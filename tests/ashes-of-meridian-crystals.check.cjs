@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
-const context = loadScripts(['core', 'renderer', 'content', 'world']);
+const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view']);
 const { geom, renderEntity, MAT } = vm.runInContext('({geom, renderEntity, MAT})', context);
 const deposit = (id = 1, amount = 1800) => Object.freeze({
   id, amount, kind: 'resource', type: 'crystal', x: 12, z: -7,

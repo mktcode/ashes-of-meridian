@@ -22,7 +22,11 @@
         R.quality = profile.settings.quality;
         R.resize();
         audio = new MeridianAudio(profile.settings);
-        game = new MeridianGame(R, profile, (type, data) => ui && ui.event(type, data));
+        const worldView = new BattlefieldView(R);
+        game = new MeridianGame(profile, (type, data) => {
+          if (type === 'start') worldView.sync(game.world);
+          if (ui) ui.event(type, data);
+        });
         ui = new MeridianUI(game, R, audio, profile, persistence);
         overlayContext = overlay.getContext('2d');
         function resize() {
@@ -36,7 +40,7 @@
         addEventListener('resize', resize);
         resize();
         ui.onPreview = () => {
-          new Battlefield(R, 40517, 'ash');
+          worldView.sync(new Battlefield(40517, 'ash'), false);
           R.fogOn = false;
           preview = [];
           let id = 0;
@@ -212,6 +216,7 @@
         }
         function battlefield(t) {
           const s = game.s;
+          worldView.sync(game.world);
           R.camera(s.cam.x, s.cam.z, s.cam.zoom);
           R.fogOn = true;
           for (let e of s.entities) {

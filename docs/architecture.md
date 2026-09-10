@@ -2,30 +2,32 @@
 
 ## Status und Geltungsbereich
 
-Bestandsaufnahme des Ausgangsstands `ab92a12`, ergänzt um Referenztests, CSS-Auslagerung, JavaScript-Formatierung und die Auslagerung aller acht ursprünglichen JavaScript-Bereiche in lokale Dateien sowie die erste Entkopplung der Speicherung. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht vollständig implementiert. Die sieben ursprünglichen Skript-Tags wurden benannt, der zentrale CSS-Block unverändert ausgelagert und JavaScript ohne Änderung der Syntaxbäume lesbar formatiert. Assets und eingebettete Texturen blieben unverändert.
+Bestandsaufnahme des Ausgangsstands `ab92a12`, ergänzt um Referenztests, CSS-Auslagerung, JavaScript-Formatierung und die Auslagerung aller acht ursprünglichen JavaScript-Bereiche in lokale Dateien sowie die Entkopplung der Speicherung und der Weltberechnung vom Renderer. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht vollständig implementiert. Die sieben ursprünglichen Skript-Tags wurden benannt, der zentrale CSS-Block unverändert ausgelagert und JavaScript ohne Änderung der Syntaxbäume lesbar formatiert. Assets und eingebettete Texturen blieben unverändert.
 
-`index.html` (statisches HTML und Dateieinbindungen), die neun JavaScript-Dateien laut Codekarte und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. JavaScript-Methoden sind nun mehrzeilig formatiert; lange Bild-Data-URLs und Template-Inhalte bleiben bewusst unverändert. Ablauf und Prüfungen: [JavaScript-Formatierung](javascript-formatting.md).
+`index.html` (statisches HTML und Dateieinbindungen), die JavaScript-Dateien laut Codekarte und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. JavaScript-Methoden sind nun mehrzeilig formatiert; lange Bild-Data-URLs und Template-Inhalte bleiben bewusst unverändert. Ablauf und Prüfungen: [JavaScript-Formatierung](javascript-formatting.md).
 
 ## Codekarte
 
-Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Stylesheet ein. Nach dem statischen HTML folgen neun lokale klassische Skripte. `index.html` enthält keine Inline-Skriptinhalte mehr. Sie teilen sich globale lexikalische Bindungen und werden synchron in Dokumentreihenfolge ausgeführt; kein `async`, `defer` oder `type="module"`. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen ES-Module. Zur Navigation die Symbolnamen in den unten angegebenen Dateien suchen; das statische DOM steht in `index.html`. Die Tags tragen `data-meridian-script` mit den Namen `core`, `renderer`, `content`, `world`, `simulation`, `audio`, `persistence`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
+Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Stylesheet ein. Nach dem statischen HTML folgen die unten aufgeführten lokalen klassischen Skripte. `index.html` enthält keine Inline-Skriptinhalte mehr. Sie teilen sich globale lexikalische Bindungen und werden synchron in Dokumentreihenfolge ausgeführt; kein `async`, `defer` oder `type="module"`. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen ES-Module. Zur Navigation die Symbolnamen in den unten angegebenen Dateien suchen; das statische DOM steht in `index.html`. Die Tags tragen `data-meridian-script` mit den Namen `core`, `renderer`, `content`, `world`, `world-view`, `simulation`, `audio`, `persistence`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
 
 | Block | Einstieg / wichtige Symbole | Zuständigkeiten heute |
 | --- | --- | --- |
 | 1 / `core` | `M4`, `V`, `seeded` in `core.js` | Matrizen, Vektoren und Seed-RNG, ohne Browserabhängigkeiten |
 | 2 / `renderer` | `MAT`, `MERIDIAN_TEXTURES`, `geom`, Shaderkonstanten und `MeridianRenderer` in `renderer.js` | Eingebettete Texturen, Meshes, GLSL-Shader, WebGL-Ressourcen, Kamera und Renderpässe |
 | 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `TECH`, `META`, `BIOMES`, `CAMPAIGN`, `ACTS`, `ICON_PATHS` und Hilfsfunktionen in `content.js` | Spieldefinitionen, Balancing, Kampagne, Texte, Icons und Namenshelfer |
-| 4 / `world` | Kartenkonstanten, Hilfsfunktionen, `Heap`, `Battlefield`, `renderEntity` in `world.js` | Kartenkonstanten, Terrain, Hindernisraster, Navigation, Sichtbarkeit und prozedurale Entitätsmodelle |
-| 5 / `simulation` | `DIFFICULTY`, `MeridianGame`, `formatTime` in `simulation.js` | Missionsaufbau, Entitäten, Befehle, Wirtschaft, Kampf, KI, Ziele, Effektdaten und Snapshot/Restore |
-| 6 / `audio` | `MeridianAudio` in `audio.js` | Prozedurales Web Audio für Musik und Geräusche |
-| 7 / `persistence` | `createMeridianPersistence` in `persistence.js` | Private Storage-Schlüssel, flüchtiger Ersatz, Profilnormalisierung, Checkpoint-JSON und Backup-Codec; nur ausdrücklich übergebene Abhängigkeiten |
-| 8 / `ui` | `MeridianUI` in `ui.js` | Fortschritt, Menüs, HUD, Eingabe, Kamera-Steuerung, Datei-/Download- und Import-Orchestrierung sowie Canvas-Overlay; Speicherung über eine übergebene Instanz |
-| 9 / `app` | IIFE und `window.Meridian` in `app.js` | Verdrahtung, Spielschleife, Menüvorschau, Szenendarstellung, Effekte und Fehlerbehandlung |
+| 4 / `world` | Kartenkonstanten, Hilfsfunktionen, `Heap`, `Battlefield` in `world.js` | CPU-Terrain-/Layoutdaten, Hindernisraster, Navigation und Sichtbarkeit, ohne Renderer |
+| 5 / `world-view` | `BattlefieldView`, `renderEntity` in `world-view.js` | Terrain-Mesh, statische GPU-Platzierungen, Fog-Upload und Entitätsmodelle |
+| 6 / `simulation` | `DIFFICULTY`, `MeridianGame`, `formatTime` in `simulation.js` | Missionsaufbau, Entitäten, Befehle, Wirtschaft, Kampf, KI, Ziele, Effektdaten und Snapshot/Restore |
+| 7 / `audio` | `MeridianAudio` in `audio.js` | Prozedurales Web Audio für Musik und Geräusche |
+| 8 / `persistence` | `createMeridianPersistence` in `persistence.js` | Private Storage-Schlüssel, flüchtiger Ersatz, Profilnormalisierung, Checkpoint-JSON und Backup-Codec; nur ausdrücklich übergebene Abhängigkeiten |
+| 9 / `ui` | `MeridianUI` in `ui.js` | Fortschritt, Menüs, HUD, Eingabe, Kamera-Steuerung, Datei-/Download- und Import-Orchestrierung sowie Canvas-Overlay; Speicherung über eine übergebene Instanz |
+| 10 / `app` | IIFE und `window.Meridian` in `app.js` | Verdrahtung, Spielschleife, Menüvorschau, Szenendarstellung, Effekte und Fehlerbehandlung |
 
 Wichtige Abhängigkeiten:
 
-- `Battlefield` verwendet Definitionen aus `content`, Mathematik aus `core`, Geometrie aus `renderer` und eine Renderer-Instanz. Es berechnet nicht nur die Welt, sondern erzeugt auch statische Renderdaten und lädt Nebeldaten auf die GPU.
-- `MeridianGame` hält Renderer, Profil und `Battlefield`. Der `emit(type, data)`-Callback wird im Einstiegspunkt an `MeridianUI.event()` angeschlossen.
+- `Battlefield(seed, biome)` verwendet `content` und `core`, aber weder Renderer noch Geometrie. `renderData` enthält CPU-Farben und benannte Platzierungsdaten; die kosmetischen RNG-Samples bleiben wegen der Layoutkompatibilität in der bisherigen Reihenfolge.
+- `BattlefieldView.sync(world)` übersetzt diese Daten in Mesh-/Rendereraufrufe und lädt geänderte Fog-Pixel. `app` synchronisiert vor dem Start-Ereignis an die UI sowie vor dem Zeichnen; die Menüvorschau nutzt denselben Adapter ohne Fog.
+- `MeridianGame(profile, emit)` hält Profil und `Battlefield`, keinen Renderer. Der `emit(type, data)`-Callback wird im Einstiegspunkt nach der nötigen Welt-Synchronisierung an `MeridianUI.event()` angeschlossen.
 - `MeridianUI` greift weiterhin direkt auf `game.s`, Renderer, Audio und DOM zu, erhält die Speicherung aber als fünftes Konstruktorargument. Weder Storage-Schlüssel noch Profilnormalisierung oder Backup-JSON-Verarbeitung liegen noch in der UI. Der Ereignis-Callback ist trotzdem keine vollständige Entkopplung.
 - `createMeridianPersistence` kennt weder UI noch Spielinstanz oder Browserglobals. `app` übergibt einen verzögerten Storage-Zugriff, `clamp`, Upgrade-Grenzen aus `META`, gültige Schwierigkeiten aus `DIFFICULTY` und einen Warn-Callback. Die Speicherinstanz besitzt ihren eigenen flüchtigen Ersatz.
 - `app` erstellt und verdrahtet alle Instanzen, lädt das Profil über die Speicherkomponente und übergibt diese der UI. Die `requestAnimationFrame`-Schleife führt bei aktivem, ungepaustem Spiel `game.step(0.05)` und `tickEffects(0.05)` aus; UI und Rendering werden pro Frame aktualisiert.
@@ -88,7 +90,9 @@ Danach wurde der gesamte Renderer-Block bytegleich nach `renderer.js` ausgelager
 
 Als erste echte Schnittstellengrenze wurde danach die [Speicherung entkoppelt](persistence-decoupling.md): 13 Charakterisierungstests zunächst gegen die bisherige UI, anschließend eine eigenständige Speicherkomponente mit vier zusätzlichen Schnittstellen-/Isolationstests. `app` verdrahtet sie ausdrücklich mit der UI. Bestehende Formatprüfungen wurden übernommen, nicht verschärft; nicht transaktionale Importabläufe bleiben bestehen.
 
-Als Nächstes Weltberechnung von Renderdaten, Simulation von kosmetischen Effekten sowie UI-Ansichten von Eingabe und weiteren Ablaufaufgaben trennen. Dafür jeweils zunächst fehlende Charakterisierungstests ergänzen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
+Die Welt-/Renderer-Grenze ist inzwischen umgesetzt: CPU-Welt und Simulation laufen ohne Renderer, `world-view` übernimmt Meshes, Platzierungen, Fog und Entitätsmodelle. Die [Welt-/Effektreferenzen](world-effects-decoupling.md) sichern die ursprünglichen Ausgaben.
+
+Als Nächstes Simulation von kosmetischen Effekten abgrenzen. Weitere UI-Aufteilungen erfolgen anschließend nur bei konkretem Featurebedarf. Dafür jeweils zunächst fehlende Charakterisierungstests ergänzen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
 
 ### Perspektive: TypeScript-Quellen, einfaches Auslieferungsartefakt
 

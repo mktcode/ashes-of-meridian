@@ -22,7 +22,7 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 
 Zusätzlich: `tests/ashes-of-meridian-persistence.check.cjs` mit 17 Tests: 13 Charakterisierungen für Profil-Normalisierung, Checkpoints, Storage-Ausfälle und UI-Backup-Abläufe sowie vier neue Schnittstellen-/Isolationstests. Die betroffenen UI-Methoden werden ohne Konstruktor mit gezielten Testdoubles ausgeführt, nicht mit einem Browser-DOM. [Details](persistence-decoupling.md).
 
-`tests/helpers/game-scripts.cjs` liest benannte klassische Skripte aus `index.html` und lokale `src`-Dateien relativ zum Quellverzeichnis, unabhängig vom Arbeitsverzeichnis des Testprozesses. Die Speicherkomponente wird zusätzlich isoliert nur mit ausdrücklich übergebenen Regeln und Storage getestet; die UI-Schnittstelle separat mit einem Fake-Dienst. Die Core-Tests laden nur `core`, ein Harness-Test nur `content`, die Modelltests `core` sowie `renderer`, `content` und `world`, die Simulationstests außerdem `simulation`. Abhängigkeiten werden explizit ausgewählt, aber wie im Browser in Dokumentreihenfolge ausgeführt. Alle gefundenen Skripte werden auf Syntax geprüft, ohne ihre Anzahl festzuschreiben. Fehlende oder doppelte Namen werden nicht stillschweigend übergangen. Module, `async`/`defer` und nicht unterstützte Pfad-/Attributformen werden bewusst abgelehnt; Details: [Core-Auslagerung](core-extraction.md).
+`tests/helpers/game-scripts.cjs` liest benannte klassische Skripte aus `index.html` und lokale `src`-Dateien relativ zum Quellverzeichnis, unabhängig vom Arbeitsverzeichnis des Testprozesses. Die Speicherkomponente wird zusätzlich isoliert nur mit ausdrücklich übergebenen Regeln und Storage getestet; die UI-Schnittstelle separat mit einem Fake-Dienst. Die Core-Tests laden nur `core`, ein Harness-Test nur `content`, die Modelltests zusätzlich `world-view`. Die bisherigen Simulationsprüfungen verdrahten den Welt-Adapter beim Start wie die Anwendung; ein weiterer Test startet, simuliert und lädt ausschließlich mit `core`, `content`, `world` und `simulation`, ohne Renderer oder dessen Stub. Abhängigkeiten werden explizit ausgewählt, aber wie im Browser in Dokumentreihenfolge ausgeführt. Alle gefundenen Skripte werden auf Syntax geprüft, ohne ihre Anzahl festzuschreiben. Fehlende oder doppelte Namen werden nicht stillschweigend übergangen. Module, `async`/`defer` und nicht unterstützte Pfad-/Attributformen werden bewusst abgelehnt; Details: [Core-Auslagerung](core-extraction.md).
 
 Der gemeinsame Renderer-Stub unter `tests/helpers/renderer-stub.cjs` ersetzt GPU-Zugriffe; nur Modelltests zeichnen Renderplatzierungen auf. Simulationstests erhalten frische VM-Kontexte mit `structuredClone`, aber ohne DOM/Storage/Audio und mit absichtlich fehlschlagendem `Math.random()`. Die fest gesetzten Seeds müssen genügen. Es wird kein WebGL-Kontext erstellt.
 
@@ -54,7 +54,13 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Welt-/Effektreferenzen
+## Aktueller Prüfstand: Welt-/Renderer-Grenze
+
+- Welt und Simulation ohne Renderer ausführbar; `world-view.js` übernimmt GPU-Übersetzung und unveränderte Entitätsmodelle. Zwei zusätzliche Isolation-/Adaptertests; **100 Tests bestanden**.
+- Frischer Chromium-`file://`-Nachher-Lauf und Vergleich zum Ausgangslauf bestanden: acht Layout-Messsätze, GPU-/Qualitätswerte, Spiel-/Eingabe-/Save-/Backup-Ablauf unverändert; nur bestehende Skybox-Ausnahmen.
+- Referenzen und Schnittstellen: [Welt und Effekte](world-effects-decoupling.md).
+
+## Vorheriger Prüfstand: Welt-/Effektreferenzen
 
 - 22 zusätzliche Referenztests vor dem Umbau gegen `97bfda6`: Terrain-Geometrie, sämtliche statischen Platzierungen und ausgewählte Navigations-/Sichtbarkeitsfälle aller 16 Karten sowie sechs Effektszenarien einschließlich Folge-RNG und Operationszustand.
 - Vollständiger obiger Befehl: **98 bestanden**, Node.js `v23.11.1` / Linux. Frischer erweiterter Chromium-`file://`-Ausgangslauf bestanden; bestehende Skybox-Ausnahme unverändert.

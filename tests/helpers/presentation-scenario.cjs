@@ -3,15 +3,16 @@ const { createHash } = require('node:crypto');
 const { loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const context = loadScripts(['core', 'renderer', 'content', 'world', 'simulation'], { globals: { structuredClone } });
+const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'simulation'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
-const { Battlefield, MeridianGame, CAMPAIGN } = vm.runInContext('({Battlefield, MeridianGame, CAMPAIGN})', context);
+const { Battlefield, BattlefieldView, MeridianGame, CAMPAIGN } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame, CAMPAIGN})', context);
 
 function worldSample(seed, biome) {
   const renderer = createRendererStub({ record: true });
   let terrain;
   renderer.geometry = (name, data) => { if (name === 'terrain') terrain = digest(data); };
-  const world = new Battlefield(renderer, seed, biome);
+  const world = new Battlefield(seed, biome);
+  new BattlefieldView(renderer).sync(world);
   const entities = [
     { kind: 'building', team: 0, x: -51, z: 49, size: 5, hp: 100 },
     { kind: 'unit', team: 2, x: 10, z: 15, hp: 20, vision: 12 },
@@ -29,7 +30,7 @@ function worldSample(seed, biome) {
 
 const effectCases = ['explosion', 'cap-bounce', 'damage', 'weapons', 'workers', 'heal-drop'];
 function effectSample(kind) {
-  const game = new MeridianGame(createRendererStub(), { upgrades: {} });
+  const game = new MeridianGame({ upgrades: {} });
   game.start(0, { seed: 1409, difficulty: 'standard', faction: 0 });
   game.world.visible.fill(255);
   const player = type => game.alive(e => e.team === 0 && e.type === type)[0];

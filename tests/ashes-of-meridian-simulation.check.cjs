@@ -16,14 +16,18 @@ const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 
 function createGame() {
-  const context = loadScripts(['core', 'renderer', 'content', 'world', 'simulation'], {
+  const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'simulation'], {
     scripts, globals: { structuredClone },
   });
   vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness in simulation test"); }', context);
   const MeridianGame = vm.runInContext('MeridianGame', context);
   const renderer = createRendererStub();
   const events = [];
-  const game = new MeridianGame(renderer, { upgrades: {} }, (type, data) => events.push({ type, data: json(data) }));
+  const View = vm.runInContext('BattlefieldView', context), view = new View(renderer);
+  const game = new MeridianGame({ upgrades: {} }, (type, data) => {
+    if (type === 'start') view.sync(game.world);
+    events.push({ type, data: json(data) });
+  });
   return { game, renderer, events };
 }
 

@@ -6,8 +6,7 @@
       veteran: { name: 'Veteran', damage: 1.22, hp: 1.17, spawn: 1.28, interval: 0.88, start: 0.95 }
     };
     class MeridianGame {
-      constructor(renderer, profile, emit = () => {}) {
-        this.R = renderer;
+      constructor(profile, emit = () => {}) {
         this.profile = profile;
         this.emit = emit;
         this.s = null;
@@ -75,7 +74,7 @@
           speed: 1
         };
         this.random = seeded(seed + 77);
-        this.world = new Battlefield(this.R, seed, m.biome);
+        this.world = new Battlefield(seed, m.biome);
         this.ids.clear();
         this.fx = [];
         this.floats = [];
@@ -232,7 +231,6 @@
           }
         this.rehash();
         this.world.reveal(s.entities);
-        this.R.fogOn = true;
         this.emit('start', { mission: m });
         this.emit(
           'radio',
@@ -1912,7 +1910,7 @@
           this.s.m = structuredClone(CAMPAIGN[data.index]);
         } else if (!['conquest', 'survival', 'endless', 'domination', 'escort'].includes(data.m?.type))
           throw Error('Unknown skirmish rules.');
-        this.world = new Battlefield(this.R, data.seed, this.s.m.biome);
+        this.world = new Battlefield(data.seed, this.s.m.biome);
         this.world.rebuild(this.s.entities);
         if (data.explored?.length === GRID * GRID)
           this.world.explored.set(data.explored.map(x => (x ? 1 : 0)));
@@ -1923,7 +1921,6 @@
         this.floats = [];
         this.rehash();
         this.world.reveal(this.s.entities, this.s.scans);
-        this.R.fogOn = true;
         this.emit('start', { mission: this.s.m, resumed: true });
         return this.s;
       }

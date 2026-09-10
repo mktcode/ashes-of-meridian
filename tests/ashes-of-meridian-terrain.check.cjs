@@ -7,12 +7,14 @@ const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
 const scripts = readScripts();
-const context = loadScripts(['core', 'renderer', 'content', 'world'], { scripts });
-const { geom, Battlefield, CAMPAIGN, MAT } = vm.runInContext('({geom, Battlefield, CAMPAIGN, MAT})', context);
+const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view'], { scripts });
+const { geom, Battlefield, BattlefieldView, CAMPAIGN, MAT } = vm.runInContext('({geom, Battlefield, BattlefieldView, CAMPAIGN, MAT})', context);
 
 function world(seed, biome) {
   const renderer = createRendererStub({ record: true });
-  return { battlefield: new Battlefield(renderer, seed, biome), calls: renderer.calls };
+  const battlefield = new Battlefield(seed, biome);
+  new BattlefieldView(renderer).sync(battlefield);
+  return { battlefield, calls: renderer.calls };
 }
 function layoutHash(w) {
   return createHash('sha256').update(w.staticGrid).update(w.terrainColors)

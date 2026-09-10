@@ -1,6 +1,6 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. `index.html` enthält das statische HTML und die Dateieinbindungen, `styles.css` das Stylesheet. Das JavaScript liegt in neun klassischen lokalen Skripten; Zuständigkeiten und Reihenfolge beschreibt die [Codekarte](docs/architecture.md#codekarte). Alle Quellen werden direkt ausgeliefert, ohne npm-Abhängigkeiten oder Build-Schritt.
+Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. `index.html` enthält das statische HTML und die Dateieinbindungen, `styles.css` das Stylesheet. Das JavaScript liegt in klassischen lokalen Skripten; Zuständigkeiten und Reihenfolge beschreibt die [Codekarte](docs/architecture.md#codekarte). Alle Quellen werden direkt ausgeliefert, ohne npm-Abhängigkeiten oder Build-Schritt.
 
 ## Spielen
 
