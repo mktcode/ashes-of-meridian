@@ -54,7 +54,7 @@ Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Be
 
 ## Aktueller Prüfstand: weitere Skriptauslagerungen
 
-- Bisher `world.js` und `simulation.js` vollständig bytegleich ausgelagert; alle bisherigen Spielquellen, Assets, Tests und Referenzen unverändert. Keine gleichzeitige Entkopplung oder Formatierung.
+- Bisher `world.js`, `simulation.js` und `audio.js` vollständig bytegleich ausgelagert; alle bisherigen Spielquellen, Assets, Tests und Referenzen unverändert. Keine gleichzeitige Entkopplung oder Formatierung.
 - Nach jedem abgeschlossenen Schritt **59 Tests bestanden, 0 fehlgeschlagen**, vollständiger obiger Befehl unter Node.js `v23.11.1` / Linux.
 - Frischer Chromium-`file://`-Vergleich mit dem Ausgangsstand und dem vorherigen Schritt: acht identische Layout-Messsätze, Shader-/Textur-/Qualitätsprüfungen, erweiterter Spiel-/Save-/Backup-Ablauf und zusätzliche Maus-/Tastaturprüfungen bestanden. Nur die bestehende Skybox-Ausnahme erfasst.
 - Einzelne Schritte, Bytevergleiche, zusätzliche Audio-API-Prüfung und weiterhin offene Bereiche: [Auslagerungsserie](script-extraction.md). Kein Hörtest, HTTP- oder vollständiger Kampagnentest.
