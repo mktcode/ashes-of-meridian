@@ -11,8 +11,9 @@ Jede Tabellenzeile bezeichnet einen separat geprüften und committeten Schritt. 
 | `world.js` | `4eab547` | 1.293 / 45.460 | `7db75a630178d6a201517c2c4b8e45a4cfb956c7b9fd98d97f316da2359ada3c` | 59 bestanden / bestanden |
 | `simulation.js` | `ba82437` | 1.934 / 73.726 | `9fe375033e16e5a014148d6dbfb80da552d3761aa38ca6157f61de192ab238ee` | 59 bestanden / bestanden |
 | `audio.js` | `7bc55c6` | 169 / 6.889 | `9bb8b1b0fcba890263cb653c7646e05228a8bf62d3e99ca17edf561e339e5eca` | 59 bestanden / bestanden |
+| `ui.js` | `f39dc75` | 2.050 / 96.809 | `29c859250647223009fbd909e5238ebf20b1b548ea118b2f9bca0f64cce86481` | 59 bestanden / bestanden |
 
-Noch ausstehend: `ui.js`, `app.js`.
+Noch ausstehend: `app.js`.
 
 ## Vertrag und Inhaltsprüfung
 
