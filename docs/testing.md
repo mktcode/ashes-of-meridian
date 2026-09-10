@@ -51,7 +51,15 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Testzugriff und Referenztests
+## Aktueller Prüfstand: CSS-Auslagerung
+
+- Die 2.276 CSS-Zeilen liegen unverändert in `styles.css`; `index.html` bindet die Datei über einen relativen Stylesheet-Link ein. Skripte, Inline-Styles und Assets sind unverändert.
+- **44 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux. Der Bytevergleich mit `ca2c04b` bestätigt die reine Auslagerung.
+- Chromium `152.0.7977.75`, Linux, headless, separates Testprofil, `file://`, ohne abschwächende Sicherheitsflags: Stylesheet geladen, Menü/Kampagnenansicht/Settings/pausierter Missionsstart bei 1280×800 und 800×700 geprüft. Ausgewählte berechnete Stile und Elementabmessungen stimmen vor und nach der Auslagerung überein.
+- **Bestehende Einschränkung bestätigt:** Skybox-Upload wird in diesem Chromium-Test unter `file://` mit einem `SecurityError` blockiert, bereits vor der Auslagerung. Keine neuen erfassten Laufzeit-/Ladefehler nach der CSS-Änderung.
+- Ablauf, genaue Grenzen und offene Browserprüfungen: [CSS-Auslagerung](css-extraction.md). Die vollständige Checkliste oben bleibt offen.
+
+## Vorheriger Prüfstand: Testzugriff und Referenztests
 
 - Obiger Befehl unter Node.js `v23.11.1` / Linux: **44 Tests bestanden, 0 fehlgeschlagen**.
 - Die ursprünglichen 24 Modell-/Terrainprüfungen bestehen weiterhin, insbesondere alle 16 unveränderten Layout-Prüfsummen.

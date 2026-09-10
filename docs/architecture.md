@@ -2,13 +2,13 @@
 
 ## Status und Geltungsbereich
 
-Bestandsaufnahme des formatierten Ausgangsstands `ab92a12`, ergänzt um den gemeinsamen Testzugriff und die Referenztests. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Im Spiel-HTML wurden bisher lediglich die sieben Skript-Tags mit Namen versehen, ihre Inhalte und das Spielverhalten blieben unverändert.
+Bestandsaufnahme des formatierten Ausgangsstands `ab92a12`, ergänzt um den gemeinsamen Testzugriff, die Referenztests und die CSS-Auslagerung. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Die sieben Skript-Tags wurden benannt und der zentrale CSS-Block unverändert ausgelagert. Skriptinhalte und Assets blieben unverändert.
 
-`index.html` ist derzeit die maßgebliche, von Hand bearbeitete Quelle und zugleich die ausgelieferte Anwendung. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Viele JavaScript-Methoden stehen trotz HTML-Formatierung noch auf einer Zeile.
+`index.html` (HTML und JavaScript) und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. Viele JavaScript-Methoden stehen trotz HTML-Formatierung noch auf einer Zeile.
 
 ## Codekarte
 
-Nach CSS und statischem HTML folgen sieben klassische Inline-Skripte. Sie teilen sich globale lexikalische Bindungen und werden in Dokumentreihenfolge ausgeführt. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen Module. Zur Navigation die Symbolnamen in `index.html` suchen. Die Tags tragen `data-meridian-script` mit den Namen `renderer`, `content`, `world`, `simulation`, `audio`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
+Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Stylesheet ein. Nach dem statischen HTML folgen sieben klassische Inline-Skripte. Sie teilen sich globale lexikalische Bindungen und werden in Dokumentreihenfolge ausgeführt. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen Module. Zur Navigation die Symbolnamen in `index.html` suchen. Die Tags tragen `data-meridian-script` mit den Namen `renderer`, `content`, `world`, `simulation`, `audio`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
 
 | Block | Einstieg / wichtige Symbole | Zuständigkeiten heute |
 | --- | --- | --- |
@@ -41,9 +41,11 @@ Daraus folgt: Nicht nur Feldnamen und Versionen, sondern auch Kampagnenindizes, 
 
 ## Assets und direkter Dateistart
 
+`styles.css` liegt neben `index.html` und muss mit ausgeliefert werden. Es enthält derzeit keine `url(...)`- oder `@import`-Verweise. Künftig beziehen sich relative Asset-URLs im Stylesheet auf dessen Speicherort. Die [CSS-Auslagerungsprüfung](css-extraction.md) bestätigt das Laden über `file://` in Chromium ohne Server oder besondere Sicherheitsflags.
+
 `MERIDIAN_TEXTURES` enthält drei eingebettete Bild-Data-URLs. Die danebenliegenden `texture-floor-*.png` werden vom aktuellen Renderer nicht als Dateien geladen. Ihre Bearbeitung allein ändert die eingebetteten Texturen nicht; ein automatischer Abgleich existiert nicht.
 
-`skybox.webp` wird dagegen über eine relative URL mit `Image` geladen und als WebGL-Textur hochgeladen. Daher ist die Anwendung nicht vollständig auf eine Datei reduziert. Der Renderer legt zunächst eine dunkle Ersatztextur an. Ob Laden und GPU-Upload unter `file://` funktionieren, muss je Browser geprüft werden; Node-Tests decken das nicht ab.
+`skybox.webp` wird dagegen über eine relative URL mit `Image` geladen und als WebGL-Textur hochgeladen. Daher ist die Anwendung nicht vollständig auf eine Datei reduziert. Der Renderer legt zunächst eine dunkle Ersatztextur an. Beim Chromium-152-Test über `file://` wurde der GPU-Upload vor und nach der CSS-Auslagerung mit einem `SecurityError` blockiert; die dunkle Ersatztextur blieb bestehen. Das ist eine bestehende, nicht durch das CSS verursachte Einschränkung. Andere Browser sind separat zu prüfen; Node-Tests decken das nicht ab.
 
 ## Bekannte Kopplungen und Risiken
 
@@ -69,7 +71,9 @@ Vor weiteren Umbauten:
 
 ### Anschließend: schrittweise entkoppeln
 
-Als erste kleine Bereiche eignen sich Mathematik, Inhaltsdefinitionen und Speicherformat-Validierung. Danach Weltberechnung von Renderdaten, Simulation von kosmetischen Effekten sowie UI-Ansichten von Eingabe und Persistenz trennen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
+Als erster rein struktureller Schritt wurde das zentrale CSS ohne Umformatierung nach `styles.css` verschoben. Weitere Aufteilungen des Stylesheets oder Bereinigung der Inline-Styles erfolgen getrennt und nur bei konkretem Bedarf.
+
+Als erste kleine JavaScript-Bereiche eignen sich Mathematik, Inhaltsdefinitionen und Speicherformat-Validierung. Danach Weltberechnung von Renderdaten, Simulation von kosmetischen Effekten sowie UI-Ansichten von Eingabe und Persistenz trennen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
 
 ### Perspektive: TypeScript-Quellen, einfaches Auslieferungsartefakt
 

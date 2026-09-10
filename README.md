@@ -1,12 +1,12 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. HTML, CSS, Renderer und Simulation liegen in `index.html`; es gibt derzeit keine npm-Abhängigkeiten und keinen Build-Schritt.
+Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. HTML, Renderer und Simulation liegen in `index.html`, das Stylesheet in `styles.css`; es gibt derzeit keine npm-Abhängigkeiten und keinen Build-Schritt.
 
 ## Spielen
 
-`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. `skybox.webp` muss für den vorgesehenen Himmel neben der HTML-Datei bleiben; das Spiel ist noch kein vollständig autarkes Ein-Datei-Paket.
+`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. `styles.css` muss für die Darstellung und `skybox.webp` für den vorgesehenen Himmel neben der HTML-Datei bleiben. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
 
-Der direkte Start über `file://` soll erhalten bleiben. Browser können dabei lokale WebGL-Texturen oder dauerhafte Speicherung einschränken; eine aktuelle Browser-Kompatibilitätsprüfung steht noch aus. Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
+Der direkte Start über `file://` soll erhalten bleiben. Das externe CSS wurde mit Chromium über `file://` geprüft. Browser können jedoch lokale WebGL-Texturen oder dauerhafte Speicherung einschränken: Beim Chromium-Test wurde der Skybox-Upload bereits vor der CSS-Auslagerung blockiert. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
 
 ```bash
 python3 -m http.server 8080 --bind 127.0.0.1
