@@ -3,7 +3,7 @@ const { createHash } = require('node:crypto');
 const { loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'simulation'], { globals: { structuredClone } });
+const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
 const { Battlefield, BattlefieldView, MeridianGame, CAMPAIGN } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame, CAMPAIGN})', context);
 

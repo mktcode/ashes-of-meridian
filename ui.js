@@ -1928,7 +1928,7 @@
             ctx.fillText('★', p.x + w / 2 + 8, p.y + 5);
           }
         }
-        for (let f of g.floats) {
+        for (let f of g.effects.floats) {
           let p = this.R.project(f.x, f.y, f.z);
           if (!p) continue;
           ctx.globalAlpha = f.life / f.maxLife;

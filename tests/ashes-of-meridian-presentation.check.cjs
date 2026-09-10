@@ -12,7 +12,7 @@ for (const { seed, biome, ...expected } of fixture.worlds) {
   });
 }
 test('world and simulation start, step and restore without renderer, geometry or browser globals', () => {
-  const context = loadScripts(['core', 'content', 'world', 'simulation'], { globals: { structuredClone } });
+  const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
   vm.runInContext('Math.random = () => { throw Error("Unseeded randomness"); }', context);
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   game.start(0, { seed: 1409, difficulty: 'standard', faction: 0 });
@@ -40,6 +40,49 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   assert.equal(JSON.stringify(world.renderData), before);
   view.sync(new Battlefield(1409, 'rust'));
   assert.equal(meshes, 2);
+});
+
+test('effects execute alone, consume RNG synchronously and preserve visibility short-circuiting', () => {
+  const context = loadScripts(['effects']);
+  const Effects = vm.runInContext('MeridianEffects', context);
+  let calls = 0, visibleCalls = 0;
+  const effects = new Effects(() => { calls++; return .5; });
+  effects.explosion(3, 4);
+  assert.equal(calls, 78); assert.equal(effects.fx.length, 16);
+  effects.tick(.5); assert.equal(calls, 78); assert.equal(effects.fx.length, 15);
+  const e = Object.freeze({ x: 0, z: 0, team: 0 }), b = Object.freeze({ x: 1, z: 1, size: 3 });
+  effects.construction(e, b, .05);
+  effects.mining(e, b, .05, () => { visibleCalls++; return true; });
+  assert.equal(calls, 80); assert.equal(visibleCalls, 0);
+  for (let i = 0; i < 40; i++) effects.damageNumber(e, 30);
+  assert.equal(effects.floats.length, 35);
+  effects.reset(); assert.equal(effects.fx.length, 0); assert.equal(effects.floats.length, 0);
+});
+
+test('effect provider follows the current game RNG and survives start/restore resets', () => {
+  const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
+  const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
+  const effects = game.effects;
+  game.start(0, { seed: 1409 });
+  const snapshot = game.snapshot();
+  game.random = () => .5; game.explosion(0, 0);
+  assert.equal(game.fx[1].vy, 6);
+  game.restore(snapshot);
+  assert.equal(game.effects, effects); assert.equal(game.fx.length, 0);
+  const restored = JSON.stringify(game.snapshot());
+  game.random = () => .25; game.explosion(0, 0);
+  assert.equal(game.fx[1].vy, 4.5);
+  assert.equal(JSON.stringify(game.snapshot()), restored);
+});
+
+test('effect drawing accepts frozen data without game/UI globals and matches the original draw calls', () => {
+  const context = loadScripts(['effects-view'], { globals: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) } });
+  vm.runInContext('Math.random = () => { throw Error("Rendering must not consume randomness"); }', context);
+  const render = vm.runInContext('renderBattlefieldEffects', context);
+  const { effectViewSample } = require('./helpers/effect-view-scenario.cjs');
+  const { reference, ...expected } = require('./fixtures/effects-view-v1.json');
+  assert.equal(reference, 'b9f0026');
+  assert.deepEqual(effectViewSample(render), expected);
 });
 
 for (const [kind, expected] of Object.entries(fixture.effects)) {

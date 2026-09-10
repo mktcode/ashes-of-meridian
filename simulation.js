@@ -6,20 +6,19 @@
       veteran: { name: 'Veteran', damage: 1.22, hp: 1.17, spawn: 1.28, interval: 0.88, start: 0.95 }
     };
     class MeridianGame {
-      constructor(profile, emit = () => {}) {
+      constructor(profile, emit = () => {}, createEffects = random => new MeridianEffects(random)) {
         this.profile = profile;
         this.emit = emit;
         this.s = null;
         this.world = null;
         this.ids = new Map();
         this.spatial = new Map();
-        this.fx = [];
-        this.floats = [];
         this.acc = 0;
         this.fogClock = 0;
         this.objectiveClock = 0;
         this.navDirty = false;
         this.random = seeded(1);
+        this.effects = createEffects(() => this.random());
       }
       start(index, opts = {}) {
         let m = structuredClone(opts.mission || CAMPAIGN[index] || CAMPAIGN[0]);
@@ -76,8 +75,7 @@
         this.random = seeded(seed + 77);
         this.world = new Battlefield(seed, m.biome);
         this.ids.clear();
-        this.fx = [];
-        this.floats = [];
+        this.effects.reset();
         this.acc = 0;
         this.fogClock = 0;
         this.objectiveClock = 0;
@@ -752,16 +750,7 @@
         }
         e.hp -= amount;
         if (source?.team === 0) this.s.stats.damage += amount;
-        if (!quiet && amount > 25 && this.visible(e) && this.floats.length < 35)
-          this.floats.push({
-            x: e.x,
-            z: e.z,
-            y: 2.4,
-            text: Math.round(amount).toString(),
-            color: e.team === 0 ? '#f8a88d' : '#f0cd93',
-            life: 0.8,
-            maxLife: 0.8
-          });
+        if (!quiet && amount > 25 && this.visible(e)) this.effects.damageNumber(e, amount);
         if (e.hp <= 0) this.kill(e, source);
         if (
           e.team === 0 &&
@@ -821,39 +810,11 @@
         if (e.tag === 'generator')
           this.emit('alert', { text: 'Ward generator destroyed.', x: e.x, z: e.z });
       }
+      // Compatibility entry points; transient state belongs to effects.
+      get fx() { return this.effects.fx; }
+      get floats() { return this.effects.floats; }
       explosion(x, z, size = 1, color = 0xefb17c) {
-        this.fx.push({ type: 'blast', x, z, size, life: 0.45, maxLife: 0.45, color });
-        let n = Math.min(22, Math.round(8 + size * 3));
-        for (let i = 0; i < n; i++) {
-          let a = this.random() * 6.28,
-            sp = (1 + this.random() * 4) * Math.sqrt(size);
-          this.fx.push({
-            type: 'particle',
-            x,
-            y: 0.8 + this.random() * size,
-            z,
-            vx: Math.sin(a) * sp,
-            vz: Math.cos(a) * sp,
-            vy: 3 + this.random() * 6,
-            size: 0.08 + this.random() * 0.17,
-            color: i % 3 ? color : 0x667278,
-            life: 0.65 + this.random() * 0.7,
-            maxLife: 1.4
-          });
-        }
-        for (let i = 0; i < 4; i++)
-          this.fx.push({
-            type: 'smoke',
-            x: x + (this.random() - 0.5) * size,
-            y: 0.6 + this.random(),
-            z: z + (this.random() - 0.5) * size,
-            vy: 1,
-            life: 2.5,
-            maxLife: 2.5,
-            size: size * 0.6 + 0.5,
-            color: 0x64707c
-          });
-        if (this.fx.length > 500) this.fx.splice(0, this.fx.length - 500);
+        this.effects.explosion(x, z, size, color);
       }
       rangedStats(e) {
         let d = e.kind === 'building' ? BUILDINGS[e.type] : UNITS[e.type],
@@ -869,9 +830,6 @@
       fire(e, target) {
         let d = this.rangedStats(e);
         e.cd = d.reload || 1;
-        let height =
-            e.type === 'air' ? 4.5 : e.type === 'avatar' ? 5 : e.kind === 'building' ? 3 : 1.45,
-          th = target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1;
         let dx = target.x - e.x,
           dz = target.z - e.z;
         e.rot = Math.atan2(dx, dz);
@@ -887,18 +845,7 @@
             team: e.team,
             type: 'shell'
           });
-          this.fx.push({
-            type: 'shell',
-            x: e.x,
-            y: height,
-            z: e.z,
-            tx: target.x,
-            tz: target.z,
-            startY: height,
-            life: travel,
-            maxLife: travel,
-            color: e.faction === 1 ? 0xb8eba3 : 0xffce8f
-          });
+          this.effects.shell(e, target, travel);
         } else {
           this.damage(target, d.damage, e);
           if (d.splash)
@@ -910,26 +857,7 @@
             ))
               this.damage(n, d.damage * 0.45, e, true);
           if (this.visible(e) || this.visible(target)) {
-            this.fx.push({
-              type: 'beam',
-              x: e.x + Math.sin(e.rot) * 0.7,
-              y: height,
-              z: e.z + Math.cos(e.rot) * 0.7,
-              tx: target.x,
-              ty: th,
-              tz: target.z,
-              life: e.faction === 2 ? 0.19 : 0.1,
-              maxLife: 0.19,
-              color:
-                e.faction === 1
-                  ? 0xafe8a6
-                  : e.faction === 2
-                    ? 0xd9bfff
-                    : e.team === 1
-                      ? 0xf49685
-                      : 0xffd2a0,
-              width: e.type === 'tank' ? 0.075 : 0.035
-            });
+            this.effects.shot(e, target);
             this.emit('shot', { x: e.x, z: e.z, heavy: e.type === 'tank' });
           }
         }
@@ -1028,20 +956,7 @@
             b.hp += amount;
             s.alloy -= amount * 0.1;
           } else this.finishOrder(e);
-          if (this.random() < dt * 4)
-            this.fx.push({
-              type: 'beam',
-              x: e.x,
-              y: 1.1,
-              z: e.z,
-              tx: b.x + (this.random() - 0.5) * b.size,
-              ty: 1.2,
-              tz: b.z + (this.random() - 0.5) * b.size,
-              life: 0.15,
-              maxLife: 0.15,
-              color: 0x83e6d2,
-              width: 0.035
-            });
+          this.effects.construction(e, b, dt);
           return true;
         }
         if (o.type === 'idle' && e.team === 0) {
@@ -1098,20 +1013,7 @@
             n.deathAt = s.time;
           }
         }
-        if (this.random() < dt * 3 && this.visible(e))
-          this.fx.push({
-            type: 'beam',
-            x: e.x,
-            y: 1,
-            z: e.z,
-            tx: n.x,
-            ty: 1.5,
-            tz: n.z,
-            life: 0.1,
-            maxLife: 0.1,
-            color: 0xf0d39b,
-            width: 0.025
-          });
+        this.effects.mining(e, n, dt, () => this.visible(e));
         return true;
       }
       medic(e, dt) {
@@ -1127,19 +1029,7 @@
           t.hp = Math.min(t.maxHp, t.hp + UNITS.medic.heal * (this.s.upgrades.healing ? 1.4 : 1) * dt);
           if (e.cd <= 0 && this.visible(e)) {
             e.cd = 0.5;
-            this.fx.push({
-              type: 'beam',
-              x: e.x,
-              y: 1.2,
-              z: e.z,
-              tx: t.x,
-              ty: t.type === 'air' ? 4 : 1.1,
-              tz: t.z,
-              life: 0.25,
-              maxLife: 0.25,
-              color: 0x94efd0,
-              width: 0.028
-            });
+            this.effects.healing(e, t);
           }
         }
         if (e.order.type === 'attackMove') {
@@ -1816,14 +1706,7 @@
           for (let i = 0; i < 4; i++) {
             let loc = this.world.nearest(p.x + (i % 2) * 2 - 1, p.z + Math.floor(i / 2) * 2 - 1);
             this.spawnUnit('rifle', loc.x, loc.z, 0, s.faction);
-            this.fx.push({
-              type: 'drop',
-              x: loc.x,
-              z: loc.z,
-              life: 1.0,
-              maxLife: 1,
-              color: FACTIONS[s.faction].color
-            });
+            this.effects.drop(loc, FACTIONS[s.faction].color);
           }
           this.emit('radio', 'Reinforcement channel|Boots on the ground. Point us at the trouble.');
         }
@@ -1857,28 +1740,7 @@
         this.emit('result', s.result);
       }
       tickEffects(dt) {
-        for (let f of this.fx) {
-          f.life -= dt;
-          if (f.type === 'particle') {
-            f.x += f.vx * dt;
-            f.z += f.vz * dt;
-            f.y += f.vy * dt;
-            f.vy -= dt * 12;
-            if (f.y < 0.05) {
-              f.y = 0.05;
-              f.vy = Math.abs(f.vy) * 0.25;
-              f.vx *= 0.8;
-              f.vz *= 0.8;
-            }
-          }
-          if (f.type === 'smoke') f.y += dt * f.vy;
-        }
-        this.fx = this.fx.filter(f => f.life > 0);
-        for (let f of this.floats) {
-          f.life -= dt;
-          f.y += dt * 1.5;
-        }
-        this.floats = this.floats.filter(f => f.life > 0);
+        this.effects.tick(dt);
       }
       snapshot() {
         let data = structuredClone(this.s);
@@ -1917,8 +1779,7 @@
         delete this.s.explored;
         this.ids = new Map(this.s.entities.map(e => [e.id, e]));
         this.random = seeded(data.seed + Math.floor(data.time * 50));
-        this.fx = [];
-        this.floats = [];
+        this.effects.reset();
         this.rehash();
         this.world.reveal(this.s.entities, this.s.scans);
         this.emit('start', { mission: this.s.m, resumed: true });

@@ -16,7 +16,7 @@ const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 
 function createGame() {
-  const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'simulation'], {
+  const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation'], {
     scripts, globals: { structuredClone },
   });
   vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness in simulation test"); }', context);
