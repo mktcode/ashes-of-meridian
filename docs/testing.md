@@ -52,7 +52,14 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Renderer-Auslagerung
+## Aktueller Prüfstand: weitere Skriptauslagerungen
+
+- Bisher `world.js` vollständig bytegleich ausgelagert; alle bisherigen Spielquellen, Assets, Tests und Referenzen unverändert. Keine gleichzeitige Entkopplung oder Formatierung.
+- Nach jedem abgeschlossenen Schritt **59 Tests bestanden, 0 fehlgeschlagen**, vollständiger obiger Befehl unter Node.js `v23.11.1` / Linux.
+- Frischer Chromium-`file://`-Vergleich mit dem Ausgangsstand und dem vorherigen Schritt: acht identische Layout-Messsätze, Shader-/Textur-/Qualitätsprüfungen, erweiterter Spiel-/Save-/Backup-Ablauf und zusätzliche Maus-/Tastaturprüfungen bestanden. Nur die bestehende Skybox-Ausnahme erfasst.
+- Einzelne Schritte, Bytevergleiche, zusätzliche Audio-API-Prüfung und weiterhin offene Bereiche: [Auslagerungsserie](script-extraction.md). Kein Hörtest, HTTP- oder vollständiger Kampagnentest.
+
+## Vorheriger Prüfstand: Renderer-Auslagerung
 
 - Der komplette Renderer-Block liegt bytegleich in `renderer.js`, einschließlich Einrückung, Shadern und eingebetteten Texturen. Klassische Einbindung weiterhin zwischen `core` und `content`; alle anderen Spielquellen, Assets und Tests unverändert.
 - **59 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux, einschließlich unveränderter Layout-Prüfsummen und Save-Referenz.

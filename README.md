@@ -1,12 +1,12 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. HTML und Simulation liegen in `index.html`, der WebGL-Renderer in `renderer.js`, Mathematik und RNG in `core.js`, Spieldefinitionen und Texte in `content.js`, das Stylesheet in `styles.css`; es gibt derzeit keine npm-Abhängigkeiten und keinen Build-Schritt.
+Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. Das HTML liegt in `index.html`, das Stylesheet in `styles.css`; die JavaScript-Bereiche beschreibt die [Codekarte](docs/architecture.md#codekarte). Alle Quellen werden direkt ausgeliefert, ohne npm-Abhängigkeiten oder Build-Schritt.
 
 ## Spielen
 
-`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. `core.js`, `renderer.js`, `content.js` und `styles.css` müssen für das Spiel und `skybox.webp` für den vorgesehenen Himmel neben der HTML-Datei bleiben. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
+`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. Alle im HTML über `<script src>` eingebundenen lokalen `.js`-Dateien und `styles.css` müssen für das Spiel und `skybox.webp` für den vorgesehenen Himmel neben der HTML-Datei bleiben. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
 
-Der direkte Start über `file://` soll erhalten bleiben. Das externe CSS und die klassischen lokalen Skripte `core.js`, `renderer.js` und `content.js` wurden mit Chromium über `file://` geprüft. Browser können jedoch lokale WebGL-Texturen oder dauerhafte Speicherung einschränken: Beim Chromium-Test wurde der Skybox-Upload bereits vor der CSS-Auslagerung blockiert. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
+Der direkte Start über `file://` soll erhalten bleiben. Das externe CSS und die lokalen klassischen Skripte wurden mit Chromium über `file://` geprüft. Browser können jedoch lokale WebGL-Texturen oder dauerhafte Speicherung einschränken: Beim Chromium-Test wurde der Skybox-Upload bereits vor der CSS-Auslagerung blockiert. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
 
 ```bash
 python3 -m http.server 8080 --bind 127.0.0.1
