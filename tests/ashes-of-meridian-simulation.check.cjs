@@ -5,10 +5,10 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const vm = require('node:vm');
-const { readInlineScripts, loadScripts } = require('./helpers/inline-scripts.cjs');
+const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
-const scripts = readInlineScripts();
+const scripts = readScripts();
 const fixtureText = readFileSync(join(__dirname, 'fixtures/operation-v1.json'), 'utf8');
 // JSON transport is intentional: saves have JSON semantics, and VM objects have
 // different prototypes. This is not a replacement for cloning live game state.
@@ -16,7 +16,7 @@ const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 
 function createGame() {
-  const context = loadScripts(['renderer', 'content', 'world', 'simulation'], {
+  const context = loadScripts(['core', 'renderer', 'content', 'world', 'simulation'], {
     scripts, globals: { structuredClone },
   });
   vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness in simulation test"); }', context);

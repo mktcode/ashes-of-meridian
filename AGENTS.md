@@ -4,7 +4,7 @@
 
 - Einstieg und Startanleitung: [README.md](README.md).
 - Vor strukturellen Änderungen [docs/architecture.md](docs/architecture.md) lesen; Ist-Zustand und noch nicht implementiertes Zielbild unterscheiden.
-- `index.html` und `styles.css` sind handgepflegte Quellen und werden direkt ausgeliefert. Kein Build, keine npm-Abhängigkeiten. Stylesheet und Bilddateien liegen neben dem HTML; Texturen sind teilweise zusätzlich eingebettet.
+- `index.html`, `core.js` und `styles.css` sind handgepflegte Quellen und werden direkt ausgeliefert. Kein Build, keine npm-Abhängigkeiten. Skript, Stylesheet und Bilddateien liegen neben dem HTML; Texturen sind teilweise zusätzlich eingebettet.
 
 ## Leitplanken
 

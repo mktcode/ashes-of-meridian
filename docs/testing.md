@@ -14,13 +14,13 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 
 | Testdatei | Prüfungen |
 | --- | --- |
-| `tests/ashes-of-meridian-core.check.cjs` | 8 Tests: feste RNG-Folgen, Seed-Konvertierung und unabhängige Generatoren; Vektorrechnung; Matrizenidentität, homogene Koordinaten, Multiplikationsreihenfolge, Projektion, Kamera und Inversion einschließlich bestehender Sonderfälle |
-| `tests/ashes-of-meridian-terrain.check.cjs` | 19 Tests: Syntax aller sieben Inline-Skripte; deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
+| `tests/ashes-of-meridian-core.check.cjs` | 9 Tests: isoliertes Laden von `core.js`; feste RNG-Folgen, Seed-Konvertierung und unabhängige Generatoren; Vektorrechnung; Matrizenidentität, homogene Koordinaten, Multiplikationsreihenfolge, Projektion, Kamera und Inversion einschließlich bestehender Sonderfälle |
+| `tests/ashes-of-meridian-terrain.check.cjs` | 19 Tests: Syntax aller benannten klassischen Skripte (Inline und lokal); deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
 | `tests/ashes-of-meridian-crystals.check.cjs` | 5 Tests: Kristallgeometrie mit 36 Dreiecken und Einheitsnormalen; 80 zeitstabile Vorkommensmodelle; Größenänderung beim Abbau ohne Mutation der Entität; Vorschauparameter; bestehende Aether-Formen und Animation |
-| `tests/ashes-of-meridian-harness.check.cjs` | 5 Tests: explizite Skriptauswahl und Dokumentreihenfolge; fehlende/doppelte Namen und unerwartete Verpackung; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
+| `tests/ashes-of-meridian-harness.check.cjs` | 10 Tests: explizite Skriptauswahl und Dokumentreihenfolge bei Inline-/Dateimischung; fehlende/doppelte Namen und unerwartete Verpackung; lokale Pfade und fehlende Dateien; Ablehnung von URL-/Traversal-/Symlink-Ausbrüchen und mehrdeutigen Attributen; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
 | `tests/ashes-of-meridian-simulation.check.cjs` | 15 Tests: fester Missionsstart, Seed-Reproduzierbarkeit, Befehle/Rally, Produktionskosten und Erstattung aller drei Fraktionen, abgelehnte Rekrutierung, Fertigstellung und Einkommen/Alloy-Lieferungen, Fünf-Sekunden-Referenzzustand, Snapshot-Isolation, Wiederherstellung und Weiterlaufen eines Version-1-Fixtures, zwei ungültige Save-Fälle |
 
-`tests/helpers/inline-scripts.cjs` liest JavaScript aus `index.html` anhand der `data-meridian-script`-Namen. Die Modelltests laden `renderer`, `content` und `world`, die Simulationstests zusätzlich `simulation`. Die Abhängigkeiten werden explizit ausgewählt, aber wie im Browser in Dokumentreihenfolge ausgeführt. Alle gefundenen Skripte werden auf Syntax geprüft, ohne ihre Anzahl festzuschreiben. Fehlende oder doppelte Namen werden nicht stillschweigend übergangen.
+`tests/helpers/game-scripts.cjs` liest benannte klassische Skripte aus `index.html` und lokale `src`-Dateien relativ zum Quellverzeichnis, unabhängig vom Arbeitsverzeichnis des Testprozesses. Die Core-Tests laden nur `core`, die Modelltests zusätzlich `renderer`, `content` und `world`, die Simulationstests außerdem `simulation`. Abhängigkeiten werden explizit ausgewählt, aber wie im Browser in Dokumentreihenfolge ausgeführt. Alle gefundenen Skripte werden auf Syntax geprüft, ohne ihre Anzahl festzuschreiben. Fehlende oder doppelte Namen werden nicht stillschweigend übergangen. Module, `async`/`defer` und nicht unterstützte Pfad-/Attributformen werden bewusst abgelehnt; Details: [Core-Auslagerung](core-extraction.md).
 
 Der gemeinsame Renderer-Stub unter `tests/helpers/renderer-stub.cjs` ersetzt GPU-Zugriffe; nur Modelltests zeichnen Renderplatzierungen auf. Simulationstests erhalten frische VM-Kontexte mit `structuredClone`, aber ohne DOM/Storage/Audio und mit absichtlich fehlschlagendem `Math.random()`. Die fest gesetzten Seeds müssen genügen. Es wird kein WebGL-Kontext erstellt.
 
@@ -52,7 +52,14 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Mathematik-/RNG-Referenzen
+## Aktueller Prüfstand: Core-Auslagerung
+
+- `core.js` enthält `M4`, `V` und `seeded` unverändert bis auf entfernte HTML-Einrückung; klassisches synchrones Skript vor `renderer`. Kein Build oder Serverwechsel.
+- Testloader für lokale klassische Skripte erweitert; **58 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux. Feste RNG-/Layout-/Save-Referenzen unverändert.
+- Chromium `152.0.7977.75`, Linux, temporäres Profil, `file://`, keine abgeschwächten Sicherheitsflags: Laden von `core.js`, acht Layoutansichten und erweiterter Spiel-/Save-/Backup-Smoke-Test geprüft. Nur die bestehende Skybox-Ausnahme erfasst.
+- Eingabeprüfungen und API-gesteuerte Szenarien sowie offene Bereiche werden im [Prüfbericht](core-extraction.md) getrennt ausgewiesen. Die vollständige Browser-Checkliste ist dadurch nicht pauschal erledigt.
+
+## Vorheriger Prüfstand: Mathematik-/RNG-Referenzen
 
 - Acht neue Core-Tests gegen die unveränderte Implementierung aus `e0734ec`, noch vor einer Auslagerung. Insgesamt **52 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux.
 - Herkunft der festen Zufallsfolgen und geprüfte Grenzen: [Core-Referenzen](core-extraction.md).

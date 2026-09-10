@@ -1,10 +1,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { loadScripts } = require('./helpers/inline-scripts.cjs');
+const { loadScripts } = require('./helpers/game-scripts.cjs');
 
-// Initially run against the renderer block in e0734ec, before extraction.
-const context = loadScripts(['renderer']);
+// References first verified against the renderer block in e0734ec.
+const context = loadScripts(['core']);
 vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness"); }', context);
 const { M4, V, seeded } = vm.runInContext('({ M4, V, seeded })', context);
 const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
@@ -25,6 +25,15 @@ const sequences = [
   [77, [1827943904, 181332479, 2989326142, 2086917005, 497196720, 3548107640]],
 ];
 const take = (rng, count = 6) => Array.from({ length: count }, () => rng() * 4294967296);
+
+test('core loads alone without renderer or browser globals and keeps classic lexical bindings', () => {
+  for (const name of ['MeridianRenderer', 'document', 'window']) {
+    assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
+  }
+  assert.equal(context.M4, undefined); // Global const is not a global-object property.
+  assert.equal(context.V, undefined);
+  assert.strictEqual(context.seeded, seeded); // Function declaration still is.
+});
 
 test('seeded retains fixed sequences for zero, mission, negative and overflowing signed seeds', () => {
   for (const [seed, expected] of sequences) assert.deepEqual(take(seeded(seed)), expected);

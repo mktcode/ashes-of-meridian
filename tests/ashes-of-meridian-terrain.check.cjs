@@ -3,11 +3,11 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const vm = require('node:vm');
-const { readInlineScripts, loadScripts } = require('./helpers/inline-scripts.cjs');
+const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
-const scripts = readInlineScripts();
-const context = loadScripts(['renderer', 'content', 'world'], { scripts });
+const scripts = readScripts();
+const context = loadScripts(['core', 'renderer', 'content', 'world'], { scripts });
 const { geom, Battlefield, CAMPAIGN, MAT } = vm.runInContext('({geom, Battlefield, CAMPAIGN, MAT})', context);
 
 function world(seed, biome) {
@@ -39,7 +39,7 @@ const originalLayouts = {
   90001: '765c115f340f522ad28aa67e996f2ccb8bb07b7012c443cb51ecafb13989792c',
 };
 
-test('all named inline scripts parse, including scripts not executed by these tests', () => {
+test('all named classic scripts parse, including local files and scripts not executed by these tests', () => {
   for (const { source, filename } of scripts) new vm.Script(source, { filename });
 });
 
