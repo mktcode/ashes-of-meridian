@@ -52,7 +52,6 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
           edge: false,
           tips: true,
           healthbars: false,
-          wasd: false,
           difficulty: 'standard',
           cameraSpeed: 1
         }
@@ -72,6 +71,8 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
           d.ending = ['seal', 'open'].includes(p.ending) ? p.ending : null;
           d.skirmishBest = Number(p.skirmishBest) || 0;
           Object.assign(d.settings, p.settings || {});
+          // Version-1 profiles may contain this obsolete camera toggle.
+          delete d.settings.wasd;
           d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);
           d.settings.quality = clamp(Number(d.settings.quality) || 0, 0, 2);
           if (!difficulties[d.settings.difficulty]) d.settings.difficulty = 'standard';

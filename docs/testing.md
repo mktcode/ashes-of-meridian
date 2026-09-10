@@ -5,7 +5,7 @@
 Aus dem Projektverzeichnis mit Node.js ausführen; weder npm-Pakete noch Browser oder Build sind erforderlich:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs
 ```
 
 Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit gilt für den JavaScript-Heap, nicht als Obergrenze für den gesamten Prozessspeicher. Die Testdateien werden nacheinander ausgeführt.
@@ -18,10 +18,11 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 | `tests/ashes-of-meridian-terrain.check.cjs` | 19 Tests: Syntax aller benannten klassischen Skripte (Inline und lokal); deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
 | `tests/ashes-of-meridian-crystals.check.cjs` | 5 Tests: Kristallgeometrie mit 36 Dreiecken und Einheitsnormalen; 80 zeitstabile Vorkommensmodelle; Größenänderung beim Abbau ohne Mutation der Entität; Vorschauparameter; bestehende Aether-Formen und Animation |
 | `tests/ashes-of-meridian-harness.check.cjs` | 11 Tests: isoliertes Laden von `content` samt Katalog-/Kampagnenreihenfolge und Namens-/Icon-Hilfsfunktionen; explizite Skriptauswahl und Dokumentreihenfolge bei Inline-/Dateimischung; fehlende/doppelte Namen und unerwartete Verpackung; lokale Pfade und fehlende Dateien; Ablehnung von URL-/Traversal-/Symlink-Ausbrüchen und mehrdeutigen Attributen; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
+| `tests/ashes-of-meridian-controls.check.cjs` | 6 Tests: WASD-Richtungen, Wiederholung/Freigabe des gehaltenen Zustands, wirkungslose Pfeiltasten, festes F unabhängig vom Altprofil, Modifier-/Fokus-/Pause-Verhalten, übrige Hotkeys und sichtbare Steuerungshinweise; UI-Methoden mit Testdoubles, keine nativen Tastaturereignisse |
 | `tests/ashes-of-meridian-presentation.check.cjs` | 27 Tests: 16 feste Terrain-/Platzierungs-/Navigationsreferenzen, sechs Effekt-/Snapshot-/Folge-RNG-Szenarien, rendererfreie Simulation, Adapterinvalidierung, isolierte synchrone Effekte, RNG nach Reset/Restore und Effekt-Zeichenreferenz mit eingefrorenen Eingabedaten |
 | `tests/ashes-of-meridian-simulation.check.cjs` | 15 Tests: fester Missionsstart, Seed-Reproduzierbarkeit, Befehle/Rally, Produktionskosten und Erstattung aller drei Fraktionen, abgelehnte Rekrutierung, Fertigstellung und Einkommen/Alloy-Lieferungen, Fünf-Sekunden-Referenzzustand, Snapshot-Isolation, Wiederherstellung und Weiterlaufen eines Version-1-Fixtures, zwei ungültige Save-Fälle |
 
-Zusätzlich: `tests/ashes-of-meridian-persistence.check.cjs` mit 17 Tests: 13 Charakterisierungen für Profil-Normalisierung, Checkpoints, Storage-Ausfälle und UI-Backup-Abläufe sowie vier neue Schnittstellen-/Isolationstests. Die betroffenen UI-Methoden werden ohne Konstruktor mit gezielten Testdoubles ausgeführt, nicht mit einem Browser-DOM. [Details](persistence-decoupling.md).
+Zusätzlich: `tests/ashes-of-meridian-persistence.check.cjs` mit 18 Tests: 13 Charakterisierungen für Profil-Normalisierung, Checkpoints, Storage-Ausfälle und UI-Backup-Abläufe sowie vier Schnittstellen-/Isolationstests und ein Kompatibilitätstest für den entfernten WASD-Schalter. Die betroffenen UI-Methoden werden ohne Konstruktor mit gezielten Testdoubles ausgeführt, nicht mit einem Browser-DOM. [Details](persistence-decoupling.md).
 
 `tests/helpers/game-scripts.cjs` liest benannte klassische Skripte aus `index.html` und lokale `src`-Dateien relativ zum Quellverzeichnis, unabhängig vom Arbeitsverzeichnis des Testprozesses. Die Speicherkomponente wird zusätzlich isoliert nur mit ausdrücklich übergebenen Regeln und Storage getestet; die UI-Schnittstelle separat mit einem Fake-Dienst. Die Core-Tests laden nur `core`, ein Harness-Test nur `content`, die Modelltests zusätzlich `world-view`. Die bisherigen Simulationsprüfungen verdrahten den Welt-Adapter beim Start wie die Anwendung; ein weiterer Test startet, simuliert und lädt ausschließlich mit `core`, `content`, `world`, `effects` und `simulation`, ohne Renderer oder dessen Stub. Abhängigkeiten werden explizit ausgewählt, aber wie im Browser in Dokumentreihenfolge ausgeführt. Alle gefundenen Skripte werden auf Syntax geprüft, ohne ihre Anzahl festzuschreiben. Fehlende oder doppelte Namen werden nicht stillschweigend übergangen. Module, `async`/`defer` und nicht unterstützte Pfad-/Attributformen werden bewusst abgelehnt; Details: [Core-Auslagerung](core-extraction.md).
 
@@ -55,7 +56,14 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Welt- und Effektgrenzen abgeschlossen
+## Aktueller Prüfstand: feste WASD-Steuerung
+
+- Tastaturkamera ausschließlich WASD, Attack-Move fest F; Option entfernt, Altprofile/-backups weiterhin Version 1. Hilfe, HUD und Tutorial angepasst.
+- **110 Tests bestanden**, vollständiger obiger Befehl, Node.js `v23.11.1` / Linux. Spiel-/Layout-/Effektreferenzen unverändert; absichtlich geändertes Standardprofil ohne `wasd`.
+- Chromium-`file://`-Probe bestanden: tatsächliche Tastaturereignisse für alle vier WASD-Richtungen und Loslassen, wirkungslose Pfeiltasten, Ctrl+A ohne Kameraschwenk, F/Escape, Field Manual und übriger erweiterter Spiel-/Save-/Backup-Ablauf. Start mit Altprofil `wasd:false`; keine Umschaltoption mehr. Nur bekannte Skybox-Ausnahmen.
+- Details und Grenzen: [WASD-Steuerung](wasd-controls.md).
+
+## Vorheriger Prüfstand: Welt- und Effektgrenzen abgeschlossen
 
 - CPU-Welt, GPU-Adapter, kosmetische Effektkomponente und reines Effektzeichnen getrennt. Die kosmetische RNG-Nutzung bleibt synchron und in bisheriger Reihenfolge.
 - **103 Tests bestanden**, vollständiger obiger Befehl, Node.js `v23.11.1` / Linux. Keine geänderten Layout-/Save-/Effekt-Sollwerte. Sechs gezielte Mutationen in Welt-RNG, Material, Fog, Effekt-RNG, Partikelphysik und Zeichnung wurden erkannt.

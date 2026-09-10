@@ -44,6 +44,8 @@ Wichtige Abhängigkeiten:
 - Exportierte Backups tragen `format: 'ashes-of-meridian'`, `version: 1`, `profile` und optional eine Operation. Backup-Codec und `restore()` prüfen unterschiedliche Teile des Formats; ein vollständig validiertes Schema gibt es nicht.
 - Der private `Store` in der Speicherkomponente fängt Storage-Ausnahmen ab und bietet einen flüchtigen In-Memory-Ersatz. Das ist keine dauerhafte Sicherung; Backup-Export bleibt wichtig.
 
+Der frühere Profilwert `settings.wasd` ist entfallen: Tastaturkamera ist fest WASD, Attack-Move fest F. Alte Version-1-Profile/Backups werden weiter gelesen; der obsolete Wert wird bei der Normalisierung entfernt. Keine automatische Schreibmigration beim Start, keine Änderung an Operationsdaten oder Storage-Schlüsseln. [Kompatibilität und Prüfungen](wasd-controls.md).
+
 Daraus folgt: Nicht nur Feldnamen und Versionen, sondern auch Kampagnenindizes, Definitionen und Kartenlayout sind für bestehende Spielstände relevant.
 
 ## Assets und direkter Dateistart

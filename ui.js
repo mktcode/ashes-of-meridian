@@ -342,7 +342,7 @@
         let st = this.profile.settings;
         this.openModal(
           'settings',
-          `<div class="eyebrow">EXPEDITION PREFERENCES</div><h1>Systems & sound.</h1><div class="settings-row"><label>Render quality<small>Reduce quality for older graphics hardware.</small></label><select data-setting="quality"><option value="2" ${st.quality === 2 ? 'selected' : ''}>High · shadows & glow</option><option value="1" ${st.quality === 1 ? 'selected' : ''}>Balanced · native resolution</option><option value="0" ${st.quality === 0 ? 'selected' : ''}>Performance · no shadows</option></select></div><div class="settings-row"><label>Master volume</label><input type="range" min="0" max="1" step=".01" value="${st.volume}" data-setting="volume"></div><div class="settings-row"><label>Atmospheric soundtrack</label><input type="checkbox" data-setting="music" ${st.music ? 'checked' : ''}></div><div class="settings-row"><label>Battlefield audio</label><input type="checkbox" data-setting="sfx" ${st.sfx ? 'checked' : ''}></div><div class="settings-row"><label>Edge scrolling<small>Pan at the edge of the battlefield.</small></label><input type="checkbox" data-setting="edge" ${st.edge ? 'checked' : ''}></div><div class="settings-row"><label>WASD camera<small>Moves attack-move from A to F.</small></label><input type="checkbox" data-setting="wasd" ${st.wasd ? 'checked' : ''}></div><div class="settings-row"><label>Always show health bars</label><input type="checkbox" data-setting="healthbars" ${st.healthbars ? 'checked' : ''}></div><div class="settings-row"><label>Field guidance<small>Contextual guidance during the first operation.</small></label><input type="checkbox" data-setting="tips" ${st.tips ? 'checked' : ''}></div>${
+          `<div class="eyebrow">EXPEDITION PREFERENCES</div><h1>Systems & sound.</h1><div class="settings-row"><label>Render quality<small>Reduce quality for older graphics hardware.</small></label><select data-setting="quality"><option value="2" ${st.quality === 2 ? 'selected' : ''}>High · shadows & glow</option><option value="1" ${st.quality === 1 ? 'selected' : ''}>Balanced · native resolution</option><option value="0" ${st.quality === 0 ? 'selected' : ''}>Performance · no shadows</option></select></div><div class="settings-row"><label>Master volume</label><input type="range" min="0" max="1" step=".01" value="${st.volume}" data-setting="volume"></div><div class="settings-row"><label>Atmospheric soundtrack</label><input type="checkbox" data-setting="music" ${st.music ? 'checked' : ''}></div><div class="settings-row"><label>Battlefield audio</label><input type="checkbox" data-setting="sfx" ${st.sfx ? 'checked' : ''}></div><div class="settings-row"><label>Edge scrolling<small>Pan at the edge of the battlefield.</small></label><input type="checkbox" data-setting="edge" ${st.edge ? 'checked' : ''}></div><div class="settings-row"><label>Always show health bars</label><input type="checkbox" data-setting="healthbars" ${st.healthbars ? 'checked' : ''}></div><div class="settings-row"><label>Field guidance<small>Contextual guidance during the first operation.</small></label><input type="checkbox" data-setting="tips" ${st.tips ? 'checked' : ''}></div>${
             this.game.s
               ? `<div class="settings-row"><label>Simulation speed</label><select id="settingSpeed">${[
                   [0.75, '0.75× · deliberate'],
@@ -373,10 +373,6 @@
         if (k === 'quality') {
           this.R.quality = v;
           this.R.resize();
-        }
-        if (k === 'wasd') {
-          this.setControlHints();
-          this.actionSignature = '';
         }
         this.persist();
       }
@@ -417,14 +413,13 @@
       }
       showHelp() {
         if (this.view === 'game') this.paused = true;
-        let attack = this.profile.settings.wasd ? 'F' : 'A';
         this.openModal(
           'help',
           `<div class="eyebrow">MERIDIAN FIELD MANUAL</div><h1>Bring your people home.</h1><div class="help-grid"><div><h3>Command your force</h3>${[
             ['Select / box-select', 'Left click / drag'],
             ['Context order / rally point', 'Right click'],
             ['Add to selection / queue orders', 'Shift'],
-            ['Attack-move', attack + ' → click ground'],
+            ['Attack-move', 'F → click ground'],
             ['Move / hold / stop', 'M / H / X'],
             ['Select all combat units', 'F2'],
             ['Select next worker', 'F3'],
@@ -433,7 +428,7 @@
           ]
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><kbd>${b}</kbd></div>`)
             .join('')}<h3>Navigate</h3>${[
-            ['Pan camera', this.profile.settings.wasd ? 'WASD / arrows' : 'Arrow keys'],
+            ['Pan camera', 'WASD'],
             ['Pan with mouse', 'Middle-button drag'],
             ['Zoom', 'Mouse wheel'],
             ['Center on base / selection', 'Space / Home'],
@@ -693,7 +688,7 @@
           f = s.faction;
         if (this.tab === 'orders') {
           for (let [k, l, ic, hot] of [
-            ['attackMove', 'Attack-move', 'attack', this.profile.settings.wasd ? 'F' : 'A'],
+            ['attackMove', 'Attack-move', 'attack', 'F'],
             ['move', 'Move', 'move', 'M'],
             ['hold', 'Hold', 'hold', 'H'],
             ['stop', 'Stop', 'stop', 'X'],
@@ -1033,7 +1028,7 @@
             'The objective counts new combat recruits, not your starting squad. Keep the muster station’s queue running.';
         } else {
           title = '04 / TAKE BACK THE LANDING FIELD';
-          text = `Press <b>F2</b> to select your combat force. Press <b>${this.profile.settings.wasd ? 'F' : 'A'}</b>, then click toward the enemy command in the northeast. Right-click the minimap to issue distant orders.`;
+          text = `Press <b>F2</b> to select your combat force. Press <b>F</b>, then click toward the enemy command in the northeast. Right-click the minimap to issue distant orders.`;
         }
         $('tip').classList.remove('hidden');
         $('tip').innerHTML =
@@ -1043,7 +1038,7 @@
       }
       setControlHints() {
         $('controlstrip').innerHTML =
-          `<span><kbd>LMB</kbd> SELECT / DRAG BOX</span><span><kbd>RMB</kbd> SMART ORDER</span><span><kbd>${this.profile.settings.wasd ? 'F' : 'A'}</kbd> ATTACK-MOVE</span><span><kbd>${this.profile.settings.wasd ? 'WASD' : 'ARROWS'}</kbd> PAN · <kbd>WHEEL</kbd> ZOOM</span><span><kbd>F2</kbd> COMBAT · <kbd>SPACE</kbd> BASE</span><span><kbd>CTRL 1–9</kbd> GROUP</span>`;
+          `<span><kbd>LMB</kbd> SELECT / DRAG BOX</span><span><kbd>RMB</kbd> SMART ORDER</span><span><kbd>F</kbd> ATTACK-MOVE</span><span><kbd>WASD</kbd> PAN · <kbd>WHEEL</kbd> ZOOM</span><span><kbd>F2</kbd> COMBAT · <kbd>SPACE</kbd> BASE</span><span><kbd>CTRL 1–9</kbd> GROUP</span>`;
       }
       bind() {
         document.addEventListener('pointerdown', e => {
@@ -1369,11 +1364,7 @@
             'f9',
             ' ',
             'home',
-            'tab',
-            'arrowup',
-            'arrowdown',
-            'arrowleft',
-            'arrowright'
+            'tab'
           ].includes(k) ||
           (e.ctrlKey && ['s', 'a'].includes(k))
         )
@@ -1391,7 +1382,8 @@
           return;
         }
         if (this.paused) return;
-        this.keys.add(k);
+        if (!e.ctrlKey && !e.altKey && !e.metaKey && ['w', 'a', 's', 'd'].includes(k))
+          this.keys.add(k);
         if (e.repeat) return;
         if (e.ctrlKey && /^[1-9]$/.test(k)) {
           e.preventDefault();
@@ -1414,8 +1406,8 @@
           return;
         }
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        if (this.profile.settings.wasd && ['w', 'a', 's', 'd'].includes(k)) return;
-        if (k === (this.profile.settings.wasd ? 'f' : 'a')) this.setMode('attackMove');
+        if (['w', 'a', 's', 'd'].includes(k)) return;
+        if (k === 'f') this.setMode('attackMove');
         else if (k === 'm') this.setMode('move');
         else if (k === 'h' || k === 'x') this.perform(k === 'h' ? 'hold' : 'stop');
         else if (k === 'q') this.setTab('orders');
@@ -1655,12 +1647,11 @@
         if (!this.paused) {
           let dx = 0,
             dz = 0,
-            keys = this.keys,
-            wasd = this.profile.settings.wasd;
-          if (keys.has('arrowleft') || (wasd && keys.has('a'))) dx--;
-          if (keys.has('arrowright') || (wasd && keys.has('d'))) dx++;
-          if (keys.has('arrowup') || (wasd && keys.has('w'))) dz--;
-          if (keys.has('arrowdown') || (wasd && keys.has('s'))) dz++;
+            keys = this.keys;
+          if (keys.has('a')) dx--;
+          if (keys.has('d')) dx++;
+          if (keys.has('w')) dz--;
+          if (keys.has('s')) dz++;
           if (this.profile.settings.edge && this.pointer.inside && !this.drag) {
             if (this.pointer.x < 13) dx--;
             if (this.pointer.x > innerWidth - 13) dx++;

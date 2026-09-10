@@ -9,7 +9,7 @@ const defaults = {
   version: 1, unlocked: 0, credits: 0, medals: {}, best: {}, upgrades: {},
   skirmishBest: 0, ending: null,
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, edge: false,
-    tips: true, healthbars: false, wasd: false, difficulty: 'standard', cameraSpeed: 1 }
+    tips: true, healthbars: false, difficulty: 'standard', cameraSpeed: 1 }
 };
 const backup = (profile = { version: 1 }, operation = null) =>
   JSON.stringify({ format: 'ashes-of-meridian', version: 1, profile, operation });
@@ -88,6 +88,20 @@ test('invalid profile JSON/version resets; a mid-normalization error retains par
   assert.deepEqual(json(h.readProfile()), { ...defaults, unlocked: 4, credits: 17, upgrades: 'bad' });
   assert.equal(h.warnings.length, 2);
   assert.ok(h.warnings.every(w => w[0] === 'Profile reset:'));
+});
+
+test('obsolete WASD toggle is discarded from loaded profiles and imported backups', async () => {
+  for (const wasd of [false, true, 'legacy']) {
+    const h = setup(), profile = { version: 1, credits: 7, settings: { wasd, music: false } };
+    h.data.set(PROFILE, JSON.stringify(profile));
+    const loaded = h.readProfile();
+    assert.equal('wasd' in loaded.settings, false);
+    assert.equal(loaded.settings.music, false); assert.equal(loaded.credits, 7);
+    await h.importText(backup(profile));
+    assert.equal('wasd' in h.ui.profile.settings, false);
+    h.ui.persist();
+    assert.equal('wasd' in JSON.parse(h.data.get(PROFILE)).settings, false);
+  }
 });
 
 test('persist writes the unchanged version-1 profile JSON and key', () => {
