@@ -57,7 +57,13 @@ Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Be
 - Die ursprünglichen 24 Modell-/Terrainprüfungen bestehen weiterhin, insbesondere alle 16 unveränderten Layout-Prüfsummen.
 - Im HTML wurden ausschließlich sieben `data-meridian-script`-Attribute ergänzt; Skriptinhalte, CSS, sonstiges HTML und Assets wurden mit dem Ausgangsstand verglichen und sind unverändert.
 - Herkunft des festen Fixtures und weitere Prüfergebnisse: [Referenztests](reference-tests.md).
-- Kein Browserlauf: Die Attribute ändern weder Script-Typ, Reihenfolge noch Inhalt. Die bestehende offene `file://`-/WebGL-Kompatibilitätsprüfung ist damit nicht erledigt.
+- Bei der Testerweiterung kein Browserlauf durch den Assistenten: Die Attribute ändern weder Script-Typ, Reihenfolge noch Inhalt.
+
+### Nachträglicher Nutzerbericht zum Dateistart
+
+Nach Commit `a4421dd` hat der Nutzer das Spiel kurz direkt über `file://` im Browser angetestet und berichtet: „Scheint in Ordnung zu sein.“ Das ist ein positiver, vom Nutzer gemeldeter Smoke-Test, keine durch den Assistenten ausgeführte Prüfung.
+
+Browser/Version, Betriebssystem und einzelne geprüfte Funktionen wurden nicht angegeben. Die vollständige Browser-Checkliste bleibt daher offen; insbesondere sind Skybox-Upload, dauerhafte Speicherung, Backup-Transfer und HTTP-Start damit nicht gezielt bestätigt.
 
 ## Historischer Prüfstand: Dokumentationsbereinigung
 
@@ -73,4 +79,4 @@ Künftige Prüfnotizen unter `docs/` ablegen und mit Commit/Änderungsumfang, Um
 
 ## Nächste Erweiterung des Sicherheitsnetzes
 
-Vor Änderungen an weiteren Bereichen passende Szenarien ergänzen, nicht aus den 44 Prüfungen eine umfassende Spielabdeckung ableiten. Vor einer neuen Verpackung steht insbesondere die Browserprüfung aus. Weitere Schritte und die bekannten RNG-Grenzen stehen in der [Architektur](architecture.md#nächste-schritte-und-späteres-zielbild).
+Vor Änderungen an weiteren Bereichen passende Szenarien ergänzen, nicht aus den 44 Prüfungen eine umfassende Spielabdeckung ableiten. Vor einer neuen Verpackung steht insbesondere die systematische Browserprüfung aus. Weitere Schritte und die bekannten RNG-Grenzen stehen in der [Architektur](architecture.md#nächste-schritte-und-späteres-zielbild).
