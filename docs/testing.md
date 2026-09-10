@@ -5,7 +5,7 @@
 Aus dem Projektverzeichnis mit Node.js ausführen; weder npm-Pakete noch Browser oder Build sind erforderlich:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs
 ```
 
 Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit gilt für den JavaScript-Heap, nicht als Obergrenze für den gesamten Prozessspeicher. Die Testdateien werden nacheinander ausgeführt.
@@ -14,6 +14,7 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 
 | Testdatei | Prüfungen |
 | --- | --- |
+| `tests/ashes-of-meridian-core.check.cjs` | 8 Tests: feste RNG-Folgen, Seed-Konvertierung und unabhängige Generatoren; Vektorrechnung; Matrizenidentität, homogene Koordinaten, Multiplikationsreihenfolge, Projektion, Kamera und Inversion einschließlich bestehender Sonderfälle |
 | `tests/ashes-of-meridian-terrain.check.cjs` | 19 Tests: Syntax aller sieben Inline-Skripte; deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
 | `tests/ashes-of-meridian-crystals.check.cjs` | 5 Tests: Kristallgeometrie mit 36 Dreiecken und Einheitsnormalen; 80 zeitstabile Vorkommensmodelle; Größenänderung beim Abbau ohne Mutation der Entität; Vorschauparameter; bestehende Aether-Formen und Animation |
 | `tests/ashes-of-meridian-harness.check.cjs` | 5 Tests: explizite Skriptauswahl und Dokumentreihenfolge; fehlende/doppelte Namen und unerwartete Verpackung; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
@@ -51,7 +52,13 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: JavaScript-Formatierung
+## Aktueller Prüfstand: Mathematik-/RNG-Referenzen
+
+- Acht neue Core-Tests gegen die unveränderte Implementierung aus `e0734ec`, noch vor einer Auslagerung. Insgesamt **52 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux.
+- Herkunft der festen Zufallsfolgen und geprüfte Grenzen: [Core-Referenzen](core-extraction.md).
+- Keine Spielcode-/Verpackungsänderung in diesem Testschritt; kein zusätzlicher Browserlauf.
+
+## Vorheriger Prüfstand: JavaScript-Formatierung
 
 - Alle sieben Inline-Skripte wurden separat formatiert, ohne Auslagerung oder absichtliche Verhaltensänderung.
 - Normalisierte Babel-Syntaxbäume vor/nach der Formatierung sind identisch. Die 246 erfassten Template-Segmente und eingebetteten Bildliterale sind zusätzlich im Rohtext unverändert. Sonstiges HTML, CSS, Assets, Tests und Fixtures wurden nicht verändert.
@@ -96,4 +103,4 @@ Künftige Prüfnotizen unter `docs/` ablegen und mit Commit/Änderungsumfang, Um
 
 ## Nächste Erweiterung des Sicherheitsnetzes
 
-Vor Änderungen an weiteren Bereichen passende Szenarien ergänzen, nicht aus den 44 Prüfungen eine umfassende Spielabdeckung ableiten. Vor einer neuen Verpackung steht insbesondere die systematische Browserprüfung aus. Weitere Schritte und die bekannten RNG-Grenzen stehen in der [Architektur](architecture.md#nächste-schritte-und-späteres-zielbild).
+Vor Änderungen an weiteren Bereichen passende Szenarien ergänzen, nicht aus den vorhandenen Prüfungen eine umfassende Spielabdeckung ableiten. Vor einer neuen Verpackung steht insbesondere die systematische Browserprüfung aus. Weitere Schritte und die bekannten RNG-Grenzen stehen in der [Architektur](architecture.md#nächste-schritte-und-späteres-zielbild).
