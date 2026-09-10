@@ -7,6 +7,7 @@ const { join } = require('node:path');
 const vm = require('node:vm');
 const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
+const { useLegacyCrystalLayout } = require('./helpers/legacy-crystal-layout.cjs');
 
 const scripts = readScripts();
 const fixtureText = readFileSync(join(__dirname, 'fixtures/operation-v1.json'), 'utf8');
@@ -167,8 +168,9 @@ test('fixed steps finish production once, retain reserved supply and account for
   close(game.s.gas, 80 + 11.05 * .25);
 });
 
-test('five-second command/production/scan scenario matches the fixed ab92a12 snapshot', () => {
+test('five-second scenario on the explicit historical resource layout matches the fixed ab92a12 snapshot', () => {
   const { game } = tutorial();
+  useLegacyCrystalLayout(game);
   checkpointScenario(game);
   assert.deepEqual(json(game.snapshot()), JSON.parse(fixtureText));
 });
@@ -190,11 +192,29 @@ test('snapshot detaches nested entity, queue, camera and explored data from live
   assert.equal(snapshot.entities[0].hp, 1);
 });
 
-test('version-1 fixture restores persistent state and rebuilds navigation, indexes and fog without mutating input', () => {
+test('version-1 fixture restores state with targeted crystal migration and rebuilds navigation, indexes and fog', () => {
   const { game, renderer, events } = createGame();
   const fixture = JSON.parse(fixtureText), before = json(fixture);
   game.restore(fixture);
-  const { explored, ...savedState } = fixture;
+  const { explored, ...savedState } = json(fixture);
+  // Explicit compatibility exception: standard crystal slots 1–4, eastern slot 0,
+  // and paths of miners heading to those IDs. Every other saved value stays identical.
+  const sites = [[-67,43],[-25,27],[6,40],[-57,-25],[27,-51],[65,6],[29,64],[7,-65]];
+  const moved = new Set();
+  savedState.entities.filter(e => e.kind === 'resource' && e.type === 'crystal').forEach((e, k) => {
+    const j = k % 5, i = Math.floor(k / 5);
+    if (!j && i !== 5) return;
+    const angle = j * Math.PI * 2 / 5 + (i === 5 ? 4.7 : i * .8), actual = game.get(e.id);
+    close(actual.x, sites[i][0] + Math.sin(angle) * 3.9);
+    close(actual.z, sites[i][1] + Math.cos(angle) * 3);
+    e.x = actual.x; e.z = actual.z; moved.add(e.id);
+  });
+  assert.equal(moved.size, 33);
+  for (const e of savedState.entities) {
+    if (e.kind === 'unit' && e.type === 'worker' && !e.returning && e.order?.type === 'mine' && moved.has(e.order.id)) {
+      e.path = []; e.pi = 0; e.nextPath = 0; delete e.pathGoal;
+    }
+  }
   assert.deepEqual(json(game.s), savedState);
   assert.deepEqual(fixture, before);
   assert.notStrictEqual(game.s.entities, fixture.entities);

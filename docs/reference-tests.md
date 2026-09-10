@@ -2,6 +2,8 @@
 
 Bericht zur Einführung der Referenztests in `a4421dd`. Der damalige Inline-Loader wurde später durch `tests/helpers/game-scripts.cjs` ersetzt; heutiger Vertrag und zusätzliche Prüfungen stehen unter [Core-Auslagerung](core-extraction.md). Die Fixture-Herkunft und die folgenden damaligen Ergebnisse bleiben unverändert gültige historische Angaben.
 
+Spätere fachliche Ausnahme: Die [Kristall-Platzierungskorrektur](crystal-spacing.md) ändert neue Ressourcenpositionen und migriert erkannte Altpositionen beim Laden. Das ursprüngliche Fixture bleibt unverändert; der historische Fünf-Sekunden-Test stellt dessen altes Ressourcenarrangement ausdrücklich als Eingabe her. Neue Verteilung und Migration werden separat geprüft.
+
 ## Umfang
 
 Die Test-Erweiterung nach dem Dokumentationscommit `49349bf` führt einen gemeinsamen HTML-Skriptloader und Renderer-Stub sowie 5 Harness- und 15 Simulationsprüfungen ein. Die 24 vorhandenen Terrain-/Kristallprüfungen bleiben erhalten. Die einzige Änderung an `index.html` sind sieben identifizierende `data-meridian-script`-Attribute; kein Skriptinhalt und kein Asset wurde geändert.

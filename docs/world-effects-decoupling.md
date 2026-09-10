@@ -1,5 +1,7 @@
 # Welt und kosmetische Effekte entkoppeln
 
+Späterer Prüfhinweis: Seit der [Kristall-Platzierungskorrektur](crystal-spacing.md) stellt der Effektszenario-Helfer die ursprünglichen Ressourcenpositionen explizit als Eingabe her. Die hier dokumentierten festen Effekt-/Snapshot-/RNG-Referenzen und Welt-Prüfsummen bleiben unverändert; neue Ressourcenplatzierung und Altstandmigration werden separat geprüft.
+
 ## Referenzen vor dem Umbau
 
 Ausgangspunkt `97bfda6`. Vor Änderungen an Spielquellen 22 Charakterisierungen ergänzt und separat committet. `tests/fixtures/presentation-v1.json` wurde einmalig aus diesem Stand erzeugt, nicht während der Tests und nicht zur Reparatur fehlgeschlagener Prüfungen.

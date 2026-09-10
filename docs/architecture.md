@@ -46,6 +46,8 @@ Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-la
 - Exportierte Backups tragen `format: 'ashes-of-meridian'`, `version: 1`, `profile` und optional eine Operation. Backup-Codec und `restore()` prüfen unterschiedliche Teile des Formats; ein vollständig validiertes Schema gibt es nicht.
 - Der private `Store` in der Speicherkomponente fängt Storage-Ausnahmen ab und bietet einen flüchtigen In-Memory-Ersatz. Das ist keine dauerhafte Sicherung; Backup-Export bleibt wichtig.
 
+Alloy-Vorkommen werden an jedem Ressourcenstandort auf fünf getrennte Ellipsenplätze verteilt; der östliche Standort lässt eine Lücke zur Startfabrik. `MeridianGame.crystalPosition()` ist die gemeinsame Positionsregel. Beim Restore erkennt `repairLegacyCrystalPositions()` ausschließlich die alten generierten Koordinaten und plant die Korrektur vor dem Wiederaufbau der Indizes. IDs, Restmengen und Versions-/Storage-Schlüssel bleiben erhalten; nur Positionen und erforderliche aktive Mining-Wege ändern sich. Blockierte Zielplätze werden deterministisch umgangen, ohne Gebäude zu verschieben; ohne sichere Gesamtanordnung bleibt der Standort unangetastet. [Kompatibilitätsplan und Prüfungen](crystal-spacing.md).
+
 Der frühere Profilwert `settings.wasd` ist entfallen: Tastaturkamera ist fest WASD, Attack-Move fest F. Alte Version-1-Profile/Backups werden weiter gelesen; der obsolete Wert wird bei der Normalisierung entfernt. Keine automatische Schreibmigration beim Start, keine Änderung an Operationsdaten oder Storage-Schlüsseln. [Kompatibilität und Prüfungen](wasd-controls.md).
 
 Daraus folgt: Nicht nur Feldnamen und Versionen, sondern auch Kampagnenindizes, Definitionen und Kartenlayout sind für bestehende Spielstände relevant.

@@ -2,6 +2,7 @@ const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
+const { useLegacyCrystalLayout } = require('./legacy-crystal-layout.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
@@ -32,6 +33,8 @@ const effectCases = ['explosion', 'cap-bounce', 'damage', 'weapons', 'workers', 
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
   game.start(0, { seed: 1409, difficulty: 'standard', faction: 0 });
+  // Keep the recorded effect scenarios' inputs, not the former new-game placement bug.
+  useLegacyCrystalLayout(game);
   game.world.visible.fill(255);
   const player = type => game.alive(e => e.team === 0 && e.type === type)[0];
   if (kind === 'explosion') {

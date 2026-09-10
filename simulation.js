@@ -109,13 +109,8 @@
         }
         for (let [i, site] of RESOURCE_SITES.entries()) {
           for (let j = 0; j < 5; j++) {
-            let a = j * 2.1 + i * 0.8;
-            this.spawnResource(
-              'crystal',
-              site.x + Math.sin(a) * 3.9,
-              site.z + Math.cos(a) * 3.0,
-              1800 + Math.floor(this.random() * 900)
-            );
+            let p = this.crystalPosition(i, j);
+            this.spawnResource('crystal', p.x, p.z, 1800 + Math.floor(this.random() * 900));
           }
           this.spawnResource('gas', site.x + (i === 0 ? 5 : 7), site.z + (i === 0 ? 18 : 7), 999999);
         }
@@ -288,6 +283,62 @@
       }
       spawnUnit(type, x, z, team, faction, extra = {}) {
         return this.spawn('unit', type, x, z, team, faction, extra);
+      }
+      crystalPosition(siteIndex, depositIndex) {
+        // Leave a gap toward the adjacent starting factory at the eastern site.
+        const phase = siteIndex === 5 ? 4.7 : siteIndex * 0.8;
+        const site = RESOURCE_SITES[siteIndex], a = (depositIndex * Math.PI * 2) / 5 + phase;
+        return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3.0 };
+      }
+      repairLegacyCrystalPositions() {
+        const moved = new Set();
+        for (const [i, site] of RESOURCE_SITES.entries()) {
+          const targets = new Map();
+          for (const e of this.s.entities) {
+            if (e.kind !== 'resource' || e.type !== 'crystal' || e.hp <= 0) continue;
+            // Recognize only the old generated coordinates, not arbitrary nearby
+            // resources, and keep IDs, amounts and all other data.
+            for (let j = 0; j < 5; j++) {
+              const a = j * 2.1 + i * 0.8;
+              const p = this.crystalPosition(i, j);
+              if (Math.hypot(e.x - site.x - Math.sin(a) * 3.9, e.z - site.z - Math.cos(a) * 3.0) < 1e-8 && distance(e, p) > 1e-8)
+                targets.set(e, p);
+            }
+          }
+          if (!targets.size) continue;
+          const occupied = this.s.entities.filter(e => e.hp > 0 && !e.evacuated && e.kind !== 'unit' && !targets.has(e));
+          const plan = new Map();
+          const free = (p, e) => {
+            for (const dx of [-e.size, 0, e.size])
+              for (const dz of [-e.size, 0, e.size])
+                if (this.world.blockedAt(p.x + dx, p.z + dz)) return false;
+            return occupied.every(o => distance(p, o) >= e.size + o.size + 0.8) &&
+              [...plan].every(([o, q]) => distance(p, q) >= e.size + o.size + 0.8);
+          };
+          // Reserve unobstructed standard slots first. Older saves may have built
+          // on a new slot; search nearby deterministically rather than moving a building.
+          for (const [e, p] of targets) if (free(p, e)) plan.set(e, p);
+          for (const [e, preferred] of targets) {
+            if (plan.has(e)) continue;
+            search: for (let radius = 1; radius <= 16; radius++) {
+              for (let k = 0; k < 32; k++) {
+                const a = (k * Math.PI * 2) / 32;
+                const p = { x: preferred.x + Math.sin(a) * radius, z: preferred.z + Math.cos(a) * radius };
+                if (free(p, e)) { plan.set(e, p); break search; }
+              }
+            }
+          }
+          // Atomic per site: if no safe arrangement exists, leave its saved data intact.
+          if (plan.size !== targets.size) continue;
+          for (const [e, p] of plan) { e.x = p.x; e.z = p.z; moved.add(e.id); }
+        }
+        for (const e of this.s.entities) {
+          if (e.kind === 'unit' && e.type === 'worker' && !e.returning &&
+              e.order?.type === 'mine' && moved.has(e.order.id)) {
+            e.path = []; e.pi = 0; e.nextPath = 0;
+            delete e.pathGoal;
+          }
+        }
       }
       spawnResource(type, x, z, amount) {
         return this.spawn('resource', type, x, z, -1, 0, { amount, size: type === 'gas' ? 1.5 : 1.3 });
@@ -1774,6 +1825,7 @@
           throw Error('Unknown skirmish rules.');
         this.world = new Battlefield(data.seed, this.s.m.biome);
         this.world.rebuild(this.s.entities);
+        this.repairLegacyCrystalPositions();
         if (data.explored?.length === GRID * GRID)
           this.world.explored.set(data.explored.map(x => (x ? 1 : 0)));
         delete this.s.explored;
