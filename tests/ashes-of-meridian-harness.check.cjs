@@ -20,6 +20,35 @@ function sandbox(t) {
   return { directory, rootDir };
 }
 
+test('content loads alone with reference catalog order, classic bindings and naming/icon helpers', () => {
+  // First verified against a3568ae's inline content block, before extraction.
+  const context = loadScripts(['content']);
+  const { FACTIONS, UNITS, BUILDINGS, TECH, META, BIOMES, CAMPAIGN, ACTS, unitName, buildingName, icon } =
+    vm.runInContext('({ FACTIONS, UNITS, BUILDINGS, TECH, META, BIOMES, CAMPAIGN, ACTS, unitName, buildingName, icon })', context);
+  for (const name of ['M4', 'seeded', 'MeridianRenderer', 'document', 'window']) {
+    assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
+  }
+  assert.equal(context.CAMPAIGN, undefined);
+  assert.strictEqual(context.icon, icon);
+  assert.deepEqual([FACTIONS.length, ACTS.length, Object.keys(TECH).length, Object.keys(META).length], [3, 4, 6, 6]);
+  assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'scout', 'medic', 'tank', 'artillery', 'air', 'hero', 'convoy', 'avatar']);
+  assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret', 'lab']);
+  assert.deepEqual(Object.keys(BIOMES), ['ash', 'rust', 'choir', 'court', 'star']);
+  assert.deepEqual(Array.from(CAMPAIGN, mission => mission.seed), [1409, 7012, 9017, 1905, 2219, 6633, 1144, 4442, 8141, 9897, 11007, 24080, 38744, 43015, 74408, 90001]);
+  assert.equal(unitName('worker'), 'Prospector');
+  assert.equal(unitName('worker', 1), 'Tender');
+  assert.equal(unitName('worker', 2), 'Custodian');
+  assert.equal(unitName('convoy', 2), 'Civilian crawler');
+  assert.equal(unitName('avatar'), 'The Starbound Avatar');
+  assert.equal(unitName('unknown-unit'), 'unknown-unit');
+  assert.equal(buildingName('hq'), 'Command center');
+  assert.equal(buildingName('hq', 1), 'Memory heart');
+  assert.equal(buildingName('hq', 2), 'Silent throne');
+  assert.equal(buildingName('unknown-building'), 'unknown-building');
+  assert.equal(icon('unknown-icon'), icon('hero'));
+  assert.match(icon('worker'), /^<svg viewBox="0 0 24 24".*<path d="M8 15l-4 5/);
+});
+
 test('loader selects explicit names in document order, skipping unrelated scripts', () => {
   const scripts = readScripts(sample);
   assert.deepEqual(scripts.map(s => s.name), ['base', 'unused', 'dependent']);

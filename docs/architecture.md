@@ -2,19 +2,19 @@
 
 ## Status und Geltungsbereich
 
-Bestandsaufnahme des Ausgangsstands `ab92a12`, ergänzt um Referenztests, CSS-Auslagerung, JavaScript-Formatierung und die erste JavaScript-Auslagerung nach `core.js`. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Die sieben Skript-Tags wurden benannt, der zentrale CSS-Block unverändert ausgelagert und JavaScript ohne Änderung der Syntaxbäume lesbar formatiert. Assets und eingebettete Texturen blieben unverändert.
+Bestandsaufnahme des Ausgangsstands `ab92a12`, ergänzt um Referenztests, CSS-Auslagerung, JavaScript-Formatierung und die JavaScript-Auslagerungen nach `core.js` und `content.js`. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Die sieben Skript-Tags wurden benannt, der zentrale CSS-Block unverändert ausgelagert und JavaScript ohne Änderung der Syntaxbäume lesbar formatiert. Assets und eingebettete Texturen blieben unverändert.
 
-`index.html` (HTML und übriges JavaScript), `core.js` (Mathematik/RNG) und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. JavaScript-Methoden sind nun mehrzeilig formatiert; lange Bild-Data-URLs und Template-Inhalte bleiben bewusst unverändert. Ablauf und Prüfungen: [JavaScript-Formatierung](javascript-formatting.md).
+`index.html` (HTML und übriges JavaScript), `core.js` (Mathematik/RNG), `content.js` (Spieldefinitionen, Texte und zugehörige Hilfsfunktionen) und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. JavaScript-Methoden sind nun mehrzeilig formatiert; lange Bild-Data-URLs und Template-Inhalte bleiben bewusst unverändert. Ablauf und Prüfungen: [JavaScript-Formatierung](javascript-formatting.md).
 
 ## Codekarte
 
-Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Stylesheet ein. Nach dem statischen HTML folgen das klassische externe Skript `core.js` und sieben klassische Inline-Skripte. Sie teilen sich globale lexikalische Bindungen und werden synchron in Dokumentreihenfolge ausgeführt; kein `async`, `defer` oder `type="module"`. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen ES-Module. Zur Navigation die Symbolnamen in `core.js` beziehungsweise `index.html` suchen. Die Tags tragen `data-meridian-script` mit den Namen `core`, `renderer`, `content`, `world`, `simulation`, `audio`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
+Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Stylesheet ein. Nach dem statischen HTML folgen acht klassische Skripte: `core` und `content` als lokale Dateien, die übrigen sechs inline. Sie teilen sich globale lexikalische Bindungen und werden synchron in Dokumentreihenfolge ausgeführt; kein `async`, `defer` oder `type="module"`. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen ES-Module. Zur Navigation die Symbolnamen in `core.js`, `content.js` beziehungsweise `index.html` suchen. Die Tags tragen `data-meridian-script` mit den Namen `core`, `renderer`, `content`, `world`, `simulation`, `audio`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
 
 | Block | Einstieg / wichtige Symbole | Zuständigkeiten heute |
 | --- | --- | --- |
 | 1 / `core` | `M4`, `V`, `seeded` in `core.js` | Matrizen, Vektoren und Seed-RNG, ohne Browserabhängigkeiten |
 | 2 / `renderer` | `MAT`, `geom`, `MeridianRenderer` | Eingebettete Texturen, Meshes, GLSL-Shader, WebGL-Ressourcen, Kamera und Renderpässe |
-| 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `TECH`, `META`, `BIOMES`, `CAMPAIGN` | Spieldefinitionen, Balancing, Kampagne, Texte, Icons und Namenshelfer |
+| 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `TECH`, `META`, `BIOMES`, `CAMPAIGN`, `ACTS`, `ICON_PATHS` und Hilfsfunktionen in `content.js` | Spieldefinitionen, Balancing, Kampagne, Texte, Icons und Namenshelfer |
 | 4 / `world` | `Heap`, `Battlefield`, `renderEntity` | Kartenkonstanten, Terrain, Hindernisraster, Navigation, Sichtbarkeit und prozedurale Entitätsmodelle |
 | 5 / `simulation` | `DIFFICULTY`, `MeridianGame` | Missionsaufbau, Entitäten, Befehle, Wirtschaft, Kampf, KI, Ziele, Effektdaten und Snapshot/Restore |
 | 6 / `audio` | `MeridianAudio` | Prozedurales Web Audio für Musik und Geräusche |
@@ -42,7 +42,7 @@ Daraus folgt: Nicht nur Feldnamen und Versionen, sondern auch Kampagnenindizes, 
 
 ## Assets und direkter Dateistart
 
-`core.js` und `styles.css` liegen neben `index.html` und müssen mit ausgeliefert werden. `core.js` wird über `<script data-meridian-script="core" src="./core.js"></script>` vor den übrigen Skripten geladen; Funktionen und globale Bindungen bleiben erhalten. Die [Core-Auslagerungsprüfung](core-extraction.md) bestätigt den direkten Dateistart.
+`core.js`, `content.js` und `styles.css` liegen neben `index.html` und müssen mit ausgeliefert werden. `core.js` wird über `<script data-meridian-script="core" src="./core.js"></script>` vor den übrigen Skripten geladen; Funktionen und globale Bindungen bleiben erhalten. Die [Core-Auslagerungsprüfung](core-extraction.md) bestätigt den direkten Dateistart. `content.js` wird entsprechend über `<script data-meridian-script="content" src="./content.js"></script>` an der bisherigen Stelle zwischen `renderer` und `world` geladen. Werte, Texte und Reihenfolge blieben unverändert; siehe [Content-Auslagerung](content-extraction.md).
 
 Das Stylesheet enthält derzeit keine `url(...)`- oder `@import`-Verweise. Künftig beziehen sich relative Asset-URLs im Stylesheet auf dessen Speicherort. Die [CSS-Auslagerungsprüfung](css-extraction.md) bestätigt das Laden über `file://` in Chromium ohne Server oder besondere Sicherheitsflags.
 
@@ -78,7 +78,9 @@ Als erster rein struktureller Schritt wurde das zentrale CSS ohne Umformatierung
 
 Nach dem separaten Formatierungscommit wurden `M4`, `V` und `seeded` zunächst im alten Renderer-Block getestet und anschließend unverändert nach `core.js` ausgelagert. Der Testloader unterstützt jetzt explizite lokale klassische Skriptdateien. Globale Bindungen und Dokumentreihenfolge bleiben erhalten; noch keine ES-Module oder neue Build-Werkzeuge.
 
-Als weitere kleine JavaScript-Bereiche eignen sich Inhaltsdefinitionen und Speicherformat-Validierung. Danach Weltberechnung von Renderdaten, Simulation von kosmetischen Effekten sowie UI-Ansichten von Eingabe und Persistenz trennen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
+Anschließend wurde der vollständige `content`-Block samt `icon`, `unitName` und `buildingName` unverändert nach `content.js` verschoben. Ein zusätzlicher Isolationstest bestätigt das Laden ohne Renderer, Core oder Browserglobals. Dies verbessert die Quellenübersicht, führt aber noch keine expliziten Modulschnittstellen ein.
+
+Als weiterer kleiner JavaScript-Bereich eignet sich Speicherformat-Validierung; dafür zunächst passende Charakterisierungstests ergänzen. Danach Weltberechnung von Renderdaten, Simulation von kosmetischen Effekten sowie UI-Ansichten von Eingabe und Persistenz trennen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
 
 ### Perspektive: TypeScript-Quellen, einfaches Auslieferungsartefakt
 

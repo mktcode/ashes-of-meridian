@@ -1,12 +1,12 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. HTML, Renderer und Simulation liegen in `index.html`, Mathematik und RNG in `core.js`, das Stylesheet in `styles.css`; es gibt derzeit keine npm-Abhängigkeiten und keinen Build-Schritt.
+Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. HTML, Renderer und Simulation liegen in `index.html`, Mathematik und RNG in `core.js`, Spieldefinitionen und Texte in `content.js`, das Stylesheet in `styles.css`; es gibt derzeit keine npm-Abhängigkeiten und keinen Build-Schritt.
 
 ## Spielen
 
-`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. `core.js` und `styles.css` müssen für das Spiel und `skybox.webp` für den vorgesehenen Himmel neben der HTML-Datei bleiben. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
+`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. `core.js`, `content.js` und `styles.css` müssen für das Spiel und `skybox.webp` für den vorgesehenen Himmel neben der HTML-Datei bleiben. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
 
-Der direkte Start über `file://` soll erhalten bleiben. Das externe CSS und das klassische lokale Skript `core.js` wurden mit Chromium über `file://` geprüft. Browser können jedoch lokale WebGL-Texturen oder dauerhafte Speicherung einschränken: Beim Chromium-Test wurde der Skybox-Upload bereits vor der CSS-Auslagerung blockiert. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
+Der direkte Start über `file://` soll erhalten bleiben. Das externe CSS und die klassischen lokalen Skripte `core.js` und `content.js` wurden mit Chromium über `file://` geprüft. Browser können jedoch lokale WebGL-Texturen oder dauerhafte Speicherung einschränken: Beim Chromium-Test wurde der Skybox-Upload bereits vor der CSS-Auslagerung blockiert. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
 
 ```bash
 python3 -m http.server 8080 --bind 127.0.0.1
