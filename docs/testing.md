@@ -15,7 +15,7 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 | Testdatei | Prüfungen |
 | --- | --- |
 | `tests/ashes-of-meridian-core.check.cjs` | 9 Tests: isoliertes Laden von `core.js`; feste RNG-Folgen, Seed-Konvertierung und unabhängige Generatoren; Vektorrechnung; Matrizenidentität, homogene Koordinaten, Multiplikationsreihenfolge, Projektion, Kamera und Inversion einschließlich bestehender Sonderfälle |
-| `tests/ashes-of-meridian-terrain.check.cjs` | 19 Tests: Syntax aller benannten klassischen Skripte (Inline und lokal); deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
+| `tests/ashes-of-meridian-terrain.check.cjs` | 20 Tests: bytegleiche Skybox-Einbettung und Quellverdrahtung; Syntax aller benannten klassischen Skripte (Inline und lokal); deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
 | `tests/ashes-of-meridian-crystals.check.cjs` | 5 Tests: Kristallgeometrie mit 36 Dreiecken und Einheitsnormalen; 80 zeitstabile Vorkommensmodelle; Größenänderung beim Abbau ohne Mutation der Entität; Vorschauparameter; bestehende Aether-Formen und Animation |
 | `tests/ashes-of-meridian-harness.check.cjs` | 11 Tests: isoliertes Laden von `content` samt Katalog-/Kampagnenreihenfolge und Namens-/Icon-Hilfsfunktionen; explizite Skriptauswahl und Dokumentreihenfolge bei Inline-/Dateimischung; fehlende/doppelte Namen und unerwartete Verpackung; lokale Pfade und fehlende Dateien; Ablehnung von URL-/Traversal-/Symlink-Ausbrüchen und mehrdeutigen Attributen; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
 | `tests/ashes-of-meridian-controls.check.cjs` | 6 Tests: WASD-Richtungen, Wiederholung/Freigabe des gehaltenen Zustands, wirkungslose Pfeiltasten, festes F unabhängig vom Altprofil, Modifier-/Fokus-/Pause-Verhalten, übrige Hotkeys und sichtbare Steuerungshinweise; UI-Methoden mit Testdoubles, keine nativen Tastaturereignisse |
@@ -56,7 +56,14 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: feste WASD-Steuerung
+## Aktueller Prüfstand: Skybox über `file://`
+
+- Skybox als Data-URL in `renderer.js`, unveränderte WebP-Bytes und Originaldatei. Keine Serverpflicht oder Sicherheitsflags.
+- **111 Tests bestanden**, vollständiger obiger Befehl, Node.js `v23.11.1` / Linux. Keine geänderten Layout-/Simulations-/Effektreferenzen.
+- Chromium `152.0.7977.75`, `file://`: vier erfolgreiche Bild-Uploads, Skybox mit 1774×887 Pixeln; drei GPU-Pixel stimmen exakt mit dem dekodierten Bild überein, Framebuffer vollständig und `gl.getError()` ohne Fehler. Himmel im Menü-Screenshot sichtbar; kein externer Skybox-Request und keine erfassten Laufzeit-/Konsolen-/Ladefehler mehr.
+- Erweiterter WASD-/Spiel-/Save-/Reload-/Backup-Ablauf bestanden. Andere Browser und die vollständige Browser-Checkliste bleiben offen. Details: [Skybox-Einbettung](skybox-embedding.md).
+
+## Vorheriger Prüfstand: feste WASD-Steuerung
 
 - Tastaturkamera ausschließlich WASD, Attack-Move fest F; Option entfernt, Altprofile/-backups weiterhin Version 1. Hilfe, HUD und Tutorial angepasst.
 - **110 Tests bestanden**, vollständiger obiger Befehl, Node.js `v23.11.1` / Linux. Spiel-/Layout-/Effektreferenzen unverändert; absichtlich geändertes Standardprofil ohne `wasd`.

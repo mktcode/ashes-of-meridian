@@ -4,9 +4,9 @@ Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktio
 
 ## Spielen
 
-`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. Alle im HTML über `<script src>` eingebundenen lokalen `.js`-Dateien und `styles.css` müssen für das Spiel und `skybox.webp` für den vorgesehenen Himmel neben der HTML-Datei bleiben. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
+`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. Alle im HTML über `<script src>` eingebundenen lokalen `.js`-Dateien und `styles.css` müssen neben der HTML-Datei bleiben. Die Skybox ist wie die Bodentexturen direkt in `renderer.js` eingebettet; die separaten Bilddateien bleiben als Quellen im Repository erhalten. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
 
-Der direkte Start über `file://` soll erhalten bleiben. Das externe CSS und die lokalen klassischen Skripte wurden mit Chromium über `file://` geprüft. Browser können jedoch lokale WebGL-Texturen oder dauerhafte Speicherung einschränken: Beim Chromium-Test wurde der Skybox-Upload bereits vor der CSS-Auslagerung blockiert. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
+Der direkte Start über `file://` bleibt erhalten und wurde einschließlich des Skybox-WebGL-Uploads mit Chromium geprüft. Die frühere Sperre der extern geladenen Skybox wird durch eingebettete Bilddaten vermieden. Browser können weiterhin dauerhafte Speicherung einschränken. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
 
 ```bash
 python3 -m http.server 8080 --bind 127.0.0.1
