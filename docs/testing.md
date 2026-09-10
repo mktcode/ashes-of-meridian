@@ -52,7 +52,14 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Content-Auslagerung
+## Aktueller Prüfstand: Renderer-Auslagerung
+
+- Der komplette Renderer-Block liegt bytegleich in `renderer.js`, einschließlich Einrückung, Shadern und eingebetteten Texturen. Klassische Einbindung weiterhin zwischen `core` und `content`; alle anderen Spielquellen, Assets und Tests unverändert.
+- **59 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux, einschließlich unveränderter Layout-Prüfsummen und Save-Referenz.
+- Frische Chromium-`file://`-Läufe vor/nach der Änderung: acht Layoutansichten unverändert, vier verlinkte Shaderprogramme, drei aufgezeichnete Bild-Uploads und laufende Renderframes bei allen drei Grafikqualitäten. Erweiterter Spiel-/Save-/Backup-Smoke-Test ebenfalls bestanden; nur die bestehende Skybox-Ausnahme erfasst.
+- Umgebung, Instrumentierung und Grenzen: [Renderer-Auslagerung](renderer-extraction.md). Kein vollständiger Kampagnen-/Interaktionstest.
+
+## Vorheriger Prüfstand: Content-Auslagerung
 
 - Der komplette `content`-Block liegt in `content.js`, unverändert bis auf entfernte HTML-Einrückung. Einbindung weiterhin nach `renderer` und vor `world`; keine neuen Module oder Build-Abhängigkeiten.
 - **59 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux. Neuer Isolationstest bereits vor dem Verschieben gegen den Inline-Block geprüft; bisherige Referenzen unverändert.
