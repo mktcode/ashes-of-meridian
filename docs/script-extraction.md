@@ -12,8 +12,9 @@ Jede Tabellenzeile bezeichnet einen separat geprüften und committeten Schritt. 
 | `simulation.js` | `ba82437` | 1.934 / 73.726 | `9fe375033e16e5a014148d6dbfb80da552d3761aa38ca6157f61de192ab238ee` | 59 bestanden / bestanden |
 | `audio.js` | `7bc55c6` | 169 / 6.889 | `9bb8b1b0fcba890263cb653c7646e05228a8bf62d3e99ca17edf561e339e5eca` | 59 bestanden / bestanden |
 | `ui.js` | `f39dc75` | 2.050 / 96.809 | `29c859250647223009fbd909e5238ebf20b1b548ea118b2f9bca0f64cce86481` | 59 bestanden / bestanden |
+| `app.js` | `85948f3` | 400 / 14.588 | `cc71c840ecaa3ba22b5125d5353617f5d3c09585952688e480a6c6a4eca77e8b` | 59 bestanden / bestanden |
 
-Noch ausstehend: `app.js`.
+**Serie abgeschlossen:** `index.html` enthält nur noch 96 Zeilen statisches HTML und Dateieinbindungen, keine Inline-Skriptinhalte. Die gemeinsame globale Ausführungsumgebung und sämtliche bisherigen Verantwortlichkeiten bleiben erhalten.
 
 ## Vertrag und Inhaltsprüfung
 
@@ -25,7 +26,7 @@ Noch ausstehend: `app.js`.
 
 ## Node- und Dokumentationsprüfung
 
-Nach jedem Schritt den vollständigen [Testbefehl](testing.md#automatisierte-tests) unter Node.js `v23.11.1` / Linux ausgeführt, mit 128-MiB-Heaplimit und einem Testworker: jeweils **59 bestanden, 0 fehlgeschlagen**. Enthalten sind Syntaxprüfung aller Skripte, Geometrie, alle 16 festen Kampagnenlayout-Prüfsummen und die bisherigen Simulations-/Save-Referenzen. Tests und gemeinsamer Loader benötigen für diese reinen Verschiebungen keine Anpassung.
+Nach jedem Schritt den vollständigen [Testbefehl](testing.md#automatisierte-tests) unter Node.js `v23.11.1` / Linux ausgeführt, mit 128-MiB-Heaplimit und einem Testworker: jeweils **59 bestanden, 0 fehlgeschlagen**. Enthalten sind Syntaxprüfung aller Skripte, Geometrie, alle 16 festen Kampagnenlayout-Prüfsummen und die bisherigen Simulations-/Save-Referenzen. Tests und gemeinsamer Loader benötigen für diese reinen Verschiebungen keine Anpassung. Abschließend den vollständigen Befehl zusätzlich aus `/tmp` mit absoluten Testpfaden ausgeführt: ebenfalls 59 bestanden.
 
 Lokale Dokumentationslinks und Anker sowie `git diff --check` vor jedem Commit geprüft.
 
@@ -50,6 +51,8 @@ Nach dem Backup-Test jeweils eine neue erste Mission gestartet, damit dieser Tes
 - Audio nach eingespeistem Nutzerklick: `AudioContext.state === 'running'` und erfolgreiche Initialisierung geprüft. Sound-Button zweimal geklickt; Musik-/SFX-Einstellungen aus/an und die entsprechenden nativen `setTargetAtTime`-Aufrufe auf beiden Gain-Parametern geprüft (Zielwerte 0/1, Zeitkonstanten 0,15/0,05). Ein testseitiger Wrapper protokolliert und delegiert unverändert an die native Methode. **Kein Hörtest und keine Wellenformanalyse.**
 
 Bei der Vorbereitung der zusätzlichen Probe scheiterte zunächst eine Annahme über den nach Wartezeit gelesenen `AudioParam.value` eines inaktiven Effektzweigs, bereits am unveränderten Ausgangsstand. Deshalb prüft die Probe die tatsächlich geplanten Gain-Aufrufe statt diesen ungeeigneten Messwert. Kein Spielcode wurde dafür geändert; erst danach bestand der vollständige Ausgangslauf.
+
+Am Endstand zusätzlich Screenshots von Menü bei 1280×800, HUD bei 800×700 und Bauvorschau bei 1280×800 gesichtet; die Bauvorschau wurde auch am Ausgangsstand gesichtet. Keine vollständige visuelle Kontrolle aller Ansichten und Zustände.
 
 ### Fehlervergleich und Grenzen
 
