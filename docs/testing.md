@@ -56,7 +56,13 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Skybox über `file://`
+## Aktueller Prüfstand: neues Skybox-Bild
+
+- Nutzer-PNG verlustfrei nach `skybox.webp` konvertiert und Einbettung aktualisiert; 1774×887 Pixel, keine abweichenden Pixel im ImageMagick-Vergleich.
+- **111 Tests bestanden** mit dem vollständigen obigen Befehl. Frische Chromium-152-`file://`-Probe einschließlich GPU-Pixelvergleich und erweitertem Spiel-/Eingabe-/Save-/Backup-Ablauf bestanden; keine erfassten Fehler. Neues Motiv im Menü-Screenshot visuell geprüft.
+- Nur Bilddaten geändert, keine Renderer-Logik oder Testreferenzen. Firefox, HTTP und umfassende Performanceprüfung weiterhin offen. Details: [Skybox-Bildaustausch](skybox-replacement.md).
+
+## Vorheriger Prüfstand: Skybox über `file://`
 
 - Skybox als Data-URL in `renderer.js`, unveränderte WebP-Bytes und Originaldatei. Keine Serverpflicht oder Sicherheitsflags.
 - **111 Tests bestanden**, vollständiger obiger Befehl, Node.js `v23.11.1` / Linux. Keine geänderten Layout-/Simulations-/Effektreferenzen.

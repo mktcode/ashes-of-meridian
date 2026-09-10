@@ -1,5 +1,7 @@
 # Skybox ohne Server
 
+Historischer Nachweis der Einbettung. Das Bild wurde anschließend [auf Nutzerwunsch ersetzt](skybox-replacement.md); die folgenden Bildgrößen/Prüfsummen beziehen sich auf das frühere Motiv.
+
 Gezielte Korrektur nach `2b124d6`: Die externe `file://`-Bildquelle wurde bisher vom Browser für WebGL als nicht origin-clean behandelt; `texImage2D` warf einen `SecurityError`. Die dunkle Ersatztextur blieb sichtbar.
 
 ## Änderung
