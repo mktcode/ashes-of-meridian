@@ -51,7 +51,16 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: CSS-Auslagerung
+## Aktueller Prüfstand: JavaScript-Formatierung
+
+- Alle sieben Inline-Skripte wurden separat formatiert, ohne Auslagerung oder absichtliche Verhaltensänderung.
+- Normalisierte Babel-Syntaxbäume vor/nach der Formatierung sind identisch. Die 246 erfassten Template-Segmente und eingebetteten Bildliterale sind zusätzlich im Rohtext unverändert. Sonstiges HTML, CSS, Assets, Tests und Fixtures wurden nicht verändert.
+- **44 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux; bestehende Layout-Prüfsummen und Save-Referenz bleiben unverändert.
+- Chromium-`file://`-Vergleich vor/nach der Formatierung wiederholt: acht Ansichten bei zwei Fenstergrößen, gleiche erfasste Stile/Abmessungen und keine neuen erfassten Fehler. Die bekannte Skybox-Ausnahme bleibt bestehen.
+- Der Nutzer berichtet zusätzlich, dass Firefox die Skybox ebenfalls blockiert; Version und Prüfumgebung wurden nicht angegeben. Eine Korrektur wurde ausdrücklich zurückgestellt.
+- Werkzeugversionen, Vorgehen und Grenzen: [JavaScript-Formatierung](javascript-formatting.md). Kein vollständiger interaktiver Browser-/Kampagnentest.
+
+## Vorheriger Prüfstand: CSS-Auslagerung
 
 - Die 2.276 CSS-Zeilen liegen unverändert in `styles.css`; `index.html` bindet die Datei über einen relativen Stylesheet-Link ein. Skripte, Inline-Styles und Assets sind unverändert.
 - **44 Tests bestanden, 0 fehlgeschlagen** unter Node.js `v23.11.1` / Linux. Der Bytevergleich mit `ca2c04b` bestätigt die reine Auslagerung.

@@ -2,9 +2,9 @@
 
 ## Status und Geltungsbereich
 
-Bestandsaufnahme des formatierten Ausgangsstands `ab92a12`, ergänzt um den gemeinsamen Testzugriff, die Referenztests und die CSS-Auslagerung. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Die sieben Skript-Tags wurden benannt und der zentrale CSS-Block unverändert ausgelagert. Skriptinhalte und Assets blieben unverändert.
+Bestandsaufnahme des Ausgangsstands `ab92a12`, ergänzt um den gemeinsamen Testzugriff, die Referenztests, die CSS-Auslagerung und die anschließende JavaScript-Formatierung. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Die sieben Skript-Tags wurden benannt, der zentrale CSS-Block unverändert ausgelagert und JavaScript ohne Änderung der Syntaxbäume lesbar formatiert. Assets und eingebettete Texturen blieben unverändert.
 
-`index.html` (HTML und JavaScript) und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. Viele JavaScript-Methoden stehen trotz HTML-Formatierung noch auf einer Zeile.
+`index.html` (HTML und JavaScript) und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. JavaScript-Methoden sind nun mehrzeilig formatiert; lange Bild-Data-URLs und Template-Inhalte bleiben bewusst unverändert. Ablauf und Prüfungen: [JavaScript-Formatierung](javascript-formatting.md).
 
 ## Codekarte
 
@@ -73,7 +73,9 @@ Vor weiteren Umbauten:
 
 Als erster rein struktureller Schritt wurde das zentrale CSS ohne Umformatierung nach `styles.css` verschoben. Weitere Aufteilungen des Stylesheets oder Bereinigung der Inline-Styles erfolgen getrennt und nur bei konkretem Bedarf.
 
-Als erste kleine JavaScript-Bereiche eignen sich Mathematik, Inhaltsdefinitionen und Speicherformat-Validierung. Danach Weltberechnung von Renderdaten, Simulation von kosmetischen Effekten sowie UI-Ansichten von Eingabe und Persistenz trennen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
+Nach dem separaten Formatierungscommit sollen zunächst `M4`, `V` und `seeded` gezielt getestet und anschließend in ein klassisches lokales `core.js` ausgelagert werden. Dabei muss der bisher auf Inline-Skripte begrenzte Testloader kontrolliert erweitert werden; globale Bindungen und Dokumentreihenfolge bleiben erhalten. Diese Auslagerung ist noch nicht implementiert.
+
+Als weitere kleine JavaScript-Bereiche eignen sich Inhaltsdefinitionen und Speicherformat-Validierung. Danach Weltberechnung von Renderdaten, Simulation von kosmetischen Effekten sowie UI-Ansichten von Eingabe und Persistenz trennen. Bestehende Verhaltensabhängigkeiten dabei zunächst erhalten; absichtliche Korrekturen separat prüfen. Kein vollständiger Rewrite und kein neues UI-Framework sind dafür nötig.
 
 ### Perspektive: TypeScript-Quellen, einfaches Auslieferungsartefakt
 
