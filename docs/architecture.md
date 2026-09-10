@@ -35,6 +35,8 @@ Wichtige Abhängigkeiten:
 - `app` erstellt und verdrahtet alle Instanzen, lädt das Profil über die Speicherkomponente und übergibt diese der UI. Die `requestAnimationFrame`-Schleife führt bei aktivem, ungepaustem Spiel `game.step(0.05)` und `game.effects.tick(0.05)` aus; UI und Rendering werden pro Frame aktualisiert.
 - `window.Meridian` stellt die laufenden Instanzen, Inhalte und Leistungswerte zur Inspektion bereit. Die übrigen globalen `const`-/`class`-Bindungen sind nicht automatisch Eigenschaften von `window`.
 
+Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-layout` gerendert. Sein Design ist in `styles.css` auf diese Klassen begrenzt; `#menu:has(> .home-screen)` schaltet nur dort den bisherigen Menü-Hintergrund ab. Kampagne, Modals und HUD behalten ihre vorhandenen Templates und Styles. [Umsetzung und Prüfungen](home-redesign.md).
+
 ## Zustände und Speicherung
 
 - `game.s` enthält den serialisierbaren Operationszustand, einschließlich Entitäten, Ressourcen, Aufträgen, Missionsdaten, Kamera und Kontrollgruppen.

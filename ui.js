@@ -163,7 +163,27 @@
         let saved = this.persistence.hasCheckpoint(),
           completed = Object.keys(this.profile.medals).filter(k => this.profile.medals[k] > 0).length;
         $('menu').innerHTML =
-          `<div class="menu-header"><div class="brand">◈ &nbsp; MERIDIAN EXPEDITIONARY COMMAND</div><div class="version">THE DARK STAR CAMPAIGN / 1.0</div></div><div class="menu-main"><div class="eyebrow">AN ORIGINAL REAL-TIME STRATEGY GAME</div><h1 class="wordmark">ASHES<span>OF</span>MERIDIAN</h1><p class="menu-tagline">The sun went dark. Then the dead began calling home.</p><div class="menu-buttons">${saved ? '<button class="primary" data-ui="continue">Resume operation <span>↗</span></button>' : ''}<button class="${saved ? 'secondary' : 'primary'}" data-ui="campaign">${completed ? 'Continue the campaign' : 'Enter the campaign'} <span>↗</span></button><button class="secondary" data-ui="skirmish">Skirmish & endless war <span>＋</span></button></div><div class="menu-subnav"><button class="textbtn" data-ui="armory">FLEET UPGRADES</button><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></div></div><div class="menu-quote">“I knew you’d come back.<br>Please don’t bring them with you.”<small>ELIAS VENN / SIGNAL 00.17</small></div><div class="menu-footer"><span><span class="live-dot"></span> &nbsp;16 OPERATIONS · 3 CIVILIZATIONS · ONE DARK STAR</span><span>${completed}/16 OPERATIONS COMPLETE &nbsp; / &nbsp; LOCAL & OFFLINE</span></div>`;
+          `<div class="home-screen"><div class="home-layout">
+            <svg class="menu-frame" viewBox="0 0 22 887" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M1 0V72L17 88V178L6 190V674L20 688V778L1 797V887"/></svg>
+            <header class="menu-header">
+              <div class="brand"><svg class="menu-emblem" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><circle cx="24" cy="24" r="22"/><path d="M24 3V11M24 37V45M3 24H11M37 24H45M24 10L28 20L38 24L28 28L24 38L20 28L10 24L20 20Z"/><circle cx="24" cy="24" r="4"/></svg><span>MERIDIAN EXPEDITIONARY COMMAND</span></div>
+              <div class="menu-system">SOL SYSTEM <span>//</span> M-472</div>
+              <div class="version">THE DARK STAR CAMPAIGN / 1.0</div>
+            </header>
+            <div class="menu-main">
+              <div class="eyebrow">AN ORIGINAL REAL-TIME STRATEGY GAME</div>
+              <h1 class="wordmark" aria-label="Ashes of Meridian">ASHES<span class="wordmark-link"><b>OF</b></span>MERIDIAN</h1>
+              <p class="menu-tagline">The sun went dark. Then the dead began calling home.</p>
+              <div class="menu-buttons">
+                ${saved ? '<button class="primary" data-ui="continue">Resume operation <span aria-hidden="true">→</span></button>' : ''}
+                <button class="${saved ? 'secondary' : 'primary'}" data-ui="campaign">${completed ? 'Continue the campaign' : 'Enter the campaign'} <span aria-hidden="true">→</span></button>
+                <button class="secondary" data-ui="skirmish">Skirmish & endless war <span aria-hidden="true">→</span></button>
+              </div>
+              <nav class="menu-subnav" aria-label="More options"><button class="textbtn" data-ui="armory">FLEET UPGRADES</button><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></nav>
+            </div>
+            <div class="menu-quote">“I knew you’d come back.<br>Please don’t bring them with you.”<small>ELIAS VENN / SIGNAL 00.17</small></div>
+            <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>16 OPERATIONS · 3 CIVILIZATIONS · ONE DARK STAR</span><span class="menu-progress">${completed}/16 OPERATIONS COMPLETE &nbsp; / &nbsp; LOCAL & OFFLINE</span></footer>
+          </div></div>`;
       }
       showCampaign(index = this.campaignSelected) {
         this.campaignSelected = clamp(index, 0, 15);

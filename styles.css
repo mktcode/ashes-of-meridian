@@ -240,122 +240,477 @@
       background: linear-gradient(90deg, #070d17f5 0%, #070d17df 24%, #070d1770 50%, #070d1700 78%)
     }
 
-    .menu-header {
+    /* Home screen only; other menus retain the existing shared controls. */
+    #menu:has(> .home-screen) {
+      background: transparent
+    }
+
+    .home-screen {
       position: absolute;
-      top: 34px;
-      left: 4.5vw;
-      right: 4.5vw;
+      inset: 0;
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #6e8e9c #09121b;
+      background: linear-gradient(90deg, #060e17e8 0%, #070e17be 23%, #07101935 53%, #070e1710 78%),
+        linear-gradient(0deg, #060e1780, transparent 25%, transparent 80%, #060e1730)
+    }
+
+    .home-layout {
+      position: relative;
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 40px;
+      padding: 26px 4.5vw
+    }
+
+    .home-screen .menu-frame {
+      position: absolute;
+      left: 3vw;
+      top: 0;
+      width: 22px;
+      height: 100%;
+      fill: none;
+      stroke: #9fc9db38;
+      stroke-width: 1;
+      pointer-events: none;
+      mask-image: linear-gradient(transparent, #000 16%, #000 85%, transparent)
+    }
+
+    .home-screen .menu-header {
+      position: relative;
       display: flex;
       align-items: center;
-      justify-content: space-between
+      gap: 30px;
+      min-height: 46px
     }
 
-    .menu-header .brand {
-      font: 10px var(--mono);
-      letter-spacing: 2.5px;
-      color: #b4c5d3
-    }
-
-    .version {
-      font: 9px var(--mono);
-      letter-spacing: 2px;
-      color: var(--muted)
-    }
-
-    .menu-main {
-      position: absolute;
-      left: 8vw;
-      top: 50%;
-      transform: translateY(-45%);
-      width: 540px;
-      max-width: 65vw
-    }
-
-    .menu-main .eyebrow {
-      display: flex;
-      align-items: center;
-      gap: 12px
-    }
-
-    .menu-main .eyebrow:before {
+    .home-screen .menu-header:after,
+    .home-screen .menu-footer:before {
       content: "";
-      width: 25px;
+      position: absolute;
+      left: 58px;
+      right: 0;
       height: 1px;
-      background: var(--gold)
+      background: linear-gradient(90deg, #93bbcd1f, transparent 45%, #93bbcd14);
+      pointer-events: none
     }
 
-    .wordmark {
+    .home-screen .menu-header:after {
+      bottom: -2px;
+      right: 58%
+    }
+
+    .home-screen .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font: 10px var(--mono);
+      letter-spacing: 1.6px;
+      color: #a8cbd9
+    }
+
+    .home-screen .menu-emblem {
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      fill: none;
+      stroke: #a1d6e4;
+      stroke-width: 1.3;
+      filter: drop-shadow(0 0 6px #8ddff22a)
+    }
+
+    .home-screen .menu-emblem > circle:first-child {
+      stroke: #93bbcd26;
+      stroke-width: .7
+    }
+
+    .home-screen .menu-system,
+    .home-screen .version {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font: 9px var(--mono);
+      letter-spacing: 1.5px;
+      color: #92adb9;
+      white-space: nowrap
+    }
+
+    .home-screen .menu-system:before,
+    .home-screen .version:after,
+    .home-screen .menu-progress:after {
+      content: "";
+      width: 30px;
+      height: 1px;
+      background: #a8cbd96b
+    }
+
+    .home-screen .version {
+      margin-left: auto
+    }
+
+    .home-screen .menu-main {
+      position: relative;
+      align-self: center;
+      width: 570px;
+      max-width: 65vw;
+      margin: 20px 0 0 1.4vw
+    }
+
+    .home-screen .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 11px;
+      color: #f2bb66
+    }
+
+    .home-screen .eyebrow:before {
+      content: "";
+      width: 30px;
+      height: 2px;
+      flex-shrink: 0;
+      background: #f5cb78;
+      box-shadow: 0 0 9px #e9b95650
+    }
+
+    .home-screen .wordmark {
       font-family: Georgia, "Times New Roman", serif;
       font-weight: 400;
-      font-size: clamp(52px, 6.3vw, 94px);
+      font-size: clamp(68px, 5.65vw, 100px);
       line-height: .92;
       letter-spacing: -3px;
-      margin: 26px 0
+      margin: 22px 0 20px;
+      text-shadow: 0 2px 18px #0008
     }
 
-    .wordmark span {
-      display: block;
-      font: 12px/3.2 var(--mono);
-      letter-spacing: 14px;
-      color: var(--gold);
-      padding-left: 7px
+    .home-screen .wordmark-link {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      width: 3.12em;
+      margin: 14px 0 16px
     }
 
-    .menu-tagline {
-      font-family: Georgia, serif;
-      font-style: italic;
-      font-size: 18px;
-      color: #bac8cc;
-      margin-bottom: 32px
+    .home-screen .wordmark-link b {
+      font: 18px/1 var(--mono);
+      letter-spacing: 8px;
+      color: #f7c573;
+      padding-left: 8px
     }
 
-    .menu-buttons {
-      width: 298px;
+    .home-screen .wordmark-link:before,
+    .home-screen .wordmark-link:after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #efbf6d;
+      box-shadow: 0 1px 2px #efbf6d55
+    }
+
+    .home-screen .menu-tagline {
+      font: italic 22px/1.5 Georgia, serif;
+      color: #afc0c7;
+      margin: 0 0 34px;
+      text-shadow: 0 2px 8px #000
+    }
+
+    .home-screen .menu-buttons {
+      width: 414px;
+      max-width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 10px
+      gap: 16px
     }
 
-    .menu-buttons .primary,
-    .menu-buttons .secondary {
+    .home-screen .menu-buttons button {
+      position: relative;
+      display: flex;
+      align-items: center;
       justify-content: space-between;
-      display: flex;
-      text-align: left
+      gap: 12px;
+      text-align: left;
+      border-radius: 3px;
+      min-height: 54px;
+      padding: 15px 32px
     }
 
-    .menu-subnav {
-      display: flex;
-      gap: 20px;
-      margin-top: 16px
+    .home-screen .menu-buttons button > span {
+      font-size: 23px;
+      font-weight: 400;
+      line-height: 1;
+      flex-shrink: 0
     }
 
-    .menu-footer {
+    .home-screen .menu-buttons .primary {
+      min-height: 58px
+    }
+
+    .home-screen .primary {
+      font-size: 15px;
+      letter-spacing: 1.6px;
+      border-color: #e9bf78;
+      background: linear-gradient(180deg, #ffe7b33b, transparent 35%, #5a3f1929),
+        linear-gradient(110deg, #cd9b54, #f0c780 48%, #a88549);
+      box-shadow: inset 0 1px 2px #ffe6b6b0, inset 0 -2px 5px #72562650, 0 0 24px #edb87526
+    }
+
+    .home-screen .primary:before {
+      content: "";
       position: absolute;
-      bottom: 28px;
-      left: 4.5vw;
-      right: 4.5vw;
+      inset: -7px;
+      pointer-events: none;
+      background:
+        linear-gradient(#d9b573, #d9b573) left top / 18px 1px no-repeat,
+        linear-gradient(#d9b573, #d9b573) left top / 1px 20px no-repeat,
+        linear-gradient(#d9b573, #d9b573) right top / 18px 1px no-repeat,
+        linear-gradient(#d9b573, #d9b573) right top / 1px 20px no-repeat,
+        linear-gradient(#d9b573, #d9b573) left bottom / 18px 1px no-repeat,
+        linear-gradient(#d9b573, #d9b573) left bottom / 1px 20px no-repeat,
+        linear-gradient(#d9b573, #d9b573) right bottom / 18px 1px no-repeat,
+        linear-gradient(#d9b573, #d9b573) right bottom / 1px 20px no-repeat
+    }
+
+    .home-screen .primary:hover {
+      filter: brightness(1.12)
+    }
+
+    .home-screen .secondary {
+      font-size: 13px;
+      color: #a9cddd;
+      border-color: #7aa2b573;
+      background: linear-gradient(115deg, #10202bae, #0a1720b8 55%, #25424b9e);
+      box-shadow: inset 0 1px 1px #a4ccdc1a, 0 3px 14px #0003
+    }
+
+    .home-screen .secondary:hover {
+      background: linear-gradient(115deg, #243b47dc, #162e3cdd);
+      border-color: #adcbd7
+    }
+
+    .home-screen .menu-subnav {
       display: flex;
+      align-items: center;
+      margin-top: 22px;
+      width: 414px;
+      max-width: 100%
+    }
+
+    .home-screen .menu-subnav button {
+      color: #a3c4d2;
+      font: 10px var(--mono);
+      letter-spacing: .5px;
+      padding: 8px 12px;
+      flex: 1;
+      white-space: nowrap
+    }
+
+    .home-screen .menu-subnav button + button {
+      border-left: 1px solid #90b6c526
+    }
+
+    .home-screen .menu-subnav button:hover {
+      color: #f4ca88
+    }
+
+    .home-screen .menu-footer {
+      position: relative;
+      display: flex;
+      align-items: center;
       justify-content: space-between;
-      color: #7b90a0;
+      gap: 24px;
+      padding-top: 14px;
+      color: #91a8b3;
       font: 10px var(--mono);
       letter-spacing: 1px
     }
 
-    .menu-quote {
-      position: absolute;
-      right: 5vw;
-      bottom: 13vh;
-      width: 270px;
-      text-align: right;
-      color: #c4d1d2;
-      font: italic 16px/1.8 Georgia, serif
+    .home-screen .menu-footer:before {
+      top: 0
     }
 
-    .menu-quote small {
-      display: block;
-      font: 9px/2.8 var(--mono);
-      letter-spacing: 2px;
-      color: var(--gold)
+    .home-screen .menu-status,
+    .home-screen .menu-progress {
+      display: flex;
+      align-items: center;
+      gap: 18px
+    }
+
+    .home-screen .menu-beacon {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+      border: 1px solid #8ac1d321;
+      border-radius: 50%;
+      background: radial-gradient(circle, #9de8f2 0 3px, #a1e0ed33 4px, transparent 8px)
+    }
+
+    .home-screen .menu-beacon:before {
+      content: "";
+      position: absolute;
+      inset: 9px;
+      border: 1px solid #9de8f2b0;
+      border-radius: 50%;
+      box-shadow: 0 0 9px #72dbef26
+    }
+
+    .home-screen .menu-quote {
+      position: absolute;
+      right: 4.5vw;
+      bottom: 11.5vh;
+      width: 250px;
+      text-align: right;
+      color: #c3d0d4;
+      font: italic 18px/1.5 Georgia, serif;
+      text-shadow: 0 2px 8px #000
+    }
+
+    .home-screen .menu-quote small {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      font: 9px/3.6 var(--mono);
+      letter-spacing: 1px;
+      color: #e6b769
+    }
+
+    .home-screen .menu-quote small:before {
+      content: "";
+      width: 40px;
+      height: 1px;
+      background: #d8b06f99
+    }
+
+    @media(max-width:1150px) {
+      .home-screen .menu-system,
+      .home-screen .menu-quote {
+        display: none
+      }
+
+      .home-screen .menu-progress:after {
+        display: none
+      }
+    }
+
+    @media(max-width:850px) {
+      .home-layout {
+        padding: 22px 5vw;
+        gap: 28px
+      }
+
+      .home-screen .menu-main {
+        max-width: 100%;
+        margin: 0
+      }
+
+      .home-screen .wordmark {
+        font-size: 70px
+      }
+
+      .home-screen .menu-tagline {
+        font-size: 17px;
+        margin-bottom: 28px
+      }
+
+      .home-screen .brand {
+        font-size: 8px;
+        letter-spacing: 1px;
+        gap: 10px
+      }
+
+      .home-screen .version,
+      .home-screen .menu-footer {
+        font-size: 8px
+      }
+
+      .home-screen .version:after {
+        display: none
+      }
+    }
+
+    @media(max-height:800px) and (min-width:601px) {
+      .home-layout {
+        gap: 20px;
+        padding-top: 20px;
+        padding-bottom: 20px
+      }
+
+      .home-screen .menu-main {
+        margin-top: 0
+      }
+
+      .home-screen .menu-header {
+        min-height: 40px
+      }
+
+      .home-screen .menu-emblem {
+        width: 40px;
+        height: 40px
+      }
+
+      .home-screen .menu-subnav {
+        margin-top: 16px
+      }
+
+      .home-screen .menu-footer {
+        padding-top: 10px
+      }
+    }
+
+    @media(max-width:600px) {
+      .home-screen .version,
+      .home-screen .menu-progress {
+        display: none
+      }
+
+      .home-screen .wordmark {
+        font-size: clamp(44px, 15vw, 70px);
+        letter-spacing: -2px
+      }
+
+      .home-screen .wordmark-link {
+        gap: 12px
+      }
+
+      .home-screen .wordmark-link b {
+        font-size: 14px;
+        letter-spacing: 5px;
+        padding-left: 5px
+      }
+
+      .home-screen .eyebrow {
+        font-size: 8px;
+        letter-spacing: 1px;
+        gap: 12px
+      }
+
+      .home-screen .menu-tagline {
+        font-size: 16px
+      }
+
+      .home-screen .menu-buttons button {
+        padding: 14px 20px;
+        font-size: 12px
+      }
+
+      .home-screen .menu-subnav button {
+        font-size: 8px;
+        padding: 8px
+      }
+
+      .home-screen .menu-status {
+        gap: 10px;
+        font-size: 7px;
+        letter-spacing: .4px
+      }
+
+      .home-screen .menu-frame {
+        left: 1vw;
+        opacity: .5
+      }
     }
 
     .subscreen {
@@ -1714,11 +2069,6 @@
         display: none
       }
 
-      .menu-quote {
-        right: 4vw;
-        bottom: 10vh
-      }
-
       .armory-grid {
         grid-template-columns: repeat(2, 1fr)
       }
@@ -1858,23 +2208,6 @@
         padding: 8px
       }
 
-      .menu-main {
-        left: 6vw;
-        max-width: 80vw
-      }
-
-      .menu-quote {
-        display: none
-      }
-
-      .menu-header {
-        top: 25px
-      }
-
-      .menu-footer {
-        font-size: 8px
-      }
-
       .campaign-layout {
         gap: 18px;
         grid-template-columns: 260px 1fr
@@ -1971,36 +2304,9 @@
         bottom: 230px
       }
 
-      .menu-main .wordmark {
-        font-size: 70px
-      }
-
-      .menu-tagline {
-        font-size: 16px
-      }
     }
 
     @media(max-width:600px) {
-      .menu-main .wordmark {
-        font-size: 57px
-      }
-
-      .menu-main {
-        max-width: 90vw
-      }
-
-      .menu-buttons {
-        width: 265px
-      }
-
-      .menu-header .brand {
-        font-size: 8px
-      }
-
-      .menu-footer span:last-child {
-        display: none
-      }
-
       #missionLabel {
         display: none
       }

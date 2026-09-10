@@ -4,7 +4,8 @@ const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
 
 function setup() {
-  const footer = {}, document = { activeElement: { tagName: 'BODY' }, getElementById: () => footer };
+  const footer = { style: {}, classList: { add() {}, remove() {} } };
+  const document = { activeElement: { tagName: 'BODY' }, getElementById: () => footer };
   const context = loadScripts(['content', 'ui'], { globals: {
     document, innerWidth: 1280, innerHeight: 800, performance: { now: () => 0 }
   } });
@@ -75,6 +76,29 @@ test('remaining command hotkeys keep their existing assignments', () => {
     ['tab', 'orders'], ['tab', 'build'], ['tab', 'army'], ['tab', 'tech'],
     ['mode', 'ability', 'orbital'], ['mode', 'ability', 'repair'], ['mode', 'ability', 'scan'],
     ['mode', 'ability', 'drop'], ['mode', 'rally'], ['army'], ['worker'], ['base'], ['selection']]);
+});
+
+test('home redesign preserves dynamic campaign progress, checkpoint priority and navigation actions', () => {
+  for (const saved of [false, true]) for (const progressed of [false, true]) {
+    const h = setup(); let previews = 0;
+    h.ui.game.s = null; h.ui.view = 'home';
+    h.ui.profile.medals = progressed ? { 0: 3, 1: 1, 2: 0 } : {};
+    h.ui.persistence.hasCheckpoint = () => saved;
+    h.ui.onPreview = () => previews++;
+    h.ui.showHome();
+    const html = h.footer.innerHTML;
+    assert.match(html, /class="home-screen"/);
+    assert.match(html, /aria-label="Ashes of Meridian"/);
+    assert.ok(html.includes(`${progressed ? 2 : 0}/16 OPERATIONS COMPLETE`));
+    assert.ok(html.includes(progressed ? 'Continue the campaign' : 'Enter the campaign'));
+    assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
+      [...(saved ? ['continue'] : []), 'campaign', 'skirmish', 'armory', 'help', 'settings']);
+    assert.equal((html.match(/class="primary"/g) || []).length, 1);
+    assert.ok(html.includes(`class="primary" data-ui="${saved ? 'continue' : 'campaign'}"`));
+    assert.equal(previews, 1); assert.equal(h.ui.R.fogOn, false);
+    assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
+    assert.deepEqual(h.calls, []);
+  }
 });
 
 test('settings, manual and live control strip describe only WASD and F', () => {
