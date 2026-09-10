@@ -6,85 +6,9 @@
         /[&<>"']/g,
         c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
       );
-    const SAVE_KEY = 'meridian.operation.v1',
-      PROFILE_KEY = 'meridian.profile.v1';
-    const memoryStore = {};
-    const Store = {
-      available: true,
-      get(k) {
-        try {
-          return localStorage.getItem(k);
-        } catch (e) {
-          this.available = false;
-          return memoryStore[k] || null;
-        }
-      },
-      set(k, v) {
-        memoryStore[k] = v;
-        try {
-          localStorage.setItem(k, v);
-          return true;
-        } catch (e) {
-          this.available = false;
-          return false;
-        }
-      },
-      remove(k) {
-        delete memoryStore[k];
-        try {
-          localStorage.removeItem(k);
-        } catch (e) {}
-      }
-    };
-    function defaultProfile() {
-      return {
-        version: 1,
-        unlocked: 0,
-        credits: 0,
-        medals: {},
-        best: {},
-        upgrades: {},
-        skirmishBest: 0,
-        ending: null,
-        settings: {
-          volume: 0.28,
-          music: true,
-          sfx: true,
-          quality: 2,
-          edge: false,
-          tips: true,
-          healthbars: false,
-          wasd: false,
-          difficulty: 'standard',
-          cameraSpeed: 1
-        }
-      };
-    }
-    function readProfile() {
-      let d = defaultProfile();
-      try {
-        let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
-        if (p && p.version === 1) {
-          d.unlocked = clamp(Number(p.unlocked) || 0, 0, 15);
-          d.credits = clamp(Number(p.credits) || 0, 0, 999);
-          d.medals = p.medals || {};
-          d.best = p.best || {};
-          d.upgrades = p.upgrades || {};
-          for (let k in META) d.upgrades[k] = clamp(Number(d.upgrades[k]) || 0, 0, META[k].max);
-          d.ending = ['seal', 'open'].includes(p.ending) ? p.ending : null;
-          d.skirmishBest = Number(p.skirmishBest) || 0;
-          Object.assign(d.settings, p.settings || {});
-          d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);
-          d.settings.quality = clamp(Number(d.settings.quality) || 0, 0, 2);
-          if (!DIFFICULTY[d.settings.difficulty]) d.settings.difficulty = 'standard';
-        }
-      } catch (e) {
-        console.warn('Profile reset:', e.message);
-      }
-      return d;
-    }
     class MeridianUI {
-      constructor(game, renderer, audio, profile) {
+      constructor(game, renderer, audio, profile, persistence) {
+        this.persistence = persistence;
         this.game = game;
         this.R = renderer;
         this.audio = audio;
@@ -113,7 +37,7 @@
         this.setControlHints();
       }
       persist() {
-        Store.set(PROFILE_KEY, JSON.stringify(this.profile));
+        this.persistence.saveProfile(this.profile);
       }
       toast(text) {
         $('toast').textContent = text;
@@ -236,7 +160,7 @@
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
         if (this.onPreview) this.onPreview();
-        let saved = !!Store.get(SAVE_KEY),
+        let saved = this.persistence.hasCheckpoint(),
           completed = Object.keys(this.profile.medals).filter(k => this.profile.medals[k] > 0).length;
         $('menu').innerHTML =
           `<div class="menu-header"><div class="brand">◈ &nbsp; MERIDIAN EXPEDITIONARY COMMAND</div><div class="version">THE DARK STAR CAMPAIGN / 1.0</div></div><div class="menu-main"><div class="eyebrow">AN ORIGINAL REAL-TIME STRATEGY GAME</div><h1 class="wordmark">ASHES<span>OF</span>MERIDIAN</h1><p class="menu-tagline">The sun went dark. Then the dead began calling home.</p><div class="menu-buttons">${saved ? '<button class="primary" data-ui="continue">Resume operation <span>↗</span></button>' : ''}<button class="${saved ? 'secondary' : 'primary'}" data-ui="campaign">${completed ? 'Continue the campaign' : 'Enter the campaign'} <span>↗</span></button><button class="secondary" data-ui="skirmish">Skirmish & endless war <span>＋</span></button></div><div class="menu-subnav"><button class="textbtn" data-ui="armory">FLEET UPGRADES</button><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></div></div><div class="menu-quote">“I knew you’d come back.<br>Please don’t bring them with you.”<small>ELIAS VENN / SIGNAL 00.17</small></div><div class="menu-footer"><span><span class="live-dot"></span> &nbsp;16 OPERATIONS · 3 CIVILIZATIONS · ONE DARK STAR</span><span>${completed}/16 OPERATIONS COMPLETE &nbsp; / &nbsp; LOCAL & OFFLINE</span></div>`;
@@ -372,7 +296,7 @@
         this.paused = true;
         this.openModal(
           'pause',
-          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>${esc(s.m.name)}</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="save">SAVE CHECKPOINT <kbd>F5</kbd></button><button class="secondary" data-ui="load" ${Store.get(SAVE_KEY) ? '' : 'disabled'}>LOAD CHECKPOINT <kbd>F9</kbd></button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button>${s.m.type === 'endless' && s.time >= 300 ? '<button class="secondary" data-ui="extract">EXTRACT EXPEDITION & RECORD SCORE</button>' : ''}<button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">SAVE & RETURN TO MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Your operation is saved automatically every 45 seconds. Export a backup in Settings before changing browsers or moving the game file.</p>`
+          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>${esc(s.m.name)}</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="save">SAVE CHECKPOINT <kbd>F5</kbd></button><button class="secondary" data-ui="load" ${this.persistence.hasCheckpoint() ? '' : 'disabled'}>LOAD CHECKPOINT <kbd>F9</kbd></button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button>${s.m.type === 'endless' && s.time >= 300 ? '<button class="secondary" data-ui="extract">EXTRACT EXPEDITION & RECORD SCORE</button>' : ''}<button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">SAVE & RETURN TO MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Your operation is saved automatically every 45 seconds. Export a backup in Settings before changing browsers or moving the game file.</p>`
         );
       }
       resume() {
@@ -384,7 +308,7 @@
       }
       save(announce = true) {
         if (!this.game.s || this.game.s.result) return false;
-        let ok = Store.set(SAVE_KEY, JSON.stringify(this.game.snapshot()));
+        let ok = this.persistence.saveCheckpoint(this.game.snapshot());
         this.lastSaveTime = this.game.s.time;
         if (announce) {
           this.toast(
@@ -397,13 +321,13 @@
         return ok;
       }
       load() {
-        let raw = Store.get(SAVE_KEY);
-        if (!raw) {
-          this.toast('No operation checkpoint found.');
-          return;
-        }
         try {
-          this.game.restore(JSON.parse(raw));
+          const checkpoint = this.persistence.readCheckpoint();
+          if (!checkpoint.exists) {
+            this.toast('No operation checkpoint found.');
+            return;
+          }
+          this.game.restore(checkpoint.state);
           this.selected = [];
           this.actionSignature = '';
           this.audio.unlock();
@@ -458,13 +382,8 @@
       }
       exportBackup() {
         let operation = this.game.s && !this.game.s.result ? this.game.snapshot() : null;
-        if (!operation) {
-          try {
-            operation = JSON.parse(Store.get(SAVE_KEY) || 'null');
-          } catch (e) {}
-        }
-        let data = { format: 'ashes-of-meridian', version: 1, profile: this.profile, operation },
-          blob = new Blob([JSON.stringify(data)], { type: 'application/json' }),
+        let data = this.persistence.serializeBackup(this.profile, operation),
+          blob = new Blob([data], { type: 'application/json' }),
           url = URL.createObjectURL(blob),
           a = document.createElement('a');
         a.href = url;
@@ -480,25 +399,15 @@
           return;
         }
         try {
-          let d = JSON.parse(await file.text());
-          if (d.format !== 'ashes-of-meridian' || d.version !== 1 || d.profile?.version !== 1)
-            throw Error('Not a Meridian backup.');
-          if (d.operation) {
-            if (
-              !Array.isArray(d.operation.entities) ||
-              d.operation.entities.length > 1500 ||
-              d.operation.version !== 1
-            )
-              throw Error('Operation data is invalid.');
-          }
-          Store.set(PROFILE_KEY, JSON.stringify(d.profile));
-          let valid = readProfile();
+          let d = this.persistence.parseBackup(await file.text());
+          this.persistence.saveProfile(d.profile);
+          let valid = this.persistence.loadProfile();
           Object.assign(this.profile, valid);
           this.audio.settings = this.profile.settings;
           this.audio.updateSettings();
           this.R.quality = this.profile.settings.quality;
           this.R.resize();
-          if (d.operation) Store.set(SAVE_KEY, JSON.stringify(d.operation));
+          if (d.operation) this.persistence.saveCheckpoint(d.operation);
           this.game.s = null;
           this.showHome();
           this.toast('Campaign and checkpoint imported.');
@@ -592,11 +501,11 @@
         }
         if (s.index < 0) this.profile.skirmishBest = Math.max(this.profile.skirmishBest, result.score);
         this.persist();
-        if (result.win) Store.remove(SAVE_KEY);
+        if (result.win) this.persistence.removeCheckpoint();
         this.audio.sound(result.win ? 'victory' : 'defeat');
         this.openModal(
           'result',
-          `<div class="eyebrow">${result.win ? 'OPERATION COMPLETE' : 'EXPEDITION LOST'} / ${s.index >= 0 ? 'OPERATION ' + String(s.index + 1).padStart(2, '0') : FACTIONS[s.faction].short}</div><h1>${result.win ? 'Another way home.' : 'We remember their names.'}</h1><div class="result-stars">${result.win ? '★'.repeat(result.stars) + '☆'.repeat(3 - result.stars) : '◇'}</div><p>${esc(result.text)}</p><div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>OPERATION TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>EXPEDITION SCORE</span></div></div>${result.win && s.index >= 0 && !s.practice ? `<p style="font-size:11px">${result.stars} commendations recorded. Earned commendations are available for permanent fleet upgrades. Replays only award newly improved medals.</p>` : s.practice ? '<p style="font-size:11px">Standalone scenario: no campaign rewards or unlocks.</p>' : ''}<div class="launch-row">${result.win && s.index === 15 ? '<button class="primary" data-ui="ending">THE LAST DOOR ↗</button>' : result.win && s.index >= 0 && s.index < 15 && !s.practice ? '<button class="primary" data-ui="nextMission">NEXT OPERATION ↗</button>' : !result.win && Store.get(SAVE_KEY) ? '<button class="primary" data-ui="load">RETRY CHECKPOINT ↗</button>' : '<button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button>'}<button class="secondary" data-ui="resultCampaign">${s.index >= 0 ? 'CAMPAIGN MAP' : 'MAIN MENU'}</button>${result.win && s.index >= 0 ? '<button class="textbtn" data-ui="armory">FLEET UPGRADES</button>' : ''}</div>`,
+          `<div class="eyebrow">${result.win ? 'OPERATION COMPLETE' : 'EXPEDITION LOST'} / ${s.index >= 0 ? 'OPERATION ' + String(s.index + 1).padStart(2, '0') : FACTIONS[s.faction].short}</div><h1>${result.win ? 'Another way home.' : 'We remember their names.'}</h1><div class="result-stars">${result.win ? '★'.repeat(result.stars) + '☆'.repeat(3 - result.stars) : '◇'}</div><p>${esc(result.text)}</p><div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>OPERATION TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>EXPEDITION SCORE</span></div></div>${result.win && s.index >= 0 && !s.practice ? `<p style="font-size:11px">${result.stars} commendations recorded. Earned commendations are available for permanent fleet upgrades. Replays only award newly improved medals.</p>` : s.practice ? '<p style="font-size:11px">Standalone scenario: no campaign rewards or unlocks.</p>' : ''}<div class="launch-row">${result.win && s.index === 15 ? '<button class="primary" data-ui="ending">THE LAST DOOR ↗</button>' : result.win && s.index >= 0 && s.index < 15 && !s.practice ? '<button class="primary" data-ui="nextMission">NEXT OPERATION ↗</button>' : !result.win && this.persistence.hasCheckpoint() ? '<button class="primary" data-ui="load">RETRY CHECKPOINT ↗</button>' : '<button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button>'}<button class="secondary" data-ui="resultCampaign">${s.index >= 0 ? 'CAMPAIGN MAP' : 'MAIN MENU'}</button>${result.win && s.index >= 0 ? '<button class="textbtn" data-ui="armory">FLEET UPGRADES</button>' : ''}</div>`,
           true
         );
       }

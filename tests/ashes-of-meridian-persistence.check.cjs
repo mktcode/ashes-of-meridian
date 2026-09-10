@@ -23,7 +23,7 @@ function setup() {
     setItem(k, v) { trace.push(['set', k, v]); if (fail.set) throw Error('set denied'); data.set(k, v); },
     removeItem(k) { trace.push(['remove', k]); if (fail.remove) throw Error('remove denied'); data.delete(k); }
   };
-  const context = loadScripts(['core', 'content', 'world', 'simulation', 'ui'], { globals: {
+  const context = loadScripts(['core', 'content', 'world', 'simulation', 'persistence', 'ui'], { globals: {
     console: { warn: (...args) => warnings.push(args) }, Blob,
     URL: { createObjectURL: blob => { blobs.push(blob); return 'blob:test'; }, revokeObjectURL() {} },
     document: { createElement: () => ({ click() { trace.push(['download', this.download]); } }) },
@@ -33,11 +33,17 @@ function setup() {
     if (fail.access) throw Error('storage getter denied');
     return storage;
   } });
-  const api = vm.runInContext('({ readProfile, UI: MeridianUI })', context);
+  const api = vm.runInContext(`(() => {
+    const persistence = createMeridianPersistence({
+      getStorage: () => localStorage, clamp, upgrades: META,
+      difficulties: DIFFICULTY, warn: (...args) => console.warn(...args)
+    });
+    return { readProfile: persistence.loadProfile, persistence, UI: MeridianUI };
+  })()`, context);
   const ui = Object.create(api.UI.prototype);
   const profile = api.readProfile();
   Object.assign(ui, {
-    profile, selected: [99], actionSignature: 'old', lastSaveTime: 0,
+    profile, persistence: api.persistence, selected: [99], actionSignature: 'old', lastSaveTime: 0,
     game: { s: { version: 1, time: 7, entities: [], result: null },
       snapshot() { trace.push(['snapshot']); return json(this.s); },
       restore(state) { trace.push(['restore', state]); if (fail.restore) throw Error('restore denied'); this.s = state; }
@@ -194,4 +200,84 @@ test('import storage failures retain the existing non-transactional behavior', a
   assert.equal(partial.ui.profile.credits, 9); assert.equal(partial.data.get(SAVE), 'old');
   assert.equal(partial.ui.game.s, active);
   assert.deepEqual(partial.trace.at(-1), ['toast', 'Import failed: resize denied']);
+});
+
+// New boundary tests: only explicitly supplied rules, storage and logging.
+// No content/world/simulation/UI scripts or browser globals are loaded here.
+function isolatedPersistence(getStorage) {
+  const context = loadScripts(['persistence']);
+  const create = vm.runInContext('createMeridianPersistence', context);
+  const warnings = [];
+  const service = create({ getStorage, clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
+    upgrades: { custom: { max: 2 } }, difficulties: { sandbox: {} },
+    warn: (...args) => warnings.push(args) });
+  return { service, warnings, context };
+}
+
+test('persistence is standalone, lazy and uses injected profile rules', () => {
+  const data = new Map(); let accesses = 0;
+  const { service, context } = isolatedPersistence(() => {
+    accesses++;
+    return { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v), removeItem: k => data.delete(k) };
+  });
+  assert.equal(accesses, 0); assert.equal(service.available, true);
+  assert.equal(vm.runInContext('typeof Store + ":" + typeof defaultProfile + ":" + typeof readProfile', context), 'undefined:undefined:undefined');
+  service.saveProfile({ version: 1, upgrades: { custom: 7 }, settings: { difficulty: 'sandbox' } });
+  const p = json(service.loadProfile());
+  assert.deepEqual(p.upgrades, { custom: 2 }); assert.equal(p.settings.difficulty, 'sandbox');
+  assert.deepEqual(json(service.readCheckpoint()), { exists: false, state: null });
+  service.saveCheckpoint(null);
+  assert.equal(service.hasCheckpoint(), true);
+  assert.deepEqual(json(service.readCheckpoint()), { exists: true, state: null });
+  service.removeCheckpoint(); assert.equal(service.hasCheckpoint(), false);
+  assert.equal(data.get(PROFILE), '{"version":1,"upgrades":{"custom":7},"settings":{"difficulty":"sandbox"}}');
+});
+
+test('checkpoint removal clears fallback even if native removal fails; availability stays sticky', () => {
+  const data = new Map(); let denyRead = false, denyRemove = false;
+  const { service } = isolatedPersistence(() => ({
+    getItem(k) { if (denyRead) throw Error('denied'); return data.get(k) ?? null; },
+    setItem(k, v) { data.set(k, v); },
+    removeItem(k) { if (denyRemove) throw Error('denied'); data.delete(k); }
+  }));
+  service.saveCheckpoint({ time: 2 }); denyRemove = true;
+  service.removeCheckpoint();
+  assert.equal(service.available, true); // Existing remove() does not flag failure.
+  assert.equal(service.hasCheckpoint(), true); // Native copy is still there.
+  denyRead = true;
+  assert.equal(service.hasCheckpoint(), false); assert.equal(service.available, false);
+  denyRead = false; denyRemove = false;
+  service.removeCheckpoint(); assert.equal(service.available, false);
+});
+
+test('backup codec has no storage writes and retains exact validation errors', () => {
+  const { service } = isolatedPersistence(() => { throw Error('must not access storage'); });
+  const text = backup({ version: 1 }, { version: 1, entities: [] });
+  const parsed = service.parseBackup(text);
+  assert.equal(service.serializeBackup(parsed.profile, parsed.operation), text);
+  assert.throws(() => service.parseBackup('{}'), { message: 'Not a Meridian backup.' });
+  assert.throws(() => service.parseBackup(backup({ version: 1 }, { version: 1, entities: {} })),
+    { message: 'Operation data is invalid.' });
+  assert.equal(service.available, true);
+});
+
+test('UI constructor and checkpoint commands accept a fake service without storage or codec globals', () => {
+  const context = loadScripts(['ui'], { globals: { innerWidth: 800, innerHeight: 600 } });
+  const UI = vm.runInContext('MeridianUI', context), calls = [], state = { time: 4 };
+  class TestUI extends UI {
+    bind() {} setControlHints() {} toast() {} radio() {} updateHUD() {}
+  }
+  const service = {
+    saveProfile: p => calls.push(['profile', p]),
+    saveCheckpoint: s => { calls.push(['save', s]); return false; },
+    readCheckpoint: () => ({ exists: true, state })
+  };
+  const profile = json(defaults), game = { s: state, snapshot: () => state,
+    restore: s => calls.push(['restore', s]) };
+  const ui = new TestUI(game, {}, { unlock() {} }, profile, service);
+  assert.equal(ui.persistence, service);
+  ui.persist(); assert.equal(ui.save(false), false); ui.load();
+  assert.equal(ui.lastSaveTime, 4);
+  assert.deepEqual(calls, [['profile', profile], ['save', state], ['restore', state]]);
+  assert.equal(vm.runInContext('typeof localStorage + ":" + typeof createMeridianPersistence', context), 'undefined:undefined');
 });

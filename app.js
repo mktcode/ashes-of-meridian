@@ -10,13 +10,20 @@
       const canvas = document.getElementById('world'),
         overlay = document.getElementById('overlay');
       try {
-        const profile = readProfile();
+        const persistence = createMeridianPersistence({
+          getStorage: () => localStorage,
+          clamp,
+          upgrades: META,
+          difficulties: DIFFICULTY,
+          warn: (...args) => console.warn(...args)
+        });
+        const profile = persistence.loadProfile();
         R = new MeridianRenderer(canvas);
         R.quality = profile.settings.quality;
         R.resize();
         audio = new MeridianAudio(profile.settings);
         game = new MeridianGame(R, profile, (type, data) => ui && ui.event(type, data));
-        ui = new MeridianUI(game, R, audio, profile);
+        ui = new MeridianUI(game, R, audio, profile, persistence);
         overlayContext = overlay.getContext('2d');
         function resize() {
           R.resize();
