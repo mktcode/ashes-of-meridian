@@ -77,7 +77,6 @@ test('preview layer and opacity are respected; absent amounts have a finite full
 const simContext = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness"); }', simContext);
 const { MeridianGame, CAMPAIGN, BIOMES } = vm.runInContext('({MeridianGame, CAMPAIGN, BIOMES})', simContext);
-const legacySave = require('./fixtures/operation-v1.json');
 const json = value => JSON.parse(JSON.stringify(value));
 const crystals = game => game.s.entities.filter(e => e.kind === 'resource' && e.type === 'crystal' && e.hp > 0);
 const fresh = () => new MeridianGame({ upgrades: {} });
@@ -121,74 +120,9 @@ test('corrected placement preserves all initial amounts and the fixed pre-fix RN
 
 test('new-layout saves round-trip without moving resources or resetting valid mining paths', () => {
   const game = fresh(); game.start(0, { seed: 1409 });
-  for (let i = 0; i < 100; i++) { game.step(.05); game.tickEffects(.05); }
+  for (let i = 0; i < 100; i++) { game.step(.05); game.effects.tick(.05); }
   const saved = game.snapshot(), restored = fresh(); restored.restore(saved);
   assert.deepEqual(json(restored.s.entities), json(saved.entities));
-  const before = json(restored.s);
-  restored.random = () => { throw Error('Repair consumed RNG'); };
-  restored.repairLegacyCrystalPositions(); assert.deepEqual(json(restored.s), before);
-});
-
-test('legacy migration preserves IDs, remaining alloy, exhausted/missing/custom nodes and orders; it is idempotent', () => {
-  const saved = structuredClone(legacySave);
-  saved.entities.find(e => e.id === 13).amount = 31;
-  Object.assign(saved.entities.find(e => e.id === 14), { amount: 0, hp: 0 });
-  saved.entities = saved.entities.filter(e => e.id !== 21);
-  const custom = { ...structuredClone(saved.entities.find(e => e.id === 12)), id: saved.nextId++, x: -68, z: 48, amount: 19 };
-  saved.entities.push(custom);
-  const workers = saved.entities.filter(e => e.type === 'worker');
-  Object.assign(workers[0], { order: { type: 'mine', id: 13 }, carry: 5, returning: false, path: [{x: -63, z: 41}], pi: 0, nextPath: 999, pathGoal: {x: -63, z: 41} });
-  Object.assign(workers[1], { order: { type: 'mine', id: 13 }, returning: true, carry: 18 });
-  const before = json(saved), game = fresh(); game.restore(saved);
-  assert.deepEqual(json(saved), before);
-  assert.equal(game.s.nextId, saved.nextId);
-  assert.deepEqual(json(game.s.entities.map(e => [e.id, e.amount, e.hp, e.carry, e.order, e.orders])),
-    json(saved.entities.map(e => [e.id, e.amount, e.hp, e.carry, e.order, e.orders])));
-  assert.deepEqual(json(game.get(custom.id)), json(custom));
-  assert.deepEqual(json(game.s.entities.find(e => e.id === 14)), json(saved.entities.find(e => e.id === 14)));
-  assert.equal(game.get(21), null);
-  const miner = game.get(workers[0].id);
-  assert.deepEqual(json(miner.path), []); assert.equal(miner.nextPath, 0); assert.equal(miner.pi, 0); assert.equal(miner.pathGoal, undefined);
-  assert.deepEqual(json(game.get(workers[1].id)), json(workers[1]));
-  const migrated = game.snapshot(), again = fresh(); again.restore(migrated);
-  assert.deepEqual(json(again.s.entities), json(game.s.entities));
-});
-
-test('legacy repair avoids a legally placed building without changing its data or losing crystals', () => {
-  const game = fresh(); game.start(0, { seed: 1409 });
-  // Arrange the original saved layout to check its building clearance before loading.
-  game.s = structuredClone(legacySave); game.rehash();
-  assert.equal(game.canBuild('depot', { x: -60.3, z: 45.3 }), '');
-  const building = game.spawnBuilding('depot', -60.3, 45.3, 0, 0), saved = game.snapshot();
-  const a = fresh(), b = fresh(); a.restore(saved); b.restore(saved);
-  assert.deepEqual(json(a.s), json(b.s)); separated(a);
-  assert.deepEqual(json(a.get(building.id)), json(building));
-  assert.equal(crystals(a).length, 40);
-  for (const e of crystals(a)) {
-    assert.ok(Math.hypot(e.x-building.x, e.z-building.z) >= e.size + building.size + .8);
-    assert.equal(a.world.blockedAt(e.x, e.z), false, `relocated crystal ${e.id} must remain accessible`);
-  }
-  assert.deepEqual(json(crystals(a).map(e => [e.id, e.amount])), json(crystals(game).map(e => [e.id, e.amount])));
-  const again = fresh(); again.restore(a.snapshot()); assert.deepEqual(json(again.s.entities), json(a.s.entities));
-});
-
-test('repair leaves a site intact if a safe arrangement is impossible, without RNG consumption', () => {
-  const game = fresh(); game.start(0, { seed: 1409 }); game.s = structuredClone(legacySave);
-  const before = json(game.s); game.world.blockedAt = () => true;
-  game.random = () => { throw Error('Repair consumed RNG'); };
-  game.repairLegacyCrystalPositions(); assert.deepEqual(json(game.s), before);
-});
-
-test('miners reach relocated crystal IDs and deliver alloy after loading a legacy path', () => {
-  const saved = structuredClone(legacySave), target = saved.entities.find(e => e.id === 16);
-  const worker = saved.entities.find(e => e.type === 'worker');
-  Object.assign(worker, { x: target.x, z: target.z, carry: 0, returning: false, order: { type: 'mine', id: target.id },
-    path: [{ x: target.x, z: target.z }], pi: 0, nextPath: 1e9, pathGoal: { x: target.x, z: target.z } });
-  const game = fresh(); game.restore(saved); separated(game);
-  for (let i = 0; i < 1000; i++) { game.step(.05); game.tickEffects(.05); }
-  assert.ok(game.get(target.id).amount < target.amount);
-  assert.ok(game.s.stats.gathered > saved.stats.gathered);
-  assert.ok(game.s.entities.every(e => [e.x, e.z, e.hp].every(Number.isFinite)));
 });
 
 test('aether vents retain their existing shapes and animated effects', () => {

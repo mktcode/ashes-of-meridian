@@ -70,10 +70,10 @@ test('profile defaults are complete, fresh and do not write storage', () => {
 test('profile normalization preserves current coercions, fractional values and unknown settings', () => {
   const h = setup();
   h.data.set(PROFILE, JSON.stringify({ version: 1, unlocked: 19, credits: '12.5',
-    medals: [3], best: 'legacy', upgrades: { veterans: 9, stores: -1, logistics: '1.5', extra: 8 },
+    medals: [3], best: 'invalid', upgrades: { veterans: 9, stores: -1, logistics: '1.5', extra: 8 },
     ending: 'open', skirmishBest: -4, settings: { volume: '0.6', quality: 1.5, difficulty: 'missing', music: 'yes', extra: 9 } }));
   const p = json(h.readProfile());
-  assert.deepEqual(p, { ...defaults, unlocked: 15, credits: 12.5, medals: [3], best: 'legacy',
+  assert.deepEqual(p, { ...defaults, unlocked: 15, credits: 12.5, medals: [3], best: 'invalid',
     upgrades: { veterans: 3, stores: 0, logistics: 1.5, extra: 8, command: 0, resolve: 0, industry: 0 },
     ending: 'open', skirmishBest: -4,
     settings: { ...defaults.settings, volume: 0.6, quality: 1.5, music: 'yes', extra: 9 } });
@@ -88,20 +88,6 @@ test('invalid profile JSON/version resets; a mid-normalization error retains par
   assert.deepEqual(json(h.readProfile()), { ...defaults, unlocked: 4, credits: 17, upgrades: 'bad' });
   assert.equal(h.warnings.length, 2);
   assert.ok(h.warnings.every(w => w[0] === 'Profile reset:'));
-});
-
-test('obsolete WASD toggle is discarded from loaded profiles and imported backups', async () => {
-  for (const wasd of [false, true, 'legacy']) {
-    const h = setup(), profile = { version: 1, credits: 7, settings: { wasd, music: false } };
-    h.data.set(PROFILE, JSON.stringify(profile));
-    const loaded = h.readProfile();
-    assert.equal('wasd' in loaded.settings, false);
-    assert.equal(loaded.settings.music, false); assert.equal(loaded.credits, 7);
-    await h.importText(backup(profile));
-    assert.equal('wasd' in h.ui.profile.settings, false);
-    h.ui.persist();
-    assert.equal('wasd' in JSON.parse(h.data.get(PROFILE)).settings, false);
-  }
 });
 
 test('persist writes the unchanged version-1 profile JSON and key', () => {

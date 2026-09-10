@@ -2,7 +2,6 @@ const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
-const { useLegacyCrystalLayout } = require('./legacy-crystal-layout.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
@@ -33,15 +32,13 @@ const effectCases = ['explosion', 'cap-bounce', 'damage', 'weapons', 'workers', 
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
   game.start(0, { seed: 1409, difficulty: 'standard', faction: 0 });
-  // Keep the recorded effect scenarios' inputs, not the former new-game placement bug.
-  useLegacyCrystalLayout(game);
   game.world.visible.fill(255);
   const player = type => game.alive(e => e.team === 0 && e.type === type)[0];
   if (kind === 'explosion') {
-    for (const size of [.2, 1, 7]) game.explosion(3, 4, size);
+    for (const size of [.2, 1, 7]) game.effects.explosion(3, 4, size);
   } else if (kind === 'cap-bounce') {
-    for (let i = 0; i < 25; i++) game.explosion(i, -i, 7);
-    const particle = game.fx.find(f => f.type === 'particle');
+    for (let i = 0; i < 25; i++) game.effects.explosion(i, -i, 7);
+    const particle = game.effects.fx.find(f => f.type === 'particle');
     particle.y = .01; particle.vy = -10;
   } else if (kind === 'damage') {
     const target = player('hero');
@@ -57,23 +54,22 @@ function effectSample(kind) {
     const worker = player('worker'), hq = player('hq');
     hq.hp -= 200; worker.x = hq.x; worker.z = hq.z;
     worker.order = { type: 'build', id: hq.id };
-    for (let i = 0; i < 20; i++) { game.worker(worker, .05); game.tickEffects(.05); }
+    for (let i = 0; i < 20; i++) { game.worker(worker, .05); game.effects.tick(.05); }
     const resource = game.alive(e => e.type === 'crystal')[0];
     worker.x = resource.x; worker.z = resource.z; worker.order = { type: 'mine', id: resource.id };
-    for (let i = 0; i < 40; i++) { game.worker(worker, .05); game.tickEffects(.05); }
+    for (let i = 0; i < 40; i++) { game.worker(worker, .05); game.effects.tick(.05); }
   } else if (kind === 'heal-drop') {
     const target = player('rifle'); target.hp -= 40;
     const medic = game.spawnUnit('medic', target.x, target.z, 0, 0); medic.cd = 0;
     game.medic(medic, .05);
     game.s.energy = 1000; game.ability('drop', { x: -45, z: 45 });
   } else throw Error('Unknown effect case: ' + kind);
-  const before = digest({ fx: game.fx, floats: game.floats });
-  game.tickEffects(.05);
-  const after = digest({ fx: game.fx, floats: game.floats });
-  const counts = { fx: game.fx.length, floats: game.floats.length };
-  const state = digest(game.snapshot());
+  const before = digest({ fx: game.effects.fx, floats: game.effects.floats });
+  game.effects.tick(.05);
+  const after = digest({ fx: game.effects.fx, floats: game.effects.floats });
+  const counts = { fx: game.effects.fx.length, floats: game.effects.floats.length };
   const nextRandom = Array.from({ length: 5 }, () => game.random());
-  game.tickEffects(5);
-  return { before, after, counts, state, nextRandom, expired: digest({ fx: game.fx, floats: game.floats }) };
+  game.effects.tick(5);
+  return { before, after, counts, nextRandom, expired: digest({ fx: game.effects.fx, floats: game.effects.floats }) };
 }
 module.exports = { worldSample, effectSample, effectCases, CAMPAIGN, digest };

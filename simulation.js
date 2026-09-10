@@ -290,56 +290,6 @@
         const site = RESOURCE_SITES[siteIndex], a = (depositIndex * Math.PI * 2) / 5 + phase;
         return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3.0 };
       }
-      repairLegacyCrystalPositions() {
-        const moved = new Set();
-        for (const [i, site] of RESOURCE_SITES.entries()) {
-          const targets = new Map();
-          for (const e of this.s.entities) {
-            if (e.kind !== 'resource' || e.type !== 'crystal' || e.hp <= 0) continue;
-            // Recognize only the old generated coordinates, not arbitrary nearby
-            // resources, and keep IDs, amounts and all other data.
-            for (let j = 0; j < 5; j++) {
-              const a = j * 2.1 + i * 0.8;
-              const p = this.crystalPosition(i, j);
-              if (Math.hypot(e.x - site.x - Math.sin(a) * 3.9, e.z - site.z - Math.cos(a) * 3.0) < 1e-8 && distance(e, p) > 1e-8)
-                targets.set(e, p);
-            }
-          }
-          if (!targets.size) continue;
-          const occupied = this.s.entities.filter(e => e.hp > 0 && !e.evacuated && e.kind !== 'unit' && !targets.has(e));
-          const plan = new Map();
-          const free = (p, e) => {
-            for (const dx of [-e.size, 0, e.size])
-              for (const dz of [-e.size, 0, e.size])
-                if (this.world.blockedAt(p.x + dx, p.z + dz)) return false;
-            return occupied.every(o => distance(p, o) >= e.size + o.size + 0.8) &&
-              [...plan].every(([o, q]) => distance(p, q) >= e.size + o.size + 0.8);
-          };
-          // Reserve unobstructed standard slots first. Older saves may have built
-          // on a new slot; search nearby deterministically rather than moving a building.
-          for (const [e, p] of targets) if (free(p, e)) plan.set(e, p);
-          for (const [e, preferred] of targets) {
-            if (plan.has(e)) continue;
-            search: for (let radius = 1; radius <= 16; radius++) {
-              for (let k = 0; k < 32; k++) {
-                const a = (k * Math.PI * 2) / 32;
-                const p = { x: preferred.x + Math.sin(a) * radius, z: preferred.z + Math.cos(a) * radius };
-                if (free(p, e)) { plan.set(e, p); break search; }
-              }
-            }
-          }
-          // Atomic per site: if no safe arrangement exists, leave its saved data intact.
-          if (plan.size !== targets.size) continue;
-          for (const [e, p] of plan) { e.x = p.x; e.z = p.z; moved.add(e.id); }
-        }
-        for (const e of this.s.entities) {
-          if (e.kind === 'unit' && e.type === 'worker' && !e.returning &&
-              e.order?.type === 'mine' && moved.has(e.order.id)) {
-            e.path = []; e.pi = 0; e.nextPath = 0;
-            delete e.pathGoal;
-          }
-        }
-      }
       spawnResource(type, x, z, amount) {
         return this.spawn('resource', type, x, z, -1, 0, { amount, size: type === 'gas' ? 1.5 : 1.3 });
       }
@@ -848,7 +798,7 @@
           }
         }
         if (this.visible(e)) {
-          this.explosion(
+          this.effects.explosion(
             e.x,
             e.z,
             e.kind === 'building' ? 3.5 : e.type === 'avatar' ? 7 : 1.2,
@@ -860,12 +810,6 @@
           this.emit('alert', { text: 'Enemy command center destroyed.', x: e.x, z: e.z });
         if (e.tag === 'generator')
           this.emit('alert', { text: 'Ward generator destroyed.', x: e.x, z: e.z });
-      }
-      // Compatibility entry points; transient state belongs to effects.
-      get fx() { return this.effects.fx; }
-      get floats() { return this.effects.floats; }
-      explosion(x, z, size = 1, color = 0xefb17c) {
-        this.effects.explosion(x, z, size, color);
       }
       rangedStats(e) {
         let d = e.kind === 'building' ? BUILDINGS[e.type] : UNITS[e.type],
@@ -1121,7 +1065,7 @@
           e.evacuated = true;
           this.s.stats.convoys++;
           this.emit('radio', 'Chief Rook|Crawler at extraction. Every passenger accounted for.');
-          this.explosion(e.x, e.z, 1, 0x99e8d8);
+          this.effects.explosion(e.x, e.z, 1, 0x99e8d8);
           return;
         }
         let target = { x: p[0], z: p[1] };
@@ -1245,7 +1189,7 @@
             if (dist < strike.radius + e.size * 0.7)
               this.damage(e, strike.damage * (dist < strike.radius * 0.5 ? 1 : 0.65), source);
           }
-          this.explosion(
+          this.effects.explosion(
             strike.x,
             strike.z,
             strike.type === 'orbital' ? 5 : 2,
@@ -1412,7 +1356,7 @@
                 x: e.x,
                 z: e.z
               });
-              this.explosion(e.x, e.z, 1.2, 0x99e6d0);
+              this.effects.explosion(e.x, e.z, 1.2, 0x99e6d0);
               if (e.tag === 'shelter') {
                 for (let i = 0; i < 3; i++)
                   this.spawnUnit(i === 2 ? 'medic' : 'rifle', e.x - 2 + i * 2, e.z + 2, 0, s.faction);
@@ -1790,9 +1734,6 @@
         };
         this.emit('result', s.result);
       }
-      tickEffects(dt) {
-        this.effects.tick(dt);
-      }
       snapshot() {
         let data = structuredClone(this.s);
         data.explored = Array.from(this.world.explored);
@@ -1825,7 +1766,6 @@
           throw Error('Unknown skirmish rules.');
         this.world = new Battlefield(data.seed, this.s.m.biome);
         this.world.rebuild(this.s.entities);
-        this.repairLegacyCrystalPositions();
         if (data.explored?.length === GRID * GRID)
           this.world.explored.set(data.explored.map(x => (x ? 1 : 0)));
         delete this.s.explored;

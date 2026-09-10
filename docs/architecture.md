@@ -27,7 +27,7 @@ Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Styl
 
 Wichtige Abhängigkeiten:
 
-- `Battlefield(seed, biome)` verwendet `content` und `core`, aber weder Renderer noch Geometrie. `renderData` enthält CPU-Farben und benannte Platzierungsdaten; die kosmetischen RNG-Samples bleiben wegen der Layoutkompatibilität in der bisherigen Reihenfolge.
+- `Battlefield(seed, biome)` verwendet `content` und `core`, aber weder Renderer noch Geometrie. `renderData` enthält CPU-Farben und benannte Platzierungsdaten; die kosmetischen RNG-Samples bleiben für reproduzierbare Karten in der bisherigen Reihenfolge.
 - `BattlefieldView.sync(world)` übersetzt diese Daten in Mesh-/Rendereraufrufe und lädt geänderte Fog-Pixel. `app` synchronisiert vor dem Start-Ereignis an die UI sowie vor dem Zeichnen; die Menüvorschau nutzt denselben Adapter ohne Fog.
 - `MeridianGame(profile, emit, createEffects)` hält Profil, `Battlefield` und eine Effektkomponente, keinen Renderer. Die optionale Factory erhält einen Provider für den jeweils aktuellen Spiel-RNG; standardmäßig erstellt sie `MeridianEffects`. Der `emit(type, data)`-Callback wird im Einstiegspunkt nach der nötigen Welt-Synchronisierung an `MeridianUI.event()` angeschlossen.
 - `MeridianUI` greift weiterhin direkt auf `game.s`, Renderer, Audio und DOM zu, erhält die Speicherung aber als fünftes Konstruktorargument. Weder Storage-Schlüssel noch Profilnormalisierung oder Backup-JSON-Verarbeitung liegen noch in der UI. Der Ereignis-Callback ist trotzdem keine vollständige Entkopplung.
@@ -46,11 +46,9 @@ Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-la
 - Exportierte Backups tragen `format: 'ashes-of-meridian'`, `version: 1`, `profile` und optional eine Operation. Backup-Codec und `restore()` prüfen unterschiedliche Teile des Formats; ein vollständig validiertes Schema gibt es nicht.
 - Der private `Store` in der Speicherkomponente fängt Storage-Ausnahmen ab und bietet einen flüchtigen In-Memory-Ersatz. Das ist keine dauerhafte Sicherung; Backup-Export bleibt wichtig.
 
-Alloy-Vorkommen werden an jedem Ressourcenstandort auf fünf getrennte Ellipsenplätze verteilt; der östliche Standort lässt eine Lücke zur Startfabrik. `MeridianGame.crystalPosition()` ist die gemeinsame Positionsregel. Beim Restore erkennt `repairLegacyCrystalPositions()` ausschließlich die alten generierten Koordinaten und plant die Korrektur vor dem Wiederaufbau der Indizes. IDs, Restmengen und Versions-/Storage-Schlüssel bleiben erhalten; nur Positionen und erforderliche aktive Mining-Wege ändern sich. Blockierte Zielplätze werden deterministisch umgangen, ohne Gebäude zu verschieben; ohne sichere Gesamtanordnung bleibt der Standort unangetastet. [Kompatibilitätsplan und Prüfungen](crystal-spacing.md).
+Alloy-Vorkommen verwenden fünf getrennte Ellipsenplätze je Standort; der östliche Standort lässt eine Lücke zur Startfabrik. `MeridianGame.crystalPosition()` liefert die Positionen. Keine Migration beim Laden. [Kristallkorrektur](crystal-spacing.md).
 
-Der frühere Profilwert `settings.wasd` ist entfallen: Tastaturkamera ist fest WASD, Attack-Move fest F. Alte Version-1-Profile/Backups werden weiter gelesen; der obsolete Wert wird bei der Normalisierung entfernt. Keine automatische Schreibmigration beim Start, keine Änderung an Operationsdaten oder Storage-Schlüsseln. [Kompatibilität und Prüfungen](wasd-controls.md).
-
-Daraus folgt: Nicht nur Feldnamen und Versionen, sondern auch Kampagnenindizes, Definitionen und Kartenlayout sind für bestehende Spielstände relevant.
+Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. WASD/F sind fest, ohne Sonderbehandlung früherer Profileinstellungen.
 
 ## Assets und direkter Dateistart
 
@@ -80,7 +78,7 @@ Boden und Felsen bleiben weltprojiziert. Weltposition/-normale für Beleuchtung,
 
 1. **RNG und Darstellung:** `Battlefield.generate()` verbraucht eine Zufallsfolge für Bodenfarben, Hindernisse und Dekoration. Ihre Aufrufreihenfolge ist layoutrelevant. Felsmeshes und Kristallmodelle besitzen bereits separate kosmetische Generatoren; Die Effektkomponente verwendet für Explosionen und Arbeitereffekte weiterhin den übergebenen Simulations-RNG. Erzeugung und Tick sind vom Zeichnen getrennt, aber eine andere Partikelanzahl kann weiterhin spätere Zufallsentscheidungen ändern. Ein separater kosmetischer RNG wäre eine bewusste spätere Verhaltensänderung.
 2. **Laden ist keine exakte Fortsetzung des RNG:** Der Generatorzustand wird nicht serialisiert. Beim Start wird `seed + 77`, beim Restore `seed + floor(time * 50)` verwendet. Feste Zeitschritte und reproduzierbare Karten sind kein Nachweis für identischen Verlauf nach Save/Load.
-3. **Breite Verantwortlichkeiten:** Welt-/GPU- und Effektgrenzen sind umgesetzt; Weltgenerierung erzeugt aus Kompatibilitätsgründen aber weiterhin auch kosmetische Layoutdaten. `MeridianUI` und Teile des Einstiegspunkts besitzen noch breite Verantwortlichkeiten.
+3. **Breite Verantwortlichkeiten:** Welt-/GPU- und Effektgrenzen sind umgesetzt; Weltgenerierung erzeugt für reproduzierbare Karten aber weiterhin auch kosmetische Layoutdaten. `MeridianUI` und Teile des Einstiegspunkts besitzen noch breite Verantwortlichkeiten.
 4. **Implizite Schnittstellen:** Entitäten, Befehle und Ereignisse sind untypisierte Objekte; der Renderer verwendet eine lange positionale `add(...)`-Signatur. Globale Bindungen und Ausführungsreihenfolge ersetzen explizite Imports.
 5. **Strukturabhängige Tests:** Der gemeinsame Loader unter `tests/helpers/game-scripts.cjs` liest benannte klassische Inline-/Dateiskripte mit bewusst begrenztem HTML-/Pfadvertrag. Aufrufer nennen ihre Abhängigkeiten explizit; Ausführung bleibt in Dokumentreihenfolge. Bei einer späteren Modulaufteilung den Testzugriff anpassen, nicht die Verhaltensprüfungen abschwächen.
 
@@ -90,7 +88,7 @@ Diese Punkte sind Befunde, keine bereits vorgenommenen Fehlerkorrekturen. Insbes
 
 ### Zunächst: Referenzverhalten absichern
 
-Bereits umgesetzt: gemeinsamer Testloader und Renderer-Teststub, Syntaxprüfung aller benannten Skripte sowie Referenztests für Missionsstart, Befehle, Produktion, Ressourcen und Wiederherstellung eines Version-1-Spielstands aus `ab92a12`. [Herkunft und Grenzen der Referenztests](reference-tests.md) sind dokumentiert; Erwartungen werden nicht während des Testlaufs erzeugt.
+Bereits umgesetzt: gemeinsamer Testloader und Renderer-Teststub, Syntaxprüfung aller benannten Skripte sowie Tests für Missionsstart, Befehle, Produktion, Ressourcen und Wiederherstellung aktuell erzeugter Spielstände. Feste Terrain-/Effekt-/RNG-Erwartungen bleiben erhalten. [Umfang der Referenztests](reference-tests.md).
 
 Vor weiteren Umbauten:
 
@@ -112,7 +110,7 @@ Als erste echte Schnittstellengrenze wurde danach die [Speicherung entkoppelt](p
 
 Die Welt-/Renderer-Grenze ist inzwischen umgesetzt: CPU-Welt und Simulation laufen ohne Renderer, `world-view` übernimmt Meshes, Platzierungen, Fog und Entitätsmodelle. Die [Welt-/Effektreferenzen](world-effects-decoupling.md) sichern die ursprünglichen Ausgaben.
 
-Auch die Effektgrenze ist umgesetzt: `effects` erzeugt und aktualisiert kosmetische Daten synchron, `effects-view` zeichnet sie ohne RNG oder Mutation. Gameplayrelevante Strikes, Felder, Scans, Cooldowns und Sichtentscheidungen bleiben in der Simulation. Die bisherigen `game.fx`-/`game.floats`-Lesezugriffe und `explosion`-/`tickEffects`-Methoden delegieren als Kompatibilitätszugang an die Komponente.
+Auch die Effektgrenze ist umgesetzt: `effects` erzeugt und aktualisiert kosmetische Daten synchron, `effects-view` zeichnet sie ohne RNG oder Mutation. Gameplayrelevante Strikes, Felder, Scans, Cooldowns und Sichtentscheidungen bleiben in der Simulation. Alle Aufrufer verwenden direkt `game.effects`; es gibt keine Übergangs-Getter oder Delegationsmethoden.
 
 **Der vereinbarte Architekturblock ist abgeschlossen. Jetzt wieder Spielfunktionen entwickeln.** Weitere UI-Aufteilungen, Typisierung und neue Werkzeuge nur bei konkretem Featurebedarf; davor die betroffenen Referenztests ergänzen. Absichtliche RNG-, Save- oder Regeländerungen separat planen und prüfen. Kein vollständiger Rewrite oder neues UI-Framework erforderlich.
 

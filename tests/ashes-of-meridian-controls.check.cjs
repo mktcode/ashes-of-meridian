@@ -47,13 +47,11 @@ test('arrow keys never pan or enter the held camera-key set', () => {
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
 });
 
-test('F always selects attack-move and A only pans, even with a stale legacy flag', () => {
-  for (const wasd of [undefined, false, true]) {
-    const h = setup(); h.ui.profile.settings.wasd = wasd;
-    h.key('a'); h.ui.tick(.1); h.key('f'); h.key('f', { repeat: true });
-    assert.deepEqual(h.calls, [['mode', 'attackMove']]);
-    assert.equal(h.ui.game.s.cam.x, -4);
-  }
+test('F selects attack-move and A only pans', () => {
+  const h = setup();
+  h.key('a'); h.ui.tick(.1); h.key('f'); h.key('f', { repeat: true });
+  assert.deepEqual(h.calls, [['mode', 'attackMove']]);
+  assert.equal(h.ui.game.s.cam.x, -4);
 });
 
 test('modified shortcuts do not accidentally pan; focus and pause suppress camera input', () => {

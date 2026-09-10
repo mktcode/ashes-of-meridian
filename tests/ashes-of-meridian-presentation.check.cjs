@@ -18,7 +18,7 @@ test('world and simulation start, step and restore without renderer, geometry or
   game.start(0, { seed: 1409, difficulty: 'standard', faction: 0 });
   assert.equal(game.s.alloy, 470);
   assert.equal('R' in game, false); assert.equal('R' in game.world, false);
-  for (let i = 0; i < 1000; i++) { game.step(.05); game.tickEffects(.05); }
+  for (let i = 0; i < 1000; i++) { game.step(.05); game.effects.tick(.05); }
   const saved = game.snapshot(); game.restore(saved);
   assert.equal(game.s.time, saved.time); assert.ok(game.s.stats.gathered > 0);
   assert.ok(game.world.fogPixels.includes(255));
@@ -65,13 +65,13 @@ test('effect provider follows the current game RNG and survives start/restore re
   const effects = game.effects;
   game.start(0, { seed: 1409 });
   const snapshot = game.snapshot();
-  game.random = () => .5; game.explosion(0, 0);
-  assert.equal(game.fx[1].vy, 6);
+  game.random = () => .5; game.effects.explosion(0, 0);
+  assert.equal(game.effects.fx[1].vy, 6);
   game.restore(snapshot);
-  assert.equal(game.effects, effects); assert.equal(game.fx.length, 0);
+  assert.equal(game.effects, effects); assert.equal(game.effects.fx.length, 0);
   const restored = JSON.stringify(game.snapshot());
-  game.random = () => .25; game.explosion(0, 0);
-  assert.equal(game.fx[1].vy, 4.5);
+  game.random = () => .25; game.effects.explosion(0, 0);
+  assert.equal(game.effects.fx[1].vy, 4.5);
   assert.equal(JSON.stringify(game.snapshot()), restored);
 });
 
@@ -86,7 +86,7 @@ test('effect drawing accepts frozen data without game/UI globals and matches the
 });
 
 for (const [kind, expected] of Object.entries(fixture.effects)) {
-  test(`effect payload, lifetime, gameplay and RNG reference: ${kind}`, () => {
+  test(`effect payload, lifetime and RNG reference: ${kind}`, () => {
     assert.deepEqual(effectSample(kind), expected);
   });
 }

@@ -1,16 +1,12 @@
-// CPU-only characterization tests; provenance of fixed values/fixture:
-// docs/reference-tests.md. Never regenerate expectations during a test run.
+// CPU tests with fixed start expectations and current-checkpoint round-trips.
+// Scope: docs/reference-tests.md.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
 const vm = require('node:vm');
 const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
-const { useLegacyCrystalLayout } = require('./helpers/legacy-crystal-layout.cjs');
 
 const scripts = readScripts();
-const fixtureText = readFileSync(join(__dirname, 'fixtures/operation-v1.json'), 'utf8');
 // JSON transport is intentional: saves have JSON semantics, and VM objects have
 // different prototypes. This is not a replacement for cloning live game state.
 const json = value => JSON.parse(JSON.stringify(value));
@@ -41,7 +37,7 @@ function tutorial(faction = 0, seed = 1409) {
 function advance(game, steps) {
   for (let i = 0; i < steps; i++) {
     game.step(.05);
-    game.tickEffects(.05);
+    game.effects.tick(.05);
   }
 }
 
@@ -168,12 +164,11 @@ test('fixed steps finish production once, retain reserved supply and account for
   close(game.s.gas, 80 + 11.05 * .25);
 });
 
-test('five-second scenario on the explicit historical resource layout matches the fixed ab92a12 snapshot', () => {
+function currentCheckpoint() {
   const { game } = tutorial();
-  useLegacyCrystalLayout(game);
   checkpointScenario(game);
-  assert.deepEqual(json(game.snapshot()), JSON.parse(fixtureText));
-});
+  return json(game.snapshot());
+}
 
 test('snapshot detaches nested entity, queue, camera and explored data from live state', () => {
   const { game } = tutorial();
@@ -192,29 +187,11 @@ test('snapshot detaches nested entity, queue, camera and explored data from live
   assert.equal(snapshot.entities[0].hp, 1);
 });
 
-test('version-1 fixture restores state with targeted crystal migration and rebuilds navigation, indexes and fog', () => {
+test('current checkpoint restores state and rebuilds navigation, indexes and fog', () => {
   const { game, renderer, events } = createGame();
-  const fixture = JSON.parse(fixtureText), before = json(fixture);
+  const fixture = currentCheckpoint(), before = json(fixture);
   game.restore(fixture);
   const { explored, ...savedState } = json(fixture);
-  // Explicit compatibility exception: standard crystal slots 1–4, eastern slot 0,
-  // and paths of miners heading to those IDs. Every other saved value stays identical.
-  const sites = [[-67,43],[-25,27],[6,40],[-57,-25],[27,-51],[65,6],[29,64],[7,-65]];
-  const moved = new Set();
-  savedState.entities.filter(e => e.kind === 'resource' && e.type === 'crystal').forEach((e, k) => {
-    const j = k % 5, i = Math.floor(k / 5);
-    if (!j && i !== 5) return;
-    const angle = j * Math.PI * 2 / 5 + (i === 5 ? 4.7 : i * .8), actual = game.get(e.id);
-    close(actual.x, sites[i][0] + Math.sin(angle) * 3.9);
-    close(actual.z, sites[i][1] + Math.cos(angle) * 3);
-    e.x = actual.x; e.z = actual.z; moved.add(e.id);
-  });
-  assert.equal(moved.size, 33);
-  for (const e of savedState.entities) {
-    if (e.kind === 'unit' && e.type === 'worker' && !e.returning && e.order?.type === 'mine' && moved.has(e.order.id)) {
-      e.path = []; e.pi = 0; e.nextPath = 0; delete e.pathGoal;
-    }
-  }
   assert.deepEqual(json(game.s), savedState);
   assert.deepEqual(fixture, before);
   assert.notStrictEqual(game.s.entities, fixture.entities);
@@ -232,12 +209,12 @@ test('version-1 fixture restores state with targeted crystal migration and rebui
   assert.equal(renderer.fogOn, true);
   assert.deepEqual(events.map(e => e.type), ['start']);
   assert.equal(events[0].data.resumed, true);
-  assert.equal(game.fx.length, 0);
+  assert.equal(game.effects.fx.length, 0);
 });
 
-test('restored fixture can advance production and time without promising identical RNG continuation', () => {
+test('restored checkpoint can advance production and time without promising identical RNG continuation', () => {
   const { game } = createGame();
-  const fixture = JSON.parse(fixtureText);
+  const fixture = currentCheckpoint();
   game.restore(fixture);
   const progress = player(game, 'barracks').queue[0].progress;
   advance(game, 1);
@@ -250,10 +227,10 @@ test('restored fixture can advance production and time without promising identic
 
 test('restore rejects unsupported save versions and unknown unit types', () => {
   const { game } = createGame();
-  const wrongVersion = JSON.parse(fixtureText);
+  const wrongVersion = currentCheckpoint();
   wrongVersion.version = 999;
   assert.throws(() => game.restore(wrongVersion), /not a valid Meridian operation/);
-  const unknownUnit = JSON.parse(fixtureText);
+  const unknownUnit = currentCheckpoint();
   unknownUnit.entities.find(e => e.kind === 'unit').type = 'unknown-unit';
   assert.throws(() => game.restore(unknownUnit), /Unknown entity in save/);
   assert.equal(game.s, null);

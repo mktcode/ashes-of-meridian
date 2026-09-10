@@ -12,7 +12,8 @@
 - Zusammenhängende, geprüfte Änderungen eigenständig committen. Fremde oder bereits vorhandene unzusammenhängende Änderungen nicht in den eigenen Commit aufnehmen.
 - Formatierung, strukturelles Refactoring und absichtliche Verhaltensänderungen getrennt halten. Keine beiläufigen Änderungen an Balancing, Darstellung oder Spielregeln; bekannte Probleme nicht stillschweigend im Refactoring korrigieren.
 - Seedbasierte Hindernisverteilung, Kollisionsradien und RNG-Aufrufreihenfolge schützen. Auch kosmetische Effekte verwenden teilweise den Simulations-RNG. Layout-Prüfsummen nicht nur zur Reparatur fehlgeschlagener Tests neu erzeugen.
-- Storage-Schlüssel, Save-/Backup-Versionen, Entitätsdaten und Kampagnenzuordnung nicht ohne ausdrücklichen Kompatibilitätsplan ändern. Exakte deterministische Fortsetzung nach Laden ist derzeit nicht zugesichert.
+- Entwicklungsprototyp: Keine Rückwärtskompatibilität, Spielstandmigrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag. Alte Spielstände dürfen durch Änderungen unbrauchbar werden.
+- Schnell und zielgerichtet liefern: kleinste sinnvolle Änderung, passende Tests, kurze Dokumentation. Keine vorsorglichen Zusatzsysteme.
 - Keine Assets löschen, austauschen oder neu kodieren, nur weil sie redundant erscheinen. Externe PNGs und eingebettete Texturen werden derzeit nicht automatisch synchronisiert.
 
 ## Prüfen und dokumentieren
