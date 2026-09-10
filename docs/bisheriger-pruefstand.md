@@ -1,6 +1,10 @@
-# Bisheriger Prüfstand
+# Historischer Prüfbericht vor der Auslagerung
 
-Übernommen aus dem bisherigen Websiteprojekt; Pfade und lokale Prüfaussagen beschreiben den Stand vor der Auslagerung. Die Spieldateien liegen jetzt direkt im Projektverzeichnis, die Tests unter `tests/`.
+> Archiv: Die folgenden Notizen wurden aus dem früheren Websiteprojekt übernommen. Pfade, Assetgrößen und Aussagen wie „lokal bestanden“ beziehen sich auf damalige Zwischenstände, nicht auf den aktuellen Projektstand. Die erwähnten Browser- und zusätzlichen Modellprüfungen sind nicht vollständig als automatisierte Tests in diesem Projekt vorhanden.
+>
+> Aktueller Aufbau: [Architektur](architecture.md). Reproduzierbare Prüfungen und belegter neuer Prüfstand: [Prüfungen](testing.md).
+
+Der übernommene Bericht bleibt nachfolgend unverändert erhalten. Die Spieldateien liegen heute direkt im Projektverzeichnis, die Tests unter `tests/`; die alten `public/`-Pfade dienen nur der historischen Einordnung.
 
 Unter `public/ashes-of-meridian/index.html` liegt die texturierte HTML-Version des Spiels mit lokalen Assets (zuvor `public/ashes-of-meridian.html`). Die drei Texturen sind eingebettet und zusätzlich als PNGs im selben Verzeichnis abgelegt; das importierte Quell-ZIP wurde gelöscht. Gebäudemodelle erhalten im Renderer einen festen kosmetischen Versatz von 12°, einschließlich Menü- und Bauvorschau sowie bestehender Spielstände. Platzierung, Kollisionsradien und Simulationsdaten bleiben unverändert; die Geschützköpfe der Free Marches zielen unabhängig vom fest gedrehten Sockel.
 

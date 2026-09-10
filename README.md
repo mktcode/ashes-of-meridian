@@ -1,19 +1,36 @@
 # Ashes of Meridian
 
-Eigenständiger statischer Spiel-Prototyp, ohne Nuxt oder npm-Abhängigkeiten. `index.html` enthält Renderer und Simulation; die Bilddateien liegen daneben.
+Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. HTML, CSS, Renderer und Simulation liegen in `index.html`; es gibt derzeit keine npm-Abhängigkeiten und keinen Build-Schritt.
 
-## Lokal starten
+## Spielen
+
+`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. `skybox.webp` muss für den vorgesehenen Himmel neben der HTML-Datei bleiben; das Spiel ist noch kein vollständig autarkes Ein-Datei-Paket.
+
+Der direkte Start über `file://` soll erhalten bleiben. Browser können dabei lokale WebGL-Texturen oder dauerhafte Speicherung einschränken; eine aktuelle Browser-Kompatibilitätsprüfung steht noch aus. Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
 
 ```bash
 python3 -m http.server 8080 --bind 127.0.0.1
 ```
 
-Anschließend `http://127.0.0.1:8080/` öffnen.
+Dann [http://127.0.0.1:8080/](http://127.0.0.1:8080/) öffnen. Der Server ist ein optionales Hilfsmittel, keine vorgesehene Spielvoraussetzung.
 
-## Tests
+Die Steuerung erklärt das **Field Manual** im Spiel (`F1`).
+
+## Spielstände sichern
+
+Fortschritt und Checkpoints werden im Browserspeicher abgelegt. Unter **Settings → Export Backup** lässt sich ein JSON-Backup sichern; **Import Backup** liest es wieder ein und ersetzt dabei gespeicherte Profildaten, bei enthaltenem Checkpoint auch diesen.
+
+Vor Browserwechsel, Verschieben der Spieldatei oder Wechsel zwischen `file://` und HTTP ein Backup exportieren: Browserspeicher wird dabei nicht automatisch übertragen. Ohne verfügbaren dauerhaften Speicher ist der In-Memory-Ersatz nach dem Schließen verloren.
+
+## Entwickeln und prüfen
+
+Die vorhandenen Tests benötigen Node.js, aber keine Installation von Paketen. Aus dem Projektverzeichnis:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-{terrain,crystals}.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs
 ```
 
-Bisherige Implementierungs- und Prüfnotizen: [docs/bisheriger-pruefstand.md](docs/bisheriger-pruefstand.md).
+- [Architektur](docs/architecture.md): aktueller Aufbau, Risiken und nächste Schritte.
+- [Prüfungen](docs/testing.md): Testabdeckung, Browser-Checkliste und belegter Prüfstand.
+- [Arbeitsregeln für KI-Assistenten](AGENTS.md).
+- [Historischer Prüfbericht](docs/bisheriger-pruefstand.md): übernommene Notizen, kein aktueller Testnachweis.
