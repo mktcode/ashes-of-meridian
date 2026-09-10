@@ -1,22 +1,19 @@
 // node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-crystals.check.cjs
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
 const vm = require('node:vm');
-const html = readFileSync(join(__dirname, '../index.html'), 'utf8');
-const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-const context = vm.createContext({});
-for (const source of scripts.slice(0, 3)) vm.runInContext(source, context);
+const { loadScripts } = require('./helpers/inline-scripts.cjs');
+const { createRendererStub } = require('./helpers/renderer-stub.cjs');
+const context = loadScripts(['renderer', 'content', 'world']);
 const { geom, renderEntity, MAT } = vm.runInContext('({geom, renderEntity, MAT})', context);
 const deposit = (id = 1, amount = 1800) => Object.freeze({
   id, amount, kind: 'resource', type: 'crystal', x: 12, z: -7,
   hp: 1, size: 1.3, team: -1, faction: 0, rot: 0,
 });
 function render(e, time = 0, options = {}) {
-  const calls = [];
-  renderEntity({ add(...args) { calls.push(args); } }, e, time, options);
-  return calls;
+  const renderer = createRendererStub({ record: true });
+  renderEntity(renderer, e, time, options);
+  return renderer.calls;
 }
 
 test('crystal prism has 36 finite, non-degenerate triangles and flat unit normals', () => {

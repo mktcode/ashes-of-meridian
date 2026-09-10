@@ -5,7 +5,7 @@
 Aus dem Projektverzeichnis mit Node.js ausführen; weder npm-Pakete noch Browser oder Build sind erforderlich:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs
 ```
 
 Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit gilt für den JavaScript-Heap, nicht als Obergrenze für den gesamten Prozessspeicher. Die Testdateien werden nacheinander ausgeführt.
@@ -16,8 +16,12 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 | --- | --- |
 | `tests/ashes-of-meridian-terrain.check.cjs` | 19 Tests: Syntax aller sieben Inline-Skripte; deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
 | `tests/ashes-of-meridian-crystals.check.cjs` | 5 Tests: Kristallgeometrie mit 36 Dreiecken und Einheitsnormalen; 80 zeitstabile Vorkommensmodelle; Größenänderung beim Abbau ohne Mutation der Entität; Vorschauparameter; bestehende Aether-Formen und Animation |
+| `tests/ashes-of-meridian-harness.check.cjs` | 5 Tests: explizite Skriptauswahl und Dokumentreihenfolge; fehlende/doppelte Namen und unerwartete Verpackung; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
+| `tests/ashes-of-meridian-simulation.check.cjs` | 15 Tests: fester Missionsstart, Seed-Reproduzierbarkeit, Befehle/Rally, Produktionskosten und Erstattung aller drei Fraktionen, abgelehnte Rekrutierung, Fertigstellung und Einkommen/Alloy-Lieferungen, Fünf-Sekunden-Referenzzustand, Snapshot-Isolation, Wiederherstellung und Weiterlaufen eines Version-1-Fixtures, zwei ungültige Save-Fälle |
 
-Beide Dateien lesen JavaScript aus `index.html` und führen die ersten drei Skriptblöcke in einer Node-VM aus. Renderer-Aufrufe werden durch Teststubs ersetzt. Es wird kein WebGL-Kontext erstellt.
+`tests/helpers/inline-scripts.cjs` liest JavaScript aus `index.html` anhand der `data-meridian-script`-Namen. Die Modelltests laden `renderer`, `content` und `world`, die Simulationstests zusätzlich `simulation`. Die Abhängigkeiten werden explizit ausgewählt, aber wie im Browser in Dokumentreihenfolge ausgeführt. Alle gefundenen Skripte werden auf Syntax geprüft, ohne ihre Anzahl festzuschreiben. Fehlende oder doppelte Namen werden nicht stillschweigend übergangen.
+
+Der gemeinsame Renderer-Stub unter `tests/helpers/renderer-stub.cjs` ersetzt GPU-Zugriffe; nur Modelltests zeichnen Renderplatzierungen auf. Simulationstests erhalten frische VM-Kontexte mit `structuredClone`, aber ohne DOM/Storage/Audio und mit absichtlich fehlschlagendem `Math.random()`. Die fest gesetzten Seeds müssen genügen. Es wird kein WebGL-Kontext erstellt.
 
 Die Layout-Prüfsummen erfassen `staticGrid`, `terrainColors` und `rocks`. Sie sind eine feste Referenz aus der Zeit vor der visuellen Terrainänderung. Bei einem reinen Refactoring müssen sie unverändert bestehen bleiben; bei Abweichungen zuerst die Ursache untersuchen, nicht neue Sollwerte übernehmen.
 
@@ -25,10 +29,10 @@ Die Layout-Prüfsummen erfassen `staticGrid`, `terrainColors` und `rocks`. Sie s
 
 - Tatsächliches Shader-Kompilieren, Texturladen, GPU-Ausgabe und Performance.
 - Browserstart über `file://` oder HTTP, DOM, Eingabe, Audio und responsive Darstellung.
-- Missionsverlauf, Wegfindungsfälle, Kampf, Produktion, Wirtschaft und Sieg/Niederlage.
-- Storage-Verhalten, Backup-Import/Export, Save-Kompatibilität und identische Fortsetzung nach Laden.
+- Vollständige Missionsverläufe, weitere Wegfindungsfälle, Bau-/Kampfregeln, Forschung und Sieg/Niederlage. Produktions-/Wirtschaftstests erfassen nur ausgewählte kurze Szenarien.
+- Storage-Verhalten, UI-Backup-Import/Export, breite Save-Kompatibilität und identische Fortsetzung nach Laden. Das Fixture deckt nur eine Kampagnenoperation mit Formatversion 1 ab, keinen vollständigen Backup-Container.
 
-Insbesondere prüft der Kristall-Abbautest die **Darstellung bei vorgegebenen Mengen**, nicht den Abbau durch Arbeiter. Ein grüner Syntaxcheck führt die UI- und Simulationsskripte nicht aus und kompiliert keine GLSL-Shader.
+Der Kristall-Abbautest prüft die **Darstellung bei vorgegebenen Mengen**; tatsächlich angeliefertes Alloy wird separat im kurzen Simulationstest erfasst. Die UI und der Anwendungseinstieg werden nicht ausgeführt. Ein grüner Syntaxcheck kompiliert keine GLSL-Shader.
 
 ## Manuelle Browser-Prüfung
 
@@ -47,11 +51,19 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Belegter Prüfstand dieser Bestandsaufnahme
+## Aktueller Prüfstand: Testzugriff und Referenztests
+
+- Obiger Befehl unter Node.js `v23.11.1` / Linux: **44 Tests bestanden, 0 fehlgeschlagen**.
+- Die ursprünglichen 24 Modell-/Terrainprüfungen bestehen weiterhin, insbesondere alle 16 unveränderten Layout-Prüfsummen.
+- Im HTML wurden ausschließlich sieben `data-meridian-script`-Attribute ergänzt; Skriptinhalte, CSS, sonstiges HTML und Assets wurden mit dem Ausgangsstand verglichen und sind unverändert.
+- Herkunft des festen Fixtures und weitere Prüfergebnisse: [Referenztests](reference-tests.md).
+- Kein Browserlauf: Die Attribute ändern weder Script-Typ, Reihenfolge noch Inhalt. Die bestehende offene `file://`-/WebGL-Kompatibilitätsprüfung ist damit nicht erledigt.
+
+## Historischer Prüfstand: Dokumentationsbereinigung
 
 - Referenz: formatierter Ausgangscommit `ab92a12`.
 - Umgebung: Node.js `v23.11.1` unter Linux; das ist die tatsächlich geprüfte Version, keine ermittelte Mindestversion.
-- Obiger Testbefehl ausgeführt: **24 Tests bestanden, 0 fehlgeschlagen**.
+- Damaligen Terrain-/Kristalltestbefehl ausgeführt: **24 Tests bestanden, 0 fehlgeschlagen**.
 - `index.html`, die vier Bilddateien und beide Testdateien wurden byteweise mit `HEAD` verglichen: unverändert.
 - Lokale Markdown-Links samt Abschnittsankern in README, AGENTS und den drei Dokumenten unter `docs/` geprüft; `git diff --check` ohne Beanstandung.
 - **Nicht ausgeführt:** Browser-Sichtprüfung, `file://`-/HTTP-Kompatibilitätsprüfung und vollständiger Spiel-/E2E-Lauf. Ein Build existiert derzeit nicht.
@@ -61,4 +73,4 @@ Künftige Prüfnotizen unter `docs/` ablegen und mit Commit/Änderungsumfang, Um
 
 ## Nächste Erweiterung des Sicherheitsnetzes
 
-Vor einer Modulaufteilung Testloader und Renderer-Stubs gemeinsam nutzen und den positionalen Zugriff auf Skriptblöcke ersetzen. Anschließend Missionsstart, Produktions-/Ressourcenverhalten, Befehle und ein bestehendes Save-Fixture absichern. Details und die bekannten RNG-Grenzen stehen in der [Architektur](architecture.md#nächste-schritte-und-späteres-zielbild).
+Vor Änderungen an weiteren Bereichen passende Szenarien ergänzen, nicht aus den 44 Prüfungen eine umfassende Spielabdeckung ableiten. Vor einer neuen Verpackung steht insbesondere die Browserprüfung aus. Weitere Schritte und die bekannten RNG-Grenzen stehen in der [Architektur](architecture.md#nächste-schritte-und-späteres-zielbild).

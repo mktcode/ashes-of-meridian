@@ -2,13 +2,13 @@
 
 ## Status und Geltungsbereich
 
-Bestandsaufnahme des formatierten Ausgangsstands `ab92a12` und Vorbereitung weiterer Refactorings. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Die Dokumentationsbereinigung verändert weder Spielcode noch Assets oder Tests.
+Bestandsaufnahme des formatierten Ausgangsstands `ab92a12`, ergänzt um den gemeinsamen Testzugriff und die Referenztests. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht implementiert. Im Spiel-HTML wurden bisher lediglich die sieben Skript-Tags mit Namen versehen, ihre Inhalte und das Spielverhalten blieben unverändert.
 
 `index.html` ist derzeit die maßgebliche, von Hand bearbeitete Quelle und zugleich die ausgelieferte Anwendung. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Viele JavaScript-Methoden stehen trotz HTML-Formatierung noch auf einer Zeile.
 
 ## Codekarte
 
-Nach CSS und statischem HTML folgen sieben klassische Inline-Skripte. Sie teilen sich globale lexikalische Bindungen und werden in Dokumentreihenfolge ausgeführt. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen Module. Zur Navigation die Symbolnamen in `index.html` suchen.
+Nach CSS und statischem HTML folgen sieben klassische Inline-Skripte. Sie teilen sich globale lexikalische Bindungen und werden in Dokumentreihenfolge ausgeführt. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen Module. Zur Navigation die Symbolnamen in `index.html` suchen. Die Tags tragen `data-meridian-script` mit den Namen `renderer`, `content`, `world`, `simulation`, `audio`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
 
 | Block | Einstieg / wichtige Symbole | Zuständigkeiten heute |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ Daraus folgt: Nicht nur Feldnamen und Versionen, sondern auch Kampagnenindizes, 
 2. **Laden ist keine exakte Fortsetzung des RNG:** Der Generatorzustand wird nicht serialisiert. Beim Start wird `seed + 77`, beim Restore `seed + floor(time * 50)` verwendet. Feste Zeitschritte und reproduzierbare Karten sind kein Nachweis für identischen Verlauf nach Save/Load.
 3. **Breite Verantwortlichkeiten:** `Battlefield`, `MeridianGame`, `MeridianUI` und der Einstiegspunkt mischen jeweils mehrere Aufgaben. Reines Verschieben in Dateien löst diese Kopplungen nicht.
 4. **Implizite Schnittstellen:** Entitäten, Befehle und Ereignisse sind untypisierte Objekte; der Renderer verwendet eine lange positionale `add(...)`-Signatur. Globale Bindungen und Ausführungsreihenfolge ersetzen explizite Imports.
-5. **Strukturabhängige Tests:** Beide Testdateien extrahieren Inline-Skripte per regulärem Ausdruck und führen die ersten drei aus. Ein Test verlangt genau sieben Skripte. Vor einer Aufteilung muss dieser Testzugriff bewusst angepasst werden, ohne Verhaltensprüfungen zu verlieren.
+5. **Strukturabhängige Tests:** Der gemeinsame Loader unter `tests/helpers/inline-scripts.cjs` extrahiert weiterhin Inline-Skripte per regulärem Ausdruck, nun mit eindeutigen Namen statt festen Positionen oder fester Anzahl. Aufrufer nennen ihre Abhängigkeiten explizit; Ausführung bleibt in Dokumentreihenfolge. Bei einer späteren Modulaufteilung nur diesen Testzugriff anpassen, nicht die Verhaltensprüfungen abschwächen.
 
 Diese Punkte sind Befunde, keine bereits vorgenommenen Fehlerkorrekturen. Insbesondere RNG- und Save-Änderungen müssen getrennt von strukturellen Refactorings geplant werden.
 
@@ -59,10 +59,13 @@ Diese Punkte sind Befunde, keine bereits vorgenommenen Fehlerkorrekturen. Insbes
 
 ### Zunächst: Referenzverhalten absichern
 
-1. Gemeinsamen Testloader und Renderer-Teststub einführen. Skriptblöcke explizit identifizierbar machen, statt die ersten drei blind auszuwählen; alle Inline-Skripte weiterhin auf Syntax prüfen.
-2. Missionsstart mit festem Seed, Ressourcen/Produktionsqueue, Befehle und Wiederherstellung eines im Ausgangsstand erfassten Spielstand-Fixtures testen. Erwartungswerte nicht bei jedem Testlauf aus der aktuellen Implementierung neu erzeugen.
-3. Die vorhandenen Layout-Prüfsummen unverändert beibehalten. Nur tatsächlich zugesicherte Save/Load-Eigenschaften prüfen, nicht vollständige Deterministik unterstellen.
-4. Den direkten Browserstart anhand der [Checkliste](testing.md#manuelle-browser-prüfung) prüfen, bevor eine neue Verpackung eingeführt wird.
+Bereits umgesetzt: gemeinsamer Testloader und Renderer-Teststub, Syntaxprüfung aller benannten Skripte sowie Referenztests für Missionsstart, Befehle, Produktion, Ressourcen und Wiederherstellung eines Version-1-Spielstands aus `ab92a12`. [Herkunft und Grenzen der Referenztests](reference-tests.md) sind dokumentiert; Erwartungen werden nicht während des Testlaufs erzeugt.
+
+Vor weiteren Umbauten:
+
+1. Für den jeweils betroffenen Bereich fehlende Fälle ergänzen, etwa weitere Missionstypen, Bau-/Kampfregeln oder Save-Validierung. Die bisherigen Referenzen decken nur ausgewählte Szenarien ab.
+2. Die vorhandenen Layout-Prüfsummen unverändert beibehalten. Nur tatsächlich zugesicherte Save/Load-Eigenschaften prüfen, nicht vollständige Deterministik unterstellen.
+3. Den direkten Browserstart anhand der [Checkliste](testing.md#manuelle-browser-prüfung) prüfen, bevor eine neue Verpackung eingeführt wird.
 
 ### Anschließend: schrittweise entkoppeln
 

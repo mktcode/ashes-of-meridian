@@ -2360,7 +2360,7 @@
   <div id="tooltip" class="hidden"></div>
   <div id="toast"></div>
   <input id="importFile" type="file" accept="application/json,.json" class="hidden">
-  <script>
+  <script data-meridian-script="renderer">
     /* Ashes of Meridian: dependency-free instanced WebGL2 renderer. */
     'use strict';
     const M4 = {
@@ -2507,7 +2507,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
     }
 
   </script>
-  <script>
+  <script data-meridian-script="content">
     /* Campaign, balancing, original narrative, iconography and faction nomenclature. */
     'use strict';
     const FACTIONS = [
@@ -2620,7 +2620,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
     function buildingName(type, faction = 0) { return FACTIONS[faction].buildings[type] || type }
 
   </script>
-  <script>
+  <script data-meridian-script="world">
     /* Seeded battlefields, grid navigation and procedural faction models. */
     'use strict';
     const EXTENT = 90, GRID = 72, CELL = 2.5;
@@ -2762,7 +2762,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
     }
 
   </script>
-  <script>
+  <script data-meridian-script="simulation">
     /* Deterministic fixed-step RTS simulation. Rendering and UI are independent. */
     'use strict';
     const DIFFICULTY = { story: { name: 'Story', damage: .67, hp: .84, spawn: .72, interval: 1.2, start: 1.2 }, standard: { name: 'Standard', damage: 1, hp: 1, spawn: 1, interval: 1, start: 1 }, veteran: { name: 'Veteran', damage: 1.22, hp: 1.17, spawn: 1.28, interval: .88, start: .95 } };
@@ -2927,7 +2927,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
     function formatTime(s) { s = Math.max(0, Math.floor(s || 0)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0') }
 
   </script>
-  <script>
+  <script data-meridian-script="audio">
     /* Original procedural score and battlefield sound. No audio files or network calls. */
     'use strict';
     class MeridianAudio {
@@ -2941,7 +2941,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
     }
 
   </script>
-  <script>
+  <script data-meridian-script="ui">
     /* Front end, local checkpoints, campaign progression, HUD, controls, field manual. */
     'use strict';
     const $ = id => document.getElementById(id);
@@ -3078,7 +3078,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
     }
 
   </script>
-  <script>
+  <script data-meridian-script="app">
     /* Application lifecycle, fixed-step clock, visual effects, and cinematic frontier. */
     'use strict';
     (() => {

@@ -1,25 +1,18 @@
-// Run without Nuxt/build/browser: node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs
+// Run without build/browser: node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
 const { createHash } = require('node:crypto');
 const vm = require('node:vm');
+const { readInlineScripts, loadScripts } = require('./helpers/inline-scripts.cjs');
+const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
-const html = readFileSync(join(__dirname, '../index.html'), 'utf8');
-const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-const context = vm.createContext({});
-for (const source of scripts.slice(0, 3)) vm.runInContext(source, context);
+const scripts = readInlineScripts();
+const context = loadScripts(['renderer', 'content', 'world'], { scripts });
 const { geom, Battlefield, CAMPAIGN, MAT } = vm.runInContext('({geom, Battlefield, CAMPAIGN, MAT})', context);
 
 function world(seed, biome) {
-  const calls = [];
-  const renderer = {
-    clearStatic() {}, geometry() {},
-    add(...args) { calls.push(args); },
-    color(c) { return [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255]; },
-  };
-  return { battlefield: new Battlefield(renderer, seed, biome), calls };
+  const renderer = createRendererStub({ record: true });
+  return { battlefield: new Battlefield(renderer, seed, biome), calls: renderer.calls };
 }
 function layoutHash(w) {
   return createHash('sha256').update(w.staticGrid).update(w.terrainColors)
@@ -46,9 +39,8 @@ const originalLayouts = {
   90001: '765c115f340f522ad28aa67e996f2ccb8bb07b7012c443cb51ecafb13989792c',
 };
 
-test('all seven inline scripts parse', () => {
-  assert.equal(scripts.length, 7);
-  for (const source of scripts) new vm.Script(source);
+test('all named inline scripts parse, including scripts not executed by these tests', () => {
+  for (const { source, filename } of scripts) new vm.Script(source, { filename });
 });
 
 test('rock meshes are deterministic, finite, bounded and inexpensive', () => {
