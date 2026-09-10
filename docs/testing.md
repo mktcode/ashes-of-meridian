@@ -5,7 +5,7 @@
 Aus dem Projektverzeichnis mit Node.js ausführen; weder npm-Pakete noch Browser oder Build sind erforderlich:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs
 ```
 
 Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit gilt für den JavaScript-Heap, nicht als Obergrenze für den gesamten Prozessspeicher. Die Testdateien werden nacheinander ausgeführt.
@@ -20,6 +20,8 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 | `tests/ashes-of-meridian-harness.check.cjs` | 11 Tests: isoliertes Laden von `content` samt Katalog-/Kampagnenreihenfolge und Namens-/Icon-Hilfsfunktionen; explizite Skriptauswahl und Dokumentreihenfolge bei Inline-/Dateimischung; fehlende/doppelte Namen und unerwartete Verpackung; lokale Pfade und fehlende Dateien; Ablehnung von URL-/Traversal-/Symlink-Ausbrüchen und mehrdeutigen Attributen; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
 | `tests/ashes-of-meridian-simulation.check.cjs` | 15 Tests: fester Missionsstart, Seed-Reproduzierbarkeit, Befehle/Rally, Produktionskosten und Erstattung aller drei Fraktionen, abgelehnte Rekrutierung, Fertigstellung und Einkommen/Alloy-Lieferungen, Fünf-Sekunden-Referenzzustand, Snapshot-Isolation, Wiederherstellung und Weiterlaufen eines Version-1-Fixtures, zwei ungültige Save-Fälle |
 
+Zusätzlich: `tests/ashes-of-meridian-persistence.check.cjs` mit 13 Charakterisierungstests für Profil-Normalisierung, Checkpoints, Storage-Ausfälle und UI-Backup-Abläufe. Die betroffenen UI-Methoden werden ohne Konstruktor mit gezielten Testdoubles ausgeführt, nicht mit einem Browser-DOM. [Details](persistence-decoupling.md).
+
 `tests/helpers/game-scripts.cjs` liest benannte klassische Skripte aus `index.html` und lokale `src`-Dateien relativ zum Quellverzeichnis, unabhängig vom Arbeitsverzeichnis des Testprozesses. Die Core-Tests laden nur `core`, ein Harness-Test nur `content`, die Modelltests `core` sowie `renderer`, `content` und `world`, die Simulationstests außerdem `simulation`. Abhängigkeiten werden explizit ausgewählt, aber wie im Browser in Dokumentreihenfolge ausgeführt. Alle gefundenen Skripte werden auf Syntax geprüft, ohne ihre Anzahl festzuschreiben. Fehlende oder doppelte Namen werden nicht stillschweigend übergangen. Module, `async`/`defer` und nicht unterstützte Pfad-/Attributformen werden bewusst abgelehnt; Details: [Core-Auslagerung](core-extraction.md).
 
 Der gemeinsame Renderer-Stub unter `tests/helpers/renderer-stub.cjs` ersetzt GPU-Zugriffe; nur Modelltests zeichnen Renderplatzierungen auf. Simulationstests erhalten frische VM-Kontexte mit `structuredClone`, aber ohne DOM/Storage/Audio und mit absichtlich fehlschlagendem `Math.random()`. Die fest gesetzten Seeds müssen genügen. Es wird kein WebGL-Kontext erstellt.
@@ -31,9 +33,9 @@ Die Layout-Prüfsummen erfassen `staticGrid`, `terrainColors` und `rocks`. Sie s
 - Tatsächliches Shader-Kompilieren, Texturladen, GPU-Ausgabe und Performance.
 - Browserstart über `file://` oder HTTP, DOM, Eingabe, Audio und responsive Darstellung.
 - Vollständige Missionsverläufe, weitere Wegfindungsfälle, Bau-/Kampfregeln, Forschung und Sieg/Niederlage. Produktions-/Wirtschaftstests erfassen nur ausgewählte kurze Szenarien.
-- Storage-Verhalten, UI-Backup-Import/Export, breite Save-Kompatibilität und identische Fortsetzung nach Laden. Das Fixture deckt nur eine Kampagnenoperation mit Formatversion 1 ab, keinen vollständigen Backup-Container.
+- Echtes Browser-Storage und Datei-/Download-Dialoge, breite Save-Kompatibilität und identische Fortsetzung nach Laden. Das Fixture deckt nur eine Kampagnenoperation mit Formatversion 1 ab, keinen vollständigen Backup-Container.
 
-Der Kristall-Abbautest prüft die **Darstellung bei vorgegebenen Mengen**; tatsächlich angeliefertes Alloy wird separat im kurzen Simulationstest erfasst. Die UI und der Anwendungseinstieg werden nicht ausgeführt. Ein grüner Syntaxcheck kompiliert keine GLSL-Shader.
+Der Kristall-Abbautest prüft die **Darstellung bei vorgegebenen Mengen**; tatsächlich angeliefertes Alloy wird separat im kurzen Simulationstest erfasst. Nur ausgewählte Speicher-/Backup-Methoden der UI werden mit Testdoubles ausgeführt; UI-Konstruktion und Anwendungseinstieg bleiben außerhalb der Node-Tests. Ein grüner Syntaxcheck kompiliert keine GLSL-Shader.
 
 ## Manuelle Browser-Prüfung
 
@@ -52,7 +54,13 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: weitere Skriptauslagerungen
+## Aktueller Prüfstand: Speicher-Charakterisierung
+
+- 13 neue Tests gegen den unveränderten Spielcode aus `b09717e`; insgesamt **72 bestanden, 0 fehlgeschlagen**, Node.js `v23.11.1` / Linux, vollständiger obiger Befehl.
+- Frischer Chromium-`file://`-Ausgangslauf mit der erweiterten Probe aus der Auslagerungsserie bestanden; weiterhin nur die bekannte Skybox-Ausnahme. Noch kein Nachher-Nachweis einer Entkopplung.
+- Verhalten, Grenzen und nächste Schnittstelle: [Speicher-Entkopplung](persistence-decoupling.md).
+
+## Vorheriger Prüfstand: weitere Skriptauslagerungen
 
 - `world.js`, `simulation.js`, `audio.js`, `ui.js` und `app.js` jeweils separat vollständig bytegleich ausgelagert; übrige Skriptdateien, Styles, Assets, Tests und Referenzen unverändert. Keine gleichzeitige Entkopplung oder Formatierung.
 - Nach jedem abgeschlossenen Schritt **59 Tests bestanden, 0 fehlgeschlagen**, vollständiger obiger Befehl unter Node.js `v23.11.1` / Linux.
