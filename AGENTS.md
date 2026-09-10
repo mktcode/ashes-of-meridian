@@ -17,7 +17,7 @@
 
 ## Prüfen und dokumentieren
 
-- Nach Spielcode-/Teständerungen mindestens ausführen: `node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs`.
+- Nach Spielcode-/Teständerungen mindestens ausführen: `node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs`.
 - Testabdeckung und Browser-Checkliste: [docs/testing.md](docs/testing.md). Bei Änderungen an Darstellung oder Verpackung ausdrücklich `file://` prüfen. Node-Tests sind kein Browser-/WebGL-Nachweis.
 - Implementierungs- und Prüfnotizen gehören unter `docs/`, nicht in diese Datei. Ausgeführte Prüfungen, Ergebnisse und ungeprüfte Bereiche klar unterscheiden; historische Berichte nicht als aktuelle Testnachweise behandeln.
 - Dokumentation bei geänderten Zuständigkeiten, Befehlen oder Abläufen aktualisieren. Diese Datei kurz und verbindlich halten, keine fortlaufende Arbeitshistorie ergänzen.

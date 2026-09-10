@@ -5,7 +5,7 @@
 Aus dem Projektverzeichnis mit Node.js ausführen; weder npm-Pakete noch Browser oder Build sind erforderlich:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs
 ```
 
 Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit gilt für den JavaScript-Heap, nicht als Obergrenze für den gesamten Prozessspeicher. Die Testdateien werden nacheinander ausgeführt.
@@ -54,7 +54,13 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Speicher-Entkopplung
+## Aktueller Prüfstand: Welt-/Effektreferenzen
+
+- 22 zusätzliche Referenztests vor dem Umbau gegen `97bfda6`: Terrain-Geometrie, sämtliche statischen Platzierungen und ausgewählte Navigations-/Sichtbarkeitsfälle aller 16 Karten sowie sechs Effektszenarien einschließlich Folge-RNG und Operationszustand.
+- Vollständiger obiger Befehl: **98 bestanden**, Node.js `v23.11.1` / Linux. Frischer erweiterter Chromium-`file://`-Ausgangslauf bestanden; bestehende Skybox-Ausnahme unverändert.
+- Herkunft, Umfang und weitere Schritte: [Welt und Effekte](world-effects-decoupling.md).
+
+## Vorheriger Prüfstand: Speicher-Entkopplung
 
 - `persistence.js` übernimmt Storage, Profilnormalisierung, Checkpoint-JSON und Backup-Codec. `app.js` übergibt Abhängigkeiten und verdrahtet den Dienst mit `MeridianUI`. Formatversionen, Schlüssel und bisheriges Fehlerverhalten der geprüften Abläufe bleiben erhalten.
 - **76 Tests bestanden, 0 fehlgeschlagen**, vollständiger obiger Befehl unter Node.js `v23.11.1` / Linux. Vier gezielte Mutationen wurden erkannt; bisherige Layout-/Save-Referenzen unverändert.

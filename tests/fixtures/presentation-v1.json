@@ -1,0 +1,221 @@
+{
+  "reference": "97bfda6",
+  "worlds": [
+    {
+      "seed": 1409,
+      "biome": "rust",
+      "terrain": "48150e08ddf3629513db7aeec44ab2ccdd4dea73a054358de4b8f61b47477f68",
+      "placements": "73e0ff7ebdf30d98a4a8dfbb6fad885dfe0c9b6b52971f144c46e7fdda188fea",
+      "navigation": "bd5dc8bc1e3cd102273a207dce257e8f74335bea1dc4cb8b631414dcf02ff51f"
+    },
+    {
+      "seed": 7012,
+      "biome": "ash",
+      "terrain": "ea98556ad18a2db450ed00c4fd12da5f63652dc5c5047dfb4000542c77e0cc61",
+      "placements": "2860d21050e6a2749113dfb4e09f2b3efe01240c79a24be29070e7bcef716a21",
+      "navigation": "a4cf5cca4f2a9d0dc62d0db74c8c71ff6aad2e8fc38e4fc804348d8250d5fd4b"
+    },
+    {
+      "seed": 9017,
+      "biome": "choir",
+      "terrain": "186b3ea01351b6dbfe4d88aff31b56933d7461e5fbdea58b4882a93de21c45a8",
+      "placements": "937ed233bf391bed5db1b66e66a1407b44765316c376fdf911dc9f6e08420cf3",
+      "navigation": "50a24dd57ad886122c9288e6969fb8b4b3cd4daa8c76aa17af31424111d54f5f"
+    },
+    {
+      "seed": 1905,
+      "biome": "choir",
+      "terrain": "074a641a1068d66f898af851cd13b7bd7a7a3bf26fc83e22f7c1657f6a7d0d6d",
+      "placements": "8b96d40355dc421049022f045eea4a36ce3f14988ab5a0af2035c1791a658f66",
+      "navigation": "838388c9eb48478b6494c427934d42ac1870acf534067e46e20ca4e7ee5c4735"
+    },
+    {
+      "seed": 2219,
+      "biome": "rust",
+      "terrain": "9b770a139fd5879bc52ea05838e96b7e071d95fe735e7ed5c424e85607dd3b3d",
+      "placements": "9a81ba390dab50925437397815f45734e5cdf4e5155f19af021af719e089561a",
+      "navigation": "8bc11c5832dd6f6acf469cc0ab1fe922eb066a86d57451637ff8f97a0c2795d9"
+    },
+    {
+      "seed": 6633,
+      "biome": "choir",
+      "terrain": "f36c644d75a5982da2744800072c6b2c22dc3d2415e12394610c9433eff2dacb",
+      "placements": "3ae2a88355dc9661df575602ee3b1b36beb9856c0e6f8d40a8e48e09bde7ec51",
+      "navigation": "d77c768079313f6a73daee64b574bd0e460326b4127e7f123b8b5f745b3cc307"
+    },
+    {
+      "seed": 1144,
+      "biome": "court",
+      "terrain": "d0aa3732f716b06d0aba80319d1da60bf7d56e4394059ea94845a5d1fdeed495",
+      "placements": "440234a8a06e093648ab733bfaebbb3fd47e7c9e6b353ec7758b97e5289f0003",
+      "navigation": "3299928fa5b313d583c62620d61d2658e1b401e63c0b1a6bc267f67b13454f5c"
+    },
+    {
+      "seed": 4442,
+      "biome": "choir",
+      "terrain": "50f9841ad6d3b95e4afa865d8a0ec67d114fce987033f3e68892b6af1ea080d3",
+      "placements": "2dc36d3e2c1b7558a87c1052ef80b5fcc6014fd3c83bfb6e5735fc9600f7c77f",
+      "navigation": "228eaa32f659a13fcbffb2ae1d934b7f483d124b88acc2db128cd89ff6b61e14"
+    },
+    {
+      "seed": 8141,
+      "biome": "court",
+      "terrain": "46eac9918c2ccb1c816c432dcc8f110ecd20a62a524f7b9c021cb196bdfa7a68",
+      "placements": "1cc3a95613ad48b94052b3753fafa9537c47494389f0caabdcf450ceea1937da",
+      "navigation": "84fb8e245d756ff882c12e399d6cddcc807623b73967b80524c7b85f23f198da"
+    },
+    {
+      "seed": 9897,
+      "biome": "court",
+      "terrain": "1d859005f2ba231d9b6ab14504a4241b0f647dc159e0a12c0b1a9f88f146206c",
+      "placements": "052181481fc6077869876741eae8da8f8e9efe47bc0150cef615aba5988dd31c",
+      "navigation": "68200e01cd41c0d3aec6b32b0de8d225937eefe1975fa32b3e133fca6c348f03"
+    },
+    {
+      "seed": 11007,
+      "biome": "ash",
+      "terrain": "a9aab67c848397cfa5c71bd0f493e4e1e65f4df702487031f1dd743f63f69796",
+      "placements": "0da05edaffe7a76695d8fcb0ceeb581d40d981697fc0d76ecd9c1205c303100d",
+      "navigation": "150c3b511fee9a0eac476bdc234652b15ede99da764ecdc7066c40be477d5039"
+    },
+    {
+      "seed": 24080,
+      "biome": "rust",
+      "terrain": "3489ed543b33612a1347837c7122574c8653a01fd30b56852e75aa1cc2bf25f2",
+      "placements": "af3c17dd71df7db0bfb945e870fe9be8bdfc1da47d751c8177a58bddfe59c982",
+      "navigation": "d489979e0c6c2528af1ec625130dcf987b43f5e93d60b222b5ecacbba31e2927"
+    },
+    {
+      "seed": 38744,
+      "biome": "choir",
+      "terrain": "68570e6adc69817c187ea5f8c1f28ab2b0f17a7d98ef37b039a924f7105e5dac",
+      "placements": "61e08f552f78d4d453ae48c3972c5ec2c4e40e1c86c30fee885a331a0286fc35",
+      "navigation": "40dd00fb88870c742cc556b40473bc3f804f4cc59047a0f42a7700ed37dc0d4a"
+    },
+    {
+      "seed": 43015,
+      "biome": "star",
+      "terrain": "b2b7aa6a0fc380e89e299794cd02327e687e6a77dc40606176aafb2419713edc",
+      "placements": "b25be22a415e1aedeea99e6680c4f93a9f1d692514b2882b19d5f20d6dc0c846",
+      "navigation": "ed6ff3c45dad758ec25bb449e06d1dd4a8cd4bfacd9a521303ebb0ebad872ff0"
+    },
+    {
+      "seed": 74408,
+      "biome": "star",
+      "terrain": "3259b25de85b3effe0db4e654bc683edd2824a0d2b9bdb3a3b3bc8233f79b3b4",
+      "placements": "64249cc2b4d3663a4437083d2fff58624be10a8a2b2474812231079c0f2c6556",
+      "navigation": "338bfd9e07b2b90f92303f30be5a17e96ccd79ed25b990f96294f89db9cf6da0"
+    },
+    {
+      "seed": 90001,
+      "biome": "star",
+      "terrain": "d8476af723f85d34b3342db354624015cc95c7e93be924f6beadf8879a1c3207",
+      "placements": "a489d509985ebd543021f013b64d50496343c359cf5cf5ac84a54479fedf94e8",
+      "navigation": "e1a9ee44ac2ac0cd8b3d7a727a818d2cb4d807cf0209be5f7cd2c49e3f5d93b4"
+    }
+  ],
+  "effects": {
+    "explosion": {
+      "before": "2a8063eb508d24bdfc24074fb46bc9dab9c45c18d06d01c7c3e33aa951ab6f96",
+      "after": "b5ee0b82a4aa88b61cd9395c487a0419ca175ccb44014c018b678a8a7521fa9a",
+      "counts": {
+        "fx": 57,
+        "floats": 0
+      },
+      "state": "41c62741ea32b2b9b064f9faf4a43560bce683ec650f06797c88b05bffb3ed64",
+      "nextRandom": [
+        0.9817241793498397,
+        0.4224003495182842,
+        0.008655627723783255,
+        0.08990172087214887,
+        0.5363729181699455
+      ],
+      "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
+    },
+    "cap-bounce": {
+      "before": "e77a468c14436cf67fbf0f504f9967845660bf33d1a94d8a8ec36256cb3a0d7a",
+      "after": "4af2dd46b5d031b72b21df3ecaf20d2aa249d6910be2aaf81adc8e0509aafb3e",
+      "counts": {
+        "fx": 500,
+        "floats": 0
+      },
+      "state": "41c62741ea32b2b9b064f9faf4a43560bce683ec650f06797c88b05bffb3ed64",
+      "nextRandom": [
+        0.7928955319803208,
+        0.39951014844700694,
+        0.7650943519547582,
+        0.27793866861611605,
+        0.7382078354712576
+      ],
+      "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
+    },
+    "damage": {
+      "before": "327eef2cbee2925eaae00ef34f145529d6c5c4060bf5f471ede5b15683690225",
+      "after": "8dab334ce53afd75adca6ad91984290dfb83c72108926f80be2579235af367a3",
+      "counts": {
+        "fx": 0,
+        "floats": 35
+      },
+      "state": "fccb0337718b38c7057d14e31a4dab45987280ba08849f5f2ca37d8ae08c9a90",
+      "nextRandom": [
+        0.3494525582063943,
+        0.934567065211013,
+        0.6150092391762882,
+        0.8877889793366194,
+        0.5110084267798811
+      ],
+      "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
+    },
+    "weapons": {
+      "before": "bada08ea163f99f8334ba0e09b5ebd6263a52d47520fadebbd82453cce673578",
+      "after": "780ac90f9a9de7b6bffe4d4df3ee2a019adfcf4df34a64f8ad85edd798e6bdb6",
+      "counts": {
+        "fx": 5,
+        "floats": 1
+      },
+      "state": "0ffff002fc25a25eec92f7dea61b5e2587c14e199c8e9a7516d695e4c008ce40",
+      "nextRandom": [
+        0.5062105606775731,
+        0.44071500934660435,
+        0.2619709372520447,
+        0.7187461191788316,
+        0.2162842347752303
+      ],
+      "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
+    },
+    "workers": {
+      "before": "484a41a014c0787a960a4e57cf32cf6c65bf33989b3f2b33b8f4a4edadc073ca",
+      "after": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f",
+      "counts": {
+        "fx": 0,
+        "floats": 0
+      },
+      "state": "ca68fde6c7c4304e47f49e181f2637015fed3230ef4fb8374b6e0b4e7f980e0d",
+      "nextRandom": [
+        0.5362242304254323,
+        0.6741550823207945,
+        0.2967292487155646,
+        0.5059226169250906,
+        0.6856694130692631
+      ],
+      "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
+    },
+    "heal-drop": {
+      "before": "7c316b3afc99d4d2977df3cd1125a41e6f946ea58fe096720e16efe12564bdef",
+      "after": "95cc3069a41858aea663f5667731c111778548227bc0f72ca4ade43cc03c35c6",
+      "counts": {
+        "fx": 5,
+        "floats": 0
+      },
+      "state": "47b07c915afdd6997396fd1dcdab9828bd1b9edb29678d78c2f7348494d9b6cf",
+      "nextRandom": [
+        0.5062105606775731,
+        0.44071500934660435,
+        0.2619709372520447,
+        0.7187461191788316,
+        0.2162842347752303
+      ],
+      "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
+    }
+  }
+}

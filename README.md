@@ -27,7 +27,7 @@ Vor Browserwechsel, Verschieben der Spieldatei oder Wechsel zwischen `file://` u
 Die vorhandenen Tests benötigen Node.js, aber keine Installation von Paketen. Aus dem Projektverzeichnis:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs
 ```
 
 - [Architektur](docs/architecture.md): aktueller Aufbau, Risiken und nächste Schritte.
