@@ -267,7 +267,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
         this.canvas = canvas;
         this.gl = canvas.getContext('webgl2', {
           alpha: false,
-          antialias: true,
+          antialias: false, // Geometry is multisampled in the scene target, not the final quad.
           powerPreference: 'high-performance',
           preserveDrawingBuffer: false
         });
@@ -345,6 +345,10 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
         this.sceneFbo = gl.createFramebuffer();
         this.sceneTex = gl.createTexture();
         this.sceneDepth = gl.createRenderbuffer();
+        this.sceneMSAAFbo = null;
+        this.sceneMSAAColor = null;
+        this.sceneMSAADepth = null;
+        this.sceneSamples = 0;
         this.resize();
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
@@ -451,7 +455,46 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
         g.bindFramebuffer(g.FRAMEBUFFER, this.sceneFbo);
         g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, this.sceneTex, 0);
         g.framebufferRenderbuffer(g.FRAMEBUFFER, g.DEPTH_ATTACHMENT, g.RENDERBUFFER, this.sceneDepth);
+        this.resizeSceneMSAA();
+        g.bindRenderbuffer(g.RENDERBUFFER, null);
         g.bindFramebuffer(g.FRAMEBUFFER, null);
+      }
+      releaseSceneMSAA() {
+        const g = this.gl;
+        if (this.sceneMSAAFbo) g.deleteFramebuffer(this.sceneMSAAFbo);
+        if (this.sceneMSAAColor) g.deleteRenderbuffer(this.sceneMSAAColor);
+        if (this.sceneMSAADepth) g.deleteRenderbuffer(this.sceneMSAADepth);
+        this.sceneMSAAFbo = this.sceneMSAAColor = this.sceneMSAADepth = null;
+        this.sceneSamples = 0;
+      }
+      resizeSceneMSAA() {
+        const g = this.gl;
+        this.releaseSceneMSAA();
+        if (this.quality === 0) return;
+        // Both attachments must support the same count. Never exceed 4x.
+        const color = Array.from(g.getInternalformatParameter(g.RENDERBUFFER, g.RGBA8, g.SAMPLES) || []),
+          depth = Array.from(g.getInternalformatParameter(g.RENDERBUFFER, g.DEPTH_COMPONENT24, g.SAMPLES) || []),
+          counts = color.filter(n => n > 1 && n <= 4 && depth.includes(n)).sort((a, b) => b - a);
+        for (const samples of counts) {
+          this.sceneMSAAFbo = g.createFramebuffer();
+          this.sceneMSAAColor = g.createRenderbuffer();
+          this.sceneMSAADepth = g.createRenderbuffer();
+          if (this.sceneMSAAFbo && this.sceneMSAAColor && this.sceneMSAADepth) {
+            g.bindFramebuffer(g.FRAMEBUFFER, this.sceneMSAAFbo);
+            g.bindRenderbuffer(g.RENDERBUFFER, this.sceneMSAAColor);
+            g.renderbufferStorageMultisample(g.RENDERBUFFER, samples, g.RGBA8, this.width, this.height);
+            g.framebufferRenderbuffer(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.RENDERBUFFER, this.sceneMSAAColor);
+            g.bindRenderbuffer(g.RENDERBUFFER, this.sceneMSAADepth);
+            g.renderbufferStorageMultisample(g.RENDERBUFFER, samples, g.DEPTH_COMPONENT24, this.width, this.height);
+            g.framebufferRenderbuffer(g.FRAMEBUFFER, g.DEPTH_ATTACHMENT, g.RENDERBUFFER, this.sceneMSAADepth);
+            if (g.checkFramebufferStatus(g.FRAMEBUFFER) === g.FRAMEBUFFER_COMPLETE) {
+              this.sceneSamples = samples;
+              break;
+            }
+          }
+          // Unsupported/incomplete targets must not replace the single-sample fallback.
+          this.releaseSceneMSAA();
+        }
       }
       color(c) {
         if (Array.isArray(c) || c instanceof Float32Array) return c;
@@ -714,7 +757,7 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
         }
-        g.bindFramebuffer(g.FRAMEBUFFER, this.sceneFbo);
+        g.bindFramebuffer(g.FRAMEBUFFER, this.sceneMSAAFbo || this.sceneFbo);
         g.viewport(0, 0, this.width, this.height);
         g.clearColor(...this.haze, 1);
         g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
@@ -759,6 +802,16 @@ void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);i
         this.drawBatches(this.effects);
         g.depthMask(true);
         g.disable(g.BLEND);
+        if (this.sceneSamples > 1) {
+          // Resolve opaque geometry and blended effects before bloom/post-processing.
+          g.bindFramebuffer(g.READ_FRAMEBUFFER, this.sceneMSAAFbo);
+          g.bindFramebuffer(g.DRAW_FRAMEBUFFER, this.sceneFbo);
+          g.blitFramebuffer(
+            0, 0, this.width, this.height,
+            0, 0, this.width, this.height,
+            g.COLOR_BUFFER_BIT, g.NEAREST
+          );
+        }
         g.bindFramebuffer(g.FRAMEBUFFER, null);
         g.viewport(0, 0, this.width, this.height);
         g.disable(g.DEPTH_TEST);

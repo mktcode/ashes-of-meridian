@@ -62,6 +62,12 @@ Das Stylesheet enthält derzeit keine `url(...)`- oder `@import`-Verweise. Künf
 
 `skybox.webp` ist die gepflegte Bildquelle. Ihre Bytes sind zusätzlich als `MERIDIAN_TEXTURES.sky` eingebettet; zur Laufzeit wird keine externe Skybox-Datei mehr angefordert. Der Terrain-Test prüft Bytegleichheit mit der Quelle, aber es gibt keinen automatischen Generierungsschritt. Bei einem absichtlichen Bildwechsel die Einbettung ebenfalls aktualisieren. Die dunkle Ersatztextur bleibt bis zum asynchronen Upload erhalten. Der frühere `file://`-SecurityError entfällt im Chromium-152-Nachtest; tatsächlicher Upload, GPU-Pixel und sichtbarer Himmel wurden geprüft. Andere Browser sind separat zu prüfen; Node-Tests allein decken das nicht ab. Details: [Skybox-Einbettung](skybox-embedding.md).
 
+## Szenen-Kantenglättung
+
+`MeridianRenderer` besitzt zusätzlich zum bisherigen Single-Sample-Ziel einen optionalen MSAA-Framebuffer mit RGBA8-Farb- und DEPTH_COMPONENT24-Tiefenrenderbuffer. High/Balanced wählen die größte gemeinsam unterstützte Samplezahl bis 4. Nach opaker Szene und transparenten Effekten wird nur Farbe per `blitFramebuffer` in `sceneTex` aufgelöst; das bestehende Postprocessing bleibt unverändert. Canvas-eigenes Antialiasing ist deaktiviert, da es die bereits gerasterte Szenentextur nicht glättet.
+
+`resize()` erneuert die MSAA-Anhänge und gibt alte bzw. unvollständige Allokationen frei. Performance oder fehlende MSAA-Unterstützung verwenden den bisherigen Szenen-Framebuffer direkt. Es gibt keine neue Profileinstellung und keine Änderungen an Simulations-/Save-Daten. [Implementierung und Prüfungen](msaa.md).
+
 ## Bekannte Kopplungen und Risiken
 
 1. **RNG und Darstellung:** `Battlefield.generate()` verbraucht eine Zufallsfolge für Bodenfarben, Hindernisse und Dekoration. Ihre Aufrufreihenfolge ist layoutrelevant. Felsmeshes und Kristallmodelle besitzen bereits separate kosmetische Generatoren; Die Effektkomponente verwendet für Explosionen und Arbeitereffekte weiterhin den übergebenen Simulations-RNG. Erzeugung und Tick sind vom Zeichnen getrennt, aber eine andere Partikelanzahl kann weiterhin spätere Zufallsentscheidungen ändern. Ein separater kosmetischer RNG wäre eine bewusste spätere Verhaltensänderung.

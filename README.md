@@ -16,6 +16,8 @@ Dann [http://127.0.0.1:8080/](http://127.0.0.1:8080/) öffnen. Der Server ist ei
 
 Tastaturkamera: **WASD**, Attack-Move: **F**. Pfeiltasten bewegen die Kamera nicht; eine Umschaltoption gibt es nicht mehr. Maussteuerung und die übrigen Befehle bleiben erhalten. Die gesamte Steuerung erklärt das **Field Manual** im Spiel (`F1`).
 
+Unter **Settings → Render quality** verwenden **High** und **Balanced** bis zu **4× MSAA** für glattere Modellkanten, sofern die Grafikhardware es unterstützt. **Performance** verzichtet darauf. Es ist kein zusätzlicher Antialiasing-Schalter nötig.
+
 ## Spielstände sichern
 
 Fortschritt und Checkpoints werden im Browserspeicher abgelegt. Unter **Settings → Export Backup** lässt sich ein JSON-Backup sichern; **Import Backup** liest es wieder ein und ersetzt dabei gespeicherte Profildaten, bei enthaltenem Checkpoint auch diesen.
@@ -27,7 +29,7 @@ Vor Browserwechsel, Verschieben der Spieldatei oder Wechsel zwischen `file://` u
 Die vorhandenen Tests benötigen Node.js, aber keine Installation von Paketen. Aus dem Projektverzeichnis:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs tests/ashes-of-meridian-renderer.check.cjs
 ```
 
 - [Architektur](docs/architecture.md): aktueller Aufbau, Risiken und nächste Schritte.

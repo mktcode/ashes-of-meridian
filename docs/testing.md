@@ -5,7 +5,7 @@
 Aus dem Projektverzeichnis mit Node.js ausführen; weder npm-Pakete noch Browser oder Build sind erforderlich:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs tests/ashes-of-meridian-renderer.check.cjs
 ```
 
 Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit gilt für den JavaScript-Heap, nicht als Obergrenze für den gesamten Prozessspeicher. Die Testdateien werden nacheinander ausgeführt.
@@ -18,6 +18,7 @@ Die expliziten Dateinamen funktionieren ohne Bash-Brace-Expansion. Das Heaplimit
 | `tests/ashes-of-meridian-terrain.check.cjs` | 20 Tests: bytegleiche Skybox-Einbettung und Quellverdrahtung; Syntax aller benannten klassischen Skripte (Inline und lokal); deterministische, endliche und begrenzte Felsgeometrie samt Normalen und Dreiecksbudget; Layout-Prüfsummen aller 16 Kampagnenkarten und variierte Felsdarstellung; reproduzierbare Renderplatzierungen eines Gefechts-Seeds |
 | `tests/ashes-of-meridian-crystals.check.cjs` | 5 Tests: Kristallgeometrie mit 36 Dreiecken und Einheitsnormalen; 80 zeitstabile Vorkommensmodelle; Größenänderung beim Abbau ohne Mutation der Entität; Vorschauparameter; bestehende Aether-Formen und Animation |
 | `tests/ashes-of-meridian-harness.check.cjs` | 11 Tests: isoliertes Laden von `content` samt Katalog-/Kampagnenreihenfolge und Namens-/Icon-Hilfsfunktionen; explizite Skriptauswahl und Dokumentreihenfolge bei Inline-/Dateimischung; fehlende/doppelte Namen und unerwartete Verpackung; lokale Pfade und fehlende Dateien; Ablehnung von URL-/Traversal-/Symlink-Ausbrüchen und mehrdeutigen Attributen; VM-Isolation; benannte Fehlerquellen; Renderer-Stub |
+| `tests/ashes-of-meridian-renderer.check.cjs` | 7 Tests mit WebGL-API-Testdouble: gemeinsame Samplezahlen/4×-Obergrenze, Auflösung, unvollständige/null-Allokationen, Ressourcenfreigabe bei Resize/Qualitätswechsel, Resolve-Reihenfolge einschließlich Effekten und Single-Sample-Rückfall; kein echter GPU-Nachweis |
 | `tests/ashes-of-meridian-controls.check.cjs` | 7 Tests: dynamische Startscreen-Aktionen/Checkpoints/Fortschrittsanzeige; WASD-Richtungen, Wiederholung/Freigabe des gehaltenen Zustands, wirkungslose Pfeiltasten, festes F unabhängig vom Altprofil, Modifier-/Fokus-/Pause-Verhalten, übrige Hotkeys und sichtbare Steuerungshinweise; UI-Methoden mit Testdoubles, keine nativen Tastaturereignisse |
 | `tests/ashes-of-meridian-presentation.check.cjs` | 27 Tests: 16 feste Terrain-/Platzierungs-/Navigationsreferenzen, sechs Effekt-/Snapshot-/Folge-RNG-Szenarien, rendererfreie Simulation, Adapterinvalidierung, isolierte synchrone Effekte, RNG nach Reset/Restore und Effekt-Zeichenreferenz mit eingefrorenen Eingabedaten |
 | `tests/ashes-of-meridian-simulation.check.cjs` | 15 Tests: fester Missionsstart, Seed-Reproduzierbarkeit, Befehle/Rally, Produktionskosten und Erstattung aller drei Fraktionen, abgelehnte Rekrutierung, Fertigstellung und Einkommen/Alloy-Lieferungen, Fünf-Sekunden-Referenzzustand, Snapshot-Isolation, Wiederherstellung und Weiterlaufen eines Version-1-Fixtures, zwei ungültige Save-Fälle |
@@ -56,7 +57,14 @@ Den kurzen Ablauf sowohl mit direkt geöffneter `index.html` (`file://`) als auc
 
 Für reine Dokumentationsänderungen ist kein neuer Browserlauf erforderlich. Bei Änderungen an Spielcode, Assets oder Verpackung die relevanten Punkte ausführen; bei strukturellem Umbau mindestens den gesamten kurzen Ablauf. Ein solcher Smoke-Test ersetzt keinen vollständigen Kampagnen-/E2E-Test.
 
-## Aktueller Prüfstand: Startscreen-Redesign
+## Aktueller Prüfstand: Szenen-MSAA
+
+- High/Balanced rendern die Szene mit bis zu 4× MSAA und lösen vor dem bestehenden Postprocessing in die Szenentextur auf. Performance bleibt ohne MSAA; unterstützte kleinere Samplezahlen bzw. der bisherige Single-Sample-Pfad dienen als Rückfall.
+- **119 Tests bestanden**, vollständiger obiger Befehl, Node.js `v23.11.1` / Linux. Keine veränderten Layout-/Simulations-/Effekt-Fixtures.
+- Chromium `152.0.7977.75`, `file://`: tatsächlich 4 Samples für Farb-/Tiefenbuffer, ausgeführte Resolves, alle Qualitätsstufen und Resize sowie injizierte Fallback-Fälle geprüft. Keine erfassten Fehler. Weißes Testdreieck liefert nur mit MSAA Zwischenwerte an Kanten; gleiche eingefrorene Spielszene mit/ohne MSAA visuell verglichen.
+- Erweiterter Spiel-/WASD-/Bau-/Save-/Reload-/Backup-Ablauf bestanden. Details und offene Hardware-/Browser-/Performanceprüfungen: [MSAA](msaa.md).
+
+## Vorheriger Prüfstand: Startscreen-Redesign
 
 - Nur Home-Template und Home-Styles nach Nutzervorlage überarbeitet. Bestehende Navigation, Fortschrittsanzeige und Checkpoint-Priorität bleiben erhalten; Renderer, Bilddaten und Spielregeln unverändert.
 - **112 Tests bestanden**, vollständiger obiger Befehl. Chromium-152-`file://`-Probe mit erweitertem Spiel-/Save-/Backup-Ablauf ohne erfasste Fehler.
