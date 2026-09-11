@@ -267,6 +267,29 @@ interface RunState {
   speed: number;
 }
 
+type WorldColor = number | number[];
+
+interface WorldPlacement {
+  mesh: string;
+  position: [number, number, number];
+  scale: [number, number, number];
+  color: WorldColor;
+  rotation: [number, number, number];
+  glow: number;
+  alpha: number;
+  layer: string;
+  material: string | undefined;
+}
+
+interface WorldRenderData {
+  groundColors: number[][];
+  placements: WorldPlacement[];
+}
+
+interface WorldRock extends Position {
+  r: number;
+}
+
 interface ObjectiveRow {
   text: string;
   current: number;

@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Typisierte CPU-Welt
+
+- `src/world.ts` typisiert Raster, Heap, Navigation, Sichtfelder, Geländeplätze und die von `BattlefieldView` konsumierten Renderdaten. Weltmethoden nehmen die bereits typisierten Entitäten und Scans entgegen; drei lokale Assertions in der Simulation dokumentieren bestehende Auftragsverengungen über Callback-Grenzen. Terrain-Erzeugung, Hindernisradien, Pfadschritte und RNG-Reihenfolge wurden nicht geändert.
+- Strenger Build und **207 Node-Tests bestanden** (rund 16 s), keine Fixtures geändert. Alle 11 `Battlefield`-Prototyp-Properties und Hilfsfunktionen blieben in Namen/Reihenfolge erhalten; die erzeugte Methodenausgabe unterscheidet sich nur durch Compilerformatierung in `generate()`. Sämtliche festen Welt-, Navigations-, Ressourcen-, Darstellungs- und RNG-Referenzen blieben grün.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Build-Ausgabe, Gefechtsstarts, Touch-Menüs, Startworker, Rekrutierung, Reload/Neustart und kontrollierter Abbau bestanden; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät- oder anderer Browser-/GPU-Test.
+
 ## Typisierte Gefechtssimulation
 
 - Alle fünf Simulationsfragmente nach TypeScript migriert. `src/contracts.d.ts` modelliert jetzt den nullable Run-Zustand, Entitätsvarianten, Einheitenbefehle, Produktionsqueues, Kosten, Fähigkeiten und Simulationsgrenzen. Die generische Spawn-Fabrik koppelt Art und Rückgabetyp; die vorhandenen Methodenobjekte erweitern weiterhin gemeinsam `MeridianGame` und werden unverändert als klassische, nicht aufzählbare Prototypmethoden ausgeliefert.

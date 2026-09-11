@@ -3,26 +3,26 @@
     const EXTENT = 90,
       GRID = 72,
       CELL = 2.5;
-    const HOME = { x: -51, z: 49 };
-    const ENEMY_SITES = [
+    const HOME: Position = { x: -51, z: 49 };
+    const ENEMY_SITES: Position[] = [
       { x: 49, z: -49 },
       { x: -47, z: -45 },
       { x: 51, z: 19 }
     ];
-    const CENTRAL_CLEARINGS = [
+    const CENTRAL_CLEARINGS: Position[] = [
       { x: -32, z: -13 },
       { x: 11, z: 6 },
       { x: 39, z: -35 },
       { x: -12, z: -55 }
     ];
-    const OUTER_CLEARINGS = [
+    const OUTER_CLEARINGS: Position[] = [
       { x: -48, z: 3 },
       { x: -21, z: -43 },
       { x: 16, z: -23 },
       { x: 51, z: 0 },
       { x: 34, z: 47 }
     ];
-    const RESOURCE_SITES = [
+    const RESOURCE_SITES: Position[] = [
       { x: -67, z: 43 },
       { x: -25, z: 27 },
       { x: 6, z: 40 },
@@ -32,7 +32,7 @@
       { x: 29, z: 64 },
       { x: 7, z: -65 }
     ];
-    const TERRAIN_CORRIDORS = [
+    const TERRAIN_CORRIDORS: [number, number][][] = [
       [
         [-52, 37],
         [-36, 15],
@@ -48,20 +48,22 @@
         [58, -63]
       ]
     ];
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-    const angleLerp = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * Math.min(1, t);
-    const pointSegment = (p, a, b) => {
+    const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+    const distance = (a: Position, b: Position) => Math.hypot(a.x - b.x, a.z - b.z);
+    const angleLerp = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * Math.min(1, t);
+    const pointSegment = (p: Position, a: Position, b: Position) => {
       let dx = b.x - a.x,
         dz = b.z - a.z,
         t = clamp(((p.x - a.x) * dx + (p.z - a.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
       return Math.hypot(p.x - a.x - dx * t, p.z - a.z - dz * t);
     };
     class Heap {
+      declare a: [number, number][];
+
       constructor() {
         this.a = [];
       }
-      push(n, p) {
+      push(n: number, p: number) {
         let a = this.a,
           i = a.length;
         a.push([n, p]);
@@ -77,7 +79,7 @@
           first = a[0],
           last = a.pop();
         if (a.length) {
-          a[0] = last;
+          a[0] = last!;
           let i = 0;
           while (true) {
             let l = i * 2 + 1,
@@ -90,14 +92,27 @@
             i = j;
           }
         }
-        return first[0];
+        return first![0];
       }
       get length() {
         return this.a.length;
       }
     }
     class Battlefield {
-      constructor(seed, biome) {
+      declare fogVersion: number;
+      declare seed: number;
+      declare biome: BiomeDefinition;
+      declare staticGrid: Uint8Array;
+      declare blocked: Uint8Array;
+      declare explored: Uint8Array;
+      declare visible: Uint8Array;
+      declare fogPixels: Uint8Array;
+      declare terrainColors: Uint8ClampedArray;
+      declare rocks: WorldRock[];
+      declare pathVersion: number;
+      declare renderData: WorldRenderData;
+
+      constructor(seed: number, biome: BiomeType) {
         this.fogVersion = 0;
         this.seed = seed;
         this.biome = BIOMES[biome] || BIOMES.ash;
@@ -112,19 +127,19 @@
         this.generate();
         this.blocked.set(this.staticGrid);
       }
-      idx(x, z) {
+      idx(x: number, z: number) {
         return (
           clamp(Math.floor((z + EXTENT) / CELL), 0, GRID - 1) * GRID +
           clamp(Math.floor((x + EXTENT) / CELL), 0, GRID - 1)
         );
       }
-      point(i) {
+      point(i: number): Position {
         return {
           x: ((i % GRID) + 0.5) * CELL - EXTENT,
           z: (Math.floor(i / GRID) + 0.5) * CELL - EXTENT
         };
       }
-      mark(grid, x, z, r, val = 1) {
+      mark(grid: Uint8Array, x: number, z: number, r: number, val = 1) {
         let a = Math.max(0, Math.floor((x - r + EXTENT) / CELL)),
           b = Math.min(GRID - 1, Math.floor((x + r + EXTENT) / CELL)),
           c = Math.max(0, Math.floor((z - r + EXTENT) / CELL)),
@@ -136,18 +151,18 @@
             if (dx * dx + dz * dz < (r + CELL * 0.4) ** 2) grid[j * GRID + i] = val;
           }
       }
-      blockedAt(x, z) {
+      blockedAt(x: number, z: number) {
         return (
           Math.abs(x) > EXTENT - 3 || Math.abs(z) > EXTENT - 3 || this.blocked[this.idx(x, z)] !== 0
         );
       }
-      rebuild(entities) {
+      rebuild(entities: Entity[]) {
         this.blocked.set(this.staticGrid);
         for (let e of entities)
           if (e.hp > 0 && e.kind === 'building') this.mark(this.blocked, e.x, e.z, e.size + 0.35);
         this.pathVersion++;
       }
-      nearest(x, z) {
+      nearest(x: number, z: number): Position {
         let i = this.idx(x, z);
         if (!this.blocked[i]) return { x: clamp(x, -86, 86), z: clamp(z, -86, 86) };
         let gx = i % GRID,
@@ -174,7 +189,7 @@
         }
         return { x: clamp(x, -84, 84), z: clamp(z, -84, 84) };
       }
-      lineFree(a, b) {
+      lineFree(a: Position, b: Position) {
         let d = distance(a, b),
           n = Math.ceil(d / 1.4);
         for (let i = 1; i <= n; i++) {
@@ -183,7 +198,7 @@
         }
         return true;
       }
-      path(x, z, tx, tz, air = false) {
+      path(x: number, z: number, tx: number, tz: number, air = false): Position[] {
         tx = clamp(tx, -85, 85);
         tz = clamp(tz, -85, 85);
         if (air) return [{ x: tx, z: tz }];
@@ -207,7 +222,7 @@
           tries = 0,
           best = s,
           bestDistance = Infinity;
-        const steps = [
+        const steps: [number, number, number][] = [
           [-1, 0, 1],
           [1, 0, 1],
           [0, -1, 1],
@@ -254,7 +269,7 @@
           end = best;
           target = this.point(best);
         }
-        let nodes = [],
+        let nodes: Position[] = [],
           i = end;
         while (i !== s && i >= 0) {
           nodes.push(this.point(i));
@@ -262,7 +277,7 @@
         }
         nodes.reverse();
         nodes.push(target);
-        let smooth = [],
+        let smooth: Position[] = [],
           anchor = start,
           j = 0;
         while (j < nodes.length) {
@@ -279,10 +294,14 @@
           bio = this.biome;
         // Keep cosmetic samples interleaved with obstacle sampling for save compatibility.
         // These are CPU descriptors, not meshes or renderer calls.
-        const layout = this.renderData = { groundColors: [], placements: [] };
-        const color = c => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
-        const place = (mesh, x, y, z, sx, sy, sz, color, yaw, pitch, roll, glow, alpha, layer, material) =>
-          layout.placements.push({ mesh, position: [x, y, z], scale: [sx, sy, sz], color,
+        const layout: WorldRenderData = this.renderData = { groundColors: [], placements: [] };
+        const color = (c: number) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
+        const place = (
+          mesh: string, x: number, y: number, z: number,
+          sx: number, sy: number, sz: number, color: WorldColor,
+          yaw: number, pitch: number, roll: number, glow: number,
+          alpha: number, layer: string, material?: string
+        ) => layout.placements.push({ mesh, position: [x, y, z], scale: [sx, sy, sz], color,
             rotation: [yaw, pitch, roll], glow, alpha, layer, material });
         let base = color(bio.ground);
         for (let z = 0; z < GRID; z++)
@@ -318,7 +337,7 @@
           { x: 0, z: 0 },
           ...TERRAIN_CORRIDORS.flat().map(([x, z]) => ({ x, z }))
         ];
-        let lanes = [
+        let lanes: [Position, Position][] = [
           [HOME, ENEMY_SITES[0]],
           [HOME, ENEMY_SITES[1]],
           [HOME, ENEMY_SITES[2]],
@@ -326,7 +345,7 @@
             route.slice(1).map((p, i) => [
               { x: route[i][0], z: route[i][1] },
               { x: p[0], z: p[1] }
-            ])
+            ] as [Position, Position])
           )
         ];
         // Preserve layout RNG calls and obstacle radii, including for existing saved games.
@@ -597,7 +616,7 @@
           }
         }
       }
-      reveal(entities, scans = []) {
+      reveal(entities: Entity[], scans: Scan[] = []) {
         this.visible.fill(0);
         for (let e of entities)
           if (e.hp > 0 && e.team === 0 && e.kind !== 'resource') {

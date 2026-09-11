@@ -132,7 +132,7 @@
             (e.team === 1 || this.visible(n))
         );
         if (e.order.type === 'guard')
-          a = a.filter(n => distance(n, { x: e.order.x, z: e.order.z }) < 28);
+          a = a.filter(n => distance(n, { x: e.order.x!, z: e.order.z! }) < 28);
         a.sort((a, b) => {
           let ca = distance(e, a) - a.size + (a.kind === 'building' ? 3 : 0),
             cb = distance(e, b) - b.size + (b.kind === 'building' ? 3 : 0);
@@ -205,10 +205,10 @@
               n.team === e.team &&
               n.kind === 'unit' &&
               UNITS[n.type]?.damage > 5 &&
-              distance(n, e.order) < distance(e, e.order)
+              distance(n, e.order as Position) < distance(e, e.order as Position)
           );
           if (front.length && distance(e, front[0]) > 6) this.move(e, front[0], dt, 5.5);
-          else if (!front.length) this.move(e, e.order, dt, 2);
+          else if (!front.length) this.move(e, e.order as Position, dt, 2);
           return true;
         }
         return false;
