@@ -2,11 +2,13 @@
 
 ## Auslieferung
 
-`index.html`, die Stylesheets unter `styles/` und die lokalen JavaScript-Dateien unter `src/` sind handgepflegte Quellen und werden direkt ausgeliefert. Keine generierten Dateien, npm-Abhängigkeiten, Laufzeit-Imports oder Build-/Serverpflicht. Die Skripte teilen globale lexikalische Bindungen und laufen synchron in HTML-Reihenfolge, ohne `async`, `defer` oder ES-Module. Inline-Styles in UI-Templates bestehen weiterhin.
+`index.html`, die Stylesheets unter `styles/` und die JavaScript-/TypeScript-Dateien unter `src/` sind handgepflegte Quellen. TypeScript ist die einzige lokale Entwicklungsabhängigkeit; `npm run build` leert `dist/` und erzeugt daraus klassische Laufzeitskripte unter `dist/src/`. `index.html` lädt diese Ausgabe synchron in der dokumentierten Reihenfolge. `dist/` und `node_modules/` werden nicht eingecheckt und generierte Dateien nicht direkt bearbeitet.
+
+Direktes Öffnen von `index.html` über `file://` bleibt nach dem Build unterstützt: kein erforderlicher Server, keine CDN-Abhängigkeiten, Laufzeit-Imports oder ES-Module. Die Laufzeitskripte teilen weiterhin globale lexikalische Bindungen und verwenden weder `async` noch `defer`. Source Maps dienen nur der lokalen Fehlersuche. Inline-Styles in UI-Templates bestehen weiterhin.
 
 ## Codekarte
 
-Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
+Die Quellreihenfolge entspricht den `data-meridian-script`-Tags in `index.html`; jeder `src/`-Pfad wird unter `dist/src/` als JavaScript ausgeliefert:
 
 | Datei | Zuständigkeit / Einstieg |
 | --- | --- |
@@ -38,7 +40,7 @@ Die Stylesheets folgen ebenfalls fester Dokumentreihenfolge: `styles/base.css` e
 
 ## Schnittstellen und Zustände
 
-- Die vier Renderer-Fragmente teilen weiterhin globale lexikalische Bindungen und werden in der dokumentierten Reihenfolge synchron geladen: Assets/Materialien, Geometrie, Shader, Laufzeit. `MeridianRenderer` bleibt eine klassische globale Klassenbindung; es gibt keine Laufzeit-Imports.
+- Die vier Renderer-Fragmente teilen weiterhin globale lexikalische Bindungen und werden aus der Build-Ausgabe in der dokumentierten Reihenfolge synchron geladen: Assets/Materialien, Geometrie, Shader, Laufzeit. `MeridianRenderer` bleibt eine klassische globale Klassenbindung; es gibt keine Laufzeit-Imports.
 - `Battlefield(seed, biome)` benötigt keinen Renderer. `renderData` enthält Layout-/Farbdaten; seine Objektidentität dient als Layout-Revision, `fogVersion` als Sicht-Revision. `BattlefieldView.sync(world)` lädt Änderungen in die GPU, ohne die Welt zu mutieren.
 - `MeridianGame(profile, emit, createEffects)` besitzt Welt und Effekte, keinen Renderer. `src/simulation/game.js` deklariert die Klasse und registriert mit `defineMeridianGameMethods` die Methoden aus allen fünf synchron geladenen Simulationsdateien als nicht aufzählbare Prototypmethoden. Die Reihenfolge der fünf `data-meridian-script`-Tags ist Teil des Ladevertrags; es gibt weiterhin keine Laufzeit-Imports. `app` synchronisiert die Welt vor dem Start-Ereignis an die UI und vor dem Zeichnen. Simulation und Effekte laufen in festen 0,05-s-Schritten, UI/Rendering pro Frame.
 - `game.s` enthält den ausschließlich flüchtigen Run-Zustand mit Entitäten, Ressourcen, Kamera und `seed`, `biome`, `faction`, `enemy`, `meta`. `start(opts = {})` startet ohne Missionsdefinition mit einem eigenen HQ und 0–5 Workern aus `meta.startingWorkers`. Nur bekannte Upgrade-Stufen werden als begrenzte Ganzzahlen aus dem Profil kopiert; Änderungen wirken erst beim nächsten Start. 24 reservierte RNG-Samples erhalten den bisherigen Standard-Einstieg für Ressourcenmengen und Gegneraufstellung. Bonusworker werden erst nach der ursprünglichen Gegnerplatzierung per `spawnUnit` nahe dem HQ auf freien Plätzen ergänzt: ein zusätzlicher regulärer Spawn-RNG-Aufruf je Worker, kein neuer Platzierungs-RNG. Der Startbestand ist fest 250 Alloy / 0 Aether; Worker kosten bei allen Fraktionen 50 Alloy. Das HQ erzeugt keine passiven Rohstoffe, reguläres Alloy-/Aether-Einkommen liefern nur Worker beziehungsweise Raffinerien. Einheiten besitzen genau einen aktuellen `order`; Produktionsgebäude eigene `queue`s. `availableProducers(buildingType)` liefert Simulation und HUD dieselben verfügbaren Produktionsgebäude in Entitätsreihenfolge. `train(type)` verteilt globale Rekrutierungsaufträge auf die kürzeste passende Queue (Gleichstand: Gebäude-ID), unabhängig von der Auswahl. Aufträge bleiben bis Spawn/Abbruch am zugewiesenen Gebäude.
@@ -65,5 +67,6 @@ Die Stylesheets folgen ebenfalls fester Dokumentreihenfolge: `styles/base.css` e
 ## Schutzgrenzen und offene Architekturfragen
 
 - Terrain-RNG wird auch für kosmetische Platzierungen verwendet; Effekte verbrauchen teilweise den Simulations-RNG. Reihenfolge, Kollisionsradien und [feste Referenzen](reference-tests.md) schützen, nicht beiläufig korrigieren.
-- UI-Klasse und Einstiegspunkt haben trotz fachlich getrennter Quelldateien weiterhin breite Aufgaben; Entitäten/Ereignisse sind untypisiert und Skriptreihenfolge ist Teil des Vertrags. Weitere Entkopplung, TypeScript oder Build-Werkzeuge sind **nicht beauftragt** und keine Voraussetzung für neue Spielfunktionen.
+- UI-Klasse und Einstiegspunkt haben trotz fachlich getrennter Quelldateien weiterhin breite Aufgaben; Entitäten/Ereignisse sind noch nicht vollständig typisiert und Skriptreihenfolge bleibt Teil des Vertrags. Die laufende TypeScript-Migration führt Typen und Build schrittweise ein, aber keine zusätzliche Entkopplung oder neue Spielfunktion.
+- TypeScript wird schrittweise eingeführt. Noch nicht migrierte `.js`-Quellen werden vom Compiler zunächst nur ausgegeben und nicht mit `checkJs` geprüft; strenge Typprüfung gilt für `.ts`-Quellen. Die Umstellung darf RNG-, Laufzeit- und Deskriptorverträge nicht verändern.
 - Aktuelle Spielregeln und zurückgestellte Entscheidungen: [Spiel und Bedienung](gameplay.md). Renderer-/Asset-Verträge: [Grafik](rendering.md). Prüfverfahren: [Tests](testing.md).

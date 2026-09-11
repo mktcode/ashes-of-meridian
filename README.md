@@ -1,12 +1,19 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fraktionen, wiederholbare Gefechte gegen ein gegnerisches HQ. Kein Build, keine npm-Abhängigkeiten und kein erforderlicher Server.
+Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fraktionen, wiederholbare Gefechte gegen ein gegnerisches HQ. TypeScript erzeugt lokale klassische Laufzeitskripte; ein Server ist nicht erforderlich.
 
 ## Spielen
 
 Neue Gefechte starten mit dem Hauptgebäude und je nach permanentem Upgrade **0–5 Workern**. **250 Alloy und 0 Aether** bleiben auf jeder Stufe erhalten; das reicht für fünf weitere Worker zu je 50 Alloy. Ohne Startworker den ersten über **Infanterie** rekrutieren. Worker bauen automatisch Alloy ab, Raffinerien liefern Aether.
 
-`index.html` direkt in einem Browser mit WebGL 2 öffnen. Die JavaScript-Quellen unter `src/`, die Stylesheets unter `styles/` und die separaten Bildquellen müssen mitgeführt werden. Die Laufzeittexturen sind in `src/renderer/assets.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket.
+Einmalig die Entwicklungsabhängigkeiten installieren und die Laufzeitskripte erzeugen:
+
+```bash
+npm install
+npm run build
+```
+
+Danach `index.html` direkt in einem Browser mit WebGL 2 öffnen. Die handgepflegten Quellen liegen unter `src/`, die generierten klassischen Skripte unter `dist/src/`. Stylesheets und separate Bildquellen müssen ebenfalls mitgeführt werden. Die Laufzeittexturen sind derzeit in `src/renderer/assets.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket; `dist/` wird nicht eingecheckt.
 
 - Kamera: mit einem Finger ziehen, Pinch-to-Zoom, Zoom-/Basisknöpfe oder Minimap.
 - Auswahl: einmal tippen; zweimal für sichtbare eigene Einheiten desselben Typs; dreimal für sichtbare eigene Nicht-Worker. Jeweils weniger als 330 ms zwischen den Releases.
@@ -18,7 +25,7 @@ Neue Gefechte starten mit dem Hauptgebäude und je nach permanentem Upgrade **0�
 
 Weitere Regeln und offene Punkte: [Spiel und Bedienung](docs/gameplay.md).
 
-Optional für lokale Entwicklung: `python3 -m http.server 8080 --bind 127.0.0.1`, dann [localhost:8080](http://127.0.0.1:8080/) öffnen. Direktes `file://` bleibt das Auslieferungsziel.
+Optional für lokale Entwicklung nach dem Build: `python3 -m http.server 8080 --bind 127.0.0.1`, dann [localhost:8080](http://127.0.0.1:8080/) öffnen. Direktes `file://` bleibt das Auslieferungsziel.
 
 ## Runs und Pausen
 

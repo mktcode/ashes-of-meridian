@@ -4,7 +4,8 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 const { SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
-const UI_FILES = UI_SCRIPTS.map(name => `src/ui/${name.replace('ui-', '')}.js`);
+const RUNTIME_SOURCE = 'dist/src';
+const UI_FILES = UI_SCRIPTS.map(name => `${RUNTIME_SOURCE}/ui/${name.replace('ui-', '')}.js`);
 const STYLE_FILES = ['styles/base.css', 'styles/screens.css', 'styles/hud.css'];
 
 function setup() {
@@ -483,7 +484,9 @@ test('victory and defeat offer only restart and main menu; an ended run cannot b
 });
 
 test('runtime and delivered HTML have no run persistence hooks or backup input', () => {
-  for(const file of ['src/app.js', ...UI_FILES, 'src/simulation/game.js','src/simulation/movement.js','src/simulation/economy.js','src/simulation/combat.js','src/simulation/runtime.js','src/persistence.js','index.html']) {
+  for(const file of [`${RUNTIME_SOURCE}/app.js`, ...UI_FILES,
+    ...SIMULATION_SCRIPTS.map(name => `${RUNTIME_SOURCE}/simulation/${name.replace('simulation-', '')}.js`),
+    `${RUNTIME_SOURCE}/persistence.js`, 'index.html']) {
     const source=fs.readFileSync(path.join(__dirname,'..',file),'utf8');
     assert.doesNotMatch(source,/checkpoint|lastSaveTime|importFile|exportBackup|importBackup|serializeBackup|parseBackup|beforeunload|operation\.v[0-9]/i,file);
   }

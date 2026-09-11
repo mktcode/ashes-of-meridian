@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Reproduzierbare TypeScript-Auslieferung
+
+- TypeScript 7.0.2 als einzige lokale Entwicklungsabhängigkeit ergänzt. `npm run build` leert `dist/` und erzeugt aus den weiterhin handgepflegten Quellen klassische Skripte samt Source Maps unter `dist/src/`; `index.html` und die Tests laden ausschließlich diese nicht eingecheckte Ausgabe. Kein Bundle, Laufzeitimport oder Server; synchrone Skriptreihenfolge und `file://` bleiben erhalten.
+- `npm test`: Build und **207 Node-Tests bestanden** (rund 17 s), keine Fixtures geändert. Der Loader schützt weiterhin klassische Bindungen, Reihenfolge, Fragment-APIs und lokale Pfade der tatsächlichen Build-Ausgabe.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Laden der Build-Ausgabe, Touch-Menüs, Käufe bis fünf Startworker, Gefechtsstarts, zusätzliche Rekrutierung, Reload/Neustart und kontrollierter Abbau bestanden; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät- oder anderer Browser-/GPU-Test.
+
 ## Renderer-, Stylesheet- und Testladegruppen
 
 - Wiederholte Listen der fünf Simulations- und fünf UI-Skripte als eingefrorene, benannte Gruppen im Testloader gebündelt; beim anschließenden Renderer-Umbau eine entsprechende Vierergruppe ergänzt. Aufrufstellen wählen Abhängigkeiten weiterhin ausdrücklich, der Loader führt sie weiterhin ausschließlich in Dokumentreihenfolge aus.

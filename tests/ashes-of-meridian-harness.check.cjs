@@ -50,7 +50,7 @@ test('content loads alone with reference catalog order, classic bindings and nam
 });
 
 test('renderer fragments expose the existing bindings and class API in document order', () => {
-  const expectedFiles = RENDERER_SCRIPTS.map(name => `src/renderer/${name.replace('renderer-', '')}.js`),
+  const expectedFiles = RENDERER_SCRIPTS.map(name => `dist/src/renderer/${name.replace('renderer-', '')}.js`),
     scripts = readScripts(), context = loadScripts(RENDERER_SCRIPTS, { scripts });
   assert.deepEqual(
     scripts.filter(script => RENDERER_SCRIPTS.includes(script.name)).map(script => script.filename),
@@ -64,7 +64,7 @@ test('renderer fragments expose the existing bindings and class API in document 
 
 test('simulation fragments assemble the existing non-enumerable MeridianGame API in document order', () => {
   const names = SIMULATION_SCRIPTS,
-    expectedFiles = names.map(name => `src/simulation/${name.replace('simulation-', '')}.js`),
+    expectedFiles = names.map(name => `dist/src/simulation/${name.replace('simulation-', '')}.js`),
     scripts = readScripts(), context = loadScripts(names, { scripts });
   assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
   assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianGame.prototype).length', context), 59);
@@ -78,7 +78,7 @@ test('simulation fragments assemble the existing non-enumerable MeridianGame API
 
 test('UI fragments assemble the existing non-enumerable MeridianUI API in document order', () => {
   const names = UI_SCRIPTS,
-    expectedFiles = names.map(name => `src/ui/${name.replace('ui-', '')}.js`),
+    expectedFiles = names.map(name => `dist/src/ui/${name.replace('ui-', '')}.js`),
     scripts = readScripts(), context = loadScripts(names, { scripts });
   assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
   assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianUI.prototype).length', context), 46);

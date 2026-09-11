@@ -3,20 +3,20 @@
 ## Prüfaufwand
 
 - **Dokumentation, minimale Text-/Rahmen-/Abstandsänderungen:** Diff sichten, bei Dokumentationsänderungen Links und Angaben prüfen; kein zusätzlicher Browserlauf nötig.
-- **Mechanische, verhaltensneutrale JavaScript-Kleinständerungen:** Syntaxprüfung mit `node --check <Datei>` für jede betroffene Datei und Diff-Sichtung genügen, etwa bei einer lokalen Konstantenextraktion mit unverändertem Wert. Voraussetzung: keine Änderung an Logik, RNG-Aufrufreihenfolge, Schnittstellen oder Auswertungsreihenfolge; kein struktureller Umbau.
-- **Sonstiger JavaScript-Spielcode oder Tests:** vollständigen Node-Befehl unten ausführen, passende Regressionstests ergänzen. Bei Änderungen an Spiellogik, RNG, Schnittstellen oder Tests sowie im Zweifel ist der vollständige Lauf Pflicht.
+- **Mechanische, verhaltensneutrale JavaScript-/TypeScript-Kleinständerungen:** `npm run build` und Diff-Sichtung genügen, etwa bei einer lokalen Konstantenextraktion mit unverändertem Wert. Voraussetzung: keine Änderung an Logik, RNG-Aufrufreihenfolge, Schnittstellen oder Auswertungsreihenfolge; kein struktureller Umbau.
+- **Sonstiger Spielcode oder Tests:** vollständiges `npm test` ausführen, passende Regressionstests ergänzen. Bei Änderungen an Spiellogik, RNG, Schnittstellen oder Tests sowie im Zweifel ist der vollständige Lauf Pflicht.
 - **Eingabe, Layoutstruktur, Rendering oder Auslieferung:** zusätzlich gezielt direkt unter `file://` prüfen, insbesondere betroffene Touch-Aktionen und Portraitgrößen. Keine vollständige Browser-Regressionsserie für jeden kleinen Schritt.
 - Ergebnisse und ausgelassene relevante Bereiche kurz nur im [Arbeitsprotokoll](worklog.md) festhalten. Ältere Nachweise sind keine neu ausgeführten Tests.
 
 ## Automatisierte Tests
 
-Keine Paketinstallation oder Build nötig:
+Nach einmaligem `npm install` baut und prüft ein Befehl die aktuelle Laufzeitausgabe:
 
 ```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs tests/ashes-of-meridian-renderer.check.cjs
+npm test
 ```
 
-Ein Testworker; 128 MiB begrenzen nur den JS-Heap, nicht den gesamten Prozessspeicher.
+Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle neun Node-Testdateien gegen die erzeugten klassischen Skripte aus. Ein Testworker; 128 MiB begrenzen nur den JS-Heap, nicht den gesamten Prozessspeicher. Für einen erneuten reinen Build genügt `npm run build`.
 
 | Bereich | Abdeckung |
 | --- | --- |
@@ -32,7 +32,7 @@ Ein Testworker; 128 MiB begrenzen nur den JS-Heap, nicht den gesamten Prozessspe
 
 ## Gezielter Browsercheck
 
-Eigenes Profil ohne wichtige Daten verwenden, `index.html` über `file://` öffnen; keine abgeschwächten Sicherheitsflags. Je nach Änderung prüfen:
+Zuerst `npm run build` ausführen. Dann mit einem eigenen Profil ohne wichtige Daten `index.html` über `file://` öffnen; keine abgeschwächten Sicherheitsflags. Je nach Änderung prüfen:
 
 - Start, lokale Ressourcen, Konsole/WebGL; betroffene Grafikqualität und Fenstergrößen.
 - Touch-Auswahl/Bodenauftrag, Pan/Pinch/Minimap; erreichbare Aktionen, Zielbestätigung/Cancel und Pause.
