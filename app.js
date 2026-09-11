@@ -87,6 +87,7 @@
         };
         ui.showHome();
         document.getElementById('loading').classList.add('hidden');
+        const SIMULATION_STEP_SECONDS = 0.05;
         let last = performance.now(),
           accumulator = 0,
           time = 0,
@@ -213,10 +214,10 @@
             if (game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
               accumulator += dt * game.s.speed;
               let steps = 0;
-              while (accumulator >= 0.05 && steps++ < 12) {
-                game.step(0.05);
-                game.effects.tick(0.05);
-                accumulator -= 0.05;
+              while (accumulator >= SIMULATION_STEP_SECONDS && steps++ < 12) {
+                game.step(SIMULATION_STEP_SECONDS);
+                game.effects.tick(SIMULATION_STEP_SECONDS);
+                accumulator -= SIMULATION_STEP_SECONDS;
                 if (game.s.result) break;
               }
             } else accumulator = 0;

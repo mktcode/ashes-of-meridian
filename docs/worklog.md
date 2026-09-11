@@ -2,6 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Benannte Simulationsschrittweite
+
+- `app.js`: vier identische Schrittweiten durch die lokale Konstante `SIMULATION_STEP_SECONDS = 0.05` ersetzt; Aufrufreihenfolge und Schrittbegrenzung unverändert.
+- **188 Node-Tests bestanden** (rund 13 s), Diff geprüft. Kein Browsercheck für die reine Konstantenextraktion. Die pauschale Node-Testpflicht soll anschließend besprochen werden.
+
 ## Startökonomie nur durch Worker und Raffinerien
 
 - Neue Runs beginnen fest mit **250 Alloy / 0 Aether**. Worker kosten für alle Fraktionen 50 Alloy, sodass genau fünf sofort bezahlbar sind. Passives HQ-Alloy/-Aether und das permanente Start-Alloy-Upgrade entfernt; Energie-Regeneration bleibt unverändert. Reguläres Alloy-/Aether-Einkommen kommt nur durch Worker beziehungsweise Raffinerien.
