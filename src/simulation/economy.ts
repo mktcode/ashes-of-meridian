@@ -109,6 +109,17 @@
         this.s!.gas += q.gas;
         this.emit('toast', 'Recruitment canceled. Resources refunded.');
       },
+      availableWorkers(this: MeridianGame): UnitEntity[] {
+        return this.alive(e => e.team === 0 && e.kind === 'unit' && e.type === 'worker' &&
+          e.order.type !== 'build' && e.order.type !== 'repair') as UnitEntity[];
+      },
+      workerTask(this: MeridianGame, target: Entity | null): 'build' | 'repair' | null {
+        if (!this.s || this.s.result || !target || target.hp <= 0 || target.team !== 0) return null;
+        if (target.kind === 'building' && target.progress < 1) return 'build';
+        if ((target.kind === 'building' || target.kind === 'unit') &&
+          target.progress >= 1 && target.hp < target.maxHp) return 'repair';
+        return null;
+      },
       canBuild(this: MeridianGame, type: BuildingType, p?: Position | null) {
         let s = this.s!,
           d: BuildingDefinitionShape = BUILDINGS[type];
@@ -117,6 +128,7 @@
           return `Requires ${buildingName(d.requires, s.faction)}.`;
         if (!this.alive(e => e.team === 0 && e.type === 'worker').length)
           return 'Recruit a worker at your command center first.';
+        if (!this.availableWorkers().length) return 'No free worker. Workers are building or repairing.';
         if (!p) return '';
         let r = d.size;
         if (Math.abs(p.x) > 83 - r || Math.abs(p.z) > 83 - r)
@@ -148,7 +160,7 @@
           this.emit('toast', reason);
           return false;
         }
-        let workers = this.alive(e => e.team === 0 && e.type === 'worker') as UnitEntity[];
+        let workers = this.availableWorkers();
         workers.sort(
           (a, b) =>
             distance(a, p) -
@@ -197,8 +209,7 @@
         let b = this.managedBuilding(id);
         if (!b) return 'Select a completed own structure.';
         if (b.hp >= b.maxHp) return 'Hull full';
-        if (!this.alive(e => e.team === 0 && e.kind === 'unit' && e.type === 'worker').length)
-          return 'No workers';
+        if (!this.availableWorkers().length) return 'No free worker';
         if (this.s!.alloy <= 0.1) return 'No alloy';
         return '';
       },
@@ -216,9 +227,9 @@
           this.emit('toast', reason);
           return false;
         }
-        let worker = this.closest(b, e => e.team === 0 && e.kind === 'unit' && e.type === 'worker');
-        this.command([worker!.id], { type: 'repair', id: b.id, x: b.x, z: b.z });
-        this.emit('toast', 'Nearest worker assigned to repair.');
+        let worker = this.availableWorkers().sort((a, c) => distance(a, b) - distance(c, b) || a.id - c.id)[0];
+        this.command([worker.id], { type: 'repair', id: b.id, x: b.x, z: b.z });
+        this.emit('toast', 'Nearest free worker assigned to repair.');
         return true;
       },
       canSellBuilding(this: MeridianGame, id: number) {

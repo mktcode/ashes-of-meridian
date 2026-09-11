@@ -108,7 +108,8 @@
           repairing = ready && this.game.buildingRepairers(b.id).length > 0,
           repairReason = ready && !repairing ? this.game.canRepairBuilding(b.id) : '',
           sellReason = ready ? this.game.canSellBuilding(b.id) : '',
-          sig = [this.tab, s.faction, this.selected.join(','), ready, repairing, repairReason, sellReason,
+          noFreeWorker = this.tab === 'build' && !this.game.availableWorkers().length,
+          sig = [this.tab, s.faction, this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
             this.mode?.kind, this.mode?.arg].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
@@ -142,6 +143,7 @@
         }
         $('actions').innerHTML = (this.tab === 'root' ? '' :
           '<button class="menu-back" data-action="tab:root">← Zurück</button>') +
+          (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b.type, f))}${ready ?
             '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}</p>` : '');

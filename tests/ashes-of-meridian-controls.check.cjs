@@ -64,6 +64,8 @@ function setup() {
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
+    workerTask: vm.runInContext('MeridianGame.prototype.workerTask', context),
+    availableWorkers: () => [{}],
     get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
@@ -682,6 +684,64 @@ test('repair restrictions and Stop repair remain visible in the fixed menu', () 
   assert.match(html(), /No workers · Last command center/);
   h.ui.game.buildingRepairers = () => [{}]; h.ui.renderActions();
   assert.doesNotMatch(html(), /data-action="repair" disabled/); assert.match(html(), /Stop repair/);
+});
+
+test('build menu explains unavailable workers and refreshes when one becomes free', () => {
+  const h = setup(); h.ui.tab = 'build';
+  h.ui.game.availableWorkers = () => [];
+  h.ui.renderActions();
+  const html = () => h.document.getElementById('actions').innerHTML;
+  assert.match(html(), /role="status">No free worker/);
+  h.ui.game.availableWorkers = () => [{}];
+  h.ui.renderActions();
+  assert.doesNotMatch(html(), /No free worker/);
+});
+
+test('selected workers turn own foundation/damaged target taps into work orders without changing selection', () => {
+  for (const pointerType of ['touch', 'mouse']) for (const attackMove of [false, true])
+    for (const kind of ['foundation', 'building', 'unit']) {
+      const h = setup(); h.UI.prototype.bind.call(h.ui);
+      const worker = { id: 7, kind: 'unit', type: 'worker', team: 0, hp: 100 },
+        soldier = { id: 8, kind: 'unit', type: 'rifle', team: 0, hp: 100 },
+        target = { id: 9, kind: kind === 'unit' ? 'unit' : 'building', type: kind === 'unit' ? 'rifle' : 'depot',
+          team: 0, hp: 50, maxHp: 100, progress: kind === 'foundation' ? .1 : 1, x: 10, z: 20 };
+      h.ui.game.s.entities = [worker, soldier, target]; h.ui.selected = [7, 8];
+      h.ui.attackMove = attackMove; h.ui.pick = () => target;
+      h.pointer('pointerdown', 200, 200, { pointerType }); h.pointer('pointerup', 200, 200, { pointerType });
+      assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], 'command');
+      assert.deepEqual(h.calls[0][1], [7, 8]);
+      assert.deepEqual(JSON.parse(JSON.stringify(h.calls[0][2])), { type: 'smart', id: 9, x: 10, z: 20 });
+      assert.deepEqual(h.ui.selected, [7, 8]);
+      h.calls.length = 0; h.ui.paused = true;
+      h.pointer('pointerdown', 200, 200, { pointerType }); h.pointer('pointerup', 200, 200, { pointerType });
+      assert.deepEqual(h.calls, []);
+    }
+});
+
+test('healthy own targets, self taps and selections without workers still select normally', () => {
+  for (const mode of ['healthy', 'self', 'no-worker', 'deselected']) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui);
+    const worker = { id: 7, kind: 'unit', type: 'worker', team: 0, hp: 50, maxHp: 100, progress: 1 },
+      target = { id: 8, kind: 'building', type: 'depot', team: 0, hp: mode === 'healthy' ? 100 : 50, maxHp: 100, progress: 1 };
+    if (mode === 'no-worker') worker.type = 'rifle';
+    h.ui.game.s.entities = [worker, target]; h.ui.selected = mode === 'deselected' ? [] : [7];
+    h.ui.pick = () => mode === 'self' ? worker : target;
+    h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+    assert.deepEqual(h.calls, [['select', [mode === 'self' ? 7 : 8]]]);
+  }
+});
+
+test('worker context taps do not override explicit targeting or camera drags', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const worker = { id: 7, kind: 'unit', type: 'worker', team: 0, hp: 100 },
+    target = { id: 8, kind: 'building', team: 0, hp: 50, maxHp: 100, progress: .1, x: 10, z: 20 };
+  h.ui.game.s.entities = [worker, target]; h.ui.selected = [7]; h.ui.pick = () => target;
+  h.ui.mode = { kind: 'ability', arg: 'scan' };
+  h.ui.game.ability = () => { h.calls.push(['ability']); return true; };
+  h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+  assert.deepEqual(h.calls, [['ability']]); h.calls.length = 0;
+  h.pointer('pointerdown', 200, 200); h.pointer('pointermove', 230, 220); h.pointer('pointerup', 230, 220);
+  assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
 });
 
 test('building ground taps/clicks only deselect, including right-click and foundations', () => {

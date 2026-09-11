@@ -19,7 +19,9 @@ Danach `index.html` direkt in einem Browser mit WebGL 2 öffnen. Die handgepfleg
 - Auswahl: einmal tippen; zweimal für sichtbare eigene Einheiten desselben Typs; dreimal für sichtbare eigene Nicht-Worker. Jeweils weniger als 330 ms zwischen den Releases.
 - Boden-Tap: normale Bewegung, auch zum Rückzug. Das **Schwerter-Symbol links neben ⌂** schaltet Attack-move ein/aus: gold = unterwegs Gegner bekämpfen. Startet pro Gefecht ausgeschaltet; Worker bewegen sich immer normal. Ausgewählte Gebäude werden abgewählt. Rallypoints nur über **Rally point** im Aktionsmenü setzen. **Cancel** bricht Bau-/Fähigkeits-/Rally-Zielauswahl ab.
 - Portrait-Deck: links die Minimap auf halber Bildschirmbreite; rechts **Gebäude / Infanterie / Fahrzeuge / Flugzeuge** und Untermenüs mit **Zurück**. Arbeiter und Kommandant stehen unter Infanterie.
-- Fertige eigene Gebäude: **Sell**, **Repair / Stop repair** und **Rally point** im rechten Menü. Reparatur braucht einen Arbeiter; Verkauf erfolgt nach Bestätigung. Fähigkeiten bleiben in der Leiste darüber verfügbar.
+- Worker ausgewählt → eigenes Fundament antippen: weiterbauen; beschädigtes eigenes Gebäude/Einheit antippen: reparieren. Genau ein ausgewählter Worker übernimmt, bestehende Bauarbeiter werden dabei abgelöst. Ohne Worker-Auswahl werden diese Ziele normal ausgewählt.
+- Automatische Bau-/Repair-Zuweisung nutzt nur Worker ohne Bau-/Reparaturauftrag (Abbau zählt als frei). Ist keiner frei, wird nichts platziert oder bezahlt.
+- Fertige eigene Gebäude: **Sell**, **Repair / Stop repair** und **Rally point** im rechten Menü. Verkauf erfolgt nach Bestätigung. Fähigkeiten bleiben in der Leiste darüber verfügbar.
 - Queue-Symbole links über der Minimap zählen offene Aufträge je Einheitentyp. Der kreisförmige Fortschritt zeigt die nächste Fertigstellung; Tap storniert einen Auftrag.
 - **Fleet Upgrades → Starting workers**: kostenlos bis Stufe 5, ein zusätzlicher Startworker pro Stufe. Wirkt erst im nächsten Gefecht oder Neustart. Alloy/Aether bleiben begrenzt; noch keine erspielbare Upgrade-Währung.
 

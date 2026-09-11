@@ -67,9 +67,9 @@ test('simulation fragments assemble the existing non-enumerable MeridianGame API
     expectedFiles = names.map(name => `dist/src/simulation/${name.replace('simulation-', '')}.js`),
     scripts = readScripts(), context = loadScripts(names, { scripts });
   assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
-  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianGame.prototype).length', context), 59);
+  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianGame.prototype).length', context), 61);
   assert.equal(vm.runInContext('Object.keys(MeridianGame.prototype).length', context), 0);
-  for (const method of ['start', 'move', 'train', 'combat', 'step']) {
+  for (const method of ['start', 'move', 'train', 'combat', 'step', 'availableWorkers', 'workerTask']) {
     assert.equal(vm.runInContext(`typeof MeridianGame.prototype.${method}`, context), 'function');
     assert.equal(vm.runInContext(`Object.getOwnPropertyDescriptor(MeridianGame.prototype, '${method}').enumerable`, context), false);
   }

@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Geschützte Worker-Aufträge und Bau-/Reparatur-Kontexttaps
+
+- Automatische Bau-/Repair-Zuweisung verwendet nur Worker ohne Bau-/Reparaturauftrag, einschließlich Anfahrt; Abbau zählt als frei. Kein freier Worker: keine Platzierung/Zahlung, sichtbarer Hinweis im Baumenü. Worker-Auswahl → eigenes Fundament/beschädigtes Gebäude oder eigene Einheit weist genau einen ausgewählten Worker zu, erhält Auswahl und sonstige Aufträge und darf ausdrücklich umleiten. An Baustellen wird der bisherige Bauarbeiter abgelöst, ohne Mehrarbeitertempo oder erneute Baukosten. Intakte Ziele bleiben normal auswählbar.
+- Beim Browsercheck zusätzlich reproduziert: Die 0,65-m-Wegpunkttoleranz konnte neu zugewiesene Worker knapp außerhalb der Arbeitsreichweite stoppen. Bau-/Reparaturaufträge fahren den letzten Wegpunkt nun präzise an; Arbeitsreichweite, Kollisionsradien, Bau-/Reparaturraten und Kosten unverändert. Keine neuen RNG-Aufrufe; geänderte Arbeitsabläufe verwenden ihre regulären Effekt-Samples.
+- **221 Node-Tests inklusive strengem Build bestanden** (rund 18 s), keine Fixtures geändert. Neue Zuweisungs-/Ablösungs- und Wegpunktregressionen scheiterten vor ihren Fixes; zusätzlich Kosten, Gruppen, gültige Arbeitsziele, Auswahl-/Pausen-/Gestenschutz und dynamischer Verfügbarkeitshinweis geprüft. Diff und lokale Markdown-Links geprüft.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: native Touch-Platzierung zweier Fundamente mit unterschiedlichen Workern, Bausperre/Hinweis bei belegten Workern, manuelle Ablösung/Fortsetzung bis Fertigstellung sowie Gebäude-/Einheitenreparatur bestanden. Auswahlerhalt und Auswahl intakter Ziele geprüft, Bilder gesichtet. Keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. Kontrollierte Simulationsschritte und CDP-Touch, kein Echtgerät-/anderer Browser-/GPU- oder allgemeiner Navigationsnachweis.
+
 ## Umschaltbares Attack-move
 
 - Schwerter-Schalter links neben der Basiskamera ergänzt: gold/`aria-pressed` = Attack-move, sonst normale Bewegung einschließlich Rückzug. Wirkt nur auf künftige Bodenaufträge (Touch und Welt-/Minimap-Rechtsklick), bleibt bei Auswahlwechsel/Cancel/Pause erhalten und startet pro Gefecht ausgeschaltet. Worker, Kontextziele, Bau/Fähigkeiten, Rally und laufende Aufträge bleiben unabhängig. Handbuch und Referenzdokumentation aktualisiert; kein weiteres Refactoring.

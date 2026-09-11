@@ -107,7 +107,7 @@ const UNITS = {
     time: 9,
     from: 'hq',
     vision: 15,
-    desc: 'Harvests alloy automatically and constructs newly placed structures. Right-click crystals to mine, or completed damaged allied structures and damaged allied units to repair.'
+    desc: 'Harvests alloy automatically. Free workers construct newly placed structures without interrupting builders or repairers. Select a worker, then tap an own foundation to resume building, a damaged allied building/unit to repair, or crystals to mine.'
   },
   rifle: {
     cost: 75,

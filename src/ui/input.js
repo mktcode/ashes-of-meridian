@@ -321,6 +321,13 @@
           return;
         }
         if (d.moved) return;
+        if (this.game.workerTask(target) && this.selected.some(id => {
+          const worker = this.game.get(id);
+          return worker?.team === 0 && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;
+        })) {
+          this.game.command(this.selected, { type: 'smart', id: target.id, x: target.x, z: target.z });
+          return;
+        }
         if (this.selectedBuilding() && (!target || target.team !== 0)) {
           this.select([]);
           return;

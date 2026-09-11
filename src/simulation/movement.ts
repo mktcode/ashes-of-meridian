@@ -137,7 +137,10 @@
         let dx = q.x - e.x,
           dz = q.z - e.z,
           d = Math.hypot(dx, dz);
-        if (d < (e.exit ? 0.04 : 0.65) || (e.pi + 1 < e.path.length && d < 3.8 &&
+        // The last work waypoint may only just enter build/repair range: don't skip it early.
+        const waypointTolerance = e.exit ? 0.04 :
+          e.pi + 1 === e.path.length && (e.order.type === 'build' || e.order.type === 'repair') ? 1e-9 : 0.65;
+        if (d < waypointTolerance || (e.pi + 1 < e.path.length && d < 3.8 &&
           !this.unitFits(e, q.x, q.z) && this.world!.lineFree(e, e.path[e.pi + 1]))) {
           // An occupied intermediate waypoint must not trap us circling an idle unit.
           e.pi++;
@@ -205,8 +208,30 @@
         e.stuck = 0;
       },
       command(this: MeridianGame, ids: number[], order: CommandOrder) {
+        if (!this.s || this.s.result) return;
         let units = ids.map(id => this.get(id)).filter(e => e && e.team === 0) as Entity[];
         let mobile = units.filter(e => e.kind === 'unit') as UnitEntity[];
+        const target = 'id' in order ? this.get(order.id) : null,
+          task = this.workerTask(target);
+        if (target && task && (order.type === 'smart' || order.type === task)) {
+          const worker = mobile.filter(e => e.type === 'worker' && e.id !== target.id)
+            .sort((a, b) => distance(a, target) - distance(b, target) || a.id - b.id)[0];
+          if (worker) {
+            if (task === 'repair' && this.s.alloy <= 0.1) {
+              this.emit('toast', 'No alloy');
+              return;
+            }
+            // Explicit orders may replace a builder, but never add construction speed.
+            if (task === 'build')
+              for (const other of this.alive(e => e.kind === 'unit' && e.type === 'worker' &&
+                e.team === 0 && e.id !== worker.id && e.order.type === 'build' && e.order.id === target.id))
+                this.setOrder(other, { type: 'idle' });
+            this.setOrder(worker, { type: task, id: target.id, x: target.x, z: target.z });
+            this.emit('order', { type: task, x: target.x, z: target.z, count: 1 });
+            return;
+          }
+        }
+        if (order.type === 'build' || order.type === 'repair') return;
         let cols = Math.max(1, Math.ceil(Math.sqrt(mobile.length))),
           spacing = Math.max(0, ...mobile.map(e => e.size)) * UNIT_BODY_SCALE * 2 + 0.1,
           i = 0;
@@ -226,14 +251,6 @@
                 o = { type: 'attack', id: target.id, x: target.x, z: target.z };
               else if (target?.kind === 'resource' && target.type === 'crystal' && e.type === 'worker')
                 o = { type: 'mine', id: target.id };
-              else if (
-                target &&
-                e.type === 'worker' &&
-                target.team === 0 &&
-                target.progress >= 1 &&
-                target.hp < target.maxHp
-              )
-                o = { type: 'repair', id: target.id };
               else if (target && target.kind === 'unit' && target.team === 0)
                 o = { type: 'follow', id: target.id };
               else o = { type: 'move', x: o.x, z: o.z };

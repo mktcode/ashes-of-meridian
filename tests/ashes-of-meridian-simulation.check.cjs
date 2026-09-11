@@ -799,20 +799,126 @@ test('new construction assigns one worker, pays once and still completes normall
   assert.equal(events.filter(e => e.type === 'complete' && e.data.type === 'depot').length, 1);
 });
 
-test('context and repair orders cannot add builders to unfinished structures', () => {
-  const { game } = battle();
-  const worker = player(game, 'worker');
-  const foundation = game.spawnBuilding('depot', worker.x, worker.z, 0, 0, { progress: .1 });
-  foundation.hp = foundation.maxHp * .1;
-  const before = [foundation.progress, foundation.hp, game.s.alloy];
-  game.command([worker.id], { type: 'smart', id: foundation.id, x: foundation.x, z: foundation.z });
-  assert.equal(worker.order.type, 'move');
-  game.worker(worker, 1);
-  assert.deepEqual([foundation.progress, foundation.hp, game.s.alloy], before);
-  game.command([worker.id], { type: 'repair', id: foundation.id });
-  game.worker(worker, 1);
-  assert.equal(worker.order.type, 'idle');
-  assert.deepEqual([foundation.progress, foundation.hp, game.s.alloy], before);
+test('new foundations never steal travelling builders or repairers, even when selected', () => {
+  const game = spacingArena(); game.world.explored.fill(255);
+  const first = game.spawnUnit('worker', 0, -8, 0, 0);
+  const second = game.spawnUnit('worker', 20, -8, 0, 0);
+  const repairer = game.spawnUnit('worker', 10, -8, 0, 0);
+  const damaged = player(game, 'barracks'); damaged.hp -= 100;
+  game.setOrder(second, { type: 'mine', id: 999 });
+  game.setOrder(repairer, { type: 'repair', id: damaged.id });
+  assert.equal(game.build('depot', { x: 0, z: 0 }, [first.id]), true);
+  const order = json(first.order), repair = json(repairer.order);
+  assert.equal(game.build('depot', { x: 10, z: 0 }, [first.id, repairer.id]), true);
+  assert.deepEqual(json(first.order), order);
+  assert.deepEqual(json(repairer.order), repair);
+  assert.equal(second.order.type, 'build'); assert.notEqual(second.order.id, first.order.id);
+  const before = json(game.s);
+  game.random = () => { throw Error('Rejected work must not consume RNG'); };
+  assert.match(game.canBuild('depot'), /No free worker/);
+  assert.equal(game.build('depot', { x: 20, z: 0 }), false);
+  assert.deepEqual(json(game.s), before, 'no foundation, payment or stolen order');
+});
+
+test('automatic Repair uses free workers and remains stoppable when all workers are busy', () => {
+  const game = spacingArena();
+  const b = game.spawnBuilding('depot', 0, 0, 0, 0); b.hp -= 100;
+  const builder = game.spawnUnit('worker', 0, -5, 0, 0);
+  const repairer = game.spawnUnit('worker', 5, -5, 0, 0);
+  const miner = game.spawnUnit('worker', 12, -5, 0, 0);
+  game.setOrder(builder, { type: 'build', id: 999, x: 30, z: 0 });
+  game.setOrder(repairer, { type: 'repair', id: player(game, 'barracks').id });
+  game.setOrder(miner, { type: 'mine', id: 999 });
+  const beforeBuilder = json(builder), beforeRepairer = json(repairer);
+  game.random = () => { throw Error('Assignment must not consume RNG'); };
+  assert.equal(game.toggleBuildingRepair(b.id), true);
+  assert.deepEqual(Array.from(game.buildingRepairers(b.id), w => w.id), [miner.id]);
+  assert.deepEqual(json(builder), beforeBuilder); assert.deepEqual(json(repairer), beforeRepairer);
+  const other = player(game, 'factory'); other.hp -= 100;
+  const before = json(game.s);
+  assert.match(game.canRepairBuilding(other.id), /No free worker/);
+  assert.equal(game.toggleBuildingRepair(other.id), false); assert.deepEqual(json(game.s), before);
+  assert.equal(game.toggleBuildingRepair(b.id), true); assert.equal(miner.order.type, 'idle');
+});
+
+test('explicit construction resumes or replaces exactly one builder without extra cost or build speed', () => {
+  for (const type of ['smart', 'build']) for (const occupied of [false, true]) {
+    const game = spacingArena();
+    const b = game.spawnBuilding('depot', 0, 0, 0, 0, { progress: .1 });
+    b.hp = b.maxHp * .1;
+    const old = game.spawnUnit('worker', 0, -5, 0, 0);
+    const next = game.spawnUnit('worker', 0, -8, 0, 0);
+    const farther = game.spawnUnit('worker', 12, -8, 0, 0);
+    const soldier = game.spawnUnit('rifle', 12, -12, 0, 0);
+    if (occupied) game.setOrder(old, { type: 'build', id: b.id, x: b.x, z: b.z });
+    // Manual reassignment may interrupt another construction job.
+    game.setOrder(next, { type: 'build', id: 999, x: 30, z: 0 });
+    const beforeOthers = [json(farther), json(soldier)], alloy = game.s.alloy;
+    game.command([farther.id, soldier.id, next.id, next.id], { type, id: b.id, x: b.x, z: b.z });
+    assert.deepEqual(Array.from(game.alive(e => e.order.type === 'build' && e.order.id === b.id), e => e.id), [next.id]);
+    assert.equal(old.order.type, 'idle');
+    assert.deepEqual([json(farther), json(soldier)], beforeOthers);
+    assert.equal(game.s.alloy, alloy);
+    next.x = 0; next.z = -5;
+    game.worker(next, .5);
+    close(b.progress, .1 + .5 / 16);
+    game.world.rebuild(game.s.entities);
+    advance(game, 1000);
+    assert.equal(b.progress, 1); assert.equal(game.s.stats.built, 1);
+  }
+});
+
+test('explicit repair sends one selected worker, leaves others alone and rejects invalid work', () => {
+  for (const kind of ['building', 'unit']) {
+    const game = spacingArena();
+    const target = kind === 'building' ? game.spawnBuilding('depot', 0, 0, 0, 0)
+      : game.spawnUnit('rifle', 0, 0, 0, 0);
+    target.hp -= 100;
+    const next = game.spawnUnit('worker', 0, -3, 0, 0);
+    const other = game.spawnUnit('worker', 15, -5, 0, 0);
+    const soldier = game.spawnUnit('rifle', 15, -10, 0, 0);
+    game.setOrder(next, { type: 'build', id: 999, x: 30, z: 0 });
+    const before = [json(other), json(soldier)];
+    game.command([other.id, soldier.id, next.id], { type: 'smart', id: target.id, x: 0, z: 0 });
+    assert.equal(next.order.type, 'repair'); assert.equal(next.order.id, target.id);
+    assert.deepEqual([json(other), json(soldier)], before);
+    const alloy = game.s.alloy;
+    game.worker(next, .5); close(game.s.alloy, alloy - 1.9); close(target.hp, target.maxHp - 81);
+    for (const invalid of ['alloy', 'enemy', 'dead', 'foundation', 'full']) {
+      target.team = invalid === 'enemy' ? 1 : 0;
+      target.hp = invalid === 'dead' ? 0 : invalid === 'full' ? target.maxHp : target.maxHp - 100;
+      target.progress = invalid === 'foundation' ? .1 : 1;
+      game.s.alloy = invalid === 'alloy' ? 0 : 100;
+      const state = json(game.s);
+      game.command([other.id], { type: 'repair', id: target.id });
+      assert.deepEqual(json(game.s), state, invalid);
+    }
+  }
+});
+
+test('builders and repairers reach the final waypoint before giving up just outside work range', () => {
+  for (const type of ['build', 'repair']) for (const [x, z, goalX, goalZ] of [
+    [-4.14, -3.60, -3.75, -3.25], [-5.31, 0, -5.29, 0]
+  ]) {
+    const game = spacingArena();
+    const b = game.spawnBuilding('depot', 0, 0, 0, 0, { progress: type === 'build' ? .1 : 1 });
+    b.hp = b.maxHp * .1;
+    const w = game.spawnUnit('worker', x, z, 0, 0);
+    game.world.rebuild(game.s.entities);
+    game.setOrder(w, { type, id: b.id, x: b.x, z: b.z });
+    // A valid final grid point is in work range; the old 0.65 m waypoint tolerance isn't.
+    w.path = [{ x: goalX, z: goalZ }]; w.pathVersion = game.world.pathVersion;
+    w.nextPath = Infinity;
+    const hp = b.hp;
+    assert.ok(Math.hypot(w.x, w.z) > b.size + 3);
+    for (let i = 0; i < 10; i++) {
+      const beforeHp = b.hp, beforeDistance = Math.hypot(w.x, w.z);
+      game.worker(w, .05);
+      if (beforeDistance > b.size + 3) assert.equal(b.hp, beforeHp, 'work range is not extended');
+    }
+    assert.ok(b.hp > hp, `${type} must start work instead of stalling`);
+    assert.ok(game.unitFits(w, w.x, w.z));
+  }
 });
 
 test('workers still repair completed damaged structures and units for the same alloy cost', () => {
