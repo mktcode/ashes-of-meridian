@@ -32,7 +32,7 @@ function setup(data = new Map()) {
 test('profile defaults are complete, fresh and do not write storage', () => {
   const h = setup(), a = h.readProfile(), b = h.readProfile();
   assert.deepEqual(json(a), defaults);
-  a.settings.music = false; a.upgrades.stores = 3;
+  a.settings.music = false; a.upgrades.command = 3;
   assert.deepEqual(json(b), defaults);
   assert.ok(h.trace.every(([kind]) => kind === 'get'));
 });
@@ -43,7 +43,7 @@ test('profile normalization preserves current coercions and fractional values bu
     medals: [3], best: 'invalid', upgrades: { command: 9, stores: -1, industry: '1.5', extra: 8 },
     ending: 'open', skirmishBest: -4, settings: { volume: '0.6', quality: 1.5, difficulty: 'missing', music: 'yes', extra: 9 } }));
   assert.deepEqual(json(h.readProfile()), { ...defaults,
-    upgrades: { command: 3, stores: 0, industry: 1.5, extra: 8, resolve: 0 },
+    upgrades: { command: 3, stores: -1, industry: 1.5, extra: 8, resolve: 0 },
     settings: { ...defaults.settings, volume: 0.6, quality: 1.5, music: 'yes' } });
 });
 
@@ -60,10 +60,10 @@ test('invalid profile JSON/version resets; a mid-normalization error retains par
 
 test('permanent upgrades and settings persist across instances using only the unchanged profile key', () => {
   const data = new Map([['meridian.operation.v3', '{"version":3,"entities":[]}']]);
-  const h = setup(data); h.ui.profile.upgrades.stores = 2; h.ui.profile.settings.quality = 0; h.ui.persist();
+  const h = setup(data); h.ui.profile.upgrades.command = 2; h.ui.profile.settings.quality = 0; h.ui.persist();
   assert.deepEqual(h.trace, [['set', PROFILE, JSON.stringify(h.ui.profile)]]);
   const reloaded = setup(data);
-  assert.equal(reloaded.ui.profile.upgrades.stores, 2); assert.equal(reloaded.ui.profile.settings.quality, 0);
+  assert.equal(reloaded.ui.profile.upgrades.command, 2); assert.equal(reloaded.ui.profile.settings.quality, 0);
   reloaded.readProfile(); assert.deepEqual(reloaded.trace, [['get', PROFILE]]);
   assert.equal(data.get('meridian.operation.v3'), '{"version":3,"entities":[]}', 'old run data is ignored, not migrated');
   assert.deepEqual(Object.keys(h.service).sort(), ['available','loadProfile','saveProfile']);
@@ -72,20 +72,20 @@ test('permanent upgrades and settings persist across instances using only the un
 
 test('denied storage getter keeps only a volatile profile; new instances lose the fallback', () => {
   const h = setup(); h.fail.access = true;
-  h.ui.profile.upgrades.stores = 2;
+  h.ui.profile.upgrades.command = 2;
   assert.equal(h.service.saveProfile(h.ui.profile), false);
-  assert.equal(h.readProfile().upgrades.stores, 2); assert.equal(h.service.available, false);
+  assert.equal(h.readProfile().upgrades.command, 2); assert.equal(h.service.available, false);
   const other = setup(); other.fail.access = true;
   assert.deepEqual(json(other.readProfile()), defaults);
 });
 
 test('write failure with successful reads still prefers the native profile; availability stays sticky', () => {
-  const h = setup(); h.data.set(PROFILE, JSON.stringify({ ...defaults, upgrades: { stores: 1 } }));
-  h.ui.profile.upgrades.stores = 2; h.fail.set = true;
+  const h = setup(); h.data.set(PROFILE, JSON.stringify({ ...defaults, upgrades: { command: 1 } }));
+  h.ui.profile.upgrades.command = 2; h.fail.set = true;
   assert.equal(h.service.saveProfile(h.ui.profile), false);
-  assert.equal(h.readProfile().upgrades.stores, 1);
-  h.fail.get = true; assert.equal(h.readProfile().upgrades.stores, 2);
-  h.fail.get = false; assert.equal(h.readProfile().upgrades.stores, 1);
+  assert.equal(h.readProfile().upgrades.command, 1);
+  h.fail.get = true; assert.equal(h.readProfile().upgrades.command, 2);
+  h.fail.get = false; assert.equal(h.readProfile().upgrades.command, 1);
   assert.equal(h.service.available, false);
 });
 

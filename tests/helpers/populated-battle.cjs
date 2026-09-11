@@ -30,6 +30,9 @@ function populateBase(game, workers = 5) {
     if (!p) throw Error('No free space in populated battle fixture.');
     Object.assign(e, p);
   }
+  // Developed-base scenarios use an explicit economy independent of start balance.
+  game.s.alloy = 1100;
+  game.s.gas = 400;
   game.rehash();
   game.world.reveal(game.s.entities);
 }

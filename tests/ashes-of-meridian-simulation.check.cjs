@@ -73,13 +73,25 @@ test('single battle starts with only the own HQ, one hostile base and no mission
   const { game, renderer, events } = freshBattle(), s = game.s;
   assert.deepEqual([s.seed,s.biome,s.faction,s.enemy,s.time], [1409,'rust',0,2,0]);
   assert.equal('version' in s, false); assert.equal(game.snapshot, undefined); assert.equal(game.restore, undefined);
-  assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [1100,400,100,61,62,0,24]);
+  assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,100,61,62,0,24]);
   assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
   assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
   for (const key of ['m','index','practice','upgrades','research','difficulty']) assert.equal(key in s, false);
   assert.equal(game.objectiveRows().length, 1); assert.match(game.objectiveRows()[0].text, /enemy base/);
   assert.equal(renderer.fogOn, true); assert.deepEqual(events.map(e => e.type), ['start','radio']);
+});
+
+test('no workers means no alloy or aether income, and 250 alloy buys exactly five workers for every faction', () => {
+  for(const faction of [0,1,2]) {
+    const {game}=freshBattle(faction);
+    assert.deepEqual(json(game.cost('worker')),{cost:50,gas:0});
+    advance(game,1200);
+    assert.deepEqual([game.s.alloy,game.s.gas,game.s.stats.gathered],[250,0,0]);
+    for(let i=0;i<5;i++)assert.equal(game.train('worker'),true);
+    assert.deepEqual([game.s.alloy,game.s.gas,game.supply(),player(game,'hq').queue.length],[0,0,5,5]);
+    assert.equal(game.train('worker'),false);
+  }
 });
 
 test('the first worker must be paid for and recruited, then enables mining and the first new building', () => {
@@ -103,10 +115,11 @@ test('the first worker must be paid for and recruited, then enables mining and t
   }
 });
 
-test('retired start-unit bonuses never add units to a new battle', () => {
-  const {game}=createGame(); game.profile.upgrades={logistics:3,veterans:3};
+test('retired start-unit and reserve bonuses never affect a new battle', () => {
+  const {game}=createGame(); game.profile.upgrades={logistics:3,veterans:3,stores:3};
   game.start({seed:1409});
   assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
+  assert.deepEqual(json(game.s.meta),{}); assert.deepEqual([game.s.alloy,game.s.gas],[250,0]);
 });
 
 test('fresh starts with the same seed reproduce state; another seed changes resource amounts', () => {
@@ -472,23 +485,24 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   const troops = [0, 1, 2].map(f => game.spawnUnit('rifle', 75, 75, 0, f));
   for (const troop of troops) troop.hp = troop.maxHp - 50;
   const gas = game.s.gas; advance(game, 1);
-  close(game.s.gas, gas + .05 * (1.7 + .25));
+  close(game.s.gas, gas + .05 * 1.7);
   for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
 });
 
 test('remaining fleet upgrades apply to new battles without providing starting units', () => {
   const { game } = createGame();
-  const meta = { stores: 2, command: 1, resolve: 1, industry: 1 };
+  const meta = { command: 1, resolve: 1, industry: 1 };
   game.profile.upgrades = meta; game.start({ seed: 1409 });
   assert.deepEqual(json(game.s.meta), meta); assert.notStrictEqual(game.s.meta, meta);
-  assert.equal(game.s.alloy, 1300);
+  assert.deepEqual([game.s.alloy,game.s.gas],[250,0]);
   assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
-  game.s.energy = 0; assert.equal(game.train('hero'), true); advance(game, 10);
+  game.s.alloy=1000; game.s.gas=1000; game.s.energy = 0;
+  assert.equal(game.train('hero'), true); advance(game, 10);
   close(game.s.energy, .5 * .8 * 1.15);
   close(player(game, 'hq').queue[0].progress, .5 / player(game, 'hq').queue[0].time * 1.1);
   advance(game, 1000); assert.equal(player(game, 'hero').maxHp, 1000);
   game.start({ seed: 1409 });
-  assert.deepEqual(json(game.s.meta), meta); assert.equal(game.s.alloy, 1300);
+  assert.deepEqual(json(game.s.meta), meta); assert.deepEqual([game.s.alloy,game.s.gas],[250,0]);
   assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
 });
 
@@ -754,7 +768,7 @@ test('removed scout cannot be recruited and no faction starts or deploys it in w
   }
 });
 
-test('fixed steps finish production once, retain reserved supply and account for HQ income and mining deliveries', () => {
+test('fixed steps finish production once, retain reserved supply and account only for mining and refinery income', () => {
   const { game, events } = battle();
   const barracks = player(game, 'barracks');
   barracks.rally = { x: -35, z: 48 };
@@ -772,8 +786,8 @@ test('fixed steps finish production once, retain reserved supply and account for
   assert.deepEqual(trained[0].data.order, { type: 'attackMove', x: -35, z: 48 });
   assert.equal(game.get(trained[0].data.id).type, 'rifle');
   assert.ok(game.s.stats.gathered > 0, 'workers actually delivered alloy');
-  close(game.s.alloy, 1100 - 75 + 11.05 + game.s.stats.gathered);
-  close(game.s.gas, 400 + 11.05 * 1.95);
+  close(game.s.alloy, 1100 - 75 + game.s.stats.gathered);
+  close(game.s.gas, 400 + 11.05 * 1.7);
 });
 
 test('restarting discards the previous run and rebuilds fresh navigation, indexes and fog', () => {

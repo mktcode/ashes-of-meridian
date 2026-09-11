@@ -4,7 +4,7 @@ Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fra
 
 ## Spielen
 
-Neue Gefechte starten nur mit dem Hauptgebäude. Den ersten Worker über **Infanterie** rekrutieren; er baut automatisch Alloy ab und ermöglicht den weiteren Basisbau.
+Neue Gefechte starten nur mit dem Hauptgebäude, **250 Alloy und 0 Aether**. Das reicht exakt für fünf Worker zu je 50 Alloy. Ohne Worker gibt es kein Alloy, ohne Raffinerie kein Aether; den ersten Worker über **Infanterie** rekrutieren.
 
 `index.html` direkt in einem Browser mit WebGL 2 öffnen. Alle lokalen JavaScript-Dateien und `styles.css` müssen neben dem HTML bleiben; die separaten Bildquellen ebenfalls mitführen. Die Laufzeittexturen sind in `renderer.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket.
 

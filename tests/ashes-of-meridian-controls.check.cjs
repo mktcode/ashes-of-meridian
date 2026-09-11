@@ -472,17 +472,17 @@ test('runtime and delivered HTML have no run persistence hooks or backup input',
 });
 
 test('permanent upgrades are free, bounded and persisted without altering the active battle', () => {
-  const h = setup(), keys = ['stores','command','resolve','industry'];
+  const h = setup(), keys = ['command','resolve','industry'];
   h.ui.game.s.meta = {}; h.ui.game.s.alloy = 123; h.ui.game.s.gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
   h.ui.showArmory(); assert.match(h.ui.html, /∞ UPGRADE RESOURCES \/ TEST MODE/);
   assert.match(h.ui.html, /FREE · LEVEL 1/);
   for (const key of keys) for (let i=0;i<5;i++) h.ui.buyUpgrade(key);
-  h.ui.buyUpgrade('not-an-upgrade'); h.ui.buyUpgrade('veterans'); h.ui.buyUpgrade('logistics');
+  h.ui.buyUpgrade('not-an-upgrade'); h.ui.buyUpgrade('veterans'); h.ui.buyUpgrade('logistics'); h.ui.buyUpgrade('stores');
   assert.deepEqual(h.ui.profile.upgrades, Object.fromEntries(keys.map(k=>[k,3])));
-  assert.equal(h.calls.length, 12); assert.equal('credits' in h.ui.profile, false);
+  assert.equal(h.calls.length, 9); assert.equal('credits' in h.ui.profile, false);
   assert.deepEqual([h.ui.game.s.alloy,h.ui.game.s.gas,h.ui.game.s.meta], [123,45,{}]);
-  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 4);
+  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 3);
 });
 
 test('campaign navigation, tutorial and ending APIs are removed; battle restart uses only battle options', () => {

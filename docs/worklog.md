@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Startökonomie nur durch Worker und Raffinerien
+
+- Neue Runs beginnen fest mit **250 Alloy / 0 Aether**. Worker kosten für alle Fraktionen 50 Alloy, sodass genau fünf sofort bezahlbar sind. Passives HQ-Alloy/-Aether und das permanente Start-Alloy-Upgrade entfernt; Energie-Regeneration bleibt unverändert. Reguläres Alloy-/Aether-Einkommen kommt nur durch Worker beziehungsweise Raffinerien.
+- Ausgebaute Testbasen deklarieren ihre 1100/400 Testwirtschaft nun ausdrücklich; feste Gelände-/RNG-Referenzen und übriges Balancing bleiben unverändert.
+- **188 Node-Tests bestanden**, darunter 60 s ohne Worker/Refinery und ohne Alloy-/Aether-Zuwachs, exakt fünf bezahlbare Worker für jede Fraktion, Abbau, Raffinerieeinkommen und verbliebene Upgrades. Keine Fixtures neu erzeugt. Kein Browsercheck für die reine Simulations-/Balancingänderung; manueller Spieltest steht aus.
+
 ## Runs ohne Speicherung
 
 - Manuelles Speichern/Laden, Autosave, Home-Resume, Retry checkpoint, Backup-Import/-Export und Simulation-Snapshot/Restore entfernt. Alte Checkpoints werden ignoriert, keine Migration. Nur Upgrades/Einstellungen bleiben im unveränderten lokalen Profil.
@@ -11,7 +17,7 @@ Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach 
 
 ## Gefechtsstart nur mit dem HQ
 
-- Spieler startet ohne weitere Gebäude oder Einheiten; auch der erste Worker muss über Infanterie rekrutiert werden. Starttruppen-/Startworker-Upgrades aus Katalog und Startlogik entfernt, vier übrige Upgrades erhalten. Gegneraufstellung, Ressourcen und Wellenzeiten unverändert; kein neues Worker-Startupgrade oder Save-Umbau.
+- Spieler startet ohne weitere Gebäude oder Einheiten; auch der erste Worker muss über Infanterie rekrutiert werden. Starttruppen-/Startworker-Upgrades aus Katalog und Startlogik entfernt, damals vier übrige Upgrades erhalten. Gegneraufstellung, Ressourcen und Wellenzeiten waren in diesem Schritt unverändert; kein neues Worker-Startupgrade oder Save-Umbau.
 - Starttext/Hilfe und Referenzen angepasst. 24 reservierte Samples erhalten die festen Ressourcen-/RNG-Referenzen. Ausgebaute Basen sind jetzt ausdrückliche Testaufbauten, kein echter Spielstart.
 - **196 Node-Tests bestanden**, einschließlich HQ-only über alle Fraktionen/Biome, erster Worker samt Bezahlung/Produktion/Restore/Abbau und erstem Gebäude, übrigen Upgrades sowie bestehenden Crowd-/Effektreferenzen. Keine Fixtures neu erzeugt. Browsercheck auf Nutzerwunsch ausgelassen; manueller Spiel- und Balancingtest steht aus.
 

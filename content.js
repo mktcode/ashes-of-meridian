@@ -216,7 +216,7 @@ const BUILDINGS = {
     size: 4.4,
     time: 45,
     cap: 24,
-    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver alloy here. Provides emergency alloy and aether income.'
+    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver alloy here; it provides no passive resources.'
   },
   barracks: {
     cost: 145,
@@ -275,12 +275,6 @@ const BUILDINGS = {
   }
 };
 const META = {
-  stores: {
-    name: 'Emergency reserves',
-    icon: 'crystal',
-    desc: 'Start each battle with 100 additional alloy per level.',
-    max: 3
-  },
   command: {
     name: 'Command uplink',
     icon: 'energy',

@@ -20,13 +20,16 @@
         let faction = FACTIONS[opts.faction] ? opts.faction : 0,
           enemy = FACTIONS[opts.enemy] ? opts.enemy : 2,
           biome = BIOMES[opts.biome] ? opts.biome : 'ash',
-          meta = structuredClone(this.profile.upgrades || {}),
+          savedMeta = this.profile.upgrades || {},
+          meta = Object.fromEntries(
+            Object.keys(META).filter(key => Object.hasOwn(savedMeta, key)).map(key => [key, savedMeta[key]])
+          ),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.s = {
           seed, faction, enemy, biome, meta,
           time: 0,
-          alloy: 1100 + (meta.stores || 0) * 100,
-          gas: 400,
+          alloy: 250,
+          gas: 0,
           energy: 100,
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
@@ -312,7 +315,9 @@
       }
       cost(type, kind = 'unit') {
         let d = kind === 'building' ? BUILDINGS[type] : UNITS[type],
-          mul = kind === 'unit' ? (this.s.faction === 1 ? 0.85 : this.s.faction === 2 ? 1.12 : 1) : 1;
+          mul = kind === 'unit' && type !== 'worker'
+            ? (this.s.faction === 1 ? 0.85 : this.s.faction === 2 ? 1.12 : 1)
+            : 1;
         return { cost: Math.ceil(d.cost * mul), gas: d.gas || 0 };
       }
       afford(c) {
@@ -1024,8 +1029,6 @@
         for (let e of economic) {
           if (e.team === 0) {
             if (e.type === 'hq') {
-              s.alloy += dt * 1.0;
-              s.gas += dt * 0.25;
               if (e.faction === 0)
                 for (let n of this.near(
                   e.x,
