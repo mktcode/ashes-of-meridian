@@ -78,7 +78,6 @@
           e('unit', 'tank', -1, 26);
           e('unit', 'artillery', -13, 15);
           e('unit', 'air', 30, 6);
-          e('unit', 'scout', 27, 26);
           for (let i = 0; i < 9; i++)
             e('unit', 'rifle', 15 + (i % 3) * 1.8, 16 + Math.floor(i / 3) * 2);
           for (let i = 0; i < 7; i++)

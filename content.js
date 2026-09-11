@@ -15,7 +15,6 @@ const FACTIONS = [
     units: {
       worker: 'Prospector',
       rifle: 'Vanguard',
-      scout: 'Jackal',
       medic: 'Field medic',
       tank: 'Ironclad',
       artillery: 'Longbow',
@@ -47,7 +46,6 @@ const FACTIONS = [
     units: {
       worker: 'Tender',
       rifle: 'Thornling',
-      scout: 'Skitter',
       medic: 'Lifesinger',
       tank: 'Rootbeast',
       artillery: 'Sporecaller',
@@ -78,7 +76,6 @@ const FACTIONS = [
     units: {
       worker: 'Custodian',
       rifle: 'Pallbearer',
-      scout: 'Wraith',
       medic: 'Absolver',
       tank: 'Sepulcher',
       artillery: 'Elegist',
@@ -126,21 +123,6 @@ const UNITS = {
     from: 'barracks',
     vision: 17,
     desc: 'Versatile ranged infantry. Attacks ground and air. Excellent in groups; vulnerable to artillery.'
-  },
-  scout: {
-    cost: 115,
-    gas: 20,
-    hp: 190,
-    damage: 10,
-    range: 8,
-    reload: 0.54,
-    speed: 7.2,
-    size: 0.95,
-    supply: 2,
-    time: 15,
-    from: 'barracks',
-    vision: 24,
-    desc: 'Fast reconnaissance vehicle with long sight range. Ideal for scouting and intercepting reinforcements.'
   },
   medic: {
     cost: 100,
@@ -191,7 +173,7 @@ const UNITS = {
     splash: 4.5,
     minRange: 5,
     groundOnly: true,
-    desc: 'Long-range siege weapon. Shells have travel time and a large blast radius. Minimum range 5. Needs scouts and protection.'
+    desc: 'Long-range siege weapon. Shells have travel time and a large blast radius. Minimum range 5. Needs vision and protection.'
   },
   air: {
     cost: 180,
@@ -241,7 +223,7 @@ const BUILDINGS = {
     hp: 1150,
     size: 3,
     time: 22,
-    desc: 'Recruits infantry, scouts and medics. Build multiple stations to produce units in parallel.'
+    desc: 'Recruits infantry and medics. Build multiple stations to produce units in parallel.'
   },
   depot: {
     cost: 85,
@@ -374,7 +356,6 @@ const BIOMES = {
 const ICON_PATHS = {
   worker: 'M8 15l-4 5m8-10 8-6 2 2-6 8M5 8l3-3 11 11-3 3z',
   rifle: 'M5 20l3-6 6-1 5-8 2 1-4 10-6 1-3 4M4 9l5-5 5 2-5 5z',
-  scout: 'M4 16l3-8h10l4 8zM6 18h3m7 0h3M8 8l3-4h4l2 4M4 12h17',
   medic: 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z',
   tank: 'M3 15h18v5H3zM6 15V9h11v6M12 9V5h9M5 18h14',
   artillery: 'M4 19h16M5 16l3-7h7l4 7M11 9l7-6 3 2-7 7M8 19v2m8-2v2',

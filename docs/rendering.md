@@ -17,6 +17,8 @@
 
 ## HUD
 
-Das Kommandodeck liegt randbündig ohne Rahmen/Spaltentrennlinien. Die Minimap füllt ihre Spalte per CSS, ihre bisherigen Zeichen-/Koordinatenregeln bleiben erhalten. Der dunkle Hintergrund gehört zur Spalte, nicht zum Canvas: So trat die beim Vergrößern in Chromium beobachtete zusätzliche Fehlfläche außerhalb der Minimap nicht mehr auf. Weitere HUD-Neugestaltung ist [zurückgestellt](gameplay.md#offen-nicht-zur-umsetzung-freigegeben).
+Das Portrait-Deck liegt randbündig ohne Rahmen/Spaltentrennlinien. Die Minimap (210×210 Zeichenpuffer) füllt die linke Bildschirmhälfte, rechts liegen scrollbare Menüs. Deckhöhe: `min(50vw, 36dvh)`; darüber die 76 px hohe Fähigkeitenleiste. Kamera-/Radiopositionen berücksichtigen beide Leisten. Der dunkle Minimap-Hintergrund bleibt auf der Spalte statt dem Canvas, um die beobachtete Chromium-Fehlfläche zu vermeiden.
+
+Queue-Symbole stehen links darüber, mit Zähler und hellem `conic-gradient`-Overlay. Dessen Winkel folgt dem Produktionsfortschritt, nicht einer unabhängig laufenden CSS-Animation. Buttons bleiben währenddessen stabil; native Touch-Scrollflächen und `touch-action: manipulation` verhindern unnötige Browser-Tap-Gesten. Regeln: [Spiel und Bedienung](gameplay.md).
 
 [Prüfverfahren](testing.md) · [zentrales Arbeitsprotokoll](worklog.md)

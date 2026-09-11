@@ -48,7 +48,7 @@ function checkpointScenario(game) {
   const hero = player(game, 'hero'), barracks = player(game, 'barracks');
   game.command([hero.id], { type: 'move', x: -10, z: 32 });
   game.command([barracks.id], { type: 'move', x: -35, z: 48 });
-  assert.equal(game.train('rifle', barracks.id), true);
+  assert.equal(game.train('rifle'), true);
   assert.equal(game.ability('scan', { x: 20, z: -20 }), true);
   // Camera position is normally assigned by the UI, which is not executed here.
   game.s.cam = { x: -42, z: 40, zoom: 64 };
@@ -58,7 +58,7 @@ function checkpointScenario(game) {
 test('single battle starts with full test arsenal, one hostile base and no mission state', () => {
   const { game, renderer, events } = battle(), s = game.s;
   assert.deepEqual([s.version,s.seed,s.biome,s.faction,s.enemy,s.time], [3,1409,'rust',0,2,0]);
-  assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [1100,400,100,84,85,33,56]);
+  assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [1100,400,100,83,84,31,56]);
   assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
   assert.equal(game.alive(e => e.team === 0 && e.kind === 'building').length, 6);
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
@@ -255,7 +255,7 @@ test('repair rejects no workers, no alloy, full hull and ineligible targets with
 test('selling refunds actual paid value and all queued recruitment, removes navigation and stops repairs without combat/RNG effects', () => {
   const { game } = battle(), b = player(game, 'barracks');
   b.paid = { cost: 101, gas: 13 }; b.hp -= 100;
-  assert.equal(game.train('rifle', b.id), true); assert.equal(game.train('medic', b.id), true);
+  assert.equal(game.train('rifle'), true); assert.equal(game.train('medic'), true);
   b.queue[0].progress = .8; game.toggleBuildingRepair(b.id);
   const worker = game.buildingRepairers(b.id)[0], count = rifleCount(game), supply = game.supply(), stats = json(game.s.stats);
   const alloy = game.s.alloy, gas = game.s.gas, refund = { cost: 225.5, gas: 41.5 };
@@ -399,15 +399,15 @@ for (const [faction, cost] of [[0, 75], [1, 64], [2, 85]]) {
   test(`faction ${faction}: recruitment spends reference cost, reserves supply and refunds cancellation`, () => {
     const { game, events } = battle(faction);
     const barracks = player(game, 'barracks');
-    assert.equal(game.train('rifle', barracks.id), true);
+    assert.equal(game.train('rifle'), true);
     assert.deepEqual(json(barracks.queue), [{ type: 'rifle', progress: 0, time: 11, cost, gas: 0 }]);
-    assert.deepEqual([game.s.alloy, game.s.gas, game.supply(), rifleCount(game)], [1100 - cost, 400, 35, 7]);
+    assert.deepEqual([game.s.alloy, game.s.gas, game.supply(), rifleCount(game)], [1100 - cost, 400, 33, 7]);
     advance(game, 20);
     assert.ok(barracks.queue[0].progress > 0 && barracks.queue[0].progress < 1);
     const beforeCancel = game.s.alloy;
     game.cancelQueue(barracks.id, 0);
     close(game.s.alloy, beforeCancel + cost);
-    assert.equal(game.supply(), 33);
+    assert.equal(game.supply(), 31);
     assert.equal(barracks.queue.length, 0);
     assert.ok(events.some(e => e.type === 'queued' && e.data === 'rifle'));
   });
@@ -428,18 +428,56 @@ for (const [reason, setup] of [
   });
 }
 
+test('recruitment distributes globally, produces in parallel at assigned buildings and keeps queues through restore', () => {
+  const {game,events} = battle(), a = player(game,'barracks'),
+    b = game.spawnBuilding('barracks',-15,55,0,0),
+    unfinished = game.spawnBuilding('barracks',-5,55,0,0);
+  unfinished.progress = .5;
+  game.s.alloy = 10000; game.s.gas = 10000;
+  a.rally = {x:-30,z:40}; b.rally = {x:-5,z:40};
+  for (const type of ['rifle','rifle','medic','rifle']) assert.equal(game.train(type), true);
+  assert.deepEqual(json(a.queue.map(q=>q.type)), ['rifle','medic']);
+  assert.deepEqual(json(b.queue.map(q=>q.type)), ['rifle','rifle']);
+  assert.equal(unfinished.queue.length, 0);
+  advance(game,40);
+  close(a.queue[0].progress,2/11); close(b.queue[0].progress,2/11);
+  const saved = game.snapshot(); game.restore(saved);
+  assert.deepEqual(json(game.get(a.id).queue), json(a.queue));
+  assert.deepEqual(json(game.get(b.id).queue), json(b.queue));
+  const spawns = [a,b].map(e => game.world.nearest(e.x + e.size + 1.8,e.z + 2));
+  advance(game,181);
+  const trained = events.filter(e=>e.type==='trained').map(e=>e.data);
+  assert.equal(trained.length, 2);
+  for (const [i,e] of trained.entries()) {
+    close(e.x,spawns[i].x); close(e.z,spawns[i].z);
+    assert.deepEqual(e.order,{type:'attackMove',...[a.rally,b.rally][i]});
+  }
+  assert.deepEqual(json(game.get(a.id).queue.map(q=>q.type)), ['medic']);
+  assert.deepEqual(json(game.get(b.id).queue.map(q=>q.type)), ['rifle']);
+});
+
+test('removed scout cannot be recruited and no faction starts or deploys it in waves', () => {
+  for (const faction of [0,1,2]) {
+    const {game} = createGame(); game.start({seed:1409,faction,enemy:faction});
+    const before = json(game.snapshot());
+    assert.equal(game.train('scout'), false); assert.deepEqual(json(game.snapshot()), before);
+    for (let i=0;i<4;i++) {game.s.enemyBudget=10000;game.wave();}
+    assert.ok(game.s.entities.every(e => e.type !== 'scout'));
+  }
+});
+
 test('fixed steps finish production once, retain reserved supply and account for HQ income and mining deliveries', () => {
   const { game, events } = battle();
   const barracks = player(game, 'barracks');
   game.command([barracks.id], { type: 'move', x: -35, z: 48 });
-  assert.equal(game.train('rifle', barracks.id), true);
+  assert.equal(game.train('rifle'), true);
   advance(game, 200);
   assert.equal(rifleCount(game), 7);
   close(barracks.queue[0].progress, 10 / 11);
   advance(game, 21);
   assert.equal(barracks.queue.length, 0);
   assert.equal(rifleCount(game), 8);
-  assert.equal(game.supply(), 35);
+  assert.equal(game.supply(), 33);
   assert.equal(game.s.stats.trained, 1);
   const trained = events.filter(e => e.type === 'trained');
   assert.equal(trained.length, 1);
@@ -524,12 +562,15 @@ test('restore rejects unsupported save versions and unknown unit types', () => {
     const oldSave = currentCheckpoint(); oldSave.version = version;
     assert.throws(() => game.restore(oldSave), /not a valid Meridian operation/);
   }
-  for (const type of ['convoy','avatar','ward']) {
+  for (const type of ['convoy','avatar','ward','scout']) {
     const removed = currentCheckpoint();
     const entity = removed.entities.find(e => e.kind === (type === 'ward' ? 'building' : 'unit'));
     entity.type = type;
     assert.throws(() => game.restore(removed), /Unknown entity/);
   }
+  const queuedScout = currentCheckpoint();
+  queuedScout.entities.find(e => e.queue.length).queue[0].type = 'scout';
+  assert.throws(() => game.restore(queuedScout), /Unknown entity/);
   const allied = currentCheckpoint(); allied.entities[0].team = 2;
   assert.throws(() => game.restore(allied), /entity in this save is invalid/);
   const unknownUnit = currentCheckpoint();

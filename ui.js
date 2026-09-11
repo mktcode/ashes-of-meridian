@@ -17,9 +17,8 @@
         this.paused = true;
         this.modalKind = '';
         this.sellBuildingId = null;
-        this.buildingActionsClosed = false;
         this.selected = [];
-        this.tab = 'orders';
+        this.tab = 'root';
         this.mode = null;
         this.hover = null;
         this.pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
@@ -79,7 +78,6 @@
           this.modalKind = '';
           this.sellBuildingId = null;
           this.lastClick = {};
-          this.buildingActionsClosed = false;
           $('menu').classList.add('hidden');
           $('modal').classList.add('hidden');
           $('hud').classList.remove('hidden');
@@ -87,7 +85,7 @@
           $('alerts').innerHTML = '';
           this.selected = [];
           this.mode = null;
-          this.tab = 'orders';
+          this.tab = 'root';
           this.actionSignature = '';
           this.lastSaveTime = this.game.s.time;
           this.updateHUD(true);
@@ -204,7 +202,6 @@
       }
       openModal(kind, html, wide = false) {
         if (kind !== 'sell') this.sellBuildingId = null;
-        $('buildingActions').classList.add('hidden');
         this.modalKind = kind;
         $('modal').innerHTML =
           `<div class="modal-shade"><div class="modal-card ${wide ? 'wide' : ''}">${html}</div></div>`;
@@ -351,7 +348,8 @@
           'help',
           `<div class="eyebrow">MERIDIAN FIELD MANUAL</div><h1>Bring your people home.</h1><div class="help-grid"><div><h3>Command your force</h3>${[
             ['Select', 'Tap unit or structure'],
-            ['Context order / rally point', 'Right click'],
+            ['Context order', 'Right click (temporary)'],
+            ['Rally point', 'Select completed building → Rally point → tap ground'],
             ['Attack-move', 'Select combat units → tap ground'],
             ['Move workers', 'Select workers → tap ground'],
             ['Select visible units of a type', 'Double-tap unit'],
@@ -361,15 +359,15 @@
             .join('')}<h3>Navigate</h3>${[
             ['Pan camera', 'Drag with one finger'],
             ['Zoom', 'Pinch / ＋ and − buttons'],
-            ['Center on base', '⌂ / Command view button'],
-            ['Navigate / issue order on minimap', 'Left / right click']
+            ['Center on base', '⌂ button'],
+            ['Navigate on minimap', 'Tap or drag']
           ]
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join(
               ''
-            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Select a completed own building for its <b>Repair</b> and <b>Sell</b> buttons. Repair sends the nearest worker and costs 0.1 alloy per hull; tap again to stop. Without workers, repair is unavailable. Selling refunds 50% of the building’s purchase value plus all pending recruitment costs; the last completed command center cannot be sold. Workers can still repair damaged own units and structures via context orders.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Scouts and scans reveal fog-of-war. Destroy the enemy command center to win. Losing your last command center ends the battle.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
-            ['Command abilities', 'Ability buttons in Command → tap target'],
-            ['Command / build / recruit', 'Tabs on the command deck'],
+            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Gebäude</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Select a completed own building for <b>Repair</b>, <b>Sell</b> and <b>Rally point</b> in the lower-right menu. Use <b>Zurück</b> to return to the categories. Repair sends the nearest worker and costs 0.1 alloy per hull; tap again to stop. Without workers, repair is unavailable. Selling refunds 50% of the building’s purchase value plus all pending recruitment costs; the last completed command center cannot be sold. Workers can still repair damaged own units and structures via context orders.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Recruit through Infanterie (including workers and commander), Fahrzeuge or Flugzeuge. Orders are distributed across matching buildings. Icons above the minimap count all pending orders per type; the clockwise overlay shows the next completion. Tap an icon to cancel one order (waiting orders first) and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Units and scans reveal fog-of-war. Destroy the enemy command center to win. Losing your last command center ends the battle.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
+            ['Command abilities', 'Always-visible ability bar → tap target'],
+            ['Build / recruit', 'Lower-right categories; Zurück returns'],
             ['Pause', 'Ⅱ button'],
             ['Cancel targeting / placement', 'Cancel button beside the target prompt'],
             ['Save / load checkpoint', 'Save / Load in the pause menu'],
@@ -432,22 +430,20 @@
         if (e) this.center(e.x + 4, e.z - 2);
       }
       select(ids) {
-        this.buildingActionsClosed = false;
         this.selected = [...new Set(ids)].filter(id => this.game.get(id));
-        this.actionSignature = '';
         this.audio.sound('select');
-        this.updateSelection();
-        if (this.selected.length === 1) {
-          let e = this.game.get(this.selected[0]);
-          if (e?.team === 0 && e.kind === 'building') {
-            if (['hq', 'barracks', 'factory', 'hangar'].includes(e.type)) this.tab = 'army';
-          }
-        }
-        this.renderActions();
+        this.setTab(this.selectedBuilding() ? 'building' : 'root');
+      }
+      selectedBuilding() {
+        let e = this.selected.length === 1 ? this.game.get(this.selected[0]) : null;
+        return e?.team === 0 && e.kind === 'building' && e.hp > 0 ? e : null;
       }
       setTab(tab) {
+        if (!['root', 'build', 'infantry', 'vehicles', 'aircraft', 'building'].includes(tab)) return;
+        this.clearMode();
         this.tab = tab;
         this.actionSignature = '';
+        $('actionPanel').scrollTop = 0;
         this.renderActions();
       }
       setMode(kind, arg) {
@@ -459,7 +455,7 @@
             return;
           }
         }
-        $('buildingActions').classList.add('hidden');
+        this.lastClick = {};
         this.mode = { kind, arg };
         let text =
           kind === 'build'
@@ -485,14 +481,15 @@
         this.actionSignature = '';
       }
       perform(action) {
-        if (!this.game.s) return;
+        if (!this.game.s || this.paused || this.game.s.result) return;
         let [kind, arg] = action.split(':');
         if (kind === 'tab') {
           this.setTab(arg);
           return;
         }
         if (kind === 'train') {
-          if (!this.paused) this.game.train(arg, this.selected[0]);
+          this.game.train(arg);
+          this.updateHUD(true);
           return;
         }
         if (kind === 'build') {
@@ -505,124 +502,74 @@
         }
         switch (kind) {
           case 'rally':
-            this.setMode(kind);
+            if (this.selectedBuilding()?.progress >= 1) this.setMode(kind);
             break;
-          case 'home':
-            this.homeCamera();
+          case 'repair':
+          case 'sell':
+            if (this.selectedBuilding()) this.buildingAction(kind, this.selected[0]);
             break;
           case 'cancelBuild':
             this.game.cancelConstruction(this.selected[0]);
+            this.updateHUD(true);
             break;
         }
       }
       actionButton(key, label, ic, opts = {}) {
         let badge = opts.badge || '';
-        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}">${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
+        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       }
       renderActions() {
         let s = this.game.s;
         if (!s) return;
-        let sig =
-          this.tab +
-          ':' +
-          this.selected.join(',') +
-          ':' +
-          (this.mode ? this.mode.kind + this.mode.arg : '');
+        let b = this.selectedBuilding();
+        if (this.tab === 'building' && !b) this.tab = 'root';
+        let ready = b?.progress >= 1,
+          repairing = ready && this.game.buildingRepairers(b.id).length > 0,
+          repairReason = ready && !repairing ? this.game.canRepairBuilding(b.id) : '',
+          sellReason = ready ? this.game.canSellBuilding(b.id) : '',
+          sig = [this.tab, s.faction, this.selected.join(','), ready, repairing, repairReason, sellReason,
+            this.mode?.kind, this.mode?.arg].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
-        for (let b of document.querySelectorAll('.tabs [data-tab]'))
-          b.classList.toggle('active', b.dataset.tab === this.tab);
-        let html = '',
-          f = s.faction;
-        if (this.tab === 'orders') {
-          for (let [k, l, ic] of [
-            ['ability:orbital', 'Orbital strike', 'orbital'],
-            ['ability:repair', 'Repair field', 'heal'],
-            ['ability:scan', 'Recon scan', 'scan'],
-            ['ability:drop', 'Reinforcements', 'drop'],
-            ['rally', 'Rally point', 'rally'],
-            ['home', 'Command view', 'hq']
-          ])
-            html += this.actionButton(k, l, ic);
+        $('abilityBar').innerHTML = [
+          ['orbital', 'Orbital strike', 'orbital'], ['repair', 'Repair field', 'heal'],
+          ['scan', 'Recon scan', 'scan'], ['drop', 'Reinforcements', 'drop']
+        ].map(([k, label, ic]) => this.actionButton('ability:' + k, label, ic)).join('');
+        let html = '', f = s.faction;
+        if (this.tab === 'root') {
+          for (let [tab, label, ic] of [
+            ['build', 'Gebäude', 'hq'], ['infantry', 'Infanterie', 'rifle'],
+            ['vehicles', 'Fahrzeuge', 'tank'], ['aircraft', 'Flugzeuge', 'air']
+          ]) html += this.actionButton('tab:' + tab, label, ic);
+        } else if (this.tab === 'building') {
+          if (ready) {
+            html += this.actionButton('sell', 'Sell', 'cancel', { disabled: !!sellReason });
+            html += this.actionButton('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
+            html += this.actionButton('rally', 'Rally point', 'rally');
+          } else html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
-          let labels = {
-            hq: 'Command',
-            barracks: 'Muster',
-            depot: 'Supply',
-            refinery: 'Refinery',
-            factory: 'Foundry',
-            hangar: 'Flight deck',
-            turret: 'Turret'
-          };
-          for (let k of Object.keys(BUILDINGS)) {
-            html += this.actionButton(
-              'build:' + k,
-              f === 0 ? labels[k] : buildingName(k, f).split(' ').slice(-1)[0],
-              k,
-              { cost: this.game.cost(k, 'building') }
-            );
-          }
-          let selected = this.game.get(this.selected[0]);
-          if (selected?.kind === 'building' && selected.team === 0 && selected.progress < 1)
-            html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
-        } else if (this.tab === 'army') {
-          for (let [k, d] of Object.entries(UNITS)) {
-            if (!d.from) continue;
+          for (let k of Object.keys(BUILDINGS))
+            html += this.actionButton('build:' + k, buildingName(k, f), k, {
+              cost: this.game.cost(k, 'building')
+            });
+        } else {
+          let types = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air'] };
+          for (let k of types[this.tab] || [])
             html += this.actionButton('train:' + k, k === 'hero' ? 'Commander' : unitName(k, f), k, {
               cost: this.game.cost(k)
             });
-          }
         }
-        $('actions').innerHTML = '<div class="action-grid">' + html + '</div>';
-      }
-      closeBuildingActions() {
-        this.buildingActionsClosed = true;
-        $('buildingActions').classList.add('hidden');
-      }
-      updateBuildingActions() {
-        let panel = $('buildingActions'), g = this.game,
-          b = this.view === 'game' && g.s && !this.paused && !this.modalKind && !this.mode &&
-            this.selected.length === 1 ? g.managedBuilding(this.selected[0]) : null;
-        if (!b || this.buildingActionsClosed) {
-          panel.classList.add('hidden');
-          return;
-        }
-        let p = this.R.project(b.x, Math.min(8, b.size + 2.5), b.z),
-          top = $('topbar').getBoundingClientRect().bottom + 8,
-          bottom = $('commandDeck').getBoundingClientRect().top - 8;
-        if (!p || p.x < 0 || p.x > innerWidth || p.y < top - 8 || p.y > bottom + 8) {
-          this.closeBuildingActions();
-          return;
-        }
-        // Do not move or relabel a button under a finger while it is being pressed.
-        if (this.domPressed) return;
-        let repairing = g.buildingRepairers(b.id).length > 0,
-          repairReason = repairing ? '' : g.canRepairBuilding(b.id), sellReason = g.canSellBuilding(b.id);
-        $('buildingActionName').textContent = buildingName(b.type, b.faction);
-        for (let button of panel.querySelectorAll('[data-building-action]')) {
-          button.dataset.buildingId = b.id;
-          button.disabled = !!(button.dataset.buildingAction === 'repair' ? repairReason : sellReason);
-          if (button.dataset.buildingAction === 'repair') button.textContent = repairing ? 'STOP REPAIR' : 'REPAIR';
-        }
-        $('buildingActionStatus').textContent = [repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ') || '38 hull/s · 0.1 alloy/hull';
-        panel.classList.remove('hidden');
-        let w = panel.offsetWidth, h = panel.offsetHeight,
-          x = clamp(p.x - w / 2, 8, innerWidth - w - 8),
-          y = clamp(p.y - h - 12, top, Math.max(top, bottom - h)),
-          tools = $('cameraTools').getBoundingClientRect();
-        if (x < tools.right + 8 && x + w > tools.left - 8 && y + h > tools.top - 8 && y < tools.bottom + 8) {
-          // Keep camera/help buttons usable, even in the narrow landscape play area.
-          if (tools.top - h - 8 >= top) y = tools.top - h - 8;
-          else x = Math.max(8, tools.left - w - 8);
-        }
-        panel.style.left = x + 'px';
-        panel.style.top = y + 'px';
+        $('actions').innerHTML = (this.tab === 'root' ? '' :
+          '<button class="menu-back" data-action="tab:root">← Zurück</button>') +
+          `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
+          (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b.type, f))}${ready ?
+            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}</p>` : '');
       }
       buildingAction(action, id) {
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s.result) return;
         if (action === 'repair') {
           this.game.toggleBuildingRepair(id);
-          this.updateBuildingActions();
+          this.updateHUD(true);
         } else if (action === 'sell') {
           let reason = this.game.canSellBuilding(id);
           if (reason) { this.toast(reason); return; }
@@ -642,68 +589,42 @@
         this.resume();
         this.updateHUD(true);
       }
-      updateSelection() {
-        let s = this.game.s;
-        if (!s) return;
-        this.selected = this.selected.filter(id => this.game.get(id));
-        $('selectCount').textContent = this.selected.length ? this.selected.length + ' SELECTED' : '';
-        if (!this.selected.length) {
-          $('selectionContent').innerHTML = '';
-          return;
-        }
-        if (this.selected.length > 1) {
-          $('selectionContent').innerHTML = `<div class="squad-grid">${this.selected
-            .slice(0, 40)
-            .map(id => {
-              let e = this.game.get(id);
-              return `<button class="squad-icon" data-select="${id}" aria-label="${esc(unitName(e.type, e.faction))}">${icon(e.type)}<i style="width:${Math.max(1, (e.hp / e.maxHp) * 27)}px"></i></button>`;
-            })
-            .join(
-              ''
-            )}</div><div class="unit-order">${this.selected.length > 40 ? '+' + (this.selected.length - 40) : ''}</div>`;
-          return;
-        }
-        let e = this.game.get(this.selected[0]),
-          d = e.kind === 'building' ? BUILDINGS[e.type] : UNITS[e.type] || {},
-          name =
-            e.label ||
-            (e.kind === 'building'
-              ? buildingName(e.type, e.faction)
-              : e.kind === 'resource'
-                ? e.type === 'gas'
-                  ? 'Aether vent'
-                  : 'Alloy crystals'
-                : unitName(e.type, e.faction)),
-          order =
-            e.kind === 'building'
-              ? e.progress < 1
-                ? 'CONSTRUCTION ' + Math.floor(e.progress * 100) + '%'
-                : e.queue.length
-                  ? 'PRODUCING ' + unitName(e.queue[0].type, e.faction).toUpperCase()
-                  : ''
-              : e.order?.type === 'mine'
-                ? 'HARVESTING · ' + Math.round(e.carry) + ' ALLOY'
-                                  : (e.order?.type || 'idle').replace(/([A-Z])/g, ' $1').toUpperCase();
-        let stats = this.game.rangedStats(
-          e.kind === 'resource' ? { ...e, kind: 'unit', type: 'worker' } : e
-        );
-        $('selectionContent').innerHTML =
-          `<div class="unit-summary"><div class="unit-portrait" style="color:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}">${icon(e.type === 'gas' ? 'energy' : e.type === 'crystal' ? 'crystal' : e.type)}</div><div class="unit-detail"><h3>${esc(name)}${e.kills >= 5 ? ' ★' : ''}</h3><small>${e.team === 1 ? 'HOSTILE' : e.team === -1 ? 'NEUTRAL' : FACTIONS[e.faction].short}</small><div class="hp-line"><i style="width:${clamp((e.hp / e.maxHp) * 100, 0, 100)}%;background:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}"></i></div><div class="hp-number">${Math.ceil(e.hp)} / ${Math.round(e.maxHp)} HULL${e.maxShield ? ' + ' + Math.ceil(e.shield) + ' SHIELD' : ''}</div></div></div><div class="unit-stats"><div>DAMAGE<b>${Math.round(stats.damage || 0)}</b></div><div>RANGE<b>${stats.range || '—'}</b></div>${e.kind === 'resource' ? `<div>REMAINING<b>${e.type === 'gas' ? '∞' : Math.round(e.amount)}</b></div>` : ''}</div><div class="unit-order">${esc(order)}</div>`;
+      recruitmentGroups() {
+        let groups = {};
+        for (let b of this.game.alive(e => e.team === 0 && e.kind === 'building' && e.queue?.length))
+          for (let [index, q] of b.queue.entries())
+            (groups[q.type] ||= []).push({ b, index, q });
+        return groups;
+      }
+      cancelRecruitment(type) {
+        let entries = this.recruitmentGroups()[type] || [];
+        // Preserve work already done: cancel a waiting order first, then the least advanced active one.
+        entries.sort((a, b) => b.index - a.index || a.q.progress - b.q.progress || b.b.id - a.b.id);
+        let entry = entries[0];
+        if (entry) this.game.cancelQueue(entry.b.id, entry.index);
       }
       updateQueues() {
-        let s = this.game.s,
-          all = this.game.alive(e => e.team === 0 && e.queue?.length),
-          sel = this.selected
-            .map(id => this.game.get(id))
-            .find(e => e?.kind === 'building' && e.queue.length),
-          list = sel ? [sel, ...all.filter(e => e.id !== sel.id)] : all,
-          html = '';
-        for (let b of list)
-          for (let [i, q] of b.queue.entries()) {
-            html += `<button class="queue-item" data-queue="${b.id}:${i}" aria-label="${esc(unitName(q.type, s.faction))} · cancel recruitment">${unitName(q.type, s.faction).slice(0, 8)} ${i === 0 ? Math.ceil(q.time * (1 - q.progress)) + 's' : '…'}<i style="width:${q.progress * 100}%"></i></button>`;
-            if (html.length > 1500) break;
-          }
-        $('productionQueue').innerHTML = html;
+        let groups = this.recruitmentGroups(),
+          types = Object.keys(UNITS).filter(type => groups[type]),
+          signature = types.join(',');
+        if (signature !== this.queueSignature) {
+          this.queueSignature = signature;
+          $('productionQueue').innerHTML = types.map(type =>
+            `<button class="queue-item" data-queue-type="${type}">${icon(type)}<span class="queue-count"></span><span class="queue-time"></span></button>`
+          ).join('');
+        }
+        // Keep the buttons stable while animating from simulation progress (also correct after pause/load).
+        for (let button of $('productionQueue').querySelectorAll('[data-queue-type]')) {
+          let type = button.dataset.queueType, entries = groups[type],
+            next = entries.filter(e => e.index === 0)
+              .sort((a, b) => a.q.time * (1 - a.q.progress) - b.q.time * (1 - b.q.progress))[0]?.q,
+            remaining = next ? Math.ceil(next.time * (1 - next.progress) / (1 + (this.game.s.meta.industry || 0) * 0.1)) + 's' : '…';
+          button.style.setProperty('--progress', (next ? clamp(next.progress, 0, 1) * 360 : 360) + 'deg');
+          button.classList.toggle('waiting', !next);
+          button.querySelector('.queue-count').textContent = entries.length;
+          button.querySelector('.queue-time').textContent = remaining;
+          button.setAttribute('aria-label', `${unitName(type, this.game.s.faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
+        }
       }
       updateHUD(force = false) {
         let s = this.game.s;
@@ -731,7 +652,7 @@
         if (wait <= 15)
           $('waveBanner').textContent =
             '⚠ HOSTILE WAVE ' + (s.wave + 1) + ' · ' + Math.max(0, Math.ceil(wait)) + 's';
-        this.updateSelection();
+        this.selected = this.selected.filter(id => this.game.get(id));
         this.renderActions();
         this.updateQueues();
         for (let b of document.querySelectorAll('[data-action]')) {
@@ -741,10 +662,10 @@
             let d = UNITS[arg];
             disabled =
               !this.game.afford(this.game.cost(arg)) ||
-              !this.game.has(d.from) ||
+              !this.game.alive(e => e.team === 0 && e.kind === 'building' && e.type === d.from && e.progress >= 1 && e.queue.length < 5).length ||
               this.game.supply() + d.supply > this.game.cap();
-            if (arg === 'hero' && this.game.alive(e => e.team === 0 && e.type === 'hero').length)
-              disabled = true;
+            if (arg === 'hero' && this.game.alive(e => e.team === 0 &&
+              (e.type === 'hero' || e.queue?.some(q => q.type === 'hero'))).length) disabled = true;
           } else if (k === 'build')
             disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
           else if (k === 'ability') {
@@ -757,6 +678,11 @@
                   ? Math.ceil(s.abilities[arg] - s.time) + 's'
                   : costs[arg] + 'ϟ';
           }
+          if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||
+            (!this.game.buildingRepairers(this.selected[0]).length && !!this.game.canRepairBuilding(this.selected[0]));
+          if (k === 'sell') disabled = !!this.mode || !!this.game.canSellBuilding(this.selected[0]);
+          disabled ||= this.paused || !!s.result;
+          b.disabled = disabled;
           b.classList.toggle('disabled', disabled);
         }
       }
@@ -766,6 +692,7 @@
           this.domPressed = !!e.target.closest('button,select,input');
         });
         document.addEventListener('pointerup', () => (this.domPressed = false));
+        document.addEventListener('pointercancel', () => (this.domPressed = false));
         document.addEventListener('click', e => {
           let b = e.target.closest('button');
           if (!b || b.disabled) return;
@@ -785,26 +712,13 @@
             this.buyUpgrade(b.dataset.upgrade);
             return;
           }
-          if (b.dataset.tab) {
-            this.setTab(b.dataset.tab);
-            return;
-          }
-          if (b.dataset.buildingAction) {
-            this.buildingAction(b.dataset.buildingAction, +b.dataset.buildingId);
-            return;
-          }
           if (b.dataset.action) {
             if (!this.paused) this.perform(b.dataset.action);
             return;
           }
-          if (b.dataset.select) {
-            this.select([+b.dataset.select]);
-            return;
-          }
-          if (b.dataset.queue && !this.paused) {
-            let [id, index] = b.dataset.queue.split(':').map(Number);
-            this.game.cancelQueue(id, index);
-            this.updateQueues();
+          if (b.dataset.queueType && !this.paused && !this.game.s?.result) {
+            this.cancelRecruitment(b.dataset.queueType);
+            this.updateHUD(true);
             return;
           }
           if (b.dataset.cam) {
@@ -845,6 +759,7 @@
           this.radioUntil = 0;
         };
         window.addEventListener('blur', () => {
+          this.domPressed = false;
           this.drag = null;
         });
         document.addEventListener('visibilitychange', () => {
@@ -870,6 +785,7 @@
         });
         c.style.touchAction = 'none';
         let map = $('minimap');
+        map.style.touchAction = 'none';
         map.addEventListener('contextmenu', e => e.preventDefault());
         let miniDrag = false;
         map.addEventListener('pointerdown', e => {
@@ -942,9 +858,6 @@
             break;
           case 'closeModal':
             this.closeModal();
-            break;
-          case 'closeBuildingActions':
-            this.closeBuildingActions();
             break;
           case 'confirmSale':
             this.finishBuildingSale(true);
@@ -1119,7 +1032,9 @@
                 (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
                 let q = this.R.project(e.x, 1, e.z);
-                return q && q.x > 0 && q.x < innerWidth && q.y > 55 && q.y < innerHeight - 210;
+                return q && q.x > 0 && q.x < innerWidth &&
+                  q.y > $('topbar').getBoundingClientRect().bottom &&
+                  q.y < $('abilityBar').getBoundingClientRect().top;
               });
             this.select(units.map(e => e.id));
           } else this.select([target.id]);
@@ -1139,10 +1054,10 @@
               e =>
                 e?.team === 0 &&
                 e.kind === 'building' &&
-                ['hq', 'barracks', 'factory', 'hangar'].includes(e.type)
+                e.progress >= 1
             );
           if (!list.length) {
-            this.toast('Select a production structure before setting a rally point.');
+            this.toast('Select a completed own structure before setting a rally point.');
             success = false;
           } else for (let e of list) e.rally = { ...p };
         }
@@ -1166,6 +1081,7 @@
         if (!this.paused) {
           if (s.time - this.lastSaveTime >= 45) this.save(false);
         }
+        if (!this.domPressed) this.updateQueues();
         this.hudClock += dt;
         if (this.hudClock > 0.25) {
           this.hudClock = 0;
@@ -1267,7 +1183,6 @@
         }
       }
       drawOverlay(ctx) {
-        this.updateBuildingActions();
         ctx.clearRect(0, 0, innerWidth, innerHeight);
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,

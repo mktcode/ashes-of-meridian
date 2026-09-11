@@ -66,7 +66,8 @@
           this.spawnUnit('rifle', -51 + (i % 4) * 1.8, 38 - Math.floor(i / 4) * 1.8, 0, faction);
         this.spawnUnit('medic', -45, 39, 0, faction);
         this.spawnUnit('tank', -40, 37, 0, faction);
-        this.spawnUnit('scout', -35, 42, 0, faction);
+        // Preserve the removed scout's spawn sample for crystal amounts and later RNG.
+        this.random();
         this.spawnUnit('tank', -36, 35, 0, faction);
         this.spawnUnit('medic', -42, 40, 0, faction);
         for (let [i, site] of RESOURCE_SITES.entries()) {
@@ -110,7 +111,7 @@
         if (kind === 'unit') {
           if (faction === 1) hp *= 0.9;
           if (faction === 2) hp *= 0.85;
-          if (faction === 0 && ['tank', 'scout', 'artillery'].includes(type)) hp *= 1.15;
+          if (faction === 0 && ['tank', 'artillery'].includes(type)) hp *= 1.15;
           if (team === 0 && type === 'hero') hp += (s.meta.resolve || 0) * 150;
         }
         let e = {
@@ -260,7 +261,7 @@
             .length > 0
         );
       }
-      train(type, preferred) {
+      train(type) {
         let s = this.s,
           d = UNITS[type];
         if (!d) return false;
@@ -280,10 +281,8 @@
             e.progress >= 1 &&
             e.queue.length < 5
         );
-        producers.sort(
-          (a, b) =>
-            (a.id === preferred ? -100 : a.queue.length) - (b.id === preferred ? -100 : b.queue.length)
-        );
+        // Global recruitment: assign to the shortest queue, independent of selection.
+        producers.sort((a, b) => a.queue.length - b.queue.length || a.id - b.id);
         let b = producers[0];
         if (!b) {
           this.emit(
@@ -1093,7 +1092,6 @@
           else if (s.wave >= 2 && r < 0.19) type = 'artillery';
           else if (r < 0.38) type = 'tank';
           else if (r < 0.48) type = 'medic';
-          else if (r < 0.65) type = 'scout';
           let c = UNITS[type].cost * 0.5;
           if (s.enemyBudget < c && i > 1) break;
           s.enemyBudget = Math.max(0, s.enemyBudget - c);
@@ -1224,7 +1222,8 @@
             !Number.isFinite(e.hp)
           )
             throw Error('An entity in this save is invalid.');
-          if ((e.kind === 'unit' && !UNITS[e.type]) || (e.kind === 'building' && !BUILDINGS[e.type]))
+          if ((e.kind === 'unit' && !UNITS[e.type]) || (e.kind === 'building' && !BUILDINGS[e.type]) ||
+            e.queue?.some(q => !UNITS[q.type]))
             throw Error('Unknown entity in save.');
         }
         this.s = structuredClone(data);

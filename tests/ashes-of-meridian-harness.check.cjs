@@ -32,7 +32,7 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.strictEqual(context.icon, icon);
   assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 6]);
   assert.equal(vm.runInContext('typeof TECH', context), 'undefined');
-  assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'scout', 'medic', 'tank', 'artillery', 'air', 'hero']);
+  assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero']);
   assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
   assert.deepEqual(Object.keys(BIOMES), ['ash', 'rust', 'choir', 'court', 'star']);
   assert.equal(unitName('worker'), 'Prospector');

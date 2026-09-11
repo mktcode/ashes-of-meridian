@@ -7,19 +7,35 @@ const { loadScripts } = require('./helpers/game-scripts.cjs');
 
 function setup() {
   const target = () => ({
-    handlers: {}, style: {}, classList: {
+    handlers: {}, style: { setProperty(key, value) { this[key] = value; } }, classList: {
       names: new Set(), add(name) { this.names.add(name); }, remove(name) { this.names.delete(name); },
-      contains(name) { return this.names.has(name); }
+      contains(name) { return this.names.has(name); },
+      toggle(name, on) { if (on) this.names.add(name); else this.names.delete(name); }
     },
     addEventListener(type, handler) { this.handlers[type] = handler; },
     setPointerCapture() {},
+    setAttribute(key, value) { this[key] = value; },
+    querySelector(selector) { return (this.parts ||= {})[selector] ||= target(); },
+    querySelectorAll(selector) {
+      assert.equal(selector, '[data-queue-type]');
+      if (this.parsedHTML !== this.innerHTML) {
+        this.parsedHTML = this.innerHTML;
+        this.queueButtons = [...(this.innerHTML || '').matchAll(/data-queue-type="([^"]+)"/g)]
+          .map(m => ({ ...target(), dataset: { queueType: m[1] } }));
+      }
+      return this.queueButtons || [];
+    },
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 180, height: 180 })
   });
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
-      assert.ok(!['tooltip','biomeLabel','contextLabel'].includes(id), 'removed DOM must never be accessed');
-      if (!elements.has(id)) elements.set(id, target());
+      assert.ok(!['tooltip','biomeLabel','contextLabel','selectionContent','selectCount','buildingActions'].includes(id), 'removed DOM must never be accessed');
+      if (!elements.has(id)) {
+        elements.set(id, target());
+        if (id === 'topbar') elements.get(id).getBoundingClientRect = () => ({ bottom: 55 });
+        if (id === 'abilityBar') elements.get(id).getBoundingClientRect = () => ({ top: 590 });
+      }
       return elements.get(id);
     }
   };
@@ -42,10 +58,10 @@ function setup() {
     openModal(kind, html) { this.html = html; }
   }
   const game = {
-    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0 },
+    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0, meta: {} },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
-    get(id) { return this.s.entities.find(e => e.id === id); },
+    get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
     command(...args) { calls.push(['command', ...args]); }
@@ -142,7 +158,7 @@ test('triple touch tap selects only living on-screen own non-workers, including 
   for (const trigger of ['rifle','worker']) {
     const h = setup(); h.UI.prototype.bind.call(h.ui);
     const unit = { id: 1, team: 0, kind: 'unit', type: trigger, hp: 100, x: 200, z: 200 };
-    h.ui.game.s.entities = [unit, ...['rifle','worker','tank','medic','hero','scout','air','artillery']
+    h.ui.game.s.entities = [unit, ...['rifle','worker','tank','medic','hero','air','artillery']
       .map((type,i) => ({...unit,id:i+2,type})),
       {...unit,id:10,team:1}, {...unit,id:11,kind:'building',type:'barracks'},
       {...unit,id:12,hp:0}, {...unit,id:13,x:-10}, {...unit,id:14,x:1280},
@@ -153,11 +169,22 @@ test('triple touch tap selects only living on-screen own non-workers, including 
     const tap = time => { h.setTime(time); h.pointer('pointerdown',200,200); h.pointer('pointerup',200,200); };
     tap(0); assert.deepEqual(h.ui.selected,[1]);
     tap(200); assert.deepEqual(h.ui.selected,trigger === 'worker' ? [1,3] : [1,2]);
-    tap(400); const combat = trigger === 'worker' ? [2,4,5,6,7,8,9] : [1,2,4,5,6,7,8,9];
+    tap(400); const combat = trigger === 'worker' ? [2,4,5,6,7,8] : [1,2,4,5,6,7,8];
     assert.deepEqual(h.ui.selected,combat);
     tap(500); assert.deepEqual(h.ui.selected,combat, 'further rapid taps keep combat selection');
     assert.ok(h.calls.every(c => c[0] === 'select'), 'no order or camera action');
   }
+});
+
+test('group selection uses the actual topbar and ability-bar bounds in portrait', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.document.getElementById('topbar').getBoundingClientRect = () => ({bottom:90});
+  h.document.getElementById('abilityBar').getBoundingClientRect = () => ({top:400});
+  const unit = {id:1,team:0,kind:'unit',type:'rifle',hp:100,x:200,z:200};
+  h.ui.game.s.entities = [unit,{...unit,id:2,z:80},{...unit,id:3,z:399},{...unit,id:4,z:410}];
+  h.ui.pick = () => unit;
+  for(let i=0;i<3;i++){h.pointer('pointerdown',200,200);h.pointer('pointerup',200,200);}
+  assert.deepEqual(h.ui.selected,[1,3]);
 });
 
 test('tap chains reset on timeout, a different target, drag, cancellation, pinch, ground order or targeting', () => {
@@ -200,16 +227,14 @@ test('triple mouse clicks keep same-type selection; buildings never trigger comb
   }
 });
 
-test('mouse clicks and portrait clicks replace selection even with Shift; select still deduplicates', () => {
+test('mouse clicks replace selection even with Shift; select still deduplicates', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   h.ui.pick = () => ({ id: 1, team: 0, kind: 'unit', type: 'rifle' });
   h.pointer('pointerdown', 200, 200, { pointerType: 'mouse', shiftKey: true });
   h.pointer('pointerup', 200, 200, { pointerType: 'mouse', shiftKey: true });
   assert.deepEqual(h.ui.selected, [1]);
-  h.document.handlers.click({ shiftKey: true, target: { closest: () => ({ dataset: { select: '2' } }) } });
-  assert.deepEqual(h.ui.selected, [2]);
   h.ui.game.s.entities = [{ id: 1 }, { id: 2 }];
-  h.ui.audio.sound = () => {}; h.ui.updateSelection = () => {}; h.ui.renderActions = () => {};
+  h.ui.audio.sound = () => {}; h.ui.renderActions = () => {};
   h.UI.prototype.select.call(h.ui, [1, 1, 99]);
   assert.deepEqual(Array.from(h.ui.selected), [1]);
 });
@@ -320,55 +345,57 @@ test('camera buttons and minimap tap/drag still navigate with existing limits', 
   assert.deepEqual(h.calls, []);
 });
 
-test('removed commands do nothing; abilities, rally, home and tabs remain, with pause guards', () => {
+test('removed commands do nothing; abilities and categories remain, with pause guards', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.perform = h.UI.prototype.perform;
   for (const action of ['attackMove','move','hold','stop','ability:orbital','ability:repair','ability:scan','ability:drop','rally','army','worker','home'])
     h.click({ action });
-  for (const tab of ['orders','build','army']) h.click({ tab });
+  for (const tab of ['root','build','infantry','vehicles','aircraft']) h.click({ action: 'tab:' + tab });
   assert.deepEqual(h.calls, [
     ['mode','ability','orbital'], ['mode','ability','repair'], ['mode','ability','scan'],
-    ['mode','ability','drop'], ['mode','rally'], ['base'],
-    ['tab','orders'], ['tab','build'], ['tab','army']
+    ['mode','ability','drop'],
+    ['tab','root'], ['tab','build'], ['tab','infantry'], ['tab','vehicles'], ['tab','aircraft']
   ]);
   h.calls.length = 0; h.ui.paused = true; h.click({ action: 'ability:orbital' });
+  h.UI.prototype.perform.call(h.ui, 'tab:build');
   assert.deepEqual(h.calls, []);
 });
 
-test('deck drops decorative labels and obsolete buttons but retains production entries', () => {
-  const h = setup(); h.ui.renderActions(); h.ui.updateSelection(); h.ui.updateQueues();
-  const actions = h.document.getElementById('actions').innerHTML;
-  assert.deepEqual([...actions.matchAll(/data-action="([^"]+)"/g)].map(m => m[1]),
-    ['ability:orbital','ability:repair','ability:scan','ability:drop','rally','home']);
-  assert.equal(h.UI.prototype.selectArmy, undefined); assert.equal(h.UI.prototype.selectWorker, undefined);
-  assert.equal(h.document.getElementById('selectionContent').innerHTML, '');
+test('portrait deck has four root categories and a separate persistent ability bar, no old panels', () => {
+  const h = setup(); h.ui.renderActions(); h.ui.updateQueues();
+  assert.deepEqual(actionKeys(h), ['tab:build','tab:infantry','tab:vehicles','tab:aircraft']);
   assert.equal(h.document.getElementById('productionQueue').innerHTML, '');
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.doesNotMatch(html, /TACTICAL OVERVIEW|biomeLabel|ORBITAL LINK ACTIVE|SELECTION|contextLabel/);
+  assert.doesNotMatch(html, /buildingActions|selectionPanel|selectionContent|data-tab/);
   assert.match(html, /id="minimap" aria-label="Minimap"/);
-  h.ui.game.s.entities = [{id:47,team:0,kind:'building',type:'barracks',queue:[{type:'rifle',time:12,progress:.25}]}];
-  h.ui.updateQueues();
-  const queue = h.document.getElementById('productionQueue').innerHTML;
-  assert.match(queue, /data-queue="47:0"/); assert.match(queue, /9s/); assert.match(queue, /width:25%/);
-  assert.match(queue, /cancel recruitment/); assert.doesNotMatch(queue, /IN PRODUCTION|PRODUCTION IDLE/);
+  for (const tab of ['root','build','infantry','vehicles','aircraft']) {
+    h.UI.prototype.setTab.call(h.ui, tab);
+    assert.deepEqual([...h.document.getElementById('abilityBar').innerHTML.matchAll(/data-action="([^"]+)"/g)].map(m => m[1]),
+      ['ability:orbital','ability:repair','ability:scan','ability:drop']);
+    assert.equal(actionKeys(h).includes('tab:root'), tab !== 'root');
+  }
 });
 
 test('Cancel button exits every targeting mode without spending resources or changing orders', () => {
   for (const [kind, arg] of [['build','depot'], ['rally'],
     ...['orbital','repair','scan','drop'].map(a => ['ability',a])]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-    const before = JSON.stringify(h.ui.game.s);
     if (kind === 'build') h.ui.tab = 'build';
+    if (kind === 'rally') {
+      h.ui.game.s.entities = [{id:7,team:0,kind:'building',type:'barracks',hp:100,progress:1,queue:[]}];
+      h.ui.tab = 'building';
+    }
+    const state = JSON.stringify(h.ui.game.s);
     h.UI.prototype.setMode.call(h.ui, kind, arg);
     assert.equal(h.document.getElementById('modeIndicator').classList.contains('hidden'), false);
     assert.match(h.document.getElementById('modeLabel').textContent, /TAP TO CONFIRM/);
-    assert.match(h.document.getElementById('actions').innerHTML, /class="action[^"\n]*\bactive\b/);
+    assert.match(h.document.getElementById(kind === 'ability' ? 'abilityBar' : 'actions').innerHTML, /class="action[^"\n]*\bactive\b/);
     h.click({ ui: 'cancelTarget' });
     assert.equal(h.ui.mode, null);
     assert.equal(h.document.getElementById('modeIndicator').classList.contains('hidden'), true);
     assert.equal(h.world.style.cursor, 'default');
-    assert.doesNotMatch(h.document.getElementById('actions').innerHTML, /class="action[^"\n]*\bactive\b/);
+    assert.doesNotMatch(h.document.getElementById(kind === 'ability' ? 'abilityBar' : 'actions').innerHTML, /class="action[^"\n]*\bactive\b/);
     assert.deepEqual(h.ui.selected, [7]); assert.equal(h.ui.paused, false);
-    assert.equal(JSON.stringify(h.ui.game.s), before); assert.deepEqual(h.calls, []);
+    assert.equal(JSON.stringify(h.ui.game.s), state); assert.deepEqual(h.calls, []);
   }
 });
 
@@ -466,123 +493,109 @@ test('tooltips and native title hints are removed without removing pointer press
   ]) assert.match(html, new RegExp(`${attribute}="${value}"[^>]*aria-label="${label}"`));
 });
 
-test('actions retain visible costs; portrait selection and queue cancellation retain labels and actions without tooltips', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  const button = h.ui.actionButton('train:rifle', 'Vanguard', 'rifle', { cost: { cost: 75, gas: 20 } });
-  assert.match(button, /data-action="train:rifle"/); assert.match(button, /Vanguard/);
-  assert.match(button, /75◆ 20⬡/); assert.doesNotMatch(button, /tooltip|\stitle=/);
-  h.ui.game.s.entities = [
-    { id: 1, kind: 'building', type: 'barracks', team: 0, queue: [{ type: 'rifle', time: 11, progress: .5 }] },
-    { id: 2, kind: 'unit', type: 'rifle', faction: 0, hp: 150, maxHp: 150 },
-    { id: 3, kind: 'unit', type: 'medic', faction: 0, hp: 130, maxHp: 130 }
-  ];
-  h.ui.selected = [2, 3]; h.ui.updateSelection();
-  const portraits = h.document.getElementById('selectionContent').innerHTML;
-  assert.match(portraits, /data-select="2" aria-label="Vanguard"/);
-  assert.match(portraits, /data-select="3" aria-label="Field medic"/);
-  assert.doesNotMatch(portraits, /\stitle=/);
-  h.click({ select: '2' }); assert.deepEqual(h.ui.selected, [2]);
-  h.ui.updateQueues();
-  const queue = h.document.getElementById('productionQueue').innerHTML;
-  assert.match(queue, /data-queue="1:0" aria-label="Vanguard · cancel recruitment"/);
-  assert.match(queue, /6s/); assert.doesNotMatch(queue, /\stitle=/);
-  h.ui.game.cancelQueue = (...args) => h.calls.push(['cancelQueue', ...args]);
-  h.click({ queue: '1:0' });
-  assert.deepEqual(h.calls, [['select', [2]], ['cancelQueue', 1, 0]]);
-});
-
-function buildingPanel() {
-  const h = setup(), b = { id: 7, kind: 'building', type: 'barracks', team: 0, faction: 0, hp: 100, maxHp: 200, progress: 1, size: 2.9, x: 0, z: 0, queue: [] };
-  h.ui.game.s.entities = [b]; h.ui.selected = [7];
-  const panel = h.document.getElementById('buildingActions'), buttons = ['repair','sell'].map(action => ({ dataset: { buildingAction: action } }));
-  panel.querySelectorAll = () => buttons; panel.offsetWidth = 260; panel.offsetHeight = 100;
-  h.document.getElementById('topbar').getBoundingClientRect = () => ({ bottom: 63 });
-  h.document.getElementById('commandDeck').getBoundingClientRect = () => ({ top: 584 });
-  h.ui.R.project = () => ({ x: 640, y: 400 });
-  return { ...h, b, panel, buttons };
+function actionKeys(h) {
+  return [...h.document.getElementById('actions').innerHTML.matchAll(/data-action="([^"]+)"/g)].map(m => m[1]);
 }
 
-test('building buttons follow projection, clamp to the play area and do not move under a pressed finger', () => {
-  const h = buildingPanel(); h.ui.updateBuildingActions();
-  assert.equal(h.panel.classList.contains('hidden'), false);
-  assert.equal(h.panel.style.left, '510px'); assert.equal(h.panel.style.top, '288px');
-  assert.deepEqual(h.buttons.map(b => b.dataset.buildingId), [7,7]);
-  h.ui.R.project = () => ({ x: 1278, y: 580 }); h.ui.domPressed = true; h.ui.updateBuildingActions();
-  assert.equal(h.panel.style.left, '510px');
-  h.ui.domPressed = false; h.ui.updateBuildingActions();
-  assert.equal(h.panel.style.left, '1012px'); assert.equal(h.panel.style.top, '468px');
-  h.ui.R.project = () => ({ x: 1, y: 64 }); h.ui.updateBuildingActions();
-  assert.equal(h.panel.style.left, '8px'); assert.equal(h.panel.style.top, '71px');
+function buildingPanel() {
+  const h = setup(), b = { id: 7, kind: 'building', type: 'barracks', team: 0, faction: 0, hp: 100, maxHp: 200, progress: 1, x: 0, z: 0, queue: [] };
+  h.ui.game.s.entities = [b]; h.ui.selected = [7]; h.ui.tab = 'building';
+  h.ui.setTab = h.UI.prototype.setTab;
+  h.ui.perform = h.UI.prototype.perform;
+  return { ...h, b };
+}
+
+test('building selection opens fixed actions; Back preserves selection and explicit reselection reopens actions', () => {
+  const h = buildingPanel(); h.UI.prototype.select.call(h.ui, [7]);
+  assert.deepEqual(actionKeys(h), ['tab:root','sell','repair','rally']);
+  h.ui.R.project = () => { throw Error('Building actions must not project into the world'); };
+  h.ui.renderActions();
+  h.ui.setTab('root'); h.ui.renderActions();
+  assert.deepEqual(actionKeys(h), ['tab:build','tab:infantry','tab:vehicles','tab:aircraft']);
+  assert.deepEqual(Array.from(h.ui.selected), [7]);
+  h.UI.prototype.select.call(h.ui, [7]);
+  assert.equal(h.ui.tab, 'building');
+  assert.equal(h.UI.prototype.updateBuildingActions, undefined);
+  assert.equal(h.UI.prototype.closeBuildingActions, undefined);
 });
 
-test('closing building actions keeps selection and orders; explicit reselection opens them again', () => {
-  const h = buildingPanel(); h.UI.prototype.bind.call(h.ui);
-  h.ui.updateBuildingActions(); h.click({ ui: 'closeBuildingActions' });
-  h.ui.updateBuildingActions(); assert.equal(h.panel.classList.contains('hidden'), true);
-  assert.deepEqual(h.ui.selected, [7]); assert.deepEqual(h.calls, []);
-  h.ui.updateSelection = () => {}; h.ui.renderActions = () => {};
-  h.UI.prototype.select.call(h.ui, [7]); h.ui.updateBuildingActions();
-  assert.equal(h.panel.classList.contains('hidden'), false);
-});
-
-test('leaving the visible field dismisses building actions until reselection, not camera return', () => {
-  for (const point of [null, {x:-1,y:400}, {x:1281,y:400}, {x:640,y:62}, {x:640,y:585}]) {
-    const h = buildingPanel(); h.ui.updateBuildingActions();
-    h.ui.R.project = () => point; h.ui.updateBuildingActions();
-    h.ui.R.project = () => ({x:640,y:400}); h.ui.updateBuildingActions();
-    assert.equal(h.panel.classList.contains('hidden'), true);
-    assert.deepEqual(h.ui.selected, [7]); assert.deepEqual(h.calls, []);
-    h.ui.updateSelection = () => {}; h.ui.renderActions = () => {};
-    h.UI.prototype.select.call(h.ui, [7]); h.ui.updateBuildingActions();
-    assert.equal(h.panel.classList.contains('hidden'), false);
-  }
-});
-
-test('pause and targeting only temporarily hide building actions', () => {
-  const h = buildingPanel();
-  for (const field of ['paused','mode']) {
-    h.ui[field] = true; h.ui.updateBuildingActions();
-    assert.equal(h.panel.classList.contains('hidden'), true);
-    h.ui[field] = false; h.ui.updateBuildingActions();
-    assert.equal(h.panel.classList.contains('hidden'), false);
-  }
-});
-
-test('building panel avoids camera/help buttons vertically or sideways in a short play area', () => {
-  const h = buildingPanel(); h.ui.R.project = () => ({ x: 1278, y: 580 });
-  h.document.getElementById('cameraTools').getBoundingClientRect = () => ({ left: 1014, right: 1272, top: 542, bottom: 574 });
-  h.ui.updateBuildingActions(); assert.equal(h.panel.style.left, '1012px'); assert.equal(h.panel.style.top, '434px');
-  h.document.getElementById('topbar').getBoundingClientRect = () => ({ bottom: 460 });
-  h.ui.updateBuildingActions(); assert.equal(h.panel.style.left, '746px'); assert.equal(h.panel.style.top, '468px');
-});
-
-test('building buttons hide for ineligible selection, offscreen targets, targeting, pause and modals', () => {
-  for (const mode of ['none','many','enemy','unit','foundation','dead','result','offscreen','behind','paused','modal','target','home']) {
+test('foundations have only Cancel build; completion and destruction update the context menu', () => {
+  const h = buildingPanel(); h.b.progress = .5; h.ui.renderActions();
+  assert.deepEqual(actionKeys(h), ['tab:root','cancelBuild']);
+  h.b.progress = 1; h.ui.renderActions();
+  assert.deepEqual(actionKeys(h), ['tab:root','sell','repair','rally']);
+  h.b.hp = 0; h.ui.renderActions();
+  assert.equal(h.ui.tab, 'root');
+  assert.ok(!actionKeys(h).includes('sell'));
+  for (const mode of ['enemy','unit','many','none']) {
     const h = buildingPanel();
-    if (mode === 'none') h.ui.selected = [];
-    if (mode === 'many') h.ui.selected = [7,8];
     if (mode === 'enemy') h.b.team = 1;
     if (mode === 'unit') h.b.kind = 'unit';
-    if (mode === 'foundation') h.b.progress = .5;
-    if (mode === 'dead') h.b.hp = 0;
-    if (mode === 'result') h.ui.game.s.result = { win: true };
-    if (mode === 'offscreen') h.ui.R.project = () => ({ x: -10, y: 400 });
-    if (mode === 'behind') h.ui.R.project = () => null;
-    if (mode === 'paused') h.ui.paused = true;
-    if (mode === 'modal') h.ui.modalKind = 'help';
-    if (mode === 'target') h.ui.mode = { kind: 'move' };
-    if (mode === 'home') h.ui.view = 'home';
-    h.ui.updateBuildingActions(); assert.equal(h.panel.classList.contains('hidden'), true, mode);
+    if (mode === 'many') h.ui.selected = [7,8];
+    if (mode === 'none') h.ui.selected = [];
+    h.ui.renderActions(); assert.equal(h.ui.tab, 'root', mode);
   }
 });
 
-test('building button states expose no-worker/last-HQ restrictions and keep stopping repair available', () => {
+test('repair restrictions and Stop repair remain visible in the fixed menu', () => {
   const h = buildingPanel();
   h.ui.game.canRepairBuilding = () => 'No workers'; h.ui.game.canSellBuilding = () => 'Last command center';
-  h.ui.updateBuildingActions(); assert.deepEqual(h.buttons.map(b => b.disabled), [true,true]);
-  assert.equal(h.document.getElementById('buildingActionStatus').textContent, 'No workers · Last command center');
-  h.ui.game.buildingRepairers = () => [{}]; h.ui.updateBuildingActions();
-  assert.equal(h.buttons[0].disabled, false); assert.equal(h.buttons[0].textContent, 'STOP REPAIR');
+  h.ui.renderActions();
+  const html = () => h.document.getElementById('actions').innerHTML;
+  assert.match(html(), /data-action="repair" disabled/); assert.match(html(), /data-action="sell" disabled/);
+  assert.match(html(), /No workers · Last command center/);
+  h.ui.game.buildingRepairers = () => [{}]; h.ui.renderActions();
+  assert.doesNotMatch(html(), /data-action="repair" disabled/); assert.match(html(), /Stop repair/);
+});
+
+test('all completed own buildings expose rally; foundations cannot set it and Back cancels targeting', () => {
+  for (const type of ['hq','barracks','factory','hangar','depot','refinery','turret']) {
+    const h = buildingPanel(); h.b.type = type;
+    h.ui.setMode = h.UI.prototype.setMode;
+    h.ui.perform('rally'); assert.equal(h.ui.mode.kind, 'rally');
+    h.ui.applyTarget({x:12,z:23});
+    assert.deepEqual(JSON.parse(JSON.stringify(h.b.rally)), {x:12,z:23});
+    h.ui.perform('rally'); h.ui.setTab('root'); assert.equal(h.ui.mode, null);
+    h.b.progress = .5; h.ui.perform('rally'); assert.equal(h.ui.mode, null);
+  }
+});
+
+test('global type icons aggregate parallel/waiting orders, keep DOM stable and show the next completion', () => {
+  const h = setup(), q = (type, progress = 0) => ({type,progress,time:10,cost:75,gas:0});
+  const a = {id:1,team:0,kind:'building',queue:[q('rifle',.25),q('rifle'),q('medic')]},
+    b = {id:2,team:0,kind:'building',queue:[q('rifle',.6),q('medic')]};
+  h.ui.game.s.entities = [a,b,{...a,id:3,team:1}]; h.ui.updateQueues();
+  const buttons = () => h.document.getElementById('productionQueue').querySelectorAll('[data-queue-type]');
+  const [rifle,medic] = buttons();
+  assert.deepEqual(buttons().map(b => b.dataset.queueType), ['rifle','medic']);
+  assert.equal(rifle.querySelector('.queue-count').textContent, 3);
+  assert.equal(rifle.style['--progress'], '216deg');
+  assert.equal(rifle.querySelector('.queue-time').textContent, '4s');
+  assert.match(rifle['aria-label'], /Vanguard · 3 pending.*cancel one recruitment/);
+  assert.equal(medic.querySelector('.queue-count').textContent, 2);
+  assert.equal(medic.classList.contains('waiting'), true);
+  b.queue[0].progress = .7; h.ui.updateQueues();
+  assert.equal(buttons()[0], rifle); assert.ok(Math.abs(parseFloat(rifle.style['--progress']) - 252) < 1e-9);
+  b.queue.shift(); h.ui.updateQueues();
+  assert.equal(rifle.querySelector('.queue-count').textContent, 2);
+  assert.equal(rifle.style['--progress'], '90deg');
+  assert.equal(medic.classList.contains('waiting'), false);
+  a.queue = []; b.queue = []; h.ui.updateQueues();
+  assert.equal(buttons().length, 0);
+});
+
+test('queue tap cancels one waiting order before active work; pause and scroll cancellation are guarded', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const q = progress => ({type:'rifle',progress,time:10});
+  h.ui.game.s.entities = [
+    {id:1,team:0,kind:'building',queue:[q(.2)]},
+    {id:2,team:0,kind:'building',queue:[q(.8),q(0)]}
+  ];
+  h.ui.game.cancelQueue = (id,index) => { h.calls.push(['cancel',id,index]); h.ui.game.get(id).queue.splice(index,1); };
+  h.click({queueType:'rifle'}); assert.deepEqual(h.calls, [['cancel',2,1]]);
+  h.click({queueType:'rifle'}); assert.deepEqual(h.calls.at(-1), ['cancel',1,0]);
+  h.ui.paused = true; h.click({queueType:'rifle'}); assert.equal(h.calls.length, 2);
+  h.ui.domPressed = true; h.document.handlers.pointercancel(); assert.equal(h.ui.domPressed, false);
 });
 
 test('building buttons dispatch repair; sale pauses, cancels safely, confirms the captured ID and rejects stale repeats', () => {
@@ -590,26 +603,25 @@ test('building buttons dispatch repair; sale pauses, cancels safely, confirms th
   h.ui.game.toggleBuildingRepair = id => h.calls.push(['repair',id]);
   h.ui.game.buildingSaleRefund = () => ({cost:147.5,gas:0});
   h.ui.game.sellBuilding = id => h.calls.push(['sell',id]);
-  h.click({ buildingAction: 'repair', buildingId: '7' }); assert.deepEqual(h.calls, [['repair',7]]);
-  h.click({ buildingAction: 'sell', buildingId: '7' });
+  h.click({ action: 'repair' }); assert.deepEqual(h.calls, [['repair',7]]);
+  h.click({ action: 'sell' });
   assert.equal(h.ui.paused, true); assert.equal(h.ui.modalKind, 'sell');
-  assert.equal(h.panel.classList.contains('hidden'), true);
   assert.match(h.document.getElementById('modal').innerHTML, /147.5 alloy/);
-  h.click({ buildingAction: 'repair', buildingId: '7' }); assert.equal(h.calls.length, 1);
+  h.click({ action: 'repair' }); assert.equal(h.calls.length, 1);
   h.click({ ui: 'cancelSale' }); assert.equal(h.ui.paused, false); assert.equal(h.calls.length, 1);
   h.click({ ui: 'confirmSale' }); assert.equal(h.calls.length, 1);
-  h.click({ buildingAction: 'sell', buildingId: '7' }); h.ui.selected = [99];
+  h.click({ action: 'sell' }); h.ui.selected = [99];
   h.click({ ui: 'confirmSale' }); assert.deepEqual(h.calls, [['repair',7],['sell',7]]);
   assert.equal(h.ui.paused, false); assert.equal(h.ui.modalKind, '');
   h.click({ ui: 'confirmSale' }); assert.equal(h.calls.length, 2);
   h.ui.game.canSellBuilding = () => 'Last command center'; h.ui.toast = text => h.calls.push(['toast',text]);
-  h.click({ buildingAction: 'sell', buildingId: '7' }); assert.equal(h.ui.paused, false);
+  h.ui.selected = [7]; h.click({ action: 'sell' }); assert.equal(h.ui.paused, false);
   assert.deepEqual(h.calls.at(-1), ['toast','Last command center']);
 });
 
 test('command deck and help have no research actions; removed buildings are never offered for construction', () => {
   const h = setup(), html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.deepEqual(Array.from(html.matchAll(/data-tab="([^"]+)"/g), m => m[1]), ['orders', 'build', 'army']);
+  assert.doesNotMatch(html, /data-tab/);
   h.ui.showHelp(); assert.doesNotMatch(h.ui.html, /research/i);
   for (const faction of [0, 1, 2]) {
     h.ui.game.s.faction = faction; h.ui.tab = 'build'; h.ui.actionSignature = '';
@@ -620,23 +632,46 @@ test('command deck and help have no research actions; removed buildings are neve
     assert.doesNotMatch(actions, /lab|ward|tech:|research|class="level"/i);
   }
   h.UI.prototype.perform.call(h.ui, 'tech:weapons'); assert.deepEqual(h.calls, []);
-  h.ui.tab = 'army'; h.ui.renderActions();
+  h.ui.tab = 'infantry'; h.ui.renderActions();
   assert.match(h.document.getElementById('actions').innerHTML, /train:rifle/);
   h.ui.game.s.entities = [{ id: 1, type: 'barracks', kind: 'building', team: 0, queue: [{ type: 'rifle', time: 11, progress: .5 }] }];
-  h.ui.updateQueues(); assert.match(h.document.getElementById('productionQueue').innerHTML, /data-queue="1:0"/);
+  h.ui.updateQueues(); assert.match(h.document.getElementById('productionQueue').innerHTML, /data-queue-type="rifle"/);
 });
 
-test('selection retains damage/range and resource quantities, without the removed armor research level', () => {
+test('all factions share the minimal recruitment categories, including HQ units under infantry', () => {
   const h = setup();
-  h.ui.game.rangedStats = () => ({ damage: 13, range: 9 });
-  const entity = { id: 1, kind: 'unit', type: 'rifle', faction: 0, team: 0, hp: 150, maxHp: 150, order: { type: 'idle' } };
-  h.ui.game.s.entities = [entity]; h.ui.selected = [1]; h.ui.updateSelection();
-  let html = h.document.getElementById('selectionContent').innerHTML;
-  assert.match(html, /DAMAGE<b>13/); assert.match(html, /RANGE<b>9/); assert.doesNotMatch(html, /ARMOR|REMAINING/);
-  for (const [type, expected] of [['crystal', '1234'], ['gas', '∞']]) {
-    Object.assign(entity, { kind: 'resource', type, amount: 1234 }); h.ui.updateSelection();
-    assert.ok(h.document.getElementById('selectionContent').innerHTML.includes(`REMAINING<b>${expected}`));
+  for (const faction of [0,1,2]) for (const [tab,types] of Object.entries({
+    infantry:['worker','rifle','medic','hero'], vehicles:['tank','artillery'], aircraft:['air']
+  })) {
+    h.ui.game.s.faction = faction; h.UI.prototype.setTab.call(h.ui, tab);
+    assert.deepEqual(actionKeys(h), ['tab:root',...types.map(t => 'train:' + t)]);
+    assert.match(h.document.getElementById('actions').innerHTML, /class="cost"/);
   }
+  h.ui.game.train = (...args) => h.calls.push(['train',...args]);
+  h.ui.selected = [99]; h.UI.prototype.perform.call(h.ui, 'train:rifle');
+  assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
+});
+
+test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
+  const h = buildingPanel(), g = h.ui.game;
+  Object.assign(g.s,{alloy:1000,gas:1000,energy:100,abilities:{},nextWave:95});
+  Object.assign(g,{supply:()=>10,cap:()=>50,afford:()=>true,objectiveRows:()=>[]});
+  const buttons = ['train:rifle','train:hero','train:air','repair','sell'].map(action =>
+    Object.assign(h.document.getElementById(action),{dataset:{action}}));
+  h.document.querySelectorAll = () => buttons;
+  const [rifle,hero,air,repair,sell] = buttons;
+  h.b.queue = Array.from({length:5},()=>({type:'rifle',time:11,progress:0}));
+  g.s.entities.push({id:8,team:0,kind:'building',type:'hq',hp:100,progress:1,queue:[{type:'hero',time:40,progress:0}]});
+  g.canRepairBuilding = () => 'No workers'; g.canSellBuilding = () => 'Protected';
+  h.UI.prototype.updateHUD.call(h.ui);
+  assert.ok(buttons.every(b=>b.disabled));
+  h.b.queue.pop(); g.buildingRepairers = () => [{}]; g.canSellBuilding = () => '';
+  h.UI.prototype.updateHUD.call(h.ui);
+  assert.equal(rifle.disabled,false); assert.equal(repair.disabled,false); assert.equal(sell.disabled,false);
+  assert.equal(hero.disabled,true); assert.equal(air.disabled,true);
+  h.ui.mode = {kind:'ability',arg:'scan'}; h.UI.prototype.updateHUD.call(h.ui);
+  assert.equal(repair.disabled,true); assert.equal(sell.disabled,true);
+  h.ui.paused = true; h.UI.prototype.updateHUD.call(h.ui); assert.ok(buttons.every(b=>b.disabled));
 });
 
 test('settings and camera hints describe touch navigation without desktop camera controls', () => {
@@ -644,7 +679,7 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
   h.ui.showHelp();
   assert.match(h.ui.html, /Select combat units → tap ground/);
-  assert.doesNotMatch(h.ui.html, /Attack-move button|Move \/ hold \/ stop|Combat force button|Next worker button/);
+  assert.doesNotMatch(h.ui.html, /Attack-move button|Move \/ hold \/ stop|Combat force button|Next worker button|Command view|Tabs on the command deck|Ability buttons in Command/);
   assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]|\bEsc\b|to assist|keyboard/);
   assert.match(h.ui.html, /Drag with one finger/); assert.match(h.ui.html, /Pinch/);
   assert.doesNotMatch(h.ui.html, /WASD|Middle-button|Mouse wheel|Space \/ Home|box-select|Shift|control group/i);
@@ -655,12 +690,10 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.match(html, /data-ui="cancelTarget"/);
   assert.doesNotMatch(html, /controlstrip/);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8'), /controlstrip/);
-  h.ui.updateSelection();
-  assert.doesNotMatch(h.document.getElementById('selectionContent').innerHTML, /Box-select|Right-click/);
   h.ui.game.s.faction = 0;
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;
-  assert.match(actions, /Command view/); assert.doesNotMatch(actions, /SPACE|class="key"|F[12359]/);
+  assert.doesNotMatch(actions, /Command view|SPACE|class="key"|F[12359]/);
   h.ui.persistence.hasCheckpoint = () => true;
   h.ui.showPause();
   assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]/);

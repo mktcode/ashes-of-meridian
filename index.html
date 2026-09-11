@@ -45,13 +45,6 @@
     <div id="alerts"></div>
     <div id="modeIndicator" class="hidden"><span id="modeLabel"></span><button class="secondary"
         data-ui="cancelTarget" aria-label="Cancel targeting or placement">CANCEL</button></div>
-    <div id="buildingActions" class="hidden" role="group" aria-labelledby="buildingActionName">
-      <div id="buildingActionName"></div>
-      <button id="closeBuildingActions" data-ui="closeBuildingActions" aria-label="Close building actions">×</button>
-      <div class="building-action-row"><button class="secondary" data-building-action="repair">REPAIR</button><button
-          class="secondary" data-building-action="sell">SELL</button></div>
-      <div id="buildingActionStatus"></div>
-    </div>
     <div id="radio" class="glass hidden">
       <div class="radio-avatar">EC<span></span></div>
       <div>
@@ -62,22 +55,15 @@
     <div id="cameraTools"><button data-cam="home" aria-label="Center on command">⌂</button><button data-cam="in"
         aria-label="Zoom in">＋</button><button data-cam="out" aria-label="Zoom out">−</button><button id="soundBtn"
         aria-label="Sound">♫</button><button id="helpBtn" aria-label="Field manual">?</button></div>
+    <div id="productionQueue" role="group" aria-label="Recruitment queues · tap to cancel one order"></div>
+    <div id="abilityBar" role="group" aria-label="Command abilities"></div>
     <footer id="commandDeck">
       <section class="minimap-panel">
         <canvas id="minimap" aria-label="Minimap" width="210"
-          height="174"></canvas>
+          height="210"></canvas>
       </section>
-      <section id="selectionPanel">
-        <div class="panel-label"><span id="selectCount"></span></div>
-        <div id="selectionContent"></div>
-      </section>
-      <section id="actionPanel">
-        <div class="action-head">
-          <div class="tabs"><button data-tab="orders" class="active">COMMAND</button><button
-              data-tab="build">BUILD</button><button data-tab="army">RECRUIT</button></div>
-        </div>
+      <section id="actionPanel" aria-label="Build, recruit and building actions">
         <div id="actions"></div>
-        <div id="productionQueue"></div>
       </section>
     </footer>
   </div>

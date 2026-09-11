@@ -4,7 +4,7 @@
 
 - **Dokumentation, minimale Text-/Rahmen-/Abstandsänderungen:** Diff sichten, bei Dokumentationsänderungen Links und Angaben prüfen; kein zusätzlicher Browserlauf nötig.
 - **JavaScript-Spielcode oder Tests:** vollständigen Node-Befehl unten ausführen, passende Regressionstests ergänzen.
-- **Eingabe, Layoutstruktur, Rendering oder Auslieferung:** zusätzlich gezielt direkt unter `file://` prüfen, insbesondere betroffene Touch-Aktionen und Hoch-/Querformat. Keine vollständige Browser-Regressionsserie für jeden kleinen Schritt.
+- **Eingabe, Layoutstruktur, Rendering oder Auslieferung:** zusätzlich gezielt direkt unter `file://` prüfen, insbesondere betroffene Touch-Aktionen und Portraitgrößen. Keine vollständige Browser-Regressionsserie für jeden kleinen Schritt.
 - Ergebnisse und ausgelassene relevante Bereiche kurz nur im [Arbeitsprotokoll](worklog.md) festhalten. Ältere Nachweise sind keine neu ausgeführten Tests.
 
 ## Automatisierte Tests
@@ -24,7 +24,7 @@ Ein Testworker; 128 MiB begrenzen nur den JS-Heap, nicht den gesamten Prozessspe
 | Simulation | Gefechtsstart/-ziel, Befehle, Bau, Reparatur/Verkauf, Produktion, Kampf, Wellen, Upgrades, aktuelle Snapshots |
 | Persistence | Profil/Checkpoint/Backup, Validierung, Fehlerfälle und flüchtiger Storage-Ersatz |
 | Präsentation | Welt-/Effektgrenzen, feste Zeichen-/Effekt-/RNG-Referenzen |
-| Steuerung | Touch-Auswahl/Gesten, Kamera, Buttons, Cancel, Pausenschutz und Gebäude-Panel |
+| Steuerung | Touch-Auswahl/Gesten, aktuelle HUD-Grenzen, Kategorien/Zurück, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz |
 | Renderer | Shader-Quellvertrag, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
 
 [Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests.
