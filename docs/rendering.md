@@ -19,6 +19,8 @@
 
 Die taktischen und responsiven HUD-Regeln liegen in `styles/hud.css`; gemeinsame Grundlagen und Menüoberflächen stehen davor in `styles/base.css` und `styles/screens.css`. Das Portrait-Deck liegt randbündig ohne Rahmen/Spaltentrennlinien. Die Minimap (210×210 Zeichenpuffer) füllt die linke Bildschirmhälfte, rechts liegen scrollbare Menüs. Deckhöhe: `min(50vw, 36dvh)`; darüber die 76 px hohe Fähigkeitenleiste. Kamera-/Radiopositionen berücksichtigen beide Leisten. Der dunkle Minimap-Hintergrund bleibt auf der Spalte statt dem Canvas, um die beobachtete Chromium-Fehlfläche zu vermeiden.
 
+Links neben dem Basiskameraknopf sitzt der Attack-move-Umschalter mit lokalem Schwerter-SVG. Goldene Füllung und `aria-pressed="true"` markieren aktiv; ein erneuter Tap schaltet zurück auf normale Bewegung. Er verwendet die bestehenden Kameraknopfgrößen.
+
 Queue-Symbole stehen links darüber, mit Zähler und hellem `conic-gradient`-Overlay. Dessen Winkel folgt dem Produktionsfortschritt, nicht einer unabhängig laufenden CSS-Animation. Buttons bleiben währenddessen stabil; native Touch-Scrollflächen und `touch-action: manipulation` verhindern unnötige Browser-Tap-Gesten. Regeln: [Spiel und Bedienung](gameplay.md).
 
 [Prüfverfahren](testing.md) · [zentrales Arbeitsprotokoll](worklog.md)

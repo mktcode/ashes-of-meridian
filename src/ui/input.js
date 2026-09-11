@@ -56,6 +56,15 @@
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
         $('battleHome').onclick = () => this.pause();
         $('helpBtn').onclick = () => this.showHelp();
+        $('attackMoveBtn').onclick = () => {
+          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s.result) return;
+          this.attackMove = !this.attackMove;
+          $('attackMoveBtn').setAttribute('aria-pressed', String(this.attackMove));
+          this.lastClick = {};
+          this.toast(this.attackMove
+            ? 'Attack-move: troops engage enemies along the way.'
+            : 'Move: troops prioritize reaching the destination.');
+        };
         $('soundBtn').onclick = () => {
           let muted = !this.profile.settings.sfx;
           this.profile.settings.sfx = muted;
@@ -113,7 +122,7 @@
             if (this.selectedBuilding()) this.select([]);
             else this.game.command(
               this.selected,
-              { type: 'move', ...p }
+              { type: this.attackMove ? 'attackMove' : 'move', ...p }
             );
             this.clearMode();
           } else if (this.mode) {
@@ -302,7 +311,7 @@
             this.selected,
             target
               ? { type: 'smart', id: target.id, x: target.x, z: target.z }
-              : { type: 'move', ...p }
+              : { type: this.attackMove ? 'attackMove' : 'move', ...p }
           );
           this.clearMode();
           return;
@@ -319,7 +328,8 @@
         if (d.type === 'touch' && this.selected.length && (!target || target.team !== 0)) {
           this.game.command(
             this.selected,
-            target ? { type: 'smart', id: target.id, x: target.x, z: target.z } : { type: 'attackMove', ...p }
+            target ? { type: 'smart', id: target.id, x: target.x, z: target.z }
+              : { type: this.attackMove ? 'attackMove' : 'move', ...p }
           );
           return;
         }

@@ -285,6 +285,19 @@
       border-color: var(--gold)
     }
 
+    #attackMoveBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0
+    }
+
+    #cameraTools #attackMoveBtn[aria-pressed="true"] {
+      color: #0b1422;
+      background: var(--gold);
+      border-color: var(--gold)
+    }
+
     #modeIndicator {
       display: flex;
       align-items: center;

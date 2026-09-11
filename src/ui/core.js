@@ -19,6 +19,7 @@
         this.sellBuildingId = null;
         this.selected = [];
         this.tab = 'root';
+        this.attackMove = false;
         this.mode = null;
         this.hover = null;
         this.pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
@@ -83,6 +84,8 @@
           $('radio').classList.add('hidden');
           $('alerts').innerHTML = '';
           this.selected = [];
+          this.attackMove = false;
+          $('attackMoveBtn').setAttribute('aria-pressed', 'false');
           this.mode = null;
           this.tab = 'root';
           this.actionSignature = '';

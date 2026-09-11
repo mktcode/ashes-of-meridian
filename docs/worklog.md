@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Umschaltbares Attack-move
+
+- Schwerter-Schalter links neben der Basiskamera ergänzt: gold/`aria-pressed` = Attack-move, sonst normale Bewegung einschließlich Rückzug. Wirkt nur auf künftige Bodenaufträge (Touch und Welt-/Minimap-Rechtsklick), bleibt bei Auswahlwechsel/Cancel/Pause erhalten und startet pro Gefecht ausgeschaltet. Worker, Kontextziele, Bau/Fähigkeiten, Rally und laufende Aufträge bleiben unabhängig. Handbuch und Referenzdokumentation aktualisiert; kein weiteres Refactoring.
+- **213 Node-Tests inklusive Build bestanden**, keine Fixtures geändert. Neue Tests decken beide Schalterzustände, wiederholte Befehle, Kontext-/Fähigkeitsziele, Pausen-/Ergebnisschutz, Startreset und Profilfreiheit ab. Diff und lokale Dokumentationslinks geprüft.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: native Touch-Umschaltung, echte Move-/Attack-move-Aufträge samt Worker-Ausnahme, Pause/Fortsetzen, Pan ohne Auftrag und Neustartreset bestanden. Aktive/inaktive Darstellung gesichtet. Seed 444213 im Browser kontrolliert simuliert: HQ wird beschädigt und ohne Gegenwehr zerstört. Keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch und kontrollierte Simulationsschritte, kein Echtgerät- oder anderer Browser-/GPU-Test.
+
 ## Kampfannäherung ohne vorzeitigen Ankunftsstopp
 
 - Die Toleranz für belegte Bewegungsziele stoppte Attack-move-Einheiten außerhalb ihrer Waffenreichweite. Kampfbewegungen deaktivieren nun nur diese Toleranz; Kollisionsradien, Waffenwerte und normale Zielankunft bleiben unverändert. Keine zusätzlichen RNG-Aufrufe; tatsächlich stattfindende Kämpfe verbrauchen wieder ihre regulären Effekt-Samples.

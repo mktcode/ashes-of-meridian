@@ -310,7 +310,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
   assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], 'command');
-  assert.equal(h.calls[0][2].type, 'attackMove'); h.calls.length = 0;
+  assert.equal(h.calls[0][2].type, 'move'); h.calls.length = 0;
   h.ui.paused = true;
   h.pointer('pointerdown', 200, 200); h.pointer('pointermove', 240, 230); h.pointer('pointerup', 240, 230);
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
@@ -322,6 +322,68 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   assert.equal(h.ui.touchGesture, false);
   h.pointer('pointerdown', 200, 200); h.window.handlers.blur();
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
+});
+
+test('attack-move toggle changes future ground orders for touch and mouse, not existing orders', () => {
+  for (const input of ['touch', 'mouse', 'minimap']) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+    const button = h.document.getElementById('attackMoveBtn');
+    const pending = { type: 'move', x: 30, z: 40 };
+    h.ui.game.s.entities = [{ id: 7, kind: 'unit', team: 0, hp: 100, order: pending }];
+    const options = input === 'touch' ? {} : {
+      pointerType: 'mouse', button: 2, target: input === 'minimap' ? h.minimap : h.world
+    };
+    for (const active of [false, true, true, false]) {
+      if (h.ui.attackMove !== active) button.onclick();
+      assert.strictEqual(h.ui.game.s.entities[0].order, pending);
+      assert.equal(h.calls.length, 0, 'toggling alone issues no command');
+      h.pointer('pointerdown', 200, 200, options); h.pointer('pointerup', 200, 200, options);
+      assert.equal(h.calls.length, 1);
+      assert.equal(h.calls[0][2].type, active ? 'attackMove' : 'move');
+      assert.equal(h.ui.attackMove, active, 'not a one-shot targeting mode');
+      h.calls.length = 0;
+    }
+    assert.equal(button['aria-pressed'], 'false');
+  }
+});
+
+test('attack-move toggle preserves context orders, selection, and explicit ability targeting', () => {
+  for (const active of [false, true]) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+    if (active) h.document.getElementById('attackMoveBtn').onclick();
+    for (const target of [{ id: 8, team: 1 }, { id: 9, team: -1 }]) {
+      h.ui.pick = () => target;
+      h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+      assert.equal(h.calls[0][2].type, 'smart'); assert.equal(h.calls[0][2].id, target.id);
+      h.calls.length = 0;
+    }
+    h.ui.pick = () => ({ id: 10, team: 0 });
+    h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+    assert.deepEqual(h.calls, [['select', [10]]]); h.calls.length = 0;
+    h.ui.mode = { kind: 'ability', arg: 'scan' }; h.ui.pick = () => null;
+    h.ui.game.ability = (...args) => { h.calls.push(['ability', ...args]); return true; };
+    h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+    assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], 'ability');
+    assert.equal(h.ui.mode, null); assert.equal(h.ui.attackMove, active);
+  }
+});
+
+test('attack-move is transient, guarded while paused/ended, and reset on battle start', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const button = h.document.getElementById('attackMoveBtn');
+  assert.equal(h.ui.attackMove, false);
+  const profile = JSON.stringify(h.ui.profile);
+  button.onclick(); assert.equal(h.ui.attackMove, true); assert.equal(button['aria-pressed'], 'true');
+  h.ui.clearMode(); assert.equal(h.ui.attackMove, true);
+  h.ui.paused = true; button.onclick(); assert.equal(h.ui.attackMove, true);
+  h.ui.paused = false; h.ui.game.s.result = {}; button.onclick(); assert.equal(h.ui.attackMove, true);
+  h.ui.game.s.result = null; h.ui.view = 'home'; button.onclick(); assert.equal(h.ui.attackMove, true);
+  h.ui.event('start', {});
+  assert.equal(h.ui.attackMove, false); assert.equal(button['aria-pressed'], 'false');
+  assert.equal(JSON.stringify(h.ui.profile), profile);
+  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+  assert.match(html, /id="cameraTools"><button id="attackMoveBtn" aria-label="Attack-move" aria-pressed="false"/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../styles/hud.css'), 'utf8'), /#attackMoveBtn\[aria-pressed="true"\]/);
 });
 
 test('camera buttons and minimap tap/drag still navigate with existing limits', () => {
@@ -872,7 +934,9 @@ test('settings and camera hints describe touch navigation without desktop camera
   const h = setup(); h.ui.showSettings();
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
   h.ui.showHelp();
-  assert.match(h.ui.html, /Select combat units → tap ground/);
+  assert.match(h.ui.html, /Move \(default\)/);
+  assert.match(h.ui.html, /Crossed swords beside ⌂ → gold = active → tap ground/);
+  assert.match(h.ui.html, /resets to off on each new battle\/restart/);
   assert.doesNotMatch(h.ui.html, /Attack-move button|Move \/ hold \/ stop|Combat force button|Next worker button|Command view|Tabs on the command deck|Ability buttons in Command/);
   assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]|\bEsc\b|to assist|keyboard/);
   assert.match(h.ui.html, /Drag with one finger/); assert.match(h.ui.html, /Pinch/);
