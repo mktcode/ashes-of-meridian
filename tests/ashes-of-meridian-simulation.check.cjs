@@ -30,7 +30,7 @@ function createGame() {
 
 function battle(faction = 0, seed = 1409) {
   const runtime = createGame();
-  runtime.game.start({ seed, biome: 'rust', difficulty: 'standard', faction });
+  runtime.game.start({ seed, biome: 'rust', faction });
   return runtime;
 }
 
@@ -57,12 +57,12 @@ function checkpointScenario(game) {
 
 test('single battle starts with full test arsenal, one hostile base and no mission state', () => {
   const { game, renderer, events } = battle(), s = game.s;
-  assert.deepEqual([s.version,s.seed,s.biome,s.difficulty,s.faction,s.enemy,s.time], [2,1409,'rust','standard',0,2,0]);
+  assert.deepEqual([s.version,s.seed,s.biome,s.faction,s.enemy,s.time], [3,1409,'rust',0,2,0]);
   assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [1100,400,100,84,85,33,56]);
   assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
   assert.equal(game.alive(e => e.team === 0 && e.kind === 'building').length, 6);
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
-  for (const key of ['m','index','practice','upgrades','research']) assert.equal(key in s, false);
+  for (const key of ['m','index','practice','upgrades','research','difficulty']) assert.equal(key in s, false);
   assert.equal(game.objectiveRows().length, 1); assert.match(game.objectiveRows()[0].text, /enemy base/);
   assert.equal(renderer.fogOn, true); assert.deepEqual(events.map(e => e.type), ['start','radio']);
 });
@@ -106,6 +106,17 @@ test('only enemy HQ destruction wins; loss of the last own HQ loses, without sta
   }
 });
 
+test('fixed wave sizing and timing retain the former standard rules', () => {
+  for (const [wave, count, interval] of [[1,8,79.2],[10,14,72],[40,24,54.4]]) {
+    const { game, events } = battle();
+    assert.equal(game.s.nextWave, 95);
+    game.s.wave = wave-1; game.s.time = 95; game.s.enemyBudget = 100000;
+    game.wave();
+    assert.equal(events.at(-1).data.n, count);
+    close(game.s.nextWave,95+interval);
+  }
+});
+
 test('waves originate at the enemy base and stop without it', () => {
   const { game, events } = battle(); const before = game.alive(e => e.team === 1 && e.kind === 'unit').length;
   game.wave(); assert.ok(game.alive(e => e.team === 1 && e.kind === 'unit').length > before);
@@ -114,13 +125,15 @@ test('waves originate at the enemy base and stop without it', () => {
   const count = game.s.entities.length; game.wave(); assert.equal(game.s.entities.length, count);
 });
 
-test('base combat/movement stats retain faction, difficulty, shields and veteran modifiers without research', () => {
-  const { game } = battle(); game.s.difficulty = 'veteran';
+test('base combat/movement stats retain faction, shields and unit-veterancy modifiers without difficulty scaling', () => {
+  const { game } = battle();
   for (const team of [0, 1, 2]) for (const faction of [0, 1, 2]) {
     const e = game.spawnUnit('rifle', 0, 0, team, faction);
     const stats = game.rangedStats(e);
-    close(stats.damage, 13 * (faction === 2 ? 1.12 : 1) * (team === 1 ? 1.22 : 1));
+    close(stats.damage, 13 * (faction === 2 ? 1.12 : 1));
     assert.equal(stats.range, 9); assert.equal(e.vision, 17);
+    close(e.maxHp, game.spawnUnit('rifle', 10, 10, 0, faction).maxHp);
+    close(game.spawnBuilding('hq', 20, 20, team, faction).maxHp, 2600);
     e.kills = 5; close(game.rangedStats(e).damage, stats.damage * 1.12);
     const hp = e.hp, shield = e.shield;
     game.damage(e, 20, null, true);
@@ -490,8 +503,10 @@ test('restore rejects unsupported save versions and unknown unit types', () => {
   const wrongVersion = currentCheckpoint();
   wrongVersion.version = 999;
   assert.throws(() => game.restore(wrongVersion), /not a valid Meridian operation/);
-  const oldSave = currentCheckpoint(); oldSave.version = 1;
-  assert.throws(() => game.restore(oldSave), /not a valid Meridian operation/);
+  for (const version of [1,2]) {
+    const oldSave = currentCheckpoint(); oldSave.version = version;
+    assert.throws(() => game.restore(oldSave), /not a valid Meridian operation/);
+  }
   for (const type of ['convoy','avatar','ward']) {
     const removed = currentCheckpoint();
     const entity = removed.entities.find(e => e.kind === (type === 'ward' ? 'building' : 'unit'));

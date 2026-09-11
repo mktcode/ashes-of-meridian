@@ -3,8 +3,8 @@
 
 // Dependencies are supplied by app.js. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
-function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, warn }) {
-    const SAVE_KEY = 'meridian.operation.v2',
+function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
+    const SAVE_KEY = 'meridian.operation.v3',
       PROFILE_KEY = 'meridian.profile.v1';
     const memoryStore = {};
     const Store = {
@@ -43,8 +43,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
           music: true,
           sfx: true,
           quality: 2,
-          healthbars: false,
-          difficulty: 'standard'
+          healthbars: false
         }
       };
     }
@@ -55,10 +54,10 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
         if (p && p.version === 1) {
           d.upgrades = p.upgrades || {};
           for (let k in upgrades) d.upgrades[k] = clamp(Number(d.upgrades[k]) || 0, 0, upgrades[k].max);
-          Object.assign(d.settings, p.settings || {});
+          for (let key of Object.keys(d.settings))
+            if (Object.hasOwn(p.settings || {}, key)) d.settings[key] = p.settings[key];
           d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);
           d.settings.quality = clamp(Number(d.settings.quality) || 0, 0, 2);
-          if (!difficulties[d.settings.difficulty]) d.settings.difficulty = 'standard';
         }
       } catch (e) {
         warn('Profile reset:', e.message);
@@ -101,7 +100,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
           if (
             !Array.isArray(d.operation.entities) ||
             d.operation.entities.length > 1500 ||
-            d.operation.version !== 2
+            d.operation.version !== 3
           )
             throw Error('Operation data is invalid.');
         }

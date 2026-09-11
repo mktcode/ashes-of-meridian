@@ -407,10 +407,23 @@ test('campaign navigation, tutorial and ending APIs are removed; battle restart 
   const h = setup();
   for (const method of ['showCampaign','launch','showSkirmish','startSkirmish','showEnding','chooseEnding','updateTips'])
     assert.equal(h.ui[method], undefined, method);
-  Object.assign(h.ui.game.s, {seed:4321,biome:'court',faction:1,enemy:0,difficulty:'veteran'});
+  Object.assign(h.ui.game.s, {seed:4321,biome:'court',faction:1,enemy:0});
   h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
   h.ui.uiAction('restart');
-  assert.deepEqual(h.calls, [['start',{seed:4321,biome:'court',faction:1,enemy:0,difficulty:'veteran'}],['save']]);
+  assert.deepEqual(h.calls, [['start',{seed:4321,biome:'court',faction:1,enemy:0}],['save']]);
+});
+
+test('battle setup and launch have no difficulty control, options API or profile setting', () => {
+  const h = setup(); h.ui.showBattle();
+  assert.equal(h.ui.difficultyOptions, undefined);
+  assert.doesNotMatch(h.document.getElementById('menu').innerHTML, /difficulty|standard|veteran/i);
+  h.ui.battleFaction = 2;
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash'],['battleSeed','1409']])
+    h.document.getElementById(id).value = value;
+  h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
+  h.ui.startBattle();
+  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'ash',seed:1409}],['save']]);
+  assert.equal('difficulty' in h.ui.profile.settings,false);
 });
 
 test('tooltips and native title hints are removed without removing pointer press guards or accessible names', () => {

@@ -15,7 +15,7 @@ test('world and simulation start, step and restore without renderer, geometry or
   const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
   vm.runInContext('Math.random = () => { throw Error("Unseeded randomness"); }', context);
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
-  game.start({ seed: 1409, difficulty: 'standard', faction: 0 });
+  game.start({ seed: 1409, faction: 0 });
   assert.equal(game.s.alloy, 1100);
   assert.equal('R' in game, false); assert.equal('R' in game.world, false);
   for (let i = 0; i < 1000; i++) { game.step(.05); game.effects.tick(.05); }

@@ -20,7 +20,7 @@ Fertige eigene Gebäude zeigen **Repair / Stop repair** und **Sell** direkt am G
 
 Beschreibungs- und Browser-Tooltips sind entfernt; sichtbare Kosten, Rückmeldungen und das Handbuch bleiben erhalten. [Tooltip-Bereinigung](docs/tooltip-removal.md).
 
-**New battle** öffnet die Wahl von Fraktion, Gegner, Landschaft, Schwierigkeit und Seed. Das eigene letzte HQ darf nicht fallen. Für Tests steht das bisherige volle Arsenal bereit; noch keine Gebäude-Freischaltungen oder absichtlich nahezu unbesiegbare Gegnerbasis.
+**New battle** öffnet die Wahl von Fraktion, Gegner, Landschaft und Seed. Es gibt keine Schwierigkeitseinstellung mehr; die bisherigen Standard-Werte gelten fest. [Entfernung und Prüfungen](docs/difficulty-removal.md). Das eigene letzte HQ darf nicht fallen. Für Tests steht das bisherige volle Arsenal bereit; noch keine Gebäude-Freischaltungen oder absichtlich nahezu unbesiegbare Gegnerbasis.
 
 Ingame-Forschung und Forschungsgebäude sind entfernt. **Fleet Upgrades** sind im Testmodus **kostenlos** bis zur bisherigen Höchststufe 3 kaufbar und werden gespeichert; alle sechs wirken ab dem nächsten Gefecht. Die Upgrade-Ressource ist für Tests unbegrenzt verfügbar, ohne Verbrauch oder Sammelsystem. Alloy/Aether im Gefecht bleiben begrenzt. Die spätere separate Fortschrittsressource und deren Gewinnung sind noch nicht implementiert. [Kampagnenentfernung und Prüfungen](docs/campaign-removal.md).
 
@@ -28,7 +28,7 @@ Unter **Settings → Render quality** verwenden **High** und **Balanced** bis zu
 
 ## Spielstände sichern
 
-Permanente Upgrades, Einstellungen und Checkpoints werden im Browserspeicher abgelegt. Gefechts-Checkpoints verwenden jetzt Version 2; alte Kampagnen-/Skirmish-Spielstände werden nicht übernommen. Vorhandene permanente Upgrade-Stufen bleiben erhalten. Unter **Settings → Export Backup** lässt sich ein JSON-Backup sichern; **Import Backup** liest es wieder ein und ersetzt dabei gespeicherte Profildaten, bei enthaltenem Checkpoint auch diesen.
+Permanente Upgrades, Einstellungen und Checkpoints werden im Browserspeicher abgelegt. Gefechts-Checkpoints verwenden jetzt Version 3; ältere Spielstände, auch solche mit Schwierigkeitseinstellung, werden nicht übernommen. Vorhandene permanente Upgrade-Stufen bleiben erhalten. Unter **Settings → Export Backup** lässt sich ein JSON-Backup sichern; **Import Backup** liest es wieder ein und ersetzt dabei gespeicherte Profildaten, bei enthaltenem Checkpoint auch diesen.
 
 Vor Browserwechsel, Verschieben der Spieldatei oder Wechsel zwischen `file://` und HTTP ein Backup exportieren: Browserspeicher wird dabei nicht automatisch übertragen. Ohne verfügbaren dauerhaften Speicher ist der In-Memory-Ersatz nach dem Schließen verloren.
 

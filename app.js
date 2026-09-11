@@ -14,7 +14,6 @@
           getStorage: () => localStorage,
           clamp,
           upgrades: META,
-          difficulties: DIFFICULTY,
           warn: (...args) => console.warn(...args)
         });
         const profile = persistence.loadProfile();

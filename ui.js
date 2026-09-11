@@ -180,14 +180,6 @@
             <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>3 CIVILIZATIONS · ONE OBJECTIVE</span><span class="menu-progress">LOCAL & OFFLINE</span></footer>
           </div></div>`;
       }
-      difficultyOptions() {
-        return Object.entries(DIFFICULTY)
-          .map(
-            ([k, d]) =>
-              `<option value="${k}" ${this.profile.settings.difficulty === k ? 'selected' : ''}>${d.name}</option>`
-          )
-          .join('');
-      }
       showBattle() {
         this.view = 'battle';
         this.paused = true;
@@ -202,16 +194,13 @@
             .map(([k, b]) => `<option value="${k}">${b.name}</option>`)
             .join(
               ''
-            )}</select></div><div class="settings-row"><label>Difficulty<small>Story is forgiving. Veteran brings larger, stronger attacks.</small></label><select id="battleDifficulty">${this.difficultyOptions()}</select></div><div class="settings-row"><label>Map seed<small>Use the same seed to replay a battlefield.</small></label><input id="battleSeed" type="number" value="${Math.floor(Math.random() * 900000) + 100000}" min="1" max="999999999" style="width:155px;background:#172333;border:1px solid #68809855;padding:11px;color:#c9dbde;font:12px var(--mono)"></div></div><div class="launch-row" style="justify-content:space-between"><span class="battle-note">FULL ARSENAL · FLEET UPGRADES ACTIVE</span><button class="primary" data-ui="startBattle">START BATTLE ↗</button></div></div></div>`;
+            )}</select></div><div class="settings-row"><label>Map seed<small>Use the same seed to replay a battlefield.</small></label><input id="battleSeed" type="number" value="${Math.floor(Math.random() * 900000) + 100000}" min="1" max="999999999" style="width:155px;background:#172333;border:1px solid #68809855;padding:11px;color:#c9dbde;font:12px var(--mono)"></div></div><div class="launch-row" style="justify-content:space-between"><span class="battle-note">FULL ARSENAL · FLEET UPGRADES ACTIVE</span><button class="primary" data-ui="startBattle">START BATTLE ↗</button></div></div></div>`;
       }
       startBattle() {
         let enemy = +$('battleEnemy').value, biome = $('battleBiome').value,
-          difficulty = $('battleDifficulty').value,
           seed = clamp(parseInt($('battleSeed').value) || Math.floor(Math.random() * 1e8), 1, 999999999);
-        this.profile.settings.difficulty = difficulty;
-        this.persist();
         this.audio.unlock();
-        this.game.start({ faction: this.battleFaction, difficulty, seed, enemy, biome });
+        this.game.start({ faction: this.battleFaction, seed, enemy, biome });
         this.save(false);
       }
       openModal(kind, html, wide = false) {
@@ -780,7 +769,7 @@
         $('supplyCount').style.color = this.game.supply() >= this.game.cap() ? 'var(--red)' : '';
         $('energyCount').textContent = Math.floor(s.energy);
         $('gameTime').textContent = formatTime(s.time);
-        $('speedLabel').textContent = s.speed + '× ' + DIFFICULTY[s.difficulty].name.toUpperCase();
+        $('speedLabel').textContent = s.speed + '×';
         $('battleLabel').innerHTML = 'Annihilation' + `<small>SEED ${s.seed}</small>`;
         $('biomeLabel').textContent = BIOMES[s.biome].name;
         let rows = this.game.objectiveRows();
@@ -1044,7 +1033,7 @@
             break;
           case 'restart': {
             let s = this.game.s;
-            this.game.start({ faction: s.faction, difficulty: s.difficulty, seed: s.seed, biome: s.biome, enemy: s.enemy });
+            this.game.start({ faction: s.faction, seed: s.seed, biome: s.biome, enemy: s.enemy });
             this.save(false);
             break;
           }

@@ -1,10 +1,5 @@
     /* Deterministic fixed-step RTS simulation. Rendering and UI are independent. */
     'use strict';
-    const DIFFICULTY = {
-      story: { name: 'Story', damage: 0.67, hp: 0.84, spawn: 0.72, interval: 1.2, start: 1.2 },
-      standard: { name: 'Standard', damage: 1, hp: 1, spawn: 1, interval: 1, start: 1 },
-      veteran: { name: 'Veteran', damage: 1.22, hp: 1.17, spawn: 1.28, interval: 0.88, start: 0.95 }
-    };
     class MeridianGame {
       constructor(profile, emit = () => {}, createEffects = random => new MeridianEffects(random)) {
         this.profile = profile;
@@ -21,25 +16,23 @@
         this.effects = createEffects(() => this.random());
       }
       start(opts = {}) {
-        let difficulty = DIFFICULTY[opts.difficulty] ? opts.difficulty : 'standard',
-          faction = FACTIONS[opts.faction] ? opts.faction : 0,
+        let faction = FACTIONS[opts.faction] ? opts.faction : 0,
           enemy = FACTIONS[opts.enemy] ? opts.enemy : 2,
           biome = BIOMES[opts.biome] ? opts.biome : 'ash',
           meta = structuredClone(this.profile.upgrades || {}),
-          seed = opts.seed || Math.floor(Math.random() * 1e8),
-          d = DIFFICULTY[difficulty];
+          seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.s = {
-          version: 2,
-          seed, difficulty, faction, enemy, biome, meta,
+          version: 3,
+          seed, faction, enemy, biome, meta,
           time: 0,
-          alloy: Math.floor(1100 * d.start) + (meta.stores || 0) * 100,
-          gas: Math.floor(400 * d.start),
+          alloy: 1100 + (meta.stores || 0) * 100,
+          gas: 400,
           energy: 100,
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
           abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 },
           wave: 0,
-          nextWave: 95 * d.interval,
+          nextWave: 95,
           enemyBudget: 900,
           stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
@@ -114,7 +107,6 @@
         let s = this.s,
           d = kind === 'building' ? BUILDINGS[type] : UNITS[type] || {},
           hp = d.hp || 1000;
-        if (team === 1) hp *= DIFFICULTY[s.difficulty].hp;
         if (kind === 'unit') {
           if (faction === 1) hp *= 0.9;
           if (faction === 2) hp *= 0.85;
@@ -692,7 +684,6 @@
           damage =
             (d.damage || 0) *
             (e.faction === 2 ? 1.12 : 1) *
-            (e.team === 1 ? DIFFICULTY[s.difficulty].damage : 1) *
             (e.kills >= 5 ? 1.12 : 1);
         return { ...d, range, damage };
       }
@@ -1084,13 +1075,12 @@
       }
       wave() {
         let s = this.s,
-          d = DIFFICULTY[s.difficulty],
           bases = this.alive(e => e.team === 1 && e.type === 'hq');
         s.wave++;
-        s.nextWave = s.time + 80 * d.interval * Math.max(0.68, 1 - s.wave * 0.01);
+        s.nextWave = s.time + 80 * Math.max(0.68, 1 - s.wave * 0.01);
         if (!bases.length) return;
         let site = bases[(s.wave - 1) % bases.length], faction = site.faction,
-          n = Math.min(24, Math.ceil((6.75 + s.wave * 0.65) * d.spawn)),
+          n = Math.min(24, Math.ceil(6.75 + s.wave * 0.65)),
           goal = this.closest(site, e => e.team === 0 && e.type === 'hq') || HOME;
         let deployed = 0;
         for (let i = 0; i < n; i++) {
@@ -1215,9 +1205,9 @@
         return data;
       }
       restore(data) {
-        if (!data || data.version !== 2 || !Array.isArray(data.entities) || data.entities.length > 1500)
+        if (!data || data.version !== 3 || !Array.isArray(data.entities) || data.entities.length > 1500)
           throw Error('This save is not a valid Meridian operation.');
-        if (!Number.isFinite(data.time) || !Number.isFinite(data.seed) || !DIFFICULTY[data.difficulty] ||
+        if (!Number.isFinite(data.time) || !Number.isFinite(data.seed) ||
           !BIOMES[data.biome] || !FACTIONS[data.faction] || !FACTIONS[data.enemy])
           throw Error('Save data is invalid.');
         let validKinds = ['unit', 'building', 'resource'];

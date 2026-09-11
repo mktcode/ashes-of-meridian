@@ -3,12 +3,12 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
 
-const PROFILE = 'meridian.profile.v1', SAVE = 'meridian.operation.v2';
+const PROFILE = 'meridian.profile.v1', SAVE = 'meridian.operation.v3';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
   version: 1, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2,
-    healthbars: false, difficulty: 'standard' }
+    healthbars: false }
 };
 const backup = (profile = { version: 1 }, operation = null) =>
   JSON.stringify({ format: 'ashes-of-meridian', version: 1, profile, operation });
@@ -35,7 +35,7 @@ function setup() {
   const api = vm.runInContext(`(() => {
     const persistence = createMeridianPersistence({
       getStorage: () => localStorage, clamp, upgrades: META,
-      difficulties: DIFFICULTY, warn: (...args) => console.warn(...args)
+      warn: (...args) => console.warn(...args)
     });
     return { readProfile: persistence.loadProfile, persistence, UI: MeridianUI };
   })()`, context);
@@ -43,7 +43,7 @@ function setup() {
   const profile = api.readProfile();
   Object.assign(ui, {
     profile, persistence: api.persistence, selected: [99], actionSignature: 'old', lastSaveTime: 0,
-    game: { s: { version: 2, time: 7, entities: [], result: null },
+    game: { s: { version: 3, time: 7, entities: [], result: null },
       snapshot() { trace.push(['snapshot']); return json(this.s); },
       restore(state) { trace.push(['restore', state]); if (fail.restore) throw Error('restore denied'); this.s = state; }
     },
@@ -66,7 +66,7 @@ test('profile defaults are complete, fresh and do not write storage', () => {
   assert.ok(h.trace.every(([kind]) => kind === 'get'));
 });
 
-test('profile normalization preserves current coercions, fractional values and unknown settings', () => {
+test('profile normalization preserves current coercions and fractional values but only accepts known settings', () => {
   const h = setup();
   h.data.set(PROFILE, JSON.stringify({ version: 1, unlocked: 19, credits: '12.5',
     medals: [3], best: 'invalid', upgrades: { veterans: 9, stores: -1, logistics: '1.5', extra: 8 },
@@ -74,7 +74,7 @@ test('profile normalization preserves current coercions, fractional values and u
   const p = json(h.readProfile());
   assert.deepEqual(p, { ...defaults,
     upgrades: { veterans: 3, stores: 0, logistics: 1.5, extra: 8, command: 0, resolve: 0, industry: 0 },
-    settings: { ...defaults.settings, volume: 0.6, quality: 1.5, music: 'yes', extra: 9 } });
+    settings: { ...defaults.settings, volume: 0.6, quality: 1.5, music: 'yes' } });
 });
 
 test('invalid profile JSON/version resets; a mid-normalization error retains partial changes', () => {
@@ -152,8 +152,9 @@ test('backup rejection and size limit leave profile, checkpoint and active game 
   h.data.set(SAVE, 'old');
   for (const text of ['{', 'null', '{}', backup({ version: 2 }),
     backup({ version: 1 }, { version: 999, entities: [] }),
-    backup({ version: 1 }, { version: 2, entities: {} }),
-    backup({ version: 1 }, { version: 2, entities: Array(1501).fill({}) })]) {
+    backup({ version: 1 }, { version: 2, entities: [] }),
+    backup({ version: 1 }, { version: 3, entities: {} }),
+    backup({ version: 1 }, { version: 3, entities: Array(1501).fill({}) })]) {
     h.trace.length = 0; await h.importText(text);
     assert.equal(h.trace.length, 1); assert.match(h.trace[0][1], /^Import failed:/);
     assert.deepEqual(json(h.ui.profile), profile); assert.equal(h.ui.game.s, before);
@@ -168,7 +169,7 @@ test('backup rejection and size limit leave profile, checkpoint and active game 
 test('import preserves profile identity, writes raw data, normalizes in memory and applies in order', async () => {
   const h = setup(), identity = h.ui.profile;
   const p = { version: 1, upgrades: { stores: 20 }, settings: { quality: 0 } };
-  const op = { version: 2, entities: Array(1500).fill({}) };
+  const op = { version: 3, entities: Array(1500).fill({}) };
   await h.importText(backup(p, op), 4000000);
   assert.equal(h.ui.profile, identity); assert.equal(identity.upgrades.stores, 3);
   assert.equal(h.ui.audio.settings, identity.settings); assert.equal(h.ui.R.quality, 0);
@@ -188,13 +189,13 @@ test('profile-only imports preserve the old checkpoint, including falsey operati
 
 test('import storage failures retain the existing non-transactional behavior', async () => {
   const h = setup(); h.fail.access = true;
-  await h.importText(backup({ version: 1, upgrades: { stores: 2 } }, { version: 2, entities: [] }));
+  await h.importText(backup({ version: 1, upgrades: { stores: 2 } }, { version: 3, entities: [] }));
   assert.equal(h.ui.profile.upgrades.stores, 2); assert.equal(h.data.size, 0);
   assert.deepEqual(h.trace.at(-1), ['toast', 'Upgrades and checkpoint imported.']);
-  h.ui.load(); assert.deepEqual(json(h.ui.game.s), { version: 2, entities: [] });
+  h.ui.load(); assert.deepEqual(json(h.ui.game.s), { version: 3, entities: [] });
   const partial = setup(); partial.fail.resize = true; partial.data.set(SAVE, 'old');
   const active = partial.ui.game.s;
-  await partial.importText(backup({ version: 1, upgrades: { stores: 3 } }, { version: 2, entities: [] }));
+  await partial.importText(backup({ version: 1, upgrades: { stores: 3 } }, { version: 3, entities: [] }));
   assert.equal(partial.ui.profile.upgrades.stores, 3); assert.equal(partial.data.get(SAVE), 'old');
   assert.equal(partial.ui.game.s, active);
   assert.deepEqual(partial.trace.at(-1), ['toast', 'Import failed: resize denied']);
@@ -207,7 +208,7 @@ function isolatedPersistence(getStorage) {
   const create = vm.runInContext('createMeridianPersistence', context);
   const warnings = [];
   const service = create({ getStorage, clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
-    upgrades: { custom: { max: 2 } }, difficulties: { sandbox: {} },
+    upgrades: { custom: { max: 2 } },
     warn: (...args) => warnings.push(args) });
   return { service, warnings, context };
 }
@@ -220,15 +221,15 @@ test('persistence is standalone, lazy and uses injected profile rules', () => {
   });
   assert.equal(accesses, 0); assert.equal(service.available, true);
   assert.equal(vm.runInContext('typeof Store + ":" + typeof defaultProfile + ":" + typeof readProfile', context), 'undefined:undefined:undefined');
-  service.saveProfile({ version: 1, upgrades: { custom: 7 }, settings: { difficulty: 'sandbox' } });
+  service.saveProfile({ version: 1, upgrades: { custom: 7 }, settings: { quality: 1 } });
   const p = json(service.loadProfile());
-  assert.deepEqual(p.upgrades, { custom: 2 }); assert.equal(p.settings.difficulty, 'sandbox');
+  assert.deepEqual(p.upgrades, { custom: 2 }); assert.equal(p.settings.quality, 1);
   assert.deepEqual(json(service.readCheckpoint()), { exists: false, state: null });
   service.saveCheckpoint(null);
   assert.equal(service.hasCheckpoint(), true);
   assert.deepEqual(json(service.readCheckpoint()), { exists: true, state: null });
   service.removeCheckpoint(); assert.equal(service.hasCheckpoint(), false);
-  assert.equal(data.get(PROFILE), '{"version":1,"upgrades":{"custom":7},"settings":{"difficulty":"sandbox"}}');
+  assert.equal(data.get(PROFILE), '{"version":1,"upgrades":{"custom":7},"settings":{"quality":1}}');
 });
 
 test('checkpoint removal clears fallback even if native removal fails; availability stays sticky', () => {
@@ -250,11 +251,11 @@ test('checkpoint removal clears fallback even if native removal fails; availabil
 
 test('backup codec has no storage writes and retains exact validation errors', () => {
   const { service } = isolatedPersistence(() => { throw Error('must not access storage'); });
-  const text = backup({ version: 1 }, { version: 2, entities: [] });
+  const text = backup({ version: 1 }, { version: 3, entities: [] });
   const parsed = service.parseBackup(text);
   assert.equal(service.serializeBackup(parsed.profile, parsed.operation), text);
   assert.throws(() => service.parseBackup('{}'), { message: 'Not a Meridian backup.' });
-  assert.throws(() => service.parseBackup(backup({ version: 1 }, { version: 2, entities: {} })),
+  assert.throws(() => service.parseBackup(backup({ version: 1 }, { version: 3, entities: {} })),
     { message: 'Operation data is invalid.' });
   assert.equal(service.available, true);
 });
