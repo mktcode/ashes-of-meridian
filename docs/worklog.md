@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Gemeinsame Hilfezeilen und Bewegungsgeschwindigkeit
+
+- `ui.js`: drei identische Hilfezeilen-Templates in die lokale Funktion `renderHelpLines` innerhalb von `showHelp()` gezogen. `simulation.js`: `move()` und `moveYield()` verwenden dieselbe Methode `movementSpeed(e)`; Faktoren, Berechnungsreihenfolge, Kollisions-/Weglogik und unterschiedliche `walk`-Fortschritte unverändert.
+- **189 Node-Tests bestanden** (rund 12 s), einschließlich neuer Prüfung für Worker-/Fluggeschwindigkeit aller Fraktionen, aktive/abgelaufene Verlangsamung und Mutations-/RNG-Freiheit. Syntax und Diff geprüft; keine Fixtures geändert.
+- Erzeugtes Hilfe-HTML, Modalargumente und Pausenverhalten für Hauptmenü/Gefecht direkt gegen den vorherigen Git-Stand verglichen: identisch. Kein neuer Browsercheck, da weder ausgeliefertes Markup noch Eingabe-/Layout-/Renderverhalten geändert wurden.
+
 ## Benannte Simulationsschrittweite und risikogerechte Testpflicht
 
 - `app.js`: vier identische Schrittweiten durch die lokale Konstante `SIMULATION_STEP_SECONDS = 0.05` ersetzt; Aufrufreihenfolge und Schrittbegrenzung unverändert.

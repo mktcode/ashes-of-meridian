@@ -201,10 +201,13 @@
           }
         }
       }
+      movementSpeed(e) {
+        return UNITS[e.type].speed * (e.faction === 1 ? 1.1 : 1) *
+          (e.slowed > this.s.time ? 0.65 : 1);
+      }
       moveYield(e, dt) {
         const p = e.yieldTo, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz),
-          speed = UNITS[e.type].speed * (e.faction === 1 ? 1.1 : 1) *
-            (e.slowed > this.s.time ? 0.65 : 1),
+          speed = this.movementSpeed(e),
           step = Math.min(d, speed * dt);
         if (d < 1e-9) { delete e.yieldTo; return; }
         const nx = e.x + dx / d * step, nz = e.z + dz / d * step;
@@ -650,10 +653,7 @@
           d = Math.hypot(dx, dz);
         }
         let u = UNITS[e.type],
-          speed =
-            u.speed *
-            (e.faction === 1 ? 1.1 : 1) *
-            (e.slowed > this.s.time ? 0.65 : 1),
+          speed = this.movementSpeed(e),
           step = Math.min(d, speed * dt),
           vx = dx / (d || 1),
           vz = dz / (d || 1);

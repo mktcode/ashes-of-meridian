@@ -348,6 +348,22 @@ for (const [seed,biome,faction,count,forced] of [
   assertUnitSpacing(game);
 });
 
+test('movement speed preserves faction modifiers and strict slow expiry without mutation or RNG', () => {
+  const { game } = freshBattle();
+  game.s.time = 10;
+  game.random = () => { throw Error('Speed calculation must not consume RNG'); };
+  for (const [type, speeds] of [['worker', [4.5, 4.95, 4.5]], ['air', [7, 7.7, 7]]]) {
+    for (const faction of [0, 1, 2]) {
+      for (const slowed of [undefined, 9, 10, 11]) {
+        const entity = Object.freeze({ type, faction, slowed });
+        const before = json(game.s);
+        close(game.movementSpeed(entity), speeds[faction] * (slowed === 11 ? 0.65 : 1));
+        assert.deepEqual(json(game.s), before);
+      }
+    }
+  }
+});
+
 test('loaded workers have priority while yielding moves continuously and preserves the pending order', () => {
   const game=spacingArena(), incoming=game.spawnUnit('worker',2,0,0,0), loaded=game.spawnUnit('worker',0,0,0,0);
   incoming.order={type:'mine',id:999}; loaded.order={type:'mine',id:999}; loaded.carry=18;
