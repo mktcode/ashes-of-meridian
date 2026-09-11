@@ -4,6 +4,10 @@ Ashes of Meridian soll ein reines Mobile Game werden. Diese Bestandsaufnahme hä
 
 Grundlage: statische Prüfung von Eingabelogik, Darstellung, Styles und Hilfetexten. Keine Browser- oder Mobilgeräteprüfung; keine neuen Tests ausgeführt. Die Zeilenangaben beziehen sich auf den untersuchten Stand und können sich bei der Bereinigung verschieben.
 
+## Fortschritt nach der Bestandsaufnahme
+
+Die erste Bereinigung ist umgesetzt: Desktop-Kamerasteuerung, Edge-Scrolling-Einstellung und Kamera-Hotkey-Hinweise sind entfernt. Zusätzlich entfällt das Zentrieren beim doppelten Kontrollgruppenaufruf; die Gruppenauswahl bleibt erhalten. Details und Prüfungen: [Mobile-Kamera-Bereinigung](mobile-camera-cleanup.md). Die folgenden Tabellen bleiben als ursprüngliche Bestandsaufnahme stehen, nicht als aktuelle Liste noch vorhandener Funktionen.
+
 ## 1. Kamera
 
 | Fund | Fundstelle |

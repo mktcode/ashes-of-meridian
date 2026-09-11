@@ -48,7 +48,7 @@ Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-la
 
 Alloy-Vorkommen verwenden fünf getrennte Ellipsenplätze je Standort; der östliche Standort lässt eine Lücke zur Startfabrik. `MeridianGame.crystalPosition()` liefert die Positionen. Keine Migration beim Laden. [Kristallkorrektur](crystal-spacing.md).
 
-Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. WASD/F sind fest, ohne Sonderbehandlung früherer Profileinstellungen.
+Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. Die Kamera verwendet Touch-Ziehen, Pinch-Zoom und UI-Navigation; Desktop-Kamerapfade und die Profilvorgaben `edge`/`cameraSpeed` sind entfernt. Die übrigen Desktop-Befehle bleiben vorerst erhalten. [Kamera-Bereinigung](mobile-camera-cleanup.md).
 
 ## Assets und direkter Dateistart
 

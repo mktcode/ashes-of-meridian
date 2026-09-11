@@ -18,16 +18,18 @@ Ein Worker; das Heaplimit begrenzt den JS-Heap, nicht den gesamten Prozessspeich
 | Simulation | Start, Befehle, Produktion, Ressourcenlieferung, Snapshot-Isolation, aktueller Checkpoint/Restore, ungültige Eingaben |
 | Persistence | Profilnormalisierung, Speichern/Laden, Backup, Fehlerfälle und flüchtiger Storage-Ersatz |
 | Präsentation | Welt-/Effektgrenzen, Terrain-/Effekt-Zeichenreferenzen, Effektablauf und RNG |
-| Steuerung | WASD/F, Modifier, Fokus/Pause, Befehle, Hinweise und Home-Aktionen |
+| Steuerung | Entfernte Desktop-Kamerapfade, Touch-Ziehen/Pinch/Limits, Kameraknöpfe/Minimap, Gestenabbruch, verbleibende Befehle/Modifier/Fokus/Pause, Hinweise und Home-Aktionen |
 | Renderer | Shader-Quellvertrag, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
 
 Keine Migrationstests, alten Operations-Fixtures oder Layout-Kompatibilitätsadapter. Spielstandtests prüfen den aktuellen Stand, nicht ältere Versionen. Feste Terrain-/Effekt-/RNG-Erwartungen werden weiterhin nicht zur Reparatur fehlgeschlagener Tests neu erzeugt.
 
 ## Aktueller Prüfstand
 
-Nach Entfernung der Kompatibilitätsschichten: **121 Node-Tests bestanden**. Entfernt: Kristallmigration samt Ausweichsuche und Sondertests, Alt-WASD-Normalisierung, historische Operationsvergleiche und Effekt-Übergangs-APIs. Neue Kristallverteilung bleibt unverändert.
+Nach der Desktop-Kamera-Bereinigung: **125 Node-Tests bestanden**, vollständiger obiger Befehl. Terrain-/Effekt-/RNG-Referenzen unverändert.
 
-Kurzer aktueller Chromium-152-Check unter `file://`: Start, 100 Simulationsschritte, aktueller Snapshot/Restore und direktes Effektrendering bestanden, keine erfassten Laufzeit-/Ressourcenfehler oder GL-Fehler. Kein erneuter vollständiger Bedienablauf.
+Chromium 152 unter `file://`, Headless mit Touch-Emulation bei 960×600: Start/WebGL 2, entfernte Desktop-Kameraeingaben, Fingerziehen, Pinch, Kameraknöpfe, Minimap und aktualisierte Kamera-Hinweise geprüft. Keine erfassten Laufzeit-/Ressourcen-/Log- oder GL-Fehler. Kein echtes Mobilgerät und kein erneuter vollständiger Spielablauf. [Umfang und Grenzen](mobile-camera-cleanup.md).
+
+Vorheriger, nicht erneut ausgeführter Browsernachweis nach Entfernung der Kompatibilitätsschichten: Start, 100 Simulationsschritte, aktueller Snapshot/Restore und direktes Effektrendering in Chromium 152 unter `file://` bestanden. Die damaligen 121 Node-Tests sind durch den aktuellen Gesamtlauf oben abgelöst.
 
 Browsernachweise für die Darstellung: [Kristalle](crystal-spacing.md), [Modelltexturen](model-textures.md), [MSAA](msaa.md), [Home](home-redesign.md). Diese Berichte sind historische Nachweise ihrer jeweiligen Änderungen, keine automatisch erneut ausgeführte Browser-Testserie.
 
@@ -36,7 +38,7 @@ Browsernachweise für die Darstellung: [Kristalle](crystal-spacing.md), [Modellt
 Eigenes Testprofil ohne wichtige Daten verwenden. `index.html` direkt unter `file://` öffnen, ohne Server oder abgeschwächte Sicherheitsflags.
 
 - Start, Skybox, Menüs, Konsole und WebGL-Ausgabe prüfen.
-- Neue Partie: WASD, Mausauswahl, Rechtsklick, Zoom, Pause, Bau, Rekrutierung, Abbau und Kampf.
+- Neue Partie: Touch-Auswahl/-Befehle, Kamera per Fingerziehen/Pinch, Zoom-/Basisknöpfe, Minimap, Pause, Bau, Rekrutierung, Abbau und Kampf. Entfernte Desktop-Kameraeingaben dürfen die Kamera nicht bewegen; übrige Mausauswahl/Rechtsklick-Befehle bleiben bis zu ihrer separaten Bereinigung prüfbar.
 - Qualität wechseln, Fenstergröße ändern; Einheiten, Effekte und HUD prüfen.
 - Aktuellen Spielstand speichern/laden, Backup exportieren/importieren.
 - Audio tatsächlich anhören; Audio-API-Prüfungen ersetzen keinen Hörtest.

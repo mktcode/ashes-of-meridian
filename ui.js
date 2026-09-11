@@ -22,10 +22,8 @@
         this.hover = null;
         this.pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
         this.drag = null;
-        this.keys = new Set();
         this.pings = [];
         this.lastClick = {};
-        this.lastGroup = {};
         this.radioUntil = 0;
         this.toastUntil = 0;
         this.actionSignature = '';
@@ -292,7 +290,6 @@
           `<div class="modal-shade"><div class="modal-card ${wide ? 'wide' : ''}">${html}</div></div>`;
         $('modal').classList.remove('hidden');
         $('tooltip').classList.add('hidden');
-        this.keys.clear();
       }
       closeModal() {
         let kind = this.modalKind;
@@ -307,7 +304,6 @@
         if (this.view !== 'game' || !this.game.s || this.game.s.result) return;
         this.paused = true;
         this.clearMode();
-        this.keys.clear();
         this.showPause();
       }
       showPause() {
@@ -323,7 +319,6 @@
         this.paused = false;
         this.modalKind = '';
         $('modal').classList.add('hidden');
-        this.keys.clear();
         this.audio.unlock();
       }
       save(announce = true) {
@@ -362,7 +357,7 @@
         let st = this.profile.settings;
         this.openModal(
           'settings',
-          `<div class="eyebrow">EXPEDITION PREFERENCES</div><h1>Systems & sound.</h1><div class="settings-row"><label>Render quality<small>Reduce quality for older graphics hardware.</small></label><select data-setting="quality"><option value="2" ${st.quality === 2 ? 'selected' : ''}>High · shadows & glow</option><option value="1" ${st.quality === 1 ? 'selected' : ''}>Balanced · native resolution</option><option value="0" ${st.quality === 0 ? 'selected' : ''}>Performance · no shadows</option></select></div><div class="settings-row"><label>Master volume</label><input type="range" min="0" max="1" step=".01" value="${st.volume}" data-setting="volume"></div><div class="settings-row"><label>Atmospheric soundtrack</label><input type="checkbox" data-setting="music" ${st.music ? 'checked' : ''}></div><div class="settings-row"><label>Battlefield audio</label><input type="checkbox" data-setting="sfx" ${st.sfx ? 'checked' : ''}></div><div class="settings-row"><label>Edge scrolling<small>Pan at the edge of the battlefield.</small></label><input type="checkbox" data-setting="edge" ${st.edge ? 'checked' : ''}></div><div class="settings-row"><label>Always show health bars</label><input type="checkbox" data-setting="healthbars" ${st.healthbars ? 'checked' : ''}></div><div class="settings-row"><label>Field guidance<small>Contextual guidance during the first operation.</small></label><input type="checkbox" data-setting="tips" ${st.tips ? 'checked' : ''}></div>${
+          `<div class="eyebrow">EXPEDITION PREFERENCES</div><h1>Systems & sound.</h1><div class="settings-row"><label>Render quality<small>Reduce quality for older graphics hardware.</small></label><select data-setting="quality"><option value="2" ${st.quality === 2 ? 'selected' : ''}>High · shadows & glow</option><option value="1" ${st.quality === 1 ? 'selected' : ''}>Balanced · native resolution</option><option value="0" ${st.quality === 0 ? 'selected' : ''}>Performance · no shadows</option></select></div><div class="settings-row"><label>Master volume</label><input type="range" min="0" max="1" step=".01" value="${st.volume}" data-setting="volume"></div><div class="settings-row"><label>Atmospheric soundtrack</label><input type="checkbox" data-setting="music" ${st.music ? 'checked' : ''}></div><div class="settings-row"><label>Battlefield audio</label><input type="checkbox" data-setting="sfx" ${st.sfx ? 'checked' : ''}></div><div class="settings-row"><label>Always show health bars</label><input type="checkbox" data-setting="healthbars" ${st.healthbars ? 'checked' : ''}></div><div class="settings-row"><label>Field guidance<small>Contextual guidance during the first operation.</small></label><input type="checkbox" data-setting="tips" ${st.tips ? 'checked' : ''}></div>${
             this.game.s
               ? `<div class="settings-row"><label>Simulation speed</label><select id="settingSpeed">${[
                   [0.75, '0.75× · deliberate'],
@@ -448,10 +443,9 @@
           ]
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><kbd>${b}</kbd></div>`)
             .join('')}<h3>Navigate</h3>${[
-            ['Pan camera', 'WASD'],
-            ['Pan with mouse', 'Middle-button drag'],
-            ['Zoom', 'Mouse wheel'],
-            ['Center on base / selection', 'Space / Home'],
+            ['Pan camera', 'Drag with one finger'],
+            ['Zoom', 'Pinch / ＋ and − buttons'],
+            ['Center on base', '⌂ / Command view button'],
             ['Navigate / issue order on minimap', 'Left / right click']
           ]
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><kbd>${b}</kbd></div>`)
@@ -505,7 +499,6 @@
       showResult(result) {
         this.paused = true;
         this.clearMode();
-        this.keys.clear();
         let s = this.game.s;
         if (result.win && s.index >= 0 && !s.practice) {
           let old = Number(this.profile.medals[s.index]) || 0;
@@ -549,14 +542,6 @@
       homeCamera() {
         let e = this.game.alive(e => e.team === 0 && e.type === 'hq')[0];
         if (e) this.center(e.x + 4, e.z - 2);
-      }
-      centerSelection() {
-        let es = this.selected.map(id => this.game.get(id)).filter(Boolean);
-        if (es.length)
-          this.center(
-            es.reduce((s, e) => s + e.x, 0) / es.length,
-            es.reduce((s, e) => s + e.z, 0) / es.length
-          );
       }
       select(ids, add = false) {
         this.selected = [...new Set(add ? [...this.selected, ...ids] : ids)].filter(id =>
@@ -719,7 +704,7 @@
             ['ability:scan', 'Recon scan', 'scan', 'C'],
             ['ability:drop', 'Reinforcements', 'drop', 'V'],
             ['rally', 'Rally point', 'rally', 'Y'],
-            ['home', 'Command view', 'hq', 'SPACE']
+            ['home', 'Command view', 'hq', '']
           ])
             html += this.actionButton(k, l, ic, { hot });
         } else if (this.tab === 'build') {
@@ -1058,7 +1043,7 @@
       }
       setControlHints() {
         $('controlstrip').innerHTML =
-          `<span><kbd>LMB</kbd> SELECT / DRAG BOX</span><span><kbd>RMB</kbd> SMART ORDER</span><span><kbd>F</kbd> ATTACK-MOVE</span><span><kbd>WASD</kbd> PAN · <kbd>WHEEL</kbd> ZOOM</span><span><kbd>F2</kbd> COMBAT · <kbd>SPACE</kbd> BASE</span><span><kbd>CTRL 1–9</kbd> GROUP</span>`;
+          `<span><kbd>LMB</kbd> SELECT / DRAG BOX</span><span><kbd>RMB</kbd> SMART ORDER</span><span><kbd>F</kbd> ATTACK-MOVE</span><span>DRAG TO PAN · PINCH TO ZOOM</span><span><kbd>F2</kbd> COMBAT</span><span><kbd>CTRL 1–9</kbd> GROUP</span>`;
       }
       bind() {
         document.addEventListener('pointerdown', e => {
@@ -1164,13 +1149,10 @@
           } else $('tooltip').classList.add('hidden');
         });
         document.addEventListener('keydown', e => this.keyDown(e));
-        document.addEventListener('keyup', e => this.keys.delete(e.key.toLowerCase()));
         window.addEventListener('blur', () => {
-          this.keys.clear();
           this.drag = null;
         });
         document.addEventListener('visibilitychange', () => {
-          this.keys.clear();
           if (document.hidden && this.view === 'game' && !this.game.s?.result) {
             this.save(false);
             this.pause();
@@ -1190,15 +1172,6 @@
           this.pointer.inside = false;
           if (!this.drag) this.hover = null;
         });
-        c.addEventListener(
-          'wheel',
-          e => {
-            if (this.view !== 'game' || this.paused) return;
-            e.preventDefault();
-            this.game.s.cam.zoom = clamp(this.game.s.cam.zoom * Math.exp(e.deltaY * 0.0012), 32, 115);
-          },
-          { passive: false }
-        );
         c.style.touchAction = 'none';
         let map = $('minimap');
         map.addEventListener('contextmenu', e => e.preventDefault());
@@ -1382,8 +1355,6 @@
             'f3',
             'f5',
             'f9',
-            ' ',
-            'home',
             'tab'
           ].includes(k) ||
           (e.ctrlKey && ['s', 'a'].includes(k))
@@ -1402,8 +1373,6 @@
           return;
         }
         if (this.paused) return;
-        if (!e.ctrlKey && !e.altKey && !e.metaKey && ['w', 'a', 's', 'd'].includes(k))
-          this.keys.add(k);
         if (e.repeat) return;
         if (e.ctrlKey && /^[1-9]$/.test(k)) {
           e.preventDefault();
@@ -1413,12 +1382,7 @@
         }
         if (/^[1-9]$/.test(k)) {
           let ids = this.game.s.groups[k];
-          if (ids?.length) {
-            this.select(ids, e.shiftKey);
-            if (this.lastGroup.key === k && performance.now() - this.lastGroup.time < 450)
-              this.centerSelection();
-            this.lastGroup = { key: k, time: performance.now() };
-          }
+          if (ids?.length) this.select(ids, e.shiftKey);
           return;
         }
         if (e.ctrlKey && k === 'a') {
@@ -1426,7 +1390,6 @@
           return;
         }
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        if (['w', 'a', 's', 'd'].includes(k)) return;
         if (k === 'f') this.setMode('attackMove');
         else if (k === 'm') this.setMode('move');
         else if (k === 'h' || k === 'x') this.perform(k === 'h' ? 'hold' : 'stop');
@@ -1441,8 +1404,6 @@
         else if (k === 'y') this.setMode('rally');
         else if (k === 'f2') this.selectArmy();
         else if (k === 'f3') this.selectWorker();
-        else if (k === ' ') this.homeCamera();
-        else if (k === 'home') this.centerSelection();
         else if (k === 'tab') {
           let tabs = ['orders', 'build', 'army', 'tech'];
           this.setTab(tabs[(tabs.indexOf(this.tab) + 1) % 4]);
@@ -1474,6 +1435,7 @@
       pointerDown(e) {
         if (this.view !== 'game' || this.paused) return;
         e.preventDefault();
+        if (e.button === 1) return;
         this.pointer = { x: e.clientX, y: e.clientY, inside: true };
         if (e.pointerType === 'touch') {
           this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1518,7 +1480,7 @@
         if (this.drag) {
           let drag = this.drag;
           if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
-          if ((drag.button === 1 || drag.type === 'touch') && drag.moved) {
+          if (drag.type === 'touch' && drag.moved) {
             let a = this.R.ground(drag.x, drag.y),
               b = this.R.ground(e.clientX, e.clientY);
             this.center(this.game.s.cam.x + a.x - b.x, this.game.s.cam.z + a.z - b.z);
@@ -1553,7 +1515,7 @@
           target = this.pick(e.clientX, e.clientY);
         p.x = clamp(p.x, -86, 86);
         p.z = clamp(p.z, -86, 86);
-        if (d.button === 1 || (d.type === 'touch' && d.moved)) return;
+        if (d.type === 'touch' && d.moved) return;
         if (d.button === 2) {
           this.game.command(
             this.selected,
@@ -1665,21 +1627,6 @@
         if (this.view !== 'game' || !this.game.s) return;
         let s = this.game.s;
         if (!this.paused) {
-          let dx = 0,
-            dz = 0,
-            keys = this.keys;
-          if (keys.has('a')) dx--;
-          if (keys.has('d')) dx++;
-          if (keys.has('w')) dz--;
-          if (keys.has('s')) dz++;
-          if (this.profile.settings.edge && this.pointer.inside && !this.drag) {
-            if (this.pointer.x < 13) dx--;
-            if (this.pointer.x > innerWidth - 13) dx++;
-            if (this.pointer.y > 63 && this.pointer.y < 77) dz--;
-            if (this.pointer.y > innerHeight - 250 && this.pointer.y < innerHeight - 237) dz++;
-          }
-          let sp = s.cam.zoom * 0.8 * dt;
-          this.center(s.cam.x + dx * sp, s.cam.z + dz * sp);
           if (s.time - this.lastSaveTime >= 45) this.save(false);
         }
         this.hudClock += dt;

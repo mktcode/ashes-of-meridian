@@ -8,8 +8,8 @@ const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
   version: 1, unlocked: 0, credits: 0, medals: {}, best: {}, upgrades: {},
   skirmishBest: 0, ending: null,
-  settings: { volume: 0.28, music: true, sfx: true, quality: 2, edge: false,
-    tips: true, healthbars: false, difficulty: 'standard', cameraSpeed: 1 }
+  settings: { volume: 0.28, music: true, sfx: true, quality: 2,
+    tips: true, healthbars: false, difficulty: 'standard' }
 };
 const backup = (profile = { version: 1 }, operation = null) =>
   JSON.stringify({ format: 'ashes-of-meridian', version: 1, profile, operation });

@@ -1,4 +1,6 @@
-# Tastatursteuerung
+# Tastatursteuerung (historisch)
+
+Dieser Bericht beschreibt die frühere WASD-Umstellung. Die Desktop-Kamerasteuerung ist inzwischen entfernt; aktueller Stand und neue Prüfungen: [Mobile-Kamera](mobile-camera-cleanup.md). Die folgenden Angaben sind kein aktueller Bedienungs- oder Testnachweis.
 
 WASD bewegt die Kamera, F aktiviert Attack-Move. Pfeiltasten bewegen die Kamera nicht. Kein Umschalter und keine Sonderbehandlung alter Profile.
 

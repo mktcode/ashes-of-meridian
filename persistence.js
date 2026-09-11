@@ -49,11 +49,9 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
           music: true,
           sfx: true,
           quality: 2,
-          edge: false,
           tips: true,
           healthbars: false,
-          difficulty: 'standard',
-          cameraSpeed: 1
+          difficulty: 'standard'
         }
       };
     }

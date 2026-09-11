@@ -14,7 +14,7 @@ python3 -m http.server 8080 --bind 127.0.0.1
 
 Dann [http://127.0.0.1:8080/](http://127.0.0.1:8080/) öffnen. Der Server ist ein optionales Hilfsmittel, keine vorgesehene Spielvoraussetzung.
 
-Tastaturkamera: **WASD**, Attack-Move: **F**. Pfeiltasten bewegen die Kamera nicht; eine Umschaltoption gibt es nicht mehr. Maussteuerung und die übrigen Befehle bleiben erhalten. Die gesamte Steuerung erklärt das **Field Manual** im Spiel (`F1`).
+Kamera: **mit einem Finger ziehen**, **Pinch-to-Zoom** oder die Zoomschaltflächen verwenden. **⌂ / Command view** führt zur Basis zurück; die Minimap lässt sich antippen und ziehen. Desktop-Kamerasteuerung per WASD, Leertaste/Home, Mausrad, mittlerem Maustasten-Ziehen im Spielfeld und Edge Scrolling ist entfernt. Die übrige Maus-/Tastaturbedienung bleibt vorerst erhalten, einschließlich Attack-Move mit **F** und **Field Manual** mit **F1**. [Kamera-Bereinigung und Prüfungen](docs/mobile-camera-cleanup.md).
 
 Unter **Settings → Render quality** verwenden **High** und **Balanced** bis zu **4× MSAA** für glattere Modellkanten, sofern die Grafikhardware es unterstützt. **Performance** verzichtet darauf. Es ist kein zusätzlicher Antialiasing-Schalter nötig.
 
