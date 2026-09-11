@@ -703,15 +703,18 @@
         let map = $('minimap');
         map.style.touchAction = 'none';
         map.addEventListener('contextmenu', e => e.preventDefault());
+        const minimapPosition = e => {
+          let r = map.getBoundingClientRect();
+          return {
+            x: ((e.clientX - r.left) / r.width) * 180 - 90,
+            z: ((e.clientY - r.top) / r.height) * 180 - 90
+          };
+        };
         let miniDrag = false;
         map.addEventListener('pointerdown', e => {
           if (this.paused || this.view !== 'game') return;
           e.preventDefault();
-          let r = map.getBoundingClientRect(),
-            p = {
-              x: ((e.clientX - r.left) / r.width) * 180 - 90,
-              z: ((e.clientY - r.top) / r.height) * 180 - 90
-            };
+          let p = minimapPosition(e);
           if (e.button === 2) {
             if (this.selectedBuilding()) this.select([]);
             else this.game.command(
@@ -733,11 +736,8 @@
         });
         map.addEventListener('pointermove', e => {
           if (!miniDrag) return;
-          let r = map.getBoundingClientRect();
-          this.center(
-            ((e.clientX - r.left) / r.width) * 180 - 90,
-            ((e.clientY - r.top) / r.height) * 180 - 90
-          );
+          let p = minimapPosition(e);
+          this.center(p.x, p.z);
         });
         map.addEventListener('pointerup', () => (miniDrag = false));
         map.addEventListener('pointercancel', () => (miniDrag = false));

@@ -344,6 +344,21 @@ test('camera buttons and minimap tap/drag still navigate with existing limits', 
   assert.deepEqual(h.calls, []);
 });
 
+test('minimap uses current offset and dimensions for pressing, dragging and right-click orders', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.minimap.getBoundingClientRect = () => ({ left: 30, top: 50, width: 360, height: 180 });
+  h.pointer('pointerdown', 210, 95, { target: h.minimap });
+  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: -45, zoom: 50 });
+  h.minimap.getBoundingClientRect = () => ({ left: 40, top: 70, width: 180, height: 360 });
+  h.pointer('pointermove', 175, 340, { target: h.minimap });
+  assert.deepEqual(h.ui.game.s.cam, { x: 45, z: 45, zoom: 50 });
+  h.pointer('pointercancel', 175, 340, { target: h.minimap });
+  h.pointer('pointermove', 40, 70, { target: h.minimap });
+  assert.deepEqual(h.ui.game.s.cam, { x: 45, z: 45, zoom: 50 });
+  h.pointer('pointerdown', 85, 160, { target: h.minimap, button: 2 });
+  assert.deepEqual(JSON.parse(JSON.stringify(h.calls)), [['command', [], { type: 'move', x: -45, z: -45 }]]);
+});
+
 test('removed commands do nothing; abilities and categories remain, with pause guards', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.perform = h.UI.prototype.perform;
   for (const action of ['attackMove','move','hold','stop','ability:orbital','ability:repair','ability:scan','ability:drop','rally','army','worker','home'])
