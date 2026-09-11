@@ -264,7 +264,7 @@ test('UI constructor and checkpoint commands accept a fake service without stora
   const context = loadScripts(['ui'], { globals: { innerWidth: 800, innerHeight: 600 } });
   const UI = vm.runInContext('MeridianUI', context), calls = [], state = { time: 4 };
   class TestUI extends UI {
-    bind() {} setControlHints() {} toast() {} radio() {} updateHUD() {}
+    bind() {} toast() {} radio() {} updateHUD() {}
   }
   const service = {
     saveProfile: p => calls.push(['profile', p]),

@@ -1340,7 +1340,7 @@
       position: absolute;
       left: 14px;
       right: 14px;
-      bottom: 29px;
+      bottom: 4px;
       height: 207px;
       display: grid;
       grid-template-columns: 226px 285px 1fr;
@@ -1673,22 +1673,6 @@
       background: var(--gold)
     }
 
-    #controlstrip {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 25px;
-      display: flex;
-      gap: 23px;
-      justify-content: center;
-      align-items: center;
-      background: #08111be8;
-      font: 8px var(--mono);
-      letter-spacing: .2px;
-      color: #667e90
-    }
-
     #toast {
       position: fixed;
       bottom: 260px;
@@ -1838,11 +1822,6 @@
         left: 55%
       }
 
-      #controlstrip {
-        gap: 12px;
-        font-size: 7px
-      }
-
       .power {
         display: none
       }
@@ -1856,7 +1835,7 @@
       #commandDeck {
         grid-template-columns: 167px 1fr;
         height: 190px;
-        bottom: 23px
+        bottom: 3px
       }
 
       #selectionPanel {
@@ -1883,16 +1862,6 @@
 
       .action-grid {
         grid-template-columns: repeat(6, 1fr)
-      }
-
-      #controlstrip {
-        gap: 15px;
-        font-size: 6px;
-        height: 20px
-      }
-
-      #controlstrip span:nth-child(n+4) {
-        display: none
       }
 
       #topbar {

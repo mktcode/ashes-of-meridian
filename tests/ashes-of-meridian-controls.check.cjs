@@ -23,7 +23,7 @@ function setup() {
       return elements.get(id);
     }
   };
-  const window = target(), footer = document.getElementById('controlstrip');
+  const window = target();
   let now = 0;
   const context = loadScripts(['core', 'content', 'world', 'ui'], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
@@ -31,7 +31,7 @@ function setup() {
   } });
   const UI = vm.runInContext('MeridianUI', context), calls = [];
   class TestUI extends UI {
-    bind() {} setControlHints() {} updateHUD() {} drawMinimap() {}
+    bind() {} updateHUD() {} drawMinimap() {}
     setMode(...args) { calls.push(['mode', ...args]); }
     perform(...args) { calls.push(['perform', ...args]); }
     setTab(...args) { calls.push(['tab', ...args]); }
@@ -67,7 +67,7 @@ function setup() {
   };
   const click = dataset => document.handlers.click({ target: { closest: () => ({ dataset }) } });
   const clickCamera = cam => click({ cam });
-  return { ui, calls, key, document, window, footer, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
+  return { ui, calls, key, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
 
 test('camera keys and pointer edges no longer move the camera', () => {
@@ -632,14 +632,12 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.match(h.ui.html, /Drag with one finger/); assert.match(h.ui.html, /Pinch/);
   assert.doesNotMatch(h.ui.html, /WASD|Middle-button|Mouse wheel|Space \/ Home|box-select|Shift|control group/i);
   assert.match(h.ui.html, /Double-tap unit/);
-  h.UI.prototype.setControlHints.call(h.ui);
-  assert.doesNotMatch(h.footer.innerHTML, /<kbd>|F[12359]/);
-  assert.match(h.footer.innerHTML, /DRAG TO PAN · PINCH TO ZOOM/);
-  assert.doesNotMatch(h.footer.innerHTML, /WASD|WHEEL|SPACE|DRAG BOX|CTRL|LMB/);
-  assert.match(h.footer.innerHTML, /TAP TO SELECT/);
+  assert.equal(h.UI.prototype.setControlHints, undefined);
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB|<kbd>|F[12359]|\bEsc\b/);
   assert.match(html, /data-ui="cancelTarget"/);
+  assert.doesNotMatch(html, /controlstrip/);
+  assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8'), /controlstrip/);
   h.ui.updateSelection();
   assert.doesNotMatch(h.document.getElementById('selectionContent').innerHTML, /Box-select|Right-click/);
   h.ui.game.s.faction = 0;

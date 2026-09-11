@@ -33,7 +33,6 @@
         this.lastSaveTime = 0;
         this.touchPoints = new Map();
         this.bind();
-        this.setControlHints();
       }
       persist() {
         this.persistence.saveProfile(this.profile);
@@ -815,10 +814,6 @@
           }
           b.classList.toggle('disabled', disabled);
         }
-      }
-      setControlHints() {
-        $('controlstrip').innerHTML =
-          `<span>TAP TO SELECT · DOUBLE-TAP TYPE · TRIPLE-TAP COMBAT</span><span>RMB SMART ORDER</span><span>DRAG TO PAN · PINCH TO ZOOM</span>`;
       }
       bind() {
         document.addEventListener('pointerdown', e => {
