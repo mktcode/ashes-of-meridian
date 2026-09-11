@@ -1337,14 +1337,12 @@
       grid-template-columns: 226px 285px 1fr;
       gap: 0;
       background: linear-gradient(135deg, #101b28f5, #091321f8);
-      border: 1px solid #698ba53d;
       box-shadow: 0 -8px 50px #0003;
       pointer-events: auto
     }
 
     #commandDeck section {
       padding: 13px 15px;
-      border-right: 1px solid var(--line);
       min-width: 0
     }
 

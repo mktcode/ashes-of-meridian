@@ -25,6 +25,8 @@ Keine Migrationstests, alten Operations-Fixtures oder Layout-Kompatibilitätsada
 
 ## Aktueller Prüfstand
 
+Nachtrag: Auch der äußere 1px-Deckrahmen und die Spaltentrennlinien sind entfernt. 170 Node-Tests und die nachfolgend beschriebene Fünf-Größen-`file://`-Touch-Probe erneut bestanden; Portrait-Screenshot betrachtet, keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. Logs: `/tmp/meridian-deck-borderless-tests.log`, `/tmp/meridian-deck-borderless-browser.log`. Weiterhin kein Echtgerät-Nachweis.
+
 Nach randbündigem Deck und flächenfüllender Minimap: **170 Node-Tests bestanden**, vollständiger obiger Befehl. Keine Fixtures neu erzeugt; alle Terrain-/Welt-/Effekt-Zeichenreferenzen und fünf weiterhin passenden Effekt-/RNG-Fälle unverändert. Der frühere kombinierte Waffenfall mit Avatar entfällt; normale Waffen werden separat geprüft. [Referenzabgrenzung](reference-tests.md).
 
 Aktuelle Layoutänderung nur in `styles.css`: Deck links/rechts/unten ohne Außenabstand; Minimap ohne Padding oder eigenen Innenrahmen, mit 100 % Breite/Höhe ihrer Spalte. Alte feste Canvas-Maße und Abstandsausnahmen an den Breakpoints entfernt. Deckhöhen, Spaltenaufteilung, Auswahl-Sichtbarkeit, Aktionen und Produktion bleiben unverändert. Der dunkle Hintergrund liegt auf der Minimap-Spalte statt dem Canvas; eine im ersten Chromium-Portraitcheck beobachtete zusätzliche Fehlfläche oben links trat damit im abschließenden Check nicht mehr auf.
