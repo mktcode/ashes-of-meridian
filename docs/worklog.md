@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Typisierte kosmetische Effekte
+
+- `src/effects.ts` typisiert den aktuellen RNG-Provider, alle sechs Effektpayload-Varianten, Schadenszahlen und die Simulationseingaben für Schüsse, Bau, Abbau, Heilung und Drops. Der diskriminierte Payload-Vertrag verengt Partikel-, Rauch-, Beam- und Shell-Felder im Tick; `effects-view.js` bleibt als renderernahe Darstellung bewusst noch untypisiert.
+- Strenger Build ohne TypeScript-Diagnosen und **207 Node-Tests bestanden** (rund 16 s), keine Fixtures geändert. Temporäre Negativproben wiesen einen unvollständigen Partikelpayload sowie falsche Weltkoordinaten und Renderdatentupel zurück. Namen, Reihenfolge und Texte aller 11 `MeridianEffects`-Prototyp-Properties stimmen mit dem vorherigen Stand überein; Effektpayload-, Lebensdauer-, Sichtbarkeits- und RNG-Referenzen blieben grün.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Build-Ausgabe, Gefechtsstarts, Touch-Menüs, Startworker, Rekrutierung, Reload/Neustart und kontrollierter Abbau bestanden; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät- oder anderer Browser-/GPU-Test.
+
 ## Typisierte CPU-Welt
 
 - `src/world.ts` typisiert Raster, Heap, Navigation, Sichtfelder, Geländeplätze und die von `BattlefieldView` konsumierten Renderdaten. Weltmethoden nehmen die bereits typisierten Entitäten und Scans entgegen; drei lokale Assertions in der Simulation dokumentieren bestehende Auftragsverengungen über Callback-Grenzen. Terrain-Erzeugung, Hindernisradien, Pfadschritte und RNG-Reihenfolge wurden nicht geändert.

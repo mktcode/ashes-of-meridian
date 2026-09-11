@@ -2,7 +2,11 @@
 'use strict';
 
 class MeridianEffects {
-      constructor(random) {
+      declare random: () => number;
+      declare fx: BattlefieldEffect[];
+      declare floats: FloatingText[];
+
+      constructor(random: () => number) {
         // The provider must resolve the current simulation RNG after each start.
         this.random = random;
         this.reset();
@@ -11,7 +15,7 @@ class MeridianEffects {
         this.fx = [];
         this.floats = [];
       }
-      explosion(x, z, size = 1, color = 0xefb17c) {
+      explosion(x: number, z: number, size = 1, color = 0xefb17c) {
         this.fx.push({ type: 'blast', x, z, size, life: 0.45, maxLife: 0.45, color });
         let n = Math.min(22, Math.round(8 + size * 3));
         for (let i = 0; i < n; i++) {
@@ -45,7 +49,7 @@ class MeridianEffects {
           });
         if (this.fx.length > 500) this.fx.splice(0, this.fx.length - 500);
       }
-      damageNumber(e, amount) {
+      damageNumber(e: Pick<EntityBase, 'x' | 'z' | 'team'>, amount: number) {
         if (this.floats.length < 35)
           this.floats.push({
             x: e.x,
@@ -57,7 +61,7 @@ class MeridianEffects {
             maxLife: 0.8
           });
       }
-      shell(e, target, travel) {
+      shell(e: UnitEntity | BuildingEntity, target: Entity, travel: number) {
         const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45;
         this.fx.push({
             type: 'shell',
@@ -72,7 +76,7 @@ class MeridianEffects {
             color: e.faction === 1 ? 0xb8eba3 : 0xffce8f
           });
       }
-      shot(e, target) {
+      shot(e: UnitEntity | BuildingEntity, target: Entity) {
         const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45,
           th = target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1;
         this.fx.push({
@@ -96,7 +100,7 @@ class MeridianEffects {
               width: e.type === 'tank' ? 0.075 : 0.035
             });
       }
-      construction(e, b, dt) {
+      construction(e: UnitEntity, b: BuildingEntity, dt: number) {
         if (this.random() < dt * 4)
           this.fx.push({
               type: 'beam',
@@ -112,7 +116,7 @@ class MeridianEffects {
               width: 0.035
             });
       }
-      mining(e, n, dt, visible) {
+      mining(e: UnitEntity, n: ResourceEntity, dt: number, visible: () => boolean) {
         // Preserve short-circuit order: RNG first, visibility only on success.
         if (this.random() < dt * 3 && visible())
           this.fx.push({
@@ -129,7 +133,7 @@ class MeridianEffects {
             width: 0.025
           });
       }
-      healing(e, t) {
+      healing(e: UnitEntity, t: Entity) {
         this.fx.push({
               type: 'beam',
               x: e.x,
@@ -144,7 +148,7 @@ class MeridianEffects {
               width: 0.028
             });
       }
-      drop(loc, color) {
+      drop(loc: Position, color: number) {
         this.fx.push({
               type: 'drop',
               x: loc.x,
@@ -154,7 +158,7 @@ class MeridianEffects {
               color
             });
       }
-      tick(dt) {
+      tick(dt: number) {
         for (let f of this.fx) {
           f.life -= dt;
           if (f.type === 'particle') {

@@ -21,7 +21,7 @@ Die Quellreihenfolge entspricht den `data-meridian-script`-Tags in `index.html`;
 | `src/content.ts` | Typisierte Kataloge `FACTIONS`, `UNITS`, `BUILDINGS`, `ABILITIES`, `META`, `BIOMES`, Icons und Namenshelfer |
 | `src/world.ts` | Typisiertes CPU-Terrain, Hindernisraster, Navigation, Sichtbarkeit und Renderdaten: `Battlefield` |
 | `src/world-view.js` | GPU-Terrain/Fog und Entitätsmodelle: `BattlefieldView`, `renderEntity` |
-| `src/effects.js` | Synchrone Effekterzeugung, Lebensdauer und Schadenszahlen: `MeridianEffects` |
+| `src/effects.ts` | Typisierte synchrone Effekterzeugung, Lebensdauer und Schadenszahlen: `MeridianEffects` |
 | `src/effects-view.js` | Reine Effektzeichnung: `renderBattlefieldEffects`, `drawEffectRing` |
 | `src/simulation/game.ts` | `MeridianGame`, Gefechtsstart, typisierte Entitätserzeugung und Zustandsabfragen |
 | `src/simulation/movement.ts` | Körperplätze, Befehle, Ausweichen, Pfade und Bewegung |
@@ -69,5 +69,5 @@ Die Stylesheets folgen ebenfalls fester Dokumentreihenfolge: `styles/base.css` e
 
 - Terrain-RNG wird auch für kosmetische Platzierungen verwendet; Effekte verbrauchen teilweise den Simulations-RNG. Reihenfolge, Kollisionsradien und [feste Referenzen](reference-tests.md) schützen, nicht beiläufig korrigieren.
 - UI-Klasse und Einstiegspunkt haben trotz fachlich getrennter Quelldateien weiterhin breite Aufgaben; UI-, Welt-, Renderer- und Ereignisgrenzen sind noch nicht vollständig typisiert, und Skriptreihenfolge bleibt Teil des Vertrags. Die laufende TypeScript-Migration führt Typen und Build schrittweise ein, aber keine zusätzliche Entkopplung oder neue Spielfunktion.
-- Inhaltsdaten, Persistenz, CPU-Welt und die fünf Simulationsfragmente werden streng geprüft. Die gemeinsamen Verträge modellieren Entitätsarten, Befehle, Queues, den nullable Run-Zustand sowie Welt- und Renderdaten; wenige externe Callback-/Darstellungsgrenzen bleiben bewusst breit. Noch nicht migrierte `.js`-Quellen werden vom Compiler nur ausgegeben und nicht mit `checkJs` geprüft. Die Umstellung darf RNG-, Laufzeit- und Deskriptorverträge nicht verändern.
+- Inhaltsdaten, Persistenz, CPU-Welt, kosmetische Effekterzeugung und die fünf Simulationsfragmente werden streng geprüft. Die gemeinsamen Verträge modellieren Entitätsarten, Befehle, Queues, den nullable Run-Zustand sowie Welt-, Render- und Effektpayloads; wenige externe Callback-/Darstellungsgrenzen bleiben bewusst breit. Noch nicht migrierte `.js`-Quellen werden vom Compiler nur ausgegeben und nicht mit `checkJs` geprüft. Die Umstellung darf RNG-, Laufzeit- und Deskriptorverträge nicht verändern.
 - Aktuelle Spielregeln und zurückgestellte Entscheidungen: [Spiel und Bedienung](gameplay.md). Renderer-/Asset-Verträge: [Grafik](rendering.md). Prüfverfahren: [Tests](testing.md).

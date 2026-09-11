@@ -290,6 +290,49 @@ interface WorldRock extends Position {
   r: number;
 }
 
+type BattlefieldEffect =
+  | (EffectBase & { type: 'blast'; size: number })
+  | (EffectBase & {
+      type: 'particle';
+      y: number;
+      vx: number;
+      vz: number;
+      vy: number;
+      size: number;
+    })
+  | (EffectBase & { type: 'smoke'; y: number; vy: number; size: number })
+  | (EffectBase & {
+      type: 'shell';
+      y: number;
+      tx: number;
+      tz: number;
+      startY: number;
+    })
+  | (EffectBase & {
+      type: 'beam';
+      y: number;
+      tx: number;
+      ty: number;
+      tz: number;
+      width: number;
+    })
+  | (EffectBase & { type: 'drop' });
+
+interface EffectBase extends Position {
+  type: 'blast' | 'particle' | 'smoke' | 'shell' | 'beam' | 'drop';
+  life: number;
+  maxLife: number;
+  color: number;
+}
+
+interface FloatingText extends Position {
+  y: number;
+  text: string;
+  color: string;
+  life: number;
+  maxLife: number;
+}
+
 interface ObjectiveRow {
   text: string;
   current: number;
