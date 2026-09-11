@@ -771,6 +771,30 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
   h.ui.paused = true; h.UI.prototype.updateHUD.call(h.ui); assert.ok(buttons.every(b=>b.disabled));
 });
 
+test('HUD reads supply and capacity once per update and refreshes counts, warnings and recruitment', () => {
+  const h = buildingPanel(), g = h.ui.game;
+  Object.assign(g.s, { alloy: 1000, gas: 1000, energy: 100, abilities: {}, nextWave: 95 });
+  Object.assign(g, { afford: () => true, objectiveRows: () => [] });
+  g.s.entities.push({ id: 8, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] });
+  const buttons = ['train:worker', 'train:rifle'].map(action =>
+    Object.assign(h.document.getElementById(action), { dataset: { action } }));
+  h.document.querySelectorAll = () => buttons;
+  for (const [supply, capacity, blocked] of [
+    [22, 24, [false, false]], [23, 24, [false, true]],
+    [24, 24, [true, true]], [24, 40, [false, false]]
+  ]) {
+    let supplyReads = 0, capacityReads = 0;
+    g.supply = () => { supplyReads++; return supply; };
+    g.cap = () => { capacityReads++; return capacity; };
+    h.UI.prototype.updateHUD.call(h.ui);
+    const count = h.document.getElementById('supplyCount');
+    assert.equal(count.textContent, supply + ' / ' + capacity);
+    assert.equal(count.style.color, supply >= capacity ? 'var(--red)' : '');
+    assert.deepEqual(buttons.map(button => button.disabled), blocked);
+    assert.deepEqual([supplyReads, capacityReads], [1, 1]);
+  }
+});
+
 test('HUD ability badges and disabled states retain energy and cooldown boundaries', () => {
   const h = setup(), g = h.ui.game;
   Object.assign(g.s, { alloy: 0, gas: 0, time: 10, abilities: {}, nextWave: 95 });

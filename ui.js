@@ -552,8 +552,9 @@
         if (!s) return;
         $('alloyCount').textContent = Math.floor(s.alloy).toLocaleString();
         $('gasCount').textContent = Math.floor(s.gas).toLocaleString();
-        $('supplyCount').textContent = this.game.supply() + ' / ' + this.game.cap();
-        $('supplyCount').style.color = this.game.supply() >= this.game.cap() ? 'var(--red)' : '';
+        const supply = this.game.supply(), capacity = this.game.cap();
+        $('supplyCount').textContent = supply + ' / ' + capacity;
+        $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
         $('energyCount').textContent = Math.floor(s.energy);
         $('gameTime').textContent = formatTime(s.time);
         $('speedLabel').textContent = s.speed + '×';
@@ -584,7 +585,7 @@
             disabled =
               !this.game.afford(this.game.cost(arg)) ||
               !this.game.alive(e => e.team === 0 && e.kind === 'building' && e.type === d.from && e.progress >= 1 && e.queue.length < 5).length ||
-              this.game.supply() + d.supply > this.game.cap();
+              supply + d.supply > capacity;
             if (arg === 'hero' && this.game.alive(e => e.team === 0 &&
               (e.type === 'hero' || e.queue?.some(q => q.type === 'hero'))).length) disabled = true;
           } else if (k === 'build')

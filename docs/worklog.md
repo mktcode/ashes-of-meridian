@@ -2,12 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
-## Gemeinsame Fähigkeitsdefinitionen und Minimap-Koordinaten
+## Fähigkeitsdefinitionen, Minimap-Koordinaten und HUD-Versorgung
 
 - Energiekosten/Cooldowns unverändert nach `content.js` (`ABILITIES`) verschoben; Simulation und HUD lesen dieselbe Kostendefinition. Zielprüfungen, Effekte und Prüfungsreihenfolge bleiben unverändert. Fünf gezielte neue Node-Tests bestanden: alle vier Energie-/Cooldown-Grenzen samt Bezahlung sowie HUD-Badges/Sperren.
 - `ui.js`: lokale Funktion `minimapPosition` für Drücken/Ziehen, weiterhin aktuelle Elementgrenzen pro Aufruf. **44 Steuerungstests bestanden**, darunter neue Prüfung mit wechselnden Abmessungen/Offsets, Abbruch und Rechtsklickauftrag.
 - Gezielt **`file://`**, Chromium/Performance, **390×844 und 430×932**: native Touch-Taps, Ziehen und Kameragrenzen nach Größenwechsel geprüft; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. Kontrolliertes CDP-Touch, kein Echtgerätetest.
-- Syntax und Diff geprüft. Vollständiger Node-Lauf folgt nach dem dritten vereinbarten Refactoring.
+- `updateHUD()` berechnet Versorgung/Kapazität einmal pro Aufruf und verwendet sie für Text, Warnfarbe und Rekrutierungssperren; kein Cache über Aufrufe hinweg. Neue Prüfung deckt Grenzwerte und Aktualisierung nach Versorgungs-/Kapazitätsänderungen ab.
+- Abschließend **196 Node-Tests bestanden** (rund 13 s) über alle drei getrennten Refactorings. Syntax, Diff und lokale Dokumentationslinks geprüft; keine Fixtures geändert. Der obige Browsercheck wurde nach der Minimap-Extraktion, vor der reinen HUD-Berechnungsbündelung ausgeführt.
 
 ## Gemeinsame Hilfezeilen und Bewegungsgeschwindigkeit
 
