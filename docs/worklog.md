@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Laufzeitquellen unter `src/`
+
+- Alle zwölf direkt ausgelieferten JavaScript-Quellen mechanisch nach `src/` verschoben. `index.html`, Testpfade und Dokumentation folgen den neuen relativen Pfaden; Dateiinhalte und synchrone Ladefolge bleiben unverändert. Stylesheet und Bildquellen verbleiben bewusst in der Rootebene.
+- Alte und verschobene Quellen bytegleich verglichen, Syntax und Diff geprüft; **203 Node-Tests bestanden** (rund 16 s), keine Fixtures geändert.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Laden aller Quellen, Start, kostenlose Startworker-Käufe, Reload, Neustart, Rekrutierung und kontrollierter Abbau bestanden; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerätetest.
+
 ## Permanentes Startworker-Upgrade
 
 - Command, Resolve und Industry samt Spieleffekten durch `Starting workers` ersetzt: kostenlos zum Testen, Stufen 0–5, ein sofort verfügbarer Worker je Stufe. 250 Alloy / 0 Aether bleiben erhalten; Wirkung nur bei neuem Gefecht/Neustart. Profil lädt nur aktuelle, begrenzte Ganzzahlstufen; alte Schlüssel werden verworfen, nicht migriert. Menü, Startanzeige, Funkhinweis und Hilfe angepasst.
