@@ -2,12 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
-## Gemeinsame Produktionsabfrage und Industriefaktor
+## Produktionsabfrage, Industriefaktor und HUD-Signatur
 
 - `availableProducers(buildingType)` bündelt den unveränderten Filter für Rekrutierung und HUD. Sortierung nach Queue-Länge/Gebäude-ID bleibt in `train()`; keine neuen Regeln oder RNG-Aufrufe. Das UI-Testdouble verwendet die echte Abfragemethode.
 - **14 gezielte Node-Tests bestanden**, einschließlich neuer Prüfung für Ausschlussfälle, Entitätsreihenfolge und mutations-/RNG-freie Abfrage.
 - `industryMultiplier()` bündelt den unveränderten Faktor für Bau, Produktion und Queue-Restzeit; Rechenreihenfolge und bisherige Anwendung auf beide Produktionsteams bleiben erhalten. **7 gezielte Node-Tests bestanden**, darunter drei neue Tests für Stufen 0–3, fehlendes Upgrade, Bau-/Produktionsraten, Restzeit und mutations-/RNG-freies Lesen.
-- Syntax und Diff geprüft. Vollständige Suite folgt nach dem dritten vereinbarten Refactoring.
+- Ungenutzten Parameter `force` aus `updateHUD()` und `true` an allen sieben Aufrufstellen entfernt; Aktualisierungszeitpunkte unverändert.
+- Abschließend **200 Node-Tests bestanden** (rund 13 s) über alle drei getrennten Refactorings. Syntax, Diff und lokale Dokumentationslinks geprüft; keine Fixtures geändert. Kein neuer Browsercheck, da Eingabeabläufe, Markup, Layout und Darstellung unverändert bleiben.
 
 ## Fähigkeitsdefinitionen, Minimap-Koordinaten und HUD-Versorgung
 

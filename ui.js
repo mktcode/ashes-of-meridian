@@ -86,7 +86,7 @@
           this.mode = null;
           this.tab = 'root';
           this.actionSignature = '';
-          this.updateHUD(true);
+          this.updateHUD();
           this.clearMode();
         } else if (type === 'toast') this.toast(data);
         else if (type === 'radio') this.radio(data);
@@ -410,7 +410,7 @@
         }
         if (kind === 'train') {
           this.game.train(arg);
-          this.updateHUD(true);
+          this.updateHUD();
           return;
         }
         if (kind === 'build') {
@@ -431,7 +431,7 @@
             break;
           case 'cancelBuild':
             this.game.cancelConstruction(this.selected[0]);
-            this.updateHUD(true);
+            this.updateHUD();
             break;
         }
       }
@@ -490,7 +490,7 @@
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s.result) return;
         if (action === 'repair') {
           this.game.toggleBuildingRepair(id);
-          this.updateHUD(true);
+          this.updateHUD();
         } else if (action === 'sell') {
           let reason = this.game.canSellBuilding(id);
           if (reason) { this.toast(reason); return; }
@@ -508,7 +508,7 @@
         this.sellBuildingId = null;
         if (confirm) this.game.sellBuilding(id);
         this.resume();
-        this.updateHUD(true);
+        this.updateHUD();
       }
       recruitmentGroups() {
         let groups = {};
@@ -547,7 +547,7 @@
           button.setAttribute('aria-label', `${unitName(type, this.game.s.faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
         }
       }
-      updateHUD(force = false) {
+      updateHUD() {
         let s = this.game.s;
         if (!s) return;
         $('alloyCount').textContent = Math.floor(s.alloy).toLocaleString();
@@ -640,7 +640,7 @@
           }
           if (b.dataset.queueType && !this.paused && !this.game.s?.result) {
             this.cancelRecruitment(b.dataset.queueType);
-            this.updateHUD(true);
+            this.updateHUD();
             return;
           }
           if (b.dataset.cam) {
@@ -971,7 +971,7 @@
           } else for (let e of list) e.rally = { ...p };
         }
         if (success) this.clearMode();
-        this.updateHUD(true);
+        this.updateHUD();
       }
       tick(dt) {
         let now = performance.now();
