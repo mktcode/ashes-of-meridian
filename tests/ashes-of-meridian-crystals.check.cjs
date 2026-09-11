@@ -74,7 +74,7 @@ test('preview layer and opacity are respected; absent amounts have a finite full
   assert.deepEqual(render({ ...e, hp: 0 }), []);
 });
 
-const simContext = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
+const simContext = loadScripts(['core', 'content', 'world', 'effects', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness"); }', simContext);
 const { MeridianGame, BIOMES } = vm.runInContext('({MeridianGame, BIOMES})', simContext);
 const json = value => JSON.parse(JSON.stringify(value));

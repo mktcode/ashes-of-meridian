@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Fachlich geteilte Gefechtssimulation
+
+- `src/simulation.js` in fünf weiterhin klassische, synchron geladene Skripte unter `src/simulation/` geteilt: Klasse/Entitäten, Bewegung, Wirtschaft, Kampf und Laufzeit. `game.js` deklariert `MeridianGame`; `defineMeridianGameMethods` registriert die übrigen Methoden mit denselben nicht aufzählbaren, konfigurierbaren und schreibbaren Deskriptoren. Öffentliche Methodennamen und Signaturen bleiben erhalten; keine Imports oder Buildschritte ergänzt.
+- Alle **58 ausgelagerten Methodentexte** und `formatTime` direkt mit dem vorherigen Stand verglichen: textidentisch. Die Signaturen/Deskriptoren aller 59 Prototyp-Properties stimmen ebenfalls überein. Neue Harness-Regression schützt Dateireihenfolge, vollständige Montage und Nichtaufzählbarkeit.
+- **204 Node-Tests bestanden** (rund 15 s), keine Fixtures geändert. Syntax, Diff und lokale Dokumentationslinks geprüft.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Laden der fünf Skripte, Gefechtsstarts, Käufe, Reload/Neustart, Rekrutierung und kontrollierter Abbau bestanden; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerätetest.
+
 ## Laufzeitquellen unter `src/`
 
 - Alle zwölf direkt ausgelieferten JavaScript-Quellen mechanisch nach `src/` verschoben. `index.html`, Testpfade und Dokumentation folgen den neuen relativen Pfaden; Dateiinhalte und synchrone Ladefolge bleiben unverändert. Stylesheet und Bildquellen verbleiben bewusst in der Rootebene.

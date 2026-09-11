@@ -4,7 +4,7 @@ const { loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
 const { populateBase } = require('./populated-battle.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation'], { globals: { structuredClone } });
+const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
 const { Battlefield, BattlefieldView, MeridianGame } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame})', context);
 

@@ -12,7 +12,7 @@ for (const { seed, biome, ...expected } of fixture.worlds) {
   });
 }
 test('world and simulation start and step without renderer, geometry or browser globals', () => {
-  const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
+  const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'], { globals: { structuredClone } });
   vm.runInContext('Math.random = () => { throw Error("Unseeded randomness"); }', context);
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   game.start({ seed: 1409, faction: 0 });
@@ -76,7 +76,7 @@ test('effects execute alone, consume RNG synchronously and preserve visibility s
 });
 
 test('effect provider follows the current game RNG and resets on each new start', () => {
-  const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
+  const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'], { globals: { structuredClone } });
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   const effects = game.effects;
   game.start({ seed: 1409 });

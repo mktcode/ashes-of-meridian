@@ -41,7 +41,7 @@ function setup() {
   };
   const window = target();
   let now = 0;
-  const context = loadScripts(['core', 'content', 'world', 'simulation', 'ui'], { globals: {
+  const context = loadScripts(['core', 'content', 'world', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime', 'ui'], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00'
   } });
@@ -481,7 +481,7 @@ test('victory and defeat offer only restart and main menu; an ended run cannot b
 });
 
 test('runtime and delivered HTML have no run persistence hooks or backup input', () => {
-  for(const file of ['src/app.js','src/ui.js','src/simulation.js','src/persistence.js','index.html']) {
+  for(const file of ['src/app.js','src/ui.js','src/simulation/game.js','src/simulation/movement.js','src/simulation/economy.js','src/simulation/combat.js','src/simulation/runtime.js','src/persistence.js','index.html']) {
     const source=fs.readFileSync(path.join(__dirname,'..',file),'utf8');
     assert.doesNotMatch(source,/checkpoint|lastSaveTime|importFile|exportBackup|importBackup|serializeBackup|parseBackup|beforeunload|operation\.v[0-9]/i,file);
   }

@@ -49,6 +49,20 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.match(icon('worker'), /^<svg viewBox="0 0 24 24".*<path d="M8 15l-4 5/);
 });
 
+test('simulation fragments assemble the existing non-enumerable MeridianGame API in document order', () => {
+  const names = ['simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'],
+    expectedFiles = names.map(name => `src/simulation/${name.replace('simulation-', '')}.js`),
+    scripts = readScripts(), context = loadScripts(names, { scripts });
+  assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
+  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianGame.prototype).length', context), 59);
+  assert.equal(vm.runInContext('Object.keys(MeridianGame.prototype).length', context), 0);
+  for (const method of ['start', 'move', 'train', 'combat', 'step']) {
+    assert.equal(vm.runInContext(`typeof MeridianGame.prototype.${method}`, context), 'function');
+    assert.equal(vm.runInContext(`Object.getOwnPropertyDescriptor(MeridianGame.prototype, '${method}').enumerable`, context), false);
+  }
+  assert.equal(vm.runInContext("formatTime(65)", context), '01:05');
+});
+
 test('loader selects explicit names in document order, skipping unrelated scripts', () => {
   const scripts = readScripts(sample);
   assert.deepEqual(scripts.map(s => s.name), ['base', 'unused', 'dependent']);
