@@ -24,8 +24,9 @@ function setup() {
     }
   };
   const window = target(), footer = document.getElementById('controlstrip');
+  let now = 0;
   const context = loadScripts(['core', 'content', 'world', 'ui'], { globals: {
-    document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => 0 },
+    document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00'
   } });
   const UI = vm.runInContext('MeridianUI', context), calls = [];
@@ -66,7 +67,7 @@ function setup() {
   };
   const click = dataset => document.handlers.click({ target: { closest: () => ({ dataset }) } });
   const clickCamera = cam => click({ cam });
-  return { ui, calls, key, document, window, footer, world, minimap, pointer, click, clickCamera, UI };
+  return { ui, calls, key, document, window, footer, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
 
 test('camera keys and pointer edges no longer move the camera', () => {
@@ -137,6 +138,68 @@ test('touch single/double tap preserves selection and visible same-type filterin
   h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
   assert.deepEqual(h.ui.selected, [1, 2]);
   assert.deepEqual(h.calls, [['select', [1]], ['select', [1, 2]]]);
+});
+
+test('triple touch tap selects only living on-screen own non-workers, including support and air units', () => {
+  for (const trigger of ['rifle','worker']) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui);
+    const unit = { id: 1, team: 0, kind: 'unit', type: trigger, hp: 100, x: 200, z: 200 };
+    h.ui.game.s.entities = [unit, ...['rifle','worker','tank','medic','hero','scout','air','artillery']
+      .map((type,i) => ({...unit,id:i+2,type})),
+      {...unit,id:10,team:1}, {...unit,id:11,kind:'building',type:'barracks'},
+      {...unit,id:12,hp:0}, {...unit,id:13,x:-10}, {...unit,id:14,x:1280},
+      {...unit,id:15,z:55}, {...unit,id:16,z:590}, {...unit,id:17,x:999}];
+    h.ui.game.alive = predicate => h.ui.game.s.entities.filter(e => e.hp > 0 && predicate(e));
+    h.ui.R.project = (x,y,z) => x === 999 ? null : {x,y:z};
+    h.ui.pick = () => unit;
+    const tap = time => { h.setTime(time); h.pointer('pointerdown',200,200); h.pointer('pointerup',200,200); };
+    tap(0); assert.deepEqual(h.ui.selected,[1]);
+    tap(200); assert.deepEqual(h.ui.selected,trigger === 'worker' ? [1,3] : [1,2]);
+    tap(400); const combat = trigger === 'worker' ? [2,4,5,6,7,8,9] : [1,2,4,5,6,7,8,9];
+    assert.deepEqual(h.ui.selected,combat);
+    tap(500); assert.deepEqual(h.ui.selected,combat, 'further rapid taps keep combat selection');
+    assert.ok(h.calls.every(c => c[0] === 'select'), 'no order or camera action');
+  }
+});
+
+test('tap chains reset on timeout, a different target, drag, cancellation, pinch, ground order or targeting', () => {
+  for (const interruption of ['timeout','target','drag','cancel','pinch','ground','mode']) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui);
+    const unit = {id:1,team:0,kind:'unit',type:'rifle',x:200,z:200};
+    h.ui.game.s.entities = [unit,{...unit,id:2},{...unit,id:3,type:'tank'}];
+    h.ui.pick = () => unit;
+    const tap = () => {h.pointer('pointerdown',200,200);h.pointer('pointerup',200,200);};
+    tap(); tap(); assert.deepEqual(h.ui.selected,[1,2]);
+    if (interruption === 'timeout') h.setTime(330);
+    if (interruption === 'target') {h.ui.pick = () => h.ui.game.s.entities[2];tap();}
+    if (interruption === 'drag') {
+      h.pointer('pointerdown',200,200);h.pointer('pointermove',220,200);h.pointer('pointerup',220,200);
+    }
+    if (interruption === 'cancel') {h.pointer('pointerdown',200,200);h.pointer('pointercancel',200,200);}
+    if (interruption === 'pinch') {
+      h.pointer('pointerdown',200,200);h.pointer('pointerdown',240,200,{pointerId:2});
+      h.pointer('pointerup',240,200,{pointerId:2});h.pointer('pointerup',200,200);
+    }
+    if (interruption === 'ground') {h.ui.pick = () => null;tap();}
+    if (interruption === 'mode') {h.ui.mode = {kind:'move'};tap();}
+    h.ui.pick = () => unit; h.calls.length = 0; tap();
+    assert.deepEqual(h.ui.selected,[1],interruption);
+    assert.deepEqual(h.calls,[['select',[1]]]);
+  }
+});
+
+test('triple mouse clicks keep same-type selection; buildings never trigger combat selection', () => {
+  for (const kind of ['unit','building']) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui);
+    const unit = {id:1,team:0,kind,type:kind === 'unit' ? 'rifle' : 'barracks',x:200,z:200};
+    h.ui.game.s.entities = [unit,{...unit,id:2},{...unit,id:3,kind:'unit',type:'tank'}];
+    h.ui.pick = () => unit;
+    for (let i=0;i<3;i++) {
+      h.pointer('pointerdown',200,200,{pointerType:kind === 'unit' ? 'mouse' : 'touch'});
+      h.pointer('pointerup',200,200,{pointerType:kind === 'unit' ? 'mouse' : 'touch'});
+    }
+    assert.deepEqual(h.ui.selected,kind === 'unit' ? [1,2] : [1]);
+  }
 });
 
 test('mouse clicks and portrait clicks replace selection even with Shift; select still deduplicates', () => {

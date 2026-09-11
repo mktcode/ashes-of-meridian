@@ -79,6 +79,7 @@
           this.paused = false;
           this.modalKind = '';
           this.sellBuildingId = null;
+          this.lastClick = {};
           this.buildingActionsClosed = false;
           $('menu').classList.add('hidden');
           $('modal').classList.add('hidden');
@@ -367,7 +368,8 @@
             ['Move / hold / stop', 'Buttons in Command'],
             ['Select all combat units', 'Combat force button'],
             ['Select next worker', 'Next worker button'],
-            ['Select visible units of a type', 'Double-tap unit']
+            ['Select visible units of a type', 'Double-tap unit'],
+            ['Select visible combat units (no workers)', 'Triple-tap unit']
           ]
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join('')}<h3>Navigate</h3>${[
@@ -708,7 +710,7 @@
         $('selectCount').textContent = this.selected.length ? this.selected.length + ' SELECTED' : '';
         if (!this.selected.length) {
           $('selectionContent').innerHTML =
-            '<div class="selection-empty"><div class="eyebrow">AWAITING YOUR ORDERS</div>Select a unit or structure.<p>Double-tap a unit to select visible units of its type.</p></div>';
+            '<div class="selection-empty"><div class="eyebrow">AWAITING YOUR ORDERS</div>Select a unit or structure.<p>Double-tap for visible units of its type; triple-tap for all visible combat units (no workers).</p></div>';
           return;
         }
         if (this.selected.length > 1) {
@@ -827,7 +829,7 @@
       }
       setControlHints() {
         $('controlstrip').innerHTML =
-          `<span>TAP TO SELECT · DOUBLE-TAP TYPE</span><span>RMB SMART ORDER</span><span>DRAG TO PAN · PINCH TO ZOOM</span>`;
+          `<span>TAP TO SELECT · DOUBLE-TAP TYPE · TRIPLE-TAP COMBAT</span><span>RMB SMART ORDER</span><span>DRAG TO PAN · PINCH TO ZOOM</span>`;
       }
       bind() {
         document.addEventListener('pointerdown', e => {
@@ -928,6 +930,7 @@
         c.addEventListener('pointermove', e => this.pointerMove(e));
         c.addEventListener('pointerup', e => this.pointerUp(e));
         c.addEventListener('pointercancel', () => {
+          this.lastClick = {};
           this.drag = null;
           this.touchPoints.clear();
           this.touchGesture = false;
@@ -1132,6 +1135,8 @@
         }
       }
       pointerUp(e) {
+        let previousClick = this.lastClick;
+        this.lastClick = {};
         if (e.pointerType === 'touch') this.touchPoints.delete(e.pointerId);
         if (this.touchGesture) {
           if (!this.touchPoints.size) {
@@ -1175,22 +1180,21 @@
           return;
         }
         if (target) {
-          let now = performance.now();
-          if (
-            this.lastClick.id === target.id &&
-            now - this.lastClick.time < 330 &&
-            target.team === 0 &&
-            target.kind === 'unit'
-          ) {
-            let units = this.game
-              .alive(e => e.team === 0 && e.type === target.type)
+          let now = performance.now(),
+            count = previousClick.id === target.id && previousClick.type === d.type &&
+              now - previousClick.time < 330 ? Math.min(3, previousClick.count + 1) : 1;
+          if (count >= 2 && target.team === 0 && target.kind === 'unit') {
+            let combat = d.type === 'touch' && count === 3,
+              units = this.game
+              .alive(e => e.team === 0 && e.kind === 'unit' &&
+                (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
                 let q = this.R.project(e.x, 1, e.z);
                 return q && q.x > 0 && q.x < innerWidth && q.y > 55 && q.y < innerHeight - 210;
               });
             this.select(units.map(e => e.id));
           } else this.select([target.id]);
-          this.lastClick = { id: target.id, time: now };
+          this.lastClick = { id: target.id, time: now, type: d.type, count };
         } else this.select([]);
       }
       applyTarget(p, target) {
