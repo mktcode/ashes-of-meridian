@@ -2,7 +2,7 @@
 
 ## Auslieferung
 
-`index.html`, `styles.css` und die lokalen JavaScript-Dateien unter `src/` sind handgepflegte Quellen und werden direkt ausgeliefert. Keine generierten Dateien, npm-Abhängigkeiten, Laufzeit-Imports oder Build-/Serverpflicht. Die Skripte teilen globale lexikalische Bindungen und laufen synchron in HTML-Reihenfolge, ohne `async`, `defer` oder ES-Module. Inline-Styles in UI-Templates bestehen weiterhin.
+`index.html`, die Stylesheets unter `styles/` und die lokalen JavaScript-Dateien unter `src/` sind handgepflegte Quellen und werden direkt ausgeliefert. Keine generierten Dateien, npm-Abhängigkeiten, Laufzeit-Imports oder Build-/Serverpflicht. Die Skripte teilen globale lexikalische Bindungen und laufen synchron in HTML-Reihenfolge, ohne `async`, `defer` oder ES-Module. Inline-Styles in UI-Templates bestehen weiterhin.
 
 ## Codekarte
 
@@ -33,6 +33,8 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 | `src/ui/input.js` | DOM-Bindung, Pointer-/Touch-Eingabe, Picking und Zielbestätigung |
 | `src/ui/presentation.js` | UI-Tick, Minimap und projizierte Gefechts-Overlays |
 | `src/app.js` | Verdrahtung, Spielschleife, Vorschau und Szenendarstellung; stellt `window.Meridian` bereit |
+
+Die Stylesheets folgen ebenfalls fester Dokumentreihenfolge: `styles/base.css` enthält gemeinsame Grundlagen, `styles/screens.css` Menüs und Dialoge samt responsiven Regeln, `styles/hud.css` das taktische Interface samt responsiven Regeln. Die Aufteilung ändert die bisherige Kaskadenreihenfolge nicht.
 
 ## Schnittstellen und Zustände
 

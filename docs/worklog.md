@@ -2,6 +2,14 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Renderer-, Stylesheet- und Testladegruppen
+
+- Wiederholte Listen der fünf Simulations- und fünf UI-Skripte als eingefrorene, benannte Gruppen im Testloader gebündelt; beim anschließenden Renderer-Umbau eine entsprechende Vierergruppe ergänzt. Aufrufstellen wählen Abhängigkeiten weiterhin ausdrücklich, der Loader führt sie weiterhin ausschließlich in Dokumentreihenfolge aus.
+- `src/renderer.js` in vier synchrone klassische Skripte unter `src/renderer/` geteilt: eingebettete Assets/Materialien, Geometrie, Shader und WebGL-Laufzeit. Alle vier verschobenen Deklarationsblöcke sind textidentisch; Material-/Textur-/Shaderwerte, Geometriefunktionen sowie Texte, Reihenfolge und Deskriptoren aller 24 `MeridianRenderer`-Prototyp-Properties wurden direkt mit dem vorherigen Stand verglichen. Eine Harness-Regression schützt Dateireihenfolge, Bindungen und Klassen-API.
+- `styles.css` entlang der vorhandenen Grenzen in `styles/base.css`, `styles/screens.css` und `styles/hud.css` geteilt. Die Verkettung in HTML-Reihenfolge ist bytegleich zum vorherigen Stylesheet; eine Steuerungsregression schützt lokale Pfade und Kaskadenreihenfolge.
+- Abschließend einmal **207 Node-Tests bestanden** (rund 16 s), keine Fixtures geändert. Syntax, Diff und veraltete Quellpfade geprüft.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Laden der neuen Renderer- und Stylesheetdateien, Touch-Menüs, Gefechtsstarts, Upgrade-/Einstellungs-Persistenz, Rekrutierung, Reload/Neustart und kontrollierter Abbau bestanden. Menü- und Gefechtsbilder gesichtet; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät-, anderer Browser-/GPU- oder weiterer Qualitätsstufentest.
+
 ## Fachlich geteilte Benutzeroberfläche
 
 - `src/ui.js` in fünf weiterhin klassische, synchron geladene Skripte unter `src/ui/` geteilt: Klasse/Ereignisse, Menüs/Dialoge, Aktionen/HUD, Eingabe sowie Minimap/Overlay. `core.js` deklariert `MeridianUI`; `defineMeridianUIMethods` registriert die ausgelagerten Methoden mit denselben nicht aufzählbaren, konfigurierbaren und schreibbaren Deskriptoren. `$` und `esc` bleiben gemeinsame lexikalische Bindungen; keine Imports oder Buildschritte ergänzt.

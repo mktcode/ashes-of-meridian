@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const UI_FILES = UI_SCRIPTS.map(name => `src/ui/${name.replace('ui-', '')}.js`);
+const STYLE_FILES = ['styles/base.css', 'styles/screens.css', 'styles/hud.css'];
 
 function setup() {
   const target = () => ({
@@ -549,7 +550,7 @@ test('tooltips and native title hints are removed without removing pointer press
   h.document.handlers.pointerup(); assert.equal(h.ui.domPressed, false);
   h.document.handlers.pointerdown({ target: { closest: () => null } });
   assert.equal(h.ui.domPressed, false);
-  for (const file of [...UI_FILES, 'index.html', 'styles.css']) {
+  for (const file of [...UI_FILES, 'index.html', ...STYLE_FILES]) {
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
     assert.doesNotMatch(source, /tooltip|tt-cost|\stitle=["']|\.title\s*=/i, file);
   }
@@ -856,6 +857,14 @@ test('HUD ability badges and disabled states retain energy and cooldown boundari
   }
 });
 
+test('stylesheets load local base, screen and HUD rules in cascade order', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.deepEqual(
+    [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map(match => match[1]),
+    STYLE_FILES.map(file => `./${file}`)
+  );
+});
+
 test('settings and camera hints describe touch navigation without desktop camera controls', () => {
   const h = setup(); h.ui.showSettings();
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
@@ -871,7 +880,8 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB|<kbd>|F[12359]|\bEsc\b/);
   assert.match(html, /data-ui="cancelTarget"/);
   assert.doesNotMatch(html, /controlstrip/);
-  assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8'), /controlstrip/);
+  const styles = STYLE_FILES.map(file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')).join('\n');
+  assert.doesNotMatch(styles, /controlstrip/);
   h.ui.game.s.faction = 0;
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;
