@@ -84,6 +84,107 @@ test('fresh starts with the same seed reproduce state; another seed changes reso
   assert.notDeepEqual(json(a.alive(e => e.type === 'crystal').map(e => e.amount)), json(other.alive(e => e.type === 'crystal').map(e => e.amount)));
 });
 
+test('campaign and skirmish starts/checkpoints contain no in-mission research or labs', () => {
+  const { game } = createGame();
+  assert.equal(game.tech, undefined);
+  for (const index of [...Array(16).keys(), -1]) {
+    game.start(index, { seed: 1409, ...(index < 0 ? { mission: { type: 'conquest', biome: 'rust', tier: 3, bases: 3 } } : {}) });
+    const snapshot = game.snapshot();
+    assert.equal('upgrades' in snapshot, false); assert.equal('research' in snapshot, false);
+    assert.ok(snapshot.entities.every(e => e.type !== 'lab'));
+    assert.ok(snapshot.entities.filter(e => e.type === 'ward').every(e => e.team === 1 && e.tag === 'generator'));
+    game.restore(snapshot); advance(game, 2);
+    assert.equal('upgrades' in game.s, false); assert.equal('research' in game.s, false);
+    assert.ok(game.s.entities.every(e => Number.isFinite(e.hp)));
+  }
+});
+
+test('removed labs and mission-only ward generators cannot be built or spend resources', () => {
+  const { game } = tutorial(), before = json(game.snapshot());
+  assert.match(game.canBuild('lab'), /Unknown structure/);
+  assert.match(game.canBuild('ward'), /mission objective/);
+  for (const type of ['lab', 'ward']) assert.equal(game.build(type, { x: -30, z: 40 }), false);
+  assert.deepEqual(json(game.snapshot()), before);
+});
+
+test('both siege missions retain destructible ward footprints and the shield/victory sequence', () => {
+  const { game, events } = createGame();
+  for (const index of [6, 10]) {
+    game.start(index, { seed: 1409 });
+    assert.equal(game.s.m.type, 'siege');
+    const wards = game.alive(e => e.tag === 'generator'), citadel = game.alive(e => e.tag === 'citadel')[0];
+    assert.equal(wards.length, game.s.m.count);
+    const hero = player(game, 'hero');
+    for (const ward of wards) {
+      assert.deepEqual([ward.kind, ward.type, ward.team, ward.hp, ward.size, ward.progress], ['building', 'ward', 1, 1050, 2.9, 1]);
+      assert.equal(game.world.blockedAt(ward.x, ward.z), true);
+      game.damage(citadel, 99999, hero, true); assert.equal(citadel.hp, citadel.maxHp);
+      game.damage(ward, 1050, hero, true); assert.equal(ward.hp, 0);
+      game.objectiveTick(.25);
+      assert.equal(!!citadel.invulnerable, ward !== wards.at(-1));
+      assert.equal(game.s.result, null);
+    }
+    assert.equal(game.objectiveRows().find(r => /ward generators/.test(r.text)).done, true);
+    game.damage(citadel, 99999, hero, true); game.objectiveTick(.25);
+    assert.equal(game.s.result.win, true);
+    assert.ok(events.some(e => e.type === 'alert' && e.data.text === 'Ward generator destroyed.'));
+  }
+});
+
+test('base combat/movement stats retain faction, difficulty, shields and veteran modifiers without research', () => {
+  const { game } = tutorial(); game.s.difficulty = 'veteran';
+  for (const team of [0, 1, 2]) for (const faction of [0, 1, 2]) {
+    const e = game.spawnUnit('rifle', 0, 0, team, faction);
+    const stats = game.rangedStats(e);
+    close(stats.damage, 13 * (faction === 2 ? 1.12 : 1) * (team === 1 ? 1.22 : 1));
+    assert.equal(stats.range, 9); assert.equal(e.vision, 17);
+    e.kills = 5; close(game.rangedStats(e).damage, stats.damage * 1.12);
+    const hp = e.hp, shield = e.shield;
+    game.damage(e, 20, null, true);
+    close(e.hp, hp - Math.max(0, 20 - shield)); close(e.shield, Math.max(0, shield - 20));
+    const air = game.spawnUnit('air', 0, 0, team, faction);
+    air.path = [{ x: 20, z: 0 }]; air.nextPath = 100;
+    game.move(air, { x: 20, z: 0 }, .1);
+    close(air.x, .7 * (faction === 1 ? 1.1 : 1)); close(air.z, 0);
+  }
+});
+
+test('base mining, refinery income, medic healing and faction regeneration work without research state', () => {
+  const { game } = tutorial();
+  const worker = player(game, 'worker'), node = game.alive(e => e.type === 'crystal')[0];
+  worker.x = node.x; worker.z = node.z; worker.order = { type: 'mine', id: node.id };
+  for (let i = 0; i < 3; i++) game.worker(worker, 1.25);
+  assert.equal(worker.carry, 18);
+  game.spawnBuilding('refinery', -63, 60, 0, 0);
+  const medic = game.spawnUnit('medic', 75, 75, 0, 0), patient = game.spawnUnit('rifle', 75, 75, 2, 0);
+  patient.hp -= 80; game.rehash(); game.medic(medic, 1);
+  close(patient.hp, patient.maxHp - 60);
+  medic.hp = 0; patient.hp = 0;
+  const troops = [0, 1, 2].map(f => game.spawnUnit('rifle', 75, 75, 0, f));
+  for (const troop of troops) troop.hp = troop.maxHp - 50;
+  const gas = game.s.gas; advance(game, 1);
+  close(game.s.gas, gas + .05 * (1.7 + .25));
+  for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
+});
+
+test('all six permanent fleet upgrades still apply to campaign operations but not practice/skirmish', () => {
+  const { game } = createGame();
+  const meta = { veterans: 2, stores: 2, logistics: 1, command: 1, resolve: 1, industry: 1 };
+  game.profile.upgrades = meta; game.start(0, { seed: 1409 });
+  assert.deepEqual(json(game.s.meta), meta); assert.notStrictEqual(game.s.meta, meta);
+  assert.equal(game.s.alloy, 670); assert.equal(rifleCount(game), 5);
+  assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 6);
+  assert.equal(player(game, 'hero').maxHp, 1000);
+  game.s.energy = 0; assert.equal(game.train('rifle'), true); advance(game, 10);
+  close(game.s.energy, .5 * .8 * 1.15);
+  close(player(game, 'barracks').queue[0].progress, .5 / 11 * 1.1);
+  for (const [index, opts] of [[0, { practice: true }], [-1, {}]]) {
+    game.start(index, { seed: 1409, ...opts });
+    assert.deepEqual(json(game.s.meta), {}); assert.equal(game.s.alloy, 470);
+    assert.equal(rifleCount(game), 3); assert.equal(player(game, 'hero').maxHp, 850);
+  }
+});
+
 test('commands replace the current order, ignore enemies and set building rally points', () => {
   const { game, events } = tutorial();
   const hero = player(game, 'hero'), barracks = player(game, 'barracks');

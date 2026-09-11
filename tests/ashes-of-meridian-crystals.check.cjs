@@ -118,6 +118,14 @@ test('corrected placement preserves all initial amounts and the fixed pre-fix RN
   assert.deepEqual(json(crystals(game).map(e => e.id)), Array.from({ length: 40 }, (_, k) => 12 + k + Math.floor(k / 5)));
 });
 
+test('removing the tier-three starting lab preserves crystal amounts and subsequent RNG samples', () => {
+  // Captured from 187c936 before research removal; do not regenerate to mask RNG shifts.
+  const game = fresh(); game.start(9, { seed: 9897 });
+  assert.equal(game.alive(e => e.type === 'lab').length, 0);
+  assert.deepEqual(json(crystals(game).map(e => e.amount)), [2009,1898,2252,1862,2134,2163,2441,1808,2452,1987,2118,2596,2622,2599,2559,2307,1910,2364,2159,2190,2230,2244,2523,2412,2023,2596,1997,1844,2478,2381,2625,2226,2309,1994,1835,1836,2011,2361,2026,2065]);
+  assert.deepEqual(Array.from({ length: 3 }, () => game.random()), [.7938700756058097,.39625314460135996,.029495206428691745]);
+});
+
 test('new-layout saves round-trip without moving resources or resetting valid mining paths', () => {
   const game = fresh(); game.start(0, { seed: 1409 });
   for (let i = 0; i < 100; i++) { game.step(.05); game.effects.tick(.05); }

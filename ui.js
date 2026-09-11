@@ -128,10 +128,6 @@
           if (data.type === 'hero')
             this.radio('Mara Venn|I’m still here. Let’s not make a habit of that.');
           this.actionSignature = '';
-        } else if (type === 'research') {
-          this.audio.sound('research');
-          this.alert({ text: data.name + ' · level ' + data.level + ' complete.' });
-          this.actionSignature = '';
         } else if (type === 'wave') {
           this.audio.sound('wave');
           this.pings.push({ ...data, life: 5, maxLife: 5, color: 0xf38f83 });
@@ -451,7 +447,7 @@
               ''
             )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Workers can repair completed damaged allied structures and damaged allied units for a small alloy cost.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Relays require nearby combat troops and cannot be captured while contested. Crawlers need an escort within 13 meters and halt near enemies. Scouts and scans reveal fog-of-war. Destroy enemy command centers to weaken reinforcements in offensive missions.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
             ['Command abilities', 'Ability buttons in Command → tap target'],
-            ['Command / build / recruit / research', 'Tabs on the command deck'],
+            ['Command / build / recruit', 'Tabs on the command deck'],
             ['Pause', 'Ⅱ button'],
             ['Cancel targeting / placement', 'Cancel button beside the target prompt'],
             ['Save / load checkpoint', 'Save / Load in the pause menu'],
@@ -549,8 +545,7 @@
         if (this.selected.length === 1) {
           let e = this.game.get(this.selected[0]);
           if (e?.team === 0 && e.kind === 'building') {
-            if (e.type === 'lab') this.tab = 'tech';
-            else if (['hq', 'barracks', 'factory', 'hangar'].includes(e.type)) this.tab = 'army';
+            if (['hq', 'barracks', 'factory', 'hangar'].includes(e.type)) this.tab = 'army';
           }
         }
         this.renderActions();
@@ -632,10 +627,6 @@
           this.setMode('build', arg);
           return;
         }
-        if (kind === 'tech') {
-          if (!this.paused) this.game.tech(arg);
-          return;
-        }
         if (kind === 'ability') {
           this.setMode('ability', arg);
           return;
@@ -666,7 +657,7 @@
       }
       actionButton(key, label, ic, opts = {}) {
         let badge = opts.badge || '';
-        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}" data-tooltip="${key}">${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small>${opts.level ? `<span class="level">${opts.level}</span>` : ''}</button>`;
+        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}" data-tooltip="${key}">${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       }
       renderActions() {
         let s = this.game.s;
@@ -677,8 +668,6 @@
           this.selected.join(',') +
           ':' +
           s.m.tier +
-          ':' +
-          JSON.stringify(s.upgrades) +
           ':' +
           (this.mode ? this.mode.kind + this.mode.arg : '');
         if (sig === this.actionSignature) return;
@@ -711,16 +700,17 @@
             refinery: 'Refinery',
             factory: 'Foundry',
             hangar: 'Flight deck',
-            turret: 'Turret',
-            lab: 'Research'
+            turret: 'Turret'
           };
-          for (let [k, d] of Object.entries(BUILDINGS))
+          for (let [k, d] of Object.entries(BUILDINGS)) {
+            if (d.missionOnly) continue;
             html += this.actionButton(
               'build:' + k,
               f === 0 ? labels[k] : buildingName(k, f).split(' ').slice(-1)[0],
               k,
               { cost: this.game.cost(k, 'building'), disabled: d.tier > s.m.tier }
             );
+          }
           let selected = this.game.get(this.selected[0]);
           if (selected?.kind === 'building' && selected.team === 0 && selected.progress < 1)
             html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
@@ -732,24 +722,6 @@
               disabled: d.tier > s.m.tier
             });
           }
-        } else if (this.tab === 'tech') {
-          for (let [k, t] of Object.entries(TECH)) {
-            let level = s.upgrades[k] || 0,
-              c = { cost: t.cost * (level + 1), gas: t.gas * (level + 1) };
-            html += this.actionButton(
-              'tech:' + k,
-              {
-                weapons: 'Weapons',
-                armor: 'Armor',
-                mining: 'Industry',
-                range: 'Optics',
-                healing: 'Regeneration',
-                engines: 'Engines'
-              }[k],
-              t.icon,
-              { cost: level >= t.max ? null : c, level: level + '/' + t.max, disabled: level >= t.max }
-            );
-          }
         }
         $('actions').innerHTML = '<div class="action-grid">' + html + '</div>';
         $('contextLabel').textContent =
@@ -757,9 +729,7 @@
             ? 'COMMAND LINK ONLINE'
             : this.tab === 'build'
               ? 'SELECT A FOUNDATION'
-              : this.tab === 'army'
-                ? 'PARALLEL PRODUCTION'
-                : 'FLEET-WIDE UPGRADES';
+              : 'PARALLEL PRODUCTION';
       }
       tooltipFor(key) {
         let [k, arg] = key.split(':'),
@@ -785,16 +755,6 @@
           if (!this.game.has(d.from))
             desc += '<br><br>Requires ' + buildingName(d.from, s.faction) + '.';
           if (d.tier > s.m.tier) desc += '<br><br>Not available in this operation.';
-        } else if (k === 'tech') {
-          let d = TECH[arg];
-          title = d.name;
-          desc = d.desc;
-          let n = s.upgrades[arg] || 0;
-          cost =
-            n >= d.max
-              ? 'MAXIMUM LEVEL'
-              : `${d.cost * (n + 1)} ALLOY / ${d.gas * (n + 1)} AETHER · ${d.time}s`;
-          if (!this.game.has('lab')) desc += '<br><br>Requires a completed research annex.';
         } else if (k === 'ability') {
           let def = {
             orbital: [
@@ -913,7 +873,7 @@
           e.kind === 'resource' || e.kind === 'objective' ? { ...e, kind: 'unit', type: 'worker' } : e
         );
         $('selectionContent').innerHTML =
-          `<div class="unit-summary"><div class="unit-portrait" style="color:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}">${icon(e.type === 'gas' ? 'energy' : e.type === 'crystal' ? 'crystal' : e.type)}</div><div class="unit-detail"><h3>${esc(name)}${e.kills >= 5 ? ' ★' : ''}</h3><small>${e.team === 1 ? 'HOSTILE' : e.team === 2 ? 'ALLIED' : e.team === -1 ? 'NEUTRAL' : FACTIONS[e.faction].short}</small><div class="hp-line"><i style="width:${clamp((e.hp / e.maxHp) * 100, 0, 100)}%;background:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}"></i></div><div class="hp-number">${Math.ceil(e.hp)} / ${Math.round(e.maxHp)} HULL${e.maxShield ? ' + ' + Math.ceil(e.shield) + ' SHIELD' : ''}</div></div></div><div class="unit-stats"><div>DAMAGE<b>${Math.round(stats.damage || 0)}</b></div><div>RANGE<b>${stats.range || '—'}</b></div><div>${e.kind === 'resource' ? 'REMAINING' : 'ARMOR'}<b>${e.kind === 'resource' ? (e.type === 'gas' ? '∞' : Math.round(e.amount)) : s.upgrades.armor || 0}</b></div></div><div class="unit-order">${esc(order)}</div>`;
+          `<div class="unit-summary"><div class="unit-portrait" style="color:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}">${icon(e.type === 'gas' ? 'energy' : e.type === 'crystal' ? 'crystal' : e.type)}</div><div class="unit-detail"><h3>${esc(name)}${e.kills >= 5 ? ' ★' : ''}</h3><small>${e.team === 1 ? 'HOSTILE' : e.team === 2 ? 'ALLIED' : e.team === -1 ? 'NEUTRAL' : FACTIONS[e.faction].short}</small><div class="hp-line"><i style="width:${clamp((e.hp / e.maxHp) * 100, 0, 100)}%;background:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}"></i></div><div class="hp-number">${Math.ceil(e.hp)} / ${Math.round(e.maxHp)} HULL${e.maxShield ? ' + ' + Math.ceil(e.shield) + ' SHIELD' : ''}</div></div></div><div class="unit-stats"><div>DAMAGE<b>${Math.round(stats.damage || 0)}</b></div><div>RANGE<b>${stats.range || '—'}</b></div>${e.kind === 'resource' ? `<div>REMAINING<b>${e.type === 'gas' ? '∞' : Math.round(e.amount)}</b></div>` : ''}</div><div class="unit-order">${esc(order)}</div>`;
       }
       updateQueues() {
         let s = this.game.s,
@@ -928,8 +888,6 @@
             html += `<button class="queue-item" data-queue="${b.id}:${i}" title="${esc(unitName(q.type, s.faction))} · click to cancel">${unitName(q.type, s.faction).slice(0, 8)} ${i === 0 ? Math.ceil(q.time * (1 - q.progress)) + 's' : '…'}<i style="width:${q.progress * 100}%"></i></button>`;
             if (html.length > 1500) break;
           }
-        for (let r of s.research)
-          html += `<span class="queue-item" title="${TECH[r.key].name}">${TECH[r.key].name.split(' ')[0]} ${Math.ceil(r.time * (1 - r.progress))}s<i style="width:${r.progress * 100}%"></i></span>`;
         $('productionQueue').innerHTML =
           '<span class="queue-label">' +
           (html ? 'IN PRODUCTION' : 'PRODUCTION IDLE') +
@@ -982,15 +940,7 @@
               disabled = true;
           } else if (k === 'build')
             disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
-          else if (k === 'tech') {
-            let t = TECH[arg],
-              n = s.upgrades[arg] || 0;
-            disabled =
-              n >= t.max ||
-              !this.game.has('lab') ||
-              s.research.some(r => r.key === arg) ||
-              !this.game.afford({ cost: t.cost * (n + 1), gas: t.gas * (n + 1) });
-          } else if (k === 'ability') {
+          else if (k === 'ability') {
             let costs = { orbital: 85, repair: 45, scan: 25, drop: 95 };
             disabled = s.energy < costs[arg] || s.abilities[arg] > s.time;
             let badge = b.querySelector('small');

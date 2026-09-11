@@ -16,6 +16,8 @@ Dann [http://127.0.0.1:8080/](http://127.0.0.1:8080/) öffnen. Der Server ist ei
 
 Kamera: **mit einem Finger ziehen**, **Pinch-to-Zoom** oder die Zoomschaltflächen verwenden. **⌂ / Command view** führt zur Basis zurück; die Minimap lässt sich antippen und ziehen. Desktop-Kamerasteuerung per WASD, Leertaste/Home, Mausrad, mittlerem Maustasten-Ziehen im Spielfeld und Edge Scrolling ist entfernt. Antippen wählt aus; Doppeltippen wählt sichtbare Einheiten desselben Typs. Maus-Rechteckauswahl, Shift-Auswahl, Kontrollgruppen und Befehls-Auftragsketten sind entfernt. Neue Befehle ersetzen den aktuellen Auftrag; Produktionswarteschlangen bleiben erhalten. Spiel-Hotkeys sind entfernt; Befehle, Fähigkeiten, Pause, Speichern/Laden und Handbuch werden über die vorhandenen Schaltflächen bedient. **Cancel** neben dem Zielhinweis bricht Bauplatzierung oder Zielauswahl ab. Bauhilfe durch weitere Arbeiter entfällt; regulärer Bau und Reparatur fertiger Gebäude/Einheiten bleiben erhalten. Rechtsklick-Befehle bestehen vorerst weiter. [Kamera-Bereinigung](docs/mobile-camera-cleanup.md) · [Auswahl-/Befehlsbereinigung](docs/mobile-selection-cleanup.md) · [Touch-Befehle, Abbrechen und Bauhilfe-Entfernung](docs/mobile-touch-controls.md).
 
+Ingame-Forschung und Forschungsgebäude sind entfernt. **Fleet Upgrades** im Hauptmenü bleiben erhalten; das geplante Roguelite-Fortschrittssystem ist noch nicht umgesetzt. [Umfang und Prüfungen](docs/research-removal.md).
+
 Unter **Settings → Render quality** verwenden **High** und **Balanced** bis zu **4× MSAA** für glattere Modellkanten, sofern die Grafikhardware es unterstützt. **Performance** verzichtet darauf. Es ist kein zusätzlicher Antialiasing-Schalter nötig.
 
 ## Spielstände sichern

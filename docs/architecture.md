@@ -14,7 +14,7 @@ Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Styl
 | --- | --- | --- |
 | 1 / `core` | `M4`, `V`, `seeded` in `core.js` | Matrizen, Vektoren und Seed-RNG, ohne Browserabhängigkeiten |
 | 2 / `renderer` | `MAT`, `MERIDIAN_TEXTURES`, `geom`, Shaderkonstanten und `MeridianRenderer` in `renderer.js` | Eingebettete Texturen, Meshes, GLSL-Shader, WebGL-Ressourcen, Kamera und Renderpässe |
-| 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `TECH`, `META`, `BIOMES`, `CAMPAIGN`, `ACTS`, `ICON_PATHS` und Hilfsfunktionen in `content.js` | Spieldefinitionen, Balancing, Kampagne, Texte, Icons und Namenshelfer |
+| 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `META`, `BIOMES`, `CAMPAIGN`, `ACTS`, `ICON_PATHS` und Hilfsfunktionen in `content.js` | Spieldefinitionen, Balancing, Kampagne, Texte, Icons und Namenshelfer |
 | 4 / `world` | Kartenkonstanten, Hilfsfunktionen, `Heap`, `Battlefield` in `world.js` | CPU-Terrain-/Layoutdaten, Hindernisraster, Navigation und Sichtbarkeit, ohne Renderer |
 | 5 / `world-view` | `BattlefieldView`, `renderEntity` in `world-view.js` | Terrain-Mesh, statische GPU-Platzierungen, Fog-Upload und Entitätsmodelle |
 | 6 / `effects` | `MeridianEffects` in `effects.js` | Synchrone kosmetische Erzeugung, Effektdaten, Schadenszahlen und Lebensdauer; übergebener RNG |
@@ -40,6 +40,7 @@ Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-la
 ## Zustände und Speicherung
 
 - `game.s` enthält den serialisierbaren Operationszustand, einschließlich Entitäten, Ressourcen, Missionsdaten und Kamera. Entitäten besitzen einen aktuellen `order`; neue Befehle ersetzen ihn. Kontrollgruppen (`groups`) und Befehls-Auftragsketten (`orders`) sind entfernt, Produktionswarteschlangen (`queue`) bleiben erhalten. [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md).
+- Ingame-Forschung (`TECH`, `game.tech()`, `game.s.upgrades`/`research`) und das baubare Labor sind entfernt. `META`, permanente `profile.upgrades` und deren Operationskopie `game.s.meta` bleiben erhalten. Das Kommandodeck hat drei Reiter. Belagerungsziele sind nun nicht baubare `BUILDINGS.ward` mit `missionOnly: true`; ihre Schild-/Sieglogik bleibt bestehen. [Forschungsentfernung und RNG-Abgrenzung](research-removal.md).
 - Welt-Raster, Suchindizes (`ids`, `spatial`), RNG-Closure und kurzlebige Effekte liegen außerhalb von `game.s`.
 - `snapshot()` klont `game.s` und ergänzt erkundete Kartenfelder. `restore()` validiert Teile der Daten, rekonstruiert Welt und Indizes und ersetzt bei Kampagnenmissionen die Missionsdefinition durch den aktuellen `CAMPAIGN`-Eintrag.
 - Profil und Operation verwenden Version 1 und die Storage-Schlüssel `meridian.profile.v1` beziehungsweise `meridian.operation.v1`.
@@ -85,6 +86,8 @@ Boden und Felsen bleiben weltprojiziert. Weltposition/-normale für Beleuchtung,
 Diese Punkte sind Befunde, keine bereits vorgenommenen Fehlerkorrekturen. Insbesondere RNG- und Save-Änderungen müssen getrennt von strukturellen Refactorings geplant werden.
 
 ## Nächste Schritte und späteres Zielbild
+
+Die Spielrichtung ist langfristig ein Roguelite mit Weiterentwicklung außerhalb der Operationen. Bisher entfernt ist die Ingame-Forschung; kein neues Run-/Fortschrittssystem und keine Übertragung der entfernten Boni ins Hauptmenü implementiert. Die übrigen Tooltips sollen als separater Vereinfachungsschritt bereinigt werden.
 
 ### Zunächst: Referenzverhalten absichern
 

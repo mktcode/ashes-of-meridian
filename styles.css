@@ -1804,14 +1804,6 @@
       margin-top: 2px
     }
 
-    .action .level {
-      position: absolute;
-      bottom: 2px;
-      right: 4px;
-      color: var(--teal);
-      font: 8px var(--mono)
-    }
-
     #productionQueue {
       display: flex;
       gap: 5px;

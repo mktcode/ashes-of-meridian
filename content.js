@@ -30,7 +30,7 @@ const FACTIONS = [
       factory: 'War foundry',
       hangar: 'Flight deck',
       turret: 'Sentinel turret',
-      lab: 'Research annex'
+      ward: 'Ward generator'
     }
   },
   {
@@ -63,7 +63,7 @@ const FACTIONS = [
       factory: 'Root hollow',
       hangar: 'Chrysalis',
       turret: 'Thorn spire',
-      lab: 'Memory garden'
+      ward: 'Ward generator'
     }
   },
   {
@@ -95,7 +95,7 @@ const FACTIONS = [
       factory: 'Tomb forge',
       hangar: 'Sky sepulcher',
       turret: 'Mourning obelisk',
-      lab: 'Archive of names'
+      ward: 'Ward generator'
     }
   }
 ];
@@ -339,71 +339,12 @@ const BUILDINGS = {
     vision: 20,
     desc: 'Automated ground and air defense. Protects workers and choke points, but can be outranged by artillery.'
   },
-  lab: {
-    cost: 170,
-    gas: 65,
+  // Siege shield objectives retain their own footprint and hull, but cannot be built.
+  ward: {
     hp: 1050,
     size: 2.9,
-    time: 25,
-    tier: 1,
-    requires: 'barracks',
-    desc: 'Unlocks weapon, armor, industry and targeting upgrades. Research applies to your entire force for this mission.'
-  }
-};
-const TECH = {
-  weapons: {
-    name: 'Calibrated weapons',
-    icon: 'attack',
-    max: 3,
-    cost: 140,
-    gas: 65,
-    time: 32,
-    desc: 'All combat units and turrets deal 15% more damage per level.'
-  },
-  armor: {
-    name: 'Layered armor',
-    icon: 'shield',
-    max: 3,
-    cost: 130,
-    gas: 60,
-    time: 30,
-    desc: 'All allied units and structures take 10% less damage per level.'
-  },
-  mining: {
-    name: 'Extraction rigs',
-    icon: 'worker',
-    max: 2,
-    cost: 115,
-    gas: 45,
-    time: 25,
-    desc: 'Workers carry 25% more alloy and refineries produce 25% more aether per level.'
-  },
-  range: {
-    name: 'Long-range optics',
-    icon: 'scan',
-    max: 1,
-    cost: 220,
-    gas: 130,
-    time: 45,
-    desc: 'Adds 2 range and 3 sight to ranged combat units and turrets.'
-  },
-  healing: {
-    name: 'Regenerative mesh',
-    icon: 'heal',
-    max: 1,
-    cost: 180,
-    gas: 100,
-    time: 35,
-    desc: 'All units regenerate 2 hull per second outside combat. Medics heal 40% faster.'
-  },
-  engines: {
-    name: 'Overcharged drives',
-    icon: 'scout',
-    max: 1,
-    cost: 190,
-    gas: 95,
-    time: 35,
-    desc: 'All mobile units move 18% faster.'
+    missionOnly: true,
+    desc: 'Maintains the ward citadel’s shield. Destroy all generators to expose the citadel.'
   }
 };
 const META = {
@@ -933,7 +874,7 @@ const ICON_PATHS = {
   factory: 'M3 21V10l6 3V8l6 4V6h6v15zM17 6V2h4v4M6 17h2m3 0h2m3 0h2',
   hangar: 'M2 20V10l10-7 10 7v10zM6 20v-7h12v7M10 8h4M10 16h4',
   turret: 'M7 21l2-8h6l2 8M6 13V8h12v5zM12 8V3h8M4 21h16',
-  lab: 'M9 2h6M10 2v7L4 19v3h16v-3L14 9V2M7 16h10M9 12h6',
+  ward: 'M12 2l9 4v7c-1 5-5 8-9 10-4-2-8-5-9-10V6zM8 12l3 3 6-7',
   attack: 'M4 4l16 16M14 20h6v-6M4 10V4h6M18 3l3 3-5 5M3 18l3 3 5-5',
   move: 'M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4M18 8l4 4-4 4',
   stop: 'M5 5h14v14H5z',

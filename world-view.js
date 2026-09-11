@@ -302,7 +302,7 @@ class BattlefieldView {
                 0.3
               );
           if (e.type === 'hangar') ring(s * 0.8, h * 0.9, accent, 0.7);
-          if (e.type === 'lab') ring(s * 0.7, h + 1, accent, 0.7, Math.PI / 2, time * 0.2);
+          if (e.type === 'ward') ring(s * 0.7, h + 1, accent, 0.7, Math.PI / 2, time * 0.2);
         } else if (e.faction === 2) {
           let h = e.type === 'hq' ? 7.8 : e.type === 'turret' ? 6.5 : e.type === 'depot' ? 3.3 : 5.5;
           p('hex', 0, 0.55, 0, s * 0.8, 0.5, s * 0.8, metal);
@@ -316,7 +316,7 @@ class BattlefieldView {
             p('box', x, h * 0.3, z, 0.42, h * 0.57, 0.65, metal, a, 0, 0);
             p('octa', x, h * 0.63, z, 0.25, 0.7, 0.25, accent, 0, 0, 0, 0.8);
           }
-          if (['hq', 'lab', 'refinery', 'hangar'].includes(e.type)) {
+          if (['hq', 'ward', 'refinery', 'hangar'].includes(e.type)) {
             R.add(
               'ring',
               e.x,
@@ -427,7 +427,7 @@ class BattlefieldView {
           head(0, 2.65, -0.2, 1.5, 0.18, 1.3, dark);
           for (let s of [-1, 1]) head(s * 0.52, 2.3, 1.0, 0.22, 0.25, 1.7, dark);
           head(0, 2.3, 0.77, 0.35, 0.25, 0.06, team, 1.2);
-        } else if (e.type === 'lab') {
+        } else if (e.type === 'ward') {
           p('hex', 0, 1.1, 0, 2.35, 1.7, 2.35, metal);
           p('hex', 0, 2.0, 0, 2.45, 0.2, 2.45, dark);
           p('sphere', 0, 3.0, 0, 1.4, 1.35, 1.4, 0x497b89);

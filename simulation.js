@@ -44,8 +44,6 @@
           energy: 100,
           nextId: 1,
           entities: [],
-          upgrades: { weapons: 0, armor: 0, mining: 0, range: 0, healing: 0, engines: 0 },
-          research: [],
           scans: [],
           strikes: [],
           fields: [],
@@ -88,7 +86,8 @@
         }
         if (m.tier >= 3) {
           this.spawnBuilding('depot', -27, 61, 0, faction);
-          this.spawnBuilding('lab', -27, 72, 0, faction);
+          // Keep subsequent spawn/resource RNG samples stable after removing the starting lab.
+          this.random();
         }
         this.spawnUnit('hero', -45, 42, 0, faction);
         let workers = 5 + (meta.logistics || 0);
@@ -173,7 +172,7 @@
         if (m.type === 'siege') {
           for (let i = 0; i < m.count; i++) {
             let p = RELAY_SITES[i];
-            this.spawnBuilding('lab', p.x, p.z, 1, m.enemy, {
+            this.spawnBuilding('ward', p.x, p.z, 1, m.enemy, {
               tag: 'generator',
               label: 'WARD ' + (i + 1)
             });
@@ -455,46 +454,11 @@
         this.s.gas += q.gas;
         this.emit('toast', 'Recruitment canceled. Resources refunded.');
       }
-      tech(key) {
-        let s = this.s,
-          t = TECH[key];
-        if (!t) return false;
-        let level = s.upgrades[key] || 0;
-        if (level >= t.max) {
-          this.emit('toast', 'Research is already at maximum level.');
-          return false;
-        }
-        if (s.research.some(r => r.key === key)) {
-          this.emit('toast', 'This technology is already in research.');
-          return false;
-        }
-        let lab = this.alive(e => e.team === 0 && e.type === 'lab' && e.progress >= 1).find(
-          e => !s.research.some(r => r.building === e.id)
-        );
-        if (!lab) {
-          this.emit(
-            'toast',
-            this.has('lab') ? 'All research annexes are busy.' : 'Complete a research annex first.'
-          );
-          return false;
-        }
-        let c = { cost: t.cost * (level + 1), gas: t.gas * (level + 1) };
-        if (!this.spend(c)) return false;
-        s.research.push({
-          key,
-          level: level + 1,
-          building: lab.id,
-          progress: 0,
-          time: t.time * (1 + level * 0.25),
-          ...c
-        });
-        this.emit('toast', 'Research initiated: ' + t.name);
-        return true;
-      }
       canBuild(type, p) {
         let s = this.s,
           d = BUILDINGS[type];
         if (!d) return 'Unknown structure.';
+        if (d.missionOnly) return 'This structure is a mission objective, not a buildable foundation.';
         if (d.tier > s.m.tier) return 'Unavailable in this operation.';
         if (d.requires && !this.has(d.requires))
           return `Requires ${buildingName(d.requires, s.faction)}.`;
@@ -659,7 +623,6 @@
           speed =
             u.speed *
             (e.faction === 1 ? 1.1 : 1) *
-            (e.team === 0 && this.s.upgrades.engines ? 1.18 : 1) *
             (e.slowed > this.s.time ? 0.65 : 1),
           step = Math.min(d, speed * dt),
           vx = dx / (d || 1),
@@ -718,7 +681,6 @@
       }
       damage(e, amount, source, quiet = false) {
         if (!e || e.hp <= 0 || e.invulnerable) return;
-        if (e.team === 0 || e.team === 2) amount *= 1 - (this.s.upgrades.armor || 0) * 0.1;
         amount = Math.max(0.05, amount);
         e.lastHit = this.s.time;
         e.lastSource = source?.id;
@@ -793,11 +755,11 @@
       rangedStats(e) {
         let d = e.kind === 'building' ? BUILDINGS[e.type] : UNITS[e.type],
           s = this.s;
-        let range = (d.range || 0) + ((e.team === 0 || e.team === 2) && s.upgrades.range ? 2 : 0),
+        let range = d.range || 0,
           damage =
             (d.damage || 0) *
             (e.faction === 2 ? 1.12 : 1) *
-            (e.team === 1 ? DIFFICULTY[s.difficulty].damage : 1 + (s.upgrades.weapons || 0) * 0.15) *
+            (e.team === 1 ? DIFFICULTY[s.difficulty].damage : 1) *
             (e.kills >= 5 ? 1.12 : 1);
         return { ...d, range, damage };
       }
@@ -941,7 +903,7 @@
           if (target) e.order = { type: 'mine', id: target.id };
         }
         if (e.order.type !== 'mine') return false;
-        let maxCarry = Math.round(18 * (1 + (s.upgrades.mining || 0) * 0.25));
+        let maxCarry = 18;
         if (e.carry >= maxCarry || e.returning) {
           e.returning = true;
           let h = this.closest(e, n => n.team === e.team && n.type === 'hq' && n.progress >= 1);
@@ -1000,7 +962,7 @@
         allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
         let t = allies[0];
         if (t) {
-          t.hp = Math.min(t.maxHp, t.hp + UNITS.medic.heal * (this.s.upgrades.healing ? 1.4 : 1) * dt);
+          t.hp = Math.min(t.maxHp, t.hp + UNITS.medic.heal * dt);
           if (e.cd <= 0 && this.visible(e)) {
             e.cd = 0.5;
             this.effects.healing(e, t);
@@ -1079,7 +1041,7 @@
                 ))
                   n.hp = Math.min(n.maxHp, n.hp + dt * 3);
             }
-            if (e.type === 'refinery') s.gas += dt * 1.7 * (1 + (s.upgrades.mining || 0) * 0.25);
+            if (e.type === 'refinery') s.gas += dt * 1.7;
           }
           if (e.team === 1)
             s.enemyBudget += dt * (e.type === 'hq' ? 2.8 : e.type === 'barracks' ? 0.8 : 0);
@@ -1090,7 +1052,7 @@
           if (e.maxShield && s.time - e.lastHit > 7)
             e.shield = Math.min(e.maxShield, e.shield + dt * e.maxShield * 0.075);
           if (e.kind === 'unit' && s.time - e.lastHit > 6) {
-            let regen = (e.faction === 1 ? 2.1 : 0) + (e.team === 0 && s.upgrades.healing ? 2 : 0);
+            let regen = e.faction === 1 ? 2.1 : 0;
             e.hp = Math.min(e.maxHp, e.hp + regen * dt);
           }
           if (e.kind === 'building') {
@@ -1137,23 +1099,6 @@
             else this.finishOrder(e);
           } else if (o.type === 'guard' && distance(e, o) > 5) this.move(e, o, dt, 3.5);
         }
-        for (let r of s.research) {
-          let lab = this.get(r.building);
-          if (!lab) {
-            r.canceled = true;
-            s.alloy += r.cost * 0.5;
-            s.gas += r.gas * 0.5;
-            continue;
-          }
-          r.progress += dt / r.time;
-          if (r.progress >= 1) {
-            s.upgrades[r.key] = r.level;
-            r.done = true;
-            this.emit('research', { name: TECH[r.key].name, level: r.level });
-            if (r.key === 'range') for (let e of s.entities) if (e.team === 0) e.vision += 3;
-          }
-        }
-        s.research = s.research.filter(r => !r.done && !r.canceled);
         for (let strike of s.strikes) {
           if (s.time < strike.at) continue;
           strike.done = true;

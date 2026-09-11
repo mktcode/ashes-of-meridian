@@ -42,7 +42,7 @@ function setup() {
     openModal(kind, html) { this.html = html; }
   }
   const game = {
-    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], m: { tier: 1 }, upgrades: {}, faction: 0 },
+    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], m: { tier: 1 }, faction: 0 },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     get(id) { return this.s.entities.find(e => e.id === id); },
@@ -259,12 +259,12 @@ test('command buttons and tabs retain their actions; pause suppresses battlefiel
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.perform = h.UI.prototype.perform;
   for (const action of ['attackMove','move','hold','stop','ability:orbital','ability:repair','ability:scan','ability:drop','rally','army','worker','home'])
     h.click({ action });
-  for (const tab of ['orders','build','army','tech']) h.click({ tab });
+  for (const tab of ['orders','build','army']) h.click({ tab });
   assert.deepEqual(h.calls.map(c => c[0] === 'command' ? ['command', c[2].type] : c), [
     ['mode','attackMove'], ['mode','move'], ['command','hold'], ['command','stop'],
     ['mode','ability','orbital'], ['mode','ability','repair'], ['mode','ability','scan'],
     ['mode','ability','drop'], ['mode','rally'], ['army'], ['worker'], ['base'],
-    ['tab','orders'], ['tab','build'], ['tab','army'], ['tab','tech']
+    ['tab','orders'], ['tab','build'], ['tab','army']
   ]);
   h.calls.length = 0; h.ui.paused = true; h.click({ action: 'ability:orbital' });
   assert.deepEqual(h.calls, []);
@@ -327,6 +327,38 @@ test('home redesign preserves dynamic campaign progress, checkpoint priority and
   }
 });
 
+test('command deck and help have no research actions; mission wards are never offered for construction', () => {
+  const h = setup(), html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.deepEqual(Array.from(html.matchAll(/data-tab="([^"]+)"/g), m => m[1]), ['orders', 'build', 'army']);
+  h.ui.showHelp(); assert.doesNotMatch(h.ui.html, /research/i);
+  for (const faction of [0, 1, 2]) {
+    h.ui.game.s.faction = faction; h.ui.tab = 'build'; h.ui.actionSignature = '';
+    h.ui.renderActions();
+    const actions = h.document.getElementById('actions').innerHTML;
+    assert.deepEqual(Array.from(actions.matchAll(/data-action="build:([^"]+)"/g), m => m[1]),
+      ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
+    assert.doesNotMatch(actions, /lab|ward|tech:|research|class="level"/i);
+  }
+  h.UI.prototype.perform.call(h.ui, 'tech:weapons'); assert.deepEqual(h.calls, []);
+  h.ui.tab = 'army'; h.ui.renderActions();
+  assert.match(h.document.getElementById('actions').innerHTML, /train:rifle/);
+  h.ui.game.s.entities = [{ id: 1, type: 'barracks', kind: 'building', team: 0, queue: [{ type: 'rifle', time: 11, progress: .5 }] }];
+  h.ui.updateQueues(); assert.match(h.document.getElementById('productionQueue').innerHTML, /data-queue="1:0"/);
+});
+
+test('selection retains damage/range and resource quantities, without the removed armor research level', () => {
+  const h = setup();
+  h.ui.game.rangedStats = () => ({ damage: 13, range: 9 });
+  const entity = { id: 1, kind: 'unit', type: 'rifle', faction: 0, team: 0, hp: 150, maxHp: 150, order: { type: 'idle' } };
+  h.ui.game.s.entities = [entity]; h.ui.selected = [1]; h.ui.updateSelection();
+  let html = h.document.getElementById('selectionContent').innerHTML;
+  assert.match(html, /DAMAGE<b>13/); assert.match(html, /RANGE<b>9/); assert.doesNotMatch(html, /ARMOR|REMAINING/);
+  for (const [type, expected] of [['crystal', '1234'], ['gas', '∞']]) {
+    Object.assign(entity, { kind: 'resource', type, amount: 1234 }); h.ui.updateSelection();
+    assert.ok(h.document.getElementById('selectionContent').innerHTML.includes(`REMAINING<b>${expected}`));
+  }
+});
+
 test('settings and camera hints describe touch navigation without desktop camera controls', () => {
   const h = setup(); h.ui.showSettings();
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
@@ -347,7 +379,7 @@ test('settings and camera hints describe touch navigation without desktop camera
   h.ui.updateSelection();
   assert.doesNotMatch(h.document.getElementById('selectionContent').innerHTML, /Box-select|Right-click/);
   assert.doesNotMatch(h.ui.tooltipFor('attackMove'), /Shift|queue waypoints/);
-  h.ui.game.s.upgrades = {}; h.ui.game.s.m = { tier: 1 }; h.ui.game.s.faction = 0;
+  h.ui.game.s.m = { tier: 1 }; h.ui.game.s.faction = 0;
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;
   assert.match(actions, /Command view/); assert.doesNotMatch(actions, /SPACE|class="key"|F[12359]/);
