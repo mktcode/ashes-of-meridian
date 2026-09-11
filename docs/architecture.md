@@ -39,7 +39,7 @@ Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-la
 
 ## Zustände und Speicherung
 
-- `game.s` enthält den serialisierbaren Operationszustand, einschließlich Entitäten, Ressourcen, Aufträgen, Missionsdaten, Kamera und Kontrollgruppen.
+- `game.s` enthält den serialisierbaren Operationszustand, einschließlich Entitäten, Ressourcen, Missionsdaten und Kamera. Entitäten besitzen einen aktuellen `order`; neue Befehle ersetzen ihn. Kontrollgruppen (`groups`) und Befehls-Auftragsketten (`orders`) sind entfernt, Produktionswarteschlangen (`queue`) bleiben erhalten. [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md).
 - Welt-Raster, Suchindizes (`ids`, `spatial`), RNG-Closure und kurzlebige Effekte liegen außerhalb von `game.s`.
 - `snapshot()` klont `game.s` und ergänzt erkundete Kartenfelder. `restore()` validiert Teile der Daten, rekonstruiert Welt und Indizes und ersetzt bei Kampagnenmissionen die Missionsdefinition durch den aktuellen `CAMPAIGN`-Eintrag.
 - Profil und Operation verwenden Version 1 und die Storage-Schlüssel `meridian.profile.v1` beziehungsweise `meridian.operation.v1`.
@@ -48,7 +48,7 @@ Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-la
 
 Alloy-Vorkommen verwenden fünf getrennte Ellipsenplätze je Standort; der östliche Standort lässt eine Lücke zur Startfabrik. `MeridianGame.crystalPosition()` liefert die Positionen. Keine Migration beim Laden. [Kristallkorrektur](crystal-spacing.md).
 
-Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. Die Kamera verwendet Touch-Ziehen, Pinch-Zoom und UI-Navigation; Desktop-Kamerapfade und die Profilvorgaben `edge`/`cameraSpeed` sind entfernt. Die übrigen Desktop-Befehle bleiben vorerst erhalten. [Kamera-Bereinigung](mobile-camera-cleanup.md).
+Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. Die Kamera verwendet Touch-Ziehen, Pinch-Zoom und UI-Navigation; Desktop-Kamerapfade und die Profilvorgaben `edge`/`cameraSpeed` sind entfernt. Auch Maus-Rechteckauswahl, Shift-Auswahl, Kontrollgruppen und Auftragsketten sind entfernt; Rechtsklick-Befehle und übrige Hotkeys bleiben vorerst erhalten. [Kamera-Bereinigung](mobile-camera-cleanup.md).
 
 ## Assets und direkter Dateistart
 

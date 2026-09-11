@@ -33,17 +33,21 @@ function setup() {
     selectWorker() { calls.push(['worker']); }
     save() { calls.push(['save']); }
     homeCamera() { calls.push(['base']); }
-    select(ids, add = false) { this.selected = [...ids]; calls.push(['select', [...ids], add]); }
+    select(ids) { this.selected = [...ids]; calls.push(['select', [...ids]]); }
     pick() { return null; }
     openModal(kind, html) { this.html = html; }
   }
   const game = {
-    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, groups: {}, entities: [] },
+    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [] },
+    effects: { floats: [] },
     alive(predicate) { return this.s.entities.filter(predicate); },
     get(id) { return this.s.entities.find(e => e.id === id); },
     command(...args) { calls.push(['command', ...args]); }
   };
-  const ui = new TestUI(game, { ground: (x, y) => ({ x: x / 10, z: y / 10 }) },
+  const ui = new TestUI(game, {
+    ground: (x, y) => ({ x: x / 10, z: y / 10 }),
+    project: (x, y, z) => ({ x, y: z })
+  },
     { unlock() {} }, { unlocked: 0, settings: { quality: 2 } }, {});
   ui.view = 'game'; ui.paused = false;
   const key = (key, options = {}) => ui.keyDown({ key, preventDefault() {}, ...options });
@@ -87,14 +91,83 @@ test('F and modified shortcuts remain; focus and pause still suppress commands',
   assert.deepEqual(h.calls, [['army'], ['save'], ['mode', 'attackMove']]);
 });
 
-test('control groups still select, but double recall no longer centers the camera', () => {
-  const h = setup();
-  h.ui.selected = [7]; h.key('1', { ctrlKey: true });
-  h.key('1'); h.key('1');
-  assert.deepEqual(h.calls, [['select', [7], false], ['select', [7], false]]);
+test('number keys no longer assign or recall control groups', () => {
+  const h = setup(); h.ui.selected = [7];
+  for (let n = 1; n <= 9; n++) {
+    h.key(String(n), { ctrlKey: true }); h.key(String(n)); h.key(String(n), { shiftKey: true });
+  }
+  assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
+  assert.equal('groups' in h.ui.game.s, false);
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
-  assert.equal('lastGroup' in h.ui, false);
-  assert.equal(h.UI.prototype.centerSelection, undefined);
+});
+
+test('left mouse dragging neither draws a selection rectangle nor changes selection or orders', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+  // A hidden entity keeps the overlay empty but would be inside the former selection box.
+  const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 0, x: 220, z: 220 };
+  h.ui.game.s.entities.push(unit); h.ui.pick = () => unit;
+  h.pointer('pointerdown', 200, 200, { pointerType: 'mouse' });
+  h.pointer('pointermove', 240, 230, { pointerType: 'mouse' });
+  const draws = [];
+  const ctx = new Proxy({}, { get: (_, key) => (...args) => draws.push([key, ...args]) });
+  h.ui.drawOverlay(ctx);
+  assert.equal(draws.some(([name]) => name === 'fillRect' || name === 'strokeRect'), false);
+  h.pointer('pointerup', 240, 230, { pointerType: 'mouse' });
+  assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
+  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
+});
+
+test('touch single/double tap preserves selection and visible same-type filtering', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', x: 200, z: 200 };
+  h.ui.game.s.entities.push(unit,
+    { ...unit, id: 2, x: 240 },
+    { ...unit, id: 3, type: 'worker' },
+    { ...unit, id: 4, team: 1 },
+    { ...unit, id: 5, x: -10 },
+    { ...unit, id: 6, z: 700 });
+  h.ui.pick = () => unit;
+  h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+  assert.deepEqual(h.ui.selected, [1]);
+  h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+  assert.deepEqual(h.ui.selected, [1, 2]);
+  assert.deepEqual(h.calls, [['select', [1]], ['select', [1, 2]]]);
+});
+
+test('mouse clicks and portrait clicks replace selection even with Shift; select still deduplicates', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+  h.ui.pick = () => ({ id: 1, team: 0, kind: 'unit', type: 'rifle' });
+  h.pointer('pointerdown', 200, 200, { pointerType: 'mouse', shiftKey: true });
+  h.pointer('pointerup', 200, 200, { pointerType: 'mouse', shiftKey: true });
+  assert.deepEqual(h.ui.selected, [1]);
+  h.document.handlers.click({ shiftKey: true, target: { closest: () => ({ dataset: { select: '2' } }) } });
+  assert.deepEqual(h.ui.selected, [2]);
+  h.ui.game.s.entities = [{ id: 1 }, { id: 2 }];
+  h.ui.audio.sound = () => {}; h.ui.updateSelection = () => {}; h.ui.renderActions = () => {};
+  h.UI.prototype.select.call(h.ui, [1, 1, 99]);
+  assert.deepEqual(Array.from(h.ui.selected), [1]);
+});
+
+test('Shift no longer queues commands or keeps successful targeting active', () => {
+  for (const mini of [false, true]) for (const rightClick of [false, true]) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+    h.ui.mode = { kind: 'attackMove' };
+    const options = { pointerType: 'mouse', button: rightClick ? 2 : 0, shiftKey: true,
+      target: mini ? h.minimap : h.world };
+    h.pointer('pointerdown', 100, 100, options); h.pointer('pointerup', 100, 100, options);
+    assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], 'command');
+    assert.equal(h.calls[0].length, 3, 'only selection and current order reach command');
+    assert.equal(h.ui.mode, null);
+  }
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.ui.mode = { kind: 'build', arg: 'depot' }; h.ui.game.build = () => false;
+  h.pointer('pointerdown', 200, 200, { shiftKey: true });
+  h.pointer('pointerup', 200, 200, { shiftKey: true });
+  assert.equal(h.ui.mode.kind, 'build', 'failed placement still allows retry');
+  h.ui.game.build = () => true;
+  h.pointer('pointerdown', 200, 200, { shiftKey: true });
+  h.pointer('pointerup', 200, 200, { shiftKey: true });
+  assert.equal(h.ui.mode, null);
 });
 
 test('wheel and key-release listeners are gone; middle-button drag does nothing', () => {
@@ -218,13 +291,18 @@ test('settings and camera hints describe touch navigation without desktop camera
   h.ui.showHelp();
   assert.match(h.ui.html, /F → click ground/);
   assert.match(h.ui.html, /Drag with one finger/); assert.match(h.ui.html, /Pinch/);
-  assert.doesNotMatch(h.ui.html, /WASD|Middle-button|Mouse wheel|Space \/ Home/);
+  assert.doesNotMatch(h.ui.html, /WASD|Middle-button|Mouse wheel|Space \/ Home|box-select|Shift|control group/i);
+  assert.match(h.ui.html, /Double-tap unit/);
   h.UI.prototype.setControlHints.call(h.ui);
   assert.match(h.footer.innerHTML, /<kbd>F<\/kbd> ATTACK-MOVE/);
   assert.match(h.footer.innerHTML, /DRAG TO PAN · PINCH TO ZOOM/);
-  assert.doesNotMatch(h.footer.innerHTML, /WASD|WHEEL|SPACE/);
+  assert.doesNotMatch(h.footer.innerHTML, /WASD|WHEEL|SPACE|DRAG BOX|CTRL|LMB/);
+  assert.match(h.footer.innerHTML, /TAP TO SELECT/);
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)/);
+  assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB/);
+  h.ui.updateSelection();
+  assert.doesNotMatch(h.document.getElementById('selectionContent').innerHTML, /Box-select|Right-click/);
+  assert.doesNotMatch(h.ui.tooltipFor('attackMove'), /Shift|queue waypoints/);
   h.ui.game.s.upgrades = {}; h.ui.game.s.m = { tier: 1 }; h.ui.game.s.faction = 0;
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;

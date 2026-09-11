@@ -2,6 +2,8 @@
 
 Erster Umsetzungsschritt aus der [Desktop-Bestandsaufnahme](mobile-desktop-inventory.md). Fokus ist das Entfernen unnötiger Desktop-Kamerasteuerung, nicht ein neues Touch-System oder HUD-Layout.
 
+Dieser Bericht beschreibt den damaligen Schritt. Die hier noch erhaltenen Maus-Rechteckauswahl, Shift-Auswahl, Kontrollgruppen und Auftragsketten wurden anschließend separat entfernt: [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md). Aktueller Gesamtprüfstand: [testing.md](testing.md).
+
 ## Änderungen
 
 - WASD-Kamerabewegung einschließlich gehaltenem Tastensatz, `keyup`-Listener und zugehörigen Reset-Aufrufen entfernt.

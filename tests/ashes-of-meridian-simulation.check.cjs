@@ -47,12 +47,10 @@ const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').l
 function checkpointScenario(game) {
   const hero = player(game, 'hero'), barracks = player(game, 'barracks');
   game.command([hero.id], { type: 'move', x: -10, z: 32 });
-  game.command([hero.id], { type: 'move', x: -15, z: 10 }, true);
   game.command([barracks.id], { type: 'move', x: -35, z: 48 });
   assert.equal(game.train('rifle', barracks.id), true);
   assert.equal(game.ability('scan', { x: 20, z: -20 }), true);
-  // These fields are normally assigned by the UI, which is not executed here.
-  game.s.groups = { '1': [hero.id] };
+  // Camera position is normally assigned by the UI, which is not executed here.
   game.s.cam = { x: -42, z: 40, zoom: 64 };
   advance(game, 100);
 }
@@ -86,25 +84,30 @@ test('fresh starts with the same seed reproduce state; another seed changes reso
   assert.notDeepEqual(json(a.alive(e => e.type === 'crystal').map(e => e.amount)), json(other.alive(e => e.type === 'crystal').map(e => e.amount)));
 });
 
-test('commands replace or append unit orders, ignore enemies and set building rally points', () => {
+test('commands replace the current order, ignore enemies and set building rally points', () => {
   const { game, events } = tutorial();
   const hero = player(game, 'hero'), barracks = player(game, 'barracks');
   const enemy = game.alive(e => e.team === 1 && e.kind === 'unit')[0];
   const enemyBefore = json(enemy);
   const move = Object.freeze({ type: 'move', x: -10, z: 32 });
   game.command([hero.id, enemy.id, 99999], move);
-  game.command([hero.id], { type: 'hold' }, true);
   assert.deepEqual(json(hero.order), move);
-  assert.deepEqual(json(hero.orders), [{ type: 'hold' }]);
+  assert.notStrictEqual(hero.order, move);
   assert.deepEqual(json(enemy), enemyBefore);
   assert.equal(events.find(e => e.type === 'order').data.count, 1);
-  game.finishOrder(hero);
+  hero.path = [{ x: -20, z: 30 }]; hero.pi = 1; hero.target = enemy.id;
+  hero.nextPath = 20; hero.stuck = 1;
+  game.command([hero.id], { type: 'hold' });
   assert.deepEqual(json(hero.order), { type: 'hold' });
-  game.command([hero.id], { type: 'move', x: -15, z: 10 }, true);
+  assert.deepEqual(json(hero.path), []);
+  assert.deepEqual([hero.pi, hero.target, hero.nextPath, hero.stuck], [0, null, 0, 0]);
+  game.finishOrder(hero);
+  assert.deepEqual(json(hero.order), { type: 'idle' });
+  assert.deepEqual(json(hero.path), []); assert.equal(hero.pi, 0);
+  game.command([hero.id], { type: 'move', x: -15, z: 10 });
   game.command([hero.id], { type: 'stop' });
   assert.deepEqual(json(hero.order), { type: 'stop' });
-  assert.deepEqual(json(hero.orders), []);
-  assert.deepEqual(json(hero.path), []);
+  assert.equal('orders' in hero, false);
   game.command([barracks.id], move);
   assert.deepEqual(json(barracks.rally), { x: -10, z: 32 });
 });
@@ -174,6 +177,8 @@ test('snapshot detaches nested entity, queue, camera and explored data from live
   const { game } = tutorial();
   assert.equal(game.train('rifle'), true);
   const snapshot = game.snapshot();
+  assert.equal('groups' in snapshot, false);
+  assert.ok(snapshot.entities.every(e => !('orders' in e)));
   snapshot.entities[1].queue[0].progress = .9;
   snapshot.entities[0].hp = 1;
   snapshot.cam.zoom = 99;
@@ -197,6 +202,8 @@ test('current checkpoint restores state and rebuilds navigation, indexes and fog
   assert.notStrictEqual(game.s.entities, fixture.entities);
   assert.notStrictEqual(game.s.entities[1].queue, fixture.entities[1].queue);
   for (const entity of game.s.entities) assert.strictEqual(game.get(entity.id), entity);
+  assert.equal('groups' in game.s, false);
+  assert.ok(game.s.entities.every(e => !('orders' in e)));
   const hq = player(game, 'hq'), hero = player(game, 'hero');
   const baseCell = game.world.idx(hq.x, hq.z);
   assert.equal(game.world.staticGrid[baseCell], 0);

@@ -6,7 +6,10 @@ Grundlage: statische Prüfung von Eingabelogik, Darstellung, Styles und Hilfetex
 
 ## Fortschritt nach der Bestandsaufnahme
 
-Die erste Bereinigung ist umgesetzt: Desktop-Kamerasteuerung, Edge-Scrolling-Einstellung und Kamera-Hotkey-Hinweise sind entfernt. Zusätzlich entfällt das Zentrieren beim doppelten Kontrollgruppenaufruf; die Gruppenauswahl bleibt erhalten. Details und Prüfungen: [Mobile-Kamera-Bereinigung](mobile-camera-cleanup.md). Die folgenden Tabellen bleiben als ursprüngliche Bestandsaufnahme stehen, nicht als aktuelle Liste noch vorhandener Funktionen.
+1. Desktop-Kamerasteuerung, Edge-Scrolling-Einstellung und Kamera-Hotkey-Hinweise entfernt: [Mobile-Kamera-Bereinigung](mobile-camera-cleanup.md).
+2. Maus-Rechteckauswahl samt Darstellung, Shift-Auswahl, Kontrollgruppen und Befehls-Auftragsketten entfernt: [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md). Touch-Auswahl und Doppeltippen bleiben erhalten. Kontrollgruppen und Auftragsketten entfallen auf ausdrücklichen Wunsch komplett, ohne neue Touch-Ersatzbedienung. Rechtsklick-Befehle und Automatisierung von Reparatur/Bauhilfe sind noch offen. Neue Auswahlbuttons sind nicht Teil dieses Schritts.
+
+Die folgenden Tabellen und ursprünglichen Konsequenzen bleiben als Bestandsaufnahme vor der Bereinigung stehen, nicht als aktuelle Liste noch vorhandener Funktionen oder aktueller Entscheidungen.
 
 ## 1. Kamera
 

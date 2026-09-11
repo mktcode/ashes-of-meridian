@@ -67,7 +67,6 @@
             convoys: 0
           },
           triggers: {},
-          groups: {},
           cam: { x: HOME.x + 5, z: HOME.z - 2, zoom: 57 },
           result: null,
           speed: 1
@@ -259,7 +258,6 @@
           progress: 1,
           queue: [],
           order: { type: 'idle' },
-          orders: [],
           path: [],
           pi: 0,
           walk: 0,
@@ -569,7 +567,7 @@
         this.navDirty = true;
         this.emit('toast', 'Foundation canceled. 75% of resources recovered.');
       }
-      setOrder(e, order, append = false) {
+      setOrder(e, order) {
         if (e.type === 'convoy' || e.evacuated) return;
         if (e.kind === 'building') {
           if (e.team === 0 && ['move', 'attackMove'].includes(order.type)) {
@@ -578,19 +576,14 @@
           }
           return;
         }
-        if (append && (e.order.type !== 'idle' || e.orders.length)) {
-          e.orders.push({ ...order });
-          return;
-        }
         e.order = { ...order };
-        e.orders = [];
         e.target = null;
         e.path = [];
         e.pi = 0;
         e.nextPath = 0;
         e.stuck = 0;
       }
-      command(ids, order, append = false) {
+      command(ids, order) {
         let units = ids.map(id => this.get(id)).filter(e => e && e.team === 0);
         let mobile = units.filter(e => e.kind === 'unit' && e.type !== 'convoy');
         let cols = Math.max(1, Math.ceil(Math.sqrt(mobile.length))),
@@ -629,7 +622,7 @@
               else o = { type: 'move', x: order.x, z: order.z };
             }
           } else if (o.type === 'smart') o = { type: 'move', x: order.x, z: order.z };
-          this.setOrder(e, o, append);
+          this.setOrder(e, o);
         }
         if (mobile.length)
           this.emit('order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
@@ -725,17 +718,9 @@
         return false;
       }
       finishOrder(e) {
-        if (e.orders?.length) {
-          let q = e.orders.shift();
-          e.order = q;
-          e.path = [];
-          e.pi = 0;
-          e.nextPath = 0;
-        } else {
-          e.order = { type: 'idle' };
-          e.path = [];
-          e.pi = 0;
-        }
+        e.order = { type: 'idle' };
+        e.path = [];
+        e.pi = 0;
       }
       damage(e, amount, source, quiet = false) {
         if (!e || e.hp <= 0 || e.invulnerable) return;

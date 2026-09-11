@@ -431,15 +431,13 @@
         this.openModal(
           'help',
           `<div class="eyebrow">MERIDIAN FIELD MANUAL</div><h1>Bring your people home.</h1><div class="help-grid"><div><h3>Command your force</h3>${[
-            ['Select / box-select', 'Left click / drag'],
+            ['Select', 'Tap unit or structure'],
             ['Context order / rally point', 'Right click'],
-            ['Add to selection / queue orders', 'Shift'],
             ['Attack-move', 'F → click ground'],
             ['Move / hold / stop', 'M / H / X'],
             ['Select all combat units', 'F2'],
             ['Select next worker', 'F3'],
-            ['Assign / recall control group', 'Ctrl + 1–9 / 1–9'],
-            ['Select visible units of a type', 'Double-click unit']
+            ['Select visible units of a type', 'Double-tap unit']
           ]
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><kbd>${b}</kbd></div>`)
             .join('')}<h3>Navigate</h3>${[
@@ -543,10 +541,8 @@
         let e = this.game.alive(e => e.team === 0 && e.type === 'hq')[0];
         if (e) this.center(e.x + 4, e.z - 2);
       }
-      select(ids, add = false) {
-        this.selected = [...new Set(add ? [...this.selected, ...ids] : ids)].filter(id =>
-          this.game.get(id)
-        );
+      select(ids) {
+        this.selected = [...new Set(ids)].filter(id => this.game.get(id));
         this.actionSignature = '';
         this.audio.sound('select');
         this.updateSelection();
@@ -832,7 +828,7 @@
           let d = {
             attackMove: [
               'Attack-move',
-              'Click a destination. Selected combat troops engage enemies on the way. Hold Shift to queue waypoints.'
+              'Tap a destination. Selected combat troops engage enemies on the way.'
             ],
             move: ['Move', 'Move directly to a destination without stopping to chase hostiles.'],
             hold: ['Hold position', 'Engage enemies in weapon range without pursuing.'],
@@ -869,7 +865,7 @@
         $('selectCount').textContent = this.selected.length ? this.selected.length + ' SELECTED' : '';
         if (!this.selected.length) {
           $('selectionContent').innerHTML =
-            '<div class="selection-empty"><div class="eyebrow">AWAITING YOUR ORDERS</div>Select a unit or structure.<p>Box-select a squad. Right-click to move, attack, mine, or repair.</p></div>';
+            '<div class="selection-empty"><div class="eyebrow">AWAITING YOUR ORDERS</div>Select a unit or structure.<p>Double-tap a unit to select visible units of its type.</p></div>';
           return;
         }
         if (this.selected.length > 1) {
@@ -1043,7 +1039,7 @@
       }
       setControlHints() {
         $('controlstrip').innerHTML =
-          `<span><kbd>LMB</kbd> SELECT / DRAG BOX</span><span><kbd>RMB</kbd> SMART ORDER</span><span><kbd>F</kbd> ATTACK-MOVE</span><span>DRAG TO PAN · PINCH TO ZOOM</span><span><kbd>F2</kbd> COMBAT</span><span><kbd>CTRL 1–9</kbd> GROUP</span>`;
+          `<span>TAP TO SELECT · DOUBLE-TAP TYPE</span><span><kbd>RMB</kbd> SMART ORDER</span><span><kbd>F</kbd> ATTACK-MOVE</span><span>DRAG TO PAN · PINCH TO ZOOM</span><span><kbd>F2</kbd> COMBAT</span>`;
       }
       bind() {
         document.addEventListener('pointerdown', e => {
@@ -1088,7 +1084,7 @@
             return;
           }
           if (b.dataset.select) {
-            this.select([+b.dataset.select], e.shiftKey);
+            this.select([+b.dataset.select]);
             return;
           }
           if (b.dataset.queue && !this.paused) {
@@ -1187,8 +1183,7 @@
           if (e.button === 2) {
             this.game.command(
               this.selected,
-              { type: this.mode?.kind === 'attackMove' ? 'attackMove' : 'move', ...p },
-              e.shiftKey
+              { type: this.mode?.kind === 'attackMove' ? 'attackMove' : 'move', ...p }
             );
             this.clearMode();
           } else if (this.mode) {
@@ -1196,7 +1191,7 @@
               this.toast('Place foundations in the main battlefield view.');
               return;
             }
-            this.applyTarget(p, null, e.shiftKey);
+            this.applyTarget(p, null);
           } else {
             this.center(p.x, p.z);
             miniDrag = true;
@@ -1374,17 +1369,6 @@
         }
         if (this.paused) return;
         if (e.repeat) return;
-        if (e.ctrlKey && /^[1-9]$/.test(k)) {
-          e.preventDefault();
-          this.game.s.groups[k] = [...this.selected];
-          this.toast('Control group ' + k + ' assigned · ' + this.selected.length + ' units');
-          return;
-        }
-        if (/^[1-9]$/.test(k)) {
-          let ids = this.game.s.groups[k];
-          if (ids?.length) this.select(ids, e.shiftKey);
-          return;
-        }
         if (e.ctrlKey && k === 'a') {
           this.selectArmy();
           return;
@@ -1454,8 +1438,7 @@
           y: e.clientY,
           button: e.button,
           type: e.pointerType,
-          moved: false,
-          shift: e.shiftKey
+          moved: false
         };
         $('tooltip').classList.add('hidden');
       }
@@ -1521,31 +1504,16 @@
             this.selected,
             target
               ? { type: 'smart', id: target.id, x: target.x, z: target.z }
-              : { type: 'move', ...p },
-            e.shiftKey
+              : { type: 'move', ...p }
           );
           this.clearMode();
           return;
         }
         if (this.mode) {
-          if (!d.moved) this.applyTarget(p, target, e.shiftKey);
+          if (!d.moved) this.applyTarget(p, target);
           return;
         }
-        if (d.moved) {
-          let left = Math.min(d.sx, d.x),
-            right = Math.max(d.sx, d.x),
-            top = Math.min(d.sy, d.y),
-            bottom = Math.max(d.sy, d.y),
-            ids = [];
-          for (let e of this.game.alive(
-            e => e.team === 0 && e.kind === 'unit' && e.type !== 'convoy'
-          )) {
-            let q = this.R.project(e.x, e.type === 'air' ? 4.5 : 1, e.z);
-            if (q && q.x >= left && q.x <= right && q.y >= top && q.y <= bottom) ids.push(e.id);
-          }
-          this.select(ids, e.shiftKey);
-          return;
-        }
+        if (d.moved) return;
         if (d.type === 'touch' && this.selected.length && (!target || target.team !== 0)) {
           this.game.command(
             this.selected,
@@ -1567,17 +1535,12 @@
                 let q = this.R.project(e.x, 1, e.z);
                 return q && q.x > 0 && q.x < innerWidth && q.y > 55 && q.y < innerHeight - 210;
               });
-            this.select(
-              units.map(e => e.id),
-              e.shiftKey
-            );
-          } else if (e.shiftKey && this.selected.includes(target.id))
-            this.select(this.selected.filter(id => id !== target.id));
-          else this.select([target.id], e.shiftKey);
+            this.select(units.map(e => e.id));
+          } else this.select([target.id]);
           this.lastClick = { id: target.id, time: now };
-        } else if (!e.shiftKey) this.select([]);
+        } else this.select([]);
       }
-      applyTarget(p, target, shift = false) {
+      applyTarget(p, target) {
         if (!this.mode) return;
         let m = this.mode,
           success = true;
@@ -1605,11 +1568,10 @@
               this.selected,
               m.kind === 'attackMove' && target?.team === 1
                 ? { type: 'attack', id: target.id, x: target.x, z: target.z }
-                : { type: m.kind, ...p },
-              shift
+                : { type: m.kind, ...p }
             );
         }
-        if (success && !shift) this.clearMode();
+        if (success) this.clearMode();
         this.updateHUD(true);
       }
       tick(dt) {
@@ -1787,15 +1749,6 @@
               ctx.moveTo(a.x, a.y);
               ctx.lineTo(b.x, b.y);
               ctx.stroke();
-              for (let order of e.orders || []) {
-                if (!Number.isFinite(order.x)) continue;
-                let q = this.R.project(order.x, 0.2, order.z);
-                ctx.beginPath();
-                ctx.moveTo(b.x, b.y);
-                ctx.lineTo(q.x, q.y);
-                ctx.stroke();
-                b = q;
-              }
             }
           }
           ctx.restore();
@@ -1895,23 +1848,5 @@
           ctx.fillText(f.text, p.x, p.y);
         }
         ctx.globalAlpha = 1;
-        if (
-          this.drag &&
-          this.drag.button === 0 &&
-          this.drag.type !== 'touch' &&
-          this.drag.moved &&
-          !this.mode
-        ) {
-          let d = this.drag,
-            x = Math.min(d.sx, d.x),
-            y = Math.min(d.sy, d.y),
-            w = Math.abs(d.x - d.sx),
-            h = Math.abs(d.y - d.sy);
-          ctx.fillStyle = '#89e3d214';
-          ctx.strokeStyle = '#99e8dccc';
-          ctx.lineWidth = 1;
-          ctx.fillRect(x, y, w, h);
-          ctx.strokeRect(x + 0.5, y + 0.5, w, h);
-        }
       }
     }
