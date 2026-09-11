@@ -3,12 +3,14 @@
 
 // Dependencies are supplied by app.js. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
-function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
+function createMeridianPersistence(
+  { getStorage, clamp, upgrades, warn }: PersistenceDependencies
+): MeridianPersistence {
     const PROFILE_KEY = 'meridian.profile.v1';
-    const memoryStore = {};
+    const memoryStore: Record<string, string> = {};
     const Store = {
       available: true,
-      get(k) {
+      get(k: string) {
         try {
           return getStorage().getItem(k);
         } catch (e) {
@@ -16,7 +18,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
           return memoryStore[k] || null;
         }
       },
-      set(k, v) {
+      set(k: string, v: string) {
         memoryStore[k] = v;
         try {
           getStorage().setItem(k, v);
@@ -27,7 +29,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
         }
       }
     };
-    function defaultProfile() {
+    function defaultProfile(): MeridianProfile {
       return {
         version: 1,
         upgrades: {},
@@ -41,7 +43,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
       };
     }
     function loadProfile() {
-      let d = defaultProfile();
+      let d: MeridianProfile = defaultProfile();
       try {
         let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
         if (p && p.version === 1) {
@@ -52,7 +54,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
           d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);
           d.settings.quality = clamp(Number(d.settings.quality) || 0, 0, 2);
         }
-      } catch (e) {
+      } catch (e: any) {
         warn('Profile reset:', e.message);
       }
       return d;
@@ -60,7 +62,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
     return {
       get available() { return Store.available; },
       loadProfile,
-      saveProfile(profile) {
+      saveProfile(profile: MeridianProfile) {
         return Store.set(PROFILE_KEY, JSON.stringify(profile));
       }
     };

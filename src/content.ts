@@ -92,7 +92,7 @@ const FACTIONS = [
       turret: 'Mourning obelisk'
     }
   }
-];
+] as const;
 const UNITS = {
   worker: {
     cost: 50,
@@ -206,7 +206,11 @@ const UNITS = {
     vision: 22,
     desc: 'Your veteran field commander. A powerful ranged fighter. Reconstruct at command if lost.'
   }
-};
+} as const satisfies Record<string, UnitDefinitionShape>;
+
+type UnitType = keyof typeof UNITS;
+type UnitDefinition = (typeof UNITS)[UnitType];
+
 const BUILDING_YAW = Math.PI / 15;
 const BUILDINGS = {
   hq: {
@@ -273,13 +277,20 @@ const BUILDINGS = {
     vision: 20,
     desc: 'Automated ground and air defense. Protects workers and choke points, but can be outranged by artillery.'
   }
-};
+} as const satisfies Record<string, BuildingDefinitionShape>;
+
+type BuildingType = keyof typeof BUILDINGS;
+type BuildingDefinition = (typeof BUILDINGS)[BuildingType];
+
 const ABILITIES = {
   orbital: { energy: 85, cd: 48 },
   repair: { energy: 45, cd: 28 },
   scan: { energy: 25, cd: 17 },
   drop: { energy: 95, cd: 75 }
-};
+} as const satisfies Record<string, AbilityDefinition>;
+
+type AbilityType = keyof typeof ABILITIES;
+
 const META = {
   startingWorkers: {
     name: 'Starting workers',
@@ -287,7 +298,10 @@ const META = {
     desc: 'Start each new battle with one additional worker per level, up to five. Starting resources are unchanged.',
     max: 5
   }
-};
+} as const satisfies Record<string, UpgradeDefinition>;
+
+type UpgradeType = keyof typeof META;
+
 const BIOMES = {
   ash: {
     name: 'ASH WASTES',
@@ -329,7 +343,10 @@ const BIOMES = {
     accent: 0xe7be88,
     flora: 0x715b72
   }
-};
+} as const satisfies Record<string, BiomeDefinition>;
+
+type BiomeType = keyof typeof BIOMES;
+
 const ICON_PATHS = {
   worker: 'M8 15l-4 5m8-10 8-6 2 2-6 8M5 8l3-3 11 11-3 3z',
   rifle: 'M5 20l3-6 6-1 5-8 2 1-4 10-6 1-3 4M4 9l5-5 5 2-5 5z',
@@ -361,16 +378,21 @@ const ICON_PATHS = {
   drop: 'M4 10a8 8 0 0 1 16 0H4M4 10l6 8m10-8-6 8M8 18h8v4H8z',
   save: 'M4 3h14l3 3v15H3V3zM7 3v7h10V3M7 21v-7h10v7',
   pause: 'M7 4v16M17 4v16'
-};
-function icon(name) {
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICON_PATHS[name] || ICON_PATHS.hero}"/></svg>`;
+} as const satisfies Record<string, string>;
+
+type IconType = keyof typeof ICON_PATHS;
+type FactionId = 0 | 1 | 2;
+type FactionDefinition = (typeof FACTIONS)[FactionId];
+
+function icon(name: string) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICON_PATHS[name as IconType] || ICON_PATHS.hero}"/></svg>`;
 }
-function unitName(type, faction = 0) {
+function unitName(type: string, faction: FactionId = 0) {
   return (
-    FACTIONS[faction].units[type] ||
+    FACTIONS[faction].units[type as UnitType] ||
     type
   );
 }
-function buildingName(type, faction = 0) {
-  return FACTIONS[faction].buildings[type] || type;
+function buildingName(type: string, faction: FactionId = 0) {
+  return FACTIONS[faction].buildings[type as BuildingType] || type;
 }

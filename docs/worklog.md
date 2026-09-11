@@ -2,6 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Typisierte Inhalts- und Profilverträge
+
+- `src/content.ts` typisiert Inhaltskataloge über `satisfies` und leitet Einheiten-, Gebäude-, Fähigkeits-, Biom- und Icon-Schlüssel aus den vorhandenen Objekten ab. `src/persistence.ts` typisiert injizierte Abhängigkeiten, Profil, Einstellungen, Storage und öffentliche API; gemeinsame reine Verträge liegen in `src/contracts.d.ts`. Keine Katalogwerte, Normalisierung oder Storage-Abläufe geändert.
+- Strenger TypeScript-Build und **207 Node-Tests bestanden** (rund 16 s), keine Fixtures geändert. Das erzeugte JavaScript beider migrierter Dateien ist bytegleich mit der Compiler-Ausgabe ihrer vorherigen JavaScript-Quellen. Kein erneuter Browsercheck, da Laufzeitwerte und erzeugte Skripte unverändert sind.
+
 ## Reproduzierbare TypeScript-Auslieferung
 
 - TypeScript 7.0.2 als einzige lokale Entwicklungsabhängigkeit ergänzt. `npm run build` leert `dist/` und erzeugt aus den weiterhin handgepflegten Quellen klassische Skripte samt Source Maps unter `dist/src/`; `index.html` und die Tests laden ausschließlich diese nicht eingecheckte Ausgabe. Kein Bundle, Laufzeitimport oder Server; synchrone Skriptreihenfolge und `file://` bleiben erhalten.
