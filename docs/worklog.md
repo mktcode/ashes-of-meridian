@@ -2,9 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
-## Seitliches Platzmachen statt Mitschieben
+## Seitliches und kontinuierliches Platzmachen
 
-Kleiner Fix in `yieldUnitSpace`: Verschiebung quer zur Bewegungsrichtung, dieselbe Querachse für die bestehende kurze Kette. Während der Ausweichwartezeit kein erneutes Verschieben. Keine neue Zustandsstruktur oder Refactoring. Bestehende Abstandstests um seitliches Ausweichen und begrenzte Verdrängung beim Vorbeilaufen ergänzt; **193 Node-Tests bestanden**. Kein neuer Browsercheck; manueller Spieltest durch den Nutzer steht aus.
+- `29fbfc4` begrenzte das Mitschieben auf seitliche Verschiebung mit Sperrzeit; trotz 193 bestandener Node-Tests meldete der Nutzer sichtbares Ruckeln durch Positionssprünge und 0,35-s-Pausen.
+- Statt sofortiger Versetzung jetzt ein kurzes `yieldTo`-Manöver mit normaler Geschwindigkeit, Drehung und Bewegungsanimation, auch für untätige Einheiten. Möglichst den ganzen Laufweg freimachen, bei Platzmangel einen kürzeren Schritt. Normale Aufträge bleiben erhalten; die Sperrzeit stoppt nicht mehr die eigene Bewegung. Eigenes Umgehen vor Platzanforderung; bereits ausweichende Verbündete nicht seitlich verfolgen.
+- **194 Node-Tests bestanden**: kontinuierliche Schritte ohne Anfangssprung, Auftrags-/Standplatzschutz, Save/Load und neu blockiertes Ausweichziel; bestehende sechsminütige Worker-Gegenverkehrstests weiterhin bestanden. Keine Fixtures geändert. Kein neuer Browsercheck; sichtbare Spielwirkung wartet auf erneutes manuelles Nutzerfeedback.
 
 ## Worker-Gegenverkehr und sichtbare Produktionsausfahrt
 

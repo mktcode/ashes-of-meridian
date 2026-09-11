@@ -192,7 +192,7 @@
           (!UNITS[e.type].flying && this.world.blockedAt(x, z))) return;
         for (const other of this.s.entities) {
           if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team || other.exit ||
-            other.yieldUntil > this.s.time || !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
+            other.yieldTo || other.yieldUntil > this.s.time || !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
             !!UNITS[other.type].flying !== !!UNITS[e.type].flying) continue;
           // Loaded workers get out first. Otherwise a stable ID priority prevents mutual pushing.
           const loaded = priority.type === 'worker' && (priority.returning || priority.carry >= 18),
@@ -202,18 +202,38 @@
           const dx = other.x - x, dz = other.z - z, d = Math.hypot(dx, dz),
             min = (e.size + other.size) * UNIT_BODY_SCALE;
           if (d >= min || d < 1e-9) continue;
-          // Clear the mover sideways, never carry another unit along its travel direction.
-          const lateral = dx * side.x + dz * side.z,
-            forward = dx * side.z - dz * side.x,
-            shift = (lateral < 0 ? -1 : 1) *
-              (Math.sqrt(Math.max(0, min * min - forward * forward)) - Math.abs(lateral) + 1e-6),
-            nx = other.x + side.x * shift, nz = other.z + side.z * shift;
-          // A short queue keeps the same lateral axis and the original mover's priority.
-          if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain, side);
-          if (this.unitFits(other, nx, nz)) {
-            other.x = nx; other.z = nz;
-            other.yieldUntil = this.s.time + 0.35;
+          // Clear the whole lane in one lateral manoeuvre, not a series of tiny pushes.
+          const lateral = dx * side.x + dz * side.z, forward = dx * side.z - dz * side.x;
+          // In a crowd, a smaller step may be all the space available.
+          for (const clearance of [min, Math.sqrt(Math.max(0, min * min - forward * forward))]) {
+            const shift = (lateral < 0 ? -1 : 1) * (clearance - Math.abs(lateral) + 1e-6),
+              nx = other.x + side.x * shift, nz = other.z + side.z * shift;
+            if (!UNITS[other.type].flying && !this.world.lineFree(other, {x:nx,z:nz})) continue;
+            // A short queue keeps the same lateral axis and the original mover's priority.
+            if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain, side);
+            if (this.unitFits(other, nx, nz)) {
+              other.yieldTo = { x: nx, z: nz };
+              other.yieldUntil = this.s.time + 0.35;
+              break;
+            }
           }
+        }
+      }
+      moveYield(e, dt) {
+        const p = e.yieldTo, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz),
+          speed = UNITS[e.type].speed * (e.faction === 1 ? 1.1 : 1) *
+            (e.slowed > this.s.time ? 0.65 : 1),
+          step = Math.min(d, speed * dt);
+        if (d < 1e-9) { delete e.yieldTo; return; }
+        const nx = e.x + dx / d * step, nz = e.z + dz / d * step;
+        if (step > 0 && this.unitFits(e, nx, nz)) {
+          e.x = nx; e.z = nz;
+          e.rot = angleLerp(e.rot, Math.atan2(dx, dz), dt * 9);
+          e.walk += step;
+          if (step >= d) delete e.yieldTo;
+        } else if (this.s.time >= e.yieldUntil) {
+          // An occupied/newly blocked route must not strand the original order.
+          delete e.yieldTo;
         }
       }
       spawnUnit(type, x, z, team, faction, extra = {}) {
@@ -615,7 +635,7 @@
         e.pathVersion = this.world.pathVersion;
       }
       move(e, p, dt, stop = 1) {
-        if (e.yieldUntil > this.s.time) return false;
+        if (e.yieldTo) { this.moveYield(e, dt); return false; }
         if (distance(e, p) < stop || (!e.exit && ['move', 'attackMove'].includes(e.order.type) &&
           distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) {
           // Stop beside an occupied destination instead of trying to stand at its center.
@@ -654,21 +674,25 @@
           vx = dx / (d || 1),
           vz = dz / (d || 1);
         if (step < 1e-9) return false;
+        // Let an ally finish clearing our next step instead of following it sideways.
+        const waitingForYield = this.s.entities.some(other => other !== e && other.hp > 0 && other.yieldTo &&
+          other.team === e.team && !!UNITS[other.type].flying === !!u.flying &&
+          Math.hypot(other.x - e.x - vx * step, other.z - e.z - vz * step) <
+            (e.size + other.size) * UNIT_BODY_SCALE);
         let moved = false, heading = Math.atan2(vx, vz);
         // Consistent passing side: never alternate left/right on consecutive frames.
-        for (const angle of [0, Math.PI / 6, Math.PI / 3, Math.PI / 2]) {
+        for (const angle of waitingForYield ? [] : [0, Math.PI / 6, Math.PI / 3, Math.PI / 2]) {
           const nx = e.x + (vx * Math.cos(angle) - vz * Math.sin(angle)) * step,
             nz = e.z + (vx * Math.sin(angle) + vz * Math.cos(angle)) * step;
-          if (!this.unitFits(e, nx, nz)) {
-            this.yieldUnitSpace(e, nx, nz);
-            if (!this.unitFits(e, nx, nz)) continue;
-          }
+          if (!this.unitFits(e, nx, nz)) continue;
           e.x = nx;
           e.z = nz;
           heading -= angle;
           moved = true;
           break;
         }
+        // Only ask for space when we cannot pass; schedule one manoeuvre, not one per trial angle.
+        if (!moved && !waitingForYield) this.yieldUnitSpace(e, e.x + vx * step, e.z + vz * step);
         // The terrain path samples can graze a grid corner: slide along it, not into it.
         if (!moved && !u.flying && this.world.blockedAt(e.x + vx * step, e.z + vz * step)) {
           for (const [nx, nz] of [[e.x + vx * step, e.z], [e.x, e.z + vz * step]]) {
@@ -1072,6 +1096,7 @@
             }
             continue;
           }
+          if (e.yieldTo) { this.moveYield(e, dt); continue; }
           if (e.type === 'worker' && this.worker(e, dt)) continue;
           if (e.type === 'medic' && this.medic(e, dt)) continue;
           let fighting = UNITS[e.type].damage > 0 ? this.combat(e, dt) : false;
@@ -1334,6 +1359,10 @@
             Math.abs(e.exit.x) > 85 || Math.abs(e.exit.z) > 85 ||
             !Number.isFinite(e.exit.length) || e.exit.length <= 0))
             throw Error('An exit in this save is invalid.');
+          if (e.yieldTo && (e.kind !== 'unit' || !Number.isFinite(e.yieldTo.x) ||
+            !Number.isFinite(e.yieldTo.z) || Math.abs(e.yieldTo.x) > 85 ||
+            Math.abs(e.yieldTo.z) > 85 || !Number.isFinite(e.yieldUntil)))
+            throw Error('A yielding target in this save is invalid.');
           if ((e.kind === 'unit' && !UNITS[e.type]) || (e.kind === 'building' && !BUILDINGS[e.type]) ||
             e.queue?.some(q => !UNITS[q.type]))
             throw Error('Unknown entity in save.');
