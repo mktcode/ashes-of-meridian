@@ -475,6 +475,51 @@ test('base combat/movement stats retain faction, shields and unit-veterancy modi
   }
 });
 
+test('attack-move closes to firing range against buildings and units on both teams', () => {
+  for (const team of [0, 1]) for (const type of ['rifle', 'tank', 'artillery']) {
+    for (const kind of ['building', 'unit']) {
+      const game = spacingArena();
+      game.s.nextWave = Infinity;
+      const target = kind === 'building'
+        ? game.spawnBuilding('hq', 0, 0, 1 - team, 0)
+        : game.spawnUnit('tank', 0, 0, 1 - team, 0);
+      target.order = { type: 'move', x: 0, z: 0 };
+      target.cd = 1000;
+      const attacker = game.spawnUnit(type, 30, 0, team, 0);
+      attacker.order = { type: 'attackMove', x: -10, z: 0 };
+      game.world.rebuild(game.s.entities);
+      // Isolate range/movement, not fog updates or return fire.
+      game.world.reveal = () => game.world.visible.fill(255);
+      game.world.reveal();
+      advance(game, 400);
+      assert.ok(target.hp < target.maxHp, `${team}/${type}/${kind} must reach firing range`);
+      assertUnitSpacing(game);
+    }
+  }
+});
+
+test('seed 444213 hostile waves destroy an undefended HQ instead of stopping outside range', () => {
+  const { game } = createGame();
+  game.start({ seed: 444213, biome: 'ash', faction: 0, enemy: 2 });
+  const hq = player(game, 'hq');
+  advance(game, 6000);
+  assert.equal(hq.hp, 0);
+  assert.ok(game.s.result);
+});
+
+test('ordinary move can retreat from an enemy without switching to combat pursuit', () => {
+  const game = spacingArena();
+  const unit = game.spawnUnit('rifle', 0, 0, 0, 0);
+  const enemy = game.spawnUnit('tank', -6, 0, 1, 0);
+  enemy.order = { type: 'hold' }; enemy.cd = 1000;
+  game.world.visible.fill(255);
+  game.command([unit.id], { type: 'move', x: 20, z: 0 });
+  advance(game, 120);
+  assert.ok(unit.x > 19);
+  assert.equal(unit.order.type, 'idle');
+  assertUnitSpacing(game);
+});
+
 test('retained weapons apply direct damage and schedule artillery shells without a boss weapon', () => {
   const { game } = battle(), target = game.alive(e => e.team === 1 && e.type === 'hq')[0];
   const hp = target.hp; game.world.visible.fill(255);

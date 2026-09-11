@@ -116,9 +116,9 @@
         e.pathGoal = { x: p.x, z: p.z };
         e.pathVersion = this.world!.pathVersion;
       },
-      move(this: MeridianGame, e: UnitEntity, p: Position, dt: number, stop = 1) {
+      move(this: MeridianGame, e: UnitEntity, p: Position, dt: number, stop = 1, settleBesideOccupiedGoal = true) {
         if (e.yieldTo) { this.moveYield(e, dt); return false; }
-        if (distance(e, p) < stop || (!e.exit && ['move', 'attackMove'].includes(e.order.type) &&
+        if (distance(e, p) < stop || (settleBesideOccupiedGoal && !e.exit && ['move', 'attackMove'].includes(e.order.type) &&
           distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) {
           // Stop beside an occupied destination instead of trying to stand at its center.
           e.path = [];

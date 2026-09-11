@@ -2,6 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Kampfannäherung ohne vorzeitigen Ankunftsstopp
+
+- Die Toleranz für belegte Bewegungsziele stoppte Attack-move-Einheiten außerhalb ihrer Waffenreichweite. Kampfbewegungen deaktivieren nun nur diese Toleranz; Kollisionsradien, Waffenwerte und normale Zielankunft bleiben unverändert. Keine zusätzlichen RNG-Aufrufe; tatsächlich stattfindende Kämpfe verbrauchen wieder ihre regulären Effekt-Samples.
+- Zwei neue Regressionen scheiterten vor dem Fix und bestehen danach: Annäherung beider Teams mit Rifle/Tank/Artillerie gegen Gebäude/Einheiten sowie unverteidigtes HQ bei Seed 444213. Ein zusätzlicher Rückzugstest schützt gewöhnliche Bewegung bei Feindkontakt. **210 Node-Tests inklusive Build bestanden**, keine Fixtures geändert. Kein eigener Browserlauf für diesen Simulationsfix; der folgende Eingabeschalter erhält einen gezielten `file://`-Check.
+
 ## Typisierte kosmetische Effekte
 
 - `src/effects.ts` typisiert den aktuellen RNG-Provider, alle sechs Effektpayload-Varianten, Schadenszahlen und die Simulationseingaben für Schüsse, Bau, Abbau, Heilung und Drops. Der diskriminierte Payload-Vertrag verengt Partikel-, Rauch-, Beam- und Shell-Felder im Tick; `effects-view.js` bleibt als renderernahe Darstellung bewusst noch untypisiert.

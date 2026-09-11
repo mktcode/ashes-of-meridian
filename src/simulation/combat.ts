@@ -173,8 +173,9 @@
             let dx = e.x - t.x,
               dz = e.z - t.z,
               len = Math.hypot(dx, dz) || 1;
-            this.move(e, { x: e.x + (dx / len) * 5, z: e.z + (dz / len) * 5 }, dt, 0.3);
-          } else this.move(e, t, dt, d.range + t.size * 0.65 - 0.6);
+            this.move(e, { x: e.x + (dx / len) * 5, z: e.z + (dz / len) * 5 }, dt, 0.3, false);
+          // Combat must reach weapon range, not the extra tolerance for crowded move goals.
+          } else this.move(e, t, dt, d.range + t.size * 0.65 - 0.6, false);
           return true;
         }
         return false;
