@@ -2,7 +2,24 @@
     'use strict';
     const UNIT_BODY_SCALE = 1.4;
     class MeridianGame {
-      constructor(profile, emit = () => {}, createEffects = random => new MeridianEffects(random)) {
+      profile: MeridianProfile;
+      emit: (type: string, data: any) => void;
+      s: RunState | null;
+      world: Battlefield | null;
+      ids: Map<number, Entity>;
+      spatial: Map<number, Entity[]>;
+      acc: number;
+      fogClock: number;
+      objectiveClock: number;
+      navDirty: boolean;
+      random: () => number;
+      effects: MeridianEffects;
+
+      constructor(
+        profile: MeridianProfile,
+        emit: (type: string, data: any) => void = () => {},
+        createEffects: (random: () => number) => MeridianEffects = random => new MeridianEffects(random)
+      ) {
         this.profile = profile;
         this.emit = emit;
         this.s = null;
@@ -17,7 +34,7 @@
         this.effects = createEffects(() => this.random());
       }
     }
-    function defineMeridianGameMethods(methods) {
+    function defineMeridianGameMethods(methods: Record<string, Function>) {
       for (const [name, method] of Object.entries(methods))
         Object.defineProperty(MeridianGame.prototype, name, {
           value: method,
@@ -25,14 +42,14 @@
           writable: true
         });
     }
-    defineMeridianGameMethods({
-      start(opts = {}) {
-        let faction = FACTIONS[opts.faction] ? opts.faction : 0,
-          enemy = FACTIONS[opts.enemy] ? opts.enemy : 2,
-          biome = BIOMES[opts.biome] ? opts.biome : 'ash',
+    const gameMethods = {
+      start(this: MeridianGame, opts: BattleOptions = {}) {
+        let faction: FactionId = FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : 0,
+          enemy: FactionId = FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : 2,
+          biome: BiomeType = BIOMES[opts.biome as BiomeType] ? opts.biome as BiomeType : 'ash',
           savedMeta = this.profile.upgrades || {},
           meta = Object.fromEntries(
-            Object.keys(META).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
+            (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
               [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
           ),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
@@ -61,7 +78,7 @@
         this.acc = 0;
         this.fogClock = 0;
         this.objectiveClock = 0;
-        let s = this.s;
+        let s = this.s!;
         // The base starts with an HQ; upgrade workers are added after the seeded setup.
         this.spawnBuilding('hq', HOME.x, HOME.z, 0, faction);
         // Keep the former default loadout's RNG entry point for crystal amounts and enemy spawns.
@@ -104,9 +121,11 @@
           : 'Expedition command|Recruit your first worker from Infanterie to establish your economy, then destroy the enemy command center.');
         return s;
       },
-      spawn(kind, type, x, z, team, faction = 0, extra = {}) {
-        let s = this.s,
-          d = kind === 'building' ? BUILDINGS[type] : UNITS[type] || {},
+      spawn<K extends EntityKind>(this: MeridianGame, kind: K, type: EntityTypeForKind<K>, x: number, z: number, team: TeamId, faction: FactionId = 0, extra: SpawnExtra = {}): EntityForKind<K> {
+        let s = this.s!,
+          d: Partial<BuildingDefinitionShape & UnitDefinitionShape> = kind === 'building'
+            ? BUILDINGS[type as BuildingType]
+            : UNITS[type as UnitType] || {},
           hp = d.hp || 1000;
         if (kind === 'unit') {
           if (faction === 1) hp *= 0.9;
@@ -142,39 +161,39 @@
           shield: faction === 2 && kind === 'unit' ? hp * 0.32 : 0,
           maxShield: faction === 2 && kind === 'unit' ? hp * 0.32 : 0,
           ...extra
-        };
+        } as unknown as EntityForKind<K>;
         s.entities.push(e);
         this.ids.set(e.id, e);
         return e;
       },
-      spawnBuilding(type, x, z, team, faction, extra = {}) {
+      spawnBuilding(this: MeridianGame, type: BuildingType, x: number, z: number, team: TeamId, faction: FactionId, extra: SpawnExtra = {}) {
         return this.spawn('building', type, x, z, team, faction, extra);
       },
-      spawnUnit(type, x, z, team, faction, extra = {}) {
+      spawnUnit(this: MeridianGame, type: UnitType, x: number, z: number, team: TeamId, faction: FactionId, extra: SpawnExtra = {}) {
         const p = this.unitPosition({ type, size: UNITS[type].size, x, z, ...extra });
         if (!p) return null;
         return this.spawn('unit', type, p.x, p.z, team, faction, { ...extra, ...p });
       },
-      crystalPosition(siteIndex, depositIndex) {
+      crystalPosition(this: MeridianGame, siteIndex: number, depositIndex: number): Position {
         // Leave a gap toward the adjacent starting factory at the eastern site.
         const phase = siteIndex === 5 ? 4.7 : siteIndex * 0.8;
         const site = RESOURCE_SITES[siteIndex], a = (depositIndex * Math.PI * 2) / 5 + phase;
         return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3.0 };
       },
-      spawnResource(type, x, z, amount) {
+      spawnResource(this: MeridianGame, type: ResourceType, x: number, z: number, amount: number) {
         return this.spawn('resource', type, x, z, -1, 0, { amount, size: type === 'gas' ? 1.5 : 1.3 });
       },
-      get(id) {
-        let e = this.ids.get(id);
+      get(this: MeridianGame, id: number | null | undefined): Entity | null {
+        let e = this.ids.get(id as number);
         return e && e.hp > 0 ? e : null;
       },
-      alive(filter = () => true) {
-        return this.s.entities.filter(e => e.hp > 0 && filter(e));
+      alive(this: MeridianGame, filter: (entity: Entity) => boolean = () => true): Entity[] {
+        return this.s!.entities.filter(e => e.hp > 0 && filter(e));
       },
-      closest(pos, filter) {
+      closest(this: MeridianGame, pos: Position, filter: (entity: Entity) => boolean): Entity | null {
         let best = null,
           d = Infinity;
-        for (let e of this.s.entities)
+        for (let e of this.s!.entities)
           if (e.hp > 0 && filter(e)) {
             let dd = distance(pos, e);
             if (dd < d) {
@@ -184,16 +203,16 @@
           }
         return best;
       },
-      rehash() {
+      rehash(this: MeridianGame) {
         this.spatial.clear();
-        for (let e of this.s.entities) {
+        for (let e of this.s!.entities) {
           if (e.hp <= 0 || !['building', 'unit'].includes(e.kind)) continue;
           let key = Math.floor((e.x + 90) / 10) + Math.floor((e.z + 90) / 10) * 32;
           if (!this.spatial.has(key)) this.spatial.set(key, []);
-          this.spatial.get(key).push(e);
+          this.spatial.get(key)!.push(e);
         }
       },
-      near(x, z, r, filter = () => true) {
+      near(this: MeridianGame, x: number, z: number, r: number, filter: (entity: Entity) => boolean = () => true): Entity[] {
         let out = [],
           a = Math.floor((x - r + 90) / 10),
           b = Math.floor((x + r + 90) / 10),
@@ -210,10 +229,13 @@
           }
         return out;
       },
-      enemy(a, b) {
+      enemy(this: MeridianGame, a: Pick<EntityBase, 'team'>, b: Pick<EntityBase, 'team'>) {
         return a.team === 1 ? b.team === 0 : b.team === 1;
       },
-      visible(e) {
-        return e.team === 0 || !!this.world.visible[this.world.idx(e.x, e.z)];
+      visible(this: MeridianGame, e: Entity) {
+        return e.team === 0 || !!this.world!.visible[this.world!.idx(e.x, e.z)];
       },
-    });
+    };
+    type GameMethods = typeof gameMethods;
+    interface MeridianGame extends GameMethods {}
+    defineMeridianGameMethods(gameMethods);

@@ -1,28 +1,28 @@
     /* MeridianGame combat methods. Loaded after simulation/game.js. */
     'use strict';
-    defineMeridianGameMethods({
-      damage(e, amount, source, quiet = false) {
+    const combatMethods = {
+      damage(this: MeridianGame, e: Entity | null | undefined, amount: number, source: CombatSource | null | undefined, quiet = false) {
         if (!e || e.hp <= 0) return;
         amount = Math.max(0.05, amount);
-        e.lastHit = this.s.time;
+        e.lastHit = this.s!.time;
         e.lastSource = source?.id;
         if (e.shield > 0) {
           let absorbed = Math.min(e.shield, amount);
           e.shield -= absorbed;
           amount -= absorbed;
-          e.shieldFlash = this.s.time + 0.18;
+          e.shieldFlash = this.s!.time + 0.18;
         }
         e.hp -= amount;
-        if (source?.team === 0) this.s.stats.damage += amount;
+        if (source?.team === 0) this.s!.stats.damage += amount;
         if (!quiet && amount > 25 && this.visible(e)) this.effects.damageNumber(e, amount);
         if (e.hp <= 0) this.kill(e, source);
         if (
           e.team === 0 &&
           e.kind === 'building' &&
           e.hp > 0 &&
-          this.s.time - (this.s.triggers.baseAlert || -100) > 14
+          this.s!.time - (this.s!.triggers.baseAlert || -100) > 14
         ) {
-          this.s.triggers.baseAlert = this.s.time;
+          this.s!.triggers.baseAlert = this.s!.time;
           this.emit('alert', {
             text:
               e.type === 'hq' ? 'Command center under attack!' : 'Your structures are under attack.',
@@ -32,26 +32,26 @@
           });
         }
       },
-      kill(e, source) {
+      kill(this: MeridianGame, e: Entity, source: CombatSource | null | undefined) {
         e.hp = 0;
-        e.deathAt = this.s.time;
+        e.deathAt = this.s!.time;
         e.target = null;
         if (e.kind === 'building') this.navDirty = true;
         if (e.team === 1) {
-          this.s.stats.kills++;
+          this.s!.stats.kills++;
           if (source && source.team === 0) {
-            source.kills++;
+            source.kills!++;
             if (source.kills === 5) {
-              source.maxHp *= 1.12;
-              source.hp = Math.min(source.maxHp, source.hp + source.maxHp * 0.25);
+              source.maxHp! *= 1.12;
+              source.hp = Math.min(source.maxHp!, source.hp! + source.maxHp! * 0.25);
               this.emit('alert', {
-                text: unitName(source.type, source.faction) + ' promoted to veteran.'
+                text: unitName(source.type!, source.faction!) + ' promoted to veteran.'
               });
             }
           }
         }
         if (e.team === 0 && e.kind === 'unit') {
-          this.s.stats.lost++;
+          this.s!.stats.lost++;
           if (e.type === 'hero') {
             this.emit(
               'radio',
@@ -71,9 +71,11 @@
         if (e.team === 1 && e.type === 'hq')
           this.emit('alert', { text: 'Enemy command center destroyed.', x: e.x, z: e.z });
       },
-      rangedStats(e) {
-        let d = e.kind === 'building' ? BUILDINGS[e.type] : UNITS[e.type],
-          s = this.s;
+      rangedStats(this: MeridianGame, e: UnitEntity | BuildingEntity): RangedStats {
+        let d: BuildingDefinitionShape | UnitDefinitionShape = e.kind === 'building'
+          ? BUILDINGS[e.type]
+          : UNITS[e.type],
+          s = this.s!;
         let range = d.range || 0,
           damage =
             (d.damage || 0) *
@@ -81,7 +83,7 @@
             (e.kills >= 5 ? 1.12 : 1);
         return { ...d, range, damage };
       },
-      fire(e, target) {
+      fire(this: MeridianGame, e: UnitEntity | BuildingEntity, target: Entity) {
         let d = this.rangedStats(e);
         e.cd = d.reload || 1;
         let dx = target.x - e.x,
@@ -89,12 +91,12 @@
         e.rot = Math.atan2(dx, dz);
         if (e.type === 'artillery') {
           let travel = 0.85;
-          this.s.strikes.push({
+          this.s!.strikes.push({
             x: target.x,
             z: target.z,
-            at: this.s.time + travel,
+            at: this.s!.time + travel,
             damage: d.damage,
-            radius: d.splash,
+            radius: d.splash!,
             source: e.id,
             team: e.team,
             type: 'shell'
@@ -116,7 +118,7 @@
           }
         }
       },
-      acquire(e) {
+      acquire(this: MeridianGame, e: UnitEntity | BuildingEntity): Entity | null {
         let d = this.rangedStats(e);
         if (!d.damage) return null;
         let radius = Math.max(d.range + (e.kind === 'building' ? 3 : 6), e.team === 1 ? 19 : 16);
@@ -126,7 +128,7 @@
           radius,
           n =>
             this.enemy(e, n) &&
-            (!d.groundOnly || !UNITS[n.type]?.flying) &&
+            (!d.groundOnly || !(UNITS as Partial<Record<EntityType, UnitDefinitionShape>>)[n.type]?.flying) &&
             (e.team === 1 || this.visible(n))
         );
         if (e.order.type === 'guard')
@@ -138,17 +140,17 @@
         });
         return a[0] || null;
       },
-      combat(e, dt) {
+      combat(this: MeridianGame, e: UnitEntity | BuildingEntity, dt: number) {
         let d = this.rangedStats(e),
           o = e.order;
-        if (e.nextThink <= this.s.time) {
-          e.nextThink = this.s.time + 0.28 + (e.id % 3) * 0.035;
+        if (e.nextThink <= this.s!.time) {
+          e.nextThink = this.s!.time + 0.28 + (e.id % 3) * 0.035;
           let target = o.type === 'attack' ? this.get(o.id) : this.get(e.target);
           if (
             target &&
             (!this.enemy(e, target) ||
               (!this.visible(target) && e.team !== 1) ||
-              (d.groundOnly && UNITS[target.type]?.flying) ||
+              (d.groundOnly && (UNITS as Partial<Record<EntityType, UnitDefinitionShape>>)[target.type]?.flying) ||
               distance(e, target) > d.range + 14)
           )
             target = null;
@@ -177,7 +179,7 @@
         }
         return false;
       },
-      medic(e, dt) {
+      medic(this: MeridianGame, e: UnitEntity, dt: number) {
         let allies = this.near(
           e.x,
           e.z,
@@ -211,4 +213,7 @@
         }
         return false;
       },
-    });
+    };
+    type CombatMethods = typeof combatMethods;
+    interface MeridianGame extends CombatMethods {}
+    defineMeridianGameMethods(combatMethods);

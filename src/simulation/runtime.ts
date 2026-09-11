@@ -1,17 +1,17 @@
     /* MeridianGame runtime methods. Loaded after simulation/game.js. */
     'use strict';
-    defineMeridianGameMethods({
-      step(dt) {
-        if (!this.s || this.s.result) return;
-        let s = this.s;
+    const runtimeMethods = {
+      step(this: MeridianGame, dt: number) {
+        if (!this.s || this.s!.result) return;
+        let s = this.s!;
         s.time += dt;
         s.energy = Math.min(200, s.energy + dt * 0.8);
         this.rehash();
         if (this.navDirty) {
-          this.world.rebuild(s.entities);
+          this.world!.rebuild(s.entities);
           this.navDirty = false;
         }
-        let economic = s.entities.filter(e => e.hp > 0 && e.kind === 'building' && e.progress >= 1);
+        let economic = s.entities.filter(e => e.hp > 0 && e.kind === 'building' && e.progress >= 1) as BuildingEntity[];
         for (let e of economic) {
           if (e.team === 0) {
             if (e.type === 'hq') {
@@ -53,7 +53,7 @@
                 this.emit('trained', u);
               }
             }
-            if (BUILDINGS[e.type].damage) this.combat(e, dt);
+            if ((BUILDINGS[e.type] as BuildingDefinitionShape).damage) this.combat(e, dt);
             continue;
           }
           if (e.exit) {
@@ -165,17 +165,17 @@
         }
         this.fogClock += dt;
         if (this.fogClock >= 0.35) {
-          this.world.reveal(s.entities, s.scans);
+          this.world!.reveal(s.entities, s.scans);
           this.fogClock = 0;
         }
-        if (s.entities.some(e => e.hp <= 0 && s.time - e.deathAt > 9)) {
-          s.entities = s.entities.filter(e => e.hp > 0 || s.time - e.deathAt <= 9);
+        if (s.entities.some(e => e.hp <= 0 && s.time - e.deathAt! > 9)) {
+          s.entities = s.entities.filter(e => e.hp > 0 || s.time - e.deathAt! <= 9);
           this.ids = new Map(s.entities.map(e => [e.id, e]));
         }
       },
-      wave() {
-        let s = this.s,
-          bases = this.alive(e => e.team === 1 && e.type === 'hq');
+      wave(this: MeridianGame) {
+        let s = this.s!,
+          bases = this.alive(e => e.team === 1 && e.type === 'hq') as BuildingEntity[];
         s.wave++;
         s.nextWave = s.time + 80 * Math.max(0.68, 1 - s.wave * 0.01);
         if (!bases.length) return;
@@ -186,14 +186,14 @@
         for (let i = 0; i < n; i++) {
           if (this.alive(e => e.team === 1 && e.kind === 'unit').length >= 130) break;
           let r = this.random(),
-            type = 'rifle';
+            type: UnitType = 'rifle';
           if (s.wave >= 3 && r < 0.1) type = 'air';
           else if (s.wave >= 2 && r < 0.19) type = 'artillery';
           else if (r < 0.38) type = 'tank';
           else if (r < 0.48) type = 'medic';
           let c = UNITS[type].cost * 0.5;
           if (s.enemyBudget < c && i > 1) break;
-          let p = this.world.nearest(site.x - 8 + (i % 4) * 2.3, site.z + 10 + Math.floor(i / 4) * 2.3);
+          let p = this.world!.nearest(site.x - 8 + (i % 4) * 2.3, site.z + 10 + Math.floor(i / 4) * 2.3);
           let u = this.spawnUnit(type, p.x, p.z, 1, faction);
           if (!u) continue;
           s.enemyBudget = Math.max(0, s.enemyBudget - c);
@@ -202,19 +202,19 @@
         }
         if (deployed) this.emit('wave', { wave: s.wave, x: site.x, z: site.z, n: deployed });
       },
-      objectiveTick() {
-        if (this.s.result) return;
+      objectiveTick(this: MeridianGame) {
+        if (this.s!.result) return;
         if (!this.alive(e => e.team === 0 && e.type === 'hq').length)
           this.finish(false, 'Your last command center has fallen.');
         else if (!this.alive(e => e.team === 1 && e.type === 'hq').length)
           this.finish(true, 'The enemy base has been destroyed.');
       },
-      objectiveRows() {
+      objectiveRows(this: MeridianGame): ObjectiveRow[] {
         let done = !this.alive(e => e.team === 1 && e.type === 'hq').length;
         return [{ text: 'Destroy the enemy base', current: done ? 1 : 0, max: 1, sub: '', done }];
       },
-      ability(kind, p) {
-        let s = this.s,
+      ability(this: MeridianGame, kind: AbilityType, p: Position) {
+        let s = this.s!,
           d = ABILITIES[kind];
         if (!d) return false;
         if (s.abilities[kind] > s.time) {
@@ -228,7 +228,7 @@
           this.emit('toast', 'Insufficient command energy.');
           return false;
         }
-        if (kind !== 'scan' && !this.world.explored[this.world.idx(p.x, p.z)]) {
+        if (kind !== 'scan' && !this.world!.explored[this.world!.idx(p.x, p.z)]) {
           this.emit('toast', 'Scout or scan this location first.');
           return false;
         }
@@ -262,11 +262,11 @@
         if (kind === 'scan') {
           s.scans.push({ ...p, r: 32, until: s.time + 22 });
           this.emit('scan', p);
-          this.world.reveal(s.entities, s.scans);
+          this.world!.reveal(s.entities, s.scans);
         }
         if (kind === 'drop') {
           for (let i = 0; i < 4; i++) {
-            let loc = this.world.nearest(p.x + (i % 2) * 2 - 1, p.z + Math.floor(i / 2) * 2 - 1);
+            let loc = this.world!.nearest(p.x + (i % 2) * 2 - 1, p.z + Math.floor(i / 2) * 2 - 1);
             this.spawnUnit('rifle', loc.x, loc.z, 0, s.faction);
             this.effects.drop(loc, FACTIONS[s.faction].color);
           }
@@ -274,10 +274,10 @@
         }
         return true;
       },
-      finish(win, text) {
-        if (this.s.result) return;
-        let s = this.s,
-          h = this.alive(e => e.team === 0 && e.type === 'hq'),
+      finish(this: MeridianGame, win: boolean, text: string) {
+        if (this.s!.result) return;
+        let s = this.s!,
+          h = this.alive(e => e.team === 0 && e.type === 'hq') as BuildingEntity[],
           integrity = h.length ? Math.max(...h.map(e => e.hp / e.maxHp)) : 0;
         s.result = {
           win,
@@ -293,9 +293,12 @@
         };
         this.emit('result', s.result);
       },
-    });
+    };
+    type RuntimeMethods = typeof runtimeMethods;
+    interface MeridianGame extends RuntimeMethods {}
+    defineMeridianGameMethods(runtimeMethods);
 
-    function formatTime(s) {
+    function formatTime(s: number) {
       s = Math.max(0, Math.floor(s || 0));
       return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
     }

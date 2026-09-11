@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Typisierte Gefechtssimulation
+
+- Alle fünf Simulationsfragmente nach TypeScript migriert. `src/contracts.d.ts` modelliert jetzt den nullable Run-Zustand, Entitätsvarianten, Einheitenbefehle, Produktionsqueues, Kosten, Fähigkeiten und Simulationsgrenzen. Die generische Spawn-Fabrik koppelt Art und Rückgabetyp; die vorhandenen Methodenobjekte erweitern weiterhin gemeinsam `MeridianGame` und werden unverändert als klassische, nicht aufzählbare Prototypmethoden ausgeliefert.
+- Strenger Build ohne TypeScript-Diagnosen und **207 Node-Tests bestanden** (rund 16 s), keine Fixtures geändert. Drei temporäre Negativproben wiesen Tippfehler in Run-Zustand/Queue und einen falschen Mine-Auftrag wie vorgesehen zurück. Namen, Reihenfolge und Deskriptoren aller 59 Prototyp-Properties stimmen mit dem vorherigen Stand überein; direkte Ausgabeprüfung zeigte nur typbedingte Formatierung in drei Methodentexten und eine logisch gleichwertige Verengung im Befehlszweig. RNG-, Entitäts-, Kollisions- und Simulationsreferenzen blieben grün.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Build-Ausgabe, Touch-Menüs, Käufe bis fünf Startworker, Gefechtsstarts, zusätzliche Rekrutierung, Reload/Neustart und kontrollierter Abbau bestanden; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät- oder anderer Browser-/GPU-Test.
+
 ## Typisierte Inhalts- und Profilverträge
 
 - `src/content.ts` typisiert Inhaltskataloge über `satisfies` und leitet Einheiten-, Gebäude-, Fähigkeits-, Biom- und Icon-Schlüssel aus den vorhandenen Objekten ab. `src/persistence.ts` typisiert injizierte Abhängigkeiten, Profil, Einstellungen, Storage und öffentliche API; gemeinsame reine Verträge liegen in `src/contracts.d.ts`. Keine Katalogwerte, Normalisierung oder Storage-Abläufe geändert.

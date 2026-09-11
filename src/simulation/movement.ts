@@ -1,23 +1,23 @@
     /* MeridianGame movement methods. Loaded after simulation/game.js. */
     'use strict';
-    defineMeridianGameMethods({
-      unitFits(e, x, z) {
-        const flying = !!UNITS[e.type].flying;
+    const movementMethods = {
+      unitFits(this: MeridianGame, e: UnitBody, x: number, z: number) {
+        const flying = !!(UNITS[e.type] as UnitDefinitionShape).flying;
         if (Math.abs(x) > 85 || Math.abs(z) > 85) return false;
-        if (!flying && this.world.blockedAt(x, z)) {
-          if (!e.exit || this.world.staticGrid[this.world.idx(x, z)]) return false;
-          const cell = this.world.point(this.world.idx(x, z));
-          if (this.s.entities.some(b => b.hp > 0 && b.kind === 'building' && b.id !== e.exit.building &&
+        if (!flying && this.world!.blockedAt(x, z)) {
+          if (!e.exit || this.world!.staticGrid[this.world!.idx(x, z)]) return false;
+          const cell = this.world!.point(this.world!.idx(x, z));
+          if (this.s!.entities.some(b => b.hp > 0 && b.kind === 'building' && b.id !== e.exit!.building &&
             distance(cell, b) < b.size + 0.35 + CELL * 0.4)) return false;
         }
         // Read live positions: the combat hash is only rebuilt once per step.
-        return !this.s.entities.some(other => other !== e && other.hp > 0 && other.kind === 'unit' &&
-          !!UNITS[other.type].flying === flying &&
+        return !this.s!.entities.some(other => other !== e && other.hp > 0 && other.kind === 'unit' &&
+          !!(UNITS[other.type] as UnitDefinitionShape).flying === flying &&
           ((other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9 ||
             (other.exit && (other.exit.x - x) ** 2 + (other.exit.z - z) ** 2 <
               ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9)));
       },
-      unitPosition(e) {
+      unitPosition(this: MeridianGame, e: UnitPlacement): Position | null {
         const x = clamp(e.x, -85, 85), z = clamp(e.z, -85, 85);
         if (this.unitFits(e, x, z)) return { x, z };
         // Deterministic nearby rings, without consuming simulation/effect RNG.
@@ -31,18 +31,18 @@
         }
         return null;
       },
-      yieldUnitSpace(e, x, z, priority = e, chain = [], side = null) {
+      yieldUnitSpace(this: MeridianGame, e: UnitEntity, x: number, z: number, priority: UnitEntity = e, chain: number[] = [], side: Position | null = null) {
         if (chain.length >= 4 || chain.includes(e.id)) return;
         const step = Math.hypot(x - e.x, z - e.z);
         if (!side && step < 1e-9) return;
         side ??= { x: -(z - e.z) / step, z: (x - e.x) / step };
         const nextChain = [...chain, e.id];
         if (Math.abs(x) > 85 || Math.abs(z) > 85 ||
-          (!UNITS[e.type].flying && this.world.blockedAt(x, z))) return;
-        for (const other of this.s.entities) {
+          (!(UNITS[e.type] as UnitDefinitionShape).flying && this.world!.blockedAt(x, z))) return;
+        for (const other of this.s!.entities) {
           if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team || other.exit ||
-            other.yieldTo || other.yieldUntil > this.s.time || !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
-            !!UNITS[other.type].flying !== !!UNITS[e.type].flying) continue;
+            other.yieldTo || other.yieldUntil! > this.s!.time || !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
+            !!(UNITS[other.type] as UnitDefinitionShape).flying !== !!(UNITS[e.type] as UnitDefinitionShape).flying) continue;
           // Loaded workers get out first. Otherwise a stable ID priority prevents mutual pushing.
           const loaded = priority.type === 'worker' && (priority.returning || priority.carry >= 18),
             otherLoaded = other.type === 'worker' && (other.returning || other.carry >= 18);
@@ -52,28 +52,28 @@
             min = (e.size + other.size) * UNIT_BODY_SCALE;
           if (d >= min || d < 1e-9) continue;
           // Clear the whole lane in one lateral manoeuvre, not a series of tiny pushes.
-          const lateral = dx * side.x + dz * side.z, forward = dx * side.z - dz * side.x;
+          const lateral = dx * side!.x + dz * side!.z, forward = dx * side!.z - dz * side!.x;
           // In a crowd, a smaller step may be all the space available.
           for (const clearance of [min, Math.sqrt(Math.max(0, min * min - forward * forward))]) {
             const shift = (lateral < 0 ? -1 : 1) * (clearance - Math.abs(lateral) + 1e-6),
-              nx = other.x + side.x * shift, nz = other.z + side.z * shift;
-            if (!UNITS[other.type].flying && !this.world.lineFree(other, {x:nx,z:nz})) continue;
+              nx = other.x + side!.x * shift, nz = other.z + side!.z * shift;
+            if (!(UNITS[other.type] as UnitDefinitionShape).flying && !this.world!.lineFree(other, {x:nx,z:nz})) continue;
             // A short queue keeps the same lateral axis and the original mover's priority.
             if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain, side);
             if (this.unitFits(other, nx, nz)) {
               other.yieldTo = { x: nx, z: nz };
-              other.yieldUntil = this.s.time + 0.35;
+              other.yieldUntil = this.s!.time + 0.35;
               break;
             }
           }
         }
       },
-      movementSpeed(e) {
+      movementSpeed(this: MeridianGame, e: UnitEntity) {
         return UNITS[e.type].speed * (e.faction === 1 ? 1.1 : 1) *
-          (e.slowed > this.s.time ? 0.65 : 1);
+          (e.slowed! > this.s!.time ? 0.65 : 1);
       },
-      moveYield(e, dt) {
-        const p = e.yieldTo, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz),
+      moveYield(this: MeridianGame, e: UnitEntity, dt: number) {
+        const p = e.yieldTo!, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz),
           speed = this.movementSpeed(e),
           step = Math.min(d, speed * dt);
         if (d < 1e-9) { delete e.yieldTo; return; }
@@ -83,40 +83,40 @@
           e.rot = angleLerp(e.rot, Math.atan2(dx, dz), dt * 9);
           e.walk += step;
           if (step >= d) delete e.yieldTo;
-        } else if (this.s.time >= e.yieldUntil) {
+        } else if (this.s!.time >= e.yieldUntil!) {
           // An occupied/newly blocked route must not strand the original order.
           delete e.yieldTo;
         }
       },
-      pathTo(e, p, avoidUnits = false) {
-        if (!avoidUnits && e.nextPath > this.s.time) return;
-        const blocked = this.world.blocked, flying = !!UNITS[e.type].flying;
+      pathTo(this: MeridianGame, e: UnitEntity, p: Position, avoidUnits = false) {
+        if (!avoidUnits && e.nextPath > this.s!.time) return;
+        const blocked = this.world!.blocked, flying = !!(UNITS[e.type] as UnitDefinitionShape).flying;
         try {
           if (e.exit && !flying) {
-            this.world.blocked = this.world.staticGrid.slice();
-            for (const b of this.s.entities) if (b.hp > 0 && b.kind === 'building' && b.id !== e.exit.building)
-              this.world.mark(this.world.blocked, b.x, b.z, b.size + 0.35);
+            this.world!.blocked = this.world!.staticGrid.slice();
+            for (const b of this.s!.entities) if (b.hp > 0 && b.kind === 'building' && b.id !== e.exit!.building)
+              this.world!.mark(this.world!.blocked, b.x, b.z, b.size + 0.35);
           }
           if (avoidUnits) {
-            this.world.blocked = flying ? new Uint8Array(blocked.length) : this.world.blocked.slice();
-            for (const other of this.s.entities) if (other !== e && other.hp > 0 && other.kind === 'unit' &&
-              !!UNITS[other.type].flying === flying) {
+            this.world!.blocked = flying ? new Uint8Array(blocked.length) : this.world!.blocked.slice();
+            for (const other of this.s!.entities) if (other !== e && other.hp > 0 && other.kind === 'unit' &&
+              !!(UNITS[other.type] as UnitDefinitionShape).flying === flying) {
               const radius = (e.size + other.size) * UNIT_BODY_SCALE + 0.4 - CELL * 0.4;
-              this.world.mark(this.world.blocked, other.x, other.z, radius);
-              if (other.exit) this.world.mark(this.world.blocked, other.exit.x, other.exit.z, radius);
+              this.world!.mark(this.world!.blocked, other.x, other.z, radius);
+              if (other.exit) this.world!.mark(this.world!.blocked, other.exit.x, other.exit.z, radius);
             }
-            this.world.blocked[this.world.idx(e.x, e.z)] = 0;
+            this.world!.blocked[this.world!.idx(e.x, e.z)] = 0;
           }
-          e.path = this.world.path(e.x, e.z, p.x, p.z, flying && !avoidUnits);
+          e.path = this.world!.path(e.x, e.z, p.x, p.z, flying && !avoidUnits);
         } finally {
-          this.world.blocked = blocked;
+          this.world!.blocked = blocked;
         }
         e.pi = 0;
-        e.nextPath = this.s.time + 0.8;
+        e.nextPath = this.s!.time + 0.8;
         e.pathGoal = { x: p.x, z: p.z };
-        e.pathVersion = this.world.pathVersion;
+        e.pathVersion = this.world!.pathVersion;
       },
-      move(e, p, dt, stop = 1) {
+      move(this: MeridianGame, e: UnitEntity, p: Position, dt: number, stop = 1) {
         if (e.yieldTo) { this.moveYield(e, dt); return false; }
         if (distance(e, p) < stop || (!e.exit && ['move', 'attackMove'].includes(e.order.type) &&
           distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) {
@@ -128,7 +128,7 @@
         if (
           !e.path?.length ||
           e.pi >= e.path.length ||
-          e.pathVersion !== this.world.pathVersion ||
+          e.pathVersion !== this.world!.pathVersion ||
           (e.pathGoal && distance(e.pathGoal, p) > 3)
         )
           this.pathTo(e, p);
@@ -138,24 +138,24 @@
           dz = q.z - e.z,
           d = Math.hypot(dx, dz);
         if (d < (e.exit ? 0.04 : 0.65) || (e.pi + 1 < e.path.length && d < 3.8 &&
-          !this.unitFits(e, q.x, q.z) && this.world.lineFree(e, e.path[e.pi + 1]))) {
+          !this.unitFits(e, q.x, q.z) && this.world!.lineFree(e, e.path[e.pi + 1]))) {
           // An occupied intermediate waypoint must not trap us circling an idle unit.
           e.pi++;
           q = e.path[e.pi];
-          if (!q) return distance(e, p) < stop + 1 || this.world.blockedAt(p.x, p.z);
+          if (!q) return distance(e, p) < stop + 1 || this.world!.blockedAt(p.x, p.z);
           dx = q.x - e.x;
           dz = q.z - e.z;
           d = Math.hypot(dx, dz);
         }
-        let u = UNITS[e.type],
+        let u: UnitDefinitionShape = UNITS[e.type],
           speed = this.movementSpeed(e),
           step = Math.min(d, speed * dt),
           vx = dx / (d || 1),
           vz = dz / (d || 1);
         if (step < 1e-9) return false;
         // Let an ally finish clearing our next step instead of following it sideways.
-        const waitingForYield = this.s.entities.some(other => other !== e && other.hp > 0 && other.yieldTo &&
-          other.team === e.team && !!UNITS[other.type].flying === !!u.flying &&
+        const waitingForYield = this.s!.entities.some(other => other !== e && other.hp > 0 && other.yieldTo &&
+          other.team === e.team && !!(UNITS[(other as UnitEntity).type] as UnitDefinitionShape).flying === !!u.flying &&
           Math.hypot(other.x - e.x - vx * step, other.z - e.z - vz * step) <
             (e.size + other.size) * UNIT_BODY_SCALE);
         let moved = false, heading = Math.atan2(vx, vz);
@@ -173,7 +173,7 @@
         // Only ask for space when we cannot pass; schedule one manoeuvre, not one per trial angle.
         if (!moved && !waitingForYield) this.yieldUnitSpace(e, e.x + vx * step, e.z + vz * step);
         // The terrain path samples can graze a grid corner: slide along it, not into it.
-        if (!moved && !u.flying && this.world.blockedAt(e.x + vx * step, e.z + vz * step)) {
+        if (!moved && !u.flying && this.world!.blockedAt(e.x + vx * step, e.z + vz * step)) {
           for (const [nx, nz] of [[e.x + vx * step, e.z], [e.x, e.z + vz * step]]) {
             if ((nx === e.x && nz === e.z) || !this.unitFits(e, nx, nz)) continue;
             heading = Math.atan2(nx - e.x, nz - e.z);
@@ -183,7 +183,7 @@
         e.stuck = moved && Math.hypot(q.x - e.x, q.z - e.z) < d - step * 0.1 ? 0 : (e.stuck || 0) + dt;
         if (e.stuck > 0.65) {
           this.pathTo(e, p, true);
-          if (!u.flying && this.world.blockedAt(e.x, e.z)) {
+          if (!u.flying && this.world!.blockedAt(e.x, e.z)) {
             const p = this.unitPosition(e);
             if (p) Object.assign(e, p);
           }
@@ -195,7 +195,7 @@
         }
         return false;
       },
-      setOrder(e, order) {
+      setOrder(this: MeridianGame, e: Entity, order: UnitOrder) {
         if (e.kind === 'building') return;
         e.order = { ...order };
         e.target = null;
@@ -204,16 +204,16 @@
         e.nextPath = 0;
         e.stuck = 0;
       },
-      command(ids, order) {
-        let units = ids.map(id => this.get(id)).filter(e => e && e.team === 0);
-        let mobile = units.filter(e => e.kind === 'unit');
+      command(this: MeridianGame, ids: number[], order: CommandOrder) {
+        let units = ids.map(id => this.get(id)).filter(e => e && e.team === 0) as Entity[];
+        let mobile = units.filter(e => e.kind === 'unit') as UnitEntity[];
         let cols = Math.max(1, Math.ceil(Math.sqrt(mobile.length))),
           spacing = Math.max(0, ...mobile.map(e => e.size)) * UNIT_BODY_SCALE * 2 + 0.1,
           i = 0;
         for (let e of units) {
-          let o = { ...order };
+          let o: CommandOrder = { ...order };
           if (e.kind === 'unit') {
-            if (['move', 'attackMove'].includes(o.type)) {
+            if (o.type === 'move' || o.type === 'attackMove') {
               let j = i++;
               o.x += ((j % cols) - (cols - 1) / 2) * spacing;
               o.z += (Math.floor(j / cols) - (Math.ceil(mobile.length / cols) - 1) / 2) * spacing;
@@ -236,17 +236,20 @@
                 o = { type: 'repair', id: target.id };
               else if (target && target.kind === 'unit' && target.team === 0)
                 o = { type: 'follow', id: target.id };
-              else o = { type: 'move', x: order.x, z: order.z };
+              else o = { type: 'move', x: o.x, z: o.z };
             }
           }
-          this.setOrder(e, o);
+          this.setOrder(e, o as UnitOrder);
         }
         if (mobile.length)
           this.emit('order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
       },
-      finishOrder(e) {
+      finishOrder(this: MeridianGame, e: UnitEntity) {
         e.order = { type: 'idle' };
         e.path = [];
         e.pi = 0;
       },
-    });
+    };
+    type MovementMethods = typeof movementMethods;
+    interface MeridianGame extends MovementMethods {}
+    defineMeridianGameMethods(movementMethods);

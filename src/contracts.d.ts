@@ -86,3 +86,200 @@ interface MeridianPersistence {
   loadProfile(): MeridianProfile;
   saveProfile(profile: MeridianProfile): boolean;
 }
+
+type TeamId = -1 | 0 | 1;
+type EntityKind = 'unit' | 'building' | 'resource';
+type ResourceType = 'crystal' | 'gas';
+type EntityType = UnitType | BuildingType | ResourceType;
+
+interface Position {
+  x: number;
+  z: number;
+}
+
+interface Cost {
+  cost: number;
+  gas: number;
+}
+
+interface ExitPath extends Position {
+  building: number;
+  length: number;
+}
+
+interface QueueItem extends Cost {
+  type: UnitType;
+  progress: number;
+  time: number;
+}
+
+type UnitOrder =
+  | { type: 'idle'; x?: number; z?: number }
+  | { type: 'hold' | 'stop'; x?: number; z?: number }
+  | ({ type: 'move' | 'attackMove' | 'guard' } & Position)
+  | ({ type: 'attack' | 'build' } & Position & { id: number })
+  | { type: 'mine' | 'follow' | 'repair'; id: number; x?: number; z?: number };
+
+type CommandOrder = UnitOrder | ({ type: 'smart'; id: number } & Position);
+
+interface EntityBase extends Position {
+  id: number;
+  kind: EntityKind;
+  type: EntityType;
+  team: TeamId;
+  faction: FactionId;
+  hp: number;
+  maxHp: number;
+  size: number;
+  vision: number;
+  rot: number;
+  progress: number;
+  queue: QueueItem[];
+  order: UnitOrder;
+  path: Position[];
+  pi: number;
+  walk: number;
+  cd: number;
+  nextThink: number;
+  nextPath: number;
+  lastHit: number;
+  kills: number;
+  carry: number;
+  work: number;
+  shield: number;
+  maxShield: number;
+  target?: number | null;
+  exit?: ExitPath;
+  yieldTo?: Position;
+  yieldUntil?: number;
+  pathGoal?: Position;
+  pathVersion?: number;
+  stuck?: number;
+  slowed?: number;
+  returning?: boolean;
+  lastSource?: number;
+  shieldFlash?: number;
+  paid?: Cost;
+  gasId?: number;
+  deathAt?: number;
+  rally?: Position;
+}
+
+interface UnitEntity extends EntityBase {
+  kind: 'unit';
+  type: UnitType;
+}
+
+interface BuildingEntity extends EntityBase {
+  kind: 'building';
+  type: BuildingType;
+}
+
+interface ResourceEntity extends EntityBase {
+  kind: 'resource';
+  type: ResourceType;
+  amount: number;
+}
+
+type Entity = UnitEntity | BuildingEntity | ResourceEntity;
+type CombatSource = Pick<EntityBase, 'team'> & Partial<EntityBase>;
+type EntityForKind<K extends EntityKind> =
+  K extends 'unit' ? UnitEntity : K extends 'building' ? BuildingEntity : ResourceEntity;
+type EntityTypeForKind<K extends EntityKind> =
+  K extends 'unit' ? UnitType : K extends 'building' ? BuildingType : ResourceType;
+type SpawnExtra = Partial<Omit<EntityBase, 'id' | 'kind' | 'type' | 'team' | 'faction' | 'x' | 'z'>> & { amount?: number };
+type UnitBody = Pick<UnitEntity, 'type' | 'size'> & Partial<UnitEntity>;
+type UnitPlacement = UnitBody & Position;
+
+interface BattleOptions {
+  faction?: number;
+  enemy?: number;
+  biome?: string;
+  seed?: number;
+}
+
+interface RunStats {
+  kills: number;
+  lost: number;
+  trained: number;
+  gathered: number;
+  built: number;
+  damage: number;
+}
+
+interface Strike extends Position {
+  at: number;
+  damage: number;
+  radius: number;
+  team: TeamId;
+  type: 'shell' | 'orbital' | 'flare';
+  source?: number;
+  done?: boolean;
+}
+
+interface TimedArea extends Position {
+  r: number;
+  until: number;
+}
+
+interface Field extends TimedArea {
+  type: 'bloom' | 'repair';
+}
+
+interface Scan extends TimedArea {}
+
+interface BattleResult {
+  win: boolean;
+  text: string;
+  time: number;
+  score: number;
+  integrity: number;
+}
+
+interface RunTriggers extends Record<string, number | boolean> {
+  baseAlert?: number;
+  solar?: number;
+}
+
+interface RunState {
+  seed: number;
+  faction: FactionId;
+  enemy: FactionId;
+  biome: BiomeType;
+  meta: Record<string, number>;
+  time: number;
+  alloy: number;
+  gas: number;
+  energy: number;
+  nextId: number;
+  entities: Entity[];
+  scans: Scan[];
+  strikes: Strike[];
+  fields: Field[];
+  abilities: Record<AbilityType, number>;
+  wave: number;
+  nextWave: number;
+  enemyBudget: number;
+  stats: RunStats;
+  triggers: RunTriggers;
+  cam: Position & { zoom: number };
+  result: BattleResult | null;
+  speed: number;
+}
+
+interface ObjectiveRow {
+  text: string;
+  current: number;
+  max: number;
+  sub: string;
+  done: boolean;
+}
+
+interface RangedStats {
+  range: number;
+  damage: number;
+  reload?: number;
+  splash?: number;
+  groundOnly?: boolean;
+  minRange?: number;
+}
