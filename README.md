@@ -1,46 +1,31 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fraktionen und wiederholbare Gefechte mit einem Ziel – das gegnerische Hauptquartier zerstören. Kampagne und alternative Missionsmodi sind entfernt. `index.html` enthält das statische HTML und die Dateieinbindungen, `styles.css` das Stylesheet. Das JavaScript liegt in klassischen lokalen Skripten; Zuständigkeiten und Reihenfolge beschreibt die [Codekarte](docs/architecture.md#codekarte). Alle Quellen werden direkt ausgeliefert, ohne npm-Abhängigkeiten oder Build-Schritt.
+Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fraktionen, wiederholbare Gefechte gegen ein gegnerisches HQ. Kein Build, keine npm-Abhängigkeiten und kein erforderlicher Server.
 
 ## Spielen
 
-`index.html` direkt in einem aktuellen Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. Alle im HTML über `<script src>` eingebundenen lokalen `.js`-Dateien und `styles.css` müssen neben der HTML-Datei bleiben. Die Skybox ist wie die Bodentexturen direkt in `renderer.js` eingebettet; die separaten Bilddateien bleiben als Quellen im Repository erhalten. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
+`index.html` direkt in einem Browser mit WebGL 2 öffnen. Alle lokalen JavaScript-Dateien und `styles.css` müssen neben dem HTML bleiben; die separaten Bildquellen ebenfalls mitführen. Die Laufzeittexturen sind in `renderer.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket.
 
-Der direkte Start über `file://` bleibt erhalten und wurde einschließlich des Skybox-WebGL-Uploads mit Chromium geprüft. Die frühere Sperre der extern geladenen Skybox wird durch eingebettete Bilddaten vermieden. Browser können weiterhin dauerhafte Speicherung einschränken. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
+- Kamera: mit einem Finger ziehen, Pinch-to-Zoom, Zoom-/Basisknöpfe oder Minimap.
+- Auswahl: einmal tippen; zweimal für sichtbare eigene Einheiten desselben Typs; dreimal für sichtbare eigene Nicht-Worker. Jeweils weniger als 330 ms zwischen den Releases.
+- Boden-Tap: Kampfeinheiten erhalten Attack-move, Worker normale Bewegung. **Cancel** bricht Bau-/Fähigkeits-/Rally-Zielauswahl ab.
+- Fertige eigene Gebäude: **Repair / Stop repair** und **Sell** am Gebäude. Reparatur braucht einen Arbeiter; Verkauf erfolgt nach Bestätigung.
+- **Fleet Upgrades** sind zum Testen kostenlos bis Stufe 3 und wirken in neuen Gefechten. Alloy/Aether bleiben begrenzt; noch keine erspielbare Upgrade-Währung.
 
-```bash
-python3 -m http.server 8080 --bind 127.0.0.1
-```
+Weitere Regeln und die noch offene UI-/Rekrutierungsplanung: [Spiel und Bedienung](docs/gameplay.md).
 
-Dann [http://127.0.0.1:8080/](http://127.0.0.1:8080/) öffnen. Der Server ist ein optionales Hilfsmittel, keine vorgesehene Spielvoraussetzung.
-
-Kamera: **mit einem Finger ziehen**, **Pinch-to-Zoom** oder die Zoomschaltflächen verwenden. **⌂ / Command view** führt zur Basis zurück; die Minimap lässt sich antippen und ziehen. Desktop-Kamerasteuerung per WASD, Leertaste/Home, Mausrad, mittlerem Maustasten-Ziehen im Spielfeld und Edge Scrolling ist entfernt. Antippen wählt aus; Doppeltippen wählt sichtbare Einheiten desselben Typs. Dreifachtippen auf dieselbe eigene Einheit wählt alle sichtbaren eigenen Einheiten außer Workern (auch Sanitäter, Scouts und Kommandant); jeweils weniger als 330 ms zwischen den Taps. [Tap-Auswahl und Prüfungen](docs/mobile-triple-tap.md). Maus-Rechteckauswahl, Shift-Auswahl, Kontrollgruppen und Befehls-Auftragsketten sind entfernt. Ein Boden-Tap mit ausgewählten Kampfeinheiten erteilt standardmäßig Attack-move; Arbeiter bewegen sich normal, auch in gemischter Auswahl. Ziel-Taps behalten ihre Kontextbefehle. Die Buttons Attack-move, Move, Hold, Stop, Combat force und Next worker sind entfernt. Fähigkeiten einschließlich Reinforcements, Rally point und Command view bleiben vorerst im COMMAND-Reiter; Reiter, Rekrutierung und gebäudeeigene Produktionswarteschlangen sind noch unverändert. Neue Befehle ersetzen den aktuellen Auftrag. Spiel-Hotkeys sind entfernt; Befehle, Fähigkeiten, Pause, Speichern/Laden und Handbuch werden über die vorhandenen Schaltflächen bedient. **Cancel** neben dem Zielhinweis bricht Bauplatzierung oder Zielauswahl ab. Bauhilfe durch weitere Arbeiter entfällt; regulärer Bau und Reparatur fertiger Gebäude/Einheiten bleiben erhalten. Rechtsklick-Befehle bestehen vorerst weiter. [Kamera-Bereinigung](docs/mobile-camera-cleanup.md) · [Auswahl-/Befehlsbereinigung](docs/mobile-selection-cleanup.md) · [Touch-Befehle, Abbrechen und Bauhilfe-Entfernung](docs/mobile-touch-controls.md).
-
-Fertige eigene Gebäude zeigen **Repair / Stop repair** und **Sell** direkt am Gebäude. Reparatur schickt den nächsten eigenen Arbeiter; ohne Arbeiter geht es nicht. Verkauf nach Bestätigung erstattet 50 % des Gebäudepreises und offene Rekrutierung vollständig. Das letzte fertige Hauptquartier bleibt geschützt. [Gebäudeaktionen und Prüfungen](docs/mobile-building-actions.md).
-
-Beschreibungs- und Browser-Tooltips sind entfernt; sichtbare Kosten, Rückmeldungen und das Handbuch bleiben erhalten. [Tooltip-Bereinigung](docs/tooltip-removal.md).
-
-**New battle** öffnet die Wahl von Fraktion, Gegner, Landschaft und Seed. Es gibt keine Schwierigkeitseinstellung mehr; die bisherigen Standard-Werte gelten fest. [Entfernung und Prüfungen](docs/difficulty-removal.md). Das eigene letzte HQ darf nicht fallen. Für Tests steht das bisherige volle Arsenal bereit; noch keine Gebäude-Freischaltungen oder absichtlich nahezu unbesiegbare Gegnerbasis.
-
-Ingame-Forschung und Forschungsgebäude sind entfernt. **Fleet Upgrades** sind im Testmodus **kostenlos** bis zur bisherigen Höchststufe 3 kaufbar und werden gespeichert; alle sechs wirken ab dem nächsten Gefecht. Die Upgrade-Ressource ist für Tests unbegrenzt verfügbar, ohne Verbrauch oder Sammelsystem. Alloy/Aether im Gefecht bleiben begrenzt. Die spätere separate Fortschrittsressource und deren Gewinnung sind noch nicht implementiert. [Kampagnenentfernung und Prüfungen](docs/campaign-removal.md).
-
-Unter **Settings → Render quality** verwenden **High** und **Balanced** bis zu **4× MSAA** für glattere Modellkanten, sofern die Grafikhardware es unterstützt. **Performance** verzichtet darauf. Es ist kein zusätzlicher Antialiasing-Schalter nötig.
+Optional für lokale Entwicklung: `python3 -m http.server 8080 --bind 127.0.0.1`, dann [localhost:8080](http://127.0.0.1:8080/) öffnen. Direktes `file://` bleibt das Auslieferungsziel.
 
 ## Spielstände sichern
 
-Permanente Upgrades, Einstellungen und Checkpoints werden im Browserspeicher abgelegt. Gefechts-Checkpoints verwenden jetzt Version 3; ältere Spielstände, auch solche mit Schwierigkeitseinstellung, werden nicht übernommen. Vorhandene permanente Upgrade-Stufen bleiben erhalten. Unter **Settings → Export Backup** lässt sich ein JSON-Backup sichern; **Import Backup** liest es wieder ein und ersetzt dabei gespeicherte Profildaten, bei enthaltenem Checkpoint auch diesen.
+Unter **Settings → Export Backup / Import Backup** lassen sich permanente Upgrades und Checkpoints übertragen. Vor Browserwechsel oder Verschieben der Dateien exportieren: Browserspeicher wird nicht automatisch übernommen und kann unter `file://` eingeschränkt sein. Ohne dauerhaften Speicher geht der flüchtige Ersatz beim Schließen verloren.
 
-Vor Browserwechsel, Verschieben der Spieldatei oder Wechsel zwischen `file://` und HTTP ein Backup exportieren: Browserspeicher wird dabei nicht automatisch übertragen. Ohne verfügbaren dauerhaften Speicher ist der In-Memory-Ersatz nach dem Schließen verloren.
+Checkpoints verwenden Version 3; ältere Spielstände werden nicht übernommen. Permanente Upgrades bleiben erhalten. Technische Details: [Speicherung](docs/architecture.md#speicherung).
 
-## Entwickeln und prüfen
+## Entwicklung
 
-Die vorhandenen Tests benötigen Node.js, aber keine Installation von Paketen. Aus dem Projektverzeichnis:
-
-```bash
-node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs tests/ashes-of-meridian-renderer.check.cjs
-```
-
-- [Architektur](docs/architecture.md): aktueller Aufbau, Risiken und nächste Schritte.
-- [Prüfungen](docs/testing.md): Testabdeckung, Browser-Checkliste und belegter Prüfstand.
-- [Arbeitsregeln für KI-Assistenten](AGENTS.md).
-- [Historischer Prüfbericht](docs/bisheriger-pruefstand.md): übernommene Notizen, kein aktueller Testnachweis.
+- [Architektur](docs/architecture.md): Codekarte, Schnittstellen, Speicherung und Risiken.
+- [Grafik und Assets](docs/rendering.md): Texturen, Skybox und Qualitätsstufen.
+- [Prüfungen](docs/testing.md): Testbefehl, Abdeckung und angemessener Prüfaufwand.
+- [Arbeitsprotokoll](docs/worklog.md): zentrale kurze Änderungshistorie und letzte Prüfnachweise.
+- [Arbeitsregeln](AGENTS.md).

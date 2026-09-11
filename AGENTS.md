@@ -18,7 +18,8 @@
 
 ## Prüfen und dokumentieren
 
-- Nach Spielcode-/Teständerungen mindestens ausführen: `node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs tests/ashes-of-meridian-renderer.check.cjs`.
-- Testabdeckung und Browser-Checkliste: [docs/testing.md](docs/testing.md). Bei Änderungen an Darstellung oder Verpackung ausdrücklich `file://` prüfen. Node-Tests sind kein Browser-/WebGL-Nachweis.
-- Implementierungs- und Prüfnotizen gehören unter `docs/`, nicht in diese Datei. Ausgeführte Prüfungen, Ergebnisse und ungeprüfte Bereiche klar unterscheiden; historische Berichte nicht als aktuelle Testnachweise behandeln.
-- Dokumentation bei geänderten Zuständigkeiten, Befehlen oder Abläufen aktualisieren. Diese Datei kurz und verbindlich halten, keine fortlaufende Arbeitshistorie ergänzen.
+- Prüfaufwand nach Risiko wählen: Nach JavaScript-Spielcode-/Teständerungen den vollständigen Node-Befehl aus [docs/testing.md](docs/testing.md) ausführen. Für reine Dokumentation oder minimale, risikoarme Text-/Rahmen-/Abstandsänderungen genügen Diff-Sichtung und passende statische Prüfungen; keine zusätzlichen Browsertests auf Vorrat.
+- Bei Änderungen an Eingabe, Layoutstruktur, Rendering oder Auslieferung gezielt `file://` prüfen. Node-Tests sind kein Browser-/WebGL-Nachweis; Headless-Touch ist kein Echtgerätetest.
+- `docs/` als kurze, aktuelle Referenz pflegen. Geänderte Zuständigkeiten, Bedienung, Befehle und offene Entscheidungen direkt nachführen, statt Nachträge anzuhängen. Keine eigene Berichtdatei für jede Änderung.
+- Das einzige fortlaufende Arbeitsprotokoll ist [docs/worklog.md](docs/worklog.md): kurze zusammenhängende Einträge mit Änderung, Prüfung/Ergebnis und relevanten offenen Grenzen. Tatsächlich ausgeführte Prüfungen von älteren Nachweisen unterscheiden; keine ausführlichen Tool-/Screenshot-Protokolle in Referenzdokumenten.
+- Bei Dokumentationspflege regelmäßig veraltete Angaben, Wiederholungen und tote Links entfernen; ältere Protokolleinträge verdichten. Details bleiben in Git auffindbar. Diese Datei enthält nur Regeln, keine Arbeitshistorie.

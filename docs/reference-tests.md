@@ -1,13 +1,12 @@
-# Referenztests
+# Feste Testreferenzen
 
-Feste Terrain-, Modell-, Effekt- und RNG-Erwartungen schützen vor unbeabsichtigten Änderungen. Sie sind keine Verpflichtung zur Rückwärtskompatibilität.
+Terrain-, Modell-, Zeichen-, Effekt- und RNG-Erwartungen schützen vor unbeabsichtigten Änderungen, nicht vor bewusst geänderten Spielregeln. Sollwerte nicht zur Reparatur fehlgeschlagener Tests neu erzeugen.
 
-Spielstandtests erzeugen einen Checkpoint aus dem aktuellen Spiel: Befehle, Produktion, Scan und 100 feste Schritte. Geprüft werden Snapshot-Isolation, Restore, Indizes/Sichtbarkeit, Weiterlaufen und ungültige Eingaben.
+- 16 feste Seed-/Biom-Paare prüfen Terrain, Platzierungen, Navigation und Sichtbarkeit; sie sind unabhängige Testdaten, keine Spielmissionen. `tests/fixtures/presentation-v1.json` stammt aus der Charakterisierung vor der Welt-/Effektentkopplung (`97bfda6`).
+- Fünf Effektfälle in `tests/helpers/presentation-scenario.cjs` setzen ihren RNG-Einstieg ausdrücklich auf `seeded(1486)` nach 104 Samples. Ihre Hashes und Folgesamples bleiben so unabhängig vom aktuellen Startaufgebot vergleichbar.
+- Der historische kombinierte Waffen-/Avatar-Fixture-Eintrag wird nicht mehr geprüft und nicht durch neue Sollwerte ersetzt. Reguläre Waffen und Fraktionsschaden werden separat in der Simulation geprüft. Alte Gesamtspielstand-Hashes sind kein aktueller Vertrag.
+- `tests/fixtures/effects-view-v1.json` charakterisiert reine Zeichenaufrufe aus `b9f0026`, keine GPU-Pixel. Mathematik-/RNG-Tests enthalten feste und unabhängig nachvollziehbare Erwartungen einschließlich vorhandener Sonderfälle.
+- Spielstandtests erzeugen aktuelle Checkpoints mit Befehlen, Produktion, Scan und festen Simulationsschritten. Geprüft werden Isolation, Restore, Indizes/Sichtbarkeit, Weiterlaufen und ungültige Eingaben; keine Migration oder exakte RNG-Fortsetzung nach Laden.
+- `tests/helpers/game-scripts.cjs` lädt benannte klassische Skripte aus `index.html` in Dokumentreihenfolge in eine gemeinsame VM. Nur explizit ausgewählte Namen werden ausgeführt; externe URLs, Pfade außerhalb des Projekts, Module und asynchrone Tags sind nicht Teil des Loader-Vertrags.
 
-Das alte Operations-Fixture, sein Fünf-Sekunden-Vergleich und der Adapter für überlagerte Kristallpositionen sind entfernt. Ebenso die sechs historischen Gesamtspielstand-Hashes innerhalb der Effekt-Fixtures; die eigentlichen Effekt-/RNG-Erwartungen bleiben unverändert.
-
-Nach der Kampagnenentfernung bleiben alle 16 historischen Seed-/Biom-Paare explizite Terrain-Testdaten, nicht Spielmissionen. Layout- und Welt-/Navigationsreferenzen wurden nicht neu erzeugt; der Test-Sichtgeber des entfallenen Allianzteams ist jetzt eine eigene Einheit mit gleicher Sichtweite. Die fünf weiterhin passenden Effektfälle setzen ihren RNG-Einstieg im Test explizit auf den ursprünglichen Zustand (`seeded(1486)`, 104 Samples). So bleiben ihre vorhandenen Hashes und Folgesamples unverändert, unabhängig vom neuen Startaufgebot.
-
-Der kombinierte Waffen-Hash einschließlich des entfernten Avatars wird nicht mehr geprüft; sein historischer Fixture-Eintrag wurde nicht durch neue Sollwerte ersetzt. Ein eigener Simulationstest prüft weiterhin Gewehr-, Panzer-, Fraktionsschaden und Artillerie-Strikes/Effekterzeugung. Entfernte Missions-/Generator-/Sternentests wurden durch Gefechtsziel-, Start-, Gratisupgrade- und neue Checkpoint-Prüfungen ersetzt. [Abgrenzung](campaign-removal.md).
-
-[Testbefehl und Abdeckung](testing.md).
+[Testbefehl und Prüfverfahren](testing.md).

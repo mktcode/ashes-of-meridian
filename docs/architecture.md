@@ -1,130 +1,51 @@
 # Architektur
 
-## Status und Geltungsbereich
+## Auslieferung
 
-Bestandsaufnahme des Ausgangsstands `ab92a12`, ergänzt um Referenztests, CSS-Auslagerung, JavaScript-Formatierung und die Auslagerung aller acht ursprünglichen JavaScript-Bereiche in lokale Dateien sowie die Entkopplung der Speicherung, der Weltberechnung vom Renderer und der kosmetischen Effektkomponente. Dieses Dokument beschreibt zunächst den vorhandenen Code; das Zielbild am Ende ist noch nicht vollständig implementiert. Die sieben ursprünglichen Skript-Tags wurden benannt, der zentrale CSS-Block unverändert ausgelagert und JavaScript ohne Änderung der Syntaxbäume lesbar formatiert. Assets und eingebettete Texturen blieben unverändert.
-
-`index.html` (statisches HTML und Dateieinbindungen), die JavaScript-Dateien laut Codekarte und `styles.css` (zentrales Stylesheet) sind die maßgeblichen, von Hand bearbeiteten Quellen und zugleich ausgelieferte Dateien. Es gibt weder ein `src/`-Verzeichnis noch generierte Dateien oder einen Build-Prozess. Inline-Styles im HTML beziehungsweise in JS-Templates bleiben vorerst bestehen. JavaScript-Methoden sind nun mehrzeilig formatiert; lange Bild-Data-URLs und Template-Inhalte bleiben bewusst unverändert. Ablauf und Prüfungen: [JavaScript-Formatierung](javascript-formatting.md).
+`index.html`, `styles.css` und die lokalen JavaScript-Dateien sind handgepflegte Quellen und werden direkt ausgeliefert. Keine generierten Dateien, npm-Abhängigkeiten, Laufzeit-Imports oder Build-/Serverpflicht. Die Skripte teilen globale lexikalische Bindungen und laufen synchron in HTML-Reihenfolge, ohne `async`, `defer` oder ES-Module. Inline-Styles in UI-Templates bestehen weiterhin.
 
 ## Codekarte
 
-Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Stylesheet ein. Nach dem statischen HTML folgen die unten aufgeführten lokalen klassischen Skripte. `index.html` enthält keine Inline-Skriptinhalte mehr. Sie teilen sich globale lexikalische Bindungen und werden synchron in Dokumentreihenfolge ausgeführt; kein `async`, `defer` oder `type="module"`. Die folgende Nummerierung beschreibt diese Reihenfolge, keine unabhängigen ES-Module. Zur Navigation die Symbolnamen in den unten angegebenen Dateien suchen; das statische DOM steht in `index.html`. Die Tags tragen `data-meridian-script` mit den Namen `core`, `renderer`, `content`, `world`, `world-view`, `effects`, `effects-view`, `simulation`, `audio`, `persistence`, `ui` und `app`; das Attribut dient nur der Identifikation durch Tests.
+Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 
-| Block | Einstieg / wichtige Symbole | Zuständigkeiten heute |
-| --- | --- | --- |
-| 1 / `core` | `M4`, `V`, `seeded` in `core.js` | Matrizen, Vektoren und Seed-RNG, ohne Browserabhängigkeiten |
-| 2 / `renderer` | `MAT`, `MERIDIAN_TEXTURES`, `geom`, Shaderkonstanten und `MeridianRenderer` in `renderer.js` | Eingebettete Texturen, Meshes, GLSL-Shader, WebGL-Ressourcen, Kamera und Renderpässe |
-| 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `META`, `BIOMES`, `ICON_PATHS` und Hilfsfunktionen in `content.js` | Spieldefinitionen, Balancing, Texte, Icons und Namenshelfer |
-| 4 / `world` | Kartenkonstanten, Hilfsfunktionen, `Heap`, `Battlefield` in `world.js` | CPU-Terrain-/Layoutdaten, Hindernisraster, Navigation und Sichtbarkeit, ohne Renderer |
-| 5 / `world-view` | `BattlefieldView`, `renderEntity` in `world-view.js` | Terrain-Mesh, statische GPU-Platzierungen, Fog-Upload und Entitätsmodelle |
-| 6 / `effects` | `MeridianEffects` in `effects.js` | Synchrone kosmetische Erzeugung, Effektdaten, Schadenszahlen und Lebensdauer; übergebener RNG |
-| 7 / `effects-view` | `drawEffectRing`, `renderBattlefieldEffects` in `effects-view.js` | Nur Zeichnen der übergebenen Effekte, Pings, Felder, Scans und Strike-Markierungen |
-| 8 / `simulation` | `MeridianGame`, `formatTime` in `simulation.js` | Gefechtsaufbau, Entitäten, Befehle, Wirtschaft, Kampf, KI, Ziele, Effektaufträge und Snapshot/Restore |
-| 9 / `audio` | `MeridianAudio` in `audio.js` | Prozedurales Web Audio für Musik und Geräusche |
-| 10 / `persistence` | `createMeridianPersistence` in `persistence.js` | Private Storage-Schlüssel, flüchtiger Ersatz, Profilnormalisierung, Checkpoint-JSON und Backup-Codec; nur ausdrücklich übergebene Abhängigkeiten |
-| 11 / `ui` | `MeridianUI` in `ui.js` | Fortschritt, Menüs, HUD, Eingabe, Kamera-Steuerung, Datei-/Download- und Import-Orchestrierung sowie Canvas-Overlay; Speicherung über eine übergebene Instanz |
-| 12 / `app` | IIFE und `window.Meridian` in `app.js` | Verdrahtung, Spielschleife, Menüvorschau, Szenendarstellung, Effekte und Fehlerbehandlung |
+| Datei | Zuständigkeit / Einstieg |
+| --- | --- |
+| `core.js` | Matrizen, Vektoren und Seed-RNG: `M4`, `V`, `seeded` |
+| `renderer.js` | WebGL 2, Meshes, Materialien, eingebettete Texturen und Renderpässe: `MeridianRenderer` |
+| `content.js` | `FACTIONS`, `UNITS`, `BUILDINGS`, `META`, `BIOMES`, Icons und Namenshelfer |
+| `world.js` | CPU-Terrain, Hindernisraster, Navigation und Sichtbarkeit: `Battlefield` |
+| `world-view.js` | GPU-Terrain/Fog und Entitätsmodelle: `BattlefieldView`, `renderEntity` |
+| `effects.js` | Synchrone Effekterzeugung, Lebensdauer und Schadenszahlen: `MeridianEffects` |
+| `effects-view.js` | Reine Effektzeichnung: `renderBattlefieldEffects`, `drawEffectRing` |
+| `simulation.js` | Gefechtsstart, Entitäten, Wirtschaft, Kampf, KI, Ziele und Snapshot/Restore: `MeridianGame` |
+| `audio.js` | Prozedurales Web Audio: `MeridianAudio` |
+| `persistence.js` | Profilnormalisierung, Storage-Ersatz und Backup-Codec: `createMeridianPersistence` |
+| `ui.js` | Menüs, HUD, Pointer-Eingabe, Kamera, Overlays und Datei-/Speicherabläufe: `MeridianUI` |
+| `app.js` | Verdrahtung, Spielschleife, Vorschau und Szenendarstellung; stellt `window.Meridian` bereit |
 
-Wichtige Abhängigkeiten:
+## Schnittstellen und Zustände
 
-- `Battlefield(seed, biome)` verwendet `content` und `core`, aber weder Renderer noch Geometrie. `renderData` enthält CPU-Farben und benannte Platzierungsdaten; die kosmetischen RNG-Samples bleiben für reproduzierbare Karten in der bisherigen Reihenfolge.
-- `BattlefieldView.sync(world)` übersetzt diese Daten in Mesh-/Rendereraufrufe und lädt geänderte Fog-Pixel. `app` synchronisiert vor dem Start-Ereignis an die UI sowie vor dem Zeichnen; die Menüvorschau nutzt denselben Adapter ohne Fog.
-- `MeridianGame(profile, emit, createEffects)` hält Profil, `Battlefield` und eine Effektkomponente, keinen Renderer. Die optionale Factory erhält einen Provider für den jeweils aktuellen Spiel-RNG; standardmäßig erstellt sie `MeridianEffects`. Der `emit(type, data)`-Callback wird im Einstiegspunkt nach der nötigen Welt-Synchronisierung an `MeridianUI.event()` angeschlossen.
-- `MeridianUI` greift weiterhin direkt auf `game.s`, Renderer, Audio und DOM zu, erhält die Speicherung aber als fünftes Konstruktorargument. Weder Storage-Schlüssel noch Profilnormalisierung oder Backup-JSON-Verarbeitung liegen noch in der UI. Der Ereignis-Callback ist trotzdem keine vollständige Entkopplung.
-- `createMeridianPersistence` kennt weder UI noch Spielinstanz oder Browserglobals. `app` übergibt einen verzögerten Storage-Zugriff, `clamp`, Upgrade-Grenzen aus `META` und einen Warn-Callback. Die Speicherinstanz besitzt ihren eigenen flüchtigen Ersatz.
-- `app` erstellt und verdrahtet alle Instanzen, lädt das Profil über die Speicherkomponente und übergibt diese der UI. Die `requestAnimationFrame`-Schleife führt bei aktivem, ungepaustem Spiel `game.step(0.05)` und `game.effects.tick(0.05)` aus; UI und Rendering werden pro Frame aktualisiert.
-- `window.Meridian` stellt die laufenden Instanzen, Inhalte und Leistungswerte zur Inspektion bereit. Die übrigen globalen `const`-/`class`-Bindungen sind nicht automatisch Eigenschaften von `window`.
+- `Battlefield(seed, biome)` benötigt keinen Renderer. `renderData` enthält Layout-/Farbdaten; seine Objektidentität dient als Layout-Revision, `fogVersion` als Sicht-Revision. `BattlefieldView.sync(world)` lädt Änderungen in die GPU, ohne die Welt zu mutieren.
+- `MeridianGame(profile, emit, createEffects)` besitzt Welt und Effekte, keinen Renderer. `app` synchronisiert die Welt vor dem Start-Ereignis an die UI und vor dem Zeichnen. Simulation und Effekte laufen in festen 0,05-s-Schritten, UI/Rendering pro Frame.
+- `game.s` enthält den serialisierbaren Zustand mit Entitäten, Ressourcen, Kamera und `seed`, `biome`, `faction`, `enemy`, `meta`. `start(opts = {})` startet ohne Missionsdefinition. Einheiten besitzen genau einen aktuellen `order`; Produktionsgebäude eigene `queue`s.
+- Teams: 0 Spieler, 1 Gegner, −1 neutral. Die drei Fraktionen sind unabhängig davon; Fraktion 2 ist weiterhin gültig.
+- Welt-/Suchindizes, RNG-Closure und kurzlebige Effekte liegen außerhalb von `game.s`. `snapshot()` ergänzt erkundete Felder; `restore()` prüft Daten und baut Welt/Indizes neu auf.
+- `game.effects` hält `fx` und `floats`. Erzeugung/Tick verwenden synchron den Simulations-RNG, Zeichnen keinen RNG. Gameplayrelevante Strikes, Heilfelder und Scans bleiben in der Simulation. Effekte nicht wegen unsichtbarer Grafik überspringen.
+- Gebäudeaktionen prüfen Zulässigkeit, Arbeiterauftrag und Erstattung in der Simulation. Die UI projiziert das Panel und hält die bestätigte Verkaufs-Ziel-ID. Panel-Schließzustand, Tap-Folge und offene Dialoge sind flüchtig, keine neuen Save-Felder.
+- `MeridianUI(game, renderer, audio, profile, persistence)` orchestriert Bedienung und Speicheraktionen. `showHome()`-Styles sind auf `.home-screen`/`.home-layout` begrenzt. `window.Meridian` bietet Runtime-Inspektion; globale `const`-/`class`-Bindungen sind nicht automatisch `window`-Eigenschaften.
 
-Das frühere Tooltip-System (`tooltipFor()`, Dokument-Mousemove, `data-tooltip`, Tooltip-DOM/CSS) und native `title`-Hinweise sind entfernt. Symbolbuttons und dynamische Porträt-/Produktionsbuttons verwenden `aria-label`. Spielwelt-Hover, sichtbare Rückmeldungen und Beschreibungstexte in den Inhaltsdaten bleiben erhalten; kein neues Info-System. [Tooltip-Bereinigung](tooltip-removal.md).
+## Speicherung
 
-Gebäudeaktionen liegen in der Simulation (`managedBuilding`, Reparaturauftrag/-status und Verkauf samt Erstattung). Die UI projiziert `#buildingActions` pro Frame nach der Kameraaktualisierung; die pausierende Verkaufsbestätigung hält nur eine Ziel-ID. Reparatur verwendet vorhandene Arbeiteraufträge, Verkauf die vorhandenen Kaufbelege und Produktionskosten; kein neues persistentes Teilsystem. Rechtsklick bleibt bis zur Entscheidung über Einheitenreparatur erhalten. [Gebäudeaktionen](mobile-building-actions.md).
+- `createMeridianPersistence({ getStorage, clamp, upgrades, warn })` kennt keine UI-/Spielinstanz oder Browserglobals. `app` injiziert den verzögerten Storage-Zugriff und Upgrade-Grenzen aus `META`.
+- API: `loadProfile`, `saveProfile`, `hasCheckpoint`, `readCheckpoint`, `saveCheckpoint`, `removeCheckpoint`, `serializeBackup`, `parseBackup`, `available`. `hasCheckpoint` prüft nur Vorhandensein, nicht das gesamte Format. Schreibmethoden melden dauerhaften Speichererfolg als Boolean.
+- Profil Version 1 / `meridian.profile.v1`: permanente Upgrades und bekannte Einstellungen `volume`, `music`, `sfx`, `quality`, `healthbars`. Keine Kampagne, Credits oder Schwierigkeit.
+- Checkpoint Version 3 / `meridian.operation.v3`. Backup: `format: 'ashes-of-meridian'`, Umschlag Version 1, Profil und optionale Operation Version 3. Keine Migration alter Checkpoints.
+- Der private Store fängt Zugriffsfehler ab und hält einen flüchtigen Ersatz. Dieser überlebt keinen Reload. Ein erfolgreicher Storage-Lesezugriff bevorzugt weiterhin den Browserwert, auch nach fehlgeschlagenem Schreiben.
+- Backup-Import (maximal 4.000.000 Bytes, Operation maximal 1.500 Entitäten) ist **nicht transaktional**: Profil speichern/normalisieren, Audio/Renderer anwenden, dann gegebenenfalls Checkpoint übernehmen. Teiländerungen bei Fehlern sind möglich; Profil-only-Import lässt den bisherigen Checkpoint stehen. Codec und Restore sind keine vollständige Schemavalidierung.
 
-Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-layout` gerendert. Sein Design ist in `styles.css` auf diese Klassen begrenzt; `#menu:has(> .home-screen)` schaltet nur dort den bisherigen Menü-Hintergrund ab. `showBattle()`/`startBattle()` ersetzen die Kampagnen-/Skirmish-Navigation. Modals und HUD verwenden weiter die bestehenden Oberflächen; Kampagnen-, Tutorial- und Endenauswahl-Templates/CSS sind gelöscht. [Aktuelle Vereinfachung](campaign-removal.md) · [historischer Home-Entwurf](home-redesign.md).
+## Schutzgrenzen und offene Architekturfragen
 
-## Zustände und Speicherung
-
-- `game.s` enthält den serialisierbaren Operationszustand, einschließlich Entitäten, Ressourcen, Kamera und flachen Gefechtsoptionen (`seed`, `biome`, `faction`, `enemy`, `meta`). `game.start(opts)` startet ohne Missionsindex oder Missionsdefinition ein Gefecht gegen ein gegnerisches HQ. Entitäten besitzen einen aktuellen `order`; neue Befehle ersetzen ihn. Kontrollgruppen (`groups`) und Befehls-Auftragsketten (`orders`) sind entfernt, Produktionswarteschlangen (`queue`) bleiben erhalten. [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md).
-- Ingame-Forschung (`TECH`, `game.tech()`, `game.s.upgrades`/`research`) und das baubare Labor sind entfernt. `META`, permanente `profile.upgrades` und deren Operationskopie `game.s.meta` bleiben erhalten. Das Kommandodeck hat drei Reiter. Auch `ward`, Missionsobjekte, Konvois, Avatar und ihre Modelle/Regeln sind inzwischen entfernt. Permanenten Upgrades fehlen im Testmodus Kosten; sie sind bis Stufe 3 kostenlos kaufbar. Noch keine neue Upgrade-Währung, Gewinnung oder Gebäude-Freischaltungen. [Kampagnenentfernung](campaign-removal.md) · [vorherige Forschungsentfernung](research-removal.md).
-- Welt-Raster, Suchindizes (`ids`, `spatial`), RNG-Closure und kurzlebige Effekte liegen außerhalb von `game.s`.
-- `snapshot()` klont `game.s` und ergänzt erkundete Kartenfelder. `restore()` validiert Teile der Gefechts-/Entitätsdaten und rekonstruiert Welt und Indizes; keine Missionsrekonstruktion oder alten Spielstände. Team 0 ist der Spieler, Team 1 der Gegner, Team −1 neutral; das reine Missions-Allianzteam 2 ist entfernt.
-- Profil: Version 1 / `meridian.profile.v1`, ohne Kampagnenfortschritt oder Credits. Gefechts-Checkpoint: Version 3 / `meridian.operation.v3`; alte Operations-Schlüssel werden nicht gelesen. Kein Migrationspfad. Schwierigkeitstabelle, Auswahl, Profil-/Gefechtsfeld und Multiplikatoren sind entfernt; die bisherigen Standard-Werte gelten fest. Profile übernehmen nur bekannte Einstellungsschlüssel. [Details](difficulty-removal.md).
-- Exportierte Backups tragen `format: 'ashes-of-meridian'`, `version: 1`, `profile` und optional eine Operation. Backup-Codec und `restore()` prüfen unterschiedliche Teile des Formats; ein vollständig validiertes Schema gibt es nicht.
-- Der private `Store` in der Speicherkomponente fängt Storage-Ausnahmen ab und bietet einen flüchtigen In-Memory-Ersatz. Das ist keine dauerhafte Sicherung; Backup-Export bleibt wichtig.
-
-Alloy-Vorkommen verwenden fünf getrennte Ellipsenplätze je Standort; der östliche Standort lässt eine Lücke zur Startfabrik. `MeridianGame.crystalPosition()` liefert die Positionen. Keine Migration beim Laden. [Kristallkorrektur](crystal-spacing.md).
-
-Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. Die Kamera verwendet Touch-Ziehen, Pinch-Zoom und UI-Navigation; Desktop-Kamerapfade und die Profilvorgaben `edge`/`cameraSpeed` sind entfernt. Auch Maus-Rechteckauswahl, Shift-Auswahl, Kontrollgruppen, Auftragsketten und Spiel-Hotkeys sind entfernt; Rechtsklick-Befehle bleiben vorerst erhalten. Bau-/Zielmodi haben einen Touch-Abbrechen-Button. Regulärer Gebäudebau weist einen Arbeiter zu; weitere Arbeiter können keine Bauhilfe mehr leisten, Reparaturbefehle bauen keine Fundamente weiter. [Kamera-Bereinigung](mobile-camera-cleanup.md) · [Touch-Befehle und Bauhilfe-Entfernung](mobile-touch-controls.md).
-
-## Assets und direkter Dateistart
-
-Alle über `<script src>` eingebundenen lokalen JavaScript-Dateien sowie `styles.css` liegen neben `index.html` und müssen mit ausgeliefert werden. `core.js` wird über `<script data-meridian-script="core" src="./core.js"></script>` vor den übrigen Skripten geladen; Funktionen und globale Bindungen bleiben erhalten. Die [Core-Auslagerungsprüfung](core-extraction.md) bestätigt den direkten Dateistart. `content.js` wird entsprechend über `<script data-meridian-script="content" src="./content.js"></script>` an der bisherigen Stelle zwischen `renderer` und `world` geladen. Werte, Texte und Reihenfolge blieben unverändert; siehe [Content-Auslagerung](content-extraction.md).
-
-Das Stylesheet enthält derzeit keine `url(...)`- oder `@import`-Verweise. Künftig beziehen sich relative Asset-URLs im Stylesheet auf dessen Speicherort. Die [CSS-Auslagerungsprüfung](css-extraction.md) bestätigt das Laden über `file://` in Chromium ohne Server oder besondere Sicherheitsflags.
-
-`renderer.js` wird über `<script data-meridian-script="renderer" src="./renderer.js"></script>` zwischen `core` und `content` geladen. Der frühere Inline-Block wurde vollständig bytegleich übernommen, bewusst ohne Bereinigung seiner Einrückung oder mehrzeiligen Shaderliterale; siehe [Renderer-Auslagerung](renderer-extraction.md).
-
-`MERIDIAN_TEXTURES` in `renderer.js` enthält vier eingebettete Bild-Data-URLs (drei Bodentexturen und die Skybox). Die danebenliegenden `texture-floor-*.png` werden vom aktuellen Renderer nicht als Dateien geladen. Ihre Bearbeitung allein ändert die eingebetteten Texturen nicht; ein automatischer Abgleich existiert nicht.
-
-`skybox.webp` ist die gepflegte Bildquelle. Ihre Bytes sind zusätzlich als `MERIDIAN_TEXTURES.sky` eingebettet; zur Laufzeit wird keine externe Skybox-Datei mehr angefordert. Der Terrain-Test prüft Bytegleichheit mit der Quelle, aber es gibt keinen automatischen Generierungsschritt. Bei einem absichtlichen Bildwechsel die Einbettung ebenfalls aktualisieren. Die dunkle Ersatztextur bleibt bis zum asynchronen Upload erhalten. Der frühere `file://`-SecurityError entfällt im Chromium-152-Nachtest; tatsächlicher Upload, GPU-Pixel und sichtbarer Himmel wurden geprüft. Andere Browser sind separat zu prüfen; Node-Tests allein decken das nicht ab. Details: [Skybox-Einbettung](skybox-embedding.md).
-
-## Modelltexturen
-
-Metall und Bio verwenden skalierte Mesh-Lokalkoordinaten (`v_modelPos`) und eine eigene lokale, invers skalierte Textur-Normale (`v_modelN`) für die triplanare Projektion. Translation und Drehung verändern das Muster nicht mehr. Die Skalierung aus den Längen der Modellmatrix-Achsen erhält die Detailgröße in Weltmaßeinheiten; der Bezug gilt pro gezeichnetem Modellteil, nicht als durchgehendes UV-Netz der gesamten Einheit. Bei einer tatsächlichen Größenänderung, etwa beim Gebäudeaufbau, wird die Texturdichte beibehalten statt das Muster mitzustrecken.
-
-Boden und Felsen bleiben weltprojiziert. Weltposition/-normale für Beleuchtung, Schatten, Sichtnebel und Entfernung bleiben unverändert. Keine neuen Vertex-/Instanzattribute, Materialien oder Bilddaten. [Korrektur und GPU-Prüfungen](model-textures.md).
-
-## Szenen-Kantenglättung
-
-`MeridianRenderer` besitzt zusätzlich zum bisherigen Single-Sample-Ziel einen optionalen MSAA-Framebuffer mit RGBA8-Farb- und DEPTH_COMPONENT24-Tiefenrenderbuffer. High/Balanced wählen die größte gemeinsam unterstützte Samplezahl bis 4. Nach opaker Szene und transparenten Effekten wird nur Farbe per `blitFramebuffer` in `sceneTex` aufgelöst; das bestehende Postprocessing bleibt unverändert. Canvas-eigenes Antialiasing ist deaktiviert, da es die bereits gerasterte Szenentextur nicht glättet.
-
-`resize()` erneuert die MSAA-Anhänge und gibt alte bzw. unvollständige Allokationen frei. Performance oder fehlende MSAA-Unterstützung verwenden den bisherigen Szenen-Framebuffer direkt. Es gibt keine neue Profileinstellung und keine Änderungen an Simulations-/Save-Daten. [Implementierung und Prüfungen](msaa.md).
-
-## Bekannte Kopplungen und Risiken
-
-1. **RNG und Darstellung:** `Battlefield.generate()` verbraucht eine Zufallsfolge für Bodenfarben, Hindernisse und Dekoration. Ihre Aufrufreihenfolge ist layoutrelevant. Felsmeshes und Kristallmodelle besitzen bereits separate kosmetische Generatoren; Die Effektkomponente verwendet für Explosionen und Arbeitereffekte weiterhin den übergebenen Simulations-RNG. Erzeugung und Tick sind vom Zeichnen getrennt, aber eine andere Partikelanzahl kann weiterhin spätere Zufallsentscheidungen ändern. Ein separater kosmetischer RNG wäre eine bewusste spätere Verhaltensänderung.
-2. **Laden ist keine exakte Fortsetzung des RNG:** Der Generatorzustand wird nicht serialisiert. Beim Start wird `seed + 77`, beim Restore `seed + floor(time * 50)` verwendet. Feste Zeitschritte und reproduzierbare Karten sind kein Nachweis für identischen Verlauf nach Save/Load.
-3. **Breite Verantwortlichkeiten:** Welt-/GPU- und Effektgrenzen sind umgesetzt; Weltgenerierung erzeugt für reproduzierbare Karten aber weiterhin auch kosmetische Layoutdaten. `MeridianUI` und Teile des Einstiegspunkts besitzen noch breite Verantwortlichkeiten.
-4. **Implizite Schnittstellen:** Entitäten, Befehle und Ereignisse sind untypisierte Objekte; der Renderer verwendet eine lange positionale `add(...)`-Signatur. Globale Bindungen und Ausführungsreihenfolge ersetzen explizite Imports.
-5. **Strukturabhängige Tests:** Der gemeinsame Loader unter `tests/helpers/game-scripts.cjs` liest benannte klassische Inline-/Dateiskripte mit bewusst begrenztem HTML-/Pfadvertrag. Aufrufer nennen ihre Abhängigkeiten explizit; Ausführung bleibt in Dokumentreihenfolge. Bei einer späteren Modulaufteilung den Testzugriff anpassen, nicht die Verhaltensprüfungen abschwächen.
-
-Diese Punkte sind Befunde, keine bereits vorgenommenen Fehlerkorrekturen. Insbesondere RNG- und Save-Änderungen müssen getrennt von strukturellen Refactorings geplant werden.
-
-## Nächste Schritte und späteres Zielbild
-
-Die Spielrichtung ist ein Mobile-Roguelite mit Weiterentwicklung außerhalb wiederholbarer Gefechte. Kampagne, alternative Modi und Ingame-Forschung sind entfernt. Aktuell gibt es ein provisorisches Vollarsenal-Gefecht gegen ein HQ und kostenlose permanente Test-Upgrades. Später: separate erspielbare Upgrade-Ressource, Gebäude-Freischaltungen und eine anfangs sehr schwere Gegnerbasis. Keine Übertragung der entfernten Forschungsboni ins Hauptmenü implementiert. Beschreibungs- und Browser-Tooltips sind inzwischen ebenfalls entfernt; weitere Vereinfachungen und die Verständlichkeit ohne diese Zusatzinformationen sind separat zu beurteilen.
-
-### Zunächst: Referenzverhalten absichern
-
-Bereits umgesetzt: gemeinsamer Testloader und Renderer-Teststub, Syntaxprüfung aller benannten Skripte sowie Tests für Gefechtsstart, Befehle, Produktion, Ressourcen und Wiederherstellung aktuell erzeugter Spielstände. Feste Terrain-/Effekt-/RNG-Erwartungen bleiben erhalten. [Umfang der Referenztests](reference-tests.md).
-
-Vor weiteren Umbauten:
-
-1. Für den jeweils betroffenen Bereich fehlende Fälle ergänzen, etwa Fortschritt/Freischaltungen, Bau-/Kampfregeln oder Save-Validierung. Die bisherigen Referenzen decken nur ausgewählte Szenarien ab.
-2. Die vorhandenen Layout-Prüfsummen unverändert beibehalten. Nur tatsächlich zugesicherte Save/Load-Eigenschaften prüfen, nicht vollständige Deterministik unterstellen.
-3. Den direkten Browserstart anhand der [Checkliste](testing.md#manuelle-browser-prüfung) prüfen, bevor eine neue Verpackung eingeführt wird.
-
-### Anschließend: schrittweise entkoppeln
-
-Als erster rein struktureller Schritt wurde das zentrale CSS ohne Umformatierung nach `styles.css` verschoben. Weitere Aufteilungen des Stylesheets oder Bereinigung der Inline-Styles erfolgen getrennt und nur bei konkretem Bedarf.
-
-Nach dem separaten Formatierungscommit wurden `M4`, `V` und `seeded` zunächst im alten Renderer-Block getestet und anschließend unverändert nach `core.js` ausgelagert. Der Testloader unterstützt jetzt explizite lokale klassische Skriptdateien. Globale Bindungen und Dokumentreihenfolge bleiben erhalten; noch keine ES-Module oder neue Build-Werkzeuge.
-
-Anschließend wurde der vollständige `content`-Block samt `icon`, `unitName` und `buildingName` unverändert nach `content.js` verschoben. Ein zusätzlicher Isolationstest bestätigt das Laden ohne Renderer, Core oder Browserglobals. Dies verbessert die Quellenübersicht, führt aber noch keine expliziten Modulschnittstellen ein.
-
-Danach wurde der gesamte Renderer-Block bytegleich nach `renderer.js` ausgelagert. Die anschließende [Auslagerungsserie](script-extraction.md) hat `world`, `simulation`, `audio`, `ui` und `app` jeweils separat und vollständig bytegleich in gleichnamige lokale Skripte verschoben, einschließlich der bisherigen Hilfsfunktionen und noch gekoppelten Darstellungs- und Speicheraufgaben. Die reine Dateiaufteilung ist abgeschlossen; `index.html` enthält nur noch HTML und Dateieinbindungen. Die Aufteilung in Dateien und echte Entkopplung bleiben getrennte Schritte.
-
-Als erste echte Schnittstellengrenze wurde danach die [Speicherung entkoppelt](persistence-decoupling.md): 13 Charakterisierungstests zunächst gegen die bisherige UI, anschließend eine eigenständige Speicherkomponente mit vier zusätzlichen Schnittstellen-/Isolationstests. `app` verdrahtet sie ausdrücklich mit der UI. Bestehende Formatprüfungen wurden übernommen, nicht verschärft; nicht transaktionale Importabläufe bleiben bestehen.
-
-Die Welt-/Renderer-Grenze ist inzwischen umgesetzt: CPU-Welt und Simulation laufen ohne Renderer, `world-view` übernimmt Meshes, Platzierungen, Fog und Entitätsmodelle. Die [Welt-/Effektreferenzen](world-effects-decoupling.md) sichern die ursprünglichen Ausgaben.
-
-Auch die Effektgrenze ist umgesetzt: `effects` erzeugt und aktualisiert kosmetische Daten synchron, `effects-view` zeichnet sie ohne RNG oder Mutation. Gameplayrelevante Strikes, Felder, Scans, Cooldowns und Sichtentscheidungen bleiben in der Simulation. Alle Aufrufer verwenden direkt `game.effects`; es gibt keine Übergangs-Getter oder Delegationsmethoden.
-
-**Der vereinbarte Architekturblock ist abgeschlossen. Jetzt wieder Spielfunktionen entwickeln.** Weitere UI-Aufteilungen, Typisierung und neue Werkzeuge nur bei konkretem Featurebedarf; davor die betroffenen Referenztests ergänzen. Absichtliche RNG-, Save- oder Regeländerungen separat planen und prüfen. Kein vollständiger Rewrite oder neues UI-Framework erforderlich.
-
-### Perspektive: TypeScript-Quellen, einfaches Auslieferungsartefakt
-
-Die langfristige Grenze soll zwischen **Entwicklungsquellen** und **Spielartefakt** verlaufen: Module für `core`, `content`, `simulation`, `rendering`, `ui` und `persistence`, verbunden durch einen kleinen Einstiegspunkt. Die Simulation soll ohne DOM, WebGL und Storage ausführbar sein; Browserzugriffe liegen in den äußeren Bereichen.
-
-TypeScript kann bereichsweise eingeführt werden, zunächst für Definitionen, Zustände, Befehle und Ereignisse. Ein kleiner Build, etwa mit esbuild, könnte die Module als klassisches Inline-Skript zusammen mit CSS in eine direkt öffnungsfähige HTML-Datei einsetzen. Typprüfung wäre separat über `tsc --noEmit` nötig.
-
-Noch offen sind Toolwahl, Quellenlayout, Asset-Einbettung und Ablage des fertigen Artefakts. Verbindlich bleibt: Zum Spielen keine Paketinstallation, kein erforderlicher Server, keine CDN-Abhängigkeiten oder Laufzeit-Imports. Vor Einführung des Builds festlegen, welche Dateien generiert sind und wie das fertige HTML ohne Build verfügbar bleibt. Keine parallel von Hand gepflegte zweite Codekopie anlegen.
+- Terrain-RNG wird auch für kosmetische Platzierungen verwendet; Effekte verbrauchen teilweise den Simulations-RNG. Reihenfolge, Kollisionsradien und [feste Referenzen](reference-tests.md) schützen, nicht beiläufig korrigieren.
+- Laden garantiert keine exakte RNG-Fortsetzung: Start verwendet `seed + 77`, Restore `seed + floor(time × 50)`, nicht den gespeicherten Generatorzustand.
+- UI und Einstiegspunkt haben weiterhin breite Aufgaben; Entitäten/Ereignisse sind untypisiert und Skriptreihenfolge ist Teil des Vertrags. Weitere Entkopplung, TypeScript oder Build-Werkzeuge sind **nicht beauftragt** und keine Voraussetzung für neue Spielfunktionen.
+- Aktuelle Spielregeln und zurückgestellte Entscheidungen: [Spiel und Bedienung](gameplay.md). Renderer-/Asset-Verträge: [Grafik](rendering.md). Prüfverfahren: [Tests](testing.md).
