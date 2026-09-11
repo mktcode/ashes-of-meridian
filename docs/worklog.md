@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Kleine zusammengehörige Schritte bündeln; ältere Einträge regelmäßig verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Freie Standplätze und Einheitenkollision
+
+- Gemeinsame Platzprüfung für Spawn/Bewegung sowie Start/Restore; deterministische freie Spawnplätze, körpergerechter Abstand und dazu passende Formationen. Untätige Verbündete können auf freie Stellen ausweichen; belegte Wegpunkte und gemeinsame Rallyziele führen nicht mehr einfach zum Stapeln. Keine Bibliothek oder neuen Save-Felder; Terrain-/Trefferradien unverändert.
+- **183 Node-Tests bestanden**, darunter wiederholte Produktion ohne Rally, alle Einheitentypen, Gegenverkehr, Ausweichen/Engstellen, gemeinsame Rallyziele, Gelände/Rand/Flugebenen, blockierter Ausgang, Restore und ein 120-s-Gefecht mit Wirtschaft/Wellen. Keine Fixtures neu erzeugt; der Heil-Emitter bleibt für die Effektreferenz explizit ortsfest. `git diff --check` sauber.
+- Gezielt `file://` in Chromium, 390×844/Performance: native Rekrutierung von fünf Riflemen und drei Tanks, getrennte Standplätze, Doppeltap/Gruppen-Bodenauftrag, vier Flugzeuge, kurze laufende Simulation und Restore bestanden. Infanterie-/Fahrzeug-Screenshots angesehen, keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler.
+- Grenzen: kontrollierte Schritte/Setup, kein Echtgerät- oder großer Crowd-Performance-Nachweis. Einfache lokale Ausweichlogik statt vollständiger Crowd-Wegplanung; überfüllte Engstellen können weiterhin blockieren.
+
 ## Rallypoint nur über das Aktionsmenü
 
 - Automatische Rally-Zuweisung durch Bewegungs-/Kontextbefehle entfernt. Normale Boden-Taps/-Klicks und Minimap-Rechtsklick wählen Gebäude ab; Kamera-Gesten und explizite Rally-Zielauswahl bleiben erhalten.

@@ -56,7 +56,8 @@ function effectSample(kind) {
     for (let i = 0; i < 40; i++) { game.worker(worker, .05); game.effects.tick(.05); }
   } else if (kind === 'heal-drop') {
     const target = player('rifle'); target.hp -= 40;
-    const medic = game.spawnUnit('medic', target.x, target.z, 0, 0); medic.cd = 0;
+    // Fixed emitter position for the historical effect reference, not a spawn-spacing test.
+    const medic = game.spawn('unit', 'medic', target.x, target.z, 0, 0); medic.cd = 0;
     game.medic(medic, .05);
     game.s.energy = 1000; game.ability('drop', { x: -45, z: 45 });
   } else throw Error('Unknown effect case: ' + kind);

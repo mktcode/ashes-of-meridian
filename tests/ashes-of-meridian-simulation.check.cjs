@@ -34,6 +34,24 @@ function battle(faction = 0, seed = 1409) {
   return runtime;
 }
 
+function spacingArena() {
+  const { game } = battle();
+  game.s.entities = game.s.entities.filter(e => e.kind === 'building');
+  game.ids = new Map(game.s.entities.map(e => [e.id, e]));
+  game.world.staticGrid.fill(0); game.world.rebuild(game.s.entities); game.rehash();
+  return game;
+}
+
+function assertUnitSpacing(game) {
+  const units = game.alive(e => e.kind === 'unit');
+  for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) {
+    const a = units[i], b = units[j];
+    if ((a.type === 'air') !== (b.type === 'air')) continue;
+    assert.ok(Math.hypot(a.x-b.x,a.z-b.z) + 1e-8 >= (a.size+b.size)*1.4,
+      `units ${a.id}/${b.id} overlap`);
+  }
+}
+
 function advance(game, steps) {
   for (let i = 0; i < steps; i++) {
     game.step(.05);
@@ -112,7 +130,7 @@ test('ground attack-move preserves mixed formations and worker movement without 
   const hq = game.alive(e => e.team === 0 && e.type === 'hq')[0];
   game.command([rifle.id,worker.id,hq.id], {type:'attackMove',x:10,z:20});
   assert.equal(rifle.order.type,'attackMove'); assert.equal(worker.order.type,'move');
-  close(rifle.order.x,9.15); close(worker.order.x,10.85);
+  close(rifle.order.x,9.04); close(worker.order.x,10.96);
   assert.equal(rifle.order.z,20); assert.equal(worker.order.z,20);
   assert.equal(hq.rally, undefined);
   const crystal = game.alive(e => e.kind === 'resource' && e.type === 'crystal')[0];
@@ -142,6 +160,121 @@ test('waves originate at the enemy base and stop without it', () => {
   const count = game.s.entities.length; game.wave(); assert.equal(game.s.entities.length, count);
 });
 
+test('starting armies and two minutes of mining, combat and waves keep unit spacing', () => {
+  for (const [faction,seed,biome] of [[0,1409,'rust'],[1,7012,'ash'],[2,9017,'choir'],[0,43015,'star']]) {
+    const { game } = createGame(); game.start({faction,seed,biome}); assertUnitSpacing(game);
+    if (seed !== 1409) continue;
+    for (let i=0;i<2400;i++) {
+      game.step(.05); game.effects.tick(.05);
+      if (i%20===0) assertUnitSpacing(game);
+    }
+    assertUnitSpacing(game); assert.ok(game.s.stats.gathered>0); assert.ok(game.s.wave>0);
+  }
+});
+
+test('coincident spawns use deterministic free positions, stay separate at rest and preserve RNG calls', () => {
+  const a = spacingArena(), b = spacingArena();
+  let samples = 0; a.random = () => { samples++; return .5; }; b.random = () => .5;
+  for (let i = 0; i < 3; i++) for (const type of ['worker','rifle','medic','tank','artillery','hero','air']) {
+    const first = a.spawnUnit(type,0,0,0,0), second = b.spawnUnit(type,0,0,0,0);
+    assert.ok(first); assert.deepEqual(json(first),json(second));
+    assertUnitSpacing(a); assert.ok(a.unitFits(first,first.x,first.z));
+  }
+  assert.equal(samples,21); // Only the existing spawn cooldown sample, no search randomness.
+  const positions = a.alive(e=>e.kind==='unit').map(e=>[e.x,e.z]);
+  advance(a,40); assertUnitSpacing(a);
+  assert.deepEqual(a.alive(e=>e.kind==='unit').map(e=>[e.x,e.z]),positions);
+});
+
+test('repeated production without rally spawns distinct idle units at the assigned building', () => {
+  const game = spacingArena(), barracks = player(game,'barracks');
+  for (let i=0;i<5;i++) assert.equal(game.train('rifle'),true);
+  for (const q of barracks.queue) q.time=.05;
+  for (let i=0;i<5;i++) { game.step(.05); assertUnitSpacing(game); }
+  const units = game.alive(e=>e.kind==='unit');
+  assert.equal(units.length,5); assert.equal(barracks.queue.length,0);
+  for (const e of units) {
+    assert.equal(e.order.type,'idle'); assert.ok(game.unitFits(e,e.x,e.z));
+    assert.ok(Math.hypot(e.x-barracks.x,e.z-barracks.z)<10);
+  }
+});
+
+test('movement sidesteps stationary units and oncoming units without interpenetration', () => {
+  const game = spacingArena();
+  const obstacle = game.spawnUnit('tank',0,0,1,0), runner = game.spawnUnit('rifle',-6,0,0,0);
+  runner.path = [{x:0,z:0},{x:6,z:0}]; runner.pathVersion = game.world.pathVersion;
+  const a = game.spawnUnit('rifle',-6,8,0,0), b = game.spawnUnit('rifle',6,8,1,0);
+  const goals = [{e:runner,x:6,z:0},{e:a,x:6,z:8},{e:b,x:-6,z:8}];
+  let sidestep = 0;
+  for (let i=0;i<400;i++) {
+    game.s.time += .05;
+    for (const p of goals) if (!p.done) p.done=game.move(p.e,p,.05);
+    sidestep=Math.max(sidestep,Math.abs(runner.z)); assertUnitSpacing(game);
+    for (const {e} of goals) assert.ok(game.unitFits(e,e.x,e.z));
+  }
+  assert.ok(sidestep>.5); assert.deepEqual([obstacle.x,obstacle.z],[0,0]);
+  for (const p of goals) assert.ok(p.done && Math.hypot(p.e.x-p.x,p.e.z-p.z)<2);
+});
+
+test('idle allies can yield only into free space; enemies and assigned units do not get pushed', () => {
+  const game=spacingArena(), mover=game.spawnUnit('rifle',0,0,0,0), other=game.spawnUnit('rifle',2,0,0,0);
+  game.random=()=>{throw Error('Collision must not consume RNG');};
+  game.yieldUnitSpace(mover,.22,0); assert.ok(other.x>2); assert.equal(other.order.type,'idle');
+  assertUnitSpacing(game);
+  other.x=2; const blockedAt=game.world.blockedAt; game.world.blockedAt=x=>x>2;
+  game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2); game.world.blockedAt=blockedAt;
+  other.team=1; game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2);
+  other.team=0; other.order={type:'hold'}; game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2);
+  other.order={type:'idle'}; game.random=()=>.5;
+  const blocker=game.spawnUnit('rifle',3.84,0,0,0);
+  game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2); assert.equal(blocker.x,3.84);
+  assertUnitSpacing(game);
+});
+
+test('troops settle beside a shared rally destination without stacking or circling', () => {
+  const game=spacingArena(), units=[];
+  for(let i=0;i<5;i++) {
+    const e=game.spawnUnit('rifle',-10+i*2,-10,0,0);
+    e.order={type:'attackMove',x:0,z:0}; units.push(e);
+  }
+  advance(game,400); assertUnitSpacing(game);
+  for(const e of units) { assert.equal(e.order.type,'idle'); assert.ok(Math.hypot(e.x,e.z)<5); }
+  const positions=units.map(e=>[e.x,e.z]); advance(game,100);
+  assert.deepEqual(units.map(e=>[e.x,e.z]),positions); assertUnitSpacing(game);
+});
+
+test('placement respects terrain, map edges and flight layers; dead units do not occupy space', () => {
+  const game = spacingArena();
+  game.world.mark(game.world.staticGrid,0,0,4); game.world.rebuild(game.s.entities);
+  const tank=game.spawnUnit('tank',0,0,0,0), air=game.spawnUnit('air',0,0,0,0);
+  assert.ok(!game.world.blockedAt(tank.x,tank.z)); assert.deepEqual([air.x,air.z],[0,0]);
+  const ground=game.spawnUnit('rifle',20,0,0,0), above=game.spawnUnit('air',20,0,0,0);
+  assert.deepEqual([above.x,above.z],[ground.x,ground.z]);
+  ground.hp=0; const replacement=game.spawnUnit('rifle',20,0,0,0);
+  assert.deepEqual([replacement.x,replacement.z],[20,0]);
+  for(let i=0;i<8;i++) {
+    const e=game.spawnUnit(i%2?'air':'tank',85,85,i%2,0);
+    assert.ok(e && game.unitFits(e,e.x,e.z)); assertUnitSpacing(game);
+  }
+});
+
+test('blocked production keeps its paid order until space is free; restore enforces spacing without changing valid positions', () => {
+  const game = spacingArena(), barracks = player(game,'barracks');
+  assert.equal(game.train('rifle'),true); barracks.queue[0].time=.05;
+  const blockedAt = game.world.blockedAt; game.world.blockedAt=()=>true;
+  let samples=0; game.random=()=>{samples++;return .5;};
+  advance(game,2);
+  assert.equal(barracks.queue.length,1); assert.equal(barracks.queue[0].progress,1);
+  assert.equal(game.alive(e=>e.kind==='unit').length,0); assert.equal(samples,0);
+  game.world.blockedAt=blockedAt; game.step(.05);
+  assert.equal(barracks.queue.length,0); assert.equal(game.s.stats.trained,1);
+  const saved=game.snapshot(), restored=battle().game; restored.restore(saved);
+  assert.deepEqual(json(restored.s.entities),json(saved.entities));
+  const units=game.alive(e=>e.kind==='unit'), other=game.spawnUnit('rifle',units[0].x,units[0].z,0,0);
+  other.x=units[0].x; other.z=units[0].z; // Deliberately overlapping input state.
+  restored.restore(game.snapshot()); assertUnitSpacing(restored);
+});
+
 test('base combat/movement stats retain faction, shields and unit-veterancy modifiers without difficulty scaling', () => {
   const { game } = battle();
   for (const team of [0, 1, 2]) for (const faction of [0, 1, 2]) {
@@ -155,10 +288,11 @@ test('base combat/movement stats retain faction, shields and unit-veterancy modi
     const hp = e.hp, shield = e.shield;
     game.damage(e, 20, null, true);
     close(e.hp, hp - Math.max(0, 20 - shield)); close(e.shield, Math.max(0, shield - 20));
-    const air = game.spawnUnit('air', 0, 0, team, faction);
-    air.path = [{ x: 20, z: 0 }]; air.nextPath = 100;
-    game.move(air, { x: 20, z: 0 }, .1);
-    close(air.x, .7 * (faction === 1 ? 1.1 : 1)); close(air.z, 0);
+    const z = team * 12 + faction * 4; // Separate flight lanes: measure speed, not avoidance.
+    const air = game.spawnUnit('air', 0, z, team, faction);
+    air.path = [{ x: 20, z }]; air.nextPath = 100;
+    game.move(air, { x: 20, z }, .1);
+    close(air.x, .7 * (faction === 1 ? 1.1 : 1)); close(air.z, z);
   }
 });
 

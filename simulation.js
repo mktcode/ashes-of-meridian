@@ -1,5 +1,6 @@
     /* Deterministic fixed-step RTS simulation. Rendering and UI are independent. */
     'use strict';
+    const UNIT_BODY_SCALE = 1.4;
     class MeridianGame {
       constructor(profile, emit = () => {}, createEffects = random => new MeridianEffects(random)) {
         this.profile = profile;
@@ -88,15 +89,15 @@
         for (let j = 0; j < 7; j++) {
           let u = this.spawnUnit(j === 6 ? 'tank' : j === 5 ? 'artillery' : 'rifle',
             site.x - 8 + (j % 4) * 3, site.z + 12 + Math.floor(j / 4) * 2, 1, enemy);
-          u.order = { type: 'guard', x: u.x, z: u.z };
+          if (u) u.order = { type: 'guard', x: u.x, z: u.z };
         }
         this.world.rebuild(s.entities);
         this.rehash();
         for (let e of s.entities)
           if (e.kind === 'unit') {
-            let p = this.world.nearest(e.x, e.z);
-            e.x = p.x;
-            e.z = p.z;
+            let p = this.unitPosition(e);
+            if (!p) throw new Error('No free space for starting units.');
+            Object.assign(e, p);
           }
         this.rehash();
         this.world.reveal(s.entities);
@@ -151,8 +152,46 @@
       spawnBuilding(type, x, z, team, faction, extra = {}) {
         return this.spawn('building', type, x, z, team, faction, extra);
       }
+      unitFits(e, x, z) {
+        const flying = !!UNITS[e.type].flying;
+        if (Math.abs(x) > 85 || Math.abs(z) > 85 || (!flying && this.world.blockedAt(x, z))) return false;
+        // Read live positions: the combat hash is only rebuilt once per step.
+        return !this.s.entities.some(other => other !== e && other.hp > 0 && other.kind === 'unit' &&
+          !!UNITS[other.type].flying === flying &&
+          (other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9);
+      }
+      unitPosition(e) {
+        const x = clamp(e.x, -85, 85), z = clamp(e.z, -85, 85);
+        if (this.unitFits(e, x, z)) return { x, z };
+        // Deterministic nearby rings, without consuming simulation/effect RNG.
+        for (let r = 1; r <= 24; r++) {
+          const count = Math.ceil(2 * Math.PI * r);
+          for (let i = 0; i < count; i++) {
+            const angle = i * 2 * Math.PI / count,
+              nx = x + Math.cos(angle) * r, nz = z + Math.sin(angle) * r;
+            if (this.unitFits(e, nx, nz)) return { x: nx, z: nz };
+          }
+        }
+        return null;
+      }
+      yieldUnitSpace(e, x, z) {
+        if (Math.abs(x) > 85 || Math.abs(z) > 85 ||
+          (!UNITS[e.type].flying && this.world.blockedAt(x, z))) return;
+        for (const other of this.s.entities) {
+          if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team ||
+            other.order.type !== 'idle' || !!UNITS[other.type].flying !== !!UNITS[e.type].flying) continue;
+          const dx = other.x - x, dz = other.z - z, d = Math.hypot(dx, dz),
+            min = (e.size + other.size) * UNIT_BODY_SCALE;
+          if (d >= min || d < 1e-9) continue;
+          const nx = x + dx / d * (min + 1e-6), nz = z + dz / d * (min + 1e-6);
+          // Idle allies can give way, but never into another unit or a wall.
+          if (this.unitFits(other, nx, nz)) { other.x = nx; other.z = nz; }
+        }
+      }
       spawnUnit(type, x, z, team, faction, extra = {}) {
-        return this.spawn('unit', type, x, z, team, faction, extra);
+        const p = this.unitPosition({ type, size: UNITS[type].size, x, z, ...extra });
+        if (!p) return null;
+        return this.spawn('unit', type, p.x, p.z, team, faction, { ...extra, ...p });
       }
       crystalPosition(siteIndex, depositIndex) {
         // Leave a gap toward the adjacent starting factory at the eastern site.
@@ -472,13 +511,13 @@
         let units = ids.map(id => this.get(id)).filter(e => e && e.team === 0);
         let mobile = units.filter(e => e.kind === 'unit');
         let cols = Math.max(1, Math.ceil(Math.sqrt(mobile.length))),
+          spacing = Math.max(0, ...mobile.map(e => e.size)) * UNIT_BODY_SCALE * 2 + 0.1,
           i = 0;
         for (let e of units) {
           let o = { ...order };
           if (e.kind === 'unit') {
             if (['move', 'attackMove'].includes(o.type)) {
-              let j = i++,
-                spacing = mobile.some(u => ['tank', 'artillery'].includes(u.type)) ? 2.4 : 1.7;
+              let j = i++;
               o.x += ((j % cols) - (cols - 1) / 2) * spacing;
               o.z += (Math.floor(j / cols) - (Math.ceil(mobile.length / cols) - 1) / 2) * spacing;
             }
@@ -517,7 +556,9 @@
         e.pathVersion = this.world.pathVersion;
       }
       move(e, p, dt, stop = 1) {
-        if (distance(e, p) < stop) {
+        if (distance(e, p) < stop || (['move', 'attackMove'].includes(e.order.type) &&
+          distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) {
+          // Stop beside an occupied destination instead of trying to stand at its center.
           e.path = [];
           e.pi = 0;
           return true;
@@ -534,7 +575,9 @@
         let dx = q.x - e.x,
           dz = q.z - e.z,
           d = Math.hypot(dx, dz);
-        if (d < 0.65) {
+        if (d < 0.65 || (e.pi + 1 < e.path.length && d < 3.8 &&
+          !this.unitFits(e, q.x, q.z) && this.world.lineFree(e, e.path[e.pi + 1]))) {
+          // An occupied intermediate waypoint must not trap us circling an idle unit.
           e.pi++;
           q = e.path[e.pi];
           if (!q) return distance(e, p) < stop + 1 || this.world.blockedAt(p.x, p.z);
@@ -550,50 +593,32 @@
           step = Math.min(d, speed * dt),
           vx = dx / (d || 1),
           vz = dz / (d || 1);
-        let ax = 0,
-          az = 0;
-        if (!u.flying) {
-          for (let other of this.near(
-            e.x,
-            e.z,
-            3.8,
-            a => a.id !== e.id && a.kind === 'unit' && !UNITS[a.type]?.flying
-          )) {
-            let ddx = e.x - other.x,
-              ddz = e.z - other.z,
-              dd = Math.hypot(ddx, ddz),
-              min = (e.size + other.size) * 0.82;
-            if (dd < min && dd > 0.001) {
-              let force = ((min - dd) / min) * 0.9;
-              ax += (ddx / dd) * force;
-              az += (ddz / dd) * force;
-            }
+        let moved = false, heading = Math.atan2(vx, vz);
+        // Prefer the path, then a sidestep. Idle units are solid obstacles too.
+        for (const angle of [0, Math.PI / 4, Math.PI / 2, -Math.PI / 4, -Math.PI / 2]) {
+          const nx = e.x + (vx * Math.cos(angle) - vz * Math.sin(angle)) * step,
+            nz = e.z + (vx * Math.sin(angle) + vz * Math.cos(angle)) * step;
+          if (!this.unitFits(e, nx, nz)) {
+            this.yieldUnitSpace(e, nx, nz);
+            if (!this.unitFits(e, nx, nz)) continue;
           }
+          e.x = nx;
+          e.z = nz;
+          heading -= angle;
+          moved = true;
+          break;
         }
-        let nx = e.x + (vx + ax) * step,
-          nz = e.z + (vz + az) * step;
-        if (u.flying || !this.world.blockedAt(nx, nz)) {
-          e.x = clamp(nx, -85, 85);
-          e.z = clamp(nz, -85, 85);
+        e.stuck = moved ? 0 : (e.stuck || 0) + dt;
+        if (e.stuck > 0.65) {
+          e.path = [];
+          e.nextPath = 0;
+          if (!u.flying && this.world.blockedAt(e.x, e.z)) {
+            const p = this.unitPosition(e);
+            if (p) Object.assign(e, p);
+          }
           e.stuck = 0;
-        } else {
-          if (!this.world.blockedAt(nx, e.z)) e.x = nx;
-          else if (!this.world.blockedAt(e.x, nz)) e.z = nz;
-          else {
-            e.stuck = (e.stuck || 0) + dt;
-            if (e.stuck > 0.65) {
-              let near = this.world.nearest(e.x + vx * 2, e.z + vz * 2);
-              e.path = [];
-              e.nextPath = 0;
-              if (this.world.blockedAt(e.x, e.z)) {
-                e.x = near.x;
-                e.z = near.z;
-              }
-              e.stuck = 0;
-            }
-          }
         }
-        e.rot = angleLerp(e.rot, Math.atan2(vx, vz), dt * 9);
+        e.rot = angleLerp(e.rot, heading, dt * 9);
         e.walk += dt * speed;
         return false;
       }
@@ -946,10 +971,11 @@
             if (e.progress < 1) continue;
             if (e.queue.length) {
               let q = e.queue[0];
-              q.progress += (dt / q.time) * (1 + (s.meta.industry || 0) * 0.1);
+              q.progress = Math.min(1, q.progress + (dt / q.time) * (1 + (s.meta.industry || 0) * 0.1));
               if (q.progress >= 1) {
                 let loc = this.world.nearest(e.x + e.size + 1.8, e.z + 2),
                   u = this.spawnUnit(q.type, loc.x, loc.z, e.team, e.faction);
+                if (!u) continue; // Keep the paid order until there is room at the exit.
                 e.queue.shift();
                 if (q.type !== 'worker' && q.type !== 'hero') s.stats.trained++;
                 if (e.rally && q.type !== 'worker')
@@ -1088,9 +1114,10 @@
           else if (r < 0.48) type = 'medic';
           let c = UNITS[type].cost * 0.5;
           if (s.enemyBudget < c && i > 1) break;
-          s.enemyBudget = Math.max(0, s.enemyBudget - c);
           let p = this.world.nearest(site.x - 8 + (i % 4) * 2.3, site.z + 10 + Math.floor(i / 4) * 2.3);
           let u = this.spawnUnit(type, p.x, p.z, 1, faction);
+          if (!u) continue;
+          s.enemyBudget = Math.max(0, s.enemyBudget - c);
           u.order = { type: 'attackMove', x: goal.x + ((i % 3) - 1) * 2, z: goal.z };
           deployed++;
         }
@@ -1223,6 +1250,11 @@
         this.s = structuredClone(data);
         this.world = new Battlefield(data.seed, this.s.biome);
         this.world.rebuild(this.s.entities);
+        for (const e of this.s.entities) if (e.hp > 0 && e.kind === 'unit') {
+          const p = this.unitPosition(e);
+          if (!p) throw new Error('No free space for saved units.');
+          Object.assign(e, p);
+        }
         if (data.explored?.length === GRID * GRID)
           this.world.explored.set(data.explored.map(x => (x ? 1 : 0)));
         delete this.s.explored;
