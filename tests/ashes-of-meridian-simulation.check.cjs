@@ -190,11 +190,11 @@ test('repeated production without rally spawns distinct idle units at the assign
   const game = spacingArena(), barracks = player(game,'barracks');
   for (let i=0;i<5;i++) assert.equal(game.train('rifle'),true);
   for (const q of barracks.queue) q.time=.05;
-  for (let i=0;i<5;i++) { game.step(.05); assertUnitSpacing(game); }
+  for (let i=0;i<400;i++) { game.step(.05); assertUnitSpacing(game); }
   const units = game.alive(e=>e.kind==='unit');
   assert.equal(units.length,5); assert.equal(barracks.queue.length,0);
   for (const e of units) {
-    assert.equal(e.order.type,'idle'); assert.ok(game.unitFits(e,e.x,e.z));
+    assert.equal(e.order.type,'idle'); assert.equal(e.exit,undefined); assert.ok(game.unitFits(e,e.x,e.z));
     assert.ok(Math.hypot(e.x-barracks.x,e.z-barracks.z)<10);
   }
 });
@@ -226,7 +226,7 @@ test('idle allies can yield only into free space; enemies and assigned units do 
   other.team=1; game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2);
   other.team=0; other.order={type:'hold'}; game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2);
   other.order={type:'idle'}; game.random=()=>.5;
-  const blocker=game.spawnUnit('rifle',3.84,0,0,0);
+  const blocker=game.spawnUnit('rifle',3.84,0,0,0); blocker.order={type:'hold'};
   game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2); assert.equal(blocker.x,3.84);
   assertUnitSpacing(game);
 });
@@ -273,6 +273,114 @@ test('blocked production keeps its paid order until space is free; restore enfor
   const units=game.alive(e=>e.kind==='unit'), other=game.spawnUnit('rifle',units[0].x,units[0].z,0,0);
   other.x=units[0].x; other.z=units[0].z; // Deliberately overlapping input state.
   restored.restore(game.snapshot()); assertUnitSpacing(restored);
+});
+
+for (const [seed,biome,faction,count,forced] of [
+  [1409,'rust',0,8,false], [7012,'ash',1,12,false], [9017,'choir',2,12,false], [1409,'rust',0,8,true]
+]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {
+  const {game}=createGame(); game.profile.upgrades.logistics=count-5;
+  game.start({seed,biome,faction}); game.s.nextWave=1e9;
+  for(const e of game.s.entities) if(e.kind==='unit'&&e.team===1)e.hp=0;
+  let workers=game.alive(e=>e.team===0&&e.type==='worker');
+  if(forced) for(const w of workers) w.order={type:'mine',id:game.closest(w,n=>n.type==='crystal').id};
+  const trips=workers.map(()=>0), previous=workers.map(()=>0), velocities=workers.map(()=>null), reversals=workers.map(()=>0);
+  for(let i=0;i<7200;i++) {
+    const before=workers.map(w=>({x:w.x,z:w.z,carry:w.carry,returning:w.returning,id:w.order.id}));
+    game.step(.05); game.effects.tick(.05);
+    workers.forEach((w,j)=>{
+      if(before[j].carry>0&&w.carry===0)trips[j]++;
+      const dx=w.x-before[j].x,dz=w.z-before[j].z,len=Math.hypot(dx,dz),v=velocities[j];
+      const reversal=len>.01&&v&&v.len>.01&&(dx*v.dx+dz*v.dz)/(len*v.len)<-.8&&
+        w.returning===before[j].returning&&w.order.id===before[j].id;
+      reversals[j]=reversal?reversals[j]+1:0;
+      assert.ok(reversals[j]<4,`sustained jitter: worker ${w.id}, step ${i}`);
+      velocities[j]={dx,dz,len};
+    });
+    if(i%20===0)assertUnitSpacing(game);
+    if(i%1200===1199)workers.forEach((w,j)=>{
+      assert.ok(trips[j]>previous[j],`worker ${w.id} stopped delivering in minute ${(i+1)/1200}`);
+      previous[j]=trips[j];
+    });
+    if(i===3599) { game.restore(game.snapshot()); workers=workers.map(w=>game.get(w.id)); }
+  }
+  assertUnitSpacing(game);
+});
+
+test('loaded workers have passage priority and yielding workers briefly wait instead of pushing back', () => {
+  const game=spacingArena(), incoming=game.spawnUnit('worker',2,0,0,0), loaded=game.spawnUnit('worker',0,0,0,0);
+  incoming.order={type:'mine',id:999}; loaded.order={type:'mine',id:999}; loaded.carry=18;
+  game.yieldUnitSpace(loaded,.22,0); assert.ok(incoming.x>2); assert.ok(incoming.yieldUntil>game.s.time);
+  const p={x:incoming.x,z:incoming.z}; game.move(incoming,{x:-5,z:0},.05);
+  assert.deepEqual({x:incoming.x,z:incoming.z},p); assert.deepEqual(incoming.order,{type:'mine',id:999});
+  game.s.time=.36; game.move(incoming,{x:-5,z:0},.05);
+  assert.ok(Math.hypot(incoming.x-p.x,incoming.z-p.z)>0); assertUnitSpacing(game);
+});
+
+test('a blocked unit does not turn or animate a zero-length terrain slide', () => {
+  const game=spacingArena(), worker=game.spawnUnit('worker',0,0,0,0);
+  worker.path=[{x:0,z:-10}]; worker.pathVersion=game.world.pathVersion; worker.nextPath=100;
+  worker.rot=1.5; worker.walk=10; game.world.blockedAt=()=>true;
+  game.move(worker,{x:0,z:-10},.05);
+  assert.deepEqual([worker.x,worker.z,worker.rot,worker.walk],[0,0,1.5,10]);
+});
+
+test('detour planning restores the navigation grid and never consumes RNG', () => {
+  const game=spacingArena(), worker=game.spawnUnit('worker',0,0,0,0);
+  game.spawnUnit('worker',3,0,0,0);
+  const grid=game.world.blocked, bytes=Array.from(grid), version=game.world.pathVersion;
+  game.random=()=>{throw Error('Path planning must not use RNG');};
+  game.pathTo(worker,{x:8,z:0},true);
+  assert.ok(worker.path.length); assert.strictEqual(game.world.blocked,grid);
+  assert.deepEqual(Array.from(grid),bytes); assert.equal(game.world.pathVersion,version);
+  const path=game.world.path; game.world.path=()=>{throw Error('probe');};
+  assert.throws(()=>game.pathTo(worker,{x:8,z:0},true),/probe/);
+  assert.strictEqual(game.world.blocked,grid); game.world.path=path;
+});
+
+test('all produced unit types physically leave their building before working or following rally, including after restore', () => {
+  for(const [i,type] of ['worker','rifle','medic','tank','artillery','air','hero'].entries()) {
+    const game=spacingArena(), faction=i%3;
+    game.s.alloy=10000; game.s.gas=10000;
+    let b=player(game,['hq','barracks','barracks','factory','factory','hangar','hq'][i]);
+    if(!b)b=game.spawnBuilding('hangar',0,10,0,faction);
+    b.faction=faction; b.rally={x:b.x+18,z:b.z-10}; game.world.rebuild(game.s.entities);
+    if(type==='worker')game.spawnResource('crystal',b.x+12,b.z,1000);
+    assert.equal(game.train(type),true); b.queue[0].progress=1;
+    game.step(.05);
+    let unit=game.alive(e=>e.kind==='unit')[0]; assert.ok(unit?.exit);
+    if(type==='worker')assert.equal(unit.order.type,'idle');
+    assert.equal(unit.exit.building,b.id); assert.ok(Math.hypot(unit.x-b.x,unit.z-b.z)<1);
+    const destination={x:unit.exit.x,z:unit.exit.z}, pending=json(unit.order);
+    assert.equal(unit.carry,0); assert.equal(game.s.stats.gathered,0);
+    const saved=game.snapshot(); game.restore(saved); unit=game.get(unit.id);
+    assert.deepEqual(json(unit),json(saved.entities.find(e=>e.id===unit.id)));
+    for(let t=0;t<240&&unit.exit;t++) {
+      const before={x:unit.x,z:unit.z}; game.step(.05);
+      const speed=[4.5,4.4,4.7,2.9,2.5,7,5][i]*(faction===1?1.1:1);
+      assert.ok(Math.hypot(unit.x-before.x,unit.z-before.z)<=speed*.05+.051,'no teleport at exit');
+      assertUnitSpacing(game);
+    }
+    assert.equal(unit.exit,undefined,type); close(unit.x,destination.x); close(unit.z,destination.z);
+    assert.ok(game.unitFits(unit,unit.x,unit.z)); assert.deepEqual(json(unit.order),pending);
+    game.step(.05);
+    if(type==='worker')assert.equal(unit.order.type,'mine');
+    else assert.equal(unit.order.type,'attackMove');
+  }
+});
+
+test('exit space is reserved, selling the producer does not strand its unit, and malformed exits are rejected', () => {
+  const game=spacingArena(), b=player(game,'barracks'); game.train('rifle'); b.queue[0].progress=1;
+  game.step(.05); const unit=game.alive(e=>e.kind==='unit')[0];
+  assert.ok(unit.exit); assert.equal(game.produceUnit(b,'rifle'),null);
+  const other=game.spawnUnit('rifle',0,0,0,0);
+  assert.equal(game.unitFits(other,unit.exit.x,unit.exit.z),false);
+  const saved=game.snapshot();
+  for(const change of [{x:Infinity},{length:0},{building:'bad'},{z:86}]) {
+    const bad=json(saved); Object.assign(bad.entities.find(e=>e.id===unit.id).exit,change);
+    assert.throws(()=>game.restore(bad),/exit in this save is invalid/);
+  }
+  assert.equal(game.sellBuilding(b.id),true);
+  advance(game,240); assert.ok(game.get(unit.id)); assert.equal(unit.exit,undefined); assertUnitSpacing(game);
 });
 
 test('base combat/movement stats retain faction, shields and unit-veterancy modifiers without difficulty scaling', () => {
@@ -584,12 +692,13 @@ test('recruitment distributes globally, produces in parallel at assigned buildin
   const saved = game.snapshot(); game.restore(saved);
   assert.deepEqual(json(game.get(a.id).queue), json(a.queue));
   assert.deepEqual(json(game.get(b.id).queue), json(b.queue));
-  const spawns = [a,b].map(e => game.world.nearest(e.x + e.size + 1.8,e.z + 2));
   advance(game,181);
   const trained = events.filter(e=>e.type==='trained').map(e=>e.data);
   assert.equal(trained.length, 2);
   for (const [i,e] of trained.entries()) {
-    close(e.x,spawns[i].x); close(e.z,spawns[i].z);
+    assert.equal(e.exit.building,[a.id,b.id][i]);
+    assert.ok(Math.hypot(e.x-[a,b][i].x,e.z-[a,b][i].z)<1);
+    assert.ok(Math.hypot(e.exit.x-[a,b][i].x,e.exit.z-[a,b][i].z)>[a,b][i].size);
     assert.deepEqual(e.order,{type:'attackMove',...[a.rally,b.rally][i]});
   }
   assert.deepEqual(json(game.get(a.id).queue.map(q=>q.type)), ['medic']);

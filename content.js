@@ -207,6 +207,7 @@ const UNITS = {
     desc: 'Your veteran field commander. A powerful ranged fighter. Reconstruct at command if lost.'
   }
 };
+const BUILDING_YAW = Math.PI / 15;
 const BUILDINGS = {
   hq: {
     cost: 400,

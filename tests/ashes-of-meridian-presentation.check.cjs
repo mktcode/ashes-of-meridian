@@ -42,6 +42,22 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   assert.equal(meshes, 2);
 });
 
+test('produced aircraft rise smoothly from the hangar without changing draw state or RNG', () => {
+  const context=loadScripts(['core','renderer','content','world','world-view']);
+  vm.runInContext('Math.random = () => { throw Error("Draw RNG"); }',context);
+  const render=vm.runInContext('renderEntity',context), renderer=createRendererStub({record:true});
+  const unit={id:1,hp:245,kind:'unit',type:'air',team:0,faction:0,size:1,x:0,z:0,rot:0,
+    exit:Object.freeze({building:2,x:10,z:0,length:10})};
+  const height=(x,exit=unit.exit)=>{
+    const e=Object.freeze({...unit,x,exit}), before=JSON.stringify(e); renderer.calls.length=0;
+    render(renderer,e,0); assert.equal(JSON.stringify(e),before);
+    return renderer.calls.find(c=>c[0]==='octa')[2];
+  };
+  const start=height(0), middle=height(5), end=height(10), normal=height(10,null);
+  assert.ok(Math.abs(middle-start-1.5)<1e-9); assert.ok(Math.abs(end-start-3)<1e-9);
+  assert.ok(Math.abs(end-normal)<1e-9);
+});
+
 test('effects execute alone, consume RNG synchronously and preserve visibility short-circuiting', () => {
   const context = loadScripts(['effects']);
   const Effects = vm.runInContext('MeridianEffects', context);

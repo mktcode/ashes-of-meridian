@@ -43,7 +43,6 @@ class BattlefieldView {
 }
 
     // Cosmetic building yaw only; placement, collision radii and save data stay unchanged.
-    const BUILDING_YAW = Math.PI / 15;
     function renderEntity(R, e, time, options = {}) {
       if (e.hp <= 0) return;
       const f = FACTIONS[e.faction || 0],
@@ -57,7 +56,8 @@ class BattlefieldView {
         sn = Math.sin(rot);
       let y =
         e.type === 'air'
-          ? 3.8 + Math.sin(time * 2 + e.id) * 0.22
+          ? 3.8 - (e.exit ? 3 * clamp(distance(e, e.exit) / e.exit.length, 0, 1) : 0) +
+            Math.sin(time * 2 + e.id) * 0.22
           : e.faction === 2 && e.kind === 'unit'
             ? 0.3 + Math.sin(time * 2 + e.id) * 0.08
             : 0;

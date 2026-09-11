@@ -21,7 +21,7 @@ Ein Testworker; 128 MiB begrenzen nur den JS-Heap, nicht den gesamten Prozessspe
 | --- | --- |
 | Terrain/Kristalle | Syntax, eingebettete Skybox, Geometrie, feste Layout-/Ressourcenreferenzen |
 | Harness/Core | Lokale Skripte, Reihenfolge/Pfadvertrag, Isolation, Mathematik und Seed-RNG |
-| Simulation | Gefechtsstart/-ziel, Befehle, Bau, Reparatur/Verkauf, Produktion, Kampf, Wellen, Upgrades, aktuelle Snapshots |
+| Simulation | Gefechtsstart/-ziel, Befehle, Bau, Reparatur/Verkauf, Produktion/Ausfahrt, Kampf, Wellen, Upgrades, Snapshots; sechsminütiger Worker-Gegenverkehr: Lieferungen je Worker/Minute, Schutz vor anhaltenden Richtungswechseln |
 | Persistence | Profil/Checkpoint/Backup, Validierung, Fehlerfälle und flüchtiger Storage-Ersatz |
 | Präsentation | Welt-/Effektgrenzen, feste Zeichen-/Effekt-/RNG-Referenzen |
 | Steuerung | Touch-Auswahl/Gesten, aktuelle HUD-Grenzen, Kategorien/Zurück, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz |

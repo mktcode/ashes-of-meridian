@@ -154,11 +154,19 @@
       }
       unitFits(e, x, z) {
         const flying = !!UNITS[e.type].flying;
-        if (Math.abs(x) > 85 || Math.abs(z) > 85 || (!flying && this.world.blockedAt(x, z))) return false;
+        if (Math.abs(x) > 85 || Math.abs(z) > 85) return false;
+        if (!flying && this.world.blockedAt(x, z)) {
+          if (!e.exit || this.world.staticGrid[this.world.idx(x, z)]) return false;
+          const cell = this.world.point(this.world.idx(x, z));
+          if (this.s.entities.some(b => b.hp > 0 && b.kind === 'building' && b.id !== e.exit.building &&
+            distance(cell, b) < b.size + 0.35 + CELL * 0.4)) return false;
+        }
         // Read live positions: the combat hash is only rebuilt once per step.
         return !this.s.entities.some(other => other !== e && other.hp > 0 && other.kind === 'unit' &&
           !!UNITS[other.type].flying === flying &&
-          (other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9);
+          ((other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9 ||
+            (other.exit && (other.exit.x - x) ** 2 + (other.exit.z - z) ** 2 <
+              ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9)));
       }
       unitPosition(e) {
         const x = clamp(e.x, -85, 85), z = clamp(e.z, -85, 85);
@@ -174,24 +182,47 @@
         }
         return null;
       }
-      yieldUnitSpace(e, x, z) {
+      yieldUnitSpace(e, x, z, priority = e, chain = []) {
+        if (chain.length >= 4 || chain.includes(e.id)) return;
+        const nextChain = [...chain, e.id];
         if (Math.abs(x) > 85 || Math.abs(z) > 85 ||
           (!UNITS[e.type].flying && this.world.blockedAt(x, z))) return;
         for (const other of this.s.entities) {
-          if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team ||
-            other.order.type !== 'idle' || !!UNITS[other.type].flying !== !!UNITS[e.type].flying) continue;
+          if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team || other.exit ||
+            !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
+            !!UNITS[other.type].flying !== !!UNITS[e.type].flying) continue;
+          // Loaded workers get out first. Otherwise a stable ID priority prevents mutual pushing.
+          const loaded = priority.type === 'worker' && (priority.returning || priority.carry >= 18),
+            otherLoaded = other.type === 'worker' && (other.returning || other.carry >= 18);
+          if (nextChain.includes(other.id) ||
+            (other.order.type !== 'idle' && (loaded !== otherLoaded ? !loaded : priority.id > other.id))) continue;
           const dx = other.x - x, dz = other.z - z, d = Math.hypot(dx, dz),
             min = (e.size + other.size) * UNIT_BODY_SCALE;
           if (d >= min || d < 1e-9) continue;
           const nx = x + dx / d * (min + 1e-6), nz = z + dz / d * (min + 1e-6);
-          // Idle allies can give way, but never into another unit or a wall.
-          if (this.unitFits(other, nx, nz)) { other.x = nx; other.z = nz; }
+          // A short queue can give way together; keep the original mover's priority.
+          if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain);
+          if (this.unitFits(other, nx, nz)) {
+            other.x = nx; other.z = nz;
+            other.yieldUntil = this.s.time + 0.35;
+          }
         }
       }
       spawnUnit(type, x, z, team, faction, extra = {}) {
         const p = this.unitPosition({ type, size: UNITS[type].size, x, z, ...extra });
         if (!p) return null;
         return this.spawn('unit', type, p.x, p.z, team, faction, { ...extra, ...p });
+      }
+      produceUnit(b, type) {
+        if (this.s.entities.some(e => e.hp > 0 && e.exit?.building === b.id)) return null;
+        const yaw = BUILDING_YAW + (b.team === 1 ? Math.PI : 0),
+          dx = Math.sin(yaw), dz = Math.cos(yaw), reach = b.size + UNITS[type].size * UNIT_BODY_SCALE + 1.5,
+          end = this.unitPosition({type, size: UNITS[type].size, x: b.x + dx * reach, z: b.z + dz * reach});
+        if (!end) return null;
+        const x = b.x - dx * 0.5, z = b.z - dz * 0.5,
+          exit = {building: b.id, ...end, length: Math.hypot(end.x - x, end.z - z)};
+        if (!this.unitFits({type, size: UNITS[type].size, exit}, x, z)) return null;
+        return this.spawn('unit', type, x, z, b.team, b.faction, {rot: yaw, exit});
       }
       crystalPosition(siteIndex, depositIndex) {
         // Leave a gap toward the adjacent starting factory at the eastern site.
@@ -547,16 +578,37 @@
         if (mobile.length)
           this.emit('order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
       }
-      pathTo(e, p) {
-        if (e.nextPath > this.s.time && e.path?.length && e.pi < e.path.length) return;
-        e.path = this.world.path(e.x, e.z, p.x, p.z, UNITS[e.type]?.flying);
+      pathTo(e, p, avoidUnits = false) {
+        if (!avoidUnits && e.nextPath > this.s.time) return;
+        const blocked = this.world.blocked, flying = !!UNITS[e.type].flying;
+        try {
+          if (e.exit && !flying) {
+            this.world.blocked = this.world.staticGrid.slice();
+            for (const b of this.s.entities) if (b.hp > 0 && b.kind === 'building' && b.id !== e.exit.building)
+              this.world.mark(this.world.blocked, b.x, b.z, b.size + 0.35);
+          }
+          if (avoidUnits) {
+            this.world.blocked = flying ? new Uint8Array(blocked.length) : this.world.blocked.slice();
+            for (const other of this.s.entities) if (other !== e && other.hp > 0 && other.kind === 'unit' &&
+              !!UNITS[other.type].flying === flying) {
+              const radius = (e.size + other.size) * UNIT_BODY_SCALE + 0.4 - CELL * 0.4;
+              this.world.mark(this.world.blocked, other.x, other.z, radius);
+              if (other.exit) this.world.mark(this.world.blocked, other.exit.x, other.exit.z, radius);
+            }
+            this.world.blocked[this.world.idx(e.x, e.z)] = 0;
+          }
+          e.path = this.world.path(e.x, e.z, p.x, p.z, flying && !avoidUnits);
+        } finally {
+          this.world.blocked = blocked;
+        }
         e.pi = 0;
         e.nextPath = this.s.time + 0.8;
         e.pathGoal = { x: p.x, z: p.z };
         e.pathVersion = this.world.pathVersion;
       }
       move(e, p, dt, stop = 1) {
-        if (distance(e, p) < stop || (['move', 'attackMove'].includes(e.order.type) &&
+        if (e.yieldUntil > this.s.time) return false;
+        if (distance(e, p) < stop || (!e.exit && ['move', 'attackMove'].includes(e.order.type) &&
           distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) {
           // Stop beside an occupied destination instead of trying to stand at its center.
           e.path = [];
@@ -575,7 +627,7 @@
         let dx = q.x - e.x,
           dz = q.z - e.z,
           d = Math.hypot(dx, dz);
-        if (d < 0.65 || (e.pi + 1 < e.path.length && d < 3.8 &&
+        if (d < (e.exit ? 0.04 : 0.65) || (e.pi + 1 < e.path.length && d < 3.8 &&
           !this.unitFits(e, q.x, q.z) && this.world.lineFree(e, e.path[e.pi + 1]))) {
           // An occupied intermediate waypoint must not trap us circling an idle unit.
           e.pi++;
@@ -593,9 +645,10 @@
           step = Math.min(d, speed * dt),
           vx = dx / (d || 1),
           vz = dz / (d || 1);
+        if (step < 1e-9) return false;
         let moved = false, heading = Math.atan2(vx, vz);
-        // Prefer the path, then a sidestep. Idle units are solid obstacles too.
-        for (const angle of [0, Math.PI / 4, Math.PI / 2, -Math.PI / 4, -Math.PI / 2]) {
+        // Consistent passing side: never alternate left/right on consecutive frames.
+        for (const angle of [0, Math.PI / 6, Math.PI / 3, Math.PI / 2]) {
           const nx = e.x + (vx * Math.cos(angle) - vz * Math.sin(angle)) * step,
             nz = e.z + (vx * Math.sin(angle) + vz * Math.cos(angle)) * step;
           if (!this.unitFits(e, nx, nz)) {
@@ -608,18 +661,27 @@
           moved = true;
           break;
         }
-        e.stuck = moved ? 0 : (e.stuck || 0) + dt;
+        // The terrain path samples can graze a grid corner: slide along it, not into it.
+        if (!moved && !u.flying && this.world.blockedAt(e.x + vx * step, e.z + vz * step)) {
+          for (const [nx, nz] of [[e.x + vx * step, e.z], [e.x, e.z + vz * step]]) {
+            if ((nx === e.x && nz === e.z) || !this.unitFits(e, nx, nz)) continue;
+            heading = Math.atan2(nx - e.x, nz - e.z);
+            e.x = nx; e.z = nz; moved = true; break;
+          }
+        }
+        e.stuck = moved && Math.hypot(q.x - e.x, q.z - e.z) < d - step * 0.1 ? 0 : (e.stuck || 0) + dt;
         if (e.stuck > 0.65) {
-          e.path = [];
-          e.nextPath = 0;
+          this.pathTo(e, p, true);
           if (!u.flying && this.world.blockedAt(e.x, e.z)) {
             const p = this.unitPosition(e);
             if (p) Object.assign(e, p);
           }
           e.stuck = 0;
         }
-        e.rot = angleLerp(e.rot, heading, dt * 9);
-        e.walk += dt * speed;
+        if (moved) {
+          e.rot = angleLerp(e.rot, heading, dt * 9);
+          e.walk += dt * speed;
+        }
         return false;
       }
       finishOrder(e) {
@@ -803,6 +865,18 @@
         }
         return false;
       }
+      miningResource(e) {
+        const loads = new Map();
+        for (const w of this.s.entities) if (w !== e && w.hp > 0 && w.type === 'worker' &&
+          w.team === e.team && w.order?.type === 'mine')
+          loads.set(w.order.id, (loads.get(w.order.id) || 0) + 1);
+        let best = null, score = Infinity;
+        for (const n of this.s.entities) if (n.hp > 0 && n.kind === 'resource' && n.type === 'crystal' && n.amount > 0) {
+          const cost = distance(e, n) + (loads.get(n.id) || 0) * 8;
+          if (cost < score) { best = n; score = cost; }
+        }
+        return best;
+      }
       worker(e, dt) {
         let o = e.order,
           s = this.s;
@@ -838,10 +912,7 @@
           return true;
         }
         if (o.type === 'idle' && e.team === 0) {
-          let target = this.closest(
-            e,
-            n => n.kind === 'resource' && n.type === 'crystal' && n.amount > 0
-          );
+          let target = this.miningResource(e);
           if (target) e.order = { type: 'mine', id: target.id };
         }
         if (e.order.type !== 'mine') return false;
@@ -866,7 +937,7 @@
         }
         let n = this.get(e.order.id);
         if (!n || n.amount <= 0) {
-          n = this.closest(e, a => a.kind === 'resource' && a.type === 'crystal' && a.amount > 0);
+          n = this.miningResource(e);
           if (!n) {
             if (e.carry) e.returning = true;
             else e.order = { type: 'idle' };
@@ -973,8 +1044,7 @@
               let q = e.queue[0];
               q.progress = Math.min(1, q.progress + (dt / q.time) * (1 + (s.meta.industry || 0) * 0.1));
               if (q.progress >= 1) {
-                let loc = this.world.nearest(e.x + e.size + 1.8, e.z + 2),
-                  u = this.spawnUnit(q.type, loc.x, loc.z, e.team, e.faction);
+                let u = this.produceUnit(e, q.type);
                 if (!u) continue; // Keep the paid order until there is room at the exit.
                 e.queue.shift();
                 if (q.type !== 'worker' && q.type !== 'hero') s.stats.trained++;
@@ -984,6 +1054,14 @@
               }
             }
             if (BUILDINGS[e.type].damage) this.combat(e, dt);
+            continue;
+          }
+          if (e.exit) {
+            if (this.move(e, e.exit, dt, 0.05) && this.unitFits(e, e.exit.x, e.exit.z)) {
+              e.x = e.exit.x; e.z = e.exit.z;
+              delete e.exit;
+              e.path = []; e.nextPath = 0;
+            }
             continue;
           }
           if (e.type === 'worker' && this.worker(e, dt)) continue;
@@ -1243,6 +1321,11 @@
             !Number.isFinite(e.hp)
           )
             throw Error('An entity in this save is invalid.');
+          if (e.exit && (e.kind !== 'unit' || !Number.isInteger(e.exit.building) ||
+            !Number.isFinite(e.exit.x) || !Number.isFinite(e.exit.z) ||
+            Math.abs(e.exit.x) > 85 || Math.abs(e.exit.z) > 85 ||
+            !Number.isFinite(e.exit.length) || e.exit.length <= 0))
+            throw Error('An exit in this save is invalid.');
           if ((e.kind === 'unit' && !UNITS[e.type]) || (e.kind === 'building' && !BUILDINGS[e.type]) ||
             e.queue?.some(q => !UNITS[q.type]))
             throw Error('Unknown entity in save.');
