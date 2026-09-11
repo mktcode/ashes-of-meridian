@@ -219,16 +219,22 @@ test('movement sidesteps stationary units and oncoming units without interpenetr
 test('idle allies can yield only into free space; enemies and assigned units do not get pushed', () => {
   const game=spacingArena(), mover=game.spawnUnit('rifle',0,0,0,0), other=game.spawnUnit('rifle',2,0,0,0);
   game.random=()=>{throw Error('Collision must not consume RNG');};
-  game.yieldUnitSpace(mover,.22,0); assert.ok(other.x>2); assert.equal(other.order.type,'idle');
+  game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2); assert.ok(other.z>0); assert.equal(other.order.type,'idle');
   assertUnitSpacing(game);
-  other.x=2; const blockedAt=game.world.blockedAt; game.world.blockedAt=x=>x>2;
-  game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2); game.world.blockedAt=blockedAt;
-  other.team=1; game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2);
-  other.team=0; other.order={type:'hold'}; game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2);
+  other.z=0; other.yieldUntil=0; const blockedAt=game.world.blockedAt; game.world.blockedAt=(x,z)=>z>0;
+  game.yieldUnitSpace(mover,.22,0); assert.equal(other.z,0); game.world.blockedAt=blockedAt;
+  other.team=1; game.yieldUnitSpace(mover,.22,0); assert.equal(other.z,0);
+  other.team=0; other.order={type:'hold'}; game.yieldUnitSpace(mover,.22,0); assert.equal(other.z,0);
   other.order={type:'idle'}; game.random=()=>.5;
-  const blocker=game.spawnUnit('rifle',3.84,0,0,0); blocker.order={type:'hold'};
-  game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2); assert.equal(blocker.x,3.84);
-  assertUnitSpacing(game);
+  const blocker=game.spawnUnit('rifle',2,1.9,0,0); blocker.order={type:'hold'};
+  game.yieldUnitSpace(mover,.22,0); assert.equal(other.z,0); assert.equal(blocker.z,1.9);
+  blocker.hp=0;
+  for(let i=0;i<100;i++) {
+    game.s.time+=.05; game.move(mover,{x:6,z:0},.05);
+    // The mover may curve around it, but must not carry it down the route.
+    assert.ok(Math.abs(other.x-2)<.5); assertUnitSpacing(game);
+  }
+  assert.ok(mover.x>5); assert.ok(other.z>0 && other.z<2);
 });
 
 test('troops settle beside a shared rally destination without stacking or circling', () => {
@@ -309,7 +315,7 @@ for (const [seed,biome,faction,count,forced] of [
 test('loaded workers have passage priority and yielding workers briefly wait instead of pushing back', () => {
   const game=spacingArena(), incoming=game.spawnUnit('worker',2,0,0,0), loaded=game.spawnUnit('worker',0,0,0,0);
   incoming.order={type:'mine',id:999}; loaded.order={type:'mine',id:999}; loaded.carry=18;
-  game.yieldUnitSpace(loaded,.22,0); assert.ok(incoming.x>2); assert.ok(incoming.yieldUntil>game.s.time);
+  game.yieldUnitSpace(loaded,.22,0); assert.equal(incoming.x,2); assert.ok(incoming.z>0); assert.ok(incoming.yieldUntil>game.s.time);
   const p={x:incoming.x,z:incoming.z}; game.move(incoming,{x:-5,z:0},.05);
   assert.deepEqual({x:incoming.x,z:incoming.z},p); assert.deepEqual(incoming.order,{type:'mine',id:999});
   game.s.time=.36; game.move(incoming,{x:-5,z:0},.05);

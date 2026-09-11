@@ -182,14 +182,17 @@
         }
         return null;
       }
-      yieldUnitSpace(e, x, z, priority = e, chain = []) {
+      yieldUnitSpace(e, x, z, priority = e, chain = [], side = null) {
         if (chain.length >= 4 || chain.includes(e.id)) return;
+        const step = Math.hypot(x - e.x, z - e.z);
+        if (!side && step < 1e-9) return;
+        side ??= { x: -(z - e.z) / step, z: (x - e.x) / step };
         const nextChain = [...chain, e.id];
         if (Math.abs(x) > 85 || Math.abs(z) > 85 ||
           (!UNITS[e.type].flying && this.world.blockedAt(x, z))) return;
         for (const other of this.s.entities) {
           if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team || other.exit ||
-            !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
+            other.yieldUntil > this.s.time || !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
             !!UNITS[other.type].flying !== !!UNITS[e.type].flying) continue;
           // Loaded workers get out first. Otherwise a stable ID priority prevents mutual pushing.
           const loaded = priority.type === 'worker' && (priority.returning || priority.carry >= 18),
@@ -199,9 +202,14 @@
           const dx = other.x - x, dz = other.z - z, d = Math.hypot(dx, dz),
             min = (e.size + other.size) * UNIT_BODY_SCALE;
           if (d >= min || d < 1e-9) continue;
-          const nx = x + dx / d * (min + 1e-6), nz = z + dz / d * (min + 1e-6);
-          // A short queue can give way together; keep the original mover's priority.
-          if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain);
+          // Clear the mover sideways, never carry another unit along its travel direction.
+          const lateral = dx * side.x + dz * side.z,
+            forward = dx * side.z - dz * side.x,
+            shift = (lateral < 0 ? -1 : 1) *
+              (Math.sqrt(Math.max(0, min * min - forward * forward)) - Math.abs(lateral) + 1e-6),
+            nx = other.x + side.x * shift, nz = other.z + side.z * shift;
+          // A short queue keeps the same lateral axis and the original mover's priority.
+          if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain, side);
           if (this.unitFits(other, nx, nz)) {
             other.x = nx; other.z = nz;
             other.yieldUntil = this.s.time + 0.35;

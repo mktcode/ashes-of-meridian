@@ -2,6 +2,10 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Seitliches Platzmachen statt Mitschieben
+
+Kleiner Fix in `yieldUnitSpace`: Verschiebung quer zur Bewegungsrichtung, dieselbe Querachse für die bestehende kurze Kette. Während der Ausweichwartezeit kein erneutes Verschieben. Keine neue Zustandsstruktur oder Refactoring. Bestehende Abstandstests um seitliches Ausweichen und begrenzte Verdrängung beim Vorbeilaufen ergänzt; **193 Node-Tests bestanden**. Kein neuer Browsercheck; manueller Spieltest durch den Nutzer steht aus.
+
 ## Worker-Gegenverkehr und sichtbare Produktionsausfahrt
 
 - Den gemeldeten Stau reproduziert: Der isolierte Acht-Worker-Probelauf blieb mit dem vorherigen Code über den sechsminütigen Test bei insgesamt 18 Alloy stehen. Die bisherigen Kurzprüfungen waren dafür unzureichend.
