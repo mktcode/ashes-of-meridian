@@ -47,9 +47,8 @@ class BattlefieldView {
     function renderEntity(R, e, time, options = {}) {
       if (e.hp <= 0) return;
       const f = FACTIONS[e.faction || 0],
-        enemy = e.team === 1,
-        friend = e.team === 2;
-      let team = enemy ? 0xe98680 : friend ? 0xa1e6ac : f.color,
+        enemy = e.team === 1;
+      let team = enemy ? 0xe98680 : f.color,
         accent = enemy ? 0xffaf87 : f.accent;
       let metal = f.metal,
         dark = f.dark;
@@ -77,7 +76,7 @@ class BattlefieldView {
       let surfaceMat =
         options.material !== undefined
           ? options.material
-          : e.kind === 'building' || e.kind === 'unit' || e.kind === 'objective'
+          : e.kind === 'building' || e.kind === 'unit'
             ? e.faction === 1
               ? MAT.BIO
               : MAT.METAL
@@ -200,61 +199,6 @@ class BattlefieldView {
         }
         return;
       }
-      if (e.kind === 'objective') {
-        let c = e.owner === 0 ? f.color : e.owner === 1 ? 0xee8b83 : 0xe7c08c;
-        if (e.type === 'cache') {
-          p('box', 0, 0.7, 0, 2, 1.4, 1.5, 0x405765);
-          p('box', 0, 1.44, 0, 2.08, 0.12, 1.6, 0xc4aa7e);
-          p('box', 0, 0.8, 0.79, 1.35, 0.18, 0.08, c, 0, 0, 0, 1.2);
-          p('octa', 0, 2.4 + Math.sin(time * 2) * 0.15, 0, 0.4, 0.7, 0.4, c, time, 0, 0, 1.2);
-          ring(3, 0.08, c, 0.55);
-        } else {
-          p('hex', 0, 0.22, 0, 3.2, 0.5, 3.2, 0x74747c);
-          p('hex', 0, 0.5, 0, 2.7, 0.12, 2.7, dark);
-          p('hex', 0, 1.2, 0, 0.8, 1.5, 0.8, 0x9a979f);
-          p(
-            'octa',
-            0,
-            3.1 + Math.sin(time * 1.3 + e.id) * 0.18,
-            0,
-            0.8,
-            1.35,
-            0.8,
-            c,
-            time * 0.3,
-            0,
-            0,
-            0.9
-          );
-          for (let i = 0; i < 3; i++) {
-            let a = (i * Math.PI * 2) / 3;
-            p('box', Math.sin(a) * 2.2, 1.15, Math.cos(a) * 2.2, 0.45, 2.0, 0.6, 0x9896a0, a);
-            p('box', Math.sin(a) * 2.2, 2.25, Math.cos(a) * 2.2, 0.46, 0.12, 0.61, c, a, 0, 0, 1);
-          }
-          ring(3.55, 0.08, c, 0.7);
-          R.add('ring', e.x, 3.1, e.z, 1.5, 1, 1.5, c, time * 0.3, Math.PI / 2, 0, 1, 0.6, 'effects');
-        }
-        if (e.progress > 0 && e.progress < 1) ring(4.1, 0.1, c, 0.5);
-        return;
-      }
-      if (e.type === 'avatar') {
-        let t = time * 0.45;
-        p('hex', 0, 0.25, 0, 4, 0.5, 4, dark);
-        p('sphere', 0, 5 + Math.sin(t) * 0.4, 0, 2.4, 2.8, 2.4, 0x1c1c30);
-        p('octa', 0, 5.2, 0, 1.3, 2.2, 1.3, accent, t, 0, 0, 1.1);
-        for (let i = 0; i < 6; i++) {
-          let a = (i * Math.PI) / 3 + t * 0.15,
-            x = Math.sin(a) * 3.8,
-            z = Math.cos(a) * 3.8;
-          p('octa', x, 4.5 + Math.sin(t + i) * 0.5, z, 0.8, 3.2, 0.6, metal, a, 0.2, 0.28);
-          p('octa', x, 7.2, z, 0.3, 0.8, 0.3, team, a, 0, 0, 1);
-          R.beam([e.x + x, 3, e.z + z], [e.x, 5, e.z], 0.045, accent, 0.9, 0.5);
-        }
-        ring(4.8, 0.15, accent, 0.65);
-        if (e.invulnerable)
-          R.add('sphere', e.x, 4.2, e.z, 5.3, 6, 5.3, 0xada0e4, 0, 0, 0, 0.7, 0.13, 'effects');
-        return;
-      }
       if (e.kind === 'building') {
         let s = e.size || 3;
         p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
@@ -302,7 +246,6 @@ class BattlefieldView {
                 0.3
               );
           if (e.type === 'hangar') ring(s * 0.8, h * 0.9, accent, 0.7);
-          if (e.type === 'ward') ring(s * 0.7, h + 1, accent, 0.7, Math.PI / 2, time * 0.2);
         } else if (e.faction === 2) {
           let h = e.type === 'hq' ? 7.8 : e.type === 'turret' ? 6.5 : e.type === 'depot' ? 3.3 : 5.5;
           p('hex', 0, 0.55, 0, s * 0.8, 0.5, s * 0.8, metal);
@@ -316,7 +259,7 @@ class BattlefieldView {
             p('box', x, h * 0.3, z, 0.42, h * 0.57, 0.65, metal, a, 0, 0);
             p('octa', x, h * 0.63, z, 0.25, 0.7, 0.25, accent, 0, 0, 0, 0.8);
           }
-          if (['hq', 'ward', 'refinery', 'hangar'].includes(e.type)) {
+          if (['hq', 'refinery', 'hangar'].includes(e.type)) {
             R.add(
               'ring',
               e.x,
@@ -427,38 +370,7 @@ class BattlefieldView {
           head(0, 2.65, -0.2, 1.5, 0.18, 1.3, dark);
           for (let s of [-1, 1]) head(s * 0.52, 2.3, 1.0, 0.22, 0.25, 1.7, dark);
           head(0, 2.3, 0.77, 0.35, 0.25, 0.06, team, 1.2);
-        } else if (e.type === 'ward') {
-          p('hex', 0, 1.1, 0, 2.35, 1.7, 2.35, metal);
-          p('hex', 0, 2.0, 0, 2.45, 0.2, 2.45, dark);
-          p('sphere', 0, 3.0, 0, 1.4, 1.35, 1.4, 0x497b89);
-          p('octa', 0, 3.15, 0, 0.65, 1, 0.65, team, time * 0.3, 0, 0, 0.8);
-          for (let i = 0; i < 4; i++) {
-            let a = (i * Math.PI) / 2;
-            p('box', Math.sin(a) * 1.85, 3.0, Math.cos(a) * 1.85, 0.35, 2, 0.35, metal, a);
-          }
-          ring(1.9, 3.6, team, 0.7, Math.PI / 2, time * 0.4);
         }
-        if (e.tag === 'generator') {
-          ring(s * 1.3, 0.4, accent, 0.8);
-          R.add(
-            'ring',
-            e.x,
-            4,
-            e.z,
-            s * 0.8,
-            1,
-            s * 0.8,
-            accent,
-            time * 0.2,
-            Math.PI / 2,
-            0,
-            1,
-            0.6,
-            'effects'
-          );
-        }
-        if (e.invulnerable)
-          R.add('sphere', e.x, 2.8, e.z, s * 1.2, 5.5, s * 1.2, 0xb7a5eb, 0, 0, 0, 0.7, 0.1, 'effects');
         if (build < 1) {
           for (let i = 0; i < 4; i++) {
             let a = (i * Math.PI) / 2 + 0.78;
@@ -487,21 +399,6 @@ class BattlefieldView {
       let move = e.walk || 0,
         step = Math.sin(move * 7) * 0.23,
         ty = e.type;
-      if (ty === 'convoy') {
-        p('box', 0, 1.25, 0, 3.1, 1.7, 5.3, 0x8f9087);
-        p('box', 0, 2.17, -0.7, 3.2, 0.23, 4.4, 0xc5b69a);
-        p('box', 0, 1.8, 2.55, 2.6, 1.0, 0.1, 0x649599);
-        p('box', 0, 2.5, -1.4, 2.0, 0.5, 1.5, 0x5a6c76);
-        for (let i of [-1, 1]) {
-          p('box', i * 1.7, 0.5, 0, 0.6, 0.85, 5.1, dark);
-          for (let j = -2; j <= 2; j++)
-            p('cylinder', i * 1.73, 0.6, j, 0.4, 0.65, 0.4, 0x3d464e, 0, 0, Math.PI / 2);
-          p('box', i * 1.05, 1.0, 2.73, 0.5, 0.3, 0.08, 0xf4d3a4, 0, 0, 0, 1.2);
-        }
-        p('box', 0, 2.35, 0, 0.15, 0.02, 1.7, 0xe8dfc9);
-        p('box', 0, 2.35, 0, 1.4, 0.02, 0.15, 0xe8dfc9);
-        return;
-      }
       if (e.faction === 1) {
         let big = ['tank', 'artillery'].includes(ty),
           air = ty === 'air',

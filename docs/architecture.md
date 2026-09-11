@@ -14,12 +14,12 @@ Im `<head>` bindet `<link rel="stylesheet" href="./styles.css">` das lokale Styl
 | --- | --- | --- |
 | 1 / `core` | `M4`, `V`, `seeded` in `core.js` | Matrizen, Vektoren und Seed-RNG, ohne Browserabhängigkeiten |
 | 2 / `renderer` | `MAT`, `MERIDIAN_TEXTURES`, `geom`, Shaderkonstanten und `MeridianRenderer` in `renderer.js` | Eingebettete Texturen, Meshes, GLSL-Shader, WebGL-Ressourcen, Kamera und Renderpässe |
-| 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `META`, `BIOMES`, `CAMPAIGN`, `ACTS`, `ICON_PATHS` und Hilfsfunktionen in `content.js` | Spieldefinitionen, Balancing, Kampagne, Texte, Icons und Namenshelfer |
+| 3 / `content` | `FACTIONS`, `UNITS`, `BUILDINGS`, `META`, `BIOMES`, `ICON_PATHS` und Hilfsfunktionen in `content.js` | Spieldefinitionen, Balancing, Texte, Icons und Namenshelfer |
 | 4 / `world` | Kartenkonstanten, Hilfsfunktionen, `Heap`, `Battlefield` in `world.js` | CPU-Terrain-/Layoutdaten, Hindernisraster, Navigation und Sichtbarkeit, ohne Renderer |
 | 5 / `world-view` | `BattlefieldView`, `renderEntity` in `world-view.js` | Terrain-Mesh, statische GPU-Platzierungen, Fog-Upload und Entitätsmodelle |
 | 6 / `effects` | `MeridianEffects` in `effects.js` | Synchrone kosmetische Erzeugung, Effektdaten, Schadenszahlen und Lebensdauer; übergebener RNG |
 | 7 / `effects-view` | `drawEffectRing`, `renderBattlefieldEffects` in `effects-view.js` | Nur Zeichnen der übergebenen Effekte, Pings, Felder, Scans und Strike-Markierungen |
-| 8 / `simulation` | `DIFFICULTY`, `MeridianGame`, `formatTime` in `simulation.js` | Missionsaufbau, Entitäten, Befehle, Wirtschaft, Kampf, KI, Ziele, Effektaufträge und Snapshot/Restore |
+| 8 / `simulation` | `DIFFICULTY`, `MeridianGame`, `formatTime` in `simulation.js` | Gefechtsaufbau, Entitäten, Befehle, Wirtschaft, Kampf, KI, Ziele, Effektaufträge und Snapshot/Restore |
 | 9 / `audio` | `MeridianAudio` in `audio.js` | Prozedurales Web Audio für Musik und Geräusche |
 | 10 / `persistence` | `createMeridianPersistence` in `persistence.js` | Private Storage-Schlüssel, flüchtiger Ersatz, Profilnormalisierung, Checkpoint-JSON und Backup-Codec; nur ausdrücklich übergebene Abhängigkeiten |
 | 11 / `ui` | `MeridianUI` in `ui.js` | Fortschritt, Menüs, HUD, Eingabe, Kamera-Steuerung, Datei-/Download- und Import-Orchestrierung sowie Canvas-Overlay; Speicherung über eine übergebene Instanz |
@@ -39,15 +39,15 @@ Das frühere Tooltip-System (`tooltipFor()`, Dokument-Mousemove, `data-tooltip`,
 
 Gebäudeaktionen liegen in der Simulation (`managedBuilding`, Reparaturauftrag/-status und Verkauf samt Erstattung). Die UI projiziert `#buildingActions` pro Frame nach der Kameraaktualisierung; die pausierende Verkaufsbestätigung hält nur eine Ziel-ID. Reparatur verwendet vorhandene Arbeiteraufträge, Verkauf die vorhandenen Kaufbelege und Produktionskosten; kein neues persistentes Teilsystem. Rechtsklick bleibt bis zur Entscheidung über Einheitenreparatur erhalten. [Gebäudeaktionen](mobile-building-actions.md).
 
-Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-layout` gerendert. Sein Design ist in `styles.css` auf diese Klassen begrenzt; `#menu:has(> .home-screen)` schaltet nur dort den bisherigen Menü-Hintergrund ab. Kampagne, Modals und HUD behalten ihre vorhandenen Templates und Styles. [Umsetzung und Prüfungen](home-redesign.md).
+Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-layout` gerendert. Sein Design ist in `styles.css` auf diese Klassen begrenzt; `#menu:has(> .home-screen)` schaltet nur dort den bisherigen Menü-Hintergrund ab. `showBattle()`/`startBattle()` ersetzen die Kampagnen-/Skirmish-Navigation. Modals und HUD verwenden weiter die bestehenden Oberflächen; Kampagnen-, Tutorial- und Endenauswahl-Templates/CSS sind gelöscht. [Aktuelle Vereinfachung](campaign-removal.md) · [historischer Home-Entwurf](home-redesign.md).
 
 ## Zustände und Speicherung
 
-- `game.s` enthält den serialisierbaren Operationszustand, einschließlich Entitäten, Ressourcen, Missionsdaten und Kamera. Entitäten besitzen einen aktuellen `order`; neue Befehle ersetzen ihn. Kontrollgruppen (`groups`) und Befehls-Auftragsketten (`orders`) sind entfernt, Produktionswarteschlangen (`queue`) bleiben erhalten. [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md).
-- Ingame-Forschung (`TECH`, `game.tech()`, `game.s.upgrades`/`research`) und das baubare Labor sind entfernt. `META`, permanente `profile.upgrades` und deren Operationskopie `game.s.meta` bleiben erhalten. Das Kommandodeck hat drei Reiter. Belagerungsziele sind nun nicht baubare `BUILDINGS.ward` mit `missionOnly: true`; ihre Schild-/Sieglogik bleibt bestehen. [Forschungsentfernung und RNG-Abgrenzung](research-removal.md).
+- `game.s` enthält den serialisierbaren Operationszustand, einschließlich Entitäten, Ressourcen, Kamera und flachen Gefechtsoptionen (`seed`, `biome`, `faction`, `enemy`, `difficulty`, `meta`). `game.start(opts)` startet ohne Missionsindex oder Missionsdefinition ein Gefecht gegen ein gegnerisches HQ. Entitäten besitzen einen aktuellen `order`; neue Befehle ersetzen ihn. Kontrollgruppen (`groups`) und Befehls-Auftragsketten (`orders`) sind entfernt, Produktionswarteschlangen (`queue`) bleiben erhalten. [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md).
+- Ingame-Forschung (`TECH`, `game.tech()`, `game.s.upgrades`/`research`) und das baubare Labor sind entfernt. `META`, permanente `profile.upgrades` und deren Operationskopie `game.s.meta` bleiben erhalten. Das Kommandodeck hat drei Reiter. Auch `ward`, Missionsobjekte, Konvois, Avatar und ihre Modelle/Regeln sind inzwischen entfernt. Permanenten Upgrades fehlen im Testmodus Kosten; sie sind bis Stufe 3 kostenlos kaufbar. Noch keine neue Upgrade-Währung, Gewinnung oder Gebäude-Freischaltungen. [Kampagnenentfernung](campaign-removal.md) · [vorherige Forschungsentfernung](research-removal.md).
 - Welt-Raster, Suchindizes (`ids`, `spatial`), RNG-Closure und kurzlebige Effekte liegen außerhalb von `game.s`.
-- `snapshot()` klont `game.s` und ergänzt erkundete Kartenfelder. `restore()` validiert Teile der Daten, rekonstruiert Welt und Indizes und ersetzt bei Kampagnenmissionen die Missionsdefinition durch den aktuellen `CAMPAIGN`-Eintrag.
-- Profil und Operation verwenden Version 1 und die Storage-Schlüssel `meridian.profile.v1` beziehungsweise `meridian.operation.v1`.
+- `snapshot()` klont `game.s` und ergänzt erkundete Kartenfelder. `restore()` validiert Teile der Gefechts-/Entitätsdaten und rekonstruiert Welt und Indizes; keine Missionsrekonstruktion oder alten Spielstände. Team 0 ist der Spieler, Team 1 der Gegner, Team −1 neutral; das reine Missions-Allianzteam 2 ist entfernt.
+- Profil: Version 1 / `meridian.profile.v1`, ohne Kampagnenfortschritt oder Credits. Gefechts-Checkpoint: Version 2 / `meridian.operation.v2`; alte Operations-Schlüssel werden nicht gelesen. Kein Migrationspfad.
 - Exportierte Backups tragen `format: 'ashes-of-meridian'`, `version: 1`, `profile` und optional eine Operation. Backup-Codec und `restore()` prüfen unterschiedliche Teile des Formats; ein vollständig validiertes Schema gibt es nicht.
 - Der private `Store` in der Speicherkomponente fängt Storage-Ausnahmen ab und bietet einen flüchtigen In-Memory-Ersatz. Das ist keine dauerhafte Sicherung; Backup-Export bleibt wichtig.
 
@@ -91,15 +91,15 @@ Diese Punkte sind Befunde, keine bereits vorgenommenen Fehlerkorrekturen. Insbes
 
 ## Nächste Schritte und späteres Zielbild
 
-Die Spielrichtung ist langfristig ein Roguelite mit Weiterentwicklung außerhalb der Operationen. Bisher entfernt ist die Ingame-Forschung; kein neues Run-/Fortschrittssystem und keine Übertragung der entfernten Boni ins Hauptmenü implementiert. Beschreibungs- und Browser-Tooltips sind inzwischen ebenfalls entfernt; weitere Vereinfachungen und die Verständlichkeit ohne diese Zusatzinformationen sind separat zu beurteilen.
+Die Spielrichtung ist ein Mobile-Roguelite mit Weiterentwicklung außerhalb wiederholbarer Gefechte. Kampagne, alternative Modi und Ingame-Forschung sind entfernt. Aktuell gibt es ein provisorisches Vollarsenal-Gefecht gegen ein HQ und kostenlose permanente Test-Upgrades. Später: separate erspielbare Upgrade-Ressource, Gebäude-Freischaltungen und eine anfangs sehr schwere Gegnerbasis. Keine Übertragung der entfernten Forschungsboni ins Hauptmenü implementiert. Beschreibungs- und Browser-Tooltips sind inzwischen ebenfalls entfernt; weitere Vereinfachungen und die Verständlichkeit ohne diese Zusatzinformationen sind separat zu beurteilen.
 
 ### Zunächst: Referenzverhalten absichern
 
-Bereits umgesetzt: gemeinsamer Testloader und Renderer-Teststub, Syntaxprüfung aller benannten Skripte sowie Tests für Missionsstart, Befehle, Produktion, Ressourcen und Wiederherstellung aktuell erzeugter Spielstände. Feste Terrain-/Effekt-/RNG-Erwartungen bleiben erhalten. [Umfang der Referenztests](reference-tests.md).
+Bereits umgesetzt: gemeinsamer Testloader und Renderer-Teststub, Syntaxprüfung aller benannten Skripte sowie Tests für Gefechtsstart, Befehle, Produktion, Ressourcen und Wiederherstellung aktuell erzeugter Spielstände. Feste Terrain-/Effekt-/RNG-Erwartungen bleiben erhalten. [Umfang der Referenztests](reference-tests.md).
 
 Vor weiteren Umbauten:
 
-1. Für den jeweils betroffenen Bereich fehlende Fälle ergänzen, etwa weitere Missionstypen, Bau-/Kampfregeln oder Save-Validierung. Die bisherigen Referenzen decken nur ausgewählte Szenarien ab.
+1. Für den jeweils betroffenen Bereich fehlende Fälle ergänzen, etwa Fortschritt/Freischaltungen, Bau-/Kampfregeln oder Save-Validierung. Die bisherigen Referenzen decken nur ausgewählte Szenarien ab.
 2. Die vorhandenen Layout-Prüfsummen unverändert beibehalten. Nur tatsächlich zugesicherte Save/Load-Eigenschaften prüfen, nicht vollständige Deterministik unterstellen.
 3. Den direkten Browserstart anhand der [Checkliste](testing.md#manuelle-browser-prüfung) prüfen, bevor eine neue Verpackung eingeführt wird.
 

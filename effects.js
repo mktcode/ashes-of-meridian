@@ -58,7 +58,7 @@ class MeridianEffects {
           });
       }
       shell(e, target, travel) {
-        const height = e.type === 'air' ? 4.5 : e.type === 'avatar' ? 5 : e.kind === 'building' ? 3 : 1.45;
+        const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45;
         this.fx.push({
             type: 'shell',
             x: e.x,
@@ -73,7 +73,7 @@ class MeridianEffects {
           });
       }
       shot(e, target) {
-        const height = e.type === 'air' ? 4.5 : e.type === 'avatar' ? 5 : e.kind === 'building' ? 3 : 1.45,
+        const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45,
           th = target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1;
         this.fx.push({
               type: 'beam',

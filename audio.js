@@ -147,8 +147,6 @@
         } else if (type === 'complete' || type === 'research' || type === 'trained') {
           this.tone(420, 0.16, 0.08, 'sine');
           this.tone(630, 0.2, 0.065, 'sine', null, 0.13);
-        } else if (type === 'capture') {
-          for (let i = 0; i < 3; i++) this.tone(330 * [1, 1.5, 2][i], 0.7, 0.1, 'sine', null, i * 0.16);
         } else if (type === 'radio') {
           this.noise(0.13, 0.06, 2100);
           this.tone(900, 0.045, 0.025, 'sine');

@@ -2,7 +2,7 @@
 
 ## Umsetzung
 
-Ein einzelnes ausgewähltes, fertiges eigenes Gebäude erhält **Repair / Stop repair** und **Sell** direkt über seiner Weltposition. Fundamente, Einheiten, fremde Gebäude und Missionsgeneratoren erhalten diese Aktionen nicht. Bei Mehrfachauswahl, Zielmodus, Pause, Modal oder Operationsende ist das Panel ausgeblendet; außerhalb des sichtbaren Spielfelds wird es geschlossen. **× oben rechts** schließt es ebenfalls, ohne Auswahl oder laufende Reparatur zu ändern. Erst erneutes Auswählen öffnet es wieder, nicht das Zurückbewegen der Kamera. Die Repair-/Sell-Schaltflächen sind mindestens 44 CSS-Pixel hoch, bleiben innerhalb des Spielfelds und weichen der Kamera-/Hilfeleiste aus. Während eines gedrückten DOM-Buttons werden Position und Beschriftung nicht ausgetauscht.
+Ein einzelnes ausgewähltes, fertiges eigenes Gebäude erhält **Repair / Stop repair** und **Sell** direkt über seiner Weltposition. Fundamente, Einheiten und fremde Gebäude erhalten diese Aktionen nicht. Die früheren Missionsgeneratoren sind inzwischen [vollständig entfernt](campaign-removal.md). Bei Mehrfachauswahl, Zielmodus, Pause, Modal oder Operationsende ist das Panel ausgeblendet; außerhalb des sichtbaren Spielfelds wird es geschlossen. **× oben rechts** schließt es ebenfalls, ohne Auswahl oder laufende Reparatur zu ändern. Erst erneutes Auswählen öffnet es wieder, nicht das Zurückbewegen der Kamera. Die Repair-/Sell-Schaltflächen sind mindestens 44 CSS-Pixel hoch, bleiben innerhalb des Spielfelds und weichen der Kamera-/Hilfeleiste aus. Während eines gedrückten DOM-Buttons werden Position und Beschriftung nicht ausgetauscht.
 
 ### Reparatur
 

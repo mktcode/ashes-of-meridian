@@ -9,13 +9,13 @@
       { x: -47, z: -45 },
       { x: 51, z: 19 }
     ];
-    const RELAY_SITES = [
+    const CENTRAL_CLEARINGS = [
       { x: -32, z: -13 },
       { x: 11, z: 6 },
       { x: 39, z: -35 },
       { x: -12, z: -55 }
     ];
-    const CACHE_SITES = [
+    const OUTER_CLEARINGS = [
       { x: -48, z: 3 },
       { x: -21, z: -43 },
       { x: 16, z: -23 },
@@ -32,7 +32,7 @@
       { x: 29, z: 64 },
       { x: 7, z: -65 }
     ];
-    const ROUTES = [
+    const TERRAIN_CORRIDORS = [
       [
         [-52, 37],
         [-36, 15],
@@ -306,8 +306,8 @@
         let safe = [
           HOME,
           ...ENEMY_SITES,
-          ...RELAY_SITES,
-          ...CACHE_SITES,
+          ...CENTRAL_CLEARINGS,
+          ...OUTER_CLEARINGS,
           ...RESOURCE_SITES,
           { x: -40, z: 62 },
           { x: -51, z: 63 },
@@ -316,13 +316,13 @@
           { x: -27, z: 61 },
           { x: -27, z: 72 },
           { x: 0, z: 0 },
-          ...ROUTES.flat().map(([x, z]) => ({ x, z }))
+          ...TERRAIN_CORRIDORS.flat().map(([x, z]) => ({ x, z }))
         ];
         let lanes = [
           [HOME, ENEMY_SITES[0]],
           [HOME, ENEMY_SITES[1]],
           [HOME, ENEMY_SITES[2]],
-          ...ROUTES.flatMap(route =>
+          ...TERRAIN_CORRIDORS.flatMap(route =>
             route.slice(1).map((p, i) => [
               { x: route[i][0], z: route[i][1] },
               { x: p[0], z: p[1] }
@@ -600,7 +600,7 @@
       reveal(entities, scans = []) {
         this.visible.fill(0);
         for (let e of entities)
-          if (e.hp > 0 && !e.evacuated && (e.team === 0 || e.team === 2) && e.kind !== 'resource') {
+          if (e.hp > 0 && e.team === 0 && e.kind !== 'resource') {
             let r = e.vision || (e.kind === 'building' ? 21 : 17);
             this.mark(this.visible, e.x, e.z, r, 255);
           }

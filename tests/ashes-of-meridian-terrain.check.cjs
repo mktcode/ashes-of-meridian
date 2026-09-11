@@ -10,7 +10,7 @@ const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
 const scripts = readScripts();
 const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view'], { scripts });
-const { geom, Battlefield, BattlefieldView, CAMPAIGN, MAT } = vm.runInContext('({geom, Battlefield, BattlefieldView, CAMPAIGN, MAT})', context);
+const { geom, Battlefield, BattlefieldView, MAT } = vm.runInContext('({geom, Battlefield, BattlefieldView, MAT})', context);
 
 test('embedded skybox preserves the maintained WebP bytes and is wired as a non-repeating texture', () => {
   const url = vm.runInContext('MERIDIAN_TEXTURES.sky', context);
@@ -79,8 +79,10 @@ test('rock meshes are deterministic, finite, bounded and inexpensive', () => {
   assert.equal(hashes.size, 4, 'four distinct silhouettes');
 });
 
-for (const { seed, biome } of CAMPAIGN) {
-  test(`campaign ${seed} (${biome}): original layout and varied textured rocks`, () => {
+// Historical terrain inputs remain fixed even though the campaign catalog is gone.
+const terrainCases = [[1409,'rust'],[7012,'ash'],[9017,'choir'],[1905,'choir'],[2219,'rust'],[6633,'choir'],[1144,'court'],[4442,'choir'],[8141,'court'],[9897,'court'],[11007,'ash'],[24080,'rust'],[38744,'choir'],[43015,'star'],[74408,'star'],[90001,'star']];
+for (const [seed, biome] of terrainCases) {
+  test(`terrain ${seed} (${biome}): original layout and varied textured rocks`, () => {
     const { battlefield, calls } = world(seed, biome);
     assert.equal(layoutHash(battlefield), originalLayouts[seed]);
     assert.deepEqual(battlefield.blocked, battlefield.staticGrid);
@@ -92,7 +94,7 @@ for (const { seed, biome } of CAMPAIGN) {
   });
 }
 
-test('regenerating a skirmish seed reproduces all visual placements', () => {
+test('regenerating a battle seed reproduces all visual placements', () => {
   const first = world(123456, 'ash'), second = world(123456, 'ash');
   assert.equal(layoutHash(first.battlefield), layoutHash(second.battlefield));
   assert.deepEqual(first.calls, second.calls);

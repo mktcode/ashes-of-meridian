@@ -5,7 +5,7 @@ const { createRendererStub } = require('./renderer-stub.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
-const { Battlefield, BattlefieldView, MeridianGame, CAMPAIGN } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame, CAMPAIGN})', context);
+const { Battlefield, BattlefieldView, MeridianGame } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame})', context);
 
 function worldSample(seed, biome) {
   const renderer = createRendererStub({ record: true });
@@ -15,7 +15,7 @@ function worldSample(seed, biome) {
   new BattlefieldView(renderer).sync(world);
   const entities = [
     { kind: 'building', team: 0, x: -51, z: 49, size: 5, hp: 100 },
-    { kind: 'unit', team: 2, x: 10, z: 15, hp: 20, vision: 12 },
+    { kind: 'unit', team: 0, x: 10, z: 15, hp: 20, vision: 12 },
     { kind: 'unit', team: 1, x: 60, z: -60, hp: 20 }
   ];
   world.rebuild(entities);
@@ -28,10 +28,13 @@ function worldSample(seed, biome) {
     visible: Array.from(world.visible), explored: Array.from(world.explored), fog: Array.from(world.fogPixels) }) };
 }
 
-const effectCases = ['explosion', 'cap-bounce', 'damage', 'weapons', 'workers', 'heal-drop'];
+const effectCases = ['explosion', 'cap-bounce', 'damage', 'workers', 'heal-drop'];
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
-  game.start(0, { seed: 1409, difficulty: 'standard', faction: 0 });
+  game.start({ seed: 1409, biome: 'rust', difficulty: 'standard', faction: 0 });
+  // Fixed effect-test RNG entry point from presentation-v1, independent of battle loadout.
+  game.random = vm.runInContext('seeded(1486)', context);
+  for (let i = 0; i < 104; i++) game.random();
   game.world.visible.fill(255);
   const player = type => game.alive(e => e.team === 0 && e.type === type)[0];
   if (kind === 'explosion') {
@@ -43,13 +46,6 @@ function effectSample(kind) {
   } else if (kind === 'damage') {
     const target = player('hero');
     for (let i = 0; i < 40; i++) { target.hp = target.maxHp; game.damage(target, 30, null); }
-  } else if (kind === 'weapons') {
-    const target = game.alive(e => e.team === 1 && e.kind === 'building')[0];
-    target.hp = 100000;
-    for (const [type, faction] of [['rifle', 0], ['tank', 1], ['rifle', 2], ['artillery', 0], ['avatar', 2]]) {
-      const unit = game.spawnUnit(type, target.x - 10, target.z, 0, faction);
-      game.fire(unit, target);
-    }
   } else if (kind === 'workers') {
     const worker = player('worker'), hq = player('hq');
     hq.hp -= 200; worker.x = hq.x; worker.z = hq.z;
@@ -72,4 +68,4 @@ function effectSample(kind) {
   game.effects.tick(5);
   return { before, after, counts, nextRandom, expired: digest({ fx: game.effects.fx, floats: game.effects.floats }) };
 }
-module.exports = { worldSample, effectSample, effectCases, CAMPAIGN, digest };
+module.exports = { worldSample, effectSample, effectCases, digest };

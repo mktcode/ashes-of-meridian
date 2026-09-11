@@ -14,6 +14,8 @@ Grundlage: statische Prüfung von Eingabelogik, Darstellung, Styles und Hilfetex
 
 6. Fertige eigene Gebäude erhalten Repair/Stop und Sell direkt an ihrer Weltposition. Reparatur schickt den nächsten eigenen Arbeiter, ohne arbeiterlose Automatik; Verkauf erstattet 50 % plus offene Rekrutierung vollständig und schützt das letzte fertige HQ. Einheitenreparatur und anschließende Rechtsklick-Bereinigung bleiben offen: [Gebäudeaktionen](mobile-building-actions.md).
 
+7. Kampagne, alternative Modi und missionsspezifische Modelle/Regeln entfernt; ein wiederholbares Gefecht gegen ein HQ bleibt. Permanente Upgrades sind für Tests kostenlos; Ressourcenprogression und Gebäude-Freischaltungen folgen separat: [Kampagnenentfernung](campaign-removal.md).
+
 Die folgenden Tabellen und ursprünglichen Konsequenzen bleiben als Bestandsaufnahme vor der Bereinigung stehen, nicht als aktuelle Liste noch vorhandener Funktionen oder aktueller Entscheidungen.
 
 ## 1. Kamera

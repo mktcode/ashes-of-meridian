@@ -15,8 +15,8 @@ test('world and simulation start, step and restore without renderer, geometry or
   const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
   vm.runInContext('Math.random = () => { throw Error("Unseeded randomness"); }', context);
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
-  game.start(0, { seed: 1409, difficulty: 'standard', faction: 0 });
-  assert.equal(game.s.alloy, 470);
+  game.start({ seed: 1409, difficulty: 'standard', faction: 0 });
+  assert.equal(game.s.alloy, 1100);
   assert.equal('R' in game, false); assert.equal('R' in game.world, false);
   for (let i = 0; i < 1000; i++) { game.step(.05); game.effects.tick(.05); }
   const saved = game.snapshot(); game.restore(saved);
@@ -63,7 +63,7 @@ test('effect provider follows the current game RNG and survives start/restore re
   const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   const effects = game.effects;
-  game.start(0, { seed: 1409 });
+  game.start({ seed: 1409 });
   const snapshot = game.snapshot();
   game.random = () => .5; game.effects.explosion(0, 0);
   assert.equal(game.effects.fx[1].vy, 6);
@@ -86,6 +86,8 @@ test('effect drawing accepts frozen data without game/UI globals and matches the
 });
 
 for (const [kind, expected] of Object.entries(fixture.effects)) {
+  // The combined five-weapon reference included the removed boss weapon.
+  if (kind === 'weapons') continue;
   test(`effect payload, lifetime and RNG reference: ${kind}`, () => {
     assert.deepEqual(effectSample(kind), expected);
   });

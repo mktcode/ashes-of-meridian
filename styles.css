@@ -733,171 +733,6 @@
       margin-right: 15px
     }
 
-    .campaign-layout {
-      display: grid;
-      grid-template-columns: minmax(260px, 390px) 1fr;
-      gap: 35px;
-      max-width: 1320px;
-      margin: auto
-    }
-
-    .mission-list {
-      max-height: calc(100vh - 195px);
-      overflow: auto;
-      padding-right: 10px;
-      scrollbar-width: thin;
-      scrollbar-color: #314253 transparent
-    }
-
-    .act-label {
-      font: 10px var(--mono);
-      letter-spacing: 2px;
-      color: var(--gold);
-      padding: 20px 0 12px
-    }
-
-    .mission-card {
-      display: grid;
-      grid-template-columns: 30px 1fr 45px;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid var(--line);
-      padding: 13px 15px;
-      background: #12203088;
-      margin-bottom: 7px;
-      text-align: left;
-      width: 100%
-    }
-
-    .mission-card:hover,
-    .mission-card.active {
-      background: #253845a8;
-      border-color: #dca56977
-    }
-
-    .mission-card.active {
-      box-shadow: inset 3px 0 var(--gold)
-    }
-
-    .mission-card .num {
-      font: 13px var(--mono);
-      color: var(--gold)
-    }
-
-    .mission-card strong {
-      font-weight: 500;
-      font-size: 13px;
-      display: block
-    }
-
-    .mission-card small {
-      font: 9px var(--mono);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted)
-    }
-
-    .mission-card .stars {
-      color: var(--gold);
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-align: right
-    }
-
-    .briefing {
-      border: 1px solid var(--line);
-      background: #0b1420a8;
-      align-self: start;
-      position: relative;
-      overflow: hidden
-    }
-
-    .briefing-art {
-      height: 170px;
-      background: radial-gradient(ellipse at 73% 48%, #d7955733, transparent 50%), linear-gradient(135deg, #172736, #1b1727);
-      position: relative;
-      overflow: hidden
-    }
-
-    .briefing-art:after {
-      content: "";
-      position: absolute;
-      width: 95px;
-      height: 95px;
-      border-radius: 50%;
-      left: 68%;
-      top: 28px;
-      background: #080e15;
-      box-shadow: 0 0 0 2px #ffd696, 0 0 22px 5px #c8915044, 0 0 80px 10px #c8915022
-    }
-
-    .briefing-grid {
-      position: absolute;
-      inset: 0;
-      background-image: linear-gradient(#91b3c210 1px, transparent 1px), linear-gradient(90deg, #91b3c210 1px, transparent 1px);
-      background-size: 28px 28px;
-      transform: perspective(250px) rotateX(30deg) scale(1.5)
-    }
-
-    .briefing-art .coords {
-      position: absolute;
-      bottom: 18px;
-      left: 28px;
-      font: 10px var(--mono);
-      letter-spacing: 3px;
-      color: #99adb5
-    }
-
-    .briefing-body {
-      padding: 28px
-    }
-
-    .briefing-body h2 {
-      font: 36px Georgia, serif;
-      font-weight: 400;
-      margin: 12px 0 18px
-    }
-
-    .briefing-body p {
-      font-size: 14px;
-      color: #b3c1cb;
-      line-height: 1.8;
-      max-width: 680px
-    }
-
-    .intel-strip {
-      display: flex;
-      gap: 24px;
-      padding: 18px 0;
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-      margin: 22px 0
-    }
-
-    .intel-strip div {
-      font: 10px var(--mono);
-      color: var(--muted)
-    }
-
-    .intel-strip strong {
-      display: block;
-      font-size: 12px;
-      margin-top: 7px;
-      color: #e8efee
-    }
-
-    .brief-objective {
-      padding: 12px 0;
-      color: #d3e1de;
-      font-size: 13px
-    }
-
-    .brief-objective:before {
-      content: "◇";
-      margin-right: 12px;
-      color: var(--gold)
-    }
-
     .launch-row {
       display: flex;
       align-items: center;
@@ -914,7 +749,7 @@
       outline: none
     }
 
-    .mission-lock {
+    .battle-note {
       font: 11px var(--mono);
       color: var(--muted)
     }
@@ -1137,34 +972,6 @@
       margin-top: 8px
     }
 
-    .end-choices {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px
-    }
-
-    .end-choices button {
-      text-align: left;
-      border: 1px solid var(--line);
-      padding: 22px
-    }
-
-    .end-choices button:hover {
-      border-color: var(--gold)
-    }
-
-    .end-choices strong {
-      font: 21px Georgia, serif;
-      display: block
-    }
-
-    .end-choices span {
-      display: block;
-      margin-top: 12px;
-      font-size: 12px;
-      color: var(--muted)
-    }
-
     /* Tactical interface */
     #hud {
       position: fixed;
@@ -1205,13 +1012,13 @@
       flex: 1
     }
 
-    #missionLabel {
+    #battleLabel {
       font-size: 12px;
       letter-spacing: 1px;
       text-transform: uppercase
     }
 
-    #missionLabel small {
+    #battleLabel small {
       display: block;
       font: 9px var(--mono);
       letter-spacing: 1.5px;
@@ -1343,28 +1150,6 @@
       padding: 8px 22px;
       font: 10px var(--mono);
       letter-spacing: 1.5px
-    }
-
-    #tip {
-      position: absolute;
-      top: 270px;
-      left: 22px;
-      width: 267px;
-      padding: 15px 18px;
-      border-color: #74e5d333;
-      font-size: 12px;
-      color: #bdcfd6
-    }
-
-    #tip .eyebrow {
-      color: var(--teal);
-      margin-bottom: 8px;
-      font-size: 9px
-    }
-
-    #tip button {
-      float: right;
-      color: var(--muted)
     }
 
     #alerts {
@@ -1979,7 +1764,7 @@
         font-size: 20px
       }
 
-      #missionLabel {
+      #battleLabel {
         max-width: 200px;
         font-size: 10px
       }
@@ -2115,7 +1900,7 @@
         gap: 10px
       }
 
-      #missionLabel {
+      #battleLabel {
         max-width: 165px
       }
 
@@ -2158,13 +1943,6 @@
         font-size: 11px
       }
 
-      #tip {
-        top: 245px;
-        left: 12px;
-        width: 224px;
-        font-size: 11px
-      }
-
       #radio {
         bottom: 227px;
         width: 400px;
@@ -2201,11 +1979,6 @@
         padding: 8px
       }
 
-      .campaign-layout {
-        gap: 18px;
-        grid-template-columns: 260px 1fr
-      }
-
       .subscreen {
         padding: 22px
       }
@@ -2220,52 +1993,6 @@
 
       .sub-header p {
         font-size: 11px
-      }
-
-      .briefing-body {
-        padding: 20px
-      }
-
-      .briefing-body h2 {
-        font-size: 29px
-      }
-
-      .briefing-body p {
-        font-size: 12px
-      }
-
-      .briefing-art {
-        height: 105px
-      }
-
-      .briefing-art:after {
-        width: 65px;
-        height: 65px;
-        top: 10px
-      }
-
-      .intel-strip {
-        gap: 15px;
-        flex-wrap: wrap
-      }
-
-      .mission-list {
-        max-height: calc(100vh - 150px)
-      }
-
-      .mission-card {
-        padding: 10px;
-        gap: 5px;
-        grid-template-columns: 25px 1fr 28px
-      }
-
-      .mission-card strong {
-        font-size: 11px
-      }
-
-      .mission-card .stars {
-        font-size: 8px;
-        letter-spacing: 0
       }
 
       .faction-options {
@@ -2300,7 +2027,7 @@
     }
 
     @media(max-width:600px) {
-      #missionLabel {
+      #battleLabel {
         display: none
       }
 
@@ -2314,19 +2041,6 @@
 
       .clock {
         margin-left: auto
-      }
-
-      .campaign-layout {
-        display: block
-      }
-
-      .mission-list {
-        max-height: 160px;
-        margin-bottom: 20px
-      }
-
-      .briefing-art {
-        display: none
       }
 
       .sub-header {
@@ -2347,23 +2061,6 @@
 
       .sub-header p {
         display: none
-      }
-
-      .briefing-body h2 {
-        font-size: 26px
-      }
-
-      .briefing-body p {
-        font-size: 11px
-      }
-
-      .briefing-body {
-        padding: 17px
-      }
-
-      .intel-strip {
-        margin: 12px 0;
-        padding: 12px 0
       }
 
       .launch-row {
@@ -2480,12 +2177,6 @@
         width: 151px
       }
 
-      #tip {
-        width: 194px;
-        font-size: 10px;
-        top: 225px
-      }
-
       #radio {
         width: calc(100% - 24px);
         bottom: 258px
@@ -2528,10 +2219,6 @@
 
       .result-stats span {
         font-size: 8px
-      }
-
-      .end-choices {
-        grid-template-columns: 1fr
       }
 
       #contextLabel {

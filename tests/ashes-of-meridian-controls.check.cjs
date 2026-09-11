@@ -43,11 +43,11 @@ function setup() {
     openModal(kind, html) { this.html = html; }
   }
   const game = {
-    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], m: { tier: 1 }, faction: 0 },
+    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0 },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     get(id) { return this.s.entities.find(e => e.id === id); },
-    managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 && b.type !== 'ward' ? b : null; },
+    managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
     command(...args) { calls.push(['command', ...args]); }
   };
@@ -55,7 +55,7 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { unlocked: 0, settings: { quality: 2 } }, {});
+    { unlock() {}, sound() {} }, { upgrades: {}, settings: { quality: 2 } }, {});
   ui.view = 'game'; ui.paused = false;
   const key = (key, options = {}) => document.handlers.keydown?.({ key, preventDefault() {}, ...options });
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
@@ -305,27 +305,49 @@ test('pause, resume, help, save/load and modal close remain available as button 
   assert.deepEqual(h.calls, [['pause'],['resume'],['help'],['save'],['load'],['close']]);
 });
 
-test('home redesign preserves dynamic campaign progress, checkpoint priority and navigation actions', () => {
-  for (const saved of [false, true]) for (const progressed of [false, true]) {
+test('home offers repeatable battles, upgrades and checkpoint priority without campaign navigation', () => {
+  for (const saved of [false, true]) {
     const h = setup(); let previews = 0;
     h.ui.game.s = null; h.ui.view = 'home';
-    h.ui.profile.medals = progressed ? { 0: 3, 1: 1, 2: 0 } : {};
     h.ui.persistence.hasCheckpoint = () => saved;
     h.ui.onPreview = () => previews++;
     h.ui.showHome();
     const html = h.document.getElementById('menu').innerHTML;
     assert.match(html, /class="home-screen"/);
     assert.match(html, /aria-label="Ashes of Meridian"/);
-    assert.ok(html.includes(`${progressed ? 2 : 0}/16 OPERATIONS COMPLETE`));
-    assert.ok(html.includes(progressed ? 'Continue the campaign' : 'Enter the campaign'));
+    assert.match(html, /New battle/); assert.doesNotMatch(html, /campaign|skirmish|endless|OPERATIONS COMPLETE/i);
     assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
-      [...(saved ? ['continue'] : []), 'campaign', 'skirmish', 'armory', 'help', 'settings']);
+      [...(saved ? ['continue'] : []), 'battle', 'armory', 'help', 'settings']);
     assert.equal((html.match(/class="primary"/g) || []).length, 1);
-    assert.ok(html.includes(`class="primary" data-ui="${saved ? 'continue' : 'campaign'}"`));
+    assert.ok(html.includes(`class="primary" data-ui="${saved ? 'continue' : 'battle'}"`));
     assert.equal(previews, 1); assert.equal(h.ui.R.fogOn, false);
     assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
     assert.deepEqual(h.calls, []);
   }
+});
+
+test('permanent upgrades are free, bounded and persisted without altering the active battle', () => {
+  const h = setup(), keys = ['veterans','stores','logistics','command','resolve','industry'];
+  h.ui.game.s.meta = {}; h.ui.game.s.alloy = 123; h.ui.game.s.gas = 45;
+  h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
+  h.ui.showArmory(); assert.match(h.ui.html, /∞ UPGRADE RESOURCES \/ TEST MODE/);
+  assert.match(h.ui.html, /FREE · LEVEL 1/);
+  for (const key of keys) for (let i=0;i<5;i++) h.ui.buyUpgrade(key);
+  h.ui.buyUpgrade('not-an-upgrade');
+  assert.deepEqual(h.ui.profile.upgrades, Object.fromEntries(keys.map(k=>[k,3])));
+  assert.equal(h.calls.length, 18); assert.equal('credits' in h.ui.profile, false);
+  assert.deepEqual([h.ui.game.s.alloy,h.ui.game.s.gas,h.ui.game.s.meta], [123,45,{}]);
+  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 6);
+});
+
+test('campaign navigation, tutorial and ending APIs are removed; battle restart uses only battle options', () => {
+  const h = setup();
+  for (const method of ['showCampaign','launch','showSkirmish','startSkirmish','showEnding','chooseEnding','updateTips'])
+    assert.equal(h.ui[method], undefined, method);
+  Object.assign(h.ui.game.s, {seed:4321,biome:'court',faction:1,enemy:0,difficulty:'veteran'});
+  h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
+  h.ui.uiAction('restart');
+  assert.deepEqual(h.calls, [['start',{seed:4321,biome:'court',faction:1,enemy:0,difficulty:'veteran'}],['save']]);
 });
 
 test('tooltips and native title hints are removed without removing pointer press guards or accessible names', () => {
@@ -345,7 +367,7 @@ test('tooltips and native title hints are removed without removing pointer press
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.match(html, /<title>Ashes of Meridian/);
   for (const [attribute, value, label] of [
-    ['id', 'missionHome', 'Pause / operations'], ['id', 'pauseBtn', 'Pause'],
+    ['id', 'battleHome', 'Pause / operations'], ['id', 'pauseBtn', 'Pause'],
     ['data-cam', 'home', 'Center on command'], ['data-cam', 'in', 'Zoom in'],
     ['data-cam', 'out', 'Zoom out'], ['id', 'soundBtn', 'Sound'],
     ['id', 'helpBtn', 'Field manual'], ['id', 'minimap', 'Tactical overview']
@@ -443,14 +465,12 @@ test('building panel avoids camera/help buttons vertically or sideways in a shor
 });
 
 test('building buttons hide for ineligible selection, offscreen targets, targeting, pause and modals', () => {
-  for (const mode of ['none','many','enemy','ally','unit','ward','foundation','dead','result','offscreen','behind','paused','modal','target','home']) {
+  for (const mode of ['none','many','enemy','unit','foundation','dead','result','offscreen','behind','paused','modal','target','home']) {
     const h = buildingPanel();
     if (mode === 'none') h.ui.selected = [];
     if (mode === 'many') h.ui.selected = [7,8];
     if (mode === 'enemy') h.b.team = 1;
-    if (mode === 'ally') h.b.team = 2;
     if (mode === 'unit') h.b.kind = 'unit';
-    if (mode === 'ward') h.b.type = 'ward';
     if (mode === 'foundation') h.b.progress = .5;
     if (mode === 'dead') h.b.hp = 0;
     if (mode === 'result') h.ui.game.s.result = { win: true };
@@ -495,7 +515,7 @@ test('building buttons dispatch repair; sale pauses, cancels safely, confirms th
   assert.deepEqual(h.calls.at(-1), ['toast','Last command center']);
 });
 
-test('command deck and help have no research actions; mission wards are never offered for construction', () => {
+test('command deck and help have no research actions; removed buildings are never offered for construction', () => {
   const h = setup(), html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.deepEqual(Array.from(html.matchAll(/data-tab="([^"]+)"/g), m => m[1]), ['orders', 'build', 'army']);
   h.ui.showHelp(); assert.doesNotMatch(h.ui.html, /research/i);
@@ -546,21 +566,12 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.match(html, /data-ui="cancelTarget"/);
   h.ui.updateSelection();
   assert.doesNotMatch(h.document.getElementById('selectionContent').innerHTML, /Box-select|Right-click/);
-  h.ui.game.s.m = { tier: 1 }; h.ui.game.s.faction = 0;
+  h.ui.game.s.faction = 0;
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;
   assert.match(actions, /Command view/); assert.doesNotMatch(actions, /SPACE|class="key"|F[12359]/);
-  h.ui.persistence.hasCheckpoint = () => true; h.ui.game.s.m.name = 'Test';
+  h.ui.persistence.hasCheckpoint = () => true;
   h.ui.showPause();
   assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]/);
-  h.ui.profile.settings.tips = true; h.ui.game.s.index = 0; h.ui.game.s.time = 30;
-  h.ui.game.s.stats = { trained: 0 };
-  h.ui.game.supply = () => 0; h.ui.game.cap = () => 24; h.ui.game.has = () => false;
-  h.ui.updateTips();
-  assert.doesNotMatch(h.document.getElementById('tip').innerHTML, /\[N\]/);
-  h.ui.game.s.stats.trained = 3; h.ui.game.supply = () => 23; h.ui.updateTips();
-  assert.doesNotMatch(h.document.getElementById('tip').innerHTML, /\[B\]/);
-  h.ui.game.s.stats.trained = 6; h.ui.game.supply = () => 0; h.ui.updateTips();
-  assert.match(h.document.getElementById('tip').innerHTML, /Tap <b>Combat force/);
-  assert.doesNotMatch(h.document.getElementById('tip').innerHTML, /F2|Press|Right-click/);
+  assert.equal(h.ui.updateTips, undefined);
 });

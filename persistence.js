@@ -4,7 +4,7 @@
 // Dependencies are supplied by app.js. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
 function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, warn }) {
-    const SAVE_KEY = 'meridian.operation.v1',
+    const SAVE_KEY = 'meridian.operation.v2',
       PROFILE_KEY = 'meridian.profile.v1';
     const memoryStore = {};
     const Store = {
@@ -37,19 +37,12 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
     function defaultProfile() {
       return {
         version: 1,
-        unlocked: 0,
-        credits: 0,
-        medals: {},
-        best: {},
         upgrades: {},
-        skirmishBest: 0,
-        ending: null,
         settings: {
           volume: 0.28,
           music: true,
           sfx: true,
           quality: 2,
-          tips: true,
           healthbars: false,
           difficulty: 'standard'
         }
@@ -60,14 +53,8 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
       try {
         let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
         if (p && p.version === 1) {
-          d.unlocked = clamp(Number(p.unlocked) || 0, 0, 15);
-          d.credits = clamp(Number(p.credits) || 0, 0, 999);
-          d.medals = p.medals || {};
-          d.best = p.best || {};
           d.upgrades = p.upgrades || {};
           for (let k in upgrades) d.upgrades[k] = clamp(Number(d.upgrades[k]) || 0, 0, upgrades[k].max);
-          d.ending = ['seal', 'open'].includes(p.ending) ? p.ending : null;
-          d.skirmishBest = Number(p.skirmishBest) || 0;
           Object.assign(d.settings, p.settings || {});
           d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);
           d.settings.quality = clamp(Number(d.settings.quality) || 0, 0, 2);
@@ -114,7 +101,7 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, difficulties, 
           if (
             !Array.isArray(d.operation.entities) ||
             d.operation.entities.length > 1500 ||
-            d.operation.version !== 1
+            d.operation.version !== 2
           )
             throw Error('Operation data is invalid.');
         }

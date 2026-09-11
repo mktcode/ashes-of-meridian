@@ -1,4 +1,4 @@
-    /* Front end, local checkpoints, campaign progression, HUD, controls, field manual. */
+    /* Front end, local checkpoints, permanent upgrades, HUD, controls, field manual. */
     'use strict';
     const $ = id => document.getElementById(id);
     const esc = s =>
@@ -31,7 +31,6 @@
         this.actionSignature = '';
         this.hudClock = 0;
         this.lastSaveTime = 0;
-        this.campaignSelected = profile.unlocked;
         this.touchPoints = new Map();
         this.bind();
         this.setControlHints();
@@ -129,7 +128,7 @@
         } else if (type === 'trained') {
           this.audio.sound('trained');
           if (data.type === 'hero')
-            this.radio('Mara Venn|I’m still here. Let’s not make a habit of that.');
+            this.radio('Expedition command|Commander reconstructed and ready.');
           this.actionSignature = '';
         } else if (type === 'wave') {
           this.audio.sound('wave');
@@ -140,7 +139,7 @@
             x: data.x,
             z: data.z
           });
-        } else if (['capture', 'scan', 'heal', 'queued', 'select'].includes(type))
+        } else if (['scan', 'heal', 'queued', 'select'].includes(type))
           this.audio.sound(type);
       }
       showHome() {
@@ -157,56 +156,28 @@
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
         if (this.onPreview) this.onPreview();
-        let saved = this.persistence.hasCheckpoint(),
-          completed = Object.keys(this.profile.medals).filter(k => this.profile.medals[k] > 0).length;
+        let saved = this.persistence.hasCheckpoint();
         $('menu').innerHTML =
           `<div class="home-screen"><div class="home-layout">
             <svg class="menu-frame" viewBox="0 0 22 887" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M1 0V72L17 88V178L6 190V674L20 688V778L1 797V887"/></svg>
             <header class="menu-header">
               <div class="brand"><svg class="menu-emblem" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><circle cx="24" cy="24" r="22"/><path d="M24 3V11M24 37V45M3 24H11M37 24H45M24 10L28 20L38 24L28 28L24 38L20 28L10 24L20 20Z"/><circle cx="24" cy="24" r="4"/></svg><span>MERIDIAN EXPEDITIONARY COMMAND</span></div>
               <div class="menu-system">SOL SYSTEM <span>//</span> M-472</div>
-              <div class="version">THE DARK STAR CAMPAIGN / 1.0</div>
+              <div class="version">ROGUELITE PROTOTYPE</div>
             </header>
             <div class="menu-main">
               <div class="eyebrow">AN ORIGINAL REAL-TIME STRATEGY GAME</div>
               <h1 class="wordmark" aria-label="Ashes of Meridian">ASHES<span class="wordmark-link"><b>OF</b></span>MERIDIAN</h1>
-              <p class="menu-tagline">The sun went dark. Then the dead began calling home.</p>
+              <p class="menu-tagline">Build your force. Break the enemy base. Return stronger.</p>
               <div class="menu-buttons">
                 ${saved ? '<button class="primary" data-ui="continue">Resume operation <span aria-hidden="true">→</span></button>' : ''}
-                <button class="${saved ? 'secondary' : 'primary'}" data-ui="campaign">${completed ? 'Continue the campaign' : 'Enter the campaign'} <span aria-hidden="true">→</span></button>
-                <button class="secondary" data-ui="skirmish">Skirmish & endless war <span aria-hidden="true">→</span></button>
+                <button class="${saved ? 'secondary' : 'primary'}" data-ui="battle">New battle <span aria-hidden="true">→</span></button>
               </div>
               <nav class="menu-subnav" aria-label="More options"><button class="textbtn" data-ui="armory">FLEET UPGRADES</button><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></nav>
             </div>
-            <div class="menu-quote">“I knew you’d come back.<br>Please don’t bring them with you.”<small>ELIAS VENN / SIGNAL 00.17</small></div>
-            <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>16 OPERATIONS · 3 CIVILIZATIONS · ONE DARK STAR</span><span class="menu-progress">${completed}/16 OPERATIONS COMPLETE &nbsp; / &nbsp; LOCAL & OFFLINE</span></footer>
+            <div class="menu-quote">One objective.<br>Destroy the enemy base.<small>REPEATABLE BATTLES / PERMANENT UPGRADES</small></div>
+            <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>3 CIVILIZATIONS · ONE OBJECTIVE</span><span class="menu-progress">LOCAL & OFFLINE</span></footer>
           </div></div>`;
-      }
-      showCampaign(index = this.campaignSelected) {
-        this.campaignSelected = clamp(index, 0, 15);
-        this.view = 'campaign';
-        this.paused = true;
-        $('hud').classList.add('hidden');
-        $('modal').classList.add('hidden');
-        this.modalKind = '';
-        $('menu').classList.remove('hidden');
-        let m = CAMPAIGN[this.campaignSelected],
-          medals = this.profile.medals,
-          locked = this.campaignSelected > this.profile.unlocked,
-          items = '';
-        for (let i = 0; i < CAMPAIGN.length; i++) {
-          let a = CAMPAIGN[i];
-          if (i === 0 || a.act !== CAMPAIGN[i - 1].act)
-            items += `<div class="act-label">${ACTS[a.act]}</div>`;
-          items += `<button class="mission-card ${i === this.campaignSelected ? 'active' : ''}" data-mission="${i}"><span class="num">${String(i + 1).padStart(2, '0')}</span><span><strong>${esc(a.name)}</strong><small>${a.type === 'tutorial' ? 'FIRST DEPLOYMENT' : a.type === 'allydefense' ? 'ALLIED DEFENSE' : a.type.toUpperCase()} · ${a.minutes} MIN</small></span><span class="stars">${medals[i] ? '★'.repeat(medals[i]) : i > this.profile.unlocked ? '⌑' : '◇'}</span></button>`;
-        }
-        $('menu').innerHTML =
-          `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">THE DARK STAR CAMPAIGN</div><h1>Our way back home.</h1><p>Every victory carries someone else’s name.</p></div><div><button class="secondary" data-ui="armory">${this.profile.credits} COMMENDATIONS</button> <button class="textbtn" data-ui="home">← MAIN MENU</button></div></header><div class="campaign-layout"><div class="mission-list" id="missionList">${items}</div><article class="briefing"><div class="briefing-art" style="background:radial-gradient(ellipse at 73% 48%,${this.biomeHex(m.biome)}66,transparent 55%),linear-gradient(135deg,#142635,#151b2a)"><div class="briefing-grid"></div><div class="coords">${esc(m.sector)}</div></div><div class="briefing-body"><div class="eyebrow">OPERATION ${String(this.campaignSelected + 1).padStart(2, '0')} / ${ACTS[m.act].split(' · ')[1]}</div><h2>${esc(m.name)}</h2><p>${esc(m.brief)}</p><div class="intel-strip"><div>OPPOSITION<strong>${FACTIONS[m.enemy].short}</strong></div><div>TERRAIN<strong>${BIOMES[m.biome].name}</strong></div><div>FORCE ACCESS<strong>${m.tier >= 3 ? 'FULL ARSENAL' : m.tier === 2 ? 'HEAVY ARMOR' : 'INFANTRY & SCOUTS'}</strong></div></div><div class="brief-objective">${esc(m.goal)}</div><div class="launch-row"><button class="primary" data-ui="launch" ${locked ? 'disabled' : ''}>DEPLOY EXPEDITION <span>↗</span></button><select id="campaignDifficulty" aria-label="Difficulty">${this.difficultyOptions()}</select></div>${locked ? `<p class="mission-lock">Complete operation ${String(this.profile.unlocked + 1).padStart(2, '0')} to advance the campaign.</p>` : ''}<div style="margin-top:15px;display:flex;justify-content:space-between;gap:10px"><button class="textbtn" data-ui="practice">PLAY AS STANDALONE SCENARIO ↗</button><span class="mission-lock">${medals[this.campaignSelected] ? '★'.repeat(medals[this.campaignSelected]) + ' EARNED' : '3 COMMENDATIONS AVAILABLE'}</span></div></div></article></div></div>`;
-        let active = $('missionList').querySelector('.active');
-        if (active) active.scrollIntoView({ block: 'nearest' });
-      }
-      biomeHex(k) {
-        return '#' + BIOMES[k].accent.toString(16).padStart(6, '0');
       }
       difficultyOptions() {
         return Object.entries(DIFFICULTY)
@@ -216,71 +187,30 @@
           )
           .join('');
       }
-      launch(practice = false) {
-        let difficulty = $('campaignDifficulty')?.value || this.profile.settings.difficulty;
-        this.profile.settings.difficulty = difficulty;
-        this.persist();
-        this.audio.unlock();
-        this.game.start(this.campaignSelected, { difficulty, practice });
-        this.game.s.practice = practice;
-        this.updateHUD(true);
-        this.save(false);
-      }
-      showSkirmish() {
-        this.view = 'skirmish';
+      showBattle() {
+        this.view = 'battle';
         this.paused = true;
         $('menu').classList.remove('hidden');
         $('hud').classList.add('hidden');
         $('modal').classList.add('hidden');
-        this.skirmishFaction = this.skirmishFaction || 0;
+        this.battleFaction = this.battleFaction || 0;
         $('menu').innerHTML =
-          `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">THE FRONTIER IS NEVER QUIET</div><h1>Choose your war.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header><div style="max-width:910px;margin:0 auto"><div class="faction-options">${FACTIONS.map((f, i) => `<button class="faction-option ${this.skirmishFaction === i ? 'active' : ''}" data-faction="${i}"><span class="sigil" style="color:#${f.color.toString(16)}">${f.sigil}</span><strong>${f.name}</strong><small>${f.desc}</small></button>`).join('')}</div><p id="factionTrait" class="muted" style="min-height:42px;font-size:13px">${FACTIONS[this.skirmishFaction].trait}</p><div class="glass" style="padding:15px 25px"><div class="settings-row"><label>Rules of engagement<small>Conquest, control, convoy escort, or an escalating defense.</small></label><select id="skMode"><option value="conquest">Annihilation</option><option value="domination">Signal control</option><option value="escort">Convoy run</option><option value="survival">Last stand · 15 minutes</option><option value="endless">Endless war</option></select></div><div class="settings-row"><label>Hostile civilization</label><select id="skEnemy"><option value="2">The Veiled Court</option><option value="1">The Verdant Choir</option><option value="0">The Free Marches</option><option value="mixed">All three civilizations</option></select></div><div class="settings-row"><label>Battlefield</label><select id="skBiome">${Object.entries(
+          `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">THE FRONTIER IS NEVER QUIET</div><h1>Choose your war.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header><div style="max-width:910px;margin:0 auto"><div class="faction-options">${FACTIONS.map((f, i) => `<button class="faction-option ${this.battleFaction === i ? 'active' : ''}" data-faction="${i}"><span class="sigil" style="color:#${f.color.toString(16)}">${f.sigil}</span><strong>${f.name}</strong><small>${f.desc}</small></button>`).join('')}</div><p id="factionTrait" class="muted" style="min-height:42px;font-size:13px">${FACTIONS[this.battleFaction].trait}</p><div class="glass" style="padding:15px 25px"><div class="settings-row"><label>Hostile civilization</label><select id="battleEnemy"><option value="2">The Veiled Court</option><option value="1">The Verdant Choir</option><option value="0">The Free Marches</option></select></div><div class="settings-row"><label>Battlefield</label><select id="battleBiome">${Object.entries(
             BIOMES
           )
             .map(([k, b]) => `<option value="${k}">${b.name}</option>`)
             .join(
               ''
-            )}</select></div><div class="settings-row"><label>Difficulty<small>Story is forgiving. Veteran brings larger, stronger attacks.</small></label><select id="skDifficulty">${this.difficultyOptions()}</select></div><div class="settings-row"><label>Map seed<small>Use the same seed to replay a battlefield.</small></label><input id="skSeed" type="number" value="${Math.floor(Math.random() * 900000) + 100000}" min="1" max="999999999" style="width:155px;background:#172333;border:1px solid #68809855;padding:11px;color:#c9dbde;font:12px var(--mono)"></div></div><div class="launch-row" style="justify-content:space-between"><span class="mission-lock">FULL ARSENAL · NO CAMPAIGN BONUSES · BEST SCORE ${this.profile.skirmishBest.toLocaleString()}</span><button class="primary" data-ui="startSkirmish">LAUNCH SKIRMISH ↗</button></div></div></div>`;
+            )}</select></div><div class="settings-row"><label>Difficulty<small>Story is forgiving. Veteran brings larger, stronger attacks.</small></label><select id="battleDifficulty">${this.difficultyOptions()}</select></div><div class="settings-row"><label>Map seed<small>Use the same seed to replay a battlefield.</small></label><input id="battleSeed" type="number" value="${Math.floor(Math.random() * 900000) + 100000}" min="1" max="999999999" style="width:155px;background:#172333;border:1px solid #68809855;padding:11px;color:#c9dbde;font:12px var(--mono)"></div></div><div class="launch-row" style="justify-content:space-between"><span class="battle-note">FULL ARSENAL · FLEET UPGRADES ACTIVE</span><button class="primary" data-ui="startBattle">START BATTLE ↗</button></div></div></div>`;
       }
-      startSkirmish() {
-        let type = $('skMode').value,
-          enemy = $('skEnemy').value,
-          biome = $('skBiome').value,
-          difficulty = $('skDifficulty').value,
-          seed = clamp(parseInt($('skSeed').value) || Math.floor(Math.random() * 1e8), 1, 999999999),
-          names = {
-            conquest: 'Annihilation',
-            domination: 'Signal Control',
-            escort: 'Convoy Run',
-            survival: 'Last Stand',
-            endless: 'Endless War'
-          };
-        let m = {
-          name: names[type],
-          act: 0,
-          sector: 'UNCHARTED FRONTIER / SEED ' + seed,
-          biome,
-          enemy: enemy === 'mixed' ? 2 : +enemy,
-          type,
-          tier: 3,
-          seed,
-          bases: 3,
-          waveInterval: type === 'endless' ? 62 : 80,
-          startAlloy: 1100,
-          startGas: 400,
-          count: type === 'escort' ? 2 : 3,
-          duration: 900,
-          hold: 150,
-          goal: 'Secure this frontier.',
-          outro: 'The frontier remembers who stood their ground.',
-          radio: [
-            `${FACTIONS[this.skirmishFaction].name}|Our expedition has arrived. Establish an economy, secure the field, and keep the command alive.`
-          ]
-        };
+      startBattle() {
+        let enemy = +$('battleEnemy').value, biome = $('battleBiome').value,
+          difficulty = $('battleDifficulty').value,
+          seed = clamp(parseInt($('battleSeed').value) || Math.floor(Math.random() * 1e8), 1, 999999999);
         this.profile.settings.difficulty = difficulty;
         this.persist();
         this.audio.unlock();
-        this.game.start(-1, { mission: m, faction: this.skirmishFaction, difficulty, seed, enemy });
+        this.game.start({ faction: this.battleFaction, difficulty, seed, enemy, biome });
         this.save(false);
       }
       openModal(kind, html, wide = false) {
@@ -298,7 +228,7 @@
         if (this.view === 'game' && !this.game.s?.result) {
           if (kind === 'pause') this.paused = false;
           else this.showPause();
-        } else if (kind === 'armory') this.view === 'campaign' ? this.showCampaign() : this.showHome();
+        } else if (kind === 'armory') this.showHome();
       }
       pause() {
         if (this.view !== 'game' || !this.game.s || this.game.s.result) return;
@@ -312,7 +242,7 @@
         this.paused = true;
         this.openModal(
           'pause',
-          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>${esc(s.m.name)}</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="save">SAVE CHECKPOINT</button><button class="secondary" data-ui="load" ${this.persistence.hasCheckpoint() ? '' : 'disabled'}>LOAD CHECKPOINT</button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button>${s.m.type === 'endless' && s.time >= 300 ? '<button class="secondary" data-ui="extract">EXTRACT EXPEDITION & RECORD SCORE</button>' : ''}<button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">SAVE & RETURN TO MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Your operation is saved automatically every 45 seconds. Export a backup in Settings before changing browsers or moving the game file.</p>`
+          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Annihilation</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="save">SAVE CHECKPOINT</button><button class="secondary" data-ui="load" ${this.persistence.hasCheckpoint() ? '' : 'disabled'}>LOAD CHECKPOINT</button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">SAVE & RETURN TO MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Your operation is saved automatically every 45 seconds. Export a backup in Settings before changing browsers or moving the game file.</p>`
         );
       }
       resume() {
@@ -357,7 +287,7 @@
         let st = this.profile.settings;
         this.openModal(
           'settings',
-          `<div class="eyebrow">EXPEDITION PREFERENCES</div><h1>Systems & sound.</h1><div class="settings-row"><label>Render quality<small>Reduce quality for older graphics hardware.</small></label><select data-setting="quality"><option value="2" ${st.quality === 2 ? 'selected' : ''}>High · shadows & glow</option><option value="1" ${st.quality === 1 ? 'selected' : ''}>Balanced · native resolution</option><option value="0" ${st.quality === 0 ? 'selected' : ''}>Performance · no shadows</option></select></div><div class="settings-row"><label>Master volume</label><input type="range" min="0" max="1" step=".01" value="${st.volume}" data-setting="volume"></div><div class="settings-row"><label>Atmospheric soundtrack</label><input type="checkbox" data-setting="music" ${st.music ? 'checked' : ''}></div><div class="settings-row"><label>Battlefield audio</label><input type="checkbox" data-setting="sfx" ${st.sfx ? 'checked' : ''}></div><div class="settings-row"><label>Always show health bars</label><input type="checkbox" data-setting="healthbars" ${st.healthbars ? 'checked' : ''}></div><div class="settings-row"><label>Field guidance<small>Contextual guidance during the first operation.</small></label><input type="checkbox" data-setting="tips" ${st.tips ? 'checked' : ''}></div>${
+          `<div class="eyebrow">EXPEDITION PREFERENCES</div><h1>Systems & sound.</h1><div class="settings-row"><label>Render quality<small>Reduce quality for older graphics hardware.</small></label><select data-setting="quality"><option value="2" ${st.quality === 2 ? 'selected' : ''}>High · shadows & glow</option><option value="1" ${st.quality === 1 ? 'selected' : ''}>Balanced · native resolution</option><option value="0" ${st.quality === 0 ? 'selected' : ''}>Performance · no shadows</option></select></div><div class="settings-row"><label>Master volume</label><input type="range" min="0" max="1" step=".01" value="${st.volume}" data-setting="volume"></div><div class="settings-row"><label>Atmospheric soundtrack</label><input type="checkbox" data-setting="music" ${st.music ? 'checked' : ''}></div><div class="settings-row"><label>Battlefield audio</label><input type="checkbox" data-setting="sfx" ${st.sfx ? 'checked' : ''}></div><div class="settings-row"><label>Always show health bars</label><input type="checkbox" data-setting="healthbars" ${st.healthbars ? 'checked' : ''}></div>${
             this.game.s
               ? `<div class="settings-row"><label>Simulation speed</label><select id="settingSpeed">${[
                   [0.75, '0.75× · deliberate'],
@@ -371,7 +301,7 @@
                   )
                   .join('')}</select></div>`
               : ''
-          }<div class="launch-row"><button class="primary" data-ui="closeModal">DONE</button><button class="textbtn" data-ui="export">EXPORT BACKUP</button><button class="textbtn" data-ui="import">IMPORT BACKUP</button></div><p style="font-size:10px">Everything stays in this browser. No accounts, analytics, external assets, or network requests. Export includes campaign progress and your current operation.</p>`
+          }<div class="launch-row"><button class="primary" data-ui="closeModal">DONE</button><button class="textbtn" data-ui="export">EXPORT BACKUP</button><button class="textbtn" data-ui="import">IMPORT BACKUP</button></div><p style="font-size:10px">Everything stays in this browser. No accounts, analytics, external assets, or network requests. Export includes permanent upgrades and your current battle.</p>`
         );
       }
       applySetting(el) {
@@ -421,7 +351,7 @@
           if (d.operation) this.persistence.saveCheckpoint(d.operation);
           this.game.s = null;
           this.showHome();
-          this.toast('Campaign and checkpoint imported.');
+          this.toast('Upgrades and checkpoint imported.');
         } catch (e) {
           this.toast('Import failed: ' + e.message);
         }
@@ -449,7 +379,7 @@
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join(
               ''
-            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Select a completed own building for its <b>Repair</b> and <b>Sell</b> buttons. Repair sends the nearest worker and costs 0.1 alloy per hull; tap again to stop. Without workers, repair is unavailable. Selling refunds 50% of the building’s purchase value plus all pending recruitment costs; the last completed command center cannot be sold. Workers can still repair damaged allied units and structures via context orders.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Relays require nearby combat troops and cannot be captured while contested. Crawlers need an escort within 13 meters and halt near enemies. Scouts and scans reveal fog-of-war. Destroy enemy command centers to weaken reinforcements in offensive missions.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
+            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Select a completed own building for its <b>Repair</b> and <b>Sell</b> buttons. Repair sends the nearest worker and costs 0.1 alloy per hull; tap again to stop. Without workers, repair is unavailable. Selling refunds 50% of the building’s purchase value plus all pending recruitment costs; the last completed command center cannot be sold. Workers can still repair damaged own units and structures via context orders.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Scouts and scans reveal fog-of-war. Destroy the enemy command center to win. Losing your last command center ends the battle.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
             ['Command abilities', 'Ability buttons in Command → tap target'],
             ['Command / build / recruit', 'Tabs on the command deck'],
             ['Pause', 'Ⅱ button'],
@@ -460,7 +390,7 @@
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join(
               ''
-            )}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Victory earns one commendation. Preserve at least half of a command center’s hull for a second. Keep your commander alive and losses below the operation’s threshold for a third. Better replay results award only the improvement. Fleet upgrades apply to campaign operations, not skirmishes or standalone scenarios.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
+            )}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Fleet upgrades apply to new battles. Upgrade resources are unlimited for testing; resource collection and unlocks will be added later.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
           true
         );
       }
@@ -469,13 +399,12 @@
         if (previous === 'game') this.paused = true;
         this.openModal(
           'armory',
-          `<div class="eyebrow">FLOTILLA REQUISITIONS / ${this.profile.credits} COMMENDATIONS AVAILABLE</div><h1>What we carry forward.</h1><p style="font-size:13px">Permanent expedition upgrades. Earn commendations by completing campaign operations and improving your results.</p><div class="armory-grid">${Object.entries(
+          `<div class="eyebrow">FLOTILLA REQUISITIONS / ∞ UPGRADE RESOURCES / TEST MODE</div><h1>What we carry forward.</h1><p style="font-size:13px">Permanent expedition upgrades. Free upgrades for testing. Resource collection will be added later. Changes apply to new battles.</p><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {
-              let n = this.profile.upgrades[k] || 0,
-                cost = m.cost + n;
-              return `<div class="upgrade-card"><div class="sigil" style="width:32px;height:32px">${icon(m.icon)}</div><h3>${m.name}</h3><p>${m.desc}</p><div class="upgrade-levels">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || cost > this.profile.credits ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : cost + ' COMMENDATIONS · LEVEL ' + (n + 1)}</button></div>`;
+              let n = this.profile.upgrades[k] || 0;
+              return `<div class="upgrade-card"><div class="sigil" style="width:32px;height:32px">${icon(m.icon)}</div><h3>${m.name}</h3><p>${m.desc}</p><div class="upgrade-levels">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : 'FREE · LEVEL ' + (n + 1)}</button></div>`;
             })
             .join(
               ''
@@ -484,12 +413,11 @@
         );
       }
       buyUpgrade(key) {
-        let m = META[key],
-          n = this.profile.upgrades[key] || 0,
-          cost = m.cost + n;
-        if (n >= m.max || this.profile.credits < cost) return;
+        let m = META[key];
+        if (!m) return;
+        let n = this.profile.upgrades[key] || 0;
+        if (n >= m.max) return;
         this.profile.upgrades[key] = n + 1;
-        this.profile.credits -= cost;
         this.persist();
         this.audio.sound('research');
         this.showArmory();
@@ -498,37 +426,11 @@
         this.paused = true;
         this.clearMode();
         let s = this.game.s;
-        if (result.win && s.index >= 0 && !s.practice) {
-          let old = Number(this.profile.medals[s.index]) || 0;
-          this.profile.credits += Math.max(0, result.stars - old);
-          this.profile.medals[s.index] = Math.max(old, result.stars);
-          this.profile.unlocked = Math.min(15, Math.max(this.profile.unlocked, s.index + 1));
-          this.profile.best[s.index] = Math.max(this.profile.best[s.index] || 0, result.score);
-        }
-        if (s.index < 0) this.profile.skirmishBest = Math.max(this.profile.skirmishBest, result.score);
-        this.persist();
         if (result.win) this.persistence.removeCheckpoint();
         this.audio.sound(result.win ? 'victory' : 'defeat');
         this.openModal(
           'result',
-          `<div class="eyebrow">${result.win ? 'OPERATION COMPLETE' : 'EXPEDITION LOST'} / ${s.index >= 0 ? 'OPERATION ' + String(s.index + 1).padStart(2, '0') : FACTIONS[s.faction].short}</div><h1>${result.win ? 'Another way home.' : 'We remember their names.'}</h1><div class="result-stars">${result.win ? '★'.repeat(result.stars) + '☆'.repeat(3 - result.stars) : '◇'}</div><p>${esc(result.text)}</p><div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>OPERATION TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>EXPEDITION SCORE</span></div></div>${result.win && s.index >= 0 && !s.practice ? `<p style="font-size:11px">${result.stars} commendations recorded. Earned commendations are available for permanent fleet upgrades. Replays only award newly improved medals.</p>` : s.practice ? '<p style="font-size:11px">Standalone scenario: no campaign rewards or unlocks.</p>' : ''}<div class="launch-row">${result.win && s.index === 15 ? '<button class="primary" data-ui="ending">THE LAST DOOR ↗</button>' : result.win && s.index >= 0 && s.index < 15 && !s.practice ? '<button class="primary" data-ui="nextMission">NEXT OPERATION ↗</button>' : !result.win && this.persistence.hasCheckpoint() ? '<button class="primary" data-ui="load">RETRY CHECKPOINT ↗</button>' : '<button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button>'}<button class="secondary" data-ui="resultCampaign">${s.index >= 0 ? 'CAMPAIGN MAP' : 'MAIN MENU'}</button>${result.win && s.index >= 0 ? '<button class="textbtn" data-ui="armory">FLEET UPGRADES</button>' : ''}</div>`,
-          true
-        );
-      }
-      showEnding() {
-        this.openModal(
-          'ending',
-          `<div class="eyebrow">THE LAST DOOR</div><h1>One promise remains.</h1><p>Beyond the broken avatar, the star speaks without anyone else’s voice. It is impossibly old. It has never been outside its prison.</p><p>Elias stands on the other side of a door Mara remembers. “You came back,” he says. “You get to stop carrying that now.”</p><div class="end-choices"><button data-ending="seal"><strong>Keep the door closed.</strong><span>Seal the star. Let its borrowed lives finally end. Bring the living home.</span></button><button data-ending="open"><strong>Open it. On our terms.</strong><span>Ask the star to release every voice before it follows you into the dark.</span></button></div>`,
-          true
-        );
-      }
-      chooseEnding(choice) {
-        this.profile.ending = choice;
-        this.persist();
-        let seal = choice === 'seal';
-        this.openModal(
-          'epilogue',
-          `<div class="eyebrow">EPILOGUE / ${seal ? 'THE MORNING AFTER' : 'A SKY OF ITS OWN'}</div><h1>${seal ? 'The sun rises.' : 'The stars make room.'}</h1><p>${seal ? 'Mara closes the door. Elias does not ask her to stay. Across Meridian, the voices fall silent, and for the first time the silence belongs to the people who survived.' : 'Mara makes no promise she cannot keep. The star releases its voices one by one. Some speak a name. Some laugh. Some say nothing at all. When the last has gone, it follows the flotilla as a small, unfamiliar light.'}</p><p>${seal ? 'The flotilla returns to Khepri under a pale gold dawn. The refugees leave their ships carrying children, photographs, and things that would have been easier to abandon. Mara waits until every passenger is ashore.' : 'No one agrees on what she has done. The Court calls it a catastrophe. The Choir calls it a beginning. The frontier calls it something worth arguing about over a hot meal. Mara keeps a place for it in the navigation lights.'}</p><p>Later, alone on the bridge, she opens the old passenger list. Beside her brother’s name, she writes one word.</p><p style="font:italic 30px Georgia,serif;color:var(--gold);text-align:center;padding:15px">Home.</p><div class="launch-row"><button class="primary" data-ui="home">RETURN TO THE FRONTIER ↗</button><button class="textbtn" data-ui="campaign">REPLAY THE CAMPAIGN</button></div>`,
+          `<div class="eyebrow">${result.win ? 'VICTORY' : 'DEFEAT'} / ${FACTIONS[s.faction].short}</div><h1>${result.win ? 'Enemy base destroyed.' : 'Command center lost.'}</h1><p>${esc(result.text)}</p><div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div><div class="launch-row"><button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button>${!result.win && this.persistence.hasCheckpoint() ? '<button class="secondary" data-ui="load">RETRY CHECKPOINT</button>' : ''}<button class="secondary" data-ui="home">MAIN MENU</button><button class="textbtn" data-ui="armory">FLEET UPGRADES</button></div>`,
           true
         );
       }
@@ -558,7 +460,7 @@
       selectArmy() {
         this.select(
           this.game
-            .alive(e => e.team === 0 && e.kind === 'unit' && e.type !== 'worker' && e.type !== 'convoy')
+            .alive(e => e.team === 0 && e.kind === 'unit' && e.type !== 'worker')
             .map(e => e.id)
         );
       }
@@ -672,8 +574,6 @@
           ':' +
           this.selected.join(',') +
           ':' +
-          s.m.tier +
-          ':' +
           (this.mode ? this.mode.kind + this.mode.arg : '');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
@@ -707,13 +607,12 @@
             hangar: 'Flight deck',
             turret: 'Turret'
           };
-          for (let [k, d] of Object.entries(BUILDINGS)) {
-            if (d.missionOnly) continue;
+          for (let k of Object.keys(BUILDINGS)) {
             html += this.actionButton(
               'build:' + k,
               f === 0 ? labels[k] : buildingName(k, f).split(' ').slice(-1)[0],
               k,
-              { cost: this.game.cost(k, 'building'), disabled: d.tier > s.m.tier }
+              { cost: this.game.cost(k, 'building') }
             );
           }
           let selected = this.game.get(this.selected[0]);
@@ -723,8 +622,7 @@
           for (let [k, d] of Object.entries(UNITS)) {
             if (!d.from) continue;
             html += this.actionButton('train:' + k, k === 'hero' ? 'Commander' : unitName(k, f), k, {
-              cost: this.game.cost(k),
-              disabled: d.tier > s.m.tier
+              cost: this.game.cost(k)
             });
           }
         }
@@ -835,9 +733,7 @@
                 ? e.type === 'gas'
                   ? 'Aether vent'
                   : 'Alloy crystals'
-                : e.kind === 'objective'
-                  ? 'Signal relay'
-                  : unitName(e.type, e.faction)),
+                : unitName(e.type, e.faction)),
           order =
             e.kind === 'building'
               ? e.progress < 1
@@ -847,18 +743,12 @@
                   : 'STRUCTURE OPERATIONAL'
               : e.order?.type === 'mine'
                 ? 'HARVESTING · ' + Math.round(e.carry) + ' ALLOY'
-                : e.type === 'convoy'
-                  ? e.blocked
-                    ? 'HALTED · HOSTILES NEARBY'
-                    : e.escorted
-                      ? 'CONVOY UNDER ESCORT'
-                      : 'WAITING FOR ESCORT'
-                  : (e.order?.type || 'idle').replace(/([A-Z])/g, ' $1').toUpperCase();
+                                  : (e.order?.type || 'idle').replace(/([A-Z])/g, ' $1').toUpperCase();
         let stats = this.game.rangedStats(
-          e.kind === 'resource' || e.kind === 'objective' ? { ...e, kind: 'unit', type: 'worker' } : e
+          e.kind === 'resource' ? { ...e, kind: 'unit', type: 'worker' } : e
         );
         $('selectionContent').innerHTML =
-          `<div class="unit-summary"><div class="unit-portrait" style="color:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}">${icon(e.type === 'gas' ? 'energy' : e.type === 'crystal' ? 'crystal' : e.type)}</div><div class="unit-detail"><h3>${esc(name)}${e.kills >= 5 ? ' ★' : ''}</h3><small>${e.team === 1 ? 'HOSTILE' : e.team === 2 ? 'ALLIED' : e.team === -1 ? 'NEUTRAL' : FACTIONS[e.faction].short}</small><div class="hp-line"><i style="width:${clamp((e.hp / e.maxHp) * 100, 0, 100)}%;background:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}"></i></div><div class="hp-number">${Math.ceil(e.hp)} / ${Math.round(e.maxHp)} HULL${e.maxShield ? ' + ' + Math.ceil(e.shield) + ' SHIELD' : ''}</div></div></div><div class="unit-stats"><div>DAMAGE<b>${Math.round(stats.damage || 0)}</b></div><div>RANGE<b>${stats.range || '—'}</b></div>${e.kind === 'resource' ? `<div>REMAINING<b>${e.type === 'gas' ? '∞' : Math.round(e.amount)}</b></div>` : ''}</div><div class="unit-order">${esc(order)}</div>`;
+          `<div class="unit-summary"><div class="unit-portrait" style="color:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}">${icon(e.type === 'gas' ? 'energy' : e.type === 'crystal' ? 'crystal' : e.type)}</div><div class="unit-detail"><h3>${esc(name)}${e.kills >= 5 ? ' ★' : ''}</h3><small>${e.team === 1 ? 'HOSTILE' : e.team === -1 ? 'NEUTRAL' : FACTIONS[e.faction].short}</small><div class="hp-line"><i style="width:${clamp((e.hp / e.maxHp) * 100, 0, 100)}%;background:${e.team === 1 ? 'var(--red)' : 'var(--teal)'}"></i></div><div class="hp-number">${Math.ceil(e.hp)} / ${Math.round(e.maxHp)} HULL${e.maxShield ? ' + ' + Math.ceil(e.shield) + ' SHIELD' : ''}</div></div></div><div class="unit-stats"><div>DAMAGE<b>${Math.round(stats.damage || 0)}</b></div><div>RANGE<b>${stats.range || '—'}</b></div>${e.kind === 'resource' ? `<div>REMAINING<b>${e.type === 'gas' ? '∞' : Math.round(e.amount)}</b></div>` : ''}</div><div class="unit-order">${esc(order)}</div>`;
       }
       updateQueues() {
         let s = this.game.s,
@@ -889,13 +779,11 @@
         $('energyCount').textContent = Math.floor(s.energy);
         $('gameTime').textContent = formatTime(s.time);
         $('speedLabel').textContent = s.speed + '× ' + DIFFICULTY[s.difficulty].name.toUpperCase();
-        $('missionLabel').innerHTML =
-          esc(s.m.name) +
-          `<small>${s.index >= 0 ? 'OPERATION ' + String(s.index + 1).padStart(2, '0') : 'SKIRMISH'} / ${esc(s.m.sector.split(' / ')[0])}${s.practice ? ' · STANDALONE' : ''}</small>`;
-        $('biomeLabel').textContent = BIOMES[s.m.biome].name;
+        $('battleLabel').innerHTML = 'Annihilation' + `<small>SEED ${s.seed}</small>`;
+        $('biomeLabel').textContent = BIOMES[s.biome].name;
         let rows = this.game.objectiveRows();
         $('objectives').innerHTML =
-          '<div class="eyebrow">◈ MISSION OBJECTIVES</div><div id="objectiveRows">' +
+          '<div class="eyebrow">◈ BATTLE OBJECTIVE</div><div id="objectiveRows">' +
           rows
             .map(
               r =>
@@ -917,7 +805,6 @@
           if (k === 'train') {
             let d = UNITS[arg];
             disabled =
-              d.tier > s.m.tier ||
               !this.game.afford(this.game.cost(arg)) ||
               !this.game.has(d.from) ||
               this.game.supply() + d.supply > this.game.cap();
@@ -937,40 +824,6 @@
           }
           b.classList.toggle('disabled', disabled);
         }
-        this.updateTips();
-      }
-      updateTips() {
-        let s = this.game.s;
-        if (!this.profile.settings.tips || s.index !== 0 || s.time > 330) {
-          $('tip').classList.add('hidden');
-          return;
-        }
-        let title, text;
-        if (s.time < 20) {
-          title = '01 / THE FRONTIER ECONOMY';
-          text =
-            'Your workers are already mining. Alloy builds your army. Select the command center to recruit more workers.';
-        } else if (s.stats.trained < 3) {
-          title = '02 / MUSTER YOUR SQUAD';
-          text =
-            'Open <b>RECRUIT</b> and queue Vanguards. Your muster station trains them automatically. Multiple stations recruit in parallel.';
-        } else if (this.game.supply() > this.game.cap() - 5 && !this.game.has('depot')) {
-          title = '03 / ROOM TO GROW';
-          text =
-            'Open <b>BUILD</b>, choose Supply, then tap free ground. A worker constructs it. Each depot adds 16 supply.';
-        } else if (s.stats.trained < 6) {
-          title = '03 / RECRUIT SIX COMBAT UNITS';
-          text =
-            'The objective counts new combat recruits, not your starting squad. Keep the muster station’s queue running.';
-        } else {
-          title = '04 / TAKE BACK THE LANDING FIELD';
-          text = `Tap <b>Combat force</b> in <b>Command</b>, then <b>Attack-move</b> and a destination toward the enemy command in the northeast. You can also tap the minimap to choose a distant destination.`;
-        }
-        $('tip').classList.remove('hidden');
-        $('tip').innerHTML =
-          `<button data-ui="dismissTip" aria-label="Dismiss guidance">×</button><div class="eyebrow">${title}</div>${text}`;
-        let objBottom = $('objectives').getBoundingClientRect().bottom;
-        $('tip').style.top = objBottom + 12 + 'px';
       }
       setControlHints() {
         $('controlstrip').innerHTML =
@@ -989,24 +842,16 @@
             this.uiAction(b.dataset.ui);
             return;
           }
-          if (b.dataset.mission !== undefined) {
-            this.showCampaign(+b.dataset.mission);
-            return;
-          }
           if (b.dataset.faction !== undefined) {
-            this.skirmishFaction = +b.dataset.faction;
+            this.battleFaction = +b.dataset.faction;
             document
               .querySelectorAll('[data-faction]')
-              .forEach(a => a.classList.toggle('active', +a.dataset.faction === this.skirmishFaction));
-            $('factionTrait').textContent = FACTIONS[this.skirmishFaction].trait;
+              .forEach(a => a.classList.toggle('active', +a.dataset.faction === this.battleFaction));
+            $('factionTrait').textContent = FACTIONS[this.battleFaction].trait;
             return;
           }
           if (b.dataset.upgrade) {
             this.buyUpgrade(b.dataset.upgrade);
-            return;
-          }
-          if (b.dataset.ending) {
-            this.chooseEnding(b.dataset.ending);
             return;
           }
           if (b.dataset.tab) {
@@ -1044,10 +889,6 @@
         document.addEventListener('change', e => {
           if (e.target.dataset.setting) this.applySetting(e.target);
           if (e.target.id === 'settingSpeed' && this.game.s) this.game.s.speed = +e.target.value;
-          if (e.target.id === 'campaignDifficulty') {
-            this.profile.settings.difficulty = e.target.value;
-            this.persist();
-          }
         });
         document.addEventListener('input', e => {
           if (e.target.dataset.setting === 'volume') this.applySetting(e.target);
@@ -1057,7 +898,7 @@
           e.target.value = '';
         };
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
-        $('missionHome').onclick = () => this.pause();
+        $('battleHome').onclick = () => this.pause();
         $('helpBtn').onclick = () => this.showHelp();
         $('soundBtn').onclick = () => {
           let muted = !this.profile.settings.sfx;
@@ -1142,24 +983,15 @@
           case 'home':
             this.showHome();
             break;
-          case 'campaign':
-            this.showCampaign();
-            break;
           case 'continue':
           case 'load':
             this.load();
             break;
-          case 'launch':
-            this.launch(false);
+          case 'battle':
+            this.showBattle();
             break;
-          case 'practice':
-            this.launch(true);
-            break;
-          case 'skirmish':
-            this.showSkirmish();
-            break;
-          case 'startSkirmish':
-            this.startSkirmish();
+          case 'startBattle':
+            this.startBattle();
             break;
           case 'armory':
             this.showArmory();
@@ -1198,71 +1030,32 @@
           case 'import':
             $('importFile').click();
             break;
-          case 'dismissTip':
-            this.profile.settings.tips = false;
-            this.persist();
-            $('tip').classList.add('hidden');
-            break;
           case 'restartConfirm':
             this.openModal(
               'confirm',
-              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Start this operation again?</h1><p>Your current deployment will be replaced. Campaign upgrades and earned commendations are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
+              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Start this operation again?</h1><p>Your current deployment will be replaced. Permanent upgrades are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
             );
             break;
           case 'backPause':
             this.showPause();
             break;
           case 'restart': {
-            let s = this.game.s,
-              m = s.m,
-              practice = s.practice;
-            this.game.start(s.index, {
-              mission: m,
-              faction: s.faction,
-              difficulty: s.difficulty,
-              seed: s.seed,
-              practice,
-              enemy: s.enemyMode
-            });
-            this.game.s.practice = practice;
+            let s = this.game.s;
+            this.game.start({ faction: s.faction, difficulty: s.difficulty, seed: s.seed, biome: s.biome, enemy: s.enemy });
             this.save(false);
             break;
           }
-          case 'nextMission': {
-            let i = Math.min(15, this.game.s.index + 1);
-            this.game.s = null;
-            this.showCampaign(i);
-            break;
-          }
-          case 'resultCampaign': {
-            let i = this.game.s.index;
-            this.game.s = null;
-            this.modalKind = '';
-            $('modal').classList.add('hidden');
-            if (i >= 0) this.showCampaign(Math.min(15, i + 1));
-            else this.showHome();
-            break;
-          }
-          case 'ending':
-            this.showEnding();
-            break;
-          case 'extract':
-            this.game.finish(
-              true,
-              'Your expedition leaves the redoubt under its own power. There will be another battle, but not for these people today.'
-            );
-            break;
         }
       }
       pick(sx, sy) {
         let best = null,
           score = Infinity;
         for (let e of this.game.s.entities) {
-          if (e.hp <= 0 || e.evacuated) continue;
+          if (e.hp <= 0) continue;
           if (e.team === 1 && !this.game.visible(e)) continue;
           if (e.team === -1 && !this.game.world.explored[this.game.world.idx(e.x, e.z)]) continue;
           let y =
-              e.type === 'air' ? 4.4 : e.kind === 'building' ? 2.0 : e.kind === 'objective' ? 1.5 : 1,
+              e.type === 'air' ? 4.4 : e.kind === 'building' ? 2.0 : 1,
             p = this.R.project(e.x, y, e.z);
           if (!p) continue;
           let edge = this.R.project(e.x + e.size, y, e.z),
@@ -1497,24 +1290,9 @@
           ctx.stroke();
         }
         for (let e of g.s.entities) {
-          if (e.hp <= 0 || e.evacuated) continue;
+          if (e.hp <= 0) continue;
           let explored = g.world.explored[g.world.idx(e.x, e.z)],
             visible = g.visible(e);
-          if (e.kind === 'objective') {
-            let p = map(e);
-            ctx.strokeStyle = e.owner === 0 ? '#84e7cf' : e.owner === 1 ? '#f0a596' : '#dfb377';
-            ctx.fillStyle = '#152335';
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y - 4);
-            ctx.lineTo(p.x + 4, p.y);
-            ctx.lineTo(p.x, p.y + 4);
-            ctx.lineTo(p.x - 4, p.y);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            continue;
-          }
           if (e.kind === 'resource') {
             if (!explored) continue;
             let p = map(e);
@@ -1523,7 +1301,7 @@
             continue;
           }
           if (e.team === 1 && !visible) {
-            if (e.kind === 'building' && e.tag === 'enemyHQ') {
+            if (e.kind === 'building' && e.type === 'hq') {
               let p = map(e);
               ctx.strokeStyle = '#e29e884e';
               ctx.strokeRect(p.x - 4, p.y - 3, 8, 6);
@@ -1531,28 +1309,15 @@
             continue;
           }
           let p = map(e);
-          ctx.fillStyle = e.team === 0 ? '#79dbcc' : e.team === 2 ? '#a5e29a' : '#eb8e80';
+          ctx.fillStyle = e.team === 0 ? '#79dbcc' : '#eb8e80';
           if (e.type === 'hero') ctx.fillStyle = '#ffd494';
           if (e.kind === 'building') {
             let size = Math.max(3, (e.size * w) / 180);
             ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
-          } else if (e.type === 'convoy') {
-            ctx.fillStyle = '#f1d79f';
-            ctx.fillRect(p.x - 2.5, p.y - 2.5, 5, 5);
+
           } else {
             ctx.beginPath();
             ctx.arc(p.x, p.y, e.type === 'hero' ? 2.3 : 1.3, 0, 6.28);
-            ctx.fill();
-          }
-        }
-        if (g.s.m.type === 'escort') {
-          ctx.fillStyle = '#f3d79c';
-          for (let route of ROUTES.slice(0, g.s.m.count)) {
-            let p = map({ x: route.at(-1)[0], z: route.at(-1)[1] });
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y - 4);
-            ctx.lineTo(p.x + 4, p.y + 3);
-            ctx.lineTo(p.x - 4, p.y + 3);
             ctx.fill();
           }
         }
@@ -1615,50 +1380,28 @@
           ctx.restore();
         }
         for (let e of s.entities) {
-          if (e.hp <= 0 || e.evacuated) continue;
+          if (e.hp <= 0) continue;
           let selected = this.selected.includes(e.id),
             hover = this.hover === e.id;
-          if (e.kind === 'objective') {
-            let p = this.R.project(e.x, e.type === 'relay' ? 5 : 3.7, e.z);
-            if (!p || p.x < 0 || p.x > innerWidth || p.y < 68 || p.y > innerHeight - 215) continue;
-            ctx.fillStyle = '#081521dd';
-            let label = e.label || 'SIGNAL',
-              tw = ctx.measureText(label).width;
-            ctx.fillRect(p.x - tw / 2 - 7, p.y - 12, tw + 14, 18);
-            ctx.fillStyle = e.owner === 0 ? '#91e3ce' : e.owner === 1 ? '#ef9f90' : '#e9c086';
-            ctx.fillText(label, p.x, p.y);
-            if ((e.type === 'relay' && e.capture > 0) || (e.type === 'cache' && e.progress > 0)) {
-              let progress = e.type === 'relay' ? e.capture : e.progress;
-              ctx.fillStyle = '#152a38';
-              ctx.fillRect(p.x - 25, p.y + 6, 50, 3);
-              ctx.fillStyle = e.contested ? '#f1b68a' : '#91d9c9';
-              ctx.fillRect(p.x - 25, p.y + 6, 50 * progress, 3);
-            }
-            continue;
-          }
           if (!g.visible(e)) continue;
           let damaged = e.hp < e.maxHp * 0.97;
           if (
             !selected &&
             !hover &&
             !(this.profile.settings.healthbars && e.kind === 'unit') &&
-            !damaged &&
-            e.tag !== 'convoy' &&
-            e.tag !== 'heart'
+            !damaged
           )
             continue;
           if (e.kind === 'resource' && !selected && !hover) continue;
           let y =
               e.type === 'air'
                 ? 6.1
-                : e.type === 'avatar'
-                  ? 10
-                  : e.kind === 'building'
+                : e.kind === 'building'
                     ? Math.min(8, e.size + 2.5)
                     : 3.0,
             p = this.R.project(e.x, y, e.z);
           if (!p || p.x < 0 || p.x > innerWidth || p.y < 64 || p.y > innerHeight - 210) continue;
-          let w = e.kind === 'building' ? 56 : e.type === 'avatar' ? 95 : e.type === 'hero' ? 42 : 30;
+          let w = e.kind === 'building' ? 56 : e.type === 'hero' ? 42 : 30;
           ctx.fillStyle = '#07101deb';
           ctx.fillRect(p.x - w / 2 - 2, p.y - 2, w + 4, e.maxShield ? 10 : 7);
           ctx.fillStyle = '#344350';
@@ -1675,9 +1418,7 @@
           }
           if (
             hover ||
-            (selected && this.selected.length === 1) ||
-            e.tag === 'convoy' ||
-            e.tag === 'heart'
+            (selected && this.selected.length === 1)
           ) {
             let name =
               e.label ||

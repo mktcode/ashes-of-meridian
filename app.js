@@ -103,7 +103,7 @@
           R.camera(s.cam.x, s.cam.z, s.cam.zoom);
           R.fogOn = true;
           for (let e of s.entities) {
-            if (e.hp <= 0 || e.evacuated) continue;
+            if (e.hp <= 0) continue;
             let idx = game.world.idx(e.x, e.z),
               visible = game.visible(e),
               explored = game.world.explored[idx];
@@ -121,9 +121,7 @@
                   ? 0xf2a490
                   : e.type === 'hero'
                     ? 0xf1c181
-                    : e.team === 2
-                      ? 0xa9e5a7
-                      : 0x94e4d1;
+                    : 0x94e4d1;
               ring(e.x, e.z, e.size + 0.5, col, selected ? 0.95 : 0.43, 0.12);
               if (selected && e.kind === 'building' && BUILDINGS[e.type].range)
                 ring(e.x, e.z, game.rangedStats(e).range, col, 0.15, 0.12);
@@ -273,7 +271,7 @@
           ui,
           renderer: R,
           audio,
-          content: { missions: CAMPAIGN, units: UNITS, buildings: BUILDINGS, factions: FACTIONS },
+          content: { units: UNITS, buildings: BUILDINGS, factions: FACTIONS },
           get performance() {
             return {
               fps: Math.round(fps),

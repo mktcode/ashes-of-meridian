@@ -20,91 +20,62 @@
         this.random = seeded(1);
         this.effects = createEffects(() => this.random());
       }
-      start(index, opts = {}) {
-        let m = structuredClone(opts.mission || CAMPAIGN[index] || CAMPAIGN[0]);
+      start(opts = {}) {
         let difficulty = DIFFICULTY[opts.difficulty] ? opts.difficulty : 'standard',
-          faction = opts.faction || 0,
-          meta = index >= 0 && !opts.practice ? structuredClone(this.profile.upgrades || {}) : {},
-          seed = opts.seed || m.seed || Math.floor(Math.random() * 1e8),
+          faction = FACTIONS[opts.faction] ? opts.faction : 0,
+          enemy = FACTIONS[opts.enemy] ? opts.enemy : 2,
+          biome = BIOMES[opts.biome] ? opts.biome : 'ash',
+          meta = structuredClone(this.profile.upgrades || {}),
+          seed = opts.seed || Math.floor(Math.random() * 1e8),
           d = DIFFICULTY[difficulty];
-        m.seed = seed;
         this.s = {
-          version: 1,
-          index,
-          m,
-          seed,
-          difficulty,
-          faction,
-          meta,
-          practice: !!opts.practice,
-          enemyMode: opts.enemy || m.enemy,
+          version: 2,
+          seed, difficulty, faction, enemy, biome, meta,
           time: 0,
-          alloy: Math.floor((m.startAlloy || 850) * d.start) + (meta.stores || 0) * 100,
-          gas: Math.floor((m.startGas || 280) * d.start),
+          alloy: Math.floor(1100 * d.start) + (meta.stores || 0) * 100,
+          gas: Math.floor(400 * d.start),
           energy: 100,
           nextId: 1,
-          entities: [],
-          scans: [],
-          strikes: [],
-          fields: [],
+          entities: [], scans: [], strikes: [], fields: [],
           abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 },
           wave: 0,
-          nextWave: m.type === 'tutorial' ? 170 : 95 * d.interval,
+          nextWave: 95 * d.interval,
           enemyBudget: 900,
-          stats: {
-            kills: 0,
-            lost: 0,
-            trained: 0,
-            gathered: 0,
-            built: 0,
-            damage: 0,
-            heroLost: false,
-            caches: 0,
-            relayHold: 0,
-            evacuations: 0,
-            convoys: 0
-          },
+          stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
           cam: { x: HOME.x + 5, z: HOME.z - 2, zoom: 57 },
           result: null,
           speed: 1
         };
         this.random = seeded(seed + 77);
-        this.world = new Battlefield(seed, m.biome);
+        this.world = new Battlefield(seed, biome);
         this.ids.clear();
         this.effects.reset();
         this.acc = 0;
         this.fogClock = 0;
         this.objectiveClock = 0;
         let s = this.s;
+        // Full-arsenal test loadout, formerly used by Annihilation. Unlocks come later.
         this.spawnBuilding('hq', HOME.x, HOME.z, 0, faction);
         this.spawnBuilding('barracks', -39, 53, 0, faction);
-        if (m.type !== 'tutorial') this.spawnBuilding('depot', -51, 63, 0, faction);
-        if (m.tier >= 2) {
-          this.spawnBuilding('refinery', -63, 60, 0, faction);
-          this.spawnBuilding('factory', -37, 67, 0, faction);
-        }
-        if (m.tier >= 3) {
-          this.spawnBuilding('depot', -27, 61, 0, faction);
-          // Keep subsequent spawn/resource RNG samples stable after removing the starting lab.
-          this.random();
-        }
+        this.spawnBuilding('depot', -51, 63, 0, faction);
+        this.spawnBuilding('refinery', -63, 60, 0, faction);
+        this.spawnBuilding('factory', -37, 67, 0, faction);
+        this.spawnBuilding('depot', -27, 61, 0, faction);
+        // Reserve the existing spawn sample so resource amounts keep their sequence.
+        this.random();
         this.spawnUnit('hero', -45, 42, 0, faction);
         let workers = 5 + (meta.logistics || 0);
         for (let i = 0; i < workers; i++)
           this.spawnUnit('worker', -57 + (i % 3) * 1.8, 46 + Math.floor(i / 3) * 1.8, 0, faction);
-        let troops = (m.type === 'tutorial' ? 3 : m.tier >= 3 ? 7 : 5) + (meta.veterans || 0);
+        let troops = 7 + (meta.veterans || 0);
         for (let i = 0; i < troops; i++)
           this.spawnUnit('rifle', -51 + (i % 4) * 1.8, 38 - Math.floor(i / 4) * 1.8, 0, faction);
-        if (m.tier >= 1 && m.type !== 'tutorial') this.spawnUnit('medic', -45, 39, 0, faction);
-        if (m.tier >= 2) {
-          this.spawnUnit('tank', -40, 37, 0, faction);
-          this.spawnUnit('scout', -35, 42, 0, faction);
-        }
-        if (m.tier >= 3) {
-          this.spawnUnit('tank', -36, 35, 0, faction);
-          this.spawnUnit('medic', -42, 40, 0, faction);
-        }
+        this.spawnUnit('medic', -45, 39, 0, faction);
+        this.spawnUnit('tank', -40, 37, 0, faction);
+        this.spawnUnit('scout', -35, 42, 0, faction);
+        this.spawnUnit('tank', -36, 35, 0, faction);
+        this.spawnUnit('medic', -42, 40, 0, faction);
         for (let [i, site] of RESOURCE_SITES.entries()) {
           for (let j = 0; j < 5; j++) {
             let p = this.crystalPosition(i, j);
@@ -114,103 +85,16 @@
         }
         for (let b of s.entities.filter(e => e.type === 'refinery'))
           b.gasId = this.closest(b, e => e.type === 'gas' && e.kind === 'resource')?.id;
-        let count = m.bases || 2;
-        for (let i = 0; i < count; i++) {
-          let site = ENEMY_SITES[i],
-            ef = opts.enemy === 'mixed' ? i % 3 : m.enemy === undefined ? 2 : m.enemy,
-            base = this.spawnBuilding('hq', site.x, site.z, 1, ef, { tag: 'enemyHQ' });
-          if (m.type === 'tutorial') {
-            base.hp = base.maxHp = 1050;
-          } else {
-            this.spawnBuilding('turret', site.x - 6, site.z + 7, 1, ef);
-            if (m.tier >= 3) this.spawnBuilding('turret', site.x + 7, site.z + 4, 1, ef);
-          }
-          this.spawnBuilding('barracks', site.x - 10, site.z - 1, 1, ef);
-          if (m.tier >= 2) this.spawnBuilding('factory', site.x + 7, site.z - 8, 1, ef);
-          let n = m.type === 'tutorial' ? 3 : 4 + m.tier;
-          for (let j = 0; j < n; j++) {
-            let u = this.spawnUnit(
-              j === n - 1 && m.tier >= 2 ? 'tank' : j === n - 2 && m.tier >= 3 ? 'artillery' : 'rifle',
-              site.x - 8 + (j % 4) * 3,
-              site.z + 12 + Math.floor(j / 4) * 2,
-              1,
-              ef
-            );
-            u.order = { type: 'guard', x: u.x, z: u.z };
-          }
-        }
-        let relays = ['capture', 'domination', 'signal', 'finale'].includes(m.type);
-        if (relays) {
-          for (let i = 0; i < (m.type === 'signal' ? 3 : m.count || 3); i++) {
-            let p = RELAY_SITES[i];
-            this.spawnObjective('relay', p.x, p.z, {
-              label: (m.type === 'finale' ? 'ANCHOR ' : 'RELAY ') + String.fromCharCode(65 + i),
-              owner: -1,
-              capture: 0
-            });
-          }
-        }
-        if (['salvage', 'rescue', 'signal'].includes(m.type))
-          for (let i = 0; i < (m.count || 4); i++) {
-            let p = CACHE_SITES[i];
-            this.spawnObjective('cache', p.x, p.z, {
-              label: (m.type === 'rescue' ? 'SHELTER ' : 'MEMORY ') + (i + 1),
-              progress: 0,
-              tag: m.type === 'rescue' ? 'shelter' : 'cache'
-            });
-            for (let j = 0; j < 2 + m.tier; j++) {
-              let u = this.spawnUnit(
-                j === 0 && m.tier >= 2 ? 'scout' : 'rifle',
-                p.x - 3 + (j % 3) * 3,
-                p.z - 6 + Math.floor(j / 3) * 2,
-                1,
-                m.enemy
-              );
-              u.order = { type: 'guard', x: p.x, z: p.z };
-            }
-          }
-        if (m.type === 'siege') {
-          for (let i = 0; i < m.count; i++) {
-            let p = RELAY_SITES[i];
-            this.spawnBuilding('ward', p.x, p.z, 1, m.enemy, {
-              tag: 'generator',
-              label: 'WARD ' + (i + 1)
-            });
-            this.spawnBuilding('turret', p.x + 5, p.z + 4, 1, m.enemy);
-          }
-          let c = this.spawnBuilding('hq', 17, -65, 1, m.enemy, {
-            tag: 'citadel',
-            invulnerable: true,
-            label: 'WARD CITADEL'
-          });
-          c.hp = c.maxHp = 4200 + m.tier * 450;
-        }
-        if (m.type === 'escort') {
-          for (let i = 0; i < (m.count || 1); i++) {
-            let path = ROUTES[i];
-            this.spawnUnit('convoy', path[0][0], path[0][1], 0, faction, {
-              tag: 'convoy',
-              route: path,
-              routeIndex: 1,
-              evacuated: false,
-              label: i ? 'ARCHIVE TWO' : 'CIVILIAN CRAWLER',
-              lastEscort: 0
-            });
-          }
-        }
-        if (m.type === 'allydefense') {
-          let h = this.spawnBuilding('hq', 0, 0, 2, 1, { tag: 'heart', label: 'THE MEMORY HEART' });
-          h.hp = h.maxHp = 4200;
-          for (let i = 0; i < 3; i++)
-            this.spawnBuilding('turret', Math.sin(i * 2.1) * 8, Math.cos(i * 2.1) * 8, 2, 1);
-          for (let i = 0; i < 6; i++) {
-            let u = this.spawnUnit(i === 5 ? 'medic' : 'rifle', -5 + i * 2, 8, 2, 1);
-            u.order = { type: 'guard', x: 0, z: 0 };
-          }
-        }
-        if (m.type === 'finale') {
-          let boss = this.spawnUnit('avatar', 17, -63, 1, 2, { tag: 'boss', invulnerable: true });
-          boss.order = { type: 'guard', x: 17, z: -63 };
+        let site = ENEMY_SITES[0];
+        this.spawnBuilding('hq', site.x, site.z, 1, enemy);
+        this.spawnBuilding('turret', site.x - 6, site.z + 7, 1, enemy);
+        this.spawnBuilding('turret', site.x + 7, site.z + 4, 1, enemy);
+        this.spawnBuilding('barracks', site.x - 10, site.z - 1, 1, enemy);
+        this.spawnBuilding('factory', site.x + 7, site.z - 8, 1, enemy);
+        for (let j = 0; j < 7; j++) {
+          let u = this.spawnUnit(j === 6 ? 'tank' : j === 5 ? 'artillery' : 'rifle',
+            site.x - 8 + (j % 4) * 3, site.z + 12 + Math.floor(j / 4) * 2, 1, enemy);
+          u.order = { type: 'guard', x: u.x, z: u.z };
         }
         this.world.rebuild(s.entities);
         this.rehash();
@@ -222,12 +106,8 @@
           }
         this.rehash();
         this.world.reveal(s.entities);
-        this.emit('start', { mission: m });
-        this.emit(
-          'radio',
-          m.radio?.[0] ||
-            'Expedition command|Your frontier is waiting. Establish your economy, secure expansions, and break the enemy command network.'
-        );
+        this.emit('start', {});
+        this.emit('radio', 'Expedition command|Establish your economy and destroy the enemy command center.');
         return s;
       }
       spawn(kind, type, x, z, team, faction = 0, extra = {}) {
@@ -290,28 +170,18 @@
       spawnResource(type, x, z, amount) {
         return this.spawn('resource', type, x, z, -1, 0, { amount, size: type === 'gas' ? 1.5 : 1.3 });
       }
-      spawnObjective(type, x, z, extra = {}) {
-        return this.spawn('objective', type, x, z, -1, 0, {
-          size: 2.8,
-          owner: -1,
-          progress: 0,
-          capture: 0,
-          invulnerable: true,
-          ...extra
-        });
-      }
       get(id) {
         let e = this.ids.get(id);
         return e && e.hp > 0 ? e : null;
       }
       alive(filter = () => true) {
-        return this.s.entities.filter(e => e.hp > 0 && !e.evacuated && filter(e));
+        return this.s.entities.filter(e => e.hp > 0 && filter(e));
       }
       closest(pos, filter) {
         let best = null,
           d = Infinity;
         for (let e of this.s.entities)
-          if (e.hp > 0 && !e.evacuated && filter(e)) {
+          if (e.hp > 0 && filter(e)) {
             let dd = distance(pos, e);
             if (dd < d) {
               d = dd;
@@ -323,7 +193,7 @@
       rehash() {
         this.spatial.clear();
         for (let e of this.s.entities) {
-          if (e.hp <= 0 || e.evacuated || !['building', 'unit'].includes(e.kind)) continue;
+          if (e.hp <= 0 || !['building', 'unit'].includes(e.kind)) continue;
           let key = Math.floor((e.x + 90) / 10) + Math.floor((e.z + 90) / 10) * 32;
           if (!this.spatial.has(key)) this.spatial.set(key, []);
           this.spatial.get(key).push(e);
@@ -341,16 +211,16 @@
             let arr = this.spatial.get(i + j * 32);
             if (arr)
               for (let e of arr)
-                if (e.hp > 0 && !e.evacuated && (e.x - x) ** 2 + (e.z - z) ** 2 < rr && filter(e))
+                if (e.hp > 0 && (e.x - x) ** 2 + (e.z - z) ** 2 < rr && filter(e))
                   out.push(e);
           }
         return out;
       }
       enemy(a, b) {
-        return a.team === 1 ? b.team === 0 || b.team === 2 : b.team === 1;
+        return a.team === 1 ? b.team === 0 : b.team === 1;
       }
       visible(e) {
-        return e.team === 0 || e.team === 2 || !!this.world.visible[this.world.idx(e.x, e.z)];
+        return e.team === 0 || !!this.world.visible[this.world.idx(e.x, e.z)];
       }
       cap() {
         return Math.min(
@@ -402,10 +272,6 @@
         let s = this.s,
           d = UNITS[type];
         if (!d) return false;
-        if (d.tier > s.m.tier) {
-          this.emit('toast', 'This unit is not yet available in this operation.');
-          return false;
-        }
         if (
           type === 'hero' &&
           (this.alive(e => e.team === 0 && e.type === 'hero').length ||
@@ -458,8 +324,6 @@
         let s = this.s,
           d = BUILDINGS[type];
         if (!d) return 'Unknown structure.';
-        if (d.missionOnly) return 'This structure is a mission objective, not a buildable foundation.';
-        if (d.tier > s.m.tier) return 'Unavailable in this operation.';
         if (d.requires && !this.has(d.requires))
           return `Requires ${buildingName(d.requires, s.faction)}.`;
         if (!this.alive(e => e.team === 0 && e.type === 'worker').length)
@@ -534,7 +398,7 @@
       managedBuilding(id) {
         let b = this.get(id);
         return this.s && !this.s.result && b?.kind === 'building' && b.team === 0 &&
-          b.progress >= 1 && !BUILDINGS[b.type].missionOnly ? b : null;
+          b.progress >= 1 ? b : null;
       }
       buildingRepairers(id) {
         return this.alive(e => e.team === 0 && e.kind === 'unit' && e.type === 'worker' &&
@@ -563,7 +427,7 @@
           this.emit('toast', reason);
           return false;
         }
-        let worker = this.closest(b, e => e.team === 0 && e.kind === 'unit' && e.type === 'worker' && !e.evacuated);
+        let worker = this.closest(b, e => e.team === 0 && e.kind === 'unit' && e.type === 'worker');
         this.command([worker.id], { type: 'repair', id: b.id, x: b.x, z: b.z });
         this.emit('toast', 'Nearest worker assigned to repair.');
         return true;
@@ -605,7 +469,6 @@
         return true;
       }
       setOrder(e, order) {
-        if (e.type === 'convoy' || e.evacuated) return;
         if (e.kind === 'building') {
           if (e.team === 0 && ['move', 'attackMove'].includes(order.type)) {
             e.rally = { x: order.x, z: order.z };
@@ -622,12 +485,12 @@
       }
       command(ids, order) {
         let units = ids.map(id => this.get(id)).filter(e => e && e.team === 0);
-        let mobile = units.filter(e => e.kind === 'unit' && e.type !== 'convoy');
+        let mobile = units.filter(e => e.kind === 'unit');
         let cols = Math.max(1, Math.ceil(Math.sqrt(mobile.length))),
           i = 0;
         for (let e of units) {
           let o = { ...order };
-          if (e.kind === 'unit' && e.type !== 'convoy') {
+          if (e.kind === 'unit') {
             if (['move', 'attackMove'].includes(o.type)) {
               let j = i++,
                 spacing = mobile.some(u => ['tank', 'artillery'].includes(u.type)) ? 2.4 : 1.7;
@@ -643,12 +506,12 @@
               else if (
                 target &&
                 e.type === 'worker' &&
-                (target.team === 0 || target.team === 2) &&
+                target.team === 0 &&
                 target.progress >= 1 &&
                 target.hp < target.maxHp
               )
                 o = { type: 'repair', id: target.id };
-              else if (target && target.kind === 'unit' && (target.team === 0 || target.team === 2))
+              else if (target && target.kind === 'unit' && target.team === 0)
                 o = { type: 'follow', id: target.id };
               else o = { type: 'move', x: order.x, z: order.z };
             }
@@ -753,7 +616,7 @@
         e.pi = 0;
       }
       damage(e, amount, source, quiet = false) {
-        if (!e || e.hp <= 0 || e.invulnerable) return;
+        if (!e || e.hp <= 0) return;
         amount = Math.max(0.05, amount);
         e.lastHit = this.s.time;
         e.lastSource = source?.id;
@@ -801,13 +664,12 @@
             }
           }
         }
-        if (e.team === 0 && e.kind === 'unit' && e.type !== 'convoy') {
+        if (e.team === 0 && e.kind === 'unit') {
           this.s.stats.lost++;
           if (e.type === 'hero') {
-            this.s.stats.heroLost = true;
             this.emit(
               'radio',
-              'Chief Rook|The captain is down. We have a recovery signal. Reconstruct the command team at headquarters.'
+              'Expedition command|The commander is down. We have a recovery signal. Reconstruct the command team at headquarters.'
             );
           }
         }
@@ -815,15 +677,13 @@
           this.effects.explosion(
             e.x,
             e.z,
-            e.kind === 'building' ? 3.5 : e.type === 'avatar' ? 7 : 1.2,
+            e.kind === 'building' ? 3.5 : 1.2,
             e.faction === 1 ? 0xaee2ac : 0xf3b17c
           );
           this.emit('explosion', { x: e.x, z: e.z, big: e.kind === 'building' || e.type === 'tank' });
         }
-        if (e.tag === 'enemyHQ')
+        if (e.team === 1 && e.type === 'hq')
           this.emit('alert', { text: 'Enemy command center destroyed.', x: e.x, z: e.z });
-        if (e.tag === 'generator')
-          this.emit('alert', { text: 'Ward generator destroyed.', x: e.x, z: e.z });
       }
       rangedStats(e) {
         let d = e.kind === 'building' ? BUILDINGS[e.type] : UNITS[e.type],
@@ -842,8 +702,8 @@
         let dx = target.x - e.x,
           dz = target.z - e.z;
         e.rot = Math.atan2(dx, dz);
-        if (e.type === 'artillery' || e.type === 'avatar') {
-          let travel = e.type === 'artillery' ? 0.85 : 1.0;
+        if (e.type === 'artillery') {
+          let travel = 0.85;
           this.s.strikes.push({
             x: target.x,
             z: target.z,
@@ -862,7 +722,7 @@
               target.x,
               target.z,
               d.splash,
-              a => a.id !== target.id && this.enemy(e, a) && a.kind !== 'objective'
+              a => a.id !== target.id && this.enemy(e, a)
             ))
               this.damage(n, d.damage * 0.45, e, true);
           if (this.visible(e) || this.visible(target)) {
@@ -881,7 +741,6 @@
           radius,
           n =>
             this.enemy(e, n) &&
-            !n.invulnerable &&
             (!d.groundOnly || !UNITS[n.type]?.flying) &&
             (e.team === 1 || this.visible(n))
         );
@@ -903,7 +762,6 @@
           if (
             target &&
             (!this.enemy(e, target) ||
-              target.invulnerable ||
               (!this.visible(target) && e.team !== 1) ||
               (d.groundOnly && UNITS[target.type]?.flying) ||
               distance(e, target) > d.range + 14)
@@ -940,7 +798,7 @@
         if (['move', 'attackMove', 'hold', 'stop', 'attack', 'follow'].includes(o.type)) return false;
         if (o.type === 'build' || o.type === 'repair') {
           let b = this.get(o.id);
-          if (!b || b.team === 1 || (o.type === 'repair' && b.progress < 1)) {
+          if (!b || b.team !== 0 || (o.type === 'repair' && b.progress < 1)) {
             this.finishOrder(e);
             return true;
           }
@@ -1059,36 +917,6 @@
         }
         return false;
       }
-      convoy(e, dt) {
-        if (e.evacuated) return;
-        let escort = this.near(
-            e.x,
-            e.z,
-            13,
-            a => (a.team === 0 || a.team === 2) && a.kind === 'unit' && (UNITS[a.type]?.damage || 0) > 5
-          ),
-          enemy = this.near(e.x, e.z, 10, a => a.team === 1 && a.kind === 'unit');
-        e.escorted = escort.length > 0;
-        e.blocked = enemy.length > 0;
-        if (!e.escorted || e.blocked) {
-          e.path = [];
-          return;
-        }
-        let p = e.route[e.routeIndex];
-        if (!p) {
-          e.evacuated = true;
-          this.s.stats.convoys++;
-          this.emit('radio', 'Chief Rook|Crawler at extraction. Every passenger accounted for.');
-          this.effects.explosion(e.x, e.z, 1, 0x99e8d8);
-          return;
-        }
-        let target = { x: p[0], z: p[1] };
-        if (this.move(e, target, dt, 2.7)) {
-          e.routeIndex++;
-          e.path = [];
-          e.nextPath = 0;
-        }
-      }
       step(dt) {
         if (!this.s || this.s.result) return;
         let s = this.s;
@@ -1120,7 +948,7 @@
             s.enemyBudget += dt * (e.type === 'hq' ? 2.8 : e.type === 'barracks' ? 0.8 : 0);
         }
         for (let e of s.entities) {
-          if (e.hp <= 0 || e.evacuated || e.kind === 'resource' || e.kind === 'objective') continue;
+          if (e.hp <= 0 || e.kind === 'resource') continue;
           e.cd -= dt;
           if (e.maxShield && s.time - e.lastHit > 7)
             e.shield = Math.min(e.maxShield, e.shield + dt * e.maxShield * 0.075);
@@ -1146,10 +974,6 @@
             if (BUILDINGS[e.type].damage) this.combat(e, dt);
             continue;
           }
-          if (e.type === 'convoy') {
-            this.convoy(e, dt);
-            continue;
-          }
           if (e.type === 'worker' && this.worker(e, dt)) continue;
           if (e.type === 'medic' && this.medic(e, dt)) continue;
           let fighting = UNITS[e.type].damage > 0 ? this.combat(e, dt) : false;
@@ -1160,10 +984,6 @@
           } else if (o.type === 'attack') {
             let t = this.get(o.id);
             if (t) {
-              if (t.invulnerable && e.team === 0 && s.time - (s.triggers.shieldWarning || -100) > 10) {
-                this.emit('toast', 'The target is shielded. Complete the shield objectives first.');
-                s.triggers.shieldWarning = s.time;
-              }
               this.move(e, t, dt, (this.rangedStats(e).range || 2) + t.size * 0.5);
             } else this.finishOrder(e);
           } else if (o.type === 'follow') {
@@ -1200,7 +1020,7 @@
         for (let field of s.fields) {
           if (field.until < s.time) continue;
           let targets = this.near(field.x, field.z, field.r, e =>
-            field.type === 'bloom' ? e.team === 1 : e.team === 0 || e.team === 2
+            field.type === 'bloom' ? e.team === 1 : e.team === 0
           );
           for (let e of targets) {
             if (field.type === 'bloom') {
@@ -1218,7 +1038,7 @@
           this.emit('alert', { text: 'Hostile reinforcements inbound in 15 seconds.', danger: true });
         }
         if (
-          s.m.biome === 'star' &&
+          s.biome === 'star' &&
           s.time > 150 &&
           Math.floor(s.time / 100) > (s.triggers.solar || 0)
         ) {
@@ -1247,30 +1067,15 @@
             });
           }
         }
-        if (s.m.type === 'allydefense' && Math.floor(s.time / 75) > (s.triggers.choirAid || 0)) {
-          s.triggers.choirAid = Math.floor(s.time / 75);
-          for (let i = 0; i < 3; i++) {
-            let u = this.spawnUnit(i === 2 ? 'medic' : 'rifle', -4 + i * 3, 6, 2, 1);
-            u.order = { type: 'guard', x: 0, z: 0 };
-          }
-        }
         this.objectiveClock += dt;
         if (this.objectiveClock >= 0.2) {
-          this.objectiveTick(this.objectiveClock);
+          this.objectiveTick();
           this.objectiveClock = 0;
         }
         this.fogClock += dt;
         if (this.fogClock >= 0.35) {
           this.world.reveal(s.entities, s.scans);
           this.fogClock = 0;
-        }
-        if (s.time > 40 && !s.triggers.radio1) {
-          s.triggers.radio1 = true;
-          if (s.m.radio?.[1]) this.emit('radio', s.m.radio[1]);
-        }
-        if (s.time > 185 && !s.triggers.radio2) {
-          s.triggers.radio2 = true;
-          if (s.m.radio?.[2]) this.emit('radio', s.m.radio[2]);
         }
         if (s.entities.some(e => e.hp <= 0 && s.time - e.deathAt > 9)) {
           s.entities = s.entities.filter(e => e.hp > 0 || s.time - e.deathAt <= 9);
@@ -1280,41 +1085,25 @@
       wave() {
         let s = this.s,
           d = DIFFICULTY[s.difficulty],
-          bases = this.alive(e => e.team === 1 && e.tag === 'enemyHQ');
+          bases = this.alive(e => e.team === 1 && e.type === 'hq');
         s.wave++;
-        s.nextWave = s.time + (s.m.waveInterval || 80) * d.interval * Math.max(0.68, 1 - s.wave * 0.01);
-        let external = ['defend', 'survival', 'rescue', 'allydefense', 'endless'].includes(s.m.type);
-        if (!external && !bases.length) return;
-        let site = bases.length ? bases[(s.wave - 1) % bases.length] : ENEMY_SITES[s.wave % 3],
-          faction = site.faction === undefined ? s.m.enemy : site.faction;
-        let n =
-          s.m.type === 'tutorial'
-            ? Math.min(7, 2 + s.wave)
-            : Math.min(24, Math.ceil((3 + s.m.tier * 1.25 + s.wave * 0.65) * d.spawn));
-        if (!external) n = Math.max(2, Math.ceil(n * (0.5 + (0.5 * bases.length) / (s.m.bases || 2))));
-        let baseGoal = this.closest(site, e => e.team === 0 && e.type === 'hq') || HOME,
-          goal =
-            s.m.type === 'allydefense' && s.wave % 3 !== 0
-              ? this.alive(e => e.tag === 'heart')[0] || baseGoal
-              : s.m.type === 'escort' && s.wave % 3 === 0
-                ? this.alive(e => e.type === 'convoy')[0] || baseGoal
-                : baseGoal;
-        if (s.m.type === 'domination' || s.m.type === 'signal' || s.m.type === 'finale') {
-          let relay = this.alive(e => e.kind === 'objective' && e.type === 'relay' && e.owner === 0);
-          if (relay.length && s.wave % 2 === 0) goal = relay[s.wave % relay.length];
-        }
+        s.nextWave = s.time + 80 * d.interval * Math.max(0.68, 1 - s.wave * 0.01);
+        if (!bases.length) return;
+        let site = bases[(s.wave - 1) % bases.length], faction = site.faction,
+          n = Math.min(24, Math.ceil((6.75 + s.wave * 0.65) * d.spawn)),
+          goal = this.closest(site, e => e.team === 0 && e.type === 'hq') || HOME;
         let deployed = 0;
         for (let i = 0; i < n; i++) {
           if (this.alive(e => e.team === 1 && e.kind === 'unit').length >= 130) break;
           let r = this.random(),
             type = 'rifle';
-          if (s.m.tier >= 3 && s.wave >= 3 && r < 0.1) type = 'air';
-          else if (s.m.tier >= 2 && s.wave >= 2 && r < 0.19) type = 'artillery';
-          else if (s.m.tier >= 2 && r < 0.38) type = 'tank';
-          else if (s.m.tier >= 1 && r < 0.48) type = 'medic';
-          else if (s.m.tier >= 1 && r < 0.65) type = 'scout';
+          if (s.wave >= 3 && r < 0.1) type = 'air';
+          else if (s.wave >= 2 && r < 0.19) type = 'artillery';
+          else if (r < 0.38) type = 'tank';
+          else if (r < 0.48) type = 'medic';
+          else if (r < 0.65) type = 'scout';
           let c = UNITS[type].cost * 0.5;
-          if (!external && s.enemyBudget < c && i > 1) break;
+          if (s.enemyBudget < c && i > 1) break;
           s.enemyBudget = Math.max(0, s.enemyBudget - c);
           let p = this.world.nearest(site.x - 8 + (i % 4) * 2.3, site.z + 10 + Math.floor(i / 4) * 2.3);
           let u = this.spawnUnit(type, p.x, p.z, 1, faction);
@@ -1323,319 +1112,16 @@
         }
         if (deployed) this.emit('wave', { wave: s.wave, x: site.x, z: site.z, n: deployed });
       }
-      objectiveTick(dt) {
-        let s = this.s,
-          m = s.m;
-        if (s.result) return;
-        let objectives = this.alive(e => e.kind === 'objective'),
-          combat = a => a.kind === 'unit' && a.type !== 'worker' && a.type !== 'convoy';
-        for (let e of objectives) {
-          let friendly = this.near(
-              e.x,
-              e.z,
-              e.type === 'cache' ? 7 : 9,
-              a => (a.team === 0 || a.team === 2) && combat(a)
-            ),
-            hostile = this.near(e.x, e.z, 9, a => a.team === 1 && combat(a));
-          if (e.type === 'cache') {
-            if (friendly.length && !hostile.length) e.progress = Math.min(1, e.progress + dt / 6);
-            if (e.progress >= 1) {
-              s.stats.caches++;
-              e.hp = 0;
-              e.deathAt = s.time;
-              s.alloy += 150;
-              s.gas += 75;
-              this.emit('alert', {
-                text:
-                  e.tag === 'shelter'
-                    ? 'Civilian shelter evacuated. Volunteers have joined.'
-                    : 'Memory recovered. +150 alloy / +75 aether.',
-                x: e.x,
-                z: e.z
-              });
-              this.effects.explosion(e.x, e.z, 1.2, 0x99e6d0);
-              if (e.tag === 'shelter') {
-                for (let i = 0; i < 3; i++)
-                  this.spawnUnit(i === 2 ? 'medic' : 'rifle', e.x - 2 + i * 2, e.z + 2, 0, s.faction);
-              } else {
-                for (let i = 0; i < 3; i++) {
-                  let p = this.world.nearest(e.x + 12 + i * 2, e.z - 10),
-                    u = this.spawnUnit('rifle', p.x, p.z, 1, m.enemy);
-                  u.order = { type: 'attackMove', x: e.x, z: e.z };
-                }
-              }
-            }
-          } else if (e.type === 'relay') {
-            let old = e.owner;
-            if (friendly.length && !hostile.length) {
-              e.capture = Math.min(
-                1,
-                e.capture + (dt / 28) * (1 + Math.min(friendly.length - 1, 4) * 0.15)
-              );
-              if (e.capture >= 1) e.owner = 0;
-            } else if (hostile.length && !friendly.length) {
-              e.capture = Math.max(
-                0,
-                e.capture - (dt / 32) * (1 + Math.min(hostile.length - 1, 4) * 0.12)
-              );
-              if (e.capture <= 0) e.owner = 1;
-            }
-            if (old !== e.owner && e.owner === 0) {
-              s.alloy += 75;
-              s.gas += 35;
-              this.emit('alert', { text: e.label + ' secured.', x: e.x, z: e.z });
-              this.emit('capture', e);
-            } else if (old === 0 && e.owner === 1)
-              this.emit('alert', {
-                text: e.label + ' lost. Retake the relay.',
-                danger: true,
-                x: e.x,
-                z: e.z
-              });
-            e.contested = !!(friendly.length && hostile.length);
-          }
-        }
-        let relays = this.alive(e => e.type === 'relay'),
-          owned = relays.filter(e => e.owner === 0).length,
-          all = relays.length > 0 && owned === relays.length;
-        if (
-          (m.type === 'domination' || m.type === 'signal') &&
-          all &&
-          (m.type !== 'signal' || s.stats.caches >= m.count)
-        )
-          s.stats.relayHold += dt;
-        if (m.type === 'siege') {
-          let remaining = this.alive(e => e.tag === 'generator').length;
-          for (let c of this.alive(e => e.tag === 'citadel')) {
-            if (!remaining && c.invulnerable) {
-              c.invulnerable = false;
-              this.emit(
-                'radio',
-                'Chief Rook|Ward network down. Their citadel is exposed. Bring it down.'
-              );
-            }
-          }
-        }
-        if (m.type === 'finale') {
-          for (let b of this.alive(e => e.tag === 'boss')) {
-            if (all && b.invulnerable) {
-              b.invulnerable = false;
-              b.order = { type: 'attackMove', x: 0, z: 0 };
-              s.triggers.bossUnshielded = true;
-              this.emit('radio', 'Elias Venn|It can’t hide behind us now. Mara. Finish it.');
-            }
-            if (s.triggers.bossUnshielded && b.hp / b.maxHp < 0.5 && !s.triggers.bossRage) {
-              s.triggers.bossRage = true;
-              this.emit('alert', {
-                text: 'The avatar is destabilizing. Reinforcements detected.',
-                danger: true
-              });
-              this.wave();
-            }
-          }
-        }
-        if (m.type === 'defend') {
-          let n = Math.min(4, Math.floor(s.time / (m.duration / 4)));
-          if (n > s.stats.evacuations) {
-            s.stats.evacuations = n;
-            this.emit(
-              'radio',
-              `Chief Rook|Lift ${n} is clear. ${n < 4 ? 'Keep that perimeter intact.' : 'All shuttles are away.'}`
-            );
-          }
-        }
-        if (!this.alive(e => e.team === 0 && e.type === 'hq').length) {
-          this.finish(
-            false,
-            'Your last command center has fallen. The flotilla has lost its foothold.'
-          );
-          return;
-        }
-        if (
-          m.type === 'escort' &&
-          s.entities.filter(e => e.hp > 0 && e.tag === 'convoy').length < (m.count || 1)
-        ) {
-          this.finish(false, 'A civilian crawler was destroyed. Its passengers had no other way out.');
-          return;
-        }
-        if (m.type === 'allydefense' && !this.alive(e => e.tag === 'heart').length) {
-          this.finish(false, 'The Memory Heart has been silenced. Vesper’s voices are gone.');
-          return;
-        }
-        if (m.type === 'finale' && s.time >= m.limit) {
-          this.finish(false, 'The stellar rupture consumed the corridor. The dark star has opened.');
-          return;
-        }
-        let win = false;
-        switch (m.type) {
-          case 'tutorial':
-            win =
-              s.stats.gathered >= 300 &&
-              s.stats.trained >= 6 &&
-              !this.alive(e => e.tag === 'enemyHQ').length;
-            break;
-          case 'conquest':
-            win = !this.alive(e => e.tag === 'enemyHQ').length;
-            break;
-          case 'defend':
-          case 'survival':
-          case 'allydefense':
-            win = s.time >= m.duration;
-            break;
-          case 'capture':
-            win = all;
-            break;
-          case 'escort':
-            win = s.stats.convoys >= m.count;
-            break;
-          case 'salvage':
-            win = s.stats.caches >= m.count;
-            break;
-          case 'rescue':
-            win = s.stats.caches >= m.count && s.time >= m.duration;
-            break;
-          case 'domination':
-            win = s.stats.relayHold >= m.hold;
-            break;
-          case 'signal':
-            win = s.stats.caches >= m.count && s.stats.relayHold >= m.hold;
-            break;
-          case 'siege':
-            win = !this.alive(e => e.tag === 'generator' || e.tag === 'citadel').length;
-            break;
-          case 'finale':
-            win = s.triggers.bossUnshielded && !this.alive(e => e.tag === 'boss').length;
-            break;
-        }
-        if (win)
-          this.finish(
-            true,
-            m.outro || 'The sector is secure. Your people have earned another sunrise.'
-          );
+      objectiveTick() {
+        if (this.s.result) return;
+        if (!this.alive(e => e.team === 0 && e.type === 'hq').length)
+          this.finish(false, 'Your last command center has fallen.');
+        else if (!this.alive(e => e.team === 1 && e.type === 'hq').length)
+          this.finish(true, 'The enemy base has been destroyed.');
       }
       objectiveRows() {
-        let s = this.s,
-          m = s.m,
-          rows = [],
-          add = (text, current, max, sub = '') =>
-            rows.push({ text, current, max, sub, done: current >= max });
-        let hqs = this.alive(e => e.tag === 'enemyHQ').length,
-          relays = this.alive(e => e.type === 'relay'),
-          owned = relays.filter(e => e.owner === 0).length;
-        if (m.type === 'tutorial') {
-          add('Harvest alloy', Math.min(300, Math.floor(s.stats.gathered)), 300);
-          add('Recruit combat units', Math.min(6, s.stats.trained), 6);
-          add('Destroy the raider command', hqs === 0 ? 1 : 0, 1);
-        }
-        if (m.type === 'conquest')
-          add('Destroy enemy command centers', (m.bases || 2) - hqs, m.bases || 2);
-        if (['defend', 'survival', 'allydefense'].includes(m.type))
-          add(
-            m.type === 'allydefense' ? 'Defend the Memory Heart' : 'Hold the perimeter',
-            Math.min(s.time, m.duration),
-            m.duration,
-            formatTime(Math.max(0, m.duration - s.time)) + ' REMAINING'
-          );
-        if (m.type === 'defend') add('Evacuation lifts departed', s.stats.evacuations, 4);
-        if (m.type === 'allydefense') {
-          let e = this.alive(e => e.tag === 'heart')[0];
-          rows.push({
-            text: 'Memory Heart integrity',
-            current: e?.hp || 0,
-            max: e?.maxHp || 4200,
-            sub: Math.ceil(((e?.hp || 0) / (e?.maxHp || 4200)) * 100) + '% HULL',
-            done: false
-          });
-        }
-        if (['capture', 'domination', 'signal', 'finale'].includes(m.type))
-          add(
-            m.type === 'finale' ? 'Secure the stellar anchors' : 'Control the signal relays',
-            owned,
-            relays.length || 3
-          );
-        if (['domination', 'signal'].includes(m.type))
-          add(
-            'Simultaneous signal alignment',
-            Math.min(s.stats.relayHold, m.hold),
-            m.hold,
-            formatTime(s.stats.relayHold) + ' / ' + formatTime(m.hold)
-          );
-        if (['salvage', 'rescue', 'signal'].includes(m.type))
-          add(
-            m.type === 'rescue' ? 'Evacuate civilian shelters' : 'Recover memory fragments',
-            s.stats.caches,
-            m.count
-          );
-        if (m.type === 'rescue')
-          add(
-            'Hold until the corridor opens',
-            Math.min(s.time, m.duration),
-            m.duration,
-            formatTime(Math.max(0, m.duration - s.time)) + ' REMAINING'
-          );
-        if (m.type === 'escort') {
-          for (let [i, e] of s.entities.filter(a => a.hp > 0 && a.tag === 'convoy').entries())
-            add(
-              e.label || 'Crawler ' + (i + 1),
-              e.evacuated ? e.route.length : e.routeIndex - 1,
-              e.route.length,
-              e.evacuated
-                ? 'EXTRACTED'
-                : e.blocked
-                  ? 'HALTED · HOSTILES NEARBY'
-                  : e.escorted
-                    ? 'ESCORT IN POSITION'
-                    : 'WAITING FOR COMBAT ESCORT'
-            );
-          if (s.stats.convoys > 0 && !rows.length) add('Crawlers extracted', s.stats.convoys, m.count);
-        }
-        if (m.type === 'siege') {
-          let gen = this.alive(e => e.tag === 'generator').length,
-            c = this.alive(e => e.tag === 'citadel')[0];
-          add('Destroy the ward generators', m.count - gen, m.count);
-          add(
-            'Destroy the ward citadel',
-            c ? 0 : 1,
-            1,
-            c?.invulnerable ? 'SHIELDED' : 'SHIELD DISABLED'
-          );
-        }
-        if (m.type === 'finale') {
-          let b = this.alive(e => e.tag === 'boss')[0];
-          add(
-            'Silence the Starbound Avatar',
-            b ? b.maxHp - b.hp : 1,
-            b?.maxHp || 1,
-            b?.invulnerable ? 'SHIELDED' : b ? Math.ceil(b.hp) + ' HULL' : 'DESTROYED'
-          );
-          rows.push({
-            text: 'Stellar rupture',
-            current: Math.max(0, m.limit - s.time),
-            max: m.limit,
-            sub: formatTime(Math.max(0, m.limit - s.time)) + ' REMAINING',
-            done: false
-          });
-        }
-        if (m.type === 'endless') {
-          rows.push({
-            text: 'Survive the endless assault',
-            current: s.wave,
-            max: s.wave + 1,
-            sub: 'WAVE ' + s.wave + ' · ' + formatTime(s.time),
-            done: false
-          });
-          rows.push({
-            text: 'Extract after 5 minutes',
-            current: Math.min(s.time, 300),
-            max: 300,
-            sub:
-              s.time >= 300
-                ? 'EXTRACTION AVAILABLE IN PAUSE MENU'
-                : 'OPTIONAL · STAY FOR A HIGHER SCORE',
-            done: s.time >= 300
-          });
-        }
-        return rows;
+        let done = !this.alive(e => e.team === 1 && e.type === 'hq').length;
+        return [{ text: 'Destroy the enemy base', current: done ? 1 : 0, max: 1, sub: '', done }];
       }
       ability(kind, p) {
         let s = this.s,
@@ -1682,7 +1168,7 @@
           this.emit('radio', 'Orbital command|Target solution confirmed. Clear the impact zone.');
         }
         if (kind === 'repair') {
-          for (let e of this.near(p.x, p.z, 12, a => a.team === 0 || a.team === 2)) {
+          for (let e of this.near(p.x, p.z, 12, a => a.team === 0)) {
             e.hp = Math.min(e.maxHp, e.hp + 180);
             if (e.maxShield) e.shield = Math.min(e.maxShield, e.shield + 100);
           }
@@ -1708,21 +1194,13 @@
         if (this.s.result) return;
         let s = this.s,
           h = this.alive(e => e.team === 0 && e.type === 'hq'),
-          integrity = h.length ? Math.max(...h.map(e => e.hp / e.maxHp)) : 0,
-          stars = win
-            ? 1 +
-              (integrity >= 0.5 ? 1 : 0) +
-              (!s.stats.heroLost && s.stats.lost <= Math.max(12, 8 + s.m.tier * 8) ? 1 : 0)
-            : 0;
+          integrity = h.length ? Math.max(...h.map(e => e.hp / e.maxHp)) : 0;
         s.result = {
           win,
           text,
-          stars,
           time: s.time,
           score: Math.floor(
             s.stats.kills * 80 +
-              s.stats.caches * 400 +
-              s.stats.convoys * 1000 +
               s.stats.damage * 0.04 +
               (win ? 2500 : 0) -
               s.stats.lost * 35
@@ -1737,14 +1215,16 @@
         return data;
       }
       restore(data) {
-        if (!data || data.version !== 1 || !Array.isArray(data.entities) || data.entities.length > 1500)
+        if (!data || data.version !== 2 || !Array.isArray(data.entities) || data.entities.length > 1500)
           throw Error('This save is not a valid Meridian operation.');
-        if (!Number.isFinite(data.time) || !Number.isFinite(data.seed) || !DIFFICULTY[data.difficulty])
+        if (!Number.isFinite(data.time) || !Number.isFinite(data.seed) || !DIFFICULTY[data.difficulty] ||
+          !BIOMES[data.biome] || !FACTIONS[data.faction] || !FACTIONS[data.enemy])
           throw Error('Save data is invalid.');
-        let validKinds = ['unit', 'building', 'objective', 'resource'];
+        let validKinds = ['unit', 'building', 'resource'];
         for (let e of data.entities) {
           if (
             !validKinds.includes(e.kind) ||
+            ![-1, 0, 1].includes(e.team) ||
             !Number.isFinite(e.x) ||
             !Number.isFinite(e.z) ||
             Math.abs(e.x) > 150 ||
@@ -1756,12 +1236,7 @@
             throw Error('Unknown entity in save.');
         }
         this.s = structuredClone(data);
-        if (data.index >= 0) {
-          if (!CAMPAIGN[data.index]) throw Error('Unknown campaign mission.');
-          this.s.m = structuredClone(CAMPAIGN[data.index]);
-        } else if (!['conquest', 'survival', 'endless', 'domination', 'escort'].includes(data.m?.type))
-          throw Error('Unknown skirmish rules.');
-        this.world = new Battlefield(data.seed, this.s.m.biome);
+        this.world = new Battlefield(data.seed, this.s.biome);
         this.world.rebuild(this.s.entities);
         if (data.explored?.length === GRID * GRID)
           this.world.explored.set(data.explored.map(x => (x ? 1 : 0)));
@@ -1771,7 +1246,7 @@
         this.effects.reset();
         this.rehash();
         this.world.reveal(this.s.entities, this.s.scans);
-        this.emit('start', { mission: this.s.m, resumed: true });
+        this.emit('start', { resumed: true });
         return this.s;
       }
     }

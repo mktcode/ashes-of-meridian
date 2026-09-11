@@ -1,10 +1,10 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp mit 16 Kampagnenmissionen und drei Fraktionen. `index.html` enthält das statische HTML und die Dateieinbindungen, `styles.css` das Stylesheet. Das JavaScript liegt in klassischen lokalen Skripten; Zuständigkeiten und Reihenfolge beschreibt die [Codekarte](docs/architecture.md#codekarte). Alle Quellen werden direkt ausgeliefert, ohne npm-Abhängigkeiten oder Build-Schritt.
+Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fraktionen und wiederholbare Gefechte mit einem Ziel – das gegnerische Hauptquartier zerstören. Kampagne und alternative Missionsmodi sind entfernt. `index.html` enthält das statische HTML und die Dateieinbindungen, `styles.css` das Stylesheet. Das JavaScript liegt in klassischen lokalen Skripten; Zuständigkeiten und Reihenfolge beschreibt die [Codekarte](docs/architecture.md#codekarte). Alle Quellen werden direkt ausgeliefert, ohne npm-Abhängigkeiten oder Build-Schritt.
 
 ## Spielen
 
-`index.html` direkt in einem aktuellen Desktop-Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. Alle im HTML über `<script src>` eingebundenen lokalen `.js`-Dateien und `styles.css` müssen neben der HTML-Datei bleiben. Die Skybox ist wie die Bodentexturen direkt in `renderer.js` eingebettet; die separaten Bilddateien bleiben als Quellen im Repository erhalten. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
+`index.html` direkt in einem aktuellen Browser mit WebGL 2 und aktivierter Hardwarebeschleunigung öffnen. Alle im HTML über `<script src>` eingebundenen lokalen `.js`-Dateien und `styles.css` müssen neben der HTML-Datei bleiben. Die Skybox ist wie die Bodentexturen direkt in `renderer.js` eingebettet; die separaten Bilddateien bleiben als Quellen im Repository erhalten. Beim Weitergeben diese Dateien zusammenhalten; das Spiel ist kein autarkes Ein-Datei-Paket.
 
 Der direkte Start über `file://` bleibt erhalten und wurde einschließlich des Skybox-WebGL-Uploads mit Chromium geprüft. Die frühere Sperre der extern geladenen Skybox wird durch eingebettete Bilddaten vermieden. Browser können weiterhin dauerhafte Speicherung einschränken. Details und offene Prüfungen stehen im [Prüfstand](docs/testing.md). Alternativ aus dem Projektverzeichnis einen lokalen Server starten (Python 3 erforderlich):
 
@@ -20,13 +20,15 @@ Fertige eigene Gebäude zeigen **Repair / Stop repair** und **Sell** direkt am G
 
 Beschreibungs- und Browser-Tooltips sind entfernt; sichtbare Kosten, Rückmeldungen und das Handbuch bleiben erhalten. [Tooltip-Bereinigung](docs/tooltip-removal.md).
 
-Ingame-Forschung und Forschungsgebäude sind entfernt. **Fleet Upgrades** im Hauptmenü bleiben erhalten; das geplante Roguelite-Fortschrittssystem ist noch nicht umgesetzt. [Umfang und Prüfungen](docs/research-removal.md).
+**New battle** öffnet die Wahl von Fraktion, Gegner, Landschaft, Schwierigkeit und Seed. Das eigene letzte HQ darf nicht fallen. Für Tests steht das bisherige volle Arsenal bereit; noch keine Gebäude-Freischaltungen oder absichtlich nahezu unbesiegbare Gegnerbasis.
+
+Ingame-Forschung und Forschungsgebäude sind entfernt. **Fleet Upgrades** sind im Testmodus **kostenlos** bis zur bisherigen Höchststufe 3 kaufbar und werden gespeichert; alle sechs wirken ab dem nächsten Gefecht. Die Upgrade-Ressource ist für Tests unbegrenzt verfügbar, ohne Verbrauch oder Sammelsystem. Alloy/Aether im Gefecht bleiben begrenzt. Die spätere separate Fortschrittsressource und deren Gewinnung sind noch nicht implementiert. [Kampagnenentfernung und Prüfungen](docs/campaign-removal.md).
 
 Unter **Settings → Render quality** verwenden **High** und **Balanced** bis zu **4× MSAA** für glattere Modellkanten, sofern die Grafikhardware es unterstützt. **Performance** verzichtet darauf. Es ist kein zusätzlicher Antialiasing-Schalter nötig.
 
 ## Spielstände sichern
 
-Fortschritt und Checkpoints werden im Browserspeicher abgelegt. Unter **Settings → Export Backup** lässt sich ein JSON-Backup sichern; **Import Backup** liest es wieder ein und ersetzt dabei gespeicherte Profildaten, bei enthaltenem Checkpoint auch diesen.
+Permanente Upgrades, Einstellungen und Checkpoints werden im Browserspeicher abgelegt. Gefechts-Checkpoints verwenden jetzt Version 2; alte Kampagnen-/Skirmish-Spielstände werden nicht übernommen. Vorhandene permanente Upgrade-Stufen bleiben erhalten. Unter **Settings → Export Backup** lässt sich ein JSON-Backup sichern; **Import Backup** liest es wieder ein und ersetzt dabei gespeicherte Profildaten, bei enthaltenem Checkpoint auch diesen.
 
 Vor Browserwechsel, Verschieben der Spieldatei oder Wechsel zwischen `file://` und HTTP ein Backup exportieren: Browserspeicher wird dabei nicht automatisch übertragen. Ohne verfügbaren dauerhaften Speicher ist der In-Memory-Ersatz nach dem Schließen verloren.
 
