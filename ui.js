@@ -51,7 +51,6 @@
         if (Number.isFinite(d.x)) {
           el.style.pointerEvents = 'auto';
           el.style.cursor = 'pointer';
-          el.title = 'Click to locate';
           el.onclick = () => this.center(d.x, d.z);
         }
         setTimeout(() => el.remove(), 5800);
@@ -285,7 +284,6 @@
         $('modal').innerHTML =
           `<div class="modal-shade"><div class="modal-card ${wide ? 'wide' : ''}">${html}</div></div>`;
         $('modal').classList.remove('hidden');
-        $('tooltip').classList.add('hidden');
       }
       closeModal() {
         let kind = this.modalKind;
@@ -601,7 +599,6 @@
                   : 'MOVE ORDER';
         $('modeLabel').textContent = text + ' · TAP TO CONFIRM';
         $('modeIndicator').classList.remove('hidden');
-        $('tooltip').classList.add('hidden');
         $('world').style.cursor = 'crosshair';
         this.actionSignature = '';
         this.renderActions();
@@ -657,7 +654,7 @@
       }
       actionButton(key, label, ic, opts = {}) {
         let badge = opts.badge || '';
-        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}" data-tooltip="${key}">${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
+        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}">${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       }
       renderActions() {
         let s = this.game.s;
@@ -731,93 +728,6 @@
               ? 'SELECT A FOUNDATION'
               : 'PARALLEL PRODUCTION';
       }
-      tooltipFor(key) {
-        let [k, arg] = key.split(':'),
-          s = this.game.s,
-          title = '',
-          desc = '',
-          cost = '';
-        if (!s) return '';
-        if (k === 'build') {
-          let d = BUILDINGS[arg];
-          title = buildingName(arg, s.faction);
-          desc = d.desc;
-          let c = this.game.cost(arg, 'building');
-          cost = `${c.cost} ALLOY ${c.gas ? ' / ' + c.gas + ' AETHER' : ''} · ${d.time}s CONSTRUCTION`;
-          let reason = this.game.canBuild(arg);
-          if (reason) desc += '<br><br><span style="color:#e3b78a">' + esc(reason) + '</span>';
-        } else if (k === 'train') {
-          let d = UNITS[arg];
-          title = unitName(arg, s.faction);
-          desc = d.desc;
-          let c = this.game.cost(arg);
-          cost = `${c.cost} ALLOY ${c.gas ? ' / ' + c.gas + ' AETHER' : ''} · ${d.supply} SUPPLY · ${d.time}s`;
-          if (!this.game.has(d.from))
-            desc += '<br><br>Requires ' + buildingName(d.from, s.faction) + '.';
-          if (d.tier > s.m.tier) desc += '<br><br>Not available in this operation.';
-        } else if (k === 'ability') {
-          let def = {
-            orbital: [
-              FACTIONS[s.faction].ability,
-              'Devastates an area after a 2.2-second targeting delay. Target explored ground. Choir strikes leave corrosive roots; Court strikes are narrower and stronger.',
-              85,
-              48
-            ],
-            repair: [
-              'Emergency repair field',
-              'Restores 180 hull immediately, then 10 hull per second for eight seconds. Affects allied units and structures within 12 meters.',
-              45,
-              28
-            ],
-            scan: [
-              'Orbital reconnaissance',
-              'Reveals a 32-meter radius for 22 seconds. Can target unexplored territory. Essential for spotting distant artillery targets.',
-              25,
-              17
-            ],
-            drop: [
-              'Rapid reinforcement',
-              'Deploys four frontline infantry at the target. Requires 8 free supply and explored ground.',
-              95,
-              75
-            ]
-          }[arg];
-          [title, desc] = def;
-          cost = def[2] + ' ENERGY · ' + def[3] + 's RECHARGE';
-        } else {
-          let d = {
-            attackMove: [
-              'Attack-move',
-              'Tap a destination. Selected combat troops engage enemies on the way.'
-            ],
-            move: ['Move', 'Move directly to a destination without stopping to chase hostiles.'],
-            hold: ['Hold position', 'Engage enemies in weapon range without pursuing.'],
-            stop: [
-              'Stop',
-              'Cancel all orders. Units defend their position and may pursue nearby hostiles.'
-            ],
-            army: [
-              'Select combat force',
-              'Select every living combat unit, including medics and the commander. Workers and crawlers are excluded.'
-            ],
-            worker: [
-              'Select next worker',
-              'Select an idle worker if available; otherwise cycle through your workers.'
-            ],
-            rally: [
-              'Set rally point',
-              'Select a production structure, then click a destination. New combat units attack-move to its rally point.'
-            ],
-            home: ['Center on command', 'Return the camera to your command center.'],
-            cancelBuild: [
-              'Cancel construction',
-              'Cancel the selected foundation and recover 75% of its cost.'
-            ]
-          }[k] || ['Command', ''];
-          [title, desc] = d;
-        }
-        return `<h3>${esc(title)}</h3><div>${desc}</div>${cost ? '<div class="tt-cost">' + cost + '</div>' : ''}`;
-      }
       updateSelection() {
         let s = this.game.s;
         if (!s) return;
@@ -833,7 +743,7 @@
             .slice(0, 40)
             .map(id => {
               let e = this.game.get(id);
-              return `<button class="squad-icon" data-select="${id}" title="${esc(unitName(e.type, e.faction))}">${icon(e.type)}<i style="width:${Math.max(1, (e.hp / e.maxHp) * 27)}px"></i></button>`;
+              return `<button class="squad-icon" data-select="${id}" aria-label="${esc(unitName(e.type, e.faction))}">${icon(e.type)}<i style="width:${Math.max(1, (e.hp / e.maxHp) * 27)}px"></i></button>`;
             })
             .join(
               ''
@@ -885,7 +795,7 @@
           html = '';
         for (let b of list)
           for (let [i, q] of b.queue.entries()) {
-            html += `<button class="queue-item" data-queue="${b.id}:${i}" title="${esc(unitName(q.type, s.faction))} · click to cancel">${unitName(q.type, s.faction).slice(0, 8)} ${i === 0 ? Math.ceil(q.time * (1 - q.progress)) + 's' : '…'}<i style="width:${q.progress * 100}%"></i></button>`;
+            html += `<button class="queue-item" data-queue="${b.id}:${i}" aria-label="${esc(unitName(q.type, s.faction))} · cancel recruitment">${unitName(q.type, s.faction).slice(0, 8)} ${i === 0 ? Math.ceil(q.time * (1 - q.progress)) + 's' : '…'}<i style="width:${q.progress * 100}%"></i></button>`;
             if (html.length > 1500) break;
           }
         $('productionQueue').innerHTML =
@@ -995,7 +905,6 @@
         document.addEventListener('pointerdown', e => {
           this.audio.unlock();
           this.domPressed = !!e.target.closest('button,select,input');
-          if (this.domPressed) $('tooltip').classList.add('hidden');
         });
         document.addEventListener('pointerup', () => (this.domPressed = false));
         document.addEventListener('click', e => {
@@ -1084,16 +993,6 @@
           $('radio').classList.add('hidden');
           this.radioUntil = 0;
         };
-        document.addEventListener('mousemove', e => {
-          let b = e.target.closest('[data-tooltip]');
-          if (b && !this.paused && this.game.s && !this.mode) {
-            $('tooltip').innerHTML = this.tooltipFor(b.dataset.tooltip);
-            $('tooltip').classList.remove('hidden');
-            let rect = b.getBoundingClientRect();
-            $('tooltip').style.left = clamp(rect.left - 25, 10, innerWidth - 270) + 'px';
-            $('tooltip').style.top = Math.max(70, rect.top - $('tooltip').offsetHeight - 12) + 'px';
-          } else $('tooltip').classList.add('hidden');
-        });
         window.addEventListener('blur', () => {
           this.drag = null;
         });
@@ -1314,7 +1213,6 @@
           type: e.pointerType,
           moved: false
         };
-        $('tooltip').classList.add('hidden');
       }
       pointerMove(e) {
         this.pointer = { x: e.clientX, y: e.clientY, inside: e.target === $('world') };

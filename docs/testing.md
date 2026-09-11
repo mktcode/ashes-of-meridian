@@ -18,16 +18,18 @@ Ein Worker; das Heaplimit begrenzt den JS-Heap, nicht den gesamten Prozessspeich
 | Simulation | Start, Auftragsersetzung ohne Befehlswarteschlange, Einzelarbeiter-Bau ohne Bauhilfe, Reparatur fertiger Ziele, entfernte Ingame-Forschung, Belagerungs-Generatoren/Schild/Sieg, Basiswerte und permanente Upgrades, Produktion, Ressourcenlieferung, Snapshot-Isolation, aktueller Checkpoint/Restore ohne Kontrollgruppen/Auftragsketten/Forschung, ungültige Eingaben |
 | Persistence | Profilnormalisierung, Speichern/Laden, Backup, Fehlerfälle und flüchtiger Storage-Ersatz |
 | Präsentation | Welt-/Effektgrenzen, Terrain-/Effekt-Zeichenreferenzen, Effektablauf und RNG |
-| Steuerung | Entfernte Desktop-Kamerapfade/Rechteckauswahl/Kontrollgruppen/Shift-Funktionen/Hotkeys, Touch-Auswahl/Doppeltippen, Touch-Ziehen/Pinch/Limits, Kameraknöpfe/Minimap, Gestenabbruch, Befehls-/Menübuttons, drei Reiter ohne Forschung, sieben Bauaktionen ohne Missionsgeneratoren, Auswahl ohne Armor-Forschungslevel, Cancel für alle Zielmodi, Pausenschutz, Hinweise und Home-Aktionen |
+| Steuerung | Entfernte Desktop-Kamerapfade/Rechteckauswahl/Kontrollgruppen/Shift-Funktionen/Hotkeys, Touch-Auswahl/Doppeltippen, Touch-Ziehen/Pinch/Limits, Kameraknöpfe/Minimap, Gestenabbruch, Befehls-/Menübuttons, drei Reiter ohne Forschung, sieben Bauaktionen ohne Missionsgeneratoren, Auswahl ohne Armor-Forschungslevel, Cancel für alle Zielmodi, Pausenschutz, entferntes Tooltip-System, zugängliche Buttonnamen ohne `title`, Hinweise und Home-Aktionen |
 | Renderer | Shader-Quellvertrag, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
 
 Keine Migrationstests, alten Operations-Fixtures oder Layout-Kompatibilitätsadapter. Spielstandtests prüfen den aktuellen Stand, nicht ältere Versionen. Feste Terrain-/Effekt-/RNG-Erwartungen werden weiterhin nicht zur Reparatur fehlgeschlagener Tests neu erzeugt.
 
 ## Aktueller Prüfstand
 
-Nach Entfernung der Ingame-Forschung: **143 Node-Tests bestanden**, vollständiger obiger Befehl. Bestehende Terrain-/Effekt-/RNG-Referenzen unverändert. Zusätzlich vor der Änderung erfasste Tier-3-Kristall-/RNG-Referenz.
+Nach Entfernung der Beschreibungs- und Browser-Tooltips: **145 Node-Tests bestanden**, vollständiger obiger Befehl. Bestehende Terrain-/Effekt-/RNG-Referenzen unverändert.
 
-Chromium 152 unter `file://`, Headless mit Touch-Emulation und Qualitätsstufe Performance: Menüvorschau, permanenter Upgrade-Kauf, drei Reiter/sieben Bauaktionen je Fraktion, Rekrutierung, Produktionsanzeige, aktuelle Checkpoints und Auswahl ohne Forschungswerte bei 960×600 geprüft. Baumenü zusätzlich bei 390×844 gesichtet. Sichtbarer Missionsgenerator und Schild-/Siegablauf über die Live-API geprüft. Vorheriger Touch-Cancel-/Menü-/Einzelarbeiter-Bauablauf erneut bestanden, Cancel auch bei 844×390 und 390×844. Keine erfassten Laufzeit-/Ressourcen-/Log- oder GL-Fehler. Kein echtes Mobilgerät oder vollständiges Durchspielen. [Umfang und Grenzen](research-removal.md).
+Chromium 152 unter `file://`, Headless mit Touch-Emulation und Qualitätsstufe Performance: keine Tooltip-/`title`-Attribute auf besuchten Ansichten oder Beschreibungsfenster bei Maus-Hover über Aktions-, Porträt- und Produktionsbuttons. Symbolbutton-Namen im Accessibility-Baum erhalten. Porträtauswahl, Produktionsabbruch mit Rückerstattung und Meldungsnavigation per Touch geprüft. Vorheriger Forschungs-/Touch-Cancel-/Menü-/Einzelarbeiter-Bauablauf erneut bestanden; Hauptabläufe bei 960×600, Cancel auch bei 844×390 und 390×844, Baumenü im Hochformat gesichtet. Keine erfassten Laufzeit-/Ressourcen-/Log- oder GL-Fehler. Kein echtes Mobilgerät oder vollständiges Durchspielen. [Umfang und Grenzen](tooltip-removal.md).
+
+Vorheriger Forschungsschritt mit Erläuterung der Missionsgeneratoren und Tier-3-RNG-Referenz: [Forschungsentfernung](research-removal.md).
 
 Vorheriger Hotkey-/Bauhilfe-Schritt einschließlich unverändertem Pausenmenü-Ablauf: [Touch-Befehle](mobile-touch-controls.md).
 
@@ -48,6 +50,7 @@ Eigenes Testprofil ohne wichtige Daten verwenden. `index.html` direkt unter `fil
 - Bauplatzierung, Bewegung, Attack-Move, Sammelpunkt und alle Fähigkeiten aktivieren und per Cancel abbrechen: kein Verbrauch, keine Befehle, kein versehentliches Platzieren. Spiel-Hotkeys dürfen keine eigenen Aktionen auslösen; native Browser-/Formularbedienung bleibt möglich.
 - Regulärer Gebäudebau mit einem Arbeiter; keine Bauhilfe durch weitere Arbeiter und kein Weiterbau durch Reparatur. Reparatur fertiger beschädigter Ziele prüfen.
 - Nur Command/Build/Recruit und sieben baubare Gebäude; keine Forschung, kein Labor. Permanente Fleet Upgrades bleiben kaufbar. In beiden Belagerungen zuerst die Schutzgeneratoren zerstören, dann die entsicherte Zitadelle.
+- Keine Beschreibungs-/Browser-Tooltips bei Aktions-, Kamera-, Porträt- und Produktionsbuttons; zugängliche Namen erhalten. Porträtauswahl, Produktionsabbruch mit Rückerstattung, sichtbare Kosten und Warn-/Toast-Rückmeldungen prüfen.
 - Qualität wechseln, Fenstergröße ändern; Einheiten, Effekte und HUD prüfen.
 - Aktuellen Spielstand speichern/laden, Backup exportieren/importieren.
 - Audio tatsächlich anhören; Audio-API-Prüfungen ersetzen keinen Hörtest.

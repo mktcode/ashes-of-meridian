@@ -1,5 +1,7 @@
 # Ingame-Forschung entfernt
 
+Historischer Bericht dieses Schritts. Anschließend wurden auch die [Beschreibungs- und Browser-Tooltips entfernt](tooltip-removal.md).
+
 Das langfristige Ziel ist ein Roguelite mit Weiterentwicklung außerhalb der einzelnen Operation. Dieser Schritt entfernt die Ingame-Forschung, implementiert aber noch kein neues Fortschritts- oder Run-System. Die übrigen Tooltips werden anschließend separat bereinigt.
 
 ## Umsetzung

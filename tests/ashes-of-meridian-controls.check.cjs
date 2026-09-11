@@ -18,6 +18,7 @@ function setup() {
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
+      assert.notEqual(id, 'tooltip', 'removed tooltip DOM must never be accessed');
       if (!elements.has(id)) elements.set(id, target());
       return elements.get(id);
     }
@@ -279,8 +280,6 @@ test('Cancel button exits every targeting mode without spending resources or cha
     h.UI.prototype.setMode.call(h.ui, kind, arg);
     assert.equal(h.document.getElementById('modeIndicator').classList.contains('hidden'), false);
     assert.match(h.document.getElementById('modeLabel').textContent, /TAP TO CONFIRM/);
-    h.document.handlers.mousemove({ target: { closest: () => ({ dataset: { tooltip: 'move' } }) } });
-    assert.equal(h.document.getElementById('tooltip').classList.contains('hidden'), true);
     assert.match(h.document.getElementById('actions').innerHTML, /class="action[^"\n]*\bactive\b/);
     h.click({ ui: 'cancelTarget' });
     assert.equal(h.ui.mode, null);
@@ -325,6 +324,55 @@ test('home redesign preserves dynamic campaign progress, checkpoint priority and
     assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
     assert.deepEqual(h.calls, []);
   }
+});
+
+test('tooltips and native title hints are removed without removing pointer press guards or accessible names', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  assert.equal(h.UI.prototype.tooltipFor, undefined);
+  assert.equal(h.document.handlers.mousemove, undefined);
+  assert.equal(typeof h.world.handlers.pointermove, 'function');
+  h.document.handlers.pointerdown({ target: { closest: () => ({}) } });
+  assert.equal(h.ui.domPressed, true);
+  h.document.handlers.pointerup(); assert.equal(h.ui.domPressed, false);
+  h.document.handlers.pointerdown({ target: { closest: () => null } });
+  assert.equal(h.ui.domPressed, false);
+  for (const file of ['ui.js', 'index.html', 'styles.css']) {
+    const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    assert.doesNotMatch(source, /tooltip|tt-cost|\stitle=["']|\.title\s*=/i, file);
+  }
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /<title>Ashes of Meridian/);
+  for (const [attribute, value, label] of [
+    ['id', 'missionHome', 'Pause / operations'], ['id', 'pauseBtn', 'Pause'],
+    ['data-cam', 'home', 'Center on command'], ['data-cam', 'in', 'Zoom in'],
+    ['data-cam', 'out', 'Zoom out'], ['id', 'soundBtn', 'Sound'],
+    ['id', 'helpBtn', 'Field manual'], ['id', 'minimap', 'Tactical overview']
+  ]) assert.match(html, new RegExp(`${attribute}="${value}"[^>]*aria-label="${label}"`));
+});
+
+test('actions retain visible costs; portrait selection and queue cancellation retain labels and actions without tooltips', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const button = h.ui.actionButton('train:rifle', 'Vanguard', 'rifle', { cost: { cost: 75, gas: 20 } });
+  assert.match(button, /data-action="train:rifle"/); assert.match(button, /Vanguard/);
+  assert.match(button, /75◆ 20⬡/); assert.doesNotMatch(button, /tooltip|\stitle=/);
+  h.ui.game.s.entities = [
+    { id: 1, kind: 'building', type: 'barracks', team: 0, queue: [{ type: 'rifle', time: 11, progress: .5 }] },
+    { id: 2, kind: 'unit', type: 'rifle', faction: 0, hp: 150, maxHp: 150 },
+    { id: 3, kind: 'unit', type: 'medic', faction: 0, hp: 130, maxHp: 130 }
+  ];
+  h.ui.selected = [2, 3]; h.ui.updateSelection();
+  const portraits = h.document.getElementById('selectionContent').innerHTML;
+  assert.match(portraits, /data-select="2" aria-label="Vanguard"/);
+  assert.match(portraits, /data-select="3" aria-label="Field medic"/);
+  assert.doesNotMatch(portraits, /\stitle=/);
+  h.click({ select: '2' }); assert.deepEqual(h.ui.selected, [2]);
+  h.ui.updateQueues();
+  const queue = h.document.getElementById('productionQueue').innerHTML;
+  assert.match(queue, /data-queue="1:0" aria-label="Vanguard · cancel recruitment"/);
+  assert.match(queue, /6s/); assert.doesNotMatch(queue, /\stitle=/);
+  h.ui.game.cancelQueue = (...args) => h.calls.push(['cancelQueue', ...args]);
+  h.click({ queue: '1:0' });
+  assert.deepEqual(h.calls, [['select', [2]], ['cancelQueue', 1, 0]]);
 });
 
 test('command deck and help have no research actions; mission wards are never offered for construction', () => {
@@ -378,7 +426,6 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.match(html, /data-ui="cancelTarget"/);
   h.ui.updateSelection();
   assert.doesNotMatch(h.document.getElementById('selectionContent').innerHTML, /Box-select|Right-click/);
-  assert.doesNotMatch(h.ui.tooltipFor('attackMove'), /Shift|queue waypoints/);
   h.ui.game.s.m = { tier: 1 }; h.ui.game.s.faction = 0;
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;

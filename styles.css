@@ -1855,31 +1855,6 @@
       color: #667e90
     }
 
-    #tooltip {
-      position: fixed;
-      width: 258px;
-      z-index: 30;
-      pointer-events: none;
-      background: #0a1524f5;
-      border: 1px solid #8caaab55;
-      padding: 15px 17px;
-      box-shadow: 0 8px 30px #0006;
-      font-size: 12px;
-      color: #b1c4ce
-    }
-
-    #tooltip h3 {
-      font-size: 13px;
-      color: #e4eeea;
-      margin: 0 0 7px
-    }
-
-    #tooltip .tt-cost {
-      color: var(--gold);
-      font: 10px var(--mono);
-      margin-top: 10px
-    }
-
     #toast {
       position: fixed;
       bottom: 260px;

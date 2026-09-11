@@ -35,6 +35,8 @@ Wichtige Abhängigkeiten:
 - `app` erstellt und verdrahtet alle Instanzen, lädt das Profil über die Speicherkomponente und übergibt diese der UI. Die `requestAnimationFrame`-Schleife führt bei aktivem, ungepaustem Spiel `game.step(0.05)` und `game.effects.tick(0.05)` aus; UI und Rendering werden pro Frame aktualisiert.
 - `window.Meridian` stellt die laufenden Instanzen, Inhalte und Leistungswerte zur Inspektion bereit. Die übrigen globalen `const`-/`class`-Bindungen sind nicht automatisch Eigenschaften von `window`.
 
+Das frühere Tooltip-System (`tooltipFor()`, Dokument-Mousemove, `data-tooltip`, Tooltip-DOM/CSS) und native `title`-Hinweise sind entfernt. Symbolbuttons und dynamische Porträt-/Produktionsbuttons verwenden `aria-label`. Spielwelt-Hover, sichtbare Rückmeldungen und Beschreibungstexte in den Inhaltsdaten bleiben erhalten; kein neues Info-System. [Tooltip-Bereinigung](tooltip-removal.md).
+
 Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-layout` gerendert. Sein Design ist in `styles.css` auf diese Klassen begrenzt; `#menu:has(> .home-screen)` schaltet nur dort den bisherigen Menü-Hintergrund ab. Kampagne, Modals und HUD behalten ihre vorhandenen Templates und Styles. [Umsetzung und Prüfungen](home-redesign.md).
 
 ## Zustände und Speicherung
@@ -87,7 +89,7 @@ Diese Punkte sind Befunde, keine bereits vorgenommenen Fehlerkorrekturen. Insbes
 
 ## Nächste Schritte und späteres Zielbild
 
-Die Spielrichtung ist langfristig ein Roguelite mit Weiterentwicklung außerhalb der Operationen. Bisher entfernt ist die Ingame-Forschung; kein neues Run-/Fortschrittssystem und keine Übertragung der entfernten Boni ins Hauptmenü implementiert. Die übrigen Tooltips sollen als separater Vereinfachungsschritt bereinigt werden.
+Die Spielrichtung ist langfristig ein Roguelite mit Weiterentwicklung außerhalb der Operationen. Bisher entfernt ist die Ingame-Forschung; kein neues Run-/Fortschrittssystem und keine Übertragung der entfernten Boni ins Hauptmenü implementiert. Beschreibungs- und Browser-Tooltips sind inzwischen ebenfalls entfernt; weitere Vereinfachungen und die Verständlichkeit ohne diese Zusatzinformationen sind separat zu beurteilen.
 
 ### Zunächst: Referenzverhalten absichern
 
