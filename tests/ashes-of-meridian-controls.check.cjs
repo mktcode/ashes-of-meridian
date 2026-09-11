@@ -47,6 +47,8 @@ function setup() {
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     get(id) { return this.s.entities.find(e => e.id === id); },
+    managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 && b.type !== 'ward' ? b : null; },
+    buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
     command(...args) { calls.push(['command', ...args]); }
   };
   const ui = new TestUI(game, {
@@ -373,6 +375,91 @@ test('actions retain visible costs; portrait selection and queue cancellation re
   h.ui.game.cancelQueue = (...args) => h.calls.push(['cancelQueue', ...args]);
   h.click({ queue: '1:0' });
   assert.deepEqual(h.calls, [['select', [2]], ['cancelQueue', 1, 0]]);
+});
+
+function buildingPanel() {
+  const h = setup(), b = { id: 7, kind: 'building', type: 'barracks', team: 0, faction: 0, hp: 100, maxHp: 200, progress: 1, size: 2.9, x: 0, z: 0, queue: [] };
+  h.ui.game.s.entities = [b]; h.ui.selected = [7];
+  const panel = h.document.getElementById('buildingActions'), buttons = ['repair','sell'].map(action => ({ dataset: { buildingAction: action } }));
+  panel.querySelectorAll = () => buttons; panel.offsetWidth = 260; panel.offsetHeight = 100;
+  h.document.getElementById('topbar').getBoundingClientRect = () => ({ bottom: 63 });
+  h.document.getElementById('commandDeck').getBoundingClientRect = () => ({ top: 584 });
+  h.ui.R.project = () => ({ x: 640, y: 400 });
+  return { ...h, b, panel, buttons };
+}
+
+test('building buttons follow projection, clamp to the play area and do not move under a pressed finger', () => {
+  const h = buildingPanel(); h.ui.updateBuildingActions();
+  assert.equal(h.panel.classList.contains('hidden'), false);
+  assert.equal(h.panel.style.left, '510px'); assert.equal(h.panel.style.top, '288px');
+  assert.deepEqual(h.buttons.map(b => b.dataset.buildingId), [7,7]);
+  h.ui.R.project = () => ({ x: 1278, y: 580 }); h.ui.domPressed = true; h.ui.updateBuildingActions();
+  assert.equal(h.panel.style.left, '510px');
+  h.ui.domPressed = false; h.ui.updateBuildingActions();
+  assert.equal(h.panel.style.left, '1012px'); assert.equal(h.panel.style.top, '468px');
+  h.ui.R.project = () => ({ x: 1, y: 64 }); h.ui.updateBuildingActions();
+  assert.equal(h.panel.style.left, '8px'); assert.equal(h.panel.style.top, '71px');
+});
+
+test('building panel avoids camera/help buttons vertically or sideways in a short play area', () => {
+  const h = buildingPanel(); h.ui.R.project = () => ({ x: 1278, y: 580 });
+  h.document.getElementById('cameraTools').getBoundingClientRect = () => ({ left: 1014, right: 1272, top: 542, bottom: 574 });
+  h.ui.updateBuildingActions(); assert.equal(h.panel.style.left, '1012px'); assert.equal(h.panel.style.top, '434px');
+  h.document.getElementById('topbar').getBoundingClientRect = () => ({ bottom: 460 });
+  h.ui.updateBuildingActions(); assert.equal(h.panel.style.left, '746px'); assert.equal(h.panel.style.top, '468px');
+});
+
+test('building buttons hide for ineligible selection, offscreen targets, targeting, pause and modals', () => {
+  for (const mode of ['none','many','enemy','ally','unit','ward','foundation','dead','result','offscreen','behind','paused','modal','target','home']) {
+    const h = buildingPanel();
+    if (mode === 'none') h.ui.selected = [];
+    if (mode === 'many') h.ui.selected = [7,8];
+    if (mode === 'enemy') h.b.team = 1;
+    if (mode === 'ally') h.b.team = 2;
+    if (mode === 'unit') h.b.kind = 'unit';
+    if (mode === 'ward') h.b.type = 'ward';
+    if (mode === 'foundation') h.b.progress = .5;
+    if (mode === 'dead') h.b.hp = 0;
+    if (mode === 'result') h.ui.game.s.result = { win: true };
+    if (mode === 'offscreen') h.ui.R.project = () => ({ x: -10, y: 400 });
+    if (mode === 'behind') h.ui.R.project = () => null;
+    if (mode === 'paused') h.ui.paused = true;
+    if (mode === 'modal') h.ui.modalKind = 'help';
+    if (mode === 'target') h.ui.mode = { kind: 'move' };
+    if (mode === 'home') h.ui.view = 'home';
+    h.ui.updateBuildingActions(); assert.equal(h.panel.classList.contains('hidden'), true, mode);
+  }
+});
+
+test('building button states expose no-worker/last-HQ restrictions and keep stopping repair available', () => {
+  const h = buildingPanel();
+  h.ui.game.canRepairBuilding = () => 'No workers'; h.ui.game.canSellBuilding = () => 'Last command center';
+  h.ui.updateBuildingActions(); assert.deepEqual(h.buttons.map(b => b.disabled), [true,true]);
+  assert.equal(h.document.getElementById('buildingActionStatus').textContent, 'No workers · Last command center');
+  h.ui.game.buildingRepairers = () => [{}]; h.ui.updateBuildingActions();
+  assert.equal(h.buttons[0].disabled, false); assert.equal(h.buttons[0].textContent, 'STOP REPAIR');
+});
+
+test('building buttons dispatch repair; sale pauses, cancels safely, confirms the captured ID and rejects stale repeats', () => {
+  const h = buildingPanel(); h.UI.prototype.bind.call(h.ui); h.ui.openModal = h.UI.prototype.openModal;
+  h.ui.game.toggleBuildingRepair = id => h.calls.push(['repair',id]);
+  h.ui.game.buildingSaleRefund = () => ({cost:147.5,gas:0});
+  h.ui.game.sellBuilding = id => h.calls.push(['sell',id]);
+  h.click({ buildingAction: 'repair', buildingId: '7' }); assert.deepEqual(h.calls, [['repair',7]]);
+  h.click({ buildingAction: 'sell', buildingId: '7' });
+  assert.equal(h.ui.paused, true); assert.equal(h.ui.modalKind, 'sell');
+  assert.equal(h.panel.classList.contains('hidden'), true);
+  assert.match(h.document.getElementById('modal').innerHTML, /147.5 alloy/);
+  h.click({ buildingAction: 'repair', buildingId: '7' }); assert.equal(h.calls.length, 1);
+  h.click({ ui: 'cancelSale' }); assert.equal(h.ui.paused, false); assert.equal(h.calls.length, 1);
+  h.click({ ui: 'confirmSale' }); assert.equal(h.calls.length, 1);
+  h.click({ buildingAction: 'sell', buildingId: '7' }); h.ui.selected = [99];
+  h.click({ ui: 'confirmSale' }); assert.deepEqual(h.calls, [['repair',7],['sell',7]]);
+  assert.equal(h.ui.paused, false); assert.equal(h.ui.modalKind, '');
+  h.click({ ui: 'confirmSale' }); assert.equal(h.calls.length, 2);
+  h.ui.game.canSellBuilding = () => 'Last command center'; h.ui.toast = text => h.calls.push(['toast',text]);
+  h.click({ buildingAction: 'sell', buildingId: '7' }); assert.equal(h.ui.paused, false);
+  assert.deepEqual(h.calls.at(-1), ['toast','Last command center']);
 });
 
 test('command deck and help have no research actions; mission wards are never offered for construction', () => {

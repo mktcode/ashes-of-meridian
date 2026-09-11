@@ -531,6 +531,79 @@
         this.navDirty = true;
         this.emit('toast', 'Foundation canceled. 75% of resources recovered.');
       }
+      managedBuilding(id) {
+        let b = this.get(id);
+        return this.s && !this.s.result && b?.kind === 'building' && b.team === 0 &&
+          b.progress >= 1 && !BUILDINGS[b.type].missionOnly ? b : null;
+      }
+      buildingRepairers(id) {
+        return this.alive(e => e.team === 0 && e.kind === 'unit' && e.type === 'worker' &&
+          e.order.type === 'repair' && e.order.id === id);
+      }
+      canRepairBuilding(id) {
+        let b = this.managedBuilding(id);
+        if (!b) return 'Select a completed own structure.';
+        if (b.hp >= b.maxHp) return 'Hull full';
+        if (!this.alive(e => e.team === 0 && e.kind === 'unit' && e.type === 'worker').length)
+          return 'No workers';
+        if (this.s.alloy <= 0.1) return 'No alloy';
+        return '';
+      }
+      toggleBuildingRepair(id) {
+        let b = this.managedBuilding(id);
+        if (!b) return false;
+        let repairing = this.buildingRepairers(id);
+        if (repairing.length) {
+          for (let w of repairing) this.setOrder(w, { type: 'idle' });
+          this.emit('toast', 'Building repair stopped.');
+          return true;
+        }
+        let reason = this.canRepairBuilding(id);
+        if (reason) {
+          this.emit('toast', reason);
+          return false;
+        }
+        let worker = this.closest(b, e => e.team === 0 && e.kind === 'unit' && e.type === 'worker' && !e.evacuated);
+        this.command([worker.id], { type: 'repair', id: b.id, x: b.x, z: b.z });
+        this.emit('toast', 'Nearest worker assigned to repair.');
+        return true;
+      }
+      canSellBuilding(id) {
+        let b = this.managedBuilding(id);
+        if (!b) return 'Select a completed own structure.';
+        if (b.type === 'hq' && this.alive(e => e.team === 0 && e.type === 'hq' && e.progress >= 1).length <= 1)
+          return 'Last command center';
+        return '';
+      }
+      buildingSaleRefund(id) {
+        let b = this.managedBuilding(id);
+        if (!b) return null;
+        let paid = b.paid || this.cost(b.type, 'building'),
+          refund = { cost: paid.cost * 0.5, gas: paid.gas * 0.5 };
+        for (let q of b.queue) {
+          refund.cost += q.cost;
+          refund.gas += q.gas;
+        }
+        return refund;
+      }
+      sellBuilding(id) {
+        let reason = this.canSellBuilding(id);
+        if (reason) {
+          this.emit('toast', reason);
+          return false;
+        }
+        let b = this.get(id), refund = this.buildingSaleRefund(id);
+        this.s.alloy += refund.cost;
+        this.s.gas += refund.gas;
+        b.queue.length = 0;
+        b.hp = 0;
+        b.deathAt = this.s.time;
+        for (let w of this.buildingRepairers(id)) this.setOrder(w, { type: 'idle' });
+        // Selling is not a combat kill: no explosion, kill credit or effect RNG draws.
+        this.world.rebuild(this.s.entities);
+        this.emit('toast', 'Structure sold. Recruitment canceled and refunded.');
+        return true;
+      }
       setOrder(e, order) {
         if (e.type === 'convoy' || e.evacuated) return;
         if (e.kind === 'building') {

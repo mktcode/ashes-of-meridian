@@ -16,6 +16,7 @@
         this.view = 'home';
         this.paused = true;
         this.modalKind = '';
+        this.sellBuildingId = null;
         this.selected = [];
         this.tab = 'orders';
         this.mode = null;
@@ -77,6 +78,7 @@
           this.view = 'game';
           this.paused = false;
           this.modalKind = '';
+          this.sellBuildingId = null;
           $('menu').classList.add('hidden');
           $('modal').classList.add('hidden');
           $('hud').classList.remove('hidden');
@@ -280,6 +282,8 @@
         this.save(false);
       }
       openModal(kind, html, wide = false) {
+        if (kind !== 'sell') this.sellBuildingId = null;
+        $('buildingActions').classList.add('hidden');
         this.modalKind = kind;
         $('modal').innerHTML =
           `<div class="modal-shade"><div class="modal-card ${wide ? 'wide' : ''}">${html}</div></div>`;
@@ -443,7 +447,7 @@
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join(
               ''
-            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Workers can repair completed damaged allied structures and damaged allied units for a small alloy cost.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Relays require nearby combat troops and cannot be captured while contested. Crawlers need an escort within 13 meters and halt near enemies. Scouts and scans reveal fog-of-war. Destroy enemy command centers to weaken reinforcements in offensive missions.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
+            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Select a completed own building for its <b>Repair</b> and <b>Sell</b> buttons. Repair sends the nearest worker and costs 0.1 alloy per hull; tap again to stop. Without workers, repair is unavailable. Selling refunds 50% of the building’s purchase value plus all pending recruitment costs; the last completed command center cannot be sold. Workers can still repair damaged allied units and structures via context orders.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Relays require nearby combat troops and cannot be captured while contested. Crawlers need an escort within 13 meters and halt near enemies. Scouts and scans reveal fog-of-war. Destroy enemy command centers to weaken reinforcements in offensive missions.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
             ['Command abilities', 'Ability buttons in Command → tap target'],
             ['Command / build / recruit', 'Tabs on the command deck'],
             ['Pause', 'Ⅱ button'],
@@ -581,6 +585,7 @@
             return;
           }
         }
+        $('buildingActions').classList.add('hidden');
         this.mode = { kind, arg };
         let text =
           kind === 'build'
@@ -727,6 +732,69 @@
             : this.tab === 'build'
               ? 'SELECT A FOUNDATION'
               : 'PARALLEL PRODUCTION';
+      }
+      updateBuildingActions() {
+        let panel = $('buildingActions'), g = this.game,
+          b = this.view === 'game' && g.s && !this.paused && !this.modalKind && !this.mode &&
+            this.selected.length === 1 ? g.managedBuilding(this.selected[0]) : null;
+        if (!b) {
+          panel.classList.add('hidden');
+          return;
+        }
+        let p = this.R.project(b.x, Math.min(8, b.size + 2.5), b.z),
+          top = $('topbar').getBoundingClientRect().bottom + 8,
+          bottom = $('commandDeck').getBoundingClientRect().top - 8;
+        if (!p || p.x < 0 || p.x > innerWidth || p.y < top - 8 || p.y > bottom + 8) {
+          panel.classList.add('hidden');
+          return;
+        }
+        // Do not move or relabel a button under a finger while it is being pressed.
+        if (this.domPressed) return;
+        let repairing = g.buildingRepairers(b.id).length > 0,
+          repairReason = repairing ? '' : g.canRepairBuilding(b.id), sellReason = g.canSellBuilding(b.id);
+        $('buildingActionName').textContent = buildingName(b.type, b.faction);
+        for (let button of panel.querySelectorAll('button')) {
+          button.dataset.buildingId = b.id;
+          button.disabled = !!(button.dataset.buildingAction === 'repair' ? repairReason : sellReason);
+          if (button.dataset.buildingAction === 'repair') button.textContent = repairing ? 'STOP REPAIR' : 'REPAIR';
+        }
+        $('buildingActionStatus').textContent = [repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ') || '38 hull/s · 0.1 alloy/hull';
+        panel.classList.remove('hidden');
+        let w = panel.offsetWidth, h = panel.offsetHeight,
+          x = clamp(p.x - w / 2, 8, innerWidth - w - 8),
+          y = clamp(p.y - h - 12, top, Math.max(top, bottom - h)),
+          tools = $('cameraTools').getBoundingClientRect();
+        if (x < tools.right + 8 && x + w > tools.left - 8 && y + h > tools.top - 8 && y < tools.bottom + 8) {
+          // Keep camera/help buttons usable, even in the narrow landscape play area.
+          if (tools.top - h - 8 >= top) y = tools.top - h - 8;
+          else x = Math.max(8, tools.left - w - 8);
+        }
+        panel.style.left = x + 'px';
+        panel.style.top = y + 'px';
+      }
+      buildingAction(action, id) {
+        if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s.result) return;
+        if (action === 'repair') {
+          this.game.toggleBuildingRepair(id);
+          this.updateBuildingActions();
+        } else if (action === 'sell') {
+          let reason = this.game.canSellBuilding(id);
+          if (reason) { this.toast(reason); return; }
+          let b = this.game.get(id), refund = this.game.buildingSaleRefund(id);
+          this.sellBuildingId = id;
+          this.paused = true;
+          this.clearMode();
+          this.openModal('sell',
+            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} alloy / ${refund.gas} aether</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. The structure is removed immediately; supply capacity may decrease.</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
+        }
+      }
+      finishBuildingSale(confirm) {
+        if (this.modalKind !== 'sell' || this.view !== 'game' || !this.game.s || this.game.s.result) return;
+        let id = this.sellBuildingId;
+        this.sellBuildingId = null;
+        if (confirm) this.game.sellBuilding(id);
+        this.resume();
+        this.updateHUD(true);
       }
       updateSelection() {
         let s = this.game.s;
@@ -938,6 +1006,10 @@
             this.setTab(b.dataset.tab);
             return;
           }
+          if (b.dataset.buildingAction) {
+            this.buildingAction(b.dataset.buildingAction, +b.dataset.buildingId);
+            return;
+          }
           if (b.dataset.action) {
             if (!this.paused) this.perform(b.dataset.action);
             return;
@@ -1099,6 +1171,12 @@
             break;
           case 'closeModal':
             this.closeModal();
+            break;
+          case 'confirmSale':
+            this.finishBuildingSale(true);
+            break;
+          case 'cancelSale':
+            this.finishBuildingSale(false);
             break;
           case 'cancelTarget':
             this.clearMode();
@@ -1492,6 +1570,7 @@
         }
       }
       drawOverlay(ctx) {
+        this.updateBuildingActions();
         ctx.clearRect(0, 0, innerWidth, innerHeight);
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,

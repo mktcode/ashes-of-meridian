@@ -8,9 +8,11 @@ Grundlage: statische Prüfung von Eingabelogik, Darstellung, Styles und Hilfetex
 
 1. Desktop-Kamerasteuerung, Edge-Scrolling-Einstellung und Kamera-Hotkey-Hinweise entfernt: [Mobile-Kamera-Bereinigung](mobile-camera-cleanup.md).
 2. Maus-Rechteckauswahl samt Darstellung, Shift-Auswahl, Kontrollgruppen und Befehls-Auftragsketten entfernt: [Auswahl-/Befehlsbereinigung](mobile-selection-cleanup.md). Touch-Auswahl und Doppeltippen bleiben erhalten. Kontrollgruppen und Auftragsketten entfallen auf ausdrücklichen Wunsch komplett, ohne neue Touch-Ersatzbedienung. Neue Auswahlbuttons sind nicht Teil dieses Schritts.
-3. Alle Spiel-Hotkeys und ihre Hinweise entfernt, Touch-Abbrechen für Bau-/Zielmodi ergänzt. Bauhilfe entfällt vollständig, ohne Automatisierungsersatz. Regulärer Bau und Reparatur fertiger Gebäude/Einheiten bleiben erhalten: [Touch-Befehle und Bauhilfe-Entfernung](mobile-touch-controls.md). Reparatur-Automatisierung und anschließende Rechtsklick-Bereinigung bleiben offen.
+3. Alle Spiel-Hotkeys und ihre Hinweise entfernt, Touch-Abbrechen für Bau-/Zielmodi ergänzt. Bauhilfe entfällt vollständig, ohne Automatisierungsersatz. Regulärer Bau und Reparatur fertiger Gebäude/Einheiten bleiben erhalten: [Touch-Befehle und Bauhilfe-Entfernung](mobile-touch-controls.md).
 4. Vor der Tooltip-Bereinigung die Ingame-Forschung einschließlich Gebäude, Reiter und Boni entfernt. Permanente Fleet Upgrades bleiben; ein neues Roguelite-System ist noch nicht umgesetzt: [Forschungsentfernung](research-removal.md).
 5. Beschreibungs-Tooltips samt Listener/DOM/CSS und native Browser-Tooltips entfernt, ohne neue Info-Oberfläche. Zugängliche Buttonnamen und sichtbare Rückmeldungen bleiben erhalten: [Tooltip-Bereinigung](tooltip-removal.md).
+
+6. Fertige eigene Gebäude erhalten Repair/Stop und Sell direkt an ihrer Weltposition. Reparatur schickt den nächsten eigenen Arbeiter, ohne arbeiterlose Automatik; Verkauf erstattet 50 % plus offene Rekrutierung vollständig und schützt das letzte fertige HQ. Einheitenreparatur und anschließende Rechtsklick-Bereinigung bleiben offen: [Gebäudeaktionen](mobile-building-actions.md).
 
 Die folgenden Tabellen und ursprünglichen Konsequenzen bleiben als Bestandsaufnahme vor der Bereinigung stehen, nicht als aktuelle Liste noch vorhandener Funktionen oder aktueller Entscheidungen.
 

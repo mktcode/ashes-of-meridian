@@ -37,6 +37,8 @@ Wichtige Abhängigkeiten:
 
 Das frühere Tooltip-System (`tooltipFor()`, Dokument-Mousemove, `data-tooltip`, Tooltip-DOM/CSS) und native `title`-Hinweise sind entfernt. Symbolbuttons und dynamische Porträt-/Produktionsbuttons verwenden `aria-label`. Spielwelt-Hover, sichtbare Rückmeldungen und Beschreibungstexte in den Inhaltsdaten bleiben erhalten; kein neues Info-System. [Tooltip-Bereinigung](tooltip-removal.md).
 
+Gebäudeaktionen liegen in der Simulation (`managedBuilding`, Reparaturauftrag/-status und Verkauf samt Erstattung). Die UI projiziert `#buildingActions` pro Frame nach der Kameraaktualisierung; die pausierende Verkaufsbestätigung hält nur eine Ziel-ID. Reparatur verwendet vorhandene Arbeiteraufträge, Verkauf die vorhandenen Kaufbelege und Produktionskosten; kein neues persistentes Teilsystem. Rechtsklick bleibt bis zur Entscheidung über Einheitenreparatur erhalten. [Gebäudeaktionen](mobile-building-actions.md).
+
 Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-layout` gerendert. Sein Design ist in `styles.css` auf diese Klassen begrenzt; `#menu:has(> .home-screen)` schaltet nur dort den bisherigen Menü-Hintergrund ab. Kampagne, Modals und HUD behalten ihre vorhandenen Templates und Styles. [Umsetzung und Prüfungen](home-redesign.md).
 
 ## Zustände und Speicherung

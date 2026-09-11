@@ -185,6 +185,117 @@ test('all six permanent fleet upgrades still apply to campaign operations but no
   }
 });
 
+test('building repair assigns only the nearest living own worker and repairs through normal travel/work', () => {
+  const { game } = tutorial(), b = player(game, 'barracks'); b.hp -= 100;
+  const workers = game.alive(e => e.team === 0 && e.type === 'worker');
+  const nearest = [...workers].sort((a, c) => Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
+  game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 2, 0);
+  game.spawnUnit('worker', b.x, b.z, 0, 0).hp = 0;
+  const before = new Map(workers.map(w => [w.id, json(w.order)])), alloy = game.s.alloy, x = nearest.x, z = nearest.z;
+  assert.equal(game.toggleBuildingRepair(b.id), true);
+  assert.deepEqual(Array.from(game.buildingRepairers(b.id), w => w.id), [nearest.id]);
+  close(game.s.alloy, alloy); assert.equal(b.hp, b.maxHp - 100);
+  for (const w of workers) if (w !== nearest) assert.deepEqual(json(w.order), before.get(w.id));
+  advance(game, 500);
+  assert.ok(Math.hypot(nearest.x-x,nearest.z-z) > 1, 'worker actually travelled');
+  assert.equal(b.hp, b.maxHp); assert.equal(game.buildingRepairers(b.id).length, 0);
+});
+
+test('repair toggle stops assigned workers; a dead worker is not automatically replaced', () => {
+  const { game } = tutorial(), b = player(game, 'barracks'); b.hp -= 100;
+  game.toggleBuildingRepair(b.id); const w = game.buildingRepairers(b.id)[0];
+  assert.equal(game.toggleBuildingRepair(b.id), true);
+  assert.equal(w.order.type, 'idle'); assert.equal(game.buildingRepairers(b.id).length, 0);
+  game.toggleBuildingRepair(b.id); w.hp = 0;
+  advance(game, 5); assert.equal(game.buildingRepairers(b.id).length, 0);
+  assert.equal(game.toggleBuildingRepair(b.id), true);
+  assert.notEqual(game.buildingRepairers(b.id)[0].id, w.id);
+});
+
+test('repair rejects no workers, no alloy, full hull and ineligible targets without changing state', () => {
+  for (const mode of ['workers', 'alloy', 'full', 'enemy', 'ally', 'foundation', 'unit', 'ward', 'dead', 'result', 'missing']) {
+    const { game } = tutorial(); let b = player(game, 'barracks'); b.hp -= 100;
+    if (mode === 'workers') for (const w of game.alive(e => e.team === 0 && e.type === 'worker')) w.hp = 0;
+    if (mode === 'alloy') game.s.alloy = .1;
+    if (mode === 'full') b.hp = b.maxHp;
+    if (mode === 'enemy') b.team = 1;
+    if (mode === 'ally') b.team = 2;
+    if (mode === 'foundation') b.progress = .5;
+    if (mode === 'unit') b = player(game, 'hero');
+    if (mode === 'ward') b = game.spawnBuilding('ward', 0, 0, 0, 0);
+    if (mode === 'dead') b.hp = 0;
+    if (mode === 'result') game.s.result = { win: true };
+    const id = mode === 'missing' ? -1 : b.id, before = json(game.snapshot());
+    assert.ok(game.canRepairBuilding(id), mode);
+    assert.equal(game.toggleBuildingRepair(id), false, mode);
+    assert.deepEqual(json(game.snapshot()), before, mode);
+  }
+});
+
+test('selling refunds actual paid value and all queued recruitment, removes navigation and stops repairs without combat/RNG effects', () => {
+  const { game } = tutorial(), b = player(game, 'barracks');
+  game.s.m.tier = 1; b.paid = { cost: 101, gas: 13 }; b.hp -= 100;
+  assert.equal(game.train('rifle', b.id), true); assert.equal(game.train('medic', b.id), true);
+  b.queue[0].progress = .8; game.toggleBuildingRepair(b.id);
+  const worker = game.buildingRepairers(b.id)[0], count = rifleCount(game), supply = game.supply(), stats = json(game.s.stats);
+  const alloy = game.s.alloy, gas = game.s.gas, refund = { cost: 225.5, gas: 41.5 };
+  assert.deepEqual(json(game.buildingSaleRefund(b.id)), refund);
+  assert.equal(game.world.blockedAt(b.x,b.z), true);
+  const random = game.random; game.random = () => { throw Error('Selling must not use RNG'); };
+  assert.equal(game.sellBuilding(b.id), true); game.random = random;
+  close(game.s.alloy, alloy + refund.cost); close(game.s.gas, gas + refund.gas);
+  assert.equal(game.get(b.id), null); assert.equal(b.queue.length, 0); assert.equal(worker.order.type, 'idle');
+  assert.equal(game.world.blockedAt(b.x,b.z), false); assert.equal(game.supply(), supply - 4);
+  assert.deepEqual(json(game.s.stats), stats);
+  const saved = game.snapshot(); assert.equal(game.sellBuilding(b.id), false);
+  assert.deepEqual(json(game.snapshot()), json(saved));
+  game.restore(saved); advance(game, 300);
+  assert.equal(rifleCount(game), count); assert.equal(game.get(b.id), null);
+});
+
+test('start structures sell for half their normal cost; supply loss keeps existing troops but blocks new recruitment', () => {
+  const { game } = tutorial(), depot = game.spawnBuilding('depot', -27, 61, 0, 0);
+  for (let i = 0; i < 10; i++) game.spawnUnit('rifle', -45, 35, 0, 0);
+  const supply = game.supply(), troops = rifleCount(game), cap = game.cap();
+  assert.deepEqual(json(game.buildingSaleRefund(depot.id)), { cost: 42.5, gas: 0 });
+  assert.equal(game.sellBuilding(depot.id), true);
+  assert.equal(game.cap(), cap - 16); assert.equal(game.supply(), supply); assert.equal(rifleCount(game), troops);
+  assert.equal(game.train('rifle'), false);
+});
+
+test('last completed HQ and ineligible buildings cannot be sold; an unfinished replacement HQ does not remove protection', () => {
+  const { game } = tutorial(), hq = player(game, 'hq');
+  const next = game.spawnBuilding('hq', -20, 60, 0, 0, { progress: .5 });
+  assert.match(game.canSellBuilding(hq.id), /Last command center/);
+  assert.equal(game.sellBuilding(hq.id), false);
+  next.progress = 1; assert.equal(game.sellBuilding(hq.id), true);
+  assert.match(game.canSellBuilding(next.id), /Last command center/);
+  for (const target of [player(game, 'hero'), game.alive(e => e.team === 1 && e.kind === 'building')[0],
+    game.spawnBuilding('depot', 0, 0, 2, 0), game.spawnBuilding('ward', 0, 0, 0, 0),
+    game.spawnBuilding('depot', 0, 0, 0, 0, { progress: .5 }), { id: -1 }]) {
+    const before = json(game.snapshot());
+    assert.equal(game.sellBuilding(target.id), false); assert.deepEqual(json(game.snapshot()), before);
+  }
+});
+
+test('selling a refinery frees its vent for a new foundation', () => {
+  const { game } = tutorial(); let p;
+  for (let z = 30; z < 80 && !p; z += 2) for (let x = -75; x < -25 && !p; x += 2)
+    if (!game.canBuild('refinery', {x,z})) p = {x,z};
+  assert.ok(p); assert.equal(game.build('refinery', p), true);
+  const b = player(game, 'refinery'); b.progress = 1; b.hp = b.maxHp;
+  assert.ok(game.canBuild('refinery', p)); assert.equal(game.sellBuilding(b.id), true);
+  assert.equal(game.canBuild('refinery', p), '');
+});
+
+test('current checkpoints preserve assigned building repair workers', () => {
+  const { game } = tutorial(), b = player(game, 'barracks'); b.hp -= 100;
+  game.toggleBuildingRepair(b.id); const id = game.buildingRepairers(b.id)[0].id;
+  const saved = game.snapshot(); game.restore(saved);
+  assert.deepEqual(Array.from(game.buildingRepairers(b.id), w => w.id), [id]);
+  advance(game, 500); assert.equal(game.get(b.id).hp, b.maxHp);
+});
+
 test('commands replace the current order, ignore enemies and set building rally points', () => {
   const { game, events } = tutorial();
   const hero = player(game, 'hero'), barracks = player(game, 'barracks');
