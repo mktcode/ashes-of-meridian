@@ -61,7 +61,6 @@ function setup() {
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
-    industryMultiplier: vm.runInContext('MeridianGame.prototype.industryMultiplier', context),
     get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
@@ -489,17 +488,31 @@ test('runtime and delivered HTML have no run persistence hooks or backup input',
 });
 
 test('permanent upgrades are free, bounded and persisted without altering the active battle', () => {
-  const h = setup(), keys = ['command','resolve','industry'];
+  const h = setup(), keys = ['startingWorkers'];
   h.ui.game.s.meta = {}; h.ui.game.s.alloy = 123; h.ui.game.s.gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
   h.ui.showArmory(); assert.match(h.ui.html, /∞ UPGRADE RESOURCES \/ TEST MODE/);
   assert.match(h.ui.html, /FREE · LEVEL 1/);
-  for (const key of keys) for (let i=0;i<5;i++) h.ui.buyUpgrade(key);
-  h.ui.buyUpgrade('not-an-upgrade'); h.ui.buyUpgrade('veterans'); h.ui.buyUpgrade('logistics'); h.ui.buyUpgrade('stores');
-  assert.deepEqual(h.ui.profile.upgrades, Object.fromEntries(keys.map(k=>[k,3])));
-  assert.equal(h.calls.length, 9); assert.equal('credits' in h.ui.profile, false);
+  assert.match(h.ui.html, /Starting workers/);
+  assert.doesNotMatch(h.ui.html, /Command uplink|Command resolve|Frontier assembly/);
+  for (const key of keys) for (let i=0;i<7;i++) h.ui.buyUpgrade(key);
+  for (const key of ['not-an-upgrade', 'veterans', 'logistics', 'stores', 'command', 'resolve', 'industry']) h.ui.buyUpgrade(key);
+  assert.deepEqual(h.ui.profile.upgrades, { startingWorkers: 5 });
+  assert.equal(h.calls.length, 5); assert.equal('credits' in h.ui.profile, false);
   assert.deepEqual([h.ui.game.s.alloy,h.ui.game.s.gas,h.ui.game.s.meta], [123,45,{}]);
-  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 3);
+  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 1);
+});
+
+test('battle setup and help describe starting workers and unchanged starting resources', () => {
+  const h = setup();
+  for (let level = 0; level <= 5; level++) {
+    h.ui.profile.upgrades.startingWorkers = level;
+    h.ui.showBattle();
+    assert.match(h.document.getElementById('menu').innerHTML, new RegExp(`HQ \\+ ${level} WORKERS`));
+  }
+  h.ui.showHelp();
+  assert.match(h.ui.html, /0–5 workers/); assert.match(h.ui.html, /250 alloy \/ 0 aether/);
+  assert.doesNotMatch(h.ui.html, /only your headquarters/);
 });
 
 test('campaign navigation, tutorial and ending APIs are removed; battle restart uses only battle options', () => {
@@ -683,13 +696,14 @@ test('global type icons aggregate parallel/waiting orders, keep DOM stable and s
   assert.equal(buttons().length, 0);
 });
 
-test('queue remaining time uses the current industry level without changing progress or waiting state', () => {
+test('starting workers do not affect queue duration, progress or waiting state', () => {
   const h = setup(), g = h.ui.game;
   g.s.entities = [{ id: 1, team: 0, kind: 'building', queue: [
     { type: 'rifle', progress: .2, time: 100 }, { type: 'medic', progress: 0, time: 10 }
   ] }];
-  for (const [level, remaining] of [[undefined, '80s'], [0, '80s'], [1, '73s'], [2, '67s'], [3, '62s']]) {
-    g.s.meta = level === undefined ? {} : { industry: level };
+  for (const level of [0, 1, 2, 3, 4, 5]) {
+    const remaining = '80s';
+    g.s.meta = { startingWorkers: level };
     const before = JSON.stringify(g.s);
     h.ui.updateQueues();
     const [rifle, medic] = h.document.getElementById('productionQueue').querySelectorAll('[data-queue-type]');

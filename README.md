@@ -4,7 +4,7 @@ Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fra
 
 ## Spielen
 
-Neue Gefechte starten nur mit dem Hauptgebäude, **250 Alloy und 0 Aether**. Das reicht exakt für fünf Worker zu je 50 Alloy. Ohne Worker gibt es kein Alloy, ohne Raffinerie kein Aether; den ersten Worker über **Infanterie** rekrutieren.
+Neue Gefechte starten mit dem Hauptgebäude und je nach permanentem Upgrade **0–5 Workern**. **250 Alloy und 0 Aether** bleiben auf jeder Stufe erhalten; das reicht für fünf weitere Worker zu je 50 Alloy. Ohne Startworker den ersten über **Infanterie** rekrutieren. Worker bauen automatisch Alloy ab, Raffinerien liefern Aether.
 
 `index.html` direkt in einem Browser mit WebGL 2 öffnen. Alle lokalen JavaScript-Dateien und `styles.css` müssen neben dem HTML bleiben; die separaten Bildquellen ebenfalls mitführen. Die Laufzeittexturen sind in `renderer.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket.
 
@@ -14,7 +14,7 @@ Neue Gefechte starten nur mit dem Hauptgebäude, **250 Alloy und 0 Aether**. Das
 - Portrait-Deck: links die Minimap auf halber Bildschirmbreite; rechts **Gebäude / Infanterie / Fahrzeuge / Flugzeuge** und Untermenüs mit **Zurück**. Arbeiter und Kommandant stehen unter Infanterie.
 - Fertige eigene Gebäude: **Sell**, **Repair / Stop repair** und **Rally point** im rechten Menü. Reparatur braucht einen Arbeiter; Verkauf erfolgt nach Bestätigung. Fähigkeiten bleiben in der Leiste darüber verfügbar.
 - Queue-Symbole links über der Minimap zählen offene Aufträge je Einheitentyp. Der kreisförmige Fortschritt zeigt die nächste Fertigstellung; Tap storniert einen Auftrag.
-- **Fleet Upgrades** sind zum Testen kostenlos bis Stufe 3 und wirken in neuen Gefechten. Alloy/Aether bleiben begrenzt; noch keine erspielbare Upgrade-Währung.
+- **Fleet Upgrades → Starting workers**: kostenlos bis Stufe 5, ein zusätzlicher Startworker pro Stufe. Wirkt erst im nächsten Gefecht oder Neustart. Alloy/Aether bleiben begrenzt; noch keine erspielbare Upgrade-Währung.
 
 Weitere Regeln und offene Punkte: [Spiel und Bedienung](docs/gameplay.md).
 

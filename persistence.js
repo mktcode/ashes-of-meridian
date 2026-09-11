@@ -45,8 +45,8 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
       try {
         let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
         if (p && p.version === 1) {
-          d.upgrades = p.upgrades || {};
-          for (let k in upgrades) d.upgrades[k] = clamp(Number(d.upgrades[k]) || 0, 0, upgrades[k].max);
+          for (let k in upgrades)
+            d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
           for (let key of Object.keys(d.settings))
             if (Object.hasOwn(p.settings || {}, key)) d.settings[key] = p.settings[key];
           d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);

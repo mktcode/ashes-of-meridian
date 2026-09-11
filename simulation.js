@@ -22,7 +22,8 @@
           biome = BIOMES[opts.biome] ? opts.biome : 'ash',
           savedMeta = this.profile.upgrades || {},
           meta = Object.fromEntries(
-            Object.keys(META).filter(key => Object.hasOwn(savedMeta, key)).map(key => [key, savedMeta[key]])
+            Object.keys(META).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
+              [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
           ),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.s = {
@@ -51,7 +52,7 @@
         this.fogClock = 0;
         this.objectiveClock = 0;
         let s = this.s;
-        // Build the economy from the HQ; even the first worker must be recruited.
+        // The base starts with an HQ; upgrade workers are added after the seeded setup.
         this.spawnBuilding('hq', HOME.x, HOME.z, 0, faction);
         // Keep the former default loadout's RNG entry point for crystal amounts and enemy spawns.
         for (let i = 0; i < 24; i++) this.random();
@@ -81,10 +82,16 @@
             if (!p) throw new Error('No free space for starting units.');
             Object.assign(e, p);
           }
+        // Add bonus workers only after the original layout and enemy RNG draws.
+        for (let i = 0; i < (meta.startingWorkers || 0); i++)
+          if (!this.spawnUnit('worker', HOME.x - 7, HOME.z - 4 + i * 2, 0, faction))
+            throw new Error('No free space for starting workers.');
         this.rehash();
         this.world.reveal(s.entities);
         this.emit('start', {});
-        this.emit('radio', 'Expedition command|Recruit your first worker from Infanterie to establish your economy, then destroy the enemy command center.');
+        this.emit('radio', meta.startingWorkers
+          ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
+          : 'Expedition command|Recruit your first worker from Infanterie to establish your economy, then destroy the enemy command center.');
         return s;
       }
       spawn(kind, type, x, z, team, faction = 0, extra = {}) {
@@ -95,7 +102,6 @@
           if (faction === 1) hp *= 0.9;
           if (faction === 2) hp *= 0.85;
           if (faction === 0 && ['tank', 'artillery'].includes(type)) hp *= 1.15;
-          if (team === 0 && type === 'hero') hp += (s.meta.resolve || 0) * 150;
         }
         let e = {
           id: s.nextId++,
@@ -345,9 +351,6 @@
           this.alive(e => e.team === 0 && e.kind === 'building' && e.type === type && e.progress >= 1)
             .length > 0
         );
-      }
-      industryMultiplier() {
-        return 1 + (this.s.meta.industry || 0) * 0.1;
       }
       availableProducers(buildingType) {
         return this.alive(e => e.team === 0 && e.kind === 'building' &&
@@ -910,7 +913,7 @@
           }
           e.rot = angleLerp(e.rot, Math.atan2(b.x - e.x, b.z - e.z), dt * 5);
           if (b.progress < 1) {
-            let rate = (dt / BUILDINGS[b.type].time) * this.industryMultiplier();
+            let rate = dt / BUILDINGS[b.type].time;
             let old = b.progress;
             b.progress = Math.min(1, b.progress + rate);
             b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);
@@ -1019,7 +1022,7 @@
         if (!this.s || this.s.result) return;
         let s = this.s;
         s.time += dt;
-        s.energy = Math.min(200, s.energy + dt * 0.8 * (1 + (s.meta.command || 0) * 0.15));
+        s.energy = Math.min(200, s.energy + dt * 0.8);
         this.rehash();
         if (this.navDirty) {
           this.world.rebuild(s.entities);
@@ -1056,7 +1059,7 @@
             if (e.progress < 1) continue;
             if (e.queue.length) {
               let q = e.queue[0];
-              q.progress = Math.min(1, q.progress + (dt / q.time) * this.industryMultiplier());
+              q.progress = Math.min(1, q.progress + dt / q.time);
               if (q.progress >= 1) {
                 let u = this.produceUnit(e, q.type);
                 if (!u) continue; // Keep the paid order until there is room at the exit.

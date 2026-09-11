@@ -281,23 +281,11 @@ const ABILITIES = {
   drop: { energy: 95, cd: 75 }
 };
 const META = {
-  command: {
-    name: 'Command uplink',
-    icon: 'energy',
-    desc: 'Command energy regenerates 15% faster per level.',
-    max: 3
-  },
-  resolve: {
-    name: 'Command resolve',
-    icon: 'hero',
-    desc: 'Your commander starts with 150 additional maximum hull per level.',
-    max: 3
-  },
-  industry: {
-    name: 'Frontier assembly',
-    icon: 'factory',
-    desc: 'Construction and recruitment are 10% faster per level.',
-    max: 3
+  startingWorkers: {
+    name: 'Starting workers',
+    icon: 'worker',
+    desc: 'Start each new battle with one additional worker per level, up to five. Starting resources are unchanged.',
+    max: 5
   }
 };
 const BIOMES = {

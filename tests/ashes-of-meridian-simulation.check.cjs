@@ -505,55 +505,91 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
 });
 
-test('remaining fleet upgrades apply to new battles without providing starting units', () => {
+test('starting worker levels 0–5 preserve seeded setup and place free, spaced workers for every faction and biome', () => {
+  for (const faction of [0, 1, 2]) for (const biome of ['ash', 'rust', 'choir', 'court', 'star']) {
+    const { game } = createGame(), opts = { seed: 1409, faction, biome };
+    game.start(opts);
+    const original = json(game.s.entities), terrain = Array.from(game.world.staticGrid),
+      samples = Array.from({ length: 6 }, () => game.random());
+    for (let level = 0; level <= 5; level++) {
+      game.profile.upgrades = { startingWorkers: level };
+      game.start(opts);
+      const workers = game.alive(e => e.team === 0 && e.type === 'worker');
+      assert.equal(workers.length, level);
+      assert.deepEqual([game.s.alloy, game.s.gas, game.supply(), game.cap()], [250, 0, level, 24]);
+      assert.equal(player(game, 'hq').queue.length, 0);
+      assert.equal(game.s.stats.trained, 0);
+      assert.deepEqual(json(game.s.entities.filter(e => e.team !== 0 || e.kind === 'building')), original);
+      assert.deepEqual(Array.from(game.world.staticGrid), terrain);
+      assert.equal(game.random(), samples[level], 'only one normal spawn RNG draw per bonus worker');
+      for (const [i, w] of workers.entries()) {
+        assert.equal(w.faction, faction); assert.equal(w.cd, samples[i] * .5);
+        assert.equal(w.hp, w.maxHp); assert.equal(w.order.type, 'idle');
+        assert.equal(w.exit, undefined); assert.ok(game.unitFits(w, w.x, w.z));
+        assert.ok(Math.hypot(w.x + 51, w.z - 49) < 24);
+      }
+      assertUnitSpacing(game);
+    }
+  }
+});
+
+test('starting worker upgrades affect only the next battle and reproduce on restart', () => {
+  const { game } = createGame(), opts = { seed: 9897, faction: 1, biome: 'rust' };
+  game.profile.upgrades = { startingWorkers: 2 }; game.start(opts);
+  const before = json(game.s);
+  game.profile.upgrades.startingWorkers = 5;
+  assert.deepEqual(json(game.s), before);
+  game.start(opts);
+  assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
+  assert.deepEqual(json(game.s.meta), { startingWorkers: 5 });
+  assert.notStrictEqual(game.s.meta, game.profile.upgrades);
+  const restarted = json(game.s);
+  game.start(opts); assert.deepEqual(json(game.s), restarted);
+});
+
+test('starting worker count is an integer bounded to 0–5 even for direct profile input', () => {
   const { game } = createGame();
-  const meta = { command: 1, resolve: 1, industry: 1 };
-  game.profile.upgrades = meta; game.start({ seed: 1409 });
-  assert.deepEqual(json(game.s.meta), meta); assert.notStrictEqual(game.s.meta, meta);
-  assert.deepEqual([game.s.alloy,game.s.gas],[250,0]);
-  assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
-  game.s.alloy=1000; game.s.gas=1000; game.s.energy = 0;
-  assert.equal(game.train('hero'), true); advance(game, 10);
-  close(game.s.energy, .5 * .8 * 1.15);
-  close(player(game, 'hq').queue[0].progress, .5 / player(game, 'hq').queue[0].time * 1.1);
-  advance(game, 1000); assert.equal(player(game, 'hero').maxHp, 1000);
+  for (const [value, count] of [[-2, 0], ['3.9', 3], [99, 5], ['bad', 0]]) {
+    game.profile.upgrades = { startingWorkers: value }; game.start({ seed: 90001 });
+    assert.equal(game.s.meta.startingWorkers, count);
+    assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, count);
+  }
+});
+
+test('five starting workers begin mining and deliver alloy without recruitment for every faction', () => {
+  for (const faction of [0, 1, 2]) {
+    const { game } = createGame(); game.profile.upgrades = { startingWorkers: 5 };
+    game.start({ seed: 1409, faction, biome: 'rust' });
+    advance(game, 1200);
+    assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
+    assert.ok(game.s.alloy > 250); assert.ok(game.s.stats.gathered > 0);
+    assert.ok(game.alive(e => e.team === 0 && e.type === 'worker').every(w => w.order.type === 'mine'));
+    assert.equal(game.s.gas, 0); assert.equal(player(game, 'hq').queue.length, 0);
+    assert.equal(game.canBuild('barracks'), '');
+  }
+});
+
+test('retired command, resolve and industry upgrades no longer change energy, hull or production and construction rates', () => {
+  const { game } = createGame();
+  game.profile.upgrades = { command: 3, resolve: 3, industry: 3 };
   game.start({ seed: 1409 });
-  assert.deepEqual(json(game.s.meta), meta); assert.deepEqual([game.s.alloy,game.s.gas],[250,0]);
-  assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
-});
-
-test('industry multiplier reads current run upgrades without mutation or RNG', () => {
-  const { game } = createGame();
-  game.random = () => { throw Error('Industry multiplier must not consume RNG'); };
-  for (const [level, expected] of [[undefined, 1], [0, 1], [1, 1.1], [2, 1.2], [3, 1.3]]) {
-    game.s = { meta: level === undefined ? {} : { industry: level } };
-    const before = json(game.s);
-    assert.equal(game.industryMultiplier(), expected);
-    assert.deepEqual(json(game.s), before);
-  }
-});
-
-test('industry levels 0–3 retain construction and both teams’ recruitment rates', () => {
-  for (const [level, multiplier] of [[0, 1], [1, 1.1], [2, 1.2], [3, 1.3]]) {
-    const { game } = freshBattle();
-    game.s.meta.industry = level;
-    assert.equal(game.train('worker'), true);
-    const own = player(game, 'hq'), enemy = game.alive(e => e.team === 1 && e.type === 'hq')[0];
-    enemy.queue.push({ type: 'worker', progress: 0, time: 9, cost: 50, gas: 0 });
-    game.step(.5);
-    for (const b of [own, enemy]) close(b.queue[0].progress, .5 / 9 * multiplier);
-    const foundation = game.spawnBuilding('depot', -35, 40, 0, 0, { progress: .1 }),
-      worker = game.spawnUnit('worker', -35, 40, 0, 0);
-    foundation.hp = foundation.maxHp * .1;
-    worker.x = foundation.x; worker.z = foundation.z;
-    game.setOrder(worker, { type: 'build', id: foundation.id });
-    game.worker(worker, .5);
-    close(foundation.progress, .1 + .5 / 16 * multiplier);
-    close(foundation.hp, foundation.maxHp * foundation.progress);
-    foundation.progress = .999; foundation.hp = foundation.maxHp * .999;
-    game.worker(worker, .5);
-    assert.equal(foundation.progress, 1); assert.equal(foundation.hp, foundation.maxHp);
-  }
+  assert.deepEqual(json(game.s.meta), {});
+  game.s.energy = 0;
+  assert.equal(game.train('worker'), true);
+  const own = player(game, 'hq'), enemy = game.alive(e => e.team === 1 && e.type === 'hq')[0];
+  enemy.queue.push({ type: 'worker', progress: 0, time: 9, cost: 50, gas: 0 });
+  game.step(.5);
+  close(game.s.energy, .5 * .8);
+  for (const b of [own, enemy]) close(b.queue[0].progress, .5 / 9);
+  assert.equal(game.spawnUnit('hero', -35, 45, 0, 0).maxHp, 850);
+  const foundation = game.spawnBuilding('depot', -35, 40, 0, 0, { progress: .1 }),
+    worker = game.spawnUnit('worker', -35, 40, 0, 0);
+  foundation.hp = foundation.maxHp * .1;
+  worker.x = foundation.x; worker.z = foundation.z;
+  game.setOrder(worker, { type: 'build', id: foundation.id });
+  game.worker(worker, .5);
+  close(foundation.progress, .1 + .5 / 16);
+  close(foundation.hp, foundation.maxHp * foundation.progress);
 });
 
 test('building repair assigns only the nearest living own worker and repairs through normal travel/work', () => {

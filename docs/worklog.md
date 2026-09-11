@@ -2,13 +2,17 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Permanentes Startworker-Upgrade
+
+- Command, Resolve und Industry samt Spieleffekten durch `Starting workers` ersetzt: kostenlos zum Testen, Stufen 0–5, ein sofort verfügbarer Worker je Stufe. 250 Alloy / 0 Aether bleiben erhalten; Wirkung nur bei neuem Gefecht/Neustart. Profil lädt nur aktuelle, begrenzte Ganzzahlstufen; alte Schlüssel werden verworfen, nicht migriert. Menü, Startanzeige, Funkhinweis und Hilfe angepasst.
+- Bonusworker werden nach dem ursprünglichen Welt-/Gegneraufbau auf freien Plätzen nahe dem HQ erzeugt. Ressourcen/Gegner behalten ihre Seedwerte; je Worker kommt nur der reguläre Spawn-RNG-Aufruf hinzu. Keine Änderungen an Terrain, Kollisionsradien oder Fixtures.
+- **203 Node-Tests bestanden** (abschließend rund 21 s bei parallelem Browsercheck). Unter anderem alle sechs Stufen × drei Fraktionen × fünf Biome, Abstände, RNG-Verbrauch, automatischer Abbau, Upgrade-Übernahme/Neustart, Speicherung und entfernte Boni geprüft. Syntax, Diff und lokale Dokumentationslinks geprüft.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: native Käufe bis Stufe 5, Maximalsperre, Starts mit 0/1/5 Workern, zusätzliche bezahlte Rekrutierung, Reload und Neustart bestanden; 60 Simulationssekunden Abbau kontrolliert durchlaufen. Upgrade-/Gefechtsbilder angesehen; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät- oder Langzeitbalancing-Nachweis.
+
 ## Produktionsabfrage, Industriefaktor und HUD-Signatur
 
-- `availableProducers(buildingType)` bündelt den unveränderten Filter für Rekrutierung und HUD. Sortierung nach Queue-Länge/Gebäude-ID bleibt in `train()`; keine neuen Regeln oder RNG-Aufrufe. Das UI-Testdouble verwendet die echte Abfragemethode.
-- **14 gezielte Node-Tests bestanden**, einschließlich neuer Prüfung für Ausschlussfälle, Entitätsreihenfolge und mutations-/RNG-freie Abfrage.
-- `industryMultiplier()` bündelt den unveränderten Faktor für Bau, Produktion und Queue-Restzeit; Rechenreihenfolge und bisherige Anwendung auf beide Produktionsteams bleiben erhalten. **7 gezielte Node-Tests bestanden**, darunter drei neue Tests für Stufen 0–3, fehlendes Upgrade, Bau-/Produktionsraten, Restzeit und mutations-/RNG-freies Lesen.
-- Ungenutzten Parameter `force` aus `updateHUD()` und `true` an allen sieben Aufrufstellen entfernt; Aktualisierungszeitpunkte unverändert.
-- Abschließend **200 Node-Tests bestanden** (rund 13 s) über alle drei getrennten Refactorings. Syntax, Diff und lokale Dokumentationslinks geprüft; keine Fixtures geändert. Kein neuer Browsercheck, da Eingabeabläufe, Markup, Layout und Darstellung unverändert bleiben.
+- In drei separaten Refactorings Produktionsfilter für Simulation/HUD und damaligen Industriefaktor gebündelt sowie ungenutztes `updateHUD(force)` bereinigt. Sortierung, Rechenreihenfolge und Aktualisierungszeitpunkte blieben gleich. Der Industriefaktor wurde mit dem obigen Upgrade-Wechsel wieder entfernt.
+- Damals **200 Node-Tests bestanden** (rund 13 s), nach 14 beziehungsweise 7 gezielten Tests. Syntax, Diff und Links geprüft; keine Fixtures geändert. Kein Browsercheck für diese verhaltensneutralen Refactorings.
 
 ## Fähigkeitsdefinitionen, Minimap-Koordinaten und HUD-Versorgung
 

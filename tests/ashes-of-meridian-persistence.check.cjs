@@ -32,38 +32,42 @@ function setup(data = new Map()) {
 test('profile defaults are complete, fresh and do not write storage', () => {
   const h = setup(), a = h.readProfile(), b = h.readProfile();
   assert.deepEqual(json(a), defaults);
-  a.settings.music = false; a.upgrades.command = 3;
+  a.settings.music = false; a.upgrades.startingWorkers = 3;
   assert.deepEqual(json(b), defaults);
   assert.ok(h.trace.every(([kind]) => kind === 'get'));
 });
 
-test('profile normalization preserves current coercions and fractional values but only accepts known settings', () => {
+test('profile normalization keeps only current integer upgrade levels and known settings', () => {
   const h = setup();
   h.data.set(PROFILE, JSON.stringify({ version: 1, unlocked: 19, credits: '12.5',
-    medals: [3], best: 'invalid', upgrades: { command: 9, stores: -1, industry: '1.5', extra: 8 },
+    medals: [3], best: 'invalid', upgrades: { startingWorkers: '3.9', command: 9, resolve: 3, stores: -1, industry: '1.5', extra: 8 },
     ending: 'open', skirmishBest: -4, settings: { volume: '0.6', quality: 1.5, difficulty: 'missing', music: 'yes', extra: 9 } }));
   assert.deepEqual(json(h.readProfile()), { ...defaults,
-    upgrades: { command: 3, stores: -1, industry: 1.5, extra: 8, resolve: 0 },
+    upgrades: { startingWorkers: 3 },
     settings: { ...defaults.settings, volume: 0.6, quality: 1.5, music: 'yes' } });
 });
 
-test('invalid profile JSON/version resets; a mid-normalization error retains partial changes', () => {
+test('invalid profile JSON/version resets; malformed upgrade values become zero and counts are bounded', () => {
   const h = setup();
   for (const text of ['{', 'null', '[]', '{"version":2}', '{"version":"1"}']) {
     h.data.set(PROFILE, text); assert.deepEqual(json(h.readProfile()), defaults);
   }
   h.data.set(PROFILE, '{"version":1,"unlocked":4,"credits":17,"upgrades":"bad"}');
-  assert.deepEqual(json(h.readProfile()), { ...defaults, upgrades: 'bad' });
-  assert.equal(h.warnings.length, 2);
+  assert.deepEqual(json(h.readProfile()), { ...defaults, upgrades: { startingWorkers: 0 } });
+  for (const [value, expected] of [[-2, 0], [99, 5], ['bad', 0], [null, 0]]) {
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, upgrades: { startingWorkers: value } }));
+    assert.equal(h.readProfile().upgrades.startingWorkers, expected);
+  }
+  assert.equal(h.warnings.length, 1);
   assert.ok(h.warnings.every(w => w[0] === 'Profile reset:'));
 });
 
 test('permanent upgrades and settings persist across instances using only the unchanged profile key', () => {
   const data = new Map([['meridian.operation.v3', '{"version":3,"entities":[]}']]);
-  const h = setup(data); h.ui.profile.upgrades.command = 2; h.ui.profile.settings.quality = 0; h.ui.persist();
+  const h = setup(data); h.ui.profile.upgrades.startingWorkers = 2; h.ui.profile.settings.quality = 0; h.ui.persist();
   assert.deepEqual(h.trace, [['set', PROFILE, JSON.stringify(h.ui.profile)]]);
   const reloaded = setup(data);
-  assert.equal(reloaded.ui.profile.upgrades.command, 2); assert.equal(reloaded.ui.profile.settings.quality, 0);
+  assert.equal(reloaded.ui.profile.upgrades.startingWorkers, 2); assert.equal(reloaded.ui.profile.settings.quality, 0);
   reloaded.readProfile(); assert.deepEqual(reloaded.trace, [['get', PROFILE]]);
   assert.equal(data.get('meridian.operation.v3'), '{"version":3,"entities":[]}', 'old run data is ignored, not migrated');
   assert.deepEqual(Object.keys(h.service).sort(), ['available','loadProfile','saveProfile']);
@@ -72,20 +76,20 @@ test('permanent upgrades and settings persist across instances using only the un
 
 test('denied storage getter keeps only a volatile profile; new instances lose the fallback', () => {
   const h = setup(); h.fail.access = true;
-  h.ui.profile.upgrades.command = 2;
+  h.ui.profile.upgrades.startingWorkers = 2;
   assert.equal(h.service.saveProfile(h.ui.profile), false);
-  assert.equal(h.readProfile().upgrades.command, 2); assert.equal(h.service.available, false);
+  assert.equal(h.readProfile().upgrades.startingWorkers, 2); assert.equal(h.service.available, false);
   const other = setup(); other.fail.access = true;
   assert.deepEqual(json(other.readProfile()), defaults);
 });
 
 test('write failure with successful reads still prefers the native profile; availability stays sticky', () => {
-  const h = setup(); h.data.set(PROFILE, JSON.stringify({ ...defaults, upgrades: { command: 1 } }));
-  h.ui.profile.upgrades.command = 2; h.fail.set = true;
+  const h = setup(); h.data.set(PROFILE, JSON.stringify({ ...defaults, upgrades: { startingWorkers: 1 } }));
+  h.ui.profile.upgrades.startingWorkers = 2; h.fail.set = true;
   assert.equal(h.service.saveProfile(h.ui.profile), false);
-  assert.equal(h.readProfile().upgrades.command, 1);
-  h.fail.get = true; assert.equal(h.readProfile().upgrades.command, 2);
-  h.fail.get = false; assert.equal(h.readProfile().upgrades.command, 1);
+  assert.equal(h.readProfile().upgrades.startingWorkers, 1);
+  h.fail.get = true; assert.equal(h.readProfile().upgrades.startingWorkers, 2);
+  h.fail.get = false; assert.equal(h.readProfile().upgrades.startingWorkers, 1);
   assert.equal(h.service.available, false);
 });
 

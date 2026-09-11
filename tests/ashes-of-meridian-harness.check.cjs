@@ -30,7 +30,9 @@ test('content loads alone with reference catalog order, classic bindings and nam
   }
   assert.equal(vm.runInContext('typeof CAMPAIGN + typeof ACTS', context), 'undefinedundefined');
   assert.strictEqual(context.icon, icon);
-  assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 3]);
+  assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 1]);
+  assert.deepEqual(Array.from(Object.keys(META)), ['startingWorkers']);
+  assert.equal(META.startingWorkers.max, 5);
   assert.equal(vm.runInContext('typeof TECH', context), 'undefined');
   assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero']);
   assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
