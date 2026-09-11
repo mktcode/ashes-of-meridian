@@ -1,11 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { loadScripts } = require('./helpers/game-scripts.cjs');
+const { RENDERER_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 
 // API orchestration and shader-source contracts only: no GPU/GLSL execution in Node.
 test('metal/bio sampling uses scaled mesh-local positions and normals, not world coordinates', () => {
-  const context = loadScripts(['renderer']);
+  const context = loadScripts(RENDERER_SCRIPTS);
   const { VERT, FRAG } = vm.runInContext('({VERT, FRAG})', context);
   assert.ok(VERT.includes('vec3 textureScale=max(vec3(length(a_model[0].xyz),length(a_model[1].xyz),length(a_model[2].xyz)),vec3(.00001));'));
   assert.ok(VERT.includes('v_modelPos=a_pos*textureScale;'));
@@ -22,7 +22,7 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.))'));
 });
 function setup(options = {}) {
-  const context = loadScripts(['renderer'], { globals: {
+  const context = loadScripts(RENDERER_SCRIPTS, { globals: {
     innerWidth: 800, innerHeight: 600, devicePixelRatio: 2
   } });
   const Renderer = vm.runInContext('MeridianRenderer', context), calls = [];

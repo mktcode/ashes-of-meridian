@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 const { populateBase } = require('./helpers/populated-battle.cjs');
 
@@ -13,7 +13,7 @@ const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 
 function createGame() {
-  const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], {
     scripts, globals: { structuredClone },
   });
   vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness in simulation test"); }', context);

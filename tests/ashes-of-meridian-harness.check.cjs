@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
-const { SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
 const sample = `
@@ -47,6 +47,19 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.equal(buildingName('unknown-building'), 'unknown-building');
   assert.equal(icon('unknown-icon'), icon('hero'));
   assert.match(icon('worker'), /^<svg viewBox="0 0 24 24".*<path d="M8 15l-4 5/);
+});
+
+test('renderer fragments expose the existing bindings and class API in document order', () => {
+  const expectedFiles = RENDERER_SCRIPTS.map(name => `src/renderer/${name.replace('renderer-', '')}.js`),
+    scripts = readScripts(), context = loadScripts(RENDERER_SCRIPTS, { scripts });
+  assert.deepEqual(
+    scripts.filter(script => RENDERER_SCRIPTS.includes(script.name)).map(script => script.filename),
+    expectedFiles
+  );
+  assert.equal(vm.runInContext('typeof MAT + ":" + typeof MERIDIAN_TEXTURES + ":" + typeof geom', context), 'object:object:object');
+  assert.equal(vm.runInContext('typeof VERT + ":" + typeof FRAG + ":" + typeof MeridianRenderer', context), 'string:string:function');
+  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianRenderer.prototype).length', context), 24);
+  assert.equal(vm.runInContext('Object.keys(MeridianRenderer.prototype).length', context), 0);
 });
 
 test('simulation fragments assemble the existing non-enumerable MeridianGame API in document order', () => {

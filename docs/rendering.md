@@ -2,7 +2,7 @@
 
 ## Texturen und `file://`
 
-- `src/renderer.js` enthält `MERIDIAN_TEXTURES` mit drei Bodentexturen und der Skybox als Data-URLs. Kein externer Bildabruf zum Spielen nötig; lokale WebGL-Uploads dürfen keine gelockerten Sicherheitsflags erfordern.
+- `src/renderer/assets.js` enthält `MERIDIAN_TEXTURES` mit drei Bodentexturen und der Skybox als Data-URLs. `geometry.js`, `shaders.js` und `runtime.js` ergänzen den Renderer in synchroner HTML-Reihenfolge. Kein externer Bildabruf zum Spielen nötig; lokale WebGL-Uploads dürfen keine gelockerten Sicherheitsflags erfordern.
 - `skybox.webp` und `texture-floor-*.png` bleiben gepflegte Bildquellen. Die Skybox-Einbettung muss bytegleich zur WebP-Datei sein (Terrain-Test). Für Boden-PNGs gibt es keinen automatischen Abgleich. Bildänderungen und Einbettungen bewusst gemeinsam pflegen, keine scheinbar redundanten Assets löschen.
 - Skybox: nicht wiederholt, seitenverhältnistreuer Cover-Shader, Clamp-to-edge, dunkler Ersatz bis zum asynchronen Upload. Kein Server als Ausweichlösung für fehlgeschlagene `file://`-Uploads.
 - Metall/Bio verwenden skalierte Mesh-Lokalkoordinaten und lokale Textur-Normalen. Muster folgen Translation/Drehung; echte Skalierung erhält die Detaildichte. Bezug pro Mesh-Teil, keine garantierte Nahtlosigkeit zwischen Teilen. Boden und Felsen bleiben weltprojiziert.

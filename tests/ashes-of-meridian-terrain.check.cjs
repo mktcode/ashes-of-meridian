@@ -5,11 +5,11 @@ const { createHash } = require('node:crypto');
 const vm = require('node:vm');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
-const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { RENDERER_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
 const scripts = readScripts();
-const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view'], { scripts });
+const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view'], { scripts });
 const { geom, Battlefield, BattlefieldView, MAT } = vm.runInContext('({geom, Battlefield, BattlefieldView, MAT})', context);
 
 test('embedded skybox preserves the maintained WebP bytes and is wired as a non-repeating texture', () => {
@@ -20,7 +20,7 @@ test('embedded skybox preserves the maintained WebP bytes and is wired as a non-
   assert.deepEqual(image, readFileSync(join(__dirname, '../skybox.webp')));
   assert.equal(image.toString('ascii', 0, 4), 'RIFF');
   assert.equal(image.toString('ascii', 8, 12), 'WEBP');
-  assert.ok(scripts.find(s => s.name === 'renderer').source.includes(
+  assert.ok(scripts.find(s => s.name === 'renderer-runtime').source.includes(
     'this.loadTexture(this.skyTex, MERIDIAN_TEXTURES.sky, false);'
   ));
 });

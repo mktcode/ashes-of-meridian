@@ -11,7 +11,10 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 | Datei | Zuständigkeit / Einstieg |
 | --- | --- |
 | `src/core.js` | Matrizen, Vektoren und Seed-RNG: `M4`, `V`, `seeded` |
-| `src/renderer.js` | WebGL 2, Meshes, Materialien, eingebettete Texturen und Renderpässe: `MeridianRenderer` |
+| `src/renderer/assets.js` | Materialkennungen und eingebettete Laufzeittexturen: `MAT`, `MERIDIAN_TEXTURES` |
+| `src/renderer/geometry.js` | Prozedurale Mesh-Erzeugung: `geom` |
+| `src/renderer/shaders.js` | GLSL-Quellen für Szene, Schatten, Himmel und Postprocessing |
+| `src/renderer/runtime.js` | WebGL-2-Ressourcen und Renderpässe: `MeridianRenderer` |
 | `src/content.js` | `FACTIONS`, `UNITS`, `BUILDINGS`, `ABILITIES`, `META`, `BIOMES`, Icons und Namenshelfer |
 | `src/world.js` | CPU-Terrain, Hindernisraster, Navigation und Sichtbarkeit: `Battlefield` |
 | `src/world-view.js` | GPU-Terrain/Fog und Entitätsmodelle: `BattlefieldView`, `renderEntity` |
@@ -33,6 +36,7 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 
 ## Schnittstellen und Zustände
 
+- Die vier Renderer-Fragmente teilen weiterhin globale lexikalische Bindungen und werden in der dokumentierten Reihenfolge synchron geladen: Assets/Materialien, Geometrie, Shader, Laufzeit. `MeridianRenderer` bleibt eine klassische globale Klassenbindung; es gibt keine Laufzeit-Imports.
 - `Battlefield(seed, biome)` benötigt keinen Renderer. `renderData` enthält Layout-/Farbdaten; seine Objektidentität dient als Layout-Revision, `fogVersion` als Sicht-Revision. `BattlefieldView.sync(world)` lädt Änderungen in die GPU, ohne die Welt zu mutieren.
 - `MeridianGame(profile, emit, createEffects)` besitzt Welt und Effekte, keinen Renderer. `src/simulation/game.js` deklariert die Klasse und registriert mit `defineMeridianGameMethods` die Methoden aus allen fünf synchron geladenen Simulationsdateien als nicht aufzählbare Prototypmethoden. Die Reihenfolge der fünf `data-meridian-script`-Tags ist Teil des Ladevertrags; es gibt weiterhin keine Laufzeit-Imports. `app` synchronisiert die Welt vor dem Start-Ereignis an die UI und vor dem Zeichnen. Simulation und Effekte laufen in festen 0,05-s-Schritten, UI/Rendering pro Frame.
 - `game.s` enthält den ausschließlich flüchtigen Run-Zustand mit Entitäten, Ressourcen, Kamera und `seed`, `biome`, `faction`, `enemy`, `meta`. `start(opts = {})` startet ohne Missionsdefinition mit einem eigenen HQ und 0–5 Workern aus `meta.startingWorkers`. Nur bekannte Upgrade-Stufen werden als begrenzte Ganzzahlen aus dem Profil kopiert; Änderungen wirken erst beim nächsten Start. 24 reservierte RNG-Samples erhalten den bisherigen Standard-Einstieg für Ressourcenmengen und Gegneraufstellung. Bonusworker werden erst nach der ursprünglichen Gegnerplatzierung per `spawnUnit` nahe dem HQ auf freien Plätzen ergänzt: ein zusätzlicher regulärer Spawn-RNG-Aufruf je Worker, kein neuer Platzierungs-RNG. Der Startbestand ist fest 250 Alloy / 0 Aether; Worker kosten bei allen Fraktionen 50 Alloy. Das HQ erzeugt keine passiven Rohstoffe, reguläres Alloy-/Aether-Einkommen liefern nur Worker beziehungsweise Raffinerien. Einheiten besitzen genau einen aktuellen `order`; Produktionsgebäude eigene `queue`s. `availableProducers(buildingType)` liefert Simulation und HUD dieselben verfügbaren Produktionsgebäude in Entitätsreihenfolge. `train(type)` verteilt globale Rekrutierungsaufträge auf die kürzeste passende Queue (Gleichstand: Gebäude-ID), unabhängig von der Auswahl. Aufträge bleiben bis Spawn/Abbruch am zugewiesenen Gebäude.

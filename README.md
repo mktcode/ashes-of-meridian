@@ -6,7 +6,7 @@ Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fra
 
 Neue Gefechte starten mit dem Hauptgebäude und je nach permanentem Upgrade **0–5 Workern**. **250 Alloy und 0 Aether** bleiben auf jeder Stufe erhalten; das reicht für fünf weitere Worker zu je 50 Alloy. Ohne Startworker den ersten über **Infanterie** rekrutieren. Worker bauen automatisch Alloy ab, Raffinerien liefern Aether.
 
-`index.html` direkt in einem Browser mit WebGL 2 öffnen. Die JavaScript-Quellen unter `src/`, `styles.css` und die separaten Bildquellen müssen mitgeführt werden. Die Laufzeittexturen sind in `src/renderer.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket.
+`index.html` direkt in einem Browser mit WebGL 2 öffnen. Die JavaScript-Quellen unter `src/`, `styles.css` und die separaten Bildquellen müssen mitgeführt werden. Die Laufzeittexturen sind in `src/renderer/assets.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket.
 
 - Kamera: mit einem Finger ziehen, Pinch-to-Zoom, Zoom-/Basisknöpfe oder Minimap.
 - Auswahl: einmal tippen; zweimal für sichtbare eigene Einheiten desselben Typs; dreimal für sichtbare eigene Nicht-Worker. Jeweils weniger als 330 ms zwischen den Releases.

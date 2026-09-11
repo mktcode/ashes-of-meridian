@@ -3,6 +3,12 @@ const { join, relative, isAbsolute, sep } = require('node:path');
 const vm = require('node:vm');
 
 const projectRoot = join(__dirname, '../..');
+const RENDERER_SCRIPTS = Object.freeze([
+  'renderer-assets',
+  'renderer-geometry',
+  'renderer-shaders',
+  'renderer-runtime'
+]);
 const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-game',
   'simulation-movement',
@@ -80,4 +86,4 @@ function loadScripts(names, { scripts = readScripts(), globals = {} } = {}) {
   return context;
 }
 
-module.exports = { SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };
+module.exports = { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };

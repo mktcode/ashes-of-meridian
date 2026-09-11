@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fixture = require('./fixtures/presentation-v1.json');
 const { worldSample, effectSample } = require('./helpers/presentation-scenario.cjs');
 const vm = require('node:vm');
-const { SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 for (const { seed, biome, ...expected } of fixture.worlds) {
   test(`world presentation/navigation reference: ${seed} (${biome})`, () => {
@@ -26,7 +26,7 @@ test('world and simulation start and step without renderer, geometry or browser 
 });
 
 test('world view uploads only changed layout/fog and does not mutate CPU data', () => {
-  const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view']);
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
   const { Battlefield, BattlefieldView } = vm.runInContext('({Battlefield, BattlefieldView})', context);
   const world = new Battlefield(1409, 'rust'), renderer = createRendererStub();
   let meshes = 0, fogs = 0;
@@ -43,7 +43,7 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
 });
 
 test('produced aircraft rise smoothly from the hangar without changing draw state or RNG', () => {
-  const context=loadScripts(['core','renderer','content','world','world-view']);
+  const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world','world-view']);
   vm.runInContext('Math.random = () => { throw Error("Draw RNG"); }',context);
   const render=vm.runInContext('renderEntity',context), renderer=createRendererStub({record:true});
   const unit={id:1,hp:245,kind:'unit',type:'air',team:0,faction:0,size:1,x:0,z:0,rot:0,
