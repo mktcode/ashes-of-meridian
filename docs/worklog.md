@@ -2,6 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Kleine zusammengehörige Schritte bündeln; ältere Einträge regelmäßig verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Rallypoint nur über das Aktionsmenü
+
+- Automatische Rally-Zuweisung durch Bewegungs-/Kontextbefehle entfernt. Normale Boden-Taps/-Klicks und Minimap-Rechtsklick wählen Gebäude ab; Kamera-Gesten und explizite Rally-Zielauswahl bleiben erhalten.
+- **175 Node-Tests bestanden**, feste Referenzen unverändert; `git diff --check` sauber. Gezielter `file://`-Check in Chromium, 390×844/Performance: native Gebäudeauswahl, Touch-/Maus-Abwahl, Rally-Button/Zielbestätigung und Minimap-Rechtsklick bestanden, keine erfassten Fehler. Kontrollierte angehaltene Simulation, kein Echtgerätetest.
+
 ## Portrait-Deck und globale Rekrutierung
 
 - Aufklärer aus Katalog, Fraktionsnamen/Icon, Modell, Startaufgebot, Vorschau und Wellen entfernt. Sein Wellenanteil wird Rifle, Startversorgung −2; ein reserviertes Spawn-RNG-Sample erhält Kristallmengen. Alte Aufklärer in Entitäten oder Queues werden beim Laden abgewiesen, keine Migration.

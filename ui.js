@@ -797,7 +797,8 @@
               z: ((e.clientY - r.top) / r.height) * 180 - 90
             };
           if (e.button === 2) {
-            this.game.command(
+            if (this.selectedBuilding()) this.select([]);
+            else this.game.command(
               this.selected,
               { type: 'move', ...p }
             );
@@ -1000,7 +1001,8 @@
         p.z = clamp(p.z, -86, 86);
         if (d.type === 'touch' && d.moved) return;
         if (d.button === 2) {
-          this.game.command(
+          if (this.selectedBuilding()) this.select([]);
+          else this.game.command(
             this.selected,
             target
               ? { type: 'smart', id: target.id, x: target.x, z: target.z }
@@ -1014,6 +1016,10 @@
           return;
         }
         if (d.moved) return;
+        if (this.selectedBuilding() && (!target || target.team !== 0)) {
+          this.select([]);
+          return;
+        }
         if (d.type === 'touch' && this.selected.length && (!target || target.team !== 0)) {
           this.game.command(
             this.selected,

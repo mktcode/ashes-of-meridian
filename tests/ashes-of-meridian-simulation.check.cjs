@@ -47,7 +47,7 @@ const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').l
 function checkpointScenario(game) {
   const hero = player(game, 'hero'), barracks = player(game, 'barracks');
   game.command([hero.id], { type: 'move', x: -10, z: 32 });
-  game.command([barracks.id], { type: 'move', x: -35, z: 48 });
+  barracks.rally = { x: -35, z: 48 };
   assert.equal(game.train('rifle'), true);
   assert.equal(game.ability('scan', { x: 20, z: -20 }), true);
   // Camera position is normally assigned by the UI, which is not executed here.
@@ -106,7 +106,7 @@ test('only enemy HQ destruction wins; loss of the last own HQ loses, without sta
   }
 });
 
-test('ground attack-move preserves mixed formations, worker movement and building rally', () => {
+test('ground attack-move preserves mixed formations and worker movement without setting building rally', () => {
   const { game } = battle();
   const rifle = game.spawnUnit('rifle', 0, 0, 0, 0), worker = game.spawnUnit('worker', 1, 0, 0, 0);
   const hq = game.alive(e => e.team === 0 && e.type === 'hq')[0];
@@ -114,7 +114,7 @@ test('ground attack-move preserves mixed formations, worker movement and buildin
   assert.equal(rifle.order.type,'attackMove'); assert.equal(worker.order.type,'move');
   close(rifle.order.x,9.15); close(worker.order.x,10.85);
   assert.equal(rifle.order.z,20); assert.equal(worker.order.z,20);
-  assert.deepEqual(json(hq.rally),{x:10,z:20});
+  assert.equal(hq.rally, undefined);
   const crystal = game.alive(e => e.kind === 'resource' && e.type === 'crystal')[0];
   game.command([worker.id], {type:'smart',id:crystal.id,x:crystal.x,z:crystal.z});
   assert.deepEqual(json(worker.order),{type:'mine',id:crystal.id});
@@ -311,7 +311,7 @@ test('current checkpoints preserve assigned building repair workers', () => {
   advance(game, 500); assert.equal(game.get(b.id).hp, b.maxHp);
 });
 
-test('commands replace the current order, ignore enemies and set building rally points', () => {
+test('commands replace unit orders, ignore enemies and never change building rally points', () => {
   const { game, events } = battle();
   const hero = player(game, 'hero'), barracks = player(game, 'barracks');
   const enemy = game.alive(e => e.team === 1 && e.kind === 'unit')[0];
@@ -335,8 +335,14 @@ test('commands replace the current order, ignore enemies and set building rally 
   game.command([hero.id], { type: 'stop' });
   assert.deepEqual(json(hero.order), { type: 'stop' });
   assert.equal('orders' in hero, false);
-  game.command([barracks.id], move);
-  assert.deepEqual(json(barracks.rally), { x: -10, z: 32 });
+  barracks.rally = { x: 5, z: 6 };
+  const before = json(barracks), count = events.length;
+  for (const order of [move, {type:'attackMove',x:20,z:30}, {type:'smart',id:hero.id,x:30,z:40}]) {
+    game.command([barracks.id], order);
+    game.setOrder(barracks, order);
+    assert.deepEqual(json(barracks), before);
+  }
+  assert.equal(events.length, count);
 });
 
 test('new construction assigns one worker, pays once and still completes normally', () => {
@@ -469,7 +475,7 @@ test('removed scout cannot be recruited and no faction starts or deploys it in w
 test('fixed steps finish production once, retain reserved supply and account for HQ income and mining deliveries', () => {
   const { game, events } = battle();
   const barracks = player(game, 'barracks');
-  game.command([barracks.id], { type: 'move', x: -35, z: 48 });
+  barracks.rally = { x: -35, z: 48 };
   assert.equal(game.train('rifle'), true);
   advance(game, 200);
   assert.equal(rifleCount(game), 7);

@@ -460,13 +460,7 @@
         return true;
       }
       setOrder(e, order) {
-        if (e.kind === 'building') {
-          if (e.team === 0 && ['move', 'attackMove'].includes(order.type)) {
-            e.rally = { x: order.x, z: order.z };
-            this.emit('rally', e.rally);
-          }
-          return;
-        }
+        if (e.kind === 'building') return;
         e.order = { ...order };
         e.target = null;
         e.path = [];
@@ -508,7 +502,7 @@
                 o = { type: 'follow', id: target.id };
               else o = { type: 'move', x: order.x, z: order.z };
             }
-          } else if (o.type === 'smart') o = { type: 'move', x: order.x, z: order.z };
+          }
           this.setOrder(e, o);
         }
         if (mobile.length)

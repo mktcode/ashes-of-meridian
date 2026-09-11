@@ -548,6 +548,49 @@ test('repair restrictions and Stop repair remain visible in the fixed menu', () 
   assert.doesNotMatch(html(), /data-action="repair" disabled/); assert.match(html(), /Stop repair/);
 });
 
+test('building ground taps/clicks only deselect, including right-click and foundations', () => {
+  for (const pointerType of ['touch','mouse']) for (const button of [0,2])
+    for (const progress of [.5,1]) for (const target of [null,{id:99,team:1,kind:'unit',type:'rifle',x:30,z:40}]) {
+      const h = buildingPanel(); h.UI.prototype.bind.call(h.ui);
+      h.ui.select = h.UI.prototype.select;
+      h.b.progress = progress; h.b.rally = {x:5,z:6}; h.ui.pick = () => target;
+      h.pointer('pointerdown',200,200,{pointerType,button});
+      h.pointer('pointerup',200,200,{pointerType,button});
+      assert.deepEqual(Array.from(h.ui.selected), []); assert.equal(h.ui.tab,'root');
+      assert.deepEqual(h.b.rally,{x:5,z:6}); assert.deepEqual(h.calls,[]);
+    }
+});
+
+test('building camera gestures and own-target selection do not set rally; minimap right-click deselects', () => {
+  const h = buildingPanel(); h.UI.prototype.bind.call(h.ui); h.ui.select = h.UI.prototype.select;
+  h.pointer('pointerdown',200,200); h.pointer('pointermove',240,230); h.pointer('pointerup',240,230);
+  assert.deepEqual(Array.from(h.ui.selected),[7]); assert.equal(h.b.rally,undefined);
+  h.pointer('pointerdown',100,100,{target:h.minimap}); h.pointer('pointerup',100,100,{target:h.minimap});
+  assert.deepEqual(Array.from(h.ui.selected),[7]); assert.equal(h.b.rally,undefined);
+  h.pointer('pointerdown',100,100,{target:h.minimap,pointerType:'mouse',button:2});
+  h.pointer('pointerup',100,100,{target:h.minimap,pointerType:'mouse',button:2});
+  assert.deepEqual(Array.from(h.ui.selected),[]); assert.deepEqual(h.calls,[]);
+  const own = {id:8,kind:'unit',type:'worker',team:0,hp:100}; h.ui.game.s.entities.push(own);
+  h.ui.select([7]); h.ui.pick = () => own;
+  h.pointer('pointerdown',200,200); h.pointer('pointerup',200,200);
+  assert.deepEqual(Array.from(h.ui.selected),[8]); assert.equal(h.b.rally,undefined);
+});
+
+test('only the Rally point button arms placement; a following normal tap deselects without changing it', () => {
+  for (const mini of [false,true]) {
+    const h = buildingPanel(); h.UI.prototype.bind.call(h.ui);
+    h.ui.select = h.UI.prototype.select; h.ui.setMode = h.UI.prototype.setMode;
+    h.click({action:'rally'}); assert.equal(h.ui.mode.kind,'rally');
+    const options = {target:mini ? h.minimap : h.world};
+    h.pointer('pointerdown',100,100,options); h.pointer('pointerup',100,100,options);
+    assert.ok(h.b.rally); assert.equal(h.ui.mode,null); assert.deepEqual(Array.from(h.ui.selected),[7]);
+    const rally = JSON.stringify(h.b.rally);
+    h.pointer('pointerdown',200,200); h.pointer('pointerup',200,200);
+    assert.equal(JSON.stringify(h.b.rally),rally); assert.deepEqual(Array.from(h.ui.selected),[]);
+    assert.deepEqual(h.calls,[]);
+  }
+});
+
 test('all completed own buildings expose rally; foundations cannot set it and Back cancels targeting', () => {
   for (const type of ['hq','barracks','factory','hangar','depot','refinery','turret']) {
     const h = buildingPanel(); h.b.type = type;
