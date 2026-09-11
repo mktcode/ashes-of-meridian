@@ -5,6 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
 
+const UI_SCRIPTS = ['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation'];
+const UI_FILES = UI_SCRIPTS.map(name => `src/ui/${name.replace('ui-', '')}.js`);
+
 function setup() {
   const target = () => ({
     handlers: {}, style: { setProperty(key, value) { this[key] = value; } }, classList: {
@@ -41,7 +44,7 @@ function setup() {
   };
   const window = target();
   let now = 0;
-  const context = loadScripts(['core', 'content', 'world', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime', 'ui'], { globals: {
+  const context = loadScripts(['core', 'content', 'world', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime', ...UI_SCRIPTS], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00'
   } });
@@ -481,7 +484,7 @@ test('victory and defeat offer only restart and main menu; an ended run cannot b
 });
 
 test('runtime and delivered HTML have no run persistence hooks or backup input', () => {
-  for(const file of ['src/app.js','src/ui.js','src/simulation/game.js','src/simulation/movement.js','src/simulation/economy.js','src/simulation/combat.js','src/simulation/runtime.js','src/persistence.js','index.html']) {
+  for(const file of ['src/app.js', ...UI_FILES, 'src/simulation/game.js','src/simulation/movement.js','src/simulation/economy.js','src/simulation/combat.js','src/simulation/runtime.js','src/persistence.js','index.html']) {
     const source=fs.readFileSync(path.join(__dirname,'..',file),'utf8');
     assert.doesNotMatch(source,/checkpoint|lastSaveTime|importFile|exportBackup|importBackup|serializeBackup|parseBackup|beforeunload|operation\.v[0-9]/i,file);
   }
@@ -548,7 +551,7 @@ test('tooltips and native title hints are removed without removing pointer press
   h.document.handlers.pointerup(); assert.equal(h.ui.domPressed, false);
   h.document.handlers.pointerdown({ target: { closest: () => null } });
   assert.equal(h.ui.domPressed, false);
-  for (const file of ['src/ui.js', 'index.html', 'styles.css']) {
+  for (const file of [...UI_FILES, 'index.html', 'styles.css']) {
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
     assert.doesNotMatch(source, /tooltip|tt-cost|\stitle=["']|\.title\s*=/i, file);
   }

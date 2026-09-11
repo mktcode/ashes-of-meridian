@@ -24,7 +24,11 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 | `src/simulation/runtime.js` | Simulationsschritt, Wellen, Ziele, Fähigkeiten, Ergebnis und `formatTime` |
 | `src/audio.js` | Prozedurales Web Audio: `MeridianAudio` |
 | `src/persistence.js` | Permanentes Profil, Normalisierung und Storage-Ersatz: `createMeridianPersistence` |
-| `src/ui.js` | Menüs, HUD, Pointer-Eingabe, Kamera, Overlays und Profileinstellungen: `MeridianUI` |
+| `src/ui/core.js` | `MeridianUI`, DOM-Helfer sowie Spielereignisse und Meldungen |
+| `src/ui/screens.js` | Hauptmenü, Dialoge, Einstellungen, Hilfe, Upgrades und Ergebnis |
+| `src/ui/actions.js` | Auswahl, Aktionsleiste, Gebäudeaktionen, Produktionsqueues und HUD |
+| `src/ui/input.js` | DOM-Bindung, Pointer-/Touch-Eingabe, Picking und Zielbestätigung |
+| `src/ui/presentation.js` | UI-Tick, Minimap und projizierte Gefechts-Overlays |
 | `src/app.js` | Verdrahtung, Spielschleife, Vorschau und Szenendarstellung; stellt `window.Meridian` bereit |
 
 ## Schnittstellen und Zustände
@@ -41,7 +45,7 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 - `ABILITIES` in `src/content.js` hält Energiekosten und Cooldowns; Simulation und HUD lesen die Kosten aus derselben Definition. Zielprüfung und Fähigkeitseffekte bleiben in der Simulation.
 - Gebäudeaktionen prüfen Zulässigkeit, Arbeiterauftrag und Erstattung in der Simulation. Die UI zeigt sie im festen rechten Portrait-Menü und hält die bestätigte Verkaufs-Ziel-ID; kein projiziertes Gebäude-Panel. Menüzustand, Tap-Folge und offene Dialoge sind flüchtig.
 - Die Queue-Leiste aggregiert vorhandene Gebäude-Queues je Einheitentyp. Stabile DOM-Buttons erhalten pro Frame den aus der Simulation abgeleiteten Winkel, Zähler und Restzeit. Keine zweite Warteschlange oder CSS-Zeitbasis. Bau-/Rekrutierungstempo und Restzeitanzeige verwenden die Basiszeiten ohne permanente Tempoboni.
-- `MeridianUI(game, renderer, audio, profile, persistence)` orchestriert Bedienung und permanente Profileinstellungen. `showHome()`-Styles sind auf `.home-screen`/`.home-layout` begrenzt. `window.Meridian` bietet Runtime-Inspektion; globale `const`-/`class`-Bindungen sind nicht automatisch `window`-Eigenschaften.
+- `MeridianUI(game, renderer, audio, profile, persistence)` orchestriert Bedienung und permanente Profileinstellungen. `src/ui/core.js` deklariert die Klasse; `defineMeridianUIMethods` registriert die Methoden aus den fünf synchron geladenen UI-Skripten mit den ursprünglichen nicht aufzählbaren Deskriptoren. Ihre Reihenfolge ist wie bei den Simulationsfragmenten Teil des Ladevertrags. `showHome()`-Styles sind auf `.home-screen`/`.home-layout` begrenzt. `window.Meridian` bietet Runtime-Inspektion; globale `const`-/`class`-Bindungen sind nicht automatisch `window`-Eigenschaften.
 
 ## Speicherung
 
@@ -55,5 +59,5 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 ## Schutzgrenzen und offene Architekturfragen
 
 - Terrain-RNG wird auch für kosmetische Platzierungen verwendet; Effekte verbrauchen teilweise den Simulations-RNG. Reihenfolge, Kollisionsradien und [feste Referenzen](reference-tests.md) schützen, nicht beiläufig korrigieren.
-- UI und Einstiegspunkt haben weiterhin breite Aufgaben; Entitäten/Ereignisse sind untypisiert und Skriptreihenfolge ist Teil des Vertrags. Weitere Entkopplung, TypeScript oder Build-Werkzeuge sind **nicht beauftragt** und keine Voraussetzung für neue Spielfunktionen.
+- UI-Klasse und Einstiegspunkt haben trotz fachlich getrennter Quelldateien weiterhin breite Aufgaben; Entitäten/Ereignisse sind untypisiert und Skriptreihenfolge ist Teil des Vertrags. Weitere Entkopplung, TypeScript oder Build-Werkzeuge sind **nicht beauftragt** und keine Voraussetzung für neue Spielfunktionen.
 - Aktuelle Spielregeln und zurückgestellte Entscheidungen: [Spiel und Bedienung](gameplay.md). Renderer-/Asset-Verträge: [Grafik](rendering.md). Prüfverfahren: [Tests](testing.md).

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
 
+const UI_SCRIPTS = ['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation'];
 const PROFILE = 'meridian.profile.v1';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
@@ -12,7 +13,7 @@ const defaults = {
 
 function setup(data = new Map()) {
   const trace = [], fail = {}, warnings = [];
-  const context = loadScripts(['core', 'content', 'persistence', 'ui']);
+  const context = loadScripts(['core', 'content', 'persistence', ...UI_SCRIPTS]);
   const service = vm.runInContext('createMeridianPersistence', context)({
     getStorage() {
       if (fail.access) throw Error('storage getter denied');
@@ -108,7 +109,7 @@ test('persistence is standalone, lazy and uses injected profile rules', () => {
 });
 
 test('UI constructor needs only profile persistence, with no storage or run codec globals', () => {
-  const context = loadScripts(['ui'], { globals: { innerWidth: 800, innerHeight: 600 } });
+  const context = loadScripts(UI_SCRIPTS, { globals: { innerWidth: 800, innerHeight: 600 } });
   const UI = vm.runInContext('MeridianUI', context), calls = [];
   class TestUI extends UI { bind() {} }
   const service = { saveProfile: p => calls.push(['profile', p]) }, profile = json(defaults);

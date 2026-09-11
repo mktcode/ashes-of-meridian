@@ -1,0 +1,369 @@
+    /* MeridianUI DOM, pointer and targeting input. Loaded after ui/core.js. */
+    'use strict';
+    defineMeridianUIMethods({
+      bind() {
+        document.addEventListener('pointerdown', e => {
+          this.audio.unlock();
+          this.domPressed = !!e.target.closest('button,select,input');
+        });
+        document.addEventListener('pointerup', () => (this.domPressed = false));
+        document.addEventListener('pointercancel', () => (this.domPressed = false));
+        document.addEventListener('click', e => {
+          let b = e.target.closest('button');
+          if (!b || b.disabled) return;
+          if (b.dataset.ui) {
+            this.uiAction(b.dataset.ui);
+            return;
+          }
+          if (b.dataset.faction !== undefined) {
+            this.battleFaction = +b.dataset.faction;
+            document
+              .querySelectorAll('[data-faction]')
+              .forEach(a => a.classList.toggle('active', +a.dataset.faction === this.battleFaction));
+            $('factionTrait').textContent = FACTIONS[this.battleFaction].trait;
+            return;
+          }
+          if (b.dataset.upgrade) {
+            this.buyUpgrade(b.dataset.upgrade);
+            return;
+          }
+          if (b.dataset.action) {
+            if (!this.paused) this.perform(b.dataset.action);
+            return;
+          }
+          if (b.dataset.queueType && !this.paused && !this.game.s?.result) {
+            this.cancelRecruitment(b.dataset.queueType);
+            this.updateHUD();
+            return;
+          }
+          if (b.dataset.cam) {
+            if (b.dataset.cam === 'home') this.homeCamera();
+            else if (this.game.s)
+              this.game.s.cam.zoom = clamp(
+                this.game.s.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18),
+                32,
+                115
+              );
+          }
+        });
+        document.addEventListener('change', e => {
+          if (e.target.dataset.setting) this.applySetting(e.target);
+          if (e.target.id === 'settingSpeed' && this.game.s) this.game.s.speed = +e.target.value;
+        });
+        document.addEventListener('input', e => {
+          if (e.target.dataset.setting === 'volume') this.applySetting(e.target);
+        });
+        $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
+        $('battleHome').onclick = () => this.pause();
+        $('helpBtn').onclick = () => this.showHelp();
+        $('soundBtn').onclick = () => {
+          let muted = !this.profile.settings.sfx;
+          this.profile.settings.sfx = muted;
+          this.profile.settings.music = muted;
+          this.audio.updateSettings();
+          this.persist();
+          $('soundBtn').textContent = muted ? '♫' : '♪';
+          this.toast(muted ? 'Audio enabled.' : 'Audio muted.');
+        };
+        $('radioClose').onclick = () => {
+          $('radio').classList.add('hidden');
+          this.radioUntil = 0;
+        };
+        window.addEventListener('blur', () => {
+          this.domPressed = false;
+          this.drag = null;
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden && this.view === 'game' && !this.game.s?.result) {
+            this.pause();
+          }
+        });
+        const c = $('world');
+        c.addEventListener('contextmenu', e => e.preventDefault());
+        c.addEventListener('pointerdown', e => this.pointerDown(e));
+        c.addEventListener('pointermove', e => this.pointerMove(e));
+        c.addEventListener('pointerup', e => this.pointerUp(e));
+        c.addEventListener('pointercancel', () => {
+          this.lastClick = {};
+          this.drag = null;
+          this.touchPoints.clear();
+          this.touchGesture = false;
+        });
+        c.addEventListener('pointerleave', () => {
+          this.pointer.inside = false;
+          if (!this.drag) this.hover = null;
+        });
+        c.style.touchAction = 'none';
+        let map = $('minimap');
+        map.style.touchAction = 'none';
+        map.addEventListener('contextmenu', e => e.preventDefault());
+        const minimapPosition = e => {
+          let r = map.getBoundingClientRect();
+          return {
+            x: ((e.clientX - r.left) / r.width) * 180 - 90,
+            z: ((e.clientY - r.top) / r.height) * 180 - 90
+          };
+        };
+        let miniDrag = false;
+        map.addEventListener('pointerdown', e => {
+          if (this.paused || this.view !== 'game') return;
+          e.preventDefault();
+          let p = minimapPosition(e);
+          if (e.button === 2) {
+            if (this.selectedBuilding()) this.select([]);
+            else this.game.command(
+              this.selected,
+              { type: 'move', ...p }
+            );
+            this.clearMode();
+          } else if (this.mode) {
+            if (this.mode.kind === 'build') {
+              this.toast('Place foundations in the main battlefield view.');
+              return;
+            }
+            this.applyTarget(p);
+          } else {
+            this.center(p.x, p.z);
+            miniDrag = true;
+            map.setPointerCapture(e.pointerId);
+          }
+        });
+        map.addEventListener('pointermove', e => {
+          if (!miniDrag) return;
+          let p = minimapPosition(e);
+          this.center(p.x, p.z);
+        });
+        map.addEventListener('pointerup', () => (miniDrag = false));
+        map.addEventListener('pointercancel', () => (miniDrag = false));
+      },
+      uiAction(action) {
+        this.audio.sound('select');
+        switch (action) {
+          case 'home':
+            this.showHome();
+            break;
+          case 'battle':
+            this.showBattle();
+            break;
+          case 'startBattle':
+            this.startBattle();
+            break;
+          case 'armory':
+            this.showArmory();
+            break;
+          case 'settings':
+            this.showSettings();
+            break;
+          case 'help':
+            this.showHelp();
+            break;
+          case 'resume':
+            this.resume();
+            break;
+          case 'closeModal':
+            this.closeModal();
+            break;
+          case 'confirmSale':
+            this.finishBuildingSale(true);
+            break;
+          case 'cancelSale':
+            this.finishBuildingSale(false);
+            break;
+          case 'cancelTarget':
+            this.clearMode();
+            this.renderActions();
+            break;
+          case 'restartConfirm':
+            this.openModal(
+              'confirm',
+              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Start this operation again?</h1><p>Your current deployment will be replaced. Permanent upgrades are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
+            );
+            break;
+          case 'backPause':
+            this.showPause();
+            break;
+          case 'restart': {
+            let s = this.game.s;
+            this.game.start({ faction: s.faction, seed: s.seed, biome: s.biome, enemy: s.enemy });
+            break;
+          }
+        }
+      },
+      pick(sx, sy) {
+        let best = null,
+          score = Infinity;
+        for (let e of this.game.s.entities) {
+          if (e.hp <= 0) continue;
+          if (e.team === 1 && !this.game.visible(e)) continue;
+          if (e.team === -1 && !this.game.world.explored[this.game.world.idx(e.x, e.z)]) continue;
+          let y =
+              e.type === 'air' ? 4.4 : e.kind === 'building' ? 2.0 : 1,
+            p = this.R.project(e.x, y, e.z);
+          if (!p) continue;
+          let edge = this.R.project(e.x + e.size, y, e.z),
+            r = Math.max(e.kind === 'unit' ? 12 : 16, edge ? Math.abs(edge.x - p.x) : 18),
+            dx = (sx - p.x) / (r + 5),
+            dy = (sy - p.y) / (r * 0.9 + 8),
+            d = dx * dx + dy * dy;
+          if (d < 1.4 && d + (e.kind === 'unit' ? -0.1 : 0) < score) {
+            score = d;
+            best = e;
+          }
+        }
+        return best;
+      },
+      pointerDown(e) {
+        if (this.view !== 'game' || this.paused) return;
+        e.preventDefault();
+        if (e.button === 1) return;
+        this.pointer = { x: e.clientX, y: e.clientY, inside: true };
+        if (e.pointerType === 'touch') {
+          this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (this.touchPoints.size === 2) {
+            let a = [...this.touchPoints.values()];
+            this.pinchDist = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+            this.touchGesture = true;
+            return;
+          }
+        }
+        $('world').setPointerCapture(e.pointerId);
+        this.drag = {
+          sx: e.clientX,
+          sy: e.clientY,
+          x: e.clientX,
+          y: e.clientY,
+          button: e.button,
+          type: e.pointerType,
+          moved: false
+        };
+      },
+      pointerMove(e) {
+        this.pointer = { x: e.clientX, y: e.clientY, inside: e.target === $('world') };
+        if (this.view !== 'game' || this.paused) return;
+        if (e.pointerType === 'touch' && this.touchPoints.has(e.pointerId)) {
+          this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (this.touchPoints.size === 2) {
+            let a = [...this.touchPoints.values()],
+              d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+            if (this.pinchDist > 0)
+              this.game.s.cam.zoom = clamp(
+                (this.game.s.cam.zoom * this.pinchDist) / Math.max(10, d),
+                32,
+                115
+              );
+            this.pinchDist = d;
+            return;
+          }
+        }
+        if (this.drag) {
+          let drag = this.drag;
+          if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
+          if (drag.type === 'touch' && drag.moved) {
+            let a = this.R.ground(drag.x, drag.y),
+              b = this.R.ground(e.clientX, e.clientY);
+            this.center(this.game.s.cam.x + a.x - b.x, this.game.s.cam.z + a.z - b.z);
+          }
+          drag.x = e.clientX;
+          drag.y = e.clientY;
+        } else {
+          this.hover = this.pick(e.clientX, e.clientY)?.id || null;
+          if (!this.mode) {
+            let t = this.game.get(this.hover);
+            $('world').style.cursor = t ? (t.team === 1 ? 'crosshair' : 'pointer') : 'default';
+          }
+        }
+      },
+      pointerUp(e) {
+        let previousClick = this.lastClick;
+        this.lastClick = {};
+        if (e.pointerType === 'touch') this.touchPoints.delete(e.pointerId);
+        if (this.touchGesture) {
+          if (!this.touchPoints.size) {
+            this.touchGesture = false;
+            this.drag = null;
+          }
+          return;
+        }
+        if (this.view !== 'game' || this.paused) {
+          this.drag = null;
+          return;
+        }
+        let d = this.drag;
+        this.drag = null;
+        if (!d) return;
+        let p = this.R.ground(e.clientX, e.clientY),
+          target = this.pick(e.clientX, e.clientY);
+        p.x = clamp(p.x, -86, 86);
+        p.z = clamp(p.z, -86, 86);
+        if (d.type === 'touch' && d.moved) return;
+        if (d.button === 2) {
+          if (this.selectedBuilding()) this.select([]);
+          else this.game.command(
+            this.selected,
+            target
+              ? { type: 'smart', id: target.id, x: target.x, z: target.z }
+              : { type: 'move', ...p }
+          );
+          this.clearMode();
+          return;
+        }
+        if (this.mode) {
+          if (!d.moved) this.applyTarget(p);
+          return;
+        }
+        if (d.moved) return;
+        if (this.selectedBuilding() && (!target || target.team !== 0)) {
+          this.select([]);
+          return;
+        }
+        if (d.type === 'touch' && this.selected.length && (!target || target.team !== 0)) {
+          this.game.command(
+            this.selected,
+            target ? { type: 'smart', id: target.id, x: target.x, z: target.z } : { type: 'attackMove', ...p }
+          );
+          return;
+        }
+        if (target) {
+          let now = performance.now(),
+            count = previousClick.id === target.id && previousClick.type === d.type &&
+              now - previousClick.time < 330 ? Math.min(3, previousClick.count + 1) : 1;
+          if (count >= 2 && target.team === 0 && target.kind === 'unit') {
+            let combat = d.type === 'touch' && count === 3,
+              units = this.game
+              .alive(e => e.team === 0 && e.kind === 'unit' &&
+                (combat ? e.type !== 'worker' : e.type === target.type))
+              .filter(e => {
+                let q = this.R.project(e.x, 1, e.z);
+                return q && q.x > 0 && q.x < innerWidth &&
+                  q.y > $('topbar').getBoundingClientRect().bottom &&
+                  q.y < $('abilityBar').getBoundingClientRect().top;
+              });
+            this.select(units.map(e => e.id));
+          } else this.select([target.id]);
+          this.lastClick = { id: target.id, time: now, type: d.type, count };
+        } else this.select([]);
+      },
+      applyTarget(p) {
+        if (!this.mode) return;
+        let m = this.mode,
+          success = true;
+        if (m.kind === 'build') success = this.game.build(m.arg, p, this.selected);
+        else if (m.kind === 'ability') success = this.game.ability(m.arg, p);
+        else if (m.kind === 'rally') {
+          let list = this.selected
+            .map(id => this.game.get(id))
+            .filter(
+              e =>
+                e?.team === 0 &&
+                e.kind === 'building' &&
+                e.progress >= 1
+            );
+          if (!list.length) {
+            this.toast('Select a completed own structure before setting a rally point.');
+            success = false;
+          } else for (let e of list) e.rally = { ...p };
+        }
+        if (success) this.clearMode();
+        this.updateHUD();
+      }
+    });

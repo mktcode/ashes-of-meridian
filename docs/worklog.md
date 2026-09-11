@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Fachlich geteilte Benutzeroberfläche
+
+- `src/ui.js` in fünf weiterhin klassische, synchron geladene Skripte unter `src/ui/` geteilt: Klasse/Ereignisse, Menüs/Dialoge, Aktionen/HUD, Eingabe sowie Minimap/Overlay. `core.js` deklariert `MeridianUI`; `defineMeridianUIMethods` registriert die ausgelagerten Methoden mit denselben nicht aufzählbaren, konfigurierbaren und schreibbaren Deskriptoren. `$` und `esc` bleiben gemeinsame lexikalische Bindungen; keine Imports oder Buildschritte ergänzt.
+- Konstruktor und alle **45 Methodentexte** direkt mit dem vorherigen Stand verglichen: textidentisch. Signaturen, Deskriptoren und Reihenfolge aller 46 Prototyp-Properties stimmen ebenfalls überein. Neue Harness-Regression schützt Dateireihenfolge, vollständige Montage, Nichtaufzählbarkeit und die von `app.js` verwendete `esc`-Bindung.
+- **205 Node-Tests bestanden** (rund 22 s), keine Fixtures geändert. Syntax, Diff, Quellpfade und lokale Dokumentationslinks geprüft.
+- **`file://`**, Chromium/Performance, **390×844 und 430×932**: Laden der fünf UI-Skripte, native Touch-Menüaktionen, Gefechtsstarts, Upgrade-/Einstellungs-Persistenz, Rekrutierung, Reload/Neustart und kontrollierter Abbau bestanden; Gefechtsbild gesichtet, keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerätetest.
+
 ## Fachlich geteilte Gefechtssimulation
 
 - `src/simulation.js` in fünf weiterhin klassische, synchron geladene Skripte unter `src/simulation/` geteilt: Klasse/Entitäten, Bewegung, Wirtschaft, Kampf und Laufzeit. `game.js` deklariert `MeridianGame`; `defineMeridianGameMethods` registriert die übrigen Methoden mit denselben nicht aufzählbaren, konfigurierbaren und schreibbaren Deskriptoren. Öffentliche Methodennamen und Signaturen bleiben erhalten; keine Imports oder Buildschritte ergänzt.

@@ -63,6 +63,20 @@ test('simulation fragments assemble the existing non-enumerable MeridianGame API
   assert.equal(vm.runInContext("formatTime(65)", context), '01:05');
 });
 
+test('UI fragments assemble the existing non-enumerable MeridianUI API in document order', () => {
+  const names = ['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation'],
+    expectedFiles = names.map(name => `src/ui/${name.replace('ui-', '')}.js`),
+    scripts = readScripts(), context = loadScripts(names, { scripts });
+  assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
+  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianUI.prototype).length', context), 46);
+  assert.equal(vm.runInContext('Object.keys(MeridianUI.prototype).length', context), 0);
+  for (const method of ['event', 'showHome', 'renderActions', 'pointerUp', 'drawOverlay']) {
+    assert.equal(vm.runInContext(`typeof MeridianUI.prototype.${method}`, context), 'function');
+    assert.equal(vm.runInContext(`Object.getOwnPropertyDescriptor(MeridianUI.prototype, '${method}').enumerable`, context), false);
+  }
+  assert.equal(vm.runInContext("esc('<battle>')", context), '&lt;battle&gt;');
+});
+
 test('loader selects explicit names in document order, skipping unrelated scripts', () => {
   const scripts = readScripts(sample);
   assert.deepEqual(scripts.map(s => s.name), ['base', 'unused', 'dependent']);
