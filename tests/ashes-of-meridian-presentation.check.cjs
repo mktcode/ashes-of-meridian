@@ -17,6 +17,7 @@ test('world and simulation start, step and restore without renderer, geometry or
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   game.start({ seed: 1409, faction: 0 });
   assert.equal(game.s.alloy, 1100);
+  assert.equal(game.train('worker'), true);
   assert.equal('R' in game, false); assert.equal('R' in game.world, false);
   for (let i = 0; i < 1000; i++) { game.step(.05); game.effects.tick(.05); }
   const saved = game.snapshot(); game.restore(saved);

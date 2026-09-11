@@ -69,11 +69,11 @@ test('profile defaults are complete, fresh and do not write storage', () => {
 test('profile normalization preserves current coercions and fractional values but only accepts known settings', () => {
   const h = setup();
   h.data.set(PROFILE, JSON.stringify({ version: 1, unlocked: 19, credits: '12.5',
-    medals: [3], best: 'invalid', upgrades: { veterans: 9, stores: -1, logistics: '1.5', extra: 8 },
+    medals: [3], best: 'invalid', upgrades: { command: 9, stores: -1, industry: '1.5', extra: 8 },
     ending: 'open', skirmishBest: -4, settings: { volume: '0.6', quality: 1.5, difficulty: 'missing', music: 'yes', extra: 9 } }));
   const p = json(h.readProfile());
   assert.deepEqual(p, { ...defaults,
-    upgrades: { veterans: 3, stores: 0, logistics: 1.5, extra: 8, command: 0, resolve: 0, industry: 0 },
+    upgrades: { command: 3, stores: 0, industry: 1.5, extra: 8, resolve: 0 },
     settings: { ...defaults.settings, volume: 0.6, quality: 1.5, music: 'yes' } });
 });
 

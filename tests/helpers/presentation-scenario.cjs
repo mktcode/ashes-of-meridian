@@ -2,6 +2,7 @@ const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
+const { populateBase } = require('./populated-battle.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation'], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
@@ -32,6 +33,7 @@ const effectCases = ['explosion', 'cap-bounce', 'damage', 'workers', 'heal-drop'
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
   game.start({ seed: 1409, biome: 'rust', faction: 0 });
+  populateBase(game);
   // Fixed effect-test RNG entry point from presentation-v1, independent of battle loadout.
   game.random = vm.runInContext('seeded(1486)', context);
   for (let i = 0; i < 104; i++) game.random();

@@ -107,7 +107,7 @@ test('all factions and biomes retain 40 distinct accessible crystals in five-slo
   }
 });
 
-test('full test loadout preserves the existing seed 9897 crystal-amount reference', () => {
+test('HQ-only start preserves the existing seed 9897 crystal-amount reference', () => {
   // Captured from 187c936 before research removal; do not regenerate to mask RNG shifts.
   const game = fresh(); game.start({ seed: 9897 });
   assert.equal(game.alive(e => e.type === 'lab').length, 0);
@@ -116,7 +116,9 @@ test('full test loadout preserves the existing seed 9897 crystal-amount referenc
 
 test('new-layout saves round-trip without moving resources or resetting valid mining paths', () => {
   const game = fresh(); game.start({ seed: 1409 });
-  for (let i = 0; i < 100; i++) { game.step(.05); game.effects.tick(.05); }
+  assert.equal(game.train('worker'), true);
+  for (let i = 0; i < 900; i++) { game.step(.05); game.effects.tick(.05); }
+  assert.ok(game.s.stats.gathered > 0);
   const saved = game.snapshot(), restored = fresh(); restored.restore(saved);
   assert.deepEqual(json(restored.s.entities), json(saved.entities));
 });

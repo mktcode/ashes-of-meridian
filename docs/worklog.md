@@ -2,11 +2,17 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Gefechtsstart nur mit dem HQ
+
+- Spieler startet ohne weitere Gebäude oder Einheiten; auch der erste Worker muss über Infanterie rekrutiert werden. Starttruppen-/Startworker-Upgrades aus Katalog und Startlogik entfernt, vier übrige Upgrades erhalten. Gegneraufstellung, Ressourcen und Wellenzeiten unverändert; kein neues Worker-Startupgrade oder Save-Umbau.
+- Starttext/Hilfe und Referenzen angepasst. 24 reservierte Samples erhalten die festen Ressourcen-/RNG-Referenzen. Ausgebaute Basen sind jetzt ausdrückliche Testaufbauten, kein echter Spielstart.
+- **196 Node-Tests bestanden**, einschließlich HQ-only über alle Fraktionen/Biome, erster Worker samt Bezahlung/Produktion/Restore/Abbau und erstem Gebäude, übrigen Upgrades sowie bestehenden Crowd-/Effektreferenzen. Keine Fixtures neu erzeugt. Browsercheck auf Nutzerwunsch ausgelassen; manueller Spiel- und Balancingtest steht aus.
+
 ## Seitliches und kontinuierliches Platzmachen
 
 - `29fbfc4` begrenzte das Mitschieben auf seitliche Verschiebung mit Sperrzeit; trotz 193 bestandener Node-Tests meldete der Nutzer sichtbares Ruckeln durch Positionssprünge und 0,35-s-Pausen.
 - Statt sofortiger Versetzung jetzt ein kurzes `yieldTo`-Manöver mit normaler Geschwindigkeit, Drehung und Bewegungsanimation, auch für untätige Einheiten. Möglichst den ganzen Laufweg freimachen, bei Platzmangel einen kürzeren Schritt. Normale Aufträge bleiben erhalten; die Sperrzeit stoppt nicht mehr die eigene Bewegung. Eigenes Umgehen vor Platzanforderung; bereits ausweichende Verbündete nicht seitlich verfolgen.
-- **194 Node-Tests bestanden**: kontinuierliche Schritte ohne Anfangssprung, Auftrags-/Standplatzschutz, Save/Load und neu blockiertes Ausweichziel; bestehende sechsminütige Worker-Gegenverkehrstests weiterhin bestanden. Keine Fixtures geändert. Kein neuer Browsercheck; sichtbare Spielwirkung wartet auf erneutes manuelles Nutzerfeedback.
+- **194 Node-Tests bestanden**: kontinuierliche Schritte ohne Anfangssprung, Auftrags-/Standplatzschutz, Save/Load und neu blockiertes Ausweichziel; bestehende sechsminütige Worker-Gegenverkehrstests weiterhin bestanden. Keine Fixtures geändert. Kein eigener neuer Browsercheck; Nutzer meldete eine Verbesserung, weitere Pathfinding-Arbeit ist zurückgestellt.
 
 ## Worker-Gegenverkehr und sichtbare Produktionsausfahrt
 

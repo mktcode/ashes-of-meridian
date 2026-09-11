@@ -49,28 +49,10 @@
         this.fogClock = 0;
         this.objectiveClock = 0;
         let s = this.s;
-        // Full-arsenal test loadout, formerly used by Annihilation. Unlocks come later.
+        // Build the economy from the HQ; even the first worker must be recruited.
         this.spawnBuilding('hq', HOME.x, HOME.z, 0, faction);
-        this.spawnBuilding('barracks', -39, 53, 0, faction);
-        this.spawnBuilding('depot', -51, 63, 0, faction);
-        this.spawnBuilding('refinery', -63, 60, 0, faction);
-        this.spawnBuilding('factory', -37, 67, 0, faction);
-        this.spawnBuilding('depot', -27, 61, 0, faction);
-        // Reserve the existing spawn sample so resource amounts keep their sequence.
-        this.random();
-        this.spawnUnit('hero', -45, 42, 0, faction);
-        let workers = 5 + (meta.logistics || 0);
-        for (let i = 0; i < workers; i++)
-          this.spawnUnit('worker', -57 + (i % 3) * 1.8, 46 + Math.floor(i / 3) * 1.8, 0, faction);
-        let troops = 7 + (meta.veterans || 0);
-        for (let i = 0; i < troops; i++)
-          this.spawnUnit('rifle', -51 + (i % 4) * 1.8, 38 - Math.floor(i / 4) * 1.8, 0, faction);
-        this.spawnUnit('medic', -45, 39, 0, faction);
-        this.spawnUnit('tank', -40, 37, 0, faction);
-        // Preserve the removed scout's spawn sample for crystal amounts and later RNG.
-        this.random();
-        this.spawnUnit('tank', -36, 35, 0, faction);
-        this.spawnUnit('medic', -42, 40, 0, faction);
+        // Keep the former default loadout's RNG entry point for crystal amounts and enemy spawns.
+        for (let i = 0; i < 24; i++) this.random();
         for (let [i, site] of RESOURCE_SITES.entries()) {
           for (let j = 0; j < 5; j++) {
             let p = this.crystalPosition(i, j);
@@ -78,8 +60,6 @@
           }
           this.spawnResource('gas', site.x + (i === 0 ? 5 : 7), site.z + (i === 0 ? 18 : 7), 999999);
         }
-        for (let b of s.entities.filter(e => e.type === 'refinery'))
-          b.gasId = this.closest(b, e => e.type === 'gas' && e.kind === 'resource')?.id;
         let site = ENEMY_SITES[0];
         this.spawnBuilding('hq', site.x, site.z, 1, enemy);
         this.spawnBuilding('turret', site.x - 6, site.z + 7, 1, enemy);
@@ -102,7 +82,7 @@
         this.rehash();
         this.world.reveal(s.entities);
         this.emit('start', {});
-        this.emit('radio', 'Expedition command|Establish your economy and destroy the enemy command center.');
+        this.emit('radio', 'Expedition command|Recruit your first worker from Infanterie to establish your economy, then destroy the enemy command center.');
         return s;
       }
       spawn(kind, type, x, z, team, faction = 0, extra = {}) {

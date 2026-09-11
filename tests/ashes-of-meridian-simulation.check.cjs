@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
+const { populateBase } = require('./helpers/populated-battle.cjs');
 
 const scripts = readScripts();
 // JSON transport is intentional: saves have JSON semantics, and VM objects have
@@ -28,9 +29,16 @@ function createGame() {
   return { game, renderer, events };
 }
 
-function battle(faction = 0, seed = 1409) {
+function freshBattle(faction = 0, seed = 1409) {
   const runtime = createGame();
   runtime.game.start({ seed, biome: 'rust', faction });
+  return runtime;
+}
+
+// Production, repair and crowd tests explicitly need a developed base, not a fresh start.
+function battle(faction = 0, seed = 1409) {
+  const runtime = freshBattle(faction, seed);
+  populateBase(runtime.game);
   return runtime;
 }
 
@@ -73,20 +81,48 @@ function checkpointScenario(game) {
   advance(game, 100);
 }
 
-test('single battle starts with full test arsenal, one hostile base and no mission state', () => {
-  const { game, renderer, events } = battle(), s = game.s;
+test('single battle starts with only the own HQ, one hostile base and no mission state', () => {
+  const { game, renderer, events } = freshBattle(), s = game.s;
   assert.deepEqual([s.version,s.seed,s.biome,s.faction,s.enemy,s.time], [3,1409,'rust',0,2,0]);
-  assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [1100,400,100,83,84,31,56]);
+  assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [1100,400,100,61,62,0,24]);
   assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
-  assert.equal(game.alive(e => e.team === 0 && e.kind === 'building').length, 6);
+  assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
   for (const key of ['m','index','practice','upgrades','research','difficulty']) assert.equal(key in s, false);
   assert.equal(game.objectiveRows().length, 1); assert.match(game.objectiveRows()[0].text, /enemy base/);
   assert.equal(renderer.fogOn, true); assert.deepEqual(events.map(e => e.type), ['start','radio']);
 });
 
+test('the first worker must be paid for and recruited, then enables mining and the first new building', () => {
+  for (const faction of [0,1,2]) {
+    const {game}=freshBattle(faction);
+    advance(game,40);
+    assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
+    assert.match(game.canBuild('barracks'),/Recruit a worker/);
+    const before=game.s.alloy, cost=game.cost('worker');
+    assert.equal(game.train('worker'),true); close(game.s.alloy,before-cost.cost);
+    assert.equal(game.supply(),1); assert.equal(player(game,'hq').queue[0].type,'worker');
+    advance(game,100); assert.equal(player(game,'worker'),undefined);
+    game.restore(game.snapshot()); assert.equal(player(game,'hq').queue[0].type,'worker');
+    advance(game,700);
+    const worker=player(game,'worker'); assert.ok(worker); assert.equal(worker.exit,undefined);
+    assert.equal(game.alive(e=>e.team===0&&e.kind==='unit').length,1);
+    assert.ok(game.s.stats.gathered>0); assert.equal(game.canBuild('barracks'), '');
+    const p={x:-39,z:53}; assert.equal(game.canBuild('barracks',p),'');
+    assert.equal(game.build('barracks',p,[worker.id]),true);
+    advance(game,900); assert.equal(player(game,'barracks').progress,1);
+    assert.equal(game.s.result,null);
+  }
+});
+
+test('retired start-unit bonuses never add units to a new battle', () => {
+  const {game}=createGame(); game.profile.upgrades={logistics:3,veterans:3};
+  game.start({seed:1409});
+  assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
+});
+
 test('fresh starts with the same seed reproduce state; another seed changes resource amounts', () => {
-  const a = battle().game, b = battle().game, other = battle(0, 1410).game;
+  const a = freshBattle().game, b = freshBattle().game, other = freshBattle(0, 1410).game;
   assert.deepEqual(json(a.snapshot()), json(b.snapshot()));
   assert.notDeepEqual(json(a.alive(e => e.type === 'crystal').map(e => e.amount)), json(other.alive(e => e.type === 'crystal').map(e => e.amount)));
 });
@@ -95,7 +131,9 @@ test('all factions and biomes start and restore without mission definitions or r
   const { game } = createGame();
   for (const faction of [0,1,2]) for (const biome of ['ash','rust','choir','court','star']) {
     game.start({ seed: 1409, faction, enemy: faction, biome });
+    assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
     const saved = game.snapshot(); game.restore(saved); advance(game, 2);
+    assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
     assert.equal(game.s.biome, biome); assert.equal(game.s.enemy, faction);
     assert.ok(game.alive(e => e.team === 1).every(e => e.faction === faction));
     assert.ok(game.s.entities.every(e => Number.isFinite(e.hp) && !['ward','avatar','convoy','lab'].includes(e.type)));
@@ -160,9 +198,9 @@ test('waves originate at the enemy base and stop without it', () => {
   const count = game.s.entities.length; game.wave(); assert.equal(game.s.entities.length, count);
 });
 
-test('starting armies and two minutes of mining, combat and waves keep unit spacing', () => {
+test('populated army fixtures and two minutes of mining, combat and waves keep unit spacing', () => {
   for (const [faction,seed,biome] of [[0,1409,'rust'],[1,7012,'ash'],[2,9017,'choir'],[0,43015,'star']]) {
-    const { game } = createGame(); game.start({faction,seed,biome}); assertUnitSpacing(game);
+    const { game } = createGame(); game.start({faction,seed,biome}); populateBase(game); assertUnitSpacing(game);
     if (seed !== 1409) continue;
     for (let i=0;i<2400;i++) {
       game.step(.05); game.effects.tick(.05);
@@ -285,8 +323,8 @@ test('blocked production keeps its paid order until space is free; restore enfor
 for (const [seed,biome,faction,count,forced] of [
   [1409,'rust',0,8,false], [7012,'ash',1,12,false], [9017,'choir',2,12,false], [1409,'rust',0,8,true]
 ]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {
-  const {game}=createGame(); game.profile.upgrades.logistics=count-5;
-  game.start({seed,biome,faction}); game.s.nextWave=1e9;
+  const {game}=createGame();
+  game.start({seed,biome,faction}); populateBase(game,count); game.s.nextWave=1e9;
   for(const e of game.s.entities) if(e.kind==='unit'&&e.team===1)e.hp=0;
   let workers=game.alive(e=>e.team===0&&e.type==='worker');
   if(forced) for(const w of workers) w.order={type:'mine',id:game.closest(w,n=>n.type==='crystal').id};
@@ -466,19 +504,20 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
 });
 
-test('all six permanent fleet upgrades apply to every new battle', () => {
+test('remaining fleet upgrades apply to new battles without providing starting units', () => {
   const { game } = createGame();
-  const meta = { veterans: 2, stores: 2, logistics: 1, command: 1, resolve: 1, industry: 1 };
+  const meta = { stores: 2, command: 1, resolve: 1, industry: 1 };
   game.profile.upgrades = meta; game.start({ seed: 1409 });
   assert.deepEqual(json(game.s.meta), meta); assert.notStrictEqual(game.s.meta, meta);
-  assert.equal(game.s.alloy, 1300); assert.equal(rifleCount(game), 9);
-  assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 6);
-  assert.equal(player(game, 'hero').maxHp, 1000);
-  game.s.energy = 0; assert.equal(game.train('rifle'), true); advance(game, 10);
+  assert.equal(game.s.alloy, 1300);
+  assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
+  game.s.energy = 0; assert.equal(game.train('hero'), true); advance(game, 10);
   close(game.s.energy, .5 * .8 * 1.15);
-  close(player(game, 'barracks').queue[0].progress, .5 / 11 * 1.1);
+  close(player(game, 'hq').queue[0].progress, .5 / player(game, 'hq').queue[0].time * 1.1);
+  advance(game, 1000); assert.equal(player(game, 'hero').maxHp, 1000);
   game.start({ seed: 1409 });
   assert.deepEqual(json(game.s.meta), meta); assert.equal(game.s.alloy, 1300);
+  assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
 });
 
 test('building repair assigns only the nearest living own worker and repairs through normal travel/work', () => {
@@ -781,7 +820,7 @@ test('snapshot detaches nested entity, queue, camera and explored data from live
   const snapshot = game.snapshot();
   assert.equal('groups' in snapshot, false);
   assert.ok(snapshot.entities.every(e => !('orders' in e)));
-  snapshot.entities[1].queue[0].progress = .9;
+  snapshot.entities.find(e => e.id === player(game, 'barracks').id).queue[0].progress = .9;
   snapshot.entities[0].hp = 1;
   snapshot.cam.zoom = 99;
   const explored = game.world.idx(-51, 49);

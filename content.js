@@ -275,22 +275,10 @@ const BUILDINGS = {
   }
 };
 const META = {
-  veterans: {
-    name: 'Veteran detachments',
-    icon: 'rifle',
-    desc: 'Start each battle with one additional infantry unit per level.',
-    max: 3
-  },
   stores: {
     name: 'Emergency reserves',
     icon: 'crystal',
     desc: 'Start each battle with 100 additional alloy per level.',
-    max: 3
-  },
-  logistics: {
-    name: 'Civilian engineers',
-    icon: 'worker',
-    desc: 'Start each battle with one additional worker per level.',
     max: 3
   },
   command: {

@@ -4,6 +4,8 @@ Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fra
 
 ## Spielen
 
+Neue Gefechte starten nur mit dem Hauptgebäude. Den ersten Worker über **Infanterie** rekrutieren; er baut automatisch Alloy ab und ermöglicht den weiteren Basisbau.
+
 `index.html` direkt in einem Browser mit WebGL 2 öffnen. Alle lokalen JavaScript-Dateien und `styles.css` müssen neben dem HTML bleiben; die separaten Bildquellen ebenfalls mitführen. Die Laufzeittexturen sind in `renderer.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket.
 
 - Kamera: mit einem Finger ziehen, Pinch-to-Zoom, Zoom-/Basisknöpfe oder Minimap.
