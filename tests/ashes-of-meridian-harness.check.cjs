@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
-const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
 const sample = `
@@ -50,7 +50,7 @@ test('content loads alone with reference catalog order, classic bindings and nam
 });
 
 test('simulation fragments assemble the existing non-enumerable MeridianGame API in document order', () => {
-  const names = ['simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'],
+  const names = SIMULATION_SCRIPTS,
     expectedFiles = names.map(name => `src/simulation/${name.replace('simulation-', '')}.js`),
     scripts = readScripts(), context = loadScripts(names, { scripts });
   assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
@@ -64,7 +64,7 @@ test('simulation fragments assemble the existing non-enumerable MeridianGame API
 });
 
 test('UI fragments assemble the existing non-enumerable MeridianUI API in document order', () => {
-  const names = ['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation'],
+  const names = UI_SCRIPTS,
     expectedFiles = names.map(name => `src/ui/${name.replace('ui-', '')}.js`),
     scripts = readScripts(), context = loadScripts(names, { scripts });
   assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);

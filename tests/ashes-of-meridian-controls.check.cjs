@@ -3,9 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-const { loadScripts } = require('./helpers/game-scripts.cjs');
-
-const UI_SCRIPTS = ['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation'];
+const { SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const UI_FILES = UI_SCRIPTS.map(name => `src/ui/${name.replace('ui-', '')}.js`);
 
 function setup() {
@@ -44,7 +42,7 @@ function setup() {
   };
   const window = target();
   let now = 0;
-  const context = loadScripts(['core', 'content', 'world', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime', ...UI_SCRIPTS], { globals: {
+  const context = loadScripts(['core', 'content', 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00'
   } });

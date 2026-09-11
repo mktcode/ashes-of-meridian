@@ -3,6 +3,14 @@ const { join, relative, isAbsolute, sep } = require('node:path');
 const vm = require('node:vm');
 
 const projectRoot = join(__dirname, '../..');
+const SIMULATION_SCRIPTS = Object.freeze([
+  'simulation-game',
+  'simulation-movement',
+  'simulation-economy',
+  'simulation-combat',
+  'simulation-runtime'
+]);
+const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation']);
 
 // Deliberately not a general HTML parser. Only the project's named classic
 // scripts with quoted attributes and synchronous document order are supported.
@@ -72,4 +80,4 @@ function loadScripts(names, { scripts = readScripts(), globals = {} } = {}) {
   return context;
 }
 
-module.exports = { readScripts, loadScripts };
+module.exports = { SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };

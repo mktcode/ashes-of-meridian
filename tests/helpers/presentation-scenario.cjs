@@ -1,10 +1,10 @@
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
-const { loadScripts } = require('./game-scripts.cjs');
+const { SIMULATION_SCRIPTS, loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
 const { populateBase } = require('./populated-battle.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'], { globals: { structuredClone } });
+const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
 const { Battlefield, BattlefieldView, MeridianGame } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame})', context);
 

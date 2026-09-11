@@ -2,7 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { loadScripts } = require('./helpers/game-scripts.cjs');
+const { SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 const context = loadScripts(['core', 'renderer', 'content', 'world', 'world-view']);
 const { geom, renderEntity, MAT } = vm.runInContext('({geom, renderEntity, MAT})', context);
@@ -74,7 +74,7 @@ test('preview layer and opacity are respected; absent amounts have a finite full
   assert.deepEqual(render({ ...e, hp: 0 }), []);
 });
 
-const simContext = loadScripts(['core', 'content', 'world', 'effects', 'simulation-game', 'simulation-movement', 'simulation-economy', 'simulation-combat', 'simulation-runtime'], { globals: { structuredClone } });
+const simContext = loadScripts(['core', 'content', 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness"); }', simContext);
 const { MeridianGame, BIOMES } = vm.runInContext('({MeridianGame, BIOMES})', simContext);
 const json = value => JSON.parse(JSON.stringify(value));

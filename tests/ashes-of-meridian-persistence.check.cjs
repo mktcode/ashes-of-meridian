@@ -1,9 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { loadScripts } = require('./helpers/game-scripts.cjs');
-
-const UI_SCRIPTS = ['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation'];
+const { UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const PROFILE = 'meridian.profile.v1';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
