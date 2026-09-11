@@ -64,18 +64,17 @@
         aria-label="Sound">♫</button><button id="helpBtn" aria-label="Field manual">?</button></div>
     <footer id="commandDeck">
       <section class="minimap-panel">
-        <div class="panel-label">TACTICAL OVERVIEW <span id="biomeLabel"></span></div><canvas id="minimap" width="210"
-          height="174" aria-label="Tactical overview"></canvas>
-        <div class="minimap-caption"><span class="live-dot"></span> ORBITAL LINK ACTIVE <span>N ↑</span></div>
+        <canvas id="minimap" aria-label="Minimap" width="210"
+          height="174"></canvas>
       </section>
       <section id="selectionPanel">
-        <div class="panel-label">SELECTION <span id="selectCount"></span></div>
+        <div class="panel-label"><span id="selectCount"></span></div>
         <div id="selectionContent"></div>
       </section>
       <section id="actionPanel">
         <div class="action-head">
           <div class="tabs"><button data-tab="orders" class="active">COMMAND</button><button
-              data-tab="build">BUILD</button><button data-tab="army">RECRUIT</button></div><span id="contextLabel"></span>
+              data-tab="build">BUILD</button><button data-tab="army">RECRUIT</button></div>
         </div>
         <div id="actions"></div>
         <div id="productionQueue"></div>

@@ -183,15 +183,6 @@
       background: #fff1
     }
 
-    .live-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--teal);
-      display: inline-block;
-      box-shadow: 0 0 8px #74e5d388
-    }
-
     .muted {
       color: var(--muted)
     }
@@ -1362,39 +1353,12 @@
       padding: 8px 9px !important
     }
 
-    .minimap-panel .panel-label {
-      font-size: 8px;
-      letter-spacing: .6px;
-      margin-bottom: 4px
-    }
-
-    .minimap-panel .panel-label span {
-      font-size: 7px
-    }
-
     #minimap {
       width: 206px;
       height: 165px;
       background: #071019;
       border: 1px solid #7b9cac3b;
       cursor: crosshair
-    }
-
-    .minimap-caption {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font: 7px var(--mono);
-      letter-spacing: .7px;
-      color: #698b9c;
-      position: absolute;
-      bottom: 5px;
-      left: 12px;
-      right: 12px
-    }
-
-    .minimap-caption span:last-child {
-      margin-left: auto
     }
 
     #selectionContent {
@@ -1529,22 +1493,6 @@
       background: var(--teal)
     }
 
-    .selection-empty {
-      padding-top: 30px;
-      font-size: 12px;
-      color: var(--muted)
-    }
-
-    .selection-empty .eyebrow {
-      color: var(--teal);
-      margin-bottom: 8px
-    }
-
-    .selection-empty p {
-      font-size: 11px;
-      color: #6c8295
-    }
-
     .action-head {
       display: flex;
       align-items: center;
@@ -1570,12 +1518,6 @@
     .tabs button.active {
       color: var(--gold);
       border-color: var(--gold)
-    }
-
-    #contextLabel {
-      font: 8px var(--mono);
-      color: #647e93;
-      text-align: right
     }
 
     .action-grid {
@@ -1645,14 +1587,6 @@
       align-items: center;
       margin-top: 8px;
       overflow: hidden
-    }
-
-    .queue-label {
-      font: 8px var(--mono);
-      color: #6e889c;
-      letter-spacing: .8px;
-      white-space: nowrap;
-      margin-right: 5px
     }
 
     .queue-item {
@@ -1812,10 +1746,6 @@
         gap: 12px
       }
 
-      #contextLabel {
-        display: none
-      }
-
       #radio {
         width: calc(100% - 440px);
         min-width: 340px;
@@ -1845,15 +1775,6 @@
       #minimap {
         width: 147px;
         height: 145px
-      }
-
-      .minimap-panel .panel-label {
-        font-size: 7px
-      }
-
-      .minimap-caption {
-        font-size: 6px;
-        letter-spacing: 0
       }
 
       .action {
@@ -2088,16 +2009,6 @@
         height: 150px
       }
 
-      .minimap-panel .panel-label {
-        font-size: 6px;
-        letter-spacing: 0
-      }
-
-      .minimap-panel .panel-label span,
-      .minimap-caption {
-        display: none
-      }
-
       .tabs {
         gap: 8px
       }
@@ -2188,10 +2099,6 @@
 
       .result-stats span {
         font-size: 8px
-      }
-
-      #contextLabel {
-        display: none
       }
     }
 

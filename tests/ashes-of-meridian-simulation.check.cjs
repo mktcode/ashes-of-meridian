@@ -106,6 +106,23 @@ test('only enemy HQ destruction wins; loss of the last own HQ loses, without sta
   }
 });
 
+test('ground attack-move preserves mixed formations, worker movement and building rally', () => {
+  const { game } = battle();
+  const rifle = game.spawnUnit('rifle', 0, 0, 0, 0), worker = game.spawnUnit('worker', 1, 0, 0, 0);
+  const hq = game.alive(e => e.team === 0 && e.type === 'hq')[0];
+  game.command([rifle.id,worker.id,hq.id], {type:'attackMove',x:10,z:20});
+  assert.equal(rifle.order.type,'attackMove'); assert.equal(worker.order.type,'move');
+  close(rifle.order.x,9.15); close(worker.order.x,10.85);
+  assert.equal(rifle.order.z,20); assert.equal(worker.order.z,20);
+  assert.deepEqual(json(hq.rally),{x:10,z:20});
+  const crystal = game.alive(e => e.kind === 'resource' && e.type === 'crystal')[0];
+  game.command([worker.id], {type:'smart',id:crystal.id,x:crystal.x,z:crystal.z});
+  assert.deepEqual(json(worker.order),{type:'mine',id:crystal.id});
+  const enemy = game.alive(e => e.team === 1 && e.type === 'rifle')[0];
+  game.command([rifle.id], {type:'smart',id:enemy.id,x:enemy.x,z:enemy.z});
+  assert.equal(rifle.order.type,'attack'); assert.equal(rifle.order.id,enemy.id);
+});
+
 test('fixed wave sizing and timing retain the former standard rules', () => {
   for (const [wave, count, interval] of [[1,8,79.2],[10,14,72],[40,24,54.4]]) {
     const { game, events } = battle();

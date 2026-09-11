@@ -489,6 +489,8 @@
               o.x += ((j % cols) - (cols - 1) / 2) * spacing;
               o.z += (Math.floor(j / cols) - (Math.ceil(mobile.length / cols) - 1) / 2) * spacing;
             }
+            // Ground taps attack-move combat units without turning workers into attackers.
+            if (e.type === 'worker' && o.type === 'attackMove') o.type = 'move';
             if (o.type === 'smart') {
               let target = this.get(o.id);
               if (target && this.enemy(e, target))

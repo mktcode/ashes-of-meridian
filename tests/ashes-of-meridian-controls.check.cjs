@@ -18,7 +18,7 @@ function setup() {
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
-      assert.notEqual(id, 'tooltip', 'removed tooltip DOM must never be accessed');
+      assert.ok(!['tooltip','biomeLabel','contextLabel'].includes(id), 'removed DOM must never be accessed');
       if (!elements.has(id)) elements.set(id, target());
       return elements.get(id);
     }
@@ -35,8 +35,6 @@ function setup() {
     setMode(...args) { calls.push(['mode', ...args]); }
     perform(...args) { calls.push(['perform', ...args]); }
     setTab(...args) { calls.push(['tab', ...args]); }
-    selectArmy() { calls.push(['army']); }
-    selectWorker() { calls.push(['worker']); }
     save() { calls.push(['save']); }
     homeCamera() { calls.push(['base']); }
     select(ids) { this.selected = [...ids]; calls.push(['select', [...ids]]); }
@@ -219,12 +217,13 @@ test('mouse clicks and portrait clicks replace selection even with Shift; select
 test('Shift no longer queues commands or keeps successful targeting active', () => {
   for (const mini of [false, true]) for (const rightClick of [false, true]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-    h.ui.mode = { kind: 'attackMove' };
+    h.ui.mode = { kind: 'ability', arg: 'scan' };
+    h.ui.game.ability = (...args) => { h.calls.push(['ability', ...args]); return true; };
     const options = { pointerType: 'mouse', button: rightClick ? 2 : 0, shiftKey: true,
       target: mini ? h.minimap : h.world };
     h.pointer('pointerdown', 100, 100, options); h.pointer('pointerup', 100, 100, options);
-    assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], 'command');
-    assert.equal(h.calls[0].length, 3, 'only selection and current order reach command');
+    assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], rightClick ? 'command' : 'ability');
+    assert.equal(h.calls[0].length, 3, 'no queue/append argument reaches command or ability');
     assert.equal(h.ui.mode, null);
   }
   const h = setup(); h.UI.prototype.bind.call(h.ui);
@@ -283,7 +282,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
   assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], 'command');
-  assert.equal(h.calls[0][2].type, 'move'); h.calls.length = 0;
+  assert.equal(h.calls[0][2].type, 'attackMove'); h.calls.length = 0;
   h.ui.paused = true;
   h.pointer('pointerdown', 200, 200); h.pointer('pointermove', 240, 230); h.pointer('pointerup', 240, 230);
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
@@ -321,23 +320,40 @@ test('camera buttons and minimap tap/drag still navigate with existing limits', 
   assert.deepEqual(h.calls, []);
 });
 
-test('command buttons and tabs retain their actions; pause suppresses battlefield actions', () => {
+test('removed commands do nothing; abilities, rally, home and tabs remain, with pause guards', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.perform = h.UI.prototype.perform;
   for (const action of ['attackMove','move','hold','stop','ability:orbital','ability:repair','ability:scan','ability:drop','rally','army','worker','home'])
     h.click({ action });
   for (const tab of ['orders','build','army']) h.click({ tab });
-  assert.deepEqual(h.calls.map(c => c[0] === 'command' ? ['command', c[2].type] : c), [
-    ['mode','attackMove'], ['mode','move'], ['command','hold'], ['command','stop'],
+  assert.deepEqual(h.calls, [
     ['mode','ability','orbital'], ['mode','ability','repair'], ['mode','ability','scan'],
-    ['mode','ability','drop'], ['mode','rally'], ['army'], ['worker'], ['base'],
+    ['mode','ability','drop'], ['mode','rally'], ['base'],
     ['tab','orders'], ['tab','build'], ['tab','army']
   ]);
   h.calls.length = 0; h.ui.paused = true; h.click({ action: 'ability:orbital' });
   assert.deepEqual(h.calls, []);
 });
 
+test('deck drops decorative labels and obsolete buttons but retains production entries', () => {
+  const h = setup(); h.ui.renderActions(); h.ui.updateSelection(); h.ui.updateQueues();
+  const actions = h.document.getElementById('actions').innerHTML;
+  assert.deepEqual([...actions.matchAll(/data-action="([^"]+)"/g)].map(m => m[1]),
+    ['ability:orbital','ability:repair','ability:scan','ability:drop','rally','home']);
+  assert.equal(h.UI.prototype.selectArmy, undefined); assert.equal(h.UI.prototype.selectWorker, undefined);
+  assert.equal(h.document.getElementById('selectionContent').innerHTML, '');
+  assert.equal(h.document.getElementById('productionQueue').innerHTML, '');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.doesNotMatch(html, /TACTICAL OVERVIEW|biomeLabel|ORBITAL LINK ACTIVE|SELECTION|contextLabel/);
+  assert.match(html, /id="minimap" aria-label="Minimap"/);
+  h.ui.game.s.entities = [{id:47,team:0,kind:'building',type:'barracks',queue:[{type:'rifle',time:12,progress:.25}]}];
+  h.ui.updateQueues();
+  const queue = h.document.getElementById('productionQueue').innerHTML;
+  assert.match(queue, /data-queue="47:0"/); assert.match(queue, /9s/); assert.match(queue, /width:25%/);
+  assert.match(queue, /cancel recruitment/); assert.doesNotMatch(queue, /IN PRODUCTION|PRODUCTION IDLE/);
+});
+
 test('Cancel button exits every targeting mode without spending resources or changing orders', () => {
-  for (const [kind, arg] of [['build','depot'], ['move'], ['attackMove'], ['rally'],
+  for (const [kind, arg] of [['build','depot'], ['rally'],
     ...['orbital','repair','scan','drop'].map(a => ['ability',a])]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
     const before = JSON.stringify(h.ui.game.s);
@@ -446,7 +462,7 @@ test('tooltips and native title hints are removed without removing pointer press
     ['id', 'battleHome', 'Pause / operations'], ['id', 'pauseBtn', 'Pause'],
     ['data-cam', 'home', 'Center on command'], ['data-cam', 'in', 'Zoom in'],
     ['data-cam', 'out', 'Zoom out'], ['id', 'soundBtn', 'Sound'],
-    ['id', 'helpBtn', 'Field manual'], ['id', 'minimap', 'Tactical overview']
+    ['id', 'helpBtn', 'Field manual'], ['id', 'minimap', 'Minimap']
   ]) assert.match(html, new RegExp(`${attribute}="${value}"[^>]*aria-label="${label}"`));
 });
 
@@ -627,7 +643,8 @@ test('settings and camera hints describe touch navigation without desktop camera
   const h = setup(); h.ui.showSettings();
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
   h.ui.showHelp();
-  assert.match(h.ui.html, /Attack-move button → tap destination/);
+  assert.match(h.ui.html, /Select combat units → tap ground/);
+  assert.doesNotMatch(h.ui.html, /Attack-move button|Move \/ hold \/ stop|Combat force button|Next worker button/);
   assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]|\bEsc\b|to assist|keyboard/);
   assert.match(h.ui.html, /Drag with one finger/); assert.match(h.ui.html, /Pinch/);
   assert.doesNotMatch(h.ui.html, /WASD|Middle-button|Mouse wheel|Space \/ Home|box-select|Shift|control group/i);

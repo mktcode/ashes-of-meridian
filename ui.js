@@ -352,10 +352,8 @@
           `<div class="eyebrow">MERIDIAN FIELD MANUAL</div><h1>Bring your people home.</h1><div class="help-grid"><div><h3>Command your force</h3>${[
             ['Select', 'Tap unit or structure'],
             ['Context order / rally point', 'Right click'],
-            ['Attack-move', 'Attack-move button → tap destination'],
-            ['Move / hold / stop', 'Buttons in Command'],
-            ['Select all combat units', 'Combat force button'],
-            ['Select next worker', 'Next worker button'],
+            ['Attack-move', 'Select combat units → tap ground'],
+            ['Move workers', 'Select workers → tap ground'],
             ['Select visible units of a type', 'Double-tap unit'],
             ['Select visible combat units (no workers)', 'Triple-tap unit']
           ]
@@ -447,25 +445,6 @@
         }
         this.renderActions();
       }
-      selectArmy() {
-        this.select(
-          this.game
-            .alive(e => e.team === 0 && e.kind === 'unit' && e.type !== 'worker')
-            .map(e => e.id)
-        );
-      }
-      selectWorker() {
-        let list = this.game.alive(e => e.team === 0 && e.type === 'worker');
-        if (!list.length) {
-          this.toast('Recruit a worker at command.');
-          return;
-        }
-        let i = list.findIndex(e => this.selected.includes(e.id));
-        let idle = list.find(e => e.order.type === 'idle');
-        let e = idle || list[(i + 1) % list.length];
-        this.select([e.id]);
-        this.center(e.x, e.z);
-      }
       setTab(tab) {
         this.tab = tab;
         this.actionSignature = '';
@@ -492,11 +471,7 @@
                   scan: 'SELECT SCAN AREA',
                   drop: 'DEPLOY REINFORCEMENTS'
                 }[arg]
-              : kind === 'rally'
-                ? 'SET RALLY POINT'
-                : kind === 'attackMove'
-                  ? 'ATTACK-MOVE'
-                  : 'MOVE ORDER';
+              : 'SET RALLY POINT';
         $('modeLabel').textContent = text + ' · TAP TO CONFIRM';
         $('modeIndicator').classList.remove('hidden');
         $('world').style.cursor = 'crosshair';
@@ -529,20 +504,8 @@
           return;
         }
         switch (kind) {
-          case 'attackMove':
-          case 'move':
           case 'rally':
             this.setMode(kind);
-            break;
-          case 'hold':
-          case 'stop':
-            this.game.command(this.selected, { type: kind });
-            break;
-          case 'army':
-            this.selectArmy();
-            break;
-          case 'worker':
-            this.selectWorker();
             break;
           case 'home':
             this.homeCamera();
@@ -573,12 +536,6 @@
           f = s.faction;
         if (this.tab === 'orders') {
           for (let [k, l, ic] of [
-            ['attackMove', 'Attack-move', 'attack'],
-            ['move', 'Move', 'move'],
-            ['hold', 'Hold', 'hold'],
-            ['stop', 'Stop', 'stop'],
-            ['army', 'Combat force', 'rifle'],
-            ['worker', 'Next worker', 'worker'],
             ['ability:orbital', 'Orbital strike', 'orbital'],
             ['ability:repair', 'Repair field', 'heal'],
             ['ability:scan', 'Recon scan', 'scan'],
@@ -617,12 +574,6 @@
           }
         }
         $('actions').innerHTML = '<div class="action-grid">' + html + '</div>';
-        $('contextLabel').textContent =
-          this.tab === 'orders'
-            ? 'COMMAND LINK ONLINE'
-            : this.tab === 'build'
-              ? 'SELECT A FOUNDATION'
-              : 'PARALLEL PRODUCTION';
       }
       closeBuildingActions() {
         this.buildingActionsClosed = true;
@@ -697,8 +648,7 @@
         this.selected = this.selected.filter(id => this.game.get(id));
         $('selectCount').textContent = this.selected.length ? this.selected.length + ' SELECTED' : '';
         if (!this.selected.length) {
-          $('selectionContent').innerHTML =
-            '<div class="selection-empty"><div class="eyebrow">AWAITING YOUR ORDERS</div>Select a unit or structure.<p>Double-tap for visible units of its type; triple-tap for all visible combat units (no workers).</p></div>';
+          $('selectionContent').innerHTML = '';
           return;
         }
         if (this.selected.length > 1) {
@@ -710,7 +660,7 @@
             })
             .join(
               ''
-            )}</div><div class="unit-order">${this.selected.length > 40 ? '+' + (this.selected.length - 40) + ' ADDITIONAL UNITS · ' : ''}${this.selected.length} CONTACTS / GROUP COMMAND ACTIVE</div>`;
+            )}</div><div class="unit-order">${this.selected.length > 40 ? '+' + (this.selected.length - 40) : ''}</div>`;
           return;
         }
         let e = this.game.get(this.selected[0]),
@@ -730,7 +680,7 @@
                 ? 'CONSTRUCTION ' + Math.floor(e.progress * 100) + '%'
                 : e.queue.length
                   ? 'PRODUCING ' + unitName(e.queue[0].type, e.faction).toUpperCase()
-                  : 'STRUCTURE OPERATIONAL'
+                  : ''
               : e.order?.type === 'mine'
                 ? 'HARVESTING · ' + Math.round(e.carry) + ' ALLOY'
                                   : (e.order?.type || 'idle').replace(/([A-Z])/g, ' $1').toUpperCase();
@@ -753,11 +703,7 @@
             html += `<button class="queue-item" data-queue="${b.id}:${i}" aria-label="${esc(unitName(q.type, s.faction))} · cancel recruitment">${unitName(q.type, s.faction).slice(0, 8)} ${i === 0 ? Math.ceil(q.time * (1 - q.progress)) + 's' : '…'}<i style="width:${q.progress * 100}%"></i></button>`;
             if (html.length > 1500) break;
           }
-        $('productionQueue').innerHTML =
-          '<span class="queue-label">' +
-          (html ? 'IN PRODUCTION' : 'PRODUCTION IDLE') +
-          '</span>' +
-          html;
+        $('productionQueue').innerHTML = html;
       }
       updateHUD(force = false) {
         let s = this.game.s;
@@ -770,7 +716,6 @@
         $('gameTime').textContent = formatTime(s.time);
         $('speedLabel').textContent = s.speed + '×';
         $('battleLabel').innerHTML = 'Annihilation' + `<small>SEED ${s.seed}</small>`;
-        $('biomeLabel').textContent = BIOMES[s.biome].name;
         let rows = this.game.objectiveRows();
         $('objectives').innerHTML =
           '<div class="eyebrow">◈ BATTLE OBJECTIVE</div><div id="objectiveRows">' +
@@ -938,7 +883,7 @@
           if (e.button === 2) {
             this.game.command(
               this.selected,
-              { type: this.mode?.kind === 'attackMove' ? 'attackMove' : 'move', ...p }
+              { type: 'move', ...p }
             );
             this.clearMode();
           } else if (this.mode) {
@@ -946,7 +891,7 @@
               this.toast('Place foundations in the main battlefield view.');
               return;
             }
-            this.applyTarget(p, null);
+            this.applyTarget(p);
           } else {
             this.center(p.x, p.z);
             miniDrag = true;
@@ -1152,14 +1097,14 @@
           return;
         }
         if (this.mode) {
-          if (!d.moved) this.applyTarget(p, target);
+          if (!d.moved) this.applyTarget(p);
           return;
         }
         if (d.moved) return;
         if (d.type === 'touch' && this.selected.length && (!target || target.team !== 0)) {
           this.game.command(
             this.selected,
-            target ? { type: 'smart', id: target.id, x: target.x, z: target.z } : { type: 'move', ...p }
+            target ? { type: 'smart', id: target.id, x: target.x, z: target.z } : { type: 'attackMove', ...p }
           );
           return;
         }
@@ -1181,7 +1126,7 @@
           this.lastClick = { id: target.id, time: now, type: d.type, count };
         } else this.select([]);
       }
-      applyTarget(p, target) {
+      applyTarget(p) {
         if (!this.mode) return;
         let m = this.mode,
           success = true;
@@ -1200,17 +1145,6 @@
             this.toast('Select a production structure before setting a rally point.');
             success = false;
           } else for (let e of list) e.rally = { ...p };
-        } else {
-          if (!this.selected.length) {
-            this.toast('Select a squad first.');
-            success = false;
-          } else
-            this.game.command(
-              this.selected,
-              m.kind === 'attackMove' && target?.team === 1
-                ? { type: 'attack', id: target.id, x: target.x, z: target.z }
-                : { type: m.kind, ...p }
-            );
         }
         if (success) this.clearMode();
         this.updateHUD(true);
