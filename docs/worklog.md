@@ -2,6 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Gemeinsame Produktionsabfrage
+
+- `availableProducers(buildingType)` bündelt den unveränderten Filter für Rekrutierung und HUD. Sortierung nach Queue-Länge/Gebäude-ID bleibt in `train()`; keine neuen Regeln oder RNG-Aufrufe. Das UI-Testdouble verwendet die echte Abfragemethode.
+- **14 gezielte Node-Tests bestanden**, einschließlich neuer Prüfung für Ausschlussfälle, Entitätsreihenfolge und mutations-/RNG-freie Abfrage. Syntax und Diff geprüft. Vollständige Suite folgt nach dem dritten vereinbarten Refactoring.
+
 ## Fähigkeitsdefinitionen, Minimap-Koordinaten und HUD-Versorgung
 
 - Energiekosten/Cooldowns unverändert nach `content.js` (`ABILITIES`) verschoben; Simulation und HUD lesen dieselbe Kostendefinition. Zielprüfungen, Effekte und Prüfungsreihenfolge bleiben unverändert. Fünf gezielte neue Node-Tests bestanden: alle vier Energie-/Cooldown-Grenzen samt Bezahlung sowie HUD-Badges/Sperren.

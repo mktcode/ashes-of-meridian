@@ -41,7 +41,7 @@ function setup() {
   };
   const window = target();
   let now = 0;
-  const context = loadScripts(['core', 'content', 'world', 'ui'], { globals: {
+  const context = loadScripts(['core', 'content', 'world', 'simulation', 'ui'], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00'
   } });
@@ -60,6 +60,7 @@ function setup() {
     s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0, meta: {} },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
+    availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
     get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',

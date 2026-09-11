@@ -584,7 +584,7 @@
             let d = UNITS[arg];
             disabled =
               !this.game.afford(this.game.cost(arg)) ||
-              !this.game.alive(e => e.team === 0 && e.kind === 'building' && e.type === d.from && e.progress >= 1 && e.queue.length < 5).length ||
+              !this.game.availableProducers(d.from).length ||
               supply + d.supply > capacity;
             if (arg === 'hero' && this.game.alive(e => e.team === 0 &&
               (e.type === 'hero' || e.queue?.some(q => q.type === 'hero'))).length) disabled = true;

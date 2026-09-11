@@ -748,6 +748,28 @@ for (const [reason, setup] of [
   });
 }
 
+test('available producers preserve entity order and exclude dead, foreign, unfinished and full structures', () => {
+  const { game } = createGame();
+  const building = (id, extra = {}) => ({
+    id, hp: 100, team: 0, kind: 'building', type: 'barracks', progress: 1, queue: [], ...extra
+  });
+  const a = building(30, { queue: Array.from({ length: 4 }, () => ({ type: 'rifle' })) }),
+    b = building(10);
+  game.s = { entities: [a, building(2, { hp: 0 }), building(3, { team: 1 }),
+    building(4, { team: -1 }), building(5, { kind: 'unit' }),
+    building(6, { progress: .99 }), building(7, { queue: Array(5).fill({ type: 'rifle' }) }),
+    building(8, { type: 'factory' }), b] };
+  game.random = () => { throw Error('Producer lookup must not consume RNG'); };
+  const before = json(game.s), producers = game.availableProducers('barracks');
+  assert.deepEqual(Array.from(producers, e => e.id), [30, 10]);
+  assert.equal(producers[0], a); assert.equal(producers[1], b);
+  producers.reverse();
+  assert.deepEqual(Array.from(game.availableProducers('barracks'), e => e.id), [30, 10]);
+  assert.deepEqual(Array.from(game.availableProducers('factory'), e => e.id), [8]);
+  assert.equal(game.availableProducers('hangar').length, 0);
+  assert.deepEqual(json(game.s), before);
+});
+
 test('recruitment distributes globally and produces in parallel at assigned buildings', () => {
   const {game,events} = battle(), a = player(game,'barracks'),
     b = game.spawnBuilding('barracks',-15,55,0,0),

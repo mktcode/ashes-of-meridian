@@ -346,6 +346,10 @@
             .length > 0
         );
       }
+      availableProducers(buildingType) {
+        return this.alive(e => e.team === 0 && e.kind === 'building' &&
+          e.type === buildingType && e.progress >= 1 && e.queue.length < 5);
+      }
       train(type) {
         let s = this.s,
           d = UNITS[type];
@@ -358,14 +362,7 @@
           this.emit('toast', 'Your commander is already deployed or in reconstruction.');
           return false;
         }
-        let producers = this.alive(
-          e =>
-            e.team === 0 &&
-            e.kind === 'building' &&
-            e.type === d.from &&
-            e.progress >= 1 &&
-            e.queue.length < 5
-        );
+        let producers = this.availableProducers(d.from);
         // Global recruitment: assign to the shortest queue, independent of selection.
         producers.sort((a, b) => a.queue.length - b.queue.length || a.id - b.id);
         let b = producers[0];
