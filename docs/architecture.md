@@ -36,7 +36,7 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 - `game.effects` hält `fx` und `floats`. Erzeugung/Tick verwenden synchron den Simulations-RNG, Zeichnen keinen RNG. Gameplayrelevante Strikes, Heilfelder und Scans bleiben in der Simulation. Effekte nicht wegen unsichtbarer Grafik überspringen.
 - `ABILITIES` in `content.js` hält Energiekosten und Cooldowns; Simulation und HUD lesen die Kosten aus derselben Definition. Zielprüfung und Fähigkeitseffekte bleiben in der Simulation.
 - Gebäudeaktionen prüfen Zulässigkeit, Arbeiterauftrag und Erstattung in der Simulation. Die UI zeigt sie im festen rechten Portrait-Menü und hält die bestätigte Verkaufs-Ziel-ID; kein projiziertes Gebäude-Panel. Menüzustand, Tap-Folge und offene Dialoge sind flüchtig.
-- Die Queue-Leiste aggregiert vorhandene Gebäude-Queues je Einheitentyp. Stabile DOM-Buttons erhalten pro Frame den aus der Simulation abgeleiteten Winkel, Zähler und Restzeit. Keine zweite Warteschlange oder CSS-Zeitbasis.
+- Die Queue-Leiste aggregiert vorhandene Gebäude-Queues je Einheitentyp. Stabile DOM-Buttons erhalten pro Frame den aus der Simulation abgeleiteten Winkel, Zähler und Restzeit. Keine zweite Warteschlange oder CSS-Zeitbasis. `game.industryMultiplier()` liefert den gemeinsamen Upgrade-Faktor für Baufortschritt, Rekrutierung und Restzeitanzeige.
 - `MeridianUI(game, renderer, audio, profile, persistence)` orchestriert Bedienung und permanente Profileinstellungen. `showHome()`-Styles sind auf `.home-screen`/`.home-layout` begrenzt. `window.Meridian` bietet Runtime-Inspektion; globale `const`-/`class`-Bindungen sind nicht automatisch `window`-Eigenschaften.
 
 ## Speicherung

@@ -61,6 +61,7 @@ function setup() {
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
+    industryMultiplier: vm.runInContext('MeridianGame.prototype.industryMultiplier', context),
     get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
@@ -680,6 +681,25 @@ test('global type icons aggregate parallel/waiting orders, keep DOM stable and s
   assert.equal(medic.classList.contains('waiting'), false);
   a.queue = []; b.queue = []; h.ui.updateQueues();
   assert.equal(buttons().length, 0);
+});
+
+test('queue remaining time uses the current industry level without changing progress or waiting state', () => {
+  const h = setup(), g = h.ui.game;
+  g.s.entities = [{ id: 1, team: 0, kind: 'building', queue: [
+    { type: 'rifle', progress: .2, time: 100 }, { type: 'medic', progress: 0, time: 10 }
+  ] }];
+  for (const [level, remaining] of [[undefined, '80s'], [0, '80s'], [1, '73s'], [2, '67s'], [3, '62s']]) {
+    g.s.meta = level === undefined ? {} : { industry: level };
+    const before = JSON.stringify(g.s);
+    h.ui.updateQueues();
+    const [rifle, medic] = h.document.getElementById('productionQueue').querySelectorAll('[data-queue-type]');
+    assert.equal(rifle.querySelector('.queue-time').textContent, remaining);
+    assert.equal(rifle.style['--progress'], '72deg');
+    assert.match(rifle['aria-label'], new RegExp(remaining));
+    assert.equal(medic.querySelector('.queue-time').textContent, '…');
+    assert.equal(medic.classList.contains('waiting'), true);
+    assert.equal(JSON.stringify(g.s), before);
+  }
 });
 
 test('queue tap cancels one waiting order before active work; pause and scroll cancellation are guarded', () => {

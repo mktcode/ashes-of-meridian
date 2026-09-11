@@ -539,7 +539,7 @@
           let type = button.dataset.queueType, entries = groups[type],
             next = entries.filter(e => e.index === 0)
               .sort((a, b) => a.q.time * (1 - a.q.progress) - b.q.time * (1 - b.q.progress))[0]?.q,
-            remaining = next ? Math.ceil(next.time * (1 - next.progress) / (1 + (this.game.s.meta.industry || 0) * 0.1)) + 's' : '…';
+            remaining = next ? Math.ceil(next.time * (1 - next.progress) / this.game.industryMultiplier()) + 's' : '…';
           button.style.setProperty('--progress', (next ? clamp(next.progress, 0, 1) * 360 : 360) + 'deg');
           button.classList.toggle('waiting', !next);
           button.querySelector('.queue-count').textContent = entries.length;

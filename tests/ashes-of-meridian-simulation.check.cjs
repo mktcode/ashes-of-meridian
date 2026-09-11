@@ -522,6 +522,40 @@ test('remaining fleet upgrades apply to new battles without providing starting u
   assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
 });
 
+test('industry multiplier reads current run upgrades without mutation or RNG', () => {
+  const { game } = createGame();
+  game.random = () => { throw Error('Industry multiplier must not consume RNG'); };
+  for (const [level, expected] of [[undefined, 1], [0, 1], [1, 1.1], [2, 1.2], [3, 1.3]]) {
+    game.s = { meta: level === undefined ? {} : { industry: level } };
+    const before = json(game.s);
+    assert.equal(game.industryMultiplier(), expected);
+    assert.deepEqual(json(game.s), before);
+  }
+});
+
+test('industry levels 0–3 retain construction and both teams’ recruitment rates', () => {
+  for (const [level, multiplier] of [[0, 1], [1, 1.1], [2, 1.2], [3, 1.3]]) {
+    const { game } = freshBattle();
+    game.s.meta.industry = level;
+    assert.equal(game.train('worker'), true);
+    const own = player(game, 'hq'), enemy = game.alive(e => e.team === 1 && e.type === 'hq')[0];
+    enemy.queue.push({ type: 'worker', progress: 0, time: 9, cost: 50, gas: 0 });
+    game.step(.5);
+    for (const b of [own, enemy]) close(b.queue[0].progress, .5 / 9 * multiplier);
+    const foundation = game.spawnBuilding('depot', -35, 40, 0, 0, { progress: .1 }),
+      worker = game.spawnUnit('worker', -35, 40, 0, 0);
+    foundation.hp = foundation.maxHp * .1;
+    worker.x = foundation.x; worker.z = foundation.z;
+    game.setOrder(worker, { type: 'build', id: foundation.id });
+    game.worker(worker, .5);
+    close(foundation.progress, .1 + .5 / 16 * multiplier);
+    close(foundation.hp, foundation.maxHp * foundation.progress);
+    foundation.progress = .999; foundation.hp = foundation.maxHp * .999;
+    game.worker(worker, .5);
+    assert.equal(foundation.progress, 1); assert.equal(foundation.hp, foundation.maxHp);
+  }
+});
+
 test('building repair assigns only the nearest living own worker and repairs through normal travel/work', () => {
   const { game } = battle(), b = player(game, 'barracks'); b.hp -= 100;
   const workers = game.alive(e => e.team === 0 && e.type === 'worker');

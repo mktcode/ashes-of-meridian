@@ -346,6 +346,9 @@
             .length > 0
         );
       }
+      industryMultiplier() {
+        return 1 + (this.s.meta.industry || 0) * 0.1;
+      }
       availableProducers(buildingType) {
         return this.alive(e => e.team === 0 && e.kind === 'building' &&
           e.type === buildingType && e.progress >= 1 && e.queue.length < 5);
@@ -907,7 +910,7 @@
           }
           e.rot = angleLerp(e.rot, Math.atan2(b.x - e.x, b.z - e.z), dt * 5);
           if (b.progress < 1) {
-            let rate = (dt / BUILDINGS[b.type].time) * (1 + (s.meta.industry || 0) * 0.1);
+            let rate = (dt / BUILDINGS[b.type].time) * this.industryMultiplier();
             let old = b.progress;
             b.progress = Math.min(1, b.progress + rate);
             b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);
@@ -1053,7 +1056,7 @@
             if (e.progress < 1) continue;
             if (e.queue.length) {
               let q = e.queue[0];
-              q.progress = Math.min(1, q.progress + (dt / q.time) * (1 + (s.meta.industry || 0) * 0.1));
+              q.progress = Math.min(1, q.progress + (dt / q.time) * this.industryMultiplier());
               if (q.progress >= 1) {
                 let u = this.produceUnit(e, q.type);
                 if (!u) continue; // Keep the paid order until there is room at the exit.
