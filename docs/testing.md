@@ -25,7 +25,7 @@ Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle n
 | Simulation | Gefechtsstart/-ziel, Startökonomie/passives Einkommen, Befehle, freie Worker-Zuweisung, Baufortsetzung/-ablösung ohne Mehrarbeitertempo, Reparatur/Verkauf, Produktion/Ausfahrt, Kampf, Wellen, Upgrades, vollständiger Neustart; sechsminütiger Worker-Gegenverkehr: Lieferungen je Worker/Minute, Schutz vor anhaltenden Richtungswechseln |
 | Persistence | Nur permanentes Profil: Normalisierung, Fehlerfälle, flüchtiger Storage-Ersatz; keine Run-/Backup-API |
 | Präsentation | Welt-/Effektgrenzen, feste Zeichen-/Effekt-/RNG-Referenzen |
-| Steuerung | Touch-Auswahl/Gesten, Move-/Attack-move-Umschaltung samt Lebenszyklus, Worker-Kontexttaps auf eigene Bau-/Reparaturziele mit Auswahl-/Gestenschutz, aktuelle HUD-Grenzen, Kategorien/Zurück, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz, Tab-Wechsel, Run-Abbruch und Ergebnisaktionen |
+| Steuerung | Touch-Auswahl/Gesten, Move-/Attack-move-Umschaltung und Tempo-Button samt Anzeige/Lebenszyklus/Profilfreiheit, Worker-Kontexttaps auf eigene Bau-/Reparaturziele mit Auswahl-/Gestenschutz, aktuelle HUD-Grenzen, Kategorien/Zurück, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz, Tab-Wechsel, Run-Abbruch und Ergebnisaktionen |
 | Renderer | Shader-Quellvertrag, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
 
 [Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests.

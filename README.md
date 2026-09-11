@@ -16,6 +16,7 @@ npm run build
 Danach `index.html` direkt in einem Browser mit WebGL 2 öffnen. Die handgepflegten Quellen liegen unter `src/`, die generierten klassischen Skripte unter `dist/src/`. Stylesheets und separate Bildquellen müssen ebenfalls mitgeführt werden. Die Laufzeittexturen sind derzeit in `src/renderer/assets.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket; `dist/` wird nicht eingecheckt.
 
 - Kamera: mit einem Finger ziehen, Pinch-to-Zoom, Zoom-/Basisknöpfe oder Minimap.
+- Tempo: Button links über der Fähigkeitenleiste zeigt die aktuelle Geschwindigkeit. Antippen wechselt **1× → 1,5× → 2× → 0,75× → 1×**. Gilt nur für das aktuelle Gefecht; Pause behält das Tempo, neues Gefecht/Neustart beginnt mit 1×. Nicht mehr in den Settings.
 - Auswahl: einmal tippen; zweimal für sichtbare eigene Einheiten desselben Typs; dreimal für sichtbare eigene Nicht-Worker. Jeweils weniger als 330 ms zwischen den Releases.
 - Boden-Tap: normale Bewegung, auch zum Rückzug. Das **Schwerter-Symbol links neben ⌂** schaltet Attack-move ein/aus: gold = unterwegs Gegner bekämpfen. Startet pro Gefecht ausgeschaltet; Worker bewegen sich immer normal. Ausgewählte Gebäude werden abgewählt. Rallypoints nur über **Rally point** im Aktionsmenü setzen. **Cancel** bricht Bau-/Fähigkeits-/Rally-Zielauswahl ab.
 - Portrait-Deck: links die Minimap auf halber Bildschirmbreite; rechts **Gebäude / Infanterie / Fahrzeuge / Flugzeuge** und Untermenüs mit **Zurück**. Arbeiter und Kommandant stehen unter Infanterie.

@@ -219,7 +219,9 @@
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
         $('energyCount').textContent = Math.floor(s.energy);
         $('gameTime').textContent = formatTime(s.time);
-        $('speedLabel').textContent = s.speed + '×';
+        const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
+        speedButton.textContent = speedLabel;
+        speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleLabel').innerHTML = 'Annihilation' + `<small>SEED ${s.seed}</small>`;
         let rows = this.game.objectiveRows();
         $('objectives').innerHTML =

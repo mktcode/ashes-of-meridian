@@ -21,6 +21,8 @@ Die taktischen und responsiven HUD-Regeln liegen in `styles/hud.css`; gemeinsame
 
 Links neben dem Basiskameraknopf sitzt der Attack-move-Umschalter mit lokalem Schwerter-SVG. Goldene Füllung und `aria-pressed="true"` markieren aktiv; ein erneuter Tap schaltet zurück auf normale Bewegung. Er verwendet die bestehenden Kameraknopfgrößen.
 
-Queue-Symbole stehen links darüber, mit Zähler und hellem `conic-gradient`-Overlay. Dessen Winkel folgt dem Produktionsfortschritt, nicht einer unabhängig laufenden CSS-Animation. Buttons bleiben währenddessen stabil; native Touch-Scrollflächen und `touch-action: manipulation` verhindern unnötige Browser-Tap-Gesten. Regeln: [Spiel und Bedienung](gameplay.md).
+Links auf Höhe der Kameraknöpfe sitzt der 54 px breite Tempo-Button. Er zeigt den aktuellen Wert einschließlich 0,75× ohne Umbruch; die separate Tempozeile unter der Uhr ist entfernt. Die Höhe entspricht den Kameraknöpfen (30 px, bis 850 px Fensterbreite 27 px).
+
+Queue-Symbole stehen links oberhalb des Tempo-Buttons mit freiem Abstand; ihre maximale Scrollhöhe berücksichtigt den reservierten Platz. Sie tragen Zähler und ein helles `conic-gradient`-Overlay. Dessen Winkel folgt dem Produktionsfortschritt, nicht einer unabhängig laufenden CSS-Animation. Buttons bleiben währenddessen stabil; native Touch-Scrollflächen und `touch-action: manipulation` verhindern unnötige Browser-Tap-Gesten. Regeln: [Spiel und Bedienung](gameplay.md).
 
 [Prüfverfahren](testing.md) · [zentrales Arbeitsprotokoll](worklog.md)

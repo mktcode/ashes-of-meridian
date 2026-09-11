@@ -33,7 +33,7 @@ function setup() {
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
-      assert.ok(!['tooltip','biomeLabel','contextLabel','selectionContent','selectCount','buildingActions','importFile'].includes(id), 'removed DOM must never be accessed');
+      assert.ok(!['tooltip','biomeLabel','contextLabel','selectionContent','selectCount','buildingActions','importFile','speedLabel','settingSpeed'].includes(id), 'removed DOM must never be accessed');
       if (!elements.has(id)) {
         elements.set(id, target());
         if (id === 'topbar') elements.get(id).getBoundingClientRect = () => ({ bottom: 55 });
@@ -324,6 +324,55 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   assert.equal(h.ui.touchGesture, false);
   h.pointer('pointerdown', 200, 200); h.window.handlers.blur();
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
+});
+
+test('speed button cycles existing rates, updates its own label and preserves commands and transient state', () => {
+  const h = setup(), g = h.ui.game;
+  Object.assign(g.s, { alloy: 100, gas: 0, energy: 100, abilities: {}, nextWave: 95 });
+  Object.assign(g, { supply: () => 0, cap: () => 24, objectiveRows: () => [] });
+  h.ui.updateHUD = h.UI.prototype.updateHUD;
+  h.UI.prototype.bind.call(h.ui);
+  const button = h.document.getElementById('speedBtn'), profile = JSON.stringify(h.ui.profile);
+  h.ui.persist = () => { throw Error('Speed must not be persisted'); };
+  g.random = () => { throw Error('Speed must not consume RNG'); };
+  const order = { type: 'move', x: 30, z: 40 }, mode = { kind: 'ability', arg: 'scan' };
+  g.s.entities = [{ id: 7, kind: 'unit', team: 0, hp: 100, order }];
+  h.ui.selected = [7]; h.ui.mode = mode; h.ui.attackMove = true;
+  h.ui.updateHUD(); assert.equal(button.textContent, '1×');
+  for (const speed of [1.5, 2, .75, 1, 1.5, 2, .75, 1]) {
+    h.ui.lastClick = { id: 7, count: 1 };
+    button.onclick();
+    const label = String(speed).replace('.', ',') + '×';
+    assert.equal(g.s.speed, speed); assert.equal(button.textContent, label);
+    assert.equal(button['aria-label'], `Simulation speed: ${label}. Tap to change.`);
+    assert.deepEqual(h.ui.selected, [7]); assert.strictEqual(h.ui.mode, mode);
+    assert.strictEqual(g.s.entities[0].order, order); assert.equal(h.ui.attackMove, true);
+    assert.equal(Object.keys(h.ui.lastClick).length, 0);
+  }
+  assert.deepEqual(h.calls, []); assert.equal(JSON.stringify(h.ui.profile), profile);
+  button.onclick(); h.ui.pause(); button.onclick(); assert.equal(g.s.speed, 1.5);
+  h.ui.resume(); assert.equal(g.s.speed, 1.5);
+  g.s.result = {}; button.onclick(); assert.equal(g.s.speed, 1.5);
+  g.s.result = null; h.ui.view = 'home'; button.onclick(); assert.equal(g.s.speed, 1.5);
+  h.ui.view = 'game'; const run = g.s; g.s = null; button.onclick(); assert.equal(g.s, null);
+  g.s = { ...run, speed: 1 }; h.ui.event('start', {});
+  assert.equal(button.textContent, '1×');
+});
+
+test('speed is absent from the clock and settings, including the former change handler', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.document.handlers.change({ target: { id: 'settingSpeed', value: '2', dataset: {} } });
+  assert.equal(h.ui.game.s.speed, 1);
+  h.ui.showPause(); assert.doesNotMatch(h.ui.html, /GAME SPEED/);
+  for (const run of [h.ui.game.s, null]) {
+    h.ui.game.s = run; h.ui.showSettings();
+    assert.doesNotMatch(h.ui.html, /settingSpeed|Simulation speed/);
+    assert.match(h.ui.html, /data-setting="quality"/);
+  }
+  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+  assert.doesNotMatch(html, /speedLabel|settingSpeed/);
+  assert.match(html, /class="clock"><strong id="gameTime">00:00<\/strong><\/div>/);
+  assert.match(html, /<button id="speedBtn"[^>]*>1×<\/button>/);
 });
 
 test('attack-move toggle changes future ground orders for touch and mouse, not existing orders', () => {

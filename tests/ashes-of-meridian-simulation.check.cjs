@@ -1077,12 +1077,13 @@ test('restarting discards the previous run and rebuilds fresh navigation, indexe
   const {game,renderer,events}=battle();
   const hero=player(game,'hero'); game.command([hero.id],{type:'move',x:-10,z:32});
   game.train('rifle'); game.ability('scan',{x:20,z:-20}); advance(game,100);
-  game.s.cam={x:-42,z:40,zoom:64};
+  game.s.cam={x:-42,z:40,zoom:64}; game.s.speed=2;
   const old=game.s, oldWorld=game.world, hq=player(game,'hq');
   game.damage(hq,999999,null,true); game.objectiveTick(.2); assert.equal(game.s.result.win,false);
   events.length=0;
   game.start({seed:1409,biome:'rust',faction:0});
   assert.notStrictEqual(game.s,old); assert.notStrictEqual(game.world,oldWorld);
+  assert.equal(game.s.speed,1);
   assert.deepEqual(json(game.s),json(freshBattle().game.s));
   for(const e of game.s.entities)assert.strictEqual(game.get(e.id),e);
   const freshHQ=player(game,'hq'), cell=game.world.idx(freshHQ.x,freshHQ.z);

@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Gefechtstempo direkt im HUD
+
+- Links über den Fähigkeiten steht ein Tempo-Button mit aktueller Anzeige: 1× → 1,5× → 2× → 0,75× → 1×. Tempozeile unter der Uhr und Geschwindigkeitsauswahl/-Handler in den Settings entfernt; Queue-Symbole mit Abstand darüber platziert. Bedienung in `ui/input.js`, Darstellung in `ui/actions.js`; kein struktureller Umbau. `game.s.speed`, Startwert 1, Simulationsschleife und Speicherung unverändert. Pause behält das Tempo, Neustart setzt zurück; keine Änderung an Auswahl, Zielmodus oder laufenden Aufträgen.
+- **223 Node-Tests inklusive strengem Build bestanden** (rund 17 s): Umschaltfolge, Button-/ARIA-Anzeige, Pausen-/Ergebnis-/Run-Schutz, Profilfreiheit, entfernte Settings-/Uhr-Anbindung und Neustart geprüft. Keine Fixtures geändert. Diff und lokale Markdown-Links geprüft.
+- **`file://`**, Chromium/Performance, **390×844, 430×932 und 1280×800**: native Touch-Umschaltung bei laufender Simulation, Auswahl-/Fähigkeitsmodus ohne Weltauftrag, Pause/Settings/Fortsetzen, Neustart auf 1× und unverändertes gespeichertes Profil bestanden. Platz/Erreichbarkeit neben Kamera/Fähigkeiten und unter aktiver Produktionsqueue einschließlich 0,75× geprüft, Bilder gesichtet. Keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät-/anderer Browser-/GPU-/Screenreader-Nachweis.
+
 ## Geschützte Worker-Aufträge und Bau-/Reparatur-Kontexttaps
 
 - Automatische Bau-/Repair-Zuweisung verwendet nur Worker ohne Bau-/Reparaturauftrag, einschließlich Anfahrt; Abbau zählt als frei. Kein freier Worker: keine Platzierung/Zahlung, sichtbarer Hinweis im Baumenü. Worker-Auswahl → eigenes Fundament/beschädigtes Gebäude oder eigene Einheit weist genau einen ausgewählten Worker zu, erhält Auswahl und sonstige Aufträge und darf ausdrücklich umleiten. An Baustellen wird der bisherige Bauarbeiter abgelöst, ohne Mehrarbeitertempo oder erneute Baukosten. Intakte Ziele bleiben normal auswählbar.

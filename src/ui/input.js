@@ -48,7 +48,6 @@
         });
         document.addEventListener('change', e => {
           if (e.target.dataset.setting) this.applySetting(e.target);
-          if (e.target.id === 'settingSpeed' && this.game.s) this.game.s.speed = +e.target.value;
         });
         document.addEventListener('input', e => {
           if (e.target.dataset.setting === 'volume') this.applySetting(e.target);
@@ -56,6 +55,13 @@
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
         $('battleHome').onclick = () => this.pause();
         $('helpBtn').onclick = () => this.showHelp();
+        $('speedBtn').onclick = () => {
+          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s.result) return;
+          const speeds = [1, 1.5, 2, 0.75];
+          this.game.s.speed = speeds[(speeds.indexOf(this.game.s.speed) + 1) % speeds.length];
+          this.lastClick = {};
+          this.updateHUD();
+        };
         $('attackMoveBtn').onclick = () => {
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s.result) return;
           this.attackMove = !this.attackMove;
