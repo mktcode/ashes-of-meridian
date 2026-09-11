@@ -12,7 +12,7 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 | --- | --- |
 | `core.js` | Matrizen, Vektoren und Seed-RNG: `M4`, `V`, `seeded` |
 | `renderer.js` | WebGL 2, Meshes, Materialien, eingebettete Texturen und Renderpässe: `MeridianRenderer` |
-| `content.js` | `FACTIONS`, `UNITS`, `BUILDINGS`, `META`, `BIOMES`, Icons und Namenshelfer |
+| `content.js` | `FACTIONS`, `UNITS`, `BUILDINGS`, `ABILITIES`, `META`, `BIOMES`, Icons und Namenshelfer |
 | `world.js` | CPU-Terrain, Hindernisraster, Navigation und Sichtbarkeit: `Battlefield` |
 | `world-view.js` | GPU-Terrain/Fog und Entitätsmodelle: `BattlefieldView`, `renderEntity` |
 | `effects.js` | Synchrone Effekterzeugung, Lebensdauer und Schadenszahlen: `MeridianEffects` |
@@ -34,6 +34,7 @@ Die Reihenfolge entspricht den `data-meridian-script`-Tags in `index.html`:
 - Teams: 0 Spieler, 1 Gegner, −1 neutral. Die drei Fraktionen sind unabhängig davon; Fraktion 2 ist weiterhin gültig.
 - Welt-/Suchindizes, RNG-Closure und kurzlebige Effekte liegen außerhalb von `game.s`. Jeder Start erzeugt eine neue Welt samt Indizes und Sichtbarkeit; es gibt kein Snapshot-/Restore-API.
 - `game.effects` hält `fx` und `floats`. Erzeugung/Tick verwenden synchron den Simulations-RNG, Zeichnen keinen RNG. Gameplayrelevante Strikes, Heilfelder und Scans bleiben in der Simulation. Effekte nicht wegen unsichtbarer Grafik überspringen.
+- `ABILITIES` in `content.js` hält Energiekosten und Cooldowns; Simulation und HUD lesen die Kosten aus derselben Definition. Zielprüfung und Fähigkeitseffekte bleiben in der Simulation.
 - Gebäudeaktionen prüfen Zulässigkeit, Arbeiterauftrag und Erstattung in der Simulation. Die UI zeigt sie im festen rechten Portrait-Menü und hält die bestätigte Verkaufs-Ziel-ID; kein projiziertes Gebäude-Panel. Menüzustand, Tap-Folge und offene Dialoge sind flüchtig.
 - Die Queue-Leiste aggregiert vorhandene Gebäude-Queues je Einheitentyp. Stabile DOM-Buttons erhalten pro Frame den aus der Simulation abgeleiteten Winkel, Zähler und Restzeit. Keine zweite Warteschlange oder CSS-Zeitbasis.
 - `MeridianUI(game, renderer, audio, profile, persistence)` orchestriert Bedienung und permanente Profileinstellungen. `showHome()`-Styles sind auf `.home-screen`/`.home-layout` begrenzt. `window.Meridian` bietet Runtime-Inspektion; globale `const`-/`class`-Bindungen sind nicht automatisch `window`-Eigenschaften.

@@ -756,6 +756,31 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
   h.ui.paused = true; h.UI.prototype.updateHUD.call(h.ui); assert.ok(buttons.every(b=>b.disabled));
 });
 
+test('HUD ability badges and disabled states retain energy and cooldown boundaries', () => {
+  const h = setup(), g = h.ui.game;
+  Object.assign(g.s, { alloy: 0, gas: 0, time: 10, abilities: {}, nextWave: 95 });
+  Object.assign(g, { supply: () => 0, cap: () => 24, objectiveRows: () => [] });
+  for (const [kind, energy] of [['orbital', 85], ['repair', 45], ['scan', 25], ['drop', 95]]) {
+    const button = h.document.getElementById('ability:' + kind);
+    button.dataset = { action: 'ability:' + kind };
+    h.document.querySelectorAll = () => [button];
+    for (const available of [energy - 1, energy]) {
+      g.s.energy = available;
+      h.UI.prototype.updateHUD.call(h.ui);
+      assert.equal(button.disabled, available < energy);
+      assert.equal(button.querySelector('small').textContent, energy + 'ϟ');
+    }
+    g.s.abilities[kind] = 12.2;
+    h.UI.prototype.updateHUD.call(h.ui);
+    assert.equal(button.disabled, true);
+    assert.equal(button.querySelector('small').textContent, '3s');
+    g.s.abilities[kind] = 10;
+    h.UI.prototype.updateHUD.call(h.ui);
+    assert.equal(button.disabled, false);
+    assert.equal(button.querySelector('small').textContent, energy + 'ϟ');
+  }
+});
+
 test('settings and camera hints describe touch navigation without desktop camera controls', () => {
   const h = setup(); h.ui.showSettings();
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);

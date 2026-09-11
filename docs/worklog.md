@@ -2,6 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Gemeinsame Fähigkeitsdefinitionen
+
+- Energiekosten/Cooldowns unverändert nach `content.js` (`ABILITIES`) verschoben; Simulation und HUD lesen dieselbe Kostendefinition. Zielprüfungen, Effekte und Prüfungsreihenfolge bleiben unverändert.
+- Fünf gezielte neue Node-Tests bestanden: alle vier Energie-/Cooldown-Grenzen samt Bezahlung sowie HUD-Badges/Sperren. Syntax und Diff geprüft. Vollständiger Node-Lauf folgt nach den drei vereinbarten Refactorings.
+
 ## Gemeinsame Hilfezeilen und Bewegungsgeschwindigkeit
 
 - `ui.js`: drei identische Hilfezeilen-Templates in die lokale Funktion `renderHelpLines` innerhalb von `showHelp()` gezogen. `simulation.js`: `move()` und `moveYield()` verwenden dieselbe Methode `movementSpeed(e)`; Faktoren, Berechnungsreihenfolge, Kollisions-/Weglogik und unterschiedliche `walk`-Fortschritte unverändert.

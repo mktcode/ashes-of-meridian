@@ -1229,13 +1229,7 @@
       }
       ability(kind, p) {
         let s = this.s,
-          defs = {
-            orbital: { energy: 85, cd: 48 },
-            repair: { energy: 45, cd: 28 },
-            scan: { energy: 25, cd: 17 },
-            drop: { energy: 95, cd: 75 }
-          },
-          d = defs[kind];
+          d = ABILITIES[kind];
         if (!d) return false;
         if (s.abilities[kind] > s.time) {
           this.emit(

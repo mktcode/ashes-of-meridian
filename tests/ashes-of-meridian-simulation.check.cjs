@@ -806,6 +806,30 @@ test('fixed steps finish production once, retain reserved supply and account onl
   close(game.s.gas, 400 + 11.05 * 1.7);
 });
 
+for (const [kind, energy, cooldown] of [
+  ['orbital', 85, 48], ['repair', 45, 28], ['scan', 25, 17], ['drop', 95, 75]
+]) test(`ability ${kind} retains energy threshold, exact payment and cooldown`, () => {
+  const { game } = freshBattle();
+  game.s.time = 10;
+  game.world.explored.fill(1);
+  const target = { x: 0, z: 0 };
+  game.s.energy = energy - 1;
+  const before = json(game.s);
+  assert.equal(game.ability(kind, target), false);
+  assert.deepEqual(json(game.s), before);
+  game.s.energy = energy;
+  assert.equal(game.ability(kind, target), true);
+  assert.equal(game.s.energy, 0);
+  assert.equal(game.s.abilities[kind], 10 + cooldown);
+  game.s.energy = 100;
+  const recharging = json(game.s);
+  assert.equal(game.ability(kind, target), false);
+  assert.deepEqual(json(game.s), recharging);
+  game.s.time = 10 + cooldown;
+  assert.equal(game.ability(kind, target), true);
+  assert.equal(game.s.energy, 100 - energy);
+});
+
 test('restarting discards the previous run and rebuilds fresh navigation, indexes and fog', () => {
   const {game,renderer,events}=battle();
   const hero=player(game,'hero'); game.command([hero.id],{type:'move',x:-10,z:32});

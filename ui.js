@@ -590,14 +590,14 @@
           } else if (k === 'build')
             disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
           else if (k === 'ability') {
-            let costs = { orbital: 85, repair: 45, scan: 25, drop: 95 };
-            disabled = s.energy < costs[arg] || s.abilities[arg] > s.time;
+            let energy = ABILITIES[arg]?.energy;
+            disabled = s.energy < energy || s.abilities[arg] > s.time;
             let badge = b.querySelector('small');
             if (badge)
               badge.textContent =
                 s.abilities[arg] > s.time
                   ? Math.ceil(s.abilities[arg] - s.time) + 's'
-                  : costs[arg] + 'ϟ';
+                  : energy + 'ϟ';
           }
           if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||
             (!this.game.buildingRepairers(this.selected[0]).length && !!this.game.canRepairBuilding(this.selected[0]));

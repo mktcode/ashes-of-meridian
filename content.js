@@ -274,6 +274,12 @@ const BUILDINGS = {
     desc: 'Automated ground and air defense. Protects workers and choke points, but can be outranged by artillery.'
   }
 };
+const ABILITIES = {
+  orbital: { energy: 85, cd: 48 },
+  repair: { energy: 45, cd: 28 },
+  scan: { energy: 25, cd: 17 },
+  drop: { energy: 95, cd: 75 }
+};
 const META = {
   command: {
     name: 'Command uplink',
