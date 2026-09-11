@@ -243,7 +243,7 @@
             loader.innerHTML =
               '<div class="eyebrow">UPLINK INTERRUPTED</div><h2>The renderer encountered a problem.</h2><p>' +
               esc(error.message) +
-              '</p><p>Reload this file. The most recent local checkpoint remains available.</p>';
+              '</p><p>Reload this file to return to the main menu. Runs are not saved; the current run will be lost.</p>';
             return;
           }
           requestAnimationFrame(draw);
@@ -251,18 +251,10 @@
         canvas.addEventListener('webglcontextlost', e => {
           e.preventDefault();
           ui.paused = true;
-          try {
-            if (game.s && !game.s.result) ui.save(false);
-          } catch {}
           document.getElementById('loading').classList.remove('hidden');
           document.getElementById('loading').innerHTML =
-            '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>Your operation has been checkpointed.</h2><p>Reload this file to reconnect. Use Low quality in Settings for a lighter graphics load.</p>';
+            '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>Reload this file to reconnect. Runs are not saved; the current run will be lost. Use Performance quality in Settings for a lighter graphics load.</p>';
           failed = true;
-        });
-        addEventListener('beforeunload', () => {
-          try {
-            if (game.s && !game.s.result) ui.save(false);
-          } catch {}
         });
         window.Meridian = {
           game,

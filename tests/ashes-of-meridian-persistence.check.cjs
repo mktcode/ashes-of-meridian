@@ -3,59 +3,30 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
 
-const PROFILE = 'meridian.profile.v1', SAVE = 'meridian.operation.v3';
+const PROFILE = 'meridian.profile.v1';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
   version: 1, upgrades: {},
-  settings: { volume: 0.28, music: true, sfx: true, quality: 2,
-    healthbars: false }
+  settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false }
 };
-const backup = (profile = { version: 1 }, operation = null) =>
-  JSON.stringify({ format: 'ashes-of-meridian', version: 1, profile, operation });
 
-// Exercise existing UI entry points without constructing a DOM, renderer or game.
-// Storage failure modes are independently switchable, including its global getter.
-function setup() {
-  const data = new Map(), trace = [], fail = {}, warnings = [], blobs = [];
-  const storage = {
-    getItem(k) { trace.push(['get', k]); if (fail.get) throw Error('get denied'); return data.get(k) ?? null; },
-    setItem(k, v) { trace.push(['set', k, v]); if (fail.set) throw Error('set denied'); data.set(k, v); },
-    removeItem(k) { trace.push(['remove', k]); if (fail.remove) throw Error('remove denied'); data.delete(k); }
-  };
-  const context = loadScripts(['core', 'content', 'world', 'simulation', 'persistence', 'ui'], { globals: {
-    console: { warn: (...args) => warnings.push(args) }, Blob,
-    URL: { createObjectURL: blob => { blobs.push(blob); return 'blob:test'; }, revokeObjectURL() {} },
-    document: { createElement: () => ({ click() { trace.push(['download', this.download]); } }) },
-    setTimeout() {}
-  } });
-  Object.defineProperty(context, 'localStorage', { get() {
-    if (fail.access) throw Error('storage getter denied');
-    return storage;
-  } });
-  const api = vm.runInContext(`(() => {
-    const persistence = createMeridianPersistence({
-      getStorage: () => localStorage, clamp, upgrades: META,
-      warn: (...args) => console.warn(...args)
-    });
-    return { readProfile: persistence.loadProfile, persistence, UI: MeridianUI };
-  })()`, context);
-  const ui = Object.create(api.UI.prototype);
-  const profile = api.readProfile();
-  Object.assign(ui, {
-    profile, persistence: api.persistence, selected: [99], actionSignature: 'old', lastSaveTime: 0,
-    game: { s: { version: 3, time: 7, entities: [], result: null },
-      snapshot() { trace.push(['snapshot']); return json(this.s); },
-      restore(state) { trace.push(['restore', state]); if (fail.restore) throw Error('restore denied'); this.s = state; }
+function setup(data = new Map()) {
+  const trace = [], fail = {}, warnings = [];
+  const context = loadScripts(['core', 'content', 'persistence', 'ui']);
+  const service = vm.runInContext('createMeridianPersistence', context)({
+    getStorage() {
+      if (fail.access) throw Error('storage getter denied');
+      return {
+        getItem(k) { trace.push(['get', k]); if (fail.get) throw Error('get denied'); return data.get(k) ?? null; },
+        setItem(k, v) { trace.push(['set', k, v]); if (fail.set) throw Error('set denied'); data.set(k, v); }
+      };
     },
-    audio: { unlock() { trace.push(['unlock']); }, sound(s) { trace.push(['sound', s]); },
-      updateSettings() { trace.push(['audio']); } },
-    R: { resize() { trace.push(['resize']); if (fail.resize) throw Error('resize denied'); } },
-    toast: s => trace.push(['toast', s]), radio: s => trace.push(['radio', s]),
-    updateHUD: force => trace.push(['hud', force]), showHome: () => trace.push(['home'])
+    clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
+    upgrades: vm.runInContext('META', context), warn: (...args) => warnings.push(args)
   });
-  trace.length = 0;
-  return { data, trace, fail, warnings, blobs, ui, readProfile: api.readProfile,
-    importText: (text, size = text.length) => ui.importBackup({ size, text: async () => text }) };
+  const ui = Object.create(vm.runInContext('MeridianUI.prototype', context));
+  ui.persistence = service; ui.profile = service.loadProfile(); trace.length = 0;
+  return { data, trace, fail, warnings, ui, service, readProfile: service.loadProfile };
 }
 
 test('profile defaults are complete, fresh and do not write storage', () => {
@@ -71,8 +42,7 @@ test('profile normalization preserves current coercions and fractional values bu
   h.data.set(PROFILE, JSON.stringify({ version: 1, unlocked: 19, credits: '12.5',
     medals: [3], best: 'invalid', upgrades: { command: 9, stores: -1, industry: '1.5', extra: 8 },
     ending: 'open', skirmishBest: -4, settings: { volume: '0.6', quality: 1.5, difficulty: 'missing', music: 'yes', extra: 9 } }));
-  const p = json(h.readProfile());
-  assert.deepEqual(p, { ...defaults,
+  assert.deepEqual(json(h.readProfile()), { ...defaults,
     upgrades: { command: 3, stores: 0, industry: 1.5, extra: 8, resolve: 0 },
     settings: { ...defaults.settings, volume: 0.6, quality: 1.5, music: 'yes' } });
 });
@@ -88,195 +58,58 @@ test('invalid profile JSON/version resets; a mid-normalization error retains par
   assert.ok(h.warnings.every(w => w[0] === 'Profile reset:'));
 });
 
-test('persist writes the unchanged version-1 profile JSON and key', () => {
-  const h = setup(); h.ui.profile.upgrades.stores = 2; h.ui.persist();
+test('permanent upgrades and settings persist across instances using only the unchanged profile key', () => {
+  const data = new Map([['meridian.operation.v3', '{"version":3,"entities":[]}']]);
+  const h = setup(data); h.ui.profile.upgrades.stores = 2; h.ui.profile.settings.quality = 0; h.ui.persist();
   assert.deepEqual(h.trace, [['set', PROFILE, JSON.stringify(h.ui.profile)]]);
+  const reloaded = setup(data);
+  assert.equal(reloaded.ui.profile.upgrades.stores, 2); assert.equal(reloaded.ui.profile.settings.quality, 0);
+  reloaded.readProfile(); assert.deepEqual(reloaded.trace, [['get', PROFILE]]);
+  assert.equal(data.get('meridian.operation.v3'), '{"version":3,"entities":[]}', 'old run data is ignored, not migrated');
+  assert.deepEqual(Object.keys(h.service).sort(), ['available','loadProfile','saveProfile']);
+  for (const method of ['save','load','exportBackup','importBackup']) assert.equal(h.ui[method], undefined);
 });
 
-test('save guards, snapshot serialization, announcement and timestamp stay ordered', () => {
-  const h = setup();
-  assert.equal(h.ui.save(), true);
-  assert.deepEqual(h.trace, [['snapshot'], ['set', SAVE, JSON.stringify(h.ui.game.s)],
-    ['toast', 'Operation checkpoint saved.'], ['sound', 'complete']]);
-  assert.equal(h.ui.lastSaveTime, 7);
-  h.trace.length = 0; h.ui.game.s.result = { win: true };
-  assert.equal(h.ui.save(), false); h.ui.game.s = null;
-  assert.equal(h.ui.save(), false); assert.deepEqual(h.trace, []);
-});
-
-test('denied storage getter uses volatile checkpoints; separate instances do not share them', () => {
+test('denied storage getter keeps only a volatile profile; new instances lose the fallback', () => {
   const h = setup(); h.fail.access = true;
-  assert.equal(h.ui.save(), false);
-  assert.match(h.trace.find(t => t[0] === 'toast')[1], /storage is unavailable/);
-  h.ui.game.s = null; h.trace.length = 0; h.ui.load();
-  assert.equal(h.ui.game.s.time, 7);
-  assert.ok(h.trace.some(t => t[0] === 'restore'));
-  const other = setup(); other.fail.access = true; other.ui.load();
-  assert.deepEqual(other.trace, [['toast', 'No operation checkpoint found.']]);
+  h.ui.profile.upgrades.stores = 2;
+  assert.equal(h.service.saveProfile(h.ui.profile), false);
+  assert.equal(h.readProfile().upgrades.stores, 2); assert.equal(h.service.available, false);
+  const other = setup(); other.fail.access = true;
+  assert.deepEqual(json(other.readProfile()), defaults);
 });
 
-test('write failure with successful reads does not prefer the memory copy', () => {
-  const h = setup(); h.data.set(SAVE, '{"time":2}'); h.fail.set = true;
-  assert.equal(h.ui.save(false), false);
-  h.ui.load(); assert.equal(h.ui.game.s.time, 2);
-  h.fail.get = true; h.ui.load(); assert.equal(h.ui.game.s.time, 7);
+test('write failure with successful reads still prefers the native profile; availability stays sticky', () => {
+  const h = setup(); h.data.set(PROFILE, JSON.stringify({ ...defaults, upgrades: { stores: 1 } }));
+  h.ui.profile.upgrades.stores = 2; h.fail.set = true;
+  assert.equal(h.service.saveProfile(h.ui.profile), false);
+  assert.equal(h.readProfile().upgrades.stores, 1);
+  h.fail.get = true; assert.equal(h.readProfile().upgrades.stores, 2);
+  h.fail.get = false; assert.equal(h.readProfile().upgrades.stores, 1);
+  assert.equal(h.service.available, false);
 });
-
-test('load distinguishes missing, malformed and JSON-null checkpoints, and catches restore errors', () => {
-  const h = setup(); h.ui.load();
-  assert.deepEqual(h.trace, [['get', SAVE], ['toast', 'No operation checkpoint found.']]);
-  h.data.set(SAVE, '{'); h.trace.length = 0; h.ui.load();
-  assert.match(h.trace[1][1], /^Checkpoint could not be loaded:/);
-  assert.ok(!h.trace.some(t => t[0] === 'restore'));
-  h.data.set(SAVE, 'null'); h.trace.length = 0; h.ui.load();
-  assert.deepEqual(h.trace[1], ['restore', null]);
-  assert.deepEqual(json(h.ui.selected), []); assert.equal(h.ui.actionSignature, '');
-  h.fail.restore = true; h.trace.length = 0; h.ui.load();
-  assert.deepEqual(h.trace, [['get', SAVE], ['restore', null], ['toast', 'Checkpoint could not be loaded: restore denied']]);
-});
-
-test('export prefers the active snapshot, otherwise saved JSON, and tolerates broken stored JSON', async () => {
-  const h = setup(); h.data.set(SAVE, '{"time":2}');
-  h.ui.exportBackup();
-  assert.equal(await h.blobs[0].text(), backup(h.ui.profile, h.ui.game.s));
-  assert.equal(h.blobs[0].type, 'application/json');
-  assert.ok(!h.trace.some(t => t[0] === 'get'));
-  h.ui.game.s.result = { win: true }; h.ui.exportBackup();
-  assert.equal(await h.blobs[1].text(), backup(h.ui.profile, { time: 2 }));
-  h.data.set(SAVE, '{'); h.ui.game.s = null; h.ui.exportBackup();
-  assert.equal(await h.blobs[2].text(), backup(h.ui.profile));
-});
-
-test('backup rejection and size limit leave profile, checkpoint and active game untouched', async () => {
-  const h = setup(), before = h.ui.game.s, profile = json(h.ui.profile);
-  h.data.set(SAVE, 'old');
-  for (const text of ['{', 'null', '{}', backup({ version: 2 }),
-    backup({ version: 1 }, { version: 999, entities: [] }),
-    backup({ version: 1 }, { version: 2, entities: [] }),
-    backup({ version: 1 }, { version: 3, entities: {} }),
-    backup({ version: 1 }, { version: 3, entities: Array(1501).fill({}) })]) {
-    h.trace.length = 0; await h.importText(text);
-    assert.equal(h.trace.length, 1); assert.match(h.trace[0][1], /^Import failed:/);
-    assert.deepEqual(json(h.ui.profile), profile); assert.equal(h.ui.game.s, before);
-    assert.equal(h.data.get(SAVE), 'old'); assert.equal(h.data.has(PROFILE), false);
-  }
-  h.trace.length = 0;
-  await h.ui.importBackup(null);
-  await h.ui.importBackup({ size: 4000001, text() { throw Error('must not read'); } });
-  assert.deepEqual(h.trace, [['toast', 'Backup is too large.']]);
-});
-
-test('import preserves profile identity, writes raw data, normalizes in memory and applies in order', async () => {
-  const h = setup(), identity = h.ui.profile;
-  const p = { version: 1, upgrades: { stores: 20 }, settings: { quality: 0 } };
-  const op = { version: 3, entities: Array(1500).fill({}) };
-  await h.importText(backup(p, op), 4000000);
-  assert.equal(h.ui.profile, identity); assert.equal(identity.upgrades.stores, 3);
-  assert.equal(h.ui.audio.settings, identity.settings); assert.equal(h.ui.R.quality, 0);
-  assert.equal(h.ui.game.s, null);
-  assert.deepEqual(h.trace, [['set', PROFILE, JSON.stringify(p)], ['get', PROFILE],
-    ['audio'], ['resize'], ['set', SAVE, JSON.stringify(op)], ['home'], ['toast', 'Upgrades and checkpoint imported.']]);
-});
-
-test('profile-only imports preserve the old checkpoint, including falsey operation values', async () => {
-  for (const operation of [null, false, 0, '']) {
-    const h = setup(); h.data.set(SAVE, 'old');
-    await h.importText(backup({ version: 1 }, operation));
-    assert.equal(h.data.get(SAVE), 'old');
-    assert.ok(!h.trace.some(t => t[0] === 'set' && t[1] === SAVE));
-  }
-});
-
-test('import storage failures retain the existing non-transactional behavior', async () => {
-  const h = setup(); h.fail.access = true;
-  await h.importText(backup({ version: 1, upgrades: { stores: 2 } }, { version: 3, entities: [] }));
-  assert.equal(h.ui.profile.upgrades.stores, 2); assert.equal(h.data.size, 0);
-  assert.deepEqual(h.trace.at(-1), ['toast', 'Upgrades and checkpoint imported.']);
-  h.ui.load(); assert.deepEqual(json(h.ui.game.s), { version: 3, entities: [] });
-  const partial = setup(); partial.fail.resize = true; partial.data.set(SAVE, 'old');
-  const active = partial.ui.game.s;
-  await partial.importText(backup({ version: 1, upgrades: { stores: 3 } }, { version: 3, entities: [] }));
-  assert.equal(partial.ui.profile.upgrades.stores, 3); assert.equal(partial.data.get(SAVE), 'old');
-  assert.equal(partial.ui.game.s, active);
-  assert.deepEqual(partial.trace.at(-1), ['toast', 'Import failed: resize denied']);
-});
-
-// New boundary tests: only explicitly supplied rules, storage and logging.
-// No content/world/simulation/UI scripts or browser globals are loaded here.
-function isolatedPersistence(getStorage) {
-  const context = loadScripts(['persistence']);
-  const create = vm.runInContext('createMeridianPersistence', context);
-  const warnings = [];
-  const service = create({ getStorage, clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
-    upgrades: { custom: { max: 2 } },
-    warn: (...args) => warnings.push(args) });
-  return { service, warnings, context };
-}
 
 test('persistence is standalone, lazy and uses injected profile rules', () => {
-  const data = new Map(); let accesses = 0;
-  const { service, context } = isolatedPersistence(() => {
-    accesses++;
-    return { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v), removeItem: k => data.delete(k) };
+  const context = loadScripts(['persistence']), data = new Map(); let accesses = 0;
+  const service = vm.runInContext('createMeridianPersistence', context)({
+    getStorage() { accesses++; return { getItem: k => data.get(k) ?? null, setItem: (k,v) => data.set(k,v) }; },
+    clamp: (v,min,max) => Math.max(min,Math.min(max,v)), upgrades: { custom: { max: 2 } }, warn() {}
   });
   assert.equal(accesses, 0); assert.equal(service.available, true);
-  assert.equal(vm.runInContext('typeof Store + ":" + typeof defaultProfile + ":" + typeof readProfile', context), 'undefined:undefined:undefined');
+  assert.equal(vm.runInContext('typeof Store + ":" + typeof defaultProfile + ":" + typeof localStorage', context), 'undefined:undefined:undefined');
   service.saveProfile({ version: 1, upgrades: { custom: 7 }, settings: { quality: 1 } });
   const p = json(service.loadProfile());
   assert.deepEqual(p.upgrades, { custom: 2 }); assert.equal(p.settings.quality, 1);
-  assert.deepEqual(json(service.readCheckpoint()), { exists: false, state: null });
-  service.saveCheckpoint(null);
-  assert.equal(service.hasCheckpoint(), true);
-  assert.deepEqual(json(service.readCheckpoint()), { exists: true, state: null });
-  service.removeCheckpoint(); assert.equal(service.hasCheckpoint(), false);
-  assert.equal(data.get(PROFILE), '{"version":1,"upgrades":{"custom":7},"settings":{"quality":1}}');
+  assert.deepEqual([...data.keys()], [PROFILE]);
 });
 
-test('checkpoint removal clears fallback even if native removal fails; availability stays sticky', () => {
-  const data = new Map(); let denyRead = false, denyRemove = false;
-  const { service } = isolatedPersistence(() => ({
-    getItem(k) { if (denyRead) throw Error('denied'); return data.get(k) ?? null; },
-    setItem(k, v) { data.set(k, v); },
-    removeItem(k) { if (denyRemove) throw Error('denied'); data.delete(k); }
-  }));
-  service.saveCheckpoint({ time: 2 }); denyRemove = true;
-  service.removeCheckpoint();
-  assert.equal(service.available, true); // Existing remove() does not flag failure.
-  assert.equal(service.hasCheckpoint(), true); // Native copy is still there.
-  denyRead = true;
-  assert.equal(service.hasCheckpoint(), false); assert.equal(service.available, false);
-  denyRead = false; denyRemove = false;
-  service.removeCheckpoint(); assert.equal(service.available, false);
-});
-
-test('backup codec has no storage writes and retains exact validation errors', () => {
-  const { service } = isolatedPersistence(() => { throw Error('must not access storage'); });
-  const text = backup({ version: 1 }, { version: 3, entities: [] });
-  const parsed = service.parseBackup(text);
-  assert.equal(service.serializeBackup(parsed.profile, parsed.operation), text);
-  assert.throws(() => service.parseBackup('{}'), { message: 'Not a Meridian backup.' });
-  assert.throws(() => service.parseBackup(backup({ version: 1 }, { version: 3, entities: {} })),
-    { message: 'Operation data is invalid.' });
-  assert.equal(service.available, true);
-});
-
-test('UI constructor and checkpoint commands accept a fake service without storage or codec globals', () => {
+test('UI constructor needs only profile persistence, with no storage or run codec globals', () => {
   const context = loadScripts(['ui'], { globals: { innerWidth: 800, innerHeight: 600 } });
-  const UI = vm.runInContext('MeridianUI', context), calls = [], state = { time: 4 };
-  class TestUI extends UI {
-    bind() {} toast() {} radio() {} updateHUD() {}
-  }
-  const service = {
-    saveProfile: p => calls.push(['profile', p]),
-    saveCheckpoint: s => { calls.push(['save', s]); return false; },
-    readCheckpoint: () => ({ exists: true, state })
-  };
-  const profile = json(defaults), game = { s: state, snapshot: () => state,
-    restore: s => calls.push(['restore', s]) };
-  const ui = new TestUI(game, {}, { unlock() {} }, profile, service);
-  assert.equal(ui.persistence, service);
-  ui.persist(); assert.equal(ui.save(false), false); ui.load();
-  assert.equal(ui.lastSaveTime, 4);
-  assert.deepEqual(calls, [['profile', profile], ['save', state], ['restore', state]]);
+  const UI = vm.runInContext('MeridianUI', context), calls = [];
+  class TestUI extends UI { bind() {} }
+  const service = { saveProfile: p => calls.push(['profile', p]) }, profile = json(defaults);
+  const ui = new TestUI({ s: null }, {}, {}, profile, service);
+  assert.equal(ui.persistence, service); ui.persist();
+  assert.deepEqual(calls, [['profile', profile]]); assert.equal('lastSaveTime' in ui, false);
   assert.equal(vm.runInContext('typeof localStorage + ":" + typeof createMeridianPersistence', context), 'undefined:undefined');
 });

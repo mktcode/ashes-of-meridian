@@ -1,11 +1,10 @@
-/* Profile and checkpoint persistence. No DOM, renderer or simulation access. */
+/* Permanent profile persistence only. Runs are never stored. */
 'use strict';
 
 // Dependencies are supplied by app.js. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
 function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
-    const SAVE_KEY = 'meridian.operation.v3',
-      PROFILE_KEY = 'meridian.profile.v1';
+    const PROFILE_KEY = 'meridian.profile.v1';
     const memoryStore = {};
     const Store = {
       available: true,
@@ -26,12 +25,6 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
           this.available = false;
           return false;
         }
-      },
-      remove(k) {
-        delete memoryStore[k];
-        try {
-          getStorage().removeItem(k);
-        } catch (e) {}
       }
     };
     function defaultProfile() {
@@ -69,44 +62,6 @@ function createMeridianPersistence({ getStorage, clamp, upgrades, warn }) {
       loadProfile,
       saveProfile(profile) {
         return Store.set(PROFILE_KEY, JSON.stringify(profile));
-      },
-      hasCheckpoint() {
-        return !!Store.get(SAVE_KEY);
-      },
-      readCheckpoint() {
-        const raw = Store.get(SAVE_KEY);
-        // JSON null is a present checkpoint and must still reach restore().
-        return { exists: !!raw, state: raw ? JSON.parse(raw) : null };
-      },
-      saveCheckpoint(state) {
-        return Store.set(SAVE_KEY, JSON.stringify(state));
-      },
-      removeCheckpoint() {
-        Store.remove(SAVE_KEY);
-      },
-      serializeBackup(profile, operation) {
-        if (!operation) {
-          try {
-            operation = JSON.parse(Store.get(SAVE_KEY) || 'null');
-          } catch (e) {}
-        }
-        return JSON.stringify({ format: 'ashes-of-meridian', version: 1, profile, operation });
-      },
-      parseBackup(text) {
-        let d = JSON.parse(text);
-        if (d.format !== 'ashes-of-meridian' || d.version !== 1 || d.profile?.version !== 1)
-          throw Error('Not a Meridian backup.');
-        if (d.operation) {
-          if (
-            !Array.isArray(d.operation.entities) ||
-            d.operation.entities.length > 1500 ||
-            d.operation.version !== 3
-          )
-            throw Error('Operation data is invalid.');
-        }
-        // Validation only: UI applies profile/settings/checkpoint in the old
-        // order. Combining these writes would change partial-failure behavior.
-        return d;
       }
     };
 }

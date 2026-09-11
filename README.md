@@ -20,11 +20,11 @@ Weitere Regeln und offene Punkte: [Spiel und Bedienung](docs/gameplay.md).
 
 Optional für lokale Entwicklung: `python3 -m http.server 8080 --bind 127.0.0.1`, dann [localhost:8080](http://127.0.0.1:8080/) öffnen. Direktes `file://` bleibt das Auslieferungsziel.
 
-## Spielstände sichern
+## Runs und Pausen
 
-Unter **Settings → Export Backup / Import Backup** lassen sich permanente Upgrades und Checkpoints übertragen. Vor Browserwechsel oder Verschieben der Dateien exportieren: Browserspeicher wird nicht automatisch übernommen und kann unter `file://` eingeschränkt sein. Ohne dauerhaften Speicher geht der flüchtige Ersatz beim Schließen verloren.
+Runs werden nicht gespeichert. **Ⅱ** pausiert das laufende Gefecht; beim Wechsel in einen anderen Tab wird ebenfalls pausiert. Fortsetzen geht nur, solange diese Seite geöffnet bleibt. Hauptmenü, Schließen oder Reload verwerfen den Run. Nach Sieg oder Niederlage bleiben **Neustart** und **Hauptmenü**.
 
-Checkpoints verwenden Version 3; ältere Versionen oder Spielstände mit dem entfernten Aufklärer werden nicht übernommen. Permanente Upgrades bleiben erhalten. Technische Details: [Speicherung](docs/architecture.md#speicherung).
+Nur permanente Upgrades und Einstellungen bleiben im Browserspeicher. Kein Checkpoint, Autosave, Resume nach Reload oder Backup-Import/-Export. Unter `file://` kann der Browserspeicher eingeschränkt sein; der flüchtige Profilersatz überlebt keinen Reload. Technische Details: [Speicherung](docs/architecture.md#speicherung).
 
 ## Entwicklung
 

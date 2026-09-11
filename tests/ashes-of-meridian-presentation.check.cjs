@@ -11,7 +11,7 @@ for (const { seed, biome, ...expected } of fixture.worlds) {
     assert.deepEqual(worldSample(seed, biome), expected);
   });
 }
-test('world and simulation start, step and restore without renderer, geometry or browser globals', () => {
+test('world and simulation start and step without renderer, geometry or browser globals', () => {
   const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
   vm.runInContext('Math.random = () => { throw Error("Unseeded randomness"); }', context);
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
@@ -20,8 +20,7 @@ test('world and simulation start, step and restore without renderer, geometry or
   assert.equal(game.train('worker'), true);
   assert.equal('R' in game, false); assert.equal('R' in game.world, false);
   for (let i = 0; i < 1000; i++) { game.step(.05); game.effects.tick(.05); }
-  const saved = game.snapshot(); game.restore(saved);
-  assert.equal(game.s.time, saved.time); assert.ok(game.s.stats.gathered > 0);
+  assert.ok(Math.abs(game.s.time-50)<1e-8); assert.ok(game.s.stats.gathered > 0);
   assert.ok(game.world.fogPixels.includes(255));
   assert.equal(vm.runInContext('typeof geom + ":" + typeof MAT + ":" + typeof document', context), 'undefined:undefined:undefined');
 });
@@ -76,20 +75,19 @@ test('effects execute alone, consume RNG synchronously and preserve visibility s
   effects.reset(); assert.equal(effects.fx.length, 0); assert.equal(effects.floats.length, 0);
 });
 
-test('effect provider follows the current game RNG and survives start/restore resets', () => {
+test('effect provider follows the current game RNG and resets on each new start', () => {
   const context = loadScripts(['core', 'content', 'world', 'effects', 'simulation'], { globals: { structuredClone } });
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   const effects = game.effects;
   game.start({ seed: 1409 });
-  const snapshot = game.snapshot();
   game.random = () => .5; game.effects.explosion(0, 0);
   assert.equal(game.effects.fx[1].vy, 6);
-  game.restore(snapshot);
+  game.start({ seed: 1409 });
   assert.equal(game.effects, effects); assert.equal(game.effects.fx.length, 0);
-  const restored = JSON.stringify(game.snapshot());
+  const restarted = JSON.stringify(game.s);
   game.random = () => .25; game.effects.explosion(0, 0);
   assert.equal(game.effects.fx[1].vy, 4.5);
-  assert.equal(JSON.stringify(game.snapshot()), restored);
+  assert.equal(JSON.stringify(game.s), restarted);
 });
 
 test('effect drawing accepts frozen data without game/UI globals and matches the original draw calls', () => {

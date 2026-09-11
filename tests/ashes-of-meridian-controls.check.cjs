@@ -30,7 +30,7 @@ function setup() {
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
-      assert.ok(!['tooltip','biomeLabel','contextLabel','selectionContent','selectCount','buildingActions'].includes(id), 'removed DOM must never be accessed');
+      assert.ok(!['tooltip','biomeLabel','contextLabel','selectionContent','selectCount','buildingActions','importFile'].includes(id), 'removed DOM must never be accessed');
       if (!elements.has(id)) {
         elements.set(id, target());
         if (id === 'topbar') elements.get(id).getBoundingClientRect = () => ({ bottom: 55 });
@@ -51,7 +51,6 @@ function setup() {
     setMode(...args) { calls.push(['mode', ...args]); }
     perform(...args) { calls.push(['perform', ...args]); }
     setTab(...args) { calls.push(['tab', ...args]); }
-    save() { calls.push(['save']); }
     homeCamera() { calls.push(['base']); }
     select(ids) { this.selected = [...ids]; calls.push(['select', [...ids]]); }
     pick() { return null; }
@@ -399,23 +398,22 @@ test('Cancel button exits every targeting mode without spending resources or cha
   }
 });
 
-test('pause, resume, help, save/load and modal close remain available as button actions', () => {
+test('pause, resume, help and modal close remain button actions; save/load/backup actions are gone', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.pause = () => { h.ui.paused = true; h.calls.push(['pause']); };
   h.ui.resume = () => { h.ui.paused = false; h.calls.push(['resume']); };
-  h.ui.showHelp = () => h.calls.push(['help']);
-  h.ui.load = () => h.calls.push(['load']); h.ui.closeModal = () => h.calls.push(['close']);
+  h.ui.showHelp = () => h.calls.push(['help']); h.ui.closeModal = () => h.calls.push(['close']);
   h.document.getElementById('pauseBtn').onclick(); h.document.getElementById('pauseBtn').onclick();
   h.document.getElementById('helpBtn').onclick();
-  for (const ui of ['save','load','closeModal']) h.click({ ui });
-  assert.deepEqual(h.calls, [['pause'],['resume'],['help'],['save'],['load'],['close']]);
+  for (const ui of ['save','load','continue','export','import','closeModal']) h.click({ ui });
+  assert.deepEqual(h.calls, [['pause'],['resume'],['help'],['close']]);
+  for (const method of ['save','load','exportBackup','importBackup']) assert.equal(h.UI.prototype[method], undefined);
 });
 
-test('home offers repeatable battles, upgrades and checkpoint priority without campaign navigation', () => {
-  for (const saved of [false, true]) {
+test('home discards an active run and offers only new battles, upgrades, help and settings', () => {
+  for (const active of [false, true]) {
     const h = setup(); let previews = 0;
-    h.ui.game.s = null; h.ui.view = 'home';
-    h.ui.persistence.hasCheckpoint = () => saved;
+    if (!active) { h.ui.game.s = null; h.ui.view = 'home'; }
     h.ui.onPreview = () => previews++;
     h.ui.showHome();
     const html = h.document.getElementById('menu').innerHTML;
@@ -423,12 +421,53 @@ test('home offers repeatable battles, upgrades and checkpoint priority without c
     assert.match(html, /aria-label="Ashes of Meridian"/);
     assert.match(html, /New battle/); assert.doesNotMatch(html, /campaign|skirmish|endless|OPERATIONS COMPLETE/i);
     assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
-      [...(saved ? ['continue'] : []), 'battle', 'armory', 'help', 'settings']);
+      ['battle', 'armory', 'help', 'settings']);
     assert.equal((html.match(/class="primary"/g) || []).length, 1);
-    assert.ok(html.includes(`class="primary" data-ui="${saved ? 'continue' : 'battle'}"`));
+    assert.ok(html.includes('class="primary" data-ui="battle"'));
+    assert.equal(h.ui.game.s, null);
     assert.equal(previews, 1); assert.equal(h.ui.R.fogOn, false);
     assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
     assert.deepEqual(h.calls, []);
+  }
+});
+
+test('pause and hidden-tab pause retain the run only in memory, with explicit abandonment warning', () => {
+  const h=setup(); h.UI.prototype.bind.call(h.ui);
+  const state=h.ui.game.s, before=JSON.stringify(state);
+  h.ui.pause(); assert.equal(h.ui.paused,true);
+  assert.match(h.ui.html,/Runs cannot be saved/); assert.match(h.ui.html,/ABANDON RUN/);
+  assert.deepEqual(Array.from(h.ui.html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),
+    ['resume','settings','help','restartConfirm','home']);
+  h.ui.resume(); assert.equal(h.ui.paused,false);
+  h.document.hidden=true; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);
+  h.document.hidden=false; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);
+  h.ui.resume(); assert.equal(h.ui.paused,false);
+  state.time=90; h.ui.tick(.1); state.time=0;
+  assert.strictEqual(h.ui.game.s,state); assert.equal(JSON.stringify(state),before); assert.deepEqual(h.calls,[]);
+  h.ui.showSettings(); assert.doesNotMatch(h.ui.html,/data-ui="(?:export|import)"/);
+  assert.match(h.ui.html,/Runs are never saved/);
+});
+
+test('victory and defeat offer only restart and main menu; an ended run cannot be resumed', () => {
+  for(const win of [false,true]) {
+    const h=setup(); h.UI.prototype.bind.call(h.ui);
+    Object.assign(h.ui.game.s,{seed:1409,biome:'rust',enemy:2,stats:{kills:0,lost:1,gathered:0}});
+    const result={win,text:'HQ destroyed',time:20,integrity:0,score:0}; h.ui.game.s.result=result;
+    h.ui.showResult(result); const html=h.ui.html;
+    assert.equal(h.ui.paused,true);
+    assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),['restart','home']);
+    h.document.getElementById('pauseBtn').onclick();
+    assert.equal(h.ui.paused,true); assert.equal(h.ui.html,html);
+    h.ui.game.start=opts=>h.calls.push(['start',{...opts}]);
+    h.click({ui:'restart'});
+    assert.deepEqual(h.calls,[['start',{faction:0,seed:1409,biome:'rust',enemy:2}]]);
+  }
+});
+
+test('runtime and delivered HTML have no run persistence hooks or backup input', () => {
+  for(const file of ['app.js','ui.js','simulation.js','persistence.js','index.html']) {
+    const source=fs.readFileSync(path.join(__dirname,'..',file),'utf8');
+    assert.doesNotMatch(source,/checkpoint|lastSaveTime|importFile|exportBackup|importBackup|serializeBackup|parseBackup|beforeunload|operation\.v[0-9]/i,file);
   }
 });
 
@@ -453,7 +492,7 @@ test('campaign navigation, tutorial and ending APIs are removed; battle restart 
   Object.assign(h.ui.game.s, {seed:4321,biome:'court',faction:1,enemy:0});
   h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
   h.ui.uiAction('restart');
-  assert.deepEqual(h.calls, [['start',{seed:4321,biome:'court',faction:1,enemy:0}],['save']]);
+  assert.deepEqual(h.calls, [['start',{seed:4321,biome:'court',faction:1,enemy:0}]]);
 });
 
 test('battle setup and launch have no difficulty control, options API or profile setting', () => {
@@ -465,7 +504,7 @@ test('battle setup and launch have no difficulty control, options API or profile
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'ash',seed:1409}],['save']]);
+  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'ash',seed:1409}]]);
   assert.equal('difficulty' in h.ui.profile.settings,false);
 });
 
@@ -737,7 +776,6 @@ test('settings and camera hints describe touch navigation without desktop camera
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;
   assert.doesNotMatch(actions, /Command view|SPACE|class="key"|F[12359]/);
-  h.ui.persistence.hasCheckpoint = () => true;
   h.ui.showPause();
   assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]/);
   assert.equal(h.ui.updateTips, undefined);

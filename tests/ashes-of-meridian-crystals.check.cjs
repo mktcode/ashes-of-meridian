@@ -114,13 +114,14 @@ test('HQ-only start preserves the existing seed 9897 crystal-amount reference', 
   assert.deepEqual(json(crystals(game).map(e => e.amount)), [2009,1898,2252,1862,2134,2163,2441,1808,2452,1987,2118,2596,2622,2599,2559,2307,1910,2364,2159,2190,2230,2244,2523,2412,2023,2596,1997,1844,2478,2381,2625,2226,2309,1994,1835,1836,2011,2361,2026,2065]);
 });
 
-test('new-layout saves round-trip without moving resources or resetting valid mining paths', () => {
+test('mining delivers alloy without moving the resource layout', () => {
   const game = fresh(); game.start({ seed: 1409 });
+  const positions = () => json(crystals(game).map(e => [e.id,e.x,e.z]));
+  const before = positions();
   assert.equal(game.train('worker'), true);
   for (let i = 0; i < 900; i++) { game.step(.05); game.effects.tick(.05); }
   assert.ok(game.s.stats.gathered > 0);
-  const saved = game.snapshot(), restored = fresh(); restored.restore(saved);
-  assert.deepEqual(json(restored.s.entities), json(saved.entities));
+  assert.deepEqual(positions(), before);
 });
 
 test('aether vents retain their existing shapes and animated effects', () => {

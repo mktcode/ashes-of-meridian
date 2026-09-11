@@ -1,4 +1,4 @@
-    /* Front end, local checkpoints, permanent upgrades, HUD, controls, field manual. */
+    /* Front end, permanent upgrades, HUD, controls, field manual. */
     'use strict';
     const $ = id => document.getElementById(id);
     const esc = s =>
@@ -29,7 +29,6 @@
         this.toastUntil = 0;
         this.actionSignature = '';
         this.hudClock = 0;
-        this.lastSaveTime = 0;
         this.touchPoints = new Map();
         this.bind();
       }
@@ -87,7 +86,6 @@
           this.mode = null;
           this.tab = 'root';
           this.actionSignature = '';
-          this.lastSaveTime = this.game.s.time;
           this.updateHUD(true);
           this.clearMode();
         } else if (type === 'toast') this.toast(data);
@@ -141,7 +139,6 @@
           this.audio.sound(type);
       }
       showHome() {
-        if (this.view === 'game' && this.game.s && !this.game.s.result) this.save(false);
         this.game.s = null;
         this.view = 'home';
         this.paused = true;
@@ -154,7 +151,6 @@
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
         if (this.onPreview) this.onPreview();
-        let saved = this.persistence.hasCheckpoint();
         $('menu').innerHTML =
           `<div class="home-screen"><div class="home-layout">
             <svg class="menu-frame" viewBox="0 0 22 887" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M1 0V72L17 88V178L6 190V674L20 688V778L1 797V887"/></svg>
@@ -168,8 +164,7 @@
               <h1 class="wordmark" aria-label="Ashes of Meridian">ASHES<span class="wordmark-link"><b>OF</b></span>MERIDIAN</h1>
               <p class="menu-tagline">Build your force. Break the enemy base. Return stronger.</p>
               <div class="menu-buttons">
-                ${saved ? '<button class="primary" data-ui="continue">Resume operation <span aria-hidden="true">→</span></button>' : ''}
-                <button class="${saved ? 'secondary' : 'primary'}" data-ui="battle">New battle <span aria-hidden="true">→</span></button>
+                <button class="primary" data-ui="battle">New battle <span aria-hidden="true">→</span></button>
               </div>
               <nav class="menu-subnav" aria-label="More options"><button class="textbtn" data-ui="armory">FLEET UPGRADES</button><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></nav>
             </div>
@@ -198,7 +193,6 @@
           seed = clamp(parseInt($('battleSeed').value) || Math.floor(Math.random() * 1e8), 1, 999999999);
         this.audio.unlock();
         this.game.start({ faction: this.battleFaction, seed, enemy, biome });
-        this.save(false);
       }
       openModal(kind, html, wide = false) {
         if (kind !== 'sell') this.sellBuildingId = null;
@@ -228,45 +222,15 @@
         this.paused = true;
         this.openModal(
           'pause',
-          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Annihilation</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="save">SAVE CHECKPOINT</button><button class="secondary" data-ui="load" ${this.persistence.hasCheckpoint() ? '' : 'disabled'}>LOAD CHECKPOINT</button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">SAVE & RETURN TO MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Your operation is saved automatically every 45 seconds. Export a backup in Settings before changing browsers or moving the game file.</p>`
+          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Annihilation</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">ABANDON RUN & MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Runs cannot be saved. Returning to the main menu, closing or reloading the page ends this run. Pausing keeps it in this open page.</p>`
         );
       }
       resume() {
+        if (this.view !== 'game' || !this.game.s || this.game.s.result) return;
         this.paused = false;
         this.modalKind = '';
         $('modal').classList.add('hidden');
         this.audio.unlock();
-      }
-      save(announce = true) {
-        if (!this.game.s || this.game.s.result) return false;
-        let ok = this.persistence.saveCheckpoint(this.game.snapshot());
-        this.lastSaveTime = this.game.s.time;
-        if (announce) {
-          this.toast(
-            ok
-              ? 'Operation checkpoint saved.'
-              : 'Browser storage is unavailable. Use Settings → Export backup.'
-          );
-          this.audio.sound('complete');
-        }
-        return ok;
-      }
-      load() {
-        try {
-          const checkpoint = this.persistence.readCheckpoint();
-          if (!checkpoint.exists) {
-            this.toast('No operation checkpoint found.');
-            return;
-          }
-          this.game.restore(checkpoint.state);
-          this.selected = [];
-          this.actionSignature = '';
-          this.audio.unlock();
-          this.radio('Expedition command|Checkpoint restored. Your orders stand.');
-          this.updateHUD(true);
-        } catch (e) {
-          this.toast('Checkpoint could not be loaded: ' + e.message);
-        }
       }
       showSettings() {
         if (this.view === 'game') this.paused = true;
@@ -287,7 +251,7 @@
                   )
                   .join('')}</select></div>`
               : ''
-          }<div class="launch-row"><button class="primary" data-ui="closeModal">DONE</button><button class="textbtn" data-ui="export">EXPORT BACKUP</button><button class="textbtn" data-ui="import">IMPORT BACKUP</button></div><p style="font-size:10px">Everything stays in this browser. No accounts, analytics, external assets, or network requests. Export includes permanent upgrades and your current battle.</p>`
+          }<div class="launch-row"><button class="primary" data-ui="closeModal">DONE</button></div><p style="font-size:10px">Everything stays in this browser. No accounts, analytics, external assets, or network requests. Only permanent upgrades and settings are stored. Runs are never saved.</p>`
         );
       }
       applySetting(el) {
@@ -306,41 +270,6 @@
           this.R.resize();
         }
         this.persist();
-      }
-      exportBackup() {
-        let operation = this.game.s && !this.game.s.result ? this.game.snapshot() : null;
-        let data = this.persistence.serializeBackup(this.profile, operation),
-          blob = new Blob([data], { type: 'application/json' }),
-          url = URL.createObjectURL(blob),
-          a = document.createElement('a');
-        a.href = url;
-        a.download = 'meridian-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        this.toast('Backup exported.');
-      }
-      async importBackup(file) {
-        if (!file) return;
-        if (file.size > 4000000) {
-          this.toast('Backup is too large.');
-          return;
-        }
-        try {
-          let d = this.persistence.parseBackup(await file.text());
-          this.persistence.saveProfile(d.profile);
-          let valid = this.persistence.loadProfile();
-          Object.assign(this.profile, valid);
-          this.audio.settings = this.profile.settings;
-          this.audio.updateSettings();
-          this.R.quality = this.profile.settings.quality;
-          this.R.resize();
-          if (d.operation) this.persistence.saveCheckpoint(d.operation);
-          this.game.s = null;
-          this.showHome();
-          this.toast('Upgrades and checkpoint imported.');
-        } catch (e) {
-          this.toast('Import failed: ' + e.message);
-        }
       }
       showHelp() {
         if (this.view === 'game') this.paused = true;
@@ -370,7 +299,7 @@
             ['Build / recruit', 'Lower-right categories; Zurück returns'],
             ['Pause', 'Ⅱ button'],
             ['Cancel targeting / placement', 'Cancel button beside the target prompt'],
-            ['Save / load checkpoint', 'Save / Load in the pause menu'],
+            ['Run lifetime', 'No saves; closing, reloading or leaving ends the run'],
             ['Field manual', '? button']
           ]
             .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
@@ -412,11 +341,10 @@
         this.paused = true;
         this.clearMode();
         let s = this.game.s;
-        if (result.win) this.persistence.removeCheckpoint();
         this.audio.sound(result.win ? 'victory' : 'defeat');
         this.openModal(
           'result',
-          `<div class="eyebrow">${result.win ? 'VICTORY' : 'DEFEAT'} / ${FACTIONS[s.faction].short}</div><h1>${result.win ? 'Enemy base destroyed.' : 'Command center lost.'}</h1><p>${esc(result.text)}</p><div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div><div class="launch-row"><button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button>${!result.win && this.persistence.hasCheckpoint() ? '<button class="secondary" data-ui="load">RETRY CHECKPOINT</button>' : ''}<button class="secondary" data-ui="home">MAIN MENU</button><button class="textbtn" data-ui="armory">FLEET UPGRADES</button></div>`,
+          `<div class="eyebrow">${result.win ? 'VICTORY' : 'DEFEAT'} / ${FACTIONS[s.faction].short}</div><h1>${result.win ? 'Enemy base destroyed.' : 'Command center lost.'}</h1><p>${esc(result.text)}</p><div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div><div class="launch-row"><button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button><button class="secondary" data-ui="home">MAIN MENU</button></div>`,
           true
         );
       }
@@ -738,10 +666,6 @@
         document.addEventListener('input', e => {
           if (e.target.dataset.setting === 'volume') this.applySetting(e.target);
         });
-        $('importFile').onchange = e => {
-          this.importBackup(e.target.files[0]);
-          e.target.value = '';
-        };
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
         $('battleHome').onclick = () => this.pause();
         $('helpBtn').onclick = () => this.showHelp();
@@ -764,7 +688,6 @@
         });
         document.addEventListener('visibilitychange', () => {
           if (document.hidden && this.view === 'game' && !this.game.s?.result) {
-            this.save(false);
             this.pause();
           }
         });
@@ -832,10 +755,6 @@
           case 'home':
             this.showHome();
             break;
-          case 'continue':
-          case 'load':
-            this.load();
-            break;
           case 'battle':
             this.showBattle();
             break;
@@ -854,9 +773,6 @@
           case 'resume':
             this.resume();
             break;
-          case 'save':
-            this.save(true);
-            break;
           case 'closeModal':
             this.closeModal();
             break;
@@ -870,12 +786,6 @@
             this.clearMode();
             this.renderActions();
             break;
-          case 'export':
-            this.exportBackup();
-            break;
-          case 'import':
-            $('importFile').click();
-            break;
           case 'restartConfirm':
             this.openModal(
               'confirm',
@@ -888,7 +798,6 @@
           case 'restart': {
             let s = this.game.s;
             this.game.start({ faction: s.faction, seed: s.seed, biome: s.biome, enemy: s.enemy });
-            this.save(false);
             break;
           }
         }
@@ -1083,10 +992,6 @@
         for (let p of this.pings) p.life -= dt;
         this.pings = this.pings.filter(p => p.life > 0);
         if (this.view !== 'game' || !this.game.s) return;
-        let s = this.game.s;
-        if (!this.paused) {
-          if (s.time - this.lastSaveTime >= 45) this.save(false);
-        }
         if (!this.domPressed) this.updateQueues();
         this.hudClock += dt;
         if (this.hudClock > 0.25) {

@@ -3,7 +3,7 @@
 
 class MeridianEffects {
       constructor(random) {
-        // The provider must resolve the current simulation RNG after start/restore.
+        // The provider must resolve the current simulation RNG after each start.
         this.random = random;
         this.reset();
       }

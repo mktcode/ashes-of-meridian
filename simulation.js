@@ -23,7 +23,6 @@
           meta = structuredClone(this.profile.upgrades || {}),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.s = {
-          version: 3,
           seed, faction, enemy, biome, meta,
           time: 0,
           alloy: 1100 + (meta.stores || 0) * 100,
@@ -1310,61 +1309,6 @@
           integrity
         };
         this.emit('result', s.result);
-      }
-      snapshot() {
-        let data = structuredClone(this.s);
-        data.explored = Array.from(this.world.explored);
-        return data;
-      }
-      restore(data) {
-        if (!data || data.version !== 3 || !Array.isArray(data.entities) || data.entities.length > 1500)
-          throw Error('This save is not a valid Meridian operation.');
-        if (!Number.isFinite(data.time) || !Number.isFinite(data.seed) ||
-          !BIOMES[data.biome] || !FACTIONS[data.faction] || !FACTIONS[data.enemy])
-          throw Error('Save data is invalid.');
-        let validKinds = ['unit', 'building', 'resource'];
-        for (let e of data.entities) {
-          if (
-            !validKinds.includes(e.kind) ||
-            ![-1, 0, 1].includes(e.team) ||
-            !Number.isFinite(e.x) ||
-            !Number.isFinite(e.z) ||
-            Math.abs(e.x) > 150 ||
-            Math.abs(e.z) > 150 ||
-            !Number.isFinite(e.hp)
-          )
-            throw Error('An entity in this save is invalid.');
-          if (e.exit && (e.kind !== 'unit' || !Number.isInteger(e.exit.building) ||
-            !Number.isFinite(e.exit.x) || !Number.isFinite(e.exit.z) ||
-            Math.abs(e.exit.x) > 85 || Math.abs(e.exit.z) > 85 ||
-            !Number.isFinite(e.exit.length) || e.exit.length <= 0))
-            throw Error('An exit in this save is invalid.');
-          if (e.yieldTo && (e.kind !== 'unit' || !Number.isFinite(e.yieldTo.x) ||
-            !Number.isFinite(e.yieldTo.z) || Math.abs(e.yieldTo.x) > 85 ||
-            Math.abs(e.yieldTo.z) > 85 || !Number.isFinite(e.yieldUntil)))
-            throw Error('A yielding target in this save is invalid.');
-          if ((e.kind === 'unit' && !UNITS[e.type]) || (e.kind === 'building' && !BUILDINGS[e.type]) ||
-            e.queue?.some(q => !UNITS[q.type]))
-            throw Error('Unknown entity in save.');
-        }
-        this.s = structuredClone(data);
-        this.world = new Battlefield(data.seed, this.s.biome);
-        this.world.rebuild(this.s.entities);
-        for (const e of this.s.entities) if (e.hp > 0 && e.kind === 'unit') {
-          const p = this.unitPosition(e);
-          if (!p) throw new Error('No free space for saved units.');
-          Object.assign(e, p);
-        }
-        if (data.explored?.length === GRID * GRID)
-          this.world.explored.set(data.explored.map(x => (x ? 1 : 0)));
-        delete this.s.explored;
-        this.ids = new Map(this.s.entities.map(e => [e.id, e]));
-        this.random = seeded(data.seed + Math.floor(data.time * 50));
-        this.effects.reset();
-        this.rehash();
-        this.world.reveal(this.s.entities, this.s.scans);
-        this.emit('start', { resumed: true });
-        return this.s;
       }
     }
     function formatTime(s) {

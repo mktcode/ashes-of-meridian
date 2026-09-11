@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Runs ohne Speicherung
+
+- Manuelles Speichern/Laden, Autosave, Home-Resume, Retry checkpoint, Backup-Import/-Export und Simulation-Snapshot/Restore entfernt. Alte Checkpoints werden ignoriert, keine Migration. Nur Upgrades/Einstellungen bleiben im unveränderten lokalen Profil.
+- Pause/Fortsetzen und automatisches Pausieren bei verborgenem Tab bleiben; Hauptmenü/Reload/Schließen verwerfen den Run. Nach Sieg/Niederlage ausschließlich Neustart oder Hauptmenü; beendete Runs lassen sich nicht fortsetzen. Hilfe, Abbruchwarnung und Grafikfehlertexte angepasst.
+- **187 Node-Tests bestanden**. Entfallene Save-Tests entfernt, verbleibende Produktions-/Bewegungsprüfungen laufen ohne Restore weiter; neue Lebenszyklus-/Profiltests prüfen Abbruch, frischen Neustart, Pause und fehlende Speicherpfade. Feste Fixtures unverändert.
+- Kurzer **`file://`-Check**, Chromium/CDP, Performance, **390×844**: native Rekrutierung/Pause/Fortsetzen, kein Autosave nach 45 s, Reload verliert Run und behält Profil, alter Checkpoint ignoriert, Niederlage → HQ-Neustart sowie Abbruch ins Hauptmenü. Pause-/Ergebnisbilder gesichtet; keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. Kontrollierter Headless-Check, kein Echtgerät- oder Langzeitspielnachweis.
+
 ## Gefechtsstart nur mit dem HQ
 
 - Spieler startet ohne weitere Gebäude oder Einheiten; auch der erste Worker muss über Infanterie rekrutiert werden. Starttruppen-/Startworker-Upgrades aus Katalog und Startlogik entfernt, vier übrige Upgrades erhalten. Gegneraufstellung, Ressourcen und Wellenzeiten unverändert; kein neues Worker-Startupgrade oder Save-Umbau.
