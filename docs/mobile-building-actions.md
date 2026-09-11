@@ -2,7 +2,7 @@
 
 ## Umsetzung
 
-Ein einzelnes ausgewähltes, fertiges eigenes Gebäude erhält **Repair / Stop repair** und **Sell** direkt über seiner Weltposition. Fundamente, Einheiten, fremde Gebäude und Missionsgeneratoren erhalten diese Aktionen nicht. Bei Mehrfachauswahl, Zielmodus, Pause, Modal oder Operationsende ist das Panel ausgeblendet; ebenso außerhalb des sichtbaren Spielfelds. Die Schaltflächen sind mindestens 44 CSS-Pixel hoch, bleiben innerhalb des Spielfelds und weichen der Kamera-/Hilfeleiste aus. Während eines gedrückten DOM-Buttons werden Position und Beschriftung nicht ausgetauscht.
+Ein einzelnes ausgewähltes, fertiges eigenes Gebäude erhält **Repair / Stop repair** und **Sell** direkt über seiner Weltposition. Fundamente, Einheiten, fremde Gebäude und Missionsgeneratoren erhalten diese Aktionen nicht. Bei Mehrfachauswahl, Zielmodus, Pause, Modal oder Operationsende ist das Panel ausgeblendet; außerhalb des sichtbaren Spielfelds wird es geschlossen. **× oben rechts** schließt es ebenfalls, ohne Auswahl oder laufende Reparatur zu ändern. Erst erneutes Auswählen öffnet es wieder, nicht das Zurückbewegen der Kamera. Die Repair-/Sell-Schaltflächen sind mindestens 44 CSS-Pixel hoch, bleiben innerhalb des Spielfelds und weichen der Kamera-/Hilfeleiste aus. Während eines gedrückten DOM-Buttons werden Position und Beschriftung nicht ausgetauscht.
 
 ### Reparatur
 
@@ -30,7 +30,13 @@ Keine neuen persistenten Reparatur-/Verkaufszustände: Der vorhandene Arbeiterau
 
 Rechtsklick bleibt vorerst erhalten. Insbesondere die Touch-Bedienung der **Einheitenreparatur** ist noch zu entscheiden. Reparaturfeld, andere bestehende Heil-/Regenerationseffekte, verbündete Ziele und manuelle Kontext-Reparaturen wurden nicht entfernt oder umbalanciert. Weitere Mobile-Bereinigung und Roguelite-Fortschritt bleiben separate Schritte.
 
-## Prüfungen
+## Nachprüfung: Panel schließen
+
+× ergänzt; Verlassen des Sichtfelds schließt dauerhaft bis zur nächsten Auswahl. Nur flüchtiger UI-Zustand, keine Simulationsänderung. Pause und Zielmodi blenden weiterhin nur vorübergehend aus.
+
+**161 Node-Tests bestanden**, vollständiger Befehl aus `testing.md`. Gezielter Chromium-`file://`-Touch-Check: ×, Kamera weg/zurück ohne Wiederöffnen und erneutes Antippen bestanden; × bei 960×600, 844×390 und 390×844 erreichbar. Keine erfassten Laufzeit-/Ressourcen-/GL-Fehler. Kleine 26×26-CSS-Pixel-Schließenfläche ohne Vergrößerung des Panels; echte Gerätebedienung übernimmt der Nutzer. Temporäre Probe: `/tmp/meridian-building-dismiss-check.cjs`. Breitere vorherige Browserabläufe nicht erneut ausgeführt.
+
+## Ursprüngliche Prüfungen der Gebäudeaktionen
 
 - Vollständiger Befehl aus [testing.md](testing.md): **158 Node-Tests bestanden**. Neue Fälle für Arbeiterauswahl, Weg/Arbeit, Stoppen/Tod, Voraussetzungen, Verkauf/Queues/Erstattung, HQ-Schutz, Versorgung, Raffinerieplatz und aktuelle Checkpoints; UI-Projektion, Randbegrenzung, Kamera-/Hilfe-Freihaltung, ausgeblendete Zustände, Buttonstatus und Bestätigungsablauf. Bestehende Terrain-/Effekt-/RNG-Referenzen nicht geändert.
 - Chromium 152, Linux Headless, frisches Profil, **direkt `file://`**, Touch-Emulation, **Performance**, keine abgeschwächten Sicherheitsflags: Gebäude per Touch ausgewählt; Repair/Stop und Sell/Keep/Bestätigung per nativen Touch-Ereignissen bedient. Nächster Arbeiter zugewiesen, Anmarsch und Vollreparatur mit expliziten Simulationsschritten geprüft; kein Sofort-Heilen beim Tippen. Ohne Arbeiter/Alloy sowie bei voller Hülle gesperrt. Bestätigung pausiert Zeit und Produktion auch mit eingeschalteter Spielgeschwindigkeit.

@@ -25,11 +25,13 @@ Keine Migrationstests, alten Operations-Fixtures oder Layout-Kompatibilitätsada
 
 ## Aktueller Prüfstand
 
-Nach Ergänzung der Gebäudeaktionen: **158 Node-Tests bestanden**, vollständiger obiger Befehl. Bestehende Terrain-/Effekt-/RNG-Referenzen unverändert.
+Nach Ergänzung des Schließen-Buttons und dauerhaftem Schließen außerhalb des Sichtfelds: **161 Node-Tests bestanden**, vollständiger obiger Befehl. Bestehende Terrain-/Effekt-/RNG-Referenzen unverändert.
 
-Chromium 152 unter `file://`, Headless mit Touch-Emulation und Qualitätsstufe Performance: Gebäudewahl, Repair/Stop, nächster Arbeiter mit Anmarsch und Reparatur, gesperrte Zustände, pausierende Verkaufsbestätigung/Abbruch, Erstattung einschließlich aktiver Rekrutierung, HQ-Schutz und aktuelles Save/Load geprüft. Panel an allen vier Spielfeldrändern bei 960×600, 844×390 und 390×844: Buttons mindestens 44×44 CSS-Pixel, im Spielfeld erreichbar, Kamera-/Hilfe-Buttons frei. Keine erfassten Laufzeit-/Ressourcen-/Log- oder GL-Fehler. Kein echtes Mobilgerät oder vollständiges Durchspielen; Modal-Scroll per DOM-Hilfe. [Umfang und Grenzen](mobile-building-actions.md).
+Aktueller gezielter Chromium-`file://`-Touch-Check: × schließt ohne Abwahl, Kamera weg/zurück öffnet nicht erneut, erneutes Antippen öffnet wieder; × bei 960×600, 844×390 und 390×844 erreichbar. Keine erfassten Laufzeit-/Ressourcen-/GL-Fehler. Echte Mobilgeräte testet der Nutzer. [Nachprüfung](mobile-building-actions.md#nachprüfung-panel-schließen).
 
-Die vorherige Tooltip-Browserprobe wurde auf diesem Stand ebenfalls erneut bestanden: zugängliche Symbolbutton-Namen, Porträtauswahl, Produktionsabbruch und Meldungsnavigation per Touch; Forschungs-/Touch-Cancel-/Menü-/Einzelarbeiter-Bauablauf einschließlich Fleet-Upgrades, aktueller Checkpoints und Belagerungs-Schild-/Siegfolge. [Ursprünglicher Umfang](tooltip-removal.md).
+Vorheriger Gebäudeaktions-Check, nicht vollständig erneut ausgeführt: Chromium 152 unter `file://`, Headless mit Touch-Emulation und Qualitätsstufe Performance: Gebäudewahl, Repair/Stop, nächster Arbeiter mit Anmarsch und Reparatur, gesperrte Zustände, pausierende Verkaufsbestätigung/Abbruch, Erstattung einschließlich aktiver Rekrutierung, HQ-Schutz und aktuelles Save/Load geprüft. Panel an allen vier Spielfeldrändern bei 960×600, 844×390 und 390×844: Buttons mindestens 44×44 CSS-Pixel, im Spielfeld erreichbar, Kamera-/Hilfe-Buttons frei. Keine erfassten Laufzeit-/Ressourcen-/Log- oder GL-Fehler. Kein echtes Mobilgerät oder vollständiges Durchspielen; Modal-Scroll per DOM-Hilfe. [Umfang und Grenzen](mobile-building-actions.md).
+
+Beim vorherigen Gebäudeaktions-Schritt wurde die Tooltip-Browserprobe ebenfalls erneut bestanden: zugängliche Symbolbutton-Namen, Porträtauswahl, Produktionsabbruch und Meldungsnavigation per Touch; Forschungs-/Touch-Cancel-/Menü-/Einzelarbeiter-Bauablauf einschließlich Fleet-Upgrades, aktueller Checkpoints und Belagerungs-Schild-/Siegfolge. [Ursprünglicher Umfang](tooltip-removal.md).
 
 Vorheriger Forschungsschritt mit Erläuterung der Missionsgeneratoren und Tier-3-RNG-Referenz: [Forschungsentfernung](research-removal.md).
 

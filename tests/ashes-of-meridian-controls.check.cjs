@@ -401,6 +401,39 @@ test('building buttons follow projection, clamp to the play area and do not move
   assert.equal(h.panel.style.left, '8px'); assert.equal(h.panel.style.top, '71px');
 });
 
+test('closing building actions keeps selection and orders; explicit reselection opens them again', () => {
+  const h = buildingPanel(); h.UI.prototype.bind.call(h.ui);
+  h.ui.updateBuildingActions(); h.click({ ui: 'closeBuildingActions' });
+  h.ui.updateBuildingActions(); assert.equal(h.panel.classList.contains('hidden'), true);
+  assert.deepEqual(h.ui.selected, [7]); assert.deepEqual(h.calls, []);
+  h.ui.updateSelection = () => {}; h.ui.renderActions = () => {};
+  h.UI.prototype.select.call(h.ui, [7]); h.ui.updateBuildingActions();
+  assert.equal(h.panel.classList.contains('hidden'), false);
+});
+
+test('leaving the visible field dismisses building actions until reselection, not camera return', () => {
+  for (const point of [null, {x:-1,y:400}, {x:1281,y:400}, {x:640,y:62}, {x:640,y:585}]) {
+    const h = buildingPanel(); h.ui.updateBuildingActions();
+    h.ui.R.project = () => point; h.ui.updateBuildingActions();
+    h.ui.R.project = () => ({x:640,y:400}); h.ui.updateBuildingActions();
+    assert.equal(h.panel.classList.contains('hidden'), true);
+    assert.deepEqual(h.ui.selected, [7]); assert.deepEqual(h.calls, []);
+    h.ui.updateSelection = () => {}; h.ui.renderActions = () => {};
+    h.UI.prototype.select.call(h.ui, [7]); h.ui.updateBuildingActions();
+    assert.equal(h.panel.classList.contains('hidden'), false);
+  }
+});
+
+test('pause and targeting only temporarily hide building actions', () => {
+  const h = buildingPanel();
+  for (const field of ['paused','mode']) {
+    h.ui[field] = true; h.ui.updateBuildingActions();
+    assert.equal(h.panel.classList.contains('hidden'), true);
+    h.ui[field] = false; h.ui.updateBuildingActions();
+    assert.equal(h.panel.classList.contains('hidden'), false);
+  }
+});
+
 test('building panel avoids camera/help buttons vertically or sideways in a short play area', () => {
   const h = buildingPanel(); h.ui.R.project = () => ({ x: 1278, y: 580 });
   h.document.getElementById('cameraTools').getBoundingClientRect = () => ({ left: 1014, right: 1272, top: 542, bottom: 574 });

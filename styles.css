@@ -1521,7 +1521,21 @@
       text-overflow: ellipsis
     }
 
-    #buildingActionName { color: var(--ink) }
+    #buildingActionName { color: var(--ink); padding-right: 28px }
+
+    #closeBuildingActions {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1
+    }
     #buildingActionStatus { color: var(--gold) }
 
     .building-action-row {

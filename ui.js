@@ -17,6 +17,7 @@
         this.paused = true;
         this.modalKind = '';
         this.sellBuildingId = null;
+        this.buildingActionsClosed = false;
         this.selected = [];
         this.tab = 'orders';
         this.mode = null;
@@ -79,6 +80,7 @@
           this.paused = false;
           this.modalKind = '';
           this.sellBuildingId = null;
+          this.buildingActionsClosed = false;
           $('menu').classList.add('hidden');
           $('modal').classList.add('hidden');
           $('hud').classList.remove('hidden');
@@ -540,6 +542,7 @@
         if (e) this.center(e.x + 4, e.z - 2);
       }
       select(ids) {
+        this.buildingActionsClosed = false;
         this.selected = [...new Set(ids)].filter(id => this.game.get(id));
         this.actionSignature = '';
         this.audio.sound('select');
@@ -733,11 +736,15 @@
               ? 'SELECT A FOUNDATION'
               : 'PARALLEL PRODUCTION';
       }
+      closeBuildingActions() {
+        this.buildingActionsClosed = true;
+        $('buildingActions').classList.add('hidden');
+      }
       updateBuildingActions() {
         let panel = $('buildingActions'), g = this.game,
           b = this.view === 'game' && g.s && !this.paused && !this.modalKind && !this.mode &&
             this.selected.length === 1 ? g.managedBuilding(this.selected[0]) : null;
-        if (!b) {
+        if (!b || this.buildingActionsClosed) {
           panel.classList.add('hidden');
           return;
         }
@@ -745,7 +752,7 @@
           top = $('topbar').getBoundingClientRect().bottom + 8,
           bottom = $('commandDeck').getBoundingClientRect().top - 8;
         if (!p || p.x < 0 || p.x > innerWidth || p.y < top - 8 || p.y > bottom + 8) {
-          panel.classList.add('hidden');
+          this.closeBuildingActions();
           return;
         }
         // Do not move or relabel a button under a finger while it is being pressed.
@@ -753,7 +760,7 @@
         let repairing = g.buildingRepairers(b.id).length > 0,
           repairReason = repairing ? '' : g.canRepairBuilding(b.id), sellReason = g.canSellBuilding(b.id);
         $('buildingActionName').textContent = buildingName(b.type, b.faction);
-        for (let button of panel.querySelectorAll('button')) {
+        for (let button of panel.querySelectorAll('[data-building-action]')) {
           button.dataset.buildingId = b.id;
           button.disabled = !!(button.dataset.buildingAction === 'repair' ? repairReason : sellReason);
           if (button.dataset.buildingAction === 'repair') button.textContent = repairing ? 'STOP REPAIR' : 'REPAIR';
@@ -1171,6 +1178,9 @@
             break;
           case 'closeModal':
             this.closeModal();
+            break;
+          case 'closeBuildingActions':
+            this.closeBuildingActions();
             break;
           case 'confirmSale':
             this.finishBuildingSale(true);
