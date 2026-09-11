@@ -114,7 +114,7 @@ const UNITS = {
     from: 'hq',
     tier: 0,
     vision: 15,
-    desc: 'Harvests alloy automatically. Constructs, completes and repairs structures. Right-click crystals to mine, or damaged allies to repair.'
+    desc: 'Harvests alloy automatically and constructs newly placed structures. Right-click crystals to mine, or completed damaged allied structures and damaged allied units to repair.'
   },
   rifle: {
     cost: 75,

@@ -7,7 +7,10 @@ const { loadScripts } = require('./helpers/game-scripts.cjs');
 
 function setup() {
   const target = () => ({
-    handlers: {}, style: {}, classList: { add() {}, remove() {} },
+    handlers: {}, style: {}, classList: {
+      names: new Set(), add(name) { this.names.add(name); }, remove(name) { this.names.delete(name); },
+      contains(name) { return this.names.has(name); }
+    },
     addEventListener(type, handler) { this.handlers[type] = handler; },
     setPointerCapture() {},
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 180, height: 180 })
@@ -21,7 +24,8 @@ function setup() {
   };
   const window = target(), footer = document.getElementById('controlstrip');
   const context = loadScripts(['core', 'content', 'world', 'ui'], { globals: {
-    document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => 0 }
+    document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => 0 },
+    formatTime: () => '00:00'
   } });
   const UI = vm.runInContext('MeridianUI', context), calls = [];
   class TestUI extends UI {
@@ -38,8 +42,8 @@ function setup() {
     openModal(kind, html) { this.html = html; }
   }
   const game = {
-    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [] },
-    effects: { floats: [] },
+    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], m: { tier: 1 }, upgrades: {}, faction: 0 },
+    effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     get(id) { return this.s.entities.find(e => e.id === id); },
     command(...args) { calls.push(['command', ...args]); }
@@ -48,19 +52,18 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {} }, { unlocked: 0, settings: { quality: 2 } }, {});
+    { unlock() {}, sound() {} }, { unlocked: 0, settings: { quality: 2 } }, {});
   ui.view = 'game'; ui.paused = false;
-  const key = (key, options = {}) => ui.keyDown({ key, preventDefault() {}, ...options });
+  const key = (key, options = {}) => document.handlers.keydown?.({ key, preventDefault() {}, ...options });
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
   const pointer = (type, x, y, options = {}) => {
     const event = { pointerType: 'touch', pointerId: 1, button: 0, clientX: x, clientY: y,
       target: world, preventDefault() {}, ...options };
     (event.target.handlers[type])(event);
   };
-  const clickCamera = cam => document.handlers.click({ target: {
-    closest: () => ({ dataset: { cam } })
-  } });
-  return { ui, calls, key, document, window, footer, world, minimap, pointer, clickCamera, UI };
+  const click = dataset => document.handlers.click({ target: { closest: () => ({ dataset }) } });
+  const clickCamera = cam => click({ cam });
+  return { ui, calls, key, document, window, footer, world, minimap, pointer, click, clickCamera, UI };
 }
 
 test('camera keys and pointer edges no longer move the camera', () => {
@@ -77,18 +80,17 @@ test('camera keys and pointer edges no longer move the camera', () => {
   assert.deepEqual(h.calls, []);
 });
 
-test('F and modified shortcuts remain; focus and pause still suppress commands', () => {
-  const h = setup();
-  h.key('a', { ctrlKey: true }); h.key('s', { ctrlKey: true });
-  h.key('d', { altKey: true }); h.key('w', { metaKey: true });
-  h.key('f'); h.key('f', { repeat: true }); h.ui.tick(.1);
-  assert.deepEqual(h.calls, [['army'], ['save'], ['mode', 'attackMove']]);
-  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
-  for (const tagName of ['INPUT', 'SELECT', 'TEXTAREA']) {
-    h.document.activeElement.tagName = tagName; h.key('f');
+test('no keyboard handler remains for game commands, menus or targeting', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  assert.equal(h.UI.prototype.keyDown, undefined);
+  assert.equal(h.document.handlers.keydown, undefined);
+  assert.equal(h.document.handlers.keyup, undefined);
+  h.ui.mode = { kind: 'move' };
+  for (const key of ['f','m','h','x','q','b','n','t','e','r','c','v','y','F1','F2','F3','F5','F9','Tab','Escape','a','s']) {
+    h.key(key); h.key(key, { ctrlKey: true });
   }
-  h.document.activeElement.tagName = 'BODY'; h.ui.paused = true; h.key('f'); h.ui.tick(.1);
-  assert.deepEqual(h.calls, [['army'], ['save'], ['mode', 'attackMove']]);
+  assert.deepEqual(h.calls, []); assert.equal(h.ui.mode.kind, 'move');
+  assert.equal(h.ui.paused, false);
 });
 
 test('number keys no longer assign or recall control groups', () => {
@@ -253,13 +255,53 @@ test('camera buttons and minimap tap/drag still navigate with existing limits', 
   assert.deepEqual(h.calls, []);
 });
 
-test('remaining command hotkeys keep their existing assignments', () => {
-  const h = setup();
-  for (const key of ['m', 'h', 'x', 'q', 'b', 'n', 't', 'e', 'r', 'c', 'v', 'y', 'F2', 'F3']) h.key(key);
-  assert.deepEqual(h.calls, [['mode', 'move'], ['perform', 'hold'], ['perform', 'stop'],
-    ['tab', 'orders'], ['tab', 'build'], ['tab', 'army'], ['tab', 'tech'],
-    ['mode', 'ability', 'orbital'], ['mode', 'ability', 'repair'], ['mode', 'ability', 'scan'],
-    ['mode', 'ability', 'drop'], ['mode', 'rally'], ['army'], ['worker']]);
+test('command buttons and tabs retain their actions; pause suppresses battlefield actions', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.perform = h.UI.prototype.perform;
+  for (const action of ['attackMove','move','hold','stop','ability:orbital','ability:repair','ability:scan','ability:drop','rally','army','worker','home'])
+    h.click({ action });
+  for (const tab of ['orders','build','army','tech']) h.click({ tab });
+  assert.deepEqual(h.calls.map(c => c[0] === 'command' ? ['command', c[2].type] : c), [
+    ['mode','attackMove'], ['mode','move'], ['command','hold'], ['command','stop'],
+    ['mode','ability','orbital'], ['mode','ability','repair'], ['mode','ability','scan'],
+    ['mode','ability','drop'], ['mode','rally'], ['army'], ['worker'], ['base'],
+    ['tab','orders'], ['tab','build'], ['tab','army'], ['tab','tech']
+  ]);
+  h.calls.length = 0; h.ui.paused = true; h.click({ action: 'ability:orbital' });
+  assert.deepEqual(h.calls, []);
+});
+
+test('Cancel button exits every targeting mode without spending resources or changing orders', () => {
+  for (const [kind, arg] of [['build','depot'], ['move'], ['attackMove'], ['rally'],
+    ...['orbital','repair','scan','drop'].map(a => ['ability',a])]) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+    const before = JSON.stringify(h.ui.game.s);
+    if (kind === 'build') h.ui.tab = 'build';
+    h.UI.prototype.setMode.call(h.ui, kind, arg);
+    assert.equal(h.document.getElementById('modeIndicator').classList.contains('hidden'), false);
+    assert.match(h.document.getElementById('modeLabel').textContent, /TAP TO CONFIRM/);
+    h.document.handlers.mousemove({ target: { closest: () => ({ dataset: { tooltip: 'move' } }) } });
+    assert.equal(h.document.getElementById('tooltip').classList.contains('hidden'), true);
+    assert.match(h.document.getElementById('actions').innerHTML, /class="action[^"\n]*\bactive\b/);
+    h.click({ ui: 'cancelTarget' });
+    assert.equal(h.ui.mode, null);
+    assert.equal(h.document.getElementById('modeIndicator').classList.contains('hidden'), true);
+    assert.equal(h.world.style.cursor, 'default');
+    assert.doesNotMatch(h.document.getElementById('actions').innerHTML, /class="action[^"\n]*\bactive\b/);
+    assert.deepEqual(h.ui.selected, [7]); assert.equal(h.ui.paused, false);
+    assert.equal(JSON.stringify(h.ui.game.s), before); assert.deepEqual(h.calls, []);
+  }
+});
+
+test('pause, resume, help, save/load and modal close remain available as button actions', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.ui.pause = () => { h.ui.paused = true; h.calls.push(['pause']); };
+  h.ui.resume = () => { h.ui.paused = false; h.calls.push(['resume']); };
+  h.ui.showHelp = () => h.calls.push(['help']);
+  h.ui.load = () => h.calls.push(['load']); h.ui.closeModal = () => h.calls.push(['close']);
+  h.document.getElementById('pauseBtn').onclick(); h.document.getElementById('pauseBtn').onclick();
+  h.document.getElementById('helpBtn').onclick();
+  for (const ui of ['save','load','closeModal']) h.click({ ui });
+  assert.deepEqual(h.calls, [['pause'],['resume'],['help'],['save'],['load'],['close']]);
 });
 
 test('home redesign preserves dynamic campaign progress, checkpoint priority and navigation actions', () => {
@@ -289,22 +331,37 @@ test('settings and camera hints describe touch navigation without desktop camera
   const h = setup(); h.ui.showSettings();
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
   h.ui.showHelp();
-  assert.match(h.ui.html, /F → click ground/);
+  assert.match(h.ui.html, /Attack-move button → tap destination/);
+  assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]|\bEsc\b|to assist|keyboard/);
   assert.match(h.ui.html, /Drag with one finger/); assert.match(h.ui.html, /Pinch/);
   assert.doesNotMatch(h.ui.html, /WASD|Middle-button|Mouse wheel|Space \/ Home|box-select|Shift|control group/i);
   assert.match(h.ui.html, /Double-tap unit/);
   h.UI.prototype.setControlHints.call(h.ui);
-  assert.match(h.footer.innerHTML, /<kbd>F<\/kbd> ATTACK-MOVE/);
+  assert.doesNotMatch(h.footer.innerHTML, /<kbd>|F[12359]/);
   assert.match(h.footer.innerHTML, /DRAG TO PAN · PINCH TO ZOOM/);
   assert.doesNotMatch(h.footer.innerHTML, /WASD|WHEEL|SPACE|DRAG BOX|CTRL|LMB/);
   assert.match(h.footer.innerHTML, /TAP TO SELECT/);
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB/);
+  assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB|<kbd>|F[12359]|\bEsc\b/);
+  assert.match(html, /data-ui="cancelTarget"/);
   h.ui.updateSelection();
   assert.doesNotMatch(h.document.getElementById('selectionContent').innerHTML, /Box-select|Right-click/);
   assert.doesNotMatch(h.ui.tooltipFor('attackMove'), /Shift|queue waypoints/);
   h.ui.game.s.upgrades = {}; h.ui.game.s.m = { tier: 1 }; h.ui.game.s.faction = 0;
   h.ui.renderActions();
   const actions = h.document.getElementById('actions').innerHTML;
-  assert.match(actions, /Command view/); assert.doesNotMatch(actions, /SPACE/);
+  assert.match(actions, /Command view/); assert.doesNotMatch(actions, /SPACE|class="key"|F[12359]/);
+  h.ui.persistence.hasCheckpoint = () => true; h.ui.game.s.m.name = 'Test';
+  h.ui.showPause();
+  assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]/);
+  h.ui.profile.settings.tips = true; h.ui.game.s.index = 0; h.ui.game.s.time = 30;
+  h.ui.game.s.stats = { trained: 0 };
+  h.ui.game.supply = () => 0; h.ui.game.cap = () => 24; h.ui.game.has = () => false;
+  h.ui.updateTips();
+  assert.doesNotMatch(h.document.getElementById('tip').innerHTML, /\[N\]/);
+  h.ui.game.s.stats.trained = 3; h.ui.game.supply = () => 23; h.ui.updateTips();
+  assert.doesNotMatch(h.document.getElementById('tip').innerHTML, /\[B\]/);
+  h.ui.game.s.stats.trained = 6; h.ui.game.supply = () => 0; h.ui.updateTips();
+  assert.match(h.document.getElementById('tip').innerHTML, /Tap <b>Combat force/);
+  assert.doesNotMatch(h.document.getElementById('tip').innerHTML, /F2|Press|Right-click/);
 });

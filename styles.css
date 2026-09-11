@@ -183,14 +183,6 @@
       background: #fff1
     }
 
-    kbd {
-      font: 9px var(--mono);
-      padding: 2px 4px;
-      border: 1px solid #6e819940;
-      border-radius: 2px;
-      color: #a5b8c8
-    }
-
     .live-dot {
       width: 5px;
       height: 5px;
@@ -1027,9 +1019,11 @@
       gap: 15px
     }
 
-    .help-line kbd {
-      font-size: 10px;
-      white-space: nowrap
+    .help-input {
+      font: 10px var(--mono);
+      color: #a5b8c8;
+      max-width: 55%;
+      text-align: right
     }
 
     .faction-options {
@@ -1368,10 +1362,6 @@
       font-size: 9px
     }
 
-    #tip kbd {
-      font-size: 10px
-    }
-
     #tip button {
       float: right;
       color: var(--muted)
@@ -1485,6 +1475,12 @@
     }
 
     #modeIndicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: max-content;
+      max-width: calc(100% - 24px);
+      z-index: 1;
       position: absolute;
       top: 47%;
       left: 50%;
@@ -1496,6 +1492,14 @@
       font: 11px var(--mono);
       letter-spacing: 1px;
       pointer-events: none
+    }
+
+    #modeIndicator button {
+      pointer-events: auto;
+      flex-shrink: 0;
+      min-height: 44px;
+      min-width: 88px;
+      padding: 8px 12px
     }
 
     #commandDeck {
@@ -1734,13 +1738,6 @@
       border-color: var(--gold)
     }
 
-    .tabs kbd {
-      font-size: 8px;
-      padding: 0 3px;
-      margin-left: 3px;
-      color: #6c869a
-    }
-
     #contextLabel {
       font: 8px var(--mono);
       color: #647e93;
@@ -1807,14 +1804,6 @@
       margin-top: 2px
     }
 
-    .action .key {
-      position: absolute;
-      left: 4px;
-      top: 2px;
-      font: 8px var(--mono);
-      color: #8099aa
-    }
-
     .action .level {
       position: absolute;
       bottom: 2px;
@@ -1872,14 +1861,6 @@
       font: 8px var(--mono);
       letter-spacing: .2px;
       color: #667e90
-    }
-
-    #controlstrip kbd {
-      border: 0;
-      font-size: 8px;
-      padding: 0;
-      color: #acbcc6;
-      margin-right: 3px
     }
 
     #tooltip {
@@ -2003,10 +1984,6 @@
 
       .tabs {
         gap: 9px
-      }
-
-      .tabs kbd {
-        display: none
       }
 
       .tabs button {

@@ -2,6 +2,8 @@
 
 Zweiter Schritt aus der [Desktop-Bestandsaufnahme](mobile-desktop-inventory.md), nach der [Kamera-Bereinigung](mobile-camera-cleanup.md).
 
+Dieser Bericht beschreibt den damaligen Stand. Anschließend wurden Spiel-Hotkeys und Bauhilfe entfernt und Touch-Abbrechen ergänzt: [Touch-Befehle](mobile-touch-controls.md). Die unten beschriebene Bauhilfe ist nicht mehr Teil des aktuellen Spiels.
+
 ## Umsetzung
 
 - Maus-Rechteckauswahl und deren Canvas-Darstellung entfernt. Ziehen mit der linken Maustaste verändert weder Auswahl noch Befehle; ein einfacher Klick bleibt über die gemeinsame Pointer-Verarbeitung möglich.
@@ -24,7 +26,7 @@ Quellen: `ui.js`, `simulation.js`, `index.html`. Keine Migration oder Altspielst
 - Reparatur und Bauhilfe bleiben unverändert; über ihre Vereinfachung oder Automatisierung wird separat entschieden.
 - Keine Änderungen an Balancing, Hindernissen, Kollisionsradien, RNG-Aufrufreihenfolge, Assets oder HUD-Layout.
 
-## Was bedeutet Bauhilfe im aktuellen Spiel?
+## Was bedeutete Bauhilfe im damaligen Spiel?
 
 Beim Platzieren eines Gebäudes wählt `build()` bereits einen Arbeiter aus und gibt ihm den Bauauftrag. Ein Kontextbefehl auf ein unfertiges eigenes oder verbündetes Gebäude kann weitere Arbeiter zuweisen (`command()` → `smart` → `build`).
 

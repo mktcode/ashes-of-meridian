@@ -607,13 +607,7 @@
                 target &&
                 e.type === 'worker' &&
                 (target.team === 0 || target.team === 2) &&
-                target.progress < 1
-              )
-                o = { type: 'build', id: target.id };
-              else if (
-                target &&
-                e.type === 'worker' &&
-                (target.team === 0 || target.team === 2) &&
+                target.progress >= 1 &&
                 target.hp < target.maxHp
               )
                 o = { type: 'repair', id: target.id };
@@ -911,7 +905,7 @@
         if (['move', 'attackMove', 'hold', 'stop', 'attack', 'follow'].includes(o.type)) return false;
         if (o.type === 'build' || o.type === 'repair') {
           let b = this.get(o.id);
-          if (!b || b.team === 1) {
+          if (!b || b.team === 1 || (o.type === 'repair' && b.progress < 1)) {
             this.finishOrder(e);
             return true;
           }

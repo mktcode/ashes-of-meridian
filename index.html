@@ -38,13 +38,14 @@
         <div><strong id="energyCount">0</strong><small>ENERGY</small></div>
       </div>
       <div class="clock"><strong id="gameTime">00:00</strong><small id="speedLabel">1× STANDARD</small></div><button
-        id="pauseBtn" class="square" title="Pause (Esc)">Ⅱ</button>
+        id="pauseBtn" class="square" title="Pause">Ⅱ</button>
     </header>
     <div id="objectives" class="glass"></div>
     <div id="waveBanner" class="hidden"></div>
     <div id="tip" class="glass hidden"></div>
     <div id="alerts"></div>
-    <div id="modeIndicator" class="hidden"></div>
+    <div id="modeIndicator" class="hidden"><span id="modeLabel"></span><button class="secondary"
+        data-ui="cancelTarget" aria-label="Cancel targeting or placement">CANCEL</button></div>
     <div id="radio" class="glass hidden">
       <div class="radio-avatar">MV<span></span></div>
       <div>
@@ -54,7 +55,7 @@
     </div>
     <div id="cameraTools"><button data-cam="home" title="Center on command">⌂</button><button data-cam="in"
         title="Zoom in">＋</button><button data-cam="out" title="Zoom out">−</button><button id="soundBtn"
-        title="Sound">♫</button><button id="helpBtn" title="Field manual (F1)">?</button></div>
+        title="Sound">♫</button><button id="helpBtn" title="Field manual">?</button></div>
     <footer id="commandDeck">
       <section class="minimap-panel">
         <div class="panel-label">TACTICAL OVERVIEW <span id="biomeLabel"></span></div><canvas id="minimap" width="210"
@@ -67,17 +68,16 @@
       </section>
       <section id="actionPanel">
         <div class="action-head">
-          <div class="tabs"><button data-tab="orders" class="active">COMMAND <kbd>Q</kbd></button><button
-              data-tab="build">BUILD <kbd>B</kbd></button><button data-tab="army">RECRUIT <kbd>N</kbd></button><button
-              data-tab="tech">RESEARCH <kbd>T</kbd></button></div><span id="contextLabel"></span>
+          <div class="tabs"><button data-tab="orders" class="active">COMMAND</button><button
+              data-tab="build">BUILD</button><button data-tab="army">RECRUIT</button><button
+              data-tab="tech">RESEARCH</button></div><span id="contextLabel"></span>
         </div>
         <div id="actions"></div>
         <div id="productionQueue"></div>
       </section>
     </footer>
-    <div id="controlstrip"><span>TAP TO SELECT · DOUBLE-TAP TYPE</span><span><kbd>RMB</kbd> SMART
-        ORDER</span><span><kbd>F</kbd> ATTACK-MOVE</span><span>DRAG TO PAN · PINCH TO
-        ZOOM</span><span><kbd>F2</kbd> ALL COMBAT</span>
+    <div id="controlstrip"><span>TAP TO SELECT · DOUBLE-TAP TYPE</span><span>RMB SMART
+        ORDER</span><span>DRAG TO PAN · PINCH TO ZOOM</span>
     </div>
   </div>
   <div id="tooltip" class="hidden"></div>

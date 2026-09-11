@@ -48,7 +48,7 @@ Der Startscreen wird innerhalb von `showHome()` als `.home-screen` mit `.home-la
 
 Alloy-Vorkommen verwenden fünf getrennte Ellipsenplätze je Standort; der östliche Standort lässt eine Lücke zur Startfabrik. `MeridianGame.crystalPosition()` liefert die Positionen. Keine Migration beim Laden. [Kristallkorrektur](crystal-spacing.md).
 
-Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. Die Kamera verwendet Touch-Ziehen, Pinch-Zoom und UI-Navigation; Desktop-Kamerapfade und die Profilvorgaben `edge`/`cameraSpeed` sind entfernt. Auch Maus-Rechteckauswahl, Shift-Auswahl, Kontrollgruppen und Auftragsketten sind entfernt; Rechtsklick-Befehle und übrige Hotkeys bleiben vorerst erhalten. [Kamera-Bereinigung](mobile-camera-cleanup.md).
+Der Entwicklungsstand muss keine älteren Spielstände oder Profile unterstützen. Keine Migrationen oder Kompatibilitätsadapter ohne ausdrücklichen Auftrag. Die Kamera verwendet Touch-Ziehen, Pinch-Zoom und UI-Navigation; Desktop-Kamerapfade und die Profilvorgaben `edge`/`cameraSpeed` sind entfernt. Auch Maus-Rechteckauswahl, Shift-Auswahl, Kontrollgruppen, Auftragsketten und Spiel-Hotkeys sind entfernt; Rechtsklick-Befehle bleiben vorerst erhalten. Bau-/Zielmodi haben einen Touch-Abbrechen-Button. Regulärer Gebäudebau weist einen Arbeiter zu; weitere Arbeiter können keine Bauhilfe mehr leisten, Reparaturbefehle bauen keine Fundamente weiter. [Kamera-Bereinigung](mobile-camera-cleanup.md) · [Touch-Befehle und Bauhilfe-Entfernung](mobile-touch-controls.md).
 
 ## Assets und direkter Dateistart
 

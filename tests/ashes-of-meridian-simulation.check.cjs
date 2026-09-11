@@ -112,6 +112,64 @@ test('commands replace the current order, ignore enemies and set building rally 
   assert.deepEqual(json(barracks.rally), { x: -10, z: 32 });
 });
 
+test('new construction assigns one worker, pays once and still completes normally', () => {
+  const { game, events } = tutorial();
+  const worker = player(game, 'worker'), beforeAlloy = game.s.alloy;
+  const cost = game.cost('depot', 'building');
+  let built = false;
+  for (let z = 30; z < 60 && !built; z += 3) for (let x = -65; x < -25 && !built; x += 3) {
+    if (!game.canBuild('depot', { x, z })) built = game.build('depot', { x, z }, [worker.id]);
+  }
+  assert.equal(built, true);
+  const foundation = player(game, 'depot');
+  const builders = game.alive(e => e.order?.type === 'build' && e.order.id === foundation.id);
+  assert.deepEqual(Array.from(builders, e => e.id), [worker.id]);
+  close(game.s.alloy, beforeAlloy - cost.cost);
+  worker.x = foundation.x; worker.z = foundation.z;
+  const beforeProgress = foundation.progress, paidAlloy = game.s.alloy;
+  game.worker(worker, .5);
+  assert.ok(foundation.progress > beforeProgress);
+  close(game.s.alloy, paidAlloy);
+  foundation.progress = .999; foundation.hp = foundation.maxHp * .999;
+  game.worker(worker, 1);
+  assert.equal(foundation.progress, 1); assert.equal(foundation.hp, foundation.maxHp);
+  assert.equal(worker.order.type, 'idle'); assert.equal(game.s.stats.built, 1);
+  assert.equal(events.filter(e => e.type === 'complete' && e.data.type === 'depot').length, 1);
+});
+
+test('context and repair orders cannot add builders to unfinished own or allied structures', () => {
+  for (const team of [0, 2]) {
+    const { game } = tutorial();
+    const worker = player(game, 'worker');
+    const foundation = game.spawnBuilding('depot', worker.x, worker.z, team, 0, { progress: .1 });
+    foundation.hp = foundation.maxHp * .1;
+    const before = [foundation.progress, foundation.hp, game.s.alloy];
+    game.command([worker.id], { type: 'smart', id: foundation.id, x: foundation.x, z: foundation.z });
+    assert.equal(worker.order.type, 'move');
+    game.worker(worker, 1);
+    assert.deepEqual([foundation.progress, foundation.hp, game.s.alloy], before);
+    game.command([worker.id], { type: 'repair', id: foundation.id });
+    game.worker(worker, 1);
+    assert.equal(worker.order.type, 'idle');
+    assert.deepEqual([foundation.progress, foundation.hp, game.s.alloy], before);
+  }
+});
+
+test('workers still repair completed damaged structures and units for the same alloy cost', () => {
+  for (const team of [0, 2]) for (const kind of ['building', 'unit']) {
+    const { game } = tutorial(); const worker = player(game, 'worker');
+    const target = kind === 'building'
+      ? game.spawnBuilding('depot', worker.x, worker.z, team, 0)
+      : game.spawnUnit('rifle', worker.x, worker.z, team, 0);
+    target.hp = target.maxHp - 50;
+    const alloy = game.s.alloy;
+    game.command([worker.id], { type: 'smart', id: target.id, x: target.x, z: target.z });
+    assert.equal(worker.order.type, 'repair');
+    game.worker(worker, 1);
+    close(target.hp, target.maxHp - 12); close(game.s.alloy, alloy - 3.8);
+  }
+});
+
 for (const [faction, cost] of [[0, 75], [1, 64], [2, 85]]) {
   test(`faction ${faction}: recruitment spends reference cost, reserves supply and refunds cancellation`, () => {
     const { game, events } = tutorial(faction);

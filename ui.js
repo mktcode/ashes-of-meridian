@@ -312,7 +312,7 @@
         this.paused = true;
         this.openModal(
           'pause',
-          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>${esc(s.m.name)}</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="save">SAVE CHECKPOINT <kbd>F5</kbd></button><button class="secondary" data-ui="load" ${this.persistence.hasCheckpoint() ? '' : 'disabled'}>LOAD CHECKPOINT <kbd>F9</kbd></button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button>${s.m.type === 'endless' && s.time >= 300 ? '<button class="secondary" data-ui="extract">EXTRACT EXPEDITION & RECORD SCORE</button>' : ''}<button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">SAVE & RETURN TO MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Your operation is saved automatically every 45 seconds. Export a backup in Settings before changing browsers or moving the game file.</p>`
+          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>${esc(s.m.name)}</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="save">SAVE CHECKPOINT</button><button class="secondary" data-ui="load" ${this.persistence.hasCheckpoint() ? '' : 'disabled'}>LOAD CHECKPOINT</button><button class="secondary" data-ui="settings">SETTINGS & GAME SPEED</button><button class="secondary" data-ui="help">FIELD MANUAL</button>${s.m.type === 'endless' && s.time >= 300 ? '<button class="secondary" data-ui="extract">EXTRACT EXPEDITION & RECORD SCORE</button>' : ''}<button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="home">SAVE & RETURN TO MAIN MENU</button></div><p style="font-size:11px;margin-bottom:0">Your operation is saved automatically every 45 seconds. Export a backup in Settings before changing browsers or moving the game file.</p>`
         );
       }
       resume() {
@@ -433,34 +433,34 @@
           `<div class="eyebrow">MERIDIAN FIELD MANUAL</div><h1>Bring your people home.</h1><div class="help-grid"><div><h3>Command your force</h3>${[
             ['Select', 'Tap unit or structure'],
             ['Context order / rally point', 'Right click'],
-            ['Attack-move', 'F → click ground'],
-            ['Move / hold / stop', 'M / H / X'],
-            ['Select all combat units', 'F2'],
-            ['Select next worker', 'F3'],
+            ['Attack-move', 'Attack-move button → tap destination'],
+            ['Move / hold / stop', 'Buttons in Command'],
+            ['Select all combat units', 'Combat force button'],
+            ['Select next worker', 'Next worker button'],
             ['Select visible units of a type', 'Double-tap unit']
           ]
-            .map(([a, b]) => `<div class="help-line"><span>${a}</span><kbd>${b}</kbd></div>`)
+            .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join('')}<h3>Navigate</h3>${[
             ['Pan camera', 'Drag with one finger'],
             ['Zoom', 'Pinch / ＋ and − buttons'],
             ['Center on base', '⌂ / Command view button'],
             ['Navigate / issue order on minimap', 'Left / right click']
           ]
-            .map(([a, b]) => `<div class="help-line"><span>${a}</span><kbd>${b}</kbd></div>`)
+            .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join(
               ''
-            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then click open, explored ground. A worker travels there to construct it. Right-click an unfinished building with another worker to assist. Workers also repair damaged allies for a small alloy cost.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Relays require nearby combat troops and cannot be captured while contested. Crawlers need an escort within 13 meters and halt near enemies. Scouts and scans reveal fog-of-war. Destroy enemy command centers to weaken reinforcements in offensive missions.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
-            ['Orbital strike / repair field', 'E / R'],
-            ['Recon scan / reinforcements', 'C / V'],
-            ['Command / build / recruit / research', 'Q / B / N / T'],
-            ['Pause / cancel targeting', 'Esc'],
-            ['Save / load checkpoint', 'F5 / F9'],
-            ['Field manual', 'F1']
+            )}</div><div><h3>Economy & production</h3><p style="font-size:12px">Workers automatically harvest <b>alloy</b> and return it to command. Recruit more at headquarters. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Build</b>, choose a structure, then tap open, explored ground. One worker is assigned to construct it. Workers can repair completed damaged allied structures and damaged allied units for a small alloy cost.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Click a queue entry to cancel it and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Relays require nearby combat troops and cannot be captured while contested. Crawlers need an escort within 13 meters and halt near enemies. Scouts and scans reveal fog-of-war. Destroy enemy command centers to weaken reinforcements in offensive missions.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${[
+            ['Command abilities', 'Ability buttons in Command → tap target'],
+            ['Command / build / recruit / research', 'Tabs on the command deck'],
+            ['Pause', 'Ⅱ button'],
+            ['Cancel targeting / placement', 'Cancel button beside the target prompt'],
+            ['Save / load checkpoint', 'Save / Load in the pause menu'],
+            ['Field manual', '? button']
           ]
-            .map(([a, b]) => `<div class="help-line"><span>${a}</span><kbd>${b}</kbd></div>`)
+            .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
             .join(
               ''
-            )}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them. Desktop mouse and keyboard offer the fullest control.</p><p style="font-size:11px">Victory earns one commendation. Preserve at least half of a command center’s hull for a second. Keep your commander alive and losses below the operation’s threshold for a third. Better replay results award only the improvement. Fleet upgrades apply to campaign operations, not skirmishes or standalone scenarios.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
+            )}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Victory earns one commendation. Preserve at least half of a command center’s hull for a second. Keep your commander alive and losses below the operation’s threshold for a third. Better replay results award only the improvement. Fleet upgrades apply to campaign operations, not skirmishes or standalone scenarios.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
           true
         );
       }
@@ -604,8 +604,9 @@
                 : kind === 'attackMove'
                   ? 'ATTACK-MOVE'
                   : 'MOVE ORDER';
-        $('modeIndicator').textContent = text + ' · CLICK TO CONFIRM · ESC TO CANCEL';
+        $('modeLabel').textContent = text + ' · TAP TO CONFIRM';
         $('modeIndicator').classList.remove('hidden');
+        $('tooltip').classList.add('hidden');
         $('world').style.cursor = 'crosshair';
         this.actionSignature = '';
         this.renderActions();
@@ -664,9 +665,8 @@
         }
       }
       actionButton(key, label, ic, opts = {}) {
-        let badge = opts.badge || '',
-          hot = opts.hot || '';
-        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}" data-tooltip="${key}"><span class="key">${hot}</span>${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small>${opts.level ? `<span class="level">${opts.level}</span>` : ''}</button>`;
+        let badge = opts.badge || '';
+        return `<button class="action ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}" data-tooltip="${key}">${icon(ic)}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small>${opts.level ? `<span class="level">${opts.level}</span>` : ''}</button>`;
       }
       renderActions() {
         let s = this.game.s;
@@ -688,21 +688,21 @@
         let html = '',
           f = s.faction;
         if (this.tab === 'orders') {
-          for (let [k, l, ic, hot] of [
-            ['attackMove', 'Attack-move', 'attack', 'F'],
-            ['move', 'Move', 'move', 'M'],
-            ['hold', 'Hold', 'hold', 'H'],
-            ['stop', 'Stop', 'stop', 'X'],
-            ['army', 'Combat force', 'rifle', 'F2'],
-            ['worker', 'Next worker', 'worker', 'F3'],
-            ['ability:orbital', 'Orbital strike', 'orbital', 'E'],
-            ['ability:repair', 'Repair field', 'heal', 'R'],
-            ['ability:scan', 'Recon scan', 'scan', 'C'],
-            ['ability:drop', 'Reinforcements', 'drop', 'V'],
-            ['rally', 'Rally point', 'rally', 'Y'],
-            ['home', 'Command view', 'hq', '']
+          for (let [k, l, ic] of [
+            ['attackMove', 'Attack-move', 'attack'],
+            ['move', 'Move', 'move'],
+            ['hold', 'Hold', 'hold'],
+            ['stop', 'Stop', 'stop'],
+            ['army', 'Combat force', 'rifle'],
+            ['worker', 'Next worker', 'worker'],
+            ['ability:orbital', 'Orbital strike', 'orbital'],
+            ['ability:repair', 'Repair field', 'heal'],
+            ['ability:scan', 'Recon scan', 'scan'],
+            ['ability:drop', 'Reinforcements', 'drop'],
+            ['rally', 'Rally point', 'rally'],
+            ['home', 'Command view', 'hq']
           ])
-            html += this.actionButton(k, l, ic, { hot });
+            html += this.actionButton(k, l, ic);
         } else if (this.tab === 'build') {
           let labels = {
             hq: 'Command',
@@ -1018,18 +1018,18 @@
         } else if (s.stats.trained < 3) {
           title = '02 / MUSTER YOUR SQUAD';
           text =
-            'Open <b>RECRUIT [N]</b> and queue Vanguards. Your muster station trains them automatically. Multiple stations recruit in parallel.';
+            'Open <b>RECRUIT</b> and queue Vanguards. Your muster station trains them automatically. Multiple stations recruit in parallel.';
         } else if (this.game.supply() > this.game.cap() - 5 && !this.game.has('depot')) {
           title = '03 / ROOM TO GROW';
           text =
-            'Open <b>BUILD [B]</b>, choose Supply, then click free ground. A worker constructs it. Each depot adds 16 supply.';
+            'Open <b>BUILD</b>, choose Supply, then tap free ground. A worker constructs it. Each depot adds 16 supply.';
         } else if (s.stats.trained < 6) {
           title = '03 / RECRUIT SIX COMBAT UNITS';
           text =
             'The objective counts new combat recruits, not your starting squad. Keep the muster station’s queue running.';
         } else {
           title = '04 / TAKE BACK THE LANDING FIELD';
-          text = `Press <b>F2</b> to select your combat force. Press <b>F</b>, then click toward the enemy command in the northeast. Right-click the minimap to issue distant orders.`;
+          text = `Tap <b>Combat force</b> in <b>Command</b>, then <b>Attack-move</b> and a destination toward the enemy command in the northeast. You can also tap the minimap to choose a distant destination.`;
         }
         $('tip').classList.remove('hidden');
         $('tip').innerHTML =
@@ -1039,7 +1039,7 @@
       }
       setControlHints() {
         $('controlstrip').innerHTML =
-          `<span>TAP TO SELECT · DOUBLE-TAP TYPE</span><span><kbd>RMB</kbd> SMART ORDER</span><span><kbd>F</kbd> ATTACK-MOVE</span><span>DRAG TO PAN · PINCH TO ZOOM</span><span><kbd>F2</kbd> COMBAT</span>`;
+          `<span>TAP TO SELECT · DOUBLE-TAP TYPE</span><span>RMB SMART ORDER</span><span>DRAG TO PAN · PINCH TO ZOOM</span>`;
       }
       bind() {
         document.addEventListener('pointerdown', e => {
@@ -1136,7 +1136,7 @@
         };
         document.addEventListener('mousemove', e => {
           let b = e.target.closest('[data-tooltip]');
-          if (b && !this.paused && this.game.s) {
+          if (b && !this.paused && this.game.s && !this.mode) {
             $('tooltip').innerHTML = this.tooltipFor(b.dataset.tooltip);
             $('tooltip').classList.remove('hidden');
             let rect = b.getBoundingClientRect();
@@ -1144,7 +1144,6 @@
             $('tooltip').style.top = Math.max(70, rect.top - $('tooltip').offsetHeight - 12) + 'px';
           } else $('tooltip').classList.add('hidden');
         });
-        document.addEventListener('keydown', e => this.keyDown(e));
         window.addEventListener('blur', () => {
           this.drag = null;
         });
@@ -1252,6 +1251,10 @@
           case 'closeModal':
             this.closeModal();
             break;
+          case 'cancelTarget':
+            this.clearMode();
+            this.renderActions();
+            break;
           case 'export':
             this.exportBackup();
             break;
@@ -1312,85 +1315,6 @@
               'Your expedition leaves the redoubt under its own power. There will be another battle, but not for these people today.'
             );
             break;
-        }
-      }
-      keyDown(e) {
-        let k = e.key.toLowerCase();
-        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && k !== 'escape')
-          return;
-        if (k === 'escape') {
-          e.preventDefault();
-          if (this.mode) {
-            this.clearMode();
-            return;
-          }
-          if (this.modalKind === 'pause') {
-            this.resume();
-            return;
-          }
-          if (this.modalKind && !['result', 'ending', 'epilogue'].includes(this.modalKind)) {
-            this.closeModal();
-            return;
-          }
-          if (this.view === 'game' && !this.game.s?.result) {
-            this.pause();
-            return;
-          }
-          if (this.view !== 'home' && this.view !== 'game') {
-            this.showHome();
-            return;
-          }
-          return;
-        }
-        if (this.view !== 'game' || !this.game.s) return;
-        if (
-          [
-            'f1',
-            'f2',
-            'f3',
-            'f5',
-            'f9',
-            'tab'
-          ].includes(k) ||
-          (e.ctrlKey && ['s', 'a'].includes(k))
-        )
-          e.preventDefault();
-        if (k === 'f1') {
-          this.showHelp();
-          return;
-        }
-        if (k === 'f5' || (e.ctrlKey && k === 's')) {
-          this.save();
-          return;
-        }
-        if (k === 'f9') {
-          this.load();
-          return;
-        }
-        if (this.paused) return;
-        if (e.repeat) return;
-        if (e.ctrlKey && k === 'a') {
-          this.selectArmy();
-          return;
-        }
-        if (e.ctrlKey || e.altKey || e.metaKey) return;
-        if (k === 'f') this.setMode('attackMove');
-        else if (k === 'm') this.setMode('move');
-        else if (k === 'h' || k === 'x') this.perform(k === 'h' ? 'hold' : 'stop');
-        else if (k === 'q') this.setTab('orders');
-        else if (k === 'b') this.setTab('build');
-        else if (k === 'n') this.setTab('army');
-        else if (k === 't') this.setTab('tech');
-        else if (k === 'e') this.setMode('ability', 'orbital');
-        else if (k === 'r') this.setMode('ability', 'repair');
-        else if (k === 'c') this.setMode('ability', 'scan');
-        else if (k === 'v') this.setMode('ability', 'drop');
-        else if (k === 'y') this.setMode('rally');
-        else if (k === 'f2') this.selectArmy();
-        else if (k === 'f3') this.selectWorker();
-        else if (k === 'tab') {
-          let tabs = ['orders', 'build', 'army', 'tech'];
-          this.setTab(tabs[(tabs.indexOf(this.tab) + 1) % 4]);
         }
       }
       pick(sx, sy) {
