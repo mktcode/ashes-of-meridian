@@ -1329,9 +1329,9 @@
 
     #commandDeck {
       position: absolute;
-      left: 14px;
-      right: 14px;
-      bottom: 4px;
+      left: 0;
+      right: 0;
+      bottom: 0;
       height: 207px;
       display: grid;
       grid-template-columns: 226px 285px 1fr;
@@ -1350,14 +1350,15 @@
 
     .minimap-panel {
       position: relative;
-      padding: 8px 9px !important
+      min-height: 0;
+      padding: 0 !important;
+      background: #071019
     }
 
     #minimap {
-      width: 206px;
-      height: 165px;
-      background: #071019;
-      border: 1px solid #7b9cac3b;
+      display: block;
+      width: 100%;
+      height: 100%;
       cursor: crosshair
     }
 
@@ -1633,11 +1634,6 @@
         height: 222px
       }
 
-      #minimap {
-        width: 220px;
-        height: 180px
-      }
-
       #radio {
         bottom: 270px
       }
@@ -1688,17 +1684,11 @@
       }
 
       #commandDeck {
-        grid-template-columns: 202px 225px 1fr;
-        left: 8px;
-        right: 8px
+        grid-template-columns: 202px 225px 1fr
       }
 
       #commandDeck section {
         padding: 12px 10px
-      }
-
-      #minimap {
-        width: 182px
       }
 
       .tabs {
@@ -1764,17 +1754,11 @@
     @media(max-width:850px) {
       #commandDeck {
         grid-template-columns: 167px 1fr;
-        height: 190px;
-        bottom: 3px
+        height: 190px
       }
 
       #selectionPanel {
         display: none
-      }
-
-      #minimap {
-        width: 147px;
-        height: 145px
       }
 
       .action {
@@ -1998,15 +1982,6 @@
       #commandDeck {
         grid-template-columns: 119px 1fr;
         height: 190px
-      }
-
-      .minimap-panel {
-        padding: 8px 5px !important
-      }
-
-      #minimap {
-        width: 106px;
-        height: 150px
       }
 
       .tabs {
