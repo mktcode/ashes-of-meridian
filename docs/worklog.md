@@ -2,10 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
-## Benannte Simulationsschrittweite
+## Benannte Simulationsschrittweite und risikogerechte Testpflicht
 
 - `app.js`: vier identische Schrittweiten durch die lokale Konstante `SIMULATION_STEP_SECONDS = 0.05` ersetzt; Aufrufreihenfolge und Schrittbegrenzung unverändert.
-- **188 Node-Tests bestanden** (rund 13 s), Diff geprüft. Kein Browsercheck für die reine Konstantenextraktion. Die pauschale Node-Testpflicht soll anschließend besprochen werden.
+- Für die Konstantenextraktion **188 Node-Tests bestanden** (rund 13 s), Diff geprüft. Kein Browsercheck für die reine Konstantenextraktion.
+- Anschließend Testpflicht in `AGENTS.md` und `docs/testing.md` gelockert: Für mechanische, verhaltensneutrale JavaScript-Kleinständerungen genügen Syntaxprüfung und Diff-Sichtung; bei Logik-/RNG-/Schnittstellen-/Teständerungen sowie im Zweifel weiterhin vollständiger Node-Lauf. Für diese reine Regeländerung nur Diff und lokale Dokumentationslinks geprüft, keine erneuten Spieltests.
 
 ## Startökonomie nur durch Worker und Raffinerien
 

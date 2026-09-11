@@ -18,7 +18,7 @@
 
 ## Prüfen und dokumentieren
 
-- Prüfaufwand nach Risiko wählen: Nach JavaScript-Spielcode-/Teständerungen den vollständigen Node-Befehl aus [docs/testing.md](docs/testing.md) ausführen. Für reine Dokumentation oder minimale, risikoarme Text-/Rahmen-/Abstandsänderungen genügen Diff-Sichtung und passende statische Prüfungen; keine zusätzlichen Browsertests auf Vorrat.
+- Prüfaufwand nach Risiko wählen: Nach JavaScript-Spielcode-/Teständerungen grundsätzlich den vollständigen Node-Befehl aus [docs/testing.md](docs/testing.md) ausführen. Ausnahme: Für mechanische, verhaltensneutrale JavaScript-Kleinständerungen (z. B. lokale Konstantenextraktion bei unverändertem Wert) genügen Syntaxprüfung der betroffenen Dateien und Diff-Sichtung. Bei Änderungen an Spiellogik, RNG, Schnittstellen oder Tests sowie im Zweifel bleibt der vollständige Lauf Pflicht. Für reine Dokumentation oder minimale, risikoarme Text-/Rahmen-/Abstandsänderungen genügen Diff-Sichtung und passende statische Prüfungen; keine zusätzlichen Browsertests auf Vorrat.
 - Bei Änderungen an Eingabe, Layoutstruktur, Rendering oder Auslieferung gezielt `file://` prüfen. Node-Tests sind kein Browser-/WebGL-Nachweis; Headless-Touch ist kein Echtgerätetest.
 - `docs/` als kurze, aktuelle Referenz pflegen. Geänderte Zuständigkeiten, Bedienung, Befehle und offene Entscheidungen direkt nachführen, statt Nachträge anzuhängen. Keine eigene Berichtdatei für jede Änderung.
 - Das einzige fortlaufende Arbeitsprotokoll ist [docs/worklog.md](docs/worklog.md): kurze zusammenhängende Einträge mit Änderung, Prüfung/Ergebnis und relevanten offenen Grenzen. Tatsächlich ausgeführte Prüfungen von älteren Nachweisen unterscheiden; keine ausführlichen Tool-/Screenshot-Protokolle in Referenzdokumenten.

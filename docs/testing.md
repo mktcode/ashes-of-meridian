@@ -3,7 +3,8 @@
 ## Prüfaufwand
 
 - **Dokumentation, minimale Text-/Rahmen-/Abstandsänderungen:** Diff sichten, bei Dokumentationsänderungen Links und Angaben prüfen; kein zusätzlicher Browserlauf nötig.
-- **JavaScript-Spielcode oder Tests:** vollständigen Node-Befehl unten ausführen, passende Regressionstests ergänzen.
+- **Mechanische, verhaltensneutrale JavaScript-Kleinständerungen:** Syntaxprüfung mit `node --check <Datei>` für jede betroffene Datei und Diff-Sichtung genügen, etwa bei einer lokalen Konstantenextraktion mit unverändertem Wert. Voraussetzung: keine Änderung an Logik, RNG-Aufrufreihenfolge, Schnittstellen oder Auswertungsreihenfolge; kein struktureller Umbau.
+- **Sonstiger JavaScript-Spielcode oder Tests:** vollständigen Node-Befehl unten ausführen, passende Regressionstests ergänzen. Bei Änderungen an Spiellogik, RNG, Schnittstellen oder Tests sowie im Zweifel ist der vollständige Lauf Pflicht.
 - **Eingabe, Layoutstruktur, Rendering oder Auslieferung:** zusätzlich gezielt direkt unter `file://` prüfen, insbesondere betroffene Touch-Aktionen und Portraitgrößen. Keine vollständige Browser-Regressionsserie für jeden kleinen Schritt.
 - Ergebnisse und ausgelassene relevante Bereiche kurz nur im [Arbeitsprotokoll](worklog.md) festhalten. Ältere Nachweise sind keine neu ausgeführten Tests.
 
