@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Last Light Relay als zweiter Gefechtstrack
+
+- Freigegebenen Entwurf bytegleich nach `audio/music-last-light-relay.mp3` kopiert. Reihenfolge: **Ratchet Theory → Last Light Relay → Breach Protocol → Black Channel → von vorn**. Weiterhin 10 % Pegel, 10 s Startverzögerung und 10 s Pause zwischen allen Stücken; Menü/SFX unverändert. Docker-Allowlist und Referenzen auf vier Tracks erweitert; Hörentwurfsordner und Nutzerreferenz bleiben außerhalb der Auslieferung.
+- **Neu geprüft:** `npm test` einschließlich Build, **252/252 bestanden** (rund 61 s), Viererfolge/Rücksprung und bytegleiche Freigaben abgesichert. Chromium `file://` und Container-HTTP bei 390×844 mit simuliertem Touch: Erststart, alle vier Dateien in gewünschter Reihenfolge, echte Endereignisse nach gezieltem Spulen, 10-s-Übergänge bei Tempo 2×, Pause/Resume, Neustart, Ergebnis und Menüreset; Pegel 0,028 bei Gesamtlautstärke 0,28, GL 0 und keine Laufzeit-/Ladefehler. Docker gebaut, gesund als UID 101, 45 Laufzeitdateien; bytegleiche MP3s, `audio/mpeg`/`no-cache`, 206-Byte-Range, echte 404 für fehlende/ausgeschlossene Assets und `nginx -t` geprüft. Diff/Links geprüft; kein neuer Hör-/Echtgeräte- oder ungespulter Langzeitnachweis, öffentliches Deployment nicht ausgeführt.
+
 ## Vierter Hörentwurf: Last Light Relay
 
 - Separater **96-BPM-/83-s-Industrial-Dub-Entwurf** unter `music-drafts/04-last-light-relay.mp3`: Halftime-Beat, runder Bass, kurze Orgel-Echos, verstimmte Signalmelodie und drei neue generische Funkphrasen. Langsamer Aufbau, fünfsekündiger Beat-Aussetzer; keine Gitarren/Hats/Flächen, getrennte Vordergrundfenster. Neuer Offline-Generator verwendet eigene Synthese und bestehende Drum-/Flite-Funktionen, keine Aufnahme als Quelle. **Nicht eingebaut**; Spiel, Deployment, alle bisherigen Fassungen und Nutzerreferenz unverändert.

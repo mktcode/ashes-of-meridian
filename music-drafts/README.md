@@ -1,16 +1,16 @@
 # Hörentwürfe – Industrial Breakbeat und Dub
 
-Die ersten drei Themen in mehreren Vergleichsfassungen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Die **Minimal Mixes sind freigegeben** und als bytegleiche Kopien unter `audio/music-*.mp3` im Spiel eingebaut: feste Dreierplaylist mit 10 Sekunden Startverzögerung und 10 Sekunden Musikpause zwischen den Stücken. Dieser Entwurfsordner selbst bleibt außerhalb des Docker-Buildkontexts; Originale und Reduced Mixes dienen weiterhin nur dem Vergleich.
+Die ersten drei Themen in mehreren Vergleichsfassungen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Die **Minimal Mixes sind freigegeben** und als bytegleiche Kopien unter `audio/music-*.mp3` im Spiel eingebaut: zusammen mit **Last Light Relay** als feste Viererplaylist (**Ratchet Theory → Last Light Relay → Breach Protocol → Black Channel**), mit 10 Sekunden Startverzögerung und 10 Sekunden Musikpause zwischen den Stücken. Dieser Entwurfsordner selbst bleibt außerhalb des Docker-Buildkontexts; Originale und Reduced Mixes dienen weiterhin nur dem Vergleich.
 
-## Neuer Hörentwurf: Last Light Relay
+## Last Light Relay – freigegeben
 
-[**04 – Last Light Relay anhören**](04-last-light-relay.mp3) – **96 BPM**, rund **83 Sekunden**, Stereo-MP3/44,1 kHz/224 kbit/s. **Nur Entwurf, nicht im Spiel oder Container enthalten.**
+[**04 – Last Light Relay anhören**](04-last-light-relay.mp3) – **96 BPM**, rund **83 Sekunden**, Stereo-MP3/44,1 kHz/224 kbit/s. **Freigegeben und als zweiter Track eingebaut**, bytegleich unter `audio/music-last-light-relay.mp3`, auch im Container enthalten.
 
 Ein langsamer Industrial-Dub-Gegenpol: trockener Halftime-Beat, runder Subbass mit hörbaren Obertönen, kurze Moll-/Dur-Nonen-Orgelakkorde mit dunklen Echos und eine leicht verstimmte, einsame Signalmelodie. Keine Gitarren, Hi-Hats oder durchgehende Klangfläche. Akkorde, Melodie und Funk bekommen getrennte Fenster; die Echos bleiben rhythmisch gebunden.
 
 - **0–5 s:** nur Kick und holziger Snare/Rim-Klang; **ab 5 s:** Bass; **ab 10 s:** Orgel-Echos; **ab 20 s:** erste Melodie.
 - **Ab 30 s:** „We are still here“. **40–45 s:** Beat setzt aus, Bass und Signal bleiben; anschließend Rückkehr des Grooves. Später „Follow the signal“ und „See you at dawn“, zum Schluss ein ausklingender Grundton.
-- Neue lokale Syntheseklänge; Drum-/Funk-Grundfunktionen aus dem bisherigen Generator, weiterhin generische Flite-Stimme mit schmalbandiger Verzerrung. Keine fremden Samples oder Referenzaufnahmen. Kein Ersatz einer bisherigen Fassung; Hörabnahme steht aus.
+- Neue lokale Syntheseklänge; Drum-/Funk-Grundfunktionen aus dem bisherigen Generator, weiterhin generische Flite-Stimme mit schmalbandiger Verzerrung. Keine fremden Samples oder Referenzaufnahmen. Kein Ersatz einer bisherigen Fassung; Hörabnahme durch den Nutzer erfolgt.
 
 ## Erste drei Themen – Originale und Vergleichsmixe
 

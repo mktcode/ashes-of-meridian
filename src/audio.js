@@ -2,6 +2,7 @@
     'use strict';
     const BATTLE_MUSIC_URLS = [
       './audio/music-ratchet-theory.mp3',
+      './audio/music-last-light-relay.mp3',
       './audio/music-breach-protocol.mp3',
       './audio/music-black-channel.mp3'
     ];
