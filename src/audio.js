@@ -113,7 +113,7 @@
       syncBattleTrack() {
         let track = this.battleTrack;
         if (!track) return;
-        track.volume = this.settings.music ? Math.max(0, Math.min(1, this.settings.volume)) * 0.5 : 0;
+        track.volume = this.settings.music ? Math.max(0, Math.min(1, this.settings.volume)) * 0.25 : 0;
         // Audio-clock seconds, never simulation time or game-speed-scaled dt.
         let now = this.ctx.currentTime;
         if (this.musicMode !== 'battle' || !this.settings.music) {
