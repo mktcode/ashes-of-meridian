@@ -399,7 +399,7 @@ test('speed button cycles existing rates, updates its own label and preserves co
   assert.equal(button.textContent, '1×');
 });
 
-test('speed is absent from the clock and settings, including the former change handler', () => {
+test('speed is a single button under the clock, not a settings control', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.document.handlers.change({ target: { id: 'settingSpeed', value: '2', dataset: {} } });
   assert.equal(h.ui.game.s.speed, 1);
@@ -411,7 +411,10 @@ test('speed is absent from the clock and settings, including the former change h
   }
   const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
   assert.doesNotMatch(html, /speedLabel|settingSpeed/);
-  assert.match(html, /class="clock"><strong id="gameTime">00:00<\/strong><\/div>/);
+  assert.match(html, /class="clock"><strong id="gameTime">00:00<\/strong><button id="speedBtn"[^>]*>1×<\/button><\/div>/);
+  assert.equal((html.match(/id="speedBtn"/g) || []).length, 1);
+  const deck = html.slice(html.indexOf('<footer id="commandDeck">'), html.indexOf('</footer>'));
+  assert.match(deck, /class="minimap-panel"[\s\S]*id="commandCenter"[\s\S]*id="cameraTools"[\s\S]*id="abilityBar"[\s\S]*id="actionPanel"/);
   assert.match(html, /<button id="speedBtn"[^>]*>1×<\/button>/);
 });
 

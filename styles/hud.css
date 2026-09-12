@@ -19,8 +19,9 @@
       position: absolute;
       inset: 0 0 auto;
       height: var(--topbar-height);
-      background: linear-gradient(#08111cef, #0b1422e8);
-      border-bottom: 1px solid var(--line);
+      background: linear-gradient(115deg, #071520f5, #102a39ef 50%, #05121ef5);
+      border-bottom: 1px solid #58ddf0a0;
+      box-shadow: inset 0 -1px #a4f7ff25, 0 2px 12px #00cfff20;
       display: flex;
       align-items: center;
       padding: 0 22px;
@@ -91,8 +92,13 @@
     }
 
     .clock {
-      border-left: 1px solid var(--line);
-      padding-left: 25px
+      border-left: 1px solid #58ddf050;
+      padding-left: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      align-self: stretch
     }
 
     .clock strong {
@@ -103,17 +109,18 @@
     #objectives {
       position: absolute;
       left: 22px;
-      top: 85px;
+      top: calc(var(--topbar-height) + 18px);
       width: 267px;
-      padding: 16px 18px;
-      background: linear-gradient(100deg, #0b1623ec, #0c1824c9);
-      border-left: 2px solid var(--gold)
+      padding: 12px 16px;
+      border-left: 2px solid #a4f7ff
     }
 
     #objectives .eyebrow {
       font-size: 9px;
       letter-spacing: 1.5px;
-      margin-bottom: 11px
+      margin-bottom: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #74dced45
     }
 
     #objectiveRows {
@@ -202,7 +209,7 @@
 
     #radio {
       position: absolute;
-      bottom: 250px;
+      bottom: calc(var(--deck-height) + var(--hud-inset) + 12px);
       left: 50%;
       transform: translateX(-50%);
       max-width: 640px;
@@ -258,21 +265,18 @@
     }
 
     #cameraTools {
-      position: absolute;
-      right: 20px;
-      bottom: calc(var(--deck-height) + var(--ability-height) + 8px);
-      display: flex;
-      gap: 4px
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 4px;
+      height: var(--tools-height);
+      padding: 3px
     }
 
-    #cameraTools button,
-    #speedBtn {
-      width: 30px;
-      height: 30px;
-      background: #0b1422da;
-      border: 1px solid var(--line);
-      font-size: 16px;
-      color: #a9c1cc
+    #cameraTools button {
+      min-width: 0;
+      padding: 0;
+      font-size: 22px;
+      color: #e0f6ff
     }
 
     #cameraTools button:hover,
@@ -282,13 +286,15 @@
     }
 
     #speedBtn {
-      position: absolute;
-      left: 6px;
-      bottom: calc(var(--deck-height) + var(--ability-height) + 8px);
-      width: 54px;
-      padding: 0;
-      font: 12px var(--mono)
+      min-width: 44px;
+      min-height: 28px;
+      padding: 2px 6px;
+      font: 11px var(--mono);
+      color: #82e9f7;
+      border-radius: 3px
     }
+
+    #speedBtn:hover { background: #50d6ed20 }
 
     #attackMoveBtn {
       display: inline-flex;
@@ -333,16 +339,16 @@
 
     #commandDeck {
       position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      left: var(--hud-inset);
+      right: var(--hud-inset);
+      bottom: var(--hud-inset);
       height: var(--deck-height);
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
-      background: linear-gradient(135deg, #101b28f5, #091321f8);
-      box-shadow: 0 -8px 50px #0003;
-      pointer-events: auto
+      grid-template-columns: var(--side-width) minmax(0, 1fr) var(--side-width);
+      grid-template-rows: minmax(0, 1fr);
+      align-items: end;
+      gap: var(--hud-gap);
+      pointer-events: none
     }
 
     #commandDeck section {
@@ -350,8 +356,17 @@
       min-height: 0
     }
 
+    #commandCenter {
+      height: var(--center-height);
+      display: grid;
+      grid-template-rows: var(--tools-height) var(--ability-height);
+      gap: var(--hud-gap)
+    }
+
     #actionPanel {
-      padding: 6px;
+      height: 100%;
+      padding: 5px;
+      pointer-events: auto;
       overflow-y: auto;
       overscroll-behavior: contain;
       touch-action: pan-y;
@@ -363,10 +378,11 @@
       top: 0;
       z-index: 1;
       width: 100%;
-      min-height: 44px;
-      margin-bottom: 6px;
+      min-height: 32px;
+      margin-bottom: 4px;
       text-align: left;
-      padding: 8px;
+      padding: 4px;
+      font-size: 10px;
       background: #152333;
       color: var(--gold)
     }
@@ -378,41 +394,48 @@
     }
 
     #abilityBar {
-      position: absolute;
-      bottom: var(--deck-height);
-      left: 0;
-      right: 0;
       height: var(--ability-height);
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 4px;
       padding: 4px;
-      background: #0b1624f5;
       pointer-events: auto
     }
 
     #abilityBar .action { min-height: 0; height: 100% }
-    #abilityBar .action span { font-size: clamp(9px, 2.5vw, 11px) }
-    .root-grid { min-height: calc(var(--deck-height) - 12px); grid-template-rows: 1fr 1fr }
+    #abilityBar .action span { font-size: clamp(8px, 1.8vw, 11px); line-height: 1.1 }
+    #abilityBar .action { padding-top: 12px }
+    .root-grid .action { min-height: 0; padding: 3px 1px }
+    .root-grid .action span { font-size: clamp(7px, 1.8vw, 11px); white-space: nowrap }
+    .root-grid { height: calc(var(--deck-height) - 12px); grid-template-rows: repeat(2, minmax(0, 1fr)) }
+    #actionPanel:has(.menu-back) { height: min(340px, calc(100dvh - var(--topbar-height) - 90px)) }
+    #actionPanel .action-grid:not(.root-grid) { grid-template-columns: 1fr }
     #hud button { touch-action: manipulation }
 
     .minimap-panel {
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       min-height: 0;
-      background: #071019
+      height: 100%;
+      padding: 5px;
+      pointer-events: auto
     }
 
     #minimap {
       display: block;
-      width: 100%;
-      height: 100%;
+      width: min(100%, calc(var(--deck-height) - 12px));
+      height: auto;
+      aspect-ratio: 1;
+      background: #071019;
       cursor: crosshair
     }
 
     .action-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 6px
+      gap: 4px
     }
 
     .action {
@@ -423,10 +446,12 @@
       justify-content: center;
       min-height: 70px;
       min-width: 0;
-      border: 1px solid #526d8545;
-      background: linear-gradient(145deg, #21344855, #11213188);
+      border: 1px solid #42cde88c;
+      background: linear-gradient(145deg, #153344e8, #051421f5);
+      box-shadow: inset 0 1px #c9faff25, inset 0 -6px 14px #03101c55;
+      border-radius: 5px 2px;
       padding: 5px 3px;
-      color: #b5cad2
+      color: #ddecf4
     }
 
     .action:hover {
@@ -474,8 +499,8 @@
     #productionQueue {
       position: absolute;
       left: 6px;
-      bottom: calc(var(--deck-height) + var(--ability-height) + 46px);
-      max-height: max(54px, calc(100dvh - var(--deck-height) - var(--ability-height) - 268px));
+      bottom: calc(var(--deck-height) + var(--hud-inset) + 8px);
+      max-height: max(54px, calc(100dvh - var(--deck-height) - 230px));
       display: flex;
       flex-direction: column;
       gap: 5px;
@@ -521,7 +546,7 @@
 
     #toast {
       position: fixed;
-      bottom: calc(var(--deck-height) + var(--ability-height) + 48px);
+      bottom: calc(var(--deck-height) + var(--hud-inset) + 16px);
       left: 50%;
       transform: translateX(-50%);
       z-index: 40;
@@ -538,6 +563,31 @@
     #toast.show {
       opacity: 1
     }
+
+    /* Cheap CSS lighting: no images or additional WebGL passes. */
+    #objectives,
+    .minimap-panel,
+    #actionPanel,
+    #cameraTools,
+    #abilityBar {
+      background: linear-gradient(135deg, #102d3df5, #05131ff5 65%);
+      border: 1px solid #4edcf0b0;
+      border-radius: 9px 3px;
+      box-shadow: inset 0 1px #d8fcff40, inset 0 0 12px #21c5ed10,
+        0 0 7px #00cfff30, 0 3px 12px #0009
+    }
+
+    #cameraTools button,
+    #pauseBtn {
+      border: 1px solid #47cfe9b0;
+      border-radius: 5px 2px;
+      background: linear-gradient(150deg, #16384a, #061725);
+      box-shadow: inset 0 1px #d8fcff30
+    }
+
+    #hud .action:hover,
+    #cameraTools button:hover { border-color: #b5f7ff; box-shadow: inset 0 0 12px #49ddff25 }
+    #hud .action.active { border-color: var(--gold); background: #775c2f80 }
 
     @media(max-width:1150px) {
       #topbar {
@@ -569,9 +619,7 @@
         left: 55%
       }
 
-      .power {
-        display: none
-      }
+      .power { min-width: 40px }
 
       .armory-grid {
         grid-template-columns: repeat(2, 1fr)
@@ -625,7 +673,7 @@
       }
 
       #radio {
-        bottom: calc(var(--deck-height) + var(--ability-height) + 48px);
+        bottom: calc(var(--deck-height) + var(--hud-inset) + 16px);
         width: calc(100% - 80px);
         min-width: 0;
         left: calc(50% + 30px);
@@ -640,19 +688,8 @@
         display: none
       }
 
-      #cameraTools {
-        right: 10px
-      }
-
-      #cameraTools button {
-        width: 27px;
-        height: 27px;
-        font-size: 14px
-      }
-
-      #speedBtn {
-        height: 27px
-      }
+      #cameraTools { gap: 2px }
+      #cameraTools button { font-size: 19px }
 
       #waveBanner {
         top: 70px;
@@ -711,17 +748,22 @@
         display: none
       }
 
-      .resource {
-        min-width: 50px
+      #topbar {
+        display: grid;
+        grid-template-columns: 22px repeat(3, minmax(0, 1fr)) 30px 48px 36px;
+        gap: 4px;
+        padding: 0 8px
       }
-
-      .resicon {
-        display: none
-      }
-
-      .clock {
-        margin-left: auto
-      }
+      .top-spacer { display: none }
+      .resource { min-width: 0; gap: 3px }
+      .resource strong { font-size: 12px; white-space: nowrap }
+      .resource small { font-size: 6px; letter-spacing: .6px }
+      .resource .resicon { font-size: 15px }
+      .power .resicon { display: none }
+      .clock { padding-left: 0 }
+      .clock strong { font-size: 11px }
+      #pauseBtn { width: 36px; height: 40px; padding: 0 }
+      .brandmark { font-size: 23px; padding: 0 }
 
       .sub-header {
         gap: 15px
@@ -786,7 +828,8 @@
       }
 
       #objectives {
-        width: 194px
+        width: 210px;
+        padding: 9px 11px
       }
 
       .objective-row {
@@ -831,4 +874,18 @@
       .result-stats span {
         font-size: 8px
       }
+    }
+
+    /* Keep every control available on unusually narrow screens. */
+    @media(max-width:360px) {
+      :root { --side-width: 82px; --deck-height: 206px; --tools-height: 84px; --ability-height: 112px }
+      #cameraTools { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+      #abilityBar { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+      .resource .resicon { display: none }
+    }
+
+    @media(max-height:500px) and (min-width:601px) {
+      :root { --deck-height: 120px; --side-width: 140px; --ability-height: 60px; --tools-height: 40px }
+      #radio { bottom: 140px; padding: 8px 12px }
+      #radioText { line-height: 1.3 }
     }

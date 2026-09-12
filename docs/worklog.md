@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Kompaktes HUD nach Grafikvorbild
+
+- Dreier-Deck wie in `graphics-inspiration.png`: Minimap links, sechs Werkzeuge über vier Fähigkeiten mittig, Kategorien als 2×2 rechts; Unterkanten bündig. Untermenüs wachsen scrollbar nach oben, ohne Werkzeuge/Fähigkeiten zu verdecken. Tempo direkt unter der Uhr, Attack-move neben Home; auch Energie bleibt mobil sichtbar. Dunkelblaue CSS-Verläufe, cyanfarbene Rahmen und Lichtkanten ohne neue Assets/Renderpässe. Minimap quadratisch eingepasst; Queue/Radio/Toast nachgeführt. Schmale und niedrige Fenster erhalten Rückfalllayouts.
+- Welt reicht nun bis zum mittleren Werkzeugblock; höhere Seitenpanels überdecken die unteren Weltecken und blockieren dort DOM-Eingaben. Bei 430×932 wächst der Welt-Viewport von 586 auf 755 px Höhe, unveränderte Zoom-Objektgröße und Spielregeln. Referenzen/Bedienhilfe aktualisiert; keine Fixtures geändert.
+- **234 Tests inklusive Build bestanden** (rund 36 s), darunter neuer HTML-Vertrag für Deck-Reihenfolge und einmaligen Tempo-Button unter der Uhr. **Chromium `file://`: 430×932, 390×844/DPR 2, 1280×800, 932×430, 320×740**: Screenshots gesichtet, Unterkanten/Viewportgrenzen, sichtbare und nicht verdeckte Knöpfe sowie scrollbarfreie Kategorien geprüft. Bei 390×844 zusätzlich Touch für Tempo, Attack-move, alle Kategorien, Scrollen/Zurück, Workerauftrag/Queue-Abbruch, Rally/Scan samt Abbruch, Minimap, Pan/Zoom/Home, Pause/Hilfe, Audio-Umschalter und Hauptmenü/Neustart geprüft. Keine Console-/Laufzeit-/GL-Fehler. Diff/lokale Markdown-Links geprüft.
+- Headless-WebGL/Touch, kein Echtgerät-/Leistungsnachweis. Sechs mittlere Werkzeuge und Kategorienbeschriftungen sind auf schmalen Portraitgeräten bewusst klein; tatsächliche Lesbarkeit und Treffsicherheit müssen am Gerät beurteilt werden. Keine pixelgenaue Kopie des Vorbilds oder Änderung der Weltbeleuchtung.
+
 ## Bloom verstärkt
 
 - Bloom-Faktor auf High/Balanced zunächst von 0,055 auf 0,08 erhöht, auf erneuten Wunsch auf 0,16 verdoppelt. Schwellen, Radien, Samplezahl und Renderpässe unverändert; Performance bleibt ohne Bloom.
