@@ -2,10 +2,10 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
-## Bloom etwas verstärkt
+## Bloom verstärkt
 
-- Bloom-Faktor auf High/Balanced von 0,055 auf 0,08 erhöht (rund 45 % stärker). Schwellen, Radien, Samplezahl und Renderpässe unverändert; Performance bleibt ohne Bloom.
-- **234 Tests inklusive Build bestanden** (rund 37 s). Chromium `file://`, Rust/43015, 430×932, High: Screenshot am HQ gesichtet, GL-Fehler 0, keine Console-Meldungen/Exceptions, weiterhin 37 Draw Calls. Diff geprüft; kein Echtgeräte-/Leistungsnachweis.
+- Bloom-Faktor auf High/Balanced zunächst von 0,055 auf 0,08 erhöht, auf erneuten Wunsch auf 0,16 verdoppelt. Schwellen, Radien, Samplezahl und Renderpässe unverändert; Performance bleibt ohne Bloom.
+- Für den Stand 0,16 erneut **234 Tests inklusive Build bestanden** (rund 38 s). Chromium `file://`, Rust/43015, 430×932, High: Screenshot am HQ gesichtet, GL-Fehler 0, keine Console-Meldungen/Exceptions, weiterhin 37 Draw Calls. Diff geprüft; kein Echtgeräte-/Leistungsnachweis.
 
 ## Einzelvarianten aus Boden-Atlanten
 
