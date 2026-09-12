@@ -20,7 +20,7 @@ Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle n
 
 | Bereich | Abdeckung |
 | --- | --- |
-| Terrain/Kristalle | Syntax, eingebettete Skybox, Geometrie, feste Layout-/Ressourcenreferenzen |
+| Terrain/Kristalle | Syntax, bytegleiche Skybox-/Dirt-Einbettungen, Geometrie, feste Layout-/Ressourcenreferenzen |
 | Harness/Core | Lokale Skripte, Reihenfolge/Pfadvertrag, Isolation, Mathematik und Seed-RNG |
 | Simulation | Gefechtsstart/-ziel, Startökonomie/passives Einkommen, Befehle, freie Worker-Zuweisung, Baufortsetzung/-ablösung ohne Mehrarbeitertempo, Reparatur/Verkauf, Produktion/Ausfahrt, Kampf, Wellen, Upgrades, vollständiger Neustart; sechsminütiger Worker-Gegenverkehr: Lieferungen je Worker/Minute, Schutz vor anhaltenden Richtungswechseln |
 | Persistence | Nur permanentes Profil: Normalisierung, Fehlerfälle, flüchtiger Storage-Ersatz; keine Run-/Backup-API |

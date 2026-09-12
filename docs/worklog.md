@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Aktualisierte Dirt-Textur eingebettet
+
+- Neue gepflegte `texture-floor-dirt.png` bytegleich eingebettet (1254×1254 statt alter 512×512-WebP-Kopie), ohne Neukodierung oder Skalierung. Expliziter Aktualisierer `node scripts/embed-ground-texture.mjs` und Bytegleichheitsregression ergänzt; andere Texturen, Farb-/Lichtregeln und Layouts unverändert. Größere Einbettung und GPU-Textur betreffen alle Qualitätsstufen; keine Speicher-/Ladezeitgarantie für Altgeräte.
+- **226 Node-Tests inklusive strengem Build bestanden** (rund 18 s), keine Fixtures geändert. Aktualisierer idempotent; Diff und lokale Dokumentationslinks geprüft.
+- Vorher/Nachher unter **`file://`, Chromium High, 430×932**, Rust und Ash mit identischem kontrolliertem Aufbau/Scan: 1254×1254-PNG erfolgreich hochgeladen, Bilder gesichtet, keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. Chromium meldet Software-WebGL-Fallback und Screenshot-/ReadPixels-Stalls; keine abgeschwächten Sicherheitsflags. Kein Echtgerät-/GPU-Leistungsnachweis. Der Vergleich bestätigt weiterhin stark biomgefärbte, kleinteilig gekachelte Bodendetails; Shader unverändert.
+
 ## Upgrades direkt vom Endscreen
 
 - Sieg und Niederlage bieten Neustart, **Fleet Upgrades** und Hauptmenü untereinander über die volle Inhaltsbreite; vorhandenes `.btnstack` wiederverwendet, keine neuen CSS-Regeln. Upgrade-Rückkehr zeigt dasselbe gesperrte Ergebnis, gekaufte Upgrades gelten beim nächsten Start. Ergebnis-Sound an das Ereignis statt die erneute Darstellung gebunden. Keine neuen Navigationszustände oder Simulationsänderungen.
