@@ -54,7 +54,8 @@
           aetherVent: geom.aetherVent(),
           commandHull: geom.commandHull(),
           workerHull: geom.workerHull(),
-          workerDrill: geom.workerDrill()
+          workerDrill: geom.workerDrill(),
+          ...geom.turretAssembly()
         }))
           this.geometry(n, d);
         this.fogTex = gl.createTexture();

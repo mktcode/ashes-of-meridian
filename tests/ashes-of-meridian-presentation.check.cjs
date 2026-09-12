@@ -204,6 +204,85 @@ test('detailed prospectors preserve yaw, cargo indication, team tint and read-on
   assert.deepEqual(render({ ...unit, hp: 0 }), []);
 });
 
+test('sentinel meshes are deterministic, bounded and non-degenerate, including recessed twin muzzles', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS]);
+  vm.runInContext('Math.random = seeded = () => { throw Error("Turret mesh RNG"); }', context);
+  const geom = vm.runInContext('geom', context), meshes = geom.turretAssembly();
+  assert.deepEqual(meshes, geom.turretAssembly());
+  for (const [name, mesh] of Object.entries(meshes)) {
+    const base = name === 'turretBase', colors = new Set();
+    assert.ok(mesh.length/27 >= (base ? 500 : 900) && mesh.length/27 <= (base ? 800 : 1300));
+    let volume = 0;
+    for (let i = 0; i < mesh.length; i += 27) {
+      const a = mesh.slice(i,i+3), b = mesh.slice(i+9,i+12), c = mesh.slice(i+18,i+21),
+        u = b.map((v,k) => v-a[k]), v = c.map((v,k) => v-a[k]),
+        cross = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]],
+        area = Math.hypot(...cross);
+      assert.ok(area > 1e-9, 'no degenerate surfaces');
+      volume += a.reduce((sum,n,k) => sum+n*cross[k],0)/6;
+      for (let j = i; j < i+27; j += 9) {
+        const p = mesh.slice(j,j+9);
+        assert.ok(p.every(Number.isFinite));
+        assert.ok(cross.every((n,k) => Math.abs(n/area-p[k+3]) < 1e-9));
+        if (base) assert.ok(Math.hypot(p[0],p[2]) <= 1.35+1e-9 && p[1] >= .15 && p[1] <= 2.05);
+        else assert.ok(Math.abs(p[0]) <= .98+1e-9 && p[1] >= 1.83-1e-9 && p[1] <= 2.77 && p[2] >= -.85-1e-9 && p[2] <= 1.85);
+        assert.ok(p.slice(6).every(tint => tint > 0 && tint < 1.5));
+        colors.add(p.slice(6).join(','));
+      }
+    }
+    assert.ok(volume > 0); assert.ok(colors.size >= 3);
+  }
+  for (const side of [-1,1]) {
+    const mesh = meshes.turretHead;
+    assert.ok(mesh.some((v,i) => i%9 === 0 && Math.abs(v-side*.52) < 1e-9 &&
+      Math.abs(mesh[i+1]-2.3) < 1e-9 && mesh[i+2] === 1.65), 'each barrel has a recessed bore end');
+  }
+});
+
+test('sentinel detail keeps its fixed base and independently aimed head through team and construction variants', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+  vm.runInContext('Math.random = seeded = geom.turretAssembly = () => { throw Error("Per-frame turret mesh/RNG"); }', context);
+  const { renderEntity, BUILDINGS, BUILDING_YAW, MAT } =
+    vm.runInContext('({renderEntity, BUILDINGS, BUILDING_YAW, MAT})', context);
+  const entity = { id: 17, kind: 'building', type: 'turret', faction: 0, team: 0,
+    x: 12, z: -7, hp: BUILDINGS.turret.hp, size: BUILDINGS.turret.size, rot: .7, progress: 1 };
+  const render = (e = entity, options = {}, time = 0) => {
+    const renderer = createRendererStub({ record: true }), before = JSON.stringify(e);
+    renderEntity(renderer, Object.freeze(e), time, options);
+    assert.equal(JSON.stringify(e), before);
+    assert.ok(renderer.calls.every(c => c.slice(1,13).every(Number.isFinite)));
+    return renderer.calls;
+  };
+  const base = calls => calls.find(c => c[0] === 'turretBase'), head = calls => calls.find(c => c[0] === 'turretHead');
+  const calls = render();
+  assert.equal(calls.filter(c => c[0] === 'turretBase').length, 1);
+  assert.equal(calls.filter(c => c[0] === 'turretHead').length, 1);
+  assert.ok(calls.length <= 10); assert.deepEqual(calls, render(entity, {}, 19));
+  for (const team of [0,1]) for (const rot of [0,.7,Math.PI,-2]) for (const progress of [0,.4,1]) {
+    const next = render({ ...entity, team, rot, progress }), scale = Math.max(.15,progress);
+    assert.equal(base(next)[8], BUILDING_YAW+team*Math.PI);
+    assert.ok(Math.abs(head(next)[8]-rot) < 1e-9, 'aim is not added to building yaw');
+    for (const c of [base(next),head(next)]) {
+      assert.deepEqual(c.slice(1,7), [entity.x,0,entity.z,1,scale,1]);
+      assert.equal(c[14], MAT.METAL);
+    }
+    const sensor = next.find(c => c[0] === 'box' && c[11] === 1.2);
+    assert.ok(Math.abs(sensor[1]-(entity.x+Math.sin(rot)*.827)) < 1e-9);
+    assert.ok(Math.abs(sensor[3]-(entity.z+Math.cos(rot)*.827)) < 1e-9);
+    assert.equal(sensor[2], 2.3*scale);
+    assert.equal(sensor[7], team ? 0xe98680 : 0x78ded3);
+  }
+  const preview = render(entity, { tint: 0x99e4c6, alpha: .3, layer: 'effects' });
+  for (const c of [base(preview),head(preview)]) {
+    assert.equal(c[7], 0x99e4c6); assert.equal(c[12], .3); assert.equal(c[13], 'effects');
+  }
+  assert.equal(head(render(entity, { ghost: true }))[7], 0x68717d);
+  for (const faction of [1,2]) assert.equal(head(render({ ...entity, faction })), undefined);
+  for (const type of Object.keys(BUILDINGS).filter(type => type !== 'turret'))
+    assert.equal(head(render({ ...entity, type })), undefined);
+  assert.deepEqual(render({ ...entity, hp: 0 }), []);
+});
+
 test('effects execute alone, consume RNG synchronously and preserve visibility short-circuiting', () => {
   const context = loadScripts(['effects']);
   const Effects = vm.runInContext('MeridianEffects', context);

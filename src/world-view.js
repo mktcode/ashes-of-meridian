@@ -371,18 +371,19 @@ class BattlefieldView {
             p('box', 0.1, 4.35, -1.3, 0.055, 1.15, 0.055, metal);
           }
         } else if (e.type === 'turret') {
-          p('hex', 0, 0.55, 0, 1.35, 0.8, 1.35, dark);
-          p('hex', 0, 1.4, 0, 0.6, 1.4, 0.6, metal);
+          p('turretBase', 0, 0, 0, 1, 1, 1, metal);
           // Keep the aiming head independent of the fixed foundation orientation.
           const aim = (e.rot || 0) - rot,
             ac = Math.cos(aim),
             as = Math.sin(aim);
           const head = (x, y, z, sx, sy, sz, c, glow = 0) =>
             p('box', x * ac + z * as, y, -x * as + z * ac, sx, sy, sz, c, aim, 0, 0, glow);
-          head(0, 2.28, 0, 1.9, 0.9, 1.5, metal);
-          head(0, 2.65, -0.2, 1.5, 0.18, 1.3, dark);
-          for (let s of [-1, 1]) head(s * 0.52, 2.3, 1.0, 0.22, 0.25, 1.7, dark);
-          head(0, 2.3, 0.77, 0.35, 0.25, 0.06, team, 1.2);
+          p('turretHead', 0, 0, 0, 1, 1, 1, metal, aim);
+          head(0, 2.3, 0.827, 0.35, 0.25, 0.025, team, 1.2);
+          for (const side of [-1, 1]) {
+            head(side * .985, 2.32, -.10, .025, .085, .48, team, .35);
+            head(side * .80, 2.568, -.1, .12, .025, .36, accent);
+          }
         }
         if (build < 1) {
           for (let i = 0; i < 4; i++) {

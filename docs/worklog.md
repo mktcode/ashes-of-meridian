@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Detaillierter Free-Marches-Sentinel
+
+- Sechskantsockel mit Ankerplatten/Schrauben, Pfeilerrippen und Drehkranz; abgeschrägter Waffenkopf mit Dachbefestigungen, Kühlgitter, Kennstreifen und gerippten Doppelläufen mit vertieften Mündungen. Zwei einmalig hochgeladene Meshes (624/1.064 Dreiecke); Sockel-/Zielausrichtung, Bau-/Teamdarstellung, Spielwerte und RNG unverändert. Nur zugehöriges Menü-PNG manuell erneuert, keine Bildautomatik eingebaut.
+- **Neu: `npm test` einschließlich Build, 245/245 bestanden** (rund 35 s). Deterministische Meshgrenzen, endliche flache Normalen, nicht degenerierte Flächen/Mündungen, reine gecachte Darstellung, unabhängiger Zielwinkel für beide Teams, Baufortschritt und Vorschau abgesichert. Fixtures unverändert; 82 unbetroffene Einheiten-/Gebäude-/Teamvarianten liefern exakt dieselben Zeichenaufrufe wie zuvor. Diff und lokale Dokumentationslinks geprüft.
+- **Neu: Chromium `file://`**, 1280×800 und 390×844: Nah-/Spielansichten, alle Qualitätsstufen, kontrollierte Bau-/Gegner-/Vorschau- und gedrehte Kopfvarianten sowie erneuertes Menübild gesichtet. GL 0, keine Console-/Laufzeitfehler, durch Zeichnen unveränderte Entität. Kontrollierter Schuss auf seitliches Ziel: korrekte 90°-Ausrichtung und unverändert 28 Schaden. Kein Echtgeräte-/Massenmodell-Leistungs- oder vollständiger neuer Bauablaufnachweis.
+
 ## Modellbilder für alle Free-Marches-Aktionsbuttons
 
 - Nach Prospector/HQ jetzt alle sieben Einheiten und sieben Gebäude mit nahen Ausschnitten ihrer tatsächlichen Spielmodelle: zwölf weitere lokale 320×320-PNGs einmalig aus `renderEntity` erzeugt, die beiden vorhandenen unverändert. Keine automatische Erzeugung eingebaut; bei späteren Modelländerungen Bilder manuell erneuern. Buttonmaße, Namen, Kosten, Badges, Aktiv-/Sperrstatus, andere Fraktionen und Queue-/Kategorie-/Befehlsicons bleiben erhalten. Keine Spielmodell-/Regel-/RNG-Änderungen oder zusätzlichen Laufzeit-WebGL-Pässe.

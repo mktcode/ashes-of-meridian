@@ -221,6 +221,82 @@
         }
         return out;
       },
+      // Sentinel: fixed hexagonal pedestal and independently aimed twin-gun assembly.
+      // Baked once; relative metal tints preserve team/ghost/construction rendering.
+      turretAssembly() {
+        const turretBase = [], turretHead = [], box = this.box(),
+          metal = [1, 1, 1], dark = [.38, .43, .49], edge = [1.28, 1.22, 1.13];
+        const part = (out, x, y, z, w, h, d, col, yaw = 0) => {
+          const cs = Math.cos(yaw), sn = Math.sin(yaw);
+          for (let i = 0; i < box.length; i += 27) {
+            const points = [];
+            for (let j = i; j < i + 27; j += 9) {
+              const px = box[j]*w, pz = box[j+2]*d;
+              points.push([x+px*cs+pz*sn, y+box[j+1]*h, z-px*sn+pz*cs]);
+            }
+            this.tri(out, ...points, col);
+          }
+        };
+        const armor = (out, x, y, z, w, h, d, col) => {
+          const rings = [[.82,-.5],[1,-.3],[1,.28],[.82,.5]].map(([s,t]) =>
+            [[-.36,.5],[.36,.5],[.5,.36],[.5,-.36],[.36,-.5],[-.36,-.5],[-.5,-.36],[-.5,.36]]
+              .map(([a,b]) => [x+a*w*s, y+t*h, z+b*d*s]));
+          for (let i = 0; i < 8; i++) {
+            const k = (i+1)%8;
+            for (let j = 0; j < 3; j++) {
+              const tint = col.map(v => v*(j === 2 ? 1.1 : j === 0 ? .75 : 1));
+              this.tri(out, rings[j][i], rings[j][k], rings[j+1][k], tint);
+              this.tri(out, rings[j][i], rings[j+1][k], rings[j+1][i], tint);
+            }
+            this.tri(out, [x,y+h/2,z], rings[3][i], rings[3][k], col);
+            this.tri(out, [x,y-h/2,z], rings[0][k], rings[0][i], dark);
+          }
+        };
+        // Profile can turn inward at a muzzle: annular lip, inner bore and recessed end.
+        const profile = (out, n, levels, colors, x = 0, y = 0, z = 0, barrel = false) => {
+          const point = (i, j) => {
+            const a = i/n*Math.PI*2, [r,h] = levels[j], px = Math.sin(a)*r, pz = Math.cos(a)*r;
+            return barrel ? [x+px,y-pz,z+h] : [x+px,y+h,z+pz];
+          };
+          for (let i = 0; i < n; i++) {
+            for (let j = 0; j < levels.length-1; j++) {
+              const a = point(i,j), b = point(i+1,j), c = point(i+1,j+1), d = point(i,j+1);
+              this.tri(out, a,b,c,colors[j]); this.tri(out, a,c,d,colors[j]);
+            }
+            const last = levels.length-1,
+              center = j => barrel ? [x,y,z+levels[j][1]] : [x,y+levels[j][1],z];
+            this.tri(out, center(0),point(i+1,0),point(i,0),dark);
+            this.tri(out, center(last),point(i,last),point(i+1,last),colors.at(-1));
+          }
+        };
+        profile(turretBase, 6, [[1.22,.15],[1.35,.26],[1.35,.70],[1.16,.95]], [dark,metal,edge]);
+        profile(turretBase, 12, [[.57,.78],[.62,.92],[.53,1.88],[.57,2.04]], [dark,metal,edge]);
+        profile(turretBase, 24, [[.67,1.77],[.75,1.83],[.75,1.96],[.66,2.05]], [dark,dark,edge]);
+        for (let i = 0; i < 6; i++) {
+          const a = i/6*Math.PI*2, x = Math.sin(a), z = Math.cos(a);
+          part(turretBase, x*.49,1.33,z*.49,.16,.93,.19,edge,a);
+          profile(turretBase, 6, [[.09,1.015],[.09,1.06]], [edge],x*1.02,0,z*1.02);
+          part(turretBase, x*.99,.97,z*.99,.30,.08,.30,dark,a);
+        }
+        armor(turretHead, 0,2.28,0,1.9,.9,1.5,metal);
+        armor(turretHead, 0,2.65,-.2,1.5,.18,1.3,dark);
+        for (const side of [-1,1]) {
+          armor(turretHead, side*.80,2.26,-.10,.36,.60,1.05,edge);
+          profile(turretHead, 12,
+            [[.11,.35],[.16,.50],[.16,.85],[.115,.95],[.115,1.52],[.16,1.56],[.16,1.85],[.085,1.85],[.085,1.65]],
+            [metal,metal,dark,dark,metal,metal,edge,dark,dark], side*.52,2.3,0,true);
+          for (let j = 0; j < 3; j++) {
+            part(turretHead, side*.52,2.3,.53+j*.11,.36,.36,.035,dark);
+            profile(turretHead, 6, [[.045,2.741],[.045,2.77]], [edge],side*.51,0,-.62+j*.37);
+          }
+        }
+        part(turretHead, 0,2.28,-.755,1.1,.37,.035,dark);
+        for (let i = -3; i <= 3; i++)
+          part(turretHead, i*.14,2.28,-.783,.035,.30,.025,edge);
+        // Recessed sensor socket; cyan optics and identification marks remain separate.
+        armor(turretHead, 0,2.3,.72,.52,.40,.20,dark);
+        return { turretBase, turretHead };
+      },
       // Free Marches command-center armor, baked at its existing world dimensions.
       // Vertex tints multiply the faction metal (also preserving preview/ghost tinting).
       commandHull() {
