@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Eigener Gefechtsmusik-Loop
+
+- **Frontier Pressure** ergänzt: eigenständiger, lokal erzeugter 60-s-Stereo-Loop mit 128 BPM als Ogg Vorbis/44,1 kHz (rund 1,29 MB). Industrieller Beat, verzerrte Basspulse, Metallperkussion, dunkle Flächen und sparsame Signale; keine übernommene Melodie oder Arrangementstruktur des genannten Referenzstücks. `scripts/generate-battle-music.py` reproduziert die Komposition bewusst mit Python/`ffmpeg`; kein Buildschritt, Netzwerkasset oder Simulations-RNG.
+- Ruhige prozedurale Musik bleibt in Hauptmenü/Gefechtsauswahl. Der neue Loop läuft nur im aktiven Gefecht; Pause/Spielmodals halten Position, Resume setzt dort fort, Ergebnis verstummt und Menürückkehr setzt zurück. Vorhandene Musik-/Gesamtlautstärke und gemeinsamer HUD-Audioknopf gelten weiter. Fehlende/gesperrte Wiedergabe blockiert das Spiel nicht und erzeugt keine Warnschleife.
+- **Neu: `npm test` einschließlich Build, 248/248 bestanden** (rund 55,9 s), Audio-Modustest und OGG-Grundvertrag ergänzt. Asset geprüft: exakt 60 s, 44,1 kHz Stereo, etwa −14,9 LUFS/−2,1 dBTP, vernachlässigbarer DC-Anteil; dekodierte Regeneration bytegleich und Loopnaht mit rund 0,0005/0,0024 Amplitudendifferenz. **Chromium `file://` und Container-HTTP** bei 390×844 mit simuliertem Touch: Track vollständig dekodiert, Start/Loop/Pause/positionsgleiches Resume/Menüreset korrekt, GL 0 und keine Console-/Laufzeit-/Ladefehler. Docker gesund als UID 101, 42 Laufzeitdateien, OGG mit `audio/ogg`, Byte-Ranges und `no-cache`. Technische Analyse ersetzt kein tatsächliches Anhören; musikalische Abnahme und Echtgerätetest stehen aus.
+
 ## Statisches Docker-/Dokploy-Deployment
 
 - Multi-Stage-`Dockerfile` ergänzt: Node 22 installiert exakt den Lockfile-Stand, baut `dist/src/` und entfernt Source Maps; ein Nginx-1.28-Alpine-Laufzeitimage dient ausschließlich `index.html`, drei Stylesheets, 23 Buildskripte und 14 Porträts als Benutzer 101 auf Port 8080 aus. `.dockerignore` begrenzt den Buildkontext. `nginx.conf` aktiviert vorab erzeugtes Gzip, Revalidierung für ungehashte Dateinamen, echte 404-Antworten und grundlegende Response-Header. Kein Backend, Volume, Profilserver oder Einfluss auf `file://`/Android.

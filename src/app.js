@@ -231,7 +231,13 @@
               }
             } else accumulator = 0;
             ui.tick(dt);
-            audio.update();
+            audio.update(
+              ui.view === 'game'
+                ? game.s && !ui.paused && !game.s.result
+                  ? 'battle'
+                  : 'silent'
+                : 'menu'
+            );
             R.begin();
             if (ui.view === 'game' && game.s) battlefield(game.s.time);
             else {

@@ -75,6 +75,7 @@
       event(type, data) {
         if (type === 'start') {
           this.view = 'game';
+          this.audio.setMode?.('battle');
           this.factionJustUnlocked = null;
           this.resultAetherRecovered = undefined;
           this.paused = false;
@@ -132,6 +133,7 @@
             }
           }
           if (changed) this.persist();
+          this.audio.setMode?.('silent');
           this.audio.sound(data.win ? 'victory' : 'defeat');
           this.showResult(data);
         } else if (type === 'shot') {

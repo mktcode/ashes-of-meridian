@@ -11,6 +11,7 @@ Das Webdeployment benötigt nur Docker beziehungsweise eine Plattform mit Docker
 - `index.html`
 - `styles/`
 - erzeugtes `dist/src/`
+- `audio/music-battlefield.ogg`
 - die 14 manuell gepflegten `preview-*.png`
 
 Boden- und Skyboxtexturen sind in `dist/src/renderer/assets.js` eingebettet. Quellcode, Tests, Dokumentation, `node_modules`, Source Maps und die externen Texturquellen gelangen nicht ins Laufzeitimage.

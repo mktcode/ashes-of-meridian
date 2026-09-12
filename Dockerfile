@@ -14,6 +14,7 @@ RUN npm run build && find dist -type f -name '*.map' -delete
 RUN mkdir -p /site && cp -R dist /site/dist
 COPY index.html /site/index.html
 COPY styles/ /site/styles/
+COPY audio/ /site/audio/
 COPY preview-*.png /site/
 RUN find /site -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
       -exec gzip -9 -k {} \;

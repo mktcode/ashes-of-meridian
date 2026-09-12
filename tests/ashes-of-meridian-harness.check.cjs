@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } = require('node:fs');
+const { mkdtempSync, mkdirSync, readFileSync, writeFileSync, symlinkSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
@@ -89,6 +89,49 @@ test('UI fragments assemble the existing non-enumerable MeridianUI API in docume
     assert.equal(vm.runInContext(`Object.getOwnPropertyDescriptor(MeridianUI.prototype, '${method}').enumerable`, context), false);
   }
   assert.equal(vm.runInContext("esc('<battle>')", context), '&lt;battle&gt;');
+});
+
+test('audio switches between procedural menu music and the local looping battle track', async () => {
+  const plays = [], tracks = [];
+  const parameter = () => ({ value: 0, setTargetAtTime(value) { this.value = value; },
+    setValueAtTime(value) { this.value = value; }, exponentialRampToValueAtTime(value) { this.value = value; } });
+  const node = () => ({ gain: parameter(), connect() {}, disconnect() {} });
+  class AudioContext {
+    constructor() { this.currentTime = 1; this.sampleRate = 10; this.state = 'running'; }
+    createGain() { return node(); }
+    createDynamicsCompressor() { return { threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}, connect() {} }; }
+    createBuffer() { return { getChannelData: () => new Float32Array(20) }; }
+    createOscillator() { return { frequency: parameter(), connect() {}, disconnect() {}, start() {}, stop() {} }; }
+    createBufferSource() { return { connect() {}, disconnect() {}, start() {}, stop() {} }; }
+    createBiquadFilter() { return { frequency: {}, connect() {}, disconnect() {} }; }
+    resume() { return Promise.resolve(); }
+  }
+  class Audio {
+    constructor(src) { this.src = src; this.currentTime = 0; this.paused = true; tracks.push(this); }
+    addEventListener() {}
+    pause() { this.paused = true; }
+    play() { this.paused = false; plays.push(this.src); return Promise.resolve(); }
+  }
+  const settings = { volume: 0.28, music: true, sfx: true },
+    context = loadScripts(['audio'], { globals: { window: { AudioContext }, Audio, settings } });
+  vm.runInContext('audio = new MeridianAudio(settings); audio.unlock(); audio.setMode("battle")', context);
+  await Promise.resolve();
+  assert.equal(tracks.length, 1);
+  assert.equal(tracks[0].src, './audio/music-battlefield.ogg');
+  assert.equal(tracks[0].loop, true);
+  assert.equal(tracks[0].volume, 0.28);
+  assert.deepEqual(plays, ['./audio/music-battlefield.ogg']);
+  tracks[0].currentTime = 12;
+  vm.runInContext('audio.update("silent")', context);
+  assert.equal(tracks[0].paused, true);
+  assert.equal(tracks[0].currentTime, 12, 'pause preserves the loop position');
+  assert.equal(vm.runInContext('audio.musicMode', context), 'silent');
+  vm.runInContext('audio.setMode("menu")', context);
+  assert.equal(tracks[0].currentTime, 0, 'returning to menus resets the battle cue');
+
+  const asset = readFileSync(join(__dirname, '..', 'audio', 'music-battlefield.ogg'));
+  assert.equal(asset.subarray(0, 4).toString(), 'OggS');
+  assert.ok(asset.length > 500_000 && asset.length < 3_000_000);
 });
 
 test('loader selects explicit names in document order, skipping unrelated scripts', () => {

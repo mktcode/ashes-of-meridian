@@ -5,6 +5,7 @@
         this.game.s = null;
         this.view = 'home';
         this.paused = true;
+        this.audio.setMode?.('menu');
         this.modalKind = '';
         this.selected = [];
         this.clearMode();
@@ -44,6 +45,7 @@
       showBattle() {
         this.view = 'battle';
         this.paused = true;
+        this.audio.setMode?.('menu');
         $('menu').classList.remove('hidden');
         $('hud').classList.add('hidden');
         $('worldViewport').classList.remove('in-battle');
@@ -94,6 +96,7 @@
       pause() {
         if (this.view !== 'game' || !this.game.s || this.game.s.result) return;
         this.paused = true;
+        this.audio.setMode?.('silent');
         this.clearMode();
         this.showPause();
       },
@@ -112,6 +115,7 @@
         this.modalKind = '';
         $('modal').classList.add('hidden');
         this.audio.unlock();
+        this.audio.setMode?.('battle');
       },
       showSettings() {
         if (this.view === 'game') this.paused = true;
