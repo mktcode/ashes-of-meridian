@@ -32,7 +32,7 @@ Optional für lokale Entwicklung nach dem Build: `python3 -m http.server 8080 --
 
 ## Runs und Pausen
 
-Runs werden nicht gespeichert. **Ⅱ** pausiert das laufende Gefecht; beim Wechsel in einen anderen Tab wird ebenfalls pausiert. Fortsetzen geht nur, solange diese Seite geöffnet bleibt. Hauptmenü, Schließen oder Reload verwerfen den Run. Nach Sieg oder Niederlage bleiben **Neustart** und **Hauptmenü**.
+Runs werden nicht gespeichert. **Ⅱ** pausiert das laufende Gefecht; beim Wechsel in einen anderen Tab wird ebenfalls pausiert. Fortsetzen geht nur, solange diese Seite geöffnet bleibt. Hauptmenü, Schließen oder Reload verwerfen den Run. Nach Sieg oder Niederlage stehen **Neustart**, **Fleet Upgrades** und **Hauptmenü** direkt bereit. Aus den Upgrades führt **Return** zurück zum Ergebnis; Änderungen gelten beim nächsten Start.
 
 Nur permanente Upgrades und Einstellungen bleiben im Browserspeicher. Kein Checkpoint, Autosave, Resume nach Reload oder Backup-Import/-Export. Unter `file://` kann der Browserspeicher eingeschränkt sein; der flüchtige Profilersatz überlebt keinen Reload. Technische Details: [Speicherung](docs/architecture.md#speicherung).
 

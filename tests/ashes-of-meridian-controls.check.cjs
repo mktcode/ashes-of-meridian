@@ -580,19 +580,61 @@ test('pause and hidden-tab pause retain the run only in memory, with explicit ab
   assert.match(h.ui.html,/Runs are never saved/);
 });
 
-test('victory and defeat offer only restart and main menu; an ended run cannot be resumed', () => {
+test('victory and defeat offer full-width restart, upgrades and main menu; ended runs cannot resume', () => {
   for(const win of [false,true]) {
     const h=setup(); h.UI.prototype.bind.call(h.ui);
     Object.assign(h.ui.game.s,{seed:1409,biome:'rust',enemy:2,stats:{kills:0,lost:1,gathered:0}});
     const result={win,text:'HQ destroyed',time:20,integrity:0,score:0}; h.ui.game.s.result=result;
     h.ui.showResult(result); const html=h.ui.html;
     assert.equal(h.ui.paused,true);
-    assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),['restart','home']);
+    assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),['restart','armory','home']);
+    assert.match(html, /<div class="btnstack"><button class="primary" data-ui="restart"/);
     h.document.getElementById('pauseBtn').onclick();
     assert.equal(h.ui.paused,true); assert.equal(h.ui.html,html);
     h.ui.game.start=opts=>h.calls.push(['start',{...opts}]);
     h.click({ui:'restart'});
     assert.deepEqual(h.calls,[['start',{faction:0,seed:1409,biome:'rust',enemy:2}]]);
+  }
+});
+
+test('result upgrades return to the same ended battle without replaying the result sound', () => {
+  for (const win of [false, true]) {
+    const h = setup(), sounds = []; h.UI.prototype.bind.call(h.ui);
+    h.ui.openModal = (kind, html, wide) => {
+      h.UI.prototype.openModal.call(h.ui, kind, html, wide); h.ui.html = html;
+    };
+    h.ui.audio.sound = name => sounds.push(name);
+    Object.assign(h.ui.game.s, { seed: 1409, biome: 'rust', enemy: 2,
+      stats: { kills: 3, lost: 1, gathered: 42 },
+      result: { win, text: 'HQ destroyed', time: 20, integrity: .5, score: 12 } });
+    const state = h.ui.game.s, before = JSON.stringify(state);
+    h.ui.event('result', state.result); const resultHTML = h.ui.html;
+    assert.deepEqual(sounds, [win ? 'victory' : 'defeat']);
+    h.click({ ui: 'armory' }); assert.equal(h.ui.modalKind, 'armory');
+    let saved = 0; h.ui.persistence.saveProfile = () => { saved++; return true; };
+    h.ui.buyUpgrade('startingWorkers');
+    assert.equal(saved, 1); assert.equal(h.ui.profile.upgrades.startingWorkers, 1);
+    assert.equal(h.ui.modalKind, 'armory');
+    h.click({ ui: 'closeModal' });
+    assert.equal(h.ui.modalKind, 'result'); assert.equal(h.ui.html, resultHTML);
+    assert.equal(h.ui.paused, true); assert.strictEqual(h.ui.game.s, state);
+    assert.equal(JSON.stringify(state), before);
+    assert.deepEqual(sounds.filter(name => name === 'victory' || name === 'defeat'), [win ? 'victory' : 'defeat']);
+    assert.equal(sounds.filter(name => name === 'research').length, 1);
+    h.click({ ui: 'home' }); assert.equal(h.ui.game.s, null);
+    assert.equal(h.ui.view, 'home'); assert.equal(h.ui.profile.upgrades.startingWorkers, 1);
+  }
+});
+
+test('upgrades opened outside a result retain home and active-battle return routes', () => {
+  for (const view of ['home', 'game']) {
+    const h = setup(); h.ui.view = view;
+    h.ui.openModal = (kind, html) => { h.ui.modalKind = kind; h.ui.html = html; };
+    if (view === 'home') h.ui.game.s = null;
+    h.ui.showArmory(); h.ui.closeModal();
+    assert.equal(h.ui.view, view);
+    assert.equal(h.ui.modalKind, view === 'home' ? '' : 'pause');
+    assert.equal(h.ui.paused, true);
   }
 });
 

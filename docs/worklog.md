@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Upgrades direkt vom Endscreen
+
+- Sieg und Niederlage bieten Neustart, **Fleet Upgrades** und Hauptmenü untereinander über die volle Inhaltsbreite; vorhandenes `.btnstack` wiederverwendet, keine neuen CSS-Regeln. Upgrade-Rückkehr zeigt dasselbe gesperrte Ergebnis, gekaufte Upgrades gelten beim nächsten Start. Ergebnis-Sound an das Ereignis statt die erneute Darstellung gebunden. Keine neuen Navigationszustände oder Simulationsänderungen.
+- **225 Node-Tests inklusive strengem Build bestanden** (rund 19 s): beide Ergebnisse, Upgrade-Kauf/Rückkehr, unveränderter Run, einmalige Ergebnis-Soundauslösung sowie bestehende Hauptmenü-/Pausenwege. Keine Fixtures geändert. Diff und lokale Markdown-Links geprüft.
+- **`file://`**, Chromium/Performance, **390×844, 430×932 und 1280×800**: beide Endscreens nach kontrollierter HQ-Zerstörung, volle Buttonbreite, native Touch-Navigation/Kauf/Rückkehr, gespeichertes Upgrade beim gleichen Seed-Neustart und Hauptmenüwege bestanden; Bilder gesichtet. Keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler. CDP-Touch, kein Echtgerät-/anderer Browser-/GPU-Test; Sound-Aufrufe automatisiert geprüft, kein Hörtest.
+
 ## Gefechtstempo direkt im HUD
 
 - Links über den Fähigkeiten steht ein Tempo-Button mit aktueller Anzeige: 1× → 1,5× → 2× → 0,75× → 1×. Tempozeile unter der Uhr und Geschwindigkeitsauswahl/-Handler in den Settings entfernt; Queue-Symbole mit Abstand darüber platziert. Bedienung in `ui/input.js`, Darstellung in `ui/actions.js`; kein struktureller Umbau. `game.s.speed`, Startwert 1, Simulationsschleife und Speicherung unverändert. Pause behält das Tempo, Neustart setzt zurück; keine Änderung an Auswahl, Zielmodus oder laufenden Aufträgen.

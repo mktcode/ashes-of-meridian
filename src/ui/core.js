@@ -107,8 +107,10 @@
                   ? 0xeebc81
                   : FACTIONS[this.game.s.faction].color
             });
-        } else if (type === 'result') this.showResult(data);
-        else if (type === 'shot') {
+        } else if (type === 'result') {
+          this.audio.sound(data.win ? 'victory' : 'defeat');
+          this.showResult(data);
+        } else if (type === 'shot') {
           let p = this.R.project(data.x, 1, data.z);
           if (p && p.x > 0 && p.x < innerWidth && p.y > 60 && p.y < innerHeight - 210)
             this.audio.sound('shot', data.heavy);
