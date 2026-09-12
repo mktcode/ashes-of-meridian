@@ -9,7 +9,7 @@ npm install
 npm run build
 ```
 
-Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe und Bildquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet.
+Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe und Bildquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet. Für ein statisches Webdeployment steht ein Multi-Stage-[Dockerfile](Dockerfile) bereit; Dokploy-Konfiguration und Auslieferungsgrenzen beschreibt [Statisches Webdeployment](docs/deployment.md).
 
 ## Spielen
 
@@ -25,6 +25,7 @@ Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen.
 - **KI-Agenten:** mit [AGENTS.md](AGENTS.md) beginnen.
 - [Spiel und Bedienung](docs/gameplay.md): genaue Regeln und priorisierte nächste Prüfungen.
 - [Architektur](docs/architecture.md): Codekarte, Zustände und Speicherung.
+- [Statisches Webdeployment](docs/deployment.md): Docker-/Dokploy-Build, Port und Zustandsgrenzen.
 - [Grafik und Assets](docs/rendering.md): Texturen, Qualitätsstufen, Viewport und Menüs.
 - [Prüfungen](docs/testing.md): `npm test`, Abdeckung, Browserchecks und Grenzen.
 - [Feste Testreferenzen](docs/reference-tests.md): Zweck und Pflege der Fixtures.

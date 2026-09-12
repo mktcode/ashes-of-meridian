@@ -1,0 +1,15 @@
+*
+!.dockerignore
+!Dockerfile
+!nginx.conf
+!package.json
+!package-lock.json
+!tsconfig.json
+!scripts/
+!scripts/clean-dist.mjs
+!src/
+!src/**
+!index.html
+!styles/
+!styles/**
+!preview-*.png
