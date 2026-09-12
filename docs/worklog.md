@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Gefechtsmusik leiser
+
+- Lautstärke aller drei Gefechtstracks mit Faktor 0,5 halbiert; Profilregler, Menümusik, Effekte, Dateien und Playlistablauf unverändert. Regressionen prüfen 0,14 statt 0,28 beziehungsweise 0,2 statt 0,4 sowie unveränderte Menü-/Effektpegel.
+- **Neu geprüft:** `npm test` einschließlich Build, **251/251 bestanden** (rund 59 s), Diff gesichtet. Kein neuer Browser-/Hör-/Docker-Test für die reine Pegelskalierung.
+
 ## Freigegebene Minimalmusik als Gefechtsplaylist
 
 - **Ratchet Theory → Breach Protocol → Black Channel**, zyklisch mit jeweils **5 s Musikpause**, auch vor Track 1. Freigegebene Minimal-MP3s bytegleich nach `audio/` kopiert, Stimmen unverändert. Ein Audioplayer, Zeitmessung über Audio-Uhr unabhängig vom Spieltempo; Pause/Musik-Aus halten Position und Restwartezeit. Menü und jeder Gefechtsstart/Neustart setzen auf Track 1 zurück, Ergebnis verstummt. Menüpartitur und SFX bleiben unverändert. Docker enthält gezielt nur die drei aktiven MP3s; alte OGG-, Referenz- und Entwurfsdateien bleiben lokal erhalten und außerhalb der Auslieferung.

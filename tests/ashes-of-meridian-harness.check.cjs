@@ -130,8 +130,11 @@ test('battle playlist uses the three approved minimal recordings in order with f
   const names = ['ratchet-theory', 'breach-protocol', 'black-channel'];
   assert.equal(h.tracks.length, 1);
   assert.equal(track.loop, false);
+  assert.equal(audio.master.gain.value, .28, 'master volume remains unchanged');
+  assert.equal(audio.musicGain.gain.value, 1, 'menu music remains unchanged');
+  assert.equal(audio.effectsGain.gain.value, 1, 'sound effects remain unchanged');
   audio.setMode('battle'); await h.flush();
-  assert.equal(track.volume, .28);
+  assert.equal(track.volume, .14, 'battle music plays at half the master volume');
   for (let i = 0; i < 3; i++) {
     const file = `music-${names[i]}.mp3`;
     assert.equal(track.src, `./audio/${file}`);
@@ -173,7 +176,7 @@ test('music pause/mute preserve track and gap position; menu and new battles res
   settings.music = true; settings.volume = .4; audio.updateSettings();
   audio.ctx.currentTime += 1.999; audio.update(); assert.equal(plays.length, count);
   audio.ctx.currentTime += .001; audio.update(); await h.flush();
-  assert.equal(audio.battleTrackIndex, 1); assert.equal(track.volume, .4);
+  assert.equal(audio.battleTrackIndex, 1); assert.equal(track.volume, .2);
   settings.music = false; audio.updateSettings(); assert.equal(track.paused, true);
   settings.music = true; audio.updateSettings(); await h.flush();
   track.finish(); audio.setMode('menu');
