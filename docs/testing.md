@@ -26,7 +26,7 @@ Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle n
 | Persistence | Nur permanentes Profil: Aether-/Upgrade-/Fraktionsfreischaltungs-Normalisierung, Fehlerfälle, flüchtiger Storage-Ersatz; keine Run-/Backup-API |
 | Präsentation | Welt-/Effektgrenzen, feste Zeichen-/Effekt-/RNG-Referenzen |
 | Steuerung | Touch-Auswahl/Gesten, Move-/Attack-move-Umschaltung und Tempo-Button samt Anzeige/Lebenszyklus/Profilfreiheit, Worker-Kontexttaps auf eigene Bau-/Reparaturziele mit Auswahl-/Gestenschutz, Fraktionssperre/Freischaltung samt abgesichertem Start, Ergebnis-Aetherevakuierung/Tiergrenzen 100–1.000/Preise, Welt-Viewport-Lebenszyklus/-Eingabegrenzen und Minimap-Ausschnitt, Kategorien/Zurück, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz, Tab-Wechsel, Run-Abbruch, Ergebnisaktionen und Upgrade-Rückkehr ohne erneuten Ergebnis-Sound |
-| Renderer | Shader-Quellvertrag samt Boden-Alpha-Dekoren und erhaltener Schattenberechnung und High-only-Tilt-Shift/Kernel/Schärfezone, CSS-Viewport/Client-Projektion/Rückprojektion und erhaltene Zoomgröße, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
+| Renderer | Shader-Quellvertrag samt Boden-Atlasrechtecken/-Sampling, einmaligem Atlasupload, Weltseed-Übergabe und erhaltener Schattenberechnung und High-only-Tilt-Shift/Kernel/Schärfezone, CSS-Viewport/Client-Projektion/Rückprojektion und erhaltene Zoomgröße, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
 
 [Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests.
 

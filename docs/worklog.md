@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Einzelvarianten aus Boden-Atlanten
+
+- Die bisher als Ganzes gekachelten Fels-/Strauchbilder dienen jetzt als unregelmäßig gepackte Atlanten: 15 Felsgruppen und 10 Sträucher mit expliziten Pixelrechtecken im Shader. Zufällige Variante, Position, Größe und Belegung pro Weltzelle aus eigenem 32-Bit-Hash/Weltseed; keine Spiel-/Terrain-RNG-Aufrufe, Kollisions- oder Layoutänderungen. Je PNG weiterhin ein Upload, Originale/Einbettungen unverändert, keine neuen Geometrien/Draw Calls. Alphastärken bleiben 18/28 %. Seitenverhältnis und transparente Ausschnittränder bleiben erhalten, Mip-Level begrenzt gegen Nachbarmotive.
+- **234 Tests inklusive Build bestanden** (rund 37 s): Atlasgrenzen/-Anzahl, Upload-/Shadervertrag, Seedwechsel an der Weltansicht sowie unveränderte Terrain-/Platzierungs-/RNG-Referenzen. Keine Fixtures geändert. Alle 25 Ausschnitte als Montage gesichtet und Alpharänder statisch geprüft; Diff/Markdown-Links geprüft.
+- **Chromium `file://`, Rust/43015, 430×932 und 1280×800, Nah-/Gesamtansicht, High/Performance:** einzelne, unregelmäßig verteilte Motive statt kompletter Bildkacheln visuell bestätigt; GL-Fehler 0, keine Console-Meldungen/Exceptions. Separater GPU-Pixelvergleich mit den tatsächlichen Atlas-Shaderfunktionen: Wiederholung und Weltverschiebung um acht Pixel exakt deckungsgleich, Seed 43016 verändert beide Dekorlagen. Headless-WebGL, kein Echtgeräte-/FPS-Nachweis; flache Bodendekore, bei großer Entfernung mögliches Aliasing durch begrenzte Mip-Stufen.
+
 ## Straßen-Geometrie statt Schatten entfernt
 
 - Der markierte Screenshot widerlegt die vorige Schatten-Diagnose: `world.ts` zeichnete drei Straßen von HOME zu den Gegnerstandorten (45 Flächen für Fahrbahn, Rand und Mittelstreifen). Diesen RNG-freien Platzierungsblock entfernt; die irrtümlich abgeschalteten Bodenschatten wiederhergestellt. Terrain-Overlay bleibt aus, Fels-/Strauchdekore bleiben an.

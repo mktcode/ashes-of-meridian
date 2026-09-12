@@ -25,6 +25,7 @@
         this.colors = new Map();
         this.quality = 2;
         this.extent = 90;
+        this.decorSeed = 0;
         this.haze = [0.055, 0.09, 0.13];
         this.eye = [0, 65, 50];
         this.vp = M4.identity();
@@ -75,8 +76,8 @@
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
         this.loadTexture(this.groundTex, MERIDIAN_TEXTURES.ground);
-        this.loadTexture(this.rockClustersTex, MERIDIAN_TEXTURES.rockClusters);
-        this.loadTexture(this.desertShrubsTex, MERIDIAN_TEXTURES.desertShrubs);
+        this.loadTexture(this.rockClustersTex, MERIDIAN_TEXTURES.rockClusters, false);
+        this.loadTexture(this.desertShrubsTex, MERIDIAN_TEXTURES.desertShrubs, false);
         this.loadTexture(this.metalTex, MERIDIAN_TEXTURES.metal);
         this.loadTexture(this.bioTex, MERIDIAN_TEXTURES.bio);
         this.skyTex = this.dataTexture([5, 9, 16]);
@@ -528,6 +529,7 @@
         g.uniform3fv(this.uniform(this.program, 'u_eye'), this.eye);
         g.uniform3fv(this.uniform(this.program, 'u_haze'), this.haze);
         g.uniform1f(this.uniform(this.program, 'u_extent'), this.extent);
+        g.uniform1ui(this.uniform(this.program, 'u_decorSeed'), this.decorSeed);
         g.uniform1f(this.uniform(this.program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_fogOn'), this.fogOn ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_time'), time);

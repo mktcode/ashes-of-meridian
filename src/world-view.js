@@ -14,6 +14,7 @@ class BattlefieldView {
       R.clearStatic();
       R.haze = world.biome.haze;
       R.extent = EXTENT;
+      R.decorSeed = world.seed >>> 0;
       const data = [];
       let i = 0;
       for (let z = 0; z < GRID; z++)

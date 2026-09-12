@@ -23,10 +23,35 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex'])
     assert.ok(FRAG.includes(`uniform sampler2D ${texture};`));
   assert.doesNotMatch(FRAG, /u_terrainOverlayTex/);
-  assert.ok(FRAG.includes('triAlpha(u_rockClustersTex,v_pos,n,.12)'));
-  assert.ok(FRAG.includes('triAlpha(u_desertShrubsTex,v_pos,n,.09)'));
+  assert.ok(FRAG.includes('groundDecor(u_rockClustersTex,v_pos.xz,false)'));
+  assert.ok(FRAG.includes('groundDecor(u_desertShrubsTex,v_pos.xz,true)'));
   assert.ok(FRAG.includes('normalize(u_eye-v_pos)'));
   assert.ok(FRAG.includes('texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.))'));
+});
+test('ground decoration samples individual irregular atlas crops with stable world-cell variation', () => {
+  const context = loadScripts(RENDERER_SCRIPTS);
+  const { GROUND_DECOR_ATLAS: atlas, FRAG, MeridianRenderer } = vm.runInContext(
+    '({GROUND_DECOR_ATLAS, FRAG, MeridianRenderer})', context);
+  for (const [key, count] of [['rockClusters', 15], ['desertShrubs', 10]]) {
+    assert.equal(atlas[key].length, count);
+    assert.equal(new Set(atlas[key].map(r => r.join(','))).size, count);
+    for (const [x, y, right, bottom] of atlas[key]) {
+      assert.ok(x >= 0 && y >= 0 && right <= 1254 && bottom <= 1254);
+      assert.ok(right > x && bottom > y);
+    }
+    assert.ok(FRAG.includes(`const vec4 ${key}Rects[${count}]`));
+    const source = MeridianRenderer.toString();
+    assert.equal(source.split(`this.loadTexture(this.${key}Tex, MERIDIAN_TEXTURES.${key}, false);`).length - 1, 1);
+  }
+  const decor = FRAG.slice(FRAG.indexOf('vec4 decorRandom'), FRAG.indexOf('vec3 detail'));
+  assert.doesNotMatch(decor, /u_time|u_eye/);
+  assert.ok(FRAG.includes('precision highp int;'), '32-bit cell hash also on mobile GPUs');
+  assert.ok(decor.includes('u_decorSeed'));
+  assert.ok(decor.includes('cell=floor(p)'));
+  assert.ok(decor.includes('pixels/max(pixels.x,pixels.y)'), 'preserve crop aspect ratio');
+  assert.ok(decor.includes('textureLod(tex,uv,lod)'));
+  assert.ok(decor.includes('dFdx(p)/span*pixels'), 'LOD excludes atlas/cell discontinuities');
+  assert.ok(decor.includes('return vec4(0.)'), 'outside a crop and unoccupied cells stay transparent');
 });
 test('tilt-shift is High-only with a sharp center, normalized kernel and resolution-relative radius', () => {
   const context = loadScripts(RENDERER_SCRIPTS);
