@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Englische HUD-Kategorien
+
+- Verbliebene deutsche Laufzeittexte vereinheitlicht: **Buildings**, **Infantry**, **Vehicles**, **Aircraft** und **Back** erscheinen nun in Kategorien, Untermenüs, Startmeldung und Feldhandbuch. Dokumentierte UI-Bezeichnungen entsprechend aktualisiert; die deutschsprachige Projektdokumentation bleibt deutsch.
+- Auf ausdrücklichen Wunsch keine Tests und kein Browserlauf. `git diff --check`, lokale Markdown-Links und Quellsuche nach den ersetzten deutschen Laufzeitbegriffen geprüft.
+
 ## Startmenü freigestellt und neu angeordnet
 
 - **Fleet upgrades** aus der kleinen Unternavigation als zweite große, sekundäre Startaktion direkt unter **New battle** angeordnet; darunter verbleiben nur **Field Manual** und **Settings**. Der Titelblock steht oben, der Aktionsblock unten; beide liegen ohne eigenen Panelhintergrund, Außenrahmen oder Box-Shadow direkt über der Weltvorschau. Die Eyebrow und Zierlinien entfallen, **ASHES OF** steht in einer Zeile über **MERIDIAN**, die Tagline lautet **A roguelite RTS.**

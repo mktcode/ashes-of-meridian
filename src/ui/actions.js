@@ -120,8 +120,8 @@
         let html = '', f = s.faction;
         if (this.tab === 'root') {
           for (let [tab, label, ic] of [
-            ['build', 'Gebäude', 'hq'], ['infantry', 'Infanterie', 'rifle'],
-            ['vehicles', 'Fahrzeuge', 'tank'], ['aircraft', 'Flugzeuge', 'air']
+            ['build', 'Buildings', 'hq'], ['infantry', 'Infantry', 'rifle'],
+            ['vehicles', 'Vehicles', 'tank'], ['aircraft', 'Aircraft', 'air']
           ]) html += this.actionButton('tab:' + tab, label, ic);
         } else if (this.tab === 'building') {
           if (ready) {
@@ -142,7 +142,7 @@
             });
         }
         $('actions').innerHTML = (this.tab === 'root' ? '' :
-          '<button class="menu-back" data-action="tab:root">← Zurück</button>') +
+          '<button class="menu-back" data-action="tab:root">← Back</button>') +
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b.type, f))}${ready ?

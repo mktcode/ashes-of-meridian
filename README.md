@@ -13,7 +13,7 @@ Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen.
 
 ## Spielen
 
-- Start: HQ, **0–5 Worker** und **250–500 Alloy** je nach Upgrade, immer **0 Aether**. Ohne Startworker den ersten unter **Infanterie** für 50 Alloy rekrutieren. Worker liefern Alloy; Raffinerien an Vents erzeugen Aether.
+- Start: HQ, **0–5 Worker** und **250–500 Alloy** je nach Upgrade, immer **0 Aether**. Ohne Startworker den ersten unter **Infantry** für 50 Alloy rekrutieren. Worker liefern Alloy; Raffinerien an Vents erzeugen Aether.
 - Kamera mit Fingerziehen, Pinch, Zoom-/Basisknöpfen oder Minimap bewegen. Tap wählt; Doppel-/Dreifachtap gruppiert eigene Einheiten. Boden-Tap erteilt Bewegung, der **Schwerter-Schalter neben ⌂** aktiviert Attack-move. **Cancel** beendet Zielauswahl.
 - Unten: Minimap links, Werkzeuge/Fähigkeiten mittig, Bau-/Rekrutierungsmenüs rechts. Gebäudeauswahl bietet Reparatur, Verkauf und Rallypoint; Queue-Symbole über der Minimap erlauben Stornierung. Tempo direkt unter der Uhr antippen.
 - Gegnerisches HQ zerstören gewinnt; Verlust des letzten eigenen HQs verliert. Ein Free-Marches-Sieg schaltet die Verdant Choir frei; ein anschließender Sieg mit ihr öffnet dauerhaft die Veiled Court.

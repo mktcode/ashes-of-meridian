@@ -118,7 +118,7 @@
         this.emit('start', {});
         this.emit('radio', meta.startingWorkers
           ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
-          : 'Expedition command|Recruit your first worker from Infanterie to establish your economy, then destroy the enemy command center.');
+          : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then destroy the enemy command center.');
         return s;
       },
       spawn<K extends EntityKind>(this: MeridianGame, kind: K, type: EntityTypeForKind<K>, x: number, z: number, team: TeamId, faction: FactionId = 0, extra: SpawnExtra = {}): EntityForKind<K> {
