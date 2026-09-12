@@ -25,13 +25,20 @@ test('embedded skybox preserves the maintained WebP bytes and is wired as a non-
   ));
 });
 
-test('embedded ground texture preserves the maintained PNG bytes without conversion', () => {
-  const url = vm.runInContext('MERIDIAN_TEXTURES.ground', context);
-  assert.match(url, /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/);
-  const payload = url.split(',')[1], image = Buffer.from(payload, 'base64');
-  assert.equal(image.toString('base64'), payload);
-  assert.deepEqual(image, readFileSync(join(__dirname, '../texture-floor-dirt.png')));
-  assert.deepEqual([...image.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+test('embedded ground textures preserve the maintained PNG bytes without conversion', () => {
+  for (const [key, file] of Object.entries({
+    ground: 'texture-ground-dirt-base.png',
+    terrainOverlay: 'texture-ground-terrain-overlay.png',
+    rockClusters: 'texture-ground-rock-clusters.png',
+    desertShrubs: 'texture-ground-desert-shrubs.png'
+  })) {
+    const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
+    assert.match(url, /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/);
+    const payload = url.split(',')[1], image = Buffer.from(payload, 'base64');
+    assert.equal(image.toString('base64'), payload);
+    assert.deepEqual(image, readFileSync(join(__dirname, '..', file)));
+    assert.deepEqual([...image.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  }
   assert.ok(scripts.find(s => s.name === 'renderer-runtime').source.includes(
     'this.loadTexture(this.groundTex, MERIDIAN_TEXTURES.ground);'
   ));
