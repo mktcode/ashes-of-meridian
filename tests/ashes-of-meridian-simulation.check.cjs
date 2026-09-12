@@ -539,6 +539,37 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
 });
 
+test('starting alloy levels 0–5 add exactly 50 alloy per level without changing seeded setup', () => {
+  const { game } = createGame(), opts = { seed: 1409, faction: 0, biome: 'rust' };
+  game.start(opts);
+  const original = json(game.s.entities), terrain = Array.from(game.world.staticGrid), nextRandom = game.random();
+  for (let level = 0; level <= 5; level++) {
+    game.profile.upgrades = { startingAlloy: level };
+    game.start(opts);
+    assert.deepEqual([game.s.alloy, game.s.gas, game.s.meta.startingAlloy], [250 + level * 50, 0, level]);
+    assert.deepEqual(json(game.s.entities), original);
+    assert.deepEqual(Array.from(game.world.staticGrid), terrain);
+    assert.equal(game.random(), nextRandom, 'starting alloy consumes no simulation RNG');
+  }
+});
+
+test('starting alloy affects only the next battle, is bounded and reproduces on restart', () => {
+  const { game } = createGame(), opts = { seed: 9897, faction: 1, biome: 'rust' };
+  game.profile.upgrades = { startingAlloy: 2 }; game.start(opts);
+  const before = json(game.s);
+  game.profile.upgrades.startingAlloy = 5;
+  assert.deepEqual(json(game.s), before);
+  game.start(opts);
+  assert.equal(game.s.alloy, 500); assert.deepEqual(json(game.s.meta), { startingAlloy: 5 });
+  assert.notStrictEqual(game.s.meta, game.profile.upgrades);
+  const restarted = json(game.s);
+  game.start(opts); assert.deepEqual(json(game.s), restarted);
+  for (const [value, level, alloy] of [[-2, 0, 250], ['3.9', 3, 400], [99, 5, 500], ['bad', 0, 250]]) {
+    game.profile.upgrades = { startingAlloy: value }; game.start(opts);
+    assert.deepEqual([game.s.meta.startingAlloy, game.s.alloy], [level, alloy]);
+  }
+});
+
 test('starting worker levels 0–5 preserve seeded setup and free spacing for every faction', () => {
   for (const faction of [0, 1, 2]) {
     const { game } = createGame(), opts = { seed: 1409, faction, biome: 'rust' };

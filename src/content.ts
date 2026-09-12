@@ -291,13 +291,21 @@ const ABILITIES = {
 
 type AbilityType = keyof typeof ABILITIES;
 
+const STARTING_ALLOY = [250, 300, 350, 400, 450, 500] as const;
 const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
 
 const META = {
+  startingAlloy: {
+    name: 'Starting alloy',
+    icon: 'crystal',
+    desc: 'Adds 50 starting alloy per level, raising expedition reserves from 250 to 500.',
+    max: 5,
+    costs: [100, 200, 300, 450, 650]
+  },
   startingWorkers: {
     name: 'Starting workers',
     icon: 'worker',
-    desc: 'Start each new battle with one additional worker per level, up to five. Starting resources are unchanged.',
+    desc: 'Start each new battle with one additional worker per level, up to five.',
     max: 5,
     costs: [300, 450, 650, 900, 1200]
   },

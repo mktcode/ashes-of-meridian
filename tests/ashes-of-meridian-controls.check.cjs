@@ -696,26 +696,30 @@ test('runtime and delivered HTML have no run persistence hooks or backup input',
 });
 
 test('permanent upgrades spend recovered aether, remain bounded and do not alter the active battle', () => {
-  const h = setup(), keys = ['startingWorkers'];
+  const h = setup(), keys = ['startingAlloy', 'startingWorkers'];
   h.ui.game.s.meta = {}; h.ui.game.s.alloy = 123; h.ui.game.s.gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
-  h.ui.profile.aether = 299; h.ui.showArmory();
-  assert.match(h.ui.html, /299 AETHER RESERVES/);
-  assert.match(h.ui.html, /300 AETHER · LEVEL 1/);
+  h.ui.profile.aether = 99; h.ui.showArmory();
+  assert.match(h.ui.html, /99 AETHER RESERVES/);
+  assert.deepEqual(Array.from(h.ui.html.matchAll(/data-upgrade="([^"]+)"/g), m => m[1]),
+    ['startingAlloy', 'startingWorkers', 'aetherEvacuation']);
+  assert.match(h.ui.html, /Starting alloy/); assert.match(h.ui.html, /100 AETHER · LEVEL 1/);
+  assert.match(h.ui.html, /Starting workers/); assert.match(h.ui.html, /300 AETHER · LEVEL 1/);
   assert.match(h.ui.html, /Aether evacuation/); assert.match(h.ui.html, /500 AETHER · LEVEL 1/);
-  assert.match(h.ui.html, /data-upgrade="startingWorkers" disabled/);
-  h.ui.buyUpgrade('startingWorkers'); assert.deepEqual(h.ui.profile.upgrades, {});
+  assert.match(h.ui.html, /data-upgrade="startingAlloy" disabled/);
+  h.ui.buyUpgrade('startingAlloy'); assert.deepEqual(h.ui.profile.upgrades, {});
+  h.ui.profile.aether = 100; h.ui.buyUpgrade('startingAlloy');
+  assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1 }); assert.equal(h.ui.profile.aether, 0);
   h.ui.profile.aether = 500; h.ui.buyUpgrade('aetherEvacuation');
-  assert.deepEqual(h.ui.profile.upgrades, { aetherEvacuation: 1 }); assert.equal(h.ui.profile.aether, 0);
-  h.ui.profile.aether = 3500; h.ui.showArmory();
-  assert.match(h.ui.html, /Starting workers/);
+  assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1, aetherEvacuation: 1 }); assert.equal(h.ui.profile.aether, 0);
+  h.ui.profile.aether = 5100; h.ui.showArmory();
   assert.doesNotMatch(h.ui.html, /∞ UPGRADE RESOURCES|FREE · LEVEL|Command uplink|Command resolve|Frontier assembly/);
   for (const key of keys) for (let i=0;i<7;i++) h.ui.buyUpgrade(key);
   for (const key of ['not-an-upgrade', 'veterans', 'logistics', 'stores', 'command', 'resolve', 'industry']) h.ui.buyUpgrade(key);
-  assert.deepEqual(h.ui.profile.upgrades, { aetherEvacuation: 1, startingWorkers: 5 });
-  assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 6); assert.equal('credits' in h.ui.profile, false);
+  assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 5, aetherEvacuation: 1, startingWorkers: 5 });
+  assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 11); assert.equal('credits' in h.ui.profile, false);
   assert.deepEqual([h.ui.game.s.alloy,h.ui.game.s.gas,h.ui.game.s.meta], [123,45,{}]);
-  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 1);
+  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 2);
 });
 
 test('each result transfers floored unused aether once, using the run-start evacuation limit through 1,000', () => {
@@ -735,15 +739,17 @@ test('each result transfers floored unused aether once, using the run-start evac
   }
 });
 
-test('battle setup and help describe starting workers and unchanged starting resources', () => {
+test('battle setup and help describe starting workers and alloy levels', () => {
   const h = setup();
   for (let level = 0; level <= 5; level++) {
     h.ui.profile.upgrades.startingWorkers = level;
+    h.ui.profile.upgrades.startingAlloy = level;
     h.ui.showBattle();
-    assert.match(h.document.getElementById('menu').innerHTML, new RegExp(`HQ \\+ ${level} WORKERS`));
+    assert.match(h.document.getElementById('menu').innerHTML,
+      new RegExp(`HQ \\+ ${level} WORKERS · ${250 + level * 50} ALLOY`));
   }
   h.ui.showHelp();
-  assert.match(h.ui.html, /0–5 workers/); assert.match(h.ui.html, /250 alloy \/ 0 aether/);
+  assert.match(h.ui.html, /0–5 workers/); assert.match(h.ui.html, /250–500 alloy \/ 0 aether/);
   assert.doesNotMatch(h.ui.html, /only your headquarters/);
 });
 

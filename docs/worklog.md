@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Permanentes Start-Alloy
+
+- Neues erstes Fleet-Upgrade `startingAlloy`: Stufen 0–5 starten mit 250 / 300 / 350 / 400 / 450 / 500 Alloy; Einzelkosten 100 / 200 / 300 / 450 / 650 Aether. Start-Aether bleibt 0. Der beim Gefechtsstart normalisierte Profilwert wird in `game.s.meta` eingefroren, verbraucht keinen RNG und wirkt deshalb weder rückwirkend auf laufende Runs noch auf deren Layout.
+- Waffenkammer-Reihenfolge, Gefechtsnotiz, Feldhandbuch, README, Gameplay und Architektur aktualisiert. Persistenz verwirft unbekannte Schlüssel weiterhin und begrenzt auch `startingAlloy` auf ganzzahlige Stufen 0–5.
+- **Neu: `npm test` einschließlich Build, 237/237 bestanden** (rund 67 s). **Chromium `file://`, 430×932:** Upgrade als erste Karte mit Einstiegspreis 100 Aether gesichtet; Stufe 1 startete mit 300 Alloy, Kauf von Stufe 2 ließ den aktiven Run bei 300 und Neustart setzte 350; Profil-Reload zeigte weiterhin Stufe 2/350, GL 0, keine Console-/Laufzeitfehler. Kein vollständiger manuell gespielter Sieg oder Echtgerätetest.
+
 ## Sequenzielle Fraktionsfreischaltung
 
 - Fortschritt von einem gemeinsamen Boolean auf `factionUnlockLevel` (0–2) umgestellt: Free-Marches-Sieg öffnet nur Verdant Choir, erst ein Choir-Sieg die Veiled Court. Ergebnis meldet jeweils genau die neu geöffnete Fraktion. Gesperrte Karten und manipulierte Startauswahl bleiben abgesichert; falsche, verlorene und wiederholte Siege überspringen keine Stufe und speichern nicht erneut.

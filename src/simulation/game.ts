@@ -56,7 +56,7 @@
         this.s = {
           seed, faction, enemy, biome, meta,
           time: 0,
-          alloy: 250,
+          alloy: STARTING_ALLOY[meta.startingAlloy || 0],
           gas: 0,
           energy: 100,
           nextId: 1,

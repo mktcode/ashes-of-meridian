@@ -28,10 +28,12 @@ test('content loads alone with reference catalog order, classic bindings and nam
     assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
   }
   assert.strictEqual(context.icon, icon);
-  assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 2]);
-  assert.deepEqual(Array.from(Object.keys(META)), ['startingWorkers', 'aetherEvacuation']);
+  assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 3]);
+  assert.deepEqual(Array.from(Object.keys(META)), ['startingAlloy', 'startingWorkers', 'aetherEvacuation']);
+  assert.deepEqual(Array.from(META.startingAlloy.costs), [100, 200, 300, 450, 650]);
   assert.equal(META.startingWorkers.max, 5);
   assert.deepEqual(Array.from(META.aetherEvacuation.costs), [500, 800, 1200, 1800, 2600]);
+  assert.deepEqual(Array.from(vm.runInContext('STARTING_ALLOY', context)), [250, 300, 350, 400, 450, 500]);
   assert.deepEqual(Array.from(vm.runInContext('AETHER_EVACUATION_CAPS', context)), [100, 200, 350, 500, 750, 1000]);
   assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero']);
   assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
