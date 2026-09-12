@@ -63,7 +63,7 @@ vec4 groundDecor(sampler2D tex,vec2 world,bool shrubs){
  vec2 dx=dFdx(p)/span*pixels,dy=dFdy(p)/span*pixels;
  float lod=clamp(log2(max(max(length(dx),length(dy)),1.)),0.,1.);
  if(any(lessThan(local,vec2(0.)))||any(greaterThan(local,vec2(1.)))
-    ||decorRandom(cell,shrubs?7927u:104743u).x>(shrubs?.65:.8))return vec4(0.);
+    ||decorRandom(cell,shrubs?7927u:104743u).x>(shrubs?.10:.8))return vec4(0.);
  // Explicit crop + limited mip level prevent neighbouring variants bleeding into a stamp.
  vec2 uv=(rect.xy+clamp(local*pixels,vec2(.5),pixels-.5))/1254.;
  return textureLod(tex,uv,lod);
