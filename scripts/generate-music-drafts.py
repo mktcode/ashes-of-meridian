@@ -236,8 +236,11 @@ class Mix:
             target.writeframes(pcm.tobytes())
 
 
-def compose(variant, directory):
+def compose(variant, directory, reduced=False):
     slug, title, root, swing, seed = VARIANTS[variant]
+    if reduced:
+        slug += '-reduced'
+        title += ' - Reduced Mix'
     rng = Random(seed)
     mix = Mix()
     commands = [speech(text) for text in (
@@ -267,6 +270,11 @@ def compose(variant, directory):
                  [0, 0, 1, 0, 0, 0, -2, 0],
                  [0, 0, -2, 0, 3, 0, -2, -2])[variant][bar % 8]
         note = root + shift
+        # Clear space around hooks/radio without rewriting any notes or timing.
+        # Muted events still evaluate at()/rng: the original groove stays exact.
+        radio_bar = bar in ((0, 7, 12, 19, 27) if variant == 2 else (0, 7, 17, 23, 30))
+        hook_bar = full and bar % 4 in (1, 3) and (variant != 1 or final)
+        foreground = radio_bar or hook_bar
 
         def at(step, human=True):
             off = swing if round(step) % 2 else 0
@@ -281,23 +289,32 @@ def compose(variant, directory):
         for step in snares:
             mix.put(drum('snare', variant), at(step) + .009, .76 + rng.uniform(-.035, .035), -.035)
             if variant == 1 or final:
-                mix.put(drum('clap', variant), at(step) + .019, .13, .17)
+                clap_gain = (.4 if variant == 1 and final and not foreground else 0) if reduced else 1
+                mix.put(drum('clap', variant), at(step) + .019, .13 * clap_gain, .17)
         if full:
             for step in ([3.25, 7.5, 11, 14.75] if bar % 2 else [2, 10, 15]):
-                mix.put(drum('snare', variant), at(step), rng.uniform(.095, .19), .09, 1.08)
+                ghost_gain = (.7 if step in (7.5, 14.75, 15) and not radio_bar else 0) if reduced else 1
+                mix.put(drum('snare', variant), at(step), rng.uniform(.095, .19) * ghost_gain, .09, 1.08)
         for step in range(16):
             if intro and step % 2 == 1 or breakdown and step % 4 != 2:
                 continue
             volume = (.105 if step % 2 == 0 else .045) * rng.uniform(.8, 1.15)
             opened = step in (6, 14) and full and bar % 2 == 1
+            if reduced:
+                # Retain the eighth-note pulse; only occasional sixteenth pickups.
+                volume *= (.65 if step in (7, 15) and not foreground else 0) if step % 2 else .85
+                if opened:
+                    volume *= .7
             mix.put(drum('open' if opened else 'hat', variant), at(step),
                     volume * (1.05 if opened else 1), -.30 if step % 2 else .25,
                     rng.choice((.97, 1, 1.035)))
         if full and bar % 2 == 0:
-            mix.put(drum('metal', variant), at(7.5), .13 if variant != 2 else .24, -.5)
+            metal_gain = (.6 if bar % 4 == 2 and not foreground else 0) if reduced else 1
+            mix.put(drum('metal', variant), at(7.5), (.13 if variant != 2 else .24) * metal_gain, -.5)
         if full and bar % 4 == 3:
             for j, step in enumerate((13.5, 14.25, 15, 15.5)):
-                mix.put(drum('tom' if j < 2 else 'snare', variant), at(step), .27 + j * .035,
+                fill_gain = (.8 if j >= 2 or bar % 8 == 7 else 0) if reduced else 1
+                mix.put(drum('tom' if j < 2 else 'snare', variant), at(step), (.27 + j * .035) * fill_gain,
                         -.3 + j * .2, 1 - .06 * j)
 
         if not intro or variant == 0:
@@ -319,11 +336,17 @@ def compose(variant, directory):
                 offset = 0 if j < len(riff) - 1 else (3 if bar % 2 else -2)
                 length = 1 if j % 2 else 1.6
                 vol = (.18, .29, .14)[variant]
+                if reduced:
+                    # Breach keeps its defining riff; the other cues answer hooks
+                    # with one downbeat accent rather than a competing guitar layer.
+                    vol *= (.55 if foreground else .78) if variant == 1 else (
+                        (.55 if j == 0 else 0) if foreground else .85)
                 mix.put(guitar(note + offset, length, 0), at(step), vol, -.64)
-                mix.put(guitar(note + offset, length, 1), at(step) + .012, vol * .83, .64)
+                mix.put(guitar(note + offset, length, 1), at(step) + .012,
+                        vol * .83 * (.55 if reduced else 1), .64)
 
         # Short minor-key answer, with rests instead of continuous arpeggiation.
-        if full and bar % 4 in (1, 3) and (variant != 1 or final):
+        if hook_bar:
             motif = ([(2, 19), (7, 15), (11, 12), (14.5, 10)],
                      [(2.5, 12), (7, 13), (14, 7)],
                      [(1.5, 24), (6, 19), (10.5, 22)])[variant]
@@ -335,8 +358,9 @@ def compose(variant, directory):
 
         # Machinery: low motor scrape plus gated metallic strokes, no large pad bed.
         if bar % 2 == 0:
-            mix.put(drum('metal', 2), start + BEAT * 1.5, .065, .6, .27)
-        if (bar in (0, 7, 17, 23, 30) and variant != 2) or (variant == 2 and bar in (0, 7, 12, 19, 27)):
+            machinery_gain = (.55 if intro or breakdown else 0) if reduced else 1
+            mix.put(drum('metal', 2), start + BEAT * 1.5, .065 * machinery_gain, .6, .27)
+        if radio_bar:
             index = (bar // 6) % 4
             voice = commands[index]
             when = start + (0 if bar == 0 else BEAT * .5)
@@ -375,11 +399,12 @@ def compose(variant, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--variant', type=int, choices=(1, 2, 3), help='Only regenerate this draft')
+    parser.add_argument('--reduced', action='store_true', help='Write separate, less layered -reduced mixes')
     args = parser.parse_args()
     OUT.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='meridian-drafts-') as directory:
         for variant in ([args.variant - 1] if args.variant else range(3)):
-            compose(variant, Path(directory))
+            compose(variant, Path(directory), reduced=args.reduced)
 
 
 if __name__ == '__main__':
