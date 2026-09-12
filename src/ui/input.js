@@ -43,7 +43,7 @@
             else if (this.game.s)
               this.game.s.cam.zoom = clamp(
                 this.game.s.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18),
-                32,
+                27.2,
                 115
               );
           }
@@ -267,7 +267,7 @@
             if (this.pinchDist > 0)
               this.game.s.cam.zoom = clamp(
                 (this.game.s.cam.zoom * this.pinchDist) / Math.max(10, d),
-                32,
+                27.2,
                 115
               );
             this.pinchDist = d;

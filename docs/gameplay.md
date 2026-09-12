@@ -17,7 +17,7 @@ Ein geschlossener Gebirgsring rahmt die Karte ein. Im Inneren liegen kleine Fels
 
 ## Touch und HUD
 
-- Kamera: Fingerziehen, Pinch, Zoom-/Basisknöpfe und Minimap-Tap/-Drag. X/Z-Grenzen −72 bis 72, Zoom 32 bis 115.
+- Kamera: Fingerziehen, Pinch, Zoom-/Basisknöpfe und Minimap-Tap/-Drag. X/Z-Grenzen −72 bis 72, Zoom 27,2 bis 115 (kleinere Werte zeigen näher).
 - Einfacher Tap wählt; Doppeltap auf dieselbe eigene Einheit wählt sichtbare eigene Einheiten ihres Typs; Dreifachtap sichtbare eigene Nicht-Worker, einschließlich Support und Kommandant. Ein Worker kann die Folge auslösen, gehört aber nicht zur Combat-Auswahl. Gebäude/Gegner lösen diese Gruppengeste nicht aus; Maus-Dreifachklick bleibt typgebunden.
 - Jeweils **weniger als 330 ms zwischen Releases**. Weitere schnelle Taps halten die Combat-Auswahl. Andere Ziele/Zeigerarten, Pan, Pinch, Abbruch, Boden-/Zielauftrag und Neustart unterbrechen die Folge. Sichtfilter: projizierter Mittelpunkt innerhalb der Bildschirmbreite und innerhalb des tatsächlichen Welt-Viewports; keine zusätzliche Verdeckungsprüfung durch darüberliegende Seitenpanels.
 - Boden-Taps mit Auswahl erteilen standardmäßig normale Bewegung: Einheiten laufen auch bei Feindkontakt zum Ziel weiter (Rückzug möglich), können dabei weiterhin in Reichweite feuern. Das **Schwerter-Symbol links neben ⌂** schaltet Attack-move um: **gold = aktiv**, Einheiten halten zum Bekämpfen erreichbarer Gegner an. Worker erhalten in beiden Modi normale Bewegung; gemeinsame Formation bleibt erhalten.

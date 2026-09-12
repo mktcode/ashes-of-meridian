@@ -343,7 +343,7 @@ test('pinch preserves zoom limits and does not pan or issue commands', () => {
   h.pointer('pointermove', 320, 200, { pointerId: 2 });
   assert.equal(h.ui.game.s.cam.zoom, 50 * 100 / 120);
   h.pointer('pointermove', 600, 200, { pointerId: 2 });
-  assert.equal(h.ui.game.s.cam.zoom, 32);
+  assert.equal(h.ui.game.s.cam.zoom, 27.2);
   h.pointer('pointermove', 210, 200, { pointerId: 2 });
   assert.equal(h.ui.game.s.cam.zoom, 115);
   h.pointer('pointerup', 210, 200, { pointerId: 2 });
@@ -494,7 +494,7 @@ test('camera buttons and minimap tap/drag still navigate with existing limits', 
   h.clickCamera('in'); assert.equal(h.ui.game.s.cam.zoom, 42.5);
   h.clickCamera('out'); assert.equal(h.ui.game.s.cam.zoom, 42.5 * 1.18);
   for (let i = 0; i < 20; i++) h.clickCamera('in');
-  assert.equal(h.ui.game.s.cam.zoom, 32);
+  assert.equal(h.ui.game.s.cam.zoom, 27.2);
   for (let i = 0; i < 20; i++) h.clickCamera('out');
   assert.equal(h.ui.game.s.cam.zoom, 115);
   h.pointer('pointerdown', 100, 110, { target: h.minimap });

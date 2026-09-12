@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Eine zusätzliche Nahzoomstufe
+
+- Untere Kameragrenze für Plus-Button und Pinch von 32 auf 27,2 gesenkt: eine weitere Stufe mit Faktor 0,85, rund 18 % größere Darstellung. Herauszoomgrenze 115 und Schrittweiten unverändert; bestehende Grenzwert-Erwartungen und Bedienreferenz nachgeführt.
+- Auf Wunsch kein Test- oder Browserlauf; Build und `git diff --check` erfolgreich. Die neuen Test-Erwartungen wurden nicht ausgeführt.
+
 ## Detaillierte Free-Marches-Worker
 
 - Prospector als kleines Kettenfahrzeug beibehalten: abgeschrägtes Gehäuse/Sensorkopf, Kühler, sechs Laufrollen, 48 einzelne Kettenglieder, Scheinwerfer, Signallichtfassung und geriffelter Bohrkopf. Zwei einmalig hochgeladene Meshes mit 1.452/120 Dreiecken; keine neuen Assets/Shader, RNG-Aufrufe oder Bewegungsanimationen. Spielgröße, Tempo, Sammel-/Bauregeln und bestehende Frachtanzeige unverändert.
