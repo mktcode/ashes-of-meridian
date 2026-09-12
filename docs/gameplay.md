@@ -11,6 +11,10 @@
 - **Keine Run-Speicherung:** kein Checkpoint, Autosave, Laden, Backup oder Fortsetzen nach Reload. **Ⅱ** pausiert in der geöffneten Seite; Tab-Wechsel pausiert automatisch, Rückkehr setzt nicht automatisch fort. Hauptmenü, Schließen und Reload verwerfen den Run. Das Pausenmenü warnt vor dem Abbruch. Nach Sieg/Niederlage stehen Neustart (gleicher Seed, Fraktionen und Biom), **Fleet Upgrades** und Hauptmenü bereit: auf breiten Fenstern nebeneinander, mobil untereinander. Aus den Upgrades führt **Return** zurück zum unveränderten Ergebnis; gekaufte Upgrades wirken beim nächsten Start. Das beendete Gefecht bleibt gesperrt.
 - Keine zweite Upgrade-Währung: Die Aether-Reserve verwendet dieselbe Ressource wie Raffinerien im Gefecht, wird aber erst am Ergebnis aus dem ungenutzten Rest gebildet. Neben ihr bleibt nur die einmalige Fraktionsfreischaltung nach dem ersten Free-Marches-Sieg als Ergebnisfortschritt. Score ist nur Statistik; Alloy/Aether im Gefecht bleiben begrenzt.
 
+## Gelände
+
+Ein geschlossener Gebirgsring rahmt die Karte ein. Im Inneren liegen kleine Felsblocker und höchstens zwei breite, nicht begehbare Gebirgszüge mit Ausläufern. Diese prägen die Laufwege und werden auf der Minimap dunkler dargestellt. Die Erzeugung hält die beiden Startbasen und Ressourcenbereiche frei und prüft verbundene Zugänge; frühere direkte Korridore dürfen unterbrochen sein. Berge verdecken gegebenenfalls Einheiten dahinter, ohne sich automatisch auszublenden.
+
 ## Touch und HUD
 
 - Kamera: Fingerziehen, Pinch, Zoom-/Basisknöpfe und Minimap-Tap/-Drag. X/Z-Grenzen −72 bis 72, Zoom 32 bis 115.

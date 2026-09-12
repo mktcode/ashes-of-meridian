@@ -284,7 +284,17 @@ interface WorldPlacement {
   material: string | undefined;
 }
 
+interface WorldMassif extends Position {
+  seed: number;
+  yaw: number;
+  width: number;
+  depth: number;
+  height: number;
+  outline: Position[];
+}
+
 interface WorldRenderData {
+  massifs: WorldMassif[];
   groundColors: number[][];
   placements: WorldPlacement[];
 }

@@ -120,7 +120,7 @@ test('world picking and captured releases outside the viewport cannot issue orde
 test('minimap camera outline uses all four actual viewport corners after layout changes', () => {
   const h = setup(), points = [], ctx = new Proxy({}, { get: () => () => {} });
   const c = h.document.getElementById('minimap'); c.width = c.height = 210; c.getContext = () => ctx;
-  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4), visible: [], explored: [] };
+  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4), massifGrid: [], visible: [], explored: [] };
   h.ui.miniBuffer = {}; h.ui.miniCtx = { putImageData() {} };
   h.ui.miniImage = { data: new Uint8Array(72*72*4) };
   h.ui.R.ground = (x,y) => { points.push([x,y]); return {x:x/10,z:y/10}; };
@@ -128,6 +128,21 @@ test('minimap camera outline uses all four actual viewport corners after layout 
     h.ui.R.viewport = v; points.length = 0; h.UI.prototype.drawMinimap.call(h.ui);
     assert.deepEqual(points, [[v.left,v.top],[v.right,v.top],[v.right,v.bottom],[v.left,v.bottom]]);
   }
+});
+
+test('minimap distinguishes massif footprints without bypassing visibility or changing terrain colors', () => {
+  const h = setup(), ctx = new Proxy({}, { get: () => () => {} }),
+    c = h.document.getElementById('minimap');
+  c.width = c.height = 210; c.getContext = () => ctx;
+  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4).fill(100),
+    massifGrid: [1,0,1,0,1,0], visible: [1,1], explored: [0,0,1,1] };
+  h.ui.miniBuffer = {}; h.ui.miniCtx = { putImageData() {} };
+  h.ui.miniImage = { data: new Uint8ClampedArray(72*72*4) };
+  h.ui.R.ground = () => ({ x: 0, z: 0 });
+  h.UI.prototype.drawMinimap.call(h.ui);
+  for (const [i, value] of [48,100,23,48,8,16].entries())
+    assert.deepEqual(Array.from(h.ui.miniImage.data.slice(i*4,i*4+4)), [value,value,value,255]);
+  assert.ok(h.ui.game.world.terrainColors.every(v => v === 100));
 });
 
 test('camera keys and pointer edges no longer move the camera', () => {

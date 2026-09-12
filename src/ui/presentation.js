@@ -39,6 +39,7 @@
           base = g.world.terrainColors;
         for (let i = 0; i < GRID * GRID; i++) {
           let fog = g.world.visible[i] ? 1 : g.world.explored[i] ? 0.48 : 0.16;
+          if (g.world.massifGrid[i]) fog *= .48;
           img[i * 4] = base[i * 4] * fog;
           img[i * 4 + 1] = base[i * 4 + 1] * fog;
           img[i * 4 + 2] = base[i * 4 + 2] * fog;

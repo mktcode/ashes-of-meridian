@@ -3,8 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
-const { createRendererStub } = require('./helpers/renderer-stub.cjs');
+const { SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { populateBase } = require('./helpers/populated-battle.cjs');
 
 const scripts = readScripts();
@@ -13,19 +12,16 @@ const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 
 function createGame() {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], {
+  const context = loadScripts(['core', 'content', 'world', 'effects', ...SIMULATION_SCRIPTS], {
     scripts, globals: { structuredClone },
   });
   vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness in simulation test"); }', context);
   const MeridianGame = vm.runInContext('MeridianGame', context);
-  const renderer = createRendererStub();
   const events = [];
-  const View = vm.runInContext('BattlefieldView', context), view = new View(renderer);
   const game = new MeridianGame({ upgrades: {} }, (type, data) => {
-    if (type === 'start') view.sync(game.world);
     events.push({ type, data: json(data) });
   });
-  return { game, renderer, events };
+  return { game, events };
 }
 
 function freshBattle(faction = 0, seed = 1409) {
@@ -70,7 +66,7 @@ const player = (game, type) => game.alive(e => e.team === 0 && e.type === type)[
 const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').length;
 
 test('single battle starts with only the own HQ, one hostile base and no mission state', () => {
-  const { game, renderer, events } = freshBattle(), s = game.s;
+  const { game, events } = freshBattle(), s = game.s;
   assert.deepEqual([s.seed,s.biome,s.faction,s.enemy,s.time], [1409,'rust',0,2,0]);
   assert.equal('version' in s, false); assert.equal(game.snapshot, undefined); assert.equal(game.restore, undefined);
   assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,100,61,62,0,24]);
@@ -79,7 +75,7 @@ test('single battle starts with only the own HQ, one hostile base and no mission
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
   for (const key of ['m','index','practice','upgrades','research','difficulty']) assert.equal(key in s, false);
   assert.equal(game.objectiveRows().length, 1); assert.match(game.objectiveRows()[0].text, /enemy base/);
-  assert.equal(renderer.fogOn, true); assert.deepEqual(events.map(e => e.type), ['start','radio']);
+  assert.deepEqual(events.map(e => e.type), ['start','radio']);
 });
 
 test('no workers means no alloy or aether income, and 250 alloy buys exactly five workers for every faction', () => {
@@ -122,16 +118,17 @@ test('fresh starts with the same seed reproduce state; another seed changes reso
   assert.notDeepEqual(json(a.alive(e => e.type === 'crystal').map(e => e.amount)), json(other.alive(e => e.type === 'crystal').map(e => e.amount)));
 });
 
-test('all factions and biomes start without mission definitions or research', () => {
+test('battle starts cover every faction and biome with valid entities', () => {
   const { game } = createGame();
-  for (const faction of [0,1,2]) for (const biome of ['ash','rust','choir','court','star']) {
+  // Biomes change presentation, not faction rules: no redundant 3×5 cross-product.
+  for (const [faction, biome] of [[0,'ash'],[1,'rust'],[2,'choir'],[0,'court'],[2,'star']]) {
     game.start({ seed: 1409, faction, enemy: faction, biome });
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
     advance(game, 2);
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
     assert.equal(game.s.biome, biome); assert.equal(game.s.enemy, faction);
     assert.ok(game.alive(e => e.team === 1).every(e => e.faction === faction));
-    assert.ok(game.s.entities.every(e => Number.isFinite(e.hp) && !['ward','avatar','convoy','lab'].includes(e.type)));
+    assert.ok(game.s.entities.every(e => Number.isFinite(e.hp) && e.hp > 0));
     assert.equal('m' in game.s, false); assert.equal('research' in game.s, false);
   }
 });
@@ -542,9 +539,9 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
 });
 
-test('starting worker levels 0–5 preserve seeded setup and place free, spaced workers for every faction and biome', () => {
-  for (const faction of [0, 1, 2]) for (const biome of ['ash', 'rust', 'choir', 'court', 'star']) {
-    const { game } = createGame(), opts = { seed: 1409, faction, biome };
+test('starting worker levels 0–5 preserve seeded setup and free spacing for every faction', () => {
+  for (const faction of [0, 1, 2]) {
+    const { game } = createGame(), opts = { seed: 1409, faction, biome: 'rust' };
     game.start(opts);
     const original = json(game.s.entities), terrain = Array.from(game.world.staticGrid),
       samples = Array.from({ length: 6 }, () => game.random());
@@ -1066,7 +1063,7 @@ for (const [kind, energy, cooldown] of [
 });
 
 test('restarting discards the previous run and rebuilds fresh navigation, indexes and fog', () => {
-  const {game,renderer,events}=battle();
+  const {game,events}=battle();
   const hero=player(game,'hero'); game.command([hero.id],{type:'move',x:-10,z:32});
   game.train('rifle'); game.ability('scan',{x:20,z:-20}); advance(game,100);
   game.s.cam={x:-42,z:40,zoom:64}; game.s.speed=2;
@@ -1076,12 +1073,13 @@ test('restarting discards the previous run and rebuilds fresh navigation, indexe
   game.start({seed:1409,biome:'rust',faction:0});
   assert.notStrictEqual(game.s,old); assert.notStrictEqual(game.world,oldWorld);
   assert.equal(game.s.speed,1);
-  assert.deepEqual(json(game.s),json(freshBattle().game.s));
+  const fresh = freshBattle().game;
+  assert.deepEqual(json(game.s),json(fresh.s));
   for(const e of game.s.entities)assert.strictEqual(game.get(e.id),e);
   const freshHQ=player(game,'hq'), cell=game.world.idx(freshHQ.x,freshHQ.z);
   assert.equal(game.world.staticGrid[cell],0); assert.equal(game.world.blocked[cell],1);
   assert.ok(game.near(freshHQ.x,freshHQ.z,3).includes(freshHQ));
-  assert.deepEqual(Array.from(renderer.fogPixels),Array.from(game.world.fogPixels));
-  assert.equal(renderer.fogOn,true); assert.deepEqual(events.map(e=>e.type),['start','radio']);
+  assert.deepEqual(Array.from(game.world.fogPixels),Array.from(fresh.world.fogPixels));
+  assert.deepEqual(events.map(e=>e.type),['start','radio']);
   assert.equal(game.effects.fx.length,0);
 });

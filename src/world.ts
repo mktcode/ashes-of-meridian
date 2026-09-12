@@ -57,6 +57,15 @@
         t = clamp(((p.x - a.x) * dx + (p.z - a.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
       return Math.hypot(p.x - a.x - dx * t, p.z - a.z - dz * t);
     };
+    const insidePolygon = (p: Position, polygon: Position[]) => {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const a = polygon[i], b = polygon[j];
+        if ((a.z > p.z) !== (b.z > p.z) &&
+            p.x < (b.x - a.x) * (p.z - a.z) / (b.z - a.z) + a.x) inside = !inside;
+      }
+      return inside;
+    };
     class Heap {
       declare a: [number, number][];
 
@@ -103,6 +112,7 @@
       declare seed: number;
       declare biome: BiomeDefinition;
       declare staticGrid: Uint8Array;
+      declare massifGrid: Uint8Array;
       declare blocked: Uint8Array;
       declare explored: Uint8Array;
       declare visible: Uint8Array;
@@ -117,6 +127,7 @@
         this.seed = seed;
         this.biome = BIOMES[biome] || BIOMES.ash;
         this.staticGrid = new Uint8Array(GRID * GRID);
+        this.massifGrid = new Uint8Array(GRID * GRID);
         this.blocked = new Uint8Array(GRID * GRID);
         this.explored = new Uint8Array(GRID * GRID);
         this.visible = new Uint8Array(GRID * GRID);
@@ -125,6 +136,7 @@
         this.rocks = [];
         this.pathVersion = 0;
         this.generate();
+        this.addMassifs();
         this.blocked.set(this.staticGrid);
       }
       idx(x: number, z: number) {
@@ -292,9 +304,9 @@
       generate() {
         const rand = seeded(this.seed),
           bio = this.biome;
-        // Keep cosmetic samples interleaved with obstacle sampling for save compatibility.
+        // Keep cosmetic samples interleaved with obstacle sampling for deterministic layouts.
         // These are CPU descriptors, not meshes or renderer calls.
-        const layout: WorldRenderData = this.renderData = { groundColors: [], placements: [] };
+        const layout: WorldRenderData = this.renderData = { massifs: [], groundColors: [], placements: [] };
         const color = (c: number) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
         const place = (
           mesh: string, x: number, y: number, z: number,
@@ -322,6 +334,7 @@
           }
         place('terrain', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static');
         place('box', 0, -8, 0, 180, 15, 180, 0x242c36, 0, 0, 0, 0, 1, 'static');
+        place('mountainRing', 0, 0, 0, 1, 1, 1, bio.rock, 0, 0, 0, 0, 1, 'static', 'MASSIF');
         let safe = [
           HOME,
           ...ENEMY_SITES,
@@ -348,7 +361,7 @@
             ] as [Position, Position])
           )
         ];
-        // Preserve layout RNG calls and obstacle radii, including for existing saved games.
+        // Taller formations retain the same blockers and layout RNG call order.
         const rockTypes = ['rockBoulder', 'rockCrag', 'rockRidge', 'rockShelf', 'rockBoulder'];
         for (let i = 0; i < 115; i++) {
           let x = (rand() - 0.5) * 166,
@@ -361,7 +374,7 @@
             continue;
           this.mark(this.staticGrid, x, z, r);
           this.rocks.push({ x, z, r });
-          let h = 2 + rand() * 8,
+          let h = 6 + rand() * 10,
             type = rockTypes[i % rockTypes.length];
           place(
             type,
@@ -369,12 +382,12 @@
             -0.18,
             z,
             r * 0.88,
-            h * 0.7,
+            h * 0.8,
             r * 0.78,
             bio.rock,
             rand() * 6,
-            0.1 * (rand() - 0.5),
-            0.15 * (rand() - 0.5),
+            0.01 * (rand() - 0.5),
+            0.015 * (rand() - 0.5),
             0,
             1,
             'static',
@@ -395,7 +408,7 @@
               color(bio.rock).map(v => v * (0.85 + rand() * 0.2)),
               a,
               0,
-              0.1,
+              0,
               0,
               1,
               'static',
@@ -559,6 +572,67 @@
             place('box', x, 0.4, z, 1.7, 0.8, 2.4, 0x536068, rand() * 6, 0.06, 0, 0, 1, 'static');
             place('box', x, 0.83, z, 1.8, 0.07, 2.4, 0x8b775c, rand() * 6, 0, 0, 0, 1, 'static');
           }
+        }
+      }
+      // Large landforms intentionally change routes, independently of the original layout RNG.
+      addMassifs() {
+        const rand = seeded(this.seed ^ 0x57494445),
+          protectedSites = [
+            { ...HOME, r: 20 }, { ...ENEMY_SITES[0], r: 21 },
+            ...RESOURCE_SITES.map(p => ({ ...p, r: 10 })),
+            ...RESOURCE_SITES.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 }))
+          ];
+        for (let attempt = 0; attempt < 600 && this.renderData.massifs.length < 2; attempt++) {
+          const m: WorldMassif = {
+            x: (rand() - .5) * 124, z: (rand() - .5) * 124,
+            width: 29 + rand() * 9, depth: 17 + rand() * 6, height: 20 + rand() * 7,
+            yaw: rand() * Math.PI * 2, seed: Math.floor(rand() * 0x100000000), outline: []
+          };
+          const shape = seeded(m.seed), phase = shape() * 6.28, cs = Math.cos(m.yaw), sn = Math.sin(m.yaw);
+          for (let i = 0; i < 96; i++) {
+            const a = i * Math.PI * 2 / 96,
+              r = .85 + .08 * Math.sin(a * 3 + phase) + .045 * Math.cos(a * 5 - phase) + .025 * Math.sin(a * 9 + phase),
+              x = Math.cos(a) * r * m.width, z = Math.sin(a) * r * m.depth;
+            m.outline.push({ x: m.x + cs * x + sn * z, z: m.z - sn * x + cs * z });
+          }
+          if (m.outline.some(p => Math.max(Math.abs(p.x), Math.abs(p.z)) > 81)) continue;
+          const minX = Math.min(...m.outline.map(p => p.x)), maxX = Math.max(...m.outline.map(p => p.x)),
+            minZ = Math.min(...m.outline.map(p => p.z)), maxZ = Math.max(...m.outline.map(p => p.z));
+          const near = (p: Position, radius: number) => {
+            if (p.x < minX - radius || p.x > maxX + radius || p.z < minZ - radius || p.z > maxZ + radius)
+              return false;
+            return insidePolygon(p, m.outline) ||
+              m.outline.some((a, i) => pointSegment(p, a, m.outline[(i + 1) % 96]) < radius);
+          };
+          if (protectedSites.some(p => near(p, p.r))) continue;
+          if (this.renderData.massifs.some(other => other.outline.some(p => near(p, 9)) ||
+              insidePolygon(m, other.outline))) continue;
+          const grid = this.staticGrid.slice(), mask = new Uint8Array(grid.length);
+          for (let i = 0; i < grid.length; i++) {
+            const p = this.point(i);
+            if (distance(p, m) < m.width + CELL && near(p, CELL * Math.SQRT1_2)) grid[i] = mask[i] = 1;
+          }
+          // Keep all protected locations connected through passages at least three cells wide.
+          const free = new Uint8Array(grid.length), reached = new Uint8Array(grid.length);
+          for (let z = 1; z < GRID - 1; z++) for (let x = 1; x < GRID - 1; x++) {
+            const i = z * GRID + x;
+            free[i] = 1;
+            for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++)
+              if (grid[i + dz * GRID + dx]) free[i] = 0;
+          }
+          const queue = [this.idx(HOME.x, HOME.z)]; reached[queue[0]] = 1;
+          for (let head = 0; head < queue.length; head++) {
+            const i = queue[head];
+            for (const j of [i - 1, i + 1, i - GRID, i + GRID])
+              if (free[j] && !reached[j]) { reached[j] = 1; queue.push(j); }
+          }
+          if (protectedSites.some(p => !queue.some(i => distance(this.point(i), p) <= CELL * 2))) continue;
+          const mesh = `massif${this.renderData.massifs.length}`;
+          this.staticGrid.set(grid);
+          for (let i = 0; i < mask.length; i++) this.massifGrid[i] |= mask[i];
+          this.renderData.massifs.push(m);
+          this.renderData.placements.push({ mesh, position: [0, 0, 0], scale: [1, 1, 1],
+            color: this.biome.rock, rotation: [0, 0, 0], glow: 0, alpha: 1, layer: 'static', material: 'MASSIF' });
         }
       }
       reveal(entities: Entity[], scans: Scan[] = []) {

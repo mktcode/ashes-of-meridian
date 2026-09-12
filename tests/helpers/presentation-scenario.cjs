@@ -24,7 +24,7 @@ function worldSample(seed, biome) {
     .map(args => world.path(...args));
   world.reveal(entities, [{ x: -20, z: -10, r: 7 }]);
   world.reveal([]);
-  return { terrain, placements: digest(renderer.calls), navigation: digest({ paths,
+  return { terrain, placements: digest({ calls: renderer.calls, massifs: world.renderData.massifs }), navigation: digest({ paths,
     nearest: world.nearest(-51, 49), blocked: Array.from(world.blocked),
     visible: Array.from(world.visible), explored: Array.from(world.explored), fog: Array.from(world.fogPixels) }) };
 }

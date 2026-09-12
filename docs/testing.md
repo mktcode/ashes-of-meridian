@@ -18,9 +18,11 @@ npm test
 
 Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle neun Node-Testdateien gegen die erzeugten klassischen Skripte aus. Ein Testworker; 128 MiB begrenzen nur den JS-Heap, nicht den gesamten Prozessspeicher. Für einen erneuten reinen Build genügt `npm run build`.
 
+Prüfzuständigkeiten klein halten: CPU-Simulationstests laden keinen Renderer und erzeugen keine Grafikmeshes, aber weiterhin echte Welten samt Massiv-Kollision. Worker-Stufen 0–5 werden für jede Fraktion geprüft; Biome separat statt als redundantes Kreuzprodukt. Terrain-Tests prüfen alle 16 CPU-Layouts samt freien/verbundenen Basis- und Ressourcenzugängen. Die vollständige Raster-/Umrissprüfung erfolgt an einer detailliert geprüften Massivwelt; feste Navigationsreferenzen sichern weiterhin alle 16 Welten. Mesh-Erzeugung und View-/Fog-Uploads gehören in Geometrie-/Präsentationstests, nicht in jeden Gefechtsstart. Durchgehende Verkehrs-, Produktions- und Kampfszenarien nicht nur wegen ihrer Laufzeit streichen.
+
 | Bereich | Abdeckung |
 | --- | --- |
-| Terrain/Kristalle | Syntax, bytegleiche Skybox-/Boden-PNG-Einbettungen, Geometrie, feste Layout-/Ressourcenreferenzen, keine Straßenflächen/-markierungen |
+| Terrain/Kristalle | Syntax, bytegleiche Skybox-/Boden-PNG-Einbettungen, Ring-/Massivgeometrie, kleine Felslayouts, Massiv-Raster, freie/verbundene Ressourcen- und Basiszugänge, echte Umwege, keine Straßenflächen/-markierungen |
 | Harness/Core | Lokale Skripte, Reihenfolge/Pfadvertrag, Isolation, Mathematik und Seed-RNG |
 | Simulation | Gefechtsstart/-ziel, Startökonomie/passives Einkommen, Befehle, freie Worker-Zuweisung, Baufortsetzung/-ablösung ohne Mehrarbeitertempo, Reparatur/Verkauf, Produktion/Ausfahrt, Kampf, Wellen, Upgrades, vollständiger Neustart; sechsminütiger Worker-Gegenverkehr: Lieferungen je Worker/Minute, Schutz vor anhaltenden Richtungswechseln |
 | Persistence | Nur permanentes Profil: Aether-/Upgrade-/Fraktionsfreischaltungs-Normalisierung, Fehlerfälle, flüchtiger Storage-Ersatz; keine Run-/Backup-API |

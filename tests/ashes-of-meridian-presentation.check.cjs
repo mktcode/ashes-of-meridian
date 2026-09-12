@@ -1,4 +1,4 @@
-// References from 97bfda6; placement hashes updated only for explicit road-mesh removal.
+// Fixed terrain/navigation/effect references; intentional visual deltas: docs/reference-tests.md.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fixture = require('./fixtures/presentation-v1.json');
@@ -29,19 +29,23 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
   const { Battlefield, BattlefieldView } = vm.runInContext('({Battlefield, BattlefieldView})', context);
   const world = new Battlefield(1409, 'rust'), renderer = createRendererStub();
-  let meshes = 0, fogs = 0;
+  let meshes = 0, fogs = 0, fogPixels;
   renderer.geometry = () => meshes++;
-  renderer.fog = () => fogs++;
+  renderer.fog = data => { fogs++; fogPixels = Array.from(data); };
   const view = new BattlefieldView(renderer), before = JSON.stringify(world.renderData);
   view.sync(world, false); view.sync(world, false);
   assert.equal(renderer.decorSeed, 1409);
-  assert.equal(meshes, 1); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
-  world.reveal([]); view.sync(world); view.sync(world);
-  assert.equal(meshes, 1); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
+  assert.equal(meshes, 2 + world.renderData.massifs.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
+  world.reveal([], [{ x: 0, z: 0, r: 7 }]); view.sync(world); view.sync(world);
+  assert.equal(meshes, 2 + world.renderData.massifs.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
+  assert.deepEqual(fogPixels, Array.from(world.fogPixels)); assert.ok(fogPixels.includes(255));
   assert.equal(JSON.stringify(world.renderData), before);
-  view.sync(new Battlefield(43015, 'rust'));
+  const next = new Battlefield(43015, 'rust'); next.reveal([]);
+  view.sync(next); view.sync(next);
+  assert.equal(fogs, 2); assert.equal(renderer.fogOn, true);
+  assert.deepEqual(fogPixels, Array.from(next.fogPixels)); assert.ok(fogPixels.every(v => v === 0));
   assert.equal(renderer.decorSeed, 43015, 'new world updates cosmetic seed without sampling world RNG');
-  assert.equal(meshes, 2);
+  assert.equal(meshes, 4 + world.renderData.massifs.length + next.renderData.massifs.length);
 });
 
 test('produced aircraft rise smoothly from the hangar without changing draw state or RNG', () => {

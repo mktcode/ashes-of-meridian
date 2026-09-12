@@ -26,6 +26,8 @@ class BattlefieldView {
             [wx + CELL, -0.13, wz], layout.groundColors[i++], [0, 1, 0]);
         }
       R.geometry('terrain', data);
+      R.geometry('mountainRing', geom.mountainRing(world.seed));
+      layout.massifs.forEach((massif, i) => R.geometry(`massif${i}`, geom.massif(massif)));
       for (const p of layout.placements) {
         const args = [p.mesh, ...p.position, ...p.scale, p.color, ...p.rotation,
           p.glow, p.alpha, p.layer];
