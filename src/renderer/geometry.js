@@ -128,6 +128,99 @@
         }
         return o;
       },
+      // Prospector: one cached chassis with chamfered armor, capsule tracks and road wheels.
+      // Tints are relative to its ochre paint; lamps, tool and carried ore remain separate.
+      workerHull() {
+        const out = [], box = this.box(), wheel = this.cylinder(10), hub = this.cylinder(6),
+          paint = [1, 1, 1], dark = [.21, .33, .54], metal = [.54, .74, 1.08],
+          tread = [.26, .31, .39];
+        const part = (mesh, x, y, z, w, h, d, col, rx = 0, rz = 0) => {
+          const cx = Math.cos(rx), sx = Math.sin(rx), cz = Math.cos(rz), sz = Math.sin(rz);
+          for (let i = 0; i < mesh.length; i += 27) {
+            const points = [];
+            for (let j = i; j < i + 27; j += 9) {
+              const px = mesh[j] * w, py = mesh[j + 1] * h, pz = mesh[j + 2] * d,
+                yy = py * cx - pz * sx, zz = py * sx + pz * cx;
+              points.push([x + px * cz - yy * sz, y + px * sz + yy * cz, z + zz]);
+            }
+            this.tri(out, ...points, col);
+          }
+        };
+        const armor = (x, y, z, w, h, d, col) => {
+          const rings = [[.83, -.5], [1, -.30], [1, .27], [.79, .5]].map(([s, t]) =>
+            [[-.36,.5],[.36,.5],[.5,.36],[.5,-.36],[.36,-.5],[-.36,-.5],[-.5,-.36],[-.5,.36]]
+              .map(([a,b]) => [x + a*w*s, y + t*h, z + b*d*s]));
+          for (let i = 0; i < 8; i++) {
+            const k = (i + 1) % 8;
+            for (let j = 0; j < 3; j++) {
+              const shade = col.map(v => v * (j === 2 ? 1.12 : j === 0 ? .7 : 1));
+              this.tri(out, rings[j][i], rings[j][k], rings[j + 1][k], shade);
+              this.tri(out, rings[j][i], rings[j + 1][k], rings[j + 1][i], shade);
+            }
+            this.tri(out, [x,y+h/2,z], rings[3][i], rings[3][k], col);
+            this.tri(out, [x,y-h/2,z], rings[0][k], rings[0][i], dark);
+          }
+        };
+        armor(0, .55, 0, 1.25, .65, 1.5, paint);
+        armor(0, 1.04, -.12, .85, .4, .8, metal);
+        armor(0, .93, -.61, .7, .24, .34, dark);
+        // Equally spaced shoes follow the flat runs and rounded ends of each track.
+        const contour = [], run = 1.18, arc = Math.PI * .24, length = 2 * (run + arc);
+        for (let i = 0; i < 24; i++) {
+          const t = i * length / 24;
+          if (t < run) contour.push([.54, -.59 + t]);
+          else if (t < run + arc) {
+            const a = (t - run) / .24;
+            contour.push([.3 + .24 * Math.cos(a), .59 + .24 * Math.sin(a)]);
+          } else if (t < 2 * run + arc) contour.push([.06, .59 - (t - run - arc)]);
+          else {
+            const a = Math.PI + (t - 2 * run - arc) / .24;
+            contour.push([.3 + .24 * Math.cos(a), -.59 + .24 * Math.sin(a)]);
+          }
+        }
+        for (const side of [-1, 1]) {
+          const x = side * .72, left = x - .155, right = x + .155;
+          for (let i = 0; i < contour.length; i++) {
+            const [y,z] = contour[i], [yy,zz] = contour[(i + 1) % contour.length],
+              a = [left,y,z], b = [right,y,z], c = [right,yy,zz], d = [left,yy,zz];
+            this.tri(out, b, a, d, tread); this.tri(out, b, d, c, tread);
+            this.tri(out, [right,.3,0], b, c, dark);
+            this.tri(out, [left,.3,0], d, a, dark);
+            part(box, x, (y+yy)/2, (z+zz)/2, .33, .05, Math.hypot(yy-y,zz-z)*.72,
+              tread, Math.atan2(y-yy, zz-z));
+          }
+          for (const z of [-.52, 0, .52]) {
+            part(wheel, side * .856, .3, z, .185, .052, .185, metal, 0, Math.PI/2);
+            part(hub, side * .881, .3, z, .075, .016, .075, paint, 0, Math.PI/2);
+          }
+          part(box, side * .61, .72, -.08, .14, .12, 1.18, metal);
+          part(box, side * .43, .57, .685, .22, .17, .07, dark);
+        }
+        for (let i = -2; i <= 2; i++)
+          part(box, i * .10, 1.057, -.61, .045, .025, .22, metal);
+        return out;
+      },
+      // Fluted drill bit, along +Y like the existing cone; no per-frame mesh generation.
+      workerDrill() {
+        const out = [], rings = [], n = 12;
+        for (let j = 0; j < 5; j++) {
+          const y = -.5 + j * .19, radius = 1 - j * .18;
+          rings.push(Array.from({length:n}, (_,i) => {
+            const a = i / n * Math.PI * 2 + j * .18, r = radius * (i % 2 ? .69 : 1);
+            return [Math.sin(a)*r, y, Math.cos(a)*r];
+          }));
+        }
+        for (let i = 0; i < n; i++) {
+          const k = (i + 1) % n, shade = i % 2 ? [.72,.77,.8] : [1,1,1];
+          for (let j = 0; j < rings.length - 1; j++) {
+            this.tri(out, rings[j][i], rings[j][k], rings[j+1][k], shade);
+            this.tri(out, rings[j][i], rings[j+1][k], rings[j+1][i], shade);
+          }
+          this.tri(out, rings[4][i], rings[4][k], [0,.5,0], shade);
+          this.tri(out, [0,-.5,0], rings[0][k], rings[0][i], [.6,.65,.7]);
+        }
+        return out;
+      },
       // Free Marches command-center armor, baked at its existing world dimensions.
       // Vertex tints multiply the faction metal (also preserving preview/ghost tinting).
       commandHull() {

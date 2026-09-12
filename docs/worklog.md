@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Detaillierte Free-Marches-Worker
+
+- Prospector als kleines Kettenfahrzeug beibehalten: abgeschrägtes Gehäuse/Sensorkopf, Kühler, sechs Laufrollen, 48 einzelne Kettenglieder, Scheinwerfer, Signallichtfassung und geriffelter Bohrkopf. Zwei einmalig hochgeladene Meshes mit 1.452/120 Dreiecken; keine neuen Assets/Shader, RNG-Aufrufe oder Bewegungsanimationen. Spielgröße, Tempo, Sammel-/Bauregeln und bestehende Frachtanzeige unverändert.
+- **Neu: `npm test` einschließlich Build, 242/242 bestanden** (rund 60 s). Deterministische Meshgrenzen/Normalen, nicht degenerierte Flächen, Wiederverwendung ohne Frame-Erzeugung, Ausrichtung, Fracht-, Team-/Vorschaufarben und unveränderte Entitäten abgesichert. Bestehende Fixtures unverändert; 94 unbetroffene Modell-/Teamvarianten lieferten identische Zeichenaufrufe zum Vorgänger. Diff und lokale Dokumentationslinks geprüft.
+- **Chromium `file://`:** 1280×800 und 390×844, Nah-/Spielansicht, alle Qualitätsstufen sowie kontrollierte Front-/Fracht-/Gegner-/Vorschauvarianten gesichtet. Regulär rekrutierter Worker sammelte und lieferte in 45 s kontrollierter Simulation 90 Alloy. GL 0, keine Console-/Laufzeitfehler. Software-WebGL, kein Echtgeräte-, Massenworker-Leistungs- oder neuer Bauablaufnachweis.
+
 ## Free-Marches-HQ verfeinert
 
 - Vorlagennahe Detailüberarbeitung ohne neue Grundsilhouette: abgeschrägte Rumpf-/Dachplatten, kräftigere Seitenrippen und Eingangspfeiler, Trittstufe, Türfuge, Dachmarkierungen, Lüftungsgitter und zwei zusätzliche Antennen. Ein gemeinsames `commandHull`-Metallmesh mit 1.152 Dreiecken; Fundament, Radarrotation, Bau-/Teamdarstellung und sämtliche Spielregeln/Radien unverändert. Keine neuen Assets, Shader oder RNG-Aufrufe.

@@ -132,6 +132,78 @@ test('command hull is faction-specific and retains construction, team yaw, tint 
   assert.deepEqual(render({ ...entity, hp: 0 }), []);
 });
 
+test('prospector meshes are deterministic, bounded and non-degenerate with finite flat normals', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS]);
+  vm.runInContext('Math.random = seeded = () => { throw Error("Worker mesh RNG"); }', context);
+  const geom = vm.runInContext('geom', context);
+  for (const [name, min, max] of [['workerHull', 1200, 1800], ['workerDrill', 100, 160]]) {
+    const mesh = geom[name](), colors = new Set();
+    assert.deepEqual(mesh, geom[name]());
+    assert.ok(mesh.length / 27 >= min && mesh.length / 27 <= max);
+    let volume = 0;
+    for (let i = 0; i < mesh.length; i += 27) {
+      const a = mesh.slice(i, i+3), b = mesh.slice(i+9, i+12), c = mesh.slice(i+18, i+21),
+        u = b.map((v,k) => v-a[k]), v = c.map((v,k) => v-a[k]),
+        cross = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]],
+        area = Math.hypot(...cross);
+      assert.ok(area > 1e-9);
+      volume += a.reduce((sum,n,k) => sum+n*cross[k], 0) / 6;
+      for (let j = i; j < i+27; j += 9) {
+        const p = mesh.slice(j, j+9);
+        assert.ok(p.every(Number.isFinite));
+        assert.ok(cross.every((n,k) => Math.abs(n/area-p[k+3]) < 1e-9));
+        if (name === 'workerHull') {
+          assert.ok(Math.abs(p[0]) <= .90 && Math.abs(p[2]) <= .87);
+          assert.ok(p[1] >= .03 && p[1] <= 1.241, 'preserve compact crawler silhouette');
+        } else {
+          assert.ok(Math.hypot(p[0],p[2]) <= 1+1e-9 && Math.abs(p[1]) <= .5);
+        }
+        assert.ok(p.slice(6).every(tint => tint > 0 && tint <= 1.21));
+        colors.add(p.slice(6).join(','));
+      }
+    }
+    assert.ok(volume > 0, 'outward-oriented closed components');
+    assert.ok(colors.size >= 3, 'facets and recesses have distinct tints');
+  }
+});
+
+test('detailed prospectors preserve yaw, cargo indication, team tint and read-only rendering', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+  vm.runInContext('Math.random = seeded = geom.workerHull = geom.workerDrill = () => { throw Error("Per-frame mesh/RNG"); }', context);
+  const { renderEntity, UNITS, MAT } = vm.runInContext('({renderEntity, UNITS, MAT})', context);
+  const unit = Object.freeze({ id: 17, kind: 'unit', type: 'worker', faction: 0, team: 0,
+    x: 12, z: -7, hp: UNITS.worker.hp, size: UNITS.worker.size, rot: .7, walk: 2, carry: 0,
+    order: Object.freeze({ type: 'gather', id: 8 }) });
+  const render = (e = unit, time = 0, options = {}) => {
+    const renderer = createRendererStub({ record: true }), before = JSON.stringify(e);
+    renderEntity(renderer, Object.freeze(e), time, options);
+    assert.equal(JSON.stringify(e), before);
+    assert.ok(renderer.calls.every(c => c.slice(1,13).every(Number.isFinite)));
+    return renderer.calls;
+  };
+  const calls = render();
+  assert.equal(calls.filter(c => c[0] === 'workerHull').length, 1);
+  assert.equal(calls.filter(c => c[0] === 'workerDrill').length, 1);
+  assert.ok(calls.length <= 16 && calls.every(c => c[14] === MAT.METAL));
+  assert.deepEqual(calls, render({ ...unit, walk: 7 }, 20), 'no new time/walk-driven behavior');
+  const drill = calls.find(c => c[0] === 'workerDrill');
+  assert.ok(Math.abs(drill[1] - (unit.x + .67*Math.cos(.7) + Math.sin(.7))) < 1e-9);
+  assert.ok(Math.abs(drill[3] - (unit.z - .67*Math.sin(.7) + Math.cos(.7))) < 1e-9);
+  assert.equal(drill[8], .7); assert.equal(drill[9], -1.1);
+  const loaded = render({ ...unit, carry: 10 });
+  assert.deepEqual(loaded.slice(0,-1), calls);
+  assert.equal(loaded.at(-1)[0], 'octa'); assert.equal(loaded.at(-1)[2], 1.4);
+  assert.equal(loaded.at(-1)[7], 0xecc88a);
+  const preview = render(unit, 0, { tint: 0x99e4c6, alpha: .3, layer: 'effects' });
+  assert.equal(preview[0][7], 0x99e4c6);
+  assert.ok(preview.every(c => c[12] === .3 && c[13] === 'effects'));
+  assert.equal(render(unit, 0, { ghost: true })[0][7], 0x68717d);
+  assert.ok(render({ ...unit, team: 1 }).some(c => c[7] === 0xe98680));
+  for (const faction of [1,2])
+    assert.ok(render({ ...unit, faction }).every(c => !['workerHull','workerDrill'].includes(c[0])));
+  assert.deepEqual(render({ ...unit, hp: 0 }), []);
+});
+
 test('effects execute alone, consume RNG synchronously and preserve visibility short-circuiting', () => {
   const context = loadScripts(['effects']);
   const Effects = vm.runInContext('MeridianEffects', context);

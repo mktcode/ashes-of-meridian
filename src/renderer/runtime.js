@@ -52,7 +52,9 @@
           rockShelf: geom.rock(853, 'shelf'),
           alloyShard: geom.crystal(),
           aetherVent: geom.aetherVent(),
-          commandHull: geom.commandHull()
+          commandHull: geom.commandHull(),
+          workerHull: geom.workerHull(),
+          workerDrill: geom.workerDrill()
         }))
           this.geometry(n, d);
         this.fogTex = gl.createTexture();
