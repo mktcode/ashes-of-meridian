@@ -1122,6 +1122,38 @@ test('all factions share the minimal recruitment categories, including HQ units 
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
+test('only Free Marches recruitment/build buttons use local model portraits without changing actions or labels', () => {
+  const h = setup();
+  for (const [key, label, type, cost, file] of [
+    ['train:worker', 'Prospector', 'worker', 50, 'preview-prospector.png'],
+    ['build:hq', 'Command center', 'hq', 400, 'preview-command-center.png']
+  ]) {
+    const png = fs.readFileSync(path.join(__dirname, '..', file));
+    assert.equal(png.subarray(0,8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(png.readUInt32BE(16), 320); assert.equal(png.readUInt32BE(20), 320);
+    for (const faction of [0,1,2]) {
+      h.ui.game.s.faction = faction;
+      const before = JSON.stringify(h.ui.game.s);
+      const html = h.ui.actionButton(key, label, type, { cost: {cost}, disabled: true, badge: '2' });
+      assert.equal(JSON.stringify(h.ui.game.s), before);
+      assert.ok(html.includes(`data-action="${key}" disabled`));
+      assert.ok(html.includes(`<span>${label}</span><span class="cost">${cost}◆</span>`));
+      assert.ok(html.includes(`<small data-badge="${key}">2</small>`));
+      if (faction === 0) {
+        assert.ok(html.includes(`src="${file}" alt="" draggable="false"`));
+        assert.match(html, /class="model-space" aria-hidden="true"/);
+        assert.doesNotMatch(html, /<svg/);
+      } else {
+        assert.match(html, /<svg/); assert.doesNotMatch(html, /<img|model-action/);
+      }
+    }
+  }
+  h.ui.game.s.faction = 0; h.ui.mode = { kind: 'build', arg: 'hq' };
+  assert.match(h.ui.actionButton('build:hq', 'Command center', 'hq'), /class="[^"]*\bmodel-action\b[^"]*\bactive\b/);
+  for (const [key, type] of [['tab:build','hq'], ['train:rifle','rifle'], ['build:barracks','barracks']])
+    assert.doesNotMatch(h.ui.actionButton(key, type, type), /<img|model-action/);
+});
+
 test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
   const h = buildingPanel(), g = h.ui.game;
   Object.assign(g.s,{alloy:1000,gas:1000,energy:100,abilities:{},nextWave:95});

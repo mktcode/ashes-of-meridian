@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Modellbilder für zwei Aktionsbuttons
+
+- Nur Free-Marches-Prospector und Command center zeigen statt Linienicons nahe Ausschnitte ihrer Spielmodelle. Zwei lokale 320×320-PNGs direkt aus `renderEntity` erzeugt; kein zusätzlicher Laufzeit-WebGL-Aufwand. Namen, Kosten, Badges, Aktiv-/Sperrstatus und Buttonmaße erhalten. Andere Fraktionen, Aktionen und Queue-Icons unverändert; Modelländerungen erfordern manuell erneuerte Porträts.
+- **Neu: `npm test` einschließlich Build, 243/243 bestanden** (rund 60 s). Lokale Bilddateien, Fraktions-/Aktionsgrenzen, unveränderte Labels/Kosten und dekorative Bildsemantik abgesichert. Diff und lokale Dokumentationslinks geprüft; bestehende Fixtures unverändert.
+- **Chromium `file://`:** 1280×800, 390×844, 320×740 und 932×430. Alle Menübuttonmaße gegen die vorherige Icon-Ausgabe verglichen: exakt gleich. Bilder geladen, Nahansichten/Scrollen/aktive und gesperrte Buttons gesichtet; per CDP-Touch über das Modellbild Worker rekrutiert (50 Alloy, reguläre Queue) und HQ-Baumodus aktiviert. Andere Fraktionen ohne Porträts, GL 0, keine Console-/Laufzeitfehler. Kontrolliertes Setup, kein Echtgerät- oder vollständiger neuer Bauablaufnachweis. Bestehenden horizontalen Überlauf der Worker-Statusmeldung bei 320 px gegen die alte Ausgabe bestätigt und nicht beiläufig geändert.
+
 ## Eine zusätzliche Nahzoomstufe
 
 - Untere Kameragrenze für Plus-Button und Pinch von 32 auf 27,2 gesenkt: eine weitere Stufe mit Faktor 0,85, rund 18 % größere Darstellung. Herauszoomgrenze 115 und Schrittweiten unverändert; bestehende Grenzwert-Erwartungen und Bedienreferenz nachgeführt.
