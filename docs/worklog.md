@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Fraktionen nach erstem Sieg freischalten
+
+- Die Gefechtsauswahl zeigt zunächst nur **The Free Marches** aktiv; Verdant Choir und Veiled Court bleiben sichtbar, ausgegraut und deaktiviert. Ein Sieg mit Spielerfraktion 0 setzt einmalig `factionsUnlocked` im bestehenden permanenten Profil, speichert es und zeigt im Ergebnis die Freischaltung. Danach sind beide Karten dauerhaft aktiv; Gegner bleiben unabhängig frei wählbar. Click-Handler und `startBattle()` verwerfen eine manipulierte gesperrte Auswahl zugunsten von Fraktion 0. Kein Fortschrittsfeld im Run, keine Simulations-/RNG-/Balancingänderung.
+- **232 Node-Tests inklusive Build bestanden** (rund 19 s): Profil-Default/strikte Boolean-Normalisierung/Persistenz, gesperrte Karten, Sieg-vs.-Niederlage, einmaliges Speichern, manipulierte Startauswahl und aktivierte Karten geschützt. Keine Fixtures geändert. Diff und lokale Markdown-Links geprüft.
+- **`file://`, Chromium, 430×932:** gesperrte Karten und Text, erzwungene gesperrte Startwahl, Ergebnis-Hinweis, aktive Karten nach Sieg und nach Reload geprüft; Bilder gesichtet. Keine Console-/Laufzeitfehler. Headless-Software-WebGL, kein Echtgerät-/Hör-/Leistungstest.
+
 ## Welt-Viewport vom HUD getrennt
 
 - Welt, 2D-Overlay und Vignette in eigenem, abgeschnittenem Viewport zwischen Ressourcen- und Fähigkeitenleiste; keine Welt hinter dem Aktionsdeck. High-Unschärfe folgt damit den sichtbaren Welträndern. Kameramitte/Seitenverhältnis, Renderpuffer, Client-Projektion/Picking, Overlayoffsets, Minimap-Rahmen und Sicht-/Eingabegrenzen gemeinsam angepasst. Bisherige Objektgrößen pro Zoomstufe bleiben erhalten; kein zusätzliches Herauszoomen durch die kleinere Fläche. Menüvorschau bleibt bildschirmfüllend, Gefechtsdialoge behalten den Ausschnitt. Simulation/RNG/Texturen/Shader unverändert.

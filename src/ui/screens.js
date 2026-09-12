@@ -45,9 +45,9 @@
         $('worldViewport').classList.remove('in-battle');
         if (this.onViewportChange) this.onViewportChange();
         $('modal').classList.add('hidden');
-        this.battleFaction = this.battleFaction || 0;
+        if (!this.factionUnlocked(this.battleFaction)) this.battleFaction = 0;
         $('menu').innerHTML =
-          `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">THE FRONTIER IS NEVER QUIET</div><h1>Choose your war.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header><div style="max-width:910px;margin:0 auto"><div class="faction-options">${FACTIONS.map((f, i) => `<button class="faction-option ${this.battleFaction === i ? 'active' : ''}" data-faction="${i}"><span class="sigil" style="color:#${f.color.toString(16)}">${f.sigil}</span><strong>${f.name}</strong><small>${f.desc}</small></button>`).join('')}</div><p id="factionTrait" class="muted" style="min-height:42px;font-size:13px">${FACTIONS[this.battleFaction].trait}</p><div class="glass" style="padding:15px 25px"><div class="settings-row"><label>Hostile civilization</label><select id="battleEnemy"><option value="2">The Veiled Court</option><option value="1">The Verdant Choir</option><option value="0">The Free Marches</option></select></div><div class="settings-row"><label>Battlefield</label><select id="battleBiome">${Object.entries(
+          `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">THE FRONTIER IS NEVER QUIET</div><h1>Choose your war.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header><div style="max-width:910px;margin:0 auto"><div class="faction-options">${FACTIONS.map((f, i) => { const unlocked = this.factionUnlocked(i); return `<button class="faction-option${this.battleFaction === i ? ' active' : ''}${unlocked ? '' : ' locked'}" data-faction="${i}"${unlocked ? '' : ' disabled'}><span class="sigil" style="color:#${f.color.toString(16)}">${f.sigil}</span><strong>${f.name}</strong><small>${unlocked ? f.desc : 'LOCKED · Win once as The Free Marches.'}</small></button>`; }).join('')}</div><p id="factionTrait" class="muted" style="min-height:42px;font-size:13px">${FACTIONS[this.battleFaction].trait}</p><div class="glass" style="padding:15px 25px"><div class="settings-row"><label>Hostile civilization</label><select id="battleEnemy"><option value="2">The Veiled Court</option><option value="1">The Verdant Choir</option><option value="0">The Free Marches</option></select></div><div class="settings-row"><label>Battlefield</label><select id="battleBiome">${Object.entries(
             BIOMES
           )
             .map(([k, b]) => `<option value="${k}">${b.name}</option>`)
@@ -55,11 +55,16 @@
               ''
             )}</select></div><div class="settings-row"><label>Map seed<small>Use the same seed to replay a battlefield.</small></label><input id="battleSeed" type="number" value="${Math.floor(Math.random() * 900000) + 100000}" min="1" max="999999999" style="width:155px;background:#172333;border:1px solid #68809855;padding:11px;color:#c9dbde;font:12px var(--mono)"></div></div><div class="launch-row" style="justify-content:space-between"><span class="battle-note">HQ + ${this.profile.upgrades.startingWorkers || 0} WORKERS</span><button class="primary" data-ui="startBattle">START BATTLE ↗</button></div></div></div>`;
       },
+      factionUnlocked(faction) {
+        return faction === 0 || (faction > 0 && faction < FACTIONS.length && this.profile.factionsUnlocked === true);
+      },
       startBattle() {
         let enemy = +$('battleEnemy').value, biome = $('battleBiome').value,
-          seed = clamp(parseInt($('battleSeed').value) || Math.floor(Math.random() * 1e8), 1, 999999999);
+          seed = clamp(parseInt($('battleSeed').value) || Math.floor(Math.random() * 1e8), 1, 999999999),
+          faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : 0;
+        this.battleFaction = faction;
         this.audio.unlock();
-        this.game.start({ faction: this.battleFaction, seed, enemy, biome });
+        this.game.start({ faction, seed, enemy, biome });
       },
       openModal(kind, html, wide = false) {
         if (kind !== 'sell') this.sellBuildingId = null;
@@ -158,7 +163,7 @@
             ['Cancel targeting / placement', 'Cancel button beside the target prompt'],
             ['Run lifetime', 'No saves; closing, reloading or leaving ends the run'],
             ['Field manual', '? button']
-          ])}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Fleet upgrades apply to new battles. Upgrade resources are unlimited for testing; resource collection and unlocks will be added later.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
+          ])}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Fleet upgrades apply to new battles. Upgrade resources are unlimited for testing. Win one battle as The Free Marches to unlock the other two factions permanently in this browser.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
           true
         );
       },
@@ -196,7 +201,7 @@
         let s = this.game.s;
         this.openModal(
           'result',
-          `<div class="eyebrow">${result.win ? 'VICTORY' : 'DEFEAT'} / ${FACTIONS[s.faction].short}</div><h1>${result.win ? 'Enemy base destroyed.' : 'Command center lost.'}</h1><p>${esc(result.text)}</p><div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div><div class="btnstack"><button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button><button class="secondary" data-ui="armory">FLEET UPGRADES</button><button class="secondary" data-ui="home">MAIN MENU</button></div>`,
+          `<div class="eyebrow">${result.win ? 'VICTORY' : 'DEFEAT'} / ${FACTIONS[s.faction].short}</div><h1>${result.win ? 'Enemy base destroyed.' : 'Command center lost.'}</h1><p>${esc(result.text)}</p>${this.factionsJustUnlocked ? '<p class="unlock-notice">NEW FACTIONS UNLOCKED · Verdant Choir and Veiled Court are ready for deployment.</p>' : ''}<div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div><div class="btnstack"><button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button><button class="secondary" data-ui="armory">FLEET UPGRADES</button><button class="secondary" data-ui="home">MAIN MENU</button></div>`,
           true
         );
       }

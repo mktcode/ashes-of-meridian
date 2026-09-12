@@ -32,6 +32,7 @@ function createMeridianPersistence(
     function defaultProfile(): MeridianProfile {
       return {
         version: 1,
+        factionsUnlocked: false,
         upgrades: {},
         settings: {
           volume: 0.28,
@@ -47,6 +48,7 @@ function createMeridianPersistence(
       try {
         let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
         if (p && p.version === 1) {
+          d.factionsUnlocked = p.factionsUnlocked === true;
           for (let k in upgrades)
             d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
           for (let key of Object.keys(d.settings))

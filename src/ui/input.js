@@ -16,7 +16,9 @@
             return;
           }
           if (b.dataset.faction !== undefined) {
-            this.battleFaction = +b.dataset.faction;
+            let faction = +b.dataset.faction;
+            if (!this.factionUnlocked(faction)) return;
+            this.battleFaction = faction;
             document
               .querySelectorAll('[data-faction]')
               .forEach(a => a.classList.toggle('active', +a.dataset.faction === this.battleFaction));

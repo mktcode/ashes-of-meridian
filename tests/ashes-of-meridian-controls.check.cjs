@@ -77,7 +77,7 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { upgrades: {}, settings: { quality: 2 } }, {});
+    { unlock() {}, sound() {} }, { factionsUnlocked: false, upgrades: {}, settings: { quality: 2 } }, { saveProfile() {} });
   ui.view = 'game'; ui.paused = false;
   const key = (key, options = {}) => document.handlers.keydown?.({ key, preventDefault() {}, ...options });
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
@@ -725,8 +725,37 @@ test('campaign navigation, tutorial and ending APIs are removed; battle restart 
   assert.deepEqual(h.calls, [['start',{seed:4321,biome:'court',faction:1,enemy:0}]]);
 });
 
+test('battle factions stay locked until a Free Marches victory, then persist and allow both choices', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.showBattle();
+  let html = h.document.getElementById('menu').innerHTML;
+  assert.match(html, /faction-option active[^>]*data-faction="0"/);
+  assert.match(html, /faction-option locked" data-faction="1" disabled/);
+  assert.match(html, /faction-option locked" data-faction="2" disabled/);
+  assert.match(html, /Win once as The Free Marches/);
+  h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 0, 'locked card cannot change selection');
+  h.ui.battleFaction = 2;
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash'],['battleSeed','1409']])
+    h.document.getElementById(id).value = value;
+  h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
+  h.ui.startBattle();
+  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'ash',seed:1409}]], 'launch also rejects a forged locked choice');
+  let saves = 0; h.ui.persistence.saveProfile = () => { saves++; return true; };
+  h.ui.showResult = () => { h.ui.html = h.ui.factionsJustUnlocked ? 'NEW FACTIONS UNLOCKED' : ''; };
+  h.ui.game.s.faction = 1; h.ui.event('result', { win: true });
+  assert.equal(h.ui.profile.factionsUnlocked, false); assert.equal(saves, 0, 'only the first faction qualifies');
+  h.ui.game.s.faction = 0; h.ui.event('result', { win: false });
+  assert.equal(h.ui.profile.factionsUnlocked, false); assert.equal(saves, 0);
+  h.ui.event('result', { win: true });
+  assert.equal(h.ui.profile.factionsUnlocked, true); assert.equal(saves, 1);
+  assert.match(h.ui.html, /NEW FACTIONS UNLOCKED/);
+  h.ui.event('result', { win: true }); assert.equal(saves, 1, 'repeat wins do not rewrite the profile');
+  h.ui.showBattle(); html = h.document.getElementById('menu').innerHTML;
+  assert.doesNotMatch(html, /faction-option[^>]*locked/);
+  h.click({ faction: '2' }); assert.equal(h.ui.battleFaction, 2);
+});
+
 test('battle setup and launch have no difficulty control, options API or profile setting', () => {
-  const h = setup(); h.ui.showBattle();
+  const h = setup(); h.ui.profile.factionsUnlocked = true; h.ui.showBattle();
   assert.equal(h.ui.difficultyOptions, undefined);
   assert.doesNotMatch(h.document.getElementById('menu').innerHTML, /difficulty|standard|veteran/i);
   h.ui.battleFaction = 2;

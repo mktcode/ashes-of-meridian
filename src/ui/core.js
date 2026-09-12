@@ -74,6 +74,7 @@
       event(type, data) {
         if (type === 'start') {
           this.view = 'game';
+          this.factionsJustUnlocked = false;
           this.paused = false;
           this.modalKind = '';
           this.sellBuildingId = null;
@@ -110,6 +111,11 @@
                   : FACTIONS[this.game.s.faction].color
             });
         } else if (type === 'result') {
+          this.factionsJustUnlocked = !!(data.win && this.game.s?.faction === 0 && !this.profile.factionsUnlocked);
+          if (this.factionsJustUnlocked) {
+            this.profile.factionsUnlocked = true;
+            this.persist();
+          }
           this.audio.sound(data.win ? 'victory' : 'defeat');
           this.showResult(data);
         } else if (type === 'shot') {

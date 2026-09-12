@@ -81,7 +81,7 @@ test('UI fragments assemble the existing non-enumerable MeridianUI API in docume
     expectedFiles = names.map(name => `dist/src/ui/${name.replace('ui-', '')}.js`),
     scripts = readScripts(), context = loadScripts(names, { scripts });
   assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
-  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianUI.prototype).length', context), 46);
+  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianUI.prototype).length', context), 47);
   assert.equal(vm.runInContext('Object.keys(MeridianUI.prototype).length', context), 0);
   for (const method of ['event', 'showHome', 'renderActions', 'pointerUp', 'drawOverlay']) {
     assert.equal(vm.runInContext(`typeof MeridianUI.prototype.${method}`, context), 'function');
