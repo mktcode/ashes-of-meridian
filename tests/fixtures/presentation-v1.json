@@ -163,22 +163,6 @@
       ],
       "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
     },
-    "weapons": {
-      "before": "bada08ea163f99f8334ba0e09b5ebd6263a52d47520fadebbd82453cce673578",
-      "after": "780ac90f9a9de7b6bffe4d4df3ee2a019adfcf4df34a64f8ad85edd798e6bdb6",
-      "counts": {
-        "fx": 5,
-        "floats": 1
-      },
-      "nextRandom": [
-        0.5062105606775731,
-        0.44071500934660435,
-        0.2619709372520447,
-        0.7187461191788316,
-        0.2162842347752303
-      ],
-      "expired": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f"
-    },
     "workers": {
       "before": "484a41a014c0787a960a4e57cf32cf6c65bf33989b3f2b33b8f4a4edadc073ca",
       "after": "68a18d313fa6cf375b6a146404052cae41e5d7b65b6a10d8c149ff3e6d9b653f",

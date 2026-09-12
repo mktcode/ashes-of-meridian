@@ -29,7 +29,6 @@ function worldSample(seed, biome) {
     visible: Array.from(world.visible), explored: Array.from(world.explored), fog: Array.from(world.fogPixels) }) };
 }
 
-const effectCases = ['explosion', 'cap-bounce', 'damage', 'workers', 'heal-drop'];
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
   game.start({ seed: 1409, biome: 'rust', faction: 0 });
@@ -58,7 +57,7 @@ function effectSample(kind) {
     for (let i = 0; i < 40; i++) { game.worker(worker, .05); game.effects.tick(.05); }
   } else if (kind === 'heal-drop') {
     const target = player('rifle'); target.hp -= 40;
-    // Fixed emitter position for the historical effect reference, not a spawn-spacing test.
+    // Fixed emitter position isolates effect behavior from spawn-spacing tests.
     const medic = game.spawn('unit', 'medic', target.x, target.z, 0, 0); medic.cd = 0;
     game.medic(medic, .05);
     game.s.energy = 1000; game.ability('drop', { x: -45, z: 45 });
@@ -71,4 +70,4 @@ function effectSample(kind) {
   game.effects.tick(5);
   return { before, after, counts, nextRandom, expired: digest({ fx: game.effects.fx, floats: game.effects.floats }) };
 }
-module.exports = { worldSample, effectSample, effectCases, digest };
+module.exports = { worldSample, effectSample, digest };

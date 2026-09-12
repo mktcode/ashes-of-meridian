@@ -28,14 +28,14 @@ Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle n
 | Steuerung | Touch-Auswahl/Gesten, Move-/Attack-move-Umschaltung und Tempo-Button unter der Uhr samt Anzeige/Lebenszyklus/Profilfreiheit, HTML-Dreier-Deck-Reihenfolge, Worker-Kontexttaps auf eigene Bau-/Reparaturziele mit Auswahl-/Gestenschutz, Fraktionssperre/Freischaltung samt abgesichertem Start, Ergebnis-Aetherevakuierung/Tiergrenzen 100–1.000/Preise, Welt-Viewport-Lebenszyklus/-Eingabegrenzen und Minimap-Ausschnitt, Kategorien/Zurück, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz, Tab-Wechsel, Run-Abbruch, Ergebnisaktionen und Upgrade-Rückkehr ohne erneuten Ergebnis-Sound |
 | Renderer | Shader-Quellvertrag samt Boden-Atlasrechtecken/-Sampling, einmaligem Atlasupload, Weltseed-Übergabe und erhaltener Schattenberechnung und High-only-Tilt-Shift/Kernel/Schärfezone, CSS-Viewport/Client-Projektion/Rückprojektion und erhaltene Zoomgröße, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
 
-[Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests.
+[Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests. Der Harness prüft aktive Lade-/Isolationsverträge und relevante APIs, keine festen Methodenzahlen. Negativtests bleiben sinnvoll, wenn sie heutige Regeln schützen (z. B. keine Run-Speicherung, unzulässige Befehle); reine Nachweise entfernter Features gehören nicht dauerhaft in die Suite.
 
 ## Gezielter Browsercheck
 
 Zuerst `npm run build` ausführen. Dann mit einem eigenen Profil ohne wichtige Daten `index.html` über `file://` öffnen; keine abgeschwächten Sicherheitsflags. Je nach Änderung prüfen:
 
 - Start, lokale Ressourcen, Konsole/WebGL; betroffene Grafikqualität und Fenstergrößen. Bei Postshaderänderungen möglichst identische Szene/Zeit für A/B-Pixelvergleich verwenden; High-Schärfezone, beide sichtbaren Weltränder, ausgeschlossene Qualitätsstufen und DPR prüfen. Nach Viewportänderungen zusätzlich Canvas-/HUD-Abgrenzung, Overlayoffsets, Minimap-Ausschnitt, Touch-Ziele und Menü-/Pause-/Resize-Lebenszyklus prüfen. Beim Dreier-Deck: bündige Unterkanten, erreichbare Werkzeuge/Fähigkeiten, aufwärts wachsende Untermenüs samt Scrollen/Zurück, Tempo unter der Uhr und schmale/querformatige Rückfalllayouts.
-- Touch-Auswahl/Bodenauftrag, Pan/Pinch/Minimap; erreichbare Aktionen, Zielbestätigung/Cancel und Pause.
+- Touch-Auswahl/Bodenauftrag, Pan/Pinch/Minimap; erreichbare Aktionen, Zielbestätigung/Cancel und Pause. Bei Menüänderungen zusätzlich scrollbare Dialoge samt Abschlussknöpfen, schmale Formulare, gesperrte/aktive Fraktionen und bezahlbare/gesperrte Upgrades prüfen.
 - Betroffene Bau-/Rekrutierungs-/Reparatur-/Verkaufsabläufe und Erstattungen. Bei Run-Lebenszyklusänderungen: Pause/Fortsetzen, Hauptmenü-Abbruch, Reload ohne Run, weiterhin gespeicherte Aether-Reserven/Upgrades/Einstellungen/Fraktionsfreischaltungen und Ergebnis → Upgrades → Ergebnis/Neustart sowie Hauptmenü.
 - Bei Grafikänderungen Ergebnis ansehen, nicht nur `gl.getError()` abfragen. Audio tatsächlich anhören, wenn hörbares Verhalten geprüft werden soll.
 

@@ -1,13 +1,21 @@
 # Feste Testreferenzen
 
-Terrain-, Modell-, Zeichen-, Effekt- und RNG-Erwartungen schützen vor unbeabsichtigten Änderungen, nicht vor bewusst geänderten Spielregeln. Sollwerte nicht zur Reparatur fehlgeschlagener Tests neu erzeugen.
+Terrain-, Zeichen-, Effekt- und RNG-Erwartungen schützen vor unbeabsichtigten Änderungen. Sollwerte nicht zum Beheben fehlgeschlagener Tests neu erzeugen; beabsichtigte Änderungen isolieren und begründen.
 
-- 16 feste Seed-/Biom-Paare prüfen Terrain, Platzierungen, Navigation und Sichtbarkeit; sie sind unabhängige Testdaten, keine Spielmissionen. `tests/fixtures/presentation-v1.json` stammt aus der Charakterisierung vor der Welt-/Effektentkopplung (`97bfda6`). Nur die Platzierungshashes wurden für die beabsichtigte Entfernung der 45 Straßenflächen/-markierungen angepasst: Vorher/Nachher-Vergleich aller 16 Welten bestätigt unveränderte übrige Platzierungen, Bodenfarben und Navigation. Terrain-/Layout-, Effekt- und RNG-Referenzen bleiben unverändert.
-- `tests/helpers/populated-battle.cjs` stellt ausdrücklich eine ausgebaute Basis für Produktions-/Reparatur-/Crowd- und historische Effekttests bereit, unabhängig vom regulären HQ-/Startworker-Spielstart und ohne den Test-RNG weiterzuschalten. Das ist kein ausgelieferter Startmodus. Eigene Starttests prüfen Stufen 0–5 des Startworker-Upgrades für alle Fraktionen/Biome, freie Körperplätze und unveränderte Ressourcen-/Gegneraufstellung samt RNG-Verbrauch. Zusätzlich: 250/0 Ressourcen ohne passives Einkommen, fünf weitere fraktionsunabhängig gleich teure Worker, erste Produktion, automatischer Abbau, erster Neubau und Upgrade-Übernahme erst beim Neustart.
-- Fünf Effektfälle in `tests/helpers/presentation-scenario.cjs` setzen ihren RNG-Einstieg ausdrücklich auf `seeded(1486)` nach 104 Samples. Ihre Hashes und Folgesamples bleiben so unabhängig vom aktuellen Startaufgebot vergleichbar. Der Heil-Emitter wird ausdrücklich an der historischen Position erzeugt, unabhängig von der separat getesteten Spawn-Kollisionsprüfung.
-- Der historische kombinierte Waffen-/Avatar-Fixture-Eintrag wird nicht mehr geprüft und nicht durch neue Sollwerte ersetzt. Reguläre Waffen und Fraktionsschaden werden separat in der Simulation geprüft. Alte Gesamtspielstand-Hashes sind kein aktueller Vertrag.
-- `tests/fixtures/effects-view-v1.json` charakterisiert reine Zeichenaufrufe aus `b9f0026`, keine GPU-Pixel. Mathematik-/RNG-Tests enthalten feste und unabhängig nachvollziehbare Erwartungen einschließlich vorhandener Sonderfälle.
-- Neustarttests verwerfen einen gespielten/verlorenen Run und prüfen frischen Zustand, Indizes und Sichtbarkeit. Produktions-/Reparatur-/sechsminütige Verkehrstests laufen ohne Restore-Unterbrechung. Ehemalige Save-Validierungs-/Roundtriptests sind mit dem Feature entfernt; UI-/Profiltests schützen Pause, die drei Ergebnisaktionen samt Upgrade-Rückkehr und die fehlenden Speicherpfade.
-- Nach `npm run build` lädt `tests/helpers/game-scripts.cjs` die benannten klassischen Skripte aus `dist/src/` gemäß `index.html` in Dokumentreihenfolge in eine gemeinsame VM. Nur explizit ausgewählte Namen werden ausgeführt; externe URLs, Pfade außerhalb des Projekts, Module und asynchrone Tags sind nicht Teil des Loader-Vertrags.
+## Aktive Fixtures
+
+- `tests/fixtures/presentation-v1.json`: 16 Seed-/Biom-Paare für Terrain, Platzierungen, Navigation und Sichtbarkeit sowie fünf Effektfälle für Payload, Lebensdauer und RNG-Folgesamples. Die Seeds sind Testdaten, keine Missionen. Herkunft: `97bfda6`; ausschließlich Platzierungshashes wurden mit `05daefc` für die gezielt entfernten 45 Straßenflächen/-markierungen angepasst. Das ist weiterhin relevante Referenzprovenienz, kein Regenerierungsauftrag.
+- `tests/fixtures/effects-view-v1.json`: reine Zeichenaufrufe aus `b9f0026`, keine GPU-Pixel. Frozen-Data- und RNG-Verbote prüfen, dass Zeichnen die Simulation nicht verändert.
+- Terrain-, Kristall-, Mathematik- und RNG-Tests enthalten weitere feste, unabhängig nachvollziehbare Erwartungen im Testcode.
+
+## Szenariohelfer
+
+- `tests/helpers/populated-battle.cjs` erzeugt eine ausgebaute Basis für Produktion, Reparatur, Verkehr und Effekte, ohne den Test-RNG weiterzuschalten. Kein ausgelieferter Startmodus; eigene Starttests decken HQ/Worker-Stufen 0–5, Ressourcen, Fraktionen und Biome ab.
+- `tests/helpers/presentation-scenario.cjs` setzt den Effekt-RNG auf `seeded(1486)` nach 104 Samples. Feste Emitterpositionen machen Effekte unabhängig vom Startaufgebot und von separat getesteter Spawn-Kollisionsvermeidung. Diesen Einstieg nicht als vermeintliches Legacy-Verhalten entfernen.
+- `tests/helpers/game-scripts.cjs` lädt nach dem Build die benannten klassischen Skripte aus `dist/src/` gemäß `index.html` in Dokumentreihenfolge in eine isolierte VM. Ausführung nur explizit gewählter Namen. Pfadprüfung, Fehlerdiagnosen und Renderer-Testdouble bleiben aktive Testinfrastruktur.
+
+## Grenzen
+
+Keine Fixture beweist Browser-/WebGL-Darstellung, echte Touchbedienung oder allgemeine Crowd-Stabilität. Durchgehende Simulationsszenarien ergänzen die Referenzen um Worker-Verkehr, Produktion, Kampf und Neustart; UI-/Profiltests decken den Core Loop und die einmalige Aether-Evakuierung ab. Historische Gesamtspielstand- oder entfernte Boss-Waffenreferenzen sind kein Vertrag.
 
 [Testbefehl und Prüfverfahren](testing.md).

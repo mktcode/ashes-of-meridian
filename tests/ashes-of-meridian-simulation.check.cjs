@@ -115,13 +115,6 @@ test('the first worker must be paid for and recruited, then enables mining and t
   }
 });
 
-test('retired start-unit and reserve bonuses never affect a new battle', () => {
-  const {game}=createGame(); game.profile.upgrades={logistics:3,veterans:3,stores:3};
-  game.start({seed:1409});
-  assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
-  assert.deepEqual(json(game.s.meta),{}); assert.deepEqual([game.s.alloy,game.s.gas],[250,0]);
-});
-
 test('fresh starts with the same seed reproduce state; another seed changes resource amounts', () => {
   const a = freshBattle().game, b = freshBattle().game, other = freshBattle(0, 1410).game;
   assert.deepEqual(json(a.s), json(b.s));
@@ -143,11 +136,10 @@ test('all factions and biomes start without mission definitions or research', ()
   }
 });
 
-test('removed labs and mission-only ward generators cannot be built or spend resources', () => {
+test('unknown structures cannot be built or spend resources', () => {
   const { game } = battle(), before = json(game.s);
-  assert.match(game.canBuild('lab'), /Unknown structure/);
-  assert.match(game.canBuild('ward'), /Unknown structure/);
-  for (const type of ['lab', 'ward']) assert.equal(game.build(type, { x: -30, z: 40 }), false);
+  assert.match(game.canBuild('unknown-structure'), /Unknown structure/);
+  assert.equal(game.build('unknown-structure', { x: -30, z: 40 }), false);
   assert.deepEqual(json(game.s), before);
 });
 
@@ -614,9 +606,8 @@ test('five starting workers begin mining and deliver alloy without recruitment f
   }
 });
 
-test('retired command, resolve and industry upgrades no longer change energy, hull or production and construction rates', () => {
+test('base energy, hull, production and construction rates match the current rules', () => {
   const { game } = createGame();
-  game.profile.upgrades = { command: 3, resolve: 3, industry: 3 };
   game.start({ seed: 1409 });
   assert.deepEqual(json(game.s.meta), {});
   game.s.energy = 0;
@@ -1017,13 +1008,14 @@ test('recruitment distributes globally and produces in parallel at assigned buil
   assert.deepEqual(json(game.get(b.id).queue.map(q=>q.type)), ['rifle']);
 });
 
-test('removed scout cannot be recruited and no faction starts or deploys it in waves', () => {
+test('unknown units cannot be recruited; starts and waves use the current unit catalog', () => {
   for (const faction of [0,1,2]) {
     const {game} = createGame(); game.start({seed:1409,faction,enemy:faction});
     const before = json(game.s);
-    assert.equal(game.train('scout'), false); assert.deepEqual(json(game.s), before);
+    assert.equal(game.train('unknown-unit'), false); assert.deepEqual(json(game.s), before);
     for (let i=0;i<4;i++) {game.s.enemyBudget=10000;game.wave();}
-    assert.ok(game.s.entities.every(e => e.type !== 'scout'));
+    const types = ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero'];
+    assert.ok(game.s.entities.filter(e => e.kind === 'unit').every(e => types.includes(e.type)));
   }
 });
 

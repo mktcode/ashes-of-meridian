@@ -1,25 +1,32 @@
-# Arbeitsregeln für KI-Assistenten
+# Einstieg für KI-Agenten
 
-## Orientierung
+## In wenigen Minuten orientieren
 
-- Einstieg und Startanleitung: [README.md](README.md).
-- Vor strukturellen Änderungen [docs/architecture.md](docs/architecture.md) lesen; Ist-Zustand und noch nicht implementiertes Zielbild unterscheiden.
-- `index.html`, die Stylesheets unter `styles/` und die JavaScript-/TypeScript-Dateien unter `src/` sind handgepflegte Quellen. `npm run build` erzeugt die nicht eingecheckten Laufzeitskripte unter `dist/src/`; generierte Dateien nie direkt bearbeiten. Bilddateien liegen neben dem HTML; Texturen sind teilweise zusätzlich eingebettet.
+1. [README.md](README.md): Projektstand, Start, Core Loop und Dokumentationskarte.
+2. Je nach Aufgabe: [Gameplay](docs/gameplay.md) für Regeln/Bedienung, [Architektur](docs/architecture.md) für Code/Schnittstellen, [Grafik](docs/rendering.md) für Rendering/Assets, [Tests](docs/testing.md) für Prüfverfahren. Vor strukturellen Änderungen immer Architektur lesen.
+3. `git status --short` prüfen, dann betroffene Quellen und Tests lesen. [Worklog](docs/worklog.md) enthält nur den kompakten Übergabestand und letzte Nachweise, keine zusätzliche Spezifikation.
+
+**Stand:** Der Core Loop aus Gefecht → Aether-Evakuierung → permanenten Upgrades → neuem Gefecht ist implementiert. Nächster Schwerpunkt ist Validierung auf echten Geräten und über vollständige Runs, nicht Featureausbau. [Nächste Schritte](docs/gameplay.md#nächste-schritte-und-grenzen) sind Prüfprioritäten, keine pauschale Implementierungsfreigabe. Breites Refactoring und weitere TypeScript-Migration bleiben bis zu einem neuen Auftrag pausiert.
+
+## Quellen und Befehle
+
+- `index.html`, `styles/` und `src/` sind handgepflegte Quellen. Simulation in `src/simulation/`, UI in `src/ui/`, WebGL in `src/renderer/`; vollständige Codekarte in der Architektur.
+- Einmalig `npm install`; `npm run build` erzeugt klassische Skripte unter `dist/src/`. Generierte Dateien nie direkt bearbeiten oder einchecken.
+- `npm test` baut neu und führt die Node-Regression aus. Testdateien unter `tests/`, gemeinsame VM-/Szenariohelfer unter `tests/helpers/`, feste Referenzen unter `tests/fixtures/`.
+- Auslieferungsziel: gebaute `index.html` direkt über `file://` öffnen. Kein erforderlicher Server, CDN, Laufzeit-Import oder Paketinstallation im Browser; keine abschwächenden Sicherheitsflags.
 
 ## Leitplanken
 
-- Direktes Öffnen von `index.html` über `file://` nach dem Build als Ziel erhalten. Keine erforderlichen Server, CDN-Abhängigkeiten, Laufzeit-Imports oder Paketinstallationen im Browser einführen. Browsergrenzen nicht durch abschwächende Sicherheitsflags umgehen.
-- Zusammenhängende, geprüfte Änderungen eigenständig committen. Fremde oder bereits vorhandene unzusammenhängende Änderungen nicht in den eigenen Commit aufnehmen.
-- Formatierung, strukturelles Refactoring und absichtliche Verhaltensänderungen getrennt halten. Keine beiläufigen Änderungen an Balancing, Darstellung oder Spielregeln; bekannte Probleme nicht stillschweigend im Refactoring korrigieren.
-- Seedbasierte Hindernisverteilung, Kollisionsradien und RNG-Aufrufreihenfolge schützen. Auch kosmetische Effekte verwenden teilweise den Simulations-RNG. Layout-Prüfsummen nicht nur zur Reparatur fehlgeschlagener Tests neu erzeugen.
-- Entwicklungsprototyp: Keine Rückwärtskompatibilität, Spielstandmigrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag. Alte Spielstände dürfen durch Änderungen unbrauchbar werden.
-- Schnell und zielgerichtet liefern: kleinste sinnvolle Änderung, passende Tests, kurze Dokumentation. Keine vorsorglichen Zusatzsysteme.
-- Keine Assets löschen, austauschen oder neu kodieren, nur weil sie redundant erscheinen. Externe PNGs und eingebettete Texturen werden derzeit nicht automatisch synchronisiert.
+- Kleinste sinnvolle Änderung; Formatierung, strukturelles Refactoring und Verhaltensänderungen getrennt halten. Keine beiläufigen Änderungen an Balancing, Darstellung oder Regeln; bekannte Probleme nicht stillschweigend korrigieren.
+- Seedbasierte Hindernisverteilung, Kollisionsradien und RNG-Aufrufreihenfolge schützen. Auch kosmetische Effekte nutzen teilweise den Simulations-RNG. [Referenzwerte](docs/reference-tests.md) nicht zur Reparatur fehlgeschlagener Tests neu erzeugen.
+- Entwicklungsprototyp: keine Rückwärtskompatibilität, Migrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag. Nur das permanente Profil wird gespeichert, keine Runs.
+- Keine Assets löschen, austauschen oder neu kodieren, nur weil sie redundant erscheinen. Separate Bilder und Einbettungen sind nicht automatisch synchronisiert; Pflegeverfahren in der Grafikreferenz.
+- Zusammenhängende, geprüfte Änderungen eigenständig committen. Fremde oder unzusammenhängende vorhandene Änderungen nicht aufnehmen.
 
 ## Prüfen und dokumentieren
 
-- Prüfaufwand nach Risiko wählen: Nach JavaScript-/TypeScript-Spielcode- oder Teständerungen grundsätzlich `npm test` gemäß [docs/testing.md](docs/testing.md) ausführen. Ausnahme: Für mechanische, verhaltensneutrale Kleinständerungen (z. B. lokale Konstantenextraktion bei unverändertem Wert) genügen Build beziehungsweise Syntaxprüfung der betroffenen Dateien und Diff-Sichtung. Bei Änderungen an Spiellogik, RNG, Schnittstellen oder Tests sowie im Zweifel bleibt der vollständige Lauf Pflicht. Für reine Dokumentation oder minimale, risikoarme Text-/Rahmen-/Abstandsänderungen genügen Diff-Sichtung und passende statische Prüfungen; keine zusätzlichen Browsertests auf Vorrat.
-- Bei Änderungen an Eingabe, Layoutstruktur, Rendering oder Auslieferung gezielt `file://` prüfen. Node-Tests sind kein Browser-/WebGL-Nachweis; Headless-Touch ist kein Echtgerätetest.
-- `docs/` als kurze, aktuelle Referenz pflegen. Geänderte Zuständigkeiten, Bedienung, Befehle und offene Entscheidungen direkt nachführen, statt Nachträge anzuhängen. Keine eigene Berichtdatei für jede Änderung.
-- Das einzige fortlaufende Arbeitsprotokoll ist [docs/worklog.md](docs/worklog.md): kurze zusammenhängende Einträge mit Änderung, Prüfung/Ergebnis und relevanten offenen Grenzen. Tatsächlich ausgeführte Prüfungen von älteren Nachweisen unterscheiden; keine ausführlichen Tool-/Screenshot-Protokolle in Referenzdokumenten.
-- Bei Dokumentationspflege regelmäßig veraltete Angaben, Wiederholungen und tote Links entfernen; ältere Protokolleinträge verdichten. Details bleiben in Git auffindbar. Diese Datei enthält nur Regeln, keine Arbeitshistorie.
+- Spielcode-/Teständerungen: grundsätzlich `npm test`. Nur mechanische, verhaltensneutrale JS-/TS-Kleinständerungen ohne Logik-/RNG-/Schnittstelleneingriff dürfen mit Build und Diff-Sichtung geprüft werden; im Zweifel vollständiger Lauf.
+- Eingabe, Layoutstruktur, Rendering oder Auslieferung: zusätzlich gezielter `file://`-Browsercheck. Node ist kein WebGL-Nachweis, Headless-Touch kein Echtgerätetest.
+- Reine Dokumentation oder minimale risikoarme Text-/Rahmen-/Abstandsänderungen: Diff und passende statische Prüfungen, keine Browsertests auf Vorrat. Details in [docs/testing.md](docs/testing.md).
+- Referenzen direkt auf den Ist-Zustand bringen, nicht historische Nachträge anhängen. Nur [docs/worklog.md](docs/worklog.md) führt kurze Änderungseinträge mit tatsächlich ausgeführten Prüfungen und offenen Grenzen; ältere Einträge verdichten, Details bleiben in Git.
+- Bei Dokumentationspflege Wiederholungen, veraltete Angaben und tote Links entfernen. AGENTS.md bleibt Wegweiser und Regelwerk, nicht Arbeitshistorie.

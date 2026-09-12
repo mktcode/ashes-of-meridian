@@ -103,8 +103,6 @@ test('effect drawing accepts frozen data without game/UI globals and matches the
 });
 
 for (const [kind, expected] of Object.entries(fixture.effects)) {
-  // The combined five-weapon reference included the removed boss weapon.
-  if (kind === 'weapons') continue;
   test(`effect payload, lifetime and RNG reference: ${kind}`, () => {
     assert.deepEqual(effectSample(kind), expected);
   });

@@ -1,46 +1,33 @@
 # Ashes of Meridian
 
-Statischer Echtzeitstrategie-Prototyp auf dem Weg zum Mobile-Roguelite: drei Fraktionen, wiederholbare Gefechte gegen ein gegnerisches HQ. TypeScript erzeugt lokale klassische Laufzeitskripte; ein Server ist nicht erforderlich.
+Lokaler, touchorientierter Echtzeitstrategie-Prototyp mit drei Fraktionen und WebGL 2. Der **Core Gameplay Loop ist implementiert**: Basis aufbauen → gegnerisches HQ zerstören oder verlieren → ungenutzten Aether evakuieren → permanente Upgrades kaufen → erneut antreten. Bedienbarkeit auf echten Geräten und Langzeitbalancing sind noch zu validieren.
 
-## Spielen
-
-Neue Gefechte starten mit dem Hauptgebäude und je nach permanentem Upgrade **0–5 Workern**. **250 Alloy und 0 Aether** bleiben auf jeder Stufe erhalten; das reicht für fünf weitere Worker zu je 50 Alloy. Ohne Startworker den ersten über **Infanterie** rekrutieren. Worker bauen automatisch Alloy ab, Raffinerien liefern Aether.
-
-Einmalig die Entwicklungsabhängigkeiten installieren und die Laufzeitskripte erzeugen:
+## Starten
 
 ```bash
 npm install
 npm run build
 ```
 
-Danach `index.html` direkt in einem Browser mit WebGL 2 öffnen. Die handgepflegten Quellen liegen unter `src/`, die generierten klassischen Skripte unter `dist/src/`. Stylesheets und separate Bildquellen müssen ebenfalls mitgeführt werden. Die Laufzeittexturen sind derzeit in `src/renderer/assets.js` eingebettet. Das Spiel ist kein Ein-Datei-Paket; `dist/` wird nicht eingecheckt.
+Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe und Bildquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet.
 
-- Kamera: mit einem Finger ziehen, Pinch-to-Zoom, Zoom-/Basisknöpfe oder Minimap. Die Welt liegt zwischen Ressourcenleiste und Fähigkeitenleiste, nicht hinter dem unteren Menü. Die Kamera zentriert diesen freien Bereich; Objektgrößen pro Zoomstufe bleiben erhalten.
-- Tempo: Antippbare Anzeige unter der Uhr zeigt die aktuelle Geschwindigkeit. Antippen wechselt **1× → 1,5× → 2× → 0,75× → 1×**. Gilt nur für das aktuelle Gefecht; Pause behält das Tempo, neues Gefecht/Neustart beginnt mit 1×. Nicht mehr in den Settings.
-- Auswahl: einmal tippen; zweimal für sichtbare eigene Einheiten desselben Typs; dreimal für sichtbare eigene Nicht-Worker. Jeweils weniger als 330 ms zwischen den Releases.
-- Boden-Tap: normale Bewegung, auch zum Rückzug. Das **Schwerter-Symbol links neben ⌂** schaltet Attack-move ein/aus: gold = unterwegs Gegner bekämpfen. Startet pro Gefecht ausgeschaltet; Worker bewegen sich immer normal. Ausgewählte Gebäude werden abgewählt. Rallypoints nur über **Rally point** im Aktionsmenü setzen. **Cancel** bricht Bau-/Fähigkeits-/Rally-Zielauswahl ab.
-- Kompaktes Dreier-Deck: Minimap links, Kamera-/Attack-move-Werkzeuge und vier Fähigkeiten mittig, **Gebäude / Infanterie / Fahrzeuge / Flugzeuge** rechts als 2×2-Raster. Untermenüs mit **Zurück** öffnen sich nach oben und sind scrollbar. Arbeiter und Kommandant stehen unter Infanterie.
-- Worker ausgewählt → eigenes Fundament antippen: weiterbauen; beschädigtes eigenes Gebäude/Einheit antippen: reparieren. Genau ein ausgewählter Worker übernimmt, bestehende Bauarbeiter werden dabei abgelöst. Ohne Worker-Auswahl werden diese Ziele normal ausgewählt.
-- Automatische Bau-/Repair-Zuweisung nutzt nur Worker ohne Bau-/Reparaturauftrag (Abbau zählt als frei). Ist keiner frei, wird nichts platziert oder bezahlt.
-- Fertige eigene Gebäude: **Sell**, **Repair / Stop repair** und **Rally point** im rechten Menü. Verkauf erfolgt nach Bestätigung. Fähigkeiten bleiben in der Leiste darüber verfügbar.
-- Queue-Symbole links über der Minimap zählen offene Aufträge je Einheitentyp. Der kreisförmige Fortschritt zeigt die nächste Fertigstellung; Tap storniert einen Auftrag.
-- Fraktionen: Zu Beginn ist nur **The Free Marches** spielbar. Ein Sieg mit ihnen schaltet **Verdant Choir** und **Veiled Court** gemeinsam und dauerhaft für dieses Browserprofil frei. Gegner dürfen weiterhin frei gewählt werden.
-- **Aether-Reserve und Fleet Upgrades**: Verbleibender Aether wird nach jedem Ergebnis in die permanente Reserve evakuiert. Die Grenze startet bei **100 pro Gefecht** und wächst mit **Aether evacuation** über fünf Stufen auf 1.000; diese kosten 500 / 800 / 1.200 / 1.800 / 2.600 Aether. **Starting workers** kostet 300 / 450 / 650 / 900 / 1.200 Aether pro Stufe und gibt je einen Startworker, maximal fünf. Upgrades wirken erst im nächsten Gefecht oder Neustart.
+## Spielen
 
-Weitere Regeln und offene Punkte: [Spiel und Bedienung](docs/gameplay.md).
+- Start: HQ, **0–5 Worker** je nach Upgrade, **250 Alloy / 0 Aether**. Ohne Startworker den ersten unter **Infanterie** für 50 Alloy rekrutieren. Worker liefern Alloy; Raffinerien an Vents erzeugen Aether.
+- Kamera mit Fingerziehen, Pinch, Zoom-/Basisknöpfen oder Minimap bewegen. Tap wählt; Doppel-/Dreifachtap gruppiert eigene Einheiten. Boden-Tap erteilt Bewegung, der **Schwerter-Schalter neben ⌂** aktiviert Attack-move. **Cancel** beendet Zielauswahl.
+- Unten: Minimap links, Werkzeuge/Fähigkeiten mittig, Bau-/Rekrutierungsmenüs rechts. Gebäudeauswahl bietet Reparatur, Verkauf und Rallypoint; Queue-Symbole über der Minimap erlauben Stornierung. Tempo direkt unter der Uhr antippen.
+- Gegnerisches HQ zerstören gewinnt; Verlust des letzten eigenen HQs verliert. Ein Free-Marches-Sieg schaltet die beiden anderen Fraktionen dauerhaft frei.
+- Nach jedem Ergebnis wird ungenutzter Aether bis zum Evakuierungslimit in die Reserve übertragen. **Fleet Upgrades** erhöht Startworkerzahl und Evakuierungslimit; Käufe gelten ab dem nächsten Gefecht/Neustart.
+- **Keine Run-Speicherung:** Pause gilt nur in der geöffneten Seite. Tab-Wechsel pausiert automatisch; Hauptmenü, Reload oder Schließen verwerfen den Run. Nur Reserve, Upgrades, Freischaltungen und Einstellungen bleiben im Browserprofil. Bei eingeschränktem Browserspeicher ist auch dieses Profil nur flüchtig.
 
-Optional für lokale Entwicklung nach dem Build: `python3 -m http.server 8080 --bind 127.0.0.1`, dann [localhost:8080](http://127.0.0.1:8080/) öffnen. Direktes `file://` bleibt das Auslieferungsziel.
+## Orientierung und Entwicklung
 
-## Runs und Pausen
+- **KI-Agenten:** mit [AGENTS.md](AGENTS.md) beginnen.
+- [Spiel und Bedienung](docs/gameplay.md): genaue Regeln und priorisierte nächste Prüfungen.
+- [Architektur](docs/architecture.md): Codekarte, Zustände und Speicherung.
+- [Grafik und Assets](docs/rendering.md): Texturen, Qualitätsstufen, Viewport und Menüs.
+- [Prüfungen](docs/testing.md): `npm test`, Abdeckung, Browserchecks und Grenzen.
+- [Feste Testreferenzen](docs/reference-tests.md): Zweck und Pflege der Fixtures.
+- [Arbeitsprotokoll](docs/worklog.md): kompakter Übergabestand und letzte Nachweise; ältere Entwicklung in Git.
 
-Runs werden nicht gespeichert. **Ⅱ** pausiert das laufende Gefecht; beim Wechsel in einen anderen Tab wird ebenfalls pausiert. Fortsetzen geht nur, solange diese Seite geöffnet bleibt. Hauptmenü, Schließen oder Reload verwerfen den Run. Nach Sieg oder Niederlage stehen **Neustart**, **Fleet Upgrades** und **Hauptmenü** direkt bereit. Aus den Upgrades führt **Return** zurück zum Ergebnis; Änderungen gelten beim nächsten Start.
-
-Nur permanente Aether-Reserve, Upgrades, Fraktionsfreischaltungen und Einstellungen bleiben im Browserspeicher. Kein Checkpoint, Autosave, Resume nach Reload oder Backup-Import/-Export. Unter `file://` kann der Browserspeicher eingeschränkt sein; der flüchtige Profilersatz überlebt keinen Reload. Technische Details: [Speicherung](docs/architecture.md#speicherung).
-
-## Entwicklung
-
-- [Architektur](docs/architecture.md): Codekarte, Schnittstellen, Speicherung und Risiken.
-- [Grafik und Assets](docs/rendering.md): Texturen, Skybox und Qualitätsstufen.
-- [Prüfungen](docs/testing.md): Testbefehl, Abdeckung und angemessener Prüfaufwand.
-- [Arbeitsprotokoll](docs/worklog.md): zentrale kurze Änderungshistorie und letzte Prüfnachweise.
-- [Arbeitsregeln](AGENTS.md).
+Breites Refactoring und weitere TypeScript-Migration sind pausiert. Als Nächstes stehen echte Mobilgeräte und vollständige Runs einschließlich Upgradeökonomie im Vordergrund, nicht zusätzliche Systeme.

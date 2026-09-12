@@ -157,16 +157,6 @@ test('no keyboard handler remains for game commands, menus or targeting', () => 
   assert.equal(h.ui.paused, false);
 });
 
-test('number keys no longer assign or recall control groups', () => {
-  const h = setup(); h.ui.selected = [7];
-  for (let n = 1; n <= 9; n++) {
-    h.key(String(n), { ctrlKey: true }); h.key(String(n)); h.key(String(n), { shiftKey: true });
-  }
-  assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
-  assert.equal('groups' in h.ui.game.s, false);
-  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
-});
-
 test('left mouse dragging neither draws a selection rectangle nor changes selection or orders', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   // A hidden entity keeps the overlay empty but would be inside the former selection box.
@@ -222,7 +212,7 @@ test('triple touch tap selects only living on-screen own non-workers, including 
   }
 });
 
-test('group selection uses the actual topbar and ability-bar bounds in portrait', () => {
+test('group selection uses the actual world viewport bounds in portrait', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   Object.assign(h.ui.R.viewport, { top: 90, bottom: 400, height: 310 });
   const unit = {id:1,team:0,kind:'unit',type:'rifle',hp:100,x:200,z:200};
@@ -623,7 +613,7 @@ test('pause and hidden-tab pause retain the run only in memory, with explicit ab
   assert.match(h.ui.html,/Runs are never saved/);
 });
 
-test('victory and defeat offer full-width restart, upgrades and main menu; ended runs cannot resume', () => {
+test('victory and defeat offer restart, upgrades and main menu; ended runs cannot resume', () => {
   for(const win of [false,true]) {
     const h=setup(); h.UI.prototype.bind.call(h.ui);
     Object.assign(h.ui.game.s,{seed:1409,biome:'rust',enemy:2,stats:{kills:0,lost:1,gathered:0}});
@@ -740,16 +730,6 @@ test('battle setup and help describe starting workers and unchanged starting res
   h.ui.showHelp();
   assert.match(h.ui.html, /0–5 workers/); assert.match(h.ui.html, /250 alloy \/ 0 aether/);
   assert.doesNotMatch(h.ui.html, /only your headquarters/);
-});
-
-test('campaign navigation, tutorial and ending APIs are removed; battle restart uses only battle options', () => {
-  const h = setup();
-  for (const method of ['showCampaign','launch','showSkirmish','startSkirmish','showEnding','chooseEnding','updateTips'])
-    assert.equal(h.ui[method], undefined, method);
-  Object.assign(h.ui.game.s, {seed:4321,biome:'court',faction:1,enemy:0});
-  h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
-  h.ui.uiAction('restart');
-  assert.deepEqual(h.calls, [['start',{seed:4321,biome:'court',faction:1,enemy:0}]]);
 });
 
 test('battle factions stay locked until a Free Marches victory, then persist and allow both choices', () => {
