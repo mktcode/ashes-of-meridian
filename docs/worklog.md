@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Industrial-Breakbeat-Hörentwürfe, noch ohne Einbau
+
+- Drei getrennte 116-BPM-Skizzen unter [`music-drafts/`](../music-drafts/README.md): **Ratchet Theory** (Funkbass/Swing), **Breach Protocol** (Gitarrenakzente/härtere Breaks), **Black Channel** (dunkle Funk-/Metalltexturen). Je rund 67 s als Stereo-MP3; eigene synthetische One-Shots, Saitenmodelle und lokal erzeugte generische Flite-Kommandos, keine fremden Samples. Separater Python-/FFmpeg-Generator; Spiel, bestehender Loop, Referenz-MP3 und Auslieferung unverändert.
+- **Neu geprüft:** Generator ausgeführt, Python-Syntax und Diff/Links geprüft; alle drei MP3s vollständig dekodiert, 44,1 kHz Stereo, endliche/nicht übersteuerte Samples, rund −15,2 LUFS und True Peaks −3,1 bis −2,5 dBTP. Einzelregeneration von Variante 3 bytegleich. Keine Spielcodeänderung, daher kein neuer `npm test`-/Browser-/Docker-Lauf. Musikalische Bewertung durch Anhören steht aus; keine fertigen Spielloops.
+
 ## Eigener Gefechtsmusik-Loop
 
 - **Frontier Pressure** ergänzt: eigenständiger, lokal erzeugter 60-s-Stereo-Loop mit 128 BPM als Ogg Vorbis/44,1 kHz (rund 1,29 MB). Industrieller Beat, verzerrte Basspulse, Metallperkussion, dunkle Flächen und sparsame Signale; keine übernommene Melodie oder Arrangementstruktur des genannten Referenzstücks. `scripts/generate-battle-music.py` reproduziert die Komposition bewusst mit Python/`ffmpeg`; kein Buildschritt, Netzwerkasset oder Simulations-RNG.
