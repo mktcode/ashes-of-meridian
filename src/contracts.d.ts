@@ -44,6 +44,7 @@ interface UpgradeDefinition {
   icon: string;
   desc: string;
   max: number;
+  costs: readonly number[];
 }
 
 interface BiomeDefinition {
@@ -66,6 +67,7 @@ type MeridianSettings = Record<string, number | boolean> & {
 interface MeridianProfile {
   version: 1;
   factionsUnlocked: boolean;
+  aether: number;
   upgrades: Record<string, number>;
   settings: MeridianSettings;
 }

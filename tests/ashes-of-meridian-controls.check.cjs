@@ -77,7 +77,7 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { factionsUnlocked: false, upgrades: {}, settings: { quality: 2 } }, { saveProfile() {} });
+    { unlock() {}, sound() {} }, { factionsUnlocked: false, aether: 0, upgrades: {}, settings: { quality: 2 } }, { saveProfile() {} });
   ui.view = 'game'; ui.paused = false;
   const key = (key, options = {}) => document.handlers.keydown?.({ key, preventDefault() {}, ...options });
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
@@ -652,8 +652,8 @@ test('result upgrades return to the same ended battle without replaying the resu
     assert.deepEqual(sounds, [win ? 'victory' : 'defeat']);
     h.click({ ui: 'armory' }); assert.equal(h.ui.modalKind, 'armory');
     let saved = 0; h.ui.persistence.saveProfile = () => { saved++; return true; };
-    h.ui.buyUpgrade('startingWorkers');
-    assert.equal(saved, 1); assert.equal(h.ui.profile.upgrades.startingWorkers, 1);
+    h.ui.profile.aether = 300; h.ui.buyUpgrade('startingWorkers');
+    assert.equal(saved, 1); assert.equal(h.ui.profile.upgrades.startingWorkers, 1); assert.equal(h.ui.profile.aether, 0);
     assert.equal(h.ui.modalKind, 'armory');
     h.click({ ui: 'closeModal' });
     assert.equal(h.ui.modalKind, 'result'); assert.equal(h.ui.html, resultHTML);
@@ -687,20 +687,44 @@ test('runtime and delivered HTML have no run persistence hooks or backup input',
   }
 });
 
-test('permanent upgrades are free, bounded and persisted without altering the active battle', () => {
+test('permanent upgrades spend recovered aether, remain bounded and do not alter the active battle', () => {
   const h = setup(), keys = ['startingWorkers'];
   h.ui.game.s.meta = {}; h.ui.game.s.alloy = 123; h.ui.game.s.gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
-  h.ui.showArmory(); assert.match(h.ui.html, /∞ UPGRADE RESOURCES \/ TEST MODE/);
-  assert.match(h.ui.html, /FREE · LEVEL 1/);
+  h.ui.profile.aether = 299; h.ui.showArmory();
+  assert.match(h.ui.html, /299 AETHER RESERVES/);
+  assert.match(h.ui.html, /300 AETHER · LEVEL 1/);
+  assert.match(h.ui.html, /Aether evacuation/); assert.match(h.ui.html, /500 AETHER · LEVEL 1/);
+  assert.match(h.ui.html, /data-upgrade="startingWorkers" disabled/);
+  h.ui.buyUpgrade('startingWorkers'); assert.deepEqual(h.ui.profile.upgrades, {});
+  h.ui.profile.aether = 500; h.ui.buyUpgrade('aetherEvacuation');
+  assert.deepEqual(h.ui.profile.upgrades, { aetherEvacuation: 1 }); assert.equal(h.ui.profile.aether, 0);
+  h.ui.profile.aether = 3500; h.ui.showArmory();
   assert.match(h.ui.html, /Starting workers/);
-  assert.doesNotMatch(h.ui.html, /Command uplink|Command resolve|Frontier assembly/);
+  assert.doesNotMatch(h.ui.html, /∞ UPGRADE RESOURCES|FREE · LEVEL|Command uplink|Command resolve|Frontier assembly/);
   for (const key of keys) for (let i=0;i<7;i++) h.ui.buyUpgrade(key);
   for (const key of ['not-an-upgrade', 'veterans', 'logistics', 'stores', 'command', 'resolve', 'industry']) h.ui.buyUpgrade(key);
-  assert.deepEqual(h.ui.profile.upgrades, { startingWorkers: 5 });
-  assert.equal(h.calls.length, 5); assert.equal('credits' in h.ui.profile, false);
+  assert.deepEqual(h.ui.profile.upgrades, { aetherEvacuation: 1, startingWorkers: 5 });
+  assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 6); assert.equal('credits' in h.ui.profile, false);
   assert.deepEqual([h.ui.game.s.alloy,h.ui.game.s.gas,h.ui.game.s.meta], [123,45,{}]);
   assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 1);
+});
+
+test('each result transfers floored unused aether once, using the run-start evacuation limit through 1,000', () => {
+  for (const [level, gas, recovered] of [[0, 0, 0], [0, 42.9, 42], [0, 1000, 100],
+    [1, 1000, 200], [2, 1000, 350], [3, 1000, 500], [4, 1000, 750], [5, 2000, 1000]]) {
+    const h = setup(), saves = [];
+    h.ui.persistence.saveProfile = p => saves.push(JSON.parse(JSON.stringify(p)));
+    h.ui.showResult = () => {};
+    h.ui.game.s.faction = 2; h.ui.game.s.gas = gas; h.ui.game.s.meta = { aetherEvacuation: level };
+    h.ui.event('result', { win: true });
+    assert.equal(h.ui.resultAetherRecovered, recovered);
+    assert.equal(h.ui.profile.aether, recovered);
+    assert.equal(saves.length, recovered ? 1 : 0);
+    h.ui.event('result', { win: true });
+    assert.equal(h.ui.profile.aether, recovered, 'same result cannot pay twice');
+    assert.equal(saves.length, recovered ? 1 : 0);
+  }
 });
 
 test('battle setup and help describe starting workers and unchanged starting resources', () => {

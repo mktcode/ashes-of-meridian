@@ -33,6 +33,7 @@ function createMeridianPersistence(
       return {
         version: 1,
         factionsUnlocked: false,
+        aether: 0,
         upgrades: {},
         settings: {
           volume: 0.28,
@@ -49,6 +50,7 @@ function createMeridianPersistence(
         let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
         if (p && p.version === 1) {
           d.factionsUnlocked = p.factionsUnlocked === true;
+          d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
           for (let k in upgrades)
             d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
           for (let key of Object.keys(d.settings))

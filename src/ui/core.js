@@ -75,6 +75,7 @@
         if (type === 'start') {
           this.view = 'game';
           this.factionsJustUnlocked = false;
+          this.resultAetherRecovered = undefined;
           this.paused = false;
           this.modalKind = '';
           this.sellBuildingId = null;
@@ -111,11 +112,22 @@
                   : FACTIONS[this.game.s.faction].color
             });
         } else if (type === 'result') {
+          let changed = false;
           this.factionsJustUnlocked = !!(data.win && this.game.s?.faction === 0 && !this.profile.factionsUnlocked);
           if (this.factionsJustUnlocked) {
             this.profile.factionsUnlocked = true;
-            this.persist();
+            changed = true;
           }
+          if (this.resultAetherRecovered === undefined) {
+            let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.meta?.aetherEvacuation || 0))),
+              limit = AETHER_EVACUATION_CAPS[level];
+            this.resultAetherRecovered = Math.min(limit, Math.max(0, Math.floor(this.game.s?.gas || 0)));
+            if (this.resultAetherRecovered) {
+              this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
+              changed = true;
+            }
+          }
+          if (changed) this.persist();
           this.audio.sound(data.win ? 'victory' : 'defeat');
           this.showResult(data);
         } else if (type === 'shot') {

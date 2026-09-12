@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Aether-Reserve und Evakuierungsausbau
+
+- Verbleibender Gefechts-Aether wird bei Sieg wie Niederlage einmalig als ganzzahliger Rest in die permanente `aether`-Reserve übertragen. Das Ergebnis zeigt die Auszahlung, die Waffenkammer Reserve, Preis und nicht bezahlbare Upgrades. Keine zweite Währung: Gefechts-Aether wird nur evakuiert, wenn er ungenutzt bleibt. `Starting workers` kostet 300 / 450 / 650 / 900 / 1.200 Aether statt kostenlos zu sein.
+- Neues permanentes Upgrade **Aether evacuation**: fünf Stufen heben die Run-Grenze von 100 auf 200 / 350 / 500 / 750 / 1.000 Aether; Kosten 500 / 800 / 1.200 / 1.800 / 2.600. Die Grenze wird beim Run-Start in `game.s.meta` kopiert, damit ein Kauf während Pause/Ergebnis erst beim nächsten Start wirkt. Keine Simulation-/RNG-/Gefechtsbalancingänderung außer dem Profiltransfer am Ende; Profilwert auf 0–999.999 normalisiert.
+- **233 Node-Tests inklusive Build bestanden** (rund 19 s): Profil- und Preisnormalisierung, nicht bezahlbare/abgezogene/begrenzte Upgrades, ganzzahliger Rest, Einmalauszahlung und alle sechs Evakuierungslimits bis 1.000 abgesichert. Keine Fixtures geändert. Diff und lokale Markdown-Links geprüft.
+- Auf Nutzerwunsch kein zusätzlicher Browser-/End-to-End-Lauf; manuelle Balance-/Bedienungsprüfung und reale Ertragserfahrung stehen aus.
+
 ## Fraktionen nach erstem Sieg freischalten
 
 - Die Gefechtsauswahl zeigt zunächst nur **The Free Marches** aktiv; Verdant Choir und Veiled Court bleiben sichtbar, ausgegraut und deaktiviert. Ein Sieg mit Spielerfraktion 0 setzt einmalig `factionsUnlocked` im bestehenden permanenten Profil, speichert es und zeigt im Ergebnis die Freischaltung. Danach sind beide Karten dauerhaft aktiv; Gegner bleiben unabhängig frei wählbar. Click-Handler und `startBattle()` verwerfen eine manipulierte gesperrte Auswahl zugunsten von Fraktion 0. Kein Fortschrittsfeld im Run, keine Simulations-/RNG-/Balancingänderung.

@@ -291,12 +291,22 @@ const ABILITIES = {
 
 type AbilityType = keyof typeof ABILITIES;
 
+const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
+
 const META = {
   startingWorkers: {
     name: 'Starting workers',
     icon: 'worker',
     desc: 'Start each new battle with one additional worker per level, up to five. Starting resources are unchanged.',
-    max: 5
+    max: 5,
+    costs: [300, 450, 650, 900, 1200]
+  },
+  aetherEvacuation: {
+    name: 'Aether evacuation',
+    icon: 'save',
+    desc: 'Raises the recovered aether limit per battle: 100 → 200 → 350 → 500 → 750 → 1,000.',
+    max: 5,
+    costs: [500, 800, 1200, 1800, 2600]
   }
 } as const satisfies Record<string, UpgradeDefinition>;
 

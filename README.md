@@ -25,7 +25,7 @@ Danach `index.html` direkt in einem Browser mit WebGL 2 öffnen. Die handgepfleg
 - Fertige eigene Gebäude: **Sell**, **Repair / Stop repair** und **Rally point** im rechten Menü. Verkauf erfolgt nach Bestätigung. Fähigkeiten bleiben in der Leiste darüber verfügbar.
 - Queue-Symbole links über der Minimap zählen offene Aufträge je Einheitentyp. Der kreisförmige Fortschritt zeigt die nächste Fertigstellung; Tap storniert einen Auftrag.
 - Fraktionen: Zu Beginn ist nur **The Free Marches** spielbar. Ein Sieg mit ihnen schaltet **Verdant Choir** und **Veiled Court** gemeinsam und dauerhaft für dieses Browserprofil frei. Gegner dürfen weiterhin frei gewählt werden.
-- **Fleet Upgrades → Starting workers**: kostenlos bis Stufe 5, ein zusätzlicher Startworker pro Stufe. Wirkt erst im nächsten Gefecht oder Neustart. Alloy/Aether bleiben begrenzt; noch keine erspielbare Upgrade-Währung.
+- **Aether-Reserve und Fleet Upgrades**: Verbleibender Aether wird nach jedem Ergebnis in die permanente Reserve evakuiert. Die Grenze startet bei **100 pro Gefecht** und wächst mit **Aether evacuation** über fünf Stufen auf 1.000; diese kosten 500 / 800 / 1.200 / 1.800 / 2.600 Aether. **Starting workers** kostet 300 / 450 / 650 / 900 / 1.200 Aether pro Stufe und gibt je einen Startworker, maximal fünf. Upgrades wirken erst im nächsten Gefecht oder Neustart.
 
 Weitere Regeln und offene Punkte: [Spiel und Bedienung](docs/gameplay.md).
 
@@ -35,7 +35,7 @@ Optional für lokale Entwicklung nach dem Build: `python3 -m http.server 8080 --
 
 Runs werden nicht gespeichert. **Ⅱ** pausiert das laufende Gefecht; beim Wechsel in einen anderen Tab wird ebenfalls pausiert. Fortsetzen geht nur, solange diese Seite geöffnet bleibt. Hauptmenü, Schließen oder Reload verwerfen den Run. Nach Sieg oder Niederlage stehen **Neustart**, **Fleet Upgrades** und **Hauptmenü** direkt bereit. Aus den Upgrades führt **Return** zurück zum Ergebnis; Änderungen gelten beim nächsten Start.
 
-Nur permanente Upgrades, Fraktionsfreischaltungen und Einstellungen bleiben im Browserspeicher. Kein Checkpoint, Autosave, Resume nach Reload oder Backup-Import/-Export. Unter `file://` kann der Browserspeicher eingeschränkt sein; der flüchtige Profilersatz überlebt keinen Reload. Technische Details: [Speicherung](docs/architecture.md#speicherung).
+Nur permanente Aether-Reserve, Upgrades, Fraktionsfreischaltungen und Einstellungen bleiben im Browserspeicher. Kein Checkpoint, Autosave, Resume nach Reload oder Backup-Import/-Export. Unter `file://` kann der Browserspeicher eingeschränkt sein; der flüchtige Profilersatz überlebt keinen Reload. Technische Details: [Speicherung](docs/architecture.md#speicherung).
 
 ## Entwicklung
 

@@ -163,21 +163,23 @@
             ['Cancel targeting / placement', 'Cancel button beside the target prompt'],
             ['Run lifetime', 'No saves; closing, reloading or leaving ends the run'],
             ['Field manual', '? button']
-          ])}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Fleet upgrades apply to new battles. Upgrade resources are unlimited for testing. Win one battle as The Free Marches to unlock the other two factions permanently in this browser.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
+          ])}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Fleet upgrades apply to new battles. Unspent aether is recovered at every result and pays for upgrades. Evacuation starts at 100 per battle and can be upgraded to 1,000. Win one battle as The Free Marches to unlock the other two factions permanently in this browser.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
           true
         );
       },
       showArmory() {
-        let previous = this.view;
+        let previous = this.view,
+          evacuationLevel = clamp(this.profile.upgrades.aetherEvacuation || 0, 0, AETHER_EVACUATION_CAPS.length - 1),
+          evacuationLimit = AETHER_EVACUATION_CAPS[evacuationLevel];
         if (previous === 'game') this.paused = true;
         this.openModal(
           'armory',
-          `<div class="eyebrow">FLOTILLA REQUISITIONS / ∞ UPGRADE RESOURCES / TEST MODE</div><h1>What we carry forward.</h1><p style="font-size:13px">Permanent expedition upgrades. Free upgrades for testing. Resource collection will be added later. Changes apply to new battles.</p><div class="armory-grid">${Object.entries(
+          `<div class="eyebrow">FLOTILLA REQUISITIONS / ${this.profile.aether.toLocaleString()} AETHER RESERVES</div><h1>What we carry forward.</h1><p style="font-size:13px">Permanent expedition upgrades. Unspent aether is recovered at every battle result. Current evacuation limit: ${evacuationLimit} per battle; requisitions raise it from 100 to 1,000. Changes apply to new battles.</p><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {
-              let n = this.profile.upgrades[k] || 0;
-              return `<div class="upgrade-card"><div class="sigil" style="width:32px;height:32px">${icon(m.icon)}</div><h3>${m.name}</h3><p>${m.desc}</p><div class="upgrade-levels">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : 'FREE · LEVEL ' + (n + 1)}</button></div>`;
+              let n = this.profile.upgrades[k] || 0, cost = m.costs[n], affordable = this.profile.aether >= cost;
+              return `<div class="upgrade-card"><div class="sigil" style="width:32px;height:32px">${icon(m.icon)}</div><h3>${m.name}</h3><p>${m.desc}</p><div class="upgrade-levels">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || !affordable ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : cost + ' AETHER · LEVEL ' + (n + 1)}</button></div>`;
             })
             .join(
               ''
@@ -188,8 +190,9 @@
       buyUpgrade(key) {
         let m = META[key];
         if (!m) return;
-        let n = this.profile.upgrades[key] || 0;
-        if (n >= m.max) return;
+        let n = this.profile.upgrades[key] || 0, cost = m.costs[n];
+        if (n >= m.max || !Number.isFinite(cost) || this.profile.aether < cost) return;
+        this.profile.aether -= cost;
         this.profile.upgrades[key] = n + 1;
         this.persist();
         this.audio.sound('research');
@@ -201,7 +204,7 @@
         let s = this.game.s;
         this.openModal(
           'result',
-          `<div class="eyebrow">${result.win ? 'VICTORY' : 'DEFEAT'} / ${FACTIONS[s.faction].short}</div><h1>${result.win ? 'Enemy base destroyed.' : 'Command center lost.'}</h1><p>${esc(result.text)}</p>${this.factionsJustUnlocked ? '<p class="unlock-notice">NEW FACTIONS UNLOCKED · Verdant Choir and Veiled Court are ready for deployment.</p>' : ''}<div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div><div class="btnstack"><button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button><button class="secondary" data-ui="armory">FLEET UPGRADES</button><button class="secondary" data-ui="home">MAIN MENU</button></div>`,
+          `<div class="eyebrow">${result.win ? 'VICTORY' : 'DEFEAT'} / ${FACTIONS[s.faction].short}</div><h1>${result.win ? 'Enemy base destroyed.' : 'Command center lost.'}</h1><p>${esc(result.text)}</p>${this.factionsJustUnlocked ? '<p class="unlock-notice">NEW FACTIONS UNLOCKED · Verdant Choir and Veiled Court are ready for deployment.</p>' : ''}<div class="result-stats"><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${this.resultAetherRecovered || 0}</strong><span>AETHER RECOVERED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div><div class="btnstack"><button class="primary" data-ui="restart">DEPLOY AGAIN ↗</button><button class="secondary" data-ui="armory">FLEET UPGRADES</button><button class="secondary" data-ui="home">MAIN MENU</button></div>`,
           true
         );
       }
