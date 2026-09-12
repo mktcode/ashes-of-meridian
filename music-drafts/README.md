@@ -1,6 +1,6 @@
 # Hörentwürfe – Industrial Breakbeat
 
-Drei eigenständige Themen in mehreren Vergleichsfassungen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Nur zum Anhören und Auswählen: **nicht im Spiel verknüpft, nicht im Docker-Buildkontext**. Der bestehende Kampftrack bleibt unverändert.
+Drei eigenständige Themen in mehreren Vergleichsfassungen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Die **Minimal Mixes sind freigegeben** und als bytegleiche Kopien unter `audio/music-*.mp3` im Spiel eingebaut: feste Dreierplaylist mit 5 Sekunden Musikpause zwischen den Stücken. Dieser Entwurfsordner selbst bleibt außerhalb des Docker-Buildkontexts; Originale und Reduced Mixes dienen weiterhin nur dem Vergleich.
 
 | Original | Luftigerer Vergleichsmix | Schwerpunkt |
 |---|---|---|
@@ -32,7 +32,7 @@ Bass, Melodien samt Echo, Funkdurchsagen, Kick/Hauptsnare, Tempo, Swing und Absc
 - Bass aus gefilterten Oszillatoren; Gitarrenannäherung durch gezupfte Saitenmodelle (Karplus–Strong), Verzerrung und Lautsprecherfilter. Keine tatsächlich eingespielten Gitarren.
 - Funkkommandos aus lokaler generischer **Flite-TTS** (`rms`), schmalbandig verzerrt, zerhackt und rhythmisch wiederholt; kein Gesang, keine nachgeahmte reale Person. Beispielsweise „Stand by“, „Weapons free“ und „Unknown transmission“.
 - Keine Downloads, Referenzaufnahmen oder bestehenden Audioassets als Klangquelle. Auch `audio/Ashes Of Meridian - Recording Sample.mp3` wird nicht verwendet.
-- Für fairen Vergleich auf etwa −15 LUFS angeglichen. Bewusst kurze Skizzen mit harten Abschnittswechseln, **keine fertig abgenommenen oder nahtlosen Spielloops**. Technische Prüfung ist kein Hörurteil.
+- Für fairen Vergleich auf etwa −15 LUFS angeglichen. Kurze Stücke, keine nahtlosen Einzeldatei-Loops; die freigegebenen Minimalfassungen spielen im Gefecht mit Ruhepausen. Technische Prüfung ist kein Hörurteil.
 
 Erneut erzeugen (überschreibt nur die jeweils gewählte Fassung):
 

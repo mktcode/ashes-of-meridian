@@ -102,6 +102,19 @@ test('battle lifecycle reserves the world viewport only while the battlefield is
   assert.deepEqual(changes, [['game', true], ['home', false], ['battle', false]]);
 });
 
+test('each battle start resets the music playlist before playback, but resume does not', () => {
+  const h = setup(), calls = [];
+  h.ui.audio.resetBattleMusic = () => calls.push('reset');
+  h.ui.audio.setMode = mode => calls.push(mode);
+  h.ui.event('start');
+  assert.deepEqual(calls, ['reset', 'battle']);
+  h.ui.pause(); h.ui.resume();
+  assert.deepEqual(calls, ['reset', 'battle', 'silent', 'battle']);
+  h.ui.event('start');
+  assert.deepEqual(calls.slice(-2), ['reset', 'battle']);
+  assert.equal(calls.filter(value => value === 'reset').length, 2);
+});
+
 test('world picking and captured releases outside the viewport cannot issue orders or target abilities', () => {
   for (const pointerType of ['touch', 'mouse']) for (const y of [40, 610]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];

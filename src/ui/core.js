@@ -75,6 +75,7 @@
       event(type, data) {
         if (type === 'start') {
           this.view = 'game';
+          this.audio.resetBattleMusic?.();
           this.audio.setMode?.('battle');
           this.factionJustUnlocked = null;
           this.resultAetherRecovered = undefined;

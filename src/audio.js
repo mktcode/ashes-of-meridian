@@ -1,6 +1,11 @@
     /* Original procedural menu score, local battlefield music, and battlefield sound. */
     'use strict';
-    const BATTLE_MUSIC_URL = './audio/music-battlefield.ogg';
+    const BATTLE_MUSIC_URLS = [
+      './audio/music-ratchet-theory.mp3',
+      './audio/music-breach-protocol.mp3',
+      './audio/music-black-channel.mp3'
+    ];
+    const BATTLE_MUSIC_GAP = 5;
     class MeridianAudio {
       constructor(settings) {
         this.settings = settings;
@@ -10,6 +15,9 @@
         this.menuGain = null;
         this.effectsGain = null;
         this.battleTrack = null;
+        this.battleTrackIndex = 0;
+        this.battleGapRemaining = null;
+        this.battleGapUntil = null;
         this.battlePlayPending = false;
         this.battlePlayFailed = false;
         this.musicMode = 'menu';
@@ -65,8 +73,14 @@
       createBattleTrack() {
         if (this.battleTrack || typeof Audio !== 'function') return;
         try {
-          let track = new Audio(BATTLE_MUSIC_URL);
-          track.loop = true;
+          let track = new Audio(BATTLE_MUSIC_URLS[this.battleTrackIndex]);
+          track.loop = false;
+          track.addEventListener('ended', () => {
+            if (!track.ended || this.battleGapRemaining !== null) return;
+            this.battleGapRemaining = BATTLE_MUSIC_GAP;
+            this.battleGapUntil = null;
+            this.syncBattleTrack();
+          });
           track.preload = 'auto';
           track.playsInline = true;
           track.addEventListener(
@@ -83,15 +97,45 @@
           console.warn('Battle music unavailable:', error.message);
         }
       }
+      resetBattleMusic() {
+        this.battleGapRemaining = null;
+        this.battleGapUntil = null;
+        this.battlePlayFailed = false;
+        if (this.battleTrack) {
+          this.battleTrack.pause();
+          if (this.battleTrackIndex !== 0) this.battleTrack.src = BATTLE_MUSIC_URLS[0];
+          try {
+            this.battleTrack.currentTime = 0;
+          } catch (_) {}
+        }
+        this.battleTrackIndex = 0;
+      }
       syncBattleTrack() {
         let track = this.battleTrack;
         if (!track) return;
         track.volume = this.settings.music ? Math.max(0, Math.min(1, this.settings.volume)) : 0;
+        // Audio-clock seconds, never simulation time or game-speed-scaled dt.
+        let now = this.ctx.currentTime;
         if (this.musicMode !== 'battle' || !this.settings.music) {
+          if (this.battleGapUntil !== null) {
+            this.battleGapRemaining = Math.max(0, this.battleGapUntil - now);
+            this.battleGapUntil = null;
+          }
           track.pause();
           return;
         }
-        if (!track.paused || this.battlePlayPending || this.battlePlayFailed) return;
+        if (this.battleGapRemaining !== null) {
+          if (this.battleGapUntil === null) this.battleGapUntil = now + this.battleGapRemaining;
+          if (now < this.battleGapUntil) return;
+          this.battleGapRemaining = null;
+          this.battleGapUntil = null;
+          this.battleTrackIndex = (this.battleTrackIndex + 1) % BATTLE_MUSIC_URLS.length;
+          track.src = BATTLE_MUSIC_URLS[this.battleTrackIndex];
+          this.battlePlayFailed = false;
+        }
+        // The media clock can reach ended before its queued event is delivered.
+        // Do not restart this file in that frame; the event starts the gap.
+        if (track.ended || !track.paused || this.battlePlayPending || this.battlePlayFailed) return;
         let playing;
         try {
           playing = track.play();
@@ -125,11 +169,7 @@
           );
         if (changed && mode !== 'battle' && this.battleTrack) {
           this.battleTrack.pause();
-          if (mode === 'menu') {
-            try {
-              this.battleTrack.currentTime = 0;
-            } catch (_) {}
-          }
+          if (mode === 'menu') this.resetBattleMusic();
         }
         this.syncBattleTrack();
       }

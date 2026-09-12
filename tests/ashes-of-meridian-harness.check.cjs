@@ -91,7 +91,7 @@ test('UI fragments assemble the existing non-enumerable MeridianUI API in docume
   assert.equal(vm.runInContext("esc('<battle>')", context), '&lt;battle&gt;');
 });
 
-test('audio switches between procedural menu music and the local looping battle track', async () => {
+function setupAudio() {
   const plays = [], tracks = [];
   const parameter = () => ({ value: 0, setTargetAtTime(value) { this.value = value; },
     setValueAtTime(value) { this.value = value; }, exponentialRampToValueAtTime(value) { this.value = value; } });
@@ -107,31 +107,94 @@ test('audio switches between procedural menu music and the local looping battle 
     resume() { return Promise.resolve(); }
   }
   class Audio {
-    constructor(src) { this.src = src; this.currentTime = 0; this.paused = true; tracks.push(this); }
-    addEventListener() {}
+    constructor(src) { this.src = src; this.listeners = {}; tracks.push(this); }
+    set src(value) { this.url = value; this.currentTime = 0; this.paused = true; this.ended = false; }
+    get src() { return this.url; }
+    set currentTime(value) { this.time = value; this.ended = false; }
+    get currentTime() { return this.time; }
+    addEventListener(name, fn) { this.listeners[name] = fn; }
     pause() { this.paused = true; }
     play() { this.paused = false; plays.push(this.src); return Promise.resolve(); }
+    finish() { this.paused = true; this.ended = true; this.listeners.ended(); }
   }
   const settings = { volume: 0.28, music: true, sfx: true },
     context = loadScripts(['audio'], { globals: { window: { AudioContext }, Audio, settings } });
-  vm.runInContext('audio = new MeridianAudio(settings); audio.unlock(); audio.setMode("battle")', context);
-  await Promise.resolve();
-  assert.equal(tracks.length, 1);
-  assert.equal(tracks[0].src, './audio/music-battlefield.ogg');
-  assert.equal(tracks[0].loop, true);
-  assert.equal(tracks[0].volume, 0.28);
-  assert.deepEqual(plays, ['./audio/music-battlefield.ogg']);
-  tracks[0].currentTime = 12;
-  vm.runInContext('audio.update("silent")', context);
-  assert.equal(tracks[0].paused, true);
-  assert.equal(tracks[0].currentTime, 12, 'pause preserves the loop position');
-  assert.equal(vm.runInContext('audio.musicMode', context), 'silent');
-  vm.runInContext('audio.setMode("menu")', context);
-  assert.equal(tracks[0].currentTime, 0, 'returning to menus resets the battle cue');
+  const evaluate = code => vm.runInContext(code, context);
+  evaluate('audio = new MeridianAudio(settings); audio.unlock()');
+  return { evaluate, settings, plays, tracks, audio: evaluate('audio'),
+    flush: () => new Promise(resolve => setImmediate(resolve)) };
+}
 
-  const asset = readFileSync(join(__dirname, '..', 'audio', 'music-battlefield.ogg'));
-  assert.equal(asset.subarray(0, 4).toString(), 'OggS');
-  assert.ok(asset.length > 500_000 && asset.length < 3_000_000);
+test('battle playlist uses the three approved minimal recordings in order with five-second gaps', async () => {
+  const h = setupAudio(), { audio, plays } = h, track = h.tracks[0];
+  const names = ['ratchet-theory', 'breach-protocol', 'black-channel'];
+  assert.equal(h.tracks.length, 1);
+  assert.equal(track.loop, false);
+  audio.setMode('battle'); await h.flush();
+  assert.equal(track.volume, .28);
+  for (let i = 0; i < 3; i++) {
+    const file = `music-${names[i]}.mp3`;
+    assert.equal(track.src, `./audio/${file}`);
+    const asset = readFileSync(join(__dirname, '..', 'audio', file));
+    assert.deepEqual(asset, readFileSync(join(__dirname, '..', 'music-drafts',
+      `0${i + 1}-${names[i]}-minimal.mp3`)), 'approved recording is copied without re-encoding');
+    track.paused = true; track.ended = true;
+    audio.update();
+    assert.equal(plays.length, i + 1, 'a frame before the ended event must not restart the old file');
+    track.listeners.ended();
+    const start = audio.ctx.currentTime;
+    track.listeners.ended(); // A duplicate event must not restart the gap.
+    audio.ctx.currentTime = start + 4.999; audio.update();
+    assert.equal(plays.length, i + 1);
+    assert.equal(track.paused, true);
+    audio.ctx.currentTime = start + 5; audio.update(); await h.flush();
+    assert.equal(plays.length, i + 2);
+  }
+  assert.equal(track.src, './audio/music-ratchet-theory.mp3', 'last track returns to first, also after a gap');
+});
+
+test('music pause/mute preserve track and gap position; menu and new battles reset the playlist', async () => {
+  const h = setupAudio(), { audio, settings, plays } = h, track = h.tracks[0];
+  audio.setMode('battle'); await h.flush();
+  track.currentTime = 12;
+  audio.setMode('silent'); assert.equal(track.paused, true);
+  audio.ctx.currentTime += 20;
+  audio.setMode('battle'); await h.flush();
+  assert.equal(track.currentTime, 12);
+  track.finish(); audio.ctx.currentTime += 2;
+  audio.setMode('silent'); assert.equal(audio.battleGapRemaining, 3);
+  audio.ctx.currentTime += 100;
+  audio.setMode('battle');
+  audio.ctx.currentTime += 1; settings.music = false; audio.updateSettings();
+  assert.equal(audio.battleGapRemaining, 2);
+  const count = plays.length;
+  audio.ctx.currentTime += 100; audio.update();
+  assert.equal(plays.length, count);
+  settings.music = true; settings.volume = .4; audio.updateSettings();
+  audio.ctx.currentTime += 1.999; audio.update(); assert.equal(plays.length, count);
+  audio.ctx.currentTime += .001; audio.update(); await h.flush();
+  assert.equal(audio.battleTrackIndex, 1); assert.equal(track.volume, .4);
+  settings.music = false; audio.updateSettings(); assert.equal(track.paused, true);
+  settings.music = true; audio.updateSettings(); await h.flush();
+  track.finish(); audio.setMode('menu');
+  assert.equal(audio.battleTrackIndex, 0); assert.equal(audio.battleGapRemaining, null);
+  assert.equal(track.currentTime, 0); assert.equal(track.paused, true);
+  audio.ctx.currentTime += 100; audio.update(); assert.equal(track.paused, true);
+  audio.setMode('battle'); await h.flush(); track.finish();
+  audio.resetBattleMusic(); audio.setMode('battle'); await h.flush();
+  assert.equal(track.paused, false); assert.equal(audio.battleGapRemaining, null);
+  assert.equal(track.src, './audio/music-ratchet-theory.mp3');
+});
+
+test('rejected battle playback does not retry every frame and can retry on user unlock', async () => {
+  const h = setupAudio(), { audio } = h, track = h.tracks[0];
+  let attempts = 0;
+  track.play = () => { attempts++; return Promise.reject(new Error('blocked')); };
+  audio.setMode('battle'); await h.flush();
+  for (let i = 0; i < 10; i++) audio.update();
+  assert.equal(attempts, 1);
+  track.play = () => { attempts++; track.paused = false; return Promise.resolve(); };
+  audio.unlock(); await h.flush(); assert.equal(attempts, 2);
 });
 
 test('loader selects explicit names in document order, skipping unrelated scripts', () => {

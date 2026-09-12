@@ -6,7 +6,7 @@
 
 Direktes Öffnen von `index.html` über `file://` bleibt nach dem Build unterstützt: kein erforderlicher Server, keine CDN-Abhängigkeiten, Laufzeit-Imports oder ES-Module. Die Laufzeitskripte teilen weiterhin globale lexikalische Bindungen und verwenden weder `async` noch `defer`. Source Maps dienen nur der lokalen Fehlersuche. Inline-Styles in UI-Templates bestehen weiterhin.
 
-Für das vorläufige Webhosting erzeugt das Multi-Stage-`Dockerfile` dieselbe Laufzeitausgabe und kopiert nur `index.html`, Styles, `dist/src/`, den lokalen Kampfmusik-Loop und die 14 Aktionsporträts in einen unprivilegierten Nginx-Container auf Port 8080. Externe Texturquellen bleiben außerhalb des Images, weil die Laufzeitfassungen eingebettet sind. Es gibt kein Backend und keine serverseitige Persistenz; Details stehen unter [Statisches Webdeployment](deployment.md).
+Für das vorläufige Webhosting erzeugt das Multi-Stage-`Dockerfile` dieselbe Laufzeitausgabe und kopiert nur `index.html`, Styles, `dist/src/`, die drei lokalen Kampfmusik-MP3s und die 14 Aktionsporträts in einen unprivilegierten Nginx-Container auf Port 8080. Externe Texturquellen bleiben außerhalb des Images, weil die Laufzeitfassungen eingebettet sind. Es gibt kein Backend und keine serverseitige Persistenz; Details stehen unter [Statisches Webdeployment](deployment.md).
 
 Eine mögliche spätere Android-Hülle mit Capacitor und AdMob ist in [Android, Google Play und Werbung](android.md) skizziert. Zurückgestellt, keine neue Abhängigkeit oder Änderung am aktuellen Auslieferungsvertrag.
 
@@ -32,7 +32,7 @@ Die Quellreihenfolge entspricht den `data-meridian-script`-Tags in `index.html`;
 | `src/simulation/economy.ts` | Versorgung, Produktion, Bau-/Gebäudeaktionen und Workerarbeit |
 | `src/simulation/combat.ts` | Schaden, Zielwahl, Waffen und Medic-Verhalten |
 | `src/simulation/runtime.ts` | Simulationsschritt, Wellen, Ziele, Fähigkeiten, Ergebnis und `formatTime` |
-| `src/audio.js` | Prozedurale Menümusik, lokaler Kampfmusik-Loop und Web-Audio-Effekte: `MeridianAudio` |
+| `src/audio.js` | Prozedurale Menümusik, lokale Kampfmusik-Playlist und Web-Audio-Effekte: `MeridianAudio` |
 | `src/persistence.ts` | Permanentes Profil, Normalisierung und Storage-Ersatz: `createMeridianPersistence` |
 | `src/ui/core.js` | `MeridianUI`, DOM-Helfer sowie Spielereignisse und Meldungen |
 | `src/ui/screens.js` | Hauptmenü, Dialoge, Einstellungen, Hilfe, Upgrades und Ergebnis |
@@ -68,9 +68,10 @@ Die Stylesheets folgen ebenfalls fester Dokumentreihenfolge: `styles/base.css` e
 
 ## Audio
 
-- Hauptmenü und Gefechtsauswahl behalten die ruhige, prozedurale Web-Audio-Partitur. Im aktiven Gefecht ersetzt sie **Frontier Pressure**, ein eigenständiger lokaler Stereo-Loop unter `audio/music-battlefield.ogg`: 60 Sekunden, 128 BPM, Ogg Vorbis/44,1 kHz. Industrielle Drums, verzerrte Basspulse, Metallakzente und sparsame Kommandosignale erhöhen den Druck, ohne Melodie oder Arrangement eines Referenzstücks zu übernehmen.
-- `MeridianAudio` hält die Zustände `menu`, `battle` und `silent`. Der Kampfloop startet mit dem Gefecht, pausiert samt Position in Pause/Spielmodals und verstummt am Ergebnis; Fortsetzen spielt an derselben Position weiter, Rückkehr in Menüs setzt ihn auf den Anfang. Musik- und Gesamtlautstärke gelten weiterhin aus demselben Profil, Soundeffekte bleiben getrennt schaltbar. Wiedergabefehler blockieren weder UI noch Simulation und werden nicht pro Frame erneut gemeldet.
-- Die OGG-Datei ist eine gepflegte lokale Laufzeitquelle und wird nicht bei `npm run build` neu erzeugt. `scripts/generate-battle-music.py` dokumentiert und reproduziert die deterministische Originalkomposition mit Python 3 und lokalem `ffmpeg`; diese Werkzeuge sind nur zur bewussten Assetpflege nötig. Keine Netzwerkquelle, Laufzeitgenerierung oder Nutzung des Simulations-RNG. Nach Änderungen OGG-Daten, Dauer, Pegel, Loopnaht, `file://` und Containerauslieferung erneut prüfen und das Ergebnis tatsächlich anhören.
+- Hauptmenü und Gefechtsauswahl behalten die ruhige, prozedurale Web-Audio-Partitur. Im Gefecht laufen die freigegebenen **Minimal Mixes** in fester Reihenfolge: **Ratchet Theory → Breach Protocol → Black Channel → Ratchet Theory**. Lokale Quellen: `audio/music-ratchet-theory.mp3`, `audio/music-breach-protocol.mp3`, `audio/music-black-channel.mp3`; je rund 67 s, 116 BPM, Stereo-MP3/44,1 kHz/224 kbit/s. Die Aufnahmen sind bytegleiche Kopien der `-minimal.mp3` unter [`music-drafts/`](../music-drafts/README.md), nicht neu kodiert.
+- `MeridianAudio` hält `menu`, `battle` und `silent`, einen HTML-Audioplayer sowie Playlistindex und Restwartezeit. Nach jedem `ended` wartet die Playlist **5 Sekunden**, auch vor dem Rücksprung von Track 3 auf Track 1. Die Audio-Uhr ist unabhängig vom Gefechtstempo; der nächste Track wird nach der Wartezeit geladen, sodass Browserlade-/Dekodierzeit hinzukommen kann. Kein automatischer Einzeldatei-Loop. Ein Frame vor dem `ended`-Event darf die alte Datei nicht erneut starten.
+- Pause/Spielmodals und Musik-Aus halten sowohl Trackposition als auch verbleibende Wartezeit an; Ergebnis verstummt. Fortsetzen setzt dort fort, Hauptmenü und jeder neue Gefechtsstart/Neustart setzen auf Track 1 ohne Vorwartezeit zurück. Musik-/Gesamtlautstärke gelten weiter aus dem Profil; Effekte bleiben unabhängig, auch in den Musikpausen. Wiedergabefehler blockieren weder UI noch Simulation und werden nicht pro Frame erneut versucht.
+- Audioassets werden nicht bei `npm run build` erzeugt. `scripts/generate-minimal-music-drafts.py` verwendet die lokalen Soundfunktionen aus `scripts/generate-music-drafts.py` (Python 3/FFmpeg/Flite), ausschließlich zur bewussten Assetpflege. Nach Freigabe die entsprechenden Minimal-MP3s unverändert nach `audio/` kopieren. Keine Netzwerkquelle, Laufzeitgenerierung oder Nutzung des Simulations-RNG. Der frühere OGG-Loop und alle Vergleichsfassungen bleiben erhalten, werden aber weder referenziert noch mit dem Container ausgeliefert. Nach Audioänderungen Assets, Pegel, Playlistübergänge, `file://` und Containerauslieferung prüfen; technische Checks ersetzen kein Anhören.
 
 ## Speicherung
 
