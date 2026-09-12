@@ -1,7 +1,8 @@
 
     /* Front end */
     #menu {
-      background: linear-gradient(90deg, #070d17f5 0%, #070d17df 24%, #070d1770 50%, #070d1700 78%)
+      background: linear-gradient(100deg, #04101bf8 0%, #071724e8 40%, #06131e80 72%, #06131e30),
+        radial-gradient(circle at 28% 45%, #27cce812, transparent 38%)
     }
 
     /* Home screen only; other menus retain the existing shared controls. */
@@ -15,8 +16,8 @@
       overflow: auto;
       scrollbar-width: thin;
       scrollbar-color: #6e8e9c #09121b;
-      background: linear-gradient(90deg, #060e17e8 0%, #070e17be 23%, #07101935 53%, #070e1710 78%),
-        linear-gradient(0deg, #060e1780, transparent 25%, transparent 80%, #060e1730)
+      background: linear-gradient(90deg, #04111ced 0%, #071725c9 37%, #06131e38 70%, #06131e12),
+        linear-gradient(0deg, #04101aa0, transparent 30%, transparent 78%, #0617225c)
     }
 
     .home-layout {
@@ -117,9 +118,15 @@
     .home-screen .menu-main {
       position: relative;
       align-self: center;
-      width: 570px;
+      width: 520px;
       max-width: 65vw;
-      margin: 20px 0 0 1.4vw
+      margin: 20px 0 0 1.4vw;
+      padding: 28px 32px 24px;
+      border: 1px solid #4edcf0a8;
+      border-radius: 12px 3px;
+      background: linear-gradient(145deg, #123144e8, #061522f3 68%);
+      box-shadow: inset 0 1px #d8fcff3d, inset 0 0 22px #21c5ed0d,
+        0 0 12px #00cfff2e, 0 18px 50px #0008
     }
 
     .home-screen .eyebrow {
@@ -142,10 +149,10 @@
     .home-screen .wordmark {
       font-family: Georgia, "Times New Roman", serif;
       font-weight: 400;
-      font-size: clamp(68px, 5.65vw, 100px);
+      font-size: clamp(52px, 4.7vw, 76px);
       line-height: .92;
-      letter-spacing: -3px;
-      margin: 22px 0 20px;
+      letter-spacing: -2px;
+      margin: 18px 0 14px;
       text-shadow: 0 2px 18px #0008
     }
 
@@ -154,7 +161,7 @@
       align-items: center;
       gap: 20px;
       width: 3.12em;
-      margin: 14px 0 16px
+      margin: 10px 0 12px
     }
 
     .home-screen .wordmark-link b {
@@ -174,9 +181,9 @@
     }
 
     .home-screen .menu-tagline {
-      font: italic 22px/1.5 Georgia, serif;
-      color: #afc0c7;
-      margin: 0 0 34px;
+      font: italic 18px/1.45 Georgia, serif;
+      color: #b8cbd3;
+      margin: 0 0 24px;
       text-shadow: 0 2px 8px #000
     }
 
@@ -185,7 +192,7 @@
       max-width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 16px
+      gap: 10px
     }
 
     .home-screen .menu-buttons button {
@@ -195,9 +202,9 @@
       justify-content: space-between;
       gap: 12px;
       text-align: left;
-      border-radius: 3px;
-      min-height: 54px;
-      padding: 15px 32px
+      border-radius: 6px 2px;
+      min-height: 48px;
+      padding: 12px 22px
     }
 
     .home-screen .menu-buttons button > span {
@@ -208,16 +215,17 @@
     }
 
     .home-screen .menu-buttons .primary {
-      min-height: 58px
+      min-height: 50px
     }
 
     .home-screen .primary {
-      font-size: 15px;
+      font-size: 13px;
       letter-spacing: 1.6px;
-      border-color: #e9bf78;
-      background: linear-gradient(180deg, #ffe7b33b, transparent 35%, #5a3f1929),
-        linear-gradient(110deg, #cd9b54, #f0c780 48%, #a88549);
-      box-shadow: inset 0 1px 2px #ffe6b6b0, inset 0 -2px 5px #72562650, 0 0 24px #edb87526
+      color: #edfaff !important;
+      border-color: #55ddf2d0;
+      background: linear-gradient(145deg, #1a4b61e8, #082131f2 60%, #12394af0);
+      box-shadow: inset 0 1px #d8fcff59, inset 0 -8px 16px #03101c55,
+        0 0 14px #00cfff38
     }
 
     .home-screen .primary:before {
@@ -226,14 +234,14 @@
       inset: -7px;
       pointer-events: none;
       background:
-        linear-gradient(#d9b573, #d9b573) left top / 18px 1px no-repeat,
-        linear-gradient(#d9b573, #d9b573) left top / 1px 20px no-repeat,
-        linear-gradient(#d9b573, #d9b573) right top / 18px 1px no-repeat,
-        linear-gradient(#d9b573, #d9b573) right top / 1px 20px no-repeat,
-        linear-gradient(#d9b573, #d9b573) left bottom / 18px 1px no-repeat,
-        linear-gradient(#d9b573, #d9b573) left bottom / 1px 20px no-repeat,
-        linear-gradient(#d9b573, #d9b573) right bottom / 18px 1px no-repeat,
-        linear-gradient(#d9b573, #d9b573) right bottom / 1px 20px no-repeat
+        linear-gradient(#83ecfa, #83ecfa) left top / 18px 1px no-repeat,
+        linear-gradient(#83ecfa, #83ecfa) left top / 1px 20px no-repeat,
+        linear-gradient(#83ecfa, #83ecfa) right top / 18px 1px no-repeat,
+        linear-gradient(#83ecfa, #83ecfa) right top / 1px 20px no-repeat,
+        linear-gradient(#83ecfa, #83ecfa) left bottom / 18px 1px no-repeat,
+        linear-gradient(#83ecfa, #83ecfa) left bottom / 1px 20px no-repeat,
+        linear-gradient(#83ecfa, #83ecfa) right bottom / 18px 1px no-repeat,
+        linear-gradient(#83ecfa, #83ecfa) right bottom / 1px 20px no-repeat
     }
 
     .home-screen .primary:hover {
@@ -249,21 +257,21 @@
     }
 
     .home-screen .secondary:hover {
-      background: linear-gradient(115deg, #243b47dc, #162e3cdd);
-      border-color: #adcbd7
+      background: linear-gradient(115deg, #20485be8, #0c2938ee);
+      border-color: #b5f7ff
     }
 
     .home-screen .menu-subnav {
       display: flex;
       align-items: center;
-      margin-top: 22px;
+      margin-top: 14px;
       width: 414px;
       max-width: 100%
     }
 
     .home-screen .menu-subnav button {
-      color: #a3c4d2;
-      font: 10px var(--mono);
+      color: #a9d9e5;
+      font: 9px var(--mono);
       letter-spacing: .5px;
       padding: 8px 12px;
       flex: 1;
@@ -479,21 +487,36 @@
 
     .subscreen {
       height: 100%;
-      background: linear-gradient(120deg, #080f1bf8, #0b1823eb);
-      padding: 35px max(30px, 5vw);
-      overflow: auto
+      padding: 28px max(24px, 5vw);
+      overflow: auto;
+      scrollbar-color: #4edcf078 #06131e;
+      background: linear-gradient(110deg, #04101bf8, #071724e5 48%, #06131eb8),
+        radial-gradient(circle at 72% 35%, #2ddcf016, transparent 42%)
+    }
+
+    .subscreen > div {
+      padding: 20px 24px;
+      border: 1px solid #4edcf098;
+      border-radius: 12px 3px;
+      background: linear-gradient(145deg, #102d3de8, #05131ff4 68%);
+      box-shadow: inset 0 1px #d8fcff35, inset 0 0 20px #21c5ed0c,
+        0 0 10px #00cfff29, 0 18px 55px #0008
     }
 
     .sub-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 28px
+      max-width: 910px;
+      margin: 0 auto 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #4edcf044
     }
 
     .sub-header h1 {
-      font: 38px Georgia, serif;
-      margin: 8px 0
+      font: 300 30px/1.15 "Segoe UI", Arial, sans-serif;
+      letter-spacing: .5px;
+      margin: 5px 0
     }
 
     .sub-header p {
@@ -508,17 +531,26 @@
     .launch-row {
       display: flex;
       align-items: center;
-      gap: 14px;
-      margin-top: 24px;
+      gap: 12px;
+      margin-top: 18px;
       flex-wrap: wrap
     }
 
-    select {
-      background: #172333;
-      border: 1px solid #68809855;
-      color: #dfebe9;
-      padding: 11px 12px;
-      outline: none
+    select,
+    #battleSeed {
+      background: linear-gradient(145deg, #153344, #071725) !important;
+      border: 1px solid #48cfe990 !important;
+      border-radius: 4px 1px;
+      color: #e4f4f8 !important;
+      padding: 10px 12px !important;
+      outline: none;
+      box-shadow: inset 0 1px #d8fcff1f
+    }
+
+    select:focus,
+    #battleSeed:focus {
+      border-color: #b5f7ff !important;
+      box-shadow: 0 0 8px #00cfff35
     }
 
     .battle-note {
@@ -528,37 +560,52 @@
 
     .modal-shade {
       height: 100%;
-      background: #040a12ca;
-      backdrop-filter: blur(8px);
+      background: radial-gradient(circle at 50% 45%, #14364970, #030912dc 62%);
+      backdrop-filter: blur(5px);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 18px;
       overflow: auto
     }
 
     .modal-card {
-      background: linear-gradient(140deg, #132130, #0b1420);
-      border: 1px solid #7893aa35;
-      width: 580px;
-      max-width: 95vw;
-      padding: 34px;
-      box-shadow: 0 24px 100px #0008;
-      max-height: 92vh;
-      overflow: auto
+      position: relative;
+      width: 540px;
+      max-width: 96vw;
+      max-height: 94dvh;
+      padding: 26px;
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #4edcf080 #06131e;
+      border: 1px solid #4edcf0ae;
+      border-radius: 12px 3px;
+      background: linear-gradient(145deg, var(--panel-lit), var(--panel-deep) 68%);
+      box-shadow: inset 0 1px #d8fcff40, inset 0 0 22px #21c5ed10,
+        0 0 12px #00cfff35, 0 24px 80px #000b
+    }
+
+    .modal-card:before {
+      content: "";
+      position: absolute;
+      inset: 7px 7px auto;
+      height: 1px;
+      pointer-events: none;
+      background: linear-gradient(90deg, #b9f8ff8c, #4edcf018 62%, transparent)
     }
 
     .modal-card.wide {
-      width: 880px
+      width: 860px
     }
 
     .modal-card h1 {
-      font: 40px/1.15 Georgia, serif;
-      margin: 12px 0 25px
+      font: 300 30px/1.15 "Segoe UI", Arial, sans-serif;
+      letter-spacing: .4px;
+      margin: 8px 0 18px
     }
 
     .modal-card h2 {
-      font: 27px Georgia, serif
+      font: 300 23px "Segoe UI", Arial, sans-serif
     }
 
     .modal-card h3 {
@@ -566,26 +613,57 @@
       letter-spacing: 1.5px;
       color: var(--gold);
       text-transform: uppercase;
-      margin-top: 25px
+      margin-top: 20px
     }
 
     .modal-card p {
-      color: #afc0cb;
-      line-height: 1.8
+      color: #b7cbd5;
+      line-height: 1.58
     }
 
     .modal-card .btnstack {
       display: flex;
       flex-direction: column;
-      gap: 10px
+      gap: 7px
+    }
+
+    .screen .primary,
+    .screen .secondary {
+      min-height: 42px;
+      border-radius: 5px 2px;
+      box-shadow: inset 0 1px #d8fcff32, inset 0 -7px 14px #03101c48
+    }
+
+    .screen .primary {
+      color: #f2fbff !important;
+      border-color: #56dff3c5;
+      background: linear-gradient(145deg, #1b4d63, #082131 62%, #123b4d);
+      box-shadow: inset 0 1px #e2fdff5c, inset 0 -8px 16px #03101c50,
+        0 0 10px #00cfff2b
+    }
+
+    .screen .primary:hover {
+      border-color: #c4fbff;
+      background: linear-gradient(145deg, #25657e, #0c3044);
+      box-shadow: inset 0 0 14px #4edcf02e, 0 0 14px #00cfff3d
+    }
+
+    .screen .secondary {
+      border-color: #48cfe98c;
+      background: linear-gradient(145deg, #153344c9, #061725e8)
+    }
+
+    .screen .secondary:hover {
+      border-color: #b5f7ff;
+      background: linear-gradient(145deg, #20485bd8, #0b2938e8)
     }
 
     .settings-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 0;
-      border-bottom: 1px solid var(--line);
+      padding: 11px 0;
+      border-bottom: 1px solid #4edcf02c;
       gap: 20px
     }
 
@@ -601,11 +679,11 @@
 
     .settings-row input[type=range] {
       width: 140px;
-      accent-color: var(--gold)
+      accent-color: var(--cyan)
     }
 
     .settings-row input[type=checkbox] {
-      accent-color: var(--gold);
+      accent-color: var(--cyan);
       width: 18px;
       height: 18px
     }
@@ -613,14 +691,14 @@
     .help-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px 32px
+      gap: 8px 24px
     }
 
     .help-line {
       font-size: 12px;
       color: #b7c7d2;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--line);
+      padding: 6px 0;
+      border-bottom: 1px solid #4edcf026;
       display: flex;
       justify-content: space-between;
       gap: 15px
@@ -636,21 +714,28 @@
     .faction-options {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin: 25px 0
+      gap: 8px;
+      margin: 14px 0
     }
 
     .faction-option {
-      border: 1px solid var(--line);
-      background: #182c3444;
-      padding: 22px 15px;
+      border: 1px solid #48cfe966;
+      border-radius: 7px 2px;
+      background: linear-gradient(145deg, #153344a8, #061725d6);
+      box-shadow: inset 0 1px #d8fcff1f;
+      padding: 16px 12px;
       text-align: center
     }
 
-    .faction-option:hover:not(:disabled),
+    .faction-option:hover:not(:disabled) {
+      border-color: #b5f7ff;
+      background: linear-gradient(145deg, #20485bc8, #0b2938e8)
+    }
+
     .faction-option.active {
       border-color: var(--gold);
-      background: #947b3420
+      background: linear-gradient(145deg, #55442788, #112331e8);
+      box-shadow: inset 0 0 14px #edb87513, 0 0 8px #edb87525
     }
 
     .faction-option.locked {
@@ -668,7 +753,7 @@
     .faction-option strong {
       display: block;
       font-size: 12px;
-      margin: 10px 0
+      margin: 7px 0
     }
 
     .faction-option small {
@@ -688,14 +773,16 @@
 
     .armory-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px
     }
 
     .upgrade-card {
-      border: 1px solid var(--line);
-      padding: 23px;
-      background: #17263566
+      border: 1px solid #48cfe966;
+      border-radius: 8px 2px;
+      padding: 18px;
+      background: linear-gradient(145deg, #153344a8, #061725dc);
+      box-shadow: inset 0 1px #d8fcff20
     }
 
     .upgrade-card .sigil {
@@ -707,7 +794,7 @@
       color: var(--ink);
       font-size: 12px;
       letter-spacing: 0;
-      margin-top: 15px
+      margin-top: 11px
     }
 
     .upgrade-card p {
@@ -724,24 +811,37 @@
     .upgrade-levels i {
       height: 4px;
       flex: 1;
-      background: #374856
+      background: #314957;
+      box-shadow: inset 0 1px #bff9ff1c
     }
 
     .upgrade-levels i.on {
-      background: var(--gold)
+      background: linear-gradient(90deg, #4edcf0, #a9f5ff);
+      box-shadow: 0 0 6px #00cfff66
     }
 
     .result-stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      border-block: 1px solid var(--line);
-      padding: 24px 0;
-      margin: 25px 0
+      gap: 6px;
+      padding: 0;
+      margin: 18px 0
+    }
+
+    .result-stats > div {
+      min-width: 0;
+      padding: 12px 10px;
+      border: 1px solid #48cfe94d;
+      border-radius: 5px 2px;
+      background: linear-gradient(145deg, #1533448f, #061725b8)
+    }
+
+    .result-stats > div:last-child {
+      grid-column: 1 / -1
     }
 
     .result-stats strong {
-      font: 27px var(--mono);
+      font: 23px var(--mono);
       display: block;
       color: var(--ink)
     }
@@ -749,7 +849,8 @@
     .result-stats span {
       font: 9px var(--mono);
       letter-spacing: 1px;
-      color: var(--muted)
+      color: #91aebc;
+      overflow-wrap: anywhere
     }
 
     .result-stars {
@@ -757,4 +858,111 @@
       letter-spacing: 10px;
       font-size: 28px;
       margin-top: 8px
+    }
+
+    .subscreen .glass {
+      border-color: #48cfe958;
+      border-radius: 7px 2px;
+      background: linear-gradient(145deg, #102b3ac9, #061521e8);
+      box-shadow: inset 0 1px #d8fcff20
+    }
+
+    .upgrade-card .secondary {
+      width: 100%;
+      padding-inline: 10px
+    }
+
+    .modal-card:has(.result-stats) .btnstack {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr))
+    }
+
+    .home-screen,
+    .subscreen,
+    .modal-card {
+      scrollbar-width: thin;
+      scrollbar-color: #4edcf080 #06131e
+    }
+
+    .home-screen::-webkit-scrollbar,
+    .subscreen::-webkit-scrollbar,
+    .modal-card::-webkit-scrollbar {
+      width: 8px
+    }
+
+    .home-screen::-webkit-scrollbar-track,
+    .subscreen::-webkit-scrollbar-track,
+    .modal-card::-webkit-scrollbar-track {
+      background: #06131e
+    }
+
+    .home-screen::-webkit-scrollbar-thumb,
+    .subscreen::-webkit-scrollbar-thumb,
+    .modal-card::-webkit-scrollbar-thumb {
+      background: #2d8598;
+      border: 2px solid #06131e;
+      border-radius: 6px
+    }
+
+    @media(max-width:600px) {
+      .home-screen .menu-main {
+        padding: 22px 20px 18px
+      }
+
+      .home-screen .wordmark {
+        font-size: clamp(40px, 12.5vw, 52px)
+      }
+
+      .home-screen .menu-tagline {
+        margin-bottom: 18px
+      }
+
+      .subscreen > div {
+        padding: 16px
+      }
+
+      .modal-card:has(.result-stats) .btnstack {
+        grid-template-columns: 1fr
+      }
+
+      .result-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+    }
+
+    @media(max-width:360px) {
+      .subscreen .settings-row,
+      .modal-card .settings-row {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 6px
+      }
+
+      .subscreen .settings-row select,
+      .subscreen #battleSeed,
+      .modal-card .settings-row select {
+        width: 100% !important;
+        max-width: none
+      }
+    }
+
+    @media(max-height:500px) and (min-width:601px) {
+      .modal-shade {
+        align-items: flex-start;
+        padding-block: 10px
+      }
+
+      .modal-card {
+        max-height: calc(100dvh - 20px);
+        padding: 20px
+      }
+
+      .modal-card h1 {
+        font-size: 24px;
+        margin-bottom: 12px
+      }
+
+      .settings-row {
+        padding-block: 7px
+      }
     }

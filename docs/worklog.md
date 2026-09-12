@@ -2,6 +2,12 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Menüs im kompakten HUD-Stil
+
+- Hauptmenü, Gefechtsauswahl sowie Pause-, Bestätigungs-, Einstellungs-, Handbuch-, Waffenkammer- und Ergebnisdialoge an das Gefechts-HUD angeglichen: dunkelblaue Verläufe, cyanfarbene Rahmen/Doppellichtkanten und Glühen, kompaktere Typografie, Karten und Formulare. Gold bleibt als semantischer Akzent für Überschriften und aktive Fraktion. Keine Inhalte, Menüzustände, Käufe oder Navigation geändert; nur gemeinsame CSS-Variablen und `styles/screens.css`.
+- Schmale Formulare stapeln Felder; Ergebniswerte erhalten kompakte Einzelkarten mit hervorgehobenem Score. Handbuch/Waffenkammer und niedrige Landscape-Ansichten bleiben scrollbar, mit passender dunkler Scrollbar. Keine Assets oder zusätzlichen Renderpässe.
+- **234 Tests inklusive Build bestanden** (rund 36 s). **Chromium `file://`: 390×844, 1280×800, 932×430 und 320×740**: alle Screenshots gesichtet; Karten innerhalb des Viewports, Querformat-/Schmalformat-Scrollen und erreichbare Abschlussknöpfe geprüft. Touch-Navigation Hauptmenü → Gefechtsauswahl, Einstellungen samt Checkbox/Persistenz, Handbuch, Waffenkammer, Pause, Neustartbestätigung und Ergebnis → Waffenkammer → Ergebnis geprüft; keine Console-/Laufzeitfehler. Headless-Touch, kein Echtgeräte-/Lesbarkeits- oder Leistungsnachweis.
+
 ## Kompaktes HUD nach Grafikvorbild
 
 - Dreier-Deck wie in `graphics-inspiration.png`: Minimap links, sechs Werkzeuge über vier Fähigkeiten mittig, Kategorien als 2×2 rechts; Unterkanten bündig. Untermenüs wachsen scrollbar nach oben, ohne Werkzeuge/Fähigkeiten zu verdecken. Tempo direkt unter der Uhr, Attack-move neben Home; auch Energie bleibt mobil sichtbar. Dunkelblaue CSS-Verläufe, cyanfarbene Rahmen und Lichtkanten ohne neue Assets/Renderpässe. Minimap quadratisch eingepasst; Queue/Radio/Toast nachgeführt. Schmale und niedrige Fenster erhalten Rückfalllayouts.
