@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Vierter Hörentwurf: Last Light Relay
+
+- Separater **96-BPM-/83-s-Industrial-Dub-Entwurf** unter `music-drafts/04-last-light-relay.mp3`: Halftime-Beat, runder Bass, kurze Orgel-Echos, verstimmte Signalmelodie und drei neue generische Funkphrasen. Langsamer Aufbau, fünfsekündiger Beat-Aussetzer; keine Gitarren/Hats/Flächen, getrennte Vordergrundfenster. Neuer Offline-Generator verwendet eigene Synthese und bestehende Drum-/Flite-Funktionen, keine Aufnahme als Quelle. **Nicht eingebaut**; Spiel, Deployment, alle bisherigen Fassungen und Nutzerreferenz unverändert.
+- **Neu geprüft:** Generator und byteidentische Regeneration, Python-Syntax, 255 rastergebundene Ereignisse ohne konkurrierende Vordergrundarten einschließlich Echos; vollständige MP3-Dekodierung, 82,8 s PCM, Stereo/44,1 kHz/224 kbit/s, endliche Samples ohne Clipping, etwa −15,24 LUFS/−2,14 dBTP. Hashes aller bisherigen Audiodateien unverändert; Diff/Links geprüft. Kein Spielcode geändert, daher kein neuer Build/`npm test`-/Browser-/Docker-Lauf. Technische Prüfung ist kein Hörurteil; Nutzerabnahme steht aus.
+
 ## Gefechtsmusik mit längeren Ruhephasen
 
 - Startverzögerung und Pausen zwischen allen Tracks auf **10 Sekunden** gesetzt. Gemeinsame pausierbare Audio-Uhr; nur beendete Tracks wechseln nach der Wartezeit, Gefechtsstart/Neustart bleibt bei Track 1. Pegel weiterhin 10 %, Menüpartitur, Effekte und Dateien unverändert.
