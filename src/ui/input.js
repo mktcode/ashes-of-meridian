@@ -193,7 +193,7 @@
           case 'restartConfirm':
             this.openModal(
               'confirm',
-              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Start this operation again?</h1><p>Your current deployment will be replaced. Permanent upgrades are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
+              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Start this operation again?</h1><p>Your current deployment will be replaced with a new random battlefield. Permanent upgrades are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
             );
             break;
           case 'backPause':
@@ -201,7 +201,7 @@
             break;
           case 'restart': {
             let s = this.game.s;
-            this.game.start({ faction: s.faction, seed: s.seed, biome: s.biome, enemy: s.enemy });
+            this.game.start({ faction: s.faction, biome: s.biome, enemy: s.enemy });
             break;
           }
         }

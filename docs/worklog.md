@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Zufälliger Seed und breiter Gefechtsstart
+
+- Seed-Eingabe samt zugehörigen Styles entfernt. Gefechtsstart und Neustart aus Pause/Ergebnis überlassen den Seed der bestehenden Zufallsauswahl in `game.start()`; Fraktionen und Biom bleiben beim Neustart erhalten. Bestätigungstext nennt das neue zufällige Schlachtfeld. Interne feste Seeds für Tests bleiben möglich, Layout-/Simulations-RNG und Fixtures unverändert. **Start battle** füllt unter der Startaufstellung die ganze Panel-Inhaltsbreite.
+- **Neu: `npm test` einschließlich Build, 247/247 bestanden** (rund 62 s): automatische Seed-Auswahl bei wiederholtem Start, Auswahl-/Neustartübergaben und Layoutvertrag abgesichert. **Chromium `file://`** bei 375×667, 320×740, 1280×800 und 932×430: kein Seed-Feld, volle Buttonbreite, kein horizontaler Überlauf, Start erreichbar. Simulierte Touch-Starts aus Auswahl, Pause und kontrolliertem Ergebnis erzeugten drei verschiedene Seeds bei gleichen Fraktionen/Biom; GL 0, keine Console-/Laufzeitfehler. Screenshots, Diff und lokale Dokumentationslinks geprüft; kein Echtgerät- oder vollständiger Run-Nachweis.
+
 ## Detaillierter Free-Marches-Sentinel
 
 - Sechskantsockel mit Ankerplatten/Schrauben, Pfeilerrippen und Drehkranz; abgeschrägter Waffenkopf mit Dachbefestigungen, Kühlgitter, Kennstreifen und gerippten Doppelläufen mit vertieften Mündungen. Zwei einmalig hochgeladene Meshes (624/1.064 Dreiecke); Sockel-/Zielausrichtung, Bau-/Teamdarstellung, Spielwerte und RNG unverändert. Nur zugehöriges Menü-PNG manuell erneuert, keine Bildautomatik eingebaut.

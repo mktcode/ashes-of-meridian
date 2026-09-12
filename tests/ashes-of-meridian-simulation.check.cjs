@@ -21,7 +21,7 @@ function createGame() {
   const game = new MeridianGame({ upgrades: {} }, (type, data) => {
     events.push({ type, data: json(data) });
   });
-  return { game, events };
+  return { game, events, context };
 }
 
 function freshBattle(faction = 0, seed = 1409) {
@@ -64,6 +64,23 @@ function advance(game, steps) {
 
 const player = (game, type) => game.alive(e => e.team === 0 && e.type === type)[0];
 const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').length;
+
+test('starts without a supplied seed draw a fresh random battlefield each time', () => {
+  const { game, context } = createGame();
+  vm.runInContext(`const samples = [.12345678, .87654321]; Math.random = () => {
+    if (!samples.length) throw Error('Unexpected extra seed draw');
+    return samples.shift();
+  }`, context);
+  for (const expected of [12345678, 87654321]) {
+    const previous = game.world;
+    game.start({ faction: 1, enemy: 2, biome: 'rust' });
+    assert.equal(game.s.seed, expected); assert.equal(game.world.seed, expected);
+    assert.notStrictEqual(game.world, previous);
+    assert.deepEqual([game.s.faction, game.s.enemy, game.s.biome], [1, 2, 'rust']);
+  }
+  game.start({ seed: 1409 }); // Internal deterministic scenarios still bypass the random draw.
+  assert.equal(game.s.seed, 1409);
+});
 
 test('single battle starts with only the own HQ, one hostile base and no mission state', () => {
   const { game, events } = freshBattle(), s = game.s;

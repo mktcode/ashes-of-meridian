@@ -47,6 +47,8 @@ Queue-Symbole stehen links oberhalb der Minimap mit freiem Abstand; ihre maximal
 
 Gefechtsauswahl, Pause/Bestätigungen, Einstellungen, Handbuch, Waffenkammer und Ergebnis verwenden denselben dunkelblauen/cyan beleuchteten Panelstil wie das HUD. Im Hauptmenü stehen Titel oben und Aktionen unten ohne eigenen Panelhintergrund, Rahmen oder Schatten direkt über der Weltvorschau. Die Wortmarke setzt **ASHES OF** ohne Zierlinien in eine Zeile und **MERIDIAN** darunter; eine Eyebrow entfällt. **New battle** und **Fleet upgrades** sind große Schaltflächen, Handbuch und Einstellungen bleiben als kleine Textaktionen darunter. Niedriges Querformat verdichtet diesen Bereich und blendet nur den nicht interaktiven Fuß aus, damit alle vier Aktionen ohne initiales Scrollen erreichbar bleiben. CSS-Verläufe und Effekte benötigen keine zusätzlichen Assets oder WebGL-Pässe. Gold markiert Überschriften und die aktive Fraktion. Die Regeln liegen in `styles/screens.css`, gemeinsame Farbvariablen in `styles/base.css`; ergänzende responsive Regeln in `styles/hud.css` beachten.
 
+In der Gefechtsauswahl gibt es keine Seed-Eingabe. Die Startaufstellung steht über **Start battle**, das in allen Fenstergrößen die volle Inhaltsbreite des Auswahlpanels ausfüllt.
+
 Modalkarten sind höhenbegrenzt und scrollbar. Schmale Formulare stapeln Felder; Upgrade-Karten stehen breit zu zweit, mobil untereinander. Ergebniswerte bilden Einzelkarten, der Score eine ganze Zeile; Ergebnisaktionen stehen breit nebeneinander, bis 600 px untereinander. Der Hauptmenü-/Gefechtsauswahl-Hintergrund bleibt eine bildschirmfüllende Weltvorschau.
 
 [Prüfverfahren](testing.md) · [zentrales Arbeitsprotokoll](worklog.md)

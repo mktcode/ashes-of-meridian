@@ -647,8 +647,18 @@ test('victory and defeat offer restart, upgrades and main menu; ended runs canno
     assert.equal(h.ui.paused,true); assert.equal(h.ui.html,html);
     h.ui.game.start=opts=>h.calls.push(['start',{...opts}]);
     h.click({ui:'restart'});
-    assert.deepEqual(h.calls,[['start',{faction:0,seed:1409,biome:'rust',enemy:2}]]);
+    assert.deepEqual(h.calls,[['start',{faction:0,biome:'rust',enemy:2}]], 'redeployment requests a fresh seed');
   }
+});
+
+test('pause restart preserves faction, enemy and biome but requests a fresh battlefield', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  Object.assign(h.ui.game.s, { faction: 1, seed: 1409, biome: 'rust', enemy: 2 });
+  h.ui.game.start = opts => h.calls.push(['start', { ...opts }]);
+  h.ui.pause(); h.click({ ui: 'restartConfirm' });
+  assert.match(h.ui.html, /new random battlefield/);
+  h.click({ ui: 'restart' });
+  assert.deepEqual(h.calls, [['start', { faction: 1, biome: 'rust', enemy: 2 }]]);
 });
 
 test('result upgrades return to the same ended battle without replaying the result sound', () => {
@@ -769,11 +779,11 @@ test('factions unlock sequentially after victories with the preceding faction', 
   assert.match(html, /Win once as The Verdant Choir/);
   h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 0, 'locked card cannot change selection');
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash'],['battleSeed','1409']])
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'ash',seed:1409}]], 'launch also rejects a forged locked choice');
+  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'ash'}]], 'launch also rejects a forged locked choice');
   let saves = 0; h.ui.persistence.saveProfile = () => { saves++; return true; };
   h.ui.showResult = () => {
     const faction = h.ui.factionJustUnlocked;
@@ -805,16 +815,20 @@ test('factions unlock sequentially after victories with the preceding faction', 
   h.click({ faction: '2' }); assert.equal(h.ui.battleFaction, 2);
 });
 
-test('battle setup and launch have no difficulty control, options API or profile setting', () => {
+test('battle setup launches with automatic seed selection and no difficulty control', () => {
   const h = setup(); h.ui.profile.factionUnlockLevel = 2; h.ui.showBattle();
   assert.equal(h.ui.difficultyOptions, undefined);
-  assert.doesNotMatch(h.document.getElementById('menu').innerHTML, /difficulty|standard|veteran/i);
+  const html = h.document.getElementById('menu').innerHTML;
+  assert.doesNotMatch(html, /difficulty|standard|veteran|seed/i);
+  assert.match(html, /class="launch-row battle-launch"/);
+  const css = fs.readFileSync(path.join(__dirname, '..', 'styles/screens.css'), 'utf8');
+  assert.match(css, /\.battle-launch\s*\{[^}]*flex-direction: column;\s*align-items: stretch/);
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash'],['battleSeed','1409']])
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'ash',seed:1409}]]);
+  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'ash'}]]);
   assert.equal('difficulty' in h.ui.profile.settings,false);
 });
 

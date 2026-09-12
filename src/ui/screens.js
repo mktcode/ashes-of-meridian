@@ -59,7 +59,7 @@
             .map(([k, b]) => `<option value="${k}">${b.name}</option>`)
             .join(
               ''
-            )}</select></div><div class="settings-row"><label>Map seed<small>Use the same seed to replay a battlefield.</small></label><input id="battleSeed" type="number" value="${Math.floor(Math.random() * 900000) + 100000}" min="1" max="999999999" style="width:155px;background:#172333;border:1px solid #68809855;padding:11px;color:#c9dbde;font:12px var(--mono)"></div></div><div class="launch-row" style="justify-content:space-between"><span class="battle-note">HQ + ${this.profile.upgrades.startingWorkers || 0} WORKERS · ${startingAlloy} ALLOY</span><button class="primary" data-ui="startBattle">START BATTLE ↗</button></div></div></div>`;
+            )}</select></div></div><div class="launch-row battle-launch"><span class="battle-note">HQ + ${this.profile.upgrades.startingWorkers || 0} WORKERS · ${startingAlloy} ALLOY</span><button class="primary" data-ui="startBattle">START BATTLE ↗</button></div></div></div>`;
       },
       factionUnlocked(faction) {
         return Number.isInteger(faction) && faction >= 0 && faction < FACTIONS.length &&
@@ -67,11 +67,10 @@
       },
       startBattle() {
         let enemy = +$('battleEnemy').value, biome = $('battleBiome').value,
-          seed = clamp(parseInt($('battleSeed').value) || Math.floor(Math.random() * 1e8), 1, 999999999),
           faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : 0;
         this.battleFaction = faction;
         this.audio.unlock();
-        this.game.start({ faction, seed, enemy, biome });
+        this.game.start({ faction, enemy, biome });
       },
       openModal(kind, html, wide = false) {
         if (kind !== 'sell') this.sellBuildingId = null;
