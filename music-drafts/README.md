@@ -1,6 +1,6 @@
 # Hörentwürfe – Industrial Breakbeat
 
-Drei eigenständige Skizzen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Nur zum Anhören und Auswählen: **nicht im Spiel verknüpft, nicht im Docker-Buildkontext**. Der bestehende Kampftrack bleibt unverändert.
+Drei eigenständige Themen in mehreren Vergleichsfassungen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Nur zum Anhören und Auswählen: **nicht im Spiel verknüpft, nicht im Docker-Buildkontext**. Der bestehende Kampftrack bleibt unverändert.
 
 | Original | Luftigerer Vergleichsmix | Schwerpunkt |
 |---|---|---|
@@ -9,6 +9,16 @@ Drei eigenständige Skizzen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte p
 | [03 – Black Channel](03-black-channel.mp3) | [Reduced Mix](03-black-channel-reduced.mp3) | Düsterer: mehr Swing und Platz, tiefere Bassfigur, metallische FM-Signale, Funkfragmente und ein ausgedünnter Halftime-Abschnitt. |
 
 Die Dateien direkt im Audioplayer öffnen, etwa mit `ffplay -autoexit music-drafts/01-ratchet-theory.mp3` vom Projektverzeichnis aus.
+
+## Minimal Mixes – neuer, deutlich sparsamerer Aufbau
+
+- [01 – Ratchet Theory / Minimal](01-ratchet-theory-minimal.mp3)
+- [02 – Breach Protocol / Minimal](02-breach-protocol-minimal.mp3)
+- [03 – Black Channel / Minimal](03-black-channel-minimal.mp3)
+
+**0–4,1 s:** nur Kick/Snare. **Ab 4,1 s:** eine einzelne Gitarre. **Ab 12,4 s:** wenige dazu passende Bassnoten. **Ab 20,7 s:** Funkfenster; **ab 24,8 s:** kurze Melodieantworten. Gitarre, Melodie und Funk lösen sich ab – höchstens Hauptbeat, Bass und eine Vordergrundstimme gleichzeitig. Zwischendurch geht die Besetzung wieder zurück.
+
+Keine Hi-Hats, Ghostnotes, Clap-/Gitarrendopplungen, Fills oder Metallkulisse. Instrumenteneinsätze liegen gemeinsam auf einem exakten Achtelraster ohne zufällige Verzögerung; Bass/Gitarre teilen ihre Akzente. Vertraute Sounds und Tonmaterial, aber bewusst vereinfachte Rhythmen und langsamerer Harmoniewechsel. **Stimmen unverändert erzeugt und bearbeitet**, einschließlich ursprünglicher Funkfilter, Retriggerabstände, Pegelverhältnisse und Echo; nur später platziert, mit eigenem Platz im Arrangement. Originale und Reduced Mixes werden nicht überschrieben.
 
 ## Reduced Mixes
 
@@ -34,6 +44,9 @@ python3 scripts/generate-music-drafts.py --variant 2
 python3 scripts/generate-music-drafts.py --reduced
 # Nur ein Vergleichsmix:
 python3 scripts/generate-music-drafts.py --reduced --variant 2
+# Neue minimalistische Arrangements; verwendet die vorhandenen Soundfunktionen:
+python3 scripts/generate-minimal-music-drafts.py
+python3 scripts/generate-minimal-music-drafts.py --variant 2
 ```
 
 Benötigt Python 3 und `ffmpeg` mit `flite`, `loudnorm` und `libmp3lame`; keine Python-Zusatzpakete. Der Generator gehört weder zum Spiel noch zu `npm run build`. Gleiche Werkzeugversionen und Seeds reproduzieren den Entwurf; Codec-/TTS-Versionen können das Ergebnis verändern.
