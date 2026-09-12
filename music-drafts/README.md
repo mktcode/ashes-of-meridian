@@ -1,6 +1,6 @@
 # Hörentwürfe – Industrial Breakbeat
 
-Drei eigenständige Themen in mehreren Vergleichsfassungen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Die **Minimal Mixes sind freigegeben** und als bytegleiche Kopien unter `audio/music-*.mp3` im Spiel eingebaut: feste Dreierplaylist mit 5 Sekunden Musikpause zwischen den Stücken. Dieser Entwurfsordner selbst bleibt außerhalb des Docker-Buildkontexts; Originale und Reduced Mixes dienen weiterhin nur dem Vergleich.
+Drei eigenständige Themen in mehreren Vergleichsfassungen mit **116 BPM**, jeweils **67 Sekunden** (32 Takte plus Ausklang), Stereo-MP3/44,1 kHz/224 kbit/s. Die **Minimal Mixes sind freigegeben** und als bytegleiche Kopien unter `audio/music-*.mp3` im Spiel eingebaut: feste Dreierplaylist mit 10 Sekunden Startverzögerung und 10 Sekunden Musikpause zwischen den Stücken. Dieser Entwurfsordner selbst bleibt außerhalb des Docker-Buildkontexts; Originale und Reduced Mixes dienen weiterhin nur dem Vergleich.
 
 | Original | Luftigerer Vergleichsmix | Schwerpunkt |
 |---|---|---|

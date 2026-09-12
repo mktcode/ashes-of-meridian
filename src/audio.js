@@ -5,7 +5,7 @@
       './audio/music-breach-protocol.mp3',
       './audio/music-black-channel.mp3'
     ];
-    const BATTLE_MUSIC_GAP = 5;
+    const BATTLE_MUSIC_GAP = 10;
     class MeridianAudio {
       constructor(settings) {
         this.settings = settings;
@@ -16,7 +16,7 @@
         this.effectsGain = null;
         this.battleTrack = null;
         this.battleTrackIndex = 0;
-        this.battleGapRemaining = null;
+        this.battleGapRemaining = BATTLE_MUSIC_GAP;
         this.battleGapUntil = null;
         this.battlePlayPending = false;
         this.battlePlayFailed = false;
@@ -98,7 +98,7 @@
         }
       }
       resetBattleMusic() {
-        this.battleGapRemaining = null;
+        this.battleGapRemaining = BATTLE_MUSIC_GAP;
         this.battleGapUntil = null;
         this.battlePlayFailed = false;
         if (this.battleTrack) {
@@ -129,8 +129,11 @@
           if (now < this.battleGapUntil) return;
           this.battleGapRemaining = null;
           this.battleGapUntil = null;
-          this.battleTrackIndex = (this.battleTrackIndex + 1) % BATTLE_MUSIC_URLS.length;
-          track.src = BATTLE_MUSIC_URLS[this.battleTrackIndex];
+          // The initial delay keeps track 1; only a finished track advances.
+          if (track.ended) {
+            this.battleTrackIndex = (this.battleTrackIndex + 1) % BATTLE_MUSIC_URLS.length;
+            track.src = BATTLE_MUSIC_URLS[this.battleTrackIndex];
+          }
           this.battlePlayFailed = false;
         }
         // The media clock can reach ended before its queued event is delivered.

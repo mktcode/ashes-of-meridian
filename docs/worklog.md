@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Gefechtsmusik mit längeren Ruhephasen
+
+- Startverzögerung und Pausen zwischen allen Tracks auf **10 Sekunden** gesetzt. Gemeinsame pausierbare Audio-Uhr; nur beendete Tracks wechseln nach der Wartezeit, Gefechtsstart/Neustart bleibt bei Track 1. Pegel weiterhin 10 %, Menüpartitur, Effekte und Dateien unverändert.
+- **Neu geprüft:** `npm test` inklusive Build, **252/252 bestanden** (rund 60 s); exakte 10-s-Grenzen, Pause/Mute der Startwartezeit und Neustart während einer Wartezeit abgesichert. Chromium `file://`, simuliertes Touch: verzögerter Erststart, alle Übergänge/Rücksprung bei Tempo 2× nach echtem Dateiende (dorthin gespult), angehaltene Restwartezeit, Resume, kontrollierter Neustart, Ergebnis und Menüreset; GL 0, keine Laufzeit-/Ladefehler. Diff/Links geprüft. Kein neuer Hör-/Echtgeräte-/Docker-Nachweis; gebaute lokale Ausgabe aktualisiert.
+
 ## Gefechtsmusik leiser
 
 - Nach Hörfeedback schrittweise auf **10 % des ursprünglichen Pegels** reduziert (Faktor 0,1 statt zuletzt 0,25). Profilregler, Menümusik, Effekte, Dateien und Playlistablauf unverändert. Regressionen prüfen 0,028 bei Gesamtlautstärke 0,28 beziehungsweise 0,04 bei 0,4 mit Gleitkommatoleranz sowie unveränderte Menü-/Effektpegel.

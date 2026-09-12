@@ -125,7 +125,7 @@ function setupAudio() {
     flush: () => new Promise(resolve => setImmediate(resolve)) };
 }
 
-test('battle playlist uses the three approved minimal recordings in order with five-second gaps', async () => {
+test('battle playlist starts after ten seconds and plays the approved recordings with ten-second gaps', async () => {
   const h = setupAudio(), { audio, plays } = h, track = h.tracks[0];
   const names = ['ratchet-theory', 'breach-protocol', 'black-channel'];
   assert.equal(h.tracks.length, 1);
@@ -134,6 +134,12 @@ test('battle playlist uses the three approved minimal recordings in order with f
   assert.equal(audio.musicGain.gain.value, 1, 'menu music remains unchanged');
   assert.equal(audio.effectsGain.gain.value, 1, 'sound effects remain unchanged');
   audio.setMode('battle'); await h.flush();
+  assert.equal(plays.length, 0, 'new battles start with silence');
+  const initial = audio.ctx.currentTime;
+  audio.ctx.currentTime = initial + 9.999; audio.update();
+  assert.equal(plays.length, 0);
+  audio.ctx.currentTime = initial + 10; audio.update(); await h.flush();
+  assert.equal(plays.length, 1);
   assert.ok(Math.abs(track.volume - .028) < 1e-12, 'battle music plays at ten percent of the master volume');
   for (let i = 0; i < 3; i++) {
     const file = `music-${names[i]}.mp3`;
@@ -147,10 +153,10 @@ test('battle playlist uses the three approved minimal recordings in order with f
     track.listeners.ended();
     const start = audio.ctx.currentTime;
     track.listeners.ended(); // A duplicate event must not restart the gap.
-    audio.ctx.currentTime = start + 4.999; audio.update();
+    audio.ctx.currentTime = start + 9.999; audio.update();
     assert.equal(plays.length, i + 1);
     assert.equal(track.paused, true);
-    audio.ctx.currentTime = start + 5; audio.update(); await h.flush();
+    audio.ctx.currentTime = start + 10; audio.update(); await h.flush();
     assert.equal(plays.length, i + 2);
   }
   assert.equal(track.src, './audio/music-ratchet-theory.mp3', 'last track returns to first, also after a gap');
@@ -158,42 +164,67 @@ test('battle playlist uses the three approved minimal recordings in order with f
 
 test('music pause/mute preserve track and gap position; menu and new battles reset the playlist', async () => {
   const h = setupAudio(), { audio, settings, plays } = h, track = h.tracks[0];
-  audio.setMode('battle'); await h.flush();
+  audio.setMode('battle'); audio.ctx.currentTime += 10; audio.update(); await h.flush();
   track.currentTime = 12;
   audio.setMode('silent'); assert.equal(track.paused, true);
   audio.ctx.currentTime += 20;
   audio.setMode('battle'); await h.flush();
   assert.equal(track.currentTime, 12);
   track.finish(); audio.ctx.currentTime += 2;
-  audio.setMode('silent'); assert.equal(audio.battleGapRemaining, 3);
+  audio.setMode('silent'); assert.equal(audio.battleGapRemaining, 8);
   audio.ctx.currentTime += 100;
   audio.setMode('battle');
   audio.ctx.currentTime += 1; settings.music = false; audio.updateSettings();
-  assert.equal(audio.battleGapRemaining, 2);
+  assert.equal(audio.battleGapRemaining, 7);
   const count = plays.length;
   audio.ctx.currentTime += 100; audio.update();
   assert.equal(plays.length, count);
   settings.music = true; settings.volume = .4; audio.updateSettings();
-  audio.ctx.currentTime += 1.999; audio.update(); assert.equal(plays.length, count);
+  audio.ctx.currentTime += 6.999; audio.update(); assert.equal(plays.length, count);
   audio.ctx.currentTime += .001; audio.update(); await h.flush();
   assert.equal(audio.battleTrackIndex, 1); assert.ok(Math.abs(track.volume - .04) < 1e-12);
   settings.music = false; audio.updateSettings(); assert.equal(track.paused, true);
   settings.music = true; audio.updateSettings(); await h.flush();
   track.finish(); audio.setMode('menu');
-  assert.equal(audio.battleTrackIndex, 0); assert.equal(audio.battleGapRemaining, null);
+  assert.equal(audio.battleTrackIndex, 0); assert.equal(audio.battleGapRemaining, 10);
   assert.equal(track.currentTime, 0); assert.equal(track.paused, true);
   audio.ctx.currentTime += 100; audio.update(); assert.equal(track.paused, true);
-  audio.setMode('battle'); await h.flush(); track.finish();
+  audio.setMode('battle'); audio.ctx.currentTime += 10; audio.update(); await h.flush(); track.finish();
   audio.resetBattleMusic(); audio.setMode('battle'); await h.flush();
+  assert.equal(track.paused, true); assert.equal(audio.battleGapRemaining, 10);
+  audio.ctx.currentTime += 10; audio.update(); await h.flush();
   assert.equal(track.paused, false); assert.equal(audio.battleGapRemaining, null);
   assert.equal(track.src, './audio/music-ratchet-theory.mp3');
+});
+
+test('initial music delay pauses with gameplay or music off and restarts for a new battle', async () => {
+  const h = setupAudio(), { audio, settings, plays } = h;
+  audio.setMode('battle'); audio.ctx.currentTime += 3;
+  audio.setMode('silent'); assert.equal(audio.battleGapRemaining, 7);
+  audio.ctx.currentTime += 100; audio.update();
+  audio.setMode('battle'); audio.ctx.currentTime += 2;
+  settings.music = false; audio.updateSettings();
+  assert.equal(audio.battleGapRemaining, 5);
+  audio.ctx.currentTime += 100; audio.update();
+  settings.music = true; audio.updateSettings();
+  audio.ctx.currentTime += 4.999; audio.update();
+  assert.equal(plays.length, 0);
+  audio.ctx.currentTime += .001; audio.update(); await h.flush();
+  assert.deepEqual(plays, ['./audio/music-ratchet-theory.mp3']);
+  audio.resetBattleMusic(); audio.setMode('battle');
+  audio.ctx.currentTime += 4; audio.update();
+  audio.resetBattleMusic(); audio.setMode('battle');
+  audio.ctx.currentTime += 9.999; audio.update(); assert.equal(plays.length, 1);
+  audio.ctx.currentTime += .001; audio.update(); await h.flush();
+  assert.equal(plays.length, 2);
+  assert.equal(audio.battleTrackIndex, 0);
 });
 
 test('rejected battle playback does not retry every frame and can retry on user unlock', async () => {
   const h = setupAudio(), { audio } = h, track = h.tracks[0];
   let attempts = 0;
   track.play = () => { attempts++; return Promise.reject(new Error('blocked')); };
-  audio.setMode('battle'); await h.flush();
+  audio.setMode('battle'); audio.ctx.currentTime += 10; audio.update(); await h.flush();
   for (let i = 0; i < 10; i++) audio.update();
   assert.equal(attempts, 1);
   track.play = () => { attempts++; track.paused = false; return Promise.resolve(); };
