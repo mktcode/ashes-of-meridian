@@ -9,6 +9,8 @@
         this.selected = [];
         this.clearMode();
         $('hud').classList.add('hidden');
+        $('worldViewport').classList.remove('in-battle');
+        if (this.onViewportChange) this.onViewportChange();
         $('modal').classList.add('hidden');
         $('radio').classList.add('hidden');
         $('menu').classList.remove('hidden');
@@ -40,6 +42,8 @@
         this.paused = true;
         $('menu').classList.remove('hidden');
         $('hud').classList.add('hidden');
+        $('worldViewport').classList.remove('in-battle');
+        if (this.onViewportChange) this.onViewportChange();
         $('modal').classList.add('hidden');
         this.battleFaction = this.battleFaction || 0;
         $('menu').innerHTML =

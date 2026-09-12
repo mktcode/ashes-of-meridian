@@ -58,7 +58,7 @@ test('renderer fragments expose the existing bindings and class API in document 
   );
   assert.equal(vm.runInContext('typeof MAT + ":" + typeof MERIDIAN_TEXTURES + ":" + typeof geom', context), 'object:object:object');
   assert.equal(vm.runInContext('typeof VERT + ":" + typeof FRAG + ":" + typeof MeridianRenderer', context), 'string:string:function');
-  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianRenderer.prototype).length', context), 24);
+  assert.equal(vm.runInContext('Object.getOwnPropertyNames(MeridianRenderer.prototype).length', context), 25);
   assert.equal(vm.runInContext('Object.keys(MeridianRenderer.prototype).length', context), 0);
 });
 

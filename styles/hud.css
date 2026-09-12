@@ -18,7 +18,7 @@
     #topbar {
       position: absolute;
       inset: 0 0 auto;
-      height: 63px;
+      height: var(--topbar-height);
       background: linear-gradient(#08111cef, #0b1422e8);
       border-bottom: 1px solid var(--line);
       display: flex;
@@ -579,8 +579,9 @@
     }
 
     @media(max-width:850px) {
+      :root { --topbar-height: 55px }
+
       #topbar {
-        height: 55px;
         gap: 10px
       }
 

@@ -72,6 +72,8 @@ function setup() {
     command(...args) { calls.push(['command', ...args]); }
   };
   const ui = new TestUI(game, {
+    viewport: { left: 0, top: 55, right: 1280, bottom: 590, width: 1280, height: 535 },
+    containsPoint(x, y) { const v = this.viewport; return x > v.left && x < v.right && y > v.top && y < v.bottom; },
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
@@ -88,6 +90,45 @@ function setup() {
   const clickCamera = cam => click({ cam });
   return { ui, calls, key, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
+
+test('battle lifecycle reserves the world viewport only while the battlefield is displayed', () => {
+  const h = setup(), changes = [], viewport = h.document.getElementById('worldViewport');
+  h.ui.onViewportChange = () => changes.push([h.ui.view, viewport.classList.contains('in-battle')]);
+  h.ui.event('start'); assert.equal(viewport.classList.contains('in-battle'), true);
+  h.ui.pause(); h.ui.showSettings(); h.ui.showArmory();
+  assert.deepEqual(changes, [['game', true]], 'dialogs keep battlefield geometry');
+  h.ui.showHome(); assert.equal(viewport.classList.contains('in-battle'), false);
+  h.ui.showBattle(); assert.equal(viewport.classList.contains('in-battle'), false);
+  assert.deepEqual(changes, [['game', true], ['home', false], ['battle', false]]);
+});
+
+test('world picking and captured releases outside the viewport cannot issue orders or target abilities', () => {
+  for (const pointerType of ['touch', 'mouse']) for (const y of [40, 610]) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+    h.ui.mode = { kind: 'ability', arg: 'scan' };
+    h.ui.applyTarget = p => h.calls.push(['target', p]);
+    h.pointer('pointerdown', 200, y, { pointerType }); assert.equal(h.ui.drag, null);
+    h.pointer('pointerdown', 200, 200, { pointerType });
+    h.pointer('pointerup', 200, y, { pointerType });
+    assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
+    h.ui.game.s.entities = [{ id: 1, hp: 100, team: 0, kind: 'unit', type: 'rifle', x: 200, z: y, size: 1 }];
+    assert.equal(h.UI.prototype.pick.call(h.ui, 200, y), null);
+    h.pointer('pointermove', 200, y, { pointerType }); assert.equal(h.ui.pointer.inside, false);
+  }
+});
+
+test('minimap camera outline uses all four actual viewport corners after layout changes', () => {
+  const h = setup(), points = [], ctx = new Proxy({}, { get: () => () => {} });
+  const c = h.document.getElementById('minimap'); c.width = c.height = 210; c.getContext = () => ctx;
+  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4), visible: [], explored: [] };
+  h.ui.miniBuffer = {}; h.ui.miniCtx = { putImageData() {} };
+  h.ui.miniImage = { data: new Uint8Array(72*72*4) };
+  h.ui.R.ground = (x,y) => { points.push([x,y]); return {x:x/10,z:y/10}; };
+  for (const v of [{left:0,top:55,right:390,bottom:573}, {left:17,top:63,right:1017,bottom:464.5}]) {
+    h.ui.R.viewport = v; points.length = 0; h.UI.prototype.drawMinimap.call(h.ui);
+    assert.deepEqual(points, [[v.left,v.top],[v.right,v.top],[v.right,v.bottom],[v.left,v.bottom]]);
+  }
+});
 
 test('camera keys and pointer edges no longer move the camera', () => {
   const h = setup();
@@ -183,8 +224,7 @@ test('triple touch tap selects only living on-screen own non-workers, including 
 
 test('group selection uses the actual topbar and ability-bar bounds in portrait', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.document.getElementById('topbar').getBoundingClientRect = () => ({bottom:90});
-  h.document.getElementById('abilityBar').getBoundingClientRect = () => ({top:400});
+  Object.assign(h.ui.R.viewport, { top: 90, bottom: 400, height: 310 });
   const unit = {id:1,team:0,kind:'unit',type:'rifle',hp:100,x:200,z:200};
   h.ui.game.s.entities = [unit,{...unit,id:2,z:80},{...unit,id:3,z:399},{...unit,id:4,z:410}];
   h.ui.pick = () => unit;

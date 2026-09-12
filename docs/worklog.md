@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Welt-Viewport vom HUD getrennt
+
+- Welt, 2D-Overlay und Vignette in eigenem, abgeschnittenem Viewport zwischen Ressourcen- und Fähigkeitenleiste; keine Welt hinter dem Aktionsdeck. High-Unschärfe folgt damit den sichtbaren Welträndern. Kameramitte/Seitenverhältnis, Renderpuffer, Client-Projektion/Picking, Overlayoffsets, Minimap-Rahmen und Sicht-/Eingabegrenzen gemeinsam angepasst. Bisherige Objektgrößen pro Zoomstufe bleiben erhalten; kein zusätzliches Herauszoomen durch die kleinere Fläche. Menüvorschau bleibt bildschirmfüllend, Gefechtsdialoge behalten den Ausschnitt. Simulation/RNG/Texturen/Shader unverändert.
+- **231 Node-Tests inklusive strengem Build bestanden** (rund 19 s), keine Fixtures geändert. Neue Regressionen für Viewport-/DPR-Puffermaße, Projektion/Rückprojektion/Zoomgröße/Offsetänderung, Menüwechsel, ungültige Pointer-Releases und Minimap-Ecken. Diff und lokale Markdown-Links geprüft.
+- **`file://`, Chromium, alle Qualitätsstufen, 390×844 / 430×932 / 1280×800 / 932×430 bei DPR 1 sowie 390×844 bei DPR 2**: Canvasgrenzen liegen exakt zwischen HUD-Leisten, Puffer/Overlaytransformation stimmen; High-Mitte pixelgleich zum ungefilterten Vergleich, beide Weltränder verändert, Balanced/Performance-Postprocessing unverändert. Touch-Auswahl/Bodenauftrag, Scan-/Bauziel, Pan/Pinch/Minimap, Abbruch außerhalb der Welt sowie Pause/Settings/Qualitätswechsel/Ergebnis/Upgrades/Hauptmenü/Neustart geprüft; Bilder gesichtet. Keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler.
+- Headless meldet Software-WebGL-/ReadPixels-Warnungen; keine abgeschwächten Sicherheitsflags. Kein Echtgerät-/FPS-Nachweis. Die bestehenden HUD-Höhen bleiben erhalten und lassen in flachem Querformat weiterhin wenig Weltfläche; kein zusätzlicher Landscape-Menüumbau.
+
 ## Dezenter High-Tilt-Shift als Grafikversuch
 
 - High filtert obere/untere Bildbereiche im bestehenden Postshader; breite scharfe Mitte, auflösungsrelativer Radius, maximal acht zusätzliche Samples ohne weitere Renderziele/Pässe. Balanced/Performance, Licht/Materialien/Bloom, Kamera, HUD-Overlays und Simulation unverändert. Settings kennzeichnen High mit Tilt-Shift. Kein allgemeiner Gerätesupport-Kompromiss beschlossen.

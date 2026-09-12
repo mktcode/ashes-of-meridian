@@ -81,6 +81,8 @@
           $('menu').classList.add('hidden');
           $('modal').classList.add('hidden');
           $('hud').classList.remove('hidden');
+          $('worldViewport').classList.add('in-battle');
+          if (this.onViewportChange) this.onViewportChange();
           $('radio').classList.add('hidden');
           $('alerts').innerHTML = '';
           this.selected = [];
@@ -112,11 +114,12 @@
           this.showResult(data);
         } else if (type === 'shot') {
           let p = this.R.project(data.x, 1, data.z);
-          if (p && p.x > 0 && p.x < innerWidth && p.y > 60 && p.y < innerHeight - 210)
+          if (p && this.R.containsPoint(p.x, p.y))
             this.audio.sound('shot', data.heavy);
         } else if (type === 'explosion') {
           let p = this.R.project(data.x, 1, data.z);
-          if (p && p.x > -100 && p.x < innerWidth + 100 && p.y > -100 && p.y < innerHeight)
+          const v = this.R.viewport;
+          if (p && p.x > v.left - 100 && p.x < v.right + 100 && p.y > v.top - 100 && p.y < v.bottom)
             this.audio.sound('explosion', data.big);
         } else if (type === 'complete') {
           this.audio.sound('complete');

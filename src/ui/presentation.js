@@ -95,13 +95,14 @@
         ctx.strokeStyle = '#c3e1debb';
         ctx.lineWidth = 1;
         ctx.beginPath();
+        const v = this.R.viewport;
         for (let [i, p] of [
-          [0, { x: 0, y: 63 }],
-          [1, { x: innerWidth, y: 63 }],
-          [2, { x: innerWidth, y: innerHeight - 237 }],
-          [3, { x: 0, y: innerHeight - 237 }]
+          { x: v.left, y: v.top },
+          { x: v.right, y: v.top },
+          { x: v.right, y: v.bottom },
+          { x: v.left, y: v.bottom }
         ].entries()) {
-          let q = map(this.R.ground(p[1].x, p[1].y));
+          let q = map(this.R.ground(p.x, p.y));
           if (i === 0) ctx.moveTo(q.x, q.y);
           else ctx.lineTo(q.x, q.y);
         }
@@ -116,7 +117,8 @@
         }
       },
       drawOverlay(ctx) {
-        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        const v = this.R.viewport;
+        ctx.clearRect(v.left, v.top, v.width, v.height);
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,
           s = g.s;
@@ -170,7 +172,7 @@
                     ? Math.min(8, e.size + 2.5)
                     : 3.0,
             p = this.R.project(e.x, y, e.z);
-          if (!p || p.x < 0 || p.x > innerWidth || p.y < 64 || p.y > innerHeight - 210) continue;
+          if (!p || !this.R.containsPoint(p.x, p.y)) continue;
           let w = e.kind === 'building' ? 56 : e.type === 'hero' ? 42 : 30;
           ctx.fillStyle = '#07101deb';
           ctx.fillRect(p.x - w / 2 - 2, p.y - 2, w + 4, e.maxShield ? 10 : 7);

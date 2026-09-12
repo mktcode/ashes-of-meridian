@@ -38,7 +38,7 @@ test('tilt-shift is High-only with a sharp center, normalized kernel and resolut
 });
 
 function setup(options = {}) {
-  const context = loadScripts(RENDERER_SCRIPTS, { globals: {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS], { globals: {
     innerWidth: 800, innerHeight: 600, devicePixelRatio: 2
   } });
   const Renderer = vm.runInContext('MeridianRenderer', context), calls = [];
@@ -95,6 +95,8 @@ function setup(options = {}) {
     upload() {}, uniform(p, name) { return name; },
     drawBatches(batch) { calls.push(['batch', batch, program, draw]); }
   });
+  Object.defineProperty(r.canvas, 'getBoundingClientRect', { value: () => options.viewport ||
+    ({ left: 0, top: 0, width: context.innerWidth, height: context.innerHeight }) });
   return { r, g, calls, options, framebuffers, buffers, context, bindings: () => ({ draw, read, buffer }) };
 }
 
@@ -107,6 +109,42 @@ test('medium/high select the largest common sample count up to 4 and retain reso
     ]);
     assert.deepEqual(h.r.canvas, { width, height });
     assert.deepEqual(h.bindings(), { draw: null, read: null, buffer: null });
+  }
+});
+
+test('scene targets use canvas CSS bounds, while projection and picking retain client coordinates at every quality', () => {
+  for (const viewport of [
+    { left: 0, top: 55, width: 390, height: 518 },
+    { left: 17, top: 63, width: 1000, height: 401.5 }
+  ]) for (const quality of [0, 1, 2]) {
+    const h = setup({ viewport }), r = h.r; r.quality = quality; r.resize();
+    const scale = quality === 0 ? .75 : quality === 1 ? 1 : 1.6;
+    assert.equal(r.width, Math.round(viewport.width * scale));
+    assert.equal(r.height, Math.round(viewport.height * scale));
+    assert.equal(r.sceneDepth.width, r.width); assert.equal(r.sceneDepth.height, r.height);
+    r.camera(-48, 40, 57);
+    const center = r.project(-48, 0, 40);
+    assert.ok(Math.abs(center.x - viewport.left - viewport.width / 2) < .001);
+    assert.ok(Math.abs(center.y - viewport.top - viewport.height / 2) < .001);
+    assert.ok(Math.abs(r.project(-47, 0, 40).x - center.x - h.context.innerHeight / 57) < .001,
+      'shorter viewport must not shrink units at the same zoom');
+    const v = r.viewport;
+    for (const [x, y] of [[v.left,v.top], [v.right,v.top], [v.right,v.bottom],
+      [v.left,v.bottom], [center.x,center.y], [v.left-50,v.bottom+50]]) {
+      const world = r.ground(x, y), screen = r.project(world.x, 0, world.z);
+      assert.ok(Math.abs(screen.x - x) < .001); assert.ok(Math.abs(screen.y - y) < .001);
+    }
+    assert.equal(r.containsPoint(center.x, center.y), true);
+    for (const [x,y] of [[v.left,center.y], [v.right,center.y], [center.x,v.top],
+      [center.x,v.bottom], [center.x,v.top-1], [center.x,v.bottom+1]])
+      assert.equal(r.containsPoint(x,y), false);
+    // A position-only layout change must refresh offsets, not just buffer size.
+    h.options.viewport = { ...viewport, top: viewport.top + 12 };
+    r.resize(); r.camera(-48, 40, 57);
+    assert.ok(Math.abs(r.project(-48, 0, 40).y - center.y - 12) < .001);
+    h.options.viewport = { ...viewport, height: viewport.height / 2 };
+    r.resize(); r.camera(-48, 40, 57);
+    assert.ok(Math.abs(r.project(-47, 0, 40).x - r.project(-48, 0, 40).x - h.context.innerHeight / 57) < .001);
   }
 });
 

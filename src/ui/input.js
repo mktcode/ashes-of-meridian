@@ -205,6 +205,7 @@
         }
       },
       pick(sx, sy) {
+        if (!this.R.containsPoint(sx, sy)) return null;
         let best = null,
           score = Infinity;
         for (let e of this.game.s.entities) {
@@ -228,7 +229,7 @@
         return best;
       },
       pointerDown(e) {
-        if (this.view !== 'game' || this.paused) return;
+        if (this.view !== 'game' || this.paused || !this.R.containsPoint(e.clientX, e.clientY)) return;
         e.preventDefault();
         if (e.button === 1) return;
         this.pointer = { x: e.clientX, y: e.clientY, inside: true };
@@ -253,7 +254,8 @@
         };
       },
       pointerMove(e) {
-        this.pointer = { x: e.clientX, y: e.clientY, inside: e.target === $('world') };
+        this.pointer = { x: e.clientX, y: e.clientY,
+          inside: e.target === $('world') && this.R.containsPoint(e.clientX, e.clientY) };
         if (this.view !== 'game' || this.paused) return;
         if (e.pointerType === 'touch' && this.touchPoints.has(e.pointerId)) {
           this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -305,7 +307,7 @@
         }
         let d = this.drag;
         this.drag = null;
-        if (!d) return;
+        if (!d || !this.R.containsPoint(e.clientX, e.clientY)) return;
         let p = this.R.ground(e.clientX, e.clientY),
           target = this.pick(e.clientX, e.clientY);
         p.x = clamp(p.x, -86, 86);
@@ -357,9 +359,7 @@
                 (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
                 let q = this.R.project(e.x, 1, e.z);
-                return q && q.x > 0 && q.x < innerWidth &&
-                  q.y > $('topbar').getBoundingClientRect().bottom &&
-                  q.y < $('abilityBar').getBoundingClientRect().top;
+                return q && this.R.containsPoint(q.x, q.y);
               });
             this.select(units.map(e => e.id));
           } else this.select([target.id]);

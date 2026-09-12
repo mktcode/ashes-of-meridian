@@ -8,6 +8,7 @@
       --teal: #74e5d3;
       --red: #f17b78;
       --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+      --topbar-height: 63px;
       --deck-height: min(50vw, 36dvh);
       --ability-height: 76px
     }
@@ -64,9 +65,20 @@
       color: var(--teal)
     }
 
+    #worldViewport {
+      position: fixed;
+      inset: 0;
+      overflow: hidden
+    }
+
+    #worldViewport.in-battle {
+      top: var(--topbar-height);
+      bottom: calc(var(--deck-height) + var(--ability-height))
+    }
+
     canvas#world,
     canvas#overlay {
-      position: fixed;
+      position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
@@ -78,7 +90,7 @@
     }
 
     #vignette {
-      position: fixed;
+      position: absolute;
       inset: 0;
       box-shadow: inset 0 0 140px #0004;
       pointer-events: none

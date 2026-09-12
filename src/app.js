@@ -31,11 +31,19 @@
         function resize() {
           R.resize();
           let d = Math.min(devicePixelRatio || 1, 2);
-          overlay.width = Math.round(innerWidth * d);
-          overlay.height = Math.round(innerHeight * d);
-          overlayContext.setTransform(d, 0, 0, d, 0, 0);
-          if (ui.view === 'game') ui.drawMinimap();
+          const v = R.viewport;
+          overlay.width = Math.round(v.width * d);
+          overlay.height = Math.round(v.height * d);
+          // Overlay drawing shares the renderer's CSS client coordinates.
+          overlayContext.setTransform(d, 0, 0, d, -v.left * d, -v.top * d);
+          if (ui.view === 'game' && game.s) {
+            const cam = game.s.cam;
+            R.camera(cam.x, cam.z, cam.zoom);
+            ui.drawMinimap();
+          }
         }
+        ui.onViewportChange = resize;
+        new ResizeObserver(resize).observe(document.getElementById('worldViewport'));
         addEventListener('resize', resize);
         resize();
         ui.onPreview = () => {
@@ -109,7 +117,8 @@
             if (e.team === 1 && !visible) continue;
             if (e.team === -1 && !explored) continue;
             let p = R.project(e.x, 0, e.z);
-            if (p && (p.x < -220 || p.x > innerWidth + 220 || p.y < -260 || p.y > innerHeight + 260))
+            const v = R.viewport;
+            if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))
               continue;
             renderEntity(R, e, t);
             let selected = ui.selected.includes(e.id),

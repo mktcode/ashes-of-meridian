@@ -168,8 +168,12 @@
         let g = this.gl,
           scale =
             this.quality === 0 ? 0.75 : this.quality === 1 ? 1 : Math.min(devicePixelRatio || 1, 1.6);
-        this.width = Math.max(1, Math.round(innerWidth * scale));
-        this.height = Math.max(1, Math.round(innerHeight * scale));
+        // Keep public projection/picking coordinates in CSS client space.
+        const rect = this.canvas.getBoundingClientRect();
+        this.viewport = { left: rect.left, top: rect.top, width: Math.max(1, rect.width), height: Math.max(1, rect.height),
+          right: rect.left + Math.max(1, rect.width), bottom: rect.top + Math.max(1, rect.height) };
+        this.width = Math.max(1, Math.round(this.viewport.width * scale));
+        this.height = Math.max(1, Math.round(this.viewport.height * scale));
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         g.bindTexture(g.TEXTURE_2D, this.sceneTex);
@@ -429,7 +433,9 @@
       }
       camera(x, z, zoom, cinema = false, t = 0) {
         this.cinema = cinema;
-        let a = innerWidth / innerHeight;
+        let a = this.viewport.width / this.viewport.height;
+        // Preserve the existing pixels-per-world-unit zoom while clipping HUD space.
+        let viewHeight = zoom * this.viewport.height / innerHeight;
         let target = cinema ? [0, 7, -4] : [x, 0, z];
         this.eye = cinema
           ? [62 + Math.sin(t * 0.025) * 8, 24, 78 + Math.cos(t * 0.025) * 5]
@@ -437,7 +443,7 @@
         let view = M4.look(this.eye, target),
           proj = cinema
             ? M4.perspective(0.74, a, 0.5, 400)
-            : M4.ortho((-zoom * a) / 2, (zoom * a) / 2, -zoom / 2, zoom / 2, 0.1, 350);
+            : M4.ortho((-viewHeight * a) / 2, (viewHeight * a) / 2, -viewHeight / 2, viewHeight / 2, 0.1, 350);
         this.vp = M4.mul(proj, view);
         this.inverseVP = M4.inverse(this.vp);
         let st = cinema ? [0, 0, 0] : [x, 0, z];
@@ -450,14 +456,18 @@
         let p = M4.point(this.vp, x, y, z);
         if (p[3] <= 0) return null;
         return {
-          x: ((p[0] / p[3]) * 0.5 + 0.5) * innerWidth,
-          y: (0.5 - (p[1] / p[3]) * 0.5) * innerHeight,
+          x: this.viewport.left + ((p[0] / p[3]) * 0.5 + 0.5) * this.viewport.width,
+          y: this.viewport.top + (0.5 - (p[1] / p[3]) * 0.5) * this.viewport.height,
           depth: p[2] / p[3]
         };
       }
+      containsPoint(sx, sy) {
+        const v = this.viewport;
+        return sx > v.left && sx < v.right && sy > v.top && sy < v.bottom;
+      }
       ground(sx, sy) {
-        let x = (sx / innerWidth) * 2 - 1,
-          y = 1 - (sy / innerHeight) * 2;
+        let x = ((sx - this.viewport.left) / this.viewport.width) * 2 - 1,
+          y = 1 - ((sy - this.viewport.top) / this.viewport.height) * 2;
         let a = M4.point(this.inverseVP, x, y, -1),
           b = M4.point(this.inverseVP, x, y, 1);
         for (let i = 0; i < 3; i++) {
