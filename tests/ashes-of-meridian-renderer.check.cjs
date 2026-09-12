@@ -21,6 +21,22 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('normalize(u_eye-v_pos)'));
   assert.ok(FRAG.includes('texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.))'));
 });
+test('tilt-shift is High-only with a sharp center, normalized kernel and resolution-relative radius', () => {
+  const context = loadScripts(RENDERER_SCRIPTS);
+  const POSTF = vm.runInContext('POSTF', context);
+  assert.ok(POSTF.includes('if(u_quality>1.5)c=tiltShift(c,px);'));
+  assert.ok(POSTF.includes('smoothstep(.20,.48,abs(uv.y-.5))'));
+  assert.ok(POSTF.includes('if(amount<=0.)return sharp;'));
+  assert.ok(POSTF.includes('px*(min(u_size.x,u_size.y)*.006*amount)'));
+  const kernel = POSTF.slice(POSTF.indexOf('vec3 tiltShift'), POSTF.indexOf('void main()'));
+  assert.equal((kernel.match(/texture\(u_tex,/g) || []).length, 8);
+  assert.ok(kernel.includes('blurred=sharp*4.;'));
+  assert.ok(kernel.includes(')).rgb)*2.;'));
+  assert.ok(kernel.includes('return blurred/16.;'));
+  assert.doesNotMatch(POSTF, /sampler2D\s+(?!u_tex\b)/);
+  assert.ok(POSTF.includes('if(u_quality>.5){for(int i=0;i<8;i++)'), 'existing bloom stays on Balanced/High');
+});
+
 function setup(options = {}) {
   const context = loadScripts(RENDERER_SCRIPTS, { globals: {
     innerWidth: 800, innerHeight: 600, devicePixelRatio: 2

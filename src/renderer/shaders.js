@@ -43,4 +43,17 @@ void main(){
 }`;
     const POSTF = `#version 300 es
 precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_size;uniform float u_time;uniform float u_quality;
-void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;vec3 bloom=vec3(0.);if(u_quality>.5){for(int i=0;i<8;i++){float a=float(i)*.785398;vec2 o=vec2(cos(a),sin(a))*px*5.;bloom+=max(texture(u_tex,uv+o).rgb-.68,0.);bloom+=max(texture(u_tex,uv+o*2.4).rgb-.72,0.)*.5;}c+=bloom*.055;}float vignette=1.-smoothstep(.25,.85,length((uv-.5)*vec2(1.,.8)))*.20;float grain=(fract(sin(dot(uv*u_size+u_time,vec2(12.9898,78.233)))*43758.5453)-.5)/260.;c=pow(max(c*vignette+grain,0.),vec3(.96));frag=vec4(c,1.);}`;
+// Screen-space tilt-shift approximation: wide sharp band, at most eight extra taps.
+// Radius follows the shorter render dimension, keeping the look stable across DPR.
+vec3 tiltShift(vec3 sharp,vec2 px){
+ float amount=smoothstep(.20,.48,abs(uv.y-.5));
+ if(amount<=0.)return sharp;
+ vec2 d=px*(min(u_size.x,u_size.y)*.006*amount);
+ vec3 blurred=sharp*4.;
+ blurred+=(texture(u_tex,uv+vec2(d.x,0.)).rgb+texture(u_tex,uv-vec2(d.x,0.)).rgb
+          +texture(u_tex,uv+vec2(0.,d.y)).rgb+texture(u_tex,uv-vec2(0.,d.y)).rgb)*2.;
+ blurred+=texture(u_tex,uv+d).rgb+texture(u_tex,uv-d).rgb
+         +texture(u_tex,uv+vec2(d.x,-d.y)).rgb+texture(u_tex,uv+vec2(-d.x,d.y)).rgb;
+ return blurred/16.;
+}
+void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;if(u_quality>1.5)c=tiltShift(c,px);vec3 bloom=vec3(0.);if(u_quality>.5){for(int i=0;i<8;i++){float a=float(i)*.785398;vec2 o=vec2(cos(a),sin(a))*px*5.;bloom+=max(texture(u_tex,uv+o).rgb-.68,0.);bloom+=max(texture(u_tex,uv+o*2.4).rgb-.72,0.)*.5;}c+=bloom*.055;}float vignette=1.-smoothstep(.25,.85,length((uv-.5)*vec2(1.,.8)))*.20;float grain=(fract(sin(dot(uv*u_size+u_time,vec2(12.9898,78.233)))*43758.5453)-.5)/260.;c=pow(max(c*vignette+grain,0.),vec3(.96));frag=vec4(c,1.);}`;

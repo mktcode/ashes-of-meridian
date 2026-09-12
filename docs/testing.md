@@ -26,7 +26,7 @@ Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle n
 | Persistence | Nur permanentes Profil: Normalisierung, Fehlerfälle, flüchtiger Storage-Ersatz; keine Run-/Backup-API |
 | Präsentation | Welt-/Effektgrenzen, feste Zeichen-/Effekt-/RNG-Referenzen |
 | Steuerung | Touch-Auswahl/Gesten, Move-/Attack-move-Umschaltung und Tempo-Button samt Anzeige/Lebenszyklus/Profilfreiheit, Worker-Kontexttaps auf eigene Bau-/Reparaturziele mit Auswahl-/Gestenschutz, aktuelle HUD-Grenzen, Kategorien/Zurück, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz, Tab-Wechsel, Run-Abbruch, Ergebnisaktionen und Upgrade-Rückkehr ohne erneuten Ergebnis-Sound |
-| Renderer | Shader-Quellvertrag, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
+| Renderer | Shader-Quellvertrag samt High-only-Tilt-Shift/Kernel/Schärfezone, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
 
 [Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests.
 
@@ -34,7 +34,7 @@ Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend alle n
 
 Zuerst `npm run build` ausführen. Dann mit einem eigenen Profil ohne wichtige Daten `index.html` über `file://` öffnen; keine abgeschwächten Sicherheitsflags. Je nach Änderung prüfen:
 
-- Start, lokale Ressourcen, Konsole/WebGL; betroffene Grafikqualität und Fenstergrößen.
+- Start, lokale Ressourcen, Konsole/WebGL; betroffene Grafikqualität und Fenstergrößen. Bei Postshaderänderungen möglichst identische Szene/Zeit für A/B-Pixelvergleich verwenden; High-Schärfezone, ausgeschlossene Qualitätsstufen und DPR prüfen.
 - Touch-Auswahl/Bodenauftrag, Pan/Pinch/Minimap; erreichbare Aktionen, Zielbestätigung/Cancel und Pause.
 - Betroffene Bau-/Rekrutierungs-/Reparatur-/Verkaufsabläufe und Erstattungen. Bei Run-Lebenszyklusänderungen: Pause/Fortsetzen, Hauptmenü-Abbruch, Reload ohne Run, weiterhin gespeicherte Upgrades/Einstellungen und Ergebnis → Upgrades → Ergebnis/Neustart sowie Hauptmenü.
 - Bei Grafikänderungen Ergebnis ansehen, nicht nur `gl.getError()` abfragen. Audio tatsächlich anhören, wenn hörbares Verhalten geprüft werden soll.

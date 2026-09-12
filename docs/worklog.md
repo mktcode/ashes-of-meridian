@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Dezenter High-Tilt-Shift als Grafikversuch
+
+- High filtert obere/untere Bildbereiche im bestehenden Postshader; breite scharfe Mitte, auflösungsrelativer Radius, maximal acht zusätzliche Samples ohne weitere Renderziele/Pässe. Balanced/Performance, Licht/Materialien/Bloom, Kamera, HUD-Overlays und Simulation unverändert. Settings kennzeichnen High mit Tilt-Shift. Kein allgemeiner Gerätesupport-Kompromiss beschlossen.
+- **227 Node-Tests inklusive strengem Build bestanden** (rund 21 s), keine Fixtures geändert. Shader-Vertrag schützt High-Schranke, Schärfezone und normierten Kernel; bestehende MSAA-/Fallbacktests bestehen. Diff und lokale Markdown-Links geprüft.
+- **`file://`, Chromium, Rust/Ash, alle drei Qualitätsstufen, 390×844 / 430×932 / 1280×800 bei DPR 1 sowie 390×844 bei DPR 2**: alter/neuer Postshader auf derselben angehaltenen Szene verglichen. High-Mitte pixelgleich, Ränder sichtbar verändert; Balanced/Performance vollständig pixelgleich. Run-Zustand unverändert, PNG-Uploads/Shader/MSAA fehlerfrei. Touch-Auswahl/Bodenauftrag, Pause/Settings-Qualitätswechsel/Fortsetzen und Settings-Breite geprüft; Vergleichsbilder gesichtet.
+- Keine erfassten Laufzeit-/Ressourcen-/Log-/GL-Fehler; bekannte Chromium-Warnungen zu Software-WebGL, ReadPixels-Stalls und Audio-Autoplay protokolliert, keine Sicherheitsflags abgeschwächt. Kein Echtgerät-/GPU-/FPS-/Hörnachweis. Eindruck gegenüber `graphics-inspiration.png`: etwas weichere Randbereiche, aber die größere Lücke bleibt bei Bodenmaßstab, Materialplastizität und Kontaktschatten; diese sind noch unverändert.
+
 ## Aktualisierte Dirt-Textur eingebettet
 
 - Neue gepflegte `texture-floor-dirt.png` bytegleich eingebettet (1254×1254 statt alter 512×512-WebP-Kopie), ohne Neukodierung oder Skalierung. Expliziter Aktualisierer `node scripts/embed-ground-texture.mjs` und Bytegleichheitsregression ergänzt; andere Texturen, Farb-/Lichtregeln und Layouts unverändert. Größere Einbettung und GPU-Textur betreffen alle Qualitätsstufen; keine Speicher-/Ladezeitgarantie für Altgeräte.
