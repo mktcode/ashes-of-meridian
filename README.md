@@ -2,6 +2,10 @@
 
 Lokaler, touchorientierter Echtzeitstrategie-Prototyp mit drei Fraktionen und WebGL 2. Der **Core Gameplay Loop ist implementiert**: Basis aufbauen → gegnerisches HQ zerstören oder verlieren → ungenutzten Aether evakuieren → permanente Upgrades kaufen → erneut antreten. Bedienbarkeit auf echten Geräten und Langzeitbalancing sind noch zu validieren.
 
+## Öffentliche Testversion
+
+Die Dokploy-Testinstanz ist unter [aom.markus-kottlaender.de](https://aom.markus-kottlaender.de/) erreichbar. Sie dient dem Projektinhaber und ersten Playtestern; Browserprofile werden weiterhin nur lokal auf dem jeweiligen Gerät gespeichert.
+
 ## Starten
 
 ```bash

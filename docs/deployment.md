@@ -1,5 +1,9 @@
 # Statisches Webdeployment
 
+## Aktueller Testbetrieb
+
+Die über Dokploy veröffentlichte Testinstanz läuft unter [https://aom.markus-kottlaender.de/](https://aom.markus-kottlaender.de/). Sie ist für den Projektinhaber und erste Playtester vorgesehen. Das ist keine Zusage zu Verfügbarkeit, Langzeitstabilität oder serverseitiger Spielstandsicherung; Profile bleiben an Browser und Origin gebunden.
+
 ## Anforderungen
 
 Das Webdeployment benötigt nur Docker beziehungsweise eine Plattform mit Dockerfile-Build wie Dokploy. Es gibt kein Backend, keine Datenbank, keine persistenten Volumes und keine Laufzeitvariablen. Das Image baut die klassischen Laufzeitskripte reproduzierbar mit `npm ci` und `npm run build` und liefert anschließend ausschließlich folgende Dateien aus:
