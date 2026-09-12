@@ -117,73 +117,44 @@
 
     .home-screen .menu-main {
       position: relative;
-      align-self: center;
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
       width: 520px;
       max-width: 65vw;
-      margin: 20px 0 0 1.4vw;
-      padding: 28px 32px 24px;
-      border: 1px solid #4edcf0a8;
-      border-radius: 12px 3px;
-      background: linear-gradient(145deg, #123144e8, #061522f3 68%);
-      box-shadow: inset 0 1px #d8fcff3d, inset 0 0 22px #21c5ed0d,
-        0 0 12px #00cfff2e, 0 18px 50px #0008
-    }
-
-    .home-screen .eyebrow {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      font-size: 11px;
-      color: #f2bb66
-    }
-
-    .home-screen .eyebrow:before {
-      content: "";
-      width: 30px;
-      height: 2px;
-      flex-shrink: 0;
-      background: #f5cb78;
-      box-shadow: 0 0 9px #e9b95650
+      min-height: 0;
+      margin: 0 0 0 1.4vw
     }
 
     .home-screen .wordmark {
+      display: flex;
+      flex-direction: column;
       font-family: Georgia, "Times New Roman", serif;
       font-weight: 400;
       font-size: clamp(52px, 4.7vw, 76px);
       line-height: .92;
       letter-spacing: -2px;
-      margin: 18px 0 14px;
+      margin: 0;
       text-shadow: 0 2px 18px #0008
     }
 
-    .home-screen .wordmark-link {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      width: 3.12em;
-      margin: 10px 0 12px
+    .home-screen .wordmark-first {
+      white-space: nowrap
     }
 
-    .home-screen .wordmark-link b {
-      font: 18px/1 var(--mono);
-      letter-spacing: 8px;
+    .home-screen .wordmark-first b {
+      margin-left: 5px;
       color: #f7c573;
-      padding-left: 8px
-    }
-
-    .home-screen .wordmark-link:before,
-    .home-screen .wordmark-link:after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: #efbf6d;
-      box-shadow: 0 1px 2px #efbf6d55
+      font: 18px/1 var(--mono);
+      letter-spacing: 3px;
+      vertical-align: middle
     }
 
     .home-screen .menu-tagline {
       font: italic 18px/1.45 Georgia, serif;
       color: #b8cbd3;
-      margin: 0 0 24px;
+      margin: 12px 0 0;
       text-shadow: 0 2px 8px #000
     }
 
@@ -383,8 +354,7 @@
       }
 
       .home-screen .menu-tagline {
-        font-size: 17px;
-        margin-bottom: 28px
+        font-size: 17px
       }
 
       .home-screen .brand {
@@ -443,20 +413,8 @@
         letter-spacing: -2px
       }
 
-      .home-screen .wordmark-link {
-        gap: 12px
-      }
-
-      .home-screen .wordmark-link b {
-        font-size: 14px;
-        letter-spacing: 5px;
-        padding-left: 5px
-      }
-
-      .home-screen .eyebrow {
-        font-size: 8px;
-        letter-spacing: 1px;
-        gap: 12px
+      .home-screen .wordmark-first b {
+        font-size: 14px
       }
 
       .home-screen .menu-tagline {
@@ -906,7 +864,7 @@
 
     @media(max-width:600px) {
       .home-screen .menu-main {
-        padding: 22px 20px 18px
+        padding: 0
       }
 
       .home-screen .wordmark {
@@ -914,7 +872,7 @@
       }
 
       .home-screen .menu-tagline {
-        margin-bottom: 18px
+        margin-top: 10px
       }
 
       .subscreen > div {
@@ -947,6 +905,44 @@
     }
 
     @media(max-height:500px) and (min-width:601px) {
+      .home-layout {
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+        padding-top: 14px;
+        padding-bottom: 14px
+      }
+
+      .home-screen .menu-main {
+        width: 470px
+      }
+
+      .home-screen .wordmark {
+        font-size: 52px
+      }
+
+      .home-screen .menu-tagline {
+        font-size: 15px;
+        margin-top: 7px
+      }
+
+      .home-screen .menu-buttons {
+        gap: 7px
+      }
+
+      .home-screen .menu-buttons button,
+      .home-screen .menu-buttons .primary {
+        min-height: 42px;
+        padding: 9px 18px
+      }
+
+      .home-screen .menu-subnav {
+        margin-top: 7px
+      }
+
+      .home-screen .menu-footer {
+        display: none
+      }
+
       .modal-shade {
         align-items: flex-start;
         padding-block: 10px

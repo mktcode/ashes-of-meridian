@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Startmenü freigestellt und neu angeordnet
+
+- **Fleet upgrades** aus der kleinen Unternavigation als zweite große, sekundäre Startaktion direkt unter **New battle** angeordnet; darunter verbleiben nur **Field Manual** und **Settings**. Der Titelblock steht oben, der Aktionsblock unten; beide liegen ohne eigenen Panelhintergrund, Außenrahmen oder Box-Shadow direkt über der Weltvorschau. Die Eyebrow und Zierlinien entfallen, **ASHES OF** steht in einer Zeile über **MERIDIAN**, die Tagline lautet **A roguelite RTS.**
+- Für Fenster bis 500 px Höhe verdichtet eine reine CSS-Variante Titel, Abstände und Schaltflächen und blendet den nicht interaktiven Fuß aus; dadurch bleiben alle vier Aktionen auch bei 932×430 ohne Scrollen sichtbar.
+- **Neu: `npm test` einschließlich Build, 237/237 bestanden** (rund 60 s). **Chromium `file://`:** 375×667, 390×844, 1280×800 und 932×430 geprüft; Aktionsreihenfolge korrekt, Panelstil rechnerisch `background: none`, Rahmen 0 und Schatten `none`, keine Überlappungen oder unerwarteten Scrollbereiche, GL 0, keine Console-/Laufzeitfehler. Kein Echtgerätetest.
+
 ## Permanentes Start-Alloy
 
 - Neues erstes Fleet-Upgrade `startingAlloy`: Stufen 0–5 starten mit 250 / 300 / 350 / 400 / 450 / 500 Alloy; Einzelkosten 100 / 200 / 300 / 450 / 650 Aether. Start-Aether bleibt 0. Der beim Gefechtsstart normalisierte Profilwert wird in `game.s.meta` eingefroren, verbraucht keinen RNG und wirkt deshalb weder rückwirkend auf laufende Runs noch auf deren Layout.

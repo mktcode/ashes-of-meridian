@@ -599,11 +599,17 @@ test('home discards an active run and offers only new battles, upgrades, help an
     const html = h.document.getElementById('menu').innerHTML;
     assert.match(html, /class="home-screen"/);
     assert.match(html, /aria-label="Ashes of Meridian"/);
+    assert.match(html, /class="wordmark-first">ASHES <b>OF<\/b>/);
+    assert.match(html, /A roguelite RTS\./);
+    assert.doesNotMatch(html, /AN ORIGINAL REAL-TIME STRATEGY GAME|wordmark-link/);
     assert.match(html, /New battle/); assert.doesNotMatch(html, /campaign|skirmish|endless|OPERATIONS COMPLETE/i);
     assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
       ['battle', 'armory', 'help', 'settings']);
     assert.equal((html.match(/class="primary"/g) || []).length, 1);
     assert.ok(html.includes('class="primary" data-ui="battle"'));
+    assert.ok(html.includes('class="secondary" data-ui="armory"'));
+    assert.match(html, /class="menu-buttons"[\s\S]*data-ui="battle"[\s\S]*data-ui="armory"[\s\S]*<\/div>/);
+    assert.match(html, /class="menu-subnav"[\s\S]*data-ui="help"[\s\S]*data-ui="settings"[\s\S]*<\/nav>/);
     assert.equal(h.ui.game.s, null);
     assert.equal(previews, 1); assert.equal(h.ui.R.fogOn, false);
     assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);

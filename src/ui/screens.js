@@ -25,13 +25,17 @@
               <div class="version">ROGUELITE PROTOTYPE</div>
             </header>
             <div class="menu-main">
-              <div class="eyebrow">AN ORIGINAL REAL-TIME STRATEGY GAME</div>
-              <h1 class="wordmark" aria-label="Ashes of Meridian">ASHES<span class="wordmark-link"><b>OF</b></span>MERIDIAN</h1>
-              <p class="menu-tagline">Build your force. Break the enemy base. Return stronger.</p>
-              <div class="menu-buttons">
-                <button class="primary" data-ui="battle">New battle <span aria-hidden="true">→</span></button>
+              <div class="menu-title">
+                <h1 class="wordmark" aria-label="Ashes of Meridian"><span class="wordmark-first">ASHES <b>OF</b></span><span>MERIDIAN</span></h1>
+                <p class="menu-tagline">A roguelite RTS.</p>
               </div>
-              <nav class="menu-subnav" aria-label="More options"><button class="textbtn" data-ui="armory">FLEET UPGRADES</button><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></nav>
+              <div class="menu-actions">
+                <div class="menu-buttons">
+                  <button class="primary" data-ui="battle">New battle <span aria-hidden="true">→</span></button>
+                  <button class="secondary" data-ui="armory">Fleet upgrades <span aria-hidden="true">→</span></button>
+                </div>
+                <nav class="menu-subnav" aria-label="More options"><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></nav>
+              </div>
             </div>
             <div class="menu-quote">One objective.<br>Destroy the enemy base.<small>REPEATABLE BATTLES / PERMANENT UPGRADES</small></div>
             <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>3 CIVILIZATIONS · ONE OBJECTIVE</span><span class="menu-progress">LOCAL & OFFLINE</span></footer>
