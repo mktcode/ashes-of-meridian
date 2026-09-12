@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Detaillierter Aether Vent
+
+- Bildvorlage als flache industrielle Panzerplattform umgesetzt: abgeschrägte achteckige Deckplatten, 16 Sockelsegmente, vier Halteklammern, Kristallfassung, zwei cyanfarbene Leuchtringe und rotierender Kristall mit sichtbaren Lichtfacetten. Ein gemeinsames Metallmesh mit 1.152 Dreiecken statt pro Frame zusammengesetzter Detailteile; keine neuen Texturen/Shader. Dampfeffekte, Ressourcenwerte/-positionen, Kollisionsradien, Raffinerieregeln und RNG bleiben unverändert.
+- **Neu: `npm test` einschließlich Build, 238/238 bestanden** (rund 60 s). Ergänzte Tests sichern Meshgrenzen, nicht degenerierte Flächen/Normalen, Material-/Animationszeichnung und unveränderte Ressourcen/Dampfeffekte; bestehende Layout-/Navigations-/RNG-Fixtures unverändert bestanden. Diff und lokale Dokumentationslinks geprüft.
+- **Chromium `file://`:** Nahansicht und normale Spielentfernung bei 1280×800 und 390×844 gesichtet, alle drei Qualitätsstufen geprüft; GL 0, keine Console-/Laufzeitfehler. Software-WebGL, kein Echtgeräte-/Leistungsnachweis.
+
 ## Englische HUD-Kategorien
 
 - Verbliebene deutsche Laufzeittexte vereinheitlicht: **Buildings**, **Infantry**, **Vehicles**, **Aircraft** und **Back** erscheinen nun in Kategorien, Untermenüs, Startmeldung und Feldhandbuch. Dokumentierte UI-Bezeichnungen entsprechend aktualisiert; die deutschsprachige Projektdokumentation bleibt deutsch.

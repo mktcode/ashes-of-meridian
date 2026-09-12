@@ -50,7 +50,8 @@
           rockCrag: geom.rock(397, 'crag'),
           rockRidge: geom.rock(619, 'ridge'),
           rockShelf: geom.rock(853, 'shelf'),
-          alloyShard: geom.crystal()
+          alloyShard: geom.crystal(),
+          aetherVent: geom.aetherVent()
         }))
           this.geometry(n, d);
         this.fogTex = gl.createTexture();

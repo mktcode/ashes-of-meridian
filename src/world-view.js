@@ -177,9 +177,10 @@ class BattlefieldView {
             );
           }
         } else {
-          p('hex', 0, 0.12, 0, 2, 0.32, 1.8, 0x404657);
-          p('hex', 0, 0.35, 0, 1.2, 0.6, 1.1, 0x546577);
-          p('octa', 0, 0.85, 0, 0.55, 0.8, 0.55, 0x8be1d9, time * 0.15, 0, 0, 1.15);
+          p('aetherVent', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, alpha, MAT.METAL);
+          p('ring', 0, 0.465, 0, 1.69, 1, 1.521, 0x65e5e9, 0, 0, 0, 0.85, alpha, MAT.CRYSTAL);
+          p('ring', 0, 0.985, 0, 0.36, 1, 0.324, 0x65e5e9, 0, 0, 0, 0.65, alpha, MAT.CRYSTAL);
+          p('octa', 0, 1.64, 0, 0.43, 0.62, 0.43, 0x50dce6, time * 0.15, 0, 0, 0.45, alpha, MAT.CRYSTAL);
           for (let i = 0; i < 3; i++) {
             let t = (time * 0.35 + i * 0.33) % 1;
             R.add(

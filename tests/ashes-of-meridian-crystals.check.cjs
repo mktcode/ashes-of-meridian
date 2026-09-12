@@ -124,8 +124,56 @@ test('mining delivers alloy without moving the resource layout', () => {
   assert.deepEqual(positions(), before);
 });
 
-test('aether vents retain their existing shapes and animated effects', () => {
-  const e = { ...deposit(), type: 'gas' }, calls = render(e);
-  assert.deepEqual(calls.map(c => c[0]), ['hex', 'hex', 'octa', 'sphere', 'sphere', 'sphere']);
-  assert.notDeepEqual(calls, render(e, 2));
+test('aether vent housing is a bounded, deterministic beveled mesh with finite outward normals', () => {
+  const mesh = geom.aetherVent();
+  assert.deepEqual(mesh, geom.aetherVent());
+  assert.ok(mesh.length / 27 >= 800 && mesh.length / 27 <= 1400, 'moderate reusable detail budget');
+  const colors = new Set();
+  let top = -Infinity;
+  for (let i = 0; i < mesh.length; i += 27) {
+    const a = mesh.slice(i, i + 3), b = mesh.slice(i + 9, i + 12), c = mesh.slice(i + 18, i + 21),
+      u = b.map((v, k) => v - a[k]), v = c.map((v, k) => v - a[k]),
+      cross = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]],
+      area = Math.hypot(...cross);
+    assert.ok(area > 1e-8, 'no degenerate faces');
+    for (let j = i; j < i + 27; j += 9) {
+      const vertex = mesh.slice(j, j + 9);
+      assert.ok(vertex.every(Number.isFinite));
+      assert.ok(Math.hypot(vertex[0], vertex[2] / .9) <= 1.96, 'retain original visual footprint');
+      assert.ok(vertex[1] >= -.041 && vertex[1] <= 1.411);
+      assert.ok(Math.abs(Math.hypot(...vertex.slice(3, 6)) - 1) < 1e-9);
+      assert.ok(cross.every((n, k) => Math.abs(n / area - vertex[3 + k]) < 1e-9));
+      if (vertex[1] < -.039) assert.ok(vertex[4] <= 0, 'bottom faces point down/out');
+      if (vertex[1] > 1.409) assert.ok(vertex[4] >= 0, 'clamp caps point up/out');
+      colors.add(vertex.slice(6).join(','));
+      top = Math.max(top, vertex[1]);
+    }
+  }
+  assert.equal(colors.size, 4, 'separate recess, panel and bevel colors');
+  assert.ok(top > 1.4, 'raised retaining clamps');
+});
+
+test('aether vents use a shared metal housing, energy rings and crystal without mutating resources', () => {
+  const e = Object.freeze({ ...deposit(), type: 'gas', size: 1.5, amount: 999999 }),
+    before = JSON.stringify(e), calls = render(e), later = render(e, 2);
+  assert.deepEqual(calls.map(c => c[0]), ['aetherVent', 'ring', 'ring', 'octa', 'sphere', 'sphere', 'sphere']);
+  assert.equal(calls[0][14], MAT.METAL);
+  assert.ok(calls.slice(1, 4).every(c => c[14] === MAT.CRYSTAL && c[11] > .4));
+  assert.ok(calls[3][11] < 1, 'crystal retains directional facet lighting');
+  assert.deepEqual(calls.slice(0, 3), later.slice(0, 3), 'housing and energy rings stay fixed');
+  assert.notEqual(calls[3][8], later[3][8], 'central crystal rotates');
+  assert.ok(calls[3][2] - calls[3][5] > .98, 'crystal clears its socket');
+  assert.deepEqual(render(e), calls, 'repeated frame is deterministic');
+  assert.equal(JSON.stringify(e), before);
+  assert.ok(render(e, 0, { layer: 'effects', alpha: .3 }).slice(0, 4)
+    .every(c => c[12] === .3 && c[13] === 'effects'));
+  assert.deepEqual(render({ ...e, hp: 0 }), []);
+  for (const time of [0, 2, 13]) {
+    const vapor = render(e, time).slice(4);
+    for (let i = 0; i < 3; i++) {
+      const t = (time * .35 + i * .33) % 1;
+      assert.deepEqual(vapor[i], ['sphere', e.x + Math.sin(time + i) * .3, .6 + t * 3, e.z,
+        .35 + t * .8, .4 + t * .6, .35 + t * .8, 0x88ddd3, 0, 0, 0, .5, (1 - t) * .12, 'effects']);
+    }
+  }
 });

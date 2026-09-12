@@ -128,6 +128,61 @@
         }
         return o;
       },
+      // One reusable metal mesh: beveled deck, segmented apron and four retaining clamps.
+      // Emissive rings and the animated crystal are drawn separately by renderEntity.
+      aetherVent() {
+        const out = [], box = this.box(), tau = Math.PI * 2,
+          dark = [.16, .20, .24], metal = [.34, .40, .44], edge = [.48, .54, .55],
+          deck = [.25, .30, .36];
+        const point = (r, y, a) => [Math.sin(a) * r, y, Math.cos(a) * r * .9];
+        const profile = (n, levels, colors) => {
+          for (let i = 0; i < n; i++) {
+            const a = (i + .5) / n * tau, b = (i + 1.5) / n * tau;
+            for (let j = 0; j < levels.length - 1; j++) {
+              const [r, y] = levels[j], [s, h] = levels[j + 1],
+                p = point(r, y, a), q = point(r, y, b),
+                u = point(s, h, a), v = point(s, h, b), col = colors[j];
+              this.tri(out, p, q, v, col);
+              this.tri(out, p, v, u, col);
+            }
+            const [r, y] = levels.at(-1);
+            this.tri(out, [0, y, 0], point(r, y, a), point(r, y, b), colors.at(-1));
+            const [br, by] = levels[0];
+            this.tri(out, [0, by, 0], point(br, by, b), point(br, by, a), dark);
+          }
+        };
+        const part = (a, r, y, w, h, d, col) => {
+          const cs = Math.cos(a), sn = Math.sin(a);
+          for (let i = 0; i < box.length; i += 27) {
+            const points = [];
+            for (let k = 0; k < 27; k += 9) {
+              const x = box[i + k] * w, z = box[i + k + 2] * d + r;
+              points.push([x * cs + z * sn, box[i + k + 1] * h + y, (-x * sn + z * cs) * .9]);
+            }
+            this.tri(out, ...points, col);
+          }
+        };
+        profile(16, [[1.83, -.04], [1.95, .08], [1.95, .18], [1.78, .30]], [dark, metal, edge, metal]);
+        profile(32, [[1.65, .22], [1.73, .34], [1.73, .44], [1.55, .48]], [dark, dark, metal, dark]);
+        profile(8, [[1.48, .38], [1.57, .53], [1.57, .65], [1.36, .84]], [dark, dark, edge, deck]);
+        // Recessed central plate and raised crystal socket.
+        profile(8, [[1.10, .842], [1.03, .88]], [dark, metal]);
+        profile(8, [[.48, .88], [.48, .94], [.36, .98]], [dark, edge, dark]);
+        for (let i = 0; i < 16; i++) {
+          const a = i / 16 * tau;
+          part(a, 1.77, .26, .32, .13, .29, i % 2 ? metal : edge);
+          part(a, 1.83, .332, .18, .014, .035, dark);
+        }
+        for (let i = 0; i < 4; i++) {
+          const a = (i + .5) / 4 * tau;
+          part(a, 1.66, .50, .29, .67, .28, dark);
+          part(a, 1.72, .91, .20, .90, .20, metal);
+          part(a, 1.69, 1.37, .24, .08, .24, edge);
+          part(a, 1.49, .77, .32, .16, .40, edge);
+          part(a, 1.18, .867, .08, .05, .08, edge);
+        }
+        return out;
+      },
       // Continuous eroded boundary belt; all detail stays outside ±87, with private cosmetic RNG.
       mountainRing(seed) {
         // Resolve once: repeated global lookups are costly in the isolated Node test worlds.
