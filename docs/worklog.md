@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Field Manual gekürzt und auf Touch ausgerichtet
+
+- Hilfetext in `src/ui/screens.js` auf vier kurze Bereiche reduziert: Touch, Gefechtsknöpfe, Basis/Wirtschaft und Fortschritt. Rechtsklick-/Provisoriumshinweise, Wiederholungen und Detailregeln entfernt; wesentliche Schritte für Auswahl, Attack-move, Bau, Reparatur, Rally, Produktion, Upgrades und fehlende Run-Speicherung bleiben. Mit aktueller Eingabelogik und Spielreferenz abgeglichen; keine Änderung an Bedienung oder Spielregeln.
+- **Neu geprüft:** Diff-Sichtung und `npm run build` erfolgreich, lokale Laufzeitausgabe aktualisiert. Auf ausdrücklichen Wunsch keine automatisierten Tests ausgeführt oder hinzugefügt; kein Browser-/Gerätenachweis für die gekürzte Ansicht.
+
 ## Last Light Relay als zweiter Gefechtstrack
 
 - Freigegebenen Entwurf bytegleich nach `audio/music-last-light-relay.mp3` kopiert. Reihenfolge: **Ratchet Theory → Last Light Relay → Breach Protocol → Black Channel → von vorn**. Weiterhin 10 % Pegel, 10 s Startverzögerung und 10 s Pause zwischen allen Stücken; Menü/SFX unverändert. Docker-Allowlist und Referenzen auf vier Tracks erweitert; Hörentwurfsordner und Nutzerreferenz bleiben außerhalb der Auslieferung.

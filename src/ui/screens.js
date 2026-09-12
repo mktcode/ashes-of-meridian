@@ -149,31 +149,19 @@
         if (this.view === 'game') this.paused = true;
         this.openModal(
           'help',
-          `<div class="eyebrow">MERIDIAN FIELD MANUAL</div><h1>Bring your people home.</h1><div class="help-grid"><div><h3>Command your force</h3>${renderHelpLines([
-            ['Select', 'Tap unit or structure'],
-            ['Context order', 'Right click (temporary)'],
-            ['Rally point', 'Select completed building → Rally point → tap ground'],
-            ['Move (default)', 'Select units → tap ground'],
-            ['Attack-move', 'Crossed swords beside ⌂ → gold = active → tap ground'],
-            ['Move workers', 'Always ordinary movement, even with Attack-move active'],
-            ['Build / repair with selected workers', 'Tap an own foundation or damaged building/unit'],
-            ['Select visible units of a type', 'Double-tap unit'],
-            ['Select visible combat units (no workers)', 'Triple-tap unit']
-          ])}<h3>Navigate</h3>${renderHelpLines([
-            ['Pan camera', 'Drag with one finger'],
-            ['Zoom', 'Pinch / ＋ and − buttons'],
-            ['Center on base', '⌂ button'],
-            ['Navigate on minimap', 'Tap or drag']
-          ])}</div><div><h3>Economy & production</h3><p style="font-size:12px">You start with <b>your headquarters and 0–5 workers</b>, depending on your permanent <b>Starting workers</b> upgrade. With no starting workers, recruit your first through <b>Infantry</b>. Starting resources range from <b>250–500 alloy / 0 aether</b>, depending on <b>Starting alloy</b>; workers automatically harvest <b>alloy</b> and return it to command. Place a <b>refinery within 8 meters of a vent</b> for aether; it runs without an assigned worker.</p><p style="font-size:12px">Use <b>Buildings</b>, choose a structure, then tap open, explored ground. One free worker is assigned; workers already building, travelling to build or repairing are not interrupted. If none is free, nothing is placed or paid. Select a completed own building for <b>Repair</b>, <b>Sell</b> and <b>Rally point</b> in the lower-right menu. Use <b>Back</b> to return to the categories. Repair sends the nearest free worker and costs 0.1 alloy per hull; tap again to stop. Without a free worker, automatic repair is unavailable. Selling refunds 50% of the building’s purchase value plus all pending recruitment costs; the last completed command center cannot be sold. Select workers, then tap an own foundation to resume construction or a damaged own building/unit to repair it. Exactly one selected worker is sent; other selected troops keep their orders. This explicit order may interrupt that worker's current job and replaces any previous builder at the target: construction never gets extra speed from multiple workers. Selection stays on the workers; deselect them first to inspect a foundation or damaged target. Intact targets are selected normally.</p><p style="font-size:12px"><b>Depots add 16 supply.</b> Queued troops reserve their supply. Multiple production structures recruit in parallel. Recruit through Infantry (including workers and commander), Vehicles or Aircraft. Orders are distributed across matching buildings. Icons above the minimap count all pending orders per type; the clockwise overlay shows the next completion. Tap an icon to cancel one order (waiting orders first) and recover its resources.</p><h3>Battlefield rules</h3><p style="font-size:12px">Attack-move stops to engage enemies; ordinary move prioritizes reaching the destination, including retreat. The crossed-swords toggle affects future ground orders only (also right-clicks in the battlefield or minimap), stays active until switched off and resets to off on each new battle/restart. Direct enemy taps still attack. Medics heal automatically. Tanks and artillery cannot attack aircraft. Artillery needs spotters and cannot fire at close range. Veterans earn stronger weapons after five kills.</p><p style="font-size:12px">Units and scans reveal fog-of-war. Destroy the enemy command center to win. Losing your last command center ends the battle.</p></div></div><h3>Command abilities & operation controls</h3><div class="help-grid">${renderHelpLines([
-            ['Command abilities', 'Always-visible ability bar → tap target'],
-            ['Build / recruit', 'Lower-right categories; Back returns'],
-            ['Simulation speed', 'Tap below the clock: 1× → 1,5× → 2× → 0,75×; current battle only'],
-            ['Speed lifetime', 'Pause keeps speed; each new battle/restart begins at 1×'],
-            ['Pause', 'Ⅱ button'],
-            ['Cancel targeting / placement', 'Cancel button beside the target prompt'],
-            ['Run lifetime', 'No saves; closing, reloading or leaving ends the run'],
-            ['Field manual', '? button']
-          ])}</div><p style="font-size:11px">On touch screens: tap a unit, then a destination or enemy. Drag the battlefield to pan. Tap structures to inspect them.</p><p style="font-size:11px">Fleet upgrades apply to new battles. Unspent aether is recovered at every result and pays for upgrades. Evacuation starts at 100 per battle and can be upgraded to 1,000. Win as The Free Marches to unlock The Verdant Choir, then win as the Choir to unlock The Veiled Court permanently in this browser.</p><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN TO COMMAND ↗</button></div>`,
+          `<div class="eyebrow">ASHES OF MERIDIAN</div><h1>Field manual</h1><p>Destroy the enemy HQ. Protect your last HQ.</p><div class="help-grid"><div><h3>Touch controls</h3>${renderHelpLines([
+            ['Select', 'Tap your unit or building'],
+            ['Move / attack', 'Select troops → tap ground / enemy'],
+            ['Group visible units', 'Double-tap: same type · triple-tap: all except workers'],
+            ['Attack-move', 'Crossed swords beside ⌂: gold = stop to fight'],
+            ['Pan / zoom', 'Drag one finger · pinch or ＋ / −'],
+            ['Navigate', '⌂: base · minimap: tap or drag']
+          ])}<p style="font-size:12px">Turn Attack-move off to prioritize moving or retreating. Workers always move normally.</p><h3>Battle controls</h3>${renderHelpLines([
+            ['Abilities', 'Choose in the bottom-center bar → tap target'],
+            ['Cancel', 'Cancel beside the target prompt'],
+            ['Speed', 'Tap the multiplier below the clock'],
+            ['Pause / help', 'Ⅱ / ? buttons']
+          ])}<p style="font-size:12px"><b>No battle saves.</b> Pause keeps the run only in this open page. Main menu, reload or closing ends it.</p></div><div><h3>Base & economy</h3><p style="font-size:12px"><b>Start:</b> HQ, 0–5 workers and 250–500 alloy / 0 aether, depending on fleet upgrades. No workers? Recruit one through <b>Infantry</b>.</p><p style="font-size:12px"><b>Resources:</b> Workers automatically gather alloy. Build a refinery within 8 meters of a vent for aether; no assigned worker needed. Depots add 16 supply.</p><p style="font-size:12px"><b>Build:</b> Buildings → choose → tap clear, explored ground. Requires a free worker. Recruit via <b>Infantry / Vehicles / Aircraft</b>. <b>Back</b> returns to categories. Tap a queue icon above the minimap to cancel one order for a full refund.</p><p style="font-size:12px"><b>Manage:</b> Select a completed building for <b>Repair / Sell / Rally point</b>. For rally, then tap a destination. Select a worker and tap your foundation or damaged unit/building to resume construction or repair.</p><h3>Between battles</h3><p style="font-size:12px">Win or lose: unspent aether is recovered up to your evacuation limit (100–1,000). Spend it on <b>Fleet upgrades</b> for future battles.</p><p style="font-size:12px">Win as <b>Free Marches</b> to unlock <b>Verdant Choir</b>; win as the Choir to unlock <b>Veiled Court</b>. Upgrades and unlocks stay in this browser.</p></div></div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN ↗</button></div>`,
           true
         );
       },
