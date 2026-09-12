@@ -66,7 +66,7 @@ type MeridianSettings = Record<string, number | boolean> & {
 
 interface MeridianProfile {
   version: 1;
-  factionsUnlocked: boolean;
+  factionUnlockLevel: number;
   aether: number;
   upgrades: Record<string, number>;
   settings: MeridianSettings;

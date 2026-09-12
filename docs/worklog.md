@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Sequenzielle Fraktionsfreischaltung
+
+- Fortschritt von einem gemeinsamen Boolean auf `factionUnlockLevel` (0–2) umgestellt: Free-Marches-Sieg öffnet nur Verdant Choir, erst ein Choir-Sieg die Veiled Court. Ergebnis meldet jeweils genau die neu geöffnete Fraktion. Gesperrte Karten und manipulierte Startauswahl bleiben abgesichert; falsche, verlorene und wiederholte Siege überspringen keine Stufe und speichern nicht erneut.
+- Profil bleibt unter `meridian.profile.v1`; das alte Feld `factionsUnlocked` wird gemäß Prototypregel nicht migriert und als unbekannt verworfen, andere gültige Profilwerte bleiben beim Laden erhalten. README, Gameplay und Architektur aktualisiert.
+- **Neu: `npm test` einschließlich Build, 235/235 bestanden** (rund 65 s). **Chromium `file://`, 430×932:** initial 1/3, nach erstem Sieg 2/3 und nach zweitem Sieg sowie Reload 3/3 Fraktionen aktiv; beide Ergebnisnachrichten gesichtet, GL 0, keine Console-/Laufzeitfehler. Kein vollständiger manuell gespielter Sieg oder Echtgerätetest.
+
 ## Außenring detailliert
 
 - Gesamter Gebirgsstand samt Testbereinigung und Android-Vorüberlegung nach Nutzerfreigabe gemeinsam zum Commit abgeschlossen. Abschließend nur Dokumentationsstatus und Diff geprüft; die folgenden Spiel-/Browsernachweise stammen aus dem unmittelbar vorherigen Prüflauf.

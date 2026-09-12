@@ -29,6 +29,7 @@
         this.radioUntil = 0;
         this.toastUntil = 0;
         this.actionSignature = '';
+        this.factionJustUnlocked = null;
         this.hudClock = 0;
         this.touchPoints = new Map();
         this.bind();
@@ -74,7 +75,7 @@
       event(type, data) {
         if (type === 'start') {
           this.view = 'game';
-          this.factionsJustUnlocked = false;
+          this.factionJustUnlocked = null;
           this.resultAetherRecovered = undefined;
           this.paused = false;
           this.modalKind = '';
@@ -112,10 +113,13 @@
                   : FACTIONS[this.game.s.faction].color
             });
         } else if (type === 'result') {
-          let changed = false;
-          this.factionsJustUnlocked = !!(data.win && this.game.s?.faction === 0 && !this.profile.factionsUnlocked);
-          if (this.factionsJustUnlocked) {
-            this.profile.factionsUnlocked = true;
+          let changed = false,
+            faction = this.game.s?.faction,
+            unlockLevel = this.profile.factionUnlockLevel;
+          this.factionJustUnlocked = null;
+          if (data.win && faction === unlockLevel && faction + 1 < FACTIONS.length) {
+            this.factionJustUnlocked = faction + 1;
+            this.profile.factionUnlockLevel = this.factionJustUnlocked;
             changed = true;
           }
           if (this.resultAetherRecovered === undefined) {

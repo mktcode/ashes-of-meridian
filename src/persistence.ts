@@ -32,7 +32,7 @@ function createMeridianPersistence(
     function defaultProfile(): MeridianProfile {
       return {
         version: 1,
-        factionsUnlocked: false,
+        factionUnlockLevel: 0,
         aether: 0,
         upgrades: {},
         settings: {
@@ -49,7 +49,7 @@ function createMeridianPersistence(
       try {
         let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
         if (p && p.version === 1) {
-          d.factionsUnlocked = p.factionsUnlocked === true;
+          d.factionUnlockLevel = clamp(Math.floor(Number(p.factionUnlockLevel) || 0), 0, 2);
           d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
           for (let k in upgrades)
             d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);

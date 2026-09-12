@@ -77,7 +77,7 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { factionsUnlocked: false, aether: 0, upgrades: {}, settings: { quality: 2 } }, { saveProfile() {} });
+    { unlock() {}, sound() {} }, { factionUnlockLevel: 0, aether: 0, upgrades: {}, settings: { quality: 2 } }, { saveProfile() {} });
   ui.view = 'game'; ui.paused = false;
   const key = (key, options = {}) => document.handlers.keydown?.({ key, preventDefault() {}, ...options });
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
@@ -747,13 +747,14 @@ test('battle setup and help describe starting workers and unchanged starting res
   assert.doesNotMatch(h.ui.html, /only your headquarters/);
 });
 
-test('battle factions stay locked until a Free Marches victory, then persist and allow both choices', () => {
+test('factions unlock sequentially after victories with the preceding faction', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.showBattle();
   let html = h.document.getElementById('menu').innerHTML;
   assert.match(html, /faction-option active[^>]*data-faction="0"/);
   assert.match(html, /faction-option locked" data-faction="1" disabled/);
   assert.match(html, /faction-option locked" data-faction="2" disabled/);
   assert.match(html, /Win once as The Free Marches/);
+  assert.match(html, /Win once as The Verdant Choir/);
   h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 0, 'locked card cannot change selection');
   h.ui.battleFaction = 2;
   for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash'],['battleSeed','1409']])
@@ -762,22 +763,38 @@ test('battle factions stay locked until a Free Marches victory, then persist and
   h.ui.startBattle();
   assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'ash',seed:1409}]], 'launch also rejects a forged locked choice');
   let saves = 0; h.ui.persistence.saveProfile = () => { saves++; return true; };
-  h.ui.showResult = () => { h.ui.html = h.ui.factionsJustUnlocked ? 'NEW FACTIONS UNLOCKED' : ''; };
+  h.ui.showResult = () => {
+    const faction = h.ui.factionJustUnlocked;
+    h.ui.html = faction === null ? '' : `NEW FACTION UNLOCKED: ${faction}`;
+  };
   h.ui.game.s.faction = 1; h.ui.event('result', { win: true });
-  assert.equal(h.ui.profile.factionsUnlocked, false); assert.equal(saves, 0, 'only the first faction qualifies');
+  assert.equal(h.ui.profile.factionUnlockLevel, 0); assert.equal(saves, 0, 'a forged later-faction win cannot skip progression');
   h.ui.game.s.faction = 0; h.ui.event('result', { win: false });
-  assert.equal(h.ui.profile.factionsUnlocked, false); assert.equal(saves, 0);
+  assert.equal(h.ui.profile.factionUnlockLevel, 0); assert.equal(saves, 0);
   h.ui.event('result', { win: true });
-  assert.equal(h.ui.profile.factionsUnlocked, true); assert.equal(saves, 1);
-  assert.match(h.ui.html, /NEW FACTIONS UNLOCKED/);
+  assert.equal(h.ui.profile.factionUnlockLevel, 1); assert.equal(saves, 1);
+  assert.match(h.ui.html, /NEW FACTION UNLOCKED: 1/);
+  Object.assign(h.ui.game.s, { stats: { kills: 0, lost: 0, gathered: 0 } });
+  h.UI.prototype.showResult.call(h.ui, { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
+  assert.match(h.ui.html, /NEW FACTION UNLOCKED · The Verdant Choir is ready for deployment/);
   h.ui.event('result', { win: true }); assert.equal(saves, 1, 'repeat wins do not rewrite the profile');
+  h.ui.showBattle(); html = h.document.getElementById('menu').innerHTML;
+  assert.doesNotMatch(html, /locked" data-faction="1"/);
+  assert.match(html, /locked" data-faction="2" disabled/);
+  h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 1);
+  h.ui.game.s.faction = 1; h.ui.event('result', { win: true });
+  assert.equal(h.ui.profile.factionUnlockLevel, 2); assert.equal(saves, 2);
+  assert.match(h.ui.html, /NEW FACTION UNLOCKED: 2/);
+  h.UI.prototype.showResult.call(h.ui, { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
+  assert.match(h.ui.html, /NEW FACTION UNLOCKED · The Veiled Court is ready for deployment/);
+  h.ui.event('result', { win: true }); assert.equal(saves, 2);
   h.ui.showBattle(); html = h.document.getElementById('menu').innerHTML;
   assert.doesNotMatch(html, /faction-option[^>]*locked/);
   h.click({ faction: '2' }); assert.equal(h.ui.battleFaction, 2);
 });
 
 test('battle setup and launch have no difficulty control, options API or profile setting', () => {
-  const h = setup(); h.ui.profile.factionsUnlocked = true; h.ui.showBattle();
+  const h = setup(); h.ui.profile.factionUnlockLevel = 2; h.ui.showBattle();
   assert.equal(h.ui.difficultyOptions, undefined);
   assert.doesNotMatch(h.document.getElementById('menu').innerHTML, /difficulty|standard|veteran/i);
   h.ui.battleFaction = 2;

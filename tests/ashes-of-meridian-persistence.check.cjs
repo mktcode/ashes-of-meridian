@@ -5,7 +5,7 @@ const { UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const PROFILE = 'meridian.profile.v1';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
-  version: 1, factionsUnlocked: false, aether: 0, upgrades: {},
+  version: 1, factionUnlockLevel: 0, aether: 0, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false }
 };
 
@@ -51,10 +51,12 @@ test('invalid profile JSON/version resets; malformed upgrade values become zero 
   for (const text of ['{', 'null', '[]', '{"version":2}', '{"version":"1"}']) {
     h.data.set(PROFILE, text); assert.deepEqual(json(h.readProfile()), defaults);
   }
-  h.data.set(PROFILE, '{"version":1,"factionsUnlocked":"yes","unlocked":4,"credits":17,"upgrades":"bad"}');
+  h.data.set(PROFILE, '{"version":1,"factionUnlockLevel":"yes","factionsUnlocked":true,"unlocked":4,"credits":17,"upgrades":"bad"}');
   assert.deepEqual(json(h.readProfile()), { ...defaults, upgrades: { startingWorkers: 0, aetherEvacuation: 0 } });
-  h.data.set(PROFILE, JSON.stringify({ ...defaults, factionsUnlocked: true }));
-  assert.equal(h.readProfile().factionsUnlocked, true);
+  for (const [value, expected] of [[-2, 0], [1.9, 1], [99, 2], ['bad', 0], [null, 0]]) {
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, factionUnlockLevel: value }));
+    assert.equal(h.readProfile().factionUnlockLevel, expected);
+  }
   for (const [value, expected] of [[-2, 0], [1000000, 999999], ['bad', 0], [null, 0]]) {
     h.data.set(PROFILE, JSON.stringify({ ...defaults, aether: value }));
     assert.equal(h.readProfile().aether, expected);
@@ -67,12 +69,12 @@ test('invalid profile JSON/version resets; malformed upgrade values become zero 
   assert.ok(h.warnings.every(w => w[0] === 'Profile reset:'));
 });
 
-test('permanent upgrades, faction unlock and settings persist across instances using only the unchanged profile key', () => {
+test('permanent upgrades, faction progress and settings persist across instances using only the unchanged profile key', () => {
   const data = new Map([['meridian.operation.v3', '{"version":3,"entities":[]}']]);
-  const h = setup(data); h.ui.profile.upgrades.startingWorkers = 2; h.ui.profile.factionsUnlocked = true; h.ui.profile.aether = 321; h.ui.profile.settings.quality = 0; h.ui.persist();
+  const h = setup(data); h.ui.profile.upgrades.startingWorkers = 2; h.ui.profile.factionUnlockLevel = 2; h.ui.profile.aether = 321; h.ui.profile.settings.quality = 0; h.ui.persist();
   assert.deepEqual(h.trace, [['set', PROFILE, JSON.stringify(h.ui.profile)]]);
   const reloaded = setup(data);
-  assert.equal(reloaded.ui.profile.upgrades.startingWorkers, 2); assert.equal(reloaded.ui.profile.factionsUnlocked, true); assert.equal(reloaded.ui.profile.aether, 321); assert.equal(reloaded.ui.profile.settings.quality, 0);
+  assert.equal(reloaded.ui.profile.upgrades.startingWorkers, 2); assert.equal(reloaded.ui.profile.factionUnlockLevel, 2); assert.equal(reloaded.ui.profile.aether, 321); assert.equal(reloaded.ui.profile.settings.quality, 0);
   reloaded.readProfile(); assert.deepEqual(reloaded.trace, [['get', PROFILE]]);
   assert.equal(data.get('meridian.operation.v3'), '{"version":3,"entities":[]}', 'old run data is ignored, not migrated');
   assert.deepEqual(Object.keys(h.service).sort(), ['available','loadProfile','saveProfile']);
