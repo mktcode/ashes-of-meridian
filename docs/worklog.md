@@ -2,11 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
-## Modellbilder für zwei Aktionsbuttons
+## Modellbilder für alle Free-Marches-Aktionsbuttons
 
-- Nur Free-Marches-Prospector und Command center zeigen statt Linienicons nahe Ausschnitte ihrer Spielmodelle. Zwei lokale 320×320-PNGs direkt aus `renderEntity` erzeugt; kein zusätzlicher Laufzeit-WebGL-Aufwand. Namen, Kosten, Badges, Aktiv-/Sperrstatus und Buttonmaße erhalten. Andere Fraktionen, Aktionen und Queue-Icons unverändert; Modelländerungen erfordern manuell erneuerte Porträts.
-- **Neu: `npm test` einschließlich Build, 243/243 bestanden** (rund 60 s). Lokale Bilddateien, Fraktions-/Aktionsgrenzen, unveränderte Labels/Kosten und dekorative Bildsemantik abgesichert. Diff und lokale Dokumentationslinks geprüft; bestehende Fixtures unverändert.
-- **Chromium `file://`:** 1280×800, 390×844, 320×740 und 932×430. Alle Menübuttonmaße gegen die vorherige Icon-Ausgabe verglichen: exakt gleich. Bilder geladen, Nahansichten/Scrollen/aktive und gesperrte Buttons gesichtet; per CDP-Touch über das Modellbild Worker rekrutiert (50 Alloy, reguläre Queue) und HQ-Baumodus aktiviert. Andere Fraktionen ohne Porträts, GL 0, keine Console-/Laufzeitfehler. Kontrolliertes Setup, kein Echtgerät- oder vollständiger neuer Bauablaufnachweis. Bestehenden horizontalen Überlauf der Worker-Statusmeldung bei 320 px gegen die alte Ausgabe bestätigt und nicht beiläufig geändert.
+- Nach Prospector/HQ jetzt alle sieben Einheiten und sieben Gebäude mit nahen Ausschnitten ihrer tatsächlichen Spielmodelle: zwölf weitere lokale 320×320-PNGs einmalig aus `renderEntity` erzeugt, die beiden vorhandenen unverändert. Keine automatische Erzeugung eingebaut; bei späteren Modelländerungen Bilder manuell erneuern. Buttonmaße, Namen, Kosten, Badges, Aktiv-/Sperrstatus, andere Fraktionen und Queue-/Kategorie-/Befehlsicons bleiben erhalten. Keine Spielmodell-/Regel-/RNG-Änderungen oder zusätzlichen Laufzeit-WebGL-Pässe.
+- **Neu: `npm test` einschließlich Build, 243/243 bestanden** (rund 36 s). Vorhandenen Porträttest auf alle 14 Dateien/Aktionen sowie Alloy-/Aetherkosten erweitert. Diff und lokale Dokumentationslinks geprüft; bestehende Fixtures unverändert.
+- **Neu: Chromium `file://`** bei 1280×800, 390×844, 320×740 und 932×430: alle vier Untermenüs laden sämtliche Porträts; Buttonmaße und Überlauf exakt gleich zur Linienicon-Ausgabe. Bilder und Menüansichten gesichtet. Per CDP-Touch alle sieben Einheitentypen mit korrekten Kosten in reguläre Queues aufgenommen und alle sieben Gebäudebilder bis zum aktiven Baumodus angetippt. Andere Fraktionen in allen Kategorien ohne Porträts, GL 0, keine Console-/Laufzeitfehler. Kontrolliertes Setup mit bereitgestellten Produktionsgebäuden/Ressourcen; kein Echtgerät- oder vollständiger neuer Bauablaufnachweis. Bestehender horizontaler Überlauf der Worker-Statusmeldung bei 320 px bewusst unverändert.
 
 ## Eine zusätzliche Nahzoomstufe
 

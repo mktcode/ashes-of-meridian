@@ -1124,9 +1124,21 @@ test('all factions share the minimal recruitment categories, including HQ units 
 
 test('only Free Marches recruitment/build buttons use local model portraits without changing actions or labels', () => {
   const h = setup();
-  for (const [key, label, type, cost, file] of [
+  for (const [key, label, type, cost, file, gas = 0] of [
     ['train:worker', 'Prospector', 'worker', 50, 'preview-prospector.png'],
-    ['build:hq', 'Command center', 'hq', 400, 'preview-command-center.png']
+    ['train:rifle', 'Vanguard', 'rifle', 75, 'preview-vanguard.png'],
+    ['train:medic', 'Field medic', 'medic', 100, 'preview-field-medic.png', 35],
+    ['train:tank', 'Ironclad', 'tank', 200, 'preview-ironclad.png', 70],
+    ['train:artillery', 'Longbow', 'artillery', 235, 'preview-longbow.png', 95],
+    ['train:air', 'Kestrel', 'air', 180, 'preview-kestrel.png', 100],
+    ['train:hero', 'Commander', 'hero', 300, 'preview-field-commander.png', 100],
+    ['build:hq', 'Command center', 'hq', 400, 'preview-command-center.png'],
+    ['build:barracks', 'Muster station', 'barracks', 145, 'preview-muster-station.png'],
+    ['build:depot', 'Logistics depot', 'depot', 85, 'preview-logistics-depot.png'],
+    ['build:refinery', 'Aether refinery', 'refinery', 100, 'preview-aether-refinery.png'],
+    ['build:factory', 'War foundry', 'factory', 225, 'preview-war-foundry.png', 85],
+    ['build:hangar', 'Flight deck', 'hangar', 220, 'preview-flight-deck.png', 115],
+    ['build:turret', 'Sentinel turret', 'turret', 115, 'preview-sentinel-turret.png', 25]
   ]) {
     const png = fs.readFileSync(path.join(__dirname, '..', file));
     assert.equal(png.subarray(0,8).toString('hex'), '89504e470d0a1a0a');
@@ -1134,10 +1146,10 @@ test('only Free Marches recruitment/build buttons use local model portraits with
     for (const faction of [0,1,2]) {
       h.ui.game.s.faction = faction;
       const before = JSON.stringify(h.ui.game.s);
-      const html = h.ui.actionButton(key, label, type, { cost: {cost}, disabled: true, badge: '2' });
+      const html = h.ui.actionButton(key, label, type, { cost: {cost, gas}, disabled: true, badge: '2' });
       assert.equal(JSON.stringify(h.ui.game.s), before);
       assert.ok(html.includes(`data-action="${key}" disabled`));
-      assert.ok(html.includes(`<span>${label}</span><span class="cost">${cost}◆</span>`));
+      assert.ok(html.includes(`<span>${label}</span><span class="cost">${cost}◆${gas ? ' ' + gas + '⬡' : ''}</span>`));
       assert.ok(html.includes(`<small data-badge="${key}">2</small>`));
       if (faction === 0) {
         assert.ok(html.includes(`src="${file}" alt="" draggable="false"`));
@@ -1150,7 +1162,7 @@ test('only Free Marches recruitment/build buttons use local model portraits with
   }
   h.ui.game.s.faction = 0; h.ui.mode = { kind: 'build', arg: 'hq' };
   assert.match(h.ui.actionButton('build:hq', 'Command center', 'hq'), /class="[^"]*\bmodel-action\b[^"]*\bactive\b/);
-  for (const [key, type] of [['tab:build','hq'], ['train:rifle','rifle'], ['build:barracks','barracks']])
+  for (const [key, type] of [['tab:build','hq'], ['tab:infantry','rifle'], ['tab:vehicles','tank'], ['tab:aircraft','air'], ['ability:drop','drop'], ['repair','repair'], ['sell','cancel']])
     assert.doesNotMatch(h.ui.actionButton(key, type, type), /<img|model-action/);
 });
 
