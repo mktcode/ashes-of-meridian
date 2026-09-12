@@ -17,7 +17,8 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('tri(u_metalTex,v_modelPos,normalize(v_modelN),.33)'));
   assert.ok(FRAG.includes('tri(u_bioTex,v_modelPos,normalize(v_modelN),.17)'));
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.28)'));
-  assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.19)'));
+  assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.055)'));
+  assert.ok(FRAG.includes('base=mix(detail(base,t,.74),t,.32)'));
   for (const texture of ['u_terrainOverlayTex', 'u_rockClustersTex', 'u_desertShrubsTex'])
     assert.ok(FRAG.includes(`uniform sampler2D ${texture};`));
   assert.ok(FRAG.includes('triAlpha(u_terrainOverlayTex,v_pos,n,.1)'));
