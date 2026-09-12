@@ -2,6 +2,11 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Bloom etwas verstärkt
+
+- Bloom-Faktor auf High/Balanced von 0,055 auf 0,08 erhöht (rund 45 % stärker). Schwellen, Radien, Samplezahl und Renderpässe unverändert; Performance bleibt ohne Bloom.
+- **234 Tests inklusive Build bestanden** (rund 37 s). Chromium `file://`, Rust/43015, 430×932, High: Screenshot am HQ gesichtet, GL-Fehler 0, keine Console-Meldungen/Exceptions, weiterhin 37 Draw Calls. Diff geprüft; kein Echtgeräte-/Leistungsnachweis.
+
 ## Einzelvarianten aus Boden-Atlanten
 
 - Strauchbelegung anschließend auf Wunsch von 65 auf 10 % der Zellen reduziert (rund 85 % weniger). Nur Ausdünnung bestehender Positionen, keine Größen-/Varianten-/Felsänderung. Dafür erneut **234 Tests inklusive Build bestanden** (rund 37 s); Chromium `file://`, Rust/43015, 430×932: deutlich weniger Sträucher visuell bestätigt, 37 Draw Calls, GL-Fehler 0, keine Console-Meldungen/Exceptions. Diff geprüft; weiterhin kein Echtgeräte-Nachweis.
