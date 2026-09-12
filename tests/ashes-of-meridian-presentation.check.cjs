@@ -64,6 +64,74 @@ test('produced aircraft rise smoothly from the hangar without changing draw stat
   assert.ok(Math.abs(end-normal)<1e-9);
 });
 
+test('command-center armor has bounded beveled panels with outward finite unit normals', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS]);
+  vm.runInContext('Math.random = seeded = () => { throw Error("Mesh RNG"); }', context);
+  const geom = vm.runInContext('geom', context), mesh = geom.commandHull();
+  assert.deepEqual(mesh, geom.commandHull());
+  assert.ok(mesh.length / 27 >= 800 && mesh.length / 27 <= 1400);
+  // Each convex panel has three eight-sided bands and two closed caps (64 triangles).
+  assert.equal(mesh.length % (64 * 27), 0);
+  for (let start = 0; start < mesh.length; start += 64 * 27) {
+    const center = [0, 0, 0];
+    for (let i = start; i < start + 64 * 27; i += 9)
+      for (let k = 0; k < 3; k++) center[k] += mesh[i + k] / (64 * 3);
+    for (let i = start; i < start + 64 * 27; i += 27) {
+      const a = mesh.slice(i, i + 3), b = mesh.slice(i + 9, i + 12), c = mesh.slice(i + 18, i + 21),
+        u = b.map((v, k) => v - a[k]), v = c.map((v, k) => v - a[k]),
+        cross = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]],
+        area = Math.hypot(...cross);
+      assert.ok(area > 1e-8, 'no degenerate triangles');
+      assert.ok(cross.reduce((sum, n, k) => sum + n * (a[k] - center[k]), 0) > 0, 'outward winding');
+      for (let j = i; j < i + 27; j += 9) {
+        const vertex = mesh.slice(j, j + 9);
+        assert.ok(vertex.every(Number.isFinite));
+        assert.ok(Math.abs(vertex[0]) <= 3.98 && vertex[1] >= .1 - 1e-9 && vertex[1] <= 3.55);
+        assert.ok(vertex[2] >= -2.6 && vertex[2] <= 4, 'armor and step remain inside existing foundation');
+        assert.ok(cross.every((n, k) => Math.abs(n / area - vertex[k + 3]) < 1e-9));
+        assert.ok(vertex.slice(6).every(tint => tint > 0 && tint < 1.6));
+      }
+    }
+  }
+});
+
+test('command hull is faction-specific and retains construction, team yaw, tint and draw isolation', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+  vm.runInContext('Math.random = seeded = () => { throw Error("HQ draw RNG"); }', context);
+  const { renderEntity, BUILDINGS, BUILDING_YAW, FACTIONS, MAT } =
+    vm.runInContext('({renderEntity, BUILDINGS, BUILDING_YAW, FACTIONS, MAT})', context);
+  const entity = Object.freeze({ id: 1, kind: 'building', type: 'hq', x: 12, z: -7,
+    hp: BUILDINGS.hq.hp, size: BUILDINGS.hq.size, faction: 0, team: 0, progress: 1 });
+  const render = (e = entity, options = {}, time = 0) => {
+    const renderer = createRendererStub({ record: true }), before = JSON.stringify(e);
+    renderEntity(renderer, Object.freeze(e), time, options);
+    assert.equal(JSON.stringify(e), before);
+    assert.ok(renderer.calls.every(c => c.slice(1, 13).every(Number.isFinite)));
+    return renderer.calls;
+  };
+  const calls = render(), hull = list => list.find(c => c[0] === 'commandHull');
+  assert.equal(calls.filter(c => c[0] === 'commandHull').length, 1);
+  assert.deepEqual(hull(calls), ['commandHull', 12, 0, -7, 1, 1, 1,
+    FACTIONS[0].metal, BUILDING_YAW, 0, 0, 0, 1, 'dynamic', MAT.METAL]);
+  assert.deepEqual(calls, render());
+  assert.deepEqual(hull(calls), hull(render(entity, {}, 9)), 'armor stays fixed while radar rotates');
+  for (const progress of [0, .4, 1]) {
+    const h = hull(render({ ...entity, progress }));
+    assert.equal(h[5], Math.max(.15, progress));
+    assert.equal(h[4], 1); assert.equal(h[6], 1);
+  }
+  const preview = hull(render(entity, { tint: 0x99e4c6, alpha: .3, layer: 'effects' }));
+  assert.equal(preview[7], 0x99e4c6); assert.equal(preview[12], .3); assert.equal(preview[13], 'effects');
+  assert.equal(hull(render(entity, { ghost: true }))[7], 0x68717d);
+  const enemy = render({ ...entity, team: 1 });
+  assert.equal(hull(enemy)[8], BUILDING_YAW + Math.PI);
+  assert.equal(enemy[1][7], 0xe98680, 'foundation retains hostile team color');
+  for (const faction of [1, 2]) assert.equal(hull(render({ ...entity, faction })), undefined);
+  for (const type of Object.keys(BUILDINGS).filter(type => type !== 'hq'))
+    assert.equal(hull(render({ ...entity, type })), undefined);
+  assert.deepEqual(render({ ...entity, hp: 0 }), []);
+});
+
 test('effects execute alone, consume RNG synchronously and preserve visibility short-circuiting', () => {
   const context = loadScripts(['effects']);
   const Effects = vm.runInContext('MeridianEffects', context);

@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Free-Marches-HQ verfeinert
+
+- Vorlagennahe Detailüberarbeitung ohne neue Grundsilhouette: abgeschrägte Rumpf-/Dachplatten, kräftigere Seitenrippen und Eingangspfeiler, Trittstufe, Türfuge, Dachmarkierungen, Lüftungsgitter und zwei zusätzliche Antennen. Ein gemeinsames `commandHull`-Metallmesh mit 1.152 Dreiecken; Fundament, Radarrotation, Bau-/Teamdarstellung und sämtliche Spielregeln/Radien unverändert. Keine neuen Assets, Shader oder RNG-Aufrufe.
+- **Neu: `npm test` einschließlich Build, 240/240 bestanden** (rund 60 s). Meshgrenzen, geschlossene konvexe Panzerteile/Normalen, Fraktionsbegrenzung, Baufortschritt, Vorschaufarbe/-transparenz und Zeichenisolation ergänzt. Bestehende Fixtures unverändert; zusätzlicher Vorher-/Nachher-Vergleich von 94 unbetroffenen Modell-/Teamvarianten lieferte identische Zeichenaufrufe. Diff und lokale Dokumentationslinks geprüft.
+- **Chromium `file://`:** 1280×800 und 390×844, Nah-/Spielansicht und alle drei Qualitätsstufen gesichtet; zusätzlich kontrollierte Zeichenvarianten für Baustelle, Gegnerausrichtung und transparente Vorschau. GL 0, keine Console-/Laufzeitfehler. Software-WebGL, kein Echtgeräte-/Leistungs- oder neuer vollständiger Bauablaufnachweis.
+
 ## Detaillierter Aether Vent
 
 - Bildvorlage als flache industrielle Panzerplattform umgesetzt: abgeschrägte achteckige Deckplatten, 16 Sockelsegmente, vier Halteklammern, Kristallfassung, zwei cyanfarbene Leuchtringe und rotierender Kristall mit sichtbaren Lichtfacetten. Ein gemeinsames Metallmesh mit 1.152 Dreiecken statt pro Frame zusammengesetzter Detailteile; keine neuen Texturen/Shader. Dampfeffekte, Ressourcenwerte/-positionen, Kollisionsradien, Raffinerieregeln und RNG bleiben unverändert.

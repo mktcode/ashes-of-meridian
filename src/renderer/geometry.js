@@ -128,6 +128,46 @@
         }
         return o;
       },
+      // Free Marches command-center armor, baked at its existing world dimensions.
+      // Vertex tints multiply the faction metal (also preserving preview/ghost tinting).
+      commandHull() {
+        const out = [], dark = [.4, .45, .5], metal = [1, 1, 1], roof = [1.42, 1.3, 1.17];
+        const panel = (x, y, z, w, h, d, bevel, col) => {
+          const ring = (inset, height) => {
+            const a = w / 2 - inset, b = d / 2 - inset,
+              c = Math.min(w, d) * .13;
+            return [[-a+c,b], [a-c,b], [a,b-c], [a,-b+c],
+              [a-c,-b], [-a+c,-b], [-a,-b+c], [-a,b-c]]
+              .map(([px, pz]) => [x + px, height, z + pz]);
+          };
+          const rings = [ring(bevel, y-h/2), ring(0, y-h/2+bevel),
+            ring(0, y+h/2-bevel), ring(bevel, y+h/2)];
+          for (let i = 0; i < 8; i++) {
+            const k = (i + 1) % 8;
+            for (let j = 0; j < 3; j++) {
+              const shade = col.map(v => v * (j === 0 ? .8 : j === 2 ? 1.12 : 1));
+              this.tri(out, rings[j][i], rings[j][k], rings[j + 1][k], shade);
+              this.tri(out, rings[j][i], rings[j + 1][k], rings[j + 1][i], shade);
+            }
+            this.tri(out, [x, y+h/2, z], rings[3][i], rings[3][k], col);
+            this.tri(out, [x, y-h/2, z], rings[0][k], rings[0][i], dark);
+          }
+        };
+        panel(0, .42, 0, 6.7, .38, 4.85, .1, dark);
+        panel(0, 1.45, 0, 6.5, 2.6, 4.6, .22, metal);
+        panel(0, 2.91, -.4, 5.65, .5, 4.2, .12, dark);
+        panel(0, 3.25, -.5, 4.9, .35, 3.6, .10, metal);
+        panel(0, 3.47, -.55, 4.25, .14, 2.9, .035, roof);
+        for (const side of [-1, 1]) {
+          panel(side * 3.4, 1.2, -.4, 1.15, 2.2, 3.7, .18, dark);
+          for (let j = 0; j < 3; j++)
+            panel(side * 3.43, 2.32, j * .95 - 1.35, 1.04, .24, .64, .06, metal);
+          panel(side * 2.23, 1.36, 2.13, .72, 2.42, .96, .16, metal);
+          panel(side * 2.23, 2.59, 2.12, .82, .22, 1.02, .06, roof);
+        }
+        panel(0, .22, 3.7, 2.45, .22, .55, .055, metal);
+        return out;
+      },
       // One reusable metal mesh: beveled deck, segmented apron and four retaining clamps.
       // Emissive rings and the animated crystal are drawn separately by renderEntity.
       aetherVent() {

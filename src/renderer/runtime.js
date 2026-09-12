@@ -51,7 +51,8 @@
           rockRidge: geom.rock(619, 'ridge'),
           rockShelf: geom.rock(853, 'shelf'),
           alloyShard: geom.crystal(),
-          aetherVent: geom.aetherVent()
+          aetherVent: geom.aetherVent(),
+          commandHull: geom.commandHull()
         }))
           this.geometry(n, d);
         this.fogTex = gl.createTexture();
