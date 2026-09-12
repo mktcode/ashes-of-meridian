@@ -531,62 +531,7 @@
             place('ring', x, -0.08, z, r, 0.1, r * 0.75, bio.rock, 0, 0, 0, 0, 1, 'static');
           }
         }
-        // Weathered roads, cargo debris, and monumental remains frame the combat lanes.
-        for (let [a, b] of lanes.slice(0, 3)) {
-          let len = distance(a, b),
-            ang = Math.atan2(b.x - a.x, b.z - a.z);
-          place(
-            'plane',
-            (a.x + b.x) / 2,
-            -0.07,
-            (a.z + b.z) / 2,
-            5.8,
-            0.1,
-            len,
-            color(bio.ground).map(v => v * 1.055),
-            ang,
-            0,
-            0,
-            0,
-            1,
-            'static'
-          );
-          place(
-            'plane',
-            (a.x + b.x) / 2,
-            -0.06,
-            (a.z + b.z) / 2,
-            4.6,
-            0.1,
-            len,
-            color(bio.ground).map(v => v * 0.92),
-            ang,
-            0,
-            0,
-            0,
-            1,
-            'static'
-          );
-          for (let j = 0; j < len; j += 9) {
-            let t = j / len;
-            place(
-              'plane',
-              a.x + (b.x - a.x) * t,
-              -0.045,
-              a.z + (b.z - a.z) * t,
-              0.1,
-              0.1,
-              1.5,
-              0x847c63,
-              ang,
-              0,
-              0,
-              0,
-              1,
-              'static'
-            );
-          }
-        }
+        // Cargo debris and monumental remains; lanes stay clear but have no road meshes.
         for (let i = 0; i < 22; i++) {
           let x = (rand() - 0.5) * 150,
             z = (rand() - 0.5) * 150;

@@ -19,8 +19,7 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.28)'));
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.012)'));
   assert.ok(FRAG.includes('base=mix(detail(base,t,.74),t,.32)'));
-  assert.ok(FRAG.includes('bool ground=(v_mat>.5&&v_mat<1.5)||(v_mat<.5&&v_pos.y<.22&&n.y>.66)'));
-  assert.ok(FRAG.includes('float sh=ground?1.:shadow()'));
+  assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
   for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex'])
     assert.ok(FRAG.includes(`uniform sampler2D ${texture};`));
   assert.doesNotMatch(FRAG, /u_terrainOverlayTex/);

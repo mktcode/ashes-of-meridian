@@ -1,4 +1,4 @@
-// Fixed references recorded once from 97bfda6 before world/effect decoupling.
+// References from 97bfda6; placement hashes updated only for explicit road-mesh removal.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fixture = require('./fixtures/presentation-v1.json');

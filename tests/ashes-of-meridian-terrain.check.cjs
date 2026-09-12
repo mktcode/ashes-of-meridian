@@ -109,6 +109,8 @@ for (const [seed, biome] of terrainCases) {
     assert.equal(new Set(rocks.map(c => c[0])).size, 4);
     assert.ok(rocks.every(c => c[13] === 'static' && c[14] === MAT.ROCK));
     assert.ok(!calls.some(c => c[0] === 'hex'), 'no hexagonal terrain columns');
+    assert.ok(!battlefield.renderData.placements.some(p => p.mesh === 'plane'),
+      'no road surfaces, edge strips or dashed center markings');
     assert.ok(calls.every(c => c.slice(1, 7).every(Number.isFinite)));
   });
 }
