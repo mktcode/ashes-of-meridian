@@ -2,6 +2,13 @@
 
 Einzige fortlaufende Änderungshistorie unter `docs/`. Neue Einträge kurz nach oben setzen: Änderung, tatsächlich ausgeführte Prüfung und relevante Grenzen. Zusammengehörige Schritte bündeln; ältere Einträge verdichten. Referenzen beschreiben den Ist-Zustand, frühere Details bleiben in Git.
 
+## Boden-Dekore aus neuen Bildquellen
+
+- Bodenquellen eindeutig benannt: `texture-ground-dirt-base.png`, `texture-ground-terrain-overlay.png`, `texture-ground-rock-clusters.png` und `texture-ground-desert-shrubs.png`. Der explizite Aktualisierer heißt `scripts/embed-ground-textures.mjs`, bettet alle vier PNGs bytegleich als Data-URLs ein und bleibt idempotent. Einbettung und anschließende Shader-/Materialnutzung sind getrennte Commits für einen nachvollziehbaren A/B-Stand.
+- Die drei transparenten Ergänzungen werden nur im Bodenfragment als zurückhaltende, weltprojizierte Alpha-Dekore gemischt: feine Terrainvariation, kleine Felsgruppen und trockene Vegetation. Keine Geometrie, Kollisionsradien, Terrainplatzierung, RNG-Aufrufe, Licht- oder Schattenregel geändert; die flachen Dekore erhalten erst mit künftiger 3D-Dekoration echte Kontaktschatten. Zusätzliche Textur-Uploads gelten für alle Qualitätsstufen und benötigen grob 25 MiB weitere GPU-Mipmaps; kein Echtgeräte-Speicher-/FPS-Nachweis.
+- **233 Node-Tests inklusive Build bestanden** (rund 35 s): vier bytegleiche PNG-Payloads, Shaderuniforms/-Skalen sowie bestehende Terrain-/Layout- und Rendererregressionen. Keine Fixtures geändert. Diff und lokale Markdown-Links geprüft.
+- **`file://`, Chromium/High, 430×932 bei DPR 1, Rust, Seed 43015:** Data-URL-Uploads und sichtbare kleine Boden-/Strauchdekore neben dem HQ geprüft; 61 Einheiten, 39 Draw Calls, `gl.getError() = 0`, keine Console-Fehler/-Exceptions. Screenshot gesichtet. Headless-Software-WebGL, kein Echtgerät-/GPU-/FPS-/Speichernachweis.
+
 ## Aether-Reserve und Evakuierungsausbau
 
 - Verbleibender Gefechts-Aether wird bei Sieg wie Niederlage einmalig als ganzzahliger Rest in die permanente `aether`-Reserve übertragen. Das Ergebnis zeigt die Auszahlung, die Waffenkammer Reserve, Preis und nicht bezahlbare Upgrades. Keine zweite Währung: Gefechts-Aether wird nur evakuiert, wenn er ungenutzt bleibt. `Starting workers` kostet 300 / 450 / 650 / 900 / 1.200 Aether statt kostenlos zu sein.

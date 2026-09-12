@@ -70,9 +70,15 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         this.groundTex = this.dataTexture([146, 101, 75]);
+        this.terrainOverlayTex = this.dataTexture([0, 0, 0, 0]);
+        this.rockClustersTex = this.dataTexture([0, 0, 0, 0]);
+        this.desertShrubsTex = this.dataTexture([0, 0, 0, 0]);
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
         this.loadTexture(this.groundTex, MERIDIAN_TEXTURES.ground);
+        this.loadTexture(this.terrainOverlayTex, MERIDIAN_TEXTURES.terrainOverlay);
+        this.loadTexture(this.rockClustersTex, MERIDIAN_TEXTURES.rockClusters);
+        this.loadTexture(this.desertShrubsTex, MERIDIAN_TEXTURES.desertShrubs);
         this.loadTexture(this.metalTex, MERIDIAN_TEXTURES.metal);
         this.loadTexture(this.bioTex, MERIDIAN_TEXTURES.bio);
         this.skyTex = this.dataTexture([5, 9, 16]);
@@ -259,7 +265,7 @@
           0,
           g.RGBA,
           g.UNSIGNED_BYTE,
-          new Uint8Array([rgb[0], rgb[1], rgb[2], 255])
+          new Uint8Array([rgb[0], rgb[1], rgb[2], rgb[3] ?? 255])
         );
         g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR);
         g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
@@ -537,11 +543,20 @@
         g.bindTexture(g.TEXTURE_2D, this.groundTex);
         g.uniform1i(this.uniform(this.program, 'u_groundTex'), 2);
         g.activeTexture(g.TEXTURE3);
-        g.bindTexture(g.TEXTURE_2D, this.metalTex);
-        g.uniform1i(this.uniform(this.program, 'u_metalTex'), 3);
+        g.bindTexture(g.TEXTURE_2D, this.terrainOverlayTex);
+        g.uniform1i(this.uniform(this.program, 'u_terrainOverlayTex'), 3);
         g.activeTexture(g.TEXTURE4);
+        g.bindTexture(g.TEXTURE_2D, this.rockClustersTex);
+        g.uniform1i(this.uniform(this.program, 'u_rockClustersTex'), 4);
+        g.activeTexture(g.TEXTURE5);
+        g.bindTexture(g.TEXTURE_2D, this.desertShrubsTex);
+        g.uniform1i(this.uniform(this.program, 'u_desertShrubsTex'), 5);
+        g.activeTexture(g.TEXTURE6);
+        g.bindTexture(g.TEXTURE_2D, this.metalTex);
+        g.uniform1i(this.uniform(this.program, 'u_metalTex'), 6);
+        g.activeTexture(g.TEXTURE7);
         g.bindTexture(g.TEXTURE_2D, this.bioTex);
-        g.uniform1i(this.uniform(this.program, 'u_bioTex'), 4);
+        g.uniform1i(this.uniform(this.program, 'u_bioTex'), 7);
         this.drawBatches(this.static);
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);
