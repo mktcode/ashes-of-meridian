@@ -4,10 +4,8 @@ Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, D
 
 ## Gefechtsmusik leiser
 
-- Auf Nutzerwunsch nochmals halbiert: Faktor 0,25 statt 0,5; Test-Erwartungen und Referenz angepasst. Nur Quellen geändert, Diff geprüft; ausdrücklich kein neuer Build oder Testlauf. Der folgende Testnachweis gilt für die erste Halbierung.
-
-- Lautstärke aller drei Gefechtstracks mit Faktor 0,5 halbiert; Profilregler, Menümusik, Effekte, Dateien und Playlistablauf unverändert. Regressionen prüfen 0,14 statt 0,28 beziehungsweise 0,2 statt 0,4 sowie unveränderte Menü-/Effektpegel.
-- **Neu geprüft:** `npm test` einschließlich Build, **251/251 bestanden** (rund 59 s), Diff gesichtet. Kein neuer Browser-/Hör-/Docker-Test für die reine Pegelskalierung.
+- Nach Hörfeedback schrittweise auf **10 % des ursprünglichen Pegels** reduziert (Faktor 0,1 statt zuletzt 0,25). Profilregler, Menümusik, Effekte, Dateien und Playlistablauf unverändert. Regressionen prüfen 0,028 bei Gesamtlautstärke 0,28 beziehungsweise 0,04 bei 0,4 mit Gleitkommatoleranz sowie unveränderte Menü-/Effektpegel.
+- **Neu geprüft:** `npm test` einschließlich Build, **251/251 bestanden** (rund 59 s), Diff gesichtet. Lokale Laufzeitausgabe aktualisiert; kein neuer Browser-/Hör-/Docker-Test für die reine Pegelskalierung.
 
 ## Freigegebene Minimalmusik als Gefechtsplaylist
 
