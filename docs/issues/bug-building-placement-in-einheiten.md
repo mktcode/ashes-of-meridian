@@ -1,0 +1,1 @@
+Man kann neue Gebäude auch dort platzieren, wo gerade bereits Einheiten stehen. Die Einheiten können sich darauf hin nicht mehr bewegen.
