@@ -201,7 +201,7 @@
             break;
           case 'restart': {
             let s = this.game.s;
-            this.game.start({ faction: s.faction, biome: s.biome, enemy: s.enemy });
+            this.game.start({ faction: s.faction, map: s.map, enemy: s.enemy });
             break;
           }
         }

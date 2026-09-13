@@ -55,8 +55,8 @@
         let startingAlloyLevel = clamp(Math.floor(Number(this.profile.upgrades.startingAlloy) || 0), 0, STARTING_ALLOY.length - 1),
           startingAlloy = STARTING_ALLOY[startingAlloyLevel];
         $('menu').innerHTML =
-          `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">THE FRONTIER IS NEVER QUIET</div><h1>Choose your war.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header><div style="max-width:910px;margin:0 auto"><div class="faction-options">${FACTIONS.map((f, i) => { const unlocked = this.factionUnlocked(i), requirement = FACTIONS[Math.max(0, i - 1)].name; return `<button class="faction-option${this.battleFaction === i ? ' active' : ''}${unlocked ? '' : ' locked'}" data-faction="${i}"${unlocked ? '' : ' disabled'}><span class="sigil" style="color:#${f.color.toString(16)}">${f.sigil}</span><strong>${esc(f.name)}</strong><small>${unlocked ? f.desc : `LOCKED · Win once as ${esc(requirement)}.`}</small></button>`; }).join('')}</div><p id="factionTrait" class="muted" style="min-height:42px;font-size:13px">${FACTIONS[this.battleFaction].trait}</p><div class="glass" style="padding:15px 25px"><div class="settings-row"><label>Hostile civilization</label><select id="battleEnemy">${FACTIONS.map((f, i) => `<option value="${i}">${esc(f.name)}</option>`).reverse().join('')}</select></div><div class="settings-row"><label>Battlefield</label><select id="battleBiome">${Object.entries(
-            BIOMES
+          `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">THE FRONTIER IS NEVER QUIET</div><h1>Choose your war.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header><div style="max-width:910px;margin:0 auto"><div class="faction-options">${FACTIONS.map((f, i) => { const unlocked = this.factionUnlocked(i), requirement = FACTIONS[Math.max(0, i - 1)].name; return `<button class="faction-option${this.battleFaction === i ? ' active' : ''}${unlocked ? '' : ' locked'}" data-faction="${i}"${unlocked ? '' : ' disabled'}><span class="sigil" style="color:#${f.color.toString(16)}">${f.sigil}</span><strong>${esc(f.name)}</strong><small>${unlocked ? f.desc : `LOCKED · Win once as ${esc(requirement)}.`}</small></button>`; }).join('')}</div><p id="factionTrait" class="muted" style="min-height:42px;font-size:13px">${FACTIONS[this.battleFaction].trait}</p><div class="glass" style="padding:15px 25px"><div class="settings-row"><label>Hostile civilization</label><select id="battleEnemy">${FACTIONS.map((f, i) => `<option value="${i}">${esc(f.name)}</option>`).reverse().join('')}</select></div><div class="settings-row"><label>Battlefield</label><select id="battleMap">${Object.entries(
+            BATTLEFIELDS
           )
             .map(([k, b]) => `<option value="${k}">${b.name}</option>`)
             .join(
@@ -68,11 +68,11 @@
           faction <= this.profile.factionUnlockLevel;
       },
       startBattle() {
-        let enemy = +$('battleEnemy').value, biome = $('battleBiome').value,
+        let enemy = +$('battleEnemy').value, map = $('battleMap').value,
           faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : FACTION_ID.FIRST;
         this.battleFaction = faction;
         this.audio.unlock();
-        this.game.start({ faction, enemy, biome });
+        this.game.start({ faction, enemy, map });
       },
       openModal(kind, html, wide = false) {
         if (kind !== 'sell') this.sellBuildingId = null;

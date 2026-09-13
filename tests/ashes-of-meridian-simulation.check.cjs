@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { populateBase } = require('./helpers/populated-battle.cjs');
 
 const scripts = readScripts();
@@ -12,7 +12,7 @@ const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 
 function createGame() {
-  const context = loadScripts(['core', 'content', 'world', 'effects', ...SIMULATION_SCRIPTS], {
+  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], {
     scripts, globals: { structuredClone },
   });
   vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness in simulation test"); }', context);
@@ -28,7 +28,7 @@ function createGame() {
 
 function freshBattle(faction = 0, seed = 1409) {
   const runtime = createGame();
-  runtime.game.start({ seed, biome: 'biome1', faction });
+  runtime.game.start({ seed, map: 'desert', faction });
   return runtime;
 }
 
@@ -81,19 +81,19 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
   }`, context);
   for (const expected of [12345678, 87654321]) {
     const previous = game.world;
-    game.start({ faction: 1, enemy: 2, biome: 'biome1' });
+    game.start({ faction: 1, enemy: 2, map: 'desert' });
     assert.equal(game.s.seed, expected); assert.equal(game.world.seed, expected);
     assert.notStrictEqual(game.world, previous);
-    assert.deepEqual([game.s.faction, game.s.enemy, game.s.biome], [1, 2, 'biome1']);
+    assert.deepEqual([game.s.faction, game.s.enemy, game.s.map], [1, 2, 'desert']);
   }
   game.start({ seed: 1409 }); // Internal deterministic scenarios still bypass the random draw.
   assert.equal(game.s.seed, 1409);
-  assert.equal(game.s.biome, 'biome1', 'default biome keeps the first catalog entry');
+  assert.equal(game.s.map, 'desert', 'default map keeps the first catalog entry');
 });
 
 test('single battle starts with only the own HQ, one hostile base and no mission state', () => {
   const { game, events } = freshBattle(), s = game.s;
-  assert.deepEqual([s.seed,s.biome,s.faction,s.enemy,s.time], [1409,'biome1',0,2,0]);
+  assert.deepEqual([s.seed,s.map,s.faction,s.enemy,s.time], [1409,'desert',0,2,0]);
   assert.equal('version' in s, false); assert.equal(game.snapshot, undefined); assert.equal(game.restore, undefined);
   assert.deepEqual([s.teams[0].alloy,s.teams[0].gas,s.teams[0].energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,100,50,51,0,24]);
   assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
@@ -144,34 +144,82 @@ test('fresh starts with the same seed reproduce state; another seed changes reso
   assert.notDeepEqual(json(a.alive(e => e.type === 'crystal').map(e => e.amount)), json(other.alive(e => e.type === 'crystal').map(e => e.amount)));
 });
 
-test('battle starts cover every faction and biome with valid entities', () => {
-  const { game, context } = createGame(), biomes = vm.runInContext('BIOMES', context);
-  // Biomes change presentation, not faction rules: no redundant 3×5 cross-product.
-  for (const [faction, biome] of [[0,'biome1'],[1,'biome2'],[2,'biome4']]) {
-    game.start({ seed: 1409, faction, enemy: faction, biome });
+test('battle starts cover every faction and map with valid entities', () => {
+  const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
+  // Maps change presentation, not faction rules: no redundant faction/map cross-product.
+  for (const [faction, map] of [[0,'desert'],[1,'alien-planet'],[2,'mothership']]) {
+    game.start({ seed: 1409, faction, enemy: faction, map });
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
     advance(game, 2);
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
-    assert.equal(game.s.biome, biome); assert.equal(game.s.enemy, faction);
-    assert.strictEqual(game.world.biome, biomes[biome], 'resolve each ID rather than silently falling back');
+    assert.equal(game.s.map, map); assert.equal(game.s.enemy, faction);
+    assert.strictEqual(game.world.definition, maps[map], 'resolve each ID rather than silently falling back');
     assert.ok(game.alive(e => e.team === 1).every(e => e.faction === faction));
     assert.ok(game.s.entities.every(e => Number.isFinite(e.hp) && e.hp > 0));
     assert.equal('m' in game.s, false); assert.equal('research' in game.s, false);
   }
 });
 
-test('biome4 alone retains its timed eruption after biome display names change', () => {
-  const { game, context } = createGame(), biomes = vm.runInContext('BIOMES', context);
-  for (const b of Object.values(biomes)) b.name = 'Same revised environment';
-  for (const biome of Object.keys(biomes)) {
-    game.start({ seed: 1409, biome });
+test('mothership alone retains its timed eruption after map display names change', () => {
+  const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
+  for (const b of Object.values(maps)) b.name = 'Same revised environment';
+  for (const map of Object.keys(maps)) {
+    game.start({ seed: 1409, map });
     game.spawnUnit('rifle', -40, 40, 0, 0);
     game.s.ai = {};
     game.s.time = 151;
     advance(game, 1);
     const flares = game.s.strikes.filter(s => s.type === 'flare');
-    assert.equal(flares.length, biome === 'biome4' ? 1 : 0);
+    assert.equal(flares.length, map === 'mothership' ? 1 : 0);
     if (flares.length) assert.deepEqual([flares[0].radius, flares[0].damage, flares[0].team], [8, 120, -1]);
+  }
+});
+
+test('map layouts supply spawns, resources, camera and AI scan/scout goals', () => {
+  const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
+  const desertBefore = json(maps.desert.layout), layout = maps.mothership.layout;
+  layout.playerStart = { x: -45, z: 45 };
+  layout.enemySites[0] = { x: 45, z: -45 };
+  layout.resourceSites[0] = { x: -65, z: 35 };
+  game.start({ seed: 1409, map: 'mothership' });
+  assert.strictEqual(game.world.layout, layout);
+  assert.deepEqual(json(game.s.cam), { x: -40, z: 43, zoom: 57 });
+  for (const [team, site] of [[0, layout.playerStart], [1, layout.enemySites[0]]]) {
+    const hq = game.alive(e => e.team === team && e.type === 'hq')[0];
+    assert.deepEqual({ x: hq.x, z: hq.z }, site);
+  }
+  const crystal = game.alive(e => e.type === 'crystal')[0];
+  assert.deepEqual({ x: crystal.x, z: crystal.z }, { x: -65, z: 38 });
+  const vent = game.alive(e => e.type === 'gas')[0];
+  assert.deepEqual({ x: vent.x, z: vent.z }, { x: -60, z: 53 });
+  const scans = [], orders = [];
+  game.ability = (kind, p, team) => scans.push([kind, json(p), team]);
+  game.aiOrder = (team, units, p) => orders.push([team, units.map(e => e.id), json(p)]);
+  game.canSee = () => false;
+  game.s.time = 61;
+  for (const team of [0, 1]) {
+    game.enableAI(team);
+    const home = game.alive(e => e.team === team && e.type === 'hq')[0];
+    const own = [home, game.spawn('unit', 'rifle', home.x + 10, home.z, team),
+      game.spawn('unit', 'rifle', home.x + 12, home.z, team)];
+    game.world.sight[team].explored.fill(0);
+    game.aiStrategy(team, own, [], home);
+    game.aiAbilities(team, own, [], home);
+    const goal = team === 1 ? layout.playerStart : layout.enemySites[0];
+    assert.ok(orders.some(([t, ids, p]) => t === team && ids[0] === own[1].id && p.x === goal.x && p.z === goal.z));
+    assert.deepEqual(scans.at(-1), ['scan', goal, team]);
+  }
+  assert.deepEqual(json(maps.desert.layout), desertBefore, 'editing one layout cannot mutate another map');
+});
+
+test('world events follow the map definition, not its ID', () => {
+  const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
+  maps.desert.worldEvent = 'solarFlare'; maps.mothership.worldEvent = null;
+  for (const map of ['desert', 'mothership']) {
+    game.start({ seed: 1409, map }); game.s.ai = {};
+    game.spawnUnit('rifle', -40, 40, 0, 0);
+    game.s.time = 151; advance(game, 1);
+    assert.equal(game.s.strikes.filter(s => s.type === 'flare').length, map === 'desert' ? 1 : 0);
   }
 });
 
@@ -214,8 +262,8 @@ test('ground attack-move preserves mixed formations and worker movement without 
 });
 
 test('populated army fixtures and two minutes of mining and combat keep unit spacing', () => {
-  for (const [faction,seed,biome] of [[0,1409,'biome1'],[1,7012,'biome1'],[2,9017,'biome2'],[0,43015,'biome4']]) {
-    const { game } = createGame(); game.start({faction,seed,biome}); populateBase(game); assertUnitSpacing(game);
+  for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'mothership']]) {
+    const { game } = createGame(); game.start({faction,seed,map}); populateBase(game); assertUnitSpacing(game);
     if (seed !== 1409) continue;
     for (let i=0;i<2400;i++) {
       game.step(.05); game.effects.tick(.05);
@@ -331,11 +379,11 @@ test('blocked production keeps its paid order until space is free', () => {
   assertUnitSpacing(game);
 });
 
-for (const [seed,biome,faction,count,forced] of [
-  [1409,'biome1',0,8,false], [7012,'biome1',1,12,false], [9017,'biome2',2,12,false], [1409,'biome1',0,8,true]
+for (const [seed,map,faction,count,forced] of [
+  [1409,'desert',0,8,false], [7012,'desert',1,12,false], [9017,'alien-planet',2,12,false], [1409,'desert',0,8,true]
 ]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {
   const {game}=createGame();
-  game.start({seed,biome,faction}); populateBase(game,count); game.s.ai={};
+  game.start({seed,map,faction}); populateBase(game,count); game.s.ai={};
   for(const e of game.s.entities) if(e.kind==='unit'&&e.team===1)e.hp=0;
   let workers=game.alive(e=>e.team===0&&e.type==='worker');
   if(forced) for(const w of workers) w.order={type:'mine',id:game.closest(w,n=>n.type==='crystal').id};
@@ -555,7 +603,7 @@ test('base mining, refinery income, medic healing and faction regeneration work 
 });
 
 test('starting alloy levels 0–5 add exactly 50 alloy per level without changing seeded setup', () => {
-  const { game } = createGame(), opts = { seed: 1409, faction: 0, biome: 'biome1' };
+  const { game } = createGame(), opts = { seed: 1409, faction: 0, map: 'desert' };
   game.start(opts);
   const original = json(game.s.entities), terrain = Array.from(game.world.staticGrid), nextRandom = game.random();
   for (let level = 0; level <= 5; level++) {
@@ -569,7 +617,7 @@ test('starting alloy levels 0–5 add exactly 50 alloy per level without changin
 });
 
 test('starting alloy affects only the next battle, is bounded and reproduces on restart', () => {
-  const { game } = createGame(), opts = { seed: 9897, faction: 1, biome: 'biome1' };
+  const { game } = createGame(), opts = { seed: 9897, faction: 1, map: 'desert' };
   game.profile.upgrades = { startingAlloy: 2 }; game.start(opts);
   const before = json(game.s);
   game.profile.upgrades.startingAlloy = 5;
@@ -587,7 +635,7 @@ test('starting alloy affects only the next battle, is bounded and reproduces on 
 
 test('starting worker levels 0–5 preserve seeded setup and free spacing for every faction', () => {
   for (const faction of [0, 1, 2]) {
-    const { game } = createGame(), opts = { seed: 1409, faction, biome: 'biome1' };
+    const { game } = createGame(), opts = { seed: 1409, faction, map: 'desert' };
     game.start(opts);
     const original = json(game.s.entities), terrain = Array.from(game.world.staticGrid),
       samples = Array.from({ length: 6 }, () => game.random());
@@ -614,7 +662,7 @@ test('starting worker levels 0–5 preserve seeded setup and free spacing for ev
 });
 
 test('starting worker upgrades affect only the next battle and reproduce on restart', () => {
-  const { game } = createGame(), opts = { seed: 9897, faction: 1, biome: 'biome1' };
+  const { game } = createGame(), opts = { seed: 9897, faction: 1, map: 'desert' };
   game.profile.upgrades = { startingWorkers: 2 }; game.start(opts);
   const before = json(game.s);
   game.profile.upgrades.startingWorkers = 5;
@@ -639,7 +687,7 @@ test('starting worker count is an integer bounded to 0–5 even for direct profi
 test('five starting workers begin mining and deliver alloy without recruitment for every faction', () => {
   for (const faction of [0, 1, 2]) {
     const { game } = createGame(); game.profile.upgrades = { startingWorkers: 5 };
-    game.start({ seed: 1409, faction, biome: 'biome1' });
+    game.start({ seed: 1409, faction, map: 'desert' });
     advance(game, 1200);
     assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
     assert.ok(game.s.teams[0].alloy > 250); assert.ok(game.s.stats.gathered > 0);
@@ -1115,7 +1163,7 @@ test('restarting discards the previous run and rebuilds fresh navigation, indexe
   const old=game.s, oldWorld=game.world, hq=player(game,'hq');
   game.damage(hq,999999,null,true); game.objectiveTick(.2); assert.equal(game.s.result.win,false);
   events.length=0;
-  game.start({seed:1409,biome:'biome1',faction:0});
+  game.start({seed:1409,map:'desert',faction:0});
   assert.notStrictEqual(game.s,old); assert.notStrictEqual(game.world,oldWorld);
   assert.equal(game.s.speed,1);
   const fresh = freshBattle().game;

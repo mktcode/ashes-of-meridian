@@ -47,14 +47,42 @@ interface UpgradeDefinition {
   costs: readonly number[];
 }
 
-interface BiomeDefinition {
-  name: string;
+interface BattlefieldPalette {
   ground: number;
   rock: number;
-  haze: readonly [number, number, number];
   accent: number;
   flora: number;
 }
+
+interface BattlefieldLayout {
+  playerStart: Position;
+  enemySites: Position[];
+  centralClearings: Position[];
+  outerClearings: Position[];
+  resourceSites: Position[];
+  additionalClearings: Position[];
+  corridors: [number, number][][];
+}
+
+interface BattlefieldRenderProfile {
+  groundTexture: 'ground' | 'metal' | 'bio';
+  skyTexture: 'sky';
+  groundPixelsPerMeter: number;
+  rockDecor: { density: number; opacity: number };
+  shrubDecor: { density: number; opacity: number };
+  haze: readonly [number, number, number];
+}
+
+interface BattlefieldDefinition {
+  name: string;
+  layout: BattlefieldLayout;
+  palette: BattlefieldPalette;
+  render: BattlefieldRenderProfile;
+  worldEvent: 'solarFlare' | null;
+  generate: (builder: BattlefieldBuilder) => void;
+}
+type BattlefieldProp = (builder: BattlefieldBuilder, x: number, z: number) => void;
+type BattlefieldPatch = (builder: BattlefieldBuilder, x: number, z: number, radius: number) => void;
 
 type MeridianSettings = Record<string, number | boolean> & {
   volume: number;
@@ -197,7 +225,7 @@ type UnitPlacement = UnitBody & Position;
 interface BattleOptions {
   faction?: number;
   enemy?: number;
-  biome?: string;
+  map?: string;
   seed?: number;
 }
 
@@ -274,7 +302,7 @@ interface RunState {
   seed: number;
   faction: FactionId;
   enemy: FactionId;
-  biome: BiomeType;
+  map: BattlefieldId;
   meta: Record<string, number>;
   time: number;
   teams: [TeamState, TeamState];
@@ -305,7 +333,7 @@ interface WorldPlacement {
   material: string | undefined;
 }
 
-interface WorldMassif extends Position {
+interface WorldTerrainFeature extends Position {
   seed: number;
   yaw: number;
   width: number;
@@ -314,10 +342,15 @@ interface WorldMassif extends Position {
   outline: Position[];
 }
 
+type WorldGeometry =
+  | { mesh: string; model: string; seed: number }
+  | { mesh: string; model: string; feature: WorldTerrainFeature };
+
 interface WorldRenderData {
-  massifs: WorldMassif[];
+  features: WorldTerrainFeature[];
   groundColors: number[][];
   placements: WorldPlacement[];
+  geometries: WorldGeometry[];
 }
 
 interface WorldRock extends Position {

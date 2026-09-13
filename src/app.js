@@ -62,7 +62,7 @@
         addEventListener('resize', resize);
         resize();
         ui.onPreview = () => {
-          worldView.sync(new Battlefield(40517, 'biome1'), false);
+          worldView.sync(new Battlefield(40517, 'desert'), false);
           R.fogOn = false;
           preview = [];
           let id = 0;

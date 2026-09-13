@@ -4,15 +4,15 @@ const assert = require('node:assert/strict');
 const fixture = require('./fixtures/presentation-v1.json');
 const { worldSample, effectSample } = require('./helpers/presentation-scenario.cjs');
 const vm = require('node:vm');
-const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
-for (const { seed, biome, ...expected } of fixture.worlds) {
-  test(`world presentation/navigation reference: ${seed} (${biome})`, () => {
-    assert.deepEqual(worldSample(seed, biome), expected);
+for (const { seed, map, ...expected } of fixture.worlds) {
+  test(`world presentation/navigation reference: ${seed} (${map})`, () => {
+    assert.deepEqual(worldSample(seed, map), expected);
   });
 }
 test('world and simulation start and step without renderer, geometry or browser globals', () => {
-  const context = loadScripts(['core', 'content', 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
+  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
   vm.runInContext('Math.random = () => { throw Error("Unseeded randomness"); }', context);
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   game.start({ seed: 1409, faction: 0 });
@@ -26,30 +26,49 @@ test('world and simulation start and step without renderer, geometry or browser 
 });
 
 test('world view uploads only changed layout/fog and does not mutate CPU data', () => {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const { Battlefield, BattlefieldView } = vm.runInContext('({Battlefield, BattlefieldView})', context);
-  const world = new Battlefield(1409, 'biome1'), renderer = createRendererStub();
+  const world = new Battlefield(1409, 'desert'), renderer = createRendererStub();
   let meshes = 0, fogs = 0, fogPixels;
   renderer.geometry = () => meshes++;
   renderer.fog = data => { fogs++; fogPixels = Array.from(data); };
   const view = new BattlefieldView(renderer), before = JSON.stringify(world.renderData);
   view.sync(world, false); view.sync(world, false);
   assert.equal(renderer.decorSeed, 1409);
-  assert.equal(meshes, 2 + world.renderData.massifs.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
+  assert.equal(meshes, 2 + world.renderData.features.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
   world.reveal([], [{ x: 0, z: 0, r: 7 }]); view.sync(world); view.sync(world);
-  assert.equal(meshes, 2 + world.renderData.massifs.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
+  assert.equal(meshes, 2 + world.renderData.features.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(world.fogPixels)); assert.ok(fogPixels.includes(255));
   assert.equal(JSON.stringify(world.renderData), before);
-  const next = new Battlefield(43015, 'biome1'); next.reveal([]);
+  const next = new Battlefield(43015, 'desert'); next.reveal([]);
   view.sync(next); view.sync(next);
   assert.equal(fogs, 2); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(next.fogPixels)); assert.ok(fogPixels.every(v => v === 0));
   assert.equal(renderer.decorSeed, 43015, 'new world updates cosmetic seed without sampling world RNG');
-  assert.equal(meshes, 4 + world.renderData.massifs.length + next.renderData.massifs.length);
+  assert.equal(meshes, 4 + world.renderData.features.length + next.renderData.features.length);
+});
+
+test('world view dispatches declared terrain models and profiles without assuming mountains', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
+  const { Battlefield, BattlefieldView, TerrainModels } = vm.runInContext('({Battlefield, BattlefieldView, TerrainModels})', context);
+  const world = new Battlefield(1409, 'mothership'), renderer = createRendererStub(), uploads = [], inputs = [];
+  const feature = world.renderData.features[0];
+  TerrainModels.testInterior = input => { inputs.push(input); return [1, 2, 3]; };
+  world.renderData.geometries = [{ mesh: 'custom', model: 'testInterior', feature }];
+  renderer.geometry = (name, data) => uploads.push([name, data]);
+  const before = JSON.stringify(world.renderData), view = new BattlefieldView(renderer);
+  view.sync(world); view.sync(world);
+  assert.deepEqual(uploads.map(([name]) => name), ['terrain', 'custom']);
+  assert.strictEqual(inputs[0], feature); assert.equal(inputs.length, 1);
+  assert.strictEqual(renderer.battlefieldProfile, world.definition.render);
+  assert.strictEqual(renderer.haze, world.definition.render.haze);
+  assert.equal(JSON.stringify(world.renderData), before);
+  assert.throws(() => TerrainModels.geometry({ model: 'missing', seed: 1 }), /Unknown terrain model/);
+  assert.throws(() => TerrainModels.geometry({ model: 'toString', seed: 1 }), /Unknown terrain model/);
 });
 
 test('produced aircraft rise smoothly from the hangar without changing draw state or RNG', () => {
-  const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world','world-view']);
+  const context=loadScripts(['core',...RENDERER_SCRIPTS,'content',...BATTLEFIELD_SCRIPTS, 'world','world-view']);
   vm.runInContext('Math.random = () => { throw Error("Draw RNG"); }',context);
   const render=vm.runInContext('renderEntity',context), renderer=createRendererStub({record:true});
   const unit={id:1,hp:245,kind:'unit',type:'air',team:0,faction:0,size:1,x:0,z:0,rot:0,
@@ -96,7 +115,7 @@ test('faction 0 HQ armor has bounded beveled panels with outward finite unit nor
 });
 
 test('command hull is faction-specific and retains construction, team yaw, tint and draw isolation', () => {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   vm.runInContext('Math.random = seeded = () => { throw Error("HQ draw RNG"); }', context);
   const { renderEntity, BUILDINGS, BUILDING_YAW, FACTIONS, MAT } =
     vm.runInContext('({renderEntity, BUILDINGS, BUILDING_YAW, FACTIONS, MAT})', context);
@@ -168,7 +187,7 @@ test('faction 0 worker meshes are deterministic, bounded and non-degenerate with
 });
 
 test('detailed faction 0 workers preserve yaw, cargo indication, team tint and read-only rendering', () => {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   vm.runInContext('Math.random = seeded = geom.workerHull = geom.workerDrill = () => { throw Error("Per-frame mesh/RNG"); }', context);
   const { renderEntity, UNITS, MAT } = vm.runInContext('({renderEntity, UNITS, MAT})', context);
   const unit = Object.freeze({ id: 17, kind: 'unit', type: 'worker', faction: 0, team: 0,
@@ -240,7 +259,7 @@ test('faction 0 turret meshes are deterministic, bounded and non-degenerate, inc
 });
 
 test('faction 0 turret detail keeps its fixed base and independently aimed head through team and construction variants', () => {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   vm.runInContext('Math.random = seeded = geom.turretAssembly = () => { throw Error("Per-frame turret mesh/RNG"); }', context);
   const { renderEntity, BUILDINGS, BUILDING_YAW, MAT } =
     vm.runInContext('({renderEntity, BUILDINGS, BUILDING_YAW, MAT})', context);
@@ -337,7 +356,7 @@ test('entity models stay identical when faction, unit and building display names
 });
 
 test('effect provider follows the current game RNG and resets on each new start', () => {
-  const context = loadScripts(['core', 'content', 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
+  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   const effects = game.effects;
   game.start({ seed: 1409 });

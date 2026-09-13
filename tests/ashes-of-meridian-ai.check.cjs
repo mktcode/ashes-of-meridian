@@ -2,14 +2,14 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
-const {loadScripts,SIMULATION_SCRIPTS}=require('./helpers/game-scripts.cjs');
-const context=loadScripts(['core','content','world','effects','effects-view',...SIMULATION_SCRIPTS]);
+const { BATTLEFIELD_SCRIPTS, loadScripts,SIMULATION_SCRIPTS }=require('./helpers/game-scripts.cjs');
+const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS, 'world','effects','effects-view',...SIMULATION_SCRIPTS]);
 const {MeridianGame,UNITS,BUILDINGS,ABILITIES,renderBattlefieldEffects}=vm.runInContext('({MeridianGame,UNITS,BUILDINGS,ABILITIES,renderBattlefieldEffects})',context);
 vm.runInContext('Math.random=()=>{throw Error("Unseeded simulation RNG")}',context);
 const json=x=>JSON.parse(JSON.stringify(x));
-function battle(faction=0,enemy=2,seed=1409,biome='biome1') {
+function battle(faction=0,enemy=2,seed=1409,map='desert') {
   const events=[],g=new MeridianGame({upgrades:{}},(type,data)=>events.push({type,data}));
-  g.start({faction,enemy,seed,biome});return {g,events};
+  g.start({faction,enemy,seed,map});return {g,events};
 }
 function advance(g,seconds) {for(let i=0;i<seconds*20&&!g.s.result;i++){g.step(.05);g.effects.tick(.05);}}
 function own(g,team,type){return Array.from(g.alive(e=>e.team===team&&(!type||e.type===type)));}
@@ -192,7 +192,7 @@ function audit(g) {
 }
 for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
   test(`autonomous ${faction} vs ${enemy}: paid economy, production, strategic pressure and completed battle`,()=>{
-    const {g}=battle(faction,enemy,1409+faction*31+enemy*11,faction===2?'biome4':'biome1');
+    const {g}=battle(faction,enemy,1409+faction*31+enemy*11,faction===2?'mothership':'desert');
     g.enableAI(0);const counts=audit(g);let attacks=0;
     for(let i=0;i<24000&&!g.s.result;i++) {
       g.step(.05);g.effects.tick(.05);
@@ -211,7 +211,7 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
   });
 
 test('seed 444213: the real opponent destroys an undefended HQ instead of stopping outside weapon range',()=>{
-  const {g}=battle(0,2,444213,'biome1');audit(g);advance(g,900);
+  const {g}=battle(0,2,444213,'desert');audit(g);advance(g,900);
   assert.equal(g.s.result?.win,false);assert.equal(own(g,0,'hq').length,0);
 });
 

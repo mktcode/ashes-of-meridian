@@ -1,11 +1,11 @@
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
-const { loadScripts, RENDERER_SCRIPTS } = require('./game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, loadScripts, RENDERER_SCRIPTS } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
 
 function modelHarness(options) {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view'], options);
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view'], options);
   const api = vm.runInContext('({ geom, ModelMesh, EntityModels, createEntityModelRegistry, renderEntity, UNITS, BUILDINGS, FACTIONS, BUILDING_YAW, MAT })', context);
   return { context, ...api, draw(entity, options = {}, time = 9) {
     const before = JSON.stringify(entity), renderer = createRendererStub({ record: true });

@@ -46,7 +46,8 @@
       start(this: MeridianGame, opts: BattleOptions = {}) {
         let faction: FactionId = FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
           enemy: FactionId = FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
-          biome: BiomeType = BIOMES[opts.biome as BiomeType] ? opts.biome as BiomeType : 'biome1',
+          map = battlefieldId(opts.map),
+          layout = BATTLEFIELDS[map].layout,
           savedMeta = this.profile.upgrades || {},
           meta = Object.fromEntries(
             (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
@@ -54,7 +55,7 @@
           ),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.s = {
-          seed, faction, enemy, biome, meta,
+          seed, faction, enemy, map, meta,
           time: 0,
           teams: [STARTING_ALLOY[meta.startingAlloy || 0], STARTING_ALLOY[0]].map(alloy => ({
             alloy, gas: 0, energy: 100, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
@@ -64,12 +65,12 @@
           ai: {},
           stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
-          cam: { x: HOME.x + 5, z: HOME.z - 2, zoom: 57 },
+          cam: { x: layout.playerStart.x + 5, z: layout.playerStart.z - 2, zoom: 57 },
           result: null,
           speed: 1
         };
         this.random = seeded(seed + 77);
-        this.world = new Battlefield(seed, biome);
+        this.world = new Battlefield(seed, map);
         this.ids.clear();
         this.effects.reset();
         this.acc = 0;
@@ -77,17 +78,17 @@
         this.objectiveClock = 0;
         let s = this.s!;
         // The base starts with an HQ; upgrade workers are added after the seeded setup.
-        this.spawnBuilding('hq', HOME.x, HOME.z, 0, faction);
+        this.spawnBuilding('hq', layout.playerStart.x, layout.playerStart.z, 0, faction);
         // Keep the former default loadout's RNG entry point for crystal amounts and enemy spawns.
         for (let i = 0; i < 24; i++) this.random();
-        for (let [i, site] of RESOURCE_SITES.entries()) {
+        for (let [i, site] of layout.resourceSites.entries()) {
           for (let j = 0; j < 5; j++) {
             let p = this.crystalPosition(i, j);
             this.spawnResource('crystal', p.x, p.z, 1800 + Math.floor(this.random() * 900));
           }
           this.spawnResource('gas', site.x + (i === 0 ? 5 : 7), site.z + (i === 0 ? 18 : 7), 999999);
         }
-        let site = ENEMY_SITES[0];
+        let site = layout.enemySites[0];
         this.spawnBuilding('hq', site.x, site.z, 1, enemy);
         // Preserve the established resource/bonus-worker RNG entry points, not the old loadout.
         for (let i = 0; i < 11; i++) this.random();
@@ -101,7 +102,7 @@
           }
         // Add bonus workers only after the original layout and enemy RNG draws.
         for (let i = 0; i < (meta.startingWorkers || 0); i++)
-          if (!this.spawnUnit('worker', HOME.x - 7, HOME.z - 4 + i * 2, 0, faction))
+          if (!this.spawnUnit('worker', layout.playerStart.x - 7, layout.playerStart.z - 4 + i * 2, 0, faction))
             throw new Error('No free space for starting workers.');
         this.rehash();
         this.world.reveal(s.entities);
@@ -168,7 +169,7 @@
       crystalPosition(this: MeridianGame, siteIndex: number, depositIndex: number): Position {
         // Leave a gap toward the adjacent starting factory at the eastern site.
         const phase = siteIndex === 5 ? 4.7 : siteIndex * 0.8;
-        const site = RESOURCE_SITES[siteIndex], a = (depositIndex * Math.PI * 2) / 5 + phase;
+        const site = this.world!.layout.resourceSites[siteIndex], a = (depositIndex * Math.PI * 2) / 5 + phase;
         return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3.0 };
       },
       spawnResource(this: MeridianGame, type: ResourceType, x: number, z: number, amount: number) {

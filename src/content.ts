@@ -324,36 +324,6 @@ const META = {
 
 type UpgradeType = keyof typeof META;
 
-// Stable, content-independent keys; names and visual parameters may change.
-const BIOMES = {
-  biome1: {
-    name: 'DESERT',
-    ground: 0x59443a,
-    rock: 0x74544a,
-    haze: [0.11, 0.085, 0.1],
-    accent: 0xf0b67b,
-    flora: 0x806348
-  },
-  biome2: {
-    name: 'ALIEN PLANET',
-    ground: 0x314747,
-    rock: 0x49656a,
-    haze: [0.052, 0.113, 0.127],
-    accent: 0x8bebc2,
-    flora: 0x538a77
-  },
-  biome4: {
-    name: 'MOTHERSHIP',
-    ground: 0x3d3c48,
-    rock: 0x5a5261,
-    haze: [0.1, 0.065, 0.125],
-    accent: 0xe7be88,
-    flora: 0x715b72
-  }
-} as const satisfies Record<string, BiomeDefinition>;
-
-type BiomeType = keyof typeof BIOMES;
-
 const ICON_PATHS = {
   worker: 'M8 15l-4 5m8-10 8-6 2 2-6 8M5 8l3-3 11 11-3 3z',
   rifle: 'M5 20l3-6 6-1 5-8 2 1-4 10-6 1-3 4M4 9l5-5 5 2-5 5z',

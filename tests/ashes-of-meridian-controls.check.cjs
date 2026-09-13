@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-const { SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const RUNTIME_SOURCE = 'dist/src';
 const UI_FILES = UI_SCRIPTS.map(name => `${RUNTIME_SOURCE}/ui/${name.replace('ui-', '')}.js`);
 const STYLE_FILES = ['styles/base.css', 'styles/screens.css', 'styles/hud.css'];
@@ -33,7 +33,7 @@ function setup() {
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
-      assert.ok(!['tooltip','biomeLabel','contextLabel','selectionContent','selectCount','buildingActions','importFile','speedLabel','settingSpeed'].includes(id), 'removed DOM must never be accessed');
+      assert.ok(!['tooltip','contextLabel','selectionContent','selectCount','buildingActions','importFile','speedLabel','settingSpeed'].includes(id), 'removed DOM must never be accessed');
       if (!elements.has(id)) {
         elements.set(id, target());
         if (id === 'topbar') elements.get(id).getBoundingClientRect = () => ({ bottom: 55 });
@@ -44,7 +44,7 @@ function setup() {
   };
   const window = target();
   let now = 0;
-  const context = loadScripts(['core', 'content', 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
+  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00'
   } });
@@ -133,7 +133,7 @@ test('world picking and captured releases outside the viewport cannot issue orde
 test('minimap camera outline uses all four actual viewport corners after layout changes', () => {
   const h = setup(), points = [], ctx = new Proxy({}, { get: () => () => {} });
   const c = h.document.getElementById('minimap'); c.width = c.height = 210; c.getContext = () => ctx;
-  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4), massifGrid: [], visible: [], explored: [] };
+  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4), terrainFeatureGrid: [], visible: [], explored: [] };
   h.ui.miniBuffer = {}; h.ui.miniCtx = { putImageData() {} };
   h.ui.miniImage = { data: new Uint8Array(72*72*4) };
   h.ui.R.ground = (x,y) => { points.push([x,y]); return {x:x/10,z:y/10}; };
@@ -148,7 +148,7 @@ test('minimap distinguishes massif footprints without bypassing visibility or ch
     c = h.document.getElementById('minimap');
   c.width = c.height = 210; c.getContext = () => ctx;
   h.ui.game.world = { terrainColors: new Uint8Array(72*72*4).fill(100),
-    massifGrid: [1,0,1,0,1,0], visible: [1,1], explored: [0,0,1,1] };
+    terrainFeatureGrid: [1,0,1,0,1,0], visible: [1,1], explored: [0,0,1,1] };
   h.ui.miniBuffer = {}; h.ui.miniCtx = { putImageData() {} };
   h.ui.miniImage = { data: new Uint8ClampedArray(72*72*4) };
   h.ui.R.ground = () => ({ x: 0, z: 0 });
@@ -650,7 +650,7 @@ test('pause and hidden-tab pause retain the run only in memory, with explicit ab
 test('victory and defeat offer restart, upgrades and main menu; ended runs cannot resume', () => {
   for(const win of [false,true]) {
     const h=setup(); h.UI.prototype.bind.call(h.ui);
-    Object.assign(h.ui.game.s,{seed:1409,biome:'biome1',enemy:2,stats:{kills:0,lost:1,gathered:0}});
+    Object.assign(h.ui.game.s,{seed:1409,map:'desert',enemy:2,stats:{kills:0,lost:1,gathered:0}});
     const result={win,text:'HQ destroyed',time:20,integrity:0,score:0}; h.ui.game.s.result=result;
     h.ui.showResult(result); const html=h.ui.html;
     assert.equal(h.ui.paused,true);
@@ -660,18 +660,18 @@ test('victory and defeat offer restart, upgrades and main menu; ended runs canno
     assert.equal(h.ui.paused,true); assert.equal(h.ui.html,html);
     h.ui.game.start=opts=>h.calls.push(['start',{...opts}]);
     h.click({ui:'restart'});
-    assert.deepEqual(h.calls,[['start',{faction:0,biome:'biome1',enemy:2}]], 'redeployment requests a fresh seed');
+    assert.deepEqual(h.calls,[['start',{faction:0,map:'desert',enemy:2}]], 'redeployment requests a fresh seed');
   }
 });
 
-test('pause restart preserves faction, enemy and biome but requests a fresh battlefield', () => {
+test('pause restart preserves faction, enemy and map but requests a fresh battlefield', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  Object.assign(h.ui.game.s, { faction: 1, seed: 1409, biome: 'biome1', enemy: 2 });
+  Object.assign(h.ui.game.s, { faction: 1, seed: 1409, map: 'desert', enemy: 2 });
   h.ui.game.start = opts => h.calls.push(['start', { ...opts }]);
   h.ui.pause(); h.click({ ui: 'restartConfirm' });
   assert.match(h.ui.html, /new random battlefield/);
   h.click({ ui: 'restart' });
-  assert.deepEqual(h.calls, [['start', { faction: 1, biome: 'biome1', enemy: 2 }]]);
+  assert.deepEqual(h.calls, [['start', { faction: 1, map: 'desert', enemy: 2 }]]);
 });
 
 test('result upgrades return to the same ended battle without replaying the result sound', () => {
@@ -681,7 +681,7 @@ test('result upgrades return to the same ended battle without replaying the resu
       h.UI.prototype.openModal.call(h.ui, kind, html, wide); h.ui.html = html;
     };
     h.ui.audio.sound = name => sounds.push(name);
-    Object.assign(h.ui.game.s, { seed: 1409, biome: 'biome1', enemy: 2,
+    Object.assign(h.ui.game.s, { seed: 1409, map: 'desert', enemy: 2,
       stats: { kills: 3, lost: 1, gathered: 42 },
       result: { win, text: 'HQ destroyed', time: 20, integrity: .5, score: 12 } });
     const state = h.ui.game.s, before = JSON.stringify(state);
@@ -786,16 +786,16 @@ test('battle setup and help describe starting workers and alloy levels', () => {
   assert.doesNotMatch(h.ui.html, /only your headquarters/);
 });
 
-test('content labels can change without changing faction/biome IDs, order or unlock requirements', () => {
+test('content labels can change without changing faction/map IDs, order or unlock requirements', () => {
   const h = setup();
   vm.runInContext(`
     FACTIONS.forEach((f, i) => { f.name = 'Faction <' + i + '> & revised'; });
-    Object.values(BIOMES).forEach((b, i) => { b.name = 'Revised environment ' + i; });
+    Object.values(BATTLEFIELDS).forEach((b, i) => { b.name = 'Revised environment ' + i; });
   `, h.context);
   h.ui.showBattle();
   const html = h.document.getElementById('menu').innerHTML;
-  const biomes = html.match(/<select id="battleBiome">([\s\S]*?)<\/select>/)[1];
-  assert.equal(biomes, ['biome1', 'biome2', 'biome4'].map((id, i) =>
+  const maps = html.match(/<select id="battleMap">([\s\S]*?)<\/select>/)[1];
+  assert.equal(maps, ['desert', 'alien-planet', 'mothership'].map((id, i) =>
     `<option value="${id}">Revised environment ${i}</option>`).join(''));
   const enemies = html.match(/<select id="battleEnemy">([\s\S]*?)<\/select>/)[1];
   assert.equal(enemies, [2, 1, 0].map(i =>
@@ -819,11 +819,11 @@ test('factions unlock sequentially after victories with the preceding faction', 
   assert.match(html, /Win once as The Verdant Choir/);
   h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 0, 'locked card cannot change selection');
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome1']])
+  for (const [id,value] of [['battleEnemy','1'],['battleMap','desert']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'biome1'}]], 'launch also rejects a forged locked choice');
+  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,map:'desert'}]], 'launch also rejects a forged locked choice');
   let saves = 0; h.ui.persistence.saveProfile = () => { saves++; return true; };
   h.ui.showResult = () => {
     const faction = h.ui.factionJustUnlocked;
@@ -864,11 +864,11 @@ test('battle setup launches with automatic seed selection and no difficulty cont
   const css = fs.readFileSync(path.join(__dirname, '..', 'styles/screens.css'), 'utf8');
   assert.match(css, /\.battle-launch\s*\{[^}]*flex-direction: column;\s*align-items: stretch/);
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome1']])
+  for (const [id,value] of [['battleEnemy','1'],['battleMap','desert']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'biome1'}]]);
+  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,map:'desert'}]]);
   assert.equal('difficulty' in h.ui.profile.settings,false);
 });
 

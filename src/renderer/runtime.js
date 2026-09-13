@@ -1,5 +1,10 @@
     /* Dependency-free instanced WebGL2 renderer. */
     'use strict';
+    // Standalone model previews also render without a BattlefieldView.
+    const DEFAULT_TERRAIN_RENDER_PROFILE = {
+      groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14,
+      rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 }
+    };
     class MeridianRenderer {
       constructor(canvas) {
         this.canvas = canvas;
@@ -26,6 +31,7 @@
         this.quality = 2;
         this.extent = 90;
         this.decorSeed = 0;
+        this.battlefieldProfile = DEFAULT_TERRAIN_RENDER_PROFILE;
         this.haze = [0.055, 0.09, 0.13];
         this.eye = [0, 65, 50];
         this.vp = M4.identity();
@@ -524,7 +530,7 @@
         g.useProgram(this.skyProg);
         g.uniform2f(this.uniform(this.skyProg, 'u_size'), this.width, this.height);
         g.activeTexture(g.TEXTURE0);
-        g.bindTexture(g.TEXTURE_2D, this.skyTex);
+        g.bindTexture(g.TEXTURE_2D, this[`${this.battlefieldProfile.skyTexture}Tex`]);
         g.uniform1i(this.uniform(this.skyProg, 'u_skyTex'), 0);
         g.bindVertexArray(this.fullVao);
         g.drawArrays(g.TRIANGLES, 0, 3);
@@ -536,6 +542,10 @@
         g.uniform3fv(this.uniform(this.program, 'u_haze'), this.haze);
         g.uniform1f(this.uniform(this.program, 'u_extent'), this.extent);
         g.uniform1ui(this.uniform(this.program, 'u_decorSeed'), this.decorSeed);
+        const profile = this.battlefieldProfile;
+        g.uniform1f(this.uniform(this.program, 'u_groundPixelsPerMeter'), profile.groundPixelsPerMeter);
+        g.uniform4f(this.uniform(this.program, 'u_groundDecor'), profile.rockDecor.density,
+          profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
         g.uniform1f(this.uniform(this.program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_fogOn'), this.fogOn ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_time'), time);
@@ -546,7 +556,7 @@
         g.bindTexture(g.TEXTURE_2D, this.fogTex);
         g.uniform1i(this.uniform(this.program, 'u_fog'), 1);
         g.activeTexture(g.TEXTURE2);
-        g.bindTexture(g.TEXTURE_2D, this.groundTex);
+        g.bindTexture(g.TEXTURE_2D, this[`${profile.groundTexture}Tex`]);
         g.uniform1i(this.uniform(this.program, 'u_groundTex'), 2);
         g.activeTexture(g.TEXTURE3);
         g.bindTexture(g.TEXTURE_2D, this.rockClustersTex);

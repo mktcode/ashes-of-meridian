@@ -6,7 +6,7 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { fileURLToPath } = require('node:url');
-const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
 const sample = `
@@ -39,8 +39,8 @@ function sandbox(t) {
 
 test('content loads alone with reference catalog order, classic bindings and naming/icon helpers', () => {
   const context = loadScripts(['content']);
-  const { FACTIONS, UNITS, BUILDINGS, META, BIOMES, unitName, buildingName, icon } =
-    vm.runInContext('({ FACTIONS, UNITS, BUILDINGS, META, BIOMES, unitName, buildingName, icon })', context);
+  const { FACTIONS, UNITS, BUILDINGS, META, unitName, buildingName, icon } =
+    vm.runInContext('({ FACTIONS, UNITS, BUILDINGS, META, unitName, buildingName, icon })', context);
   for (const name of ['M4', 'seeded', 'MeridianRenderer', 'document', 'window']) {
     assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
   }
@@ -58,9 +58,7 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.deepEqual(Array.from(vm.runInContext('AETHER_EVACUATION_CAPS', context)), [100, 200, 350, 500, 750, 1000]);
   assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero']);
   assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
-  assert.deepEqual(Object.keys(BIOMES), ['biome1', 'biome2', 'biome4']);
-  assert.deepEqual(Object.values(BIOMES).map(b => b.name),
-    ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP']);
+
   assert.equal(unitName('worker'), 'Prospector');
   assert.equal(unitName('worker', 1), 'Tender');
   assert.equal(unitName('worker', 2), 'Custodian');
@@ -71,6 +69,22 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.equal(buildingName('unknown-building'), 'unknown-building');
   assert.equal(icon('unknown-icon'), icon('hero'));
   assert.match(icon('worker'), /^<svg viewBox="0 0 24 24".*<path d="M8 15l-4 5/);
+});
+
+test('three CPU map recipes load without content, renderer or browser, with explicit names and IDs', () => {
+  const scripts = readScripts(), context = loadScripts(BATTLEFIELD_SCRIPTS, { scripts });
+  assert.deepEqual(scripts.filter(s => BATTLEFIELD_SCRIPTS.includes(s.name)).map(s => s.filename),
+    BATTLEFIELD_SCRIPTS.map(name => `dist/src/battlefields/${name.replace('battlefield-', '')}.js`));
+  const { BATTLEFIELDS, battlefieldId } = vm.runInContext('({BATTLEFIELDS, battlefieldId})', context);
+  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership']);
+  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP']);
+  for (const id of Object.keys(BATTLEFIELDS)) assert.equal(battlefieldId(id), id);
+  for (const invalid of [undefined, null, 4, '', 'unknown', 'toString', '__proto__'])
+    assert.equal(battlefieldId(invalid), 'desert');
+  for (const name of ['geom', 'MAT', 'document', 'window', 'FACTIONS'])
+    assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
+  assert.notStrictEqual(BATTLEFIELDS.desert.layout.resourceSites, BATTLEFIELDS.mothership.layout.resourceSites);
+  assert.notStrictEqual(BATTLEFIELDS.desert.render.rockDecor, BATTLEFIELDS.mothership.render.rockDecor);
 });
 
 test('renderer fragments expose the existing bindings and class API in document order', () => {

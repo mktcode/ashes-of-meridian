@@ -18,10 +18,10 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('tri(u_bioTex,v_modelPos,normalize(v_modelN),.17)'));
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.28)'));
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.012)'));
-  assert.ok(FRAG.includes('world*14./pixels'), 'ground keeps equal source-texel density on both axes');
+  assert.ok(FRAG.includes('world*u_groundPixelsPerMeter/pixels'), 'ground keeps equal source-texel density on both axes');
   assert.ok(FRAG.includes('vec3 t=groundBase(v_pos.xz);base=t;'), 'ground uses the aspect-correct Dirt source');
   assert.ok(FRAG.includes('base=t;vec4 rocks=groundDecor'), 'ground starts with the unchanged Dirt color');
-  assert.ok(!FRAG.includes('base=mix(detail(base,t,.74),t,.32)'), 'biome tint is not mixed into the ground');
+  assert.ok(!FRAG.includes('base=mix(detail(base,t,.74),t,.32)'), 'map tint is not mixed into the ground');
   assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
   for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex'])
     assert.ok(FRAG.includes(`uniform sampler2D ${texture};`));
@@ -125,6 +125,7 @@ function setup(options = {}) {
   const r = Object.assign(Object.create(Renderer.prototype), {
     gl: g, quality: 2, canvas: {}, sceneFbo: g.createFramebuffer(), sceneTex: {}, sceneDepth: g.createRenderbuffer(),
     sceneMSAAFbo: null, sceneMSAAColor: null, sceneMSAADepth: null, sceneSamples: 0,
+    battlefieldProfile: vm.runInContext('DEFAULT_TERRAIN_RENDER_PROFILE', context),
     frame: 0, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
     program: 'scene', depthProg: 'shadow', skyProg: 'sky', postProg: 'post', shadowFbo: 'shadow-target',
     upload() {}, uniform(p, name) { return name; },
@@ -134,6 +135,24 @@ function setup(options = {}) {
     ({ left: 0, top: 0, width: context.innerWidth, height: context.innerHeight }) });
   return { r, g, calls, options, framebuffers, buffers, context, bindings: () => ({ draw, read, buffer }) };
 }
+
+test('map render profiles select cached textures and independent decor uniforms without uploads', () => {
+  const h = setup(); h.r.resize();
+  h.r.groundTex = 'dirt'; h.r.metalTex = 'metal'; h.r.bioTex = 'bio'; h.r.skyTex = 'sky';
+  for (const texture of ['ground', 'metal', 'bio']) {
+    h.calls.length = 0;
+    h.r.battlefieldProfile = { groundTexture: texture, skyTexture: 'sky', groundPixelsPerMeter: 9,
+      rockDecor: { density: 0, opacity: .3 }, shrubDecor: { density: .6, opacity: 0 } };
+    h.r.render(0);
+    assert.ok(h.calls.some(c => c[0] === 'uniform1f' && c[1] === 'u_groundPixelsPerMeter' && c[2] === 9));
+    assert.ok(h.calls.some(c => JSON.stringify(c) === JSON.stringify(['uniform4f', 'u_groundDecor', 0, .6, .3, 0])));
+    const slot = h.calls.findIndex(c => c[0] === 'activeTexture' && c[1] === 'TEXTURE2');
+    assert.deepEqual(h.calls[slot + 1], ['bindTexture', 'TEXTURE_2D', h.r[`${texture}Tex`]]);
+    assert.ok(!h.calls.some(c => ['texImage2D', 'createTexture'].includes(c[0])));
+  }
+  const frag = vm.runInContext('FRAG', h.context);
+  for (const component of ['x','y','z','w']) assert.ok(frag.includes('u_groundDecor.' + component));
+});
 
 test('medium/high select the largest common sample count up to 4 and retain resolution scaling', () => {
   for (const [quality, width, height] of [[1, 800, 600], [2, 1280, 960]]) {

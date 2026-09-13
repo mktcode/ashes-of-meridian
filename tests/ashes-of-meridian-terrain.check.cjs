@@ -5,12 +5,12 @@ const { createHash } = require('node:crypto');
 const vm = require('node:vm');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
-const { readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 
 const scripts = readScripts();
-const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'content', 'world'], { scripts });
-const { geom, Battlefield, insidePolygon, pointSegment, HOME, ENEMY_SITES, RESOURCE_SITES } =
-  vm.runInContext('({geom, Battlefield, insidePolygon, pointSegment, HOME, ENEMY_SITES, RESOURCE_SITES})', context);
+const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
+const { geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS } =
+  vm.runInContext('({geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS})', context);
 
 test('embedded skybox preserves the canonical WebP bytes and is wired as a non-repeating texture', () => {
   const url = vm.runInContext('MERIDIAN_TEXTURES.sky', context);
@@ -64,7 +64,7 @@ function layoutHash(w) {
   const originalGrid = new Uint8Array(w.staticGrid.length);
   for (const rock of w.rocks) w.mark(originalGrid, rock.x, rock.z, rock.r);
   for (let i = 0; i < originalGrid.length; i++)
-    assert.equal(w.staticGrid[i], originalGrid[i] | w.massifGrid[i], 'only massif footprints add blockers');
+    assert.equal(w.staticGrid[i], originalGrid[i] | w.terrainFeatureGrid[i], 'only massif footprints add blockers');
   return createHash('sha256').update(originalGrid).update(w.terrainColors)
     .update(JSON.stringify(w.rocks)).digest('hex');
 }
@@ -113,17 +113,17 @@ test('rock meshes are deterministic, finite, bounded and inexpensive', () => {
 });
 
 test('wide massif mesh is detailed, deterministic and matches its CPU footprint', () => {
-  const world = new Battlefield(43015, 'biome1'), m = world.renderData.massifs[0],
-    mesh = geom.massif(m), before = JSON.stringify(m);
-  assert.deepEqual(mesh, geom.massif(m));
-  assert.notDeepEqual(mesh, geom.massif({ ...m, seed: m.seed ^ 1 }));
+  const world = new Battlefield(43015, 'desert'), m = world.renderData.features[0],
+    mesh = TerrainModels.massif(m), before = JSON.stringify(m);
+  assert.deepEqual(mesh, TerrainModels.massif(m));
+  assert.notDeepEqual(mesh, TerrainModels.massif({ ...m, seed: m.seed ^ 1 }));
   assert.equal(JSON.stringify(m), before);
   assert.equal(mesh.length / 27, 11712);
-  // Exhaustive raster/outline agreement once; all 16 layouts retain fixed navigation references.
-  for (let i = 0; i < world.massifGrid.length; i++) {
-    const p = world.point(i), covered = world.renderData.massifs.some(m => insidePolygon(p, m.outline) ||
+  // Exhaustive raster/outline agreement once; all 11 layouts retain fixed navigation references.
+  for (let i = 0; i < world.terrainFeatureGrid.length; i++) {
+    const p = world.point(i), covered = world.renderData.features.some(m => insidePolygon(p, m.outline) ||
       m.outline.some((a, j) => pointSegment(p, a, m.outline[(j + 1) % m.outline.length]) < 2.5 * Math.SQRT1_2));
-    assert.equal(world.massifGrid[i], +covered, 'raster follows irregular outlines, not bounding circles');
+    assert.equal(world.terrainFeatureGrid[i], +covered, 'raster follows irregular outlines, not bounding circles');
   }
   let high = 0;
   for (let i = 0; i < mesh.length; i += 9) {
@@ -140,9 +140,9 @@ test('wide massif mesh is detailed, deterministic and matches its CPU footprint'
 });
 
 test('mountain belt is seeded, continuous and outside the playable ground', () => {
-  const mesh = geom.mountainRing(43015), edges = new Map(), surfaceTriangles = 384 * 40 * 2;
-  assert.deepEqual(mesh, geom.mountainRing(43015));
-  assert.notDeepEqual(mesh, geom.mountainRing(43016));
+  const mesh = TerrainModels.mountainRing(43015), edges = new Map(), surfaceTriangles = 384 * 40 * 2;
+  assert.deepEqual(mesh, TerrainModels.mountainRing(43015));
+  assert.notDeepEqual(mesh, TerrainModels.mountainRing(43016));
   assert.equal(mesh.length / 27, surfaceTriangles + 80 * 72);
   assert.ok(mesh.length / 27 <= 40000, 'bounded detail budget for the entire belt including scree');
   let peak = 0;
@@ -177,11 +177,11 @@ test('mountain belt is seeded, continuous and outside the playable ground', () =
   }
 });
 
-// Fixed terrain inputs cover every remaining biome.
-const terrainCases = [[1409,'biome1'],[9017,'biome2'],[1905,'biome2'],[2219,'biome1'],[6633,'biome2'],[4442,'biome2'],[24080,'biome1'],[38744,'biome2'],[43015,'biome4'],[74408,'biome4'],[90001,'biome4']];
-for (const [seed, biome] of terrainCases) {
-  test(`terrain ${seed} (${biome}): original layout and varied textured rocks`, () => {
-    const battlefield = new Battlefield(seed, biome), placements = battlefield.renderData.placements;
+// Fixed terrain inputs cover every remaining map.
+const terrainCases = [[1409,'desert'],[9017,'alien-planet'],[1905,'alien-planet'],[2219,'desert'],[6633,'alien-planet'],[4442,'alien-planet'],[24080,'desert'],[38744,'alien-planet'],[43015,'mothership'],[74408,'mothership'],[90001,'mothership']];
+for (const [seed, map] of terrainCases) {
+  test(`terrain ${seed} (${map}): original layout and varied textured rocks`, () => {
+    const battlefield = new Battlefield(seed, map), placements = battlefield.renderData.placements;
     assert.equal(layoutHash(battlefield), originalLayouts[seed]);
     assert.deepEqual(battlefield.blocked, battlefield.staticGrid);
     const belts = placements.filter(p => p.mesh === 'mountainRing');
@@ -190,7 +190,7 @@ for (const [seed, biome] of terrainCases) {
     for (const rock of battlefield.rocks) {
       assert.ok(battlefield.blockedAt(rock.x, rock.z), 'interior formations are real blockers');
     }
-    const massifs = battlefield.renderData.massifs;
+    const massifs = battlefield.renderData.features;
     assert.equal(massifs.length, 2, 'two suitable broad landforms in each reference world');
     for (const m of massifs) {
       assert.ok(m.width >= 29 && m.width <= 38 && m.depth >= 17 && m.depth <= 23);
@@ -198,15 +198,16 @@ for (const [seed, biome] of terrainCases) {
       assert.equal(m.outline.length, 96);
       assert.ok(m.outline.every(p => Math.max(Math.abs(p.x), Math.abs(p.z)) <= 81));
     }
-    const reserved = [{ ...HOME, r: 20 }, { ...ENEMY_SITES[0], r: 21 },
-      ...RESOURCE_SITES.map(p => ({ ...p, r: 10 })),
-      ...RESOURCE_SITES.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 }))];
+    const { playerStart, enemySites, resourceSites } = battlefield.layout;
+    const reserved = [{ ...playerStart, r: 20 }, { ...enemySites[0], r: 21 },
+      ...resourceSites.map(p => ({ ...p, r: 10 })),
+      ...resourceSites.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 }))];
     for (const p of reserved) for (const m of massifs) {
       assert.ok(!insidePolygon(p, m.outline));
       assert.ok(m.outline.every((a, i) => pointSegment(p, a, m.outline[(i + 1) % 96]) >= p.r));
     }
     // Independent flood fill with a one-cell clearance margin around every obstacle.
-    const seen = new Set([battlefield.idx(HOME.x, HOME.z)]), queue = [...seen];
+    const seen = new Set([battlefield.idx(playerStart.x, playerStart.z)]), queue = [...seen];
     for (let h = 0; h < queue.length; h++) for (const j of [queue[h] - 1, queue[h] + 1, queue[h] - 72, queue[h] + 72]) {
       if (j % 72 < 1 || j % 72 > 70 || j < 72 || j >= 71 * 72 || seen.has(j)) continue;
       if ([-73, -72, -71, -1, 0, 1, 71, 72, 73].some(d => battlefield.staticGrid[j + d])) continue;
@@ -227,7 +228,7 @@ for (const [seed, biome] of terrainCases) {
 }
 
 test('navigation goes around a broad massif instead of crossing its slopes', () => {
-  const w = new Battlefield(43015, 'biome1'), m = w.renderData.massifs[0],
+  const w = new Battlefield(43015, 'desert'), m = w.renderData.features[0],
     dx = Math.sin(m.yaw) * (m.depth + 8), dz = Math.cos(m.yaw) * (m.depth + 8),
     start = { x: m.x - dx, z: m.z - dz }, target = { x: m.x + dx, z: m.z + dz };
   assert.ok(!w.blockedAt(start.x, start.z) && !w.blockedAt(target.x, target.z));
@@ -239,9 +240,50 @@ test('navigation goes around a broad massif instead of crossing its slopes', () 
   assert.ok(Math.hypot(previous.x - target.x, previous.z - target.z) < 3);
 });
 
+test('map recipes and new cosmetic streams are isolated without shifting existing terrain samples', () => {
+  const local = loadScripts(['core', ...BATTLEFIELD_SCRIPTS, 'world']);
+  const { Battlefield: World, BATTLEFIELDS: maps } = vm.runInContext('({Battlefield, BATTLEFIELDS})', local);
+  const snapshot = id => {
+    const w = new World(1409, id);
+    return JSON.stringify([w.renderData, Array.from(w.staticGrid), Array.from(w.terrainColors)]);
+  };
+  const before = Object.fromEntries(Object.keys(maps).map(id => [id, snapshot(id)]));
+  const generate = maps.desert.generate;
+  maps.desert.generate = builder => {
+    const cosmetic = builder.cosmeticRandom(0x4445434f), repeated = builder.cosmeticRandom(0x4445434f);
+    for (let i = 0; i < 1000; i++) assert.equal(cosmetic(), repeated());
+    generate(builder);
+  };
+  assert.equal(snapshot('desert'), before.desert, 'private cosmetic samples do not consume layout RNG');
+  maps.desert.palette.rock = 0xff0000;
+  assert.notEqual(snapshot('desert'), before.desert);
+  assert.equal(snapshot('alien-planet'), before['alien-planet']);
+  assert.equal(snapshot('mothership'), before.mothership);
+});
+
+test('terrain feature validation accepts non-mountain polygons and rasterizes their corners', () => {
+  const local = loadScripts(['core', ...BATTLEFIELD_SCRIPTS, 'world']);
+  const { Battlefield: World, BattlefieldBuilder: Builder } = vm.runInContext('({Battlefield, BattlefieldBuilder})', local);
+  const w = new World(1409, 'desert');
+  w.staticGrid.fill(0); w.terrainFeatureGrid.fill(0);
+  const builder = new Builder(w);
+  const polygon = { x: 0, z: 0, width: 12, depth: 12, height: 10, yaw: 0, seed: 5,
+    outline: [{x:-12,z:-12}, {x:12,z:-12}, {x:12,z:12}, {x:-12,z:12}] };
+  builder.features(() => polygon, 'testHangar', 'METAL');
+  assert.equal(w.renderData.features.length, 1, 'overlapping candidates are rejected');
+  assert.equal(w.renderData.geometries[0].model, 'testHangar');
+  assert.equal(w.renderData.placements[0].material, 'METAL');
+  assert.equal(w.terrainFeatureGrid[w.idx(11, 11)], 1, 'no mountain-radius shortcut cuts off polygon corners');
+  for (let i = 0; i < w.staticGrid.length; i++) {
+    const p = w.point(i), expected = insidePolygon(p, polygon.outline) || polygon.outline.some((a,j) =>
+      pointSegment(p, a, polygon.outline[(j+1)%4]) < 2.5*Math.SQRT1_2);
+    assert.equal(w.staticGrid[i], +expected);
+  }
+});
+
 test('regenerating a battle seed reproduces all visual placements', () => {
-  const first = new Battlefield(123456, 'biome1'), second = new Battlefield(123456, 'biome1');
+  const first = new Battlefield(123456, 'desert'), second = new Battlefield(123456, 'desert');
   assert.equal(layoutHash(first), layoutHash(second));
   assert.deepEqual(first.renderData, second.renderData);
-  assert.deepEqual(first.massifGrid, second.massifGrid);
+  assert.deepEqual(first.terrainFeatureGrid, second.terrainFeatureGrid);
 });

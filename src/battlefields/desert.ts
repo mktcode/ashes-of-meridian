@@ -1,0 +1,28 @@
+/* Map recipe; current visuals are preserved until its separate design pass. */
+'use strict';
+const DESERT_BATTLEFIELD: BattlefieldDefinition = {
+  name: 'DESERT',
+  layout: standardBattleLayout(),
+  palette: {
+    ground: 0x59443a,
+    rock: 0x74544a,
+    accent: 0xf0b67b,
+    flora: 0x806348
+  },
+  render: {
+    groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14,
+    rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 },
+    haze: [0.11, 0.085, 0.1]
+  },
+  worldEvent: null,
+  generate(builder) {
+    builder.ground();
+    builder.boundary('mountainRing', 'MASSIF');
+    builder.smallObstacles();
+    builder.boundaryRocks();
+    builder.rubble();
+    builder.patches(placeGroundPatch);
+    builder.debris(placeCargo);
+    builder.features(createMassifCandidate, 'massif', 'MASSIF');
+  }
+};

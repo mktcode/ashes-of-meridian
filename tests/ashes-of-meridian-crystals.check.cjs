@@ -2,9 +2,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
-const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
+const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
 const { geom, renderEntity, MAT } = vm.runInContext('({geom, renderEntity, MAT})', context);
 const deposit = (id = 1, amount = 1800) => Object.freeze({
   id, amount, kind: 'resource', type: 'crystal', x: 12, z: -7,
@@ -74,9 +74,9 @@ test('preview layer and opacity are respected; absent amounts have a finite full
   assert.deepEqual(render({ ...e, hp: 0 }), []);
 });
 
-const simContext = loadScripts(['core', 'content', 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
+const simContext = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness"); }', simContext);
-const { MeridianGame, BIOMES } = vm.runInContext('({MeridianGame, BIOMES})', simContext);
+const { MeridianGame, BATTLEFIELDS } = vm.runInContext('({MeridianGame, BATTLEFIELDS})', simContext);
 const json = value => JSON.parse(JSON.stringify(value));
 const crystals = game => game.s.entities.filter(e => e.kind === 'resource' && e.type === 'crystal' && e.hp > 0);
 const fresh = () => new MeridianGame({ upgrades: {} });
@@ -88,9 +88,9 @@ function separated(game) {
   }
 }
 
-test('all factions and biomes retain 40 distinct accessible crystals in five-slot ellipses', () => {
-  for (const faction of [0,1,2]) for (const [i, biome] of Object.keys(BIOMES).entries()) {
-    const game = fresh(); game.start({ seed: 12345 + i * 31, faction, enemy: i % 3, biome });
+test('all factions and maps retain 40 distinct accessible crystals in five-slot ellipses', () => {
+  for (const faction of [0,1,2]) for (const [i, map] of Object.keys(BATTLEFIELDS).entries()) {
+    const game = fresh(); game.start({ seed: 12345 + i * 31, faction, enemy: i % 3, map });
     const nodes = crystals(game); assert.equal(nodes.length, 40); separated(game);
     assert.equal(game.s.entities.filter(e => e.type === 'gas').length, 8);
     for (let i = 0; i < 8; i++) {
@@ -98,9 +98,9 @@ test('all factions and biomes retain 40 distinct accessible crystals in five-slo
       const cx = group.reduce((sum, e) => sum + e.x, 0) / 5, cz = group.reduce((sum, e) => sum + e.z, 0) / 5;
       for (const e of group) {
         assert.ok(Math.abs(((e.x-cx)/3.9)**2 + ((e.z-cz)/3)**2 - 1) < 1e-12);
-        assert.equal(game.world.blockedAt(e.x, e.z), false, `battle ${biome}/${faction}, crystal ${e.id}`);
+        assert.equal(game.world.blockedAt(e.x, e.z), false, `battle ${map}/${faction}, crystal ${e.id}`);
         for (const b of game.s.entities.filter(b => b.kind === 'building' && b.hp > 0))
-          assert.ok(Math.hypot(e.x-b.x, e.z-b.z) >= e.size + b.size, `crystal ${e.id} intersects ${b.type} in battle ${biome}/${faction}`);
+          assert.ok(Math.hypot(e.x-b.x, e.z-b.z) >= e.size + b.size, `crystal ${e.id} intersects ${b.type} in battle ${map}/${faction}`);
         assert.equal(e.size, 1.3); assert.ok(e.amount >= 1800 && e.amount < 2700);
       }
     }

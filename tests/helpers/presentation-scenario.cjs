@@ -1,18 +1,18 @@
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
-const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
 const { populateBase } = require('./populated-battle.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
+const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
 const { Battlefield, BattlefieldView, MeridianGame } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame})', context);
 
-function worldSample(seed, biome) {
+function worldSample(seed, map) {
   const renderer = createRendererStub({ record: true });
   let terrain;
   renderer.geometry = (name, data) => { if (name === 'terrain') terrain = digest(data); };
-  const world = new Battlefield(seed, biome);
+  const world = new Battlefield(seed, map);
   new BattlefieldView(renderer).sync(world);
   const entities = [
     { kind: 'building', team: 0, x: -51, z: 49, size: 5, hp: 100 },
@@ -24,14 +24,15 @@ function worldSample(seed, biome) {
     .map(args => world.path(...args));
   world.reveal(entities, [{ x: -20, z: -10, r: 7 }]);
   world.reveal([]);
-  return { terrain, placements: digest({ calls: renderer.calls, massifs: world.renderData.massifs }), navigation: digest({ paths,
+  // Preserve the fixture serializer key, not a runtime alias, after the generic feature rename.
+  return { terrain, placements: digest({ calls: renderer.calls, massifs: world.renderData.features }), navigation: digest({ paths,
     nearest: world.nearest(-51, 49), blocked: Array.from(world.blocked),
     visible: Array.from(world.visible), explored: Array.from(world.explored), fog: Array.from(world.fogPixels) }) };
 }
 
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
-  game.start({ seed: 1409, biome: 'biome1', faction: 0 });
+  game.start({ seed: 1409, map: 'desert', faction: 0 });
   populateBase(game);
   // Fixed effect-test RNG entry point from presentation-v1, independent of battle loadout.
   game.random = vm.runInContext('seeded(1486)', context);

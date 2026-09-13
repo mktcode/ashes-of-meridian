@@ -113,7 +113,7 @@
         s.fields = s.fields.filter(f => f.until > s.time);
         s.scans = s.scans.filter(a => a.until > s.time);
         if (
-          s.biome === 'biome4' &&
+          this.world!.definition.worldEvent === 'solarFlare' &&
           s.time > 150 &&
           Math.floor(s.time / 100) > (s.triggers.solar || 0)
         ) {

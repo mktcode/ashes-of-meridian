@@ -143,7 +143,7 @@ const aiMethods = {
       if (p) this.ability('drop',p,team);
     }
     if (ready('scan') && s.time>60 && !foes.length && own.some(e=>e.type==='rifle')) {
-      const p=ai.goal || (team===1?HOME:ENEMY_SITES[0]);
+      const layout=this.world!.layout, p=ai.goal || (team===1?layout.playerStart:layout.enemySites[0]);
       if (!this.canSee(team,p) && !s.scans.some(scan=>scan.team===team)) this.ability('scan',p,team);
     }
   },
@@ -171,8 +171,8 @@ const aiMethods = {
     if (army.length>=2 && (!ai.scout || !army.some(e=>e.id===ai.scout))) ai.scout=army[0].id;
     const scout=army.find(e=>e.id===ai.scout);
     if (scout && ai.mode!=='attack' && s.time-ai.lastScout>15) {
-      const p=team===1?HOME:ENEMY_SITES[0];
-      const goals=[p,...RESOURCE_SITES];
+      const layout=this.world!.layout, p=team===1?layout.playerStart:layout.enemySites[0];
+      const goals=[p,...layout.resourceSites];
       const goal=goals.find(p=>!this.world!.sight[team].explored[this.world!.idx(p.x,p.z)]) || p;
       this.aiOrder(team,[scout],scout.hp<scout.maxHp*.4?home:goal,false);ai.lastScout=s.time;
     }

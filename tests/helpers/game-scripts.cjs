@@ -6,6 +6,7 @@ const projectRoot = join(__dirname, '../..');
 const RENDERER_SCRIPTS = Object.freeze([
   'renderer-assets',
   'renderer-geometry',
+  'renderer-terrain-models',
   'renderer-model-kit',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',
@@ -37,6 +38,13 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-faction-0-unit-hero',
   'renderer-shaders',
   'renderer-runtime'
+]);
+const BATTLEFIELD_SCRIPTS = Object.freeze([
+  'battlefield-shared',
+  'battlefield-desert',
+  'battlefield-alien-planet',
+  'battlefield-mothership',
+  'battlefield-catalog'
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-game',
@@ -116,4 +124,4 @@ function loadScripts(names, { scripts = readScripts(), globals = {} } = {}) {
   return context;
 }
 
-module.exports = { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };
+module.exports = { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };
