@@ -1,0 +1,2 @@
+Die großen, blockierenden, charakteristischen Felsformationen in der Map, müssen noch optimiert werden.
+Farblich heben sie sich gerade zu stark vom Boden ab und ihre Geometrie ist teilweise etwas zu detailliert.
