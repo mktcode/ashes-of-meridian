@@ -1,5 +1,7 @@
-Aktuell muss man die Aether Raffinary in der Nähe eines Aether Vents platzieren. Da ohnehin nur eine Raffinary pro Vent erlaubt ist, sollte es man das Gebäude direkt auf dem Vent platzieren müssen.
+# Raffinerie direkt auf dem Aether Vent platzieren
 
-Modellstand: Die drei Raffinerien liegen jetzt separat unter `src/renderer/models/faction-<0–2>-building-refinery.js`; die Fraktion-0-Fassung hat zusätzlich ein aktualisiertes Aktionsportrait. Der Detailpass ändert weder Vent-Modell noch Platzierungsregel/Kollisionsradius. Eine spätere Zusammenlegung auf dem Vent muss die drei vorhandenen Hüllen und den gemeinsamen `renderEntity`-Transform berücksichtigen, nicht nur die UI-Vorschau verschieben.
+Derzeit wird die Raffinerie in Vent-Nähe gebaut. Da nur eine pro Vent erlaubt ist, soll sie direkt auf dem Vent stehen müssen.
 
-Die Gegner-KI verwendet jetzt dieselben Bau-/Ventprüfungen und wählt aus beobachteten Vents legale Positionen im bisherigen Umkreis. Bei einer Umstellung auf direkte Vent-Platzierung müssen auch die Raffinerie-Kandidatensuche in `src/simulation/ai.ts` und die autonomen Wirtschaftstests angepasst werden; der KI-Auftrag selbst verändert diese Regel nicht.
+Dabei die vorhandenen Raffineriehüllen aller Fraktionen und den gemeinsamen `renderEntity`-Transform berücksichtigen, nicht nur die UI-Vorschau verschieben. Modellgröße, Vent-Modell, Kollision und zugehörige Portraits gezielt beurteilen.
+
+Die KI verwendet dieselben Bau-/Ventprüfungen, sucht aber Positionen im bisherigen Umkreis beobachteter Vents. Direkte Platzierung erfordert daher auch angepasste Kandidatensuche in `src/simulation/ai.ts` und passende autonome Wirtschaftstests. Mit dem [allgemeinen Bauplatzfehler](bug-building-placement-in-einheiten.md) abstimmen; keine getrennten Platzierungsregeln für UI und KI.

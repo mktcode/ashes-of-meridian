@@ -1,10 +1,8 @@
 # Ashes of Meridian
 
-Lokaler, touchorientierter Echtzeitstrategie-Prototyp mit drei Fraktionen und WebGL 2. Der **Core Gameplay Loop ist implementiert**: Basis aufbauen → gegnerisches HQ zerstören oder verlieren → ungenutzten Aether evakuieren → permanente Upgrades kaufen → erneut antreten. Bedienbarkeit auf echten Geräten und Langzeitbalancing sind noch zu validieren.
+Lokaler, touchorientierter Echtzeitstrategie-Prototyp mit drei Fraktionen und WebGL 2. Der Core Loop ist implementiert: **Basis aufbauen → Gefecht → ungenutzten Aether evakuieren → permanente Upgrades → neues Gefecht**. Bedienbarkeit auf echten Geräten und Langzeitbalancing sind noch zu validieren.
 
-## Öffentliche Testversion
-
-Die Dokploy-Testinstanz ist unter [aom.markus-kottlaender.de](https://aom.markus-kottlaender.de/) erreichbar. Sie dient dem Projektinhaber und ersten Playtestern; Browserprofile werden weiterhin nur lokal auf dem jeweiligen Gerät gespeichert.
+[Öffentliche Testversion](https://aom.markus-kottlaender.de/) für erste Playtests; Profile bleiben lokal im jeweiligen Browser.
 
 ## Starten
 
@@ -13,35 +11,23 @@ npm install
 npm run build
 ```
 
-Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich.
-
-Eine rein manuelle Zuschauerpartie lässt sich separat starten:
-
-```bash
-npm run simulate:visible
-```
-
-Der Befehl baut den aktuellen Stand und öffnet ihn über `file://` als normales Fenster beziehungsweise neuen Tab im Standardbrowser – ohne App-Modus oder vorgegebene Fenster-/Viewportgröße. Beide Seiten steuert die KI. Jeder Run beginnt mit 1× und wechselt nach zehn Echtzeitsekunden auf 2×; Reload/erneutes Deployen startet wieder so. Das flüchtige Simulationsprofil liest oder verändert keine normalen Freischaltungen, Upgrades, Aetherreserven oder Einstellungen. Browserfenster beziehungsweise Tab zum Beenden selbst schließen. Dieser persönliche Zuschauerbefehl gehört ausdrücklich nicht zu Build, Tests oder Agentenabnahmen und wird nie automatisch ausgeführt. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe sowie Laufzeitbilder und Audioquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet; ihre kanonischen WebP-Quellen (Qualität 80) liegen unter `assets/textures/`. Nach Texturänderungen erzeugt `npm run embed:textures` zentral `src/renderer/assets.js`, anschließend aktualisiert `npm run build` die Auslieferung. Für ein statisches Webdeployment steht ein Multi-Stage-[Dockerfile](Dockerfile) bereit; Dokploy-Konfiguration und Auslieferungsgrenzen beschreibt [Statisches Webdeployment](docs/deployment.md).
+Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. HTML, Styles, Build-Ausgabe und lokale Laufzeitassets gemeinsam mitführen; es ist kein Ein-Datei-Paket. Quellen und Ladevertrag: [Architektur](docs/architecture.md), Webhosting: [Deployment](docs/deployment.md).
 
 ## Spielen
 
-- Start: HQ, **0–5 Worker** und **250–500 Alloy** je nach Upgrade, immer **0 Aether**. Ohne Startworker den ersten unter **Infantry** für 50 Alloy rekrutieren. Worker liefern Alloy; Raffinerien an Vents erzeugen Aether.
-- Kamera mit Fingerziehen, Pinch, Zoom-/Basisknöpfen oder Minimap bewegen. Tap wählt; Doppel-/Dreifachtap gruppiert eigene Einheiten. Boden-Tap erteilt Bewegung, der **Schwerter-Schalter neben ⌂** aktiviert Attack-move. **Cancel** beendet Zielauswahl.
-- Unten: Minimap links, Werkzeuge/Fähigkeiten mittig, Bau-/Rekrutierungsmenüs rechts. Gebäudeauswahl bietet Reparatur, Verkauf und Rallypoint; Queue-Symbole über der Minimap erlauben Stornierung. Tempo direkt unter der Uhr antippen.
-- Der Gegner startet ebenfalls nur mit HQ und regulären Startmitteln. Er baut eine echte Wirtschaft/Basis auf, produziert über Queues, klärt auf und greift bekannte Ziele an – ohne künstliche Wellen, Sichtcheats oder Ressourcenboni. Noch keine einstellbare Schwierigkeit.
-- Gegnerisches HQ zerstören gewinnt; Verlust des letzten eigenen HQs verliert. Ein Free-Marches-Sieg schaltet die Verdant Choir frei; ein anschließender Sieg mit ihr öffnet dauerhaft die Veiled Court.
-- Nach jedem Ergebnis wird ungenutzter Aether bis zum Evakuierungslimit in die Reserve übertragen. **Fleet Upgrades** erhöht Start-Alloy, Startworkerzahl und Evakuierungslimit; Käufe gelten ab dem nächsten Gefecht/Neustart.
-- **Keine Run-Speicherung:** Pause gilt nur in der geöffneten Seite. Tab-Wechsel pausiert automatisch; Hauptmenü, Reload oder Schließen verwerfen den Run. Nur Reserve, Upgrades, Freischaltungen und Einstellungen bleiben im Browserprofil. Bei eingeschränktem Browserspeicher ist auch dieses Profil nur flüchtig.
+Mit **New battle** Fraktion, Gegner und Karte wählen. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Alloy, Raffinerien an Vents erzeugen Aether. Das gegnerische HQ zerstören gewinnt; das letzte eigene HQ verlieren beendet das Gefecht als Niederlage.
 
-## Orientierung und Entwicklung
+Fingerziehen/Pinch bewegt die Kamera, Tap wählt oder erteilt einen Kontextbefehl. Der Schwerter-Schalter neben ⌂ aktiviert Attack-move. Bau und Rekrutierung liegen rechts, Fähigkeiten mittig, Minimap links. **Cancel** beendet eine Zielauswahl.
 
-- **KI-Agenten:** mit [AGENTS.md](AGENTS.md) beginnen.
-- [Spiel und Bedienung](docs/gameplay.md): genaue Regeln und priorisierte nächste Prüfungen.
-- [Architektur](docs/architecture.md): Codekarte, Zustände und Speicherung.
-- [Statisches Webdeployment](docs/deployment.md): Docker-/Dokploy-Build, Port und Zustandsgrenzen.
-- [Grafik und Assets](docs/rendering.md): Texturen, Qualitätsstufen, Viewport und Menüs.
-- [Prüfungen](docs/testing.md): `npm test`, Abdeckung, Browserchecks und Grenzen.
-- [Feste Testreferenzen](docs/reference-tests.md): Zweck und Pflege der Fixtures.
-- [Arbeitsprotokoll](docs/worklog.md): kompakter Übergabestand und letzte Nachweise; ältere Entwicklung in Git.
+Nur Reserve, Upgrades, Fraktionsfreischaltungen und Einstellungen bleiben gespeichert, **keine Runs**. Reload oder Schließen verwirft das Gefecht. Genaue Regeln und Bedienung: [Gameplay](docs/gameplay.md).
 
-Breites Refactoring und weitere TypeScript-Migration sind pausiert. Als Nächstes stehen echte Mobilgeräte und vollständige Runs einschließlich Upgradeökonomie im Vordergrund, nicht zusätzliche Systeme.
+## Entwicklung
+
+- [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
+- [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
+- [Grafik und Assets](docs/rendering.md): Modell-/Texturpflege und Darstellungsgrenzen.
+- [Prüfungen](docs/testing.md): gezielte Tests, Gesamtsuite und Aussagegrenzen.
+- [Feste Testreferenzen](docs/reference-tests.md): Umgang mit Fixtures.
+- [Issues](docs/issues/): offene Aufgaben und Entscheidungen, darunter [Geräte-/Run-Validierung](docs/issues/playtest-validation.md).
+
+`npm run simulate:visible` baut und öffnet eine persönliche KI-gegen-KI-Zuschauerpartie über `file://` im normalen Standardbrowser, ohne vorgegebene Fenstergröße. Das flüchtige Profil berührt keine normalen Browserdaten. Jeder Run startet mit 1× und wechselt nach zehn Echtzeitsekunden auf 2×; Tab/Fenster selbst schließen. **Kein Test- oder Agentenabnahmebefehl, nie automatisch ausführen.**

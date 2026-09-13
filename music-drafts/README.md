@@ -40,6 +40,8 @@ Bass, Melodien samt Echo, Funkdurchsagen, Kick/Hauptsnare, Tempo, Swing und Absc
 
 ## Herstellung und Grenzen
 
+Freigegebene Fassungen zur Spielpflege bytegleich nach `audio/` kopieren, nicht erneut kodieren. Bei Änderungen an der Playlist die Auswahl in `src/audio.js` und im `Dockerfile` abstimmen; andere Entwürfe nicht wegen fehlender Laufzeitreferenzen löschen. Technische Wiedergabe-/Auslieferungsprüfungen nach [Risiko](../docs/testing.md), hörbare Änderungen durch den Menschen abnehmen lassen.
+
 - Eigene synthetische Drum-One-Shots werden wie Samplersounds wiederholt, in Tonhöhe/Timing variiert und mit Ghostnotes, kurzen Raumreflexionen und reduzierter Auflösung bearbeitet. Kein fremder Drumloop.
 - Bass aus gefilterten Oszillatoren; Gitarrenannäherung durch gezupfte Saitenmodelle (Karplus–Strong), Verzerrung und Lautsprecherfilter. Keine tatsächlich eingespielten Gitarren.
 - Funkkommandos aus lokaler generischer **Flite-TTS** (`rms`), schmalbandig verzerrt, zerhackt und rhythmisch wiederholt; kein Gesang, keine nachgeahmte reale Person. Beispielsweise „Stand by“, „Weapons free“ und „Unknown transmission“.

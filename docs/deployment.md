@@ -1,40 +1,26 @@
 # Statisches Webdeployment
 
-## Aktueller Testbetrieb
+Die [öffentliche Testversion](../README.md) wird über Dokploy ausgeliefert. Kein Backend, keine Datenbank, persistenten Volumes oder Laufzeitvariablen. Lokale `file://`-Auslieferung bleibt unabhängig davon unterstützt.
 
-Die über Dokploy veröffentlichte Testinstanz läuft unter [https://aom.markus-kottlaender.de/](https://aom.markus-kottlaender.de/). Sie ist für den Projektinhaber und erste Playtester vorgesehen. Das ist keine Zusage zu Verfügbarkeit, Langzeitstabilität oder serverseitiger Spielstandsicherung; Profile bleiben an Browser und Origin gebunden.
+## Docker und Dokploy
 
-## Anforderungen
+Das [Dockerfile](../Dockerfile) baut mit `npm ci` und `npm run build` und stellt die benötigten Laufzeitdateien für Nginx zusammen. Es ist die maßgebliche Auslieferungsliste: HTML, Styles, gebaute Skripte sowie lokale Musik und Portraits. WebGL-Texturen sind bereits eingebettet; Quelltexturen, Tests, Dokumentation und Source Maps gehören nicht ins Laufzeitimage.
 
-Das Webdeployment benötigt nur Docker beziehungsweise eine Plattform mit Dockerfile-Build wie Dokploy. Es gibt kein Backend, keine Datenbank, keine persistenten Volumes und keine Laufzeitvariablen. Das Image baut die klassischen Laufzeitskripte reproduzierbar mit `npm ci` und `npm run build` und liefert anschließend ausschließlich folgende Dateien aus:
+In Dokploy **Dockerfile** als Build-Typ und intern **HTTP-Port 8080** konfigurieren. Domain, öffentliches HTTPS und Zertifikate übernimmt der Proxy. `GET /` dient als Healthcheck, zusätzlich im Image hinterlegt. Keine weiteren Startbefehle nötig.
 
-- `index.html`
-- `styles/`
-- erzeugtes `dist/src/`
-- `audio/music-ratchet-theory.mp3`, `audio/music-last-light-relay.mp3`, `audio/music-breach-protocol.mp3`, `audio/music-black-channel.mp3` (freigegebene Aufnahmen; andere Audio-/Hörentwürfe werden nicht ausgeliefert)
-- die 14 manuell gepflegten WebP-Aktionsporträts unter `assets/portraits/`
+Die [Nginx-Konfiguration](../nginx.conf) verwendet absichtlich **keinen SPA-Fallback**: fehlende Skripte/Assets müssen 404 liefern, nicht HTML. Solange Dateinamen keine Inhalts-Hashes tragen, verhindert Revalidierung gemischte Versionen nach Rollouts. HTML/CSS/JavaScript werden beim Build vorab gzip-komprimiert.
 
-Alle Laufzeittexturen sind in `dist/src/renderer/assets.js` eingebettet. Quellcode, Tests, Dokumentation, `node_modules`, Source Maps und die gepflegten Texturquellen unter `assets/textures/` gelangen nicht ins Laufzeitimage.
-
-## Dokploy
-
-In Dokploy das Repository mit dem **Dockerfile** als Build-Typ konfigurieren. Der Container lauscht intern per HTTP auf **Port 8080**; Domain, öffentliches HTTPS und Zertifikate werden am Dokploy-Proxy eingerichtet. `GET /` eignet sich als Healthcheck und ist zusätzlich im Image als Docker-Healthcheck hinterlegt. Weitere Build- oder Startbefehle sind nicht nötig.
-
-Die Auslieferung hat absichtlich keinen SPA-Routenfallback: Das Spiel verwendet keine clientseitigen URL-Routen, und fehlende Skripte oder Assets sollen mit 404 statt irreführend mit `index.html` antworten. HTML, CSS und JavaScript werden beim Build vorab gzip-komprimiert. Da ihre Namen noch keine Inhalts-Hashes tragen, verlangt Nginx Revalidierung und verhindert so gemischte Versionen nach einem Rollout.
-
-Zum lokalen Prüfen:
+Lokal starten:
 
 ```bash
 docker build -t ashes-of-meridian .
 docker run --rm -p 8080:8080 ashes-of-meridian
 ```
 
-Danach `http://localhost:8080/` öffnen. Für ein öffentliches Deployment HTTPS verwenden und mindestens Start, lokale Assets, WebGL 2, Touchbedienung und Browserkonsole prüfen.
+Dann `http://localhost:8080/` öffnen. Bei Containeränderungen gezielt Imagebau, Healthcheck, MIME-Typen, 404-Verhalten und erforderliche Laufzeitassets prüfen; weitere Browserprüfungen nach [Risiko](testing.md). Öffentlich HTTPS verwenden.
 
-## Zustands- und Android-Grenzen
+## Zustandsgrenzen
 
-Aether, Upgrades, Fraktionsfreischaltungen und Einstellungen bleiben im `localStorage` des jeweiligen Browser-Origins. Ein Wechsel von Domain, Subdomain oder Protokoll erzeugt daher aus Browsersicht ein anderes Profil; es gibt keine serverseitige Synchronisierung. Gefechte bleiben wie bei `file://` ausschließlich flüchtig.
+Profile liegen im `localStorage` des jeweiligen Browser-Origins. Domain-/Protokollwechsel erzeugt aus Browsersicht ein anderes Profil; es gibt keine serverseitige Sicherung oder Synchronisierung. Das Hosting macht flüchtige Runs nicht wiederherstellbar.
 
-Dieses statische Webimage ist Test- und Browserauslieferung. Es ersetzt kein Android App Bundle und führt weder Capacitor noch AdMob ein; der spätere Play-Store-Weg bleibt separat in [Android, Google Play und Werbung](android.md) beschrieben.
-
-[Architektur](architecture.md) · [Prüfverfahren](testing.md)
+Das Image ist keine Android-App. Eine mögliche Hülle mit Werbung bleibt eine [zurückgestellte Option](issues/android.md), kein Auslieferungsvertrag.

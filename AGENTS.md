@@ -1,39 +1,37 @@
 # Einstieg für KI-Agenten
 
-## In wenigen Minuten orientieren
+## Orientierung
 
-1. [README.md](README.md): Projektstand, Start, Core Loop und Dokumentationskarte.
-2. Je nach Aufgabe: [Gameplay](docs/gameplay.md) für Regeln/Bedienung, [Architektur](docs/architecture.md) für Code/Schnittstellen, [Grafik](docs/rendering.md) für Rendering/Assets, [Tests](docs/testing.md) für Prüfverfahren. Vor strukturellen Änderungen immer Architektur lesen.
-3. `git status --short` prüfen, dann betroffene Quellen und Tests lesen. [Worklog](docs/worklog.md) enthält nur den kompakten Übergabestand und letzte Nachweise, keine zusätzliche Spezifikation.
-
-**Stand:** Der Core Loop aus Gefecht → Aether-Evakuierung → permanenten Upgrades → neuem Gefecht ist implementiert. Nächster Schwerpunkt ist Validierung auf echten Geräten und über vollständige Runs, nicht Featureausbau. [Nächste Schritte](docs/gameplay.md#nächste-schritte-und-grenzen) sind Prüfprioritäten, keine pauschale Implementierungsfreigabe. Breites Refactoring und weitere TypeScript-Migration bleiben bis zu einem neuen Auftrag pausiert.
-
-## Quellen und Befehle
-
-- `index.html`, `styles/` und `src/` sind handgepflegte Quellen. Ausnahme: `src/renderer/assets.js` wird mit `npm run embed:textures` bytegleich aus `assets/textures/` erzeugt und nicht direkt bearbeitet. Simulation in `src/simulation/`, UI in `src/ui/`, WebGL in `src/renderer/`; vollständige Codekarte in der Architektur.
-- Einmalig `npm install`; `npm run build` erzeugt klassische Skripte unter `dist/src/`. `dist/` nie direkt bearbeiten oder einchecken; die eingecheckte Textur-Einbettung nur über das vorgesehene Skript aktualisieren.
-- `npm test` baut neu und führt die Node-Regression aus. Testdateien unter `tests/`, gemeinsame VM-/Szenariohelfer unter `tests/helpers/`, feste Referenzen unter `tests/fixtures/`.
-- Auslieferungsziel: gebaute `index.html` direkt über `file://` öffnen. Kein erforderlicher Server, CDN, Laufzeit-Import oder Paketinstallation im Browser; keine abschwächenden Sicherheitsflags.
+1. [README.md](README.md) für Start und Projektüberblick lesen, `git status --short` prüfen.
+2. Betroffenes [Issue](docs/issues/), Quellen und Tests erkunden; `rg`/`find` statt einer gepflegten Codekarte nutzen.
+3. Fachreferenzen nur nach Bedarf lesen: [Spielregeln](docs/gameplay.md), [Architektur](docs/architecture.md), [Grafik/Assets](docs/rendering.md), [Prüfverfahren](docs/testing.md). Vor strukturellen Änderungen Architektur lesen.
 
 ## Leitplanken
 
 - Kleinste sinnvolle Änderung; Formatierung, strukturelles Refactoring und Verhaltensänderungen getrennt halten. Keine beiläufigen Änderungen an Balancing, Darstellung oder Regeln; bekannte Probleme nicht stillschweigend korrigieren.
+- Breites Refactoring und weitere TypeScript-Migration bleiben ohne neuen Auftrag pausiert. Issues und Prüfprioritäten sind keine automatische Implementierungsfreigabe.
 - Seedbasierte Hindernisverteilung, Kollisionsradien und RNG-Aufrufreihenfolge schützen. Auch kosmetische Effekte nutzen teilweise den Simulations-RNG. [Referenzwerte](docs/reference-tests.md) nicht zur Reparatur fehlgeschlagener Tests neu erzeugen.
-- Entwicklungsprototyp: keine Rückwärtskompatibilität, Migrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag. Nur das permanente Profil wird gespeichert, keine Runs.
-- Bildassets werden ausschließlich als WebP mit Qualität 80 gepflegt; keine PNGs einchecken. Texturquellen und Einbettungen mit `npm run embed:textures` synchronisieren. Assets trotzdem nicht nur wegen vermeintlicher Redundanz löschen oder austauschen; Pflegeverfahren in der Grafikreferenz beachten.
+- Entwicklungsprototyp: keine Rückwärtskompatibilität, Migrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag.
+- Quellen statt Build-Ausgaben bearbeiten; `dist/` nie direkt bearbeiten oder einchecken. Die generierte `src/renderer/assets.js` ausschließlich mit `npm run embed:textures` aus den Texturquellen aktualisieren.
+- Bildassets ausschließlich als WebP mit Qualität 80 pflegen, keine PNGs einchecken. Assets nicht wegen vermeintlicher Redundanz löschen oder austauschen; [Pflegeverfahren](docs/rendering.md) beachten.
+- Direkte `file://`-Auslieferung erhalten: kein erforderlicher Server, CDN, Laufzeit-Import oder abgeschwächte Browser-Sicherheitsflags.
 - Zusammenhängende, geprüfte Änderungen eigenständig committen. Fremde oder unzusammenhängende vorhandene Änderungen nicht aufnehmen.
 
-## Prüfen und dokumentieren
+## Risikobasiert prüfen
 
-- Spielcode-/Teständerungen: grundsätzlich `npm test`. Nur mechanische, verhaltensneutrale JS-/TS-Kleinständerungen ohne Logik-/RNG-/Schnittstelleneingriff dürfen mit Build und Diff-Sichtung geprüft werden; im Zweifel vollständiger Lauf.
-- Eingabe, Layoutstruktur, Rendering oder Auslieferung: zusätzlich gezielter `file://`-Browsercheck. Node ist kein WebGL-Nachweis, Headless-Touch kein Echtgerätetest.
-- Reine Dokumentation oder minimale risikoarme Text-/Rahmen-/Abstandsänderungen: Diff und passende statische Prüfungen, keine Browsertests auf Vorrat. Details in [docs/testing.md](docs/testing.md).
-- Referenzen direkt auf den Ist-Zustand bringen, nicht historische Nachträge anhängen. Nur [docs/worklog.md](docs/worklog.md) führt kurze Änderungseinträge mit tatsächlich ausgeführten Prüfungen und offenen Grenzen; ältere Einträge verdichten, Details bleiben in Git.
-- Bei Dokumentationspflege Wiederholungen, veraltete Angaben und tote Links entfernen. AGENTS.md bleibt Wegweiser und Regelwerk, nicht Arbeitshistorie.
+- Prüfungen nach betroffenem Verhalten und Reichweite wählen, nicht pauschal nach Dateiendung. Lokale Änderungen brauchen meist Build und gezielte Tests; mechanische, verhaltensneutrale Kleinständerungen können mit Build und Diff geprüft werden.
+- Gesamtsuite bei gemeinsamen Simulations-/RNG-/Ladeverträgen, breiten Eingriffen oder nicht sinnvoll eingrenzbaren Auswirkungen. Längere Simulationen gezielt für Langzeitverhalten, KI, Navigation und Ökonomie einsetzen; nicht bei jeder Kleinigkeit.
+- Dokumentation mit Diff und betroffenen Links/Angaben prüfen. Browserchecks nur bei einer konkreten technischen Fragestellung; keine automatischen Screenshotserien auf Vorrat.
+- Visuelle und akustische Abnahme erfolgt durch den Menschen. Technische Prüfung ist keine Darstellungs-, Hör- oder Echtgerätebestätigung. Ausgeführte Prüfungen und relevante offene Grenzen im Abschluss nennen; nötige Folgearbeiten ins Issue. Details und Befehle: [Prüfverfahren](docs/testing.md).
+
+## Dokumentation pflegen
+
+- Dokumentiere dauerhafte Entscheidungen, Begründungen, nicht offensichtliche Fallen und Pflegeverfahren; keine vollständigen Datei-/Methodenlisten, aus Code ablesbaren Wertetabellen oder nacherzählten Tests.
+- Jede Information hat einen maßgeblichen Ort. Andere Stellen verlinken dorthin. README bleibt Einstieg, AGENTS.md Regelwerk; offene Arbeit gehört in Issues, abgeschlossene Historie nach Git. Kein zusätzliches Worklog.
+- Bei Änderungen nur tatsächlich betroffene Dokumentation aktualisieren und dort veraltete Angaben, Wiederholungen und tote Links entfernen. Keine routinemäßigen Änderungsberichte oder Testzahlen an Fachreferenzen anhängen.
+- Dokumentationsbereinigung ist eine regelmäßige Wartungsaufgabe: bei Wartungsrunden `docs/` auf Relevanz, Redundanzen und erledigte Issues durchsehen. Größere Bereinigungen als eigenen Auftrag bzw. eigenes Issue bündeln, nicht als Nebenarbeit jedes Codeauftrags.
 
 ## Issues
 
-- Issues werden lokal im Repository in `docs/issues` verwaltet.
-- Kommentare und ergänzende Infos werden in den dortigen Dateien fortlaufend gepflegt.
-- Ist ein Issue erledigt, wird die Datei gelöscht.
-- Auswirkungen auf andere bestehende Issues müssen dort ergänzt werden.
+- Offene Aufgaben, Entscheidungen, Kommentare und nötige Übergaben ausschließlich in `docs/issues/` führen. Tatsächliche Befunde knapp mit Prüfkontext festhalten, nicht jeden Arbeitsschritt protokollieren.
+- Auswirkungen auf andere bestehende Issues dort ergänzen. Erledigte Issue-Dateien löschen; ihre Historie bleibt in Git.

@@ -1,50 +1,57 @@
 # Prüfungen
 
-## Prüfaufwand
+Prüfaufwand folgt dem Änderungsrisiko. Nicht jede Codeänderung braucht die Gesamtsuite, nicht jede Grafikänderung einen Browserlauf. Vorab klären: Welches Verhalten kann betroffen sein, und welche Prüfung liefert dafür einen belastbaren Nachweis?
 
-- **Dokumentation, minimale Text-/Rahmen-/Abstandsänderungen:** Diff sichten, bei Dokumentationsänderungen Links und Angaben prüfen; kein zusätzlicher Browserlauf nötig.
-- **Mechanische, verhaltensneutrale JavaScript-/TypeScript-Kleinständerungen:** `npm run build` und Diff-Sichtung genügen, etwa bei einer lokalen Konstantenextraktion mit unverändertem Wert. Voraussetzung: keine Änderung an Logik, RNG-Aufrufreihenfolge, Schnittstellen oder Auswertungsreihenfolge; kein struktureller Umbau.
-- **Sonstiger Spielcode oder Tests:** vollständiges `npm test` ausführen, passende Regressionstests ergänzen. Bei Änderungen an Spiellogik, RNG, Schnittstellen oder Tests sowie im Zweifel ist der vollständige Lauf Pflicht.
-- **Eingabe, Layoutstruktur, Rendering oder Auslieferung:** zusätzlich gezielt direkt unter `file://` prüfen, insbesondere betroffene Touch-Aktionen und Portraitgrößen. Bei Änderungen am Webcontainer außerdem Image bauen, Healthcheck/MIME-Typen/404-Verhalten prüfen und die ausgelieferte Seite über HTTP öffnen. Keine vollständige Browser-Regressionsserie für jeden kleinen Schritt.
-- Ergebnisse und ausgelassene relevante Bereiche kurz nur im [Arbeitsprotokoll](worklog.md) festhalten. Ältere Nachweise sind keine neu ausgeführten Tests.
+## Prüfwahl
 
-## Automatisierte Tests
+| Änderung / Risiko | Übliche Prüfung |
+| --- | --- |
+| Dokumentation | Diff, betroffene Links und Angaben; keine Spieltests |
+| Minimale Text-/Rahmen-/Abstandsänderung | Diff und passende statische Prüfung |
+| Mechanische, verhaltensneutrale Code-Kleinständerung | Build und Diff; nur ohne Logik-/RNG-/Schnittstelleneingriff |
+| Lokale Verhaltensänderung | Build und gezielte betroffene Tests; Regression für den Fehler bzw. neuen Vertrag |
+| Gemeinsame Simulation, RNG, Ladeverträge, breite oder unklar eingrenzbare Auswirkungen | Gesamtsuite mit `npm test` |
+| Langzeitverhalten, KI, Navigation oder Ökonomie | Passende längere Simulationsszenarien; bei übergreifenden Änderungen Gesamtsuite |
+| Rendering, Eingabe oder Auslieferung | Technische Prüfung der konkreten Änderung; Browsercheck, wenn Node/statische Prüfung die Fragestellung nicht abdecken |
 
-Nach einmaligem `npm install` baut und prüft ein Befehl die aktuelle Laufzeitausgabe:
+Bei Unsicherheit die mögliche Auswirkung prüfen und den Umfang entsprechend erweitern, nicht automatisch bei jeder Kleinigkeit alle Simulationen starten. Bestehende Langzeittests nicht wegen ihrer Laufzeit entfernen oder ihre Erwartungen zum Grünmachen abschwächen.
+
+## Befehle und Auswahl
+
+Tests laufen gegen die erzeugten klassischen Skripte, deshalb vor einem gezielten Lauf neu bauen:
+
+```bash
+npm run build
+node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-persistence.check.cjs
+```
+
+Einzelne Szenarien lassen sich über ihren Testnamen wählen, zum Beispiel nach dem Build:
+
+```bash
+node --max-old-space-size=128 --test --test-concurrency=1 --test-name-pattern='profile defaults' tests/ashes-of-meridian-persistence.check.cjs
+```
+
+Die passende Datei bzw. den Namen in `tests/` suchen (`rg 'test\(' tests`); keine parallele Markdown-Abdeckungsliste pflegen. Bei Namensfiltern die Ausgabe prüfen: übersprungene Tests sind keine bestandenen Tests. Filter umgehen außerdem nicht unbedingt den Aufbau auf Dateiebene. Für Änderungen an gemeinsamen Helfern auch deren Nutzer berücksichtigen.
 
 ```bash
 npm test
 ```
 
-Das Skript leert `dist/`, kompiliert die Quellen und führt anschließend die zehn fachlichen Node-Testdateien sowie `tests/models/*.check.cjs` gegen die erzeugten klassischen Skripte aus. Ein Testworker; 128 MiB begrenzen nur den JS-Heap, nicht den gesamten Prozessspeicher. Für einen erneuten reinen Build genügt `npm run build`.
+baut neu und führt die Gesamtsuite einschließlich längerer Simulationen aus. Die genaue Auswahl und Runneroptionen stehen in `package.json`. **`npm test -- …` ist kein Ersatz für einen gezielten Dateilauf** mit dem obigen Node-Befehl.
 
-Prüfzuständigkeiten klein halten: CPU-Simulationstests laden keinen Renderer und erzeugen keine Grafikmeshes, aber weiterhin echte Welten samt Massiv-Kollision. Einheitenregel-Szenarien isolieren den strategischen Controller; `tests/ashes-of-meridian-ai.check.cjs` verwendet dagegen echte Controller und reguläre Produktion. Kontrollierte Testaufstellungen sind keine privilegierten Startarmeen im Spiel. Worker-Stufen 0–5 werden für jede Fraktion geprüft; Karten separat statt als redundantes Kreuzprodukt. Terrain-Tests schützen sechs unveränderte Desert-/Mothership-Layouts mit festen Digests und prüfen die neu gestaltete Alien-Karte über sechs Szenarien plus 40 zusätzliche Seeds mit unabhängiger Zugänglichkeitsprüfung. Die vollständige Raster-/Umrissprüfung erfolgt an einer detailliert geprüften Massivwelt; Alien-Tests prüfen zusätzlich offene Haupt-/Flankenrouten, einen dichten Außenwald auf allen vier Seiten, nach innen abnehmende Dichte, exakte einzelne Wurzelblocker samt Korridorabständen/Minimapfarben, flache Bodenfortsetzung, unabhängige Außen-/Dekor-RNGs, Wiederholbarkeit sowie Einzelmesh- und instanzgewichtetes Gesamtbudget. Mesh-Erzeugung und View-/Fog-Uploads gehören in Geometrie-/Präsentationstests, nicht in jeden Gefechtsstart. Durchgehende Verkehrs-, Produktions- und Kampfszenarien nicht nur wegen ihrer Laufzeit streichen.
+CPU-Simulationstests laden keinen Renderer; Grafikgeometrie und Uploads separat prüfen. Tests für einzelne Einheitenregeln isolieren den strategischen Controller, KI-Abnahmen verwenden echte Aktionen/Produktion. Neue Abdeckung fachlich klein halten, keine redundanten Karten-/Fraktions-/Upgrade-Kreuzprodukte ohne zusätzlichen Erkenntniswert. Umgang mit Sollwerten: [Feste Referenzen](reference-tests.md).
 
-| Bereich | Abdeckung |
-| --- | --- |
-| Terrain/Kristalle | Syntax, bytegleiche Einbettung aller sechs kanonischen Texturquellen, Ring-/Massiv- und organische Alien-Geometrie samt Normalen/Budgets, kleine Felslayouts, Polygonraster auch ohne Bergform, isolierte Kartenrezepte/kosmetische RNGs, variable Welt-/Rastergrößen samt Validierung, äußerer Navigation und skaliertem A*-Budget, freie/verbundene Ressourcen- und Basiszugänge, echte Umwege, keine Straßenflächen/-markierungen |
-| Harness/Core | Lokale Skripte, Reihenfolge/Pfadvertrag, Isolation, neutrale Fraktions-IDs und drei sprechende Karten-IDs samt Katalogzuordnung und rendererfreiem Rezept-Ladevertrag, Mathematik und Seed-RNG; bytegleiche Musikfreigaben, Playlistreihenfolge/10-s-Startverzögerung und -Pausen/Rücksprung, Pause/Mute/Reset und Wiedergabefehler |
-| Simulation | Gefechtsstart/-ziel, Layoutdaten für Spawn/Ressourcen/Kamera/KI und deklarative Weltereignisse, Bauen/Produktion/Bewegung außerhalb der bisherigen Grenzen und kollisionsfreie räumliche Hashschlüssel, Startökonomie/passives Einkommen, Befehle, freie Worker-Zuweisung, Baufortsetzung/-ablösung ohne Mehrarbeitertempo, Reparatur/Verkauf, Produktion/Ausfahrt, Kampf, Upgrades, vollständiger Neustart; sechsminütiger Worker-Gegenverkehr: Lieferungen je Worker/Minute, Schutz vor anhaltenden Richtungswechseln |
-| Gegner-KI | Symmetrischer Baseline-Start aller Fraktionspaare, unabhängige Konten/Fraktionskosten, Worker-/Raffinerieeinkommen, faire Zielerfassung und kopiertes Sichtgedächtnis, unsichtbare gegnerische Effektmarker, alle Fähigkeiten samt Controllerheuristiken, Wirtschaftsziele/Verteidigung, verlorene Bauarbeiter und fehlgeschlagene Bau-/Produktionsversuche; neun bisherige und drei Alien-Planet-KI-gegen-KI-Langläufe bis zum Ergebnis (maximal 20 Simulationsminuten auf Desert/Mothership, 30 auf Alien Planet), Audit bezahlter Fundamente/echter Produktionsausgänge und Körperabstände einschließlich Bauplatzfreiheit, Seed-Reproduzierbarkeit |
-| Persistence | Nur permanentes Profil: Aether-/Upgrade-/Fraktionsfreischaltungs-Normalisierung, Fehlerfälle, flüchtiger Storage-Ersatz; keine Run-/Backup-API |
-| Präsentation | Welt-/Effektgrenzen, deklarativer Terrain-Modell-/Renderprofil-Dispatch, Weltgrößenwechsel samt Terrainbounds und Fogdaten, feste Zeichen-/Effekt-/RNG-Referenzen; Modell-/Schussvarianten bleiben unabhängig von Anzeigenamen |
-| Einzelmodelle | Registry-/Dispatchvertrag aller 21 Gebäude und sieben Fraktion-0-Einheiten; Meshhilfen (geschlossene Panzerung und organische Schalen ohne degenerierte Pole, Rotation, Normalen); einzelne Mesh-/Assemblierungsbounds, Merkmale, Gesamtbudgets und Farben/Alpha/Layer/Material; unveränderte Bau-/Kristall-/Orbital-/Zielwinkel-, Lauf-/Flug-/Frachtverträge, vertiefte Mündungen und geschlossener Air-Rumpf; feste Zeichenreferenzen aller Gebäude und Fraktion-1/2-Einheiten sowie ergänzungsbereinigter Worker-Altassemblierung |
-| Steuerung | Fraktions-/Kartennamen aus dem Katalog unabhängig von technischen IDs, Gegnerreihenfolge und Freischaltung; neutrale Portraitpfade aller 14 Aktionen; Touch-Auswahl/Gesten, Move-/Attack-move-Umschaltung und Tempo-Button unter der Uhr samt Anzeige/Lebenszyklus/Profilfreiheit, HTML-Dreier-Deck-Reihenfolge, Worker-Kontexttaps auf eigene Bau-/Reparaturziele mit Auswahl-/Gestenschutz, Fraktionssperre/Freischaltung samt abgesichertem Start, Ergebnis-Aetherevakuierung/Tiergrenzen 100–1.000/Preise, Welt-Viewport-Lebenszyklus/-Eingabegrenzen und Minimap-Ausschnitt, größenabhängige Minimap-Raster/-Marker/-Eingaben und Kameragrenzen, Kategorien/**Back**, feste Gebäudeaktionen, Queue-Aggregation/-Abbruch und Pausenschutz, Tab-Wechsel, Run-Abbruch, Ergebnisaktionen und Upgrade-Rückkehr ohne erneuten Ergebnis-Sound |
-| Renderer | Shader-Quellvertrag samt Boden-Atlasrechtecken/-Sampling, Kartenprofil-Texturauswahl, optionale gespiegelte Bodenwiederholung und Dekoruniforms ohne erneute Uploads, Fog-Neuallokation nur bei Rastergrößenwechsel inklusive ungerader Zeilenbreiten, einmaligem Atlasupload, Weltseed-Übergabe und erhaltener Schattenberechnung und High-only-Tilt-Shift/Kernel/Schärfezone, CSS-Viewport/Client-Projektion/Rückprojektion und erhaltene Zoomgröße, MSAA-Allokation/Resolve/Resize/Fallback mit WebGL-Testdouble |
+## Browser und menschliche Abnahme
 
-[Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests. Der Harness prüft aktive Lade-/Isolationsverträge und relevante APIs, keine festen Methodenzahlen. Negativtests bleiben sinnvoll, wenn sie heutige Regeln schützen (z. B. keine Run-Speicherung, unzulässige Befehle); reine Nachweise entfernter Features gehören nicht dauerhaft in die Suite.
+Ein gezielter technischer Browsercheck verwendet den aktuellen Build, ein isoliertes Profil und direkt `file://`, ohne abgeschwächte Sicherheitsflags. Nur betroffene Abläufe prüfen, etwa:
 
-## Manuelle Zuschauerpartie
+- Shader-/Assetänderung: Laden, Kompilieren, WebGL-Fehler, betroffene Qualität.
+- Viewport/Eingabe: Projektion und Picking, Overlayoffset, Resize und betroffene Touch-Aktion.
+- Run/Profile: betroffener Start-, Pause-, Ergebnis- oder Reload-Pfad.
+- Webcontainer: Imagebau, Healthcheck, MIME-Typen, fehlende Assets/404 und bei Bedarf HTTP-Start gemäß [Deployment](deployment.md).
 
-`npm run simulate:visible` ist ausschließlich ein persönlicher Beobachtungsbefehl: normales Standardbrowserfenster ohne gesetzte Größe, flüchtiges Profil, KI gegen KI, zunächst 1× und nach zehn Echtzeitsekunden 2×. Er ist absichtlich kein Bestandteil von `npm test`, CI oder Agentenabnahmen und darf dort nicht automatisch geöffnet werden. Automatisierte Browserchecks verwenden weiterhin ihre isolierten Harnesses; bloßes Zuschauen ersetzt keinen reproduzierbaren Test oder vollständigen menschlichen Run.
+**Technisch geprüft und visuell bestätigt sind getrennte Aussagen.** Visuelle und akustische Abnahme erfolgt durch den Menschen; bei Bedarf konkret benennen, was noch anzusehen oder anzuhören ist. Automatisierte Screenshots können eine gezielte Diagnose unterstützen, sind aber keine Pflichtserie und kein menschliches Qualitätsurteil.
 
-## Gezielter Browsercheck
+Node führt kein GLSL aus. Headless-/Software-WebGL ist kein Echtgeräte-Performancenachweis; emuliertes Touch kein Nachweis realer Gesten unter Last. Automatische KI-Partien beweisen kein menschliches Balancing. Offene Abnahme: [Geräte und vollständige Runs](issues/playtest-validation.md).
 
-Zuerst `npm run build` ausführen. Dann mit einem eigenen Profil ohne wichtige Daten `index.html` über `file://` öffnen; keine abgeschwächten Sicherheitsflags. Je nach Änderung prüfen:
-
-- Start, lokale Ressourcen, Konsole/WebGL; betroffene Grafikqualität und Fenstergrößen. Bei Postshaderänderungen möglichst identische Szene/Zeit für A/B-Pixelvergleich verwenden; High-Schärfezone, beide sichtbaren Weltränder, ausgeschlossene Qualitätsstufen und DPR prüfen. Nach Viewportänderungen zusätzlich Canvas-/HUD-Abgrenzung, Overlayoffsets, Minimap-Ausschnitt, Touch-Ziele und Menü-/Pause-/Resize-Lebenszyklus prüfen. Beim Dreier-Deck: bündige Unterkanten, erreichbare Werkzeuge/Fähigkeiten, aufwärts wachsende Untermenüs samt Scrollen/**Back**, Tempo unter der Uhr und schmale/querformatige Rückfalllayouts.
-- Touch-Auswahl/Bodenauftrag, Pan/Pinch/Minimap; erreichbare Aktionen, Zielbestätigung/Cancel und Pause. Bei Menüänderungen zusätzlich scrollbare Dialoge samt Abschlussknöpfen, schmale Formulare, gesperrte/aktive Fraktionen und bezahlbare/gesperrte Upgrades prüfen.
-- Betroffene Bau-/Rekrutierungs-/Reparatur-/Verkaufsabläufe und Erstattungen. Bei Run-Lebenszyklusänderungen: Pause/Fortsetzen, Hauptmenü-Abbruch, Reload ohne Run, weiterhin gespeicherte Aether-Reserven/Upgrades/Einstellungen/Fraktionsfreischaltungen und Ergebnis → Upgrades → Ergebnis/Neustart sowie Hauptmenü.
-- Bei Grafikänderungen Ergebnis ansehen, nicht nur `gl.getError()` abfragen. Audio tatsächlich anhören, wenn hörbares Verhalten geprüft werden soll.
-
-Node führt kein GLSL aus. Headless/CDP-Touch mit kontrolliertem Setup ist kein Echtgerät-, zuverlässiger Tap-Timing-, Langzeitspiel-, Screenreader- oder Hörnachweis. Andere Browser/GPUs und tatsächliche Mobilgeräte getrennt bewerten.
+Die [manuelle Zuschauerpartie](../README.md#entwicklung) ist kein Testbefehl und wird von Agenten nie automatisch geöffnet. Im Abschluss tatsächlich ausgeführte Prüfungen und relevante ausgelassene Bereiche nennen. Nur wenn daraus offene Arbeit entsteht, den Befund samt Kontext im passenden Issue festhalten; kein separates Prüfprotokoll oder Fortschreiben von Testzahlen in Referenzen.
