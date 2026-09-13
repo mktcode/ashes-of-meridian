@@ -207,27 +207,27 @@
         e.nextPath = 0;
         e.stuck = 0;
       },
-      command(this: MeridianGame, ids: number[], order: CommandOrder) {
+      command(this: MeridianGame, ids: number[], order: CommandOrder, team: PlayerTeam = 0) {
         if (!this.s || this.s.result) return;
-        let units = ids.map(id => this.get(id)).filter(e => e && e.team === 0) as Entity[];
+        let units = ids.map(id => this.get(id)).filter(e => e && e.team === team) as Entity[];
         let mobile = units.filter(e => e.kind === 'unit') as UnitEntity[];
         const target = 'id' in order ? this.get(order.id) : null,
-          task = this.workerTask(target);
+          task = this.workerTask(target, team);
         if (target && task && (order.type === 'smart' || order.type === task)) {
           const worker = mobile.filter(e => e.type === 'worker' && e.id !== target.id)
             .sort((a, b) => distance(a, target) - distance(b, target) || a.id - b.id)[0];
           if (worker) {
-            if (task === 'repair' && this.s.alloy <= 0.1) {
-              this.emit('toast', 'No alloy');
+            if (task === 'repair' && this.account(team).alloy <= 0.1) {
+              this.notify(team, 'toast', 'No alloy');
               return;
             }
             // Explicit orders may replace a builder, but never add construction speed.
             if (task === 'build')
               for (const other of this.alive(e => e.kind === 'unit' && e.type === 'worker' &&
-                e.team === 0 && e.id !== worker.id && e.order.type === 'build' && e.order.id === target.id))
+                e.team === team && e.id !== worker.id && e.order.type === 'build' && e.order.id === target.id))
                 this.setOrder(other, { type: 'idle' });
             this.setOrder(worker, { type: task, id: target.id, x: target.x, z: target.z });
-            this.emit('order', { type: task, x: target.x, z: target.z, count: 1 });
+            this.notify(team, 'order', { type: task, x: target.x, z: target.z, count: 1 });
             return;
           }
         }
@@ -251,7 +251,7 @@
                 o = { type: 'attack', id: target.id, x: target.x, z: target.z };
               else if (target?.kind === 'resource' && target.type === 'crystal' && e.type === 'worker')
                 o = { type: 'mine', id: target.id };
-              else if (target && target.kind === 'unit' && target.team === 0)
+              else if (target && target.kind === 'unit' && target.team === team)
                 o = { type: 'follow', id: target.id };
               else o = { type: 'move', x: o.x, z: o.z };
             }
@@ -259,7 +259,7 @@
           this.setOrder(e, o as UnitOrder);
         }
         if (mobile.length)
-          this.emit('order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
+          this.notify(team, 'order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
       },
       finishOrder(this: MeridianGame, e: UnitEntity) {
         e.order = { type: 'idle' };

@@ -231,12 +231,12 @@
       updateHUD() {
         let s = this.game.s;
         if (!s) return;
-        $('alloyCount').textContent = Math.floor(s.alloy).toLocaleString();
-        $('gasCount').textContent = Math.floor(s.gas).toLocaleString();
+        $('alloyCount').textContent = Math.floor(s.teams[0].alloy).toLocaleString();
+        $('gasCount').textContent = Math.floor(s.teams[0].gas).toLocaleString();
         const supply = this.game.supply(), capacity = this.game.cap();
         $('supplyCount').textContent = supply + ' / ' + capacity;
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
-        $('energyCount').textContent = Math.floor(s.energy);
+        $('energyCount').textContent = Math.floor(s.teams[0].energy);
         $('gameTime').textContent = formatTime(s.time);
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
         speedButton.textContent = speedLabel;
@@ -275,12 +275,12 @@
             disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
           else if (k === 'ability') {
             let energy = ABILITIES[arg]?.energy;
-            disabled = s.energy < energy || s.abilities[arg] > s.time;
+            disabled = s.teams[0].energy < energy || s.teams[0].abilities[arg] > s.time;
             let badge = b.querySelector('small');
             if (badge)
               badge.textContent =
-                s.abilities[arg] > s.time
-                  ? Math.ceil(s.abilities[arg] - s.time) + 's'
+                s.teams[0].abilities[arg] > s.time
+                  ? Math.ceil(s.teams[0].abilities[arg] - s.time) + 's'
                   : energy + 'ϟ';
           }
           if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||

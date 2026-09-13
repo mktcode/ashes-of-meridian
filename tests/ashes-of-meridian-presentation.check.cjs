@@ -16,7 +16,7 @@ test('world and simulation start and step without renderer, geometry or browser 
   vm.runInContext('Math.random = () => { throw Error("Unseeded randomness"); }', context);
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   game.start({ seed: 1409, faction: 0 });
-  assert.deepEqual([game.s.alloy,game.s.gas],[250,0]);
+  assert.deepEqual([game.s.teams[0].alloy,game.s.teams[0].gas],[250,0]);
   assert.equal(game.train('worker'), true);
   assert.equal('R' in game, false); assert.equal('R' in game.world, false);
   for (let i = 0; i < 1000; i++) { game.step(.05); game.effects.tick(.05); }

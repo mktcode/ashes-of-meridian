@@ -227,9 +227,10 @@ interface TimedArea extends Position {
 
 interface Field extends TimedArea {
   type: 'bloom' | 'repair';
+  team: PlayerTeam;
 }
 
-interface Scan extends TimedArea {}
+interface Scan extends TimedArea { team?: PlayerTeam; }
 
 interface BattleResult {
   win: boolean;
@@ -244,6 +245,14 @@ interface RunTriggers extends Record<string, number | boolean> {
   solar?: number;
 }
 
+type PlayerTeam = 0 | 1;
+interface TeamState {
+  alloy: number;
+  gas: number;
+  energy: number;
+  abilities: Record<AbilityType, number>;
+}
+
 interface RunState {
   seed: number;
   faction: FactionId;
@@ -251,15 +260,12 @@ interface RunState {
   biome: BiomeType;
   meta: Record<string, number>;
   time: number;
-  alloy: number;
-  gas: number;
-  energy: number;
+  teams: [TeamState, TeamState];
   nextId: number;
   entities: Entity[];
   scans: Scan[];
   strikes: Strike[];
   fields: Field[];
-  abilities: Record<AbilityType, number>;
   wave: number;
   nextWave: number;
   enemyBudget: number;

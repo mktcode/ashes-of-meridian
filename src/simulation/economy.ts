@@ -12,123 +12,123 @@
         if (!this.unitFits({type, size: UNITS[type].size, exit}, x, z)) return null;
         return this.spawn('unit', type, x, z, b.team, b.faction, {rot: yaw, exit});
       },
-      cap(this: MeridianGame) {
+      cap(this: MeridianGame, team: PlayerTeam = 0) {
         return Math.min(
           180,
-          this.alive(e => e.team === 0 && e.kind === 'building' && e.progress >= 1).reduce(
+          this.alive(e => e.team === team && e.kind === 'building' && e.progress >= 1).reduce(
             (a, e) => a + ((BUILDINGS[e.type as BuildingType] as BuildingDefinitionShape).cap || 0),
             0
           )
         );
       },
-      supply(this: MeridianGame) {
+      supply(this: MeridianGame, team: PlayerTeam = 0) {
         let n = 0;
         for (let e of this.s!.entities)
-          if (e.hp > 0 && e.team === 0) {
+          if (e.hp > 0 && e.team === team) {
             if (e.kind === 'unit') n += UNITS[e.type].supply || 0;
             for (let q of e.queue || []) n += UNITS[q.type]?.supply || 0;
           }
         return n;
       },
-      cost(this: MeridianGame, type: UnitType | BuildingType, kind: 'unit' | 'building' = 'unit'): Cost {
+      cost(this: MeridianGame, type: UnitType | BuildingType, kind: 'unit' | 'building' = 'unit', team: PlayerTeam = 0): Cost {
         let d: BuildingDefinitionShape | UnitDefinitionShape = kind === 'building'
           ? BUILDINGS[type as BuildingType]
           : UNITS[type as UnitType],
           mul = kind === 'unit' && type !== 'worker'
-            ? (this.s!.faction === FACTION_ID.SECOND ? 0.85 : this.s!.faction === FACTION_ID.THIRD ? 1.12 : 1)
+            ? (this.factionFor(team) === FACTION_ID.SECOND ? 0.85 : this.factionFor(team) === FACTION_ID.THIRD ? 1.12 : 1)
             : 1;
         return { cost: Math.ceil(d.cost * mul), gas: d.gas || 0 };
       },
-      afford(this: MeridianGame, c: Cost) {
-        return this.s!.alloy >= c.cost && this.s!.gas >= c.gas;
+      afford(this: MeridianGame, c: Cost, team: PlayerTeam = 0) {
+        return this.account(team).alloy >= c.cost && this.account(team).gas >= c.gas;
       },
-      spend(this: MeridianGame, c: Cost) {
-        if (!this.afford(c)) {
-          this.emit(
+      spend(this: MeridianGame, c: Cost, team: PlayerTeam = 0) {
+        if (!this.afford(c, team)) {
+          this.notify(team,
             'toast',
-            this.s!.alloy < c.cost
+            this.account(team).alloy < c.cost
               ? 'Insufficient alloy. Assign more workers to crystals.'
               : 'Insufficient aether. Build a refinery beside a vent.'
           );
           return false;
         }
-        this.s!.alloy -= c.cost;
-        this.s!.gas -= c.gas;
+        this.account(team).alloy -= c.cost;
+        this.account(team).gas -= c.gas;
         return true;
       },
-      has(this: MeridianGame, type: BuildingType) {
+      has(this: MeridianGame, type: BuildingType, team: PlayerTeam = 0) {
         return (
-          this.alive(e => e.team === 0 && e.kind === 'building' && e.type === type && e.progress >= 1)
+          this.alive(e => e.team === team && e.kind === 'building' && e.type === type && e.progress >= 1)
             .length > 0
         );
       },
-      availableProducers(this: MeridianGame, buildingType: BuildingType): BuildingEntity[] {
-        return this.alive(e => e.team === 0 && e.kind === 'building' &&
+      availableProducers(this: MeridianGame, buildingType: BuildingType, team: PlayerTeam = 0): BuildingEntity[] {
+        return this.alive(e => e.team === team && e.kind === 'building' &&
           e.type === buildingType && e.progress >= 1 && e.queue.length < 5) as BuildingEntity[];
       },
-      train(this: MeridianGame, type: UnitType) {
+      train(this: MeridianGame, type: UnitType, team: PlayerTeam = 0) {
         let s = this.s!,
           d = UNITS[type];
         if (!d) return false;
         if (
           type === 'hero' &&
-          (this.alive(e => e.team === 0 && e.type === 'hero').length ||
-            this.alive(e => e.team === 0).some(e => e.queue?.some(q => q.type === 'hero')))
+          (this.alive(e => e.team === team && e.type === 'hero').length ||
+            this.alive(e => e.team === team).some(e => e.queue?.some(q => q.type === 'hero')))
         ) {
-          this.emit('toast', 'Your commander is already deployed or in reconstruction.');
+          this.notify(team, 'toast', 'Your commander is already deployed or in reconstruction.');
           return false;
         }
-        let producers = this.availableProducers(d.from);
+        let producers = this.availableProducers(d.from, team);
         // Global recruitment: assign to the shortest queue, independent of selection.
         producers.sort((a, b) => a.queue.length - b.queue.length || a.id - b.id);
         let b = producers[0];
         if (!b) {
-          this.emit(
+          this.notify(team,
             'toast',
-            this.has(d.from)
+            this.has(d.from, team)
               ? 'Production queues are full (five orders per structure).'
-              : `Construct a ${buildingName(d.from, s.faction)} first.`
+              : `Construct a ${buildingName(d.from, this.factionFor(team))} first.`
           );
           return false;
         }
-        if (this.supply() + d.supply > this.cap()) {
-          this.emit('toast', 'Supply limit. Complete another logistics depot.');
+        if (this.supply(team) + d.supply > this.cap(team)) {
+          this.notify(team, 'toast', 'Supply limit. Complete another logistics depot.');
           return false;
         }
-        let c = this.cost(type);
-        if (!this.spend(c)) return false;
+        let c = this.cost(type, 'unit', team);
+        if (!this.spend(c, team)) return false;
         b.queue.push({ type, progress: 0, time: d.time, ...c });
-        this.emit('queued', type);
+        this.notify(team, 'queued', type);
         return true;
       },
-      cancelQueue(this: MeridianGame, id: number, index: number) {
+      cancelQueue(this: MeridianGame, id: number, index: number, team: PlayerTeam = 0) {
         let b = this.get(id);
-        if (!b || b.team !== 0 || !b.queue[index]) return;
+        if (!b || b.team !== team || !b.queue[index]) return;
         let q = b.queue.splice(index, 1)[0];
-        this.s!.alloy += q.cost;
-        this.s!.gas += q.gas;
-        this.emit('toast', 'Recruitment canceled. Resources refunded.');
+        this.account(team).alloy += q.cost;
+        this.account(team).gas += q.gas;
+        this.notify(team, 'toast', 'Recruitment canceled. Resources refunded.');
       },
-      availableWorkers(this: MeridianGame): UnitEntity[] {
-        return this.alive(e => e.team === 0 && e.kind === 'unit' && e.type === 'worker' &&
+      availableWorkers(this: MeridianGame, team: PlayerTeam = 0): UnitEntity[] {
+        return this.alive(e => e.team === team && e.kind === 'unit' && e.type === 'worker' &&
           e.order.type !== 'build' && e.order.type !== 'repair') as UnitEntity[];
       },
-      workerTask(this: MeridianGame, target: Entity | null): 'build' | 'repair' | null {
-        if (!this.s || this.s.result || !target || target.hp <= 0 || target.team !== 0) return null;
+      workerTask(this: MeridianGame, target: Entity | null, team: PlayerTeam = 0): 'build' | 'repair' | null {
+        if (!this.s || this.s.result || !target || target.hp <= 0 || target.team !== team) return null;
         if (target.kind === 'building' && target.progress < 1) return 'build';
         if ((target.kind === 'building' || target.kind === 'unit') &&
           target.progress >= 1 && target.hp < target.maxHp) return 'repair';
         return null;
       },
-      canBuild(this: MeridianGame, type: BuildingType, p?: Position | null) {
+      canBuild(this: MeridianGame, type: BuildingType, p?: Position | null, team: PlayerTeam = 0) {
         let s = this.s!,
           d: BuildingDefinitionShape = BUILDINGS[type];
         if (!d) return 'Unknown structure.';
-        if (d.requires && !this.has(d.requires as BuildingType))
-          return `Requires ${buildingName(d.requires, s.faction)}.`;
-        if (!this.alive(e => e.team === 0 && e.type === 'worker').length)
+        if (d.requires && !this.has(d.requires as BuildingType, team))
+          return `Requires ${buildingName(d.requires, this.factionFor(team))}.`;
+        if (!this.alive(e => e.team === team && e.type === 'worker').length)
           return 'Recruit a worker at your command center first.';
-        if (!this.availableWorkers().length) return 'No free worker. Workers are building or repairing.';
+        if (!this.availableWorkers(team).length) return 'No free worker. Workers are building or repairing.';
         if (!p) return '';
         let r = d.size;
         if (Math.abs(p.x) > 83 - r || Math.abs(p.z) > 83 - r)
@@ -154,13 +154,13 @@
         }
         return '';
       },
-      build(this: MeridianGame, type: BuildingType, p: Position, selected: number[] = []) {
-        let reason = this.canBuild(type, p);
+      build(this: MeridianGame, type: BuildingType, p: Position, selected: number[] = [], team: PlayerTeam = 0) {
+        let reason = this.canBuild(type, p, team);
         if (reason) {
-          this.emit('toast', reason);
+          this.notify(team, 'toast', reason);
           return false;
         }
-        let workers = this.availableWorkers();
+        let workers = this.availableWorkers(team);
         workers.sort(
           (a, b) =>
             distance(a, p) -
@@ -171,78 +171,78 @@
         let w = workers[0];
         let path = this.world!.path(w.x, w.z, p.x, p.z);
         if (!path.length && distance(w, p) > 5) {
-          this.emit('toast', 'A worker cannot reach this location.');
+          this.notify(team, 'toast', 'A worker cannot reach this location.');
           return false;
         }
-        let c = this.cost(type, 'building');
-        if (!this.spend(c)) return false;
-        let b = this.spawnBuilding(type, p.x, p.z, 0, this.s!.faction, { progress: 0.06, paid: c });
+        let c = this.cost(type, 'building', team);
+        if (!this.spend(c, team)) return false;
+        let b = this.spawnBuilding(type, p.x, p.z, team, this.factionFor(team), { progress: 0.06, paid: c });
         b.hp = b.maxHp * 0.06;
         if (type === 'refinery')
           b.gasId = this.closest(p, e => e.type === 'gas' && e.kind === 'resource')?.id;
         this.world!.rebuild(this.s!.entities);
         this.setOrder(w, { type: 'build', id: b.id, x: p.x, z: p.z });
-        this.emit('build', b);
+        this.notify(team, 'build', b);
         return true;
       },
-      cancelConstruction(this: MeridianGame, id: number) {
+      cancelConstruction(this: MeridianGame, id: number, team: PlayerTeam = 0) {
         let e = this.get(id);
-        if (!e || e.team !== 0 || e.kind !== 'building' || e.progress >= 1) return;
-        let c = e.paid || this.cost(e.type, 'building');
-        this.s!.alloy += c.cost * 0.75;
-        this.s!.gas += c.gas * 0.75;
+        if (!e || e.team !== team || e.kind !== 'building' || e.progress >= 1) return;
+        let c = e.paid || this.cost(e.type, 'building', team);
+        this.account(team).alloy += c.cost * 0.75;
+        this.account(team).gas += c.gas * 0.75;
         e.hp = 0;
         e.deathAt = this.s!.time;
         this.navDirty = true;
-        this.emit('toast', 'Foundation canceled. 75% of resources recovered.');
+        this.notify(team, 'toast', 'Foundation canceled. 75% of resources recovered.');
       },
-      managedBuilding(this: MeridianGame, id: number): BuildingEntity | null {
+      managedBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0): BuildingEntity | null {
         let b = this.get(id);
-        return this.s && !this.s!.result && b?.kind === 'building' && b.team === 0 &&
+        return this.s && !this.s!.result && b?.kind === 'building' && b.team === team &&
           b.progress >= 1 ? b : null;
       },
-      buildingRepairers(this: MeridianGame, id: number): UnitEntity[] {
-        return this.alive(e => e.team === 0 && e.kind === 'unit' && e.type === 'worker' &&
+      buildingRepairers(this: MeridianGame, id: number, team: PlayerTeam = 0): UnitEntity[] {
+        return this.alive(e => e.team === team && e.kind === 'unit' && e.type === 'worker' &&
           e.order.type === 'repair' && e.order.id === id) as UnitEntity[];
       },
-      canRepairBuilding(this: MeridianGame, id: number) {
-        let b = this.managedBuilding(id);
+      canRepairBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0) {
+        let b = this.managedBuilding(id, team);
         if (!b) return 'Select a completed own structure.';
         if (b.hp >= b.maxHp) return 'Hull full';
-        if (!this.availableWorkers().length) return 'No free worker';
-        if (this.s!.alloy <= 0.1) return 'No alloy';
+        if (!this.availableWorkers(team).length) return 'No free worker';
+        if (this.account(team).alloy <= 0.1) return 'No alloy';
         return '';
       },
-      toggleBuildingRepair(this: MeridianGame, id: number) {
-        let b = this.managedBuilding(id);
+      toggleBuildingRepair(this: MeridianGame, id: number, team: PlayerTeam = 0) {
+        let b = this.managedBuilding(id, team);
         if (!b) return false;
-        let repairing = this.buildingRepairers(id);
+        let repairing = this.buildingRepairers(id, team);
         if (repairing.length) {
           for (let w of repairing) this.setOrder(w, { type: 'idle' });
-          this.emit('toast', 'Building repair stopped.');
+          this.notify(team, 'toast', 'Building repair stopped.');
           return true;
         }
-        let reason = this.canRepairBuilding(id);
+        let reason = this.canRepairBuilding(id, team);
         if (reason) {
-          this.emit('toast', reason);
+          this.notify(team, 'toast', reason);
           return false;
         }
-        let worker = this.availableWorkers().sort((a, c) => distance(a, b) - distance(c, b) || a.id - c.id)[0];
-        this.command([worker.id], { type: 'repair', id: b.id, x: b.x, z: b.z });
-        this.emit('toast', 'Nearest free worker assigned to repair.');
+        let worker = this.availableWorkers(team).sort((a, c) => distance(a, b) - distance(c, b) || a.id - c.id)[0];
+        this.command([worker.id], { type: 'repair', id: b.id, x: b.x, z: b.z }, team);
+        this.notify(team, 'toast', 'Nearest free worker assigned to repair.');
         return true;
       },
-      canSellBuilding(this: MeridianGame, id: number) {
-        let b = this.managedBuilding(id);
+      canSellBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0) {
+        let b = this.managedBuilding(id, team);
         if (!b) return 'Select a completed own structure.';
-        if (b.type === 'hq' && this.alive(e => e.team === 0 && e.type === 'hq' && e.progress >= 1).length <= 1)
+        if (b.type === 'hq' && this.alive(e => e.team === team && e.type === 'hq' && e.progress >= 1).length <= 1)
           return 'Last command center';
         return '';
       },
-      buildingSaleRefund(this: MeridianGame, id: number): Cost | null {
-        let b = this.managedBuilding(id);
+      buildingSaleRefund(this: MeridianGame, id: number, team: PlayerTeam = 0): Cost | null {
+        let b = this.managedBuilding(id, team);
         if (!b) return null;
-        let paid = b.paid || this.cost(b.type, 'building'),
+        let paid = b.paid || this.cost(b.type, 'building', team),
           refund = { cost: paid.cost * 0.5, gas: paid.gas * 0.5 };
         for (let q of b.queue) {
           refund.cost += q.cost;
@@ -250,22 +250,22 @@
         }
         return refund;
       },
-      sellBuilding(this: MeridianGame, id: number) {
-        let reason = this.canSellBuilding(id);
+      sellBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0) {
+        let reason = this.canSellBuilding(id, team);
         if (reason) {
-          this.emit('toast', reason);
+          this.notify(team, 'toast', reason);
           return false;
         }
-        let b = this.get(id), refund = this.buildingSaleRefund(id);
-        this.s!.alloy += refund!.cost;
-        this.s!.gas += refund!.gas;
+        let b = this.get(id), refund = this.buildingSaleRefund(id, team);
+        this.account(team).alloy += refund!.cost;
+        this.account(team).gas += refund!.gas;
         b!.queue.length = 0;
         b!.hp = 0;
         b!.deathAt = this.s!.time;
-        for (let w of this.buildingRepairers(id)) this.setOrder(w, { type: 'idle' });
+        for (let w of this.buildingRepairers(id, team)) this.setOrder(w, { type: 'idle' });
         // Selling is not a combat kill: no explosion, kill credit or effect RNG draws.
         this.world!.rebuild(this.s!.entities);
-        this.emit('toast', 'Structure sold. Recruitment canceled and refunded.');
+        this.notify(team, 'toast', 'Structure sold. Recruitment canceled and refunded.');
         return true;
       },
       miningResource(this: MeridianGame, e: UnitEntity): ResourceEntity | null {
@@ -281,12 +281,13 @@
         return best;
       },
       worker(this: MeridianGame, e: UnitEntity, dt: number) {
+        const team = e.team as PlayerTeam;
         let o = e.order,
           s = this.s!;
         if (['move', 'attackMove', 'hold', 'stop', 'attack', 'follow'].includes(o.type)) return false;
         if (o.type === 'build' || o.type === 'repair') {
           let b = this.get(o.id) as BuildingEntity | null;
-          if (!b || b.team !== 0 || (o.type === 'repair' && b.progress < 1)) {
+          if (!b || b.team !== team || (o.type === 'repair' && b.progress < 1)) {
             this.finishOrder(e);
             return true;
           }
@@ -302,19 +303,19 @@
             b.progress = Math.min(1, b.progress + rate);
             b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);
             if (b.progress >= 1) {
-              s.stats.built++;
-              this.emit('complete', { type: b.type, x: b.x, z: b.z });
+              if (team === 0) s.stats.built++;
+              this.notify(team, 'complete', { type: b.type, x: b.x, z: b.z });
               this.finishOrder(e);
             }
-          } else if (b.hp < b.maxHp && s.alloy > 0.1) {
-            let amount = Math.min(dt * 38, b.maxHp - b.hp, s.alloy * 10);
+          } else if (b.hp < b.maxHp && this.account(team).alloy > 0.1) {
+            let amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10);
             b.hp += amount;
-            s.alloy -= amount * 0.1;
+            this.account(team).alloy -= amount * 0.1;
           } else this.finishOrder(e);
           this.effects.construction(e, b, dt);
           return true;
         }
-        if (o.type === 'idle' && e.team === 0) {
+        if (o.type === 'idle') {
           let target = this.miningResource(e);
           if (target) e.order = { type: 'mine', id: target.id };
         }
@@ -328,9 +329,9 @@
             this.move(e, h, dt, h.size + 3.1);
             return true;
           }
-          if (e.team === 0) {
-            s.alloy += e.carry;
-            s.stats.gathered += e.carry;
+          if (e.team === team) {
+            this.account(team).alloy += e.carry;
+            if (team === 0) s.stats.gathered += e.carry;
           }
           e.carry = 0;
           e.returning = false;

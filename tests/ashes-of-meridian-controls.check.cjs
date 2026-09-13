@@ -60,7 +60,7 @@ function setup() {
     openModal(kind, html) { this.html = html; }
   }
   const game = {
-    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0, meta: {} },
+    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0, meta: {}, teams: [{alloy:0,gas:0,energy:100,abilities:{}}] },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
@@ -386,7 +386,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
 
 test('speed button cycles existing rates, updates its own label and preserves commands and transient state', () => {
   const h = setup(), g = h.ui.game;
-  Object.assign(g.s, { alloy: 100, gas: 0, energy: 100, abilities: {}, nextWave: 95 });
+  Object.assign(g.s.teams[0], { alloy: 100, gas: 0, energy: 100, abilities: {} }); g.s.nextWave = 95;
   Object.assign(g, { supply: () => 0, cap: () => 24, objectiveRows: () => [] });
   h.ui.updateHUD = h.UI.prototype.updateHUD;
   h.UI.prototype.bind.call(h.ui);
@@ -726,7 +726,7 @@ test('runtime and delivered HTML have no run persistence hooks or backup input',
 
 test('permanent upgrades spend recovered aether, remain bounded and do not alter the active battle', () => {
   const h = setup(), keys = ['startingAlloy', 'startingWorkers'];
-  h.ui.game.s.meta = {}; h.ui.game.s.alloy = 123; h.ui.game.s.gas = 45;
+  h.ui.game.s.meta = {}; h.ui.game.s.teams[0].alloy = 123; h.ui.game.s.teams[0].gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
   h.ui.profile.aether = 99; h.ui.showArmory();
   assert.match(h.ui.html, /99 AETHER RESERVES/);
@@ -747,7 +747,7 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   for (const key of ['not-an-upgrade', 'veterans', 'logistics', 'stores', 'command', 'resolve', 'industry']) h.ui.buyUpgrade(key);
   assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 5, aetherEvacuation: 1, startingWorkers: 5 });
   assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 11); assert.equal('credits' in h.ui.profile, false);
-  assert.deepEqual([h.ui.game.s.alloy,h.ui.game.s.gas,h.ui.game.s.meta], [123,45,{}]);
+  assert.deepEqual([h.ui.game.s.teams[0].alloy,h.ui.game.s.teams[0].gas,h.ui.game.s.meta], [123,45,{}]);
   assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 2);
 });
 
@@ -757,7 +757,7 @@ test('each result transfers floored unused aether once, using the run-start evac
     const h = setup(), saves = [];
     h.ui.persistence.saveProfile = p => saves.push(JSON.parse(JSON.stringify(p)));
     h.ui.showResult = () => {};
-    h.ui.game.s.faction = 2; h.ui.game.s.gas = gas; h.ui.game.s.meta = { aetherEvacuation: level };
+    h.ui.game.s.faction = 2; h.ui.game.s.teams[0].gas = gas; h.ui.game.s.meta = { aetherEvacuation: level };
     h.ui.event('result', { win: true });
     assert.equal(h.ui.resultAetherRecovered, recovered);
     assert.equal(h.ui.profile.aether, recovered);
@@ -1220,7 +1220,7 @@ test('only faction 0 recruitment/build buttons use local model portraits without
 
 test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
   const h = buildingPanel(), g = h.ui.game;
-  Object.assign(g.s,{alloy:1000,gas:1000,energy:100,abilities:{},nextWave:95});
+  Object.assign(g.s.teams[0],{alloy:1000,gas:1000,energy:100,abilities:{}}); g.s.nextWave=95;
   Object.assign(g,{supply:()=>10,cap:()=>50,afford:()=>true,objectiveRows:()=>[]});
   const buttons = ['train:rifle','train:hero','train:air','repair','sell'].map(action =>
     Object.assign(h.document.getElementById(action),{dataset:{action}}));
@@ -1242,7 +1242,7 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
 
 test('HUD reads supply and capacity once per update and refreshes counts, warnings and recruitment', () => {
   const h = buildingPanel(), g = h.ui.game;
-  Object.assign(g.s, { alloy: 1000, gas: 1000, energy: 100, abilities: {}, nextWave: 95 });
+  Object.assign(g.s.teams[0], { alloy: 1000, gas: 1000, energy: 100, abilities: {} }); g.s.nextWave=95;
   Object.assign(g, { afford: () => true, objectiveRows: () => [] });
   g.s.entities.push({ id: 8, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] });
   const buttons = ['train:worker', 'train:rifle'].map(action =>
@@ -1266,23 +1266,23 @@ test('HUD reads supply and capacity once per update and refreshes counts, warnin
 
 test('HUD ability badges and disabled states retain energy and cooldown boundaries', () => {
   const h = setup(), g = h.ui.game;
-  Object.assign(g.s, { alloy: 0, gas: 0, time: 10, abilities: {}, nextWave: 95 });
+  Object.assign(g.s.teams[0], { alloy: 0, gas: 0, abilities: {} }); Object.assign(g.s,{time:10,nextWave:95});
   Object.assign(g, { supply: () => 0, cap: () => 24, objectiveRows: () => [] });
   for (const [kind, energy] of [['orbital', 85], ['repair', 45], ['scan', 25], ['drop', 95]]) {
     const button = h.document.getElementById('ability:' + kind);
     button.dataset = { action: 'ability:' + kind };
     h.document.querySelectorAll = () => [button];
     for (const available of [energy - 1, energy]) {
-      g.s.energy = available;
+      g.s.teams[0].energy = available;
       h.UI.prototype.updateHUD.call(h.ui);
       assert.equal(button.disabled, available < energy);
       assert.equal(button.querySelector('small').textContent, energy + 'ϟ');
     }
-    g.s.abilities[kind] = 12.2;
+    g.s.teams[0].abilities[kind] = 12.2;
     h.UI.prototype.updateHUD.call(h.ui);
     assert.equal(button.disabled, true);
     assert.equal(button.querySelector('small').textContent, '3s');
-    g.s.abilities[kind] = 10;
+    g.s.teams[0].abilities[kind] = 10;
     h.UI.prototype.updateHUD.call(h.ui);
     assert.equal(button.disabled, false);
     assert.equal(button.querySelector('small').textContent, energy + 'ϟ');

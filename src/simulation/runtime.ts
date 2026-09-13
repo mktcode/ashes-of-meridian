@@ -5,7 +5,7 @@
         if (!this.s || this.s!.result) return;
         let s = this.s!;
         s.time += dt;
-        s.energy = Math.min(200, s.energy + dt * 0.8);
+        for (const account of s.teams) account.energy = Math.min(200, account.energy + dt * 0.8);
         this.rehash();
         if (this.navDirty) {
           this.world!.rebuild(s.entities);
@@ -24,7 +24,7 @@
                 ))
                   n.hp = Math.min(n.maxHp, n.hp + dt * 3);
             }
-            if (e.type === 'refinery') s.gas += dt * 1.7;
+            if (e.type === 'refinery') this.account(0).gas += dt * 1.7;
           }
           if (e.team === 1)
             s.enemyBudget += dt * (e.type === 'hq' ? 2.8 : e.type === 'barracks' ? 0.8 : 0);
@@ -47,10 +47,10 @@
                 let u = this.produceUnit(e, q.type);
                 if (!u) continue; // Keep the paid order until there is room at the exit.
                 e.queue.shift();
-                if (q.type !== 'worker' && q.type !== 'hero') s.stats.trained++;
+                if (e.team === 0 && q.type !== 'worker' && q.type !== 'hero') s.stats.trained++;
                 if (e.rally && q.type !== 'worker')
                   u.order = { type: 'attackMove', x: e.rally.x, z: e.rally.z };
-                this.emit('trained', u);
+                this.notify(e.team as PlayerTeam, 'trained', u);
               }
             }
             if ((BUILDINGS[e.type] as BuildingDefinitionShape).damage) this.combat(e, dt);
@@ -104,18 +104,18 @@
             strike.team === 0 ? 0xa2e3db : 0xf2b084
           );
           this.emit('explosion', { x: strike.x, z: strike.z, big: true });
-          if (strike.type === 'orbital' && s.faction === FACTION_ID.SECOND)
-            s.fields.push({ type: 'bloom', x: strike.x, z: strike.z, r: 10, until: s.time + 7 });
+          if (strike.type === 'orbital' && this.factionFor(strike.team as PlayerTeam) === FACTION_ID.SECOND)
+            s.fields.push({ type: 'bloom', team: strike.team as PlayerTeam, x: strike.x, z: strike.z, r: 10, until: s.time + 7 });
         }
         s.strikes = s.strikes.filter(a => !a.done);
         for (let field of s.fields) {
           if (field.until < s.time) continue;
           let targets = this.near(field.x, field.z, field.r, e =>
-            field.type === 'bloom' ? e.team === 1 : e.team === 0
+            field.type === 'bloom' ? this.enemy(field, e) : e.team === field.team
           );
           for (let e of targets) {
             if (field.type === 'bloom') {
-              this.damage(e, dt * 23, { team: 0 }, true);
+              this.damage(e, dt * 23, { team: field.team }, true);
               e.slowed = s.time + 1;
             } else e.hp = Math.min(e.maxHp, e.hp + dt * 10);
           }
@@ -213,64 +213,64 @@
         let done = !this.alive(e => e.team === 1 && e.type === 'hq').length;
         return [{ text: 'Destroy the enemy base', current: done ? 1 : 0, max: 1, sub: '', done }];
       },
-      ability(this: MeridianGame, kind: AbilityType, p: Position) {
-        let s = this.s!,
+      ability(this: MeridianGame, kind: AbilityType, p: Position, team: PlayerTeam = 0) {
+        let s = this.s!, account = this.account(team), faction = this.factionFor(team),
           d = ABILITIES[kind];
         if (!d) return false;
-        if (s.abilities[kind] > s.time) {
-          this.emit(
+        if (account.abilities[kind] > s.time) {
+          this.notify(team, 
             'toast',
-            'Ability recharging: ' + Math.ceil(s.abilities[kind] - s.time) + ' seconds.'
+            'Ability recharging: ' + Math.ceil(account.abilities[kind] - s.time) + ' seconds.'
           );
           return false;
         }
-        if (s.energy < d.energy) {
-          this.emit('toast', 'Insufficient command energy.');
+        if (account.energy < d.energy) {
+          this.notify(team, 'toast', 'Insufficient command energy.');
           return false;
         }
         if (kind !== 'scan' && !this.world!.explored[this.world!.idx(p.x, p.z)]) {
-          this.emit('toast', 'Scout or scan this location first.');
+          this.notify(team, 'toast', 'Scout or scan this location first.');
           return false;
         }
-        if (kind === 'drop' && this.supply() + 8 > this.cap()) {
-          this.emit('toast', 'Reinforcements require 8 free supply.');
+        if (kind === 'drop' && this.supply(team) + 8 > this.cap(team)) {
+          this.notify(team, 'toast', 'Reinforcements require 8 free supply.');
           return false;
         }
-        s.energy -= d.energy;
-        s.abilities[kind] = s.time + d.cd;
+        account.energy -= d.energy;
+        account.abilities[kind] = s.time + d.cd;
         if (kind === 'orbital') {
           s.strikes.push({
             x: p.x,
             z: p.z,
             at: s.time + 2.2,
-            radius: s.faction === FACTION_ID.THIRD ? 8 : 10,
-            damage: s.faction === FACTION_ID.THIRD ? 440 : s.faction === FACTION_ID.SECOND ? 260 : 355,
-            team: 0,
+            radius: faction === FACTION_ID.THIRD ? 8 : 10,
+            damage: faction === FACTION_ID.THIRD ? 440 : faction === FACTION_ID.SECOND ? 260 : 355,
+            team,
             type: 'orbital'
           });
-          s.scans.push({ ...p, r: 17, until: s.time + 8 });
-          this.emit('radio', 'Orbital command|Target solution confirmed. Clear the impact zone.');
+          s.scans.push({ ...p, team, r: 17, until: s.time + 8 });
+          this.notify(team, 'radio', 'Orbital command|Target solution confirmed. Clear the impact zone.');
         }
         if (kind === 'repair') {
-          for (let e of this.near(p.x, p.z, 12, a => a.team === 0)) {
+          for (let e of this.near(p.x, p.z, 12, a => a.team === team)) {
             e.hp = Math.min(e.maxHp, e.hp + 180);
             if (e.maxShield) e.shield = Math.min(e.maxShield, e.shield + 100);
           }
-          s.fields.push({ type: 'repair', x: p.x, z: p.z, r: 12, until: s.time + 8 });
-          this.emit('heal', p);
+          s.fields.push({ type: 'repair', team, x: p.x, z: p.z, r: 12, until: s.time + 8 });
+          this.notify(team, 'heal', p);
         }
         if (kind === 'scan') {
-          s.scans.push({ ...p, r: 32, until: s.time + 22 });
-          this.emit('scan', p);
+          s.scans.push({ ...p, team, r: 32, until: s.time + 22 });
+          this.notify(team, 'scan', p);
           this.world!.reveal(s.entities, s.scans);
         }
         if (kind === 'drop') {
           for (let i = 0; i < 4; i++) {
             let loc = this.world!.nearest(p.x + (i % 2) * 2 - 1, p.z + Math.floor(i / 2) * 2 - 1);
-            this.spawnUnit('rifle', loc.x, loc.z, 0, s.faction);
-            this.effects.drop(loc, FACTIONS[s.faction].color);
+            this.spawnUnit('rifle', loc.x, loc.z, team, faction);
+            this.effects.drop(loc, FACTIONS[faction].color);
           }
-          this.emit('radio', 'Reinforcement channel|Boots on the ground. Point us at the trouble.');
+          this.notify(team, 'radio', 'Reinforcement channel|Boots on the ground. Point us at the trouble.');
         }
         return true;
       },

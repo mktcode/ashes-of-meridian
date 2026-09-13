@@ -87,7 +87,7 @@ test('single battle starts with only the own HQ, one hostile base and no mission
   const { game, events } = freshBattle(), s = game.s;
   assert.deepEqual([s.seed,s.biome,s.faction,s.enemy,s.time], [1409,'biome1',0,2,0]);
   assert.equal('version' in s, false); assert.equal(game.snapshot, undefined); assert.equal(game.restore, undefined);
-  assert.deepEqual([s.alloy,s.gas,s.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,100,61,62,0,24]);
+  assert.deepEqual([s.teams[0].alloy,s.teams[0].gas,s.teams[0].energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,100,61,62,0,24]);
   assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
   assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
@@ -101,9 +101,9 @@ test('no workers means no alloy or aether income, and 250 alloy buys exactly fiv
     const {game}=freshBattle(faction);
     assert.deepEqual(json(game.cost('worker')),{cost:50,gas:0});
     advance(game,1200);
-    assert.deepEqual([game.s.alloy,game.s.gas,game.s.stats.gathered],[250,0,0]);
+    assert.deepEqual([game.s.teams[0].alloy,game.s.teams[0].gas,game.s.stats.gathered],[250,0,0]);
     for(let i=0;i<5;i++)assert.equal(game.train('worker'),true);
-    assert.deepEqual([game.s.alloy,game.s.gas,game.supply(),player(game,'hq').queue.length],[0,0,5,5]);
+    assert.deepEqual([game.s.teams[0].alloy,game.s.teams[0].gas,game.supply(),player(game,'hq').queue.length],[0,0,5,5]);
     assert.equal(game.train('worker'),false);
   }
 });
@@ -114,8 +114,8 @@ test('the first worker must be paid for and recruited, then enables mining and t
     advance(game,40);
     assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
     assert.match(game.canBuild('barracks'),/Recruit a worker/);
-    const before=game.s.alloy, cost=game.cost('worker');
-    assert.equal(game.train('worker'),true); close(game.s.alloy,before-cost.cost);
+    const before=game.s.teams[0].alloy, cost=game.cost('worker');
+    assert.equal(game.train('worker'),true); close(game.s.teams[0].alloy,before-cost.cost);
     assert.equal(game.supply(),1); assert.equal(player(game,'hq').queue[0].type,'worker');
     advance(game,100); assert.equal(player(game,'worker'),undefined);
     advance(game,700);
@@ -441,7 +441,7 @@ test('detour planning restores the navigation grid and never consumes RNG', () =
 test('all produced unit types physically leave their building before working or following rally', () => {
   for(const [i,type] of ['worker','rifle','medic','tank','artillery','air','hero'].entries()) {
     const game=spacingArena(), faction=i%3;
-    game.s.alloy=10000; game.s.gas=10000;
+    game.s.teams[0].alloy=10000; game.s.teams[0].gas=10000;
     let b=player(game,['hq','barracks','barracks','factory','factory','hangar','hq'][i]);
     if(!b)b=game.spawnBuilding('hangar',0,10,0,faction);
     b.faction=faction; b.rally={x:b.x+18,z:b.z-10}; game.world.rebuild(game.s.entities);
@@ -568,8 +568,8 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   medic.hp = 0; patient.hp = 0;
   const troops = [0, 1, 2].map(f => game.spawnUnit('rifle', 75, 75, 0, f));
   for (const troop of troops) troop.hp = troop.maxHp - 50;
-  const gas = game.s.gas; advance(game, 1);
-  close(game.s.gas, gas + .05 * 1.7);
+  const gas = game.s.teams[0].gas; advance(game, 1);
+  close(game.s.teams[0].gas, gas + .05 * 1.7);
   for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
 });
 
@@ -580,7 +580,7 @@ test('starting alloy levels 0–5 add exactly 50 alloy per level without changin
   for (let level = 0; level <= 5; level++) {
     game.profile.upgrades = { startingAlloy: level };
     game.start(opts);
-    assert.deepEqual([game.s.alloy, game.s.gas, game.s.meta.startingAlloy], [250 + level * 50, 0, level]);
+    assert.deepEqual([game.s.teams[0].alloy, game.s.teams[0].gas, game.s.meta.startingAlloy], [250 + level * 50, 0, level]);
     assert.deepEqual(json(game.s.entities), original);
     assert.deepEqual(Array.from(game.world.staticGrid), terrain);
     assert.equal(game.random(), nextRandom, 'starting alloy consumes no simulation RNG');
@@ -594,13 +594,13 @@ test('starting alloy affects only the next battle, is bounded and reproduces on 
   game.profile.upgrades.startingAlloy = 5;
   assert.deepEqual(json(game.s), before);
   game.start(opts);
-  assert.equal(game.s.alloy, 500); assert.deepEqual(json(game.s.meta), { startingAlloy: 5 });
+  assert.equal(game.s.teams[0].alloy, 500); assert.deepEqual(json(game.s.meta), { startingAlloy: 5 });
   assert.notStrictEqual(game.s.meta, game.profile.upgrades);
   const restarted = json(game.s);
   game.start(opts); assert.deepEqual(json(game.s), restarted);
   for (const [value, level, alloy] of [[-2, 0, 250], ['3.9', 3, 400], [99, 5, 500], ['bad', 0, 250]]) {
     game.profile.upgrades = { startingAlloy: value }; game.start(opts);
-    assert.deepEqual([game.s.meta.startingAlloy, game.s.alloy], [level, alloy]);
+    assert.deepEqual([game.s.meta.startingAlloy, game.s.teams[0].alloy], [level, alloy]);
   }
 });
 
@@ -615,7 +615,7 @@ test('starting worker levels 0–5 preserve seeded setup and free spacing for ev
       game.start(opts);
       const workers = game.alive(e => e.team === 0 && e.type === 'worker');
       assert.equal(workers.length, level);
-      assert.deepEqual([game.s.alloy, game.s.gas, game.supply(), game.cap()], [250, 0, level, 24]);
+      assert.deepEqual([game.s.teams[0].alloy, game.s.teams[0].gas, game.supply(), game.cap()], [250, 0, level, 24]);
       assert.equal(player(game, 'hq').queue.length, 0);
       assert.equal(game.s.stats.trained, 0);
       assert.deepEqual(json(game.s.entities.filter(e => e.team !== 0 || e.kind === 'building')), original);
@@ -661,9 +661,9 @@ test('five starting workers begin mining and deliver alloy without recruitment f
     game.start({ seed: 1409, faction, biome: 'biome1' });
     advance(game, 1200);
     assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
-    assert.ok(game.s.alloy > 250); assert.ok(game.s.stats.gathered > 0);
+    assert.ok(game.s.teams[0].alloy > 250); assert.ok(game.s.stats.gathered > 0);
     assert.ok(game.alive(e => e.team === 0 && e.type === 'worker').every(w => w.order.type === 'mine'));
-    assert.equal(game.s.gas, 0); assert.equal(player(game, 'hq').queue.length, 0);
+    assert.equal(game.s.teams[0].gas, 0); assert.equal(player(game, 'hq').queue.length, 0);
     assert.equal(game.canBuild('barracks'), '');
   }
 });
@@ -672,12 +672,12 @@ test('base energy, hull, production and construction rates match the current rul
   const { game } = createGame();
   game.start({ seed: 1409 });
   assert.deepEqual(json(game.s.meta), {});
-  game.s.energy = 0;
+  game.s.teams[0].energy = 0;
   assert.equal(game.train('worker'), true);
   const own = player(game, 'hq'), enemy = game.alive(e => e.team === 1 && e.type === 'hq')[0];
   enemy.queue.push({ type: 'worker', progress: 0, time: 9, cost: 50, gas: 0 });
   game.step(.5);
-  close(game.s.energy, .5 * .8);
+  close(game.s.teams[0].energy, .5 * .8);
   for (const b of [own, enemy]) close(b.queue[0].progress, .5 / 9);
   assert.equal(game.spawnUnit('hero', -35, 45, 0, 0).maxHp, 850);
   const foundation = game.spawnBuilding('depot', -35, 40, 0, 0, { progress: .1 }),
@@ -696,10 +696,10 @@ test('building repair assigns only the nearest living own worker and repairs thr
   const nearest = [...workers].sort((a, c) => Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
   game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 2, 0);
   game.spawnUnit('worker', b.x, b.z, 0, 0).hp = 0;
-  const before = new Map(workers.map(w => [w.id, json(w.order)])), alloy = game.s.alloy, x = nearest.x, z = nearest.z;
+  const before = new Map(workers.map(w => [w.id, json(w.order)])), alloy = game.s.teams[0].alloy, x = nearest.x, z = nearest.z;
   assert.equal(game.toggleBuildingRepair(b.id), true);
   assert.deepEqual(Array.from(game.buildingRepairers(b.id), w => w.id), [nearest.id]);
-  close(game.s.alloy, alloy); assert.equal(b.hp, b.maxHp - 100);
+  close(game.s.teams[0].alloy, alloy); assert.equal(b.hp, b.maxHp - 100);
   for (const w of workers) if (w !== nearest) assert.deepEqual(json(w.order), before.get(w.id));
   advance(game, 500);
   assert.ok(Math.hypot(nearest.x-x,nearest.z-z) > 1, 'worker actually travelled');
@@ -721,7 +721,7 @@ test('repair rejects no workers, no alloy, full hull and ineligible targets with
   for (const mode of ['workers', 'alloy', 'full', 'enemy', 'foundation', 'unit', 'dead', 'result', 'missing']) {
     const { game } = battle(); let b = player(game, 'barracks'); b.hp -= 100;
     if (mode === 'workers') for (const w of game.alive(e => e.team === 0 && e.type === 'worker')) w.hp = 0;
-    if (mode === 'alloy') game.s.alloy = .1;
+    if (mode === 'alloy') game.s.teams[0].alloy = .1;
     if (mode === 'full') b.hp = b.maxHp;
     if (mode === 'enemy') b.team = 1;
     if (mode === 'foundation') b.progress = .5;
@@ -741,12 +741,12 @@ test('selling refunds actual paid value and all queued recruitment, removes navi
   assert.equal(game.train('rifle'), true); assert.equal(game.train('medic'), true);
   b.queue[0].progress = .8; game.toggleBuildingRepair(b.id);
   const worker = game.buildingRepairers(b.id)[0], count = rifleCount(game), supply = game.supply(), stats = json(game.s.stats);
-  const alloy = game.s.alloy, gas = game.s.gas, refund = { cost: 225.5, gas: 41.5 };
+  const alloy = game.s.teams[0].alloy, gas = game.s.teams[0].gas, refund = { cost: 225.5, gas: 41.5 };
   assert.deepEqual(json(game.buildingSaleRefund(b.id)), refund);
   assert.equal(game.world.blockedAt(b.x,b.z), true);
   const random = game.random; game.random = () => { throw Error('Selling must not use RNG'); };
   assert.equal(game.sellBuilding(b.id), true); game.random = random;
-  close(game.s.alloy, alloy + refund.cost); close(game.s.gas, gas + refund.gas);
+  close(game.s.teams[0].alloy, alloy + refund.cost); close(game.s.teams[0].gas, gas + refund.gas);
   assert.equal(game.get(b.id), null); assert.equal(b.queue.length, 0); assert.equal(worker.order.type, 'idle');
   assert.equal(game.world.blockedAt(b.x,b.z), false); assert.equal(game.supply(), supply - 4);
   assert.deepEqual(json(game.s.stats), stats);
@@ -829,7 +829,7 @@ test('commands replace unit orders, ignore enemies and never change building ral
 
 test('new construction assigns one worker, pays once and still completes normally', () => {
   const { game, events } = battle();
-  const worker = player(game, 'worker'), beforeAlloy = game.s.alloy;
+  const worker = player(game, 'worker'), beforeAlloy = game.s.teams[0].alloy;
   const cost = game.cost('depot', 'building');
   let built = false;
   for (let z = 30; z < 60 && !built; z += 3) for (let x = -65; x < -25 && !built; x += 3) {
@@ -839,12 +839,12 @@ test('new construction assigns one worker, pays once and still completes normall
   const foundation = game.alive(e => e.type === 'depot' && e.progress < 1)[0];
   const builders = game.alive(e => e.order?.type === 'build' && e.order.id === foundation.id);
   assert.deepEqual(Array.from(builders, e => e.id), [worker.id]);
-  close(game.s.alloy, beforeAlloy - cost.cost);
+  close(game.s.teams[0].alloy, beforeAlloy - cost.cost);
   worker.x = foundation.x; worker.z = foundation.z;
-  const beforeProgress = foundation.progress, paidAlloy = game.s.alloy;
+  const beforeProgress = foundation.progress, paidAlloy = game.s.teams[0].alloy;
   game.worker(worker, .5);
   assert.ok(foundation.progress > beforeProgress);
-  close(game.s.alloy, paidAlloy);
+  close(game.s.teams[0].alloy, paidAlloy);
   foundation.progress = .999; foundation.hp = foundation.maxHp * .999;
   game.worker(worker, 1);
   assert.equal(foundation.progress, 1); assert.equal(foundation.hp, foundation.maxHp);
@@ -906,12 +906,12 @@ test('explicit construction resumes or replaces exactly one builder without extr
     if (occupied) game.setOrder(old, { type: 'build', id: b.id, x: b.x, z: b.z });
     // Manual reassignment may interrupt another construction job.
     game.setOrder(next, { type: 'build', id: 999, x: 30, z: 0 });
-    const beforeOthers = [json(farther), json(soldier)], alloy = game.s.alloy;
+    const beforeOthers = [json(farther), json(soldier)], alloy = game.s.teams[0].alloy;
     game.command([farther.id, soldier.id, next.id, next.id], { type, id: b.id, x: b.x, z: b.z });
     assert.deepEqual(Array.from(game.alive(e => e.order.type === 'build' && e.order.id === b.id), e => e.id), [next.id]);
     assert.equal(old.order.type, 'idle');
     assert.deepEqual([json(farther), json(soldier)], beforeOthers);
-    assert.equal(game.s.alloy, alloy);
+    assert.equal(game.s.teams[0].alloy, alloy);
     next.x = 0; next.z = -5;
     game.worker(next, .5);
     close(b.progress, .1 + .5 / 16);
@@ -935,13 +935,13 @@ test('explicit repair sends one selected worker, leaves others alone and rejects
     game.command([other.id, soldier.id, next.id], { type: 'smart', id: target.id, x: 0, z: 0 });
     assert.equal(next.order.type, 'repair'); assert.equal(next.order.id, target.id);
     assert.deepEqual([json(other), json(soldier)], before);
-    const alloy = game.s.alloy;
-    game.worker(next, .5); close(game.s.alloy, alloy - 1.9); close(target.hp, target.maxHp - 81);
+    const alloy = game.s.teams[0].alloy;
+    game.worker(next, .5); close(game.s.teams[0].alloy, alloy - 1.9); close(target.hp, target.maxHp - 81);
     for (const invalid of ['alloy', 'enemy', 'dead', 'foundation', 'full']) {
       target.team = invalid === 'enemy' ? 1 : 0;
       target.hp = invalid === 'dead' ? 0 : invalid === 'full' ? target.maxHp : target.maxHp - 100;
       target.progress = invalid === 'foundation' ? .1 : 1;
-      game.s.alloy = invalid === 'alloy' ? 0 : 100;
+      game.s.teams[0].alloy = invalid === 'alloy' ? 0 : 100;
       const state = json(game.s);
       game.command([other.id], { type: 'repair', id: target.id });
       assert.deepEqual(json(game.s), state, invalid);
@@ -981,11 +981,11 @@ test('workers still repair completed damaged structures and units for the same a
       ? game.spawnBuilding('depot', worker.x, worker.z, 0, 0)
       : game.spawnUnit('rifle', worker.x, worker.z, 0, 0);
     target.hp = target.maxHp - 50;
-    const alloy = game.s.alloy;
+    const alloy = game.s.teams[0].alloy;
     game.command([worker.id], { type: 'smart', id: target.id, x: target.x, z: target.z });
     assert.equal(worker.order.type, 'repair');
     game.worker(worker, 1);
-    close(target.hp, target.maxHp - 12); close(game.s.alloy, alloy - 3.8);
+    close(target.hp, target.maxHp - 12); close(game.s.teams[0].alloy, alloy - 3.8);
   }
 });
 
@@ -995,12 +995,12 @@ for (const [faction, cost] of [[0, 75], [1, 64], [2, 85]]) {
     const barracks = player(game, 'barracks');
     assert.equal(game.train('rifle'), true);
     assert.deepEqual(json(barracks.queue), [{ type: 'rifle', progress: 0, time: 11, cost, gas: 0 }]);
-    assert.deepEqual([game.s.alloy, game.s.gas, game.supply(), rifleCount(game)], [1100 - cost, 400, 33, 7]);
+    assert.deepEqual([game.s.teams[0].alloy, game.s.teams[0].gas, game.supply(), rifleCount(game)], [1100 - cost, 400, 33, 7]);
     advance(game, 20);
     assert.ok(barracks.queue[0].progress > 0 && barracks.queue[0].progress < 1);
-    const beforeCancel = game.s.alloy;
+    const beforeCancel = game.s.teams[0].alloy;
     game.cancelQueue(barracks.id, 0);
-    close(game.s.alloy, beforeCancel + cost);
+    close(game.s.teams[0].alloy, beforeCancel + cost);
     assert.equal(game.supply(), 31);
     assert.equal(barracks.queue.length, 0);
     assert.ok(events.some(e => e.type === 'queued' && e.data === 'rifle'));
@@ -1008,7 +1008,7 @@ for (const [faction, cost] of [[0, 75], [1, 64], [2, 85]]) {
 }
 
 for (const [reason, setup] of [
-  ['insufficient alloy', game => { game.s.alloy = 74; }],
+  ['insufficient alloy', game => { game.s.teams[0].alloy = 74; }],
   ['full production queue', game => { for (let i = 0; i < 5; i++) assert.equal(game.train('rifle'), true); }],
   ['supply limit', game => { for (let i = 0; i < 12; i++) game.spawnUnit('rifle', -45, 35, 0, 0); }],
 ]) {
@@ -1049,7 +1049,7 @@ test('recruitment distributes globally and produces in parallel at assigned buil
     b = game.spawnBuilding('barracks',-15,55,0,0),
     unfinished = game.spawnBuilding('barracks',-5,55,0,0);
   unfinished.progress = .5;
-  game.s.alloy = 10000; game.s.gas = 10000;
+  game.s.teams[0].alloy = 10000; game.s.teams[0].gas = 10000;
   a.rally = {x:-30,z:40}; b.rally = {x:-5,z:40};
   for (const type of ['rifle','rifle','medic','rifle']) assert.equal(game.train(type), true);
   assert.deepEqual(json(a.queue.map(q=>q.type)), ['rifle','medic']);
@@ -1099,8 +1099,8 @@ test('fixed steps finish production once, retain reserved supply and account onl
   assert.deepEqual(trained[0].data.order, { type: 'attackMove', x: -35, z: 48 });
   assert.equal(game.get(trained[0].data.id).type, 'rifle');
   assert.ok(game.s.stats.gathered > 0, 'workers actually delivered alloy');
-  close(game.s.alloy, 1100 - 75 + game.s.stats.gathered);
-  close(game.s.gas, 400 + 11.05 * 1.7);
+  close(game.s.teams[0].alloy, 1100 - 75 + game.s.stats.gathered);
+  close(game.s.teams[0].gas, 400 + 11.05 * 1.7);
 });
 
 for (const [kind, energy, cooldown] of [
@@ -1110,21 +1110,21 @@ for (const [kind, energy, cooldown] of [
   game.s.time = 10;
   game.world.explored.fill(1);
   const target = { x: 0, z: 0 };
-  game.s.energy = energy - 1;
+  game.s.teams[0].energy = energy - 1;
   const before = json(game.s);
   assert.equal(game.ability(kind, target), false);
   assert.deepEqual(json(game.s), before);
-  game.s.energy = energy;
+  game.s.teams[0].energy = energy;
   assert.equal(game.ability(kind, target), true);
-  assert.equal(game.s.energy, 0);
-  assert.equal(game.s.abilities[kind], 10 + cooldown);
-  game.s.energy = 100;
+  assert.equal(game.s.teams[0].energy, 0);
+  assert.equal(game.s.teams[0].abilities[kind], 10 + cooldown);
+  game.s.teams[0].energy = 100;
   const recharging = json(game.s);
   assert.equal(game.ability(kind, target), false);
   assert.deepEqual(json(game.s), recharging);
   game.s.time = 10 + cooldown;
   assert.equal(game.ability(kind, target), true);
-  assert.equal(game.s.energy, 100 - energy);
+  assert.equal(game.s.teams[0].energy, 100 - energy);
 });
 
 test('restarting discards the previous run and rebuilds fresh navigation, indexes and fog', () => {

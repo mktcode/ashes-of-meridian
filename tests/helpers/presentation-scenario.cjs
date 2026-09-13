@@ -60,7 +60,7 @@ function effectSample(kind) {
     // Fixed emitter position isolates effect behavior from spawn-spacing tests.
     const medic = game.spawn('unit', 'medic', target.x, target.z, 0, 0); medic.cd = 0;
     game.medic(medic, .05);
-    game.s.energy = 1000; game.ability('drop', { x: -45, z: 45 });
+    game.s.teams[0].energy = 1000; game.ability('drop', { x: -45, z: 45 });
   } else throw Error('Unknown effect case: ' + kind);
   const before = digest({ fx: game.effects.fx, floats: game.effects.floats });
   game.effects.tick(.05);

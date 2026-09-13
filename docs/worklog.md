@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## KI-Umsetzung: Konten und Aktionen
+
+- Ressourcen/Energie/Cooldowns in explizite `teams`-Konten überführt; Wirtschafts-, Bau-, Produktions-, Reparatur- und Befehlsoperationen nehmen einen Akteur entgegen. UI und ihre Testdoubles greifen ausdrücklich auf das lokale Konto zu. Gegnerstart und Wellen bleiben in diesem Zwischenschritt bestehen; faire Sicht und vollständige teamneutrale Laufzeiteffekte folgen getrennt.
+- **Geprüft:** `npm test` 293/293, einschließlich unveränderter historischer Terrain-/Effekt-/Modelldigests. Keine Fixture geändert. Browserabnahme folgt gebündelt mit der KI-Integration.
+
 ## KI-Folgeauftrag präzisiert
 
 - `docs/issues/gegner-ki-und-wellen.md` vom Ziel-Einzeiler zur gestuften Spezifikation erweitert: symmetrischer Baseline-Start, faire teamspezifische Sicht, vollständige Kosten-/Wirtschaftsparität ohne Cheats, zustandsabhängiger regelmäßiger Druck auf bekannte Wirtschafts-/Produktionsziele, Fähigkeitsheuristiken und Abnahmekriterien. Multiplayer nur als spätere Architekturleitplanke für teamneutrale deterministische Simulationsaktionen festgehalten; keinerlei Netzwerk-/Snapshot-/Lockstep-Auftrag.

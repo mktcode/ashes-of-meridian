@@ -31,8 +31,8 @@ function populateBase(game, workers = 5) {
     Object.assign(e, p);
   }
   // Developed-base scenarios use an explicit economy independent of start balance.
-  game.s.alloy = 1100;
-  game.s.gas = 400;
+  game.s.teams[0].alloy = 1100;
+  game.s.teams[0].gas = 400;
   game.rehash();
   game.world.reveal(game.s.entities);
 }

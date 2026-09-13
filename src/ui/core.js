@@ -127,7 +127,7 @@
           if (this.resultAetherRecovered === undefined) {
             let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.meta?.aetherEvacuation || 0))),
               limit = AETHER_EVACUATION_CAPS[level];
-            this.resultAetherRecovered = Math.min(limit, Math.max(0, Math.floor(this.game.s?.gas || 0)));
+            this.resultAetherRecovered = Math.min(limit, Math.max(0, Math.floor(this.game.s?.teams[0].gas || 0)));
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
               changed = true;

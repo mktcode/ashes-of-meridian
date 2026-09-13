@@ -56,12 +56,11 @@
         this.s = {
           seed, faction, enemy, biome, meta,
           time: 0,
-          alloy: STARTING_ALLOY[meta.startingAlloy || 0],
-          gas: 0,
-          energy: 100,
+          teams: [STARTING_ALLOY[meta.startingAlloy || 0], STARTING_ALLOY[0]].map(alloy => ({
+            alloy, gas: 0, energy: 100, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+          })) as [TeamState, TeamState],
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
-          abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 },
           wave: 0,
           nextWave: 95,
           enemyBudget: 900,
@@ -182,6 +181,13 @@
       },
       spawnResource(this: MeridianGame, type: ResourceType, x: number, z: number, amount: number) {
         return this.spawn('resource', type, x, z, -1, FACTION_ID.FIRST, { amount, size: type === 'gas' ? 1.5 : 1.3 });
+      },
+      account(this: MeridianGame, team: PlayerTeam = 0): TeamState { return this.s!.teams[team]; },
+      factionFor(this: MeridianGame, team: PlayerTeam = 0): FactionId {
+        return team === 0 ? this.s!.faction : this.s!.enemy;
+      },
+      notify(this: MeridianGame, team: PlayerTeam, type: string, data: any) {
+        if (team === 0) this.emit(type, data);
       },
       get(this: MeridianGame, id: number | null | undefined): Entity | null {
         let e = this.ids.get(id as number);
