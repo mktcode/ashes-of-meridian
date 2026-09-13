@@ -2,6 +2,13 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Modellpilot: detaillierte Barracks von Fraktion 0
+
+- Nach der separaten mechanischen Migration (`248a15c`) nur die eigene Barracks-Datei verfeinert: geschlossene Panzerhülle, Truppenschleuse, Seitenmodule, Kühlgitter und Dachdetails. Hülle 1.392 Dreiecke; fertiges Modell 12 Teilinstanzen/1.620 Dreiecke statt 15/304. Das zugehörige 320×320-Portrait aus dem tatsächlichen Modell in Balanced ohne Welt/Himmel erneuert, WebP-Qualität 80; alle anderen Assets unverändert. Modellworkflow und Auswertung stehen in der Grafikreferenz; Pilotissue abgeschlossen und entfernt.
+- **Geprüft:** `npm test` **263/263 bestanden**, darunter Geometrie/Normals/Bounds, deterministische Erzeugung, keine Frame-Meshallokation, Bau-/Team-/Yaw-/Tint-/Alpha-/Layer-/Materialvarianten. Nur die 18 Fraktion-0-Barracks-Zeichenvarianten ändern sich; 738 übrige Varianten, fünf vorhandene Meshfabriken und drei kontrollierte 20-s-Fraktionsruns samt RNG/Schüssen identisch. Alle vorhandenen Fixtures einschließlich der neuen Ausgangs-Modellreferenz unangetastet.
+- **Chromium `file://`:** Nahansichten, Gegner, Teilbau und Ghost in Performance/Balanced/High gesichtet; einmaliger Hüllupload, erneuertes 320×320-Portrait im Baumenü, GL 0 und keine Lade-/Laufzeitfehler. Zusätzlich 390×844 mit emuliertem Touch: Portrait/Baumenü gesichtet, Barracks-Aktion öffnet den Platzierungsmodus. Kontrollierte ausgebaute Seed-1409-Szene mit 131 Entitäten (davon eine Spieler-Barracks), Standardzoom 57 bei 1280×800 vor/nachher gesichtet: 170.390 → 171.706 Szenendreiecke; Modell-/Terrainchargen Performance 27 → 28, Balanced/High 52 → 54 inklusive Schatten, ohne Vollbildpässe.
+- **Messgrenze:** jeweils 3 Warmup-/20 Messframes mit `requestAnimationFrame` und synchronisierendem Pixel-Readback auf Software-WebGL: Performance 7,66 → 8,63 FPS, Balanced 3,33 → 3,27, High 3,24 → 3,29. Das ist ein kurzer, readbackbelasteter Headless-Vergleich, kein belastbarer Speedup/Regressions- oder Echtgerätetest. Nur bekannte Software-WebGL-Warnungen, keine Sicherheitsflags gelockert; keine vollständigen Runs oder öffentliche Auslieferung geprüft.
+
 ## Modellpilot: mechanische Barracks-Auslagerung
 
 - Kleine synchrone Registry und getestete CPU-Meshhilfen eingeführt; Fraktion 0 / building / barracks als eigene Modelldatei, unveränderte Plattform/Baugerüste im Adapter. Explizite HTML-/Testladereihenfolge und getrennte Modelltests; kein Gameplay-/Assetwechsel.

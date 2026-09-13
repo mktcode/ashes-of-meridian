@@ -21,7 +21,7 @@ Die Quellreihenfolge entspricht den `data-meridian-script`-Tags in `index.html`;
 | `src/renderer/assets.js` | Durch `npm run embed:textures` erzeugte Materialkennungen und eingebettete Laufzeittexturen: `MAT`, `MERIDIAN_TEXTURES` |
 | `src/renderer/geometry.js` | Prozedurale Mesh-Erzeugung: `geom` |
 | `src/renderer/model-kit.js` | Synchrone `EntityModels`-Registry, `registerEntityModel` und CPU-Meshhilfen `ModelMesh` |
-| `src/renderer/models/faction-0-building-barracks.js` | Isolierte Modellassemblierung für Fraktion 0 / building / barracks |
+| `src/renderer/models/faction-0-building-barracks.js` | Isolierte Meshfabrik und Modellassemblierung für Fraktion 0 / building / barracks |
 | `src/renderer/shaders.js` | GLSL-Quellen für Szene, Schatten, Himmel und Postprocessing |
 | `src/renderer/runtime.js` | WebGL-2-Ressourcen und Renderpässe: `MeridianRenderer` |
 | `src/content.ts` | Neutrale Fraktions-IDs `FACTION_ID`, typisierte Kataloge `FACTIONS`, `UNITS`, `BUILDINGS`, `ABILITIES`, `META`, `BIOMES`, Icons und Namenshelfer |
