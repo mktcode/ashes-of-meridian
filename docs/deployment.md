@@ -14,7 +14,7 @@ Das Webdeployment benötigt nur Docker beziehungsweise eine Plattform mit Docker
 - `audio/music-ratchet-theory.mp3`, `audio/music-last-light-relay.mp3`, `audio/music-breach-protocol.mp3`, `audio/music-black-channel.mp3` (freigegebene Aufnahmen; andere Audio-/Hörentwürfe werden nicht ausgeliefert)
 - die 14 manuell gepflegten `preview-*.png`
 
-Boden- und Skyboxtexturen sind in `dist/src/renderer/assets.js` eingebettet. Quellcode, Tests, Dokumentation, `node_modules`, Source Maps und die externen Texturquellen gelangen nicht ins Laufzeitimage.
+Boden- und Skyboxtexturen sind in `dist/src/renderer/assets.js` eingebettet. Quellcode, Tests, Dokumentation, `node_modules`, Source Maps und die gepflegten Texturquellen unter `assets/textures/` gelangen nicht ins Laufzeitimage.
 
 ## Dokploy
 

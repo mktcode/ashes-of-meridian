@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Texturquellen aus dem Projektroot aufgeräumt
+
+- Gepflegte Texturquellen nach `assets/textures/` verschoben. Audit bestätigt die eingebettete Nutzung von Skybox, Dirt-Basis, Felsclustern und Wüstensträuchern; Metall-/Bio-PNGs ergeben pixelgleich die beiden laufzeitgenutzten WebP-Einbettungen und bleiben deshalb als Quellen erhalten. Das weder hochgeladene noch gezeichnete Terrain-Overlay samt Einbettung entfernt; Einbettungsskript, Tests und Referenzen auf die neuen Pfade umgestellt.
+- **Neu geprüft:** `npm test` baut erfolgreich und erreicht **251/252**; einziger Fehler ist die bereits bestehende, sachfremde Erwartung `Move (default)` an den zuvor gekürzten Field-Manual-Text. Gezielte Terrain-/Renderertests **35/35 bestanden**. Chromium `file://`: Hauptmenü und Renderer geladen, GL 0, keine Laufzeit-/Ladefehler. Einbettungsskript idempotent, eingebettete Quelldateien bytegleich, Diff-Prüfung ohne Whitespacefehler. Kein Echtgerätetest.
+
 ## Field Manual gekürzt und auf Touch ausgerichtet
 
 - Hilfetext in `src/ui/screens.js` auf vier kurze Bereiche reduziert: Touch, Gefechtsknöpfe, Basis/Wirtschaft und Fortschritt. Rechtsklick-/Provisoriumshinweise, Wiederholungen und Detailregeln entfernt; wesentliche Schritte für Auswahl, Attack-move, Bau, Reparatur, Rally, Produktion, Upgrades und fehlende Run-Speicherung bleiben. Mit aktueller Eingabelogik und Spielreferenz abgeglichen; keine Änderung an Bedienung oder Spielregeln.

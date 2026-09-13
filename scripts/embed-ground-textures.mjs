@@ -4,10 +4,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const root = new URL('../', import.meta.url);
 const assets = new URL('src/renderer/assets.js', root);
 const textures = {
-  ground: 'texture-ground-dirt-base.png',
-  terrainOverlay: 'texture-ground-terrain-overlay.png',
-  rockClusters: 'texture-ground-rock-clusters.png',
-  desertShrubs: 'texture-ground-desert-shrubs.png'
+  ground: 'assets/textures/texture-ground-dirt-base.png',
+  rockClusters: 'assets/textures/texture-ground-rock-clusters.png',
+  desertShrubs: 'assets/textures/texture-ground-desert-shrubs.png'
 };
 const dataUrl = file => `data:image/png;base64,${readFileSync(new URL(file, root)).toString('base64')}`;
 let source = readFileSync(assets, 'utf8');
