@@ -1,0 +1,1 @@
+Der Fleet Upgrades Dialog zeigt die Upgrades nicht sehr platzsparend an und man muss schnell scrollen. Das muss optimiert werden.
