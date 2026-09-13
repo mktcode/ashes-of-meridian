@@ -172,7 +172,7 @@
         if (previous === 'game') this.paused = true;
         this.openModal(
           'armory',
-          `<div class="armory-screen"><header class="armory-heading"><h1>Fleet upgrades.</h1><div class="armory-limit"><span>EVACUATION LIMIT</span><strong>${evacuationLimit}</strong><small>AETHER / BATTLE</small></div></header><div class="armory-grid">${Object.entries(
+          `<div class="armory-screen"><header class="armory-heading"><h1>Upgrades</h1><div class="armory-limit"><span>EVACUATION LIMIT</span><strong>${evacuationLimit}</strong><small>AETHER / BATTLE</small></div></header><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {
