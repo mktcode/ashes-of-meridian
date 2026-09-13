@@ -1,0 +1,3 @@
+Wir sollte auf dem Startbildschirm einen Button hinzufügen "Units and Buildings". Dann öffnet sich eine Übersicht aller Einheiten und gebäude mit deren Vorschaubild aus dem Baumenü.
+Dort könnten später auch Einheiten freigeschaltet oder verstärkt werden oder so. Raum für weitere Features. Das sollte in der ersten Implementierung aber erstmal außen vor sein.
+Nur eine reine Übersicht aller Einheiten, nach Fraktion.
