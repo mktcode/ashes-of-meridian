@@ -1,0 +1,3 @@
+Mir kommt es so vor, als enthielten die Markdown-Dateien in docs/ sehr viel Information, die für die zukünftige Entwicklung nicht unmittelbar nützlich ist. Vor allem Dateien und Verzeichnisstrukturen sollten nicht ständig aktualisiert werden müssen. Die Exploration der Codebase erfolgt ohnehin meist durch KI-Agenten, die einfach bash Commands (rg, find, etc.) nutzen, um das Repo zu erkunden.
+
+Insgesamt sollte überlegt werden, inwieweit das docs Verzeichnis aufgeräumt bzw. kompaktiert werden kann.
