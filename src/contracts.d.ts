@@ -43,6 +43,7 @@ interface UpgradeDefinition {
   name: string;
   icon: string;
   desc: string;
+  display: { label: string; values: readonly number[]; unit: string };
   max: number;
   costs: readonly number[];
 }

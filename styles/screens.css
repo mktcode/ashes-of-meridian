@@ -744,7 +744,7 @@
       margin-bottom: 0
     }
 
-    .armory-limit {
+    .armory-balance {
       min-width: 130px;
       padding: 8px 12px;
       border: 1px solid #edb87566;
@@ -753,8 +753,8 @@
       background: linear-gradient(145deg, #5544274d, #101c27c9)
     }
 
-    .armory-limit span,
-    .armory-limit small,
+    .armory-balance span,
+    .armory-balance small,
     .upgrade-rank {
       display: block;
       font: 8px var(--mono);
@@ -762,7 +762,7 @@
       color: var(--muted)
     }
 
-    .armory-limit strong {
+    .armory-balance strong {
       display: block;
       font: 22px/1.05 var(--mono);
       color: var(--gold)
@@ -811,6 +811,35 @@
       font-size: 11px;
       line-height: 1.45;
       margin: 9px 0 12px
+    }
+
+    .upgrade-effect {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin: -3px 0 12px;
+      padding: 6px 8px;
+      border-left: 2px solid #edb87599;
+      background: #5544272b
+    }
+
+    .upgrade-effect span,
+    .upgrade-effect small {
+      font: 8px var(--mono);
+      letter-spacing: .8px;
+      color: var(--muted)
+    }
+
+    .upgrade-effect strong {
+      color: var(--gold);
+      font: 13px var(--mono);
+      text-align: right;
+      white-space: nowrap
+    }
+
+    .upgrade-effect small {
+      white-space: nowrap
     }
 
     .upgrade-levels {
@@ -950,7 +979,7 @@
         font-size: 24px
       }
 
-      .armory-limit {
+      .armory-balance {
         min-width: 108px;
         padding: 7px 9px
       }

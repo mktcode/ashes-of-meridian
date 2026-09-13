@@ -166,18 +166,17 @@
         );
       },
       showArmory() {
-        let previous = this.view,
-          evacuationLevel = clamp(this.profile.upgrades.aetherEvacuation || 0, 0, AETHER_EVACUATION_CAPS.length - 1),
-          evacuationLimit = AETHER_EVACUATION_CAPS[evacuationLevel];
+        let previous = this.view;
         if (previous === 'game') this.paused = true;
         this.openModal(
           'armory',
-          `<div class="armory-screen"><header class="armory-heading"><h1>Upgrades</h1><div class="armory-limit"><span>EVACUATION LIMIT</span><strong>${evacuationLimit}</strong><small>AETHER / BATTLE</small></div></header><div class="armory-grid">${Object.entries(
+          `<div class="armory-screen"><header class="armory-heading"><h1>Upgrades</h1><div class="armory-balance"><span>AETHER</span><strong>${this.profile.aether.toLocaleString()}</strong><small>AVAILABLE</small></div></header><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {
-              let n = this.profile.upgrades[k] || 0, cost = m.costs[n], affordable = this.profile.aether >= cost;
-              return `<div class="upgrade-card"><div class="upgrade-heading"><div class="sigil">${icon(m.icon)}</div><div><h3>${m.name}</h3><span class="upgrade-rank">LEVEL ${n} / ${m.max}</span></div></div><p>${m.desc}</p><div class="upgrade-levels" aria-label="Level ${n} of ${m.max}">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || !affordable ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : cost + ' AETHER · LEVEL ' + (n + 1)}</button></div>`;
+              let n = this.profile.upgrades[k] || 0, cost = m.costs[n], affordable = this.profile.aether >= cost,
+                effect = m.display.values[n];
+              return `<div class="upgrade-card"><div class="upgrade-heading"><div class="sigil">${icon(m.icon)}</div><div><h3>${m.name}</h3><span class="upgrade-rank">LEVEL ${n} / ${m.max}</span></div></div><p>${m.desc}</p><div class="upgrade-effect"><span>${m.display.label}</span><strong>${effect.toLocaleString()} <small>${m.display.unit}</small></strong></div><div class="upgrade-levels" aria-label="Level ${n} of ${m.max}">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || !affordable ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : cost + ' AETHER · LEVEL ' + (n + 1)}</button></div>`;
             })
             .join(
               ''

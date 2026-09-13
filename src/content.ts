@@ -302,7 +302,8 @@ const META = {
   startingAlloy: {
     name: 'Starting alloy',
     icon: 'crystal',
-    desc: 'Adds 50 starting alloy per level, raising expedition reserves from 250 to 500.',
+    desc: 'Adds 50 starting alloy per level.',
+    display: { label: 'STARTING RESERVES', values: STARTING_ALLOY, unit: 'ALLOY' },
     max: 5,
     costs: [100, 200, 300, 450, 650]
   },
@@ -310,13 +311,15 @@ const META = {
     name: 'Starting workers',
     icon: 'worker',
     desc: 'Start each new battle with one additional worker per level, up to five.',
+    display: { label: 'STARTING WORKERS', values: [0, 1, 2, 3, 4, 5], unit: 'WORKERS' },
     max: 5,
     costs: [300, 450, 650, 900, 1200]
   },
   aetherEvacuation: {
     name: 'Aether evacuation',
     icon: 'save',
-    desc: 'Raises the recovered aether limit per battle: 100 → 200 → 350 → 500 → 750 → 1,000.',
+    desc: 'Raises the recovered aether limit per battle.',
+    display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'AETHER / BATTLE' },
     max: 5,
     costs: [500, 800, 1200, 1800, 2600]
   }

@@ -773,7 +773,10 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
   h.ui.profile.aether = 99; h.ui.showArmory();
   assert.match(h.ui.html, /class="armory-screen"/);
-  assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>100<\/strong>/);
+  assert.match(h.ui.html, /AETHER<\/span><strong>99<\/strong><small>AVAILABLE<\/small>/);
+  assert.match(h.ui.html, /STARTING RESERVES<\/span><strong>250 <small>ALLOY<\/small>/);
+  assert.match(h.ui.html, /STARTING WORKERS<\/span><strong>0 <small>WORKERS<\/small>/);
+  assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>100 <small>AETHER \/ BATTLE<\/small>/);
   assert.equal((h.ui.html.match(/class="upgrade-heading"/g) || []).length, 3);
   assert.equal((h.ui.html.match(/class="upgrade-rank">LEVEL 0 \/ 5/g) || []).length, 3);
   assert.equal((h.ui.html.match(/aria-label="Level 0 of 5"/g) || []).length, 3);
@@ -786,8 +789,10 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   h.ui.buyUpgrade('startingAlloy'); assert.deepEqual(h.ui.profile.upgrades, {});
   h.ui.profile.aether = 100; h.ui.buyUpgrade('startingAlloy');
   assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1 }); assert.equal(h.ui.profile.aether, 0);
+  assert.match(h.ui.html, /STARTING RESERVES<\/span><strong>300 <small>ALLOY<\/small>/);
   h.ui.profile.aether = 500; h.ui.buyUpgrade('aetherEvacuation');
   assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1, aetherEvacuation: 1 }); assert.equal(h.ui.profile.aether, 0);
+  assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>200 <small>AETHER \/ BATTLE<\/small>/);
   h.ui.profile.aether = 5100; h.ui.showArmory();
   assert.doesNotMatch(h.ui.html, /∞ UPGRADE RESOURCES|FREE · LEVEL|Command uplink|Command resolve|Frontier assembly/);
   for (const key of keys) for (let i=0;i<7;i++) h.ui.buyUpgrade(key);
