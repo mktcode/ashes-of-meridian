@@ -1,0 +1,1 @@
+Der New Battle Dialog sollte die Kartenauswahl als Vorschaubilder darstellen und die Wahl der gegnerischen Fraktion genauso wie die eigene, anstatt mit langweiligen Dropdowns.
