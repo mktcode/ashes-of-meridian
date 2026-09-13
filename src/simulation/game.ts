@@ -53,12 +53,21 @@
             (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
               [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
           ),
-          seed = opts.seed || Math.floor(Math.random() * 1e8);
+          suppliedBenefits = opts.benefits || {},
+          benefits = Object.fromEntries(
+            (Object.keys(EXPEDITION_BENEFITS) as ExpeditionBenefit[]).map(key =>
+              [key, clamp(Math.floor(Number(suppliedBenefits[key]) || 0), 0,
+                'max' in EXPEDITION_BENEFITS[key] ? Number(EXPEDITION_BENEFITS[key].max) : 999999)])
+              .filter(([, value]) => Number(value) > 0)
+          ) as Record<string, number>,
+          seed = opts.seed || Math.floor(Math.random() * 1e8),
+          playerAlloy = STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * 100;
         this.s = {
-          seed, faction, enemy, map, meta,
+          seed, faction, enemy, map, meta, benefits,
           time: 0,
-          teams: [STARTING_ALLOY[meta.startingAlloy || 0], STARTING_ALLOY[0]].map(alloy => ({
-            alloy, gas: 0, energy: 100, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+          teams: [playerAlloy, STARTING_ALLOY[0]].map((alloy, team) => ({
+            alloy, gas: team === 0 ? (benefits.aetherAllocation || 0) * 50 : 0,
+            energy: 100, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
           })) as [TeamState, TeamState],
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
@@ -100,15 +109,19 @@
             if (!p) throw new Error('No free space for starting units.');
             Object.assign(e, p);
           }
-        // Add bonus workers only after the original layout and enemy RNG draws.
-        for (let i = 0; i < (meta.startingWorkers || 0); i++)
+        // Add bonus units only after the original layout and enemy RNG draws.
+        const startingWorkers = (meta.startingWorkers || 0) + (benefits.pioneerSquad || 0);
+        for (let i = 0; i < startingWorkers; i++)
           if (!this.spawnUnit('worker', layout.playerStart.x - 7, layout.playerStart.z - 4 + i * 2, 0, faction))
             throw new Error('No free space for starting workers.');
+        if (benefits.commanderMandate &&
+          !this.spawnUnit('hero', layout.playerStart.x - 9, layout.playerStart.z + 7, 0, faction))
+          throw new Error('No free space for starting commander.');
         this.rehash();
         this.world.reveal(s.entities);
         this.enableAI(1);
         this.emit('start', {});
-        this.emit('radio', meta.startingWorkers
+        this.emit('radio', startingWorkers
           ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
           : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then destroy the enemy command center.');
         return s;

@@ -13,6 +13,7 @@
         this.R = renderer;
         this.audio = audio;
         this.profile = profile;
+        this.expedition = this.persistence.loadExpedition?.() || null;
         this.view = 'home';
         this.paused = true;
         this.modalKind = '';
@@ -115,27 +116,37 @@
                   : FACTIONS[this.game.s.faction].color
             });
         } else if (type === 'result') {
-          let changed = false,
-            faction = this.game.s?.faction,
-            unlockLevel = this.profile.factionUnlockLevel;
+          const firstResult = this.resultAetherRecovered === undefined;
+          let profileChanged = false;
           this.factionJustUnlocked = null;
-          if (data.win && faction === unlockLevel && faction + 1 < FACTIONS.length) {
-            this.factionJustUnlocked = faction + 1;
-            this.profile.factionUnlockLevel = this.factionJustUnlocked;
-            changed = true;
-          }
-          if (this.resultAetherRecovered === undefined) {
+          if (firstResult) {
             let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.meta?.aetherEvacuation || 0))),
               limit = AETHER_EVACUATION_CAPS[level];
             this.resultAetherRecovered = Math.min(limit, Math.max(0, Math.floor(this.game.s?.teams[0].gas || 0)));
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
-              changed = true;
+              profileChanged = true;
             }
+            if (data.win && this.expedition) {
+              const previousUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
+              this.expedition.depth++;
+              if (this.expedition.depth > this.profile.expeditionDepth) {
+                this.profile.expeditionDepth = this.expedition.depth;
+                profileChanged = true;
+              }
+              const currentUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
+              if (currentUnlock > previousUnlock) this.factionJustUnlocked = currentUnlock;
+              this.expedition.encounter = this.createEncounter();
+              this.expedition.offers = this.createBenefitOffers(this.expedition);
+              this.persistence.saveExpedition(this.expedition);
+            } else if (!data.win) {
+              this.persistence.clearExpedition?.();
+              this.expedition = null;
+            }
+            if (profileChanged) this.persist();
+            this.audio.setMode?.('silent');
+            this.audio.sound(data.win ? 'victory' : 'defeat');
           }
-          if (changed) this.persist();
-          this.audio.setMode?.('silent');
-          this.audio.sound(data.win ? 'victory' : 'defeat');
           this.showResult(data);
         } else if (type === 'shot') {
           let p = this.R.project(data.x, 1, data.z);

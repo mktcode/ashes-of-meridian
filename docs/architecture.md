@@ -15,10 +15,10 @@ Das [Webdeployment](deployment.md) liefert denselben Stand statisch aus, ohne Ba
 ## Zustands- und Verantwortungsgrenzen
 
 - `MeridianGame` besitzt CPU-Welt und Effekte, keinen Renderer. Simulation und Effektticks laufen in festen Zeitschritten, UI/Rendering pro Frame. Die Spielschleife skaliert die Simulationszeit, nicht die Audio-Uhr.
-- `game.s` und `game.world` sind außerhalb eines Gefechts `null`. Der Run ist ausschließlich flüchtig; Start erzeugt eine neue Welt samt Suchindizes, RNG und Sicht. Es gibt kein Snapshot-/Restore-API.
-- Die UI orchestriert Auswahl, Dialoge und Profilfortschritt. Sie verarbeitet Ergebnis-Auszahlung und Fraktionsfreischaltung einmal pro Run; erneutes Anzeigen des Ergebnisses darf weder erneut auszahlen noch erneut den Ergebnis-Sound auslösen. Upgrade-Stufen werden beim Start in den Run kopiert; Käufe wirken erst beim nächsten Start.
-- Persistenz erhält Storage-Zugriff und Upgrade-Grenzen injiziert, ohne UI-/Spielabhängigkeit. Nur das permanente Profil wird normalisiert und gespeichert. Zugriffsausfälle führen zu flüchtigem Ersatz, nicht zu zugesicherter Speicherung; erfolgreiche spätere Lesezugriffe bevorzugen den Browserwert. Keine Run-Speicherung oder Migration ohne Auftrag.
-- Menüzustand, Befehlsmodus und Tempo sind keine Profileinstellungen. Tab-Verbergen pausiert, Rückkehr setzt nicht automatisch fort. Browser-/Grafikverlust kann den Run verwerfen.
+- `game.s` und `game.world` sind außerhalb eines Gefechts `null`. Jeder Gefechtsstart erzeugt eine neue Welt samt Suchindizes, RNG und Sicht; es gibt kein Snapshot-/Restore-API. Der Expeditionscheckpoint enthält ausschließlich Fraktion, Tiefe, Vorteile, Angebote und das nächste Gefechtsrezept, niemals Entitäten oder laufenden Simulationszustand.
+- Die UI orchestriert Expedition, Auswahl, Dialoge und Profilfortschritt. Sie verarbeitet Auszahlung, Tiefenfortschritt und Fraktionsfreischaltung einmal pro Gefecht; erneutes Anzeigen des Ergebnisses darf weder erneut fortschreiben noch erneut den Ergebnis-Sound auslösen. Upgrade-Stufen und Expeditionsvorteile werden beim Start in das Gefecht kopiert; spätere Änderungen wirken erst beim nächsten Start.
+- Persistenz erhält Storage-Zugriff sowie Upgrade-, Vorteils- und Kartenregeln injiziert, ohne UI-/Spielabhängigkeit. Permanentes Profil und Expeditionscheckpoint besitzen getrennte Schlüssel und werden unabhängig normalisiert. Zugriffsausfälle führen zu flüchtigem Ersatz, nicht zu zugesicherter Speicherung; erfolgreiche spätere Lesezugriffe bevorzugen den Browserwert. Es gibt keine Profilmigration und keine Speicherung laufender Gefechte.
+- Menüzustand, Befehlsmodus und Tempo sind keine Profileinstellungen. Tab-Verbergen pausiert, Rückkehr setzt nicht automatisch fort. Reload sowie Browser-/Grafikverlust verwerfen das aktuelle Gefecht und kehren höchstens zum davor gesicherten Expeditionsübergang zurück.
 
 ## Technische IDs und Anzeigenamen
 

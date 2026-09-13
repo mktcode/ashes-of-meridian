@@ -1,1 +1,3 @@
-Der New Battle Dialog sollte die Kartenauswahl als Vorschaubilder darstellen und die Wahl der gegnerischen Fraktion genauso wie die eigene, anstatt mit langweiligen Dropdowns.
+# Späterer Skirmish-Dialog
+
+Der Expeditionsmodus bestimmt Gegner und Karte automatisch. Für den später vorgesehenen frei konfigurierbaren Skirmish-Modus soll die Kartenauswahl Vorschaubilder verwenden und die gegnerische Fraktion ebenso anschaulich wie die eigene darstellen, statt Dropdowns zu verwenden.

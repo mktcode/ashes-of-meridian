@@ -47,7 +47,7 @@ Ein gezielter technischer Browsercheck verwendet den aktuellen Build, ein isolie
 
 - Shader-/Assetänderung: Laden, Kompilieren, WebGL-Fehler, betroffene Qualität.
 - Viewport/Eingabe: Projektion und Picking, Overlayoffset, Resize und betroffene Touch-Aktion.
-- Run/Profile: betroffener Start-, Pause-, Ergebnis- oder Reload-Pfad.
+- Expedition/Profil: betroffener Start-, Pause-, Ergebnis-, Vorteilswahl-, Abbruch- oder Reload-Pfad. Reload darf nur den gesicherten Übergang, nie die laufende Welt wiederherstellen.
 - Webcontainer: Imagebau, Healthcheck, MIME-Typen, fehlende Assets/404 und bei Bedarf HTTP-Start gemäß [Deployment](deployment.md).
 
 **Technisch geprüft und visuell bestätigt sind getrennte Aussagen.** Visuelle und akustische Abnahme erfolgt durch den Menschen; bei Bedarf konkret benennen, was noch anzusehen oder anzuhören ist. Automatisierte Screenshots können eine gezielte Diagnose unterstützen, sind aber keine Pflichtserie und kein menschliches Qualitätsurteil.

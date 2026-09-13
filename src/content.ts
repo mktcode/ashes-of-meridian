@@ -297,6 +297,34 @@ type AbilityType = keyof typeof ABILITIES;
 
 const STARTING_ALLOY = [250, 300, 350, 400, 450, 500] as const;
 const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
+const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
+
+const EXPEDITION_BENEFITS = {
+  supplyCrate: {
+    name: 'Supply crate',
+    icon: 'crystal',
+    desc: 'Adds 100 alloy to your reserves at the start of every remaining battle.'
+  },
+  aetherAllocation: {
+    name: 'Aether allocation',
+    icon: 'save',
+    desc: 'Adds 50 aether at the start of every remaining battle.'
+  },
+  pioneerSquad: {
+    name: 'Pioneer squad',
+    icon: 'worker',
+    desc: 'Deploys one additional worker at the start of every remaining battle.',
+    max: 5
+  },
+  commanderMandate: {
+    name: 'Commander mandate',
+    icon: 'hero',
+    desc: 'Deploys your faction commander at the start of every remaining battle.',
+    max: 1
+  }
+} as const;
+
+type ExpeditionBenefit = keyof typeof EXPEDITION_BENEFITS;
 
 const META = {
   startingAlloy: {

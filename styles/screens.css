@@ -723,6 +723,49 @@
       line-height: 1.6
     }
 
+    .benefit-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .benefit-option {
+      min-height: 170px;
+      padding: 18px 14px;
+      border: 1px solid #48cfe966;
+      border-radius: 7px 2px;
+      background: linear-gradient(145deg, #153344d9, #061725f2);
+      text-align: left;
+    }
+
+    .benefit-option:hover {
+      border-color: var(--gold);
+      background: linear-gradient(145deg, #55442788, #112331e8);
+    }
+
+    .benefit-option .sigil {
+      display: block;
+      width: 32px;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+
+    .benefit-option strong,
+    .benefit-option small {
+      display: block;
+    }
+
+    .benefit-option small {
+      color: var(--muted);
+      line-height: 1.55;
+      margin-top: 8px;
+    }
+
+    .benefit-options.compact .benefit-option {
+      min-height: 140px;
+    }
+
     .unlock-notice {
       border-left: 2px solid var(--gold);
       color: var(--gold);
@@ -960,6 +1003,15 @@
     }
 
     @media(max-width:600px) {
+      .benefit-options {
+        grid-template-columns: 1fr;
+      }
+
+      .benefit-option,
+      .benefit-options.compact .benefit-option {
+        min-height: 0;
+      }
+
       .home-screen .menu-main {
         padding: 0
       }

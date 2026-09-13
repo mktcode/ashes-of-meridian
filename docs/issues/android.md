@@ -6,7 +6,7 @@ Nur Vorüberlegung, kein Umsetzungsauftrag. Es gibt kein Android-Projekt oder We
 
 Ein werbefreier **Capacitor**-Prototyp ist der bevorzugte Kandidat, noch keine verbindliche Werkzeugentscheidung. Nur gebaute Laufzeitdateien in einer lokalen WebView bündeln, nicht das ganze Repository. Native Brücke/Plugins nach Bedarf; Android Studio/Gradle erzeugen später ein signiertes App Bundle. Eine TWA verlangt HTTPS-Hosting, eine eigene WebView-Hülle mehr native Wartung.
 
-Vor weiterer Planung auf echten Geräten WebGL 2, Kontextverlust, Startzeit, Speicher/Wärme/Akku, Touch, Zurück-Taste, Safe Areas/Ausrichtung, Hintergrundwechsel und Audio prüfen. Prozessende verliert heute den Run. Profilverhalten bei Neustart/Update/Datenlöschung prüfen; kein Browser-App-Profiltransfer zugesagt. Paketgröße, Berechtigungen und Asset-/Audio-Lizenzen berücksichtigen.
+Vor weiterer Planung auf echten Geräten WebGL 2, Kontextverlust, Startzeit, Speicher/Wärme/Akku, Touch, Zurück-Taste, Safe Areas/Ausrichtung, Hintergrundwechsel und Audio prüfen. Prozessende verliert das laufende Gefecht, der letzte Expeditionsübergang soll jedoch erhalten bleiben. Profil- und Checkpointverhalten bei Neustart/Update/Datenlöschung prüfen; kein Browser-App-Profiltransfer zugesagt. Paketgröße, Berechtigungen und Asset-/Audio-Lizenzen berücksichtigen.
 
 ## Werbung und Veröffentlichung
 

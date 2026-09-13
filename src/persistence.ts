@@ -1,12 +1,12 @@
-/* Permanent profile persistence only. Runs are never stored. */
+/* Permanent profile and between-battle expedition checkpoint persistence. */
 'use strict';
 
 // Dependencies are supplied by app.js. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
 function createMeridianPersistence(
-  { getStorage, clamp, upgrades, warn }: PersistenceDependencies
+  { getStorage, clamp, upgrades, benefits, battlefields, warn }: PersistenceDependencies
 ): MeridianPersistence {
-    const PROFILE_KEY = 'meridian.profile.v1';
+    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v1';
     const memoryStore: Record<string, string> = {};
     const Store = {
       available: true,
@@ -27,12 +27,24 @@ function createMeridianPersistence(
           this.available = false;
           return false;
         }
+      },
+      remove(k: string) {
+        delete memoryStore[k];
+        try {
+          const storage = getStorage();
+          if (storage.removeItem) storage.removeItem(k);
+          else storage.setItem(k, '');
+          return true;
+        } catch (e) {
+          this.available = false;
+          return false;
+        }
       }
     };
     function defaultProfile(): MeridianProfile {
       return {
         version: 1,
-        factionUnlockLevel: 0,
+        expeditionDepth: 0,
         aether: 0,
         upgrades: {},
         settings: {
@@ -49,7 +61,7 @@ function createMeridianPersistence(
       try {
         let p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
         if (p && p.version === 1) {
-          d.factionUnlockLevel = clamp(Math.floor(Number(p.factionUnlockLevel) || 0), 0, 2);
+          d.expeditionDepth = clamp(Math.floor(Number(p.expeditionDepth) || 0), 0, 999999);
           d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
           for (let k in upgrades)
             d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
@@ -63,11 +75,51 @@ function createMeridianPersistence(
       }
       return d;
     }
+    function loadExpedition(): MeridianExpedition | null {
+      try {
+        const p = JSON.parse(Store.get(EXPEDITION_KEY) || 'null');
+        if (!p || p.version !== 1 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
+          !p.encounter || !Number.isInteger(p.encounter.enemy) || p.encounter.enemy < 0 || p.encounter.enemy > 2 ||
+          !Object.hasOwn(battlefields, p.encounter.map)) return null;
+        const normalized: MeridianExpedition = {
+          version: 1,
+          faction: p.faction,
+          depth: clamp(Math.floor(Number(p.depth) || 0), 0, 999999),
+          benefits: {},
+          encounter: {
+            enemy: p.encounter.enemy,
+            map: p.encounter.map,
+            seed: clamp(Math.floor(Number(p.encounter.seed) || 1), 1, 99999999)
+          },
+          offers: []
+        };
+        for (const key of Object.keys(benefits)) {
+          const max = benefits[key].max ?? 999999;
+          const count = clamp(Math.floor(Number(p.benefits?.[key]) || 0), 0, max);
+          if (count) normalized.benefits[key] = count;
+        }
+        if (Array.isArray(p.offers)) normalized.offers = [...new Set<unknown>(p.offers)]
+          .filter((key): key is string => typeof key === 'string' && Object.hasOwn(benefits, key) &&
+            (benefits[key].max === undefined || (normalized.benefits[key] || 0) < benefits[key].max))
+          .slice(0, 3);
+        return normalized;
+      } catch (e: any) {
+        warn('Expedition reset:', e.message);
+        return null;
+      }
+    }
     return {
       get available() { return Store.available; },
       loadProfile,
       saveProfile(profile: MeridianProfile) {
         return Store.set(PROFILE_KEY, JSON.stringify(profile));
+      },
+      loadExpedition,
+      saveExpedition(expedition: MeridianExpedition) {
+        return Store.set(EXPEDITION_KEY, JSON.stringify(expedition));
+      },
+      clearExpedition() {
+        return Store.remove(EXPEDITION_KEY);
       }
     };
 }

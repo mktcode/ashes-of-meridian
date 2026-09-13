@@ -103,21 +103,39 @@ type MeridianSettings = Record<string, number | boolean> & {
 
 interface MeridianProfile {
   version: 1;
-  factionUnlockLevel: number;
+  expeditionDepth: number;
   aether: number;
   upgrades: Record<string, number>;
   settings: MeridianSettings;
 }
 
+interface ExpeditionEncounter {
+  enemy: FactionId;
+  map: BattlefieldId;
+  seed: number;
+}
+
+interface MeridianExpedition {
+  version: 1;
+  faction: FactionId;
+  depth: number;
+  benefits: Record<string, number>;
+  encounter: ExpeditionEncounter;
+  offers: string[];
+}
+
 interface ProfileStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+  removeItem?(key: string): void;
 }
 
 interface PersistenceDependencies {
   getStorage(): ProfileStorage;
   clamp(value: number, min: number, max: number): number;
   upgrades: Record<string, { max: number }>;
+  benefits: Record<string, { max?: number }>;
+  battlefields: Record<string, unknown>;
   warn(...values: unknown[]): void;
 }
 
@@ -125,6 +143,9 @@ interface MeridianPersistence {
   readonly available: boolean;
   loadProfile(): MeridianProfile;
   saveProfile(profile: MeridianProfile): boolean;
+  loadExpedition(): MeridianExpedition | null;
+  saveExpedition(expedition: MeridianExpedition): boolean;
+  clearExpedition(): boolean;
 }
 
 type TeamId = -1 | 0 | 1;
@@ -236,6 +257,7 @@ interface BattleOptions {
   enemy?: number;
   map?: string;
   seed?: number;
+  benefits?: Record<string, number>;
 }
 
 interface RunStats {
@@ -313,6 +335,7 @@ interface RunState {
   enemy: FactionId;
   map: BattlefieldId;
   meta: Record<string, number>;
+  benefits: Record<string, number>;
   time: number;
   teams: [TeamState, TeamState];
   nextId: number;

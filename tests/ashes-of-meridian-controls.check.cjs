@@ -78,7 +78,8 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { factionUnlockLevel: 0, aether: 0, upgrades: {}, settings: { quality: 2 } }, { saveProfile() {} });
+    { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, upgrades: {}, settings: { quality: 2 } },
+    { saveProfile() {}, saveExpedition() {}, clearExpedition() {} });
   ui.view = 'game'; ui.paused = false;
   const key = (key, options = {}) => document.handlers.keydown?.({ key, preventDefault() {}, ...options });
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
@@ -646,40 +647,27 @@ test('pause, resume, help and modal close remain button actions; save/load/backu
   for (const method of ['save','load','exportBackup','importBackup']) assert.equal(h.UI.prototype[method], undefined);
 });
 
-test('home discards an active run and offers only new battles, upgrades, help and settings', () => {
-  for (const active of [false, true]) {
-    const h = setup(); let previews = 0;
-    if (!active) { h.ui.game.s = null; h.ui.view = 'home'; }
-    h.ui.onPreview = () => previews++;
-    h.ui.showHome();
-    const html = h.document.getElementById('menu').innerHTML;
-    assert.match(html, /class="home-screen"/);
-    assert.match(html, /aria-label="Ashes of Meridian"/);
-    assert.match(html, /class="wordmark-first">ASHES <b>OF<\/b>/);
-    assert.match(html, /A roguelite RTS\./);
-    assert.doesNotMatch(html, /AN ORIGINAL REAL-TIME STRATEGY GAME|wordmark-link/);
-    assert.match(html, /New battle/); assert.doesNotMatch(html, /campaign|skirmish|endless|OPERATIONS COMPLETE/i);
-    assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
-      ['battle', 'armory', 'help', 'settings']);
-    assert.equal((html.match(/class="primary"/g) || []).length, 1);
-    assert.ok(html.includes('class="primary" data-ui="battle"'));
-    assert.ok(html.includes('class="secondary" data-ui="armory"'));
-    assert.match(html, /class="menu-buttons"[\s\S]*data-ui="battle"[\s\S]*data-ui="armory"[\s\S]*<\/div>/);
-    assert.match(html, /class="menu-subnav"[\s\S]*data-ui="help"[\s\S]*data-ui="settings"[\s\S]*<\/nav>/);
-    assert.equal(h.ui.game.s, null);
-    assert.equal(previews, 1); assert.equal(h.ui.R.fogOn, false);
-    assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
-    assert.deepEqual(h.calls, []);
-  }
+test('home offers a new expedition and exposes a secured expedition when present', () => {
+  const h = setup(); h.ui.showHome();
+  let html = h.document.getElementById('menu').innerHTML;
+  assert.match(html, /New expedition/);
+  assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
+    ['battle', 'armory', 'help', 'settings']);
+  h.ui.expedition = { depth: 4 };
+  h.ui.showHome(); html = h.document.getElementById('menu').innerHTML;
+  assert.match(html, /Continue expedition/); assert.match(html, /DEPTH 4 · CHECKPOINT SECURED/);
+  assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
+    ['continueExpedition', 'battle', 'armory', 'help', 'settings']);
+  assert.equal(h.ui.game.s, null); assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
 });
 
 test('pause and hidden-tab pause retain the run only in memory, with explicit abandonment warning', () => {
   const h=setup(); h.UI.prototype.bind.call(h.ui);
   const state=h.ui.game.s, before=JSON.stringify(state);
   h.ui.pause(); assert.equal(h.ui.paused,true);
-  assert.match(h.ui.html,/Runs cannot be saved/); assert.match(h.ui.html,/ABANDON RUN/);
+  assert.match(h.ui.html,/current battle is not saved/); assert.match(h.ui.html,/ABANDON EXPEDITION/);
   assert.deepEqual(Array.from(h.ui.html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),
-    ['resume','settings','help','restartConfirm','home']);
+    ['resume','settings','help','restartConfirm','abandon']);
   h.ui.resume(); assert.equal(h.ui.paused,false);
   h.document.hidden=true; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);
   h.document.hidden=false; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);
@@ -687,34 +675,52 @@ test('pause and hidden-tab pause retain the run only in memory, with explicit ab
   state.time=90; h.ui.tick(.1); state.time=0;
   assert.strictEqual(h.ui.game.s,state); assert.equal(JSON.stringify(state),before); assert.deepEqual(h.calls,[]);
   h.ui.showSettings(); assert.doesNotMatch(h.ui.html,/data-ui="(?:export|import)"/);
-  assert.match(h.ui.html,/Runs are never saved/);
+  assert.match(h.ui.html,/saved only between battles/);
 });
 
-test('victory and defeat offer restart, upgrades and main menu; ended runs cannot resume', () => {
-  for(const win of [false,true]) {
-    const h=setup(); h.UI.prototype.bind.call(h.ui);
-    Object.assign(h.ui.game.s,{seed:1409,map:'desert',enemy:2,stats:{kills:0,lost:1,gathered:0}});
-    const result={win,text:'HQ destroyed',time:20,integrity:0,score:0}; h.ui.game.s.result=result;
-    h.ui.showResult(result); const html=h.ui.html;
-    assert.equal(h.ui.paused,true);
-    assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),['restart','armory','home']);
-    assert.match(html, /<div class="btnstack"><button class="primary" data-ui="restart"/);
-    h.document.getElementById('pauseBtn').onclick();
-    assert.equal(h.ui.paused,true); assert.equal(h.ui.html,html);
-    h.ui.game.start=opts=>h.calls.push(['start',{...opts}]);
-    h.click({ui:'restart'});
-    assert.deepEqual(h.calls,[['start',{faction:0,map:'desert',enemy:2}]], 'redeployment requests a fresh seed');
+test('victory offers expedition benefits while defeat offers a fresh expedition', () => {
+  for (const win of [false, true]) {
+    const h = setup();
+    Object.assign(h.ui.game.s, { stats: { kills: 0, lost: 1, gathered: 0 } });
+    if (win) h.ui.expedition = { depth: 2, offers: ['supplyCrate'], benefits: {} };
+    const result = { win, text: 'HQ destroyed', time: 20, integrity: 0, score: 0 };
+    h.ui.showResult(result);
+    assert.equal(h.ui.paused, true);
+    if (win) assert.match(h.ui.html, /data-benefit="supplyCrate"/);
+    else assert.match(h.ui.html, /data-ui="battle">NEW EXPEDITION/);
+    assert.match(h.ui.html, /data-ui="armory"/); assert.match(h.ui.html, /data-ui="home"/);
   }
 });
 
-test('pause restart preserves faction, enemy and map but requests a fresh battlefield', () => {
+test('pause restart reopens the secured encounter with its expedition benefits', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  Object.assign(h.ui.game.s, { faction: 1, seed: 1409, map: 'desert', enemy: 2 });
-  h.ui.game.start = opts => h.calls.push(['start', { ...opts }]);
-  h.ui.pause(); h.click({ ui: 'restartConfirm' });
-  assert.match(h.ui.html, /new random battlefield/);
-  h.click({ ui: 'restart' });
-  assert.deepEqual(h.calls, [['start', { faction: 1, map: 'desert', enemy: 2 }]]);
+  h.ui.expedition = { faction: 1, encounter: { enemy: 2, map: 'desert', seed: 1409 },
+    benefits: { supplyCrate: 2 }, offers: [], depth: 3 };
+  h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
+  h.ui.pause(); h.click({ ui: 'restartConfirm' }); h.click({ ui: 'restart' });
+  assert.deepEqual(h.calls, [['start', { faction: 1, enemy: 2, map: 'desert', seed: 1409,
+    benefits: { supplyCrate: 2 } }]]);
+});
+
+test('victory checkpoints offers and chosen benefits; defeat clears the expedition', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const saved = [], cleared = [];
+  h.ui.persistence.saveExpedition = value => saved.push(JSON.parse(JSON.stringify(value)));
+  h.ui.persistence.clearExpedition = () => cleared.push(true);
+  h.ui.persistence.saveProfile = () => {};
+  h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
+  h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
+  h.ui.expedition = { version: 1, faction: 0, depth: 0, benefits: {},
+    encounter: { enemy: 1, map: 'desert', seed: 1409 }, offers: [] };
+  h.ui.event('result', { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
+  assert.equal(h.ui.expedition.depth, 1); assert.equal(saved.length, 1);
+  assert.equal(h.ui.expedition.offers.length, 3);
+  const choice = h.ui.expedition.offers[0]; h.click({ benefit: choice });
+  assert.equal(h.ui.expedition.benefits[choice], 1); assert.equal(h.ui.expedition.offers.length, 0);
+  assert.equal(saved.length, 2); assert.equal(h.calls.length, 1);
+  h.ui.resultAetherRecovered = undefined;
+  h.ui.event('result', { win: false, text: 'Defeat', time: 1, integrity: 0, score: 0 });
+  assert.equal(h.ui.expedition, null); assert.equal(cleared.length, 1);
 });
 
 test('result upgrades return to the same ended battle without replaying the result sound', () => {
@@ -758,12 +764,12 @@ test('upgrades opened outside a result retain home and active-battle return rout
   }
 });
 
-test('runtime and delivered HTML have no run persistence hooks or backup input', () => {
-  for(const file of [`${RUNTIME_SOURCE}/app.js`, ...UI_FILES,
+test('runtime has no in-battle snapshot or backup hooks', () => {
+  for (const file of [`${RUNTIME_SOURCE}/app.js`, ...UI_FILES,
     ...SIMULATION_SCRIPTS.map(name => `${RUNTIME_SOURCE}/simulation/${name.replace('simulation-', '')}.js`),
     `${RUNTIME_SOURCE}/persistence.js`, 'index.html']) {
-    const source=fs.readFileSync(path.join(__dirname,'..',file),'utf8');
-    assert.doesNotMatch(source,/checkpoint|lastSaveTime|importFile|exportBackup|importBackup|serializeBackup|parseBackup|beforeunload|operation\.v[0-9]/i,file);
+    const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    assert.doesNotMatch(source, /lastSaveTime|importFile|exportBackup|importBackup|serializeBackup|parseBackup|beforeunload|entities.*localStorage/i, file);
   }
 });
 
@@ -830,94 +836,52 @@ test('battle setup and help describe starting workers and alloy levels', () => {
       new RegExp(`HQ \\+ ${level} WORKERS · ${250 + level * 50} ALLOY`));
   }
   h.ui.showHelp();
-  assert.match(h.ui.html, /0–5 workers/); assert.match(h.ui.html, /250–500 alloy \/ 0 aether/);
+  assert.match(h.ui.html, /0–5 workers/); assert.match(h.ui.html, /250–500 alloy/);
+  assert.match(h.ui.html, /benefits can add workers, alloy, aether and your commander/);
   assert.doesNotMatch(h.ui.html, /only your headquarters/);
 });
 
-test('content labels can change without changing faction/map IDs, order or unlock requirements', () => {
+test('content labels can change without changing faction IDs or depth requirements', () => {
   const h = setup();
-  vm.runInContext(`
-    FACTIONS.forEach((f, i) => { f.name = 'Faction <' + i + '> & revised'; });
-    Object.values(BATTLEFIELDS).forEach((b, i) => { b.name = 'Revised environment ' + i; });
-  `, h.context);
+  vm.runInContext(`FACTIONS.forEach((f, i) => { f.name = 'Faction <' + i + '> & revised'; });`, h.context);
   h.ui.showBattle();
   const html = h.document.getElementById('menu').innerHTML;
-  const maps = html.match(/<select id="battleMap">([\s\S]*?)<\/select>/)[1];
-  assert.equal(maps, ['desert', 'alien-planet', 'mothership'].map((id, i) =>
-    `<option value="${id}">Revised environment ${i}</option>`).join(''));
-  const enemies = html.match(/<select id="battleEnemy">([\s\S]*?)<\/select>/)[1];
-  assert.equal(enemies, [2, 1, 0].map(i =>
-    `<option value="${i}">Faction &lt;${i}&gt; &amp; revised</option>`).join(''));
-  for (const i of [0, 1]) assert.ok(html.includes(`Win once as Faction &lt;${i}&gt; &amp; revised.`));
+  assert.match(html, /Faction &lt;1&gt; &amp; revised/);
+  assert.match(html, /Reach expedition depth 10/); assert.match(html, /Reach expedition depth 25/);
   h.ui.showHelp();
-  for (const i of [0, 1, 2]) assert.ok(h.ui.html.includes(`<b>Faction &lt;${i}&gt; &amp; revised</b>`));
-  h.ui.factionJustUnlocked = 1;
-  h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
-  h.UI.prototype.showResult.call(h.ui, { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
-  assert.ok(h.ui.html.includes('NEW FACTION UNLOCKED · Faction &lt;1&gt; &amp; revised'));
+  for (const i of [1, 2]) assert.ok(h.ui.html.includes(`<b>Faction &lt;${i}&gt; &amp; revised</b>`));
 });
 
-test('factions unlock sequentially after victories with the preceding faction', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.showBattle();
-  let html = h.document.getElementById('menu').innerHTML;
-  assert.match(html, /faction-option active[^>]*data-faction="0"/);
-  assert.match(html, /faction-option locked" data-faction="1" disabled/);
-  assert.match(html, /faction-option locked" data-faction="2" disabled/);
-  assert.match(html, /Win once as The Free Marches/);
-  assert.match(html, /Win once as The Verdant Choir/);
-  h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 0, 'locked card cannot change selection');
-  h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleMap','desert']])
-    h.document.getElementById(id).value = value;
+test('best expedition depth unlocks factions at 10 and 25', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  for (const [depth, unlocked] of [[0, 0], [9, 0], [10, 1], [24, 1], [25, 2]]) {
+    h.ui.profile.expeditionDepth = depth;
+    assert.deepEqual([0, 1, 2].map(faction => h.ui.factionUnlocked(faction)),
+      [true, unlocked >= 1, unlocked >= 2]);
+  }
+  h.ui.profile.expeditionDepth = 9;
+  h.ui.expedition = { version: 1, faction: 0, depth: 9, benefits: {},
+    encounter: { enemy: 1, map: 'desert', seed: 1409 }, offers: [] };
+  h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
+  h.ui.showResult = () => {};
+  let saves = 0; h.ui.persistence.saveProfile = () => { saves++; };
+  h.ui.event('result', { win: true });
+  assert.equal(h.ui.profile.expeditionDepth, 10); assert.equal(h.ui.factionJustUnlocked, 1); assert.equal(saves, 1);
+  h.ui.resultAetherRecovered = undefined; h.ui.expedition.depth = 24; h.ui.profile.expeditionDepth = 24;
+  h.ui.event('result', { win: true });
+  assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
+});
+
+test('expedition setup creates and saves a random pending encounter', () => {
+  const h = setup(); h.ui.profile.expeditionDepth = 25; h.ui.battleFaction = 2;
+  const saved = []; h.ui.persistence.saveExpedition = value => saved.push(JSON.parse(JSON.stringify(value)));
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,map:'desert'}]], 'launch also rejects a forged locked choice');
-  let saves = 0; h.ui.persistence.saveProfile = () => { saves++; return true; };
-  h.ui.showResult = () => {
-    const faction = h.ui.factionJustUnlocked;
-    h.ui.html = faction === null ? '' : `NEW FACTION UNLOCKED: ${faction}`;
-  };
-  h.ui.game.s.faction = 1; h.ui.event('result', { win: true });
-  assert.equal(h.ui.profile.factionUnlockLevel, 0); assert.equal(saves, 0, 'a forged later-faction win cannot skip progression');
-  h.ui.game.s.faction = 0; h.ui.event('result', { win: false });
-  assert.equal(h.ui.profile.factionUnlockLevel, 0); assert.equal(saves, 0);
-  h.ui.event('result', { win: true });
-  assert.equal(h.ui.profile.factionUnlockLevel, 1); assert.equal(saves, 1);
-  assert.match(h.ui.html, /NEW FACTION UNLOCKED: 1/);
-  Object.assign(h.ui.game.s, { stats: { kills: 0, lost: 0, gathered: 0 } });
-  h.UI.prototype.showResult.call(h.ui, { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
-  assert.match(h.ui.html, /NEW FACTION UNLOCKED · The Verdant Choir is ready for deployment/);
-  h.ui.event('result', { win: true }); assert.equal(saves, 1, 'repeat wins do not rewrite the profile');
-  h.ui.showBattle(); html = h.document.getElementById('menu').innerHTML;
-  assert.doesNotMatch(html, /locked" data-faction="1"/);
-  assert.match(html, /locked" data-faction="2" disabled/);
-  h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 1);
-  h.ui.game.s.faction = 1; h.ui.event('result', { win: true });
-  assert.equal(h.ui.profile.factionUnlockLevel, 2); assert.equal(saves, 2);
-  assert.match(h.ui.html, /NEW FACTION UNLOCKED: 2/);
-  h.UI.prototype.showResult.call(h.ui, { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
-  assert.match(h.ui.html, /NEW FACTION UNLOCKED · The Veiled Court is ready for deployment/);
-  h.ui.event('result', { win: true }); assert.equal(saves, 2);
-  h.ui.showBattle(); html = h.document.getElementById('menu').innerHTML;
-  assert.doesNotMatch(html, /faction-option[^>]*locked/);
-  h.click({ faction: '2' }); assert.equal(h.ui.battleFaction, 2);
-});
-
-test('battle setup launches with automatic seed selection and no difficulty control', () => {
-  const h = setup(); h.ui.profile.factionUnlockLevel = 2; h.ui.showBattle();
-  assert.equal(h.ui.difficultyOptions, undefined);
-  const html = h.document.getElementById('menu').innerHTML;
-  assert.doesNotMatch(html, /difficulty|standard|veteran|seed/i);
-  assert.match(html, /class="launch-row battle-launch"/);
-  const css = fs.readFileSync(path.join(__dirname, '..', 'styles/screens.css'), 'utf8');
-  assert.match(css, /\.battle-launch\s*\{[^}]*flex-direction: column;\s*align-items: stretch/);
-  h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleMap','desert']])
-    h.document.getElementById(id).value = value;
-  h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
-  h.ui.startBattle();
-  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,map:'desert'}]]);
-  assert.equal('difficulty' in h.ui.profile.settings,false);
+  assert.equal(saved.length, 1); assert.equal(saved[0].faction, 2); assert.equal(saved[0].depth, 0);
+  assert.ok([0, 1, 2].includes(saved[0].encounter.enemy));
+  assert.ok(['desert', 'alien-planet', 'mothership'].includes(saved[0].encounter.map));
+  assert.ok(saved[0].encounter.seed > 0);
+  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {} });
 });
 
 test('tooltips and native title hints are removed without removing pointer press guards or accessible names', () => {

@@ -1,6 +1,6 @@
 # Ashes of Meridian
 
-Lokaler, touchorientierter Echtzeitstrategie-Prototyp mit drei Fraktionen und WebGL 2. Der Core Loop ist implementiert: **Basis aufbauen → Gefecht → ungenutzten Aether evakuieren → permanente Upgrades → neues Gefecht**. Bedienbarkeit auf echten Geräten und Langzeitbalancing sind noch zu validieren.
+Lokaler, touchorientierter Echtzeitstrategie-Roguelite-Prototyp mit drei Fraktionen und WebGL 2. Der Core Loop ist implementiert: **Basis aufbauen → Gefecht gewinnen → Expeditionsvorteil wählen → weiter vordringen → Aether in permanente Flottenupgrades investieren**. Bedienbarkeit auf echten Geräten und Langzeitbalancing sind noch zu validieren.
 
 [Öffentliche Testversion](https://aom.markus-kottlaender.de/) für erste Playtests; Profile bleiben lokal im jeweiligen Browser.
 
@@ -15,11 +15,11 @@ Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen.
 
 ## Spielen
 
-Mit **New battle** Fraktion, Gegner und Karte wählen. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Alloy, Raffinerien an Vents erzeugen Aether. Das gegnerische HQ zerstören gewinnt; das letzte eigene HQ verlieren beendet das Gefecht als Niederlage.
+Mit **New expedition** eine freigeschaltete Fraktion wählen; Gegner, Karte und Seed werden für jedes Gefecht neu bestimmt. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Alloy, Raffinerien an Vents erzeugen Aether. Das gegnerische HQ zerstören führt zur Vorteilswahl und zum nächsten Gefecht; das letzte eigene HQ beendet die Expedition.
 
 Fingerziehen/Pinch bewegt die Kamera, Tap wählt oder erteilt einen Kontextbefehl. Der Schwerter-Schalter neben ⌂ aktiviert Attack-move. Bau und Rekrutierung liegen rechts, Fähigkeiten mittig, Minimap links. **Cancel** beendet eine Zielauswahl.
 
-Nur Reserve, Upgrades, Fraktionsfreischaltungen und Einstellungen bleiben gespeichert, **keine Runs**. Reload oder Schließen verwirft das Gefecht. Genaue Regeln und Bedienung: [Gameplay](docs/gameplay.md).
+Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine laufende Expedition wird **zwischen Gefechten** automatisch gesichert; Reload oder Schließen verwirft nur das aktuelle Gefecht und setzt am letzten Übergang fort. Genaue Regeln und Bedienung: [Gameplay](docs/gameplay.md).
 
 ## Entwicklung
 

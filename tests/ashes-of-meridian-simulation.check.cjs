@@ -743,6 +743,23 @@ test('five starting workers begin mining and deliver alloy without recruitment f
   }
 });
 
+test('expedition benefits combine with permanent start upgrades without helping the enemy', () => {
+  const { game } = createGame();
+  game.profile.upgrades = { startingAlloy: 1, startingWorkers: 2 };
+  game.start({ seed: 1409, faction: 1, benefits: {
+    supplyCrate: 2, aetherAllocation: 2, pioneerSquad: 3, commanderMandate: 1,
+    unknown: 99
+  } });
+  assert.deepEqual(json(game.s.benefits), {
+    supplyCrate: 2, aetherAllocation: 2, pioneerSquad: 3, commanderMandate: 1
+  });
+  assert.deepEqual([game.s.teams[0].alloy, game.s.teams[0].gas], [500, 100]);
+  assert.deepEqual([game.s.teams[1].alloy, game.s.teams[1].gas], [250, 0]);
+  assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
+  assert.equal(game.alive(e => e.team === 0 && e.type === 'hero').length, 1);
+  assert.equal(game.alive(e => e.team === 1 && (e.type === 'worker' || e.type === 'hero')).length, 0);
+});
+
 test('base energy, hull, production and construction rates match the current rules', () => {
   const { game } = createGame();
   game.start({ seed: 1409 });

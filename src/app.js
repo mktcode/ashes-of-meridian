@@ -11,12 +11,14 @@
         overlay = document.getElementById('overlay');
       try {
         const visibleSimulation = new URLSearchParams(location.search).get('simulation') === 'ai-vs-ai',
-          volatileStorage = { getItem: () => null, setItem: () => {} },
+          volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
             // The explicitly launched spectator run must not read or mutate the normal profile.
             getStorage: () => visibleSimulation ? volatileStorage : localStorage,
             clamp,
             upgrades: META,
+            benefits: EXPEDITION_BENEFITS,
+            battlefields: BATTLEFIELDS,
             warn: (...args) => console.warn(...args)
           });
         const profile = persistence.loadProfile();
@@ -275,7 +277,7 @@
             loader.innerHTML =
               '<div class="eyebrow">UPLINK INTERRUPTED</div><h2>The renderer encountered a problem.</h2><p>' +
               esc(error.message) +
-              '</p><p>Reload this file to return to the main menu. Runs are not saved; the current run will be lost.</p>';
+              '</p><p>Reload this file to return to the last secured expedition checkpoint.</p>';
             return;
           }
           requestAnimationFrame(draw);
@@ -285,7 +287,7 @@
           ui.paused = true;
           document.getElementById('loading').classList.remove('hidden');
           document.getElementById('loading').innerHTML =
-            '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>Reload this file to reconnect. Runs are not saved; the current run will be lost. Use Performance quality in Settings for a lighter graphics load.</p>';
+            '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>Reload this file to reconnect from the last secured expedition checkpoint. Use Performance quality in Settings for a lighter graphics load.</p>';
           failed = true;
         });
         window.Meridian = {

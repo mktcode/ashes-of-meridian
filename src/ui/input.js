@@ -29,6 +29,10 @@
             this.buyUpgrade(b.dataset.upgrade);
             return;
           }
+          if (b.dataset.benefit) {
+            this.chooseBenefit(b.dataset.benefit);
+            return;
+          }
           if (b.dataset.action) {
             if (!this.paused) this.perform(b.dataset.action);
             return;
@@ -165,6 +169,14 @@
           case 'startBattle':
             this.startBattle();
             break;
+          case 'continueExpedition':
+            this.continueExpedition();
+            break;
+          case 'abandon':
+            this.persistence.clearExpedition?.();
+            this.expedition = null;
+            this.showHome();
+            break;
           case 'armory':
             this.showArmory();
             break;
@@ -193,17 +205,15 @@
           case 'restartConfirm':
             this.openModal(
               'confirm',
-              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Start this operation again?</h1><p>Your current deployment will be replaced with a new random battlefield. Permanent upgrades are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
+              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Restart this operation?</h1><p>The current battle will restart from its secured expedition checkpoint. Permanent upgrades are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
             );
             break;
           case 'backPause':
             this.showPause();
             break;
-          case 'restart': {
-            let s = this.game.s;
-            this.game.start({ faction: s.faction, map: s.map, enemy: s.enemy });
+          case 'restart':
+            if (this.expedition) this.startExpeditionBattle();
             break;
-          }
         }
       },
       pick(sx, sy) {
