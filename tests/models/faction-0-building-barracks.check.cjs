@@ -33,7 +33,7 @@ test('barracks dispatch retains tint, yaw, construction, isolation and instance 
   assert.equal(h.BUILDINGS.barracks.hp, entity.hp);
   const model = h.EntityModels.find(entity);
   assert.equal(model.id, modelId); assert.equal(Object.isFrozen(model), true);
-  for (const faction of [1, 2]) assert.equal(h.EntityModels.find({ ...entity, faction }), undefined);
+  for (const faction of [1, 2]) assert.notEqual(h.EntityModels.find({ ...entity, faction })?.id, modelId);
   for (const type of Object.keys(h.BUILDINGS).filter(t => t !== 'barracks'))
     assert.notEqual(h.EntityModels.find({ ...entity, type })?.id, modelId);
   assert.equal(h.EntityModels.find({ ...entity, kind: 'unit' }), undefined);

@@ -118,8 +118,8 @@ class BattlefieldView {
           m
         );
       };
-      const ring = (radius, h, color = team, a = 0.7, rx = 0, ry = 0) =>
-        R.add('ring', e.x, y + h, e.z, radius, 1, radius, color, ry, rx, 0, 1.2, a, 'effects');
+      const ring = (radius, h, color = team, a = 0.7, rx = 0, ry = 0, glow = 1.2) =>
+        R.add('ring', e.x, y + h, e.z, radius, 1, radius, color, ry, rx, 0, glow, a, 'effects');
       if (e.kind === 'resource') {
         if (e.type === 'crystal') {
           // Cosmetic RNG only: stable per deposit, independent of time, saves and mining RNG.
@@ -209,148 +209,7 @@ class BattlefieldView {
         p('ring', 0, 0.33, 0, s * 1.03, 0.1, s * 1.03, team, 0, 0, 0, 0.4);
         const model = EntityModels.find(e);
         if (model) {
-          model.render({ entity: e, time, part: p, ring, metal, dark, team, accent });
-        } else if (e.faction === FACTION_ID.SECOND) {
-          let h = e.type === 'hq' ? 5 : e.type === 'turret' ? 5.8 : e.type === 'depot' ? 2.8 : 3.8;
-          p('sphere', 0, h * 0.44, 0, s * 0.8, h * 0.57, s * 0.78, metal);
-          p('octa', 0, h * 0.77, 0, s * 0.5, h * 0.65, s * 0.5, dark, 0.3);
-          for (let i = 0; i < 6; i++) {
-            let a = (i * Math.PI) / 3,
-              x = Math.sin(a) * s * 0.8,
-              z = Math.cos(a) * s * 0.8;
-            p('cone', x, 0.7, z, 0.5, 2, 0.5, dark, a, 0.25, 0.42);
-            p('sphere', x * 0.8, h * 0.63, z * 0.8, 0.45, 0.8, 0.45, team, a, 0, 0.3, 0.28);
-          }
-          p(
-            'octa',
-            0,
-            h + Math.sin(time + e.id) * 0.14,
-            0,
-            s * 0.3,
-            1.3,
-            s * 0.3,
-            accent,
-            time * 0.22,
-            0,
-            0,
-            0.85
-          );
-          if (e.type === 'turret') p('cone', 0, h + 1.2, 0, 0.4, 2, 0.4, accent, 0, 0, 0, 0.5);
-          if (e.type === 'refinery')
-            for (let i = 0; i < 3; i++)
-              p(
-                'sphere',
-                Math.sin(i * 2) * 1.4,
-                2.5,
-                Math.cos(i * 2) * 1.4,
-                0.7,
-                1.5,
-                0.7,
-                0x86b6a0,
-                0,
-                0,
-                0,
-                0.3
-              );
-          if (e.type === 'hangar') ring(s * 0.8, h * 0.9, accent, 0.7);
-        } else if (e.faction === FACTION_ID.THIRD) {
-          let h = e.type === 'hq' ? 7.8 : e.type === 'turret' ? 6.5 : e.type === 'depot' ? 3.3 : 5.5;
-          p('hex', 0, 0.55, 0, s * 0.8, 0.5, s * 0.8, metal);
-          p('octa', 0, h * 0.48, 0, s * 0.5, h * 0.53, s * 0.5, dark, 0.4);
-          p('octa', 0, h * 0.67, 0, s * 0.38, h * 0.43, s * 0.38, metal, 0.4);
-          p('octa', 0, h * 0.79, 0, s * 0.21, h * 0.35, s * 0.21, team, time * 0.1, 0, 0, 0.75);
-          for (let i = 0; i < 4; i++) {
-            let a = (i * Math.PI) / 2 + 0.785,
-              x = Math.sin(a) * s * 0.74,
-              z = Math.cos(a) * s * 0.74;
-            p('box', x, h * 0.3, z, 0.42, h * 0.57, 0.65, metal, a, 0, 0);
-            p('octa', x, h * 0.63, z, 0.25, 0.7, 0.25, accent, 0, 0, 0, 0.8);
-          }
-          if (['hq', 'refinery', 'hangar'].includes(e.type)) {
-            R.add(
-              'ring',
-              e.x,
-              h * 0.62,
-              e.z,
-              s * 0.88,
-              1,
-              s * 0.88,
-              accent,
-              time * 0.18,
-              Math.PI / 2,
-              0,
-              0.85,
-              0.8,
-              'effects'
-            );
-            ring(s * 0.85, h * 0.4, team, 0.6);
-          }
-        } else if (e.type === 'hq') {
-          p('commandHull', 0, 0, 0, 1, 1, 1, metal);
-          p('box', 0, 2.5, 2.35, 5.6, 0.23, 0.12, team, 0, 0, 0, 0.7);
-          p('box', 0, 1.05, 2.39, 2.2, 1.9, 0.11, dark);
-          p('box', 0, 0.4, 3.05, 2.7, 0.3, 1.3, 0x82918f, 0, -0.15);
-          for (let i = -1; i <= 1; i++) {
-            p('box', i * 0.65, 0.58, 3.1, 0.28, 0.03, 1.1, accent, 0.2);
-            p('box', i * 1.4, 1.8, 2.41, 0.7, 0.48, 0.12, 0x81c5cf, 0, 0, 0, 0.6);
-          }
-          // Door seam, armored entry lights, roof inlays and recessed cooling grilles.
-          p('box', 0, 1.05, 2.46, 0.09, 1.9, 0.06, metal);
-          for (const side of [-1, 1]) {
-            p('box', side * 2.23, 2.61, 2.635, 0.43, 0.10, 0.03, accent, 0, 0, 0, 0.3);
-            p('box', side * 2.23, 1.40, 2.616, 0.37, 1.12, 0.035, dark);
-            p('box', side * 2.23, 1.69, 2.64, 0.22, 0.07, 0.025, team, 0, 0, 0, 0.5);
-            p('box', side * 1.91, 3.552, -0.40, 0.045, 0.018, 1.86, accent);
-            for (const z of [-1.29, .49])
-              p('box', side * 1.91, 3.568, z, 0.13, 0.03, 0.13, accent);
-            p('box', side * 2.94, 2.765, -.35, 0.20, 0.025, 2.25, dark);
-            for (let j = 0; j < 6; j++)
-              p('box', side * 2.94, 2.790, j * .34 - 1.18, 0.20, 0.025, 0.055, metal);
-          }
-          p('box', -1.7, 4.0, -1.2, 1.5, 1.3, 1.5, dark);
-          p('box', -1.7, 4.58, -1.2, 1.65, 0.17, 1.65, team, 0, 0, 0, 0.7);
-          p('cylinder', -1.7, 5.4, -1.2, 0.06, 1.6, 0.06, metal);
-          for (const side of [-1, 1]) {
-            p('cylinder', -1.7 + side * .58, 5.45, -1.55, 0.035, 1.55, 0.035, dark);
-            p('sphere', -1.7 + side * .58, 6.255, -1.55, 0.055, 0.055, 0.055, team, 0, 0, 0, 0.45);
-          }
-          p('cone', -1.7, 5.65, -1.2, 0.55, 0.3, 0.55, metal, time * 0.13, 0.8);
-          p('sphere', -1.7, 6.23, -1.2, 0.12, 0.12, 0.12, accent, 0, 0, 0, 1.5);
-          p('box', 1.6, 3.9, -1.4, 1.1, 1.1, 1.1, metal);
-          p('box', 1.6, 4.48, -1.4, 0.85, 0.1, 0.85, accent, 0, 0, 0, 0.7);
-        } else if (e.type === 'depot') {
-          for (let i of [-1, 1]) {
-            p('box', i * 1.05, 1, 0, 1.85, 1.8, 3.3, metal);
-            p('box', i * 1.05, 1.95, 0, 1.93, 0.12, 3.4, dark);
-            for (let j = -1; j <= 1; j++) p('box', i * 1.05, 1, j, 0.06, 1.65, 0.11, accent);
-            p('box', i * 1.05, 1.2, 1.67, 1.1, 0.22, 0.06, team, 0, 0, 0, 0.5);
-          }
-        } else if (e.type === 'refinery') {
-          p('box', 0, 0.45, 0, 4.3, 0.7, 3.2, metal);
-          for (let i of [-1, 1]) {
-            let h = i < 0 ? 4.5 : 3.5;
-            p('cylinder', i * 1.13, h * 0.5 + 0.5, -0.15, 0.85, h, 0.85, metal);
-            p('cylinder', i * 1.13, h + 0.55, -0.15, 1, 0.17, 1, dark);
-            p('cylinder', i * 1.13, h * 0.6, -0.15, 0.88, 0.25, 0.88, team, 0, 0, 0, 0.8);
-            p('cone', i * 1.13, h + 0.95, -0.15, 0.55, 0.7, 0.55, dark);
-            p('box', i * 1.13, 1.0, 1.05, 0.5, 0.55, 2, accent);
-          }
-          p('box', 0, 2.2, -0.3, 2.3, 0.27, 0.27, dark);
-          p('octa', 0, 2.1, 1.1, 0.55, 1.2, 0.5, 0x8ff0de, time * 0.22, 0, 0, 1);
-        } else if (e.type === 'turret') {
-          p('turretBase', 0, 0, 0, 1, 1, 1, metal);
-          // Keep the aiming head independent of the fixed foundation orientation.
-          const aim = (e.rot || 0) - rot,
-            ac = Math.cos(aim),
-            as = Math.sin(aim);
-          const head = (x, y, z, sx, sy, sz, c, glow = 0) =>
-            p('box', x * ac + z * as, y, -x * as + z * ac, sx, sy, sz, c, aim, 0, 0, glow);
-          p('turretHead', 0, 0, 0, 1, 1, 1, metal, aim);
-          head(0, 2.3, 0.827, 0.35, 0.25, 0.025, team, 1.2);
-          for (const side of [-1, 1]) {
-            head(side * .985, 2.32, -.10, .025, .085, .48, team, .35);
-            head(side * .80, 2.568, -.1, .12, .025, .36, accent);
-          }
+          model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot });
         }
         if (build < 1) {
           for (let i = 0; i < 4; i++) {

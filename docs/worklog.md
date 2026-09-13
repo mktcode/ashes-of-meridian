@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Alle Gebäude: mechanische Auslagerung
+
+- Weitere 18 Gebäudeassemblierungen in eigene Fraktion-/Typdateien ausgelagert. Alle 21 Gebäude laufen durch die Registry; Einheiten/Ressourcen bleiben unangetastet. Zentraler Gebäudekontext ergänzt Basisrotation für den zielenden Turmkopf und optionales Effektring-Glow für unveränderte Fraktion-2-Orbitale. Noch keine visuelle Änderung.
+- **Geprüft:** Build; 63/63 gezielte Modell-/Harness-/Präsentationstests; alle 756 Zeichenvarianten, fünf vorhandene Meshfabriken/Barracks und drei kontrollierte 20-s-Fraktionsruns samt RNG/Schüssen identisch. Chromium `file://`: alle 21 Gebäude pixelidentisch zum vorherigen Dispatcher, GL 0, keine Lade-/Laufzeitfehler. Die vollständige Suite und breite Zustandssichtung folgen auf Benutzerwunsch gebündelt nach dem Detailpass; kein Docker-Neubau.
+
 ## Factory/Hangar: verfeinerte Produktionsgebäude
 
 - Nach der zeichnungsidentischen Auslagerung (`58088fc`) zwei eigene Hüllen umgesetzt: Factory mit gepanzerter Montagebucht, Kühlbänken, Hohlstutzen und Fachwerkkran; Hangar mit gestuftem Hex-Flugdeck, Anfluglichtern und Kontrollturm. Je 21 Instanzen; Hüllen 1.648/1.640, komplette Modelle 1.984/1.976 Dreiecke. Nur beide zugehörigen 320×320-WebP-Portraits erneuert (Qualität 80). Vorhandenes Meshkit/Registry/Renderer und die freigegebene Barracks unverändert; gemeinsamer Produktionsgebäude-Testvertrag ergänzt.
