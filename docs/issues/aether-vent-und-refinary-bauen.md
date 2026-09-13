@@ -1,0 +1,1 @@
+Aktuell muss man die Aether Raffinary in der Nähe eines Aether Vents platzieren. Da ohnehin nur eine Raffinary pro Vent erlaubt ist, sollte es man das Gebäude direkt auf dem Vent platzieren müssen.
