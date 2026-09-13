@@ -170,7 +170,7 @@
         if (previous === 'game') this.paused = true;
         this.openModal(
           'armory',
-          `<div class="armory-screen"><header class="armory-heading"><h1>Upgrades</h1><div class="armory-balance"><span>AETHER</span><strong>${this.profile.aether.toLocaleString()}</strong><small>AVAILABLE</small></div></header><div class="armory-grid">${Object.entries(
+          `<div class="armory-screen"><header class="armory-heading"><h1>Upgrades</h1><div class="armory-balance"><strong>${this.profile.aether.toLocaleString()}</strong><span class="armory-aether-icon">${icon('crystal')}</span></div></header><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {

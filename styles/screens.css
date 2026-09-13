@@ -745,16 +745,17 @@
     }
 
     .armory-balance {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
       min-width: 130px;
       padding: 8px 12px;
       border: 1px solid #edb87566;
       border-radius: 6px 2px;
-      text-align: right;
       background: linear-gradient(145deg, #5544274d, #101c27c9)
     }
 
-    .armory-balance span,
-    .armory-balance small,
     .upgrade-rank {
       display: block;
       font: 8px var(--mono);
@@ -763,9 +764,18 @@
     }
 
     .armory-balance strong {
-      display: block;
       font: 22px/1.05 var(--mono);
       color: var(--gold)
+    }
+
+    .armory-aether-icon {
+      width: 25px;
+      height: 25px;
+      color: var(--gold)
+    }
+
+    .armory-aether-icon svg {
+      display: block
     }
 
     .armory-screen .armory-grid {
