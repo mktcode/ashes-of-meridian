@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Field-Manual-Test aktualisiert
+
+- Veraltete Erwartungen an drei bereits bewusst entfernte Langformulierungen durch Prüfungen der aktuellen kompakten Touch-Anleitung ersetzt: normaler Ziel-Tap, Attack-move/Rückzug, Worker-Ausnahme, Pan/Pinch und Doppeltap. Nur Regressionstest und Protokoll geändert; Handbuch, Bedienung und Laufzeitcode unverändert.
+- **Geprüft:** `npm test` inklusive Build **257/257 bestanden**; Diff-Prüfung erfolgreich. Kein Browsercheck nötig, da keine ausgelieferte Datei geändert wurde.
+
 ## Neutrale Biome-IDs und Portraitpfade
 
 - Alle fünf Biome verwenden `biome0`–`biome4`; Namen, Reihenfolge, Parameter und Eruptionsereignis unverändert. 14 Portraits nach `faction-<id>-<unit|building>-<type>.webp` umbenannt, bytegleich gegen Git geprüft. ID-/Pfadkonventionen in Architektur/Grafikreferenz; keine Aliase, neue Assetpipeline oder Profilmigration.
