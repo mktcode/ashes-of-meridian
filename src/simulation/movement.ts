@@ -207,7 +207,7 @@
         e.nextPath = 0;
         e.stuck = 0;
       },
-      command(this: MeridianGame, ids: number[], order: CommandOrder, team: PlayerTeam = 0) {
+      command(this: MeridianGame, ids: number[], order: CommandOrder, team: PlayerTeam = 0, announce = true) {
         if (!this.s || this.s.result) return;
         let units = ids.map(id => this.get(id)).filter(e => e && e.team === team) as Entity[];
         let mobile = units.filter(e => e.kind === 'unit') as UnitEntity[];
@@ -228,7 +228,7 @@
                 e.team === team && e.id !== worker.id && e.order.type === 'build' && e.order.id === target.id))
                 this.setOrder(other, { type: 'idle' });
             this.setOrder(worker, { type: task, id: target.id, x: target.x, z: target.z });
-            this.notify(team, 'order', { type: task, x: target.x, z: target.z, count: 1 });
+            if (announce) this.notify(team, 'order', { type: task, x: target.x, z: target.z, count: 1 });
             return;
           }
         }
@@ -259,7 +259,7 @@
           }
           this.setOrder(e, o as UnitOrder);
         }
-        if (mobile.length)
+        if (announce && mobile.length)
           this.notify(team, 'order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
       },
       finishOrder(this: MeridianGame, e: UnitEntity) {

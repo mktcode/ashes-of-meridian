@@ -36,7 +36,8 @@ const aiMethods = {
     // Do not erase path progress every strategic tick. The command API handles formation/ownership.
     const changed = units.filter(e => !e.exit &&
       (e.order.type !== (attack ? 'attackMove' : 'move') || distance(e.order as Position,p) > 8));
-    if (changed.length) this.command(changed.map(e=>e.id), {type:attack?'attackMove':'move',x:p.x,z:p.z},team);
+    if (changed.length) this.command(changed.map(e=>e.id),
+      {type:attack?'attackMove':'move',x:p.x,z:p.z},team,false);
   },
   aiBuild(this: MeridianGame, team: PlayerTeam, type: BuildingType, home: BuildingEntity) {
     const s=this.s!, ai=s.ai[team]!;

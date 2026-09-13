@@ -140,6 +140,17 @@ test('strategy prioritizes remembered economy without following hidden changes a
   assert.equal(g.s.ai[1].mode,'defend');assert.equal(g.s.ai[1].squad.length,0);
 });
 
+test('autonomous orders retain formation behavior without leaking local command markers',()=>{
+  const {g,events}=battle();g.s.ai={};const h=own(g,0,'hq')[0],goal={x:h.x+35,z:h.z};
+  const units=Array.from({length:16},(_,i)=>g.spawnUnit('tank',h.x+(i%4),h.z+Math.floor(i/4),0,0));
+  g.aiOrder(0,units,goal);assert.ok(units.every(u=>u.order.type==='attackMove'));
+  for(const u of units){u.x=u.order.x;u.z=u.order.z;g.finishOrder(u);}
+  g.aiOrder(0,units,goal);assert.ok(units.every(u=>u.order.type==='attackMove'),'controller may renew a completed holding order');
+  assert.equal(events.filter(e=>e.type==='order').length,0,'controller decisions are not player input markers');
+  g.command(units.map(u=>u.id),{type:'attackMove',x:goal.x+35,z:goal.z},0);
+  assert.equal(events.filter(e=>e.type==='order').length,1,'ordinary local input still emits its marker');
+});
+
 test('real AI replaces a lost builder and completes its paid foundation without a free replacement',()=>{
   const {g}=battle();
   let foundation;

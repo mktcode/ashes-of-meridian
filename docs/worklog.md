@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## KI-Befehlsmarker aus Vorführlauf
+
+- Sichtbarer KI-gegen-KI-Lauf machte sekündlich erneuerte Attack-move-Aufträge am Sammelpunkt als gelb-orange lokale Eingabemarker hör-/sichtbar. Das ist nur möglich, wenn Team 0 zu Test-/Vorführzwecken ebenfalls vom Controller geführt wird; normale Gegnerereignisse waren bereits teamseitig verborgen. Autonome Strategieaufträge verwenden nun weiterhin die gemeinsame validierte Formation und unveränderte Wiederholungslogik, unterdrücken aber ausschließlich lokalen Befehlston/-marker. Echte Spielerbefehle zeigen beides weiterhin.
+- Eine zunächst versuchte Entfernung abgeschlossener Sammelaufträge wurde verworfen: Obwohl der Marker-Test bestand, liefen nacheinander zwei der neun Fraktionspaarungen nach 20 Simulationsminuten noch ohne Ergebnis. Keine solche unbeabsichtigte Taktik-/Balanceänderung übernommen.
+- **Geprüft:** neuer fokussierter Marker-/Formationsvertrag, echte lokale Gegenprobe, betroffene Langlaufpaarung und abschließend `npm test` **313/313 bestanden**. Keine Fixture, Darstellung oder Spielregel geändert.
+
 ## Regelbasierter Gegner statt Direktspawn-Wellen
 
 - `bd24424`: Konten und Aktionen zuerst getrennt teamfähig gemacht, damals `npm test` 293/293. Danach echte KI-Wirtschaft/Produktion mit symmetrischem HQ-Baseline-Start, eigene Sicht/Erkundung und kopierte Kontakte, Scouts, Verteidigung/Sammlung/Angriff/Erholung, strategische Ziele und vier Fähigkeitsheuristiken implementiert. Wellenbudget, Timer, Spawnroutine, UI-Warnung, Event und zugehöriger Ton entfernt. Spieler-Upgrades bleiben Spielervorteile; kein Schwierigkeitsmenü, Netzwerkcode oder Modell-/Assetwechsel.
