@@ -661,13 +661,16 @@ test('home offers a new expedition and exposes a secured expedition when present
   assert.equal(h.ui.game.s, null); assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
 });
 
-test('pause and hidden-tab pause retain the run only in memory, with explicit abandonment warning', () => {
+test('pause offers checkpoint-preserving home and explicit expedition abandonment', () => {
   const h=setup(); h.UI.prototype.bind.call(h.ui);
   const state=h.ui.game.s, before=JSON.stringify(state);
   h.ui.pause(); assert.equal(h.ui.paused,true);
-  assert.match(h.ui.html,/current battle is not saved/); assert.match(h.ui.html,/ABANDON EXPEDITION/);
+  assert.match(h.ui.html,/discards this battle but keeps its secured pre-battle checkpoint/);
+  assert.match(h.ui.html,/ABANDON EXPEDITION/);
   assert.deepEqual(Array.from(h.ui.html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),
-    ['resume','settings','help','restartConfirm','abandon']);
+    ['resume','settings','help','home','restartConfirm','abandon']);
+  assert.equal((h.ui.html.match(/class="primary"|class="secondary"/g) || []).length, 6);
+  assert.doesNotMatch(h.ui.html, /class="textbtn"/);
   h.ui.resume(); assert.equal(h.ui.paused,false);
   h.document.hidden=true; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);
   h.document.hidden=false; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);

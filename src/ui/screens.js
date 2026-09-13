@@ -161,7 +161,7 @@
         this.paused = true;
         this.openModal(
           'pause',
-          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Annihilation</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">SETTINGS</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="restartConfirm">RESTART OPERATION</button><button class="textbtn" data-ui="abandon">ABANDON EXPEDITION</button></div><p style="font-size:11px;margin-bottom:0">The current battle is not saved. Closing or reloading returns to its secured pre-battle checkpoint.</p>`
+          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Annihilation</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">SETTINGS</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="restartConfirm">RESTART OPERATION</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p style="font-size:11px;margin-bottom:0">Main menu, closing or reloading discards this battle but keeps its secured pre-battle checkpoint. Abandoning ends the expedition.</p>`
         );
       },
       resume() {
