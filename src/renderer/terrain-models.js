@@ -1,8 +1,8 @@
 /* CPU mesh factories dispatched by world descriptors, independent of map IDs. */
 'use strict';
 const TerrainModels = {
-      // Continuous eroded boundary belt; all detail stays outside ±87, with private cosmetic RNG.
-      mountainRing(seed) {
+      // Continuous eroded boundary belt, three metres inside the world edge; private cosmetic RNG.
+      mountainRing(seed, extent) {
         // Resolve once: repeated global lookups are costly in the isolated Node test worlds.
         const { Math } = globalThis;
         const rand = seeded(seed ^ 0x4d524944), out = [], columns = [], perSide = 96,
@@ -23,8 +23,9 @@ const TerrainModels = {
           return (hash(ix, iz) * (1 - u) + hash(ix + 1, iz) * u) * (1 - v) +
             (hash(ix, iz + 1) * (1 - u) + hash(ix + 1, iz + 1) * u) * v;
         };
+        const innerEdge = extent - 3;
         const height = (x, z) => {
-          const r = (Math.max(Math.abs(x), Math.abs(z)) - 87) / 36, angle = Math.atan2(z, x);
+          const r = (Math.max(Math.abs(x), Math.abs(z)) - innerEdge) / 36, angle = Math.atan2(z, x);
           let summit = 0;
           for (const p of peaks) {
             const d = Math.abs(angle - p.angle), distance = Math.min(d, Math.PI * 2 - d) / p.width;
@@ -57,7 +58,7 @@ const TerrainModels = {
           const p = perimeter((i + (i % perSide ? (rand() - .5) * .45 : 0)) / perSide), column = [];
           for (let j = 0; j <= levels; j++) {
             const r = j === 0 || j === levels ? j / levels : (j + (rand() - .5) * .45) / levels,
-              radius = 87 + r * 36, x = p[0] * radius, z = p[1] * radius;
+              radius = innerEdge + r * 36, x = p[0] * radius, z = p[1] * radius;
             column.push([x, j === 0 ? -.25 : j === levels ? -8 : height(x, z), z]);
           }
           columns.push(column);
@@ -74,7 +75,7 @@ const TerrainModels = {
         // Embedded scree on the inner foothills, in the same mesh/charge as the belt.
         const rubble = geom.rock(seed ^ 0x54414c55, 'boulder');
         for (let j = 0; j < 80; j++) {
-          const p = perimeter(rand() * 4), radius = 90.5 + rand() * 8,
+          const p = perimeter(rand() * 4), radius = extent + .5 + rand() * 8,
             x = p[0] * radius, z = p[1] * radius, size = .6 + rand() * 1.2,
             angle = rand() * Math.PI * 2, ca = Math.cos(angle), sa = Math.sin(angle);
           for (let i = 0; i < rubble.length; i += 27) {
@@ -165,5 +166,5 @@ TerrainModels.geometry = descriptor => {
   const factory = Object.hasOwn(TerrainModels, descriptor.model) && TerrainModels[descriptor.model];
   if (typeof factory !== 'function' || descriptor.model === 'geometry')
     throw new Error('Unknown terrain model: ' + descriptor.model);
-  return factory('feature' in descriptor ? descriptor.feature : descriptor.seed);
+  return 'feature' in descriptor ? factory(descriptor.feature) : factory(descriptor.seed, descriptor.extent);
 };

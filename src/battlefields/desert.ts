@@ -2,6 +2,7 @@
 'use strict';
 const DESERT_BATTLEFIELD: BattlefieldDefinition = {
   name: 'DESERT',
+  size: { extent: 90, cellSize: 2.5 },
   layout: standardBattleLayout(),
   palette: {
     ground: 0x59443a,

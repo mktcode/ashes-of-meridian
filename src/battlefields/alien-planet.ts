@@ -47,6 +47,8 @@ function placeAlienPatch(builder: BattlefieldBuilder, x: number, z: number, r: n
 
 const ALIEN_PLANET_BATTLEFIELD: BattlefieldDefinition = {
   name: 'ALIEN PLANET',
+  // Target for the design pass: extent 135 (1.5× each side, 2.25× area).
+  size: { extent: 90, cellSize: 2.5 },
   layout: standardBattleLayout(),
   palette: {
     ground: 0x314747,

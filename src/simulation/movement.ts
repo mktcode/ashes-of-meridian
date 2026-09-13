@@ -3,12 +3,13 @@
     const movementMethods = {
       unitFits(this: MeridianGame, e: UnitBody, x: number, z: number) {
         const flying = !!(UNITS[e.type] as UnitDefinitionShape).flying;
-        if (Math.abs(x) > 85 || Math.abs(z) > 85) return false;
+        const limit = this.world!.extent - 5;
+        if (Math.abs(x) > limit || Math.abs(z) > limit) return false;
         if (!flying && this.world!.blockedAt(x, z)) {
           if (!e.exit || this.world!.staticGrid[this.world!.idx(x, z)]) return false;
           const cell = this.world!.point(this.world!.idx(x, z));
           if (this.s!.entities.some(b => b.hp > 0 && b.kind === 'building' && b.id !== e.exit!.building &&
-            distance(cell, b) < b.size + 0.35 + CELL * 0.4)) return false;
+            distance(cell, b) < b.size + 0.35 + this.world!.cellSize * 0.4)) return false;
         }
         // Read live positions: the combat hash is only rebuilt once per step.
         return !this.s!.entities.some(other => other !== e && other.hp > 0 && other.kind === 'unit' &&
@@ -18,7 +19,8 @@
               ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9)));
       },
       unitPosition(this: MeridianGame, e: UnitPlacement): Position | null {
-        const x = clamp(e.x, -85, 85), z = clamp(e.z, -85, 85);
+        const limit = this.world!.extent - 5;
+        const x = clamp(e.x, -limit, limit), z = clamp(e.z, -limit, limit);
         if (this.unitFits(e, x, z)) return { x, z };
         // Deterministic nearby rings, without consuming simulation/effect RNG.
         for (let r = 1; r <= 24; r++) {
@@ -37,7 +39,8 @@
         if (!side && step < 1e-9) return;
         side ??= { x: -(z - e.z) / step, z: (x - e.x) / step };
         const nextChain = [...chain, e.id];
-        if (Math.abs(x) > 85 || Math.abs(z) > 85 ||
+        const limit = this.world!.extent - 5;
+        if (Math.abs(x) > limit || Math.abs(z) > limit ||
           (!(UNITS[e.type] as UnitDefinitionShape).flying && this.world!.blockedAt(x, z))) return;
         for (const other of this.s!.entities) {
           if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team || other.exit ||
@@ -101,7 +104,7 @@
             this.world!.blocked = flying ? new Uint8Array(blocked.length) : this.world!.blocked.slice();
             for (const other of this.s!.entities) if (other !== e && other.hp > 0 && other.kind === 'unit' &&
               !!(UNITS[other.type] as UnitDefinitionShape).flying === flying) {
-              const radius = (e.size + other.size) * UNIT_BODY_SCALE + 0.4 - CELL * 0.4;
+              const radius = (e.size + other.size) * UNIT_BODY_SCALE + 0.4 - this.world!.cellSize * 0.4;
               this.world!.mark(this.world!.blocked, other.x, other.z, radius);
               if (other.exit) this.world!.mark(this.world!.blocked, other.exit.x, other.exit.z, radius);
             }

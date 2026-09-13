@@ -73,8 +73,15 @@ interface BattlefieldRenderProfile {
   haze: readonly [number, number, number];
 }
 
+interface BattlefieldSize {
+  /** Half-width/depth of the square world, in metres. */
+  extent: number;
+  cellSize: number;
+}
+
 interface BattlefieldDefinition {
   name: string;
+  size: BattlefieldSize;
   layout: BattlefieldLayout;
   palette: BattlefieldPalette;
   render: BattlefieldRenderProfile;
@@ -343,7 +350,7 @@ interface WorldTerrainFeature extends Position {
 }
 
 type WorldGeometry =
-  | { mesh: string; model: string; seed: number }
+  | { mesh: string; model: string; seed: number; extent: number }
   | { mesh: string; model: string; feature: WorldTerrainFeature };
 
 interface WorldRenderData {

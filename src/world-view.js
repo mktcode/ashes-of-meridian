@@ -9,7 +9,8 @@ class BattlefieldView {
     this.fogVersion = -1;
   }
   sync(world, fogOn = true) {
-    const R = this.R, layout = world.renderData;
+    const R = this.R, layout = world.renderData,
+      { extent: EXTENT, cellSize: CELL, gridSize: GRID } = world;
     if (this.data !== layout) {
       R.clearStatic();
       R.battlefieldProfile = world.definition.render;
@@ -37,8 +38,8 @@ class BattlefieldView {
       }
       this.data = layout;
     }
-    if (this.world !== world || this.fogVersion !== world.fogVersion) {
-      if (world.fogVersion > 0) R.fog(world.fogPixels);
+    if (this.world !== world || this.fogVersion !== world.fogVersion || (fogOn && !R.fogOn)) {
+      if (world.fogVersion > 0 || fogOn) R.fog(world.fogPixels, GRID);
       this.world = world;
       this.fogVersion = world.fogVersion;
     }

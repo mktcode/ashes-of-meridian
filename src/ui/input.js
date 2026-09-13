@@ -115,10 +115,10 @@
         map.style.touchAction = 'none';
         map.addEventListener('contextmenu', e => e.preventDefault());
         const minimapPosition = e => {
-          let r = map.getBoundingClientRect();
+          let r = map.getBoundingClientRect(), extent = this.game.world.extent;
           return {
-            x: ((e.clientX - r.left) / r.width) * 180 - 90,
-            z: ((e.clientY - r.top) / r.height) * 180 - 90
+            x: ((e.clientX - r.left) / r.width) * (extent * 2) - extent,
+            z: ((e.clientY - r.top) / r.height) * (extent * 2) - extent
           };
         };
         let miniDrag = false;
@@ -312,8 +312,9 @@
         if (!d || !this.R.containsPoint(e.clientX, e.clientY)) return;
         let p = this.R.ground(e.clientX, e.clientY),
           target = this.pick(e.clientX, e.clientY);
-        p.x = clamp(p.x, -86, 86);
-        p.z = clamp(p.z, -86, 86);
+        const limit = this.game.world.extent - 4;
+        p.x = clamp(p.x, -limit, limit);
+        p.z = clamp(p.z, -limit, limit);
         if (d.type === 'touch' && d.moved) return;
         if (d.button === 2) {
           if (this.selectedBuilding()) this.select([]);

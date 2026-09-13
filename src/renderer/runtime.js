@@ -65,18 +65,20 @@
         }))
           this.geometry(n, d);
         EntityModels.upload(this);
+        // Model/menu previews only need an opaque texel; each world supplies its own raster.
+        this.fogSize = 1;
         this.fogTex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this.fogTex);
         gl.texImage2D(
           gl.TEXTURE_2D,
           0,
           gl.R8,
-          72,
-          72,
+          this.fogSize,
+          this.fogSize,
           0,
           gl.RED,
           gl.UNSIGNED_BYTE,
-          new Uint8Array(72 * 72).fill(255)
+          new Uint8Array([255])
         );
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -494,11 +496,16 @@
         let t = -a[1] / (b[1] - a[1]);
         return { x: a[0] + (b[0] - a[0]) * t, z: a[2] + (b[2] - a[2]) * t };
       }
-      fog(data) {
+      fog(data, size) {
         let g = this.gl;
         g.bindTexture(g.TEXTURE_2D, this.fogTex);
         g.pixelStorei(g.UNPACK_ALIGNMENT, 1);
-        g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, 72, 72, g.RED, g.UNSIGNED_BYTE, data);
+        if (this.fogSize !== size) {
+          g.texImage2D(g.TEXTURE_2D, 0, g.R8, size, size, 0, g.RED, g.UNSIGNED_BYTE, data);
+          this.fogSize = size;
+        } else {
+          g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, size, size, g.RED, g.UNSIGNED_BYTE, data);
+        }
       }
       render(time) {
         let g = this.gl;

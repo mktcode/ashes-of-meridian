@@ -24,6 +24,7 @@ function placeMothershipPillar(builder: BattlefieldBuilder, x: number, z: number
 
 const MOTHERSHIP_BATTLEFIELD: BattlefieldDefinition = {
   name: 'MOTHERSHIP',
+  size: { extent: 90, cellSize: 2.5 },
   layout: standardBattleLayout(),
   palette: {
     ground: 0x3d3c48,

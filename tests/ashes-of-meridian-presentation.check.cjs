@@ -48,6 +48,37 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   assert.equal(meshes, 4 + world.renderData.features.length + next.renderData.features.length);
 });
 
+test('world view switches ground bounds, boundary descriptors and fog sizes between worlds', () => {
+  const context=loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
+  const {Battlefield,BattlefieldView,BATTLEFIELDS,TerrainModels}=vm.runInContext(
+    '({Battlefield,BattlefieldView,BATTLEFIELDS,TerrainModels})',context);
+  BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};
+  const renderer=createRendererStub(), uploads=[], fogs=[], boundaries=[];
+  // Test descriptor dispatch here; actual boundary meshes are checked in the terrain suite.
+  TerrainModels.mountainRing=(seed,extent)=>{boundaries.push([seed,extent]); return [];};
+  TerrainModels.massif=()=>[];
+  renderer.geometry=(mesh,data)=>{
+    if (mesh!=='terrain') return;
+    let min=Infinity,max=-Infinity;
+    for(let i=0;i<data.length;i+=9) {min=Math.min(min,data[i],data[i+2]);max=Math.max(max,data[i],data[i+2]);}
+    uploads.push([data.length/27,min,max]);
+  };
+  renderer.fog=(data,size)=>{assert.equal(data.length,size*size);fogs.push([size,Array.from(data)]);};
+  const view=new BattlefieldView(renderer);
+  for(const [map,extent,grid] of [['desert',90,72],['alien-planet',135,108],['mothership',90,72]]) {
+    const w=new Battlefield(43015,map), count=fogs.length;
+    view.sync(w,false);view.sync(w,true);view.sync(w,true);
+    assert.equal(renderer.extent,extent);
+    assert.deepEqual(uploads.at(-1),[grid*grid*2,-extent,extent]);
+    assert.deepEqual(boundaries.at(-1),[43015,extent]);
+    assert.equal(fogs.length,count+1);assert.equal(fogs.at(-1)[0],grid);
+    assert.ok(fogs.at(-1)[1].every(v=>v===0), 'unrevealed world never reuses old fog');
+    w.reveal([], [{x:extent-15,z:0,r:7}]);view.sync(w);
+    assert.ok(fogs.at(-1)[1].includes(255));
+  }
+  assert.equal(uploads.length,3);
+});
+
 test('world view dispatches declared terrain models and profiles without assuming mountains', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const { Battlefield, BattlefieldView, TerrainModels } = vm.runInContext('({Battlefield, BattlefieldView, TerrainModels})', context);

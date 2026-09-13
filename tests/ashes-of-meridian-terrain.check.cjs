@@ -12,6 +12,86 @@ const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 're
 const { geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS } =
   vm.runInContext('({geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS})', context);
 
+test('map dimensions are instance-local, validated and keep square cells at larger extents', () => {
+  const definition = BATTLEFIELDS['alien-planet'], original = definition.size;
+  try {
+    for (const [extent, cellSize, grid] of [[90,2.5,72], [135,2.5,108], [135,3,90], [136.25,2.5,109]]) {
+      definition.size = { extent, cellSize };
+      const w = new Battlefield(43015, 'alien-planet');
+      assert.deepEqual([w.extent,w.cellSize,w.gridSize], [extent,cellSize,grid]);
+      for (const data of [w.blocked,w.staticGrid,w.terrainFeatureGrid,w.fogPixels,
+        ...w.sight.flatMap(v => [v.visible,v.explored])]) assert.equal(data.length, grid*grid);
+      assert.equal(w.terrainColors.length, grid*grid*4);
+      assert.equal(w.renderData.groundColors.length, grid*grid*2);
+      assert.equal(w.renderData.geometries[0].extent, extent);
+      const slab = w.renderData.placements.find(p => p.mesh === 'box' && p.position[1] === -8);
+      assert.deepEqual(Array.from(slab.scale), [extent*2,15,extent*2]);
+      for (let i=0;i<grid*grid;i++) { const p=w.point(i); assert.equal(w.idx(p.x,p.z),i); }
+      assert.equal(w.idx(-extent,-extent),0); assert.equal(w.idx(extent,extent),grid*grid-1);
+      definition.size = { extent: 90, cellSize: 2.5 };
+      assert.equal(w.extent,extent, 'active worlds snapshot dimensions');
+    }
+    assert.equal(new Battlefield(43015, 'desert').gridSize,72);
+    for (const size of [{extent:NaN,cellSize:2.5},{extent:135,cellSize:0},
+      {extent:135,cellSize:Infinity},{extent:135,cellSize:4},{extent:10,cellSize:2.5}]) {
+      definition.size=size;
+      assert.throws(()=>new Battlefield(1,'alien-planet'), /Battlefield size/);
+    }
+  } finally { definition.size=original; }
+});
+
+test('larger worlds navigate, rebuild blockers and reveal both teams beyond the old edges', () => {
+  const definition=BATTLEFIELDS['alien-planet'], original=definition.size;
+  try {
+    definition.size={extent:135,cellSize:2.5};
+    const w=new Battlefield(43015,'alien-planet'); w.staticGrid.fill(0); w.rebuild([]);
+    assert.equal(w.blockedAt(120,110),false); assert.equal(w.blockedAt(133,0),true);
+    assert.deepEqual(JSON.parse(JSON.stringify(w.nearest(999,-999))),{x:131,z:-131});
+    assert.deepEqual(JSON.parse(JSON.stringify(w.path(0,0,999,-999,true))),[{x:130,z:-130}]);
+    w.rebuild([{hp:100,kind:'building',x:110,z:110,size:5}]);
+    const start={x:95,z:110}, end={x:125,z:110}, path=w.path(start.x,start.z,end.x,end.z);
+    assert.equal(w.lineFree(start,end),false); assert.ok(path.length>1);
+    assert.deepEqual(JSON.parse(JSON.stringify(path.at(-1))),end);
+    let anchor=start;
+    for (const p of path) { assert.ok(w.lineFree(anchor,p)); anchor=p; }
+    w.reveal([], [{team:0,x:120,z:110,r:7},{team:1,x:-120,z:-110,r:7}]);
+    assert.equal(w.visible[w.idx(120,110)],255); assert.equal(w.visible[w.idx(-120,-110)],0);
+    assert.equal(w.sight[1].visible[w.idx(-120,-110)],255);
+    w.reveal([]); assert.equal(w.fogPixels[w.idx(120,110)],80);
+    assert.equal(w.sight[1].explored[w.idx(-120,-110)],1);
+  } finally { definition.size=original; }
+});
+
+test('large-grid path budget traverses a winding route requiring more than 5600 cells', () => {
+  const definition=BATTLEFIELDS['alien-planet'], original=definition.size;
+  try {
+    definition.size={extent:135,cellSize:2.5};
+    const w=new Battlefield(43015,'alien-planet'), n=w.gridSize;
+    w.blocked.fill(1);
+    for (let z=1;z<n-1;z+=2) {
+      for (let x=1;x<n-1;x++) w.blocked[z*n+x]=0;
+      if (z+1<n-1) w.blocked[(z+1)*n+(((z-1)/2)%2 ? 1 : n-2)]=0;
+    }
+    const start=w.point(n+1), end={x:130,z:w.point(105*n+106).z};
+    const path=w.path(start.x,start.z,end.x,end.z);
+    assert.ok(path.length>50); assert.deepEqual(JSON.parse(JSON.stringify(path.at(-1))),end);
+    let anchor=start;
+    for (const p of path) { assert.ok(w.lineFree(anchor,p)); anchor=p; }
+  } finally { definition.size=original; }
+});
+
+test('boundary mesh follows a larger extent without scaling terrain height or producing invalid faces', () => {
+  const mesh=TerrainModels.mountainRing(43015,135);
+  let max=0;
+  for (let i=0;i<mesh.length;i+=9) {
+    const edge=Math.max(Math.abs(mesh[i]),Math.abs(mesh[i+2]));
+    assert.ok(edge>=132-1e-8); max=Math.max(max,edge);
+    for (let k=0;k<9;k++) assert.ok(Number.isFinite(mesh[i+k]));
+    assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-6);
+  }
+  assert.equal(max,168);
+});
+
 test('embedded skybox preserves the canonical WebP bytes and is wired as a non-repeating texture', () => {
   const url = vm.runInContext('MERIDIAN_TEXTURES.sky', context);
   assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
@@ -140,9 +220,9 @@ test('wide massif mesh is detailed, deterministic and matches its CPU footprint'
 });
 
 test('mountain belt is seeded, continuous and outside the playable ground', () => {
-  const mesh = TerrainModels.mountainRing(43015), edges = new Map(), surfaceTriangles = 384 * 40 * 2;
-  assert.deepEqual(mesh, TerrainModels.mountainRing(43015));
-  assert.notDeepEqual(mesh, TerrainModels.mountainRing(43016));
+  const mesh = TerrainModels.mountainRing(43015, 90), edges = new Map(), surfaceTriangles = 384 * 40 * 2;
+  assert.deepEqual(mesh, TerrainModels.mountainRing(43015, 90));
+  assert.notDeepEqual(mesh, TerrainModels.mountainRing(43016, 90));
   assert.equal(mesh.length / 27, surfaceTriangles + 80 * 72);
   assert.ok(mesh.length / 27 <= 40000, 'bounded detail budget for the entire belt including scree');
   let peak = 0;

@@ -60,6 +60,7 @@ function setup() {
     openModal(kind, html) { this.html = html; }
   }
   const game = {
+    world: { extent: 90, gridSize: 72, cellSize: 2.5 },
     s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0, meta: {}, teams: [{alloy:0,gas:0,energy:100,abilities:{}}] },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
@@ -133,8 +134,8 @@ test('world picking and captured releases outside the viewport cannot issue orde
 test('minimap camera outline uses all four actual viewport corners after layout changes', () => {
   const h = setup(), points = [], ctx = new Proxy({}, { get: () => () => {} });
   const c = h.document.getElementById('minimap'); c.width = c.height = 210; c.getContext = () => ctx;
-  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4), terrainFeatureGrid: [], visible: [], explored: [] };
-  h.ui.miniBuffer = {}; h.ui.miniCtx = { putImageData() {} };
+  h.ui.game.world = { extent: 90, gridSize: 72, terrainColors: new Uint8Array(72*72*4), terrainFeatureGrid: [], visible: [], explored: [] };
+  h.ui.miniBuffer = { width: 72 }; h.ui.miniCtx = { putImageData() {} };
   h.ui.miniImage = { data: new Uint8Array(72*72*4) };
   h.ui.R.ground = (x,y) => { points.push([x,y]); return {x:x/10,z:y/10}; };
   for (const v of [{left:0,top:55,right:390,bottom:573}, {left:17,top:63,right:1017,bottom:464.5}]) {
@@ -147,15 +148,57 @@ test('minimap distinguishes massif footprints without bypassing visibility or ch
   const h = setup(), ctx = new Proxy({}, { get: () => () => {} }),
     c = h.document.getElementById('minimap');
   c.width = c.height = 210; c.getContext = () => ctx;
-  h.ui.game.world = { terrainColors: new Uint8Array(72*72*4).fill(100),
+  h.ui.game.world = { extent: 90, gridSize: 72, terrainColors: new Uint8Array(72*72*4).fill(100),
     terrainFeatureGrid: [1,0,1,0,1,0], visible: [1,1], explored: [0,0,1,1] };
-  h.ui.miniBuffer = {}; h.ui.miniCtx = { putImageData() {} };
+  h.ui.miniBuffer = { width: 72 }; h.ui.miniCtx = { putImageData() {} };
   h.ui.miniImage = { data: new Uint8ClampedArray(72*72*4) };
   h.ui.R.ground = () => ({ x: 0, z: 0 });
   h.UI.prototype.drawMinimap.call(h.ui);
   for (const [i, value] of [48,100,23,48,8,16].entries())
     assert.deepEqual(Array.from(h.ui.miniImage.data.slice(i*4,i*4+4)), [value,value,value,255]);
   assert.ok(h.ui.game.world.terrainColors.every(v => v === 100));
+});
+
+test('minimap input, camera limits and world targets use the active map size after switching', () => {
+  const h=setup();h.UI.prototype.bind.call(h.ui);
+  for (const extent of [90,135,90]) {
+    h.ui.game.world.extent=extent;
+    h.pointer('pointerdown',180,0,{target:h.minimap});
+    h.pointer('pointerup',180,0,{target:h.minimap});
+    assert.deepEqual(h.ui.game.s.cam,{x:extent-18,z:18-extent,zoom:50});
+    h.calls.length=0;
+    h.pointer('pointerdown',162,18,{target:h.minimap,button:2});
+    const target=h.calls[0][2];
+    assert.ok(Math.abs(target.x-extent*.8)<1e-8);assert.ok(Math.abs(target.z+extent*.8)<1e-8);
+    h.ui.R.ground=()=>({x:999,z:-999});h.calls.length=0;
+    h.pointer('pointerdown',200,200,{pointerType:'mouse',button:2});
+    h.pointer('pointerup',200,200,{pointerType:'mouse',button:2});
+    assert.deepEqual(JSON.parse(JSON.stringify(h.calls[0][2])),{type:'move',x:extent-4,z:4-extent});
+  }
+});
+
+test('minimap reallocates its raster on size changes and scales markers and camera outline', () => {
+  const h=setup(), draws=[], rects=[], outline=[], images=[];
+  const ctx=new Proxy({fillRect(...args){rects.push(args);},moveTo(...args){outline.push(args);}},
+    {get:(target,key)=>target[key] || (()=>{})});
+  h.minimap.width=270;h.minimap.height=180;h.minimap.getContext=()=>ctx;
+  const miniCtx={createImageData(w,height){images.push([w,height]);return {data:new Uint8ClampedArray(w*height*4)};},
+    putImageData(img){draws.push(img.data.length);}};
+  h.document.createElement=()=>({getContext:()=>miniCtx});h.ui.game.visible=()=>true;
+  h.ui.R.ground=()=>({x:0,z:0});
+  for(const [extent,n] of [[90,72],[135,108],[135,108],[90,72]]) {
+    rects.length=outline.length=0;
+    h.ui.game.world={extent,gridSize:n,terrainColors:new Uint8Array(n*n*4).fill(100),
+      visible:new Uint8Array(n*n).fill(255),explored:[],terrainFeatureGrid:[],idx:()=>0};
+    h.ui.game.s.entities=[{hp:100,kind:'building',type:'hq',team:0,size:10,x:extent*.8,z:-extent*.8}];
+    h.UI.prototype.drawMinimap.call(h.ui);
+    assert.equal(draws.at(-1),n*n*4);assert.equal(h.ui.miniBuffer.width,n);
+    assert.equal(h.ui.miniBuffer.height,n);
+    const size=10*270/(extent*2);
+    assert.deepEqual(rects,[[243-size/2,18-size/2,size,size]]);
+    assert.deepEqual(outline.at(-1),[135,90]);
+  }
+  assert.deepEqual(images,[[72,72],[108,108],[72,72]]);
 });
 
 test('camera keys and pointer edges no longer move the camera', () => {

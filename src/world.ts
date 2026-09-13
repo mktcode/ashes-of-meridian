@@ -1,8 +1,5 @@
     /* Seeded battlefields, grid navigation and procedural faction models. */
     'use strict';
-    const EXTENT = 90,
-      GRID = 72,
-      CELL = 2.5;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
     const distance = (a: Position, b: Position) => Math.hypot(a.x - b.x, a.z - b.z);
     const angleLerp = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * Math.min(1, t);
@@ -63,6 +60,9 @@
       }
     }
     class Battlefield {
+      readonly extent: number;
+      readonly cellSize: number;
+      readonly gridSize: number;
       declare fogVersion: number;
       declare seed: number;
       declare definition: BattlefieldDefinition;
@@ -84,6 +84,14 @@
         this.seed = seed;
         this.definition = BATTLEFIELDS[battlefieldId(map)];
         this.layout = this.definition.layout;
+        this.extent = this.definition.size.extent;
+        this.cellSize = this.definition.size.cellSize;
+        this.gridSize = this.extent * 2 / this.cellSize;
+        if (!Number.isFinite(this.extent) || this.extent <= 18 ||
+            !Number.isFinite(this.cellSize) || this.cellSize <= 0 ||
+            !Number.isSafeInteger(this.gridSize) || this.gridSize < 3)
+          throw new Error('Battlefield size must have extent > 18 and a whole grid of at least 3 cells per side');
+        const GRID = this.gridSize;
         this.staticGrid = new Uint8Array(GRID * GRID);
         this.terrainFeatureGrid = new Uint8Array(GRID * GRID);
         this.blocked = new Uint8Array(GRID * GRID);
@@ -100,18 +108,21 @@
         this.blocked.set(this.staticGrid);
       }
       idx(x: number, z: number) {
+        const { extent: EXTENT, cellSize: CELL, gridSize: GRID } = this;
         return (
           clamp(Math.floor((z + EXTENT) / CELL), 0, GRID - 1) * GRID +
           clamp(Math.floor((x + EXTENT) / CELL), 0, GRID - 1)
         );
       }
       point(i: number): Position {
+        const { extent: EXTENT, cellSize: CELL, gridSize: GRID } = this;
         return {
           x: ((i % GRID) + 0.5) * CELL - EXTENT,
           z: (Math.floor(i / GRID) + 0.5) * CELL - EXTENT
         };
       }
       mark(grid: Uint8Array, x: number, z: number, r: number, val = 1) {
+        const { extent: EXTENT, cellSize: CELL, gridSize: GRID } = this;
         let a = Math.max(0, Math.floor((x - r + EXTENT) / CELL)),
           b = Math.min(GRID - 1, Math.floor((x + r + EXTENT) / CELL)),
           c = Math.max(0, Math.floor((z - r + EXTENT) / CELL)),
@@ -125,7 +136,7 @@
       }
       blockedAt(x: number, z: number) {
         return (
-          Math.abs(x) > EXTENT - 3 || Math.abs(z) > EXTENT - 3 || this.blocked[this.idx(x, z)] !== 0
+          Math.abs(x) > this.extent - 3 || Math.abs(z) > this.extent - 3 || this.blocked[this.idx(x, z)] !== 0
         );
       }
       rebuild(entities: Entity[]) {
@@ -135,8 +146,9 @@
         this.pathVersion++;
       }
       nearest(x: number, z: number): Position {
+        const GRID = this.gridSize, limit = this.extent - 4;
         let i = this.idx(x, z);
-        if (!this.blocked[i]) return { x: clamp(x, -86, 86), z: clamp(z, -86, 86) };
+        if (!this.blocked[i]) return { x: clamp(x, -limit, limit), z: clamp(z, -limit, limit) };
         let gx = i % GRID,
           gz = Math.floor(i / GRID),
           best = null,
@@ -159,7 +171,8 @@
             }
           if (best) return best;
         }
-        return { x: clamp(x, -84, 84), z: clamp(z, -84, 84) };
+        const fallback = this.extent - 6;
+        return { x: clamp(x, -fallback, fallback), z: clamp(z, -fallback, fallback) };
       }
       lineFree(a: Position, b: Position) {
         let d = distance(a, b),
@@ -171,8 +184,9 @@
         return true;
       }
       path(x: number, z: number, tx: number, tz: number, air = false): Position[] {
-        tx = clamp(tx, -85, 85);
-        tz = clamp(tz, -85, 85);
+        const GRID = this.gridSize, limit = this.extent - 5;
+        tx = clamp(tx, -limit, limit);
+        tz = clamp(tz, -limit, limit);
         if (air) return [{ x: tx, z: tz }];
         let target = this.nearest(tx, tz),
           start = { x, z };
@@ -204,7 +218,9 @@
           [-1, 1, 1.414],
           [1, 1, 1.414]
         ];
-        while (heap.length && tries++ < 5600) {
+        // Preserve the 72×72 search budget; larger grids need proportionally more heap pops.
+        const searchLimit = Math.ceil(5600 * (GRID / 72) ** 2);
+        while (heap.length && tries++ < searchLimit) {
           let i = heap.pop();
           if (closed[i]) continue;
           let targetDistance = ((i % GRID) - ex) ** 2 + (Math.floor(i / GRID) - ez) ** 2;

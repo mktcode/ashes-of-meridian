@@ -53,7 +53,7 @@ const aiMethods = {
         p={x:center.x+Math.sin(angle)*radius,z:center.z+Math.cos(angle)*radius};
       // Inspect only a fully visible footprint, including a body-sized margin. Otherwise an
       // unseen unit could occupy the proposed plot (the general UI placement bug is separate).
-      const margin=BUILDINGS[type].size+3;
+      const margin=BUILDINGS[type].size+3, CELL=this.world!.cellSize;
       let observed=true;
       for (let z=p.z-margin;z<=p.z+margin+CELL;z+=CELL)
         for (let x=p.x-margin;x<=p.x+margin+CELL;x+=CELL)

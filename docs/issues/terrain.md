@@ -6,5 +6,8 @@ Das Terrain einer Map ist außen von Gebirgen begrenzt. Innerhalb der Karte gibt
 
 Für die Desert-Karte passt das. Für Alien Planet und Mothership sollten das keine Felsformationen sein sondern andere Models.
 
-Alien Planet: Große, dichte Alienfauna
-Mothership: Große Hangars
+Alien Planet: Große, dichte Alienfauna. Kreative Gestaltung freigegeben; Zielgröße ausdrücklich **1,5× Breite und Tiefe von Desert**, also 270 × 270 m und **125 % mehr Fläche**. Die Größeninfrastruktur ist vorbereitet und bei `extent: 135`, `cellSize: 2.5` geprüft. Aktivierung, passende Start-/Ressourcenorte und Dichte folgen erst mit der Gestaltung; derzeit weiterhin 180 × 180 m.
+
+Mothership: Große Hangars.
+
+Vor dem Textureinsatz die bewusst umbenannten Quellen `texture-floor-alien-planet.webp` und `texture-floor-mothership.webp` in Einbettungsskript und Bytevergleich zuordnen und einbetten. Aktuell bleiben alte `bio`-/`metal`-Einbettungen aktiv; der Texturtest scheitert an den entfernten Quelldateinamen. Kartenboden und bestehende Materialtexturen für Modelle getrennt betrachten. Im Größenrefactoring keine Assets geändert.

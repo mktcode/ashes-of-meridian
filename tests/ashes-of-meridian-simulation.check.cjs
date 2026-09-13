@@ -73,6 +73,52 @@ function advance(game, steps) {
 const player = (game, type) => game.alive(e => e.team === 0 && e.type === type)[0];
 const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').length;
 
+test('larger map supports outer-area spawns, paid construction, production, commands and restart', () => {
+  const {game,context}=createGame();
+  vm.runInContext(`BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};
+    BATTLEFIELDS['alien-planet'].layout.playerStart={x:-111,z:109};`,context);
+  game.start({seed:43015,map:'alien-planet'});
+  assert.deepEqual([player(game,'hq').x,player(game,'hq').z],[-111,109]);
+  assert.equal(game.s.cam.x,-106);assert.equal(game.world.gridSize,108);
+  game.world.staticGrid.fill(0);game.world.rebuild(game.s.entities);
+  game.world.reveal(game.s.entities,[{x:110,z:105,r:31}]);
+  game.account(0).alloy=1000;
+  const worker=game.spawnUnit('worker',110,110,0,0);assert.ok(worker);
+  assert.deepEqual([worker.x,worker.z],[110,110]);
+  assert.match(game.canBuild('barracks',{x:134,z:105}),/boundary/);
+  assert.equal(game.canBuild('barracks',{x:110,z:95}),'');
+  const before=game.account(0).alloy, cost=game.cost('barracks','building').cost;
+  assert.equal(game.build('barracks',{x:110,z:95},[worker.id]),true);
+  assert.equal(game.account(0).alloy,before-cost);
+  advance(game,1600);
+  const barracks=player(game,'barracks');assert.equal(barracks.progress,1);
+  assert.equal(game.train('rifle'),true);advance(game,600);
+  const rifle=player(game,'rifle');assert.ok(rifle);assert.ok(rifle.x>90 && rifle.z>85);
+  assert.equal(rifle.exit,undefined);
+  game.command([rifle.id],{type:'move',x:120,z:115});advance(game,200);
+  assert.ok(Math.hypot(rifle.x-120,rifle.z-115)<2);
+  assert.equal(game.unitFits(rifle,131,115),false);
+  const air=game.spawnUnit('air',120,-120,0,0);assert.ok(air);
+  game.pathTo(air,{x:999,z:-999});assert.deepEqual(json(air.path),[{x:130,z:-130}]);
+  for(const map of ['desert','alien-planet','mothership']) {
+    game.start({seed:43015,map});assert.equal(game.world.gridSize,map==='alien-planet'?108:72);
+    assert.ok(game.world.visible.includes(255));
+  }
+});
+
+test('spatial queries retain stable order without row aliases on large maps or wide scans', () => {
+  const {game,context}=createGame();
+  vm.runInContext("BATTLEFIELDS['alien-planet'].size={extent:180,cellSize:2.5}",context);
+  game.start({seed:43015,map:'alien-planet'});
+  game.s.entities=[];game.ids.clear();game.world.staticGrid.fill(0);game.world.rebuild([]);
+  const units=[[-170,-160],[150,-170],[120,110],[-100,100]].map(([x,z])=>game.spawnUnit('rifle',x,z,0,0));
+  game.rehash();
+  for(const u of units) assert.deepEqual(Array.from(game.near(u.x,u.z,5),e=>e.id),[u.id]);
+  const ids=Array.from(game.near(0,0,600),e=>e.id);
+  assert.deepEqual(ids,[units[1].id,units[0].id,units[3].id,units[2].id]);
+  assert.equal(new Set(ids).size,units.length);
+});
+
 test('starts without a supplied seed draw a fresh random battlefield each time', () => {
   const { game, context } = createGame();
   vm.runInContext(`const samples = [.12345678, .87654321]; Math.random = () => {

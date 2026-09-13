@@ -7,7 +7,7 @@
       s: RunState | null;
       world: Battlefield | null;
       ids: Map<number, Entity>;
-      spatial: Map<number, Entity[]>;
+      spatial: Map<string, Entity[]>;
       acc: number;
       fogClock: number;
       objectiveClock: number;
@@ -206,21 +206,22 @@
         this.spatial.clear();
         for (let e of this.s!.entities) {
           if (e.hp <= 0 || !['building', 'unit'].includes(e.kind)) continue;
-          let key = Math.floor((e.x + 90) / 10) + Math.floor((e.z + 90) / 10) * 32;
+          // Coordinate pairs cannot alias rows as map size or query radius grows.
+          let key = `${Math.floor((e.x + this.world!.extent) / 10)},${Math.floor((e.z + this.world!.extent) / 10)}`;
           if (!this.spatial.has(key)) this.spatial.set(key, []);
           this.spatial.get(key)!.push(e);
         }
       },
       near(this: MeridianGame, x: number, z: number, r: number, filter: (entity: Entity) => boolean = () => true): Entity[] {
         let out = [],
-          a = Math.floor((x - r + 90) / 10),
-          b = Math.floor((x + r + 90) / 10),
-          c = Math.floor((z - r + 90) / 10),
-          d = Math.floor((z + r + 90) / 10),
+          a = Math.floor((x - r + this.world!.extent) / 10),
+          b = Math.floor((x + r + this.world!.extent) / 10),
+          c = Math.floor((z - r + this.world!.extent) / 10),
+          d = Math.floor((z + r + this.world!.extent) / 10),
           rr = r * r;
         for (let j = c; j <= d; j++)
           for (let i = a; i <= b; i++) {
-            let arr = this.spatial.get(i + j * 32);
+            let arr = this.spatial.get(`${i},${j}`);
             if (arr)
               for (let e of arr)
                 if (e.hp > 0 && (e.x - x) ** 2 + (e.z - z) ** 2 < rr && filter(e))

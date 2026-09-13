@@ -175,8 +175,9 @@
           renderBattlefieldEffects(R, game.effects, game.world, s, ui.pings, t);
           if (ui.mode && ui.pointer.inside && !ui.paused) {
             let p = R.ground(ui.pointer.x, ui.pointer.y);
-            p.x = clamp(p.x, -86, 86);
-            p.z = clamp(p.z, -86, 86);
+            const limit = game.world.extent - 4;
+            p.x = clamp(p.x, -limit, limit);
+            p.z = clamp(p.z, -limit, limit);
             if (ui.mode.kind === 'build') {
               let type = ui.mode.arg,
                 d = BUILDINGS[type];

@@ -29,8 +29,9 @@
           ctx = c.getContext('2d'),
           w = c.width,
           h = c.height;
-        if (!this.miniBuffer) {
-          this.miniBuffer = document.createElement('canvas');
+        const { extent, gridSize: GRID } = g.world, span = extent * 2;
+        if (!this.miniBuffer || this.miniBuffer.width !== GRID) {
+          this.miniBuffer ||= document.createElement('canvas');
           this.miniBuffer.width = this.miniBuffer.height = GRID;
           this.miniCtx = this.miniBuffer.getContext('2d');
           this.miniImage = this.miniCtx.createImageData(GRID, GRID);
@@ -48,7 +49,7 @@
         this.miniCtx.putImageData(this.miniImage, 0, 0);
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(this.miniBuffer, 0, 0, w, h);
-        let map = p => ({ x: ((p.x + 90) / 180) * w, y: ((p.z + 90) / 180) * h });
+        let map = p => ({ x: ((p.x + extent) / span) * w, y: ((p.z + extent) / span) * h });
         ctx.strokeStyle = '#91b7c215';
         ctx.lineWidth = 0.6;
         for (let i = 1; i < 6; i++) {
@@ -84,7 +85,7 @@
           ctx.fillStyle = e.team === 0 ? '#79dbcc' : '#eb8e80';
           if (e.type === 'hero') ctx.fillStyle = '#ffd494';
           if (e.kind === 'building') {
-            let size = Math.max(3, (e.size * w) / 180);
+            let size = Math.max(3, (e.size * w) / span);
             ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
 
           } else {

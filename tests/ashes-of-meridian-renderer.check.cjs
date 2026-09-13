@@ -136,6 +136,22 @@ function setup(options = {}) {
   return { r, g, calls, options, framebuffers, buffers, context, bindings: () => ({ draw, read, buffer }) };
 }
 
+test('fog texture reallocates only on grid-size changes, including odd row widths', () => {
+  const {r,calls}=setup();r.fogTex={};r.fogSize=1;
+  let previous=1;
+  for(const size of [72,72,108,108,109,72]) {
+    calls.length=0;
+    const data=new Uint8Array(size*size);r.fog(data,size);
+    assert.equal(r.fogSize,size);
+    assert.deepEqual(calls[0],['bindTexture','TEXTURE_2D',r.fogTex]);
+    assert.deepEqual(calls[1],['pixelStorei','UNPACK_ALIGNMENT',1]);
+    assert.deepEqual(calls[2], previous===size
+      ? ['texSubImage2D','TEXTURE_2D',0,0,0,size,size,'RED','UNSIGNED_BYTE',data]
+      : ['texImage2D','TEXTURE_2D',0,'R8',size,size,0,'RED','UNSIGNED_BYTE',data]);
+    assert.equal(calls.length,3);previous=size;
+  }
+});
+
 test('map render profiles select cached textures and independent decor uniforms without uploads', () => {
   const h = setup(); h.r.resize();
   h.r.groundTex = 'dirt'; h.r.metalTex = 'metal'; h.r.bioTex = 'bio'; h.r.skyTex = 'sky';

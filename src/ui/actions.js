@@ -19,8 +19,9 @@
     defineMeridianUIMethods({
       center(x, z) {
         if (!this.game.s) return;
-        this.game.s.cam.x = clamp(x, -72, 72);
-        this.game.s.cam.z = clamp(z, -72, 72);
+        const limit = this.game.world.extent - 18;
+        this.game.s.cam.x = clamp(x, -limit, limit);
+        this.game.s.cam.z = clamp(z, -limit, limit);
       },
       homeCamera() {
         let e = this.game.alive(e => e.team === 0 && e.type === 'hq')[0];

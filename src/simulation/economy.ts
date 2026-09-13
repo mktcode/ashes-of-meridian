@@ -131,7 +131,8 @@
         if (!this.availableWorkers(team).length) return 'No free worker. Workers are building or repairing.';
         if (!p) return '';
         let r = d.size;
-        if (Math.abs(p.x) > 83 - r || Math.abs(p.z) > 83 - r)
+        const limit = this.world!.extent - 7 - r;
+        if (Math.abs(p.x) > limit || Math.abs(p.z) > limit)
           return 'Too close to the battlefield boundary.';
         if (!this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
           return 'Scout this location before building.';

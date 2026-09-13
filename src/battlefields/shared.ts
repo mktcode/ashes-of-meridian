@@ -96,6 +96,7 @@ class BattlefieldBuilder {
 
   ground() {
     const { world, random: rand, palette: bio, place } = this, layout = world.renderData, color = this.color;
+    const { extent: EXTENT, cellSize: CELL, gridSize: GRID } = world;
     let base = color(bio.ground);
     for (let z = 0; z < GRID; z++)
       for (let x = 0; x < GRID; x++) {
@@ -114,18 +115,18 @@ class BattlefieldBuilder {
         layout.groundColors.push(c2);
       }
     place('terrain', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static');
-    place('box', 0, -8, 0, 180, 15, 180, 0x242c36, 0, 0, 0, 0, 1, 'static');
+    place('box', 0, -8, 0, EXTENT * 2, 15, EXTENT * 2, 0x242c36, 0, 0, 0, 0, 1, 'static');
   }
   boundary(model: string, material: string) {
-    this.world.renderData.geometries.push({ mesh: model, model, seed: this.world.seed });
+    this.world.renderData.geometries.push({ mesh: model, model, seed: this.world.seed, extent: this.world.extent });
     this.place(model, 0, 0, 0, 1, 1, 1, this.palette.rock, 0, 0, 0, 0, 1, 'static', material);
   }
   smallObstacles() {
     const { world, random: rand, palette: bio, safe, lanes, place } = this, color = this.color;
     const rockTypes = ['rockBoulder', 'rockCrag', 'rockRidge', 'rockShelf', 'rockBoulder'];
     for (let i = 0; i < 115; i++) {
-      let x = (rand() - 0.5) * 166,
-        z = (rand() - 0.5) * 166,
+      let x = (rand() - 0.5) * (world.extent * 2 - 14),
+        z = (rand() - 0.5) * (world.extent * 2 - 14),
         r = 1.7 + rand() * 4;
       if (
         safe.some(p => distance(p, { x, z }) < r + 11) ||
@@ -195,13 +196,14 @@ class BattlefieldBuilder {
     }
   }
   boundaryRocks() {
-    const { random: rand, palette: bio, place } = this;
+    const { random: rand, palette: bio, place, world } = this;
+    const edge = world.extent - 2;
     const rockTypes = ['rockBoulder', 'rockCrag', 'rockRidge', 'rockShelf', 'rockBoulder'];
     for (let i = 0; i < 62; i++) {
       let side = i % 4,
-        pos = (rand() - 0.5) * 175,
-        x = side < 2 ? (side ? 88 : -88) : pos,
-        z = side >= 2 ? (side === 2 ? 88 : -88) : pos,
+        pos = (rand() - 0.5) * (world.extent * 2 - 5),
+        x = side < 2 ? (side ? edge : -edge) : pos,
+        z = side >= 2 ? (side === 2 ? edge : -edge) : pos,
         h = 3 + rand() * 11,
         r = 3 + rand() * 6;
       place(
@@ -226,8 +228,8 @@ class BattlefieldBuilder {
   rubble(plant?: BattlefieldProp) {
     const { random: rand, palette: bio, safe, place } = this, color = this.color;
     for (let i = 0; i < 470; i++) {
-      let x = (rand() - 0.5) * 174,
-        z = (rand() - 0.5) * 174;
+      let x = (rand() - 0.5) * (this.world.extent * 2 - 6),
+        z = (rand() - 0.5) * (this.world.extent * 2 - 6);
       if (safe.some(p => distance(p, { x, z }) < 4)) continue;
       let r = 0.1 + rand() * 0.7;
       place(
@@ -252,8 +254,8 @@ class BattlefieldBuilder {
   patches(patch: BattlefieldPatch) {
     const rand = this.random;
     for (let i = 0; i < 12; i++) {
-      let x = (rand() - 0.5) * 155,
-        z = (rand() - 0.5) * 155,
+      let x = (rand() - 0.5) * (this.world.extent * 2 - 25),
+        z = (rand() - 0.5) * (this.world.extent * 2 - 25),
         r = 3 + rand() * 8;
       patch(this, x, z, r);
     }
@@ -262,14 +264,14 @@ class BattlefieldBuilder {
     const { random: rand, safe } = this;
     // Cargo debris and monumental remains; lanes stay clear but have no road meshes.
     for (let i = 0; i < 22; i++) {
-      let x = (rand() - 0.5) * 150,
-        z = (rand() - 0.5) * 150;
+      let x = (rand() - 0.5) * (this.world.extent * 2 - 30),
+        z = (rand() - 0.5) * (this.world.extent * 2 - 30);
       if (safe.some(p => distance(p, { x, z }) < 7)) continue;
       prop(this, x, z);
     }
   }
-  features(candidate: (rand: () => number) => WorldTerrainFeature, model: string, material: string) {
-    const world = this.world;
+  features(candidate: (rand: () => number, world: Battlefield) => WorldTerrainFeature, model: string, material: string) {
+    const world = this.world, { gridSize: GRID, cellSize: CELL } = world;
     const rand = seeded(world.seed ^ 0x57494445),
       protectedSites = [
         { ...world.layout.playerStart, r: 20 }, { ...world.layout.enemySites[0], r: 21 },
@@ -277,8 +279,8 @@ class BattlefieldBuilder {
         ...world.layout.resourceSites.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 }))
       ];
     for (let attempt = 0; attempt < 600 && world.renderData.features.length < 2; attempt++) {
-      const m = candidate(rand);
-      if (m.outline.some(p => Math.max(Math.abs(p.x), Math.abs(p.z)) > 81)) continue;
+      const m = candidate(rand, world);
+      if (m.outline.some(p => Math.max(Math.abs(p.x), Math.abs(p.z)) > world.extent - 9)) continue;
       const minX = Math.min(...m.outline.map(p => p.x)), maxX = Math.max(...m.outline.map(p => p.x)),
         minZ = Math.min(...m.outline.map(p => p.z)), maxZ = Math.max(...m.outline.map(p => p.z));
       const near = (p: Position, radius: number) => {
@@ -322,9 +324,10 @@ class BattlefieldBuilder {
 }
 
 // Current shared silhouette only; the validator above accepts other polygon shapes.
-function createMassifCandidate(rand: () => number): WorldTerrainFeature {
+function createMassifCandidate(rand: () => number, world: Battlefield): WorldTerrainFeature {
+  const span = world.extent * 2 - 56;
   const m: WorldTerrainFeature = {
-    x: (rand() - .5) * 124, z: (rand() - .5) * 124,
+    x: (rand() - .5) * span, z: (rand() - .5) * span,
     width: 29 + rand() * 9, depth: 17 + rand() * 6, height: 20 + rand() * 7,
     yaw: rand() * Math.PI * 2, seed: Math.floor(rand() * 0x100000000), outline: []
   };
