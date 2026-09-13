@@ -20,7 +20,7 @@
 - Kleinste sinnvolle Änderung; Formatierung, strukturelles Refactoring und Verhaltensänderungen getrennt halten. Keine beiläufigen Änderungen an Balancing, Darstellung oder Regeln; bekannte Probleme nicht stillschweigend korrigieren.
 - Seedbasierte Hindernisverteilung, Kollisionsradien und RNG-Aufrufreihenfolge schützen. Auch kosmetische Effekte nutzen teilweise den Simulations-RNG. [Referenzwerte](docs/reference-tests.md) nicht zur Reparatur fehlgeschlagener Tests neu erzeugen.
 - Entwicklungsprototyp: keine Rückwärtskompatibilität, Migrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag. Nur das permanente Profil wird gespeichert, keine Runs.
-- Bildassets werden ausschließlich als WebP mit Qualität 60 gepflegt; keine PNGs einchecken. Texturquellen und Einbettungen mit `npm run embed:textures` synchronisieren. Assets trotzdem nicht nur wegen vermeintlicher Redundanz löschen oder austauschen; Pflegeverfahren in der Grafikreferenz beachten.
+- Bildassets werden ausschließlich als WebP mit Qualität 80 gepflegt; keine PNGs einchecken. Texturquellen und Einbettungen mit `npm run embed:textures` synchronisieren. Assets trotzdem nicht nur wegen vermeintlicher Redundanz löschen oder austauschen; Pflegeverfahren in der Grafikreferenz beachten.
 - Zusammenhängende, geprüfte Änderungen eigenständig committen. Fremde oder unzusammenhängende vorhandene Änderungen nicht aufnehmen.
 
 ## Prüfen und dokumentieren

@@ -13,7 +13,7 @@ npm install
 npm run build
 ```
 
-Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe sowie Laufzeitbilder und Audioquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet; ihre kanonischen WebP-Quellen (Qualität 60) liegen unter `assets/textures/`. Nach Texturänderungen erzeugt `npm run embed:textures` zentral `src/renderer/assets.js`, anschließend aktualisiert `npm run build` die Auslieferung. Für ein statisches Webdeployment steht ein Multi-Stage-[Dockerfile](Dockerfile) bereit; Dokploy-Konfiguration und Auslieferungsgrenzen beschreibt [Statisches Webdeployment](docs/deployment.md).
+Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe sowie Laufzeitbilder und Audioquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet; ihre kanonischen WebP-Quellen (Qualität 80) liegen unter `assets/textures/`. Nach Texturänderungen erzeugt `npm run embed:textures` zentral `src/renderer/assets.js`, anschließend aktualisiert `npm run build` die Auslieferung. Für ein statisches Webdeployment steht ein Multi-Stage-[Dockerfile](Dockerfile) bereit; Dokploy-Konfiguration und Auslieferungsgrenzen beschreibt [Statisches Webdeployment](docs/deployment.md).
 
 ## Spielen
 

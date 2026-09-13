@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Neue Dirt-, Metall- und Bio-Texturen
+
+- `new-dirt.png`, `new-spacehip.png` und `new-alienplanet.png` ersetzen die kanonischen Dirt-, Metall- und Bio-Quellen unter ihren bestehenden WebP-Pfaden. Konvertierung ohne Skalierung auf 941×1672 mit WebP-Qualität 80; die PNG-Eingaben wurden anschließend entfernt. Der allgemeine Pflegewert ist auf Qualität 80 angehoben, Einbettungen wurden zentral neu erzeugt.
+- **Geprüft:** `npm test` baut erfolgreich und erreicht **252/253**; einziger Fehler bleibt die sachfremde alte Erwartung `Move (default)` im Field-Manual-Test. Generatorcheck, PNG-Ausschluss und Diff-Prüfung erfolgreich. Chromium `file://` mit Rust-Seed 1409 und Free-Marches-/Choir-HQ: alle drei neuen Einbettungen geladen, Dirt-/Materialwirkung visuell gesichtet, Fog aktiv, GL 0 und keine Laufzeit-/Ladefehler. Kein Echtgerätetest.
+
 ## Dirt-Boden ohne Biomtönung
 
 - Der Bodenshader verwendet die Dirt-WebP jetzt direkt als Grundfarbe statt sie überwiegend mit den fünf Biomfarben zu mischen. Schatten, Fog of War, Entfernungsdunst, Postprocessing und die schwachen Dekoratlanten bleiben erhalten; Simulation, Terrain-RNG und Texturdatei sind unverändert.
