@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Dirt-Projektion in nativer Dichte
+
+- Die 941×1672-Dirt-Textur wird nicht mehr auf eine quadratische 83,3×83,3-m-Wiederholung verzerrt. Der Shader leitet die UV-Skalierung jetzt aus der tatsächlichen Texturgröße ab und hält auf beiden Achsen 14 Quellpixel pro Weltmeter; dadurch bleiben Seitenverhältnis und näherungsweise native Bildschirmdichte bei der Standardansicht erhalten. Beleuchtung, Schatten, Fog, Dekor, RNG und Quelldatei bleiben unverändert.
+- **Geprüft:** `npm test` baut erfolgreich und erreicht **252/253**; einziger Fehler bleibt die sachfremde alte Erwartung `Move (default)` im Field-Manual-Test. Generatorcheck und Diff-Prüfung erfolgreich. Chromium `file://` mit festem Rust-Seed 1409: neue Dirt-Skalierung visuell gesichtet, Fog aktiv, GL 0 und keine Laufzeit-/Ladefehler. Kein Echtgerätetest.
+
 ## Neue Dirt-, Metall- und Bio-Texturen
 
 - `new-dirt.png`, `new-spacehip.png` und `new-alienplanet.png` ersetzen die kanonischen Dirt-, Metall- und Bio-Quellen unter ihren bestehenden WebP-Pfaden. Konvertierung ohne Skalierung auf 941×1672 mit WebP-Qualität 80; die PNG-Eingaben wurden anschließend entfernt. Der allgemeine Pflegewert ist auf Qualität 80 angehoben, Einbettungen wurden zentral neu erzeugt.

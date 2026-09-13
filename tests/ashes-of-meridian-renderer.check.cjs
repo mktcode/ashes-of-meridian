@@ -18,6 +18,8 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('tri(u_bioTex,v_modelPos,normalize(v_modelN),.17)'));
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.28)'));
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.012)'));
+  assert.ok(FRAG.includes('world*14./pixels'), 'ground keeps equal source-texel density on both axes');
+  assert.ok(FRAG.includes('vec3 t=groundBase(v_pos.xz);base=t;'), 'ground uses the aspect-correct Dirt source');
   assert.ok(FRAG.includes('base=t;vec4 rocks=groundDecor'), 'ground starts with the unchanged Dirt color');
   assert.ok(!FRAG.includes('base=mix(detail(base,t,.74),t,.32)'), 'biome tint is not mixed into the ground');
   assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
