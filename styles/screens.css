@@ -732,21 +732,75 @@
       background: #947b3420
     }
 
-    .armory-grid {
+    .armory-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 8px
+    }
+
+    .armory-heading h1 {
+      margin-bottom: 0
+    }
+
+    .armory-limit {
+      min-width: 130px;
+      padding: 8px 12px;
+      border: 1px solid #edb87566;
+      border-radius: 6px 2px;
+      text-align: right;
+      background: linear-gradient(145deg, #5544274d, #101c27c9)
+    }
+
+    .armory-limit span,
+    .armory-limit small,
+    .upgrade-rank {
+      display: block;
+      font: 8px var(--mono);
+      letter-spacing: .8px;
+      color: var(--muted)
+    }
+
+    .armory-limit strong {
+      display: block;
+      font: 22px/1.05 var(--mono);
+      color: var(--gold)
+    }
+
+    .armory-intro {
+      max-width: 650px;
+      margin: 0 0 14px;
+      font-size: 12px
+    }
+
+    .armory-screen .armory-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px
     }
 
     .upgrade-card {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
       border: 1px solid #48cfe966;
       border-radius: 8px 2px;
-      padding: 18px;
+      padding: 14px;
       background: linear-gradient(145deg, #153344a8, #061725dc);
       box-shadow: inset 0 1px #d8fcff20
     }
 
+    .upgrade-heading {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      align-items: center;
+      gap: 9px
+    }
+
     .upgrade-card .sigil {
+      width: 32px;
+      height: 32px;
       font-size: 27px;
       color: var(--gold)
     }
@@ -755,18 +809,20 @@
       color: var(--ink);
       font-size: 12px;
       letter-spacing: 0;
-      margin-top: 11px
+      margin: 0 0 2px
     }
 
     .upgrade-card p {
-      font-size: 12px;
-      min-height: 45px
+      flex: 1;
+      font-size: 11px;
+      line-height: 1.45;
+      margin: 9px 0 12px
     }
 
     .upgrade-levels {
       display: flex;
       gap: 5px;
-      margin-bottom: 18px
+      margin-bottom: 12px
     }
 
     .upgrade-levels i {
@@ -828,9 +884,14 @@
       box-shadow: inset 0 1px #d8fcff20
     }
 
+    .armory-screen > .launch-row {
+      margin-top: 14px
+    }
+
     .upgrade-card .secondary {
       width: 100%;
-      padding-inline: 10px
+      padding-inline: 8px;
+      font-size: 9px
     }
 
     .modal-card:has(.result-stats) .btnstack {
@@ -884,6 +945,46 @@
 
       .modal-card:has(.result-stats) .btnstack {
         grid-template-columns: 1fr
+      }
+
+      .armory-heading {
+        align-items: center;
+        gap: 10px
+      }
+
+      .armory-heading h1 {
+        font-size: 24px
+      }
+
+      .armory-limit {
+        min-width: 108px;
+        padding: 7px 9px
+      }
+
+      .armory-intro {
+        line-height: 1.4;
+        margin-bottom: 10px
+      }
+
+      .armory-screen .armory-grid {
+        grid-template-columns: 1fr;
+        gap: 8px
+      }
+
+      .upgrade-card {
+        padding: 11px 12px
+      }
+
+      .upgrade-card p {
+        margin-block: 6px 9px
+      }
+
+      .upgrade-levels {
+        margin-bottom: 9px
+      }
+
+      .upgrade-card .secondary {
+        min-height: 38px
       }
 
       .result-stats {

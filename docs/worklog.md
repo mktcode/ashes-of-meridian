@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Kompakter Fleet-Upgrades-Dialog
+
+- Fleet Upgrades ohne Regel-/Preisänderung verdichtet: direkte Levelanzeige und Evakuierungslimit im Kopf, kompaktere Karten, drei Spalten auf breiten Dialogen und eine lesbare mobile Spalte. Das erledigte lokale Issue wurde entfernt.
+- **Geprüft:** gezielter Steuerungsvertrag für Reihenfolge, Level-/Limitanzeige und Kaufzustände; direkter Chromium-`file://`-Check bei 1280×800 und emulierten 390×844. In beiden Ansichten waren alle drei Karten und **Return** ohne internes Dialogscrollen sichtbar; Kauf-Neudarstellung und keine Seiten-/Konsolenfehler. `npm test` **314/314 bestanden**.
+
 ## Persönlicher sichtbarer KI-Zuschauerlauf
 
 - `npm run simulate:visible` als absichtlich manuellen Befehl ergänzt. Er baut und öffnet per System-Standardbrowser die direkte `file://`-Auslieferung ohne App-/Headless-Modus oder Größenparameter; URL-Modus startet beide Controller, pro Run 1× und nach zehn Echtzeitsekunden 2×. Flüchtiges Standardprofil verhindert Lesen/Schreiben des normalen Browserprofils. Der Befehl ist aus `build`/`test` unerreichbar und wird von Agenten nicht automatisch geöffnet.

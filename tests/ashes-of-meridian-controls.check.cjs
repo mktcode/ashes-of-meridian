@@ -729,7 +729,12 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   h.ui.game.s.meta = {}; h.ui.game.s.teams[0].alloy = 123; h.ui.game.s.teams[0].gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
   h.ui.profile.aether = 99; h.ui.showArmory();
+  assert.match(h.ui.html, /class="armory-screen"/);
   assert.match(h.ui.html, /99 AETHER RESERVES/);
+  assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>100<\/strong>/);
+  assert.equal((h.ui.html.match(/class="upgrade-heading"/g) || []).length, 3);
+  assert.equal((h.ui.html.match(/class="upgrade-rank">LEVEL 0 \/ 5/g) || []).length, 3);
+  assert.equal((h.ui.html.match(/aria-label="Level 0 of 5"/g) || []).length, 3);
   assert.deepEqual(Array.from(h.ui.html.matchAll(/data-upgrade="([^"]+)"/g), m => m[1]),
     ['startingAlloy', 'startingWorkers', 'aetherEvacuation']);
   assert.match(h.ui.html, /Starting alloy/); assert.match(h.ui.html, /100 AETHER · LEVEL 1/);

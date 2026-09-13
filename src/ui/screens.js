@@ -172,16 +172,16 @@
         if (previous === 'game') this.paused = true;
         this.openModal(
           'armory',
-          `<div class="eyebrow">FLOTILLA REQUISITIONS / ${this.profile.aether.toLocaleString()} AETHER RESERVES</div><h1>What we carry forward.</h1><p style="font-size:13px">Permanent expedition upgrades. Unspent aether is recovered at every battle result. Current evacuation limit: ${evacuationLimit} per battle; requisitions raise it from 100 to 1,000. Changes apply to new battles.</p><div class="armory-grid">${Object.entries(
+          `<div class="armory-screen"><header class="armory-heading"><div><div class="eyebrow">FLOTILLA REQUISITIONS / ${this.profile.aether.toLocaleString()} AETHER RESERVES</div><h1>Fleet upgrades.</h1></div><div class="armory-limit"><span>EVACUATION LIMIT</span><strong>${evacuationLimit}</strong><small>AETHER / BATTLE</small></div></header><p class="armory-intro">Permanent bonuses for future battles. Unspent aether is recovered after every result, up to the evacuation limit.</p><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {
               let n = this.profile.upgrades[k] || 0, cost = m.costs[n], affordable = this.profile.aether >= cost;
-              return `<div class="upgrade-card"><div class="sigil" style="width:32px;height:32px">${icon(m.icon)}</div><h3>${m.name}</h3><p>${m.desc}</p><div class="upgrade-levels">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || !affordable ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : cost + ' AETHER · LEVEL ' + (n + 1)}</button></div>`;
+              return `<div class="upgrade-card"><div class="upgrade-heading"><div class="sigil">${icon(m.icon)}</div><div><h3>${m.name}</h3><span class="upgrade-rank">LEVEL ${n} / ${m.max}</span></div></div><p>${m.desc}</p><div class="upgrade-levels" aria-label="Level ${n} of ${m.max}">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || !affordable ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : cost + ' AETHER · LEVEL ' + (n + 1)}</button></div>`;
             })
             .join(
               ''
-            )}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN ↗</button></div>`,
+            )}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN ↗</button></div></div>`,
           true
         );
       },
