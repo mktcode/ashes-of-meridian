@@ -119,6 +119,6 @@ Gefechtsauswahl, Pause/Bestätigungen, Einstellungen, Handbuch, Waffenkammer und
 
 In der Gefechtsauswahl gibt es keine Seed-Eingabe. Die Startaufstellung steht über **Start battle**, das in allen Fenstergrößen die volle Inhaltsbreite des Auswahlpanels ausfüllt.
 
-Modalkarten sind höhenbegrenzt und scrollbar. Schmale Formulare stapeln Felder; Upgrade-Karten stehen breit zu zweit, mobil untereinander. Ergebniswerte bilden Einzelkarten, der Score eine ganze Zeile; Ergebnisaktionen stehen breit nebeneinander, bis 600 px untereinander. Der Hauptmenü-/Gefechtsauswahl-Hintergrund bleibt eine bildschirmfüllende Weltvorschau.
+Modalkarten sind höhenbegrenzt und scrollbar. Schmale Formulare stapeln Felder; Upgrade-Karten stehen breit zu dritt und mobil untereinander. Ergebniswerte bilden Einzelkarten, der Score eine ganze Zeile; Ergebnisaktionen stehen breit nebeneinander, bis 600 px untereinander. Der Hauptmenü-/Gefechtsauswahl-Hintergrund bleibt eine bildschirmfüllende Weltvorschau.
 
 [Prüfverfahren](testing.md) · [zentrales Arbeitsprotokoll](worklog.md)
