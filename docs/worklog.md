@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Persönlicher sichtbarer KI-Zuschauerlauf
+
+- `npm run simulate:visible` als absichtlich manuellen, von Build/Test unerreichbaren Befehl ergänzt. Er baut und öffnet per System-Standardbrowser die direkte `file://`-Auslieferung ohne App-/Headless-Modus oder Größenparameter; URL-Modus startet beide Controller, pro Run 1× und nach zehn Echtzeitsekunden 2×. Flüchtiges Standardprofil verhindert Lesen/Schreiben des normalen Browserprofils.
+- **Geprüft:** Build und Launcher-URL; isolierter Chromium-`file://`-Vergleich bestätigt unveränderten normalen Hauptmenüstart, sofort aktive Teams 0/1 bei Zuschauer-URL, 1×→2×/HUD nach zehn Sekunden, Standardprofil trotz präpariertem persistentem Profil, bytegleich unberührtes `localStorage` auch nach explizitem Persistieren sowie keine Seiten-/Konsolenfehler. Den sichtbaren npm-Befehl nicht automatisiert geöffnet.
+
 ## KI-Befehlsmarker aus Vorführlauf
 
 - Sichtbarer KI-gegen-KI-Lauf machte sekündlich erneuerte Attack-move-Aufträge am Sammelpunkt als gelb-orange lokale Eingabemarker hör-/sichtbar. Das ist nur möglich, wenn Team 0 zu Test-/Vorführzwecken ebenfalls vom Controller geführt wird; normale Gegnerereignisse waren bereits teamseitig verborgen. Autonome Strategieaufträge verwenden nun weiterhin die gemeinsame validierte Formation und unveränderte Wiederholungslogik, unterdrücken aber ausschließlich lokalen Befehlston/-marker. Echte Spielerbefehle zeigen beides weiterhin.

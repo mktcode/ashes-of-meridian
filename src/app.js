@@ -10,12 +10,15 @@
       const canvas = document.getElementById('world'),
         overlay = document.getElementById('overlay');
       try {
-        const persistence = createMeridianPersistence({
-          getStorage: () => localStorage,
-          clamp,
-          upgrades: META,
-          warn: (...args) => console.warn(...args)
-        });
+        const visibleSimulation = new URLSearchParams(location.search).get('simulation') === 'ai-vs-ai',
+          volatileStorage = { getItem: () => null, setItem: () => {} },
+          persistence = createMeridianPersistence({
+            // The explicitly launched spectator run must not read or mutate the normal profile.
+            getStorage: () => visibleSimulation ? volatileStorage : localStorage,
+            clamp,
+            upgrades: META,
+            warn: (...args) => console.warn(...args)
+          });
         const profile = persistence.loadProfile();
         R = new MeridianRenderer(canvas);
         R.quality = profile.settings.quality;
@@ -23,7 +26,19 @@
         audio = new MeridianAudio(profile.settings);
         const worldView = new BattlefieldView(R);
         game = new MeridianGame(profile, (type, data) => {
-          if (type === 'start') worldView.sync(game.world);
+          if (type === 'start') {
+            worldView.sync(game.world);
+            if (visibleSimulation) {
+              game.enableAI(0);
+              const run = game.s;
+              setTimeout(() => {
+                if (game.s === run && !run.result) {
+                  run.speed = 2;
+                  ui?.updateHUD();
+                }
+              }, 10000);
+            }
+          }
           if (ui) ui.event(type, data);
         });
         ui = new MeridianUI(game, R, audio, profile, persistence);
@@ -287,6 +302,11 @@
           },
           version: '1.0.0'
         };
+        // Manual spectator command only; normal launches still stop at the home screen.
+        if (visibleSimulation) {
+          ui.showBattle();
+          ui.startBattle();
+        }
         requestAnimationFrame(draw);
       } catch (error) {
         console.error(error);

@@ -13,7 +13,15 @@ npm install
 npm run build
 ```
 
-Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe sowie Laufzeitbilder und Audioquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet; ihre kanonischen WebP-Quellen (Qualität 80) liegen unter `assets/textures/`. Nach Texturänderungen erzeugt `npm run embed:textures` zentral `src/renderer/assets.js`, anschließend aktualisiert `npm run build` die Auslieferung. Für ein statisches Webdeployment steht ein Multi-Stage-[Dockerfile](Dockerfile) bereit; Dokploy-Konfiguration und Auslieferungsgrenzen beschreibt [Statisches Webdeployment](docs/deployment.md).
+Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich.
+
+Eine rein manuelle Zuschauerpartie lässt sich separat starten:
+
+```bash
+npm run simulate:visible
+```
+
+Der Befehl baut den aktuellen Stand und öffnet ihn über `file://` als normales Fenster beziehungsweise neuen Tab im Standardbrowser – ohne App-Modus oder vorgegebene Fenster-/Viewportgröße. Beide Seiten steuert die KI. Jeder Run beginnt mit 1× und wechselt nach zehn Echtzeitsekunden auf 2×; Reload/erneutes Deployen startet wieder so. Das flüchtige Simulationsprofil liest oder verändert keine normalen Freischaltungen, Upgrades, Aetherreserven oder Einstellungen. Browserfenster beziehungsweise Tab zum Beenden selbst schließen. Dieser persönliche Zuschauerbefehl gehört ausdrücklich nicht zu Build, Tests oder Agentenabnahmen und wird nie automatisch ausgeführt. `src/`, `styles/` und `index.html` sind Quellen; `dist/src/` wird lokal erzeugt und nicht eingecheckt. Das Spiel ist kein Ein-Datei-Paket: HTML, Styles, Build-Ausgabe sowie Laufzeitbilder und Audioquellen gemeinsam mitführen. Laufzeittexturen sind eingebettet; ihre kanonischen WebP-Quellen (Qualität 80) liegen unter `assets/textures/`. Nach Texturänderungen erzeugt `npm run embed:textures` zentral `src/renderer/assets.js`, anschließend aktualisiert `npm run build` die Auslieferung. Für ein statisches Webdeployment steht ein Multi-Stage-[Dockerfile](Dockerfile) bereit; Dokploy-Konfiguration und Auslieferungsgrenzen beschreibt [Statisches Webdeployment](docs/deployment.md).
 
 ## Spielen
 

@@ -34,6 +34,10 @@ Prüfzuständigkeiten klein halten: CPU-Simulationstests laden keinen Renderer u
 
 [Feste Referenzen und ihre Grenzen](reference-tests.md). Keine Altspielstand-Kompatibilität und kein Regenerieren von Fixtures zum Beheben fehlgeschlagener Tests. Der Harness prüft aktive Lade-/Isolationsverträge und relevante APIs, keine festen Methodenzahlen. Negativtests bleiben sinnvoll, wenn sie heutige Regeln schützen (z. B. keine Run-Speicherung, unzulässige Befehle); reine Nachweise entfernter Features gehören nicht dauerhaft in die Suite.
 
+## Manuelle Zuschauerpartie
+
+`npm run simulate:visible` ist ausschließlich ein persönlicher Beobachtungsbefehl: normales Standardbrowserfenster ohne gesetzte Größe, flüchtiges Profil, KI gegen KI, zunächst 1× und nach zehn Echtzeitsekunden 2×. Er ist absichtlich kein Bestandteil von `npm test`, CI oder Agentenabnahmen und darf dort nicht automatisch geöffnet werden. Automatisierte Browserchecks verwenden weiterhin ihre isolierten Harnesses; bloßes Zuschauen ersetzt keinen reproduzierbaren Test oder vollständigen menschlichen Run.
+
 ## Gezielter Browsercheck
 
 Zuerst `npm run build` ausführen. Dann mit einem eigenen Profil ohne wichtige Daten `index.html` über `file://` öffnen; keine abgeschwächten Sicherheitsflags. Je nach Änderung prüfen:
