@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ashes of Meridian — AI Simulation</title>
+</head>
+<body>
+  <p>Opening the visible AI simulation…</p>
+  <script>
+    'use strict';
+    const game = new URL('index.html', location.href);
+    game.searchParams.set('simulation', 'ai-vs-ai');
+    location.replace(game);
+  </script>
+  <noscript>JavaScript is required. Open index.html to play normally.</noscript>
+</body>
+</html>

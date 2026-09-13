@@ -4,6 +4,8 @@ const vm = require('node:vm');
 const { mkdtempSync, mkdirSync, readFileSync, writeFileSync, symlinkSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
+const { execFileSync } = require('node:child_process');
+const { fileURLToPath } = require('node:url');
 const { RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
@@ -11,6 +13,21 @@ const sample = `
 <script data-meridian-script="base">const value = 41;</script>
 <script data-meridian-script="unused">throw Error('must not execute');</script>
 <script data-meridian-script='dependent'>const result = value + 1;</script>`;
+
+test('visible simulation launcher gives desktop openers a real wrapper file without query data', () => {
+  const root = join(__dirname, '..'), output = execFileSync(process.execPath,
+    ['scripts/open-visible-simulation.mjs', '--print'], { cwd: root, encoding: 'utf8' }).trim(),
+    url = new URL(output), file = fileURLToPath(url), html = readFileSync(file, 'utf8'),
+    pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  assert.equal(url.protocol, 'file:');
+  assert.equal(url.search, '');
+  assert.equal(url.hash, '');
+  assert.equal(file, join(root, 'visible-simulation.html'));
+  assert.match(html, /index\.html/);
+  assert.match(html, /simulation.*ai-vs-ai/);
+  assert.match(html, /location\.replace\(game\)/);
+  assert.equal(pkg.scripts['simulate:visible'], 'npm run build && node scripts/open-visible-simulation.mjs');
+});
 
 function sandbox(t) {
   const directory = mkdtempSync(join(tmpdir(), 'meridian-loader-'));

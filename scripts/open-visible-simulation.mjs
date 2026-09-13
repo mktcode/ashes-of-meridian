@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 
-const page = new URL('../index.html', import.meta.url);
-page.searchParams.set('simulation', 'ai-vs-ai');
+// xdg-open strips query strings and fragments from file:// URLs before handing them to
+// some desktop browsers. Open a real wrapper file and let the browser add the mode itself.
+const page = new URL('../visible-simulation.html', import.meta.url);
 
 if (process.argv.includes('--print')) {
   console.log(page.href);

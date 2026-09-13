@@ -4,8 +4,9 @@ Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, D
 
 ## Persönlicher sichtbarer KI-Zuschauerlauf
 
-- `npm run simulate:visible` als absichtlich manuellen, von Build/Test unerreichbaren Befehl ergänzt. Er baut und öffnet per System-Standardbrowser die direkte `file://`-Auslieferung ohne App-/Headless-Modus oder Größenparameter; URL-Modus startet beide Controller, pro Run 1× und nach zehn Echtzeitsekunden 2×. Flüchtiges Standardprofil verhindert Lesen/Schreiben des normalen Browserprofils.
-- **Geprüft:** Build und Launcher-URL; isolierter Chromium-`file://`-Vergleich bestätigt unveränderten normalen Hauptmenüstart, sofort aktive Teams 0/1 bei Zuschauer-URL, 1×→2×/HUD nach zehn Sekunden, Standardprofil trotz präpariertem persistentem Profil, bytegleich unberührtes `localStorage` auch nach explizitem Persistieren sowie keine Seiten-/Konsolenfehler. Den sichtbaren npm-Befehl nicht automatisiert geöffnet.
+- `npm run simulate:visible` als absichtlich manuellen Befehl ergänzt. Er baut und öffnet per System-Standardbrowser die direkte `file://`-Auslieferung ohne App-/Headless-Modus oder Größenparameter; URL-Modus startet beide Controller, pro Run 1× und nach zehn Echtzeitsekunden 2×. Flüchtiges Standardprofil verhindert Lesen/Schreiben des normalen Browserprofils. Der Befehl ist aus `build`/`test` unerreichbar und wird von Agenten nicht automatisch geöffnet.
+- **Launcher-Reparatur:** Der erste Stand übergab die Query direkt an `xdg-open`; dessen lokale `file://`-Konvertierung entfernt auf dem Zielsystem Query und Fragment, wodurch nur der normale Start ankam. Nun öffnet der Systembefehl die reale `visible-simulation.html` ohne URL-Zusatz; erst der Browser-Wrapper leitet auf den Querymodus weiter. Fokussierter Test schützt existierende Wrapperdatei und query-/fragmentfreie Launcher-URL.
+- **Geprüft:** Wrapperpfad und Build; isolierter Chromium-`file://`-Vergleich über den tatsächlichen Wrapper bestätigt unveränderten normalen Hauptmenüstart, sofort aktive Teams 0/1, 1×→2×/HUD nach zehn Sekunden, Standardprofil trotz präpariertem persistentem Profil, bytegleich unangetastetes `localStorage` auch nach explizitem Persistieren sowie keine Seiten-/Konsolenfehler. `npm test` **314/314 bestanden**. Den sichtbaren npm-Befehl nicht automatisch geöffnet.
 
 ## KI-Befehlsmarker aus Vorführlauf
 
