@@ -1152,20 +1152,20 @@ test('all factions share the minimal recruitment categories, including HQ units 
 test('only Free Marches recruitment/build buttons use local model portraits without changing actions or labels', () => {
   const h = setup();
   for (const [key, label, type, cost, file, gas = 0] of [
-    ['train:worker', 'Prospector', 'worker', 50, 'preview-prospector.webp'],
-    ['train:rifle', 'Vanguard', 'rifle', 75, 'preview-vanguard.webp'],
-    ['train:medic', 'Field medic', 'medic', 100, 'preview-field-medic.webp', 35],
-    ['train:tank', 'Ironclad', 'tank', 200, 'preview-ironclad.webp', 70],
-    ['train:artillery', 'Longbow', 'artillery', 235, 'preview-longbow.webp', 95],
-    ['train:air', 'Kestrel', 'air', 180, 'preview-kestrel.webp', 100],
-    ['train:hero', 'Commander', 'hero', 300, 'preview-field-commander.webp', 100],
-    ['build:hq', 'Command center', 'hq', 400, 'preview-command-center.webp'],
-    ['build:barracks', 'Muster station', 'barracks', 145, 'preview-muster-station.webp'],
-    ['build:depot', 'Logistics depot', 'depot', 85, 'preview-logistics-depot.webp'],
-    ['build:refinery', 'Aether refinery', 'refinery', 100, 'preview-aether-refinery.webp'],
-    ['build:factory', 'War foundry', 'factory', 225, 'preview-war-foundry.webp', 85],
-    ['build:hangar', 'Flight deck', 'hangar', 220, 'preview-flight-deck.webp', 115],
-    ['build:turret', 'Sentinel turret', 'turret', 115, 'preview-sentinel-turret.webp', 25]
+    ['train:worker', 'Prospector', 'worker', 50, 'assets/portraits/preview-prospector.webp'],
+    ['train:rifle', 'Vanguard', 'rifle', 75, 'assets/portraits/preview-vanguard.webp'],
+    ['train:medic', 'Field medic', 'medic', 100, 'assets/portraits/preview-field-medic.webp', 35],
+    ['train:tank', 'Ironclad', 'tank', 200, 'assets/portraits/preview-ironclad.webp', 70],
+    ['train:artillery', 'Longbow', 'artillery', 235, 'assets/portraits/preview-longbow.webp', 95],
+    ['train:air', 'Kestrel', 'air', 180, 'assets/portraits/preview-kestrel.webp', 100],
+    ['train:hero', 'Commander', 'hero', 300, 'assets/portraits/preview-field-commander.webp', 100],
+    ['build:hq', 'Command center', 'hq', 400, 'assets/portraits/preview-command-center.webp'],
+    ['build:barracks', 'Muster station', 'barracks', 145, 'assets/portraits/preview-muster-station.webp'],
+    ['build:depot', 'Logistics depot', 'depot', 85, 'assets/portraits/preview-logistics-depot.webp'],
+    ['build:refinery', 'Aether refinery', 'refinery', 100, 'assets/portraits/preview-aether-refinery.webp'],
+    ['build:factory', 'War foundry', 'factory', 225, 'assets/portraits/preview-war-foundry.webp', 85],
+    ['build:hangar', 'Flight deck', 'hangar', 220, 'assets/portraits/preview-flight-deck.webp', 115],
+    ['build:turret', 'Sentinel turret', 'turret', 115, 'assets/portraits/preview-sentinel-turret.webp', 25]
   ]) {
     const webp = fs.readFileSync(path.join(__dirname, '..', file));
     assert.equal(webp.toString('ascii', 0, 4), 'RIFF');

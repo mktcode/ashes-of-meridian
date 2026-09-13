@@ -1,20 +1,20 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
     const FREE_MARCHES_ACTION_PORTRAITS = {
-      'train:worker': 'preview-prospector.webp',
-      'train:rifle': 'preview-vanguard.webp',
-      'train:medic': 'preview-field-medic.webp',
-      'train:tank': 'preview-ironclad.webp',
-      'train:artillery': 'preview-longbow.webp',
-      'train:air': 'preview-kestrel.webp',
-      'train:hero': 'preview-field-commander.webp',
-      'build:hq': 'preview-command-center.webp',
-      'build:barracks': 'preview-muster-station.webp',
-      'build:depot': 'preview-logistics-depot.webp',
-      'build:refinery': 'preview-aether-refinery.webp',
-      'build:factory': 'preview-war-foundry.webp',
-      'build:hangar': 'preview-flight-deck.webp',
-      'build:turret': 'preview-sentinel-turret.webp'
+      'train:worker': 'assets/portraits/preview-prospector.webp',
+      'train:rifle': 'assets/portraits/preview-vanguard.webp',
+      'train:medic': 'assets/portraits/preview-field-medic.webp',
+      'train:tank': 'assets/portraits/preview-ironclad.webp',
+      'train:artillery': 'assets/portraits/preview-longbow.webp',
+      'train:air': 'assets/portraits/preview-kestrel.webp',
+      'train:hero': 'assets/portraits/preview-field-commander.webp',
+      'build:hq': 'assets/portraits/preview-command-center.webp',
+      'build:barracks': 'assets/portraits/preview-muster-station.webp',
+      'build:depot': 'assets/portraits/preview-logistics-depot.webp',
+      'build:refinery': 'assets/portraits/preview-aether-refinery.webp',
+      'build:factory': 'assets/portraits/preview-war-foundry.webp',
+      'build:hangar': 'assets/portraits/preview-flight-deck.webp',
+      'build:turret': 'assets/portraits/preview-sentinel-turret.webp'
     };
     defineMeridianUIMethods({
       center(x, z) {

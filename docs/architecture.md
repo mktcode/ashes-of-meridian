@@ -6,7 +6,7 @@
 
 Direktes Öffnen von `index.html` über `file://` bleibt nach dem Build unterstützt: kein erforderlicher Server, keine CDN-Abhängigkeiten, Laufzeit-Imports oder ES-Module. Die Laufzeitskripte teilen weiterhin globale lexikalische Bindungen und verwenden weder `async` noch `defer`. Source Maps dienen nur der lokalen Fehlersuche. Inline-Styles in UI-Templates bestehen weiterhin.
 
-Für das vorläufige Webhosting erzeugt das Multi-Stage-`Dockerfile` dieselbe Laufzeitausgabe und kopiert nur `index.html`, Styles, `dist/src/`, die vier lokalen Kampfmusik-MP3s und die 14 Aktionsporträts in einen unprivilegierten Nginx-Container auf Port 8080. Die gepflegten Texturquellen unter `assets/textures/` bleiben außerhalb des Images, weil die Laufzeitfassungen eingebettet sind. Es gibt kein Backend und keine serverseitige Persistenz; Details stehen unter [Statisches Webdeployment](deployment.md).
+Für das vorläufige Webhosting erzeugt das Multi-Stage-`Dockerfile` dieselbe Laufzeitausgabe und kopiert nur `index.html`, Styles, `dist/src/`, die vier lokalen Kampfmusik-MP3s und die 14 Aktionsporträts aus `assets/portraits/` in einen unprivilegierten Nginx-Container auf Port 8080. Die gepflegten Texturquellen unter `assets/textures/` bleiben außerhalb des Images, weil die Laufzeitfassungen eingebettet sind. Es gibt kein Backend und keine serverseitige Persistenz; Details stehen unter [Statisches Webdeployment](deployment.md).
 
 Eine mögliche spätere Android-Hülle mit Capacitor und AdMob ist in [Android, Google Play und Werbung](android.md) skizziert. Zurückgestellt, keine neue Abhängigkeit oder Änderung am aktuellen Auslieferungsvertrag.
 
