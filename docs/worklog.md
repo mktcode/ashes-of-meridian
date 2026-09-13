@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## KI-Folgeauftrag präzisiert
+
+- `docs/issues/gegner-ki-und-wellen.md` vom Ziel-Einzeiler zur gestuften Spezifikation erweitert: symmetrischer Baseline-Start, faire teamspezifische Sicht, vollständige Kosten-/Wirtschaftsparität ohne Cheats, zustandsabhängiger regelmäßiger Druck auf bekannte Wirtschafts-/Produktionsziele, Fähigkeitsheuristiken und Abnahmekriterien. Multiplayer nur als spätere Architekturleitplanke für teamneutrale deterministische Simulationsaktionen festgehalten; keinerlei Netzwerk-/Snapshot-/Lockstep-Auftrag.
+- **Geprüft:** Dokumentdiff und lokale Links; keine Laufzeit-, Test- oder Browseränderung.
+
 ## Fraktion-0-Einheiten: Detailpass abgeschlossen
 
 - Alle sieben Einheiten mit eigenen Modelldateien und Tests: Infanteriepanzerung/Visier/Waffen, Kettenfahrgestelle mit Laufrollen/Motorgittern/vertieften Mündungen, detaillierter Deltaflieger und zurückhaltende Worker-Servicefittings. Sieben zugehörige Portraits manuell erneuert (320×320 WebP Q80). Silhouetten, Laufphase, Flug-/Ausfahrthöhe, Fracht, Richtung, Katalog-/Spielwerte und RNG erhalten. Alle Gebäude, Fraktion-1/2-Einheiten, Ressourcen und bisherigen Grundmeshfabriken bleiben unverändert. Katalog/Budgets in der Grafikreferenz; Arbeitsissue abgeschlossen und Folgeissue `unit-browser` um den aktuellen Assetstand ergänzt.
