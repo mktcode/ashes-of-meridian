@@ -25,18 +25,19 @@ test('embedded skybox preserves the canonical WebP bytes and is wired as a non-r
   ));
 });
 
-test('embedded ground textures preserve the canonical PNG bytes without conversion', () => {
+test('embedded ground textures preserve the canonical WebP bytes without conversion', () => {
   for (const [key, file] of Object.entries({
-    ground: 'texture-ground-dirt-base.png',
-    rockClusters: 'texture-ground-rock-clusters.png',
-    desertShrubs: 'texture-ground-desert-shrubs.png'
+    ground: 'texture-ground-dirt-base.webp',
+    rockClusters: 'texture-ground-rock-clusters.webp',
+    desertShrubs: 'texture-ground-desert-shrubs.webp'
   })) {
     const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
-    assert.match(url, /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/);
+    assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
     const payload = url.split(',')[1], image = Buffer.from(payload, 'base64');
     assert.equal(image.toString('base64'), payload);
     assert.deepEqual(image, readFileSync(join(__dirname, '..', 'assets/textures', file)));
-    assert.deepEqual([...image.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.equal(image.toString('ascii', 0, 4), 'RIFF');
+    assert.equal(image.toString('ascii', 8, 12), 'WEBP');
   }
   assert.equal(vm.runInContext("'terrainOverlay' in MERIDIAN_TEXTURES", context), false);
   assert.ok(scripts.find(s => s.name === 'renderer-runtime').source.includes(

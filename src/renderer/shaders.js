@@ -1,6 +1,6 @@
     /* WebGL shader sources. */
     'use strict';
-    // Pixel rectangles (left, top, right, bottom) in the unchanged 1254² PNG atlases.
+    // Pixel rectangles (left, top, right, bottom) in the unchanged 1254² WebP atlases.
     // Irregular packing: do not treat either image as an evenly spaced sprite grid.
     const GROUND_DECOR_ATLAS = {
       rockClusters: [

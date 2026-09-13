@@ -1152,24 +1152,26 @@ test('all factions share the minimal recruitment categories, including HQ units 
 test('only Free Marches recruitment/build buttons use local model portraits without changing actions or labels', () => {
   const h = setup();
   for (const [key, label, type, cost, file, gas = 0] of [
-    ['train:worker', 'Prospector', 'worker', 50, 'preview-prospector.png'],
-    ['train:rifle', 'Vanguard', 'rifle', 75, 'preview-vanguard.png'],
-    ['train:medic', 'Field medic', 'medic', 100, 'preview-field-medic.png', 35],
-    ['train:tank', 'Ironclad', 'tank', 200, 'preview-ironclad.png', 70],
-    ['train:artillery', 'Longbow', 'artillery', 235, 'preview-longbow.png', 95],
-    ['train:air', 'Kestrel', 'air', 180, 'preview-kestrel.png', 100],
-    ['train:hero', 'Commander', 'hero', 300, 'preview-field-commander.png', 100],
-    ['build:hq', 'Command center', 'hq', 400, 'preview-command-center.png'],
-    ['build:barracks', 'Muster station', 'barracks', 145, 'preview-muster-station.png'],
-    ['build:depot', 'Logistics depot', 'depot', 85, 'preview-logistics-depot.png'],
-    ['build:refinery', 'Aether refinery', 'refinery', 100, 'preview-aether-refinery.png'],
-    ['build:factory', 'War foundry', 'factory', 225, 'preview-war-foundry.png', 85],
-    ['build:hangar', 'Flight deck', 'hangar', 220, 'preview-flight-deck.png', 115],
-    ['build:turret', 'Sentinel turret', 'turret', 115, 'preview-sentinel-turret.png', 25]
+    ['train:worker', 'Prospector', 'worker', 50, 'preview-prospector.webp'],
+    ['train:rifle', 'Vanguard', 'rifle', 75, 'preview-vanguard.webp'],
+    ['train:medic', 'Field medic', 'medic', 100, 'preview-field-medic.webp', 35],
+    ['train:tank', 'Ironclad', 'tank', 200, 'preview-ironclad.webp', 70],
+    ['train:artillery', 'Longbow', 'artillery', 235, 'preview-longbow.webp', 95],
+    ['train:air', 'Kestrel', 'air', 180, 'preview-kestrel.webp', 100],
+    ['train:hero', 'Commander', 'hero', 300, 'preview-field-commander.webp', 100],
+    ['build:hq', 'Command center', 'hq', 400, 'preview-command-center.webp'],
+    ['build:barracks', 'Muster station', 'barracks', 145, 'preview-muster-station.webp'],
+    ['build:depot', 'Logistics depot', 'depot', 85, 'preview-logistics-depot.webp'],
+    ['build:refinery', 'Aether refinery', 'refinery', 100, 'preview-aether-refinery.webp'],
+    ['build:factory', 'War foundry', 'factory', 225, 'preview-war-foundry.webp', 85],
+    ['build:hangar', 'Flight deck', 'hangar', 220, 'preview-flight-deck.webp', 115],
+    ['build:turret', 'Sentinel turret', 'turret', 115, 'preview-sentinel-turret.webp', 25]
   ]) {
-    const png = fs.readFileSync(path.join(__dirname, '..', file));
-    assert.equal(png.subarray(0,8).toString('hex'), '89504e470d0a1a0a');
-    assert.equal(png.readUInt32BE(16), 320); assert.equal(png.readUInt32BE(20), 320);
+    const webp = fs.readFileSync(path.join(__dirname, '..', file));
+    assert.equal(webp.toString('ascii', 0, 4), 'RIFF');
+    assert.equal(webp.toString('ascii', 8, 16), 'WEBPVP8 ');
+    assert.equal(webp.readUInt16LE(26) & 0x3fff, 320);
+    assert.equal(webp.readUInt16LE(28) & 0x3fff, 320);
     for (const faction of [0,1,2]) {
       h.ui.game.s.faction = faction;
       const before = JSON.stringify(h.ui.game.s);

@@ -2,10 +2,10 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
-## Texturquellen und zentrale Einbettung aufgeräumt
+## Neue Dirt-Basis und WebP-only-Bildassets
 
-- Sechs kanonische, bereits laufzeitgenutzte Texturdateien liegen unter `assets/textures/`. `npm run embed:textures` erzeugt daraus vollständig und ohne Umkodierung die zentrale `src/renderer/assets.js`; `-- --check` erkennt Abweichungen. Die bisherigen Metall-/Bio-Einbettungen wurden unverändert als kanonische WebPs herausgelöst, ihre redundanten PNG-Kopien entfernt. Das weder hochgeladene noch gezeichnete Terrain-Overlay samt Einbettung ebenfalls entfernt; Tests und Referenzen aktualisiert.
-- **Neu geprüft:** `npm test` baut erfolgreich und erreicht **252/253**; einziger Fehler ist die bereits bestehende, sachfremde Erwartung `Move (default)` an den zuvor gekürzten Field-Manual-Text. Gezielte Terrain-/Renderertests **36/36 bestanden**. Alle sechs generierten Data-URLs stimmen bytegleich mit Quellen und bisherigen Laufzeitpayloads überein; Generator und `--check` erfolgreich. Chromium `file://`: Hauptmenü und Renderer geladen, GL 0, keine Laufzeit-/Ladefehler. Diff-Prüfung ohne Whitespacefehler; kein Echtgerätetest.
+- Neue nahtlose Dirt-Basis (941×1672) eingebaut. Sämtliche sechs Texturquellen, 14 Aktionsporträts und die Grafikreferenz liegen nun als WebP mit Qualität 60 vor; RGBA-Dekoralpha bleibt erhalten, keine PNG-Dateien mehr unter Versionskontrolle. `npm run embed:textures` erzeugt alle Data-URLs weiterhin bytegleich aus `assets/textures/`; `-- --check` erkennt Abweichungen. Laufzeitpfade, Docker-Allowlist, Tests und Referenzen auf WebP umgestellt.
+- **Neu geprüft:** `npm test` baut erfolgreich und erreicht **252/253**; einziger Fehler ist die bereits bestehende, sachfremde Erwartung `Move (default)` an den zuvor gekürzten Field-Manual-Text. Betroffene Portraitprüfung besteht, sämtliche Einbettungen stimmen bytegleich mit den WebP-Quellen überein; Generator-Check und Diff-Prüfung erfolgreich. Chromium `file://`, 1280×800: neue Bodenwirkung gesichtet, vier Infantry-Porträts vollständig als 320×320 geladen, GL 0 und keine Laufzeit-/Ladefehler. Docker gebaut; HTTP liefert WebP-Porträt als `image/webp`, alter PNG-Pfad 404. Kein Echtgerätetest.
 
 ## Field Manual gekürzt und auf Touch ausgerichtet
 

@@ -1,20 +1,20 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
     const FREE_MARCHES_ACTION_PORTRAITS = {
-      'train:worker': 'preview-prospector.png',
-      'train:rifle': 'preview-vanguard.png',
-      'train:medic': 'preview-field-medic.png',
-      'train:tank': 'preview-ironclad.png',
-      'train:artillery': 'preview-longbow.png',
-      'train:air': 'preview-kestrel.png',
-      'train:hero': 'preview-field-commander.png',
-      'build:hq': 'preview-command-center.png',
-      'build:barracks': 'preview-muster-station.png',
-      'build:depot': 'preview-logistics-depot.png',
-      'build:refinery': 'preview-aether-refinery.png',
-      'build:factory': 'preview-war-foundry.png',
-      'build:hangar': 'preview-flight-deck.png',
-      'build:turret': 'preview-sentinel-turret.png'
+      'train:worker': 'preview-prospector.webp',
+      'train:rifle': 'preview-vanguard.webp',
+      'train:medic': 'preview-field-medic.webp',
+      'train:tank': 'preview-ironclad.webp',
+      'train:artillery': 'preview-longbow.webp',
+      'train:air': 'preview-kestrel.webp',
+      'train:hero': 'preview-field-commander.webp',
+      'build:hq': 'preview-command-center.webp',
+      'build:barracks': 'preview-muster-station.webp',
+      'build:depot': 'preview-logistics-depot.webp',
+      'build:refinery': 'preview-aether-refinery.webp',
+      'build:factory': 'preview-war-foundry.webp',
+      'build:hangar': 'preview-flight-deck.webp',
+      'build:turret': 'preview-sentinel-turret.webp'
     };
     defineMeridianUIMethods({
       center(x, z) {
