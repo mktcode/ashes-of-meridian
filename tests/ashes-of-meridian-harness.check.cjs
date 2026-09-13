@@ -57,7 +57,9 @@ test('content loads alone with reference catalog order, classic bindings and nam
 });
 
 test('renderer fragments expose the existing bindings and class API in document order', () => {
-  const expectedFiles = RENDERER_SCRIPTS.map(name => `dist/src/renderer/${name.replace('renderer-', '')}.js`),
+  const expectedFiles = RENDERER_SCRIPTS.map(name => name.startsWith('model-')
+    ? `dist/src/renderer/models/${name.replace('model-', '')}.js`
+    : `dist/src/renderer/${name.replace('renderer-', '')}.js`),
     scripts = readScripts(), context = loadScripts(RENDERER_SCRIPTS, { scripts });
   assert.deepEqual(
     scripts.filter(script => RENDERER_SCRIPTS.includes(script.name)).map(script => script.filename),

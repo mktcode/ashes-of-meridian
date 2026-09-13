@@ -58,6 +58,7 @@
           ...geom.turretAssembly()
         }))
           this.geometry(n, d);
+        EntityModels.upload(this);
         this.fogTex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this.fogTex);
         gl.texImage2D(

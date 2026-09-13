@@ -6,6 +6,8 @@ const projectRoot = join(__dirname, '../..');
 const RENDERER_SCRIPTS = Object.freeze([
   'renderer-assets',
   'renderer-geometry',
+  'renderer-model-kit',
+  'model-faction-0-building-barracks',
   'renderer-shaders',
   'renderer-runtime'
 ]);

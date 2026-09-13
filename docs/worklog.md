@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Modellpilot: mechanische Barracks-Auslagerung
+
+- Kleine synchrone Registry und getestete CPU-Meshhilfen eingeführt; Fraktion 0 / building / barracks als eigene Modelldatei, unveränderte Plattform/Baugerüste im Adapter. Explizite HTML-/Testladereihenfolge und getrennte Modelltests; kein Gameplay-/Assetwechsel.
+- **Geprüft:** `npm test` **262/262 bestanden**; 756 Zeichenvarianten gegenüber `d4689d2`, fünf bestehende Meshfabriken und drei kontrollierte 20-s-Fraktionsruns einschließlich RNG/Schüssen identisch. Neue separate Modellreferenz aus dem Ausgangscode, bestehende Fixtures unangetastet.
+- **Chromium `file://`:** isolierte fertige Barracks pixelidentisch zum Ausgangscode; normal/Gegner/im Bau/Ghost in allen drei Qualitätsstufen, Portrait 320×320 geladen, GL 0 und keine Lade-/Laufzeitfehler. 15 Instanzen/304 Dreiecke; 8 tatsächliche Modell-Draw-Calls mit Schatten, 4 ohne. Nur bekannte Software-WebGL-Warnung; keine Sicherheitsflags gelockert, kein Echtgerätetest. Detailmodell ist der nächste getrennte Schritt.
+
 ## Field-Manual-Test aktualisiert
 
 - Veraltete Erwartungen an drei bereits bewusst entfernte Langformulierungen durch Prüfungen der aktuellen kompakten Touch-Anleitung ersetzt: normaler Ziel-Tap, Attack-move/Rückzug, Worker-Ausnahme, Pan/Pinch und Doppeltap. Nur Regressionstest und Protokoll geändert; Handbuch, Bedienung und Laufzeitcode unverändert.

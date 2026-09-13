@@ -1,6 +1,6 @@
 # Bessere, einzeln wartbare 3D-Modelle
 
-**Status:** geplant · erster Pilot: **Fraktion 0 / building / barracks**
+**Status:** in Umsetzung · Infrastruktur und zeichnungsidentische Auslagerung geprüft; Detailmodell folgt · erster Pilot: **Fraktion 0 / building / barracks**
 
 Bis auf das HQ von Fraktion 0 und den Aether Vent sind die 3D-Modelle noch sehr einfach. Gebäude und Einheiten sollen einzeln auf einen vergleichbaren Detailgrad gebracht werden können, ohne dass jeder Modellauftrag dieselben zentralen Rendererdateien umbaut oder unbeteiligte Modelle verändert.
 
@@ -175,7 +175,7 @@ Der kurze Test des einzelnen Modells prüft zusätzlich:
 ## Abnahme des Piloten
 
 - [ ] Infrastruktur und visuelle Änderung liegen in getrennten Commits.
-- [ ] Die unveränderte Barracks wurde vor der Detailarbeit zeichnungsidentisch migriert.
+- [x] Die unveränderte Barracks wurde vor der Detailarbeit zeichnungsidentisch migriert.
 - [ ] Danach wird nur Fraktion 0 / building / barracks anders gezeichnet.
 - [ ] Silhouette, Front, Teammarkierung und Dachdetails sind bei normalem Spielzoom lesbar.
 - [ ] Mesh-, Registry- und Variantenprüfungen bestehen; feste Terrain-/Effekt-/RNG-Referenzen bleiben unverändert.
