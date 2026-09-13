@@ -8,6 +8,8 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-geometry',
   'renderer-model-kit',
   'model-faction-0-building-barracks',
+  'model-faction-0-building-factory',
+  'model-faction-0-building-hangar',
   'renderer-shaders',
   'renderer-runtime'
 ]);

@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Factory/Hangar: mechanische Auslagerung
+
+- Fraktion 0 / building / factory und hangar in getrennte Modelldateien verschoben; vorhandene Registry, Meshhilfen und Renderer-Laufzeit unverändert. Gemeinsame Zeichenisolation aus dem Barracks-Test gelöst, freigegebene Barracks-Zeichenfolge aus `19dd176` zusätzlich festgehalten. Noch keine neue Gestaltung oder Portraitänderung.
+- **Geprüft:** `npm test` **265/265 bestanden**; alle 756 Varianten, bestehende Meshes einschließlich Barracks sowie drei kontrollierte 20-s-Fraktionsruns/RNG/Schüsse identisch. Chromium `file://`: beide isolierten Modelle pixelidentisch zum alten Dispatcher, Spieler/Gegner/Teilbau/Ghost in allen drei Qualitätsstufen, beide Portraits 320×320 geladen, GL 0 und keine Lade-/Laufzeitfehler. Factory 18 Instanzen/368 Dreiecke, Hangar 19/336; nur bekannte Software-WebGL-Warnung, keine Sicherheitsflags gelockert. Gestaltung folgt separat.
+
 ## Modellpilot: detaillierte Barracks von Fraktion 0
 
 - Nach der separaten mechanischen Migration (`248a15c`) nur die eigene Barracks-Datei verfeinert: geschlossene Panzerhülle, Truppenschleuse, Seitenmodule, Kühlgitter und Dachdetails. Hülle 1.392 Dreiecke; fertiges Modell 12 Teilinstanzen/1.620 Dreiecke statt 15/304. Das zugehörige 320×320-Portrait aus dem tatsächlichen Modell in Balanced ohne Welt/Himmel erneuert, WebP-Qualität 80; alle anderen Assets unverändert. Modellworkflow und Auswertung stehen in der Grafikreferenz; Pilotissue abgeschlossen und entfernt.
