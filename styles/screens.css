@@ -160,30 +160,30 @@
 
     .home-screen .expedition-stage {
       position: absolute;
-      left: calc(100% + clamp(70px, 13vw, 210px));
+      left: calc(100% + clamp(80px, 15vw, 230px));
       top: 50%;
-      width: clamp(190px, 20vw, 270px);
-      transform: translateY(-54%);
+      width: clamp(120px, 12vw, 150px);
+      transform: translateY(-52%);
       display: flex;
       flex-direction: column;
       align-items: center;
       color: #dffbff;
       pointer-events: none;
-      filter: drop-shadow(0 20px 24px #0009)
+      filter: drop-shadow(0 14px 18px #0009)
     }
 
     .home-screen .stage-label {
-      margin-bottom: -5px;
-      color: #a9d9e5;
+      margin-bottom: 8px;
+      color: #efc779;
       font: 9px var(--mono);
       letter-spacing: 3px;
-      text-shadow: 0 0 10px #58eaff
+      text-shadow: 0 0 9px #d9a8495c
     }
 
     .home-screen .stage-crystal {
       position: relative;
       width: 100%;
-      aspect-ratio: 220 / 260
+      aspect-ratio: 200 / 190
     }
 
     .home-screen .stage-crystal svg {
@@ -194,35 +194,35 @@
     }
 
     .home-screen .crystal-halo {
-      fill: #35dbef0c;
-      stroke: #7eefff4f;
+      fill: #35dbef0b;
+      stroke: #8bf4ff55;
       stroke-width: 1;
-      filter: drop-shadow(0 0 16px #37dcef88)
+      filter: drop-shadow(0 0 12px #37dcef82)
     }
 
     .home-screen .crystal-body {
       fill: url(#stageCrystalCore);
-      stroke: url(#stageCrystalEdge);
+      stroke: #aef7ffcc;
       stroke-width: 2;
-      opacity: .78
+      opacity: .72
     }
 
     .home-screen .crystal-facet {
-      stroke: #d9ffff42;
+      stroke: #d9ffff3d;
       stroke-width: 1
     }
 
     .home-screen .crystal-facet.light {
-      fill: #d5ffff26
+      fill: #d5ffff29
     }
 
     .home-screen .crystal-facet.shade {
-      fill: #03182759
+      fill: #03182766
     }
 
     .home-screen .crystal-lines {
       fill: none;
-      stroke: #c9fbff5c;
+      stroke: #d8ffff61;
       stroke-width: 1
     }
 
@@ -231,33 +231,10 @@
       inset: 0;
       display: grid;
       place-items: center;
-      padding-bottom: 2%;
       color: #f4ffff;
-      font: 300 clamp(58px, 7vw, 94px)/1 "Segoe UI", Arial, sans-serif;
-      letter-spacing: -4px;
-      text-shadow: 0 0 7px #fff, 0 0 22px #18daf5, 0 4px 8px #03121d
-    }
-
-    .home-screen .stage-status {
-      display: flex;
-      align-items: center;
-      width: 115%;
-      gap: 10px;
-      margin-top: -5px;
-      color: #efc779;
-      font: 8px var(--mono);
-      letter-spacing: 1.5px;
-      white-space: nowrap
-    }
-
-    .home-screen .stage-status i {
-      height: 1px;
-      flex: 1;
-      background: linear-gradient(90deg, transparent, #e8c47f94)
-    }
-
-    .home-screen .stage-status i:last-child {
-      transform: scaleX(-1)
+      font: 300 clamp(44px, 4.5vw, 58px)/1 "Segoe UI", Arial, sans-serif;
+      letter-spacing: -3px;
+      text-shadow: 0 0 6px #fff, 0 0 18px #18daf5, 0 3px 7px #03121d
     }
 
     .home-screen .menu-buttons {
@@ -266,6 +243,31 @@
       display: flex;
       flex-direction: column;
       gap: 10px
+    }
+
+    .home-screen .continue-row {
+      display: flex;
+      gap: 10px;
+      width: 100%
+    }
+
+    .home-screen .continue-row .primary {
+      flex: 1;
+      min-width: 0
+    }
+
+    .home-screen .continue-row .expedition-perks-button {
+      width: 58px;
+      flex: 0 0 58px;
+      justify-content: center;
+      padding: 12px
+    }
+
+    .home-screen .expedition-perks-button svg {
+      width: 22px;
+      height: 22px;
+      color: #f2cc82;
+      filter: drop-shadow(0 0 6px #f0b64a66)
     }
 
     .home-screen .menu-buttons button {
@@ -509,24 +511,20 @@
         position: relative;
         left: auto;
         top: auto;
-        width: 135px;
+        width: 100px;
         margin: 12px auto 2px;
         transform: none
       }
 
       .home-screen .stage-label {
+        margin-bottom: 4px;
         font-size: 7px;
         letter-spacing: 2px
       }
 
       .home-screen .stage-crystal strong {
-        font-size: 48px;
+        font-size: 42px;
         letter-spacing: -2px
-      }
-
-      .home-screen .stage-status {
-        font-size: 6px;
-        letter-spacing: .8px
       }
     }
 
@@ -892,6 +890,78 @@
 
     .benefit-options.compact .benefit-option {
       min-height: 140px;
+    }
+
+    .expedition-benefit-list {
+      max-height: min(52vh, 410px);
+      overflow-y: auto;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: #4edcf078 #06131e
+    }
+
+    .expedition-benefit-row {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 13px;
+      padding: 13px 14px;
+      border: 1px solid #48cfe94a;
+      border-radius: 6px 2px;
+      background: linear-gradient(135deg, #123040b8, #061724d9)
+    }
+
+    .expedition-benefit-row + .expedition-benefit-row {
+      margin-top: 8px
+    }
+
+    .expedition-benefit-row .sigil {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      color: var(--gold);
+      border: 1px solid #edbd6966;
+      background: #e9b8590d
+    }
+
+    .expedition-benefit-row .sigil svg {
+      width: 22px;
+      height: 22px
+    }
+
+    .expedition-benefit-row strong,
+    .expedition-benefit-row small {
+      display: block
+    }
+
+    .expedition-benefit-row strong {
+      color: #eafaff;
+      font-size: 12px;
+      letter-spacing: .4px
+    }
+
+    .expedition-benefit-row small,
+    .empty-benefits {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45
+    }
+
+    .expedition-benefit-row small {
+      margin-top: 4px
+    }
+
+    .expedition-benefit-row > b {
+      color: var(--gold);
+      font: 16px var(--mono)
+    }
+
+    .empty-benefits {
+      margin: 0;
+      padding: 18px;
+      border: 1px solid #48cfe938;
+      text-align: center
     }
 
     .unlock-notice {

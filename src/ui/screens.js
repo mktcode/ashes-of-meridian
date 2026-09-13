@@ -29,11 +29,11 @@
               <div class="menu-title">
                 <h1 class="wordmark" aria-label="Ashes of Meridian"><span class="wordmark-first">ASHES <b>OF</b></span><span>MERIDIAN</span></h1>
                 <p class="menu-tagline">A roguelite RTS.</p>
-                ${this.expedition ? `<div class="expedition-stage" aria-label="Current stage ${this.expedition.depth + 1}"><span class="stage-label">CURRENT STAGE</span><div class="stage-crystal"><svg viewBox="0 0 220 260" aria-hidden="true" focusable="false"><defs><linearGradient id="stageCrystalCore" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eaffff"/><stop offset=".28" stop-color="#55e7fa"/><stop offset=".7" stop-color="#126984"/><stop offset="1" stop-color="#08283c"/></linearGradient><linearGradient id="stageCrystalEdge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#bdfaff"/><stop offset="1" stop-color="#23869f"/></linearGradient></defs><path class="crystal-halo" d="M110 4 200 65 181 202 110 256 39 202 20 65Z"/><path class="crystal-body" d="M110 10 193 69 175 197 110 248 45 197 27 69Z"/><path class="crystal-facet light" d="M110 10 110 248 45 197 27 69Z"/><path class="crystal-facet shade" d="m110 10 83 59-18 128-65 51 29-70 20-88Z"/><path class="crystal-lines" d="m27 69 83 45 83-45M45 197l65-83 65 83M110 10v104M110 114v134"/></svg><strong>${this.expedition.depth + 1}</strong></div><span class="stage-status"><i></i>CHECKPOINT SECURED<i></i></span></div>` : ''}
+                ${this.expedition ? `<div class="expedition-stage" aria-label="Checkpoint ${this.expedition.depth + 1}"><span class="stage-label">CHECKPOINT</span><div class="stage-crystal"><svg viewBox="0 0 200 190" aria-hidden="true" focusable="false"><defs><linearGradient id="stageCrystalCore" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dfffff"/><stop offset=".35" stop-color="#48d9ed"/><stop offset="1" stop-color="#07344c"/></linearGradient></defs><path class="crystal-halo" d="M100 3 174 34 194 104 143 184 57 184 6 104 26 34Z"/><path class="crystal-body" d="M100 10 168 40 185 102 138 176 62 176 15 102 32 40Z"/><path class="crystal-facet light" d="m15 102 85-92v166l-38-10Z"/><path class="crystal-facet shade" d="m100 10 68 30 17 62-47 74-38-10 34-62Z"/><path class="crystal-lines" d="m32 40 68 64 68-64M15 102h170M62 176l38-72 38 72M100 10v94"/></svg><strong>${this.expedition.depth + 1}</strong></div></div>` : ''}
               </div>
               <div class="menu-actions">
                 <div class="menu-buttons">
-                  ${this.expedition ? `<button class="primary" data-ui="continueExpedition">Continue expedition <span aria-hidden="true">→</span></button>` : ''}
+                  ${this.expedition ? `<div class="continue-row"><button class="primary" data-ui="continueExpedition">Continue expedition <span aria-hidden="true">→</span></button><button class="secondary expedition-perks-button" data-ui="expeditionBenefits" aria-label="View expedition benefits" title="Run benefits">${icon('hero')}</button></div>` : ''}
                   <button class="${this.expedition ? 'secondary' : 'primary'}" data-ui="battle">New expedition <span aria-hidden="true">→</span></button>
                   <button class="secondary" data-ui="armory">Fleet upgrades <span aria-hidden="true">→</span></button>
                 </div>
@@ -43,6 +43,15 @@
             <div class="menu-quote">One expedition.<br>How deep can you go?<small>${this.expedition ? `${this.expedition.depth} SECTORS CLEARED` : `BEST DEPTH ${this.profile.expeditionDepth}`}</small></div>
             <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>3 CIVILIZATIONS · ONE OBJECTIVE</span><span class="menu-progress">LOCAL & OFFLINE</span></footer>
           </div></div>`;
+      },
+      showExpeditionBenefits() {
+        if (!this.expedition) return;
+        const active = Object.entries(this.expedition.benefits || {}).filter(([key, count]) =>
+          count > 0 && Object.hasOwn(EXPEDITION_BENEFITS, key));
+        this.openModal(
+          'expeditionBenefits',
+          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Run benefits.</h1><div class="expedition-benefit-list">${active.length ? active.map(([key, count]) => { const benefit = EXPEDITION_BENEFITS[key]; return `<div class="expedition-benefit-row"><span class="sigil">${icon(benefit.icon)}</span><div><strong>${esc(benefit.name)}</strong><small>${esc(benefit.desc)}</small></div><b>×${count}</b></div>`; }).join('') : '<p class="empty-benefits">No benefits collected yet. Win this battle to choose your first.</p>'}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`
+        );
       },
       showBattle() {
         this.view = 'battle';

@@ -172,6 +172,9 @@
           case 'continueExpedition':
             this.continueExpedition();
             break;
+          case 'expeditionBenefits':
+            this.showExpeditionBenefits();
+            break;
           case 'abandon':
             this.persistence.clearExpedition?.();
             this.expedition = null;

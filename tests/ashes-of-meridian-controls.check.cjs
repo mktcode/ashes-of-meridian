@@ -653,13 +653,18 @@ test('home offers a new expedition and exposes a secured expedition when present
   assert.match(html, /New expedition/);
   assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
     ['battle', 'armory', 'help', 'settings']);
-  h.ui.expedition = { depth: 4 };
+  h.ui.expedition = { depth: 4, benefits: { supplyCrate: 2, commanderMandate: 1 } };
   h.ui.showHome(); html = h.document.getElementById('menu').innerHTML;
   assert.match(html, /Continue expedition/);
-  assert.match(html, /class="expedition-stage" aria-label="Current stage 5"/);
+  assert.match(html, /class="continue-row"/); assert.match(html, /aria-label="View expedition benefits"/);
+  assert.match(html, /class="expedition-stage" aria-label="Checkpoint 5"/);
+  assert.match(html, />CHECKPOINT<\/span>/); assert.doesNotMatch(html, /CURRENT STAGE|CHECKPOINT SECURED/);
   assert.match(html, /<strong>5<\/strong>/); assert.match(html, /4 SECTORS CLEARED/);
   assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
-    ['continueExpedition', 'battle', 'armory', 'help', 'settings']);
+    ['continueExpedition', 'expeditionBenefits', 'battle', 'armory', 'help', 'settings']);
+  h.ui.uiAction('expeditionBenefits');
+  assert.match(h.ui.html, /Run benefits/); assert.match(h.ui.html, /Supply crate/);
+  assert.match(h.ui.html, /Commander mandate/); assert.match(h.ui.html, /×2/);
   assert.equal(h.ui.game.s, null); assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
 });
 
