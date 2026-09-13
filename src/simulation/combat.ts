@@ -37,17 +37,15 @@
         e.deathAt = this.s!.time;
         e.target = null;
         if (e.kind === 'building') this.navDirty = true;
-        if (e.team === 1) {
-          this.s!.stats.kills++;
-          if (source && source.team === 0) {
-            source.kills!++;
-            if (source.kills === 5) {
-              source.maxHp! *= 1.12;
-              source.hp = Math.min(source.maxHp!, source.hp! + source.maxHp! * 0.25);
-              this.emit('alert', {
-                text: unitName(source.type!, source.faction!) + ' promoted to veteran.'
-              });
-            }
+        if (e.team === 1) this.s!.stats.kills++;
+        if (source && source.id && this.enemy(source, e)) {
+          source.kills!++;
+          if (source.kills === 5) {
+            source.maxHp! *= 1.12;
+            source.hp = Math.min(source.maxHp!, source.hp! + source.maxHp! * 0.25);
+            this.notify(source.team as PlayerTeam, 'alert', {
+              text: unitName(source.type!, source.faction!) + ' promoted to veteran.'
+            });
           }
         }
         if (e.team === 0 && e.kind === 'unit') {
@@ -121,7 +119,7 @@
       acquire(this: MeridianGame, e: UnitEntity | BuildingEntity): Entity | null {
         let d = this.rangedStats(e);
         if (!d.damage) return null;
-        let radius = Math.max(d.range + (e.kind === 'building' ? 3 : 6), e.team === 1 ? 19 : 16);
+        let radius = Math.max(d.range + (e.kind === 'building' ? 3 : 6), 16);
         let a = this.near(
           e.x,
           e.z,
@@ -129,7 +127,7 @@
           n =>
             this.enemy(e, n) &&
             (!d.groundOnly || !(UNITS as Partial<Record<EntityType, UnitDefinitionShape>>)[n.type]?.flying) &&
-            (e.team === 1 || this.visible(n))
+            this.canSee(e.team as PlayerTeam, n)
         );
         if (e.order.type === 'guard')
           a = a.filter(n => distance(n, { x: e.order.x!, z: e.order.z! }) < 28);
@@ -149,7 +147,7 @@
           if (
             target &&
             (!this.enemy(e, target) ||
-              (!this.visible(target) && e.team !== 1) ||
+              !this.canSee(e.team as PlayerTeam, target) ||
               (d.groundOnly && (UNITS as Partial<Record<EntityType, UnitDefinitionShape>>)[target.type]?.flying) ||
               distance(e, target) > d.range + 14)
           )
@@ -158,7 +156,7 @@
           e.target = target?.id || null;
         }
         let t = this.get(e.target);
-        if (!t) return false;
+        if (!t || !this.canSee(e.team as PlayerTeam, t)) return false;
         let dist = distance(e, t) - t.size * 0.72;
         if (dist <= d.range && dist >= (d.minRange || 0)) {
           e.rot = angleLerp(e.rot, Math.atan2(t.x - e.x, t.z - e.z), dt * 8);

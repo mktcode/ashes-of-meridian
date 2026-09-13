@@ -21,6 +21,8 @@ function createGame() {
   const game = new MeridianGame({ upgrades: {} }, (type, data) => {
     events.push({ type, data: json(data) });
   });
+  // Unit-rule scenarios isolate the controller; autonomous play lives in the AI suite.
+  game.aiTick = () => {};
   return { game, events, context };
 }
 
@@ -34,6 +36,12 @@ function freshBattle(faction = 0, seed = 1409) {
 function battle(faction = 0, seed = 1409) {
   const runtime = freshBattle(faction, seed);
   populateBase(runtime.game);
+  // Explicit developed opponent fixture, not a privileged live starting loadout.
+  const g=runtime.game, h=g.alive(e=>e.team===1&&e.type==='hq')[0];
+  for (const [type,x,z] of [['turret',-6,7],['turret',7,4],['barracks',-10,-1],['factory',7,-8]])
+    g.spawnBuilding(type,h.x+x,h.z+z,1,h.faction);
+  for(let i=0;i<7;i++) g.spawnUnit(i===6?'tank':i===5?'artillery':'rifle',h.x-8+(i%4)*3,h.z+12+Math.floor(i/4)*2,1,h.faction);
+  g.world.rebuild(g.s.entities);g.rehash();
   return runtime;
 }
 
@@ -87,7 +95,7 @@ test('single battle starts with only the own HQ, one hostile base and no mission
   const { game, events } = freshBattle(), s = game.s;
   assert.deepEqual([s.seed,s.biome,s.faction,s.enemy,s.time], [1409,'biome1',0,2,0]);
   assert.equal('version' in s, false); assert.equal(game.snapshot, undefined); assert.equal(game.restore, undefined);
-  assert.deepEqual([s.teams[0].alloy,s.teams[0].gas,s.teams[0].energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,100,61,62,0,24]);
+  assert.deepEqual([s.teams[0].alloy,s.teams[0].gas,s.teams[0].energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,100,50,51,0,24]);
   assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
   assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
@@ -158,7 +166,7 @@ test('biome4 alone retains its timed eruption after biome display names change',
   for (const biome of Object.keys(biomes)) {
     game.start({ seed: 1409, biome });
     game.spawnUnit('rifle', -40, 40, 0, 0);
-    game.s.nextWave = 1e9;
+    game.s.ai = {};
     game.s.time = 151;
     advance(game, 1);
     const flares = game.s.strikes.filter(s => s.type === 'flare');
@@ -200,30 +208,12 @@ test('ground attack-move preserves mixed formations and worker movement without 
   game.command([worker.id], {type:'smart',id:crystal.id,x:crystal.x,z:crystal.z});
   assert.deepEqual(json(worker.order),{type:'mine',id:crystal.id});
   const enemy = game.alive(e => e.team === 1 && e.type === 'rifle')[0];
+  game.world.visible[game.world.idx(enemy.x,enemy.z)] = 255;
   game.command([rifle.id], {type:'smart',id:enemy.id,x:enemy.x,z:enemy.z});
   assert.equal(rifle.order.type,'attack'); assert.equal(rifle.order.id,enemy.id);
 });
 
-test('fixed wave sizing and timing retain the former standard rules', () => {
-  for (const [wave, count, interval] of [[1,8,79.2],[10,14,72],[40,24,54.4]]) {
-    const { game, events } = battle();
-    assert.equal(game.s.nextWave, 95);
-    game.s.wave = wave-1; game.s.time = 95; game.s.enemyBudget = 100000;
-    game.wave();
-    assert.equal(events.at(-1).data.n, count);
-    close(game.s.nextWave,95+interval);
-  }
-});
-
-test('waves originate at the enemy base and stop without it', () => {
-  const { game, events } = battle(); const before = game.alive(e => e.team === 1 && e.kind === 'unit').length;
-  game.wave(); assert.ok(game.alive(e => e.team === 1 && e.kind === 'unit').length > before);
-  assert.ok(events.some(e => e.type === 'wave'));
-  const hq = game.alive(e => e.team === 1 && e.type === 'hq')[0]; hq.hp = 0;
-  const count = game.s.entities.length; game.wave(); assert.equal(game.s.entities.length, count);
-});
-
-test('populated army fixtures and two minutes of mining, combat and waves keep unit spacing', () => {
+test('populated army fixtures and two minutes of mining and combat keep unit spacing', () => {
   for (const [faction,seed,biome] of [[0,1409,'biome1'],[1,7012,'biome0'],[2,9017,'biome2'],[0,43015,'biome4']]) {
     const { game } = createGame(); game.start({faction,seed,biome}); populateBase(game); assertUnitSpacing(game);
     if (seed !== 1409) continue;
@@ -231,7 +221,7 @@ test('populated army fixtures and two minutes of mining, combat and waves keep u
       game.step(.05); game.effects.tick(.05);
       if (i%20===0) assertUnitSpacing(game);
     }
-    assertUnitSpacing(game); assert.ok(game.s.stats.gathered>0); assert.ok(game.s.wave>0);
+    assertUnitSpacing(game); assert.ok(game.s.stats.gathered>0);
   }
 });
 
@@ -345,7 +335,7 @@ for (const [seed,biome,faction,count,forced] of [
   [1409,'biome1',0,8,false], [7012,'biome0',1,12,false], [9017,'biome2',2,12,false], [1409,'biome1',0,8,true]
 ]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {
   const {game}=createGame();
-  game.start({seed,biome,faction}); populateBase(game,count); game.s.nextWave=1e9;
+  game.start({seed,biome,faction}); populateBase(game,count); game.s.ai={};
   for(const e of game.s.entities) if(e.kind==='unit'&&e.team===1)e.hp=0;
   let workers=game.alive(e=>e.team===0&&e.type==='worker');
   if(forced) for(const w of workers) w.order={type:'mine',id:game.closest(w,n=>n.type==='crystal').id};
@@ -502,7 +492,7 @@ test('attack-move closes to firing range against buildings and units on both tea
   for (const team of [0, 1]) for (const type of ['rifle', 'tank', 'artillery']) {
     for (const kind of ['building', 'unit']) {
       const game = spacingArena();
-      game.s.nextWave = Infinity;
+      game.s.ai = {};
       const target = kind === 'building'
         ? game.spawnBuilding('hq', 0, 0, 1 - team, 0)
         : game.spawnUnit('tank', 0, 0, 1 - team, 0);
@@ -512,22 +502,13 @@ test('attack-move closes to firing range against buildings and units on both tea
       attacker.order = { type: 'attackMove', x: -10, z: 0 };
       game.world.rebuild(game.s.entities);
       // Isolate range/movement, not fog updates or return fire.
-      game.world.reveal = () => game.world.visible.fill(255);
+      game.world.reveal = () => game.world.sight.forEach(view=>view.visible.fill(255));
       game.world.reveal();
       advance(game, 400);
       assert.ok(target.hp < target.maxHp, `${team}/${type}/${kind} must reach firing range`);
       assertUnitSpacing(game);
     }
   }
-});
-
-test('seed 444213 hostile waves destroy an undefended HQ instead of stopping outside range', () => {
-  const { game } = createGame();
-  game.start({ seed: 444213, biome: 'biome0', faction: 0, enemy: 2 });
-  const hq = player(game, 'hq');
-  advance(game, 6000);
-  assert.equal(hq.hp, 0);
-  assert.ok(game.s.result);
 });
 
 test('ordinary move can retreat from an enemy without switching to combat pursuit', () => {
@@ -694,7 +675,7 @@ test('building repair assigns only the nearest living own worker and repairs thr
   const { game } = battle(), b = player(game, 'barracks'); b.hp -= 100;
   const workers = game.alive(e => e.team === 0 && e.type === 'worker');
   const nearest = [...workers].sort((a, c) => Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
-  game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 2, 0);
+  game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 1, 2);
   game.spawnUnit('worker', b.x, b.z, 0, 0).hp = 0;
   const before = new Map(workers.map(w => [w.id, json(w.order)])), alloy = game.s.teams[0].alloy, x = nearest.x, z = nearest.z;
   assert.equal(game.toggleBuildingRepair(b.id), true);
@@ -1070,12 +1051,11 @@ test('recruitment distributes globally and produces in parallel at assigned buil
   assert.deepEqual(json(game.get(b.id).queue.map(q=>q.type)), ['rifle']);
 });
 
-test('unknown units cannot be recruited; starts and waves use the current unit catalog', () => {
+test('unknown units cannot be recruited; starts use the current unit catalog', () => {
   for (const faction of [0,1,2]) {
     const {game} = createGame(); game.start({seed:1409,faction,enemy:faction});
     const before = json(game.s);
     assert.equal(game.train('unknown-unit'), false); assert.deepEqual(json(game.s), before);
-    for (let i=0;i<4;i++) {game.s.enemyBudget=10000;game.wave();}
     const types = ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero'];
     assert.ok(game.s.entities.filter(e => e.kind === 'unit').every(e => types.includes(e.type)));
   }

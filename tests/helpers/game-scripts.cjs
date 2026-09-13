@@ -43,6 +43,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-movement',
   'simulation-economy',
   'simulation-combat',
+  'simulation-ai',
   'simulation-runtime'
 ]);
 const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation']);

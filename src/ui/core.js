@@ -159,15 +159,6 @@
           if (data.type === 'hero')
             this.radio('Expedition command|Commander reconstructed and ready.');
           this.actionSignature = '';
-        } else if (type === 'wave') {
-          this.audio.sound('wave');
-          this.pings.push({ ...data, life: 5, maxLife: 5, color: 0xf38f83 });
-          this.alert({
-            text: 'Hostile wave ' + data.wave + ' is advancing.',
-            danger: true,
-            x: data.x,
-            z: data.z
-          });
         } else if (['scan', 'heal', 'queued', 'select'].includes(type))
           this.audio.sound(type);
       }

@@ -386,7 +386,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
 
 test('speed button cycles existing rates, updates its own label and preserves commands and transient state', () => {
   const h = setup(), g = h.ui.game;
-  Object.assign(g.s.teams[0], { alloy: 100, gas: 0, energy: 100, abilities: {} }); g.s.nextWave = 95;
+  Object.assign(g.s.teams[0], { alloy: 100, gas: 0, energy: 100, abilities: {} });
   Object.assign(g, { supply: () => 0, cap: () => 24, objectiveRows: () => [] });
   h.ui.updateHUD = h.UI.prototype.updateHUD;
   h.UI.prototype.bind.call(h.ui);
@@ -1220,7 +1220,7 @@ test('only faction 0 recruitment/build buttons use local model portraits without
 
 test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
   const h = buildingPanel(), g = h.ui.game;
-  Object.assign(g.s.teams[0],{alloy:1000,gas:1000,energy:100,abilities:{}}); g.s.nextWave=95;
+  Object.assign(g.s.teams[0],{alloy:1000,gas:1000,energy:100,abilities:{}});
   Object.assign(g,{supply:()=>10,cap:()=>50,afford:()=>true,objectiveRows:()=>[]});
   const buttons = ['train:rifle','train:hero','train:air','repair','sell'].map(action =>
     Object.assign(h.document.getElementById(action),{dataset:{action}}));
@@ -1242,7 +1242,7 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
 
 test('HUD reads supply and capacity once per update and refreshes counts, warnings and recruitment', () => {
   const h = buildingPanel(), g = h.ui.game;
-  Object.assign(g.s.teams[0], { alloy: 1000, gas: 1000, energy: 100, abilities: {} }); g.s.nextWave=95;
+  Object.assign(g.s.teams[0], { alloy: 1000, gas: 1000, energy: 100, abilities: {} });
   Object.assign(g, { afford: () => true, objectiveRows: () => [] });
   g.s.entities.push({ id: 8, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] });
   const buttons = ['train:worker', 'train:rifle'].map(action =>
@@ -1266,7 +1266,7 @@ test('HUD reads supply and capacity once per update and refreshes counts, warnin
 
 test('HUD ability badges and disabled states retain energy and cooldown boundaries', () => {
   const h = setup(), g = h.ui.game;
-  Object.assign(g.s.teams[0], { alloy: 0, gas: 0, abilities: {} }); Object.assign(g.s,{time:10,nextWave:95});
+  Object.assign(g.s.teams[0], { alloy: 0, gas: 0, abilities: {} }); Object.assign(g.s,{time:10});
   Object.assign(g, { supply: () => 0, cap: () => 24, objectiveRows: () => [] });
   for (const [kind, energy] of [['orbital', 85], ['repair', 45], ['scan', 25], ['drop', 95]]) {
     const button = h.document.getElementById('ability:' + kind);

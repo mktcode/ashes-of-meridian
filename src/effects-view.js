@@ -6,7 +6,7 @@
         function renderBattlefieldEffects(R, effects, world, s, pings, t) {
           const ring = (...args) => drawEffectRing(R, ...args);
           for (let f of effects.fx) {
-            if (!world.visible[world.idx(f.x, f.z)] && f.type !== 'drop') continue;
+            if (!world.visible[world.idx(f.x, f.z)] && (f.type !== 'drop' || f.team === 1)) continue;
             let life = clamp(f.life / f.maxLife, 0, 1),
               age = 1 - life;
             if (f.type === 'beam')
@@ -69,6 +69,7 @@
           for (let p of pings)
             ring(p.x, p.z, 1 + (1 - p.life / p.maxLife) * 4, p.color || 0x9fe9d6, p.life / p.maxLife);
           for (let f of s.fields) {
+            if (f.team === 1 && !world.visible[world.idx(f.x,f.z)]) continue;
             let left = f.until - s.time;
             if (left <= 0) continue;
             ring(
@@ -96,12 +97,13 @@
             );
           }
           for (let scan of s.scans) {
+            if (scan.team === 1) continue;
             let left = scan.until - s.time;
             if (left > 0)
               ring(scan.x, scan.z, scan.r || 32, 0x9bc6ea, 0.1 + (0.5 + 0.5 * Math.sin(t * 2)) * 0.1);
           }
           for (let a of s.strikes) {
-            if (a.type === 'shell') continue;
+            if (a.type === 'shell' || (a.team !== 0 && !world.visible[world.idx(a.x,a.z)])) continue;
             let wait = a.at - s.time,
               col = a.team === 0 ? 0x9fe3d1 : 0xf4ad84,
               rad = a.radius || 10;

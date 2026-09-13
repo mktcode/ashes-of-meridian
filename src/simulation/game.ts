@@ -61,9 +61,7 @@
           })) as [TeamState, TeamState],
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
-          wave: 0,
-          nextWave: 95,
-          enemyBudget: 900,
+          ai: {},
           stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
           cam: { x: HOME.x + 5, z: HOME.z - 2, zoom: 57 },
@@ -91,15 +89,8 @@
         }
         let site = ENEMY_SITES[0];
         this.spawnBuilding('hq', site.x, site.z, 1, enemy);
-        this.spawnBuilding('turret', site.x - 6, site.z + 7, 1, enemy);
-        this.spawnBuilding('turret', site.x + 7, site.z + 4, 1, enemy);
-        this.spawnBuilding('barracks', site.x - 10, site.z - 1, 1, enemy);
-        this.spawnBuilding('factory', site.x + 7, site.z - 8, 1, enemy);
-        for (let j = 0; j < 7; j++) {
-          let u = this.spawnUnit(j === 6 ? 'tank' : j === 5 ? 'artillery' : 'rifle',
-            site.x - 8 + (j % 4) * 3, site.z + 12 + Math.floor(j / 4) * 2, 1, enemy);
-          if (u) u.order = { type: 'guard', x: u.x, z: u.z };
-        }
+        // Preserve the established resource/bonus-worker RNG entry points, not the old loadout.
+        for (let i = 0; i < 11; i++) this.random();
         this.world.rebuild(s.entities);
         this.rehash();
         for (let e of s.entities)
@@ -114,6 +105,7 @@
             throw new Error('No free space for starting workers.');
         this.rehash();
         this.world.reveal(s.entities);
+        this.enableAI(1);
         this.emit('start', {});
         this.emit('radio', meta.startingWorkers
           ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
@@ -238,8 +230,9 @@
       enemy(this: MeridianGame, a: Pick<EntityBase, 'team'>, b: Pick<EntityBase, 'team'>) {
         return a.team === 1 ? b.team === 0 : b.team === 1;
       },
-      visible(this: MeridianGame, e: Entity) {
-        return e.team === 0 || !!this.world!.visible[this.world!.idx(e.x, e.z)];
+      visible(this: MeridianGame, e: Entity) { return this.canSee(0, e); },
+      canSee(this: MeridianGame, team: PlayerTeam, e: Position & {team?: TeamId}) {
+        return e.team === team || !!this.world!.sight[team].visible[this.world!.idx(e.x, e.z)];
       },
     };
     type GameMethods = typeof gameMethods;

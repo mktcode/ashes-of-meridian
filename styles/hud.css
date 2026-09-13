@@ -165,19 +165,6 @@
       margin-top: 4px
     }
 
-    #waveBanner {
-      position: absolute;
-      top: 82px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      color: #f4b099;
-      background: #331d20de;
-      border: 1px solid #d5856640;
-      padding: 8px 22px;
-      font: 10px var(--mono);
-      letter-spacing: 1.5px
-    }
 
     #alerts {
       position: absolute;
@@ -713,14 +700,6 @@
       #cameraTools { gap: 2px }
       #cameraTools button { font-size: 19px }
 
-      #waveBanner {
-        top: 70px;
-        left: auto;
-        right: 12px;
-        transform: none;
-        font-size: 8px;
-        padding: 8px
-      }
 
       .subscreen {
         padding: 22px
@@ -862,11 +841,6 @@
         width: 151px
       }
 
-      #waveBanner {
-        font-size: 7px;
-        padding: 6px;
-        max-width: 140px
-      }
 
       .modal-card h1 {
         font-size: 30px

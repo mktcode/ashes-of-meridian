@@ -286,10 +286,6 @@
           this.tone(900, 0.045, 0.025, 'sine');
         } else if (type === 'scan' || type === 'heal') {
           this.tone(180, 0.7, 0.12, 'sine', null, 0, 1100);
-        } else if (type === 'wave') {
-          this.tone(165, 0.5, 0.09, 'triangle');
-          this.tone(155, 0.5, 0.055, 'sine', null, 0.08);
-          this.tone(130, 0.5, 0.09, 'triangle', null, 0.6);
         } else if (type === 'victory') {
           [220, 261.63, 330, 440, 659.25].forEach((f, i) =>
             this.tone(f, 2.3, 0.1, 'sine', null, i * 0.22)

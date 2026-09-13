@@ -252,11 +252,6 @@
             )
             .join('') +
           '</div>';
-        let wait = s.nextWave - s.time;
-        $('waveBanner').classList.toggle('hidden', wait > 15 || this.paused);
-        if (wait <= 15)
-          $('waveBanner').textContent =
-            '⚠ HOSTILE WAVE ' + (s.wave + 1) + ' · ' + Math.max(0, Math.ceil(wait)) + 's';
         this.selected = this.selected.filter(id => this.game.get(id));
         this.renderActions();
         this.updateQueues();

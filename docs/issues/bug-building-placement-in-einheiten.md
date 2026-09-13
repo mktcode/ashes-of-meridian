@@ -1,1 +1,3 @@
 Man kann neue Gebäude auch dort platzieren, wo gerade bereits Einheiten stehen. Die Einheiten können sich darauf hin nicht mehr bewegen.
+
+Die neue [Gegner-KI](../architecture.md#teamzustand-sicht-und-ki) meidet für ihre Kandidaten vollständig sichtbare, belegte Flächen und reservierte Produktionsausgänge. Das ist nur vorsichtige Platzwahl, keine Behebung im gemeinsamen Bauvalidator: `canBuild()` überspringt Einheiten weiterhin. Eine spätere allgemeine Lösung muss beide Akteure und laufende Ausfahrten berücksichtigen; keine unterschiedliche Kollisionsregel für UI und KI einführen.

@@ -116,6 +116,7 @@
       declare blocked: Uint8Array;
       declare explored: Uint8Array;
       declare visible: Uint8Array;
+      declare sight: [{ visible: Uint8Array; explored: Uint8Array }, { visible: Uint8Array; explored: Uint8Array }];
       declare fogPixels: Uint8Array;
       declare terrainColors: Uint8ClampedArray;
       declare rocks: WorldRock[];
@@ -131,6 +132,9 @@
         this.blocked = new Uint8Array(GRID * GRID);
         this.explored = new Uint8Array(GRID * GRID);
         this.visible = new Uint8Array(GRID * GRID);
+        // The existing fields are the local presentation view, not a second copy of sight.
+        this.sight = [{ visible: this.visible, explored: this.explored },
+          { visible: new Uint8Array(GRID * GRID), explored: new Uint8Array(GRID * GRID) }];
         this.fogPixels = new Uint8Array(GRID * GRID);
         this.terrainColors = new Uint8ClampedArray(GRID * GRID * 4);
         this.rocks = [];
@@ -636,13 +640,15 @@
         }
       }
       reveal(entities: Entity[], scans: Scan[] = []) {
-        this.visible.fill(0);
+        for (const view of this.sight) view.visible.fill(0);
         for (let e of entities)
-          if (e.hp > 0 && e.team === 0 && e.kind !== 'resource') {
+          if (e.hp > 0 && e.team !== -1 && e.kind !== 'resource') {
             let r = e.vision || (e.kind === 'building' ? 21 : 17);
-            this.mark(this.visible, e.x, e.z, r, 255);
+            this.mark(this.sight[e.team].visible, e.x, e.z, r, 255);
           }
-        for (let s of scans) this.mark(this.visible, s.x, s.z, s.r || 31, 255);
+        for (let s of scans) this.mark(this.sight[s.team ?? 0].visible, s.x, s.z, s.r || 31, 255);
+        for (const view of this.sight)
+          for (let i = 0; i < view.visible.length; i++) if (view.visible[i]) view.explored[i] = 1;
         for (let i = 0; i < this.visible.length; i++) {
           if (this.visible[i]) this.explored[i] = 1;
           this.fogPixels[i] = this.visible[i] ? 255 : this.explored[i] ? 80 : 0;

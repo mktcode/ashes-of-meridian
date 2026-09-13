@@ -133,7 +133,7 @@
         let r = d.size;
         if (Math.abs(p.x) > 83 - r || Math.abs(p.z) > 83 - r)
           return 'Too close to the battlefield boundary.';
-        if (!this.world!.explored[this.world!.idx(p.x, p.z)])
+        if (!this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
           return 'Scout this location before building.';
         for (let i = 0; i < 12; i++) {
           let a = (i / 12) * Math.PI * 2;
@@ -274,7 +274,7 @@
           w.team === e.team && w.order?.type === 'mine')
           loads.set(w.order.id, (loads.get(w.order.id) || 0) + 1);
         let best: ResourceEntity | null = null, score = Infinity;
-        for (const n of this.s!.entities) if (n.hp > 0 && n.kind === 'resource' && n.type === 'crystal' && n.amount > 0) {
+        for (const n of this.s!.entities) if (n.hp > 0 && n.kind === 'resource' && n.type === 'crystal' && n.amount > 0 && this.world!.sight[e.team as PlayerTeam].explored[this.world!.idx(n.x,n.z)]) {
           const cost = distance(e, n) + (loads.get(n.id) || 0) * 8;
           if (cost < score) { best = n; score = cost; }
         }

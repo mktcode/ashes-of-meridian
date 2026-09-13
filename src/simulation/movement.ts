@@ -213,6 +213,7 @@
         let mobile = units.filter(e => e.kind === 'unit') as UnitEntity[];
         const target = 'id' in order ? this.get(order.id) : null,
           task = this.workerTask(target, team);
+        if (target && this.enemy({team}, target) && !this.canSee(team, target)) return;
         if (target && task && (order.type === 'smart' || order.type === task)) {
           const worker = mobile.filter(e => e.type === 'worker' && e.id !== target.id)
             .sort((a, b) => distance(a, target) - distance(b, target) || a.id - b.id)[0];

@@ -15,6 +15,12 @@ Terrain-, Zeichen-, Effekt- und RNG-Erwartungen schützen vor unbeabsichtigten �
 - `tests/helpers/presentation-scenario.cjs` setzt den Effekt-RNG auf `seeded(1486)` nach 104 Samples. Feste Emitterpositionen machen Effekte unabhängig vom Startaufgebot und von separat getesteter Spawn-Kollisionsvermeidung. Diesen Einstieg nicht als vermeintliches Legacy-Verhalten entfernen.
 - `tests/helpers/game-scripts.cjs` lädt nach dem Build die benannten klassischen Skripte aus `dist/src/` gemäß `index.html` in Dokumentreihenfolge in eine isolierte VM. Ausführung nur explizit gewählter Namen. Pfadprüfung, Fehlerdiagnosen und Renderer-Testdouble bleiben aktive Testinfrastruktur.
 
+## Gegnerumbau und Simulationsszenarien
+
+Der neue Controller ersetzt Gegner-Festungsstart, Budget und Direktspawn-Wellen bewusst; alte Wellenzeit-/Größenprüfungen sind daher kein aktiver Vertrag mehr. Die vorherige Konten-/Aktionsumstellung wurde separat mit den bisherigen 293 Tests geprüft (`bd24424`). Keine Terrain-, Modell- oder Effektfixture wurde für den KI-Umbau regeneriert. Die alte Effekt-RNG-Einstiegsposition bleibt im Szenariohelfer erhalten; reservierte Startsamples schützen Ressourcenmengen und Bonusworker-Cooldowns, nicht die entfernten Gegnerentitäten/IDs.
+
+Die Einheitenregression deaktiviert den Planer ausdrücklich und stellt benötigte Gegnergebäude/-truppen im Test selbst auf. Zwei-Team-Sichtprüfungen ersetzen dort die bisherige einseitige Sichtfreigabe; ein alter Test nutzte fälschlich Team 2 und verwendet jetzt korrekt Team 1 mit Fraktion 2. Die KI-Suite prüft stattdessen Regelparität, Sichtgedächtnis, Aktionsabrechnung, Fähigkeitsentscheidungen, Wiederaufbau und neun vollständige KI-gegen-KI-Partien. Dabei müssen neu erzeugte Truppen aus einer bezahlten Queue samt Ausgang oder aus der regulären Drop-Fähigkeit stammen; Fundamente müssen bezahlt und körperfrei sein. Das ist eine Verhaltensprüfung, keine neu aus dem Ist-Code gewonnene Gesamtzustandsfixture.
+
 ## Grenzen
 
 Keine Fixture beweist Browser-/WebGL-Darstellung, echte Touchbedienung oder allgemeine Crowd-Stabilität. Durchgehende Simulationsszenarien ergänzen die Referenzen um Worker-Verkehr, Produktion, Kampf und Neustart; UI-/Profiltests decken den Core Loop und die einmalige Aether-Evakuierung ab. Historische Gesamtspielstand- oder entfernte Boss-Waffenreferenzen sind kein Vertrag.

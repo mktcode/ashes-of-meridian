@@ -148,9 +148,9 @@ class MeridianEffects {
               width: 0.028
             });
       }
-      drop(loc: Position, color: number) {
+      drop(loc: Position, color: number, team: PlayerTeam = 0) {
         this.fx.push({
-              type: 'drop',
+              type: 'drop', ...(team === 1 ? {team} : {}),
               x: loc.x,
               z: loc.z,
               life: 1.0,

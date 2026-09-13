@@ -245,6 +245,23 @@ interface RunTriggers extends Record<string, number | boolean> {
   solar?: number;
 }
 
+interface AIContact extends Position {
+  id: number; team: TeamId; kind: EntityKind; type: EntityType;
+  hp: number; maxHp: number; size: number; progress: number; seenAt: number;
+}
+interface AIState {
+  nextThink: number;
+  mode: 'bootstrap' | 'defend' | 'assemble' | 'attack' | 'recover';
+  contacts: Record<number, AIContact>;
+  squad: number[];
+  scout?: number;
+  goal?: Position;
+  lastAttack: number;
+  launched: number;
+  search: number;
+  nextBuild: number;
+  lastScout: number;
+}
 type PlayerTeam = 0 | 1;
 interface TeamState {
   alloy: number;
@@ -266,9 +283,7 @@ interface RunState {
   scans: Scan[];
   strikes: Strike[];
   fields: Field[];
-  wave: number;
-  nextWave: number;
-  enemyBudget: number;
+  ai: Partial<Record<PlayerTeam, AIState>>;
   stats: RunStats;
   triggers: RunTriggers;
   cam: Position & { zoom: number };
@@ -335,7 +350,7 @@ type BattlefieldEffect =
       tz: number;
       width: number;
     })
-  | (EffectBase & { type: 'drop' });
+  | (EffectBase & { type: 'drop'; team?: PlayerTeam });
 
 interface EffectBase extends Position {
   type: 'blast' | 'particle' | 'smoke' | 'shell' | 'beam' | 'drop';
