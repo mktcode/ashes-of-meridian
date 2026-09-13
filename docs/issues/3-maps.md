@@ -1,5 +1,5 @@
-Aktuell gibt es 5 verschiedene Karten/Battlefields. Das sollte auf 3 reduziert werden:
+Die fünf Karten/Battlefields sind auf diese drei reduziert:
 
-- Destert
+- Desert
 - Alien Planet
 - Mothership

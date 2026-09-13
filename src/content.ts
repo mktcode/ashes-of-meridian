@@ -326,16 +326,8 @@ type UpgradeType = keyof typeof META;
 
 // Stable, content-independent keys; names and visual parameters may change.
 const BIOMES = {
-  biome0: {
-    name: 'ASH WASTES',
-    ground: 0x3a4144,
-    rock: 0x495158,
-    haze: [0.064, 0.095, 0.126],
-    accent: 0xe3a46d,
-    flora: 0x625647
-  },
   biome1: {
-    name: 'RUST FRONTIER',
+    name: 'DESERT',
     ground: 0x59443a,
     rock: 0x74544a,
     haze: [0.11, 0.085, 0.1],
@@ -343,23 +335,15 @@ const BIOMES = {
     flora: 0x806348
   },
   biome2: {
-    name: 'LIVING GARDENS',
+    name: 'ALIEN PLANET',
     ground: 0x314747,
     rock: 0x49656a,
     haze: [0.052, 0.113, 0.127],
     accent: 0x8bebc2,
     flora: 0x538a77
   },
-  biome3: {
-    name: 'SILENT NECROPOLIS',
-    ground: 0x424459,
-    rock: 0x626679,
-    haze: [0.075, 0.082, 0.145],
-    accent: 0xc8b2f4,
-    flora: 0x838094
-  },
   biome4: {
-    name: 'STELLAR INTERIOR',
+    name: 'MOTHERSHIP',
     ground: 0x3d3c48,
     rock: 0x5a5261,
     haze: [0.1, 0.065, 0.125],

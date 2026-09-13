@@ -211,7 +211,7 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
   });
 
 test('seed 444213: the real opponent destroys an undefended HQ instead of stopping outside weapon range',()=>{
-  const {g}=battle(0,2,444213,'biome0');audit(g);advance(g,900);
+  const {g}=battle(0,2,444213,'biome1');audit(g);advance(g,900);
   assert.equal(g.s.result?.win,false);assert.equal(own(g,0,'hq').length,0);
 });
 

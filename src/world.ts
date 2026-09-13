@@ -126,7 +126,7 @@
       constructor(seed: number, biome: BiomeType) {
         this.fogVersion = 0;
         this.seed = seed;
-        this.biome = BIOMES[biome] || BIOMES.biome0;
+        this.biome = BIOMES[biome] || BIOMES.biome1;
         this.staticGrid = new Uint8Array(GRID * GRID);
         this.massifGrid = new Uint8Array(GRID * GRID);
         this.blocked = new Uint8Array(GRID * GRID);
@@ -553,7 +553,7 @@
           let x = (rand() - 0.5) * 150,
             z = (rand() - 0.5) * 150;
           if (safe.some(p => distance(p, { x, z }) < 7)) continue;
-          if (bio === BIOMES.biome3 || bio === BIOMES.biome4) {
+          if (bio === BIOMES.biome4) {
             let h = 2 + rand() * 6;
             place(
               'box',

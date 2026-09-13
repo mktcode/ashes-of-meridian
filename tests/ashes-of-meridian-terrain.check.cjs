@@ -177,8 +177,8 @@ test('mountain belt is seeded, continuous and outside the playable ground', () =
   }
 });
 
-// Fixed terrain inputs cover every biome.
-const terrainCases = [[1409,'biome1'],[7012,'biome0'],[9017,'biome2'],[1905,'biome2'],[2219,'biome1'],[6633,'biome2'],[1144,'biome3'],[4442,'biome2'],[8141,'biome3'],[9897,'biome3'],[11007,'biome0'],[24080,'biome1'],[38744,'biome2'],[43015,'biome4'],[74408,'biome4'],[90001,'biome4']];
+// Fixed terrain inputs cover every remaining biome.
+const terrainCases = [[1409,'biome1'],[9017,'biome2'],[1905,'biome2'],[2219,'biome1'],[6633,'biome2'],[4442,'biome2'],[24080,'biome1'],[38744,'biome2'],[43015,'biome4'],[74408,'biome4'],[90001,'biome4']];
 for (const [seed, biome] of terrainCases) {
   test(`terrain ${seed} (${biome}): original layout and varied textured rocks`, () => {
     const battlefield = new Battlefield(seed, biome), placements = battlefield.renderData.placements;
@@ -240,7 +240,7 @@ test('navigation goes around a broad massif instead of crossing its slopes', () 
 });
 
 test('regenerating a battle seed reproduces all visual placements', () => {
-  const first = new Battlefield(123456, 'biome0'), second = new Battlefield(123456, 'biome0');
+  const first = new Battlefield(123456, 'biome1'), second = new Battlefield(123456, 'biome1');
   assert.equal(layoutHash(first), layoutHash(second));
   assert.deepEqual(first.renderData, second.renderData);
   assert.deepEqual(first.massifGrid, second.massifGrid);

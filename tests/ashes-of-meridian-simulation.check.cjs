@@ -88,7 +88,7 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
   }
   game.start({ seed: 1409 }); // Internal deterministic scenarios still bypass the random draw.
   assert.equal(game.s.seed, 1409);
-  assert.equal(game.s.biome, 'biome0', 'default biome keeps the first catalog entry');
+  assert.equal(game.s.biome, 'biome1', 'default biome keeps the first catalog entry');
 });
 
 test('single battle starts with only the own HQ, one hostile base and no mission state', () => {
@@ -147,7 +147,7 @@ test('fresh starts with the same seed reproduce state; another seed changes reso
 test('battle starts cover every faction and biome with valid entities', () => {
   const { game, context } = createGame(), biomes = vm.runInContext('BIOMES', context);
   // Biomes change presentation, not faction rules: no redundant 3×5 cross-product.
-  for (const [faction, biome] of [[0,'biome0'],[1,'biome1'],[2,'biome2'],[0,'biome3'],[2,'biome4']]) {
+  for (const [faction, biome] of [[0,'biome1'],[1,'biome2'],[2,'biome4']]) {
     game.start({ seed: 1409, faction, enemy: faction, biome });
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
     advance(game, 2);
@@ -214,7 +214,7 @@ test('ground attack-move preserves mixed formations and worker movement without 
 });
 
 test('populated army fixtures and two minutes of mining and combat keep unit spacing', () => {
-  for (const [faction,seed,biome] of [[0,1409,'biome1'],[1,7012,'biome0'],[2,9017,'biome2'],[0,43015,'biome4']]) {
+  for (const [faction,seed,biome] of [[0,1409,'biome1'],[1,7012,'biome1'],[2,9017,'biome2'],[0,43015,'biome4']]) {
     const { game } = createGame(); game.start({faction,seed,biome}); populateBase(game); assertUnitSpacing(game);
     if (seed !== 1409) continue;
     for (let i=0;i<2400;i++) {
@@ -332,7 +332,7 @@ test('blocked production keeps its paid order until space is free', () => {
 });
 
 for (const [seed,biome,faction,count,forced] of [
-  [1409,'biome1',0,8,false], [7012,'biome0',1,12,false], [9017,'biome2',2,12,false], [1409,'biome1',0,8,true]
+  [1409,'biome1',0,8,false], [7012,'biome1',1,12,false], [9017,'biome2',2,12,false], [1409,'biome1',0,8,true]
 ]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {
   const {game}=createGame();
   game.start({seed,biome,faction}); populateBase(game,count); game.s.ai={};

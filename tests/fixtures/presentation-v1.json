@@ -9,13 +9,6 @@
       "navigation": "a9edf79487cf5998b23b69394be292a244cbc9911621345cbc830dd2152fa72b"
     },
     {
-      "seed": 7012,
-      "biome": "biome0",
-      "terrain": "ea98556ad18a2db450ed00c4fd12da5f63652dc5c5047dfb4000542c77e0cc61",
-      "placements": "904e5471f1aad1cddbd8d25b685abac13315f8d6861a33fef4b5e3ce057a6b35",
-      "navigation": "87274d706198baa88eae23de798dd190b19d1b08c11e0f2ffa00707c39bd847e"
-    },
-    {
       "seed": 9017,
       "biome": "biome2",
       "terrain": "186b3ea01351b6dbfe4d88aff31b56933d7461e5fbdea58b4882a93de21c45a8",
@@ -44,39 +37,11 @@
       "navigation": "a2bf030a3b828be104067b6d2f4ac5d8784aa896c9338a8af41151621437d425"
     },
     {
-      "seed": 1144,
-      "biome": "biome3",
-      "terrain": "d0aa3732f716b06d0aba80319d1da60bf7d56e4394059ea94845a5d1fdeed495",
-      "placements": "260920e9d428851bb8fbd81c7af26ebfe6ef2e3a282e56908469ac6a2f82353a",
-      "navigation": "21a4bbf3ce64efbef774bd018d34173ff180607a6c99f7ed49fd2684fc36b704"
-    },
-    {
       "seed": 4442,
       "biome": "biome2",
       "terrain": "50f9841ad6d3b95e4afa865d8a0ec67d114fce987033f3e68892b6af1ea080d3",
       "placements": "05120cefdd3cc4374247b897d5b18b2c0172c7e15645a1743addbbd326cfa77e",
       "navigation": "8f233bfbee24f6d5d21023123e309f3e4d1a221326067935401a3aaef9217c09"
-    },
-    {
-      "seed": 8141,
-      "biome": "biome3",
-      "terrain": "46eac9918c2ccb1c816c432dcc8f110ecd20a62a524f7b9c021cb196bdfa7a68",
-      "placements": "9d829816729d60cdb9d3f1dc76bd743b14eaa2f46f6ab82b7e04e92bce321de5",
-      "navigation": "c82575bd6204284d5e2893c6e45bcac0e342d7aa424768f214fec4bae839039c"
-    },
-    {
-      "seed": 9897,
-      "biome": "biome3",
-      "terrain": "1d859005f2ba231d9b6ab14504a4241b0f647dc159e0a12c0b1a9f88f146206c",
-      "placements": "436181a08869ccfaf0e2e5bab71455f050f3f5c844d39b386a5acbe6e8dec62d",
-      "navigation": "98459e30f2475b99a1d96a6dedfc17d8b1e5d5f0fb6cbe78ed8737b08348c2c3"
-    },
-    {
-      "seed": 11007,
-      "biome": "biome0",
-      "terrain": "a9aab67c848397cfa5c71bd0f493e4e1e65f4df702487031f1dd743f63f69796",
-      "placements": "6a75cf5d12cfe204d9b69c665aa2c34f2157894206fbb96f715373c9203d1465",
-      "navigation": "7e9b2ead029f63a0f049e33f7fb82404d0992033121a6488bb210e920a16df25"
     },
     {
       "seed": 24080,

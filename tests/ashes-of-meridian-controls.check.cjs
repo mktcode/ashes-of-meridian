@@ -795,8 +795,8 @@ test('content labels can change without changing faction/biome IDs, order or unl
   h.ui.showBattle();
   const html = h.document.getElementById('menu').innerHTML;
   const biomes = html.match(/<select id="battleBiome">([\s\S]*?)<\/select>/)[1];
-  assert.equal(biomes, [0, 1, 2, 3, 4].map(i =>
-    `<option value="biome${i}">Revised environment ${i}</option>`).join(''));
+  assert.equal(biomes, ['biome1', 'biome2', 'biome4'].map((id, i) =>
+    `<option value="${id}">Revised environment ${i}</option>`).join(''));
   const enemies = html.match(/<select id="battleEnemy">([\s\S]*?)<\/select>/)[1];
   assert.equal(enemies, [2, 1, 0].map(i =>
     `<option value="${i}">Faction &lt;${i}&gt; &amp; revised</option>`).join(''));
@@ -819,11 +819,11 @@ test('factions unlock sequentially after victories with the preceding faction', 
   assert.match(html, /Win once as The Verdant Choir/);
   h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 0, 'locked card cannot change selection');
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome0']])
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome1']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'biome0'}]], 'launch also rejects a forged locked choice');
+  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'biome1'}]], 'launch also rejects a forged locked choice');
   let saves = 0; h.ui.persistence.saveProfile = () => { saves++; return true; };
   h.ui.showResult = () => {
     const faction = h.ui.factionJustUnlocked;
@@ -864,11 +864,11 @@ test('battle setup launches with automatic seed selection and no difficulty cont
   const css = fs.readFileSync(path.join(__dirname, '..', 'styles/screens.css'), 'utf8');
   assert.match(css, /\.battle-launch\s*\{[^}]*flex-direction: column;\s*align-items: stretch/);
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome0']])
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome1']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'biome0'}]]);
+  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'biome1'}]]);
   assert.equal('difficulty' in h.ui.profile.settings,false);
 });
 
