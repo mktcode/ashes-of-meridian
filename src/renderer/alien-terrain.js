@@ -3,7 +3,6 @@
 (() => {
   const bark = [.25,.31,.34], root = [.27,.19,.29], jade = [.39,.58,.52], plum = [.56,.33,.51],
     rim = [.69,.55,.68], light = [.62,.91,.79];
-  const mix = (a,b,t) => a.map((v,i)=>v*(1-t)+b[i]*t);
   const ring = (x,y,z,r,n,phase=0) => Array.from({length:n},(_,i)=> {
     const a=i*Math.PI*2/n+phase; return [x+Math.cos(a)*r,y,z+Math.sin(a)*r];
   });
@@ -80,43 +79,10 @@
     }
     for(let i=0;i<n;i++)geom.tri(out,[m.x,height,m.z],rows[4][(i+1)%n],rows[4][i],root);
   }
-  const within = (x,z,outline) => {
-    let yes=false;
-    for(let i=0,j=outline.length-1;i<outline.length;j=i++) {
-      const a=outline[i],b=outline[j];
-      if((a.z>z)!==(b.z>z)&&x<(b.x-a.x)*(z-a.z)/(b.z-a.z)+a.x)yes=!yes;
-    }
-    return yes;
-  };
-  function grove(m, luminous) {
-    const rand=seeded(m.seed ^ 0x47524f56),out=[];
-    if(!luminous)bed(out,m);
-    // The same private sequence supplies the body and its separate low-intensity phosphor mesh.
-    for(let i=0;i<120;i++) {
-      const x=m.x+(rand()-.5)*m.width*1.8,z=m.z+(rand()-.5)*m.depth*1.8,
-        phase=rand()*Math.PI*2,h=4+rand()*(m.height-4),r=1.8+rand()*2.1;
-      // Contract the sampling footprint so crowns and roots stay inside the blocking mat.
-      if(!within(m.x+(x-m.x)*1.22,m.z+(z-m.z)*1.22,m.outline))continue;
-      if(luminous) {
-        if(i%3===0)spore(out,x+r*.5,z-r*.3,.65+rand()*.25,.22);
-        else rand();
-      } else {
-        const small=rand();
-        mushroom(out,x,z,h,r,phase,i);
-        if(i%2===0)fern(out,x+r,z-r,1.1+small,phase);
-        // Broad, interlocking root ridges fill the occupied understory.
-        tube(out,[[x-r,.08,z-r,.1],[x-r*.4,.65,z,r*.32],[x+r,.1,z+r,.1]],root,6);
-      }
-    }
-    if(!luminous) for(let i=0;i<200;i++) {
-      const x=m.x+(rand()-.5)*m.width*2,z=m.z+(rand()-.5)*m.depth*2;
-      if(within(m.x+(x-m.x)*1.06,m.z+(z-m.z)*1.06,m.outline))
-        fern(out,x,z,1.4+rand()*1.4,rand()*Math.PI*2);
-    }
-    return out;
-  }
-  TerrainModels.alienGrove=m=>grove(m,false);
-  TerrainModels.alienGroveLight=m=>grove(m,true);
+  // Reusable single plants. The recipe controls age, canopy mix and placement, not a grove mesh.
+  TerrainModels.alienTreePlum=()=>{const out=[];mushroom(out,0,0,3.4,1,.8,1);return out;};
+  TerrainModels.alienTreeJade=()=>{const out=[];mushroom(out,0,0,3.7,.95,2.1,0);return out;};
+  TerrainModels.alienTreeUmbrella=()=>{const out=[];mushroom(out,0,0,2.6,1.24,4.3,2);return out;};
   TerrainModels.alienFern=()=>{const out=[];fern(out);return out;};
   TerrainModels.alienSpore=()=>{
     const out=[];spore(out,0,0,.85,.25);spore(out,.4,.25,.5,.19);spore(out,-.3,.15,.65,.22);return out;
@@ -132,23 +98,13 @@
     }
     return out;
   };
-  TerrainModels.alienCanopy=(seed,extent)=>{
-    const out=[],rand=seeded(seed ^ 0x43414e4f),n=192,inner=extent-3;
-    const perimeter=(a,r)=>{const x=Math.cos(a),z=Math.sin(a),d=Math.max(Math.abs(x),Math.abs(z));return [x/d*r,z/d*r];};
-    const rows=[];
-    for(let j=0;j<4;j++)rows.push(Array.from({length:n},(_,i)=>{
-      const a=i*Math.PI*2/n,[x,z]=perimeter(a,[inner,extent+12,extent+38,extent+70][j]);
-      return [x,j===0?-.2:j===3?-8:(j===1?4:11)+Math.sin(a*13)*1.7,z];
-    }));
-    // Ground-facing root bank, not a reskinned mountain wall.
-    for(let j=0;j<3;j++)for(let i=0;i<n;i++) {
-      const k=(i+1)%n,c=mix(root,bark,(i%5)/5);
-      geom.tri(out,rows[j][i],rows[j][k],rows[j+1][k],c);
-      geom.tri(out,rows[j][i],rows[j+1][k],rows[j+1][i],c);
-    }
-    for(let i=0;i<144;i++) {
-      const a=(i+rand()*.5)*Math.PI*2/144,[x,z]=perimeter(a,extent+(i%2?25:7)+rand()*13),h=12+rand()*12;
-      mushroom(out,x,z,h,3+rand()*2.5,rand()*Math.PI*2,i);
+  TerrainModels.alienForestFloor=(seed,extent)=>{
+    const out=[],far=extent+100;
+    // Coplanar continuation of the playable soil, without banks, stripes or raised mats.
+    for(const [x0,x1,z0,z1] of [[-far,-extent,-far,far],[extent,far,-far,far],
+      [-extent,extent,-far,-extent],[-extent,extent,extent,far]]) {
+      const a=[x0,-.13,z0],b=[x0,-.13,z1],c=[x1,-.13,z1],d=[x1,-.13,z0];
+      geom.tri(out,a,b,c,[1,1,1]);geom.tri(out,a,c,d,[1,1,1]);
     }
     return out;
   };

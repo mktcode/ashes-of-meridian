@@ -213,7 +213,9 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
 for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real economies cross the larger living map and finish a battle`,()=>{
   const {g}=battle(faction,(faction+1)%3,43015+faction*97,'alien-planet');
   g.enableAI(0);const counts=audit(g);let attacks=0;
-  for(let i=0;i<24000&&!g.s.result;i++) {
+  // Porous woodland changes encounter timing; Choir/Court seed 43112 ends normally at ~24:31.
+  // Keep the result requirement and original seeds, with a 30-minute bound for Alien only.
+  for(let i=0;i<36000&&!g.s.result;i++) {
     g.step(.05);g.effects.tick(.05);
     if(i%100===0){
       attacks+=Object.values(g.s.ai).filter(a=>a.mode==='attack').length;

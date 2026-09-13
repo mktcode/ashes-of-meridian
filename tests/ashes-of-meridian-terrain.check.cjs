@@ -325,42 +325,45 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
   assert.equal((w.extent/BATTLEFIELDS.desert.size.extent)**2,2.25);
   assert.equal(w.definition.render.groundTexture,'bio');assert.equal(w.definition.render.groundMirror,true);
   assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
-  assert.equal(w.renderData.features.length,2);
-  const pods=p.filter(p=>p.mesh==='alienPod'),fringe=p.filter(p=>p.mesh==='alienSapling');
-  assert.ok(pods.length>=15&&pods.length<=45);assert.ok(fringe.length>=40&&fringe.length<=56);
-  assert.equal(w.rocks.length,pods.length+fringe.length);
-  assert.ok(p.length>=400&&p.length<=850);
-  for(const [axis,sign] of [[0,1],[0,-1],[2,1],[2,-1]])
-    assert.ok(fringe.filter(p=>p.position[axis]*sign>=125).length>=10,'scattered growth on every edge');
-  for(const plant of fringe) {
-    const [x,,z]=plant.position,r=plant.scale[0],q={x,z};
-    assert.ok(Math.max(Math.abs(x),Math.abs(z))+r<132,'stem and crown stay inside the border');
+  const edge=p=>Math.max(Math.abs(p.position[0]),Math.abs(p.position[2])),
+    trees=p.filter(p=>p.mesh.startsWith('alienTree')||p.mesh==='alienSapling'),
+    interior=trees.filter(p=>edge(p)<135),exterior=trees.filter(p=>edge(p)>135),
+    solid=[...interior,...p.filter(p=>p.mesh==='alienPod')];
+  assert.ok(interior.length>=100&&interior.length<=300);assert.ok(exterior.length>=480&&exterior.length<=650);
+  assert.ok(p.length>=1800&&p.length<=3200);
+  assert.equal(w.rocks.length,solid.length);
+  for(const [axis,sign] of [[0,1],[0,-1],[2,1],[2,-1]]) for(let sector=0;sector<6;sector++) {
+    const lo=-135+sector*45;
+    assert.ok(exterior.filter(p=>p.position[axis]*sign>=137&&p.position[2-axis]>=lo&&p.position[2-axis]<lo+45).length>=8,
+      'deep exterior forest covers every section of all four sides');
+  }
+  assert.ok(interior.filter(p=>edge(p)>=110).length/(135**2-110**2)>
+    interior.filter(p=>edge(p)<75).length/75**2,'sparser inland, denser toward the exterior');
+  assert.ok(new Set(interior.map(p=>p.mesh)).size>=3,'mixed reusable plants inside and outside');
+  assert.ok(exterior.every(p=>edge(p)>=137&&p.scale[0]>=3.97));
+  const reconstructed=new Uint8Array(w.staticGrid.length);
+  for(const plant of solid) {
+    const [x,,z]=plant.position,r=plant.scale[0]*(plant.mesh==='alienPod'?1:.6),q={x,z};
+    assert.ok(edge(plant)+r<=131,'solid roots stay within the playable boundary');
     assert.ok(w.rocks.some(p=>p.x===x&&p.z===z&&p.r===r));assert.ok(w.blockedAt(x,z),'solid stems');
+    w.mark(reconstructed,x,z,r);
     for(const route of w.layout.corridors) for(let i=1;i<route.length;i++)
       assert.ok(pointSegment(q,{x:route[i-1][0],z:route[i-1][1]},{x:route[i][0],z:route[i][1]})>=r+7);
   }
-  assert.equal(p.filter(p=>p.mesh==='alienCanopy').length,1);
-  assert.ok(!p.some(p=>/rock|massif|mountain|box/.test(p.mesh)&&p.position[1]!==-8),'no desert props or cargo');
-  for(const m of w.renderData.features) {
-    assert.equal(m.outline.length,48);assert.ok(m.height<=15);
-    const area=Math.abs(m.outline.reduce((sum,p,i)=>{const q=m.outline[(i+1)%48];return sum+p.x*q.z-q.x*p.z;},0))/2;
-    assert.ok(area>=2000&&area<=2800,'enlarged grove footprint, not just oversized crowns');
-    assert.ok(m.outline.every(p=>Math.max(Math.abs(p.x),Math.abs(p.z))<=126));
-    assert.equal(w.terrainFeatureGrid[w.idx(m.x,m.z)],1);
-    const dx=Math.sin(m.yaw)*(m.depth+9),dz=Math.cos(m.yaw)*(m.depth+9),
-      a={x:m.x-dx,z:m.z-dz},b={x:m.x+dx,z:m.z+dz};
-    assert.equal(w.lineFree(a,b),false);
-    const path=w.path(a.x,a.z,b.x,b.z);assert.ok(path.length>1);
-    let last=a;for(const q of path){assert.ok(w.lineFree(last,q));last=q;}
-    assert.ok(Math.hypot(last.x-b.x,last.z-b.z)<5);
+  assert.deepEqual(Buffer.from(w.staticGrid),Buffer.from(reconstructed),'only individual root footprints block, no invisible grove mats');
+  for(let i=0;i<w.staticGrid.length;i++) for(let c=0;c<3;c++) {
+    const byte=new Uint8ClampedArray([w.renderData.groundColors[i*2][c]*[175,190,200][c]]);
+    if(w.staticGrid[i])byte[0]*=.65;
+    assert.equal(w.terrainColors[i*4+c],byte[0],'minimap marks actual solid ground');
   }
+  assert.equal(p.filter(p=>p.mesh==='alienForestFloor'&&p.material==='GROUND').length,1);
   assertAlienAccess(w);
   assert.ok(p.every(p=>[...p.position,...p.scale,...p.rotation].every(Number.isFinite)));
 });
 
 test('Alien layout remains accessible over 40 additional seeds and repeats its private streams exactly',()=>{
   for(let seed=1;seed<=40;seed++) {
-    const w=new Battlefield(seed*7919,'alien-planet');assert.equal(w.renderData.features.length,2);assertAlienAccess(w);
+    const w=new Battlefield(seed*7919,'alien-planet');assertAlienAccess(w);
   }
   const a=new Battlefield(43015,'alien-planet'),b=new Battlefield(43015,'alien-planet'),other=new Battlefield(43016,'alien-planet');
   assert.deepEqual(a.renderData,b.renderData);assert.deepEqual(a.staticGrid,b.staticGrid);
@@ -370,12 +373,18 @@ test('Alien layout remains accessible over 40 additional seeds and repeats its p
 
 test('Alien mesh factories are deterministic, finite, bounded and remain below explicit budgets',()=>{
   const w=new Battlefield(43015,'alien-planet');
-  const budgets={alienCanopy:60000,alienGrove:50000,alienGroveLight:5000,alienPod:2200,alienFern:100,alienSpore:350,alienSapling:500};
+  const budgets={alienForestFloor:8,alienTreePlum:500,alienTreeJade:500,alienTreeUmbrella:500,
+    alienPod:2200,alienFern:100,alienSpore:350,alienSapling:500},triangles={};
   for(const descriptor of w.renderData.geometries) {
     const mesh=TerrainModels.geometry(descriptor);assert.equal(mesh.length%27,0);
     assert.ok(mesh.length/27>0&&mesh.length/27<=budgets[descriptor.model],`${descriptor.model}: ${mesh.length/27}`);
     assert.deepEqual(mesh,TerrainModels.geometry(descriptor));
-    const limit=descriptor.feature?135:descriptor.model==='alienCanopy'?210:4;
+    triangles[descriptor.mesh]=mesh.length/27;
+    const floor=descriptor.model==='alienForestFloor',limit=floor?w.extent+100:4;
+    if(floor) for(let i=0;i<mesh.length;i+=9) {
+      assert.equal(mesh[i+1],-.13,'seamless flat extension of the soil, no bank');
+      assert.equal(mesh[i+4],1);assert.ok(Math.max(Math.abs(mesh[i]),Math.abs(mesh[i+2]))>=w.extent);
+    }
     for(let i=0;i<mesh.length;i+=9) {
       for(let k=0;k<9;k++)assert.ok(Number.isFinite(mesh[i+k]));
       assert.ok(Math.abs(mesh[i])<=limit&&Math.abs(mesh[i+2])<=limit);
@@ -388,6 +397,20 @@ test('Alien mesh factories are deterministic, finite, bounded and remain below e
       assert.ok(Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])>1e-9,'nondegenerate faces');
     }
   }
+  const total=w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+w.gridSize**2*2;
+  assert.ok(total<=550000,`whole planted world budget (excluding units/shadow repetition): ${total}`);
+});
+
+test('Alien exterior and understory randomness cannot relocate solid roots',()=>{
+  const Builder=vm.runInContext('BattlefieldBuilder',context),original=Builder.prototype.cosmeticRandom;
+  const a=new Battlefield(43015,'alien-planet');
+  try {
+    Builder.prototype.cosmeticRandom=()=>()=>.5;
+    const b=new Battlefield(43015,'alien-planet');
+    assert.deepEqual(a.staticGrid,b.staticGrid);assert.deepEqual(a.rocks,b.rocks);
+    assert.deepEqual(a.terrainColors,b.terrainColors);assert.deepEqual(a.renderData.groundColors,b.renderData.groundColors);
+    assert.notDeepEqual(a.renderData.placements,b.renderData.placements);
+  } finally {Builder.prototype.cosmeticRandom=original;}
 });
 
 test('navigation goes around a broad massif instead of crossing its slopes', () => {
