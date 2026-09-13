@@ -1,0 +1,1 @@
+Das Konzept von Angriffswellen sollte komplett entfernt werden. Der KI-Gegner soll frei entscheiden, wann und wie angegriffen wird und genauso seine Basis aufbauen und Fähigkeiten nutzen können, wie man selbst als Spieler.
