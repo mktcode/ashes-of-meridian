@@ -57,7 +57,7 @@ test('produced aircraft rise smoothly from the hangar without changing draw stat
   const height=(x,exit=unit.exit)=>{
     const e=Object.freeze({...unit,x,exit}), before=JSON.stringify(e); renderer.calls.length=0;
     render(renderer,e,0); assert.equal(JSON.stringify(e),before);
-    return renderer.calls.find(c=>c[0]==='octa')[2];
+    return renderer.calls.find(c=>c[0]==='faction0AirHull')[2];
   };
   const start=height(0), middle=height(5), end=height(10), normal=height(10,null);
   assert.ok(Math.abs(middle-start-1.5)<1e-9); assert.ok(Math.abs(end-start-3)<1e-9);

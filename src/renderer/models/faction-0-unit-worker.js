@@ -1,9 +1,23 @@
-/* Fraktion 0 / unit / worker: isolated assembly. */
+/* Fraktion 0 / unit / worker: the established hull/drill plus restrained service fittings. */
 'use strict';
 registerEntityModel({
   id: 'faction-0/unit/worker',
-  render({entity:e,time,part:p,metal,dark,team,accent,surfaceColor}) {
+  meshes: {
+    faction0WorkerFittings() {
+      const out=[], box=geom.box(), bolt=geom.cylinder(6), edge=[1.12,1.15,1.16];
+      ModelMesh.panel(out,{x:.15,y:1.25,z:-.13,w:.3,h:.04,d:.3,bevel:.009,tint:[.54,.74,1.08]});
+      for(let j=-1;j<=1;j++) ModelMesh.bake(out,box,{
+        x:.15+j*.07,y:1.277,z:-.13,sx:.032,sy:.025,sz:.22,tint:edge});
+      for(const x of [-.03,.33]) for(const z of [-.32,.06]) ModelMesh.bake(out,bolt,{
+        x,y:1.248,z,sx:.025,sy:.025,sz:.025,tint:edge});
+      ModelMesh.panel(out,{x:-.43,y:1.03,z:-.27,w:.03,h:.18,d:.26,bevel:.009,tint:[.54,.74,1.08]});
+      ModelMesh.bake(out,box,{x:-.449,y:1.03,z:-.27,sx:.018,sy:.1,sz:.04,tint:[.21,.33,.54]});
+      return out;
+    }
+  },
+  render({entity:e,part:p,metal,dark,team,accent,surfaceColor}) {
     p('workerHull', 0, 0, 0, 1, 1, 1, surfaceColor(0xb7a27b));
+    p('faction0WorkerFittings', 0, 0, 0, 1, 1, 1, surfaceColor(0xb7a27b));
     p('box', 0, 1.05, 0.295, 0.67, 0.20, 0.065, dark);
     p('box', 0, 1.065, 0.334, 0.49, 0.105, 0.025, team, 0, 0, 0, 0.65);
     for (const side of [-1, 1]) {
