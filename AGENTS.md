@@ -30,3 +30,10 @@
 - Reine Dokumentation oder minimale risikoarme Text-/Rahmen-/Abstandsänderungen: Diff und passende statische Prüfungen, keine Browsertests auf Vorrat. Details in [docs/testing.md](docs/testing.md).
 - Referenzen direkt auf den Ist-Zustand bringen, nicht historische Nachträge anhängen. Nur [docs/worklog.md](docs/worklog.md) führt kurze Änderungseinträge mit tatsächlich ausgeführten Prüfungen und offenen Grenzen; ältere Einträge verdichten, Details bleiben in Git.
 - Bei Dokumentationspflege Wiederholungen, veraltete Angaben und tote Links entfernen. AGENTS.md bleibt Wegweiser und Regelwerk, nicht Arbeitshistorie.
+
+## Issues
+
+- Issues werden lokal im Repository in `docs/issues` verwaltet.
+- Kommentare und ergänzende Infos werden in den dortigen Dateien fortlaufend gepflegt.
+- Ist ein Issue erledigt, wird die Datei gelöscht.
+- Auswirkungen auf andere bestehende Issues müssen dort ergänzt werden.
