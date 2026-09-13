@@ -1,50 +1,47 @@
-/* Fraktion 1 / building / depot: isolated procedural assembly. */
+/* Fraktion 1 / building / depot. Canopy: overlapping horizontal storage leaves, not a new tower silhouette. */
 'use strict';
-registerEntityModel({
-  id: 'faction-1/building/depot',
-  render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation }) {
-    const s = e.size || 3;
-    let h = e.type === 'hq' ? 5 : e.type === 'turret' ? 5.8 : e.type === 'depot' ? 2.8 : 3.8;
-    p('sphere', 0, h * 0.44, 0, s * 0.8, h * 0.57, s * 0.78, metal);
-    p('octa', 0, h * 0.77, 0, s * 0.5, h * 0.65, s * 0.5, dark, 0.3);
-    for (let i = 0; i < 6; i++) {
-      let a = (i * Math.PI) / 3,
-        x = Math.sin(a) * s * 0.8,
-        z = Math.cos(a) * s * 0.8;
-      p('cone', x, 0.7, z, 0.5, 2, 0.5, dark, a, 0.25, 0.42);
-      p('sphere', x * 0.8, h * 0.63, z * 0.8, 0.45, 0.8, 0.45, team, a, 0, 0.3, 0.28);
+(() => {
+  function hull() {
+    const out=[], s=2.3, h=2.8, cone=geom.cylinder(7,0), collar=geom.cylinder(8), octa=geom.octa(),
+      dark=[.48,.58,.58], edge=[1.2,1.22,1.12];
+    const part=(mesh,x,y,z,sx,sy,sz,tint,ry=0,rx=0,rz=0)=>ModelMesh.bake(out,mesh,{x,y,z,sx,sy,sz,tint,ry,rx,rz});
+    const shell=(x,y,z,sx,sy,sz,tint)=>ModelMesh.lobedShell(out,{x,y,z,sx,sy,sz,lobes:3,segments:12,rings:6,tint});
+    ModelMesh.lobedShell(out,{x:0,y:h*.44,z:0,sx:s*.8,sy:h*.57,sz:s*.78});
+    // Six old root positions and lean angles, now with growth rings baked once.
+    const root=[];
+    ModelMesh.bake(root,cone,{sx:.5,sy:2,sz:.5,tint:dark});
+    for(const y of [-.6,-.05,.45]) ModelMesh.bake(root,collar,{y,sx:(1-y)*.25+.035,sy:.075,sz:(1-y)*.25+.035,tint:edge});
+    for(let i=0;i<6;i++) {
+      const a=i*Math.PI/3;
+      ModelMesh.bake(out,root,{x:Math.sin(a)*s*.8,y:.7,z:Math.cos(a)*s*.8,ry:a,rx:.25,rz:.42});
     }
-    p(
-      'octa',
-      0,
-      h + Math.sin(time + e.id) * 0.14,
-      0,
-      s * 0.3,
-      1.3,
-      s * 0.3,
-      accent,
-      time * 0.22,
-      0,
-      0,
-      0.85
-    );
-    if (e.type === 'turret') p('cone', 0, h + 1.2, 0, 0.4, 2, 0.4, accent, 0, 0, 0, 0.5);
-    if (e.type === 'refinery')
-      for (let i = 0; i < 3; i++)
-        p(
-          'sphere',
-          Math.sin(i * 2) * 1.4,
-          2.5,
-          Math.cos(i * 2) * 1.4,
-          0.7,
-          1.5,
-          0.7,
-          0x86b6a0,
-          0,
-          0,
-          0,
-          0.3
-        );
-    if (e.type === 'hangar') ring(s * 0.8, h * 0.9, accent, 0.7);
+    // Six segmented meridian ribs sit just above the shell, like overlapping chitin seams.
+    for(let i=0;i<6;i++) for(let j=0;j<6;j++) {
+      const a=(i+.5)*Math.PI/3;
+      const point=b=>{const r=Math.sin(b)*(1-.055*Math.sin(b))+.04;
+        return [Math.cos(a)*s*.8*r,h*.44+Math.cos(b)*h*.57,Math.sin(a)*s*.78*r];};
+      const [x,y,z]=point(.62+j/6*1.82),[u,v,w]=point(.62+(j+1)/6*1.82),dx=u-x,dy=v-y,dz=w-z;
+      part(octa,(x+u)/2,(y+v)/2,(z+w)/2,.055,Math.hypot(dx,dy,dz)/2+.012,.055,edge,Math.atan2(dx,dz),Math.atan2(Math.hypot(dx,dz),dy));
+    }
+    for(const side of [-1,1]) {
+      shell(side*s*.65,h*.55,0,.65,.48,1.12,edge);
+      part(octa,side*s*.67,h*.75,0,.08,.07,1.0,dark);
+    }
+    shell(0,h*.48,s*.72,.85,.36,.43,edge);
+    return out;
   }
-});
+  registerEntityModel({
+    id:'faction-1/building/depot', meshes:{faction1DepotHull:hull},
+    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
+      const s=e.size||3, h=2.8;
+      p('faction1DepotHull',0,0,0,s/2.3,1,s/2.3,metal);
+      p('octa',0,h*.77,0,s*.5,h*.65,s*.5,dark,.3);
+      for(let i=0;i<6;i++) {
+        const a=i*Math.PI/3;
+        p('sphere',Math.sin(a)*s*.8*.8,h*.63,Math.cos(a)*s*.8*.8,.45,.8,.45,team,a,0,.3,.28);
+      }
+      // Preserve the original phase, bob, colors and frequency; drawing consumes no RNG.
+      p('octa',0,h+Math.sin(time+e.id)*.14,0,s*.3,1.3,s*.3,accent,time*.22,0,0,.85);
+    }
+  });
+})();

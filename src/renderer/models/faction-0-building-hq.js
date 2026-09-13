@@ -1,9 +1,20 @@
 /* Fraktion 0 / building / hq: isolated procedural assembly. */
 'use strict';
+(() => {
+function fittings() {
+  const out=[], box=geom.box(), bolt=geom.cylinder(6), dark=[.4,.45,.5];
+  ModelMesh.panel(out,{x:0,y:3.6,z:-.55,w:1.32,h:.12,d:1.48,bevel:.028,tint:dark});
+  ModelMesh.panel(out,{x:0,y:3.68,z:-.55,w:1.12,h:.09,d:1.28,bevel:.02,tint:[1.18,1.15,1.1]});
+  for(let j=-2;j<=2;j++) ModelMesh.bake(out,box,{x:0,y:3.731,z:-.55+j*.2,sx:.78,sy:.018,sz:.055,tint:dark});
+  for(const x of [-.48,.48]) for(const z of [-1.08,-.02])
+    ModelMesh.bake(out,bolt,{x,y:3.742,z,sx:.045,sy:.025,sz:.045,tint:dark});
+  return out;
+}
 registerEntityModel({
-  id: 'faction-0/building/hq',
+  id: 'faction-0/building/hq', meshes: { faction0HqFittings: fittings },
   render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation }) {
     p('commandHull', 0, 0, 0, 1, 1, 1, metal);
+    p('faction0HqFittings', 0, 0, 0, 1, 1, 1, metal);
     p('box', 0, 2.5, 2.35, 5.6, 0.23, 0.12, team, 0, 0, 0, 0.7);
     p('box', 0, 1.05, 2.39, 2.2, 1.9, 0.11, dark);
     p('box', 0, 0.4, 3.05, 2.7, 0.3, 1.3, 0x82918f, 0, -0.15);
@@ -37,3 +48,4 @@ registerEntityModel({
     p('box', 1.6, 4.48, -1.4, 0.85, 0.1, 0.85, accent, 0, 0, 0, 0.7);
   }
 });
+})();

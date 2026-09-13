@@ -28,6 +28,28 @@ test('model registry validates atomically, defers factories and uploads once per
   }
 });
 
+test('organic shell is closed, outward, deterministic and nondegenerate at both poles', () => {
+  const h = modelHarness(), options = { sx: 2, sy: 3, sz: 1 };
+  vm.runInContext('Math.random = seeded = () => { throw Error("Shell RNG"); }', h.context);
+  const mesh = assertMesh(() => {
+    const out = []; h.ModelMesh.lobedShell(out, options); return out;
+  }, { minTriangles: 336, maxTriangles: 336, min: [-2.12,-3,-1.06], max: [2.12,3,1.06] });
+  const edges = new Map(); let volume = 0;
+  for (let i = 0; i < mesh.length; i += 27) {
+    const points = [0,9,18].map(k => mesh.slice(i+k,i+k+3)), [a,b,c] = points;
+    volume += (a[0]*(b[1]*c[2]-b[2]*c[1])+a[1]*(b[2]*c[0]-b[0]*c[2])+a[2]*(b[0]*c[1]-b[1]*c[0]))/6;
+    assert.ok(a.reduce((n,v,k)=>n+v*mesh[i+3+k],0)>0, 'outward face');
+    for(let j=0;j<3;j++) {
+      const key=[points[j],points[(j+1)%3]].map(p=>p.map(v=>Math.round(v*1e9)).join(',')).sort().join('|');
+      edges.set(key,(edges.get(key)||0)+1);
+    }
+  }
+  assert.ok(volume > 20 && volume < 27);
+  assert.ok([...edges.values()].every(n=>n===2), 'closed seam and poles');
+  for(const bad of [{sx:0},{sy:-1},{sz:NaN},{depth:.3},{depth:NaN},{rings:2},{rings:3.5},{segments:12},{lobes:0}])
+    assert.throws(()=>h.ModelMesh.lobedShell([],{...options,...bad}),/Invalid organic shell/);
+});
+
 test('mesh helpers produce outward closed armor and preserve transformed primitive normals/tints', () => {
   const h = modelHarness();
   vm.runInContext('Math.random = seeded = () => { throw Error("Mesh RNG"); }', h.context);

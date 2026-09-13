@@ -50,6 +50,26 @@ const ModelMesh = Object.freeze({
         out.push(...points[j], ...normal, ...tint.map((v, k) => v * mesh[i + j * 9 + 6 + k]));
     }
   },
+  // Closed ribbed organic shell. Unlike the legacy sphere, poles have no collapsed faces.
+  lobedShell(out, { x = 0, y = 0, z = 0, sx, sy, sz, lobes = 6, depth = .055,
+    segments = 24, rings = 8, tint = [1, 1, 1] }) {
+    if (![sx, sy, sz].every(v => Number.isFinite(v) && v > 0) ||
+        !Number.isInteger(lobes) || lobes < 1 || !Number.isInteger(segments) || segments < lobes * 4 ||
+        !Number.isInteger(rings) || rings < 3 || !Number.isFinite(depth) || depth < 0 || depth > .2)
+      throw Error('Invalid organic shell dimensions');
+    const point = (i, j) => {
+      if (j === 0 || j === rings) return [x, y + (j === 0 ? sy : -sy), z];
+      const a = (i % segments) / segments * Math.PI * 2, b = j / rings * Math.PI,
+        r = Math.sin(b) * (1 + depth * Math.cos(lobes * a) * Math.sin(b));
+      return [x + Math.cos(a) * r * sx, y + Math.cos(b) * sy, z + Math.sin(a) * r * sz];
+    };
+    for (let j = 0; j < rings; j++) for (let i = 0; i < segments; i++) {
+      const a = point(i, j), b = point(i + 1, j), c = point(i + 1, j + 1), d = point(i, j + 1),
+        shade = tint.map(v => v * (.96 + .04 * Math.cos(i / segments * Math.PI * 2 * lobes)));
+      if (j > 0) geom.tri(out, a, b, c, shade);
+      if (j < rings - 1) geom.tri(out, a, c, d, shade);
+    }
+  },
   // Closed octagonal armor panel; 64 outward triangles, bevel on top and bottom.
   panel(out, { x = 0, y = 0, z = 0, w, h, d, bevel, tint = [1, 1, 1] }) {
     if (![w, h, d, bevel].every(v => Number.isFinite(v) && v > 0) || bevel >= Math.min(w, h, d) / 2)
