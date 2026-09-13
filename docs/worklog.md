@@ -4,8 +4,8 @@ Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, D
 
 ## Kompakter Fleet-Upgrades-Dialog
 
-- Fleet Upgrades ohne Regel-/Preisänderung verdichtet: direkte Levelanzeige und Evakuierungslimit im Kopf, kompaktere Karten, drei Spalten auf breiten Dialogen und eine lesbare mobile Spalte. Das erledigte lokale Issue wurde entfernt.
-- **Geprüft:** gezielter Steuerungsvertrag für Reihenfolge, Level-/Limitanzeige und Kaufzustände; direkter Chromium-`file://`-Check bei 1280×800 und emulierten 390×844. In beiden Ansichten waren alle drei Karten und **Return** ohne internes Dialogscrollen sichtbar; Kauf-Neudarstellung und keine Seiten-/Konsolenfehler. `npm test` **314/314 bestanden**.
+- Fleet Upgrades ohne Regel-/Preisänderung verdichtet: direkte Levelanzeige und Evakuierungslimit im Kopf, kompaktere Karten, drei Spalten auf breiten Dialogen und eine lesbare mobile Spalte. Auf Nutzerwunsch entfallen die obere Flotilla-/Reservezeile und der Erklärungstext vollständig. Das erledigte lokale Issue wurde entfernt.
+- **Geprüft:** Die Kartenfassung bestand zuvor den gezielten Steuerungsvertrag, Chromium-`file://` bei 1280×800/emulierten 390×844 sowie `npm test` mit 314/314. Für die anschließende reine Textentfernung auf ausdrücklichen Wunsch nur `npm run build`; keine Tests und kein weiterer Browsercheck.
 
 ## Persönlicher sichtbarer KI-Zuschauerlauf
 

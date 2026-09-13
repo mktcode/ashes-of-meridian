@@ -172,7 +172,7 @@
         if (previous === 'game') this.paused = true;
         this.openModal(
           'armory',
-          `<div class="armory-screen"><header class="armory-heading"><div><div class="eyebrow">FLOTILLA REQUISITIONS / ${this.profile.aether.toLocaleString()} AETHER RESERVES</div><h1>Fleet upgrades.</h1></div><div class="armory-limit"><span>EVACUATION LIMIT</span><strong>${evacuationLimit}</strong><small>AETHER / BATTLE</small></div></header><p class="armory-intro">Permanent bonuses for future battles. Unspent aether is recovered after every result, up to the evacuation limit.</p><div class="armory-grid">${Object.entries(
+          `<div class="armory-screen"><header class="armory-heading"><h1>Fleet upgrades.</h1><div class="armory-limit"><span>EVACUATION LIMIT</span><strong>${evacuationLimit}</strong><small>AETHER / BATTLE</small></div></header><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {

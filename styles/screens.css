@@ -768,12 +768,6 @@
       color: var(--gold)
     }
 
-    .armory-intro {
-      max-width: 650px;
-      margin: 0 0 14px;
-      font-size: 12px
-    }
-
     .armory-screen .armory-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -959,11 +953,6 @@
       .armory-limit {
         min-width: 108px;
         padding: 7px 9px
-      }
-
-      .armory-intro {
-        line-height: 1.4;
-        margin-bottom: 10px
       }
 
       .armory-screen .armory-grid {

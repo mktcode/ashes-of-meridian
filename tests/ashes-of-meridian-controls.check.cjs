@@ -730,7 +730,7 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
   h.ui.profile.aether = 99; h.ui.showArmory();
   assert.match(h.ui.html, /class="armory-screen"/);
-  assert.match(h.ui.html, /99 AETHER RESERVES/);
+  assert.doesNotMatch(h.ui.html, /FLOTILLA REQUISITIONS|AETHER RESERVES|class="armory-intro"/);
   assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>100<\/strong>/);
   assert.equal((h.ui.html.match(/class="upgrade-heading"/g) || []).length, 3);
   assert.equal((h.ui.html.match(/class="upgrade-rank">LEVEL 0 \/ 5/g) || []).length, 3);
