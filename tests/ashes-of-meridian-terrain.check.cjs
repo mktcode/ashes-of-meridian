@@ -12,7 +12,7 @@ const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'co
 const { geom, Battlefield, insidePolygon, pointSegment, HOME, ENEMY_SITES, RESOURCE_SITES } =
   vm.runInContext('({geom, Battlefield, insidePolygon, pointSegment, HOME, ENEMY_SITES, RESOURCE_SITES})', context);
 
-test('embedded skybox preserves the maintained WebP bytes and is wired as a non-repeating texture', () => {
+test('embedded skybox preserves the canonical WebP bytes and is wired as a non-repeating texture', () => {
   const url = vm.runInContext('MERIDIAN_TEXTURES.sky', context);
   assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
   const payload = url.split(',')[1], image = Buffer.from(payload, 'base64');
@@ -25,7 +25,7 @@ test('embedded skybox preserves the maintained WebP bytes and is wired as a non-
   ));
 });
 
-test('embedded ground textures preserve the maintained PNG bytes without conversion', () => {
+test('embedded ground textures preserve the canonical PNG bytes without conversion', () => {
   for (const [key, file] of Object.entries({
     ground: 'texture-ground-dirt-base.png',
     rockClusters: 'texture-ground-rock-clusters.png',
@@ -42,6 +42,21 @@ test('embedded ground textures preserve the maintained PNG bytes without convers
   assert.ok(scripts.find(s => s.name === 'renderer-runtime').source.includes(
     'this.loadTexture(this.groundTex, MERIDIAN_TEXTURES.ground);'
   ));
+});
+
+test('embedded material textures preserve the canonical WebP bytes without conversion', () => {
+  for (const [key, file] of Object.entries({
+    metal: 'texture-floor-metal.webp',
+    bio: 'texture-floor-bio.webp'
+  })) {
+    const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
+    assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
+    const payload = url.split(',')[1], image = Buffer.from(payload, 'base64');
+    assert.equal(image.toString('base64'), payload);
+    assert.deepEqual(image, readFileSync(join(__dirname, '..', 'assets/textures', file)));
+    assert.equal(image.toString('ascii', 0, 4), 'RIFF');
+    assert.equal(image.toString('ascii', 8, 12), 'WEBP');
+  }
 });
 
 function layoutHash(w) {

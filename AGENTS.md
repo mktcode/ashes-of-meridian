@@ -10,8 +10,8 @@
 
 ## Quellen und Befehle
 
-- `index.html`, `styles/` und `src/` sind handgepflegte Quellen. Simulation in `src/simulation/`, UI in `src/ui/`, WebGL in `src/renderer/`; vollständige Codekarte in der Architektur.
-- Einmalig `npm install`; `npm run build` erzeugt klassische Skripte unter `dist/src/`. Generierte Dateien nie direkt bearbeiten oder einchecken.
+- `index.html`, `styles/` und `src/` sind handgepflegte Quellen. Ausnahme: `src/renderer/assets.js` wird mit `npm run embed:textures` bytegleich aus `assets/textures/` erzeugt und nicht direkt bearbeitet. Simulation in `src/simulation/`, UI in `src/ui/`, WebGL in `src/renderer/`; vollständige Codekarte in der Architektur.
+- Einmalig `npm install`; `npm run build` erzeugt klassische Skripte unter `dist/src/`. `dist/` nie direkt bearbeiten oder einchecken; die eingecheckte Textur-Einbettung nur über das vorgesehene Skript aktualisieren.
 - `npm test` baut neu und führt die Node-Regression aus. Testdateien unter `tests/`, gemeinsame VM-/Szenariohelfer unter `tests/helpers/`, feste Referenzen unter `tests/fixtures/`.
 - Auslieferungsziel: gebaute `index.html` direkt über `file://` öffnen. Kein erforderlicher Server, CDN, Laufzeit-Import oder Paketinstallation im Browser; keine abschwächenden Sicherheitsflags.
 

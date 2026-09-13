@@ -2,7 +2,7 @@
 
 ## Auslieferung
 
-`index.html`, die Stylesheets unter `styles/` und die JavaScript-/TypeScript-Dateien unter `src/` sind handgepflegte Quellen. TypeScript ist die einzige lokale Entwicklungsabhängigkeit; `npm run build` leert `dist/` und erzeugt daraus klassische Laufzeitskripte unter `dist/src/`. `index.html` lädt diese Ausgabe synchron in der dokumentierten Reihenfolge. `dist/` und `node_modules/` werden nicht eingecheckt und generierte Dateien nicht direkt bearbeitet.
+`index.html`, die Stylesheets unter `styles/` und die JavaScript-/TypeScript-Dateien unter `src/` sind handgepflegte Quellen; nur `src/renderer/assets.js` wird aus den kanonischen Dateien unter `assets/textures/` mit `npm run embed:textures` erzeugt. TypeScript ist die einzige lokale Entwicklungsabhängigkeit; `npm run build` leert `dist/` und erzeugt daraus klassische Laufzeitskripte unter `dist/src/`. `index.html` lädt diese Ausgabe synchron in der dokumentierten Reihenfolge. `dist/` und `node_modules/` werden nicht eingecheckt und generierte Dateien nicht direkt bearbeitet.
 
 Direktes Öffnen von `index.html` über `file://` bleibt nach dem Build unterstützt: kein erforderlicher Server, keine CDN-Abhängigkeiten, Laufzeit-Imports oder ES-Module. Die Laufzeitskripte teilen weiterhin globale lexikalische Bindungen und verwenden weder `async` noch `defer`. Source Maps dienen nur der lokalen Fehlersuche. Inline-Styles in UI-Templates bestehen weiterhin.
 
@@ -18,7 +18,7 @@ Die Quellreihenfolge entspricht den `data-meridian-script`-Tags in `index.html`;
 | --- | --- |
 | `src/contracts.d.ts` | Globale Compile-Zeit-Verträge für Profil, Kataloge, Entitäten, Befehle und Run-Zustand; keine Laufzeitausgabe |
 | `src/core.js` | Matrizen, Vektoren und Seed-RNG: `M4`, `V`, `seeded` |
-| `src/renderer/assets.js` | Materialkennungen und eingebettete Laufzeittexturen: `MAT`, `MERIDIAN_TEXTURES` |
+| `src/renderer/assets.js` | Durch `npm run embed:textures` erzeugte Materialkennungen und eingebettete Laufzeittexturen: `MAT`, `MERIDIAN_TEXTURES` |
 | `src/renderer/geometry.js` | Prozedurale Mesh-Erzeugung: `geom` |
 | `src/renderer/shaders.js` | GLSL-Quellen für Szene, Schatten, Himmel und Postprocessing |
 | `src/renderer/runtime.js` | WebGL-2-Ressourcen und Renderpässe: `MeridianRenderer` |

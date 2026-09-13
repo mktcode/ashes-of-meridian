@@ -22,7 +22,7 @@ Prüfzuständigkeiten klein halten: CPU-Simulationstests laden keinen Renderer u
 
 | Bereich | Abdeckung |
 | --- | --- |
-| Terrain/Kristalle | Syntax, bytegleiche Skybox-/Boden-PNG-Einbettungen, Ring-/Massivgeometrie, kleine Felslayouts, Massiv-Raster, freie/verbundene Ressourcen- und Basiszugänge, echte Umwege, keine Straßenflächen/-markierungen |
+| Terrain/Kristalle | Syntax, bytegleiche Einbettung aller sechs kanonischen Texturquellen, Ring-/Massivgeometrie, kleine Felslayouts, Massiv-Raster, freie/verbundene Ressourcen- und Basiszugänge, echte Umwege, keine Straßenflächen/-markierungen |
 | Harness/Core | Lokale Skripte, Reihenfolge/Pfadvertrag, Isolation, Mathematik und Seed-RNG; bytegleiche Musikfreigaben, Playlistreihenfolge/10-s-Startverzögerung und -Pausen/Rücksprung, Pause/Mute/Reset und Wiedergabefehler |
 | Simulation | Gefechtsstart/-ziel, Startökonomie/passives Einkommen, Befehle, freie Worker-Zuweisung, Baufortsetzung/-ablösung ohne Mehrarbeitertempo, Reparatur/Verkauf, Produktion/Ausfahrt, Kampf, Wellen, Upgrades, vollständiger Neustart; sechsminütiger Worker-Gegenverkehr: Lieferungen je Worker/Minute, Schutz vor anhaltenden Richtungswechseln |
 | Persistence | Nur permanentes Profil: Aether-/Upgrade-/Fraktionsfreischaltungs-Normalisierung, Fehlerfälle, flüchtiger Storage-Ersatz; keine Run-/Backup-API |

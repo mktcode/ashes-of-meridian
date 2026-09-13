@@ -2,10 +2,10 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
-## Texturquellen aus dem Projektroot aufgeräumt
+## Texturquellen und zentrale Einbettung aufgeräumt
 
-- Gepflegte Texturquellen nach `assets/textures/` verschoben. Audit bestätigt die eingebettete Nutzung von Skybox, Dirt-Basis, Felsclustern und Wüstensträuchern; Metall-/Bio-PNGs ergeben pixelgleich die beiden laufzeitgenutzten WebP-Einbettungen und bleiben deshalb als Quellen erhalten. Das weder hochgeladene noch gezeichnete Terrain-Overlay samt Einbettung entfernt; Einbettungsskript, Tests und Referenzen auf die neuen Pfade umgestellt.
-- **Neu geprüft:** `npm test` baut erfolgreich und erreicht **251/252**; einziger Fehler ist die bereits bestehende, sachfremde Erwartung `Move (default)` an den zuvor gekürzten Field-Manual-Text. Gezielte Terrain-/Renderertests **35/35 bestanden**. Chromium `file://`: Hauptmenü und Renderer geladen, GL 0, keine Laufzeit-/Ladefehler. Einbettungsskript idempotent, eingebettete Quelldateien bytegleich, Diff-Prüfung ohne Whitespacefehler. Kein Echtgerätetest.
+- Sechs kanonische, bereits laufzeitgenutzte Texturdateien liegen unter `assets/textures/`. `npm run embed:textures` erzeugt daraus vollständig und ohne Umkodierung die zentrale `src/renderer/assets.js`; `-- --check` erkennt Abweichungen. Die bisherigen Metall-/Bio-Einbettungen wurden unverändert als kanonische WebPs herausgelöst, ihre redundanten PNG-Kopien entfernt. Das weder hochgeladene noch gezeichnete Terrain-Overlay samt Einbettung ebenfalls entfernt; Tests und Referenzen aktualisiert.
+- **Neu geprüft:** `npm test` baut erfolgreich und erreicht **252/253**; einziger Fehler ist die bereits bestehende, sachfremde Erwartung `Move (default)` an den zuvor gekürzten Field-Manual-Text. Gezielte Terrain-/Renderertests **36/36 bestanden**. Alle sechs generierten Data-URLs stimmen bytegleich mit Quellen und bisherigen Laufzeitpayloads überein; Generator und `--check` erfolgreich. Chromium `file://`: Hauptmenü und Renderer geladen, GL 0, keine Laufzeit-/Ladefehler. Diff-Prüfung ohne Whitespacefehler; kein Echtgerätetest.
 
 ## Field Manual gekürzt und auf Touch ausgerichtet
 
