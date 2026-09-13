@@ -237,7 +237,8 @@ class BattlefieldView {
       }
       const model = EntityModels.find(e);
       if (model) {
-        model.render({ entity: e, time, part: p, ring, metal, dark, team, accent });
+        model.render({ entity: e, time, part: p, ring, metal, dark, team, accent,
+          surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         return;
       }
       // Mobile units. Silhouettes and surface treatments differ for every civilization.
@@ -369,81 +370,5 @@ class BattlefieldView {
         if (ty === 'medic')
           R.add('ring', e.x, 2.0, e.z, 0.9, 1, 0.9, accent, time, Math.PI / 2, 0, 1, 0.7, 'effects');
         return;
-      }
-      if (['rifle', 'hero', 'medic'].includes(ty)) {
-        let h = ty === 'hero' ? 1.17 : 1,
-          med = ty === 'medic',
-          c = med ? 0xb9c3be : metal;
-        for (let side of [-1, 1]) {
-          p('box', side * 0.23, 0.35, side * step, 0.25, 0.65, 0.33, dark);
-          p('box', side * 0.25, 0.13, side * step + 0.09, 0.32, 0.22, 0.48, dark);
-        }
-        p('box', 0, 1.0 * h, 0, 0.78 * h, 0.75 * h, 0.5 * h, c);
-        p('box', 0, 1.16 * h, 0.28, 0.48, 0.26, 0.1, team, 0, 0, 0, 0.35);
-        p('box', 0, 1.65 * h, 0.02, 0.45 * h, 0.43 * h, 0.43 * h, c);
-        p('box', 0, 1.65 * h, 0.25, 0.43, 0.115, 0.08, med ? 0x84dfc1 : 0x8ce1e2, 0, 0, 0, 0.85);
-        p('box', -0.5 * h, 1.32 * h, 0, 0.34, 0.35, 0.54, c);
-        p('box', 0.5 * h, 1.32 * h, 0.08, 0.34, 0.35, 0.54, c);
-        p('box', -0.48, 1.0, 0.27, 0.22, 0.47, 0.22, dark, -0.3, -0.5);
-        p('box', 0.5, 1.09, 0.48, 0.25, 0.23, 0.85, dark);
-        p('box', 0.5, 1.12, 0.98, 0.11, 0.11, 0.42, 0x9eaaa8);
-        p('box', 0, 1.08, -0.37, 0.49, 0.66, 0.26, dark);
-        if (med) {
-          p('box', 0, 1.15, -0.53, 0.36, 0.11, 0.02, 0x92e5c5, 0, 0, 0, 0.7);
-          p('box', 0, 1.15, -0.53, 0.11, 0.38, 0.02, 0x92e5c5, 0, 0, 0, 0.7);
-        }
-        if (ty === 'hero') {
-          p('box', 0, 0.91, -0.49, 0.86, 1.2, 0.06, 0xa6835b, 0, -0.1);
-          p('box', -0.54, 1.48, 0.02, 0.42, 0.16, 0.59, accent);
-          p('box', 0.54, 1.48, 0.02, 0.42, 0.16, 0.59, accent);
-        }
-      } else if (ty === 'worker') {
-        p('workerHull', 0, 0, 0, 1, 1, 1, ghost ? 0x68717d : options.tint || 0xb7a27b);
-        p('box', 0, 1.05, 0.295, 0.67, 0.20, 0.065, dark);
-        p('box', 0, 1.065, 0.334, 0.49, 0.105, 0.025, team, 0, 0, 0, 0.65);
-        for (const side of [-1, 1]) {
-          p('box', side * .43, .60, .731, .11, .07, .025, 0xffe4aa, 0, 0, 0, .55);
-          p('box', side * .62, .80, -.08, .065, .025, .66, accent);
-        }
-        p('box', 0.67, 0.94, 0.45, 0.18, 0.2, 0.95, accent, 0, -0.35);
-        p('cylinder', .63, .95, .08, .14, .18, .14, metal, 0, 0, Math.PI/2);
-        p('cylinder', .67, .86, .88, .21, .13, .21, dark, 0, -1.1);
-        p('workerDrill', 0.67, 0.8, 1.0, 0.18, 0.55, 0.18, 0xd9cdb5, 0, -1.1);
-        p('cylinder', -0.3, 1.28, -0.4, 0.18, 0.4, 0.18, accent);
-        p('cylinder', -.3, 1.49, -.4, .19, .055, .19, dark);
-        p('sphere', -.3, 1.53, -.4, .095, .035, .095, team, 0, 0, 0, .5);
-        if (e.carry > 0) p('octa', 0, 1.4, -0.4, 0.32, 0.46, 0.3, 0xecc88a, 0, 0, 0, 0.35);
-      } else if (ty === 'tank' || ty === 'artillery') {
-        p('box', 0, 0.75, 0, 2.3, 0.85, 3.0, metal);
-        for (let i of [-1, 1]) {
-          p('box', i * 1.35, 0.57, 0, 0.66, 0.83, 3.25, dark);
-          p('box', i * 1.35, 1.08, 0, 0.73, 0.18, 3.5, metal);
-          for (let j = -2; j <= 2; j++)
-            p('cylinder', i * 1.55, 0.48, j * 0.61, 0.31, 0.22, 0.31, 0x697a7f, 0, 0, Math.PI / 2);
-          p('box', i * 1.35, 1.2, 0.5, 0.18, 0.08, 1.6, team, 0, 0, 0, 0.3);
-        }
-        p('hex', 0, 1.48, -0.25, 1.03, 0.8, 0.95, metal, 0.25);
-        p('box', 0, 1.95, -0.33, 1.3, 0.18, 1.3, dark);
-        if (ty === 'tank') {
-          p('box', 0, 1.63, 1.25, 0.35, 0.35, 2.3, dark);
-          p('box', 0, 1.63, 2.48, 0.53, 0.47, 0.42, metal);
-          p('box', 0, 1.63, 2.7, 0.28, 0.23, 0.02, 0x18242f);
-        } else {
-          p('box', 0, 2.15, 0.9, 0.48, 0.45, 3.65, dark, 0, -0.23);
-          p('box', 0, 2.59, 2.68, 0.7, 0.63, 0.55, metal, 0, -0.23);
-          for (let i of [-1, 1]) p('box', i * 0.67, 1.8, -1.25, 0.5, 0.9, 0.9, accent);
-        }
-        p('box', -0.45, 2.08, -0.35, 0.44, 0.1, 0.6, team, 0, 0, 0, 0.4);
-      } else if (ty === 'air') {
-        p('octa', 0, 0.65, 0.25, 0.7, 0.43, 2.2, metal);
-        p('box', 0, 0.85, 0.75, 0.47, 0.24, 0.9, 0x81bdcc, 0, 0, 0, 0.4);
-        for (let i of [-1, 1]) {
-          p('octa', i * 1.35, 0.45, -0.18, 1.6, 0.12, 1.1, metal, 0, 0, i * 0.06);
-          p('box', i * 1.05, 0.32, -0.55, 0.53, 0.56, 1.8, dark);
-          p('cylinder', i * 1.05, 0.3, -1.48, 0.23, 0.12, 0.23, accent, 0, Math.PI / 2, 0, 1.3);
-          p('box', i * 0.66, 0.38, 1.1, 0.16, 0.2, 1.1, dark);
-          p('box', i * 0.42, 1.13, -1.2, 0.15, 0.7, 0.8, metal, 0, 0.18, i * 0.27);
-        }
-        p('sphere', 0, 0.94, -0.2, 0.09, 0.08, 0.09, team, 0, 0, 0, 1.4);
       }
     }

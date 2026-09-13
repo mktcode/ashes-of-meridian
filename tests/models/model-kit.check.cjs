@@ -88,10 +88,10 @@ test('mesh helpers produce outward closed armor and preserve transformed primiti
 
 test('registered unit dispatch uses the common transform without touching entity state', () => {
   const h = modelHarness();
-  vm.runInContext(`registerEntityModel({ id: 'faction-0/unit/rifle', render({part, metal}) {
+  vm.runInContext(`registerEntityModel({ id: 'faction-0/unit/modelprobe', render({part, metal}) {
     part('box', 0, 1, 0, 1, 1, 1, metal);
   } }); Math.random = seeded = () => { throw Error('Draw RNG'); };`, h.context);
-  const e = { id: 1, faction: 0, kind: 'unit', type: 'rifle', hp: 100, x: 12, z: -7, rot: .7 };
+  const e = { id: 1, faction: 0, kind: 'unit', type: 'modelprobe', hp: 100, x: 12, z: -7, rot: .7 };
   const calls = h.draw(e);
   assert.equal(calls.length, 1); assert.equal(calls[0][1], 12); assert.equal(calls[0][3], -7);
   assert.equal(calls[0][8], .7);

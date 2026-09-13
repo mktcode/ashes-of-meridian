@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Fraktion-0-Einheiten: mechanische Auslagerung
+
+- Sieben Assemblierungen in eigene Modelldateien ausgelagert; `surfaceColor(color)` erhält die Sonderlackierung des Workers samt Ghost-/Tint-Priorität. Andere Fraktionen, alle Gebäude, Geometriefabriken, Animation und Simulation unverändert.
+- **Geprüft:** Build, 82/82 gezielte Modell-/Harness-/Präsentationstests; alle 756 Zeichenvarianten, vorhandene Meshfabriken und drei kontrollierte 20-s-Fraktionsruns/RNG/Schüsse identisch. Chromium `file://`: sieben Einheiten pixelidentisch, GL 0, keine Lade-/Laufzeitfehler. Vollsuite und Zustandsprüfung folgen gebündelt nach der separaten Verfeinerung.
+
 ## Alle Gebäude: abgeschlossener Detailpass
 
 - Alle 21 Gebäude besitzen eigene Fraktions-/Typdateien. Nach zeichenidentischer Auslagerung (`cf1a6ea`) die übrigen 18 Modelle verfeinert: Fraktion 0 erhält Depot-/Raffineriehüllen und ergänzende HQ-/Turret-Servicepanzerung; Fraktion 1 gerippte Schalen/Wurzelmanschetten und eigene Funktionsorgane; Fraktion 2 eingefasste Pfeiler, gestufte Sockel und individuelle Portal-/Kronen-/Kollektordetails. Grundsilhouetten, blasse Kristallreflexe, Altanimationen, Produktion/Ausfahrt und Spielwerte erhalten. Neue konkrete Meshhilfe `lobedShell`; alle Einheiten/Ressourcen und die freigegebenen Barracks/Factory/Hangar unverändert. Nur vier Fraktion-0-Portraits erneuert (HQ/Depot/Refinery/Turret, 320×320 WebP Q80). Modellkatalog/Budgets stehen in der Grafikreferenz; Arbeitsissue abgeschlossen, Vent-Platzierungsissue um neue Modellgrenzen ergänzt.

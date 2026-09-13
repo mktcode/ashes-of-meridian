@@ -28,6 +28,13 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-faction-2-building-factory',
   'model-faction-2-building-hangar',
   'model-faction-2-building-turret',
+  'model-faction-0-unit-worker',
+  'model-faction-0-unit-rifle',
+  'model-faction-0-unit-medic',
+  'model-faction-0-unit-tank',
+  'model-faction-0-unit-artillery',
+  'model-faction-0-unit-air',
+  'model-faction-0-unit-hero',
   'renderer-shaders',
   'renderer-runtime'
 ]);
