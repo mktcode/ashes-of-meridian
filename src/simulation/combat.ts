@@ -64,7 +64,7 @@
             e.x,
             e.z,
             e.kind === 'building' ? 3.5 : 1.2,
-            e.faction === 1 ? 0xaee2ac : 0xf3b17c
+            e.faction === FACTION_ID.SECOND ? 0xaee2ac : 0xf3b17c
           );
           this.emit('explosion', { x: e.x, z: e.z, big: e.kind === 'building' || e.type === 'tank' });
         }
@@ -79,7 +79,7 @@
         let range = d.range || 0,
           damage =
             (d.damage || 0) *
-            (e.faction === 2 ? 1.12 : 1) *
+            (e.faction === FACTION_ID.THIRD ? 1.12 : 1) *
             (e.kills >= 5 ? 1.12 : 1);
         return { ...d, range, damage };
       },

@@ -48,7 +48,7 @@ class BattlefieldView {
     // Cosmetic building yaw only; placement, collision radii and save data stay unchanged.
     function renderEntity(R, e, time, options = {}) {
       if (e.hp <= 0) return;
-      const f = FACTIONS[e.faction || 0],
+      const f = FACTIONS[e.faction || FACTION_ID.FIRST],
         enemy = e.team === 1;
       let team = enemy ? 0xe98680 : f.color,
         accent = enemy ? 0xffaf87 : f.accent;
@@ -61,7 +61,7 @@ class BattlefieldView {
         e.type === 'air'
           ? 3.8 - (e.exit ? 3 * clamp(distance(e, e.exit) / e.exit.length, 0, 1) : 0) +
             Math.sin(time * 2 + e.id) * 0.22
-          : e.faction === 2 && e.kind === 'unit'
+          : e.faction === FACTION_ID.THIRD && e.kind === 'unit'
             ? 0.3 + Math.sin(time * 2 + e.id) * 0.08
             : 0;
       let layer = options.layer || 'dynamic',
@@ -80,7 +80,7 @@ class BattlefieldView {
         options.material !== undefined
           ? options.material
           : e.kind === 'building' || e.kind === 'unit'
-            ? e.faction === 1
+            ? e.faction === FACTION_ID.SECOND
               ? MAT.BIO
               : MAT.METAL
             : MAT.AUTO;
@@ -207,7 +207,7 @@ class BattlefieldView {
         let s = e.size || 3;
         p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
         p('ring', 0, 0.33, 0, s * 1.03, 0.1, s * 1.03, team, 0, 0, 0, 0.4);
-        if (e.faction === 1) {
+        if (e.faction === FACTION_ID.SECOND) {
           let h = e.type === 'hq' ? 5 : e.type === 'turret' ? 5.8 : e.type === 'depot' ? 2.8 : 3.8;
           p('sphere', 0, h * 0.44, 0, s * 0.8, h * 0.57, s * 0.78, metal);
           p('octa', 0, h * 0.77, 0, s * 0.5, h * 0.65, s * 0.5, dark, 0.3);
@@ -250,7 +250,7 @@ class BattlefieldView {
                 0.3
               );
           if (e.type === 'hangar') ring(s * 0.8, h * 0.9, accent, 0.7);
-        } else if (e.faction === 2) {
+        } else if (e.faction === FACTION_ID.THIRD) {
           let h = e.type === 'hq' ? 7.8 : e.type === 'turret' ? 6.5 : e.type === 'depot' ? 3.3 : 5.5;
           p('hex', 0, 0.55, 0, s * 0.8, 0.5, s * 0.8, metal);
           p('octa', 0, h * 0.48, 0, s * 0.5, h * 0.53, s * 0.5, dark, 0.4);
@@ -413,7 +413,7 @@ class BattlefieldView {
       let move = e.walk || 0,
         step = Math.sin(move * 7) * 0.23,
         ty = e.type;
-      if (e.faction === 1) {
+      if (e.faction === FACTION_ID.SECOND) {
         let big = ['tank', 'artillery'].includes(ty),
           air = ty === 'air',
           scale = big ? 1.85 : ty === 'hero' ? 1.4 : 1;
@@ -505,7 +505,7 @@ class BattlefieldView {
         if (ty === 'artillery') p('sphere', 0, 2.0, -0.6, 1.15, 1.1, 1.15, accent, 0, 0, 0, 0.4);
         return;
       }
-      if (e.faction === 2) {
+      if (e.faction === FACTION_ID.THIRD) {
         let big = ['tank', 'artillery'].includes(ty),
           scale = big ? 1.9 : ty === 'hero' ? 1.35 : 1,
           air = ty === 'air';

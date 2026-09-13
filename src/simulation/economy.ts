@@ -35,7 +35,7 @@
           ? BUILDINGS[type as BuildingType]
           : UNITS[type as UnitType],
           mul = kind === 'unit' && type !== 'worker'
-            ? (this.s!.faction === 1 ? 0.85 : this.s!.faction === 2 ? 1.12 : 1)
+            ? (this.s!.faction === FACTION_ID.SECOND ? 0.85 : this.s!.faction === FACTION_ID.THIRD ? 1.12 : 1)
             : 1;
         return { cost: Math.ceil(d.cost * mul), gas: d.gas || 0 };
       },

@@ -1,6 +1,6 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
-    const FREE_MARCHES_ACTION_PORTRAITS = {
+    const FACTION_0_ACTION_PORTRAITS = {
       'train:worker': 'assets/portraits/preview-prospector.webp',
       'train:rifle': 'assets/portraits/preview-vanguard.webp',
       'train:medic': 'assets/portraits/preview-field-medic.webp',
@@ -113,7 +113,7 @@
       },
       actionButton(key, label, ic, opts = {}) {
         let badge = opts.badge || '',
-          preview = this.game.s?.faction === 0 && FREE_MARCHES_ACTION_PORTRAITS[key];
+          preview = this.game.s?.faction === FACTION_ID.FIRST && FACTION_0_ACTION_PORTRAITS[key];
         // Fixed renders of the actual models: no additional WebGL scenes in the HUD.
         const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;

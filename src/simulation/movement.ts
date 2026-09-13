@@ -69,7 +69,7 @@
         }
       },
       movementSpeed(this: MeridianGame, e: UnitEntity) {
-        return UNITS[e.type].speed * (e.faction === 1 ? 1.1 : 1) *
+        return UNITS[e.type].speed * (e.faction === FACTION_ID.SECOND ? 1.1 : 1) *
           (e.slowed! > this.s!.time ? 0.65 : 1);
       },
       moveYield(this: MeridianGame, e: UnitEntity, dt: number) {

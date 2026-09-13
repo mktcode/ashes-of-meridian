@@ -128,7 +128,7 @@
         }
         return o;
       },
-      // Prospector: one cached chassis with chamfered armor, capsule tracks and road wheels.
+      // Faction 0 worker: one cached chassis with chamfered armor, capsule tracks and road wheels.
       // Tints are relative to its ochre paint; lamps, tool and carried ore remain separate.
       workerHull() {
         const out = [], box = this.box(), wheel = this.cylinder(10), hub = this.cylinder(6),
@@ -221,7 +221,7 @@
         }
         return out;
       },
-      // Sentinel: fixed hexagonal pedestal and independently aimed twin-gun assembly.
+      // Faction 0 turret: fixed hexagonal pedestal and independently aimed twin-gun assembly.
       // Baked once; relative metal tints preserve team/ghost/construction rendering.
       turretAssembly() {
         const turretBase = [], turretHead = [], box = this.box(),
@@ -297,7 +297,7 @@
         armor(turretHead, 0,2.3,.72,.52,.40,.20,dark);
         return { turretBase, turretHead };
       },
-      // Free Marches command-center armor, baked at its existing world dimensions.
+      // Faction 0 HQ armor, baked at its existing world dimensions.
       // Vertex tints multiply the faction metal (also preserving preview/ghost tinting).
       commandHull() {
         const out = [], dark = [.4, .45, .5], metal = [1, 1, 1], roof = [1.42, 1.3, 1.17];

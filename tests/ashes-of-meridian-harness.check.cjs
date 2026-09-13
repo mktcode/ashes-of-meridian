@@ -27,6 +27,10 @@ test('content loads alone with reference catalog order, classic bindings and nam
   for (const name of ['M4', 'seeded', 'MeridianRenderer', 'document', 'window']) {
     assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
   }
+  const ids = vm.runInContext('FACTION_ID', context);
+  assert.deepEqual({ ...ids }, { FIRST: 0, SECOND: 1, THIRD: 2 });
+  assert.equal(Object.isFrozen(ids), true);
+  assert.deepEqual(Object.values(ids), Array.from(FACTIONS.keys()), 'IDs retain catalog/unlock order');
   assert.strictEqual(context.icon, icon);
   assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 3]);
   assert.deepEqual(Array.from(Object.keys(META)), ['startingAlloy', 'startingWorkers', 'aetherEvacuation']);

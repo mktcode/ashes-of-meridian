@@ -44,8 +44,8 @@
     }
     const gameMethods = {
       start(this: MeridianGame, opts: BattleOptions = {}) {
-        let faction: FactionId = FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : 0,
-          enemy: FactionId = FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : 2,
+        let faction: FactionId = FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
+          enemy: FactionId = FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
           biome: BiomeType = BIOMES[opts.biome as BiomeType] ? opts.biome as BiomeType : 'ash',
           savedMeta = this.profile.upgrades || {},
           meta = Object.fromEntries(
@@ -121,16 +121,16 @@
           : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then destroy the enemy command center.');
         return s;
       },
-      spawn<K extends EntityKind>(this: MeridianGame, kind: K, type: EntityTypeForKind<K>, x: number, z: number, team: TeamId, faction: FactionId = 0, extra: SpawnExtra = {}): EntityForKind<K> {
+      spawn<K extends EntityKind>(this: MeridianGame, kind: K, type: EntityTypeForKind<K>, x: number, z: number, team: TeamId, faction: FactionId = FACTION_ID.FIRST, extra: SpawnExtra = {}): EntityForKind<K> {
         let s = this.s!,
           d: Partial<BuildingDefinitionShape & UnitDefinitionShape> = kind === 'building'
             ? BUILDINGS[type as BuildingType]
             : UNITS[type as UnitType] || {},
           hp = d.hp || 1000;
         if (kind === 'unit') {
-          if (faction === 1) hp *= 0.9;
-          if (faction === 2) hp *= 0.85;
-          if (faction === 0 && ['tank', 'artillery'].includes(type)) hp *= 1.15;
+          if (faction === FACTION_ID.SECOND) hp *= 0.9;
+          if (faction === FACTION_ID.THIRD) hp *= 0.85;
+          if (faction === FACTION_ID.FIRST && ['tank', 'artillery'].includes(type)) hp *= 1.15;
         }
         let e = {
           id: s.nextId++,
@@ -158,8 +158,8 @@
           kills: 0,
           carry: 0,
           work: 0,
-          shield: faction === 2 && kind === 'unit' ? hp * 0.32 : 0,
-          maxShield: faction === 2 && kind === 'unit' ? hp * 0.32 : 0,
+          shield: faction === FACTION_ID.THIRD && kind === 'unit' ? hp * 0.32 : 0,
+          maxShield: faction === FACTION_ID.THIRD && kind === 'unit' ? hp * 0.32 : 0,
           ...extra
         } as unknown as EntityForKind<K>;
         s.entities.push(e);
@@ -181,7 +181,7 @@
         return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3.0 };
       },
       spawnResource(this: MeridianGame, type: ResourceType, x: number, z: number, amount: number) {
-        return this.spawn('resource', type, x, z, -1, 0, { amount, size: type === 'gas' ? 1.5 : 1.3 });
+        return this.spawn('resource', type, x, z, -1, FACTION_ID.FIRST, { amount, size: type === 'gas' ? 1.5 : 1.3 });
       },
       get(this: MeridianGame, id: number | null | undefined): Entity | null {
         let e = this.ids.get(id as number);

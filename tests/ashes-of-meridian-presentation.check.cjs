@@ -64,7 +64,7 @@ test('produced aircraft rise smoothly from the hangar without changing draw stat
   assert.ok(Math.abs(end-normal)<1e-9);
 });
 
-test('command-center armor has bounded beveled panels with outward finite unit normals', () => {
+test('faction 0 HQ armor has bounded beveled panels with outward finite unit normals', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS]);
   vm.runInContext('Math.random = seeded = () => { throw Error("Mesh RNG"); }', context);
   const geom = vm.runInContext('geom', context), mesh = geom.commandHull();
@@ -132,7 +132,7 @@ test('command hull is faction-specific and retains construction, team yaw, tint 
   assert.deepEqual(render({ ...entity, hp: 0 }), []);
 });
 
-test('prospector meshes are deterministic, bounded and non-degenerate with finite flat normals', () => {
+test('faction 0 worker meshes are deterministic, bounded and non-degenerate with finite flat normals', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS]);
   vm.runInContext('Math.random = seeded = () => { throw Error("Worker mesh RNG"); }', context);
   const geom = vm.runInContext('geom', context);
@@ -167,7 +167,7 @@ test('prospector meshes are deterministic, bounded and non-degenerate with finit
   }
 });
 
-test('detailed prospectors preserve yaw, cargo indication, team tint and read-only rendering', () => {
+test('detailed faction 0 workers preserve yaw, cargo indication, team tint and read-only rendering', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
   vm.runInContext('Math.random = seeded = geom.workerHull = geom.workerDrill = () => { throw Error("Per-frame mesh/RNG"); }', context);
   const { renderEntity, UNITS, MAT } = vm.runInContext('({renderEntity, UNITS, MAT})', context);
@@ -204,7 +204,7 @@ test('detailed prospectors preserve yaw, cargo indication, team tint and read-on
   assert.deepEqual(render({ ...unit, hp: 0 }), []);
 });
 
-test('sentinel meshes are deterministic, bounded and non-degenerate, including recessed twin muzzles', () => {
+test('faction 0 turret meshes are deterministic, bounded and non-degenerate, including recessed twin muzzles', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS]);
   vm.runInContext('Math.random = seeded = () => { throw Error("Turret mesh RNG"); }', context);
   const geom = vm.runInContext('geom', context), meshes = geom.turretAssembly();
@@ -239,7 +239,7 @@ test('sentinel meshes are deterministic, bounded and non-degenerate, including r
   }
 });
 
-test('sentinel detail keeps its fixed base and independently aimed head through team and construction variants', () => {
+test('faction 0 turret detail keeps its fixed base and independently aimed head through team and construction variants', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
   vm.runInContext('Math.random = seeded = geom.turretAssembly = () => { throw Error("Per-frame turret mesh/RNG"); }', context);
   const { renderEntity, BUILDINGS, BUILDING_YAW, MAT } =
@@ -283,8 +283,8 @@ test('sentinel detail keeps its fixed base and independently aimed head through 
   assert.deepEqual(render({ ...entity, hp: 0 }), []);
 });
 
-test('effects execute alone, consume RNG synchronously and preserve visibility short-circuiting', () => {
-  const context = loadScripts(['effects']);
+test('effects need only content, consume RNG synchronously and preserve visibility short-circuiting', () => {
+  const context = loadScripts(['content', 'effects']);
   const Effects = vm.runInContext('MeridianEffects', context);
   let calls = 0, visibleCalls = 0;
   const effects = new Effects(() => { calls++; return .5; });
@@ -298,6 +298,42 @@ test('effects execute alone, consume RNG synchronously and preserve visibility s
   for (let i = 0; i < 40; i++) effects.damageNumber(e, 30);
   assert.equal(effects.floats.length, 35);
   effects.reset(); assert.equal(effects.fx.length, 0); assert.equal(effects.floats.length, 0);
+});
+
+test('shot and shell faction variants use stable IDs rather than display names', () => {
+  const context = loadScripts(['content', 'effects']);
+  vm.runInContext(`FACTIONS.forEach(f => { f.name = 'Same revised name'; });`, context);
+  const Effects = vm.runInContext('MeridianEffects', context);
+  const effects = new Effects(() => { throw Error('Shot RNG'); });
+  const target = { kind: 'unit', type: 'rifle', x: 8, z: 9 };
+  for (const [faction, color, life, shellColor] of [
+    [0, 0xffd2a0, .1, 0xffce8f], [1, 0xafe8a6, .1, 0xb8eba3], [2, 0xd9bfff, .19, 0xffce8f]
+  ]) {
+    const e = Object.freeze({ kind: 'unit', type: 'rifle', x: 0, z: 0, rot: 0, team: 0, faction });
+    effects.shot(e, target); effects.shell(e, target, .85);
+    assert.equal(effects.fx.at(-2).color, color); assert.equal(effects.fx.at(-2).life, life);
+    assert.equal(effects.fx.at(-1).color, shellColor);
+  }
+});
+
+test('entity models stay identical when faction, unit and building display names change', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world-view']);
+  const { renderEntity, UNITS, BUILDINGS } = vm.runInContext('({renderEntity, UNITS, BUILDINGS})', context);
+  const draw = () => {
+    const renderer = createRendererStub({ record: true });
+    for (const faction of [0, 1, 2]) for (const team of [0, 1])
+      for (const [kind, definitions] of [['unit', UNITS], ['building', BUILDINGS]])
+        for (const [type, d] of Object.entries(definitions))
+          renderEntity(renderer, Object.freeze({ id: 1, kind, type, faction, team,
+            hp: d.hp, size: d.size, x: 0, z: 0, progress: 1, rot: .7, walk: 0, carry: 0 }), 0);
+    return renderer.calls;
+  };
+  const before = draw();
+  vm.runInContext(`FACTIONS.forEach(f => {
+    f.name = f.short = 'Revised';
+    for (const names of [f.units, f.buildings]) for (const key of Object.keys(names)) names[key] = 'Revised';
+  });`, context);
+  assert.deepEqual(draw(), before);
 });
 
 test('effect provider follows the current game RNG and resets on each new start', () => {

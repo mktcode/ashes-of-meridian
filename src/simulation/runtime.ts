@@ -15,7 +15,7 @@
         for (let e of economic) {
           if (e.team === 0) {
             if (e.type === 'hq') {
-              if (e.faction === 0)
+              if (e.faction === FACTION_ID.FIRST)
                 for (let n of this.near(
                   e.x,
                   e.z,
@@ -35,7 +35,7 @@
           if (e.maxShield && s.time - e.lastHit > 7)
             e.shield = Math.min(e.maxShield, e.shield + dt * e.maxShield * 0.075);
           if (e.kind === 'unit' && s.time - e.lastHit > 6) {
-            let regen = e.faction === 1 ? 2.1 : 0;
+            let regen = e.faction === FACTION_ID.SECOND ? 2.1 : 0;
             e.hp = Math.min(e.maxHp, e.hp + regen * dt);
           }
           if (e.kind === 'building') {
@@ -104,7 +104,7 @@
             strike.team === 0 ? 0xa2e3db : 0xf2b084
           );
           this.emit('explosion', { x: strike.x, z: strike.z, big: true });
-          if (strike.type === 'orbital' && s.faction === 1)
+          if (strike.type === 'orbital' && s.faction === FACTION_ID.SECOND)
             s.fields.push({ type: 'bloom', x: strike.x, z: strike.z, r: 10, until: s.time + 7 });
         }
         s.strikes = s.strikes.filter(a => !a.done);
@@ -243,8 +243,8 @@
             x: p.x,
             z: p.z,
             at: s.time + 2.2,
-            radius: s.faction === 2 ? 8 : 10,
-            damage: s.faction === 2 ? 440 : s.faction === 1 ? 260 : 355,
+            radius: s.faction === FACTION_ID.THIRD ? 8 : 10,
+            damage: s.faction === FACTION_ID.THIRD ? 440 : s.faction === FACTION_ID.SECOND ? 260 : 355,
             team: 0,
             type: 'orbital'
           });

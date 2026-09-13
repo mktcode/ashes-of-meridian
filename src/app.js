@@ -51,7 +51,7 @@
           R.fogOn = false;
           preview = [];
           let id = 0;
-          function e(kind, type, x, z, faction = 0, team = 0) {
+          function e(kind, type, x, z, faction = FACTION_ID.FIRST, team = 0) {
             let d = kind === 'building' ? BUILDINGS[type] : UNITS[type] || {};
             preview.push({
               id: ++id,
@@ -90,8 +90,8 @@
             e('unit', 'rifle', 15 + (i % 3) * 1.8, 16 + Math.floor(i / 3) * 2);
           for (let i = 0; i < 7; i++)
             e('resource', 'crystal', -19 + Math.sin(i * 2) * 4, 25 + Math.cos(i * 2) * 4);
-          e('building', 'hq', -30, -48, 2, 1);
-          e('building', 'turret', -20, -39, 2, 1);
+          e('building', 'hq', -30, -48, FACTION_ID.THIRD, 1);
+          e('building', 'turret', -20, -39, FACTION_ID.THIRD, 1);
         };
         ui.showHome();
         document.getElementById('loading').classList.add('hidden');
@@ -196,7 +196,7 @@
                   kind === 'scan'
                     ? 32
                     : kind === 'orbital'
-                      ? s.faction === 2
+                      ? s.faction === FACTION_ID.THIRD
                         ? 8
                         : 10
                       : kind === 'repair'

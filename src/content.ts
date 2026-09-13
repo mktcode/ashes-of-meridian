@@ -1,5 +1,9 @@
 /* Battle definitions, balancing, iconography and faction nomenclature. */
 'use strict';
+// Stable numeric IDs; display names below are content, never lookup keys.
+const FACTION_ID = Object.freeze({ FIRST: 0, SECOND: 1, THIRD: 2 } as const);
+type FactionId = (typeof FACTION_ID)[keyof typeof FACTION_ID];
+
 const FACTIONS = [
   {
     name: 'The Free Marches',
@@ -399,18 +403,17 @@ const ICON_PATHS = {
 } as const satisfies Record<string, string>;
 
 type IconType = keyof typeof ICON_PATHS;
-type FactionId = 0 | 1 | 2;
 type FactionDefinition = (typeof FACTIONS)[FactionId];
 
 function icon(name: string) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICON_PATHS[name as IconType] || ICON_PATHS.hero}"/></svg>`;
 }
-function unitName(type: string, faction: FactionId = 0) {
+function unitName(type: string, faction: FactionId = FACTION_ID.FIRST) {
   return (
     FACTIONS[faction].units[type as UnitType] ||
     type
   );
 }
-function buildingName(type: string, faction: FactionId = 0) {
+function buildingName(type: string, faction: FactionId = FACTION_ID.FIRST) {
   return FACTIONS[faction].buildings[type as BuildingType] || type;
 }

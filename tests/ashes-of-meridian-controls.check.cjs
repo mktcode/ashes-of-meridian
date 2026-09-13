@@ -88,7 +88,7 @@ function setup() {
   };
   const click = dataset => document.handlers.click({ target: { closest: () => ({ dataset }) } });
   const clickCamera = cam => click({ cam });
-  return { ui, calls, key, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
+  return { context, ui, calls, key, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
 
 test('battle lifecycle reserves the world viewport only while the battlefield is displayed', () => {
@@ -782,6 +782,23 @@ test('battle setup and help describe starting workers and alloy levels', () => {
   assert.doesNotMatch(h.ui.html, /only your headquarters/);
 });
 
+test('faction labels come from content without changing enemy IDs, order or unlock requirements', () => {
+  const h = setup();
+  vm.runInContext(`FACTIONS.forEach((f, i) => { f.name = 'Faction <' + i + '> & revised'; });`, h.context);
+  h.ui.showBattle();
+  const html = h.document.getElementById('menu').innerHTML;
+  const enemies = html.match(/<select id="battleEnemy">([\s\S]*?)<\/select>/)[1];
+  assert.equal(enemies, [2, 1, 0].map(i =>
+    `<option value="${i}">Faction &lt;${i}&gt; &amp; revised</option>`).join(''));
+  for (const i of [0, 1]) assert.ok(html.includes(`Win once as Faction &lt;${i}&gt; &amp; revised.`));
+  h.ui.showHelp();
+  for (const i of [0, 1, 2]) assert.ok(h.ui.html.includes(`<b>Faction &lt;${i}&gt; &amp; revised</b>`));
+  h.ui.factionJustUnlocked = 1;
+  h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
+  h.UI.prototype.showResult.call(h.ui, { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
+  assert.ok(h.ui.html.includes('NEW FACTION UNLOCKED · Faction &lt;1&gt; &amp; revised'));
+});
+
 test('factions unlock sequentially after victories with the preceding faction', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.showBattle();
   let html = h.document.getElementById('menu').innerHTML;
@@ -1149,7 +1166,7 @@ test('all factions share the minimal recruitment categories, including HQ units 
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
-test('only Free Marches recruitment/build buttons use local model portraits without changing actions or labels', () => {
+test('only faction 0 recruitment/build buttons use local model portraits without changing actions or labels', () => {
   const h = setup();
   for (const [key, label, type, cost, file, gas = 0] of [
     ['train:worker', 'Prospector', 'worker', 50, 'assets/portraits/preview-prospector.webp'],

@@ -2,6 +2,12 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Neutrale Fraktionsbezeichner
+
+- `FACTION_ID.FIRST / SECOND / THIRD` ersetzen technische Fraktionsliterale bei unveränderten Werten 0/1/2. Typ daraus abgeleitet; Portrait-Zuordnung und Modellkommentare neutral benannt. Gegnerauswahl, Freischaltungshilfe und Ergebnis verwenden Katalognamen; ID-/Dateikonvention in Architektur und Grafikreferenz festgehalten. Kein Modellumbau, Balancing-, RNG- oder Profilformatwechsel.
+- **Geprüft:** Ausgangslauf `npm test` **252/253**, nach Änderung **255/256**; unverändert einziger Fehler ist die alte Field-Manual-Erwartung `Move (default)`. Neue Tests sichern ID-Reihenfolge und vom Anzeigenamen unabhängige UI-/Modell-/Schussvarianten. Zusätzlich 756 Modellvarianten, fünf Mesh-Fabriken und drei kontrollierte 20-s-Fraktionsruns samt RNG/Schussdaten gegen den Ausgangsbuild verglichen: identisch. Fixtures unverändert; Diff geprüft.
+- **Chromium `file://`:** 1280×800 und 390×844, Gefecht/Portraits und Auswahl gesichtet; umbenannte Testnamen einschließlich `<>&`, Gegnerreihenfolge 2/1/0, kontrollierte Freischaltungen 1→2 und Profil-Reload geprüft. GL 0, keine Lade-/Laufzeitfehler; Software-WebGL meldet Deprecation-Warnung, keine Sicherheitsflags gelockert. Kein Echtgerät-/vollständiger Run-Nachweis.
+
 ## Dirt-Projektion in nativer Dichte
 
 - Die 941×1672-Dirt-Textur wird nicht mehr auf eine quadratische 83,3×83,3-m-Wiederholung verzerrt. Der Shader leitet die UV-Skalierung jetzt aus der tatsächlichen Texturgröße ab und hält auf beiden Achsen 14 Quellpixel pro Weltmeter; dadurch bleiben Seitenverhältnis und näherungsweise native Bildschirmdichte bei der Standardansicht erhalten. Beleuchtung, Schatten, Fog, Dekor, RNG und Quelldatei bleiben unverändert.

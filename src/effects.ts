@@ -73,7 +73,7 @@ class MeridianEffects {
             startY: height,
             life: travel,
             maxLife: travel,
-            color: e.faction === 1 ? 0xb8eba3 : 0xffce8f
+            color: e.faction === FACTION_ID.SECOND ? 0xb8eba3 : 0xffce8f
           });
       }
       shot(e: UnitEntity | BuildingEntity, target: Entity) {
@@ -87,12 +87,12 @@ class MeridianEffects {
               tx: target.x,
               ty: th,
               tz: target.z,
-              life: e.faction === 2 ? 0.19 : 0.1,
+              life: e.faction === FACTION_ID.THIRD ? 0.19 : 0.1,
               maxLife: 0.19,
               color:
-                e.faction === 1
+                e.faction === FACTION_ID.SECOND
                   ? 0xafe8a6
-                  : e.faction === 2
+                  : e.faction === FACTION_ID.THIRD
                     ? 0xd9bfff
                     : e.team === 1
                       ? 0xf49685
