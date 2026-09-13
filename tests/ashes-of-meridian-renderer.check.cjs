@@ -157,16 +157,18 @@ test('map render profiles select cached textures and independent decor uniforms 
   h.r.groundTex = 'dirt'; h.r.metalTex = 'metal'; h.r.bioTex = 'bio'; h.r.skyTex = 'sky';
   for (const texture of ['ground', 'metal', 'bio']) {
     h.calls.length = 0;
-    h.r.battlefieldProfile = { groundTexture: texture, skyTexture: 'sky', groundPixelsPerMeter: 9,
+    h.r.battlefieldProfile = { groundTexture: texture, skyTexture: 'sky', groundPixelsPerMeter: 9, groundMirror: texture==='bio',
       rockDecor: { density: 0, opacity: .3 }, shrubDecor: { density: .6, opacity: 0 } };
     h.r.render(0);
     assert.ok(h.calls.some(c => c[0] === 'uniform1f' && c[1] === 'u_groundPixelsPerMeter' && c[2] === 9));
+    assert.ok(h.calls.some(c => c[0] === 'uniform1f' && c[1] === 'u_groundMirror' && c[2] === (texture==='bio'?1:0)));
     assert.ok(h.calls.some(c => JSON.stringify(c) === JSON.stringify(['uniform4f', 'u_groundDecor', 0, .6, .3, 0])));
     const slot = h.calls.findIndex(c => c[0] === 'activeTexture' && c[1] === 'TEXTURE2');
     assert.deepEqual(h.calls[slot + 1], ['bindTexture', 'TEXTURE_2D', h.r[`${texture}Tex`]]);
     assert.ok(!h.calls.some(c => ['texImage2D', 'createTexture'].includes(c[0])));
   }
   const frag = vm.runInContext('FRAG', h.context);
+  assert.ok(frag.includes('if(u_groundMirror>.5)'));assert.ok(frag.includes('1.-abs(mod(uv,2.)-1.)'));
   for (const component of ['x','y','z','w']) assert.ok(frag.includes('u_groundDecor.' + component));
 });
 

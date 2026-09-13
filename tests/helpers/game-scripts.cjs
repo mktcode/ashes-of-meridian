@@ -7,6 +7,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-assets',
   'renderer-geometry',
   'renderer-terrain-models',
+  'renderer-alien-terrain',
   'renderer-model-kit',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',

@@ -551,6 +551,7 @@
         g.uniform1ui(this.uniform(this.program, 'u_decorSeed'), this.decorSeed);
         const profile = this.battlefieldProfile;
         g.uniform1f(this.uniform(this.program, 'u_groundPixelsPerMeter'), profile.groundPixelsPerMeter);
+        g.uniform1f(this.uniform(this.program, 'u_groundMirror'), profile.groundMirror ? 1 : 0);
         g.uniform4f(this.uniform(this.program, 'u_groundDecor'), profile.rockDecor.density,
           profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
         g.uniform1f(this.uniform(this.program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);

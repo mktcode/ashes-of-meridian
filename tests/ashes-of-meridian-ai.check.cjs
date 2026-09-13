@@ -210,6 +210,21 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
     assert.ok(g.s.result,`no result at ${g.s.time}; ${JSON.stringify(g.s.ai)}`);
   });
 
+for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real economies cross the larger living map and finish a battle`,()=>{
+  const {g}=battle(faction,(faction+1)%3,43015+faction*97,'alien-planet');
+  g.enableAI(0);const counts=audit(g);let attacks=0;
+  for(let i=0;i<24000&&!g.s.result;i++) {
+    g.step(.05);g.effects.tick(.05);
+    if(i%100===0){
+      attacks+=Object.values(g.s.ai).filter(a=>a.mode==='attack').length;
+      for(const team of [0,1])assert.ok(g.account(team).alloy>=0&&g.account(team).gas>=0);
+    }
+  }
+  assert.ok(counts.produced>=10&&counts.built>=6);assert.ok(attacks>0);
+  assert.ok(g.s.result,`no result at ${g.s.time}`);
+  assert.equal(g.world.extent,135);
+});
+
 test('seed 444213: the real opponent destroys an undefended HQ instead of stopping outside weapon range',()=>{
   const {g}=battle(0,2,444213,'desert');audit(g);advance(g,900);
   assert.equal(g.s.result?.win,false);assert.equal(own(g,0,'hq').length,0);

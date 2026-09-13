@@ -53,6 +53,9 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
   const {Battlefield,BattlefieldView,BATTLEFIELDS,TerrainModels}=vm.runInContext(
     '({Battlefield,BattlefieldView,BATTLEFIELDS,TerrainModels})',context);
   BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};
+  // Isolate size dispatch from the map's independently designed models/layout.
+  BATTLEFIELDS['alien-planet'].generate=BATTLEFIELDS.desert.generate;
+  BATTLEFIELDS['alien-planet'].layout=BATTLEFIELDS.desert.layout;
   const renderer=createRendererStub(), uploads=[], fogs=[], boundaries=[];
   // Test descriptor dispatch here; actual boundary meshes are checked in the terrain suite.
   TerrainModels.mountainRing=(seed,extent)=>{boundaries.push([seed,extent]); return [];};

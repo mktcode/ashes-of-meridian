@@ -68,6 +68,7 @@ interface BattlefieldRenderProfile {
   groundTexture: 'ground' | 'metal' | 'bio';
   skyTexture: 'sky';
   groundPixelsPerMeter: number;
+  groundMirror?: boolean;
   rockDecor: { density: number; opacity: number };
   shrubDecor: { density: number; opacity: number };
   haze: readonly [number, number, number];

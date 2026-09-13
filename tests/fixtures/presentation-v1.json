@@ -9,20 +9,6 @@
       "navigation": "a9edf79487cf5998b23b69394be292a244cbc9911621345cbc830dd2152fa72b"
     },
     {
-      "seed": 9017,
-      "map": "alien-planet",
-      "terrain": "186b3ea01351b6dbfe4d88aff31b56933d7461e5fbdea58b4882a93de21c45a8",
-      "placements": "d23abad1149b53c0116567a4986ed64347b4446233395039b4f84ee788429341",
-      "navigation": "4027300704f0bc0b4a4bc78c77170e58923cd72e8e98eefc90a1ab45acf886aa"
-    },
-    {
-      "seed": 1905,
-      "map": "alien-planet",
-      "terrain": "074a641a1068d66f898af851cd13b7bd7a7a3bf26fc83e22f7c1657f6a7d0d6d",
-      "placements": "984f8a31fc5ad6e4ca8cfec68fb7c46592b6f621d62e602f2516829f20bb7441",
-      "navigation": "4702132a4d996e7827531394d20b6e3b9074a3f3fa99c95cf50fcb5c9b4acd62"
-    },
-    {
       "seed": 2219,
       "map": "desert",
       "terrain": "9b770a139fd5879bc52ea05838e96b7e071d95fe735e7ed5c424e85607dd3b3d",
@@ -30,32 +16,11 @@
       "navigation": "2a34f556b7d2003f909f97a6e1c5413b8dd682b90bc7b7ace65de030cab54186"
     },
     {
-      "seed": 6633,
-      "map": "alien-planet",
-      "terrain": "f36c644d75a5982da2744800072c6b2c22dc3d2415e12394610c9433eff2dacb",
-      "placements": "6e0179ac4add8b979f1db619f0fcc9697d0d82b59372d59f0580cbe544c88501",
-      "navigation": "a2bf030a3b828be104067b6d2f4ac5d8784aa896c9338a8af41151621437d425"
-    },
-    {
-      "seed": 4442,
-      "map": "alien-planet",
-      "terrain": "50f9841ad6d3b95e4afa865d8a0ec67d114fce987033f3e68892b6af1ea080d3",
-      "placements": "05120cefdd3cc4374247b897d5b18b2c0172c7e15645a1743addbbd326cfa77e",
-      "navigation": "8f233bfbee24f6d5d21023123e309f3e4d1a221326067935401a3aaef9217c09"
-    },
-    {
       "seed": 24080,
       "map": "desert",
       "terrain": "3489ed543b33612a1347837c7122574c8653a01fd30b56852e75aa1cc2bf25f2",
       "placements": "04317df3660c16989d86eb8c1c4779dcec3bca381338efc2c1b6b7d387f0b7ed",
       "navigation": "d88388b90a8bb54810caae7656c715322b926f68655097740aafa6d1c2d678fb"
-    },
-    {
-      "seed": 38744,
-      "map": "alien-planet",
-      "terrain": "68570e6adc69817c187ea5f8c1f28ab2b0f17a7d98ef37b039a924f7105e5dac",
-      "placements": "ae791f0940f64d1b716777bf783c5001bf9399b677476e15d0cdce48145e3755",
-      "navigation": "ebc90e6771aaa5df56685ce388a27ef2695610758374d716f8a23eedfd93446c"
     },
     {
       "seed": 43015,

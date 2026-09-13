@@ -8,7 +8,7 @@ const { join } = require('node:path');
 const { BATTLEFIELD_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 
 const scripts = readScripts();
-const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
+const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'renderer-alien-terrain', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
 const { geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS } =
   vm.runInContext('({geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS})', context);
 
@@ -127,8 +127,8 @@ test('embedded ground textures preserve the canonical WebP bytes without convers
 
 test('embedded material textures preserve the canonical WebP bytes without conversion', () => {
   for (const [key, file] of Object.entries({
-    metal: 'texture-floor-metal.webp',
-    bio: 'texture-floor-bio.webp'
+    metal: 'texture-floor-mothership.webp',
+    bio: 'texture-floor-alien-planet.webp'
   })) {
     const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
     assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
@@ -153,17 +153,12 @@ function layoutHash(w) {
 const originalLayouts = {
   1409: 'e008f2827368d27fda1bbbd04e3a8002f751ccd797edd7858becbd5f68419ce6',
   7012: 'c412c4ca92c24b7f53758ae1ada2974b7789ee240c88d6259729b7cc4155058a',
-  9017: 'ee6cdab2e6cfc5b2f823c2e087cbe0ea86cea8da4d7a316c1306c3c3e7eedd9b',
-  1905: '93e0e9dbf23c432e6d5f1097c227f5609d3af614648af4ea5cf723a653a117da',
   2219: '6481a6efd6af94048a5401f63d89c0aa3b00be9aa796cb63df477985a74b8818',
-  6633: '652ac00dd426772122f7e590331c35d1469e6461ea19fa3a227e23ded01645b1',
   1144: 'b8f035efd8e8be2e6cf71e93017ed948a582d2d2d460e7fa3b88f022858e8040',
-  4442: '55e5916aaec4307167d13169bd786a9d6ee5118100b297173bc7111d495ca287',
   8141: '43b394c16cdb8b0699964394572f391828f5ff426f28c1e424fc8a06e2b0b902',
   9897: '7a53e344e8d1fbea4f16999d5e39a6e3c27bd673ac5bb6fbb98e1d913e66bb48',
   11007: '40a49b63ddd50aa35023fde1f1e0439d9a567f266956a70267f222bd60942171',
   24080: '5afb1bf9af3ad0851b6c512f29cac192ffa863b176217fdad3d547f42123815c',
-  38744: '8d4ccde2f441981ca7e40e79e3021279ed87f860ebfb050ba81eb83723c4d80a',
   43015: 'e07ff802b2668fbd173ed1ce465d1136adb9a09f05149b5e2c915bccd6f9cac6',
   74408: '8b53d0c255a50ab3d344919f919c7f860517e8e1be50d747d98d18bccb0d88cf',
   90001: '765c115f340f522ad28aa67e996f2ccb8bb07b7012c443cb51ecafb13989792c',
@@ -257,8 +252,8 @@ test('mountain belt is seeded, continuous and outside the playable ground', () =
   }
 });
 
-// Fixed terrain inputs cover every remaining map.
-const terrainCases = [[1409,'desert'],[9017,'alien-planet'],[1905,'alien-planet'],[2219,'desert'],[6633,'alien-planet'],[4442,'alien-planet'],[24080,'desert'],[38744,'alien-planet'],[43015,'mothership'],[74408,'mothership'],[90001,'mothership']];
+// Unchanged maps keep their original digests. Alien's intentional redesign is checked below.
+const terrainCases = [[1409,'desert'],[2219,'desert'],[24080,'desert'],[43015,'mothership'],[74408,'mothership'],[90001,'mothership']];
 for (const [seed, map] of terrainCases) {
   test(`terrain ${seed} (${map}): original layout and varied textured rocks`, () => {
     const battlefield = new Battlefield(seed, map), placements = battlefield.renderData.placements;
@@ -306,6 +301,80 @@ for (const [seed, map] of terrainCases) {
     assert.ok(placements.every(p => [...p.position, ...p.scale].every(Number.isFinite)));
   });
 }
+
+function assertAlienAccess(w) {
+  const n=w.gridSize, sites=[w.layout.playerStart,...w.layout.enemySites.slice(0,1),...w.layout.resourceSites,
+    ...w.layout.resourceSites.map((p,i)=>({x:p.x+(i?7:5),z:p.z+(i?7:18)}))];
+  const seen=new Uint8Array(n*n), queue=[w.idx(sites[0].x,sites[0].z)];seen[queue[0]]=1;
+  for(let head=0;head<queue.length;head++) for(const i of [queue[head]-1,queue[head]+1,queue[head]-n,queue[head]+n]) {
+    if(i%n<1||i%n>=n-1||i<n||i>=(n-1)*n||seen[i])continue;
+    if([-n-1,-n,-n+1,-1,0,1,n-1,n,n+1].some(d=>w.staticGrid[i+d]))continue;
+    seen[i]=1;queue.push(i);
+  }
+  for(const p of sites) {
+    assert.equal(w.blockedAt(p.x,p.z),false,'unobstructed base/resource/vent');
+    assert.ok(queue.some(i=>{const q=w.point(i);return Math.hypot(q.x-p.x,q.z-p.z)<=5;}),'connected with body clearance');
+  }
+  assert.ok(w.lineFree(w.layout.playerStart,w.layout.enemySites[0]),'wide direct diagonal remains open');
+  for(const route of w.layout.corridors) for(let i=1;i<route.length;i++)
+    assert.ok(w.lineFree({x:route[i-1][0],z:route[i-1][1]},{x:route[i][0],z:route[i][1]}),'flank routes remain open');
+}
+for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}: larger living terrain with protected routes and resources`,()=>{
+  const w=new Battlefield(seed,'alien-planet'),p=w.renderData.placements;
+  assert.deepEqual([w.extent,w.gridSize,w.cellSize],[135,108,2.5]);
+  assert.equal((w.extent/BATTLEFIELDS.desert.size.extent)**2,2.25);
+  assert.equal(w.definition.render.groundTexture,'bio');assert.equal(w.definition.render.groundMirror,true);
+  assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
+  assert.equal(w.renderData.features.length,2);assert.ok(w.rocks.length>=15&&w.rocks.length<=45);
+  assert.ok(p.length>=250&&p.length<=650);
+  assert.equal(p.filter(p=>p.mesh==='alienCanopy').length,1);
+  assert.ok(!p.some(p=>/rock|massif|mountain|box/.test(p.mesh)&&p.position[1]!==-8),'no desert props or cargo');
+  for(const m of w.renderData.features) {
+    assert.equal(m.outline.length,48);assert.ok(m.height<=15);
+    assert.ok(m.outline.every(p=>Math.max(Math.abs(p.x),Math.abs(p.z))<=126));
+    assert.equal(w.terrainFeatureGrid[w.idx(m.x,m.z)],1);
+    const dx=Math.sin(m.yaw)*(m.depth+9),dz=Math.cos(m.yaw)*(m.depth+9),
+      a={x:m.x-dx,z:m.z-dz},b={x:m.x+dx,z:m.z+dz};
+    assert.equal(w.lineFree(a,b),false);
+    const path=w.path(a.x,a.z,b.x,b.z);assert.ok(path.length>1);
+    let last=a;for(const q of path){assert.ok(w.lineFree(last,q));last=q;}
+    assert.ok(Math.hypot(last.x-b.x,last.z-b.z)<5);
+  }
+  assertAlienAccess(w);
+  assert.ok(p.every(p=>[...p.position,...p.scale,...p.rotation].every(Number.isFinite)));
+});
+
+test('Alien layout remains accessible over 40 additional seeds and repeats its private streams exactly',()=>{
+  for(let seed=1;seed<=40;seed++) {
+    const w=new Battlefield(seed*7919,'alien-planet');assert.equal(w.renderData.features.length,2);assertAlienAccess(w);
+  }
+  const a=new Battlefield(43015,'alien-planet'),b=new Battlefield(43015,'alien-planet'),other=new Battlefield(43016,'alien-planet');
+  assert.deepEqual(a.renderData,b.renderData);assert.deepEqual(a.staticGrid,b.staticGrid);
+  assert.notDeepEqual(a.renderData.placements,other.renderData.placements);
+  assert.deepEqual(a.layout,other.layout,'seed variation preserves strategic anchor points');
+});
+
+test('Alien mesh factories are deterministic, finite, bounded and remain below explicit budgets',()=>{
+  const w=new Battlefield(43015,'alien-planet');
+  const budgets={alienCanopy:60000,alienGrove:35000,alienGroveLight:5000,alienPod:2200,alienFern:100,alienSpore:350};
+  for(const descriptor of w.renderData.geometries) {
+    const mesh=TerrainModels.geometry(descriptor);assert.equal(mesh.length%27,0);
+    assert.ok(mesh.length/27>0&&mesh.length/27<=budgets[descriptor.model],`${descriptor.model}: ${mesh.length/27}`);
+    assert.deepEqual(mesh,TerrainModels.geometry(descriptor));
+    const limit=descriptor.feature?135:descriptor.model==='alienCanopy'?210:4;
+    for(let i=0;i<mesh.length;i+=9) {
+      for(let k=0;k<9;k++)assert.ok(Number.isFinite(mesh[i+k]));
+      assert.ok(Math.abs(mesh[i])<=limit&&Math.abs(mesh[i+2])<=limit);
+      assert.ok(mesh[i+1]>=-8&&mesh[i+1]<=28);
+      assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-5);
+    }
+    for(let i=0;i<mesh.length;i+=27){
+      const a=mesh.slice(i,i+3),b=mesh.slice(i+9,i+12),c=mesh.slice(i+18,i+21),
+        u=b.map((v,k)=>v-a[k]),v=c.map((v,k)=>v-a[k]);
+      assert.ok(Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])>1e-9,'nondegenerate faces');
+    }
+  }
+});
 
 test('navigation goes around a broad massif instead of crossing its slopes', () => {
   const w = new Battlefield(43015, 'desert'), m = w.renderData.features[0],
