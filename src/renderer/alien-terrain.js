@@ -92,7 +92,7 @@
     const rand=seeded(m.seed ^ 0x47524f56),out=[];
     if(!luminous)bed(out,m);
     // The same private sequence supplies the body and its separate low-intensity phosphor mesh.
-    for(let i=0;i<85;i++) {
+    for(let i=0;i<120;i++) {
       const x=m.x+(rand()-.5)*m.width*1.8,z=m.z+(rand()-.5)*m.depth*1.8,
         phase=rand()*Math.PI*2,h=4+rand()*(m.height-4),r=1.8+rand()*2.1;
       // Contract the sampling footprint so crowns and roots stay inside the blocking mat.
@@ -108,7 +108,7 @@
         tube(out,[[x-r,.08,z-r,.1],[x-r*.4,.65,z,r*.32],[x+r,.1,z+r,.1]],root,6);
       }
     }
-    if(!luminous) for(let i=0;i<140;i++) {
+    if(!luminous) for(let i=0;i<200;i++) {
       const x=m.x+(rand()-.5)*m.width*2,z=m.z+(rand()-.5)*m.depth*2;
       if(within(m.x+(x-m.x)*1.06,m.z+(z-m.z)*1.06,m.outline))
         fern(out,x,z,1.4+rand()*1.4,rand()*Math.PI*2);
@@ -121,6 +121,7 @@
   TerrainModels.alienSpore=()=>{
     const out=[];spore(out,0,0,.85,.25);spore(out,.4,.25,.5,.19);spore(out,-.3,.15,.65,.22);return out;
   };
+  TerrainModels.alienSapling=()=>{const out=[];mushroom(out,0,0,2.4,.8,.4,0);return out;};
   TerrainModels.alienPod=seed=>{
     const out=[],rand=seeded(seed ^ 0x504f4453);
     const m={x:0,z:0,outline:Array.from({length:16},(_,i)=>({x:Math.cos(i*Math.PI/8)*.95,z:Math.sin(i*Math.PI/8)*.95}))};

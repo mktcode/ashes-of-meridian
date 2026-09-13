@@ -28,7 +28,7 @@ function createAlienGrove(rand: () => number, world: Battlefield): WorldTerrainF
   const side = world.renderData.features.length ? 1 : -1;
   const m: WorldTerrainFeature = {
     x: side * (39 + rand() * 7), z: side * (31 + rand() * 7),
-    width: 27 + rand() * 4, depth: 21 + rand() * 3, height: 12 + rand() * 3,
+    width: (27 + rand() * 4) * 1.2, depth: (21 + rand() * 3) * 1.2, height: 12 + rand() * 3,
     yaw: -.5 + rand() * .25, seed: Math.floor(rand() * 0x100000000), outline: []
   };
   const phase = rand() * Math.PI * 2, cs = Math.cos(m.yaw), sn = Math.sin(m.yaw);
@@ -47,8 +47,8 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
     world.layout.resourceSites.some((q, i) => distance(p, { x: q.x + (i ? 7 : 5), z: q.z + (i ? 7 : 18) }) < margin);
   const lane = (p: Position, margin: number) => builder.lanes.some(([a, b]) => pointSegment(p, a, b) < margin);
   const prop = (mesh: string, x: number, z: number, scale: number, yaw: number, glow = 0) =>
-    place(mesh, x, -.1, z, scale, scale, scale, 0xffffff, yaw, 0, 0, glow, 1, 'static', mesh === 'alienPod' ? 'ALIEN' : 'AUTO');
-  for (const model of ['alienPod', 'alienFern', 'alienSpore'])
+    place(mesh, x, -.1, z, scale, scale, scale, 0xffffff, yaw, 0, 0, glow, 1, 'static', mesh === 'alienPod' || mesh === 'alienSapling' ? 'ALIEN' : 'AUTO');
+  for (const model of ['alienPod', 'alienFern', 'alienSpore', 'alienSapling'])
     world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent: world.extent });
 
   // Root colonies are the small, genuinely blocking obstacles. Routes and resource aprons stay open.
@@ -59,6 +59,23 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
     world.mark(world.staticGrid, p.x, p.z, r);
     world.rocks.push({ ...p, r });
     prop('alienPod', p.x, p.z, r, obstacles() * Math.PI * 2);
+  }
+  // Scattered young growth just inside all four edges, with its own placement stream.
+  // Stems are real small blockers; low companion ferns remain cosmetic.
+  const fringe = seeded(world.seed ^ 0x45444745);
+  for (let side = 0; side < 4; side++) for (let i = 0; i < 14; i++) {
+    const along = ((i + .2 + fringe() * .6) / 14 - .5) * (world.extent * 2 - 32),
+      edge = world.extent - 6 - fringe() * 4,
+      p = side < 2 ? { x: along, z: edge * (side ? -1 : 1) } : { x: edge * (side === 2 ? -1 : 1), z: along },
+      r = 1.5 + fringe() * .7;
+    if (safe(p, r + 14) || lane(p, r + 7) || world.rocks.some(q => distance(p, q) < r + q.r + 4)) continue;
+    world.mark(world.staticGrid, p.x, p.z, r);
+    world.rocks.push({ ...p, r });
+    prop('alienSapling', p.x, p.z, r, fringe() * Math.PI * 2);
+    for (let j = 0; j < 3; j++) {
+      const a = fringe() * Math.PI * 2, d = r + .5 + fringe();
+      prop('alienFern', p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, .8 + fringe() * .8, a);
+    }
   }
   builder.features(createAlienGrove, 'alienGrove', 'ALIEN');
   for (let i = 0; i < world.renderData.features.length; i++) {

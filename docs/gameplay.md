@@ -23,7 +23,7 @@
 
 ## Gelände
 
-**Desert und Mothership** sind 180 × 180 m groß. Ein geschlossener Gebirgsring rahmt sie ein; im Inneren liegen kleine Felsblocker und höchstens zwei breite, nicht begehbare Gebirgszüge. **Alien Planet** bietet 270 × 270 m (+125 % Fläche), eine freie diagonale Hauptfront, zwei äußere Flankenrouten und acht Ressourcenbereiche. Zwei dichte Pilz-/Wurzelhaine und kleinere Pilzkolonien ersetzen dort Felsblocker; der Rand ist ein hoher Vegetationsgürtel. Niedrige Farne und Sporen außerhalb der Haine sind Dekoration, keine weiteren Blocker.
+**Desert und Mothership** sind 180 × 180 m groß. Ein geschlossener Gebirgsring rahmt sie ein; im Inneren liegen kleine Felsblocker und höchstens zwei breite, nicht begehbare Gebirgszüge. **Alien Planet** bietet 270 × 270 m (+125 % Fläche), eine freie diagonale Hauptfront, zwei äußere Flankenrouten und acht Ressourcenbereiche. Zwei dichte Pilz-/Wurzelhaine und kleinere Pilzkolonien ersetzen dort Felsblocker; der Rand ist ein hoher Vegetationsgürtel mit vereinzelten kleinen, ebenfalls blockierenden Jungpilzen auf der Innenseite. Niedrige Farne und Sporen außerhalb der Haine sind Dekoration, keine weiteren Blocker.
 
 Große Hindernisse erscheinen auf der Minimap dunkler. Die Erzeugung hält Startbasen und Ressourcenbereiche frei und prüft verbundene Zugänge. Terrain und hohe Vegetation können Einheiten dahinter verdecken, ohne sich automatisch auszublenden. Die größere Alien-Karte hat längere Wege; Ressourcenmengen, Einheitenwerte und übrige Regeln bleiben gleich.
 

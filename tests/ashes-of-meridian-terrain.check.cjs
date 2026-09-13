@@ -325,12 +325,26 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
   assert.equal((w.extent/BATTLEFIELDS.desert.size.extent)**2,2.25);
   assert.equal(w.definition.render.groundTexture,'bio');assert.equal(w.definition.render.groundMirror,true);
   assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
-  assert.equal(w.renderData.features.length,2);assert.ok(w.rocks.length>=15&&w.rocks.length<=45);
-  assert.ok(p.length>=250&&p.length<=650);
+  assert.equal(w.renderData.features.length,2);
+  const pods=p.filter(p=>p.mesh==='alienPod'),fringe=p.filter(p=>p.mesh==='alienSapling');
+  assert.ok(pods.length>=15&&pods.length<=45);assert.ok(fringe.length>=40&&fringe.length<=56);
+  assert.equal(w.rocks.length,pods.length+fringe.length);
+  assert.ok(p.length>=400&&p.length<=850);
+  for(const [axis,sign] of [[0,1],[0,-1],[2,1],[2,-1]])
+    assert.ok(fringe.filter(p=>p.position[axis]*sign>=125).length>=10,'scattered growth on every edge');
+  for(const plant of fringe) {
+    const [x,,z]=plant.position,r=plant.scale[0],q={x,z};
+    assert.ok(Math.max(Math.abs(x),Math.abs(z))+r<132,'stem and crown stay inside the border');
+    assert.ok(w.rocks.some(p=>p.x===x&&p.z===z&&p.r===r));assert.ok(w.blockedAt(x,z),'solid stems');
+    for(const route of w.layout.corridors) for(let i=1;i<route.length;i++)
+      assert.ok(pointSegment(q,{x:route[i-1][0],z:route[i-1][1]},{x:route[i][0],z:route[i][1]})>=r+7);
+  }
   assert.equal(p.filter(p=>p.mesh==='alienCanopy').length,1);
   assert.ok(!p.some(p=>/rock|massif|mountain|box/.test(p.mesh)&&p.position[1]!==-8),'no desert props or cargo');
   for(const m of w.renderData.features) {
     assert.equal(m.outline.length,48);assert.ok(m.height<=15);
+    const area=Math.abs(m.outline.reduce((sum,p,i)=>{const q=m.outline[(i+1)%48];return sum+p.x*q.z-q.x*p.z;},0))/2;
+    assert.ok(area>=2000&&area<=2800,'enlarged grove footprint, not just oversized crowns');
     assert.ok(m.outline.every(p=>Math.max(Math.abs(p.x),Math.abs(p.z))<=126));
     assert.equal(w.terrainFeatureGrid[w.idx(m.x,m.z)],1);
     const dx=Math.sin(m.yaw)*(m.depth+9),dz=Math.cos(m.yaw)*(m.depth+9),
@@ -356,7 +370,7 @@ test('Alien layout remains accessible over 40 additional seeds and repeats its p
 
 test('Alien mesh factories are deterministic, finite, bounded and remain below explicit budgets',()=>{
   const w=new Battlefield(43015,'alien-planet');
-  const budgets={alienCanopy:60000,alienGrove:35000,alienGroveLight:5000,alienPod:2200,alienFern:100,alienSpore:350};
+  const budgets={alienCanopy:60000,alienGrove:50000,alienGroveLight:5000,alienPod:2200,alienFern:100,alienSpore:350,alienSapling:500};
   for(const descriptor of w.renderData.geometries) {
     const mesh=TerrainModels.geometry(descriptor);assert.equal(mesh.length%27,0);
     assert.ok(mesh.length/27>0&&mesh.length/27<=budgets[descriptor.model],`${descriptor.model}: ${mesh.length/27}`);
