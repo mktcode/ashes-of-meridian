@@ -42,7 +42,7 @@ Kartenrezepte besitzen Größe, Layout, Renderprofil und explizite Bauphasen. Ge
 
 Die CPU-Welt beschreibt Terrain über `renderData`; `BattlefieldView` übernimmt es ohne Mutation und löst deklarierte Geometrien auf. Die Objektidentität von `renderData` ist die Layout-Revision, `fogVersion` die Sicht-Revision. Fog-/Minimap-Puffer müssen bei Größenwechsel wachsen und schrumpfen, ohne Daten der vorherigen Welt zu übernehmen. Sichtbare Blocker und CPU-Umrisse müssen zusammenpassen; Basis-/Ressourcenzugänge bleiben erreichbar.
 
-**RNG ist eine Verhaltensgrenze:** Bestehende Terrainphasen auf Desert/Mothership verschachteln Hindernis- und Dekorzufall. Zusätzliche kosmetische Samples können damit Spielwege ändern. Neue Dekoration nutzt `builder.cosmeticRandom(salt)` mit eigener stabiler Kennung; bestehende Ströme nicht nebenbei umstellen. Reservierte Startsamples erhalten nach entfernten Systemen weiterhin die RNG-Position und dürfen nicht als toter Code entfallen.
+**RNG ist eine Verhaltensgrenze:** Bestehende Terrainphasen auf Desert verschachteln Hindernis- und Dekorzufall. Zusätzliche kosmetische Samples können damit Spielwege ändern. Neue Dekoration nutzt `builder.cosmeticRandom(salt)` mit eigener stabiler Kennung; bestehende Ströme nicht nebenbei umstellen. Reservierte Startsamples erhalten nach entfernten Systemen weiterhin die RNG-Position und dürfen nicht als toter Code entfallen.
 
 Auch Erzeugung und Tick kosmetischer Effekte nutzen teilweise den Simulations-RNG; unsichtbare Effekte deshalb nicht einfach überspringen. Reines Zeichnen verbraucht keinen RNG. Geometrieverfeinerung, Kollisionsänderung und Layoutänderung getrennt behandeln und gegen [feste Referenzen](reference-tests.md) prüfen.
 

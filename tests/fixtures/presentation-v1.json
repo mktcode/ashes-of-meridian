@@ -21,27 +21,6 @@
       "terrain": "3489ed543b33612a1347837c7122574c8653a01fd30b56852e75aa1cc2bf25f2",
       "placements": "04317df3660c16989d86eb8c1c4779dcec3bca381338efc2c1b6b7d387f0b7ed",
       "navigation": "d88388b90a8bb54810caae7656c715322b926f68655097740aafa6d1c2d678fb"
-    },
-    {
-      "seed": 43015,
-      "map": "mothership",
-      "terrain": "b2b7aa6a0fc380e89e299794cd02327e687e6a77dc40606176aafb2419713edc",
-      "placements": "235b4c7f18ed12802dce95ff2873d7d1c33e46fa6a05a2431c7b0f3d56d6a2a1",
-      "navigation": "7ec5a2c1ac31c8be68f21a7a67d7f114ee402209a44ffddaf996b49eaa1f9b77"
-    },
-    {
-      "seed": 74408,
-      "map": "mothership",
-      "terrain": "3259b25de85b3effe0db4e654bc683edd2824a0d2b9bdb3a3b3bc8233f79b3b4",
-      "placements": "c11ef3fddb53e14367bf6a56e202b0aef8ecb58ab86546ce36c9b635beae194a",
-      "navigation": "139d207943e1112eeb83d9f89925e3a8a31677a9608ba7fefdb9d3701b22d978"
-    },
-    {
-      "seed": 90001,
-      "map": "mothership",
-      "terrain": "d8476af723f85d34b3342db354624015cc95c7e93be924f6beadf8879a1c3207",
-      "placements": "d51cdab497120b97a5f457195e00fa950890c25a1a8067c1dbe721c059cfcd4d",
-      "navigation": "021378f1a4d31c324f72d26ba037ae6653ced72baf7f6a86079e082ef2f63094"
     }
   ],
   "effects": {

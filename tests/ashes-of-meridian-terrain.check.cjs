@@ -8,7 +8,7 @@ const { join } = require('node:path');
 const { BATTLEFIELD_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 
 const scripts = readScripts();
-const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'renderer-alien-terrain', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
+const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'renderer-alien-terrain', 'renderer-mothership-terrain', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
 const { geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS } =
   vm.runInContext('({geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS})', context);
 
@@ -159,9 +159,6 @@ const originalLayouts = {
   9897: '7a53e344e8d1fbea4f16999d5e39a6e3c27bd673ac5bb6fbb98e1d913e66bb48',
   11007: '40a49b63ddd50aa35023fde1f1e0439d9a567f266956a70267f222bd60942171',
   24080: '5afb1bf9af3ad0851b6c512f29cac192ffa863b176217fdad3d547f42123815c',
-  43015: 'e07ff802b2668fbd173ed1ce465d1136adb9a09f05149b5e2c915bccd6f9cac6',
-  74408: '8b53d0c255a50ab3d344919f919c7f860517e8e1be50d747d98d18bccb0d88cf',
-  90001: '765c115f340f522ad28aa67e996f2ccb8bb07b7012c443cb51ecafb13989792c',
 };
 
 test('all named classic scripts parse, including local files and scripts not executed by these tests', () => {
@@ -252,8 +249,8 @@ test('mountain belt is seeded, continuous and outside the playable ground', () =
   }
 });
 
-// Unchanged maps keep their original digests. Alien's intentional redesign is checked below.
-const terrainCases = [[1409,'desert'],[2219,'desert'],[24080,'desert'],[43015,'mothership'],[74408,'mothership'],[90001,'mothership']];
+// Desert keeps its original digests; redesigned maps use independent geometric/access checks.
+const terrainCases = [[1409,'desert'],[2219,'desert'],[24080,'desert']];
 for (const [seed, map] of terrainCases) {
   test(`terrain ${seed} (${map}): original layout and varied textured rocks`, () => {
     const battlefield = new Battlefield(seed, map), placements = battlefield.renderData.placements;
@@ -302,7 +299,7 @@ for (const [seed, map] of terrainCases) {
   });
 }
 
-function assertAlienAccess(w) {
+function assertMapAccess(w) {
   const n=w.gridSize, sites=[w.layout.playerStart,...w.layout.enemySites.slice(0,1),...w.layout.resourceSites,
     ...w.layout.resourceSites.map((p,i)=>({x:p.x+(i?7:5),z:p.z+(i?7:18)}))];
   const seen=new Uint8Array(n*n), queue=[w.idx(sites[0].x,sites[0].z)];seen[queue[0]]=1;
@@ -357,13 +354,13 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
     assert.equal(w.terrainColors[i*4+c],byte[0],'minimap marks actual solid ground');
   }
   assert.equal(p.filter(p=>p.mesh==='alienForestFloor'&&p.material==='GROUND').length,1);
-  assertAlienAccess(w);
+  assertMapAccess(w);
   assert.ok(p.every(p=>[...p.position,...p.scale,...p.rotation].every(Number.isFinite)));
 });
 
 test('Alien layout remains accessible over 40 additional seeds and repeats its private streams exactly',()=>{
   for(let seed=1;seed<=40;seed++) {
-    const w=new Battlefield(seed*7919,'alien-planet');assertAlienAccess(w);
+    const w=new Battlefield(seed*7919,'alien-planet');assertMapAccess(w);
   }
   const a=new Battlefield(43015,'alien-planet'),b=new Battlefield(43015,'alien-planet'),other=new Battlefield(43016,'alien-planet');
   assert.deepEqual(a.renderData,b.renderData);assert.deepEqual(a.staticGrid,b.staticGrid);
@@ -411,6 +408,74 @@ test('Alien exterior and understory randomness cannot relocate solid roots',()=>
     assert.deepEqual(a.terrainColors,b.terrainColors);assert.deepEqual(a.renderData.groundColors,b.renderData.groundColors);
     assert.notDeepEqual(a.renderData.placements,b.renderData.placements);
   } finally {Builder.prototype.cosmeticRandom=original;}
+});
+
+for(const seed of [43015,74408,90001]) test(`Mothership ${seed}: closed architecture with open deck, flanks and resource docks`,()=>{
+  const w=new Battlefield(seed,'mothership'),p=w.renderData.placements;
+  assert.deepEqual([w.extent,w.gridSize,w.cellSize],[90,72,2.5]);
+  assert.equal(w.definition.render.groundTexture,'metal');assert.equal(w.definition.render.groundMirror,true);
+  assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
+  assert.equal(w.definition.worldEvent,'solarFlare');assert.equal(w.rocks.length,0);
+  assert.equal(w.renderData.features.length,6);
+  for(const f of w.renderData.features) {
+    assert.equal(f.outline.length,4);
+    const body=p.find(p=>p.position[0]===f.x&&p.position[2]===f.z&&['shipHangar','shipPlant'].includes(p.mesh));
+    assert.ok(body);assert.deepEqual(Array.from(body.scale),[f.width,f.height,f.depth]);assert.equal(body.rotation[0],f.yaw);
+    assert.ok(f.outline.every(q=>Math.max(Math.abs(q.x),Math.abs(q.z))<83));
+    assert.ok(w.blockedAt(f.x,f.z),'doors and plant islands are solid, not fake open portals');
+  }
+  for(let i=0;i<w.staticGrid.length;i++) {
+    const q=w.point(i),pad=w.cellSize*.5;
+    const blocked=w.renderData.features.some(f=>q.x>=Math.min(...f.outline.map(p=>p.x))-pad&&q.x<=Math.max(...f.outline.map(p=>p.x))+pad&&
+      q.z>=Math.min(...f.outline.map(p=>p.z))-pad&&q.z<=Math.max(...f.outline.map(p=>p.z))+pad);
+    assert.equal(w.staticGrid[i],+blocked);assert.equal(w.terrainFeatureGrid[i],+blocked);
+  }
+  assertMapAccess(w);
+  assert.equal(p.filter(p=>p.mesh==='shipCargoPad').length,8);assert.equal(p.filter(p=>p.mesh==='shipVentDock').length,8);
+  for(const [i,site] of w.layout.resourceSites.entries()) {
+    assert.ok(p.some(p=>p.mesh==='shipCargoPad'&&p.position[0]===site.x&&p.position[2]===site.z));
+    assert.ok(p.some(p=>p.mesh==='shipVentDock'&&p.position[0]===site.x+(i?7:5)&&p.position[2]===site.z+(i?7:18)));
+  }
+  assert.equal(p.filter(p=>p.mesh==='shipTransport').length,2);assert.equal(p.filter(p=>p.mesh==='shipBridge').length,1);
+  assert.equal(p.filter(p=>p.mesh==='shipHangar').length,12,'same modules continue outside the playable deck');
+  assert.ok(!p.some(p=>/rock|mountain|massif|alien/.test(p.mesh)));
+});
+
+test('Mothership exterior variety is deterministic and cannot alter its strategic layout or blockers',()=>{
+  const Builder=vm.runInContext('BattlefieldBuilder',context),original=Builder.prototype.cosmeticRandom;
+  const a=new Battlefield(43015,'mothership'),b=new Battlefield(43015,'mothership'),other=new Battlefield(74408,'mothership');
+  assert.deepEqual(a.renderData,b.renderData);assert.deepEqual(a.staticGrid,other.staticGrid);
+  assert.notDeepEqual(a.renderData.placements,other.renderData.placements);
+  try {
+    Builder.prototype.cosmeticRandom=()=>()=>.5;
+    const c=new Battlefield(43015,'mothership');
+    assert.deepEqual(a.staticGrid,c.staticGrid);assert.deepEqual(a.renderData.features,c.renderData.features);
+    assert.deepEqual(a.layout,c.layout);assert.notDeepEqual(a.renderData.placements,c.renderData.placements);
+  } finally {Builder.prototype.cosmeticRandom=original;}
+});
+
+test('Mothership reusable architecture has finite normals, bounded meshes and a modest instanced budget',()=>{
+  const w=new Battlefield(43015,'mothership'),triangles={},budgets={shipHangar:900,shipHangarLights:100,shipPlant:600,
+    shipCrate:300,shipTransport:600,shipTransportLights:150,shipBridge:600,shipCargoPad:300,shipVentDock:150,
+    shipOuterDeck:8,shipHull:3500,shipDeckPaint:3500};
+  for(const d of w.renderData.geometries) {
+    const mesh=TerrainModels.geometry(d);assert.equal(mesh.length%27,0);
+    triangles[d.mesh]=mesh.length/27;assert.ok(triangles[d.mesh]>0&&triangles[d.mesh]<=budgets[d.model],d.model);
+    assert.deepEqual(mesh,TerrainModels.geometry(d));
+    const large=['shipOuterDeck','shipHull','shipDeckPaint'].includes(d.model),pad=['shipCargoPad','shipVentDock'].includes(d.model);
+    for(let i=0;i<mesh.length;i+=9) {
+      for(let j=0;j<9;j++)assert.ok(Number.isFinite(mesh[i+j]));
+      assert.ok(Math.abs(Math.hypot(...mesh.slice(i+3,i+6))-1)<1e-6);
+      assert.ok(Math.abs(mesh[i])<=(large?190:pad?6.1:1.1));assert.ok(Math.abs(mesh[i+2])<=(large?220:pad?6:1.1));
+      assert.ok(mesh[i+1]>=(large?-17:-.1)&&mesh[i+1]<=1.4);
+      if(d.model==='shipOuterDeck') {assert.equal(mesh[i+1],-.13);assert.equal(mesh[i+4],1);}
+    }
+    for(let i=0;i<mesh.length;i+=27) {
+      const a=mesh.slice(i,i+3),u=mesh.slice(i+9,i+12).map((v,j)=>v-a[j]),v=mesh.slice(i+18,i+21).map((v,j)=>v-a[j]);
+      assert.ok(Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])>1e-10,'nondegenerate architecture');
+    }
+  }
+  assert.ok(w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+w.gridSize**2*2<60000);
 });
 
 test('navigation goes around a broad massif instead of crossing its slopes', () => {
