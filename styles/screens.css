@@ -158,6 +158,108 @@
       text-shadow: 0 2px 8px #000
     }
 
+    .home-screen .expedition-stage {
+      position: absolute;
+      left: calc(100% + clamp(70px, 13vw, 210px));
+      top: 50%;
+      width: clamp(190px, 20vw, 270px);
+      transform: translateY(-54%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #dffbff;
+      pointer-events: none;
+      filter: drop-shadow(0 20px 24px #0009)
+    }
+
+    .home-screen .stage-label {
+      margin-bottom: -5px;
+      color: #a9d9e5;
+      font: 9px var(--mono);
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px #58eaff
+    }
+
+    .home-screen .stage-crystal {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 220 / 260
+    }
+
+    .home-screen .stage-crystal svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible
+    }
+
+    .home-screen .crystal-halo {
+      fill: #35dbef0c;
+      stroke: #7eefff4f;
+      stroke-width: 1;
+      filter: drop-shadow(0 0 16px #37dcef88)
+    }
+
+    .home-screen .crystal-body {
+      fill: url(#stageCrystalCore);
+      stroke: url(#stageCrystalEdge);
+      stroke-width: 2;
+      opacity: .78
+    }
+
+    .home-screen .crystal-facet {
+      stroke: #d9ffff42;
+      stroke-width: 1
+    }
+
+    .home-screen .crystal-facet.light {
+      fill: #d5ffff26
+    }
+
+    .home-screen .crystal-facet.shade {
+      fill: #03182759
+    }
+
+    .home-screen .crystal-lines {
+      fill: none;
+      stroke: #c9fbff5c;
+      stroke-width: 1
+    }
+
+    .home-screen .stage-crystal strong {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding-bottom: 2%;
+      color: #f4ffff;
+      font: 300 clamp(58px, 7vw, 94px)/1 "Segoe UI", Arial, sans-serif;
+      letter-spacing: -4px;
+      text-shadow: 0 0 7px #fff, 0 0 22px #18daf5, 0 4px 8px #03121d
+    }
+
+    .home-screen .stage-status {
+      display: flex;
+      align-items: center;
+      width: 115%;
+      gap: 10px;
+      margin-top: -5px;
+      color: #efc779;
+      font: 8px var(--mono);
+      letter-spacing: 1.5px;
+      white-space: nowrap
+    }
+
+    .home-screen .stage-status i {
+      height: 1px;
+      flex: 1;
+      background: linear-gradient(90deg, transparent, #e8c47f94)
+    }
+
+    .home-screen .stage-status i:last-child {
+      transform: scaleX(-1)
+    }
+
     .home-screen .menu-buttons {
       width: 414px;
       max-width: 100%;
@@ -399,6 +501,32 @@
 
       .home-screen .menu-footer {
         padding-top: 10px
+      }
+    }
+
+    @media(max-width:760px) {
+      .home-screen .expedition-stage {
+        position: relative;
+        left: auto;
+        top: auto;
+        width: 135px;
+        margin: 12px auto 2px;
+        transform: none
+      }
+
+      .home-screen .stage-label {
+        font-size: 7px;
+        letter-spacing: 2px
+      }
+
+      .home-screen .stage-crystal strong {
+        font-size: 48px;
+        letter-spacing: -2px
+      }
+
+      .home-screen .stage-status {
+        font-size: 6px;
+        letter-spacing: .8px
       }
     }
 

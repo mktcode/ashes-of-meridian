@@ -655,7 +655,9 @@ test('home offers a new expedition and exposes a secured expedition when present
     ['battle', 'armory', 'help', 'settings']);
   h.ui.expedition = { depth: 4 };
   h.ui.showHome(); html = h.document.getElementById('menu').innerHTML;
-  assert.match(html, /Continue expedition/); assert.match(html, /DEPTH 4 · CHECKPOINT SECURED/);
+  assert.match(html, /Continue expedition/);
+  assert.match(html, /class="expedition-stage" aria-label="Current stage 5"/);
+  assert.match(html, /<strong>5<\/strong>/); assert.match(html, /4 SECTORS CLEARED/);
   assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
     ['continueExpedition', 'battle', 'armory', 'help', 'settings']);
   assert.equal(h.ui.game.s, null); assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);

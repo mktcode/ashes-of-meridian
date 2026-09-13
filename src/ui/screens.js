@@ -29,6 +29,7 @@
               <div class="menu-title">
                 <h1 class="wordmark" aria-label="Ashes of Meridian"><span class="wordmark-first">ASHES <b>OF</b></span><span>MERIDIAN</span></h1>
                 <p class="menu-tagline">A roguelite RTS.</p>
+                ${this.expedition ? `<div class="expedition-stage" aria-label="Current stage ${this.expedition.depth + 1}"><span class="stage-label">CURRENT STAGE</span><div class="stage-crystal"><svg viewBox="0 0 220 260" aria-hidden="true" focusable="false"><defs><linearGradient id="stageCrystalCore" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eaffff"/><stop offset=".28" stop-color="#55e7fa"/><stop offset=".7" stop-color="#126984"/><stop offset="1" stop-color="#08283c"/></linearGradient><linearGradient id="stageCrystalEdge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#bdfaff"/><stop offset="1" stop-color="#23869f"/></linearGradient></defs><path class="crystal-halo" d="M110 4 200 65 181 202 110 256 39 202 20 65Z"/><path class="crystal-body" d="M110 10 193 69 175 197 110 248 45 197 27 69Z"/><path class="crystal-facet light" d="M110 10 110 248 45 197 27 69Z"/><path class="crystal-facet shade" d="m110 10 83 59-18 128-65 51 29-70 20-88Z"/><path class="crystal-lines" d="m27 69 83 45 83-45M45 197l65-83 65 83M110 10v104M110 114v134"/></svg><strong>${this.expedition.depth + 1}</strong></div><span class="stage-status"><i></i>CHECKPOINT SECURED<i></i></span></div>` : ''}
               </div>
               <div class="menu-actions">
                 <div class="menu-buttons">
@@ -39,7 +40,7 @@
                 <nav class="menu-subnav" aria-label="More options"><button class="textbtn" data-ui="help">FIELD MANUAL</button><button class="textbtn" data-ui="settings">SETTINGS</button></nav>
               </div>
             </div>
-            <div class="menu-quote">One expedition.<br>How deep can you go?<small>${this.expedition ? `DEPTH ${this.expedition.depth} · CHECKPOINT SECURED` : `BEST DEPTH ${this.profile.expeditionDepth}`}</small></div>
+            <div class="menu-quote">One expedition.<br>How deep can you go?<small>${this.expedition ? `${this.expedition.depth} SECTORS CLEARED` : `BEST DEPTH ${this.profile.expeditionDepth}`}</small></div>
             <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>3 CIVILIZATIONS · ONE OBJECTIVE</span><span class="menu-progress">LOCAL & OFFLINE</span></footer>
           </div></div>`;
       },
