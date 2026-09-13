@@ -2,6 +2,13 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Factory/Hangar: verfeinerte Produktionsgebäude
+
+- Nach der zeichnungsidentischen Auslagerung (`58088fc`) zwei eigene Hüllen umgesetzt: Factory mit gepanzerter Montagebucht, Kühlbänken, Hohlstutzen und Fachwerkkran; Hangar mit gestuftem Hex-Flugdeck, Anfluglichtern und Kontrollturm. Je 21 Instanzen; Hüllen 1.648/1.640, komplette Modelle 1.984/1.976 Dreiecke. Nur beide zugehörigen 320×320-WebP-Portraits erneuert (Qualität 80). Vorhandenes Meshkit/Registry/Renderer und die freigegebene Barracks unverändert; gemeinsamer Produktionsgebäude-Testvertrag ergänzt.
+- **Geprüft:** `npm test` **267/267 bestanden**; nur 36 Factory-/Hangar-Varianten ändern sich. 720 übrige Zeichenvarianten, bestehende Meshes einschließlich Barracks und drei kontrollierte 20-s-Fraktionsruns samt RNG/Schüssen identisch; sämtliche Fixtures unverändert. Diff, Dokumentationslinks und vollständige WebP-Dekodierung geprüft.
+- **Chromium `file://`:** einmaliger Hüllupload, Nahansichten/Spieler/Gegner/Teilbau/Ghost in Performance/Balanced/High gesichtet, beide neuen Portraits 320×320 geladen, GL 0 und keine Lade-/Laufzeitfehler. Bei 390×844 mit emuliertem Touch Baumenü gesichtet und beide Platzierungsmodi mit kontrolliert bereitgestellten Voraussetzungen geöffnet. Seed-1409-Szene mit 132 Entitäten, je einer Spieler-Factory/einem Hangar, Zoom 57 bei 1280×800 vor/nachher gesichtet: 172.042 → 175.298 Dreiecke, Modell-/Terrainchargen Performance 28 → 30, Balanced/High 54 → 58 einschließlich Schatten, ohne Vollbildpässe.
+- **Messgrenzen:** Software-WebGL, jeweils 3 Warmup-/20 Messframes via RAF mit Pixel-Readback: Performance 8,50 → 8,24 FPS, Balanced 3,17 → 3,11, High 3,20 → 3,05. Kurzer readbackbelasteter Headless-Vergleich, kein belastbarer Echtgeräte-/Langzeitnachweis. Nur bekannte Software-WebGL-Warnungen; keine Sicherheitsflags gelockert, keine vollständigen Runs oder öffentliche Auslieferung geprüft.
+
 ## Factory/Hangar: mechanische Auslagerung
 
 - Fraktion 0 / building / factory und hangar in getrennte Modelldateien verschoben; vorhandene Registry, Meshhilfen und Renderer-Laufzeit unverändert. Gemeinsame Zeichenisolation aus dem Barracks-Test gelöst, freigegebene Barracks-Zeichenfolge aus `19dd176` zusätzlich festgehalten. Noch keine neue Gestaltung oder Portraitänderung.

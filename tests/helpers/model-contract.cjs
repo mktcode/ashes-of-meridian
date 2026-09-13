@@ -55,4 +55,46 @@ function modelDrawDigests(h) {
   }
   return result;
 }
-module.exports = { modelHarness, assertMesh, modelDrawDigests };
+// Shared contract for static, single-hull production buildings with a +Z header light.
+function assertBuildingAssembly(h, { type, meshName, frontZ, hp, maxInstances = 25 }) {
+  vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }; geom.box = geom.cylinder = () => { throw Error("Per-frame geometry"); };', h.context);
+  const e = { id: 17, faction: 0, team: 0, kind: 'building', type, x: 12, z: -7, hp, size: 3.8, progress: 1 },
+    id = `faction-0/building/${type}`, model = h.EntityModels.find(e),
+    hull = calls => calls.find(c => c[0] === meshName);
+  assert.equal(h.BUILDINGS[type].size, e.size); assert.equal(h.BUILDINGS[type].hp, hp);
+  assert.equal(model.id, id); assert.equal(Object.isFrozen(model), true);
+  for (const faction of [1, 2]) assert.notEqual(h.EntityModels.find({ ...e, faction })?.id, id);
+  for (const other of Object.keys(h.BUILDINGS).filter(t => t !== type))
+    assert.notEqual(h.EntityModels.find({ ...e, type: other })?.id, id);
+  assert.equal(h.EntityModels.find({ ...e, kind: 'unit' }), undefined);
+  const normal = h.draw(e);
+  assert.ok(normal.length <= maxInstances);
+  assert.equal(normal.filter(c => c[0] === meshName).length, 1);
+  assert.deepEqual(normal.slice(0, 2).map(c => c[0]), ['hex', 'ring']);
+  assert.deepEqual(hull(normal), [meshName, 12, 0, -7, 1, 1, 1, h.FACTIONS[0].metal,
+    h.BUILDING_YAW, 0, 0, 0, 1, 'dynamic', h.MAT.METAL]);
+  assert.deepEqual(normal, h.draw(e, {}, 0), 'static model: no new animation');
+  assert.deepEqual(normal, h.draw({ ...e, progress: undefined }), 'default is completed');
+  for (const team of [0, 1]) for (const progress of [0, .4, 1]) {
+    const state = { ...e, team, progress }, calls = h.draw(state), scale = Math.max(.15, progress),
+      yaw = h.BUILDING_YAW + team * Math.PI, front = calls[3];
+    assert.equal(hull(calls)[5], scale); assert.equal(hull(calls)[8], yaw);
+    assert.equal(calls.length, normal.length + (progress < 1 ? 5 : 0), 'common scaffold');
+    assert.ok(Math.abs(front[1] - (e.x + Math.sin(yaw) * frontZ)) < 1e-9, 'production front X');
+    assert.ok(Math.abs(front[3] - (e.z + Math.cos(yaw) * frontZ)) < 1e-9, 'production front Z');
+    assert.equal(front[2], 3.07 * scale);
+    assert.equal(front[7], team ? 0xe98680 : h.FACTIONS[0].color);
+    assert.equal(calls[1][7], front[7]);
+    for (const alpha of [0, .3, 1]) {
+      const preview = h.draw(state, { tint: 0x99e4c6, alpha, layer: 'effects', material: h.MAT.AUTO });
+      assert.equal(hull(preview)[7], 0x99e4c6);
+      assert.deepEqual(hull(preview).slice(12), [alpha, 'effects', h.MAT.AUTO]);
+      assert.equal(preview[3][7], 0x99e4c6);
+    }
+    assert.equal(hull(h.draw(state, { ghost: true }))[7], 0x68717d);
+    assert.equal(hull(h.draw(state, { ghost: true, tint: 0x99e4c6 }))[7], 0x68717d);
+  }
+  assert.deepEqual(h.draw({ ...e, hp: 0 }), []);
+  return normal;
+}
+module.exports = { modelHarness, assertMesh, modelDrawDigests, assertBuildingAssembly };
