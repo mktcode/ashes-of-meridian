@@ -650,7 +650,7 @@ test('pause and hidden-tab pause retain the run only in memory, with explicit ab
 test('victory and defeat offer restart, upgrades and main menu; ended runs cannot resume', () => {
   for(const win of [false,true]) {
     const h=setup(); h.UI.prototype.bind.call(h.ui);
-    Object.assign(h.ui.game.s,{seed:1409,biome:'rust',enemy:2,stats:{kills:0,lost:1,gathered:0}});
+    Object.assign(h.ui.game.s,{seed:1409,biome:'biome1',enemy:2,stats:{kills:0,lost:1,gathered:0}});
     const result={win,text:'HQ destroyed',time:20,integrity:0,score:0}; h.ui.game.s.result=result;
     h.ui.showResult(result); const html=h.ui.html;
     assert.equal(h.ui.paused,true);
@@ -660,18 +660,18 @@ test('victory and defeat offer restart, upgrades and main menu; ended runs canno
     assert.equal(h.ui.paused,true); assert.equal(h.ui.html,html);
     h.ui.game.start=opts=>h.calls.push(['start',{...opts}]);
     h.click({ui:'restart'});
-    assert.deepEqual(h.calls,[['start',{faction:0,biome:'rust',enemy:2}]], 'redeployment requests a fresh seed');
+    assert.deepEqual(h.calls,[['start',{faction:0,biome:'biome1',enemy:2}]], 'redeployment requests a fresh seed');
   }
 });
 
 test('pause restart preserves faction, enemy and biome but requests a fresh battlefield', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  Object.assign(h.ui.game.s, { faction: 1, seed: 1409, biome: 'rust', enemy: 2 });
+  Object.assign(h.ui.game.s, { faction: 1, seed: 1409, biome: 'biome1', enemy: 2 });
   h.ui.game.start = opts => h.calls.push(['start', { ...opts }]);
   h.ui.pause(); h.click({ ui: 'restartConfirm' });
   assert.match(h.ui.html, /new random battlefield/);
   h.click({ ui: 'restart' });
-  assert.deepEqual(h.calls, [['start', { faction: 1, biome: 'rust', enemy: 2 }]]);
+  assert.deepEqual(h.calls, [['start', { faction: 1, biome: 'biome1', enemy: 2 }]]);
 });
 
 test('result upgrades return to the same ended battle without replaying the result sound', () => {
@@ -681,7 +681,7 @@ test('result upgrades return to the same ended battle without replaying the resu
       h.UI.prototype.openModal.call(h.ui, kind, html, wide); h.ui.html = html;
     };
     h.ui.audio.sound = name => sounds.push(name);
-    Object.assign(h.ui.game.s, { seed: 1409, biome: 'rust', enemy: 2,
+    Object.assign(h.ui.game.s, { seed: 1409, biome: 'biome1', enemy: 2,
       stats: { kills: 3, lost: 1, gathered: 42 },
       result: { win, text: 'HQ destroyed', time: 20, integrity: .5, score: 12 } });
     const state = h.ui.game.s, before = JSON.stringify(state);
@@ -782,11 +782,17 @@ test('battle setup and help describe starting workers and alloy levels', () => {
   assert.doesNotMatch(h.ui.html, /only your headquarters/);
 });
 
-test('faction labels come from content without changing enemy IDs, order or unlock requirements', () => {
+test('content labels can change without changing faction/biome IDs, order or unlock requirements', () => {
   const h = setup();
-  vm.runInContext(`FACTIONS.forEach((f, i) => { f.name = 'Faction <' + i + '> & revised'; });`, h.context);
+  vm.runInContext(`
+    FACTIONS.forEach((f, i) => { f.name = 'Faction <' + i + '> & revised'; });
+    Object.values(BIOMES).forEach((b, i) => { b.name = 'Revised environment ' + i; });
+  `, h.context);
   h.ui.showBattle();
   const html = h.document.getElementById('menu').innerHTML;
+  const biomes = html.match(/<select id="battleBiome">([\s\S]*?)<\/select>/)[1];
+  assert.equal(biomes, [0, 1, 2, 3, 4].map(i =>
+    `<option value="biome${i}">Revised environment ${i}</option>`).join(''));
   const enemies = html.match(/<select id="battleEnemy">([\s\S]*?)<\/select>/)[1];
   assert.equal(enemies, [2, 1, 0].map(i =>
     `<option value="${i}">Faction &lt;${i}&gt; &amp; revised</option>`).join(''));
@@ -809,11 +815,11 @@ test('factions unlock sequentially after victories with the preceding faction', 
   assert.match(html, /Win once as The Verdant Choir/);
   h.click({ faction: '1' }); assert.equal(h.ui.battleFaction, 0, 'locked card cannot change selection');
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash']])
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome0']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'ash'}]], 'launch also rejects a forged locked choice');
+  assert.deepEqual(h.calls, [['start',{faction:0,enemy:1,biome:'biome0'}]], 'launch also rejects a forged locked choice');
   let saves = 0; h.ui.persistence.saveProfile = () => { saves++; return true; };
   h.ui.showResult = () => {
     const faction = h.ui.factionJustUnlocked;
@@ -854,11 +860,11 @@ test('battle setup launches with automatic seed selection and no difficulty cont
   const css = fs.readFileSync(path.join(__dirname, '..', 'styles/screens.css'), 'utf8');
   assert.match(css, /\.battle-launch\s*\{[^}]*flex-direction: column;\s*align-items: stretch/);
   h.ui.battleFaction = 2;
-  for (const [id,value] of [['battleEnemy','1'],['battleBiome','ash']])
+  for (const [id,value] of [['battleEnemy','1'],['battleBiome','biome0']])
     h.document.getElementById(id).value = value;
   h.ui.game.start = opts => h.calls.push(['start',JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'ash'}]]);
+  assert.deepEqual(h.calls,[['start',{faction:2,enemy:1,biome:'biome0'}]]);
   assert.equal('difficulty' in h.ui.profile.settings,false);
 });
 
@@ -1169,20 +1175,20 @@ test('all factions share the minimal recruitment categories, including HQ units 
 test('only faction 0 recruitment/build buttons use local model portraits without changing actions or labels', () => {
   const h = setup();
   for (const [key, label, type, cost, file, gas = 0] of [
-    ['train:worker', 'Prospector', 'worker', 50, 'assets/portraits/preview-prospector.webp'],
-    ['train:rifle', 'Vanguard', 'rifle', 75, 'assets/portraits/preview-vanguard.webp'],
-    ['train:medic', 'Field medic', 'medic', 100, 'assets/portraits/preview-field-medic.webp', 35],
-    ['train:tank', 'Ironclad', 'tank', 200, 'assets/portraits/preview-ironclad.webp', 70],
-    ['train:artillery', 'Longbow', 'artillery', 235, 'assets/portraits/preview-longbow.webp', 95],
-    ['train:air', 'Kestrel', 'air', 180, 'assets/portraits/preview-kestrel.webp', 100],
-    ['train:hero', 'Commander', 'hero', 300, 'assets/portraits/preview-field-commander.webp', 100],
-    ['build:hq', 'Command center', 'hq', 400, 'assets/portraits/preview-command-center.webp'],
-    ['build:barracks', 'Muster station', 'barracks', 145, 'assets/portraits/preview-muster-station.webp'],
-    ['build:depot', 'Logistics depot', 'depot', 85, 'assets/portraits/preview-logistics-depot.webp'],
-    ['build:refinery', 'Aether refinery', 'refinery', 100, 'assets/portraits/preview-aether-refinery.webp'],
-    ['build:factory', 'War foundry', 'factory', 225, 'assets/portraits/preview-war-foundry.webp', 85],
-    ['build:hangar', 'Flight deck', 'hangar', 220, 'assets/portraits/preview-flight-deck.webp', 115],
-    ['build:turret', 'Sentinel turret', 'turret', 115, 'assets/portraits/preview-sentinel-turret.webp', 25]
+    ['train:worker', 'Prospector', 'worker', 50, 'assets/portraits/faction-0-unit-worker.webp'],
+    ['train:rifle', 'Vanguard', 'rifle', 75, 'assets/portraits/faction-0-unit-rifle.webp'],
+    ['train:medic', 'Field medic', 'medic', 100, 'assets/portraits/faction-0-unit-medic.webp', 35],
+    ['train:tank', 'Ironclad', 'tank', 200, 'assets/portraits/faction-0-unit-tank.webp', 70],
+    ['train:artillery', 'Longbow', 'artillery', 235, 'assets/portraits/faction-0-unit-artillery.webp', 95],
+    ['train:air', 'Kestrel', 'air', 180, 'assets/portraits/faction-0-unit-air.webp', 100],
+    ['train:hero', 'Commander', 'hero', 300, 'assets/portraits/faction-0-unit-hero.webp', 100],
+    ['build:hq', 'Command center', 'hq', 400, 'assets/portraits/faction-0-building-hq.webp'],
+    ['build:barracks', 'Muster station', 'barracks', 145, 'assets/portraits/faction-0-building-barracks.webp'],
+    ['build:depot', 'Logistics depot', 'depot', 85, 'assets/portraits/faction-0-building-depot.webp'],
+    ['build:refinery', 'Aether refinery', 'refinery', 100, 'assets/portraits/faction-0-building-refinery.webp'],
+    ['build:factory', 'War foundry', 'factory', 225, 'assets/portraits/faction-0-building-factory.webp', 85],
+    ['build:hangar', 'Flight deck', 'hangar', 220, 'assets/portraits/faction-0-building-hangar.webp', 115],
+    ['build:turret', 'Sentinel turret', 'turret', 115, 'assets/portraits/faction-0-building-turret.webp', 25]
   ]) {
     const webp = fs.readFileSync(path.join(__dirname, '..', file));
     assert.equal(webp.toString('ascii', 0, 4), 'RIFF');

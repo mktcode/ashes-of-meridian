@@ -31,7 +31,7 @@ function worldSample(seed, biome) {
 
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
-  game.start({ seed: 1409, biome: 'rust', faction: 0 });
+  game.start({ seed: 1409, biome: 'biome1', faction: 0 });
   populateBase(game);
   // Fixed effect-test RNG entry point from presentation-v1, independent of battle loadout.
   game.random = vm.runInContext('seeded(1486)', context);

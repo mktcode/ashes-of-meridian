@@ -324,8 +324,9 @@ const META = {
 
 type UpgradeType = keyof typeof META;
 
+// Stable, content-independent keys; names and visual parameters may change.
 const BIOMES = {
-  ash: {
+  biome0: {
     name: 'ASH WASTES',
     ground: 0x3a4144,
     rock: 0x495158,
@@ -333,7 +334,7 @@ const BIOMES = {
     accent: 0xe3a46d,
     flora: 0x625647
   },
-  rust: {
+  biome1: {
     name: 'RUST FRONTIER',
     ground: 0x59443a,
     rock: 0x74544a,
@@ -341,7 +342,7 @@ const BIOMES = {
     accent: 0xf0b67b,
     flora: 0x806348
   },
-  choir: {
+  biome2: {
     name: 'LIVING GARDENS',
     ground: 0x314747,
     rock: 0x49656a,
@@ -349,7 +350,7 @@ const BIOMES = {
     accent: 0x8bebc2,
     flora: 0x538a77
   },
-  court: {
+  biome3: {
     name: 'SILENT NECROPOLIS',
     ground: 0x424459,
     rock: 0x626679,
@@ -357,7 +358,7 @@ const BIOMES = {
     accent: 0xc8b2f4,
     flora: 0x838094
   },
-  star: {
+  biome4: {
     name: 'STELLAR INTERIOR',
     ground: 0x3d3c48,
     rock: 0x5a5261,

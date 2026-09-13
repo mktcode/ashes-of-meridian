@@ -2,11 +2,16 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Neutrale Biome-IDs und Portraitpfade
+
+- Alle fünf Biome verwenden `biome0`–`biome4`; Namen, Reihenfolge, Parameter und Eruptionsereignis unverändert. 14 Portraits nach `faction-<id>-<unit|building>-<type>.webp` umbenannt, bytegleich gegen Git geprüft. ID-/Pfadkonventionen in Architektur/Grafikreferenz; keine Aliase, neue Assetpipeline oder Profilmigration.
+- **Geprüft:** `npm test` inklusive Build **256/257**; einzig der schon im Ausgangslauf fehlschlagende Field-Manual-Test (`Move (default)`) bleibt unverändert rot. Geänderte Katalognamen, alle Biomauflösungen und die weiterhin ausschließlich an `biome4` gebundene Eruption geprüft. Fixture-Diff enthält nur 16 umbenannte Biomeingaben, sämtliche Seeds/Hashes/Effekt-/RNG-Erwartungen unverändert. Vergleich mit Ausgangsbuild erneut identisch für 756 Modellvarianten, fünf Mesh-Fabriken und drei kontrollierte Fraktionsruns. Textur-Generatorcheck, Diff und Dokumentationslinks geprüft.
+- **Chromium `file://` und Container-HTTP:** alle fünf Biome gestartet, alle 14 Portraits in vier Kategorien als 320×320 geladen; geänderte Testnamen lassen Pfade unverändert, andere Fraktion bleibt bei Icons. Gefechts-/Portraitansichten bei 1280×800 und 390×844 gesichtet, GL 0 und keine verknüpften Lade-/Laufzeitfehler. Docker erfolgreich gebaut, gesund als UID 101; `nginx -t`, bytegleiche Auslieferung aller Portraits als `image/webp`/`no-cache` und 404 für alte/fehlende Pfade geprüft. Nur Software-WebGL-Deprecation-Warnung, keine Sicherheitsflags gelockert. Kein Echtgerät-/Langzeitnachweis oder öffentliches Deployment.
+
 ## Neutrale Fraktionsbezeichner
 
-- `FACTION_ID.FIRST / SECOND / THIRD` ersetzen technische Fraktionsliterale bei unveränderten Werten 0/1/2. Typ daraus abgeleitet; Portrait-Zuordnung und Modellkommentare neutral benannt. Gegnerauswahl, Freischaltungshilfe und Ergebnis verwenden Katalognamen; ID-/Dateikonvention in Architektur und Grafikreferenz festgehalten. Kein Modellumbau, Balancing-, RNG- oder Profilformatwechsel.
-- **Geprüft:** Ausgangslauf `npm test` **252/253**, nach Änderung **255/256**; unverändert einziger Fehler ist die alte Field-Manual-Erwartung `Move (default)`. Neue Tests sichern ID-Reihenfolge und vom Anzeigenamen unabhängige UI-/Modell-/Schussvarianten. Zusätzlich 756 Modellvarianten, fünf Mesh-Fabriken und drei kontrollierte 20-s-Fraktionsruns samt RNG/Schussdaten gegen den Ausgangsbuild verglichen: identisch. Fixtures unverändert; Diff geprüft.
-- **Chromium `file://`:** 1280×800 und 390×844, Gefecht/Portraits und Auswahl gesichtet; umbenannte Testnamen einschließlich `<>&`, Gegnerreihenfolge 2/1/0, kontrollierte Freischaltungen 1→2 und Profil-Reload geprüft. GL 0, keine Lade-/Laufzeitfehler; Software-WebGL meldet Deprecation-Warnung, keine Sicherheitsflags gelockert. Kein Echtgerät-/vollständiger Run-Nachweis.
+- `b2b5ab1`: `FACTION_ID.FIRST / SECOND / THIRD` mit unveränderten Werten 0/1/2; technische Bezeichner und Modellkommentare neutral, Gegnerauswahl/Freischaltungshilfe aus Katalognamen. Kein Modell-, Balancing-, RNG- oder Profilformatwechsel.
+- **Damals geprüft:** Ausgangslauf `npm test` **252/253**, danach **255/256** (derselbe Field-Manual-Fehler); 756 Modellvarianten, fünf Mesh-Fabriken und drei 20-s-Fraktionsruns/RNG identisch. Chromium `file://` bei 1280×800 und 390×844: Testnamen einschließlich `<>&`, Gegnerreihenfolge 2/1/0, kontrollierte Freischaltungen 1→2 und Profil-Reload; GL 0, keine Lade-/Laufzeitfehler. Kein Echtgerät-/vollständiger Run-Nachweis.
 
 ## Dirt-Projektion in nativer Dichte
 

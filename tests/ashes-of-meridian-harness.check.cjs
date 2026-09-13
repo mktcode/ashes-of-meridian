@@ -41,7 +41,9 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.deepEqual(Array.from(vm.runInContext('AETHER_EVACUATION_CAPS', context)), [100, 200, 350, 500, 750, 1000]);
   assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero']);
   assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
-  assert.deepEqual(Object.keys(BIOMES), ['ash', 'rust', 'choir', 'court', 'star']);
+  assert.deepEqual(Object.keys(BIOMES), ['biome0', 'biome1', 'biome2', 'biome3', 'biome4']);
+  assert.deepEqual(Object.values(BIOMES).map(b => b.name),
+    ['ASH WASTES', 'RUST FRONTIER', 'LIVING GARDENS', 'SILENT NECROPOLIS', 'STELLAR INTERIOR']);
   assert.equal(unitName('worker'), 'Prospector');
   assert.equal(unitName('worker', 1), 'Tender');
   assert.equal(unitName('worker', 2), 'Custodian');

@@ -46,7 +46,7 @@
       start(this: MeridianGame, opts: BattleOptions = {}) {
         let faction: FactionId = FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
           enemy: FactionId = FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
-          biome: BiomeType = BIOMES[opts.biome as BiomeType] ? opts.biome as BiomeType : 'ash',
+          biome: BiomeType = BIOMES[opts.biome as BiomeType] ? opts.biome as BiomeType : 'biome0',
           savedMeta = this.profile.upgrades || {},
           meta = Object.fromEntries(
             (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>

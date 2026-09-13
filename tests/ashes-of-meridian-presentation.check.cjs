@@ -28,7 +28,7 @@ test('world and simulation start and step without renderer, geometry or browser 
 test('world view uploads only changed layout/fog and does not mutate CPU data', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world', 'world-view']);
   const { Battlefield, BattlefieldView } = vm.runInContext('({Battlefield, BattlefieldView})', context);
-  const world = new Battlefield(1409, 'rust'), renderer = createRendererStub();
+  const world = new Battlefield(1409, 'biome1'), renderer = createRendererStub();
   let meshes = 0, fogs = 0, fogPixels;
   renderer.geometry = () => meshes++;
   renderer.fog = data => { fogs++; fogPixels = Array.from(data); };
@@ -40,7 +40,7 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   assert.equal(meshes, 2 + world.renderData.massifs.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(world.fogPixels)); assert.ok(fogPixels.includes(255));
   assert.equal(JSON.stringify(world.renderData), before);
-  const next = new Battlefield(43015, 'rust'); next.reveal([]);
+  const next = new Battlefield(43015, 'biome1'); next.reveal([]);
   view.sync(next); view.sync(next);
   assert.equal(fogs, 2); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(next.fogPixels)); assert.ok(fogPixels.every(v => v === 0));

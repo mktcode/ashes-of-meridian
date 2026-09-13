@@ -125,7 +125,7 @@
       constructor(seed: number, biome: BiomeType) {
         this.fogVersion = 0;
         this.seed = seed;
-        this.biome = BIOMES[biome] || BIOMES.ash;
+        this.biome = BIOMES[biome] || BIOMES.biome0;
         this.staticGrid = new Uint8Array(GRID * GRID);
         this.massifGrid = new Uint8Array(GRID * GRID);
         this.blocked = new Uint8Array(GRID * GRID);
@@ -479,7 +479,7 @@
             1,
             'static'
           );
-          if (i % 6 === 0 && bio === BIOMES.choir) {
+          if (i % 6 === 0 && bio === BIOMES.biome2) {
             let h = 0.6 + rand() * 1.5;
             place('cone', x, h / 2, z, 0.09, h, 0.09, bio.flora, 0, 0, rand() * 0.5, 0, 1, 'static');
             place('sphere', x, h, z, 0.45, 0.23, 0.45, bio.accent, 0, 0, 0, 0.25, 1, 'static');
@@ -506,7 +506,7 @@
           let x = (rand() - 0.5) * 155,
             z = (rand() - 0.5) * 155,
             r = 3 + rand() * 8;
-          if (bio === BIOMES.choir) {
+          if (bio === BIOMES.biome2) {
             place(
               'cylinder',
               x,
@@ -549,7 +549,7 @@
           let x = (rand() - 0.5) * 150,
             z = (rand() - 0.5) * 150;
           if (safe.some(p => distance(p, { x, z }) < 7)) continue;
-          if (bio === BIOMES.court || bio === BIOMES.star) {
+          if (bio === BIOMES.biome3 || bio === BIOMES.biome4) {
             let h = 2 + rand() * 6;
             place(
               'box',

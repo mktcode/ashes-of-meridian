@@ -1,20 +1,20 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
     const FACTION_0_ACTION_PORTRAITS = {
-      'train:worker': 'assets/portraits/preview-prospector.webp',
-      'train:rifle': 'assets/portraits/preview-vanguard.webp',
-      'train:medic': 'assets/portraits/preview-field-medic.webp',
-      'train:tank': 'assets/portraits/preview-ironclad.webp',
-      'train:artillery': 'assets/portraits/preview-longbow.webp',
-      'train:air': 'assets/portraits/preview-kestrel.webp',
-      'train:hero': 'assets/portraits/preview-field-commander.webp',
-      'build:hq': 'assets/portraits/preview-command-center.webp',
-      'build:barracks': 'assets/portraits/preview-muster-station.webp',
-      'build:depot': 'assets/portraits/preview-logistics-depot.webp',
-      'build:refinery': 'assets/portraits/preview-aether-refinery.webp',
-      'build:factory': 'assets/portraits/preview-war-foundry.webp',
-      'build:hangar': 'assets/portraits/preview-flight-deck.webp',
-      'build:turret': 'assets/portraits/preview-sentinel-turret.webp'
+      'train:worker': 'assets/portraits/faction-0-unit-worker.webp',
+      'train:rifle': 'assets/portraits/faction-0-unit-rifle.webp',
+      'train:medic': 'assets/portraits/faction-0-unit-medic.webp',
+      'train:tank': 'assets/portraits/faction-0-unit-tank.webp',
+      'train:artillery': 'assets/portraits/faction-0-unit-artillery.webp',
+      'train:air': 'assets/portraits/faction-0-unit-air.webp',
+      'train:hero': 'assets/portraits/faction-0-unit-hero.webp',
+      'build:hq': 'assets/portraits/faction-0-building-hq.webp',
+      'build:barracks': 'assets/portraits/faction-0-building-barracks.webp',
+      'build:depot': 'assets/portraits/faction-0-building-depot.webp',
+      'build:refinery': 'assets/portraits/faction-0-building-refinery.webp',
+      'build:factory': 'assets/portraits/faction-0-building-factory.webp',
+      'build:hangar': 'assets/portraits/faction-0-building-hangar.webp',
+      'build:turret': 'assets/portraits/faction-0-building-turret.webp'
     };
     defineMeridianUIMethods({
       center(x, z) {

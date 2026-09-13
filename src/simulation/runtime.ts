@@ -129,7 +129,7 @@
           this.emit('alert', { text: 'Hostile reinforcements inbound in 15 seconds.', danger: true });
         }
         if (
-          s.biome === 'star' &&
+          s.biome === 'biome4' &&
           s.time > 150 &&
           Math.floor(s.time / 100) > (s.triggers.solar || 0)
         ) {

@@ -113,7 +113,7 @@ test('rock meshes are deterministic, finite, bounded and inexpensive', () => {
 });
 
 test('wide massif mesh is detailed, deterministic and matches its CPU footprint', () => {
-  const world = new Battlefield(43015, 'rust'), m = world.renderData.massifs[0],
+  const world = new Battlefield(43015, 'biome1'), m = world.renderData.massifs[0],
     mesh = geom.massif(m), before = JSON.stringify(m);
   assert.deepEqual(mesh, geom.massif(m));
   assert.notDeepEqual(mesh, geom.massif({ ...m, seed: m.seed ^ 1 }));
@@ -178,7 +178,7 @@ test('mountain belt is seeded, continuous and outside the playable ground', () =
 });
 
 // Fixed terrain inputs cover every biome.
-const terrainCases = [[1409,'rust'],[7012,'ash'],[9017,'choir'],[1905,'choir'],[2219,'rust'],[6633,'choir'],[1144,'court'],[4442,'choir'],[8141,'court'],[9897,'court'],[11007,'ash'],[24080,'rust'],[38744,'choir'],[43015,'star'],[74408,'star'],[90001,'star']];
+const terrainCases = [[1409,'biome1'],[7012,'biome0'],[9017,'biome2'],[1905,'biome2'],[2219,'biome1'],[6633,'biome2'],[1144,'biome3'],[4442,'biome2'],[8141,'biome3'],[9897,'biome3'],[11007,'biome0'],[24080,'biome1'],[38744,'biome2'],[43015,'biome4'],[74408,'biome4'],[90001,'biome4']];
 for (const [seed, biome] of terrainCases) {
   test(`terrain ${seed} (${biome}): original layout and varied textured rocks`, () => {
     const battlefield = new Battlefield(seed, biome), placements = battlefield.renderData.placements;
@@ -227,7 +227,7 @@ for (const [seed, biome] of terrainCases) {
 }
 
 test('navigation goes around a broad massif instead of crossing its slopes', () => {
-  const w = new Battlefield(43015, 'rust'), m = w.renderData.massifs[0],
+  const w = new Battlefield(43015, 'biome1'), m = w.renderData.massifs[0],
     dx = Math.sin(m.yaw) * (m.depth + 8), dz = Math.cos(m.yaw) * (m.depth + 8),
     start = { x: m.x - dx, z: m.z - dz }, target = { x: m.x + dx, z: m.z + dz };
   assert.ok(!w.blockedAt(start.x, start.z) && !w.blockedAt(target.x, target.z));
@@ -240,7 +240,7 @@ test('navigation goes around a broad massif instead of crossing its slopes', () 
 });
 
 test('regenerating a battle seed reproduces all visual placements', () => {
-  const first = new Battlefield(123456, 'ash'), second = new Battlefield(123456, 'ash');
+  const first = new Battlefield(123456, 'biome0'), second = new Battlefield(123456, 'biome0');
   assert.equal(layoutHash(first), layoutHash(second));
   assert.deepEqual(first.renderData, second.renderData);
   assert.deepEqual(first.massifGrid, second.massifGrid);
