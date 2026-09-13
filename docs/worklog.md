@@ -2,6 +2,11 @@
 
 Kompakter Übergabestand und letzte Prüfnachweise. Ältere Implementierungs-, Diagnose- und Refactoringprotokolle liegen in Git. Neue Einträge kurz halten; Regeln und offene Prioritäten direkt in den Referenzdokumenten pflegen.
 
+## Dirt-Boden ohne Biomtönung
+
+- Der Bodenshader verwendet die Dirt-WebP jetzt direkt als Grundfarbe statt sie überwiegend mit den fünf Biomfarben zu mischen. Schatten, Fog of War, Entfernungsdunst, Postprocessing und die schwachen Dekoratlanten bleiben erhalten; Simulation, Terrain-RNG und Texturdatei sind unverändert.
+- **Geprüft:** `npm test` baut erfolgreich und erreicht **252/253**; einziger Fehler bleibt die sachfremde alte Erwartung `Move (default)` im Field-Manual-Test. Textur-Generatorcheck und Diff-Prüfung erfolgreich. Chromium `file://` mit festem Rust-Seed 1409: kräftige Dirt-Farbe im aufgedeckten Bereich visuell gesichtet, Schatten und Fog aktiv, GL 0 und keine Laufzeit-/Ladefehler. Kein Echtgerätetest.
+
 ## Neue Dirt-Basis und WebP-only-Bildassets
 
 - Neue nahtlose Dirt-Basis (941×1672) eingebaut. Sämtliche sechs Texturquellen, die 14 Aktionsporträts unter `assets/portraits/` und die Grafikreferenz liegen nun als WebP mit Qualität 60 vor; RGBA-Dekoralpha bleibt erhalten, keine PNG-Dateien mehr unter Versionskontrolle. `npm run embed:textures` erzeugt alle Data-URLs weiterhin bytegleich aus `assets/textures/`; `-- --check` erkennt Abweichungen. Laufzeitpfade, Docker-Allowlist, Tests und Referenzen auf WebP umgestellt.
