@@ -329,6 +329,71 @@ test('Desert relief draws CPU samples exactly, with finite normals and upward no
   layoutHash(w);
 });
 
+test('Desert basin rims have uneven straight faces without cutting into the circular building reserve', () => {
+  const {desertCanyonPlan,desertElevation}=vm.runInContext('({desertCanyonPlan,desertElevation})',context);
+  for (const seed of [1409,1420,43015,6633]) {
+    const plan=desertCanyonPlan(BATTLEFIELDS.desert.layout,seed), basins=plan.sites.filter(s=>s.planes);
+    assert.equal(basins.length,4);
+    const shapes=new Set();
+    for (const basin of basins) {
+      assert.equal(basin.planes.length,8);
+      shapes.add(JSON.stringify(basin.planes));
+      const radii=[];
+      for(let i=0;i<360;i++) {
+        const angle=i*Math.PI/180, x=Math.cos(angle), z=Math.sin(angle);
+        assert.ok(plan.siteClearance(basin,basin.x+x*28,basin.z+z*28)<=1e-9,'entire old reserve remains free');
+        radii.push(Math.min(...basin.planes.filter(p=>p.x*x+p.z*z>0).map(p=>p.offset/(p.x*x+p.z*z))));
+      }
+      assert.ok(Math.max(...radii)-Math.min(...radii)>2,'no circular outline');
+      assert.ok(Math.max(...radii)<36,'bounded local expansion, not an enlarged arena');
+      for(const p of basin.planes) for(const along of [-2,0,2]) {
+        const x=basin.x+p.x*p.offset-p.z*along, z=basin.z+p.z*p.offset+p.x*along;
+        assert.ok(Math.abs(plan.siteClearance(basin,x,z))<1e-8,'each straight face participates in the outline');
+      }
+    }
+    assert.equal(shapes.size,4,'different rock faces at each start');
+    const elevation=desertElevation(seed,90,plan), circular=desertElevation(seed,90,{...plan,
+      siteClearance:(s,x,z)=>Math.hypot(x-s.x,z-s.z)-s.r});
+    let changed=0;
+    for(let z=-90;z<=90;z+=3) for(let x=-90;x<=90;x+=3) {
+      const before=circular(x,z), after=elevation(x,z);
+      assert.ok(after<=before+1e-9,'rim shaping can only open, never obstruct, the existing relief');
+      if(basins.every(s=>Math.hypot(x-s.x,z-s.z)>s.bound)) assert.equal(after,before,'other landforms stay unchanged');
+      if(Math.abs(before-after)>.1) changed++;
+    }
+    assert.ok(changed>30,'visible rim shaping');
+  }
+});
+
+test('Desert rim refinement cannot reshuffle solid-rock proposals outside the basins', () => {
+  const originalPlan=vm.runInContext('desertCanyonPlan',context);
+  context.testCanyonPlan=originalPlan;
+  try {
+    for(const seed of [1409,43015]) {
+      const shaped=new Battlefield(seed,'desert'), plan=originalPlan(shaped.layout,seed), basins=plan.sites.filter(s=>s.planes),
+        relief=shaped.renderData.geometries.find(d=>d.relief&&!d.relief.innerExtent).relief,
+        elevation=vm.runInContext('desertElevation',context)(seed,shaped.extent,plan);
+      for(let row=0;row<relief.size;row++) for(let col=0;col<relief.size;col++)
+        assert.equal(relief.heights[row*relief.size+col],Math.fround(elevation(-relief.extent+(col-1)*relief.step,-relief.extent+(row-1)*relief.step)),
+          'bounded refinement visits every changed sample, including the halo');
+      vm.runInContext('desertCanyonPlan=(...args)=>{const p=testCanyonPlan(...args);return {...p,siteClearance:p.circleClearance};}',context);
+      const round=new Battlefield(seed,'desert');
+      vm.runInContext('desertCanyonPlan=testCanyonPlan',context);
+      assert.ok(shaped.staticGrid.every((cell,i)=>cell<=round.staticGrid[i]),'no formerly free navigation cell becomes blocked');
+      const proposals=new Map(round.rocks.map(r=>[`${r.x},${r.z}`,r.r]));
+      for(const r of shaped.rocks) assert.equal(proposals.get(`${r.x},${r.z}`),r.r,'only omit proposals, never reroll');
+      const remote=r=>basins.every(s=>Math.hypot(r.x-s.x,r.z-s.z)>s.bound+r.r);
+      assert.equal(JSON.stringify(shaped.rocks.filter(remote)),JSON.stringify(round.rocks.filter(remote)));
+      const names=['desertBoulder','desertCrag','desertRidge','desertShelf'], placements=w=>w.renderData.placements.filter(p=>
+        names.includes(p.mesh)&&remote({x:p.position[0],z:p.position[2],r:p.scale[0]}));
+      assert.equal(JSON.stringify(placements(shaped)),JSON.stringify(placements(round)),'remote model, rotation, scale and grounding stay identical');
+      assert.equal(JSON.stringify(shaped.layout.corridors),JSON.stringify(round.layout.corridors));
+    }
+  } finally {
+    vm.runInContext('desertCanyonPlan=testCanyonPlan',context); delete context.testCanyonPlan;
+  }
+});
+
 test('Desert basin loops retain another approach when the central exit is obstructed', () => {
   const w = new Battlefield(1409,'desert');
   for (const route of w.layout.corridors.slice(0,4)) {

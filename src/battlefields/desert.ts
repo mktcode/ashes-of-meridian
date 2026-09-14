@@ -23,8 +23,18 @@ const DESERT_BATTLEFIELD: BattlefieldDefinition = {
 // vent approaches are part of that network, not holes cut out of otherwise sealed cliffs.
 function desertCanyonPlan(layout: BattlefieldLayout, seed: number) {
   const rand = seeded(seed ^ 0x43414e59), routes: Position[][] = [];
-  // Leave circulation space beyond the outer production-building ring, not just HQ room.
-  const sites = [...layout.startSites.map(p => ({ ...p, r: 28 })),
+  // Circumscribed, uneven rock faces retain the entire circular building reserve.
+  // Their own stream must not change canyon bends when the basin outline is refined.
+  const rimRandom = seeded(seed ^ 0x42415349);
+  const basins = layout.startSites.map(p => {
+    const r = 28, phase = rimRandom() * Math.PI * 2,
+      angles = Array.from({ length: 8 }, (_, i) => phase + i * Math.PI / 4 + (rimRandom() - .5) * .24),
+      planes = angles.map(a => ({ x: Math.cos(a), z: Math.sin(a), offset: r + .35 + rimRandom() * 1.75 })),
+      gap = Math.max(...angles.map((a, i) => (angles[(i + 1) % angles.length] + (i === angles.length - 1 ? Math.PI * 2 : 0)) - a)),
+      bound = (Math.max(...planes.map(p => p.offset)) + 5) / Math.cos(gap / 2);
+    return { ...p, r, planes, bound };
+  });
+  const sites: (Position & { r: number; planes?: (typeof basins)[number]['planes']; bound?: number })[] = [...basins,
     ...layout.resourceSites.map(p => ({ ...p, r: 10 })),
     ...layout.resourceSites.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 })),
     { x: 0, z: 0, r: 9 }];
@@ -58,7 +68,14 @@ function desertCanyonPlan(layout: BattlefieldLayout, seed: number) {
     routes.push([resource, nearest]);
     routes.push([resource, { x: resource.x + (i ? 7 : 5), z: resource.z + (i ? 7 : 18) }]);
   }
-  return { sites, routes, halfWidth: 8.5 };
+  const circleClearance = (s: Position & { r: number }, x: number, z: number) => Math.hypot(x - s.x, z - s.z) - s.r;
+  const siteClearance = (s: typeof sites[number], x: number, z: number) => {
+    if (!s.planes) return circleClearance(s, x, z);
+    let clearance = -Infinity;
+    for (const plane of s.planes) clearance = Math.max(clearance, (x - s.x) * plane.x + (z - s.z) * plane.z - plane.offset);
+    return clearance;
+  };
+  return { sites, routes, halfWidth: 8.5, siteClearance, circleClearance };
 }
 
 function desertElevation(seed: number, extent: number, plan: ReturnType<typeof desertCanyonPlan>) {
@@ -86,8 +103,11 @@ function desertElevation(seed: number, extent: number, plan: ReturnType<typeof d
   return (x: number, z: number) => {
     let clearance = 5;
     if (Math.max(Math.abs(x), Math.abs(z)) < extent + 22) {
-      for (const s of plan.sites) if (Math.abs(x - s.x) < s.r + 5 && Math.abs(z - s.z) < s.r + 5)
-        clearance = Math.min(clearance, Math.hypot(x - s.x, z - s.z) - s.r);
+      for (const s of plan.sites) {
+        const bound = s.bound ?? s.r + 5;
+        if (Math.abs(x - s.x) < bound && Math.abs(z - s.z) < bound)
+          clearance = Math.min(clearance, plan.siteClearance(s, x, z));
+      }
       if (clearance <= 0) return -.14;
       for (const s of segments) {
         if (x < s.left || x > s.right || z < s.top || z > s.bottom) continue;
@@ -130,6 +150,7 @@ function desertReliefHeight(surface: WorldRelief, x: number, z: number) {
 function populateDesertCanyons(builder: BattlefieldBuilder) {
   const { world, palette, place } = builder, extent = world.extent,
     plan = desertCanyonPlan(world.layout, world.seed), elevation = desertElevation(world.seed, extent, plan),
+    proposalElevation = desertElevation(world.seed, extent, { ...plan, siteClearance: plan.circleClearance }),
     decor = builder.cosmeticRandom(0x53435245), rocks = seeded(world.seed ^ 0x524f434b);
   // Corridors are seed-specific, instance-local terrain data; never mutate the map definition.
   world.layout = { ...world.layout, corridors: plan.routes.map(route => route.map(p => [p.x, p.z])) };
@@ -137,13 +158,34 @@ function populateDesertCanyons(builder: BattlefieldBuilder) {
     const step = .75, size = Math.round(radius * 2 / step) + 3, heights = new Float32Array(size * size);
     for (let row = 0; row < size; row++) for (let col = 0; col < size; col++) {
       const x = -radius + (col - 1) * step, z = -radius + (row - 1) * step;
-      heights[row * size + col] = innerExtent && Math.max(Math.abs(x), Math.abs(z)) < innerExtent - step * 2 ? -.14 : elevation(x, z);
+      heights[row * size + col] = innerExtent && Math.max(Math.abs(x), Math.abs(z)) < innerExtent - step * 2 ? -.14 : proposalElevation(x, z);
     }
     return { extent: radius, step, size, heights, innerExtent };
   };
+  // Stone proposals use the round reserve before rim shaping. Otherwise a locally
+  // rejected stone would shift conditional RNG draws and relocate rocks map-wide.
+  // Only the refined samples below are published for drawing and collision.
+  const refine = (s: WorldRelief): WorldRelief => {
+    const heights = s.heights.slice();
+    for (const basin of plan.sites) {
+      const bound = basin.bound;
+      if (bound === undefined) continue;
+      const first = (v: number) => Math.max(0, Math.floor((v - bound + s.extent) / s.step) + 1),
+        last = (v: number) => Math.min(s.size - 1, Math.ceil((v + bound + s.extent) / s.step) + 1),
+        left = first(basin.x), right = last(basin.x), top = first(basin.z), bottom = last(basin.z);
+      for (let row = top; row <= bottom; row++) for (let col = left; col <= right; col++) {
+        const x = -s.extent + (col - 1) * s.step, z = -s.extent + (row - 1) * s.step;
+        if (s.innerExtent && Math.max(Math.abs(x), Math.abs(z)) < s.innerExtent - s.step * 2) continue;
+        heights[row * s.size + col] = elevation(x, z);
+      }
+    }
+    return { ...s, heights };
+  };
   // Cover extreme in-game pan/zoom on wide displays, not only a narrow edge strip.
-  const interior = surface(extent, 0), exterior = surface(extent + 150, extent),
-    heightAt = (x: number, z: number) => desertReliefHeight(Math.max(Math.abs(x), Math.abs(z)) <= extent ? interior : exterior, x, z);
+  const proposalInterior = surface(extent, 0), proposalExterior = surface(extent + 150, extent),
+    interior = refine(proposalInterior), exterior = refine(proposalExterior),
+    heightAt = (x: number, z: number) => desertReliefHeight(Math.max(Math.abs(x), Math.abs(z)) <= extent ? interior : exterior, x, z),
+    proposalHeightAt = (x: number, z: number) => desertReliefHeight(Math.max(Math.abs(x), Math.abs(z)) <= extent ? proposalInterior : proposalExterior, x, z);
   for (const [mesh, relief] of [['desertInterior', interior], ['desertExterior', exterior]] as const) {
     world.renderData.geometries.push({ mesh, model: 'desertRelief', relief });
     place(mesh, 0, 0, 0, 1, 1, 1, palette.rock, 0, 0, 0, 0, 1, 'static', 'MASSIF');
@@ -162,15 +204,16 @@ function populateDesertCanyons(builder: BattlefieldBuilder) {
   const meshes = ['desertBoulder', 'desertCrag', 'desertRidge', 'desertShelf', 'desertTalus', 'desertFlake', 'desertPebble', 'desertChip'];
   for (const [i, model] of meshes.entries())
     world.renderData.geometries.push({ mesh: model, model, seed: world.seed ^ (0x524f434b + i), extent });
-  const clear = (p: Position, margin: number) => plan.sites.every(s => distance(p, s) >= s.r + margin) &&
+  const clear = (p: Position, margin: number, siteClearance = plan.siteClearance) => plan.sites.every(s => siteClearance(s, p.x, p.z) >= margin) &&
     plan.routes.every(route => route.slice(1).every((b, i) => pointSegment(p, route[i], b) >= plan.halfWidth + margin));
   // Distributed spurs and detached boulders at different scales, rooted in the relief.
   for (let z = -extent + 4; z < extent - 4; z += 5) for (let x = -extent + 4; x < extent - 4; x += 5) {
     const p = { x: x + rocks() * 4, z: z + rocks() * 4 }, h = heightAt(p.x, p.z), r = .85 + rocks() * 1.55;
-    if (!clear(p, r + .6) || rocks() > .57 || h > 15) continue;
+    if (!clear(p, r + .6, plan.circleClearance) || rocks() > .57 || proposalHeightAt(p.x, p.z) > 15) continue;
     const base = Math.min(h, heightAt(p.x + r, p.z), heightAt(p.x - r, p.z), heightAt(p.x, p.z + r), heightAt(p.x, p.z - r));
-    const type = meshes[Math.floor(rocks() * 4)];
-    place(type, p.x, base - .08, p.z, r, 1.2 + r * rocks() * 2, r * .86, palette.rock, rocks() * 6.28, 0, 0, 0, 1, 'static', 'ROCK');
+    const type = meshes[Math.floor(rocks() * 4)], height = 1.2 + r * rocks() * 2, yaw = rocks() * 6.28;
+    if (!clear(p, r + .6)) continue; // Consume the complete proposal before excluding the widened basin.
+    place(type, p.x, base - .08, p.z, r, height, r * .86, palette.rock, yaw, 0, 0, 0, 1, 'static', 'ROCK');
     world.mark(world.staticGrid, p.x, p.z, r); world.rocks.push({ ...p, r });
   }
   // Keep the approved stone vocabulary, with prominent embedded slabs and lower,
