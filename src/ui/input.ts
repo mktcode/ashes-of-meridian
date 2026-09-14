@@ -97,6 +97,15 @@
         });
         const c = $('world');
         c.addEventListener('contextmenu', e => e.preventDefault());
+        c.addEventListener('wheel', e => {
+          if (this.view !== 'game' || this.paused || !this.game.s ||
+              !this.R.containsPoint(e.clientX, e.clientY)) return;
+          e.preventDefault();
+          // WheelEvent delta modes are pixels, lines and pages respectively.
+          const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
+          this.game.s.cam.zoom = clamp(this.game.s.cam.zoom * Math.exp(clamp(pixels, -240, 240) * .0015), 27.2, 115);
+          this.lastClick = {};
+        }, { passive: false });
         c.addEventListener('pointerdown', e => this.pointerDown(e));
         c.addEventListener('pointermove', e => this.pointerMove(e));
         c.addEventListener('pointerup', e => this.pointerUp(e));
@@ -238,7 +247,7 @@
       pointerDown(this: MeridianUI, e: PointerEvent) {
         if (this.view !== 'game' || this.paused || !this.R.containsPoint(e.clientX, e.clientY)) return;
         e.preventDefault();
-        if (e.button === 1) return;
+        if (e.pointerType === 'mouse' && ![0, 1, 2].includes(e.button)) return;
         this.pointer = { x: e.clientX, y: e.clientY, inside: true };
         if (e.pointerType === 'touch') {
           this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -282,7 +291,7 @@
         if (this.drag) {
           let drag = this.drag;
           if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
-          if (drag.type === 'touch' && drag.moved) {
+          if (drag.moved && (drag.type === 'touch' || (drag.type === 'mouse' && drag.button !== 2))) {
             let a = this.R.ground(drag.x, drag.y),
               b = this.R.ground(e.clientX, e.clientY);
             this.center(this.game.s!.cam.x + a.x - b.x, this.game.s!.cam.z + a.z - b.z);
@@ -320,7 +329,7 @@
         const limit = this.game.world!.extent - 4;
         p.x = clamp(p.x, -limit, limit);
         p.z = clamp(p.z, -limit, limit);
-        if (d.type === 'touch' && d.moved) return;
+        if ((d.type === 'touch' && d.moved) || d.button === 1) return;
         if (d.button === 2) {
           if (this.selectedBuilding()) this.select([]);
           else this.game.command(

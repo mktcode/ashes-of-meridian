@@ -16,11 +16,11 @@ Fachliche Regeln und Bedienkonzept; aktuelle Preise, Stufenwerte und Fraktionsbo
 
 ## Kamera und Befehle
 
-- Fingerziehen, Pinch, die Zoom-/Basisknöpfe unter der Minimap und die Minimap selbst bewegen die Kamera. Tap wählt; Doppeltap auf dieselbe eigene Einheit gruppiert sichtbare eigene Einheiten dieses Typs, Dreifachtap sichtbare eigene Nicht-Worker. Ein Worker kann diese Folge auslösen, gehört aber nicht zur Kampfauswahl. Das Gruppensymbol wählt alle lebenden eigenen Nicht-Worker, auch außerhalb des Bildausschnitts. Andere Ziele, Pan/Pinch und Befehle unterbrechen die Tapfolge.
+- Fingerziehen bzw. Ziehen mit linker oder mittlerer Maustaste verschiebt die Kamera. Pinch, Mausrad, Zoom-/Basisknöpfe unter der Minimap und die Minimap selbst ergänzen die Navigation. Tap oder Linksklick wählt; Doppeltap/-klick auf dieselbe eigene Einheit gruppiert sichtbare eigene Einheiten dieses Typs, Dreifachtap sichtbare eigene Nicht-Worker. Ein Worker kann diese Folge auslösen, gehört aber nicht zur Kampfauswahl. Das Gruppensymbol wählt alle lebenden eigenen Nicht-Worker, auch außerhalb des Bildausschnitts. Andere Ziele, Pan/Pinch/Zoom und Befehle unterbrechen die Tapfolge.
 - Boden-Tap mit Auswahl erteilt Bewegung, auch zum Rückzug durch Feindkontakt. Der mittige **Schwerter-Schalter** aktiviert Attack-move: Einheiten halten zum Bekämpfen erreichbarer Gegner an. Worker erhalten weiterhin normale Bewegung. Der Schalter betrifft nur zukünftige Befehle und wird beim Gefechtsstart zurückgesetzt.
 - Ziel-Taps verwenden Kontextbefehle, etwa Angriff, Abbau oder Workerarbeit. Neue Befehle ersetzen den aktuellen Auftrag; keine Befehlswarteschlange. Rechtsklick auf Welt/Minimap bleibt für Kontext-/Bewegungsbefehle verfügbar.
 - **Cancel** beendet Bau-, Rally- oder Fähigkeitszielwahl ohne Verbrauch. Erfolgreiche Anwendung beendet den Modus, fehlgeschlagene Platzierung erlaubt einen neuen Versuch.
-- Keine Spiel-Hotkeys, Rechteck-/Shift-Auswahl oder Kontrollgruppen. Die touchorientierte Bedienung wird nicht durch ein separates Desktop-Steuerungssystem ergänzt.
+- Keine Spiel-Hotkeys, Rechteck-/Shift-Auswahl oder Kontrollgruppen. Mausnavigation und Rechtsklick spiegeln die bestehende Touch-Bedienung, statt ein separates Desktop-Steuerungssystem einzuführen.
 
 ## HUD und Produktion
 

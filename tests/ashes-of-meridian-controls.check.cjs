@@ -25,7 +25,10 @@ test('screen templates render frozen data without DOM access, randomness or prof
   assert.match(render.renderHomeScreen(null, 10, ''), /BEST DEPTH 10/);
   assert.equal((render.renderBattleScreen(profile, 1, 1, 250).match(/ disabled/g) || []).length, 1);
   assert.match(render.renderSettingsScreen(profile.settings), /data-setting="volume"/);
-  assert.match(render.renderFieldManual(), /Enemy doctrines/);
+  const manual = render.renderFieldManual();
+  assert.match(manual, /Enemy doctrines/);
+  assert.match(manual, /left-click your unit or building/);
+  assert.match(manual, /middle-drag · wheel, pinch/);
   assert.equal((render.renderArmoryScreen(profile).match(/data-upgrade=/g) || []).length, 6);
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal((offers.match(/data-benefit=/g) || []).length, 2);
@@ -270,7 +273,7 @@ test('no keyboard handler remains for game commands, menus or targeting', () => 
   assert.equal(h.ui.paused, false);
 });
 
-test('left mouse dragging neither draws a selection rectangle nor changes selection or orders', () => {
+test('left mouse dragging pans without drawing a selection rectangle or changing commands', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   // A hidden entity keeps the overlay empty but would be inside the former selection box.
   const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 0, x: 220, z: 220 };
@@ -283,7 +286,7 @@ test('left mouse dragging neither draws a selection rectangle nor changes select
   assert.equal(draws.some(([name]) => name === 'fillRect' || name === 'strokeRect'), false);
   h.pointer('pointerup', 240, 230, { pointerType: 'mouse' });
   assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
-  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
+  assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 50 });
 });
 
 test('touch single/double tap preserves selection and visible same-type filtering', () => {
@@ -410,16 +413,29 @@ test('Shift no longer queues commands or keeps successful targeting active', () 
   assert.equal(h.ui.mode, null);
 });
 
-test('wheel and key-release listeners are gone; middle-button drag does nothing', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  assert.equal(h.world.handlers.wheel, undefined);
+test('mouse wheel zoom and middle-button pan respect camera limits without issuing commands', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+  assert.equal(typeof h.world.handlers.wheel, 'function');
   assert.equal(h.document.handlers.keyup, undefined);
+  let prevented = 0;
+  const wheel = (deltaY, options = {}) => h.world.handlers.wheel({ deltaY, deltaMode: 0,
+    clientX: 200, clientY: 200, preventDefault: () => prevented++, ...options });
+  h.ui.lastClick = { id: 4, count: 1 };
+  wheel(120);
+  assert.ok(Math.abs(h.ui.game.s.cam.zoom - 50 * Math.exp(.18)) < 1e-10);
+  assert.equal(Object.keys(h.ui.lastClick).length, 0); assert.equal(prevented, 1);
+  for (let i = 0; i < 20; i++) wheel(1000);
+  assert.equal(h.ui.game.s.cam.zoom, 115);
+  for (let i = 0; i < 20; i++) wheel(-1000);
+  assert.equal(h.ui.game.s.cam.zoom, 27.2);
   h.pointer('pointerdown', 200, 200, { pointerType: 'mouse', button: 1 });
   h.pointer('pointermove', 240, 230, { pointerType: 'mouse', button: 1 });
   h.pointer('pointerup', 240, 230, { pointerType: 'mouse', button: 1 });
   assert.equal(h.ui.drag, null);
-  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
-  assert.deepEqual(h.calls, []);
+  assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 27.2 });
+  assert.deepEqual(h.ui.selected, [7]); assert.deepEqual(h.calls, []);
+  h.ui.paused = true; wheel(120); assert.equal(prevented, 41);
+  assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 27.2 });
 });
 
 test('one-finger drag preserves pan, camera bounds and no command on release', () => {
@@ -1571,7 +1587,7 @@ test('stylesheets load local base, screen and HUD rules in cascade order', () =>
   );
 });
 
-test('settings and camera hints describe touch navigation without desktop camera controls', () => {
+test('settings and camera hints describe shared touch and mouse navigation without hotkeys', () => {
   const h = setup(); h.ui.showSettings();
   assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
   h.ui.showHelp();
@@ -1583,9 +1599,9 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.match(h.ui.html, /Workers always move normally/);
   assert.doesNotMatch(h.ui.html, /Attack-move button|Move \/ hold \/ stop|Combat force button|Next worker button|Command view|Tabs on the command deck|Ability buttons in Command/);
   assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]|\bEsc\b|to assist|keyboard/);
-  assert.match(h.ui.html, /Drag one finger/); assert.match(h.ui.html, /pinch/i);
-  assert.doesNotMatch(h.ui.html, /WASD|Middle-button|Mouse wheel|Space \/ Home|box-select|Shift|control group/i);
-  assert.match(h.ui.html, /Double-tap: same type/);
+  assert.match(h.ui.html, /Drag or middle-drag/); assert.match(h.ui.html, /wheel, pinch/i);
+  assert.doesNotMatch(h.ui.html, /WASD|Space \/ Home|box-select|Shift|control group/i);
+  assert.match(h.ui.html, /Double-tap\/click: same type/);
   assert.equal(h.UI.prototype.setControlHints, undefined);
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB|<kbd>|F[12359]|\bEsc\b/);

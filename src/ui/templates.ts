@@ -41,14 +41,14 @@ function renderFieldManual() {
         const renderHelpLines = (rows: string[][]) => rows
           .map(([a, b]) => `<div class="help-line"><span>${a}</span><span class="help-input">${b}</span></div>`)
           .join('');
-  return `<div class="eyebrow">ASHES OF MERIDIAN</div><h1>Field manual</h1><p>Destroy the enemy HQ. Protect your last HQ.</p><div class="help-grid"><div><h3>Touch controls</h3>${renderHelpLines([
-            ['Select', 'Tap your unit or building'],
-            ['Move / attack', 'Select troops → tap ground / enemy'],
-            ['Group visible units', 'Double-tap: same type · triple-tap: all except workers'],
+  return `<div class="eyebrow">ASHES OF MERIDIAN</div><h1>Field manual</h1><p>Destroy the enemy HQ. Protect your last HQ.</p><div class="help-grid"><div><h3>Controls</h3>${renderHelpLines([
+            ['Select', 'Tap or left-click your unit or building'],
+            ['Move / attack', 'Select troops → tap ground / enemy · right-click'],
+            ['Group visible units', 'Double-tap/click: same type · triple-tap: all except workers'],
             ['Combat force', 'Group icon: select all combat units'],
             ['Attack-move', 'Crossed swords: gold = stop to fight'],
-            ['Pan / zoom', 'Drag one finger · pinch or ＋ / −'],
-            ['Navigate', '⌂: base · minimap: tap or drag']
+            ['Pan / zoom', 'Drag or middle-drag · wheel, pinch or ＋ / −'],
+            ['Navigate', '⌂: base · minimap: tap, click or drag']
           ])}<p style="font-size:12px">Turn Attack-move off to prioritize moving or retreating. Workers always move normally.</p><h3>Battle controls</h3>${renderHelpLines([
             ['Abilities', 'Choose in the bottom-center bar → tap target'],
             ['Cancel', 'Tap the selected action again'],

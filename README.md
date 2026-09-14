@@ -17,7 +17,7 @@ Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen.
 
 Mit **New expedition** eine freigeschaltete Fraktion wählen; Gegner, Karte und Seed werden für jedes Gefecht neu bestimmt. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Alloy, Raffinerien an Vents erzeugen Aether. Das gegnerische HQ zerstören führt zur Vorteilswahl und zum nächsten Gefecht; das letzte eigene HQ beendet die Expedition.
 
-Fingerziehen/Pinch bewegt die Kamera, Tap wählt oder erteilt einen Kontextbefehl. Basis- und Zoomknöpfe liegen unter der Minimap; der mittige Schwerter-Schalter aktiviert Attack-move. Das Gruppensymbol wählt alle eigenen Kampfeinheiten außer Workern. Bau und Rekrutierung liegen rechts, Fähigkeiten mittig, Minimap links. **Cancel** beendet eine Zielauswahl.
+Fingerziehen/Pinch oder Mausziehen/Mausrad bewegt die Kamera; Tap bzw. Linksklick wählt, Rechtsklick erteilt Kontextbefehle. Basis- und Zoomknöpfe liegen unter der Minimap; der mittige Schwerter-Schalter aktiviert Attack-move. Das Gruppensymbol wählt alle eigenen Kampfeinheiten außer Workern. Bau und Rekrutierung liegen rechts, Fähigkeiten mittig, Minimap links. **Cancel** beendet eine Zielauswahl.
 
 Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine laufende Expedition wird **zwischen Gefechten** automatisch gesichert; Reload oder Schließen verwirft nur das aktuelle Gefecht und setzt am letzten Übergang fort. Genaue Regeln und Bedienung: [Gameplay](docs/gameplay.md).
 
