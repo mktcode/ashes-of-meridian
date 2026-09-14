@@ -19,7 +19,9 @@ test('screen templates render frozen data without DOM access, randomness or prof
     benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
     encounter: Object.freeze({enemy: 2, map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
-  assert.match(render.renderHomeScreen(expedition, 10, '<p>Briefing</p>'), /Checkpoint 11/);
+  const home = render.renderHomeScreen(expedition, 10, '<p>Briefing</p>');
+  assert.match(home, /Checkpoint 11/);
+  assert.doesNotMatch(home, /menu-status|menu-beacon|3 CIVILIZATIONS/);
   assert.match(render.renderHomeScreen(null, 10, ''), /BEST DEPTH 10/);
   assert.equal((render.renderBattleScreen(profile, 1, 1, 250).match(/ disabled/g) || []).length, 1);
   assert.match(render.renderSettingsScreen(profile.settings), /data-setting="volume"/);

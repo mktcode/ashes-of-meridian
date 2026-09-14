@@ -26,7 +26,7 @@ function renderHomeScreen(expedition: MeridianExpedition | null, bestDepth: numb
               </div>
             </div>
             <div class="menu-quote">One expedition.<br>How deep can you go?<small>${expedition ? `${expedition.depth} SECTORS CLEARED` : `BEST DEPTH ${bestDepth}`}</small></div>
-            <footer class="menu-footer"><span class="menu-status"><span class="menu-beacon" aria-hidden="true"></span>3 CIVILIZATIONS · ONE OBJECTIVE</span><span class="menu-progress">LOCAL & OFFLINE</span></footer>
+            <footer class="menu-footer"><span class="menu-progress">LOCAL & OFFLINE</span></footer>
           </div></div>`;
 }
 

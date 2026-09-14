@@ -365,7 +365,7 @@
       position: relative;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 24px;
       padding-top: 14px;
       color: #91a8b3;
@@ -377,30 +377,10 @@
       top: 0
     }
 
-    .home-screen .menu-status,
     .home-screen .menu-progress {
       display: flex;
       align-items: center;
       gap: 18px
-    }
-
-    .home-screen .menu-beacon {
-      position: relative;
-      width: 38px;
-      height: 38px;
-      flex-shrink: 0;
-      border: 1px solid #8ac1d321;
-      border-radius: 50%;
-      background: radial-gradient(circle, #9de8f2 0 3px, #a1e0ed33 4px, transparent 8px)
-    }
-
-    .home-screen .menu-beacon:before {
-      content: "";
-      position: absolute;
-      inset: 9px;
-      border: 1px solid #9de8f2b0;
-      border-radius: 50%;
-      box-shadow: 0 0 9px #72dbef26
     }
 
     .home-screen .menu-quote {
@@ -530,7 +510,7 @@
 
     @media(max-width:600px) {
       .home-screen .version,
-      .home-screen .menu-progress {
+      .home-screen .menu-footer {
         display: none
       }
 
@@ -555,12 +535,6 @@
       .home-screen .menu-subnav button {
         font-size: 8px;
         padding: 8px
-      }
-
-      .home-screen .menu-status {
-        gap: 10px;
-        font-size: 7px;
-        letter-spacing: .4px
       }
 
       .home-screen .menu-frame {
