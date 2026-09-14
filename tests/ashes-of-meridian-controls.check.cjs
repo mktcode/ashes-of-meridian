@@ -8,6 +8,29 @@ const RUNTIME_SOURCE = 'dist/src';
 const UI_FILES = UI_SCRIPTS.map(name => `${RUNTIME_SOURCE}/ui/${name.replace('ui-', '')}.js`);
 const STYLE_FILES = ['styles/base.css', 'styles/screens.css', 'styles/hud.css'];
 
+test('screen templates render frozen data without DOM access, randomness or profile mutation', () => {
+  const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
+  vm.runInContext('Math.random = seeded = () => { throw Error("Template RNG"); };', context);
+  const render = vm.runInContext('({renderHomeScreen, renderBattleScreen, renderSettingsScreen, renderFieldManual, renderArmoryScreen, renderBenefitOptions})', context);
+  const profile = Object.freeze({version: 1, expeditionDepth: 10, aether: 250,
+    upgrades: Object.freeze({startingAlloy: 0, constructionProtocols: 1}),
+    settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false})});
+  const expedition = Object.freeze({version: 1, faction: 1, depth: 10,
+    benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
+    encounter: Object.freeze({enemy: 2, map: 'desert', seed: 1409})});
+  const before = JSON.stringify({profile, expedition});
+  assert.match(render.renderHomeScreen(expedition, 10, '<p>Briefing</p>'), /Checkpoint 11/);
+  assert.match(render.renderHomeScreen(null, 10, ''), /BEST DEPTH 10/);
+  assert.equal((render.renderBattleScreen(profile, 1, 1, 250).match(/ disabled/g) || []).length, 1);
+  assert.match(render.renderSettingsScreen(profile.settings), /data-setting="volume"/);
+  assert.match(render.renderFieldManual(), /Enemy doctrines/);
+  assert.equal((render.renderArmoryScreen(profile).match(/data-upgrade=/g) || []).length, 6);
+  const offers = render.renderBenefitOptions(expedition.offers);
+  assert.equal((offers.match(/data-benefit=/g) || []).length, 2);
+  assert.equal(offers, render.renderBenefitOptions(expedition.offers));
+  assert.equal(JSON.stringify({profile, expedition}), before);
+});
+
 function setup() {
   const target = () => ({
     handlers: {}, style: { setProperty(key, value) { this[key] = value; } }, classList: {

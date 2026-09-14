@@ -56,7 +56,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-ai',
   'simulation-runtime'
 ]);
-const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation']);
+const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation']);
 
 // Deliberately not a general HTML parser. Only the project's named classic
 // scripts with quoted attributes and synchronous document order are supported.
