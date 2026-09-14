@@ -77,4 +77,17 @@
   TerrainModels.desertChip = (seed: number) => rock(seed, [
     { x: 0, z: 0, sx: .60, sz: .46, h: .52, yaw: -.2, sides: 7, top: .79 }
   ], true);
+  // Wall-foot debris has broad buried bases and several differently eroded shoulders.
+  // Separate meshes keep decorative buttresses out of the solid-rock placement contract.
+  TerrainModels.desertButtress = (seed: number) => rock(seed, [
+    { x: -.20, z: -.12, sx: .69, sz: .72, h: 1, yaw: -.2, sides: 16, top: .42 },
+    { x: .39, z: .16, sx: .58, sz: .59, h: .55, yaw: .8, sides: 12, top: .63 },
+    { x: -.34, z: .52, sx: .49, sz: .42, h: .31, yaw: -.6, sides: 10, top: .71 }
+  ]);
+  TerrainModels.desertScree = (seed: number) => rock(seed, [
+    { x: -.25, z: -.14, sx: .62, sz: .51, h: 1, yaw: .2, sides: 11, top: .72 },
+    { x: .43, z: -.27, sx: .42, sz: .45, h: .61, yaw: -.5, sides: 9, top: .59 },
+    { x: .24, z: .48, sx: .48, sz: .36, h: .43, yaw: .7, sides: 9, top: .81 },
+    { x: -.50, z: .43, sx: .32, sz: .39, h: .25, yaw: -.7, sides: 8, top: .68 }
+  ], true);
 })();

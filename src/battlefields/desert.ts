@@ -22,16 +22,18 @@ const DESERT_BATTLEFIELD: BattlefieldDefinition = {
 // Each corner has a sheltered basin connected to the valley network. Resource and
 // vent approaches are part of that network, not holes cut out of otherwise sealed cliffs.
 function desertCanyonPlan(layout: BattlefieldLayout, seed: number) {
+  const { Math } = globalThis;
   const rand = seeded(seed ^ 0x43414e59), routes: Position[][] = [];
-  // Circumscribed, uneven rock faces retain the entire circular building reserve.
-  // Their own stream must not change canyon bends when the basin outline is refined.
+  // This envelope reserves building space; it must not become the visible wall.
+  // Weathering carves beyond it, without changing the canyon or rock-proposal RNG.
   const rimRandom = seeded(seed ^ 0x42415349);
   const basins = layout.startSites.map(p => {
     const r = 28, phase = rimRandom() * Math.PI * 2,
       angles = Array.from({ length: 8 }, (_, i) => phase + i * Math.PI / 4 + (rimRandom() - .5) * .24),
       planes = angles.map(a => ({ x: Math.cos(a), z: Math.sin(a), offset: r + .35 + rimRandom() * 1.75 })),
       gap = Math.max(...angles.map((a, i) => (angles[(i + 1) % angles.length] + (i === angles.length - 1 ? Math.PI * 2 : 0)) - a)),
-      bound = (Math.max(...planes.map(p => p.offset)) + 5) / Math.cos(gap / 2);
+      // Include both erosion depth and the full apron width in the refinement bound.
+      bound = (Math.max(...planes.map(p => p.offset)) + 15) / Math.cos(gap / 2);
     return { ...p, r, planes, bound };
   });
   const sites: (Position & { r: number; planes?: (typeof basins)[number]['planes']; bound?: number })[] = [...basins,
@@ -73,12 +75,17 @@ function desertCanyonPlan(layout: BattlefieldLayout, seed: number) {
     if (!s.planes) return circleClearance(s, x, z);
     let clearance = -Infinity;
     for (const plane of s.planes) clearance = Math.max(clearance, (x - s.x) * plane.x + (z - s.z) * plane.z - plane.offset);
-    return clearance;
+    // Irregular alcoves and smaller drainage cuts interrupt every long face.
+    // Positive erosion only: neither the envelope nor its free approaches shrink.
+    const u = x - s.x, v = z - s.z, phase = seed * .001 + s.x * .23 - s.z * .19,
+      wash = Math.sin(u * .34 + v * .19 + phase + 1.5 * Math.sin(v * .15 - phase)),
+      erosion = .4 + 3.6 * (.5 + .5 * wash) ** 2 + 1.1 * (.5 + .5 * Math.sin(u * .83 - v * .47 + phase));
+    return clearance - erosion;
   };
   return { sites, routes, halfWidth: 8.5, siteClearance, circleClearance };
 }
 
-function desertElevation(seed: number, extent: number, plan: ReturnType<typeof desertCanyonPlan>) {
+function desertElevation(seed: number, extent: number, plan: ReturnType<typeof desertCanyonPlan>, weathered = true) {
   const { Math } = globalThis;
   const hash = (x: number, z: number) => {
     let h = Math.imul(x, 374761393) ^ Math.imul(z, 668265263) ^ seed;
@@ -101,12 +108,18 @@ function desertElevation(seed: number, extent: number, plan: ReturnType<typeof d
       top: Math.min(a.z, b.z) - margin, bottom: Math.max(a.z, b.z) + margin };
   }));
   return (x: number, z: number) => {
-    let clearance = 5;
+    let clearance = 5, apron = 1;
     if (Math.max(Math.abs(x), Math.abs(z)) < extent + 22) {
       for (const s of plan.sites) {
         const bound = s.bound ?? s.r + 5;
-        if (Math.abs(x - s.x) < bound && Math.abs(z - s.z) < bound)
-          clearance = Math.min(clearance, plan.siteClearance(s, x, z));
+        if (Math.abs(x - s.x) < bound && Math.abs(z - s.z) < bound) {
+          const d = plan.siteClearance(s, x, z);
+          clearance = Math.min(clearance, d);
+          // A broad, variable colluvial apron, with a flat tangent at ground level.
+          // The old steep first sample row produced the conspicuous triangular teeth.
+          if (weathered && s.planes)
+            apron = Math.min(apron, Math.pow(smooth(0, 8 + noise(x * .12 + 91, z * .12) * 1.5, d), 2.2));
+        }
       }
       if (clearance <= 0) return -.14;
       for (const s of segments) {
@@ -131,7 +144,7 @@ function desertElevation(seed: number, extent: number, plan: ReturnType<typeof d
     height += (smooth(.20, .79, fraction) - fraction) * 1.6;
     const fissure = Math.abs(Math.sin(x * .31 + z * .17 + noise(x * .12, z * .12) * 2.8));
     height += support * (noise(x * .38, z * .38) * .85 + noise(x * .83, z * .83) * .22 - Math.exp(-fissure * 14) * 1.65);
-    return -.14 + Math.max(0, Math.min(45, height)) * Math.pow(smooth(0, 4.5, clearance), .72);
+    return -.14 + Math.max(0, Math.min(45, height)) * Math.min(apron, Math.pow(smooth(0, 4.5, clearance), .72));
   };
 }
 
@@ -150,7 +163,7 @@ function desertReliefHeight(surface: WorldRelief, x: number, z: number) {
 function populateDesertCanyons(builder: BattlefieldBuilder) {
   const { world, palette, place } = builder, extent = world.extent,
     plan = desertCanyonPlan(world.layout, world.seed), elevation = desertElevation(world.seed, extent, plan),
-    proposalElevation = desertElevation(world.seed, extent, { ...plan, siteClearance: plan.circleClearance }),
+    proposalElevation = desertElevation(world.seed, extent, { ...plan, siteClearance: plan.circleClearance }, false),
     decor = builder.cosmeticRandom(0x53435245), rocks = seeded(world.seed ^ 0x524f434b);
   // Corridors are seed-specific, instance-local terrain data; never mutate the map definition.
   world.layout = { ...world.layout, corridors: plan.routes.map(route => route.map(p => [p.x, p.z])) };
@@ -201,7 +214,7 @@ function populateDesertCanyons(builder: BattlefieldBuilder) {
       world.terrainFeatureGrid[rz * n + cx] = 1;
   }
   world.staticGrid.set(world.terrainFeatureGrid);
-  const meshes = ['desertBoulder', 'desertCrag', 'desertRidge', 'desertShelf', 'desertTalus', 'desertFlake', 'desertPebble', 'desertChip'];
+  const meshes = ['desertBoulder', 'desertCrag', 'desertRidge', 'desertShelf', 'desertTalus', 'desertFlake', 'desertPebble', 'desertChip', 'desertButtress', 'desertScree'];
   for (const [i, model] of meshes.entries())
     world.renderData.geometries.push({ mesh: model, model, seed: world.seed ^ (0x524f434b + i), extent });
   const clear = (p: Position, margin: number, siteClearance = plan.siteClearance) => plan.sites.every(s => siteClearance(s, p.x, p.z) >= margin) &&
@@ -236,5 +249,30 @@ function populateDesertCanyons(builder: BattlefieldBuilder) {
     const mesh = size < .45 ? (i % 2 ? 'desertPebble' : 'desertChip') : (i % 4 ? 'desertTalus' : 'desertFlake');
     place(mesh, x, base - .025, z, size, height, size * (.65 + decor() * .25),
       builder.color(palette.rock).map(v => v * (.92 + decor() * .18)), decor() * 6.28, 0, 0, 0, 1, 'static', 'ROCK');
+  }
+  // Deposit irregular debris fans at actual wall feet, not uniformly around a ring.
+  // Tall pieces must fit entirely on existing blockers; their shallow outwash can
+  // reach the valley edge without creating invisible obstacles or cluttering HQ cores.
+  const scree = builder.cosmeticRandom(0x4150524e);
+  for (let z = -extent + 3; z < extent - 3; z += 5) for (let x = -extent + 3; x < extent - 3; x += 5) {
+    const cx = x + scree() * 4, cz = z + scree() * 4, center = heightAt(cx, cz),
+      shoulder = Math.max(heightAt(cx + 4, cz), heightAt(cx - 4, cz), heightAt(cx, cz + 4), heightAt(cx, cz - 4));
+    if (center > 7 || shoulder < 1.5 || scree() > .70) continue;
+    const count = 7 + Math.floor(scree() * 10), angle = scree() * Math.PI * 2;
+    for (let i = 0; i < count; i++) {
+      const along = (scree() - .5) * 8, across = (scree() - .5) * 4,
+        px = cx + Math.cos(angle) * along - Math.sin(angle) * across,
+        pz = cz + Math.sin(angle) * along + Math.cos(angle) * across,
+        h = heightAt(px, pz), radius = .28 + scree() ** 1.4 * 1.65;
+      if (h > 8 || Math.max(Math.abs(px), Math.abs(pz)) + radius > extent ||
+        plan.sites.some(s => distance({ x: px, z: pz }, s) < s.r * .80)) continue;
+      const tall = h > .18 && embeddedFoot(px, pz, radius), size = tall ? radius : Math.min(radius, .8),
+        base = Math.min(h, heightAt(px + size, pz), heightAt(px - size, pz), heightAt(px, pz + size), heightAt(px, pz - size)),
+        height = tall ? .22 + size * .85 : Math.min(.20 + scree() * .13, (.275 - base) / 1.2),
+        mesh = tall && i % 4 === 0 ? 'desertButtress' : 'desertScree', tint = .94 + scree() * .12;
+      if (!tall && base > .05) continue;
+      place(mesh, px, base - .025, pz, size, height, size * .83,
+        builder.color(palette.rock).map(v => v * tint), scree() * 6.28, 0, 0, 0, 1, 'static', 'ROCK');
+    }
   }
 }

@@ -289,6 +289,47 @@ test('Desert dressing is closed and rooted; taller fragments stay entirely on bl
   }
 });
 
+test('Desert wall-foot debris is closed, grounded and low unless its whole footprint is blocked', () => {
+  const names=['desertButtress','desertScree'], sample=vm.runInContext('desertReliefHeight',context);
+  for(const seed of [1409,2219,24080,43015]) {
+    const w=new Battlefield(seed,'desert'), surfaces=w.renderData.geometries.filter(d=>d.relief).map(d=>d.relief),
+      height=(x,z)=>sample(Math.max(Math.abs(x),Math.abs(z))<=w.extent?surfaces[0]:surfaces[1],x,z), peaks=new Map();
+    let bytes=0, prominent=0, low=0;
+    for(const name of names) {
+      const descriptor=w.renderData.geometries.find(d=>d.model===name), mesh=TerrainModels.geometry(descriptor);
+      assert.deepEqual(mesh,TerrainModels.geometry(descriptor));
+      assert.notDeepEqual(mesh,TerrainModels[name](descriptor.seed^1));
+      assertClosedFractures(mesh); bytes+=mesh.length*4;
+      let peak=0;
+      for(let i=0;i<mesh.length;i+=9) {
+        assert.ok(mesh.slice(i,i+9).every(Number.isFinite));
+        assert.ok(Math.hypot(mesh[i],mesh[i+2])<=1.000001);
+        assert.ok(mesh[i+1]>=-.13 && mesh[i+1]<=1.2);
+        peak=Math.max(peak,mesh[i+1]);
+      }
+      peaks.set(name,peak);
+    }
+    assert.ok(bytes<80000,'two shared meshes, no unique geometry per deposit');
+    const deposits=w.renderData.placements.filter(p=>names.includes(p.mesh));
+    assert.ok(deposits.length>500 && deposits.length<4000,'substantial, bounded wall-foot dressing');
+    for(const p of deposits) {
+      const [x,y,z]=p.position, r=p.scale[0];
+      assert.equal(p.material,'ROCK'); assert.equal(p.layer,'static');
+      assert.ok(r>0 && r<2 && p.scale[1]>0 && p.scale[1]<=r*1.7,'no slope-compensating vertical pillars');
+      assert.equal(y,Math.min(height(x,z),height(x+r,z),height(x-r,z),height(x,z+r),height(x,z-r))-.025);
+      for(const s of w.layout.startSites) assert.ok(Math.hypot(x-s.x,z-s.z)>22,'quiet construction cores');
+      if(y+p.scale[1]*peaks.get(p.mesh)>.28) {
+        prominent++;
+        assert.ok(Math.max(Math.abs(x)+r,Math.abs(z)+r)<=w.extent);
+        const a=w.idx(x-r,z-r), b=w.idx(x+r,z+r), n=w.gridSize;
+        for(let row=Math.floor(a/n);row<=Math.floor(b/n);row++) for(let col=a%n;col<=b%n;col++)
+          assert.equal(w.staticGrid[row*n+col],1,'no tall decoration in a free cell');
+      } else low++;
+    }
+    assert.ok(prominent>100 && low>100,'embedded boulder groups and shallow outwash');
+  }
+});
+
 test('Desert relief draws CPU samples exactly, with finite normals and upward nondegenerate faces', () => {
   const w = new Battlefield(43015, 'desert'), descriptors = w.renderData.geometries.filter(d => d.relief);
   assert.equal(descriptors.length, 2);
@@ -329,7 +370,7 @@ test('Desert relief draws CPU samples exactly, with finite normals and upward no
   layoutHash(w);
 });
 
-test('Desert basin rims have uneven straight faces without cutting into the circular building reserve', () => {
+test('Desert basin rims erode the reserved envelope and meet the floor with shallow continuous feet', () => {
   const {desertCanyonPlan,desertElevation}=vm.runInContext('({desertCanyonPlan,desertElevation})',context);
   for (const seed of [1409,1420,43015,6633]) {
     const plan=desertCanyonPlan(BATTLEFIELDS.desert.layout,seed), basins=plan.sites.filter(s=>s.planes);
@@ -339,29 +380,44 @@ test('Desert basin rims have uneven straight faces without cutting into the circ
       assert.equal(basin.planes.length,8);
       shapes.add(JSON.stringify(basin.planes));
       const radii=[];
+      let curvedFaces=0;
       for(let i=0;i<360;i++) {
         const angle=i*Math.PI/180, x=Math.cos(angle), z=Math.sin(angle);
         assert.ok(plan.siteClearance(basin,basin.x+x*28,basin.z+z*28)<=1e-9,'entire old reserve remains free');
-        radii.push(Math.min(...basin.planes.filter(p=>p.x*x+p.z*z>0).map(p=>p.offset/(p.x*x+p.z*z))));
+        let lo=28, hi=44;
+        for(let j=0;j<16;j++) {
+          const r=(lo+hi)/2;
+          if(plan.siteClearance(basin,basin.x+x*r,basin.z+z*r)>0) hi=r; else lo=r;
+        }
+        radii.push((lo+hi)/2);
       }
-      assert.ok(Math.max(...radii)-Math.min(...radii)>2,'no circular outline');
-      assert.ok(Math.max(...radii)<36,'bounded local expansion, not an enlarged arena');
-      for(const p of basin.planes) for(const along of [-2,0,2]) {
-        const x=basin.x+p.x*p.offset-p.z*along, z=basin.z+p.z*p.offset+p.x*along;
-        assert.ok(Math.abs(plan.siteClearance(basin,x,z))<1e-8,'each straight face participates in the outline');
+      assert.ok(Math.max(...radii)-Math.min(...radii)>3,'no circular outline');
+      assert.ok(Math.max(...radii)<42,'bounded local erosion');
+      for(const p of basin.planes) {
+        const depths=[-3,0,3].map(along=>plan.siteClearance(basin,
+          basin.x+p.x*p.offset-p.z*along,basin.z+p.z*p.offset+p.x*along));
+        assert.ok(depths.every(d=>d<-.39),'the planning envelope is no longer a cut wall');
+        if(Math.abs(depths[0]+depths[2]-2*depths[1])>.15) curvedFaces++;
       }
+      assert.ok(curvedFaces>=3,'alcoves, not merely another rotated polygon');
     }
     assert.equal(shapes.size,4,'different rock faces at each start');
-    const elevation=desertElevation(seed,90,plan), circular=desertElevation(seed,90,{...plan,
-      siteClearance:(s,x,z)=>Math.hypot(x-s.x,z-s.z)-s.r});
-    let changed=0;
-    for(let z=-90;z<=90;z+=3) for(let x=-90;x<=90;x+=3) {
-      const before=circular(x,z), after=elevation(x,z);
+    const envelopeClearance=(s,x,z)=>s.planes?
+      Math.max(...s.planes.map(p=>(x-s.x)*p.x+(z-s.z)*p.z-p.offset)):plan.circleClearance(s,x,z),
+      elevation=desertElevation(seed,90,plan), unweathered=desertElevation(seed,90,{...plan,siteClearance:envelopeClearance},false);
+    let changed=0, shallow=0;
+    for(let z=-90;z<=90;z+=2) for(let x=-90;x<=90;x+=2) {
+      const before=unweathered(x,z), after=elevation(x,z);
       assert.ok(after<=before+1e-9,'rim shaping can only open, never obstruct, the existing relief');
       if(basins.every(s=>Math.hypot(x-s.x,z-s.z)>s.bound)) assert.equal(after,before,'other landforms stay unchanged');
       if(Math.abs(before-after)>.1) changed++;
+      const d=Math.min(...basins.map(s=>plan.siteClearance(s,x,z)));
+      if(d>0 && d<1 && before>2) {
+        assert.ok(after<.02,'no tall first sample row / triangular wall-foot teeth'); shallow++;
+      }
     }
     assert.ok(changed>30,'visible rim shaping');
+    assert.ok(shallow>15,'a shallow foot on actual formerly raised wall segments');
   }
 });
 
@@ -409,11 +465,15 @@ test('Desert relief is distributed inside the world and its edges continue natur
   const w = new Battlefield(1409, 'desert'), s = w.renderData.geometries.find(d => d.relief && !d.relief.innerExtent).relief;
   const at = (x,z) => s.heights[(Math.round((z+s.extent)/s.step)+1)*s.size+Math.round((x+s.extent)/s.step)+1];
   for (const sx of [-1,1]) for (const sz of [-1,1]) {
-    let highs = 0, lows = 0;
+    let raised = 0, lows = 0, peak = 0;
     for (let x = 8; x < 68; x += 3) for (let z = 8; z < 68; z += 3) {
-      const h = at(x*sx,z*sz); if (h > 3) highs++; if (h < .18) lows++;
+      const h = at(x*sx,z*sz); if (h > .18) raised++; if (h < .18) lows++;
+      peak = Math.max(peak,h);
     }
-    assert.ok(highs > 30 && lows > 30, 'both landforms and usable valleys in every quadrant');
+    // Broad low aprons are still raised relief, not missing landforms. Check the
+    // occupied area separately from tall cores, rather than requiring steep feet.
+    assert.ok(raised > 30 && lows > 30, 'both landforms and usable valleys in every quadrant');
+    assert.ok(peak > 10, 'retain tall interior cores, not only low bumps or an outer rim');
     assert.ok(at(87*sx,87*sz) > 10, 'corner mountains, not an exposed right-angle arena edge');
   }
   const next = new Battlefield(1410,'desert');
