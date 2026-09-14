@@ -28,7 +28,8 @@ function worldSample(seed, map) {
   // Normalize only the commissioned Desert mesh substitution/pebble grounding for the old
   // placement digest. Independent terrain tests compare all other descriptors and CPU grids.
   const rockNames = { desertBoulder: 'rockBoulder', desertCrag: 'rockCrag', desertRidge: 'rockRidge', desertShelf: 'rockShelf' };
-  const calls = renderer.calls.map(call => {
+  // New, independently checked foot dressing is outside the historical placement contract.
+  const calls = renderer.calls.filter(call => !['desertTalus', 'desertFlake'].includes(call[0])).map(call => {
     if (rockNames[call[0]]) return [rockNames[call[0]], ...call.slice(1)];
     if (call[0] === 'desertPebble' || call[0] === 'desertChip') {
       const old = call.slice(0, 14); old[0] = call[0] === 'desertPebble' ? 'octa' : 'box'; old[2] = call[4] * .27;

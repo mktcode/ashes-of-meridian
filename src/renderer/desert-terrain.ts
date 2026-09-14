@@ -1,5 +1,5 @@
 /* Desert-only rock silhouettes. Baked once per world, with a private geometry RNG.
- * Shared geom.rock stays unchanged for resource pedestals and mountain scree. */
+ * Shared geom.rock stays unchanged for resource pedestals. */
 'use strict';
 (() => {
   type Lobe = { x: number; z: number; sx: number; sz: number; h: number; yaw: number; sides: number; top: number };
