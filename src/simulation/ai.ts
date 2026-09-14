@@ -27,7 +27,14 @@ function aiRulesFor(faction: FactionId, depth: number) {
 const aiMethods = {
   enableAI(this: MeridianGame, team: PlayerTeam) {
     this.s!.ai[team] = { nextThink: 0, mode: 'bootstrap', contacts: {}, squad: [],
-      lastAttack: 0, launched: 0, search: 0, nextBuild: 0, lastScout: -100 };
+      attackStartedAt: 0, restStartedAt: 0, launched: 0, search: 0, nextBuild: 0, buildWindowAt: -1, buildAttempts: {}, lastScout: -100 };
+  },
+  aiSetMode(this: MeridianGame, team: PlayerTeam, mode: AIState['mode']) {
+    const ai=this.s!.ai[team]!;
+    if (ai.mode===mode) return;
+    if (mode==='attack') ai.attackStartedAt=this.s!.time;
+    else if (ai.mode==='attack' || mode==='recover') ai.restStartedAt=this.s!.time;
+    ai.mode=mode;
   },
   aiObserve(this: MeridianGame, team: PlayerTeam): AIContact[] {
     const s = this.s!, ai = s.ai[team]!, view = this.world!.sight[team], visible: AIContact[] = [];
@@ -63,8 +70,13 @@ const aiMethods = {
   },
   aiBuild(this: MeridianGame, team: PlayerTeam, type: BuildingType, home: BuildingEntity) {
     const s=this.s!, ai=s.ai[team]!;
-    if (s.time < ai.nextBuild || this.canBuild(type,null,team) || !this.afford(this.cost(type,'building',team),team)) return false;
+    if ((s.time < ai.nextBuild && ai.buildWindowAt !== s.time) || ai.buildAttempts[type] === s.time ||
+      this.canBuild(type,null,team) || !this.afford(this.cost(type,'building',team),team)) return false;
+    // One planning window per retry interval; each type can search once in that window.
+    // Alternative plots share the window, not the failed candidate's cooldown.
     ai.nextBuild = s.time + AI_RULES.buildRetry;
+    ai.buildWindowAt = s.time;
+    ai.buildAttempts[type] = s.time;
     const vents = Object.values(ai.contacts).filter(e=>e.type==='gas')
       .sort((a,b)=>distance(a,home)-distance(b,home)||a.id-b.id);
     const centers: Position[] = type==='refinery' ? vents : [home];
@@ -114,12 +126,12 @@ const aiMethods = {
     const candidates=rules.build.filter((type,i,plan)=>count(type)<plan.slice(0,i+1).filter(t=>t===type).length);
     if (this.cap(team)-this.supply(team)<=6 && this.cap(team)<180 &&
       !buildings.some(b=>b.type==='depot'&&b.progress<1)) candidates.unshift('depot');
-    for (const next of candidates) {
+    for (const next of new Set(candidates)) {
       if (this.canBuild(next,null,team)) continue;
       const built=this.aiBuild(team,next,home), c=this.cost(next,'building',team);
       // An unseen/unreachable second vent must not lock out the rest of the doctrine.
       if (built) return workers.length<2?50:0;
-      if (next!=='refinery' && account.gas >= c.gas*.7) return c.cost;
+      if (next!=='refinery' && !this.afford(c,team) && account.gas >= c.gas*.7) return c.cost;
     }
     return workers.length<2?50:0;
   },
@@ -180,7 +192,7 @@ const aiMethods = {
       army=own.filter(e=>e.kind==='unit'&&e.type!=='worker'&&!e.exit) as UnitEntity[],
       danger=foes.filter(e=>e.kind==='unit'&&distance(e,home)<30);
     if (danger.length) {
-      ai.mode='defend'; ai.squad=[];
+      this.aiSetMode(team,'defend'); ai.squad=[];
       this.aiOrder(team,army,danger[0]); return;
     }
     let squad=army.filter(e=>ai.squad.includes(e.id));
@@ -188,10 +200,10 @@ const aiMethods = {
       // Keep the retreat order across strategic ticks, but never wait forever for healing.
       const restored=squad.every(e=>distance(e,home)<22 &&
         (this.factionFor(team)===FACTION_ID.THIRD ? e.shield>=e.maxShield*.75 : e.hp>=e.maxHp*.85));
-      if (squad.length && s.time<(ai.recoverUntil || 0) && (!restored || s.time-ai.lastAttack<6)) {
+      if (squad.length && s.time<(ai.recoverUntil || 0) && (!restored || s.time-ai.restStartedAt<6)) {
         this.aiOrder(team,squad,home,false);return;
       }
-      ai.mode='assemble';ai.squad=[];squad=[];
+      this.aiSetMode(team,'assemble');ai.squad=[];squad=[];
     }
     if (ai.mode==='attack' && ai.goal && squad.length) {
       const power=squad.reduce((n,e)=>n+this.aiPower(e),0),
@@ -199,11 +211,12 @@ const aiMethods = {
         arrived=squad.some(e=>distance(e,ai.goal!)<10),
         hull=squad.reduce((n,e)=>n+e.hp,0)/squad.reduce((n,e)=>n+e.maxHp,0),
         shields=squad.reduce((n,e)=>n+e.shield,0)/Math.max(1,squad.reduce((n,e)=>n+e.maxShield,0)),
-        exhausted=opposition>0 && s.time-ai.lastAttack>6 &&
+        exhausted=opposition>0 && s.time-ai.attackStartedAt>6 &&
           (this.factionFor(team)===FACTION_ID.SECOND ? hull<.6 :
             this.factionFor(team)===FACTION_ID.THIRD && shields<.2);
-      if (exhausted || squad.length<ai.launched*.45 || power<opposition*.5 || s.time-ai.lastAttack>150) {
-        ai.mode='recover';ai.lastAttack=s.time;ai.recoverUntil=s.time+rules.recoveryTime;
+      if (exhausted || squad.length<ai.launched*.45 || power<opposition*.5 || s.time-ai.attackStartedAt>150) {
+        ai.failedGoal={...ai.goal,until:s.time+AI_RULES.contactLife};
+        this.aiSetMode(team,'recover');ai.recoverUntil=s.time+rules.recoveryTime;
         this.aiOrder(team,squad,home,false);return;
       }
       if (!arrived) { this.aiOrder(team,squad,ai.goal);return; }
@@ -219,18 +232,21 @@ const aiMethods = {
       this.aiOrder(team,[scout],scout.hp<scout.maxHp*.4?home:goal,false);ai.lastScout=s.time;
     }
     const pool=army.filter(e=>e.id!==ai.scout), attackers=ai.mode==='attack'?squad:pool.slice(rules.reserve),
-      strength=attackers.reduce((n,e)=>n+this.aiPower(e),0),elapsed=s.time-ai.lastAttack;
+      strength=attackers.reduce((n,e)=>n+this.aiPower(e),0),
+      elapsed=s.time-(ai.mode==='attack'?ai.attackStartedAt:ai.restStartedAt);
     const weights: Partial<Record<EntityType,number>>=rules.targets,
-      value=(e:AIContact)=>weights[e.type] ?? (e.type==='depot'?65:e.type==='hq'?85:25);
+      value=(e:AIContact)=>(weights[e.type] ?? (e.type==='depot'?65:e.type==='hq'?85:25)) -
+        (ai.failedGoal && s.time<ai.failedGoal.until && distance(e,ai.failedGoal)<25 ? 100 : 0);
     const targets=known.map(e=>({e,defense:known.filter(n=>distance(e,n)<25).reduce((n,note)=>n+this.aiPower(note),0)}))
       .sort((a,b)=>(value(b.e)-b.defense*.5-distance(b.e,home)*.2)-(value(a.e)-a.defense*.5-distance(a.e,home)*.2)||a.e.id-b.e.id);
     const target=targets.find(t=>strength>Math.max(42,t.defense*(elapsed>180?.8:rules.forceRatio)));
     if (target && attackers.length>=rules.attackers && (ai.mode==='attack'||elapsed>=rules.attackWait)) {
-      ai.mode='attack';ai.goal={x:target.e.x,z:target.e.z};
-      ai.squad=attackers.map(e=>e.id);ai.launched=attackers.length;ai.lastAttack=s.time;
+      if (ai.mode!=='attack') ai.launched=attackers.length;
+      this.aiSetMode(team,'attack');ai.goal={x:target.e.x,z:target.e.z};
+      ai.squad=attackers.map(e=>e.id);
       this.aiOrder(team,attackers,ai.goal);return;
     }
-    ai.mode=army.length?'assemble':'bootstrap'; ai.squad=[];
+    this.aiSetMode(team,army.length?'assemble':'bootstrap'); ai.squad=[];
     // Hold near the base without pinning the producer exits.
     const rally={x:home.x+(team===1?-13:13),z:home.z+(team===1?13:-13)};
     this.aiOrder(team,pool,rally);

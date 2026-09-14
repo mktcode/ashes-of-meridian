@@ -2,8 +2,6 @@
 
 Die implementierten Doktrinen, Tiefenstufen, Vorteile und Flottenupgrades sind in den [Spielregeln](../gameplay.md) beschrieben. Die technische Planung bleibt in Git; offene menschliche Abnahme ist maßgeblich in der [Run-Validierung](playtest-validation.md) geführt. Automatische autonome Partien sind kein Nachweis ausgewogener menschlicher Schwierigkeit.
 
-Vor weiterem Balancing die reproduzierten [KI-Randfälle bei Bauprioritäten und Strategietimern](ki-controller-timer-und-bauprioritaeten.md) berücksichtigen: Sie können den Ausbau bzw. den vorgesehenen Rückzug unterdrücken.
-
 ## Sehr tiefe Expeditionen
 
 Der Gegnerdruck erreicht ab Tiefe 16 seine letzte Stufe. Unbegrenzte Ressourcen-Vorteile wachsen dagegen weiter. Menschliche Runs bis zu den Fraktionsfreischaltungen und darüber hinaus müssen zeigen, ob diese begrenzte Kurve genügt. Erst danach weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.

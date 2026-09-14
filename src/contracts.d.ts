@@ -318,12 +318,16 @@ interface AIState {
   squad: number[];
   scout?: number;
   goal?: Position;
-  lastAttack: number;
+  attackStartedAt: number;
+  restStartedAt: number;
   launched: number;
   search: number;
   nextBuild: number;
+  buildWindowAt: number;
+  buildAttempts: Partial<Record<BuildingType, number>>;
   lastScout: number;
   recoverUntil?: number;
+  failedGoal?: Position & { until: number };
 }
 type PlayerTeam = 0 | 1;
 interface TeamState {

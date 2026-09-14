@@ -175,7 +175,7 @@ test('Choir hull and Court shields trigger sustained but bounded recovery, not a
     const {g}=battle(0,faction),h=own(g,1,'hq')[0],ai=g.s.ai[1];
     const troops=Array.from({length:8},()=>g.spawnUnit('rifle',0,0,1,faction));
     for(const e of troops) { if(faction===1)e.hp=e.maxHp*.55;else e.shield=0; }
-    g.s.time=100;Object.assign(ai,{mode:'attack',squad:troops.map(e=>e.id),launched:8,lastAttack:70,goal:{x:-20,z:0}});
+    g.s.time=100;Object.assign(ai,{mode:'attack',squad:troops.map(e=>e.id),launched:8,attackStartedAt:70,goal:{x:-20,z:0}});
     const threat={id:999,kind:'unit',type:'rifle',team:0,x:4,z:0,hp:150,maxHp:150,progress:1,size:.65,seenAt:100};
     g.aiStrategy(1,own(g,1),[threat],h);
     assert.equal(ai.mode,'recover');assert.equal(ai.squad.length,8);
@@ -184,10 +184,60 @@ test('Choir hull and Court shields trigger sustained but bounded recovery, not a
     assert.equal(ai.mode,'recover');assert.ok(troops.every(e=>e.order.type==='move'));
     g.s.time=ai.recoverUntil;g.aiStrategy(1,own(g,1),[],h);
     assert.notEqual(ai.mode,'recover','failed regeneration cannot trap the controller');
-    Object.assign(ai,{mode:'recover',squad:troops.map(e=>e.id),lastAttack:100,recoverUntil:140});
+    Object.assign(ai,{mode:'recover',squad:troops.map(e=>e.id),restStartedAt:100,recoverUntil:140});
     for(const e of troops){e.hp=e.maxHp;e.shield=e.maxShield;e.x=h.x+9;e.z=h.z;}
     g.s.time=110;g.aiStrategy(1,own(g,1),[],h);assert.notEqual(ai.mode,'recover');
   }
+});
+
+test('reassessing an arrived target preserves sortie age and the original loss threshold',()=>{
+  for(const exhausted of [true,false]) {
+    const {g}=battle(),h=own(g,1,'hq')[0],ai=g.s.ai[1];
+    const troops=Array.from({length:8},()=>g.spawnUnit('rifle',0,0,1,2));
+    if(exhausted)troops.forEach(e=>e.shield=0);
+    const target={id:999,kind:'unit',type:'rifle',team:0,x:-12,z:-8,hp:150,maxHp:150,progress:1,size:.65,seenAt:100};
+    Object.assign(ai,{mode:'attack',squad:troops.map(e=>e.id),launched:10,attackStartedAt:99,
+      goal:{x:target.x,z:target.z},contacts:{999:target}});
+    for(let time=100;time<=105;time++) {
+      g.s.time=time;g.aiStrategy(1,own(g,1),[target],h);
+      assert.equal(ai.mode,'attack');assert.equal(ai.attackStartedAt,99);assert.equal(ai.launched,10);
+    }
+    g.s.time=exhausted?106:250;g.aiStrategy(1,own(g,1),[target],h);
+    assert.equal(ai.mode,'recover');assert.equal(ai.restStartedAt,g.s.time);
+    assert.equal(ai.attackStartedAt,99);
+  }
+});
+
+test('a failed assault temporarily lowers that observed area priority instead of repeating it blindly',()=>{
+  const {g}=battle(),h=own(g,1,'hq')[0],ai=g.s.ai[1];
+  for(let i=0;i<12;i++)g.spawnUnit('rifle',h.x-10,h.z+10,1,2);
+  ai.contacts={
+    901:{id:901,team:0,kind:'building',type:'refinery',x:0,z:0,hp:850,maxHp:850,progress:1,size:2.3,seenAt:500},
+    902:{id:902,team:0,kind:'building',type:'factory',x:0,z:30,hp:1450,maxHp:1450,progress:1,size:3.8,seenAt:500}
+  };
+  g.s.time=500;ai.failedGoal={x:0,z:0,until:590};g.aiStrategy(1,own(g,1),[],h);
+  assert.deepEqual(json(ai.goal),{x:0,z:30});
+  g.aiSetMode(1,'assemble');g.s.time=600;g.aiStrategy(1,own(g,1),[],h);
+  assert.deepEqual(json(ai.goal),{x:0,z:0});
+});
+
+test('occupied known vent does not starve a paid hangar and each plot search remains throttled',()=>{
+  const {g}=battle(0,0),h=own(g,1,'hq')[0];
+  const gas=g.alive(e=>e.type==='gas').sort((a,b)=>Math.hypot(a.x-h.x,a.z-h.z)-Math.hypot(b.x-h.x,b.z-h.z))[0];
+  g.spawnBuilding('refinery',gas.x-4,gas.z,1,0,{gasId:gas.id});
+  for(const [i,type] of ['barracks','turret','factory'].entries())g.spawnBuilding(type,i*15,0,1,0);
+  g.spawnUnit('worker',h.x-7,h.z+3,1,0);g.world.rebuild(g.s.entities);g.world.reveal(g.s.entities);g.aiObserve(1);
+  for(const [id,e] of Object.entries(g.s.ai[1].contacts))if(e.type==='gas'&&e.id!==gas.id)delete g.s.ai[1].contacts[id];
+  Object.assign(g.account(1),{alloy:3000,gas:3000});
+  const before=g.account(1).gas;g.aiEconomy(1,own(g,1),h);
+  assert.equal(own(g,1,'hangar').length,1);close(g.account(1).gas,before-BUILDINGS.hangar.gas);
+  assert.equal(own(g,1,'refinery').length,1);
+  const ai=g.s.ai[1],search=ai.search;
+  for(let i=0;i<10;i++)assert.equal(g.aiBuild(1,'refinery',h),false);
+  assert.equal(ai.search,search,'cooldown skips repeated expensive searches');
+  const worker=own(g,1,'worker')[0];g.setOrder(worker,{type:'idle'});
+  g.s.time=1;assert.equal(g.aiBuild(1,'refinery',h),false);assert.equal(ai.search,search);
+  g.s.time=3;assert.equal(g.aiBuild(1,'refinery',h),false);assert.notEqual(ai.search,search);
 });
 
 test('each faction chooses its own build, production and remembered target priorities',()=>{
