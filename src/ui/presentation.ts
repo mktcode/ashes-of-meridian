@@ -137,10 +137,16 @@
             let a = this.R.project(e.x, 0.2, e.z),
               b = this.R.project(goal.x, 0.2, goal.z);
             if (a && b) {
-              ctx.strokeStyle = e.order?.type === 'attack' ? '#e9b47b5c' : '#8dddd955';
               ctx.beginPath();
               ctx.moveTo(a.x, a.y);
               ctx.lineTo(b.x, b.y);
+              if (e.rally) {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#07101dcc';
+                ctx.stroke();
+              }
+              ctx.lineWidth = e.rally ? 2 : 1;
+              ctx.strokeStyle = e.rally ? '#9fe9d6' : e.order?.type === 'attack' ? '#e9b47b5c' : '#8dddd955';
               ctx.stroke();
             }
           }

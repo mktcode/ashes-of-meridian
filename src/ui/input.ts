@@ -402,7 +402,10 @@
           if (!list.length) {
             this.toast('Select a completed own structure before setting a rally point.');
             success = false;
-          } else for (let e of list) e.rally = { ...p };
+          } else {
+            for (let e of list) e.rally = { ...p };
+            this.event('order', { type: 'move', count: list.length, ...p });
+          }
         }
         if (success) this.clearMode();
         this.updateHUD();

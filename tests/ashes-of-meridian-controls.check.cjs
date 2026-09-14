@@ -1191,18 +1191,45 @@ test('building camera gestures and own-target selection do not set rally; minima
 });
 
 test('only the Rally point button arms placement; a following normal tap deselects without changing it', () => {
-  for (const mini of [false,true]) {
+  for (const mini of [false,true]) for (const pointerType of ['touch','mouse']) {
     const h = buildingPanel(); h.UI.prototype.bind.call(h.ui);
     h.ui.select = h.UI.prototype.select; h.ui.setMode = h.UI.prototype.setMode;
     h.click({action:'rally'}); assert.equal(h.ui.mode.kind,'rally');
-    const options = {target:mini ? h.minimap : h.world};
+    const options = {target:mini ? h.minimap : h.world,pointerType},sounds=[];
+    h.ui.audio.sound=key=>sounds.push(key);
+    h.ui.game.random=()=>{throw Error('Rally feedback consumed simulation RNG');};
     h.pointer('pointerdown',100,100,options); h.pointer('pointerup',100,100,options);
     assert.ok(h.b.rally); assert.equal(h.ui.mode,null); assert.deepEqual(Array.from(h.ui.selected),[7]);
+    assert.equal(h.ui.pings.length,1);assert.deepEqual(sounds,['order']);
+    const ping=h.ui.pings[0];
+    assert.deepEqual([ping.x,ping.z,ping.life,ping.maxLife],[h.b.rally.x,h.b.rally.z,1,1]);
     const rally = JSON.stringify(h.b.rally);
     h.pointer('pointerdown',200,200); h.pointer('pointerup',200,200);
     assert.equal(JSON.stringify(h.b.rally),rally); assert.deepEqual(Array.from(h.ui.selected),[]);
+    assert.equal(h.ui.pings.length,1);
+    h.ui.tick(.5);assert.equal(ping.life,.5);
+    h.ui.tick(.5);assert.equal(h.ui.pings.length,0);
+    h.ui.mode={kind:'rally'};h.ui.applyTarget({x:0,z:0});
+    assert.equal(h.ui.pings.length,0);assert.deepEqual(sounds.filter(key=>key==='order'),['order']);
     assert.deepEqual(h.calls,[]);
   }
+});
+
+test('rally overlays use a bright thicker dashed line with dark contrast, without changing unit-order lines',()=>{
+  const h=buildingPanel(),g=h.ui.game;
+  h.b.rally={x:12,z:23};
+  g.s.entities.push({id:8,team:0,kind:'unit',hp:100,x:2,z:3,order:{type:'move',x:10,z:20}});
+  h.ui.selected=[7,8];g.visible=()=>false;
+  g.random=()=>{throw Error('Overlay consumed simulation RNG');};
+  const before=JSON.stringify(g.s),strokes=[],paths=[],dashes=[];
+  const ctx={clearRect(){},save(){},restore(){},setLineDash(v){dashes.push(v);},
+    beginPath(){},moveTo(x,y){paths.push(['from',x,y]);},lineTo(x,y){paths.push(['to',x,y]);},
+    stroke(){strokes.push([this.lineWidth,this.strokeStyle]);}};
+  h.ui.drawOverlay(ctx);
+  assert.deepEqual(strokes,[[4,'#07101dcc'],[2,'#9fe9d6'],[1,'#8dddd955']]);
+  assert.deepEqual(Array.from(dashes[0]),[4,6]);
+  assert.deepEqual(paths.filter(p=>p[0]==='to'),[['to',12,23],['to',10,20]]);
+  assert.equal(JSON.stringify(g.s),before);
 });
 
 test('all completed own buildings expose rally; foundations cannot set it and Back cancels targeting', () => {
