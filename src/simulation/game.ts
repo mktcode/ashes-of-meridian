@@ -64,6 +64,7 @@
           playerAlloy = STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * 100;
         this.s = {
           seed, faction, enemy, map, meta, benefits,
+          depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
           time: 0,
           teams: [playerAlloy, STARTING_ALLOY[0]].map((alloy, team) => ({
             alloy, gas: team === 0 ? (benefits.aetherAllocation || 0) * 50 : 0,

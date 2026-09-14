@@ -12,4 +12,6 @@ Der Core Loop ist implementiert; menschliche Bedienbarkeit, Langzeitbalancing un
 
 Vorhandene Node-Regression und Chromium-/Software-WebGL-Sichtungen sind technische Vorprüfungen, keine Echtgeräte-, Hör- oder menschliche Langzeitabnahme. Frühere Messreihen bleiben in Git. Neue relevante Befunde hier knapp mit Gerät/Browser, Spielsituation und Ergebnis festhalten; daraus konkrete Folgeissues ableiten.
 
+Technischer Vorbefund (`npm test`, Beginn der Tiefenskalierung): Der bestehende Controls-Test gegen native Tooltips scheitert an `title="Run benefits"` in `src/ui/screens.js`; das Attribut ist schon vor diesem Paket vorhanden. Separat entscheiden bzw. bereinigen, nicht durch Abschwächung des Tests verdecken.
+
 Bekannte Einschränkungen bei der Bewertung berücksichtigen: [Bauplätze über Einheiten](bug-building-placement-in-einheiten.md), [Raffinerie/Vent](aether-vent-und-refinary-bauen.md), offene [Desert-Gestaltung](desert-map.md) und [Mothership-Abnahme](terrain.md).

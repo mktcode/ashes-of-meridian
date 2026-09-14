@@ -109,7 +109,7 @@
         if (!this.expedition) return;
         this.audio.unlock();
         this.game.start({ faction: this.expedition.faction, ...this.expedition.encounter,
-          benefits: this.expedition.benefits });
+          benefits: this.expedition.benefits, depth: this.expedition.depth });
       },
       continueExpedition() {
         if (!this.expedition) return this.showBattle();

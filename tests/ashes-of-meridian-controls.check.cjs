@@ -709,7 +709,7 @@ test('pause restart reopens the secured encounter with its expedition benefits',
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.pause(); h.click({ ui: 'restartConfirm' }); h.click({ ui: 'restart' });
   assert.deepEqual(h.calls, [['start', { faction: 1, enemy: 2, map: 'desert', seed: 1409,
-    benefits: { supplyCrate: 2 } }]]);
+    benefits: { supplyCrate: 2 }, depth: 3 }]]);
 });
 
 test('victory checkpoints offers and chosen benefits; defeat clears the expedition', () => {
@@ -891,7 +891,7 @@ test('expedition setup creates and saves a random pending encounter', () => {
   assert.ok([0, 1, 2].includes(saved[0].encounter.enemy));
   assert.ok(['desert', 'alien-planet', 'mothership'].includes(saved[0].encounter.map));
   assert.ok(saved[0].encounter.seed > 0);
-  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {} });
+  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {}, depth: 0 });
 });
 
 test('tooltips and native title hints are removed without removing pointer press guards or accessible names', () => {

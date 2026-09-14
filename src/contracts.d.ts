@@ -253,6 +253,7 @@ type UnitBody = Pick<UnitEntity, 'type' | 'size'> & Partial<UnitEntity>;
 type UnitPlacement = UnitBody & Position;
 
 interface BattleOptions {
+  depth?: number;
   faction?: number;
   enemy?: number;
   map?: string;
@@ -330,6 +331,7 @@ interface TeamState {
 }
 
 interface RunState {
+  depth: number;
   seed: number;
   faction: FactionId;
   enemy: FactionId;

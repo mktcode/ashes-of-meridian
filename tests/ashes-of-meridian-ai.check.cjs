@@ -15,6 +15,36 @@ function advance(g,seconds) {for(let i=0;i<seconds*20&&!g.s.result;i++){g.step(.
 function own(g,team,type){return Array.from(g.alive(e=>e.team===team&&(!type||e.type===type)));}
 function close(a,b){assert.ok(Math.abs(a-b)<1e-7,`${a} ~= ${b}`);}
 
+test('depth is bounded and snapshots the battle without changing seeded setup or RNG',()=>{
+  const {g}=battle(), original=json(g.s.entities), terrain=Array.from(g.world.staticGrid), next=g.random();
+  assert.equal(g.s.depth,0);
+  for(const [depth,expected] of [[-2,0],[3.9,3],[4,4],[16,16],[1000000,999999],[NaN,0]]) {
+    const options={seed:1409,depth};g.start(options);options.depth=100;
+    assert.equal(g.s.depth,expected);assert.deepEqual(json(g.s.entities),original);
+    assert.deepEqual(Array.from(g.world.staticGrid),terrain);assert.equal(g.random(),next);
+  }
+});
+
+test('doctrine resolution has bounded monotonic execution stages without random draws',()=>{
+  const resolve=vm.runInContext('aiRulesFor',context);
+  for(const faction of [0,1,2]) {
+    let previous;
+    for(const depth of [0,3,4,7,8,11,12,15,16,25,999999]) {
+      const rule=resolve(faction,depth);
+      assert.equal(rule.stage,Math.min(4,Math.floor(depth/4)));
+      if(previous) {
+        assert.ok(rule.workers>=previous.workers);assert.ok(rule.attackWait<=previous.attackWait);
+        assert.ok(rule.scoutInterval<=previous.scoutInterval);assert.ok(rule.forceRatio<=previous.forceRatio);
+        assert.ok(rule.build.length>=previous.build.length);
+      }
+      previous=rule;
+    }
+    assert.deepEqual(json(resolve(faction,16)),json(resolve(faction,999999)));
+    const rule=resolve(faction,8);rule.build.length=0;
+    assert.ok(resolve(faction,8).build.length>0,'no mutable rule state retained');
+  }
+});
+
 test('baseline starts are symmetric for all faction pairings, with separate accounts and no army',()=>{
   for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++){
     const {g}=battle(faction,enemy);
