@@ -62,6 +62,9 @@
           ) as Record<string, number>,
           seed = opts.seed || Math.floor(Math.random() * 1e8),
           playerAlloy = STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy;
+        this.world = new Battlefield(seed, map);
+        this.world.startSites = battlefieldStartSites(this.world);
+        const [playerStart, enemyStart] = this.startingPositions(seed);
         this.s = {
           seed, faction, enemy, map, meta, benefits,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
@@ -75,12 +78,11 @@
           ai: {},
           stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
-          cam: { x: layout.playerStart.x + 5, z: layout.playerStart.z - 2, zoom: 57 },
+          cam: { x: playerStart.x + 5, z: playerStart.z - 2, zoom: 57 },
           result: null,
           speed: 1
         };
         this.random = seeded(seed + 77);
-        this.world = new Battlefield(seed, map);
         this.ids.clear();
         this.effects.reset();
         this.acc = 0;
@@ -88,7 +90,7 @@
         this.objectiveClock = 0;
         let s = this.s!;
         // The base starts with an HQ; upgrade workers are added after the seeded setup.
-        this.spawnBuilding('hq', layout.playerStart.x, layout.playerStart.z, 0, faction);
+        this.spawnBuilding('hq', playerStart.x, playerStart.z, 0, faction);
         // Keep the former default loadout's RNG entry point for crystal amounts and enemy spawns.
         for (let i = 0; i < 24; i++) this.random();
         for (let [i, site] of layout.resourceSites.entries()) {
@@ -98,7 +100,7 @@
           }
           this.spawnResource('gas', site.x + (i === 0 ? 5 : 7), site.z + (i === 0 ? 18 : 7), 999999);
         }
-        let site = layout.enemySites[0];
+        let site = enemyStart;
         this.spawnBuilding('hq', site.x, site.z, 1, enemy);
         // Preserve the established resource/bonus-worker RNG entry points, not the old loadout.
         for (let i = 0; i < 11; i++) this.random();
@@ -113,16 +115,16 @@
         // Add bonus units only after the original layout and enemy RNG draws.
         const startingWorkers = (meta.startingWorkers || 0) + (benefits.pioneerSquad || 0);
         for (let i = 0; i < startingWorkers; i++)
-          if (!this.spawnUnit('worker', layout.playerStart.x - 7, layout.playerStart.z - 4 + i * 2, 0, faction))
+          if (!this.spawnUnit('worker', playerStart.x - 7, playerStart.z - 4 + i * 2, 0, faction))
             throw new Error('No free space for starting workers.');
         if (benefits.commanderMandate &&
-          !this.spawnUnit('hero', layout.playerStart.x - 9, layout.playerStart.z + 7, 0, faction))
+          !this.spawnUnit('hero', playerStart.x - 9, playerStart.z + 7, 0, faction))
           throw new Error('No free space for starting commander.');
         this.rehash();
         this.world.reveal(s.entities);
         if (benefits.surveyDrones) {
           const site = layout.resourceSites.filter(p => !this.world!.explored[this.world!.idx(p.x, p.z)])
-            .sort((a, b) => distance(a, layout.playerStart) - distance(b, layout.playerStart))[0];
+            .sort((a, b) => distance(a, playerStart) - distance(b, playerStart))[0];
           if (site) this.world.explore(0, site, EXPEDITION_EFFECTS.surveyRadius);
         }
         this.enableAI(1);
@@ -131,6 +133,12 @@
           ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
           : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then destroy the enemy command center.');
         return s;
+      },
+      startingPositions(this: MeridianGame, seed: number): [Position, Position] {
+        // Separate stream: replayable corner assignment never shifts terrain/resources/effects RNG.
+        const random = seeded(seed ^ 0x53544152), available = [...this.world!.startSites],
+          player = available.splice(Math.floor(random() * available.length), 1)[0];
+        return [player, available[Math.floor(random() * available.length)]];
       },
       spawn<K extends EntityKind>(this: MeridianGame, kind: K, type: EntityTypeForKind<K>, x: number, z: number, team: TeamId, faction: FactionId = FACTION_ID.FIRST, extra: SpawnExtra = {}): EntityForKind<K> {
         let s = this.s!,

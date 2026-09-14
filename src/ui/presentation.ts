@@ -73,14 +73,7 @@
             ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
             continue;
           }
-          if (e.team === 1 && !visible) {
-            if (e.kind === 'building' && e.type === 'hq') {
-              let p = map(e);
-              ctx.strokeStyle = '#e29e884e';
-              ctx.strokeRect(p.x - 4, p.y - 3, 8, 6);
-            }
-            continue;
-          }
+          if (e.team === 1 && !visible) continue;
           let p = map(e);
           ctx.fillStyle = e.team === 0 ? '#79dbcc' : '#eb8e80';
           if (e.type === 'hero') ctx.fillStyle = '#ffd494';

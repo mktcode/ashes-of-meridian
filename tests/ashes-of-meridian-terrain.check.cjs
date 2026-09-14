@@ -249,7 +249,7 @@ test('mountain belt is seeded, continuous and outside the playable ground', () =
   }
 });
 
-// Desert keeps its original digests; redesigned maps use independent geometric/access checks.
+// Small-obstacle digests stay fixed; corner clearances and massifs have independent access checks.
 const terrainCases = [[1409,'desert'],[2219,'desert'],[24080,'desert']];
 for (const [seed, map] of terrainCases) {
   test(`terrain ${seed} (${map}): original layout and varied textured rocks`, () => {
@@ -263,7 +263,7 @@ for (const [seed, map] of terrainCases) {
       assert.ok(battlefield.blockedAt(rock.x, rock.z), 'interior formations are real blockers');
     }
     const massifs = battlefield.renderData.features;
-    assert.equal(massifs.length, 2, 'two suitable broad landforms in each reference world');
+    assert.equal(massifs.length, seed === 1409 ? 1 : 2, 'corner clearances take priority over a second broad landform');
     for (const m of massifs) {
       assert.ok(m.width >= 29 && m.width <= 38 && m.depth >= 17 && m.depth <= 23);
       assert.ok(m.height >= 20 && m.height <= 27);
@@ -272,6 +272,7 @@ for (const [seed, map] of terrainCases) {
     }
     const { playerStart, enemySites, resourceSites } = battlefield.layout;
     const reserved = [{ ...playerStart, r: 20 }, { ...enemySites[0], r: 21 },
+      ...vm.runInContext('battlefieldStartSites', context)(battlefield).slice(2).map(p => ({ ...p, r: 12 })),
       ...resourceSites.map(p => ({ ...p, r: 10 })),
       ...resourceSites.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 }))];
     for (const p of reserved) for (const m of massifs) {
@@ -288,7 +289,7 @@ for (const [seed, map] of terrainCases) {
     for (const p of reserved) assert.ok(queue.some(i => {
       const q = battlefield.point(i); return Math.hypot(q.x - p.x, q.z - p.z) <= 5;
     }), 'bases and all resource approaches remain connected with clearance');
-    assert.equal(placements.filter(p => p.mesh.startsWith('massif') && p.material === 'MASSIF').length, 2);
+    assert.equal(placements.filter(p => p.mesh.startsWith('massif') && p.material === 'MASSIF').length, massifs.length);
     const rocks = placements.filter(p => p.mesh.startsWith('rock'));
     assert.equal(new Set(rocks.map(p => p.mesh)).size, 4);
     assert.ok(rocks.every(p => p.layer === 'static' && p.material === 'ROCK'));

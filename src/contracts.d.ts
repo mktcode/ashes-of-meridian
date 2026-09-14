@@ -63,6 +63,9 @@ interface BattlefieldPalette {
 }
 
 interface BattlefieldLayout {
+  /** Public corner candidates, independent of team assignment. */
+  startSites: [Position, Position, Position, Position];
+  /** Terrain-generation anchors; these do not identify the live teams. */
   playerStart: Position;
   enemySites: Position[];
   centralClearings: Position[];

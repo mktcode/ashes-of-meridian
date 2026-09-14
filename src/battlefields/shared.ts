@@ -2,6 +2,7 @@
 'use strict';
 function standardBattleLayout(): BattlefieldLayout {
   return {
+    startSites: [{ x: -51, z: 49 }, { x: 49, z: -49 }, { x: -47, z: -45 }, { x: 51, z: 49 }],
     playerStart: { x: -51, z: 49 },
     enemySites: [
       { x: 49, z: -49 },
@@ -52,6 +53,27 @@ function standardBattleLayout(): BattlefieldLayout {
       ]
     ],
   };
+}
+
+// Fit HQs to existing terrain rather than changing obstacle/RNG generation for a team draw.
+function battlefieldStartSites(world: Battlefield): Position[] {
+  return world.layout.startSites.map(anchor => {
+    const candidates = [anchor, ...Array.from(world.staticGrid, (_, i) => world.point(i))
+      .filter(p => distance(p, anchor) <= 22)
+      .sort((a, b) => distance(a, anchor) - distance(b, anchor))];
+    const site = candidates.find(p => {
+      if (Math.abs(p.x) > world.extent - 12 || Math.abs(p.z) > world.extent - 12) return false;
+      if (!world.layout.resourceSites.some(r => distance(p, r) <= 23)) return false;
+      if (world.layout.resourceSites.some((r, i) => distance(p, r) < 11 ||
+        distance(p, {x: r.x + (i ? 7 : 5), z: r.z + (i ? 7 : 18)}) < 8)) return false;
+      for (let z = p.z - 7; z <= p.z + 7; z += 1)
+        for (let x = p.x - 7; x <= p.x + 7; x += 1)
+          if (world.staticGrid[world.idx(x, z)]) return false;
+      return true;
+    });
+    if (!site) throw Error('No clear corner starting area');
+    return { ...site };
+  });
 }
 
 class BattlefieldBuilder {
@@ -275,6 +297,7 @@ class BattlefieldBuilder {
     const rand = seeded(world.seed ^ 0x57494445),
       protectedSites = [
         { ...world.layout.playerStart, r: 20 }, { ...world.layout.enemySites[0], r: 21 },
+        ...battlefieldStartSites(world).slice(2).map(p => ({ ...p, r: 12 })),
         ...world.layout.resourceSites.map(p => ({ ...p, r: 10 })),
         ...world.layout.resourceSites.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 }))
       ];

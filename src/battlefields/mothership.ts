@@ -2,6 +2,7 @@
 'use strict';
 function mothershipLayout(): BattlefieldLayout {
   return {
+    startSites: [{ x: -42, z: 58 }, { x: 42, z: -58 }, { x: -42, z: -58 }, { x: 42, z: 58 }],
     playerStart: { x: -42, z: 58 },
     enemySites: [{ x: 42, z: -58 }, { x: -42, z: -58 }, { x: 42, z: 58 }],
     centralClearings: [{ x: 0, z: 0 }, { x: -14, z: 28 }, { x: 14, z: -28 }],

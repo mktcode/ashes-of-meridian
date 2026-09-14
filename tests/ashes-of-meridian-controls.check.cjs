@@ -168,6 +168,22 @@ test('minimap camera outline uses all four actual viewport corners after layout 
   }
 });
 
+test('minimap never marks an unseen enemy HQ, even on explored ground', () => {
+  const h=setup(), draws=[], ctx=new Proxy({}, {get:(_,name)=>(...args)=>draws.push([name,...args])});
+  h.minimap.width=h.minimap.height=180;h.minimap.getContext=()=>ctx;
+  h.ui.game.world={extent:90,gridSize:72,terrainColors:new Uint8Array(72*72*4),terrainFeatureGrid:[],visible:[],explored:[],idx:()=>0};
+  h.ui.miniBuffer={width:72};h.ui.miniCtx={putImageData(){}};h.ui.miniImage={data:new Uint8Array(72*72*4)};
+  h.ui.R.ground=()=>({x:0,z:0});
+  h.ui.game.s.entities=[{kind:'building',type:'hq',team:1,hp:100,size:4.4,x:49,z:-49}];
+  for(const explored of [0,1]) {
+    h.ui.game.world.explored[0]=explored;h.ui.game.visible=()=>false;draws.length=0;
+    h.UI.prototype.drawMinimap.call(h.ui);
+    assert.equal(draws.some(([name])=>name==='strokeRect'||name==='fillRect'),false);
+  }
+  h.ui.game.visible=()=>true;draws.length=0;h.UI.prototype.drawMinimap.call(h.ui);
+  assert.equal(draws.filter(([name])=>name==='fillRect').length,1,'visible HQ remains visible');
+});
+
 test('minimap distinguishes massif footprints without bypassing visibility or changing terrain colors', () => {
   const h = setup(), ctx = new Proxy({}, { get: () => () => {} }),
     c = h.document.getElementById('minimap');

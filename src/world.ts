@@ -78,6 +78,7 @@
       declare rocks: WorldRock[];
       declare pathVersion: number;
       declare renderData: WorldRenderData;
+      declare startSites: Position[];
 
       constructor(seed: number, map: BattlefieldId) {
         this.fogVersion = 0;
@@ -106,6 +107,7 @@
         this.pathVersion = 0;
         this.definition.generate(new BattlefieldBuilder(this));
         this.blocked.set(this.staticGrid);
+        this.startSites = this.layout.startSites;
       }
       idx(x: number, z: number) {
         const { extent: EXTENT, cellSize: CELL, gridSize: GRID } = this;

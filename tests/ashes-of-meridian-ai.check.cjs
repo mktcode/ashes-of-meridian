@@ -15,6 +15,22 @@ function advance(g,seconds) {for(let i=0;i<seconds*20&&!g.s.result;i++){g.step(.
 function own(g,team,type){return Array.from(g.alive(e=>e.team===team&&(!type||e.type===type)));}
 function close(a,b){assert.ok(Math.abs(a-b)<1e-7,`${a} ~= ${b}`);}
 
+test('scouting and scans visit unexplored candidate corners without reading the hidden enemy assignment',()=>{
+  const {g}=battle();
+  for(const team of [0,1]) {
+    const home=own(g,team,'hq')[0], other=own(g,1-team,'hq')[0];
+    g.world.sight[team].explored.fill(0);
+    const first=json(g.aiScoutGoal(team,home));
+    assert.ok(Math.hypot(first.x-home.x,first.z-home.z)>25);
+    const original={x:other.x,z:other.z};other.x=0;other.z=0;
+    assert.deepEqual(json(g.aiScoutGoal(team,home)),first,'hidden opponent movement cannot redirect search');
+    Object.assign(other,original);
+    g.world.sight[team].explored[g.world.idx(first.x,first.z)]=1;
+    const next=json(g.aiScoutGoal(team,home));assert.notDeepEqual(next,first);
+    assert.ok(g.world.startSites.some(p=>p.x===next.x&&p.z===next.z));
+  }
+});
+
 test('depth is bounded and snapshots the battle without changing seeded setup or RNG',()=>{
   const {g}=battle(), original=json(g.s.entities), terrain=Array.from(g.world.staticGrid), next=g.random();
   assert.equal(g.s.depth,0);

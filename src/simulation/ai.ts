@@ -182,9 +182,16 @@ const aiMethods = {
       if (p) this.ability('drop',p,team);
     }
     if (ready('scan') && s.time>rules.scanAfter && !foes.length && own.some(e=>e.type==='rifle')) {
-      const layout=this.world!.layout, p=ai.goal || (team===1?layout.playerStart:layout.enemySites[0]);
+      const p=ai.goal || this.aiScoutGoal(team,home);
       if (!this.canSee(team,p) && !s.scans.some(scan=>scan.team===team)) this.ability('scan',p,team);
     }
+  },
+  aiScoutGoal(this: MeridianGame, team: PlayerTeam, home: BuildingEntity): Position {
+    const world=this.world!, unexplored=(p:Position)=>!world.sight[team].explored[world.idx(p.x,p.z)],
+      corners=world.startSites.filter(p=>distance(p,home)>25)
+        .sort((a,b)=>distance(a,home)-distance(b,home));
+    // Candidate terrain sites are public; actual opponent assignment and hidden HQs are not.
+    return [...corners,...world.layout.resourceSites].find(unexplored) || corners[0] || home;
   },
   aiStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
     const s=this.s!,ai=s.ai[team]!, rules=aiRulesFor(this.factionFor(team),s.depth),
@@ -226,9 +233,7 @@ const aiMethods = {
     if (army.length>=2 && (!ai.scout || !army.some(e=>e.id===ai.scout))) ai.scout=army[0].id;
     const scout=army.find(e=>e.id===ai.scout);
     if (scout && ai.mode!=='attack' && s.time-ai.lastScout>rules.scoutInterval) {
-      const layout=this.world!.layout, p=team===1?layout.playerStart:layout.enemySites[0];
-      const goals=[p,...layout.resourceSites];
-      const goal=goals.find(p=>!this.world!.sight[team].explored[this.world!.idx(p.x,p.z)]) || p;
+      const goal=this.aiScoutGoal(team,home);
       this.aiOrder(team,[scout],scout.hp<scout.maxHp*.4?home:goal,false);ai.lastScout=s.time;
     }
     const pool=army.filter(e=>e.id!==ai.scout), attackers=ai.mode==='attack'?squad:pool.slice(rules.reserve),
@@ -248,7 +253,7 @@ const aiMethods = {
     }
     this.aiSetMode(team,army.length?'assemble':'bootstrap'); ai.squad=[];
     // Hold near the base without pinning the producer exits.
-    const rally={x:home.x+(team===1?-13:13),z:home.z+(team===1?13:-13)};
+    const rally={x:home.x-Math.sign(home.x)*13,z:home.z-Math.sign(home.z)*13};
     this.aiOrder(team,pool,rally);
   },
   aiTick(this: MeridianGame, team: PlayerTeam) {

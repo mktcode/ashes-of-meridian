@@ -11,7 +11,7 @@ const scripts = readScripts();
 const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 
-function createGame() {
+function createGame(fixedStarts = false) {
   const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], {
     scripts, globals: { structuredClone },
   });
@@ -23,11 +23,13 @@ function createGame() {
   });
   // Unit-rule scenarios isolate the controller; autonomous play lives in the AI suite.
   game.aiTick = () => {};
+  // Fixed-location economy/crowd arenas are not tests of the randomized start controller.
+  if (fixedStarts) game.startingPositions = () => [game.world.layout.playerStart, game.world.layout.enemySites[0]];
   return { game, events, context };
 }
 
 function freshBattle(faction = 0, seed = 1409) {
-  const runtime = createGame();
+  const runtime = createGame(true);
   runtime.game.start({ seed, map: 'desert', faction });
   return runtime;
 }
@@ -74,9 +76,11 @@ const player = (game, type) => game.alive(e => e.team === 0 && e.type === type)[
 const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').length;
 
 test('larger map supports outer-area spawns, paid construction, production, commands and restart', () => {
-  const {game,context}=createGame();
+  const {game,context}=createGame(true);
   vm.runInContext(`BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};
-    BATTLEFIELDS['alien-planet'].layout.playerStart={x:-111,z:109};`,context);
+    BATTLEFIELDS['alien-planet'].layout.playerStart={x:-111,z:109};
+    BATTLEFIELDS['alien-planet'].layout.startSites[0]={x:-111,z:109};
+    BATTLEFIELDS['alien-planet'].layout.resourceSites[0]={x:-118,z:88};`,context);
   game.start({seed:43015,map:'alien-planet'});
   assert.deepEqual([player(game,'hq').x,player(game,'hq').z],[-111,109]);
   assert.equal(game.s.cam.x,-106);assert.equal(game.world.gridSize,108);
@@ -135,6 +139,38 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
   game.start({ seed: 1409 }); // Internal deterministic scenarios still bypass the random draw.
   assert.equal(game.s.seed, 1409);
   assert.equal(game.s.map, 'desert', 'default map keeps the first catalog entry');
+});
+
+test('seeded starts use distinct corners, keep replay/RNG contracts and allow every ordered corner pair', () => {
+  const {game}=createGame(), pairs=new Set();
+  for (const map of ['desert','alien-planet','mothership']) {
+    for (const seed of [1,2,3,4,5,6,7,8,9,10,1409,2219,24080]) {
+      game.profile.upgrades={startingWorkers:5};
+      const options={seed,map,benefits:{pioneerSquad:5,commanderMandate:1}};
+      game.start(options);
+      const sites=game.world.startSites, bases=[player(game,'hq'),game.alive(e=>e.team===1&&e.type==='hq')[0]];
+      const indices=bases.map(b=>sites.findIndex(p=>p.x===b.x&&p.z===b.z));
+      assert.ok(indices.every(i=>i>=0));assert.notEqual(indices[0],indices[1]);
+      assert.deepEqual(json(game.s.cam),{x:bases[0].x+5,z:bases[0].z-2,zoom:57});
+      assert.equal(game.canSee(0,bases[1]),false);assert.equal(game.canSee(1,bases[0]),false);
+      for(const team of [0,1]) assert.ok(game.alive(e=>e.type==='crystal').some(e=>game.canSee(team,e)), 'starting minerals visible');
+      assertUnitSpacing(game);
+      for(const u of game.alive(e=>e.kind==='unit')) assert.ok(game.unitFits(u,u.x,u.z));
+      const before=json(game.s), terrain=Array.from(game.world.staticGrid), next=game.random();
+      game.start(options);assert.deepEqual(json(game.s),before);assert.equal(game.random(),next);
+      const choose=game.startingPositions;
+      game.startingPositions=()=>game.world.startSites.slice(0,2);
+      game.start(options);game.startingPositions=choose;
+      assert.equal(game.random(),next,'corner choice must not advance simulation RNG');
+      assert.deepEqual(Array.from(game.world.staticGrid),terrain);
+      assert.deepEqual(json(game.s.entities.filter(e=>e.kind==='resource')),before.entities.filter(e=>e.kind==='resource'));
+    }
+  }
+  for(let seed=1;seed<=200;seed++) {
+    const sites=game.startingPositions(seed);
+    pairs.add(sites.map(p=>game.world.startSites.indexOf(p)).join('/'));
+  }
+  assert.equal(pairs.size,12,'all four player corners and all three remaining enemy corners');
 });
 
 test('single battle starts with only the own HQ, one hostile base and no mission state', () => {
@@ -221,18 +257,19 @@ test('mothership alone retains its timed eruption after map display names change
   }
 });
 
-test('map layouts supply spawns, resources, camera and AI scan/scout goals', () => {
+test('map layouts supply candidate spawns, resources, camera and unexplored AI scan/scout goals', () => {
   const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
   const desertBefore = json(maps.desert.layout), layout = maps.mothership.layout;
+  layout.startSites[2] = { x: -34, z: -56 };
   layout.playerStart = { x: -45, z: 45 };
   layout.enemySites[0] = { x: 45, z: -45 };
   layout.resourceSites[0] = { x: -65, z: 35 };
   game.start({ seed: 1409, map: 'mothership' });
   assert.strictEqual(game.world.layout, layout);
-  assert.deepEqual(json(game.s.cam), { x: -40, z: 43, zoom: 57 });
-  for (const [team, site] of [[0, layout.playerStart], [1, layout.enemySites[0]]]) {
+  assert.deepEqual(json(game.s.cam), { x: -29, z: -58, zoom: 57 });
+  for (const [team, site] of [[0, layout.startSites[2]], [1, game.world.startSites[0]]]) {
     const hq = game.alive(e => e.team === team && e.type === 'hq')[0];
-    assert.deepEqual({ x: hq.x, z: hq.z }, site);
+    assert.deepEqual({ x: hq.x, z: hq.z }, json(site));
   }
   const crystal = game.alive(e => e.type === 'crystal')[0];
   assert.deepEqual({ x: crystal.x, z: crystal.z }, { x: -65, z: 38 });
@@ -251,7 +288,7 @@ test('map layouts supply spawns, resources, camera and AI scan/scout goals', () 
     game.world.sight[team].explored.fill(0);
     game.aiStrategy(team, own, [], home);
     game.aiAbilities(team, own, [], home);
-    const goal = team === 1 ? layout.playerStart : layout.enemySites[0];
+    const goal = json(game.aiScoutGoal(team, home));
     assert.ok(orders.some(([t, ids, p]) => t === team && ids[0] === own[1].id && p.x === goal.x && p.z === goal.z));
     assert.deepEqual(scans.at(-1), ['scan', goal, team]);
   }
@@ -309,7 +346,7 @@ test('ground attack-move preserves mixed formations and worker movement without 
 
 test('populated army fixtures and two minutes of mining and combat keep unit spacing', () => {
   for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'mothership']]) {
-    const { game } = createGame(); game.start({faction,seed,map}); populateBase(game); assertUnitSpacing(game);
+    const { game } = createGame(true); game.start({faction,seed,map}); populateBase(game); assertUnitSpacing(game);
     if (seed !== 1409) continue;
     for (let i=0;i<2400;i++) {
       game.step(.05); game.effects.tick(.05);
@@ -428,7 +465,7 @@ test('blocked production keeps its paid order until space is free', () => {
 for (const [seed,map,faction,count,forced] of [
   [1409,'desert',0,8,false], [7012,'desert',1,12,false], [9017,'alien-planet',2,12,false], [1409,'desert',0,8,true]
 ]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {
-  const {game}=createGame();
+  const {game}=createGame(true);
   game.start({seed,map,faction}); populateBase(game,count); game.s.ai={};
   for(const e of game.s.entities) if(e.kind==='unit'&&e.team===1)e.hp=0;
   let workers=game.alive(e=>e.team===0&&e.type==='worker');
@@ -700,7 +737,7 @@ test('starting worker levels 0–5 preserve seeded setup and free spacing for ev
         assert.equal(w.faction, faction); assert.equal(w.cd, samples[i] * .5);
         assert.equal(w.hp, w.maxHp); assert.equal(w.order.type, 'idle');
         assert.equal(w.exit, undefined); assert.ok(game.unitFits(w, w.x, w.z));
-        assert.ok(Math.hypot(w.x + 51, w.z - 49) < 24);
+        assert.ok(Math.hypot(w.x - player(game, 'hq').x, w.z - player(game, 'hq').z) < 24);
       }
       assertUnitSpacing(game);
     }

@@ -3,6 +3,7 @@
 
 function alienBattleLayout(): BattlefieldLayout {
   return {
+    startSites: [{ x: -81, z: 81 }, { x: 81, z: -81 }, { x: -83, z: -83 }, { x: 83, z: 83 }],
     playerStart: { x: -81, z: 81 },
     enemySites: [{ x: 81, z: -81 }, { x: -83, z: -83 }, { x: 83, z: 83 }],
     centralClearings: [{ x: 0, z: 0 }, { x: -30, z: 30 }, { x: 30, z: -30 }],
@@ -11,7 +12,7 @@ function alienBattleLayout(): BattlefieldLayout {
       { x: -98, z: 74 }, { x: 66, z: -95 },
       { x: -45, z: 60 }, { x: 45, z: -60 },
       { x: -86, z: -12 }, { x: 86, z: 12 },
-      { x: -24, z: -94 }, { x: 24, z: 94 }
+      { x: -98, z: -74 }, { x: 98, z: 74 }
     ],
     additionalClearings: [{ x: -81, z: 99 }, { x: 81, z: -99 }],
     corridors: [
