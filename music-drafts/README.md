@@ -18,9 +18,12 @@ Die kinetischere Alienplanet-Variante: weiche, vokalartige Samenimpulse wandern 
 
 ## Worker-Voice-Lines
 
-[**Worker Select 01 – Rig Checked anhören**](worker-select-01-rig-checked.mp3) – „Rig checked, ready to work.“, rund **1,78 Sekunden**, Mono-MP3/44,1 kHz/128 kbit/s.
+- [**01 – Rig Checked**](worker-select-01-rig-checked.mp3) – „Rig checked, ready to work.“; `slt`, 1,78 s, ursprüngliche gefilterte Vergleichsfassung.
+- [**02 – Worker Ready**](worker-select-02-worker-ready-awb.mp3) – „Worker ready. Give me a task.“; männliche Stimme `awb`, 2,17 s.
+- [**03 – Tools Ready**](worker-select-03-tools-ready-rms.mp3) – „Tools are ready. What needs building?“; männliche Stimme `rms`, 2,48 s.
+- [**04 – Standing By**](worker-select-04-standing-by-kal.mp3) – „Standing by. Point me to the work.“; männliche Stimme `kal`, 2,32 s.
 
-Eine knappe Auswahlbestätigung mit dezenter Funk-/Helmfilterung und lokaler generischer Flite-Stimme. Keine nachgeahmte Figur oder reale Person und noch nicht ins Spiel eingebunden. Dies ist bewusst zunächst die einzige Voice-Line.
+Die drei neuen Varianten sind zugunsten der Verständlichkeit nahezu trocken, nur leicht verlangsamt, normalisiert und auf vergleichbare Lautheit gebracht. Alle Fassungen sind Mono-MP3 mit 44,1 kHz/128 kbit/s, verwenden lokale generische Flite-Stimmen, ahmen keine Figur oder reale Person nach und sind noch nicht ins Spiel eingebunden.
 
 ## Herstellung und Grenzen
 
@@ -31,7 +34,7 @@ python3 scripts/generate-sporewake.py
 python3 scripts/generate-rootmind.py
 ```
 
-Die Worker-Zeile wurde lokal mit FFmpegs generischer `flite`-Stimme `slt` erzeugt, auf Sprache beschnitten, dezent bandbegrenzt und auf −18 LUFS ausgerichtet. Es werden keine Aufnahmen oder externen Samples verwendet.
+Die Worker-Zeilen wurden lokal mit FFmpegs generischen `flite`-Stimmen erzeugt, auf Sprache beschnitten und auf −18 LUFS ausgerichtet. Nur Fassung 01 besitzt die deutliche Funkfilterung; die männlichen Fassungen 02–04 bleiben für bessere Verständlichkeit nahezu trocken. Es werden keine Aufnahmen oder externen Samples verwendet.
 
 Die Musikgeneratoren verwenden ausschließlich lokale Synthese sowie Python 3 und FFmpeg; sie lesen keine Aufnahmen oder Spielassets und überschreiben jeweils nur ihre eigene MP3. Die Musiklautheit ist technisch auf −15 LUFS bei −1,5 dBTP ausgerichtet. Technische Prüfung ersetzt kein Hörurteil.
 
