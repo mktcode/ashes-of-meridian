@@ -86,7 +86,8 @@ const MOTHERSHIP_BATTLEFIELD: BattlefieldDefinition = {
   render: {
     groundTexture: 'metal', skyTexture: 'sky', groundPixelsPerMeter: 28, groundMirror: true,
     rockDecor: { density: 0, opacity: 0 }, shrubDecor: { density: 0, opacity: 0 },
-    haze: [.055,.075,.11]
+    haze: [.055,.075,.11],
+    lighting: { sun: [.88, 1.00, 1.14], sky: [.36, .44, .56], bounce: [.19, .22, .28] }
   },
   worldEvent: 'solarFlare',
   generate(builder) {

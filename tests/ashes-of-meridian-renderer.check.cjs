@@ -126,7 +126,7 @@ function setup(options = {}) {
     gl: g, quality: 2, canvas: {}, sceneFbo: g.createFramebuffer(), sceneTex: {}, sceneDepth: g.createRenderbuffer(),
     sceneMSAAFbo: null, sceneMSAAColor: null, sceneMSAADepth: null, sceneSamples: 0,
     battlefieldProfile: vm.runInContext('DEFAULT_TERRAIN_RENDER_PROFILE', context),
-    frame: 0, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
+    frame: 0, shadowSize: 1536, shadowBias: .00022, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
     program: 'scene', depthProg: 'shadow', skyProg: 'sky', postProg: 'post', shadowFbo: 'shadow-target',
     upload() {}, uniform(p, name) { return name; },
     drawBatches(batch) { calls.push(['batch', batch, program, draw]); }
@@ -170,6 +170,63 @@ test('map render profiles select cached textures and independent decor uniforms 
   const frag = vm.runInContext('FRAG', h.context);
   assert.ok(frag.includes('if(u_groundMirror>.5)'));assert.ok(frag.includes('1.-abs(mod(uv,2.)-1.)'));
   for (const component of ['x','y','z','w']) assert.ok(frag.includes('u_groundDecor.' + component));
+});
+
+test('lighting profiles override shader colors without additional textures or render passes',()=>{
+  const {r,calls,context}=setup();r.resize();r.camera(0,0,57);
+  const defaults=vm.runInContext('DEFAULT_LIGHTING',context);
+  for(const lighting of [undefined,{sun:[1.12,.94,.76],sky:[.38,.47,.56],bounce:[.23,.18,.16]}]) {
+    r.battlefieldProfile={...r.battlefieldProfile,lighting};calls.length=0;r.render(0);
+    for(const [uniform,key] of [['u_sun','sun'],['u_skyLight','sky'],['u_bounce','bounce']])
+      assert.deepEqual(Array.from(calls.find(c=>c[0]==='uniform3fv'&&c[1]===uniform)[2]),Array.from((lighting||defaults)[key]));
+    assert.ok(calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_shadowBias'&&c[2]===r.shadowBias));
+    assert.equal(calls.filter(c=>c[0]==='program'&&c[1]==='shadow').length,1);
+    assert.ok(!calls.some(c=>['texImage2D','createTexture'].includes(c[0])));
+  }
+  const {FRAG,VERT}=vm.runInContext('({FRAG,VERT})',context);
+  assert.match(FRAG,/float metal=.*v_mat>1.5/);assert.match(FRAG,/strength=\.008\+metal/);
+  assert.ok(FRAG.indexOf('lit=finishLighting(lit)')<FRAG.indexOf('float field='),'compress highlights before fog and RGBA8 storage');
+  assert.match(FRAG,/over\/\(1\.\+over\/\.35\)/);
+  assert.match(VERT,/if\(a_material==-1\.\)v_modelPos=a_pos/);
+  const contact=FRAG.slice(FRAG.indexOf('if(v_mat==-1.)'),FRAG.indexOf('vec3 n=normalize(v_n)'));
+  assert.match(contact,/smoothstep\(\.05,1\.,length\(v_modelPos.xz\*2\.\)\)/);
+  assert.match(contact,/smoothstep\(\.35,\.8,sight\)/);
+  assert.doesNotMatch(contact,/shadow\(|u_metalTex|u_groundTex/);
+});
+
+test('fitted shadow projection covers ground and elevated view corners at zoom limits and different viewport shapes',()=>{
+  for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
+    const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context);r.resize();
+    for(const zoom of [27.2,57,115])for(const [x,z] of [[0,0],[-83,83],[83,-83]]) {
+      r.camera(x,z,zoom);
+      assert.ok(Array.from(r.lightVP).every(Number.isFinite));assert.ok(r.shadowBias>0&&r.shadowBias<.001);
+      for(const [sx,sy] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+        const a=M4.point(r.inverseVP,sx,sy,-1),b=M4.point(r.inverseVP,sx,sy,1);
+        for(let i=0;i<3;i++){a[i]/=a[3];b[i]/=b[3];}
+        for(const height of [0,32]) {
+          const t=(height-a[1])/(b[1]-a[1]),p=[a[0]+(b[0]-a[0])*t,height,a[2]+(b[2]-a[2])*t],q=M4.point(r.lightVP,...p);
+          for(let i=0;i<3;i++)assert.ok(Math.abs(q[i]/q[3])<1,`clipped receiver ${p}: ${q}`);
+        }
+      }
+    }
+    r.camera(0,0,48);
+    const scale=Math.hypot(r.lightVP[0],r.lightVP[4],r.lightVP[8]);
+    assert.ok(scale>1/78,'closer views spend the same 1536 shadow texels on a smaller area');
+    const before=Array.from(r.lightVP);r.camera(0,0,48);assert.deepEqual(Array.from(r.lightVP),before);
+    let previous=M4.point(r.lightVP,0,0,0);
+    for(let i=1;i<=60;i++) {
+      r.camera(i*.003,i*.002,48);
+      const q=M4.point(r.lightVP,0,0,0);
+      for(let axis=0;axis<2;axis++) {
+        const pixels=(q[axis]-previous[axis])*r.shadowSize/2;
+        assert.ok(Math.abs(pixels-Math.round(pixels))<.005,'panning moves the shadow grid only in whole texels');
+      }
+      previous=q;
+    }
+    assert.equal(r.shadowSize,1536);
+    r.quality=0;r.fitShadow=()=>{throw Error('Performance should skip shadow fitting');};
+    r.camera(0,0,48);assert.deepEqual(Array.from(r.lightVP),Array.from(M4.identity()));
+  }
 });
 
 test('medium/high select the largest common sample count up to 4 and retain resolution scaling', () => {

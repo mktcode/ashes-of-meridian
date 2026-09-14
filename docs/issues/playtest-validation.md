@@ -10,6 +10,8 @@ Der Core Loop ist implementiert; menschliche Bedienbarkeit, Langzeitbalancing un
 4. **Reale GPUs/Browser:** Framerate, Start-/Weltwechselkosten, Wärme/Akku und Speicherdruck, insbesondere große Karten, dichte Vegetation und große Armeen. Verdeckung durch Berge/Baumkronen/Hangardächer sowie High/Balanced/Performance visuell beurteilen.
 5. **Profil und Lebenszyklus:** Profil und separaten Expeditionscheckpoint unter `file://` und Webhosting sowie Pause/Hintergrundwechsel und Audio prüfen. Reload, Seitenverwerfen und Grafikverlust müssen das laufende Gefecht verwerfen, aber den letzten Übergang erhalten; Niederlage und Abbruch müssen den Checkpoint löschen.
 
+Der Material-/Licht-/Schattenpass wurde nach menschlicher Sichtung positiv bewertet und zum Commit freigegeben; Gerät, Browser und geprüfte Karten/Qualitätsstufen wurden dabei nicht angegeben. Offen bleiben insbesondere Schatten bei Pan/Zoom und an erhöhten Deckflächen sowie anhaltende Framerate und Wärme auf älteren Handys. Gleichbleibende Texturgrößen bzw. wenige Draw Calls allein garantieren keine Performance. Der größere Bloom-Umbau ist nicht Teil dieses Passes.
+
 Vorhandene Node-Regression und Chromium-/Software-WebGL-Sichtungen sind technische Vorprüfungen, keine Echtgeräte-, Hör- oder menschliche Langzeitabnahme. Frühere Messreihen bleiben in Git. Neue relevante Befunde hier knapp mit Gerät/Browser, Spielsituation und Ergebnis festhalten; daraus konkrete Folgeissues ableiten.
 
 Bekannte Einschränkungen bei der Bewertung berücksichtigen: [Bauplätze über Einheiten](bug-building-placement-in-einheiten.md), [Raffinerie/Vent](aether-vent-und-refinary-bauen.md), offene [Desert-Gestaltung](desert-map.md) und [Mothership-Abnahme](terrain.md).

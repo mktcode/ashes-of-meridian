@@ -1,5 +1,8 @@
     /* Dependency-free instanced WebGL2 renderer. */
     'use strict';
+    const DEFAULT_LIGHTING: BattlefieldLighting = {
+      sun: [1.10, .96, .82], sky: [.38, .47, .56], bounce: [.20, .23, .27]
+    };
     // Standalone model previews also render without a BattlefieldView.
     const DEFAULT_TERRAIN_RENDER_PROFILE: BattlefieldRenderProfile = {
       groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14, haze: [0.055, 0.09, 0.13],
@@ -30,6 +33,7 @@
       fogOn: boolean;
       cinema: boolean;
       shadowSize: number;
+      shadowBias = .00022;
       uniformCache: Map<WebGLProgram, Record<string, WebGLUniformLocation | null>>;
       fullVao: WebGLVertexArrayObject | null;
       fogSize: number;
@@ -516,11 +520,38 @@
             : M4.ortho((-viewHeight * a) / 2, (viewHeight * a) / 2, -viewHeight / 2, viewHeight / 2, 0.1, 350);
         this.vp = M4.mul(proj, view);
         this.inverseVP = M4.inverse(this.vp);
-        let st = cinema ? [0, 0, 0] : [x, 0, z];
-        this.lightVP = M4.mul(
-          M4.ortho(-78, 78, -78, 78, 1, 250),
-          M4.look([st[0] - 64, 110, st[2] + 43], st)
-        );
+        if (this.quality === 0) this.lightVP = M4.identity();
+        else if (cinema) {
+          this.lightVP = M4.mul(M4.ortho(-78, 78, -78, 78, 1, 250), M4.look([-64, 110, 43], [0, 0, 0]));
+          this.shadowBias = .00022;
+        } else this.fitShadow();
+      }
+      fitShadow() {
+        // Fit the visible ground and elevated receivers in a fixed light-space basis.
+        // The 32m receiver ceiling covers current meshes; revisit for taller terrain.
+        // Padding keeps off-screen casters near the view edge; no extra shadow pass.
+        const view = M4.look([-64, 110, 43], [0, 0, 0]), v = this.viewport;
+        const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+        for (const [x, y] of [[v.left, v.top], [v.right, v.top], [v.left, v.bottom], [v.right, v.bottom]]) {
+          const sx = (x - v.left) / v.width * 2 - 1, sy = 1 - (y - v.top) / v.height * 2;
+          const a = M4.point(this.inverseVP, sx, sy, -1), b = M4.point(this.inverseVP, sx, sy, 1);
+          for (let i = 0; i < 3; i++) { a[i] /= a[3]; b[i] /= b[3]; }
+          for (const height of [0, 32]) {
+            const t = (height - a[1]) / (b[1] - a[1]);
+            const q = M4.point(view, a[0] + (b[0] - a[0]) * t, height, a[2] + (b[2] - a[2]) * t);
+            for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], q[i]); hi[i] = Math.max(hi[i], q[i]); }
+          }
+        }
+        // Quantized extents and texel-aligned centers prevent subpixel swimming when panning.
+        const span = [0, 1].map(i => Math.ceil((hi[i] - lo[i] + 16) / 4 + .01) * 4);
+        const center = span.map((width, i) => {
+          const texel = width / this.shadowSize;
+          return Math.round((lo[i] + hi[i]) * .5 / texel) * texel;
+        });
+        const near = -hi[2] - 64, far = -lo[2] + 64;
+        this.shadowBias = Math.max(.03, Math.max(...span) / this.shadowSize * .4) / (far - near);
+        this.lightVP = M4.mul(M4.ortho(center[0] - span[0] / 2, center[0] + span[0] / 2,
+          center[1] - span[1] / 2, center[1] + span[1] / 2, near, far), view);
       }
       project(x: number, y: number, z: number) {
         let p = M4.point(this.vp, x, y, z);
@@ -600,7 +631,11 @@
         g.uniform3fv(this.uniform(this.program, 'u_haze'), this.haze as [number, number, number]);
         g.uniform1f(this.uniform(this.program, 'u_extent'), this.extent);
         g.uniform1ui(this.uniform(this.program, 'u_decorSeed'), this.decorSeed);
-        const profile = this.battlefieldProfile;
+        const profile = this.battlefieldProfile, lighting = profile.lighting ?? DEFAULT_LIGHTING;
+        g.uniform3fv(this.uniform(this.program, 'u_sun'), lighting.sun as [number, number, number]);
+        g.uniform3fv(this.uniform(this.program, 'u_skyLight'), lighting.sky as [number, number, number]);
+        g.uniform3fv(this.uniform(this.program, 'u_bounce'), lighting.bounce as [number, number, number]);
+        g.uniform1f(this.uniform(this.program, 'u_shadowBias'), this.shadowBias);
         g.uniform1f(this.uniform(this.program, 'u_groundPixelsPerMeter'), profile.groundPixelsPerMeter);
         g.uniform1f(this.uniform(this.program, 'u_groundMirror'), profile.groundMirror ? 1 : 0);
         g.uniform4f(this.uniform(this.program, 'u_groundDecor'), profile.rockDecor.density,

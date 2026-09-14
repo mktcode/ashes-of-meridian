@@ -13,7 +13,8 @@ const DESERT_BATTLEFIELD: BattlefieldDefinition = {
   render: {
     groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14,
     rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 },
-    haze: [0.11, 0.085, 0.1]
+    haze: [0.11, 0.085, 0.1],
+    lighting: { sun: [1.12, .94, .76], sky: [.38, .47, .56], bounce: [.23, .18, .16] }
   },
   worldEvent: null,
   generate(builder) {

@@ -134,7 +134,8 @@ const ALIEN_PLANET_BATTLEFIELD: BattlefieldDefinition = {
   render: {
     groundTexture: 'bio', skyTexture: 'sky', groundPixelsPerMeter: 14, groundMirror: true,
     rockDecor: { density: 0, opacity: 0 }, shrubDecor: { density: 0, opacity: 0 },
-    haze: [.12, .085, .155]
+    haze: [.12, .085, .155],
+    lighting: { sun: [.98, 1.06, .91], sky: [.39, .45, .55], bounce: [.16, .25, .22] }
   },
   worldEvent: null,
   generate(builder) {

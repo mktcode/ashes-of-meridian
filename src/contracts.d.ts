@@ -75,6 +75,12 @@ interface BattlefieldLayout {
   corridors: [number, number][][];
 }
 
+interface BattlefieldLighting {
+  sun: readonly [number, number, number];
+  sky: readonly [number, number, number];
+  bounce: readonly [number, number, number];
+}
+
 interface BattlefieldRenderProfile {
   groundTexture: 'ground' | 'metal' | 'bio';
   skyTexture: 'sky';
@@ -83,6 +89,7 @@ interface BattlefieldRenderProfile {
   rockDecor: { density: number; opacity: number };
   shrubDecor: { density: number; opacity: number };
   haze: readonly [number, number, number];
+  lighting?: BattlefieldLighting;
 }
 
 interface BattlefieldSize {

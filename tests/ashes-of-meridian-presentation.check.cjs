@@ -25,6 +25,34 @@ test('world and simulation start and step without renderer, geometry or browser 
   assert.equal(vm.runInContext('typeof geom + ":" + typeof MAT + ":" + typeof document', context), 'undefined:undefined:undefined');
 });
 
+test('contact shadows add one effect quad per unit/building on Balanced/High without changing models or previews',()=>{
+  const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world-view']);
+  vm.runInContext('Math.random=()=>{throw Error("Render RNG");}',context);
+  const {renderEntity:render,CONTACT_SHADOW_MATERIAL:material}=vm.runInContext('({renderEntity,CONTACT_SHADOW_MATERIAL})',context);
+  const R=createRendererStub({record:true});R.cinema=false;
+  for(const [kind,type] of [['building','hq'],['unit','worker'],['unit','air']]) {
+    const e=Object.freeze({id:42,kind,type,hp:100,team:0,faction:0,size:kind==='building'?4:1,x:12,z:-23,rot:.3,walk:0,progress:1});
+    const before=JSON.stringify(e);R.quality=0;R.calls.length=0;render(R,e,0);
+    const model=JSON.stringify(R.calls);
+    for(const quality of [1,2]) {
+      R.quality=quality;R.calls.length=0;render(R,e,0);
+      const contacts=R.calls.filter(c=>c[14]===material);
+      assert.equal(contacts.length,1);
+      const c=contacts[0];assert.equal(c[0],'plane');assert.deepEqual(c.slice(1,4),[12,-.02,-23]);
+      assert.equal(c[11],0);assert.equal(c[13],'effects');assert.ok(c[12]>0&&c[12]<.4);
+      assert.ok(c.slice(1,13).every(Number.isFinite));
+      assert.equal(JSON.stringify(R.calls.filter(c=>c[14]!==material)),model);
+    }
+    for(const options of [{ghost:true},{tint:0xffffff},{alpha:.3},{layer:'effects'}]) {
+      R.calls.length=0;render(R,e,0,options);assert.ok(!R.calls.some(c=>c[14]===material));
+    }
+    R.cinema=true;R.calls.length=0;render(R,e,0);assert.ok(!R.calls.some(c=>c[14]===material));R.cinema=false;
+    assert.equal(JSON.stringify(e),before);
+  }
+  R.calls.length=0;render(R,{id:1,kind:'resource',type:'gas',hp:100,x:0,z:0},0);
+  assert.ok(!R.calls.some(c=>c[14]===material));
+});
+
 test('world view uploads only changed layout/fog and does not mutate CPU data', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const { Battlefield, BattlefieldView } = vm.runInContext('({Battlefield, BattlefieldView})', context);

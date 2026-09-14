@@ -215,6 +215,14 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
         }
         return;
       }
+      // Two triangles per visible entity, batched with effects; never a shadow caster.
+      // Exclude menus, placement previews and Performance. No RNG, textures or model changes.
+      if (R.quality > 0 && !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic') {
+        const width = (e.size || 1) * (e.kind === 'building' ? 3.2 : 3.6);
+        R.add('plane', e.x, -.02, e.z, width, 1, width * (e.kind === 'building' ? 1 : .8),
+          0xffffff, rot, 0, 0, 0, e.kind === 'building' ? .32 : e.type === 'air' ? .12 : .26,
+          'effects', CONTACT_SHADOW_MATERIAL);
+      }
       if (e.kind === 'building') {
         let s = e.size || 3;
         p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
