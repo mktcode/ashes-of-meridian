@@ -4,7 +4,9 @@
       './audio/music-ratchet-theory.mp3',
       './audio/music-last-light-relay.mp3',
       './audio/music-breach-protocol.mp3',
-      './audio/music-black-channel.mp3'
+      './audio/music-black-channel.mp3',
+      './audio/music-sporewake.mp3',
+      './audio/music-rootmind.mp3'
     ];
     const BATTLE_MUSIC_GAP = 10;
     type MusicMode = 'menu' | 'battle' | 'silent';

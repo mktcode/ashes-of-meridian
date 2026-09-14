@@ -1,32 +1,30 @@
 # Musikentwürfe
 
-Dieses Verzeichnis enthält Hörentwürfe, die nicht Teil des Spiels sind.
+Dieses Verzeichnis enthält Hör- und Masterfassungen selbst erzeugter Musik. Freigegebene Stücke werden bytegleich nach [`../audio/`](../audio/) kopiert; die tatsächlich abgespielte Reihenfolge steht in [`src/audio.ts`](../src/audio.ts).
 
-## Aether Bloom
-
-- [**05 – Aether Bloom / Glass anhören**](05-aether-bloom.mp3)
-- [**05 – Aether Bloom / Soft Glow anhören**](05-aether-bloom-soft-glow.mp3)
-
-Beide Fassungen haben **122 BPM**, laufen rund **74 Sekunden** und verwenden dasselbe Arrangement sowie dieselben Melodien. `Soft Glow` ersetzt den gläsernen FM-Klang durch einen leiseren, weich einschwingenden Sinus-Pluck mit sehr wenigen Obertönen.
-
-Ein heller Elektronikentwurf auf klarem Achtelraster: abgesetzte E-Piano-Akkorde und eine leichte Bassfigur in einer offenen lydischen Klangfarbe. Die Melodie erscheint nur in einzelnen Phrasen; der Mittelteil und der spätere luftige Abschnitt lassen bewusst Raum. Es gibt keine Gitarren, Sprachsamples oder dauerhafte Klangfläche. Beide Hördateien sind Stereo-MP3 mit 44,1 kHz und 224 kbit/s.
-
-## Sporewake
+## Sporewake – freigegeben
 
 [**06 – Sporewake anhören**](06-sporewake.mp3) – **108 BPM**, rund **83 Sekunden**, Stereo-MP3/44,1 kHz/224 kbit/s.
 
-Ein Entwurf für den Alienplaneten: tiefe Membran- und Wurzelperkussion halten einen klaren Vierviertelpuls, während langsam atmende Intervallflächen, asymmetrische Bassimpulse und weich gleitende Kreaturenrufe den porösen Pilzwald aufgreifen. Sechs sehr leise Sporenakzente setzen nur Farbe. Keine Glocken, Gitarren, Stimmen oder Samples.
+Ein Stück für den Alienplaneten: tiefe Membran- und Wurzelperkussion halten einen klaren Vierviertelpuls, während langsam atmende Intervallflächen, asymmetrische Bassimpulse und weich gleitende Kreaturenrufe den porösen Pilzwald aufgreifen. Der Anfang bleibt frei von Rauschen; die späteren Waldatem-Übergänge gehören zum Arrangement. Sechs sehr leise Sporenakzente setzen nur Farbe. Keine Glocken, Gitarren, Stimmen oder Samples.
+
+## Rootmind – freigegeben
+
+[**07 – Rootmind anhören**](07-rootmind.mp3) – **108 BPM**, rund **83 Sekunden**, Stereo-MP3/44,1 kHz/224 kbit/s.
+
+Die kinetischere Alienplanet-Variante: weiche, vokalartige Samenimpulse wandern auf den Offbeats durch ein imaginäres Wurzelnetz, getragen von federnden Membranen und kurzen Basssignalen. Wenige Kreaturenrufe und Sporenakzente verbinden den Klang mit `Sporewake`; das eigenständige Arrangement verwendet kein Rauschbett, keine Glocken, Gitarren, Stimmen oder Samples.
+
+`Sporewake` und `Rootmind` stehen in der InGame-Playlist direkt hintereinander.
 
 ## Herstellung und Grenzen
 
 Entwürfe bei Bedarf neu erzeugen:
 
 ```bash
-python3 scripts/generate-aether-bloom.py
-python3 scripts/generate-aether-bloom.py --soft
 python3 scripts/generate-sporewake.py
+python3 scripts/generate-rootmind.py
 ```
 
-Der Generator verwendet ausschließlich lokale Synthese sowie Python 3 und FFmpeg; er liest keine Aufnahmen oder Spielassets und überschreibt nur die jeweils gewählte Fassung. Die Lautheit ist technisch auf −15 LUFS bei −1,5 dBTP ausgerichtet. Technische Prüfung ersetzt kein Hörurteil.
+Die Generatoren verwenden ausschließlich lokale Synthese sowie Python 3 und FFmpeg; sie lesen keine Aufnahmen oder Spielassets und überschreiben jeweils nur ihre eigene MP3. Die Lautheit ist technisch auf −15 LUFS bei −1,5 dBTP ausgerichtet. Technische Prüfung ersetzt kein Hörurteil.
 
-Freigegebene Fassungen bytegleich nach `audio/` kopieren, nicht neu kodieren. Bei einer Playliständerung Auswahl in `src/audio.ts` sowie die Audioeinträge in `Dockerfile` und `.dockerignore` gemeinsam anpassen. Entwürfe bleiben bis zu einer ausdrücklichen Freigabe außerhalb der Laufzeit.
+Freigegebene Fassungen bytegleich nach `audio/` kopieren, nicht neu kodieren. Bei einer Playliständerung Auswahl in `src/audio.ts` sowie die Audioeinträge in `Dockerfile` und `.dockerignore` gemeinsam anpassen.

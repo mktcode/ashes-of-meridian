@@ -232,7 +232,7 @@ def arrangement():
             length = 3.8 if clearing else 3.0
             put('canopy', canopy(chord, length), bar, 0, .16 if intro else .20,
                 -.12 if bar % 4 == 0 else .12)
-        if bar in (0, 16, 20, 28):
+        if bar in (16, 20, 28):
             put('breath', forest_breath(bar // 4), bar, 0, .11, -.35)
             put('breath', forest_breath(bar // 4 + 1), bar, 2, .08, .35)
 
@@ -270,6 +270,8 @@ def arrangement():
 
     put('canopy', canopy((48, 55, 62), 2.7), BARS, 0, .15)
     assert all(step % 2 == 0 for _, _, step in events)
+    assert [(bar, step) for part, bar, step in events if part == 'breath'] == [
+        (16, 0), (16, 2), (20, 0), (20, 2), (28, 0), (28, 2)]
     assert sum(part == 'spore' for part, _, _ in events) == 6
     assert not any(part in ('bell', 'guitar', 'speech') for part, _, _ in events)
     return mix, events
