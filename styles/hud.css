@@ -33,6 +33,12 @@
       flex: 1
     }
 
+    .resource-strip {
+      display: flex;
+      align-items: center;
+      gap: 27px
+    }
+
     #battleLabel {
       color: var(--muted);
       font: 11px var(--mono);
@@ -76,6 +82,12 @@
     .resicon.energy {
       color: #b8a2ea;
       font-size: 28px
+    }
+
+    .resicon.energy svg {
+      display: block;
+      width: 1em;
+      height: 1em
     }
 
     .clock {
@@ -591,6 +603,8 @@
         padding: 0 15px
       }
 
+      .resource-strip { gap: 15px }
+
       .resource {
         min-width: 65px;
         gap: 7px
@@ -721,17 +735,27 @@
     @media(max-width:600px) {
       #topbar {
         display: grid;
-        grid-template-columns: 43px repeat(4, minmax(0, 1fr)) 40px 32px;
+        grid-template-columns: 43px minmax(0, 1fr) 40px 32px;
         gap: 3px;
         padding: 0 6px
       }
       #battleLabel { font-size: 8px; letter-spacing: .6px }
       .top-spacer { display: none }
-      .resource { min-width: 0; gap: 3px }
+      .resource-strip {
+        min-width: 0;
+        height: 34px;
+        gap: 0
+      }
+      .resource {
+        flex: 1 1 0;
+        justify-content: center;
+        min-width: 0;
+        gap: 3px
+      }
+      .resource + .resource { border-left: 1px solid #58ddf030 }
       .resource strong { font-size: 12px; white-space: nowrap }
-      .resource small { font-size: 6px; letter-spacing: .6px }
-      .resource .resicon { font-size: 15px }
-      .power .resicon { display: none }
+      .resource small { display: none }
+      .resource .resicon { font-size: 15px; flex: 0 0 auto }
       .clock { padding-left: 0 }
       .clock strong { font-size: 11px }
       #pauseBtn { width: 32px; height: 40px; padding: 0 }
@@ -845,12 +869,14 @@
     /* Keep every control available on unusually narrow screens. */
     @media(max-width:360px) {
       :root { --side-width: 82px; --deck-height: 206px; --tools-height: 84px; --ability-height: 112px }
-      #topbar { grid-template-columns: 37px repeat(4, minmax(0, 1fr)) 35px 30px; gap: 2px; padding: 0 4px }
+      #topbar { grid-template-columns: 37px minmax(0, 1fr) 35px 30px; gap: 2px; padding: 0 4px }
       #battleLabel { font-size: 7px; letter-spacing: .3px }
       #pauseBtn { width: 30px }
       #cameraTools { grid-template-columns: repeat(3, minmax(0, 1fr)) }
       #abilityBar { grid-template-columns: repeat(2, minmax(0, 1fr)) }
-      .resource .resicon { display: none }
+      .resource { gap: 2px }
+      .resource strong { font-size: 10px }
+      .resource .resicon { display: block; font-size: 12px }
     }
 
     @media(max-height:500px) and (min-width:601px) {

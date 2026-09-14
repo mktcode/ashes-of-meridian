@@ -27,18 +27,19 @@
   <div id="hud" class="hidden">
     <header id="topbar"><div id="battleLabel"></div>
       <div class="top-spacer"></div>
-      <div class="resource"><span class="resicon alloy">◆</span>
-        <div><strong id="alloyCount">0</strong><small>ALLOY</small></div>
-      </div>
-      <div class="resource"><span class="resicon aether">⬡</span>
-        <div><strong id="gasCount">0</strong><small>AETHER</small></div>
-      </div>
-      <div class="resource"><span
-          class="resicon">▥</span>
-        <div><strong id="supplyCount">0 / 0</strong><small>SUPPLY</small></div>
-      </div>
-      <div class="resource power"><span class="resicon energy">ϟ</span>
-        <div><strong id="energyCount">0</strong><small>ENERGY</small></div>
+      <div class="resource-strip" aria-label="Resources">
+        <div class="resource"><span class="resicon alloy" aria-hidden="true">◆</span>
+          <div><strong id="alloyCount">0</strong><small>ALLOY</small></div>
+        </div>
+        <div class="resource"><span class="resicon aether" aria-hidden="true">⬡</span>
+          <div><strong id="gasCount">0</strong><small>AETHER</small></div>
+        </div>
+        <div class="resource"><span class="resicon" aria-hidden="true">▥</span>
+          <div><strong id="supplyCount">0 / 0</strong><small>SUPPLY</small></div>
+        </div>
+        <div class="resource power"><span class="resicon energy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 1L4 14h7l-1 9 10-14h-7z"/></svg></span>
+          <div><strong id="energyCount">0</strong><small>ENERGY</small></div>
+        </div>
       </div>
       <div class="clock"><strong id="gameTime">00:00</strong><button id="speedBtn" aria-label="Simulation speed: 1×. Tap to change.">1×</button></div><button
         id="pauseBtn" class="square" aria-label="Pause">Ⅱ</button>
