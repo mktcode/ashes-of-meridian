@@ -586,7 +586,7 @@
       }
       fitShadow() {
         // Fit the visible ground and elevated receivers in a fixed light-space basis.
-        // The 32m receiver ceiling covers current meshes; revisit for taller terrain.
+        // Taller terrain opts into a higher ceiling without changing other map profiles.
         // Padding keeps off-screen casters near the view edge; no extra shadow pass.
         const view = M4.look([-64, 110, 43], [0, 0, 0]), v = this.viewport;
         const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
@@ -594,7 +594,7 @@
           const sx = (x - v.left) / v.width * 2 - 1, sy = 1 - (y - v.top) / v.height * 2;
           const a = M4.point(this.inverseVP, sx, sy, -1), b = M4.point(this.inverseVP, sx, sy, 1);
           for (let i = 0; i < 3; i++) { a[i] /= a[3]; b[i] /= b[3]; }
-          for (const height of [0, 32]) {
+          for (const height of [0, this.battlefieldProfile?.terrainReceiverHeight ?? 32]) {
             const t = (height - a[1]) / (b[1] - a[1]);
             const q = M4.point(view, a[0] + (b[0] - a[0]) * t, height, a[2] + (b[2] - a[2]) * t);
             for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], q[i]); hi[i] = Math.max(hi[i], q[i]); }

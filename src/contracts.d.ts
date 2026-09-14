@@ -92,6 +92,8 @@ interface BattlefieldRenderProfile {
   shrubDecor: { density: number; opacity: number };
   haze: readonly [number, number, number];
   lighting?: BattlefieldLighting;
+  /** Highest terrain receiver included in the fitted shadow projection; default 32 m. */
+  terrainReceiverHeight?: number;
 }
 
 interface BattlefieldSize {
@@ -426,9 +428,19 @@ interface WorldTerrainFeature extends Position {
   outline: Position[];
 }
 
+// CPU-owned sampled relief: navigation and drawing consume the same heights.
+interface WorldRelief {
+  extent: number;
+  step: number;
+  size: number; // Includes one vertex of halo on every side, for seamless edge normals.
+  heights: Float32Array;
+  innerExtent: number;
+}
+
 type WorldGeometry =
   | { mesh: string; model: string; seed: number; extent: number }
-  | { mesh: string; model: string; feature: WorldTerrainFeature };
+  | { mesh: string; model: string; feature: WorldTerrainFeature }
+  | { mesh: string; model: string; relief: WorldRelief };
 
 interface WorldRenderData {
   features: WorldTerrainFeature[];

@@ -1,4 +1,4 @@
-// Fixed terrain/navigation/effect references; intentional visual deltas: docs/reference-tests.md.
+// Fixed ground/effect references and deterministic landscape contracts: docs/reference-tests.md.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fixture = require('./fixtures/presentation-v1.json');
@@ -7,8 +7,12 @@ const vm = require('node:vm');
 const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 for (const { seed, map, ...expected } of fixture.worlds) {
-  test(`world presentation/navigation reference: ${seed} (${map})`, () => {
-    assert.deepEqual(worldSample(seed, map), expected);
+  test(`world ground reference and repeatable canyon presentation/navigation: ${seed} (${map})`, () => {
+    const actual = worldSample(seed, map);
+    assert.equal(actual.terrain, expected.terrain, 'ground sampling remains protected by the historical fixture');
+    assert.deepEqual(actual, worldSample(seed, map), 'new geometry, placement and navigation are seeded');
+    // The commissioned redesign replaces obstacle distribution; do not regenerate the old fixture to hide that change.
+    assert.notEqual(actual.navigation, expected.navigation);
   });
 }
 test('world and simulation start and step without renderer, geometry or browser globals', () => {
@@ -163,8 +167,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
   }
   const renderer=createRendererStub(), uploads=[], fogs=[], boundaries=[];
   // Test descriptor dispatch here; actual boundary meshes are checked in the terrain suite.
-  TerrainModels.mountainRing=(seed,extent)=>{boundaries.push([seed,extent]); return [];};
-  TerrainModels.massif=()=>[];
+  TerrainModels.desertRelief=relief=>{boundaries.push([relief.extent,relief.innerExtent]); return new Float32Array();};
   renderer.geometry=(mesh,data)=>{
     if (mesh!=='terrain') return;
     let min=Infinity,max=-Infinity;
@@ -178,7 +181,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
     view.sync(w,false);view.sync(w,true);view.sync(w,true);
     assert.equal(renderer.extent,extent);
     assert.deepEqual(uploads.at(-1),[grid*grid*2,-extent,extent]);
-    assert.deepEqual(boundaries.at(-1),[43015,extent]);
+    assert.deepEqual(boundaries.at(-1),[extent+150,extent]);
     assert.equal(fogs.length,count+1);assert.equal(fogs.at(-1)[0],grid);
     assert.ok(fogs.at(-1)[1].every(v=>v===0), 'unrevealed world never reuses old fog');
     w.reveal([], [{x:extent-15,z:0,r:7}]);view.sync(w);

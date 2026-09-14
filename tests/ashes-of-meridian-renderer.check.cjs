@@ -235,15 +235,16 @@ test('lighting profiles override shader colors without additional textures or re
 });
 
 test('fitted shadow projection covers ground and elevated view corners at zoom limits and different viewport shapes',()=>{
-  for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
-    const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context);r.resize();
+  for(const receiverHeight of [undefined,46]) for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
+    const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context);
+    r.battlefieldProfile=receiverHeight?{terrainReceiverHeight:receiverHeight}:undefined; r.resize();
     for(const zoom of [27.2,57,115])for(const [x,z] of [[0,0],[-83,83],[83,-83]]) {
       r.camera(x,z,zoom);
       assert.ok(Array.from(r.lightVP).every(Number.isFinite));assert.ok(r.shadowBias>0&&r.shadowBias<.001);
       for(const [sx,sy] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
         const a=M4.point(r.inverseVP,sx,sy,-1),b=M4.point(r.inverseVP,sx,sy,1);
         for(let i=0;i<3;i++){a[i]/=a[3];b[i]/=b[3];}
-        for(const height of [0,32]) {
+        for(const height of [0,receiverHeight??32]) {
           const t=(height-a[1])/(b[1]-a[1]),p=[a[0]+(b[0]-a[0])*t,height,a[2]+(b[2]-a[2])*t],q=M4.point(r.lightVP,...p);
           for(let i=0;i<3;i++)assert.ok(Math.abs(q[i]/q[3])<1,`clipped receiver ${p}: ${q}`);
         }

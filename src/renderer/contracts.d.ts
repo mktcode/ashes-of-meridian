@@ -59,9 +59,9 @@ interface RenderEntityOptions {
   material?: number;
 }
 interface TerrainModelCatalog {
-  [model: string]: ((seed: number, extent: number) => number[]) |
-    ((feature: WorldTerrainFeature) => number[]) | ((descriptor: WorldGeometry) => number[]);
-  geometry: (descriptor: WorldGeometry) => number[];
+  [model: string]: ((seed: number, extent: number) => MeshData) |
+    ((feature: WorldTerrainFeature) => MeshData) | ((relief: WorldRelief) => MeshData) | ((descriptor: WorldGeometry) => MeshData);
+  geometry: (descriptor: WorldGeometry) => MeshData;
 }
 interface Window {
   Meridian: {

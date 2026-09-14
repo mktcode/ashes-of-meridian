@@ -962,7 +962,12 @@ test('base energy, hull, production and construction rates match the current rul
 test('building repair assigns only the nearest living own worker and repairs through normal travel/work', () => {
   const { game } = battle(), b = player(game, 'barracks'); b.hp -= 100;
   const workers = game.alive(e => e.team === 0 && e.type === 'worker');
+  // Isolate repair/travel from an incidental army jam at the HQ (docs/issues/unit-crowd-stau.md).
+  // Keep a real, body-checked approach rather than teleporting the worker into repair range.
+  const approach = game.unitPosition({...workers[0],x:b.x,z:b.z+9}); assert.ok(approach);
+  Object.assign(workers[0],approach);
   const nearest = [...workers].sort((a, c) => Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
+  assert.ok(Math.hypot(nearest.x-b.x,nearest.z-b.z)>b.size+4, 'starts outside repair range');
   game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 1, 2);
   game.spawnUnit('worker', b.x, b.z, 0, 0).hp = 0;
   const before = new Map(workers.map(w => [w.id, json(w.order)])), alloy = game.s.teams[0].alloy, x = nearest.x, z = nearest.z;

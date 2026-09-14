@@ -1,4 +1,4 @@
-// Run without build/browser: node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs
+// Build first (npm run build), then run without a browser: node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
@@ -80,18 +80,6 @@ test('large-grid path budget traverses a winding route requiring more than 5600 
   } finally { definition.size=original; }
 });
 
-test('boundary mesh follows a larger extent without scaling terrain height or producing invalid faces', () => {
-  const mesh=TerrainModels.mountainRing(43015,135);
-  let max=0;
-  for (let i=0;i<mesh.length;i+=9) {
-    const edge=Math.max(Math.abs(mesh[i]),Math.abs(mesh[i+2]));
-    assert.ok(edge>=132-1e-8); max=Math.max(max,edge);
-    for (let k=0;k<9;k++) assert.ok(Number.isFinite(mesh[i+k]));
-    assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-6);
-  }
-  assert.equal(max,168);
-});
-
 test('embedded skybox preserves the canonical WebP bytes and is wired as a non-repeating texture', () => {
   const url = vm.runInContext('MERIDIAN_TEXTURES.sky', context);
   assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
@@ -156,25 +144,13 @@ test('Desert alone opts into the dedicated rock albedo and repeats its ground wi
 });
 
 function layoutHash(w) {
-  const originalGrid = new Uint8Array(w.staticGrid.length);
-  for (const rock of w.rocks) w.mark(originalGrid, rock.x, rock.z, rock.r);
-  for (let i = 0; i < originalGrid.length; i++)
-    assert.equal(w.staticGrid[i], originalGrid[i] | w.terrainFeatureGrid[i], 'only massif footprints add blockers');
-  return createHash('sha256').update(originalGrid).update(w.terrainColors)
+  const rockGrid = new Uint8Array(w.staticGrid.length);
+  for (const rock of w.rocks) w.mark(rockGrid, rock.x, rock.z, rock.r);
+  for (let i = 0; i < rockGrid.length; i++)
+    assert.equal(w.staticGrid[i], rockGrid[i] | w.terrainFeatureGrid[i], 'only sampled relief and solid stones block');
+  return createHash('sha256').update(rockGrid).update(w.terrainFeatureGrid).update(w.terrainColors)
     .update(JSON.stringify(w.rocks)).digest('hex');
 }
-
-// Original small-rock layout/colors remain fixed; large massif footprints are an intentional addition.
-const originalLayouts = {
-  1409: 'e008f2827368d27fda1bbbd04e3a8002f751ccd797edd7858becbd5f68419ce6',
-  7012: 'c412c4ca92c24b7f53758ae1ada2974b7789ee240c88d6259729b7cc4155058a',
-  2219: '6481a6efd6af94048a5401f63d89c0aa3b00be9aa796cb63df477985a74b8818',
-  1144: 'b8f035efd8e8be2e6cf71e93017ed948a582d2d2d460e7fa3b88f022858e8040',
-  8141: '43b394c16cdb8b0699964394572f391828f5ff426f28c1e424fc8a06e2b0b902',
-  9897: '7a53e344e8d1fbea4f16999d5e39a6e3c27bd673ac5bb6fbb98e1d913e66bb48',
-  11007: '40a49b63ddd50aa35023fde1f1e0439d9a567f266956a70267f222bd60942171',
-  24080: '5afb1bf9af3ad0851b6c512f29cac192ffa863b176217fdad3d547f42123815c',
-};
 
 test('all named classic scripts parse, including local files and scripts not executed by these tests', () => {
   for (const { source, filename } of scripts) new vm.Script(source, { filename });
@@ -232,45 +208,18 @@ test('Desert rock meshes are closed, bounded and crease-shaded within a small fi
   assert.ok(bytes < 150000, 'six reusable meshes, not geometry per instance/frame');
 });
 
-test('Desert visual replacements preserve placement counts, CPU grids and all original layout samples', () => {
-  const definition = BATTLEFIELDS.desert, generate = definition.generate;
-  const original = vm.runInContext(`builder => {
-    builder.ground(); builder.boundary('mountainRing', 'MASSIF'); builder.smallObstacles();
-    builder.boundaryRocks(); builder.rubble(); builder.patches(placeGroundPatch);
-    builder.debris(placeCargo); builder.features(createMassifCandidate, 'massif', 'MASSIF');
-  }`, context);
-  const plain = x => JSON.parse(JSON.stringify(x));
-  const names = { rockBoulder: 'desertBoulder', rockCrag: 'desertCrag', rockRidge: 'desertRidge', rockShelf: 'desertShelf' };
+test('Desert cosmetic scatter cannot relocate cliffs, solid stones, routes or ground samples', () => {
+  const Builder = vm.runInContext('BattlefieldBuilder', context), original = Builder.prototype.cosmeticRandom;
+  const before = new Battlefield(1409, 'desert');
   try {
-    for (const seed of [1409, 2219, 24080, 43015]) {
-      definition.generate = original; const before = new Battlefield(seed, 'desert');
-      definition.generate = generate; const after = new Battlefield(seed, 'desert');
-      for (const key of ['rocks', 'staticGrid', 'blocked', 'terrainFeatureGrid', 'terrainColors']) assert.deepEqual(after[key], before[key], key);
-      assert.deepEqual(after.renderData.features, before.renderData.features);
-      assert.deepEqual(after.renderData.groundColors, before.renderData.groundColors);
-      const dressing = ['desertTalus', 'desertFlake'];
-      const originalPlacements = after.renderData.placements.filter(p => !dressing.includes(p.mesh));
-      assert.equal(originalPlacements.length, before.renderData.placements.length);
-      let rubble = 0, triangles = 0;
-      const meshes = Object.fromEntries(after.renderData.geometries.filter(d => d.model.startsWith('desert') && !dressing.includes(d.model)).map(d => [d.mesh, TerrainModels.geometry(d)]));
-      assert.equal(Object.keys(meshes).length, 6);
-      for (let i = 0; i < before.renderData.placements.length; i++) {
-        const expected = plain(before.renderData.placements[i]), actual = plain(originalPlacements[i]);
-        if (names[expected.mesh]) expected.mesh = names[expected.mesh];
-        if (actual.mesh === 'desertPebble' || actual.mesh === 'desertChip') {
-          assert.equal(expected.mesh, actual.mesh === 'desertPebble' ? 'octa' : 'box');
-          assert.equal(expected.position[1], expected.scale[0] * .27);
-          expected.mesh = actual.mesh; expected.position[1] = -.13; expected.material = 'ROCK'; rubble++;
-        }
-        assert.deepEqual(actual, expected, 'only mesh choice and explicit rubble grounding/material may change');
-        triangles += (meshes[actual.mesh]?.length || 0) / 27;
-      }
-      assert.ok(rubble > 350 && rubble <= 470, 'reuse the existing decoration population');
-      assert.ok(triangles < 100000, 'bounded full-map stone workload before the shadow repeat');
-      assert.deepEqual(after.renderData.geometries.filter(d => !d.model.startsWith('desert')), before.renderData.geometries, 'massif and boundary descriptors retain their original CPU parameters');
-    }
+    Builder.prototype.cosmeticRandom = () => () => .5;
+    const after = new Battlefield(1409, 'desert');
+    for (const key of ['rocks', 'layout', 'staticGrid', 'blocked', 'terrainFeatureGrid', 'terrainColors']) assert.deepEqual(after[key], before[key], key);
+    assert.deepEqual(after.renderData.geometries, before.renderData.geometries);
+    assert.deepEqual(after.renderData.groundColors, before.renderData.groundColors);
+    assert.notDeepEqual(after.renderData.placements, before.renderData.placements);
     for (const map of ['alien-planet', 'mothership']) assert.ok(!new Battlefield(43015, map).renderData.geometries.some(d => d.model.startsWith('desert')));
-  } finally { definition.generate = generate; }
+  } finally { Builder.prototype.cosmeticRandom = original; }
 });
 
 function assertClosedFractures(mesh) {
@@ -295,159 +244,145 @@ function assertClosedFractures(mesh) {
   assert.ok([...edges.values()].every(e => e.count === 2 && e.winding === 0), 'no open cuts or reversed cap edges');
 }
 
-test('Desert foot dressing is shallow, clustered, bounded and keeps starts, vents and lanes quiet', () => {
-  const definition = BATTLEFIELDS.desert, generate = definition.generate;
-  let builder;
-  definition.generate = b => { generate(b); builder = b; };
-  try {
-    for (const seed of [1409, 2219, 24080, 43015]) {
-      const world = new Battlefield(seed, 'desert'), names = ['desertTalus', 'desertFlake'];
-      const extras = world.renderData.placements.filter(p => names.includes(p.mesh));
-      const descriptorNames = world.renderData.geometries.filter(d => names.includes(d.mesh)).map(d => d.mesh);
-      assert.deepEqual(Array.from(descriptorNames).sort(), [...names].sort(), 'two reusable batches, not per-stone meshes');
-      assert.ok(extras.length > 500 && extras.length <= 1800);
-      assert.ok(world.renderData.placements.slice(-extras.length).every(p => names.includes(p.mesh)), 'append after all protected layout phases');
-      const sites = [...builder.safe.map(p => ({...p, r: 6})),
-        ...vm.runInContext('battlefieldStartSites', context)(world).map(p => ({...p, r: 10})),
-        ...world.layout.resourceSites.map((p, i) => ({x:p.x+(i?7:5), z:p.z+(i?7:18), r:6}))];
-      for (const p of extras) {
-        const q = {x:p.position[0], z:p.position[2]}, radius = p.scale[0];
-        assert.equal(p.position[1], -.13); assert.equal(p.material, 'ROCK'); assert.equal(p.layer, 'static');
-        assert.equal(p.rotation[1], 0); assert.equal(p.rotation[2], 0);
-        assert.ok(radius <= 1.4 && p.scale[1] * 1.2 <= .26, 'traversable flakes, not invisible blockers');
-        assert.ok(Math.max(Math.abs(q.x), Math.abs(q.z)) + radius <= world.extent - 4);
-        assert.ok(sites.every(s => Math.hypot(q.x-s.x,q.z-s.z) >= s.r+radius));
-        assert.ok(builder.lanes.every(([a,b]) => pointSegment(q,a,b) >= 3.5+radius));
-        assert.ok(world.rocks.some(r => Math.hypot(q.x-r.x,q.z-r.z) <= r.r+4) ||
-          world.renderData.features.some(m => m.outline.some((a,i) => pointSegment(q,a,m.outline[(i+1)%m.outline.length]) < 5)), 'no unrelated clutter in open sand');
-      }
-      for (const name of names) {
-        const mesh = TerrainModels[name](seed);
-        assert.deepEqual(mesh, TerrainModels[name](seed)); assert.notDeepEqual(mesh, TerrainModels[name](seed ^ 1));
-        assert.ok(mesh.length / 27 <= 32);
-        for (let i = 0; i < mesh.length; i += 9) {
-          assert.ok(Math.hypot(mesh[i],mesh[i+2]) <= 1.000001);
-          assert.ok(mesh[i+1] >= -.060001 && mesh[i+1] <= 1.200001);
-        }
-        assertClosedFractures(mesh);
-      }
-    }
-  } finally { definition.generate = generate; }
+test('stone grounding interpolates the actual rendered triangles, including both diagonals', () => {
+  const surface = { extent:1, step:1, size:5, innerExtent:0, heights:new Float32Array(25) };
+  surface.heights[12] = 4;
+  const mesh = TerrainModels.geometry({mesh:'test', model:'desertRelief', relief:surface}),
+    height = vm.runInContext('desertReliefHeight',context);
+  for (let i=0; i<mesh.length; i+=27) for (const weights of [[1/3,1/3,1/3],[.1,.2,.7]]) {
+    const p = [0,1,2].map(axis=>weights.reduce((sum,w,k)=>sum+w*mesh[i+k*9+axis],0));
+    assert.ok(Math.abs(height(surface,p[0],p[2])-p[1])<1e-6, 'not bilinear or unsampled analytic noise');
+  }
 });
 
-test('wide massif mesh is detailed, deterministic and matches its CPU footprint', () => {
-  const world = new Battlefield(43015, 'desert'), m = world.renderData.features[0],
-    mesh = TerrainModels.massif(m), before = JSON.stringify(m);
-  assert.deepEqual(mesh, TerrainModels.massif(m));
-  assert.notDeepEqual(mesh, TerrainModels.massif({ ...m, seed: m.seed ^ 1 }));
-  assert.equal(JSON.stringify(m), before);
-  assert.ok(mesh.length / 27 > 15000 && mesh.length / 27 <= 32000, 'bounded multi-scale fracture volumes and embedded talus');
-  assertClosedFractures(mesh);
-  // Exhaustive raster/outline agreement once; all 11 layouts retain fixed navigation references.
-  for (let i = 0; i < world.terrainFeatureGrid.length; i++) {
-    const p = world.point(i), covered = world.renderData.features.some(m => insidePolygon(p, m.outline) ||
-      m.outline.some((a, j) => pointSegment(p, a, m.outline[(j + 1) % m.outline.length]) < 2.5 * Math.SQRT1_2));
-    assert.equal(world.terrainFeatureGrid[i], +covered, 'raster follows irregular outlines, not bounding circles');
-  }
-  let high = 0;
-  for (let i = 0; i < mesh.length; i += 9) {
-    assert.ok(mesh.slice(i, i + 9).every(Number.isFinite));
-    assert.ok(mesh[i + 1] >= -m.height * .04 && mesh[i + 1] <= m.height * 1.1, 'buried roots and no taller shadow envelope');
-    assert.ok(world.blockedAt(mesh[i], mesh[i + 2]), 'no visible mountain slope over walkable cells');
-    assert.ok(Math.abs(Math.hypot(...mesh.slice(i + 3, i + 6)) - 1) < 1e-9);
-    high = Math.max(high, mesh[i + 1]);
-  }
-  assert.ok(high > m.height * .8);
-  const vertices = new Set();
-  for (let i = 0; i < mesh.length; i += 9) vertices.add(`${mesh[i]},${mesh[i + 1]},${mesh[i + 2]}`);
-  for (const p of m.outline) assert.ok(vertices.has(`${p.x},-0.14,${p.z}`), 'continuous exact ground-level perimeter');
-});
-
-test('mountain belt is seeded, continuous and outside the playable ground', () => {
-  const mesh = TerrainModels.mountainRing(43015, 90), edges = new Map(), surfaceTriangles = 96 * 3 * 2;
-  assert.deepEqual(mesh, TerrainModels.mountainRing(43015, 90));
-  assert.notDeepEqual(mesh, TerrainModels.mountainRing(43016, 90));
-  assert.ok(mesh.length / 27 > 30000 && mesh.length / 27 <= 56000, 'bounded budget for the continuous apron, fracture courses and scree');
-  let peak = 0;
-  for (let i = 0; i < mesh.length; i += 27) {
-    const vertices = [0, 9, 18].map(k => mesh.slice(i + k, i + k + 3));
-    assert.ok([0, 2].some(axis => [-1, 1].some(sign => vertices.every(v => sign * v[axis] >= 87))),
-      'whole triangles stay outside playable ground, including square corners and scree');
-    for (let j = 0; j < 3; j++) {
-      const [x, y, z] = vertices[j]; peak = Math.max(peak, y);
-      assert.ok([x, y, z].every(Number.isFinite));
-      assert.ok(Math.max(Math.abs(x), Math.abs(z)) >= 87, 'no mountain vertex in walkable ground');
-      assert.ok(Math.max(Math.abs(x), Math.abs(z)) <= 123);
-      const normal = mesh.slice(i + j * 9 + 3, i + j * 9 + 6);
-      assert.ok(Math.abs(Math.hypot(...normal) - 1) < 1e-9);
-      if (i < surfaceTriangles * 27) {
-        assert.ok(normal[1] > 0, 'non-degenerate, upward-facing heightfield facets');
-        const pair = [vertices[j], vertices[(j + 1) % 3]].map(v => JSON.stringify(v)).sort(),
-          key = pair.join('|');
-        edges.set(key, (edges.get(key) || 0) + 1);
-      }
+test('Desert dressing is closed and rooted; taller fragments stay entirely on blocked ground', () => {
+  for (const seed of [1409, 2219, 24080, 43015]) {
+    const w = new Battlefield(seed, 'desert'), names = ['desertTalus', 'desertFlake', 'desertPebble', 'desertChip'],
+      extras = w.renderData.placements.filter(p => names.includes(p.mesh));
+    assert.ok(extras.length > 1000 && extras.length < 9000);
+    let prominent = 0, low = 0;
+    const surfaces = w.renderData.geometries.filter(d=>d.relief).map(d=>d.relief), sample = vm.runInContext('desertReliefHeight',context),
+      height = (x,z)=>sample(Math.max(Math.abs(x),Math.abs(z))<=w.extent?surfaces[0]:surfaces[1],x,z);
+    for (const p of extras) {
+      assert.equal(p.material, 'ROCK'); assert.equal(p.layer, 'static');
+      const [x, y, z] = p.position, r = p.scale[0];
+      assert.ok(p.scale[1] > 0 && r <= 2 && y >= -.166);
+      assert.equal(y,Math.min(height(x,z),height(x+r,z),height(x-r,z),height(x,z+r),height(x,z-r))-.025,'embedded in the rendered surface');
+      if (p.scale[1] * 1.2 > .28) {
+        prominent++;
+        const a = w.idx(x-r,z-r), b = w.idx(x+r,z+r), n = w.gridSize;
+        for (let row = Math.floor(a/n); row <= Math.floor(b/n); row++) for (let col = a%n; col <= b%n; col++)
+          assert.equal(w.staticGrid[row*n+col], 1, 'no decorative tall stone over navigable ground');
+      } else low++;
+      for (const s of w.layout.startSites) assert.ok(Math.hypot(x-s.x,z-s.z) > 10, 'quiet HQ core');
     }
-  }
-  assert.ok(peak > 32 && peak <= 52, 'broken crest retains the established maximum caster reserve');
-  const boundary = [...edges].filter(([, count]) => count === 1);
-  assert.equal(boundary.length, 192, 'only the inner and outer perimeter are open');
-  for (const [edge, count] of edges) {
-    assert.ok(count <= 2);
-    if (count === 1) {
-      const [a, b] = edge.split('|').map(v => JSON.parse(v));
-      assert.ok(a[1] === b[1] && [-.25, -8].includes(a[1]), 'no cracks or side seams');
+    assert.ok(prominent > 100 && low > 100, 'both stronger embedded detail and traversable valley scatter');
+    for (const name of names.slice(0,2)) {
+      const mesh = TerrainModels[name](seed);
+      assert.deepEqual(mesh, TerrainModels[name](seed)); assert.notDeepEqual(mesh, TerrainModels[name](seed ^ 1));
+      for (let i = 0; i < mesh.length; i += 9) {
+        assert.ok(Math.hypot(mesh[i],mesh[i+2]) <= 1.000001);
+        assert.ok(mesh[i+1] >= -.060001 && mesh[i+1] <= 1.200001);
+      }
+      assertClosedFractures(mesh);
     }
   }
 });
 
-// Small-obstacle digests stay fixed; corner clearances and massifs have independent access checks.
-const terrainCases = [[1409,'desert'],[2219,'desert'],[24080,'desert']];
-for (const [seed, map] of terrainCases) {
-  test(`terrain ${seed} (${map}): original layout and varied textured rocks`, () => {
-    const battlefield = new Battlefield(seed, map), placements = battlefield.renderData.placements;
-    assert.equal(layoutHash(battlefield), originalLayouts[seed]);
-    assert.deepEqual(battlefield.blocked, battlefield.staticGrid);
-    const belts = placements.filter(p => p.mesh === 'mountainRing');
-    assert.equal(belts.length, 1);
-    assert.equal(belts[0].material, 'MASSIF', 'boundary uses the same unstriped rock material as interior massifs');
-    for (const rock of battlefield.rocks) {
-      assert.ok(battlefield.blockedAt(rock.x, rock.z), 'interior formations are real blockers');
+test('Desert relief draws CPU samples exactly, with finite normals and upward nondegenerate faces', () => {
+  const w = new Battlefield(43015, 'desert'), descriptors = w.renderData.geometries.filter(d => d.relief);
+  assert.equal(descriptors.length, 2);
+  let triangles = 0;
+  const seam = new Map();
+  for (const descriptor of descriptors) {
+    const s = descriptor.relief, before = Buffer.from(s.heights.buffer).toString('base64'), mesh = TerrainModels.geometry(descriptor);
+    assert.ok(ArrayBuffer.isView(mesh), 'large meshes use preallocated typed storage, not growable JS arrays');
+    assert.deepEqual(mesh, TerrainModels.geometry(descriptor));
+    assert.equal(Buffer.from(s.heights.buffer).toString('base64'), before, 'renderer never modifies CPU relief');
+    assert.equal(s.size, s.extent * 2 / s.step + 3, 'one-vertex halo for shared-edge normals');
+    assert.equal(mesh.length % 27, 0); triangles += mesh.length / 27;
+    for (let i = 0; i < mesh.length; i += 9) {
+      const [x,y,z,nx,ny,nz] = mesh.subarray(i,i+6), row = Math.round((z+s.extent)/s.step)+1, col = Math.round((x+s.extent)/s.step)+1;
+      for (let k = 0; k < 9; k++) assert.ok(Number.isFinite(mesh[i+k]));
+      assert.equal(y, s.heights[row*s.size+col]);
+      assert.ok(Math.abs(Math.hypot(nx,ny,nz)-1) < 1e-6 && ny > 0);
+      assert.ok(y >= -.141 && y < w.definition.render.terrainReceiverHeight);
+      assert.ok(Math.max(Math.abs(x),Math.abs(z)) <= s.extent);
+      if (!s.innerExtent && y > .18) assert.ok(w.blockedAt(x,z), 'no rendered slope over walkable cells');
+      if (Math.max(Math.abs(x),Math.abs(z)) === w.extent) {
+        const key = `${x},${z}`, value = Array.from(mesh.subarray(i+1,i+9));
+        if (seam.has(key)) assert.deepEqual(value,seam.get(key),'matching heights, normals and color across technical border');
+        else seam.set(key,value);
+      }
     }
-    const massifs = battlefield.renderData.features;
-    assert.equal(massifs.length, seed === 1409 ? 1 : 2, 'corner clearances take priority over a second broad landform');
-    for (const m of massifs) {
-      assert.ok(m.width >= 29 && m.width <= 38 && m.depth >= 17 && m.depth <= 23);
-      assert.ok(m.height >= 20 && m.height <= 27);
-      assert.equal(m.outline.length, 96);
-      assert.ok(m.outline.every(p => Math.max(Math.abs(p.x), Math.abs(p.z)) <= 81));
+    for (let i = 0; i < mesh.length; i += 27) {
+      const ax=mesh[i+9]-mesh[i], az=mesh[i+11]-mesh[i+2], bx=mesh[i+18]-mesh[i], bz=mesh[i+20]-mesh[i+2];
+      assert.ok(az*bx-ax*bz > 0, 'upward winding and nonzero projected area');
+      if (!s.innerExtent && (mesh[i+1]+mesh[i+10]+mesh[i+19])/3 > .18)
+        assert.ok(w.blockedAt((mesh[i]+mesh[i+9]+mesh[i+18])/3,(mesh[i+2]+mesh[i+11]+mesh[i+20])/3),'triangle interiors also block');
+      if (s.innerExtent) assert.ok([0,2].some(axis => [-1,1].some(sign => [0,9,18].every(k => sign*mesh[i+k+axis] >= s.innerExtent))),
+        'no overlapping triangles between interior and exterior');
     }
-    const { playerStart, enemySites, resourceSites } = battlefield.layout;
-    const reserved = [{ ...playerStart, r: 20 }, { ...enemySites[0], r: 21 },
-      ...vm.runInContext('battlefieldStartSites', context)(battlefield).slice(2).map(p => ({ ...p, r: 12 })),
-      ...resourceSites.map(p => ({ ...p, r: 10 })),
-      ...resourceSites.map((p, i) => ({ x: p.x + (i ? 7 : 5), z: p.z + (i ? 7 : 18), r: 7 }))];
-    for (const p of reserved) for (const m of massifs) {
-      assert.ok(!insidePolygon(p, m.outline));
-      assert.ok(m.outline.every((a, i) => pointSegment(p, a, m.outline[(i + 1) % 96]) >= p.r));
+  }
+  assert.ok(seam.size > 500, 'a continuous shared edge rather than four separately closed walls');
+  assert.ok(triangles > 700000 && triangles < 900000, 'dense relief, no accidental duplicated tiles');
+  layoutHash(w);
+});
+
+test('Desert basin loops retain another approach when the central exit is obstructed', () => {
+  const w = new Battlefield(1409,'desert');
+  for (const route of w.layout.corridors.slice(0,4)) {
+    w.rebuild([]); w.mark(w.blocked,route[2][0],route[2][1],10);
+    const start = {x:route[0][0],z:route[0][1]}, target = {x:0,z:0}, path = w.path(start.x,start.z,0,0);
+    let previous = start;
+    for (const point of path) { assert.ok(w.lineFree(previous,point)); previous=point; }
+    assert.ok(Math.hypot(previous.x-target.x,previous.z-target.z)<3,'a second basin exit, not a dead-end tree');
+  }
+});
+
+test('Desert relief is distributed inside the world and its edges continue naturally through all corners', () => {
+  const w = new Battlefield(1409, 'desert'), s = w.renderData.geometries.find(d => d.relief && !d.relief.innerExtent).relief;
+  const at = (x,z) => s.heights[(Math.round((z+s.extent)/s.step)+1)*s.size+Math.round((x+s.extent)/s.step)+1];
+  for (const sx of [-1,1]) for (const sz of [-1,1]) {
+    let highs = 0, lows = 0;
+    for (let x = 8; x < 68; x += 3) for (let z = 8; z < 68; z += 3) {
+      const h = at(x*sx,z*sz); if (h > 3) highs++; if (h < .18) lows++;
     }
-    // Independent flood fill with a one-cell clearance margin around every obstacle.
-    const seen = new Set([battlefield.idx(playerStart.x, playerStart.z)]), queue = [...seen];
-    for (let h = 0; h < queue.length; h++) for (const j of [queue[h] - 1, queue[h] + 1, queue[h] - 72, queue[h] + 72]) {
-      if (j % 72 < 1 || j % 72 > 70 || j < 72 || j >= 71 * 72 || seen.has(j)) continue;
-      if ([-73, -72, -71, -1, 0, 1, 71, 72, 73].some(d => battlefield.staticGrid[j + d])) continue;
-      seen.add(j); queue.push(j);
+    assert.ok(highs > 30 && lows > 30, 'both landforms and usable valleys in every quadrant');
+    assert.ok(at(87*sx,87*sz) > 10, 'corner mountains, not an exposed right-angle arena edge');
+  }
+  const next = new Battlefield(1410,'desert');
+  assert.notDeepEqual(w.terrainFeatureGrid,next.terrainFeatureGrid);
+  assert.notDeepEqual(w.layout.corridors,next.layout.corridors);
+  assert.notStrictEqual(w.layout,w.definition.layout,'seed-specific routes never mutate the shared map definition');
+  assert.deepEqual(w.layout.startSites,next.layout.startSites);
+  assert.deepEqual(w.layout.resourceSites,next.layout.resourceSites);
+});
+
+for (const seed of [1409,2219,24080,43015,...Array.from({length:16},(_,i)=>(i+1)*7919)]) {
+  test(`Desert ${seed}: all four starts, resources and vents share a body-clear canyon network`, () => {
+    const w = new Battlefield(seed,'desert'), n = w.gridSize,
+      sites = [...vm.runInContext('battlefieldStartSites',context)(w),...w.layout.resourceSites,
+        ...w.layout.resourceSites.map((p,i)=>({x:p.x+(i?7:5),z:p.z+(i?7:18)}))],
+      seen = new Uint8Array(n*n), queue = [w.idx(sites[0].x,sites[0].z)];
+    seen[queue[0]] = 1;
+    for (let head = 0; head < queue.length; head++) for (const i of [queue[head]-1,queue[head]+1,queue[head]-n,queue[head]+n]) {
+      if (i%n<1 || i%n>=n-1 || i<n || i>=(n-1)*n || seen[i]) continue;
+      if ([-n-1,-n,-n+1,-1,0,1,n-1,n,n+1].some(d=>w.staticGrid[i+d])) continue;
+      seen[i]=1; queue.push(i);
     }
-    for (const p of reserved) assert.ok(queue.some(i => {
-      const q = battlefield.point(i); return Math.hypot(q.x - p.x, q.z - p.z) <= 5;
-    }), 'bases and all resource approaches remain connected with clearance');
-    assert.equal(placements.filter(p => p.mesh.startsWith('massif') && p.material === 'MASSIF').length, massifs.length);
-    const rocks = placements.filter(p => ['desertBoulder', 'desertCrag', 'desertRidge', 'desertShelf'].includes(p.mesh));
-    assert.equal(new Set(rocks.map(p => p.mesh)).size, 4);
-    assert.ok(rocks.every(p => p.layer === 'static' && p.material === 'ROCK'));
-    assert.ok(!placements.some(p => p.mesh === 'hex'), 'no hexagonal terrain columns');
-    assert.ok(!battlefield.renderData.placements.some(p => p.mesh === 'plane'),
-      'no road surfaces, edge strips or dashed center markings');
-    assert.ok(placements.every(p => [...p.position, ...p.scale].every(Number.isFinite)));
+    for (const p of sites) {
+      assert.ok(!w.blockedAt(p.x,p.z));
+      assert.ok(queue.some(i=>{const q=w.point(i);return Math.hypot(q.x-p.x,q.z-p.z)<=5;}),'connected with one-cell clearance');
+    }
+    for (const route of w.layout.corridors) for (let i=1;i<route.length;i++)
+      assert.ok(w.lineFree({x:route[i-1][0],z:route[i-1][1]},{x:route[i][0],z:route[i][1]}));
+    assert.deepEqual(w.blocked,w.staticGrid); layoutHash(w);
+    for (const rock of w.rocks) assert.ok(w.blockedAt(rock.x,rock.z),'every freestanding solid stone blocks its containing cell');
+    const placements = w.renderData.placements;
+    assert.ok(placements.every(p=>[...p.position,...p.scale,...p.rotation].every(Number.isFinite)));
+    assert.equal(new Set(placements.filter(p=>['desertBoulder','desertCrag','desertRidge','desertShelf'].includes(p.mesh)).map(p=>p.mesh)).size,4);
+    assert.ok(!placements.some(p=>p.mesh==='hex'||p.mesh==='plane'||p.mesh==='mountainRing'), 'no columns, drawn roads or square ring');
   });
 }
 
@@ -630,17 +565,17 @@ test('Mothership reusable architecture has finite normals, bounded meshes and a 
   assert.ok(w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+w.gridSize**2*2<60000);
 });
 
-test('navigation goes around a broad massif instead of crossing its slopes', () => {
-  const w = new Battlefield(43015, 'desert'), m = w.renderData.features[0],
-    dx = Math.sin(m.yaw) * (m.depth + 8), dz = Math.cos(m.yaw) * (m.depth + 8),
-    start = { x: m.x - dx, z: m.z - dz }, target = { x: m.x + dx, z: m.z + dz };
-  assert.ok(!w.blockedAt(start.x, start.z) && !w.blockedAt(target.x, target.z));
-  assert.ok(!w.lineFree(start, target));
-  const path = w.path(start.x, start.z, target.x, target.z);
-  assert.ok(path.length > 1);
-  let previous = start;
-  for (const point of path) { assert.ok(w.lineFree(previous, point)); previous = point; }
-  assert.ok(Math.hypot(previous.x - target.x, previous.z - target.z) < 3);
+test('navigation follows canyon bends instead of crossing the relief', () => {
+  const w = new Battlefield(43015, 'desert'), sites = [...w.layout.startSites, ...w.layout.resourceSites];
+  let detours = 0;
+  for (const start of w.layout.startSites) for (const target of sites) {
+    const path = w.path(start.x, start.z, target.x, target.z);
+    let previous = start;
+    for (const point of path) { assert.ok(w.lineFree(previous, point)); previous = point; }
+    assert.ok(Math.hypot(previous.x - target.x, previous.z - target.z) < 3);
+    if (!w.lineFree(start, target)) { assert.ok(path.length > 1); detours++; }
+  }
+  assert.ok(detours >= 8, 'new landforms meaningfully shape routes, not just their appearance');
 });
 
 test('map recipes and new cosmetic streams are isolated without shifting existing terrain samples', () => {
