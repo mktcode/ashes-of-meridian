@@ -15,7 +15,8 @@ const DESERT_BATTLEFIELD: BattlefieldDefinition = {
     rockSurface: { texture: 'desertRock', metersPerTile: 18 },
     rockDecor: { density: .55, opacity: .72 }, shrubDecor: { density: .08, opacity: .78 },
     haze: [0.11, 0.085, 0.1],
-    lighting: { sun: [1.12, .94, .76], sky: [.38, .47, .56], bounce: [.23, .18, .16] }
+    // Preserve sunlit soil brightness while giving shaded facets less uniform fill.
+    lighting: { sun: [1.20, 1.00, .80], sky: [.27, .34, .43], bounce: [.15, .12, .09] }
   },
   worldEvent: null,
   generate(builder) {
