@@ -138,9 +138,9 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   const view = new BattlefieldView(renderer), before = JSON.stringify(world.renderData);
   view.sync(world, false); view.sync(world, false);
   assert.equal(renderer.decorSeed, 1409);
-  assert.equal(meshes, 2 + world.renderData.features.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
+  assert.equal(meshes, 1 + world.renderData.geometries.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
   world.reveal([], [{ x: 0, z: 0, r: 7 }]); view.sync(world); view.sync(world);
-  assert.equal(meshes, 2 + world.renderData.features.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
+  assert.equal(meshes, 1 + world.renderData.geometries.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(world.fogPixels)); assert.ok(fogPixels.includes(255));
   assert.equal(JSON.stringify(world.renderData), before);
   const next = new Battlefield(43015, 'desert'); next.reveal([]);
@@ -148,7 +148,7 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   assert.equal(fogs, 2); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(next.fogPixels)); assert.ok(fogPixels.every(v => v === 0));
   assert.equal(renderer.decorSeed, 43015, 'new world updates cosmetic seed without sampling world RNG');
-  assert.equal(meshes, 4 + world.renderData.features.length + next.renderData.features.length);
+  assert.equal(meshes, 2 + world.renderData.geometries.length + next.renderData.geometries.length);
 });
 
 test('world view switches ground bounds, boundary descriptors and fog sizes between worlds', () => {

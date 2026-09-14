@@ -8,7 +8,7 @@ const { join } = require('node:path');
 const { BATTLEFIELD_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 
 const scripts = readScripts();
-const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'renderer-alien-terrain', 'renderer-mothership-terrain', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
+const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'renderer-desert-terrain', 'renderer-alien-terrain', 'renderer-mothership-terrain', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
 const { geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS } =
   vm.runInContext('({geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS})', context);
 
@@ -199,6 +199,78 @@ test('rock meshes are deterministic, finite, bounded and inexpensive', () => {
   assert.equal(hashes.size, 4, 'four distinct silhouettes');
 });
 
+test('Desert rock meshes are closed, bounded and crease-shaded within a small fixed upload budget', () => {
+  const budgets = { desertBoulder: 320, desertCrag: 320, desertRidge: 320, desertShelf: 156, desertPebble: 42, desertChip: 42 };
+  let bytes = 0;
+  for (const [model, budget] of Object.entries(budgets)) {
+    const mesh = TerrainModels[model](43015);
+    assert.deepEqual(mesh, TerrainModels[model](43015));
+    assert.notDeepEqual(mesh, TerrainModels[model](43016));
+    assert.equal(mesh.length / 27, budget); bytes += mesh.length * 4;
+    const edges = new Map(); let maxY = -Infinity, minX = Infinity, maxX = -Infinity;
+    for (let i = 0; i < mesh.length; i += 27) {
+      const points = [0, 9, 18].map(k => mesh.slice(i + k, i + k + 3));
+      const a = points[1].map((v, k) => v - points[0][k]), b = points[2].map((v, k) => v - points[0][k]);
+      const cross = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+      assert.ok(Math.hypot(...cross) > 1e-9, 'no degenerate faces');
+      for (let j = 0; j < 3; j++) {
+        const p = points[j], normal = mesh.slice(i + j * 9 + 3, i + j * 9 + 6);
+        assert.ok(mesh.slice(i + j * 9, i + j * 9 + 9).every(Number.isFinite));
+        assert.ok(Math.hypot(p[0], p[2]) <= 1.000001, 'inside the unchanged radial envelope');
+        assert.ok(p[1] >= -.13 && p[1] <= 1.1, 'no taller shadow casters');
+        assert.ok(Math.abs(Math.hypot(...normal) - 1) < 1e-6);
+        assert.ok(normal.reduce((s, v, k) => s + v * cross[k], 0) > 0, 'shading normal follows face winding');
+        maxY = Math.max(maxY, p[1]); minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+        const edge = [p, points[(j + 1) % 3]].map(v => JSON.stringify(v)).sort().join('|');
+        edges.set(edge, (edges.get(edge) || 0) + 1);
+      }
+    }
+    assert.ok([...edges.values()].every(n => n === 2), 'each interlocking stone is a closed mesh');
+    if (!['desertPebble', 'desertChip'].includes(model)) assert.ok(maxX - minX > 1.5, 'broad readable blocker foot');
+    if (model === 'desertShelf') assert.ok(maxY < .35, 'slabs, not upright pillars');
+  }
+  assert.ok(bytes < 150000, 'six reusable meshes, not geometry per instance/frame');
+});
+
+test('Desert visual replacements preserve placement counts, CPU grids and all original layout samples', () => {
+  const definition = BATTLEFIELDS.desert, generate = definition.generate;
+  const original = vm.runInContext(`builder => {
+    builder.ground(); builder.boundary('mountainRing', 'MASSIF'); builder.smallObstacles();
+    builder.boundaryRocks(); builder.rubble(); builder.patches(placeGroundPatch);
+    builder.debris(placeCargo); builder.features(createMassifCandidate, 'massif', 'MASSIF');
+  }`, context);
+  const plain = x => JSON.parse(JSON.stringify(x));
+  const names = { rockBoulder: 'desertBoulder', rockCrag: 'desertCrag', rockRidge: 'desertRidge', rockShelf: 'desertShelf' };
+  try {
+    for (const seed of [1409, 2219, 24080, 43015]) {
+      definition.generate = original; const before = new Battlefield(seed, 'desert');
+      definition.generate = generate; const after = new Battlefield(seed, 'desert');
+      for (const key of ['rocks', 'staticGrid', 'blocked', 'terrainFeatureGrid', 'terrainColors']) assert.deepEqual(after[key], before[key], key);
+      assert.deepEqual(after.renderData.features, before.renderData.features);
+      assert.deepEqual(after.renderData.groundColors, before.renderData.groundColors);
+      assert.equal(after.renderData.placements.length, before.renderData.placements.length);
+      let rubble = 0, triangles = 0;
+      const meshes = Object.fromEntries(after.renderData.geometries.filter(d => d.model.startsWith('desert')).map(d => [d.mesh, TerrainModels.geometry(d)]));
+      assert.equal(Object.keys(meshes).length, 6);
+      for (let i = 0; i < before.renderData.placements.length; i++) {
+        const expected = plain(before.renderData.placements[i]), actual = plain(after.renderData.placements[i]);
+        if (names[expected.mesh]) expected.mesh = names[expected.mesh];
+        if (actual.mesh === 'desertPebble' || actual.mesh === 'desertChip') {
+          assert.equal(expected.mesh, actual.mesh === 'desertPebble' ? 'octa' : 'box');
+          assert.equal(expected.position[1], expected.scale[0] * .27);
+          expected.mesh = actual.mesh; expected.position[1] = -.13; expected.material = 'ROCK'; rubble++;
+        }
+        assert.deepEqual(actual, expected, 'only mesh choice and explicit rubble grounding/material may change');
+        triangles += (meshes[actual.mesh]?.length || 0) / 27;
+      }
+      assert.ok(rubble > 350 && rubble <= 470, 'reuse the existing decoration population');
+      assert.ok(triangles < 100000, 'bounded full-map stone workload before the shadow repeat');
+      assert.deepEqual(after.renderData.geometries.filter(d => !d.model.startsWith('desert')), before.renderData.geometries, 'massifs and boundary belt are unchanged');
+    }
+    for (const map of ['alien-planet', 'mothership']) assert.ok(!new Battlefield(43015, map).renderData.geometries.some(d => d.model.startsWith('desert')));
+  } finally { definition.generate = generate; }
+});
+
 test('wide massif mesh is detailed, deterministic and matches its CPU footprint', () => {
   const world = new Battlefield(43015, 'desert'), m = world.renderData.features[0],
     mesh = TerrainModels.massif(m), before = JSON.stringify(m);
@@ -305,7 +377,7 @@ for (const [seed, map] of terrainCases) {
       const q = battlefield.point(i); return Math.hypot(q.x - p.x, q.z - p.z) <= 5;
     }), 'bases and all resource approaches remain connected with clearance');
     assert.equal(placements.filter(p => p.mesh.startsWith('massif') && p.material === 'MASSIF').length, massifs.length);
-    const rocks = placements.filter(p => p.mesh.startsWith('rock'));
+    const rocks = placements.filter(p => ['desertBoulder', 'desertCrag', 'desertRidge', 'desertShelf'].includes(p.mesh));
     assert.equal(new Set(rocks.map(p => p.mesh)).size, 4);
     assert.ok(rocks.every(p => p.layer === 'static' && p.material === 'ROCK'));
     assert.ok(!placements.some(p => p.mesh === 'hex'), 'no hexagonal terrain columns');

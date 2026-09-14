@@ -25,7 +25,18 @@ function worldSample(seed, map) {
   world.reveal(entities, [{ x: -20, z: -10, r: 7 }]);
   world.reveal([]);
   // Preserve the fixture serializer key, not a runtime alias, after the generic feature rename.
-  return { terrain, placements: digest({ calls: renderer.calls, massifs: world.renderData.features }), navigation: digest({ paths,
+  // Normalize only the commissioned Desert mesh substitution/pebble grounding for the old
+  // placement digest. Independent terrain tests compare all other descriptors and CPU grids.
+  const rockNames = { desertBoulder: 'rockBoulder', desertCrag: 'rockCrag', desertRidge: 'rockRidge', desertShelf: 'rockShelf' };
+  const calls = renderer.calls.map(call => {
+    if (rockNames[call[0]]) return [rockNames[call[0]], ...call.slice(1)];
+    if (call[0] === 'desertPebble' || call[0] === 'desertChip') {
+      const old = call.slice(0, 14); old[0] = call[0] === 'desertPebble' ? 'octa' : 'box'; old[2] = call[4] * .27;
+      return old;
+    }
+    return call;
+  });
+  return { terrain, placements: digest({ calls, massifs: world.renderData.features }), navigation: digest({ paths,
     nearest: world.nearest(-51, 49), blocked: Array.from(world.blocked),
     visible: Array.from(world.visible), explored: Array.from(world.explored), fog: Array.from(world.fogPixels) }) };
 }
