@@ -6,6 +6,8 @@ Die implementierten Doktrinen, Tiefenstufen, Vorteile und Flottenupgrades sind i
 
 Vergleichsfall vor der beauftragten Balanceanpassung: Nach Einführung zufälliger Eckstarts erreicht der Spieler Stage 21 ohne größere Probleme, besonders durch Startressourcen und Scans/Reinforcements/Orbital Strike. Gemeldete Stapel: Supply crate ×8, Aether allocation ×4, Pioneer squad ×3, Commander mandate ×1, Survey drones ×1, Field workshop ×1, Command capacitor ×2. Fraktion und permanente Upgrade-Stufen fehlen noch.
 
+Erste menschliche Rückmeldung nach der Anpassung: „schon viel viel besser“. Neue erreichte Stage, Fraktion und Flottenausstattung sind noch nicht angegeben; daraus folgt noch keine Abnahme tiefer Runs.
+
 Mit einem neuen Run prüfen, ob halbierte Supply crates, geringere Startenergie, Technologie-/Zielbedingungen der Fähigkeiten und gegnerische Vorteilsstapel genügend Gegenwehr erzeugen, ohne den Einstieg ohne Flottenupgrades zu überfordern. Insbesondere frühe gegnerische Commander-/Worker-Vorteile und beide Seiten mit vielen Ressourcenstapeln vergleichen. Die aktuellen Regeln stehen ausschließlich in den [Spielregeln](../gameplay.md); weitere Zahlenänderungen erst aus dem nächsten menschlichen Run ableiten.
 
 ## Sehr tiefe Expeditionen
