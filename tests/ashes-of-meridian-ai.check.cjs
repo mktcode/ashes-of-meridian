@@ -170,6 +170,35 @@ test('strategy prioritizes remembered economy without following hidden changes a
   assert.equal(g.s.ai[1].mode,'defend');assert.equal(g.s.ai[1].squad.length,0);
 });
 
+test('each faction chooses its own build, production and remembered target priorities',()=>{
+  for(const faction of [0,1,2]) {
+    const {g}=battle(0,faction),h=own(g,1,'hq')[0];
+    g.spawnBuilding('barracks',h.x-12,h.z,1,faction);
+    g.spawnBuilding('refinery',h.x,h.z+12,1,faction);
+    Object.assign(g.account(1),{alloy:2000,gas:2000});
+    const builds=[];g.aiBuild=(team,type)=>{builds.push(type);return true;};
+    g.canBuild=()=>'';g.train=()=>true;
+    g.aiEconomy(1,own(g,1),h);
+    assert.equal(builds[0],['turret','barracks','factory'][faction]);
+    for(const type of ['factory','hangar'])g.spawnBuilding(type,h.x-20,h.z+20,1,faction);
+    for(const type of ['rifle','rifle','rifle','rifle','rifle','rifle','tank','tank','air','air','hero','medic'])
+      assert.ok(g.spawnUnit(type,h.x-10,h.z+10,1,faction));
+    const trained=[];g.train=(type)=>{trained.push(type);return true;};
+    g.aiProduction(1,own(g,1),[],0);
+    assert.deepEqual(trained,[["tank"],["medic"],["air"]][faction]);
+    trained.length=0;g.aiProduction(1,own(g,1),[{type:'air'}],0);
+    assert.deepEqual(trained,['rifle'],'visible air overrides doctrine');
+    const ai=g.s.ai[1];g.s.time=100;
+    for(const [id,type,kind] of [[901,'worker','unit'],[902,'factory','building'],[903,'artillery','unit']])
+      ai.contacts[id]={id,type,kind,team:0,x:0,z:0,hp:100,maxHp:100,progress:1,size:1,seenAt:100};
+    // Separate equidistant goals so the chosen priority is observable.
+    ai.contacts[901].x=1;ai.contacts[902].x=2;ai.contacts[903].x=3;
+    g.random=()=>{throw Error('Doctrine decisions must not draw RNG');};
+    g.aiStrategy(1,own(g,1),[],h);
+    assert.equal(ai.mode,'attack');assert.equal(ai.goal.x,[2,1,3][faction]);
+  }
+});
+
 test('autonomous orders retain formation behavior without leaking local command markers',()=>{
   const {g,events}=battle();g.s.ai={};const h=own(g,0,'hq')[0],goal={x:h.x+35,z:h.z};
   const units=Array.from({length:16},(_,i)=>g.spawnUnit('tank',h.x+(i%4),h.z+Math.floor(i/4),0,0));
@@ -255,6 +284,20 @@ for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real econo
   assert.ok(counts.produced>=10&&counts.built>=6);assert.ok(attacks>0);
   assert.ok(g.s.result,`no result at ${g.s.time}`);
   assert.equal(g.world.extent,135);
+});
+
+for(const enemy of [0,1,2]) test(`depth 16 doctrine ${enemy}: paid autonomous battle finishes`,()=>{
+  const {g}=battle((enemy+1)%3,enemy,7109+enemy*31);
+  g.s.depth=16;g.enableAI(0);const counts=audit(g);let attacks=0;
+  for(let i=0;i<24000&&!g.s.result;i++) {
+    g.step(.05);g.effects.tick(.05);
+    if(i%100===0) {
+      attacks+=Object.values(g.s.ai).filter(a=>a.mode==='attack').length;
+      for(const team of [0,1])assert.ok(g.account(team).alloy>=0&&g.account(team).gas>=0);
+    }
+  }
+  assert.ok(counts.produced>=10&&counts.built>=6);assert.ok(attacks>0);
+  assert.ok(g.s.result,`no result for doctrine ${enemy} at ${g.s.time}`);
 });
 
 test('seed 444213: the real opponent destroys an undefended HQ instead of stopping outside weapon range',()=>{

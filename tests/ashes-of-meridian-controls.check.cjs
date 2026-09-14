@@ -882,6 +882,20 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
 });
 
+test('checkpoint briefing derives faction doctrine and pressure without changing the encounter',()=>{
+  const h=setup();
+  h.ui.expedition={faction:0,depth:8,benefits:{},offers:['supplyCrate'],
+    encounter:{enemy:1,map:'desert',seed:1409}};
+  const saved=JSON.stringify(h.ui.expedition);
+  h.ui.showExpeditionTransition();
+  let html=h.document.getElementById('menu').innerHTML;
+  assert.match(html,/VERDANT CHOIR/);assert.match(html,/Regenerating swarm/);assert.match(html,/PRESSURE 3\/5/);
+  h.ui.showHome();assert.match(h.document.getElementById('menu').innerHTML,/Regenerating swarm/);
+  assert.equal(JSON.stringify(h.ui.expedition),saved);
+  vm.runInContext("FACTIONS[1].doctrine.name='<Swarm & revised>'",h.context);
+  assert.match(h.ui.encounterBriefing(),/&lt;Swarm &amp; revised&gt;/);
+});
+
 test('expedition setup creates and saves a random pending encounter', () => {
   const h = setup(); h.ui.profile.expeditionDepth = 25; h.ui.battleFaction = 2;
   const saved = []; h.ui.persistence.saveExpedition = value => saved.push(JSON.parse(JSON.stringify(value)));

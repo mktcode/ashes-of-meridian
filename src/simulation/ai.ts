@@ -1,7 +1,6 @@
 /* A deterministic controller. All mutations go through the same actions as the local UI. */
 'use strict';
-const AI_RULES = Object.freeze({ think: 1, buildRetry: 3, workers: 6, reserve: 2,
-  attackWait: 65, contactLife: 90, buildingMemory: 300 });
+const AI_RULES = Object.freeze({ think: 1, buildRetry: 3, contactLife: 90, buildingMemory: 300 });
 // Faction is the doctrine; depth only strengthens its execution. No additional encounter roll.
 const AI_DOCTRINES = [
   { workers: 6, reserve: 3, attackWait: 75, attackers: 4, airShare: .12, tankShare: .35, medicRatio: 4,
@@ -92,12 +91,12 @@ const aiMethods = {
     return false;
   },
   aiEconomy(this: MeridianGame, team: PlayerTeam, own: Entity[], home: BuildingEntity): number {
-    const s=this.s!, account=this.account(team), ai=s.ai[team]!,
+    const s=this.s!, account=this.account(team), rules=aiRulesFor(this.factionFor(team),s.depth),
       buildings=own.filter(e=>e.kind==='building') as BuildingEntity[],
       workers=own.filter(e=>e.type==='worker') as UnitEntity[],
       count=(type:EntityType)=>own.filter(e=>e.type===type).length,
       queued=(type:UnitType)=>buildings.reduce((n,b)=>n+b.queue.filter(q=>q.type===type).length,0),
-      desired=AI_RULES.workers+(count('factory')?2:0)+(count('hangar')?2:0);
+      desired=rules.workers+(count('factory')?2:0)+(count('hangar')?2:0);
     if (workers.length+queued('worker') < desired && queued('worker')<2) this.train('worker',team);
     const free=this.availableWorkers(team);
     for (const b of buildings.filter(b=>b.progress<1)) {
@@ -107,35 +106,39 @@ const aiMethods = {
       }
     }
     if (free.length>2 && (account.alloy>150 || home.hp<home.maxHp*.5)) {
-      const damaged=own.filter(e=>e.hp<e.maxHp*.65 && e.progress>=1)
+      const damaged=own.filter(e=>e.hp<e.maxHp*rules.repairHull && e.progress>=1)
         .sort((a,b)=>(a.type==='hq'?-1:0)-(b.type==='hq'?-1:0)||a.hp/a.maxHp-b.hp/b.maxHp);
       const b=damaged.find(b=>!workers.some(w=>w.order.type==='repair' && w.order.id===b.id));
       if (b) this.command([free[0].id],{type:'repair',id:b.id,x:b.x,z:b.z},team);
     }
-    let next: BuildingType | null = !count('barracks')?'barracks':!count('refinery')?'refinery':
-      this.cap(team)-this.supply(team)<=6 && this.cap(team)<180 && !buildings.some(b=>b.type==='depot'&&b.progress<1)?'depot':
-      !count('factory')?'factory':!count('hangar')?'hangar':
-      !count('turret')?'turret':count('refinery')<2?'refinery':count('barracks')<2?'barracks':null;
-    if (next && !this.canBuild(next,null,team)) {
-      this.aiBuild(team,next,home);
-      // Reserve for near-term tech, not an unreachable second vent or a distant gas requirement.
-      const c=this.cost(next,'building',team);
+    const candidates=rules.build.filter((type,i,plan)=>count(type)<plan.slice(0,i+1).filter(t=>t===type).length);
+    if (this.cap(team)-this.supply(team)<=6 && this.cap(team)<180 &&
+      !buildings.some(b=>b.type==='depot'&&b.progress<1)) candidates.unshift('depot');
+    for (const next of candidates) {
+      if (this.canBuild(next,null,team)) continue;
+      const built=this.aiBuild(team,next,home), c=this.cost(next,'building',team);
+      // An unseen/unreachable second vent must not lock out the rest of the doctrine.
+      if (built) return workers.length<2?50:0;
       if (next!=='refinery' && account.gas >= c.gas*.7) return c.cost;
     }
     return workers.length<2?50:0;
   },
   aiProduction(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], reserve: number) {
-    const units=own.filter(e=>e.kind==='unit' && e.type!=='worker'),
-      count=(type:UnitType)=>units.filter(e=>e.type===type).length,
-      pending=(type:UnitType)=>own.some(e=>e.queue.some(q=>q.type===type)),
+    const rules=aiRulesFor(this.factionFor(team),this.s!.depth),
+      units=own.filter(e=>e.kind==='unit' && e.type!=='worker'),
+      count=(type:UnitType)=>units.filter(e=>e.type===type).length +
+        own.reduce((n,e)=>n+e.queue.filter(q=>q.type===type).length,0),
       needAA=visible.some(e=>e.type==='air'),
       siege=Object.values(this.s!.ai[team]!.contacts).some(e=>e.team!==-1&&e.kind==='building'),
       choices: UnitType[] = [];
-    if (units.length>=8 && !count('hero') && !pending('hero')) choices.push('hero');
-    if (this.has('hangar',team) && count('air')<Math.max(2,units.length/5)) choices.push('air');
-    if (units.length>=4 && this.has('factory',team) && !needAA)
-      choices.push(siege && count('artillery')<Math.max(1,count('tank')/2)?'artillery':'tank');
-    if (units.length>=3 && count('medic')<Math.floor(units.length/4)) choices.push('medic');
+    if (needAA) choices.push('rifle');
+    if (units.length>=8 && !count('hero')) choices.push('hero');
+    if (this.has('hangar',team) && count('air')<Math.max(1,units.length*rules.airShare)) choices.push('air');
+    if (units.length>=4 && this.has('factory',team) && !needAA) {
+      if (siege && count('artillery')<Math.max(1,count('tank')/2)) choices.push('artillery');
+      if (count('tank')<Math.max(1,units.length*rules.tankShare)) choices.push('tank');
+    }
+    if (units.length>=3 && count('medic')<Math.floor(units.length/rules.medicRatio)) choices.push('medic');
     choices.push('rifle');
     for (const type of choices) {
       if (!this.availableProducers(UNITS[type].from,team).some(b=>!b.queue.length)) continue;
@@ -148,30 +151,32 @@ const aiMethods = {
     }
   },
   aiAbilities(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
-    const s=this.s!, ai=s.ai[team]!, foes=visible.filter(e=>e.team!==-1);
+    const s=this.s!, ai=s.ai[team]!, rules=aiRulesFor(this.factionFor(team),s.depth),
+      foes=visible.filter(e=>e.team!==-1);
     const ready=(kind:AbilityType)=>this.account(team).energy>=ABILITIES[kind].energy && this.account(team).abilities[kind]<=s.time;
     if (ready('repair')) {
       const p=own.map(e=>({e,missing:own.filter(n=>n.progress>=1 && distance(e,n)<12).reduce((n,a)=>n+a.maxHp-a.hp,0)}))
         .sort((a,b)=>b.missing-a.missing)[0];
-      if (p?.missing>=250) this.ability('repair',p.e,team);
+      if (p?.missing>=rules.repairMissing) this.ability('repair',p.e,team);
     }
     if (ready('orbital')) {
       const p=foes.map(e=>({e,value:foes.filter(n=>distance(e,n)<8).reduce((n,a)=>n+Math.min(a.hp,300),0)}))
         .sort((a,b)=>b.value-a.value)[0];
-      if (p?.value>=450) this.ability('orbital',p.e,team);
+      if (p?.value>=rules.orbitalValue) this.ability('orbital',p.e,team);
     }
     if (ready('drop') && this.supply(team)+8<=this.cap(team) &&
       (ai.mode==='attack' || foes.some(e=>distance(e,home)<30))) {
       const p=ai.mode==='attack'?own.find(e=>ai.squad.includes(e.id)):home;
       if (p) this.ability('drop',p,team);
     }
-    if (ready('scan') && s.time>60 && !foes.length && own.some(e=>e.type==='rifle')) {
+    if (ready('scan') && s.time>rules.scanAfter && !foes.length && own.some(e=>e.type==='rifle')) {
       const layout=this.world!.layout, p=ai.goal || (team===1?layout.playerStart:layout.enemySites[0]);
       if (!this.canSee(team,p) && !s.scans.some(scan=>scan.team===team)) this.ability('scan',p,team);
     }
   },
   aiStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
-    const s=this.s!,ai=s.ai[team]!, foes=visible.filter(e=>e.team!==-1),
+    const s=this.s!,ai=s.ai[team]!, rules=aiRulesFor(this.factionFor(team),s.depth),
+      foes=visible.filter(e=>e.team!==-1),
       army=own.filter(e=>e.kind==='unit'&&e.type!=='worker'&&!e.exit) as UnitEntity[],
       danger=foes.filter(e=>e.kind==='unit'&&distance(e,home)<30);
     if (danger.length) {
@@ -193,20 +198,20 @@ const aiMethods = {
     const known=Object.values(ai.contacts).filter(e=>e.team!==-1 && e.kind!=='resource');
     if (army.length>=2 && (!ai.scout || !army.some(e=>e.id===ai.scout))) ai.scout=army[0].id;
     const scout=army.find(e=>e.id===ai.scout);
-    if (scout && ai.mode!=='attack' && s.time-ai.lastScout>15) {
+    if (scout && ai.mode!=='attack' && s.time-ai.lastScout>rules.scoutInterval) {
       const layout=this.world!.layout, p=team===1?layout.playerStart:layout.enemySites[0];
       const goals=[p,...layout.resourceSites];
       const goal=goals.find(p=>!this.world!.sight[team].explored[this.world!.idx(p.x,p.z)]) || p;
       this.aiOrder(team,[scout],scout.hp<scout.maxHp*.4?home:goal,false);ai.lastScout=s.time;
     }
-    const pool=army.filter(e=>e.id!==ai.scout), attackers=ai.mode==='attack'?squad:pool.slice(AI_RULES.reserve),
+    const pool=army.filter(e=>e.id!==ai.scout), attackers=ai.mode==='attack'?squad:pool.slice(rules.reserve),
       strength=attackers.reduce((n,e)=>n+this.aiPower(e),0),elapsed=s.time-ai.lastAttack;
-    const value=(e:AIContact)=>e.type==='worker'?65:e.type==='refinery'?95:
-      ['factory','hangar','barracks'].includes(e.type)?100:e.type==='depot'?65:e.type==='hq'?85:25;
+    const weights: Partial<Record<EntityType,number>>=rules.targets,
+      value=(e:AIContact)=>weights[e.type] ?? (e.type==='depot'?65:e.type==='hq'?85:25);
     const targets=known.map(e=>({e,defense:known.filter(n=>distance(e,n)<25).reduce((n,note)=>n+this.aiPower(note),0)}))
       .sort((a,b)=>(value(b.e)-b.defense*.5-distance(b.e,home)*.2)-(value(a.e)-a.defense*.5-distance(a.e,home)*.2)||a.e.id-b.e.id);
-    const target=targets.find(t=>strength>Math.max(42,t.defense*(elapsed>180?.8:1.15)));
-    if (target && attackers.length>=3 && (ai.mode==='attack'||elapsed>=AI_RULES.attackWait)) {
+    const target=targets.find(t=>strength>Math.max(42,t.defense*(elapsed>180?.8:rules.forceRatio)));
+    if (target && attackers.length>=rules.attackers && (ai.mode==='attack'||elapsed>=rules.attackWait)) {
       ai.mode='attack';ai.goal={x:target.e.x,z:target.e.z};
       ai.squad=attackers.map(e=>e.id);ai.launched=attackers.length;ai.lastAttack=s.time;
       this.aiOrder(team,attackers,ai.goal);return;

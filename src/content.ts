@@ -14,6 +14,7 @@ const FACTIONS = [
     metal: 0x627885,
     dark: 0x273642,
     desc: 'Frontier steel. Stubborn hearts.',
+    doctrine: { name: 'Fortified advance', desc: 'Defensive buildup, heavy armor and larger assault groups.' },
     trait: 'Armored vehicles have 15% more hull. Command centers repair nearby allies.',
     ability: 'Orbital barrage',
     units: {
@@ -44,6 +45,7 @@ const FACTIONS = [
     metal: 0x526d64,
     dark: 0x263f3a,
     desc: 'A thousand lives. One memory.',
+    doctrine: { name: 'Regenerating swarm', desc: 'Infantry masses, frequent attacks and economic targets.' },
     trait:
       'Units cost 15% less alloy, move 10% faster and regenerate outside combat. Lighter hulls.',
     ability: 'Bloom of unmaking',
@@ -75,6 +77,7 @@ const FACTIONS = [
     metal: 0xc7c3ba,
     dark: 0x3c3b50,
     desc: 'Beautiful. Ancient. Afraid.',
+    doctrine: { name: 'Precision supremacy', desc: 'Early technology, aircraft and high-value targets.' },
     trait: 'Units have regenerative shields and deal 12% more damage. Alloy costs are 12% higher.',
     ability: 'Judgment beam',
     units: {
