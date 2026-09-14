@@ -1429,6 +1429,7 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
 test('HUD reads supply and capacity once per update and refreshes counts, warnings and recruitment', () => {
   const h = buildingPanel(), g = h.ui.game;
   Object.assign(g.s.teams[0], { alloy: 1000, gas: 1000, energy: 100, abilities: {} });
+  Object.assign(g.s, { depth: 4 });
   Object.assign(g, { afford: () => true, objectiveRows: () => [] });
   g.s.entities.push({ id: 8, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] });
   const buttons = ['train:worker', 'train:rifle'].map(action =>
@@ -1443,6 +1444,7 @@ test('HUD reads supply and capacity once per update and refreshes counts, warnin
     g.cap = () => { capacityReads++; return capacity; };
     h.UI.prototype.updateHUD.call(h.ui);
     const count = h.document.getElementById('supplyCount');
+    assert.equal(h.document.getElementById('battleLabel').innerHTML, 'Annihilation<small>STAGE 5</small>');
     assert.equal(count.textContent, supply + ' / ' + capacity);
     assert.equal(count.style.color, supply >= capacity ? 'var(--red)' : '');
     assert.deepEqual(buttons.map(button => button.disabled), blocked);
