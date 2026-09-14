@@ -2,7 +2,8 @@
 
 Gestaltungsziel bleibt die warme, trockene Wüste mit bodenfarbigen Felsen, nicht die dunkle Basaltlandschaft der KI-Referenz.
 
-- Neue Boden-/Felsalbedos und Geröll-/Pflanzenatlanten menschlich abnehmen: Texturmaßstab, Kachelwiederholung, Dekordichte, Einheitenkontrast und Übergang von Felsen zu Boden. Die gelieferten Boden-/Felsquellen wurden vom Nutzer in GIMP als nahtlos bestätigt und werden ohne Spiegelung eingesetzt; Pflege unter [Grafik/Assets](../rendering.md).
+- Teilabnahme: Der Nutzer bewertet den Fels-Boden-Übergang in der Desert-Nahaufnahme mit Prospector (14.09.2026) positiv. Diese Materialabstimmung bei weiteren Licht-/Geometriearbeiten erhalten; keine pauschale Freigabe aller Geländeübergänge.
+- Offen bleibt die menschliche Abnahme von Texturmaßstab, Kachelwiederholung, Dekordichte und Einheitenkontrast. Die gelieferten Boden-/Felsquellen wurden vom Nutzer in GIMP als nahtlos bestätigt; Pflege und Sampling unter [Grafik/Assets](../rendering.md).
 - Felsformationen sind teilweise zu detailliert: Polygonzahl um etwa ein Drittel reduzieren. Farbangleichung nach Sichtung des neuen Felsmaterials beurteilen.
 - Beleuchtung, Nebel/Postprocessing und weitere 3D-Geländedetails sind separate Folgeschritte; der Asset-Pass verändert weder Licht noch Geometrie.
 
