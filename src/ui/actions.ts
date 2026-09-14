@@ -44,8 +44,18 @@
         $('actionPanel').scrollTop = 0;
         this.renderActions();
       },
+      isModeAction(this: MeridianUI, action: string) {
+        if (!this.mode) return false;
+        return action === (this.mode.kind === 'rally' ? 'rally' : `${this.mode.kind}:${this.mode.arg}`);
+      },
       setMode(this: MeridianUI, ...[kind, arg]: ['build', BuildingType] | ['ability', AbilityType] | ['rally']) {
         if (this.paused) return;
+        const action = kind === 'rally' ? 'rally' : `${kind}:${arg}`;
+        if (this.isModeAction(action)) {
+          this.clearMode();
+          this.renderActions();
+          return;
+        }
         if (kind === 'build') {
           let reason = this.game.canBuild(arg);
           if (reason) {
@@ -55,26 +65,12 @@
         }
         this.lastClick = {};
         this.mode = kind === 'build' ? { kind, arg } : kind === 'ability' ? { kind, arg } : { kind };
-        let text =
-          kind === 'build'
-            ? `PLACE ${buildingName(arg, this.game.s!.faction).toUpperCase()}`
-            : kind === 'ability'
-              ? {
-                  orbital: 'TARGET ORBITAL STRIKE',
-                  repair: 'DEPLOY REPAIR FIELD',
-                  scan: 'SELECT SCAN AREA',
-                  drop: 'DEPLOY REINFORCEMENTS'
-                }[arg]
-              : 'SET RALLY POINT';
-        $('modeLabel').textContent = text + ' · TAP TO CONFIRM';
-        $('modeIndicator').classList.remove('hidden');
         $('world').style.cursor = 'crosshair';
         this.actionSignature = '';
         this.renderActions();
       },
       clearMode(this: MeridianUI) {
         this.mode = null;
-        $('modeIndicator').classList.add('hidden');
         $('world').style.cursor = 'default';
         this.actionSignature = '';
       },
@@ -113,11 +109,12 @@
         }
       },
       actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: {badge?: string | number; disabled?: boolean; cost?: Cost} = {}) {
-        let badge = opts.badge || '',
+        const active = this.isModeAction(key), renderedLabel = active ? 'Cancel' : label;
+        let badge = active ? '' : opts.badge || '',
           preview = this.game.s?.faction === FACTION_ID.FIRST && FACTION_0_ACTION_PORTRAITS[key];
         // Fixed renders of the actual models: no additional WebGL scenes in the HUD.
         const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
-        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
+        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
         this.renderActionMarkup();
@@ -262,8 +259,12 @@
         capacity ??= this.game.cap();
         for (let b of buttons) {
           let [k, arg] = b.dataset.action!.split(':');
+          const active = this.isModeAction(b.dataset.action!);
           let disabled = false;
-          if (k === 'train' && hasContentKey(UNITS, arg)) {
+          if (active) {
+            const badge = b.querySelector('small');
+            if (badge) badge.textContent = '';
+          } else if (k === 'train' && hasContentKey(UNITS, arg)) {
             let d = UNITS[arg];
             disabled =
               !this.game.afford(this.game.cost(arg)) ||

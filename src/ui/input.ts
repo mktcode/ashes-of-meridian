@@ -197,10 +197,6 @@
           case 'cancelSale':
             this.finishBuildingSale(false);
             break;
-          case 'cancelTarget':
-            this.clearMode();
-            this.renderActions();
-            break;
           case 'restartConfirm':
             this.openModal(
               'confirm',

@@ -58,7 +58,7 @@ function setup() {
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
-      assert.ok(!['tooltip','contextLabel','selectionContent','selectCount','buildingActions','importFile','speedLabel','settingSpeed'].includes(id), 'removed DOM must never be accessed');
+      assert.ok(!['tooltip','contextLabel','selectionContent','selectCount','buildingActions','importFile','speedLabel','settingSpeed','modeIndicator','modeLabel'].includes(id), 'removed DOM must never be accessed');
       if (!elements.has(id)) {
         elements.set(id, target());
         if (id === 'topbar') elements.get(id).getBoundingClientRect = () => ({ bottom: 55 });
@@ -670,25 +670,29 @@ test('portrait deck has four root categories and a separate persistent ability b
   }
 });
 
-test('Cancel button exits every targeting mode without spending resources or changing orders', () => {
+test('selected build, ability and rally actions become Cancel buttons and cancel on a second tap', () => {
   for (const [kind, arg] of [['build','depot'], ['rally'],
     ...['orbital','repair','scan','drop'].map(a => ['ability',a])]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+    h.ui.setMode = h.UI.prototype.setMode; h.ui.perform = h.UI.prototype.perform;
     if (kind === 'build') h.ui.tab = 'build';
     if (kind === 'rally') {
       h.ui.game.s.entities = [{id:7,team:0,kind:'building',type:'barracks',hp:100,progress:1,queue:[]}];
       h.ui.tab = 'building';
     }
-    const state = JSON.stringify(h.ui.game.s);
-    h.UI.prototype.setMode.call(h.ui, kind, arg);
-    assert.equal(h.document.getElementById('modeIndicator').classList.contains('hidden'), false);
-    assert.match(h.document.getElementById('modeLabel').textContent, /TAP TO CONFIRM/);
-    assert.match(h.document.getElementById(kind === 'ability' ? 'abilityBar' : 'actions').innerHTML, /class="action[^"\n]*\bactive\b/);
-    h.click({ ui: 'cancelTarget' });
+    const state = JSON.stringify(h.ui.game.s), action = kind === 'rally' ? 'rally' : `${kind}:${arg}`,
+      panel = kind === 'ability' ? 'abilityBar' : 'actions';
+    h.ui.setMode(kind, arg);
+    const activeMarkup = h.document.getElementById(panel).innerHTML,
+      activeButton = activeMarkup.match(new RegExp(`<button[^>]*data-action="${action}"[\\s\\S]*?</button>`))[0];
+    assert.match(activeButton, /class="action[^"\n]*\bactive\b/);
+    assert.match(activeButton, /<span>Cancel<\/span>/);
+    if (kind === 'build') assert.doesNotMatch(activeButton, /class="cost"/);
+    h.click({ action });
     assert.equal(h.ui.mode, null);
-    assert.equal(h.document.getElementById('modeIndicator').classList.contains('hidden'), true);
     assert.equal(h.world.style.cursor, 'default');
-    assert.doesNotMatch(h.document.getElementById(kind === 'ability' ? 'abilityBar' : 'actions').innerHTML, /class="action[^"\n]*\bactive\b/);
+    assert.doesNotMatch(h.document.getElementById(panel).innerHTML, /class="action[^"\n]*\bactive\b/);
+    assert.doesNotMatch(h.document.getElementById(panel).innerHTML, /<span>Cancel<\/span>/);
     assert.deepEqual(h.ui.selected, [7]); assert.equal(h.ui.paused, false);
     assert.equal(JSON.stringify(h.ui.game.s), state); assert.deepEqual(h.calls, []);
   }
@@ -1453,9 +1457,11 @@ test('tab and target-mode renders synchronously restore button locks and badges 
     for (const button of buttons) {
       const action = button.dataset.action;
       if (action.startsWith('ability:')) {
-        assert.equal(button.disabled, action !== 'ability:scan', action);
+        const active = h.ui.isModeAction(action);
+        assert.equal(button.disabled, active ? false : action !== 'ability:scan', action);
         assert.equal(button.classList.contains('disabled'), button.disabled, action);
-        assert.match(button.querySelector('small').textContent, action === 'ability:orbital' ? /^TECH$/ : /^\d+ϟ$/);
+        if (active) assert.equal(button.querySelector('small').textContent, '');
+        else assert.match(button.querySelector('small').textContent, action === 'ability:orbital' ? /^TECH$/ : /^\d+ϟ$/);
       } else if (/^(train|build):/.test(action)) {
         assert.equal(button.disabled, true, action);
         assert.equal(button.classList.contains('disabled'), true, action);
@@ -1472,7 +1478,10 @@ test('tab and target-mode renders synchronously restore button locks and badges 
   g.s.teams[0].energy = 0;
   h.ui.renderActions();
   assert.equal(panels[0].buttons, previous, 'unchanged markup is retained');
-  assert.ok(panels[0].buttons.every(b => b.disabled), 'state still refreshes when markup is unchanged');
+  assert.equal(panels[0].buttons.find(b => b.dataset.action === 'ability:scan').disabled, false,
+    'the selected action remains available to cancel');
+  assert.ok(panels[0].buttons.filter(b => b.dataset.action !== 'ability:scan').every(b => b.disabled),
+    'state still refreshes when markup is unchanged');
 });
 
 test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
@@ -1580,7 +1589,7 @@ test('settings and camera hints describe touch navigation without desktop camera
   assert.equal(h.UI.prototype.setControlHints, undefined);
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB|<kbd>|F[12359]|\bEsc\b/);
-  assert.match(html, /data-ui="cancelTarget"/);
+  assert.doesNotMatch(html, /cancelTarget|modeIndicator|modeLabel/);
   assert.doesNotMatch(html, /controlstrip/);
   const styles = STYLE_FILES.map(file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')).join('\n');
   assert.doesNotMatch(styles, /controlstrip/);

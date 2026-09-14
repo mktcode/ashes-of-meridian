@@ -239,34 +239,6 @@
       border-color: var(--gold)
     }
 
-    #modeIndicator {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: max-content;
-      max-width: calc(100% - 24px);
-      z-index: 1;
-      position: absolute;
-      top: 47%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #0a1724dc;
-      border: 1px solid var(--gold);
-      color: var(--gold);
-      padding: 8px 18px;
-      font: 11px var(--mono);
-      letter-spacing: 1px;
-      pointer-events: none
-    }
-
-    #modeIndicator button {
-      pointer-events: auto;
-      flex-shrink: 0;
-      min-height: 44px;
-      min-width: 88px;
-      padding: 8px 12px
-    }
-
     #commandDeck {
       position: absolute;
       left: var(--hud-inset);
