@@ -86,6 +86,8 @@ interface BattlefieldRenderProfile {
   skyTexture: 'sky';
   groundPixelsPerMeter: number;
   groundMirror?: boolean;
+  /** Optional albedo for ROCK/MASSIF; other profiles retain their ground-derived material. */
+  rockSurface?: { texture: 'desertRock'; metersPerTile: number };
   rockDecor: { density: number; opacity: number };
   shrubDecor: { density: number; opacity: number };
   haze: readonly [number, number, number];

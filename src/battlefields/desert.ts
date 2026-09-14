@@ -1,4 +1,4 @@
-/* Map recipe; current visuals are preserved until its separate design pass. */
+/* Warm mineral desert; visual materials stay independent of the seeded obstacle layout. */
 'use strict';
 const DESERT_BATTLEFIELD: BattlefieldDefinition = {
   name: 'DESERT',
@@ -11,8 +11,9 @@ const DESERT_BATTLEFIELD: BattlefieldDefinition = {
     flora: 0x806348
   },
   render: {
-    groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14,
-    rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 },
+    groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 22,
+    rockSurface: { texture: 'desertRock', metersPerTile: 18 },
+    rockDecor: { density: .55, opacity: .72 }, shrubDecor: { density: .08, opacity: .78 },
     haze: [0.11, 0.085, 0.1],
     lighting: { sun: [1.12, .94, .76], sky: [.38, .47, .56], bounce: [.23, .18, .16] }
   },

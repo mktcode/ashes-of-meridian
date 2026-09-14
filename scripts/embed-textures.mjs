@@ -6,6 +6,7 @@ const target = new URL('src/renderer/assets.js', root);
 const textures = [
   ['sky', 'assets/textures/skybox.webp'],
   ['ground', 'assets/textures/texture-ground-dirt-base.webp'],
+  ['desertRock', 'assets/textures/texture-rock-desert.webp'],
   ['rockClusters', 'assets/textures/texture-ground-rock-clusters.webp'],
   ['desertShrubs', 'assets/textures/texture-ground-desert-shrubs.webp'],
   ['metal', 'assets/textures/texture-floor-mothership.webp'],

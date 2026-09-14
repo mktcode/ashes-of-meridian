@@ -35,14 +35,19 @@ test('ground decoration samples individual irregular atlas crops with stable wor
   const context = loadScripts(RENDERER_SCRIPTS);
   const { GROUND_DECOR_ATLAS: atlas, FRAG, MeridianRenderer } = vm.runInContext(
     '({GROUND_DECOR_ATLAS, FRAG, MeridianRenderer})', context);
-  for (const [key, count] of [['rockClusters', 15], ['desertShrubs', 10]]) {
+  for (const [key, count] of [['rockClusters', 16], ['desertShrubs', 10]]) {
     assert.equal(atlas[key].length, count);
     assert.equal(new Set(atlas[key].map(r => r.join(','))).size, count);
     for (const [x, y, right, bottom] of atlas[key]) {
       assert.ok(x >= 0 && y >= 0 && right <= 1254 && bottom <= 1254);
       assert.ok(right > x && bottom > y);
     }
+    for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++) {
+      const a = atlas[key][i], b = atlas[key][j];
+      assert.ok(a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1], 'motif crops do not overlap');
+    }
     assert.ok(FRAG.includes(`const vec4 ${key}Rects[${count}]`));
+    assert.ok(FRAG.includes(`${key}Rects[int(r.z*${count}.)]`), 'all supplied motifs are selectable');
     const source = MeridianRenderer.toString();
     assert.equal(source.split(`this.loadTexture(this.${key}Tex, MERIDIAN_TEXTURES.${key}, false);`).length - 1, 1);
   }
@@ -182,6 +187,29 @@ test('map render profiles select cached textures and independent decor uniforms 
   const frag = vm.runInContext('FRAG', h.context);
   assert.ok(frag.includes('if(u_groundMirror>.5)'));assert.ok(frag.includes('1.-abs(mod(uv,2.)-1.)'));
   for (const component of ['x','y','z','w']) assert.ok(frag.includes('u_groundDecor.' + component));
+});
+
+test('dedicated rock material is opt-in and resets on profile changes without texture uploads', () => {
+  const h = setup(); h.r.resize();
+  h.r.desertRockTex = 'desert-stone'; h.r.groundTex = 'dirt'; h.r.bioTex = 'bio'; h.r.metalTex = 'metal';
+  const rockSurface = { texture: 'desertRock', metersPerTile: 18 };
+  for (const [groundTexture, surface] of [['ground', rockSurface], ['bio', undefined], ['ground', rockSurface], ['metal', undefined], ['ground', undefined]]) {
+    h.r.battlefieldProfile = { ...h.r.battlefieldProfile, groundTexture, rockSurface: surface };
+    h.calls.length = 0; h.r.render(0);
+    assert.ok(h.calls.some(c => c[0] === 'uniform1f' && c[1] === 'u_rockScale' && c[2] === (surface ? 1 / 18 : 0)));
+    const slot = h.calls.findIndex(c => c[0] === 'activeTexture' && c[1] === 'TEXTURE7');
+    assert.deepEqual(h.calls[slot + 1], ['bindTexture', 'TEXTURE_2D', h.r[`${surface?.texture ?? groundTexture}Tex`]]);
+    assert.ok(h.calls.some(c => c[0] === 'uniform1i' && c[1] === 'u_rockTex' && c[2] === 7));
+    assert.ok(!h.calls.some(c => ['texImage2D', 'createTexture'].includes(c[0])));
+  }
+  const { FRAG, MeridianRenderer } = vm.runInContext('({FRAG, MeridianRenderer})', h.context);
+  assert.ok(MeridianRenderer.toString().includes('this.loadTexture(this.desertRockTex, MERIDIAN_TEXTURES.desertRock);'));
+  assert.ok(FRAG.includes('if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5)))'));
+  const material = FRAG.slice(FRAG.indexOf('vec3 rockSurface'), FRAG.indexOf('const vec4 rockClustersRects'));
+  assert.ok(material.includes('vec3 p=v_pos*u_rockScale;'));
+  for (const projection of ['zy', 'xz', 'xy']) assert.ok(material.includes(`texture(u_rockTex,p.${projection})`));
+  assert.ok(material.includes('groundBase(v_pos.xz)'), 'rock foot blends with the local ground');
+  assert.doesNotMatch(material, /mod\(|fract\(|u_time|u_eye|u_decorSeed/, 'no mirrored tiling or moving detail');
 });
 
 test('lighting profiles override shader colors without additional textures or render passes',()=>{

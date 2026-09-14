@@ -43,6 +43,7 @@
       fogSize: number;
       fogTex: WebGLTexture | null;
       groundTex: WebGLTexture | null;
+      desertRockTex: WebGLTexture | null;
       rockClustersTex: WebGLTexture | null;
       desertShrubsTex: WebGLTexture | null;
       metalTex: WebGLTexture | null;
@@ -143,11 +144,13 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         this.groundTex = this.dataTexture([146, 101, 75]);
+        this.desertRockTex = this.dataTexture([137, 99, 71]);
         this.rockClustersTex = this.dataTexture([0, 0, 0, 0]);
         this.desertShrubsTex = this.dataTexture([0, 0, 0, 0]);
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
         this.loadTexture(this.groundTex, MERIDIAN_TEXTURES.ground);
+        this.loadTexture(this.desertRockTex, MERIDIAN_TEXTURES.desertRock);
         this.loadTexture(this.rockClustersTex, MERIDIAN_TEXTURES.rockClusters, false);
         this.loadTexture(this.desertShrubsTex, MERIDIAN_TEXTURES.desertShrubs, false);
         this.loadTexture(this.metalTex, MERIDIAN_TEXTURES.metal);
@@ -693,6 +696,7 @@
         g.uniform1f(this.uniform(this.program, 'u_shadowBias'), this.shadowBias);
         g.uniform1f(this.uniform(this.program, 'u_groundPixelsPerMeter'), profile.groundPixelsPerMeter);
         g.uniform1f(this.uniform(this.program, 'u_groundMirror'), profile.groundMirror ? 1 : 0);
+        g.uniform1f(this.uniform(this.program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
         g.uniform4f(this.uniform(this.program, 'u_groundDecor'), profile.rockDecor.density,
           profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
         g.uniform1f(this.uniform(this.program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
@@ -719,6 +723,9 @@
         g.activeTexture(g.TEXTURE6);
         g.bindTexture(g.TEXTURE_2D, this.bioTex);
         g.uniform1i(this.uniform(this.program, 'u_bioTex'), 6);
+        g.activeTexture(g.TEXTURE7);
+        g.bindTexture(g.TEXTURE_2D, this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`]);
+        g.uniform1i(this.uniform(this.program, 'u_rockTex'), 7);
         this.drawBatches(this.static);
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);

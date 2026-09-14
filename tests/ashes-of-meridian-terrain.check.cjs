@@ -128,7 +128,8 @@ test('embedded ground textures preserve the canonical WebP bytes without convers
 test('embedded material textures preserve the canonical WebP bytes without conversion', () => {
   for (const [key, file] of Object.entries({
     metal: 'texture-floor-mothership.webp',
-    bio: 'texture-floor-alien-planet.webp'
+    bio: 'texture-floor-alien-planet.webp',
+    desertRock: 'texture-rock-desert.webp'
   })) {
     const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
     assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
@@ -137,6 +138,20 @@ test('embedded material textures preserve the canonical WebP bytes without conve
     assert.deepEqual(image, readFileSync(join(__dirname, '..', 'assets/textures', file)));
     assert.equal(image.toString('ascii', 0, 4), 'RIFF');
     assert.equal(image.toString('ascii', 8, 12), 'WEBP');
+  }
+});
+
+test('Desert alone opts into the dedicated rock albedo and repeats its ground without mirroring', () => {
+  const desert = BATTLEFIELDS.desert.render;
+  assert.equal(desert.groundTexture, 'ground');
+  assert.ok(!desert.groundMirror);
+  assert.equal(desert.rockSurface.texture, 'desertRock');
+  assert.ok(Number.isFinite(desert.rockSurface.metersPerTile) && desert.rockSurface.metersPerTile > 0);
+  for (const map of ['alien-planet', 'mothership']) {
+    assert.equal(BATTLEFIELDS[map].render.rockSurface, undefined);
+    assert.notEqual(BATTLEFIELDS[map].render.groundTexture, 'ground');
+    assert.equal(BATTLEFIELDS[map].render.rockDecor.opacity, 0);
+    assert.equal(BATTLEFIELDS[map].render.shrubDecor.opacity, 0);
   }
 });
 

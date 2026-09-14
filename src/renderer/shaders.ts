@@ -2,21 +2,19 @@
     'use strict';
     // Effect-only material; no texture or changes to the embedded material catalog.
     const CONTACT_SHADOW_MATERIAL = -1;
-    // Pixel rectangles (left, top, right, bottom) in the unchanged 1254² WebP atlases.
-    // Irregular packing: do not treat either image as an evenly spaced sprite grid.
+    // Pixel rectangles (left, top, right, bottom) in the 1254² Desert WebP atlases.
+    // Keep a transparent margin around each motif; the plant sheet is not a regular grid.
     const GROUND_DECOR_ATLAS = {
       rockClusters: [
-        [60,100,315,255], [510,60,810,260], [955,85,1165,255],
-        [95,305,425,510], [540,320,800,540], [960,350,1190,540],
-        [90,580,300,735], [445,590,740,785], [810,565,1025,755],
-        [85,775,345,980], [540,815,745,980], [955,740,1175,925],
-        [55,1010,315,1200], [495,1000,800,1195], [940,1000,1185,1175]
+        [63,88,264,264], [400,64,609,301], [702,112,874,233], [994,92,1181,271],
+        [34,381,305,587], [381,396,587,571], [713,432,885,552], [986,365,1217,607],
+        [73,713,263,877], [387,716,584,856], [653,678,935,909], [1014,719,1196,844],
+        [51,953,294,1211], [380,1004,583,1170], [703,1020,887,1145], [1004,1002,1200,1170]
       ],
       desertShrubs: [
-        [202,365,368,513], [538,259,747,473], [886,378,1080,584],
-        [365,474,656,736], [705,482,848,613], [176,661,338,797],
-        [383,739,585,924], [649,646,935,876], [962,733,1083,836],
-        [630,893,720,977]
+        [21,101,412,451], [433,87,841,444], [899,124,1224,429],
+        [48,458,431,839], [450,491,786,825], [836,461,1221,838],
+        [29,860,310,1183], [317,845,584,1166], [613,892,906,1175], [941,873,1237,1191]
       ]
     };
     const VERT = `#version 300 es
@@ -40,11 +38,21 @@ in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in
 in vec3 v_modelPos;in vec3 v_modelN;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform float u_groundPixelsPerMeter;uniform float u_groundMirror;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
+uniform sampler2D u_rockTex;uniform float u_rockScale;
 out vec4 frag;
 float shadow(){if(u_shadowOn<.5||v_glow>1.)return 1.;vec3 p=v_shadow.xyz/v_shadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float bias=max(u_shadowBias*2.5*(1.-dot(normalize(v_n),normalize(vec3(-64.,110.,43.)))),u_shadowBias);float s=0.;vec2 texel=1./vec2(textureSize(u_shadow,0));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)s+=p.z-bias>texture(u_shadow,p.xy+vec2(x,y)*texel).r?.36:1.;return s/9.;}
 float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
 vec3 tri(sampler2D tex,vec3 p,vec3 n,float scale){vec3 an=pow(abs(n),vec3(4.));an/=max(an.x+an.y+an.z,.0001);vec3 tx=texture(tex,p.yz*scale).rgb;vec3 ty=texture(tex,p.xz*scale).rgb;vec3 tz=texture(tex,p.xy*scale).rgb;return tx*an.x+ty*an.y+tz*an.z;}
 vec3 groundBase(vec2 world){vec2 pixels=vec2(textureSize(u_groundTex,0));if(u_groundMirror>.5){vec2 uv=world*u_groundPixelsPerMeter/pixels;return texture(u_groundTex,1.-abs(mod(uv,2.)-1.)).rgb;}return texture(u_groundTex,world*u_groundPixelsPerMeter/pixels).rgb;}
+// Dedicated tileable rock albedo with regular world-space repetition.
+// Both vertical projections keep sediment layers horizontal; the foot blends into local soil.
+vec3 rockSurface(vec3 n){
+ vec3 p=v_pos*u_rockScale;
+ vec3 weights=pow(abs(n),vec3(4.));weights/=max(weights.x+weights.y+weights.z,.0001);
+ vec3 stone=texture(u_rockTex,p.zy).rgb*weights.x+texture(u_rockTex,p.xz).rgb*weights.y+texture(u_rockTex,p.xy).rgb*weights.z;
+ stone=mix(stone,v_col.rgb,.18);
+ return mix(groundBase(v_pos.xz),stone,smoothstep(-.1,1.8,v_pos.y));
+}
 ${Object.entries(GROUND_DECOR_ATLAS).map(([name, rects]) =>
   `const vec4 ${name}Rects[${rects.length}]=vec4[${rects.length}](${rects.map(r => `vec4(${r.map(v => v + '.').join(',')})`).join(',')});`
 ).join('\n')}
@@ -60,7 +68,7 @@ vec4 groundDecor(sampler2D tex,vec2 world,bool shrubs){
  float spacing=shrubs?4.5:3.8;
  vec2 p=world/spacing,cell=floor(p);
  vec4 r=decorRandom(cell,shrubs?7919u:104729u);
- vec4 rect=shrubs?desertShrubsRects[int(r.z*10.)]:rockClustersRects[int(r.z*15.)];
+ vec4 rect=shrubs?desertShrubsRects[int(r.z*${GROUND_DECOR_ATLAS.desertShrubs.length}.)]:rockClustersRects[int(r.z*${GROUND_DECOR_ATLAS.rockClusters.length}.)];
  vec2 pixels=rect.zw-rect.xy;
  vec2 span=pixels/max(pixels.x,pixels.y)*mix(.32,.46,r.w);
  vec2 local=(fract(p)-(.5+(r.xy-.5)*.46))/span+.5;
@@ -86,7 +94,7 @@ void main(){
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
   frag=vec4(.025,.035,.045,v_col.a*mask*mix(1.,smoothstep(.35,.8,sight),u_fogOn));return;
  }
- vec3 n=normalize(v_n);vec3 base=v_col.rgb;if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
+ vec3 n=normalize(v_n);vec3 base=v_col.rgb;if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
 vec3 light=normalize(vec3(-64.,110.,43.));float nd=max(dot(n,light),0.);float sh=shadow();
 vec3 ambient=mix(u_bounce,u_skyLight,n.y*.5+.5);
 vec3 lit=base*(ambient+u_sun*nd*sh),viewDir=normalize(u_eye-v_pos);
