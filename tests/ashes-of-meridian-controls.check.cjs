@@ -517,7 +517,7 @@ test('speed is a single button under the clock, not a settings control', () => {
   assert.match(html, /class="clock"><strong id="gameTime">00:00<\/strong><button id="speedBtn"[^>]*>1×<\/button><\/div>/);
   assert.equal((html.match(/id="speedBtn"/g) || []).length, 1);
   const deck = html.slice(html.indexOf('<footer id="commandDeck">'), html.indexOf('</footer>'));
-  assert.match(deck, /class="minimap-panel"[\s\S]*id="commandCenter"[\s\S]*id="cameraTools"[\s\S]*id="abilityBar"[\s\S]*id="actionPanel"/);
+  assert.match(deck, /class="minimap-panel"[\s\S]*id="cameraTools"[\s\S]*id="commandCenter"[\s\S]*id="commandTools"[\s\S]*id="abilityBar"[\s\S]*id="actionPanel"/);
   assert.match(html, /<button id="speedBtn"[^>]*>1×<\/button>/);
 });
 
@@ -579,8 +579,8 @@ test('attack-move is transient, guarded while paused/ended, and reset on battle 
   assert.equal(h.ui.attackMove, false); assert.equal(button['aria-pressed'], 'false');
   assert.equal(JSON.stringify(h.ui.profile), profile);
   const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-  assert.match(html, /id="cameraTools"><button id="attackMoveBtn" aria-label="Attack-move" aria-pressed="false"/);
-  assert.match(fs.readFileSync(path.join(__dirname, '../styles/hud.css'), 'utf8'), /#attackMoveBtn\[aria-pressed="true"\]/);
+  assert.match(html, /id="commandTools"><button id="attackMoveBtn" aria-label="Attack-move" aria-pressed="false"/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../styles/hud.css'), 'utf8'), /#commandTools #attackMoveBtn\[aria-pressed="true"\]/);
 });
 
 test('camera buttons and minimap tap/drag still navigate with existing limits', () => {

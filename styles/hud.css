@@ -250,15 +250,19 @@
       font-size: 16px
     }
 
-    #cameraTools {
+    #cameraTools,
+    #commandTools {
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 4px;
       height: var(--tools-height);
       padding: 3px
     }
 
-    #cameraTools button {
+    #cameraTools { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100% }
+    #commandTools { grid-template-columns: minmax(0, 1fr) }
+
+    #cameraTools button,
+    #commandTools button {
       min-width: 0;
       padding: 0;
       font-size: 22px;
@@ -266,6 +270,7 @@
     }
 
     #cameraTools button:hover,
+    #commandTools button:hover,
     #speedBtn:hover {
       color: var(--gold);
       border-color: var(--gold)
@@ -289,7 +294,7 @@
       padding: 0
     }
 
-    #cameraTools #attackMoveBtn[aria-pressed="true"] {
+    #commandTools #attackMoveBtn[aria-pressed="true"] {
       color: #0b1422;
       background: var(--gold);
       border-color: var(--gold)
@@ -401,8 +406,10 @@
     .minimap-panel {
       position: relative;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: var(--hud-gap);
       min-height: 0;
       height: 100%;
       padding: 5px;
@@ -411,7 +418,7 @@
 
     #minimap {
       display: block;
-      width: min(100%, calc(var(--deck-height) - 12px));
+      width: min(100%, calc(var(--deck-height) - var(--tools-height) - 16px));
       height: auto;
       aspect-ratio: 1;
       background: #071019;
@@ -576,7 +583,7 @@
     #objectives,
     .minimap-panel,
     #actionPanel,
-    #cameraTools,
+    #commandTools,
     #abilityBar {
       background: linear-gradient(135deg, #102d3df5, #05131ff5 65%);
       border: 1px solid #4edcf0b0;
@@ -586,6 +593,7 @@
     }
 
     #cameraTools button,
+    #commandTools button,
     #pauseBtn {
       border: 1px solid #47cfe9b0;
       border-radius: 5px 2px;
@@ -594,7 +602,8 @@
     }
 
     #hud .action:hover,
-    #cameraTools button:hover { border-color: #b5f7ff; box-shadow: inset 0 0 12px #49ddff25 }
+    #cameraTools button:hover,
+    #commandTools button:hover { border-color: #b5f7ff; box-shadow: inset 0 0 12px #49ddff25 }
     #hud .action.active { border-color: var(--gold); background: #775c2f80 }
 
     @media(max-width:1150px) {
@@ -685,8 +694,10 @@
         display: none
       }
 
-      #cameraTools { gap: 2px }
-      #cameraTools button { font-size: 19px }
+      #cameraTools,
+      #commandTools { gap: 2px }
+      #cameraTools button,
+      #commandTools button { font-size: 19px }
 
 
       .subscreen {
@@ -871,7 +882,6 @@
       #topbar { grid-template-columns: 37px minmax(0, 1fr) 35px 30px; gap: 2px; padding: 0 4px }
       #battleLabel { font-size: 7px; letter-spacing: .3px }
       #pauseBtn { width: 30px }
-      #cameraTools { grid-template-columns: repeat(3, minmax(0, 1fr)) }
       #abilityBar { grid-template-columns: repeat(2, minmax(0, 1fr)) }
       .resource { gap: 2px }
       .resource strong { font-size: 10px }
