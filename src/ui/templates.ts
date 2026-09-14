@@ -5,13 +5,12 @@ function renderHomeScreen(expedition: MeridianExpedition | null, bestDepth: numb
   return `<div class="home-screen"><div class="home-layout">
             <svg class="menu-frame" viewBox="0 0 22 887" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M1 0V72L17 88V178L6 190V674L20 688V778L1 797V887"/></svg>
             <header class="menu-header">
-              <div class="brand"><svg class="menu-emblem" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><circle cx="24" cy="24" r="22"/><path d="M24 3V11M24 37V45M3 24H11M37 24H45M24 10L28 20L38 24L28 28L24 38L20 28L10 24L20 20Z"/><circle cx="24" cy="24" r="4"/></svg><span>MERIDIAN EXPEDITIONARY COMMAND</span></div>
               <div class="menu-system">SOL SYSTEM <span>//</span> M-472</div>
               <div class="version">ROGUELITE PROTOTYPE</div>
             </header>
             <div class="menu-main">
               <div class="menu-title">
-                <h1 class="wordmark" aria-label="Ashes of Meridian"><span class="wordmark-first">ASHES <b>OF</b></span><span>MERIDIAN</span></h1>
+                <div class="menu-wordmark"><svg class="menu-emblem" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><circle cx="24" cy="24" r="22"/><path d="M24 3V11M24 37V45M3 24H11M37 24H45M24 10L28 20L38 24L28 28L24 38L20 28L10 24L20 20Z"/><circle cx="24" cy="24" r="4"/></svg><h1 class="wordmark" aria-label="Ashes of Meridian"><span class="wordmark-first">ASHES <b>OF</b></span><span>MERIDIAN</span></h1></div>
                 <p class="menu-tagline">A roguelite RTS.</p>
                 ${expedition ? `<div class="expedition-stage" aria-label="Checkpoint ${expedition.depth + 1}"><span class="stage-label">CHECKPOINT</span><div class="stage-crystal"><svg viewBox="0 0 200 190" aria-hidden="true" focusable="false"><defs><linearGradient id="stageCrystalCore" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dfffff"/><stop offset=".35" stop-color="#48d9ed"/><stop offset="1" stop-color="#07344c"/></linearGradient></defs><path class="crystal-halo" d="M100 3 174 34 194 104 143 184 57 184 6 104 26 34Z"/><path class="crystal-body" d="M100 10 168 40 185 102 138 176 62 176 15 102 32 40Z"/><path class="crystal-facet light" d="m15 102 85-92v166l-38-10Z"/><path class="crystal-facet shade" d="m100 10 68 30 17 62-47 74-38-10 34-62Z"/><path class="crystal-lines" d="m32 40 68 64 68-64M15 102h170M62 176l38-72 38 72M100 10v94"/></svg><strong>${expedition.depth + 1}</strong></div></div>` : ''}
               </div>

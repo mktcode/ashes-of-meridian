@@ -67,18 +67,15 @@
       right: 58%
     }
 
-    .home-screen .brand {
+    .home-screen .menu-wordmark {
       display: flex;
       align-items: center;
-      gap: 16px;
-      font: 10px var(--mono);
-      letter-spacing: 1.6px;
-      color: #a8cbd9
+      gap: 16px
     }
 
     .home-screen .menu-emblem {
-      width: 46px;
-      height: 46px;
+      width: clamp(46px, 4vw, 62px);
+      height: clamp(46px, 4vw, 62px);
       flex-shrink: 0;
       fill: none;
       stroke: #a1d6e4;
@@ -441,12 +438,6 @@
         font-size: 17px
       }
 
-      .home-screen .brand {
-        font-size: 8px;
-        letter-spacing: 1px;
-        gap: 10px
-      }
-
       .home-screen .version,
       .home-screen .menu-footer {
         font-size: 8px
@@ -509,6 +500,11 @@
     }
 
     @media(max-width:600px) {
+      .home-layout {
+        grid-template-rows: 1fr auto
+      }
+
+      .home-screen .menu-header,
       .home-screen .version,
       .home-screen .menu-footer {
         display: none
