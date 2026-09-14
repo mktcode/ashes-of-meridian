@@ -90,7 +90,7 @@ class BattlefieldBuilder {
     mesh: string, x: number, y: number, z: number,
     sx: number, sy: number, sz: number, color: WorldColor,
     yaw: number, pitch: number, roll: number, glow: number,
-    alpha: number, layer: string, material?: string
+    alpha: number, layer: WorldPlacement['layer'], material?: WorldPlacement['material']
   ) => this.world.renderData.placements.push({ mesh, position: [x, y, z], scale: [sx, sy, sz], color,
       rotation: [yaw, pitch, roll], glow, alpha, layer, material });
 
@@ -117,7 +117,7 @@ class BattlefieldBuilder {
     place('terrain', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static');
     place('box', 0, -8, 0, EXTENT * 2, 15, EXTENT * 2, 0x242c36, 0, 0, 0, 0, 1, 'static');
   }
-  boundary(model: string, material: string) {
+  boundary(model: string, material: WorldPlacement['material']) {
     this.world.renderData.geometries.push({ mesh: model, model, seed: this.world.seed, extent: this.world.extent });
     this.place(model, 0, 0, 0, 1, 1, 1, this.palette.rock, 0, 0, 0, 0, 1, 'static', material);
   }
@@ -270,7 +270,7 @@ class BattlefieldBuilder {
       prop(this, x, z);
     }
   }
-  features(candidate: (rand: () => number, world: Battlefield) => WorldTerrainFeature, model: string, material: string) {
+  features(candidate: (rand: () => number, world: Battlefield) => WorldTerrainFeature, model: string, material: WorldPlacement['material']) {
     const world = this.world, { gridSize: GRID, cellSize: CELL } = world;
     const rand = seeded(world.seed ^ 0x57494445),
       protectedSites = [

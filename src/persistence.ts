@@ -1,7 +1,7 @@
 /* Permanent profile and between-battle expedition checkpoint persistence. */
 'use strict';
 
-// Dependencies are supplied by app.js. Access storage lazily: even reading the
+// Dependencies are supplied by the app. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
 function createMeridianPersistence(
   { getStorage, clamp, upgrades, benefits, battlefields, warn }: PersistenceDependencies
@@ -70,8 +70,8 @@ function createMeridianPersistence(
           d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);
           d.settings.quality = clamp(Number(d.settings.quality) || 0, 0, 2);
         }
-      } catch (e: any) {
-        warn('Profile reset:', e.message);
+      } catch (e) {
+        warn('Profile reset:', e instanceof Error ? e.message : String(e));
       }
       return d;
     }
@@ -103,8 +103,8 @@ function createMeridianPersistence(
             (benefits[key].max === undefined || (normalized.benefits[key] || 0) < benefits[key].max))
           .slice(0, 3);
         return normalized;
-      } catch (e: any) {
-        warn('Expedition reset:', e.message);
+      } catch (e) {
+        warn('Expedition reset:', e instanceof Error ? e.message : String(e));
         return null;
       }
     }

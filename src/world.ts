@@ -73,7 +73,7 @@
       declare explored: Uint8Array;
       declare visible: Uint8Array;
       declare sight: [{ visible: Uint8Array; explored: Uint8Array }, { visible: Uint8Array; explored: Uint8Array }];
-      declare fogPixels: Uint8Array;
+      declare fogPixels: Uint8Array<ArrayBuffer>;
       declare terrainColors: Uint8ClampedArray;
       declare rocks: WorldRock[];
       declare pathVersion: number;

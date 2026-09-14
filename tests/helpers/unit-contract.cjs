@@ -12,7 +12,7 @@ function checkUnit({ type, meshes: specs, min, max, totalTriangles, maxInstances
   let descriptor;
   const isolated = vm.createContext({ registerEntityModel: model => { descriptor = model; } });
   vm.runInContext('Math.random = () => { throw Error("Registration RNG"); };', isolated);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, `../../src/renderer/models/faction-0-unit-${type}.js`), 'utf8'), isolated);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, `../../dist/src/renderer/models/faction-0-unit-${type}.js`), 'utf8'), isolated);
   assert.equal(descriptor.id, id);
   isolated.geom = h.geom; isolated.ModelMesh = h.ModelMesh;
   const uploaded = {}, r = { meshes: {}, geometry(name, data) {

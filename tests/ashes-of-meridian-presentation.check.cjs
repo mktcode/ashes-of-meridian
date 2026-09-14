@@ -371,6 +371,24 @@ test('shot and shell faction variants use stable IDs rather than display names',
   }
 });
 
+test('placement previews have a stable visual identity and finite transforms for every building', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world-view']);
+  const { createBuildingPreview, renderEntity, BUILDINGS } = vm.runInContext(
+    '({createBuildingPreview, renderEntity, BUILDINGS})', context);
+  vm.runInContext('Math.random = seeded = () => { throw Error("Preview RNG"); };', context);
+  for (const faction of [0, 1, 2]) for (const type of Object.keys(BUILDINGS)) {
+    const preview = Object.freeze(createBuildingPreview(type, {x: 12, z: -7}, faction));
+    assert.equal(preview.id, 0, 'no simulation ID allocation');
+    for (const time of [0, 9, 20]) {
+      const renderer = createRendererStub({record: true});
+      renderEntity(renderer, preview, time, {tint: 0x99e4c6, alpha: .3, layer: 'effects'});
+      assert.ok(renderer.calls.length > 0);
+      for (const call of renderer.calls) for (const value of call)
+        if (typeof value === 'number') assert.ok(Number.isFinite(value), `${faction}/${type}: finite transform`);
+    }
+  }
+});
+
 test('entity models stay identical when faction, unit and building display names change', () => {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world-view']);
   const { renderEntity, UNITS, BUILDINGS } = vm.runInContext('({renderEntity, UNITS, BUILDINGS})', context);

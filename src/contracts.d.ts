@@ -141,7 +141,7 @@ interface PersistenceDependencies {
   getStorage(): ProfileStorage;
   clamp(value: number, min: number, max: number): number;
   upgrades: Record<string, { max: number }>;
-  benefits: Record<string, { max?: number }>;
+  benefits: Record<string, { max?: number; name?: string }>;
   battlefields: Record<string, unknown>;
   warn(...values: unknown[]): void;
 }
@@ -328,7 +328,7 @@ interface BattleResult {
   integrity: number;
 }
 
-interface RunTriggers extends Record<string, number | boolean> {
+interface RunTriggers extends Record<string, number | boolean | undefined> {
   baseAlert?: number;
   solar?: number;
   fieldWorkshop?: boolean;
@@ -397,8 +397,8 @@ interface WorldPlacement {
   rotation: [number, number, number];
   glow: number;
   alpha: number;
-  layer: string;
-  material: string | undefined;
+  layer: 'static' | 'dynamic' | 'effects';
+  material: keyof typeof MAT | undefined;
 }
 
 interface WorldTerrainFeature extends Position {

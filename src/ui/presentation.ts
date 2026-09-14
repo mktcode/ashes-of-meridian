@@ -135,7 +135,7 @@
             if (!e || e.team !== 0) continue;
             let goal =
               e.rally ||
-              (['move', 'attackMove'].includes(e.order?.type)
+              ((e.order?.type === 'move' || e.order?.type === 'attackMove')
                 ? e.order
                 : e.order?.type === 'attack'
                   ? g.get(e.order.id)

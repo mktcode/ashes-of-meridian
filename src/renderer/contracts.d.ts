@@ -1,0 +1,78 @@
+/* CPU/GPU boundary contracts; erased by the classic-script build. */
+type RenderLayer = 'static' | 'dynamic' | 'effects';
+type RenderColor = number | string | readonly number[] | Float32Array;
+type MeshData = number[] | Float32Array;
+interface RenderBucket {
+  data: Float32Array;
+  n: number;
+  buffer: WebGLBuffer | null;
+  dirty: boolean;
+}
+type RenderBatches = Record<string, RenderBucket>;
+interface RenderMesh {
+  vao: WebGLVertexArrayObject | null;
+  vbo: WebGLBuffer | null;
+  count: number;
+}
+interface ModelTransform {
+  x?: number; y?: number; z?: number;
+  sx?: number; sy?: number; sz?: number;
+  ry?: number; rx?: number; rz?: number;
+  tint?: number[];
+}
+interface ShellDimensions {
+  x?: number; y?: number; z?: number;
+  sx: number; sy: number; sz: number;
+  lobes?: number; depth?: number; segments?: number; rings?: number; tint?: number[];
+}
+interface PanelDimensions {
+  x?: number; y?: number; z?: number;
+  w: number; h: number; d: number; bevel: number; tint?: number[];
+}
+type ModelPart = (shape: string, x: number, y: number, z: number,
+  sx: number, sy: number, sz: number, color: RenderColor,
+  ry?: number, rx?: number, rz?: number, glow?: number, alpha?: number, material?: number) => void;
+type ModelRing = (radius: number, height: number, color?: number, alpha?: number,
+  rx?: number, ry?: number, glow?: number) => void;
+// Previews need visual properties, not live simulation paths, cooldowns or orders.
+type RenderEntity = Pick<EntityBase, 'id' | 'kind' | 'type' | 'x' | 'z' | 'hp' | 'faction' | 'team' | 'size'> &
+  Partial<EntityBase> & { amount?: number };
+interface EntityModelContext {
+  entity: RenderEntity;
+  time: number;
+  part: ModelPart;
+  ring: ModelRing;
+  metal: number; dark: number; team: number; accent: number;
+  baseRotation: number;
+  surfaceColor: (color: number) => number;
+}
+interface EntityModelDefinition {
+  id: string;
+  meshes?: Record<string, () => number[]>;
+  render: (context: EntityModelContext) => void;
+}
+interface RenderEntityOptions {
+  layer?: RenderLayer;
+  alpha?: number;
+  tint?: number;
+  ghost?: boolean;
+  material?: number;
+}
+interface TerrainModelCatalog {
+  [model: string]: ((seed: number, extent: number) => number[]) |
+    ((feature: WorldTerrainFeature) => number[]) | ((descriptor: WorldGeometry) => number[]);
+  geometry: (descriptor: WorldGeometry) => number[];
+}
+interface Window {
+  Meridian: {
+    game: MeridianGame;
+    ui: MeridianUI;
+    renderer: MeridianRenderer;
+    audio: MeridianAudio;
+    content: { units: typeof UNITS; buildings: typeof BUILDINGS; factions: typeof FACTIONS };
+    readonly performance: { fps: number; drawCalls: number; entities: number };
+    version: string;
+  };
+}
+type EffectRingArgs = [x: number, z: number, radius: number, color: RenderColor,
+  alpha?: number, y?: number, rotation?: number];
