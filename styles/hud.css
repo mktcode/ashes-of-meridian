@@ -752,7 +752,6 @@
         min-width: 0;
         gap: 3px
       }
-      .resource + .resource { border-left: 1px solid #58ddf030 }
       .resource strong { font-size: 12px; white-space: nowrap }
       .resource small { display: none }
       .resource .resicon { font-size: 15px; flex: 0 0 auto }

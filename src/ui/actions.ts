@@ -236,7 +236,7 @@
         $('alloyCount').textContent = Math.floor(s.teams[0].alloy).toLocaleString();
         $('gasCount').textContent = Math.floor(s.teams[0].gas).toLocaleString();
         const supply = this.game.supply(), capacity = this.game.cap();
-        $('supplyCount').textContent = supply + ' / ' + capacity;
+        $('supplyCount').textContent = supply + '/' + capacity;
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
         $('energyCount').textContent = String(Math.floor(s.teams[0].energy));
         $('gameTime').textContent = formatTime(s.time);
