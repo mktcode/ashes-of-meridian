@@ -45,7 +45,8 @@ function renderFieldManual() {
             ['Select', 'Tap your unit or building'],
             ['Move / attack', 'Select troops → tap ground / enemy'],
             ['Group visible units', 'Double-tap: same type · triple-tap: all except workers'],
-            ['Attack-move', 'Crossed swords beside ⌂: gold = stop to fight'],
+            ['Combat force', 'Group icon: select all combat units'],
+            ['Attack-move', 'Crossed swords: gold = stop to fight'],
             ['Pan / zoom', 'Drag one finger · pinch or ＋ / −'],
             ['Navigate', '⌂: base · minimap: tap or drag']
           ])}<p style="font-size:12px">Turn Attack-move off to prioritize moving or retreating. Workers always move normally.</p><h3>Battle controls</h3>${renderHelpLines([

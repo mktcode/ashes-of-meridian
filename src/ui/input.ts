@@ -77,6 +77,11 @@
             ? 'Attack-move: troops engage enemies along the way.'
             : 'Move: troops prioritize reaching the destination.');
         };
+        $('combatSelectBtn').onclick = () => {
+          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
+          this.select(this.game.alive(e => e.team === 0 && e.kind === 'unit' && e.type !== 'worker').map(e => e.id));
+          this.lastClick = {};
+        };
         $('radioClose').onclick = () => {
           $('radio').classList.add('hidden');
           this.radioUntil = 0;

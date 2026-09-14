@@ -544,6 +544,24 @@ test('attack-move toggle changes future ground orders for touch and mouse, not e
   }
 });
 
+test('combat force button selects every living own non-worker without changing commands', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 100 };
+  h.ui.game.s.entities = [unit, { ...unit, id: 2, type: 'medic' }, { ...unit, id: 3, type: 'hero' },
+    { ...unit, id: 4, type: 'air' }, { ...unit, id: 5, type: 'worker' }, { ...unit, id: 6, team: 1 },
+    { ...unit, id: 7, kind: 'building', type: 'barracks' }, { ...unit, id: 8, hp: 0 }];
+  h.ui.game.alive = predicate => h.ui.game.s.entities.filter(e => e.hp > 0 && predicate(e));
+  h.ui.lastClick = { id: 5, count: 2 };
+  h.document.getElementById('combatSelectBtn').onclick();
+  assert.deepEqual(h.ui.selected, [1, 2, 3, 4]);
+  assert.deepEqual(h.calls, [['select', [1, 2, 3, 4]]]);
+  assert.equal(Object.keys(h.ui.lastClick).length, 0);
+  h.ui.paused = true; h.document.getElementById('combatSelectBtn').onclick();
+  assert.deepEqual(h.calls, [['select', [1, 2, 3, 4]]]);
+  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+  assert.match(html, /id="combatSelectBtn" aria-label="Select all combat units"/);
+});
+
 test('attack-move toggle preserves context orders, selection, and explicit ability targeting', () => {
   for (const active of [false, true]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
@@ -1046,7 +1064,8 @@ test('tooltips and native title hints are removed without removing pointer press
   for (const [attribute, value, label] of [
     ['id', 'pauseBtn', 'Pause'],
     ['data-cam', 'home', 'Center on command'], ['data-cam', 'in', 'Zoom in'],
-    ['data-cam', 'out', 'Zoom out'], ['id', 'minimap', 'Minimap']
+    ['data-cam', 'out', 'Zoom out'], ['id', 'combatSelectBtn', 'Select all combat units'],
+    ['id', 'minimap', 'Minimap']
   ]) assert.match(html, new RegExp(`${attribute}="${value}"[^>]*aria-label="${label}"`));
   assert.doesNotMatch(html, /id="(?:soundBtn|helpBtn)"/);
 });
@@ -1497,7 +1516,8 @@ test('settings and camera hints describe touch navigation without desktop camera
   h.ui.showHelp();
   assert.match(h.ui.html, /Move \/ attack/);
   assert.match(h.ui.html, /Select troops → tap ground \/ enemy/);
-  assert.match(h.ui.html, /Crossed swords beside ⌂: gold = stop to fight/);
+  assert.match(h.ui.html, /Group icon: select all combat units/);
+  assert.match(h.ui.html, /Crossed swords: gold = stop to fight/);
   assert.match(h.ui.html, /Turn Attack-move off to prioritize moving or retreating/);
   assert.match(h.ui.html, /Workers always move normally/);
   assert.doesNotMatch(h.ui.html, /Attack-move button|Move \/ hold \/ stop|Combat force button|Next worker button|Command view|Tabs on the command deck|Ability buttons in Command/);
