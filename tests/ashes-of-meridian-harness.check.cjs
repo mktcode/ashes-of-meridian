@@ -70,7 +70,7 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.equal(unitName('worker', 2), 'Custodian');
   assert.equal(unitName('unknown-unit'), 'unknown-unit');
   assert.equal(buildingName('hq'), 'Command center');
-  assert.equal(buildingName('hq', 1), 'Memory heart');
+  assert.equal(buildingName('hq', 1), 'Bloom queen');
   assert.equal(buildingName('hq', 2), 'Silent throne');
   assert.equal(buildingName('unknown-building'), 'unknown-building');
   assert.equal(icon('unknown-icon'), icon('hero'));

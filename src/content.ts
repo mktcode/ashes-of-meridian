@@ -59,7 +59,7 @@ const FACTIONS = [
       hero: 'The First Voice'
     },
     buildings: {
-      hq: 'Memory heart',
+      hq: 'Bloom queen',
       barracks: 'Bloom nursery',
       depot: 'Living canopy',
       refinery: 'Sap well',

@@ -49,13 +49,13 @@ test('requested entity redesigns preserve every unrelated unit and building draw
       ];
     }
   });
-  // The nursery and honeycomb canopy have independent geometry/assembly checks.
+  // Redesigned Choir bodies have independent geometry, assembly and animation checks.
   // Retain their old digests above; do not regenerate any unrelated reference.
   for (const id of Object.keys(expected)) if (id.startsWith('faction-0/unit/') ||
-    ['faction-1/building/barracks','faction-1/building/depot'].includes(id)) {
+    ['faction-1/building/barracks','faction-1/building/depot','faction-1/building/hq'].includes(id)) {
     assert.notEqual(actual[id], expected[id], 'requested refinement has its own geometry/variant test');
     delete actual[id]; delete expected[id];
   }
-  assert.equal(Object.keys(actual).length, 33);
+  assert.equal(Object.keys(actual).length, 32);
   assert.deepEqual(actual, expected);
 });

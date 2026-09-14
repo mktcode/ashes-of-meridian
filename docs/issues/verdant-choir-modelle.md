@@ -2,7 +2,9 @@
 
 ## Gestaltungsrichtung
 
-Die bisherigen Gebäude teilen Knollenkörper, Wurzelsymmetrie und schwebenden Kristall; die Einheiten überwiegend denselben Krabbelkörper. Gewünscht sind eigene Silhouetten bei erhaltenem Pflanzen-Alien-Thema. **Der Gebäudekörper des Memory heart bleibt zunächst unverändert.** KI-Bild des Nutzers dient als Inspiration, nicht als zu übernehmendes Asset oder neue Spielregel.
+Die bisherigen Gebäude teilen Knollenkörper, Wurzelsymmetrie und schwebenden Kristall; die Einheiten überwiegend denselben Krabbelkörper. Gewünscht sind eigene Silhouetten bei erhaltenem Pflanzen-Alien-Thema. KI-Bild des Nutzers dient als Inspiration, nicht als zu übernehmendes Asset oder neue Spielregel.
+
+Bloom queen („Blütenkönigin“): ein sesshaftes Pflanzen-Alien im offenen Wurzel-/Blattnest ersetzt das alte Hauptgebäude. Schwerer segmentierter Hinterleib, aufgerichteter Kopf mit Blattkrone und vier greifende Gliedmaßen; die Vorderseite bleibt für Worker offen. Nur Hinterleib und zugehörige Wachstumskammern atmen, zwei Blattfühler schwingen leicht. Nest, Füße und Kopf stehen fest. Technische ID `hq`, Gebäuderolle und Spielwerte bleiben erhalten; keine mobile Königin oder neue Produktionsregeln.
 
 Bloom nursery: niedriges asymmetrisches Brutbeet mit drei unterschiedlich großen Samenkapseln, fleischigen Blättern, verbundenen Wurzeln und einer nach +Z geöffneten Brutkapsel. Kein schwebender Kristall; nur schwach pulsierendes Nährgewebe, keine neue Geometrieanimation. Kollisionsradius und Produktion bleiben erhalten.
 
@@ -12,6 +14,6 @@ Die fraktionsweite Fundamentgestaltung, einschließlich HQ, folgt dem [gemeinsam
 
 ## Offen
 
-- Menschliche Sichtung der neuen Bloom nursery, der Living Canopy als Wabennest und der Erdhügel aller Choir-Gebäude im normalen Spielzoom, auf den verschiedenen Karten und während des Baus. Technischer `file://`-Check deckt Uploads, WebGL-Fehler sowie Team-/Bau-/Vorschauvarianten in allen Qualitätsstufen ab, nicht die visuelle oder Echtgeräteabnahme.
+- Menschliche Sichtung der Bloom queen (Kreatur-/Nestwirkung, Atmen und Fühlerbewegung), der Bloom nursery, der Living Canopy als Wabennest und der Erdhügel aller Choir-Gebäude im normalen Spielzoom, auf den verschiedenen Karten und während des Baus. Technischer `file://`-Check deckt Uploads, WebGL-Fehler sowie Team-/Bau-/Vorschauvarianten in allen Qualitätsstufen ab, nicht die visuelle oder Echtgeräteabnahme.
 - Weitere Choir-Modelle einzeln nach Nutzerpriorität mit eigenem Silhouettenziel angehen, statt erneut dieselbe Grundform zu variieren. Thornling soll zur Brutstätte passen.
 - Choir-Aktionsbuttons verwenden bislang Icons, keine Modellportraits. Eine spätere Portraitanbindung benötigt Bilder der abgenommenen Modelle nach dem [Pflegeverfahren](../rendering.md#texturen-und-portraits); keine ungenutzten Portraitassets auf Vorrat erzeugen.
