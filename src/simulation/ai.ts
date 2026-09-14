@@ -184,12 +184,26 @@ const aiMethods = {
       this.aiOrder(team,army,danger[0]); return;
     }
     let squad=army.filter(e=>ai.squad.includes(e.id));
+    if (ai.mode==='recover') {
+      // Keep the retreat order across strategic ticks, but never wait forever for healing.
+      const restored=squad.every(e=>distance(e,home)<22 &&
+        (this.factionFor(team)===FACTION_ID.THIRD ? e.shield>=e.maxShield*.75 : e.hp>=e.maxHp*.85));
+      if (squad.length && s.time<(ai.recoverUntil || 0) && (!restored || s.time-ai.lastAttack<6)) {
+        this.aiOrder(team,squad,home,false);return;
+      }
+      ai.mode='assemble';ai.squad=[];squad=[];
+    }
     if (ai.mode==='attack' && ai.goal && squad.length) {
       const power=squad.reduce((n,e)=>n+this.aiPower(e),0),
         opposition=foes.filter(e=>squad.some(u=>distance(u,e)<25)).reduce((n,e)=>n+this.aiPower(e),0),
-        arrived=squad.some(e=>distance(e,ai.goal!)<10);
-      if (squad.length<ai.launched*.45 || power<opposition*.5 || s.time-ai.lastAttack>150) {
-        ai.mode='recover';ai.squad=[];ai.lastAttack=s.time;
+        arrived=squad.some(e=>distance(e,ai.goal!)<10),
+        hull=squad.reduce((n,e)=>n+e.hp,0)/squad.reduce((n,e)=>n+e.maxHp,0),
+        shields=squad.reduce((n,e)=>n+e.shield,0)/Math.max(1,squad.reduce((n,e)=>n+e.maxShield,0)),
+        exhausted=opposition>0 && s.time-ai.lastAttack>6 &&
+          (this.factionFor(team)===FACTION_ID.SECOND ? hull<.6 :
+            this.factionFor(team)===FACTION_ID.THIRD && shields<.2);
+      if (exhausted || squad.length<ai.launched*.45 || power<opposition*.5 || s.time-ai.lastAttack>150) {
+        ai.mode='recover';ai.lastAttack=s.time;ai.recoverUntil=s.time+rules.recoveryTime;
         this.aiOrder(team,squad,home,false);return;
       }
       if (!arrived) { this.aiOrder(team,squad,ai.goal);return; }

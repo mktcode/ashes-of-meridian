@@ -170,6 +170,26 @@ test('strategy prioritizes remembered economy without following hidden changes a
   assert.equal(g.s.ai[1].mode,'defend');assert.equal(g.s.ai[1].squad.length,0);
 });
 
+test('Choir hull and Court shields trigger sustained but bounded recovery, not a one-tick retreat',()=>{
+  for(const faction of [1,2]) {
+    const {g}=battle(0,faction),h=own(g,1,'hq')[0],ai=g.s.ai[1];
+    const troops=Array.from({length:8},()=>g.spawnUnit('rifle',0,0,1,faction));
+    for(const e of troops) { if(faction===1)e.hp=e.maxHp*.55;else e.shield=0; }
+    g.s.time=100;Object.assign(ai,{mode:'attack',squad:troops.map(e=>e.id),launched:8,lastAttack:70,goal:{x:-20,z:0}});
+    const threat={id:999,kind:'unit',type:'rifle',team:0,x:4,z:0,hp:150,maxHp:150,progress:1,size:.65,seenAt:100};
+    g.aiStrategy(1,own(g,1),[threat],h);
+    assert.equal(ai.mode,'recover');assert.equal(ai.squad.length,8);
+    assert.ok(troops.every(e=>e.order.type==='move'));
+    g.s.time=101;g.aiStrategy(1,own(g,1),[],h);
+    assert.equal(ai.mode,'recover');assert.ok(troops.every(e=>e.order.type==='move'));
+    g.s.time=ai.recoverUntil;g.aiStrategy(1,own(g,1),[],h);
+    assert.notEqual(ai.mode,'recover','failed regeneration cannot trap the controller');
+    Object.assign(ai,{mode:'recover',squad:troops.map(e=>e.id),lastAttack:100,recoverUntil:140});
+    for(const e of troops){e.hp=e.maxHp;e.shield=e.maxShield;e.x=h.x+9;e.z=h.z;}
+    g.s.time=110;g.aiStrategy(1,own(g,1),[],h);assert.notEqual(ai.mode,'recover');
+  }
+});
+
 test('each faction chooses its own build, production and remembered target priorities',()=>{
   for(const faction of [0,1,2]) {
     const {g}=battle(0,faction),h=own(g,1,'hq')[0];

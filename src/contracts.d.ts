@@ -321,6 +321,7 @@ interface AIState {
   search: number;
   nextBuild: number;
   lastScout: number;
+  recoverUntil?: number;
 }
 type PlayerTeam = 0 | 1;
 interface TeamState {
