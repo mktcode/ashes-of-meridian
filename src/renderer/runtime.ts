@@ -103,6 +103,7 @@
           box: geom.box(),
           cylinder: geom.cylinder(10),
           hex: geom.cylinder(6),
+          choirMound: geom.choirMound(),
           cone: geom.cylinder(7, 0),
           octa: geom.octa(),
           sphere: geom.sphere(),

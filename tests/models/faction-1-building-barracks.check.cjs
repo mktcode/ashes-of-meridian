@@ -57,7 +57,7 @@ test('Bloom nursery: static three-part assembly preserves team, build, preview a
   assert.equal(h.EntityModels.find({ ...entity, kind:'unit' }), undefined);
   vm.runInContext('for (const key of Object.keys(geom)) geom[key] = () => { throw Error("Per-frame geometry"); }', h.context);
   const normal = h.draw(entity);
-  assert.deepEqual(normal.map(c => c[0]), ['hex','ring',...names], 'no floating crystal or reused tower pieces');
+  assert.deepEqual(normal.map(c => c[0]), ['choirMound',...names], 'no floating crystal or reused tower pieces');
   assert.deepEqual(normal, h.draw(entity, {}, 0), 'no geometric animation');
   assert.deepEqual(normal, h.draw({ ...entity, progress:undefined, rot:-2.1 }), 'default completion and fixed building yaw');
   assert.deepEqual(h.draw({ ...entity, hp:0 }), []);
@@ -66,11 +66,9 @@ test('Bloom nursery: static three-part assembly preserves team, build, preview a
       yaw = h.BUILDING_YAW + team*Math.PI, faction = h.FACTIONS[1],
       teamColor = team ? 0xe98680 : faction.color, accent = team ? 0xffaf87 : faction.accent;
     const calls = h.draw(state);
-    assert.equal(calls.length, 5 + (progress < 1 ? 5 : 0), 'unchanged common scaffold');
-    assert.deepEqual(calls.slice(0,2), [
-      ['hex',12,.15*build,-7,3*1.09,.3*build,3*1.09,0x384552,yaw+.12,0,0,0,1,'dynamic',h.MAT.BIO],
-      ['ring',12,.33*build,-7,3*1.03,.1*build,3*1.03,teamColor,yaw,0,0,.4,1,'dynamic',h.MAT.BIO]
-    ]);
+    assert.equal(calls.length, 4 + (progress < 1 ? 5 : 0), 'unchanged common scaffold');
+    assert.deepEqual(calls[0],
+      ['choirMound',12,0,-7,3,build,3,0x70523b,yaw,0,0,0,1,'dynamic',h.MAT.ROCK]);
     for (const options of [{}, { ghost:true }, { ghost:true, tint:0x99e4c6 },
       ...[0,.3,1].map(alpha => ({ tint:0x99e4c6, alpha, layer:'effects', material:h.MAT.AUTO }))]) {
       const rendered = h.draw(state, options);
@@ -83,10 +81,9 @@ test('Bloom nursery: static three-part assembly preserves team, build, preview a
 
 test('Bloom nursery: complete triangle budget and only shared organic light pulsing', () => {
   const h = modelHarness(), meshes = upload(h), counts = Object.fromEntries(names.map(n => [n,meshes[n].length/27]));
-  counts.hex = h.geom.cylinder(6).length/27;
-  counts.ring = h.geom.ring().length/27;
+  counts.choirMound = h.geom.choirMound().length/27;
   const normal = h.draw(entity);
-  assert.ok(normal.reduce((sum,c) => sum + counts[c[0]],0) <= 4100, 'includes common foundation and ring');
+  assert.ok(normal.reduce((sum,c) => sum + counts[c[0]],0) <= 4100, 'includes shared earth mound');
   vm.runInContext(`{
     const r = { quality:1, calls:[], add(...args) { this.calls.push(args); } };
     const e = ${JSON.stringify(entity)};

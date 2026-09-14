@@ -230,8 +230,15 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       }
       if (e.kind === 'building') {
         let s = e.size || 3;
-        p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
-        p('ring', 0, 0.33, 0, s * 1.03, 0.1, s * 1.03, team, 0, 0, 0, 0.4);
+        if (e.faction === FACTION_ID.SECOND) {
+          // Living buildings grow out of soil, not a mechanical plinth. Keep this in
+          // the adapter so every Choir model and placement/build preview agrees.
+          p('choirMound', 0, 0, 0, s, 1, s, ghost ? 0x68717d : options.tint || 0x70523b,
+            0, 0, 0, 0, alpha, options.material ?? MAT.ROCK);
+        } else {
+          p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
+          p('ring', 0, 0.33, 0, s * 1.03, 0.1, s * 1.03, team, 0, 0, 0, 0.4);
+        }
         const model = EntityModels.find(e);
         if (model) {
           model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot,

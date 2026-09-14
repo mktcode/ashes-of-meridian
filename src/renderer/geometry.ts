@@ -66,6 +66,30 @@
         }
         return o;
       },
+      // Shared Choir foundation: a low earth mound with an uneven, feathered edge.
+      // Fixed contour, 40 triangles; no entity/world RNG and no vertical platform walls.
+      choirMound() {
+        const out: number[] = [], radii = [1.02,.87,1.07,.93,.99,.86,1.06,.90,1.03,.95],
+          heights = [.26,.29,.24,.28,.23,.27,.25,.30,.24,.26],
+          outer = radii.map((r, i) => {
+            const a = i * Math.PI / 5;
+            // Bury the rim just below the world's -.13 ground plane, avoiding a raised seam.
+            return [Math.cos(a)*r, -.14, Math.sin(a)*r];
+          }),
+          shoulder = radii.map((r, i) => {
+            const a = i * Math.PI / 5 + .06;
+            return [Math.cos(a)*r*.64, heights[i], Math.sin(a)*r*.64];
+          });
+        for (let i = 0; i < 10; i++) {
+          const k = (i+1)%10, shade = .88 + (i%3)*.045,
+            tint = [shade, shade*.96, shade*.87];
+          this.tri(out, [.04,.28,-.03], shoulder[k], shoulder[i], tint);
+          this.tri(out, shoulder[i], shoulder[k], outer[k], tint);
+          this.tri(out, shoulder[i], outer[k], outer[i], tint);
+          this.tri(out, [0,-.18,0], outer[i], outer[k], tint);
+        }
+        return out;
+      },
       octa() {
         let o: number[] = [],
           top = [0, 1, 0],

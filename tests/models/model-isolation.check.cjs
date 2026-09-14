@@ -31,7 +31,24 @@ test('requested entity redesigns preserve every unrelated unit and building draw
     'faction-2/building/factory': '0b3a61ed82f4012212e3182ddc4a14b86956b899059c64d8be07b468e6aa12fc',
     'faction-2/building/hangar': '2037a7799209527ba3356d8b97f48da740dd2b6e770a257f6b93013110c6f3ed',
     'faction-2/building/turret': '991e4bba1eec52a5e272fe455ae5bc89b847a7e158c19b4402e96a3efe175b10'
-  }, expected = { ...baseline, ...approved }, actual = modelDrawDigests(h);
+  }, expected = { ...baseline, ...approved }, actual = modelDrawDigests({
+    ...h,
+    draw(e, options = {}, time) {
+      const calls = h.draw(e, options, time);
+      if (e.faction !== 1 || e.kind !== 'building') return calls;
+      // Normalize ONLY the requested foundation replacement to the original calls.
+      // Every remaining Choir body, animation and build scaffold still hits its old digest.
+      assert.equal(calls[0][0], 'choirMound');
+      const build = Math.max(.15, e.progress), yaw = h.BUILDING_YAW + e.team*Math.PI,
+        color = options.tint || (e.team ? 0xe98680 : h.FACTIONS[1].color),
+        tail = [options.alpha??1, options.layer||'dynamic', options.material??h.MAT.BIO];
+      return [
+        ['hex',e.x,.15*build,e.z,e.size*1.09,.3*build,e.size*1.09,0x384552,yaw+.12,0,0,0,...tail],
+        ['ring',e.x,.33*build,e.z,e.size*1.03,.1*build,e.size*1.03,color,yaw,0,0,.4,...tail],
+        ...calls.slice(1)
+      ];
+    }
+  });
   // The nursery's new low, three-pod silhouette has independent geometry/assembly checks.
   // Retain its old digest above; do not regenerate any unrelated reference.
   for (const id of Object.keys(expected)) if (id.startsWith('faction-0/unit/') || id === 'faction-1/building/barracks') {

@@ -24,6 +24,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
 
   const counts = Object.fromEntries(Object.entries(first).map(([k, v]) => [k, v.length / 27]));
   for (const name of ['box', 'octa', 'sphere', 'ring', 'commandHull']) counts[name] = h.geom[name]().length / 27;
+  counts.choirMound = h.geom.choirMound().length / 27;
   counts.hex = h.geom.cylinder(6).length / 27; counts.cylinder = h.geom.cylinder(10).length / 27;
   counts.cone = h.geom.cylinder(7, 0).length / 27;
   for (const [name, data] of Object.entries(h.geom.turretAssembly())) counts[name] = data.length / 27;
@@ -45,7 +46,9 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
     const state = { ...e, team, progress }, build = Math.max(.15, progress), yaw = h.BUILDING_YAW + team * Math.PI,
       calls = h.draw(state), f = h.FACTIONS[faction], color = team ? 0xe98680 : f.color;
     assert.equal(calls.length, normal.length + (progress < 1 ? 5 : 0), 'shared construction scaffold');
-    assert.deepEqual(calls.slice(0, 2), [
+    if (faction === 1) assert.deepEqual(calls[0],
+      ['choirMound',12,0,-7,d.size,build,d.size,0x70523b,yaw,0,0,0,1,'dynamic',h.MAT.ROCK]);
+    else assert.deepEqual(calls.slice(0, 2), [
       ['hex',12,.15*build,-7,d.size*1.09,.3*build,d.size*1.09,0x384552,yaw+.12,0,0,0,1,'dynamic',faction===1?h.MAT.BIO:h.MAT.METAL],
       ['ring',12,.33*build,-7,d.size*1.03,.1*build,d.size*1.03,color,yaw,0,0,.4,1,'dynamic',faction===1?h.MAT.BIO:h.MAT.METAL]
     ]);
