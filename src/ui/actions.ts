@@ -271,12 +271,12 @@
           } else if (k === 'build' && hasContentKey(BUILDINGS, arg))
             disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
           else if (k === 'ability' && hasContentKey(ABILITIES, arg)) {
-            let energy = ABILITIES[arg]?.energy;
-            disabled = s.teams[0].energy < energy || s.teams[0].abilities[arg] > s.time;
+            let energy = ABILITIES[arg]?.energy, requirement = this.game.abilityRequirement(arg);
+            disabled = !!requirement || s.teams[0].energy < energy || s.teams[0].abilities[arg] > s.time;
             let badge = b.querySelector('small');
             if (badge)
               badge.textContent =
-                s.teams[0].abilities[arg] > s.time
+                requirement ? 'TECH' : s.teams[0].abilities[arg] > s.time
                   ? Math.ceil(s.teams[0].abilities[arg] - s.time) + 's'
                   : energy + 'ϟ';
           }

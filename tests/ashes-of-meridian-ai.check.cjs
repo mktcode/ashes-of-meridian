@@ -132,6 +132,7 @@ test('enemy scan does not reveal its target to the player or render a secret mar
 test('all abilities charge only the acting team, obey cooldown/sight/supply, and use the actor faction',()=>{
   for(let faction=0;faction<3;faction++)for(const team of [0,1])for(const kind of Object.keys(ABILITIES)) {
     const {g}=battle(faction,faction);g.s.ai={};const p=own(g,team,'hq')[0],other=json(g.account(1-team));
+    if(kind==='orbital')g.spawnBuilding('factory',p.x+12,p.z,team,faction);
     const d=ABILITIES[kind];g.account(team).energy=d.energy;
     assert.equal(g.ability(kind,p,team),true);assert.equal(g.account(team).energy,0);
     assert.equal(g.account(team).abilities[kind],d.cd);assert.equal(g.ability(kind,p,team),false);
@@ -140,7 +141,8 @@ test('all abilities charge only the acting team, obey cooldown/sight/supply, and
     if(kind==='repair')assert.equal(g.s.fields[0].team,team);
     if(kind==='drop')assert.equal(own(g,team,'rifle').length,4);
   }
-  const {g}=battle();g.s.ai={};
+  const {g}=battle();g.s.ai={};g.account(1).energy=100;
+  g.spawnBuilding('factory',own(g,1,'hq')[0].x+12,own(g,1,'hq')[0].z,1,2);
   assert.equal(g.ability('orbital',{x:0,z:0},1),false);assert.equal(g.account(1).energy,100);
   const h=own(g,1,'hq')[0];for(let i=0;i<10;i++)g.spawnUnit('rifle',h.x,h.z+8,1,2);
   assert.equal(g.ability('drop',h,1),false);assert.equal(g.account(1).energy,100);
@@ -151,6 +153,7 @@ test('repair and faction healing/bloom benefit or damage the correct side',()=>{
     const {g}=battle(1,1);g.s.ai={};const h=own(g,team,'hq')[0];
     const friend=g.spawnUnit('tank',h.x+10,h.z,team,1),enemy=g.spawnUnit('tank',h.x+14,h.z,1-team,1);
     friend.hp-=300;enemy.hp-=300;g.rehash();const hp=enemy.hp;
+    g.account(team).energy=100;g.spawnBuilding('factory',h.x,h.z-12,team,1);
     assert.equal(g.ability('repair',h,team),true);assert.ok(friend.hp>friend.maxHp-300);assert.equal(enemy.hp,hp);
     g.account(team).energy=100;g.ability('orbital',h,team);advance(g,2.3);
     assert.ok(g.s.fields.some(f=>f.type==='bloom'&&f.team===team));
@@ -162,7 +165,10 @@ test('controller heuristics actually choose all four abilities under appropriate
     const {g}=battle();g.s.time=70;const h=own(g,1,'hq')[0];
     const soldier=g.spawnUnit('tank',h.x+10,h.z,1,2);
     if(kind==='repair')soldier.hp-=300;
-    if(kind==='orbital')for(let i=0;i<3;i++)g.spawnUnit('rifle',h.x+12,h.z+i*2,0,0);
+    if(kind==='orbital') {
+      g.spawnBuilding('factory',h.x,h.z-12,1,2);
+      for(let i=0;i<3;i++)g.spawnUnit('rifle',h.x+12,h.z+i*2,0,0);
+    }
     if(kind==='scan')g.spawnUnit('rifle',h.x-7,h.z,1,2);
     if(kind==='drop'){g.s.ai[1].mode='attack';g.s.ai[1].squad=[soldier.id];}
     g.account(1).energy=ABILITIES[kind].energy;
@@ -384,6 +390,24 @@ for(const enemy of [0,1,2]) test(`depth 16 doctrine ${enemy}: paid autonomous ba
   }
   assert.ok(counts.produced>=10&&counts.built>=6);assert.ok(attacks>0);
   assert.ok(g.s.result,`no result for doctrine ${enemy} at ${g.s.time}`);
+});
+
+for(const enemy of [0,1,2]) test(`stage 21 benefits vs doctrine ${enemy}: declared starts and paid autonomous play finish`,()=>{
+  const {g}=battle((enemy+1)%3,enemy,1409),choose=vm.runInContext('chooseEnemyBenefit',context),enemyBenefits={};
+  for(let depth=1;depth<=20;depth++) {
+    const key=choose(depth===20?enemy:depth%3,enemyBenefits,1409+depth*7919,depth);
+    enemyBenefits[key]=(enemyBenefits[key]||0)+1;
+  }
+  const benefits={supplyCrate:8,aetherAllocation:4,pioneerSquad:3,commanderMandate:1,surveyDrones:1,fieldWorkshop:1,commandCapacitor:2};
+  g.start({seed:1409,faction:(enemy+1)%3,enemy,depth:20,benefits,enemyBenefits});g.enableAI(0);
+  assert.equal(Object.values(g.s.enemyBenefits).reduce((a,b)=>a+b,0),20);
+  const counts=audit(g);
+  for(let i=0;i<24000&&!g.s.result;i++) {
+    g.step(.05);g.effects.tick(.05);
+    if(i%100===0)for(const team of [0,1])assert.ok(g.account(team).alloy>=0&&g.account(team).gas>=0);
+  }
+  assert.ok(counts.produced>=10&&counts.built>=6);
+  assert.ok(g.s.result,`no result for stage 21 / doctrine ${enemy} at ${g.s.time}`);
 });
 
 test('seed 444213: the real opponent destroys an undefended HQ instead of stopping outside weapon range',()=>{

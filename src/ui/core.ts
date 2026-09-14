@@ -178,6 +178,9 @@
               const currentUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
               if (currentUnlock > previousUnlock) this.factionJustUnlocked = currentUnlock;
               this.expedition.encounter = this.createEncounter();
+              const enemyBenefit = chooseEnemyBenefit(this.expedition.encounter.enemy, this.expedition.enemyBenefits,
+                this.expedition.encounter.seed, this.expedition.depth);
+              if (enemyBenefit) this.expedition.enemyBenefits[enemyBenefit] = (this.expedition.enemyBenefits[enemyBenefit] || 0) + 1;
               this.expedition.offers = this.createBenefitOffers(this.expedition);
               this.persistence.saveExpedition(this.expedition);
             } else if (!data.win) {

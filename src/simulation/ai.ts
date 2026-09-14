@@ -165,7 +165,8 @@ const aiMethods = {
   aiAbilities(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
     const s=this.s!, ai=s.ai[team]!, rules=aiRulesFor(this.factionFor(team),s.depth),
       foes=visible.filter(e=>e.team!==-1);
-    const ready=(kind:AbilityType)=>this.account(team).energy>=ABILITIES[kind].energy && this.account(team).abilities[kind]<=s.time;
+    const ready=(kind:AbilityType)=>!this.abilityRequirement(kind,team) &&
+      this.account(team).energy>=ABILITIES[kind].energy && this.account(team).abilities[kind]<=s.time;
     if (ready('repair')) {
       const p=own.map(e=>({e,missing:own.filter(n=>n.progress>=1 && distance(e,n)<12).reduce((n,a)=>n+a.maxHp-a.hp,0)}))
         .sort((a,b)=>b.missing-a.missing)[0];

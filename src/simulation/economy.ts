@@ -178,11 +178,12 @@
         let c = this.cost(type, 'building', team);
         if (!this.spend(c, team)) return false;
         let b = this.spawnBuilding(type, p.x, p.z, team, this.factionFor(team), { progress: 0.06, paid: c });
-        const workshop = team === 0 && this.s!.benefits.fieldWorkshop && !this.s!.triggers.fieldWorkshop,
+        const workshopKey = team === 0 ? 'fieldWorkshop' : 'enemyFieldWorkshop',
+          workshop = this.benefitsFor(team).fieldWorkshop && !this.s!.triggers[workshopKey],
           buildRate = 1 + (team === 0 ? (this.s!.meta.constructionProtocols || 0) * FLEET_EFFECTS.constructionSpeed : 0) + (workshop ? EXPEDITION_EFFECTS.workshopSpeed : 0);
         // Add both bonuses to base speed once; changing builders never changes the foundation.
         if (buildRate !== 1) b.buildRate = buildRate;
-        if (workshop) this.s!.triggers.fieldWorkshop = true;
+        if (workshop) this.s!.triggers[workshopKey] = true;
         b.hp = b.maxHp * 0.06;
         if (type === 'refinery')
           b.gasId = this.closest(p, e => e.type === 'gas' && e.kind === 'resource')?.id;

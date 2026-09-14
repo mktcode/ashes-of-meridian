@@ -2,21 +2,15 @@
 
 Die implementierten Doktrinen, Tiefenstufen, Vorteile und Flottenupgrades sind in den [Spielregeln](../gameplay.md) beschrieben. Die technische Planung bleibt in Git; offene menschliche Abnahme ist maßgeblich in der [Run-Validierung](playtest-validation.md) geführt. Automatische autonome Partien sind kein Nachweis ausgewogener menschlicher Schwierigkeit.
 
-## Frühe Rush-Dominanz: menschlicher Playtestbefund
+## Menschliche Neubewertung der Rush- und Startökonomie
 
-Der Spieler berichtet, dass Boni, Flottenupgrades und eine zu schwache KI die Gefechte zu einfach machen. Besonders **Commander mandate + sofort verfügbarer Orbital Strike** ermöglicht laut Playtest den direkten Marsch zum gegnerischen HQ mit schnellem Sieg. Nach Einführung zufälliger Eckstarts berichtet der Spieler eine spürbare Verbesserung, erreicht aber weiterhin Stage 21 ohne größere Probleme; besonders Scans, Reinforcements und Orbital Strike bleiben zu stark. Fraktion, Upgrade-Stufen und konkrete Vorteilsstapel sind noch nicht festgehalten.
+Vergleichsfall vor der beauftragten Balanceanpassung: Nach Einführung zufälliger Eckstarts erreicht der Spieler Stage 21 ohne größere Probleme, besonders durch Startressourcen und Scans/Reinforcements/Orbital Strike. Gemeldete Stapel: Supply crate ×8, Aether allocation ×4, Pioneer squad ×3, Commander mandate ×1, Survey drones ×1, Field workshop ×1, Command capacitor ×2. Fraktion und permanente Upgrade-Stufen fehlen noch.
 
-Zufällige Eckstarts und das Entfernen der ungesehenen HQ-Markierung erhöhen den Aufklärungsbedarf, beheben aber nicht diesen Machtvorsprung. Als Nächstes gemeinsam entscheiden: Spitzenstärke des Start-Commanders/Orbital-Kombos, Umfang sofort verfügbarer Startboni gegenüber während des Gefechts erspielten Vorteilen sowie fairer Aufbau-/Verteidigungsdruck der KI. Noch keine Freigabe für neue Kosten, Verzögerungen, Statboni oder zusätzliche Armeen.
-
-## Gegnerische Vorteilswahl: zur Diskussion
-
-Der Spieler schlägt eine eigene Bonuswahl der KI pro Runde vor. Derzeit erhält ausschließlich der Spieler Expeditionsvorteile; die KI nutzt bereits dieselben Fähigkeiten und Energiepreise, aber ohne entsprechende Bonusstapel. Eine gegnerische Vorteilsprogression ist noch nicht implementiert oder zur Umsetzung freigegeben.
-
-Bei einer Umsetzung klären: gleicher Wahlumfang und gleiche Stapelgrenzen, Speicherung über wechselnde Gegnerfraktionen hinweg, sichtbare Ankündigung im Übergang sowie Abgrenzung zu permanenten Spieler-Upgrades. Startboni allein lösen die Dominanz fernwirkender Fähigkeiten nicht: Orbital Strike und Reinforcements benötigen derzeit nur erkundeten Boden, keine aktuelle Sicht oder eigenen Truppen am Ziel. Eine Verringerung der Startenergie müsste auch Command capacitor berücksichtigen.
+Mit einem neuen Run prüfen, ob halbierte Supply crates, geringere Startenergie, Technologie-/Zielbedingungen der Fähigkeiten und gegnerische Vorteilsstapel genügend Gegenwehr erzeugen, ohne den Einstieg ohne Flottenupgrades zu überfordern. Insbesondere frühe gegnerische Commander-/Worker-Vorteile und beide Seiten mit vielen Ressourcenstapeln vergleichen. Die aktuellen Regeln stehen ausschließlich in den [Spielregeln](../gameplay.md); weitere Zahlenänderungen erst aus dem nächsten menschlichen Run ableiten.
 
 ## Sehr tiefe Expeditionen
 
-Der Gegnerdruck erreicht ab Tiefe 16 seine letzte Stufe. Unbegrenzte Ressourcen-Vorteile wachsen dagegen weiter. Der berichtete leichte Durchmarsch bis Stage 21 spricht gegen eine ausreichende Kurve für das getestete Spielerprofil; die genaue Ausstattung und weitere Fraktions-/Startlagen bleiben einzugrenzen. Erst danach weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.
+Der Verhaltensdruck erreicht ab Tiefe 16 seine letzte Stufe; unbegrenzte Ressourcen-Vorteile wachsen nun auf beiden Seiten weiter. Ob die begrenzten Workerziele und Produktionspläne der KI ihre zusätzlichen Startmittel in sehr tiefen Runs ausreichend nutzen, bleibt offen. Erst nach erneuten menschlichen Runs weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.
 
 ## Permanenter Start-Aether
 

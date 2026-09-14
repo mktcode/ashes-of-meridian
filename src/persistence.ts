@@ -6,7 +6,7 @@
 function createMeridianPersistence(
   { getStorage, clamp, upgrades, benefits, battlefields, warn }: PersistenceDependencies
 ): MeridianPersistence {
-    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v1';
+    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v2';
     const memoryStore: Record<string, string> = {};
     const Store = {
       available: true,
@@ -78,14 +78,15 @@ function createMeridianPersistence(
     function loadExpedition(): MeridianExpedition | null {
       try {
         const p = JSON.parse(Store.get(EXPEDITION_KEY) || 'null');
-        if (!p || p.version !== 1 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
+        if (!p || p.version !== 2 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
           !p.encounter || !Number.isInteger(p.encounter.enemy) || p.encounter.enemy < 0 || p.encounter.enemy > 2 ||
           !Object.hasOwn(battlefields, p.encounter.map)) return null;
         const normalized: MeridianExpedition = {
-          version: 1,
+          version: 2,
           faction: p.faction,
           depth: clamp(Math.floor(Number(p.depth) || 0), 0, 999999),
           benefits: {},
+          enemyBenefits: {},
           encounter: {
             enemy: p.encounter.enemy,
             map: p.encounter.map,
@@ -93,11 +94,12 @@ function createMeridianPersistence(
           },
           offers: []
         };
-        for (const key of Object.keys(benefits)) {
-          const max = benefits[key].max ?? 999999;
-          const count = clamp(Math.floor(Number(p.benefits?.[key]) || 0), 0, max);
-          if (count) normalized.benefits[key] = count;
-        }
+        for (const side of ['benefits', 'enemyBenefits'] as const)
+          for (const key of Object.keys(benefits)) {
+            const max = benefits[key].max ?? 999999;
+            const count = clamp(Math.floor(Number(p[side]?.[key]) || 0), 0, max);
+            if (count) normalized[side][key] = count;
+          }
         if (Array.isArray(p.offers)) normalized.offers = [...new Set<unknown>(p.offers)]
           .filter((key): key is string => typeof key === 'string' && Object.hasOwn(benefits, key) &&
             (benefits[key].max === undefined || (normalized.benefits[key] || 0) < benefits[key].max))

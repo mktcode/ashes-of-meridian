@@ -126,10 +126,11 @@ interface ExpeditionEncounter {
 }
 
 interface MeridianExpedition {
-  version: 1;
+  version: 2;
   faction: FactionId;
   depth: number;
   benefits: Record<string, number>;
+  enemyBenefits: Record<string, number>;
   encounter: ExpeditionEncounter;
   offers: string[];
 }
@@ -290,6 +291,7 @@ interface BattleOptions {
   map?: string;
   seed?: number;
   benefits?: Record<string, number>;
+  enemyBenefits?: Record<string, number>;
 }
 
 interface RunStats {
@@ -335,6 +337,7 @@ interface RunTriggers extends Record<string, number | boolean | undefined> {
   baseAlert?: number;
   solar?: number;
   fieldWorkshop?: boolean;
+  enemyFieldWorkshop?: boolean;
 }
 
 interface AIContact extends Position {
@@ -375,6 +378,7 @@ interface RunState {
   map: BattlefieldId;
   meta: Record<string, number>;
   benefits: Record<string, number>;
+  enemyBenefits: Record<string, number>;
   time: number;
   teams: [TeamState, TeamState];
   nextId: number;

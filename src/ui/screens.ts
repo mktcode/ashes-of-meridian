@@ -23,8 +23,10 @@
       encounterBriefing(this: MeridianUI) {
         if (!this.expedition?.encounter) return '';
         const { enemy, map } = this.expedition.encounter, faction = FACTIONS[enemy],
-          stage = aiRulesFor(enemy, this.expedition.depth).stage + 1;
-        return `<p class="battle-note">NEXT · ${esc(faction.short)} · ${esc(BATTLEFIELDS[map].name)} · PRESSURE ${stage}/5<br><b>${esc(faction.doctrine.name)}</b> — ${esc(faction.doctrine.desc)}</p>`;
+          stage = aiRulesFor(enemy, this.expedition.depth).stage + 1,
+          perks = Object.entries(this.expedition.enemyBenefits).filter(([, count]) => count > 0)
+            .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · ');
+        return `<p class="battle-note">NEXT · ${esc(faction.short)} · ${esc(BATTLEFIELDS[map].name)} · PRESSURE ${stage}/5<br><b>${esc(faction.doctrine.name)}</b> — ${esc(faction.doctrine.desc)}<br>ENEMY BENEFITS · ${perks || 'NONE'}</p>`;
       },
       showExpeditionBenefits(this: MeridianUI) {
         if (!this.expedition) return;
@@ -69,21 +71,12 @@
         };
       },
       createBenefitOffers(this: MeridianUI, expedition: MeridianExpedition) {
-        const available = contentKeys(EXPEDITION_BENEFITS).filter(key => {
-          const max = expeditionBenefit(key)!.max;
-          return max === undefined || (expedition.benefits[key] || 0) < max;
-        });
-        const random = seeded(expedition.encounter.seed + expedition.depth * 7919);
-        for (let i = available.length - 1; i > 0; i--) {
-          const j = Math.floor(random() * (i + 1));
-          [available[i], available[j]] = [available[j], available[i]];
-        }
-        return available.slice(0, 3);
+        return expeditionBenefitOffers(expedition.benefits, seeded(expedition.encounter.seed + expedition.depth * 7919));
       },
       startBattle(this: MeridianUI) {
         const faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : FACTION_ID.FIRST;
         this.battleFaction = faction;
-        this.expedition = { version: 1, faction, depth: 0, benefits: {}, encounter: this.createEncounter(), offers: [] };
+        this.expedition = { version: 2, faction, depth: 0, benefits: {}, enemyBenefits: {}, encounter: this.createEncounter(), offers: [] };
         this.persistence.saveExpedition(this.expedition);
         this.startExpeditionBattle();
       },
@@ -91,7 +84,7 @@
         if (!this.expedition) return;
         this.audio.unlock();
         this.game.start({ faction: this.expedition.faction, ...this.expedition.encounter,
-          benefits: this.expedition.benefits, depth: this.expedition.depth });
+          benefits: this.expedition.benefits, enemyBenefits: this.expedition.enemyBenefits, depth: this.expedition.depth });
       },
       continueExpedition(this: MeridianUI) {
         if (!this.expedition) return this.showBattle();

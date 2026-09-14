@@ -2,14 +2,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
-const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v1';
+const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v2';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
   version: 1, expeditionDepth: 0, aether: 0, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false }
 };
 const benefitRules = {
-  supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }
+  supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }, fieldWorkshop: { max: 1 }
 };
 
 function setup(data = new Map(), rules = {}) {
@@ -35,8 +35,9 @@ function setup(data = new Map(), rules = {}) {
 }
 
 const expedition = {
-  version: 1, faction: 1, depth: 8,
+  version: 2, faction: 1, depth: 8,
   benefits: { supplyCrate: 2, commanderMandate: 1 },
+  enemyBenefits: { pioneerSquad: 2, fieldWorkshop: 1 },
   encounter: { enemy: 2, map: 'desert', seed: 1409 },
   offers: ['pioneerSquad', 'aetherAllocation']
 };
@@ -50,6 +51,16 @@ test('profile defaults and normalization retain only permanent expedition progre
   assert.deepEqual(json(h.service.loadProfile()), { ...defaults, expeditionDepth: 25, aether: 120,
     upgrades: { startingAlloy: 0, startingWorkers: 5, aetherEvacuation: 0 },
     settings: { ...defaults.settings, volume: 1, quality: 0 } });
+});
+
+test('the new expedition format resets old runs without migrating or changing the permanent profile', () => {
+  const h=setup(), profile={...defaults,expeditionDepth:21,aether:432,upgrades:{startingAlloy:3}};
+  h.service.saveProfile(profile);
+  h.data.set('meridian.expedition.v1',JSON.stringify({...expedition,version:1,depth:21}));
+  const before=JSON.stringify(h.service.loadProfile());
+  assert.equal(h.service.loadExpedition(),null);
+  assert.equal(JSON.stringify(h.service.loadProfile()),before);
+  assert.ok(!h.trace.some(([op,key])=>op==='get'&&key==='meridian.expedition.v1'));
 });
 
 test('profile and expedition use separate local keys and survive service recreation', () => {
@@ -71,18 +82,20 @@ test('profile and expedition use separate local keys and survive service recreat
 
 test('expedition normalization rejects invalid encounters and bounds known benefits and offers', () => {
   const h = setup();
-  for (const invalid of [null, {}, { ...expedition, version: 2 },
+  for (const invalid of [null, {}, { ...expedition, version: 1 },
     { ...expedition, faction: 3 }, { ...expedition, encounter: { enemy: 0, map: 'missing', seed: 1 } }]) {
     h.data.set(EXPEDITION, JSON.stringify(invalid));
     assert.equal(h.service.loadExpedition(), null);
   }
   h.data.set(EXPEDITION, JSON.stringify({ ...expedition, depth: '9.8',
     benefits: { supplyCrate: '3.9', pioneerSquad: 99, commanderMandate: 4, unknown: 7 },
+    enemyBenefits: { supplyCrate: -3, pioneerSquad: 99, commanderMandate: 2.9, unknown: 7 },
     offers: ['commanderMandate', 'aetherAllocation', 'aetherAllocation', 'unknown', 'supplyCrate', 'pioneerSquad'],
     encounter: { enemy: 0, map: 'mothership', seed: -8 } }));
   assert.deepEqual(json(h.service.loadExpedition()), {
-    version: 1, faction: 1, depth: 9,
+    version: 2, faction: 1, depth: 9,
     benefits: { supplyCrate: 3, pioneerSquad: 5, commanderMandate: 1 },
+    enemyBenefits: { pioneerSquad: 5, commanderMandate: 1 },
     encounter: { enemy: 0, map: 'mothership', seed: 1 },
     offers: ['aetherAllocation', 'supplyCrate']
   });

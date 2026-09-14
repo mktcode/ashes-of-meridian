@@ -302,8 +302,9 @@ const STARTING_ALLOY = [250, 300, 350, 400, 450, 500] as const;
 const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
 const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
 
-const COMMAND_ENERGY = Object.freeze({ start: 100, max: 200, regeneration: .8 });
-const EXPEDITION_EFFECTS = Object.freeze({ alloy: 100, aether: 50, surveyRadius: 22, workshopSpeed: .5, energy: 50 });
+const COMMAND_ENERGY = Object.freeze({ start: 25, max: 200, regeneration: .8 });
+const ABILITY_RULES = Object.freeze({ orbitalBuilding: 'factory' as const, reinforcementRange: 20 });
+const EXPEDITION_EFFECTS = Object.freeze({ alloy: 50, aether: 50, surveyRadius: 22, workshopSpeed: .5, energy: 15 });
 const FLEET_EFFECTS = Object.freeze({ constructionSpeed: .05, supply: 2, repairDiscount: .05 });
 const fleetLevels = (step: number) => Array.from({ length: 6 }, (_, level) => level * step);
 
@@ -345,12 +346,42 @@ const EXPEDITION_BENEFITS = {
   commandCapacitor: {
     name: 'Command capacitor',
     icon: 'energy',
-    desc: `Adds ${EXPEDITION_EFFECTS.energy} starting command energy per stack, up to the energy limit of ${COMMAND_ENERGY.max}.`,
+    desc: `Adds ${EXPEDITION_EFFECTS.energy} starting command energy per stack. Base starting energy is ${COMMAND_ENERGY.start}.`,
     max: 2
   }
 } as const;
 
 type ExpeditionBenefit = keyof typeof EXPEDITION_BENEFITS;
+
+function normalizedBenefits(input: Record<string, number> = {}): Record<string, number> {
+  return Object.fromEntries(contentKeys(EXPEDITION_BENEFITS).map(key =>
+    [key, clamp(Math.floor(Number(input?.[key]) || 0), 0, expeditionBenefit(key)!.max ?? 999999)])
+    .filter(([, value]) => Number(value) > 0));
+}
+
+function expeditionBenefitOffers(benefits: Record<string, number>, random: () => number): ExpeditionBenefit[] {
+  const available = contentKeys(EXPEDITION_BENEFITS).filter(key =>
+    (benefits[key] || 0) < (expeditionBenefit(key)!.max ?? Infinity));
+  for (let i = available.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [available[i], available[j]] = [available[j], available[i]];
+  }
+  return available.slice(0, 3);
+}
+
+// Shared pool and stack limits, not faction-exclusive or stronger enemy benefits.
+const ENEMY_BENEFIT_PREFERENCES: Record<FactionId, Partial<Record<ExpeditionBenefit, number>>> = {
+  0: { fieldWorkshop: 4, supplyCrate: 3, commanderMandate: 2 },
+  1: { pioneerSquad: 4, supplyCrate: 3, fieldWorkshop: 2 },
+  2: { commandCapacitor: 4, aetherAllocation: 3, commanderMandate: 2 }
+};
+function chooseEnemyBenefit(faction: FactionId, benefits: Record<string, number>, seed: number, depth: number): ExpeditionBenefit | undefined {
+  // Only checkpoint advancement draws here; never rendering or the simulation RNG.
+  const random = seeded(seed ^ 0x454e454d ^ depth), offers = expeditionBenefitOffers(benefits, random),
+    weights = offers.map(key => ENEMY_BENEFIT_PREFERENCES[faction][key] ?? 1);
+  let draw = random() * weights.reduce((sum, weight) => sum + weight, 0);
+  return offers.find((_, i) => (draw -= weights[i]) < 0);
+}
 
 const META = {
   startingAlloy: {

@@ -53,25 +53,21 @@
             (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
               [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
           ),
-          suppliedBenefits = opts.benefits || {},
-          benefits = Object.fromEntries(
-            (Object.keys(EXPEDITION_BENEFITS) as ExpeditionBenefit[]).map(key =>
-              [key, clamp(Math.floor(Number(suppliedBenefits[key]) || 0), 0,
-                'max' in EXPEDITION_BENEFITS[key] ? Number(EXPEDITION_BENEFITS[key].max) : 999999)])
-              .filter(([, value]) => Number(value) > 0)
-          ) as Record<string, number>,
+          benefits = normalizedBenefits(opts.benefits), enemyBenefits = normalizedBenefits(opts.enemyBenefits),
           seed = opts.seed || Math.floor(Math.random() * 1e8),
           playerAlloy = STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy;
         this.world = new Battlefield(seed, map);
         this.world.startSites = battlefieldStartSites(this.world);
         const [playerStart, enemyStart] = this.startingPositions(seed);
         this.s = {
-          seed, faction, enemy, map, meta, benefits,
+          seed, faction, enemy, map, meta, benefits, enemyBenefits,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
           time: 0,
-          teams: [playerAlloy, STARTING_ALLOY[0]].map((alloy, team) => ({
-            alloy, gas: team === 0 ? (benefits.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether : 0,
-            energy: Math.min(COMMAND_ENERGY.max, COMMAND_ENERGY.start + (team === 0 ? (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy : 0)), abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+          teams: [benefits, enemyBenefits].map((perks, team) => ({
+            alloy: team === 0 ? playerAlloy : STARTING_ALLOY[0] + (perks.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy,
+            gas: (perks.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
+            energy: COMMAND_ENERGY.start + (perks.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy,
+            abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
           })) as [TeamState, TeamState],
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
@@ -114,18 +110,23 @@
           }
         // Add bonus units only after the original layout and enemy RNG draws.
         const startingWorkers = (meta.startingWorkers || 0) + (benefits.pioneerSquad || 0);
-        for (let i = 0; i < startingWorkers; i++)
-          if (!this.spawnUnit('worker', playerStart.x - 7, playerStart.z - 4 + i * 2, 0, faction))
-            throw new Error('No free space for starting workers.');
-        if (benefits.commanderMandate &&
-          !this.spawnUnit('hero', playerStart.x - 9, playerStart.z + 7, 0, faction))
-          throw new Error('No free space for starting commander.');
+        for (const team of [0, 1] as const) {
+          const perks = this.benefitsFor(team), home = team === 0 ? playerStart : enemyStart,
+            workers = team === 0 ? startingWorkers : (perks.pioneerSquad || 0);
+          for (let i = 0; i < workers; i++)
+            if (!this.spawnUnit('worker', home.x - 7, home.z - 4 + i * 2, team, this.factionFor(team)))
+              throw new Error('No free space for starting workers.');
+          if (perks.commanderMandate &&
+            !this.spawnUnit('hero', home.x - 9, home.z + 7, team, this.factionFor(team)))
+            throw new Error('No free space for starting commander.');
+        }
         this.rehash();
         this.world.reveal(s.entities);
-        if (benefits.surveyDrones) {
-          const site = layout.resourceSites.filter(p => !this.world!.explored[this.world!.idx(p.x, p.z)])
-            .sort((a, b) => distance(a, playerStart) - distance(b, playerStart))[0];
-          if (site) this.world.explore(0, site, EXPEDITION_EFFECTS.surveyRadius);
+        for (const team of [0, 1] as const) if (this.benefitsFor(team).surveyDrones) {
+          const home = team === 0 ? playerStart : enemyStart,
+            site = layout.resourceSites.filter(p => !this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
+              .sort((a, b) => distance(a, home) - distance(b, home))[0];
+          if (site) this.world.explore(team, site, EXPEDITION_EFFECTS.surveyRadius);
         }
         this.enableAI(1);
         this.emit('start', {});
@@ -133,6 +134,9 @@
           ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
           : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then destroy the enemy command center.');
         return s;
+      },
+      benefitsFor(this: MeridianGame, team: PlayerTeam): Record<string, number> {
+        return team === 0 ? this.s!.benefits : this.s!.enemyBenefits;
       },
       startingPositions(this: MeridianGame, seed: number): [Position, Position] {
         // Separate stream: replayable corner assignment never shifts terrain/resources/effects RNG.

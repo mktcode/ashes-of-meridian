@@ -169,10 +169,21 @@
         let done = !this.alive(e => e.team === 1 && e.type === 'hq').length;
         return [{ text: 'Destroy the enemy base', current: done ? 1 : 0, max: 1, sub: '', done }];
       },
+      abilityRequirement(this: MeridianGame, kind: AbilityType, team: PlayerTeam = 0): string | null {
+        if (kind === 'orbital' && !this.alive(e => e.team === team && e.kind === 'building' &&
+          e.type === ABILITY_RULES.orbitalBuilding && e.progress >= 1).length)
+          return 'Requires a completed ' + buildingName(ABILITY_RULES.orbitalBuilding, this.factionFor(team)) + '.';
+        return null;
+      },
       ability(this: MeridianGame, kind: AbilityType, p: Position, team: PlayerTeam = 0) {
         let s = this.s!, account = this.account(team), faction = this.factionFor(team),
           d = ABILITIES[kind];
         if (!d) return false;
+        const requirement = this.abilityRequirement(kind, team);
+        if (requirement) {
+          this.notify(team, 'toast', requirement);
+          return false;
+        }
         if (account.abilities[kind] > s.time) {
           this.notify(team,
             'toast',
@@ -186,6 +197,16 @@
         }
         if (kind !== 'scan' && !this.world!.sight[team].explored[this.world!.idx(p.x, p.z)]) {
           this.notify(team, 'toast', 'Scout or scan this location first.');
+          return false;
+        }
+        if (kind === 'orbital' && !this.world!.sight[team].visible[this.world!.idx(p.x, p.z)]) {
+          this.notify(team, 'toast', 'Orbital strike requires current vision at the target.');
+          return false;
+        }
+        if (kind === 'drop' && !this.alive(e => e.team === team &&
+          (e.kind === 'unit' || (e.kind === 'building' && e.progress >= 1)) &&
+          distance(e, p) <= ABILITY_RULES.reinforcementRange).length) {
+          this.notify(team, 'toast', `Reinforcements require own troops or a completed structure within ${ABILITY_RULES.reinforcementRange} meters.`);
           return false;
         }
         if (kind === 'drop' && this.supply(team) + 8 > this.cap(team)) {
