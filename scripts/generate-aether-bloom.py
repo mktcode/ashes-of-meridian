@@ -2,12 +2,13 @@
 """Aether Bloom: bright, guitar-free electronic listening sketch.
 
 Requires Python 3 and local FFmpeg. It reads no recordings or game assets and
-writes only music-drafts/05-aether-bloom.mp3.
+writes one selected Aether Bloom draft under music-drafts/.
 """
 from array import array
 from functools import lru_cache
 from math import exp, pi, sin, sqrt, tanh
 from pathlib import Path
+import argparse
 import json
 import runpy
 import sys
@@ -74,6 +75,20 @@ def bell(midi, length=.52):
 
 
 @lru_cache(maxsize=128)
+def glow(midi, length=.52):
+    """Soft sine pluck with a rounded attack and almost no metallic overtones."""
+    hz = frequency(midi)
+    data = array('f')
+    for i in range(round(length * SR)):
+        time = i / SR
+        phase = TAU * hz * time
+        body = sin(phase) + .09 * sin(phase * 2) + .025 * sin(phase * 3)
+        envelope = min(1, time / .024, (length - time) / .10) * exp(-time * 3.1)
+        data.append(tanh(body * .92) * envelope)
+    return data
+
+
+@lru_cache(maxsize=128)
 def keys(midi, length=.34):
     """Rounded electric-key click; deliberately unlike the draft guitars."""
     hz = frequency(midi)
@@ -103,7 +118,7 @@ def bass_note(midi, length=.42):
     return data
 
 
-def arrangement():
+def arrangement(lead_sound=bell, lead_level=1):
     mix = Mix()
     # Two bars per chord make the D-Lydian progression easy to follow.
     harmony = (
@@ -143,15 +158,18 @@ def arrangement():
             for note, pan in zip(chord, (-.25, 0, .25)):
                 put('keys', keys(note), bar, step, .105 if intro else .13, pan)
 
-        # Four compact statements replace the previous near-continuous chimes.
+        # Four compact lead statements; variants share notes and placement.
         if bar in lead_bars:
             for step, note in lead_phrases[lead_bars.index(bar)]:
-                put('bell', bell(note), bar, step, .135, -.14 if step in (0, 8) else .14)
+                put('lead', lead_sound(note), bar, step, .135 * lead_level,
+                    -.14 if step in (0, 8) else .14)
         elif intro and bar in (1, 3):
-            put('bell', bell(78 if bar == 1 else 80, .62), bar, 8, .105, .12)
+            put('lead', lead_sound(78 if bar == 1 else 80, .62), bar, 8,
+                .105 * lead_level, .12)
         elif bar == 30:
             for step, note in ((0, 76), (8, 78), (12, 81)):
-                put('bell', bell(note, .62), bar, step, .10, (step - 6) / 24)
+                put('lead', lead_sound(note, .62), bar, step, .10 * lead_level,
+                    (step - 6) / 24)
 
         if rhythmic:
             # Kick, snare, hats and bass now share an unambiguous eighth grid.
@@ -174,19 +192,30 @@ def arrangement():
                 put('bass', bass_note(root + interval), bar, step, .255)
 
     # A restrained final tone resolves with the chord rather than another high peal.
-    put('bell', bell(78, 1.25), BARS, 0, .10, .10)
-    bell_count = sum(part == 'bell' for part, _, _ in events)
-    assert bell_count <= 22
+    put('lead', lead_sound(78, 1.25), BARS, 0, .10 * lead_level, .10)
+    lead_count = sum(part == 'lead' for part, _, _ in events)
+    assert lead_count == 22
     assert not any(part == 'guitar' for part, _, _ in events)
     assert all(step % 2 == 0 for _, _, step in events)
     return mix, events
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--soft', action='store_true',
+                        help='Render the softer, non-metallic lead variant')
+    args = parser.parse_args()
+    slug = '05-aether-bloom-soft-glow' if args.soft else '05-aether-bloom'
+    title = 'Aether Bloom - Soft Glow' if args.soft else 'Aether Bloom'
+    lead_sound = glow if args.soft else bell
+    lead_level = .72 if args.soft else 1
+    comment = ('Original bright electronic sketch; soft sine lead, keys and no guitar'
+               if args.soft else
+               'Original bright electronic sketch; glass FM, keys and no guitar')
     OUT.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='meridian-aether-bloom-') as directory:
         wav = Path(directory) / 'aether-bloom.wav'
-        mix, events = arrangement()
+        mix, events = arrangement(lead_sound, lead_level)
         mix.write(wav)
         first = run(['-v', 'info', '-i', str(wav), '-af',
                      'loudnorm=I=-15:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'])
@@ -196,14 +225,13 @@ def main():
                          f"measured_I={measured['input_i']}:measured_TP={measured['input_tp']}:"
                          f"measured_LRA={measured['input_lra']}:measured_thresh={measured['input_thresh']}:"
                          f"offset={measured['target_offset']}")
-        output = OUT / '05-aether-bloom.mp3'
+        output = OUT / f'{slug}.mp3'
         run(['-v', 'error', '-y', '-i', str(wav), '-af', normalization, '-ar', '44100',
-             '-c:a', 'libmp3lame', '-b:a', '224k', '-metadata', 'title=Aether Bloom',
+             '-c:a', 'libmp3lame', '-b:a', '224k', '-metadata', f'title={title}',
              '-metadata', 'artist=Ashes of Meridian - listening drafts', '-metadata', 'TBPM=122',
-             '-metadata', 'comment=Original bright electronic sketch; glass FM, keys and no guitar',
-             str(output)])
+             '-metadata', f'comment={comment}', str(output)])
         print(f'{output.relative_to(OUT.parent)}: {DURATION:.2f} s, {BPM} BPM; '
-              f'{len(events)} eighth-grid events, {sum(e[0] == "bell" for e in events)} bell notes, no guitar',
+              f'{len(events)} eighth-grid events, {sum(e[0] == "lead" for e in events)} lead notes, no guitar',
               flush=True)
 
 
