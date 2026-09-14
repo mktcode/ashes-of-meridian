@@ -1,47 +1,84 @@
-/* Fraktion 1 / building / depot. Canopy: overlapping horizontal storage leaves, not a new tower silhouette. */
+/* Verdant Choir / Living canopy: a terraced honeycomb nest in a fleshy leaf husk.
+ * Open cells have real recessed floors; two cells are sealed with living membranes.
+ * Static geometry inside the size-2.3 footprint; only the shared light pulse animates. */
 'use strict';
 (() => {
+  const cells = [
+    { x:0, z:0, radius:.74, height:1.55, sealed:false },
+    { x:-1.05, z:-.61, radius:.68, height:1.96, sealed:true },
+    { x:0, z:-1.22, radius:.71, height:2.20, sealed:false },
+    { x:1.05, z:-.61, radius:.65, height:1.73, sealed:false },
+    { x:1.05, z:.61, radius:.68, height:1.02, sealed:true },
+    { x:0, z:1.22, radius:.67, height:.90, sealed:false },
+    { x:-1.05, z:.61, radius:.70, height:1.22, sealed:false }
+  ];
+
+  // Bevel each hexagon corner rather than using cylindrical pipes or razor-sharp tiles.
+  function ring(cell: typeof cells[number], radius: number, height: number, ripple = 0) {
+    const points: number[][] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = i*Math.PI/3, b = (i+1)*Math.PI/3;
+      for (const t of [.14,.86]) points.push([
+        cell.x + ((1-t)*Math.cos(a)+t*Math.cos(b))*cell.radius*radius,
+        height + Math.sin(i*1.7+cell.x)*ripple,
+        cell.z + ((1-t)*Math.sin(a)+t*Math.sin(b))*cell.radius*radius
+      ]);
+    }
+    return points;
+  }
+
   function hull() {
-    const out: number[]=[], s=2.3, h=2.8, cone=geom.cylinder(7,0), collar=geom.cylinder(8), octa=geom.octa(),
-      dark=[.48,.58,.58], edge=[1.2,1.22,1.12];
-    const part=(mesh: number[],x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[],ry=0,rx=0,rz=0)=>ModelMesh.bake(out,mesh,{x,y,z,sx,sy,sz,tint,ry,rx,rz});
-    const shell=(x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[])=>ModelMesh.lobedShell(out,{x,y,z,sx,sy,sz,lobes:3,segments:12,rings:6,tint});
-    ModelMesh.lobedShell(out,{x:0,y:h*.44,z:0,sx:s*.8,sy:h*.57,sz:s*.78});
-    // Six old root positions and lean angles, now with growth rings baked once.
-    const root: number[]=[];
-    ModelMesh.bake(root,cone,{sx:.5,sy:2,sz:.5,tint:dark});
-    for(const y of [-.6,-.05,.45]) ModelMesh.bake(root,collar,{y,sx:(1-y)*.25+.035,sy:.075,sz:(1-y)*.25+.035,tint:edge});
-    for(let i=0;i<6;i++) {
-      const a=i*Math.PI/3;
-      ModelMesh.bake(out,root,{x:Math.sin(a)*s*.8,y:.7,z:Math.cos(a)*s*.8,ry:a,rx:.25,rz:.42});
+    const out: number[] = [];
+    for (const cell of cells) {
+      const floor = Math.max(.34,cell.height-.67),
+        rings = [ring(cell,.86,.25), ring(cell,1.06,cell.height*.55),
+          ring(cell,1.02,cell.height-.14,.025), ring(cell,.90,cell.height,.035),
+          ring(cell,.66,cell.height-.025,.025), ring(cell,.62,floor)],
+        shades = [[.88,1,.78], [1.07,1.16,.86], [1.32,1.30,.96],
+          [1.40,1.35,1.01], [.48,.62,.51]];
+      for (let j = 0; j < rings.length-1; j++) for (let i = 0; i < 12; i++) {
+        const k = (i+1)%12;
+        geom.tri(out,rings[j][i],rings[j+1][i],rings[j+1][k],shades[j]);
+        geom.tri(out,rings[j][i],rings[j+1][k],rings[j][k],shades[j]);
+      }
+      for (let i = 0; i < 12; i++) {
+        const k = (i+1)%12;
+        geom.tri(out,[cell.x,floor,cell.z],rings[5][k],rings[5][i],[.38,.48,.40]);
+        geom.tri(out,[cell.x,.25,cell.z],rings[0][i],rings[0][k],[.63,.72,.55]);
+      }
     }
-    // Six segmented meridian ribs sit just above the shell, like overlapping chitin seams.
-    for(let i=0;i<6;i++) for(let j=0;j<6;j++) {
-      const a=(i+.5)*Math.PI/3;
-      const point= (b: number) =>{const r=Math.sin(b)*(1-.055*Math.sin(b))+.04;
-        return [Math.cos(a)*s*.8*r,h*.44+Math.cos(b)*h*.57,Math.sin(a)*s*.78*r];};
-      const [x,y,z]=point(.62+j/6*1.82),[u,v,w]=point(.62+(j+1)/6*1.82),dx=u-x,dy=v-y,dz=w-z;
-      part(octa,(x+u)/2,(y+v)/2,(z+w)/2,.055,Math.hypot(dx,dy,dz)/2+.012,.055,edge,Math.atan2(dx,dz),Math.atan2(Math.hypot(dx,dz),dy));
-    }
-    for(const side of [-1,1]) {
-      shell(side*s*.65,h*.55,0,.65,.48,1.12,edge);
-      part(octa,side*s*.67,h*.75,0,.08,.07,1.0,dark);
-    }
-    shell(0,h*.48,s*.72,.85,.36,.43,edge);
+    // Broad, overlapping sepals bind the wax cells into a plant nest, not seven metal tubes.
+    const leaf: number[] = [];
+    ModelMesh.lobedShell(leaf,{sx:.36,sy:.16,sz:.86,lobes:3,segments:12,rings:5,tint:[.73,1.04,.69]});
+    for (const [x,y,z,yaw,lean] of [[-1.51,.48,0,-.22,.24], [1.47,.46,-.25,.32,-.20],
+      [.38,.42,1.51,1.72,.17], [-.48,.48,-1.48,1.22,-.23]])
+      ModelMesh.bake(out,leaf,{x,y,z,ry:yaw,rx:lean});
     return out;
   }
-  registerEntityModel({
-    id:'faction-1/building/depot', meshes:{faction1DepotHull:hull},
-    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
-      const s=e.size||3, h=2.8;
-      p('faction1DepotHull',0,0,0,s/2.3,1,s/2.3,metal);
-      p('octa',0,h*.77,0,s*.5,h*.65,s*.5,dark,.3);
-      for(let i=0;i<6;i++) {
-        const a=i*Math.PI/3;
-        p('sphere',Math.sin(a)*s*.8*.8,h*.63,Math.cos(a)*s*.8*.8,.45,.8,.45,team,a,0,.3,.28);
+
+  function contents(sealed: boolean) {
+    const out: number[] = [];
+    for (const cell of cells.filter(c => c.sealed === sealed)) {
+      const y = sealed ? cell.height-.015 : Math.max(.34,cell.height-.67)+.035,
+        rim = ring(cell,sealed ? .68 : .40,y), top = y+(sealed ? .12 : .035);
+      for (let i = 0; i < 12; i++) {
+        const k = (i+1)%12;
+        geom.tri(out,[cell.x,top,cell.z],rim[k],rim[i],[.86,1,.83]);
+        geom.tri(out,[cell.x,y-.035,cell.z],rim[i],rim[k],[.65,.83,.70]);
       }
-      // Preserve the original phase, bob, colors and frequency; drawing consumes no RNG.
-      p('octa',0,h+Math.sin(time+e.id)*.14,0,s*.3,1.3,s*.3,accent,time*.22,0,0,.85);
+    }
+    return out;
+  }
+
+  registerEntityModel({
+    id:'faction-1/building/depot',
+    meshes:{faction1DepotHull:hull, faction1DepotMembranes:() => contents(true),
+      faction1DepotStores:() => contents(false)},
+    render({entity:e,part:p,metal,team,accent}) {
+      const scale = (e.size || 2.3)/2.3;
+      p('faction1DepotHull',0,0,0,scale,1,scale,metal);
+      p('faction1DepotMembranes',0,0,0,scale,1,scale,team,0,0,0,.32);
+      p('faction1DepotStores',0,0,0,scale,1,scale,accent,0,0,0,.30);
     }
   });
 })();

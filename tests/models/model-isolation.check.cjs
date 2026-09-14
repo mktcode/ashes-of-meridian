@@ -49,12 +49,13 @@ test('requested entity redesigns preserve every unrelated unit and building draw
       ];
     }
   });
-  // The nursery's new low, three-pod silhouette has independent geometry/assembly checks.
-  // Retain its old digest above; do not regenerate any unrelated reference.
-  for (const id of Object.keys(expected)) if (id.startsWith('faction-0/unit/') || id === 'faction-1/building/barracks') {
+  // The nursery and honeycomb canopy have independent geometry/assembly checks.
+  // Retain their old digests above; do not regenerate any unrelated reference.
+  for (const id of Object.keys(expected)) if (id.startsWith('faction-0/unit/') ||
+    ['faction-1/building/barracks','faction-1/building/depot'].includes(id)) {
     assert.notEqual(actual[id], expected[id], 'requested refinement has its own geometry/variant test');
     delete actual[id]; delete expected[id];
   }
-  assert.equal(Object.keys(actual).length, 34);
+  assert.equal(Object.keys(actual).length, 33);
   assert.deepEqual(actual, expected);
 });
