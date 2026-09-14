@@ -1,142 +1,230 @@
-/* Verdant Choir / Bloom queen: a rooted sovereign, not a mobile unit or a tower.
- * Four grasping limbs surround a heavy segmented abdomen; +Z stays open for workers.
- * Only the abdomen breathes and the two leaf-feelers sway. Nest, head and feet stay fixed. */
+/* Bloom queen: a pollen-fleeced, bumblebee-like sovereign cradled in FIVE broad petals.
+ * Rounded head, no neck, six tucked legs and veined leaf wings; no mound or mantis stance.
+ * All detailed surfaces are built once. Only the plump abdomen breathes and antennae sway. */
 'use strict';
 (() => {
-  const bark = [.64,.79,.60], leaf = [1.05,1.27,.87], armor = [.82,1.05,.83];
+  type Point = number[];
+  const moss = [.68,.90,.62], pollen = [1.50,1.36,.72], shade = [.44,.66,.51];
 
-  // Closed tapered sweeps for bent limbs, roots and fleshy leaves. The elliptical
-  // cross-section is local to the path: no negative scales or double-sided surfaces.
-  function growth(out: number[], path: number[][], tint: number[], flat = 1, sides = 8) {
+  // Area-weighted, crease-aware normals are local to this model. Pollen color bands
+  // stay crisp but their lighting is rounded; thin petal edges never smooth inside-out.
+  function soften(mesh: number[]) {
+    const shared = new Map<string,{area: Point; unit: Point}[]>(), keys: string[] = [], faces: Point[] = [];
+    for (let i = 0; i < mesh.length; i += 27) {
+      const a = mesh.slice(i,i+3), b = mesh.slice(i+9,i+12), c = mesh.slice(i+18,i+21),
+        area = V.cross(V.sub(b,a),V.sub(c,a)), unit = V.norm(area);
+      faces.push(unit);
+      for (const j of [i,i+9,i+18]) {
+        const key = mesh.slice(j,j+3).map(v => Math.round(v*1e6)).join(','), list = shared.get(key)||[];
+        list.push({area,unit}); shared.set(key,list); keys[j/9] = key;
+      }
+    }
+    for (let i = 0; i < mesh.length; i += 9) {
+      const face = faces[Math.floor(i/27)], sum = [0,0,0];
+      for (const other of shared.get(keys[i/9])!) if (V.dot(face,other.unit)>.15)
+        for (let k = 0; k < 3; k++) sum[k] += other.area[k];
+      const n = V.norm(sum);
+      for (let k = 0; k < 3; k++) mesh[i+3+k] = n[k];
+    }
+    return mesh;
+  }
+  function loft(out: number[], rings: Point[][], tint: number[] | ((j: number) => number[])) {
+    const color = (j: number) => typeof tint==='function'?tint(j):tint, n = rings[0].length;
+    for (let j = 0; j < rings.length-1; j++) for (let i = 0; i < n; i++) {
+      const k = (i+1)%n;
+      geom.tri(out,rings[j][i],rings[j][k],rings[j+1][k],color(j));
+      geom.tri(out,rings[j][i],rings[j+1][k],rings[j+1][i],color(j));
+    }
+    for (const j of [0,rings.length-1]) {
+      const center = rings[j].reduce((sum,p) => sum.map((v,k) => v+p[k]/n),[0,0,0]);
+      for (let i = 0; i < n; i++) {
+        const k = (i+1)%n;
+        geom.tri(out,center,rings[j][j===0?k:i],rings[j][j===0?i:k],color(j));
+      }
+    }
+  }
+  function tube(out: number[], path: Point[], tint: number[], sides = 6) {
+    let across = [1,0,0];
     const rings = path.map((p,i) => {
-      const prev = path[Math.max(0,i-1)], next = path[Math.min(path.length-1,i+1)],
-        tangent = V.norm(V.sub(next.slice(0,3),prev.slice(0,3))),
-        across = V.norm(V.cross(tangent,Math.abs(tangent[1]) > .9 ? [1,0,0] : [0,1,0])),
-        normal = V.cross(tangent,across);
+      const a = path[Math.max(0,i-1)], b = path[Math.min(path.length-1,i+1)],
+        tangent = V.norm(V.sub(b.slice(0,3),a.slice(0,3))), dot = V.dot(across,tangent);
+      // Transport the frame instead of flipping axes at a bend.
+      across = V.sub(across,tangent.map(v => v*dot));
+      if (Math.hypot(...across)<.01) across = V.cross(tangent,[0,0,1]);
+      across = V.norm(across);
+      const up = V.cross(tangent,across);
       return Array.from({length:sides},(_,j) => {
-        const a = j*Math.PI*2/sides;
-        return p.slice(0,3).map((v,k) => v+p[3]*(Math.cos(a)*across[k]+Math.sin(a)*normal[k]*flat));
+        const angle = j*Math.PI*2/sides;
+        return p.slice(0,3).map((v,k) => v+p[3]*(Math.cos(angle)*across[k]+Math.sin(angle)*up[k]));
       });
     });
-    for (let i = 0; i < rings.length-1; i++) for (let j = 0; j < sides; j++) {
-      const k = (j+1)%sides;
-      geom.tri(out,rings[i][j],rings[i][k],rings[i+1][k],tint);
-      geom.tri(out,rings[i][j],rings[i+1][k],rings[i+1][j],tint);
-    }
-    for (const i of [0,path.length-1]) for (let j = 0; j < sides; j++) {
-      const k = (j+1)%sides;
-      geom.tri(out,path[i].slice(0,3),rings[i][i===0?k:j],rings[i][i===0?j:k],tint);
+    loft(out,rings,tint);
+  }
+  function egg(out: number[], center: Point, size: Point, tint: number[] | ((j: number) => number[]),
+    segments = 24, rows = 12, yaw = 0) {
+    const [sx,sy,sz] = size, cs = Math.cos(yaw), sn = Math.sin(yaw);
+    const point = (i: number,j: number) => {
+      const a = i%segments*Math.PI*2/segments, b = j*Math.PI/rows,
+        r = j===0||j===rows?0:Math.sin(b), x = Math.cos(a)*r*sx, z = -Math.cos(b)*sz;
+      return [center[0]+x*cs+z*sn,center[1]+Math.sin(a)*r*sy,center[2]-x*sn+z*cs];
+    };
+    for (let j = 0; j < rows; j++) for (let i = 0; i < segments; i++) {
+      const a = point(i,j), b = point(i+1,j), c = point(i+1,j+1), d = point(i,j+1),
+        color = typeof tint==='function'?tint(j):tint;
+      if (j>0) geom.tri(out,a,b,c,color);
+      if (j<rows-1) geom.tri(out,a,c,d,color);
     }
   }
-  function shell(out: number[], x: number, y: number, z: number,
-    sx: number, sy: number, sz: number, tint: number[]) {
-    ModelMesh.lobedShell(out,{x,y,z,sx,sy,sz,lobes:3,segments:12,rings:5,tint});
+  function tuft(out: number[], p: Point, normal: Point, length: number, tint: number[]) {
+    // Bury the root of each tiny fleece tuft: no cactus spines or dark floating flecks.
+    p = p.map((v,k) => v-normal[k]*.035);
+    const across = V.norm(V.cross(normal,[0,0,1])), up = V.cross(normal,across),
+      tip = p.map((v,k) => v+normal[k]*length+(k===2?-.025:0)),
+      base = Array.from({length:3},(_,i) => p.map((v,k) => v+.035*(
+        Math.cos(i*Math.PI*2/3)*across[k]+Math.sin(i*Math.PI*2/3)*up[k])));
+    for (let i = 0; i < 3; i++) geom.tri(out,base[i],base[(i+1)%3],tip,tint);
+    geom.tri(out,base[2],base[1],base[0],tint);
   }
 
-  function nest() {
-    const out: number[] = [];
-    // An incomplete wreath, not another pedestal. The front apron stays low and open.
-    for (let i = 0; i < 9; i++) {
-      const a = .68+i*(Math.PI*2-1.36)/8, sn = Math.sin(a), cs = Math.cos(a);
-      growth(out,[[sn*2.4,.28,cs*2.4,.22],[sn*3.2,.48,cs*3.2,.28],
-        [sn*3.65,.28,cs*3.65,.17],[sn*3.95,.11,cs*3.95,.025]],bark,1,6);
+  const petalProfile = [[.52,.12,.38],[1.12,.60,.30],[1.90,1.05,.20],[2.72,1.36,.20],
+    [3.45,1.12,.34],[3.96,.59,.51],[4.20,.035,.61]];
+  function petalPoint(angle: number, r: number, u: number, y: number) {
+    return [Math.sin(angle)*r+Math.cos(angle)*u,y,Math.cos(angle)*r-Math.sin(angle)*u];
+  }
+  function flower() {
+    const out: number[] = [], cross = [[1,0],[.7,.08],[0,.13],[-.7,.08],
+      [-1,0],[-.65,-.07],[0,-.105],[.65,-.07]];
+    // Two samples per span retain broad rounded tips and visible notches between FIVE lobes.
+    const profile: Point[] = [];
+    for (let j = 0; j < petalProfile.length-1; j++) {
+      const a = petalProfile[Math.max(0,j-1)], b = petalProfile[j], c = petalProfile[j+1],
+        d = petalProfile[Math.min(petalProfile.length-1,j+2)];
+      profile.push(b,b.map((v,k) => (-a[k]+9*v+9*c[k]-d[k])/16));
     }
-    for (const a of [.90,1.65,2.45,3.25,4.1,4.85,5.42]) {
-      const sn = Math.sin(a), cs = Math.cos(a);
-      growth(out,[[sn*3.65,.23,cs*3.65,.09],[sn*3.35,.55,cs*3.35,.49],
-        [sn*3.05,1.04,cs*3.05,.55],[sn*2.68,1.48,cs*2.68,.32],
-        [sn*2.46,1.64,cs*2.46,.025]],leaf,.22);
+    profile.push(petalProfile[petalProfile.length-1]);
+    for (let i = 0; i < 5; i++) {
+      const angle = i*Math.PI*2/5;
+      const rings = profile.map(([r,w,y]) => cross.map(([u,h]) =>
+        petalPoint(angle,r,u*w,y+h*Math.min(1,w/.5))));
+      loft(out,rings,j => {
+        const t = j/(profile.length-1);
+        return [.66+.50*t,.46+.61*t,.68+.47*t];
+      });
+      // Veins follow the actual petal surface, rather than floating above its curves.
+      const surface = (r: number,u: number) => {
+        let j = 0;
+        while (j<profile.length-2 && profile[j+1][0]<r) j++;
+        const t = (r-profile[j][0])/(profile[j+1][0]-profile[j][0]),
+          w = profile[j][1]*(1-t)+profile[j+1][1]*t,
+          y = profile[j][2]*(1-t)+profile[j+1][2]*t, a = Math.abs(u),
+          top = (a<.7?.13-.05*a/.7:.08*(1-a)/.3)*Math.min(1,w/.5);
+        return petalPoint(angle,r,u*w,y+top+.013);
+      };
+      tube(out,petalProfile.slice(1,-1).map(([r]) => [...surface(r,0),.016]),[.58,.43,.64],4);
+      for (const j of [2,3,4]) for (const side of [-1,1]) {
+        const r = petalProfile[j][0];
+        tube(out,[[...surface(r-.28+side*.035,0),.013],[...surface(r,side*.43),.011],
+          [...surface(r+.16,side*.78),.005]],[.72,.55,.77],4);
+      }
     }
-    return out;
+    return soften(out);
   }
 
   function hull() {
     const out: number[] = [];
-    // Narrow upright thorax and a distinct head above the low, broad abdomen.
-    ModelMesh.lobedShell(out,{x:0,y:2.62,z:.62,sx:.82,sy:1.30,sz:.73,
-      lobes:4,segments:16,rings:7,tint:armor});
-    shell(out,0,4.02,1.20,.68,.60,.59,armor);
-    growth(out,[[0,3.68,1.65,.04],[0,4.06,1.77,.42],[0,4.40,1.53,.62],
-      [0,4.62,1.05,.37],[0,4.59,.79,.025]],leaf,.24);
-    for (const side of [-1,1]) {
-      // Two pairs of jointed, weight-bearing limbs; no walking/aiming mode.
-      growth(out,[[side*.64,3.12,.80,.27],[side*1.52,2.80,1.15,.24],
-        [side*2.43,1.85,1.48,.18],[side*2.65,.54,2.36,.08]],armor);
-      growth(out,[[side*1.22,2.04,-.70,.28],[side*2.36,2.05,-.85,.25],
-        [side*3.10,1.26,-1.55,.17],[side*3.13,.47,-2.30,.075]],armor);
-      for (const [x,y,z] of [[1.52,2.80,1.15],[2.43,1.85,1.48],[2.36,2.05,-.85]])
-        shell(out,side*x,y,z,.24,.28,.25,leaf);
-      for (const offset of [-.15,.15]) {
-        growth(out,[[side*2.65,.56,2.36,.095],[side*(2.83+offset),.40,2.61,.07],
-          [side*(2.93+offset),.27,2.72,.018]],bark,1,6);
-      }
-      growth(out,[[side*.28,3.90,1.66,.12],[side*.37,3.64,1.92,.11],
-        [side*.16,3.58,2.01,.02]],leaf,1,6);
-      // Folded shoulder bracts reinforce the plant silhouette without enclosing the neck.
-      growth(out,[[side*.52,2.20,.57,.08],[side*.96,2.69,.71,.39],
-        [side*.93,3.26,.57,.31],[side*.62,3.58,.52,.02]],leaf,.22);
+    // A small living calyx joins the petals UNDER the bee. No soil, disc, or detached nest stakes.
+    egg(out,[0,.55,-.12],[1.86,.44,1.66],moss,24,10);
+    egg(out,[0,2.02,.42],[1.38,1.18,1.20],pollen,28,14);
+    egg(out,[0,1.98,1.68],[1.00,.88,.84],[.82,1.03,.65],28,14);
+    // Six short folded legs cradle the body, never reaching past its flower.
+    for (const side of [-1,1]) for (const [z,x] of [[1.35,1.0],[.18,1.45],[-1.02,1.62]]) {
+      tube(out,[[side*x,1.43,z,.19],[side*(x+.38),1.05,z+.10,.22],
+        [side*(x+.34),.62,z+.37,.16],[side*(x+.12),.48,z+.55,.09]],shade,8);
+      egg(out,[side*(x+.12),.49,z+.55],[.21,.13,.28],moss,12,6);
     }
-    // Three attached crown leaves; the lateral feelers are separate moving parts.
-    for (const side of [-1,0,1]) growth(out,[[side*.30,4.35,.91,.05],
-      [side*.48,4.77,.74,.25],[side*.58,5.12,.55,.23],
-      [side*.64,side===0?5.56:5.27,.38,.02]],leaf,.22);
-    return out;
+    for (const side of [-1,1]) egg(out,[side*.18,1.55,2.40],[.20,.17,.17],pollen,16,8);
+    // A low pollen coronet, not the old triangular mask and tall mantis crest.
+    for (const [x,y] of [[-.30,2.68],[0,2.85],[.30,2.68]])
+      egg(out,[x,y,1.83],[.18,.16,.14],pollen,12,6);
+    // Short moss/pollen fleece catches light along the shoulders; no simulation RNG.
+    for (let j = 0; j < 6; j++) for (let i = 0; i < 10; i++) {
+      const a = (.09+i*.091)*Math.PI, b = (.23+j*.09)*Math.PI,
+        x = Math.cos(a)*Math.sin(b), y = Math.sin(a)*Math.sin(b), z = -Math.cos(b),
+        n = V.norm([x/1.38,y/1.18,z/1.20]);
+      tuft(out,[x*1.39,2.02+y*1.19,.42+z*1.21],n,.045+.022*Math.sin(i*2+j)**2,pollen);
+    }
+    return soften(out);
   }
-
   function abdomen() {
-    const out: number[] = [], profile = [[-2.10,.07],[-1.88,.48],[-1.52,.78],[-1.08,.94],
-      [-.56,1],[0,.96],[.48,.84],[.91,.63],[1.25,.30],[1.39,.06]], segments = 20;
-    const rings = profile.map(([z,r],j) => Array.from({length:segments},(_,i) => {
-      const a = i*Math.PI*2/segments, seam = j%2===0?.96:1;
-      return [Math.cos(a)*2.08*r*seam,1.06+Math.sin(a)*1.02*r*seam,z];
-    }));
-    for (let j = 0; j < rings.length-1; j++) for (let i = 0; i < segments; i++) {
-      const k = (i+1)%segments, tint = j%2===0 ? [.79,1.08,.76] : [1.12,1.26,.90];
-      geom.tri(out,rings[j][i],rings[j][k],rings[j+1][k],tint);
-      geom.tri(out,rings[j][i],rings[j+1][k],rings[j+1][i],tint);
+    const out: number[] = [], bands = (j: number) => (j>=3&&j<=5)||(j>=9&&j<=11)?pollen:shade;
+    egg(out,[0,1.42,0],[2.02,1.40,1.95],bands,32,16);
+    for (let j = 2; j < 14; j++) for (let i = 0; i < 9; i++) {
+      const a = (.06+i*.11)*Math.PI, b = (j+.35)*Math.PI/16,
+        x = Math.cos(a)*Math.sin(b), y = Math.sin(a)*Math.sin(b), z = -Math.cos(b);
+      tuft(out,[x*2.03,1.42+y*1.41,z*1.96],V.norm([x/2.02,y/1.40,z/1.95]),
+        .04+.022*Math.sin(i+j*2)**2,bands(j));
     }
-    for (const j of [0,profile.length-1]) for (let i = 0; i < segments; i++) {
-      const k = (i+1)%segments;
-      geom.tri(out,[0,1.06,profile[j][0]],rings[j][j===0?k:i],rings[j][j===0?i:k],armor);
-    }
-    return out;
+    return soften(out);
   }
 
-  function chambers() {
+  function wings() {
     const out: number[] = [];
-    for (const side of [-1,1]) for (const [z,x] of [[-1.06,1.88],[-.53,2.01],[.03,1.88]])
-      shell(out,side*x,1.18,z,.16,.32,.23,[.87,1,.86]);
-    return out;
+    for (const side of [-1,1]) {
+      const samples = Array.from({length:9},(_,j) => {
+        const t = j/8, w = .025+.57*Math.sin(Math.PI*t)**.8;
+        return {x:.78+1.36*t, y:2.64+.55*Math.sin(Math.PI*t)-.15*t, z:.50-2.37*t, w};
+      });
+      const point = (p: typeof samples[number], u: number, h: number) =>
+        [side*(p.x+u*p.w*.86),p.y+h,p.z+u*p.w*.51];
+      const rings = samples.map(p => Array.from({length:8},(_,i) => {
+        const a = i*Math.PI/4;
+        return point(p,Math.cos(a),Math.sin(a)*.055);
+      }).reverse());
+      if (side===-1) for (const r of rings) r.reverse();
+      loft(out,rings,[.89,1.08,.87]);
+      tube(out,samples.map(p => [...point(p,0,.065),.018]),[.47,.72,.49],4);
+      for (const j of [2,4,6]) for (const dir of [-1,1])
+        tube(out,[[...point(samples[j-1],0,.065),.013],
+          [...point(samples[j],dir*.54,.047),.011],
+          [...point(samples[j+1],dir*.78,.04),.005]],[.60,.84,.62],4);
+    }
+    return soften(out);
+  }
+  function eyes() {
+    const out: number[] = [];
+    for (const side of [-1,1]) egg(out,[side*.68,2.20,2.24],[.35,.43,.235],
+      [.90,1,.92],24,12,side*.32);
+    return soften(out);
   }
   function senses() {
     const out: number[] = [];
-    for (const side of [-1,1]) shell(out,side*.39,4.16,1.83,.22,.10,.11,[.90,1,.90]);
-    shell(out,0,2.97,1.33,.20,.32,.105,[.80,1,.85]);
-    return out;
+    for (const side of [-1,1]) {
+      egg(out,[side*.57,2.39,2.434],[.07,.095,.042],[1.2,1.25,1.16],12,6);
+      egg(out,[side*.82,2.09,2.438],[.035,.06,.025],[.69,1,.84],10,5);
+    }
+    return soften(out);
   }
-  function feeler() {
+  function antenna() {
     const out: number[] = [];
-    growth(out,[[0,0,0,.055],[.34,.25,-.02,.08],[.62,.57,-.13,.075],
-      [.76,.90,-.22,.025]],bark,1,6);
-    growth(out,[[.26,.22,-.02,.04],[.58,.52,-.12,.27],[.80,.88,-.24,.22],
-      [.75,1.08,-.35,.015]],leaf,.18);
-    return out;
+    tube(out,[[0,0,0,.065],[.08,.26,.035,.058],[.27,.48,.09,.049],[.36,.64,.12,.042]],shade,8);
+    egg(out,[.36,.66,.12],[.135,.17,.13],pollen,16,8);
+    return soften(out);
   }
 
   registerEntityModel({
     id:'faction-1/building/hq',
-    meshes:{faction1HqNest:nest, faction1HqHull:hull, faction1HqAbdomen:abdomen,
-      faction1HqChambers:chambers, faction1HqSenses:senses, faction1HqFeeler:feeler},
-    render({entity:e,time,part:p,metal,team,accent}) {
-      const scale = (e.size || 4.4)/4.4, phase = time*1.4+e.id*.61,
-        breath = 1+Math.sin(phase)*.018;
-      p('faction1HqNest',0,0,0,scale,1,scale,metal);
+    meshes:{faction1HqFlower:flower,faction1HqHull:hull,faction1HqAbdomen:abdomen,
+      faction1HqWings:wings,faction1HqEyes:eyes,faction1HqSenses:senses,faction1HqAntenna:antenna},
+    render({entity:e,time,part:p,metal,team,accent,surfaceColor}) {
+      const scale = (e.size||4.4)/4.4, phase = time*1.4+e.id*.61,
+        breath = 1+Math.sin(phase)*.014;
+      p('faction1HqFlower',0,0,0,scale,1,scale,surfaceColor(accent));
       p('faction1HqHull',0,0,0,scale,1,scale,metal);
-      // Breathing is anchored below the sac, not a whole-creature bob or a collision change.
-      p('faction1HqAbdomen',0,.68,-1.10*scale,scale,breath,scale,metal);
-      p('faction1HqChambers',0,.68,-1.10*scale,scale,breath,scale,accent,0,0,0,.32);
-      p('faction1HqSenses',0,0,0,scale,1,scale,team,0,0,0,.40);
-      for (const side of [-1,1]) p('faction1HqFeeler',side*.48*scale,4.38,1.12*scale,
+      p('faction1HqAbdomen',0,.56,-1.02*scale,scale,breath,scale,metal);
+      p('faction1HqWings',0,0,0,scale,1,scale,surfaceColor(team));
+      p('faction1HqEyes',0,0,0,scale,1,scale,surfaceColor(0x193931));
+      p('faction1HqSenses',0,0,0,scale,1,scale,surfaceColor(team),0,0,0,.35);
+      for (const side of [-1,1]) p('faction1HqAntenna',side*.43*scale,2.70,1.86*scale,
         scale,1,scale,metal,side===1?0:Math.PI,Math.sin(phase*.43+side)*.035);
     }
   });

@@ -26,7 +26,7 @@ test('Choir earth mound is low, closed, outward and irregular within the former 
   assert.ok([...edges.values()].every(e => e.count === 2 && e.winding === 0), 'watertight with consistent winding');
 });
 
-test('all Choir buildings replace only the foundation, including build, team and placement variants', () => {
+test('Choir buildings keep soil foundations except the flower-seated queen, including previews', () => {
   const h = modelHarness();
   vm.runInContext('Math.random = seeded = () => { throw Error("Draw RNG"); }; for (const k of Object.keys(geom)) geom[k] = () => { throw Error("Frame geometry"); };', h.context);
   for (const [type,d] of Object.entries(h.BUILDINGS)) for (const team of [0,1]) for (const progress of [0,.4,1]) {
@@ -35,8 +35,9 @@ test('all Choir buildings replace only the foundation, including build, team and
     for (const options of [{}, {ghost:true}, {ghost:true,tint:0x99e4c6},
       ...[0,.3,1].map(alpha => ({tint:0x99e4c6,alpha,layer:'effects',material:h.MAT.AUTO}))]) {
       const calls = h.draw(e,options), mounds = calls.filter(c => c[0] === 'choirMound');
-      assert.equal(mounds.length,1);
-      assert.deepEqual(mounds[0], ['choirMound',12,0,-7,d.size,build,d.size,
+      assert.equal(mounds.length,type==='hq'?0:1);
+      if (type==='hq') assert.equal(calls[0][0],'faction1HqFlower','queen owns the five-petal base');
+      else assert.deepEqual(mounds[0], ['choirMound',12,0,-7,d.size,build,d.size,
         options.ghost ? 0x68717d : options.tint || 0x70523b,yaw,0,0,0,
         options.alpha??1,options.layer||'dynamic',options.material??h.MAT.ROCK]);
       assert.ok(!calls.some(c => c[0] === 'hex'), 'no mechanical platform');

@@ -35,7 +35,7 @@ test('requested entity redesigns preserve every unrelated unit and building draw
     ...h,
     draw(e, options = {}, time) {
       const calls = h.draw(e, options, time);
-      if (e.faction !== 1 || e.kind !== 'building') return calls;
+      if (e.faction !== 1 || e.kind !== 'building' || e.type === 'hq') return calls;
       // Normalize ONLY the requested foundation replacement to the original calls.
       // Every remaining Choir body, animation and build scaffold still hits its old digest.
       assert.equal(calls[0][0], 'choirMound');

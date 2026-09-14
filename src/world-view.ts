@@ -231,9 +231,9 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       if (e.kind === 'building') {
         let s = e.size || 3;
         if (e.faction === FACTION_ID.SECOND) {
-          // Living buildings grow out of soil, not a mechanical plinth. Keep this in
-          // the adapter so every Choir model and placement/build preview agrees.
-          p('choirMound', 0, 0, 0, s, 1, s, ghost ? 0x68717d : options.tint || 0x70523b,
+          // The queen sits in her model-owned five-petal flower, with no soil plinth.
+          // Other Choir buildings retain the shared mound, including in build previews.
+          if (e.type !== 'hq') p('choirMound', 0, 0, 0, s, 1, s, ghost ? 0x68717d : options.tint || 0x70523b,
             0, 0, 0, 0, alpha, options.material ?? MAT.ROCK);
         } else {
           p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
