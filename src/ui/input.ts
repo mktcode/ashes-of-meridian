@@ -1,15 +1,15 @@
     /* MeridianUI DOM, pointer and targeting input. Loaded after ui/core.js. */
     'use strict';
-    defineMeridianUIMethods({
-      bind() {
+    const uiInputMethods = {
+      bind(this: MeridianUI) {
         document.addEventListener('pointerdown', e => {
           this.audio.unlock();
-          this.domPressed = !!e.target.closest('button,select,input');
+          this.domPressed = !!(e.target as Element | null)?.closest('button,select,input');
         });
         document.addEventListener('pointerup', () => (this.domPressed = false));
         document.addEventListener('pointercancel', () => (this.domPressed = false));
         document.addEventListener('click', e => {
-          let b = e.target.closest('button');
+          let b = (e.target as Element | null)?.closest('button');
           if (!b || b.disabled) return;
           if (b.dataset.ui) {
             this.uiAction(b.dataset.ui);
@@ -20,8 +20,8 @@
             if (!this.factionUnlocked(faction)) return;
             this.battleFaction = faction;
             document
-              .querySelectorAll('[data-faction]')
-              .forEach(a => a.classList.toggle('active', +a.dataset.faction === this.battleFaction));
+              .querySelectorAll<HTMLElement>('[data-faction]')
+              .forEach(a => a.classList.toggle('active', +a.dataset.faction! === this.battleFaction));
             $('factionTrait').textContent = FACTIONS[this.battleFaction].trait;
             return;
           }
@@ -37,7 +37,7 @@
             if (!this.paused) this.perform(b.dataset.action);
             return;
           }
-          if (b.dataset.queueType && !this.paused && !this.game.s?.result) {
+          if (hasContentKey(UNITS, b.dataset.queueType) && !this.paused && !this.game.s?.result) {
             this.cancelRecruitment(b.dataset.queueType);
             this.updateHUD();
             return;
@@ -45,31 +45,33 @@
           if (b.dataset.cam) {
             if (b.dataset.cam === 'home') this.homeCamera();
             else if (this.game.s)
-              this.game.s.cam.zoom = clamp(
-                this.game.s.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18),
+              this.game.s!.cam.zoom = clamp(
+                this.game.s!.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18),
                 27.2,
                 115
               );
           }
         });
         document.addEventListener('change', e => {
-          if (e.target.dataset.setting) this.applySetting(e.target);
+          const target = e.target as HTMLInputElement | HTMLSelectElement | null;
+          if (target?.dataset.setting) this.applySetting(target);
         });
         document.addEventListener('input', e => {
-          if (e.target.dataset.setting === 'volume') this.applySetting(e.target);
+          const target = e.target as HTMLInputElement | HTMLSelectElement | null;
+          if (target?.dataset.setting === 'volume') this.applySetting(target);
         });
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
         $('battleHome').onclick = () => this.pause();
         $('helpBtn').onclick = () => this.showHelp();
         $('speedBtn').onclick = () => {
-          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s.result) return;
+          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           const speeds = [1, 1.5, 2, 0.75];
-          this.game.s.speed = speeds[(speeds.indexOf(this.game.s.speed) + 1) % speeds.length];
+          this.game.s!.speed = speeds[(speeds.indexOf(this.game.s!.speed) + 1) % speeds.length];
           this.lastClick = {};
           this.updateHUD();
         };
         $('attackMoveBtn').onclick = () => {
-          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s.result) return;
+          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           this.attackMove = !this.attackMove;
           $('attackMoveBtn').setAttribute('aria-pressed', String(this.attackMove));
           this.lastClick = {};
@@ -118,8 +120,8 @@
         let map = $('minimap');
         map.style.touchAction = 'none';
         map.addEventListener('contextmenu', e => e.preventDefault());
-        const minimapPosition = e => {
-          let r = map.getBoundingClientRect(), extent = this.game.world.extent;
+        const minimapPosition = (e: PointerEvent) => {
+          let r = map.getBoundingClientRect(), extent = this.game.world!.extent;
           return {
             x: ((e.clientX - r.left) / r.width) * (extent * 2) - extent,
             z: ((e.clientY - r.top) / r.height) * (extent * 2) - extent
@@ -157,7 +159,7 @@
         map.addEventListener('pointerup', () => (miniDrag = false));
         map.addEventListener('pointercancel', () => (miniDrag = false));
       },
-      uiAction(action) {
+      uiAction(this: MeridianUI, action: string) {
         this.audio.sound('select');
         switch (action) {
           case 'home':
@@ -219,14 +221,14 @@
             break;
         }
       },
-      pick(sx, sy) {
+      pick(this: MeridianUI, sx: number, sy: number) {
         if (!this.R.containsPoint(sx, sy)) return null;
         let best = null,
           score = Infinity;
-        for (let e of this.game.s.entities) {
+        for (let e of this.game.s!.entities) {
           if (e.hp <= 0) continue;
           if (e.team === 1 && !this.game.visible(e)) continue;
-          if (e.team === -1 && !this.game.world.explored[this.game.world.idx(e.x, e.z)]) continue;
+          if (e.team === -1 && !this.game.world!.explored[this.game.world!.idx(e.x, e.z)]) continue;
           let y =
               e.type === 'air' ? 4.4 : e.kind === 'building' ? 2.0 : 1,
             p = this.R.project(e.x, y, e.z);
@@ -243,7 +245,7 @@
         }
         return best;
       },
-      pointerDown(e) {
+      pointerDown(this: MeridianUI, e: PointerEvent) {
         if (this.view !== 'game' || this.paused || !this.R.containsPoint(e.clientX, e.clientY)) return;
         e.preventDefault();
         if (e.button === 1) return;
@@ -268,7 +270,7 @@
           moved: false
         };
       },
-      pointerMove(e) {
+      pointerMove(this: MeridianUI, e: PointerEvent) {
         this.pointer = { x: e.clientX, y: e.clientY,
           inside: e.target === $('world') && this.R.containsPoint(e.clientX, e.clientY) };
         if (this.view !== 'game' || this.paused) return;
@@ -277,9 +279,9 @@
           if (this.touchPoints.size === 2) {
             let a = [...this.touchPoints.values()],
               d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
-            if (this.pinchDist > 0)
-              this.game.s.cam.zoom = clamp(
-                (this.game.s.cam.zoom * this.pinchDist) / Math.max(10, d),
+            if (this.pinchDist && this.pinchDist > 0)
+              this.game.s!.cam.zoom = clamp(
+                (this.game.s!.cam.zoom * this.pinchDist) / Math.max(10, d),
                 27.2,
                 115
               );
@@ -293,7 +295,7 @@
           if (drag.type === 'touch' && drag.moved) {
             let a = this.R.ground(drag.x, drag.y),
               b = this.R.ground(e.clientX, e.clientY);
-            this.center(this.game.s.cam.x + a.x - b.x, this.game.s.cam.z + a.z - b.z);
+            this.center(this.game.s!.cam.x + a.x - b.x, this.game.s!.cam.z + a.z - b.z);
           }
           drag.x = e.clientX;
           drag.y = e.clientY;
@@ -305,7 +307,7 @@
           }
         }
       },
-      pointerUp(e) {
+      pointerUp(this: MeridianUI, e: PointerEvent) {
         let previousClick = this.lastClick;
         this.lastClick = {};
         if (e.pointerType === 'touch') this.touchPoints.delete(e.pointerId);
@@ -325,7 +327,7 @@
         if (!d || !this.R.containsPoint(e.clientX, e.clientY)) return;
         let p = this.R.ground(e.clientX, e.clientY),
           target = this.pick(e.clientX, e.clientY);
-        const limit = this.game.world.extent - 4;
+        const limit = this.game.world!.extent - 4;
         p.x = clamp(p.x, -limit, limit);
         p.z = clamp(p.z, -limit, limit);
         if (d.type === 'touch' && d.moved) return;
@@ -345,7 +347,7 @@
           return;
         }
         if (d.moved) return;
-        if (this.game.workerTask(target) && this.selected.some(id => {
+        if (target && this.game.workerTask(target) && this.selected.some(id => {
           const worker = this.game.get(id);
           return worker?.team === 0 && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;
         })) {
@@ -367,7 +369,7 @@
         if (target) {
           let now = performance.now(),
             count = previousClick.id === target.id && previousClick.type === d.type &&
-              now - previousClick.time < 330 ? Math.min(3, previousClick.count + 1) : 1;
+              now - previousClick.time! < 330 ? Math.min(3, previousClick.count! + 1) : 1;
           if (count >= 2 && target.team === 0 && target.kind === 'unit') {
             let combat = d.type === 'touch' && count === 3,
               units = this.game
@@ -382,7 +384,7 @@
           this.lastClick = { id: target.id, time: now, type: d.type, count };
         } else this.select([]);
       },
-      applyTarget(p) {
+      applyTarget(this: MeridianUI, p: Position) {
         if (!this.mode) return;
         let m = this.mode,
           success = true;
@@ -392,7 +394,7 @@
           let list = this.selected
             .map(id => this.game.get(id))
             .filter(
-              e =>
+              (e): e is BuildingEntity =>
                 e?.team === 0 &&
                 e.kind === 'building' &&
                 e.progress >= 1
@@ -405,4 +407,7 @@
         if (success) this.clearMode();
         this.updateHUD();
       }
-    });
+    };
+    type UIInputMethods = typeof uiInputMethods;
+    interface MeridianUI extends UIInputMethods {}
+    defineMeridianUIMethods(uiInputMethods);

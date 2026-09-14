@@ -5,7 +5,7 @@
         if (!this.s || this.s!.result) return;
         let s = this.s!;
         s.time += dt;
-        for (const account of s.teams) account.energy = Math.min(200, account.energy + dt * 0.8);
+        for (const account of s.teams) account.energy = Math.min(COMMAND_ENERGY.max, account.energy + dt * COMMAND_ENERGY.regeneration);
         this.rehash();
         if (this.navDirty) {
           this.world!.rebuild(s.entities);

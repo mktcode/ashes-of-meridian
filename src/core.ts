@@ -2,7 +2,7 @@
 'use strict';
 const M4 = {
   identity: () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
-  mul(a, b) {
+  mul(a: ArrayLike<number>, b: ArrayLike<number>) {
     const o = new Float32Array(16);
     for (let c = 0; c < 4; c++)
       for (let r = 0; r < 4; r++)
@@ -13,7 +13,7 @@ const M4 = {
           a[12 + r] * b[c * 4 + 3];
     return o;
   },
-  ortho(l, r, b, t, n, f) {
+  ortho(l: number, r: number, b: number, t: number, n: number, f: number) {
     return new Float32Array([
       2 / (r - l),
       0,
@@ -33,7 +33,7 @@ const M4 = {
       1
     ]);
   },
-  perspective(fov, a, n, f) {
+  perspective(fov: number, a: number, n: number, f: number) {
     const s = 1 / Math.tan(fov / 2);
     return new Float32Array([
       s / a,
@@ -54,7 +54,7 @@ const M4 = {
       0
     ]);
   },
-  look(eye, target) {
+  look(eye: readonly number[], target: readonly number[]) {
     let z = V.norm(V.sub(eye, target)),
       x = V.norm(V.cross([0, 1, 0], z)),
       y = V.cross(z, x);
@@ -77,7 +77,7 @@ const M4 = {
       1
     ]);
   },
-  inverse(a) {
+  inverse(a: ArrayLike<number>) {
     let m = Array.from(a),
       o = Array.from(this.identity());
     for (let i = 0; i < 4; i++) {
@@ -105,7 +105,7 @@ const M4 = {
     }
     return new Float32Array(o);
   },
-  point(m, x, y, z, w = 1) {
+  point(m: ArrayLike<number>, x: number, y: number, z: number, w = 1) {
     let r = [
       m[0] * x + m[4] * y + m[8] * z + m[12] * w,
       m[1] * x + m[5] * y + m[9] * z + m[13] * w,
@@ -116,19 +116,19 @@ const M4 = {
   }
 };
 const V = {
-  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
-  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
-  cross: (a, b) => [
+  sub: (a: readonly number[], b: readonly number[]) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  dot: (a: readonly number[], b: readonly number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a: readonly number[], b: readonly number[]) => [
     a[1] * b[2] - a[2] * b[1],
     a[2] * b[0] - a[0] * b[2],
     a[0] * b[1] - a[1] * b[0]
   ],
-  norm(a) {
+  norm(a: readonly number[]) {
     let d = Math.hypot(...a) || 1;
     return a.map(x => x / d);
   }
 };
-function seeded(seed) {
+function seeded(seed: number) {
   let a = seed | 0;
   return () => {
     a |= 0;

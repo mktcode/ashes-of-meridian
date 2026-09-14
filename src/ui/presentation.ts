@@ -1,7 +1,7 @@
     /* MeridianUI minimap and battlefield overlay drawing. Loaded after ui/core.js. */
     'use strict';
-    defineMeridianUIMethods({
-      tick(dt) {
+    const uiPresentationMethods = {
+      tick(this: MeridianUI, dt: number) {
         let now = performance.now();
         if (this.toastUntil && now > this.toastUntil) {
           $('toast').classList.remove('show');
@@ -22,21 +22,21 @@
           this.drawMinimap();
         }
       },
-      drawMinimap() {
+      drawMinimap(this: MeridianUI) {
         let g = this.game;
         if (!g.s || !g.world) return;
         let c = $('minimap'),
-          ctx = c.getContext('2d'),
+          ctx = c.getContext('2d')!,
           w = c.width,
           h = c.height;
         const { extent, gridSize: GRID } = g.world, span = extent * 2;
         if (!this.miniBuffer || this.miniBuffer.width !== GRID) {
           this.miniBuffer ||= document.createElement('canvas');
           this.miniBuffer.width = this.miniBuffer.height = GRID;
-          this.miniCtx = this.miniBuffer.getContext('2d');
+          this.miniCtx = this.miniBuffer.getContext('2d')!;
           this.miniImage = this.miniCtx.createImageData(GRID, GRID);
         }
-        let img = this.miniImage.data,
+        let img = this.miniImage!.data,
           base = g.world.terrainColors;
         for (let i = 0; i < GRID * GRID; i++) {
           let fog = g.world.visible[i] ? 1 : g.world.explored[i] ? 0.48 : 0.16;
@@ -46,10 +46,10 @@
           img[i * 4 + 2] = base[i * 4 + 2] * fog;
           img[i * 4 + 3] = 255;
         }
-        this.miniCtx.putImageData(this.miniImage, 0, 0);
+        this.miniCtx!.putImageData(this.miniImage!, 0, 0);
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(this.miniBuffer, 0, 0, w, h);
-        let map = p => ({ x: ((p.x + extent) / span) * w, y: ((p.z + extent) / span) * h });
+        let map = (p: Position) => ({ x: ((p.x + extent) / span) * w, y: ((p.z + extent) / span) * h });
         ctx.strokeStyle = '#91b7c215';
         ctx.lineWidth = 0.6;
         for (let i = 1; i < 6; i++) {
@@ -97,7 +97,7 @@
         ctx.strokeStyle = '#c3e1debb';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        const v = this.R.viewport;
+        const v = this.R.viewport!;
         for (let [i, p] of [
           { x: v.left, y: v.top },
           { x: v.right, y: v.top },
@@ -118,12 +118,12 @@
           ctx.stroke();
         }
       },
-      drawOverlay(ctx) {
-        const v = this.R.viewport;
+      drawOverlay(this: MeridianUI, ctx: CanvasRenderingContext2D) {
+        const v = this.R.viewport!;
         ctx.clearRect(v.left, v.top, v.width, v.height);
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,
-          s = g.s;
+          s = g.s!;
         ctx.font = '10px ui-monospace,Consolas,monospace';
         ctx.textAlign = 'center';
         if (this.selected.length && this.mode?.kind !== 'build') {
@@ -225,4 +225,7 @@
         }
         ctx.globalAlpha = 1;
       }
-    });
+    };
+    type UIPresentationMethods = typeof uiPresentationMethods;
+    interface MeridianUI extends UIPresentationMethods {}
+    defineMeridianUIMethods(uiPresentationMethods);

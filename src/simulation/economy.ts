@@ -17,7 +17,7 @@
           180,
           this.alive(e => e.team === team && e.kind === 'building' && e.progress >= 1).reduce(
             (a, e) => a + ((BUILDINGS[e.type as BuildingType] as BuildingDefinitionShape).cap || 0),
-            team === 0 ? (this.s!.meta.logisticsFrame || 0) * 2 : 0
+            team === 0 ? (this.s!.meta.logisticsFrame || 0) * FLEET_EFFECTS.supply : 0
           )
         );
       },
@@ -179,7 +179,7 @@
         if (!this.spend(c, team)) return false;
         let b = this.spawnBuilding(type, p.x, p.z, team, this.factionFor(team), { progress: 0.06, paid: c });
         const workshop = team === 0 && this.s!.benefits.fieldWorkshop && !this.s!.triggers.fieldWorkshop,
-          buildRate = 1 + (team === 0 ? (this.s!.meta.constructionProtocols || 0) * .05 : 0) + (workshop ? .5 : 0);
+          buildRate = 1 + (team === 0 ? (this.s!.meta.constructionProtocols || 0) * FLEET_EFFECTS.constructionSpeed : 0) + (workshop ? EXPEDITION_EFFECTS.workshopSpeed : 0);
         // Add both bonuses to base speed once; changing builders never changes the foundation.
         if (buildRate !== 1) b.buildRate = buildRate;
         if (workshop) this.s!.triggers.fieldWorkshop = true;
@@ -314,7 +314,7 @@
               this.finishOrder(e);
             }
           } else if (b.hp < b.maxHp && this.account(team).alloy > 0.1) {
-            const repairFactor = 1 - (team === 0 ? (s.meta.repairLogistics || 0) * .05 : 0),
+            const repairFactor = 1 - (team === 0 ? (s.meta.repairLogistics || 0) * FLEET_EFFECTS.repairDiscount : 0),
               amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10 / repairFactor);
             b.hp += amount;
             this.account(team).alloy -= amount * .1 * repairFactor;

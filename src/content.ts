@@ -302,16 +302,21 @@ const STARTING_ALLOY = [250, 300, 350, 400, 450, 500] as const;
 const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
 const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
 
+const COMMAND_ENERGY = Object.freeze({ start: 100, max: 200, regeneration: .8 });
+const EXPEDITION_EFFECTS = Object.freeze({ alloy: 100, aether: 50, surveyRadius: 22, workshopSpeed: .5, energy: 50 });
+const FLEET_EFFECTS = Object.freeze({ constructionSpeed: .05, supply: 2, repairDiscount: .05 });
+const fleetLevels = (step: number) => Array.from({ length: 6 }, (_, level) => level * step);
+
 const EXPEDITION_BENEFITS = {
   supplyCrate: {
     name: 'Supply crate',
     icon: 'crystal',
-    desc: 'Adds 100 alloy to your reserves at the start of every remaining battle.'
+    desc: `Adds ${EXPEDITION_EFFECTS.alloy} alloy to your reserves at the start of every remaining battle.`
   },
   aetherAllocation: {
     name: 'Aether allocation',
     icon: 'save',
-    desc: 'Adds 50 aether at the start of every remaining battle.'
+    desc: `Adds ${EXPEDITION_EFFECTS.aether} aether at the start of every remaining battle.`
   },
   pioneerSquad: {
     name: 'Pioneer squad',
@@ -334,13 +339,13 @@ const EXPEDITION_BENEFITS = {
   fieldWorkshop: {
     name: 'Field workshop',
     icon: 'repair',
-    desc: 'Your first placed foundation in each battle builds 50% faster. Consumed even if canceled.',
+    desc: `Your first placed foundation in each battle builds ${EXPEDITION_EFFECTS.workshopSpeed * 100}% faster. Consumed even if canceled.`,
     max: 1
   },
   commandCapacitor: {
     name: 'Command capacitor',
     icon: 'energy',
-    desc: 'Adds 50 starting command energy per stack, up to the energy limit of 200.',
+    desc: `Adds ${EXPEDITION_EFFECTS.energy} starting command energy per stack, up to the energy limit of ${COMMAND_ENERGY.max}.`,
     max: 2
   }
 } as const;
@@ -375,24 +380,24 @@ const META = {
   constructionProtocols: {
     name: 'Construction protocols',
     icon: 'factory',
-    desc: 'Adds 5% of base construction speed per level. Adds to Field workshop, without faster repairs.',
-    display: { label: 'CONSTRUCTION BONUS', values: [0, 5, 10, 15, 20, 25], unit: '% FASTER' },
+    desc: `Adds ${FLEET_EFFECTS.constructionSpeed * 100}% of base construction speed per level. Adds to Field workshop, without faster repairs.`,
+    display: { label: 'CONSTRUCTION BONUS', values: fleetLevels(FLEET_EFFECTS.constructionSpeed * 100), unit: '% FASTER' },
     max: 5,
     costs: [200, 350, 550, 800, 1100]
   },
   logisticsFrame: {
     name: 'Logistics frame',
     icon: 'depot',
-    desc: 'Adds 2 supply capacity per level from battle start. The total limit remains 180.',
-    display: { label: 'EXTRA CAPACITY', values: [0, 2, 4, 6, 8, 10], unit: 'SUPPLY' },
+    desc: `Adds ${FLEET_EFFECTS.supply} supply capacity per level from battle start. The total limit remains 180.`,
+    display: { label: 'EXTRA CAPACITY', values: fleetLevels(FLEET_EFFECTS.supply), unit: 'SUPPLY' },
     max: 5,
     costs: [150, 250, 400, 600, 850]
   },
   repairLogistics: {
     name: 'Repair logistics',
     icon: 'repair',
-    desc: 'Reduces worker repair alloy costs by 5% per level, without changing repair speed.',
-    display: { label: 'REPAIR DISCOUNT', values: [0, 5, 10, 15, 20, 25], unit: '% LESS ALLOY' },
+    desc: `Reduces worker repair alloy costs by ${FLEET_EFFECTS.repairDiscount * 100}% per level, without changing repair speed.`,
+    display: { label: 'REPAIR DISCOUNT', values: fleetLevels(FLEET_EFFECTS.repairDiscount * 100), unit: '% LESS ALLOY' },
     max: 5,
     costs: [150, 250, 400, 600, 850]
   }
@@ -435,6 +440,17 @@ const ICON_PATHS = {
 
 type IconType = keyof typeof ICON_PATHS;
 type FactionDefinition = (typeof FACTIONS)[FactionId];
+
+function contentKeys<T extends object>(catalog: T): Array<Extract<keyof T, string>> {
+  return Object.keys(catalog) as Array<Extract<keyof T, string>>;
+}
+function hasContentKey<T extends object>(catalog: T, key: string | undefined): key is Extract<keyof T, string> {
+  return key !== undefined && Object.hasOwn(catalog, key);
+}
+
+function expeditionBenefit(key: string): ExpeditionBenefitDefinition | undefined {
+  return hasContentKey(EXPEDITION_BENEFITS, key) ? EXPEDITION_BENEFITS[key] : undefined;
+}
 
 function icon(name: string) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICON_PATHS[name as IconType] || ICON_PATHS.hero}"/></svg>`;

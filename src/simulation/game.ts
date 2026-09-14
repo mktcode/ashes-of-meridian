@@ -3,7 +3,7 @@
     const UNIT_BODY_SCALE = 1.4;
     class MeridianGame {
       profile: MeridianProfile;
-      emit: (type: string, data: any) => void;
+      emit: GameEventSink;
       s: RunState | null;
       world: Battlefield | null;
       ids: Map<number, Entity>;
@@ -17,7 +17,7 @@
 
       constructor(
         profile: MeridianProfile,
-        emit: (type: string, data: any) => void = () => {},
+        emit: GameEventSink = () => {},
         createEffects: (random: () => number) => MeridianEffects = random => new MeridianEffects(random)
       ) {
         this.profile = profile;
@@ -61,14 +61,14 @@
               .filter(([, value]) => Number(value) > 0)
           ) as Record<string, number>,
           seed = opts.seed || Math.floor(Math.random() * 1e8),
-          playerAlloy = STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * 100;
+          playerAlloy = STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy;
         this.s = {
           seed, faction, enemy, map, meta, benefits,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
           time: 0,
           teams: [playerAlloy, STARTING_ALLOY[0]].map((alloy, team) => ({
-            alloy, gas: team === 0 ? (benefits.aetherAllocation || 0) * 50 : 0,
-            energy: Math.min(200, 100 + (team === 0 ? (benefits.commandCapacitor || 0) * 50 : 0)), abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+            alloy, gas: team === 0 ? (benefits.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether : 0,
+            energy: Math.min(COMMAND_ENERGY.max, COMMAND_ENERGY.start + (team === 0 ? (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy : 0)), abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
           })) as [TeamState, TeamState],
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
@@ -123,7 +123,7 @@
         if (benefits.surveyDrones) {
           const site = layout.resourceSites.filter(p => !this.world!.explored[this.world!.idx(p.x, p.z)])
             .sort((a, b) => distance(a, layout.playerStart) - distance(b, layout.playerStart))[0];
-          if (site) this.world.explore(0, site, 22);
+          if (site) this.world.explore(0, site, EXPEDITION_EFFECTS.surveyRadius);
         }
         this.enableAI(1);
         this.emit('start', {});
@@ -198,8 +198,8 @@
       factionFor(this: MeridianGame, team: PlayerTeam = 0): FactionId {
         return team === 0 ? this.s!.faction : this.s!.enemy;
       },
-      notify(this: MeridianGame, team: PlayerTeam, type: string, data: any) {
-        if (team === 0) this.emit(type, data);
+      notify(this: MeridianGame, team: PlayerTeam, ...event: GameEvent) {
+        if (team === 0) this.emit(...event);
       },
       get(this: MeridianGame, id: number | null | undefined): Entity | null {
         let e = this.ids.get(id as number);

@@ -1,6 +1,6 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
-    const FACTION_0_ACTION_PORTRAITS = {
+    const FACTION_0_ACTION_PORTRAITS: Partial<Record<string, string>> = {
       'train:worker': 'assets/portraits/faction-0-unit-worker.webp',
       'train:rifle': 'assets/portraits/faction-0-unit-rifle.webp',
       'train:medic': 'assets/portraits/faction-0-unit-medic.webp',
@@ -16,35 +16,35 @@
       'build:hangar': 'assets/portraits/faction-0-building-hangar.webp',
       'build:turret': 'assets/portraits/faction-0-building-turret.webp'
     };
-    defineMeridianUIMethods({
-      center(x, z) {
+    const uiActionMethods = {
+      center(this: MeridianUI, x: number, z: number) {
         if (!this.game.s) return;
-        const limit = this.game.world.extent - 18;
-        this.game.s.cam.x = clamp(x, -limit, limit);
-        this.game.s.cam.z = clamp(z, -limit, limit);
+        const limit = this.game.world!.extent - 18;
+        this.game.s!.cam.x = clamp(x, -limit, limit);
+        this.game.s!.cam.z = clamp(z, -limit, limit);
       },
-      homeCamera() {
+      homeCamera(this: MeridianUI) {
         let e = this.game.alive(e => e.team === 0 && e.type === 'hq')[0];
         if (e) this.center(e.x + 4, e.z - 2);
       },
-      select(ids) {
+      select(this: MeridianUI, ids: number[]) {
         this.selected = [...new Set(ids)].filter(id => this.game.get(id));
         this.audio.sound('select');
         this.setTab(this.selectedBuilding() ? 'building' : 'root');
       },
-      selectedBuilding() {
+      selectedBuilding(this: MeridianUI) {
         let e = this.selected.length === 1 ? this.game.get(this.selected[0]) : null;
         return e?.team === 0 && e.kind === 'building' && e.hp > 0 ? e : null;
       },
-      setTab(tab) {
+      setTab(this: MeridianUI, tab: string) {
         if (!['root', 'build', 'infantry', 'vehicles', 'aircraft', 'building'].includes(tab)) return;
         this.clearMode();
-        this.tab = tab;
+        this.tab = tab as UITab;
         this.actionSignature = '';
         $('actionPanel').scrollTop = 0;
         this.renderActions();
       },
-      setMode(kind, arg) {
+      setMode(this: MeridianUI, ...[kind, arg]: ['build', BuildingType] | ['ability', AbilityType] | ['rally']) {
         if (this.paused) return;
         if (kind === 'build') {
           let reason = this.game.canBuild(arg);
@@ -54,10 +54,10 @@
           }
         }
         this.lastClick = {};
-        this.mode = { kind, arg };
+        this.mode = kind === 'build' ? { kind, arg } : kind === 'ability' ? { kind, arg } : { kind };
         let text =
           kind === 'build'
-            ? `PLACE ${buildingName(arg, this.game.s.faction).toUpperCase()}`
+            ? `PLACE ${buildingName(arg, this.game.s!.faction).toUpperCase()}`
             : kind === 'ability'
               ? {
                   orbital: 'TARGET ORBITAL STRIKE',
@@ -72,35 +72,35 @@
         this.actionSignature = '';
         this.renderActions();
       },
-      clearMode() {
+      clearMode(this: MeridianUI) {
         this.mode = null;
         $('modeIndicator').classList.add('hidden');
         $('world').style.cursor = 'default';
         this.actionSignature = '';
       },
-      perform(action) {
-        if (!this.game.s || this.paused || this.game.s.result) return;
+      perform(this: MeridianUI, action: string) {
+        if (!this.game.s || this.paused || this.game.s!.result) return;
         let [kind, arg] = action.split(':');
         if (kind === 'tab') {
           this.setTab(arg);
           return;
         }
-        if (kind === 'train') {
+        if (kind === 'train' && hasContentKey(UNITS, arg)) {
           this.game.train(arg);
           this.updateHUD();
           return;
         }
-        if (kind === 'build') {
+        if (kind === 'build' && hasContentKey(BUILDINGS, arg)) {
           this.setMode('build', arg);
           return;
         }
-        if (kind === 'ability') {
+        if (kind === 'ability' && hasContentKey(ABILITIES, arg)) {
           this.setMode('ability', arg);
           return;
         }
         switch (kind) {
           case 'rally':
-            if (this.selectedBuilding()?.progress >= 1) this.setMode(kind);
+            if ((this.selectedBuilding()?.progress || 0) >= 1) this.setMode(kind);
             break;
           case 'repair':
           case 'sell':
@@ -112,22 +112,22 @@
             break;
         }
       },
-      actionButton(key, label, ic, opts = {}) {
+      actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: {badge?: string | number; disabled?: boolean; cost?: Cost} = {}) {
         let badge = opts.badge || '',
           preview = this.game.s?.faction === FACTION_ID.FIRST && FACTION_0_ACTION_PORTRAITS[key];
         // Fixed renders of the actual models: no additional WebGL scenes in the HUD.
         const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
-      renderActions() {
+      renderActions(this: MeridianUI) {
         let s = this.game.s;
         if (!s) return;
         let b = this.selectedBuilding();
         if (this.tab === 'building' && !b) this.tab = 'root';
-        let ready = b?.progress >= 1,
-          repairing = ready && this.game.buildingRepairers(b.id).length > 0,
-          repairReason = ready && !repairing ? this.game.canRepairBuilding(b.id) : '',
-          sellReason = ready ? this.game.canSellBuilding(b.id) : '',
+        let ready = !!b && b.progress >= 1,
+          repairing = ready && this.game.buildingRepairers(b!.id).length > 0,
+          repairReason = ready && !repairing ? this.game.canRepairBuilding(b!.id) : '',
+          sellReason = ready ? this.game.canSellBuilding(b!.id) : '',
           noFreeWorker = this.tab === 'build' && !this.game.availableWorkers().length,
           sig = [this.tab, s.faction, this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
             this.mode?.kind, this.mode?.arg].join(':');
@@ -150,12 +150,12 @@
             html += this.actionButton('rally', 'Rally point', 'rally');
           } else html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
-          for (let k of Object.keys(BUILDINGS))
+          for (let k of contentKeys(BUILDINGS))
             html += this.actionButton('build:' + k, buildingName(k, f), k, {
               cost: this.game.cost(k, 'building')
             });
         } else {
-          let types = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air'] };
+          let types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air'] };
           for (let k of types[this.tab] || [])
             html += this.actionButton('train:' + k, k === 'hero' ? 'Commander' : unitName(k, f), k, {
               cost: this.game.cost(k)
@@ -165,11 +165,11 @@
           '<button class="menu-back" data-action="tab:root">← Back</button>') +
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
-          (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b.type, f))}${ready ?
+          (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?
             '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}</p>` : '');
       },
-      buildingAction(action, id) {
-        if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s.result) return;
+      buildingAction(this: MeridianUI, action: string, id: number) {
+        if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s!.result) return;
         if (action === 'repair') {
           this.game.toggleBuildingRepair(id);
           this.updateHUD();
@@ -177,6 +177,7 @@
           let reason = this.game.canSellBuilding(id);
           if (reason) { this.toast(reason); return; }
           let b = this.game.get(id), refund = this.game.buildingSaleRefund(id);
+          if (!b || !refund) return;
           this.sellBuildingId = id;
           this.paused = true;
           this.clearMode();
@@ -184,31 +185,31 @@
             `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} alloy / ${refund.gas} aether</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. The structure is removed immediately; supply capacity may decrease.</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
         }
       },
-      finishBuildingSale(confirm) {
-        if (this.modalKind !== 'sell' || this.view !== 'game' || !this.game.s || this.game.s.result) return;
+      finishBuildingSale(this: MeridianUI, confirm: boolean) {
+        if (this.modalKind !== 'sell' || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         let id = this.sellBuildingId;
         this.sellBuildingId = null;
-        if (confirm) this.game.sellBuilding(id);
+        if (confirm && id !== null) this.game.sellBuilding(id);
         this.resume();
         this.updateHUD();
       },
-      recruitmentGroups() {
-        let groups = {};
-        for (let b of this.game.alive(e => e.team === 0 && e.kind === 'building' && e.queue?.length))
+      recruitmentGroups(this: MeridianUI) {
+        let groups: Partial<Record<UnitType, {b: Entity; index: number; q: QueueItem}[]>> = {};
+        for (let b of this.game.alive(e => e.team === 0 && e.kind === 'building' && !!e.queue?.length))
           for (let [index, q] of b.queue.entries())
             (groups[q.type] ||= []).push({ b, index, q });
         return groups;
       },
-      cancelRecruitment(type) {
+      cancelRecruitment(this: MeridianUI, type: UnitType) {
         let entries = this.recruitmentGroups()[type] || [];
         // Preserve work already done: cancel a waiting order first, then the least advanced active one.
         entries.sort((a, b) => b.index - a.index || a.q.progress - b.q.progress || b.b.id - a.b.id);
         let entry = entries[0];
         if (entry) this.game.cancelQueue(entry.b.id, entry.index);
       },
-      updateQueues() {
+      updateQueues(this: MeridianUI) {
         let groups = this.recruitmentGroups(),
-          types = Object.keys(UNITS).filter(type => groups[type]),
+          types = contentKeys(UNITS).filter(type => groups[type]),
           signature = types.join(',');
         if (signature !== this.queueSignature) {
           this.queueSignature = signature;
@@ -217,19 +218,19 @@
           ).join('');
         }
         // Keep the buttons stable while animating from simulation progress (also correct after pause/load).
-        for (let button of $('productionQueue').querySelectorAll('[data-queue-type]')) {
-          let type = button.dataset.queueType, entries = groups[type],
+        for (let button of $('productionQueue').querySelectorAll<HTMLButtonElement>('[data-queue-type]')) {
+          let type = button.dataset.queueType as UnitType, entries = groups[type]!,
             next = entries.filter(e => e.index === 0)
               .sort((a, b) => a.q.time * (1 - a.q.progress) - b.q.time * (1 - b.q.progress))[0]?.q,
             remaining = next ? Math.ceil(next.time * (1 - next.progress)) + 's' : '…';
           button.style.setProperty('--progress', (next ? clamp(next.progress, 0, 1) * 360 : 360) + 'deg');
           button.classList.toggle('waiting', !next);
-          button.querySelector('.queue-count').textContent = entries.length;
-          button.querySelector('.queue-time').textContent = remaining;
-          button.setAttribute('aria-label', `${unitName(type, this.game.s.faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
+          button.querySelector('.queue-count')!.textContent = String(entries.length);
+          button.querySelector('.queue-time')!.textContent = remaining;
+          button.setAttribute('aria-label', `${unitName(type, this.game.s!.faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
         }
       },
-      updateHUD() {
+      updateHUD(this: MeridianUI) {
         let s = this.game.s;
         if (!s) return;
         $('alloyCount').textContent = Math.floor(s.teams[0].alloy).toLocaleString();
@@ -237,7 +238,7 @@
         const supply = this.game.supply(), capacity = this.game.cap();
         $('supplyCount').textContent = supply + ' / ' + capacity;
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
-        $('energyCount').textContent = Math.floor(s.teams[0].energy);
+        $('energyCount').textContent = String(Math.floor(s.teams[0].energy));
         $('gameTime').textContent = formatTime(s.time);
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
         speedButton.textContent = speedLabel;
@@ -256,10 +257,10 @@
         this.selected = this.selected.filter(id => this.game.get(id));
         this.renderActions();
         this.updateQueues();
-        for (let b of document.querySelectorAll('[data-action]')) {
-          let [k, arg] = b.dataset.action.split(':');
+        for (let b of document.querySelectorAll<HTMLButtonElement>('[data-action]')) {
+          let [k, arg] = b.dataset.action!.split(':');
           let disabled = false;
-          if (k === 'train') {
+          if (k === 'train' && hasContentKey(UNITS, arg)) {
             let d = UNITS[arg];
             disabled =
               !this.game.afford(this.game.cost(arg)) ||
@@ -267,9 +268,9 @@
               supply + d.supply > capacity;
             if (arg === 'hero' && this.game.alive(e => e.team === 0 &&
               (e.type === 'hero' || e.queue?.some(q => q.type === 'hero'))).length) disabled = true;
-          } else if (k === 'build')
+          } else if (k === 'build' && hasContentKey(BUILDINGS, arg))
             disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
-          else if (k === 'ability') {
+          else if (k === 'ability' && hasContentKey(ABILITIES, arg)) {
             let energy = ABILITIES[arg]?.energy;
             disabled = s.teams[0].energy < energy || s.teams[0].abilities[arg] > s.time;
             let badge = b.querySelector('small');
@@ -287,4 +288,7 @@
           b.classList.toggle('disabled', disabled);
         }
       }
-    });
+    };
+    type UIActionMethods = typeof uiActionMethods;
+    interface MeridianUI extends UIActionMethods {}
+    defineMeridianUIMethods(uiActionMethods);

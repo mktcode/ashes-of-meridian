@@ -7,8 +7,28 @@
       './audio/music-black-channel.mp3'
     ];
     const BATTLE_MUSIC_GAP = 10;
+    type MusicMode = 'menu' | 'battle' | 'silent';
+    interface Window { webkitAudioContext?: typeof AudioContext; }
     class MeridianAudio {
-      constructor(settings) {
+      settings: MeridianSettings;
+      ctx: AudioContext | null;
+      master: GainNode | null;
+      musicGain: GainNode | null;
+      menuGain: GainNode | null;
+      effectsGain: GainNode | null;
+      battleTrack: HTMLAudioElement | null;
+      battleTrackIndex: number;
+      battleGapRemaining: number | null;
+      battleGapUntil: number | null;
+      battlePlayPending: boolean;
+      battlePlayFailed: boolean;
+      musicMode: MusicMode;
+      nextChord: number;
+      chord: number;
+      lastShot: number;
+      started: boolean;
+      noiseBuffer?: AudioBuffer;
+      constructor(settings: MeridianSettings) {
         this.settings = settings;
         this.ctx = null;
         this.master = null;
@@ -68,7 +88,7 @@
           this.nextChord = c.currentTime + 0.1;
           this.sound('select');
         } catch (e) {
-          console.warn('Audio unavailable:', e.message);
+          console.warn('Audio unavailable:', e instanceof Error ? e.message : String(e));
         }
       }
       createBattleTrack() {
@@ -83,7 +103,7 @@
             this.syncBattleTrack();
           });
           track.preload = 'auto';
-          track.playsInline = true;
+          (track as HTMLAudioElement & { playsInline: boolean }).playsInline = true;
           track.addEventListener(
             'error',
             () => {
@@ -95,7 +115,7 @@
           this.battleTrack = track;
         } catch (error) {
           this.battlePlayFailed = true;
-          console.warn('Battle music unavailable:', error.message);
+          console.warn('Battle music unavailable:', error instanceof Error ? error.message : String(error));
         }
       }
       resetBattleMusic() {
@@ -116,7 +136,7 @@
         if (!track) return;
         track.volume = this.settings.music ? Math.max(0, Math.min(1, this.settings.volume)) * 0.1 : 0;
         // Audio-clock seconds, never simulation time or game-speed-scaled dt.
-        let now = this.ctx.currentTime;
+        let now = this.ctx!.currentTime;
         if (this.musicMode !== 'battle' || !this.settings.music) {
           if (this.battleGapUntil !== null) {
             this.battleGapRemaining = Math.max(0, this.battleGapUntil - now);
@@ -145,7 +165,7 @@
           playing = track.play();
         } catch (error) {
           this.battlePlayFailed = true;
-          console.warn('Battle music unavailable:', error.message);
+          console.warn('Battle music unavailable:', error instanceof Error ? error.message : String(error));
           return;
         }
         if (playing && typeof playing.catch === 'function') {
@@ -160,7 +180,7 @@
             .finally(() => (this.battlePlayPending = false));
         }
       }
-      setMode(mode) {
+      setMode(mode: MusicMode) {
         if (!['menu', 'battle', 'silent'].includes(mode)) return;
         let changed = mode !== this.musicMode;
         this.musicMode = mode;
@@ -179,17 +199,17 @@
       }
       updateSettings() {
         if (!this.ctx) return;
-        this.master.gain.setTargetAtTime(this.settings.volume, this.ctx.currentTime, 0.08);
-        this.musicGain.gain.setTargetAtTime(this.settings.music ? 1 : 0, this.ctx.currentTime, 0.15);
-        this.menuGain.gain.setTargetAtTime(
+        this.master!.gain.setTargetAtTime(this.settings.volume, this.ctx.currentTime, 0.08);
+        this.musicGain!.gain.setTargetAtTime(this.settings.music ? 1 : 0, this.ctx.currentTime, 0.15);
+        this.menuGain!.gain.setTargetAtTime(
           this.musicMode === 'menu' && this.settings.music ? 1 : 0,
           this.ctx.currentTime,
           0.12
         );
-        this.effectsGain.gain.setTargetAtTime(this.settings.sfx ? 1 : 0, this.ctx.currentTime, 0.05);
+        this.effectsGain!.gain.setTargetAtTime(this.settings.sfx ? 1 : 0, this.ctx.currentTime, 0.05);
         this.syncBattleTrack();
       }
-      tone(freq, duration = 0.1, volume = 0.12, type = 'sine', dest = null, delay = 0, endFreq = null) {
+      tone(freq: number, duration = 0.1, volume = 0.12, type: OscillatorType = 'sine', dest: AudioNode | null = null, delay = 0, endFreq: number | null = null) {
         if (!this.ctx) return;
         let c = this.ctx,
           t = c.currentTime + delay,
@@ -205,7 +225,7 @@
         );
         g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
         o.connect(g);
-        g.connect(dest || this.effectsGain);
+        g.connect(dest || this.effectsGain!);
         o.start(t);
         o.stop(t + duration + 0.03);
         o.onended = () => {
@@ -227,7 +247,7 @@
         g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
         src.connect(f);
         f.connect(g);
-        g.connect(this.effectsGain);
+        g.connect(this.effectsGain!);
         src.start();
         src.stop(t + duration);
         src.onended = () => {
@@ -254,7 +274,7 @@
           this.tone(root * 6, 2.8, 0.02, 'sine', this.menuGain, 4.8);
         }
       }
-      sound(type, heavy = false) {
+      sound(type: string, heavy = false) {
         if (!this.ctx || !this.settings.sfx) return;
         let t = this.ctx.currentTime;
         if (type === 'shot') {

@@ -39,6 +39,13 @@ interface AbilityDefinition {
   cd: number;
 }
 
+interface ExpeditionBenefitDefinition {
+  name: string;
+  icon: string;
+  desc: string;
+  max?: number;
+}
+
 interface UpgradeDefinition {
   name: string;
   icon: string;
@@ -139,6 +146,25 @@ interface PersistenceDependencies {
   warn(...values: unknown[]): void;
 }
 
+interface GameEventMap {
+  start: Record<string, never>;
+  toast: string;
+  radio: string;
+  alert: string | ({ text: string; danger?: boolean } & Partial<Position>);
+  order: { type: CommandOrder['type']; count: number } & Partial<Position>;
+  result: BattleResult;
+  shot: Position & { heavy: boolean };
+  explosion: Position & { big: boolean };
+  complete: Position & { type: BuildingType };
+  trained: UnitEntity;
+  queued: UnitType;
+  build: BuildingEntity;
+  heal: Position;
+  scan: Position;
+}
+type GameEvent = { [K in keyof GameEventMap]: [type: K, data: GameEventMap[K]] }[keyof GameEventMap];
+type GameEventSink = (...event: GameEvent) => void;
+
 interface MeridianPersistence {
   readonly available: boolean;
   loadProfile(): MeridianProfile;
@@ -224,6 +250,7 @@ interface EntityBase extends Position {
   gasId?: number;
   deathAt?: number;
   rally?: Position;
+  label?: string;
 }
 
 interface UnitEntity extends EntityBase {

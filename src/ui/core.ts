@@ -1,13 +1,54 @@
     /* Front end, permanent upgrades, HUD, controls, field manual. */
     'use strict';
-    const $ = id => document.getElementById(id);
-    const esc = s =>
+    function $(id: 'world' | 'overlay' | 'minimap'): HTMLCanvasElement;
+    function $(id: string): HTMLElement;
+    function $(id: string): HTMLElement { return document.getElementById(id)!; }
+    const esc = (s: unknown) =>
       String(s ?? '').replace(
         /[&<>"']/g,
-        c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+        c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>)[c]
       );
+    type UIMode = { kind: 'build'; arg: BuildingType } | { kind: 'ability'; arg: AbilityType } | { kind: 'rally'; arg?: undefined };
+    type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'building';
+    interface UIPing extends Position { life: number; maxLife: number; color: number; }
     class MeridianUI {
-      constructor(game, renderer, audio, profile, persistence) {
+      persistence: MeridianPersistence;
+      game: MeridianGame;
+      R: MeridianRenderer;
+      audio: MeridianAudio;
+      profile: MeridianProfile;
+      expedition: MeridianExpedition | null;
+      view: 'home' | 'battle' | 'transition' | 'game';
+      paused: boolean;
+      modalKind: string;
+      sellBuildingId: number | null;
+      selected: number[];
+      tab: UITab;
+      attackMove: boolean;
+      mode: UIMode | null;
+      hover: number | null;
+      pointer: { x: number; y: number; inside: boolean };
+      drag: { sx: number; sy: number; x: number; y: number; button: number; type: string; moved: boolean } | null;
+      pings: UIPing[];
+      lastClick: Partial<{ id: number; type: string; time: number; count: number }>;
+      radioUntil: number;
+      toastUntil: number;
+      actionSignature: string;
+      factionJustUnlocked: FactionId | null;
+      hudClock: number;
+      touchPoints: Map<number, {x: number; y: number}>;
+      battleFaction?: FactionId;
+      resultAetherRecovered?: number;
+      onViewportChange?: () => void;
+      onPreview?: () => void;
+      domPressed?: boolean;
+      touchGesture?: boolean;
+      pinchDist?: number;
+      queueSignature?: string;
+      miniBuffer?: HTMLCanvasElement;
+      miniCtx?: CanvasRenderingContext2D;
+      miniImage?: ImageData;
+      constructor(game: MeridianGame, renderer: MeridianRenderer, audio: MeridianAudio, profile: MeridianProfile, persistence: MeridianPersistence) {
         this.persistence = persistence;
         this.game = game;
         this.R = renderer;
@@ -38,12 +79,12 @@
       persist() {
         this.persistence.saveProfile(this.profile);
       }
-      toast(text) {
+      toast(text: string) {
         $('toast').textContent = text;
         $('toast').classList.add('show');
         this.toastUntil = performance.now() + 3500;
       }
-      alert(data) {
+      alert(data: GameEventMap['alert']) {
         let d = typeof data === 'string' ? { text: data } : data,
           el = document.createElement('div');
         el.className = 'alert' + (d.danger ? ' danger' : '');
@@ -52,12 +93,12 @@
         if (Number.isFinite(d.x)) {
           el.style.pointerEvents = 'auto';
           el.style.cursor = 'pointer';
-          el.onclick = () => this.center(d.x, d.z);
+          el.onclick = () => this.center(d.x!, d.z!);
         }
         setTimeout(() => el.remove(), 5800);
-        while ($('alerts').children.length > 5) $('alerts').firstChild.remove();
+        while ($('alerts').children.length > 5) $('alerts').firstChild!.remove();
       }
-      radio(text) {
+      radio(text: string) {
         if (!text) return;
         let parts = text.split('|'),
           name = parts.length > 1 ? parts[0] : 'Expedition command',
@@ -65,7 +106,7 @@
         $('radioName').textContent = name + ' / SECURE CHANNEL';
         $('radioText').textContent = body;
         $('radio').classList.remove('hidden');
-        $('radio').querySelector('.radio-avatar').firstChild.textContent = name
+        $('radio').querySelector('.radio-avatar')!.firstChild!.textContent = name
           .split(' ')
           .map(w => w[0])
           .slice(0, 2)
@@ -73,7 +114,7 @@
         this.radioUntil = performance.now() + Math.max(7000, body.length * 54);
         this.audio.sound('radio');
       }
-      event(type, data) {
+      event(...[type, data]: GameEvent) {
         if (type === 'start') {
           this.view = 'game';
           this.audio.resetBattleMusic?.();
@@ -106,14 +147,14 @@
           this.audio.sound('order');
           if (Number.isFinite(data.x))
             this.pings.push({
-              x: data.x,
-              z: data.z,
+              x: data.x!,
+              z: data.z!,
               life: 1,
               maxLife: 1,
               color:
                 data.type === 'attackMove' || data.type === 'attack'
                   ? 0xeebc81
-                  : FACTIONS[this.game.s.faction].color
+                  : FACTIONS[this.game.s!.faction].color
             });
         } else if (type === 'result') {
           const firstResult = this.resultAetherRecovered === undefined;
@@ -154,13 +195,13 @@
             this.audio.sound('shot', data.heavy);
         } else if (type === 'explosion') {
           let p = this.R.project(data.x, 1, data.z);
-          const v = this.R.viewport;
+          const v = this.R.viewport!;
           if (p && p.x > v.left - 100 && p.x < v.right + 100 && p.y > v.top - 100 && p.y < v.bottom)
             this.audio.sound('explosion', data.big);
         } else if (type === 'complete') {
           this.audio.sound('complete');
           this.alert({
-            text: buildingName(data.type, this.game.s.faction) + ' complete.',
+            text: buildingName(data.type, this.game.s!.faction) + ' complete.',
             x: data.x,
             z: data.z
           });
@@ -174,7 +215,7 @@
           this.audio.sound(type);
       }
     }
-    function defineMeridianUIMethods(methods) {
+    function defineMeridianUIMethods(methods: Record<string, Function>) {
       for (const [name, method] of Object.entries(methods))
         Object.defineProperty(MeridianUI.prototype, name, {
           value: method,
