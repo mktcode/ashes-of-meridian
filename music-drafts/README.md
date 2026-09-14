@@ -18,12 +18,11 @@ Die kinetischere Alienplanet-Variante: weiche, vokalartige Samenimpulse wandern 
 
 ## Worker-Voice-Lines
 
-- [**01 – Rig Checked**](worker-select-01-rig-checked.mp3) – „Rig checked, ready to work.“; `slt`, 1,78 s, ursprüngliche gefilterte Vergleichsfassung.
-- [**02 – Worker Ready**](worker-select-02-worker-ready-awb.mp3) – „Worker ready. Give me a task.“; männliche Stimme `awb`, 2,17 s.
-- [**03 – Tools Ready**](worker-select-03-tools-ready-rms.mp3) – „Tools are ready. What needs building?“; männliche Stimme `rms`, 2,48 s.
-- [**04 – Standing By**](worker-select-04-standing-by-kal.mp3) – „Standing by. Point me to the work.“; männliche Stimme `kal`, 2,32 s.
+- [**01 – Worker Ready**](worker-select-01-worker-ready-awb.mp3) – „Worker ready.“; männliche Stimme `awb`, 0,84 s.
+- [**02 – Awaiting Orders**](worker-select-02-awaiting-orders-rms.mp3) – „Awaiting orders.“; männliche Stimme `rms`, 1,15 s.
+- [**03 – What Needs Building**](worker-select-03-what-needs-building-kal16.mp3) – „What needs building?“; männliche Stimme `kal16`, 1,25 s.
 
-Die drei neuen Varianten sind zugunsten der Verständlichkeit nahezu trocken, nur leicht verlangsamt, normalisiert und auf vergleichbare Lautheit gebracht. Alle Fassungen sind Mono-MP3 mit 44,1 kHz/128 kbit/s, verwenden lokale generische Flite-Stimmen, ahmen keine Figur oder reale Person nach und sind noch nicht ins Spiel eingebunden.
+Jede Datei enthält genau eine kurze Äußerung. Die Varianten sind zugunsten der Verständlichkeit nahezu trocken, nur leicht verlangsamt, normalisiert und auf vergleichbare Lautheit gebracht; `awb` dient als klare Referenz, `rms` und `kal16` als Stimmvergleiche. Alle Fassungen sind Mono-MP3 mit 44,1 kHz/128 kbit/s, verwenden lokale generische Flite-Stimmen, ahmen keine Figur oder reale Person nach und sind noch nicht ins Spiel eingebunden.
 
 ## Herstellung und Grenzen
 
@@ -34,7 +33,7 @@ python3 scripts/generate-sporewake.py
 python3 scripts/generate-rootmind.py
 ```
 
-Die Worker-Zeilen wurden lokal mit FFmpegs generischen `flite`-Stimmen erzeugt, auf Sprache beschnitten und auf −18 LUFS ausgerichtet. Nur Fassung 01 besitzt die deutliche Funkfilterung; die männlichen Fassungen 02–04 bleiben für bessere Verständlichkeit nahezu trocken. Es werden keine Aufnahmen oder externen Samples verwendet.
+Die Worker-Zeilen wurden lokal mit FFmpegs generischen `flite`-Stimmen erzeugt, auf Sprache beschnitten und auf −18 LUFS ausgerichtet. Für bessere Verständlichkeit bleibt die Bearbeitung nahezu trocken. Es werden keine Aufnahmen oder externen Samples verwendet.
 
 Die Musikgeneratoren verwenden ausschließlich lokale Synthese sowie Python 3 und FFmpeg; sie lesen keine Aufnahmen oder Spielassets und überschreiben jeweils nur ihre eigene MP3. Die Musiklautheit ist technisch auf −15 LUFS bei −1,5 dBTP ausgerichtet. Technische Prüfung ersetzt kein Hörurteil.
 
