@@ -12,12 +12,12 @@
       --red: #f17b78;
       --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
       --topbar-height: 63px;
-      --deck-height: clamp(132px, 25vw, 184px);
-      --side-width: clamp(92px, 25vw, 184px);
-      --ability-height: 68px;
-      --tools-height: 44px;
-      --hud-gap: 4px;
-      --hud-inset: 6px;
+      --deck-height: clamp(116px, 22vw, 160px);
+      --side-width: clamp(90px, 23vw, 168px);
+      --ability-height: 58px;
+      --tools-height: 42px;
+      --hud-gap: 2px;
+      --hud-inset: 4px;
       --center-height: calc(var(--tools-height) + var(--ability-height) + var(--hud-gap))
     }
 

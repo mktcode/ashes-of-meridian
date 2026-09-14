@@ -253,9 +253,9 @@
     #cameraTools,
     #commandTools {
       display: grid;
-      gap: 4px;
+      gap: 2px;
       height: var(--tools-height);
-      padding: 3px
+      padding: 0
     }
 
     #cameraTools { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100% }
@@ -356,7 +356,7 @@
 
     #actionPanel {
       height: 100%;
-      padding: 5px;
+      padding: 2px;
       pointer-events: auto;
       overflow-y: auto;
       overscroll-behavior: contain;
@@ -388,8 +388,8 @@
       height: var(--ability-height);
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 4px;
-      padding: 4px;
+      gap: 2px;
+      padding: 2px;
       pointer-events: auto
     }
 
@@ -398,7 +398,7 @@
     #abilityBar .action { padding-top: 12px }
     .root-grid .action { min-height: 0; padding: 3px 1px }
     .root-grid .action span { font-size: clamp(7px, 1.8vw, 11px); white-space: nowrap }
-    .root-grid { height: calc(var(--deck-height) - 12px); grid-template-rows: repeat(2, minmax(0, 1fr)) }
+    .root-grid { height: calc(var(--deck-height) - 4px); grid-template-rows: repeat(2, minmax(0, 1fr)) }
     #actionPanel:has(.menu-back) { height: min(340px, calc(100dvh - var(--topbar-height) - 90px)) }
     #actionPanel .action-grid:not(.root-grid) { grid-template-columns: 1fr }
     #hud button { touch-action: manipulation }
@@ -412,13 +412,13 @@
       gap: var(--hud-gap);
       min-height: 0;
       height: 100%;
-      padding: 5px;
+      padding: 2px;
       pointer-events: auto
     }
 
     #minimap {
       display: block;
-      width: min(100%, calc(var(--deck-height) - var(--tools-height) - 16px));
+      width: min(100%, calc(var(--deck-height) - var(--tools-height) - 8px));
       height: auto;
       aspect-ratio: 1;
       background: #071019;
@@ -428,7 +428,7 @@
     .action-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 4px
+      gap: 2px
     }
 
     .action {
@@ -579,17 +579,23 @@
       opacity: 1
     }
 
-    /* Cheap CSS lighting: no images or additional WebGL passes. */
-    #objectives,
-    .minimap-panel,
-    #actionPanel,
-    #commandTools,
-    #abilityBar {
+    /* Objectives remain a panel; the compact deck lets its buttons carry the affordance. */
+    #objectives {
       background: linear-gradient(135deg, #102d3df5, #05131ff5 65%);
       border: 1px solid #4edcf0b0;
       border-radius: 9px 3px;
       box-shadow: inset 0 1px #d8fcff40, inset 0 0 12px #21c5ed10,
         0 0 7px #00cfff30, 0 3px 12px #0009
+    }
+
+    .minimap-panel,
+    #actionPanel,
+    #commandTools,
+    #abilityBar {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none
     }
 
     #cameraTools button,
