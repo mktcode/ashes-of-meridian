@@ -34,7 +34,7 @@
               <div class="menu-actions">
                 <div class="menu-buttons">
                   ${this.encounterBriefing()}
-                  ${this.expedition ? `<div class="continue-row"><button class="primary" data-ui="continueExpedition">Continue expedition <span aria-hidden="true">→</span></button><button class="secondary expedition-perks-button" data-ui="expeditionBenefits" aria-label="View expedition benefits" title="Run benefits">${icon('hero')}</button></div>` : ''}
+                  ${this.expedition ? `<div class="continue-row"><button class="primary" data-ui="continueExpedition">Continue expedition <span aria-hidden="true">→</span></button><button class="secondary expedition-perks-button" data-ui="expeditionBenefits" aria-label="View expedition benefits">${icon('hero')}</button></div>` : ''}
                   <button class="${this.expedition ? 'secondary' : 'primary'}" data-ui="battle">New expedition <span aria-hidden="true">→</span></button>
                   <button class="secondary" data-ui="armory">Fleet upgrades <span aria-hidden="true">→</span></button>
                 </div>
