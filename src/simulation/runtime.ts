@@ -142,10 +142,10 @@
             });
           }
         }
-        this.objectiveClock += dt;
-        if (this.objectiveClock >= 0.2) {
-          this.objectiveTick();
-          this.objectiveClock = 0;
+        this.resultClock += dt;
+        if (this.resultClock >= 0.2) {
+          this.checkBattleResult();
+          this.resultClock = 0;
         }
         this.fogClock += dt;
         if (this.fogClock >= 0.35) {
@@ -158,16 +158,12 @@
           this.ids = new Map(s.entities.map(e => [e.id, e]));
         }
       },
-      objectiveTick(this: MeridianGame) {
+      checkBattleResult(this: MeridianGame) {
         if (this.s!.result) return;
         if (!this.alive(e => e.team === 0 && e.type === 'hq').length)
           this.finish(false, 'Your last command center has fallen.');
         else if (!this.alive(e => e.team === 1 && e.type === 'hq').length)
           this.finish(true, 'The enemy base has been destroyed.');
-      },
-      objectiveRows(this: MeridianGame): ObjectiveRow[] {
-        let done = !this.alive(e => e.team === 1 && e.type === 'hq').length;
-        return [{ text: 'Destroy the enemy base', current: done ? 1 : 0, max: 1, sub: '', done }];
       },
       abilityRequirement(this: MeridianGame, kind: AbilityType, team: PlayerTeam = 0): string | null {
         if (kind === 'orbital' && !this.alive(e => e.team === team && e.kind === 'building' &&

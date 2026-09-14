@@ -249,16 +249,6 @@
         speedButton.textContent = speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
-        let rows = this.game.objectiveRows();
-        $('objectives').innerHTML =
-          '<div class="eyebrow">◈ BATTLE OBJECTIVE</div><div id="objectiveRows">' +
-          rows
-            .map(
-              r =>
-                `<div class="objective-row ${r.done ? 'complete' : ''}"><span class="check">${r.done ? '✓' : '◇'}</span><div>${esc(r.text)}${!r.sub && r.max < 30 ? ' <span class="objective-sub">' + Math.min(r.max, Math.floor(r.current)) + '/' + r.max + '</span>' : ''}${r.sub ? '<div class="objective-sub">' + esc(r.sub) + '</div>' : ''}<div class="progress"><i style="width:${clamp((r.current / r.max) * 100, 0, 100)}%;${r.done ? 'background:var(--teal)' : ''}"></i></div></div></div>`
-            )
-            .join('') +
-          '</div>';
         this.selected = this.selected.filter(id => this.game.get(id));
         this.renderActions(supply, capacity);
         this.updateQueues();

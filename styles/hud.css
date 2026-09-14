@@ -10,8 +10,7 @@
     #hud button,
     #hud canvas,
     #hud .action,
-    #hud .queue-item,
-    #objectives {
+    #hud .queue-item {
       pointer-events: auto
     }
 
@@ -104,66 +103,6 @@
       font: 14px var(--mono);
       color: #c5d6df
     }
-
-    #objectives {
-      position: absolute;
-      left: 22px;
-      top: calc(var(--topbar-height) + 18px);
-      width: 267px;
-      padding: 12px 16px;
-      border-left: 2px solid #a4f7ff
-    }
-
-    #objectives .eyebrow {
-      font-size: 9px;
-      letter-spacing: 1.5px;
-      margin-bottom: 8px;
-      padding-bottom: 7px;
-      border-bottom: 1px solid #74dced45
-    }
-
-    #objectiveRows {
-      display: flex;
-      flex-direction: column;
-      gap: 10px
-    }
-
-    .objective-row {
-      font-size: 12px;
-      color: #d3dfe3;
-      display: flex;
-      gap: 9px;
-      align-items: flex-start
-    }
-
-    .objective-row .check {
-      color: var(--gold)
-    }
-
-    .objective-row.complete {
-      color: var(--teal)
-    }
-
-    .objective-row .progress {
-      height: 3px;
-      background: #8398ad28;
-      margin-top: 8px;
-      width: 207px
-    }
-
-    .objective-row .progress i {
-      display: block;
-      height: 3px;
-      background: var(--gold);
-      transition: width .4s
-    }
-
-    .objective-sub {
-      font: 10px var(--mono);
-      color: var(--muted);
-      margin-top: 4px
-    }
-
 
     #alerts {
       position: absolute;
@@ -586,15 +525,6 @@
       opacity: 1
     }
 
-    /* Objectives retain their frame; the deck uses opaque surfaces and single-pixel seams. */
-    #objectives {
-      background: linear-gradient(135deg, #102d3df5, #05131ff5 65%);
-      border: 1px solid #4edcf0b0;
-      border-radius: 9px 3px;
-      box-shadow: inset 0 1px #d8fcff40, inset 0 0 12px #21c5ed10,
-        0 0 7px #00cfff30, 0 3px 12px #0009
-    }
-
     .minimap-panel,
     #actionPanel,
     #commandTools,
@@ -682,21 +612,6 @@
 
       .resource {
         min-width: 55px
-      }
-
-      #objectives {
-        top: 70px;
-        left: 12px;
-        width: 224px;
-        padding: 12px
-      }
-
-      #objectives .progress {
-        width: 178px
-      }
-
-      .objective-row {
-        font-size: 11px
       }
 
       #radio {
@@ -855,20 +770,6 @@
       .faction-option small {
         font-size: 10px
       }
-
-      #objectives {
-        width: 210px;
-        padding: 9px 11px
-      }
-
-      .objective-row {
-        font-size: 10px
-      }
-
-      #objectives .progress {
-        width: 151px
-      }
-
 
       .modal-card h1 {
         font-size: 30px

@@ -182,7 +182,6 @@ test('single battle starts with only the own HQ, one hostile base and no mission
   assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
   assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
   for (const key of ['m','index','practice','upgrades','research','difficulty']) assert.equal(key in s, false);
-  assert.equal(game.objectiveRows().length, 1); assert.match(game.objectiveRows()[0].text, /enemy base/);
   assert.deepEqual(events.map(e => e.type), ['start','radio']);
 });
 
@@ -316,9 +315,9 @@ test('unknown structures cannot be built or spend resources', () => {
 test('only enemy HQ destruction wins; loss of the last own HQ loses, without stars or rewards', () => {
   for (const win of [true,false]) {
     const { game, events } = battle();
-    game.s.time = 3600; game.objectiveTick(.2); assert.equal(game.s.result, null);
+    game.s.time = 3600; game.checkBattleResult(); assert.equal(game.s.result, null);
     const hq = game.alive(e => e.type === 'hq' && e.team === (win ? 1 : 0))[0];
-    game.damage(hq, 999999, null, true); game.objectiveTick(.2);
+    game.damage(hq, 999999, null, true); game.checkBattleResult();
     assert.equal(game.s.result.win, win); assert.equal('stars' in game.s.result, false);
     assert.deepEqual(json(game.profile), {upgrades:{}});
     const ended = json(game.s); advance(game, 10); assert.deepEqual(json(game.s), ended);
@@ -1446,7 +1445,7 @@ test('restarting discards the previous run and rebuilds fresh navigation, indexe
   game.train('rifle'); game.ability('scan',{x:20,z:-20}); advance(game,100);
   game.s.cam={x:-42,z:40,zoom:64}; game.s.speed=2;
   const old=game.s, oldWorld=game.world, hq=player(game,'hq');
-  game.damage(hq,999999,null,true); game.objectiveTick(.2); assert.equal(game.s.result.win,false);
+  game.damage(hq,999999,null,true); game.checkBattleResult(); assert.equal(game.s.result.win,false);
   events.length=0;
   game.start({seed:1409,map:'desert',faction:0});
   assert.notStrictEqual(game.s,old); assert.notStrictEqual(game.world,oldWorld);

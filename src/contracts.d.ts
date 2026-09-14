@@ -482,14 +482,6 @@ interface FloatingText extends Position {
   maxLife: number;
 }
 
-interface ObjectiveRow {
-  text: string;
-  current: number;
-  max: number;
-  sub: string;
-  done: boolean;
-}
-
 interface RangedStats {
   range: number;
   damage: number;

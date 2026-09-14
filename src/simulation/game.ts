@@ -10,7 +10,7 @@
       spatial: Map<string, Entity[]>;
       acc: number;
       fogClock: number;
-      objectiveClock: number;
+      resultClock: number;
       navDirty: boolean;
       random: () => number;
       effects: MeridianEffects;
@@ -28,7 +28,7 @@
         this.spatial = new Map();
         this.acc = 0;
         this.fogClock = 0;
-        this.objectiveClock = 0;
+        this.resultClock = 0;
         this.navDirty = false;
         this.random = seeded(1);
         this.effects = createEffects(() => this.random());
@@ -83,7 +83,7 @@
         this.effects.reset();
         this.acc = 0;
         this.fogClock = 0;
-        this.objectiveClock = 0;
+        this.resultClock = 0;
         let s = this.s!;
         // The base starts with an HQ; upgrade workers are added after the seeded setup.
         this.spawnBuilding('hq', playerStart.x, playerStart.z, 0, faction);
