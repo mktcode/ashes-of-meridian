@@ -16,6 +16,12 @@ Die kinetischere Alienplanet-Variante: weiche, vokalartige Samenimpulse wandern 
 
 `Sporewake` und `Rootmind` stehen in der InGame-Playlist direkt hintereinander.
 
+## Worker-Voice-Lines
+
+[**Worker Select 01 – Rig Checked anhören**](worker-select-01-rig-checked.mp3) – „Rig checked, ready to work.“, rund **1,78 Sekunden**, Mono-MP3/44,1 kHz/128 kbit/s.
+
+Eine knappe Auswahlbestätigung mit dezenter Funk-/Helmfilterung und lokaler generischer Flite-Stimme. Keine nachgeahmte Figur oder reale Person und noch nicht ins Spiel eingebunden. Dies ist bewusst zunächst die einzige Voice-Line.
+
 ## Herstellung und Grenzen
 
 Entwürfe bei Bedarf neu erzeugen:
@@ -25,6 +31,8 @@ python3 scripts/generate-sporewake.py
 python3 scripts/generate-rootmind.py
 ```
 
-Die Generatoren verwenden ausschließlich lokale Synthese sowie Python 3 und FFmpeg; sie lesen keine Aufnahmen oder Spielassets und überschreiben jeweils nur ihre eigene MP3. Die Lautheit ist technisch auf −15 LUFS bei −1,5 dBTP ausgerichtet. Technische Prüfung ersetzt kein Hörurteil.
+Die Worker-Zeile wurde lokal mit FFmpegs generischer `flite`-Stimme `slt` erzeugt, auf Sprache beschnitten, dezent bandbegrenzt und auf −18 LUFS ausgerichtet. Es werden keine Aufnahmen oder externen Samples verwendet.
+
+Die Musikgeneratoren verwenden ausschließlich lokale Synthese sowie Python 3 und FFmpeg; sie lesen keine Aufnahmen oder Spielassets und überschreiben jeweils nur ihre eigene MP3. Die Musiklautheit ist technisch auf −15 LUFS bei −1,5 dBTP ausgerichtet. Technische Prüfung ersetzt kein Hörurteil.
 
 Freigegebene Fassungen bytegleich nach `audio/` kopieren, nicht neu kodieren. Bei einer Playliständerung Auswahl in `src/audio.ts` sowie die Audioeinträge in `Dockerfile` und `.dockerignore` gemeinsam anpassen.
