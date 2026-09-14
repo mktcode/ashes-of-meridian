@@ -682,7 +682,7 @@ test('pause, resume, help and modal close remain button actions; save/load/backu
   h.ui.resume = () => { h.ui.paused = false; h.calls.push(['resume']); };
   h.ui.showHelp = () => h.calls.push(['help']); h.ui.closeModal = () => h.calls.push(['close']);
   h.document.getElementById('pauseBtn').onclick(); h.document.getElementById('pauseBtn').onclick();
-  h.document.getElementById('helpBtn').onclick();
+  h.click({ ui: 'help' });
   for (const ui of ['save','load','continue','export','import','closeModal']) h.click({ ui });
   assert.deepEqual(h.calls, [['pause'],['resume'],['help'],['close']]);
   for (const method of ['save','load','exportBackup','importBackup']) assert.equal(h.UI.prototype[method], undefined);
@@ -1046,9 +1046,9 @@ test('tooltips and native title hints are removed without removing pointer press
   for (const [attribute, value, label] of [
     ['id', 'pauseBtn', 'Pause'],
     ['data-cam', 'home', 'Center on command'], ['data-cam', 'in', 'Zoom in'],
-    ['data-cam', 'out', 'Zoom out'], ['id', 'soundBtn', 'Sound'],
-    ['id', 'helpBtn', 'Field manual'], ['id', 'minimap', 'Minimap']
+    ['data-cam', 'out', 'Zoom out'], ['id', 'minimap', 'Minimap']
   ]) assert.match(html, new RegExp(`${attribute}="${value}"[^>]*aria-label="${label}"`));
+  assert.doesNotMatch(html, /id="(?:soundBtn|helpBtn)"/);
 });
 
 function actionKeys(h) {
@@ -1445,7 +1445,7 @@ test('HUD reads supply and capacity once per update and refreshes counts, warnin
     h.UI.prototype.updateHUD.call(h.ui);
     const count = h.document.getElementById('supplyCount');
     assert.equal(h.document.getElementById('battleLabel').textContent, 'STAGE 5');
-    assert.equal(count.textContent, supply + ' / ' + capacity);
+    assert.equal(count.textContent, supply + '/' + capacity);
     assert.equal(count.style.color, supply >= capacity ? 'var(--red)' : '');
     assert.deepEqual(buttons.map(button => button.disabled), blocked);
     assert.deepEqual([supplyReads, capacityReads], [1, 1]);

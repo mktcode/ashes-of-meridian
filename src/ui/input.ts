@@ -61,7 +61,6 @@
           if (target?.dataset.setting === 'volume') this.applySetting(target);
         });
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
-        $('helpBtn').onclick = () => this.showHelp();
         $('speedBtn').onclick = () => {
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           const speeds = [1, 1.5, 2, 0.75];
@@ -77,15 +76,6 @@
           this.toast(this.attackMove
             ? 'Attack-move: troops engage enemies along the way.'
             : 'Move: troops prioritize reaching the destination.');
-        };
-        $('soundBtn').onclick = () => {
-          let muted = !this.profile.settings.sfx;
-          this.profile.settings.sfx = muted;
-          this.profile.settings.music = muted;
-          this.audio.updateSettings();
-          this.persist();
-          $('soundBtn').textContent = muted ? '♫' : '♪';
-          this.toast(muted ? 'Audio enabled.' : 'Audio muted.');
         };
         $('radioClose').onclick = () => {
           $('radio').classList.add('hidden');
