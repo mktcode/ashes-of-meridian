@@ -96,6 +96,10 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
               ? MAT.BIO
               : MAT.METAL
             : MAT.AUTO;
+      // Only model lamps/cores breathe; keep low glow below the shader's texture cutoff.
+      // Tactical rings and previews stay unchanged.
+      const animated = (e.kind === 'unit' || e.kind === 'building') && R.quality > 0 && !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic';
+      const phase = time * (e.faction === FACTION_ID.SECOND ? 1.8 : 1.1) + e.id * 2.39996;
       const p: ModelPart = (
         shape,
         lx,
@@ -124,7 +128,8 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
           rot + ry,
           rx,
           rz,
-          glow,
+          animated && glow >= .3 ? glow * (1 + (e.faction === FACTION_ID.SECOND ? .22 : .12) *
+            Math.sin(phase + (e.faction === FACTION_ID.THIRD ? ly * 3 - lz * 2 : lx * .7))) : glow,
           a,
           layer,
           m

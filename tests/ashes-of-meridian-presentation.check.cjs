@@ -33,7 +33,8 @@ test('contact shadows add one effect quad per unit/building on Balanced/High wit
   for(const [kind,type] of [['building','hq'],['unit','worker'],['unit','air']]) {
     const e=Object.freeze({id:42,kind,type,hp:100,team:0,faction:0,size:kind==='building'?4:1,x:12,z:-23,rot:.3,walk:0,progress:1});
     const before=JSON.stringify(e);R.quality=0;R.calls.length=0;render(R,e,0);
-    const model=JSON.stringify(R.calls);
+    const withoutGlow=calls=>JSON.stringify(calls.map(c=>c.map((value,i)=>i===11?0:value)));
+    const model=withoutGlow(R.calls);
     for(const quality of [1,2]) {
       R.quality=quality;R.calls.length=0;render(R,e,0);
       const contacts=R.calls.filter(c=>c[14]===material);
@@ -41,7 +42,7 @@ test('contact shadows add one effect quad per unit/building on Balanced/High wit
       const c=contacts[0];assert.equal(c[0],'plane');assert.deepEqual(c.slice(1,4),[12,-.02,-23]);
       assert.equal(c[11],0);assert.equal(c[13],'effects');assert.ok(c[12]>0&&c[12]<.4);
       assert.ok(c.slice(1,13).every(Number.isFinite));
-      assert.equal(JSON.stringify(R.calls.filter(c=>c[14]!==material)),model);
+      assert.equal(withoutGlow(R.calls.filter(c=>c[14]!==material)),model);
     }
     for(const options of [{ghost:true},{tint:0xffffff},{alpha:.3},{layer:'effects'}]) {
       R.calls.length=0;render(R,e,0,options);assert.ok(!R.calls.some(c=>c[14]===material));
@@ -51,6 +52,80 @@ test('contact shadows add one effect quad per unit/building on Balanced/High wit
   }
   R.calls.length=0;render(R,{id:1,kind:'resource',type:'gas',hp:100,x:0,z:0},0);
   assert.ok(!R.calls.some(c=>c[14]===material));
+});
+
+test('faction light animation changes only emissive model strength, not geometry, team colors or previews',()=>{
+  const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world-view']);
+  vm.runInContext('Math.random=()=>{throw Error("Animation RNG");}',context);
+  const render=vm.runInContext('renderEntity',context),R=createRendererStub({record:true});R.cinema=false;
+  for(const faction of [0,1,2]) {
+    const e=Object.freeze({id:42,kind:'building',type:'hq',hp:100,team:0,faction,size:4,x:0,z:0,rot:0,progress:1});
+    for(const time of [0,1.5]) {
+      const draw=(quality,options={})=>{R.quality=quality;R.calls.length=0;render(R,e,time,options);return R.calls.filter(c=>c[14]!==-1);};
+      const still=draw(0),animated=draw(2);let changed=0;
+      assert.equal(animated.length,still.length);
+      animated.forEach((c,i)=>{
+        assert.deepEqual(c.filter((_,j)=>j!==11),still[i].filter((_,j)=>j!==11));
+        if(still[i][11]<.3) assert.equal(c[11],still[i][11],'do not animate across the shader texture cutoff');
+        if(c[11]!==still[i][11]) {changed++;assert.ok(c[11]/still[i][11]>=.78&&c[11]/still[i][11]<=1.22);}
+      });
+      assert.ok(changed>0);
+      for(const options of [{ghost:true},{tint:0xffffff},{alpha:.3,layer:'effects'}]) assert.deepEqual(draw(2,options),draw(0,options));
+      R.cinema=true;assert.deepEqual(draw(2),draw(0));R.cinema=false;
+    }
+  }
+});
+
+test('motion dust is view-owned, bounded, stationary after emission, and cleared by fog, quality and world changes',()=>{
+  const context=loadScripts(['core','content','effects','effects-view'],{globals:{clamp:(v,a,b)=>Math.max(a,Math.min(b,v))}});
+  vm.runInContext('Math.random=()=>{throw Error("Dust RNG");}',context);
+  const {renderMotionDust:render,motionDustViews:views}=vm.runInContext('({renderMotionDust,motionDustViews})',context);
+  const R=createRendererStub({record:true});R.quality=2;R.cinema=false;
+  R.project=()=>({x:100,y:100});R.viewport={left:0,top:0,right:200,bottom:200};
+  const world={visible:[1],idx:()=>0,definition:{palette:{ground:0xab9876}}};
+  const s={time:0,entities:Array.from({length:80},(_,id)=>({id,kind:'unit',type:'tank',hp:100,x:0,z:0,rot:0,size:1,walk:0}))};
+  const frame=()=>{const before=JSON.stringify(s);R.calls.length=0;render(R,world,s);assert.equal(JSON.stringify(s),before);return R.calls;};
+  assert.equal(frame().length,0);
+  s.time=.2;for(const e of s.entities){e.walk=1;e.x=1;}
+  assert.equal(frame().length,48);const first=R.calls[0];
+  s.time=.4;for(const e of s.entities){e.walk=2;e.x=2;}
+  assert.equal(frame().length,96);assert.equal(R.calls[0][1],first[1]);assert.equal(R.calls[0][3],first[3]);
+  assert.equal(views.get(R).tracks.size,48);
+  s.time=1;assert.equal(frame().length,0,'stopped units leave no permanent cloud');
+  world.visible[0]=0;frame();assert.equal(views.get(R).tracks.size,0);
+  world.visible[0]=1;s.time=2;assert.equal(frame().length,0,'revealing units never replays old motion');
+  R.quality=0;frame();assert.equal(views.has(R),false);
+  R.quality=1;frame();s.time=2.2;s.entities.forEach(e=>e.walk++);assert.equal(frame().length,24);
+  render(R,{...world},s);assert.equal(views.get(R).tracks.size,24);assert.ok([...views.get(R).tracks.values()].every(t=>t.puffs.length===0));
+});
+
+test('combat accents exclude work/healing beams, obey both endpoint visibility and fixed quality budgets',()=>{
+  const context=loadScripts(['core','content','effects','effects-view'],{globals:{clamp:(v,a,b)=>Math.max(a,Math.min(b,v))}});
+  const {MeridianEffects:Effects,renderBattlefieldEffects:render}=vm.runInContext('({MeridianEffects,renderBattlefieldEffects})',context);
+  const effects=new Effects(()=>{throw Error('Combat cosmetic RNG');});
+  const shooter={kind:'unit',type:'tank',x:0,z:0,rot:0,faction:0,team:0},target={kind:'unit',type:'tank',x:20,z:0,size:1.3};
+  effects.shot(shooter,target);const shot=effects.fx[0];
+  effects.healing(shooter,target);
+  effects.random=()=>0;effects.construction(shooter,target,1);effects.mining(shooter,target,1,()=>true);
+  effects.random=()=>{throw Error('View sampled RNG');};
+  assert.ok(effects.fx.slice(1).every(f=>!effects.combatBeams.has(f)));
+  const R=createRendererStub({record:true});R.beam=(...args)=>R.calls.push(['beam',...args]);R.quality=2;R.cinema=false;
+  const world={visible:[1,1],idx:x=>x<10?0:1,definition:{palette:{ground:0xab9876}}},s={entities:[],fields:[],scans:[],strikes:[],time:0};
+  const frame=()=>{const before=JSON.stringify(effects.fx);R.calls.length=0;render(R,effects,world,s,[],0);assert.equal(JSON.stringify(effects.fx),before);return R.calls;};
+  assert.equal(frame().filter(c=>c[0]==='sphere').length,1);
+  assert.equal(R.calls.filter(c=>c[0]==='beam').length,7,'four original beams and three combat sparks');
+  assert.equal(effects.combatBeams.get(shot),1.3);
+  for(const c of R.calls.filter(c=>c[0]==='beam').slice(1,4)) assert.ok(Math.abs(Math.hypot(c[1][0]-20,c[1][2])-1.3)<.0001,'sparks start at the hull, not its center');
+  world.visible[1]=0;assert.equal(frame().filter(c=>c[0]==='beam').length,4);
+  world.visible[0]=0;assert.equal(frame().length,0);world.visible=[1,1];
+  effects.fx=Array.from({length:100},()=>shot);
+  for(const [quality,cap,sparks] of [[0,0,0],[1,16,1],[2,48,3]]) {
+    R.quality=quality;frame();assert.equal(R.calls.filter(c=>c[0]==='sphere').length,cap);
+    assert.equal(R.calls.filter(c=>c[0]==='beam').length,100+cap*sparks);
+  }
+  effects.reset();effects.shell(shooter,target,.8);R.quality=2;
+  assert.equal(frame().filter(c=>c[0]==='sphere').length,2,'projectile plus short launch flash');
+  effects.tick(.15);assert.equal(frame().filter(c=>c[0]==='sphere').length,1,'launch flash ends before impact');
 });
 
 test('world view uploads only changed layout/fog and does not mutate CPU data', () => {

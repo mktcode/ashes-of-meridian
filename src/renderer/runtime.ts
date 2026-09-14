@@ -15,6 +15,10 @@
       depthProg: WebGLProgram;
       skyProg: WebGLProgram;
       postProg: WebGLProgram;
+      bloomProg: WebGLProgram;
+      bloomTargets: { texture: WebGLTexture | null; fbo: WebGLFramebuffer | null }[] = [];
+      bloomWidth = 1;
+      bloomHeight = 1;
       meshes: Record<string, RenderMesh>;
       static: RenderBatches;
       dynamic: RenderBatches;
@@ -75,6 +79,7 @@
         this.depthProg = this.programOf(DEPTHV, DEPTHF);
         this.skyProg = this.programOf(FULLV, SKYF);
         this.postProg = this.programOf(FULLV, POSTF);
+        this.bloomProg = this.programOf(FULLV, BLOOMF);
         this.meshes = {};
         this.static = {};
         this.dynamic = {};
@@ -271,8 +276,57 @@
         g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, this.sceneTex, 0);
         g.framebufferRenderbuffer(g.FRAMEBUFFER, g.DEPTH_ATTACHMENT, g.RENDERBUFFER, this.sceneDepth);
         this.resizeSceneMSAA();
+        this.resizeBloom();
         g.bindRenderbuffer(g.RENDERBUFFER, null);
         g.bindFramebuffer(g.FRAMEBUFFER, null);
+      }
+      releaseBloom() {
+        for (const target of this.bloomTargets) {
+          if (target.texture) this.gl.deleteTexture(target.texture);
+          if (target.fbo) this.gl.deleteFramebuffer(target.fbo);
+        }
+        this.bloomTargets = [];
+      }
+      resizeBloom() {
+        const g = this.gl;
+        this.releaseBloom();
+        if (this.quality === 0) return;
+        this.bloomWidth = Math.max(1, Math.ceil(this.width / 4));
+        this.bloomHeight = Math.max(1, Math.ceil(this.height / 4));
+        for (let i = 0; i < 2; i++) {
+          const target = { texture: g.createTexture(), fbo: g.createFramebuffer() };
+          this.bloomTargets.push(target);
+          if (!target.texture || !target.fbo) { this.releaseBloom(); return; }
+          g.bindTexture(g.TEXTURE_2D, target.texture);
+          g.texImage2D(g.TEXTURE_2D, 0, g.RGBA8, this.bloomWidth, this.bloomHeight, 0, g.RGBA, g.UNSIGNED_BYTE, null);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
+          g.bindFramebuffer(g.FRAMEBUFFER, target.fbo);
+          g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, target.texture, 0);
+          if (g.checkFramebufferStatus(g.FRAMEBUFFER) !== g.FRAMEBUFFER_COMPLETE) { this.releaseBloom(); return; }
+        }
+      }
+      renderBloom() {
+        if (this.quality === 0 || this.bloomTargets.length !== 2) return;
+        const g = this.gl;
+        g.disable(g.DEPTH_TEST);
+        g.viewport(0, 0, this.bloomWidth, this.bloomHeight);
+        g.useProgram(this.bloomProg);
+        g.bindVertexArray(this.fullVao);
+        g.activeTexture(g.TEXTURE0);
+        g.uniform1i(this.uniform(this.bloomProg, 'u_tex'), 0);
+        for (let pass = 0; pass < 3; pass++) {
+          // Extract, horizontal blur, vertical blur. Never sample the attached target.
+          g.bindFramebuffer(g.FRAMEBUFFER, this.bloomTargets[pass === 1 ? 1 : 0].fbo);
+          g.bindTexture(g.TEXTURE_2D, pass === 0 ? this.sceneTex : this.bloomTargets[pass === 1 ? 0 : 1].texture);
+          g.uniform1i(this.uniform(this.bloomProg, 'u_extract'), pass === 0 ? 1 : 0);
+          g.uniform2f(this.uniform(this.bloomProg, 'u_step'),
+            pass === 0 ? 1 / this.width : pass === 1 ? 1 / this.bloomWidth : 0,
+            pass === 0 ? 1 / this.height : pass === 2 ? 1 / this.bloomHeight : 0);
+          g.drawArrays(g.TRIANGLES, 0, 3);
+        }
       }
       releaseSceneMSAA() {
         const g = this.gl;
@@ -682,6 +736,7 @@
             g.COLOR_BUFFER_BIT, g.NEAREST
           );
         }
+        this.renderBloom();
         g.bindFramebuffer(g.FRAMEBUFFER, null);
         g.viewport(0, 0, this.width, this.height);
         g.disable(g.DEPTH_TEST);
@@ -689,6 +744,10 @@
         g.activeTexture(g.TEXTURE0);
         g.bindTexture(g.TEXTURE_2D, this.sceneTex);
         g.uniform1i(this.uniform(this.postProg, 'u_tex'), 0);
+        g.activeTexture(g.TEXTURE1);
+        g.bindTexture(g.TEXTURE_2D, this.bloomTargets[0]?.texture || this.sceneTex);
+        g.uniform1i(this.uniform(this.postProg, 'u_bloom'), 1);
+        g.uniform1f(this.uniform(this.postProg, 'u_bloomOn'), this.quality > 0 && this.bloomTargets.length === 2 ? 1 : 0);
         g.uniform2f(this.uniform(this.postProg, 'u_size'), this.width, this.height);
         g.uniform1f(this.uniform(this.postProg, 'u_time'), time);
         g.uniform1f(this.uniform(this.postProg, 'u_quality'), this.quality);

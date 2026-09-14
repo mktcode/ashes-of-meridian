@@ -5,6 +5,8 @@ class MeridianEffects {
       declare random: () => number;
       declare fx: BattlefieldEffect[];
       declare floats: FloatingText[];
+      // View-only combat marker/hull radius: keep serialized effects and RNG samples unchanged.
+      readonly combatBeams = new WeakMap<BattlefieldEffect, number>();
 
       constructor(random: () => number) {
         // The provider must resolve the current simulation RNG after each start.
@@ -99,6 +101,7 @@ class MeridianEffects {
                       : 0xffd2a0,
               width: e.type === 'tank' ? 0.075 : 0.035
             });
+        this.combatBeams.set(this.fx[this.fx.length - 1], target.size);
       }
       construction(e: UnitEntity, b: BuildingEntity, dt: number) {
         if (this.random() < dt * 4)

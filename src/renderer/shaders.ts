@@ -119,8 +119,27 @@ void main(){
  vec2 skyUV=(vec2(uv.x,1.-uv.y)-.5)*scale+.5;
  frag=vec4(texture(u_skyTex,skyUV).rgb,1.);
 }`;
+    const BLOOMF = `#version 300 es
+precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_step;uniform bool u_extract;
+vec3 bright(vec2 p){
+ vec3 c=texture(u_tex,p).rgb;
+ float peak=max(max(c.r,c.g),c.b),lum=dot(c,vec3(.2126,.7152,.0722));
+ return c*smoothstep(.76,.90,peak)*smoothstep(.48,.74,lum);
+}
+void main(){
+ vec3 c;
+ if(u_extract){
+  // Threshold before averaging: small lamps survive the quarter-size reduction.
+  c=(bright(uv+u_step)+bright(uv-u_step)+bright(uv+vec2(u_step.x,-u_step.y))+bright(uv+vec2(-u_step.x,u_step.y)))*.25;
+ }else{
+  c=texture(u_tex,uv).rgb*.227027;
+  c+=(texture(u_tex,uv+u_step*1.384615).rgb+texture(u_tex,uv-u_step*1.384615).rgb)*.316216;
+  c+=(texture(u_tex,uv+u_step*3.230769).rgb+texture(u_tex,uv-u_step*3.230769).rgb)*.070270;
+ }
+ frag=vec4(c,1.);
+}`;
     const POSTF = `#version 300 es
-precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_size;uniform float u_time;uniform float u_quality;
+precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_size;uniform float u_time;uniform float u_quality;uniform sampler2D u_bloom;uniform float u_bloomOn;
 // Screen-space tilt-shift approximation: wide sharp band, at most eight extra taps.
 // Radius follows the shorter render dimension, keeping the look stable across DPR.
 vec3 tiltShift(vec3 sharp,vec2 px){
@@ -134,4 +153,4 @@ vec3 tiltShift(vec3 sharp,vec2 px){
          +texture(u_tex,uv+vec2(d.x,-d.y)).rgb+texture(u_tex,uv+vec2(-d.x,d.y)).rgb;
  return blurred/16.;
 }
-void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;if(u_quality>1.5)c=tiltShift(c,px);vec3 bloom=vec3(0.);if(u_quality>.5){for(int i=0;i<8;i++){float a=float(i)*.785398;vec2 o=vec2(cos(a),sin(a))*px*5.;bloom+=max(texture(u_tex,uv+o).rgb-.68,0.);bloom+=max(texture(u_tex,uv+o*2.4).rgb-.72,0.)*.5;}c+=bloom*.16;}float vignette=1.-smoothstep(.25,.85,length((uv-.5)*vec2(1.,.8)))*.20;float grain=(fract(sin(dot(uv*u_size+u_time,vec2(12.9898,78.233)))*43758.5453)-.5)/260.;c=pow(max(c*vignette+grain,0.),vec3(.96));frag=vec4(c,1.);}`;
+void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;if(u_quality>1.5)c=tiltShift(c,px);if(u_bloomOn>.5)c+=texture(u_bloom,uv).rgb*.65*(1.-c);float vignette=1.-smoothstep(.25,.85,length((uv-.5)*vec2(1.,.8)))*.20;float grain=(fract(sin(dot(uv*u_size+u_time,vec2(12.9898,78.233)))*43758.5453)-.5)/260.;c=pow(max(c*vignette+grain,0.),vec3(.96));frag=vec4(c,1.);}`;

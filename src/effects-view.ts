@@ -1,17 +1,78 @@
-/* Rendering only: no effect generation, ticking or RNG calls. */
+/* View-only embellishments: never mutate CPU effects or consume simulation RNG. */
 'use strict';
+interface MotionDustTrack {
+  walk: number;
+  emitted: number;
+  puffs: { x: number; z: number; at: number }[];
+}
+const motionDustViews = new WeakMap<MeridianRenderer, { world: Battlefield; color: readonly number[]; tracks: Map<UnitEntity, MotionDustTrack> }>();
+function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState) {
+  if (!(R.quality > 0) || R.cinema) { motionDustViews.delete(R); return; }
+  let view = motionDustViews.get(R);
+  if (!view || view.world !== world) {
+    view = { world, color: Array.from(R.color(world.definition.palette.ground), c => c * .55 + .35), tracks: new Map() };
+    motionDustViews.set(R, view);
+  }
+  const seen = new Set<UnitEntity>(), cap = R.quality > 1 ? 48 : 24, now = s.time;
+  for (const e of s.entities) {
+    if (seen.size >= cap) break;
+    if (e.kind !== 'unit' || e.hp <= 0 || (e.type !== 'tank' && e.type !== 'artillery') || !world.visible[world.idx(e.x,e.z)]) continue;
+    const p = R.project(e.x, 0, e.z), v = R.viewport;
+    if (!p || p.x < v.left - 30 || p.x > v.right + 30 || p.y < v.top - 30 || p.y > v.bottom + 30) continue;
+    seen.add(e);
+    let track = view.tracks.get(e);
+    if (!track) { track = { walk: e.walk, emitted: now, puffs: [] }; view.tracks.set(e, track); }
+    if (e.walk > track.walk && now - track.emitted >= .18) {
+      const side = Math.sin(e.id * 7 + Math.floor(e.walk * 3)) > 0 ? 1 : -1;
+      track.puffs.push({ x: e.x - Math.sin(e.rot) * e.size + Math.cos(e.rot) * side * e.size * .65,
+        z: e.z - Math.cos(e.rot) * e.size - Math.sin(e.rot) * side * e.size * .65, at: now });
+      track.emitted = now;
+    }
+    track.walk = e.walk;
+    track.puffs = track.puffs.filter(puff => now - puff.at < .42).slice(R.quality > 1 ? -2 : -1);
+    for (const puff of track.puffs) {
+      if (!world.visible[world.idx(puff.x,puff.z)]) continue;
+      const age = clamp((now - puff.at) / .42, 0, 1), radius = .3 + age * .6;
+      R.add('sphere', puff.x, .18 + age * .35, puff.z, radius, radius * .45, radius,
+        view.color, 0, 0, 0, 0, (1 - age) * .17, 'effects');
+    }
+  }
+  for (const e of view.tracks.keys()) if (!seen.has(e)) view.tracks.delete(e);
+}
         function drawEffectRing(R: MeridianRenderer, x: number, z: number, r: number, color: RenderColor, alpha = 0.65, y = 0.1, rot = 0) {
           R.add('ring', x, y, z, r, 1, r, color, rot, 0, 0, 0.45, alpha, 'effects');
         }
         function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number) {
           const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
+          renderMotionDust(R, world, s);
+          let accents = R.quality > 1 ? 48 : R.quality > 0 ? 16 : 0;
           for (let f of effects.fx) {
             if (!world.visible[world.idx(f.x, f.z)] && (f.type !== 'drop' || f.team === 1)) continue;
             let life = clamp(f.life / f.maxLife, 0, 1),
               age = 1 - life;
-            if (f.type === 'beam')
+            if (f.type === 'beam') {
               R.beam([f.x, f.y, f.z], [f.tx, f.ty, f.tz], f.width, f.color, 1.6, Math.min(1, life * 3));
-            else if (f.type === 'shell') {
+              if (accents > 0 && effects.combatBeams.has(f)) {
+                accents--;
+                const flash = clamp(f.life / .1, 0, 1), radius = .14 + f.width * 2;
+                R.add('sphere', f.x, f.y, f.z, radius, radius * .7, radius, f.color, 0, 0, 0, 2, flash * .8, 'effects');
+                // Place the accent at the approximate hull, not inside the target mesh.
+                const dx = f.x - f.tx, dz = f.z - f.tz, distance = Math.max(.001, Math.hypot(dx,dz));
+                const hitRadius = Math.min(effects.combatBeams.get(f) || .65, distance * .5);
+                const hitX = f.tx + dx / distance * hitRadius, hitZ = f.tz + dz / distance * hitRadius;
+                if (world.visible[world.idx(f.tx,f.tz)] && world.visible[world.idx(hitX,hitZ)]) {
+                  for (let i = 0; i < (R.quality > 1 ? 3 : 1); i++) {
+                    const angle = Math.atan2(dx,dz) + Math.sin(f.tx * 1.7 + f.tz * 2.3 + i * 2.39996) * .9, length = .15 + age * .8;
+                    R.beam([hitX, f.ty, hitZ], [hitX + Math.sin(angle) * length, f.ty + length * .7, hitZ + Math.cos(angle) * length],
+                      .025, f.color, 1.5, life * .7);
+                  }
+                }
+              }
+            } else if (f.type === 'shell') {
+              if (accents > 0 && age * f.maxLife < .1) {
+                accents--;
+                R.add('sphere', f.x, f.y, f.z, .27, .2, .27, f.color, 0, 0, 0, 2, (1 - age * f.maxLife / .1) * .8, 'effects');
+              }
               let x = f.x + (f.tx - f.x) * age,
                 z = f.z + (f.tz - f.z) * age,
                 y = f.startY * (1 - age) + Math.sin(age * Math.PI) * 12;

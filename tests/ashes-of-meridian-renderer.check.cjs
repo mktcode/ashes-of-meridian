@@ -68,8 +68,9 @@ test('tilt-shift is High-only with a sharp center, normalized kernel and resolut
   assert.ok(kernel.includes('blurred=sharp*4.;'));
   assert.ok(kernel.includes(')).rgb)*2.;'));
   assert.ok(kernel.includes('return blurred/16.;'));
-  assert.doesNotMatch(POSTF, /sampler2D\s+(?!u_tex\b)/);
-  assert.ok(POSTF.includes('if(u_quality>.5){for(int i=0;i<8;i++)'), 'existing bloom stays on Balanced/High');
+  assert.doesNotMatch(kernel, /texture\((?!u_tex,)/);
+  assert.ok(POSTF.includes('if(u_bloomOn>.5)c+=texture(u_bloom,uv)'), 'bloom composites a separate low-resolution texture');
+  assert.doesNotMatch(POSTF,/for\(int i=0;i<8/);
 });
 
 function setup(options = {}) {
@@ -77,10 +78,16 @@ function setup(options = {}) {
     innerWidth: 800, innerHeight: 600, devicePixelRatio: 2
   } });
   const Renderer = vm.runInContext('MeridianRenderer', context), calls = [];
-  const framebuffers = new Set(), buffers = new Set();
+  const framebuffers = new Set(), buffers = new Set(), textures = new Set(), textureUnits = new Map();
+  let activeUnit = 'TEXTURE0';
   let draw = null, read = null, buffer = null, program = null, next = 0;
   const api = {
     COLOR_BUFFER_BIT: 1, DEPTH_BUFFER_BIT: 2,
+    createTexture() { if(options.failTexture||options.failTextureAt===textures.size+1)return null;const t={id:++next};textures.add(t);return t; },
+    deleteTexture(t) { assert.ok(textures.delete(t)); },
+    activeTexture(unit) { activeUnit=unit;calls.push(['activeTexture',unit]); },
+    bindTexture(target,t) { textureUnits.set(activeUnit,t);calls.push(['bindTexture',target,t]); },
+    texImage2D(...args) { Object.assign(textureUnits.get(activeUnit),{width:args[3],height:args[4]});calls.push(['texImage2D',...args]); },
     createFramebuffer() {
       if (options.failFramebuffer) return null;
       const f = { id: ++next, attachments: {} }; framebuffers.add(f); return f;
@@ -111,11 +118,15 @@ function setup(options = {}) {
     framebufferTexture2D(target, attachment, texTarget, tex) { draw.attachments[attachment] = tex; },
     checkFramebufferStatus() {
       const c = draw.attachments.COLOR_ATTACHMENT0, d = draw.attachments.DEPTH_ATTACHMENT;
+      if(!d) { assert.ok(c.width>0&&c.height>0);return options.rejectBloom ? 'FRAMEBUFFER_UNSUPPORTED' : 'FRAMEBUFFER_COMPLETE'; }
       assert.equal(c.samples, d.samples); assert.equal(c.width, d.width); assert.equal(c.height, d.height);
       return options.reject?.(c.samples) ? 'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE' : 'FRAMEBUFFER_COMPLETE';
     },
     useProgram(p) { program = p; calls.push(['program', p]); },
-    drawArrays() { calls.push(['quad', program, draw]); },
+    drawArrays() {
+      if(program==='bloom') assert.notEqual(textureUnits.get('TEXTURE0'),draw.attachments.COLOR_ATTACHMENT0,'no texture feedback');
+      calls.push(['quad', program, draw]);
+    },
     blitFramebuffer(...args) { calls.push(['resolve', read, draw, ...args]); }
   };
   const g = new Proxy(api, { get(target, name) {
@@ -125,6 +136,7 @@ function setup(options = {}) {
   const r = Object.assign(Object.create(Renderer.prototype), {
     gl: g, quality: 2, canvas: {}, sceneFbo: g.createFramebuffer(), sceneTex: {}, sceneDepth: g.createRenderbuffer(),
     sceneMSAAFbo: null, sceneMSAAColor: null, sceneMSAADepth: null, sceneSamples: 0,
+    bloomTargets: [], bloomProg: 'bloom',
     battlefieldProfile: vm.runInContext('DEFAULT_TERRAIN_RENDER_PROFILE', context),
     frame: 0, shadowSize: 1536, shadowBias: .00022, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
     program: 'scene', depthProg: 'shadow', skyProg: 'sky', postProg: 'post', shadowFbo: 'shadow-target',
@@ -133,7 +145,7 @@ function setup(options = {}) {
   });
   Object.defineProperty(r.canvas, 'getBoundingClientRect', { value: () => options.viewport ||
     ({ left: 0, top: 0, width: context.innerWidth, height: context.innerHeight }) });
-  return { r, g, calls, options, framebuffers, buffers, context, bindings: () => ({ draw, read, buffer }) };
+  return { r, g, calls, options, framebuffers, buffers, textures, context, bindings: () => ({ draw, read, buffer }) };
 }
 
 test('fog texture reallocates only on grid-size changes, including odd row widths', () => {
@@ -283,7 +295,7 @@ test('sample selection respects both formats and falls back without supported mu
   ]) {
     const h = setup({ color, depth }); h.r.resize(); assert.equal(h.r.sceneSamples, expected);
     assert.equal(!!h.r.sceneMSAAFbo, expected > 0);
-    assert.equal(h.framebuffers.size, expected ? 2 : 1);
+    assert.equal(h.framebuffers.size, expected ? 4 : 3);
     assert.equal(h.buffers.size, expected ? 3 : 1);
   }
 });
@@ -292,7 +304,7 @@ test('incomplete 4x target is released before retrying supported 2x', () => {
   const h = setup({ reject: n => n === 4 }); h.r.resize();
   assert.equal(h.r.sceneSamples, 2);
   assert.deepEqual(h.calls.filter(c => c[0] === 'storage').map(c => c[1]), [4, 4, 2, 2]);
-  assert.equal(h.framebuffers.size, 2); assert.equal(h.buffers.size, 3);
+  assert.equal(h.framebuffers.size, 4); assert.equal(h.buffers.size, 3);
 });
 
 test('incomplete targets and null GPU allocations leave a clean single-sample fallback', () => {
@@ -300,7 +312,7 @@ test('incomplete targets and null GPU allocations leave a clean single-sample fa
     const h = setup(); Object.assign(h.options, failure); h.r.resize();
     assert.equal(h.r.sceneSamples, 0); assert.equal(h.r.sceneMSAAFbo, null);
     assert.equal(h.r.sceneMSAAColor, null); assert.equal(h.r.sceneMSAADepth, null);
-    assert.equal(h.framebuffers.size, 1); assert.equal(h.buffers.size, 1);
+    assert.equal(h.framebuffers.size, failure.failFramebuffer ? 1 : 3); assert.equal(h.buffers.size, 1);
     assert.deepEqual(h.bindings(), { draw: null, read: null, buffer: null });
   }
 });
@@ -315,7 +327,34 @@ test('resize and quality switches release old attachments and rebuild matching d
   assert.equal(h.framebuffers.size, 1); assert.equal(h.buffers.size, 1);
   h.r.quality = 1; h.r.resize();
   assert.equal(h.r.sceneSamples, 4); assert.equal(h.r.sceneMSAAColor.width, 1000);
-  assert.equal(h.framebuffers.size, 2); assert.equal(h.buffers.size, 3);
+  assert.equal(h.framebuffers.size, 4); assert.equal(h.buffers.size, 3);
+});
+
+test('bloom uses two quarter-size targets, three ordered passes and a clean allocation fallback',()=>{
+  const h=setup();h.r.resize();
+  assert.equal(h.r.bloomWidth,320);assert.equal(h.r.bloomHeight,240);assert.equal(h.textures.size,2);
+  h.calls.length=0;h.r.render(0);
+  const quads=h.calls.filter(c=>c[0]==='quad'&&c[1]==='bloom');
+  assert.deepEqual(quads.map(c=>c[2]),[h.r.bloomTargets[0].fbo,h.r.bloomTargets[1].fbo,h.r.bloomTargets[0].fbo]);
+  assert.ok(h.calls.indexOf(quads[0])>h.calls.findIndex(c=>c[0]==='resolve'));
+  assert.ok(h.calls.indexOf(quads[2])<h.calls.findIndex(c=>c[0]==='quad'&&c[1]==='post'));
+  assert.deepEqual(h.calls.filter(c=>c[0]==='uniform2f'&&c[1]==='u_step').map(c=>c.slice(2)),[[1/1280,1/960],[1/320,0],[0,1/240]]);
+  for(const quality of [0,1,2,0,2]) {
+    h.r.quality=quality;h.r.resize();assert.equal(h.textures.size,quality?2:0);
+    h.calls.length=0;h.r.render(0);assert.equal(h.calls.filter(c=>c[0]==='quad'&&c[1]==='bloom').length,quality?3:0);
+    assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_bloomOn'&&c[2]===(quality?1:0)));
+  }
+  for(const failure of [{failTexture:true},{failTextureAt:2},{rejectBloom:true},{failFramebuffer:true}]) {
+    const f=setup();Object.assign(f.options,failure);f.r.resize();
+    assert.equal(f.textures.size,0);assert.equal(f.r.bloomTargets.length,0);
+    f.calls.length=0;f.r.render(0);assert.ok(!f.calls.some(c=>c[0]==='quad'&&c[1]==='bloom'));
+    assert.ok(f.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_bloomOn'&&c[2]===0));
+  }
+  h.options.viewport={left:0,top:0,width:1,height:1};h.r.quality=1;h.r.resize();
+  assert.equal(h.r.bloomWidth,1);assert.equal(h.r.bloomHeight,1);
+  const shader=vm.runInContext('BLOOMF',h.context);
+  assert.match(shader,/smoothstep\(\.76,\.90,peak\)\*smoothstep\(\.48,\.74,lum\)/);
+  assert.ok(Math.abs(.227027+2*.316216+2*.070270-1)<.00001);
 });
 
 test('scene geometry and blended effects resolve exactly once before post-processing', () => {
