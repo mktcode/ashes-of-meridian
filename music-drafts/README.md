@@ -1,5 +1,21 @@
 # Musikentwürfe
 
-Dieses Verzeichnis bleibt als Ablage für künftige Hörentwürfe erhalten. Derzeit enthält es bewusst keine Entwürfe.
+Dieses Verzeichnis enthält Hörentwürfe, die nicht Teil des Spiels sind.
 
-Die freigegebene Spielplaylist liegt unter [`../audio/`](../audio/) und ist in [`src/audio.ts`](../src/audio.ts) festgelegt.
+## Aether Bloom
+
+[**05 – Aether Bloom anhören**](05-aether-bloom.mp3) – **122 BPM**, rund **74 Sekunden**, Stereo-MP3/44,1 kHz/224 kbit/s.
+
+Ein heller, rhythmischer Elektronikentwurf: kurze Glas-FM-Töne, abgesetzte E-Piano-Akkorde und eine leichte Bassfigur in einer offenen lydischen Klangfarbe. Die Melodie erscheint nur in einzelnen Phrasen; der Mittelteil und der spätere luftige Abschnitt lassen bewusst Raum. Es gibt keine Gitarren, Sprachsamples oder dauerhafte Klangfläche.
+
+## Herstellung und Grenzen
+
+`Aether Bloom` bei Bedarf neu erzeugen:
+
+```bash
+python3 scripts/generate-aether-bloom.py
+```
+
+Der Generator verwendet ausschließlich lokale Synthese sowie Python 3 und FFmpeg; er liest keine Aufnahmen oder Spielassets und überschreibt nur `05-aether-bloom.mp3`. Die Lautheit ist technisch auf −15 LUFS bei −1,5 dBTP ausgerichtet. Technische Prüfung ersetzt kein Hörurteil.
+
+Freigegebene Fassungen bytegleich nach `audio/` kopieren, nicht neu kodieren. Bei einer Playliständerung Auswahl in `src/audio.ts` sowie die Audioeinträge in `Dockerfile` und `.dockerignore` gemeinsam anpassen. Entwürfe bleiben bis zu einer ausdrücklichen Freigabe außerhalb der Laufzeit.
