@@ -1,6 +1,6 @@
 # Statisches Webdeployment
 
-Die [öffentliche Testversion](../README.md) wird über Dokploy ausgeliefert. Kein Backend, keine Datenbank, persistenten Volumes oder Laufzeitvariablen. Lokale `file://`-Auslieferung bleibt unabhängig davon unterstützt.
+Die [öffentliche Testversion](../README.md) wird über Dokploy ausgeliefert; zusätzlich kann derselbe statische Stand als HTML5-Prototyp bei itch.io veröffentlicht werden. Kein Backend, keine Datenbank, persistenten Volumes oder Laufzeitvariablen. Lokale `file://`-Auslieferung bleibt unabhängig davon unterstützt.
 
 ## Docker und Dokploy
 
@@ -18,6 +18,18 @@ docker run --rm -p 8080:8080 ashes-of-meridian
 ```
 
 Dann `http://localhost:8080/` öffnen. Bei Containeränderungen gezielt Imagebau, Healthcheck, MIME-Typen, 404-Verhalten und erforderliche Laufzeitassets prüfen; weitere Browserprüfungen nach [Risiko](testing.md). Öffentlich HTTPS verwenden.
+
+## itch.io
+
+```bash
+npm run build:zip
+```
+
+Der Befehl baut neu und erzeugt `release/ashes-of-meridian-prototype.zip`. Das Archiv enthält `index.html` direkt an seiner Wurzel sowie nur die benötigten Styles, kompilierten Skripte, Musik und Portraits. Source Maps, TypeScript-Quellen, Tests, Dokumentation und Quelltexturen bleiben draußen. Der Paketinhalt ist sortiert und mit festen Zeitstempeln reproduzierbar.
+
+Das ZIP auf der itch.io-Projektseite als **HTML**-Build hochladen und **„This file will be played in the browser“** aktivieren. Wegen WebGL 2 und des bildschirmfüllenden Touch-Layouts den eingebetteten Viewport auf automatisch bzw. Vollbild konfigurierbar stellen; eine feste kleine Canvas-Größe vermeiden. Nach dem Upload mindestens Startmenü, Audiofreigabe, Gefechtsstart und Browserkonsole am tatsächlich von itch.io ausgelieferten Build prüfen.
+
+Die Laufzeitdateiliste entspricht dem Docker-Webdeployment. Bei neuen lokalen Assets beide Paketwege gemeinsam aktualisieren und jeweils auf fehlende Dateien prüfen.
 
 ## Zustandsgrenzen
 
