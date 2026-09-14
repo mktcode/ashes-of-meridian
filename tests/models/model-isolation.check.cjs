@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const baseline = require('../fixtures/model-draw-v1.json');
 const { modelHarness, modelDrawDigests } = require('../helpers/model-contract.cjs');
 
-test('faction-0 unit detail preserves 252 other-unit variants and all 378 approved building variants', () => {
+test('requested entity redesigns preserve every unrelated unit and building draw variant', () => {
   const h = modelHarness();
   vm.runInContext('Math.random = seeded = () => { throw Error("Draw RNG"); }', h.context);
   // Approved buildings from b7b9efc, captured BEFORE the unit pass.
@@ -32,10 +32,12 @@ test('faction-0 unit detail preserves 252 other-unit variants and all 378 approv
     'faction-2/building/hangar': '2037a7799209527ba3356d8b97f48da740dd2b6e770a257f6b93013110c6f3ed',
     'faction-2/building/turret': '991e4bba1eec52a5e272fe455ae5bc89b847a7e158c19b4402e96a3efe175b10'
   }, expected = { ...baseline, ...approved }, actual = modelDrawDigests(h);
-  for (const id of Object.keys(expected)) if (id.startsWith('faction-0/unit/')) {
+  // The nursery's new low, three-pod silhouette has independent geometry/assembly checks.
+  // Retain its old digest above; do not regenerate any unrelated reference.
+  for (const id of Object.keys(expected)) if (id.startsWith('faction-0/unit/') || id === 'faction-1/building/barracks') {
     assert.notEqual(actual[id], expected[id], 'requested refinement has its own geometry/variant test');
     delete actual[id]; delete expected[id];
   }
-  assert.equal(Object.keys(actual).length, 35);
+  assert.equal(Object.keys(actual).length, 34);
   assert.deepEqual(actual, expected);
 });
