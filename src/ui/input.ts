@@ -61,7 +61,6 @@
           if (target?.dataset.setting === 'volume') this.applySetting(target);
         });
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
-        $('battleHome').onclick = () => this.pause();
         $('helpBtn').onclick = () => this.showHelp();
         $('speedBtn').onclick = () => {
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;

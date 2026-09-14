@@ -243,7 +243,7 @@
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
         speedButton.textContent = speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
-        $('battleLabel').innerHTML = 'Annihilation' + `<small>STAGE ${s.depth + 1}</small>`;
+        $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
         let rows = this.game.objectiveRows();
         $('objectives').innerHTML =
           '<div class="eyebrow">◈ BATTLE OBJECTIVE</div><div id="objectiveRows">' +

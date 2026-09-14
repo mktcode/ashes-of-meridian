@@ -29,28 +29,15 @@
       pointer-events: auto
     }
 
-    .brandmark {
-      color: var(--gold);
-      font-size: 31px;
-      padding: 0
-    }
-
     .top-spacer {
       flex: 1
     }
 
     #battleLabel {
-      font-size: 12px;
-      letter-spacing: 1px;
-      text-transform: uppercase
-    }
-
-    #battleLabel small {
-      display: block;
-      font: 9px var(--mono);
-      letter-spacing: 1.5px;
       color: var(--muted);
-      margin-top: 4px
+      font: 11px var(--mono);
+      letter-spacing: 1px;
+      white-space: nowrap
     }
 
     .resource {
@@ -617,11 +604,6 @@
         font-size: 20px
       }
 
-      #battleLabel {
-        max-width: 200px;
-        font-size: 10px
-      }
-
       #radio {
         width: calc(100% - 440px);
         min-width: 340px;
@@ -642,10 +624,6 @@
         gap: 10px
       }
 
-      #battleLabel {
-        max-width: 165px
-      }
-
       .resource strong {
         font-size: 14px
       }
@@ -660,10 +638,6 @@
 
       .resource {
         min-width: 55px
-      }
-
-      .brandmark {
-        font-size: 24px
       }
 
       #objectives {
@@ -745,16 +719,13 @@
     }
 
     @media(max-width:600px) {
-      #battleLabel {
-        display: none
-      }
-
       #topbar {
         display: grid;
-        grid-template-columns: 22px repeat(3, minmax(0, 1fr)) 30px 48px 36px;
-        gap: 4px;
-        padding: 0 8px
+        grid-template-columns: 43px repeat(4, minmax(0, 1fr)) 40px 32px;
+        gap: 3px;
+        padding: 0 6px
       }
+      #battleLabel { font-size: 8px; letter-spacing: .6px }
       .top-spacer { display: none }
       .resource { min-width: 0; gap: 3px }
       .resource strong { font-size: 12px; white-space: nowrap }
@@ -763,8 +734,7 @@
       .power .resicon { display: none }
       .clock { padding-left: 0 }
       .clock strong { font-size: 11px }
-      #pauseBtn { width: 36px; height: 40px; padding: 0 }
-      .brandmark { font-size: 23px; padding: 0 }
+      #pauseBtn { width: 32px; height: 40px; padding: 0 }
 
       .sub-header {
         gap: 15px
@@ -875,6 +845,9 @@
     /* Keep every control available on unusually narrow screens. */
     @media(max-width:360px) {
       :root { --side-width: 82px; --deck-height: 206px; --tools-height: 84px; --ability-height: 112px }
+      #topbar { grid-template-columns: 37px repeat(4, minmax(0, 1fr)) 35px 30px; gap: 2px; padding: 0 4px }
+      #battleLabel { font-size: 7px; letter-spacing: .3px }
+      #pauseBtn { width: 30px }
       #cameraTools { grid-template-columns: repeat(3, minmax(0, 1fr)) }
       #abilityBar { grid-template-columns: repeat(2, minmax(0, 1fr)) }
       .resource .resicon { display: none }

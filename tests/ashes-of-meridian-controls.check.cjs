@@ -1044,7 +1044,7 @@ test('tooltips and native title hints are removed without removing pointer press
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.match(html, /<title>Ashes of Meridian/);
   for (const [attribute, value, label] of [
-    ['id', 'battleHome', 'Pause / operations'], ['id', 'pauseBtn', 'Pause'],
+    ['id', 'pauseBtn', 'Pause'],
     ['data-cam', 'home', 'Center on command'], ['data-cam', 'in', 'Zoom in'],
     ['data-cam', 'out', 'Zoom out'], ['id', 'soundBtn', 'Sound'],
     ['id', 'helpBtn', 'Field manual'], ['id', 'minimap', 'Minimap']
@@ -1444,7 +1444,7 @@ test('HUD reads supply and capacity once per update and refreshes counts, warnin
     g.cap = () => { capacityReads++; return capacity; };
     h.UI.prototype.updateHUD.call(h.ui);
     const count = h.document.getElementById('supplyCount');
-    assert.equal(h.document.getElementById('battleLabel').innerHTML, 'Annihilation<small>STAGE 5</small>');
+    assert.equal(h.document.getElementById('battleLabel').textContent, 'STAGE 5');
     assert.equal(count.textContent, supply + ' / ' + capacity);
     assert.equal(count.style.color, supply >= capacity ? 'var(--red)' : '');
     assert.deepEqual(buttons.map(button => button.disabled), blocked);
