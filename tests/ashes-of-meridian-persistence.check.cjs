@@ -88,6 +88,16 @@ test('expedition normalization rejects invalid encounters and bounds known benef
   });
 });
 
+test('new fleet upgrades normalize and reload through the real content catalog',()=>{
+  const rules=vm.runInContext('({upgrades:META,benefits:EXPEDITION_BENEFITS})',loadScripts(['content']));
+  const h=setup(new Map(),rules);
+  h.service.saveProfile({...defaults,upgrades:{constructionProtocols:99,logisticsFrame:2.9,repairLogistics:-1}});
+  const loaded=setup(h.data,rules).service.loadProfile();
+  assert.deepEqual(json(loaded.upgrades),{startingAlloy:0,startingWorkers:0,aetherEvacuation:0,
+    constructionProtocols:5,logisticsFrame:2,repairLogistics:0});
+  assert.equal(loaded.aether,0);assert.equal(h.service.loadExpedition(),null);
+});
+
 test('new benefit keys round-trip with real content limits and exhausted offers disappear',()=>{
   const rules=vm.runInContext('({upgrades:META,benefits:EXPEDITION_BENEFITS})',loadScripts(['content']));
   const h=setup(new Map(),rules);

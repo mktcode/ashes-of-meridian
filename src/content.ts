@@ -371,6 +371,30 @@ const META = {
     display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'AETHER / BATTLE' },
     max: 5,
     costs: [500, 800, 1200, 1800, 2600]
+  },
+  constructionProtocols: {
+    name: 'Construction protocols',
+    icon: 'factory',
+    desc: 'Adds 5% of base construction speed per level. Adds to Field workshop, without faster repairs.',
+    display: { label: 'CONSTRUCTION BONUS', values: [0, 5, 10, 15, 20, 25], unit: '% FASTER' },
+    max: 5,
+    costs: [200, 350, 550, 800, 1100]
+  },
+  logisticsFrame: {
+    name: 'Logistics frame',
+    icon: 'depot',
+    desc: 'Adds 2 supply capacity per level from battle start. The total limit remains 180.',
+    display: { label: 'EXTRA CAPACITY', values: [0, 2, 4, 6, 8, 10], unit: 'SUPPLY' },
+    max: 5,
+    costs: [150, 250, 400, 600, 850]
+  },
+  repairLogistics: {
+    name: 'Repair logistics',
+    icon: 'repair',
+    desc: 'Reduces worker repair alloy costs by 5% per level, without changing repair speed.',
+    display: { label: 'REPAIR DISCOUNT', values: [0, 5, 10, 15, 20, 25], unit: '% LESS ALLOY' },
+    max: 5,
+    costs: [150, 250, 400, 600, 850]
   }
 } as const satisfies Record<string, UpgradeDefinition>;
 

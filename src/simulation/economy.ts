@@ -17,7 +17,7 @@
           180,
           this.alive(e => e.team === team && e.kind === 'building' && e.progress >= 1).reduce(
             (a, e) => a + ((BUILDINGS[e.type as BuildingType] as BuildingDefinitionShape).cap || 0),
-            0
+            team === 0 ? (this.s!.meta.logisticsFrame || 0) * 2 : 0
           )
         );
       },
@@ -178,10 +178,11 @@
         let c = this.cost(type, 'building', team);
         if (!this.spend(c, team)) return false;
         let b = this.spawnBuilding(type, p.x, p.z, team, this.factionFor(team), { progress: 0.06, paid: c });
-        if (team === 0 && this.s!.benefits.fieldWorkshop && !this.s!.triggers.fieldWorkshop) {
-          b.buildRate = 1.5;
-          this.s!.triggers.fieldWorkshop = true;
-        }
+        const workshop = team === 0 && this.s!.benefits.fieldWorkshop && !this.s!.triggers.fieldWorkshop,
+          buildRate = 1 + (team === 0 ? (this.s!.meta.constructionProtocols || 0) * .05 : 0) + (workshop ? .5 : 0);
+        // Add both bonuses to base speed once; changing builders never changes the foundation.
+        if (buildRate !== 1) b.buildRate = buildRate;
+        if (workshop) this.s!.triggers.fieldWorkshop = true;
         b.hp = b.maxHp * 0.06;
         if (type === 'refinery')
           b.gasId = this.closest(p, e => e.type === 'gas' && e.kind === 'resource')?.id;
@@ -313,9 +314,10 @@
               this.finishOrder(e);
             }
           } else if (b.hp < b.maxHp && this.account(team).alloy > 0.1) {
-            let amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10);
+            const repairFactor = 1 - (team === 0 ? (s.meta.repairLogistics || 0) * .05 : 0),
+              amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10 / repairFactor);
             b.hp += amount;
-            this.account(team).alloy -= amount * 0.1;
+            this.account(team).alloy -= amount * .1 * repairFactor;
           } else this.finishOrder(e);
           this.effects.construction(e, b, dt);
           return true;

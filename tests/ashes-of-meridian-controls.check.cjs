@@ -793,11 +793,11 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   assert.match(h.ui.html, /STARTING RESERVES<\/span><strong>250 <small>ALLOY<\/small>/);
   assert.match(h.ui.html, /STARTING WORKERS<\/span><strong>0 <small>WORKERS<\/small>/);
   assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>100 <small>AETHER \/ BATTLE<\/small>/);
-  assert.equal((h.ui.html.match(/class="upgrade-heading"/g) || []).length, 3);
-  assert.equal((h.ui.html.match(/class="upgrade-rank">LEVEL 0 \/ 5/g) || []).length, 3);
-  assert.equal((h.ui.html.match(/aria-label="Level 0 of 5"/g) || []).length, 3);
+  assert.equal((h.ui.html.match(/class="upgrade-heading"/g) || []).length, 6);
+  assert.equal((h.ui.html.match(/class="upgrade-rank">LEVEL 0 \/ 5/g) || []).length, 6);
+  assert.equal((h.ui.html.match(/aria-label="Level 0 of 5"/g) || []).length, 6);
   assert.deepEqual(Array.from(h.ui.html.matchAll(/data-upgrade="([^"]+)"/g), m => m[1]),
-    ['startingAlloy', 'startingWorkers', 'aetherEvacuation']);
+    ['startingAlloy', 'startingWorkers', 'aetherEvacuation', 'constructionProtocols', 'logisticsFrame', 'repairLogistics']);
   assert.match(h.ui.html, /Starting alloy/); assert.match(h.ui.html, /100 AETHER · LEVEL 1/);
   assert.match(h.ui.html, /Starting workers/); assert.match(h.ui.html, /300 AETHER · LEVEL 1/);
   assert.match(h.ui.html, /Aether evacuation/); assert.match(h.ui.html, /500 AETHER · LEVEL 1/);
@@ -834,6 +834,24 @@ test('each result transfers floored unused aether once, using the run-start evac
     assert.equal(h.ui.profile.aether, recovered, 'same result cannot pay twice');
     assert.equal(saves.length, recovered ? 1 : 0);
   }
+});
+
+test('new fleet upgrades display levels, charge their prices and never mutate an active battle',()=>{
+  const h=setup(),rules=vm.runInContext('META',h.context),snapshot=JSON.stringify(h.ui.game.s);
+  let saves=0;h.ui.persistence.saveProfile=()=>saves++;
+  for(const key of ['constructionProtocols','logisticsFrame','repairLogistics']) {
+    const rule=rules[key];
+    for(let level=0;level<rule.max;level++) {
+      h.ui.profile.aether=rule.costs[level]-1;h.ui.buyUpgrade(key);
+      assert.equal(h.ui.profile.upgrades[key]||0,level);
+      h.ui.profile.aether++;h.ui.buyUpgrade(key);
+      assert.equal(h.ui.profile.upgrades[key],level+1);assert.equal(h.ui.profile.aether,0);
+      assert.ok(h.ui.html.includes(`${rule.display.values[level+1]} <small>${rule.display.unit}</small>`));
+    }
+    h.ui.profile.aether=10000;h.ui.buyUpgrade(key);
+    assert.equal(h.ui.profile.upgrades[key],5);assert.equal(h.ui.profile.aether,10000);
+  }
+  assert.equal(saves,15);assert.equal(JSON.stringify(h.ui.game.s),snapshot);
 });
 
 test('battle setup and help describe starting workers and alloy levels', () => {

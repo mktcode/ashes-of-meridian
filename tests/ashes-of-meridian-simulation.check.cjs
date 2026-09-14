@@ -808,6 +808,51 @@ test('field workshop is paid, consumed only by successful placement and stays wi
   assert.equal(game.s.benefits.fieldWorkshop,1);
 });
 
+test('fleet logistics and construction levels are bounded snapshots with unchanged setup and RNG',()=>{
+  const {game}=createGame(),options={seed:1409};game.start(options);
+  const entities=json(game.s.entities),terrain=Array.from(game.world.staticGrid),rng=game.random();
+  for(const [value,level] of [[-1,0],[1,1],[2.9,2],[3,3],[4,4],[99,5],[NaN,0]]) {
+    game.profile.upgrades={constructionProtocols:value,logisticsFrame:value,repairLogistics:value};
+    game.start(options);
+    assert.deepEqual(json(game.s.meta),{constructionProtocols:level,logisticsFrame:level,repairLogistics:level});
+    assert.deepEqual(json(game.s.entities),entities);assert.deepEqual(Array.from(game.world.staticGrid),terrain);
+    assert.equal(game.random(),rng);assert.deepEqual([game.cap(0),game.cap(1)],[24+level*2,24]);
+    const snapshot=json(game.s);game.profile.upgrades.logisticsFrame=5;
+    assert.deepEqual(json(game.s),snapshot);assert.equal(game.cap(0),24+level*2);
+  }
+  game.profile.upgrades={logisticsFrame:5};game.start(options);
+  for(let i=0;i<12;i++)game.spawnBuilding('depot',0,0,0,0);
+  assert.equal(game.cap(),180);
+});
+
+test('construction adds workshop once; repair discounts change cost, never speed or enemy rules',()=>{
+  const {game}=createGame();
+  for(let level=0;level<=5;level++) {
+    game.profile.upgrades={constructionProtocols:level,repairLogistics:level};
+    game.start({seed:1409,benefits:{fieldWorkshop:1}});
+    game.world.staticGrid.fill(0);for(const view of game.world.sight)view.explored.fill(255);
+    game.world.rebuild(game.s.entities);
+    for(const team of [0,1]) {
+      const x=team*20,w=game.spawnUnit('worker',x,-5,team,game.factionFor(team));
+      Object.assign(game.account(team),{alloy:1000,gas:1000});
+      assert.equal(game.build('depot',{x,z:0},[],team),true);
+      const b=game.get(w.order.id),rate=team===0?1.5+level*.05:1;
+      assert.equal(b.buildRate||1,rate);game.worker(w,1);close(b.progress,.06+rate/16);
+      b.progress=1;b.hp=b.maxHp-100;
+      game.setOrder(w,{type:'repair',id:b.id,x:b.x,z:b.z});
+      const alloy=game.account(team).alloy;game.worker(w,1);
+      close(b.hp,b.maxHp-62);close(game.account(team).alloy,alloy-3.8*(team===0?1-level*.05:1));
+      // Also bound the actual hull repaired by the discounted remaining budget.
+      game.account(team).alloy=1;const hp=b.hp;game.worker(w,1);
+      close(b.hp-hp,10/(team===0?1-level*.05:1));close(game.account(team).alloy,0);
+      b.hp=b.maxHp;game.worker(w,0);
+      game.account(team).alloy=1000;
+      assert.equal(game.build('depot',{x,z:12},[],team),true);
+      assert.equal(game.get(w.order.id).buildRate||1,team===0?1+level*.05:1);
+    }
+  }
+});
+
 test('base energy, hull, production and construction rates match the current rules', () => {
   const { game } = createGame();
   game.start({ seed: 1409 });
