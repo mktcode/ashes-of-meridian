@@ -49,8 +49,14 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.equal(Object.isFrozen(ids), true);
   assert.deepEqual(Object.values(ids), Array.from(FACTIONS.keys()), 'IDs retain catalog/unlock order');
   assert.strictEqual(context.icon, icon);
-  assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 3]);
-  assert.deepEqual(Array.from(Object.keys(META)), ['startingAlloy', 'startingWorkers', 'aetherEvacuation']);
+  assert.deepEqual([FACTIONS.length, Object.keys(META).length], [3, 6]);
+  assert.deepEqual(Array.from(Object.keys(META)), ['startingAlloy', 'startingWorkers', 'aetherEvacuation',
+    'constructionProtocols', 'logisticsFrame', 'repairLogistics']);
+  for (const upgrade of Object.values(META)) {
+    assert.equal(upgrade.costs.length, upgrade.max);
+    assert.equal(upgrade.display.values.length, upgrade.max + 1);
+    assert.ok(upgrade.costs.every(cost => Number.isFinite(cost) && cost > 0));
+  }
   assert.deepEqual(Array.from(META.startingAlloy.costs), [100, 200, 300, 450, 650]);
   assert.equal(META.startingWorkers.max, 5);
   assert.deepEqual(Array.from(META.aetherEvacuation.costs), [500, 800, 1200, 1800, 2600]);
