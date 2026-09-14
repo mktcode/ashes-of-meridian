@@ -4,13 +4,19 @@ Die implementierten Doktrinen, Tiefenstufen, Vorteile und Flottenupgrades sind i
 
 ## Frühe Rush-Dominanz: menschlicher Playtestbefund
 
-Der Spieler berichtet, dass Boni, Flottenupgrades und eine zu schwache KI die Gefechte zu einfach machen. Besonders **Commander mandate + sofort verfügbarer Orbital Strike** ermöglicht laut Playtest den direkten Marsch zum gegnerischen HQ mit schnellem Sieg. Konkrete Tiefe, Fraktion und Upgrade-Stufen wurden nicht festgehalten; vor Zahlenänderungen einen repräsentativen Run eingrenzen.
+Der Spieler berichtet, dass Boni, Flottenupgrades und eine zu schwache KI die Gefechte zu einfach machen. Besonders **Commander mandate + sofort verfügbarer Orbital Strike** ermöglicht laut Playtest den direkten Marsch zum gegnerischen HQ mit schnellem Sieg. Nach Einführung zufälliger Eckstarts berichtet der Spieler eine spürbare Verbesserung, erreicht aber weiterhin Stage 21 ohne größere Probleme; besonders Scans, Reinforcements und Orbital Strike bleiben zu stark. Fraktion, Upgrade-Stufen und konkrete Vorteilsstapel sind noch nicht festgehalten.
 
 Zufällige Eckstarts und das Entfernen der ungesehenen HQ-Markierung erhöhen den Aufklärungsbedarf, beheben aber nicht diesen Machtvorsprung. Als Nächstes gemeinsam entscheiden: Spitzenstärke des Start-Commanders/Orbital-Kombos, Umfang sofort verfügbarer Startboni gegenüber während des Gefechts erspielten Vorteilen sowie fairer Aufbau-/Verteidigungsdruck der KI. Noch keine Freigabe für neue Kosten, Verzögerungen, Statboni oder zusätzliche Armeen.
 
+## Gegnerische Vorteilswahl: zur Diskussion
+
+Der Spieler schlägt eine eigene Bonuswahl der KI pro Runde vor. Derzeit erhält ausschließlich der Spieler Expeditionsvorteile; die KI nutzt bereits dieselben Fähigkeiten und Energiepreise, aber ohne entsprechende Bonusstapel. Eine gegnerische Vorteilsprogression ist noch nicht implementiert oder zur Umsetzung freigegeben.
+
+Bei einer Umsetzung klären: gleicher Wahlumfang und gleiche Stapelgrenzen, Speicherung über wechselnde Gegnerfraktionen hinweg, sichtbare Ankündigung im Übergang sowie Abgrenzung zu permanenten Spieler-Upgrades. Startboni allein lösen die Dominanz fernwirkender Fähigkeiten nicht: Orbital Strike und Reinforcements benötigen derzeit nur erkundeten Boden, keine aktuelle Sicht oder eigenen Truppen am Ziel. Eine Verringerung der Startenergie müsste auch Command capacitor berücksichtigen.
+
 ## Sehr tiefe Expeditionen
 
-Der Gegnerdruck erreicht ab Tiefe 16 seine letzte Stufe. Unbegrenzte Ressourcen-Vorteile wachsen dagegen weiter. Menschliche Runs bis zu den Fraktionsfreischaltungen und darüber hinaus müssen zeigen, ob diese begrenzte Kurve genügt. Erst danach weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.
+Der Gegnerdruck erreicht ab Tiefe 16 seine letzte Stufe. Unbegrenzte Ressourcen-Vorteile wachsen dagegen weiter. Der berichtete leichte Durchmarsch bis Stage 21 spricht gegen eine ausreichende Kurve für das getestete Spielerprofil; die genaue Ausstattung und weitere Fraktions-/Startlagen bleiben einzugrenzen. Erst danach weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.
 
 ## Permanenter Start-Aether
 
