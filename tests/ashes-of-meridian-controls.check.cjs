@@ -882,6 +882,26 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
 });
 
+test('new expedition benefits are offered deterministically, displayed and bounded on selection',()=>{
+  const h=setup(),rules=vm.runInContext('EXPEDITION_BENEFITS',h.context),seen=new Set();
+  h.ui.expedition={faction:0,depth:8,benefits:{},offers:[],encounter:{enemy:1,map:'desert',seed:1409}};
+  const run=h.ui.expedition;
+  for(let seed=1;seed<=30;seed++) {
+    run.encounter.seed=seed;
+    const offers=Array.from(h.ui.createBenefitOffers(run));
+    assert.equal(new Set(offers).size,3);assert.deepEqual(Array.from(h.ui.createBenefitOffers(run)),offers);
+    offers.forEach(k=>seen.add(k));
+  }
+  for(const key of ['surveyDrones','fieldWorkshop','commandCapacitor']) {
+    assert.ok(seen.has(key));run.offers=[key];h.ui.showExpeditionTransition();
+    assert.ok(h.document.getElementById('menu').innerHTML.includes(rules[key].name));
+    h.ui.game.start=()=>{};h.ui.chooseBenefit(key);assert.equal(run.benefits[key],1);
+    run.benefits[key]=rules[key].max;run.offers=[key];h.ui.chooseBenefit(key);
+    assert.equal(run.benefits[key],rules[key].max);
+    assert.ok(!h.ui.createBenefitOffers(run).includes(key));
+  }
+});
+
 test('checkpoint briefing derives faction doctrine and pressure without changing the encounter',()=>{
   const h=setup();
   h.ui.expedition={faction:0,depth:8,benefits:{},offers:['supplyCrate'],

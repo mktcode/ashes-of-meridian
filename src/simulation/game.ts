@@ -68,7 +68,7 @@
           time: 0,
           teams: [playerAlloy, STARTING_ALLOY[0]].map((alloy, team) => ({
             alloy, gas: team === 0 ? (benefits.aetherAllocation || 0) * 50 : 0,
-            energy: 100, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+            energy: Math.min(200, 100 + (team === 0 ? (benefits.commandCapacitor || 0) * 50 : 0)), abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
           })) as [TeamState, TeamState],
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
@@ -120,6 +120,11 @@
           throw new Error('No free space for starting commander.');
         this.rehash();
         this.world.reveal(s.entities);
+        if (benefits.surveyDrones) {
+          const site = layout.resourceSites.filter(p => !this.world!.explored[this.world!.idx(p.x, p.z)])
+            .sort((a, b) => distance(a, layout.playerStart) - distance(b, layout.playerStart))[0];
+          if (site) this.world.explore(0, site, 22);
+        }
         this.enableAI(1);
         this.emit('start', {});
         this.emit('radio', startingWorkers

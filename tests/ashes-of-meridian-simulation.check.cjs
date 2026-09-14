@@ -760,6 +760,54 @@ test('expedition benefits combine with permanent start upgrades without helping 
   assert.equal(game.alive(e => e.team === 1 && (e.type === 'worker' || e.type === 'hero')).length, 0);
 });
 
+test('survey drones and capacitor preserve seeded setup, enemy sight and RNG across restarts',()=>{
+  const {game}=createGame();
+  for(const map of ['desert','alien-planet','mothership']) {
+    const options={seed:1409,map};game.start(options);
+    const entities=json(game.s.entities),terrain=Array.from(game.world.staticGrid),rng=game.random(),
+      visible=Array.from(game.world.visible),enemyView=json(game.world.sight[1]),
+      explored=Array.from(game.world.explored),version=game.world.fogVersion;
+    for(const count of [1,2,99]) {
+      const benefits={surveyDrones:99,commandCapacitor:count};game.start({...options,benefits});
+      assert.deepEqual(json(game.s.entities),entities);assert.deepEqual(Array.from(game.world.staticGrid),terrain);
+      assert.equal(game.random(),rng);assert.deepEqual(Array.from(game.world.visible),visible);
+      assert.deepEqual(json(game.world.sight[1]),enemyView);assert.ok(game.world.fogVersion>version);
+      assert.ok(game.world.explored.some((v,i)=>v&&!explored[i]));
+      for(let i=0;i<visible.length;i++)assert.equal(game.world.fogPixels[i],visible[i]?255:game.world.explored[i]?80:0);
+      assert.deepEqual([game.account(0).energy,game.account(1).energy],[count===1?150:200,100]);
+      assert.deepEqual(json(game.s.benefits),{surveyDrones:1,commandCapacitor:Math.min(2,count)});
+      const saved=json(game.s);benefits.commandCapacitor=0;assert.deepEqual(json(game.s),saved);
+      game.world.reveal(game.s.entities);assert.deepEqual(Array.from(game.world.visible),visible);
+    }
+  }
+});
+
+test('field workshop is paid, consumed only by successful placement and stays with one foundation',()=>{
+  const {game}=createGame(),options={seed:1409,benefits:{fieldWorkshop:99}};
+  game.profile.upgrades={startingWorkers:1};game.start(options);
+  const worker=player(game,'worker');worker.x=0;worker.z=-5;
+  game.world.staticGrid.fill(0);game.world.explored.fill(255);game.world.rebuild(game.s.entities);
+  game.account(0).alloy=0;assert.equal(game.build('depot',{x:0,z:0}),false);
+  assert.equal(game.s.triggers.fieldWorkshop,undefined);
+  game.account(0).alloy=1000;assert.equal(game.build('depot',{x:0,z:0}),true);
+  const b=game.get(worker.order.id);assert.equal(b.buildRate,1.5);assert.equal(game.s.triggers.fieldWorkshop,true);
+  close(game.account(0).alloy,915);game.worker(worker,1);close(b.progress,.06+1.5/16);
+  worker.x=-8;
+  const replacement=game.spawnUnit('worker',0,-5,0,0);
+  game.command([replacement.id],{type:'build',id:b.id,x:b.x,z:b.z});
+  assert.equal(worker.order.type,'idle');game.worker(replacement,1);close(b.progress,.06+3/16);
+  game.cancelConstruction(b.id);game.worker(replacement,0);
+  close(game.account(0).alloy,915+85*.75);
+  assert.equal(game.build('depot',{x:10,z:0}),true);
+  const second=game.alive(e=>e.kind==='building'&&e.progress<1)[0];
+  assert.equal(second.buildRate,undefined,'cancel does not return the workshop');
+  const enemy=game.spawnUnit('worker',20,-6,1,2);game.world.sight[1].explored.fill(255);
+  game.account(1).alloy=1000;assert.equal(game.build('depot',{x:20,z:0},[],1),true);
+  assert.equal(game.get(enemy.order.id).buildRate,undefined);
+  game.start(options);assert.equal(game.s.triggers.fieldWorkshop,undefined);
+  assert.equal(game.s.benefits.fieldWorkshop,1);
+});
+
 test('base energy, hull, production and construction rates match the current rules', () => {
   const { game } = createGame();
   game.start({ seed: 1409 });

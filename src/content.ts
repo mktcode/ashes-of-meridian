@@ -324,6 +324,24 @@ const EXPEDITION_BENEFITS = {
     icon: 'hero',
     desc: 'Deploys your faction commander at the start of every remaining battle.',
     max: 1
+  },
+  surveyDrones: {
+    name: 'Survey drones',
+    icon: 'scan',
+    desc: 'Maps the nearest unexplored resource area at each battle start. Does not reveal enemies.',
+    max: 1
+  },
+  fieldWorkshop: {
+    name: 'Field workshop',
+    icon: 'repair',
+    desc: 'Your first placed foundation in each battle builds 50% faster. Consumed even if canceled.',
+    max: 1
+  },
+  commandCapacitor: {
+    name: 'Command capacitor',
+    icon: 'energy',
+    desc: 'Adds 50 starting command energy per stack, up to the energy limit of 200.',
+    max: 2
   }
 } as const;
 

@@ -178,6 +178,10 @@
         let c = this.cost(type, 'building', team);
         if (!this.spend(c, team)) return false;
         let b = this.spawnBuilding(type, p.x, p.z, team, this.factionFor(team), { progress: 0.06, paid: c });
+        if (team === 0 && this.s!.benefits.fieldWorkshop && !this.s!.triggers.fieldWorkshop) {
+          b.buildRate = 1.5;
+          this.s!.triggers.fieldWorkshop = true;
+        }
         b.hp = b.maxHp * 0.06;
         if (type === 'refinery')
           b.gasId = this.closest(p, e => e.type === 'gas' && e.kind === 'resource')?.id;
@@ -299,7 +303,7 @@
           }
           e.rot = angleLerp(e.rot, Math.atan2(b.x - e.x, b.z - e.z), dt * 5);
           if (b.progress < 1) {
-            let rate = dt / (BUILDINGS[b.type] as BuildingDefinitionShape).time;
+            let rate = dt * (b.buildRate || 1) / (BUILDINGS[b.type] as BuildingDefinitionShape).time;
             let old = b.progress;
             b.progress = Math.min(1, b.progress + rate);
             b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);

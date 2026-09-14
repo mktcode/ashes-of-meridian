@@ -277,6 +277,15 @@
         }
         return smooth;
       }
+      explore(team: PlayerTeam, p: Position, radius: number) {
+        this.mark(this.sight[team].explored, p.x, p.z, radius, 1);
+        // Exploration reveals terrain/resources, never live vision or enemy contacts.
+        if (team === 0) {
+          for (let i = 0; i < this.visible.length; i++)
+            this.fogPixels[i] = this.visible[i] ? 255 : this.explored[i] ? 80 : 0;
+          this.fogVersion++;
+        }
+      }
       reveal(entities: Entity[], scans: Scan[] = []) {
         for (const view of this.sight) view.visible.fill(0);
         for (let e of entities)

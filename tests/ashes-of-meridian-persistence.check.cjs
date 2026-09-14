@@ -12,7 +12,7 @@ const benefitRules = {
   supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }
 };
 
-function setup(data = new Map()) {
+function setup(data = new Map(), rules = {}) {
   const trace = [], fail = {}, warnings = [];
   const context = loadScripts(['persistence']);
   const service = vm.runInContext('createMeridianPersistence', context)({
@@ -27,6 +27,7 @@ function setup(data = new Map()) {
     clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
     upgrades: { startingAlloy: { max: 5 }, startingWorkers: { max: 5 }, aetherEvacuation: { max: 5 } },
     benefits: benefitRules,
+    ...rules,
     battlefields: { desert: {}, 'alien-planet': {}, mothership: {} },
     warn: (...args) => warnings.push(args)
   });
@@ -85,6 +86,17 @@ test('expedition normalization rejects invalid encounters and bounds known benef
     encounter: { enemy: 0, map: 'mothership', seed: 1 },
     offers: ['aetherAllocation', 'supplyCrate']
   });
+});
+
+test('new benefit keys round-trip with real content limits and exhausted offers disappear',()=>{
+  const rules=vm.runInContext('({upgrades:META,benefits:EXPEDITION_BENEFITS})',loadScripts(['content']));
+  const h=setup(new Map(),rules);
+  h.service.saveExpedition({...expedition,benefits:{surveyDrones:99,fieldWorkshop:99,commandCapacitor:1.9},
+    offers:['surveyDrones','fieldWorkshop','commandCapacitor','supplyCrate']});
+  const loaded=setup(h.data,rules).service.loadExpedition();
+  assert.deepEqual(json(loaded.benefits),{surveyDrones:1,fieldWorkshop:1,commandCapacitor:1});
+  assert.deepEqual(json(loaded.offers),['commandCapacitor','supplyCrate']);
+  assert.deepEqual(json(loaded.encounter),expedition.encounter);assert.equal(loaded.depth,8);
 });
 
 test('denied storage remains a per-service volatile fallback for both records', () => {

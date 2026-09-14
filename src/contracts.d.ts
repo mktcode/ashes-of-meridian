@@ -234,6 +234,7 @@ interface UnitEntity extends EntityBase {
 interface BuildingEntity extends EntityBase {
   kind: 'building';
   type: BuildingType;
+  buildRate?: number;
 }
 
 interface ResourceEntity extends EntityBase {
@@ -248,7 +249,7 @@ type EntityForKind<K extends EntityKind> =
   K extends 'unit' ? UnitEntity : K extends 'building' ? BuildingEntity : ResourceEntity;
 type EntityTypeForKind<K extends EntityKind> =
   K extends 'unit' ? UnitType : K extends 'building' ? BuildingType : ResourceType;
-type SpawnExtra = Partial<Omit<EntityBase, 'id' | 'kind' | 'type' | 'team' | 'faction' | 'x' | 'z'>> & { amount?: number };
+type SpawnExtra = Partial<Omit<EntityBase, 'id' | 'kind' | 'type' | 'team' | 'faction' | 'x' | 'z'>> & { amount?: number; buildRate?: number };
 type UnitBody = Pick<UnitEntity, 'type' | 'size'> & Partial<UnitEntity>;
 type UnitPlacement = UnitBody & Position;
 
@@ -303,6 +304,7 @@ interface BattleResult {
 interface RunTriggers extends Record<string, number | boolean> {
   baseAlert?: number;
   solar?: number;
+  fieldWorkshop?: boolean;
 }
 
 interface AIContact extends Position {
