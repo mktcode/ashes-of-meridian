@@ -6,7 +6,7 @@ Dieses Verzeichnis enthält Hörentwürfe, die nicht Teil des Spiels sind.
 
 [**05 – Aether Bloom anhören**](05-aether-bloom.mp3) – **122 BPM**, rund **74 Sekunden**, Stereo-MP3/44,1 kHz/224 kbit/s.
 
-Ein heller, rhythmischer Elektronikentwurf: kurze Glas-FM-Töne, abgesetzte E-Piano-Akkorde und eine leichte Bassfigur in einer offenen lydischen Klangfarbe. Die Melodie erscheint nur in einzelnen Phrasen; der Mittelteil und der spätere luftige Abschnitt lassen bewusst Raum. Es gibt keine Gitarren, Sprachsamples oder dauerhafte Klangfläche.
+Ein heller Elektronikentwurf auf klarem Achtelraster: wenige kurze Glas-FM-Töne, abgesetzte E-Piano-Akkorde und eine leichte Bassfigur in einer offenen lydischen Klangfarbe. Die Melodie erscheint nur in einzelnen Phrasen; der Mittelteil und der spätere luftige Abschnitt lassen bewusst Raum. Es gibt keine Gitarren, Sprachsamples oder dauerhafte Klangfläche.
 
 ## Herstellung und Grenzen
 
