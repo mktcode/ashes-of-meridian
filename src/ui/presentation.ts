@@ -39,7 +39,8 @@
         let img = this.miniImage!.data,
           base = g.world.terrainColors;
         for (let i = 0; i < GRID * GRID; i++) {
-          let fog = g.world.visible[i] ? 1 : g.world.explored[i] ? 0.48 : 0.16;
+          // Keep the tactical terrain legible; entity visibility still follows the world fog below.
+          let fog = g.world.visible[i] ? 1 : g.world.explored[i] ? 0.65 : 0.30;
           if (g.world.terrainFeatureGrid[i]) fog *= .48;
           img[i * 4] = base[i * 4] * fog;
           img[i * 4 + 1] = base[i * 4 + 1] * fog;
@@ -70,7 +71,7 @@
             if (!explored) continue;
             let p = map(e);
             ctx.fillStyle = e.type === 'gas' ? '#9ed3c1' : '#c0a880';
-            ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
+            ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
             continue;
           }
           if (e.team === 1 && !visible) continue;
@@ -78,17 +79,17 @@
           ctx.fillStyle = e.team === 0 ? '#79dbcc' : '#eb8e80';
           if (e.type === 'hero') ctx.fillStyle = '#ffd494';
           if (e.kind === 'building') {
-            let size = Math.max(3, (e.size * w) / span);
+            let size = Math.max(5, (e.size * w) / span);
             ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
 
           } else {
             ctx.beginPath();
-            ctx.arc(p.x, p.y, e.type === 'hero' ? 2.3 : 1.3, 0, 6.28);
+            ctx.arc(p.x, p.y, e.type === 'hero' ? 3 : 2, 0, 6.28);
             ctx.fill();
           }
         }
-        ctx.strokeStyle = '#c3e1debb';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#e3ffff';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         const v = this.R.viewport!;
         for (let [i, p] of [

@@ -253,7 +253,7 @@
     #cameraTools,
     #commandTools {
       display: grid;
-      gap: 2px;
+      gap: 1px;
       height: var(--tools-height);
       padding: 0
     }
@@ -335,7 +335,7 @@
       bottom: var(--hud-inset);
       height: var(--deck-height);
       display: grid;
-      grid-template-columns: var(--side-width) minmax(0, 1fr) var(--side-width);
+      grid-template-columns: var(--map-size) minmax(0, 1fr) var(--action-width);
       grid-template-rows: minmax(0, 1fr);
       align-items: end;
       gap: var(--hud-gap);
@@ -355,8 +355,8 @@
     }
 
     #actionPanel {
-      height: 100%;
-      padding: 2px;
+      height: var(--center-height);
+      padding: 0;
       pointer-events: auto;
       overflow-y: auto;
       overscroll-behavior: contain;
@@ -369,12 +369,12 @@
       top: 0;
       z-index: 1;
       width: 100%;
-      min-height: 32px;
-      margin-bottom: 4px;
+      min-height: 44px;
+      margin-bottom: 1px;
       text-align: left;
-      padding: 4px;
-      font-size: 10px;
-      background: #152333;
+      padding: 6px 10px;
+      font-size: 12px;
+      background: #203b4a;
       color: var(--gold)
     }
 
@@ -388,18 +388,22 @@
       height: var(--ability-height);
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 2px;
-      padding: 2px;
+      gap: 1px;
+      padding: 0;
       pointer-events: auto
     }
 
     #abilityBar .action { min-height: 0; height: 100% }
-    #abilityBar .action span { font-size: clamp(8px, 1.8vw, 11px); line-height: 1.1 }
-    #abilityBar .action { padding-top: 12px }
-    .root-grid .action { min-height: 0; padding: 3px 1px }
-    .root-grid .action span { font-size: clamp(7px, 1.8vw, 11px); white-space: nowrap }
-    .root-grid { height: calc(var(--deck-height) - 4px); grid-template-rows: repeat(2, minmax(0, 1fr)) }
-    #actionPanel:has(.menu-back) { height: min(340px, calc(100dvh - var(--topbar-height) - 90px)) }
+    #abilityBar .action span { font-size: 10px; line-height: 1.1 }
+    #abilityBar .action { padding: 13px 2px 4px }
+    #abilityBar .action svg { width: 20px; height: 20px; flex-shrink: 0 }
+    .root-grid .action { min-height: 0; padding: 4px 1px }
+    .root-grid .action span { font-size: 10px; white-space: nowrap }
+    .root-grid { height: var(--center-height); grid-template-rows: repeat(2, minmax(0, 1fr)) }
+    #actionPanel:has(.menu-back) {
+      height: auto;
+      max-height: min(340px, calc(100dvh - var(--topbar-height) - 90px))
+    }
     #actionPanel .action-grid:not(.root-grid) { grid-template-columns: 1fr }
     #hud button { touch-action: manipulation }
 
@@ -408,18 +412,18 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: end;
       gap: var(--hud-gap);
       min-height: 0;
       height: 100%;
-      padding: 2px;
+      padding: 0;
       pointer-events: auto
     }
 
     #minimap {
       display: block;
-      /* Let the map use the side rail; it may extend a little above the compact controls. */
-      width: min(calc(100% - 2px), calc(var(--deck-height) - var(--tools-height) + 6px));
+      /* A dedicated square, independent of the command and recruitment rails. */
+      width: var(--map-size);
       height: auto;
       flex: 0 0 auto;
       aspect-ratio: 1;
@@ -430,7 +434,7 @@
     .action-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 2px
+      gap: 1px
     }
 
     .action {
@@ -441,26 +445,27 @@
       justify-content: center;
       min-height: 70px;
       min-width: 0;
-      border: 1px solid #42cde88c;
-      background: linear-gradient(145deg, #153344e8, #051421f5);
-      box-shadow: inset 0 1px #c9faff25, inset 0 -6px 14px #03101c55;
-      border-radius: 5px 2px;
+      border: 0;
+      background: #142d3b;
+      box-shadow: none;
+      border-radius: 0;
       padding: 5px 3px;
       color: #ddecf4
     }
 
     .action:hover {
-      border-color: #dbae6a99;
-      background: #33505c66
+      background: #254859
     }
 
     .action.disabled {
-      opacity: .4
+      opacity: 1;
+      color: #80929d;
+      background: #101f2b
     }
 
     .action.active {
-      border-color: var(--gold);
-      background: #ad864b22
+      color: var(--gold);
+      background: #493d2b
     }
 
     .action svg {
@@ -581,7 +586,7 @@
       opacity: 1
     }
 
-    /* Objectives remain a panel; the compact deck lets its buttons carry the affordance. */
+    /* Objectives retain their frame; the deck uses opaque surfaces and single-pixel seams. */
     #objectives {
       background: linear-gradient(135deg, #102d3df5, #05131ff5 65%);
       border: 1px solid #4edcf0b0;
@@ -594,14 +599,12 @@
     #actionPanel,
     #commandTools,
     #abilityBar {
-      background: transparent;
+      background: #091923;
       border: 0;
       border-radius: 0;
       box-shadow: none
     }
 
-    #cameraTools button,
-    #commandTools button,
     #pauseBtn {
       border: 1px solid #47cfe9b0;
       border-radius: 5px 2px;
@@ -609,10 +612,20 @@
       box-shadow: inset 0 1px #d8fcff30
     }
 
-    #hud .action:hover,
+    #cameraTools button,
+    #commandTools button {
+      border: 0;
+      border-radius: 0;
+      background: #142d3b;
+      box-shadow: none
+    }
     #cameraTools button:hover,
-    #commandTools button:hover { border-color: #b5f7ff; box-shadow: inset 0 0 12px #49ddff25 }
-    #hud .action.active { border-color: var(--gold); background: #775c2f80 }
+    #commandTools button:hover { background: #254859 }
+    #commandDeck button:focus-visible { outline-offset: -2px }
+    #hud .action.disabled:hover { background: #101f2b }
+    .action.disabled .action-model { opacity: .35 }
+    .action.disabled small,
+    .action.disabled .cost { color: #80929d }
 
     @media(max-width:1150px) {
       #topbar {
@@ -703,7 +716,7 @@
       }
 
       #cameraTools,
-      #commandTools { gap: 2px }
+      #commandTools { gap: 1px }
       #cameraTools button,
       #commandTools button { font-size: 19px }
 
@@ -752,6 +765,9 @@
     }
 
     @media(max-width:600px) {
+      :root { --ability-height: 120px }
+      #abilityBar { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+      .root-grid .action span { font-size: 9px }
       #topbar {
         display: grid;
         grid-template-columns: 43px minmax(0, 1fr) 40px 32px;
@@ -886,7 +902,7 @@
 
     /* Keep every control available on unusually narrow screens. */
     @media(max-width:360px) {
-      :root { --side-width: 82px; --deck-height: 206px; --tools-height: 84px; --ability-height: 112px }
+      :root { --map-size: 108px; --action-width: 96px; --ability-height: 132px }
       #topbar { grid-template-columns: 37px minmax(0, 1fr) 35px 30px; gap: 2px; padding: 0 4px }
       #battleLabel { font-size: 7px; letter-spacing: .3px }
       #pauseBtn { width: 30px }
@@ -897,7 +913,7 @@
     }
 
     @media(max-height:500px) and (min-width:601px) {
-      :root { --deck-height: 120px; --side-width: 140px; --ability-height: 60px; --tools-height: 40px }
+      :root { --map-size: 112px; --action-width: 160px; --ability-height: 60px }
       #radio { bottom: 140px; padding: 8px 12px }
       #radioText { line-height: 1.3 }
     }

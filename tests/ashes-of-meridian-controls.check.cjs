@@ -196,7 +196,7 @@ test('minimap distinguishes massif footprints without bypassing visibility or ch
   h.ui.miniImage = { data: new Uint8ClampedArray(72*72*4) };
   h.ui.R.ground = () => ({ x: 0, z: 0 });
   h.UI.prototype.drawMinimap.call(h.ui);
-  for (const [i, value] of [48,100,23,48,8,16].entries())
+  for (const [i, value] of [48,100,31,65,14,30].entries())
     assert.deepEqual(Array.from(h.ui.miniImage.data.slice(i*4,i*4+4)), [value,value,value,255]);
   assert.ok(h.ui.game.world.terrainColors.every(v => v === 100));
 });
