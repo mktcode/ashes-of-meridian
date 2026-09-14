@@ -1423,6 +1423,58 @@ test('only faction 0 recruitment/build buttons use local model portraits without
     assert.doesNotMatch(h.ui.actionButton(key, type, type), /<img|model-action/);
 });
 
+test('tab and target-mode renders synchronously restore button locks and badges without a HUD tick', () => {
+  const h = setup(), g = h.ui.game;
+  Object.assign(g, { supply: () => 0, cap: () => 24, afford: () => false,
+    abilityRequirement: key => key === 'orbital' ? 'TECH' : '' });
+  g.s.teams[0].energy = 32;
+  const panels = ['abilityBar', 'actions'].map(id => h.document.getElementById(id));
+  // Model innerHTML replacement: each render creates fresh, initially enabled buttons.
+  for (const panel of panels) {
+    let html = '';
+    Object.defineProperty(panel, 'innerHTML', {
+      get: () => html,
+      set(value) {
+        html = value;
+        panel.buttons = [...value.matchAll(/<button[^>]*data-action="([^"]+)"[^>]*>/g)].map(([tag, action]) => {
+          const button = Object.assign(h.document.getElementById(Symbol(action)), {
+            dataset: { action }, disabled: / disabled/.test(tag)
+          });
+          button.querySelector('small').textContent = '';
+          return button;
+        });
+      }
+    });
+  }
+  h.document.querySelectorAll = () => panels.flatMap(p => p.buttons || []);
+  h.ui.updateHUD = () => { throw Error('must not wait for or require the periodic HUD update'); };
+  const check = () => {
+    const buttons = h.document.querySelectorAll();
+    for (const button of buttons) {
+      const action = button.dataset.action;
+      if (action.startsWith('ability:')) {
+        assert.equal(button.disabled, action !== 'ability:scan', action);
+        assert.equal(button.classList.contains('disabled'), button.disabled, action);
+        assert.match(button.querySelector('small').textContent, action === 'ability:orbital' ? /^TECH$/ : /^\d+ϟ$/);
+      } else if (/^(train|build):/.test(action)) {
+        assert.equal(button.disabled, true, action);
+        assert.equal(button.classList.contains('disabled'), true, action);
+      }
+    }
+  };
+  for (const tab of ['infantry', 'build', 'vehicles', 'root']) {
+    h.UI.prototype.setTab.call(h.ui, tab);
+    check();
+  }
+  h.UI.prototype.setMode.call(h.ui, 'ability', 'scan');
+  check();
+  const previous = panels[0].buttons;
+  g.s.teams[0].energy = 0;
+  h.ui.renderActions();
+  assert.equal(panels[0].buttons, previous, 'unchanged markup is retained');
+  assert.ok(panels[0].buttons.every(b => b.disabled), 'state still refreshes when markup is unchanged');
+});
+
 test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
   const h = buildingPanel(), g = h.ui.game;
   Object.assign(g.s.teams[0],{alloy:1000,gas:1000,energy:100,abilities:{}});

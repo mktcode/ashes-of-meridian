@@ -119,7 +119,12 @@
         const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${this.mode && (key === 'build:' + this.mode.arg || key === 'ability:' + this.mode.arg || key === this.mode.kind) ? 'active' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${label}</span>${opts.cost ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
-      renderActions(this: MeridianUI) {
+      renderActions(this: MeridianUI, supply?: number, capacity?: number) {
+        this.renderActionMarkup();
+        // Never expose newly created buttons in their default enabled state until the next HUD tick.
+        this.updateActionStates(supply, capacity);
+      },
+      renderActionMarkup(this: MeridianUI) {
         let s = this.game.s;
         if (!s) return;
         let b = this.selectedBuilding();
@@ -255,9 +260,17 @@
             .join('') +
           '</div>';
         this.selected = this.selected.filter(id => this.game.get(id));
-        this.renderActions();
+        this.renderActions(supply, capacity);
         this.updateQueues();
-        for (let b of document.querySelectorAll<HTMLButtonElement>('[data-action]')) {
+      },
+      updateActionStates(this: MeridianUI, supply?: number, capacity?: number) {
+        const s = this.game.s;
+        if (!s) return;
+        const buttons = document.querySelectorAll<HTMLButtonElement>('[data-action]');
+        if (!buttons.length) return;
+        supply ??= this.game.supply();
+        capacity ??= this.game.cap();
+        for (let b of buttons) {
           let [k, arg] = b.dataset.action!.split(':');
           let disabled = false;
           if (k === 'train' && hasContentKey(UNITS, arg)) {
