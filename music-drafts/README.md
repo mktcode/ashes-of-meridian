@@ -20,9 +20,11 @@ Die kinetischere Alienplanet-Variante: weiche, vokalartige Samenimpulse wandern 
 
 - [**01 – Worker Ready**](worker-select-01-worker-ready-awb.mp3) – „Worker ready.“; männliche Stimme `awb`, 0,84 s.
 - [**02 – Awaiting Orders**](worker-select-02-awaiting-orders-rms.mp3) – „Awaiting orders.“; männliche Stimme `rms`, 1,15 s.
-- [**03 – What Needs Building**](worker-select-03-what-needs-building-kal16.mp3) – „What needs building?“; männliche Stimme `kal16`, 1,25 s.
+- [**03 – Tools Ready**](worker-select-03-tools-ready-awb.mp3) – „Tools ready.“; männliche Stimme `awb`, 0,89 s.
+- [**04 – Name the Job**](worker-select-04-name-the-job-rms.mp3) – „Name the job.“; männliche Stimme `rms`, 1,07 s.
+- [**05 – Where Am I Needed**](worker-select-05-where-needed-awb.mp3) – „Where am I needed?“; männliche Stimme `awb`, 1,07 s.
 
-Jede Datei enthält genau eine kurze Äußerung. Die Varianten sind zugunsten der Verständlichkeit nahezu trocken, nur leicht verlangsamt, normalisiert und auf vergleichbare Lautheit gebracht; `awb` dient als klare Referenz, `rms` und `kal16` als Stimmvergleiche. Alle Fassungen sind Mono-MP3 mit 44,1 kHz/128 kbit/s, verwenden lokale generische Flite-Stimmen, ahmen keine Figur oder reale Person nach und sind noch nicht ins Spiel eingebunden.
+Jede Datei enthält genau eine kurze Äußerung. Die Varianten sind zugunsten der Verständlichkeit nahezu trocken, nur leicht verlangsamt, normalisiert und auf vergleichbare Lautheit gebracht; `awb` dient als klare Referenz, `rms` als zweite akzeptierte Stimme. Alle Fassungen sind Mono-MP3 mit 44,1 kHz/128 kbit/s, verwenden lokale generische Flite-Stimmen, ahmen keine Figur oder reale Person nach und sind noch nicht ins Spiel eingebunden.
 
 ## Herstellung und Grenzen
 
