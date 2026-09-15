@@ -31,7 +31,7 @@ Das ZIP auf der itch.io-Projektseite als **HTML**-Build hochladen und **„This 
 
 Die Laufzeitdateiliste entspricht dem Docker-Webdeployment. Bei neuen lokalen Assets beide Paketwege gemeinsam aktualisieren und jeweils auf fehlende Dateien prüfen.
 
-`npm run capture:itch` erzeugt unter `release/itch-media/` aktuelle, arrangierte Browseraufnahmen sowie Banner, Full-HD+-Seitenhintergrund, Embed-Hintergrund und eine Textdatei mit Theme-Farben und Uploadeinstellungen. Dafür muss Chromium installiert sein; einen abweichenden Pfad über `CHROMIUM_PATH` angeben. Die Aufnahmen sind technische, bevölkerte Präsentationsfixtures und kein Spielstands- oder Balancingnachweis.
+`npm run capture:itch` erzeugt unter `release/itch-media/` aktuelle, arrangierte Desktop-Präsentationsmotive, separate Portrait-Screenshots mit vollständigem Mobile-HUD sowie Banner, Full-HD+-Seitenhintergrund, Embed-Hintergrund und eine Textdatei mit Theme-Farben und Uploadeinstellungen. Dafür muss Chromium installiert sein; einen abweichenden Pfad über `CHROMIUM_PATH` angeben. Die Aufnahmen sind technische, bevölkerte Präsentationsfixtures und kein Spielstands- oder Balancingnachweis.
 
 ## Zustandsgrenzen
 

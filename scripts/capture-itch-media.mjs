@@ -6,6 +6,7 @@ import { chromium } from 'playwright-core';
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'release/itch-media');
 const screenshots = resolve(output, 'screenshots');
+const mobileScreenshots = resolve(output, 'screenshots-mobile');
 const browserCandidates = [process.env.CHROMIUM_PATH, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome'].filter(Boolean);
 let executablePath;
 for (const candidate of browserCandidates) {
@@ -13,6 +14,7 @@ for (const candidate of browserCandidates) {
 }
 if (!executablePath) throw new Error('Chromium not found. Set CHROMIUM_PATH to a Chromium/Chrome executable.');
 await mkdir(screenshots, { recursive: true });
+await mkdir(mobileScreenshots, { recursive: true });
 
 const browser = await chromium.launch({ executablePath, headless: true, chromiumSandbox: true });
 const errors = [];
@@ -27,7 +29,14 @@ try {
   })));
   await page.waitForTimeout(250);
   await page.screenshot({ path: resolve(screenshots, '05-expedition-command.jpg'), type: 'jpeg', quality: 92 });
-  await page.addStyleTag({ content: '#hud,#toast,#radio{display:none!important} #worldViewport.in-battle{top:0!important;bottom:0!important}' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => Meridian.renderer.resize());
+  await page.waitForTimeout(120);
+  await page.screenshot({ path: resolve(mobileScreenshots, '05-expedition-command.jpg'), type: 'jpeg', quality: 92 });
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.evaluate(() => Meridian.renderer.resize());
+  await page.addStyleTag({ content: '#toast,#radio{display:none!important}' });
+  let cleanStyle = await page.addStyleTag({ content: '#hud{display:none!important} #worldViewport.in-battle{top:0!important;bottom:0!important}' });
 
   const scenes = [
     { file: '01-desert-firefight.jpg', map: 'desert', seed: 1409, faction: 0, enemy: 1, view: 'front' },
@@ -65,7 +74,7 @@ try {
         return null;
       }
       for (const team of [0, 1])
-        ['barracks', 'factory', 'depot', 'turret', 'depot', 'depot'].forEach((type, index) => addBuilding(type, team, index));
+        ['barracks', 'factory', 'depot', 'turret', 'depot', 'depot', 'depot'].forEach((type, index) => addBuilding(type, team, index));
       game.world.rebuild(game.s.entities);
 
       const armies = [[], []];
@@ -101,6 +110,7 @@ try {
       });
       else Object.assign(game.s.cam, { x: 0, z: 1, zoom: map === 'alien-planet' ? 64 : 60 });
       ui.selected = armies[0].slice(-7); ui.hover = null; ui.pointer.inside = false;
+      ui.renderActions(); ui.updateHUD();
       ui.paused = view === 'base';
       return { entities: game.s.entities.length, view };
     }, scene);
@@ -110,7 +120,15 @@ try {
     const glError = await page.evaluate(() => Meridian.renderer.gl.getError());
     if (glError) throw new Error(`${scene.file}: WebGL error ${glError}`);
     await page.screenshot({ path: resolve(screenshots, scene.file), type: 'jpeg', quality: 92 });
-    console.log(`Captured ${scene.file} (${result.entities} entities)`);
+    await cleanStyle.evaluate(element => element.remove());
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => { Meridian.renderer.resize(); Meridian.ui.updateHUD(); });
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: resolve(mobileScreenshots, scene.file), type: 'jpeg', quality: 92 });
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.evaluate(() => Meridian.renderer.resize());
+    cleanStyle = await page.addStyleTag({ content: '#hud{display:none!important} #worldViewport.in-battle{top:0!important;bottom:0!important}' });
+    console.log(`Captured desktop and mobile ${scene.file} (${result.entities} entities)`);
   }
 
   async function imageData(file) {
@@ -128,13 +146,13 @@ try {
     '<div class="shade"></div><div class="label">MERIDIAN TACTICAL LINK<br><small>CLICK RUN GAME TO DEPLOY</small></div>',
     '.shade{position:fixed;inset:0;background:radial-gradient(circle at center,#080e1740,#080e1788 100%)}.label{position:fixed;left:55px;bottom:45px;padding-left:18px;border-left:2px solid #74e5d3;color:#eef3ed;font:18px/1.6 monospace;letter-spacing:3px;text-shadow:0 2px 8px #000}.label small{color:#edb875;font-size:12px}');
   await compose('banner-1920x600.jpg', 1920, 600, '01-desert-firefight.jpg',
-    '<div class="shade"></div><div class="mark">◇</div><div class="title"><strong>ASHES <i>OF</i><br>MERIDIAN</strong><span>A ROGUELITE REAL-TIME STRATEGY PROTOTYPE</span></div>',
-    '.shade{position:fixed;inset:0;background:linear-gradient(90deg,#04101bf5 0%,#06131ecb 31%,#06131e38 64%,#06131e70),linear-gradient(0deg,#04101b80,transparent 55%)}.mark{position:fixed;left:105px;top:226px;color:#74e5d3;font:64px Georgia}.title{position:fixed;left:190px;top:115px;color:#eef3ed;text-shadow:0 3px 14px #000}.title strong{font:72px/.88 Georgia,serif;letter-spacing:2px}.title i{color:#edb875;font:16px monospace;letter-spacing:5px}.title span{display:block;margin-top:30px;color:#9fc9db;font:14px monospace;letter-spacing:4px}');
+    '<div class="shade"></div><div class="title"><strong>ASHES <i>OF</i><br>MERIDIAN</strong><span>A ROGUELITE REAL-TIME STRATEGY PROTOTYPE</span></div>',
+    '.shade{position:fixed;inset:0;background:linear-gradient(90deg,#04101bf5 0%,#06131ecb 31%,#06131e38 64%,#06131e70),linear-gradient(0deg,#04101b80,transparent 55%)}.title{position:fixed;left:125px;top:115px;color:#eef3ed;text-shadow:0 3px 14px #000}.title strong{font:72px/.88 Georgia,serif;letter-spacing:2px}.title i{color:#edb875;font:16px monospace;letter-spacing:5px}.title span{display:block;margin-top:30px;color:#9fc9db;font:14px monospace;letter-spacing:4px}');
 
   if (errors.length) throw new Error(`Browser errors:\n${errors.join('\n')}`);
-  const notes = `Ashes of Meridian – itch.io media\n\nTheme colors\nBG:      #080e17\nBG 2:    #0b1522\nText:    #eef3ed\nLink:    #edb875\nEmbed 1: #080e17\nEmbed 2: #102d3d\n\nImages\nbackground-2560x1440.jpg  Background · Repeat: None · Align: Center · Fixed: enabled\nbanner-1920x600.jpg       Banner · Align: Center\nembed-background-1920x1080.jpg  Embed BG · suggested alpha: 35%\nscreenshots/*.jpg         Five gallery screenshots, 1920x1080\n\nSuggested theme: Anonymous Pro or Lato, Large, screenshot layout Sidebar.\nGenerated from the current local build with Chromium; scenes are arranged populated fixtures.\n`;
+  const notes = `Ashes of Meridian – itch.io media\n\nTheme colors\nBG:      #080e17\nBG 2:    #0b1522\nText:    #eef3ed\nLink:    #edb875\nEmbed 1: #080e17\nEmbed 2: #102d3d\n\nImages\nbackground-2560x1440.jpg  Background · Repeat: None · Align: Center · Fixed: enabled\nbanner-1920x600.jpg       Banner · Align: Center\nembed-background-1920x1080.jpg  Embed BG · suggested alpha: 35%\nscreenshots/*.jpg         Five clean gallery screenshots, 1920x1080\nscreenshots-mobile/*.jpg  Five portrait screenshots with UI, 390x844 mobile viewport\n\nSuggested theme: Anonymous Pro or Lato, Large, screenshot layout Sidebar.\nGenerated from the current local build with Chromium; scenes are arranged populated fixtures.\n`;
   await writeFile(resolve(output, 'README.txt'), notes);
-  await writeFile(resolve(output, 'preview.html'), `<!doctype html><html><meta charset="utf-8"><title>Ashes of Meridian · itch.io preview</title><style>*{box-sizing:border-box}body{margin:0;background:#080e17 url('background-2560x1440.jpg') center top/cover fixed no-repeat;color:#eef3ed;font:18px/1.55 monospace}main{width:min(960px,100%);margin:auto;background:#0b1522;min-height:100vh;box-shadow:0 0 60px #000;padding-bottom:45px}.banner{display:block;width:100%}article{padding:30px}.embed{position:relative;margin-bottom:28px}.embed img,.shot{display:block;width:100%}.run{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);padding:16px 25px;background:#edb875;color:#080e17;font-weight:bold}.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:25px 0}.colors span{padding:10px;border:1px solid #eef3ed33}a{color:#edb875}h1{font-family:Georgia,serif;font-size:38px}.gallery{display:grid;grid-template-columns:1fr 1fr;gap:12px}</style><main><img class="banner" src="banner-1920x600.jpg"><article><h1>Media preview</h1><div class="embed"><img src="embed-background-1920x1080.jpg"><b class="run">▶ RUN GAME</b></div><p>Theme colors and the generated gallery in an approximation of the itch.io content column.</p><div class="colors"><span>BG<br>#080e17</span><span>BG 2<br>#0b1522</span><span>Text<br>#eef3ed</span><span style="color:#edb875">Link<br>#edb875</span><span>Embed 1<br>#080e17</span><span style="background:#102d3d">Embed 2<br>#102d3d</span></div><div class="gallery">${scenes.map(scene => `<img class="shot" src="screenshots/${scene.file}">`).join('')}<img class="shot" src="screenshots/05-expedition-command.jpg"></div></article></main></html>`);
+  await writeFile(resolve(output, 'preview.html'), `<!doctype html><html><meta charset="utf-8"><title>Ashes of Meridian · itch.io preview</title><style>*{box-sizing:border-box}body{margin:0;background:#080e17 url('background-2560x1440.jpg') center top/cover fixed no-repeat;color:#eef3ed;font:18px/1.55 monospace}main{width:min(960px,100%);margin:auto;background:#0b1522;min-height:100vh;box-shadow:0 0 60px #000;padding-bottom:45px}.banner{display:block;width:100%}article{padding:30px}.embed{position:relative;margin-bottom:28px}.embed img,.shot{display:block;width:100%}.run{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);padding:16px 25px;background:#edb875;color:#080e17;font-weight:bold}.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:25px 0}.colors span{padding:10px;border:1px solid #eef3ed33}a{color:#edb875}h1{font-family:Georgia,serif;font-size:38px}.gallery{display:grid;grid-template-columns:1fr 1fr;gap:12px}</style><main><img class="banner" src="banner-1920x600.jpg"><article><h1>Media preview</h1><div class="embed"><img src="embed-background-1920x1080.jpg"><b class="run">▶ RUN GAME</b></div><p>Theme colors and the generated gallery in an approximation of the itch.io content column.</p><div class="colors"><span>BG<br>#080e17</span><span>BG 2<br>#0b1522</span><span>Text<br>#eef3ed</span><span style="color:#edb875">Link<br>#edb875</span><span>Embed 1<br>#080e17</span><span style="background:#102d3d">Embed 2<br>#102d3d</span></div><div class="gallery">${scenes.map(scene => `<img class="shot" src="screenshots-mobile/${scene.file}">`).join('')}<img class="shot" src="screenshots-mobile/05-expedition-command.jpg"></div></article></main></html>`);
   console.log(`Created itch.io media in ${output}`);
 } finally {
   await browser.close();
