@@ -17,6 +17,22 @@
 - Direkte `file://`-Auslieferung erhalten: kein erforderlicher Server, CDN, Laufzeit-Import oder abgeschwächte Browser-Sicherheitsflags.
 - Zusammenhängende, geprüfte Änderungen eigenständig committen. Fremde oder unzusammenhängende vorhandene Änderungen nicht aufnehmen.
 
+## Parallele Arbeit und Subagents
+
+- Der Hauptagent orchestriert freigegebene Arbeitspakete, beantwortet Rückfragen, pflegt Issues und integriert Änderungen. Delegation ist innerhalb des erteilten Auftrags erlaubt, keine Freigabe zum selbstständigen Abarbeiten des Backlogs. Zunächst höchstens drei Subagents gleichzeitig; keine weitere Delegation durch Subagents.
+- Jeder Subagent arbeitet in einem eigenen, vom Hauptagenten angelegten Git-Worktree mit eigenem Branch, auch bei Analyse-, Dokumentations- oder Testaufträgen. Pro Worktree nur ein aktiver Bearbeiter. Vor Arbeitsbeginn absoluten Worktree-Pfad, Branch, Ausgangscommit und `git status --short` gegen den Auftrag prüfen; bei Abweichung stoppen und rückfragen.
+- Alle Subagents befolgen diese `AGENTS.md` in der Version ihres Worktrees. Der Hauptagent stellt die Projektkontext-Vererbung sicher; eigene Agentenprofile benötigen `inheritProjectContext: true`. Regeln während einer Arbeitswelle nicht nebenbei ändern.
+- Jeder Auftrag benennt Ziel, erlaubte Dateien/Verträge, Nicht-Ziele, Abhängigkeiten, Prüfungen und erwartete Übergabe. Überschneidungen und gemeinsame Simulations-/RNG-/Ladeverträge vorab klären; unterschiedliche Verzeichnisse allein beweisen keine Unabhängigkeit. Umfangserweiterungen und unklare Entscheidungen an den Hauptagenten melden statt raten.
+- Subagents committen ausschließlich ihre geprüften Änderungen im eigenen Branch. Keine Änderungen in anderen Worktrees, keine Merges, eigenständigen Rebases, Pushes, Branch-/Worktree-Löschungen oder Änderungen gemeinsamer Git-Konfiguration. `docs/issues/` und die gemeinsamen Arbeitsregeln pflegt nur der Hauptagent; Befunde und Folgearbeiten an ihn zurückmelden.
+- Rückfragen und relevante Zwischenmeldungen über den nativen Supervisor-Kanal senden; Abschluss über das normale Ergebnis. Übergabe enthält Branch/Commit, geänderte Dateien, ausgeführte Prüfungen samt Ergebnis, offene Risiken und nötige Entscheidungen. Bei Fehlern oder unklarer Prozesszuständigkeit Arbeit erhalten, keinen zweiten Bearbeiter starten oder stillschweigend den Ausführungsmodus wechseln.
+- Nur der Hauptagent integriert geprüfte Ergebnisse einzeln, prüft den kombinierten Stand und schließt Issues. Worktrees erst nach gesicherter Übergabe, beendeten Prozessen und abgeschlossener Integration bzw. geklärter Verwerfung bereinigen. Einrichtung, Kommunikation und Merge-Verfahren: [Subagent-Arbeitsablauf](docs/subagents.md).
+
+## Temporäre Arbeit
+
+- Für Hauptagent und Subagents gilt: selbst angelegte temporäre Skripte, Downloads, Diagnosebilder, Browserprofile, Logs und sonstige Scratch-Dateien ausschließlich unter `<eigener-Worktree>/.tmp/` ablegen, nie unter gemeinsam benannten `/tmp/`-Pfaden. Pro Aufgabe/Lauf ein eigenes Unterverzeichnis verwenden. `.tmp/` ist ignoriert und wird auch nicht mit `git add -f` eingecheckt.
+- Bei gestarteten Hilfsprogrammen `TMPDIR`, `TMP` und `TEMP` auf das absolute eigene Scratch-Verzeichnis setzen; explizite Ausgabe-/Profilpfade ebenfalls dorthin richten. Shell-Exports gelten nicht automatisch im nächsten Toolaufruf. Einrichtung und Grenzen für Pi-eigene Laufzeitdateien: [temporäre Isolation](docs/subagents.md#temporäre-isolation).
+- Keine schreibend geteilten `.tmp/`-, `dist/`- oder `node_modules/`-Verzeichnisse/Symlinks zwischen Worktrees. Nur eigene temporäre Dateien bereinigen, nachdem die zugehörigen Prozesse beendet sind. Dauerhafte Befunde gehören über den Hauptagenten ins Issue, nicht ausschließlich in vergängliche Logs.
+
 ## Risikobasiert prüfen
 
 - Prüfungen nach betroffenem Verhalten und Reichweite wählen, nicht pauschal nach Dateiendung. Lokale Änderungen brauchen meist Build und gezielte Tests; mechanische, verhaltensneutrale Kleinständerungen können mit Build und Diff geprüft werden.

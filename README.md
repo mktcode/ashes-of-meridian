@@ -32,7 +32,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 
 ### Pi-Subagents
 
-[pi-subagents](https://github.com/nicobailon/pi-subagents) ist in [`.pi/settings.json`](.pi/settings.json) projektlokal auf einen Git-Commit gepinnt. Pi installiert das Paket beim Start nach Projektfreigabe; der Download unter `.pi/git/` bleibt unversioniert. Nach Installation `/reload` ausführen (bei neuer Projektfreigabe Pi neu starten), mit `/subagents-doctor` die Einrichtung prüfen. Die eingebauten Rollen lassen sich beispielsweise mit „Nutze scout, um den betroffenen Code zu erkunden“ ansprechen; die Installation allein startet keine Delegation. Updates bewusst mit `pi install -l git:github.com/nicobailon/pi-subagents@<neuer-Commit>` vornehmen und prüfen.
+[pi-subagents](https://github.com/nicobailon/pi-subagents) ist projektlokal eingerichtet. Der Hauptagent verteilt abgegrenzte Aufgaben auf eigene Worktrees, beantwortet Rückfragen und integriert die Ergebnisse. [Einrichtung und Arbeitsablauf](docs/subagents.md); verbindliche Grenzen in [AGENTS.md](AGENTS.md#parallele-arbeit-und-subagents).
 
 ### Manuelle Zuschauerpartie
 
