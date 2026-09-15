@@ -521,6 +521,31 @@ test('blocked production keeps its paid order until space is free', () => {
   assertUnitSpacing(game);
 });
 
+test('workers use distributed near-side mining and HQ service points without queueing at one point', () => {
+  const game=spacingArena();
+  game.s.entities=[]; game.ids.clear(); game.world.staticGrid.fill(0);
+  const hq=game.spawnBuilding('hq',0,0,0,0), enemy=game.spawnBuilding('hq',60,60,1,1),
+    node=game.spawnResource('crystal',-25,0,1000), workers=[];
+  assert.ok(hq && enemy && node); game.world.rebuild(game.s.entities);
+  for(let i=0;i<8;i++) {
+    const w=game.spawnUnit('worker',-17-(i%2)*2,(i-3.5)*2,0,0);
+    assert.ok(w); w.order={type:'mine',id:node.id}; w.carry=18; w.returning=true; workers.push(w);
+  }
+  const dropoffs=workers.map(w=>game.workerDropoff(w,hq)), miningPoints=workers.map(w=>game.workerMiningPoint(w,node));
+  assert.equal(new Set(dropoffs.map(p=>`${p.x.toFixed(3)}/${p.z.toFixed(3)}`)).size,3);
+  assert.equal(new Set(miningPoints.map(p=>`${p.x.toFixed(3)}/${p.z.toFixed(3)}`)).size,3);
+  assert.ok(dropoffs.every(p=>p.x<=0&&Math.hypot(p.x-hq.x,p.z-hq.z)<hq.size+3.1),JSON.stringify(dropoffs));
+  assert.ok(miningPoints.every(p=>p.x>-25&&Math.hypot(p.x-node.x,p.z-node.z)<2.15));
+  const delivered=new Set();
+  for(let i=0;i<400&&delivered.size<workers.length;i++) {
+    const before=workers.map(w=>w.carry); game.step(.05); game.effects.tick(.05);
+    workers.forEach((w,j)=>{if(before[j]>0&&w.carry===0)delivered.add(w.id);});
+    if(i%20===0)assertUnitSpacing(game);
+  }
+  assert.equal(delivered.size,workers.length); assert.ok(game.s.stats.gathered>=workers.length*18);
+  assertUnitSpacing(game);
+});
+
 for (const [seed,map,faction,count,forced] of [
   [1409,'desert',0,8,false], [7012,'desert',1,12,false], [9017,'alien-planet',2,12,false], [1409,'desert',0,8,true]
 ]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {

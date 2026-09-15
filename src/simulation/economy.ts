@@ -304,6 +304,26 @@
         }
         return best;
       },
+      workerDropoff(this: MeridianGame, e: UnitEntity, h: Entity): Position {
+        const source = e.order.type === 'mine' ? this.get(e.order.id) : null,
+          toward = source || e,
+          base = Math.atan2(toward.x-h.x,toward.z-h.z),
+          slots = 3,
+          offset = ((e.id % slots) - 1) * 0.28,
+          radius = h.size + 2.5,
+          angle = base + offset,
+          p = {x:h.x+Math.sin(angle)*radius,z:h.z+Math.cos(angle)*radius};
+        return this.world!.nearest(p.x,p.z);
+      },
+      workerMiningPoint(this: MeridianGame, e: UnitEntity, n: ResourceEntity): Position {
+        const h = this.closest(n, target => target.team === e.team && target.type === 'hq' && target.progress >= 1),
+          toward = h || e,
+          base = Math.atan2(toward.x-n.x,toward.z-n.z),
+          offset = ((e.id % 3) - 1) * 0.5,
+          angle = base + offset,
+          p = {x:n.x+Math.sin(angle)*1.9,z:n.z+Math.cos(angle)*1.9};
+        return this.world!.nearest(p.x,p.z);
+      },
       worker(this: MeridianGame, e: UnitEntity, dt: number) {
         const team = e.team as PlayerTeam;
         let o = e.order,
@@ -350,8 +370,15 @@
           e.returning = true;
           let h = this.closest(e, n => n.team === e.team && n.type === 'hq' && n.progress >= 1);
           if (!h) return true;
-          if (distance(e, h) > h.size + 3.1) {
-            this.move(e, h, dt, h.size + 3.1);
+          const hqRange = h.size + 3.1,
+            hqDistance = distance(e,h);
+          if (hqDistance > hqRange + 1.5) {
+            this.move(e,h,dt,hqRange+1.5);
+            return true;
+          }
+          const dropoff = this.workerDropoff(e,h);
+          if (hqDistance > hqRange && distance(e, dropoff) > e.size * UNIT_BODY_SCALE * 2.5) {
+            this.move(e, dropoff, dt, 0.45, false);
             return true;
           }
           if (e.team === team) {
@@ -375,8 +402,9 @@
           e.order.id = n.id;
           e.path = [];
         }
-        if (distance(e, n) > 2.15) {
-          this.move(e, n, dt, 2.15);
+        const miningPoint = this.workerMiningPoint(e,n);
+        if (distance(e, n) > 2.15 && distance(e,miningPoint) > e.size*UNIT_BODY_SCALE) {
+          this.move(e, miningPoint, dt, 0.35, false);
           return true;
         }
         e.rot = angleLerp(e.rot, Math.atan2(n.x - e.x, n.z - e.z), dt * 8);
