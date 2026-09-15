@@ -58,16 +58,20 @@
           const lateral = dx * side!.x + dz * side!.z, forward = dx * side!.z - dz * side!.x;
           // In a crowd, a smaller step may be all the space available.
           for (const clearance of [min, Math.sqrt(Math.max(0, min * min - forward * forward))]) {
-            const shift = (lateral < 0 ? -1 : 1) * (clearance - Math.abs(lateral) + 1e-6),
-              nx = other.x + side!.x * shift, nz = other.z + side!.z * shift;
-            if (!(UNITS[other.type] as UnitDefinitionShape).flying && !this.world!.lineFree(other, {x:nx,z:nz})) continue;
-            // A short queue keeps the same lateral axis and the original mover's priority.
-            if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain, side);
-            if (this.unitFits(other, nx, nz)) {
-              other.yieldTo = { x: nx, z: nz };
-              other.yieldUntil = this.s!.time + 0.35;
-              break;
+            const preferred = lateral < 0 ? -1 : 1;
+            for (const direction of [preferred, -preferred]) {
+              const shift = direction * clearance - lateral + direction * 1e-6,
+                nx = other.x + side!.x * shift, nz = other.z + side!.z * shift;
+              if (!(UNITS[other.type] as UnitDefinitionShape).flying && !this.world!.lineFree(other, {x:nx,z:nz})) continue;
+              // Prefer the current lane side, but cross it if terrain or a crowd seals that side.
+              if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain, side);
+              if (this.unitFits(other, nx, nz)) {
+                other.yieldTo = { x: nx, z: nz };
+                other.yieldUntil = this.s!.time + 0.35;
+                break;
+              }
             }
+            if (other.yieldTo) break;
           }
         }
       },
@@ -116,6 +120,7 @@
         }
         e.pi = 0;
         e.nextPath = this.s!.time + 0.8;
+        delete e.steerLocked;
         e.pathGoal = { x: p.x, z: p.z };
         e.pathVersion = this.world!.pathVersion;
       },
@@ -165,14 +170,25 @@
           Math.hypot(other.x - e.x - vx * step, other.z - e.z - vz * step) <
             (e.size + other.size) * UNIT_BODY_SCALE);
         let moved = false, heading = Math.atan2(vx, vz);
-        // Consistent passing side: never alternate left/right on consecutive frames.
-        for (const angle of waitingForYield ? [] : [0, Math.PI / 6, Math.PI / 3, Math.PI / 2]) {
+        // Keep the chosen passing side for the current order; only fall back when it is sealed.
+        // Remembering the successful fallback prevents left/right oscillation in dense traffic.
+        const steerSide = e.steerSide || 1,
+          steeringAngles = [0, steerSide*Math.PI/6, steerSide*Math.PI/3, steerSide*Math.PI/2],
+          allowAlternate = e.type !== 'worker' || e.order.type === 'build' || e.order.type === 'repair';
+        if (allowAlternate && !e.steerLocked)
+          steeringAngles.push(-steerSide*Math.PI/6, -steerSide*Math.PI/3, -steerSide*Math.PI/2);
+        for (const angle of waitingForYield ? [] : steeringAngles) {
           const nx = e.x + (vx * Math.cos(angle) - vz * Math.sin(angle)) * step,
             nz = e.z + (vx * Math.sin(angle) + vz * Math.cos(angle)) * step;
           if (!this.unitFits(e, nx, nz)) continue;
           e.x = nx;
           e.z = nz;
           heading -= angle;
+          if (angle && allowAlternate) {
+            const chosenSide: 1 | -1 = angle > 0 ? 1 : -1;
+            if (chosenSide !== steerSide) e.steerLocked = true;
+            e.steerSide = chosenSide;
+          } else if (!angle) delete e.steerLocked;
           moved = true;
           break;
         }
@@ -209,6 +225,8 @@
         e.pi = 0;
         e.nextPath = 0;
         e.stuck = 0;
+        delete e.steerSide;
+        delete e.steerLocked;
       },
       command(this: MeridianGame, ids: number[], order: CommandOrder, team: PlayerTeam = 0, announce = true) {
         if (!this.s || this.s.result) return;
@@ -269,6 +287,8 @@
         e.order = { type: 'idle' };
         e.path = [];
         e.pi = 0;
+        delete e.steerSide;
+        delete e.steerLocked;
       },
     };
     type MovementMethods = typeof movementMethods;

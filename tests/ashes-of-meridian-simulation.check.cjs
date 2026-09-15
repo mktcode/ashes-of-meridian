@@ -405,13 +405,14 @@ test('idle allies can yield only into free space; enemies and assigned units do 
   game.yieldUnitSpace(mover,.22,0); assert.equal(other.x,2); assert.equal(other.z,0);
   assert.ok(other.yieldTo.z>0); assert.equal(other.order.type,'idle'); assertUnitSpacing(game);
   delete other.yieldTo; other.yieldUntil=0; const blockedAt=game.world.blockedAt; game.world.blockedAt=(x,z)=>z>0;
-  game.yieldUnitSpace(mover,.22,0); assert.equal(other.yieldTo,undefined); game.world.blockedAt=blockedAt;
+  game.yieldUnitSpace(mover,.22,0); assert.ok(other.yieldTo.z<0, 'the open lane side remains usable');
+  delete other.yieldTo; other.yieldUntil=0; game.world.blockedAt=blockedAt;
   other.team=1; game.yieldUnitSpace(mover,.22,0); assert.equal(other.yieldTo,undefined);
   other.team=0; other.order={type:'hold'}; game.yieldUnitSpace(mover,.22,0); assert.equal(other.yieldTo,undefined);
   other.order={type:'idle'}; game.random=()=>.5;
   const blocker=game.spawnUnit('rifle',2,1.9,0,0); blocker.order={type:'hold'};
-  game.yieldUnitSpace(mover,.22,0); assert.equal(other.yieldTo,undefined); assert.equal(blocker.z,1.9);
-  blocker.hp=0; game.yieldUnitSpace(mover,.22,0);
+  game.yieldUnitSpace(mover,.22,0); assert.ok(other.yieldTo.z<0); assert.equal(blocker.z,1.9);
+  delete other.yieldTo; other.yieldUntil=0; blocker.hp=0; game.yieldUnitSpace(mover,.22,0);
   for(let i=0;i<100;i++) {
     game.s.time+=.05; game.move(mover,{x:6,z:0},.05);
     if(other.yieldTo) game.moveYield(other,.05);
@@ -419,6 +420,43 @@ test('idle allies can yield only into free space; enemies and assigned units do 
     assert.ok(Math.abs(other.x-2)<.5); assertUnitSpacing(game);
   }
   assert.ok(mover.x>5); assert.ok(other.z>0 && other.z<2);
+});
+
+test('local steering tries the open side when a unit and terrain seal its preferred side', () => {
+  const game=spacingArena();
+  game.s.entities=[]; game.ids.clear(); game.world.staticGrid.fill(0); game.world.rebuild([]);
+  const mover=game.spawnUnit('rifle',0,0,0,0), blocker=game.spawnUnit('rifle',0,2,1,1);
+  assert.ok(mover && blocker);
+  game.world.blockedAt=(x,z)=>x<0;
+  mover.order={type:'move',x:0,z:10}; mover.path=[{x:0,z:10}];
+  mover.pathVersion=game.world.pathVersion; mover.nextPath=Infinity;
+  for(let i=0;i<10&&mover.x===0;i++) { game.s.time+=.05; game.move(mover,mover.order,.05); }
+  assert.ok(mover.x>0,JSON.stringify({mover:{x:mover.x,z:mover.z,stuck:mover.stuck,path:mover.path},blocker:{x:blocker.x,z:blocker.z}}));
+  assert.ok(mover.z>=0);
+});
+
+test('a ground formation clears a mothership hangar corner without losing its orders', () => {
+  const { game } = createGame(true);
+  game.start({seed:1409,map:'mothership',faction:0});
+  game.s.entities=[]; game.ids.clear();
+  game.spawnBuilding('hq',0,-75,0,0); game.spawnBuilding('hq',0,75,1,1);
+  game.world.rebuild(game.s.entities); game.rehash();
+  const units=[];
+  for(let i=0;i<24;i++) {
+    const e=game.spawnUnit(i%5===0?'tank':'rifle',-58+(i%6)*3,-27-Math.floor(i/6)*3,0,0);
+    assert.ok(e); units.push(e);
+  }
+  game.command(units.map(e=>e.id),{type:'move',x:-35,z:28});
+  const goals=units.map(e=>json(e.order));
+  advance(game,1200);
+  for(let i=0;i<units.length;i++) {
+    assert.equal(units[i].order.type,'idle',JSON.stringify({unit:{id:units[i].id,type:units[i].type,
+      x:units[i].x,z:units[i].z,order:units[i].order,path:units[i].path,pi:units[i].pi,
+      nextPath:units[i].nextPath,stuck:units[i].stuck},formation:units.map(e=>({id:e.id,type:e.type,x:e.x,z:e.z,order:e.order}))}));
+    assert.ok(Math.hypot(units[i].x-goals[i].x,units[i].z-goals[i].z)<6,
+      JSON.stringify({id:units[i].id,type:units[i].type,x:units[i].x,z:units[i].z,goal:goals[i]}));
+  }
+  assertUnitSpacing(game);
 });
 
 test('troops settle beside a shared rally destination without stacking or circling', () => {
@@ -984,10 +1022,6 @@ test('base energy, hull, production and construction rates match the current rul
 test('building repair assigns only the nearest living own worker and repairs through normal travel/work', () => {
   const { game } = battle(), b = player(game, 'barracks'); b.hp -= 100;
   const workers = game.alive(e => e.team === 0 && e.type === 'worker');
-  // Isolate repair/travel from an incidental army jam at the HQ (docs/issues/unit-crowd-stau.md).
-  // Keep a real, body-checked approach rather than teleporting the worker into repair range.
-  const approach = game.unitPosition({...workers[0],x:b.x,z:b.z+9}); assert.ok(approach);
-  Object.assign(workers[0],approach);
   const nearest = [...workers].sort((a, c) => Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
   assert.ok(Math.hypot(nearest.x-b.x,nearest.z-b.z)>b.size+4, 'starts outside repair range');
   game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 1, 2);

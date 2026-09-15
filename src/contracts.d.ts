@@ -257,6 +257,8 @@ interface EntityBase extends Position {
   pathGoal?: Position;
   pathVersion?: number;
   stuck?: number;
+  steerSide?: 1 | -1;
+  steerLocked?: boolean;
   slowed?: number;
   returning?: boolean;
   lastSource?: number;
