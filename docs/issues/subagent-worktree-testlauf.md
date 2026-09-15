@@ -16,6 +16,7 @@ Der nächste Auftrag startet den Testlauf. Zunächst das Repo analysieren und kl
 ## Abnahme
 
 - Keine Änderungen im fremden Worktree; eigene `.tmp/`-Pfade auch für Logs/Hilfsprogramme, nichts Temporäres im Commit. Eigenständige Build-/Abhängigkeitsverzeichnisse, soweit benötigt.
+- Die [Modellzuordnung](../subagents.md#modelle-und-thinking) mindestens mit Terra für einfache Erkundung und Sol für die gewählte Umsetzung prüfen: tatsächlich gestartetes Modell und Thinking müssen zum Auftrag passen und dürfen nicht unbemerkt vom Hauptagenten übernommen werden. Astra nicht allein zum Testen aufrufen.
 - Asynchrone Zustellung einer Rückfrage, passende Antwort und Abschluss tatsächlich beobachtet; Verhalten bei Blockaden nicht aus einem Doctor-Report ableiten.
 - Übergaben enthalten Commit, Dateiumfang, Testnachweise und offene Grenzen. Integration übernimmt ausschließlich geprüfte Änderungen; auch der zusammengeführte Stand ist geprüft.
 - Erst nach beendeten Prozessen, gesicherter Integration und Übernahme dauerhafter Befunde aufräumen. Übrig gebliebene Runs, Branches oder Worktrees mit konkretem Zustand und nächster Aktion hier vermerken, nicht stillschweigend löschen.

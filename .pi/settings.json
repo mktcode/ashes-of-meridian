@@ -1,5 +1,40 @@
 {
   "packages": [
     "git:github.com/nicobailon/pi-subagents@63eb567009ac2f4a421951e718e1502149c546a0"
-  ]
+  ],
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "medium",
+  "subagents": {
+    "defaultModel": "openai-codex/gpt-5.6-sol",
+    "defaultThinking": "low",
+    "maxThinking": "high",
+    "agentOverrides": {
+      "scout": {
+        "model": "openai-codex/gpt-5.6-terra",
+        "thinking": "low"
+      },
+      "worker": {
+        "thinking": "low"
+      },
+      "reviewer": {
+        "thinking": "medium"
+      },
+      "oracle": {
+        "thinking": "high"
+      },
+      "evidence-auditor": {
+        "thinking": "medium"
+      }
+    },
+    "modelScope": {
+      "enforce": true,
+      "strict": true,
+      "allow": [
+        "openai-codex/gpt-5.6-terra",
+        "openai-codex/gpt-5.6-sol",
+        "openai-codex/gpt-6-astra"
+      ]
+    }
+  }
 }
