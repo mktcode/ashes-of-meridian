@@ -11,4 +11,6 @@ Ziel bleibt eine warme, trockene Wüste mit bodenfarbigen Felsen, nicht die dunk
 - Texturvielfalt sowie zusätzliches Normal-/Höhenmaterial sind zurückgestellt. Ressourcenkristalle und Einheiten-/Gebäudemodelle wurden nicht überarbeitet. Atmosphärischer Nebel bleibt ebenfalls zurückgestellt. Weitere Umsetzung erst nach neuer Rückmeldung, keine automatische Folge von kleinen Geometrieschritten.
 - Offen bleiben Texturmaßstab, Kachelwiederholung und Einheitenkontrast. Die gelieferten Boden-/Felsquellen wurden vom Nutzer in GIMP als nahtlos bestätigt; nicht spiegeln oder ihre Kanten bearbeiten.
 
+Das [statische Audit (PERF-3)](audit-welle-01-befunde.md#performance-erst-wirkung-und-kosten-abgrenzen) konkretisiert die spätere Trennung von Schatten-/Szenenpass, Dreieckslast und Pixelkosten. Es hat weder die Galerie-Zahlen nachgemessen noch einen aktuellen GPU-Flaschenhals belegt; daraus folgt keine Freigabe für reduzierte Geometrie oder Schatten.
+
 Desert-Verfeinerungen dürfen Mothership oder die eigenständige Alien-Gestaltung nicht stillschweigend ändern. Motherships [visuelle Abnahme](terrain.md) ist separat.

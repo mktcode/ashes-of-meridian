@@ -12,4 +12,6 @@ Bei der Desert-Neugestaltung legt die veränderte Anfangsaufstellung einen Stau 
 
 Lokale Ausweich-/Yield- und Neuplanungsbedingungen für Arbeitsaufträge untersuchen. Eigenständige Crowd-Regression aus der klemmenden Aufstellung ableiten, dabei Körperabstände, Prioritäten und fremde Einheiten erhalten. Der Reparaturtest isoliert weiterhin Auswahl, tatsächlichen Anmarsch und Reparatur, ist aber kein Nachweis für Auflösung dieses Armeestaus.
 
+Das [statische Audit (PERF-1/2)](audit-welle-01-befunde.md#performance-erst-wirkung-und-kosten-abgrenzen) ergänzt separate Messfragen zu Live-Kollisionsscans und Neuplanung. Es liefert keinen Laufzeitnachweis und löst diesen funktionalen Stau nicht; den Kampfhash wegen seiner innerhalb des Ticks veraltenden Positionen nicht ungeprüft als Ersatz verwenden.
+
 Auch in menschlichen Runs prüfen: [Playtest-Validierung](playtest-validation.md).
