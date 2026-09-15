@@ -21,11 +21,9 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('world*u_groundPixelsPerMeter/pixels'), 'ground keeps equal source-texel density on both axes');
   assert.ok(FRAG.includes('vec3 t=groundBase(v_pos.xz);base=t;'), 'ground uses the aspect-correct Dirt source');
   assert.ok(FRAG.includes('base=t;vec4 rocks=groundDecor'), 'ground starts with the unchanged Dirt color');
-  assert.ok(!FRAG.includes('base=mix(detail(base,t,.74),t,.32)'), 'map tint is not mixed into the ground');
   assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
   for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex'])
     assert.ok(FRAG.includes(`uniform sampler2D ${texture};`));
-  assert.doesNotMatch(FRAG, /u_terrainOverlayTex/);
   assert.ok(FRAG.includes('groundDecor(u_rockClustersTex,v_pos.xz,false)'));
   assert.ok(FRAG.includes('groundDecor(u_desertShrubsTex,v_pos.xz,true)'));
   assert.ok(FRAG.includes('normalize(u_eye-v_pos)'));
@@ -75,7 +73,6 @@ test('tilt-shift is High-only with a sharp center, normalized kernel and resolut
   assert.ok(kernel.includes('return blurred/16.;'));
   assert.doesNotMatch(kernel, /texture\((?!u_tex,)/);
   assert.ok(POSTF.includes('if(u_bloomOn>.5)c+=texture(u_bloom,uv)'), 'bloom composites a separate low-resolution texture');
-  assert.doesNotMatch(POSTF,/for\(int i=0;i<8/);
 });
 
 function setup(options = {}) {

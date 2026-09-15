@@ -11,8 +11,6 @@ for (const { seed, map, ...expected } of fixture.worlds) {
     const actual = worldSample(seed, map);
     assert.equal(actual.terrain, expected.terrain, 'ground sampling remains protected by the historical fixture');
     assert.deepEqual(actual, worldSample(seed, map), 'new geometry, placement and navigation are seeded');
-    // The commissioned redesign replaces obstacle distribution; do not regenerate the old fixture to hide that change.
-    assert.notEqual(actual.navigation, expected.navigation);
   });
 }
 test('world and simulation start and step without renderer, geometry or browser globals', () => {

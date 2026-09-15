@@ -2,17 +2,25 @@
 
 Prüfaufwand folgt dem Änderungsrisiko. Nicht jede Codeänderung braucht die Gesamtsuite, nicht jede Grafikänderung einen Browserlauf. Vorab klären: Welches Verhalten kann betroffen sein, und welche Prüfung liefert dafür einen belastbaren Nachweis?
 
+## Schwerpunkt im Prototyp
+
+Die automatisierte Suite konzentriert sich auf Simulation und unit-testbare Logik: Ökonomie, KI, Navigation, RNG, Persistenz und technische Ressourcen-/Ladeverträge. Logik hinter UI-Aktionen bleibt prüfbar, etwa einmalige Auszahlungen, Upgradegrenzen, Befehlsauswahl und Pause-Guards; dafür nicht Texte oder komplettes Markup vergleichen.
+
+UI-Wortlaut, Layout, Farben, Menüaufteilung und vollständige Navigationsabläufe werden manuell beurteilt, nicht durch dauerhafte HTML-/CSS-Sollbilder festgeschrieben. Ebenso keine Tests oder Stub-Verbotslisten behalten, deren einziger Zweck der Nachweis einer früheren Entfernung ist. Eine beauftragte Entfernung braucht Diff und passende einmalige Prüfung, keinen dauerhaften Test gegen die Wiederkehr alter Namen, Bedienelemente oder Implementierungen. Gemischte Tests auf ihre weiterhin relevante Logik reduzieren. Negative Prüfungen mit aktuellem fachlichem Grund bleiben sinnvoll: etwa keine doppelte Auszahlung, keine verborgenen Feindinformationen und keine RNG-Mutation beim Zeichnen.
+
+End-to-End-Abnahme erfolgt laufend durch den Nutzer; vorhandene Simulationsszenarien ergänzen sie. Automatische Browser-/E2E-Läufe sind kein Pflichtteil der Suite und werden von Agenten nicht routinemäßig ergänzt oder gestartet.
+
 ## Prüfwahl
 
 | Änderung / Risiko | Übliche Prüfung |
 | --- | --- |
 | Dokumentation | Diff, betroffene Links und Angaben; keine Spieltests |
-| Minimale Text-/Rahmen-/Abstandsänderung | Diff und passende statische Prüfung |
+| Minimale Text-/Rahmen-/Abstandsänderung | Diff; bei Quellcodeänderungen Build, keine Text-/Layouttests |
 | Mechanische, verhaltensneutrale Code-Kleinständerung | Build und Diff; nur ohne Logik-/RNG-/Schnittstelleneingriff |
-| Lokale Verhaltensänderung | Build und gezielte betroffene Tests; Regression für den Fehler bzw. neuen Vertrag |
+| Lokale Logikänderung | Build und gezielte betroffene Tests; Regression für den Fehler bzw. weiterhin relevanten Vertrag |
 | Gemeinsame Simulation, RNG, Ladeverträge, breite oder unklar eingrenzbare Auswirkungen | Gesamtsuite mit `npm test` |
 | Langzeitverhalten, KI, Navigation oder Ökonomie | Passende längere Simulationsszenarien; bei übergreifenden Änderungen Gesamtsuite |
-| Rendering, Eingabe oder Auslieferung | Technische Prüfung der konkreten Änderung; Browsercheck, wenn Node/statische Prüfung die Fragestellung nicht abdecken |
+| Rendering, Eingabe oder Auslieferung | Betroffene technische Logik prüfen; Darstellung und E2E manuell, Browserdiagnose nur bei konkretem Bedarf |
 
 Bei Unsicherheit die mögliche Auswirkung prüfen und den Umfang entsprechend erweitern, nicht automatisch bei jeder Kleinigkeit alle Simulationen starten. Bestehende Langzeittests nicht wegen ihrer Laufzeit entfernen oder ihre Erwartungen zum Grünmachen abschwächen.
 
@@ -43,7 +51,7 @@ CPU-Simulationstests laden keinen Renderer; Grafikgeometrie und Uploads separat 
 
 ## Browser und menschliche Abnahme
 
-Ein gezielter technischer Browsercheck verwendet den aktuellen Build, ein isoliertes Profil und direkt `file://`, ohne abgeschwächte Sicherheitsflags. Nur betroffene Abläufe prüfen, etwa:
+Ein bei konkretem Diagnosebedarf beauftragter technischer Browsercheck verwendet den aktuellen Build, ein isoliertes Profil und direkt `file://`, ohne abgeschwächte Sicherheitsflags. Nur betroffene Abläufe prüfen, etwa:
 
 - Shader-/Assetänderung: Laden, Kompilieren, WebGL-Fehler, betroffene Qualität.
 - Viewport/Eingabe: Projektion und Picking, Overlayoffset, Resize und betroffene Touch-Aktion.

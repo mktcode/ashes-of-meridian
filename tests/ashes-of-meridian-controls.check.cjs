@@ -1,12 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const fs = require('node:fs');
-const path = require('node:path');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
-const RUNTIME_SOURCE = 'dist/src';
-const UI_FILES = UI_SCRIPTS.map(name => `${RUNTIME_SOURCE}/ui/${name.replace('ui-', '')}.js`);
-const STYLE_FILES = ['styles/base.css', 'styles/screens.css', 'styles/hud.css'];
+// Logic behind UI actions; copy, layout and full navigation flows are checked manually.
+
+test('escaping converts values and protects HTML delimiters independently of screen wording', () => {
+  const context = loadScripts(['ui-core']), esc = vm.runInContext('esc', context);
+  for (const [input, expected] of [[null, ''], [undefined, ''], [42, '42'],
+    ['<&>"\'', '&lt;&amp;&gt;&quot;&#39;'], ['&lt;', '&amp;lt;']])
+    assert.equal(esc(input), expected);
+});
 
 test('screen templates render frozen data without DOM access, randomness or profile mutation', () => {
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
@@ -19,19 +22,13 @@ test('screen templates render frozen data without DOM access, randomness or prof
     benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
     encounter: Object.freeze({enemy: 2, map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
-  const home = render.renderHomeScreen(expedition, 10, '<p>Briefing</p>');
-  assert.match(home, /Checkpoint 11/);
-  assert.doesNotMatch(home, /menu-status|menu-beacon|3 CIVILIZATIONS/);
-  assert.match(render.renderHomeScreen(null, 10, ''), /BEST DEPTH 10/);
-  assert.equal((render.renderBattleScreen(profile, 1, 1, 250).match(/ disabled/g) || []).length, 1);
-  assert.match(render.renderSettingsScreen(profile.settings), /data-setting="volume"/);
-  const manual = render.renderFieldManual();
-  assert.match(manual, /Enemy doctrines/);
-  assert.match(manual, /left-click your unit or building/);
-  assert.match(manual, /middle-drag · wheel, pinch/);
-  assert.equal((render.renderArmoryScreen(profile).match(/data-upgrade=/g) || []).length, 6);
+  render.renderHomeScreen(expedition, 10, '<p>Briefing</p>');
+  render.renderHomeScreen(null, 10, '');
+  render.renderBattleScreen(profile, 1, 1, 250);
+  render.renderSettingsScreen(profile.settings);
+  render.renderFieldManual();
+  render.renderArmoryScreen(profile);
   const offers = render.renderBenefitOptions(expedition.offers);
-  assert.equal((offers.match(/data-benefit=/g) || []).length, 2);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
   assert.equal(JSON.stringify({profile, expedition}), before);
 });
@@ -61,7 +58,6 @@ function setup() {
   const elements = new Map();
   const document = { ...target(), activeElement: { tagName: 'BODY' }, querySelectorAll: () => [],
     getElementById(id) {
-      assert.ok(!['tooltip','contextLabel','selectionContent','selectCount','buildingActions','importFile','speedLabel','settingSpeed','modeIndicator','modeLabel'].includes(id), 'removed DOM must never be accessed');
       if (!elements.has(id)) {
         elements.set(id, target());
         if (id === 'topbar') elements.get(id).getBoundingClientRect = () => ({ bottom: 55 });
@@ -85,7 +81,7 @@ function setup() {
     homeCamera() { calls.push(['base']); }
     select(ids) { this.selected = [...ids]; calls.push(['select', [...ids]]); }
     pick() { return null; }
-    openModal(kind, html) { this.html = html; }
+    openModal() {}
   }
   const game = {
     world: { extent: 90, gridSize: 72, cellSize: 2.5 },
@@ -109,7 +105,6 @@ function setup() {
     { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, upgrades: {}, settings: { quality: 2 } },
     { saveProfile() {}, saveExpedition() {}, clearExpedition() {} });
   ui.view = 'game'; ui.paused = false;
-  const key = (key, options = {}) => document.handlers.keydown?.({ key, preventDefault() {}, ...options });
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
   const pointer = (type, x, y, options = {}) => {
     const event = { pointerType: 'touch', pointerId: 1, button: 0, clientX: x, clientY: y,
@@ -118,19 +113,8 @@ function setup() {
   };
   const click = dataset => document.handlers.click({ target: { closest: () => ({ dataset }) } });
   const clickCamera = cam => click({ cam });
-  return { context, ui, calls, key, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
+  return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
-
-test('battle lifecycle reserves the world viewport only while the battlefield is displayed', () => {
-  const h = setup(), changes = [], viewport = h.document.getElementById('worldViewport');
-  h.ui.onViewportChange = () => changes.push([h.ui.view, viewport.classList.contains('in-battle')]);
-  h.ui.event('start'); assert.equal(viewport.classList.contains('in-battle'), true);
-  h.ui.pause(); h.ui.showSettings(); h.ui.showArmory();
-  assert.deepEqual(changes, [['game', true]], 'dialogs keep battlefield geometry');
-  h.ui.showHome(); assert.equal(viewport.classList.contains('in-battle'), false);
-  h.ui.showBattle(); assert.equal(viewport.classList.contains('in-battle'), false);
-  assert.deepEqual(changes, [['game', true], ['home', false], ['battle', false]]);
-});
 
 test('each battle start resets the music playlist before playback, but resume does not', () => {
   const h = setup(), calls = [];
@@ -189,21 +173,6 @@ test('minimap never marks an unseen enemy HQ, even on explored ground', () => {
   assert.equal(draws.filter(([name])=>name==='fillRect').length,1,'visible HQ remains visible');
 });
 
-test('minimap distinguishes massif footprints without bypassing visibility or changing terrain colors', () => {
-  const h = setup(), ctx = new Proxy({}, { get: () => () => {} }),
-    c = h.document.getElementById('minimap');
-  c.width = c.height = 210; c.getContext = () => ctx;
-  h.ui.game.world = { extent: 90, gridSize: 72, terrainColors: new Uint8Array(72*72*4).fill(100),
-    terrainFeatureGrid: [1,0,1,0,1,0], visible: [1,1], explored: [0,0,1,1] };
-  h.ui.miniBuffer = { width: 72 }; h.ui.miniCtx = { putImageData() {} };
-  h.ui.miniImage = { data: new Uint8ClampedArray(72*72*4) };
-  h.ui.R.ground = () => ({ x: 0, z: 0 });
-  h.UI.prototype.drawMinimap.call(h.ui);
-  for (const [i, value] of [48,100,31,65,14,30].entries())
-    assert.deepEqual(Array.from(h.ui.miniImage.data.slice(i*4,i*4+4)), [value,value,value,255]);
-  assert.ok(h.ui.game.world.terrainColors.every(v => v === 100));
-});
-
 test('minimap input, camera limits and world targets use the active map size after switching', () => {
   const h=setup();h.UI.prototype.bind.call(h.ui);
   for (const extent of [90,135,90]) {
@@ -246,44 +215,10 @@ test('minimap reallocates its raster on size changes and scales markers and came
   assert.deepEqual(images,[[72,72],[108,108],[72,72]]);
 });
 
-test('camera keys and pointer edges no longer move the camera', () => {
-  const h = setup();
-  for (const key of ['w', 'a', 's', 'd', 'W', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Home']) {
-    h.key(key); h.key(key, { repeat: true }); h.key(key, { shiftKey: true }); h.ui.tick(.1);
-    assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
-  }
-  for (const [x, y] of [[0, 400], [1279, 400], [640, 70], [640, 555]]) {
-    h.ui.pointer = { x, y, inside: true }; h.ui.tick(.1);
-    assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
-  }
-  assert.equal('keys' in h.ui, false);
-  assert.deepEqual(h.calls, []);
-});
-
-test('no keyboard handler remains for game commands, menus or targeting', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  assert.equal(h.UI.prototype.keyDown, undefined);
-  assert.equal(h.document.handlers.keydown, undefined);
-  assert.equal(h.document.handlers.keyup, undefined);
-  h.ui.mode = { kind: 'move' };
-  for (const key of ['f','m','h','x','q','b','n','t','e','r','c','v','y','F1','F2','F3','F5','F9','Tab','Escape','a','s']) {
-    h.key(key); h.key(key, { ctrlKey: true });
-  }
-  assert.deepEqual(h.calls, []); assert.equal(h.ui.mode.kind, 'move');
-  assert.equal(h.ui.paused, false);
-});
-
-test('left mouse dragging pans without drawing a selection rectangle or changing commands', () => {
+test('left mouse dragging pans without issuing commands or changing selection', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-  // A hidden entity keeps the overlay empty but would be inside the former selection box.
-  const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 0, x: 220, z: 220 };
-  h.ui.game.s.entities.push(unit); h.ui.pick = () => unit;
   h.pointer('pointerdown', 200, 200, { pointerType: 'mouse' });
   h.pointer('pointermove', 240, 230, { pointerType: 'mouse' });
-  const draws = [];
-  const ctx = new Proxy({}, { get: (_, key) => (...args) => draws.push([key, ...args]) });
-  h.ui.drawOverlay(ctx);
-  assert.equal(draws.some(([name]) => name === 'fillRect' || name === 'strokeRect'), false);
   h.pointer('pointerup', 240, 230, { pointerType: 'mouse' });
   assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
   assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 50 });
@@ -378,45 +313,39 @@ test('triple mouse clicks keep same-type selection; buildings never trigger comb
   }
 });
 
-test('mouse clicks replace selection even with Shift; select still deduplicates', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-  h.ui.pick = () => ({ id: 1, team: 0, kind: 'unit', type: 'rifle' });
-  h.pointer('pointerdown', 200, 200, { pointerType: 'mouse', shiftKey: true });
-  h.pointer('pointerup', 200, 200, { pointerType: 'mouse', shiftKey: true });
-  assert.deepEqual(h.ui.selected, [1]);
+test('selection deduplicates IDs and excludes missing entities', () => {
+  const h = setup();
   h.ui.game.s.entities = [{ id: 1 }, { id: 2 }];
   h.ui.audio.sound = () => {}; h.ui.renderActions = () => {};
   h.UI.prototype.select.call(h.ui, [1, 1, 99]);
   assert.deepEqual(Array.from(h.ui.selected), [1]);
 });
 
-test('Shift no longer queues commands or keeps successful targeting active', () => {
+test('successful targeting clears the mode; failed placement allows retry', () => {
   for (const mini of [false, true]) for (const rightClick of [false, true]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
     h.ui.mode = { kind: 'ability', arg: 'scan' };
     h.ui.game.ability = (...args) => { h.calls.push(['ability', ...args]); return true; };
-    const options = { pointerType: 'mouse', button: rightClick ? 2 : 0, shiftKey: true,
+    const options = { pointerType: 'mouse', button: rightClick ? 2 : 0,
       target: mini ? h.minimap : h.world };
     h.pointer('pointerdown', 100, 100, options); h.pointer('pointerup', 100, 100, options);
     assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], rightClick ? 'command' : 'ability');
-    assert.equal(h.calls[0].length, 3, 'no queue/append argument reaches command or ability');
     assert.equal(h.ui.mode, null);
   }
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.mode = { kind: 'build', arg: 'depot' }; h.ui.game.build = () => false;
-  h.pointer('pointerdown', 200, 200, { shiftKey: true });
-  h.pointer('pointerup', 200, 200, { shiftKey: true });
+  h.pointer('pointerdown', 200, 200);
+  h.pointer('pointerup', 200, 200);
   assert.equal(h.ui.mode.kind, 'build', 'failed placement still allows retry');
   h.ui.game.build = () => true;
-  h.pointer('pointerdown', 200, 200, { shiftKey: true });
-  h.pointer('pointerup', 200, 200, { shiftKey: true });
+  h.pointer('pointerdown', 200, 200);
+  h.pointer('pointerup', 200, 200);
   assert.equal(h.ui.mode, null);
 });
 
 test('mouse wheel zoom and middle-button pan respect camera limits without issuing commands', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   assert.equal(typeof h.world.handlers.wheel, 'function');
-  assert.equal(h.document.handlers.keyup, undefined);
   let prevented = 0;
   const wheel = (deltaY, options = {}) => h.world.handlers.wheel({ deltaY, deltaMode: 0,
     clientX: 200, clientY: 200, preventDefault: () => prevented++, ...options });
@@ -485,7 +414,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
 });
 
-test('speed button cycles existing rates, updates its own label and preserves commands and transient state', () => {
+test('speed changes are transient, pause-guarded and preserve commands and RNG', () => {
   const h = setup(), g = h.ui.game;
   Object.assign(g.s.teams[0], { alloy: 100, gas: 0, energy: 100, abilities: {} });
   Object.assign(g, { supply: () => 0, cap: () => 24 });
@@ -497,13 +426,11 @@ test('speed button cycles existing rates, updates its own label and preserves co
   const order = { type: 'move', x: 30, z: 40 }, mode = { kind: 'ability', arg: 'scan' };
   g.s.entities = [{ id: 7, kind: 'unit', team: 0, hp: 100, order }];
   h.ui.selected = [7]; h.ui.mode = mode; h.ui.attackMove = true;
-  h.ui.updateHUD(); assert.equal(button.textContent, '1×');
+  h.ui.updateHUD();
   for (const speed of [1.5, 2, .75, 1, 1.5, 2, .75, 1]) {
     h.ui.lastClick = { id: 7, count: 1 };
     button.onclick();
-    const label = String(speed).replace('.', ',') + '×';
-    assert.equal(g.s.speed, speed); assert.equal(button.textContent, label);
-    assert.equal(button['aria-label'], `Simulation speed: ${label}. Tap to change.`);
+    assert.equal(g.s.speed, speed);
     assert.deepEqual(h.ui.selected, [7]); assert.strictEqual(h.ui.mode, mode);
     assert.strictEqual(g.s.entities[0].order, order); assert.equal(h.ui.attackMove, true);
     assert.equal(Object.keys(h.ui.lastClick).length, 0);
@@ -514,27 +441,7 @@ test('speed button cycles existing rates, updates its own label and preserves co
   g.s.result = {}; button.onclick(); assert.equal(g.s.speed, 1.5);
   g.s.result = null; h.ui.view = 'home'; button.onclick(); assert.equal(g.s.speed, 1.5);
   h.ui.view = 'game'; const run = g.s; g.s = null; button.onclick(); assert.equal(g.s, null);
-  g.s = { ...run, speed: 1 }; h.ui.event('start', {});
-  assert.equal(button.textContent, '1×');
-});
-
-test('speed is a single button under the clock, not a settings control', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.document.handlers.change({ target: { id: 'settingSpeed', value: '2', dataset: {} } });
-  assert.equal(h.ui.game.s.speed, 1);
-  h.ui.showPause(); assert.doesNotMatch(h.ui.html, /GAME SPEED/);
-  for (const run of [h.ui.game.s, null]) {
-    h.ui.game.s = run; h.ui.showSettings();
-    assert.doesNotMatch(h.ui.html, /settingSpeed|Simulation speed/);
-    assert.match(h.ui.html, /data-setting="quality"/);
-  }
-  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-  assert.doesNotMatch(html, /speedLabel|settingSpeed/);
-  assert.match(html, /class="clock"><strong id="gameTime">00:00<\/strong><button id="speedBtn"[^>]*>1×<\/button><\/div>/);
-  assert.equal((html.match(/id="speedBtn"/g) || []).length, 1);
-  const deck = html.slice(html.indexOf('<footer id="commandDeck">'), html.indexOf('</footer>'));
-  assert.match(deck, /class="minimap-panel"[\s\S]*id="cameraTools"[\s\S]*id="commandCenter"[\s\S]*id="commandTools"[\s\S]*id="abilityBar"[\s\S]*id="actionPanel"/);
-  assert.match(html, /<button id="speedBtn"[^>]*>1×<\/button>/);
+  g.s = run;
 });
 
 test('attack-move toggle changes future ground orders for touch and mouse, not existing orders', () => {
@@ -556,7 +463,6 @@ test('attack-move toggle changes future ground orders for touch and mouse, not e
       assert.equal(h.ui.attackMove, active, 'not a one-shot targeting mode');
       h.calls.length = 0;
     }
-    assert.equal(button['aria-pressed'], 'false');
   }
 });
 
@@ -574,8 +480,6 @@ test('combat force button selects every living own non-worker without changing c
   assert.equal(Object.keys(h.ui.lastClick).length, 0);
   h.ui.paused = true; h.document.getElementById('combatSelectBtn').onclick();
   assert.deepEqual(h.calls, [['select', [1, 2, 3, 4]]]);
-  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-  assert.match(html, /id="combatSelectBtn" aria-label="Select all combat units"/);
 });
 
 test('attack-move toggle preserves context orders, selection, and explicit ability targeting', () => {
@@ -604,17 +508,14 @@ test('attack-move is transient, guarded while paused/ended, and reset on battle 
   const button = h.document.getElementById('attackMoveBtn');
   assert.equal(h.ui.attackMove, false);
   const profile = JSON.stringify(h.ui.profile);
-  button.onclick(); assert.equal(h.ui.attackMove, true); assert.equal(button['aria-pressed'], 'true');
+  button.onclick(); assert.equal(h.ui.attackMove, true);
   h.ui.clearMode(); assert.equal(h.ui.attackMove, true);
   h.ui.paused = true; button.onclick(); assert.equal(h.ui.attackMove, true);
   h.ui.paused = false; h.ui.game.s.result = {}; button.onclick(); assert.equal(h.ui.attackMove, true);
   h.ui.game.s.result = null; h.ui.view = 'home'; button.onclick(); assert.equal(h.ui.attackMove, true);
   h.ui.event('start', {});
-  assert.equal(h.ui.attackMove, false); assert.equal(button['aria-pressed'], 'false');
+  assert.equal(h.ui.attackMove, false);
   assert.equal(JSON.stringify(h.ui.profile), profile);
-  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-  assert.match(html, /id="commandTools"><button id="attackMoveBtn" aria-label="Attack-move" aria-pressed="false"/);
-  assert.match(fs.readFileSync(path.join(__dirname, '../styles/hud.css'), 'utf8'), /#commandTools #attackMoveBtn\[aria-pressed="true"\]/);
 });
 
 test('camera buttons and minimap tap/drag still navigate with existing limits', () => {
@@ -656,9 +557,9 @@ test('minimap uses current offset and dimensions for pressing, dragging and righ
   assert.deepEqual(JSON.parse(JSON.stringify(h.calls)), [['command', [], { type: 'move', x: -45, z: -45 }]]);
 });
 
-test('removed commands do nothing; abilities and categories remain, with pause guards', () => {
+test('ability and category actions dispatch only while unpaused', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.perform = h.UI.prototype.perform;
-  for (const action of ['attackMove','move','hold','stop','ability:orbital','ability:repair','ability:scan','ability:drop','rally','army','worker','home'])
+  for (const action of ['ability:orbital','ability:repair','ability:scan','ability:drop'])
     h.click({ action });
   for (const tab of ['root','build','infantry','vehicles','aircraft']) h.click({ action: 'tab:' + tab });
   assert.deepEqual(h.calls, [
@@ -671,22 +572,7 @@ test('removed commands do nothing; abilities and categories remain, with pause g
   assert.deepEqual(h.calls, []);
 });
 
-test('portrait deck has four root categories and a separate persistent ability bar, no old panels', () => {
-  const h = setup(); h.ui.renderActions(); h.ui.updateQueues();
-  assert.deepEqual(actionKeys(h), ['tab:build','tab:infantry','tab:vehicles','tab:aircraft']);
-  assert.equal(h.document.getElementById('productionQueue').innerHTML, '');
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.doesNotMatch(html, /buildingActions|selectionPanel|selectionContent|data-tab/);
-  assert.match(html, /id="minimap" aria-label="Minimap"/);
-  for (const tab of ['root','build','infantry','vehicles','aircraft']) {
-    h.UI.prototype.setTab.call(h.ui, tab);
-    assert.deepEqual([...h.document.getElementById('abilityBar').innerHTML.matchAll(/data-action="([^"]+)"/g)].map(m => m[1]),
-      ['ability:orbital','ability:repair','ability:scan','ability:drop']);
-    assert.equal(actionKeys(h).includes('tab:root'), tab !== 'root');
-  }
-});
-
-test('selected build, ability and rally actions become Cancel buttons and cancel on a second tap', () => {
+test('repeating the active targeting action cancels without changing selection or game state', () => {
   for (const [kind, arg] of [['build','depot'], ['rally'],
     ...['orbital','repair','scan','drop'].map(a => ['ability',a])]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
@@ -696,89 +582,26 @@ test('selected build, ability and rally actions become Cancel buttons and cancel
       h.ui.game.s.entities = [{id:7,team:0,kind:'building',type:'barracks',hp:100,progress:1,queue:[]}];
       h.ui.tab = 'building';
     }
-    const state = JSON.stringify(h.ui.game.s), action = kind === 'rally' ? 'rally' : `${kind}:${arg}`,
-      panel = kind === 'ability' ? 'abilityBar' : 'actions';
+    const state = JSON.stringify(h.ui.game.s), action = kind === 'rally' ? 'rally' : `${kind}:${arg}`;
     h.ui.setMode(kind, arg);
-    const activeMarkup = h.document.getElementById(panel).innerHTML,
-      activeButton = activeMarkup.match(new RegExp(`<button[^>]*data-action="${action}"[\\s\\S]*?</button>`))[0];
-    assert.match(activeButton, /class="action[^"\n]*\bactive\b/);
-    assert.match(activeButton, /<span>Cancel<\/span>/);
-    if (kind === 'build') assert.doesNotMatch(activeButton, /class="cost"/);
+    assert.equal(h.ui.mode.kind, kind);
     h.click({ action });
     assert.equal(h.ui.mode, null);
-    assert.equal(h.world.style.cursor, 'default');
-    assert.doesNotMatch(h.document.getElementById(panel).innerHTML, /class="action[^"\n]*\bactive\b/);
-    assert.doesNotMatch(h.document.getElementById(panel).innerHTML, /<span>Cancel<\/span>/);
     assert.deepEqual(h.ui.selected, [7]); assert.equal(h.ui.paused, false);
     assert.equal(JSON.stringify(h.ui.game.s), state); assert.deepEqual(h.calls, []);
   }
 });
 
-test('pause, resume, help and modal close remain button actions; save/load/backup actions are gone', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.ui.pause = () => { h.ui.paused = true; h.calls.push(['pause']); };
-  h.ui.resume = () => { h.ui.paused = false; h.calls.push(['resume']); };
-  h.ui.showHelp = () => h.calls.push(['help']); h.ui.closeModal = () => h.calls.push(['close']);
-  h.document.getElementById('pauseBtn').onclick(); h.document.getElementById('pauseBtn').onclick();
-  h.click({ ui: 'help' });
-  for (const ui of ['save','load','continue','export','import','closeModal']) h.click({ ui });
-  assert.deepEqual(h.calls, [['pause'],['resume'],['help'],['close']]);
-  for (const method of ['save','load','exportBackup','importBackup']) assert.equal(h.UI.prototype[method], undefined);
-});
-
-test('home offers a new expedition and exposes a secured expedition when present', () => {
-  const h = setup(); h.ui.showHome();
-  let html = h.document.getElementById('menu').innerHTML;
-  assert.match(html, /New expedition/);
-  assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
-    ['battle', 'armory', 'help', 'settings']);
-  h.ui.expedition = { depth: 4, benefits: { supplyCrate: 2, commanderMandate: 1 } };
-  h.ui.showHome(); html = h.document.getElementById('menu').innerHTML;
-  assert.match(html, /Continue expedition/);
-  assert.match(html, /class="continue-row"/); assert.match(html, /aria-label="View expedition benefits"/);
-  assert.match(html, /class="expedition-stage" aria-label="Checkpoint 5"/);
-  assert.match(html, />CHECKPOINT<\/span>/); assert.doesNotMatch(html, /CURRENT STAGE|CHECKPOINT SECURED/);
-  assert.match(html, /<strong>5<\/strong>/); assert.match(html, /4 SECTORS CLEARED/);
-  assert.deepEqual(Array.from(html.matchAll(/data-ui="([^"]+)"/g), m => m[1]),
-    ['continueExpedition', 'expeditionBenefits', 'battle', 'armory', 'help', 'settings']);
-  h.ui.uiAction('expeditionBenefits');
-  assert.match(h.ui.html, /Run benefits/); assert.match(h.ui.html, /Supply crate/);
-  assert.match(h.ui.html, /Commander mandate/); assert.match(h.ui.html, /×2/);
-  assert.equal(h.ui.game.s, null); assert.equal(h.ui.view, 'home'); assert.equal(h.ui.paused, true);
-});
-
-test('pause offers checkpoint-preserving home and explicit expedition abandonment', () => {
+test('pause and visibility changes preserve battle state and require explicit resume', () => {
   const h=setup(); h.UI.prototype.bind.call(h.ui);
   const state=h.ui.game.s, before=JSON.stringify(state);
   h.ui.pause(); assert.equal(h.ui.paused,true);
-  assert.match(h.ui.html,/discards this battle but keeps its secured pre-battle checkpoint/);
-  assert.match(h.ui.html,/ABANDON EXPEDITION/);
-  assert.deepEqual(Array.from(h.ui.html.matchAll(/data-ui="([^"]+)"/g),m=>m[1]),
-    ['resume','settings','help','home','restartConfirm','abandon']);
-  assert.equal((h.ui.html.match(/class="primary"|class="secondary"/g) || []).length, 6);
-  assert.doesNotMatch(h.ui.html, /class="textbtn"/);
   h.ui.resume(); assert.equal(h.ui.paused,false);
   h.document.hidden=true; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);
   h.document.hidden=false; h.document.handlers.visibilitychange(); assert.equal(h.ui.paused,true);
   h.ui.resume(); assert.equal(h.ui.paused,false);
   state.time=90; h.ui.tick(.1); state.time=0;
   assert.strictEqual(h.ui.game.s,state); assert.equal(JSON.stringify(state),before); assert.deepEqual(h.calls,[]);
-  h.ui.showSettings(); assert.doesNotMatch(h.ui.html,/data-ui="(?:export|import)"/);
-  assert.match(h.ui.html,/saved only between battles/);
-});
-
-test('victory offers expedition benefits while defeat offers a fresh expedition', () => {
-  for (const win of [false, true]) {
-    const h = setup();
-    Object.assign(h.ui.game.s, { stats: { kills: 0, lost: 1, gathered: 0 } });
-    if (win) h.ui.expedition = { depth: 2, offers: ['supplyCrate'], benefits: {} };
-    const result = { win, text: 'HQ destroyed', time: 20, integrity: 0, score: 0 };
-    h.ui.showResult(result);
-    assert.equal(h.ui.paused, true);
-    if (win) assert.match(h.ui.html, /data-benefit="supplyCrate"/);
-    else assert.match(h.ui.html, /data-ui="battle">NEW EXPEDITION/);
-    assert.match(h.ui.html, /data-ui="armory"/); assert.match(h.ui.html, /data-ui="home"/);
-  }
 });
 
 test('pause restart reopens the secured encounter with its expedition benefits', () => {
@@ -808,7 +631,6 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   assert.equal(Object.values(h.ui.expedition.enemyBenefits).reduce((a,b)=>a+b,0),1);
   h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
   assert.equal(saved.length,1);assert.equal(JSON.stringify(h.ui.expedition.enemyBenefits),enemyBefore);
-  assert.match(h.ui.encounterBriefing(),/ENEMY BENEFITS/);
   const choice = h.ui.expedition.offers[0]; h.click({ benefit: choice });
   assert.equal(h.ui.expedition.benefits[choice], 1); assert.equal(h.ui.expedition.offers.length, 0);
   assert.equal(saved.length, 2); assert.equal(h.calls.length, 1);
@@ -825,18 +647,16 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   assert.equal(h.ui.expedition, null); assert.equal(cleared.length, 1);
 });
 
-test('result upgrades return to the same ended battle without replaying the result sound', () => {
+test('upgrades after a result preserve the ended battle and do not replay its sound', () => {
   for (const win of [false, true]) {
     const h = setup(), sounds = []; h.UI.prototype.bind.call(h.ui);
-    h.ui.openModal = (kind, html, wide) => {
-      h.UI.prototype.openModal.call(h.ui, kind, html, wide); h.ui.html = html;
-    };
+    h.ui.openModal = h.UI.prototype.openModal;
     h.ui.audio.sound = name => sounds.push(name);
     Object.assign(h.ui.game.s, { seed: 1409, map: 'desert', enemy: 2,
       stats: { kills: 3, lost: 1, gathered: 42 },
       result: { win, text: 'HQ destroyed', time: 20, integrity: .5, score: 12 } });
     const state = h.ui.game.s, before = JSON.stringify(state);
-    h.ui.event('result', state.result); const resultHTML = h.ui.html;
+    h.ui.event('result', state.result);
     assert.deepEqual(sounds, [win ? 'victory' : 'defeat']);
     h.click({ ui: 'armory' }); assert.equal(h.ui.modalKind, 'armory');
     let saved = 0; h.ui.persistence.saveProfile = () => { saved++; return true; };
@@ -844,7 +664,7 @@ test('result upgrades return to the same ended battle without replaying the resu
     assert.equal(saved, 1); assert.equal(h.ui.profile.upgrades.startingWorkers, 1); assert.equal(h.ui.profile.aether, 0);
     assert.equal(h.ui.modalKind, 'armory');
     h.click({ ui: 'closeModal' });
-    assert.equal(h.ui.modalKind, 'result'); assert.equal(h.ui.html, resultHTML);
+    assert.equal(h.ui.modalKind, 'result');
     assert.equal(h.ui.paused, true); assert.strictEqual(h.ui.game.s, state);
     assert.equal(JSON.stringify(state), before);
     assert.deepEqual(sounds.filter(name => name === 'victory' || name === 'defeat'), [win ? 'victory' : 'defeat']);
@@ -854,61 +674,22 @@ test('result upgrades return to the same ended battle without replaying the resu
   }
 });
 
-test('upgrades opened outside a result retain home and active-battle return routes', () => {
-  for (const view of ['home', 'game']) {
-    const h = setup(); h.ui.view = view;
-    h.ui.openModal = (kind, html) => { h.ui.modalKind = kind; h.ui.html = html; };
-    if (view === 'home') h.ui.game.s = null;
-    h.ui.showArmory(); h.ui.closeModal();
-    assert.equal(h.ui.view, view);
-    assert.equal(h.ui.modalKind, view === 'home' ? '' : 'pause');
-    assert.equal(h.ui.paused, true);
-  }
-});
-
-test('runtime has no in-battle snapshot or backup hooks', () => {
-  for (const file of [`${RUNTIME_SOURCE}/app.js`, ...UI_FILES,
-    ...SIMULATION_SCRIPTS.map(name => `${RUNTIME_SOURCE}/simulation/${name.replace('simulation-', '')}.js`),
-    `${RUNTIME_SOURCE}/persistence.js`, 'index.html']) {
-    const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
-    assert.doesNotMatch(source, /lastSaveTime|importFile|exportBackup|importBackup|serializeBackup|parseBackup|beforeunload|entities.*localStorage/i, file);
-  }
-});
-
 test('permanent upgrades spend recovered aether, remain bounded and do not alter the active battle', () => {
   const h = setup(), keys = ['startingAlloy', 'startingWorkers'];
   h.ui.game.s.meta = {}; h.ui.game.s.teams[0].alloy = 123; h.ui.game.s.teams[0].gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
-  h.ui.profile.aether = 99; h.ui.showArmory();
-  assert.match(h.ui.html, /class="armory-screen"/);
-  assert.match(h.ui.html, /class="armory-balance"><strong>99<\/strong><span class="armory-aether-icon"><svg/);
-  assert.match(h.ui.html, /STARTING RESERVES<\/span><strong>250 <small>ALLOY<\/small>/);
-  assert.match(h.ui.html, /STARTING WORKERS<\/span><strong>0 <small>WORKERS<\/small>/);
-  assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>100 <small>AETHER \/ BATTLE<\/small>/);
-  assert.equal((h.ui.html.match(/class="upgrade-heading"/g) || []).length, 6);
-  assert.equal((h.ui.html.match(/class="upgrade-rank">LEVEL 0 \/ 5/g) || []).length, 6);
-  assert.equal((h.ui.html.match(/aria-label="Level 0 of 5"/g) || []).length, 6);
-  assert.deepEqual(Array.from(h.ui.html.matchAll(/data-upgrade="([^"]+)"/g), m => m[1]),
-    ['startingAlloy', 'startingWorkers', 'aetherEvacuation', 'constructionProtocols', 'logisticsFrame', 'repairLogistics']);
-  assert.match(h.ui.html, /Starting alloy/); assert.match(h.ui.html, /100 AETHER · LEVEL 1/);
-  assert.match(h.ui.html, /Starting workers/); assert.match(h.ui.html, /300 AETHER · LEVEL 1/);
-  assert.match(h.ui.html, /Aether evacuation/); assert.match(h.ui.html, /500 AETHER · LEVEL 1/);
-  assert.match(h.ui.html, /data-upgrade="startingAlloy" disabled/);
+  h.ui.profile.aether = 99;
   h.ui.buyUpgrade('startingAlloy'); assert.deepEqual(h.ui.profile.upgrades, {});
   h.ui.profile.aether = 100; h.ui.buyUpgrade('startingAlloy');
   assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1 }); assert.equal(h.ui.profile.aether, 0);
-  assert.match(h.ui.html, /STARTING RESERVES<\/span><strong>300 <small>ALLOY<\/small>/);
   h.ui.profile.aether = 500; h.ui.buyUpgrade('aetherEvacuation');
   assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1, aetherEvacuation: 1 }); assert.equal(h.ui.profile.aether, 0);
-  assert.match(h.ui.html, /EVACUATION LIMIT<\/span><strong>200 <small>AETHER \/ BATTLE<\/small>/);
-  h.ui.profile.aether = 5100; h.ui.showArmory();
-  assert.doesNotMatch(h.ui.html, /∞ UPGRADE RESOURCES|FREE · LEVEL|Command uplink|Command resolve|Frontier assembly/);
+  h.ui.profile.aether = 5100;
   for (const key of keys) for (let i=0;i<7;i++) h.ui.buyUpgrade(key);
-  for (const key of ['not-an-upgrade', 'veterans', 'logistics', 'stores', 'command', 'resolve', 'industry']) h.ui.buyUpgrade(key);
+  h.ui.buyUpgrade('not-an-upgrade');
   assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 5, aetherEvacuation: 1, startingWorkers: 5 });
-  assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 11); assert.equal('credits' in h.ui.profile, false);
+  assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 11);
   assert.deepEqual([h.ui.game.s.teams[0].alloy,h.ui.game.s.teams[0].gas,h.ui.game.s.meta], [123,45,{}]);
-  assert.equal((h.ui.html.match(/FULLY REQUISITIONED/g)||[]).length, 2);
 });
 
 test('each result transfers floored unused aether once, using the run-start evacuation limit through 1,000', () => {
@@ -928,7 +709,7 @@ test('each result transfers floored unused aether once, using the run-start evac
   }
 });
 
-test('new fleet upgrades display levels, charge their prices and never mutate an active battle',()=>{
+test('fleet upgrades charge their prices, respect caps and never mutate an active battle',()=>{
   const h=setup(),rules=vm.runInContext('META',h.context),snapshot=JSON.stringify(h.ui.game.s);
   let saves=0;h.ui.persistence.saveProfile=()=>saves++;
   for(const key of ['constructionProtocols','logisticsFrame','repairLogistics']) {
@@ -938,38 +719,11 @@ test('new fleet upgrades display levels, charge their prices and never mutate an
       assert.equal(h.ui.profile.upgrades[key]||0,level);
       h.ui.profile.aether++;h.ui.buyUpgrade(key);
       assert.equal(h.ui.profile.upgrades[key],level+1);assert.equal(h.ui.profile.aether,0);
-      assert.ok(h.ui.html.includes(`${rule.display.values[level+1]} <small>${rule.display.unit}</small>`));
     }
     h.ui.profile.aether=10000;h.ui.buyUpgrade(key);
     assert.equal(h.ui.profile.upgrades[key],5);assert.equal(h.ui.profile.aether,10000);
   }
   assert.equal(saves,15);assert.equal(JSON.stringify(h.ui.game.s),snapshot);
-});
-
-test('battle setup and help describe starting workers and alloy levels', () => {
-  const h = setup();
-  for (let level = 0; level <= 5; level++) {
-    h.ui.profile.upgrades.startingWorkers = level;
-    h.ui.profile.upgrades.startingAlloy = level;
-    h.ui.showBattle();
-    assert.match(h.document.getElementById('menu').innerHTML,
-      new RegExp(`HQ \\+ ${level} WORKERS · ${250 + level * 50} ALLOY`));
-  }
-  h.ui.showHelp();
-  assert.match(h.ui.html, /0–5 workers/); assert.match(h.ui.html, /250–500 alloy/);
-  assert.match(h.ui.html, /benefits can add workers, alloy, aether and your commander/);
-  assert.doesNotMatch(h.ui.html, /only your headquarters/);
-});
-
-test('content labels can change without changing faction IDs or depth requirements', () => {
-  const h = setup();
-  vm.runInContext(`FACTIONS.forEach((f, i) => { f.name = 'Faction <' + i + '> & revised'; });`, h.context);
-  h.ui.showBattle();
-  const html = h.document.getElementById('menu').innerHTML;
-  assert.match(html, /Faction &lt;1&gt; &amp; revised/);
-  assert.match(html, /Reach expedition depth 10/); assert.match(html, /Reach expedition depth 25/);
-  h.ui.showHelp();
-  for (const i of [1, 2]) assert.ok(h.ui.html.includes(`<b>Faction &lt;${i}&gt; &amp; revised</b>`));
 });
 
 test('best expedition depth unlocks factions at 10 and 25', () => {
@@ -1018,7 +772,7 @@ test('enemy choices use the shared three-offer pool and caps with deterministic 
   for(const faction of [0,1,2])assert.ok(['aetherAllocation','supplyCrate'].includes(choose(faction,capped,1409,21)));
 });
 
-test('new expedition benefits are offered deterministically, displayed and bounded on selection',()=>{
+test('expedition benefits are offered deterministically and bounded on selection',()=>{
   const h=setup(),rules=vm.runInContext('EXPEDITION_BENEFITS',h.context),seen=new Set();
   h.ui.expedition={faction:0,depth:8,benefits:{},enemyBenefits:{},offers:[],encounter:{enemy:1,map:'desert',seed:1409}};
   const run=h.ui.expedition;
@@ -1029,28 +783,12 @@ test('new expedition benefits are offered deterministically, displayed and bound
     offers.forEach(k=>seen.add(k));
   }
   for(const key of ['surveyDrones','fieldWorkshop','commandCapacitor']) {
-    assert.ok(seen.has(key));run.offers=[key];h.ui.showExpeditionTransition();
-    assert.ok(h.document.getElementById('menu').innerHTML.includes(rules[key].name));
+    assert.ok(seen.has(key));run.offers=[key];
     h.ui.game.start=()=>{};h.ui.chooseBenefit(key);assert.equal(run.benefits[key],1);
     run.benefits[key]=rules[key].max;run.offers=[key];h.ui.chooseBenefit(key);
     assert.equal(run.benefits[key],rules[key].max);
     assert.ok(!h.ui.createBenefitOffers(run).includes(key));
   }
-});
-
-test('checkpoint briefing derives faction doctrine and pressure without changing the encounter',()=>{
-  const h=setup();
-  h.ui.expedition={faction:0,depth:8,benefits:{},enemyBenefits:{fieldWorkshop:1,supplyCrate:2},offers:['supplyCrate'],
-    encounter:{enemy:1,map:'desert',seed:1409}};
-  const saved=JSON.stringify(h.ui.expedition);
-  h.ui.showExpeditionTransition();
-  let html=h.document.getElementById('menu').innerHTML;
-  assert.match(html,/VERDANT CHOIR/);assert.match(html,/Regenerating swarm/);assert.match(html,/PRESSURE 3\/5/);
-  assert.match(html,/ENEMY BENEFITS · Field workshop ×1 · Supply crate ×2/);
-  h.ui.showHome();assert.match(h.document.getElementById('menu').innerHTML,/Regenerating swarm/);
-  assert.equal(JSON.stringify(h.ui.expedition),saved);
-  vm.runInContext("FACTIONS[1].doctrine.name='<Swarm & revised>'",h.context);
-  assert.match(h.ui.encounterBriefing(),/&lt;Swarm &amp; revised&gt;/);
 });
 
 test('expedition setup creates and saves a random pending encounter', () => {
@@ -1065,34 +803,14 @@ test('expedition setup creates and saves a random pending encounter', () => {
   assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {}, enemyBenefits: {}, depth: 0 });
 });
 
-test('tooltips and native title hints are removed without removing pointer press guards or accessible names', () => {
+test('DOM press guard tracks pointer presses on controls', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  assert.equal(h.UI.prototype.tooltipFor, undefined);
-  assert.equal(h.document.handlers.mousemove, undefined);
-  assert.equal(typeof h.world.handlers.pointermove, 'function');
   h.document.handlers.pointerdown({ target: { closest: () => ({}) } });
   assert.equal(h.ui.domPressed, true);
   h.document.handlers.pointerup(); assert.equal(h.ui.domPressed, false);
   h.document.handlers.pointerdown({ target: { closest: () => null } });
   assert.equal(h.ui.domPressed, false);
-  for (const file of [...UI_FILES, 'index.html', ...STYLE_FILES]) {
-    const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
-    assert.doesNotMatch(source, /tooltip|tt-cost|\stitle=["']|\.title\s*=/i, file);
-  }
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.match(html, /<title>Ashes of Meridian/);
-  for (const [attribute, value, label] of [
-    ['id', 'pauseBtn', 'Pause'],
-    ['data-cam', 'home', 'Center on command'], ['data-cam', 'in', 'Zoom in'],
-    ['data-cam', 'out', 'Zoom out'], ['id', 'combatSelectBtn', 'Select all combat units'],
-    ['id', 'minimap', 'Minimap']
-  ]) assert.match(html, new RegExp(`${attribute}="${value}"[^>]*aria-label="${label}"`));
-  assert.doesNotMatch(html, /id="(?:soundBtn|helpBtn)"/);
 });
-
-function actionKeys(h) {
-  return [...h.document.getElementById('actions').innerHTML.matchAll(/data-action="([^"]+)"/g)].map(m => m[1]);
-}
 
 function buildingPanel() {
   const h = setup(), b = { id: 7, kind: 'building', type: 'barracks', team: 0, faction: 0, hp: 100, maxHp: 200, progress: 1, x: 0, z: 0, queue: [] };
@@ -1102,28 +820,9 @@ function buildingPanel() {
   return { ...h, b };
 }
 
-test('building selection opens fixed actions; Back preserves selection and explicit reselection reopens actions', () => {
-  const h = buildingPanel(); h.UI.prototype.select.call(h.ui, [7]);
-  assert.deepEqual(actionKeys(h), ['tab:root','sell','repair','rally']);
-  h.ui.R.project = () => { throw Error('Building actions must not project into the world'); };
-  h.ui.renderActions();
-  h.ui.setTab('root'); h.ui.renderActions();
-  assert.deepEqual(actionKeys(h), ['tab:build','tab:infantry','tab:vehicles','tab:aircraft']);
-  assert.deepEqual(Array.from(h.ui.selected), [7]);
-  h.UI.prototype.select.call(h.ui, [7]);
-  assert.equal(h.ui.tab, 'building');
-  assert.equal(h.UI.prototype.updateBuildingActions, undefined);
-  assert.equal(h.UI.prototype.closeBuildingActions, undefined);
-});
-
-test('foundations have only Cancel build; completion and destruction update the context menu', () => {
-  const h = buildingPanel(); h.b.progress = .5; h.ui.renderActions();
-  assert.deepEqual(actionKeys(h), ['tab:root','cancelBuild']);
-  h.b.progress = 1; h.ui.renderActions();
-  assert.deepEqual(actionKeys(h), ['tab:root','sell','repair','rally']);
-  h.b.hp = 0; h.ui.renderActions();
+test('invalid building selections leave building context', () => {
+  const h = buildingPanel(); h.b.hp = 0; h.ui.renderActions();
   assert.equal(h.ui.tab, 'root');
-  assert.ok(!actionKeys(h).includes('sell'));
   for (const mode of ['enemy','unit','many','none']) {
     const h = buildingPanel();
     if (mode === 'enemy') h.b.team = 1;
@@ -1132,28 +831,6 @@ test('foundations have only Cancel build; completion and destruction update the 
     if (mode === 'none') h.ui.selected = [];
     h.ui.renderActions(); assert.equal(h.ui.tab, 'root', mode);
   }
-});
-
-test('repair restrictions and Stop repair remain visible in the fixed menu', () => {
-  const h = buildingPanel();
-  h.ui.game.canRepairBuilding = () => 'No workers'; h.ui.game.canSellBuilding = () => 'Last command center';
-  h.ui.renderActions();
-  const html = () => h.document.getElementById('actions').innerHTML;
-  assert.match(html(), /data-action="repair" disabled/); assert.match(html(), /data-action="sell" disabled/);
-  assert.match(html(), /No workers · Last command center/);
-  h.ui.game.buildingRepairers = () => [{}]; h.ui.renderActions();
-  assert.doesNotMatch(html(), /data-action="repair" disabled/); assert.match(html(), /Stop repair/);
-});
-
-test('build menu explains unavailable workers and refreshes when one becomes free', () => {
-  const h = setup(); h.ui.tab = 'build';
-  h.ui.game.availableWorkers = () => [];
-  h.ui.renderActions();
-  const html = () => h.document.getElementById('actions').innerHTML;
-  assert.match(html(), /role="status">No free worker/);
-  h.ui.game.availableWorkers = () => [{}];
-  h.ui.renderActions();
-  assert.doesNotMatch(html(), /No free worker/);
 });
 
 test('selected workers turn own foundation/damaged target taps into work orders without changing selection', () => {
@@ -1256,19 +933,16 @@ test('only the Rally point button arms placement; a following normal tap deselec
   }
 });
 
-test('rally overlays use a bright thicker dashed line with dark contrast, without changing unit-order lines',()=>{
+test('rally and order overlays read target coordinates without mutating state or consuming RNG',()=>{
   const h=buildingPanel(),g=h.ui.game;
   h.b.rally={x:12,z:23};
   g.s.entities.push({id:8,team:0,kind:'unit',hp:100,x:2,z:3,order:{type:'move',x:10,z:20}});
   h.ui.selected=[7,8];g.visible=()=>false;
   g.random=()=>{throw Error('Overlay consumed simulation RNG');};
-  const before=JSON.stringify(g.s),strokes=[],paths=[],dashes=[];
-  const ctx={clearRect(){},save(){},restore(){},setLineDash(v){dashes.push(v);},
-    beginPath(){},moveTo(x,y){paths.push(['from',x,y]);},lineTo(x,y){paths.push(['to',x,y]);},
-    stroke(){strokes.push([this.lineWidth,this.strokeStyle]);}};
+  const before=JSON.stringify(g.s),paths=[];
+  const ctx={clearRect(){},save(){},restore(){},setLineDash(){},
+    beginPath(){},moveTo(x,y){paths.push(['from',x,y]);},lineTo(x,y){paths.push(['to',x,y]);},stroke(){}};
   h.ui.drawOverlay(ctx);
-  assert.deepEqual(strokes,[[4,'#07101dcc'],[2,'#9fe9d6'],[1,'#8dddd955']]);
-  assert.deepEqual(Array.from(dashes[0]),[4,6]);
   assert.deepEqual(paths.filter(p=>p[0]==='to'),[['to',12,23],['to',10,20]]);
   assert.equal(JSON.stringify(g.s),before);
 });
@@ -1285,48 +959,32 @@ test('all completed own buildings expose rally; foundations cannot set it and Ba
   }
 });
 
-test('global type icons aggregate parallel/waiting orders, keep DOM stable and show the next completion', () => {
+test('recruitment groups combine own parallel and waiting orders with their producer and queue index', () => {
   const h = setup(), q = (type, progress = 0) => ({type,progress,time:10,cost:75,gas:0});
   const a = {id:1,team:0,kind:'building',queue:[q('rifle',.25),q('rifle'),q('medic')]},
     b = {id:2,team:0,kind:'building',queue:[q('rifle',.6),q('medic')]};
-  h.ui.game.s.entities = [a,b,{...a,id:3,team:1}]; h.ui.updateQueues();
-  const buttons = () => h.document.getElementById('productionQueue').querySelectorAll('[data-queue-type]');
-  const [rifle,medic] = buttons();
-  assert.deepEqual(buttons().map(b => b.dataset.queueType), ['rifle','medic']);
-  assert.equal(rifle.querySelector('.queue-count').textContent, '3');
-  assert.equal(rifle.style['--progress'], '216deg');
-  assert.equal(rifle.querySelector('.queue-time').textContent, '4s');
-  assert.match(rifle['aria-label'], /Vanguard · 3 pending.*cancel one recruitment/);
-  assert.equal(medic.querySelector('.queue-count').textContent, '2');
-  assert.equal(medic.classList.contains('waiting'), true);
-  b.queue[0].progress = .7; h.ui.updateQueues();
-  assert.equal(buttons()[0], rifle); assert.ok(Math.abs(parseFloat(rifle.style['--progress']) - 252) < 1e-9);
-  b.queue.shift(); h.ui.updateQueues();
-  assert.equal(rifle.querySelector('.queue-count').textContent, '2');
-  assert.equal(rifle.style['--progress'], '90deg');
-  assert.equal(medic.classList.contains('waiting'), false);
-  a.queue = []; b.queue = []; h.ui.updateQueues();
-  assert.equal(buttons().length, 0);
+  h.ui.game.s.entities = [a,b,{...a,id:3,team:1}];
+  const before = JSON.stringify(h.ui.game.s);
+  const summary = () => Object.fromEntries(Object.entries(h.ui.recruitmentGroups()).map(([type, entries]) =>
+    [type, Array.from(entries, ({b,index,q}) => [b.id,index,q.progress])]));
+  assert.deepEqual(summary(), {rifle:[[1,0,.25],[1,1,0],[2,0,.6]],medic:[[1,2,0],[2,1,0]]});
+  assert.strictEqual(h.ui.recruitmentGroups().rifle[0].q, a.queue[0]);
+  assert.equal(JSON.stringify(h.ui.game.s), before);
+  b.queue.shift();
+  assert.deepEqual(summary(), {rifle:[[1,0,.25],[1,1,0]],medic:[[1,2,0],[2,0,0]]});
+  a.queue = []; b.queue = [];
+  assert.deepEqual(summary(), {});
 });
 
-test('starting workers do not affect queue duration, progress or waiting state', () => {
+test('queue rendering leaves production state and RNG untouched', () => {
   const h = setup(), g = h.ui.game;
   g.s.entities = [{ id: 1, team: 0, kind: 'building', queue: [
     { type: 'rifle', progress: .2, time: 100 }, { type: 'medic', progress: 0, time: 10 }
   ] }];
-  for (const level of [0, 1, 2, 3, 4, 5]) {
-    const remaining = '80s';
-    g.s.meta = { startingWorkers: level };
-    const before = JSON.stringify(g.s);
-    h.ui.updateQueues();
-    const [rifle, medic] = h.document.getElementById('productionQueue').querySelectorAll('[data-queue-type]');
-    assert.equal(rifle.querySelector('.queue-time').textContent, remaining);
-    assert.equal(rifle.style['--progress'], '72deg');
-    assert.match(rifle['aria-label'], new RegExp(remaining));
-    assert.equal(medic.querySelector('.queue-time').textContent, '…');
-    assert.equal(medic.classList.contains('waiting'), true);
-    assert.equal(JSON.stringify(g.s), before);
-  }
+  g.random = () => { throw Error('Queue rendering consumed simulation RNG'); };
+  const before = JSON.stringify(g.s);
+  h.ui.updateQueues(); h.ui.updateQueues();
+  assert.equal(JSON.stringify(g.s), before);
 });
 
 test('queue tap cancels one waiting order before active work; pause and scroll cancellation are guarded', () => {
@@ -1351,7 +1009,6 @@ test('building buttons dispatch repair; sale pauses, cancels safely, confirms th
   h.click({ action: 'repair' }); assert.deepEqual(h.calls, [['repair',7]]);
   h.click({ action: 'sell' });
   assert.equal(h.ui.paused, true); assert.equal(h.ui.modalKind, 'sell');
-  assert.match(h.document.getElementById('modal').innerHTML, /147.5 alloy/);
   h.click({ action: 'repair' }); assert.equal(h.calls.length, 1);
   h.click({ ui: 'cancelSale' }); assert.equal(h.ui.paused, false); assert.equal(h.calls.length, 1);
   h.click({ ui: 'confirmSale' }); assert.equal(h.calls.length, 1);
@@ -1364,86 +1021,14 @@ test('building buttons dispatch repair; sale pauses, cancels safely, confirms th
   assert.deepEqual(h.calls.at(-1), ['toast','Last command center']);
 });
 
-test('command deck and help have no research actions; removed buildings are never offered for construction', () => {
-  const h = setup(), html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.doesNotMatch(html, /data-tab/);
-  h.ui.showHelp(); assert.doesNotMatch(h.ui.html, /research/i);
-  for (const faction of [0, 1, 2]) {
-    h.ui.game.s.faction = faction; h.ui.tab = 'build'; h.ui.actionSignature = '';
-    h.ui.renderActions();
-    const actions = h.document.getElementById('actions').innerHTML;
-    assert.deepEqual(Array.from(actions.matchAll(/data-action="build:([^"]+)"/g), m => m[1]),
-      ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
-    assert.doesNotMatch(actions, /lab|ward|tech:|research|class="level"/i);
-  }
-  h.UI.prototype.perform.call(h.ui, 'tech:weapons'); assert.deepEqual(h.calls, []);
-  h.ui.tab = 'infantry'; h.ui.renderActions();
-  assert.match(h.document.getElementById('actions').innerHTML, /train:rifle/);
-  h.ui.game.s.entities = [{ id: 1, type: 'barracks', kind: 'building', team: 0, queue: [{ type: 'rifle', time: 11, progress: .5 }] }];
-  h.ui.updateQueues(); assert.match(h.document.getElementById('productionQueue').innerHTML, /data-queue-type="rifle"/);
-});
-
-test('all factions share the minimal recruitment categories, including HQ units under infantry', () => {
+test('recruitment delegates producer choice to the simulation, independent of selection', () => {
   const h = setup();
-  for (const faction of [0,1,2]) for (const [tab,types] of Object.entries({
-    infantry:['worker','rifle','medic','hero'], vehicles:['tank','artillery'], aircraft:['air']
-  })) {
-    h.ui.game.s.faction = faction; h.UI.prototype.setTab.call(h.ui, tab);
-    assert.deepEqual(actionKeys(h), ['tab:root',...types.map(t => 'train:' + t)]);
-    assert.match(h.document.getElementById('actions').innerHTML, /class="cost"/);
-  }
   h.ui.game.train = (...args) => h.calls.push(['train',...args]);
   h.ui.selected = [99]; h.UI.prototype.perform.call(h.ui, 'train:rifle');
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
-test('only faction 0 recruitment/build buttons use local model portraits without changing actions or labels', () => {
-  const h = setup();
-  for (const [key, label, type, cost, file, gas = 0] of [
-    ['train:worker', 'Prospector', 'worker', 50, 'assets/portraits/faction-0-unit-worker.webp'],
-    ['train:rifle', 'Vanguard', 'rifle', 75, 'assets/portraits/faction-0-unit-rifle.webp'],
-    ['train:medic', 'Field medic', 'medic', 100, 'assets/portraits/faction-0-unit-medic.webp', 35],
-    ['train:tank', 'Ironclad', 'tank', 200, 'assets/portraits/faction-0-unit-tank.webp', 70],
-    ['train:artillery', 'Longbow', 'artillery', 235, 'assets/portraits/faction-0-unit-artillery.webp', 95],
-    ['train:air', 'Kestrel', 'air', 180, 'assets/portraits/faction-0-unit-air.webp', 100],
-    ['train:hero', 'Commander', 'hero', 300, 'assets/portraits/faction-0-unit-hero.webp', 100],
-    ['build:hq', 'Command center', 'hq', 400, 'assets/portraits/faction-0-building-hq.webp'],
-    ['build:barracks', 'Muster station', 'barracks', 145, 'assets/portraits/faction-0-building-barracks.webp'],
-    ['build:depot', 'Logistics depot', 'depot', 85, 'assets/portraits/faction-0-building-depot.webp'],
-    ['build:refinery', 'Aether refinery', 'refinery', 100, 'assets/portraits/faction-0-building-refinery.webp'],
-    ['build:factory', 'War foundry', 'factory', 225, 'assets/portraits/faction-0-building-factory.webp', 85],
-    ['build:hangar', 'Flight deck', 'hangar', 220, 'assets/portraits/faction-0-building-hangar.webp', 115],
-    ['build:turret', 'Sentinel turret', 'turret', 115, 'assets/portraits/faction-0-building-turret.webp', 25]
-  ]) {
-    const webp = fs.readFileSync(path.join(__dirname, '..', file));
-    assert.equal(webp.toString('ascii', 0, 4), 'RIFF');
-    assert.equal(webp.toString('ascii', 8, 16), 'WEBPVP8 ');
-    assert.equal(webp.readUInt16LE(26) & 0x3fff, 320);
-    assert.equal(webp.readUInt16LE(28) & 0x3fff, 320);
-    for (const faction of [0,1,2]) {
-      h.ui.game.s.faction = faction;
-      const before = JSON.stringify(h.ui.game.s);
-      const html = h.ui.actionButton(key, label, type, { cost: {cost, gas}, disabled: true, badge: '2' });
-      assert.equal(JSON.stringify(h.ui.game.s), before);
-      assert.ok(html.includes(`data-action="${key}" disabled`));
-      assert.ok(html.includes(`<span>${label}</span><span class="cost">${cost}◆${gas ? ' ' + gas + '⬡' : ''}</span>`));
-      assert.ok(html.includes(`<small data-badge="${key}">2</small>`));
-      if (faction === 0) {
-        assert.ok(html.includes(`src="${file}" alt="" draggable="false"`));
-        assert.match(html, /class="model-space" aria-hidden="true"/);
-        assert.doesNotMatch(html, /<svg/);
-      } else {
-        assert.match(html, /<svg/); assert.doesNotMatch(html, /<img|model-action/);
-      }
-    }
-  }
-  h.ui.game.s.faction = 0; h.ui.mode = { kind: 'build', arg: 'hq' };
-  assert.match(h.ui.actionButton('build:hq', 'Command center', 'hq'), /class="[^"]*\bmodel-action\b[^"]*\bactive\b/);
-  for (const [key, type] of [['tab:build','hq'], ['tab:infantry','rifle'], ['tab:vehicles','tank'], ['tab:aircraft','air'], ['ability:drop','drop'], ['repair','repair'], ['sell','cancel']])
-    assert.doesNotMatch(h.ui.actionButton(key, type, type), /<img|model-action/);
-});
-
-test('tab and target-mode renders synchronously restore button locks and badges without a HUD tick', () => {
+test('action availability refreshes synchronously without a HUD tick', () => {
   const h = setup(), g = h.ui.game;
   Object.assign(g, { supply: () => 0, cap: () => 24, afford: () => false,
     abilityRequirement: key => key === 'orbital' ? 'TECH' : '' });
@@ -1475,12 +1060,8 @@ test('tab and target-mode renders synchronously restore button locks and badges 
       if (action.startsWith('ability:')) {
         const active = h.ui.isModeAction(action);
         assert.equal(button.disabled, active ? false : action !== 'ability:scan', action);
-        assert.equal(button.classList.contains('disabled'), button.disabled, action);
-        if (active) assert.equal(button.querySelector('small').textContent, '');
-        else assert.match(button.querySelector('small').textContent, action === 'ability:orbital' ? /^TECH$/ : /^\d+ϟ$/);
       } else if (/^(train|build):/.test(action)) {
         assert.equal(button.disabled, true, action);
-        assert.equal(button.classList.contains('disabled'), true, action);
       }
     }
   };
@@ -1522,7 +1103,7 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
   h.ui.paused = true; h.UI.prototype.updateHUD.call(h.ui); assert.ok(buttons.every(b=>b.disabled));
 });
 
-test('HUD reads supply and capacity once per update and refreshes counts, warnings and recruitment', () => {
+test('HUD reads supply and capacity once per update and gates recruitment at capacity', () => {
   const h = buildingPanel(), g = h.ui.game;
   Object.assign(g.s.teams[0], { alloy: 1000, gas: 1000, energy: 100, abilities: {} });
   Object.assign(g.s, { depth: 4 });
@@ -1539,16 +1120,12 @@ test('HUD reads supply and capacity once per update and refreshes counts, warnin
     g.supply = () => { supplyReads++; return supply; };
     g.cap = () => { capacityReads++; return capacity; };
     h.UI.prototype.updateHUD.call(h.ui);
-    const count = h.document.getElementById('supplyCount');
-    assert.equal(h.document.getElementById('battleLabel').textContent, 'STAGE 5');
-    assert.equal(count.textContent, supply + '/' + capacity);
-    assert.equal(count.style.color, supply >= capacity ? 'var(--red)' : '');
     assert.deepEqual(buttons.map(button => button.disabled), blocked);
     assert.deepEqual([supplyReads, capacityReads], [1, 1]);
   }
 });
 
-test('HUD ability badges and disabled states retain energy and cooldown boundaries', () => {
+test('ability availability respects energy, cooldown and technology boundaries', () => {
   const h = setup(), g = h.ui.game;
   Object.assign(g.s.teams[0], { alloy: 0, gas: 0, abilities: {} }); Object.assign(g.s,{time:10});
   Object.assign(g, { supply: () => 0, cap: () => 24, abilityRequirement: () => null });
@@ -1560,60 +1137,18 @@ test('HUD ability badges and disabled states retain energy and cooldown boundari
       g.s.teams[0].energy = available;
       h.UI.prototype.updateHUD.call(h.ui);
       assert.equal(button.disabled, available < energy);
-      assert.equal(button.querySelector('small').textContent, energy + 'ϟ');
     }
     g.s.teams[0].abilities[kind] = 12.2;
     h.UI.prototype.updateHUD.call(h.ui);
     assert.equal(button.disabled, true);
-    assert.equal(button.querySelector('small').textContent, '3s');
     g.s.teams[0].abilities[kind] = 10;
     h.UI.prototype.updateHUD.call(h.ui);
     assert.equal(button.disabled, false);
-    assert.equal(button.querySelector('small').textContent, energy + 'ϟ');
     if(kind==='orbital') {
       g.abilityRequirement=()=>'Requires a completed War foundry.';
       h.UI.prototype.updateHUD.call(h.ui);
-      assert.equal(button.disabled,true);assert.equal(button.querySelector('small').textContent,'TECH');
+      assert.equal(button.disabled,true);
       g.abilityRequirement=()=>null;
     }
   }
-});
-
-test('stylesheets load local base, screen and HUD rules in cascade order', () => {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.deepEqual(
-    [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map(match => match[1]),
-    STYLE_FILES.map(file => `./${file}`)
-  );
-});
-
-test('settings and camera hints describe shared touch and mouse navigation without hotkeys', () => {
-  const h = setup(); h.ui.showSettings();
-  assert.doesNotMatch(h.ui.html, /data-setting="edge"|Edge scrolling/);
-  h.ui.showHelp();
-  assert.match(h.ui.html, /Move \/ attack/);
-  assert.match(h.ui.html, /Select troops → tap ground \/ enemy/);
-  assert.match(h.ui.html, /Group icon: select all combat units/);
-  assert.match(h.ui.html, /Crossed swords: gold = stop to fight/);
-  assert.match(h.ui.html, /Turn Attack-move off to prioritize moving or retreating/);
-  assert.match(h.ui.html, /Workers always move normally/);
-  assert.doesNotMatch(h.ui.html, /Attack-move button|Move \/ hold \/ stop|Combat force button|Next worker button|Command view|Tabs on the command deck|Ability buttons in Command/);
-  assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]|\bEsc\b|to assist|keyboard/);
-  assert.match(h.ui.html, /Drag or middle-drag/); assert.match(h.ui.html, /wheel, pinch/i);
-  assert.doesNotMatch(h.ui.html, /WASD|Space \/ Home|box-select|Shift|control group/i);
-  assert.match(h.ui.html, /Double-tap\/click: same type/);
-  assert.equal(h.UI.prototype.setControlHints, undefined);
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.doesNotMatch(html, /WASD|WHEEL|SPACE|\(Space\)|DRAG BOX|CTRL|LMB|<kbd>|F[12359]|\bEsc\b/);
-  assert.doesNotMatch(html, /cancelTarget|modeIndicator|modeLabel/);
-  assert.doesNotMatch(html, /controlstrip/);
-  const styles = STYLE_FILES.map(file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')).join('\n');
-  assert.doesNotMatch(styles, /controlstrip/);
-  h.ui.game.s.faction = 0;
-  h.ui.renderActions();
-  const actions = h.document.getElementById('actions').innerHTML;
-  assert.doesNotMatch(actions, /Command view|SPACE|class="key"|F[12359]/);
-  h.ui.showPause();
-  assert.doesNotMatch(h.ui.html, /<kbd>|F[12359]/);
-  assert.equal(h.ui.updateTips, undefined);
 });
