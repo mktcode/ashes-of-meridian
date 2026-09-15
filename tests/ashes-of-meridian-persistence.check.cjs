@@ -53,6 +53,61 @@ test('profile defaults and normalization retain only permanent expedition progre
     settings: { ...defaults.settings, volume: 1, quality: 0 } });
 });
 
+test('profile settings reject foreign types without losing valid fields or progress', () => {
+  const h = setup();
+  for (const invalid of ['false', '1', '', 0, 1, null, {}, []]) {
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, expeditionDepth: 12, aether: 321,
+      upgrades: { startingWorkers: 2 }, settings: { volume: 0.6, quality: 1,
+        music: invalid, sfx: invalid, healthbars: invalid, extra: true } }));
+    const loaded = json(h.service.loadProfile());
+    assert.deepEqual(loaded.settings, { ...defaults.settings, volume: 0.6, quality: 1 }, JSON.stringify(invalid));
+    assert.equal(loaded.expeditionDepth, 12);
+    assert.equal(loaded.aether, 321);
+    assert.equal(loaded.upgrades.startingWorkers, 2);
+  }
+  for (const invalid of ['0.5', '', false, true, null, {}, [], [1]]) {
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, settings: {
+      volume: invalid, quality: invalid, music: false, sfx: false, healthbars: true } }));
+    assert.deepEqual(json(h.service.loadProfile().settings), {
+      ...defaults.settings, music: false, sfx: false, healthbars: true
+    }, JSON.stringify(invalid));
+  }
+  assert.deepEqual(h.warnings, []);
+});
+
+test('profile numeric settings stay finite and quality rounds down within the supported levels', () => {
+  const h = setup();
+  for (const [volume, quality, expectedVolume, expectedQuality] of [
+    [0, 0, 0, 0], [0.37, 1, 0.37, 1], [1, 2, 1, 2],
+    [-2, -2, 0, 0], [7, 7, 1, 2], [0.5, 0.9, 0.5, 0], [0.5, 1.5, 0.5, 1]
+  ]) {
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, settings: { volume, quality } }));
+    assert.deepEqual(json(h.service.loadProfile().settings), {
+      ...defaults.settings, volume: expectedVolume, quality: expectedQuality
+    });
+  }
+  // JSON numbers can overflow even though JSON.stringify(Infinity) produces null.
+  for (const value of ['1e309', '-1e309']) {
+    h.data.set(PROFILE, `{"version":1,"settings":{"volume":${value},"quality":${value}}}`);
+    assert.deepEqual(json(h.service.loadProfile().settings), defaults.settings);
+  }
+});
+
+test('missing or malformed settings containers retain defaults independently of expedition data', () => {
+  const h = setup();
+  h.service.saveExpedition(expedition);
+  const checkpoint = h.data.get(EXPEDITION);
+  for (const settings of [undefined, null, false, 1, 'settings', [], {}]) {
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, expeditionDepth: 12, settings }));
+    const before = h.data.get(PROFILE);
+    assert.deepEqual(json(h.service.loadProfile().settings), defaults.settings);
+    assert.equal(h.service.loadProfile().expeditionDepth, 12);
+    assert.equal(h.data.get(PROFILE), before, 'loading must not rewrite stored data');
+    assert.equal(h.data.get(EXPEDITION), checkpoint);
+  }
+  assert.deepEqual(h.warnings, []);
+});
+
 test('the new expedition format resets old runs without migrating or changing the permanent profile', () => {
   const h=setup(), profile={...defaults,expeditionDepth:21,aether:432,upgrades:{startingAlloy:3}};
   h.service.saveProfile(profile);

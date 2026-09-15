@@ -65,10 +65,14 @@ function createMeridianPersistence(
           d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
           for (let k in upgrades)
             d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
-          for (let key of Object.keys(d.settings))
-            if (Object.hasOwn(p.settings || {}, key)) d.settings[key] = p.settings[key];
-          d.settings.volume = clamp(Number(d.settings.volume) || 0, 0, 1);
-          d.settings.quality = clamp(Number(d.settings.quality) || 0, 0, 2);
+          for (let key of Object.keys(d.settings)) {
+            const value = p.settings?.[key];
+            if (Object.hasOwn(p.settings || {}, key) && typeof value === typeof d.settings[key] &&
+              (typeof value !== 'number' || Number.isFinite(value))) d.settings[key] = value;
+          }
+          d.settings.volume = clamp(d.settings.volume, 0, 1);
+          // Never select a more demanding quality level from a fractional stored value.
+          d.settings.quality = clamp(Math.floor(d.settings.quality), 0, 2);
         }
       } catch (e) {
         warn('Profile reset:', e instanceof Error ? e.message : String(e));
