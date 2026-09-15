@@ -6,6 +6,20 @@ Den [dokumentierten Subagent-Arbeitsablauf](../subagents.md) mit einem kleinen r
 
 Das [Audit-Team](../subagents.md#projektteam-für-lesende-audits) ist eingerichtet; seine Konfiguration startet noch keinen Testlauf. Nach Startfreigabe zunächst das Repo ausschließlich lesend analysieren und begründete Pflegekandidaten vorschlagen. Keine Befehle, Builds, Tests, Benchmarks, Browserläufe oder Dateiänderungen durch die Audit-Subagents. Tests dürfen als Quellen gelesen werden; ungemessene Performancewirkungen bleiben Hypothesen. Jede Umsetzung wird erst nach konsolidierten Befunden konkret mit dem Nutzer vereinbart, nicht automatisch aus dem Backlog abgeleitet. Größeres Refactoring und Regel-/Balancingänderungen bleiben außerhalb des Testumfangs.
 
+## Freigegebene Audit-Welle 01
+
+Startfreigabe des Nutzers liegt vor. Hauptagent: Einrichtung, Git-Nachweise, Supervisor-Antworten, Quellenprüfung und Konsolidierung; keine Implementierung in dieser Welle. Alle drei Worktrees starten auf demselben Commit dieses Auftragsstands. Die konkrete SHA und Run-Identitäten werden nach Einrichtung ergänzt.
+
+| Auftrag / Branch | Absoluter Worktree | Lesender Schwerpunkt |
+| --- | --- | --- |
+| `aom/audit-01-docs` | `/home/mkt/Projekte/experimental2/aom-audit-worktrees/wave-01-docs` | README und `docs/` einschließlich Issues gegen Quellen und gelesene Tests abgleichen; Aktualität und maßgebliche Informationsorte |
+| `aom/audit-01-code` | `/home/mkt/Projekte/experimental2/aom-audit-worktrees/wave-01-code` | `src/`, Lade-/Typverträge und Testharness auf notwendigen Wartungsbedarf und nachweislich obsolete Übergangslösungen prüfen |
+| `aom/audit-01-perf` | `/home/mkt/Projekte/experimental2/aom-audit-worktrees/wave-01-perf` | Simulations-/KI-/Navigations- und Render-/UI-Aufrufpfade statisch auf wiederholte Arbeit, Allokationen und Skalierungsrisiken untersuchen |
+
+Lesezugriff auf den gesamten eigenen Quellstand für Gegenbelege erlaubt; keine Schreibrechte, kein gegenseitiges Lesen vor der unabhängigen Übergabe. Gemeinsame RNG-, Sicht-, Kollisions- und Ladeverträge bleiben unverändert. Die Fragen sind unabhängig: Dokumentationswahrheit, Änderungsrisiko, ungemessene Laufzeitwirkung; Querverweise bei Überschneidungen statt mehrfacher Kernbewertung. Generierte Assets, Abhängigkeiten und Git-Interna nicht flächig durchsuchen.
+
+Abnahme dieser Phase: priorisierte, belegte Befunde mit Pfad/Zeile, Abdeckung und Grenzen, kleinste Maßnahmen, Risiken und spätere Prüfempfehlungen; kein Mindestmaß an Problemen. Mindestens eine fachliche Supervisor-Rückfrage samt beantworteter Fortsetzung beobachten. Modell-/Thinking-Zuordnung und unveränderte Quellstände durch den Hauptagenten kontrollieren. Ergebnisberichte werden aus den normalen Antworten durch die Runtime in den jeweiligen `.tmp/audit-wave-01/`-Bereich geschrieben; die Audit-Subagents selbst schreiben keine Dateien. Dauerhafte Befunde übernimmt nur der Hauptagent in Issues.
+
 ## Anzeigegrenze
 
 Die Standardagenten bleiben über `disableBuiltins` abgeschaltet; `action: "list", capabilities: true` zeigt ausschließlich die drei eigenen Audit-Profile als ausführbar. `/subagents-models` zeigt sie in der gepinnten Extension-Version trotzdem mit `disabled` an (auch Aliase). Vollständiges Ausblenden aus dieser Diagnoseansicht ist damit noch nicht erreicht und benötigt eine gesonderte Extension-Anpassung, keine direkte Änderung am ignorierten Paketdownload.
