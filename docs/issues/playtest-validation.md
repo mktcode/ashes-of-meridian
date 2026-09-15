@@ -14,4 +14,4 @@ Der Material-/Licht-/Schattenpass wurde nach menschlicher Sichtung positiv bewer
 
 Vorhandene Node-Regression und Chromium-/Software-WebGL-Sichtungen sind technische Vorprüfungen, keine Echtgeräte-, Hör- oder menschliche Langzeitabnahme. Frühere Messreihen bleiben in Git. Neue relevante Befunde hier knapp mit Gerät/Browser, Spielsituation und Ergebnis festhalten; daraus konkrete Folgeissues ableiten.
 
-Bekannte Einschränkungen bei der Bewertung berücksichtigen: [Arbeitsweg-Stau an der Basisarmee](unit-crowd-stau.md), [Raffinerie/Vent](aether-vent-und-refinary-bauen.md), offene [Desert-Gestaltung](desert-map.md) und [Mothership-Abnahme](terrain.md).
+Bekannte Einschränkungen bei der Bewertung berücksichtigen: [Arbeitsweg-Stau an der Basisarmee](unit-crowd-stau.md), offene [Desert-Gestaltung](desert-map.md) und [Mothership-Abnahme](terrain.md).
