@@ -6,8 +6,13 @@ Den [dokumentierten Subagent-Arbeitsablauf](../subagents.md) mit einem kleinen r
 
 Der nächste Auftrag startet den Testlauf. Zunächst das Repo analysieren und kleine Pflegekandidaten auswählen, nicht pauschal den Backlog implementieren. Größeres Refactoring und Regel-/Balancingänderungen bleiben außerhalb des Testumfangs.
 
+## Anzeigegrenze
+
+Die Standardagenten sind über `disableBuiltins` abgeschaltet; die ausführbare Liste wurde leer geprüft. `/subagents-models` zeigt sie in der gepinnten Extension-Version trotzdem mit `disabled` an (auch Aliase). Vollständiges Ausblenden aus dieser Diagnoseansicht ist damit noch nicht erreicht und benötigt eine gesonderte Extension-Anpassung, keine direkte Änderung am ignorierten Paketdownload.
+
 ## Vorgehen
 
+- Vor dem Start eigene Projektprofile für Analyse und Umsetzung anlegen und ihre Modell-/Thinking-Werte, Tools und `inheritProjectContext: true` prüfen. Die Standardagenten sind bewusst deaktiviert; derzeit sind noch keine eigenen Profile eingerichtet. Standardagenten nicht für den Testlauf wieder aktivieren.
 - Zwei unabhängige Analyseaufträge auf demselben Ausgangscommit, jeweils in eigenem Worktree: Dokumentationsrelevanz/Redundanzen/erledigte Issues sowie Tests und ein eng eingegrenzter Codebereich. Befunde mit Quellen und vorgeschlagenem Änderungsumfang zurückgeben, noch nichts bereinigen.
 - Mindestens eine begrenzte Supervisor-Rückfrage zum weiteren Vorgehen stellen und in der ursprünglichen Hauptsession beantworten. Jeder Agent meldet seinen tatsächlichen cwd, Branch, Ausgangscommit und Scratch-Pfad; lokale `AGENTS.md` und effektive Kontextvererbung prüfen.
 - Der Hauptagent wählt daraus höchstens zwei kleine, unabhängige Änderungen im freigegebenen Pflegeumfang aus und weist exakte Schreibgrenzen zu. Ein mögliches Refactoring vor Umsetzung konkret eingrenzen und mit dem Nutzer klären, falls es über den Auftrag hinausgeht. Kein künstlicher Änderungsbedarf nur für den Testlauf.

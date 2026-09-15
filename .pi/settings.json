@@ -6,27 +6,10 @@
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "medium",
   "subagents": {
+    "disableBuiltins": true,
     "defaultModel": "openai-codex/gpt-5.6-sol",
     "defaultThinking": "low",
     "maxThinking": "high",
-    "agentOverrides": {
-      "scout": {
-        "model": "openai-codex/gpt-5.6-terra",
-        "thinking": "low"
-      },
-      "worker": {
-        "thinking": "low"
-      },
-      "reviewer": {
-        "thinking": "medium"
-      },
-      "oracle": {
-        "thinking": "high"
-      },
-      "evidence-auditor": {
-        "thinking": "medium"
-      }
-    },
     "modelScope": {
       "enforce": true,
       "strict": true,
