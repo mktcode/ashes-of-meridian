@@ -1076,10 +1076,18 @@ test('last completed HQ and ineligible buildings cannot be sold; an unfinished r
   }
 });
 
-test('selling a refinery frees its vent for a new foundation', () => {
-  const { game } = battle(), b = player(game, 'refinery'), p = {x:b.x,z:b.z};
-  assert.ok(game.canBuild('refinery', p)); assert.equal(game.sellBuilding(b.id), true);
-  assert.equal(game.canBuild('refinery', p), '');
+test('nearby refinery placement snaps to the vent and selling frees it for a new foundation', () => {
+  const { game } = battle(), b = player(game, 'refinery'), gas = game.get(b.gasId),
+    nearby = {x:gas.x+5,z:gas.z};
+  assert.ok(game.canBuild('refinery', nearby));
+  assert.equal(game.sellBuilding(b.id), true);
+  assert.deepEqual(game.foundationPosition('refinery', nearby), {x:gas.x,z:gas.z});
+  assert.match(game.canBuild('refinery', {x:gas.x+6.01,z:gas.z}), /within 6 meters/);
+  assert.equal(game.canBuild('refinery', nearby), '');
+  assert.equal(game.build('refinery', nearby), true);
+  const replacement = player(game, 'refinery');
+  assert.deepEqual({x:replacement.x,z:replacement.z,gasId:replacement.gasId},
+    {x:gas.x,z:gas.z,gasId:gas.id});
 });
 
 test('assigned building repair workers finish over uninterrupted simulation steps', () => {

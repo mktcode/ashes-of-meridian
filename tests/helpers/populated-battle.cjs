@@ -7,7 +7,7 @@ function populateBase(game, workers = 5) {
     game.random = () => .5;
     game.world.blocked = game.world.staticGrid.slice();
     for (const [type, x, z] of [
-      ['barracks', -39, 53], ['depot', -51, 63], ['refinery', -63, 60],
+      ['barracks', -39, 53], ['depot', -51, 63], ['refinery', -60, 53],
       ['factory', -37, 67], ['depot', -27, 61]
     ]) game.spawnBuilding(type, x, z, 0, faction);
     game.spawnUnit('hero', -45, 42, 0, faction);

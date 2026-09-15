@@ -187,16 +187,17 @@
               let type = ui.mode.arg,
                 d = BUILDINGS[type];
               if (d) {
+                const foundation = game.foundationPosition(type, p);
                 let check = game.canBuild(type, p),
                   ok = !check,
                   col = ok ? 0x99e4c6 : 0xf39989;
                 renderEntity(
                   R,
-                  createBuildingPreview(type, p, s.faction),
+                  createBuildingPreview(type, foundation, s.faction),
                   t,
                   { tint: col, alpha: 0.3, layer: 'effects' }
                 );
-                ring(p.x, p.z, d.size + 0.6, col, 0.9);
+                ring(foundation.x, foundation.z, d.size + 0.6, col, 0.9);
               }
             } else if (ui.mode.kind === 'ability') {
               let kind = ui.mode.arg,

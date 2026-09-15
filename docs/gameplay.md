@@ -30,7 +30,7 @@ Rekrutierung ist unabhängig vom ausgewählten Gebäude: Der Auftrag geht an die
 
 Queue-Symbole über der Minimap aggregieren Aufträge je Einheitentyp. Tap storniert zuerst einen möglichst weit hinten wartenden, sonst den am wenigsten fortgeschrittenen aktiven Auftrag, mit vollständiger Erstattung. Offene Rekrutierungen reservieren Versorgung.
 
-Worker sammeln automatisch entdecktes Alloy und verteilen sich auf Vorkommen; manuelle Zuweisung gilt bis zur Erschöpfung. Raffinerien arbeiten ohne dauerhaft zugewiesenen Worker. Einheiten derselben Höhenebene halten Körperabstand; beladene Worker haben beim Ausweichen Vorrang. Das ist keine allgemeine Engstellen-/Crowd-Garantie.
+Worker sammeln automatisch entdecktes Alloy und verteilen sich auf Vorkommen; manuelle Zuweisung gilt bis zur Erschöpfung. Eine Raffinerie kann innerhalb von 6 Metern um einen erkundeten Aether Vent angesetzt werden; Vorschau und Fundament rasten auf dessen Zentrum ein. Raffinerien arbeiten ohne dauerhaft zugewiesenen Worker. Einheiten derselben Höhenebene halten Körperabstand; beladene Worker haben beim Ausweichen Vorrang. Das ist keine allgemeine Engstellen-/Crowd-Garantie.
 
 ## Bau und Gebäudeaktionen
 

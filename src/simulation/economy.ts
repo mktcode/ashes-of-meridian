@@ -1,5 +1,6 @@
     /* MeridianGame economy methods. Loaded after simulation/game.js. */
     'use strict';
+    const REFINERY_PLACEMENT_RANGE = 6;
     const economyMethods = {
       produceUnit(this: MeridianGame, b: BuildingEntity, type: UnitType): UnitEntity | null {
         if (this.s!.entities.some(e => e.hp > 0 && e.exit?.building === b.id)) return null;
@@ -120,6 +121,15 @@
           target.progress >= 1 && target.hp < target.maxHp) return 'repair';
         return null;
       },
+      refineryVent(this: MeridianGame, p: Position, team: PlayerTeam = 0): ResourceEntity | null {
+        const gas = this.closest(p, e => e.kind === 'resource' && e.type === 'gas' &&
+          !!this.world!.sight[team].explored[this.world!.idx(e.x, e.z)]) as ResourceEntity | null;
+        return gas && distance(p, gas) <= REFINERY_PLACEMENT_RANGE ? gas : null;
+      },
+      foundationPosition(this: MeridianGame, type: BuildingType, p: Position, team: PlayerTeam = 0): Position {
+        const gas = type === 'refinery' ? this.refineryVent(p, team) : null;
+        return gas ? { x: gas.x, z: gas.z } : p;
+      },
       canBuild(this: MeridianGame, type: BuildingType, p?: Position | null, team: PlayerTeam = 0) {
         let s = this.s!,
           d: BuildingDefinitionShape = BUILDINGS[type];
@@ -130,6 +140,10 @@
           return 'Recruit a worker at your command center first.';
         if (!this.availableWorkers(team).length) return 'No free worker. Workers are building or repairing.';
         if (!p) return '';
+        const gas = type === 'refinery' ? this.refineryVent(p, team) : null;
+        if (type === 'refinery' && !gas)
+          return `Place within ${REFINERY_PLACEMENT_RANGE} meters of an explored aether vent.`;
+        p = gas ? { x: gas.x, z: gas.z } : p;
         let r = d.size;
         const limit = this.world!.extent - 7 - r;
         if (Math.abs(p.x) > limit || Math.abs(p.z) > limit)
@@ -150,18 +164,15 @@
               return 'Leave room around units and production exits.';
             continue;
           }
-          if (e.kind === 'resource' && e.type === 'gas' && type === 'refinery') continue;
+          if (e === gas) continue;
           if (distance(p, e) < r + e.size + 0.8) return 'Leave room around structures and resources.';
         }
-        if (type === 'refinery') {
-          let gas = this.closest(p, e => e.kind === 'resource' && e.type === 'gas');
-          if (!gas || distance(p, gas) > 8) return 'Place within 8 meters of an aether vent.';
-          if (this.alive(e => e.type === 'refinery' && e.gasId === gas.id).length)
-            return 'This vent already supplies a refinery.';
-        }
+        if (gas && this.alive(e => e.type === 'refinery' && e.gasId === gas.id).length)
+          return 'This vent already supplies a refinery.';
         return '';
       },
       build(this: MeridianGame, type: BuildingType, p: Position, selected: number[] = [], team: PlayerTeam = 0) {
+        p = this.foundationPosition(type, p, team);
         let reason = this.canBuild(type, p, team);
         if (reason) {
           this.notify(team, 'toast', reason);

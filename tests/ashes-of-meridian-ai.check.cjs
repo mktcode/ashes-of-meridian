@@ -335,6 +335,10 @@ function audit(g) {
       assert.ok(extra.paid);assert.ok(extra.progress<1);
       for(const u of this.alive(e=>e.kind==='unit'))
         assert.ok(Math.hypot(u.x-x,u.z-z)>=BUILDINGS[type].size+u.size*1.4+1-1e-8,'AI never builds over a body, including unseen enemies');
+      if(type==='refinery'){
+        const gas=this.closest({x,z},e=>e.kind==='resource'&&e.type==='gas');
+        assert.deepEqual([x,z],[gas.x,gas.z],'AI refinery is centered on its observed vent');
+      }
       counts.built++;
     }
     return spawn.call(this,kind,type,x,z,team,faction,extra);

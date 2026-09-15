@@ -252,7 +252,7 @@ const BUILDINGS = {
     hp: 850,
     size: 2.3,
     time: 20,
-    desc: 'Place within 8 meters of an aether vent. Generates 1.7 aether per second; no worker is needed after construction.'
+    desc: 'Place within 6 meters of an explored aether vent; the foundation snaps to its center. Generates 1.7 aether per second; no worker is needed after construction.'
   },
   factory: {
     cost: 225,

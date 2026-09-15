@@ -80,10 +80,11 @@ const aiMethods = {
     const vents = Object.values(ai.contacts).filter(e=>e.type==='gas')
       .sort((a,b)=>distance(a,home)-distance(b,home)||a.id-b.id);
     const centers: Position[] = type==='refinery' ? vents : [home];
-    for (const center of centers) for (let j=0;j<64;j++) {
+    for (const center of centers) for (let j=0;j<(type==='refinery'?1:64);j++) {
       const i=(j+ai.search)%64, angle=(i%16)*Math.PI/8,
-        radius=type==='refinery'?4+(Math.floor(i/16))*.8:11+Math.floor(i/16)*5,
-        p={x:center.x+Math.sin(angle)*radius,z:center.z+Math.cos(angle)*radius};
+        radius=11+Math.floor(i/16)*5,
+        p=type==='refinery'?{x:center.x,z:center.z}:
+          {x:center.x+Math.sin(angle)*radius,z:center.z+Math.cos(angle)*radius};
       // Inspect the full footprint before the common validator checks live bodies. Otherwise
       // its rejection could reveal an unseen unit to the controller.
       const margin=BUILDINGS[type].size+3, CELL=this.world!.cellSize;
