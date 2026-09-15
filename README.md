@@ -26,7 +26,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 - [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
 - [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
 - [Grafik und Assets](docs/rendering.md): Modell-/Texturpflege und Darstellungsgrenzen.
-- [Prüfungen](docs/testing.md): gezielte Tests, Gesamtsuite und Aussagegrenzen.
+- [Prüfungen](docs/testing.md): gezielte Tests, Standardtestsuite, ausdrücklich beauftragte KI-/Simulationsläufe und Aussagegrenzen.
 - [Feste Testreferenzen](docs/reference-tests.md): Umgang mit Fixtures.
 - [Issues](docs/issues/): offene Aufgaben und Entscheidungen, darunter [Geräte-/Run-Validierung](docs/issues/playtest-validation.md).
 

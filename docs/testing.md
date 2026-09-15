@@ -1,6 +1,6 @@
 # Prüfungen
 
-Prüfaufwand folgt dem Änderungsrisiko. Nicht jede Codeänderung braucht die Gesamtsuite, nicht jede Grafikänderung einen Browserlauf. Vorab klären: Welches Verhalten kann betroffen sein, und welche Prüfung liefert dafür einen belastbaren Nachweis?
+Prüfaufwand folgt dem Änderungsrisiko. Nicht jede Codeänderung braucht die Standardtestsuite, nicht jede Grafikänderung einen Browserlauf. Vorab klären: Welches Verhalten kann betroffen sein, und welche Prüfung liefert dafür einen belastbaren Nachweis?
 
 ## Schwerpunkt im Prototyp
 
@@ -18,11 +18,11 @@ End-to-End-Abnahme erfolgt laufend durch den Nutzer; vorhandene Simulationsszena
 | Minimale Text-/Rahmen-/Abstandsänderung | Diff; bei Quellcodeänderungen Build, keine Text-/Layouttests |
 | Mechanische, verhaltensneutrale Code-Kleinständerung | Build und Diff; nur ohne Logik-/RNG-/Schnittstelleneingriff |
 | Lokale Logikänderung | Build und gezielte betroffene Tests; Regression für den Fehler bzw. weiterhin relevanten Vertrag |
-| Gemeinsame Simulation, RNG, Ladeverträge, breite oder unklar eingrenzbare Auswirkungen | Gesamtsuite mit `npm test` |
-| Langzeitverhalten, KI, Navigation oder Ökonomie | Passende längere Simulationsszenarien; bei übergreifenden Änderungen Gesamtsuite |
+| Gemeinsame Simulation, RNG, Ladeverträge, breite oder unklar eingrenzbare Auswirkungen | Standardtestsuite mit `npm test`; zusätzlichen KI-/Simulationsbedarf zur Freigabe vorschlagen |
+| Langzeitverhalten, KI, Navigation oder Ökonomie | Passende KI-/Simulationsfälle nur auf ausdrücklichen Nutzerauftrag |
 | Rendering, Eingabe oder Auslieferung | Betroffene technische Logik prüfen; Darstellung und E2E manuell, Browserdiagnose nur bei konkretem Bedarf |
 
-Bei Unsicherheit die mögliche Auswirkung prüfen und den Umfang entsprechend erweitern, nicht automatisch bei jeder Kleinigkeit alle Simulationen starten. Bestehende Langzeittests nicht wegen ihrer Laufzeit entfernen oder ihre Erwartungen zum Grünmachen abschwächen.
+Bei Unsicherheit die mögliche Auswirkung prüfen; für KI-/Simulations-Testblöcke nötige Freigabe abwarten statt sie automatisch zu starten. Bestehende Langzeittests nicht wegen ihrer Laufzeit entfernen oder ihre Erwartungen zum Grünmachen abschwächen.
 
 ## Befehle und Auswahl
 
@@ -45,7 +45,18 @@ Die passende Datei bzw. den Namen in `tests/` suchen (`rg 'test\(' tests`); kein
 npm test
 ```
 
-baut neu und führt die Gesamtsuite einschließlich längerer Simulationen aus. Die genaue Auswahl und Runneroptionen stehen in `package.json`. **`npm test -- …` ist kein Ersatz für einen gezielten Dateilauf** mit dem obigen Node-Befehl.
+baut neu und führt die Standardtestsuite **ohne die beiden umfangreichen KI- und Simulations-Testdateien** aus. Terrain-, Präsentations- und übrige technische Tests bleiben enthalten; auch der Standardlauf ist daher nicht ausschließlich eine schnelle Unit-Test-Suite. Die genaue Auswahl und Runneroptionen stehen in `package.json`. **`npm test -- …` ist kein Ersatz für einen gezielten Dateilauf** mit dem obigen Node-Befehl.
+
+Die beiden umfangreichen Blöcke sind getrennt ausführbar und bauen jeweils vorher neu:
+
+```bash
+npm run test:ai
+npm run test:simulation
+```
+
+**Nur auf ausdrücklichen aktuellen Nutzerauftrag**, gemäß [AGENTS.md](../AGENTS.md#risikobasiert-prüfen); nicht automatisch bei Implementierung, Integration oder Abschlussprüfung. Diese Freigabepflicht gilt ebenso für per Dateipfad oder Namensfilter ausgewählte Fälle dieser Blöcke. Nach Freigabe ist auch hier der direkte Node-Befehl mit `--test-name-pattern` vor dem Dateipfad möglich. Eine Freigabe für einen Einzeltest erlaubt nicht automatisch die ganze Datei oder den anderen Block. Insbesondere gehören Startpositions-/Replayprüfungen zum Simulationsblock und die team-/fraktionsübergreifende Fähigkeitsprüfung zum KI-Block.
+
+Im Abschluss Standardlauf, gezielte Tests und ausdrücklich beauftragte Langläufe getrennt benennen. Ein grünes `npm test` bedeutet nicht, dass auch die beiden optionalen Blöcke geprüft wurden.
 
 CPU-Simulationstests laden keinen Renderer; Grafikgeometrie und Uploads separat prüfen. Tests für einzelne Einheitenregeln isolieren den strategischen Controller, KI-Abnahmen verwenden echte Aktionen/Produktion. Neue Abdeckung fachlich klein halten, keine redundanten Karten-/Fraktions-/Upgrade-Kreuzprodukte ohne zusätzlichen Erkenntniswert. Umgang mit Sollwerten: [Feste Referenzen](reference-tests.md).
 
