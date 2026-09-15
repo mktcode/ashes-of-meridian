@@ -39,7 +39,7 @@ Fähigkeitsvoraussetzungen gelten für beide Teams. Orbital-Technologie wird bei
 
 Bauplanung hat ein gemeinsames Retry-Fenster mit höchstens einer Platzsuche je Kandidatentyp: Ein nicht platzierbarer Vorrangbau darf bezahlbare Alternativen nicht aussperren. Strategische Moduswechsel führen Angriffs- und Erholungsbeginn getrennt; Zielbestätigung startet die Angriffsuhr nicht neu. Nach einem abgebrochenen Angriff wird das gescheiterte Ziel vorübergehend niedriger priorisiert, damit dieselbe Front nicht sofort wieder gewählt wird.
 
-Die KI prüft ihre Baukandidaten zusätzlich auf sichtbare, freie Flächen und reservierte Ausgänge. Das behebt nicht den [allgemeinen Bauplatzfehler](issues/bug-building-placement-in-einheiten.md). Einheitenkörper und Ausfahrtsreservierungen direkt prüfen: der Kampf-Hash kann innerhalb eines Schritts veraltet sein.
+Die KI prüft die vollständige Baufläche zusätzlich auf aktuelle Sicht, bevor der gemeinsame Validator Live-Einheitenkörper und reservierte Produktionsausgänge prüft; dadurch verrät eine Ablehnung keine ungesehene Einheit. Dafür stets direkte Entitätspositionen verwenden: Der Kampf-Hash kann innerhalb eines Schritts veraltet sein.
 
 Diese Akteursgrenzen ermöglichen weitere Controller, sind aber kein Netzwerk-, Replay- oder Lockstep-Nachweis. Multiplayertechnik ist nicht vorweg entschieden.
 

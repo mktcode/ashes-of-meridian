@@ -80,22 +80,18 @@ const aiMethods = {
     const vents = Object.values(ai.contacts).filter(e=>e.type==='gas')
       .sort((a,b)=>distance(a,home)-distance(b,home)||a.id-b.id);
     const centers: Position[] = type==='refinery' ? vents : [home];
-    const known = this.alive(e=>e.team===team || this.canSee(team,e));
     for (const center of centers) for (let j=0;j<64;j++) {
       const i=(j+ai.search)%64, angle=(i%16)*Math.PI/8,
         radius=type==='refinery'?4+(Math.floor(i/16))*.8:11+Math.floor(i/16)*5,
         p={x:center.x+Math.sin(angle)*radius,z:center.z+Math.cos(angle)*radius};
-      // Inspect only a fully visible footprint, including a body-sized margin. Otherwise an
-      // unseen unit could occupy the proposed plot (the general UI placement bug is separate).
+      // Inspect the full footprint before the common validator checks live bodies. Otherwise
+      // its rejection could reveal an unseen unit to the controller.
       const margin=BUILDINGS[type].size+3, CELL=this.world!.cellSize;
       let observed=true;
       for (let z=p.z-margin;z<=p.z+margin+CELL;z+=CELL)
         for (let x=p.x-margin;x<=p.x+margin+CELL;x+=CELL)
           if (!this.canSee(team,{x,z})) observed=false;
       if (!observed) continue;
-      if (known.some(e=>e.kind==='unit' &&
-        (distance(e,p)<BUILDINGS[type].size+e.size*UNIT_BODY_SCALE+1 ||
-          (e.exit && distance(e.exit,p)<BUILDINGS[type].size+e.size*UNIT_BODY_SCALE+1)))) continue;
       if (this.canBuild(type,p,team)) continue;
       if (this.build(type,p,[],team)) { ai.search=(i+9)%64; return true; }
     }

@@ -34,7 +34,7 @@ Worker sammeln automatisch entdecktes Alloy und verteilen sich auf Vorkommen; ma
 
 ## Bau und Gebäudeaktionen
 
-- Bau benötigt genau einen freien Worker; Anfahrt zu Bau/Reparatur zählt bereits als belegt, Abbau dagegen als frei. Ohne freien Worker kein Fundament und keine Zahlung.
+- Bau benötigt genau einen freien Worker; Anfahrt zu Bau/Reparatur zählt bereits als belegt, Abbau dagegen als frei. Ohne freien Worker kein Fundament und keine Zahlung. Fundamente dürfen weder lebende Einheitenkörper noch reservierte Produktionsausgänge überdecken.
 - Worker auswählen → eigenes Fundament antippen überträgt die Baustelle an genau einen ausgewählten Worker und löst den bisherigen Bauarbeiter ab. Weitere Ausgewählte behalten ihre Aufträge. Keine Mehrarbeiterbeschleunigung oder automatische Wiederaufnahme unterbrochener Arbeit.
 - Ein fertiges eigenes Gebäude bietet **Sell**, **Repair / Stop repair** und **Rally point** im rechten Menü, ein Fundament **Cancel build**. Rally wird ausschließlich über die eigene Aktion und Zielbestätigung gesetzt, nicht nebenbei durch Bodenbefehle.
 - **Repair** schickt den nächsten freien Worker. Ein ausdrücklicher Worker-Kontextbefehl auf ein beschädigtes eigenes Gebäude oder eine Einheit darf hingegen dessen bisherigen Auftrag ersetzen. Reparatur erfolgt erst am Ziel und kostet Alloy; nach einem Arbeits-Tap bleiben die Worker ausgewählt. Zum normalen Auswählen eines solchen Arbeitsziels erst Worker abwählen.

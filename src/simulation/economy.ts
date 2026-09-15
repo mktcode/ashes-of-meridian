@@ -143,7 +143,13 @@
         }
         if (this.world!.staticGrid[this.world!.idx(p.x, p.z)]) return 'Terrain obstructs the foundation.';
         for (let e of this.s!.entities) {
-          if (e.hp <= 0 || e.kind === 'unit') continue;
+          if (e.hp <= 0) continue;
+          if (e.kind === 'unit') {
+            const clearance = r + e.size * UNIT_BODY_SCALE + 1;
+            if (distance(p, e) < clearance || (e.exit && distance(p, e.exit) < clearance))
+              return 'Leave room around units and production exits.';
+            continue;
+          }
           if (e.kind === 'resource' && e.type === 'gas' && type === 'refinery') continue;
           if (distance(p, e) < r + e.size + 0.8) return 'Leave room around structures and resources.';
         }

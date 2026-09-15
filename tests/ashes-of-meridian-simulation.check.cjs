@@ -433,6 +433,28 @@ test('troops settle beside a shared rally destination without stacking or circli
   assert.deepEqual(units.map(e=>[e.x,e.z]),positions); assertUnitSpacing(game);
 });
 
+test('foundations reject live unit bodies and production exits but ignore dead units', () => {
+  const { game } = freshBattle();
+  game.s.entities = [];
+  game.ids.clear();
+  game.world.staticGrid.fill(0);
+  game.world.rebuild([]);
+  game.world.sight[0].explored.fill(255);
+  const worker = game.spawnUnit('worker', -20, -20, 0, 0), unit = game.spawnUnit('rifle', 0, 0, 1, 1);
+  assert.ok(worker && unit);
+  for (const type of ['depot', 'barracks']) {
+    assert.match(game.canBuild(type, { x: unit.x, z: unit.z }), /units and production exits/);
+    assert.equal(game.build(type, { x: unit.x, z: unit.z }, [worker.id]), false);
+  }
+  unit.hp = 0;
+  assert.equal(game.canBuild('depot', { x: 0, z: 0 }), '');
+  unit.hp = unit.maxHp;
+  Object.assign(unit, { x: 20, z: 20, exit: { building: 99, x: 0, z: 0, length: 30 } });
+  assert.match(game.canBuild('depot', { x: 0, z: 0 }), /production exits/);
+  unit.exit = undefined;
+  assert.equal(game.canBuild('depot', { x: 0, z: 0 }), '');
+});
+
 test('placement respects terrain, map edges and flight layers; dead units do not occupy space', () => {
   const game = spacingArena();
   game.world.mark(game.world.staticGrid,0,0,4); game.world.rebuild(game.s.entities);
