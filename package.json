@@ -5,11 +5,13 @@
   "scripts": {
     "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json",
     "build:zip": "npm run build && node scripts/build-zip.mjs",
+    "capture:itch": "npm run build && node scripts/capture-itch-media.mjs",
     "embed:textures": "node scripts/embed-textures.mjs",
     "simulate:visible": "npm run build && node scripts/open-visible-simulation.mjs",
     "test": "npm run build && node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-terrain.check.cjs tests/ashes-of-meridian-crystals.check.cjs tests/ashes-of-meridian-harness.check.cjs tests/ashes-of-meridian-simulation.check.cjs tests/ashes-of-meridian-ai.check.cjs tests/ashes-of-meridian-core.check.cjs tests/ashes-of-meridian-persistence.check.cjs tests/ashes-of-meridian-presentation.check.cjs tests/ashes-of-meridian-controls.check.cjs tests/ashes-of-meridian-renderer.check.cjs tests/models/*.check.cjs"
   },
   "devDependencies": {
+    "playwright-core": "1.63.0",
     "typescript": "7.0.2"
   }
 }
