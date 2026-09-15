@@ -8,7 +8,7 @@ Das [Audit-Team](../subagents.md#projektteam-für-lesende-audits) ist eingericht
 
 ## Freigegebene Audit-Welle 01
 
-Startfreigabe des Nutzers liegt vor. Hauptagent: Einrichtung, Git-Nachweise, Supervisor-Antworten, Quellenprüfung und Konsolidierung; keine Implementierung in dieser Welle. Alle drei Worktrees starten auf demselben Commit dieses Auftragsstands. Die konkrete SHA und Run-Identitäten werden nach Einrichtung ergänzt.
+Startfreigabe des Nutzers liegt vor. Hauptagent: Einrichtung, Git-Nachweise, Supervisor-Antworten, Quellenprüfung und Konsolidierung; keine Implementierung in dieser Welle. Alle drei Worktrees wurden sauber auf `2d991a42fde3e5a61467838619840cb3cfdce75a` angelegt; Pfad, Branch und Status sowie identische Regeln/Konfiguration sind vor dem Start geprüft. Native asynchrone Workflow-ID: `124f5ceb-4f72-4b41-bb12-89eb3b439f6f`, Mission: `7a56d50e-41e1-4c9c-bf34-90c829fd6478`. Kindläufe: `docs` → `03c045ea-92da-4010-8774-525b5fb27b00`, `code` → `90745de1-61aa-4b53-8645-03500ba21cf8`, `perf` → `86c2f091-9554-4f78-8d74-acfdad96322f`. Aufrufscript: Hauptcheckout `.tmp/audit-wave-01/workflow.js`; syntaktisch validiert, dynamische Startzahl durch Laufzeitlimit 3 begrenzt. Status: alle drei Modellläufe aktiv; tatsächliches Sol/medium für `docs` und Sol/high für `code`/`perf` im Laufzeitstatus bestätigt. Fachliche DOC-Rückfrage zur Trennung von Snapshot-Widersprüchen und laufabhängiger Abnahme beantwortet (`7b7c2446-6e47-466e-89ec-f78c3abe3380`); danach keine offene Anfrage, Lauf wieder aktiv. Abschluss und Quellstandkontrolle stehen noch aus.
 
 | Auftrag / Branch | Absoluter Worktree | Lesender Schwerpunkt |
 | --- | --- | --- |
