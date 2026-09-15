@@ -9,10 +9,10 @@ Bei der gezielten Prüfung der Profilnormalisierung schlagen zwei bereits vorher
 
 Beide Fehler sind mit einem separat unter `.tmp/profile-settings-01/baseline/` gebauten Quellabzug des unveränderten Commits `1b120a7` reproduziert, ohne Profilpatch. Die Controls-Testwelt lädt das Persistenzmodul nicht. Im kombinierten gezielten Lauf bestehen Persistenz und Renderer; nur diese beiden Controls-Fälle scheitern (Logs im Hauptcheckout `.tmp/profile-settings-01/`).
 
-Die Tests lesen den alten Modal-Stub `ui.html`. `showResult()` schreibt dagegen direkt nach `document.getElementById('result').innerHTML` (`src/ui/screens.ts:211–231`). Zusätzlich erwartet der erste Test den Armory-Knopf auch bei offenen Vorteilsangeboten, während das aktuelle Markup ihn dort ausblendet. Eine reine Umstellung der abgefragten DOM-Stelle genügt deshalb nicht für die gesamte Vertragsklärung.
+Die Tests lesen den alten Modal-Stub `ui.html`. `showResult()` schreibt dagegen direkt nach `document.getElementById('result').innerHTML` (`src/ui/screens.ts:211–232`). Der Upgrade-Knopf ist auch bei offenen Vorteilsangeboten vorhanden: im `benefitPanel` (`:229`) statt in der allgemeinen unteren Knopfleiste (`:231`). Die zunächst gemeldete Abweichung über einen fehlenden Knopf war eine unvollständige Quellenprüfung, kein Produktkonflikt.
 
 ## Entscheidung und nächste Prüfung
 
-Mit dem Nutzer bestätigen, ob das aktuelle Verhalten gelten soll: Bei offenen Vorteilsangeboten kein Upgrade-Knopf; danach bzw. bei Niederlage vorhanden. Anschließend die betroffenen Tests auf den vereinbarten Vertrag ausrichten, ohne Behauptungen nur zum Grünmachen zu entfernen. Insbesondere Rückkehr zum selben Ergebnis, unveränderte Spielzustände und einmaligen Ergebnis-Sound weiter prüfen.
+Keine Produktentscheidung zum Upgrade-Knopf nötig. Die betroffenen Tests auf den vorhandenen Ergebnis-DOM ausrichten und ihre Testdaten gegen den aktuellen Expeditionsvertrag prüfen, ohne Behauptungen nur zum Grünmachen zu entfernen. Insbesondere Upgrade-Zugang mit Vorteilsangeboten, Rückkehr zum selben Ergebnis, unveränderte Spielzustände und einmaligen Ergebnis-Sound weiter prüfen.
 
-Bis zur Klärung keine Änderung an Ergebnis-UI oder bestehenden Tests. Die einmalige abschließende Gesamtsuite steht noch aus; sie folgt nach Integration des geklärten Umfangs beim Hauptagenten. Kein Browser-/Sound-/Darstellungsnachweis durch die Node-Prüfung.
+Keine Änderung der Ergebnis-UI erforderlich. Die einmalige abschließende Gesamtsuite steht noch aus; sie folgt nach Integration der Testkorrekturen beim Hauptagenten. Kein Browser-/Sound-/Darstellungsnachweis durch die Node-Prüfung.

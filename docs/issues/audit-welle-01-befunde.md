@@ -4,7 +4,7 @@
 
 Ausschließlich lesender Audit auf `2d991a42fde3e5a61467838619840cb3cfdce75a`; drei unabhängige Rollen für Dokumentation, Wartbarkeit und Performance. Der Hauptagent hat die unten genannten zentralen Quellenstellen gegengelesen und die Priorisierung korrigiert. Lauf-/Übergabenachweise: [Worktree-Testlauf](subagent-worktree-testlauf.md#freigegebene-audit-welle-01).
 
-Das erste freigegebene Paket (CODE-1 und DOC-1) ist umgesetzt; unten verbleiben die noch nicht ausgewählten Kandidaten. Ein bereits vorher bestehender [Controls-Prüfblocker](result-screen-tests.md) benötigt eine fachliche Entscheidung vor der abschließenden Gesamtsuite. Kein dringender breiter Strukturumbau belegt. Im lesenden Audit wurden keine Laufzeitmessungen, Tests oder Builds ausgeführt. Statische Kostenformen sind keine gemessenen Engpässe; insbesondere folgt daraus keine generelle Dringlichkeit einer Optimierung. Modelle, Assets, Shader und Styles wurden nicht vollständig geprüft; Grafik, Sound, externe Links und Echtgeräte bleiben außerhalb der Abnahme.
+Das erste freigegebene Paket (CODE-1 und DOC-1) ist umgesetzt; unten verbleiben die noch nicht ausgewählten Kandidaten. Ein bereits vorher bestehender [Controls-Prüfblocker](result-screen-tests.md) benötigt eine Anpassung veralteter Tests vor der abschließenden Gesamtsuite; die zunächst vermutete Produktentscheidung zum Upgrade-Knopf hat sich bei vollständiger Quellenprüfung erübrigt. Kein dringender breiter Strukturumbau belegt. Im lesenden Audit wurden keine Laufzeitmessungen, Tests oder Builds ausgeführt. Statische Kostenformen sind keine gemessenen Engpässe; insbesondere folgt daraus keine generelle Dringlichkeit einer Optimierung. Modelle, Assets, Shader und Styles wurden nicht vollständig geprüft; Grafik, Sound, externe Links und Echtgeräte bleiben außerhalb der Abnahme.
 
 ## Konkrete kleine Korrektur- und Absicherungskandidaten
 
@@ -29,4 +29,4 @@ Klassische globale Skripte, Prototyperweiterungen und reservierte RNG-Aufrufe bl
 
 ## Nächste Entscheidung
 
-Zuerst den [Ergebnisbildschirm-Testvertrag](result-screen-tests.md) klären. Als nächster kleiner Audit-Kandidat bietet sich CODE-2 an. Größere Simulations-/Renderoptimierungen erst nach beauftragten Messungen, nicht aufgrund dieser Auditliste automatisch beginnen.
+Zuerst die [Ergebnisbildschirm-Tests](result-screen-tests.md) an den vorhandenen UI-Vertrag anpassen. Als nächster kleiner Audit-Kandidat bietet sich CODE-2 an. Größere Simulations-/Renderoptimierungen erst nach beauftragten Messungen, nicht aufgrund dieser Auditliste automatisch beginnen.
