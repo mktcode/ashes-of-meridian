@@ -1,0 +1,5 @@
+{
+  "packages": [
+    "git:github.com/nicobailon/pi-subagents@63eb567009ac2f4a421951e718e1502149c546a0"
+  ]
+}

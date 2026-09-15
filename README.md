@@ -30,4 +30,10 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 - [Feste Testreferenzen](docs/reference-tests.md): Umgang mit Fixtures.
 - [Issues](docs/issues/): offene Aufgaben und Entscheidungen, darunter [Geräte-/Run-Validierung](docs/issues/playtest-validation.md).
 
+### Pi-Subagents
+
+[pi-subagents](https://github.com/nicobailon/pi-subagents) ist in [`.pi/settings.json`](.pi/settings.json) projektlokal auf einen Git-Commit gepinnt. Pi installiert das Paket beim Start nach Projektfreigabe; der Download unter `.pi/git/` bleibt unversioniert. Nach Installation `/reload` ausführen (bei neuer Projektfreigabe Pi neu starten), mit `/subagents-doctor` die Einrichtung prüfen. Die eingebauten Rollen lassen sich beispielsweise mit „Nutze scout, um den betroffenen Code zu erkunden“ ansprechen; die Installation allein startet keine Delegation. Updates bewusst mit `pi install -l git:github.com/nicobailon/pi-subagents@<neuer-Commit>` vornehmen und prüfen.
+
+### Manuelle Zuschauerpartie
+
 `npm run simulate:visible` baut und öffnet eine persönliche KI-gegen-KI-Zuschauerpartie über `file://` im normalen Standardbrowser, ohne vorgegebene Fenstergröße. Das flüchtige Profil berührt keine normalen Browserdaten. Jeder Run startet mit 1× und wechselt nach zehn Echtzeitsekunden auf 2×; Tab/Fenster selbst schließen. **Kein Test- oder Agentenabnahmebefehl, nie automatisch ausführen.**
