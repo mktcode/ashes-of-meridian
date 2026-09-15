@@ -71,9 +71,9 @@ function renderArmoryScreen(profile: MeridianProfile) {
             )}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN ↗</button></div></div>`;
 }
 
-function renderBenefitOptions(offers: readonly string[]) {
+function renderBenefitOptions(offers: readonly string[], selected?: string) {
   return offers.map(key => {
-    const benefit = expeditionBenefit(key)!;
-    return `<button class="benefit-option" data-benefit="${key}"><span class="sigil">${icon(benefit.icon)}</span><strong>${benefit.name}</strong><small>${benefit.desc}</small></button>`;
+    const benefit = expeditionBenefit(key)!, active = key === selected;
+    return `<button class="benefit-option${active ? ' active' : ''}" data-benefit="${key}" aria-pressed="${active}"><span class="sigil">${icon(benefit.icon)}</span><strong>${benefit.name}</strong><small>${benefit.desc}</small></button>`;
   }).join('');
 }

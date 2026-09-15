@@ -39,6 +39,7 @@
       touchPoints: Map<number, {x: number; y: number}>;
       battleFaction?: FactionId;
       resultAetherRecovered?: number;
+      resultBenefit?: string;
       onViewportChange?: () => void;
       onPreview?: () => void;
       domPressed?: boolean;
@@ -121,13 +122,16 @@
           this.audio.setMode?.('battle');
           this.factionJustUnlocked = null;
           this.resultAetherRecovered = undefined;
+          this.resultBenefit = undefined;
           this.paused = false;
           this.modalKind = '';
           this.sellBuildingId = null;
           this.lastClick = {};
           $('menu').classList.add('hidden');
           $('modal').classList.add('hidden');
+          $('result').classList.add('hidden');
           $('hud').classList.remove('hidden');
+          $('worldViewport').classList.remove('result-backdrop');
           $('worldViewport').classList.add('in-battle');
           if (this.onViewportChange) this.onViewportChange();
           $('radio').classList.add('hidden');

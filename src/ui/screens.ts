@@ -10,9 +10,10 @@
         this.selected = [];
         this.clearMode();
         $('hud').classList.add('hidden');
-        $('worldViewport').classList.remove('in-battle');
+        $('worldViewport').classList.remove('in-battle', 'result-backdrop');
         if (this.onViewportChange) this.onViewportChange();
         $('modal').classList.add('hidden');
+        $('result').classList.add('hidden');
         $('radio').classList.add('hidden');
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
@@ -43,9 +44,10 @@
         this.audio.setMode?.('menu');
         $('menu').classList.remove('hidden');
         $('hud').classList.add('hidden');
-        $('worldViewport').classList.remove('in-battle');
+        $('worldViewport').classList.remove('in-battle', 'result-backdrop');
         if (this.onViewportChange) this.onViewportChange();
         $('modal').classList.add('hidden');
+        $('result').classList.add('hidden');
         if (!this.factionUnlocked(this.battleFaction)) this.battleFaction = FACTION_ID.FIRST;
         let startingAlloyLevel = clamp(Math.floor(Number(this.profile.upgrades.startingAlloy) || 0), 0, STARTING_ALLOY.length - 1),
           startingAlloy = STARTING_ALLOY[startingAlloyLevel];
@@ -97,8 +99,9 @@
         this.paused = true;
         this.audio.setMode?.('menu');
         $('hud').classList.add('hidden');
-        $('worldViewport').classList.remove('in-battle');
+        $('worldViewport').classList.remove('in-battle', 'result-backdrop');
         $('modal').classList.add('hidden');
+        $('result').classList.add('hidden');
         $('menu').classList.remove('hidden');
         const benefits = Object.entries(this.expedition.benefits).filter(([, count]) => count)
           .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)}${count > 1 ? ` ×${count}` : ''}`).join(' · ');
@@ -208,15 +211,25 @@
       showResult(this: MeridianUI, result: BattleResult) {
         this.paused = true;
         this.clearMode();
-        let s = this.game.s!, offers = result.win && this.expedition ? this.expedition.offers : [];
-        const resultHeader = result.win
-          ? `<div class="eyebrow">VICTORY / EXPEDITION DEPTH ${this.expedition?.depth || 0}</div><h1>Enemy base destroyed.</h1>`
-          : '<h1>Expedition lost</h1>';
-        this.openModal(
-          'result',
-          `${resultHeader}<p>${esc(result.text)}</p>${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}<div class="result-stats"><div class="alloy-harvested"><strong>${Math.floor(s.stats.gathered).toLocaleString()}</strong><span>ALLOY HARVESTED</span></div><div><strong>${formatTime(result.time)}</strong><span>BATTLE TIME</span></div><div><strong>${s.stats.kills}</strong><span>HOSTILES NEUTRALIZED</span></div><div><strong>${s.stats.lost}</strong><span>UNITS LOST</span></div><div><strong>${this.resultAetherRecovered || 0}</strong><span>AETHER RECOVERED</span></div><div><strong>${Math.round(result.integrity * 100)}%</strong><span>COMMAND INTEGRITY</span></div><div><strong>${result.score.toLocaleString()}</strong><span>SCORE</span></div></div>${result.win ? this.encounterBriefing() : ''}${offers.length ? `<h3>Choose your expedition benefit</h3><div class="benefit-options compact">${renderBenefitOptions(offers)}</div>` : ''}<div class="btnstack">${result.win && !offers.length ? '<button class="primary" data-ui="continueExpedition">CONTINUE EXPEDITION ↗</button>' : !result.win ? '<button class="primary" data-ui="battle">NEW EXPEDITION ↗</button>' : ''}<button class="secondary" data-ui="armory">FLEET UPGRADES</button><button class="secondary" data-ui="home">MAIN MENU</button></div>`,
-          true
-        );
+        this.modalKind = 'result';
+        this.sellBuildingId = null;
+        $('hud').classList.add('hidden');
+        $('radio').classList.add('hidden');
+        $('worldViewport').classList.remove('in-battle');
+        $('worldViewport').classList.add('result-backdrop');
+        if (this.onViewportChange) this.onViewportChange();
+        const offers = result.win && this.expedition ? this.expedition.offers : [];
+        if (!offers.includes(this.resultBenefit || '')) this.resultBenefit = offers[0];
+        const next = result.win && this.expedition ? this.expedition.encounter : null,
+          nextFaction = next ? FACTIONS[next.enemy] : null,
+          nextStage = next ? aiRulesFor(next.enemy, this.expedition!.depth).stage + 1 : 0,
+          nextPerks = this.expedition ? Object.entries(this.expedition.enemyBenefits).filter(([, count]) => count > 0)
+            .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · ') : '',
+          nextPanel = next && nextFaction ? `<section class="result-next"><div class="result-next-preview map-${next.map}" aria-hidden="true"><span>${esc(BATTLEFIELDS[next.map].name)}</span></div><div class="result-next-body"><div class="result-next-heading"><div><div class="eyebrow">NEXT / EXPEDITION DEPTH ${this.expedition!.depth}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2></div><span class="result-pressure">PRESSURE ${nextStage}/5</span></div><div class="result-next-meta"><span>${esc(nextFaction.short)}</span><i></i><span>${esc(nextFaction.doctrine.name)}</span></div><p>${esc(nextFaction.doctrine.desc)}</p><small>ENEMY BENEFITS · ${nextPerks || 'NONE'}</small></div></section>` : '',
+          benefitPanel = offers.length ? `<section class="result-benefits"><h3><span></span>CHOOSE AN EXPEDITION BENEFIT<span></span></h3><div class="benefit-options compact">${renderBenefitOptions(offers, this.resultBenefit)}</div><button class="primary result-confirm-benefit" data-ui="confirmBenefit">CONTINUE EXPEDITION <span>→</span></button><button class="secondary result-benefit-armory" data-ui="armory">FLEET UPGRADES <span>→</span></button></section>` : '';
+        $('modal').classList.add('hidden');
+        $('result').innerHTML = `<main class="result-screen ${result.win ? 'victory' : 'defeat'}"><div class="result-shell"><header class="result-hero"><h1>${result.win ? 'VICTORY' : 'DEFEAT'}</h1><p>${result.win ? `EXPEDITION DEPTH ${this.expedition?.depth || 0} SECURED` : esc(result.text)}</p></header><section class="result-reward"><span class="result-reward-sigil">⬡</span><div><span>AETHER RECOVERED</span><strong>${(this.resultAetherRecovered || 0).toLocaleString()}</strong></div></section>${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}${benefitPanel}${nextPanel}<nav class="result-actions">${result.win && !offers.length ? '<button class="primary" data-ui="continueExpedition">CONTINUE EXPEDITION <span>→</span></button>' : !result.win ? '<button class="primary" data-ui="battle">NEW EXPEDITION <span>→</span></button>' : ''}${offers.length ? '' : '<button class="secondary" data-ui="armory">FLEET UPGRADES <span>→</span></button>'}<button class="textbtn" data-ui="home">MAIN MENU</button></nav></div></main>`;
+        $('result').classList.remove('hidden');
       }
     };
     type UIScreenMethods = typeof uiScreenMethods;

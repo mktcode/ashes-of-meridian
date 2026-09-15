@@ -30,7 +30,14 @@
             return;
           }
           if (b.dataset.benefit) {
-            this.chooseBenefit(b.dataset.benefit);
+            if (this.game.s?.result && !$('result').classList.contains('hidden')) {
+              this.resultBenefit = b.dataset.benefit;
+              document.querySelectorAll<HTMLElement>('#result [data-benefit]').forEach(option => {
+                const active = option.dataset.benefit === this.resultBenefit;
+                option.classList.toggle('active', active);
+                option.setAttribute('aria-pressed', String(active));
+              });
+            } else this.chooseBenefit(b.dataset.benefit);
             return;
           }
           if (b.dataset.action) {
@@ -176,6 +183,9 @@
             break;
           case 'continueExpedition':
             this.continueExpedition();
+            break;
+          case 'confirmBenefit':
+            if (this.resultBenefit) this.chooseBenefit(this.resultBenefit);
             break;
           case 'expeditionBenefits':
             this.showExpeditionBenefits();
