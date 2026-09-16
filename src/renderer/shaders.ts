@@ -117,7 +117,9 @@ void main(){
   frag=vec4(.025,.035,.045,v_col.a*mask*mix(1.,smoothstep(.35,.8,sight),u_fogOn));return;
  }
  if(v_mat==${PORTAL_MATERIAL}.||v_mat==${PORTAL_STILL_MATERIAL}.){
-  vec3 lit=finishLighting(veilSurface(v_modelPos.xy,v_mat==${PORTAL_MATERIAL}.?u_portalTime:0.));
+  // Vertical gates use XY; horizontal flight wells use XZ without changing gate motion.
+  vec2 veilUv=abs(v_modelN.y)>.7?v_modelPos.xz:v_modelPos.xy;
+  vec3 lit=finishLighting(veilSurface(veilUv,v_mat==${PORTAL_MATERIAL}.?u_portalTime:0.));
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
   lit*=mix(1.,mix(.16,1.,sight),u_fogOn);
   float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);

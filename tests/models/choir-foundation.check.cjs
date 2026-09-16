@@ -46,8 +46,8 @@ test('Choir buildings keep soil foundations except the flower-seated queen, incl
     }
     for (const faction of [0,2]) {
       const calls = h.draw({...e,faction});
-      if (faction === 2 && ['barracks','depot','factory'].includes(type)) {
-        const mesh = type === 'barracks' ? 'faction2BarracksHull' : type === 'depot' ? 'faction2DepotHull' : 'faction2FactoryHull';
+      if (faction === 2 && ['barracks','depot','factory','hangar'].includes(type)) {
+        const mesh = type === 'barracks' ? 'faction2BarracksHull' : type === 'depot' ? 'faction2DepotHull' : type === 'factory' ? 'faction2FactoryHull' : 'faction2HangarHull';
         assert.equal(calls[0][0],mesh,'Court structure owns its angular foundation');
       }
       else { assert.equal(calls[0][0],'hex'); assert.equal(calls[1][0],'ring'); }
