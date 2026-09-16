@@ -1,55 +1,83 @@
-/* Fraktion 2 / building / barracks. Processional gate: a framed +Z threshold, without broadening the spire. */
+/* Fraktion 2 / building / barracks. Processional gate: a tall open portal and forward ceremonial ramp. */
 'use strict';
 (() => {
   function hull() {
-    const out: number[]=[], s=3, h=5.5, hex=geom.cylinder(6), box=geom.box(), octa=geom.octa(),
-      dark=[.35,.36,.45], edge=[1.16,1.14,1.12];
-    const part=(mesh: number[],x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[],ry=0,rx=0)=>ModelMesh.bake(out,mesh,{x,y,z,sx,sy,sz,tint,ry,rx});
-    const panel=(x: number,y: number,z: number,w: number,h: number,d: number,bevel: number,tint: number[])=>ModelMesh.panel(out,{x,y,z,w,h,d,bevel,tint});
+    const out: number[]=[], hex=geom.cylinder(6), box=geom.box(),
+      pale=[1,1,1], dark=[.35,.36,.45], edge=[1.16,1.14,1.12];
+    const part=(mesh: number[],x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[],ry=0,rx=0,rz=0)=>
+      ModelMesh.bake(out,mesh,{x,y,z,sx,sy,sz,tint,ry,rx,rz});
+    const panel=(x: number,y: number,z: number,w: number,h: number,d: number,bevel: number,tint: number[],rz=0)=>{
+      const mesh: number[]=[];
+      ModelMesh.panel(mesh,{w,h,d,bevel,tint});
+      ModelMesh.bake(out,mesh,{x,y,z,rz});
+    };
     const brace=(x: number,y: number,z: number,u: number,v: number,w: number,width: number,tint: number[])=>{
       const dx=u-x,dy=v-y,dz=w-z;
-      part(box,(x+u)/2,(y+v)/2,(z+w)/2,width,Math.hypot(dx,dy,dz),width,tint,Math.atan2(dx,dz),Math.atan2(Math.hypot(dx,dz),dy));
+      part(box,(x+u)/2,(y+v)/2,(z+w)/2,width,Math.hypot(dx,dy,dz),width,tint,
+        Math.atan2(dx,dz),Math.atan2(Math.hypot(dx,dz),dy));
     };
-    part(hex,0,.55,0,s*.8,.5,s*.8,[1,1,1]);
-    part(hex,0,.84,0,s*.71,.14,s*.71,dark);
-    part(hex,0,.94,0,s*.65,.09,s*.65,edge);
-    // Existing four-pylon plan, now beveled with feet, capitals and recessed grooves.
-    for(let i=0;i<4;i++) {
-      const a=i*Math.PI/2+.785,x=Math.sin(a)*s*.74,z=Math.cos(a)*s*.74,pylon: number[]=[];
-      ModelMesh.panel(pylon,{x:0,y:h*.3,z:0,w:.42,h:h*.57,d:.65,bevel:.055,tint:[1,1,1]});
-      ModelMesh.panel(pylon,{x:0,y:.24,z:0,w:.64,h:.21,d:.83,bevel:.045,tint:dark});
-      ModelMesh.panel(pylon,{x:0,y:h*.59,z:0,w:.58,h:.17,d:.79,bevel:.035,tint:edge});
-      ModelMesh.bake(out,pylon,{x,z,ry:a});
-      for(let j=-1;j<=1;j++) {
-        const dx=j*.09,dz=.335;
-        part(box,x+dx*Math.cos(a)+dz*Math.sin(a),h*.32,z-dx*Math.sin(a)+dz*Math.cos(a),.035,h*.36,.025,dark,a);
-      }
-      const b=i*Math.PI/2+.4,rx=Math.sin(b)*s*.38,rz=Math.cos(b)*s*.38;
-      brace(0,h*.24,0,rx,h*.67,rz,.048,edge);
-      brace(rx,h*.67,rz,0,h*1.1,0,.048,edge);
-    }
+
+    // A broad, low court and ramp replace the faction's usual central spire.
+    part(hex,0,.38,-.08,2.55,.35,2.35,dark);
+    panel(0,.68,-.05,4.45,.34,3.85,.08,pale);
+    panel(0,.86,-.05,4.08,.15,3.48,.045,edge);
     for(const side of [-1,1]) {
-      panel(side*.73,.87,s*.66,.24,1.48,.48,.055,edge);
-      panel(side*.73,1.64,s*.66,.4,.19,.65,.035,dark);
+      panel(side*1.67,.91,-.18,1.22,.5,2.7,.07,dark);
+      panel(side*1.7,1.16,-.18,.93,.34,2.35,.055,pale);
+      brace(side*2.25,.7,.75,side*1.74,3.25,-.18,.15,dark);
+      brace(side*2.07,.78,-1.12,side*1.72,2.85,-.25,.1,edge);
     }
-    panel(0,.29,s*.7,1.65,.22,.83,.05,dark);
-    panel(0,.92,s*.69,1.18,1.1,.11,.025,dark);
-    part(box,0,.93,s*.715,.05,1,.035,edge);
+    // The processional lane remains readable from the isometric camera and points to local +Z.
+    panel(0,.99,1.15,1.62,.2,3.15,.045,pale);
+    panel(0,1.105,1.15,1.28,.035,2.98,.012,edge);
+    for(const side of [-1,1]) {
+      brace(side*.91,.92,-.38,side*.91,1.18,2.48,.07,dark);
+      brace(side*.7,1.14,-.3,side*.7,1.25,2.42,.035,edge);
+    }
+
+    // Twin tapering pylons frame an actual void instead of hiding another pyramidal core.
+    for(const side of [-1,1]) {
+      const tilt=side*.06;
+      panel(side*1.68,3.17,-.18,.86,4.72,.88,.075,pale,tilt);
+      panel(side*1.68,3.18,.285,.36,3.42,.075,.018,dark,tilt);
+      panel(side*1.68,1.02,-.18,1.28,.58,1.38,.07,edge);
+      panel(side*1.68,5.52,-.18,.74,.32,.78,.045,dark,tilt);
+      // Dark inner jamb and faceted arch shoulder.
+      panel(side*.99,3.25,-.04,.42,2.62,.62,.055,dark);
+      brace(side*.99,4.43,-.04,side*.28,5.24,-.04,.34,dark);
+      brace(side*1.08,4.48,.285,side*.31,5.35,.285,.055,edge);
+    }
+    panel(0,5.24,-.04,.52,.46,.68,.055,dark);
     return out;
   }
+
+  // A faceted, two-sided field matching the opening. Layered instances make it shimmer without per-frame geometry.
+  function portal() {
+    const out: number[]=[], points=[[-.76,-1.45],[.76,-1.45],[.76,.82],[.55,1.12],[0,1.55],[-.55,1.12],[-.76,.82]],
+      center:[number,number]=[0,.05];
+    for(let i=0;i<points.length;i++) {
+      const a=points[i], b=points[(i+1)%points.length], shade=[.82+.12*(i%2),.72,.98];
+      geom.tri(out,[center[0],center[1],0],[a[0],a[1],0],[b[0],b[1],0],shade);
+      geom.tri(out,[center[0],center[1],0],[b[0],b[1],0],[a[0],a[1],0],shade);
+    }
+    return out;
+  }
+
   registerEntityModel({
-    id:'faction-2/building/barracks', meshes:{faction2BarracksHull:hull},
-    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
-      const s=e.size||3, h=5.5;
+    id:'faction-2/building/barracks',
+    meshes:{faction2BarracksHull:hull,faction2BarracksPortal:portal},
+    render({entity:e,time,part:p,metal,dark,team,accent,surfaceColor}) {
+      const s=e.size||3, wave=Math.sin(time*1.7+e.id*.71), drift=Math.sin(time*2.3+e.id)*.045;
       p('faction2BarracksHull',0,0,0,s/3,1,s/3,metal);
-      p('octa',0,h*.48,0,s*.5,h*.53,s*.5,dark,.4);
-      // Retain the original core's instanced normals, local texture frame and pale highlights.
-      p('octa',0,h*.67,0,s*.38,h*.43,s*.38,metal,.4);
-      p('octa',0,h*.79,0,s*.21,h*.35,s*.21,team,time*.1,0,0,.75);
-      for(let i=0;i<4;i++) {
-        const a=i*Math.PI/2+.785;
-        p('octa',Math.sin(a)*s*.74,h*.63,Math.cos(a)*s*.74,.25,.7,.25,accent,0,0,0,.8);
+      p('faction2BarracksPortal',0,3.3,-.015,s/3*(1+wave*.025),1-wave*.018,s/3,
+        surfaceColor(0x9168e8),0,0,0,.85,.62,MAT.CRYSTAL);
+      p('faction2BarracksPortal',drift,3.3,.035,s/3*(.9-wave*.018),.94+wave*.025,s/3,
+        surfaceColor(0xc2a2ff),0,0,0,1.05,.28,MAT.CRYSTAL);
+      for(const side of [-1,1]) {
+        p('octa',side*1.54,5.86,-.18,.24,.48,.24,accent,0,0,0,.8);
+        p('octa',side*1.68,3.2,.32,.09,.34,.09,team,0,0,0,.55);
       }
+      p('octa',0,5.05,.06,.2,.48,.2,dark,0,0,0,.25);
     }
   });
 })();

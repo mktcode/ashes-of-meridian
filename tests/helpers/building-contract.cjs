@@ -67,10 +67,12 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
           ['ring',12,height*.9,-7,d.size*.8,1,d.size*.8,accent,0,0,0,1.2,.7,'effects']);
       }
       if (faction === 2) {
-        assert.deepEqual(timed.find(c => c[0]==='octa' && c[11]===.75),
-          ['octa',12,height*.79*build,-7,d.size*.21,height*.35*build,d.size*.21,color,yaw+time*.1,0,0,.75,1,'dynamic',h.MAT.METAL]);
-        assert.deepEqual(timed.find(c => c[0]==='octa' && c[5]===height*.43*build),
-          ['octa',12,height*.67*build,-7,d.size*.38,height*.43*build,d.size*.38,f.metal,yaw+.4,0,0,0,1,'dynamic',h.MAT.METAL], 'original pale core keeps its instanced lighting');
+        if (type !== 'barracks') {
+          assert.deepEqual(timed.find(c => c[0]==='octa' && c[11]===.75),
+            ['octa',12,height*.79*build,-7,d.size*.21,height*.35*build,d.size*.21,color,yaw+time*.1,0,0,.75,1,'dynamic',h.MAT.METAL]);
+          assert.deepEqual(timed.find(c => c[0]==='octa' && c[5]===height*.43*build),
+            ['octa',12,height*.67*build,-7,d.size*.38,height*.43*build,d.size*.38,f.metal,yaw+.4,0,0,0,1,'dynamic',h.MAT.METAL], 'original pale core keeps its instanced lighting');
+        }
         if (['hq','refinery','hangar'].includes(type)) {
           assert.deepEqual(timed.find(c => c[0]==='ring' && c[9]===Math.PI/2),
             ['ring',12,height*.62,-7,d.size*.88,1,d.size*.88,accent,time*.18,Math.PI/2,0,.85,.8,'effects']);
