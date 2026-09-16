@@ -32,6 +32,7 @@ test('Veiled Court turret tracks targets with its complete upper assembly', () =
   assert.notDeepEqual(left.filter(c=>c[0]==='octa').slice(2),right.filter(c=>c[0]==='octa').slice(2),
     'rear crystal, lance and muzzle follow the weapon');
   assert.equal(crystals.length,5,'two capacitor caps, rear charge crystal, lance and muzzle crystal');
+  assert.ok(crystals.every(c=>c[14]===h.MAT.CRYSTAL),'all luminous prisms use faceted crystal shading');
   assert.equal(calls.filter(c=>c[0]==='faction2TurretLights'||c[0]==='faction2TurretHeadLights').length,2);
   assert.ok(!calls.some(c=>c[0]==='hex'||c[0]==='ring'),'model owns its angular foundation');
   const rearAt=time=>draw(.7,time).find(c=>c[0]==='octa'&&c[2]===4.27),start=rearAt(0),later=rearAt(5);

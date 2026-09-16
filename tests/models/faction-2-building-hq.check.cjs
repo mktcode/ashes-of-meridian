@@ -39,6 +39,7 @@ test('Silent Throne mantle and inverted reliquary have outward normals; orbits o
   }
   const live=h.draw(entity),crystals=live.filter(c=>c[0]==='octa');
   assert.equal(crystals.length,8,'six pylon caps and two central crystals');
+  assert.ok(crystals.every(c=>c[14]===h.MAT.CRYSTAL),'luminous Court prisms use faceted crystal shading');
   assert.ok(!live.some(c=>c[0]==='ring'),'no separate unscaled legacy effect rings');
   const names=['faction2HqLowerOrbit','faction2HqMiddleOrbit','faction2HqUpperOrbit','faction2HqCrownOrbit'];
   for(const alpha of [0,.3,1]) for(const name of names) {

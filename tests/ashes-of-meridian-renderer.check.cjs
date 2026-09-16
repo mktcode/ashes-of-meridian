@@ -239,6 +239,14 @@ function setup(options = {}) {
   return { r, g, calls, options, framebuffers, buffers, textures, context, bindings: () => ({ draw, read, buffer }) };
 }
 
+test('crystal shader preserves facets and adds texture-free internal depth', () => {
+  const {context}=setup(),shader=vm.runInContext('FRAG',context);
+  assert.match(shader,/float facet=\.58\+\.42\*abs\(dot\(localN/);
+  assert.match(shader,/float caustic=pow\(\.5\+\.5\*sin\(dot\(v_modelPos/);
+  assert.match(shader,/glowMix=clamp\(v_glow,0\.,1\.\)\*\(1\.-crystal\*\.58\)/);
+  assert.doesNotMatch(shader,/sampler2D u_crystal/,'crystal depth adds no texture or render pass');
+});
+
 test('portal surface clock follows simulation time, not wall time, and freezes in Performance and menus', () => {
   const {r,calls}=setup();r.resize();
   for (const [quality,cinema,wall,simulation,expected] of [

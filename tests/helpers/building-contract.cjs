@@ -70,7 +70,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
       if (faction === 2) {
         if (!['barracks','depot','factory','hangar','hq','turret'].includes(type)) {
           assert.deepEqual(timed.find(c => c[0]==='octa' && c[11]===.75),
-            ['octa',12,height*.79*build,-7,d.size*.21,height*.35*build,d.size*.21,color,yaw+time*.1,0,0,.75,1,'dynamic',h.MAT.METAL]);
+            ['octa',12,height*.79*build,-7,d.size*.21,height*.35*build,d.size*.21,color,yaw+time*.1,0,0,.75,1,'dynamic',h.MAT.CRYSTAL]);
           assert.deepEqual(timed.find(c => c[0]==='octa' && c[5]===height*.43*build),
             ['octa',12,height*.67*build,-7,d.size*.38,height*.43*build,d.size*.38,f.metal,yaw+.4,0,0,0,1,'dynamic',h.MAT.METAL], 'original pale core keeps its instanced lighting');
         }

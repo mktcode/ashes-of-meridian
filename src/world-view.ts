@@ -116,6 +116,12 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
         a = alpha,
         m = surfaceMat
       ) => {
+        // Glowing Court prisms use the existing crystal shader instead of flat painted metal.
+        // Explicit preview/material overrides retain authority over this model-level default.
+        const resolvedMaterial = options.material === undefined && m === surfaceMat &&
+          e.faction === FACTION_ID.THIRD && e.kind === 'building' && shape === 'octa' && glow >= .3
+            ? MAT.CRYSTAL
+            : m;
         R.add(
           shape,
           e.x + lx * cs + lz * sn,
@@ -132,7 +138,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
             Math.sin(phase + (e.faction === FACTION_ID.THIRD ? ly * 3 - lz * 2 : lx * .7))) : glow,
           a,
           layer,
-          m === PORTAL_MATERIAL && !animated ? PORTAL_STILL_MATERIAL : m
+          resolvedMaterial === PORTAL_MATERIAL && !animated ? PORTAL_STILL_MATERIAL : resolvedMaterial
         );
       };
       const ring: ModelRing = (radius, h, color = team, a = 0.7, rx = 0, ry = 0, glow = 1.2) =>

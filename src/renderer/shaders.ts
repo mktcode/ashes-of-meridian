@@ -125,12 +125,20 @@ void main(){
   float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);
   frag=vec4(mix(lit,u_haze,mist),v_col.a);return;
  }
- vec3 n=normalize(v_n);vec3 base=v_col.rgb;if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
+ vec3 n=normalize(v_n);vec3 base=v_col.rgb;
+float metal=float(v_mat>1.5&&v_mat<2.5),bio=float(v_mat>2.5&&v_mat<3.5),crystal=float(v_mat>4.5&&v_mat<5.5);
+if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
+// Local-normal variation restores readable facets; a restrained static caustic suggests internal depth.
+if(crystal>.5){
+ vec3 localN=normalize(v_modelN);
+ float facet=.58+.42*abs(dot(localN,normalize(vec3(.37,.81,.45))));
+ float caustic=pow(.5+.5*sin(dot(v_modelPos,vec3(5.1,7.3,3.7))),10.);
+ base=mix(base*facet,mix(base,vec3(.88,.95,1.),.48),caustic*.2);
+}
 vec3 light=normalize(vec3(-64.,110.,43.));float nd=max(dot(n,light),0.);float sh=shadow();
 vec3 ambient=mix(u_bounce,u_skyLight,n.y*.5+.5);
 vec3 lit=base*(ambient+u_sun*nd*sh),viewDir=normalize(u_eye-v_pos);
 // Painted metal, soft organic gloss and crystals share the existing material IDs.
-float metal=float(v_mat>1.5&&v_mat<2.5),bio=float(v_mat>2.5&&v_mat<3.5),crystal=float(v_mat>4.5&&v_mat<5.5);
 float exponent=8.+metal*36.+bio*6.+crystal*56.;
 float strength=.008+metal*.37+bio*.15+crystal*.45;
 float spec=pow(max(dot(n,normalize(light+viewDir)),0.),exponent)*strength*sh;
@@ -138,8 +146,11 @@ vec3 specColor=mix(vec3(1.),mix(vec3(.85,.92,1.),base,.25),metal);
 lit+=spec*u_sun*specColor;
 float edge=1.-max(dot(n,viewDir),0.),fresnel=edge*edge*edge*edge*edge;
 vec3 environment=mix(u_bounce,u_skyLight,clamp(reflect(-viewDir,n).y*.5+.5,0.,1.));
-lit+=environment*((.07+fresnel*.22)*metal+(.025+fresnel*.05)*bio+fresnel*.20*crystal);
-lit=mix(lit,base*1.35,clamp(v_glow,0.,1.));lit+=base*max(v_glow-1.,0.)*.38;
+lit+=environment*((.07+fresnel*.22)*metal+(.025+fresnel*.05)*bio+fresnel*.42*crystal);
+// Crystal glow preserves directional shading instead of flattening every face to one color.
+float glowMix=clamp(v_glow,0.,1.)*(1.-crystal*.58);
+lit=mix(lit,base*1.35,glowMix);lit+=base*max(v_glow-1.,0.)*.38;
+lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
 float field=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,v_col.a);}`;
     const DEPTHV = `#version 300 es
