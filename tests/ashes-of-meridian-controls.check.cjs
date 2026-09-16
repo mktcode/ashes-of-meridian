@@ -987,6 +987,17 @@ test('queue rendering leaves production state and RNG untouched', () => {
   assert.equal(JSON.stringify(g.s), before);
 });
 
+test('periodic HUD refresh does not duplicate the per-frame queue update', () => {
+  const h = setup(); let queues = 0;
+  h.ui.game.supply = () => 0; h.ui.game.cap = () => 20;
+  h.ui.renderActions = () => {};
+  h.ui.updateHUD = h.UI.prototype.updateHUD;
+  h.ui.updateQueues = () => queues++;
+  h.ui.hudClock = .3;
+  h.ui.tick(0);
+  assert.equal(queues, 1);
+});
+
 test('queue tap cancels one waiting order before active work; pause and scroll cancellation are guarded', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   const q = progress => ({type:'rifle',progress,time:10});

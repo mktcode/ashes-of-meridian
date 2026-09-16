@@ -24,17 +24,14 @@ Die erste Meldung entspricht dem `webglcontextlost`-Pfad in `src/app.ts`; beim R
 
 ## Kleine qualitätsneutrale Kandidaten
 
-Wirkung vor einer Umsetzung messen oder mindestens mit passenden Aufruf-/Bytezählern absichern; die Reihenfolge ist keine pauschale Implementierungsfreigabe.
+Ein erstes lokales Paket ist umgesetzt: dauerhaft leere Instanzbuckets verursachen keine wiederholten Null-Uploads mehr, der Übergang belegt → leer wird weiterhin einmal hochgeladen; der periodische HUD-Pfad dupliziert die ohnehin frameweise Queue-Aktualisierung nicht mehr; bereits typisierte Geometriedaten werden ohne vollständige zweite CPU-Kopie an WebGL übergeben. Renderer-/UI-Regressionen sichern diese Verträge ab. Die verbleibenden Kandidaten sind keine pauschale Implementierungsfreigabe:
 
-1. **Leere Instanzuploads:** dauerhaft leere dynamische/Effektbuckets nicht in jedem Frame erneut per `bufferData` hochladen. Den Übergang belegt → leer und die heutige Speicherfreigabe ausdrücklich erhalten; siehe auch PERF-4 im [Audit-Issue](audit-welle-01-befunde.md#performance-erst-wirkung-und-kosten-abgrenzen).
-2. **Queue-Doppelarbeit:** die zusätzliche `updateQueues()`-Ausführung über `updateHUD()` entfernen und direkte Aktionen/Pause korrekt halten; siehe PERF-5 im Audit-Issue.
-3. **Geometrie-Spitzenbelegung:** ein bereits vorliegendes `Float32Array` in `MeridianRenderer.geometry()` ohne vollständige zweite Kopie an `bufferData` übergeben. Das zielt auf Weltwechsel/Peak-Heap, nicht auf laufende FPS.
-4. **Ruhende Ansichten:** vollständiges Battlefield-Rendering bei Pause, Settings, Ergebnis und verborgenem Tab aussetzen bzw. ereignisgesteuert neu zeichnen. Aktives Gameplay bleibt unverändert.
-5. **Effekt-Culling:** Offscreen-Effekte und Floating Text anhand ihrer tatsächlichen Segment-/Radius-/Höhenbounds verwerfen; große Ringe, Strahlen und Schatteneinfluss dürfen nicht sichtbar aufpoppen.
-6. **Auswahl-Lookups:** wiederholte `selected.includes(id)`-Prüfungen in 3D- und Overlaydurchlauf pro Frame über ein Set abwickeln.
-7. **Redundante Schattenframes:** die Schattenkarte wiederverwenden, solange Casterzustand, Karte, Qualität und Kamera-/Lichtprojektion unverändert sind. Vollständige Invalidierung ist Voraussetzung.
-8. **Unnötige Schatten-Caster:** das flache Basisterrain nicht in den Depth-Pass schicken; Relief und andere echte Caster bleiben erhalten.
-9. **Texturresidenz:** kartenspezifische Texturen erst für die aktuelle Karte hochladen und bei Kartenwechsel kontrolliert freigeben. Entitätsmaterialien, `file://` und ein artefaktfreier synchronisierter Übergang bleiben Pflicht.
+1. **Ruhende Ansichten:** vollständiges Battlefield-Rendering bei Pause, Settings, Ergebnis und verborgenem Tab aussetzen bzw. ereignisgesteuert neu zeichnen. Aktives Gameplay bleibt unverändert.
+2. **Effekt-Culling:** Offscreen-Effekte und Floating Text anhand ihrer tatsächlichen Segment-/Radius-/Höhenbounds verwerfen; große Ringe, Strahlen und Schatteneinfluss dürfen nicht sichtbar aufpoppen.
+3. **Auswahl-Lookups:** wiederholte `selected.includes(id)`-Prüfungen in 3D- und Overlaydurchlauf pro Frame über ein Set abwickeln.
+4. **Redundante Schattenframes:** die Schattenkarte wiederverwenden, solange Casterzustand, Karte, Qualität und Kamera-/Lichtprojektion unverändert sind. Vollständige Invalidierung ist Voraussetzung.
+5. **Unnötige Schatten-Caster:** das flache Basisterrain nicht in den Depth-Pass schicken; Relief und andere echte Caster bleiben erhalten.
+6. **Texturresidenz:** kartenspezifische Texturen erst für die aktuelle Karte hochladen und bei Kartenwechsel kontrolliert freigeben. Entitätsmaterialien, `file://` und ein artefaktfreier synchronisierter Übergang bleiben Pflicht.
 
 ## Größere qualitätsneutrale Richtung
 

@@ -248,7 +248,6 @@
         $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
         this.selected = this.selected.filter(id => this.game.get(id));
         this.renderActions(supply, capacity);
-        this.updateQueues();
       },
       updateActionStates(this: MeridianUI, supply?: number, capacity?: number) {
         const s = this.game.s;

@@ -210,7 +210,8 @@
           vbo = gl.createBuffer();
         gl.bindVertexArray(vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+        // Large terrain factories already return their final typed storage; do not duplicate it before upload.
+        gl.bufferData(gl.ARRAY_BUFFER, Array.isArray(data) ? new Float32Array(data) : data, gl.STATIC_DRAW);
         for (let [i, offset] of [
           [0, 0],
           [1, 12],
@@ -519,8 +520,9 @@
       begin() {
         for (let map of [this.dynamic, this.effects])
           for (let b of Object.values(map)) {
+            // Upload the transition to empty once, but leave persistently empty buckets alone.
+            b.dirty = b.n > 0;
             b.n = 0;
-            b.dirty = true;
           }
       }
       clearStatic() {

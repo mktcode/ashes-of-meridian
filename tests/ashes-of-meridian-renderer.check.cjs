@@ -75,6 +75,38 @@ test('tilt-shift is High-only with a sharp center, normalized kernel and resolut
   assert.ok(POSTF.includes('if(u_bloomOn>.5)c+=texture(u_bloom,uv)'), 'bloom composites a separate low-resolution texture');
 });
 
+test('renderer reuses typed geometry and uploads a bucket transition to empty only once', () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context), uploads = [];
+  const gl = new Proxy({
+    ARRAY_BUFFER: 'ARRAY_BUFFER', STATIC_DRAW: 'STATIC_DRAW', DYNAMIC_DRAW: 'DYNAMIC_DRAW',
+    createVertexArray: () => ({}), createBuffer: () => ({}), bindVertexArray() {}, bindBuffer() {},
+    bufferData(target, data, usage) { uploads.push({ target, data, usage }); }
+  }, { get(target, name) {
+    if (!(name in target)) target[name] = () => {};
+    return target[name];
+  } });
+  const renderer = Object.assign(Object.create(Renderer.prototype), { gl, meshes: {}, dynamic: {}, effects: {} });
+  const typed = vm.runInContext('new Float32Array(27)', context);
+  renderer.geometry('typed', typed);
+  assert.strictEqual(uploads.at(-1).data, typed, 'typed mesh storage is passed directly to WebGL');
+  renderer.geometry('array', Array(27).fill(0));
+  assert.ok(ArrayBuffer.isView(uploads.at(-1).data), 'plain mesh arrays are still converted for WebGL');
+
+  const occupied = { data: new Float32Array(44), n: 2, buffer: {}, dirty: false },
+    empty = { data: new Float32Array(22), n: 0, buffer: {}, dirty: false };
+  renderer.dynamic = { occupied, empty };
+  uploads.length = 0;
+  renderer.begin();
+  assert.equal(occupied.dirty, true); assert.equal(empty.dirty, false);
+  renderer.upload(renderer.dynamic);
+  assert.equal(uploads.length, 1); assert.equal(uploads[0].data.length, 0, 'occupied bucket releases its old upload once');
+  renderer.begin(); renderer.upload(renderer.dynamic);
+  assert.equal(uploads.length, 1, 'persistently empty buckets cause no repeated upload');
+  occupied.n = 1; occupied.dirty = true;
+  renderer.upload(renderer.dynamic);
+  assert.equal(uploads.at(-1).data.length, 22, 'a reused bucket uploads new instances normally');
+});
+
 function setup(options = {}) {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS], { globals: {
     innerWidth: 800, innerHeight: 600, devicePixelRatio: 2
