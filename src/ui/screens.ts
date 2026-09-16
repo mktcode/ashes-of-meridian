@@ -17,7 +17,7 @@
         $('radio').classList.add('hidden');
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
-        if (this.onPreview) this.onPreview();
+        if (this.onPreview) this.onPreview(this.expedition?.encounter.map || 'desert');
         $('menu').innerHTML =
           renderHomeScreen(this.expedition, this.profile.expeditionDepth, this.encounterBriefing());
       },
@@ -85,8 +85,10 @@
       startExpeditionBattle(this: MeridianUI) {
         if (!this.expedition) return;
         this.audio.unlock();
-        this.game.start({ faction: this.expedition.faction, ...this.expedition.encounter,
-          benefits: this.expedition.benefits, enemyBenefits: this.expedition.enemyBenefits, depth: this.expedition.depth });
+        const options: BattleOptions = { faction: this.expedition.faction, ...this.expedition.encounter,
+          benefits: this.expedition.benefits, enemyBenefits: this.expedition.enemyBenefits, depth: this.expedition.depth };
+        if (this.onLaunchBattle) this.onLaunchBattle(options);
+        else this.game.start(options);
       },
       continueExpedition(this: MeridianUI) {
         if (!this.expedition) return this.showBattle();
@@ -103,6 +105,7 @@
         $('modal').classList.add('hidden');
         $('result').classList.add('hidden');
         $('menu').classList.remove('hidden');
+        if (this.onPreview) this.onPreview(this.expedition.encounter.map);
         const benefits = Object.entries(this.expedition.benefits).filter(([, count]) => count)
           .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)}${count > 1 ? ` ×${count}` : ''}`).join(' · ');
         $('menu').innerHTML = `<div class="subscreen expedition-transition"><header class="sub-header"><div><div class="eyebrow">CHECKPOINT SECURED / DEPTH ${this.expedition.depth}</div><h1>Choose an expedition benefit.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header>${this.encounterBriefing()}<p class="muted">The benefit remains active until this expedition ends.</p><div class="benefit-options">${renderBenefitOptions(this.expedition.offers)}</div><p class="battle-note">ACTIVE · ${benefits || 'NO BENEFITS YET'}</p><div class="launch-row"><button class="secondary" data-ui="armory">FLEET UPGRADES</button></div></div>`;

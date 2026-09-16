@@ -43,7 +43,8 @@
       resultAetherRecovered?: number;
       resultBenefit?: string;
       onViewportChange?: () => void;
-      onPreview?: () => void;
+      onPreview?: (map?: BattlefieldId) => void;
+      onLaunchBattle?: (options: BattleOptions) => void;
       domPressed?: boolean;
       touchGesture?: boolean;
       pinchDist?: number;

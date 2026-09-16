@@ -46,8 +46,6 @@ test('ground decoration samples individual irregular atlas crops with stable wor
     }
     assert.ok(FRAG.includes(`const vec4 ${key}Rects[${count}]`));
     assert.ok(FRAG.includes(`${key}Rects[int(r.z*${count}.)]`), 'all supplied motifs are selectable');
-    const source = MeridianRenderer.toString();
-    assert.equal(source.split(`this.loadTexture(this.${key}Tex, MERIDIAN_TEXTURES.${key}, false);`).length - 1, 1);
   }
   const decor = FRAG.slice(FRAG.indexOf('vec4 decorRandom'), FRAG.indexOf('vec3 detail'));
   assert.doesNotMatch(decor, /u_time|u_eye/);
@@ -105,6 +103,32 @@ test('renderer reuses typed geometry and uploads a bucket transition to empty on
   occupied.n = 1; occupied.dirty = true;
   renderer.upload(renderer.dynamic);
   assert.equal(uploads.at(-1).data.length, 22, 'a reused bucket uploads new instances normally');
+});
+
+test('battlefield texture residency retains shared materials and releases map-only assets', async () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context), loads = [], releases = [];
+  const names = ['ground', 'desertRock', 'rockClusters', 'desertShrubs', 'metal', 'bio', 'sky'];
+  const renderer = Object.assign(Object.create(Renderer.prototype), {
+    textureResources: Object.fromEntries(names.map(name => [name, { resident: false }])),
+    textureLoads: {}, desiredTextures: new Set(), textureGeneration: 0,
+    loadResidentTexture: async name => {
+      if (renderer.textureResources[name].resident) return true;
+      loads.push(name); renderer.textureResources[name].resident = true; return true;
+    },
+    releaseResidentTexture: name => { releases.push(name); renderer.textureResources[name].resident = false; }
+  });
+  const profile = (groundTexture, decor = false, rockSurface) => ({ groundTexture, skyTexture: 'sky',
+    groundPixelsPerMeter: 14, rockSurface, rockDecor: { density: decor ? .5 : 0, opacity: 1 },
+    shrubDecor: { density: decor ? .1 : 0, opacity: 1 }, haze: [0, 0, 0] });
+  const desert = profile('ground', true, { texture: 'desertRock', metersPerTile: 18 });
+  await renderer.prepareBattlefieldTextures(desert);
+  assert.deepEqual(new Set(loads), new Set(names));
+  assert.equal(renderer.hasBattlefieldTextures(desert), true);
+  loads.length = 0;
+  await renderer.prepareBattlefieldTextures(profile('bio'));
+  assert.deepEqual(loads, [], 'shared bio, metal and sky textures stay resident across maps');
+  assert.deepEqual(new Set(releases), new Set(['ground', 'desertRock', 'rockClusters', 'desertShrubs']));
+  assert.deepEqual(names.filter(name => renderer.textureResources[name].resident).sort(), ['bio', 'metal', 'sky']);
 });
 
 test('large static geometry and placements are chunked and conservatively culled', () => {
@@ -264,8 +288,7 @@ test('dedicated rock material is opt-in and resets on profile changes without te
     assert.ok(h.calls.some(c => c[0] === 'uniform1i' && c[1] === 'u_rockTex' && c[2] === 7));
     assert.ok(!h.calls.some(c => ['texImage2D', 'createTexture'].includes(c[0])));
   }
-  const { FRAG, MeridianRenderer } = vm.runInContext('({FRAG, MeridianRenderer})', h.context);
-  assert.ok(MeridianRenderer.toString().includes('this.loadTexture(this.desertRockTex, MERIDIAN_TEXTURES.desertRock);'));
+  const { FRAG } = vm.runInContext('({FRAG})', h.context);
   assert.ok(FRAG.includes('if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5)))'));
   const material = FRAG.slice(FRAG.indexOf('vec3 rockSurface'), FRAG.indexOf('const vec4 rockClustersRects'));
   assert.ok(material.includes('vec3 p=v_pos*u_rockScale;'));

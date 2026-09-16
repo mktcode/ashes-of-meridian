@@ -51,6 +51,10 @@
       metalTex: WebGLTexture | null;
       bioTex: WebGLTexture | null;
       skyTex: WebGLTexture | null;
+      textureResources: Record<ResidentTextureName, ResidentTexture>;
+      textureLoads: Partial<Record<ResidentTextureName, Promise<boolean>>> = {};
+      desiredTextures = new Set<ResidentTextureName>();
+      textureGeneration = 0;
       shadowTex: WebGLTexture | null;
       shadowFbo: WebGLFramebuffer | null;
       sceneFbo: WebGLFramebuffer | null;
@@ -152,14 +156,16 @@
         this.desertShrubsTex = this.dataTexture([0, 0, 0, 0]);
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
-        this.loadTexture(this.groundTex, MERIDIAN_TEXTURES.ground);
-        this.loadTexture(this.desertRockTex, MERIDIAN_TEXTURES.desertRock);
-        this.loadTexture(this.rockClustersTex, MERIDIAN_TEXTURES.rockClusters, false);
-        this.loadTexture(this.desertShrubsTex, MERIDIAN_TEXTURES.desertShrubs, false);
-        this.loadTexture(this.metalTex, MERIDIAN_TEXTURES.metal);
-        this.loadTexture(this.bioTex, MERIDIAN_TEXTURES.bio);
         this.skyTex = this.dataTexture([5, 9, 16]);
-        this.loadTexture(this.skyTex, MERIDIAN_TEXTURES.sky, false);
+        this.textureResources = {
+          ground: { texture: this.groundTex, fallback: [146, 101, 75], repeat: true, resident: false },
+          desertRock: { texture: this.desertRockTex, fallback: [137, 99, 71], repeat: true, resident: false },
+          rockClusters: { texture: this.rockClustersTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
+          desertShrubs: { texture: this.desertShrubsTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
+          metal: { texture: this.metalTex, fallback: [128, 130, 136], repeat: true, resident: false },
+          bio: { texture: this.bioTex, fallback: [77, 128, 119], repeat: true, resident: false },
+          sky: { texture: this.skyTex, fallback: [5, 9, 16], repeat: false, resident: false }
+        };
         this.shadowTex = gl.createTexture();
         this.shadowFbo = gl.createFramebuffer();
         this.setupShadow();
@@ -446,25 +452,63 @@
         g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.REPEAT);
         return t;
       }
-      loadTexture(tex: WebGLTexture | null, src: string, repeat = true) {
-        let g = this.gl,
-          img = new Image();
-        img.decoding = 'async';
-        img.onload = () => {
-          g.bindTexture(g.TEXTURE_2D, tex);
-          g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, img);
-          g.generateMipmap(g.TEXTURE_2D);
-          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
-          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
-          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, repeat ? g.REPEAT : g.CLAMP_TO_EDGE);
-          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, repeat ? g.REPEAT : g.CLAMP_TO_EDGE);
-        };
-        img.onerror = () =>
-          console.warn(
-            'Texture could not be loaded:',
-            src.startsWith('data:') ? 'embedded texture' : src
-          );
-        img.src = src;
+      textureNames(profile: BattlefieldRenderProfile) {
+        const names = new Set<ResidentTextureName>(['sky', 'metal', 'bio', profile.groundTexture]);
+        if (profile.rockSurface) names.add(profile.rockSurface.texture);
+        if (profile.rockDecor.density > 0) names.add('rockClusters');
+        if (profile.shrubDecor.density > 0) names.add('desertShrubs');
+        return names;
+      }
+      hasBattlefieldTextures(profile: BattlefieldRenderProfile) {
+        for (const name of this.textureNames(profile)) if (!this.textureResources[name].resident) return false;
+        return true;
+      }
+      async prepareBattlefieldTextures(profile: BattlefieldRenderProfile) {
+        const generation = ++this.textureGeneration, required = this.textureNames(profile);
+        this.desiredTextures = required;
+        await Promise.all(Array.from(required, name => this.loadResidentTexture(name)));
+        if (generation !== this.textureGeneration) return false;
+        for (const name of Object.keys(this.textureResources) as ResidentTextureName[])
+          if (!required.has(name) && this.textureResources[name].resident) this.releaseResidentTexture(name);
+        return true;
+      }
+      loadResidentTexture(name: ResidentTextureName) {
+        const resource = this.textureResources[name];
+        if (resource.resident) return Promise.resolve(true);
+        const active = this.textureLoads[name];
+        if (active) return active;
+        const load = new Promise<boolean>(resolve => {
+          const img = new Image();
+          img.decoding = 'async';
+          img.onload = () => {
+            if (this.desiredTextures.has(name)) {
+              const g = this.gl;
+              g.bindTexture(g.TEXTURE_2D, resource.texture);
+              g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, img);
+              g.generateMipmap(g.TEXTURE_2D);
+              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
+              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, resource.repeat ? g.REPEAT : g.CLAMP_TO_EDGE);
+              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, resource.repeat ? g.REPEAT : g.CLAMP_TO_EDGE);
+              resource.resident = true;
+            }
+            resolve(resource.resident);
+          };
+          img.onerror = () => {
+            console.warn('Texture could not be loaded:', 'embedded texture');
+            resolve(false);
+          };
+          img.src = MERIDIAN_TEXTURES[name];
+        }).finally(() => delete this.textureLoads[name]);
+        this.textureLoads[name] = load;
+        return load;
+      }
+      releaseResidentTexture(name: ResidentTextureName) {
+        const resource = this.textureResources[name];
+        this.gl.deleteTexture(resource.texture);
+        resource.texture = this.dataTexture(resource.fallback);
+        resource.resident = false;
+        (this as unknown as Record<string, WebGLTexture | null>)[`${name}Tex`] = resource.texture;
       }
       bucket(map: RenderBatches, key: string, mesh = key, source = mesh, capacity = 1024) {
         if (!map[key])

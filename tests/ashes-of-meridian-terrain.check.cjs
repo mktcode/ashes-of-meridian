@@ -88,9 +88,9 @@ test('embedded skybox preserves the canonical WebP bytes and is wired as a non-r
   assert.deepEqual(image, readFileSync(join(__dirname, '../assets/textures/skybox.webp')));
   assert.equal(image.toString('ascii', 0, 4), 'RIFF');
   assert.equal(image.toString('ascii', 8, 12), 'WEBP');
-  assert.ok(scripts.find(s => s.name === 'renderer-runtime').source.includes(
-    'this.loadTexture(this.skyTex, MERIDIAN_TEXTURES.sky, false);'
-  ));
+  const runtime = scripts.find(s => s.name === 'renderer-runtime').source;
+  assert.ok(runtime.includes("sky: { texture: this.skyTex, fallback: [5, 9, 16], repeat: false, resident: false }"));
+  assert.ok(runtime.includes('img.src = MERIDIAN_TEXTURES[name];'));
 });
 
 test('embedded ground textures preserve the canonical WebP bytes without conversion', () => {
@@ -109,7 +109,7 @@ test('embedded ground textures preserve the canonical WebP bytes without convers
   }
   assert.equal(vm.runInContext("'terrainOverlay' in MERIDIAN_TEXTURES", context), false);
   assert.ok(scripts.find(s => s.name === 'renderer-runtime').source.includes(
-    'this.loadTexture(this.groundTex, MERIDIAN_TEXTURES.ground);'
+    'ground: { texture: this.groundTex, fallback: [146, 101, 75], repeat: true, resident: false }'
   ));
 });
 

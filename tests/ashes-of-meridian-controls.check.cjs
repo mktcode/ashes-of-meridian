@@ -796,10 +796,20 @@ test('expedition benefits are offered deterministically and bounded on selection
   }
 });
 
+test('home preview prepares the known next expedition battlefield', () => {
+  const h = setup(), maps = [];
+  h.ui.expedition = { faction: 0, depth: 2, benefits: {}, enemyBenefits: {}, offers: [],
+    encounter: { enemy: 1, map: 'alien-planet', seed: 1409 } };
+  h.ui.onPreview = map => maps.push(map);
+  h.ui.showHome();
+  assert.deepEqual(maps, ['alien-planet']);
+});
+
 test('expedition setup creates and saves a random pending encounter', () => {
   const h = setup(); h.ui.profile.expeditionDepth = 25; h.ui.battleFaction = 2;
   const saved = []; h.ui.persistence.saveExpedition = value => saved.push(JSON.parse(JSON.stringify(value)));
-  h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
+  h.ui.game.start = () => { throw Error('Battle started before renderer preparation'); };
+  h.ui.onLaunchBattle = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
   assert.equal(saved.length, 1); assert.equal(saved[0].faction, 2); assert.equal(saved[0].depth, 0);
   assert.ok([0, 1, 2].includes(saved[0].encounter.enemy));

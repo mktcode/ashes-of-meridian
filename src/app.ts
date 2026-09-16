@@ -66,33 +66,17 @@
         new ResizeObserver(resize).observe($('worldViewport'));
         addEventListener('resize', resize);
         resize();
-        ui.onPreview = () => {
-          worldView.sync(new Battlefield(40517, 'desert'), false);
-          R.fogOn = false;
+        let worldRequest = 0;
+        function previewEntities() {
           preview = [];
           let id = 0;
           function e<K extends EntityKind>(kind: K, type: EntityTypeForKind<K>, x: number, z: number, faction: FactionId = FACTION_ID.FIRST, team: TeamId = 0) {
             let d: { hp?: number; size?: number } = kind === 'building' ? BUILDINGS[type as BuildingType] : UNITS[type as UnitType] || {};
             preview.push({
-              id: ++id,
-              kind,
-              type,
-              x,
-              z,
-              faction,
-              team,
-              hp: d.hp || 100,
-              maxHp: d.hp || 100,
-              size: d.size || 1,
-              rot: kind === 'building' ? 0 : -0.45,
-              walk: 0,
-              progress: 1,
-              carry: 0,
-              amount: 2200,
-              shield: 0,
-              maxShield: 0,
-              kills: 0,
-              order: { type: 'idle' }
+              id: ++id, kind, type, x, z, faction, team,
+              hp: d.hp || 100, maxHp: d.hp || 100, size: d.size || 1,
+              rot: kind === 'building' ? 0 : -0.45, walk: 0, progress: 1, carry: 0, amount: 2200,
+              shield: 0, maxShield: 0, kills: 0, order: { type: 'idle' }
             });
           }
           e('building', 'hq', 7, 1);
@@ -106,15 +90,43 @@
           e('unit', 'tank', -1, 26);
           e('unit', 'artillery', -13, 15);
           e('unit', 'air', 30, 6);
-          for (let i = 0; i < 9; i++)
-            e('unit', 'rifle', 15 + (i % 3) * 1.8, 16 + Math.floor(i / 3) * 2);
-          for (let i = 0; i < 7; i++)
-            e('resource', 'crystal', -19 + Math.sin(i * 2) * 4, 25 + Math.cos(i * 2) * 4);
+          for (let i = 0; i < 9; i++) e('unit', 'rifle', 15 + (i % 3) * 1.8, 16 + Math.floor(i / 3) * 2);
+          for (let i = 0; i < 7; i++) e('resource', 'crystal', -19 + Math.sin(i * 2) * 4, 25 + Math.cos(i * 2) * 4);
           e('building', 'hq', -30, -48, FACTION_ID.THIRD, 1);
           e('building', 'turret', -20, -39, FACTION_ID.THIRD, 1);
+        }
+        function loadingBattlefield(text: string) {
+          const loader = $('loading');
+          loader.innerHTML = `<div class="crest">◈</div><div class="eyebrow">MERIDIAN EXPEDITIONARY COMMAND</div><h2>${text}<span class="dots">...</span></h2><p>Preparing the frontier</p>`;
+          loader.classList.remove('hidden');
+        }
+        function textureFailure(error: unknown) {
+          console.error(error);
+          const loader = $('loading');
+          loader.innerHTML = `<div class="eyebrow">UPLINK INTERRUPTED</div><h2>Texture preparation failed.</h2><p>${esc(error instanceof Error ? error.message : String(error))}</p>`;
+          loader.classList.remove('hidden');
+        }
+        ui.onPreview = map => {
+          const id = ++worldRequest, mapId = battlefieldId(map), world = new Battlefield(40517, mapId),
+            profile = BATTLEFIELDS[mapId].render;
+          void R.prepareBattlefieldTextures(profile).then(ready => {
+            if (!ready || id !== worldRequest || ui.view === 'game') return;
+            worldView.sync(world, false);
+            R.fogOn = false;
+            previewEntities();
+            $('loading').classList.add('hidden');
+          }).catch(textureFailure);
+        };
+        ui.onLaunchBattle = options => {
+          const id = ++worldRequest, mapId = battlefieldId(options.map), profile = BATTLEFIELDS[mapId].render;
+          if (!R.hasBattlefieldTextures(profile)) loadingBattlefield('Preparing operation');
+          void R.prepareBattlefieldTextures(profile).then(ready => {
+            if (!ready || id !== worldRequest) return;
+            game.start(options);
+            $('loading').classList.add('hidden');
+          }).catch(textureFailure);
         };
         ui.showHome();
-        $('loading').classList.add('hidden');
         const SIMULATION_STEP_SECONDS = 0.05;
         let last = performance.now(),
           accumulator = 0,
