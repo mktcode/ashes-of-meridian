@@ -7,12 +7,16 @@ interface RenderBucket {
   n: number;
   buffer: WebGLBuffer | null;
   dirty: boolean;
+  mesh: string;
+  source: string;
+  bounds?: [number, number, number, number, number, number];
 }
 type RenderBatches = Record<string, RenderBucket>;
 interface RenderMesh {
   vao: WebGLVertexArrayObject | null;
   vbo: WebGLBuffer | null;
   count: number;
+  bounds: [number, number, number, number, number, number];
 }
 interface ModelTransform {
   x?: number; y?: number; z?: number;

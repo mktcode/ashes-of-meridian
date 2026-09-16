@@ -15,7 +15,7 @@ Die erste Meldung entspricht dem `webglcontextlost`-Pfad in `src/app.ts`; beim R
 ## Relevante Kostenformen im aktuellen Renderer
 
 - Dynamische Entitäten werden in `src/app.ts` bereits nach Sicht und projiziertem Viewport plus großem Puffer gefiltert. Die CPU durchläuft dafür weiterhin die gesamte Entitätsliste.
-- Statischer Boden, Relief, Felsen, Bäume und Dekoration werden nicht räumlich gecullt. Die vollständigen statischen Batches laufen bei High/Balanced durch Schatten- und Szenenpass (`src/world-view.ts`, `src/renderer/runtime.ts`). Die GPU clippt außerhalb liegende Geometrie erst nach der Einreichung.
+- Im Ausgangsstand wurden statischer Boden, Relief, Felsen, Bäume und Dekoration nicht räumlich gecullt. Der Renderer teilt nun große statische Dreiecksmeshes und gruppiert Platzierungen in 32-Welteinheiten-Chunks; Szenen- und Schattenpass prüfen deren vollständige Welt-Bounds getrennt gegen Kamera- beziehungsweise Licht-Clipvolumen (`src/world-view.ts`, `src/renderer/runtime.ts`).
 - Desert zählt im dokumentierten Galerie-Stand rund 1,32 Millionen statische Dreiecke je Pass und 78,5 MiB aktive Terrain-Vertexdaten; diese Werte sind keine aktuelle Pixel-7-Messung.
 - High rendert bis zu 1,6× CSS-Auflösung je Achse, versucht bis zu 4× MSAA, nutzt eine 1536²-Schattenkarte, drei Bloom-Pässe und High-spezifisches Tilt-Shift. Der Renderloop besitzt kein eigenes Framelimit; auf Displays über 60 Hz können deshalb mehr Frames angefordert werden, obwohl die Simulation in 20-Hz-Schritten läuft und keine Renderinterpolation besitzt.
 - Alle eingebetteten Welt-/Materialtexturen werden beim Rendererstart auf die GPU geladen. Ihre etwa 11 Millionen Ausgangspixel benötigen als RGBA-Texturen mit Mipmaps größenordnungsmäßig rund 56 MiB vor Treiber-Overhead, auch wenn kartenspezifische Texturen im aktuellen Gefecht nicht gebraucht werden.
@@ -33,7 +33,7 @@ Zwei lokale Pakete sind umgesetzt: dauerhaft leere Instanzbuckets verursachen ke
 
 ## Größere qualitätsneutrale Richtung
 
-Statische Weltgeometrie und Platzierungen räumlich chunken. Szenenpass und Schattenpass wählen getrennt nur überlappende Chunks mit passenden Höhen- und Casterreserven. Das ist voraussichtlich der größte Hebel ohne reduzierte Modelle oder Dekoration, aber kein Kleinstumbau: Reliefnormalen und Übergänge müssen nahtlos bleiben, Draw-Call-Zahl und Chunkgröße gegeneinander gemessen werden, und außerhalb des Bildes liegende sichtbare Schatten dürfen nicht verschwinden.
+Statische Weltgeometrie und Platzierungen sind ohne Änderung der Quelldreiecke räumlich gechunkt: große Meshes werden entlang vollständiger Dreiecke aufgeteilt, platzierte Meshes nach Weltbereich gruppiert und beide über transformierte AABBs konservativ gecullt. Szenenpass und Schattenpass verwenden getrennt Kamera- und Licht-Clipvolumen. Die erste manuelle Sichtprüfung zeigte keine Auffälligkeiten; Draw Calls und Stabilität auf dem Pixel 7 bleiben Teil der ausstehenden Vergleichsmessung.
 
 ## Stärkere Hebel mit Qualitätsabwägung
 

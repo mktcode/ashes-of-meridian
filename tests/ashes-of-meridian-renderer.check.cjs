@@ -85,7 +85,7 @@ test('renderer reuses typed geometry and uploads a bucket transition to empty on
     if (!(name in target)) target[name] = () => {};
     return target[name];
   } });
-  const renderer = Object.assign(Object.create(Renderer.prototype), { gl, meshes: {}, dynamic: {}, effects: {} });
+  const renderer = Object.assign(Object.create(Renderer.prototype), { gl, meshes: {}, meshParts: {}, dynamic: {}, effects: {} });
   const typed = vm.runInContext('new Float32Array(27)', context);
   renderer.geometry('typed', typed);
   assert.strictEqual(uploads.at(-1).data, typed, 'typed mesh storage is passed directly to WebGL');
@@ -105,6 +105,39 @@ test('renderer reuses typed geometry and uploads a bucket transition to empty on
   occupied.n = 1; occupied.dirty = true;
   renderer.upload(renderer.dynamic);
   assert.equal(uploads.at(-1).data.length, 22, 'a reused bucket uploads new instances normally');
+});
+
+test('large static geometry and placements are chunked and conservatively culled', () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context), draws = [];
+  const gl = new Proxy({
+    ARRAY_BUFFER: 'ARRAY_BUFFER', STATIC_DRAW: 'STATIC_DRAW', DYNAMIC_DRAW: 'DYNAMIC_DRAW', FLOAT: 'FLOAT', TRIANGLES: 'TRIANGLES',
+    createVertexArray: () => ({}), createBuffer: () => ({}), bindVertexArray() {}, bindBuffer() {}, bufferData() {},
+    drawArraysInstanced(mode, first, count, instances) { draws.push({ mode, first, count, instances }); }
+  }, { get(target, name) {
+    if (!(name in target)) target[name] = () => {};
+    return target[name];
+  } });
+  const renderer = Object.assign(Object.create(Renderer.prototype), {
+    gl, meshes: {}, meshParts: {}, static: {}, dynamic: {}, effects: {}, colors: new Map(), drawCalls: 0
+  });
+  const vertices = [];
+  for (const x of [0, 64]) for (let triangle = 0; triangle < 32; triangle++)
+    for (const [px, pz] of [[x, 0], [x + .2, 0], [x, .2]]) vertices.push(px, 0, pz, 0, 1, 0, 1, 1, 1);
+  renderer.geometry('wide', new Float32Array(vertices));
+  assert.equal(renderer.meshParts.wide.length, 2, 'wide triangle data is split into local meshes');
+  assert.equal(renderer.meshParts.wide.reduce((sum, part) => sum + renderer.meshes[part].count, 0), vertices.length / 9,
+    'chunking preserves every source vertex');
+  renderer.add('wide', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static');
+  assert.equal(Object.keys(renderer.static).length, 2);
+  assert.equal(Object.values(renderer.static).reduce((sum, bucket) => sum + bucket.n, 0), 2,
+    'one logical placement is retained for every geometry part');
+  renderer.upload(renderer.static);
+  const identity = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+  renderer.drawBatches(renderer.static, identity);
+  assert.deepEqual(draws.map(draw => draw.instances), [1], 'only the origin chunk reaches the identity frustum');
+  draws.length = 0; identity[12] = -64;
+  renderer.drawBatches(renderer.static, identity);
+  assert.deepEqual(draws.map(draw => draw.instances), [1], 'moving the frustum selects the distant chunk without loss');
 });
 
 function setup(options = {}) {
@@ -175,7 +208,7 @@ function setup(options = {}) {
     frame: 0, shadowSize: 1536, shadowBias: .00022, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
     program: 'scene', depthProg: 'shadow', skyProg: 'sky', postProg: 'post', shadowFbo: 'shadow-target',
     upload() {}, uniform(p, name) { return name; },
-    drawBatches(batch, excludedName) { calls.push(['batch', batch, program, draw, excludedName]); }
+    drawBatches(batch, matrix, excludedName) { calls.push(['batch', batch, program, draw, matrix, excludedName]); }
   });
   Object.defineProperty(r.canvas, 'getBoundingClientRect', { value: () => options.viewport ||
     ({ left: 0, top: 0, width: context.innerWidth, height: context.innerHeight }) });
@@ -417,10 +450,10 @@ test('bloom uses two quarter-size targets, three ordered passes and a clean allo
 
 test('scene geometry and blended effects resolve exactly once before post-processing', () => {
   const h = setup(); h.r.resize(); h.calls.length = 0; h.r.render(1);
-  assert.equal(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[4], 'terrain',
+  assert.equal(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[5], 'terrain',
     'flat ground is not submitted as a shadow caster');
-  assert.equal(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'scene')[4], undefined,
-    'flat ground remains in the visible scene');
+  assert.strictEqual(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'scene')[4], h.r.vp,
+    'static scene chunks use the camera projection for culling');
   const resolve = h.calls.findIndex(c => c[0] === 'resolve');
   assert.equal(h.calls.filter(c => c[0] === 'resolve').length, 1);
   assert.deepEqual(h.calls[resolve], ['resolve', h.r.sceneMSAAFbo, h.r.sceneFbo,

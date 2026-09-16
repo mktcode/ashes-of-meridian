@@ -3,6 +3,7 @@
     const DEFAULT_LIGHTING: BattlefieldLighting = {
       sun: [1.10, .96, .82], sky: [.38, .47, .56], bounce: [.20, .23, .27]
     };
+    const STATIC_CHUNK_SIZE = 32;
     // Standalone model previews also render without a BattlefieldView.
     const DEFAULT_TERRAIN_RENDER_PROFILE: BattlefieldRenderProfile = {
       groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14, haze: [0.055, 0.09, 0.13],
@@ -20,6 +21,7 @@
       bloomWidth = 1;
       bloomHeight = 1;
       meshes: Record<string, RenderMesh>;
+      meshParts: Record<string, string[]>;
       static: RenderBatches;
       dynamic: RenderBatches;
       effects: RenderBatches;
@@ -82,6 +84,7 @@
         this.postProg = this.programOf(FULLV, POSTF);
         this.bloomProg = this.programOf(FULLV, BLOOMF);
         this.meshes = {};
+        this.meshParts = {};
         this.static = {};
         this.dynamic = {};
         this.effects = {};
@@ -201,27 +204,70 @@
         return map[k];
       }
       geometry(name: string, data: MeshData) {
-        let gl = this.gl;
-        if (this.meshes[name]) {
-          gl.deleteBuffer(this.meshes[name].vbo);
-          gl.deleteVertexArray(this.meshes[name].vao);
+        const partsByName = this.meshParts ||= {}, oldParts = partsByName[name] || (this.meshes[name] ? [name] : []);
+        for (const part of oldParts) {
+          this.gl.deleteBuffer(this.meshes[part]?.vbo);
+          this.gl.deleteVertexArray(this.meshes[part]?.vao);
+          delete this.meshes[part];
         }
-        let vao = gl.createVertexArray(),
-          vbo = gl.createBuffer();
+        const chunkCounts = new Map<number, number>(), triangles = data.length / 27;
+        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+        for (let i = 0; i < data.length; i += 9) {
+          minX = Math.min(minX, data[i]); maxX = Math.max(maxX, data[i]);
+          minZ = Math.min(minZ, data[i + 2]); maxZ = Math.max(maxZ, data[i + 2]);
+        }
+        if (triangles >= 64 && (maxX - minX > STATIC_CHUNK_SIZE * 1.5 || maxZ - minZ > STATIC_CHUNK_SIZE * 1.5)) {
+          for (let i = 0; i < data.length; i += 27) {
+            const x = (data[i] + data[i + 9] + data[i + 18]) / 3,
+              z = (data[i + 2] + data[i + 11] + data[i + 20]) / 3,
+              key = (Math.floor(x / STATIC_CHUNK_SIZE) + 32768) * 65536 + Math.floor(z / STATIC_CHUNK_SIZE) + 32768;
+            chunkCounts.set(key, (chunkCounts.get(key) || 0) + 1);
+          }
+        }
+        const parts: string[] = [];
+        if (chunkCounts.size > 1) {
+          const groups = new Map<number, { data: Float32Array; offset: number }>();
+          for (const [key, count] of chunkCounts) groups.set(key, { data: new Float32Array(count * 27), offset: 0 });
+          for (let i = 0; i < data.length; i += 27) {
+            const x = (data[i] + data[i + 9] + data[i + 18]) / 3,
+              z = (data[i + 2] + data[i + 11] + data[i + 20]) / 3,
+              key = (Math.floor(x / STATIC_CHUNK_SIZE) + 32768) * 65536 + Math.floor(z / STATIC_CHUNK_SIZE) + 32768,
+              group = groups.get(key)!;
+            for (let j = 0; j < 27; j++) group.data[group.offset++] = data[i + j];
+          }
+          for (const [key, group] of groups) {
+            const chunkX = Math.floor(key / 65536) - 32768, chunkZ = key % 65536 - 32768,
+              part = `${name}@chunk:${chunkX},${chunkZ}`;
+            this.createGeometry(part, group.data);
+            parts.push(part);
+          }
+        } else {
+          this.createGeometry(name, data);
+          parts.push(name);
+        }
+        partsByName[name] = parts;
+      }
+      createGeometry(name: string, data: MeshData) {
+        const gl = this.gl, storage = Array.isArray(data) ? new Float32Array(data) : data;
+        let vao = gl.createVertexArray(), vbo = gl.createBuffer();
         gl.bindVertexArray(vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
         // Large terrain factories already return their final typed storage; do not duplicate it before upload.
-        gl.bufferData(gl.ARRAY_BUFFER, Array.isArray(data) ? new Float32Array(data) : data, gl.STATIC_DRAW);
-        for (let [i, offset] of [
-          [0, 0],
-          [1, 12],
-          [8, 24]
-        ]) {
+        gl.bufferData(gl.ARRAY_BUFFER, storage, gl.STATIC_DRAW);
+        for (let [i, offset] of [[0, 0], [1, 12], [8, 24]]) {
           gl.enableVertexAttribArray(i);
           gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 36, offset);
         }
         gl.bindVertexArray(null);
-        this.meshes[name] = { vao, vbo, count: data.length / 9 };
+        const bounds: [number, number, number, number, number, number] =
+          [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+        for (let i = 0; i < storage.length; i += 9) {
+          for (let axis = 0; axis < 3; axis++) {
+            bounds[axis] = Math.min(bounds[axis], storage[i + axis]);
+            bounds[axis + 3] = Math.max(bounds[axis + 3], storage[i + axis]);
+          }
+        }
+        this.meshes[name] = { vao, vbo, count: storage.length / 9, bounds };
       }
       setupShadow() {
         let g = this.gl;
@@ -420,15 +466,17 @@
           );
         img.src = src;
       }
-      bucket(map: RenderBatches, name: string) {
-        if (!map[name])
-          map[name] = {
-            data: new Float32Array(22 * 1024),
+      bucket(map: RenderBatches, key: string, mesh = key, source = mesh, capacity = 1024) {
+        if (!map[key])
+          map[key] = {
+            data: new Float32Array(22 * capacity),
             n: 0,
             buffer: this.gl.createBuffer(),
-            dirty: true
+            dirty: true,
+            mesh,
+            source
           };
-        return map[name];
+        return map[key];
       }
       reserve(b: RenderBucket) {
         if ((b.n + 1) * 22 > b.data.length) {
@@ -455,40 +503,58 @@
         layer: RenderLayer = 'dynamic',
         material = MAT.AUTO
       ) {
-        let map = this[layer],
-          b = this.bucket(map, name),
-          o = this.reserve(b),
-          d = b.data;
-        let cy = Math.cos(ry),
-          syy = Math.sin(ry),
-          cx = Math.cos(rx),
-          sxx = Math.sin(rx),
-          cz = Math.cos(rz),
-          szz = Math.sin(rz);
-        d[o] = (cy * cz + syy * sxx * szz) * sx;
-        d[o + 1] = cx * szz * sx;
-        d[o + 2] = (-syy * cz + cy * sxx * szz) * sx;
-        d[o + 3] = 0;
-        d[o + 4] = (-cy * szz + syy * sxx * cz) * sy;
-        d[o + 5] = cx * cz * sy;
-        d[o + 6] = (syy * szz + cy * sxx * cz) * sy;
-        d[o + 7] = 0;
-        d[o + 8] = syy * cx * sz;
-        d[o + 9] = -sxx * sz;
-        d[o + 10] = cy * cx * sz;
-        d[o + 11] = 0;
-        d[o + 12] = x;
-        d[o + 13] = y;
-        d[o + 14] = z;
-        d[o + 15] = 1;
-        let c = this.color(color);
-        d[o + 16] = c[0];
-        d[o + 17] = c[1];
-        d[o + 18] = c[2];
-        d[o + 19] = alpha;
-        d[o + 20] = glow;
-        d[o + 21] = material;
-        b.dirty = true;
+        const map = this[layer], parts = this.meshParts?.[name] || [name], c = this.color(color);
+        const cy = Math.cos(ry), syy = Math.sin(ry), cx = Math.cos(rx), sxx = Math.sin(rx),
+          cz = Math.cos(rz), szz = Math.sin(rz);
+        for (const meshName of parts) {
+          const key = layer === 'static'
+            ? `${meshName}|${Math.floor(x / STATIC_CHUNK_SIZE)},${Math.floor(z / STATIC_CHUNK_SIZE)}` : meshName,
+            b = this.bucket(map, key, meshName, name, layer === 'static' ? 32 : 1024), o = this.reserve(b), d = b.data;
+          d[o] = (cy * cz + syy * sxx * szz) * sx;
+          d[o + 1] = cx * szz * sx;
+          d[o + 2] = (-syy * cz + cy * sxx * szz) * sx;
+          d[o + 3] = 0;
+          d[o + 4] = (-cy * szz + syy * sxx * cz) * sy;
+          d[o + 5] = cx * cz * sy;
+          d[o + 6] = (syy * szz + cy * sxx * cz) * sy;
+          d[o + 7] = 0;
+          d[o + 8] = syy * cx * sz;
+          d[o + 9] = -sxx * sz;
+          d[o + 10] = cy * cx * sz;
+          d[o + 11] = 0;
+          d[o + 12] = x;
+          d[o + 13] = y;
+          d[o + 14] = z;
+          d[o + 15] = 1;
+          d[o + 16] = c[0];
+          d[o + 17] = c[1];
+          d[o + 18] = c[2];
+          d[o + 19] = alpha;
+          d[o + 20] = glow;
+          d[o + 21] = material;
+          if (layer === 'static') this.extendBounds(b, this.meshes[meshName], d, o);
+          b.dirty = true;
+        }
+      }
+      extendBounds(b: RenderBucket, mesh: RenderMesh | undefined, d: Float32Array, o: number) {
+        if (!mesh) return;
+        const a = mesh.bounds, center = [(a[0] + a[3]) / 2, (a[1] + a[4]) / 2, (a[2] + a[5]) / 2],
+          half = [(a[3] - a[0]) / 2, (a[4] - a[1]) / 2, (a[5] - a[2]) / 2],
+          world = [
+            d[o] * center[0] + d[o + 4] * center[1] + d[o + 8] * center[2] + d[o + 12],
+            d[o + 1] * center[0] + d[o + 5] * center[1] + d[o + 9] * center[2] + d[o + 13],
+            d[o + 2] * center[0] + d[o + 6] * center[1] + d[o + 10] * center[2] + d[o + 14]
+          ], extent = [
+            Math.abs(d[o]) * half[0] + Math.abs(d[o + 4]) * half[1] + Math.abs(d[o + 8]) * half[2],
+            Math.abs(d[o + 1]) * half[0] + Math.abs(d[o + 5]) * half[1] + Math.abs(d[o + 9]) * half[2],
+            Math.abs(d[o + 2]) * half[0] + Math.abs(d[o + 6]) * half[1] + Math.abs(d[o + 10]) * half[2]
+          ];
+        if (!b.bounds) b.bounds = [world[0] - extent[0], world[1] - extent[1], world[2] - extent[2],
+          world[0] + extent[0], world[1] + extent[1], world[2] + extent[2]];
+        else for (let axis = 0; axis < 3; axis++) {
+          b.bounds[axis] = Math.min(b.bounds[axis], world[axis] - extent[axis]);
+          b.bounds[axis + 3] = Math.max(b.bounds[axis + 3], world[axis] + extent[axis]);
+        }
       }
       beam(a: number[], b: number[], width: number, color: RenderColor, glow = 1, alpha = 1) {
         let axis = V.sub(b, a),
@@ -539,11 +605,30 @@
           }
         }
       }
-      drawBatches(map: RenderBatches, excludedName?: string) {
+      bucketVisible(b: RenderBucket, matrix?: Float32Array) {
+        if (!matrix || !b.bounds) return true;
+        const a = b.bounds;
+        let left = true, right = true, bottom = true, top = true, near = true, far = true;
+        for (let corner = 0; corner < 8; corner++) {
+          const x = a[corner & 1 ? 3 : 0], y = a[corner & 2 ? 4 : 1], z = a[corner & 4 ? 5 : 2],
+            cx = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
+            cy = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
+            cz = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14],
+            cw = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+          if (cx >= -cw) left = false;
+          if (cx <= cw) right = false;
+          if (cy >= -cw) bottom = false;
+          if (cy <= cw) top = false;
+          if (cz >= -cw) near = false;
+          if (cz <= cw) far = false;
+        }
+        return !(left || right || bottom || top || near || far);
+      }
+      drawBatches(map: RenderBatches, matrix?: Float32Array, excludedName?: string) {
         let g = this.gl;
-        for (let [name, b] of Object.entries(map)) {
-          if (!b.n || name === excludedName) continue;
-          let m = this.meshes[name];
+        for (const b of Object.values(map)) {
+          if (!b.n || b.source === excludedName || !this.bucketVisible(b, matrix)) continue;
+          let m = this.meshes[b.mesh];
           if (!m) continue;
           g.bindVertexArray(m.vao);
           g.bindBuffer(g.ARRAY_BUFFER, b.buffer);
@@ -668,7 +753,7 @@
           g.enable(g.POLYGON_OFFSET_FILL);
           g.polygonOffset(1.5, 2);
           // The flat ground receives shadows in the scene pass but cannot cast a visible one itself.
-          this.drawBatches(this.static, 'terrain');
+          this.drawBatches(this.static, this.lightVP, 'terrain');
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
         }
@@ -729,7 +814,7 @@
         g.activeTexture(g.TEXTURE7);
         g.bindTexture(g.TEXTURE_2D, this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`]);
         g.uniform1i(this.uniform(this.program, 'u_rockTex'), 7);
-        this.drawBatches(this.static);
+        this.drawBatches(this.static, this.vp);
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);
         g.blendFunc(g.SRC_ALPHA, g.ONE_MINUS_SRC_ALPHA);
