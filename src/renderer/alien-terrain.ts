@@ -51,15 +51,35 @@
     }
   }
   function fern(out: number[],x=0,z=0,scale=1,phase=0) {
+    // Arched, faceted fronds replace the old four-triangle fans while retaining their footprint.
     for(let i=0;i<7;i++) {
-      const a=phase+i*Math.PI*2/7,l=scale*(.85+(i%3)*.22),
-        c=[x,.08,z],m=[x+Math.cos(a)*l*.65,l*.85,z+Math.sin(a)*l*.65],
-        tip=[x+Math.cos(a)*l,l*.55,z+Math.sin(a)*l],
-        left=[m[0]+Math.sin(a)*l*.23,m[1]-.16*l,m[2]-Math.cos(a)*l*.23],
-        right=[m[0]-Math.sin(a)*l*.23,m[1]-.16*l,m[2]+Math.cos(a)*l*.23];
-      for(const [p,q,r,col] of [[c,left,m,jade],[c,m,right,bark],[m,left,tip,jade],[m,tip,right,plum]]) {
-        geom.tri(out,p,q,r,col);geom.tri(out,r,q,p,col.map(v=>v*.65));
+      const a=phase+i*Math.PI*2/7,l=scale*(.88+(i%3)*.2),dx=Math.cos(a),dz=Math.sin(a),
+        side=i%2 ? .07 : -.055, ts=[.035,.34,.7,1], widths=[.035,.18,.245,.025],
+        heights=[.08,.54,.76,.49], left: number[][]=[],right: number[][]=[];
+      for(let j=0;j<ts.length;j++) {
+        const t=ts[j],bend=side*Math.sin(t*Math.PI)*l,cx=x+dx*l*t+dz*bend,cz=z+dz*l*t-dx*bend,
+          w=widths[j]*l*(j===2&&i%2 ? .88 : 1);
+        left.push([cx+dz*w,heights[j]*l,cz-dx*w]);
+        right.push([cx-dz*w,heights[j]*l,cz+dx*w]);
       }
+      for(let j=0;j<3;j++) {
+        const ca=(j===0?jade:j===1?bark:plum),cb=(j===0?bark:j===1?jade:rim),
+          p=left[j],q=left[j+1],r=right[j+1],s=right[j];
+        geom.tri(out,p,q,r,ca);geom.tri(out,p,r,s,cb);
+        geom.tri(out,r,q,p,ca.map(v=>v*.62));geom.tri(out,s,r,p,cb.map(v=>v*.62));
+      }
+    }
+    // Pale curled shoots and a plum heart keep the center from reading as a flat pinwheel.
+    for(let i=0;i<3;i++) {
+      const a=phase+.45+i*Math.PI*2/3,l=scale*(.28+i*.035),
+        p=[x+Math.sin(a)*l*.13,.08,z-Math.cos(a)*l*.13],
+        q=[x-Math.sin(a)*l*.13,.08,z+Math.cos(a)*l*.13],
+        r=[x+Math.cos(a)*l,.62*l,z+Math.sin(a)*l];
+      geom.tri(out,p,r,q,light);geom.tri(out,q,r,p,rim.map(v=>v*.7));
+    }
+    const base=ring(x,.08,z,scale*.11,4,phase+Math.PI/4),top=[x,.28*scale,z];
+    for(let i=0;i<4;i++) {
+      const k=(i+1)%4;geom.tri(out,base[i],base[k],top,plum);geom.tri(out,[x,.06,z],base[k],base[i],root);
     }
   }
   function spore(out: number[],x: number,z: number,h: number,r: number) {
