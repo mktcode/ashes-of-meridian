@@ -48,7 +48,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
     assert.equal(calls.length, normal.length + (progress < 1 ? 5 : 0), 'shared construction scaffold');
     if (faction === 1) assert.deepEqual(calls[0],
       ['choirMound',12,0,-7,d.size,build,d.size,0x70523b,yaw,0,0,0,1,'dynamic',h.MAT.ROCK]);
-    else if (faction === 2 && ['barracks','depot','factory','hangar'].includes(type)) assert.equal(calls[0][0], mesh, 'Court structure owns its angular foundation');
+    else if (faction === 2 && ['barracks','depot','factory','hangar','hq'].includes(type)) assert.equal(calls[0][0], mesh, 'Court structure owns its angular foundation');
     else assert.deepEqual(calls.slice(0, 2), [
       ['hex',12,.15*build,-7,d.size*1.09,.3*build,d.size*1.09,0x384552,yaw+.12,0,0,0,1,'dynamic',faction===1?h.MAT.BIO:h.MAT.METAL],
       ['ring',12,.33*build,-7,d.size*1.03,.1*build,d.size*1.03,color,yaw,0,0,.4,1,'dynamic',faction===1?h.MAT.BIO:h.MAT.METAL]
@@ -68,13 +68,13 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
           ['ring',12,height*.9,-7,d.size*.8,1,d.size*.8,accent,0,0,0,1.2,.7,'effects']);
       }
       if (faction === 2) {
-        if (!['barracks','depot','factory','hangar'].includes(type)) {
+        if (!['barracks','depot','factory','hangar','hq'].includes(type)) {
           assert.deepEqual(timed.find(c => c[0]==='octa' && c[11]===.75),
             ['octa',12,height*.79*build,-7,d.size*.21,height*.35*build,d.size*.21,color,yaw+time*.1,0,0,.75,1,'dynamic',h.MAT.METAL]);
           assert.deepEqual(timed.find(c => c[0]==='octa' && c[5]===height*.43*build),
             ['octa',12,height*.67*build,-7,d.size*.38,height*.43*build,d.size*.38,f.metal,yaw+.4,0,0,0,1,'dynamic',h.MAT.METAL], 'original pale core keeps its instanced lighting');
         }
-        if (['hq','refinery'].includes(type)) {
+        if (type === 'refinery') {
           assert.deepEqual(timed.find(c => c[0]==='ring' && c[9]===Math.PI/2),
             ['ring',12,height*.62,-7,d.size*.88,1,d.size*.88,accent,time*.18,Math.PI/2,0,.85,.8,'effects']);
           assert.ok(timed.some(c => c[0]==='ring' && c[2]===height*.4 && c[11]===1.2 && c[12]===.6));
