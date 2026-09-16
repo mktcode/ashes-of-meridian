@@ -84,7 +84,7 @@
           e('building', 'barracks', 21, 10);
           e('building', 'depot', 29, 1);
           e('building', 'turret', 20, -6);
-          e('building', 'turret', 30, 17);
+          e('building', 'turret', 30, -10);
           e('unit', 'hero', 14, 21);
           e('unit', 'tank', 8, 23);
           e('unit', 'tank', -1, 26);
