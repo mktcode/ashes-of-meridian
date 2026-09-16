@@ -159,7 +159,7 @@ function setupAudio() {
     get currentTime() { return this.time; }
     addEventListener(name, fn) { this.listeners[name] = fn; }
     pause() { this.paused = true; }
-    play() { this.paused = false; plays.push(this.src); return Promise.resolve(); }
+    play() { this.paused = false; this.playCount = (this.playCount || 0) + 1; plays.push(this.src); return Promise.resolve(); }
     finish() { this.paused = true; this.ended = true; this.listeners.ended(); }
   }
   const settings = { volume: 0.28, music: true, sfx: true },
@@ -180,7 +180,7 @@ test('battle playlist starts after ten seconds and plays the approved recordings
     ['sporewake', '06-sporewake.mp3'],
     ['rootmind', '07-rootmind.mp3']
   ];
-  assert.equal(h.tracks.length, 1);
+  assert.equal(h.tracks.length, 6, 'one music element and five overlapping infantry-shot voices are prepared');
   assert.equal(track.loop, false);
   assert.equal(audio.master.gain.value, .28, 'master volume remains unchanged');
   assert.equal(audio.musicGain.gain.value, 1, 'menu music remains unchanged');
@@ -214,6 +214,33 @@ test('battle playlist starts after ten seconds and plays the approved recordings
     assert.equal(plays.length, i + 2);
   }
   assert.equal(track.src, './audio/music-ratchet-theory.mp3', 'last track returns to first, also after a gap');
+});
+
+test('light shots use the approved recording with throttled overlapping voices', async () => {
+  const h = setupAudio(), { audio, plays, settings } = h, shots = h.tracks.slice(1);
+  assert.equal(shots.length, 5);
+  assert.ok(shots.every(shot => shot.src === './audio/sfx-infantry-shot.wav'));
+  assert.ok(shots.every(shot => Math.abs(shot.volume - .098) < 1e-12));
+  const asset = readFileSync(join(__dirname, '..', 'audio', 'sfx-infantry-shot.wav'));
+  assert.equal(asset.subarray(0, 4).toString('ascii'), 'RIFF');
+  assert.ok(asset.length > 1000);
+
+  audio.sound('shot', false); await h.flush();
+  assert.deepEqual(plays, ['./audio/sfx-infantry-shot.wav']);
+  audio.sound('shot', false); await h.flush();
+  assert.equal(plays.length, 1, 'light shots retain the existing fire-rate throttle');
+  audio.ctx.currentTime += .086;
+  audio.sound('shot', false); await h.flush();
+  assert.equal(plays.length, 2);
+  assert.equal(shots[0].playCount, 1);
+  assert.equal(shots[1].playCount, 1, 'successive shots may overlap');
+
+  settings.volume = .4; audio.updateSettings();
+  assert.ok(shots.every(shot => Math.abs(shot.volume - .14) < 1e-12));
+  settings.sfx = false; audio.updateSettings();
+  assert.ok(shots.every(shot => shot.volume === 0));
+  audio.ctx.currentTime += 1; audio.sound('shot', false); await h.flush();
+  assert.equal(plays.length, 2);
 });
 
 test('music pause/mute preserve track and gap position; menu and new battles reset the playlist', async () => {

@@ -9,6 +9,8 @@
       './audio/music-rootmind.mp3'
     ];
     const BATTLE_MUSIC_GAP = 10;
+    const INFANTRY_SHOT_URL = './audio/sfx-infantry-shot.wav';
+    const INFANTRY_SHOT_POOL_SIZE = 5;
     type MusicMode = 'menu' | 'battle' | 'silent';
     interface Window { webkitAudioContext?: typeof AudioContext; }
     class MeridianAudio {
@@ -19,6 +21,8 @@
       menuGain: GainNode | null;
       effectsGain: GainNode | null;
       battleTrack: HTMLAudioElement | null;
+      infantryShots: HTMLAudioElement[];
+      infantryShotIndex: number;
       battleTrackIndex: number;
       battleGapRemaining: number | null;
       battleGapUntil: number | null;
@@ -38,6 +42,8 @@
         this.menuGain = null;
         this.effectsGain = null;
         this.battleTrack = null;
+        this.infantryShots = [];
+        this.infantryShotIndex = 0;
         this.battleTrackIndex = 0;
         this.battleGapRemaining = BATTLE_MUSIC_GAP;
         this.battleGapUntil = null;
@@ -78,6 +84,7 @@
           this.musicGain.connect(this.master);
           this.effectsGain.connect(this.master);
           this.createBattleTrack();
+          this.createInfantryShots();
           this.updateSettings();
           this.noiseBuffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
           let arr = this.noiseBuffer.getChannelData(0),
@@ -119,6 +126,29 @@
           this.battlePlayFailed = true;
           console.warn('Battle music unavailable:', error instanceof Error ? error.message : String(error));
         }
+      }
+      createInfantryShots() {
+        if (this.infantryShots.length || typeof Audio !== 'function') return;
+        try {
+          for (let i = 0; i < INFANTRY_SHOT_POOL_SIZE; i++) {
+            const shot = new Audio(INFANTRY_SHOT_URL);
+            shot.preload = 'auto';
+            (shot as HTMLAudioElement & { playsInline: boolean }).playsInline = true;
+            this.infantryShots.push(shot);
+          }
+        } catch (error) {
+          this.infantryShots = [];
+          console.warn('Infantry shot unavailable:', error instanceof Error ? error.message : String(error));
+        }
+      }
+      playInfantryShot() {
+        if (!this.infantryShots.length) return;
+        const shot = this.infantryShots[this.infantryShotIndex++ % this.infantryShots.length];
+        try {
+          shot.currentTime = 0;
+          const playing = shot.play();
+          if (playing && typeof playing.catch === 'function') playing.catch(() => {});
+        } catch (_) {}
       }
       resetBattleMusic() {
         this.battleGapRemaining = BATTLE_MUSIC_GAP;
@@ -209,6 +239,10 @@
           0.12
         );
         this.effectsGain!.gain.setTargetAtTime(this.settings.sfx ? 1 : 0, this.ctx.currentTime, 0.05);
+        const infantryShotVolume = this.settings.sfx
+          ? Math.max(0, Math.min(1, this.settings.volume)) * 0.35
+          : 0;
+        for (const shot of this.infantryShots) shot.volume = infantryShotVolume;
         this.syncBattleTrack();
       }
       tone(freq: number, duration = 0.1, volume = 0.12, type: OscillatorType = 'sine', dest: AudioNode | null = null, delay = 0, endFreq: number | null = null) {
@@ -282,16 +316,12 @@
         if (type === 'shot') {
           if (t - this.lastShot < (heavy ? 0.15 : 0.085)) return;
           this.lastShot = t;
-          this.tone(
-            heavy ? 100 : 230,
-            heavy ? 0.19 : 0.07,
-            heavy ? 0.22 : 0.1,
-            'sawtooth',
-            null,
-            0,
-            heavy ? 38 : 70
-          );
-          this.noise(heavy ? 0.21 : 0.06, heavy ? 0.18 : 0.07, heavy ? 800 : 2400);
+          if (!heavy) {
+            this.playInfantryShot();
+            return;
+          }
+          this.tone(100, 0.19, 0.22, 'sawtooth', null, 0, 38);
+          this.noise(0.21, 0.18, 800);
         } else if (type === 'explosion') {
           this.tone(heavy ? 65 : 110, heavy ? 0.5 : 0.25, heavy ? 0.3 : 0.17, 'sine', null, 0, 24);
           this.noise(heavy ? 0.6 : 0.3, heavy ? 0.23 : 0.13, 1500);

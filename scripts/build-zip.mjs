@@ -4,13 +4,14 @@ import { dirname, relative, resolve, sep } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'release/ashes-of-meridian-prototype.zip');
-const music = [
+const runtimeAudio = [
   'audio/music-ratchet-theory.mp3',
   'audio/music-last-light-relay.mp3',
   'audio/music-breach-protocol.mp3',
   'audio/music-black-channel.mp3',
   'audio/music-sporewake.mp3',
-  'audio/music-rootmind.mp3'
+  'audio/music-rootmind.mp3',
+  'audio/sfx-infantry-shot.wav'
 ];
 
 async function filesBelow(directory, accept = () => true) {
@@ -30,7 +31,7 @@ const paths = [
   'index.html',
   ...(await filesBelow('styles')),
   ...(await filesBelow('dist', path => path.endsWith('.js'))),
-  ...music,
+  ...runtimeAudio,
   ...(await filesBelow('assets/portraits', path => path.endsWith('.webp')))
 ].sort();
 
