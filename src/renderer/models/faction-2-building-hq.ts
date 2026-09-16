@@ -10,7 +10,7 @@
     for(let i=0;i<outline.length;i++) {
       const a=outline[i],b=outline[(i+1)%outline.length],af=[a[0],a[1],z+depth/2],bf=[b[0],b[1],z+depth/2],
         ab=[a[0],a[1],z-depth/2],bb=[b[0],b[1],z-depth/2],side=tint.map(v=>v*.8);
-      geom.tri(out,[...center,z+depth*.62],af,bf,tint);geom.tri(out,[...center,z-depth/2],bb,ab,dark);
+      geom.tri(out,[...center,z+depth*.62],af,bf,tint);geom.tri(out,[...center,z-depth/2],bb,ab,tint.map(v=>v*.88));
       geom.tri(out,af,ab,bb,side);geom.tri(out,af,bb,bf,side);
     }
   }
@@ -24,27 +24,54 @@
     geom.tri(out,ai,aib,aob,side);geom.tri(out,ai,aob,ao,side);
     geom.tri(out,bi,bo,bob,side);geom.tri(out,bi,bob,bib,side);
   }
+  const crownProfile=[[1.84,4.55],[1.17,5.55],[.72,6.38],[.36,7.32],[.13,8.35]];
+  function core() {
+    const out: number[]=[],n=8;
+    for(let i=0;i<n;i++) {
+      const a=i/n*Math.PI*2,b=(i+1)/n*Math.PI*2,p=point(a,1.86,4.55),q=point(b,1.86,4.55);
+      geom.tri(out,[0,2.05,0],q,p);geom.tri(out,[0,5.2,0],p,q);
+    }
+    return out;
+  }
+  function orbits() {
+    const out: number[]=[];
+    ModelMesh.bake(out,geom.ring(80,.014),{y:4.6,sx:2.65,sz:2.65,rx:.08});
+    ModelMesh.bake(out,geom.ring(80,.012),{y:5.95,sx:2.2,sz:2.2,rx:.42,ry:.7});
+    return out;
+  }
   function hull() {
     const out: number[]=[],box=geom.box();
     const part=(mesh: number[],x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[],ry=0,rx=0)=>
       ModelMesh.bake(out,mesh,{x,y,z,sx,sy,sz,tint,ry,rx});
     // Broad twelve-sided command terrace with six separated ceremonial floor panels.
     part(geom.cylinder(12),0,.18,0,4.28,.3,4.28,dark,Math.PI/12);
-    part(geom.cylinder(12),0,.4,0,3.96,.16,3.96,trim,Math.PI/12);
+    part(geom.cylinder(12),0,.55,0,3.96,.46,3.96,dark,Math.PI/12);
+    part(geom.cylinder(12),0,.77,0,3.9,.15,3.9,trim,Math.PI/12);
     for(let i=0;i<6;i++) {
       const c=i*Math.PI/3,g=.055;
-      wedge(out,c-Math.PI/6+g,c+Math.PI/6-g,1.48,3.55,.72,.56,.38,pale);
+      wedge(out,c-Math.PI/6+g,c+Math.PI/6-g,1.48,3.55,1.02,.92,.78,pale);
       wedge(out,c-.24,c+.24,3.42,4.12,.58,.35,.2,dark);
     }
     // Three broad stair flights face the player and the front diagonals.
     for(const c of [-Math.PI/3,0,Math.PI/3]) for(let j=0;j<5;j++) {
-      const r=3.48+j*.17,y=.52-j*.075;
-      part(box,Math.sin(c)*r,y,Math.cos(c)*r,1.42,.12,.42,trim,c);
+      const r=3.48+j*.17,y=.86-j*.15;
+      part(box,Math.sin(c)*r,y,Math.cos(c)*r,1.75,.16,.42,trim,c);
+    }
+    // Pale stair cheeks frame the dark treads, following the same five-step rise.
+    for(const c of [-Math.PI/3,0,Math.PI/3]) for(const side of [-1,1]) {
+      const rail: number[]=[];
+      stone(rail,[[3.34,.3],[4.36,.12],[4.36,.38],[3.34,1.15]],side*.98,.16,trim);
+      ModelMesh.bake(out,rail,{ry:c-Math.PI/2});
     }
     // Central recessed audience well and faceted command socket.
     part(geom.cylinder(8),0,.68,0,1.64,.35,1.64,dark,Math.PI/8);
     part(geom.cylinder(8),0,.9,0,1.34,.16,1.34,trim,Math.PI/8);
-    part(geom.cylinder(8),0,1.08,0,.72,.22,.72,dark,Math.PI/8);
+    part(geom.cylinder(8),0,1.08,0,.72,.22,.72,trim,Math.PI/8);
+    for(let i=0;i<4;i++) {
+      const fin: number[]=[];
+      stone(fin,[[1.22,.85],[1.62,.85],[1.53,3.08],[1.38,3.28]],0,.3,pale);
+      ModelMesh.bake(out,fin,{ry:i*Math.PI/2+.785});
+    }
     // Six slender pylons use raised pale facets around long dark inlays.
     for(let i=0;i<6;i++) {
       const a=i*Math.PI/3,r=3.48,x=Math.sin(a)*r,z=Math.cos(a)*r,pylon: number[]=[];
@@ -52,16 +79,42 @@
       for(const face of [-1,1]) stone(pylon,[[-.19,.78],[.19,.78],[.1,3.84],[-.1,3.84]],face*.41,.035,dark);
       stone(pylon,[[-.49,.28],[-.3,.28],[-.18,2.2],[-.32,1.45]],.34,.24,trim);
       stone(pylon,[[.3,.28],[.49,.28],[.32,1.45],[.18,2.2]],.34,.24,trim);
+      // Broad swept outer foot replaces a straight obelisk planted on the floor.
+      const foot: number[]=[];
+      stone(foot,[[0,.28],[.91,.28],[.74,.64],[.49,1.12],[.3,1.95],[.2,3.1],[0,3.45]],0,.55,pale);
+      stone(foot,[[.2,.44],[.66,.44],[.47,1.04],[.29,1.85]],.29,.025,dark);
+      ModelMesh.bake(out,foot,{x,z,ry:a-Math.PI/2});
       ModelMesh.bake(out,pylon,{x,z,ry:a});
       part(box,x,.36,z,.88,.22,.92,dark,a);
       part(box,x,4.43,z,.56,.18,.62,trim,a);
     }
-    // Four long crown blades sweep down from the central needle onto the floating core.
+    // Curved flying buttresses anchor each pylon to the inner terrace.
+    for(let i=0;i<6;i++) {
+      const a=i*Math.PI/3,web: number[]=[];
+      const profile=[[1.38,.86],[3.45,.5],[3.45,3.5],[3.29,2.6],[3.02,1.91],[2.63,1.5],[2.08,1.18]];
+      stone(web,profile,0,.24,dark);
+      // Raised pale rails follow the curved upper edge rather than a straight diagonal.
+      for(let j=2;j<profile.length-1;j++) {
+        const [x,y]=profile[j],[u,v]=profile[j+1];
+        stone(web,[[x,y],[u,v],[u,v+.14],[x,y+.14]],0,.36,trim);
+      }
+      ModelMesh.bake(out,web,{ry:a-Math.PI/2});
+    }
+    // Closed, swept ivory mantle: four broad faceted petals, not freestanding sticks.
     for(let i=0;i<4;i++) {
-      const a=i*Math.PI/2+.785,blade: number[]=[];
-      stone(blade,[[.12,4.62],[.2,7.92],[.4,7.42],[1.48,4.92],[1.2,4.48]],0,.38,pale);
-      stone(blade,[[.24,5.02],[.27,7.5],[.34,7.24],[1.18,4.98]],.235,.025,dark);
-      ModelMesh.bake(out,blade,{ry:a});
+      const a=i*Math.PI/2,rows=crownProfile.map(([r,y])=>[
+        point(a-.71,r*.77,y+.15),point(a,r,y),point(a+.71,r*.77,y+.15)]);
+      for(let j=0;j<rows.length-1;j++) for(let k=0;k<2;k++) {
+        const p=rows[j][k],q=rows[j][k+1],r=rows[j+1][k+1],s=rows[j+1][k];
+        geom.tri(out,p,q,r,k?trim:pale);geom.tri(out,p,r,s,k?trim:pale);
+      }
+      // Dark recessed seams close the narrow spaces between the mantle petals.
+      for(let j=0;j<rows.length-1;j++) {
+        const [r,y]=crownProfile[j],[rr,yy]=crownProfile[j+1],
+          p=point(a+.71,r*.77,y+.15),q=point(a+.86,r*.77,y+.15),
+          s=point(a+.71,rr*.77,yy+.15),t=point(a+.86,rr*.77,yy+.15);
+        geom.tri(out,p,q,t,dark);geom.tri(out,p,t,s,dark);
+      }
     }
     return out;
   }
@@ -75,41 +128,39 @@
     // Hexagonal floor channels separate each command-sector panel.
     for(let i=0;i<6;i++) {
       const a=i*Math.PI/3+.055,b=(i+1)*Math.PI/3-.055;
-      strip(point(a,1.55,.76),point(a,3.28,.6),.025);
-      strip(point(a,3.28,.6),point(b,3.28,.6),.025);
+      strip(point(a,1.55,1.04),point(a,3.28,.955),.025);
+      strip(point(a,3.28,.955),point(b,3.28,.955),.025);
     }
     // Vertical pylon conductors and the four central crown seams.
     for(let i=0;i<6;i++) {
-      const a=i*Math.PI/3,r=3.48,x=Math.sin(a)*r,z=Math.cos(a)*r;
-      const w=.025,lo=[x-Math.cos(a)*w,.86,z+Math.sin(a)*w],hi=[x-Math.cos(a)*w,3.8,z+Math.sin(a)*w],
+      const a=i*Math.PI/3,r=3.48+.45,x=Math.sin(a)*r,z=Math.cos(a)*r;
+      const w=.035,lo=[x-Math.cos(a)*w,.86,z+Math.sin(a)*w],hi=[x-Math.cos(a)*w,3.8,z+Math.sin(a)*w],
         lo2=[x+Math.cos(a)*w,.86,z-Math.sin(a)*w],hi2=[x+Math.cos(a)*w,3.8,z-Math.sin(a)*w];
       geom.tri(out,lo,hi,hi2);geom.tri(out,lo,hi2,lo2);
     }
-    for(let i=0;i<4;i++) {
-      const a=i*Math.PI/2+.785,x=Math.sin(a)*.29,z=Math.cos(a)*.29,w=.025,tx=Math.cos(a)*w,tz=-Math.sin(a)*w,
-        lo=[x-tx,5.08,z-tz],hi=[x-tx,7.52,z-tz],lo2=[x+tx,5.08,z+tz],hi2=[x+tx,7.52,z+tz];
-      geom.tri(out,lo,hi,hi2);geom.tri(out,lo,hi2,lo2);
+    for(let i=0;i<4;i++) for(let j=0;j<crownProfile.length-1;j++) {
+      const a=i*Math.PI/2+.785,[r,y]=crownProfile[j],[rr,yy]=crownProfile[j+1],
+        p=point(a-.023,r*.785,y+.16),q=point(a+.023,r*.785,y+.16),
+        s=point(a-.023,rr*.785,yy+.16),t=point(a+.023,rr*.785,yy+.16);
+      geom.tri(out,p,s,t);geom.tri(out,p,t,q);
     }
     return out;
   }
   registerEntityModel({
     id:'faction-2/building/hq',
-    meshes:{faction2HqHull:hull,faction2HqRibbons:ribbons},
-    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
+    meshes:{faction2HqHull:hull,faction2HqRibbons:ribbons,faction2HqCore:core,faction2HqOrbits:orbits},
+    render({entity:e,part:p,metal,dark,team,accent,surfaceColor}) {
       const s=(e.size||4.4)/4.4;
       p('faction2HqHull',0,0,0,s,1,s,metal);
-      p('octa',0,4.62,0,2.04*s,2.05,2.04*s,dark,.4,0,0,.18);
-      p('faction2HqRibbons',0,0,0,s,1,s,team,0,0,0,.9);
+      p('faction2HqCore',0,0,0,s,1,s,dark);
+      p('faction2HqOrbits',0,0,0,s,1,s,surfaceColor(team),0,0,0,1);
+      p('faction2HqRibbons',0,0,0,s,1,s,surfaceColor(team),0,0,0,.9);
       for(let i=0;i<6;i++) {
         const a=i*Math.PI/3;
-        p('octa',Math.sin(a)*3.48*s,4.79,Math.cos(a)*3.48*s,.23*s,.38,.23*s,accent,0,0,0,.85);
+        p('octa',Math.sin(a)*3.48*s,4.89,Math.cos(a)*3.48*s,.23*s,.48,.23*s,accent,0,0,0,.85);
       }
       p('octa',0,1.42,0,.28*s,.48,.28*s,team,.4,0,0,.9);
-      p('octa',0,8.18,0,.2*s,.44,.2*s,team,.4,0,0,1);
-      // Three tilted orbital traces reproduce the layered energy paths of the concept.
-      ring(2.64*s,4.72,team,.72,.08,time*.15,.9);
-      ring(2.9*s,5.72,team,.62,.2,-time*.11,.85);
-      ring(2.48*s,6.62,team,.52,.34,time*.09+.7,.8);
+      p('octa',0,8.66,0,.13*s,.38,.13*s,team,.4,0,0,1);
     }
   });
 })();
