@@ -49,7 +49,6 @@
       desertRockTex: WebGLTexture | null;
       rockClustersTex: WebGLTexture | null;
       desertShrubsTex: WebGLTexture | null;
-      alienGrowthTex: WebGLTexture | null;
       metalTex: WebGLTexture | null;
       bioTex: WebGLTexture | null;
       skyTex: WebGLTexture | null;
@@ -156,7 +155,6 @@
         this.desertRockTex = this.dataTexture([137, 99, 71]);
         this.rockClustersTex = this.dataTexture([0, 0, 0, 0]);
         this.desertShrubsTex = this.dataTexture([0, 0, 0, 0]);
-        this.alienGrowthTex = this.dataTexture([0, 0, 0, 0]);
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
         this.skyTex = this.dataTexture([5, 9, 16]);
@@ -165,7 +163,6 @@
           desertRock: { texture: this.desertRockTex, fallback: [137, 99, 71], repeat: true, resident: false },
           rockClusters: { texture: this.rockClustersTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
           desertShrubs: { texture: this.desertShrubsTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
-          alienGrowth: { texture: this.alienGrowthTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
           metal: { texture: this.metalTex, fallback: [128, 130, 136], repeat: true, resident: false },
           bio: { texture: this.bioTex, fallback: [77, 128, 119], repeat: true, resident: false },
           sky: { texture: this.skyTex, fallback: [5, 9, 16], repeat: false, resident: false }
@@ -461,7 +458,6 @@
         if (profile.rockSurface) names.add(profile.rockSurface.texture);
         if (profile.rockDecor.density > 0) names.add('rockClusters');
         if (profile.shrubDecor.density > 0) names.add('desertShrubs');
-        if (profile.alienDecor?.density) names.add('alienGrowth');
         return names;
       }
       hasBattlefieldTextures(profile: BattlefieldRenderProfile) {
@@ -836,8 +832,6 @@
         g.uniform1f(this.uniform(this.program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
         g.uniform4f(this.uniform(this.program, 'u_groundDecor'), profile.rockDecor.density,
           profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
-        g.uniform2f(this.uniform(this.program, 'u_alienDecor'), profile.alienDecor?.density ?? 0,
-          profile.alienDecor?.opacity ?? 0);
         g.uniform1f(this.uniform(this.program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_fogOn'), this.fogOn ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_time'), time);
@@ -866,9 +860,6 @@
         g.activeTexture(g.TEXTURE7);
         g.bindTexture(g.TEXTURE_2D, this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`]);
         g.uniform1i(this.uniform(this.program, 'u_rockTex'), 7);
-        g.activeTexture(g.TEXTURE8);
-        g.bindTexture(g.TEXTURE_2D, this.alienGrowthTex);
-        g.uniform1i(this.uniform(this.program, 'u_alienGrowthTex'), 8);
         this.drawBatches(this.static, this.vp);
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);

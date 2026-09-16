@@ -22,11 +22,10 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('vec3 t=groundBase(v_pos.xz);base=t;'), 'ground uses the aspect-correct Dirt source');
   assert.ok(FRAG.includes('base=t;vec4 rocks=groundDecor'), 'ground starts with the unchanged Dirt color');
   assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
-  for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex', 'u_alienGrowthTex'])
+  for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex'])
     assert.ok(FRAG.includes(`uniform sampler2D ${texture};`));
   assert.ok(FRAG.includes('groundDecor(u_rockClustersTex,v_pos.xz,false)'));
   assert.ok(FRAG.includes('groundDecor(u_desertShrubsTex,v_pos.xz,true)'));
-  assert.ok(FRAG.includes('alienGrowth(v_pos.xz)'));
   assert.ok(FRAG.includes('normalize(u_eye-v_pos)'));
   assert.ok(FRAG.includes('texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.))'));
 });
@@ -34,7 +33,7 @@ test('ground decoration samples individual irregular atlas crops with stable wor
   const context = loadScripts(RENDERER_SCRIPTS);
   const { GROUND_DECOR_ATLAS: atlas, FRAG, MeridianRenderer } = vm.runInContext(
     '({GROUND_DECOR_ATLAS, FRAG, MeridianRenderer})', context);
-  for (const [key, count] of [['rockClusters', 16], ['desertShrubs', 10], ['alienPlants', 16]]) {
+  for (const [key, count] of [['rockClusters', 16], ['desertShrubs', 10]]) {
     assert.equal(atlas[key].length, count);
     assert.equal(new Set(atlas[key].map(r => r.join(','))).size, count);
     for (const [x, y, right, bottom] of atlas[key]) {
@@ -108,7 +107,7 @@ test('renderer reuses typed geometry and uploads a bucket transition to empty on
 
 test('battlefield texture residency retains shared materials and releases map-only assets', async () => {
   const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context), loads = [], releases = [];
-  const names = ['ground', 'desertRock', 'rockClusters', 'desertShrubs', 'alienGrowth', 'metal', 'bio', 'sky'];
+  const names = ['ground', 'desertRock', 'rockClusters', 'desertShrubs', 'metal', 'bio', 'sky'];
   const renderer = Object.assign(Object.create(Renderer.prototype), {
     textureResources: Object.fromEntries(names.map(name => [name, { resident: false }])),
     textureLoads: {}, desiredTextures: new Set(), textureGeneration: 0,
@@ -118,18 +117,18 @@ test('battlefield texture residency retains shared materials and releases map-on
     },
     releaseResidentTexture: name => { releases.push(name); renderer.textureResources[name].resident = false; }
   });
-  const profile = (groundTexture, decor = false, rockSurface, alien = false) => ({ groundTexture, skyTexture: 'sky',
+  const profile = (groundTexture, decor = false, rockSurface) => ({ groundTexture, skyTexture: 'sky',
     groundPixelsPerMeter: 14, rockSurface, rockDecor: { density: decor ? .5 : 0, opacity: 1 },
-    shrubDecor: { density: decor ? .1 : 0, opacity: 1 }, alienDecor: { density: alien ? .14 : 0, opacity: .9 }, haze: [0, 0, 0] });
+    shrubDecor: { density: decor ? .1 : 0, opacity: 1 }, haze: [0, 0, 0] });
   const desert = profile('ground', true, { texture: 'desertRock', metersPerTile: 18 });
   await renderer.prepareBattlefieldTextures(desert);
-  assert.deepEqual(new Set(loads), new Set(names.filter(name => name !== 'alienGrowth')));
+  assert.deepEqual(new Set(loads), new Set(names));
   assert.equal(renderer.hasBattlefieldTextures(desert), true);
   loads.length = 0;
-  await renderer.prepareBattlefieldTextures(profile('bio', false, undefined, true));
-  assert.deepEqual(loads, ['alienGrowth'], 'Alien adds only its map-specific decor atlas');
+  await renderer.prepareBattlefieldTextures(profile('bio'));
+  assert.deepEqual(loads, [], 'shared bio, metal and sky textures stay resident across maps');
   assert.deepEqual(new Set(releases), new Set(['ground', 'desertRock', 'rockClusters', 'desertShrubs']));
-  assert.deepEqual(names.filter(name => renderer.textureResources[name].resident).sort(), ['alienGrowth', 'bio', 'metal', 'sky']);
+  assert.deepEqual(names.filter(name => renderer.textureResources[name].resident).sort(), ['bio', 'metal', 'sky']);
 });
 
 test('large static geometry and placements are chunked and conservatively culled', () => {

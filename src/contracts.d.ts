@@ -90,8 +90,6 @@ interface BattlefieldRenderProfile {
   rockSurface?: { texture: 'desertRock'; metersPerTile: number };
   rockDecor: { density: number; opacity: number };
   shrubDecor: { density: number; opacity: number };
-  /** Optional flat alien-growth atlas; cosmetic and independent of world collision/RNG. */
-  alienDecor?: { density: number; opacity: number };
   haze: readonly [number, number, number];
   lighting?: BattlefieldLighting;
   /** Highest terrain receiver included in the fitted shadow projection; default 32 m. */
