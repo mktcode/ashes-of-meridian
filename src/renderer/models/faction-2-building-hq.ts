@@ -149,11 +149,11 @@
   registerEntityModel({
     id:'faction-2/building/hq',
     meshes:{faction2HqHull:hull,faction2HqRibbons:ribbons,faction2HqCore:core,faction2HqOrbits:orbits},
-    render({entity:e,part:p,metal,dark,team,accent,surfaceColor}) {
+    render({entity:e,time,part:p,metal,dark,team,accent,surfaceColor}) {
       const s=(e.size||4.4)/4.4;
       p('faction2HqHull',0,0,0,s,1,s,metal);
       p('faction2HqCore',0,0,0,s,1,s,dark);
-      p('faction2HqOrbits',0,0,0,s,1,s,surfaceColor(team),0,0,0,1);
+      p('faction2HqOrbits',0,0,0,s,1,s,surfaceColor(team),time*.15,0,0,1);
       p('faction2HqRibbons',0,0,0,s,1,s,surfaceColor(team),0,0,0,.9);
       for(let i=0;i<6;i++) {
         const a=i*Math.PI/3;

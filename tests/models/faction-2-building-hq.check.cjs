@@ -44,5 +44,10 @@ test('Silent Throne mantle and inverted reliquary have outward normals; orbits o
   assert.equal(h.draw(entity,{ghost:true}).find(c=>c[0]==='faction2HqOrbits')[7],0x68717d);
   const build=h.draw({...entity,progress:.4}).find(c=>c[0]==='faction2HqOrbits');
   assert.equal(build[5],.4,'orbital paths lower with the construction instead of hovering above it');
+  const orbitAt=time=>h.draw(entity,{},time).find(c=>c[0]==='faction2HqOrbits');
+  const start=orbitAt(0),later=orbitAt(4);
+  assert.ok(Math.abs(later[8]-start[8]-.6)<1e-12,'rings precess with simulation time');
+  assert.deepEqual(orbitAt(4),later,'paused simulation preserves the orbital pose');
+  assert.deepEqual(later.map((v,i)=>i===8?start[i]:v),start,'only orbital yaw changes');
   assert.equal(h.BUILDINGS.hq.size,4.4,'gameplay footprint remains unchanged');
 });
