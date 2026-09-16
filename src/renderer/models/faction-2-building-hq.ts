@@ -33,10 +33,24 @@
     }
     return out;
   }
-  function orbits() {
+  function lowerOrbit() {
     const out: number[]=[];
-    ModelMesh.bake(out,geom.ring(80,.014),{y:4.6,sx:2.65,sz:2.65,rx:.08});
-    ModelMesh.bake(out,geom.ring(80,.012),{y:5.95,sx:2.2,sz:2.2,rx:.42,ry:.7});
+    ModelMesh.bake(out,geom.ring(80,.024),{y:4.52,sx:2.72,sz:2.72,rx:.17});
+    return out;
+  }
+  function middleOrbit() {
+    const out: number[]=[];
+    ModelMesh.bake(out,geom.ring(80,.022),{y:5.28,sx:2.52,sz:2.52,rx:.29,ry:1.15});
+    return out;
+  }
+  function upperOrbit() {
+    const out: number[]=[];
+    ModelMesh.bake(out,geom.ring(80,.021),{y:6.08,sx:2.24,sz:2.24,rx:.43,ry:.65});
+    return out;
+  }
+  function crownOrbit() {
+    const out: number[]=[];
+    ModelMesh.bake(out,geom.ring(80,.019),{y:6.82,sx:1.68,sz:1.68,rx:.58,ry:1.62});
     return out;
   }
   function hull() {
@@ -148,12 +162,17 @@
   }
   registerEntityModel({
     id:'faction-2/building/hq',
-    meshes:{faction2HqHull:hull,faction2HqRibbons:ribbons,faction2HqCore:core,faction2HqOrbits:orbits},
+    meshes:{faction2HqHull:hull,faction2HqRibbons:ribbons,faction2HqCore:core,
+      faction2HqLowerOrbit:lowerOrbit,faction2HqMiddleOrbit:middleOrbit,
+      faction2HqUpperOrbit:upperOrbit,faction2HqCrownOrbit:crownOrbit},
     render({entity:e,time,part:p,metal,dark,team,accent,surfaceColor}) {
       const s=(e.size||4.4)/4.4;
       p('faction2HqHull',0,0,0,s,1,s,metal);
       p('faction2HqCore',0,0,0,s,1,s,dark);
-      p('faction2HqOrbits',0,0,0,s,1,s,surfaceColor(team),time*.15,0,0,1);
+      p('faction2HqLowerOrbit',0,0,0,s,1,s,surfaceColor(team),time*.42,0,0,1);
+      p('faction2HqMiddleOrbit',0,0,0,s,1,s,surfaceColor(team),-time*.34,0,0,1);
+      p('faction2HqUpperOrbit',0,0,0,s,1,s,surfaceColor(team),time*.29,0,0,1);
+      p('faction2HqCrownOrbit',0,0,0,s,1,s,surfaceColor(team),-time*.24,0,0,1);
       p('faction2HqRibbons',0,0,0,s,1,s,surfaceColor(team),0,0,0,.9);
       for(let i=0;i<6;i++) {
         const a=i*Math.PI/3;
