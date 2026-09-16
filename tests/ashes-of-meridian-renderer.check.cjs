@@ -239,6 +239,17 @@ function setup(options = {}) {
   return { r, g, calls, options, framebuffers, buffers, textures, context, bindings: () => ({ draw, read, buffer }) };
 }
 
+test('portal surface clock follows simulation time, not wall time, and freezes in Performance and menus', () => {
+  const {r,calls}=setup();r.resize();
+  for (const [quality,cinema,wall,simulation,expected] of [
+    [1,false,80,4,4],[1,false,81,4,4],[2,false,82,5,5],[0,false,83,6,0],[1,true,84,7,0]
+  ]) {
+    r.quality=quality;r.cinema=cinema;calls.length=0;r.render(wall,simulation);
+    assert.ok(calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_portalTime'&&c[2]===expected));
+    assert.ok(calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_time'&&c[2]===wall), 'other shader clocks remain unchanged');
+  }
+});
+
 test('fog texture reallocates only on grid-size changes, including odd row widths', () => {
   const {r,calls}=setup();r.fogTex={};r.fogSize=1;
   let previous=1;

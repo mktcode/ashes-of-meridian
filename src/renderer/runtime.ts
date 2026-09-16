@@ -779,7 +779,7 @@
           g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, size, size, g.RED, g.UNSIGNED_BYTE, data);
         }
       }
-      render(time: number) {
+      render(time: number, modelTime = time) {
         let g = this.gl;
         this.frame++;
         this.drawCalls = 0;
@@ -835,6 +835,7 @@
         g.uniform1f(this.uniform(this.program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_fogOn'), this.fogOn ? 1 : 0);
         g.uniform1f(this.uniform(this.program, 'u_time'), time);
+        g.uniform1f(this.uniform(this.program, 'u_portalTime'), this.quality > 0 && !this.cinema ? modelTime : 0);
         g.activeTexture(g.TEXTURE0);
         g.bindTexture(g.TEXTURE_2D, this.shadowTex);
         g.uniform1i(this.uniform(this.program, 'u_shadow'), 0);

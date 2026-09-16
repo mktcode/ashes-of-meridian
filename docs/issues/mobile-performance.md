@@ -53,6 +53,7 @@ Auf dem Pixel 7 zunächst denselben reproduzierbaren Abschnitt getrennt mit High
 - GPU-Zeit von Schatten-, Szenen-, Bloom- und Postpass, soweit `EXT_disjoint_timer_query_webgl2` verfügbar ist,
 - eingereichte statische Dreiecke/Instanzen je Pass, sichtbare dynamische Instanzen und Uploadbytes,
 - Renderzielgröße, gewählte MSAA-Samplezahl und Kontextverlustereignis,
-- Desert gegenüber Alien Planet und Mothership bei vergleichbarer Kamera und Armee.
+- Desert gegenüber Alien Planet und Mothership bei vergleichbarer Kamera und Armee,
+- mehrere sichtbare Veiled-Court-Processional-Gates: das neue Portalmaterial berechnet verzerrtes Rauschen pro Fragment (auch eingefroren in Performance). Der lokale Chromium-Check bestätigt Shaderkompilierung und zeitabhängige Pixel ohne WebGL-Fehler, nicht die GPU-Kosten auf dem Pixel 7.
 
 Desktop-, Software-WebGL- und Node-Prüfungen ersetzen diese Echtgerätemessung nicht. Ein 60-FPS-Limit oder automatische Qualitätswahl nicht vorab als qualitätsneutral ausgeben.

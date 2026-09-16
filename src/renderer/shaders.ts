@@ -2,6 +2,8 @@
     'use strict';
     // Effect-only material; no texture or changes to the embedded material catalog.
     const CONTACT_SHADOW_MATERIAL = -1;
+    // Dedicated procedural surface; frozen variant is used for previews and Performance.
+    const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3;
     // Pixel rectangles (left, top, right, bottom) in the 1254² Desert WebP atlases.
     // Keep a transparent margin around each motif; the plant sheet is not a regular grid.
     const GROUND_DECOR_ATLAS = {
@@ -29,6 +31,7 @@ void main(){vec4 p=a_model*vec4(a_pos,1.);v_pos=p.xyz;
 vec3 textureScale=max(vec3(length(a_model[0].xyz),length(a_model[1].xyz),length(a_model[2].xyz)),vec3(.00001));
 v_modelPos=a_pos*textureScale;
 if(a_material==${CONTACT_SHADOW_MATERIAL}.)v_modelPos=a_pos;
+if(a_material==${PORTAL_MATERIAL}.||a_material==${PORTAL_STILL_MATERIAL}.)v_modelPos=a_pos;
 v_modelN=a_normal/textureScale;
 vec3 normal=a_normal;if(a_material>3.5)normal/=vec3(dot(a_model[0].xyz,a_model[0].xyz),dot(a_model[1].xyz,a_model[1].xyz),dot(a_model[2].xyz,a_model[2].xyz));v_n=normalize(mat3(a_model)*normal);v_col=vec4(a_color.rgb*a_tint,a_color.a);v_glow=a_glow;v_shadow=u_light*p;v_mat=a_material;gl_Position=u_vp*p;}`;
     const FRAG = `#version 300 es
@@ -38,7 +41,7 @@ in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in
 in vec3 v_modelPos;in vec3 v_modelN;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform float u_groundPixelsPerMeter;uniform float u_groundMirror;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
-uniform sampler2D u_rockTex;uniform float u_rockScale;
+uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;
 out vec4 frag;
 float shadow(){if(u_shadowOn<.5||v_glow>1.)return 1.;vec3 p=v_shadow.xyz/v_shadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float bias=max(u_shadowBias*2.5*(1.-dot(normalize(v_n),normalize(vec3(-64.,110.,43.)))),u_shadowBias);float s=0.;vec2 texel=1./vec2(textureSize(u_shadow,0));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)s+=p.z-bias>texture(u_shadow,p.xy+vec2(x,y)*texel).r?.36:1.;return s/9.;}
 float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
@@ -88,11 +91,37 @@ vec3 finishLighting(vec3 color){
  color*=(peak-over+over/(1.+over/.35))/max(peak,.0001);
  return mix(color,color*color*(3.-2.*color),.10);
 }
+// Smooth value noise and domain warping, evaluated only on the gate membrane.
+// Fixed octave budget, no texture reads, particles, CPU geometry or simulation RNG.
+float veilHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float veilNoise(vec2 p){
+ vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+ return mix(mix(veilHash(i),veilHash(i+vec2(1,0)),f.x),mix(veilHash(i+vec2(0,1)),veilHash(i+vec2(1,1)),f.x),f.y);
+}
+float veilCloud(vec2 p){return veilNoise(p)*.57+veilNoise(p*2.03+7.1)*.29+veilNoise(p*4.07-3.4)*.14;}
+vec3 veilSurface(vec2 p,float time){
+ vec2 drift=vec2(time*.12,-time*.24);
+ vec2 warp=vec2(veilCloud(p*1.35+drift),veilCloud(p*1.35-drift+9.7));
+ float cloud=veilCloud(p*2.1+warp*2.8+drift);
+ float fold=sin(p.y*6.5+p.x*2.4+warp.x*9.+cloud*7.-time*1.8);
+ float threads=pow(.5+.5*fold,12.)*smoothstep(.3,.75,cloud);
+ float edge=pow(clamp(abs(p.x)/1.12,0.,1.),5.);
+ vec3 hue=v_col.rgb;
+ return mix(hue*.16,hue*1.18,smoothstep(.16,.86,cloud))
+       +mix(hue,vec3(.85,.66,1.),.45)*(threads*.95+edge*.22);
+}
 void main(){
  if(v_mat==${CONTACT_SHADOW_MATERIAL}.){
   float mask=1.-smoothstep(.05,1.,length(v_modelPos.xz*2.));
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
   frag=vec4(.025,.035,.045,v_col.a*mask*mix(1.,smoothstep(.35,.8,sight),u_fogOn));return;
+ }
+ if(v_mat==${PORTAL_MATERIAL}.||v_mat==${PORTAL_STILL_MATERIAL}.){
+  vec3 lit=finishLighting(veilSurface(v_modelPos.xy,v_mat==${PORTAL_MATERIAL}.?u_portalTime:0.));
+  float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
+  lit*=mix(1.,mix(.16,1.,sight),u_fogOn);
+  float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);
+  frag=vec4(mix(lit,u_haze,mist),v_col.a);return;
  }
  vec3 n=normalize(v_n);vec3 base=v_col.rgb;if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
 vec3 light=normalize(vec3(-64.,110.,43.));float nd=max(dot(n,light),0.);float sh=shadow();

@@ -270,7 +270,7 @@
                 renderEntity(R, e, time);
               }
             }
-            R.render(time);
+            R.render(time, ui.view === 'game' && game.s ? game.s.time : 0);
             ui.drawOverlay(overlayContext);
           } catch (error) {
             failed = true;

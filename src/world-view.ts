@@ -132,7 +132,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
             Math.sin(phase + (e.faction === FACTION_ID.THIRD ? ly * 3 - lz * 2 : lx * .7))) : glow,
           a,
           layer,
-          m
+          m === PORTAL_MATERIAL && !animated ? PORTAL_STILL_MATERIAL : m
         );
       };
       const ring: ModelRing = (radius, h, color = team, a = 0.7, rx = 0, ry = 0, glow = 1.2) =>
@@ -235,7 +235,8 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
           // Other Choir buildings retain the shared mound, including in build previews.
           if (e.type !== 'hq') p('choirMound', 0, 0, 0, s, 1, s, ghost ? 0x68717d : options.tint || 0x70523b,
             0, 0, 0, 0, alpha, options.material ?? MAT.ROCK);
-        } else {
+        } else if (!(e.faction === FACTION_ID.THIRD && e.type === 'barracks')) {
+          // The processional gate owns its angular feet and ramp, without a circular dais.
           p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
           p('ring', 0, 0.33, 0, s * 1.03, 0.1, s * 1.03, team, 0, 0, 0, 0.4);
         }
