@@ -24,14 +24,12 @@ Die erste Meldung entspricht dem `webglcontextlost`-Pfad in `src/app.ts`; beim R
 
 ## Kleine qualitätsneutrale Kandidaten
 
-Ein erstes lokales Paket ist umgesetzt: dauerhaft leere Instanzbuckets verursachen keine wiederholten Null-Uploads mehr, der Übergang belegt → leer wird weiterhin einmal hochgeladen; der periodische HUD-Pfad dupliziert die ohnehin frameweise Queue-Aktualisierung nicht mehr; bereits typisierte Geometriedaten werden ohne vollständige zweite CPU-Kopie an WebGL übergeben. Renderer-/UI-Regressionen sichern diese Verträge ab. Die verbleibenden Kandidaten sind keine pauschale Implementierungsfreigabe:
+Zwei lokale Pakete sind umgesetzt: dauerhaft leere Instanzbuckets verursachen keine wiederholten Null-Uploads mehr, der Übergang belegt → leer wird weiterhin einmal hochgeladen; der periodische HUD-Pfad dupliziert die ohnehin frameweise Queue-Aktualisierung nicht mehr; bereits typisierte Geometriedaten werden ohne vollständige zweite CPU-Kopie an WebGL übergeben. Auswahlprüfungen in 3D- und Overlaydurchlauf verwenden je Frame ein Set, Floating Text außerhalb eines sicheren Randpuffers wird nicht gezeichnet, und der flache Grundboden bleibt im Szenenpass, wird aber nicht mehr als wirkungsloser Schatten-Caster eingereicht. Renderer-/UI-Regressionen sichern diese Verträge ab. Die verbleibenden Kandidaten sind keine pauschale Implementierungsfreigabe:
 
 1. **Ruhende Ansichten:** vollständiges Battlefield-Rendering bei Pause, Settings, Ergebnis und verborgenem Tab aussetzen bzw. ereignisgesteuert neu zeichnen. Aktives Gameplay bleibt unverändert.
-2. **Effekt-Culling:** Offscreen-Effekte und Floating Text anhand ihrer tatsächlichen Segment-/Radius-/Höhenbounds verwerfen; große Ringe, Strahlen und Schatteneinfluss dürfen nicht sichtbar aufpoppen.
-3. **Auswahl-Lookups:** wiederholte `selected.includes(id)`-Prüfungen in 3D- und Overlaydurchlauf pro Frame über ein Set abwickeln.
-4. **Redundante Schattenframes:** die Schattenkarte wiederverwenden, solange Casterzustand, Karte, Qualität und Kamera-/Lichtprojektion unverändert sind. Vollständige Invalidierung ist Voraussetzung.
-5. **Unnötige Schatten-Caster:** das flache Basisterrain nicht in den Depth-Pass schicken; Relief und andere echte Caster bleiben erhalten.
-6. **Texturresidenz:** kartenspezifische Texturen erst für die aktuelle Karte hochladen und bei Kartenwechsel kontrolliert freigeben. Entitätsmaterialien, `file://` und ein artefaktfreier synchronisierter Übergang bleiben Pflicht.
+2. **Effekt-Culling:** weitere Offscreen-Effekte anhand ihrer tatsächlichen Segment-/Radius-/Höhenbounds verwerfen; große Ringe, Strahlen und Schatteneinfluss dürfen nicht sichtbar aufpoppen.
+3. **Redundante Schattenframes:** die Schattenkarte wiederverwenden, solange Casterzustand, Karte, Qualität und Kamera-/Lichtprojektion unverändert sind. Vollständige Invalidierung ist Voraussetzung.
+4. **Texturresidenz:** kartenspezifische Texturen erst für die aktuelle Karte hochladen und bei Kartenwechsel kontrolliert freigeben. Entitätsmaterialien, `file://` und ein artefaktfreier synchronisierter Übergang bleiben Pflicht.
 
 ## Größere qualitätsneutrale Richtung
 

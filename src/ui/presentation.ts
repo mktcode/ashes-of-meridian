@@ -118,6 +118,7 @@
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,
           s = g.s!;
+        const selectedIds = this.selectionIds();
         ctx.font = '10px ui-monospace,Consolas,monospace';
         ctx.textAlign = 'center';
         if (this.selected.length && this.mode?.kind !== 'build') {
@@ -155,7 +156,7 @@
         }
         for (let e of s.entities) {
           if (e.hp <= 0) continue;
-          let selected = this.selected.includes(e.id),
+          let selected = selectedIds.has(e.id),
             hover = this.hover === e.id;
           if (!g.visible(e)) continue;
           let damaged = e.hp < e.maxHp * 0.97;
@@ -217,7 +218,7 @@
         }
         for (let f of g.effects.floats) {
           let p = this.R.project(f.x, f.y, f.z);
-          if (!p) continue;
+          if (!p || p.x < v.left - 40 || p.x > v.right + 40 || p.y < v.top - 20 || p.y > v.bottom + 20) continue;
           ctx.globalAlpha = f.life / f.maxLife;
           ctx.fillStyle = f.color;
           ctx.font = 'bold 12px ui-monospace,Consolas,monospace';

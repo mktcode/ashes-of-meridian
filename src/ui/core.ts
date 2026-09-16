@@ -23,6 +23,8 @@
       modalKind: string;
       sellBuildingId: number | null;
       selected: number[];
+      selectedLookupSource: number[];
+      selectedLookup: Set<number>;
       tab: UITab;
       attackMove: boolean;
       mode: UIMode | null;
@@ -61,6 +63,8 @@
         this.modalKind = '';
         this.sellBuildingId = null;
         this.selected = [];
+        this.selectedLookupSource = this.selected;
+        this.selectedLookup = new Set();
         this.tab = 'root';
         this.attackMove = false;
         this.mode = null;
@@ -76,6 +80,13 @@
         this.hudClock = 0;
         this.touchPoints = new Map();
         this.bind();
+      }
+      selectionIds() {
+        if (this.selectedLookupSource !== this.selected) {
+          this.selectedLookupSource = this.selected;
+          this.selectedLookup = new Set(this.selected);
+        }
+        return this.selectedLookup;
       }
       persist() {
         this.persistence.saveProfile(this.profile);

@@ -539,10 +539,10 @@
           }
         }
       }
-      drawBatches(map: RenderBatches) {
+      drawBatches(map: RenderBatches, excludedName?: string) {
         let g = this.gl;
         for (let [name, b] of Object.entries(map)) {
-          if (!b.n) continue;
+          if (!b.n || name === excludedName) continue;
           let m = this.meshes[name];
           if (!m) continue;
           g.bindVertexArray(m.vao);
@@ -667,7 +667,8 @@
           g.uniformMatrix4fv(this.uniform(this.depthProg, 'u_vp'), false, this.lightVP);
           g.enable(g.POLYGON_OFFSET_FILL);
           g.polygonOffset(1.5, 2);
-          this.drawBatches(this.static);
+          // The flat ground receives shadows in the scene pass but cannot cast a visible one itself.
+          this.drawBatches(this.static, 'terrain');
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
         }

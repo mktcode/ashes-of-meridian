@@ -319,6 +319,11 @@ test('selection deduplicates IDs and excludes missing entities', () => {
   h.ui.audio.sound = () => {}; h.ui.renderActions = () => {};
   h.UI.prototype.select.call(h.ui, [1, 1, 99]);
   assert.deepEqual(Array.from(h.ui.selected), [1]);
+  const lookup = h.ui.selectionIds();
+  assert.strictEqual(h.ui.selectionIds(), lookup, 'unchanged selection reuses its lookup');
+  h.ui.selected = [2];
+  assert.notStrictEqual(h.ui.selectionIds(), lookup);
+  assert.deepEqual(Array.from(h.ui.selectionIds()), [2]);
 });
 
 test('successful targeting clears the mode; failed placement allows retry', () => {
@@ -933,17 +938,23 @@ test('only the Rally point button arms placement; a following normal tap deselec
   }
 });
 
-test('rally and order overlays read target coordinates without mutating state or consuming RNG',()=>{
+test('overlays use selection lookups and cull distant floating text without mutating state or RNG',()=>{
   const h=buildingPanel(),g=h.ui.game;
   h.b.rally={x:12,z:23};
   g.s.entities.push({id:8,team:0,kind:'unit',hp:100,x:2,z:3,order:{type:'move',x:10,z:20}});
-  h.ui.selected=[7,8];g.visible=()=>false;
+  h.ui.selected=[7,8];h.ui.selected.includes=()=>{throw Error('Linear selection lookup');};g.visible=()=>false;
+  g.effects.floats=[
+    {x:100,y:1,z:100,text:'inside',color:'#fff',life:1,maxLife:1},
+    {x:2000,y:1,z:100,text:'outside',color:'#fff',life:1,maxLife:1}
+  ];
   g.random=()=>{throw Error('Overlay consumed simulation RNG');};
-  const before=JSON.stringify(g.s),paths=[];
+  const before=JSON.stringify(g.s),paths=[],texts=[];
   const ctx={clearRect(){},save(){},restore(){},setLineDash(){},
-    beginPath(){},moveTo(x,y){paths.push(['from',x,y]);},lineTo(x,y){paths.push(['to',x,y]);},stroke(){}};
+    beginPath(){},moveTo(x,y){paths.push(['from',x,y]);},lineTo(x,y){paths.push(['to',x,y]);},stroke(){},
+    fillText(text){texts.push(text);}};
   h.ui.drawOverlay(ctx);
   assert.deepEqual(paths.filter(p=>p[0]==='to'),[['to',12,23],['to',10,20]]);
+  assert.deepEqual(texts,['inside']);
   assert.equal(JSON.stringify(g.s),before);
 });
 

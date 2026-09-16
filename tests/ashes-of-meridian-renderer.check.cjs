@@ -175,7 +175,7 @@ function setup(options = {}) {
     frame: 0, shadowSize: 1536, shadowBias: .00022, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
     program: 'scene', depthProg: 'shadow', skyProg: 'sky', postProg: 'post', shadowFbo: 'shadow-target',
     upload() {}, uniform(p, name) { return name; },
-    drawBatches(batch) { calls.push(['batch', batch, program, draw]); }
+    drawBatches(batch, excludedName) { calls.push(['batch', batch, program, draw, excludedName]); }
   });
   Object.defineProperty(r.canvas, 'getBoundingClientRect', { value: () => options.viewport ||
     ({ left: 0, top: 0, width: context.innerWidth, height: context.innerHeight }) });
@@ -417,6 +417,10 @@ test('bloom uses two quarter-size targets, three ordered passes and a clean allo
 
 test('scene geometry and blended effects resolve exactly once before post-processing', () => {
   const h = setup(); h.r.resize(); h.calls.length = 0; h.r.render(1);
+  assert.equal(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[4], 'terrain',
+    'flat ground is not submitted as a shadow caster');
+  assert.equal(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'scene')[4], undefined,
+    'flat ground remains in the visible scene');
   const resolve = h.calls.findIndex(c => c[0] === 'resolve');
   assert.equal(h.calls.filter(c => c[0] === 'resolve').length, 1);
   assert.deepEqual(h.calls[resolve], ['resolve', h.r.sceneMSAAFbo, h.r.sceneFbo,

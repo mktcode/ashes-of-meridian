@@ -129,6 +129,7 @@
           worldView.sync(world);
           R.camera(s.cam.x, s.cam.z, s.cam.zoom);
           R.fogOn = true;
+          const selectedIds = ui.selectionIds();
           for (let e of s.entities) {
             if (e.hp <= 0) continue;
             let idx = world.idx(e.x, e.z),
@@ -141,7 +142,7 @@
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))
               continue;
             renderEntity(R, e, t);
-            let selected = ui.selected.includes(e.id),
+            let selected = selectedIds.has(e.id),
               hover = ui.hover === e.id;
             if (selected || hover) {
               let col =
