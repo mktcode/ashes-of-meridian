@@ -93,6 +93,36 @@ for(const [faction,type,min,max,budget,instances,primary] of specs) test(`factio
   assert.equal(loaded.length-empty.length,type==='worker'?1:0,'cargo is only drawn for loaded workers');
 });
 
+test('Tender walks on alternating tripods with visible foot travel and freezes when walk stops',()=>{
+  const h=modelHarness(), e={id:37,kind:'unit',type:'worker',faction:1,team:0,hp:100,size:.65,x:0,z:0,rot:0,carry:10};
+  vm.runInContext('Math.random = seeded = () => { throw Error("Gait RNG"); }; for(const key of Object.keys(geom)) geom[key]=()=>{throw Error("Gait geometry allocation");};',h.context);
+  const draw=walk=>h.draw({...e,walk}), legs=calls=>calls.filter(c=>c[0]==='choirTenderLeg');
+  // Center of the baked foot tip, transformed by the recorded hip yaw/roll.
+  const toe=c=>{
+    const x=.38*Math.cos(c[10])+.43*Math.sin(c[10]), y=.38*Math.sin(c[10])-.43*Math.cos(c[10]);
+    return [c[1]+x*Math.cos(c[8])+.04*Math.sin(c[8]),c[2]+y,c[3]-x*Math.sin(c[8])+.04*Math.cos(c[8])];
+  };
+  const start=draw(0), half=draw(Math.PI/7), forward=legs(draw(Math.PI/14)), back=legs(draw(3*Math.PI/14));
+  assert.equal(legs(start).length,6);
+  const lifted=calls=>legs(calls).map((c,i)=>toe(c)[1]>.12?i:-1).filter(i=>i>=0);
+  assert.deepEqual(lifted(start),[1,3,5],'left middle and right outer legs swing together');
+  assert.deepEqual(lifted(half),[0,2,4],'opposite tripod supports the return stroke');
+  for(let i=0;i<6;i++) {
+    assert.ok(Math.abs(toe(forward[i])[2]-toe(back[i])[2])>.35,'clearly visible fore/aft travel, not just a tiny tilt');
+    assert.deepEqual(forward[i].slice(1,4),back[i].slice(1,4),'hips stay attached to the body');
+  }
+  const stanceStart=legs(draw((Math.PI-.3)/7)), stanceEnd=legs(draw((Math.PI+.3)/7));
+  for(const i of [1,3,5]) assert.ok(toe(stanceEnd[i])[2]<toe(stanceStart[i])[2],'planted feet push backward while the body advances along +Z');
+  for(let i=0;i<=32;i++) {
+    const calls=draw(i*Math.PI/112);
+    assert.ok(legs(calls).filter(c=>toe(c)[1]<.04).length>=3,'at least three supporting feet throughout the cycle');
+    assert.ok(legs(calls).every(c=>toe(c)[1]>=.029 && toe(c)[1]<.24),'no buried or excessively lifted foot tips');
+    assert.deepEqual(calls.filter(c=>c[0]!=='choirTenderLeg'),start.filter(c=>c[0]!=='choirTenderLeg'),'body, baskets, cargo and tools stay unchanged');
+  }
+  assert.deepEqual(h.draw({...e,walk:.4},{},0),h.draw({...e,walk:.4},{},9),'no time-driven treadmill when stationary');
+  assert.deepEqual(draw(undefined),start,'missing preview walk defaults to a finite pose');
+});
+
 test('new unit catalog has fourteen distinct assemblies and deliberately different flight animation',()=>{
   const h=modelHarness(), signatures=new Set();
   for(const [faction,type] of specs) {

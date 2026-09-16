@@ -63,8 +63,11 @@
       p('choirTenderBody',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) p('choirTenderBasket',s*.4,.68,-.35,1,1,1,metal);
       for(const s of [-1,1]) for(let i=0;i<3;i++) {
-        const step=Math.sin((e.walk||0)*7+i*2.1+s)*.13;
-        p('choirTenderLeg',s*.25,.46,-.5+i*.4,1,1,1,dark,s<0?Math.PI:0,step,0);
+        // Alternating tripods: fore/aft sweep around the hip, with clearance on the return stroke.
+        // Mirrored hips need opposite yaw, but the same local roll lifts both sets of feet.
+        const phase=(e.walk||0)*7+((i+(s<0?1:0))%2)*Math.PI,
+          swing=-Math.sin(phase)*.55, lift=Math.max(0,Math.cos(phase))*.42;
+        p('choirTenderLeg',s*.25,.46,-.5+i*.4,1,1,1,dark,(s<0?Math.PI:0)+s*swing,0,lift);
       }
       for(const s of [-1,1]) p('octa',s*.2,.63,.91,.065,.055,.035,team,0,0,0,.5);
       if((e.carry||0)>0) p('choirTenderCargo',0,0,0,1,1,1,c(0xdcb670));
