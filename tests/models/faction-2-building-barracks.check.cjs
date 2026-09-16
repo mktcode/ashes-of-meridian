@@ -8,17 +8,37 @@ const { createRendererStub } = require('../helpers/renderer-stub.cjs');
 test('faction 2 barracks: swept pylons, split arch, ramp and bounded cached veil meshes', () => {
   checkBuilding({
     faction: 2, type: 'barracks', mesh: 'faction2BarracksHull', height: 5.5,
-    min: [-2.73, .06, -1.85], max: [2.73, 5.681, 2.722],
-    minTriangles: 1200, maxTriangles: 1300, maxInstances: 12, totalTriangles: 1600,
+    min: [-2.75, .06, -1.92], max: [2.75, 5.681, 2.722],
+    minTriangles: 1300, maxTriangles: 1400, maxInstances: 12, totalTriangles: 1700,
     features: [
       { name: 'sloped production ramp', min: [-1, .1, 2.4], max: [1, .5, 2.73], vertices: 20 },
       { name: 'tall twin spires', min: [-2.2, 4.5, -.75], max: [2.2, 5.7, .4], vertices: 80 }
     ],
     extraMeshes: [
       { mesh: 'faction2BarracksPortal', min: [-1.12, .74, -.22], max: [1.12, 4.85, -.22], minTriangles: 9, maxTriangles: 9 },
-      { mesh: 'faction2BarracksRibbons', min: [-1.661, .415, -1.2], max: [1.661, 5.195, 2.7], minTriangles: 140, maxTriangles: 140 }
+      { mesh: 'faction2BarracksRibbons', min: [-1.792, .415, -1.2], max: [1.792, 5.195, 2.7], minTriangles: 168, maxTriangles: 168 }
     ]
   });
+});
+
+test('gate terraces follow a notched outline rather than rectangular slabs', () => {
+  const h=modelHarness(), meshes={};
+  h.EntityModels.upload({meshes,geometry(name,data){meshes[name]=data;}});
+  const data=meshes.faction2BarracksHull;
+  const covered=(x,z)=>{
+    for(let i=0;i<data.length;i+=27) {
+      const p=[0,9,18].map(k=>data.slice(i+k,i+k+3));
+      if(!p.every(v=>Math.abs(v[1]-.45)<1e-8)) continue;
+      const cross=p.map((a,k)=>{const b=p[(k+1)%3];return (b[0]-a[0])*(z-a[2])-(b[2]-a[2])*(x-a[0]);});
+      if(cross.every(v=>v>=-1e-8)||cross.every(v=>v<=1e-8)) return true;
+    }
+    return false;
+  };
+  for(const side of [-1,1]) {
+    assert.ok(covered(side*1.72,-.12), 'inset floor beneath each pylon');
+    assert.ok(!covered(side*2.5,.9), 'outer corner is cut away');
+    assert.ok(!covered(side*1.0,1.5), 'front notch is not filled by a slab');
+  }
 });
 
 test('gate membrane stays fixed; surface animation respects previews, quality, opacity and construction', () => {
