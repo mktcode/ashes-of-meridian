@@ -51,6 +51,7 @@ type RenderEntity = Pick<EntityBase, 'id' | 'kind' | 'type' | 'x' | 'z' | 'hp' |
 interface EntityModelContext {
   entity: RenderEntity;
   time: number;
+  animated: boolean;
   part: ModelPart;
   ring: ModelRing;
   metal: number; dark: number; team: number; accent: number;

@@ -235,14 +235,14 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
           // Other Choir buildings retain the shared mound, including in build previews.
           if (e.type !== 'hq') p('choirMound', 0, 0, 0, s, 1, s, ghost ? 0x68717d : options.tint || 0x70523b,
             0, 0, 0, 0, alpha, options.material ?? MAT.ROCK);
-        } else if (!(e.faction === FACTION_ID.THIRD && (e.type === 'barracks' || e.type === 'factory'))) {
-          // Court production portals own angular feet and ramps, without a circular dais.
+        } else if (!(e.faction === FACTION_ID.THIRD && ['barracks','depot','factory'].includes(e.type))) {
+          // Court portals and the accumulator own angular foundations, without a circular dais.
           p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
           p('ring', 0, 0.33, 0, s * 1.03, 0.1, s * 1.03, team, 0, 0, 0, 0.4);
         }
         const model = EntityModels.find(e);
         if (model) {
-          model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+          model.render({ entity: e, time, animated, part: p, ring, metal, dark, team, accent, baseRotation: rot,
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {
@@ -271,7 +271,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       }
       const model = EntityModels.find(e);
       if (model) {
-        model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+        model.render({ entity: e, time, animated, part: p, ring, metal, dark, team, accent, baseRotation: rot,
           surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         return;
       }
