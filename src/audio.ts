@@ -240,7 +240,7 @@
         );
         this.effectsGain!.gain.setTargetAtTime(this.settings.sfx ? 1 : 0, this.ctx.currentTime, 0.05);
         const infantryShotVolume = this.settings.sfx
-          ? Math.max(0, Math.min(1, this.settings.volume)) * 0.35
+          ? Math.max(0, Math.min(1, this.settings.volume)) * 0.22
           : 0;
         for (const shot of this.infantryShots) shot.volume = infantryShotVolume;
         this.syncBattleTrack();
