@@ -319,6 +319,15 @@ test('lighting profiles override shader colors without additional textures or re
   assert.doesNotMatch(contact,/shadow\(|u_metalTex|u_groundTex/);
 });
 
+test('menu camera keeps its gentle orbit at the increased rate', () => {
+  const h = setup(), speed = vm.runInContext('CINEMA_ORBIT_SPEED', h.context);
+  assert.equal(speed, .04);
+  h.r.resize();
+  h.r.camera(0, 0, 65, true, Math.PI / (2 * speed));
+  assert.ok(Math.abs(h.r.eye[0] - 70) < 1e-9);
+  assert.ok(Math.abs(h.r.eye[2] - 78) < 1e-9);
+});
+
 test('fitted shadow projection covers ground and elevated view corners at zoom limits and different viewport shapes',()=>{
   for(const receiverHeight of [undefined,46]) for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
     const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context);

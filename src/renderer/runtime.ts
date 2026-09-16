@@ -4,6 +4,7 @@
       sun: [1.10, .96, .82], sky: [.38, .47, .56], bounce: [.20, .23, .27]
     };
     const STATIC_CHUNK_SIZE = 32;
+    const CINEMA_ORBIT_SPEED = .04;
     // Standalone model previews also render without a BattlefieldView.
     const DEFAULT_TERRAIN_RENDER_PROFILE: BattlefieldRenderProfile = {
       groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14, haze: [0.055, 0.09, 0.13],
@@ -701,7 +702,7 @@
         let viewHeight = zoom * this.viewport.height / innerHeight;
         let target = cinema ? [0, 7, -4] : [x, 0, z];
         this.eye = cinema
-          ? [62 + Math.sin(t * 0.025) * 8, 24, 78 + Math.cos(t * 0.025) * 5]
+          ? [62 + Math.sin(t * CINEMA_ORBIT_SPEED) * 8, 24, 78 + Math.cos(t * CINEMA_ORBIT_SPEED) * 5]
           : [x, zoom * 1.1, z + zoom * 0.82];
         let view = M4.look(this.eye, target),
           proj = cinema
