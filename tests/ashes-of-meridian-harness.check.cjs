@@ -220,7 +220,7 @@ test('light shots use the approved recording with throttled overlapping voices',
   const h = setupAudio(), { audio, plays, settings } = h, shots = h.tracks.slice(1);
   assert.equal(shots.length, 5);
   assert.ok(shots.every(shot => shot.src === './audio/sfx-infantry-shot.wav'));
-  assert.ok(shots.every(shot => Math.abs(shot.volume - .0616) < 1e-12));
+  assert.ok(shots.every(shot => Math.abs(shot.volume - .0448) < 1e-12));
   const asset = readFileSync(join(__dirname, '..', 'audio', 'sfx-infantry-shot.wav'));
   assert.equal(asset.subarray(0, 4).toString('ascii'), 'RIFF');
   assert.ok(asset.length > 1000);
@@ -236,7 +236,7 @@ test('light shots use the approved recording with throttled overlapping voices',
   assert.equal(shots[1].playCount, 1, 'successive shots may overlap');
 
   settings.volume = .4; audio.updateSettings();
-  assert.ok(shots.every(shot => Math.abs(shot.volume - .088) < 1e-12));
+  assert.ok(shots.every(shot => Math.abs(shot.volume - .064) < 1e-12));
   settings.sfx = false; audio.updateSettings();
   assert.ok(shots.every(shot => shot.volume === 0));
   audio.ctx.currentTime += 1; audio.sound('shot', false); await h.flush();
