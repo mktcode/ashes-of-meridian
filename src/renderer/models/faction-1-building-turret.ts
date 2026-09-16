@@ -1,48 +1,66 @@
-/* Fraktion 1 / building / turret. Thorn spire: nested growth collars and four narrow thorn-support leaves. */
+/* Verdant Choir / Thorn spire — a rooted seed cannon with a long hollow thorn barrel. */
 'use strict';
 (() => {
-  function hull() {
-    const out: number[]=[], s=1.7, h=5.8, cone=geom.cylinder(7,0), collar=geom.cylinder(8), octa=geom.octa(),
-      dark=[.48,.58,.58], edge=[1.2,1.22,1.12];
-    const part=(mesh: number[],x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[],ry=0,rx=0,rz=0)=>ModelMesh.bake(out,mesh,{x,y,z,sx,sy,sz,tint,ry,rx,rz});
-    const shell=(x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[])=>ModelMesh.lobedShell(out,{x,y,z,sx,sy,sz,lobes:3,segments:12,rings:6,tint});
-    ModelMesh.lobedShell(out,{x:0,y:h*.44,z:0,sx:s*.8,sy:h*.57,sz:s*.78});
-    // Six old root positions and lean angles, now with growth rings baked once.
-    const root: number[]=[];
-    ModelMesh.bake(root,cone,{sx:.5,sy:2,sz:.5,tint:dark});
-    for(const y of [-.6,-.05,.45]) ModelMesh.bake(root,collar,{y,sx:(1-y)*.25+.035,sy:.075,sz:(1-y)*.25+.035,tint:edge});
-    for(let i=0;i<6;i++) {
-      const a=i*Math.PI/3;
-      ModelMesh.bake(out,root,{x:Math.sin(a)*s*.8,y:.7,z:Math.cos(a)*s*.8,ry:a,rx:.25,rz:.42});
-    }
-    // Six segmented meridian ribs sit just above the shell, like overlapping chitin seams.
-    for(let i=0;i<6;i++) for(let j=0;j<6;j++) {
-      const a=(i+.5)*Math.PI/3;
-      const point= (b: number) =>{const r=Math.sin(b)*(1-.055*Math.sin(b))+.04;
-        return [Math.cos(a)*s*.8*r,h*.44+Math.cos(b)*h*.57,Math.sin(a)*s*.78*r];};
-      const [x,y,z]=point(.62+j/6*1.82),[u,v,w]=point(.62+(j+1)/6*1.82),dx=u-x,dy=v-y,dz=w-z;
-      part(octa,(x+u)/2,(y+v)/2,(z+w)/2,.055,Math.hypot(dx,dy,dz)/2+.012,.055,edge,Math.atan2(dx,dz),Math.atan2(Math.hypot(dx,dz),dy));
-    }
-    for(let j=0;j<3;j++) part(collar,0,h-.35+j*.3,0,.62-j*.08,.14,.62-j*.08,edge);
-    for(let i=0;i<4;i++) {
-      const a=i*Math.PI/2;
-      part(octa,Math.sin(a)*.61,h*.73,Math.cos(a)*.61,.15,h*.25,.25,edge,a,.14);
+  const bark=[.48,.58,.52],leaf=[1.12,1.28,.78],edge=[1.3,1.18,.82],throat=[.34,.39,.34];
+  function rod(out: number[],a: number[],b: number[],radius: number,tint: number[],top=1) {
+    const d=b.map((v,i)=>v-a[i]),length=Math.hypot(...d);
+    ModelMesh.bake(out,geom.cylinder(10,top),{x:(a[0]+b[0])/2,y:(a[1]+b[1])/2,z:(a[2]+b[2])/2,
+      sx:radius,sy:length,sz:radius,rx:Math.acos(d[1]/length),ry:Math.atan2(d[0],d[2]),tint});
+  }
+  function shell(out: number[],x: number,y: number,z: number,sx: number,sy: number,sz: number,tint: number[],lobes=4) {
+    ModelMesh.lobedShell(out,{x,y,z,sx,sy,sz,lobes,segments:20,rings:8,depth:.04,tint});
+  }
+  // Thick, recessed muzzle along +Y; the complete emitter is rotated onto +Z when baked into the head.
+  function cup() {
+    const out: number[]=[],n=20,height=2.25,base=.29,rim=.5,
+      point=(r: number,y: number,i: number)=>[Math.cos(i*Math.PI*2/n)*r,y,Math.sin(i*Math.PI*2/n)*r],
+      quad=(a: number[],b: number[],c: number[],d: number[],t: number[])=>{geom.tri(out,a,b,c,t);geom.tri(out,a,c,d,t);};
+    for(let i=0;i<n;i++) {
+      const j=(i+1)%n,a=point(base,0,i),b=point(base,0,j),c=point(rim,height,j),d=point(rim,height,i),
+        e=point(rim*.68,height,i),f=point(rim*.68,height,j),g=point(base*.44,.34,j),h=point(base*.44,.34,i);
+      quad(a,d,c,b,edge);quad(d,e,f,c,[1.42,1.2,.78]);quad(e,h,g,f,throat);
+      geom.tri(out,[0,.34,0],g,h,throat);geom.tri(out,[0,0,0],a,b,bark);
     }
     return out;
   }
+  function hull() {
+    const out: number[]=[];
+    shell(out,0,.38,0,1.48,.46,1.48,bark,5);
+    for(let i=0;i<6;i++) {
+      const a=i*Math.PI/3;
+      rod(out,[Math.sin(a)*1.25,.28,Math.cos(a)*1.25],[Math.sin(a)*.38,1.42,Math.cos(a)*.38],.16,bark,.62);
+    }
+    rod(out,[0,.55,0],[0,2.72,0],.38,bark,.72);
+    shell(out,0,2.5,0,.78,.48,.78,leaf,4);
+    // Four upward leaves form an unmistakable gun cradle rather than a decorative spire.
+    for(const side of [-1,1]) {
+      rod(out,[side*.32,2.2,-.12],[side*.92,3.08,.18],.1,edge,.35);
+      rod(out,[side*.3,2.14,-.22],[side*1.02,2.72,-.72],.08,leaf,.25);
+    }
+    return out;
+  }
+  function weapon() {
+    const out: number[]=[];
+    shell(out,0,0,-.35,.83,.66,1.08,leaf,5);
+    ModelMesh.bake(out,cup(),{x:0,y:.05,z:.42,rx:Math.PI/2});
+    // Paired guard thorns visually point in the same firing direction as the open barrel.
+    for(const side of [-1,1]) {
+      rod(out,[side*.58,.05,-.08],[side*.76,.16,1.72],.105,edge,.12);
+      rod(out,[side*.55,.22,-.42],[side*.86,.42,-.9],.09,bark,.08);
+    }
+    return out;
+  }
+  function bud() {const out: number[]=[];shell(out,0,0,0,.22,.28,.22,[1,1,1],4);return out;}
   registerEntityModel({
-    id:'faction-1/building/turret', meshes:{faction1TurretHull:hull},
-    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
-      const s=e.size||3, h=5.8;
-      p('faction1TurretHull',0,0,0,s/1.7,1,s/1.7,metal);
-      p('octa',0,h*.77,0,s*.5,h*.65,s*.5,dark,.3);
-      for(let i=0;i<6;i++) {
-        const a=i*Math.PI/3;
-        p('sphere',Math.sin(a)*s*.8*.8,h*.63,Math.cos(a)*s*.8*.8,.45,.8,.45,team,a,0,.3,.28);
-      }
-      // Preserve the original phase, bob, colors and frequency; drawing consumes no RNG.
-      p('octa',0,h+Math.sin(time+e.id)*.14,0,s*.3,1.3,s*.3,accent,time*.22,0,0,.85);
-      p('cone',0,h+1.2,0,.4,2,.4,accent,0,0,0,.5);
+    id:'faction-1/building/turret',meshes:{faction1TurretHull:hull,faction1TurretWeapon:weapon,faction1TurretBud:bud},
+    render({entity:e,time,part:p,metal,dark,team,accent,baseRotation,surfaceColor}) {
+      const scale=(e.size||1.7)/1.7,aim=(e.rot??baseRotation)-baseRotation,
+        muzzle=(distance: number)=>[Math.sin(aim)*distance*scale,3.23,Math.cos(aim)*distance*scale];
+      p('faction1TurretHull',0,0,0,scale,1,scale,metal);
+      p('faction1TurretWeapon',0,3.18,0,scale,1,scale,dark,aim);
+      const bud=muzzle(2.57),rim=muzzle(2.74);
+      p('faction1TurretBud',bud[0],bud[1],bud[2],.78,.78,.78,surfaceColor(team),aim,0,0,.72+.08*Math.sin(time*2+e.id));
+      p('ring',rim[0],rim[1],rim[2],.34,.34,.34,accent,aim,Math.PI/2,0,.7);
     }
   });
 })();

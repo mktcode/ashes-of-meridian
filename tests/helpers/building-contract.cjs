@@ -4,7 +4,7 @@ const { modelHarness, assertMesh } = require('./model-contract.cjs');
 
 // Every remaining building owns a small declarative test specification, not a runtime model DSL.
 function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangles,
-  maxInstances = 36, totalTriangles = 3000, features = [], height, extraMeshes = [] }) {
+  maxInstances = 36, totalTriangles = 3000, features = [], height, extraMeshes = [], legacyChoirEffects = true }) {
   const h = modelHarness(), id = `faction-${faction}/building/${type}`, d = h.BUILDINGS[type];
   vm.runInContext('Math.random = seeded = () => { throw Error("Building mesh/draw RNG"); };', h.context);
   const upload = () => {
@@ -61,7 +61,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
     }
     for (const time of [0,9,20]) {
       const timed = h.draw(state, {}, time), accent = team ? 0xffaf87 : f.accent;
-      if (faction === 1) {
+      if (faction === 1 && legacyChoirEffects) {
         assert.deepEqual(timed.find(c => c[0]==='octa' && c[11]===.85),
           ['octa',12,(height+Math.sin(time+e.id)*.14)*build,-7,d.size*.3,1.3*build,d.size*.3,accent,yaw+time*.22,0,0,.85,1,'dynamic',h.MAT.BIO]);
         if (type === 'hangar') assert.deepEqual(timed.find(c => c[0]==='ring' && c[13]==='effects' && c[2]===height*.9),
@@ -84,7 +84,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
       if (faction === 0 && type === 'hq') assert.equal(timed.find(c => c[0]==='cone')[8],yaw+time*.13);
     }
   }
-  if ((faction > 0 || type === 'depot') && !(faction === 2 && type === 'turret'))
+  if ((faction > 0 || type === 'depot') && !(faction >= 1 && type === 'turret'))
     assert.deepEqual(h.draw({ ...e, rot: -2.1 }), normal, 'no new targeting mode');
   if (faction === 0 && type === 'depot') assert.deepEqual(h.draw(e, {}, 0), normal, 'static cargo modules');
   if (faction === 0 && type === 'turret') for (const rot of [-2.1,0,.7,3.14]) {

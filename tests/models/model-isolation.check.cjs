@@ -52,11 +52,11 @@ test('requested entity redesigns preserve every unrelated unit and building draw
   // Redesigned bodies have independent geometry, assembly and animation checks.
   // Retain their old digests above; do not regenerate any unrelated reference.
   for (const id of Object.keys(expected)) if (id.includes('/unit/') ||
-    ['faction-1/building/barracks','faction-1/building/depot','faction-1/building/hq',
+    ['faction-1/building/barracks','faction-1/building/depot','faction-1/building/hangar','faction-1/building/hq','faction-1/building/turret',
       'faction-2/building/barracks','faction-2/building/depot','faction-2/building/refinery','faction-2/building/factory','faction-2/building/hangar','faction-2/building/hq','faction-2/building/turret'].includes(id)) {
     assert.notEqual(actual[id], expected[id], 'requested refinement has its own geometry/variant test');
     delete actual[id]; delete expected[id];
   }
-  assert.equal(Object.keys(actual).length, 11);
+  assert.equal(Object.keys(actual).length, 9);
   assert.deepEqual(actual, expected);
 });
