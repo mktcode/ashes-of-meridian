@@ -97,7 +97,8 @@ test('embedded ground textures preserve the canonical WebP bytes without convers
   for (const [key, file] of Object.entries({
     ground: 'texture-ground-dirt-base.webp',
     rockClusters: 'texture-ground-rock-clusters.webp',
-    desertShrubs: 'texture-ground-desert-shrubs.webp'
+    desertShrubs: 'texture-ground-desert-shrubs.webp',
+    alienGrowth: 'texture-ground-alien-growth.webp'
   })) {
     const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
     assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
@@ -534,6 +535,7 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
   assert.equal((w.extent/BATTLEFIELDS.desert.size.extent)**2,2.25);
   assert.equal(w.definition.render.groundTexture,'bio');assert.equal(w.definition.render.groundMirror,true);
   assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
+  assert.ok(w.definition.render.alienDecor.density>0&&w.definition.render.alienDecor.opacity>0);
   const edge=p=>Math.max(Math.abs(p.position[0]),Math.abs(p.position[2])),
     trees=p.filter(p=>p.mesh.startsWith('alienTree')||p.mesh==='alienSapling'),
     interior=trees.filter(p=>edge(p)<135),exterior=trees.filter(p=>edge(p)>135),

@@ -9,6 +9,7 @@ const textures = [
   ['desertRock', 'assets/textures/texture-rock-desert.webp'],
   ['rockClusters', 'assets/textures/texture-ground-rock-clusters.webp'],
   ['desertShrubs', 'assets/textures/texture-ground-desert-shrubs.webp'],
+  ['alienGrowth', 'assets/textures/texture-ground-alien-growth.webp'],
   ['metal', 'assets/textures/texture-floor-mothership.webp'],
   ['bio', 'assets/textures/texture-floor-alien-planet.webp']
 ];

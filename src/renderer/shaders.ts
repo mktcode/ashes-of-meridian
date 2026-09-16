@@ -4,8 +4,8 @@
     const CONTACT_SHADOW_MATERIAL = -1;
     // Dedicated procedural surface; frozen variant is used for previews and Performance.
     const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3;
-    // Pixel rectangles (left, top, right, bottom) in the 1254² Desert WebP atlases.
-    // Keep a transparent margin around each motif; the plant sheet is not a regular grid.
+    // Pixel rectangles (left, top, right, bottom) in the 1254² WebP atlases.
+    // Keep a transparent margin around each motif; the Desert plant sheet is not a regular grid.
     const GROUND_DECOR_ATLAS = {
       rockClusters: [
         [63,88,264,264], [400,64,609,301], [702,112,874,233], [994,92,1181,271],
@@ -17,6 +17,12 @@
         [21,101,412,451], [433,87,841,444], [899,124,1224,429],
         [48,458,431,839], [450,491,786,825], [836,461,1221,838],
         [29,860,310,1183], [317,845,584,1166], [613,892,906,1175], [941,873,1237,1191]
+      ],
+      alienPlants: [
+        [0,0,314,314], [314,0,627,314], [627,0,940,314], [940,0,1254,314],
+        [0,314,314,627], [314,314,627,627], [627,314,940,627], [940,314,1254,627],
+        [0,627,314,940], [314,627,627,940], [627,627,940,940], [940,627,1254,940],
+        [0,940,314,1254], [314,940,627,1254], [627,940,940,1254], [940,940,1254,1254]
       ]
     };
     const VERT = `#version 300 es
@@ -39,7 +45,7 @@ precision highp float;
 precision highp int;
 in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in float v_mat;
 in vec3 v_modelPos;in vec3 v_modelN;
-uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform float u_groundPixelsPerMeter;uniform float u_groundMirror;uniform vec4 u_groundDecor;
+uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_alienGrowthTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform float u_groundPixelsPerMeter;uniform float u_groundMirror;uniform vec4 u_groundDecor;uniform vec2 u_alienDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;
 out vec4 frag;
@@ -84,6 +90,22 @@ vec4 groundDecor(sampler2D tex,vec2 world,bool shrubs){
  vec2 uv=(rect.xy+clamp(local*pixels,vec2(.5),pixels-.5))/1254.;
  return textureLod(tex,uv,lod);
 }
+vec4 alienGrowth(vec2 world){
+ if(u_alienDecor.x<=0.)return vec4(0.);
+ float spacing=5.2;
+ vec2 p=world/spacing,cell=floor(p);
+ vec4 r=decorRandom(cell,32452843u);
+ vec4 rect=alienPlantsRects[int(r.z*${GROUND_DECOR_ATLAS.alienPlants.length}.)];
+ vec2 pixels=rect.zw-rect.xy;
+ vec2 span=pixels/max(pixels.x,pixels.y)*mix(.42,.57,r.w);
+ vec2 local=(fract(p)-(.5+(r.xy-.5)*.35))/span+.5;
+ vec2 dx=dFdx(p)/span*pixels,dy=dFdy(p)/span*pixels;
+ float lod=clamp(log2(max(max(length(dx),length(dy)),1.)),0.,1.);
+ if(any(lessThan(local,vec2(0.)))||any(greaterThan(local,vec2(1.)))
+    ||decorRandom(cell,32452867u).x>u_alienDecor.x)return vec4(0.);
+ vec2 uv=(rect.xy+clamp(local*pixels,vec2(.5),pixels-.5))/1254.;
+ return textureLod(u_alienGrowthTex,uv,lod);
+}
 vec3 detail(vec3 base,vec3 tex,float amount){float d=luma(tex);vec3 toned=base*(.68+d*.78);return mix(base,toned*.92+tex*.08,amount);}
 // Hue-preserving highlight shoulder before RGBA8 storage, not a new HDR/post pass.
 vec3 finishLighting(vec3 color){
@@ -127,7 +149,7 @@ void main(){
  }
  vec3 n=normalize(v_n);vec3 base=v_col.rgb;
 float metal=float(v_mat>1.5&&v_mat<2.5),bio=float(v_mat>2.5&&v_mat<3.5),crystal=float(v_mat>4.5&&v_mat<5.5);
-if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
+if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);vec4 growth=alienGrowth(v_pos.xz);base=mix(base,growth.rgb,growth.a*u_alienDecor.y);}}
 // Local-normal variation restores readable facets; a restrained static caustic suggests internal depth.
 if(crystal>.5){
  vec3 localN=normalize(v_modelN);
