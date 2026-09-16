@@ -84,7 +84,8 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
       if (faction === 0 && type === 'hq') assert.equal(timed.find(c => c[0]==='cone')[8],yaw+time*.13);
     }
   }
-  if (faction > 0 || type === 'depot') assert.deepEqual(h.draw({ ...e, rot: -2.1 }), normal, 'no new targeting mode');
+  if ((faction > 0 || type === 'depot') && !(faction === 2 && type === 'turret'))
+    assert.deepEqual(h.draw({ ...e, rot: -2.1 }), normal, 'no new targeting mode');
   if (faction === 0 && type === 'depot') assert.deepEqual(h.draw(e, {}, 0), normal, 'static cargo modules');
   if (faction === 0 && type === 'turret') for (const rot of [-2.1,0,.7,3.14]) {
     const calls = h.draw({ ...e, rot, team: 1 });

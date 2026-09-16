@@ -97,18 +97,33 @@
     part(cyl,0,3.18,.47,.24,.045,.24,0,Math.PI/2);
     return out;
   }
+  const select=(mesh: number[],moving: boolean,split: number)=>{
+    const out: number[]=[];
+    for(let i=0;i<mesh.length;i+=27) {
+      const y=(mesh[i+1]+mesh[i+10]+mesh[i+19])/3;
+      if((y>=split)===moving) out.push(...mesh.slice(i,i+27));
+    }
+    return out;
+  };
+  const baseHull=()=>select(hull(),false,1.4), headHull=()=>select(hull(),true,1.4),
+    baseLights=()=>select(lights(),false,2), headLights=()=>select(lights(),true,2);
   registerEntityModel({
     id:'faction-2/building/turret',
-    meshes:{faction2TurretHull:hull,faction2TurretLights:lights},
-    render({entity:e,time,part:p,metal,dark,team,accent,surfaceColor}) {
-      const s=(e.size||1.7)/1.7;
+    meshes:{faction2TurretHull:baseHull,faction2TurretHead:headHull,
+      faction2TurretLights:baseLights,faction2TurretHeadLights:headLights},
+    render({entity:e,time,part:p,metal,team,accent,surfaceColor,baseRotation}) {
+      const s=(e.size||1.7)/1.7,aim=(e.rot||0)-baseRotation,ac=Math.cos(aim),as=Math.sin(aim),
+        head=(mesh: string,x: number,y: number,z: number,sx: number,sy: number,sz: number,color: number,ry=0,rx=0,glow=0)=>
+          p(mesh,x*ac+z*as,y,-x*as+z*ac,sx,sy,sz,color,aim+ry,rx,0,glow);
       p('faction2TurretHull',0,0,0,s,1,s,metal);
       p('faction2TurretLights',0,0,0,s,1,s,surfaceColor(team),0,0,0,1.15);
-      // Three cyan crystal caps and the suspended violet aether lance.
+      head('faction2TurretHead',0,0,0,s,1,s,metal);
+      head('faction2TurretHeadLights',0,0,0,s,1,s,surfaceColor(team),0,0,1.15);
+      // Capacitor caps stay fixed; breech, lance and rear crystal follow the acquired target.
       for(const side of [-1,1]) p('octa',side*1.19,1.56,1.08,.19,.31,.19,accent,0,0,0,.8);
-      p('octa',0,4.27,-1.08,.27,.43,.27,accent,time*.12,0,0,.85);
-      p('octa',0,3.18,1.34,.25,.21,1.02,team,0,0,0,1.1);
-      p('octa',0,3.18,2.35,.12,.13,.18,accent,0,0,0,.9);
+      head('octa',0,4.27,-1.08,.27,.43,.27,accent,time*.12,0,.85);
+      head('octa',0,3.18,1.34,.25,.21,1.02,team,0,0,1.1);
+      head('octa',0,3.18,2.35,.12,.13,.18,accent,0,0,.9);
     }
   });
 })();
