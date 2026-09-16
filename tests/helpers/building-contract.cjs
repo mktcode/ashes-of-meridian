@@ -48,7 +48,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
     assert.equal(calls.length, normal.length + (progress < 1 ? 5 : 0), 'shared construction scaffold');
     if (faction === 1) assert.deepEqual(calls[0],
       ['choirMound',12,0,-7,d.size,build,d.size,0x70523b,yaw,0,0,0,1,'dynamic',h.MAT.ROCK]);
-    else if (faction === 2 && type === 'barracks') assert.equal(calls[0][0], mesh, 'gate owns its angular foundation');
+    else if (faction === 2 && ['barracks','factory'].includes(type)) assert.equal(calls[0][0], mesh, 'gate owns its angular foundation');
     else assert.deepEqual(calls.slice(0, 2), [
       ['hex',12,.15*build,-7,d.size*1.09,.3*build,d.size*1.09,0x384552,yaw+.12,0,0,0,1,'dynamic',faction===1?h.MAT.BIO:h.MAT.METAL],
       ['ring',12,.33*build,-7,d.size*1.03,.1*build,d.size*1.03,color,yaw,0,0,.4,1,'dynamic',faction===1?h.MAT.BIO:h.MAT.METAL]
@@ -68,7 +68,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
           ['ring',12,height*.9,-7,d.size*.8,1,d.size*.8,accent,0,0,0,1.2,.7,'effects']);
       }
       if (faction === 2) {
-        if (type !== 'barracks') {
+        if (!['barracks','factory'].includes(type)) {
           assert.deepEqual(timed.find(c => c[0]==='octa' && c[11]===.75),
             ['octa',12,height*.79*build,-7,d.size*.21,height*.35*build,d.size*.21,color,yaw+time*.1,0,0,.75,1,'dynamic',h.MAT.METAL]);
           assert.deepEqual(timed.find(c => c[0]==='octa' && c[5]===height*.43*build),
