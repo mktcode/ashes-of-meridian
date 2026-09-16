@@ -242,7 +242,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
         }
         const model = EntityModels.find(e);
         if (model) {
-          model.render({ entity: e, time, animated, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+          model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot,
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {
@@ -271,7 +271,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       }
       const model = EntityModels.find(e);
       if (model) {
-        model.render({ entity: e, time, animated, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+        model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot,
           surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         return;
       }
