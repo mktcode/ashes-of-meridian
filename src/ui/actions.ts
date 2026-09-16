@@ -16,6 +16,7 @@
       'build:hangar': 'assets/portraits/faction-0-building-hangar.webp',
       'build:turret': 'assets/portraits/faction-0-building-turret.webp'
     };
+    const BUILDING_PORTRAIT_ACTIONS = new Set(contentKeys(BUILDINGS).map(type => `build:${type}`));
     const uiActionMethods = {
       center(this: MeridianUI, x: number, z: number) {
         if (!this.game.s) return;
@@ -110,8 +111,13 @@
       },
       actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: {badge?: string | number; disabled?: boolean; cost?: Cost} = {}) {
         const active = this.isModeAction(key), renderedLabel = active ? 'Cancel' : label;
+        const faction = this.game.s?.faction;
         let badge = active ? '' : opts.badge || '',
-          preview = this.game.s?.faction === FACTION_ID.FIRST && FACTION_0_ACTION_PORTRAITS[key];
+          preview = faction === FACTION_ID.FIRST
+            ? FACTION_0_ACTION_PORTRAITS[key]
+            : faction !== undefined && BUILDING_PORTRAIT_ACTIONS.has(key)
+              ? `assets/portraits/faction-${faction}-building-${key.slice('build:'.length)}.webp`
+              : undefined;
         // Fixed renders of the actual models: no additional WebGL scenes in the HUD.
         const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;

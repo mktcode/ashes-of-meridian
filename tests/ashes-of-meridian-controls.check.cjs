@@ -1060,6 +1060,18 @@ test('recruitment delegates producer choice to the simulation, independent of se
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
+test('building actions use the model portrait of the active faction', () => {
+  const h = setup();
+  for (const faction of [0, 1, 2]) {
+    h.ui.game.s.faction = faction;
+    const html = h.UI.prototype.actionButton.call(h.ui, 'build:hq', 'HQ', 'hq');
+    assert.match(html, new RegExp(`assets/portraits/faction-${faction}-building-hq\\.webp`));
+    assert.match(html, /class="action-model"/);
+  }
+  h.ui.game.s.faction = 1;
+  assert.doesNotMatch(h.UI.prototype.actionButton.call(h.ui, 'train:worker', 'Worker', 'worker'), /action-model/);
+});
+
 test('action availability refreshes synchronously without a HUD tick', () => {
   const h = setup(), g = h.ui.game;
   Object.assign(g, { supply: () => 0, cap: () => 24, afford: () => false,
