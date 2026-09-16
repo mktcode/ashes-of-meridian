@@ -16,7 +16,7 @@
       'build:hangar': 'assets/portraits/faction-0-building-hangar.webp',
       'build:turret': 'assets/portraits/faction-0-building-turret.webp'
     };
-    const BUILDING_PORTRAIT_ACTIONS = new Set(contentKeys(BUILDINGS).map(type => `build:${type}`));
+    const BUILDING_PORTRAIT_ACTIONS = new Set(Object.keys(FACTION_0_ACTION_PORTRAITS).filter(key => key.startsWith('build:')));
     const uiActionMethods = {
       center(this: MeridianUI, x: number, z: number) {
         if (!this.game.s) return;
