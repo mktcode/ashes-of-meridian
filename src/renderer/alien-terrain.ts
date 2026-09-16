@@ -2,7 +2,7 @@
 'use strict';
 (() => {
   const bark = [.25,.31,.34], root = [.27,.19,.29], jade = [.39,.58,.52], plum = [.56,.33,.51],
-    rim = [.69,.55,.68], light = [.62,.91,.79], glowCyan = [.82,1.34,1.18], glowPink = [1.36,.52,1.08];
+    rim = [.69,.55,.68], light = [.62,.91,.79];
   const ring = (x: number,y: number,z: number,r: number,n: number,phase=0) => Array.from({length:n},(_,i)=> {
     const a=i*Math.PI*2/n+phase; return [x+Math.cos(a)*r,y,z+Math.sin(a)*r];
   });
@@ -35,24 +35,15 @@
     skin(out,points.map(([x,y,z,r])=>ring(x,y,z,r,n)),[color]);
   }
   function mushroom(out: number[],x: number,z: number,h: number,r: number,phase: number,variant=0) {
-    const dx=Math.cos(phase)*h*.13,dz=Math.sin(phase)*h*.13,cx=x+dx,cz=z+dz;
+    const dx=Math.cos(phase)*h*.13,dz=Math.sin(phase)*h*.13;
     tube(out,[[x,.15,z,r*.25],[x-dx*.2,h*.3,z-dz*.2,r*.14],
-      [x+dx*.5,h*.68,z+dz*.5,r*.13],[cx,h*.85,cz,r*.22]],bark);
+      [x+dx*.5,h*.68,z+dz*.5,r*.13],[x+dx,h*.85,z+dz,r*.22]],bark);
     const colors=variant%3===0?[bark,jade,light,jade,jade,bark]:[root,plum,rim,plum,plum,root];
     const profiles=[[.77,.22],[.8,.82],[.85,1.06],[.89,1.08],[.96,.91],[1.04,.55],[1.08,.055]];
     skin(out,profiles.map(([y,s])=>Array.from({length:16},(_,i)=>{
       const a=i*Math.PI/8+phase, wave=1+.075*Math.sin(a*5+phase);
-      return [cx+Math.cos(a)*r*s*wave,h*(y+Math.sin(a*5+phase)*.012*s),cz+Math.sin(a)*r*s*wave];
+      return [x+dx+Math.cos(a)*r*s*wave,h*(y+Math.sin(a*5+phase)*.012*s),z+dz+Math.sin(a)*r*s*wave];
     })),colors);
-    // Raised luminous gills remain readable below the broad crown at RTS scale.
-    const luminous=variant%2?glowPink:glowCyan;
-    for(let i=0;i<6;i++) {
-      const a=phase+i*Math.PI/3,side=.04*r,tx=-Math.sin(a)*side,tz=Math.cos(a)*side,
-        ix=cx+Math.cos(a)*r*.24,iz=cz+Math.sin(a)*r*.24,
-        ox=cx+Math.cos(a)*r*.74,oz=cz+Math.sin(a)*r*.74,
-        p=[ix+tx,h*.766,iz+tz],q=[ix-tx,h*.766,iz-tz],s=[ox+tx,h*.794,oz+tz],t=[ox-tx,h*.794,oz-tz];
-      geom.tri(out,p,s,t,luminous);geom.tri(out,p,t,q,luminous);
-    }
     // Buttress roots make the base look anchored rather than balanced on a stick.
     for(let i=0;i<3;i++) {
       const a=phase+i*Math.PI*2/3,rx=Math.cos(a)*r,rz=Math.sin(a)*r;
@@ -84,8 +75,7 @@
         p=[x+Math.sin(a)*l*.13,.08,z-Math.cos(a)*l*.13],
         q=[x-Math.sin(a)*l*.13,.08,z+Math.cos(a)*l*.13],
         r=[x+Math.cos(a)*l,.62*l,z+Math.sin(a)*l];
-      const color=i%2?glowPink:glowCyan;
-      geom.tri(out,p,r,q,color);geom.tri(out,q,r,p,color.map(v=>v*.62));
+      geom.tri(out,p,r,q,light);geom.tri(out,q,r,p,rim.map(v=>v*.7));
     }
     const base=ring(x,.08,z,scale*.11,4,phase+Math.PI/4),top=[x,.28*scale,z];
     for(let i=0;i<4;i++) {
@@ -94,9 +84,7 @@
   }
   function spore(out: number[],x: number,z: number,h: number,r: number) {
     tube(out,[[x,0,z,r*.22],[x+r*.3,h*.7,z,r*.15],[x,h,z,r*.4]],jade,5);
-    skin(out,[[h*.74,r*.5],[h,r],[h*1.25,r*.15]].map(([y,s])=>ring(x,y,z,s,7)),[jade,glowCyan,plum]);
-    const crown=ring(x,h*1.05,z,r*.72,7,Math.PI/7),heart=[x,h*1.31,z];
-    for(let i=0;i<7;i++)geom.tri(out,heart,crown[(i+1)%7],crown[i],i%2?glowPink:glowCyan);
+    skin(out,[[h*.74,r*.5],[h,r],[h*1.25,r*.15]].map(([y,s])=>ring(x,y,z,s,7)),[jade,light,plum]);
   }
   function bed(out: number[],m: Pick<WorldTerrainFeature, "x" | "z" | "outline">,height=.55) {
     const n=m.outline.length, rows=[];
