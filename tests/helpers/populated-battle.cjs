@@ -1,7 +1,7 @@
 // Explicit developed-base fixture for production, repair, crowd and effect tests.
 // This is not the game's starting loadout or an alternative runtime start mode.
 function populateBase(game, workers = 5) {
-  const faction = game.s.faction, random = game.random, blocked = game.world.blocked;
+  const faction = game.s.parties[0].faction, random = game.random, blocked = game.world.blocked;
   try {
     // Fixture entities must not shift the battle/effect RNG entry point.
     game.random = () => .5;
@@ -31,8 +31,8 @@ function populateBase(game, workers = 5) {
     Object.assign(e, p);
   }
   // Developed-base scenarios use an explicit economy independent of start balance.
-  game.s.teams[0].alloy = 1100;
-  game.s.teams[0].gas = 400;
+  game.s.parties[0].account.alloy = 1100;
+  game.s.parties[0].account.gas = 400;
   game.rehash();
   game.world.reveal(game.s.entities);
 }

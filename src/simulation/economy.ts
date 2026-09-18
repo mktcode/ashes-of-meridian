@@ -18,7 +18,7 @@
           180,
           this.alive(e => e.team === team && e.kind === 'building' && e.progress >= 1).reduce(
             (a, e) => a + ((BUILDINGS[e.type as BuildingType] as BuildingDefinitionShape).cap || 0),
-            team === 0 ? (this.s!.meta.logisticsFrame || 0) * FLEET_EFFECTS.supply : 0
+            (this.party(team).meta.logisticsFrame || 0) * FLEET_EFFECTS.supply
           )
         );
       },
@@ -195,12 +195,12 @@
         let c = this.cost(type, 'building', team);
         if (!this.spend(c, team)) return false;
         let b = this.spawnBuilding(type, p.x, p.z, team, this.factionFor(team), { progress: 0.06, paid: c });
-        const workshopKey = team === 0 ? 'fieldWorkshop' : 'enemyFieldWorkshop',
-          workshop = this.benefitsFor(team).fieldWorkshop && !this.s!.triggers[workshopKey],
-          buildRate = 1 + (team === 0 ? (this.s!.meta.constructionProtocols || 0) * FLEET_EFFECTS.constructionSpeed : 0) + (workshop ? EXPEDITION_EFFECTS.workshopSpeed : 0);
+        const party = this.party(team),
+          workshop = party.benefits.fieldWorkshop && !party.fieldWorkshopUsed,
+          buildRate = 1 + (party.meta.constructionProtocols || 0) * FLEET_EFFECTS.constructionSpeed + (workshop ? EXPEDITION_EFFECTS.workshopSpeed : 0);
         // Add both bonuses to base speed once; changing builders never changes the foundation.
         if (buildRate !== 1) b.buildRate = buildRate;
-        if (workshop) this.s!.triggers[workshopKey] = true;
+        if (workshop) party.fieldWorkshopUsed = true;
         b.hp = b.maxHp * 0.06;
         if (type === 'refinery')
           b.gasId = this.closest(p, e => e.type === 'gas' && e.kind === 'resource')?.id;
@@ -356,7 +356,7 @@
               this.finishOrder(e);
             }
           } else if (b.hp < b.maxHp && this.account(team).alloy > 0.1) {
-            const repairFactor = 1 - (team === 0 ? (s.meta.repairLogistics || 0) * FLEET_EFFECTS.repairDiscount : 0),
+            const repairFactor = 1 - (this.party(team).meta.repairLogistics || 0) * FLEET_EFFECTS.repairDiscount,
               amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10 / repairFactor);
             b.hp += amount;
             this.account(team).alloy -= amount * .1 * repairFactor;

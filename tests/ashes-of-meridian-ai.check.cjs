@@ -72,7 +72,7 @@ test('baseline starts are symmetric for all faction pairings, with separate acco
 
 test('both teams pay faction prices, reserve supply, use real producer queues and cannot cancel foreign orders',()=>{
   for(let faction=0;faction<3;faction++)for(const team of [0,1]) {
-    const {g}=battle(faction,faction);g.s.ai={};
+    const {g}=battle(faction,faction);g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });
     const h=own(g,team,'hq')[0],other=json(g.account(1-team));
     const b=g.spawnBuilding('barracks',h.x+(team?-12:12),h.z,team,faction);g.world.rebuild(g.s.entities);
     Object.assign(g.account(team),{alloy:1000,gas:1000});
@@ -90,7 +90,7 @@ test('both teams pay faction prices, reserve supply, use real producer queues an
 });
 
 test('enemy worker income and refinery income belong to its account, without passive HQ money',()=>{
-  const {g}=battle();g.s.ai={};const before=json(g.account(0));
+  const {g}=battle();g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });const before=json(g.account(0));
   assert.equal(g.train('worker',1),true);advance(g,65);
   assert.ok(g.account(1).alloy>200);assert.equal(g.account(0).alloy,before.alloy);
   const h=own(g,1,'hq')[0];g.spawnBuilding('refinery',h.x+12,h.z+12,1,2);
@@ -99,24 +99,24 @@ test('enemy worker income and refinery income belong to its account, without pas
 
 test('both observers have fair combat acquisition and copied last-seen memory, not live enemy references',()=>{
   for(const team of [0,1]) {
-    const {g}=battle();g.enableAI(team);g.s.ai[1-team]=undefined;
+    const {g}=battle();g.enableAI(team);g.party(1-team).controller={kind:'human'};
     const h=own(g,team,'hq')[0],e=g.spawnUnit('rifle',h.x+10,h.z,1-team,0);
     g.world.reveal(g.s.entities);g.rehash();g.aiObserve(team);
-    const remembered=json(g.s.ai[team].contacts[e.id]);assert.ok(remembered);assert.equal('queue' in remembered,false);
+    const remembered=json(g.aiFor(team).contacts[e.id]);assert.ok(remembered);assert.equal('queue' in remembered,false);
     g.world.sight[team].visible.fill(0);e.x=0;e.z=0;e.hp-=30;
-    g.aiObserve(team);assert.deepEqual(json(g.s.ai[team].contacts[e.id]),remembered);
+    g.aiObserve(team);assert.deepEqual(json(g.aiFor(team).contacts[e.id]),remembered);
     const u=g.spawnUnit('rifle',2,0,team,0);g.rehash();
     assert.equal(g.acquire(u),null);const order=json(u.order);
     g.command([u.id],{type:'attack',id:e.id,x:e.x,z:e.z},team);assert.deepEqual(json(u.order),order);
     g.world.sight[team].visible[g.world.idx(e.x,e.z)]=255;
     assert.equal(g.acquire(u).id,e.id);g.aiObserve(team);
-    assert.deepEqual([g.s.ai[team].contacts[e.id].x,g.s.ai[team].contacts[e.id].hp],[0,e.hp]);
-    e.x=40;e.z=40;g.aiObserve(team);assert.equal(g.s.ai[team].contacts[e.id],undefined,'vacated visible location invalidates memory');
+    assert.deepEqual([g.aiFor(team).contacts[e.id].x,g.aiFor(team).contacts[e.id].hp],[0,e.hp]);
+    e.x=40;e.z=40;g.aiObserve(team);assert.equal(g.aiFor(team).contacts[e.id],undefined,'vacated visible location invalidates memory');
   }
 });
 
 test('enemy scan does not reveal its target to the player or render a secret marker',()=>{
-  const {g}=battle();g.s.ai={};const before=Array.from(g.world.visible);
+  const {g}=battle();g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });const before=Array.from(g.world.visible);
   assert.equal(g.ability('scan',{x:0,z:0},1),true);
   assert.ok(g.world.sight[1].visible[g.world.idx(0,0)]);assert.deepEqual(Array.from(g.world.visible),before);
   const calls=[],R={add:(...a)=>calls.push(a),beam:(...a)=>calls.push(a)};
@@ -131,7 +131,7 @@ test('enemy scan does not reveal its target to the player or render a secret mar
 
 test('all abilities charge only the acting team, obey cooldown/sight/supply, and use the actor faction',()=>{
   for(let faction=0;faction<3;faction++)for(const team of [0,1])for(const kind of Object.keys(ABILITIES)) {
-    const {g}=battle(faction,faction);g.s.ai={};const p=own(g,team,'hq')[0],other=json(g.account(1-team));
+    const {g}=battle(faction,faction);g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });const p=own(g,team,'hq')[0],other=json(g.account(1-team));
     if(kind==='orbital')g.spawnBuilding('factory',p.x+12,p.z,team,faction);
     const d=ABILITIES[kind];g.account(team).energy=d.energy;
     assert.equal(g.ability(kind,p,team),true);assert.equal(g.account(team).energy,0);
@@ -141,7 +141,7 @@ test('all abilities charge only the acting team, obey cooldown/sight/supply, and
     if(kind==='repair')assert.equal(g.s.fields[0].team,team);
     if(kind==='drop')assert.equal(own(g,team,'rifle').length,4);
   }
-  const {g}=battle();g.s.ai={};g.account(1).energy=100;
+  const {g}=battle();g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });g.account(1).energy=100;
   g.spawnBuilding('factory',own(g,1,'hq')[0].x+12,own(g,1,'hq')[0].z,1,2);
   assert.equal(g.ability('orbital',{x:0,z:0},1),false);assert.equal(g.account(1).energy,100);
   const h=own(g,1,'hq')[0];for(let i=0;i<10;i++)g.spawnUnit('rifle',h.x,h.z+8,1,2);
@@ -150,7 +150,7 @@ test('all abilities charge only the acting team, obey cooldown/sight/supply, and
 
 test('repair and faction healing/bloom benefit or damage the correct side',()=>{
   for(const team of [0,1]) {
-    const {g}=battle(1,1);g.s.ai={};const h=own(g,team,'hq')[0];
+    const {g}=battle(1,1);g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });const h=own(g,team,'hq')[0];
     const friend=g.spawnUnit('tank',h.x+10,h.z,team,1),enemy=g.spawnUnit('tank',h.x+14,h.z,1-team,1);
     friend.hp-=300;enemy.hp-=300;g.rehash();const hp=enemy.hp;
     g.account(team).energy=100;g.spawnBuilding('factory',h.x,h.z-12,team,1);
@@ -170,7 +170,7 @@ test('controller heuristics actually choose all four abilities under appropriate
       for(let i=0;i<3;i++)g.spawnUnit('rifle',h.x+12,h.z+i*2,0,0);
     }
     if(kind==='scan')g.spawnUnit('rifle',h.x-7,h.z,1,2);
-    if(kind==='drop'){g.s.ai[1].mode='attack';g.s.ai[1].squad=[soldier.id];}
+    if(kind==='drop'){g.aiFor(1).mode='attack';g.aiFor(1).squad=[soldier.id];}
     g.account(1).energy=ABILITIES[kind].energy;
     g.world.reveal(g.s.entities);g.rehash();
     const visible=g.aiObserve(1);g.aiAbilities(1,own(g,1),visible,h);
@@ -186,15 +186,15 @@ test('strategy prioritizes remembered economy without following hidden changes a
   refinery.x=-35;refinery.z=40;refinery.hp=1; // Cannot update last-seen information.
   g.random=()=>{throw Error('A strategy observation/order must not sample RNG');};
   g.aiStrategy(1,own(g,1),[],h);
-  assert.equal(g.s.ai[1].mode,'attack');assert.deepEqual(json(g.s.ai[1].goal),{x:0,z:0});
+  assert.equal(g.aiFor(1).mode,'attack');assert.deepEqual(json(g.aiFor(1).goal),{x:0,z:0});
   // No spawn is required for the observer's copied visible threat in this controller-only test.
   g.aiStrategy(1,own(g,1),[{id:999,kind:'unit',type:'tank',team:0,x:h.x-12,z:h.z,hp:520,maxHp:520,progress:1,size:1.3,seenAt:100}],h);
-  assert.equal(g.s.ai[1].mode,'defend');assert.equal(g.s.ai[1].squad.length,0);
+  assert.equal(g.aiFor(1).mode,'defend');assert.equal(g.aiFor(1).squad.length,0);
 });
 
 test('Choir hull and Court shields trigger sustained but bounded recovery, not a one-tick retreat',()=>{
   for(const faction of [1,2]) {
-    const {g}=battle(0,faction),h=own(g,1,'hq')[0],ai=g.s.ai[1];
+    const {g}=battle(0,faction),h=own(g,1,'hq')[0],ai=g.aiFor(1);
     const troops=Array.from({length:8},()=>g.spawnUnit('rifle',0,0,1,faction));
     for(const e of troops) { if(faction===1)e.hp=e.maxHp*.55;else e.shield=0; }
     g.s.time=100;Object.assign(ai,{mode:'attack',squad:troops.map(e=>e.id),launched:8,attackStartedAt:70,goal:{x:-20,z:0}});
@@ -214,7 +214,7 @@ test('Choir hull and Court shields trigger sustained but bounded recovery, not a
 
 test('reassessing an arrived target preserves sortie age and the original loss threshold',()=>{
   for(const exhausted of [true,false]) {
-    const {g}=battle(),h=own(g,1,'hq')[0],ai=g.s.ai[1];
+    const {g}=battle(),h=own(g,1,'hq')[0],ai=g.aiFor(1);
     const troops=Array.from({length:8},()=>g.spawnUnit('rifle',0,0,1,2));
     if(exhausted)troops.forEach(e=>e.shield=0);
     const target={id:999,kind:'unit',type:'rifle',team:0,x:-12,z:-8,hp:150,maxHp:150,progress:1,size:.65,seenAt:100};
@@ -231,7 +231,7 @@ test('reassessing an arrived target preserves sortie age and the original loss t
 });
 
 test('a failed assault temporarily lowers that observed area priority instead of repeating it blindly',()=>{
-  const {g}=battle(),h=own(g,1,'hq')[0],ai=g.s.ai[1];
+  const {g}=battle(),h=own(g,1,'hq')[0],ai=g.aiFor(1);
   for(let i=0;i<12;i++)g.spawnUnit('rifle',h.x-10,h.z+10,1,2);
   ai.contacts={
     901:{id:901,team:0,kind:'building',type:'refinery',x:0,z:0,hp:850,maxHp:850,progress:1,size:2.3,seenAt:500},
@@ -249,12 +249,12 @@ test('occupied known vent does not starve a paid hangar and each plot search rem
   g.spawnBuilding('refinery',gas.x-4,gas.z,1,0,{gasId:gas.id});
   for(const [i,type] of ['barracks','turret','factory'].entries())g.spawnBuilding(type,i*15,0,1,0);
   g.spawnUnit('worker',h.x-7,h.z+3,1,0);g.world.rebuild(g.s.entities);g.world.reveal(g.s.entities);g.aiObserve(1);
-  for(const [id,e] of Object.entries(g.s.ai[1].contacts))if(e.type==='gas'&&e.id!==gas.id)delete g.s.ai[1].contacts[id];
+  for(const [id,e] of Object.entries(g.aiFor(1).contacts))if(e.type==='gas'&&e.id!==gas.id)delete g.aiFor(1).contacts[id];
   Object.assign(g.account(1),{alloy:3000,gas:3000});
   const before=g.account(1).gas;g.aiEconomy(1,own(g,1),h);
   assert.equal(own(g,1,'hangar').length,1);close(g.account(1).gas,before-BUILDINGS.hangar.gas);
   assert.equal(own(g,1,'refinery').length,1);
-  const ai=g.s.ai[1],search=ai.search;
+  const ai=g.aiFor(1),search=ai.search;
   for(let i=0;i<10;i++)assert.equal(g.aiBuild(1,'refinery',h),false);
   assert.equal(ai.search,search,'cooldown skips repeated expensive searches');
   const worker=own(g,1,'worker')[0];g.setOrder(worker,{type:'idle'});
@@ -280,7 +280,7 @@ test('each faction chooses its own build, production and remembered target prior
     assert.deepEqual(trained,[["tank"],["medic"],["air"]][faction]);
     trained.length=0;g.aiProduction(1,own(g,1),[{type:'air'}],0);
     assert.deepEqual(trained,['rifle'],'visible air overrides doctrine');
-    const ai=g.s.ai[1];g.s.time=100;
+    const ai=g.aiFor(1);g.s.time=100;
     for(const [id,type,kind] of [[901,'worker','unit'],[902,'factory','building'],[903,'artillery','unit']])
       ai.contacts[id]={id,type,kind,team:0,x:0,z:0,hp:100,maxHp:100,progress:1,size:1,seenAt:100};
     // Separate equidistant goals so the chosen priority is observable.
@@ -292,7 +292,7 @@ test('each faction chooses its own build, production and remembered target prior
 });
 
 test('autonomous orders retain formation behavior without leaking local command markers',()=>{
-  const {g,events}=battle();g.s.ai={};const h=own(g,0,'hq')[0],goal={x:h.x+35,z:h.z};
+  const {g,events}=battle();g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });const h=own(g,0,'hq')[0],goal={x:h.x+35,z:h.z};
   const units=Array.from({length:16},(_,i)=>g.spawnUnit('tank',h.x+(i%4),h.z+Math.floor(i/4),0,0));
   g.aiOrder(0,units,goal);assert.ok(units.every(u=>u.order.type==='attackMove'));
   for(const u of units){u.x=u.order.x;u.z=u.order.z;g.finishOrder(u);}
@@ -312,13 +312,13 @@ test('real AI replaces a lost builder and completes its paid foundation without 
 });
 
 test('invalid build candidates and a blocked producer neither mint units nor block future controller ticks',()=>{
-  const {g}=battle();g.s.ai={};g.enableAI(1);
+  const {g}=battle();g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });g.enableAI(1);
   const h=own(g,1,'hq')[0];g.spawnUnit('worker',h.x-7,h.z,1,2);g.world.reveal(g.s.entities);
   const before=json(g.account(1));g.world.staticGrid.fill(1);
   assert.equal(g.aiBuild(1,'barracks',h),false);assert.deepEqual(json(g.account(1)),before);
   g.world.staticGrid.fill(0);g.world.rebuild(g.s.entities);g.s.time=4;
   assert.equal(g.aiBuild(1,'barracks',h),true);
-  g.s.ai={};g.train('worker',1);const count=own(g,1,'worker').length,paid=g.account(1).alloy;
+  g.s.parties.forEach(p => { p.controller = { kind: 'human' }; });g.train('worker',1);const count=own(g,1,'worker').length,paid=g.account(1).alloy;
   const original=g.produceUnit;g.produceUnit=()=>null;advance(g,12);
   assert.equal(own(g,1,'worker').length,count);assert.equal(h.queue[0].progress,1);
   g.produceUnit=original;advance(g,5);assert.equal(own(g,1,'worker').length,count+1);
@@ -352,7 +352,7 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
     for(let i=0;i<24000&&!g.s.result;i++) {
       g.step(.05);g.effects.tick(.05);
       if(i%100===0){
-        attacks+=Object.values(g.s.ai).filter(a=>a.mode==='attack').length;
+        attacks+=g.s.parties.map(p=>g.aiFor(p.id)).filter(Boolean).filter(a=>a.mode==='attack').length;
         for(const t of [0,1]){assert.ok(Number.isFinite(g.account(t).alloy)&&g.account(t).alloy>=0);assert.ok(g.account(t).gas>=0);}
         const units=g.alive(e=>e.kind==='unit');
         for(let a=0;a<units.length;a++)for(let b=a+1;b<units.length;b++){
@@ -362,7 +362,7 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
       }
     }
     assert.ok(counts.produced>=10);assert.ok(counts.built>=6);assert.ok(attacks>0);
-    assert.ok(g.s.result,`no result at ${g.s.time}; ${JSON.stringify(g.s.ai)}`);
+    assert.ok(g.s.result,`no result at ${g.s.time}; ${JSON.stringify(g.s.parties.map(p=>p.controller))}`);
   });
 
 for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real economies cross the larger living map and finish a battle`,()=>{
@@ -373,7 +373,7 @@ for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real econo
   for(let i=0;i<36000&&!g.s.result;i++) {
     g.step(.05);g.effects.tick(.05);
     if(i%100===0){
-      attacks+=Object.values(g.s.ai).filter(a=>a.mode==='attack').length;
+      attacks+=g.s.parties.map(p=>g.aiFor(p.id)).filter(Boolean).filter(a=>a.mode==='attack').length;
       for(const team of [0,1])assert.ok(g.account(team).alloy>=0&&g.account(team).gas>=0);
     }
   }
@@ -388,7 +388,7 @@ for(const enemy of [0,1,2]) test(`depth 16 doctrine ${enemy}: paid autonomous ba
   for(let i=0;i<24000&&!g.s.result;i++) {
     g.step(.05);g.effects.tick(.05);
     if(i%100===0) {
-      attacks+=Object.values(g.s.ai).filter(a=>a.mode==='attack').length;
+      attacks+=g.s.parties.map(p=>g.aiFor(p.id)).filter(Boolean).filter(a=>a.mode==='attack').length;
       for(const team of [0,1])assert.ok(g.account(team).alloy>=0&&g.account(team).gas>=0);
     }
   }
@@ -404,7 +404,7 @@ for(const enemy of [0,1,2]) test(`stage 21 benefits vs doctrine ${enemy}: declar
   }
   const benefits={supplyCrate:8,aetherAllocation:4,pioneerSquad:3,commanderMandate:1,surveyDrones:1,fieldWorkshop:1,commandCapacitor:2};
   g.start({seed:1409,faction:(enemy+1)%3,enemy,depth:20,benefits,enemyBenefits});g.enableAI(0);
-  assert.equal(Object.values(g.s.enemyBenefits).reduce((a,b)=>a+b,0),20);
+  assert.equal(Object.values(g.s.parties[1].benefits).reduce((a,b)=>a+b,0),20);
   const counts=audit(g);
   for(let i=0;i<24000&&!g.s.result;i++) {
     g.step(.05);g.effects.tick(.05);

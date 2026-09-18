@@ -101,7 +101,7 @@ try {
       game.rehash();
       game.world.rebuild(game.s.entities);
       game.world.reveal(game.s.entities, [{ team: 0, x: 0, z: 0, r: game.world.extent * 3 }]);
-      game.s.teams[0].alloy = 1280; game.s.teams[0].gas = 420; game.s.teams[0].energy = 88;
+      game.s.parties[0].account.alloy = 1280; game.s.parties[0].account.gas = 420; game.s.parties[0].account.energy = 88;
       game.command(armies[0], { type: 'attackMove', x: 13, z: 0 }, 0, false);
       game.command(armies[1], { type: 'attackMove', x: -13, z: 0 }, 1, false);
       const home = homes[0], length = Math.hypot(home.x, home.z) || 1;

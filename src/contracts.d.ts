@@ -364,8 +364,6 @@ interface BattleResult {
 interface RunTriggers extends Record<string, number | boolean | undefined> {
   baseAlert?: number;
   solar?: number;
-  fieldWorkshop?: boolean;
-  enemyFieldWorkshop?: boolean;
 }
 
 interface AIContact extends Position {
@@ -398,23 +396,28 @@ interface TeamState {
   abilities: Record<AbilityType, number>;
 }
 
+type PartyController = { kind: 'human' } | { kind: 'ai'; state: AIState };
+interface PartyState {
+  id: PlayerTeam;
+  faction: FactionId;
+  account: TeamState;
+  meta: Record<string, number>;
+  benefits: Record<string, number>;
+  controller: PartyController;
+  fieldWorkshopUsed?: boolean;
+}
+
 interface RunState {
   depth: number;
   seed: number;
-  faction: FactionId;
-  enemy: FactionId;
   map: BattlefieldId;
-  meta: Record<string, number>;
-  benefits: Record<string, number>;
-  enemyBenefits: Record<string, number>;
   time: number;
-  teams: [TeamState, TeamState];
+  parties: [PartyState, PartyState];
   nextId: number;
   entities: Entity[];
   scans: Scan[];
   strikes: Strike[];
   fields: Field[];
-  ai: Partial<Record<PlayerTeam, AIState>>;
   stats: RunStats;
   triggers: RunTriggers;
   cam: Position & { zoom: number };

@@ -26,18 +26,22 @@ function aiRulesFor(faction: FactionId, depth: number) {
 }
 const aiMethods = {
   enableAI(this: MeridianGame, team: PlayerTeam) {
-    this.s!.ai[team] = { nextThink: 0, mode: 'bootstrap', contacts: {}, squad: [],
-      attackStartedAt: 0, restStartedAt: 0, launched: 0, search: 0, nextBuild: 0, buildWindowAt: -1, buildAttempts: {}, lastScout: -100 };
+    this.party(team).controller = { kind: 'ai', state: { nextThink: 0, mode: 'bootstrap', contacts: {}, squad: [],
+      attackStartedAt: 0, restStartedAt: 0, launched: 0, search: 0, nextBuild: 0, buildWindowAt: -1, buildAttempts: {}, lastScout: -100 } };
+  },
+  aiFor(this: MeridianGame, team: PlayerTeam): AIState | undefined {
+    const controller = this.party(team).controller;
+    return controller.kind === 'ai' ? controller.state : undefined;
   },
   aiSetMode(this: MeridianGame, team: PlayerTeam, mode: AIState['mode']) {
-    const ai=this.s!.ai[team]!;
+    const ai=this.aiFor(team)!;
     if (ai.mode===mode) return;
     if (mode==='attack') ai.attackStartedAt=this.s!.time;
     else if (ai.mode==='attack' || mode==='recover') ai.restStartedAt=this.s!.time;
     ai.mode=mode;
   },
   aiObserve(this: MeridianGame, team: PlayerTeam): AIContact[] {
-    const s = this.s!, ai = s.ai[team]!, view = this.world!.sight[team], visible: AIContact[] = [];
+    const s = this.s!, ai = this.aiFor(team)!, view = this.world!.sight[team], visible: AIContact[] = [];
     for (const e of s.entities) {
       if (e.hp <= 0 || e.team === team || !this.canSee(team, e)) continue;
       // Copy only observable properties. Never retain an Entity reference or its queue/order.
@@ -69,7 +73,7 @@ const aiMethods = {
       {type:attack?'attackMove':'move',x:p.x,z:p.z},team,false);
   },
   aiBuild(this: MeridianGame, team: PlayerTeam, type: BuildingType, home: BuildingEntity) {
-    const s=this.s!, ai=s.ai[team]!;
+    const s=this.s!, ai=this.aiFor(team)!;
     if ((s.time < ai.nextBuild && ai.buildWindowAt !== s.time) || ai.buildAttempts[type] === s.time ||
       this.canBuild(type,null,team) || !this.afford(this.cost(type,'building',team),team)) return false;
     // One planning window per retry interval; each type can search once in that window.
@@ -138,7 +142,7 @@ const aiMethods = {
       count=(type:UnitType)=>units.filter(e=>e.type===type).length +
         own.reduce((n,e)=>n+e.queue.filter(q=>q.type===type).length,0),
       needAA=visible.some(e=>e.type==='air'),
-      siege=Object.values(this.s!.ai[team]!.contacts).some(e=>e.team!==-1&&e.kind==='building'),
+      siege=Object.values(this.aiFor(team)!.contacts).some(e=>e.team!==-1&&e.kind==='building'),
       choices: UnitType[] = [];
     if (needAA) choices.push('rifle');
     if (units.length>=8 && !count('hero')) choices.push('hero');
@@ -160,7 +164,7 @@ const aiMethods = {
     }
   },
   aiAbilities(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
-    const s=this.s!, ai=s.ai[team]!, rules=aiRulesFor(this.factionFor(team),s.depth),
+    const s=this.s!, ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),s.depth),
       foes=visible.filter(e=>e.team!==-1);
     const ready=(kind:AbilityType)=>!this.abilityRequirement(kind,team) &&
       this.account(team).energy>=ABILITIES[kind].energy && this.account(team).abilities[kind]<=s.time;
@@ -192,7 +196,7 @@ const aiMethods = {
     return [...corners,...world.layout.resourceSites].find(unexplored) || corners[0] || home;
   },
   aiStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
-    const s=this.s!,ai=s.ai[team]!, rules=aiRulesFor(this.factionFor(team),s.depth),
+    const s=this.s!,ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),s.depth),
       foes=visible.filter(e=>e.team!==-1),
       army=own.filter(e=>e.kind==='unit'&&e.type!=='worker'&&!e.exit) as UnitEntity[],
       danger=foes.filter(e=>e.kind==='unit'&&distance(e,home)<30);
@@ -255,7 +259,7 @@ const aiMethods = {
     this.aiOrder(team,pool,rally);
   },
   aiTick(this: MeridianGame, team: PlayerTeam) {
-    const s=this.s!, ai=s.ai[team];
+    const s=this.s!, ai=this.aiFor(team);
     if (!ai || s.result || s.time<ai.nextThink) return;
     ai.nextThink=s.time+AI_RULES.think;
     const own=this.alive(e=>e.team===team), home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;

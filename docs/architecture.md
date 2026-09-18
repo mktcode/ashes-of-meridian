@@ -29,6 +29,8 @@ Teams sind davon unabhängig: 0 ist lokaler Spieler, 1 Gegner, −1 neutral. Kar
 
 ## Teamzustand, Sicht und KI
 
+Der Gefechtszustand bündelt je Partei Fraktion, Konto, kopierte Metaupgrades/Run-Vorteile, Workshop-Verbrauch und Controller. Die Controllerzuordnung besitzt bei KI-Steuerung auch deren Gedächtnis; sie ist unabhängig von der Fraktion und kein zweites paralleles KI-Register. Nur das Einzelspieler-Startrezept weist permanente Profilupgrades der Partei 0 zu, die gemeinsamen Wirtschaftsaktionen lesen die Ausstattung der ausführenden Partei. Das gespeicherte Expeditionsrezept bleibt davon getrennt und unverändert.
+
 Die KI ist ein weiterer Akteur derselben Simulation, keine zweite Wirtschafts-/Kampflogik. Aktionen erhalten das ausführende Team und prüfen Konten, Eigentum, Kosten, Voraussetzungen und Ziele gemeinsam. UI und Ergebnisstatistik bleiben auf Team 0 ausgerichtet; autonome Befehle erzeugen keine lokalen Eingabemarker oder Befehlstöne.
 
 Beide Teams haben eigene Sicht/Erkundung. Die KI speichert nur kopierte beobachtete Kontakte, keine Referenzen auf verborgene Live-Entitäten. Auch Zielerfassung, direkte Angriffe und Effektmarker müssen Sichtgrenzen beachten. Abgesehen von ihren ausdrücklich angekündigten Expeditions-Startvorteilen erhält die KI keine freien Ressourcen/Armeen; strategische Abfragen verbrauchen keinen Simulations-RNG, reguläre Aktionen und Effekte dagegen gegebenenfalls schon. Doktrin und Druckstufe werden aus der Akteursfraktion und der beim Gefechtsstart normalisierten Expeditionstiefe abgeleitet. Sie werden weder zusätzlich gewürfelt noch redundant im Checkpoint gespeichert; direkte Starts ohne Tiefe verwenden 0.
@@ -41,7 +43,7 @@ Bauplanung hat ein gemeinsames Retry-Fenster mit höchstens einer Platzsuche je 
 
 Die KI prüft die vollständige Baufläche zusätzlich auf aktuelle Sicht, bevor der gemeinsame Validator Live-Einheitenkörper und reservierte Produktionsausgänge prüft; dadurch verrät eine Ablehnung keine ungesehene Einheit. Raffineriekandidaten sind die Zentren beobachteter Vents. Spieler dürfen innerhalb des Fangradius ansetzen, aber Vorschau, Validierung und Fundament verwenden dieselbe auf das erkundete Vent eingerastete Position. Dafür stets direkte Entitätspositionen verwenden: Der Kampf-Hash kann innerhalb eines Schritts veraltet sein.
 
-Diese Akteursgrenzen ermöglichen weitere Controller, sind aber kein Netzwerk-, Replay- oder Lockstep-Nachweis. Multiplayertechnik ist nicht vorweg entschieden.
+Diese Akteursgrenzen ermöglichen weitere Controller, sind aber kein Netzwerk-, Replay- oder Lockstep-Nachweis. Parteien-IDs, Startaufstellung, Sichtverwaltung und Siegbedingungen bleiben vorerst auf zwei Parteien begrenzt; lokale Perspektive und Beziehungen sind noch nicht verallgemeinert. Multiplayertechnik und Spielmechanik sind nicht vorweg entschieden; offene Pakete stehen im [Multiplayer-Rahmen](issues/multiplayer-rahmen.md).
 
 ## Welt, Darstellung und Zufall
 

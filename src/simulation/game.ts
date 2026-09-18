@@ -1,6 +1,29 @@
     /* Deterministic fixed-step RTS simulation. Rendering and UI are independent. */
     'use strict';
     const UNIT_BODY_SCALE = 1.4;
+    // Snapshot the single-player recipe without terrain, entities or random draws.
+    function singlePlayerParties(profile: MeridianProfile, opts: BattleOptions): [PartyState, PartyState] {
+      const savedMeta = profile.upgrades || {},
+        meta = Object.fromEntries(
+          (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
+            [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
+        );
+      const party = (id: PlayerTeam, faction: FactionId, upgrades: Record<string, number>, perks: Record<string, number>): PartyState => ({
+        id, faction, meta: upgrades, benefits: perks, controller: { kind: 'human' },
+        account: {
+          alloy: STARTING_ALLOY[upgrades.startingAlloy || 0] + (perks.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy,
+          gas: (perks.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
+          energy: COMMAND_ENERGY.start + (perks.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy,
+          abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+        }
+      });
+      return [
+        party(0, FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
+          meta, normalizedBenefits(opts.benefits)),
+        party(1, FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
+          {}, normalizedBenefits(opts.enemyBenefits))
+      ];
+    }
     class MeridianGame {
       profile: MeridianProfile;
       emit: GameEventSink;
@@ -44,34 +67,20 @@
     }
     const gameMethods = {
       start(this: MeridianGame, opts: BattleOptions = {}) {
-        let faction: FactionId = FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
-          enemy: FactionId = FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
-          map = battlefieldId(opts.map),
-          layout = BATTLEFIELDS[map].layout,
-          savedMeta = this.profile.upgrades || {},
-          meta = Object.fromEntries(
-            (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
-              [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
-          ),
-          benefits = normalizedBenefits(opts.benefits), enemyBenefits = normalizedBenefits(opts.enemyBenefits),
-          seed = opts.seed || Math.floor(Math.random() * 1e8),
-          playerAlloy = STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy;
+        const parties = singlePlayerParties(this.profile, opts),
+          [{ faction, meta, benefits }, { faction: enemy }] = parties,
+          map = battlefieldId(opts.map), layout = BATTLEFIELDS[map].layout,
+          seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.world = new Battlefield(seed, map);
         this.world.startSites = battlefieldStartSites(this.world);
         const [playerStart, enemyStart] = this.startingPositions(seed);
         this.s = {
-          seed, faction, enemy, map, meta, benefits, enemyBenefits,
+          seed, map,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
           time: 0,
-          teams: [benefits, enemyBenefits].map((perks, team) => ({
-            alloy: team === 0 ? playerAlloy : STARTING_ALLOY[0] + (perks.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy,
-            gas: (perks.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
-            energy: COMMAND_ENERGY.start + (perks.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy,
-            abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
-          })) as [TeamState, TeamState],
+          parties,
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
-          ai: {},
           stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
           cam: { x: playerStart.x + 5, z: playerStart.z - 2, zoom: 57 },
@@ -136,7 +145,7 @@
         return s;
       },
       benefitsFor(this: MeridianGame, team: PlayerTeam): Record<string, number> {
-        return team === 0 ? this.s!.benefits : this.s!.enemyBenefits;
+        return this.party(team).benefits;
       },
       startingPositions(this: MeridianGame, seed: number): [Position, Position] {
         // Separate stream: replayable corner assignment never shifts terrain/resources/effects RNG.
@@ -206,9 +215,10 @@
       spawnResource(this: MeridianGame, type: ResourceType, x: number, z: number, amount: number) {
         return this.spawn('resource', type, x, z, -1, FACTION_ID.FIRST, { amount, size: type === 'gas' ? 1.5 : 1.3 });
       },
-      account(this: MeridianGame, team: PlayerTeam = 0): TeamState { return this.s!.teams[team]; },
+      party(this: MeridianGame, team: PlayerTeam = 0): PartyState { return this.s!.parties[team]; },
+      account(this: MeridianGame, team: PlayerTeam = 0): TeamState { return this.party(team).account; },
       factionFor(this: MeridianGame, team: PlayerTeam = 0): FactionId {
-        return team === 0 ? this.s!.faction : this.s!.enemy;
+        return this.party(team).faction;
       },
       notify(this: MeridianGame, team: PlayerTeam, ...event: GameEvent) {
         if (team === 0) this.emit(...event);

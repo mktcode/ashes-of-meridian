@@ -206,7 +206,7 @@
                   col = ok ? 0x99e4c6 : 0xf39989;
                 renderEntity(
                   R,
-                  createBuildingPreview(type, foundation, s.faction),
+                  createBuildingPreview(type, foundation, s.parties[0].faction),
                   t,
                   { tint: col, alpha: 0.3, layer: 'effects' }
                 );
@@ -218,7 +218,7 @@
                   kind === 'scan'
                     ? 32
                     : kind === 'orbital'
-                      ? s.faction === FACTION_ID.THIRD
+                      ? s.parties[0].faction === FACTION_ID.THIRD
                         ? 8
                         : 10
                       : kind === 'repair'

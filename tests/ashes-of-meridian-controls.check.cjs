@@ -85,7 +85,8 @@ function setup() {
   }
   const game = {
     world: { extent: 90, gridSize: 72, cellSize: 2.5 },
-    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [], faction: 0, meta: {}, teams: [{alloy:0,gas:0,energy:100,abilities:{}}] },
+    s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [],
+      parties: [{id:0,faction:0,meta:{},benefits:{},controller:{kind:'human'},account:{alloy:0,gas:0,energy:100,abilities:{}}}] },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
@@ -421,7 +422,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
 
 test('speed changes are transient, pause-guarded and preserve commands and RNG', () => {
   const h = setup(), g = h.ui.game;
-  Object.assign(g.s.teams[0], { alloy: 100, gas: 0, energy: 100, abilities: {} });
+  Object.assign(g.s.parties[0].account, { alloy: 100, gas: 0, energy: 100, abilities: {} });
   Object.assign(g, { supply: () => 0, cap: () => 24 });
   h.ui.updateHUD = h.UI.prototype.updateHUD;
   h.UI.prototype.bind.call(h.ui);
@@ -681,7 +682,7 @@ test('upgrades after a result preserve the ended battle and do not replay its so
 
 test('permanent upgrades spend recovered aether, remain bounded and do not alter the active battle', () => {
   const h = setup(), keys = ['startingAlloy', 'startingWorkers'];
-  h.ui.game.s.meta = {}; h.ui.game.s.teams[0].alloy = 123; h.ui.game.s.teams[0].gas = 45;
+  h.ui.game.s.parties[0].meta = {}; h.ui.game.s.parties[0].account.alloy = 123; h.ui.game.s.parties[0].account.gas = 45;
   h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
   h.ui.profile.aether = 99;
   h.ui.buyUpgrade('startingAlloy'); assert.deepEqual(h.ui.profile.upgrades, {});
@@ -694,7 +695,7 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   h.ui.buyUpgrade('not-an-upgrade');
   assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 5, aetherEvacuation: 1, startingWorkers: 5 });
   assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 11);
-  assert.deepEqual([h.ui.game.s.teams[0].alloy,h.ui.game.s.teams[0].gas,h.ui.game.s.meta], [123,45,{}]);
+  assert.deepEqual([h.ui.game.s.parties[0].account.alloy,h.ui.game.s.parties[0].account.gas,h.ui.game.s.parties[0].meta], [123,45,{}]);
 });
 
 test('each result transfers floored unused aether once, using the run-start evacuation limit through 1,000', () => {
@@ -703,7 +704,7 @@ test('each result transfers floored unused aether once, using the run-start evac
     const h = setup(), saves = [];
     h.ui.persistence.saveProfile = p => saves.push(JSON.parse(JSON.stringify(p)));
     h.ui.showResult = () => {};
-    h.ui.game.s.faction = 2; h.ui.game.s.teams[0].gas = gas; h.ui.game.s.meta = { aetherEvacuation: level };
+    h.ui.game.s.parties[0].faction = 2; h.ui.game.s.parties[0].account.gas = gas; h.ui.game.s.parties[0].meta = { aetherEvacuation: level };
     h.ui.event('result', { win: true });
     assert.equal(h.ui.resultAetherRecovered, recovered);
     assert.equal(h.ui.profile.aether, recovered);
@@ -1063,12 +1064,12 @@ test('recruitment delegates producer choice to the simulation, independent of se
 test('building actions use the model portrait of the active faction', () => {
   const h = setup();
   for (const faction of [0, 1, 2]) {
-    h.ui.game.s.faction = faction;
+    h.ui.game.s.parties[0].faction = faction;
     const html = h.UI.prototype.actionButton.call(h.ui, 'build:hq', 'HQ', 'hq');
     assert.match(html, new RegExp(`assets/portraits/faction-${faction}-building-hq\\.webp`));
     assert.match(html, /class="action-model"/);
   }
-  h.ui.game.s.faction = 1;
+  h.ui.game.s.parties[0].faction = 1;
   assert.doesNotMatch(h.UI.prototype.actionButton.call(h.ui, 'train:worker', 'Worker', 'worker'), /action-model/);
 });
 
@@ -1076,7 +1077,7 @@ test('action availability refreshes synchronously without a HUD tick', () => {
   const h = setup(), g = h.ui.game;
   Object.assign(g, { supply: () => 0, cap: () => 24, afford: () => false,
     abilityRequirement: key => key === 'orbital' ? 'TECH' : '' });
-  g.s.teams[0].energy = 32;
+  g.s.parties[0].account.energy = 32;
   const panels = ['abilityBar', 'actions'].map(id => h.document.getElementById(id));
   // Model innerHTML replacement: each render creates fresh, initially enabled buttons.
   for (const panel of panels) {
@@ -1116,7 +1117,7 @@ test('action availability refreshes synchronously without a HUD tick', () => {
   h.UI.prototype.setMode.call(h.ui, 'ability', 'scan');
   check();
   const previous = panels[0].buttons;
-  g.s.teams[0].energy = 0;
+  g.s.parties[0].account.energy = 0;
   h.ui.renderActions();
   assert.equal(panels[0].buttons, previous, 'unchanged markup is retained');
   assert.equal(panels[0].buttons.find(b => b.dataset.action === 'ability:scan').disabled, false,
@@ -1127,7 +1128,7 @@ test('action availability refreshes synchronously without a HUD tick', () => {
 
 test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
   const h = buildingPanel(), g = h.ui.game;
-  Object.assign(g.s.teams[0],{alloy:1000,gas:1000,energy:100,abilities:{}});
+  Object.assign(g.s.parties[0].account,{alloy:1000,gas:1000,energy:100,abilities:{}});
   Object.assign(g,{supply:()=>10,cap:()=>50,afford:()=>true});
   const buttons = ['train:rifle','train:hero','train:air','repair','sell'].map(action =>
     Object.assign(h.document.getElementById(action),{dataset:{action}}));
@@ -1149,7 +1150,7 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
 
 test('HUD reads supply and capacity once per update and gates recruitment at capacity', () => {
   const h = buildingPanel(), g = h.ui.game;
-  Object.assign(g.s.teams[0], { alloy: 1000, gas: 1000, energy: 100, abilities: {} });
+  Object.assign(g.s.parties[0].account, { alloy: 1000, gas: 1000, energy: 100, abilities: {} });
   Object.assign(g.s, { depth: 4 });
   Object.assign(g, { afford: () => true });
   g.s.entities.push({ id: 8, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] });
@@ -1171,21 +1172,21 @@ test('HUD reads supply and capacity once per update and gates recruitment at cap
 
 test('ability availability respects energy, cooldown and technology boundaries', () => {
   const h = setup(), g = h.ui.game;
-  Object.assign(g.s.teams[0], { alloy: 0, gas: 0, abilities: {} }); Object.assign(g.s,{time:10});
+  Object.assign(g.s.parties[0].account, { alloy: 0, gas: 0, abilities: {} }); Object.assign(g.s,{time:10});
   Object.assign(g, { supply: () => 0, cap: () => 24, abilityRequirement: () => null });
   for (const [kind, energy] of [['orbital', 85], ['repair', 45], ['scan', 25], ['drop', 95]]) {
     const button = h.document.getElementById('ability:' + kind);
     button.dataset = { action: 'ability:' + kind };
     h.document.querySelectorAll = () => [button];
     for (const available of [energy - 1, energy]) {
-      g.s.teams[0].energy = available;
+      g.s.parties[0].account.energy = available;
       h.UI.prototype.updateHUD.call(h.ui);
       assert.equal(button.disabled, available < energy);
     }
-    g.s.teams[0].abilities[kind] = 12.2;
+    g.s.parties[0].account.abilities[kind] = 12.2;
     h.UI.prototype.updateHUD.call(h.ui);
     assert.equal(button.disabled, true);
-    g.s.teams[0].abilities[kind] = 10;
+    g.s.parties[0].account.abilities[kind] = 10;
     h.UI.prototype.updateHUD.call(h.ui);
     assert.equal(button.disabled, false);
     if(kind==='orbital') {

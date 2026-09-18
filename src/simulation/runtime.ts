@@ -5,7 +5,7 @@
         if (!this.s || this.s!.result) return;
         let s = this.s!;
         s.time += dt;
-        for (const account of s.teams) account.energy = Math.min(COMMAND_ENERGY.max, account.energy + dt * COMMAND_ENERGY.regeneration);
+        for (const { account } of s.parties) account.energy = Math.min(COMMAND_ENERGY.max, account.energy + dt * COMMAND_ENERGY.regeneration);
         this.rehash();
         if (this.navDirty) {
           this.world!.rebuild(s.entities);
@@ -152,7 +152,7 @@
           this.world!.reveal(s.entities, s.scans);
           this.fogClock = 0;
         }
-        if (!s.result) for (const team of [0, 1] as const) if (s.ai[team]) this.aiTick(team);
+        if (!s.result) for (const party of s.parties) if (party.controller.kind === 'ai') this.aiTick(party.id);
         if (s.entities.some(e => e.hp <= 0 && s.time - e.deathAt! > 9)) {
           s.entities = s.entities.filter(e => e.hp > 0 || s.time - e.deathAt! <= 9);
           this.ids = new Map(s.entities.map(e => [e.id, e]));

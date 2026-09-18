@@ -170,16 +170,16 @@
               color:
                 data.type === 'attackMove' || data.type === 'attack'
                   ? 0xeebc81
-                  : FACTIONS[this.game.s!.faction].color
+                  : FACTIONS[this.game.s!.parties[0].faction].color
             });
         } else if (type === 'result') {
           const firstResult = this.resultAetherRecovered === undefined;
           let profileChanged = false;
           this.factionJustUnlocked = null;
           if (firstResult) {
-            let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.meta?.aetherEvacuation || 0))),
+            let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.parties[0].meta?.aetherEvacuation || 0))),
               limit = AETHER_EVACUATION_CAPS[level];
-            this.resultAetherRecovered = Math.min(limit, Math.max(0, Math.floor(this.game.s?.teams[0].gas || 0)));
+            this.resultAetherRecovered = Math.min(limit, Math.max(0, Math.floor(this.game.s?.parties[0].account.gas || 0)));
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
               profileChanged = true;
@@ -220,7 +220,7 @@
         } else if (type === 'complete') {
           this.audio.sound('complete');
           this.alert({
-            text: buildingName(data.type, this.game.s!.faction) + ' complete.',
+            text: buildingName(data.type, this.game.s!.parties[0].faction) + ' complete.',
             x: data.x,
             z: data.z
           });

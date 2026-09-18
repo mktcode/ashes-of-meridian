@@ -111,7 +111,7 @@
       },
       actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: {badge?: string | number; disabled?: boolean; cost?: Cost} = {}) {
         const active = this.isModeAction(key), renderedLabel = active ? 'Cancel' : label;
-        const faction = this.game.s?.faction;
+        const faction = this.game.s?.parties[0].faction;
         let badge = active ? '' : opts.badge || '',
           preview = faction === FACTION_ID.FIRST
             ? FACTION_0_ACTION_PORTRAITS[key]
@@ -137,7 +137,7 @@
           repairReason = ready && !repairing ? this.game.canRepairBuilding(b!.id) : '',
           sellReason = ready ? this.game.canSellBuilding(b!.id) : '',
           noFreeWorker = this.tab === 'build' && !this.game.availableWorkers().length,
-          sig = [this.tab, s.faction, this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
+          sig = [this.tab, s.parties[0].faction, this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
             this.mode?.kind, this.mode?.arg].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
@@ -145,7 +145,7 @@
           ['orbital', 'Orbital strike', 'orbital'], ['repair', 'Repair field', 'heal'],
           ['scan', 'Recon scan', 'scan'], ['drop', 'Reinforcements', 'drop']
         ].map(([k, label, ic]) => this.actionButton('ability:' + k, label, ic)).join('');
-        let html = '', f = s.faction;
+        let html = '', f = s.parties[0].faction;
         if (this.tab === 'root') {
           for (let [tab, label, ic] of [
             ['build', 'Buildings', 'hq'], ['infantry', 'Infantry', 'rifle'],
@@ -235,18 +235,18 @@
           button.classList.toggle('waiting', !next);
           button.querySelector('.queue-count')!.textContent = String(entries.length);
           button.querySelector('.queue-time')!.textContent = remaining;
-          button.setAttribute('aria-label', `${unitName(type, this.game.s!.faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
+          button.setAttribute('aria-label', `${unitName(type, this.game.s!.parties[0].faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
         }
       },
       updateHUD(this: MeridianUI) {
         let s = this.game.s;
         if (!s) return;
-        $('alloyCount').textContent = Math.floor(s.teams[0].alloy).toLocaleString();
-        $('gasCount').textContent = Math.floor(s.teams[0].gas).toLocaleString();
+        $('alloyCount').textContent = Math.floor(s.parties[0].account.alloy).toLocaleString();
+        $('gasCount').textContent = Math.floor(s.parties[0].account.gas).toLocaleString();
         const supply = this.game.supply(), capacity = this.game.cap();
         $('supplyCount').textContent = supply + '/' + capacity;
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
-        $('energyCount').textContent = String(Math.floor(s.teams[0].energy));
+        $('energyCount').textContent = String(Math.floor(s.parties[0].account.energy));
         $('gameTime').textContent = formatTime(s.time);
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
         speedButton.textContent = speedLabel;
@@ -281,12 +281,12 @@
             disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
           else if (k === 'ability' && hasContentKey(ABILITIES, arg)) {
             let energy = ABILITIES[arg]?.energy, requirement = this.game.abilityRequirement(arg);
-            disabled = !!requirement || s.teams[0].energy < energy || s.teams[0].abilities[arg] > s.time;
+            disabled = !!requirement || s.parties[0].account.energy < energy || s.parties[0].account.abilities[arg] > s.time;
             let badge = b.querySelector('small');
             if (badge)
               badge.textContent =
-                requirement ? 'TECH' : s.teams[0].abilities[arg] > s.time
-                  ? Math.ceil(s.teams[0].abilities[arg] - s.time) + 's'
+                requirement ? 'TECH' : s.parties[0].account.abilities[arg] > s.time
+                  ? Math.ceil(s.parties[0].account.abilities[arg] - s.time) + 's'
                   : energy + 'ϟ';
           }
           if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||
