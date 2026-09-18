@@ -1,8 +1,10 @@
 # Multiplayer-Vorbereitung: offene Mehrparteien-Prüfungen
 
-Technische Szenariogrenzen: [Architektur](../architecture.md#teamzustand-sicht-und-ki). Kein öffentlicher Mehrspielermodus; weitere Pakete nach [Rahmen](multiplayer-rahmen.md).
+Technische Szenariogrenzen: [Architektur](../architecture.md#teamzustand-sicht-und-ki). Kein öffentlicher Mehrspielermodus; vorerst ausschließlich jeder gegen jeden nach [Rahmen](multiplayer-rahmen.md), keine 2on2-KI.
 
-- [ ] Zusätzliche Parteien auf Desert und Alien Planet gezielt auf freie Aufstellung/Ressourcenzugänge prüfen; aktuelle neue Szenarien verwenden nur Mothership.
-- [ ] Bei Freigabe gezielte KI-Fälle für mehrere feindliche bzw. nichtfeindliche Parteien ergänzen; Nichtfeindschaft darf nicht versehentlich Zielwahl oder Fähigkeiten auslösen.
+- [ ] Bei Freigabe gezielte echte FFA-KI-Fälle für mehrere feindliche Parteien prüfen; bisher ist nur der Controller-Dispatch instrumentiert.
+- [ ] Erweiterte FFA-/Routenassertionen auch auf Mothership ausführen; dort ist bisher nur die frühere Start-/Stopp-Prüfung abgenommen.
 
-Prüfkontext: Die beiden kurzen 3-/4-Parteien-Szenarien auf Mothership bestehen (Seed 1409, jeweils 0,1 Sekunden Simulationszeit): eindeutige Starts, wiederholbarer Anfangszustand, Controller-Dispatch und Stopp ohne Expeditionsauszahlung. Der KI-Dispatch ist dabei instrumentiert; echte Mehrparteien-KI, vollständige Partien und Ressourcen-Erreichbarkeit sind damit nicht abgenommen. Die übrigen mechanisch angepassten KI-/Simulationsfälle sind nur auf Syntax geprüft. Weitere Start-/Replayprüfungen und KI-Läufe benötigen gemäß [Prüfverfahren](../testing.md) gesonderte aktuelle Freigabe. Standardtests prüfen Zustands-/Besitzverträge und getrennte Sichtpuffer, nicht die vollständige Mehrparteienpartie. Darstellung/Statistik und sichtabhängige Simulationskopplung bleiben im [Perspektivpaket](multiplayer-karten-und-darstellung.md) offen; keine Referenzwerte zum Grünmachen ändern.
+Prüfkontext: Desert und Alien Planet bestehen mit jeweils drei und vier Parteien die kurzen FFA-Szenarien (Seed 1409, je 0,1 Sekunden Simulationszeit): eindeutige HQ-Plätze, freie Startworker, sichtbares Start-Alloy mit vollständigen Navigationspfaden zu Abbau und HQ-Rückgabe, wiederholbarer Anfangszustand, Controller-Dispatch und Stopp ohne Expeditionsauszahlung. Das belegt weder tatsächliche Erntezyklen noch Gas-/Raffineriezugang, weitere Seeds, Balance oder vollständige KI-Partien. Motherships bisheriger Start-/Stopp-Nachweis bleibt auf den früheren Prüfumfang begrenzt.
+
+Weitere Simulations-/KI-Läufe benötigen gemäß [Prüfverfahren](../testing.md) gesonderte aktuelle Freigabe. Darstellung/Statistik und sichtabhängige Simulationskopplung bleiben im [Perspektivpaket](multiplayer-karten-und-darstellung.md) offen; keine Referenzwerte zum Grünmachen ändern.

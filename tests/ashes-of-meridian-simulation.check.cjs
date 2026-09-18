@@ -75,11 +75,12 @@ function advance(game, steps) {
 const player = (game, type) => game.alive(e => e.team === 0 && e.type === type)[0];
 const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').length;
 
-for (const count of [3, 4]) test(`internal ${count}-party scenario: distinct starts, isolated state and explicit stop without expedition result`, () => {
+for (const map of ['mothership', 'desert', 'alien-planet']) for (const count of [3, 4])
+test(`internal ${count}-party scenario on ${map}: FFA starts, resource access and explicit stop without expedition result`, () => {
   const { game, events } = createGame(), options = {
-    seed: 1409, map: 'mothership', duration: .1,
+    seed: 1409, map, duration: .1,
     parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human', benefits: { pioneerSquad: 1 } })),
-    hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b && (a + b) % 2 === 1))
+    hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b))
   };
   const profile = json(game.profile), dispatched = [];
   game.aiTick = team => dispatched.push(team);
@@ -90,8 +91,21 @@ for (const count of [3, 4]) test(`internal ${count}-party scenario: distinct sta
   assert.equal(bases.length, count);
   assert.equal(new Set(bases.map(e => `${e.x}/${e.z}`)).size, count);
   for (let team = 0; team < count; team++) {
-    assert.ok(game.alive(e => e.team === team && e.type === 'worker').length === 1);
-    assert.ok(game.alive(e => e.type === 'crystal').some(e => game.canSee(team, e)));
+    const workers = game.alive(e => e.team === team && e.type === 'worker');
+    assert.equal(workers.length, 1);
+    const worker = workers[0], home = bases.find(e => e.team === team);
+    assert.ok(game.unitFits(worker, worker.x, worker.z), `party ${team}: free worker placement`);
+    const resource = game.miningResource(worker);
+    assert.ok(resource && game.canSee(team, resource), `party ${team}: visible starting alloy`);
+    const mining = game.workerMiningPoint(worker, resource), dropoff = game.workerDropoff(worker, home);
+    for (const [from, to] of [[worker, mining], [mining, dropoff]]) {
+      const path = game.world.path(from.x, from.z, to.x, to.z);
+      assert.equal(path.status, 'complete', `party ${team}: alloy route`);
+      assert.ok(Math.hypot(path.goal.x - to.x, path.goal.z - to.z) <= game.world.cellSize,
+        `party ${team}: route reaches service point`);
+    }
+    for (let other = 0; other < count; other++)
+      assert.equal(game.enemy({ team }, { team: other }), team !== other);
     assert.equal(game.account(team).alloy, 250);
   }
   const setup = json(game.s), nextRandom = game.random();
@@ -106,7 +120,7 @@ for (const count of [3, 4]) test(`internal ${count}-party scenario: distinct sta
   const stopped = json(game.s); game.step(.05); assert.deepEqual(json(game.s), stopped);
   assert.equal(events.some(e => e.type === 'result'), false);
   assert.deepEqual(json(game.profile), profile);
-  game.start({ seed: 1409, map: 'mothership' });
+  game.start({ seed: 1409, map });
   assert.equal(game.s.parties.length, 2); assert.equal(game.world.sight.length, 2);
   assert.equal(game.s.stopped, false); assert.equal(game.s.rules.kind, 'single-player');
 });

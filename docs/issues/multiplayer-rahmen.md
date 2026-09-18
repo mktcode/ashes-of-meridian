@@ -7,4 +7,4 @@
 3. [Netzwerk-Vorbereitung](multiplayer-netzwerk.md): Befehls-, Tick- und Zustandsgrenzen klären; Transportprototyp erst mit separater Freigabe.
 4. [Spielmechanik und Expeditionen](multiplayer-expeditionen.md): später gemeinsam definieren, bis dahin blockiert.
 
-Technisches Ziel: bis zu vier Parteien, unabhängig von Fraktion und Controller. Vier Startbereiche bedeuten weder vier menschliche Spieler noch vier Menschen plus zusätzliche KI-Parteien. Allianzen, geteilte Kontrolle und Ergebnisse bleiben offene Spielregeln; Tests dürfen dafür explizite Szenariovorgaben nutzen, keine versteckten Produktentscheidungen.
+Technisches Ziel: bis zu vier Parteien, unabhängig von Fraktion und Controller. Vier Startbereiche bedeuten weder vier menschliche Spieler noch vier Menschen plus zusätzliche KI-Parteien. Aktueller Umfang ist ausschließlich jeder gegen jeden (FFA); 2on2-KI, Allianzen und geteilte Kontrolle bleiben außen vor. Ergebnisse und Expeditionsregeln sind weiterhin offen; die technischen Testvorgaben ersetzen keine Produktregeln.
