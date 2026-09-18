@@ -1,8 +1,11 @@
-# Multiplayer: Spielrahmen festlegen
+# Multiplayer: technische Vorbereitung und Reihenfolge
 
-- [ ] Ersten Zielmodus festlegen: kooperative Expedition gegen KI, freies PvP oder gemischte Parteien.
-- [ ] Obergrenze zunächst auf vier **Parteien** setzen; Spielerzahl, Teams/Allianzen und KI-Plätze getrennt modellieren.
-- [ ] Sieg, Niederlage, Ausscheiden, Aufgabe und Host-Abbruch für mehrere HQ-Parteien definieren.
-- [ ] Einen kleinen Vertical Slice bestimmen: Lobby → ein Gefecht → gemeinsames Ergebnis; noch keine vollständige Expedition.
+**Nur Vorbereitung; Umsetzung erst nach ausdrücklichem Go.** Bestehendes Einzelspiel, Roguelite-Fortschritt, RNG-Verträge und direkte `file://`-Auslieferung bleiben erhalten. Keine neuen Spielmodi oder Netzwerkdienste in dieser Phase.
 
-Die vier Kartenstarts erlauben diese Zielgröße räumlich, der aktuelle Zwei-Parteien-Code jedoch noch nicht. Dieses Issue entscheidet den Vertrag für die übrigen Multiplayer-Pakete.
+1. [Simulationsmodell](multiplayer-simulationsmodell.md): Parteien/Controller trennen, zunächst bei unverändertem Zwei-Parteien-Spiel.
+2. Ebendort: interne 3–4-Parteien-Szenarien und technische Start-/Sicht-/Aktionsprüfungen ergänzen; kein öffentlich spielbarer Modus.
+3. [Perspektive und Karten](multiplayer-karten-und-darstellung.md): lokale Darstellung entkoppeln und technische Karten-/Lastgrenzen prüfen.
+4. [Netzwerk-Vorbereitung](multiplayer-netzwerk.md): Befehls-, Tick- und Zustandsgrenzen klären; Transportprototyp erst mit separater Freigabe.
+5. [Spielmechanik und Expeditionen](multiplayer-expeditionen.md): später gemeinsam definieren, bis dahin blockiert.
+
+Technisches Ziel: bis zu vier Parteien, unabhängig von Fraktion und Controller. Vier Startbereiche bedeuten weder vier menschliche Spieler noch vier Menschen plus zusätzliche KI-Parteien. Allianzen, geteilte Kontrolle und Ergebnisse bleiben offene Spielregeln; Tests dürfen dafür explizite Szenariovorgaben nutzen, keine versteckten Produktentscheidungen.

@@ -1,9 +1,10 @@
-# Multiplayer: Karten, Darstellung und Skalierung
+# Multiplayer-Vorbereitung: Perspektive, Karten und Last
 
-Alle drei Karten deklarieren genau vier öffentliche `layout.startSites`; Desert schützt/verbindet alle vier im Canyonplan, Alien Planet und Mothership halten die vier Startbereiche ebenfalls frei. Das belegt vier mögliche HQ-Plätze, aber noch keine faire oder performante Vier-Parteien-Partie.
+Nach dem [Parteienmodell und lokalen Harness](multiplayer-simulationsmodell.md); keine Balanceänderung oder neue Multiplayeroberfläche.
 
-- [ ] Seedbasiert bis zu vier verschiedene Startplätze vergeben und gleiche Startressourcen/baubare Flächen je Ecke prüfen.
-- [ ] Erreichbarkeit, Rush-Distanzen, Engstellen und Ressourcenkonkurrenz auf jeder Karte mit 3–4 Parteien bewerten.
-- [ ] Lokale Perspektive statt festem Team 0 führen: Fog, Auswahl, HUD, Minimap, Farben, Meldungen und Audio.
-- [ ] Verbündete und mehrere Gegner visuell unterscheidbar machen; Fraktionsfarbe nicht mit Parteienfarbe vermischen.
-- [ ] Simulations-, Wegfindungs-, Sicht- und Renderlast bei bis zu vier Armeen messen; Karten- oder Einheitenbalance erst aus diesen Befunden ändern.
+- [ ] Lokale Perspektive für Fog, Auswahl, HUD, Minimap, Effekte, Meldungen und Audio ausdrücklich führen statt Team 0 vorauszusetzen; Fraktion und Parteienkennzeichnung trennen.
+- [ ] Vor Perspektivwechsel Simulationsabhängigkeiten entfernen: sichtabhängige Explosionen verbrauchen Simulations-RNG, der Medic-Cooldown wird ebenfalls sichtabhängig gesetzt (`src/simulation/combat.ts`, `src/effects.ts`). Bestehenden Einzelspielverlauf schützen.
+- [ ] Drei/vier gleichzeitige Starts auf allen Karten technisch prüfen: eindeutige HQ-Plätze, freie Startaufstellung und erreichbare Ressourcen; keine Zusage gleicher Ressourcen oder fairer Rush-Distanzen.
+- [ ] Mehrparteienlast gezielt messen, bevor Limits/Optimierungen beschlossen werden; vorhandene [mobile Lastbefunde](mobile-performance.md) berücksichtigen. Zusätzliche Langläufe gesondert freigeben lassen.
+
+Codebefund: Alle drei Rezepte in `src/battlefields/` deklarieren vier `startSites`; `battlefieldStartSites` sucht passende HQ-Plätze, `startingPositions` belegt bisher nur zwei. Vorhandene Starttests prüfen Zweierbelegungen, nicht eine vollständige Vier-Parteien-Partie. Vier Kandidaten sind kein Balance- oder Performancenachweis.
