@@ -21,7 +21,7 @@ function worldSample(seed, map) {
   ];
   world.rebuild(entities);
   const paths = [[-51, 49, 50, -51], [0, 0, -51, 49], [88, 88, -100, -100]]
-    .map(args => world.path(...args));
+    .map(args => world.path(...args).points);
   world.reveal(entities, [{ x: -20, z: -10, r: 7 }]);
   world.reveal([]);
   // Compare the actual new landscape, without translating it back to old mesh names.

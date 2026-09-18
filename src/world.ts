@@ -185,17 +185,23 @@
         }
         return true;
       }
-      path(x: number, z: number, tx: number, tz: number, air = false): Position[] {
+      path(x: number, z: number, tx: number, tz: number, air = false, area?: NavigationArea): NavigationPath {
         const GRID = this.gridSize, limit = this.extent - 5;
         tx = clamp(tx, -limit, limit);
         tz = clamp(tz, -limit, limit);
-        if (air) return [{ x: tx, z: tz }];
+        const complete = (goal: Position): NavigationPath => ({ points: [goal], goal, status: 'complete' });
+        if (air) return complete({ x: tx, z: tz });
         let target = this.nearest(tx, tz),
           start = { x, z };
-        if (this.lineFree(start, target)) return [target];
+        // Work orders accept any reachable position in their area, not an arbitrary
+        // nearest cell on the far side of a building. Keep a valid preferred service
+        // point for unobstructed traffic; otherwise search the whole area once.
+        const inArea = (p: Position) => !area || distance(p, area) <= area.radius;
+        if (area && inArea(start) && !this.blockedAt(x, z)) return complete(start);
+        if (inArea(target) && !this.blockedAt(target.x, target.z) && this.lineFree(start, target)) return complete(target);
         let s = this.idx(x, z),
           end = this.idx(target.x, target.z);
-        if (s === end) return [target];
+        if (s === end && inArea(target) && !this.blockedAt(target.x, target.z)) return complete(target);
         let cost = new Float32Array(GRID * GRID);
         cost.fill(Infinity);
         cost[s] = 0;
@@ -220,18 +226,29 @@
           [-1, 1, 1.414],
           [1, 1, 1.414]
         ];
+        const areaX = area ? (area.x + this.extent) / this.cellSize - 0.5 : 0,
+          areaZ = area ? (area.z + this.extent) / this.cellSize - 0.5 : 0,
+          areaRadius = area ? area.radius / this.cellSize : 0;
+        const heuristic = (i: number) => {
+          // Stay admissible for the existing rounded diagonal cost (1.414).
+          // Grid coordinates avoid allocating a position for every relaxation.
+          if (area) return Math.max(0, Math.hypot(i % GRID - areaX, Math.floor(i / GRID) - areaZ) - areaRadius) * (1.414 / Math.SQRT2);
+          const ax = Math.abs(ex - i % GRID), az = Math.abs(ez - Math.floor(i / GRID));
+          return Math.max(ax, az) + 0.414 * Math.min(ax, az);
+        };
         // Preserve the 72×72 search budget; larger grids need proportionally more heap pops.
         const searchLimit = Math.ceil(5600 * (GRID / 72) ** 2);
         while (heap.length && tries++ < searchLimit) {
           let i = heap.pop();
           if (closed[i]) continue;
-          let targetDistance = ((i % GRID) - ex) ** 2 + (Math.floor(i / GRID) - ez) ** 2;
+          let targetDistance = area ? heuristic(i) ** 2 : ((i % GRID) - ex) ** 2 + (Math.floor(i / GRID) - ez) ** 2;
           if (targetDistance < bestDistance) {
             bestDistance = targetDistance;
             best = i;
           }
-          if (i === end) {
+          if (area ? targetDistance === 0 && !this.blocked[i] : i === end) {
             found = true;
+            if (area) { end = i; target = this.point(i); }
             break;
           }
           closed[i] = 1;
@@ -248,14 +265,14 @@
             if (nc < cost[q]) {
               cost[q] = nc;
               parent[q] = i;
-              let ax = Math.abs(ex - xx),
-                az = Math.abs(ez - zz);
-              heap.push(q, nc + Math.max(ax, az) + 0.414 * Math.min(ax, az));
+              heap.push(q, nc + heuristic(q));
             }
           }
         }
+        const exhausted = !found && heap.length > 0;
         if (!found) {
-          if (best === s || bestDistance > 25) return [];
+          if (best === s || bestDistance > 25)
+            return { points: [], goal: target, status: exhausted ? 'budget-exhausted' : 'unreachable' };
           end = best;
           target = this.point(best);
         }
@@ -277,7 +294,7 @@
           anchor = nodes[k];
           j = k + 1;
         }
-        return smooth;
+        return { points: smooth, goal: target, status: found ? 'complete' : exhausted ? 'budget-exhausted' : 'partial' };
       }
       explore(team: PlayerTeam, p: Position, radius: number) {
         this.mark(this.sight[team].explored, p.x, p.z, radius, 1);

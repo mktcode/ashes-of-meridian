@@ -188,7 +188,7 @@
         );
         let w = workers[0];
         let path = this.world!.path(w.x, w.z, p.x, p.z);
-        if (!path.length && distance(w, p) > 5) {
+        if (!path.points.length && distance(w, p) > 5) {
           this.notify(team, 'toast', 'A worker cannot reach this location.');
           return false;
         }
@@ -313,7 +313,10 @@
           radius = h.size + 2.5,
           angle = base + offset,
           p = {x:h.x+Math.sin(angle)*radius,z:h.z+Math.cos(angle)*radius};
-        return this.world!.nearest(p.x,p.z);
+        const snapped = this.world!.nearest(p.x,p.z);
+        // A neighbour may push the nearest free cell to its far side. Such a
+        // point is not an HQ service position; let area navigation find a side.
+        return distance(snapped, h) <= h.size + 3.1 ? snapped : p;
       },
       workerMiningPoint(this: MeridianGame, e: UnitEntity, n: ResourceEntity): Position {
         const h = this.closest(n, target => target.team === e.team && target.type === 'hq' && target.progress >= 1),
@@ -322,7 +325,8 @@
           offset = ((e.id % 3) - 1) * 0.5,
           angle = base + offset,
           p = {x:n.x+Math.sin(angle)*1.9,z:n.z+Math.cos(angle)*1.9};
-        return this.world!.nearest(p.x,p.z);
+        const snapped = this.world!.nearest(p.x,p.z);
+        return distance(snapped, n) <= 2.15 ? snapped : p;
       },
       worker(this: MeridianGame, e: UnitEntity, dt: number) {
         const team = e.team as PlayerTeam;
@@ -337,7 +341,7 @@
           }
           let need = b.size + 3.0;
           if (distance(e, b) > need) {
-            this.move(e, b, dt, need);
+            this.move(e, b, dt, need, false, { x: b.x, z: b.z, radius: need - 0.1 });
             return true;
           }
           e.rot = angleLerp(e.rot, Math.atan2(b.x - e.x, b.z - e.z), dt * 5);
@@ -372,13 +376,12 @@
           if (!h) return true;
           const hqRange = h.size + 3.1,
             hqDistance = distance(e,h);
-          if (hqDistance > hqRange + 1.5) {
-            this.move(e,h,dt,hqRange+1.5);
-            return true;
-          }
           const dropoff = this.workerDropoff(e,h);
-          if (hqDistance > hqRange && distance(e, dropoff) > e.size * UNIT_BODY_SCALE * 2.5) {
-            this.move(e, dropoff, dt, 0.45, false);
+          // One stable goal for the whole return trip: switching back to the HQ
+          // centre when a detour leaves the near zone creates an endless loop.
+          if (hqDistance > hqRange + 1.5 || (hqDistance > hqRange &&
+            (this.world!.blockedAt(dropoff.x, dropoff.z) || distance(e, dropoff) > e.size * UNIT_BODY_SCALE * 2.5))) {
+            this.move(e, dropoff, dt, 0.45, false, { x: h.x, z: h.z, radius: hqRange - 0.1 });
             return true;
           }
           if (e.team === team) {
@@ -387,6 +390,9 @@
           }
           e.carry = 0;
           e.returning = false;
+          e.recoveryAttempts = 0;
+          e.nextRecovery = 0;
+          e.stuck = 0;
           e.path = [];
           e.nextPath = 0;
           return true;
@@ -403,10 +409,14 @@
           e.path = [];
         }
         const miningPoint = this.workerMiningPoint(e,n);
-        if (distance(e, n) > 2.15 && distance(e,miningPoint) > e.size*UNIT_BODY_SCALE) {
-          this.move(e, miningPoint, dt, 0.35, false);
+        if (distance(e, n) > 2.15 && (this.world!.blockedAt(miningPoint.x, miningPoint.z) ||
+          distance(e,miningPoint) > e.size*UNIT_BODY_SCALE)) {
+          this.move(e, miningPoint, dt, 0.35, false, { x: n.x, z: n.z, radius: 2.05 });
           return true;
         }
+        e.recoveryAttempts = 0;
+        e.nextRecovery = 0;
+        e.stuck = 0;
         e.rot = angleLerp(e.rot, Math.atan2(n.x - e.x, n.z - e.z), dt * 8);
         e.work += dt;
         if (e.work >= 1.25) {

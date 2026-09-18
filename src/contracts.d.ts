@@ -199,6 +199,16 @@ interface Position {
   z: number;
 }
 
+interface NavigationArea extends Position {
+  radius: number;
+}
+
+interface NavigationPath {
+  points: Position[];
+  goal: Position;
+  status: 'complete' | 'partial' | 'unreachable' | 'budget-exhausted';
+}
+
 interface Cost {
   cost: number;
   gas: number;
@@ -256,6 +266,11 @@ interface EntityBase extends Position {
   yieldUntil?: number;
   pathGoal?: Position;
   pathVersion?: number;
+  pathArea?: NavigationArea;
+  pathStatus?: NavigationPath['status'];
+  pathResolvedGoal?: Position;
+  recoveryAttempts?: number;
+  nextRecovery?: number;
   stuck?: number;
   steerSide?: 1 | -1;
   steerLocked?: boolean;

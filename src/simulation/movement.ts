@@ -95,7 +95,7 @@
           delete e.yieldTo;
         }
       },
-      pathTo(this: MeridianGame, e: UnitEntity, p: Position, avoidUnits = false) {
+      pathTo(this: MeridianGame, e: UnitEntity, p: Position, avoidUnits = false, area?: NavigationArea) {
         if (!avoidUnits && e.nextPath > this.s!.time) return;
         const blocked = this.world!.blocked, flying = !!(UNITS[e.type] as UnitDefinitionShape).flying;
         try {
@@ -114,46 +114,85 @@
             }
             this.world!.blocked[this.world!.idx(e.x, e.z)] = 0;
           }
-          e.path = this.world!.path(e.x, e.z, p.x, p.z, flying && !avoidUnits);
+          const route = this.world!.path(e.x, e.z, p.x, p.z, flying && !avoidUnits, area);
+          e.path = route.points;
+          e.pathStatus = route.status;
+          e.pathResolvedGoal = route.goal;
         } finally {
           this.world!.blocked = blocked;
         }
         e.pi = 0;
-        e.nextPath = this.s!.time + 0.8;
+        e.nextPath = this.s!.time + Math.min(3.2, 0.8 * (1 + (e.recoveryAttempts || 0)));
         delete e.steerLocked;
         e.pathGoal = { x: p.x, z: p.z };
+        e.pathArea = area ? { ...area } : undefined;
         e.pathVersion = this.world!.pathVersion;
       },
-      move(this: MeridianGame, e: UnitEntity, p: Position, dt: number, stop = 1, settleBesideOccupiedGoal = true) {
+      recoverMovement(this: MeridianGame, e: UnitEntity, p: Position, dt: number, area?: NavigationArea) {
+        e.stuck = (e.stuck || 0) + dt;
+        if (e.stuck <= 0.65 || (e.nextRecovery || 0) > this.s!.time) return;
+        e.recoveryAttempts = (e.recoveryAttempts || 0) + 1;
+        // Keep ordinary mining traffic stable. Only a demonstrated stall may change
+        // its passing side; periodically retry without coarse unit raster blockers.
+        if (e.recoveryAttempts > 1) e.steerSide = e.steerSide === -1 ? 1 : -1;
+        e.nextPath = 0;
+        this.pathTo(e, p, e.recoveryAttempts % 3 !== 0, area);
+        e.nextRecovery = e.nextPath;
+        if (!(UNITS[e.type] as UnitDefinitionShape).flying && this.world!.blockedAt(e.x, e.z)) {
+          const position = this.unitPosition(e);
+          if (position) Object.assign(e, position);
+        }
+        e.stuck = 0;
+      },
+      move(this: MeridianGame, e: UnitEntity, p: Position, dt: number, stop = 1, settleBesideOccupiedGoal = true, area?: NavigationArea) {
         if (e.yieldTo) { this.moveYield(e, dt); return false; }
-        if (distance(e, p) < stop || (settleBesideOccupiedGoal && !e.exit && ['move', 'attackMove'].includes(e.order.type) &&
+        if ((area && distance(e, area) <= area.radius) || distance(e, p) < stop || (settleBesideOccupiedGoal && !e.exit && ['move', 'attackMove'].includes(e.order.type) &&
           distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) {
           // Stop beside an occupied destination instead of trying to stand at its center.
           e.path = [];
           e.pi = 0;
+          e.stuck = 0;
+          e.recoveryAttempts = 0;
+          e.nextRecovery = 0;
           return true;
         }
+        const changedGoal = (e.pathGoal && distance(e.pathGoal, p) > 3) ||
+          !!e.pathArea !== !!area || (area && e.pathArea &&
+            (distance(area, e.pathArea) > 3 || area.radius !== e.pathArea.radius));
+        // A changed work phase or building layout must not follow a stale route
+        // during the ordinary retry cooldown.
+        if (changedGoal || e.pathVersion !== this.world!.pathVersion) e.nextPath = 0;
         if (
           !e.path?.length ||
           e.pi >= e.path.length ||
           e.pathVersion !== this.world!.pathVersion ||
-          (e.pathGoal && distance(e.pathGoal, p) > 3)
+          changedGoal
         )
-          this.pathTo(e, p);
+          this.pathTo(e, p, false, area);
         let q = e.path[e.pi];
-        if (!q) return false;
+        if (!q) { this.recoverMovement(e, p, dt, area); return false; }
         let dx = q.x - e.x,
           dz = q.z - e.z,
           d = Math.hypot(dx, dz);
-        // The last work waypoint may only just enter build/repair range: don't skip it early.
+        // The last work waypoint may only just enter the accepted area: don't skip it early.
         const waypointTolerance = e.exit ? 0.04 :
-          e.pi + 1 === e.path.length && (e.order.type === 'build' || e.order.type === 'repair') ? 1e-9 : 0.65;
+          e.pi + 1 === e.path.length && (area || e.order.type === 'build' || e.order.type === 'repair') ? 1e-9 : 0.65;
         if (d < waypointTolerance || (e.pi + 1 < e.path.length && d < 3.8 &&
           !this.unitFits(e, q.x, q.z) && this.world!.lineFree(e, e.path[e.pi + 1]))) {
           // An occupied intermediate waypoint must not trap us circling an idle unit.
           e.pi++;
           q = e.path[e.pi];
-          if (!q) return distance(e, p) < stop + 1 || this.world!.blockedAt(p.x, p.z);
+          if (!q) {
+            // An incomplete route is never arrival, even if its requested target
+            // is inside a building. Work orders use their actual area instead.
+            if (!area && e.pathStatus === 'complete' && e.pathResolvedGoal &&
+              distance(e, e.pathResolvedGoal) < stop && this.world!.blockedAt(p.x, p.z)) {
+              e.stuck = 0; e.recoveryAttempts = 0; e.nextRecovery = 0;
+              return true;
+            }
+            this.recoverMovement(e, p, dt, area);
+            return false;
+          }
           dx = q.x - e.x;
           dz = q.z - e.z;
           d = Math.hypot(dx, dz);
@@ -163,7 +202,7 @@
           step = Math.min(d, speed * dt),
           vx = dx / (d || 1),
           vz = dz / (d || 1);
-        if (step < 1e-9) return false;
+        if (step < 1e-9) { this.recoverMovement(e, p, dt, area); return false; }
         // Let an ally finish clearing our next step instead of following it sideways.
         const waitingForYield = this.s!.entities.some(other => other !== e && other.hp > 0 && other.yieldTo &&
           other.team === e.team && !!(UNITS[(other as UnitEntity).type] as UnitDefinitionShape).flying === !!u.flying &&
@@ -174,7 +213,7 @@
         // Remembering the successful fallback prevents left/right oscillation in dense traffic.
         const steerSide = e.steerSide || 1,
           steeringAngles = [0, steerSide*Math.PI/6, steerSide*Math.PI/3, steerSide*Math.PI/2],
-          allowAlternate = e.type !== 'worker' || e.order.type === 'build' || e.order.type === 'repair';
+          allowAlternate = e.type !== 'worker' || e.order.type === 'build' || e.order.type === 'repair' || !!e.recoveryAttempts;
         if (allowAlternate && !e.steerLocked)
           steeringAngles.push(-steerSide*Math.PI/6, -steerSide*Math.PI/3, -steerSide*Math.PI/2);
         for (const angle of waitingForYield ? [] : steeringAngles) {
@@ -202,15 +241,9 @@
             e.x = nx; e.z = nz; moved = true; break;
           }
         }
-        e.stuck = moved && Math.hypot(q.x - e.x, q.z - e.z) < d - step * 0.1 ? 0 : (e.stuck || 0) + dt;
-        if (e.stuck > 0.65) {
-          this.pathTo(e, p, true);
-          if (!u.flying && this.world!.blockedAt(e.x, e.z)) {
-            const p = this.unitPosition(e);
-            if (p) Object.assign(e, p);
-          }
+        if (moved && Math.hypot(q.x - e.x, q.z - e.z) < d - step * 0.1) {
           e.stuck = 0;
-        }
+        } else this.recoverMovement(e, p, dt, area);
         if (moved) {
           e.rot = angleLerp(e.rot, heading, dt * 9);
           e.walk += dt * speed;
@@ -225,6 +258,11 @@
         e.pi = 0;
         e.nextPath = 0;
         e.stuck = 0;
+        delete e.recoveryAttempts;
+        delete e.nextRecovery;
+        delete e.pathArea;
+        delete e.pathStatus;
+        delete e.pathResolvedGoal;
         delete e.steerSide;
         delete e.steerLocked;
       },
@@ -287,6 +325,11 @@
         e.order = { type: 'idle' };
         e.path = [];
         e.pi = 0;
+        delete e.recoveryAttempts;
+        delete e.nextRecovery;
+        delete e.pathArea;
+        delete e.pathStatus;
+        delete e.pathResolvedGoal;
         delete e.steerSide;
         delete e.steerLocked;
       },

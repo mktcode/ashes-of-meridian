@@ -47,9 +47,9 @@ test('larger worlds navigate, rebuild blockers and reveal both teams beyond the 
     const w=new Battlefield(43015,'alien-planet'); w.staticGrid.fill(0); w.rebuild([]);
     assert.equal(w.blockedAt(120,110),false); assert.equal(w.blockedAt(133,0),true);
     assert.deepEqual(JSON.parse(JSON.stringify(w.nearest(999,-999))),{x:131,z:-131});
-    assert.deepEqual(JSON.parse(JSON.stringify(w.path(0,0,999,-999,true))),[{x:130,z:-130}]);
+    assert.deepEqual(JSON.parse(JSON.stringify(w.path(0,0,999,-999,true).points)),[{x:130,z:-130}]);
     w.rebuild([{hp:100,kind:'building',x:110,z:110,size:5}]);
-    const start={x:95,z:110}, end={x:125,z:110}, path=w.path(start.x,start.z,end.x,end.z);
+    const start={x:95,z:110}, end={x:125,z:110}, path=w.path(start.x,start.z,end.x,end.z).points;
     assert.equal(w.lineFree(start,end),false); assert.ok(path.length>1);
     assert.deepEqual(JSON.parse(JSON.stringify(path.at(-1))),end);
     let anchor=start;
@@ -73,7 +73,7 @@ test('large-grid path budget traverses a winding route requiring more than 5600 
       if (z+1<n-1) w.blocked[(z+1)*n+(((z-1)/2)%2 ? 1 : n-2)]=0;
     }
     const start=w.point(n+1), end={x:130,z:w.point(105*n+106).z};
-    const path=w.path(start.x,start.z,end.x,end.z);
+    const path=w.path(start.x,start.z,end.x,end.z).points;
     assert.ok(path.length>50); assert.deepEqual(JSON.parse(JSON.stringify(path.at(-1))),end);
     let anchor=start;
     for (const p of path) { assert.ok(w.lineFree(anchor,p)); anchor=p; }
@@ -454,7 +454,7 @@ test('Desert basin loops retain another approach when the central exit is obstru
   const w = new Battlefield(1409,'desert');
   for (const route of w.layout.corridors.slice(0,4)) {
     w.rebuild([]); w.mark(w.blocked,route[2][0],route[2][1],10);
-    const start = {x:route[0][0],z:route[0][1]}, target = {x:0,z:0}, path = w.path(start.x,start.z,0,0);
+    const start = {x:route[0][0],z:route[0][1]}, target = {x:0,z:0}, path = w.path(start.x,start.z,0,0).points;
     let previous = start;
     for (const point of path) { assert.ok(w.lineFree(previous,point)); previous=point; }
     assert.ok(Math.hypot(previous.x-target.x,previous.z-target.z)<3,'a second basin exit, not a dead-end tree');
@@ -694,7 +694,7 @@ test('navigation follows canyon bends instead of crossing the relief', () => {
   const w = new Battlefield(43015, 'desert'), sites = [...w.layout.startSites, ...w.layout.resourceSites];
   let detours = 0;
   for (const start of w.layout.startSites) for (const target of sites) {
-    const path = w.path(start.x, start.z, target.x, target.z);
+    const path = w.path(start.x, start.z, target.x, target.z).points;
     let previous = start;
     for (const point of path) { assert.ok(w.lineFree(previous, point)); previous = point; }
     assert.ok(Math.hypot(previous.x - target.x, previous.z - target.z) < 3);
