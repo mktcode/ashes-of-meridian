@@ -267,7 +267,7 @@
         delete e.steerLocked;
       },
       command(this: MeridianGame, ids: number[], order: CommandOrder, team: PlayerTeam = 0, announce = true) {
-        if (!this.s || this.s.result) return;
+        if (!this.s || this.s.result || this.s.stopped) return;
         let units = ids.map(id => this.get(id)).filter(e => e && e.team === team) as Entity[];
         let mobile = units.filter(e => e.kind === 'unit') as UnitEntity[];
         const target = 'id' in order ? this.get(order.id) : null,

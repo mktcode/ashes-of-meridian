@@ -72,7 +72,7 @@
       declare blocked: Uint8Array;
       declare explored: Uint8Array;
       declare visible: Uint8Array;
-      declare sight: [{ visible: Uint8Array; explored: Uint8Array }, { visible: Uint8Array; explored: Uint8Array }];
+      declare sight: { visible: Uint8Array; explored: Uint8Array }[];
       declare fogPixels: Uint8Array<ArrayBuffer>;
       declare terrainColors: Uint8ClampedArray;
       declare rocks: WorldRock[];
@@ -80,7 +80,9 @@
       declare renderData: WorldRenderData;
       declare startSites: Position[];
 
-      constructor(seed: number, map: BattlefieldId) {
+      constructor(seed: number, map: BattlefieldId, partyCount = 2) {
+        if (!Number.isInteger(partyCount) || partyCount < 2 || partyCount > 4)
+          throw Error('Battlefield requires 2–4 parties');
         this.fogVersion = 0;
         this.seed = seed;
         this.definition = BATTLEFIELDS[battlefieldId(map)];
@@ -96,11 +98,12 @@
         this.staticGrid = new Uint8Array(GRID * GRID);
         this.terrainFeatureGrid = new Uint8Array(GRID * GRID);
         this.blocked = new Uint8Array(GRID * GRID);
-        this.explored = new Uint8Array(GRID * GRID);
-        this.visible = new Uint8Array(GRID * GRID);
-        // The existing fields are the local presentation view, not a second copy of sight.
-        this.sight = [{ visible: this.visible, explored: this.explored },
-          { visible: new Uint8Array(GRID * GRID), explored: new Uint8Array(GRID * GRID) }];
+        this.sight = Array.from({ length: partyCount }, () => ({
+          visible: new Uint8Array(GRID * GRID), explored: new Uint8Array(GRID * GRID)
+        }));
+        // Presentation still observes party 0; no shared sight or perspective switching yet.
+        this.visible = this.sight[0].visible;
+        this.explored = this.sight[0].explored;
         this.fogPixels = new Uint8Array(GRID * GRID);
         this.terrainColors = new Uint8ClampedArray(GRID * GRID * 4);
         this.rocks = [];

@@ -2,15 +2,15 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { loadScripts, SIMULATION_SCRIPTS } = require('./helpers/game-scripts.cjs');
-const context = loadScripts(['core', 'content', 'world', ...SIMULATION_SCRIPTS]);
-const { MeridianGame, singlePlayerParties } = vm.runInContext('({MeridianGame, singlePlayerParties})', context);
+const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('./helpers/game-scripts.cjs');
+const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS]);
+const { MeridianGame, singlePlayerParties, scenarioSetup } = vm.runInContext('({MeridianGame, singlePlayerParties, scenarioSetup})', context);
 vm.runInContext('Math.random = seeded = () => { throw Error("Unexpected RNG in party setup"); }', context);
 const json = value => JSON.parse(JSON.stringify(value));
 
 function state(profile = { upgrades: {} }, options = {}) {
   const game = Object.create(MeridianGame.prototype);
-  game.s = { parties: singlePlayerParties(profile, options), entities: [] };
+  game.s = { parties: singlePlayerParties(profile, options), entities: [], rules: { kind: 'single-player' }, stopped: false };
   return game;
 }
 
@@ -74,4 +74,69 @@ test('controller assignment owns independent AI memory without altering faction,
   assert.strictEqual(game.account(1), account);
   assert.strictEqual(game.benefitsFor(1), benefits);
   assert.equal(game.factionFor(1), 2);
+});
+
+function scenario(count = 4) {
+  return { seed: 1409, map: 'mothership', duration: 2,
+    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human' })),
+    hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b && (a + b) % 2 === 1)) };
+}
+
+test('internal scenarios snapshot 3–4 parties and require explicit hostility and duration', () => {
+  for (const count of [3, 4]) {
+    const options = scenario(count), setup = scenarioSetup(options);
+    assert.deepEqual(Array.from(setup.parties, p => p.id), Array.from({ length: count }, (_, i) => i));
+    assert.deepEqual(Array.from(setup.aiTeams), [2]);
+    assert.ok(setup.parties.every(p => Object.keys(p.meta).length === 0));
+    options.hostilities[0][1] = false;
+    assert.equal(setup.rules.hostilities[0][1], true);
+    const g = state(); g.s.parties = setup.parties; g.s.rules = setup.rules;
+    for (const party of setup.parties) {
+      assert.strictEqual(g.account(party.id), party.account);
+      assert.equal(g.enemy({ team: party.id }, { team: -1 }), false);
+      assert.equal(g.enemy({ team: party.id }, { team: party.id }), false);
+    }
+    assert.equal(g.enemy({ team: 0 }, { team: 1 }), true);
+    assert.equal(g.enemy({ team: 0 }, { team: 2 }), false);
+    assert.equal(g.enemy({ team: 2 }, { team: 1 }), true);
+  }
+  for (const invalid of [
+    { duration: 0 }, { duration: Infinity }, { seed: 0 }, { map: 'missing' },
+    { parties: scenario(1).parties }, { parties: scenario(5).parties },
+    { parties: [{ faction: 4, controller: 'ai' }, ...scenario().parties.slice(1)] },
+    { parties: [{ faction: 0, controller: 'remote' }, ...scenario().parties.slice(1)] },
+    { hostilities: [] }, { hostilities: [[false]] }, { hostilities: new Array(4) },
+    { parties: new Array(4) }, { hostilities: Array.from({ length: 4 }, () => new Array(4)) },
+    { hostilities: scenario().hostilities.map(row => row.map(() => true)) }
+  ]) assert.throws(() => scenarioSetup({ ...scenario(), ...invalid }));
+  const asymmetric = scenario(); asymmetric.hostilities[0][1] = false;
+  assert.throws(() => scenarioSetup(asymmetric));
+});
+
+test('scenario ownership stays separate from non-hostility and stopped scenarios reject commands', () => {
+  const g = state(), setup = scenarioSetup(scenario());
+  Object.assign(g.s, { parties: setup.parties, rules: setup.rules });
+  const unit = team => ({ id: team + 1, team, hp: 100, kind: 'unit', type: 'rifle', size: 1, order: { type: 'idle' } });
+  g.s.entities = [unit(0), unit(2), unit(3)];
+  g.ids = new Map(g.s.entities.map(e => [e.id, e]));
+  g.command([1, 3, 4], { type: 'hold' }, 2, false);
+  assert.deepEqual(g.s.entities.map(e => e.order.type), ['idle', 'hold', 'idle']);
+  // Non-hostility never grants medic support to someone else's units.
+  g.s.entities.forEach(e => { e.maxHp = 100; e.hp = 50; });
+  g.near = (x, z, radius, filter) => g.s.entities.filter(filter);
+  g.medic({ id: 99, team: 2, x: 0, z: 0, cd: 1, order: { type: 'idle' } }, 1);
+  assert.equal(g.s.entities[0].hp, 50);
+  assert.ok(g.s.entities[1].hp > 50);
+  assert.equal(g.s.entities[2].hp, 50);
+  const before = json(g.s);
+  g.checkBattleResult(); g.finish(true, 'not an expedition result');
+  assert.deepEqual(json(g.s), before);
+  g.s.stopped = true;
+  const stopped = json(g.s);
+  g.command([3], { type: 'stop' }, 2, false);
+  assert.equal(g.train('worker', 2), false);
+  assert.equal(g.build('depot', { x: 0, z: 0 }, [], 2), false);
+  assert.equal(g.ability('scan', { x: 0, z: 0 }, 2), false);
+  g.step(.05);
+  assert.deepEqual(json(g.s), stopped);
 });

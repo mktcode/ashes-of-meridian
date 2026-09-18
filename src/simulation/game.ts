@@ -1,6 +1,38 @@
     /* Deterministic fixed-step RTS simulation. Rendering and UI are independent. */
     'use strict';
     const UNIT_BODY_SCALE = 1.4;
+    function createParty(id: PlayerTeam, faction: FactionId, meta: Record<string, number>, benefits: Record<string, number>): PartyState {
+      return {
+        id, faction, meta, benefits, controller: { kind: 'human' },
+        account: {
+          alloy: STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy,
+          gas: (benefits.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
+          energy: COMMAND_ENERGY.start + (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy,
+          abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+        }
+      };
+    }
+    // Validate before touching a running game, terrain or RNG. No implicit FFA/alliances.
+    function scenarioSetup(opts: ScenarioOptions) {
+      if (!Array.isArray(opts.parties) || !Array.isArray(opts.hostilities))
+        throw Error('Scenario requires party and hostility arrays');
+      const count = opts.parties.length;
+      if (!Number.isInteger(opts.seed) || opts.seed <= 0 || !Object.hasOwn(BATTLEFIELDS, opts.map) ||
+          count < 2 || count > 4 || !Number.isFinite(opts.duration) || opts.duration <= 0)
+        throw Error('Scenario requires a seed, known map, 2–4 parties and a positive duration');
+      if (Array.from(opts.parties).some(p => !p || !Number.isInteger(p.faction) || !FACTIONS[p.faction] ||
+          !['human', 'ai'].includes(p.controller))) throw Error('Invalid scenario party');
+      const matrix = opts.hostilities;
+      if (matrix.length !== count || Array.from(matrix).some(row => !Array.isArray(row) || row.length !== count) ||
+          matrix.some((row, a) => Array.from(row).some((enemy, b) => typeof enemy !== 'boolean' ||
+            (a === b && enemy) || enemy !== matrix[b][a])))
+        throw Error('Scenario requires an explicit symmetric hostility matrix with no self-hostility');
+      return {
+        parties: opts.parties.map((p, id) => createParty(id as PlayerTeam, p.faction, {}, normalizedBenefits(p.benefits))),
+        aiTeams: opts.parties.flatMap((p, id) => p.controller === 'ai' ? [id as PlayerTeam] : []),
+        rules: { kind: 'scenario', duration: opts.duration, hostilities: matrix.map(row => [...row]) } as BattleRules
+      };
+    }
     // Snapshot the single-player recipe without terrain, entities or random draws.
     function singlePlayerParties(profile: MeridianProfile, opts: BattleOptions): [PartyState, PartyState] {
       const savedMeta = profile.upgrades || {},
@@ -8,19 +40,10 @@
           (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
             [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
         );
-      const party = (id: PlayerTeam, faction: FactionId, upgrades: Record<string, number>, perks: Record<string, number>): PartyState => ({
-        id, faction, meta: upgrades, benefits: perks, controller: { kind: 'human' },
-        account: {
-          alloy: STARTING_ALLOY[upgrades.startingAlloy || 0] + (perks.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy,
-          gas: (perks.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
-          energy: COMMAND_ENERGY.start + (perks.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy,
-          abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
-        }
-      });
       return [
-        party(0, FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
+        createParty(0, FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
           meta, normalizedBenefits(opts.benefits)),
-        party(1, FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
+        createParty(1, FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
           {}, normalizedBenefits(opts.enemyBenefits))
       ];
     }
@@ -67,18 +90,24 @@
     }
     const gameMethods = {
       start(this: MeridianGame, opts: BattleOptions = {}) {
-        const parties = singlePlayerParties(this.profile, opts),
-          [{ faction, meta, benefits }, { faction: enemy }] = parties,
+        return this.startBattle(opts, singlePlayerParties(this.profile, opts), { kind: 'single-player' }, [1]);
+      },
+      startScenario(this: MeridianGame, opts: ScenarioOptions) {
+        const { parties, rules, aiTeams } = scenarioSetup(opts);
+        return this.startBattle(opts, parties, rules, aiTeams);
+      },
+      startBattle(this: MeridianGame, opts: BattleOptions, parties: PartyState[], rules: BattleRules, aiTeams: PlayerTeam[]) {
+        const [{ faction, meta, benefits }, { faction: enemy }] = parties,
           map = battlefieldId(opts.map), layout = BATTLEFIELDS[map].layout,
           seed = opts.seed || Math.floor(Math.random() * 1e8);
-        this.world = new Battlefield(seed, map);
+        this.world = new Battlefield(seed, map, parties.length);
         this.world.startSites = battlefieldStartSites(this.world);
-        const [playerStart, enemyStart] = this.startingPositions(seed);
+        const starts = this.startingPositions(seed, parties.length), [playerStart, enemyStart] = starts;
         this.s = {
           seed, map,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
           time: 0,
-          parties,
+          parties, rules, stopped: false,
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
           stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
@@ -109,6 +138,11 @@
         this.spawnBuilding('hq', site.x, site.z, 1, enemy);
         // Preserve the established resource/bonus-worker RNG entry points, not the old loadout.
         for (let i = 0; i < 11; i++) this.random();
+        // Extra HQs follow the protected two-party/resource RNG sequence.
+        for (const party of parties.slice(2)) {
+          const home = starts[party.id];
+          this.spawnBuilding('hq', home.x, home.z, party.id, party.faction);
+        }
         this.world.rebuild(s.entities);
         this.rehash();
         for (let e of s.entities)
@@ -119,9 +153,9 @@
           }
         // Add bonus units only after the original layout and enemy RNG draws.
         const startingWorkers = (meta.startingWorkers || 0) + (benefits.pioneerSquad || 0);
-        for (const team of [0, 1] as const) {
-          const perks = this.benefitsFor(team), home = team === 0 ? playerStart : enemyStart,
-            workers = team === 0 ? startingWorkers : (perks.pioneerSquad || 0);
+        for (const party of parties) {
+          const team = party.id, perks = party.benefits, home = starts[team],
+            workers = (party.meta.startingWorkers || 0) + (perks.pioneerSquad || 0);
           for (let i = 0; i < workers; i++)
             if (!this.spawnUnit('worker', home.x - 7, home.z - 4 + i * 2, team, this.factionFor(team)))
               throw new Error('No free space for starting workers.');
@@ -131,13 +165,15 @@
         }
         this.rehash();
         this.world.reveal(s.entities);
-        for (const team of [0, 1] as const) if (this.benefitsFor(team).surveyDrones) {
-          const home = team === 0 ? playerStart : enemyStart,
+        for (const party of parties) if (party.benefits.surveyDrones) {
+          const team = party.id, home = starts[team],
             site = layout.resourceSites.filter(p => !this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
               .sort((a, b) => distance(a, home) - distance(b, home))[0];
           if (site) this.world.explore(team, site, EXPEDITION_EFFECTS.surveyRadius);
         }
-        this.enableAI(1);
+        for (const team of aiTeams) this.enableAI(team);
+        // CPU scenarios must never enter the expedition UI or pay out profile rewards.
+        if (rules.kind === 'scenario') return s;
         this.emit('start', {});
         this.emit('radio', startingWorkers
           ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
@@ -147,11 +183,12 @@
       benefitsFor(this: MeridianGame, team: PlayerTeam): Record<string, number> {
         return this.party(team).benefits;
       },
-      startingPositions(this: MeridianGame, seed: number): [Position, Position] {
-        // Separate stream: replayable corner assignment never shifts terrain/resources/effects RNG.
-        const random = seeded(seed ^ 0x53544152), available = [...this.world!.startSites],
-          player = available.splice(Math.floor(random() * available.length), 1)[0];
-        return [player, available[Math.floor(random() * available.length)]];
+      startingPositions(this: MeridianGame, seed: number, count = 2): Position[] {
+        // The first two draws are identical to single-player, including RNG consumption.
+        if (!Number.isInteger(count) || count < 2 || count > 4 || count > this.world!.startSites.length)
+          throw Error('Invalid starting party count');
+        const random = seeded(seed ^ 0x53544152), available = [...this.world!.startSites];
+        return Array.from({ length: count }, () => available.splice(Math.floor(random() * available.length), 1)[0]);
       },
       spawn<K extends EntityKind>(this: MeridianGame, kind: K, type: EntityTypeForKind<K>, x: number, z: number, team: TeamId, faction: FactionId = FACTION_ID.FIRST, extra: SpawnExtra = {}): EntityForKind<K> {
         let s = this.s!,
@@ -271,7 +308,10 @@
         return out;
       },
       enemy(this: MeridianGame, a: Pick<EntityBase, 'team'>, b: Pick<EntityBase, 'team'>) {
-        return a.team === 1 ? b.team === 0 : b.team === 1;
+        const rules = this.s!.rules;
+        if (rules.kind === 'single-player') return a.team === 1 ? b.team === 0 : b.team === 1;
+        if (a.team === -1 || b.team === -1 || a.team === b.team) return false;
+        return rules.hostilities[a.team]?.[b.team] === true;
       },
       visible(this: MeridianGame, e: Entity) { return this.canSee(0, e); },
       canSee(this: MeridianGame, team: PlayerTeam, e: Position & {team?: TeamId}) {

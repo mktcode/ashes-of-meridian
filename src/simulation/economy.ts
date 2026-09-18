@@ -68,6 +68,7 @@
           e.type === buildingType && e.progress >= 1 && e.queue.length < 5) as BuildingEntity[];
       },
       train(this: MeridianGame, type: UnitType, team: PlayerTeam = 0) {
+        if (this.s!.stopped) return false;
         let s = this.s!,
           d = UNITS[type];
         if (!d) return false;
@@ -103,6 +104,7 @@
         return true;
       },
       cancelQueue(this: MeridianGame, id: number, index: number, team: PlayerTeam = 0) {
+        if (this.s!.stopped) return;
         let b = this.get(id);
         if (!b || b.team !== team || !b.queue[index]) return;
         let q = b.queue.splice(index, 1)[0];
@@ -115,7 +117,7 @@
           e.order.type !== 'build' && e.order.type !== 'repair') as UnitEntity[];
       },
       workerTask(this: MeridianGame, target: Entity | null, team: PlayerTeam = 0): 'build' | 'repair' | null {
-        if (!this.s || this.s.result || !target || target.hp <= 0 || target.team !== team) return null;
+        if (!this.s || this.s.result || this.s.stopped || !target || target.hp <= 0 || target.team !== team) return null;
         if (target.kind === 'building' && target.progress < 1) return 'build';
         if ((target.kind === 'building' || target.kind === 'unit') &&
           target.progress >= 1 && target.hp < target.maxHp) return 'repair';
@@ -172,6 +174,7 @@
         return '';
       },
       build(this: MeridianGame, type: BuildingType, p: Position, selected: number[] = [], team: PlayerTeam = 0) {
+        if (this.s!.stopped) return false;
         p = this.foundationPosition(type, p, team);
         let reason = this.canBuild(type, p, team);
         if (reason) {
@@ -210,6 +213,7 @@
         return true;
       },
       cancelConstruction(this: MeridianGame, id: number, team: PlayerTeam = 0) {
+        if (this.s!.stopped) return;
         let e = this.get(id);
         if (!e || e.team !== team || e.kind !== 'building' || e.progress >= 1) return;
         let c = e.paid || this.cost(e.type, 'building', team);
@@ -222,7 +226,7 @@
       },
       managedBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0): BuildingEntity | null {
         let b = this.get(id);
-        return this.s && !this.s!.result && b?.kind === 'building' && b.team === team &&
+        return this.s && !this.s!.result && !this.s.stopped && b?.kind === 'building' && b.team === team &&
           b.progress >= 1 ? b : null;
       },
       buildingRepairers(this: MeridianGame, id: number, team: PlayerTeam = 0): UnitEntity[] {

@@ -40,6 +40,25 @@ test('map dimensions are instance-local, validated and keep square cells at larg
   } finally { definition.size=original; }
 });
 
+test('four party sight buffers remain isolated, while the presentation view still belongs to party zero', () => {
+  const w = new Battlefield(1409, 'mothership', 4), sites = w.layout.startSites;
+  assert.equal(w.sight.length, 4);
+  assert.strictEqual(w.visible, w.sight[0].visible);
+  assert.strictEqual(w.explored, w.sight[0].explored);
+  w.reveal([], sites.map((p, team) => ({ ...p, team, r: 5 })));
+  for (let team = 0; team < 4; team++) for (let other = 0; other < 4; other++) {
+    assert.equal(w.sight[team].visible[w.idx(sites[other].x, sites[other].z)], team === other ? 255 : 0);
+    if (team !== other) assert.notStrictEqual(w.sight[team].explored, w.sight[other].explored);
+  }
+  w.reveal([]);
+  assert.equal(w.sight[3].visible[w.idx(sites[3].x, sites[3].z)], 0);
+  assert.equal(w.sight[3].explored[w.idx(sites[3].x, sites[3].z)], 1);
+  const fresh = new Battlefield(1409, 'mothership');
+  assert.equal(fresh.sight.length, 2);
+  assert.ok(fresh.sight.every(view => !view.explored.some(Boolean)));
+  for (const count of [0, 1, 5, 2.5, NaN]) assert.throws(() => new Battlefield(1409, 'mothership', count));
+});
+
 test('larger worlds navigate, rebuild blockers and reveal both teams beyond the old edges', () => {
   const definition=BATTLEFIELDS['alien-planet'], original=definition.size;
   try {

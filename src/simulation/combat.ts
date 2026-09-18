@@ -183,7 +183,9 @@
           e.x,
           e.z,
           UNITS.medic.range + 2,
-          n => n.id !== e.id && !this.enemy(e, n) && n.kind === 'unit' && n.hp < n.maxHp && n.hp > 0
+          n => n.id !== e.id &&
+            (this.s!.rules.kind === 'scenario' ? n.team === e.team : !this.enemy(e, n)) &&
+            n.kind === 'unit' && n.hp < n.maxHp && n.hp > 0
         );
         allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
         let t = allies[0];

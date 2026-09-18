@@ -141,8 +141,8 @@ const aiMethods = {
       units=own.filter(e=>e.kind==='unit' && e.type!=='worker'),
       count=(type:UnitType)=>units.filter(e=>e.type===type).length +
         own.reduce((n,e)=>n+e.queue.filter(q=>q.type===type).length,0),
-      needAA=visible.some(e=>e.type==='air'),
-      siege=Object.values(this.aiFor(team)!.contacts).some(e=>e.team!==-1&&e.kind==='building'),
+      needAA=visible.some(e=>this.enemy({team},e)&&e.type==='air'),
+      siege=Object.values(this.aiFor(team)!.contacts).some(e=>this.enemy({team},e)&&e.kind==='building'),
       choices: UnitType[] = [];
     if (needAA) choices.push('rifle');
     if (units.length>=8 && !count('hero')) choices.push('hero');
@@ -165,7 +165,7 @@ const aiMethods = {
   },
   aiAbilities(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
     const s=this.s!, ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),s.depth),
-      foes=visible.filter(e=>e.team!==-1);
+      foes=visible.filter(e=>this.enemy({team},e));
     const ready=(kind:AbilityType)=>!this.abilityRequirement(kind,team) &&
       this.account(team).energy>=ABILITIES[kind].energy && this.account(team).abilities[kind]<=s.time;
     if (ready('repair')) {
@@ -197,7 +197,7 @@ const aiMethods = {
   },
   aiStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
     const s=this.s!,ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),s.depth),
-      foes=visible.filter(e=>e.team!==-1),
+      foes=visible.filter(e=>this.enemy({team},e)),
       army=own.filter(e=>e.kind==='unit'&&e.type!=='worker'&&!e.exit) as UnitEntity[],
       danger=foes.filter(e=>e.kind==='unit'&&distance(e,home)<30);
     if (danger.length) {
@@ -231,7 +231,7 @@ const aiMethods = {
       if (!arrived) { this.aiOrder(team,squad,ai.goal);return; }
       // Reassess at the last-known location, not at a hidden live entity's new coordinates.
     }
-    const known=Object.values(ai.contacts).filter(e=>e.team!==-1 && e.kind!=='resource');
+    const known=Object.values(ai.contacts).filter(e=>this.enemy({team},e) && e.kind!=='resource');
     if (army.length>=2 && (!ai.scout || !army.some(e=>e.id===ai.scout))) ai.scout=army[0].id;
     const scout=army.find(e=>e.id===ai.scout);
     if (scout && ai.mode!=='attack' && s.time-ai.lastScout>rules.scoutInterval) {
@@ -260,7 +260,7 @@ const aiMethods = {
   },
   aiTick(this: MeridianGame, team: PlayerTeam) {
     const s=this.s!, ai=this.aiFor(team);
-    if (!ai || s.result || s.time<ai.nextThink) return;
+    if (!ai || s.result || s.stopped || s.time<ai.nextThink) return;
     ai.nextThink=s.time+AI_RULES.think;
     const own=this.alive(e=>e.team===team), home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
     if (!home) return;

@@ -75,6 +75,42 @@ function advance(game, steps) {
 const player = (game, type) => game.alive(e => e.team === 0 && e.type === type)[0];
 const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').length;
 
+for (const count of [3, 4]) test(`internal ${count}-party scenario: distinct starts, isolated state and explicit stop without expedition result`, () => {
+  const { game, events } = createGame(), options = {
+    seed: 1409, map: 'mothership', duration: .1,
+    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human', benefits: { pioneerSquad: 1 } })),
+    hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b && (a + b) % 2 === 1))
+  };
+  const profile = json(game.profile), dispatched = [];
+  game.aiTick = team => dispatched.push(team);
+  game.startScenario(options);
+  assert.equal(events.length, 0, 'no start/radio/result UI flow');
+  assert.equal(game.s.parties.length, count); assert.equal(game.world.sight.length, count);
+  const bases = game.alive(e => e.type === 'hq');
+  assert.equal(bases.length, count);
+  assert.equal(new Set(bases.map(e => `${e.x}/${e.z}`)).size, count);
+  for (let team = 0; team < count; team++) {
+    assert.ok(game.alive(e => e.team === team && e.type === 'worker').length === 1);
+    assert.ok(game.alive(e => e.type === 'crystal').some(e => game.canSee(team, e)));
+    assert.equal(game.account(team).alloy, 250);
+  }
+  const setup = json(game.s), nextRandom = game.random();
+  game.startScenario(options);
+  assert.deepEqual(json(game.s), setup); assert.equal(game.random(), nextRandom);
+  // Loss of either former single-player HQ cannot silently end this scenario.
+  for (const e of game.alive(e => e.type === 'hq' && e.team < 2)) { e.hp = 0; e.deathAt = 0; }
+  game.checkBattleResult(); assert.equal(game.s.result, null);
+  game.step(.05); game.step(.05);
+  assert.deepEqual(dispatched, [2, 2]); assert.equal(game.s.stopped, true);
+  assert.equal(game.s.time, .1); assert.equal(game.s.result, null);
+  const stopped = json(game.s); game.step(.05); assert.deepEqual(json(game.s), stopped);
+  assert.equal(events.some(e => e.type === 'result'), false);
+  assert.deepEqual(json(game.profile), profile);
+  game.start({ seed: 1409, map: 'mothership' });
+  assert.equal(game.s.parties.length, 2); assert.equal(game.world.sight.length, 2);
+  assert.equal(game.s.stopped, false); assert.equal(game.s.rules.kind, 'single-player');
+});
+
 test('larger map supports outer-area spawns, paid construction, production, commands and restart', () => {
   const {game,context}=createGame(true);
   vm.runInContext(`BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};

@@ -278,7 +278,7 @@ test('each faction chooses its own build, production and remembered target prior
     const trained=[];g.train=(type)=>{trained.push(type);return true;};
     g.aiProduction(1,own(g,1),[],0);
     assert.deepEqual(trained,[["tank"],["medic"],["air"]][faction]);
-    trained.length=0;g.aiProduction(1,own(g,1),[{type:'air'}],0);
+    trained.length=0;g.aiProduction(1,own(g,1),[{type:'air',team:0}],0);
     assert.deepEqual(trained,['rifle'],'visible air overrides doctrine');
     const ai=g.aiFor(1);g.s.time=100;
     for(const [id,type,kind] of [[901,'worker','unit'],[902,'factory','building'],[903,'artillery','unit']])

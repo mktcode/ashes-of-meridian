@@ -2,8 +2,9 @@
     'use strict';
     const runtimeMethods = {
       step(this: MeridianGame, dt: number) {
-        if (!this.s || this.s!.result) return;
+        if (!this.s || this.s.result || this.s.stopped) return;
         let s = this.s!;
+        if (s.rules.kind === 'scenario') dt = Math.min(dt, Math.max(0, s.rules.duration - s.time));
         s.time += dt;
         for (const { account } of s.parties) account.energy = Math.min(COMMAND_ENERGY.max, account.energy + dt * COMMAND_ENERGY.regeneration);
         this.rehash();
@@ -157,9 +158,10 @@
           s.entities = s.entities.filter(e => e.hp > 0 || s.time - e.deathAt! <= 9);
           this.ids = new Map(s.entities.map(e => [e.id, e]));
         }
+        if (s.rules.kind === 'scenario' && s.time >= s.rules.duration) s.stopped = true;
       },
       checkBattleResult(this: MeridianGame) {
-        if (this.s!.result) return;
+        if (this.s!.result || this.s!.rules.kind === 'scenario') return;
         if (!this.alive(e => e.team === 0 && e.type === 'hq').length)
           this.finish(false, 'Your last command center has fallen.');
         else if (!this.alive(e => e.team === 1 && e.type === 'hq').length)
@@ -172,6 +174,7 @@
         return null;
       },
       ability(this: MeridianGame, kind: AbilityType, p: Position, team: PlayerTeam = 0) {
+        if (this.s!.stopped) return false;
         let s = this.s!, account = this.account(team), faction = this.factionFor(team),
           d = ABILITIES[kind];
         if (!d) return false;
@@ -248,7 +251,7 @@
         return true;
       },
       finish(this: MeridianGame, win: boolean, text: string) {
-        if (this.s!.result) return;
+        if (this.s!.result || this.s!.rules.kind === 'scenario') return;
         let s = this.s!,
           h = this.alive(e => e.team === 0 && e.type === 'hq') as BuildingEntity[],
           integrity = h.length ? Math.max(...h.map(e => e.hp / e.maxHp)) : 0;

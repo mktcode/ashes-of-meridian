@@ -189,7 +189,7 @@ interface MeridianPersistence {
   clearExpedition(): boolean;
 }
 
-type TeamId = -1 | 0 | 1;
+type TeamId = -1 | PlayerTeam;
 type EntityKind = 'unit' | 'building' | 'resource';
 type ResourceType = 'crystal' | 'gas';
 type EntityType = UnitType | BuildingType | ResourceType;
@@ -322,6 +322,19 @@ interface BattleOptions {
   enemyBenefits?: Record<string, number>;
 }
 
+// Internal CPU scenarios only; not an expedition recipe or a selectable game mode.
+interface ScenarioOptions {
+  seed: number;
+  map: BattlefieldId;
+  depth?: number;
+  parties: { faction: FactionId; controller: 'human' | 'ai'; benefits?: Record<string, number> }[];
+  /** Symmetric matrix; false means non-hostile, not shared ownership or vision. */
+  hostilities: boolean[][];
+  duration: number;
+}
+type BattleRules = { kind: 'single-player' } |
+  { kind: 'scenario'; hostilities: boolean[][]; duration: number };
+
 interface RunStats {
   kills: number;
   lost: number;
@@ -388,7 +401,7 @@ interface AIState {
   recoverUntil?: number;
   failedGoal?: Position & { until: number };
 }
-type PlayerTeam = 0 | 1;
+type PlayerTeam = 0 | 1 | 2 | 3;
 interface TeamState {
   alloy: number;
   gas: number;
@@ -412,7 +425,9 @@ interface RunState {
   seed: number;
   map: BattlefieldId;
   time: number;
-  parties: [PartyState, PartyState];
+  parties: PartyState[];
+  rules: BattleRules;
+  stopped: boolean;
   nextId: number;
   entities: Entity[];
   scans: Scan[];
