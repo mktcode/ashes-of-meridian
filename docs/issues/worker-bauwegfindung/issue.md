@@ -16,6 +16,8 @@ Die dauerhaften Regressionsfälle stehen in [den Navigationstests](../../../test
 
 Diese Befunde erklären eine passende Fehlerklasse, beweisen aber nicht den exakten Zustand eines der Screenshots. Die isolierten Kurztests sind kein Ersatz für Crowd-Langläufe oder menschliche Abnahme.
 
+Der vollständig freigegebene Simulationslauf auf `0fd975b` (Node v23.11.1) findet zusätzlich einen offenen Langlaufbefund: `worker traffic stays productive for six minutes: 1409/0/8, forced node true` scheitert mit `worker 64 stopped delivering in minute 1`. Die Variante ohne erzwungenen Knoten besteht. Ursache und Bezug zu den bisherigen Navigationseingriffen sind noch nicht eingegrenzt; keine Erwartungen, Radien oder Referenzen geändert.
+
 ## Noch offen
 
 - Die gemeldeten Originalkonstellationen im Spiel nachprüfen. Bei erneutem Stillstand Auftrag, Position, Ladung, `returning`, `exit`, `yieldTo`, `path`, `pi`, `pathGoal`, `pathArea`, `pathResolvedGoal`, `pathStatus`, `pathVersion`, `stuck`, `recoveryAttempts` und Nachbargeometrie sichern. Nicht zuerst neu laden: laufende Gefechte besitzen kein Restore-API.
@@ -23,7 +25,7 @@ Diese Befunde erklären eine passende Fehlerklasse, beweisen aber nicht den exak
 - Tatsächlich unerreichbare Aufträge behalten ihren Auftrag und versuchen es mit begrenzter Retry-Frequenz erneut. Ein sichtbarer Blockiert-Status bzw. eine abschließende Fehlerreaktion fehlt noch; temporäre Einheitenbelegung darf nicht als dauerhafte Unerreichbarkeit behandelt werden.
 - Die Fortschrittsmessung ist weiterhin wegpunktbezogen, nicht auftragsweit. Wiederholte Yield-Manöver oder komplexe wechselnde Umwege können zusätzliche Liveness-Kontrolle benötigen. Servicepunkte sind bevorzugte Positionen, keine exklusiv reservierten Slots; eine allgemeine Fairness-/Gegenverkehrsgarantie besteht nicht.
 - Größenabhängige Terrain-Clearance, durchgängige Segment-Kollisionsprüfung und ein globales Suchbudget sind separate Erweiterungen. Bestehende Körperradien, Hindernisverteilung und RNG-Verträge dabei schützen.
-- Bestehende längere Minenverkehrs-, Formations- und KI-Prüfungen wurden für diese fokussierte Umsetzung nicht gestartet. Bei weiterem Prüfbedarf gezielt freigeben lassen; keine breite Seed-/Kartenmatrix ohne konkreten Befund.
+- Den oben genannten Minenverkehrsfall anhand von Auftrag, Ladung, Arbeitsbereich und Nachbargeometrie eingrenzen. Weitere Diagnose-Läufe gezielt freigeben lassen; keine breite Seed-/Kartenmatrix ohne konkreten Befund.
 
 ## Akzeptanz der offenen Arbeit
 
