@@ -1,0 +1,13 @@
+{
+  "name": "ashes-of-meridian-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs && tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs"
+  },
+  "dependencies": { "ws": "^8.18.3" },
+  "devDependencies": { "@types/node": "^22.0.0", "@types/ws": "^8.18.1", "typescript": "7.0.2" }
+}

@@ -56,13 +56,17 @@ function commandOutcome(command: QueuedAction, status: ActionOutcome['status']):
 }
 const commandMethods = {
   submitAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): boolean {
+    if (this.networkTeam != null) {
+      const action = parseBattleAction(input, this.s?.entities.length || 0);
+      return !!action && team === this.networkTeam && !!this.networkSubmit?.(action);
+    }
     return this.s?.rules.kind === 'scenario'
       ? this.queueAction(team, input, announce) !== null
       : this.executeAction(team, input, announce);
   },
   queueAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): ActionTicket | null {
     const s = this.s, queue = this.commandQueue;
-    if (!s || s.rules.kind !== 'scenario' || s.result || s.stopped ||
+    if (this.networkTeam != null || !s || s.rules.kind !== 'scenario' || s.result || s.stopped ||
         !Number.isInteger(team) || !s.parties.some(p => p.id === team) ||
         queue.pending.length >= COMMAND_QUEUE_LIMIT || queue.tick >= Number.MAX_SAFE_INTEGER ||
         queue.nextSequence >= Number.MAX_SAFE_INTEGER) return null;
@@ -83,7 +87,7 @@ const commandMethods = {
   },
   beginCommandTick(this: MeridianGame): boolean {
     const s = this.s, queue = this.commandQueue;
-    if (!s || s.rules.kind !== 'scenario' || s.result || s.stopped || queue.processing ||
+    if (this.networkTeam != null || !s || s.rules.kind !== 'scenario' || s.result || s.stopped || queue.processing ||
         queue.tick >= Number.MAX_SAFE_INTEGER) return false;
     // Detach this batch before callbacks can enqueue inputs for the following tick.
     const batch = queue.pending;
@@ -119,7 +123,7 @@ const commandMethods = {
   },
   executeAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): boolean {
     const s = this.s;
-    if (!s || s.result || s.stopped || !Number.isInteger(team) || !s.parties.some(p => p.id === team)) return false;
+    if (this.networkTeam != null || !s || s.result || s.stopped || !Number.isInteger(team) || !s.parties.some(p => p.id === team)) return false;
     const action = parseBattleAction(input, s.entities.length);
     if (!action) return false;
     const inBounds = (p: Position) => Math.abs(p.x) <= this.world!.extent && Math.abs(p.z) <= this.world!.extent;

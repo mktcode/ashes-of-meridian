@@ -278,7 +278,8 @@
         $('energyCount').textContent = String(Math.floor(account.energy));
         $('gameTime').textContent = formatTime(s.time);
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
-        speedButton.textContent = speedLabel;
+        (speedButton as HTMLButtonElement).disabled = this.game.networkTeam != null;
+        speedButton.textContent = this.game.networkTeam != null ? 'SERVER' : speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });

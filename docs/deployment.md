@@ -1,6 +1,6 @@
 # Statisches Webdeployment
 
-Die [öffentliche Testversion](../README.md) wird über Dokploy ausgeliefert; zusätzlich kann derselbe statische Stand als HTML5-Prototyp bei itch.io veröffentlicht werden. Kein Backend, keine Datenbank, persistenten Volumes oder Laufzeitvariablen. Lokale `file://`-Auslieferung bleibt unabhängig davon unterstützt.
+Die [öffentliche Testversion](../README.md) wird über Dokploy ausgeliefert; zusätzlich kann derselbe statische Stand als HTML5-Prototyp bei itch.io veröffentlicht werden. Das statische Paket selbst benötigt kein Backend, keine Datenbank, persistenten Volumes oder Laufzeitvariablen. Der optionale [Multiplayerserver](../server/README.md#separat-deployen) wird als eigener Dienst deployt; er ist nicht Teil dieses Nginx-Images. Lokale `file://`-Auslieferung bleibt unabhängig davon unterstützt.
 
 ## Docker und Dokploy
 

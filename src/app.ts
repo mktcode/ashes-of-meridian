@@ -126,6 +126,11 @@
             $('loading').classList.add('hidden');
           }).catch(textureFailure);
         };
+        ui.multiplayer = new MeridianMultiplayerClient(ui, async map => {
+          const id = ++worldRequest;
+          const ready = await R.prepareBattlefieldTextures(BATTLEFIELDS[map].render);
+          return ready && id === worldRequest;
+        });
         ui.showHome();
         const SIMULATION_STEP_SECONDS = 0.05;
         let last = performance.now(),
@@ -238,7 +243,7 @@
             frameClock = 0;
           }
           try {
-            if (game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
+            if (game.networkTeam == null && game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
               accumulator += dt * game.s.speed;
               let steps = 0;
               while (accumulator >= SIMULATION_STEP_SECONDS && steps++ < 12) {
@@ -269,6 +274,8 @@
             R.render(time, ui.view === 'game' && game.s ? game.s.time : 0);
             ui.drawOverlay(overlayContext);
           } catch (error) {
+            const network = game.networkTeam != null;
+            if (network) ui.multiplayer?.disconnect();
             failed = true;
             console.error(error);
             ui.paused = true;
@@ -277,17 +284,22 @@
             loader.innerHTML =
               '<div class="eyebrow">UPLINK INTERRUPTED</div><h2>The renderer encountered a problem.</h2><p>' +
               esc(error instanceof Error ? error.message : String(error)) +
-              '</p><p>Reload this file to return to the last secured expedition checkpoint.</p>';
+              (network ? '</p><p>The multiplayer session ended. Reload to return to the menu.</p>'
+                : '</p><p>Reload this file to return to the last secured expedition checkpoint.</p>');
             return;
           }
           requestAnimationFrame(draw);
         }
         canvas.addEventListener('webglcontextlost', e => {
           e.preventDefault();
+          const network = game.networkTeam != null;
+          if (network) ui.multiplayer?.disconnect();
           ui.paused = true;
           $('loading').classList.remove('hidden');
           $('loading').innerHTML =
-            '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>Reload this file to reconnect from the last secured expedition checkpoint. Use Performance quality in Settings for a lighter graphics load.</p>';
+            '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>' +
+            (network ? 'The multiplayer session ended. Reload to return to the menu.' : 'Reload this file to reconnect from the last secured expedition checkpoint.') +
+            ' Use Performance quality in Settings for a lighter graphics load.</p>';
           failed = true;
         });
         window.Meridian = {

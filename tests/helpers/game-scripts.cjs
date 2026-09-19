@@ -73,6 +73,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-ai',
   'simulation-runtime'
 ]);
+const MULTIPLAYER_SCRIPTS = Object.freeze(['multiplayer-state', 'multiplayer-client']);
 const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation']);
 
 // Deliberately not a general HTML parser. Only the project's named classic
@@ -143,4 +144,4 @@ function loadScripts(names, { scripts = readScripts(), globals = {} } = {}) {
   return context;
 }
 
-module.exports = { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };
+module.exports = { MULTIPLAYER_SCRIPTS, BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };

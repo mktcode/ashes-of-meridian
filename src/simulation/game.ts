@@ -17,6 +17,8 @@
       if (!Array.isArray(opts.parties) || !Array.isArray(opts.hostilities))
         throw Error('Scenario requires party and hostility arrays');
       const count = opts.parties.length;
+      if (opts.startSeed !== undefined && (!Number.isSafeInteger(opts.startSeed) || opts.startSeed <= 0))
+        throw Error('Invalid deployment seed');
       if (!Number.isInteger(opts.seed) || opts.seed <= 0 || !Object.hasOwn(BATTLEFIELDS, opts.map) ||
           count < 2 || count > 4 || !Number.isFinite(opts.duration) || opts.duration <= 0)
         throw Error('Scenario requires a seed, known map, 2–4 parties and a positive duration');
@@ -65,6 +67,8 @@
       cosmeticRandom: () => number;
       effects: MeridianEffects;
       commandQueue: CommandQueue = createCommandQueue();
+      networkTeam: PlayerTeam | null = null;
+      networkSubmit?: (action: BattleAction) => boolean;
 
       get localTeam(): PlayerTeam { return this.world?.viewTeam ?? 0; }
 
@@ -99,7 +103,8 @@
     }
     const gameMethods = {
       setPerspective(this: MeridianGame, team: PlayerTeam): boolean {
-        if (!this.s || !this.world || !this.s.parties.some(p => p.id === team) ||
+        if ((this.networkTeam != null && team !== this.networkTeam) ||
+            !this.s || !this.world || !this.s.parties.some(p => p.id === team) ||
             (this.s.rules.kind === 'single-player' && team !== 0)) return false;
         if (team === this.localTeam) return true;
         if (!this.world.selectView(team)) return false;
@@ -118,13 +123,13 @@
         const { parties, rules, aiTeams } = scenarioSetup(opts);
         return this.startBattle(opts, parties, rules, aiTeams);
       },
-      startBattle(this: MeridianGame, opts: BattleOptions, parties: PartyState[], rules: BattleRules, aiTeams: PlayerTeam[]) {
+      startBattle(this: MeridianGame, opts: BattleOptions & { startSeed?: number }, parties: PartyState[], rules: BattleRules, aiTeams: PlayerTeam[]) {
         const [{ faction, meta, benefits }, { faction: enemy }] = parties,
           map = battlefieldId(opts.map), layout = BATTLEFIELDS[map].layout,
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.world = new Battlefield(seed, map, parties.length);
         this.world.startSites = battlefieldStartSites(this.world);
-        const starts = this.startingPositions(seed, parties.length), [playerStart, enemyStart] = starts;
+        const starts = this.startingPositions(rules.kind === 'scenario' ? opts.startSeed ?? seed : seed, parties.length), [playerStart, enemyStart] = starts;
         this.s = {
           seed, map,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),

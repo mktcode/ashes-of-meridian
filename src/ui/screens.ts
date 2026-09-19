@@ -2,6 +2,7 @@
     'use strict';
     const uiScreenMethods = {
       showHome(this: MeridianUI) {
+        this.multiplayer?.disconnect();
         this.game.s = null;
         this.view = 'home';
         this.paused = true;
@@ -150,6 +151,10 @@
         let s = this.game.s;
         if (!s) return;
         this.paused = true;
+        if (this.game.networkTeam != null) {
+          this.openModal('pause', `<div class="eyebrow">SESSION ${esc(this.multiplayer?.code || '')}</div><h1>Server keeps running.</h1><p>This menu only blocks your local controls. Leaving ends the session for both players. No expedition or profile changes.</p><div class="btnstack"><button class="primary" data-ui="resume">RETURN TO SESSION</button><button class="secondary" data-ui="settings">SETTINGS</button><button class="secondary" data-ui="home">LEAVE SESSION</button></div>`);
+          return;
+        }
         this.openModal(
           'pause',
           `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">SETTINGS</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="restartConfirm">RESTART OPERATION</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p style="font-size:11px;margin-bottom:0">Main menu, closing or reloading discards this battle but keeps its secured pre-battle checkpoint. Abandoning ends the expedition.</p>`

@@ -346,9 +346,11 @@ interface BattleOptions {
   enemyBenefits?: Record<string, number>;
 }
 
-// Internal CPU scenarios only; not an expedition recipe or a selectable game mode.
+// Bounded non-expedition scenarios; also used by the optional multiplayer host.
 interface ScenarioOptions {
   seed: number;
+  /** Optional private deployment draw, independent of the public terrain seed. */
+  startSeed?: number;
   map: BattlefieldId;
   depth?: number;
   parties: { faction: FactionId; controller: 'human' | 'ai'; benefits?: Record<string, number> }[];

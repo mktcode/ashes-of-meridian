@@ -2,7 +2,7 @@
     'use strict';
     const runtimeMethods = {
       step(this: MeridianGame, dt: number) {
-        if (!this.s || this.s.result || this.s.stopped) return;
+        if (this.networkTeam != null || !this.s || this.s.result || this.s.stopped) return;
         let s = this.s!;
         if (s.rules.kind === 'scenario') {
           if (!Number.isFinite(dt) || dt <= 0) return;

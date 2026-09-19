@@ -1,6 +1,6 @@
 # Multiplayer-Vorbereitung: offene Mehrparteien-Prüfungen
 
-Technische Szenariogrenzen: [Architektur](../architecture.md#teamzustand-sicht-und-ki). Kein öffentlicher Mehrspielermodus; vorerst ausschließlich jeder gegen jeden nach [Rahmen](multiplayer-rahmen.md), keine 2on2-KI.
+Technische Szenariogrenzen: [Architektur](../architecture.md#teamzustand-sicht-und-ki). Der [Netzwerkprototyp](multiplayer-netzwerk.md) nutzt zwei menschliche Parteien; darüber hinaus vorerst ausschließlich jeder gegen jeden nach [Rahmen](multiplayer-rahmen.md), keine 2on2-KI.
 
 - [ ] Bei Freigabe gezielte echte FFA-KI-Fälle für mehrere feindliche Parteien prüfen; bisher ist nur der Controller-Dispatch instrumentiert.
 

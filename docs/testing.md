@@ -60,6 +60,10 @@ Im Abschluss Standardlauf, gezielte Tests und ausdrücklich beauftragte Langläu
 
 CPU-Simulationstests laden keinen Renderer; Grafikgeometrie und Uploads separat prüfen. Tests für einzelne Einheitenregeln isolieren den strategischen Controller, KI-Abnahmen verwenden echte Aktionen/Produktion. Neue Abdeckung fachlich klein halten, keine redundanten Karten-/Fraktions-/Upgrade-Kreuzprodukte ohne zusätzlichen Erkenntniswert. Umgang mit Sollwerten: [Feste Referenzen](reference-tests.md).
 
+## Multiplayer-Prototyp
+
+Die Standardtests enthalten synthetische Sichtprojektion, Ressourcen-Gedächtnis und die Sperre lokaler Ausführung im Netzwerkmodus. Nach `npm run build --prefix server` prüft `npm test --prefix server` zusätzlich kurze echte WebSocket-Sitzungen mit menschlichen Controllern auf allen Karten, Akteursbindung, Annahme/Ausführung und Abbruch. Das sind gezielte Netzwerkprüfungen, keine autonomen KI-Partien oder Ersatz für die gesonderten Simulations-Langläufe. Serverabhängigkeiten vorher separat installieren; Details unter [Server](../server/README.md).
+
 ## Browser und menschliche Abnahme
 
 Ein bei konkretem Diagnosebedarf beauftragter technischer Browsercheck verwendet den aktuellen Build, ein isoliertes Profil und direkt `file://`, ohne abgeschwächte Sicherheitsflags. Nur betroffene Abläufe prüfen, etwa:

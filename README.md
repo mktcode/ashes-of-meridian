@@ -13,6 +13,10 @@ npm run build
 
 Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. HTML, Styles, Build-Ausgabe und lokale Laufzeitassets gemeinsam mitführen; es ist kein Ein-Datei-Paket. `npm run build:zip` erzeugt das direkt hochladbare HTML5-Paket `release/ashes-of-meridian-prototype.zip` für itch.io. Quellen und Ladevertrag: [Architektur](docs/architecture.md), Webhosting und Veröffentlichung: [Deployment](docs/deployment.md).
 
+## Multiplayer-Prototyp
+
+Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen bzw. per Code beitreten, mit freier Karten- und Fraktionswahl. Dafür ist ein separat laufender [Multiplayerserver](server/README.md) nötig. Noch keine Expeditionen, Belohnungen oder Wiederverbindung; Kampf-Effekte/Audio sind noch nicht repliziert. Das bisherige Einzelspiel bleibt offline nutzbar.
+
 ## Spielen
 
 Mit **New expedition** eine freigeschaltete Fraktion wählen; Gegner, Karte und Seed werden für jedes Gefecht neu bestimmt. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Alloy, Raffinerien an Vents erzeugen Aether. Das gegnerische HQ zerstören führt zur Vorteilswahl und zum nächsten Gefecht; das letzte eigene HQ beendet die Expedition.

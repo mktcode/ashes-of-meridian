@@ -69,6 +69,7 @@
         });
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
         $('speedBtn').onclick = () => {
+          if (this.game.networkTeam != null) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           const speeds = [1, 1.5, 2, 0.75];
           this.game.s!.speed = speeds[(speeds.indexOf(this.game.s!.speed) + 1) % speeds.length];
@@ -172,6 +173,10 @@
       uiAction(this: MeridianUI, action: string) {
         this.audio.sound('select');
         switch (action) {
+          case 'multiplayer': this.multiplayer?.show(); break;
+          case 'networkCreate': this.multiplayer?.connect('create'); break;
+          case 'networkJoin': this.multiplayer?.connect('join'); break;
+          case 'networkCopy': void this.multiplayer?.copyCode(); break;
           case 'home':
             this.showHome();
             break;
