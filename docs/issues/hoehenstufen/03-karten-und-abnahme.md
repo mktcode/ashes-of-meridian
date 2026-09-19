@@ -6,6 +6,8 @@ Abhängigkeiten: [Welt/Navigation](01-welt-und-navigation.md) und [Darstellung/B
 
 ### Mothership: erster spielbarer Versuch
 
+**Auf dem Experimentier-Branch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Die übrigen Karten folgen erst nach Rückmeldung; die gemeinsame Layout-Abnahme unten bleibt offen.
+
 Erhöhte industrielle Basisdecks in den vier Eckbereichen, große abgesenkte zentrale Gefechtsplattform, breite technische Rampen. Flankenzugänge sollen die vorhandene Schiffsarchitektur weiterführen; keine Naturklippen oder Bergkulisse.
 
 Das deterministische Layout ist für den ersten Durchstich überschaubarer als Desert. Allerdings stehen Hangars und Anlagen bereits an festen Orten, und Anfangsvorkommen liegen teils außerhalb einer kleinen kreisförmigen HQ-Reserve. Nicht einfach vier identische Scheiben unter die jetzigen HQs setzen. Deckmalerei, Cargo-Pads und Vent-Docks brauchen dieselbe Höhe wie das Nutzterrain; Außenhülle, Brücke und Hangardächer sind nicht automatisch spielbarer Boden. Ressourcenzugänge und Maschineninseln zusammen mit den Rampen planen.

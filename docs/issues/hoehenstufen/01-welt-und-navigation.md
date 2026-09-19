@@ -2,7 +2,11 @@
 
 Abhängigkeit: [Ziel und offene Regelentscheidungen](README.md). Dieses Paket definiert den gemeinsamen Vertrag für Darstellung und Karten, keine vollständige 3D-Simulation.
 
-## Ausgangsbefund
+## Prototypstand
+
+Der Mothership-Durchstich auf `experiment/hoehenstufen` integriert den Oberflächen-/Segmentvertrag, radiusabhängige Klippenfreiräume, Arbeitszugänge, ebene Fundamente und sichere Produktions-/Verstärkungsplätze. Synthetische Geometrie- und kurze Mothership-Verhaltenstests liegen im Branch. Die Aufgaben unten bleiben kartenübergreifende Abnahmeziele; kein Nachweis für Großgruppen, alle Spawnkontexte oder die noch nicht umgebauten Karten. [Teststart und offene Grenzen](README.md#jetzt-manuell-testen).
+
+## Ausgangsbefund vor dem Experiment
 
 `Position` enthält nur `x/z`. `Battlefield.path`, `lineFree` und `blockedAt` in `src/world.ts` arbeiten mit einem Belegungsraster; Bewegung, Yield und Recovery in `src/simulation/movement.ts` prüfen überwiegend Zielpositionen. `distance` ist planar. Desert besitzt schon `WorldRelief` und dreiecksgenaue Interpolation, markiert erhöhte Samples aber als Hindernisse. Das ist kein bereits begehbares Höhenfeld.
 
