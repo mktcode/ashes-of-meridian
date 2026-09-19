@@ -28,7 +28,8 @@ interface Connection {
 }
 interface Seat {
   room?: Room; team: number; ready: boolean; connection?: Connection; disconnectedAt?: number;
-  resumeToken: string; resources: Map<number, unknown>; requests: Map<number, number>;
+  resumeToken: string; previousToken?: string; rotationUntil?: number;
+  resources: Map<number, unknown>; requests: Map<number, number>;
   outcomes: Map<number, string>; lastRequest: number;
 }
 interface Room {
@@ -200,7 +201,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
   function findSeat(code: unknown, token: unknown) {
     const room = typeof code === 'string' ? rooms.get(code) : undefined;
     if (!room) return undefined;
-    const seat = room.seats.find(candidate => tokenMatches(candidate.resumeToken, token));
+    const seat = room.seats.find(candidate => tokenMatches(candidate.resumeToken, token) ||
+      (candidate.previousToken !== undefined && now() < candidate.rotationUntil! && tokenMatches(candidate.previousToken, token)));
     return seat?.room === room ? seat : undefined;
   }
   function resume(connection: Connection, data: Record<string, unknown>) {
@@ -214,7 +216,12 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
       metrics.resumeRejected++; emit('resume_rejected', { connectionId: connection.id, reason: 'credentials_or_expired' });
       fail(connection, 'Session unavailable.', 'resume_rejected'); return;
     }
-    attach(connection, seat); seat.resumeToken = newToken();
+    // Retrying a lost proposal must neither rotate again nor extend its validity.
+    if (tokenMatches(seat.resumeToken, data.token)) {
+      seat.previousToken = seat.resumeToken; seat.rotationUntil = now() + timing.resumeGrace;
+      seat.resumeToken = newToken();
+    }
+    attach(connection, seat);
     metrics.resumeSucceeded++; emit('resume_succeeded', { connectionId: connection.id, roomId: room.id, team: seat.team, phase: room.phase });
     send(connection, { type: 'resumed', token: seat.resumeToken, graceMs: timing.resumeGrace, phase: room.phase,
       lastRequest: seat.lastRequest, start: room.phase === 'waiting' ? undefined : startMessage(room, seat) });
@@ -257,13 +264,13 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
         error: error instanceof Error ? error.name : 'UnknownError' });
       ws.terminate();
     });
-    ws.on('close', (code, reason) => {
+    ws.on('close', code => {
       connections.delete(connection); metrics.connectionsClosed++;
       const seat = connection.seat, room = seat?.room;
       if (seat?.connection === connection) seat.connection = undefined;
       connection.seat = undefined;
       emit('connection_close', { connectionId: connection.id, roomId: room?.id, phase: room?.phase,
-        team: room ? seat?.team : undefined, code, reason: reason.toString('utf8').slice(0, 123),
+        team: room ? seat?.team : undefined, code,
         cause: connection.closeCause ?? 'peer_close', durationMs: Math.max(0, now() - connection.connected),
         bytesSent: connection.bytesSent, stateFramesSent: connection.stateFramesSent,
         stateFramesSkipped: connection.stateFramesSkipped, stateFramesThrottled: connection.stateFramesThrottled,
@@ -317,6 +324,11 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
         const seat = connection.seat, room = seat.room;
         if (!room) { fail(connection, 'Session unavailable.'); return; }
         if (data.type === 'leave') { end(room, 'A player left the session. No rewards.', 'player_leave'); return; }
+        if (data.type === 'resume_ack') {
+          if (!tokenMatches(seat.resumeToken, data.token)) { fail(connection, 'Invalid resume acknowledgment.'); return; }
+          seat.previousToken = undefined; seat.rotationUntil = undefined; return;
+        }
+        if (data.type === 'ready' && seat.ready && room.phase === 'playing') return;
         if (data.type === 'ready' && room.phase === 'loading') {
           if (!seat.ready) {
             seat.ready = true;

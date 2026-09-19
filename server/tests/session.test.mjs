@@ -31,18 +31,18 @@ async function fixture(t, options) {
 }
 for (const map of ['desert', 'alien-planet', 'mothership']) test(`two resumable actors on ${map}: map choice, filtered views, queued commands and reconnect`, async t => {
   const { connect } = await fixture(t), host = await connect(), guest = await connect();
-  host.send({ type: 'create', version: 3, map, faction: 0 });
+  host.send({ type: 'create', version: 4, map, faction: 0 });
   const waiting = await host.receive(m => m.type === 'waiting');
   assert.match(waiting.code, /^[A-F0-9]{10}$/); assert.equal(waiting.map, map);
   assert.match(waiting.token, /^[A-Za-z0-9_-]{32}$/); assert.equal(waiting.graceMs, 45000);
-  guest.send({ type: 'join', version: 3, code: waiting.code, faction: 2, team: 0, map: 'invalid-ignored-map' });
+  guest.send({ type: 'join', version: 4, code: waiting.code, faction: 2, team: 0, map: 'invalid-ignored-map' });
   const a = await host.receive(m => m.type === 'start'), b = await guest.receive(m => m.type === 'start');
   assert.equal(a.map, map); assert.equal(b.map, map); assert.equal(a.seed, b.seed);
   assert.equal(a.team, 0); assert.equal(b.team, 1); assert.deepEqual(a.factions, [0, 2]);
   assert.equal(a.token, waiting.token); assert.match(b.token, /^[A-Za-z0-9_-]{32}$/);
   assert.equal(a.startSeed, undefined); assert.equal(b.startSeed, undefined);
   const intruder = await connect();
-  intruder.send({ type: 'join', version: 3, code: waiting.code, faction: 0 });
+  intruder.send({ type: 'join', version: 4, code: waiting.code, faction: 0 });
   await intruder.receive(m => m.type === 'error');
   host.send({ type: 'ready' }); guest.send({ type: 'ready' });
   const own = await host.receive(m => m.type === 'frame'), other = await guest.receive(m => m.type === 'frame');
@@ -71,7 +71,7 @@ for (const map of ['desert', 'alien-planet', 'mothership']) test(`two resumable 
   assert.deepEqual(await guest.receive(m => m.type === 'presence' && m.team === 0),
     { type: 'presence', team: 0, connected: false, graceMs: 45000 });
   const resumedHost = await connect();
-  resumedHost.send({ type: 'resume', version: 3, code: waiting.code, token: a.token });
+  resumedHost.send({ type: 'resume', version: 4, code: waiting.code, token: a.token });
   const resumed = await resumedHost.receive(m => m.type === 'resumed');
   assert.equal(resumed.phase, 'playing'); assert.equal(resumed.lastRequest, 2);
   assert.notEqual(resumed.token, a.token); assert.equal(resumed.start.team, 0);
@@ -86,9 +86,9 @@ for (const map of ['desert', 'alien-planet', 'mothership']) test(`two resumable 
 test('accepted command outcomes survive transport loss and expired tokens cannot take over the seat', async t => {
   const { connect, server } = await fixture(t);
   const host = await connect(), guest = await connect();
-  host.send({ type: 'create', version: 3, map: 'desert', faction: 0 });
+  host.send({ type: 'create', version: 4, map: 'desert', faction: 0 });
   const waiting = await host.receive(m => m.type === 'waiting');
-  guest.send({ type: 'join', version: 3, code: waiting.code, faction: 1 });
+  guest.send({ type: 'join', version: 4, code: waiting.code, faction: 1 });
   const start = await host.receive(m => m.type === 'start'); await guest.receive(m => m.type === 'start');
   host.send({ type: 'ready' }); guest.send({ type: 'ready' });
   const frame = await host.receive(m => m.type === 'frame'), ownHQ = frame.entities.find(e => e.type === 'hq');
@@ -98,13 +98,17 @@ test('accepted command outcomes survive transport loss and expired tokens cannot
   host.ws.terminate(); await guest.receive(m => m.type === 'presence' && m.connected === false);
 
   const replacement = await connect();
-  replacement.send({ type: 'resume', version: 3, code: waiting.code, token: start.token });
+  replacement.send({ type: 'resume', version: 4, code: waiting.code, token: start.token });
   const resumed = await replacement.receive(m => m.type === 'resumed');
   assert.equal(resumed.lastRequest, 1); assert.notEqual(resumed.token, start.token);
   assert.equal((await replacement.receive(m => m.type === 'outcome' && m.request === 1)).status, 'applied');
 
+  replacement.send({ type: 'resume_ack', token: resumed.token });
+  // A following action proves the acknowledgment was processed before the stale-token attempt.
+  replacement.send({ type: 'ready' });
+  await replacement.receive(m => m.type === 'frame');
   const replay = await connect();
-  replay.send({ type: 'resume', version: 3, code: waiting.code, token: start.token });
+  replay.send({ type: 'resume', version: 4, code: waiting.code, token: start.token });
   assert.match((await replay.receive(m => m.type === 'error')).message, /unavailable/);
   replacement.send({ type: 'action', request: 2, action: { kind: 'rally', ids: [ownHQ.id], position: { x: 3, z: 3 } } });
   assert.equal((await replacement.receive(m => m.type === 'outcome' && m.request === 2)).status, 'applied');
@@ -116,9 +120,9 @@ test('state backpressure skips replaceable frames while control outcomes stay li
   const { connect, server } = await fixture(t, { tickIntervalMs: 20, stateFrameEveryTicks: 1,
     stateBackpressureBytes: 10, controlBackpressureBytes: 100, bufferedAmount: () => congested ? 20 : 0 });
   const host = await connect(), guest = await connect();
-  host.send({ type: 'create', version: 3, map: 'desert', faction: 0 });
+  host.send({ type: 'create', version: 4, map: 'desert', faction: 0 });
   const waiting = await host.receive(m => m.type === 'waiting');
-  guest.send({ type: 'join', version: 3, code: waiting.code, faction: 1 });
+  guest.send({ type: 'join', version: 4, code: waiting.code, faction: 1 });
   await host.receive(m => m.type === 'start'); await guest.receive(m => m.type === 'start');
   host.send({ type: 'ready' }); guest.send({ type: 'ready' });
   const frame = await host.receive(m => m.type === 'frame'), ownHQ = frame.entities.find(e => e.type === 'hq');
@@ -153,9 +157,9 @@ test('delayed and missing heartbeat replies reduce state rate without dropping t
     if (current % 4 === 0) return;
     setTimeout(() => { if (host.ws.readyState === WebSocket.OPEN) host.ws.pong(payload); }, current % 2 ? 12 : 35);
   });
-  host.send({ type: 'create', version: 3, map: 'desert', faction: 0 });
+  host.send({ type: 'create', version: 4, map: 'desert', faction: 0 });
   const waiting = await host.receive(m => m.type === 'waiting');
-  guest.send({ type: 'join', version: 3, code: waiting.code, faction: 1 });
+  guest.send({ type: 'join', version: 4, code: waiting.code, faction: 1 });
   await host.receive(m => m.type === 'start'); await guest.receive(m => m.type === 'start');
   host.send({ type: 'ready' }); guest.send({ type: 'ready' });
   await host.receive(m => m.type === 'frame'); await guest.receive(m => m.type === 'frame');
@@ -171,9 +175,9 @@ test('the room ends only after the disconnected seat exhausts its resume grace',
   const { connect } = await fixture(t, { resumeGraceMs: 80, tickIntervalMs: 10,
     telemetry: event => events.push(event) });
   const host = await connect(), guest = await connect();
-  host.send({ type: 'create', version: 3, map: 'mothership', faction: 0 });
+  host.send({ type: 'create', version: 4, map: 'mothership', faction: 0 });
   const waiting = await host.receive(m => m.type === 'waiting');
-  guest.send({ type: 'join', version: 3, code: waiting.code, faction: 2 });
+  guest.send({ type: 'join', version: 4, code: waiting.code, faction: 2 });
   await host.receive(m => m.type === 'start'); await guest.receive(m => m.type === 'start');
   host.send({ type: 'ready' }); guest.send({ type: 'ready' });
   await host.receive(m => m.type === 'frame'); await guest.receive(m => m.type === 'frame');
@@ -188,11 +192,11 @@ test('connection telemetry reports lifecycle, traffic and heartbeat measurements
   const { connect, server } = await fixture(t, { telemetry: event => events.push(event), heartbeatIntervalMs: 20,
     unassignedTimeoutMs: 1000, metricsIntervalMs: 20 });
   const client = await connect();
-  client.send({ type: 'create', version: 3, map: 'desert', faction: 0 });
+  client.send({ type: 'create', version: 4, map: 'desert', faction: 0 });
   const waiting = await client.receive(m => m.type === 'waiting');
   await new Promise(resolve => setTimeout(resolve, 60));
   const socketClosed = once(client.ws, 'close');
-  client.ws.close(4001, 'network switch');
+  client.ws.close(4001, waiting.token + waiting.code);
   await socketClosed;
   await new Promise(resolve => setImmediate(resolve));
 
@@ -200,11 +204,12 @@ test('connection telemetry reports lifecycle, traffic and heartbeat measurements
   const closed = events.find(event => event.event === 'connection_close');
   assert.equal(typeof opened.connectionId, 'number');
   assert.equal(closed.connectionId, opened.connectionId);
-  assert.equal(closed.code, 4001); assert.equal(closed.reason, 'network switch'); assert.equal(closed.cause, 'peer_close');
+  assert.equal(closed.code, 4001); assert.equal(closed.reason, undefined); assert.equal(closed.cause, 'peer_close');
   assert.ok(closed.bytesSent > 0); assert.ok(closed.durationMs >= 0);
   assert.ok(events.some(event => event.event === 'room_created'));
   assert.ok(events.some(event => event.event === 'metrics'));
   assert.ok(!JSON.stringify(events).includes(waiting.code));
+  assert.ok(!JSON.stringify(events).includes(waiting.token));
   const metrics = server.getMetrics();
   assert.equal(metrics.connectionsOpened, 1); assert.equal(metrics.connectionsClosed, 1);
   assert.ok(metrics.bytesSent > 0); assert.ok(metrics.controlMessagesSent > 0);
@@ -216,9 +221,9 @@ test('connection telemetry reports lifecycle, traffic and heartbeat measurements
 test('unknown map, missing room and protocol mismatch fail before a battle starts', async t => {
   const { connect } = await fixture(t);
   for (const message of [
-    { type: 'create', version: 3, faction: 0, map: 'unknown' },
+    { type: 'create', version: 4, faction: 0, map: 'unknown' },
     { type: 'create', version: 999, faction: 0, map: 'desert' },
-    { type: 'join', version: 3, faction: 0, code: '0000000000' }
+    { type: 'join', version: 4, faction: 0, code: '0000000000' }
   ]) { const client = await connect(); client.send(message); await client.receive(m => m.type === 'error'); }
 });
 
@@ -227,10 +232,10 @@ test('the absolute two-room limit cannot be raised and binary application messag
   const binary = await connect(); binary.ws.send(Buffer.from('{}'));
   await binary.receive(m => m.type === 'error');
   for (let i = 0; i < 2; i++) {
-    const client = await connect(); client.send({ type: 'create', version: 3, map: 'mothership', faction: 0 });
+    const client = await connect(); client.send({ type: 'create', version: 4, map: 'mothership', faction: 0 });
     await client.receive(m => m.type === 'waiting');
   }
-  const overflow = await connect(); overflow.send({ type: 'create', version: 3, map: 'mothership', faction: 0 });
+  const overflow = await connect(); overflow.send({ type: 'create', version: 4, map: 'mothership', faction: 0 });
   assert.match((await overflow.receive(m => m.type === 'error')).message, /full/);
 });
 
@@ -239,4 +244,49 @@ test('unapproved origins cannot establish a connection', async t => {
   const ws = new WebSocket(url, { origin: 'https://unapproved.example' });
   const [error] = await once(ws, 'error');
   assert.match(error.message, /403/);
+});
+
+
+test('lost resume proposal is repeatable until acknowledged, without extending rotation expiry', async t => {
+  let now = 1000;
+  const { connect } = await fixture(t, { now: () => now, resumeGraceMs: 1000 });
+  const host = await connect();
+  host.send({ type: 'create', version: 4, map: 'mothership', faction: 0 });
+  const waiting = await host.receive(m => m.type === 'waiting');
+  const first = await connect();
+  first.send({ type: 'resume', version: 4, code: waiting.code, token: waiting.token });
+  const proposal = await first.receive(m => m.type === 'resumed');
+  // Model the client never learning this proposal: retry with its original credential.
+  const retry = await connect();
+  retry.send({ type: 'resume', version: 4, code: waiting.code, token: waiting.token });
+  assert.equal((await retry.receive(m => m.type === 'resumed')).token, proposal.token);
+  now += 1001;
+  const expired = await connect();
+  expired.send({ type: 'resume', version: 4, code: waiting.code, token: waiting.token });
+  await expired.receive(m => m.type === 'error');
+  const current = await connect();
+  current.send({ type: 'resume', version: 4, code: waiting.code, token: proposal.token });
+  const rotated = await current.receive(m => m.type === 'resumed');
+  current.send({ type: 'resume_ack', token: rotated.token });
+  current.send({ type: 'leave' });
+  await current.receive(m => m.type === 'end');
+});
+
+test('ready replay after loading resume is harmless when the other player starts the match', async t => {
+  const { connect } = await fixture(t);
+  const host = await connect(), guest = await connect();
+  host.send({ type: 'create', version: 4, map: 'mothership', faction: 0 });
+  const waiting = await host.receive(m => m.type === 'waiting');
+  guest.send({ type: 'join', version: 4, code: waiting.code, faction: 1 });
+  const start = await host.receive(m => m.type === 'start');
+  await guest.receive(m => m.type === 'start');
+  host.send({ type: 'ready' });
+  const replacement = await connect();
+  replacement.send({ type: 'resume', version: 4, code: waiting.code, token: start.token });
+  assert.equal((await replacement.receive(m => m.type === 'resumed')).phase, 'loading');
+  guest.send({ type: 'ready' });
+  await replacement.receive(m => m.type === 'frame');
+  replacement.send({ type: 'ready' });
+  replacement.send({ type: 'action', request: 1, action: { kind: 'train', unit: 'worker' } });
+  assert.equal((await replacement.receive(m => m.type === 'outcome')).status, 'applied');
 });

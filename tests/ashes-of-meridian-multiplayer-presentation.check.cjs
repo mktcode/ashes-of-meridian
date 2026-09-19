@@ -146,15 +146,54 @@ test('client resume rotates credentials and resends only requests unknown to the
   client.socket = socket; client.code = 'AABBCCDDEE'; client.started = true; client.request = 2;
   client.pending.set(1, { kind: 'train', unit: 'worker' });
   client.pending.set(2, { kind: 'order', ids: [1], order: { type: 'move', x: 1, z: 1 } });
-  const start = { type: 'start', version: 3, code: client.code, team: 0, map: 'desert', seed: 42,
+  const start = { type: 'start', version: 4, code: client.code, team: 0, map: 'desert', seed: 42,
     factions: [0, 1], token: 'B'.repeat(32), graceMs: 45000 };
   await client.receive({ type: 'resumed', token: 'B'.repeat(32), graceMs: 45000,
     phase: 'playing', lastRequest: 1, start }, socket);
-  assert.deepEqual(sent.map(message => message.request), [2]);
+  assert.equal(sent[0].type, 'resume_ack');
+  assert.deepEqual(sent.filter(message => message.type === 'action').map(message => message.request), [2]);
   assert.equal(client.resumeToken, 'B'.repeat(32)); assert.equal(client.connectionPhase, 'reconnecting');
   await client.receive({ type: 'outcome', request: 1, status: 'applied' }, socket);
   await client.receive({ type: 'outcome', request: 1, status: 'applied' }, socket);
   assert.equal(client.pending.has(1), false); assert.equal(events.length, 0);
+});
+
+test('resume replay is paced and cancelled on disconnect', () => {
+  const timers = new Map(); let id = 0;
+  context.setTimeout = fn => { timers.set(++id, fn); return id; };
+  context.clearTimeout = key => timers.delete(key);
+  context.WebSocket = { OPEN: 1 };
+  const client = new MeridianMultiplayerClient({ game: { networkTeam: null } }, async () => true);
+  const sent = [], socket = { readyState: 1, send: raw => sent.push(JSON.parse(raw)), close: () => {} };
+  client.socket = socket;
+  for (let request = 1; request <= 64; request++) client.pending.set(request, { kind: 'train', unit: 'worker' });
+  client.replay = [...client.pending.keys()]; client.replayNext(socket);
+  assert.equal(sent.length, 1); assert.equal(timers.size, 1);
+  for (let n = 1; n < 64; n++) {
+    const [key, fn] = timers.entries().next().value; timers.delete(key); fn();
+    assert.equal(sent.length, n + 1);
+  }
+  assert.equal(timers.size, 0);
+  client.replay = [1, 2]; client.replayNext(socket);
+  client.disconnect();
+  assert.equal(timers.size, 0); assert.equal(client.replay.length, 0);
+});
+
+test('cancelled asynchronous resume preparation cannot change a newer client phase', async () => {
+  context.document = { getElementById: () => null };
+  let complete;
+  const game = { networkTeam: null };
+  const client = new MeridianMultiplayerClient({ game, toast: () => {} }, () => new Promise(resolve => { complete = resolve; }));
+  const socket = { readyState: 1, send: () => {}, close: () => {} };
+  client.socket = socket;
+  const start = { type: 'start', version: 4, code: 'AABBCCDDEE', team: 0, map: 'desert', seed: 42,
+    factions: [0, 1], token: 'B'.repeat(32), graceMs: 45000 };
+  const receiving = client.receive({ type: 'resumed', token: start.token, graceMs: 45000,
+    phase: 'loading', lastRequest: 0, start }, socket);
+  client.disconnect(); client.connectionPhase = 'connecting'; client.connectionAttempt = 7;
+  complete(true); await receiving;
+  assert.equal(client.connectionPhase, 'connecting'); assert.equal(client.connectionAttempt, 7);
+  assert.equal(game.networkTeam, null);
 });
 
 test('real combat presentation capture leaves simulation, original effects and both RNG streams unchanged', () => {

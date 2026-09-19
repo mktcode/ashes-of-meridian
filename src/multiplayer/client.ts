@@ -21,6 +21,20 @@ class MeridianMultiplayerClient {
   private resumeToken = '';
   private preparation = 0;
   private pending = new Map<number, BattleAction>();
+  private replayTimer: ReturnType<typeof setTimeout> | null = null;
+  private replay: number[] = [];
+  private stopReplay() {
+    if (this.replayTimer) clearTimeout(this.replayTimer);
+    this.replayTimer = null; this.replay = [];
+  }
+  private replayNext(socket: WebSocket) {
+    if (socket !== this.socket || socket.readyState !== WebSocket.OPEN) return;
+    const request = this.replay.shift(), action = request === undefined ? undefined : this.pending.get(request);
+    if (action) socket.send(JSON.stringify({ type: 'action', request, action }));
+    if (this.replay.length) this.replayTimer = setTimeout(() => {
+      this.replayTimer = null; this.replayNext(socket);
+    }, 100);
+  }
   constructor(private ui: MeridianUI, private prepare: (map: BattlefieldId) => Promise<boolean>) {
     if (typeof window !== 'undefined' && typeof window.addEventListener === 'function')
       window.addEventListener('online', () => this.retryReconnectNow());
@@ -105,9 +119,9 @@ class MeridianMultiplayerClient {
     };
     socket.onclose = event => {
       if (socket !== this.socket) return;
-      this.socket = null; this.preparation++;
+      this.socket = null; this.preparation++; this.stopReplay();
       const closedPhase = this.connectionPhase;
-      this.diagnose('socket_close', { code: event.code, reason: event.reason.slice(0, 123), clean: event.wasClean,
+      this.diagnose('socket_close', { code: event.code, clean: event.wasClean,
         phase: closedPhase, silenceMs: Math.round(performance.now() - this.receivedAt) });
       if (this.resumeToken && closedPhase !== 'reconnecting') this.reconnectUntil = performance.now() + this.resumeGraceMs;
       if (this.resumeToken && closedPhase !== 'ended' && performance.now() < this.reconnectUntil) this.scheduleReconnect();
@@ -211,13 +225,13 @@ class MeridianMultiplayerClient {
       if (game.networkTeam !== start.team || game.s?.seed !== start.seed || game.s.map !== start.map ||
           game.s.parties.some((party, index) => party.faction !== start.factions[index])) throw Error('Resumed session does not match');
       if (sendReady && socket === this.socket) socket.send(JSON.stringify({ type: 'ready' }));
-      return;
+      return socket === this.socket;
     }
     const preparation = ++this.preparation;
     this.preparing = true; this.setConnectionPhase('preparing');
     this.status(`Preparing ${BATTLEFIELDS[start.map].name}…`);
     const prepared = await this.prepare(start.map);
-    if (preparation !== this.preparation || socket !== this.socket) return;
+    if (preparation !== this.preparation || socket !== this.socket) return false;
     this.preparing = false;
     if (!prepared) throw Error('Map preparation failed');
     game.world = new Battlefield(start.seed, start.map, 2);
@@ -234,6 +248,7 @@ class MeridianMultiplayerClient {
       speed: 1, cam: { x: 0, z: 0, zoom: 48 } };
     game.resetRandom(start.seed);
     if (sendReady) socket.send(JSON.stringify({ type: 'ready' }));
+    return true;
   }
   private async receive(message: Record<string, unknown>, socket: WebSocket) {
     const game = this.ui.game;
@@ -256,6 +271,7 @@ class MeridianMultiplayerClient {
       }
       case 'resumed': {
         this.acceptCredentials(message);
+        socket.send(JSON.stringify({ type: 'resume_ack', token: this.resumeToken }));
         if (!Number.isSafeInteger(message.lastRequest) || Number(message.lastRequest) < 0 || Number(message.lastRequest) > this.request ||
             !['waiting', 'loading', 'playing'].includes(String(message.phase))) throw Error('Invalid resume state');
         if (message.phase === 'waiting') {
@@ -264,15 +280,17 @@ class MeridianMultiplayerClient {
           if (!message.start || typeof message.start !== 'object') throw Error('Missing resumed session');
           const start = message.start as unknown as MultiplayerStart;
           this.acceptCredentials(start as unknown as Record<string, unknown>);
-          await this.prepareSession(start, socket, message.phase === 'loading');
+          if (!await this.prepareSession(start, socket, message.phase === 'loading') || socket !== this.socket) return;
           if (message.phase === 'playing') {
             if (game.networkTeam === null) throw Error('Cannot restore an unprepared session');
             this.timeline.reset(); game.effects.reset(); this.lastTick = -1;
             this.setConnectionPhase('reconnecting', 'Session restored · synchronizing state…');
           }
         }
-        for (const [request, action] of this.pending) if (request > Number(message.lastRequest) && socket === this.socket)
-          socket.send(JSON.stringify({ type: 'action', request, action }));
+        if (socket !== this.socket) return;
+        this.stopReplay();
+        this.replay = [...this.pending.keys()].filter(request => request > Number(message.lastRequest));
+        this.replayNext(socket);
         this.diagnose('resume_succeeded', { attempt: this.connectionAttempt, phase: message.phase,
           pendingRequests: this.pending.size, lastRequest: message.lastRequest });
         this.connectionAttempt = 0;
@@ -327,7 +345,7 @@ class MeridianMultiplayerClient {
     }
   }
   private submit(action: BattleAction): boolean {
-    if (!this.started || this.connectionPhase !== 'playing' || this.socket?.readyState !== WebSocket.OPEN ||
+    if (!this.started || this.replay.length || this.replayTimer || this.connectionPhase !== 'playing' || this.socket?.readyState !== WebSocket.OPEN ||
         this.pending.size >= 64 || this.socket.bufferedAmount > 65536) return false;
     const request = ++this.request;
     this.pending.set(request, action);
@@ -335,7 +353,7 @@ class MeridianMultiplayerClient {
     return true;
   }
   disconnect(cause = 'user_leave') {
-    const socket = this.socket; this.socket = null; this.preparation++;
+    const socket = this.socket; this.socket = null; this.preparation++; this.stopReplay();
     if (this.timer) clearInterval(this.timer);
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.timer = null; this.reconnectTimer = null;
