@@ -27,7 +27,7 @@ async function fixture(t, options) {
     }
     return { ws, receive, send: data => ws.send(JSON.stringify(data)) };
   }
-  return { connect, url };
+  return { connect, url, server };
 }
 for (const map of ['desert', 'alien-planet', 'mothership']) test(`two connection-bound actors on ${map}: map choice, filtered views, queued commands, disconnect`, async t => {
   const { connect } = await fixture(t), host = await connect(), guest = await connect();
@@ -67,6 +67,34 @@ for (const map of ['desert', 'alien-planet', 'mothership']) test(`two connection
   assert.ok(!hostView.effects.some(e => e.kind === 'notice' && e.event[0] === 'queued'));
   host.ws.close();
   assert.match((await guest.receive(m => m.type === 'end')).message, /disconnected/);
+});
+
+test('connection telemetry reports lifecycle, traffic and heartbeat measurements without room credentials', async t => {
+  const events = [];
+  const { connect, server } = await fixture(t, { telemetry: event => events.push(event), heartbeatIntervalMs: 20,
+    unassignedTimeoutMs: 1000, metricsIntervalMs: 20 });
+  const client = await connect();
+  client.send({ type: 'create', version: 2, map: 'desert', faction: 0 });
+  const waiting = await client.receive(m => m.type === 'waiting');
+  await new Promise(resolve => setTimeout(resolve, 60));
+  const socketClosed = once(client.ws, 'close');
+  client.ws.close(4001, 'network switch');
+  await socketClosed;
+  await new Promise(resolve => setImmediate(resolve));
+
+  const opened = events.find(event => event.event === 'connection_open');
+  const closed = events.find(event => event.event === 'connection_close');
+  assert.equal(typeof opened.connectionId, 'number');
+  assert.equal(closed.connectionId, opened.connectionId);
+  assert.equal(closed.code, 4001); assert.equal(closed.reason, 'network switch'); assert.equal(closed.cause, 'peer_close');
+  assert.ok(closed.bytesSent > 0); assert.ok(closed.durationMs >= 0);
+  assert.ok(events.some(event => event.event === 'room_created'));
+  assert.ok(events.some(event => event.event === 'metrics'));
+  assert.ok(!JSON.stringify(events).includes(waiting.code));
+  const metrics = server.getMetrics();
+  assert.equal(metrics.connectionsOpened, 1); assert.equal(metrics.connectionsClosed, 1);
+  assert.ok(metrics.bytesSent > 0); assert.ok(metrics.controlMessagesSent > 0);
+  assert.ok(metrics.heartbeatRttSamples > 0); assert.ok(metrics.heartbeatRttMaxMs >= 0);
 });
 
 test('unknown map, missing room and protocol mismatch fail before a battle starts', async t => {

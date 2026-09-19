@@ -36,6 +36,14 @@ docker run --rm -p 8787:8787 -e ALLOWED_ORIGINS=https://your-client.example meri
 - Buildstände gemeinsam ausrollen: Server nach Neubau neu starten und Browser neu laden. Der Darstellungsstream nutzt Protokollversion 2; alte Clients/Server werden abgewiesen. Die Protokollversion prüft die Nachrichtenform, ist noch kein Content-Hash-Handshake.
 - Kein Produktionsbetrieb unter beliebiger öffentlicher Last zugesichert: maximal zwei Räume/24 kurzzeitig angenommene Verbindungen pro Prozess, begrenzte Nachrichten, Warteschlangen und ausgehende Puffer; keine horizontale Verteilung oder DDoS-Abwehr.
 
+## Betriebsdiagnose
+
+Der Server schreibt Verbindungs- und Raumeignisse als einzeilige JSON-Objekte nach Standardausgabe. Zufällige interne `connectionId`/`roomId` dienen nur zur Zuordnung innerhalb eines Prozesses; Raumcodes, Nachrichteninhalte und spätere Resume-Tokens werden nicht protokolliert. `connection_close` enthält Close-Code/-Grund, interne Ursache, Dauer, gesendete Bytes/Zustandsframes und den größten beobachteten `bufferedAmount`. Eigene Ereignisse unterscheiden insbesondere Transportfehler, Heartbeat-Timeout und Backpressure-Abbruch.
+
+Das periodische Ereignis `metrics` enthält aktive Verbindungen/Räume und kumulierte Zähler für Verbindungen, Bytes, Kontrollnachrichten, Zustandsframes, Backpressure, Heartbeat sowie RTT/Jitter. `stateFramesSkipped` bleibt bis zur geplanten Backpressure-Änderung null. Werte gelten pro Prozess seit Start und sind kein dauerhaftes Monitoring. Die Erzeugerfunktion erlaubt Tests, Zeitquelle, Tick-/Sendetakt, Heartbeat und Metrikintervall kontrolliert zu ersetzen; der Produktionsstart verwendet die dokumentierten Standardwerte.
+
+Der Browser protokolliert Phasenwechsel, Socketfehler/-Close und lokale Timeouts unter dem Präfix `[multiplayer]` in der Entwicklerkonsole. Dabei werden keine Aktionen protokolliert. Diese Diagnose ersetzt noch keine automatische Wiederwahl.
+
 ## Ablauf und Grenzen
 
 Der Raumcode ist eine zufällige Beitrittsberechtigung, nicht die Parteiidentität. Die Identität bindet der Server an die konkrete Verbindung; Client-Parteiangaben werden nicht übernommen. Nach Beitritt ist der Raum geschlossen. Nach Verbindungsabbruch endet die Sitzung für beide; ein neuer Code/Beitritt ersetzt keine verlorene Verbindung.

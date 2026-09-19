@@ -21,9 +21,12 @@ Die in der [Recherche](../../research/multiplayer-network.md) beschriebene serve
 
 ### P0 – Diagnose und messbare Verbindungszustände
 
-- Servermetriken für Verbindungsaufbau, Close-Code/-Grund, Heartbeat-Timeout, Reconnect, Resume-Ablehnung, gesendete Bytes, `bufferedAmount` und ausgelassene Zustandsframes ergänzen. Keine Resume-Tokens oder Aktionsinhalte protokollieren.
-- Clientseitig Verbindungsphase und Wiederwahlversuche unterscheidbar anzeigen; technische Fehlergründe für Diagnose erfassen, ohne interne Details als Spielermeldung auszugeben.
-- Sendetakt, Heartbeat- und Zeitquellen so kapseln, dass kurze Integrationstests sie kontrollieren können.
+- [x] Servermetriken für Verbindungsaufbau, Close-Code/-Grund, Heartbeat-Timeout, gesendete Bytes, `bufferedAmount` und Zustandsframes ergänzen. Strukturierte Ereignisse enthalten keine Raumcodes, Aktionsinhalte oder künftigen Resume-Tokens.
+- [x] Clientseitige Verbindungsphasen und technische Gründe für Socketfehler/-Close und lokalen Timeout erfassen, ohne interne Details als Spielermeldung auszugeben.
+- [x] Sendetakt, Heartbeat- und Zeitquellen so kapseln, dass kurze Integrationstests sie kontrollieren können.
+- [ ] Reconnect-Versuche und Resume-Ablehnungen instrumentieren, sobald P1 diese Zustände einführt; `stateFramesSkipped` mit der P1-Backpressure-Logik hochzählen.
+
+Die Diagnostikgrundlage ist umgesetzt. Serverseitig stehen Lebenszyklusereignisse, periodische Prozesszähler und eine abfragbare Momentaufnahme bereit; der Browser kennzeichnet Phasenwechsel unter `[multiplayer]` in der Entwicklerkonsole. Das ist noch kein persistentes Monitoring und ändert weder Heartbeat-Toleranz noch Abbruchverhalten.
 
 **Herausforderung:** Browser, Reverse-Proxy und Server melden denselben Netzwechsel oft nur als generischen abnormalen Close. Telemetrie kann die Schicht eingrenzen, aber nicht jeden Funkfehler exakt beweisen.
 

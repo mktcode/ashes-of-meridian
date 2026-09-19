@@ -13,6 +13,8 @@ class MeridianMultiplayerClient {
   private preparing = false;
   private timer: ReturnType<typeof setInterval> | null = null;
   private receivedAt = 0;
+  private connectionAttempt = 0;
+  private connectionPhase: 'idle' | 'connecting' | 'handshake' | 'waiting' | 'preparing' | 'playing' | 'ended' = 'idle';
   private pending = new Map<number, BattleAction>();
   constructor(private ui: MeridianUI, private prepare: (map: BattlefieldId) => Promise<boolean>) {}
   show() {
@@ -47,12 +49,19 @@ class MeridianMultiplayerClient {
       this.ui.audio.unlock();
       const socket = this.socket = new WebSocket(url.href);
       this.lastTick = -1; this.request = 0; this.started = false; this.receivedAt = performance.now();
-      this.status('Connecting…');
+      this.connectionAttempt = 1;
+      this.setConnectionPhase('connecting', `Connecting… (attempt ${this.connectionAttempt})`);
+      this.diagnose('connect_attempt', { attempt: this.connectionAttempt });
       for (const id of ['netCreate', 'netJoin', 'netServer', 'netMap', 'netFaction'])
         (document.getElementById(id) as HTMLInputElement).disabled = true;
       (document.getElementById('netCode') as HTMLInputElement).readOnly = true;
       const message = { type: kind, version: MULTIPLAYER_VERSION, map: value('netMap'), faction: Number(value('netFaction')), code };
-      socket.onopen = () => { if (socket === this.socket) socket.send(JSON.stringify(message)); };
+      socket.onopen = () => {
+        if (socket !== this.socket) return;
+        this.setConnectionPhase('handshake', 'Connected · negotiating session…');
+        this.diagnose('socket_open', { attempt: this.connectionAttempt });
+        socket.send(JSON.stringify(message));
+      };
       socket.onmessage = event => {
         if (socket !== this.socket) return;
         this.receivedAt = performance.now();
@@ -61,12 +70,27 @@ class MeridianMultiplayerClient {
           void this.receive(JSON.parse(event.data), socket).catch(error => { if (socket === this.socket) this.end(String(error)); });
         } catch { this.end('Invalid server message.'); }
       };
-      socket.onerror = () => { if (socket === this.socket) this.end('Server connection failed. Check address, TLS and server availability.'); };
-      socket.onclose = () => { if (socket === this.socket) this.end('Connection lost. The session has ended.'); };
+      socket.onerror = () => {
+        if (socket === this.socket) this.diagnose('socket_error', { readyState: socket.readyState,
+          bufferedAmount: socket.bufferedAmount, silenceMs: Math.round(performance.now() - this.receivedAt) });
+      };
+      socket.onclose = event => {
+        if (socket !== this.socket) return;
+        this.diagnose('socket_close', { code: event.code, reason: event.reason.slice(0, 123), clean: event.wasClean,
+          phase: this.connectionPhase, silenceMs: Math.round(performance.now() - this.receivedAt) });
+        this.end('Connection lost. The session has ended.', 'transport_close');
+      };
       this.timer = setInterval(() => {
-        if (performance.now() - this.receivedAt > 45000) this.end('Server timed out. The session has ended.');
+        const silenceMs = performance.now() - this.receivedAt;
+        if (silenceMs > 45000) {
+          this.diagnose('client_timeout', { phase: this.connectionPhase, silenceMs: Math.round(silenceMs) });
+          this.end('Server timed out. The session has ended.', 'client_timeout');
+        }
       }, 5000);
-    } catch (error) { this.status(error instanceof Error ? error.message : String(error)); }
+    } catch (error) {
+      this.setConnectionPhase('ended', error instanceof Error ? error.message : String(error));
+      this.diagnose('connect_rejected', { reason: error instanceof Error ? error.name : 'UnknownError' });
+    }
   }
   get renderTime() { return this.timeline.time; }
   displayEntity(entity: Entity): Entity { return this.timeline.poses.get(entity.id) ?? entity; }
@@ -119,10 +143,22 @@ class MeridianMultiplayerClient {
     if (element) element.textContent = text;
     else this.ui.toast(text);
   }
+  private setConnectionPhase(phase: typeof this.connectionPhase, text?: string) {
+    const previous = this.connectionPhase;
+    this.connectionPhase = phase;
+    const element = document.getElementById('netStatus');
+    if (element) element.dataset.phase = phase;
+    if (text) this.status(text);
+    if (previous !== phase) this.diagnose('phase', { from: previous, to: phase, attempt: this.connectionAttempt });
+  }
+  private diagnose(event: string, fields: Record<string, unknown> = {}) {
+    if (typeof console !== 'undefined') console.info('[multiplayer]', { event, at: Date.now(), ...fields });
+  }
   private async receive(message: Record<string, unknown>, socket: WebSocket) {
     const game = this.ui.game;
     switch (message.type) {
       case 'waiting': {
+        this.setConnectionPhase('waiting');
         this.code = String(message.code);
         (document.getElementById('netCode') as HTMLInputElement).value = this.code;
         this.status(`Session ${this.code} · ${BATTLEFIELDS[message.map as BattlefieldId].name} · waiting for the second player…`);
@@ -133,6 +169,7 @@ class MeridianMultiplayerClient {
       case 'start': {
         if (this.started || this.preparing || game.networkTeam !== null) throw Error('Duplicate session start');
         this.preparing = true;
+        this.setConnectionPhase('preparing');
         const start = message as unknown as MultiplayerStart;
         if (start.version !== MULTIPLAYER_VERSION || !Object.hasOwn(BATTLEFIELDS, start.map) ||
             ![0, 1].includes(start.team) || !Number.isSafeInteger(start.seed) || start.seed <= 0 ||
@@ -179,6 +216,7 @@ class MeridianMultiplayerClient {
         this.lastTick = frame.tick;
         if (!this.started) {
           this.started = true;
+          this.setConnectionPhase('playing');
           const home = frame.entities.find(e => e.team === game.networkTeam && e.type === 'hq');
           if (home) { game.s.cam.x = home.x; game.s.cam.z = home.z; }
           this.ui.event('start', {});
@@ -203,18 +241,21 @@ class MeridianMultiplayerClient {
     this.socket.send(JSON.stringify({ type: 'action', request, action }));
     return true;
   }
-  disconnect() {
+  disconnect(cause = 'user_leave') {
     const socket = this.socket; this.socket = null;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
-    socket?.close();
+    this.diagnose('disconnect', { cause, phase: this.connectionPhase, pendingRequests: this.pending.size });
+    socket?.close(1000, cause === 'user_leave' ? 'Client left' : 'Client cleanup');
     this.pending.clear(); this.started = false; this.preparing = false;
     this.timeline.reset(); this.receivedFrames = 0; this.wasHidden = false;
     if (this.ui.game.networkTeam !== null) this.ui.game.effects.reset();
     this.ui.game.networkSubmit = undefined; this.ui.game.networkTeam = null;
+    this.connectionPhase = 'idle'; this.connectionAttempt = 0;
   }
-  private end(message: string) {
-    this.disconnect();
+  private end(message: string, cause = 'server_end') {
+    this.setConnectionPhase('ended');
+    this.disconnect(cause);
     this.ui.showHome();
     this.ui.toast(message);
   }
