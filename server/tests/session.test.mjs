@@ -4,8 +4,8 @@ import { once } from 'node:events';
 import { WebSocket } from 'ws';
 import { createMultiplayerServer } from '../dist/server.js';
 
-async function fixture(t) {
-  const server = createMultiplayerServer();
+async function fixture(t, options) {
+  const server = createMultiplayerServer(options);
   server.http.listen(0, '127.0.0.1'); await once(server.http, 'listening');
   t.after(() => server.close());
   const url = `ws://127.0.0.1:${server.http.address().port}`;
@@ -78,11 +78,11 @@ test('unknown map, missing room and protocol mismatch fail before a battle start
   ]) { const client = await connect(); client.send(message); await client.receive(m => m.type === 'error'); }
 });
 
-test('waiting rooms are bounded and binary application messages are rejected', async t => {
-  const { connect } = await fixture(t);
+test('the absolute two-room limit cannot be raised and binary application messages are rejected', async t => {
+  const { connect } = await fixture(t, { maxRooms: 99 });
   const binary = await connect(); binary.ws.send(Buffer.from('{}'));
   await binary.receive(m => m.type === 'error');
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 2; i++) {
     const client = await connect(); client.send({ type: 'create', version: 2, map: 'mothership', faction: 0 });
     await client.receive(m => m.type === 'waiting');
   }

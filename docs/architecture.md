@@ -61,6 +61,8 @@ Das ist lokale Szenariosteuerung, keine Berechtigung zum Wechsel einer Netzwerki
 
 ## Netzwerkprototyp
 
+Der einzelne Node-Prozess bearbeitet alle Räume seriell im 50-ms-Takt; zwei vCPUs ergeben daher nicht zwei Simulationsworker. Der öffentliche Prototyp begrenzt einschließlich wartender Sessions absolut auf zwei Räume. `MAX_ROOMS` darf diese Grenze nur reduzieren; eine Erhöhung erfordert einen Lastnachweis auf der Zielmaschine.
+
 Der Node-Host bündelt dieselben kompilierten CPU-Skripte in einem isolierten VM-Kontext je Raum, nicht eine zweite Implementierung der Spielregeln. Er besitzt die Simulation und verarbeitet eingereihte Clientaktionen vor dem jeweiligen Tick. Der Browser führt für dieses Gefecht weder Schritte noch Aktionen lokal aus; sein `RunState` ist nur ein flüchtiges Bedien-/Renderabbild. Verbindungs-, Lade- und Abbruchregeln sowie Deployment: [Server](../server/README.md).
 
 Die gemeinsame Projektion in `src/multiplayer/state.ts` nutzt eine ausdrückliche Feldfreigabe statt `RunState` zu serialisieren. Sie enthält nur das eigene Konto, eigene Produktions-/Auftragsdaten, sichtbare Gegner und die eigene Sicht/Erkundung. Pfade, Kontakte, fremde Konten/Queues, Statistiken und verborgene Angriffszielkoordinaten werden nicht übertragen. Neutrale Ressourcen bleiben außerhalb aktueller Sicht beim zuletzt beobachteten Stand. Es gibt keine uneingeschränkte Zustandsübertragung mit bloß clientseitigem Fog. Gelände-Seed und Fraktionen sind öffentlich; der Host würfelt die Startzuordnung separat und überträgt diesen Seed nicht.

@@ -3,7 +3,7 @@
 Der freigegebene vertikale Prototyp ist umgesetzt: separater autoritativer [Server](../../server/README.md), Session-Code, Kartenauswahl für alle drei Karten, zwei menschliche Parteien und serverseitig gefilterte Ansichten. Einzelspiel bleibt dienstfrei über `file://`. Keine KI, Expeditionen, Belohnungen oder Wiederverbindung im Netzwerkmodus; Erweiterungen erst nach eigenem Auftrag.
 
 - [ ] Menschlichen Zwei-Geräte-Playtest mit echter Verbindung durchführen; Bedienbarkeit, Latenz, Bewegungsglättung und Kampf-/Audio-Rückmeldung abnehmen. Vorhandener technischer Browsercheck ersetzt das nicht.
-- [ ] Öffentlichen Betrieb getrennt absichern und prüfen: TLS-/Proxykonfiguration, Content-Hash-Handshake gegen gemischte Builds, Last/Netzwerkbudgets, Metadaten-/ID-Seitenkanäle und Missbrauchsschutz. Prototyplimits sind keine Produktionsfreigabe.
+- [ ] Öffentlichen Betrieb getrennt absichern und prüfen: TLS-/Proxykonfiguration, Content-Hash-Handshake gegen gemischte Builds, Last/Netzwerkbudgets, Metadaten-/ID-Seitenkanäle und Missbrauchsschutz. Der öffentliche Einzelprozess ist vorerst absolut auf zwei Räume begrenzt; Prototyplimits sind keine Produktionsfreigabe.
 - [ ] Erst nach Abnahme auf drei/vier menschliche Parteien erweitern; FFA beibehalten. KI und die [offenen Unterbau-Befunde](multiplayer-simulationsmodell.md#offene-befunde-im-gemeinsamen-unterbau) separat behandeln.
 - [ ] Zustandsumfang für spätere Wiederherstellung/Replays bestimmen, einschließlich Befehlsqueue/RNG. Die übertragene Sicht ist kein Simulationssnapshot; der Expeditionscheckpoint ebenfalls nicht.
 

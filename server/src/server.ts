@@ -27,12 +27,15 @@ interface Room {
   phase: 'waiting' | 'loading' | 'playing'; deadline: number; ticks: number;
   api?: Simulation; game?: Game;
 }
+export const MAX_MULTIPLAYER_ROOMS = 2;
 export function createMultiplayerServer(options: { origins?: string[]; maxRooms?: number } = {}) {
   const script = new Script(readFileSync(new URL('./simulation.js', import.meta.url), 'utf8'), { filename: 'simulation.js' });
   const catalog = script.runInNewContext({ console }) as Simulation;
   const rooms = new Map<string, Room>(), clients = new Set<Client>();
   const origins = new Set(options.origins ?? ['null']);
-  const maxRooms = options.maxRooms ?? 8;
+  const requestedRooms = options.maxRooms ?? MAX_MULTIPLAYER_ROOMS;
+  if (!Number.isSafeInteger(requestedRooms) || requestedRooms < 1) throw Error('Invalid room limit');
+  const maxRooms = Math.min(requestedRooms, MAX_MULTIPLAYER_ROOMS);
   const http = createServer((req, res) => {
     if (req.url !== '/health' || req.method !== 'GET') { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });

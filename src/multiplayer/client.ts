@@ -3,7 +3,7 @@
 class MeridianMultiplayerClient {
   socket: WebSocket | null = null;
   code = '';
-  serverUrl = 'ws://localhost:8787';
+  serverUrl = 'wss://aoms.markus-kottlaender.de';
   private readonly timeline = new MultiplayerTimeline();
   private receivedFrames = 0;
   private wasHidden = false;
