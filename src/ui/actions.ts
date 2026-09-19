@@ -18,6 +18,13 @@
     };
     const BUILDING_PORTRAIT_ACTIONS = new Set(Object.keys(FACTION_0_ACTION_PORTRAITS).filter(key => key.startsWith('build:')));
     const uiActionMethods = {
+      submitAction(this: MeridianUI, action: BattleAction) {
+        // Single-player actor remains explicit here; perspective/session binding is separate work.
+        return this.game.executeAction(0, action);
+      },
+      issueOrder(this: MeridianUI, ids: number[], order: CommandOrder) {
+        return this.submitAction({ kind: 'order', ids, order });
+      },
       center(this: MeridianUI, x: number, z: number) {
         if (!this.game.s) return;
         const limit = this.game.world!.extent - 18;
@@ -83,7 +90,7 @@
           return;
         }
         if (kind === 'train' && hasContentKey(UNITS, arg)) {
-          this.game.train(arg);
+          this.submitAction({ kind: 'train', unit: arg });
           this.updateHUD();
           return;
         }
@@ -104,7 +111,7 @@
             if (this.selectedBuilding()) this.buildingAction(kind, this.selected[0]);
             break;
           case 'cancelBuild':
-            this.game.cancelConstruction(this.selected[0]);
+            this.submitAction({ kind: 'cancelConstruction', id: this.selected[0] });
             this.updateHUD();
             break;
         }
@@ -179,7 +186,7 @@
       buildingAction(this: MeridianUI, action: string, id: number) {
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s!.result) return;
         if (action === 'repair') {
-          this.game.toggleBuildingRepair(id);
+          this.submitAction({ kind: 'toggleRepair', id });
           this.updateHUD();
         } else if (action === 'sell') {
           let reason = this.game.canSellBuilding(id);
@@ -197,7 +204,7 @@
         if (this.modalKind !== 'sell' || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         let id = this.sellBuildingId;
         this.sellBuildingId = null;
-        if (confirm && id !== null) this.game.sellBuilding(id);
+        if (confirm && id !== null) this.submitAction({ kind: 'sell', id });
         this.resume();
         this.updateHUD();
       },
@@ -213,7 +220,7 @@
         // Preserve work already done: cancel a waiting order first, then the least advanced active one.
         entries.sort((a, b) => b.index - a.index || a.q.progress - b.q.progress || b.b.id - a.b.id);
         let entry = entries[0];
-        if (entry) this.game.cancelQueue(entry.b.id, entry.index);
+        if (entry) this.submitAction({ kind: 'cancelQueue', id: entry.b.id, index: entry.index });
       },
       updateQueues(this: MeridianUI) {
         let groups = this.recruitmentGroups(),

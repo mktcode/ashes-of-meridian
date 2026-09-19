@@ -95,7 +95,24 @@ function setup() {
     get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
-    command(...args) { calls.push(['command', ...args]); }
+    command(...args) { calls.push(['command', ...args]); },
+    // UI tests mock action execution; permission/shape checks have their own CPU state tests.
+    executeAction(team, action) {
+      assert.equal(team, 0, 'single-player UI supplies its actor outside the payload');
+      switch (action.kind) {
+        case 'order': return this.command(action.ids, action.order);
+        case 'train': return this.train(action.unit);
+        case 'build': return this.build(action.building, action.position, action.selected);
+        case 'ability': return this.ability(action.ability, action.position);
+        case 'cancelConstruction': return this.cancelConstruction(action.id);
+        case 'cancelQueue': return this.cancelQueue(action.id, action.index);
+        case 'toggleRepair': return this.toggleBuildingRepair(action.id);
+        case 'sell': return this.sellBuilding(action.id);
+        case 'rally': return vm.runInContext('MeridianGame.prototype.executeAction', context).call(this, team, action);
+        default: assert.fail(`Unexpected UI action: ${action.kind}`);
+      }
+    },
+    notify(team, ...event) { assert.equal(team, 0); ui.event(...event); }
   };
   const ui = new TestUI(game, {
     viewport: { left: 0, top: 55, right: 1280, bottom: 590, width: 1280, height: 535 },
@@ -116,6 +133,23 @@ function setup() {
   const clickCamera = cam => click({ cam });
   return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
+
+test('UI submits actor-bound action data and cannot set rally when execution rejects it', () => {
+  const h = setup(), actions = [];
+  h.ui.game.executeAction = (team, action) => { actions.push(JSON.parse(JSON.stringify([team, action]))); return false; };
+  h.ui.game.s.entities = [{ id: 7, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1 }];
+  h.ui.selected = [7]; h.ui.mode = { kind: 'rally' };
+  h.ui.applyTarget({ x: 12, z: 23 });
+  assert.equal(h.ui.game.get(7).rally, undefined);
+  assert.equal(h.ui.mode.kind, 'rally', 'rejection keeps targeting active');
+  h.ui.issueOrder([7], { type: 'hold' });
+  h.UI.prototype.perform.call(h.ui, 'train:worker');
+  assert.deepEqual(actions, [
+    [0, { kind: 'rally', ids: [7], position: { x: 12, z: 23 } }],
+    [0, { kind: 'order', ids: [7], order: { type: 'hold' } }],
+    [0, { kind: 'train', unit: 'worker' }]
+  ]);
+});
 
 test('each battle start resets the music playlist before playback, but resume does not', () => {
   const h = setup(), calls = [];

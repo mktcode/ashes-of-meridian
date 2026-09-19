@@ -69,6 +69,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-movement',
   'simulation-economy',
   'simulation-combat',
+  'simulation-commands',
   'simulation-ai',
   'simulation-runtime'
 ]);

@@ -267,19 +267,19 @@
         delete e.steerLocked;
       },
       command(this: MeridianGame, ids: number[], order: CommandOrder, team: PlayerTeam = 0, announce = true) {
-        if (!this.s || this.s.result || this.s.stopped) return;
+        if (!this.s || this.s.result || this.s.stopped) return false;
         let units = ids.map(id => this.get(id)).filter(e => e && e.team === team) as Entity[];
         let mobile = units.filter(e => e.kind === 'unit') as UnitEntity[];
         const target = 'id' in order ? this.get(order.id) : null,
           task = this.workerTask(target, team);
-        if (target && this.enemy({team}, target) && !this.canSee(team, target)) return;
+        if (target && this.enemy({team}, target) && !this.canSee(team, target)) return false;
         if (target && task && (order.type === 'smart' || order.type === task)) {
           const worker = mobile.filter(e => e.type === 'worker' && e.id !== target.id)
             .sort((a, b) => distance(a, target) - distance(b, target) || a.id - b.id)[0];
           if (worker) {
             if (task === 'repair' && this.account(team).alloy <= 0.1) {
               this.notify(team, 'toast', 'No alloy');
-              return;
+              return false;
             }
             // Explicit orders may replace a builder, but never add construction speed.
             if (task === 'build')
@@ -288,10 +288,10 @@
                 this.setOrder(other, { type: 'idle' });
             this.setOrder(worker, { type: task, id: target.id, x: target.x, z: target.z });
             if (announce) this.notify(team, 'order', { type: task, x: target.x, z: target.z, count: 1 });
-            return;
+            return true;
           }
         }
-        if (order.type === 'build' || order.type === 'repair') return;
+        if (order.type === 'build' || order.type === 'repair') return false;
         let cols = Math.max(1, Math.ceil(Math.sqrt(mobile.length))),
           spacing = Math.max(0, ...mobile.map(e => e.size)) * UNIT_BODY_SCALE * 2 + 0.1,
           i = 0;
@@ -320,6 +320,7 @@
         }
         if (announce && mobile.length)
           this.notify(team, 'order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
+        return mobile.length > 0;
       },
       finishOrder(this: MeridianGame, e: UnitEntity) {
         e.order = { type: 'idle' };

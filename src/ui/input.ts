@@ -144,7 +144,7 @@
           let p = minimapPosition(e);
           if (e.button === 2) {
             if (this.selectedBuilding()) this.select([]);
-            else this.game.command(
+            else this.issueOrder(
               this.selected,
               { type: this.attackMove ? 'attackMove' : 'move', ...p }
             );
@@ -342,7 +342,7 @@
         if ((d.type === 'touch' && d.moved) || d.button === 1) return;
         if (d.button === 2) {
           if (this.selectedBuilding()) this.select([]);
-          else this.game.command(
+          else this.issueOrder(
             this.selected,
             target
               ? { type: 'smart', id: target.id, x: target.x, z: target.z }
@@ -360,7 +360,7 @@
           const worker = this.game.get(id);
           return worker?.team === 0 && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;
         })) {
-          this.game.command(this.selected, { type: 'smart', id: target.id, x: target.x, z: target.z });
+          this.issueOrder(this.selected, { type: 'smart', id: target.id, x: target.x, z: target.z });
           return;
         }
         if (this.selectedBuilding() && (!target || target.team !== 0)) {
@@ -368,7 +368,7 @@
           return;
         }
         if (d.type === 'touch' && this.selected.length && (!target || target.team !== 0)) {
-          this.game.command(
+          this.issueOrder(
             this.selected,
             target ? { type: 'smart', id: target.id, x: target.x, z: target.z }
               : { type: this.attackMove ? 'attackMove' : 'move', ...p }
@@ -397,25 +397,9 @@
         if (!this.mode) return;
         let m = this.mode,
           success = true;
-        if (m.kind === 'build') success = this.game.build(m.arg, p, this.selected);
-        else if (m.kind === 'ability') success = this.game.ability(m.arg, p);
-        else if (m.kind === 'rally') {
-          let list = this.selected
-            .map(id => this.game.get(id))
-            .filter(
-              (e): e is BuildingEntity =>
-                e?.team === 0 &&
-                e.kind === 'building' &&
-                e.progress >= 1
-            );
-          if (!list.length) {
-            this.toast('Select a completed own structure before setting a rally point.');
-            success = false;
-          } else {
-            for (let e of list) e.rally = { ...p };
-            this.event('order', { type: 'move', count: list.length, ...p });
-          }
-        }
+        if (m.kind === 'build') success = this.submitAction({ kind: 'build', building: m.arg, position: p, selected: this.selected });
+        else if (m.kind === 'ability') success = this.submitAction({ kind: 'ability', ability: m.arg, position: p });
+        else if (m.kind === 'rally') success = this.submitAction({ kind: 'rally', ids: this.selected, position: p });
         if (success) this.clearMode();
         this.updateHUD();
       }

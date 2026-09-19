@@ -234,6 +234,16 @@ type UnitOrder =
 
 type CommandOrder = UnitOrder | ({ type: 'smart'; id: number } & Position);
 
+// Actor identity is supplied by the caller/authority, never by the action payload.
+type BattleAction =
+  | { kind: 'order'; ids: number[]; order: CommandOrder }
+  | { kind: 'rally'; ids: number[]; position: Position }
+  | { kind: 'train'; unit: UnitType }
+  | { kind: 'build'; building: BuildingType; position: Position; selected: number[] }
+  | { kind: 'ability'; ability: AbilityType; position: Position }
+  | { kind: 'cancelQueue'; id: number; index: number }
+  | { kind: 'cancelConstruction' | 'toggleRepair' | 'sell'; id: number };
+
 interface EntityBase extends Position {
   id: number;
   kind: EntityKind;

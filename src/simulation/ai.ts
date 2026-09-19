@@ -69,8 +69,8 @@ const aiMethods = {
     // Do not erase path progress every strategic tick. The command API handles formation/ownership.
     const changed = units.filter(e => !e.exit &&
       (e.order.type !== (attack ? 'attackMove' : 'move') || distance(e.order as Position,p) > 8));
-    if (changed.length) this.command(changed.map(e=>e.id),
-      {type:attack?'attackMove':'move',x:p.x,z:p.z},team,false);
+    if (changed.length) this.executeAction(team, {kind:'order',ids:changed.map(e=>e.id),
+      order:{type:attack?'attackMove':'move',x:p.x,z:p.z}},false);
   },
   aiBuild(this: MeridianGame, team: PlayerTeam, type: BuildingType, home: BuildingEntity) {
     const s=this.s!, ai=this.aiFor(team)!;
@@ -98,7 +98,7 @@ const aiMethods = {
           if (!this.canSee(team,{x,z})) observed=false;
       if (!observed) continue;
       if (this.canBuild(type,p,team)) continue;
-      if (this.build(type,p,[],team)) { ai.search=(i+9)%64; return true; }
+      if (this.executeAction(team,{kind:'build',building:type,position:p,selected:[]})) { ai.search=(i+9)%64; return true; }
     }
     ai.search=(ai.search+7)%64;
     return false;
@@ -110,19 +110,19 @@ const aiMethods = {
       count=(type:EntityType)=>own.filter(e=>e.type===type).length,
       queued=(type:UnitType)=>buildings.reduce((n,b)=>n+b.queue.filter(q=>q.type===type).length,0),
       desired=rules.workers+(count('factory')?2:0)+(count('hangar')?2:0);
-    if (workers.length+queued('worker') < desired && queued('worker')<2) this.train('worker',team);
+    if (workers.length+queued('worker') < desired && queued('worker')<2) this.executeAction(team,{kind:'train',unit:'worker'});
     const free=this.availableWorkers(team);
     for (const b of buildings.filter(b=>b.progress<1)) {
       if (!workers.some(w=>w.order.type==='build' && w.order.id===b.id) && free.length) {
         const w=free.shift()!;
-        this.command([w.id],{type:'build',id:b.id,x:b.x,z:b.z},team);
+        this.executeAction(team,{kind:'order',ids:[w.id],order:{type:'build',id:b.id,x:b.x,z:b.z}});
       }
     }
     if (free.length>2 && (account.alloy>150 || home.hp<home.maxHp*.5)) {
       const damaged=own.filter(e=>e.hp<e.maxHp*rules.repairHull && e.progress>=1)
         .sort((a,b)=>(a.type==='hq'?-1:0)-(b.type==='hq'?-1:0)||a.hp/a.maxHp-b.hp/b.maxHp);
       const b=damaged.find(b=>!workers.some(w=>w.order.type==='repair' && w.order.id===b.id));
-      if (b) this.command([free[0].id],{type:'repair',id:b.id,x:b.x,z:b.z},team);
+      if (b) this.executeAction(team,{kind:'order',ids:[free[0].id],order:{type:'repair',id:b.id,x:b.x,z:b.z}});
     }
     const candidates=rules.build.filter((type,i,plan)=>count(type)<plan.slice(0,i+1).filter(t=>t===type).length);
     if (this.cap(team)-this.supply(team)<=6 && this.cap(team)<180 &&
@@ -159,7 +159,7 @@ const aiMethods = {
       if (this.account(team).gas<cost.gas) continue;
       // Save for the chosen counter/tech unit instead of spending every 75 alloy on rifles.
       if (this.account(team).alloy-cost.cost<keep) return;
-      this.train(type,team);
+      this.executeAction(team,{kind:'train',unit:type});
       return;
     }
   },
@@ -171,21 +171,21 @@ const aiMethods = {
     if (ready('repair')) {
       const p=own.map(e=>({e,missing:own.filter(n=>n.progress>=1 && distance(e,n)<12).reduce((n,a)=>n+a.maxHp-a.hp,0)}))
         .sort((a,b)=>b.missing-a.missing)[0];
-      if (p?.missing>=rules.repairMissing) this.ability('repair',p.e,team);
+      if (p?.missing>=rules.repairMissing) this.executeAction(team,{kind:'ability',ability:'repair',position:p.e});
     }
     if (ready('orbital')) {
       const p=foes.map(e=>({e,value:foes.filter(n=>distance(e,n)<8).reduce((n,a)=>n+Math.min(a.hp,300),0)}))
         .sort((a,b)=>b.value-a.value)[0];
-      if (p?.value>=rules.orbitalValue) this.ability('orbital',p.e,team);
+      if (p?.value>=rules.orbitalValue) this.executeAction(team,{kind:'ability',ability:'orbital',position:p.e});
     }
     if (ready('drop') && this.supply(team)+8<=this.cap(team) &&
       (ai.mode==='attack' || foes.some(e=>distance(e,home)<30))) {
       const p=ai.mode==='attack'?own.find(e=>ai.squad.includes(e.id)):home;
-      if (p) this.ability('drop',p,team);
+      if (p) this.executeAction(team,{kind:'ability',ability:'drop',position:p});
     }
     if (ready('scan') && s.time>rules.scanAfter && !foes.length && own.some(e=>e.type==='rifle')) {
       const p=ai.goal || this.aiScoutGoal(team,home);
-      if (!this.canSee(team,p) && !s.scans.some(scan=>scan.team===team)) this.ability('scan',p,team);
+      if (!this.canSee(team,p) && !s.scans.some(scan=>scan.team===team)) this.executeAction(team,{kind:'ability',ability:'scan',position:p});
     }
   },
   aiScoutGoal(this: MeridianGame, team: PlayerTeam, home: BuildingEntity): Position {
