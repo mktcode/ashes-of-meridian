@@ -19,11 +19,32 @@
     const BUILDING_PORTRAIT_ACTIONS = new Set(Object.keys(FACTION_0_ACTION_PORTRAITS).filter(key => key.startsWith('build:')));
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
-        // Single-player actor remains explicit here; perspective/session binding is separate work.
-        return this.game.executeAction(0, action);
+        // Local scenario control follows the view; this is not network authentication.
+        return this.game.executeAction(this.localTeam, action);
       },
       issueOrder(this: MeridianUI, ids: number[], order: CommandOrder) {
         return this.submitAction({ kind: 'order', ids, order });
+      },
+      setPerspective(this: MeridianUI, team: PlayerTeam) {
+        if (this.view !== 'game' || this.modalKind || !this.game.setPerspective(team)) return false;
+        this.selected = [];
+        this.hover = null;
+        this.drag = null;
+        this.lastClick = {};
+        this.touchPoints.clear();
+        this.touchGesture = false;
+        this.domPressed = false;
+        this.pinchDist = undefined;
+        this.pings = [];
+        this.radioUntil = this.toastUntil = 0;
+        $('radio').classList.add('hidden');
+        $('toast').classList.remove('show');
+        this.queueSignature = undefined;
+        this.setTab('root');
+        this.homeCamera();
+        this.updateHUD();
+        this.updateQueues();
+        return true;
       },
       center(this: MeridianUI, x: number, z: number) {
         if (!this.game.s) return;
@@ -32,17 +53,17 @@
         this.game.s!.cam.z = clamp(z, -limit, limit);
       },
       homeCamera(this: MeridianUI) {
-        let e = this.game.alive(e => e.team === 0 && e.type === 'hq')[0];
+        let e = this.game.alive(e => e.team === this.localTeam && e.type === 'hq')[0];
         if (e) this.center(e.x + 4, e.z - 2);
       },
       select(this: MeridianUI, ids: number[]) {
-        this.selected = [...new Set(ids)].filter(id => this.game.get(id));
+        this.selected = [...new Set(ids)].filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.audio.sound('select');
         this.setTab(this.selectedBuilding() ? 'building' : 'root');
       },
       selectedBuilding(this: MeridianUI) {
         let e = this.selected.length === 1 ? this.game.get(this.selected[0]) : null;
-        return e?.team === 0 && e.kind === 'building' && e.hp > 0 ? e : null;
+        return e?.team === this.localTeam && e.kind === 'building' && e.hp > 0 ? e : null;
       },
       setTab(this: MeridianUI, tab: string) {
         if (!['root', 'build', 'infantry', 'vehicles', 'aircraft', 'building'].includes(tab)) return;
@@ -65,7 +86,7 @@
           return;
         }
         if (kind === 'build') {
-          let reason = this.game.canBuild(arg);
+          let reason = this.game.canBuild(arg, null, this.localTeam);
           if (reason) {
             this.toast(reason);
             return;
@@ -118,7 +139,7 @@
       },
       actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: {badge?: string | number; disabled?: boolean; cost?: Cost} = {}) {
         const active = this.isModeAction(key), renderedLabel = active ? 'Cancel' : label;
-        const faction = this.game.s?.parties[0].faction;
+        const faction = this.game.s?.parties[this.localTeam].faction;
         let badge = active ? '' : opts.badge || '',
           preview = faction === FACTION_ID.FIRST
             ? FACTION_0_ACTION_PORTRAITS[key]
@@ -140,11 +161,11 @@
         let b = this.selectedBuilding();
         if (this.tab === 'building' && !b) this.tab = 'root';
         let ready = !!b && b.progress >= 1,
-          repairing = ready && this.game.buildingRepairers(b!.id).length > 0,
-          repairReason = ready && !repairing ? this.game.canRepairBuilding(b!.id) : '',
-          sellReason = ready ? this.game.canSellBuilding(b!.id) : '',
-          noFreeWorker = this.tab === 'build' && !this.game.availableWorkers().length,
-          sig = [this.tab, s.parties[0].faction, this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
+          repairing = ready && this.game.buildingRepairers(b!.id, this.localTeam).length > 0,
+          repairReason = ready && !repairing ? this.game.canRepairBuilding(b!.id, this.localTeam) : '',
+          sellReason = ready ? this.game.canSellBuilding(b!.id, this.localTeam) : '',
+          noFreeWorker = this.tab === 'build' && !this.game.availableWorkers(this.localTeam).length,
+          sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
             this.mode?.kind, this.mode?.arg].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
@@ -152,7 +173,7 @@
           ['orbital', 'Orbital strike', 'orbital'], ['repair', 'Repair field', 'heal'],
           ['scan', 'Recon scan', 'scan'], ['drop', 'Reinforcements', 'drop']
         ].map(([k, label, ic]) => this.actionButton('ability:' + k, label, ic)).join('');
-        let html = '', f = s.parties[0].faction;
+        let html = '', f = s.parties[this.localTeam].faction;
         if (this.tab === 'root') {
           for (let [tab, label, ic] of [
             ['build', 'Buildings', 'hq'], ['infantry', 'Infantry', 'rifle'],
@@ -167,13 +188,13 @@
         } else if (this.tab === 'build') {
           for (let k of contentKeys(BUILDINGS))
             html += this.actionButton('build:' + k, buildingName(k, f), k, {
-              cost: this.game.cost(k, 'building')
+              cost: this.game.cost(k, 'building', this.localTeam)
             });
         } else {
           let types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air'] };
           for (let k of types[this.tab] || [])
             html += this.actionButton('train:' + k, k === 'hero' ? 'Commander' : unitName(k, f), k, {
-              cost: this.game.cost(k)
+              cost: this.game.cost(k, 'unit', this.localTeam)
             });
         }
         $('actions').innerHTML = (this.tab === 'root' ? '' :
@@ -189,9 +210,9 @@
           this.submitAction({ kind: 'toggleRepair', id });
           this.updateHUD();
         } else if (action === 'sell') {
-          let reason = this.game.canSellBuilding(id);
+          let reason = this.game.canSellBuilding(id, this.localTeam);
           if (reason) { this.toast(reason); return; }
-          let b = this.game.get(id), refund = this.game.buildingSaleRefund(id);
+          let b = this.game.get(id), refund = this.game.buildingSaleRefund(id, this.localTeam);
           if (!b || !refund) return;
           this.sellBuildingId = id;
           this.paused = true;
@@ -210,7 +231,7 @@
       },
       recruitmentGroups(this: MeridianUI) {
         let groups: Partial<Record<UnitType, {b: Entity; index: number; q: QueueItem}[]>> = {};
-        for (let b of this.game.alive(e => e.team === 0 && e.kind === 'building' && !!e.queue?.length))
+        for (let b of this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && !!e.queue?.length))
           for (let [index, q] of b.queue.entries())
             (groups[q.type] ||= []).push({ b, index, q });
         return groups;
@@ -242,24 +263,25 @@
           button.classList.toggle('waiting', !next);
           button.querySelector('.queue-count')!.textContent = String(entries.length);
           button.querySelector('.queue-time')!.textContent = remaining;
-          button.setAttribute('aria-label', `${unitName(type, this.game.s!.parties[0].faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
+          button.setAttribute('aria-label', `${unitName(type, this.game.s!.parties[this.localTeam].faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
         }
       },
       updateHUD(this: MeridianUI) {
         let s = this.game.s;
         if (!s) return;
-        $('alloyCount').textContent = Math.floor(s.parties[0].account.alloy).toLocaleString();
-        $('gasCount').textContent = Math.floor(s.parties[0].account.gas).toLocaleString();
-        const supply = this.game.supply(), capacity = this.game.cap();
+        const account = s.parties[this.localTeam].account;
+        $('alloyCount').textContent = Math.floor(account.alloy).toLocaleString();
+        $('gasCount').textContent = Math.floor(account.gas).toLocaleString();
+        const supply = this.game.supply(this.localTeam), capacity = this.game.cap(this.localTeam);
         $('supplyCount').textContent = supply + '/' + capacity;
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
-        $('energyCount').textContent = String(Math.floor(s.parties[0].account.energy));
+        $('energyCount').textContent = String(Math.floor(account.energy));
         $('gameTime').textContent = formatTime(s.time);
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
         speedButton.textContent = speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
-        this.selected = this.selected.filter(id => this.game.get(id));
+        this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },
       updateActionStates(this: MeridianUI, supply?: number, capacity?: number) {
@@ -267,8 +289,8 @@
         if (!s) return;
         const buttons = document.querySelectorAll<HTMLButtonElement>('[data-action]');
         if (!buttons.length) return;
-        supply ??= this.game.supply();
-        capacity ??= this.game.cap();
+        supply ??= this.game.supply(this.localTeam);
+        capacity ??= this.game.cap(this.localTeam);
         for (let b of buttons) {
           let [k, arg] = b.dataset.action!.split(':');
           const active = this.isModeAction(b.dataset.action!);
@@ -279,26 +301,27 @@
           } else if (k === 'train' && hasContentKey(UNITS, arg)) {
             let d = UNITS[arg];
             disabled =
-              !this.game.afford(this.game.cost(arg)) ||
-              !this.game.availableProducers(d.from).length ||
+              !this.game.afford(this.game.cost(arg, 'unit', this.localTeam), this.localTeam) ||
+              !this.game.availableProducers(d.from, this.localTeam).length ||
               supply + d.supply > capacity;
-            if (arg === 'hero' && this.game.alive(e => e.team === 0 &&
+            if (arg === 'hero' && this.game.alive(e => e.team === this.localTeam &&
               (e.type === 'hero' || e.queue?.some(q => q.type === 'hero'))).length) disabled = true;
           } else if (k === 'build' && hasContentKey(BUILDINGS, arg))
-            disabled = !!this.game.canBuild(arg) || !this.game.afford(this.game.cost(arg, 'building'));
+            disabled = !!this.game.canBuild(arg, null, this.localTeam) || !this.game.afford(this.game.cost(arg, 'building', this.localTeam), this.localTeam);
           else if (k === 'ability' && hasContentKey(ABILITIES, arg)) {
-            let energy = ABILITIES[arg]?.energy, requirement = this.game.abilityRequirement(arg);
-            disabled = !!requirement || s.parties[0].account.energy < energy || s.parties[0].account.abilities[arg] > s.time;
+            let energy = ABILITIES[arg]?.energy, requirement = this.game.abilityRequirement(arg, this.localTeam),
+              account = s.parties[this.localTeam].account;
+            disabled = !!requirement || account.energy < energy || account.abilities[arg] > s.time;
             let badge = b.querySelector('small');
             if (badge)
               badge.textContent =
-                requirement ? 'TECH' : s.parties[0].account.abilities[arg] > s.time
-                  ? Math.ceil(s.parties[0].account.abilities[arg] - s.time) + 's'
+                requirement ? 'TECH' : account.abilities[arg] > s.time
+                  ? Math.ceil(account.abilities[arg] - s.time) + 's'
                   : energy + 'ϟ';
           }
           if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||
-            (!this.game.buildingRepairers(this.selected[0]).length && !!this.game.canRepairBuilding(this.selected[0]));
-          if (k === 'sell') disabled = !!this.mode || !!this.game.canSellBuilding(this.selected[0]);
+            (!this.game.buildingRepairers(this.selected[0], this.localTeam).length && !!this.game.canRepairBuilding(this.selected[0], this.localTeam));
+          if (k === 'sell') disabled = !!this.mode || !!this.game.canSellBuilding(this.selected[0], this.localTeam);
           disabled ||= this.paused || !!s.result;
           b.disabled = disabled;
           b.classList.toggle('disabled', disabled);

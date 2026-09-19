@@ -92,9 +92,9 @@
             strike.x,
             strike.z,
             strike.type === 'orbital' ? 5 : 2,
-            strike.team === 0 ? 0xa2e3db : 0xf2b084
+            strike.team === this.localTeam ? 0xa2e3db : 0xf2b084
           );
-          if (this.canSee(0, strike)) this.emit('explosion', { x: strike.x, z: strike.z, big: true });
+          if (this.canSee(this.localTeam, strike)) this.emit('explosion', { x: strike.x, z: strike.z, big: true });
           if (strike.type === 'orbital' && this.factionFor(strike.team as PlayerTeam) === FACTION_ID.SECOND)
             s.fields.push({ type: 'bloom', team: strike.team as PlayerTeam, x: strike.x, z: strike.z, r: 10, until: s.time + 7 });
         }

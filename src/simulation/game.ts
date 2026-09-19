@@ -62,6 +62,8 @@
       cosmeticRandom: () => number;
       effects: MeridianEffects;
 
+      get localTeam(): PlayerTeam { return this.world?.viewTeam ?? 0; }
+
       constructor(
         profile: MeridianProfile,
         emit: GameEventSink = () => {},
@@ -92,6 +94,15 @@
         });
     }
     const gameMethods = {
+      setPerspective(this: MeridianGame, team: PlayerTeam): boolean {
+        if (!this.s || !this.world || !this.s.parties.some(p => p.id === team) ||
+            (this.s.rules.kind === 'single-player' && team !== 0)) return false;
+        if (team === this.localTeam) return true;
+        if (!this.world.selectView(team)) return false;
+        // Old local effects must not leak information into the newly selected view.
+        this.effects.reset();
+        return true;
+      },
       resetRandom(this: MeridianGame, seed: number) {
         this.random = seeded(seed + 77);
         this.cosmeticRandom = seeded(seed ^ 0x4658524e);
@@ -265,7 +276,7 @@
         return this.party(team).faction;
       },
       notify(this: MeridianGame, team: PlayerTeam, ...event: GameEvent) {
-        if (team === 0) this.emit(...event);
+        if (team === this.localTeam) this.emit(...event);
       },
       get(this: MeridianGame, id: number | null | undefined): Entity | null {
         let e = this.ids.get(id as number);
@@ -320,7 +331,10 @@
         if (a.team === -1 || b.team === -1 || a.team === b.team) return false;
         return rules.hostilities[a.team]?.[b.team] === true;
       },
-      visible(this: MeridianGame, e: Entity) { return this.canSee(0, e); },
+      visible(this: MeridianGame, e: Position & { team?: TeamId }) { return this.canSee(this.localTeam, e); },
+      observed(this: MeridianGame, e: Entity) {
+        return e.team === -1 ? !!this.world!.explored[this.world!.idx(e.x, e.z)] : this.visible(e);
+      },
       canSee(this: MeridianGame, team: PlayerTeam, e: Position & {team?: TeamId}) {
         return e.team === team || !!this.world!.sight[team].visible[this.world!.idx(e.x, e.z)];
       },

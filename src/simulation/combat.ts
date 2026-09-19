@@ -14,16 +14,17 @@
         }
         e.hp -= amount;
         if (source?.team === 0) this.s!.stats.damage += amount;
-        if (!quiet && amount > 25 && this.visible(e)) this.effects.damageNumber(e, amount);
+        if (!quiet && amount > 25 && this.visible(e)) this.effects.damageNumber(e, amount, this.localTeam);
         if (e.hp <= 0) this.kill(e, source);
+        const alertKey = this.s!.rules.kind === 'scenario' ? `baseAlert:${e.team}` : 'baseAlert';
         if (
-          e.team === 0 &&
+          (e.team === 0 || (this.s!.rules.kind === 'scenario' && e.team !== -1)) &&
           e.kind === 'building' &&
           e.hp > 0 &&
-          this.s!.time - (this.s!.triggers.baseAlert || -100) > 14
+          this.s!.time - Number(this.s!.triggers[alertKey] || -100) > 14
         ) {
-          this.s!.triggers.baseAlert = this.s!.time;
-          this.emit('alert', {
+          this.s!.triggers[alertKey] = this.s!.time;
+          this.notify(e.team as PlayerTeam, 'alert', {
             text:
               e.type === 'hq' ? 'Command center under attack!' : 'Your structures are under attack.',
             danger: true,
@@ -48,15 +49,10 @@
             });
           }
         }
-        if (e.team === 0 && e.kind === 'unit') {
-          this.s!.stats.lost++;
-          if (e.type === 'hero') {
-            this.emit(
-              'radio',
-              'Expedition command|The commander is down. We have a recovery signal. Reconstruct the command team at headquarters.'
-            );
-          }
-        }
+        if (e.team === 0 && e.kind === 'unit') this.s!.stats.lost++;
+        if (e.team !== -1 && e.kind === 'unit' && e.type === 'hero')
+          this.notify(e.team, 'radio',
+            'Expedition command|The commander is down. We have a recovery signal. Reconstruct the command team at headquarters.');
         if (this.visible(e)) {
           this.effects.explosion(
             e.x,
@@ -66,7 +62,8 @@
           );
           this.emit('explosion', { x: e.x, z: e.z, big: e.kind === 'building' || e.type === 'tank' });
         }
-        if (e.team === 1 && e.type === 'hq')
+        if (e.type === 'hq' && this.enemy({ team: this.localTeam }, e) &&
+            (this.s!.rules.kind === 'single-player' || this.visible(e)))
           this.emit('alert', { text: 'Enemy command center destroyed.', x: e.x, z: e.z });
       },
       rangedStats(this: MeridianGame, e: UnitEntity | BuildingEntity): RangedStats {
@@ -111,7 +108,7 @@
             ))
               this.damage(n, d.damage * 0.45, e, true);
           if (this.visible(e) || this.visible(target)) {
-            this.effects.shot(e, target);
+            this.effects.shot(e, target, this.localTeam);
             this.emit('shot', { x: e.x, z: e.z, heavy: e.type === 'tank' });
           }
         }

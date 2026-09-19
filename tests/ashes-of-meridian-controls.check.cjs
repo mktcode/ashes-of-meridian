@@ -84,7 +84,10 @@ function setup() {
     openModal() {}
   }
   const game = {
-    world: { extent: 90, gridSize: 72, cellSize: 2.5 },
+    localTeam: 0,
+    visible: () => true,
+    observed: vm.runInContext('MeridianGame.prototype.observed', context),
+    world: { extent: 90, gridSize: 72, cellSize: 2.5, idx: () => 0, explored: new Uint8Array([1]) },
     s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [],
       parties: [{id:0,faction:0,meta:{},benefits:{},controller:{kind:'human'},account:{alloy:0,gas:0,energy:100,abilities:{}}}] },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
@@ -149,6 +152,57 @@ test('UI submits actor-bound action data and cannot set rally when execution rej
     [0, { kind: 'order', ids: [7], order: { type: 'hold' } }],
     [0, { kind: 'train', unit: 'worker' }]
   ]);
+});
+
+test('scenario UI perspective resets local interaction, follows actor accounts and routes commands to that actor', () => {
+  const h = setup(), g = h.ui.game, queries = [], actions = [];
+  g.s.parties = Array.from({ length: 4 }, (_, id) => ({ id, faction: id % 3,
+    account: { alloy: 100 + id, gas: 200 + id, energy: 20 + id, abilities: {} } }));
+  g.s.entities = [{ id: 7, team: 2, type: 'hq', kind: 'building', hp: 100, progress: 1, x: 20, z: 10, queue: [] }];
+  g.supply = team => { queries.push(['supply', team]); return 3; };
+  g.cap = team => { queries.push(['cap', team]); return 10; };
+  g.setPerspective = team => { g.localTeam = team; return true; };
+  g.executeAction = (team, action) => { actions.push([team, JSON.parse(JSON.stringify(action))]); return true; };
+  h.ui.setTab = h.UI.prototype.setTab;
+  h.ui.homeCamera = h.UI.prototype.homeCamera;
+  h.ui.updateHUD = h.UI.prototype.updateHUD;
+  h.ui.selected = [99]; h.ui.hover = 99; h.ui.mode = { kind: 'rally' };
+  h.ui.drag = { x: 1 }; h.ui.lastClick = { id: 99 }; h.ui.pings = [{ x: 1, z: 1 }];
+  h.ui.touchPoints.set(1, { x: 1, y: 1 }); h.ui.touchGesture = true;
+  h.ui.queueSignature = 'worker'; h.document.getElementById('productionQueue').innerHTML = 'old party queue';
+  assert.equal(h.ui.setPerspective(2), true);
+  assert.equal(h.document.getElementById('productionQueue').innerHTML, '');
+  assert.deepEqual(Array.from(h.ui.selected), []); assert.equal(h.ui.hover, null); assert.equal(h.ui.mode, null);
+  assert.equal(h.ui.drag, null); assert.equal(h.ui.touchPoints.size, 0); assert.equal(h.ui.pings.length, 0);
+  assert.deepEqual([g.s.cam.x, g.s.cam.z], [24, 8]);
+  assert.equal(h.document.getElementById('alloyCount').textContent, '102');
+  assert.equal(h.document.getElementById('gasCount').textContent, '202');
+  assert.equal(h.document.getElementById('energyCount').textContent, '22');
+  assert.deepEqual(queries, [['supply', 2], ['cap', 2]]);
+  h.ui.issueOrder([7], { type: 'hold' });
+  assert.deepEqual(actions, [[2, { kind: 'order', ids: [7], order: { type: 'hold' } }]]);
+  assert.match(h.ui.actionButton('build:hq', 'HQ', 'hq'), /faction-2-building-hq/);
+  h.ui.modalKind = 'sell'; assert.equal(h.ui.setPerspective(3), false); assert.equal(g.localTeam, 2);
+});
+
+test('nonzero perspective selection and picking hide foreign units and select only its own combat force', () => {
+  const h = setup(), g = h.ui.game;
+  g.localTeam = 2;
+  g.visible = e => e.team === 2;
+  g.s.entities = [
+    { id: 1, team: 0, type: 'rifle' }, { id: 2, team: 1, type: 'rifle' },
+    { id: 3, team: 2, type: 'rifle' }, { id: 4, team: 3, type: 'rifle' },
+    { id: 5, team: 2, type: 'worker' }
+  ].map(e => ({ ...e, kind: 'unit', hp: 100, x: 200, z: 200, size: 1 }));
+  assert.equal(h.UI.prototype.pick.call(h.ui, 200, 200).team, 2);
+  h.UI.prototype.select.call(h.ui, [1, 2, 3, 4]);
+  assert.deepEqual(Array.from(h.ui.selected), [3]);
+  h.UI.prototype.bind.call(h.ui);
+  h.document.getElementById('combatSelectBtn').onclick();
+  assert.deepEqual(Array.from(h.ui.selected), [3]);
+  g.s.entities.push({ id: 6, team: 2, kind: 'building', type: 'hq', hp: 100, queue: [{ type: 'worker', time: 10, progress: 0 }] });
+  g.s.entities.push({ id: 7, team: 0, kind: 'building', type: 'hq', hp: 100, queue: [{ type: 'rifle', time: 10, progress: 0 }] });
+  assert.deepEqual(Object.keys(h.ui.recruitmentGroups()), ['worker']);
 });
 
 test('each battle start resets the music playlist before playback, but resume does not', () => {

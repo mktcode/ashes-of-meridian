@@ -144,21 +144,17 @@
           const selectedIds = ui.selectionIds();
           for (let e of s.entities) {
             if (e.hp <= 0) continue;
-            let idx = world.idx(e.x, e.z),
-              visible = game.visible(e),
-              explored = world.explored[idx];
-            if (e.team === 1 && !visible) continue;
-            if (e.team === -1 && !explored) continue;
+            if (!game.observed(e)) continue;
             let p = R.project(e.x, 0, e.z);
             const v = R.viewport;
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))
               continue;
-            renderEntity(R, e, t);
+            renderEntity(R, e, t, { localTeam: game.localTeam });
             let selected = selectedIds.has(e.id),
               hover = ui.hover === e.id;
             if (selected || hover) {
               let col =
-                e.team === 1
+                e.team !== -1 && e.team !== game.localTeam
                   ? 0xf2a490
                   : e.type === 'hero'
                     ? 0xf1c181
@@ -190,7 +186,7 @@
                 ring(b.x, b.z, b.size + 1, 0xe5ba79, 0.25, 0.11, t * 0.1);
             }
           }
-          renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t);
+          renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t, game.localTeam);
           if (ui.mode && ui.pointer.inside && !ui.paused) {
             let p = R.ground(ui.pointer.x, ui.pointer.y);
             const limit = world.extent - 4;
@@ -200,15 +196,15 @@
               let type = ui.mode.arg,
                 d = BUILDINGS[type];
               if (d) {
-                const foundation = game.foundationPosition(type, p);
-                let check = game.canBuild(type, p),
+                const foundation = game.foundationPosition(type, p, game.localTeam);
+                let check = game.canBuild(type, p, game.localTeam),
                   ok = !check,
                   col = ok ? 0x99e4c6 : 0xf39989;
                 renderEntity(
                   R,
-                  createBuildingPreview(type, foundation, s.parties[0].faction),
+                  createBuildingPreview(type, foundation, s.parties[game.localTeam].faction, game.localTeam),
                   t,
-                  { tint: col, alpha: 0.3, layer: 'effects' }
+                  { tint: col, alpha: 0.3, layer: 'effects', localTeam: game.localTeam }
                 );
                 ring(foundation.x, foundation.z, d.size + 0.6, col, 0.9);
               }
@@ -218,7 +214,7 @@
                   kind === 'scan'
                     ? 32
                     : kind === 'orbital'
-                      ? s.parties[0].faction === FACTION_ID.THIRD
+                      ? s.parties[game.localTeam].faction === FACTION_ID.THIRD
                         ? 8
                         : 10
                       : kind === 'repair'

@@ -5,12 +5,12 @@ interface MotionDustTrack {
   emitted: number;
   puffs: { x: number; z: number; at: number }[];
 }
-const motionDustViews = new WeakMap<MeridianRenderer, { world: Battlefield; color: readonly number[]; tracks: Map<UnitEntity, MotionDustTrack> }>();
-function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState) {
+const motionDustViews = new WeakMap<MeridianRenderer, { world: Battlefield; team: PlayerTeam; color: readonly number[]; tracks: Map<UnitEntity, MotionDustTrack> }>();
+function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, localTeam: PlayerTeam = 0) {
   if (!(R.quality > 0) || R.cinema) { motionDustViews.delete(R); return; }
   let view = motionDustViews.get(R);
-  if (!view || view.world !== world) {
-    view = { world, color: Array.from(R.color(world.definition.palette.ground), c => c * .55 + .35), tracks: new Map() };
+  if (!view || view.world !== world || view.team !== localTeam) {
+    view = { world, team: localTeam, color: Array.from(R.color(world.definition.palette.ground), c => c * .55 + .35), tracks: new Map() };
     motionDustViews.set(R, view);
   }
   const seen = new Set<UnitEntity>(), cap = R.quality > 1 ? 48 : 24, now = s.time;
@@ -42,12 +42,12 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState) 
         function drawEffectRing(R: MeridianRenderer, x: number, z: number, r: number, color: RenderColor, alpha = 0.65, y = 0.1, rot = 0) {
           R.add('ring', x, y, z, r, 1, r, color, rot, 0, 0, 0.45, alpha, 'effects');
         }
-        function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number) {
+        function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number, localTeam: PlayerTeam = 0) {
           const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
-          renderMotionDust(R, world, s);
+          renderMotionDust(R, world, s, localTeam);
           let accents = R.quality > 1 ? 48 : R.quality > 0 ? 16 : 0;
           for (let f of effects.fx) {
-            if (!world.visible[world.idx(f.x, f.z)] && (f.type !== 'drop' || f.team === 1)) continue;
+            if (!world.visible[world.idx(f.x, f.z)] && (f.type !== 'drop' || (f.team ?? 0) !== localTeam)) continue;
             let life = clamp(f.life / f.maxLife, 0, 1),
               age = 1 - life;
             if (f.type === 'beam') {
@@ -130,7 +130,7 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState) 
           for (let p of pings)
             ring(p.x, p.z, 1 + (1 - p.life / p.maxLife) * 4, p.color || 0x9fe9d6, p.life / p.maxLife);
           for (let f of s.fields) {
-            if (f.team === 1 && !world.visible[world.idx(f.x,f.z)]) continue;
+            if ((f.team ?? 0) !== localTeam && !world.visible[world.idx(f.x,f.z)]) continue;
             let left = f.until - s.time;
             if (left <= 0) continue;
             ring(
@@ -158,15 +158,15 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState) 
             );
           }
           for (let scan of s.scans) {
-            if (scan.team === 1) continue;
+            if ((scan.team ?? 0) !== localTeam) continue;
             let left = scan.until - s.time;
             if (left > 0)
               ring(scan.x, scan.z, scan.r || 32, 0x9bc6ea, 0.1 + (0.5 + 0.5 * Math.sin(t * 2)) * 0.1);
           }
           for (let a of s.strikes) {
-            if (a.type === 'shell' || (a.team !== 0 && !world.visible[world.idx(a.x,a.z)])) continue;
+            if (a.type === 'shell' || (a.team !== localTeam && !world.visible[world.idx(a.x,a.z)])) continue;
             let wait = a.at - s.time,
-              col = a.team === 0 ? 0x9fe3d1 : 0xf4ad84,
+              col = a.team === localTeam ? 0x9fe3d1 : 0xf4ad84,
               rad = a.radius || 10;
             ring(a.x, a.z, rad, col, 0.58, 0.14);
             ring(

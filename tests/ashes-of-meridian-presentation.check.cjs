@@ -28,6 +28,40 @@ test('world and simulation start and step without renderer, geometry or browser 
   assert.equal(vm.runInContext('typeof geom + ":" + typeof MAT + ":" + typeof document', context), 'undefined:undefined:undefined');
 });
 
+test('observer-relative entity colors do not rotate buildings or mutate model state', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world-view']);
+  const render = vm.runInContext('renderEntity', context), R = createRendererStub({ record: true });
+  R.cinema = false; R.quality = 0;
+  for (const team of [0, 1, 2, 3]) {
+    const e = Object.freeze({ id: 42, kind: 'building', type: 'hq', hp: 100, team, faction: 0, size: 4, x: 0, z: 0, progress: 1 });
+    const draw = localTeam => { R.calls.length = 0; render(R, e, 0, { localTeam }); return R.calls.map(c => [...c]); };
+    const own = draw(team), foreign = draw((team + 1) % 4);
+    assert.deepEqual(own.map(c => c.filter((_, i) => i !== 7)), foreign.map(c => c.filter((_, i) => i !== 7)));
+    assert.ok(own.some((c, i) => c[7] !== foreign[i][7]), 'ownership changes colors, not faction identity or transforms');
+  }
+});
+
+test('effect markers use the local actor for scans, drops, fields and strike warnings', () => {
+  const context = loadScripts(['core', 'content', 'effects', 'effects-view'], { globals: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) } });
+  const render = vm.runInContext('renderBattlefieldEffects', context), R = createRendererStub({ record: true });
+  R.quality = 0; R.beam = (...args) => R.calls.push(['beam', ...args]);
+  const world = { visible: [0], idx: () => 0 }, s = { time: 0, entities: [], scans: [], fields: [], strikes: [] };
+  const effects = { fx: [], combatBeams: new WeakMap() };
+  const draws = team => { R.calls.length = 0; render(R, effects, world, s, [], 0, team); return R.calls.length; };
+  for (const kind of ['scan', 'drop', 'field', 'strike']) {
+    s.scans = []; s.fields = []; s.strikes = []; effects.fx = [];
+    const p = { team: 2, x: 0, z: 0 };
+    if (kind === 'scan') s.scans = [{ ...p, until: 10, r: 10 }];
+    if (kind === 'drop') effects.fx = [{ ...p, type: 'drop', life: 1, maxLife: 1, color: 1 }];
+    if (kind === 'field') s.fields = [{ ...p, until: 10, r: 10, type: 'repair' }];
+    if (kind === 'strike') s.strikes = [{ ...p, at: 10, radius: 10, type: 'orbital' }];
+    const before = JSON.stringify([s, effects.fx]);
+    assert.equal(draws(0), 0, `${kind}: hidden foreign marker`);
+    assert.ok(draws(2) > 0, `${kind}: own marker`);
+    assert.equal(JSON.stringify([s, effects.fx]), before);
+  }
+});
+
 test('contact shadows add one effect quad per unit/building on Balanced/High without changing models or previews',()=>{
   const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world-view']);
   vm.runInContext('Math.random=()=>{throw Error("Render RNG");}',context);

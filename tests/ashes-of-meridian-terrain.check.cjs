@@ -53,7 +53,17 @@ test('four party sight buffers remain isolated, while the presentation view stil
   w.reveal([]);
   assert.equal(w.sight[3].visible[w.idx(sites[3].x, sites[3].z)], 0);
   assert.equal(w.sight[3].explored[w.idx(sites[3].x, sites[3].z)], 1);
+  assert.equal(w.selectView(3), true);
+  assert.strictEqual(w.visible, w.sight[3].visible);
+  assert.equal(w.fogPixels[w.idx(sites[3].x, sites[3].z)], 80);
+  const version = w.fogVersion;
+  w.explore(0, sites[2], 5);
+  assert.equal(w.fogVersion, version, 'another party exploration does not update local fog');
+  w.explore(3, sites[0], 5);
+  assert.equal(w.fogPixels[w.idx(sites[0].x, sites[0].z)], 80);
+  assert.equal(w.fogVersion, version + 1);
   const fresh = new Battlefield(1409, 'mothership');
+  assert.equal(fresh.viewTeam, 0);
   assert.equal(fresh.sight.length, 2);
   assert.ok(fresh.sight.every(view => !view.explored.some(Boolean)));
   for (const count of [0, 1, 5, 2.5, NaN]) assert.throws(() => new Battlefield(1409, 'mothership', count));

@@ -82,6 +82,7 @@
         this.touchPoints = new Map();
         this.bind();
       }
+      get localTeam(): PlayerTeam { return this.game.localTeam; }
       selectionIds() {
         if (this.selectedLookupSource !== this.selected) {
           this.selectedLookupSource = this.selected;
@@ -170,7 +171,7 @@
               color:
                 data.type === 'attackMove' || data.type === 'attack'
                   ? 0xeebc81
-                  : FACTIONS[this.game.s!.parties[0].faction].color
+                  : FACTIONS[this.game.s!.parties[this.localTeam].faction].color
             });
         } else if (type === 'result') {
           const firstResult = this.resultAetherRecovered === undefined;
@@ -220,7 +221,7 @@
         } else if (type === 'complete') {
           this.audio.sound('complete');
           this.alert({
-            text: buildingName(data.type, this.game.s!.parties[0].faction) + ' complete.',
+            text: buildingName(data.type, this.game.s!.parties[this.localTeam].faction) + ' complete.',
             x: data.x,
             z: data.z
           });

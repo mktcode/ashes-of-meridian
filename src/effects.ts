@@ -51,14 +51,14 @@ class MeridianEffects {
           });
         if (this.fx.length > 500) this.fx.splice(0, this.fx.length - 500);
       }
-      damageNumber(e: Pick<EntityBase, 'x' | 'z' | 'team'>, amount: number) {
+      damageNumber(e: Pick<EntityBase, 'x' | 'z' | 'team'>, amount: number, localTeam: PlayerTeam = 0) {
         if (this.floats.length < 35)
           this.floats.push({
             x: e.x,
             z: e.z,
             y: 2.4,
             text: Math.round(amount).toString(),
-            color: e.team === 0 ? '#f8a88d' : '#f0cd93',
+            color: e.team === localTeam ? '#f8a88d' : '#f0cd93',
             life: 0.8,
             maxLife: 0.8
           });
@@ -78,7 +78,7 @@ class MeridianEffects {
             color: e.faction === FACTION_ID.SECOND ? 0xb8eba3 : 0xffce8f
           });
       }
-      shot(e: UnitEntity | BuildingEntity, target: Entity) {
+      shot(e: UnitEntity | BuildingEntity, target: Entity, localTeam: PlayerTeam = 0) {
         const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45,
           th = target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1;
         this.fx.push({
@@ -96,7 +96,7 @@ class MeridianEffects {
                   ? 0xafe8a6
                   : e.faction === FACTION_ID.THIRD
                     ? 0xd9bfff
-                    : e.team === 1
+                    : e.team !== localTeam
                       ? 0xf49685
                       : 0xffd2a0,
               width: e.type === 'tank' ? 0.075 : 0.035

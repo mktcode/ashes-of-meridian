@@ -63,6 +63,7 @@ interface EntityModelDefinition {
   render: (context: EntityModelContext) => void;
 }
 interface RenderEntityOptions {
+  localTeam?: PlayerTeam;
   layer?: RenderLayer;
   alpha?: number;
   tint?: number;

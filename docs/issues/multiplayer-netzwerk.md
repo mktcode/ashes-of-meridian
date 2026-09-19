@@ -2,7 +2,7 @@
 
 Weitere Synchronisations-/Transportarbeit nach [Parteienmodell](multiplayer-simulationsmodell.md) und [Perspektivtrennung](multiplayer-karten-und-darstellung.md). **Kein Transport, Backend oder Lobbybau ohne weitere Freigabe.**
 
-- [ ] Simulationsschritt, Befehlsreihenfolge, Zufall und lokale Darstellung sauber abgrenzen; Perspektivwechsel darf den Simulationsverlauf nicht verändern.
+- [ ] Die bisher sofortige Aktionsausführung an eine ausdrückliche Tick-/Reihenfolgegrenze binden. Szenario-Effektzufall und lokale Perspektive sind getrennt; Kamera/Tempo, Ereignisausgabe und rein visuelle Zustände beim künftigen Serververtrag ausdrücklich behandeln.
 - [ ] Zustandsumfang für Abgleich/Wiederherstellung bestimmen; heutiger Expeditionscheckpoint ist kein Gefechtssnapshot.
 - [ ] Autoritativen Simulationsserver als separates start-/deploybares Paket im selben Repository vorbereiten; gemeinsamen Code wiederverwenden statt die Simulation zu kopieren. Einzelspiel bleibt dienstfrei über `file://` startbar.
 - [ ] Kleinen vertikalen Netzwerkprototyp separat freigeben: Session erstellen, Code teilen, mit zwei Browsern beitreten und eigene Einheiten bewegen. Raumcode von persönlicher Verbindungsidentität trennen; noch keine Expeditionen, vollständigen KI-Partien oder aufwendige Wiederverbindung.

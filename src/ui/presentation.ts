@@ -74,9 +74,9 @@
             ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
             continue;
           }
-          if (e.team === 1 && !visible) continue;
+          if (e.team !== this.localTeam && !visible) continue;
           let p = map(e);
-          ctx.fillStyle = e.team === 0 ? '#79dbcc' : '#eb8e80';
+          ctx.fillStyle = e.team === this.localTeam ? '#79dbcc' : '#eb8e80';
           if (e.type === 'hero') ctx.fillStyle = '#ffd494';
           if (e.kind === 'building') {
             let size = Math.max(5, (e.size * w) / span);
@@ -127,15 +127,11 @@
           ctx.lineWidth = 1;
           for (let id of this.selected.slice(0, 12)) {
             let e = g.get(id);
-            if (!e || e.team !== 0) continue;
-            let goal =
-              e.rally ||
-              ((e.order?.type === 'move' || e.order?.type === 'attackMove')
-                ? e.order
-                : e.order?.type === 'attack'
-                  ? g.get(e.order.id)
-                  : null);
-            if (!goal) continue;
+            if (!e || e.team !== this.localTeam) continue;
+            const target = e.order?.type === 'attack' ? g.get(e.order.id) : null;
+            let goal = e.rally ||
+              ((e.order?.type === 'move' || e.order?.type === 'attackMove') ? e.order : target);
+            if (!goal || (goal === target && !g.visible(target!))) continue;
             let a = this.R.project(e.x, 0.2, e.z),
               b = this.R.project(goal.x, 0.2, goal.z);
             if (a && b) {
@@ -181,7 +177,7 @@
           ctx.fillRect(p.x - w / 2 - 2, p.y - 2, w + 4, e.maxShield ? 10 : 7);
           ctx.fillStyle = '#344350';
           ctx.fillRect(p.x - w / 2, p.y, w, 3);
-          ctx.fillStyle = e.team === 1 ? '#e8a291' : e.hp / e.maxHp < 0.3 ? '#f0b178' : '#91daca';
+          ctx.fillStyle = e.team !== -1 && e.team !== this.localTeam ? '#e8a291' : e.hp / e.maxHp < 0.3 ? '#f0b178' : '#91daca';
           ctx.fillRect(p.x - w / 2, p.y, w * clamp(e.hp / e.maxHp, 0, 1), 3);
           if (e.maxShield) {
             ctx.fillStyle = '#b5adf0';
@@ -208,7 +204,7 @@
             ctx.lineWidth = 3;
             ctx.strokeStyle = '#091421';
             ctx.strokeText(name.toUpperCase(), p.x, p.y - 8);
-            ctx.fillStyle = e.team === 1 ? '#efc8b5' : '#d9e9df';
+            ctx.fillStyle = e.team !== -1 && e.team !== this.localTeam ? '#efc8b5' : '#d9e9df';
             ctx.fillText(name.toUpperCase(), p.x, p.y - 8);
           }
           if (e.kills >= 5) {

@@ -52,8 +52,8 @@ class BattlefieldView {
 }
 
 // Placement ghosts are visual objects, never spawned simulation entities.
-function createBuildingPreview(type: BuildingType, p: Position, faction: FactionId): RenderEntity {
-  return { id: 0, kind: 'building', type, x: p.x, z: p.z, rot: 0, faction, team: 0,
+function createBuildingPreview(type: BuildingType, p: Position, faction: FactionId, team: PlayerTeam = 0): RenderEntity {
+  return { id: 0, kind: 'building', type, x: p.x, z: p.z, rot: 0, faction, team,
     hp: 1, maxHp: 1, progress: 1, size: BUILDINGS[type].size, queue: [] };
 }
 
@@ -61,12 +61,13 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
     function renderEntity(R: MeridianRenderer, e: RenderEntity, time: number, options: RenderEntityOptions = {}) {
       if (e.hp <= 0) return;
       const f = FACTIONS[e.faction || FACTION_ID.FIRST],
-        enemy = e.team === 1;
+        enemy = e.team !== -1 && e.team !== (options.localTeam ?? 0);
       let team = enemy ? 0xe98680 : f.color,
         accent = enemy ? 0xffaf87 : f.accent;
       let metal: number = f.metal,
         dark: number = f.dark;
-      const rot = e.kind === 'building' ? (enemy ? Math.PI : 0) + BUILDING_YAW : e.rot || 0,
+      // Building orientation belongs to the world, not the observing party.
+      const rot = e.kind === 'building' ? (e.team === 1 ? Math.PI : 0) + BUILDING_YAW : e.rot || 0,
         cs = Math.cos(rot),
         sn = Math.sin(rot);
       let y =

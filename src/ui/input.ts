@@ -86,7 +86,7 @@
         };
         $('combatSelectBtn').onclick = () => {
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
-          this.select(this.game.alive(e => e.team === 0 && e.kind === 'unit' && e.type !== 'worker').map(e => e.id));
+          this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker').map(e => e.id));
           this.lastClick = {};
         };
         $('radioClose').onclick = () => {
@@ -236,8 +236,7 @@
           score = Infinity;
         for (let e of this.game.s!.entities) {
           if (e.hp <= 0) continue;
-          if (e.team === 1 && !this.game.visible(e)) continue;
-          if (e.team === -1 && !this.game.world!.explored[this.game.world!.idx(e.x, e.z)]) continue;
+          if (!this.game.observed(e)) continue;
           let y =
               e.type === 'air' ? 4.4 : e.kind === 'building' ? 2.0 : 1,
             p = this.R.project(e.x, y, e.z);
@@ -312,7 +311,7 @@
           this.hover = this.pick(e.clientX, e.clientY)?.id || null;
           if (!this.mode) {
             let t = this.game.get(this.hover);
-            $('world').style.cursor = t ? (t.team === 1 ? 'crosshair' : 'pointer') : 'default';
+            $('world').style.cursor = t ? (t.team !== -1 && t.team !== this.localTeam ? 'crosshair' : 'pointer') : 'default';
           }
         }
       },
@@ -356,18 +355,18 @@
           return;
         }
         if (d.moved) return;
-        if (target && this.game.workerTask(target) && this.selected.some(id => {
+        if (target && this.game.workerTask(target, this.localTeam) && this.selected.some(id => {
           const worker = this.game.get(id);
-          return worker?.team === 0 && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;
+          return worker?.team === this.localTeam && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;
         })) {
           this.issueOrder(this.selected, { type: 'smart', id: target.id, x: target.x, z: target.z });
           return;
         }
-        if (this.selectedBuilding() && (!target || target.team !== 0)) {
+        if (this.selectedBuilding() && (!target || target.team !== this.localTeam)) {
           this.select([]);
           return;
         }
-        if (d.type === 'touch' && this.selected.length && (!target || target.team !== 0)) {
+        if (d.type === 'touch' && this.selected.length && (!target || target.team !== this.localTeam)) {
           this.issueOrder(
             this.selected,
             target ? { type: 'smart', id: target.id, x: target.x, z: target.z }
@@ -379,10 +378,10 @@
           let now = performance.now(),
             count = previousClick.id === target.id && previousClick.type === d.type &&
               now - previousClick.time! < 330 ? Math.min(3, previousClick.count! + 1) : 1;
-          if (count >= 2 && target.team === 0 && target.kind === 'unit') {
+          if (count >= 2 && target.team === this.localTeam && target.kind === 'unit') {
             let combat = d.type === 'touch' && count === 3,
               units = this.game
-              .alive(e => e.team === 0 && e.kind === 'unit' &&
+              .alive(e => e.team === this.localTeam && e.kind === 'unit' &&
                 (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
                 let q = this.R.project(e.x, 1, e.z);

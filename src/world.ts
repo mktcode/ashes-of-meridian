@@ -64,6 +64,7 @@
       readonly cellSize: number;
       readonly gridSize: number;
       declare fogVersion: number;
+      viewTeam: PlayerTeam = 0;
       declare seed: number;
       declare definition: BattlefieldDefinition;
       declare layout: BattlefieldLayout;
@@ -80,6 +81,18 @@
       declare renderData: WorldRenderData;
       declare startSites: Position[];
 
+      selectView(team: PlayerTeam): boolean {
+        const view = this.sight[team];
+        if (!Number.isInteger(team) || !view) return false;
+        if (team === this.viewTeam) return true;
+        this.viewTeam = team;
+        this.visible = view.visible;
+        this.explored = view.explored;
+        for (let i = 0; i < this.fogPixels.length; i++)
+          this.fogPixels[i] = this.visible[i] ? 255 : this.explored[i] ? 80 : 0;
+        this.fogVersion++;
+        return true;
+      }
       constructor(seed: number, map: BattlefieldId, partyCount = 2) {
         if (!Number.isInteger(partyCount) || partyCount < 2 || partyCount > 4)
           throw Error('Battlefield requires 2–4 parties');
@@ -101,7 +114,7 @@
         this.sight = Array.from({ length: partyCount }, () => ({
           visible: new Uint8Array(GRID * GRID), explored: new Uint8Array(GRID * GRID)
         }));
-        // Presentation still observes party 0; no shared sight or perspective switching yet.
+        // A fresh world presents party 0; switching aliases never shares or copies sight.
         this.visible = this.sight[0].visible;
         this.explored = this.sight[0].explored;
         this.fogPixels = new Uint8Array(GRID * GRID);
@@ -302,7 +315,7 @@
       explore(team: PlayerTeam, p: Position, radius: number) {
         this.mark(this.sight[team].explored, p.x, p.z, radius, 1);
         // Exploration reveals terrain/resources, never live vision or enemy contacts.
-        if (team === 0) {
+        if (team === this.viewTeam) {
           for (let i = 0; i < this.visible.length; i++)
             this.fogPixels[i] = this.visible[i] ? 255 : this.explored[i] ? 80 : 0;
           this.fogVersion++;
