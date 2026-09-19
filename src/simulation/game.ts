@@ -47,6 +47,9 @@
           {}, normalizedBenefits(opts.enemyBenefits))
       ];
     }
+    function createCommandQueue(): CommandQueue {
+      return { tick: 0, nextSequence: 1, pending: [], lastResults: [], processing: false };
+    }
     class MeridianGame {
       profile: MeridianProfile;
       emit: GameEventSink;
@@ -61,6 +64,7 @@
       random: () => number;
       cosmeticRandom: () => number;
       effects: MeridianEffects;
+      commandQueue: CommandQueue = createCommandQueue();
 
       get localTeam(): PlayerTeam { return this.world?.viewTeam ?? 0; }
 
@@ -135,6 +139,7 @@
           speed: 1
         };
         this.resetRandom(seed);
+        this.commandQueue = createCommandQueue();
         this.ids.clear();
         this.effects.reset();
         this.acc = 0;

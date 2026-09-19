@@ -4,7 +4,12 @@
       step(this: MeridianGame, dt: number) {
         if (!this.s || this.s.result || this.s.stopped) return;
         let s = this.s!;
-        if (s.rules.kind === 'scenario') dt = Math.min(dt, Math.max(0, s.rules.duration - s.time));
+        if (s.rules.kind === 'scenario') {
+          if (!Number.isFinite(dt) || dt <= 0) return;
+          dt = Math.min(dt, Math.max(0, s.rules.duration - s.time));
+          if (!dt) { s.stopped = true; this.cancelQueuedActions(); return; }
+          if (!this.beginCommandTick()) return;
+        }
         s.time += dt;
         for (const { account } of s.parties) account.energy = Math.min(COMMAND_ENERGY.max, account.energy + dt * COMMAND_ENERGY.regeneration);
         this.rehash();
@@ -158,7 +163,10 @@
           s.entities = s.entities.filter(e => e.hp > 0 || s.time - e.deathAt! <= 9);
           this.ids = new Map(s.entities.map(e => [e.id, e]));
         }
-        if (s.rules.kind === 'scenario' && s.time >= s.rules.duration) s.stopped = true;
+        if (s.rules.kind === 'scenario' && s.time >= s.rules.duration) {
+          s.stopped = true;
+          this.cancelQueuedActions();
+        }
       },
       checkBattleResult(this: MeridianGame) {
         if (this.s!.result || this.s!.rules.kind === 'scenario') return;

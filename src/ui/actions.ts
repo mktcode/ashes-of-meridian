@@ -20,7 +20,7 @@
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
         // Local scenario control follows the view; this is not network authentication.
-        return this.game.executeAction(this.localTeam, action);
+        return this.game.submitAction(this.localTeam, action);
       },
       issueOrder(this: MeridianUI, ids: number[], order: CommandOrder) {
         return this.submitAction({ kind: 'order', ids, order });

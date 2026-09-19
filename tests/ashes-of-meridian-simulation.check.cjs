@@ -125,6 +125,28 @@ test(`internal ${count}-party scenario on ${map}: FFA starts, resource access an
   assert.equal(game.s.stopped, false); assert.equal(game.s.rules.kind, 'single-player');
 });
 
+test('scenario command tick precedes production and cancels callback input at the duration limit', () => {
+  const { game } = createGame(), options = { seed: 1409, map: 'mothership', duration: .05,
+    parties: [{ faction: 0, controller: 'human' }, { faction: 1, controller: 'human' }],
+    hostilities: [[false, true], [true, false]] };
+  game.startScenario(options);
+  const home = game.alive(e => e.team === 0 && e.type === 'hq')[0];
+  const other = game.alive(e => e.team === 1 && e.type === 'hq')[0];
+  game.emit = type => {
+    if (type === 'queued') game.queueAction(1, { kind: 'rally', ids: [other.id], position: { x: 0, z: 0 } });
+  };
+  const ticket = game.queueAction(0, { kind: 'train', unit: 'worker' });
+  assert.deepEqual(json(ticket), { tick: 1, sequence: 1 }); assert.equal(home.queue.length, 0);
+  game.step(.05);
+  assert.ok(home.queue[0].progress > 0, 'admitted before production in this tick');
+  assert.equal(game.commandQueue.tick, 1); assert.equal(game.s.stopped, true);
+  assert.equal(other.rally, undefined); assert.equal(game.commandQueue.pending.length, 0);
+  assert.deepEqual(Array.from(game.commandQueue.lastResults, r => [r.tick, r.status]), [[1, 'applied'], [2, 'cancelled']]);
+  game.startScenario(options);
+  assert.equal(game.commandQueue.tick, 0); assert.equal(game.commandQueue.nextSequence, 1);
+  assert.equal(game.commandQueue.pending.length, 0); assert.equal(game.commandQueue.lastResults.length, 0);
+});
+
 test('larger map supports outer-area spawns, paid construction, production, commands and restart', () => {
   const {game,context}=createGame(true);
   vm.runInContext(`BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};

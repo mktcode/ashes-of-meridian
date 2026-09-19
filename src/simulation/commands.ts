@@ -1,4 +1,4 @@
-/* Actor-facing action boundary. Immediate local execution, not a wire protocol or tick queue. */
+/* Actor-facing actions and scenario input scheduling. No transport or replay protocol. */
 'use strict';
 function parseBattleAction(value: unknown, maxIds: number): BattleAction | null {
   const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -50,7 +50,73 @@ function parseBattleAction(value: unknown, maxIds: number): BattleAction | null 
     default: return null;
   }
 }
+const COMMAND_QUEUE_LIMIT = 256;
+function commandOutcome(command: QueuedAction, status: ActionOutcome['status']): ActionOutcome {
+  return { tick: command.tick, sequence: command.sequence, team: command.team, status };
+}
 const commandMethods = {
+  submitAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): boolean {
+    return this.s?.rules.kind === 'scenario'
+      ? this.queueAction(team, input, announce) !== null
+      : this.executeAction(team, input, announce);
+  },
+  queueAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): ActionTicket | null {
+    const s = this.s, queue = this.commandQueue;
+    if (!s || s.rules.kind !== 'scenario' || s.result || s.stopped ||
+        !Number.isInteger(team) || !s.parties.some(p => p.id === team) ||
+        queue.pending.length >= COMMAND_QUEUE_LIMIT || queue.tick >= Number.MAX_SAFE_INTEGER ||
+        queue.nextSequence >= Number.MAX_SAFE_INTEGER) return null;
+    const action = parseBattleAction(input, s.entities.length);
+    if (!action) return null;
+    const position = 'position' in action ? action.position : action.kind === 'order' ? action.order : null;
+    if (position && position.x !== undefined && position.z !== undefined &&
+        (Math.abs(position.x) > this.world!.extent || Math.abs(position.z) > this.world!.extent)) return null;
+    const tick = queue.tick + 1, sequence = queue.nextSequence++;
+    queue.pending.push({ tick, sequence, team, action, announce });
+    return { tick, sequence };
+  },
+  cancelQueuedActions(this: MeridianGame) {
+    const queue = this.commandQueue;
+    queue.lastResults.push(...queue.pending.map(command => commandOutcome(command, 'cancelled')));
+    queue.lastResults = queue.lastResults.slice(-2 * COMMAND_QUEUE_LIMIT);
+    queue.pending = [];
+  },
+  beginCommandTick(this: MeridianGame): boolean {
+    const s = this.s, queue = this.commandQueue;
+    if (!s || s.rules.kind !== 'scenario' || s.result || s.stopped || queue.processing ||
+        queue.tick >= Number.MAX_SAFE_INTEGER) return false;
+    // Detach this batch before callbacks can enqueue inputs for the following tick.
+    const batch = queue.pending;
+    queue.pending = [];
+    queue.tick++;
+    queue.lastResults = [];
+    queue.processing = true;
+    let index = 0;
+    const active = () => this.s === s && this.commandQueue === queue && !s.result && !s.stopped;
+    try {
+      for (; index < batch.length && active(); index++) {
+        const command = batch[index];
+        // Earlier deaths/sales/cancellations must be reflected in placement validation.
+        if (this.navDirty) { this.world!.rebuild(s.entities); this.navDirty = false; }
+        const applied = this.executeAction(command.team, command.action, command.announce);
+        queue.lastResults.push(commandOutcome(command, applied ? 'applied' : 'rejected'));
+      }
+      return active();
+    } catch (error) {
+      // A programming/event-sink error can follow partial mutation: never retry it automatically.
+      s.stopped = true;
+      queue.lastResults.push(commandOutcome(batch[index], 'failed'));
+      index++;
+      throw error;
+    } finally {
+      queue.processing = false;
+      if (!active()) {
+        queue.lastResults.push(...batch.slice(index).map(command => commandOutcome(command, 'cancelled')),
+          ...queue.pending.map(command => commandOutcome(command, 'cancelled')));
+        queue.pending = [];
+      }
+    }
+  },
   executeAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): boolean {
     const s = this.s;
     if (!s || s.result || s.stopped || !Number.isInteger(team) || !s.parties.some(p => p.id === team)) return false;

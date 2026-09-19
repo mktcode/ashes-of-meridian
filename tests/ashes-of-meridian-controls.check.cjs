@@ -99,7 +99,8 @@ function setup() {
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
     command(...args) { calls.push(['command', ...args]); },
-    // UI tests mock action execution; permission/shape checks have their own CPU state tests.
+    // UI tests mock submission/execution; scheduling and permission checks have separate CPU tests.
+    submitAction(team, action) { return this.executeAction(team, action); },
     executeAction(team, action) {
       assert.equal(team, 0, 'single-player UI supplies its actor outside the payload');
       switch (action.kind) {

@@ -244,6 +244,20 @@ type BattleAction =
   | { kind: 'cancelQueue'; id: number; index: number }
   | { kind: 'cancelConstruction' | 'toggleRepair' | 'sell'; id: number };
 
+interface ActionTicket { tick: number; sequence: number; }
+interface QueuedAction extends ActionTicket { team: PlayerTeam; action: BattleAction; announce: boolean; }
+interface ActionOutcome extends ActionTicket {
+  team: PlayerTeam;
+  status: 'applied' | 'rejected' | 'cancelled' | 'failed';
+}
+interface CommandQueue {
+  tick: number;
+  nextSequence: number;
+  pending: QueuedAction[];
+  lastResults: ActionOutcome[];
+  processing: boolean;
+}
+
 interface EntityBase extends Position {
   id: number;
   kind: EntityKind;
