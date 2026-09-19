@@ -80,6 +80,10 @@
       declare pathVersion: number;
       declare renderData: WorldRenderData;
       declare startSites: Position[];
+      surface: BattlefieldSurface | null = null;
+      terrainFree(a: Position, b: Position, radius = 0) {
+        return !this.surface || this.surface.segment(a, b, radius);
+      }
 
       selectView(team: PlayerTeam): boolean {
         const view = this.sight[team];
@@ -163,10 +167,10 @@
           if (e.hp > 0 && e.kind === 'building') this.mark(this.blocked, e.x, e.z, e.size + 0.35);
         this.pathVersion++;
       }
-      nearest(x: number, z: number): Position {
+      nearest(x: number, z: number, radius = 0, ignoreSurface = false): Position {
         const GRID = this.gridSize, limit = this.extent - 4;
         let i = this.idx(x, z);
-        if (!this.blocked[i]) return { x: clamp(x, -limit, limit), z: clamp(z, -limit, limit) };
+        if (!this.blocked[i] && (ignoreSurface || !this.surface || this.surface.fits(x,z,radius))) return { x: clamp(x, -limit, limit), z: clamp(z, -limit, limit) };
         let gx = i % GRID,
           gz = Math.floor(i / GRID),
           best = null,
@@ -179,7 +183,7 @@
                 nz = gz + dz;
               if (nx < 1 || nz < 1 || nx >= GRID - 1 || nz >= GRID - 1) continue;
               let id = nz * GRID + nx;
-              if (this.blocked[id]) continue;
+              if (this.blocked[id] || (!ignoreSurface && this.surface && !this.surface.fits(this.point(id).x,this.point(id).z,radius))) continue;
               let p = this.point(id),
                 d = (p.x - x) ** 2 + (p.z - z) ** 2;
               if (d < dd) {
@@ -192,7 +196,8 @@
         const fallback = this.extent - 6;
         return { x: clamp(x, -fallback, fallback), z: clamp(z, -fallback, fallback) };
       }
-      lineFree(a: Position, b: Position) {
+      lineFree(a: Position, b: Position, radius = 0, ignoreSurface = false) {
+        if (!ignoreSurface && !this.terrainFree(a, b, radius)) return false;
         let d = distance(a, b),
           n = Math.ceil(d / 1.4);
         for (let i = 1; i <= n; i++) {
@@ -201,23 +206,25 @@
         }
         return true;
       }
-      path(x: number, z: number, tx: number, tz: number, air = false, area?: NavigationArea): NavigationPath {
+      path(x: number, z: number, tx: number, tz: number, air = false, area?: NavigationArea, radius = 0, ignoreSurface = false): NavigationPath {
         const GRID = this.gridSize, limit = this.extent - 5;
         tx = clamp(tx, -limit, limit);
         tz = clamp(tz, -limit, limit);
         const complete = (goal: Position): NavigationPath => ({ points: [goal], goal, status: 'complete' });
         if (air) return complete({ x: tx, z: tz });
-        let target = this.nearest(tx, tz),
+        let target = this.nearest(tx, tz, radius, ignoreSurface),
           start = { x, z };
         // Work orders accept any reachable position in their area, not an arbitrary
         // nearest cell on the far side of a building. Keep a valid preferred service
         // point for unobstructed traffic; otherwise search the whole area once.
-        const inArea = (p: Position) => !area || distance(p, area) <= area.radius;
-        if (area && inArea(start) && !this.blockedAt(x, z)) return complete(start);
-        if (inArea(target) && !this.blockedAt(target.x, target.z) && this.lineFree(start, target)) return complete(target);
+        const surfaceFree = (a: Position, b: Position, r = 0) => ignoreSurface || this.terrainFree(a,b,r);
+        const inArea = (p: Position) => !area || (distance(p, area) <= area.radius && surfaceFree(p, area));
+        const fits = (i: number) => ignoreSurface || !this.surface || this.surface.fits(this.point(i).x, this.point(i).z, radius);
+        if (area && inArea(start) && !this.blockedAt(x, z) && (ignoreSurface || !this.surface || this.surface.fits(x,z,radius))) return complete(start);
+        if (inArea(target) && !this.blockedAt(target.x, target.z) && this.lineFree(start, target, radius, ignoreSurface)) return complete(target);
         let s = this.idx(x, z),
           end = this.idx(target.x, target.z);
-        if (s === end && inArea(target) && !this.blockedAt(target.x, target.z)) return complete(target);
+        if (s === end && inArea(target) && !this.blockedAt(target.x, target.z) && surfaceFree(start, target, radius)) return complete(target);
         let cost = new Float32Array(GRID * GRID);
         cost.fill(Infinity);
         cost[s] = 0;
@@ -262,7 +269,7 @@
             bestDistance = targetDistance;
             best = i;
           }
-          if (area ? targetDistance === 0 && !this.blocked[i] : i === end) {
+          if (area ? targetDistance === 0 && !this.blocked[i] && inArea(this.point(i)) : i === end && surfaceFree(this.point(i), target, radius)) {
             found = true;
             if (area) { end = i; target = this.point(i); }
             break;
@@ -275,7 +282,8 @@
               zz = gz + dz;
             if (xx < 1 || zz < 1 || xx >= GRID - 1 || zz >= GRID - 1) continue;
             let q = zz * GRID + xx;
-            if (closed[q] || this.blocked[q]) continue;
+            if (closed[q] || this.blocked[q] || !fits(q)) continue;
+            if (!surfaceFree(i === s ? start : this.point(i), this.point(q), radius)) continue;
             if (dx && dz && (this.blocked[gz * GRID + xx] || this.blocked[zz * GRID + gx])) continue;
             let nc = cost[i] + w;
             if (nc < cost[q]) {
@@ -305,7 +313,7 @@
           j = 0;
         while (j < nodes.length) {
           let k = j;
-          while (k + 1 < nodes.length && this.lineFree(anchor, nodes[k + 1])) k++;
+          while (k + 1 < nodes.length && this.lineFree(anchor, nodes[k + 1], radius, ignoreSurface)) k++;
           smooth.push(nodes[k]);
           anchor = nodes[k];
           j = k + 1;

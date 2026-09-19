@@ -135,8 +135,8 @@
             let goal = e.rally ||
               ((e.order?.type === 'move' || e.order?.type === 'attackMove') ? e.order : target);
             if (!goal || (goal === target && !g.visible(target!))) continue;
-            let a = this.R.project(e.x, 0.2, e.z),
-              b = this.R.project(goal.x, 0.2, goal.z);
+            let a = this.R.project(e.x, .2 + (g.world?.surface?.heightAt(e.x,e.z) ?? 0), e.z),
+              b = this.R.project(goal.x, .2 + (g.world?.surface?.heightAt(goal.x,goal.z) ?? 0), goal.z);
             if (a && b) {
               ctx.beginPath();
               ctx.moveTo(a.x, a.y);
@@ -174,7 +174,7 @@
                 : e.kind === 'building'
                     ? Math.min(8, e.size + 2.5)
                     : 3.0,
-            p = this.R.project(e.x, y, e.z);
+            p = this.R.project(e.x, y + (g.world?.surface?.entityHeight(e) ?? 0), e.z);
           if (!p || !this.R.containsPoint(p.x, p.y)) continue;
           let w = e.kind === 'building' ? 56 : e.type === 'hero' ? 42 : 30;
           ctx.fillStyle = '#07101deb';

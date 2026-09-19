@@ -245,9 +245,9 @@
           if (!this.game.observed(e)) continue;
           let y =
               e.type === 'air' ? 4.4 : e.kind === 'building' ? 2.0 : 1,
-            p = this.R.project(e.x, y, e.z);
+            p = this.R.project(e.x, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
           if (!p) continue;
-          let edge = this.R.project(e.x + e.size, y, e.z),
+          let edge = this.R.project(e.x + e.size, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z),
             r = Math.max(e.kind === 'unit' ? 12 : 16, edge ? Math.abs(edge.x - p.x) : 18),
             dx = (sx - p.x) / (r + 5),
             dy = (sy - p.y) / (r * 0.9 + 8),
@@ -307,8 +307,8 @@
           let drag = this.drag;
           if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
           if (drag.moved && (drag.type === 'touch' || (drag.type === 'mouse' && drag.button !== 2))) {
-            let a = this.R.ground(drag.x, drag.y),
-              b = this.R.ground(e.clientX, e.clientY);
+            let a = this.R.ground(drag.x, drag.y, false),
+              b = this.R.ground(e.clientX, e.clientY, false);
             this.center(this.game.s!.cam.x + a.x - b.x, this.game.s!.cam.z + a.z - b.z);
           }
           drag.x = e.clientX;
@@ -391,7 +391,7 @@
                 (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
                 const pose = this.multiplayer?.displayEntity(e) ?? e;
-                let q = this.R.project(pose.x, 1, pose.z);
+                let q = this.R.project(pose.x, 1 + (this.game.world?.surface?.entityHeight(pose) ?? 0), pose.z);
                 return q && this.R.containsPoint(q.x, q.y);
               });
             this.select(units.map(e => e.id));

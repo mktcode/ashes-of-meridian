@@ -7,6 +7,8 @@ class MeridianEffects {
       declare floats: FloatingText[];
       // View-only combat marker/hull radius: keep serialized effects and RNG samples unchanged.
       readonly combatBeams = new WeakMap<BattlefieldEffect, number>();
+      groundHeight: (x: number, z: number) => number = () => 0;
+      entityHeight: (e: Position & { type: string }) => number = e => this.groundHeight(e.x,e.z);
 
       constructor(random: () => number) {
         // The provider resolves the current game's selected effect RNG after each start.
@@ -26,7 +28,7 @@ class MeridianEffects {
           this.fx.push({
             type: 'particle',
             x,
-            y: 0.8 + this.random() * size,
+            y: this.groundHeight(x,z) + 0.8 + this.random() * size,
             z,
             vx: Math.sin(a) * sp,
             vz: Math.cos(a) * sp,
@@ -41,7 +43,7 @@ class MeridianEffects {
           this.fx.push({
             type: 'smoke',
             x: x + (this.random() - 0.5) * size,
-            y: 0.6 + this.random(),
+            y: this.groundHeight(x,z) + 0.6 + this.random(),
             z: z + (this.random() - 0.5) * size,
             vy: 1,
             life: 2.5,
@@ -56,7 +58,7 @@ class MeridianEffects {
           this.floats.push({
             x: e.x,
             z: e.z,
-            y: 2.4,
+            y: this.groundHeight(e.x,e.z) + 2.4,
             text: Math.round(amount).toString(),
             color: e.team === localTeam ? '#f8a88d' : '#f0cd93',
             life: 0.8,
@@ -64,7 +66,8 @@ class MeridianEffects {
           });
       }
       shell(e: EffectPose, target: EffectPose, travel: number) {
-        const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45;
+        const height = this.entityHeight(e) + (e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45);
+        const endY = this.groundHeight(target.x,target.z);
         this.fx.push({
             type: 'shell',
             x: e.x,
@@ -73,14 +76,15 @@ class MeridianEffects {
             tx: target.x,
             tz: target.z,
             startY: height,
+            ...(endY ? {endY} : {}),
             life: travel,
             maxLife: travel,
             color: e.faction === FACTION_ID.SECOND ? 0xb8eba3 : 0xffce8f
           });
       }
       shot(e: EffectPose, target: EffectPose, localTeam: PlayerTeam = 0) {
-        const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45,
-          th = target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1;
+        const height = this.entityHeight(e) + (e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45),
+          th = this.entityHeight(target) + (target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1);
         this.fx.push({
               type: 'beam',
               x: e.x + Math.sin(e.rot) * 0.7,
@@ -108,10 +112,10 @@ class MeridianEffects {
           this.fx.push({
               type: 'beam',
               x: e.x,
-              y: 1.1,
+              y: this.entityHeight(e) + 1.1,
               z: e.z,
               tx: b.x + (this.random() - 0.5) * b.size,
-              ty: 1.2,
+              ty: this.entityHeight(b) + 1.2,
               tz: b.z + (this.random() - 0.5) * b.size,
               life: 0.15,
               maxLife: 0.15,
@@ -125,10 +129,10 @@ class MeridianEffects {
           this.fx.push({
             type: 'beam',
             x: e.x,
-            y: 1,
+            y: this.entityHeight(e) + 1,
             z: e.z,
             tx: n.x,
-            ty: 1.5,
+            ty: this.entityHeight(n) + 1.5,
             tz: n.z,
             life: 0.1,
             maxLife: 0.1,
@@ -140,10 +144,10 @@ class MeridianEffects {
         this.fx.push({
               type: 'beam',
               x: e.x,
-              y: 1.2,
+              y: this.entityHeight(e) + 1.2,
               z: e.z,
               tx: t.x,
-              ty: t.type === 'air' ? 4 : 1.1,
+              ty: this.entityHeight(t) + (t.type === 'air' ? 4 : 1.1),
               tz: t.z,
               life: 0.25,
               maxLife: 0.25,
@@ -169,8 +173,9 @@ class MeridianEffects {
             f.z += f.vz * dt;
             f.y += f.vy * dt;
             f.vy -= dt * 12;
-            if (f.y < 0.05) {
-              f.y = 0.05;
+            const floor = this.groundHeight(f.x,f.z) + .05;
+            if (f.y < floor) {
+              f.y = floor;
               f.vy = Math.abs(f.vy) * 0.25;
               f.vx *= 0.8;
               f.vz *= 0.8;

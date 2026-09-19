@@ -7,7 +7,8 @@
         const yaw = BUILDING_YAW + (b.team === 1 ? Math.PI : 0),
           dx = Math.sin(yaw), dz = Math.cos(yaw), reach = b.size + UNITS[type].size * UNIT_BODY_SCALE + 1.5,
           end = this.unitPosition({type, size: UNITS[type].size, x: b.x + dx * reach, z: b.z + dz * reach});
-        if (!end) return null;
+        if (!end || (!(UNITS[type] as UnitDefinitionShape).flying &&
+          !this.world!.terrainFree(b, end, UNITS[type].size * UNIT_BODY_SCALE))) return null;
         const x = b.x - dx * 0.5, z = b.z - dz * 0.5,
           exit = {building: b.id, ...end, length: Math.hypot(end.x - x, end.z - z)};
         if (!this.unitFits({type, size: UNITS[type].size, exit}, x, z)) return null;
@@ -147,6 +148,17 @@
           return `Place within ${REFINERY_PLACEMENT_RANGE} meters of an explored aether vent.`;
         p = gas ? { x: gas.x, z: gas.z } : p;
         let r = d.size;
+        if (this.world!.surface) {
+          if (!this.world!.surface.foundation(p, r))
+            return 'Build on level ground, away from ramps and cliffs.';
+          const yaw = BUILDING_YAW + (team === 1 ? Math.PI : 0);
+          for (const unit of Object.values(UNITS) as UnitDefinitionShape[]) {
+            if (unit.from !== type || unit.flying) continue;
+            const body = unit.size * UNIT_BODY_SCALE, reach = r + body + 1.5,
+              exit = {x:p.x+Math.sin(yaw)*reach,z:p.z+Math.cos(yaw)*reach};
+            if (!this.world!.terrainFree(p,exit,body)) return 'Leave clear terrain for production exits.';
+          }
+        }
         const limit = this.world!.extent - 7 - r;
         if (Math.abs(p.x) > limit || Math.abs(p.z) > limit)
           return 'Too close to the battlefield boundary.';
@@ -344,7 +356,7 @@
             return true;
           }
           let need = b.size + 3.0;
-          if (distance(e, b) > need) {
+          if (distance(e, b) > need || !this.world!.terrainFree(e, b)) {
             this.move(e, b, dt, need, false, { x: b.x, z: b.z, radius: need - 0.1 });
             return true;
           }
@@ -385,7 +397,7 @@
           // One stable goal for the whole return trip: switching back to the HQ
           // centre when a detour leaves the near zone creates an endless loop.
           if (hqDistance > hqRange + 1.5 || (hqDistance > hqRange &&
-            (this.world!.blockedAt(dropoff.x, dropoff.z) || distance(e, dropoff) > e.size * UNIT_BODY_SCALE * 2.5))) {
+            (this.world!.blockedAt(dropoff.x, dropoff.z) || distance(e, dropoff) > e.size * UNIT_BODY_SCALE * 2.5)) || !this.world!.terrainFree(e, h)) {
             this.move(e, dropoff, dt, 0.45, false, { x: h.x, z: h.z, radius: hqRange - 0.1 });
             return true;
           }
@@ -414,8 +426,8 @@
           e.path = [];
         }
         const miningPoint = this.workerMiningPoint(e,n);
-        if (distance(e, n) > 2.15 && (this.world!.blockedAt(miningPoint.x, miningPoint.z) ||
-          distance(e,miningPoint) > e.size*UNIT_BODY_SCALE)) {
+        if ((distance(e, n) > 2.15 && (this.world!.blockedAt(miningPoint.x, miningPoint.z) ||
+          distance(e,miningPoint) > e.size*UNIT_BODY_SCALE)) || !this.world!.terrainFree(e, n)) {
           this.move(e, miningPoint, dt, 0.35, false, { x: n.x, z: n.z, radius: 2.05 });
           return true;
         }

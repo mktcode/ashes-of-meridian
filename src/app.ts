@@ -10,11 +10,13 @@
       const canvas = $('world'),
         overlay = $('overlay');
       try {
-        const visibleSimulation = new URLSearchParams(location.search).get('simulation') === 'ai-vs-ai',
+        const params = new URLSearchParams(location.search),
+          heightExperiment = params.get('experiment') === 'height',
+          visibleSimulation = !heightExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
             // The explicitly launched spectator run must not read or mutate the normal profile.
-            getStorage: () => visibleSimulation ? volatileStorage : localStorage,
+            getStorage: () => visibleSimulation || heightExperiment ? volatileStorage : localStorage,
             clamp,
             upgrades: META,
             benefits: EXPEDITION_BENEFITS,
@@ -152,7 +154,7 @@
           for (let e of viewState.entities) {
             if (e.hp <= 0) continue;
             if (!game.observed(e)) continue;
-            let p = R.project(e.x, 0, e.z);
+            let p = R.project(e.x, world.surface?.entityHeight(e) ?? 0, e.z);
             const v = R.viewport;
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))
               continue;
@@ -174,7 +176,7 @@
               R.add(
                 'sphere',
                 e.x,
-                e.type === 'air' ? 4.7 : 1.4,
+                (world.surface?.entityHeight(e) ?? 0) + (e.type === 'air' ? 4.7 : 1.4),
                 e.z,
                 e.size * 1.5,
                 e.size * 1.7,
@@ -326,7 +328,12 @@
           version: '1.0.0'
         };
         // Manual spectator command only; normal launches still stop at the home screen.
-        if (visibleSimulation) {
+        if (heightExperiment) {
+          // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
+          ui.expedition = { version: 2, faction: 0, depth: 0, benefits: {pioneerSquad: 2}, enemyBenefits: {},
+            encounter: {map: 'mothership', seed: 1409, enemy: 2}, offers: [] };
+          ui.startExpeditionBattle();
+        } else if (visibleSimulation) {
           ui.showBattle();
           ui.startBattle();
         }

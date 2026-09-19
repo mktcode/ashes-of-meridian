@@ -92,6 +92,8 @@
         this.cosmeticRandom = seeded(1);
         // Preserve the single-player RNG contract; scenarios isolate all cosmetic draws.
         this.effects = createEffects(() => this.s?.rules.kind === 'scenario' ? this.cosmeticRandom() : this.random());
+        this.effects.groundHeight = (x,z) => this.world?.surface?.heightAt(x,z) ?? 0;
+        this.effects.entityHeight = e => this.world?.surface?.entityHeight(e) ?? 0;
       }
     }
     function defineMeridianGameMethods(methods: Record<string, Function>) {

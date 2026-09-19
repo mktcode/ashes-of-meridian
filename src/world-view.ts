@@ -21,9 +21,30 @@ class BattlefieldView {
       R.haze = R.battlefieldProfile.haze;
       R.extent = EXTENT;
       R.decorSeed = world.seed >>> 0;
+      R.surface = world.surface;
       const data: number[] = [];
       let i = 0;
-      for (let z = 0; z < GRID; z++)
+      if (world.surface) {
+        const surface = world.surface, step = surface.step;
+        for (let z = 0; z < surface.size-1; z++) for (let x = 0; x < surface.size-1; x++) {
+          const wx = x*step-EXTENT, wz = z*step-EXTENT,
+            at = (dx: number,dz: number) => [wx+dx, surface.heightAt(wx+dx,wz+dz)-.13, wz+dz],
+            color = layout.groundColors[world.idx(wx+step*.5,wz+step*.5)*2];
+          geom.tri(data,at(0,0),at(0,step),at(step,step),color);
+          geom.tri(data,at(0,0),at(step,step),at(step,0),color);
+        }
+        // Close raised deck edges against the low exterior apron, without a second floor.
+        const corners = [[-EXTENT,-EXTENT],[EXTENT,-EXTENT],[EXTENT,EXTENT],[-EXTENT,EXTENT]];
+        for (let side = 0; side < 4; side++) for (let j = 0; j < surface.size-1; j++) {
+          const from = corners[side], to = corners[(side+1)%4],
+            point = (t: number) => [from[0]+(to[0]-from[0])*t,from[1]+(to[1]-from[1])*t],
+            p = point(j/(surface.size-1)), q = point((j+1)/(surface.size-1)),
+            a = [p[0],surface.heightAt(p[0],p[1])-.13,p[1]], b = [q[0],surface.heightAt(q[0],q[1])-.13,q[1]],
+            lowA = [p[0],-.13,p[1]], lowB = [q[0],-.13,q[1]];
+          if (b[1] > -.13) geom.tri(data,a,b,lowB,[.5,.58,.64]);
+          if (a[1] > -.13) geom.tri(data,a,lowB,lowA,[.5,.58,.64]);
+        }
+      } else for (let z = 0; z < GRID; z++)
         for (let x = 0; x < GRID; x++) {
           const wx = x * CELL - EXTENT, wz = z * CELL - EXTENT;
           geom.tri(data, [wx, -0.13, wz], [wx, -0.13, wz + CELL],
@@ -32,8 +53,15 @@ class BattlefieldView {
             [wx + CELL, -0.13, wz], layout.groundColors[i++], [0, 1, 0]);
         }
       R.geometry('terrain', data);
-      for (const descriptor of layout.geometries)
-        R.geometry(descriptor.mesh, TerrainModels.geometry(descriptor));
+      for (const descriptor of layout.geometries) {
+        const geometry = TerrainModels.geometry(descriptor);
+        if (descriptor.grounded && world.surface) {
+          // Painted deck furniture is baked once; terrain remains CPU authoritative.
+          for (let i = 0; i < geometry.length; i += 9)
+            geometry[i+1] += world.surface.heightAt(geometry[i],geometry[i+2]);
+        }
+        R.geometry(descriptor.mesh, geometry);
+      }
       for (const p of layout.placements) {
         const args: Parameters<MeridianRenderer['add']> = [p.mesh, ...p.position, ...p.scale, p.color, ...p.rotation,
           p.glow, p.alpha, p.layer];
@@ -70,13 +98,14 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       const rot = e.kind === 'building' ? (e.team === 1 ? Math.PI : 0) + BUILDING_YAW : e.rot || 0,
         cs = Math.cos(rot),
         sn = Math.sin(rot);
-      let y =
+      const ground = R.cinema ? 0 : R.surface?.entityHeight(e) ?? 0;
+      let y = ground + (
         e.type === 'air'
           ? 3.8 - (e.exit ? 3 * clamp(distance(e, e.exit) / e.exit.length, 0, 1) : 0) +
             Math.sin(time * 2 + e.id) * 0.22
           : e.faction === FACTION_ID.THIRD && e.kind === 'unit'
             ? 0.3 + Math.sin(time * 2 + e.id) * 0.08
-            : 0;
+            : 0);
       let layer = options.layer || 'dynamic',
         alpha = options.alpha === undefined ? 1 : options.alpha;
       let build = e.kind === 'building' ? Math.max(0.15, e.progress === undefined ? 1 : e.progress) : 1;
@@ -210,7 +239,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
             R.add(
               'sphere',
               e.x + Math.sin(time + i) * 0.3,
-              0.6 + t * 3,
+              ground + 0.6 + t * 3,
               e.z,
               0.35 + t * 0.8,
               0.4 + t * 0.6,
@@ -231,7 +260,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       // Exclude menus, placement previews and Performance. No RNG, textures or model changes.
       if (R.quality > 0 && !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic') {
         const width = (e.size || 1) * (e.kind === 'building' ? 3.2 : 3.6);
-        R.add('plane', e.x, -.02, e.z, width, 1, width * (e.kind === 'building' ? 1 : .8),
+        R.add('plane', e.x, (R.surface?.heightAt(e.x,e.z) ?? 0) - .02, e.z, width, 1, width * (e.kind === 'building' ? 1 : .8),
           0xffffff, rot, 0, 0, 0, e.kind === 'building' ? .32 : e.type === 'air' ? .12 : .26,
           'effects', CONTACT_SHADOW_MATERIAL);
       }
@@ -258,7 +287,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
             R.add(
               'box',
               e.x + Math.sin(a) * s,
-              2,
+              ground + 2,
               e.z + Math.cos(a) * s,
               0.1,
               4,
