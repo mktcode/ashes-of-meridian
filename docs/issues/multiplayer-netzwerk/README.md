@@ -9,6 +9,8 @@ Der freigegebene vertikale Prototyp ist umgesetzt: separater autoritativer [Serv
 - [ ] Erst nach Abnahme auf drei/vier menschliche Parteien erweitern; FFA beibehalten. KI und die [offenen Unterbau-Befunde](../multiplayer-simulationsmodell.md#offene-befunde-im-gemeinsamen-unterbau) separat behandeln.
 - [ ] Zustandsumfang für spätere Wiederherstellung/Replays bestimmen, einschließlich Befehlsqueue/RNG. Die übertragene Sicht ist kein Simulationssnapshot; der Expeditionscheckpoint ebenfalls nicht.
 
+- [ ] [Reviewbefunde](robustheit.md#offene-befunde-aus-dem-kurzen-code-review) zu verlorener Tokenrotation, Resume/Ready-Rennen, veralteten Clientfortsetzungen, Replay-Limits und Logdatenschutz vor weiteren Netzwerkerweiterungen beheben. Kleine Strukturverbesserungen erst durch Regressionstests absichern.
+
 ## Mobilfunkrobustheit
 
 Mehrere menschliche Tests über ein Mobilfunknetz endeten durch Verbindungsabbruch. Diagnose, automatische Wiederwahl, Resume-Schonfrist, toleranterer Heartbeat, Backpressure-Behandlung, adaptive Zustandsrate und Transportkompression sind inzwischen technisch umgesetzt; Ziel-VM-, Zielgeräte- und vollständige Netzprofilabnahme bleiben offen. Befund, Prioritäten und Umsetzungspakete stehen im [Robustheitsplan](robustheit.md).
