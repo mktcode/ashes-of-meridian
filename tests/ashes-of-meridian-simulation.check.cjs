@@ -1212,7 +1212,8 @@ test('nearby refinery placement snaps to the vent and selling frees it for a new
     nearby = {x:gas.x+5,z:gas.z};
   assert.ok(game.canBuild('refinery', nearby));
   assert.equal(game.sellBuilding(b.id), true);
-  assert.deepEqual(game.foundationPosition('refinery', nearby), {x:gas.x,z:gas.z});
+  // Compare position data, not object prototypes across the VM boundary.
+  assert.deepEqual({...game.foundationPosition('refinery', nearby)}, {x:gas.x,z:gas.z});
   assert.match(game.canBuild('refinery', {x:gas.x+6.01,z:gas.z}), /within 6 meters/);
   assert.equal(game.canBuild('refinery', nearby), '');
   assert.equal(game.build('refinery', nearby), true);
