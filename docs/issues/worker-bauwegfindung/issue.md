@@ -27,6 +27,10 @@ Der vollständig freigegebene Simulationslauf auf `0fd975b` (Node v23.11.1) find
 - Größenabhängige Terrain-Clearance, durchgängige Segment-Kollisionsprüfung und ein globales Suchbudget sind separate Erweiterungen. Bestehende Körperradien, Hindernisverteilung und RNG-Verträge dabei schützen.
 - Den oben genannten Minenverkehrsfall anhand von Auftrag, Ladung, Arbeitsbereich und Nachbargeometrie eingrenzen. Weitere Diagnose-Läufe gezielt freigeben lassen; keine breite Seed-/Kartenmatrix ohne konkreten Befund.
 
+## Abhängigkeit: begehbare Höhenstufen
+
+Der [Höhenstufenplan](../hoehenstufen/01-welt-und-navigation.md) ergänzt Rampen, Klippen und erhöhte Arbeitsflächen. Dabei müssen Segmentprüfung, Recovery-Platzsuche und Arbeitsreichweiten gemeinsam betrachtet werden: Eine nahe X/Z-Position auf der anderen Klippenseite ist kein erreichbarer Servicepunkt. Die hier dokumentierten Flachkarten-/Langlaufbefunde bleiben separat offen; das Höhenexperiment ist kein Auftrag zu ihrer beiläufigen Reparatur.
+
 ## Akzeptanz der offenen Arbeit
 
 Ein gültig platziertes Fundament mit erreichbarer Arbeitsseite muss vom zugewiesenen Worker ohne manuellen Neuauftrag begonnen und abgeschlossen werden. Erreichbarer Minenverkehr muss pro Worker wiederholt liefern, nicht nur als Gruppe Gesamteinkommen erzeugen. Dauerhaft unerreichbare Ziele müssen nachvollziehbar behandelt werden, ohne Suchstürme, heimliche Erstattungen oder veränderte Arbeitsreichweiten. Darstellungs- und Crowd-Abnahme bleiben menschlich bzw. ausdrücklich beauftragten Läufen vorbehalten.

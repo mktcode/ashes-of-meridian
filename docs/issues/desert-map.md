@@ -13,4 +13,6 @@ Ziel bleibt eine warme, trockene Wüste mit bodenfarbigen Felsen, nicht die dunk
 
 Das [statische Audit (PERF-3)](audit-welle-01-befunde.md#performance-erst-wirkung-und-kosten-abgrenzen) konkretisiert die spätere Trennung von Schatten-/Szenenpass, Dreieckslast und Pixelkosten. Es hat weder die Galerie-Zahlen nachgemessen noch einen aktuellen GPU-Flaschenhals belegt; daraus folgt keine Freigabe für reduzierte Geometrie oder Schatten.
 
+Der neue [Höhenstufenplan](hoehenstufen/03-karten-und-abnahme.md#desert-canyonlandschaft-mit-erhöhten-basisflächen) sieht als separates Experiment erhöhte spielbare Basen und ein großes tieferes Mittelfeld vor. Das verändert die heutige Startbecken-/Tal-Topologie bewusst; die bisherigen Nachweise unveränderter freier Navigationszellen gelten dafür nicht. Warme Canyonästhetik und Materialabnahme bleiben eigenständige Anforderungen, der Plan ist noch keine integrierte Kartenänderung.
+
 Desert-Verfeinerungen dürfen Mothership oder die eigenständige Alien-Gestaltung nicht stillschweigend ändern. Motherships [visuelle Abnahme](terrain.md) ist separat.
