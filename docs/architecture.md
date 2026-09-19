@@ -61,7 +61,9 @@ Das ist lokale Szenariosteuerung, keine Berechtigung zum Wechsel einer Netzwerki
 
 ## Netzwerkprototyp
 
-Der einzelne Node-Prozess bearbeitet alle Räume seriell im 50-ms-Takt; zwei vCPUs ergeben daher nicht zwei Simulationsworker. Der öffentliche Prototyp begrenzt einschließlich wartender Sessions absolut auf zwei Räume. `MAX_ROOMS` darf diese Grenze nur reduzieren; eine Erhöhung erfordert einen Lastnachweis auf der Zielmaschine.
+Der einzelne Node-Prozess bearbeitet alle Räume seriell im 50-ms-Takt; zwei vCPUs ergeben daher nicht zwei Simulationsworker. Pro spielendem Raum entstehen 20 Simulationsticks und 10 Netzwerkframes je Sekunde, bei zwei Spielern also 20 sichtgefilterte Projektionen samt JSON-Serialisierung. Räumlicher Index und Entitätenlogik laufen je Tick, Sichtberechnung ungefähr dreimal je Sekunde; Wegsuche und dichte lokale Abfragen erzeugen die relevanten Spitzen. Gebäudezahl allein ist deshalb kein Kapazitätsmaß.
+
+Der öffentliche Prototyp begrenzt einschließlich wartender Sessions absolut auf zwei Räume. `MAX_ROOMS` darf diese Grenze nur reduzieren; eine Erhöhung erfordert einen Lastnachweis auf der Zielmaschine. Alle Räume, Verbindungen und Befehls-/Effektpuffer sind flüchtig; ein Prozessneustart beendet Sitzungen statt sie wiederherzustellen.
 
 Der Node-Host bündelt dieselben kompilierten CPU-Skripte in einem isolierten VM-Kontext je Raum, nicht eine zweite Implementierung der Spielregeln. Er besitzt die Simulation und verarbeitet eingereihte Clientaktionen vor dem jeweiligen Tick. Der Browser führt für dieses Gefecht weder Schritte noch Aktionen lokal aus; sein `RunState` ist nur ein flüchtiges Bedien-/Renderabbild. Verbindungs-, Lade- und Abbruchregeln sowie Deployment: [Server](../server/README.md).
 

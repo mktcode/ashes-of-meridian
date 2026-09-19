@@ -64,6 +64,20 @@ CPU-Simulationstests laden keinen Renderer; Grafikgeometrie und Uploads separat 
 
 Die Standardtests enthalten synthetische Sichtprojektion, Ressourcen-Gedächtnis und die Sperre lokaler Ausführung im Netzwerkmodus. Darstellungsprüfungen decken Interpolation ohne Zustandsmutation, Sichtverlust, Ereignisfilter/-grenzen, Audiofreigabe und ausgeschlossene Persistenzereignisse ab; ein kurzer direkter Kampfschritt vergleicht Zustand und beide RNG-Ströme mit/ohne Präsentations-Observer. Nach `npm run build --prefix server` prüft `npm test --prefix server` zusätzlich kurze echte WebSocket-Sitzungen mit menschlichen Controllern auf allen Karten, Akteursbindung, Annahme/Ausführung und Abbruch. Das sind gezielte Netzwerkprüfungen, keine autonomen KI-Partien oder Ersatz für die gesonderten Simulations-Langläufe. Serverabhängigkeiten vorher separat installieren; Details unter [Server](../server/README.md).
 
+### Kapazitätsbefund
+
+Ein einmaliger lokaler CPU-Benchmark verwendete das echte Serverbundle, 20 Ticks/s sowie 10 Frames/s für je zwei Parteien einschließlich Sichtprojektion und JSON-Serialisierung. Referenzrechner war ein Ryzen 7 5700G; Prozentwerte bezeichnen einen Kern, nicht die Gesamtmaschine. Die Mothership-Leerlauffixture begann mit 50 Karten-/Startentitäten; die Laststufen ergänzten:
+
+| Last | Ergänzung | gemessene Kernlast je Raum | ausgehende Daten je Raum |
+| --- | --- | --- | --- |
+| Leerlauf | keine | ca. 0,6 % | ca. 0,34 MiB/s |
+| Mittel | 80 Einheiten, 18 Gebäude | ca. 3,8 % | ca. 0,8 MiB/s |
+| Hoch | 200 Einheiten, 38 Gebäude | je nach Karte ca. 13–19 % | ca. 1,4 MiB/s |
+
+Unter der hohen Last lagen zwei Räume lokal bei p99 ca. 29 ms und maximal 38 ms pro 50-ms-Serverintervall. Vier Räume überschritten mit p99 ca. 63 ms und maximal 80 ms das Echtzeitbudget. RAM war mit grob wenigen MiB Heap je Raum nicht begrenzend; CPU-Spitzen und unkomprimierte Vollzustände sind die relevanten Grenzen. Kampf reduziert die Entitätszahl im Verlauf, vollständige Sicht maximiert dagegen die Projektion; die Werte sind Kapazitätsindikatoren, kein Produktions-SLA.
+
+Die Ziel-VM mit zwei virtuellen EPYC-Rome-Kernen wurde dabei nicht unter künstliche Last gesetzt. Da ein Node-Prozess die Räume seriell abarbeitet, bleibt die absolute Grenze von zwei Räumen bewusst konservativ. Vor jeder Erhöhung einen reproduzierbaren Test direkt auf der Zielklasse ausführen und mindestens Tick-p95/p99, verfehlte 50-ms-Intervalle, CPU, RSS und ausgehende Bytes erfassen. Solche Lastläufe sind Simulations-/Performanceprüfungen und benötigen wie andere umfangreiche Läufe einen ausdrücklichen aktuellen Auftrag.
+
 ## Browser und menschliche Abnahme
 
 Ein bei konkretem Diagnosebedarf beauftragter technischer Browsercheck verwendet den aktuellen Build, ein isoliertes Profil und direkt `file://`, ohne abgeschwächte Sicherheitsflags. Nur betroffene Abläufe prüfen, etwa:

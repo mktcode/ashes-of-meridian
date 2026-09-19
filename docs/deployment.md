@@ -19,6 +19,47 @@ docker run --rm -p 8080:8080 ashes-of-meridian
 
 Dann `http://localhost:8080/` öffnen. Bei Containeränderungen gezielt Imagebau, Healthcheck, MIME-Typen, 404-Verhalten und erforderliche Laufzeitassets prüfen; weitere Browserprüfungen nach [Risiko](testing.md). Öffentlich HTTPS verwenden.
 
+## Multiplayerserver in Dokploy
+
+Spiel und Server sind zwei Anwendungen aus demselben Commit. Für den Server muss Dokploy den **Repository-Root als Build-Kontext** verwenden; `server/` allein kann die gemeinsamen Simulationsquellen nicht sehen:
+
+| Einstellung | Hauptspiel | Multiplayerserver |
+| --- | --- | --- |
+| Dockerfile | `Dockerfile` | `server/Dockerfile` |
+| Build-Kontext | Repository-Root (`.` bzw. `/`) | Repository-Root (`.` bzw. `/`) |
+| interner HTTP-Port | `8080` | `8787` |
+| öffentlicher Endpunkt | `https://aom.markus-kottlaender.de` | `wss://aoms.markus-kottlaender.de` |
+| Healthcheck | `GET /` | `GET /health` |
+
+Kein Build-Target angeben; beide Dockerfiles wählen ihre letzte Runtime-Stage selbst. Traefik spricht intern unverschlüsseltes HTTP mit dem Container, TLS/WSS endet am Proxy. Ein normaler Browseraufruf von `/` am Multiplayerserver ist kein Website-Test: `/` ist der WebSocket-Endpunkt und liefert ohne Upgrade 404; `/health` muss `200` mit Protokollversion liefern.
+
+Der Server benötigt keine Volumes oder Datenbank. Deployments und Containerneustarts beenden laufende Sessions absichtlich. Maßgebliche Variablen:
+
+```env
+ALLOWED_ORIGINS=https://aom.markus-kottlaender.de,https://html-classic.itch.zone
+# optional nur weiter reduzieren; die absolute Codegrenze bleibt zwei Räume
+MAX_ROOMS=2
+```
+
+Die itch.io-Origin am tatsächlichen WebSocket-Request prüfen; die Projektseite ist nicht zwingend die Origin des eingebetteten HTML5-Builds. `null` nur ergänzen, wenn direkte `file://`-Clients den öffentlichen Server verwenden sollen. Eine geteilte Hosting-Origin ist keine Authentifizierung.
+
+### Dokploy-/Traefik-Diagnose
+
+Die Remote-App-VM nimmt 80/443 über `dokploy-traefik` an; Appports bleiben intern. Bei Fehlern in dieser Reihenfolge unterscheiden:
+
+1. DNS und öffentliche Ports (`curl -I https://…`) – Verbindungsablehnung liegt vor der Anwendung.
+2. Container/Service gesund und Domain auf den richtigen internen Port geroutet.
+3. Traefik und Service gemeinsam im Overlay-Netz `dokploy-network`; ein 502 bei gesundem Container ist häufig fehlende Backend-Erreichbarkeit.
+4. Backend aus Traefik per Servicename und internem Port prüfen, danach `/health` öffentlich.
+
+Bei Dokploy v0.30.6 wurde folgende Teilinstallation beobachtet: Belegte Ports 80/443 ließen `docker run` nach dem Anlegen des Traefik-Containers scheitern. Wegen `set -e` wurde das nachfolgende `docker network connect dokploy-network dokploy-traefik` nicht ausgeführt; ein erneutes Setup erkannte nur den vorhandenen Container, und **Reload** führte lediglich `docker restart` aus. Nach Prüfung mit `docker inspect` reparierte einmalig:
+
+```bash
+docker network connect dokploy-network dokploy-traefik
+```
+
+Das ist eine gezielte Reparatur für genau diesen nachgewiesenen Zustand, kein routinemäßiger Deploymentschritt. Vorher Portbelegung, Containerstatus und Netzwerke prüfen; keinen zusätzlichen Nginx installieren und 8080/8787 nicht öffentlich öffnen.
+
 ## itch.io
 
 ```bash
