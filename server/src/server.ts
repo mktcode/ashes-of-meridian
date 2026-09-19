@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { Script } from 'node:vm';
+import { performance } from 'node:perf_hooks';
 import { WebSocket, WebSocketServer } from 'ws';
 
 interface Ticket { tick: number; sequence: number; }
@@ -20,8 +21,9 @@ interface Simulation {
 }
 interface Connection {
   id: number; ws: WebSocket; seat?: Seat; tokens: number; tokenAt: number;
-  connected: number; lastPong: number; pingAt: number; previousRtt?: number;
-  bytesSent: number; stateFramesSent: number; stateFramesSkipped: number;
+  connected: number; lastPong: number; nextPing: number; pings: Map<number, number>;
+  previousRtt?: number; smoothedRtt?: number; stateStride: number; frameOpportunities: number;
+  bytesSent: number; stateFramesSent: number; stateFramesSkipped: number; stateFramesThrottled: number;
   maxBufferedAmount: number; closeCause?: string;
 }
 interface Seat {
@@ -39,17 +41,23 @@ export interface MultiplayerTelemetryEvent {
 }
 export interface MultiplayerServerMetrics {
   connectionsOpened: number; connectionsClosed: number; bytesSent: number;
-  controlMessagesSent: number; stateFramesSent: number; stateFramesSkipped: number;
+  controlMessagesSent: number; controlPayloadBytes: number; stateFramesSent: number;
+  statePayloadBytes: number; stateFrameBytesMax: number; stateFramesSkipped: number; stateFramesThrottled: number;
   backpressureDisconnects: number; heartbeatTimeouts: number; maxBufferedAmount: number;
-  heartbeatRttSamples: number; heartbeatRttLastMs: number; heartbeatRttMaxMs: number; heartbeatJitterLastMs: number;
+  heartbeatRttSamples: number; heartbeatRttLastMs: number; heartbeatRttMaxMs: number;
+  heartbeatJitterLastMs: number; heartbeatJitterMaxMs: number;
+  tickDurationSamples: number; tickDurationP95Ms: number; tickDurationP99Ms: number; tickDurationMaxMs: number;
+  processCpuPercent: number; processRssBytes: number;
   resumeAttempts: number; resumeSucceeded: number; resumeRejected: number;
 }
 export interface MultiplayerServerOptions {
   origins?: string[]; maxRooms?: number; now?: () => number;
   tickIntervalMs?: number; stateFrameEveryTicks?: number; heartbeatIntervalMs?: number;
   heartbeatTimeoutMs?: number; unassignedTimeoutMs?: number; resumeGraceMs?: number;
-  metricsIntervalMs?: number; stateBackpressureBytes?: number; controlBackpressureBytes?: number;
-  bufferedAmount?: (ws: WebSocket) => number; telemetry?: (event: MultiplayerTelemetryEvent) => void;
+  stateRttMediumMs?: number; stateRttHighMs?: number; metricsIntervalMs?: number;
+  stateBackpressureBytes?: number; controlBackpressureBytes?: number;
+  compression?: boolean; bufferedAmount?: (ws: WebSocket) => number;
+  telemetry?: (event: MultiplayerTelemetryEvent) => void;
 }
 export const MAX_MULTIPLAYER_ROOMS = 2;
 export function createMultiplayerServer(options: MultiplayerServerOptions = {}) {
@@ -69,14 +77,22 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
     metrics: options.metricsIntervalMs ?? 30000
   };
   const limits = { stateBuffer: options.stateBackpressureBytes ?? 256 * 1024,
-    controlBuffer: options.controlBackpressureBytes ?? 1024 * 1024 };
+    controlBuffer: options.controlBackpressureBytes ?? 1024 * 1024,
+    rttMedium: options.stateRttMediumMs ?? 400, rttHigh: options.stateRttHighMs ?? 800 };
   if ([...Object.values(timing), ...Object.values(limits)].some(value => !Number.isSafeInteger(value) || value < 1) ||
-      timing.heartbeatTimeout <= timing.heartbeat || limits.stateBuffer >= limits.controlBuffer)
+      timing.heartbeatTimeout <= timing.heartbeat || limits.stateBuffer >= limits.controlBuffer || limits.rttMedium >= limits.rttHigh)
     throw Error('Invalid server timing or buffer limit');
   const metrics: MultiplayerServerMetrics = { connectionsOpened: 0, connectionsClosed: 0, bytesSent: 0,
-    controlMessagesSent: 0, stateFramesSent: 0, stateFramesSkipped: 0, backpressureDisconnects: 0,
-    heartbeatTimeouts: 0, maxBufferedAmount: 0, heartbeatRttSamples: 0, heartbeatRttLastMs: 0,
-    heartbeatRttMaxMs: 0, heartbeatJitterLastMs: 0, resumeAttempts: 0, resumeSucceeded: 0, resumeRejected: 0 };
+    controlMessagesSent: 0, controlPayloadBytes: 0, stateFramesSent: 0, statePayloadBytes: 0,
+    stateFrameBytesMax: 0, stateFramesSkipped: 0, stateFramesThrottled: 0,
+    backpressureDisconnects: 0, heartbeatTimeouts: 0,
+    maxBufferedAmount: 0, heartbeatRttSamples: 0, heartbeatRttLastMs: 0, heartbeatRttMaxMs: 0,
+    heartbeatJitterLastMs: 0, heartbeatJitterMaxMs: 0, tickDurationSamples: 0,
+    tickDurationP95Ms: 0, tickDurationP99Ms: 0,
+    tickDurationMaxMs: 0, processCpuPercent: 0, processRssBytes: process.memoryUsage().rss,
+    resumeAttempts: 0, resumeSucceeded: 0, resumeRejected: 0 };
+  const tickDurations: number[] = [];
+  let previousCpu = process.cpuUsage(), previousMetricAt = performance.now();
   let nextConnectionId = 1, nextRoomId = 1;
   const emit = (event: string, fields: Record<string, unknown> = {}) => telemetry({ event, at: now(), ...fields });
   const requestedRooms = options.maxRooms ?? MAX_MULTIPLAYER_ROOMS;
@@ -87,7 +103,11 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     res.end(JSON.stringify({ ok: true, protocol: catalog.version }));
   });
-  const wss = new WebSocketServer({ noServer: true, maxPayload: 16384, perMessageDeflate: false });
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 16384, perMessageDeflate: options.compression === false ? false : {
+    threshold: 1024, concurrencyLimit: MAX_MULTIPLAYER_ROOMS,
+    clientNoContextTakeover: true, serverNoContextTakeover: true,
+    zlibDeflateOptions: { level: 3 }
+  } });
   http.on('upgrade', (req, socket, head) => {
     if (req.url !== '/' || !origins.has(req.headers.origin ?? '') || connections.size >= 24) {
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return;
@@ -111,7 +131,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
     }
     const message = JSON.stringify(value), bytes = Buffer.byteLength(message);
     connection.ws.send(message); connection.bytesSent += bytes; metrics.bytesSent += bytes;
-    metrics.controlMessagesSent++;
+    metrics.controlMessagesSent++; metrics.controlPayloadBytes += bytes;
     return true;
   }
   function sendSeat(seat: Seat, value: unknown) { return send(seat.connection, value); }
@@ -121,6 +141,9 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
   function frameSeat(room: Room, seat: Seat, afterResume = false) {
     const connection = seat.connection;
     if (!connection || connection.ws.readyState !== WebSocket.OPEN) { discardFrame(room, seat); return false; }
+    if (!afterResume && connection.stateStride > 1 && ++connection.frameOpportunities % connection.stateStride !== 0) {
+      discardFrame(room, seat); connection.stateFramesThrottled++; metrics.stateFramesThrottled++; return false;
+    }
     const bufferedAmount = observeBuffer(connection);
     if (bufferedAmount > limits.stateBuffer) {
       discardFrame(room, seat); connection.stateFramesSkipped++; metrics.stateFramesSkipped++;
@@ -129,7 +152,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
     if (afterResume) discardFrame(room, seat);
     const message = JSON.stringify(room.api!.view(room.game!, seat.team, seat.resources)), bytes = Buffer.byteLength(message);
     connection.ws.send(message); connection.bytesSent += bytes; metrics.bytesSent += bytes;
-    connection.stateFramesSent++; metrics.stateFramesSent++;
+    connection.stateFramesSent++; metrics.stateFramesSent++; metrics.statePayloadBytes += bytes;
+    metrics.stateFrameBytesMax = Math.max(metrics.stateFrameBytesMax, bytes);
     return true;
   }
   function tokenMatches(actual: string, supplied: unknown) {
@@ -204,16 +228,28 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
   wss.on('connection', (ws: WebSocket) => {
     const connected = now();
     const connection: Connection = { id: nextConnectionId++, ws, tokens: 60, tokenAt: connected, connected,
-      lastPong: connected, pingAt: connected, bytesSent: 0, stateFramesSent: 0, stateFramesSkipped: 0, maxBufferedAmount: 0 };
+      lastPong: connected, nextPing: 0, pings: new Map(), stateStride: 1, frameOpportunities: 0,
+      bytesSent: 0, stateFramesSent: 0, stateFramesSkipped: 0, stateFramesThrottled: 0, maxBufferedAmount: 0 };
     connections.add(connection); metrics.connectionsOpened++;
-    emit('connection_open', { connectionId: connection.id });
-    ws.on('pong', () => {
-      const receivedAt = now(), rtt = Math.max(0, receivedAt - connection.pingAt);
+    emit('connection_open', { connectionId: connection.id, compression: ws.extensions.includes('permessage-deflate') });
+    ws.on('pong', payload => {
+      if (payload.length !== 4) return;
+      const sequence = payload.readUInt32BE(), sentAt = connection.pings.get(sequence);
+      if (sentAt === undefined) return;
+      connection.pings.delete(sequence);
+      const receivedAt = now(), rtt = Math.max(0, receivedAt - sentAt);
       connection.lastPong = receivedAt;
       metrics.heartbeatRttSamples++; metrics.heartbeatRttLastMs = rtt;
       metrics.heartbeatRttMaxMs = Math.max(metrics.heartbeatRttMaxMs, rtt);
       metrics.heartbeatJitterLastMs = connection.previousRtt === undefined ? 0 : Math.abs(rtt - connection.previousRtt);
+      metrics.heartbeatJitterMaxMs = Math.max(metrics.heartbeatJitterMaxMs, metrics.heartbeatJitterLastMs);
       connection.previousRtt = rtt;
+      connection.smoothedRtt = connection.smoothedRtt === undefined ? rtt : connection.smoothedRtt * .75 + rtt * .25;
+      const stride = connection.smoothedRtt >= limits.rttHigh ? 4 : connection.smoothedRtt >= limits.rttMedium ? 2 : 1;
+      if (stride !== connection.stateStride) { connection.stateStride = stride; connection.frameOpportunities = 0;
+        emit('state_rate_changed', { connectionId: connection.id, roomId: connection.seat?.room?.id,
+          stateRateHz: 1000 / timing.tick / timing.stateFrameTicks / stride,
+          smoothedRttMs: Math.round(connection.smoothedRtt) }); }
     });
     ws.on('error', error => {
       connection.closeCause ??= 'transport_error';
@@ -230,7 +266,8 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
         team: room ? seat?.team : undefined, code, reason: reason.toString('utf8').slice(0, 123),
         cause: connection.closeCause ?? 'peer_close', durationMs: Math.max(0, now() - connection.connected),
         bytesSent: connection.bytesSent, stateFramesSent: connection.stateFramesSent,
-        stateFramesSkipped: connection.stateFramesSkipped, maxBufferedAmount: connection.maxBufferedAmount });
+        stateFramesSkipped: connection.stateFramesSkipped, stateFramesThrottled: connection.stateFramesThrottled,
+        maxBufferedAmount: connection.maxBufferedAmount });
       if (!seat || !room || seat.connection) return;
       if (['invalid_request', 'resume_rejected'].includes(connection.closeCause ?? '')) {
         end(room, 'A player left the session. No rewards.', connection.closeCause); return;
@@ -305,12 +342,22 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
       }
     });
   });
+  function recordTickDuration(duration: number) {
+    tickDurations.push(duration); if (tickDurations.length > 2048) tickDurations.shift();
+    metrics.tickDurationSamples++; metrics.tickDurationMaxMs = Math.max(metrics.tickDurationMaxMs, duration);
+    if (metrics.tickDurationSamples % 20 !== 0) return;
+    const sorted = [...tickDurations].sort((a, b) => a - b);
+    const percentile = (p: number) => sorted[Math.max(0, Math.ceil(sorted.length * p) - 1)] ?? 0;
+    metrics.tickDurationP95Ms = percentile(.95); metrics.tickDurationP99Ms = percentile(.99);
+  }
   const clock = setInterval(() => {
+    const tickStartedAt = performance.now(); let played = false;
     for (const room of rooms.values()) {
       const expiredSeat = room.seats.find(seat => seat.disconnectedAt !== undefined && now() - seat.disconnectedAt >= timing.resumeGrace);
       if (expiredSeat) { end(room, 'A player did not reconnect in time. No rewards.', 'resume_expired'); continue; }
       if (now() >= room.deadline) { end(room, 'Session time limit reached. No rewards.', 'room_timeout'); continue; }
       if (room.phase !== 'playing') continue;
+      played = true;
       try {
         const dt = timing.tick / 1000;
         room.game!.step(dt); room.game!.effects.tick(dt);
@@ -322,6 +369,7 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
         if (room.game!.s.stopped) end(room, 'Scenario stopped. No rewards.', 'scenario_stopped');
       } catch (error) { console.error('Session tick failed', error); end(room, 'Server error. Session ended.', 'server_error'); }
     }
+    if (played) recordTickDuration(performance.now() - tickStartedAt);
   }, timing.tick);
   const heartbeat = setInterval(() => {
     for (const connection of connections) {
@@ -336,10 +384,19 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
       if (!connection.seat && current - connection.connected > timing.unassigned) {
         connection.closeCause = 'unassigned_timeout'; connection.ws.terminate(); continue;
       }
-      connection.pingAt = current; connection.ws.ping(); send(connection, { type: 'ping' });
+      const sequence = connection.nextPing++ >>> 0, payload = Buffer.allocUnsafe(4); payload.writeUInt32BE(sequence);
+      connection.pings.set(sequence, current);
+      while (connection.pings.size > 8) connection.pings.delete(connection.pings.keys().next().value!);
+      connection.ws.ping(payload); send(connection, { type: 'ping' });
     }
   }, timing.heartbeat);
-  const metricReport = setInterval(() => emit('metrics', { activeConnections: connections.size, activeRooms: rooms.size, ...metrics }), timing.metrics);
+  const metricReport = setInterval(() => {
+    const reportedAt = performance.now(), elapsedMs = Math.max(1, reportedAt - previousMetricAt);
+    const cpu = process.cpuUsage(previousCpu); previousCpu = process.cpuUsage(); previousMetricAt = reportedAt;
+    metrics.processCpuPercent = (cpu.user + cpu.system) / 1000 / elapsedMs * 100;
+    metrics.processRssBytes = process.memoryUsage().rss;
+    emit('metrics', { activeConnections: connections.size, activeRooms: rooms.size, ...metrics });
+  }, timing.metrics);
   return {
     http,
     getMetrics: (): MultiplayerServerMetrics => ({ ...metrics }),

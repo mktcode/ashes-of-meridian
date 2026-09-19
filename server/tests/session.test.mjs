@@ -9,8 +9,8 @@ async function fixture(t, options) {
   server.http.listen(0, '127.0.0.1'); await once(server.http, 'listening');
   t.after(() => server.close());
   const url = `ws://127.0.0.1:${server.http.address().port}`;
-  async function connect() {
-    const ws = new WebSocket(url, { origin: 'null' }), messages = [], waiters = new Set();
+  async function connect(options = {}) {
+    const ws = new WebSocket(url, { origin: 'null', ...options }), messages = [], waiters = new Set();
     ws.on('message', raw => { messages.push(JSON.parse(raw)); for (const wake of waiters) wake(); });
     await once(ws, 'open');
     t.after(() => ws.terminate());
@@ -123,11 +123,47 @@ test('state backpressure skips replaceable frames while control outcomes stay li
   host.send({ type: 'ready' }); guest.send({ type: 'ready' });
   const frame = await host.receive(m => m.type === 'frame'), ownHQ = frame.entities.find(e => e.type === 'hq');
   await guest.receive(m => m.type === 'frame');
-  congested = true; await new Promise(resolve => setTimeout(resolve, 80));
+  assert.match(host.ws.extensions, /permessage-deflate/);
+  congested = true; await new Promise(resolve => setTimeout(resolve, 420));
   assert.ok(server.getMetrics().stateFramesSkipped >= 2);
   host.send({ type: 'action', request: 1, action: { kind: 'rally', ids: [ownHQ.id], position: { x: 2, z: 2 } } });
   assert.equal((await host.receive(m => m.type === 'outcome' && m.request === 1)).status, 'applied');
-  assert.equal(server.getMetrics().backpressureDisconnects, 0);
+  const metrics = server.getMetrics();
+  assert.equal(metrics.backpressureDisconnects, 0); assert.ok(metrics.statePayloadBytes > 0);
+  assert.ok(metrics.controlPayloadBytes > 0); assert.ok(metrics.stateFrameBytesMax > 0);
+  assert.ok(metrics.tickDurationSamples >= 20); assert.ok(metrics.tickDurationP95Ms > 0);
+  assert.ok(metrics.tickDurationP99Ms >= metrics.tickDurationP95Ms);
+});
+
+test('WebSocket compression can be disabled for baseline measurements', async t => {
+  const { connect } = await fixture(t, { compression: false });
+  const client = await connect();
+  assert.equal(client.ws.extensions, '');
+});
+
+test('delayed and missing heartbeat replies reduce state rate without dropping the session', async t => {
+  const events = [];
+  const { connect, server } = await fixture(t, { tickIntervalMs: 20, stateFrameEveryTicks: 1,
+    heartbeatIntervalMs: 25, heartbeatTimeoutMs: 2000, stateRttMediumMs: 2, stateRttHighMs: 8,
+    metricsIntervalMs: 50, telemetry: event => events.push(event) });
+  const host = await connect({ autoPong: false }), guest = await connect();
+  let pings = 0;
+  host.ws.on('ping', payload => {
+    const current = ++pings;
+    if (current % 4 === 0) return;
+    setTimeout(() => { if (host.ws.readyState === WebSocket.OPEN) host.ws.pong(payload); }, current % 2 ? 12 : 35);
+  });
+  host.send({ type: 'create', version: 3, map: 'desert', faction: 0 });
+  const waiting = await host.receive(m => m.type === 'waiting');
+  guest.send({ type: 'join', version: 3, code: waiting.code, faction: 1 });
+  await host.receive(m => m.type === 'start'); await guest.receive(m => m.type === 'start');
+  host.send({ type: 'ready' }); guest.send({ type: 'ready' });
+  await host.receive(m => m.type === 'frame'); await guest.receive(m => m.type === 'frame');
+  await new Promise(resolve => setTimeout(resolve, 180));
+  const metrics = server.getMetrics();
+  assert.equal(host.ws.readyState, WebSocket.OPEN); assert.ok(metrics.heartbeatRttSamples >= 3);
+  assert.ok(metrics.heartbeatJitterMaxMs > 0); assert.ok(metrics.stateFramesThrottled > 0);
+  assert.ok(events.some(event => event.event === 'state_rate_changed' && event.stateRateHz < 50));
 });
 
 test('the room ends only after the disconnected seat exhausts its resume grace', async t => {
@@ -172,7 +208,9 @@ test('connection telemetry reports lifecycle, traffic and heartbeat measurements
   const metrics = server.getMetrics();
   assert.equal(metrics.connectionsOpened, 1); assert.equal(metrics.connectionsClosed, 1);
   assert.ok(metrics.bytesSent > 0); assert.ok(metrics.controlMessagesSent > 0);
+  assert.ok(metrics.controlPayloadBytes > 0); assert.equal(metrics.bytesSent, metrics.controlPayloadBytes + metrics.statePayloadBytes);
   assert.ok(metrics.heartbeatRttSamples > 0); assert.ok(metrics.heartbeatRttMaxMs >= 0);
+  assert.ok(metrics.processCpuPercent >= 0); assert.ok(metrics.processRssBytes > 0);
 });
 
 test('unknown map, missing room and protocol mismatch fail before a battle starts', async t => {

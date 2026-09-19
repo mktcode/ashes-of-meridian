@@ -2,12 +2,12 @@
 
 ## Befund und Ziel
 
-Mehrere menschliche Tests über ein Mobilfunknetz endeten durch Verbindungsabbruch. Die konkrete Ursache ist ohne Verbindungsmetriken noch nicht unterscheidbar. Der aktuelle Prototyp verschärft jedoch typische Mobilfunkstörungen:
+Mehrere menschliche Tests über ein Mobilfunknetz endeten durch Verbindungsabbruch. Die konkrete Ursache war ohne Verbindungsmetriken nicht unterscheidbar. Die Ausgangslage verschärfte typische Mobilfunkstörungen:
 
-- Der Server beendet beim `close` eines WebSockets sofort den Raum für beide Parteien. Parteiidentität und ausstehende Befehle hängen an der konkreten Verbindung.
-- Der Heartbeat terminiert nach einem unbeantworteten Ping-Intervall von ungefähr fünf Sekunden. Der Browser beendet bei `error`/`close` sofort und versucht keinen Neuaufbau.
-- Vollständige sichtgefilterte Zustände werden unkomprimiert als JSON mit 10 Hz über einen geordneten WebSocket gesendet. Der vorhandene Hochlastbefund von etwa 1,4 MiB/s je Raum ist für Mobilfunk relevant. Ab 1 MiB ausgehendem WebSocket-Puffer terminiert der Server die Verbindung.
-- Telemetrie und Prüfungen für Jitter, Burst-Loss, Bandbreitenengpässe, Hintergrundphasen und Wiederverbindung fehlen.
+- Jeder WebSocket-`close` beendete sofort den Raum für beide Parteien; Parteiidentität und ausstehende Befehle hingen an der konkreten Verbindung.
+- Der Heartbeat terminierte nach einem unbeantworteten Ping-Intervall von ungefähr fünf Sekunden. Der Browser beendete bei `error`/`close` sofort und versuchte keinen Neuaufbau.
+- Vollständige sichtgefilterte Zustände wurden unkomprimiert als JSON mit 10 Hz über einen geordneten WebSocket gesendet. Der vorhandene Hochlastbefund von etwa 1,4 MiB/s je Raum bleibt für Mobilfunk relevant; P1/P2 ergänzen inzwischen Frame-Dropping, adaptive Rate und Transportkompression.
+- Telemetrie und Prüfungen für Jitter, Burst-Loss, Bandbreitenengpässe, Hintergrundphasen und Wiederverbindung fehlten.
 
 Ziel ist, kurze Funklöcher, App-Hintergrundphasen und Wi-Fi-/Mobilfunkwechsel zu überstehen, ohne Befehle doppelt auszuführen oder verborgenen Zustand offenzulegen. Server- oder Prozessneustarts bleiben zunächst ausdrücklich nicht wiederherstellbar.
 
@@ -61,23 +61,25 @@ Die Diagnostikgrundlage ist umgesetzt. Serverseitig stehen Lebenszyklusereigniss
 
 ### P2 – Bandbreite und Sendetakt
 
-Erst nach P0 messen und dann die kleinste wirksame Variante wählen:
+Die kleinsten Varianten sind umgesetzt und messbar:
 
-1. adaptive Zustandsrate bei Rückstau oder hoher RTT,
-2. gemessene WebSocket-Kompression mit CPU-/Latenzgrenzen,
-3. Deltaframes mit regelmäßigen Voll-Keyframes und expliziten Löschungen,
-4. erst bei weiterem Bedarf ein kompaktes Binärformat.
+1. [x] Zustandsrate bei geglätteter RTT ab 400/800 ms von 10 auf 5/2,5 Hz reduzieren; Backpressure lässt Frames weiterhin vor Projektion und Serialisierung aus.
+2. [x] WebSocket-Deflate Level 3 ab 1 KiB ohne Kontextübernahme aushandeln. Der kurze reproduzierbare Öffnungsprofil-Lauf zeigt lokal je nach Karte ungefähr 25–35 % der unkomprimierten Nutzlast bei Kompressions-p95 unter 0,3 ms; das ist kein Hochlast- oder Ziel-VM-Nachweis.
+3. [ ] Deltaframes mit regelmäßigen Voll-Keyframes und expliziten Löschungen nur bei nachgewiesenem weiterem Bedarf entwickeln.
+4. [ ] Ein kompaktes Binärformat ebenfalls nur bei weiterem Bedarf erwägen.
 
-Fog, Sichtkontakte, neutrale Ressourcen-Erinnerung und private Felder müssen bei jeder Variante unverändert geschützt bleiben. Deltaframes benötigen eine belastbare Basis-/Sequenzkennung; nach Lücke oder Resume folgt immer ein Voll-Keyframe. Eine Protokolländerung erhöht die Version und wird gemeinsam mit Client und Server ausgerollt.
+`npm run measure:network --prefix server` misst das kurze, ruhende Öffnungsprofil auf allen Karten. Die Betriebsmetriken trennen logische Kontroll-/Zustandsbytes und ergänzen Frame-Maximum, Tick-p95/p99, CPU und RSS. Für den tatsächlichen Egress müssen Container- oder Proxyzähler verwendet werden, da die Prozessmetriken bewusst Nutzbytes vor Kompression zählen. Zwei volle Räume und belastete Gefechte auf der Ziel-VM bleiben offen.
 
-**Herausforderungen:** JSON komprimiert gut, kann aber CPU-Spitzen auf dem seriellen Node-Prozess erhöhen. Deltaframes sparen Egress, erhöhen dagegen Zustands- und Fehlerkomplexität. Werte erst auf der Ziel-VM und unter realistischen Mobilfunkprofilen vergleichen.
+Fog, Sichtkontakte, neutrale Ressourcen-Erinnerung und private Felder bleiben unverändert geschützt. Deltaframes würden eine belastbare Basis-/Sequenzkennung benötigen; nach Lücke oder Resume müsste immer ein Voll-Keyframe folgen. Eine spätere Protokolländerung erhöht die Version und wird gemeinsam mit Client und Server ausgerollt.
+
+**Herausforderungen:** JSON komprimiert gut, kann aber CPU-Spitzen auf dem seriellen Node-Prozess erhöhen. Deltaframes sparen weiteren Egress, erhöhen dagegen Zustands- und Fehlerkomplexität. Ziel-VM und realistische Mobilfunkprofile bleiben maßgeblich.
 
 ### P2 – Netzwerksimulation und Abnahme
 
 - Serverintegrationstests für Socketverlust und Resume beider Parteien, ungültige/abgelaufene Tokens, Ersetzen eines alten Sockets, weiterlaufende Simulation und Schonfristende ergänzen.
 - Befehle rund um den Abbruch testen: vor Annahme verloren, angenommen ohne zugestelltes Ack, Ergebnis während Trennung und wiederholte Request-ID. Kein Fall darf eine Aktion doppelt ausführen.
-- Backpressure mit kontrolliert langsamem Empfänger prüfen: Speicher bleibt begrenzt, Zustandsframes dürfen entfallen, Kontrollnachrichten und der andere Spieler bleiben funktionsfähig.
-- Einen reproduzierbaren Netzwerktest für Latenz, Jitter, Burst-Loss, Bandbreitenlimit und kurze Unterbrechung vorsehen. Umfangreiche Last-/Simulationsläufe bleiben gesondert freigabepflichtig.
+- [x] Backpressure mit kontrolliert langsamem Empfänger prüfen: Zustandsframes entfallen vor ihrer Erzeugung, während Kontrollausgänge und der Raum funktionsfähig bleiben.
+- [ ] Einen vollständigen reproduzierbaren Netzwerktest für Latenz, Jitter, Burst-Loss, Bandbreitenlimit und kurze Unterbrechung vorsehen. Kurze Integrationstests decken verzögerte/ausgelassene Heartbeat-Antworten, RTT-Drosselung, synthetischen Rückstau und Resume bereits ab; Kernel-/Proxy-Netzprofile sowie umfangreiche Last-/Simulationsläufe bleiben gesondert freigabepflichtig.
 - Abschließend zwei echte Geräte über Mobilfunk beziehungsweise Wi-Fi-Wechsel prüfen. Automatische Tests ersetzen diese menschliche Geräteabnahme nicht.
 
 ## Abnahmekriterien des Robustheitspakets
