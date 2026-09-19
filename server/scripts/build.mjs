@@ -13,4 +13,5 @@ const files = ['core', 'content', 'battlefields/shared', 'battlefields/desert', 
 const source = files.map(name => readFileSync(resolve(root, '../dist/src', name + '.js'), 'utf8')).join('\n');
 writeFileSync(resolve(root, 'dist/simulation.js'), source + `\n({ version: MULTIPLAYER_VERSION, maps: Object.keys(BATTLEFIELDS),
   create(options) { const game = new MeridianGame({ upgrades: {} }, () => {}); game.startScenario(options); enableMultiplayerPresentation(game); return game; },
-  view: multiplayerFrame, enqueue: queueMultiplayerAction });\n`);
+  view: multiplayerFrame, enqueue: queueMultiplayerAction,
+  discard(game, team) { takeMultiplayerEffects(game, team); } });\n`);

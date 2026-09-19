@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
-import { randomBytes, randomInt } from 'node:crypto';
+import { randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { Script } from 'node:vm';
 import { WebSocket, WebSocketServer } from 'ws';
 
@@ -16,15 +16,21 @@ interface Simulation {
   create(options: unknown): Game;
   enqueue(game: Game, team: number, input: unknown): Ticket | null;
   view(game: Game, team: number, resources: Map<number, unknown>): unknown;
+  discard(game: Game, team: number): void;
 }
-interface Client {
-  id: number; ws: WebSocket; room?: Room; team: number; ready: boolean; alive: boolean;
-  resources: Map<number, unknown>; requests: Map<number, number>;
-  lastRequest: number; tokens: number; tokenAt: number; connected: number; lastPong: number; pingAt: number; previousRtt?: number;
-  bytesSent: number; stateFramesSent: number; maxBufferedAmount: number; closeCause?: string;
+interface Connection {
+  id: number; ws: WebSocket; seat?: Seat; tokens: number; tokenAt: number;
+  connected: number; lastPong: number; pingAt: number; previousRtt?: number;
+  bytesSent: number; stateFramesSent: number; stateFramesSkipped: number;
+  maxBufferedAmount: number; closeCause?: string;
+}
+interface Seat {
+  room?: Room; team: number; ready: boolean; connection?: Connection; disconnectedAt?: number;
+  resumeToken: string; resources: Map<number, unknown>; requests: Map<number, number>;
+  outcomes: Map<number, string>; lastRequest: number;
 }
 interface Room {
-  id: number; code: string; map: string; seed: number; factions: number[]; clients: Client[];
+  id: number; code: string; map: string; seed: number; factions: number[]; seats: Seat[];
   phase: 'waiting' | 'loading' | 'playing'; deadline: number; ticks: number;
   api?: Simulation; game?: Game;
 }
@@ -36,34 +42,42 @@ export interface MultiplayerServerMetrics {
   controlMessagesSent: number; stateFramesSent: number; stateFramesSkipped: number;
   backpressureDisconnects: number; heartbeatTimeouts: number; maxBufferedAmount: number;
   heartbeatRttSamples: number; heartbeatRttLastMs: number; heartbeatRttMaxMs: number; heartbeatJitterLastMs: number;
+  resumeAttempts: number; resumeSucceeded: number; resumeRejected: number;
 }
 export interface MultiplayerServerOptions {
   origins?: string[]; maxRooms?: number; now?: () => number;
   tickIntervalMs?: number; stateFrameEveryTicks?: number; heartbeatIntervalMs?: number;
-  unassignedTimeoutMs?: number; metricsIntervalMs?: number;
-  telemetry?: (event: MultiplayerTelemetryEvent) => void;
+  heartbeatTimeoutMs?: number; unassignedTimeoutMs?: number; resumeGraceMs?: number;
+  metricsIntervalMs?: number; stateBackpressureBytes?: number; controlBackpressureBytes?: number;
+  bufferedAmount?: (ws: WebSocket) => number; telemetry?: (event: MultiplayerTelemetryEvent) => void;
 }
 export const MAX_MULTIPLAYER_ROOMS = 2;
 export function createMultiplayerServer(options: MultiplayerServerOptions = {}) {
   const script = new Script(readFileSync(new URL('./simulation.js', import.meta.url), 'utf8'), { filename: 'simulation.js' });
   const catalog = script.runInNewContext({ console }) as Simulation;
-  const rooms = new Map<string, Room>(), clients = new Set<Client>();
+  const rooms = new Map<string, Room>(), connections = new Set<Connection>();
   const origins = new Set(options.origins ?? ['null']);
   const now = options.now ?? Date.now;
   const telemetry = options.telemetry ?? (() => {});
   const timing = {
     tick: options.tickIntervalMs ?? 50,
     stateFrameTicks: options.stateFrameEveryTicks ?? 2,
-    heartbeat: options.heartbeatIntervalMs ?? 5000,
+    heartbeat: options.heartbeatIntervalMs ?? 10000,
+    heartbeatTimeout: options.heartbeatTimeoutMs ?? 30000,
     unassigned: options.unassignedTimeoutMs ?? 10000,
+    resumeGrace: options.resumeGraceMs ?? 45000,
     metrics: options.metricsIntervalMs ?? 30000
   };
-  if (Object.values(timing).some(value => !Number.isSafeInteger(value) || value < 1)) throw Error('Invalid server timing');
+  const limits = { stateBuffer: options.stateBackpressureBytes ?? 256 * 1024,
+    controlBuffer: options.controlBackpressureBytes ?? 1024 * 1024 };
+  if ([...Object.values(timing), ...Object.values(limits)].some(value => !Number.isSafeInteger(value) || value < 1) ||
+      timing.heartbeatTimeout <= timing.heartbeat || limits.stateBuffer >= limits.controlBuffer)
+    throw Error('Invalid server timing or buffer limit');
   const metrics: MultiplayerServerMetrics = { connectionsOpened: 0, connectionsClosed: 0, bytesSent: 0,
     controlMessagesSent: 0, stateFramesSent: 0, stateFramesSkipped: 0, backpressureDisconnects: 0,
     heartbeatTimeouts: 0, maxBufferedAmount: 0, heartbeatRttSamples: 0, heartbeatRttLastMs: 0,
-    heartbeatRttMaxMs: 0, heartbeatJitterLastMs: 0 };
-  let nextClientId = 1, nextRoomId = 1;
+    heartbeatRttMaxMs: 0, heartbeatJitterLastMs: 0, resumeAttempts: 0, resumeSucceeded: 0, resumeRejected: 0 };
+  let nextConnectionId = 1, nextRoomId = 1;
   const emit = (event: string, fields: Record<string, unknown> = {}) => telemetry({ event, at: now(), ...fields });
   const requestedRooms = options.maxRooms ?? MAX_MULTIPLAYER_ROOMS;
   if (!Number.isSafeInteger(requestedRooms) || requestedRooms < 1) throw Error('Invalid room limit');
@@ -75,170 +89,264 @@ export function createMultiplayerServer(options: MultiplayerServerOptions = {}) 
   });
   const wss = new WebSocketServer({ noServer: true, maxPayload: 16384, perMessageDeflate: false });
   http.on('upgrade', (req, socket, head) => {
-    if (req.url !== '/' || !origins.has(req.headers.origin ?? '') || clients.size >= 24) {
+    if (req.url !== '/' || !origins.has(req.headers.origin ?? '') || connections.size >= 24) {
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return;
     }
     wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
   });
-  function send(client: Client, value: unknown, kind: 'control' | 'state' = 'control') {
-    if (client.ws.readyState !== WebSocket.OPEN) return false;
-    const bufferedAmount = client.ws.bufferedAmount;
-    client.maxBufferedAmount = Math.max(client.maxBufferedAmount, bufferedAmount);
+  function observeBuffer(connection: Connection) {
+    const bufferedAmount = options.bufferedAmount?.(connection.ws) ?? connection.ws.bufferedAmount;
+    connection.maxBufferedAmount = Math.max(connection.maxBufferedAmount, bufferedAmount);
     metrics.maxBufferedAmount = Math.max(metrics.maxBufferedAmount, bufferedAmount);
-    if (bufferedAmount > 1024 * 1024) {
+    return bufferedAmount;
+  }
+  function send(connection: Connection | undefined, value: unknown) {
+    if (!connection || connection.ws.readyState !== WebSocket.OPEN) return false;
+    const bufferedAmount = observeBuffer(connection);
+    if (bufferedAmount > limits.controlBuffer) {
       metrics.backpressureDisconnects++;
-      client.closeCause = 'backpressure';
-      emit('backpressure_disconnect', { connectionId: client.id, roomId: client.room?.id, bufferedAmount });
-      client.ws.terminate(); return false;
+      connection.closeCause = 'backpressure';
+      emit('backpressure_disconnect', { connectionId: connection.id, roomId: connection.seat?.room?.id, bufferedAmount });
+      connection.ws.terminate(); return false;
     }
     const message = JSON.stringify(value), bytes = Buffer.byteLength(message);
-    client.ws.send(message); client.bytesSent += bytes; metrics.bytesSent += bytes;
-    if (kind === 'state') { client.stateFramesSent++; metrics.stateFramesSent++; }
-    else metrics.controlMessagesSent++;
+    connection.ws.send(message); connection.bytesSent += bytes; metrics.bytesSent += bytes;
+    metrics.controlMessagesSent++;
     return true;
+  }
+  function sendSeat(seat: Seat, value: unknown) { return send(seat.connection, value); }
+  function discardFrame(room: Room, seat: Seat) {
+    room.api!.discard(room.game!, seat.team);
+  }
+  function frameSeat(room: Room, seat: Seat, afterResume = false) {
+    const connection = seat.connection;
+    if (!connection || connection.ws.readyState !== WebSocket.OPEN) { discardFrame(room, seat); return false; }
+    const bufferedAmount = observeBuffer(connection);
+    if (bufferedAmount > limits.stateBuffer) {
+      discardFrame(room, seat); connection.stateFramesSkipped++; metrics.stateFramesSkipped++;
+      return false;
+    }
+    if (afterResume) discardFrame(room, seat);
+    const message = JSON.stringify(room.api!.view(room.game!, seat.team, seat.resources)), bytes = Buffer.byteLength(message);
+    connection.ws.send(message); connection.bytesSent += bytes; metrics.bytesSent += bytes;
+    connection.stateFramesSent++; metrics.stateFramesSent++;
+    return true;
+  }
+  function tokenMatches(actual: string, supplied: unknown) {
+    if (typeof supplied !== 'string') return false;
+    const actualBytes = Buffer.from(actual), suppliedBytes = Buffer.from(supplied);
+    return suppliedBytes.length === actualBytes.length && timingSafeEqual(actualBytes, suppliedBytes);
+  }
+  function newToken() { return randomBytes(24).toString('base64url'); }
+  function startMessage(room: Room, seat: Seat) {
+    return { type: 'start', version: catalog.version, code: room.code, map: room.map, seed: room.seed,
+      factions: room.factions, team: seat.team, token: seat.resumeToken, graceMs: timing.resumeGrace };
+  }
+  function rememberOutcome(seat: Seat, request: number, status: string) {
+    seat.outcomes.set(request, status);
+    while (seat.outcomes.size > 64) seat.outcomes.delete(seat.outcomes.keys().next().value!);
+    sendSeat(seat, { type: 'outcome', request, status });
+  }
+  function presence(room: Room, changed: Seat, connected: boolean) {
+    for (const seat of room.seats) if (seat !== changed)
+      sendSeat(seat, { type: 'presence', team: changed.team, connected, graceMs: connected ? 0 : timing.resumeGrace });
   }
   function end(room: Room, message: string, cause = 'session_end') {
     if (!rooms.delete(room.code)) return;
     if (room.game) room.game.s.stopped = true;
     emit('room_end', { roomId: room.id, phase: room.phase, cause, ticks: room.ticks });
-    for (const client of room.clients) {
-      client.room = undefined; client.resources.clear(); client.requests.clear();
-      send(client, { type: 'end', message }); client.closeCause ??= cause; client.ws.close(1000, 'Session ended');
+    for (const seat of room.seats) {
+      const connection = seat.connection;
+      seat.room = undefined; seat.connection = undefined; seat.resources.clear(); seat.requests.clear(); seat.outcomes.clear();
+      if (!connection) continue;
+      connection.seat = undefined; send(connection, { type: 'end', message });
+      connection.closeCause ??= cause; connection.ws.close(1000, 'Session ended');
     }
   }
-  function fail(client: Client, message: string) {
-    send(client, { type: 'error', message }); client.closeCause = 'invalid_request'; client.ws.close(1008, 'Invalid request');
+  function fail(connection: Connection, message: string, cause = 'invalid_request') {
+    send(connection, { type: 'error', message }); connection.closeCause = cause; connection.ws.close(1008, 'Invalid request');
   }
-  function frame(room: Room) {
-    for (const client of room.clients) send(client, room.api!.view(room.game!, client.team, client.resources), 'state');
+  function attach(connection: Connection, seat: Seat) {
+    const previous = seat.connection;
+    if (previous && previous !== connection) {
+      previous.seat = undefined; previous.closeCause = 'replaced'; previous.ws.close(4000, 'Connection replaced');
+    }
+    connection.seat = seat; seat.connection = connection; seat.disconnectedAt = undefined;
+  }
+  function findSeat(code: unknown, token: unknown) {
+    const room = typeof code === 'string' ? rooms.get(code) : undefined;
+    if (!room) return undefined;
+    const seat = room.seats.find(candidate => tokenMatches(candidate.resumeToken, token));
+    return seat?.room === room ? seat : undefined;
+  }
+  function resume(connection: Connection, data: Record<string, unknown>) {
+    metrics.resumeAttempts++;
+    if (data.version !== catalog.version) {
+      metrics.resumeRejected++; emit('resume_rejected', { connectionId: connection.id, reason: 'version' });
+      fail(connection, 'Session unavailable.', 'resume_rejected'); return;
+    }
+    const seat = findSeat(data.code, data.token), room = seat?.room;
+    if (!seat || !room || (seat.disconnectedAt !== undefined && now() - seat.disconnectedAt >= timing.resumeGrace)) {
+      metrics.resumeRejected++; emit('resume_rejected', { connectionId: connection.id, reason: 'credentials_or_expired' });
+      fail(connection, 'Session unavailable.', 'resume_rejected'); return;
+    }
+    attach(connection, seat); seat.resumeToken = newToken();
+    metrics.resumeSucceeded++; emit('resume_succeeded', { connectionId: connection.id, roomId: room.id, team: seat.team, phase: room.phase });
+    send(connection, { type: 'resumed', token: seat.resumeToken, graceMs: timing.resumeGrace, phase: room.phase,
+      lastRequest: seat.lastRequest, start: room.phase === 'waiting' ? undefined : startMessage(room, seat) });
+    for (const [request, status] of seat.outcomes) sendSeat(seat, { type: 'outcome', request, status });
+    presence(room, seat, true);
+    if (room.phase === 'playing') frameSeat(room, seat, true);
+  }
+  function createSeat(team: number): Seat {
+    return { team, ready: false, resumeToken: newToken(), resources: new Map(), requests: new Map(), outcomes: new Map(), lastRequest: 0 };
   }
   wss.on('connection', (ws: WebSocket) => {
     const connected = now();
-    const client: Client = { id: nextClientId++, ws, team: 0, ready: false, alive: true, resources: new Map(), requests: new Map(),
-      lastRequest: 0, tokens: 60, tokenAt: connected, connected, lastPong: connected, pingAt: connected,
-      bytesSent: 0, stateFramesSent: 0, maxBufferedAmount: 0 };
-    clients.add(client); metrics.connectionsOpened++;
-    emit('connection_open', { connectionId: client.id });
+    const connection: Connection = { id: nextConnectionId++, ws, tokens: 60, tokenAt: connected, connected,
+      lastPong: connected, pingAt: connected, bytesSent: 0, stateFramesSent: 0, stateFramesSkipped: 0, maxBufferedAmount: 0 };
+    connections.add(connection); metrics.connectionsOpened++;
+    emit('connection_open', { connectionId: connection.id });
     ws.on('pong', () => {
-      const receivedAt = now(), rtt = Math.max(0, receivedAt - client.pingAt);
-      client.alive = true; client.lastPong = receivedAt;
+      const receivedAt = now(), rtt = Math.max(0, receivedAt - connection.pingAt);
+      connection.lastPong = receivedAt;
       metrics.heartbeatRttSamples++; metrics.heartbeatRttLastMs = rtt;
       metrics.heartbeatRttMaxMs = Math.max(metrics.heartbeatRttMaxMs, rtt);
-      metrics.heartbeatJitterLastMs = client.previousRtt === undefined ? 0 : Math.abs(rtt - client.previousRtt);
-      client.previousRtt = rtt;
+      metrics.heartbeatJitterLastMs = connection.previousRtt === undefined ? 0 : Math.abs(rtt - connection.previousRtt);
+      connection.previousRtt = rtt;
     });
     ws.on('error', error => {
-      client.closeCause ??= 'transport_error';
-      emit('transport_error', { connectionId: client.id, roomId: client.room?.id,
+      connection.closeCause ??= 'transport_error';
+      emit('transport_error', { connectionId: connection.id, roomId: connection.seat?.room?.id,
         error: error instanceof Error ? error.name : 'UnknownError' });
       ws.terminate();
     });
     ws.on('close', (code, reason) => {
-      clients.delete(client); metrics.connectionsClosed++;
-      const room = client.room;
-      emit('connection_close', { connectionId: client.id, roomId: room?.id, phase: room?.phase,
-        team: room ? client.team : undefined, code, reason: reason.toString('utf8').slice(0, 123),
-        cause: client.closeCause ?? 'peer_close', durationMs: Math.max(0, now() - client.connected),
-        bytesSent: client.bytesSent, stateFramesSent: client.stateFramesSent,
-        maxBufferedAmount: client.maxBufferedAmount });
-      if (room) end(room, 'A player disconnected. Session ended without rewards.', client.closeCause ?? 'peer_close');
+      connections.delete(connection); metrics.connectionsClosed++;
+      const seat = connection.seat, room = seat?.room;
+      if (seat?.connection === connection) seat.connection = undefined;
+      connection.seat = undefined;
+      emit('connection_close', { connectionId: connection.id, roomId: room?.id, phase: room?.phase,
+        team: room ? seat?.team : undefined, code, reason: reason.toString('utf8').slice(0, 123),
+        cause: connection.closeCause ?? 'peer_close', durationMs: Math.max(0, now() - connection.connected),
+        bytesSent: connection.bytesSent, stateFramesSent: connection.stateFramesSent,
+        stateFramesSkipped: connection.stateFramesSkipped, maxBufferedAmount: connection.maxBufferedAmount });
+      if (!seat || !room || seat.connection) return;
+      if (['invalid_request', 'resume_rejected'].includes(connection.closeCause ?? '')) {
+        end(room, 'A player left the session. No rewards.', connection.closeCause); return;
+      }
+      seat.disconnectedAt = now(); presence(room, seat, false);
+      emit('seat_disconnected', { roomId: room.id, team: seat.team, cause: connection.closeCause ?? 'peer_close', graceMs: timing.resumeGrace });
     });
     ws.on('message', (raw, binary) => {
       try {
         if (ws.readyState !== WebSocket.OPEN) return;
         const receivedAt = now();
-        client.tokens = Math.min(60, client.tokens + (receivedAt - client.tokenAt) * .03); client.tokenAt = receivedAt;
-        if (binary || --client.tokens < 0) { fail(client, 'Message limit exceeded.'); return; }
+        connection.tokens = Math.min(60, connection.tokens + (receivedAt - connection.tokenAt) * .03); connection.tokenAt = receivedAt;
+        if (binary || --connection.tokens < 0) { fail(connection, 'Message limit exceeded.'); return; }
         const data = JSON.parse(raw.toString()) as Record<string, unknown>;
-        if (!data || typeof data !== 'object' || Array.isArray(data)) { fail(client, 'Invalid message.'); return; }
-        if (!client.room) {
+        if (!data || typeof data !== 'object' || Array.isArray(data)) { fail(connection, 'Invalid message.'); return; }
+        if (!connection.seat) {
+          if (data.type === 'resume') { resume(connection, data); return; }
           if (!['create', 'join'].includes(String(data.type)) || data.version !== catalog.version ||
               !Number.isInteger(data.faction) || ![0, 1, 2].includes(data.faction as number)) {
-            fail(client, 'Incompatible session request.'); return;
+            fail(connection, 'Incompatible session request.'); return;
           }
           if (data.type === 'create') {
-            if (!catalog.maps.includes(String(data.map)) || rooms.size >= maxRooms) { fail(client, 'Unknown map or server full.'); return; }
+            if (!catalog.maps.includes(String(data.map)) || rooms.size >= maxRooms) { fail(connection, 'Unknown map or server full.'); return; }
             let code: string; do { code = randomBytes(5).toString('hex').toUpperCase(); } while (rooms.has(code));
-            const room: Room = { id: nextRoomId++, code, map: String(data.map), seed: randomInt(1, 100000000), factions: [data.faction as number],
-              clients: [client], phase: 'waiting', deadline: receivedAt + 120000, ticks: 0 };
-            rooms.set(code, room); client.room = room;
+            const seat = createSeat(0);
+            const room: Room = { id: nextRoomId++, code, map: String(data.map), seed: randomInt(1, 100000000),
+              factions: [data.faction as number], seats: [seat], phase: 'waiting', deadline: receivedAt + 120000, ticks: 0 };
+            seat.room = room; attach(connection, seat); rooms.set(code, room);
             emit('room_created', { roomId: room.id, map: room.map });
-            send(client, { type: 'waiting', code, map: room.map }); return;
+            send(connection, { type: 'waiting', code, map: room.map, token: seat.resumeToken, graceMs: timing.resumeGrace }); return;
           }
           const room = typeof data.code === 'string' ? rooms.get(data.code) : undefined;
-          if (!room || room.phase !== 'waiting' || receivedAt >= room.deadline || room.clients[0].ws.readyState !== WebSocket.OPEN) {
-            fail(client, 'Session unavailable.'); return;
+          const host = room?.seats[0];
+          if (!room || !host || room.phase !== 'waiting' || receivedAt >= room.deadline || !host.connection) {
+            fail(connection, 'Session unavailable.'); return;
           }
-          client.room = room; client.team = 1; room.clients.push(client); room.factions.push(data.faction as number);
+          const seat = createSeat(1); seat.room = room; attach(connection, seat);
+          room.seats.push(seat); room.factions.push(data.faction as number);
           room.phase = 'loading'; room.deadline = receivedAt + 60000;
           emit('room_loading', { roomId: room.id, map: room.map });
           room.api = script.runInNewContext({ console }) as Simulation;
           room.game = room.api.create({ seed: room.seed, startSeed: randomInt(1, 100000000), map: room.map, duration: 3600,
             parties: room.factions.map(faction => ({ faction, controller: 'human' })), hostilities: [[false, true], [true, false]] });
-          for (const member of room.clients) send(member, { type: 'start', version: catalog.version, code: room.code,
-            map: room.map, seed: room.seed, factions: room.factions, team: member.team });
+          for (const member of room.seats) sendSeat(member, startMessage(room, member));
           return;
         }
-        const room = client.room;
-        if (data.type === 'ready' && room.phase === 'loading' && !client.ready) {
-          client.ready = true;
-          if (room.clients.every(c => c.ready)) {
-            room.phase = 'playing'; room.deadline = receivedAt + 3600000;
-            emit('room_playing', { roomId: room.id, map: room.map }); frame(room);
+        const seat = connection.seat, room = seat.room;
+        if (!room) { fail(connection, 'Session unavailable.'); return; }
+        if (data.type === 'leave') { end(room, 'A player left the session. No rewards.', 'player_leave'); return; }
+        if (data.type === 'ready' && room.phase === 'loading') {
+          if (!seat.ready) {
+            seat.ready = true;
+            if (room.seats.every(member => member.ready)) {
+              room.phase = 'playing'; room.deadline = receivedAt + 3600000;
+              emit('room_playing', { roomId: room.id, map: room.map });
+              for (const member of room.seats) frameSeat(room, member);
+            }
           }
           return;
         }
         if (data.type !== 'action' || room.phase !== 'playing' || !Number.isSafeInteger(data.request) ||
-            (data.request as number) <= client.lastRequest) { fail(client, 'Invalid command sequence or session phase.'); return; }
-        client.lastRequest = data.request as number;
-        const ticket = client.requests.size < 64 ? room.api!.enqueue(room.game!, client.team, data.action) : null;
-        if (!ticket) { send(client, { type: 'outcome', request: data.request, status: 'rejected' }); return; }
-        client.requests.set(ticket.sequence, data.request as number);
-        send(client, { type: 'accepted', request: data.request, tick: ticket.tick });
+            (data.request as number) <= seat.lastRequest) { fail(connection, 'Invalid command sequence or session phase.'); return; }
+        seat.lastRequest = data.request as number;
+        const ticket = seat.requests.size < 64 ? room.api!.enqueue(room.game!, seat.team, data.action) : null;
+        if (!ticket) { rememberOutcome(seat, data.request as number, 'rejected'); return; }
+        seat.requests.set(ticket.sequence, data.request as number);
+        sendSeat(seat, { type: 'accepted', request: data.request, tick: ticket.tick });
       } catch (error) {
-        if (error instanceof SyntaxError) fail(client, 'Invalid JSON.');
-        else { console.error('Session initialization failed', error); if (client.room) end(client.room, 'Server error. Session ended.'); else fail(client, 'Server error.'); }
+        if (error instanceof SyntaxError) fail(connection, 'Invalid JSON.');
+        else { console.error('Session initialization failed', error); const room = connection.seat?.room;
+          if (room) end(room, 'Server error. Session ended.', 'server_error'); else fail(connection, 'Server error.'); }
       }
     });
   });
   const clock = setInterval(() => {
     for (const room of rooms.values()) {
+      const expiredSeat = room.seats.find(seat => seat.disconnectedAt !== undefined && now() - seat.disconnectedAt >= timing.resumeGrace);
+      if (expiredSeat) { end(room, 'A player did not reconnect in time. No rewards.', 'resume_expired'); continue; }
       if (now() >= room.deadline) { end(room, 'Session time limit reached. No rewards.', 'room_timeout'); continue; }
       if (room.phase !== 'playing') continue;
       try {
         const dt = timing.tick / 1000;
         room.game!.step(dt); room.game!.effects.tick(dt);
         for (const result of room.game!.commandQueue.lastResults) {
-          const client = room.clients[result.team], request = client?.requests.get(result.sequence);
-          if (request !== undefined) { send(client, { type: 'outcome', request, status: result.status }); client.requests.delete(result.sequence); }
+          const seat = room.seats[result.team], request = seat?.requests.get(result.sequence);
+          if (request !== undefined) { rememberOutcome(seat, request, result.status); seat.requests.delete(result.sequence); }
         }
-        if (++room.ticks % timing.stateFrameTicks === 0) frame(room);
+        if (++room.ticks % timing.stateFrameTicks === 0) for (const seat of room.seats) frameSeat(room, seat);
         if (room.game!.s.stopped) end(room, 'Scenario stopped. No rewards.', 'scenario_stopped');
       } catch (error) { console.error('Session tick failed', error); end(room, 'Server error. Session ended.', 'server_error'); }
     }
   }, timing.tick);
   const heartbeat = setInterval(() => {
-    for (const client of clients) {
-      if (!client.alive) {
-        metrics.heartbeatTimeouts++; client.closeCause = 'heartbeat_timeout';
-        emit('heartbeat_timeout', { connectionId: client.id, roomId: client.room?.id,
-          silenceMs: Math.max(0, now() - client.lastPong), bufferedAmount: client.ws.bufferedAmount });
-        client.ws.terminate(); continue;
+    for (const connection of connections) {
+      if (connection.ws.readyState !== WebSocket.OPEN) continue;
+      const current = now();
+      if (current - connection.lastPong > timing.heartbeatTimeout) {
+        metrics.heartbeatTimeouts++; connection.closeCause = 'heartbeat_timeout';
+        emit('heartbeat_timeout', { connectionId: connection.id, roomId: connection.seat?.room?.id,
+          silenceMs: current - connection.lastPong, bufferedAmount: connection.ws.bufferedAmount });
+        connection.ws.terminate(); continue;
       }
-      if (!client.room && now() - client.connected > timing.unassigned) {
-        client.closeCause = 'unassigned_timeout'; client.ws.terminate(); continue;
+      if (!connection.seat && current - connection.connected > timing.unassigned) {
+        connection.closeCause = 'unassigned_timeout'; connection.ws.terminate(); continue;
       }
-      client.alive = false; client.pingAt = now(); client.ws.ping(); send(client, { type: 'ping' });
+      connection.pingAt = current; connection.ws.ping(); send(connection, { type: 'ping' });
     }
   }, timing.heartbeat);
-  const metricReport = setInterval(() => emit('metrics', { activeConnections: clients.size, activeRooms: rooms.size, ...metrics }), timing.metrics);
+  const metricReport = setInterval(() => emit('metrics', { activeConnections: connections.size, activeRooms: rooms.size, ...metrics }), timing.metrics);
   return {
     http,
     getMetrics: (): MultiplayerServerMetrics => ({ ...metrics }),
     async close() {
       clearInterval(clock); clearInterval(heartbeat); clearInterval(metricReport);
       for (const room of rooms.values()) end(room, 'Server shutting down.', 'server_shutdown');
-      for (const client of clients) { client.closeCause ??= 'server_shutdown'; client.ws.terminate(); }
+      for (const connection of connections) { connection.closeCause ??= 'server_shutdown'; connection.ws.terminate(); }
       await new Promise<void>(resolve => wss.close(() => resolve()));
       if (http.listening) await new Promise<void>(resolve => http.close(() => resolve()));
     }

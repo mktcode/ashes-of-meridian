@@ -134,6 +134,29 @@ test('client effects use cosmetic state, gate audio and cannot route forged life
   client.disconnect(); assert.equal(game.networkTeam, null); assert.equal(game.effects.fx.length, 0);
 });
 
+test('client resume rotates credentials and resends only requests unknown to the server', async () => {
+  context.document = { hidden: false, getElementById: () => null, addEventListener: () => {} };
+  context.performance = { now: () => 1000 };
+  context.WebSocket = { OPEN: 1 };
+  const sent = [], events = [], game = { networkTeam: 0, effects: { reset: () => {} },
+    s: { seed: 42, map: 'desert', parties: [{ faction: 0 }, { faction: 1 }] } };
+  const ui = { game, toast: () => {}, event: (...args) => events.push(args) };
+  const client = new MeridianMultiplayerClient(ui, async () => true);
+  const socket = { readyState: 1, send: value => sent.push(JSON.parse(value)) };
+  client.socket = socket; client.code = 'AABBCCDDEE'; client.started = true; client.request = 2;
+  client.pending.set(1, { kind: 'train', unit: 'worker' });
+  client.pending.set(2, { kind: 'order', ids: [1], order: { type: 'move', x: 1, z: 1 } });
+  const start = { type: 'start', version: 3, code: client.code, team: 0, map: 'desert', seed: 42,
+    factions: [0, 1], token: 'B'.repeat(32), graceMs: 45000 };
+  await client.receive({ type: 'resumed', token: 'B'.repeat(32), graceMs: 45000,
+    phase: 'playing', lastRequest: 1, start }, socket);
+  assert.deepEqual(sent.map(message => message.request), [2]);
+  assert.equal(client.resumeToken, 'B'.repeat(32)); assert.equal(client.connectionPhase, 'reconnecting');
+  await client.receive({ type: 'outcome', request: 1, status: 'applied' }, socket);
+  await client.receive({ type: 'outcome', request: 1, status: 'applied' }, socket);
+  assert.equal(client.pending.has(1), false); assert.equal(events.length, 0);
+});
+
 test('real combat presentation capture leaves simulation, original effects and both RNG streams unchanged', () => {
   const games = [false, true].map(capture => {
     const game = new MeridianGame({ upgrades: {} }, () => {});

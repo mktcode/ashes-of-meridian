@@ -24,38 +24,38 @@ Die in der [Recherche](../../research/multiplayer-network.md) beschriebene serve
 - [x] Servermetriken für Verbindungsaufbau, Close-Code/-Grund, Heartbeat-Timeout, gesendete Bytes, `bufferedAmount` und Zustandsframes ergänzen. Strukturierte Ereignisse enthalten keine Raumcodes, Aktionsinhalte oder künftigen Resume-Tokens.
 - [x] Clientseitige Verbindungsphasen und technische Gründe für Socketfehler/-Close und lokalen Timeout erfassen, ohne interne Details als Spielermeldung auszugeben.
 - [x] Sendetakt, Heartbeat- und Zeitquellen so kapseln, dass kurze Integrationstests sie kontrollieren können.
-- [ ] Reconnect-Versuche und Resume-Ablehnungen instrumentieren, sobald P1 diese Zustände einführt; `stateFramesSkipped` mit der P1-Backpressure-Logik hochzählen.
+- [x] Reconnect-Versuche und Resume-Ablehnungen instrumentieren; `stateFramesSkipped` mit der P1-Backpressure-Logik hochzählen.
 
-Die Diagnostikgrundlage ist umgesetzt. Serverseitig stehen Lebenszyklusereignisse, periodische Prozesszähler und eine abfragbare Momentaufnahme bereit; der Browser kennzeichnet Phasenwechsel unter `[multiplayer]` in der Entwicklerkonsole. Das ist noch kein persistentes Monitoring und ändert weder Heartbeat-Toleranz noch Abbruchverhalten.
+Die Diagnostikgrundlage ist umgesetzt. Serverseitig stehen Lebenszyklusereignisse, periodische Prozesszähler und eine abfragbare Momentaufnahme bereit; der Browser kennzeichnet Phasenwechsel unter `[multiplayer]` in der Entwicklerkonsole. Das ist noch kein persistentes Monitoring.
 
 **Herausforderung:** Browser, Reverse-Proxy und Server melden denselben Netzwechsel oft nur als generischen abnormalen Close. Telemetrie kann die Schicht eingrenzen, aber nicht jeden Funkfehler exakt beweisen.
 
 ### P1 – Spielerplatz, Resume-Protokoll und Befehlsintegrität
 
-- Raumteilnehmer als langlebigen Spielerplatz modellieren; WebSocket, Onlinezustand und letzter Pong sind austauschbare Transportdaten.
-- Beim Start pro Spieler ein kryptographisch zufälliges, mindestens 128 Bit starkes Resume-Token ausgeben. Der Raumcode bleibt nur Beitrittscode und darf keine Übernahme erlauben.
-- Bei Transportverlust den Raum 30–60 Sekunden weiterlaufen lassen. Ein gültiges Resume ersetzt ausschließlich den Socket desselben Spielerplatzes; abgelaufene, falsche oder bereits ersetzte Tokens werden abgewiesen.
-- `lastRequest`, Zuordnung von Simulationsticket zu Clientrequest, letzte Ergebnisse und Ressourcen-Erinnerung am Spielerplatz erhalten. Resume bestätigt den bekannten Befehlsstand, damit unklare Requests weder verloren noch blind doppelt ausgeführt werden.
-- Nach erfolgreichem Resume eine frische Vollansicht senden, Interpolation und flüchtige Effekte clientseitig neu aufsetzen und alte Effekte nicht nachspielen.
-- Ablauf der Schonfrist beendet die Sitzung wie bisher für beide. Absichtliches Verlassen umgeht die Wiederwahl und beendet unmittelbar.
+- [x] Raumteilnehmer als langlebigen Spielerplatz modellieren; WebSocket, Onlinezustand und letzter Pong sind austauschbare Transportdaten.
+- [x] Beim Start pro Spieler ein kryptographisch zufälliges, mindestens 128 Bit starkes Resume-Token ausgeben. Der Raumcode bleibt nur Beitrittscode und darf keine Übernahme erlauben.
+- [x] Bei Transportverlust den Raum 30–60 Sekunden weiterlaufen lassen. Ein gültiges Resume ersetzt ausschließlich den Socket desselben Spielerplatzes; abgelaufene, falsche oder bereits ersetzte Tokens werden abgewiesen.
+- [x] `lastRequest`, Zuordnung von Simulationsticket zu Clientrequest, letzte Ergebnisse und Ressourcen-Erinnerung am Spielerplatz erhalten. Resume bestätigt den bekannten Befehlsstand, damit unklare Requests weder verloren noch blind doppelt ausgeführt werden.
+- [x] Nach erfolgreichem Resume eine frische Vollansicht senden, Interpolation und flüchtige Effekte clientseitig neu aufsetzen und alte Effekte nicht nachspielen.
+- [x] Ablauf der Schonfrist beendet die Sitzung wie bisher für beide. Absichtliches Verlassen umgeht die Wiederwahl und beendet unmittelbar.
 
 **Herausforderungen:** Race zwischen altem und neuem Socket, Token-Diebstahl, ein Disconnect zwischen Annahme und Ergebnis eines Befehls sowie genau-einmalige Ausführung trotz Wiederholung. Der Server bleibt die einzige Instanz, die Befehle dedupliziert; Clientrequest-IDs müssen eine Wiederverbindung überleben.
 
 ### P1 – Automatische Wiederwahl und toleranter Heartbeat
 
-- Client bei unerwartetem `error`/`close` im Gefecht halten, Eingaben sperren und mit begrenztem exponentiellem Backoff wiederverbinden. `online`, Sichtbarkeitswechsel und Nutzerrückkehr dürfen einen Versuch vorziehen, aber keine parallelen Sockets erzeugen.
-- Reconnect nach Erfolg transparent auflösen; bei endgültiger Ablehnung oder abgelaufener Schonfrist kontrolliert ins Menü wechseln.
-- Heartbeat anhand eines Zeitstempels statt eines einzelnen verpassten Pong bewerten. Timeout, Client-Watchdog und Resume-Schonfrist aufeinander abstimmen.
-- Dem verbundenen Gegner den vorübergehend getrennten Status anzeigen, ohne Netzwerkdetails oder Token offenzulegen. Die Simulation pausiert nicht.
+- [x] Client bei unerwartetem `error`/`close` im Gefecht halten, Eingaben sperren und mit begrenztem exponentiellem Backoff wiederverbinden. `online`, Sichtbarkeitswechsel und Nutzerrückkehr dürfen einen Versuch vorziehen, aber keine parallelen Sockets erzeugen.
+- [x] Reconnect nach Erfolg transparent auflösen; bei endgültiger Ablehnung oder abgelaufener Schonfrist kontrolliert ins Menü wechseln.
+- [x] Heartbeat anhand eines Zeitstempels statt eines einzelnen verpassten Pong bewerten. Timeout, Client-Watchdog und Resume-Schonfrist aufeinander abstimmen.
+- [x] Dem verbundenen Gegner den vorübergehend getrennten Status anzeigen, ohne Netzwerkdetails oder Token offenzulegen. Die Simulation pausiert nicht.
 
 **Herausforderung:** Mobile Browser können JavaScript-Timer im Hintergrund stark drosseln oder die Seite vollständig suspendieren. Korrektheit darf deshalb nicht von pünktlichen Clienttimern abhängen.
 
 ### P1 – Backpressure ohne Sitzungsabbruch
 
-- Ersetzbare Zustandsframes nicht erzeugen oder senden, solange der Socket einen definierten Rückstau hat; später reicht die neueste Vollansicht. Ein hoher Puffer darf nicht unmittelbar den ganzen Raum beenden.
-- Kontrollnachrichten und Befehlsausgänge klein halten und vor weiterem Zustandstraffic schützen. WebSocket kann bereits eingereihte Bytes nicht priorisieren oder zurücknehmen, daher muss der Rückstau früh begrenzt werden.
-- Ereignispuffer bewusst behandeln: flüchtige Audio-/Grafikeffekte dürfen bei Rückstau entfallen, Befehlsausgänge und Sitzungszustände nicht. Die Projektion darf Ereignisse erst dann unwiederbringlich leeren, wenn ihre Behandlung feststeht.
-- Dauerhaft nicht lesende Verbindungen nach großzügigem Timeout in den normalen Resume-Pfad überführen; Speicher und Puffer bleiben strikt begrenzt.
+- [x] Ersetzbare Zustandsframes nicht erzeugen oder senden, solange der Socket einen definierten Rückstau hat; später reicht die neueste Vollansicht. Ein hoher Puffer darf nicht unmittelbar den ganzen Raum beenden.
+- [x] Kontrollnachrichten und Befehlsausgänge klein halten und vor weiterem Zustandstraffic schützen. WebSocket kann bereits eingereihte Bytes nicht priorisieren oder zurücknehmen, daher muss der Rückstau früh begrenzt werden.
+- [x] Ereignispuffer bewusst behandeln: flüchtige Audio-/Grafikeffekte dürfen bei Rückstau entfallen, Befehlsausgänge und Sitzungszustände nicht. Die Projektion darf Ereignisse erst dann unwiederbringlich leeren, wenn ihre Behandlung feststeht.
+- [x] Dauerhaft nicht lesende Verbindungen nach großzügigem Timeout in den normalen Resume-Pfad überführen; Speicher und Puffer bleiben strikt begrenzt.
 
 **Herausforderung:** Alle Nachrichten teilen weiterhin den geordneten TCP/WebSocket-Strom. Frame-Dropping verhindert neuen Rückstau, beseitigt aber keine bereits blockierten Bytes.
 
