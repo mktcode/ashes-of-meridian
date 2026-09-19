@@ -93,6 +93,7 @@
             if (dist < strike.radius + e.size * 0.7)
               this.damage(e, strike.damage * (dist < strike.radius * 0.5 ? 1 : 0.65), source);
           }
+          this.presentation?.({ kind: 'explosion', point: strike, size: strike.type === 'orbital' ? 5 : 2, big: true });
           this.effects.explosion(
             strike.x,
             strike.z,
@@ -140,6 +141,9 @@
               team: -1,
               type: 'flare'
             });
+            this.presentation?.({ kind: 'notice', team: null, event: ['alert', {
+              text: 'Stellar eruption detected. Leave the marked area.', danger: true, x: target.x + 5, z: target.z
+            }] });
             this.emit('alert', {
               text: 'Stellar eruption detected. Leave the marked area.',
               danger: true,
@@ -252,6 +256,7 @@
           for (let i = 0; i < 4; i++) {
             let loc = this.world!.nearest(p.x + (i % 2) * 2 - 1, p.z + Math.floor(i / 2) * 2 - 1);
             this.spawnUnit('rifle', loc.x, loc.z, team, faction);
+            this.presentation?.({ kind: 'drop', point: loc, team, color: FACTIONS[faction].color });
             this.effects.drop(loc, FACTIONS[faction].color, team);
           }
           this.notify(team, 'radio', 'Reinforcement channel|Boots on the ground. Point us at the trouble.');

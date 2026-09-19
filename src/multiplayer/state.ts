@@ -1,13 +1,14 @@
 /* Shared read-model projection. Never send RunState or restore a simulation from this view. */
 'use strict';
-const MULTIPLAYER_VERSION = 1;
+const MULTIPLAYER_VERSION = 2;
 interface MultiplayerStart {
   type: 'start'; version: number; code: string; team: PlayerTeam;
   map: BattlefieldId; seed: number; factions: FactionId[];
 }
 interface MultiplayerFrame {
   type: 'frame'; tick: number; time: number; party: PartyState;
-  entities: Entity[]; fog: number[]; scans: Scan[]; fields: Field[];
+  entities: Entity[]; fog: number[]; scans: Scan[]; fields: Field[]; strikes: Strike[];
+  effects: MultiplayerEffect[];
 }
 function queueMultiplayerAction(game: MeridianGame, team: PlayerTeam, input: unknown): ActionTicket | null {
   // Admission limits must not reveal the total (including hidden) entity count.
@@ -79,7 +80,9 @@ function multiplayerFrame(game: MeridianGame, team: PlayerTeam, resources: Map<n
     party: { id: team, faction: party.faction, controller: { kind: 'human' },
       account: { ...party.account, abilities: { ...party.account.abilities } }, meta: {}, benefits: {},
       fieldWorkshopUsed: party.fieldWorkshopUsed },
-    entities, fog: multiplayerFog(sight.visible, sight.explored),
+    entities, fog: multiplayerFog(sight.visible, sight.explored), effects: takeMultiplayerEffects(game, team),
+    strikes: s.strikes.filter(a => a.type !== 'shell' && !a.done && (a.team === team || !!sight.visible[world.idx(a.x, a.z)]))
+      .map(a => ({ x: a.x, z: a.z, at: a.at, radius: a.radius, team: a.team, type: a.type, damage: 0 })),
     scans: s.scans.filter(a => a.team === team).map(a => ({ x: a.x, z: a.z, r: a.r, until: a.until, team })),
     fields: s.fields.filter(a => a.team === team || !!sight.visible[world.idx(a.x, a.z)])
       .map(a => ({ x: a.x, z: a.z, r: a.r, until: a.until, team: a.team, type: a.type })) };

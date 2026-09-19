@@ -62,7 +62,7 @@ CPU-Simulationstests laden keinen Renderer; Grafikgeometrie und Uploads separat 
 
 ## Multiplayer-Prototyp
 
-Die Standardtests enthalten synthetische Sichtprojektion, Ressourcen-Gedächtnis und die Sperre lokaler Ausführung im Netzwerkmodus. Nach `npm run build --prefix server` prüft `npm test --prefix server` zusätzlich kurze echte WebSocket-Sitzungen mit menschlichen Controllern auf allen Karten, Akteursbindung, Annahme/Ausführung und Abbruch. Das sind gezielte Netzwerkprüfungen, keine autonomen KI-Partien oder Ersatz für die gesonderten Simulations-Langläufe. Serverabhängigkeiten vorher separat installieren; Details unter [Server](../server/README.md).
+Die Standardtests enthalten synthetische Sichtprojektion, Ressourcen-Gedächtnis und die Sperre lokaler Ausführung im Netzwerkmodus. Darstellungsprüfungen decken Interpolation ohne Zustandsmutation, Sichtverlust, Ereignisfilter/-grenzen, Audiofreigabe und ausgeschlossene Persistenzereignisse ab; ein kurzer direkter Kampfschritt vergleicht Zustand und beide RNG-Ströme mit/ohne Präsentations-Observer. Nach `npm run build --prefix server` prüft `npm test --prefix server` zusätzlich kurze echte WebSocket-Sitzungen mit menschlichen Controllern auf allen Karten, Akteursbindung, Annahme/Ausführung und Abbruch. Das sind gezielte Netzwerkprüfungen, keine autonomen KI-Partien oder Ersatz für die gesonderten Simulations-Langläufe. Serverabhängigkeiten vorher separat installieren; Details unter [Server](../server/README.md).
 
 ## Browser und menschliche Abnahme
 

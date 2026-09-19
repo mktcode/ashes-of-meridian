@@ -143,11 +143,13 @@
         const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
+          const viewState = game.networkTeam !== null ? { ...s, time: t,
+            entities: s.entities.map(e => ui.multiplayer!.displayEntity(e)) } : s;
           worldView.sync(world);
           R.camera(s.cam.x, s.cam.z, s.cam.zoom);
           R.fogOn = true;
           const selectedIds = ui.selectionIds();
-          for (let e of s.entities) {
+          for (let e of viewState.entities) {
             if (e.hp <= 0) continue;
             if (!game.observed(e)) continue;
             let p = R.project(e.x, 0, e.z);
@@ -191,7 +193,7 @@
                 ring(b.x, b.z, b.size + 1, 0xe5ba79, 0.25, 0.11, t * 0.1);
             }
           }
-          renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t, game.localTeam);
+          renderBattlefieldEffects(R, game.effects, world, viewState, ui.pings, t, game.localTeam);
           if (ui.mode && ui.pointer.inside && !ui.paused) {
             let p = R.ground(ui.pointer.x, ui.pointer.y);
             const limit = world.extent - 4;
@@ -232,13 +234,17 @@
         }
         function draw(now: number) {
           if (failed) return;
-          let dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+          const elapsed = Math.max(0, (now - last) / 1000);
+          let dt = Math.min(0.1, elapsed);
           last = now;
           time += dt;
           frames++;
-          frameClock += dt;
+          frameClock += elapsed;
           if (frameClock >= 1) {
             fps = frames / frameClock;
+            const snapshots = ui.multiplayer?.takeSnapshotCount() ?? 0;
+            $('fpsReadout').textContent = `${Math.round(fps)} FPS` +
+              (game.networkTeam !== null ? ` · NET ${(snapshots / frameClock).toFixed(0)} Hz` : '');
             frames = 0;
             frameClock = 0;
           }
@@ -253,6 +259,7 @@
                 if (game.s.result) break;
               }
             } else accumulator = 0;
+            ui.multiplayer?.updatePresentation(now);
             ui.tick(dt);
             audio.update(
               ui.view === 'game'
@@ -262,7 +269,8 @@
                 : 'menu'
             );
             R.begin();
-            if (ui.view === 'game' && game.s) battlefield(game.s.time);
+            const viewTime = game.networkTeam !== null ? ui.multiplayer!.renderTime : game.s?.time;
+            if (ui.view === 'game' && game.s) battlefield(viewTime!);
             else {
               R.fogOn = false;
               R.camera(0, 0, 65, true, time);
@@ -271,7 +279,7 @@
                 renderEntity(R, e, time);
               }
             }
-            R.render(time, ui.view === 'game' && game.s ? game.s.time : 0);
+            R.render(time, ui.view === 'game' && game.s ? viewTime! : 0);
             ui.drawOverlay(overlayContext);
           } catch (error) {
             const network = game.networkTeam != null;

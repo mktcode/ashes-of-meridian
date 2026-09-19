@@ -73,7 +73,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-ai',
   'simulation-runtime'
 ]);
-const MULTIPLAYER_SCRIPTS = Object.freeze(['multiplayer-state', 'multiplayer-client']);
+const MULTIPLAYER_SCRIPTS = Object.freeze(['multiplayer-presentation', 'multiplayer-state', 'multiplayer-client']);
 const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-screens', 'ui-actions', 'ui-input', 'ui-presentation']);
 
 // Deliberately not a general HTML parser. Only the project's named classic

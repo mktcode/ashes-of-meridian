@@ -14,6 +14,7 @@
         }
         e.hp -= amount;
         if (source?.team === 0) this.s!.stats.damage += amount;
+        if (!quiet && amount > 25) this.presentation?.({ kind: 'damage', target: e, amount });
         if (!quiet && amount > 25 && this.visible(e)) this.effects.damageNumber(e, amount, this.localTeam);
         if (e.hp <= 0) this.kill(e, source);
         const alertKey = this.s!.rules.kind === 'scenario' ? `baseAlert:${e.team}` : 'baseAlert';
@@ -53,6 +54,8 @@
         if (e.team !== -1 && e.kind === 'unit' && e.type === 'hero')
           this.notify(e.team, 'radio',
             'Expedition command|The commander is down. We have a recovery signal. Reconstruct the command team at headquarters.');
+        this.presentation?.({ kind: 'explosion', point: e, size: e.kind === 'building' ? 3.5 : 1.2,
+          color: e.faction === FACTION_ID.SECOND ? 0xaee2ac : 0xf3b17c, big: e.kind === 'building' || e.type === 'tank' });
         if (this.visible(e)) {
           this.effects.explosion(
             e.x,
@@ -84,6 +87,7 @@
         let dx = target.x - e.x,
           dz = target.z - e.z;
         e.rot = Math.atan2(dx, dz);
+        this.presentation?.({ kind: 'shot', source: e, target, travel: e.type === 'artillery' ? 0.85 : undefined });
         if (e.type === 'artillery') {
           let travel = 0.85;
           this.s!.strikes.push({
@@ -193,6 +197,7 @@
             // Scenario state must not depend on the observing client's sight.
             // Single-player keeps its established cooldown/visibility contract.
             if (visible || this.s!.rules.kind === 'scenario') e.cd = 0.5;
+            this.presentation?.({ kind: 'healing', source: e, target: t });
             if (visible) this.effects.healing(e, t);
           }
         }

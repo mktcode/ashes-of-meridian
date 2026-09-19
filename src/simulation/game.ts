@@ -67,6 +67,7 @@
       cosmeticRandom: () => number;
       effects: MeridianEffects;
       commandQueue: CommandQueue = createCommandQueue();
+      presentation?: (event: SimulationPresentation) => void;
       networkTeam: PlayerTeam | null = null;
       networkSubmit?: (action: BattleAction) => boolean;
 
@@ -286,6 +287,7 @@
         return this.party(team).faction;
       },
       notify(this: MeridianGame, team: PlayerTeam, ...event: GameEvent) {
+        this.presentation?.({ kind: 'notice', team, event });
         if (team === this.localTeam) this.emit(...event);
       },
       get(this: MeridianGame, id: number | null | undefined): Entity | null {

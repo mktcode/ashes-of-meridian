@@ -240,6 +240,7 @@
         let best = null,
           score = Infinity;
         for (let e of this.game.s!.entities) {
+          e = this.multiplayer?.displayEntity(e) ?? e;
           if (e.hp <= 0) continue;
           if (!this.game.observed(e)) continue;
           let y =
@@ -389,7 +390,8 @@
               .alive(e => e.team === this.localTeam && e.kind === 'unit' &&
                 (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
-                let q = this.R.project(e.x, 1, e.z);
+                const pose = this.multiplayer?.displayEntity(e) ?? e;
+                let q = this.R.project(pose.x, 1, pose.z);
                 return q && this.R.containsPoint(q.x, q.y);
               });
             this.select(units.map(e => e.id));

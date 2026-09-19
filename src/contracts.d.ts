@@ -258,6 +258,14 @@ interface CommandQueue {
   processing: boolean;
 }
 
+type EffectPose = Pick<EntityBase, 'x' | 'z' | 'kind' | 'type' | 'team' | 'faction' | 'rot' | 'size'>;
+type SimulationPresentation =
+  | { kind: 'shot' | 'healing' | 'mining' | 'construction'; source: Entity; target: Entity; travel?: number }
+  | { kind: 'damage'; target: Entity; amount: number }
+  | { kind: 'explosion'; point: Position & { team?: TeamId }; size: number; color?: number; big: boolean }
+  | { kind: 'drop'; point: Position; team: PlayerTeam; color: number }
+  | { kind: 'notice'; team: PlayerTeam | null; event: GameEvent };
+
 interface EntityBase extends Position {
   id: number;
   kind: EntityKind;

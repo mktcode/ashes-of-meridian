@@ -64,6 +64,7 @@
           ctx.stroke();
         }
         for (let e of g.s.entities) {
+          e = this.multiplayer?.displayEntity(e) ?? e;
           if (e.hp <= 0) continue;
           let explored = g.world.explored[g.world.idx(e.x, e.z)],
             visible = g.visible(e);
@@ -128,7 +129,9 @@
           for (let id of this.selected.slice(0, 12)) {
             let e = g.get(id);
             if (!e || e.team !== this.localTeam) continue;
-            const target = e.order?.type === 'attack' ? g.get(e.order.id) : null;
+            e = this.multiplayer?.displayEntity(e) ?? e;
+            let target = e.order?.type === 'attack' ? g.get(e.order.id) : null;
+            if (target) target = this.multiplayer?.displayEntity(target) ?? target;
             let goal = e.rally ||
               ((e.order?.type === 'move' || e.order?.type === 'attackMove') ? e.order : target);
             if (!goal || (goal === target && !g.visible(target!))) continue;
@@ -151,6 +154,7 @@
           ctx.restore();
         }
         for (let e of s.entities) {
+          e = this.multiplayer?.displayEntity(e) ?? e;
           if (e.hp <= 0) continue;
           let selected = selectedIds.has(e.id),
             hover = this.hover === e.id;

@@ -4,6 +4,9 @@ class MeridianMultiplayerClient {
   socket: WebSocket | null = null;
   code = '';
   serverUrl = 'ws://localhost:8787';
+  private readonly timeline = new MultiplayerTimeline();
+  private receivedFrames = 0;
+  private wasHidden = false;
   private request = 0;
   private lastTick = -1;
   private started = false;
@@ -65,6 +68,52 @@ class MeridianMultiplayerClient {
       }, 5000);
     } catch (error) { this.status(error instanceof Error ? error.message : String(error)); }
   }
+  get renderTime() { return this.timeline.time; }
+  displayEntity(entity: Entity): Entity { return this.timeline.poses.get(entity.id) ?? entity; }
+  takeSnapshotCount() { const count = this.receivedFrames; this.receivedFrames = 0; return count; }
+  updatePresentation(now: number) {
+    if (this.ui.game.networkTeam === null) return;
+    if (document.hidden) this.wasHidden = true;
+    else if (this.wasHidden) {
+      this.timeline.clearEffects(); this.ui.game.effects.reset(); this.wasHidden = false;
+    }
+    const due: MultiplayerEffect[] = [];
+    const delta = this.timeline.advance(now, event => due.push(event));
+    this.ui.game.effects.tick(delta);
+    for (const event of due) this.playEffect(event);
+  }
+  private playEffect(event: MultiplayerEffect) {
+    const game = this.ui.game, fx = game.effects, audible = !this.ui.paused && !document.hidden;
+    switch (event.kind) {
+      case 'shot':
+        if (event.travel) fx.shell(event.source, event.target, event.travel);
+        else fx.shot(event.source, event.target, game.localTeam);
+        if (audible) this.ui.event('shot', { ...event.source, heavy: event.source.type === 'tank' || !!event.travel });
+        break;
+      case 'sound': if (audible) this.ui.event('shot', { ...event.point, heavy: event.heavy }); break;
+      case 'explosion':
+        fx.explosion(event.point.x, event.point.z, event.size, event.color);
+        if (audible) this.ui.event('explosion', { ...event.point, big: event.big });
+        break;
+      case 'healing': fx.healing(event.source, event.target); break;
+      case 'mining': fx.mining(event.source, event.target, 1, () => true); break;
+      case 'construction': fx.construction(event.source, event.target, 1); break;
+      case 'damage': fx.damageNumber(event.point, event.amount, game.localTeam); break;
+      case 'drop': fx.drop(event.point, event.color, event.team); break;
+      case 'notice': {
+        if (!audible) break; // No delayed sound/radio burst when returning from a hidden tab/menu.
+        if (event.event[0] === 'trained') {
+          this.ui.audio.sound('trained'); this.ui.actionSignature = '';
+          if (event.event[1].type === 'hero') this.ui.radio('Expedition command|Commander reconstructed and ready.');
+        } else if (['toast', 'radio', 'alert', 'complete', 'queued', 'scan', 'heal'].includes(event.event[0])) {
+          // Keep this runtime allowlist even with typed server payloads: network events must never reach start/result persistence.
+          this.ui.event(...event.event);
+        }
+        break;
+      }
+    }
+    if (fx.fx.length > 500) fx.fx.splice(0, fx.fx.length - 500);
+  }
   private status(text: string) {
     const element = document.getElementById('netStatus');
     if (element) element.textContent = text;
@@ -105,6 +154,7 @@ class MeridianMultiplayerClient {
           stopped: false, result: null, entities: [], scans: [], strikes: [], fields: [], triggers: {},
           stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           speed: 1, cam: { x: 0, z: 0, zoom: 48 } };
+        game.resetRandom(start.seed);
         socket.send(JSON.stringify({ type: 'ready' }));
         break;
       }
@@ -112,13 +162,17 @@ class MeridianMultiplayerClient {
         if (!game.s || game.networkTeam === null) throw Error('Frame before session start');
         const frame = message as unknown as MultiplayerFrame;
         if (!Number.isSafeInteger(frame.tick) || frame.tick <= this.lastTick) return;
-        if (frame.party.id !== game.networkTeam || !Number.isFinite(frame.time) || !Array.isArray(frame.entities) || frame.entities.length > 10000)
+        if (frame.party.id !== game.networkTeam || !Number.isFinite(frame.time) || !Array.isArray(frame.entities) || frame.entities.length > 10000 ||
+            !Array.isArray(frame.effects) || frame.effects.length > 256 || !Array.isArray(frame.strikes))
           throw Error('Invalid party view');
         applyMultiplayerFog(game.world!, game.networkTeam, frame.fog);
         game.s.time = frame.time;
         game.s.parties[game.networkTeam] = frame.party;
         game.s.entities = frame.entities;
-        game.s.scans = frame.scans; game.s.fields = frame.fields;
+        game.s.scans = frame.scans; game.s.fields = frame.fields; game.s.strikes = frame.strikes;
+        if (document.hidden) this.wasHidden = true;
+        this.timeline.push(document.hidden ? { ...frame, effects: [] } : frame, performance.now());
+        this.receivedFrames++;
         game.ids = new Map(frame.entities.map(e => [e.id, e]));
         game.world!.rebuild(frame.entities);
         game.rehash();
@@ -155,6 +209,8 @@ class MeridianMultiplayerClient {
     this.timer = null;
     socket?.close();
     this.pending.clear(); this.started = false; this.preparing = false;
+    this.timeline.reset(); this.receivedFrames = 0; this.wasHidden = false;
+    if (this.ui.game.networkTeam !== null) this.ui.game.effects.reset();
     this.ui.game.networkSubmit = undefined; this.ui.game.networkTeam = null;
   }
   private end(message: string) {

@@ -12,7 +12,7 @@ function fixture() {
     queue: [], order: { type: 'idle' }, path: [{ x: 80, z: 80 }], target: 99, lastSource: 99 });
   const s = { time: 1, entities: [entity(1, 0, 0), entity(2, 1, 1), entity(3, 1, 2),
     { ...entity(4, -1, 1), kind: 'resource', type: 'crystal', amount: 500 }],
-    scans: [{ team: 1, x: 2, z: 0, r: 10, until: 99 }], fields: [], stats: { damage: 9999 }, triggers: { secret: true } };
+    scans: [{ team: 1, x: 2, z: 0, r: 10, until: 99 }], fields: [], strikes: [], parties: [{ id: 0 }, { id: 1 }], stats: { damage: 9999 }, triggers: { secret: true } };
   const sight = { visible: new Uint8Array([255, 255, 0]), explored: new Uint8Array([1, 1, 0]) };
   const game = { s, world: { sight: [sight], idx: x => x }, commandQueue: { tick: 7 },
     canSee: (team, e) => team === e.team || !!sight.visible[e.x],
@@ -41,6 +41,19 @@ test('hidden resource updates do not leak through explored fog; current sight re
   game.s.entities[3].hp = 0;
   assert.equal(multiplayerFrame(game, 0, memory).entities.some(e => e.id === 4), false);
 });
+test('strike warnings expose only owned or visible non-shell markers, never combat payloads', () => {
+  const { game } = fixture();
+  game.s.strikes = [
+    { x: 2, z: 0, type: 'orbital', team: 0, at: 9, radius: 10, damage: 999, source: 42 },
+    { x: 2, z: 0, type: 'orbital', team: 1, at: 9, radius: 10, damage: 999, source: 43 },
+    { x: 1, z: 0, type: 'flare', team: -1, at: 9, radius: 8, damage: 999 },
+    { x: 0, z: 0, type: 'shell', team: 0, at: 9, radius: 4, damage: 999, source: 42 }
+  ];
+  const strikes = multiplayerFrame(game, 0, new Map()).strikes;
+  assert.deepEqual(json(strikes).map(s => s.type), ['orbital', 'flare']);
+  assert.ok(strikes.every(s => s.damage === 0 && s.source === undefined));
+});
+
 test('wire admission limits do not disclose hidden entity counts', () => {
   const { game } = fixture(); let calls = 0;
   game.queueAction = () => { calls++; return { tick: 1, sequence: 1 }; };

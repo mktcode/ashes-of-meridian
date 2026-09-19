@@ -16,6 +16,7 @@
     <canvas id="world" aria-label="Three-dimensional battlefield"></canvas><canvas id="overlay"></canvas>
     <div id="vignette"></div>
   </div>
+  <div id="fpsReadout" aria-hidden="true" title="Rendered frames per second; NET shows received state updates">FPS —</div>
   <div id="loading">
     <div class="crest">◈</div>
     <div class="eyebrow">MERIDIAN EXPEDITIONARY COMMAND</div>
@@ -148,6 +149,7 @@
   <script data-meridian-script="ui-actions" src="./dist/src/ui/actions.js"></script>
   <script data-meridian-script="ui-input" src="./dist/src/ui/input.js"></script>
   <script data-meridian-script="ui-presentation" src="./dist/src/ui/presentation.js"></script>
+  <script data-meridian-script="multiplayer-presentation" src="./dist/src/multiplayer/presentation.js"></script>
   <script data-meridian-script="multiplayer-state" src="./dist/src/multiplayer/state.js"></script>
   <script data-meridian-script="multiplayer-client" src="./dist/src/multiplayer/client.js"></script>
   <script data-meridian-script="app" src="./dist/src/app.js"></script>

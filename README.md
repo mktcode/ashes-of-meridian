@@ -15,7 +15,7 @@ Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen.
 
 ## Multiplayer-Prototyp
 
-Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen bzw. per Code beitreten, mit freier Karten- und Fraktionswahl. Dafür ist ein separat laufender [Multiplayerserver](server/README.md) nötig. Noch keine Expeditionen, Belohnungen oder Wiederverbindung; Kampf-Effekte/Audio sind noch nicht repliziert. Das bisherige Einzelspiel bleibt offline nutzbar.
+Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen bzw. per Code beitreten, mit freier Karten- und Fraktionswahl. Dafür ist ein separat laufender [Multiplayerserver](server/README.md) nötig. Bewegungen werden geglättet, Kampf-Effekte und Audio sicht-/parteigefiltert übertragen. Noch keine Expeditionen, Belohnungen oder Wiederverbindung. Das bisherige Einzelspiel bleibt offline nutzbar.
 
 ## Spielen
 

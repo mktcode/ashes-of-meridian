@@ -63,7 +63,7 @@ class MeridianEffects {
             maxLife: 0.8
           });
       }
-      shell(e: UnitEntity | BuildingEntity, target: Entity, travel: number) {
+      shell(e: EffectPose, target: EffectPose, travel: number) {
         const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45;
         this.fx.push({
             type: 'shell',
@@ -78,7 +78,7 @@ class MeridianEffects {
             color: e.faction === FACTION_ID.SECOND ? 0xb8eba3 : 0xffce8f
           });
       }
-      shot(e: UnitEntity | BuildingEntity, target: Entity, localTeam: PlayerTeam = 0) {
+      shot(e: EffectPose, target: EffectPose, localTeam: PlayerTeam = 0) {
         const height = e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45,
           th = target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1;
         this.fx.push({
@@ -103,7 +103,7 @@ class MeridianEffects {
             });
         this.combatBeams.set(this.fx[this.fx.length - 1], target.size);
       }
-      construction(e: UnitEntity, b: BuildingEntity, dt: number) {
+      construction(e: EffectPose, b: EffectPose, dt: number) {
         if (this.random() < dt * 4)
           this.fx.push({
               type: 'beam',
@@ -119,7 +119,7 @@ class MeridianEffects {
               width: 0.035
             });
       }
-      mining(e: UnitEntity, n: ResourceEntity, dt: number, visible: () => boolean) {
+      mining(e: EffectPose, n: EffectPose, dt: number, visible: () => boolean) {
         // Preserve short-circuit order: RNG first, visibility only on success.
         if (this.random() < dt * 3 && visible())
           this.fx.push({
@@ -136,7 +136,7 @@ class MeridianEffects {
             width: 0.025
           });
       }
-      healing(e: UnitEntity, t: Entity) {
+      healing(e: EffectPose, t: EffectPose) {
         this.fx.push({
               type: 'beam',
               x: e.x,
