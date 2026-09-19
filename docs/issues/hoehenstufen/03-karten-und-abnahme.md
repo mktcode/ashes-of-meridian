@@ -6,7 +6,7 @@ Abhängigkeiten: [Welt/Navigation](01-welt-und-navigation.md) und [Darstellung/B
 
 ### Mothership: erster spielbarer Versuch
 
-**Auf dem Experimentier-Branch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Die übrigen Karten folgen erst nach Rückmeldung; die gemeinsame Layout-Abnahme unten bleibt offen.
+**Auf dem Experimentier-Branch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Erstes Nutzerfeedback ist positiv. Zunächst folgt ausschließlich die [Sichtkorrektur](04-hoehenabhaengige-sicht.md); die übrigen Karten und die gemeinsame Layout-Abnahme unten bleiben offen.
 
 Erhöhte industrielle Basisdecks in den vier Eckbereichen, große abgesenkte zentrale Gefechtsplattform, breite technische Rampen. Flankenzugänge sollen die vorhandene Schiffsarchitektur weiterführen; keine Naturklippen oder Bergkulisse.
 
@@ -44,7 +44,7 @@ Heute reserviert `desertCanyonPlan` tiefe flache Startbecken und verbindet Resso
 ## Prüf- und Integrationsplan
 
 1. Pakete 1/2 an einer synthetischen Zwei-Ebenen-Fixture prüfen, anschließend Mothership-Durchstich. Neue Tests für neue Regeln schreiben; bestehende feste Referenzen nicht zur Reparatur überschreiben.
-2. Nutzer begutachtet Mothership-Höhenwirkung, Rampen und zentrale Fläche. Erst danach Parameter/Kartensprache auf Alien Planet und Desert übertragen.
+2. Nach erstem positivem Nutzerfeedback zunächst die [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) implementieren und gezielt begutachten lassen. Erst danach Parameter/Kartensprache auf Alien Planet und Desert übertragen.
 3. Kleine gezielte Terrain-/Zugangsprüfungen auf ausgewählten Seeds und allen vier Startkandidaten. Umfang vorab begrenzen; kein versteckter KI-/Simulations-Langlauf.
 4. Netzwerk: gleicher öffentlicher Seed erzeugt gleiche Höhen/Übergänge auf Host und Client; Interpolation/Ereignisse auf Rampe, Sichtverlust und Session-/Kartenwechsel prüfen. Zwei-Client-Kurzcheck bei konkretem Bedarf gemäß [Prüfverfahren](../../testing.md).
 5. Hauptagent führt ganz zum Schluss nach Integration die Standardtestsuite aus. `test:ai` und `test:simulation` einschließlich gefilterter Fälle nur nach ausdrücklicher aktueller Freigabe. Bei Bedarf gezielt Rampen-Gegenverkehr, produktive Worker und Angriffs-KI vorschlagen; keine Laufzeit-/Referenzanpassung zum Grünmachen.
