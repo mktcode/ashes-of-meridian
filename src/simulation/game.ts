@@ -59,6 +59,7 @@
       resultClock: number;
       navDirty: boolean;
       random: () => number;
+      cosmeticRandom: () => number;
       effects: MeridianEffects;
 
       constructor(
@@ -77,7 +78,9 @@
         this.resultClock = 0;
         this.navDirty = false;
         this.random = seeded(1);
-        this.effects = createEffects(() => this.random());
+        this.cosmeticRandom = seeded(1);
+        // Preserve the single-player RNG contract; scenarios isolate all cosmetic draws.
+        this.effects = createEffects(() => this.s?.rules.kind === 'scenario' ? this.cosmeticRandom() : this.random());
       }
     }
     function defineMeridianGameMethods(methods: Record<string, Function>) {
@@ -89,6 +92,10 @@
         });
     }
     const gameMethods = {
+      resetRandom(this: MeridianGame, seed: number) {
+        this.random = seeded(seed + 77);
+        this.cosmeticRandom = seeded(seed ^ 0x4658524e);
+      },
       start(this: MeridianGame, opts: BattleOptions = {}) {
         return this.startBattle(opts, singlePlayerParties(this.profile, opts), { kind: 'single-player' }, [1]);
       },
@@ -116,7 +123,7 @@
           result: null,
           speed: 1
         };
-        this.random = seeded(seed + 77);
+        this.resetRandom(seed);
         this.ids.clear();
         this.effects.reset();
         this.acc = 0;

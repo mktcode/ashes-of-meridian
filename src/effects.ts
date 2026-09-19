@@ -9,7 +9,7 @@ class MeridianEffects {
       readonly combatBeams = new WeakMap<BattlefieldEffect, number>();
 
       constructor(random: () => number) {
-        // The provider must resolve the current simulation RNG after each start.
+        // The provider resolves the current game's selected effect RNG after each start.
         this.random = random;
         this.reset();
       }

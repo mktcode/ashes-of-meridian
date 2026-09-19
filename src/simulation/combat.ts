@@ -191,9 +191,12 @@
         let t = allies[0];
         if (t) {
           t.hp = Math.min(t.maxHp, t.hp + UNITS.medic.heal * dt);
-          if (e.cd <= 0 && this.visible(e)) {
-            e.cd = 0.5;
-            this.effects.healing(e, t);
+          if (e.cd <= 0) {
+            const visible = this.visible(e);
+            // Scenario state must not depend on the observing client's sight.
+            // Single-player keeps its established cooldown/visibility contract.
+            if (visible || this.s!.rules.kind === 'scenario') e.cd = 0.5;
+            if (visible) this.effects.healing(e, t);
           }
         }
         if (e.order.type === 'attackMove') {
