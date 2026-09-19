@@ -2,7 +2,11 @@
 
 Abhängigkeiten: [Ziel/Regelentscheidungen](README.md), [gemeinsamer CPU-Vertrag](01-welt-und-navigation.md). Kein separater GPU-Höhengenerator, keine neuen Texturen als Voraussetzung.
 
-## Ausgangsbefund
+## Prototypstand
+
+Mothership auf `experiment/hoehenstufen` nutzt triangulierten Spielboden, Terrain-Picking, geerdete Modelle/Dekoration und absolute Effekt-Y-Werte. Auswahl/Overlays, Gerüste, Kontaktflächen und Ringe folgen der Oberfläche; Kameraziehen behält bewusst seine flache Gestenebene. CPU-Tests und ein `file://`-Browserstart ersetzen nicht die ausstehenden Darstellungs-, Touch- und Mehrclientprüfungen. Die Aufgaben unten bleiben Abnahmeziele. [Teststart und offene Grenzen](README.md#jetzt-manuell-testen).
+
+## Ausgangsbefund vor dem Experiment
 
 `BattlefieldView.sync` baut den Boden in `src/world-view.ts` auf einer festen Ebene auf. `renderEntity` besitzt relative Schwebe-/Flughöhen, aber keine Terrainhöhe. Einzelne Elemente umgehen sogar diesen gemeinsamen Offset: Ventdampf, Baugerüst und Kontaktschatten. `MeridianRenderer.ground` in `src/renderer/runtime.ts` schneidet bei `y=0`; App-Culling, UI-Picking, Lebensbalken, Marker und Rally-Linien verwenden ebenfalls feste Höhen. Nur das Modell anzuheben reicht daher nicht.
 
