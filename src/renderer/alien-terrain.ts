@@ -86,6 +86,38 @@
     tube(out,[[x,0,z,r*.22],[x+r*.3,h*.7,z,r*.15],[x,h,z,r*.4]],jade,5);
     skin(out,[[h*.74,r*.5],[h,r],[h*1.25,r*.15]].map(([y,s])=>ring(x,y,z,s,7)),[jade,light,plum]);
   }
+  function glowBud(out: number[],x: number,y: number,z: number,r: number,color: number[]) {
+    const equator=ring(x,y,z,r,4,Math.PI/4),top=[x,y+r*1.5,z],bottom=[x,y-r*1.5,z];
+    for(let i=0;i<4;i++) {
+      const k=(i+1)%4;geom.tri(out,top,equator[k],equator[i],color);
+      geom.tri(out,bottom,equator[i],equator[k],color.map(v=>v*.72));
+    }
+  }
+  function vines(out: number[],h: number,r: number,phase: number,variant: number) {
+    const dx=Math.cos(phase)*h*.13,dz=Math.sin(phase)*h*.13;
+    // Sparse luminous tendrils hang from beneath the cap instead of wrapping the trunk.
+    for(let i=0;i<4;i++) {
+      const a=phase+.28+i*1.57+(i%2)*.17,reach=r*(.48+(i%3)*.16),
+        x=dx+Math.cos(a)*reach,z=dz+Math.sin(a)*reach,
+        drop=h*(.2+(i%3)*.065),sway=(i%2 ? 1 : -1)*r*.12,
+        color=(i+variant)%3===0?plum:light;
+      tube(out,[[x,h*.83,z,.014],[x+Math.sin(a)*sway,h*.83-drop*.55,z-Math.cos(a)*sway,.012],
+        [x-Math.cos(a)*r*.08,h*.83-drop,z-Math.sin(a)*r*.08,.007]],color,3);
+      if(i%2===variant%2) glowBud(out,x-Math.cos(a)*r*.08,h*.83-drop,z-Math.sin(a)*r*.08,.035,color);
+    }
+  }
+  function glowTuft(out: number[]) {
+    // Low, bright leaves and pearl buds read as a fluorescent carpet around mature trees.
+    for(let i=0;i<6;i++) {
+      const a=i*Math.PI/3+.2,l=.36+(i%2)*.12,w=.085,
+        base=[Math.cos(a)*.06,.02,Math.sin(a)*.06],tip=[Math.cos(a)*l,.12+(i%3)*.055,Math.sin(a)*l],
+        left=[base[0]+Math.sin(a)*w,base[1],base[2]-Math.cos(a)*w],
+        right=[base[0]-Math.sin(a)*w,base[1],base[2]+Math.cos(a)*w],c=i%2?light:plum;
+      geom.tri(out,left,tip,right,c);geom.tri(out,right,tip,left,c.map(v=>v*.68));
+    }
+    glowBud(out,0,.22,0,.075,light);
+    glowBud(out,.18,.14,-.08,.045,plum);
+  }
   function bed(out: number[],m: Pick<WorldTerrainFeature, "x" | "z" | "outline">,height=.55) {
     const n=m.outline.length, rows=[];
     for(let j=0;j<5;j++)rows.push(m.outline.map((p,i)=>{
@@ -107,6 +139,10 @@
   TerrainModels.alienSpore=()=>{
     const out: number[]=[];spore(out,0,0,.85,.25);spore(out,.4,.25,.5,.19);spore(out,-.3,.15,.65,.22);return out;
   };
+  TerrainModels.alienGlowTuft=()=>{const out: number[]=[];glowTuft(out);return out;};
+  TerrainModels.alienVinesPlum=()=>{const out: number[]=[];vines(out,3.4,1,.8,1);return out;};
+  TerrainModels.alienVinesJade=()=>{const out: number[]=[];vines(out,3.7,.95,2.1,0);return out;};
+  TerrainModels.alienVinesUmbrella=()=>{const out: number[]=[];vines(out,2.6,1.24,4.3,2);return out;};
   TerrainModels.alienSapling=()=>{const out: number[]=[];mushroom(out,0,0,2.4,.8,.4,0);return out;};
   TerrainModels.alienPod=(seed: number)=>{
     const out: number[]=[],rand=seeded(seed ^ 0x504f4453);
