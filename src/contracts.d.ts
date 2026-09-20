@@ -485,7 +485,7 @@ interface WorldPlacement {
   glow: number;
   alpha: number;
   layer: 'static' | 'dynamic' | 'effects';
-  material: keyof typeof MAT | undefined;
+  material: keyof typeof MAT | 'ALIEN_LIGHT' | undefined;
 }
 
 interface WorldTerrainFeature extends Position {

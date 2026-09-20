@@ -3,7 +3,8 @@
     // Effect-only material; no texture or changes to the embedded material catalog.
     const CONTACT_SHADOW_MATERIAL = -1;
     // Dedicated procedural surfaces; the alloy pool makes deposits visibly illuminate the ground.
-    const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3, ALLOY_LIGHT_MATERIAL = -4;
+    const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3, ALLOY_LIGHT_MATERIAL = -4,
+      ALIEN_LIGHT_MATERIAL = -5;
     // Pixel rectangles (left, top, right, bottom) in the 1254² Desert WebP atlases.
     // Keep a transparent margin around each motif; the plant sheet is not a regular grid.
     const GROUND_DECOR_ATLAS = {
@@ -121,6 +122,18 @@ void main(){
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
   float visible=mix(1.,smoothstep(.2,.8,sight),u_fogOn);
   frag=vec4(v_col.rgb*(1.08+mask*.38),v_col.a*mask*.16*visible);return;
+ }
+ if(v_mat==${ALIEN_LIGHT_MATERIAL}.){
+  vec3 base=groundBase(v_pos.xz),n=vec3(0.,1.,0.),light=normalize(vec3(-64.,110.,43.));
+  vec3 ambient=mix(u_bounce,u_skyLight,1.);float sh=shadow();
+  vec3 lit=base*(ambient+u_sun*max(dot(n,light),0.)*sh)+v_col.rgb*(1.15+v_glow*.55);
+  lit=finishLighting(lit);
+  float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
+  lit*=mix(1.,mix(.16,1.,sight),u_fogOn);
+  float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);
+  lit=mix(lit,u_haze,mist);
+  float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;
+  frag=vec4(lit,1.);return;
  }
  if(v_mat==${PORTAL_MATERIAL}.||v_mat==${PORTAL_STILL_MATERIAL}.){
   // Vertical gates use XY; horizontal flight wells use XZ without changing gate motion.

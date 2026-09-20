@@ -37,7 +37,7 @@ class BattlefieldView {
       for (const p of layout.placements) {
         const args: Parameters<MeridianRenderer['add']> = [p.mesh, ...p.position, ...p.scale, p.color, ...p.rotation,
           p.glow, p.alpha, p.layer];
-        if (p.material !== undefined) args.push(MAT[p.material]);
+        if (p.material !== undefined) args.push(p.material === 'ALIEN_LIGHT' ? ALIEN_LIGHT_MATERIAL : MAT[p.material]);
         R.add(...args);
       }
       this.data = layout;

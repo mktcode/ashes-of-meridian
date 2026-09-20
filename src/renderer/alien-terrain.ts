@@ -120,18 +120,35 @@
         color=(i+variant)%3===0?plum:light;
       geom.tri(out,p,q,s,color);geom.tri(out,s,q,p,color.map(v=>v*.78));
     }
-    // Straight, hair-fine threads carry many small dew-like pearls at varied intervals.
-    for(let i=0;i<6;i++) {
-      const a=phase+.2+i*Math.PI/3,reach=r*(.5+(i%3)*.13),x=dx+Math.cos(a)*reach,
-        z=dz+Math.sin(a)*reach,top=h*.798,drop=h*(.17+(i%4)*.04),
+    // A dense curtain of straight, hair-fine threads carries dew-like pearls at varied intervals.
+    for(let i=0;i<12;i++) {
+      const a=phase+.12+i*Math.PI/6,reach=r*(.48+(i%4)*.1),x=dx+Math.cos(a)*reach,
+        z=dz+Math.sin(a)*reach,top=h*.798,drop=h*(.16+(i%5)*.033),
         color=(i+variant)%3===0?plum:light;
-      tube(out,[[x,top,z,.006],[x,top-drop,z,.004]],color,6);
+      tube(out,[[x,top,z,.0055],[x,top-drop,z,.0035]],color,6);
       const pearls=3+i%2;
       for(let j=0;j<pearls;j++) {
-        const t=(j+1)/(pearls+1),size=.012+((i+j)%3)*.005;
+        const t=(j+1)/(pearls+1),size=.011+((i+j)%3)*.0045;
         glowPearl(out,x,top-drop*t,z,size,(i+j+variant)%4===0?(color===light?plum:light):color);
       }
     }
+  }
+  function lanternPool() {
+    const out: number[]=[],n=32,radii=[0,.28,.58,1],colors=[[.42,1,.82],[.3,.72,.65],[.15,.34,.38],[0,0,0]],
+      point=(radius: number,i: number)=>[Math.cos(i*Math.PI*2/n)*radius,.015,Math.sin(i*Math.PI*2/n)*radius],
+      vertex=(p: number[],c: number[])=>out.push(...p,0,1,0,...c),
+      face=(a: number[],b: number[],c: number[],ca: number[],cb: number[],cc: number[])=>{
+        vertex(a,ca);vertex(b,cb);vertex(c,cc);
+      };
+    for(let i=0;i<n;i++) {
+      const k=(i+1)%n;
+      face(point(0,0),point(radii[1],k),point(radii[1],i),colors[0],colors[1],colors[1]);
+      for(let j=1;j<radii.length-1;j++) {
+        const a=point(radii[j],i),b=point(radii[j],k),c=point(radii[j+1],k),d=point(radii[j+1],i);
+        face(a,c,b,colors[j],colors[j+1],colors[j]);face(a,d,c,colors[j],colors[j+1],colors[j+1]);
+      }
+    }
+    return out;
   }
   function glowTuft(out: number[]) {
     // Low, bright leaves and pearl buds read as a fluorescent carpet around mature trees.
@@ -167,6 +184,7 @@
     const out: number[]=[];spore(out,0,0,.85,.25);spore(out,.4,.25,.5,.19);spore(out,-.3,.15,.65,.22);return out;
   };
   TerrainModels.alienGlowTuft=()=>{const out: number[]=[];glowTuft(out);return out;};
+  TerrainModels.alienLanternPool=()=>lanternPool();
   TerrainModels.alienCapGillsPlum=()=>{const out: number[]=[];capGills(out,3.4,1,.8,1);return out;};
   TerrainModels.alienCapGillsJade=()=>{const out: number[]=[];capGills(out,3.7,.95,2.1,0);return out;};
   TerrainModels.alienCapGillsUmbrella=()=>{const out: number[]=[];capGills(out,2.6,1.24,4.3,2);return out;};

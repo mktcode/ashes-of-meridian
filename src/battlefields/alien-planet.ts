@@ -68,7 +68,8 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
   const treeModel = (size: number, choice: number) => size < 2.2 ? 'alienSapling' :
     choice < .42 ? 'alienTreePlum' : choice < .78 ? 'alienTreeJade' : 'alienTreeUmbrella';
   for (const model of ['alienTreePlum', 'alienTreeJade', 'alienTreeUmbrella', 'alienSapling', 'alienPod',
-    'alienFern', 'alienSpore', 'alienGlowTuft', 'alienCapGillsPlum', 'alienCapGillsJade', 'alienCapGillsUmbrella'])
+    'alienFern', 'alienSpore', 'alienGlowTuft', 'alienLanternPool',
+    'alienCapGillsPlum', 'alienCapGillsJade', 'alienCapGillsUmbrella'])
     world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent });
 
   // A deep, irregular stand beyond every edge, not two rows on a raised square bank.
@@ -117,9 +118,13 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
     };
   for (const [index, tree] of trunks.entries()) {
     const inland = Math.max(Math.abs(tree.position[0]), Math.abs(tree.position[2])) < extent;
-    if (gillModels[tree.mesh] && (inland || index % 12 === 0))
+    if (gillModels[tree.mesh] && (inland || index % 24 === 0)) {
       prop(gillModels[tree.mesh], tree.position[0], tree.position[2], tree.scale[0], tree.rotation[0],
-        1.65, tree.scale[1]);
+        2.5, tree.scale[1]);
+      if (inland) place('alienLanternPool', tree.position[0], -.1, tree.position[2],
+        tree.scale[0] * 2.15, .1, tree.scale[0] * 2.15, 0xffffff, tree.rotation[0], 0, 0,
+        2, 1, 'static', 'ALIEN_LIGHT');
+    }
     const count = inland ? 4 : 2;
     for (let i = 0; i < count; i++) {
       if (!inland && i === 0 && index % 4 !== 0) continue;
