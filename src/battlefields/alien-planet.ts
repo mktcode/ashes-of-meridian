@@ -117,7 +117,7 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
     };
   for (const [index, tree] of trunks.entries()) {
     const inland = Math.max(Math.abs(tree.position[0]), Math.abs(tree.position[2])) < extent;
-    if (gillModels[tree.mesh] && (inland || index % 4 === 0))
+    if (gillModels[tree.mesh] && (inland || index % 12 === 0))
       prop(gillModels[tree.mesh], tree.position[0], tree.position[2], tree.scale[0], tree.rotation[0],
         1.65, tree.scale[1]);
     const count = inland ? 4 : 2;

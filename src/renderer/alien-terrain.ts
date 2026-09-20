@@ -87,8 +87,8 @@
     skin(out,[[h*.74,r*.5],[h,r],[h*1.25,r*.15]].map(([y,s])=>ring(x,y,z,s,7)),[jade,light,plum]);
   }
   function glowPearl(out: number[],x: number,y: number,z: number,r: number,color: number[]) {
-    const n=5,upper=ring(x,y+r*.58,z,r*.72,n,Math.PI/2),equator=ring(x,y,z,r,n,Math.PI/2),
-      lower=ring(x,y-r*.58,z,r*.72,n,Math.PI/2),top=[x,y+r*1.08,z],bottom=[x,y-r*1.08,z];
+    const n=8,upper=ring(x,y+r*.58,z,r*.72,n,Math.PI/8),equator=ring(x,y,z,r,n,Math.PI/8),
+      lower=ring(x,y-r*.58,z,r*.72,n,Math.PI/8),top=[x,y+r*1.08,z],bottom=[x,y-r*1.08,z];
     for(let i=0;i<n;i++) {
       const k=(i+1)%n;
       geom.tri(out,top,upper[k],upper[i],color);
@@ -98,34 +98,38 @@
     }
   }
   function capGills(out: number[],h: number,r: number,phase: number,variant: number) {
-    const dx=Math.cos(phase)*h*.13,dz=Math.sin(phase)*h*.13;
-    // Fine luminous lamellae radiate below the cap; a few continue as beaded, curved threads.
-    for(let i=0;i<10;i++) {
-      const a=phase+i*Math.PI/5+.08,side=.018*r,inner=.25*r,outer=.82*r,
-        p=[dx+Math.cos(a)*inner,h*.805,dz+Math.sin(a)*inner],
-        q=[dx+Math.cos(a)*outer+Math.sin(a)*side,h*.825,dz+Math.sin(a)*outer-Math.cos(a)*side],
-        s=[dx+Math.cos(a)*outer-Math.sin(a)*side,h*.825,dz+Math.sin(a)*outer+Math.cos(a)*side],
+    const dx=Math.cos(phase)*h*.13,dz=Math.sin(phase)*h*.13,n=20,
+      under=variant%2?[.48,.2,.47]:[.25,.56,.5],
+      underside=[ring(dx,h*.756,dz,r*.15,n,phase),ring(dx,h*.776,dz,r*.46,n,phase),
+        ring(dx,h*.797,dz,r*.79,n,phase)];
+    // A broad emissive underside turns the cap itself into a lantern, not only its ornaments.
+    for(let i=0;i<n;i++) {
+      const k=(i+1)%n;
+      geom.tri(out,[dx,h*.752,dz],underside[0][i],underside[0][k],under);
+      for(let j=0;j<underside.length-1;j++) {
+        geom.tri(out,underside[j][i],underside[j+1][k],underside[j][k],under);
+        geom.tri(out,underside[j][i],underside[j+1][i],underside[j+1][k],under);
+      }
+    }
+    // Brighter radial lamellae remain visible across the softly glowing underside.
+    for(let i=0;i<12;i++) {
+      const a=phase+i*Math.PI/6+.08,side=.014*r,inner=.18*r,outer=.78*r,
+        p=[dx+Math.cos(a)*inner,h*.759,dz+Math.sin(a)*inner],
+        q=[dx+Math.cos(a)*outer+Math.sin(a)*side,h*.799,dz+Math.sin(a)*outer-Math.cos(a)*side],
+        s=[dx+Math.cos(a)*outer-Math.sin(a)*side,h*.799,dz+Math.sin(a)*outer+Math.cos(a)*side],
         color=(i+variant)%3===0?plum:light;
       geom.tri(out,p,q,s,color);geom.tri(out,s,q,p,color.map(v=>v*.78));
     }
-    for(let i=0;i<5;i++) {
-      const a=phase+.22+i*1.257+(i%2)*.11,reach=r*(.5+(i%3)*.14),
-        x=dx+Math.cos(a)*reach,z=dz+Math.sin(a)*reach,
-        drop=h*(.19+(i%3)*.055),side=(i%2 ? 1 : -1)*r*.105,
-        color=(i+variant)%3===0?plum:light,
-        points=[
-          [x,h*.825,z,.012],
-          [x+Math.sin(a)*side*.38,h*.825-drop*.22,z-Math.cos(a)*side*.38,.013],
-          [x+Math.sin(a)*side,h*.825-drop*.48,z-Math.cos(a)*side,.011],
-          [x+Math.sin(a)*side*.55-Math.cos(a)*r*.045,h*.825-drop*.74,z-Math.cos(a)*side*.55-Math.sin(a)*r*.045,.008],
-          [x-Math.cos(a)*r*.095,h*.825-drop,z-Math.sin(a)*r*.095,.004]
-        ];
-      tube(out,points,color,5);
-      for(const [j,size] of [[2,.027],[4,.041]] as const) {
-        const p=points[j];glowPearl(out,p[0],p[1],p[2],size,color);
-      }
-      if(i%2===variant%2) {
-        const p=points[3];glowPearl(out,p[0],p[1],p[2],.021,color===light?plum:light);
+    // Straight, hair-fine threads carry many small dew-like pearls at varied intervals.
+    for(let i=0;i<6;i++) {
+      const a=phase+.2+i*Math.PI/3,reach=r*(.5+(i%3)*.13),x=dx+Math.cos(a)*reach,
+        z=dz+Math.sin(a)*reach,top=h*.798,drop=h*(.17+(i%4)*.04),
+        color=(i+variant)%3===0?plum:light;
+      tube(out,[[x,top,z,.006],[x,top-drop,z,.004]],color,6);
+      const pearls=3+i%2;
+      for(let j=0;j<pearls;j++) {
+        const t=(j+1)/(pearls+1),size=.012+((i+j)%3)*.005;
+        glowPearl(out,x,top-drop*t,z,size,(i+j+variant)%4===0?(color===light?plum:light):color);
       }
     }
   }
