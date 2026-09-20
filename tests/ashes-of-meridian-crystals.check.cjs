@@ -43,7 +43,10 @@ test('deposits have 9–12 growths, three chips, and a rock base; stable across 
     assert.ok(shards.every(c => c.slice(1, 12).every(Number.isFinite)));
     assert.ok(shards.every(c => Math.hypot(c[1] - e.x, c[3] - e.z) < 1.4));
     assert.ok(shards.every(c => c[4] > 0 && c[5] > 0 && c[6] > 0));
-    assert.ok(shards.every(c => c[11] < .3 && c[12] === 1 && c[13] === 'dynamic'));
+    const growths = shards.slice(0, -3), chips = shards.slice(-3);
+    assert.ok(growths.every(c => c[11] >= .62 && c[11] <= .72));
+    assert.ok(chips.every(c => c[11] === .48));
+    assert.ok(shards.every(c => c[12] === 1 && c[13] === 'dynamic'));
     counts.add(shards.length);
     silhouettes.add(JSON.stringify(shards));
   }

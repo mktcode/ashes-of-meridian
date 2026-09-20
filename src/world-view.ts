@@ -174,7 +174,8 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
               a,
               lean * Math.cos(a),
               -lean * Math.sin(a),
-              0.18 + rand() * 0.08,
+              // Alloy stays softly emissive under every map profile; higher qualities add bloom.
+              0.62 + rand() * 0.1,
               alpha,
               MAT.CRYSTAL
             );
@@ -195,7 +196,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
               a,
               0.45,
               0.25,
-              0.12,
+              0.48,
               alpha,
               MAT.CRYSTAL
             );
