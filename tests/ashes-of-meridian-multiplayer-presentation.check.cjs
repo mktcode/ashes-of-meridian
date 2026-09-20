@@ -158,6 +158,55 @@ test('client resume rotates credentials and resends only requests unknown to the
   assert.equal(client.pending.has(1), false); assert.equal(events.length, 0);
 });
 
+test('recent session credentials survive reload briefly and resume without re-entering the code', t => {
+  const original = { localStorage: context.localStorage, WebSocket: context.WebSocket, document: context.document,
+    URL: context.URL, performance: context.performance, setInterval: context.setInterval, clearInterval: context.clearInterval };
+  t.after(() => Object.assign(context, original));
+  const values = new Map();
+  context.localStorage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value),
+    removeItem: key => values.delete(key) };
+  context.URL = URL; context.performance = performance;
+  context.document = { getElementById: () => null, addEventListener: () => {}, hidden: false };
+  context.setInterval = () => 1; context.clearInterval = () => {};
+  const first = new MeridianMultiplayerClient({ game: { networkTeam: null }, toast: () => {} }, async () => true);
+  first.serverUrl = 'wss://example.test/socket'; first.code = 'A1B2C3D4E5'; first.request = 17;
+  first.acceptCredentials({ token: 'T'.repeat(32), graceMs: 45000 });
+  first.rememberCode(); first.persistResume(true);
+  const saved = JSON.parse(values.get('ashes.multiplayer.resume.v1'));
+  assert.equal(saved.code, first.code); assert.equal(saved.request, 17);
+  assert.equal(values.get('ashes.multiplayer.code'), first.code);
+
+  const sockets = [];
+  context.WebSocket = class {
+    static OPEN = 1;
+    constructor(url) { this.url = url; this.readyState = 1; this.bufferedAmount = 0; sockets.push(this); }
+    send(raw) { this.sent = JSON.parse(raw); }
+    close() { this.readyState = 3; }
+  };
+  const restored = new MeridianMultiplayerClient({ game: { networkTeam: null }, toast: () => {} }, async () => true);
+  assert.ok(restored.storedResume());
+  restored.resumeStored(); sockets[0].onopen();
+  assert.equal(sockets[0].url, 'wss://example.test/socket');
+  assert.deepEqual(sockets[0].sent, { type: 'resume', version: 4, code: first.code, token: 'T'.repeat(32) });
+  assert.equal(restored.request, 17);
+  restored.disconnect();
+  assert.equal(values.has('ashes.multiplayer.resume.v1'), false);
+  assert.equal(values.get('ashes.multiplayer.code'), first.code);
+});
+
+test('expired or malformed stored multiplayer credentials are discarded', t => {
+  const original = { localStorage: context.localStorage, URL: context.URL };
+  t.after(() => Object.assign(context, original));
+  context.URL = URL;
+  const values = new Map([['ashes.multiplayer.resume.v1', JSON.stringify({ version: 4, serverUrl: 'wss://example.test',
+    code: 'A1B2C3D4E5', token: 'T'.repeat(32), graceMs: 45000, expiresAt: Date.now() - 1, request: 0 })]]);
+  context.localStorage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value),
+    removeItem: key => values.delete(key) };
+  const client = new MeridianMultiplayerClient({ game: { networkTeam: null } }, async () => true);
+  assert.equal(client.storedResume(), null);
+  assert.equal(values.has('ashes.multiplayer.resume.v1'), false);
+});
+
 test('resume replay is paced and cancelled on disconnect', () => {
   const timers = new Map(); let id = 0;
   context.setTimeout = fn => { timers.set(++id, fn); return id; };

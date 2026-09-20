@@ -1,6 +1,8 @@
 /* Optional WebSocket client; offline play never opens a connection. */
 'use strict';
 class MeridianMultiplayerClient {
+  private static readonly CODE_KEY = 'ashes.multiplayer.code';
+  private static readonly RESUME_KEY = 'ashes.multiplayer.resume.v1';
   socket: WebSocket | null = null;
   code = '';
   serverUrl = 'wss://aoms.markus-kottlaender.de';
@@ -23,6 +25,51 @@ class MeridianMultiplayerClient {
   private pending = new Map<number, BattleAction>();
   private replayTimer: ReturnType<typeof setTimeout> | null = null;
   private replay: number[] = [];
+  private resumeExpiresAt = 0;
+  private persistedAt = 0;
+  private storage(): Storage | null {
+    try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
+  }
+  private rememberedCode() {
+    try {
+      const code = this.storage()?.getItem(MeridianMultiplayerClient.CODE_KEY) ?? '';
+      return /^[A-F0-9]{10}$/.test(code) ? code : '';
+    } catch { return ''; }
+  }
+  private rememberCode() {
+    if (!/^[A-F0-9]{10}$/.test(this.code)) return;
+    try { this.storage()?.setItem(MeridianMultiplayerClient.CODE_KEY, this.code); } catch { /* Storage is optional. */ }
+  }
+  private persistResume(force = false) {
+    if (!this.resumeToken || !this.code) return;
+    const now = Date.now();
+    if (!force && now - this.persistedAt < 5000) return;
+    this.resumeExpiresAt = now + this.resumeGraceMs; this.persistedAt = now;
+    try { this.storage()?.setItem(MeridianMultiplayerClient.RESUME_KEY, JSON.stringify({
+      version: MULTIPLAYER_VERSION, serverUrl: this.serverUrl, code: this.code, token: this.resumeToken,
+      graceMs: this.resumeGraceMs, expiresAt: this.resumeExpiresAt, request: this.request
+    })); } catch { /* Storage is optional. */ }
+  }
+  private clearResume() {
+    this.resumeExpiresAt = 0; this.persistedAt = 0;
+    try { this.storage()?.removeItem(MeridianMultiplayerClient.RESUME_KEY); } catch { /* Storage is optional. */ }
+  }
+  private storedResume() {
+    try {
+      const raw = this.storage()?.getItem(MeridianMultiplayerClient.RESUME_KEY);
+      if (!raw) return null;
+      const value = JSON.parse(raw) as Record<string, unknown>;
+      const url = new URL(String(value.serverUrl));
+      if (value.version !== MULTIPLAYER_VERSION || !['ws:', 'wss:'].includes(url.protocol) || url.username || url.password || url.hash ||
+          (typeof location !== 'undefined' && location.protocol === 'https:' && url.protocol !== 'wss:') ||
+          !/^[A-F0-9]{10}$/.test(String(value.code)) || !/^[A-Za-z0-9_-]{32}$/.test(String(value.token)) ||
+          !Number.isSafeInteger(value.graceMs) || Number(value.graceMs) < 1000 || Number(value.graceMs) > 120000 ||
+          !Number.isSafeInteger(value.expiresAt) || Number(value.expiresAt) <= Date.now() ||
+          !Number.isSafeInteger(value.request) || Number(value.request) < 0) throw Error('Invalid stored session');
+      return { serverUrl: url.href, code: String(value.code), token: String(value.token),
+        graceMs: Number(value.graceMs), expiresAt: Number(value.expiresAt), request: Number(value.request) };
+    } catch { this.clearResume(); return null; }
+  }
   private stopReplay() {
     if (this.replayTimer) clearTimeout(this.replayTimer);
     this.replayTimer = null; this.replay = [];
@@ -38,21 +85,38 @@ class MeridianMultiplayerClient {
   constructor(private ui: MeridianUI, private prepare: (map: BattlefieldId) => Promise<boolean>) {
     if (typeof window !== 'undefined' && typeof window.addEventListener === 'function')
       window.addEventListener('online', () => this.retryReconnectNow());
-    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) this.retryReconnectNow();
-    });
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) this.retryReconnectNow();
+        else this.persistResume(true);
+      });
+      document.addEventListener('pagehide', () => this.persistResume(true));
+    }
   }
   show() {
     this.ui.showHome();
+    const stored = this.storedResume(), code = stored?.code ?? this.rememberedCode();
     $('menu').innerHTML = `<div class="subscreen"><header class="sub-header"><div><div class="eyebrow">TWO-PLAYER PROTOTYPE</div><h1>Multiplayer.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header>
       <div style="max-width:640px;margin:auto"><p>Two human parties, no expedition rewards. Short connection losses reconnect automatically; leaving or exceeding the recovery window ends the session. Menus do not pause the server.</p>
-      <div class="settings-row"><label for="netServer">Server address</label><input id="netServer" type="url" value="${esc(this.serverUrl)}" placeholder="wss://your-server.example"></div>
+      ${stored ? '<div class="launch-row"><button class="primary" data-ui="networkResume">CONTINUE RECENT SESSION</button></div>' : ''}
+      <div class="settings-row"><label for="netServer">Server address</label><input id="netServer" type="url" value="${esc(stored?.serverUrl ?? this.serverUrl)}" placeholder="wss://your-server.example"></div>
       <div class="settings-row"><label for="netFaction">Your faction</label><select id="netFaction">${FACTIONS.map((f,i) => `<option value="${i}">${esc(f.name)}</option>`).join('')}</select></div>
       <div class="settings-row"><label for="netMap">Map (session creator)</label><select id="netMap">${contentKeys(BATTLEFIELDS).map(id => `<option value="${id}">${esc(BATTLEFIELDS[id].name)}</option>`).join('')}</select></div>
       <div class="launch-row"><button id="netCreate" class="primary" data-ui="networkCreate">CREATE SESSION</button></div>
-      <div class="settings-row"><label for="netCode">Session code</label><input id="netCode" maxlength="10" autocomplete="off" spellcheck="false" placeholder="Code from your friend"></div>
+      <div class="settings-row"><label for="netCode">Session code</label><input id="netCode" maxlength="10" autocomplete="off" spellcheck="false" value="${esc(code)}" placeholder="Code from your friend"></div>
       <div class="launch-row"><button id="netJoin" class="primary" data-ui="networkJoin">JOIN SESSION</button><button class="secondary" data-ui="networkCopy">COPY CODE</button></div>
       <p id="netStatus" role="status">Start the separate multiplayer server, then create or join a session.</p></div></div>`;
+  }
+  resumeStored() {
+    if (this.socket || this.reconnectTimer) return;
+    const stored = this.storedResume();
+    if (!stored) { this.status('The saved reconnection window has expired.'); return; }
+    this.serverUrl = stored.serverUrl; this.code = stored.code; this.resumeToken = stored.token;
+    this.resumeGraceMs = stored.graceMs; this.resumeExpiresAt = stored.expiresAt; this.request = stored.request;
+    this.reconnectUntil = performance.now() + Math.max(0, stored.expiresAt - Date.now());
+    this.receivedAt = performance.now(); this.connectionAttempt = 0;
+    this.openSocket({ type: 'resume', version: MULTIPLAYER_VERSION, code: this.code, token: this.resumeToken }, true);
+    this.startWatchdog();
   }
   async copyCode() {
     const input = document.getElementById('netCode') as HTMLInputElement | null;
@@ -70,7 +134,8 @@ class MeridianMultiplayerClient {
       if (location.protocol === 'https:' && url.protocol !== 'wss:') throw Error('HTTPS pages require a wss:// server.');
       const code = value('netCode').trim().toUpperCase();
       if (kind === 'join' && !/^[A-F0-9]{10}$/.test(code)) throw Error('Enter the ten-character session code.');
-      this.serverUrl = url.href; this.code = code; this.resumeToken = '';
+      this.serverUrl = url.href; this.code = code; this.resumeToken = ''; this.clearResume();
+      if (code) this.rememberCode();
       this.ui.audio.unlock();
       this.lastTick = -1; this.request = 0; this.started = false; this.receivedAt = performance.now();
       this.connectionAttempt = 0;
@@ -79,18 +144,22 @@ class MeridianMultiplayerClient {
       (document.getElementById('netCode') as HTMLInputElement).readOnly = true;
       const message = { type: kind, version: MULTIPLAYER_VERSION, map: value('netMap'), faction: Number(value('netFaction')), code };
       this.openSocket(message, false);
-      this.timer = setInterval(() => {
+      this.startWatchdog();
+    } catch (error) {
+      this.setConnectionPhase('ended', error instanceof Error ? error.message : String(error));
+      this.diagnose('connect_rejected', { reason: error instanceof Error ? error.name : 'UnknownError' });
+    }
+  }
+  private startWatchdog() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = setInterval(() => {
         if (!this.socket) return;
         const silenceMs = performance.now() - this.receivedAt;
         if (silenceMs > 35000) {
           this.diagnose('client_timeout', { phase: this.connectionPhase, silenceMs: Math.round(silenceMs) });
           this.socket.close(4002, 'Client timeout');
         }
-      }, 5000);
-    } catch (error) {
-      this.setConnectionPhase('ended', error instanceof Error ? error.message : String(error));
-      this.diagnose('connect_rejected', { reason: error instanceof Error ? error.name : 'UnknownError' });
-    }
+    }, 5000);
   }
   private openSocket(message: Record<string, unknown>, reconnect: boolean) {
     const socket = this.socket = new WebSocket(this.serverUrl);
@@ -107,7 +176,7 @@ class MeridianMultiplayerClient {
     };
     socket.onmessage = event => {
       if (socket !== this.socket) return;
-      this.receivedAt = performance.now();
+      this.receivedAt = performance.now(); this.persistResume();
       try {
         if (typeof event.data !== 'string' || event.data.length > 4 * 1024 * 1024) throw Error('Invalid server message');
         void this.receive(JSON.parse(event.data), socket).catch(error => { if (socket === this.socket) this.end(String(error)); });
@@ -256,7 +325,7 @@ class MeridianMultiplayerClient {
       case 'waiting': {
         this.acceptCredentials(message);
         this.setConnectionPhase('waiting');
-        this.code = String(message.code);
+        this.code = String(message.code); this.rememberCode(); this.persistResume(true);
         (document.getElementById('netCode') as HTMLInputElement).value = this.code;
         this.status(`Session ${this.code} · ${BATTLEFIELDS[message.map as BattlefieldId].name} · waiting for the second player…`);
         break;
@@ -266,11 +335,13 @@ class MeridianMultiplayerClient {
       case 'start': {
         const start = message as unknown as MultiplayerStart;
         this.acceptCredentials(start as unknown as Record<string, unknown>);
-        await this.prepareSession(start, socket);
+        await this.prepareSession(start, socket); this.rememberCode(); this.persistResume(true);
         break;
       }
       case 'resumed': {
         this.acceptCredentials(message);
+        // Store the proposed token before acknowledging it; a reload during map preparation must not retain the invalidated token.
+        this.persistResume(true);
         socket.send(JSON.stringify({ type: 'resume_ack', token: this.resumeToken }));
         if (!Number.isSafeInteger(message.lastRequest) || Number(message.lastRequest) < 0 || Number(message.lastRequest) > this.request ||
             !['waiting', 'loading', 'playing'].includes(String(message.phase))) throw Error('Invalid resume state');
@@ -293,7 +364,7 @@ class MeridianMultiplayerClient {
         this.replayNext(socket);
         this.diagnose('resume_succeeded', { attempt: this.connectionAttempt, phase: message.phase,
           pendingRequests: this.pending.size, lastRequest: message.lastRequest });
-        this.connectionAttempt = 0;
+        this.connectionAttempt = 0; this.rememberCode(); this.persistResume(true);
         break;
       }
       case 'presence': {
@@ -348,11 +419,12 @@ class MeridianMultiplayerClient {
     if (!this.started || this.replay.length || this.replayTimer || this.connectionPhase !== 'playing' || this.socket?.readyState !== WebSocket.OPEN ||
         this.pending.size >= 64 || this.socket.bufferedAmount > 65536) return false;
     const request = ++this.request;
-    this.pending.set(request, action);
+    this.pending.set(request, action); this.persistResume(true);
     this.socket.send(JSON.stringify({ type: 'action', request, action }));
     return true;
   }
   disconnect(cause = 'user_leave') {
+    const hadSession = !!this.resumeToken;
     const socket = this.socket; this.socket = null; this.preparation++; this.stopReplay();
     if (this.timer) clearInterval(this.timer);
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
@@ -365,6 +437,7 @@ class MeridianMultiplayerClient {
     if (this.ui.game.networkTeam !== null) this.ui.game.effects.reset();
     this.ui.game.networkSubmit = undefined; this.ui.game.networkTeam = null;
     this.connectionPhase = 'idle'; this.connectionAttempt = 0; this.resumeToken = ''; this.reconnectUntil = 0;
+    if (hadSession || cause !== 'user_leave') this.clearResume();
   }
   private end(message: string, cause = 'server_end') {
     this.setConnectionPhase('ended');
