@@ -134,7 +134,7 @@
     }
   }
   function lanternPool() {
-    const out: number[]=[],n=32,radii=[0,.28,.58,1],colors=[[.42,1,.82],[.3,.72,.65],[.15,.34,.38],[0,0,0]],
+    const out: number[]=[],n=32,radii=[0,.28,.58,1],colors=[[1,1,1],[.62,.62,.62],[.22,.22,.22],[0,0,0]],
       point=(radius: number,i: number)=>[Math.cos(i*Math.PI*2/n)*radius,.015,Math.sin(i*Math.PI*2/n)*radius],
       vertex=(p: number[],c: number[])=>out.push(...p,0,1,0,...c),
       face=(a: number[],b: number[],c: number[],ca: number[],cb: number[],cc: number[])=>{

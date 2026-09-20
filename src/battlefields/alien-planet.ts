@@ -121,9 +121,13 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
     if (gillModels[tree.mesh] && (inland || index % 24 === 0)) {
       prop(gillModels[tree.mesh], tree.position[0], tree.position[2], tree.scale[0], tree.rotation[0],
         2.5, tree.scale[1]);
-      if (inland) place('alienLanternPool', tree.position[0], -.1, tree.position[2],
-        tree.scale[0] * 2.15, .1, tree.scale[0] * 2.15, 0xffffff, tree.rotation[0], 0, 0,
-        2, 1, 'static', 'ALIEN_LIGHT');
+      if (inland) {
+        const poolColor = tree.mesh === 'alienTreeJade' ? 0x6be8d1 :
+          tree.mesh === 'alienTreePlum' ? 0xd264dd : index % 2 ? 0x6be8d1 : 0xd264dd;
+        place('alienLanternPool', tree.position[0], -.1, tree.position[2],
+          tree.scale[0] * 1.55, .1, tree.scale[0] * 1.55, poolColor, tree.rotation[0], 0, 0,
+          1.25, 1, 'static', 'ALIEN_LIGHT');
+      }
     }
     const count = inland ? 4 : 2;
     for (let i = 0; i < count; i++) {

@@ -126,7 +126,7 @@ void main(){
  if(v_mat==${ALIEN_LIGHT_MATERIAL}.){
   vec3 base=groundBase(v_pos.xz),n=vec3(0.,1.,0.),light=normalize(vec3(-64.,110.,43.));
   vec3 ambient=mix(u_bounce,u_skyLight,1.);float sh=shadow();
-  vec3 lit=base*(ambient+u_sun*max(dot(n,light),0.)*sh)+v_col.rgb*(1.15+v_glow*.55);
+  vec3 lit=base*(ambient+u_sun*max(dot(n,light),0.)*sh)+v_col.rgb*(.32+v_glow*.2);
   lit=finishLighting(lit);
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
   lit*=mix(1.,mix(.16,1.,sight),u_fogOn);
