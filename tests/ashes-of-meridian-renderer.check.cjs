@@ -244,6 +244,8 @@ test('crystal shader preserves facets and adds texture-free internal depth', () 
   assert.match(shader,/float facet=\.58\+\.42\*abs\(dot\(localN/);
   assert.match(shader,/float caustic=pow\(\.5\+\.5\*sin\(dot\(v_modelPos/);
   assert.match(shader,/glowMix=clamp\(v_glow,0\.,1\.\)\*\(1\.-crystal\*\.58\)/);
+  assert.ok(shader.includes('float mask=1.-smoothstep(.06,.5,length(v_modelPos.xz));'));
+  assert.ok(shader.includes('v_col.a*mask*.42*visible'));
   assert.doesNotMatch(shader,/sampler2D u_crystal/,'crystal depth adds no texture or render pass');
 });
 
@@ -331,7 +333,7 @@ test('lighting profiles override shader colors without additional textures or re
   assert.match(FRAG,/float metal=.*v_mat>1.5/);assert.match(FRAG,/strength=\.008\+metal/);
   assert.ok(FRAG.indexOf('lit=finishLighting(lit)')<FRAG.indexOf('float field='),'compress highlights before fog and RGBA8 storage');
   assert.match(FRAG,/over\/\(1\.\+over\/\.35\)/);
-  assert.match(VERT,/if\(a_material==-1\.\)v_modelPos=a_pos/);
+  assert.match(VERT,/if\(a_material==-1\.\|\|a_material==-4\.\)v_modelPos=a_pos/);
   const contact=FRAG.slice(FRAG.indexOf('if(v_mat==-1.)'),FRAG.indexOf('vec3 n=normalize(v_n)'));
   assert.match(contact,/smoothstep\(\.05,1\.,length\(v_modelPos.xz\*2\.\)\)/);
   assert.match(contact,/smoothstep\(\.35,\.8,sight\)/);

@@ -174,8 +174,8 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
               a,
               lean * Math.cos(a),
               -lean * Math.sin(a),
-              // Alloy stays softly emissive under every map profile; higher qualities add bloom.
-              0.62 + rand() * 0.1,
+              // Alloy remains a strong emissive source under every map profile; higher qualities add bloom.
+              3 + rand() * 0.4,
               alpha,
               MAT.CRYSTAL
             );
@@ -196,11 +196,14 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
               a,
               0.45,
               0.25,
-              0.48,
+              2.2,
               alpha,
               MAT.CRYSTAL
             );
           }
+          // A procedural pool conveys the deposit's warm light on the surrounding terrain.
+          R.add('plane', e.x, 0.025, e.z, 8, 1, 8, 0xffb84f, 0, 0, 0, 0, alpha,
+            'effects', ALLOY_LIGHT_MATERIAL);
         } else {
           p('aetherVent', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, alpha, MAT.METAL);
           p('ring', 0, 0.465, 0, 1.69, 1, 1.521, 0x65e5e9, 0, 0, 0, 0.85, alpha, MAT.CRYSTAL);

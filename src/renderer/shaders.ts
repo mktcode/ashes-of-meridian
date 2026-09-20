@@ -2,8 +2,8 @@
     'use strict';
     // Effect-only material; no texture or changes to the embedded material catalog.
     const CONTACT_SHADOW_MATERIAL = -1;
-    // Dedicated procedural surface; frozen variant is used for previews and Performance.
-    const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3;
+    // Dedicated procedural surfaces; the alloy pool makes deposits visibly illuminate the ground.
+    const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3, ALLOY_LIGHT_MATERIAL = -4;
     // Pixel rectangles (left, top, right, bottom) in the 1254² Desert WebP atlases.
     // Keep a transparent margin around each motif; the plant sheet is not a regular grid.
     const GROUND_DECOR_ATLAS = {
@@ -30,7 +30,7 @@ void main(){vec4 p=a_model*vec4(a_pos,1.);v_pos=p.xyz;
 // Scaled mesh-local coordinates keep detail density without world-space sliding.
 vec3 textureScale=max(vec3(length(a_model[0].xyz),length(a_model[1].xyz),length(a_model[2].xyz)),vec3(.00001));
 v_modelPos=a_pos*textureScale;
-if(a_material==${CONTACT_SHADOW_MATERIAL}.)v_modelPos=a_pos;
+if(a_material==${CONTACT_SHADOW_MATERIAL}.||a_material==${ALLOY_LIGHT_MATERIAL}.)v_modelPos=a_pos;
 if(a_material==${PORTAL_MATERIAL}.||a_material==${PORTAL_STILL_MATERIAL}.)v_modelPos=a_pos;
 v_modelN=a_normal/textureScale;
 vec3 normal=a_normal;if(a_material>3.5)normal/=vec3(dot(a_model[0].xyz,a_model[0].xyz),dot(a_model[1].xyz,a_model[1].xyz),dot(a_model[2].xyz,a_model[2].xyz));v_n=normalize(mat3(a_model)*normal);v_col=vec4(a_color.rgb*a_tint,a_color.a);v_glow=a_glow;v_shadow=u_light*p;v_mat=a_material;gl_Position=u_vp*p;}`;
@@ -115,6 +115,12 @@ void main(){
   float mask=1.-smoothstep(.05,1.,length(v_modelPos.xz*2.));
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
   frag=vec4(.025,.035,.045,v_col.a*mask*mix(1.,smoothstep(.35,.8,sight),u_fogOn));return;
+ }
+ if(v_mat==${ALLOY_LIGHT_MATERIAL}.){
+  float mask=1.-smoothstep(.06,.5,length(v_modelPos.xz));
+  float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
+  float visible=mix(1.,smoothstep(.2,.8,sight),u_fogOn);
+  frag=vec4(v_col.rgb*(1.25+mask*.65),v_col.a*mask*.42*visible);return;
  }
  if(v_mat==${PORTAL_MATERIAL}.||v_mat==${PORTAL_STILL_MATERIAL}.){
   // Vertical gates use XY; horizontal flight wells use XZ without changing gate motion.

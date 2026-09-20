@@ -5,7 +5,8 @@ const vm = require('node:vm');
 const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
-const { geom, renderEntity, MAT } = vm.runInContext('({geom, renderEntity, MAT})', context);
+const { geom, renderEntity, MAT, ALLOY_LIGHT_MATERIAL } = vm.runInContext(
+  '({geom, renderEntity, MAT, ALLOY_LIGHT_MATERIAL})', context);
 const deposit = (id = 1, amount = 1800) => Object.freeze({
   id, amount, kind: 'resource', type: 'crystal', x: 12, z: -7,
   hp: 1, size: 1.3, team: -1, faction: 0, rot: 0,
@@ -37,15 +38,18 @@ test('deposits have 9–12 growths, three chips, and a rock base; stable across 
     assert.equal(JSON.stringify(e), before);
     assert.equal(calls[0][0], 'rockShelf');
     assert.equal(calls[0][14], MAT.ROCK);
-    const shards = calls.slice(1);
+    const shards = calls.filter(c => c[0] === 'alloyShard'), light = calls.at(-1);
     assert.ok(shards.length >= 12 && shards.length <= 15);
+    assert.deepEqual(light.slice(0, 8), ['plane', e.x, .025, e.z, 8, 1, 8, 0xffb84f]);
+    assert.equal(light[13], 'effects');
+    assert.equal(light[14], ALLOY_LIGHT_MATERIAL);
     assert.ok(shards.every(c => c[0] === 'alloyShard' && c[14] === MAT.CRYSTAL));
     assert.ok(shards.every(c => c.slice(1, 12).every(Number.isFinite)));
     assert.ok(shards.every(c => Math.hypot(c[1] - e.x, c[3] - e.z) < 1.4));
     assert.ok(shards.every(c => c[4] > 0 && c[5] > 0 && c[6] > 0));
     const growths = shards.slice(0, -3), chips = shards.slice(-3);
-    assert.ok(growths.every(c => c[11] >= .62 && c[11] <= .72));
-    assert.ok(chips.every(c => c[11] === .48));
+    assert.ok(growths.every(c => c[11] >= 3 && c[11] <= 3.4));
+    assert.ok(chips.every(c => c[11] === 2.2));
     assert.ok(shards.every(c => c[12] === 1 && c[13] === 'dynamic'));
     counts.add(shards.length);
     silhouettes.add(JSON.stringify(shards));
@@ -57,14 +61,16 @@ test('deposits have 9–12 growths, three chips, and a rock base; stable across 
 test('mining shrinks crystals without reshuffling their positions or changing the entity', () => {
   const full = render(deposit(17, 1800));
   assert.deepEqual(full, render(deposit(17, 2700)));
+  const fullShards = full.filter(c => c[0] === 'alloyShard');
   for (const amount of [900, 1, 0]) {
-    const reduced = render(deposit(17, amount));
+    const reduced = render(deposit(17, amount)), reducedShards = reduced.filter(c => c[0] === 'alloyShard');
     assert.equal(reduced.length, full.length);
     assert.deepEqual(reduced[0], full[0]);
-    for (let i = 1; i < full.length; i++) {
-      assert.ok(reduced[i][5] < full[i][5]);
+    assert.deepEqual(reduced.at(-1), full.at(-1));
+    for (let i = 0; i < fullShards.length; i++) {
+      assert.ok(reducedShards[i][5] < fullShards[i][5]);
       for (const index of [0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14]) {
-        assert.equal(reduced[i][index], full[i][index]);
+        assert.equal(reducedShards[i][index], fullShards[i][index]);
       }
     }
   }
