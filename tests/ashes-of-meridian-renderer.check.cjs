@@ -244,8 +244,8 @@ test('crystal shader preserves facets and adds texture-free internal depth', () 
   assert.match(shader,/float facet=\.58\+\.42\*abs\(dot\(localN/);
   assert.match(shader,/float caustic=pow\(\.5\+\.5\*sin\(dot\(v_modelPos/);
   assert.match(shader,/glowMix=clamp\(v_glow,0\.,1\.\)\*\(1\.-crystal\*\.58\)/);
-  assert.ok(shader.includes('float mask=1.-smoothstep(.06,.5,length(v_modelPos.xz));'));
-  assert.ok(shader.includes('v_col.a*mask*.42*visible'));
+  assert.ok(shader.includes('float mask=1.-smoothstep(.02,.5,length(v_modelPos.xz));'));
+  assert.ok(shader.includes('v_col.a*mask*.16*visible'));
   assert.doesNotMatch(shader,/sampler2D u_crystal/,'crystal depth adds no texture or render pass');
 });
 

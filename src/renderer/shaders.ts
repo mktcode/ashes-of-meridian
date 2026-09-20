@@ -117,10 +117,10 @@ void main(){
   frag=vec4(.025,.035,.045,v_col.a*mask*mix(1.,smoothstep(.35,.8,sight),u_fogOn));return;
  }
  if(v_mat==${ALLOY_LIGHT_MATERIAL}.){
-  float mask=1.-smoothstep(.06,.5,length(v_modelPos.xz));
+  float mask=1.-smoothstep(.02,.5,length(v_modelPos.xz));
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
   float visible=mix(1.,smoothstep(.2,.8,sight),u_fogOn);
-  frag=vec4(v_col.rgb*(1.25+mask*.65),v_col.a*mask*.42*visible);return;
+  frag=vec4(v_col.rgb*(1.08+mask*.38),v_col.a*mask*.16*visible);return;
  }
  if(v_mat==${PORTAL_MATERIAL}.||v_mat==${PORTAL_STILL_MATERIAL}.){
   // Vertical gates use XY; horizontal flight wells use XZ without changing gate motion.
