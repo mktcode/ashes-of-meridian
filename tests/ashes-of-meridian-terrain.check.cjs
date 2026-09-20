@@ -570,9 +570,9 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
   assert.ok(interior.length>=100&&interior.length<=300);assert.ok(exterior.length>=480&&exterior.length<=650);
   assert.ok(p.length>=2800&&p.length<=3500);
   assert.equal(w.rocks.length,solid.length);
-  const vines=p.filter(p=>p.mesh.startsWith('alienVines')),understory=p.filter(p=>
+  const gills=p.filter(p=>p.mesh.startsWith('alienCapGills')),understory=p.filter(p=>
     ['alienFern','alienSpore','alienGlowTuft'].includes(p.mesh));
-  assert.ok(vines.length>=400&&vines.every(p=>p.glow>1),'mature caps carry blooming luminous vines');
+  assert.ok(gills.length>=300&&gills.every(p=>p.glow>1),'mature caps carry blooming beaded lamellae');
   assert.ok(p.filter(p=>p.mesh==='alienGlowTuft'&&p.glow>=1).length>=200,'fluorescent ground plants remain abundant');
   const planted=interior.filter(tree=>understory.filter(p=>Math.hypot(p.position[0]-tree.position[0],
     p.position[2]-tree.position[2])<tree.scale[0]*1.55).length>=3);
@@ -619,8 +619,8 @@ test('Alien layout remains accessible over 40 additional seeds and repeats its p
 test('Alien mesh factories are deterministic, finite, bounded and remain below explicit budgets',()=>{
   const w=new Battlefield(43015,'alien-planet');
   const budgets={alienForestFloor:8,alienTreePlum:500,alienTreeJade:500,alienTreeUmbrella:500,
-    alienPod:2200,alienFern:100,alienSpore:350,alienGlowTuft:40,alienVinesPlum:100,
-    alienVinesJade:100,alienVinesUmbrella:100,alienSapling:500},triangles={};
+    alienPod:2200,alienFern:100,alienSpore:350,alienGlowTuft:80,alienCapGillsPlum:700,
+    alienCapGillsJade:700,alienCapGillsUmbrella:700,alienSapling:500},triangles={};
   for(const descriptor of w.renderData.geometries) {
     const mesh=TerrainModels.geometry(descriptor);assert.equal(mesh.length%27,0);
     assert.ok(mesh.length/27>0&&mesh.length/27<=budgets[descriptor.model],`${descriptor.model}: ${mesh.length/27}`);
@@ -644,7 +644,7 @@ test('Alien mesh factories are deterministic, finite, bounded and remain below e
     }
   }
   const total=w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+w.gridSize**2*2;
-  assert.ok(total<=610000,`whole planted world budget (excluding units/shadow repetition): ${total}`);
+  assert.ok(total<=810000,`whole planted world budget (excluding units/shadow repetition): ${total}`);
 });
 
 test('Alien exterior and understory randomness cannot relocate solid roots',()=>{

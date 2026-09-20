@@ -68,7 +68,7 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
   const treeModel = (size: number, choice: number) => size < 2.2 ? 'alienSapling' :
     choice < .42 ? 'alienTreePlum' : choice < .78 ? 'alienTreeJade' : 'alienTreeUmbrella';
   for (const model of ['alienTreePlum', 'alienTreeJade', 'alienTreeUmbrella', 'alienSapling', 'alienPod',
-    'alienFern', 'alienSpore', 'alienGlowTuft', 'alienVinesPlum', 'alienVinesJade', 'alienVinesUmbrella'])
+    'alienFern', 'alienSpore', 'alienGlowTuft', 'alienCapGillsPlum', 'alienCapGillsJade', 'alienCapGillsUmbrella'])
     world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent });
 
   // A deep, irregular stand beyond every edge, not two rows on a raised square bank.
@@ -110,15 +110,15 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
     for (let c = 0; c < 3; c++) world.terrainColors[i * 4 + c] *= .65;
 
   // Understory follows the same habitat, with denser fluorescent carpets around inland trunks.
-  // Separate cosmetic stream: changing ferns, vines or phosphor never relocates solid trunks.
+  // Separate cosmetic stream: changing ferns, cap lamellae or phosphor never relocates solid trunks.
   const trunks = world.renderData.placements.filter(p => p.mesh.startsWith('alienTree') || p.mesh === 'alienSapling'),
-    vineModels: Record<string, string> = {
-      alienTreePlum: 'alienVinesPlum', alienTreeJade: 'alienVinesJade', alienTreeUmbrella: 'alienVinesUmbrella'
+    gillModels: Record<string, string> = {
+      alienTreePlum: 'alienCapGillsPlum', alienTreeJade: 'alienCapGillsJade', alienTreeUmbrella: 'alienCapGillsUmbrella'
     };
   for (const [index, tree] of trunks.entries()) {
     const inland = Math.max(Math.abs(tree.position[0]), Math.abs(tree.position[2])) < extent;
-    if (vineModels[tree.mesh] && (inland || index % 2 === 0))
-      prop(vineModels[tree.mesh], tree.position[0], tree.position[2], tree.scale[0], tree.rotation[0],
+    if (gillModels[tree.mesh] && (inland || index % 4 === 0))
+      prop(gillModels[tree.mesh], tree.position[0], tree.position[2], tree.scale[0], tree.rotation[0],
         1.65, tree.scale[1]);
     const count = inland ? 4 : 2;
     for (let i = 0; i < count; i++) {

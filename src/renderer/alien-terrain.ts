@@ -86,24 +86,47 @@
     tube(out,[[x,0,z,r*.22],[x+r*.3,h*.7,z,r*.15],[x,h,z,r*.4]],jade,5);
     skin(out,[[h*.74,r*.5],[h,r],[h*1.25,r*.15]].map(([y,s])=>ring(x,y,z,s,7)),[jade,light,plum]);
   }
-  function glowBud(out: number[],x: number,y: number,z: number,r: number,color: number[]) {
-    const equator=ring(x,y,z,r,4,Math.PI/4),top=[x,y+r*1.5,z],bottom=[x,y-r*1.5,z];
-    for(let i=0;i<4;i++) {
-      const k=(i+1)%4;geom.tri(out,top,equator[k],equator[i],color);
-      geom.tri(out,bottom,equator[i],equator[k],color.map(v=>v*.72));
+  function glowPearl(out: number[],x: number,y: number,z: number,r: number,color: number[]) {
+    const n=5,upper=ring(x,y+r*.58,z,r*.72,n,Math.PI/2),equator=ring(x,y,z,r,n,Math.PI/2),
+      lower=ring(x,y-r*.58,z,r*.72,n,Math.PI/2),top=[x,y+r*1.08,z],bottom=[x,y-r*1.08,z];
+    for(let i=0;i<n;i++) {
+      const k=(i+1)%n;
+      geom.tri(out,top,upper[k],upper[i],color);
+      geom.tri(out,upper[i],upper[k],equator[k],color);geom.tri(out,upper[i],equator[k],equator[i],color);
+      geom.tri(out,equator[i],equator[k],lower[k],color.map(v=>v*.88));geom.tri(out,equator[i],lower[k],lower[i],color.map(v=>v*.88));
+      geom.tri(out,bottom,lower[i],lower[k],color.map(v=>v*.66));
     }
   }
-  function vines(out: number[],h: number,r: number,phase: number,variant: number) {
+  function capGills(out: number[],h: number,r: number,phase: number,variant: number) {
     const dx=Math.cos(phase)*h*.13,dz=Math.sin(phase)*h*.13;
-    // Sparse luminous tendrils hang from beneath the cap instead of wrapping the trunk.
-    for(let i=0;i<4;i++) {
-      const a=phase+.28+i*1.57+(i%2)*.17,reach=r*(.48+(i%3)*.16),
-        x=dx+Math.cos(a)*reach,z=dz+Math.sin(a)*reach,
-        drop=h*(.2+(i%3)*.065),sway=(i%2 ? 1 : -1)*r*.12,
+    // Fine luminous lamellae radiate below the cap; a few continue as beaded, curved threads.
+    for(let i=0;i<10;i++) {
+      const a=phase+i*Math.PI/5+.08,side=.018*r,inner=.25*r,outer=.82*r,
+        p=[dx+Math.cos(a)*inner,h*.805,dz+Math.sin(a)*inner],
+        q=[dx+Math.cos(a)*outer+Math.sin(a)*side,h*.825,dz+Math.sin(a)*outer-Math.cos(a)*side],
+        s=[dx+Math.cos(a)*outer-Math.sin(a)*side,h*.825,dz+Math.sin(a)*outer+Math.cos(a)*side],
         color=(i+variant)%3===0?plum:light;
-      tube(out,[[x,h*.83,z,.014],[x+Math.sin(a)*sway,h*.83-drop*.55,z-Math.cos(a)*sway,.012],
-        [x-Math.cos(a)*r*.08,h*.83-drop,z-Math.sin(a)*r*.08,.007]],color,3);
-      if(i%2===variant%2) glowBud(out,x-Math.cos(a)*r*.08,h*.83-drop,z-Math.sin(a)*r*.08,.035,color);
+      geom.tri(out,p,q,s,color);geom.tri(out,s,q,p,color.map(v=>v*.78));
+    }
+    for(let i=0;i<5;i++) {
+      const a=phase+.22+i*1.257+(i%2)*.11,reach=r*(.5+(i%3)*.14),
+        x=dx+Math.cos(a)*reach,z=dz+Math.sin(a)*reach,
+        drop=h*(.19+(i%3)*.055),side=(i%2 ? 1 : -1)*r*.105,
+        color=(i+variant)%3===0?plum:light,
+        points=[
+          [x,h*.825,z,.012],
+          [x+Math.sin(a)*side*.38,h*.825-drop*.22,z-Math.cos(a)*side*.38,.013],
+          [x+Math.sin(a)*side,h*.825-drop*.48,z-Math.cos(a)*side,.011],
+          [x+Math.sin(a)*side*.55-Math.cos(a)*r*.045,h*.825-drop*.74,z-Math.cos(a)*side*.55-Math.sin(a)*r*.045,.008],
+          [x-Math.cos(a)*r*.095,h*.825-drop,z-Math.sin(a)*r*.095,.004]
+        ];
+      tube(out,points,color,5);
+      for(const [j,size] of [[2,.027],[4,.041]] as const) {
+        const p=points[j];glowPearl(out,p[0],p[1],p[2],size,color);
+      }
+      if(i%2===variant%2) {
+        const p=points[3];glowPearl(out,p[0],p[1],p[2],.021,color===light?plum:light);
+      }
     }
   }
   function glowTuft(out: number[]) {
@@ -115,8 +138,8 @@
         right=[base[0]-Math.sin(a)*w,base[1],base[2]+Math.cos(a)*w],c=i%2?light:plum;
       geom.tri(out,left,tip,right,c);geom.tri(out,right,tip,left,c.map(v=>v*.68));
     }
-    glowBud(out,0,.22,0,.075,light);
-    glowBud(out,.18,.14,-.08,.045,plum);
+    glowPearl(out,0,.22,0,.075,light);
+    glowPearl(out,.18,.14,-.08,.045,plum);
   }
   function bed(out: number[],m: Pick<WorldTerrainFeature, "x" | "z" | "outline">,height=.55) {
     const n=m.outline.length, rows=[];
@@ -140,9 +163,9 @@
     const out: number[]=[];spore(out,0,0,.85,.25);spore(out,.4,.25,.5,.19);spore(out,-.3,.15,.65,.22);return out;
   };
   TerrainModels.alienGlowTuft=()=>{const out: number[]=[];glowTuft(out);return out;};
-  TerrainModels.alienVinesPlum=()=>{const out: number[]=[];vines(out,3.4,1,.8,1);return out;};
-  TerrainModels.alienVinesJade=()=>{const out: number[]=[];vines(out,3.7,.95,2.1,0);return out;};
-  TerrainModels.alienVinesUmbrella=()=>{const out: number[]=[];vines(out,2.6,1.24,4.3,2);return out;};
+  TerrainModels.alienCapGillsPlum=()=>{const out: number[]=[];capGills(out,3.4,1,.8,1);return out;};
+  TerrainModels.alienCapGillsJade=()=>{const out: number[]=[];capGills(out,3.7,.95,2.1,0);return out;};
+  TerrainModels.alienCapGillsUmbrella=()=>{const out: number[]=[];capGills(out,2.6,1.24,4.3,2);return out;};
   TerrainModels.alienSapling=()=>{const out: number[]=[];mushroom(out,0,0,2.4,.8,.4,0);return out;};
   TerrainModels.alienPod=(seed: number)=>{
     const out: number[]=[],rand=seeded(seed ^ 0x504f4453);
