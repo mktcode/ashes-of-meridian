@@ -133,7 +133,7 @@ void main(){
   float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);
   lit=mix(lit,u_haze,mist);
   float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;
-  frag=vec4(lit,1.);return;
+  frag=vec4(lit,v_col.a);return;
  }
  if(v_mat==${PORTAL_MATERIAL}.||v_mat==${PORTAL_STILL_MATERIAL}.){
   // Vertical gates use XY; horizontal flight wells use XZ without changing gate motion.

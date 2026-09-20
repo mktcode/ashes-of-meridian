@@ -126,7 +126,7 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
           tree.mesh === 'alienTreePlum' ? 0xd264dd : index % 2 ? 0x6be8d1 : 0xd264dd;
         place('alienLanternPool', tree.position[0], -.1, tree.position[2],
           tree.scale[0] * 1.55, .1, tree.scale[0] * 1.55, poolColor, tree.rotation[0], 0, 0,
-          1.25, 1, 'static', 'ALIEN_LIGHT');
+          1.25, .72, 'static', 'ALIEN_LIGHT');
       }
     }
     const count = inland ? 4 : 2;

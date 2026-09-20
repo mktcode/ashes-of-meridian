@@ -574,7 +574,7 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
     ['alienFern','alienSpore','alienGlowTuft'].includes(p.mesh));
   assert.ok(gills.length>=200&&gills.every(p=>p.glow>=2.5),'mature caps carry strongly blooming beaded lamellae');
   const pools=p.filter(p=>p.mesh==='alienLanternPool'&&p.material==='ALIEN_LIGHT');
-  assert.ok(pools.length>=175,'inland lantern caps project light onto the ground');
+  assert.ok(pools.length>=175&&pools.every(p=>p.alpha===.72),'inland lantern caps project translucent light onto the ground');
   assert.deepEqual(new Set(pools.map(p=>p.color)),new Set([0x6be8d1,0xd264dd]),'cyan and plum lantern pools coexist');
   assert.ok(p.filter(p=>p.mesh==='alienGlowTuft'&&p.glow>=1).length>=200,'fluorescent ground plants remain abundant');
   const planted=interior.filter(tree=>understory.filter(p=>Math.hypot(p.position[0]-tree.position[0],
