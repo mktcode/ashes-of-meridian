@@ -1,6 +1,19 @@
 /* Faction is the doctrine; depth only strengthens its execution. No encounter roll. */
 'use strict';
-const AI_RULES = Object.freeze({ think: 1, buildRetry: 3, contactLife: 90, buildingMemory: 300 });
+// Designer knobs, in simulation seconds. These are not resource/combat bonuses.
+const AI_TUNING = {
+  depthPerTier: 4, maxTier: 4,
+  decisionSeconds: [1.5, 1], reactionSeconds: [1, .6],
+  attackWaitReduction: 5, forceRatio: [1.15, .99],
+  scoutSeconds: [15, 7], recoverySeconds: [30, 18],
+  stalledSeconds: 45, targetCommitSeconds: 12, targetSwitchMargin: 40,
+  finishWaitSeconds: 8, finishBonus: 100,
+  targetRadius: 25, failedGoalSeconds: 90,
+  retreatLossRatio: .45, retreatPowerRatio: .5
+} as const;
+// Hard floors apply even if tuning endpoints are made more aggressive.
+const AI_RULES = Object.freeze({ minReaction: .6, minDecision: 1,
+  buildRetry: 3, contactLife: 90, buildingMemory: 300 });
 const AI_DOCTRINES = [
   { workers: 6, reserve: 3, attackWait: 75, attackers: 4, airShare: .12, tankShare: .35, medicRatio: 4,
     repairHull: .75, repairMissing: 200, orbitalValue: 450, scanAfter: 60,
@@ -16,10 +29,15 @@ const AI_DOCTRINES = [
     targets: { worker: 65, refinery: 125, factory: 120, hangar: 120, barracks: 100, turret: 25, artillery: 140 } }
 ] as const;
 function aiRulesFor(faction: FactionId, depth: number) {
-  const doctrine = AI_DOCTRINES[faction], stage = clamp(Math.floor((Number(depth) || 0) / 4), 0, 4);
+  const doctrine = AI_DOCTRINES[faction], tuning = AI_TUNING,
+    stage = clamp(Math.floor((Number(depth) || 0) / tuning.depthPerTier), 0, tuning.maxTier),
+    blend = (ends: readonly [number, number]) => ends[0] + (ends[1] - ends[0]) * stage / tuning.maxTier,
+    reactionDelay = Math.max(AI_RULES.minReaction, blend(tuning.reactionSeconds));
   return { ...doctrine, stage, workers: doctrine.workers + stage,
-    attackWait: doctrine.attackWait - stage * 5, scoutInterval: 15 - stage * 2,
-    forceRatio: 1.15 - stage * .04, recoveryTime: 30 - stage * 3,
+    reactionDelay, think: Math.max(AI_RULES.minDecision, reactionDelay, blend(tuning.decisionSeconds)),
+    attackWait: Math.max(30, doctrine.attackWait - stage * tuning.attackWaitReduction),
+    scoutInterval: blend(tuning.scoutSeconds),
+    forceRatio: blend(tuning.forceRatio), recoveryTime: blend(tuning.recoverySeconds),
     build: [...doctrine.build, ...(stage >= 2 ? [doctrine.extra] : []),
       ...(stage >= 4 ? [doctrine.extra] : [])] as BuildingType[] };
 }

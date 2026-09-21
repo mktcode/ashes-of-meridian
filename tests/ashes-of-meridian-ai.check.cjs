@@ -188,7 +188,8 @@ test('strategy prioritizes remembered economy without following hidden changes a
   g.aiStrategy(1,own(g,1),[],h);
   assert.equal(g.aiFor(1).mode,'attack');assert.deepEqual(json(g.aiFor(1).goal),{x:0,z:0});
   // No spawn is required for the observer's copied visible threat in this controller-only test.
-  g.aiStrategy(1,own(g,1),[{id:999,kind:'unit',type:'tank',team:0,x:h.x-12,z:h.z,hp:520,maxHp:520,progress:1,size:1.3,seenAt:100}],h);
+  const threats=[999,1000].map(id=>({id,kind:'unit',type:'tank',team:0,x:h.x-12,z:h.z,hp:520,maxHp:520,progress:1,size:1.3,seenAt:100}));
+  g.aiStrategy(1,own(g,1),threats,h);
   assert.equal(g.aiFor(1).mode,'defend');assert.equal(g.aiFor(1).squad.length,0);
 });
 

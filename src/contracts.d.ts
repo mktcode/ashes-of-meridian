@@ -417,9 +417,15 @@ interface RunTriggers extends Record<string, number | boolean | undefined> {
 interface AIContact extends Position {
   id: number; team: TeamId; kind: EntityKind; type: EntityType;
   hp: number; maxHp: number; size: number; progress: number; seenAt: number;
+  areaVisible?: boolean;
 }
 interface AIState {
   nextThink: number;
+  observation?: { readyAt: number; own: Entity[]; visible: AIContact[] };
+  attackProgress?: { targetId: number; distance: number; hp: number; at: number; startedAt: number };
+  combatProgressAt?: number;
+  scoutSite?: number;
+  scoutGoal?: Position;
   mode: 'bootstrap' | 'defend' | 'assemble' | 'attack' | 'recover';
   contacts: Record<number, AIContact>;
   squad: number[];

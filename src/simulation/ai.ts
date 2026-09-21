@@ -23,6 +23,10 @@ const aiMethods = {
       // Copy only observable properties. Never retain an Entity reference or its queue/order.
       const contact: AIContact = { id:e.id, team:e.team, kind:e.kind, type:e.type,
         x:e.x, z:e.z, hp:e.hp, maxHp:e.maxHp, size:e.size, progress:e.progress, seenAt:s.time };
+      if (e.type === 'hq') contact.areaVisible = this.aiAreaVisible(team, e, AI_TUNING.targetRadius);
+      if (ai.mode==='attack' && ai.goal && this.enemy({team},contact) &&
+          distance(contact,ai.goal)<AI_TUNING.targetRadius && contact.hp<(ai.contacts[e.id]?.hp ?? contact.hp))
+        ai.combatProgressAt=s.time;
       ai.contacts[e.id] = contact;
       visible.push(contact);
     }
@@ -167,10 +171,23 @@ const aiMethods = {
   aiTick(this: MeridianGame, team: PlayerTeam) {
     const s=this.s!, ai=this.aiFor(team);
     if (!ai || this.party(team).eliminated || s.result || s.stopped || s.time<ai.nextThink) return;
-    ai.nextThink=s.time+AI_RULES.think;
-    const own=this.alive(e=>e.team===team), home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
+    const rules=aiRulesFor(this.factionFor(team),s.depth);
+    if (!ai.observation) {
+      // Freeze decision inputs, including own damage/positions. A think interval alone
+      // permits zero-latency reactions to enemies appearing just before that tick.
+      const own=this.alive(e=>e.team===team).map(e=>({...e,
+        order:{...e.order},queue:e.queue.map(q=>({...q}))}));
+      ai.observation={readyAt:s.time+rules.reactionDelay,own,visible:this.aiObserve(team)};
+      ai.nextThink=ai.observation.readyAt;
+      return;
+    }
+    const {own,visible}=ai.observation;
+    ai.observation=undefined;
+    ai.nextThink=s.time+Math.max(0,rules.think-rules.reactionDelay);
+    const home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
     if (!home) return;
-    const visible=this.aiObserve(team),reserve=this.aiEconomy(team,own,home);
+    // Actions still validate live ownership, visibility, technology and resources.
+    const reserve=this.aiEconomy(team,own,home);
     this.aiProduction(team,own,visible,reserve);
     this.aiStrategy(team,own,visible,home);
     this.aiAbilities(team,own,visible,home);
