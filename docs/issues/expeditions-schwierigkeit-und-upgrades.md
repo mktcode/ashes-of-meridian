@@ -6,6 +6,12 @@ Die implementierten Doktrinen, Tiefenstufen, Vorteile und Flottenupgrades sind i
 
 Die Expedition nutzt jetzt [Free-for-all](../gameplay.md#gefecht-und-fortschritt) mit persistenten Vorteilen je Gegner-Slot. Die frühen Eintrittsschwellen dienen dem aktuellen menschlichen Testauftrag; Abnahme einschließlich KI-gegen-KI-Druck und Mobilperformance steht in der [Run-Validierung](playtest-validation.md#ffa-expeditionen-gezielte-abnahme). Die folgenden früheren Ein-Gegner-Beobachtungen sind keine Balancebestätigung für FFA; gegenseitige KI-Angriffe können den Spielerdruck auch reduzieren.
 
+## FFA: Rückzug vor dem letzten HQ
+
+Menschlicher FFA-Test: Der Spieler ließ sich absichtlich besiegen. Nach Zerstörung aller übrigen Strukturen zogen die Angreifer ab; erst deutlich später zerstörte der letzte KI-Gegner das verbliebene HQ. Stage, Karte, Fraktionen, Seed und strategischer KI-Zustand fehlen; keine reproduzierte Ursachenbestätigung.
+
+Statischer Prüfkontext `src/simulation/ai.ts`, `aiStrategy`: Nach 150 Sekunden Angriffsmodus erfolgt unabhängig vom erzielten Fortschritt ein Rückzug; das Zielgebiet erhält für 90 Sekunden einen Prioritätsabzug. Für Folgeangriffe gelten weiter Mindeststärke, Mindesttruppenzahl, Reserven und Wartezeit, auch gegen ein unbewaffnetes HQ. HQs erhalten keinen besonderen Abschlussvorrang. Im FFA konkurrieren andere Gegnerziele und die eigene Basisverteidigung zusätzlich um dieselbe Kampfgruppe. Diese bestehenden Regeln sind plausible Erklärungen, kein nachgewiesener konkreter Auslöser. Vor Änderung Rückzug mit/ohne tatsächliche Bedrohung, Fortschritt am Ziel und abschließende HQ-Angriffe unterscheiden; keine pauschale Abschaffung der Rückzugssicherung oder Kenntnis verborgener HQs. Keine Tests oder Balancingänderungen für diese Diagnose ausgeführt.
+
 ## Menschliche Neubewertung der Rush- und Startökonomie
 
 Vergleichsfall vor der beauftragten Balanceanpassung: Nach Einführung zufälliger Eckstarts erreicht der Spieler Stage 21 ohne größere Probleme, besonders durch Startressourcen und Scans/Reinforcements/Orbital Strike. Gemeldete Stapel: Supply crate ×8, Aether allocation ×4, Pioneer squad ×3, Commander mandate ×1, Survey drones ×1, Field workshop ×1, Command capacitor ×2. Fraktion und permanente Upgrade-Stufen fehlen noch.
