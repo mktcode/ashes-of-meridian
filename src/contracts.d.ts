@@ -452,6 +452,7 @@ interface PartyState {
   benefits: Record<string, number>;
   controller: PartyController;
   fieldWorkshopUsed?: boolean;
+  eliminated?: boolean;
 }
 
 interface RunState {

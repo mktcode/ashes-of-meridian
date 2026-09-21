@@ -39,7 +39,7 @@
         e.deathAt = this.s!.time;
         e.target = null;
         if (e.kind === 'building') this.navDirty = true;
-        if (e.team === 1) this.s!.stats.kills++;
+        if (source?.team === 0 && this.enemy(source, e)) this.s!.stats.kills++;
         if (source && source.id && this.enemy(source, e)) {
           source.kills!++;
           if (source.kills === 5) {
@@ -65,8 +65,7 @@
           );
           this.emit('explosion', { x: e.x, z: e.z, big: e.kind === 'building' || e.type === 'tank' });
         }
-        if (e.type === 'hq' && this.enemy({ team: this.localTeam }, e) &&
-            (this.s!.rules.kind === 'single-player' || this.visible(e)))
+        if (e.type === 'hq' && this.enemy({ team: this.localTeam }, e) && this.visible(e))
           this.emit('alert', { text: 'Enemy command center destroyed.', x: e.x, z: e.z });
       },
       rangedStats(this: MeridianGame, e: UnitEntity | BuildingEntity): RangedStats {

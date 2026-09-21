@@ -339,8 +339,8 @@
       },
       enemy(this: MeridianGame, a: Pick<EntityBase, 'team'>, b: Pick<EntityBase, 'team'>) {
         const rules = this.s!.rules;
-        if (rules.kind === 'single-player') return a.team === 1 ? b.team === 0 : b.team === 1;
         if (a.team === -1 || b.team === -1 || a.team === b.team) return false;
+        if (rules.kind === 'single-player') return true;
         return rules.hostilities[a.team]?.[b.team] === true;
       },
       visible(this: MeridianGame, e: Position & { team?: TeamId }) { return this.canSee(this.localTeam, e); },

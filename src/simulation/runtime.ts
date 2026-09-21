@@ -162,7 +162,7 @@
           this.world!.reveal(s.entities, s.scans);
           this.fogClock = 0;
         }
-        if (!s.result) for (const party of s.parties) if (party.controller.kind === 'ai') this.aiTick(party.id);
+        if (!s.result) for (const party of s.parties) if (!party.eliminated && party.controller.kind === 'ai') this.aiTick(party.id);
         if (s.entities.some(e => e.hp <= 0 && s.time - e.deathAt! > 9)) {
           s.entities = s.entities.filter(e => e.hp > 0 || s.time - e.deathAt! <= 9);
           this.ids = new Map(s.entities.map(e => [e.id, e]));
@@ -173,11 +173,30 @@
         }
       },
       checkBattleResult(this: MeridianGame) {
-        if (this.s!.result || this.s!.rules.kind === 'scenario') return;
-        if (!this.alive(e => e.team === 0 && e.type === 'hq').length)
+        const s = this.s!;
+        if (s.result || s.rules.kind === 'scenario') return;
+        // Resolve all HQ losses together; simultaneous player elimination is always a loss.
+        const eliminated = s.parties.filter(p => !p.eliminated &&
+          !this.alive(e => e.team === p.id && e.type === 'hq').length);
+        for (const party of eliminated) {
+          party.eliminated = true;
+          // Withdrawal, not combat kills: no score, promotions, explosions or RNG draws.
+          for (const e of this.alive(e => e.team === party.id)) {
+            e.hp = 0;
+            e.deathAt = s.time;
+            e.target = null;
+            e.queue = [];
+            if (e.kind === 'building') this.navDirty = true;
+          }
+          s.fields = s.fields.filter(f => f.team !== party.id);
+          s.scans = s.scans.filter(scan => scan.team !== party.id);
+          if (party.id !== 0) this.emit('alert', { text: `Opponent ${party.id} eliminated.` });
+        }
+        if (eliminated.length) this.world!.reveal(s.entities, s.scans);
+        if (this.party(0).eliminated)
           this.finish(false, 'Your last command center has fallen.');
-        else if (!this.alive(e => e.team === 1 && e.type === 'hq').length)
-          this.finish(true, 'The enemy base has been destroyed.');
+        else if (s.parties.every(p => p.id === 0 || p.eliminated))
+          this.finish(true, 'You are the last remaining party.');
       },
       abilityRequirement(this: MeridianGame, kind: AbilityType, team: PlayerTeam = 0): string | null {
         if (kind === 'orbital' && !this.alive(e => e.team === team && e.kind === 'building' &&
@@ -186,7 +205,7 @@
         return null;
       },
       ability(this: MeridianGame, kind: AbilityType, p: Position, team: PlayerTeam = 0) {
-        if (this.s!.stopped) return false;
+        if (this.s!.stopped || this.party(team).eliminated) return false;
         let s = this.s!, account = this.account(team), faction = this.factionFor(team),
           d = ABILITIES[kind];
         if (!d) return false;

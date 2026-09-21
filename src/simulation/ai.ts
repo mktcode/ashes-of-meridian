@@ -260,7 +260,7 @@ const aiMethods = {
   },
   aiTick(this: MeridianGame, team: PlayerTeam) {
     const s=this.s!, ai=this.aiFor(team);
-    if (!ai || s.result || s.stopped || s.time<ai.nextThink) return;
+    if (!ai || this.party(team).eliminated || s.result || s.stopped || s.time<ai.nextThink) return;
     ai.nextThink=s.time+AI_RULES.think;
     const own=this.alive(e=>e.team===team), home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
     if (!home) return;

@@ -123,7 +123,8 @@ const commandMethods = {
   },
   executeAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): boolean {
     const s = this.s;
-    if (this.networkTeam != null || !s || s.result || s.stopped || !Number.isInteger(team) || !s.parties.some(p => p.id === team)) return false;
+    if (this.networkTeam != null || !s || s.result || s.stopped || !Number.isInteger(team) ||
+        !s.parties.some(p => p.id === team && !p.eliminated)) return false;
     const action = parseBattleAction(input, s.entities.length);
     if (!action) return false;
     const inBounds = (p: Position) => Math.abs(p.x) <= this.world!.extent && Math.abs(p.z) <= this.world!.extent;
