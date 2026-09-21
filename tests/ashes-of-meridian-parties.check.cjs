@@ -24,7 +24,7 @@ test('party snapshots retain single-player defaults and isolate normalized benef
   assert.notStrictEqual(defaults[0].account.abilities, defaults[1].account.abilities);
   const perks = { supplyCrate: 2, commandCapacitor: 99, fieldWorkshop: 1, unknown: 8 },
     profile = { upgrades: { startingAlloy: 99, logisticsFrame: 2.9, repairLogistics: -1, unknown: 5 } },
-    options = { faction: 1, enemy: 1, benefits: perks, enemyBenefits: perks },
+    options = { faction: 1, enemies: [1], benefits: perks, enemyBenefits: [perks] },
     parties = singlePlayerParties(profile, options);
   assert.deepEqual(json(parties[0].meta), { startingAlloy: 5, logisticsFrame: 2, repairLogistics: 0 });
   assert.deepEqual(json(parties[1].meta), {});
@@ -42,7 +42,7 @@ test('party snapshots retain single-player defaults and isolate normalized benef
 });
 
 test('party accessors share one state, while accounts and upgrade effects remain separate', () => {
-  const game = state({ upgrades: { logisticsFrame: 2 } }, { faction: 1, enemy: 2 });
+  const game = state({ upgrades: { logisticsFrame: 2 } }, { faction: 1, enemies: [2] });
   assert.strictEqual(game.account(0), game.party(0).account);
   assert.strictEqual(game.benefitsFor(1), game.party(1).benefits);
   assert.deepEqual([game.factionFor(0), game.factionFor(1)], [1, 2]);

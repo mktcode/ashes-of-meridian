@@ -353,6 +353,12 @@ const EXPEDITION_BENEFITS = {
 
 type ExpeditionBenefit = keyof typeof EXPEDITION_BENEFITS;
 
+// Early entry thresholds requested for playtesting; stage = completed depth + 1.
+const EXPEDITION_ENEMY_ENTRY_STAGES = [1, 2, 3] as const;
+function expeditionEnemyCount(depth: number): number {
+  return EXPEDITION_ENEMY_ENTRY_STAGES.filter(stage => depth + 1 >= stage).length;
+}
+
 function normalizedBenefits(input: Record<string, number> = {}): Record<string, number> {
   return Object.fromEntries(contentKeys(EXPEDITION_BENEFITS).map(key =>
     [key, clamp(Math.floor(Number(input?.[key]) || 0), 0, expeditionBenefit(key)!.max ?? 999999)])
@@ -375,12 +381,23 @@ const ENEMY_BENEFIT_PREFERENCES: Record<FactionId, Partial<Record<ExpeditionBene
   1: { pioneerSquad: 4, supplyCrate: 3, fieldWorkshop: 2 },
   2: { commandCapacitor: 4, aetherAllocation: 3, commanderMandate: 2 }
 };
-function chooseEnemyBenefit(faction: FactionId, benefits: Record<string, number>, seed: number, depth: number): ExpeditionBenefit | undefined {
-  // Only checkpoint advancement draws here; never rendering or the simulation RNG.
-  const random = seeded(seed ^ 0x454e454d ^ depth), offers = expeditionBenefitOffers(benefits, random),
+function chooseEnemyBenefit(faction: FactionId, benefits: Record<string, number>, seed: number, depth: number, slot = 0): ExpeditionBenefit | undefined {
+  // Independent slot streams; slot zero retains its original draw. Never simulation RNG.
+  const random = seeded(seed ^ 0x454e454d ^ depth ^ Math.imul(slot, 0x9e3779b9)), offers = expeditionBenefitOffers(benefits, random),
     weights = offers.map(key => ENEMY_BENEFIT_PREFERENCES[faction][key] ?? 1);
   let draw = random() * weights.reduce((sum, weight) => sum + weight, 0);
   return offers.find((_, i) => (draw -= weights[i]) < 0);
+}
+
+function advanceEnemyBenefits(previous: Record<string, number>[], encounter: ExpeditionEncounter, depth: number): Record<string, number>[] {
+  return encounter.enemies.map((faction, slot) => {
+    // New entrants have no catch-up bonus and earn their first benefit after this battle.
+    if (!previous[slot]) return {};
+    const benefits = normalizedBenefits(previous[slot]),
+      key = chooseEnemyBenefit(faction, benefits, encounter.seed, depth, slot);
+    if (key) benefits[key] = (benefits[key] || 0) + 1;
+    return benefits;
+  });
 }
 
 const META = {

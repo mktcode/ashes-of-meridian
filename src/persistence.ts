@@ -4,9 +4,9 @@
 // Dependencies are supplied by the app. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
 function createMeridianPersistence(
-  { getStorage, clamp, upgrades, benefits, battlefields, warn }: PersistenceDependencies
+  { getStorage, clamp, upgrades, benefits, battlefields, enemyCount, warn }: PersistenceDependencies
 ): MeridianPersistence {
-    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v2';
+    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v3';
     const memoryStore: Record<string, string> = {};
     const Store = {
       available: true,
@@ -82,28 +82,34 @@ function createMeridianPersistence(
     function loadExpedition(): MeridianExpedition | null {
       try {
         const p = JSON.parse(Store.get(EXPEDITION_KEY) || 'null');
-        if (!p || p.version !== 2 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
-          !p.encounter || !Number.isInteger(p.encounter.enemy) || p.encounter.enemy < 0 || p.encounter.enemy > 2 ||
-          !Object.hasOwn(battlefields, p.encounter.map)) return null;
+        if (!p || p.version !== 3 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
+          !p.encounter || !Object.hasOwn(battlefields, p.encounter.map)) return null;
+        const depth = clamp(Math.floor(Number(p.depth) || 0), 0, 999999), count = enemyCount(depth);
+        if (!Array.isArray(p.encounter.enemies) || p.encounter.enemies.length !== count ||
+          p.encounter.enemies.some((f: unknown) => !Number.isInteger(f) || Number(f) < 0 || Number(f) > 2) ||
+          !Array.isArray(p.enemyBenefits) || p.enemyBenefits.length !== count ||
+          p.enemyBenefits.some((b: unknown) => !b || typeof b !== 'object' || Array.isArray(b))) return null;
+        const normalize = (input: Record<string, number> | undefined) => {
+          const result: Record<string, number> = {};
+          for (const key of Object.keys(benefits)) {
+            const value = clamp(Math.floor(Number(input?.[key]) || 0), 0, benefits[key].max ?? 999999);
+            if (value) result[key] = value;
+          }
+          return result;
+        };
         const normalized: MeridianExpedition = {
-          version: 2,
+          version: 3,
           faction: p.faction,
-          depth: clamp(Math.floor(Number(p.depth) || 0), 0, 999999),
-          benefits: {},
-          enemyBenefits: {},
+          depth,
+          benefits: normalize(p.benefits),
+          enemyBenefits: p.enemyBenefits.map(normalize),
           encounter: {
-            enemy: p.encounter.enemy,
+            enemies: [...p.encounter.enemies],
             map: p.encounter.map,
             seed: clamp(Math.floor(Number(p.encounter.seed) || 1), 1, 99999999)
           },
           offers: []
         };
-        for (const side of ['benefits', 'enemyBenefits'] as const)
-          for (const key of Object.keys(benefits)) {
-            const max = benefits[key].max ?? 999999;
-            const count = clamp(Math.floor(Number(p[side]?.[key]) || 0), 0, max);
-            if (count) normalized[side][key] = count;
-          }
         if (Array.isArray(p.offers)) normalized.offers = [...new Set<unknown>(p.offers)]
           .filter((key): key is string => typeof key === 'string' && Object.hasOwn(benefits, key) &&
             (benefits[key].max === undefined || (normalized.benefits[key] || 0) < benefits[key].max))

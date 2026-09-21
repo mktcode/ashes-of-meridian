@@ -24,11 +24,7 @@
       },
       encounterBriefing(this: MeridianUI) {
         if (!this.expedition?.encounter) return '';
-        const { enemy, map } = this.expedition.encounter, faction = FACTIONS[enemy],
-          stage = aiRulesFor(enemy, this.expedition.depth).stage + 1,
-          perks = Object.entries(this.expedition.enemyBenefits).filter(([, count]) => count > 0)
-            .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · ');
-        return `<p class="battle-note">NEXT · ${esc(faction.short)} · ${esc(BATTLEFIELDS[map].name)} · PRESSURE ${stage}/5<br><b>${esc(faction.doctrine.name)}</b> — ${esc(faction.doctrine.desc)}<br>ENEMY BENEFITS · ${perks || 'NONE'}</p>`;
+        return `<div class="battle-note">NEXT · STAGE ${this.expedition.depth + 1} · ${esc(BATTLEFIELDS[this.expedition.encounter.map].name)}${renderExpeditionOpponents(this.expedition, aiRulesFor(this.expedition.encounter.enemies[0], this.expedition.depth).stage + 1)}</div>`;
       },
       showExpeditionBenefits(this: MeridianUI) {
         if (!this.expedition) return;
@@ -65,10 +61,10 @@
         return faction !== undefined && Number.isInteger(faction) && faction >= 0 && faction < FACTIONS.length &&
           faction <= this.unlockedFactionForDepth(this.profile.expeditionDepth);
       },
-      createEncounter(this: MeridianUI): ExpeditionEncounter {
+      createEncounter(this: MeridianUI, depth = 0): ExpeditionEncounter {
         const maps = contentKeys(BATTLEFIELDS);
         return {
-          enemy: Math.floor(Math.random() * FACTIONS.length) as FactionId,
+          enemies: Array.from({ length: expeditionEnemyCount(depth) }, () => Math.floor(Math.random() * FACTIONS.length) as FactionId),
           map: maps[Math.floor(Math.random() * maps.length)],
           seed: 1 + Math.floor(Math.random() * 99999999)
         };
@@ -79,7 +75,7 @@
       startBattle(this: MeridianUI) {
         const faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : FACTION_ID.FIRST;
         this.battleFaction = faction;
-        this.expedition = { version: 2, faction, depth: 0, benefits: {}, enemyBenefits: {}, encounter: this.createEncounter(), offers: [] };
+        this.expedition = { version: 3, faction, depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
         this.persistence.saveExpedition(this.expedition);
         this.startExpeditionBattle();
       },
@@ -229,11 +225,7 @@
         const offers = result.win && this.expedition ? this.expedition.offers : [];
         if (!offers.includes(this.resultBenefit || '')) this.resultBenefit = offers[0];
         const next = result.win && this.expedition ? this.expedition.encounter : null,
-          nextFaction = next ? FACTIONS[next.enemy] : null,
-          nextStage = next ? aiRulesFor(next.enemy, this.expedition!.depth).stage + 1 : 0,
-          nextPerks = this.expedition ? Object.entries(this.expedition.enemyBenefits).filter(([, count]) => count > 0)
-            .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · ') : '',
-          nextPanel = next && nextFaction ? `<section class="result-next"><div class="result-next-preview map-${next.map}" aria-hidden="true"><span>${esc(BATTLEFIELDS[next.map].name)}</span></div><div class="result-next-body"><div class="result-next-heading"><div><div class="eyebrow">NEXT / EXPEDITION DEPTH ${this.expedition!.depth}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2></div><span class="result-pressure">PRESSURE ${nextStage}/5</span></div><div class="result-next-meta"><span>${esc(nextFaction.short)}</span><i></i><span>${esc(nextFaction.doctrine.name)}</span></div><p>${esc(nextFaction.doctrine.desc)}</p><small>ENEMY BENEFITS · ${nextPerks || 'NONE'}</small></div></section>` : '',
+          nextPanel = next ? `<section class="result-next"><div class="result-next-preview map-${next.map}" aria-hidden="true"><span>${esc(BATTLEFIELDS[next.map].name)}</span></div><div class="result-next-body"><div class="result-next-heading"><div><div class="eyebrow">NEXT / STAGE ${this.expedition!.depth + 1}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2></div></div>${renderExpeditionOpponents(this.expedition!, aiRulesFor(next.enemies[0], this.expedition!.depth).stage + 1)}</div></section>` : '',
           benefitPanel = offers.length ? `<section class="result-benefits"><h3><span></span>CHOOSE AN EXPEDITION BENEFIT<span></span></h3><div class="benefit-options compact">${renderBenefitOptions(offers, this.resultBenefit)}</div><button class="primary result-confirm-benefit" data-ui="confirmBenefit">CONTINUE EXPEDITION <span>→</span></button><button class="secondary result-benefit-armory" data-ui="armory">FLEET UPGRADES <span>→</span></button></section>` : '';
         $('modal').classList.add('hidden');
         $('result').innerHTML = `<main class="result-screen ${result.win ? 'victory' : 'defeat'}"><div class="result-shell"><header class="result-hero"><h1>${result.win ? 'VICTORY' : 'DEFEAT'}</h1><p>${result.win ? `EXPEDITION DEPTH ${this.expedition?.depth || 0} SECURED` : esc(result.text)}</p></header><section class="result-reward"><span class="result-reward-sigil">⬡</span><div><span>AETHER RECOVERED</span><strong>${(this.resultAetherRecovered || 0).toLocaleString()}</strong></div></section>${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}${benefitPanel}${nextPanel}<nav class="result-actions">${result.win && !offers.length ? '<button class="primary" data-ui="continueExpedition">CONTINUE EXPEDITION <span>→</span></button>' : !result.win ? '<button class="primary" data-ui="battle">NEW EXPEDITION <span>→</span></button>' : ''}${offers.length ? '' : '<button class="secondary" data-ui="armory">FLEET UPGRADES <span>→</span></button>'}<button class="textbtn" data-ui="home">MAIN MENU</button></nav></div></main>`;

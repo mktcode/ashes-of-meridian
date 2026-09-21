@@ -131,17 +131,17 @@ interface MeridianProfile {
 }
 
 interface ExpeditionEncounter {
-  enemy: FactionId;
+  enemies: FactionId[];
   map: BattlefieldId;
   seed: number;
 }
 
 interface MeridianExpedition {
-  version: 2;
+  version: 3;
   faction: FactionId;
   depth: number;
   benefits: Record<string, number>;
-  enemyBenefits: Record<string, number>;
+  enemyBenefits: Record<string, number>[];
   encounter: ExpeditionEncounter;
   offers: string[];
 }
@@ -158,6 +158,7 @@ interface PersistenceDependencies {
   upgrades: Record<string, { max: number }>;
   benefits: Record<string, { max?: number; name?: string }>;
   battlefields: Record<string, unknown>;
+  enemyCount(depth: number): number;
   warn(...values: unknown[]): void;
 }
 
@@ -347,11 +348,11 @@ type UnitPlacement = UnitBody & Position;
 interface BattleOptions {
   depth?: number;
   faction?: number;
-  enemy?: number;
+  enemies?: FactionId[];
   map?: string;
   seed?: number;
   benefits?: Record<string, number>;
-  enemyBenefits?: Record<string, number>;
+  enemyBenefits?: Record<string, number>[];
 }
 
 // Bounded non-expedition scenarios; also used by the optional multiplayer host.

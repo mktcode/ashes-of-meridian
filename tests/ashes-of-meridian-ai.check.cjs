@@ -9,7 +9,7 @@ vm.runInContext('Math.random=()=>{throw Error("Unseeded simulation RNG")}',conte
 const json=x=>JSON.parse(JSON.stringify(x));
 function battle(faction=0,enemy=2,seed=1409,map='desert') {
   const events=[],g=new MeridianGame({upgrades:{}},(type,data)=>events.push({type,data}));
-  g.start({faction,enemy,seed,map});return {g,events};
+  g.start({faction,enemies:[enemy],seed,map});return {g,events};
 }
 function advance(g,seconds) {for(let i=0;i<seconds*20&&!g.s.result;i++){g.step(.05);g.effects.tick(.05);}}
 function own(g,team,type){return Array.from(g.alive(e=>e.team===team&&(!type||e.type===type)));}
@@ -403,7 +403,7 @@ for(const enemy of [0,1,2]) test(`stage 21 benefits vs doctrine ${enemy}: declar
     enemyBenefits[key]=(enemyBenefits[key]||0)+1;
   }
   const benefits={supplyCrate:8,aetherAllocation:4,pioneerSquad:3,commanderMandate:1,surveyDrones:1,fieldWorkshop:1,commandCapacitor:2};
-  g.start({seed:1409,faction:(enemy+1)%3,enemy,depth:20,benefits,enemyBenefits});g.enableAI(0);
+  g.start({seed:1409,faction:(enemy+1)%3,enemies:[enemy],depth:20,benefits,enemyBenefits:[enemyBenefits]});g.enableAI(0);
   assert.equal(Object.values(g.s.parties[1].benefits).reduce((a,b)=>a+b,0),20);
   const counts=audit(g);
   for(let i=0;i<24000&&!g.s.result;i++) {

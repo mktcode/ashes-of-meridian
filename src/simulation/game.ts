@@ -36,7 +36,11 @@
       };
     }
     // Snapshot the single-player recipe without terrain, entities or random draws.
-    function singlePlayerParties(profile: MeridianProfile, opts: BattleOptions): [PartyState, PartyState] {
+    function singlePlayerParties(profile: MeridianProfile, opts: BattleOptions): PartyState[] {
+      const enemies = opts.enemies ?? [FACTION_ID.THIRD];
+      if (!Array.isArray(enemies) || enemies.length < 1 || enemies.length > 3 ||
+          Array.from(enemies).some(faction => !Number.isInteger(faction) || !FACTIONS[faction]))
+        throw Error('Expedition battle requires 1–3 enemy factions');
       const savedMeta = profile.upgrades || {},
         meta = Object.fromEntries(
           (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
@@ -45,8 +49,8 @@
       return [
         createParty(0, FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
           meta, normalizedBenefits(opts.benefits)),
-        createParty(1, FACTIONS[opts.enemy as FactionId] ? opts.enemy as FactionId : FACTION_ID.THIRD,
-          {}, normalizedBenefits(opts.enemyBenefits))
+        ...enemies.map((faction, slot) => createParty((slot + 1) as PlayerTeam, faction,
+          {}, normalizedBenefits(opts.enemyBenefits?.[slot])))
       ];
     }
     function createCommandQueue(): CommandQueue {
@@ -118,7 +122,8 @@
         this.cosmeticRandom = seeded(seed ^ 0x4658524e);
       },
       start(this: MeridianGame, opts: BattleOptions = {}) {
-        return this.startBattle(opts, singlePlayerParties(this.profile, opts), { kind: 'single-player' }, [1]);
+        const parties = singlePlayerParties(this.profile, opts);
+        return this.startBattle(opts, parties, { kind: 'single-player' }, parties.slice(1).map(p => p.id));
       },
       startScenario(this: MeridianGame, opts: ScenarioOptions) {
         const { parties, rules, aiTeams } = scenarioSetup(opts);
@@ -205,8 +210,8 @@
         if (rules.kind === 'scenario') return s;
         this.emit('start', {});
         this.emit('radio', startingWorkers
-          ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then destroy the enemy command center.'
-          : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then destroy the enemy command center.');
+          ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then outlast every opposing party.'
+          : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then outlast every opposing party.');
         return s;
       },
       benefitsFor(this: MeridianGame, team: PlayerTeam): Record<string, number> {

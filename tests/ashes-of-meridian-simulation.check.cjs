@@ -203,7 +203,7 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
   }`, context);
   for (const expected of [12345678, 87654321]) {
     const previous = game.world;
-    game.start({ faction: 1, enemy: 2, map: 'desert' });
+    game.start({ faction: 1, enemies: [2], map: 'desert' });
     assert.equal(game.s.seed, expected); assert.equal(game.world.seed, expected);
     assert.notStrictEqual(game.world, previous);
     assert.deepEqual([game.s.parties[0].faction, game.s.parties[1].faction, game.s.map], [1, 2, 'desert']);
@@ -301,7 +301,7 @@ test('battle starts cover every faction and map with valid entities', () => {
   const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
   // Maps change presentation, not faction rules: no redundant faction/map cross-product.
   for (const [faction, map] of [[0,'desert'],[1,'alien-planet'],[2,'mothership']]) {
-    game.start({ seed: 1409, faction, enemy: faction, map });
+    game.start({ seed: 1409, faction, enemies: [faction], map });
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
     advance(game, 2);
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
@@ -981,7 +981,7 @@ test('enemy benefits use the same effects, remain separate from fleet upgrades a
   game.start({seed:1409});
   const entities=json(game.s.entities),next=game.random(),playerSight=json(game.world.sight[0]),
     enemyVisible=Array.from(game.world.sight[1].visible),enemyExplored=Array.from(game.world.sight[1].explored);
-  game.start({seed:1409,enemyBenefits:perks});
+  game.start({seed:1409,enemyBenefits:[perks]});
   assert.deepEqual(json(game.s.entities),entities);assert.equal(game.random(),next);
   assert.deepEqual(json(game.world.sight[0]),playerSight);
   assert.deepEqual(Array.from(game.world.sight[1].visible),enemyVisible);
@@ -991,8 +991,8 @@ test('enemy benefits use the same effects, remain separate from fleet upgrades a
   assert.equal(game.cap(0),34);assert.equal(game.cap(1),24);
   const snapshot=json(game.s.parties[1].benefits);perks.supplyCrate=0;
   assert.deepEqual(json(game.s.parties[1].benefits),snapshot);
-  const options={seed:1409,faction:0,enemy:0,benefits:{pioneerSquad:3,commanderMandate:1},
-    enemyBenefits:{pioneerSquad:99,commanderMandate:99,unknown:8}};
+  const options={seed:1409,faction:0,enemies:[0],benefits:{pioneerSquad:3,commanderMandate:1},
+    enemyBenefits:[{pioneerSquad:99,commanderMandate:99,unknown:8}]};
   game.start(options);
   assert.deepEqual(json(game.s.parties[1].benefits),{pioneerSquad:5,commanderMandate:1});
   for(const team of [0,1]) {
@@ -1007,7 +1007,7 @@ test('enemy benefits use the same effects, remain separate from fleet upgrades a
 });
 
 test('each team consumes its own paid first-foundation workshop; only the player gets fleet construction speed',()=>{
-  const {game}=createGame(),options={seed:1409,benefits:{pioneerSquad:1,fieldWorkshop:1},enemyBenefits:{pioneerSquad:1,fieldWorkshop:1}};
+  const {game}=createGame(),options={seed:1409,benefits:{pioneerSquad:1,fieldWorkshop:1},enemyBenefits:[{pioneerSquad:1,fieldWorkshop:1}]};
   game.profile.upgrades={constructionProtocols:5};game.start(options);game.world.staticGrid.fill(0);
   for(const team of [0,1]) {
     const p={x:team?12:-12,z:0},w=game.alive(e=>e.team===team&&e.type==='worker')[0];
@@ -1508,7 +1508,7 @@ test('recruitment distributes globally and produces in parallel at assigned buil
 
 test('unknown units cannot be recruited; starts use the current unit catalog', () => {
   for (const faction of [0,1,2]) {
-    const {game} = createGame(); game.start({seed:1409,faction,enemy:faction});
+    const {game} = createGame(); game.start({seed:1409,faction,enemies:[faction]});
     const before = json(game.s);
     assert.equal(game.train('unknown-unit'), false); assert.deepEqual(json(game.s), before);
     const types = ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero'];

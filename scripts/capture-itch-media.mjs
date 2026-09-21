@@ -47,7 +47,7 @@ try {
   for (const scene of scenes) {
     const result = await page.evaluate(({ map, seed, faction, enemy, view }) => {
       const { game, ui, renderer } = Meridian;
-      game.start({ map, seed, faction, enemy, benefits: {}, enemyBenefits: {}, depth: 6 });
+      game.start({ map, seed, faction, enemies: [enemy], benefits: {}, enemyBenefits: [{}], depth: 6 });
       ui.paused = true;
       renderer.quality = 2;
       renderer.resize();

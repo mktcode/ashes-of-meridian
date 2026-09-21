@@ -101,7 +101,8 @@
             strike.team === this.localTeam ? 0xa2e3db : 0xf2b084
           );
           if (this.canSee(this.localTeam, strike)) this.emit('explosion', { x: strike.x, z: strike.z, big: true });
-          if (strike.type === 'orbital' && this.factionFor(strike.team as PlayerTeam) === FACTION_ID.SECOND)
+          if (strike.type === 'orbital' && !this.party(strike.team as PlayerTeam).eliminated &&
+              this.factionFor(strike.team as PlayerTeam) === FACTION_ID.SECOND)
             s.fields.push({ type: 'bloom', team: strike.team as PlayerTeam, x: strike.x, z: strike.z, r: 10, until: s.time + 7 });
         }
         s.strikes = s.strikes.filter(a => !a.done);

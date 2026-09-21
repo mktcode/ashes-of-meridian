@@ -18,6 +18,7 @@
             clamp,
             upgrades: META,
             benefits: EXPEDITION_BENEFITS,
+            enemyCount: expeditionEnemyCount,
             battlefields: BATTLEFIELDS,
             warn: (...args) => console.warn(...args)
           });

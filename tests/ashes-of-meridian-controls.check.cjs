@@ -14,15 +14,18 @@ test('escaping converts values and protects HTML delimiters independently of scr
 test('screen templates render frozen data without DOM access, randomness or profile mutation', () => {
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
   vm.runInContext('Math.random = seeded = () => { throw Error("Template RNG"); };', context);
-  const render = vm.runInContext('({renderHomeScreen, renderBattleScreen, renderSettingsScreen, renderFieldManual, renderArmoryScreen, renderBenefitOptions})', context);
+  const render = vm.runInContext('({renderHomeScreen, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderFieldManual, renderArmoryScreen, renderBenefitOptions})', context);
   const profile = Object.freeze({version: 1, expeditionDepth: 10, aether: 250,
     upgrades: Object.freeze({startingAlloy: 0, constructionProtocols: 1}),
     settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false})});
-  const expedition = Object.freeze({version: 2, faction: 1, depth: 10, enemyBenefits: Object.freeze({}),
+  const expedition = Object.freeze({version: 3, faction: 1, depth: 10,
+    enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({supplyCrate: 2}), Object.freeze({})]),
     benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
-    encounter: Object.freeze({enemy: 2, map: 'desert', seed: 1409})});
+    encounter: Object.freeze({enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
-  render.renderHomeScreen(expedition, 10, '<p>Briefing</p>');
+  const briefing = render.renderExpeditionOpponents(expedition, 3);
+  assert.equal(briefing, render.renderExpeditionOpponents(expedition, 3));
+  render.renderHomeScreen(expedition, 10, briefing);
   render.renderHomeScreen(null, 10, '');
   render.renderBattleScreen(profile, 1, 1, 250);
   render.renderSettingsScreen(profile.settings);
@@ -701,12 +704,12 @@ test('pause and visibility changes preserve battle state and require explicit re
 
 test('pause restart reopens the secured encounter with its expedition benefits', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.ui.expedition = { faction: 1, encounter: { enemy: 2, map: 'desert', seed: 1409 },
-    benefits: { supplyCrate: 2 }, enemyBenefits: { fieldWorkshop: 1 }, offers: [], depth: 3 };
+  h.ui.expedition = { faction: 1, encounter: { enemies: [2, 0, 2], map: 'desert', seed: 1409 },
+    benefits: { supplyCrate: 2 }, enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }, {}], offers: [], depth: 3 };
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.pause(); h.click({ ui: 'restartConfirm' }); h.click({ ui: 'restart' });
-  assert.deepEqual(h.calls, [['start', { faction: 1, enemy: 2, map: 'desert', seed: 1409,
-    benefits: { supplyCrate: 2 }, enemyBenefits: { fieldWorkshop: 1 }, depth: 3 }]]);
+  assert.deepEqual(h.calls, [['start', { faction: 1, enemies: [2, 0, 2], map: 'desert', seed: 1409,
+    benefits: { supplyCrate: 2 }, enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }, {}], depth: 3 }]]);
 });
 
 test('victory checkpoints offers and chosen benefits; defeat clears the expedition', () => {
@@ -717,13 +720,15 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   h.ui.persistence.saveProfile = () => {};
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
-  h.ui.expedition = { version: 2, faction: 0, depth: 0, benefits: {}, enemyBenefits: {},
-    encounter: { enemy: 1, map: 'desert', seed: 1409 }, offers: [] };
+  h.ui.expedition = { version: 3, faction: 0, depth: 0, benefits: {}, enemyBenefits: [{}],
+    encounter: { enemies: [1], map: 'desert', seed: 1409 }, offers: [] };
   h.ui.event('result', { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
   assert.equal(h.ui.expedition.depth, 1); assert.equal(saved.length, 1);
   assert.equal(h.ui.expedition.offers.length, 3);
   const enemyBefore=JSON.stringify(h.ui.expedition.enemyBenefits);
-  assert.equal(Object.values(h.ui.expedition.enemyBenefits).reduce((a,b)=>a+b,0),1);
+  const totals = () => Array.from(h.ui.expedition.enemyBenefits, perks => Object.values(perks).reduce((a,b)=>a+b,0));
+  assert.deepEqual(totals(), [1, 0]);
+  assert.equal(h.ui.expedition.encounter.enemies.length, 2);
   h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
   assert.equal(saved.length,1);assert.equal(JSON.stringify(h.ui.expedition.enemyBenefits),enemyBefore);
   const choice = h.ui.expedition.offers[0]; h.click({ benefit: choice });
@@ -733,10 +738,13 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   assert.equal(JSON.stringify(saved[1].enemyBenefits),enemyBefore);
   const previous=JSON.parse(enemyBefore);
   h.ui.resultAetherRecovered=undefined;
-  h.ui.createEncounter=()=>({enemy:2,map:'mothership',seed:222});
+  h.ui.createEncounter=depth=>({enemies: Array.from({length: Math.min(3, depth + 1)}, () => 2),map:'mothership',seed:222});
   h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
-  assert.equal(Object.values(h.ui.expedition.enemyBenefits).reduce((a,b)=>a+b,0),2);
-  for(const [key,count] of Object.entries(previous))assert.ok(h.ui.expedition.enemyBenefits[key]>=count);
+  assert.deepEqual(totals(), [2, 1, 0]);
+  for(const [key,count] of Object.entries(previous[0]))assert.ok(h.ui.expedition.enemyBenefits[0][key]>=count);
+  h.ui.resultAetherRecovered=undefined;
+  h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
+  assert.deepEqual(totals(), [3, 2, 1]);
   h.ui.resultAetherRecovered = undefined;
   h.ui.event('result', { win: false, text: 'Defeat', time: 1, integrity: 0, score: 0 });
   assert.equal(h.ui.expedition, null); assert.equal(cleared.length, 1);
@@ -829,8 +837,8 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
       [true, unlocked >= 1, unlocked >= 2]);
   }
   h.ui.profile.expeditionDepth = 9;
-  h.ui.expedition = { version: 2, faction: 0, depth: 9, benefits: {}, enemyBenefits: {},
-    encounter: { enemy: 1, map: 'desert', seed: 1409 }, offers: [] };
+  h.ui.expedition = { version: 3, faction: 0, depth: 9, benefits: {}, enemyBenefits: [{}, {}, {}],
+    encounter: { enemies: [1, 2, 0], map: 'desert', seed: 1409 }, offers: [] };
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.showResult = () => {};
   let saves = 0; h.ui.persistence.saveProfile = () => { saves++; };
@@ -869,7 +877,7 @@ test('enemy choices use the shared three-offer pool and caps with deterministic 
 
 test('expedition benefits are offered deterministically and bounded on selection',()=>{
   const h=setup(),rules=vm.runInContext('EXPEDITION_BENEFITS',h.context),seen=new Set();
-  h.ui.expedition={faction:0,depth:8,benefits:{},enemyBenefits:{},offers:[],encounter:{enemy:1,map:'desert',seed:1409}};
+  h.ui.expedition={faction:0,depth:8,benefits:{},enemyBenefits:[{},{},{}],offers:[],encounter:{enemies:[1,0,2],map:'desert',seed:1409}};
   const run=h.ui.expedition;
   for(let seed=1;seed<=30;seed++) {
     run.encounter.seed=seed;
@@ -888,8 +896,8 @@ test('expedition benefits are offered deterministically and bounded on selection
 
 test('home preview prepares the known next expedition battlefield', () => {
   const h = setup(), maps = [];
-  h.ui.expedition = { faction: 0, depth: 2, benefits: {}, enemyBenefits: {}, offers: [],
-    encounter: { enemy: 1, map: 'alien-planet', seed: 1409 } };
+  h.ui.expedition = { faction: 0, depth: 2, benefits: {}, enemyBenefits: [{}, {}, {}], offers: [],
+    encounter: { enemies: [1, 1, 2], map: 'alien-planet', seed: 1409 } };
   h.ui.onPreview = map => maps.push(map);
   h.ui.showHome();
   assert.deepEqual(maps, ['alien-planet']);
@@ -902,10 +910,11 @@ test('expedition setup creates and saves a random pending encounter', () => {
   h.ui.onLaunchBattle = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
   assert.equal(saved.length, 1); assert.equal(saved[0].faction, 2); assert.equal(saved[0].depth, 0);
-  assert.ok([0, 1, 2].includes(saved[0].encounter.enemy));
+  assert.equal(saved[0].encounter.enemies.length, 1);
+  assert.ok([0, 1, 2].includes(saved[0].encounter.enemies[0]));
   assert.ok(['desert', 'alien-planet', 'mothership'].includes(saved[0].encounter.map));
   assert.ok(saved[0].encounter.seed > 0);
-  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {}, enemyBenefits: {}, depth: 0 });
+  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {}, enemyBenefits: [{}], depth: 0 });
 });
 
 test('DOM press guard tracks pointer presses on controls', () => {
