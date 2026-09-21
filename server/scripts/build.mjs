@@ -9,7 +9,7 @@ rmSync(resolve(root, 'dist'), { recursive: true, force: true });
 mkdirSync(resolve(root, 'dist'), { recursive: true });
 const files = ['core', 'content', 'battlefields/shared', 'battlefields/desert', 'battlefields/alien-planet',
   'battlefields/mothership', 'battlefields/catalog', 'world', 'effects', 'simulation/game', 'simulation/movement',
-  'simulation/economy', 'simulation/combat', 'simulation/commands', 'simulation/ai', 'simulation/runtime', 'multiplayer/presentation', 'multiplayer/state'];
+  'simulation/economy', 'simulation/combat', 'simulation/commands', 'simulation/ai-rules', 'simulation/ai-strategy', 'simulation/ai', 'simulation/runtime', 'multiplayer/presentation', 'multiplayer/state'];
 const source = files.map(name => readFileSync(resolve(root, '../dist/src', name + '.js'), 'utf8')).join('\n');
 writeFileSync(resolve(root, 'dist/simulation.js'), source + `\n({ version: MULTIPLAYER_VERSION, maps: Object.keys(BATTLEFIELDS),
   create(options) { const game = new MeridianGame({ upgrades: {} }, () => {}); game.startScenario(options); enableMultiplayerPresentation(game); return game; },
