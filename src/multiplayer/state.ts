@@ -1,9 +1,9 @@
 /* Shared read-model projection. Never send RunState or restore a simulation from this view. */
 'use strict';
-const MULTIPLAYER_VERSION = 2;
+const MULTIPLAYER_VERSION = 4;
 interface MultiplayerStart {
   type: 'start'; version: number; code: string; team: PlayerTeam;
-  map: BattlefieldId; seed: number; factions: FactionId[];
+  map: BattlefieldId; seed: number; factions: FactionId[]; token: string; graceMs: number;
 }
 interface MultiplayerFrame {
   type: 'frame'; tick: number; time: number; party: PartyState;

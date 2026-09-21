@@ -568,8 +568,18 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
     interior=trees.filter(p=>edge(p)<135),exterior=trees.filter(p=>edge(p)>135),
     solid=[...interior,...p.filter(p=>p.mesh==='alienPod')];
   assert.ok(interior.length>=100&&interior.length<=300);assert.ok(exterior.length>=480&&exterior.length<=650);
-  assert.ok(p.length>=1800&&p.length<=3200);
+  assert.ok(p.length>=2800&&p.length<=3500);
   assert.equal(w.rocks.length,solid.length);
+  const gills=p.filter(p=>p.mesh.startsWith('alienCapGills')),understory=p.filter(p=>
+    ['alienFern','alienSpore','alienGlowTuft'].includes(p.mesh));
+  assert.ok(gills.length>=200&&gills.every(p=>p.glow>=2.5),'mature caps carry strongly blooming beaded lamellae');
+  const pools=p.filter(p=>p.mesh==='alienLanternPool'&&p.material==='ALIEN_LIGHT');
+  assert.ok(pools.length>=175&&pools.every(p=>p.alpha===.72),'inland lantern caps project translucent light onto the ground');
+  assert.deepEqual(new Set(pools.map(p=>p.color)),new Set([0x6be8d1,0xd264dd]),'cyan and plum lantern pools coexist');
+  assert.ok(p.filter(p=>p.mesh==='alienGlowTuft'&&p.glow>=1).length>=200,'fluorescent ground plants remain abundant');
+  const planted=interior.filter(tree=>understory.filter(p=>Math.hypot(p.position[0]-tree.position[0],
+    p.position[2]-tree.position[2])<tree.scale[0]*1.55).length>=3);
+  assert.ok(planted.length/interior.length>.95,'understory is concentrated around inland mushroom trees');
   for(const [axis,sign] of [[0,1],[0,-1],[2,1],[2,-1]]) for(let sector=0;sector<6;sector++) {
     const lo=-135+sector*45;
     assert.ok(exterior.filter(p=>p.position[axis]*sign>=137&&p.position[2-axis]>=lo&&p.position[2-axis]<lo+45).length>=8,
@@ -612,7 +622,8 @@ test('Alien layout remains accessible over 40 additional seeds and repeats its p
 test('Alien mesh factories are deterministic, finite, bounded and remain below explicit budgets',()=>{
   const w=new Battlefield(43015,'alien-planet');
   const budgets={alienForestFloor:8,alienTreePlum:500,alienTreeJade:500,alienTreeUmbrella:500,
-    alienPod:2200,alienFern:100,alienSpore:350,alienSapling:500},triangles={};
+    alienPod:2200,alienFern:100,alienSpore:350,alienGlowTuft:120,alienLanternPool:180,
+    alienCapGillsPlum:2500,alienCapGillsJade:2500,alienCapGillsUmbrella:2500,alienSapling:500},triangles={};
   for(const descriptor of w.renderData.geometries) {
     const mesh=TerrainModels.geometry(descriptor);assert.equal(mesh.length%27,0);
     assert.ok(mesh.length/27>0&&mesh.length/27<=budgets[descriptor.model],`${descriptor.model}: ${mesh.length/27}`);
@@ -636,7 +647,7 @@ test('Alien mesh factories are deterministic, finite, bounded and remain below e
     }
   }
   const total=w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+w.gridSize**2*2;
-  assert.ok(total<=550000,`whole planted world budget (excluding units/shadow repetition): ${total}`);
+  assert.ok(total<=1250000,`whole planted world budget (excluding units/shadow repetition): ${total}`);
 });
 
 test('Alien exterior and understory randomness cannot relocate solid roots',()=>{

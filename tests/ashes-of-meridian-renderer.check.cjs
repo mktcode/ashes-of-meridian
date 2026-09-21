@@ -232,7 +232,9 @@ function setup(options = {}) {
     frame: 0, shadowSize: 1536, shadowBias: .00022, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
     program: 'scene', depthProg: 'shadow', skyProg: 'sky', postProg: 'post', shadowFbo: 'shadow-target',
     upload() {}, uniform(p, name) { return name; },
-    drawBatches(batch, matrix, excludedName) { calls.push(['batch', batch, program, draw, matrix, excludedName]); }
+    drawBatches(batch, matrix, excludedNames, includedName) {
+      calls.push(['batch', batch, program, draw, matrix, excludedNames, includedName]);
+    }
   });
   Object.defineProperty(r.canvas, 'getBoundingClientRect', { value: () => options.viewport ||
     ({ left: 0, top: 0, width: context.innerWidth, height: context.innerHeight }) });
@@ -244,6 +246,8 @@ test('crystal shader preserves facets and adds texture-free internal depth', () 
   assert.match(shader,/float facet=\.58\+\.42\*abs\(dot\(localN/);
   assert.match(shader,/float caustic=pow\(\.5\+\.5\*sin\(dot\(v_modelPos/);
   assert.match(shader,/glowMix=clamp\(v_glow,0\.,1\.\)\*\(1\.-crystal\*\.58\)/);
+  assert.ok(shader.includes('float mask=1.-smoothstep(.02,.5,length(v_modelPos.xz));'));
+  assert.ok(shader.includes('v_col.a*mask*.16*visible'));
   assert.doesNotMatch(shader,/sampler2D u_crystal/,'crystal depth adds no texture or render pass');
 });
 
@@ -331,7 +335,7 @@ test('lighting profiles override shader colors without additional textures or re
   assert.match(FRAG,/float metal=.*v_mat>1.5/);assert.match(FRAG,/strength=\.008\+metal/);
   assert.ok(FRAG.indexOf('lit=finishLighting(lit)')<FRAG.indexOf('float field='),'compress highlights before fog and RGBA8 storage');
   assert.match(FRAG,/over\/\(1\.\+over\/\.35\)/);
-  assert.match(VERT,/if\(a_material==-1\.\)v_modelPos=a_pos/);
+  assert.match(VERT,/if\(a_material==-1\.\|\|a_material==-4\.\)v_modelPos=a_pos/);
   const contact=FRAG.slice(FRAG.indexOf('if(v_mat==-1.)'),FRAG.indexOf('vec3 n=normalize(v_n)'));
   assert.match(contact,/smoothstep\(\.05,1\.,length\(v_modelPos.xz\*2\.\)\)/);
   assert.match(contact,/smoothstep\(\.35,\.8,sight\)/);
@@ -501,10 +505,14 @@ test('bloom uses two quarter-size targets, three ordered passes and a clean allo
 
 test('scene geometry and blended effects resolve exactly once before post-processing', () => {
   const h = setup(); h.r.resize(); h.calls.length = 0; h.r.render(1);
-  assert.equal(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[5], 'terrain',
-    'flat ground is not submitted as a shadow caster');
-  assert.strictEqual(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'scene')[4], h.r.vp,
-    'static scene chunks use the camera projection for culling');
+  assert.deepEqual(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[5],
+    ['terrain','alienLanternPool'],'flat ground and projected light are not submitted as shadow casters');
+  const staticScene=h.calls.filter(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'scene');
+  assert.strictEqual(staticScene[0][4], h.r.vp,'static scene chunks use the camera projection for culling');
+  assert.equal(staticScene[0][5],'alienLanternPool','projected light is excluded from the opaque static pass');
+  assert.equal(staticScene[1][6],'alienLanternPool','projected light receives its own blended static pass');
+  assert.ok(h.calls.findIndex(c=>c[0]==='depthMask'&&c[1]===false)<h.calls.indexOf(staticScene[1]),
+    'overlapping projected lights blend without depth writes');
   const resolve = h.calls.findIndex(c => c[0] === 'resolve');
   assert.equal(h.calls.filter(c => c[0] === 'resolve').length, 1);
   assert.deepEqual(h.calls[resolve], ['resolve', h.r.sceneMSAAFbo, h.r.sceneFbo,

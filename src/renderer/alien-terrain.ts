@@ -86,6 +86,82 @@
     tube(out,[[x,0,z,r*.22],[x+r*.3,h*.7,z,r*.15],[x,h,z,r*.4]],jade,5);
     skin(out,[[h*.74,r*.5],[h,r],[h*1.25,r*.15]].map(([y,s])=>ring(x,y,z,s,7)),[jade,light,plum]);
   }
+  function glowPearl(out: number[],x: number,y: number,z: number,r: number,color: number[]) {
+    const n=8,upper=ring(x,y+r*.58,z,r*.72,n,Math.PI/8),equator=ring(x,y,z,r,n,Math.PI/8),
+      lower=ring(x,y-r*.58,z,r*.72,n,Math.PI/8),top=[x,y+r*1.08,z],bottom=[x,y-r*1.08,z];
+    for(let i=0;i<n;i++) {
+      const k=(i+1)%n;
+      geom.tri(out,top,upper[k],upper[i],color);
+      geom.tri(out,upper[i],upper[k],equator[k],color);geom.tri(out,upper[i],equator[k],equator[i],color);
+      geom.tri(out,equator[i],equator[k],lower[k],color.map(v=>v*.88));geom.tri(out,equator[i],lower[k],lower[i],color.map(v=>v*.88));
+      geom.tri(out,bottom,lower[i],lower[k],color.map(v=>v*.66));
+    }
+  }
+  function capGills(out: number[],h: number,r: number,phase: number,variant: number) {
+    const dx=Math.cos(phase)*h*.13,dz=Math.sin(phase)*h*.13,n=20,
+      under=variant%2?[.48,.2,.47]:[.25,.56,.5],
+      underside=[ring(dx,h*.756,dz,r*.15,n,phase),ring(dx,h*.776,dz,r*.46,n,phase),
+        ring(dx,h*.797,dz,r*.79,n,phase)];
+    // A broad emissive underside turns the cap itself into a lantern, not only its ornaments.
+    for(let i=0;i<n;i++) {
+      const k=(i+1)%n;
+      geom.tri(out,[dx,h*.752,dz],underside[0][i],underside[0][k],under);
+      for(let j=0;j<underside.length-1;j++) {
+        geom.tri(out,underside[j][i],underside[j+1][k],underside[j][k],under);
+        geom.tri(out,underside[j][i],underside[j+1][i],underside[j+1][k],under);
+      }
+    }
+    // Brighter radial lamellae remain visible across the softly glowing underside.
+    for(let i=0;i<12;i++) {
+      const a=phase+i*Math.PI/6+.08,side=.014*r,inner=.18*r,outer=.78*r,
+        p=[dx+Math.cos(a)*inner,h*.759,dz+Math.sin(a)*inner],
+        q=[dx+Math.cos(a)*outer+Math.sin(a)*side,h*.799,dz+Math.sin(a)*outer-Math.cos(a)*side],
+        s=[dx+Math.cos(a)*outer-Math.sin(a)*side,h*.799,dz+Math.sin(a)*outer+Math.cos(a)*side],
+        color=(i+variant)%3===0?plum:light;
+      geom.tri(out,p,q,s,color);geom.tri(out,s,q,p,color.map(v=>v*.78));
+    }
+    // A dense curtain of straight, hair-fine threads carries dew-like pearls at varied intervals.
+    for(let i=0;i<12;i++) {
+      const a=phase+.12+i*Math.PI/6,reach=r*(.48+(i%4)*.1),x=dx+Math.cos(a)*reach,
+        z=dz+Math.sin(a)*reach,top=h*.798,drop=h*(.16+(i%5)*.033),
+        color=(i+variant)%3===0?plum:light;
+      tube(out,[[x,top,z,.0055],[x,top-drop,z,.0035]],color,6);
+      const pearls=3+i%2;
+      for(let j=0;j<pearls;j++) {
+        const t=(j+1)/(pearls+1),size=.011+((i+j)%3)*.0045;
+        glowPearl(out,x,top-drop*t,z,size,(i+j+variant)%4===0?(color===light?plum:light):color);
+      }
+    }
+  }
+  function lanternPool() {
+    const out: number[]=[],n=32,radii=[0,.28,.58,1],colors=[[1,1,1],[.62,.62,.62],[.22,.22,.22],[0,0,0]],
+      point=(radius: number,i: number)=>[Math.cos(i*Math.PI*2/n)*radius,.015,Math.sin(i*Math.PI*2/n)*radius],
+      vertex=(p: number[],c: number[])=>out.push(...p,0,1,0,...c),
+      face=(a: number[],b: number[],c: number[],ca: number[],cb: number[],cc: number[])=>{
+        vertex(a,ca);vertex(b,cb);vertex(c,cc);
+      };
+    for(let i=0;i<n;i++) {
+      const k=(i+1)%n;
+      face(point(0,0),point(radii[1],k),point(radii[1],i),colors[0],colors[1],colors[1]);
+      for(let j=1;j<radii.length-1;j++) {
+        const a=point(radii[j],i),b=point(radii[j],k),c=point(radii[j+1],k),d=point(radii[j+1],i);
+        face(a,c,b,colors[j],colors[j+1],colors[j]);face(a,d,c,colors[j],colors[j+1],colors[j+1]);
+      }
+    }
+    return out;
+  }
+  function glowTuft(out: number[]) {
+    // Low, bright leaves and pearl buds read as a fluorescent carpet around mature trees.
+    for(let i=0;i<6;i++) {
+      const a=i*Math.PI/3+.2,l=.36+(i%2)*.12,w=.085,
+        base=[Math.cos(a)*.06,.02,Math.sin(a)*.06],tip=[Math.cos(a)*l,.12+(i%3)*.055,Math.sin(a)*l],
+        left=[base[0]+Math.sin(a)*w,base[1],base[2]-Math.cos(a)*w],
+        right=[base[0]-Math.sin(a)*w,base[1],base[2]+Math.cos(a)*w],c=i%2?light:plum;
+      geom.tri(out,left,tip,right,c);geom.tri(out,right,tip,left,c.map(v=>v*.68));
+    }
+    glowPearl(out,0,.22,0,.075,light);
+    glowPearl(out,.18,.14,-.08,.045,plum);
+  }
   function bed(out: number[],m: Pick<WorldTerrainFeature, "x" | "z" | "outline">,height=.55) {
     const n=m.outline.length, rows=[];
     for(let j=0;j<5;j++)rows.push(m.outline.map((p,i)=>{
@@ -107,6 +183,11 @@
   TerrainModels.alienSpore=()=>{
     const out: number[]=[];spore(out,0,0,.85,.25);spore(out,.4,.25,.5,.19);spore(out,-.3,.15,.65,.22);return out;
   };
+  TerrainModels.alienGlowTuft=()=>{const out: number[]=[];glowTuft(out);return out;};
+  TerrainModels.alienLanternPool=()=>lanternPool();
+  TerrainModels.alienCapGillsPlum=()=>{const out: number[]=[];capGills(out,3.4,1,.8,1);return out;};
+  TerrainModels.alienCapGillsJade=()=>{const out: number[]=[];capGills(out,3.7,.95,2.1,0);return out;};
+  TerrainModels.alienCapGillsUmbrella=()=>{const out: number[]=[];capGills(out,2.6,1.24,4.3,2);return out;};
   TerrainModels.alienSapling=()=>{const out: number[]=[];mushroom(out,0,0,2.4,.8,.4,0);return out;};
   TerrainModels.alienPod=(seed: number)=>{
     const out: number[]=[],rand=seeded(seed ^ 0x504f4453);

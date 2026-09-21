@@ -67,7 +67,9 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
       mesh === 'alienFern' || mesh === 'alienSpore' ? 'AUTO' : 'ALIEN');
   const treeModel = (size: number, choice: number) => size < 2.2 ? 'alienSapling' :
     choice < .42 ? 'alienTreePlum' : choice < .78 ? 'alienTreeJade' : 'alienTreeUmbrella';
-  for (const model of ['alienTreePlum', 'alienTreeJade', 'alienTreeUmbrella', 'alienSapling', 'alienPod', 'alienFern', 'alienSpore'])
+  for (const model of ['alienTreePlum', 'alienTreeJade', 'alienTreeUmbrella', 'alienSapling', 'alienPod',
+    'alienFern', 'alienSpore', 'alienGlowTuft', 'alienLanternPool',
+    'alienCapGillsPlum', 'alienCapGillsJade', 'alienCapGillsUmbrella'])
     world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent });
 
   // A deep, irregular stand beyond every edge, not two rows on a raised square bank.
@@ -108,21 +110,44 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
   for (let i = 0; i < world.staticGrid.length; i++) if (world.staticGrid[i])
     for (let c = 0; c < 3; c++) world.terrainColors[i * 4 + c] *= .65;
 
-  // Understory follows the same habitat, fading into scattered low plants on the open ground.
-  // Separate cosmetic stream: changing ferns or phosphor never relocates solid trunks.
-  const trunks = world.renderData.placements.filter(p => p.mesh.startsWith('alienTree') || p.mesh === 'alienSapling');
-  for (const [index, tree] of trunks.entries()) for (let i = 0; i < 2; i++) {
-    if (i === 0 && index % 4 !== 0) continue;
-    const a = decor() * Math.PI * 2, r = tree.scale[0] * (.7 + decor() * .7),
-      x = tree.position[0] + Math.cos(a) * r, z = tree.position[2] + Math.sin(a) * r;
-    if (safe({ x, z }, 2) || lane({ x, z }, 3)) continue;
-    prop(i ? 'alienFern' : 'alienSpore', x, z, i ? 1.2 + decor() * 1.6 : .4 + decor() * .6, a, i ? 0 : .45);
+  // Understory follows the same habitat, with denser fluorescent carpets around inland trunks.
+  // Separate cosmetic stream: changing ferns, cap lamellae or phosphor never relocates solid trunks.
+  const trunks = world.renderData.placements.filter(p => p.mesh.startsWith('alienTree') || p.mesh === 'alienSapling'),
+    gillModels: Record<string, string> = {
+      alienTreePlum: 'alienCapGillsPlum', alienTreeJade: 'alienCapGillsJade', alienTreeUmbrella: 'alienCapGillsUmbrella'
+    };
+  for (const [index, tree] of trunks.entries()) {
+    const inland = Math.max(Math.abs(tree.position[0]), Math.abs(tree.position[2])) < extent;
+    if (gillModels[tree.mesh] && (inland || index % 24 === 0)) {
+      prop(gillModels[tree.mesh], tree.position[0], tree.position[2], tree.scale[0], tree.rotation[0],
+        2.5, tree.scale[1]);
+      if (inland) {
+        const poolColor = tree.mesh === 'alienTreeJade' ? 0x6be8d1 :
+          tree.mesh === 'alienTreePlum' ? 0xd264dd : index % 2 ? 0x6be8d1 : 0xd264dd;
+        place('alienLanternPool', tree.position[0], -.1, tree.position[2],
+          tree.scale[0] * 1.55, .1, tree.scale[0] * 1.55, poolColor, tree.rotation[0], 0, 0,
+          1.25, .72, 'static', 'ALIEN_LIGHT');
+      }
+    }
+    const count = inland ? 4 : 2;
+    for (let i = 0; i < count; i++) {
+      if (!inland && i === 0 && index % 4 !== 0) continue;
+      const a = decor() * Math.PI * 2, r = tree.scale[0] * (.68 + decor() * .78),
+        x = tree.position[0] + Math.cos(a) * r, z = tree.position[2] + Math.sin(a) * r;
+      if (safe({ x, z }, 2) || lane({ x, z }, 3)) continue;
+      const mesh = inland && i === 2 ? 'alienGlowTuft' : i === 0 ? 'alienSpore' : 'alienFern',
+        size = mesh === 'alienFern' ? 1.05 + decor() * 1.45 : mesh === 'alienSpore' ? .4 + decor() * .6 : .75 + decor() * .65;
+      prop(mesh, x, z, size, a, mesh === 'alienFern' ? 0 : mesh === 'alienSpore' ? .55 : 1.15);
+    }
   }
-  for (let i = 0; i < 1600; i++) {
+  // Keep some plants between groves, but concentrate most of the biomass around the trees.
+  for (let i = 0; i < 1050; i++) {
     const p = { x: (decor() - .5) * (extent * 2 + 80), z: (decor() - .5) * (extent * 2 + 80) }, habitat = density(p.x, p.z);
     if (safe(p, 2) || lane(p, 3) || decor() > .16 + habitat * .75) continue;
-    const fern = i % 5 !== 0, size = fern ? .7 + decor() * (1 + habitat) : .4 + decor() * .65;
-    prop(fern ? 'alienFern' : 'alienSpore', p.x, p.z, size, decor() * Math.PI * 2, fern ? 0 : .45);
+    const luminous = i % 11 === 0, fern = i % 5 !== 0 && !luminous,
+      size = fern ? .7 + decor() * (1 + habitat) : luminous ? .6 + decor() * .55 : .4 + decor() * .65,
+      mesh = fern ? 'alienFern' : luminous ? 'alienGlowTuft' : 'alienSpore';
+    prop(mesh, p.x, p.z, size, decor() * Math.PI * 2, fern ? 0 : luminous ? 1.05 : .5);
   }
 }
 
@@ -134,8 +159,8 @@ const ALIEN_PLANET_BATTLEFIELD: BattlefieldDefinition = {
   render: {
     groundTexture: 'bio', skyTexture: 'sky', groundPixelsPerMeter: 14, groundMirror: true,
     rockDecor: { density: 0, opacity: 0 }, shrubDecor: { density: 0, opacity: 0 },
-    haze: [.12, .085, .155],
-    lighting: { sun: [.98, 1.06, .91], sky: [.39, .45, .55], bounce: [.16, .25, .22] }
+    haze: [.035, .045, .095],
+    lighting: { sun: [.42, .52, .78], sky: [.14, .20, .34], bounce: [.055, .085, .16] }
   },
   worldEvent: null,
   generate(builder) {

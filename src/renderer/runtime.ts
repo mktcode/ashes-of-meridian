@@ -669,10 +669,11 @@
         }
         return !(left || right || bottom || top || near || far);
       }
-      drawBatches(map: RenderBatches, matrix?: Float32Array, excludedName?: string) {
+      drawBatches(map: RenderBatches, matrix?: Float32Array, excludedNames?: string | readonly string[], includedName?: string) {
         let g = this.gl;
         for (const b of Object.values(map)) {
-          if (!b.n || b.source === excludedName || !this.bucketVisible(b, matrix)) continue;
+          const excluded = typeof excludedNames === 'string' ? b.source === excludedNames : excludedNames?.includes(b.source);
+          if (!b.n || excluded || (includedName !== undefined && b.source !== includedName) || !this.bucketVisible(b, matrix)) continue;
           let m = this.meshes[b.mesh];
           if (!m) continue;
           g.bindVertexArray(m.vao);
@@ -798,7 +799,7 @@
           g.enable(g.POLYGON_OFFSET_FILL);
           g.polygonOffset(1.5, 2);
           // The flat ground receives shadows in the scene pass but cannot cast a visible one itself.
-          this.drawBatches(this.static, this.lightVP, 'terrain');
+          this.drawBatches(this.static, this.lightVP, ['terrain', 'alienLanternPool']);
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
         }
@@ -860,11 +861,14 @@
         g.activeTexture(g.TEXTURE7);
         g.bindTexture(g.TEXTURE_2D, this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`]);
         g.uniform1i(this.uniform(this.program, 'u_rockTex'), 7);
-        this.drawBatches(this.static, this.vp);
+        this.drawBatches(this.static, this.vp, 'alienLanternPool');
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);
         g.blendFunc(g.SRC_ALPHA, g.ONE_MINUS_SRC_ALPHA);
         g.depthMask(false);
+        // Persistent projected light is translucent static geometry: blend it without depth writes so
+        // overlapping cyan/plum pools cannot fight over the same ground plane while the camera moves.
+        this.drawBatches(this.static, this.vp, undefined, 'alienLanternPool');
         this.drawBatches(this.effects);
         g.depthMask(true);
         g.disable(g.BLEND);

@@ -176,6 +176,7 @@
           case 'multiplayer': this.multiplayer?.show(); break;
           case 'networkCreate': this.multiplayer?.connect('create'); break;
           case 'networkJoin': this.multiplayer?.connect('join'); break;
+          case 'networkResume': this.multiplayer?.resumeStored(); break;
           case 'networkCopy': void this.multiplayer?.copyCode(); break;
           case 'home':
             this.showHome();

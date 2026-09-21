@@ -37,7 +37,7 @@ class BattlefieldView {
       for (const p of layout.placements) {
         const args: Parameters<MeridianRenderer['add']> = [p.mesh, ...p.position, ...p.scale, p.color, ...p.rotation,
           p.glow, p.alpha, p.layer];
-        if (p.material !== undefined) args.push(MAT[p.material]);
+        if (p.material !== undefined) args.push(p.material === 'ALIEN_LIGHT' ? ALIEN_LIGHT_MATERIAL : MAT[p.material]);
         R.add(...args);
       }
       this.data = layout;
@@ -174,7 +174,8 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
               a,
               lean * Math.cos(a),
               -lean * Math.sin(a),
-              0.18 + rand() * 0.08,
+              // Alloy remains a strong emissive source under every map profile; higher qualities add bloom.
+              1.8 + rand() * 0.3,
               alpha,
               MAT.CRYSTAL
             );
@@ -195,11 +196,14 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
               a,
               0.45,
               0.25,
-              0.12,
+              1.4,
               alpha,
               MAT.CRYSTAL
             );
           }
+          // A procedural pool conveys the deposit's warm light on the surrounding terrain.
+          R.add('plane', e.x, 0.025, e.z, 7, 1, 7, 0xffb84f, 0, 0, 0, 0, alpha,
+            'effects', ALLOY_LIGHT_MATERIAL);
         } else {
           p('aetherVent', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, alpha, MAT.METAL);
           p('ring', 0, 0.465, 0, 1.69, 1, 1.521, 0x65e5e9, 0, 0, 0, 0.85, alpha, MAT.CRYSTAL);
