@@ -2,17 +2,21 @@
 
 Die implementierten Doktrinen, Tiefenstufen, Vorteile und Flottenupgrades sind in den [Spielregeln](../gameplay.md) beschrieben. Die technische Planung bleibt in Git; offene menschliche Abnahme ist maßgeblich in der [Run-Validierung](playtest-validation.md) geführt. Automatische autonome Partien sind kein Nachweis ausgewogener menschlicher Schwierigkeit.
 
+## Mehrparteien-Expeditionen
+
+Die Expedition nutzt jetzt [Free-for-all](../gameplay.md#gefecht-und-fortschritt) mit persistenten Vorteilen je Gegner-Slot. Die frühen Eintrittsschwellen dienen dem aktuellen menschlichen Testauftrag; Abnahme einschließlich KI-gegen-KI-Druck und Mobilperformance steht in der [Run-Validierung](playtest-validation.md#ffa-expeditionen-gezielte-abnahme). Die folgenden früheren Ein-Gegner-Beobachtungen sind keine Balancebestätigung für FFA; gegenseitige KI-Angriffe können den Spielerdruck auch reduzieren.
+
 ## Menschliche Neubewertung der Rush- und Startökonomie
 
 Vergleichsfall vor der beauftragten Balanceanpassung: Nach Einführung zufälliger Eckstarts erreicht der Spieler Stage 21 ohne größere Probleme, besonders durch Startressourcen und Scans/Reinforcements/Orbital Strike. Gemeldete Stapel: Supply crate ×8, Aether allocation ×4, Pioneer squad ×3, Commander mandate ×1, Survey drones ×1, Field workshop ×1, Command capacitor ×2. Fraktion und permanente Upgrade-Stufen fehlen noch.
 
 Erste menschliche Rückmeldung nach der Anpassung: „schon viel viel besser“. Neue erreichte Stage, Fraktion und Flottenausstattung sind noch nicht angegeben; daraus folgt noch keine Abnahme tiefer Runs.
 
-Mit einem neuen Run prüfen, ob halbierte Supply crates, geringere Startenergie, Technologie-/Zielbedingungen der Fähigkeiten und gegnerische Vorteilsstapel genügend Gegenwehr erzeugen, ohne den Einstieg ohne Flottenupgrades zu überfordern. Insbesondere frühe gegnerische Commander-/Worker-Vorteile und beide Seiten mit vielen Ressourcenstapeln vergleichen. Die aktuellen Regeln stehen ausschließlich in den [Spielregeln](../gameplay.md); weitere Zahlenänderungen erst aus dem nächsten menschlichen Run ableiten.
+Mit einem neuen Run prüfen, ob halbierte Supply crates, geringere Startenergie, Technologie-/Zielbedingungen der Fähigkeiten und gegnerische Vorteilsstapel genügend Gegenwehr erzeugen, ohne den Einstieg ohne Flottenupgrades zu überfordern. Insbesondere frühe gegnerische Commander-/Worker-Vorteile und mehrere Parteien mit vielen Ressourcenstapeln vergleichen. Die aktuellen Regeln stehen ausschließlich in den [Spielregeln](../gameplay.md); weitere Zahlenänderungen erst aus dem nächsten menschlichen Run ableiten.
 
 ## Sehr tiefe Expeditionen
 
-Der Verhaltensdruck erreicht ab Tiefe 16 seine letzte Stufe; unbegrenzte Ressourcen-Vorteile wachsen nun auf beiden Seiten weiter. Ob die begrenzten Workerziele und Produktionspläne der KI ihre zusätzlichen Startmittel in sehr tiefen Runs ausreichend nutzen, bleibt offen. Erst nach erneuten menschlichen Runs weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.
+Der Verhaltensdruck erreicht ab Tiefe 16 seine letzte Stufe; unbegrenzte Ressourcen-Vorteile wachsen bei Spieler und Gegner-Slots weiter. Ob die begrenzten Workerziele und Produktionspläne der KI ihre zusätzlichen Startmittel in sehr tiefen Runs ausreichend nutzen, bleibt offen. Erst nach erneuten menschlichen Runs weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.
 
 ## Permanenter Start-Aether
 

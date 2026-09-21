@@ -2,6 +2,12 @@
 
 Der Core Loop ist implementiert; menschliche Bedienbarkeit, Langzeitbalancing und Echtgeräte-Performance sind noch nicht ausreichend validiert. Prüfprioritäten, kein pauschaler Auftrag für neue Systeme oder Balancingänderungen.
 
+## FFA-Expeditionen: gezielte Abnahme
+
+Die [FFA-Spielregeln](../gameplay.md#gefecht-und-fortschritt) verwenden auf aktuellen Testauftrag frühe Eintrittsschwellen. Mit frischem Run Stage 1 → 2 → 3 spielen: neu eintretende Gegner ohne Vorteile, bestehende Slots mit getrennt wachsenden Stapeln und zufälligen (auch gleichen) Fraktionen. KI-gegen-KI-Kämpfe, Ausscheiden beim letzten HQ und Spielersieg erst als letzte Partei beobachten. Reload am Übergang muss alle Slots/Fraktionen/Stapel erhalten; alte Einzelgegner-Checkpoints werden verworfen, das Profil nicht.
+
+Briefing/Ergebnisvorschau mit drei Gegnern insbesondere auf schmalen Displays manuell abnehmen. Balance und mobile Last mit drei aktiven KI-Wirtschaften/Armeen sind ungemessen; keine automatische Browserabnahme und keine autonomen KI-/Simulationslangläufe für diesen Auftrag. Spätere Rückstellung der Eintrittsschwellen nur auf neuen Auftrag; keine automatische Umstellung auf die ursprünglich diskutierten späteren Stufen.
+
 ## Offene Prüfungen
 
 1. **Mobil- und Browserbedienung:** kleine HUD-Knöpfe/Texte, Tap-Folgen unter Last, Pan/Pinch, Minimap, Untermenüs/Scrollen und Zielplatzierung. Hoch-/Querformatwechsel und Rückkehr aus dem Hintergrund berücksichtigen. Für Desktopbrowser zusätzlich Links-/Mitteltasten-Pan, Mausradzoom, Auswahl und Rechtsklickbefehle im tatsächlich eingebetteten itch.io-Build gemeinsam spielen. Am flachen unteren HUD insbesondere Karten-/Markerlesbarkeit, zweizeilige Fähigkeiten auf schmalen Displays und gesperrte Einträge im deckenden Baumenü menschlich abnehmen. Chromium über `file://` bestätigt technisch passende Kontrollflächen, scrollbare Untermenüs und erreichbares Back bei 320–1280 px Breite einschließlich kurzem Querformat; keine Echtgeräte- oder itch.io-Abnahme.
