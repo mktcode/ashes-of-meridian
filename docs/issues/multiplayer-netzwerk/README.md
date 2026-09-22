@@ -1,6 +1,6 @@
 # Multiplayer: Zwei-Spieler-Prototyp und nächste Grenzen
 
-Der freigegebene vertikale Prototyp ist umgesetzt: separater autoritativer [Server](../../../server/README.md), Session-Code, Kartenauswahl für alle drei Karten, zwei menschliche Parteien, serverseitig gefilterte Ansichten und Wiederaufnahme kurzer Verbindungsabbrüche. Einzelspiel bleibt dienstfrei über `file://`. Keine KI, Expeditionen, Belohnungen oder Wiederherstellung nach Serverneustart; Erweiterungen erst nach eigenem Auftrag.
+Der freigegebene vertikale Prototyp ist umgesetzt: separater autoritativer [Server](../../../server/README.md), Session-Code, Kartenauswahl für alle vier Karten, zwei menschliche Parteien, serverseitig gefilterte Ansichten und Wiederaufnahme kurzer Verbindungsabbrüche. Einzelspiel bleibt dienstfrei über `file://`. Keine KI, Expeditionen, Belohnungen oder Wiederherstellung nach Serverneustart; Erweiterungen erst nach eigenem Auftrag.
 
 - [ ] Menschlichen Zwei-Geräte-Playtest mit echter Verbindung durchführen; Bedienbarkeit, Latenz, Bewegungsglättung und Kampf-/Audio-Rückmeldung abnehmen. Vorhandener technischer Browsercheck ersetzt das nicht.
 - [ ] Öffentlichen Betrieb absichern: Content-Hash-Handshake, Metadaten-/ID-Seitenkanäle und Missbrauchsschutz prüfen.

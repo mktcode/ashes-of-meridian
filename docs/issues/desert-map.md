@@ -11,7 +11,7 @@ Ziel bleibt eine warme, trockene Wüste mit bodenfarbigen Felsen, nicht die dunk
 - Texturvielfalt sowie zusätzliches Normal-/Höhenmaterial sind zurückgestellt. Ressourcenkristalle und Einheiten-/Gebäudemodelle wurden nicht überarbeitet. Atmosphärischer Nebel bleibt ebenfalls zurückgestellt. Weitere Umsetzung erst nach neuer Rückmeldung, keine automatische Folge von kleinen Geometrieschritten.
 - Offen bleiben Texturmaßstab, Kachelwiederholung und Einheitenkontrast. Die gelieferten Boden-/Felsquellen wurden vom Nutzer in GIMP als nahtlos bestätigt; nicht spiegeln oder ihre Kanten bearbeiten.
 
-Das [statische Audit (PERF-3)](audit-welle-01-befunde.md#performance-erst-wirkung-und-kosten-abgrenzen) konkretisiert die spätere Trennung von Schatten-/Szenenpass, Dreieckslast und Pixelkosten. Es hat weder die Galerie-Zahlen nachgemessen noch einen aktuellen GPU-Flaschenhals belegt; daraus folgt keine Freigabe für reduzierte Geometrie oder Schatten.
+Das aktuelle [Mobile-Performance-Issue](mobile-performance.md) trennt Schatten-/Szenenpass, Dreieckslast, Pixelkosten und residente Geometrie. Die historischen Galerie-Zahlen belegen keinen aktuellen GPU-Flaschenhals und geben weder reduzierte Geometrie noch Schattenänderungen frei.
 
 Der neue [Höhenstufenplan](hoehenstufen/03-karten-und-abnahme.md#desert-canyonlandschaft-mit-erhöhten-basisflächen) sieht als separates Experiment erhöhte spielbare Basen und ein großes tieferes Mittelfeld vor. Das verändert die heutige Startbecken-/Tal-Topologie bewusst; die bisherigen Nachweise unveränderter freier Navigationszellen gelten dafür nicht. Warme Canyonästhetik und Materialabnahme bleiben eigenständige Anforderungen, der Plan ist noch keine integrierte Kartenänderung.
 

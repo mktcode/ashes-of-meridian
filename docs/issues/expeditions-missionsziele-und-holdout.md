@@ -2,9 +2,9 @@
 
 ## Ziel und Aufwand
 
-Expeditionen sollen außer dem heutigen **„gegnerisches HQ zerstören / letztes eigenes HQ verlieren“** weitere Sieg- und Niederlagebedingungen enthalten können. Erster Pilot ist eine Tower-Defense-artige **Holdout-Mission** auf einer dafür entworfenen Karte: Basis und Wirtschaft aufbauen, das eigene Kommandozentrum gegen angekündigte Angriffswellen halten und nach Ablauf der Einsatzdauer gewinnen.
+Expeditionen sollen außer dem heutigen **„als letzte Partei mit HQ übrig bleiben / letztes eigenes HQ verlieren“** weitere Sieg- und Niederlagebedingungen enthalten können. Erster Pilot ist eine Tower-Defense-artige **Holdout-Mission** auf einer dafür entworfenen Karte: Basis und Wirtschaft aufbauen, das eigene Kommandozentrum gegen angekündigte Angriffswellen halten und nach Ablauf der Einsatzdauer gewinnen.
 
-Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spielregeln](../gameplay.md#gefecht-und-fortschritt) setzen zwei HQ-Starts, eine wirtschaftende Standard-KI und fest verdrahtete HQ-Ergebnisregeln voraus; Checkpoint, Briefing und Hilfetexte kennen nur Karte, Gegner und Seed. Eine bloße Sonderabfrage anhand der Karten-ID würde diese Kopplung verschärfen. Zustands-, Karten- und RNG-Grenzen stehen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen).
+Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spielregeln](../gameplay.md#gefecht-und-fortschritt) starten je nach Tiefe zwei bis vier FFA-Parteien mit wirtschaftenden Standard-KIs und prüfen Ausscheiden sowie Sieg anhand des letzten HQs. Der Expeditionscheckpoint speichert Karte, Seed, mehrere Gegnerfraktionen und getrennte Vorteilsstapel, aber keine Missions-ID oder laufende Welt; Briefing und Hilfetexte setzen den Standardangriff voraus. Eine Sonderabfrage anhand der Karten-ID würde diese Kopplung verschärfen. Zustands-, Parteien-, Karten- und RNG-Grenzen stehen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen).
 
 Grobe Größenordnung für einen belastbaren ersten Piloten: mehrere getrennte Umsetzungspakete bzw. etwa **8–15 Entwicklungstage** für Missionsvertrag, Wellenregie, Kartenrezept, UI und automatisierte Prüfungen, danach zusätzliche menschliche Spiel- und Balance-Runden. Ein deutlich kleinerer Prototyp mit normaler Basisbau-KI und bloßem Überlebenstimer wäre mittlerer Aufwand, aber noch keine echte Tower-Defense-Karte mit lesbaren Wellen und kontrollierter Dramaturgie.
 
@@ -22,7 +22,7 @@ Grobe Größenordnung für einen belastbaren ersten Piloten: mehrere getrennte U
 
 Mission und Landschaft bleiben getrennte Begriffe. Das gespeicherte Encounter-Rezept erhält neben `map` eine stabile `mission`-ID; zulässige Kombinationen kommen aus einem kleinen Katalog. Die erste Holdout-Mission darf auf genau eine dedizierte Karte begrenzt sein, ohne dass die Simulation anhand des Kartennamens ihre Regeln errät.
 
-- `BattleRules` bzw. ein eigener Einzelspieler-Missionszustand beschreibt Zielart und deterministischen Laufzeitzustand. Ergebnisprüfung delegiert an die Mission statt direkt zwei HQ-Listen zu prüfen.
+- `BattleRules` bzw. ein eigener Einzelspieler-Missionszustand beschreibt Zielart und deterministischen Laufzeitzustand. Ergebnisprüfung delegiert an die Mission, statt Ausscheiden und Sieg ausschließlich aus den HQ-Beständen der heutigen FFA-Parteien abzuleiten.
 - Das Kartenrezept deklariert nur räumliche Anker wie Spielerstart, Wellenzugänge, Sammel-/Warnpositionen und zu schützende Bauflächen. Wellentakt, Sieg und Progression gehören nicht in Renderer oder Geländegenerator.
 - Der Encounter-Checkpoint speichert weiterhin kein laufendes Gefecht. `mission`, Karte, Gegner, Seed und nötige statische Parameter reichen aus, um denselben Start und dieselbe Wellenfolge wiederherzustellen. Wegen des geänderten Rezepts den Checkpoint bewusst auf eine neue Version heben; alte Runs werden gemäß Prototypregel verworfen, nicht migriert.
 - Der Wellenregisseur verwendet einen eigenen, aus Encounter-Seed und Mission abgeleiteten Zufallsstrom. Gelände-, Startplatz-, Kampf- und Effekt-RNG dürfen sich dadurch nicht verschieben. Anzeigen oder erneutes Öffnen des Briefings würfeln keine Welle neu.
@@ -35,11 +35,11 @@ Mission und Landschaft bleiben getrennte Begriffe. Das gespeicherte Encounter-Re
 ### 1. Missionsrahmen ohne Verhaltensänderung
 
 - [ ] Missionstypen und Katalog für zulässige Karten-/Missionskombinationen einführen; alle bisherigen Encounters explizit als Standardangriff erzeugen und normalisieren.
-- [ ] HQ-Siegregeln in eine Standardmission verschieben, dabei Gleichzeitigkeit, Score, Aether-Auszahlung und genau einmalige Ergebnisverarbeitung unverändert erhalten.
+- [ ] Die heutigen FFA-Ausscheidungs- und HQ-Siegregeln in eine Standardmission verschieben, dabei gleichzeitige Ausscheidungen, Vorrang des Spielerverlusts, Score, Aether-Auszahlung und genau einmalige Ergebnisverarbeitung unverändert erhalten.
 - [ ] Checkpointformat und Persistenztests auf das neue Encounter-Rezept umstellen. Reload startet weiterhin nur den gesicherten Gefechtsanfang.
 - [ ] Briefing, Ergebnisvorschau und Feldhandbuch aus Missionsmetadaten speisen, nicht mit Karten-ID- oder Text-Sonderfällen.
 
-**Zwischenabnahme:** Bestehende Expeditionen spielen sich seed- und RNG-identisch; alle drei heutigen Karten verwenden weiterhin ausschließlich den Standardangriff.
+**Zwischenabnahme:** Bestehende Expeditionen spielen sich seed- und RNG-identisch; alle vier heutigen Karten verwenden weiterhin ausschließlich den Standardangriff.
 
 ### 2. Deterministische Holdout-Simulation
 
@@ -66,7 +66,7 @@ Mission und Landschaft bleiben getrennte Begriffe. Das gespeicherte Encounter-Re
 
 ## Abnahmekriterien
 
-- Ein Standardgefecht behält unverändert die heutigen HQ-Siegregeln und seine bisherige Expeditionsprogression.
+- Ein Standardgefecht behält unverändert die heutigen FFA-Ausscheidungs- und HQ-Siegregeln sowie seine bisherige Expeditionsprogression.
 - Derselbe Holdout-Checkpoint erzeugt nach Neustart dieselbe Karte, Eingänge, Wellenfolge und Spawnreihenfolge; er speichert keine laufenden Entitäten oder Timerstände.
 - Holdout gewinnt ausschließlich nach erfüllter Haltebedingung und verliert beim festgelegten Schutzobjektverlust. Gleichzeitige Grenzfälle liefern genau ein reproduzierbares Ergebnisereignis.
 - Wellen laufen über reguläre Navigation und Kampfregeln. Blockierte oder unbrauchbare Eingänge führen weder zu Hängen noch zu Teleports oder direkten Schadensskripten.

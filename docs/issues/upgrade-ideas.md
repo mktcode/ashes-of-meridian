@@ -22,9 +22,13 @@ Kampfeinheiten erhalten erhöhte Bewegungsgeschwindigkeit +1%, sollte mehrfach v
 
 Das erste erfolgreich platzierte Turret jedes Gefechts kostet keine Ressourcen. Abbruch, fehlgeschlagene Platzierung und Verkauf müssen vorab eindeutig behandeln, damit der Vorteil nicht mehrfach nutzbar wird.
 
-## Gemeinsame Commander-Effekte in 2vs2
+## Orbital Strike durch Commander autorisieren
 
-In einem späteren 2vs2 sollen Commander-Auren auch den jeweiligen Teamkollegen begünstigen. Die Implementierung darf deshalb nicht auf die heutige Zweiparteienannahme oder auf feste Parteien-IDs bauen:
+Der Commander soll den Orbital Strike anstelle der Fahrzeugfabrik freischalten. Vor einer Umsetzung festlegen: Nur ein lebender, fertig erzeugter Commander zählt; Tod sperrt den Schlag sofort, erfolgreiche Rekonstruktion gibt ihn wieder frei. Prüfung, Energie, Cooldown und aktuelle Zielsicht bleiben unverändert. KI, HUD/Feldhandbuch und technische Voraussetzung müssen denselben Vertrag verwenden. Diese Regel getrennt von neuen Commander-Auren umsetzen und abnehmen, damit ihre Balancewirkungen unterscheidbar bleiben.
+
+## Gemeinsame Commander-Effekte in 2vs2 – zurückgestellt
+
+Ein Allianzmodell ist heute ausdrücklich nicht vorhanden. Falls später 2vs2 beauftragt wird, sollen Commander-Auren auch den jeweiligen Teamkollegen begünstigen. Die heutige erste Aura darf dafür keinen allgemeinen Allianz- oder Stat-Modifikator-Unterbau vorwegnehmen; eine spätere Erweiterung darf jedoch nicht auf feste Parteien-IDs bauen:
 
 - Ein Effekt sucht alle lebenden Commander der eigenen expliziten Allianz und wirkt auf alle Einheiten dieser Allianz, nicht nur auf die Einheiten des Commander-Besitzers.
 - Nicht-Feindschaft allein genügt dafür nicht: Sie kann in Szenarien auch neutral bedeuten. Das 2vs2-Modell braucht einen ausdrücklichen Allianz-/Teamvertrag.

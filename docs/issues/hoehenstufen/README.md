@@ -30,14 +30,14 @@ Automatisierte Höhenprüfungen decken Oberfläche, Übergänge, Sichtstufen, Be
 - Zunächst statisches 2,5D-Gelände: genau eine begehbare Bodenhöhe je `x/z`, keine Brücken mit Unterführung, Tunnel, Aufzüge, Terrainverformung oder frei bewegliche Z-Achse.
 - Keine neuen Ressourcenmengen, Einheitenwerte oder Höhenboni außer dem ausdrücklich beauftragten Sichtvorteil. Ein neuer Kartenaufbau verändert allerdings bewusst Laufwege und strategisches Balancing; das lässt sich nicht als verhaltensneutrale Grafikänderung behandeln.
 
-## Umsetzungspakete und Reihenfolge
+## Verbleibende Pakete und Reihenfolge
 
-1. [Weltvertrag und Navigation](01-welt-und-navigation.md): für Mothership umgesetzt; kartenübergreifende Langlaufgrenzen bleiben offen.
-2. [Darstellung und Bedienung](02-darstellung-und-bedienung.md): für Mothership umgesetzt; menschliche Touch-/Darstellungsabnahme bleibt offen.
-3. [Höhenabhängige Sicht](04-hoehenabhaengige-sicht.md): technisch umgesetzt; menschlicher Rampen-/Klippencheck bleibt offen.
-4. [Karten und Abnahme](03-karten-und-abnahme.md): Mothership abnehmen; Alien Planet und Desert erst mit neuem Auftrag adaptieren.
+Der technische Welt-, Navigations-, Darstellungs- und Bedienvertrag ist für Mothership umgesetzt und maßgeblich in der [Architektur](../../architecture.md#welt-darstellung-und-zufall) dokumentiert. Die abgeschlossenen Planungsissues wurden entfernt.
 
-Alle Pakete teilen den CPU-Oberflächenvertrag und dürfen keine inkompatiblen Höhenabfragen oder Renderer-Sonderlogik einführen.
+1. [Höhenabhängige Sicht](04-hoehenabhaengige-sicht.md): technisch umgesetzt; menschlicher Rampen-/Klippencheck bleibt offen.
+2. [Karten und Abnahme](03-karten-und-abnahme.md): Mothership abnehmen; Alien Planet und Desert erst mit neuem Auftrag adaptieren.
+
+Weitere Karten müssen denselben CPU-Oberflächenvertrag verwenden und dürfen keine inkompatiblen Höhenabfragen oder Renderer-Sonderlogik einführen.
 
 ## Entscheidungen vor spielbarer Abnahme
 

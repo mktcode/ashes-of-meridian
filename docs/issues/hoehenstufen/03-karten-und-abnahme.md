@@ -1,6 +1,6 @@
 # Höhenstufen 3: Kartenlayouts, Integration und Abnahme
 
-Abhängigkeiten: [Welt/Navigation](01-welt-und-navigation.md) und [Darstellung/Bedienung](02-darstellung-und-bedienung.md). [Ziel, Parameter und Entscheidungen](README.md) sind maßgeblich; dieses Paket kopiert keine zweite Regeltabelle.
+Abhängigkeiten: der integrierte [Welt-, Navigations- und Darstellungsvertrag](../../architecture.md#welt-darstellung-und-zufall) sowie [Ziel, Parameter und Entscheidungen](README.md). Dieses Paket kopiert keine zweite Regeltabelle.
 
 ## Kartenplan
 

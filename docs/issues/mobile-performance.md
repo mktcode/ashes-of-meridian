@@ -68,7 +68,7 @@ Alle folgenden Kostenformen sind statisch, keine gemessenen Engpässe. Tempo 2 e
 | Kampfwerte/KI/Effekte | `rangedStats()` kopiert Definitionen häufig (`src/simulation/combat.ts:71–180`); KI enthält gedrosselte quadratische Nachbarschaftswertungen; Effekttick ersetzt Arrays (`src/effects.ts:168–191`). | Niedriger priorisierte Allokationskandidaten; keine breiten Caches ohne Profilbeleg. Beobachtungskopien, Veteranengrenzen, Gleichstände, Effektfolge und RNG schützen. |
 | Multiplayer-Client | Zwei ID-Maps pro Snapshot plus Raster-/Hash-Rebuild (`src/multiplayer/client.ts:375–393`, `presentation.ts:91–97`), Interpolation pro Renderframe (`:99–135`). Timeline auf fünf Frames und 512 Events begrenzt. | Gemeinsame unveränderte Snapshot-ID-Map erwägen, nötige Clientnutzer vor Weglassen von Rebuilds belegen. Sichtverlust und stabile Poseidentität erhalten. Kein lokaler Simulationstick im Netzwerkspiel. |
 
-Die bekannten Bewegungs-/KI-Befunde stehen ergänzend im [ersten Audit](audit-welle-01-befunde.md#performance-erst-wirkung-und-kosten-abgrenzen). Ein allgemeines Refactoring ist daraus nicht freigegeben.
+Die bekannten Bewegungs-/KI-Kostenformen sind Messkandidaten, keine Freigabe für ein allgemeines Refactoring.
 
 ## Erste lokale Nutzeraufnahme
 

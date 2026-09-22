@@ -29,7 +29,7 @@ Der vollständig freigegebene Simulationslauf auf `0fd975b` (Node v23.11.1) find
 
 ## Abhängigkeit: begehbare Höhenstufen
 
-Der [Höhenstufenplan](../hoehenstufen/01-welt-und-navigation.md) ergänzt Rampen, Klippen und erhöhte Arbeitsflächen. Dabei müssen Segmentprüfung, Recovery-Platzsuche und Arbeitsreichweiten gemeinsam betrachtet werden: Eine nahe X/Z-Position auf der anderen Klippenseite ist kein erreichbarer Servicepunkt. Die hier dokumentierten Flachkarten-/Langlaufbefunde bleiben separat offen; das Höhenexperiment ist kein Auftrag zu ihrer beiläufigen Reparatur.
+Der integrierte [Höhen- und Navigationsvertrag](../../architecture.md#welt-darstellung-und-zufall) ergänzt Rampen, Klippen und erhöhte Arbeitsflächen. Dabei müssen Segmentprüfung, Recovery-Platzsuche und Arbeitsreichweiten gemeinsam betrachtet werden: Eine nahe X/Z-Position auf der anderen Klippenseite ist kein erreichbarer Servicepunkt. Die hier dokumentierten Flachkarten-/Langlaufbefunde bleiben separat offen; das Höhenexperiment ist kein Auftrag zu ihrer beiläufigen Reparatur.
 
 ## Akzeptanz der offenen Arbeit
 
