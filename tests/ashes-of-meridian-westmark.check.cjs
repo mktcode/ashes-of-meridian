@@ -25,6 +25,19 @@ for(const seed of [1409,43015,7919])test(`Westmark ${seed}: all public starts an
     for(const p of path.points){assert.ok(w.lineFree(previous,p,radius));previous=p;}
   }
   for(const p of starts)assert.equal(w.surface.visibilityLevelAt(p.x,p.z),0,'no implicit new high-ground rule');
+  const trees=w.renderData.placements.filter(p=>p.mesh==='westmarkSpruce'),
+    anchors=trees.filter(p=>p.scale[0]>=.64),young=trees.filter(p=>p.scale[0]<.64);
+  assert.ok(anchors.length>0&&young.length>=anchors.length,'existing groves gain at least one younger tree per anchor on average');
+  assert.ok(young.length<=anchors.length*2,'bounded local density, not a new forest distribution');
+  for(const p of young) {
+    const [x,,z]=p.position;
+    assert.ok(anchors.some(a=>Math.hypot(a.position[0]-x,a.position[2]-z)<2.36));
+    assert.ok(plan.reserve(x,z)>=4.1&&plan.road(x,z)>=7.1&&!plan.bridgeAt(x,z,11.1));
+    assert.ok(westmarkRiver(x,z).bank>=5.1);
+    const cell=v=>Math.floor((v+w.extent)/w.cellSize);
+    for(let row=cell(z-.6);row<=cell(z+.6);row++)for(let col=cell(x-.6);col<=cell(x+.6);col++)
+      assert.equal(w.staticGrid[row*w.gridSize+col],1,'decorative trunks never occupy a traversable cell');
+  }
 });
 
 test('all bridge decks admit opposing vehicles, prohibit foundations and preserve water barriers without the mutable grid',()=>{
@@ -111,7 +124,8 @@ test('Westmark mesh descriptors use bounded finite geometry and CPU surface samp
     }
   }
   const triangles=w.renderData.placements.reduce((sum,p)=>sum+(counts[p.mesh]??100),0);
-  assert.ok(triangles<280000,`static world budget excluding shadow repetition: ${triangles}`);
+  // Denser groves add up to two young trees per existing anchor, sharing the same meshes.
+  assert.ok(triangles<400000,`static world budget excluding shadow repetition: ${triangles}`);
   for(const b of plan.bridges) {
     const hit=w.surface.ray([b.x,50,b.z],[b.x,0,b.z]);
     assert.ok(hit&&Math.hypot(hit.x-b.x,hit.z-b.z)<1e-6,'picking selects the deck, not the river bed');

@@ -211,6 +211,30 @@ const WESTMARK_BATTLEFIELD: BattlefieldDefinition = {
       builder.place('westmarkBeacon',x,y,z,1,1,1,0xffffff,angle,0,0,0,1,'static','BARK');
       builder.place('octa',x,y+7.3,z,.65,1.1,.65,0xffb54a,0,0,0,1.8,1,'static','CRYSTAL');
     }
+    // Fill existing groves with younger trees, not new navigation obstacles.
+    // Every added trunk footprint must fit entirely inside the existing blocked
+    // cells. Run after fixed rocks/beacons so neither their proposals nor their
+    // RNG stream/acceptance can change when decorative density is adjusted.
+    const grove=builder.cosmeticRandom(0x47524f56),anchors=w.renderData.placements.filter(p=>p.mesh==='westmarkSpruce'),
+      insideBlock=(x:number,z:number)=>{
+        const cell=(v:number)=>Math.floor((v+w.extent)/w.cellSize);
+        for(let row=cell(z-.6);row<=cell(z+.6);row++)for(let col=cell(x-.6);col<=cell(x+.6);col++)
+          if(row<0||col<0||row>=w.gridSize||col>=w.gridSize||!surface.cliffs[row*w.gridSize+col])return false;
+        return true;
+      };
+    for(const anchor of anchors) {
+      const neighbors:Position[]=[],phase=grove()*Math.PI*2;
+      for(let attempt=0;attempt<12&&neighbors.length<2;attempt++) {
+        const angle=phase+attempt*2.39996,radius=1.55+grove()*.8,
+          x=anchor.position[0]+Math.cos(angle)*radius,z=anchor.position[2]+Math.sin(angle)*radius,
+          scale=.45+grove()*.17,yaw=grove()*Math.PI*2;
+        if(protectedAt(x,z,1.1)||!insideBlock(x,z)||neighbors.some(p=>Math.hypot(p.x-x,p.z-z)<1.6))continue;
+        neighbors.push({x,z});
+        const y=surface.heightAt(x,z)-.15;
+        builder.place('westmarkTrunk',x,y,z,scale,scale,scale,0xffffff,yaw,0,0,0,1,'static','BARK');
+        builder.place('westmarkSpruce',x,y,z,scale,scale,scale,0xffffff,yaw,0,0,0,1,'static','FOLIAGE');
+      }
+    }
     w.staticGrid.set(surface.cliffs);w.terrainFeatureGrid.set(surface.cliffs);
     for(let i=0;i<w.staticGrid.length;i++) {
       const p=w.point(i),b=plan.bridgeAt(p.x,p.z),water=westmarkRiver(p.x,p.z).bank<0,
