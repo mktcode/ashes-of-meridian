@@ -231,11 +231,11 @@
           }
           this.showResult(data);
         } else if (type === 'shot') {
-          let p = this.R.project(data.x, 1, data.z);
+          let p = this.R.project(data.x, 1 + (this.game.world?.surface?.heightAt(data.x,data.z) ?? 0), data.z);
           if (p && this.R.containsPoint(p.x, p.y))
             this.audio.sound('shot', data.heavy);
         } else if (type === 'explosion') {
-          let p = this.R.project(data.x, 1, data.z);
+          let p = this.R.project(data.x, 1 + (this.game.world?.surface?.heightAt(data.x,data.z) ?? 0), data.z);
           const v = this.R.viewport!;
           if (p && p.x > v.left - 100 && p.x < v.right + 100 && p.y > v.top - 100 && p.y < v.bottom)
             this.audio.sound('explosion', data.big);

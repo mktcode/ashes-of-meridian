@@ -58,6 +58,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-runtime'
 ]);
 const BATTLEFIELD_SCRIPTS = Object.freeze([
+  'battlefield-surface',
   'battlefield-shared',
   'battlefield-desert',
   'battlefield-alien-planet',

@@ -13,6 +13,12 @@ npm run build
 
 Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. HTML, Styles, Build-Ausgabe und lokale Laufzeitassets gemeinsam mitführen; es ist kein Ein-Datei-Paket. `npm run build:zip` erzeugt das direkt hochladbare HTML5-Paket `release/ashes-of-meridian-prototype.zip` für itch.io. Quellen und Ladevertrag: [Architektur](docs/architecture.md), Webhosting und Veröffentlichung: [Deployment](docs/deployment.md).
 
+## Höhenexperiment (dieser Branch)
+
+Nach `npm run build` die lokale `index.html?experiment=height` im Browser öffnen. Dieser ausdrückliche Teststart lädt Mothership mit erhöhten Basisdecks, Rampen und zwei eigenen Startworkern; Profil und Expeditionscheckpoint bleiben flüchtig und berühren den normalen Speicher nicht. Reload startet den Versuch neu. Alien Planet und Desert sind noch nicht umgebaut; Sicht und Kampf erhalten keine Höhenboni. Testfragen und Grenzen stehen im [Höhenstufen-Issue](docs/issues/hoehenstufen/README.md).
+
+Für Netzwerktests ausschließlich Client und lokalen Server aus demselben Branch verwenden, nicht den öffentlichen Server mit dem experimentellen Kartenlayout mischen.
+
 ## Multiplayer-Prototyp
 
 Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen bzw. per Code beitreten, mit freier Karten- und Fraktionswahl. Voreingestellt ist `wss://aoms.markus-kottlaender.de`; alternativ ist ein separat laufender [Multiplayerserver](server/README.md) nutzbar. Bewegungen werden geglättet, Kampf-Effekte und Audio sicht-/parteigefiltert übertragen; kurze Transportabbrüche werden innerhalb einer begrenzten Schonfrist automatisch wiederaufgenommen. Der letzte Raumcode wird im Browser vorausgefüllt. Nach Reload oder erneutem Öffnen innerhalb der Schonfrist bietet das Multiplayer-Menü an, die letzte Sitzung mit lokal gespeicherten, kurzlebigen Zugangsdaten fortzusetzen; bewusstes Verlassen, Sitzungsende oder Fristablauf entfernt diese wieder. Noch keine Expeditionen, Belohnungen oder Wiederherstellung nach Serverneustart. Das bisherige Einzelspiel bleibt offline nutzbar.

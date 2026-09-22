@@ -64,6 +64,8 @@ function battlefieldStartSites(world: Battlefield): Position[] {
     const site = candidates.find(p => {
       if (Math.abs(p.x) > world.extent - 12 || Math.abs(p.z) > world.extent - 12) return false;
       if (!world.layout.resourceSites.some(r => distance(p, r) <= 23)) return false;
+      if (world.surface && (Math.abs(world.surface.heightAt(p.x,p.z) - world.surface.maxHeight) > .05 ||
+        !world.surface.foundation(p, 7))) return false;
       if (world.layout.resourceSites.some((r, i) => distance(p, r) < 11 ||
         distance(p, {x: r.x + (i ? 7 : 5), z: r.z + (i ? 7 : 18)}) < 8)) return false;
       for (let z = p.z - 7; z <= p.z + 7; z += 1)
@@ -136,11 +138,12 @@ class BattlefieldBuilder {
         let c2 = c.map(v => v * (0.99 + rand() * 0.025));
         layout.groundColors.push(c2);
       }
-    place('terrain', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static');
+    place('terrain', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static', world.surface ? 'GROUND' : undefined);
     place('box', 0, -8, 0, EXTENT * 2, 15, EXTENT * 2, 0x242c36, 0, 0, 0, 0, 1, 'static');
   }
-  boundary(model: string, material: WorldPlacement['material']) {
-    this.world.renderData.geometries.push({ mesh: model, model, seed: this.world.seed, extent: this.world.extent });
+  boundary(model: string, material: WorldPlacement['material'], grounded = false) {
+    this.world.renderData.geometries.push({ mesh: model, model, seed: this.world.seed, extent: this.world.extent,
+      ...(grounded ? {grounded: true} : {}) });
     this.place(model, 0, 0, 0, 1, 1, 1, this.palette.rock, 0, 0, 0, 0, 1, 'static', material);
   }
   smallObstacles() {

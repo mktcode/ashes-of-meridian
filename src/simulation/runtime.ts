@@ -244,6 +244,22 @@
           this.notify(team, 'toast', 'Reinforcements require 8 free supply.');
           return false;
         }
+        // Resolve the whole elevated landing before spending, without spawning temporary entities.
+        // nearest() alone can otherwise move a drop onto the far side of a cliff.
+        let landings: UnitPlacement[] | null = null;
+        if (kind === 'drop' && this.world!.surface) {
+          landings = [];
+          for (let i = 0; i < 4; i++) {
+            const body: UnitPlacement = {type:'rifle',size:UNITS.rifle.size,
+              x:p.x+(i%2)*2-1,z:p.z+Math.floor(i/2)*2-1},
+              loc = this.unitPosition(body,landings);
+            if (!loc || !this.world!.terrainFree(p,loc,body.size*UNIT_BODY_SCALE)) {
+              this.notify(team,'toast','Reinforcements need clear ground away from cliffs.');
+              return false;
+            }
+            landings.push({...body,...loc});
+          }
+        }
         account.energy -= d.energy;
         account.abilities[kind] = s.time + d.cd;
         if (kind === 'orbital') {
@@ -274,7 +290,7 @@
         }
         if (kind === 'drop') {
           for (let i = 0; i < 4; i++) {
-            let loc = this.world!.nearest(p.x + (i % 2) * 2 - 1, p.z + Math.floor(i / 2) * 2 - 1);
+            let loc = landings?.[i] ?? this.world!.nearest(p.x + (i % 2) * 2 - 1, p.z + Math.floor(i / 2) * 2 - 1);
             this.spawnUnit('rifle', loc.x, loc.z, team, faction);
             this.presentation?.({ kind: 'drop', point: loc, team, color: FACTIONS[faction].color });
             this.effects.drop(loc, FACTIONS[faction].color, team);

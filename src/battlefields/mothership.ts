@@ -9,14 +9,14 @@ function mothershipLayout(): BattlefieldLayout {
     outerClearings: [{ x: -80, z: 32 }, { x: 80, z: -32 }],
     resourceSites: [
       { x: -62, z: 53 }, { x: 58, z: -52 }, { x: -29, z: 15 }, { x: 29, z: -15 },
-      { x: -64, z: -41 }, { x: 64, z: 41 }, { x: -16, z: -65 }, { x: 16, z: 65 }
+      { x: -62, z: -51 }, { x: 62, z: 50 }, { x: -8, z: -60 }, { x: 5, z: 58 }
     ],
     additionalClearings: [{ x: -42, z: 75 }, { x: 42, z: -75 }],
     corridors: [
-      [[-42,58],[-14,28],[14,-28],[42,-58]],
+      [[-42,58],[-42,12],[0,0],[42,-12],[42,-58]],
       [[0,-83],[0,83]],
-      [[-42,58],[-80,36],[-80,-40],[-33,-51],[42,-58]],
-      [[-42,58],[33,51],[80,40],[80,-36],[42,-58]]
+      [[-42,58],[-30,58],[-30,78],[0,78],[30,78],[30,58],[42,58]],
+      [[-42,-58],[-30,-58],[-30,-78],[0,-78],[30,-78],[30,-58],[42,-58]]
     ]
   };
 }
@@ -25,7 +25,8 @@ function populateMothership(builder: BattlefieldBuilder) {
   const { world, place } = builder, decor = builder.cosmeticRandom(0x4445434b);
   const part = (mesh: string, x: number, y: number, z: number, sx: number, sy: number, sz: number,
     yaw = 0, color = 0xffffff, glow = 0) =>
-    place(mesh, x, y, z, sx, sy, sz, color, yaw, 0, 0, glow, 1, 'static', 'METAL');
+    place(mesh, x, y + (Math.max(Math.abs(x),Math.abs(z)) < world.extent ? world.surface!.heightAt(x,z) : 0),
+      z, sx, sy, sz, color, yaw, 0, 0, glow, 1, 'static', 'METAL');
   for (const model of ['shipHangar', 'shipHangarLights', 'shipPlant', 'shipCrate', 'shipTransport',
     'shipTransportLights', 'shipBridge', 'shipCargoPad', 'shipVentDock'])
     world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent: world.extent });
@@ -49,10 +50,10 @@ function populateMothership(builder: BattlefieldBuilder) {
   };
   block('shipHangar',-59,0,16,12,12,Math.PI/2);
   block('shipHangar',59,0,16,12,12,-Math.PI/2);
-  block('shipHangar',-58,-69,15,10,10);
-  block('shipHangar',58,69,15,10,10,Math.PI);
-  block('shipPlant',-31,-29,9,5,6);
-  block('shipPlant',31,29,9,5,6,Math.PI);
+  block('shipHangar',-58,-72.5,15,10,10);
+  block('shipHangar',58,72.5,15,10,10,Math.PI);
+  block('shipPlant',-65,-25,9,5,6);
+  block('shipPlant',65,25,9,5,6,Math.PI);
 
   // The same industrial modules continue beyond the playable bounds, at a larger scale.
   for (const side of [-1,1]) for (const z of [-112,-49,22,99]) {
@@ -75,7 +76,7 @@ function populateMothership(builder: BattlefieldBuilder) {
     part('shipVentDock',p.x+(i?7:5),-.1,p.z+(i?7:18),1,1,1);
   }
   // Low painted deck furniture, no invisible cargo obstacles or extra simulation RNG.
-  builder.boundary('shipDeckPaint','METAL');
+  builder.boundary('shipDeckPaint','METAL', true);
 }
 
 const MOTHERSHIP_BATTLEFIELD: BattlefieldDefinition = {
@@ -91,7 +92,23 @@ const MOTHERSHIP_BATTLEFIELD: BattlefieldDefinition = {
   },
   worldEvent: 'solarFlare',
   generate(builder) {
+    const world = builder.world;
+    world.surface = new BattlefieldSurface(world.extent, world.cellSize, (x,z) => {
+      const ax = Math.abs(x), az = Math.abs(z);
+      // Four public high decks; central floor remains low regardless of deployed parties.
+      let deck = Math.min(clamp((ax-19.5)/2.5,0,1), clamp((az-35.5)/2.5,0,1));
+      // Broad inward ramp and a separate rear/flank ramp for every starting deck.
+      if (ax >= 30 && ax <= 55) deck = Math.max(deck, clamp((az-18)/20,0,1));
+      if (az >= 72 && az <= 84) deck = Math.max(deck, clamp((ax-2)/20,0,1));
+      return deck * 6;
+    });
+    world.staticGrid.set(world.surface.cliffs);
+    world.terrainFeatureGrid.set(world.surface.cliffs);
     builder.ground();
+    for (let i = 0; i < world.staticGrid.length; i++) {
+      const p = world.point(i), shade = 1 + world.surface.heightAt(p.x,p.z) * .045;
+      for (let c = 0; c < 3; c++) world.terrainColors[i*4+c] *= shade;
+    }
     builder.boundary('shipOuterDeck','GROUND');
     builder.boundary('shipHull','METAL');
     populateMothership(builder);

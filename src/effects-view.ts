@@ -17,7 +17,7 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
   for (const e of s.entities) {
     if (seen.size >= cap) break;
     if (e.kind !== 'unit' || e.hp <= 0 || (e.type !== 'tank' && e.type !== 'artillery') || !world.visible[world.idx(e.x,e.z)]) continue;
-    const p = R.project(e.x, 0, e.z), v = R.viewport;
+    const p = R.project(e.x, world.surface?.heightAt(e.x,e.z) ?? 0, e.z), v = R.viewport;
     if (!p || p.x < v.left - 30 || p.x > v.right + 30 || p.y < v.top - 30 || p.y > v.bottom + 30) continue;
     seen.add(e);
     let track = view.tracks.get(e);
@@ -33,14 +33,31 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
     for (const puff of track.puffs) {
       if (!world.visible[world.idx(puff.x,puff.z)]) continue;
       const age = clamp((now - puff.at) / .42, 0, 1), radius = .3 + age * .6;
-      R.add('sphere', puff.x, .18 + age * .35, puff.z, radius, radius * .45, radius,
+      R.add('sphere', puff.x, (world.surface?.heightAt(puff.x,puff.z) ?? 0) + .18 + age * .35, puff.z, radius, radius * .45, radius,
         view.color, 0, 0, 0, 0, (1 - age) * .17, 'effects');
     }
   }
   for (const e of view.tracks.keys()) if (!seen.has(e)) view.tracks.delete(e);
 }
         function drawEffectRing(R: MeridianRenderer, x: number, z: number, r: number, color: RenderColor, alpha = 0.65, y = 0.1, rot = 0) {
-          R.add('ring', x, y, z, r, 1, r, color, rot, 0, 0, 0.45, alpha, 'effects');
+          if (R.surface && !R.cinema) {
+            // Follow each local surface segment, rather than floating a large flat ring over ramps.
+            const count = Math.min(192,Math.max(24,Math.ceil(r * Math.PI * 2 / 1.25)));
+            let low = Infinity, high = -Infinity;
+            for (let i = 0; i < count; i++) {
+              const a = rot+i*Math.PI*2/count, h = R.surface.heightAt(x+Math.sin(a)*r,z+Math.cos(a)*r);
+              low = Math.min(low,h); high = Math.max(high,h);
+            }
+            if (high-low < .01) {
+              R.add('ring',x,high+y,z,r,1,r,color,rot,0,0,.45,alpha,'effects');
+              return;
+            }
+            for (let i = 0; i < count; i++) {
+              const a = rot+i*Math.PI*2/count, b = rot+(i+1)*Math.PI*2/count,
+                ax = x+Math.sin(a)*r, az = z+Math.cos(a)*r, bx = x+Math.sin(b)*r, bz = z+Math.cos(b)*r;
+              R.beam([ax,R.surface.heightAt(ax,az)+y,az],[bx,R.surface.heightAt(bx,bz)+y,bz],.045,color,.45,alpha);
+            }
+          } else R.add('ring', x, y, z, r, 1, r, color, rot, 0, 0, 0.45, alpha, 'effects');
         }
         function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number, localTeam: PlayerTeam = 0) {
           const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
@@ -75,7 +92,7 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
               }
               let x = f.x + (f.tx - f.x) * age,
                 z = f.z + (f.tz - f.z) * age,
-                y = f.startY * (1 - age) + Math.sin(age * Math.PI) * 12;
+                y = f.startY * (1 - age) + (f.endY ?? 0) * age + Math.sin(age * Math.PI) * 12;
               R.add('sphere', x, y, z, 0.22, 0.22, 0.22, f.color, 0, 0, 0, 2);
               R.beam(
                 [x, y, z],
@@ -90,7 +107,7 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
               R.add(
                 'sphere',
                 f.x,
-                0.6 + age * f.size * 0.6,
+                (world.surface?.heightAt(f.x,f.z) ?? 0) + 0.6 + age * f.size * 0.6,
                 f.z,
                 r,
                 r * 0.6,
@@ -123,7 +140,8 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
               let r = f.size * (1 + age * 0.9);
               R.add('sphere', f.x, f.y, f.z, r, r * 0.8, r, f.color, 0, 0, 0, 0, life * 0.2, 'effects');
             } else if (f.type === 'drop') {
-              R.beam([f.x, 0.2, f.z], [f.x, life * 24 + 2, f.z], life * 0.24, f.color, 1.3, life);
+              const base = world.surface?.heightAt(f.x,f.z) ?? 0;
+              R.beam([f.x, base + 0.2, f.z], [f.x, base + life * 24 + 2, f.z], life * 0.24, f.color, 1.3, life);
               ring(f.x, f.z, 1 + age * 2.5, f.color, life);
             }
           }
@@ -143,7 +161,7 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
             R.add(
               'sphere',
               f.x,
-              0.25,
+              (world.surface?.heightAt(f.x,f.z) ?? 0) + 0.25,
               f.z,
               f.r || 12,
               0.16,
@@ -177,6 +195,7 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
               0.85,
               0.15
             );
-            R.beam([a.x, 0.1, a.z], [a.x, 10 + Math.sin(t * 4) * 1, a.z], 0.045, col, 1.2, 0.5);
+            const base = world.surface?.heightAt(a.x,a.z) ?? 0;
+            R.beam([a.x, base + 0.1, a.z], [a.x, base + 10 + Math.sin(t * 4) * 1, a.z], 0.045, col, 1.2, 0.5);
           }
         }

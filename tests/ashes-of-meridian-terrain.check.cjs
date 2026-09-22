@@ -553,7 +553,10 @@ function assertMapAccess(w) {
     assert.equal(w.blockedAt(p.x,p.z),false,'unobstructed base/resource/vent');
     assert.ok(queue.some(i=>{const q=w.point(i);return Math.hypot(q.x-p.x,q.z-p.z)<=5;}),'connected with body clearance');
   }
-  assert.ok(w.lineFree(w.layout.playerStart,w.layout.enemySites[0]),'wide direct diagonal remains open');
+  if (w.surface) {
+    const a=w.layout.playerStart,b=w.layout.enemySites[0];
+    assert.equal(w.path(a.x,a.z,b.x,b.z).status,'complete','opposite high decks connect through ramps');
+  } else assert.ok(w.lineFree(w.layout.playerStart,w.layout.enemySites[0]),'wide direct diagonal remains open');
   for(const route of w.layout.corridors) for(let i=1;i<route.length;i++)
     assert.ok(w.lineFree({x:route[i-1][0],z:route[i-1][1]},{x:route[i][0],z:route[i][1]}),'flank routes remain open');
 }
@@ -680,7 +683,8 @@ for(const seed of [43015,74408,90001]) test(`Mothership ${seed}: closed architec
     const q=w.point(i),pad=w.cellSize*.5;
     const blocked=w.renderData.features.some(f=>q.x>=Math.min(...f.outline.map(p=>p.x))-pad&&q.x<=Math.max(...f.outline.map(p=>p.x))+pad&&
       q.z>=Math.min(...f.outline.map(p=>p.z))-pad&&q.z<=Math.max(...f.outline.map(p=>p.z))+pad);
-    assert.equal(w.staticGrid[i],+blocked);assert.equal(w.terrainFeatureGrid[i],+blocked);
+    const solid = +(blocked || !!w.surface.cliffs[i]);
+    assert.equal(w.staticGrid[i],solid);assert.equal(w.terrainFeatureGrid[i],solid);
   }
   assertMapAccess(w);
   assert.equal(p.filter(p=>p.mesh==='shipCargoPad').length,8);assert.equal(p.filter(p=>p.mesh==='shipVentDock').length,8);
@@ -727,7 +731,8 @@ test('Mothership reusable architecture has finite normals, bounded meshes and a 
       assert.ok(Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])>1e-10,'nondegenerate architecture');
     }
   }
-  assert.ok(w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+w.gridSize**2*2<60000);
+  const floorTriangles = (w.surface.size-1)**2*2;
+  assert.ok(w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+floorTriangles<95000);
 });
 
 test('navigation follows canyon bends instead of crossing the relief', () => {

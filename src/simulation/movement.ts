@@ -5,6 +5,7 @@
         const flying = !!(UNITS[e.type] as UnitDefinitionShape).flying;
         const limit = this.world!.extent - 5;
         if (Math.abs(x) > limit || Math.abs(z) > limit) return false;
+        if (!flying && this.world!.surface && !this.world!.surface.fits(x, z, e.size * UNIT_BODY_SCALE)) return false;
         if (!flying && this.world!.blockedAt(x, z)) {
           if (!e.exit || this.world!.staticGrid[this.world!.idx(x, z)]) return false;
           const cell = this.world!.point(this.world!.idx(x, z));
@@ -18,17 +19,20 @@
             (other.exit && (other.exit.x - x) ** 2 + (other.exit.z - z) ** 2 <
               ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9)));
       },
-      unitPosition(this: MeridianGame, e: UnitPlacement): Position | null {
+      unitPosition(this: MeridianGame, e: UnitPlacement, reserved: UnitPlacement[] = []): Position | null {
         const limit = this.world!.extent - 5;
-        const x = clamp(e.x, -limit, limit), z = clamp(e.z, -limit, limit);
-        if (this.unitFits(e, x, z)) return { x, z };
+        const x = clamp(e.x, -limit, limit), z = clamp(e.z, -limit, limit),
+          fits = (x: number,z: number) => this.unitFits(e,x,z) && reserved.every(other =>
+            Math.hypot(other.x-x,other.z-z) >= (other.size+e.size)*UNIT_BODY_SCALE);
+        if (fits(x, z)) return { x, z };
         // Deterministic nearby rings, without consuming simulation/effect RNG.
         for (let r = 1; r <= 24; r++) {
           const count = Math.ceil(2 * Math.PI * r);
           for (let i = 0; i < count; i++) {
             const angle = i * 2 * Math.PI / count,
               nx = x + Math.cos(angle) * r, nz = z + Math.sin(angle) * r;
-            if (this.unitFits(e, nx, nz)) return { x: nx, z: nz };
+            if (fits(nx, nz) && ((UNITS[e.type] as UnitDefinitionShape).flying ||
+              this.world!.terrainFree({x,z}, {x:nx,z:nz}, e.size * UNIT_BODY_SCALE))) return { x: nx, z: nz };
           }
         }
         return null;
@@ -62,7 +66,7 @@
             for (const direction of [preferred, -preferred]) {
               const shift = direction * clearance - lateral + direction * 1e-6,
                 nx = other.x + side!.x * shift, nz = other.z + side!.z * shift;
-              if (!(UNITS[other.type] as UnitDefinitionShape).flying && !this.world!.lineFree(other, {x:nx,z:nz})) continue;
+              if (!(UNITS[other.type] as UnitDefinitionShape).flying && !this.world!.lineFree(other, {x:nx,z:nz}, other.size * UNIT_BODY_SCALE)) continue;
               // Prefer the current lane side, but cross it if terrain or a crowd seals that side.
               if (!this.unitFits(other, nx, nz)) this.yieldUnitSpace(other, nx, nz, priority, nextChain, side);
               if (this.unitFits(other, nx, nz)) {
@@ -79,13 +83,17 @@
         return UNITS[e.type].speed * (e.faction === FACTION_ID.SECOND ? 1.1 : 1) *
           (e.slowed! > this.s!.time ? 0.65 : 1);
       },
+      canStep(this: MeridianGame, e: UnitEntity, x: number, z: number) {
+        return this.unitFits(e, x, z) && (!!(UNITS[e.type] as UnitDefinitionShape).flying ||
+          this.world!.terrainFree(e, {x,z}, e.size * UNIT_BODY_SCALE));
+      },
       moveYield(this: MeridianGame, e: UnitEntity, dt: number) {
         const p = e.yieldTo!, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz),
           speed = this.movementSpeed(e),
           step = Math.min(d, speed * dt);
         if (d < 1e-9) { delete e.yieldTo; return; }
         const nx = e.x + dx / d * step, nz = e.z + dz / d * step;
-        if (step > 0 && this.unitFits(e, nx, nz)) {
+        if (step > 0 && this.canStep(e, nx, nz)) {
           e.x = nx; e.z = nz;
           e.rot = angleLerp(e.rot, Math.atan2(dx, dz), dt * 9);
           e.walk += step;
@@ -114,7 +122,7 @@
             }
             this.world!.blocked[this.world!.idx(e.x, e.z)] = 0;
           }
-          const route = this.world!.path(e.x, e.z, p.x, p.z, flying && !avoidUnits, area);
+          const route = this.world!.path(e.x, e.z, p.x, p.z, flying && !avoidUnits, area, flying ? 0 : e.size * UNIT_BODY_SCALE, flying);
           e.path = route.points;
           e.pathStatus = route.status;
           e.pathResolvedGoal = route.goal;
@@ -146,8 +154,9 @@
       },
       move(this: MeridianGame, e: UnitEntity, p: Position, dt: number, stop = 1, settleBesideOccupiedGoal = true, area?: NavigationArea) {
         if (e.yieldTo) { this.moveYield(e, dt); return false; }
-        if ((area && distance(e, area) <= area.radius) || distance(e, p) < stop || (settleBesideOccupiedGoal && !e.exit && ['move', 'attackMove'].includes(e.order.type) &&
-          distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) {
+        if (((area && distance(e, area) <= area.radius) || distance(e, p) < stop || (settleBesideOccupiedGoal && !e.exit && ['move', 'attackMove'].includes(e.order.type) &&
+          distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) &&
+          ((UNITS[e.type] as UnitDefinitionShape).flying || this.world!.terrainFree(e, area || p))) {
           // Stop beside an occupied destination instead of trying to stand at its center.
           e.path = [];
           e.pi = 0;
@@ -178,7 +187,7 @@
         const waypointTolerance = e.exit ? 0.04 :
           e.pi + 1 === e.path.length && (area || e.order.type === 'build' || e.order.type === 'repair') ? 1e-9 : 0.65;
         if (d < waypointTolerance || (e.pi + 1 < e.path.length && d < 3.8 &&
-          !this.unitFits(e, q.x, q.z) && this.world!.lineFree(e, e.path[e.pi + 1]))) {
+          !this.unitFits(e, q.x, q.z) && this.world!.lineFree(e, e.path[e.pi + 1], e.size * UNIT_BODY_SCALE))) {
           // An occupied intermediate waypoint must not trap us circling an idle unit.
           e.pi++;
           q = e.path[e.pi];
@@ -219,7 +228,7 @@
         for (const angle of waitingForYield ? [] : steeringAngles) {
           const nx = e.x + (vx * Math.cos(angle) - vz * Math.sin(angle)) * step,
             nz = e.z + (vx * Math.sin(angle) + vz * Math.cos(angle)) * step;
-          if (!this.unitFits(e, nx, nz)) continue;
+          if (!this.canStep(e, nx, nz)) continue;
           e.x = nx;
           e.z = nz;
           heading -= angle;
@@ -236,7 +245,7 @@
         // The terrain path samples can graze a grid corner: slide along it, not into it.
         if (!moved && !u.flying && this.world!.blockedAt(e.x + vx * step, e.z + vz * step)) {
           for (const [nx, nz] of [[e.x + vx * step, e.z], [e.x, e.z + vz * step]]) {
-            if ((nx === e.x && nz === e.z) || !this.unitFits(e, nx, nz)) continue;
+            if ((nx === e.x && nz === e.z) || !this.canStep(e, nx, nz)) continue;
             heading = Math.atan2(nx - e.x, nz - e.z);
             e.x = nx; e.z = nz; moved = true; break;
           }

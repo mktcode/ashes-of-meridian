@@ -24,6 +24,7 @@ Modelltests und gemeinsame Helfer unter `tests/models/` bzw. `tests/helpers/` pr
 
 ## Terrain und Renderpässe
 
+- Im Mothership-Höhenexperiment ist der spielbare Boden explizites Bodenmaterial auch oberhalb von `y=0`; die bisherige automatische Materialwahl nach niedriger Y-Koordinate reicht dort nicht. Dieser erhöhte Boden nimmt am Schatten-Casterpass teil, Flachböden bleiben davon ausgenommen. Taktische Ringe folgen bei Höhenwechseln segmentiert der Oberfläche; auf ebenen Flächen behalten sie eine einzelne Instanz. Die [CPU-Oberfläche](architecture.md#welt-darstellung-und-zufall) bestimmt Geometrie und Höhenabfragen, nicht der Shader.
 - Kartenrezepte wählen Boden, Palette, Renderprofil und deklarierte Terrainmodelle. Neue Modelle über `TerrainModels` anbinden, nicht als Karten-Sonderfall im GPU-Adapter. Weltgeometrie nur beim Weltwechsel erzeugen/hochladen.
 - Dekoration und blockierende Geometrie unterscheiden; sichtbare Hindernisse und CPU-Kollision gemeinsam gestalten. Layoutmaße, geschützte Zugänge und RNG-Trennung folgen dem [Weltvertrag](architecture.md#welt-darstellung-und-zufall).
 - Bodenatlanten verteilen ihre Details mit eigenem Weltkoordinaten-/Seed-Hash, nicht dem Simulations-RNG. Atlasrechtecke und Mip-Sampling müssen Nachbarmotive fernhalten; flache Details erzeugen keine Kollisionskörper oder eigenen Schatten. Bei Atlaswechseln Motivgrenzen und transparente Ränder neu prüfen, nicht nur die Bilddatei ersetzen.

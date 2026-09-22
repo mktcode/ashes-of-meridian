@@ -29,6 +29,7 @@
       colors: Map<number | string, readonly number[] | Float32Array>;
       quality: number;
       extent: number;
+      surface: BattlefieldSurface | null = null;
       decorSeed: number;
       battlefieldProfile: BattlefieldRenderProfile;
       haze: readonly [number, number, number];
@@ -757,7 +758,7 @@
         const v = this.viewport;
         return sx > v.left && sx < v.right && sy > v.top && sy < v.bottom;
       }
-      ground(sx: number, sy: number) {
+      ground(sx: number, sy: number, terrain = true) {
         let x = ((sx - this.viewport.left) / this.viewport.width) * 2 - 1,
           y = 1 - ((sy - this.viewport.top) / this.viewport.height) * 2;
         let a = M4.point(this.inverseVP, x, y, -1),
@@ -765,6 +766,10 @@
         for (let i = 0; i < 3; i++) {
           a[i] /= a[3];
           b[i] /= b[3];
+        }
+        if (terrain && !this.cinema && this.surface) {
+          const hit = this.surface.ray(a, b);
+          if (hit) return hit;
         }
         let t = -a[1] / (b[1] - a[1]);
         return { x: a[0] + (b[0] - a[0]) * t, z: a[2] + (b[2] - a[2]) * t };
@@ -799,7 +804,8 @@
           g.enable(g.POLYGON_OFFSET_FILL);
           g.polygonOffset(1.5, 2);
           // The flat ground receives shadows in the scene pass but cannot cast a visible one itself.
-          this.drawBatches(this.static, this.lightVP, ['terrain', 'alienLanternPool']);
+          this.drawBatches(this.static, this.lightVP,
+            this.surface ? 'alienLanternPool' : ['terrain', 'alienLanternPool']);
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
         }
