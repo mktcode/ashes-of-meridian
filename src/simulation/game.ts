@@ -211,7 +211,7 @@
         this.emit('start', {});
         this.emit('radio', startingWorkers
           ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then outlast every opposing party.'
-          : 'Expedition command|Recruit your first worker from Infantry to establish your economy, then outlast every opposing party.');
+          : 'Expedition command|Recruit your first two workers from Infantry to establish your economy, then outlast every opposing party.');
         return s;
       },
       benefitsFor(this: MeridianGame, team: PlayerTeam): Record<string, number> {
