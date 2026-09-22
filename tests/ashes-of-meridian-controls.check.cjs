@@ -288,10 +288,14 @@ test('first-stage tutorial highlights two workers, refinery, barracks and rifle 
     queue: [{ type: 'worker' }] };
   h.ui.game.s.entities.push(producer);
   h.ui.renderActions();
-  assert.equal(actions.innerHTML.includes('tutorial-focus'), false, 'queued target waits without prompting duplicates');
-  producer.queue = [];
+  assert.equal(focused('train:worker'), true, 'the prompt remains until the second Prospector is ordered');
+  producer.queue.push({ type: 'worker' });
   h.ui.renderActions();
-  assert.equal(focused('train:worker'), true, 'cancelled target restores its prompt');
+  assert.equal(actions.innerHTML.includes('tutorial-focus'), false, 'two queued Prospectors satisfy the ordering prompt');
+  producer.queue.pop();
+  h.ui.renderActions();
+  assert.equal(focused('train:worker'), true, 'cancelling the second order restores its prompt');
+  producer.queue = [];
 
   h.ui.event('trained', { type: 'worker' });
   assert.equal(h.ui.tab, 'infantry');

@@ -29,11 +29,15 @@ const uiTutorialMethods = {
   tutorialAction(this: MeridianUI): string | null {
     if (!this.battleTutorial) return null;
     const step = this.battleTutorial.step, target = BATTLE_TUTORIAL_TARGETS[step],
-      pending = step === 'trainWorker' || step === 'trainRifle'
-        ? this.game.alive(e => e.team === this.localTeam && e.kind === 'building' &&
-          e.queue?.some(q => q.type === (step === 'trainWorker' ? 'worker' : 'rifle'))).length > 0
-        : this.game.alive(e => e.team === this.localTeam && e.kind === 'building' &&
-          e.type === (step === 'buildRefinery' ? 'refinery' : 'barracks') && e.progress < 1).length > 0;
+      queuedWorkers = step === 'trainWorker' ? this.game.alive(e => e.team === this.localTeam && e.kind === 'building')
+        .reduce((count, e) => count + (e.queue?.filter(q => q.type === 'worker').length || 0), 0) : 0,
+      pending = step === 'trainWorker'
+        ? this.battleTutorial.workersTrained + queuedWorkers >= 2
+        : step === 'trainRifle'
+          ? this.game.alive(e => e.team === this.localTeam && e.kind === 'building' &&
+            e.queue?.some(q => q.type === 'rifle')).length > 0
+          : this.game.alive(e => e.team === this.localTeam && e.kind === 'building' &&
+            e.type === (step === 'buildRefinery' ? 'refinery' : 'barracks') && e.progress < 1).length > 0;
     if (pending) return null;
     if (this.tab === target.tab) return target.action;
     return this.tab === 'root' ? `tab:${target.tab}` : 'tab:root';
