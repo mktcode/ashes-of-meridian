@@ -28,6 +28,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 ## Entwicklung
 
 - [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
+- [Story und Welt](docs/story.md): erzählerische Grundlage, Fraktionen, Einheiten und mögliche Missionsansätze.
 - [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
 - [Grafik und Assets](docs/rendering.md): Modell-/Texturpflege und Darstellungsgrenzen.
 - [Prüfungen](docs/testing.md): gezielte Tests, Standardtestsuite, ausdrücklich beauftragte KI-/Simulationsläufe und Aussagegrenzen.
