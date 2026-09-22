@@ -186,23 +186,26 @@ test('network interpolated ground poses sample the ramp rather than a chord thro
   assert.equal(unit.z,16,'no mutation of authoritative entities');
 });
 
-test('rendered floor samples and models use the CPU surface, and changing maps clears it',()=>{
+test('rendered floor samples and models use the CPU surface in battle and menu cinema, and changing maps clears it',()=>{
   const w=new Battlefield(1409,'mothership'),r=createRendererStub({record:true}),meshes=new Map();
-  r.geometry=(name,data)=>{meshes.set(name,data);};r.quality=0;r.cinema=false;
+  r.geometry=(name,data)=>{meshes.set(name,data);};r.quality=0;
   const view=new BattlefieldView(r);view.sync(w);
   const mesh=meshes.get('terrain'),floorVertices=(w.surface.size-1)**2*6;
   for(let i=0;i<floorVertices*9;i+=9) {
     assert.ok(Math.abs(mesh[i+1]+.13-w.surface.heightAt(mesh[i],mesh[i+2]))<1e-6);
     assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-6);
   }
-  for(const e of [{id:1,x:42,z:50,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:.65},
-    {id:2,x:42,z:50,kind:'resource',type:'gas',hp:100,faction:0,team:-1,size:2},
-    {id:3,x:42,z:50,kind:'building',type:'depot',hp:100,faction:0,team:0,size:2.3,progress:.3},
-    {id:4,x:42,z:50,kind:'resource',type:'crystal',hp:100,faction:0,team:-1,size:2,amount:1800}]) {
-    r.calls=[];r.surface=null;renderEntity(r,e,1);const flat=r.calls;
-    r.calls=[];r.surface=w.surface;renderEntity(r,e,1);
-    assert.equal(r.calls.length,flat.length);
-    r.calls.forEach((call,i)=>assert.ok(Math.abs(call[2]-flat[i][2]-6)<1e-6));
+  for(const cinema of [false,true]) {
+    r.cinema=cinema;
+    for(const e of [{id:1,x:42,z:50,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:.65},
+      {id:2,x:42,z:50,kind:'resource',type:'gas',hp:100,faction:0,team:-1,size:2},
+      {id:3,x:42,z:50,kind:'building',type:'depot',hp:100,faction:0,team:0,size:2.3,progress:.3},
+      {id:4,x:42,z:50,kind:'resource',type:'crystal',hp:100,faction:0,team:-1,size:2,amount:1800}]) {
+      r.calls=[];r.surface=null;renderEntity(r,e,1);const flat=r.calls;
+      r.calls=[];r.surface=w.surface;renderEntity(r,e,1);
+      assert.equal(r.calls.length,flat.length);
+      r.calls.forEach((call,i)=>assert.ok(Math.abs(call[2]-flat[i][2]-6)<1e-6));
+    }
   }
   view.sync(new Battlefield(1409,'alien-planet'));assert.equal(r.surface,null);
 });

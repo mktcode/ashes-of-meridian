@@ -98,7 +98,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       const rot = e.kind === 'building' ? (e.team === 1 ? Math.PI : 0) + BUILDING_YAW : e.rot || 0,
         cs = Math.cos(rot),
         sn = Math.sin(rot);
-      const ground = R.cinema ? 0 : R.surface?.entityHeight(e) ?? 0;
+      const ground = R.surface?.entityHeight(e) ?? 0;
       let y = ground + (
         e.type === 'air'
           ? 3.8 - (e.exit ? 3 * clamp(distance(e, e.exit) / e.exit.length, 0, 1) : 0) +
