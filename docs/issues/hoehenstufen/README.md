@@ -2,30 +2,28 @@
 
 ## Auftrag und Status
 
-Freigegeben sind Detailplanung und die möglichst weitgehende Umsetzung auf einem separaten Branch bis zum nächsten sinnvollen menschlichen Spieltest. Gewünschtes Kartenleitbild: **mindestens zwei bespielbare Höhenlagen auf jeder Karte; erhöhte Basen außen, ein großes tieferes Schlachtfeld in der Mitte**, angelehnt an StarCraft 2. Inzwischen ausdrücklich gewünscht ist der asymmetrische Sichtvorteil von Hochplateaus; weitere SC2-Regeln oder Höhenboni sind nicht beauftragt.
+Der Mothership-Durchstich ist auf `main` integriert. Gewünschtes Leitbild bleiben erhöhte Basen außen und ein großes tieferes Schlachtfeld in der Mitte, angelehnt an StarCraft 2. Der gemeinsame Oberflächenvertrag ist für spätere Karten nutzbar; Alien Planet und Desert bleiben auf ausdrücklichen Wunsch vorerst unverändert. Weitere SC2-Regeln oder Höhenboni sind nicht beauftragt.
 
-Experimentier-Branch: `experiment/hoehenstufen`, angelegt von `main` bei `1b2d160`. Eigener Worktree: `../aom-height/` neben dem Hauptrepository; aus dem längeren `.tmp/`-Pfad verschoben, da Chromium sonst an der Unix-Socket-Pfadlänge scheitert. Die Issues bleiben maßgeblich auf `main`; Spielcode wird dort noch nicht integriert.
+**Stand: technisch integriert, menschliche Gesamt- und Mobilabnahme offen.** Vier öffentliche 6-m-Basisdecks, breite Innen-/Flankenrampen und tiefes Zentrum sind umgesetzt. Hangars, Anlagen und einige Vorkommen wurden für freie Rampen und ebene Vent-Fundamente versetzt; Mengen und RNG-Ziehungsreihenfolge bleiben unverändert. CPU-Höhenfeld, Klippen-/Segmentprüfung, Bau-/Arbeitszugänge, Produktionsausgänge und reservierte Verstärkungslandungen sind integriert. Darstellung, Picking und Effekte nutzen dieselbe Oberfläche.
 
-**Stand: erster Nutzertest des Mothership-Prototyps positiv, keine vollständige Abnahme** (Spielcode-Commit `d424ab8` auf dem Experimentier-Branch). Vier öffentliche 6-m-Basisdecks, breite Innen-/Flankenrampen und tiefes Zentrum sind umgesetzt. Hangars, Anlagen und einige Vorkommen wurden für freie Rampen und ebene Vent-Fundamente versetzt; Mengen und RNG-Ziehungsreihenfolge bleiben unverändert. CPU-Höhenfeld, Klippen-/Segmentprüfung, Bau-/Arbeitszugänge, Produktionsausgänge und reservierte Verstärkungslandungen sind integriert. Darstellung, Picking und Effekte nutzen dieselbe Oberfläche. Alien Planet und Desert bleiben noch auf dem bisherigen Stand.
-
-Nutzerfeedback: Der bisherige Prototyp scheint zunächst zu funktionieren. Als nächster Schritt ist ausschließlich [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) vorgesehen; weitere Kartenumbauten warten. Der Experimentier-Branch ist auf `origin` veröffentlicht.
+Die [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) ist autoritativ integriert: Tiefland-Bodensicht deckt kein Plateau auf, Hochsicht reicht innerhalb der bestehenden Reichweite nach unten. Flugzeuge und Recon scans überbrücken Sichtstufen. Weitere Kartenumbauten sind zurückgestellt, nicht automatisch der nächste Auftrag.
 
 ### Jetzt manuell testen
 
-Im Experiment-Worktree `npm run build`, dann die lokale `index.html?experiment=height` öffnen. Der ausdrückliche Teststart verwendet Mothership/Seed 1409 mit zwei Startworkern. Profil und Checkpoint sind flüchtig; normales Savegame und Fortschritt werden weder gelesen noch geschrieben. Reload setzt diesen Test zurück.
+Im Haupt-Worktree `npm run build`, dann die lokale `index.html?experiment=height` öffnen. Der ausdrückliche Teststart verwendet Mothership/Seed 1409 mit zwei Startworkern. Profil und Checkpoint sind flüchtig; normales Savegame und Fortschritt werden weder gelesen noch geschrieben. Reload setzt diesen Test zurück.
 
 1. Erkennbarkeit von hoher Basis, Rampen und tiefer Mitte bei normalem Zoom beurteilen; insbesondere verdeckte Einheiten am vorderen Plateaurand.
 2. Worker auswählen, hinunter und wieder hinauf schicken; Klickziele, Auswahlrahmen, Kameraziehen und MiniMap prüfen.
 3. Alloy abbauen/abliefern, Refinery setzen, auf beiden Ebenen bauen und Einheiten produzieren. Rampen-/Klippenbau muss abgelehnt werden, Ausfahrten müssen benutzbar bleiben.
-4. Kleine Gruppen/Gegenverkehr und Gefechte an Rampen anschauen. Im bisherigen Prototyp sind Schüsse, Sicht und Fernheilung noch planar. Die beauftragte Sichtänderung ist noch nicht umgesetzt; andere Höhenvorteile bleiben ausgeschlossen.
+4. Kleine Gruppen/Gegenverkehr und Gefechte an Rampen anschauen. Sichtverlust beidseits einer Klippe und beim Überqueren der Rampenmitte prüfen; andere Höhenvorteile bleiben ausgeschlossen.
 
-Versuchsentscheidung: Flugzeuge nutzen eine feste Reiseflughöhe über der höchsten spielbaren Ebene mit Übergang beim Produktionsstart; keine Höhensprünge an Klippen. Hohe Dekorhindernisse werden dadurch nicht automatisch umflogen. Nur lokale Client-/Serverstände aus demselben Branch kombinieren, nicht mit dem öffentlichen Server mischen.
+Flugzeuge nutzen eine feste Reiseflughöhe über der höchsten spielbaren Ebene mit Übergang beim Produktionsstart; keine Höhensprünge an Klippen. Hohe Dekorhindernisse werden dadurch nicht automatisch umflogen.
 
-Technischer Prüfkontext des Prototyps: Build und Standardtests grün (360 Fälle, davon 13 neue Höhenprüfungen), Server-Build und sechs kurze Serverfälle grün. Die Höhenprüfungen decken Oberfläche, Übergänge, Bedienprojektion, Modelle, Effekt-Y und interpolierte Netzwerkposen ab. Browserstart über echtes `file://` war ohne JS-/WebGL-Fehler möglich; dies ist keine visuelle oder akustische Abnahme. Noch offen: gezielte menschliche Abnahme einschließlich der kommenden Sichtregel, Zwei-Browser-Höhentest, Touch/Mobilkosten und länger laufende Crowd-/KI-Szenarien. `test:ai` und `test:simulation` sind nicht freigegeben und wurden nicht gestartet; feste Referenzwerte wurden nicht neu erzeugt.
+Automatisierte Höhenprüfungen decken Oberfläche, Übergänge, Sichtstufen, Bedienprojektion, Modelle, Effekt-Y und interpolierte Netzwerkposen ab. Offen bleiben gezielte menschliche Abnahme, Zwei-Browser-Höhentest, Touch/Mobilkosten und länger laufende Crowd-/KI-Szenarien. `test:ai` und `test:simulation` benötigen weiterhin ausdrückliche Freigabe; feste Referenzwerte nicht zur Reparatur neu erzeugen.
 
 ## Ziel und vorgeschlagene Grenzen
 
-- Alle **vier öffentlichen Startkandidaten** jeder Karte erhalten ein brauchbares Hochplateau, nicht nur die zwei tatsächlich belegten Starts. Gelände darf die geheime Multiplayer-Startzuordnung nicht verraten.
+- Auf Mothership besitzen alle **vier öffentlichen Startkandidaten** ein brauchbares Hochplateau, nicht nur die tatsächlich belegten Starts. Jede künftig adaptierte Karte muss denselben Schutz der geheimen Multiplayer-Startzuordnung einhalten.
 - Das Plateau umfasst HQ, Anfangswirtschaft und ausreichend Bau-/Ausfahrtsfläche; nicht lediglich einen Sockel unter dem HQ. Die Mitte bietet eine große zusammenhängende Kampfzone. Seitliche Flankenwege bleiben möglich, ohne die zentrale Fläche durch ein enges Wegenetz zu ersetzen.
 - Vorschlag für den ersten Versuch: Tiefland `0 m`, Plateaus `+6 m`, breite Rampen mit etwa `18–24 m` Laufstrecke. **Versuchsparameter, kein beschlossenes Balancing.** Plateaugrößen müssen je Karte aus Bauflächen und Ressourcenzugängen folgen.
 - Vorschlag: zwei räumlich getrennte Ausgänge pro Basis, eine breite Hauptrampe zur Mitte und ein Flankenzugang. Ein einziger schmaler SC2-artiger Engpass wäre mit der heutigen Crowd-Navigation besonders riskant. Anzahl/Breite nach menschlichem Spieltest entscheiden.
@@ -34,23 +32,21 @@ Technischer Prüfkontext des Prototyps: Build und Standardtests grün (360 Fäll
 
 ## Umsetzungspakete und Reihenfolge
 
-1. [Weltvertrag und Navigation](01-welt-und-navigation.md): CPU-Oberfläche, begehbare Übergänge, Bau-/Arbeitszugänge; kleine synthetische Zwei-Ebenen-Fixture.
-2. [Darstellung und Bedienung](02-darstellung-und-bedienung.md): dieselbe Oberfläche zeichnen und treffen, Modelle/Effekte erden; mit Paket 1 einen vertikalen Prototyp fertigstellen.
-3. **Jetzt vorrangig:** [Höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) im Mothership-Prototyp, ohne andere Höhenvorteile.
-4. [Karten, Integration und Abnahme](03-karten-und-abnahme.md): nach Sichtkorrektur und Rückmeldung Alien Planet und Desert; Netzwerk und kombinierte Prüfungen.
+1. [Weltvertrag und Navigation](01-welt-und-navigation.md): für Mothership umgesetzt; kartenübergreifende Langlaufgrenzen bleiben offen.
+2. [Darstellung und Bedienung](02-darstellung-und-bedienung.md): für Mothership umgesetzt; menschliche Touch-/Darstellungsabnahme bleibt offen.
+3. [Höhenabhängige Sicht](04-hoehenabhaengige-sicht.md): technisch umgesetzt; menschlicher Rampen-/Klippencheck bleibt offen.
+4. [Karten und Abnahme](03-karten-und-abnahme.md): Mothership abnehmen; Alien Planet und Desert erst mit neuem Auftrag adaptieren.
 
-Paket 1 und 2 teilen den Oberflächenvertrag und dürfen nicht unabhängig inkompatible Höhenabfragen einführen. Zuerst einen kleinen vollständigen Durchstich auf dem Experimentier-Branch schaffen: Plateau auswählen → Worker über Rampe bewegen → Gebäude errichten → Einheit produzieren → sichtbares Gefecht auf beiden Ebenen. Kein halb umgestellter Stand auf `main`.
+Alle Pakete teilen den CPU-Oberflächenvertrag und dürfen keine inkompatiblen Höhenabfragen oder Renderer-Sonderlogik einführen.
 
 ## Entscheidungen vor spielbarer Abnahme
 
-- **Sicht entschieden, Umsetzung offen:** Von unten kein Aufdecken des höheren Plateaus, von oben Sicht ins Tiefland innerhalb bestehender Reichweiten. Maßgeblicher Auftrag und offene Sonderfälle: [Sichtpaket](04-hoehenabhaengige-sicht.md). **Kampf:** keine weiteren Höhenboni und keine neue physische Schussblockierung; bestehende Zielsichtanforderungen bleiben bestehen.
-- **Luftfahrt:** globale Flughöhe über der maximalen spielbaren Ebene oder begrenztes Terrain-Following? Einfaches `heightAt + 3.8` erzeugt an Klippen Höhensprünge. Nicht stillschweigend als Fertiglösung einsetzen.
+- **Sicht:** Von unten kein Aufdecken des höheren Plateaus, von oben Sicht ins Tiefland innerhalb bestehender Reichweiten. Die Rampenmitte trennt die logischen Stufen; Flugzeuge und Recon scans überbrücken sie. Keine allgemeine Gelände-Occlusion. **Kampf:** keine weiteren Höhenboni und keine neue physische Schussblockierung; bestehende Zielsichtanforderungen bleiben bestehen.
+- **Luftfahrt:** feste Reiseflughöhe über der maximalen spielbaren Ebene; Produktionsausfahrt steigt von der lokalen Oberfläche dorthin an.
 - **Bauen:** Empfehlung: nur ebene Flächen, Rampen und Klippenränder nicht bebaubar; kein automatisches Terraforming. Sollen weitere Gebäude auch im Tiefland erlaubt sein? Vorschlag: ja; die Höhenvorgabe betrifft die Startbasen.
 - **Interaktion:** Bau, Abbau und Reparatur dürfen nicht durch Klippen hindurch erfolgen. Fernheilung/Fähigkeitsflächen zunächst wie Kampf behandeln; deren Höhenregeln ausdrücklich bestätigen.
 - **Layout:** Anfangs-Alloy und zugehöriger Vent auf dem Plateau als Vorschlag; zusätzliche Vorkommen im Tiefland als umkämpfte Ziele. Bestehende Mengen erhalten, nötige Ortsänderungen sichtbar prüfen.
 
-## Aufwand und nächste Freigabe
+## Nächste Freigabe
 
-Vorläufige Größenordnung für eine integrierte Version ohne neue Sicht-/Kampfregeln: **15–30 Personentage**, einschließlich technischer Prüfungen, nicht menschlicher Abnahme. Der Auftrag für drei unterschiedlich gestaltete Karten kann die obere Hälfte erreichen; Crowd-Probleme und echte Sichtlinien sind Zusatzrisiken. Der erste Durchstich soll Aufwand und Grenzen konkretisieren, keine feste Terminzusage ersetzen.
-
-Der nächste Schritt ist ausschließlich die Sichtkorrektur am Mothership-Prototyp mit anschließender gezielter Begutachtung. Die übrigen Karten bleiben vorerst zurückgestellt. Backlog-Einträge sind keine automatische Freigabe aller Pakete oder zusätzlicher Langläufe.
+Als nächstes steht die gezielte menschliche Mothership-Abnahme an. Alien Planet und Desert bleiben zurückgestellt; ihre mögliche spätere Adaption ist ein eigener Auftrag. Backlog-Einträge sind keine automatische Freigabe weiterer Karten oder zusätzlicher Langläufe.

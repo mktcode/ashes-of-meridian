@@ -6,7 +6,7 @@ Abhängigkeiten: [Welt/Navigation](01-welt-und-navigation.md) und [Darstellung/B
 
 ### Mothership: erster spielbarer Versuch
 
-**Auf dem Experimentier-Branch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Erstes Nutzerfeedback ist positiv. Zunächst folgt ausschließlich die [Sichtkorrektur](04-hoehenabhaengige-sicht.md); die übrigen Karten und die gemeinsame Layout-Abnahme unten bleiben offen.
+**Auf `main` technisch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Erstes Nutzerfeedback ist positiv; die [asymmetrische Höhensicht](04-hoehenabhaengige-sicht.md) ist integriert. Die übrigen Karten bleiben bis zu einem neuen Auftrag unverändert.
 
 Erhöhte industrielle Basisdecks in den vier Eckbereichen, große abgesenkte zentrale Gefechtsplattform, breite technische Rampen. Flankenzugänge sollen die vorhandene Schiffsarchitektur weiterführen; keine Naturklippen oder Bergkulisse.
 
@@ -43,12 +43,12 @@ Heute reserviert `desertCanyonPlan` tiefe flache Startbecken und verbindet Resso
 
 ## Prüf- und Integrationsplan
 
-1. Pakete 1/2 an einer synthetischen Zwei-Ebenen-Fixture prüfen, anschließend Mothership-Durchstich. Neue Tests für neue Regeln schreiben; bestehende feste Referenzen nicht zur Reparatur überschreiben.
-2. Nach erstem positivem Nutzerfeedback zunächst die [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) implementieren und gezielt begutachten lassen. Erst danach Parameter/Kartensprache auf Alien Planet und Desert übertragen.
+1. Pakete 1/2 und die Sichtregel sind an synthetischen Verträgen und dem Mothership-Durchstich technisch geprüft. Bestehende feste Referenzen nicht zur Reparatur überschreiben.
+2. Mothership einschließlich der [höhenabhängigen Sicht](04-hoehenabhaengige-sicht.md) gezielt menschlich begutachten. Alien Planet und Desert nur nach neuem Auftrag übertragen.
 3. Kleine gezielte Terrain-/Zugangsprüfungen auf ausgewählten Seeds und allen vier Startkandidaten. Umfang vorab begrenzen; kein versteckter KI-/Simulations-Langlauf.
 4. Netzwerk: gleicher öffentlicher Seed erzeugt gleiche Höhen/Übergänge auf Host und Client; Interpolation/Ereignisse auf Rampe, Sichtverlust und Session-/Kartenwechsel prüfen. Zwei-Client-Kurzcheck bei konkretem Bedarf gemäß [Prüfverfahren](../../testing.md).
 5. Hauptagent führt ganz zum Schluss nach Integration die Standardtestsuite aus. `test:ai` und `test:simulation` einschließlich gefilterter Fälle nur nach ausdrücklicher aktueller Freigabe. Bei Bedarf gezielt Rampen-Gegenverkehr, produktive Worker und Angriffs-KI vorschlagen; keine Laufzeit-/Referenzanpassung zum Grünmachen.
-6. Menschliche vollständige Partien, Touch-Bedienung und Mobilkosten separat abnehmen. Technische Erreichbarkeit belegt weder gutes Rampenspiel noch faire Startchancen. Erst einen abgegrenzten, geprüften Gesamtstand vom Experimentier-Branch nach `main` übernehmen.
+6. Menschliche vollständige Partien, Touch-Bedienung und Mobilkosten separat abnehmen. Technische Erreichbarkeit belegt weder gutes Rampenspiel noch faire Startchancen.
 
 ## Bestehende offene Arbeit
 

@@ -156,6 +156,20 @@
             if (dx * dx + dz * dz < (r + CELL * 0.4) ** 2) grid[j * GRID + i] = val;
           }
       }
+      markVisible(grid: Uint8Array, x: number, z: number, r: number, sourceLevel: number) {
+        const { extent: EXTENT, cellSize: CELL, gridSize: GRID } = this;
+        let a = Math.max(0, Math.floor((x - r + EXTENT) / CELL)),
+          b = Math.min(GRID - 1, Math.floor((x + r + EXTENT) / CELL)),
+          c = Math.max(0, Math.floor((z - r + EXTENT) / CELL)),
+          d = Math.min(GRID - 1, Math.floor((z + r + EXTENT) / CELL));
+        for (let j = c; j <= d; j++)
+          for (let i = a; i <= b; i++) {
+            const wx = (i + 0.5) * CELL - EXTENT, wz = (j + 0.5) * CELL - EXTENT,
+              dx = wx - x, dz = wz - z;
+            if (dx * dx + dz * dz < (r + CELL * 0.4) ** 2 &&
+                (!this.surface || this.surface.visibilityLevelAt(wx, wz) <= sourceLevel)) grid[j * GRID + i] = 255;
+          }
+      }
       blockedAt(x: number, z: number) {
         return (
           Math.abs(x) > this.extent - 3 || Math.abs(z) > this.extent - 3 || this.blocked[this.idx(x, z)] !== 0
@@ -333,10 +347,13 @@
         for (const view of this.sight) view.visible.fill(0);
         for (let e of entities)
           if (e.hp > 0 && e.team !== -1 && e.kind !== 'resource') {
-            let r = e.vision || (e.kind === 'building' ? 21 : 17);
-            this.mark(this.sight[e.team].visible, e.x, e.z, r, 255);
+            const r = e.vision || (e.kind === 'building' ? 21 : 17),
+              flying = e.kind === 'unit' && !!(UNITS[e.type] as UnitDefinitionShape | undefined)?.flying,
+              level = flying ? Infinity : this.surface?.visibilityLevelAt(e.x, e.z) ?? 0;
+            this.markVisible(this.sight[e.team].visible, e.x, e.z, r, level);
           }
-        for (let s of scans) this.mark(this.sight[s.team ?? 0].visible, s.x, s.z, s.r || 31, 255);
+        // Reconnaissance scans and aircraft observe independently of the ground tier.
+        for (let s of scans) this.markVisible(this.sight[s.team ?? 0].visible, s.x, s.z, s.r || 31, Infinity);
         for (const view of this.sight)
           for (let i = 0; i < view.visible.length; i++) if (view.visible[i]) view.explored[i] = 1;
         for (let i = 0; i < this.visible.length; i++) {

@@ -5,10 +5,10 @@ const vm = require('node:vm');
 const {createRendererStub} = require('./helpers/renderer-stub.cjs');
 const {loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, RENDERER_SCRIPTS} = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
-  ...RENDERER_SCRIPTS,'world-view','effects-view','multiplayer-presentation'], {globals:{innerHeight:800}});
+  ...RENDERER_SCRIPTS,'world-view','effects-view','multiplayer-presentation','multiplayer-state'], {globals:{innerHeight:800}});
 const {Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity,
-  battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline} = vm.runInContext(
-  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline})',context);
+  battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect} = vm.runInContext(
+  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect})',context);
 function game() {
   const g = new MeridianGame({upgrades:{}}); g.start({seed:1409,map:'mothership'});
   g.s.parties.forEach(p=>p.controller={kind:'human'});
@@ -24,6 +24,43 @@ test('surface height and ray use the same diagonal, including non-planar quads',
   }
   assert.equal(s.ray([30,20,30],[30,-20,30]),null);
   assert.ok(Number.isFinite(s.heightAt(1e6,-1e6)));
+  assert.equal(s.visibilityLevelAt(0,0),0,'flat surfaces retain one visibility tier by default');
+});
+
+test('ground sight respects declared tiers while sources combine and air or scans see every tier',()=>{
+  const w=new Battlefield(1409,'mothership'), entity=(id,team,type,x,z)=>({
+    id,team,type,x,z,kind:'unit',hp:100,vision:17
+  }), low=entity(1,0,'rifle',80,30), high=entity(2,1,'rifle',80,42), highAlly=entity(3,0,'rifle',76,42);
+  assert.equal(w.surface.visibilityLevelAt(80,36),0,'lower half of the ramp belongs to the low tier');
+  assert.equal(w.surface.visibilityLevelAt(80,37),1,'upper half of the ramp belongs to the plateau tier');
+  w.reveal([low,high]);
+  const lowCell=w.idx(80,30), highCell=w.idx(80,42);
+  assert.equal(w.sight[0].visible[lowCell],255,'same-tier ground remains visible');
+  assert.equal(w.sight[0].visible[highCell],0,'low ground cannot reveal the plateau');
+  assert.equal(w.sight[0].explored[highCell],0,'blocked current sight does not explore a new plateau');
+  assert.equal(w.sight[1].visible[lowCell],255,'plateau observers see lower ground within normal range');
+  w.reveal([low,high,highAlly]);
+  assert.equal(w.sight[0].visible[highCell],255,'one allied high observer contributes plateau sight');
+  w.reveal([low,high]);
+  assert.equal(w.sight[0].visible[highCell],0,'plateau sight disappears with the high observer');
+  assert.equal(w.sight[0].explored[highCell],1,'previously explored plateau terrain remains remembered');
+  w.reveal([entity(4,0,'air',80,30),high]);
+  assert.equal(w.sight[0].visible[highCell],255,'aircraft see independently of ground tier');
+  w.reveal([low,high],[{team:0,x:80,z:30,r:17,until:10}]);
+  assert.equal(w.sight[0].visible[highCell],255,'reconnaissance scans cross visibility tiers');
+});
+
+test('server projections and events do not disclose plateau contacts to a low observer',()=>{
+  const g=game();g.s.entities=[];g.ids.clear();g.world.rebuild([]);
+  const low=g.spawnUnit('rifle',80,30,0,0),high=g.spawnUnit('rifle',80,42,1,2);
+  assert.ok(low&&high);g.world.reveal(g.s.entities);
+  let frame=multiplayerFrame(g,0,new Map());
+  assert.equal(frame.entities.some(e=>e.id===high.id),false);
+  assert.equal(projectMultiplayerEffect(g,0,{kind:'explosion',point:high,size:2,big:true}),null);
+  g.s.scans=[{team:0,x:80,z:30,r:17,until:10}];g.world.reveal(g.s.entities,g.s.scans);
+  frame=multiplayerFrame(g,0,new Map());
+  assert.equal(frame.entities.some(e=>e.id===high.id),true);
+  assert.equal(projectMultiplayerEffect(g,0,{kind:'explosion',point:high,size:2,big:true}).kind,'explosion');
 });
 
 test('four high Mothership starts, flat initial economy and connected low central battlefield',()=>{
@@ -160,7 +197,8 @@ test('rendered floor samples and models use the CPU surface, and changing maps c
   }
   for(const e of [{id:1,x:42,z:50,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:.65},
     {id:2,x:42,z:50,kind:'resource',type:'gas',hp:100,faction:0,team:-1,size:2},
-    {id:3,x:42,z:50,kind:'building',type:'depot',hp:100,faction:0,team:0,size:2.3,progress:.3}]) {
+    {id:3,x:42,z:50,kind:'building',type:'depot',hp:100,faction:0,team:0,size:2.3,progress:.3},
+    {id:4,x:42,z:50,kind:'resource',type:'crystal',hp:100,faction:0,team:-1,size:2,amount:1800}]) {
     r.calls=[];r.surface=null;renderEntity(r,e,1);const flat=r.calls;
     r.calls=[];r.surface=w.surface;renderEntity(r,e,1);
     assert.equal(r.calls.length,flat.length);

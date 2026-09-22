@@ -101,7 +101,7 @@ const MOTHERSHIP_BATTLEFIELD: BattlefieldDefinition = {
       if (ax >= 30 && ax <= 55) deck = Math.max(deck, clamp((az-18)/20,0,1));
       if (az >= 72 && az <= 84) deck = Math.max(deck, clamp((ax-2)/20,0,1));
       return deck * 6;
-    });
+    }, height => height >= 3 ? 1 : 0);
     world.staticGrid.set(world.surface.cliffs);
     world.terrainFeatureGrid.set(world.surface.cliffs);
     builder.ground();

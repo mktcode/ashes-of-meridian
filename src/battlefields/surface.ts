@@ -6,7 +6,8 @@ class BattlefieldSurface {
   readonly heights: Float32Array;
   readonly cliffs: Uint8Array;
   readonly maxHeight: number;
-  constructor(readonly extent: number, readonly cellSize: number, height: (x: number, z: number) => number) {
+  constructor(readonly extent: number, readonly cellSize: number, height: (x: number, z: number) => number,
+      readonly visibilityLevel: (height: number, x: number, z: number) => number = () => 0) {
     this.step = cellSize / 2;
     this.size = Math.round(extent * 2 / this.step) + 1;
     this.heights = new Float32Array(this.size * this.size);
@@ -33,6 +34,10 @@ class BattlefieldSurface {
       u = gx - col, v = gz - row, i = row * this.size + col,
       a = this.heights[i], b = this.heights[i + 1], c = this.heights[i + this.size + 1], d = this.heights[i + this.size];
     return v >= u ? a + (c - d) * u + (d - a) * v : a + (b - a) * u + (c - b) * v;
+  }
+  visibilityLevelAt(x: number, z: number): number {
+    const level = this.visibilityLevel(this.heightAt(x, z), x, z);
+    return Number.isFinite(level) ? Math.max(0, Math.floor(level)) : 0;
   }
   ray(a: number[], b: number[]): Position | null {
     const dx = b[0]-a[0], dy = b[1]-a[1], dz = b[2]-a[2];

@@ -4,7 +4,7 @@ Abhängigkeiten: [Ziel/Regelentscheidungen](README.md), [gemeinsamer CPU-Vertrag
 
 ## Prototypstand
 
-Mothership auf `experiment/hoehenstufen` nutzt triangulierten Spielboden, Terrain-Picking, geerdete Modelle/Dekoration und absolute Effekt-Y-Werte. Auswahl/Overlays, Gerüste, Kontaktflächen und Ringe folgen der Oberfläche; Kameraziehen behält bewusst seine flache Gestenebene. CPU-Tests und ein `file://`-Browserstart ersetzen nicht die ausstehenden Darstellungs-, Touch- und Mehrclientprüfungen. Die Aufgaben unten bleiben Abnahmeziele. [Teststart und offene Grenzen](README.md#jetzt-manuell-testen).
+Mothership auf `main` nutzt triangulierten Spielboden, Terrain-Picking, geerdete Modelle/Dekoration und absolute Effekt-Y-Werte. Auswahl/Overlays, Gerüste, Kontaktflächen und Ringe folgen der Oberfläche; Kameraziehen behält bewusst seine flache Gestenebene. CPU-Tests ersetzen nicht die ausstehenden Darstellungs-, Touch- und Mehrclientprüfungen. Die Aufgaben unten bleiben Abnahmeziele. [Teststart und offene Grenzen](README.md#jetzt-manuell-testen).
 
 ## Ausgangsbefund vor dem Experiment
 

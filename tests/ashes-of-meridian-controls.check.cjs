@@ -719,8 +719,11 @@ test('visible combat force button selects living own non-workers projected insid
     { ...unit, id: 3, x: -10 }, { ...unit, id: 4, z: 700 }, { ...unit, id: 5, type: 'worker' },
     { ...unit, id: 6, team: 1 }, { ...unit, id: 7, kind: 'building' }, { ...unit, id: 8, hp: 0 }];
   h.ui.game.alive = predicate => h.ui.game.s.entities.filter(e => e.hp > 0 && predicate(e));
+  const grounded = [];
+  h.ui.game.world.surface = { entityHeight: e => { grounded.push(e.id); return 6; } };
   h.ui.lastClick = { id: 5, count: 2 };
   h.document.getElementById('visibleCombatSelectBtn').onclick();
+  assert.deepEqual(grounded, [1, 2, 3, 4]);
   assert.deepEqual(h.ui.selected, [1, 2]);
   assert.deepEqual(h.calls, [['select', [1, 2]]]);
   assert.equal(Object.keys(h.ui.lastClick).length, 0);

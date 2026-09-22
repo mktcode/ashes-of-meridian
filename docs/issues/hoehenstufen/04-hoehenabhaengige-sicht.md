@@ -2,7 +2,7 @@
 
 ## Auftrag und Reihenfolge
 
-Nach dem ersten positiven Nutzertest des Mothership-Prototyps ist dies der nächste Umsetzungsschritt auf `experiment/hoehenstufen`. Zunächst ausschließlich Sicht korrigieren; weitere Kartenumbauten und andere Höhenvorteile zurückstellen. [Gesamtstand und Teststart](README.md).
+Die Höhenregel ist für Mothership auf `main` technisch umgesetzt. Weitere Kartenumbauten und andere Höhenvorteile bleiben zurückgestellt. Offen ist die gezielte menschliche Abnahme an Klippe und Rampe. [Gesamtstand und Teststart](README.md).
 
 ## Festgelegte Regel
 
@@ -12,21 +12,21 @@ Nach dem ersten positiven Nutzertest des Mothership-Prototyps ist dies der näch
 - Kein zusätzlicher Schaden, keine Treffer-/Ausweichboni, keine Reichweitenänderung und keine neue physische Schussblockierung. Bestehende Abhängigkeiten von Zielsicht bleiben erhalten; sie sind kein neuer Kampfbonus.
 - Keine vollständige Übernahme der StarCraft-Regeln: Nur der ausdrücklich gewünschte asymmetrische Sichtvorteil ist entschieden.
 
-## Vor Umsetzung konkretisieren
+## Konkretisierte Grenzen
 
-- Rampen: Ab welchem Übergang gilt ein Beobachter als auf dem Plateau? Nicht jeden kleinen Höhenunterschied zwischen Dreiecken als eigene Sichtstufe behandeln.
-- Sicht über dazwischenliegendes Hochgelände auf ein dahinterliegendes Tiefland: Endpunkthöhen allein definieren noch keine allgemeine Gelände-Sichtlinie. Nicht unbeabsichtigt ein größeres Occlusion-System einführen.
-- Flugzeuge, Scan und andere temporäre Sichtquellen: bestehende Sonderfälle prüfen und ihre Behandlung ausdrücklich festlegen, keine SC2-Ausnahmen stillschweigend übernehmen.
-- Gebäudehöhe und kosmetische Schwebe-/Modelloffsets sind nicht automatisch eine erhöhte Sichtstufe.
+- Die Mothership-Rampenmitte trennt Tiefland und Plateau als zwei diskrete logische Sichtstufen; kleine Dreiecksunterschiede erzeugen keine weiteren Stufen.
+- Es gibt keine allgemeine Gelände-Sichtlinie: Entscheidend sind Quellen- und Zielstufe, nicht dazwischenliegende Gipfel.
+- Flugzeuge und Recon scans beobachten unabhängig von Bodenstufen. Andere Quellen bleiben bodengebunden, bis ihr Vertrag ausdrücklich geändert wird.
+- Gebäudehöhe und kosmetische Schwebe-/Modelloffsets verändern die Sichtstufe nicht.
 
 ## Umsetzung und Akzeptanz
 
-- [ ] Gemeinsame autoritative Sichtberechnung um den Höhenvertrag ergänzen; vorhandene CPU-Oberfläche verwenden, keine unabhängige Renderer-Höhenlogik.
-- [ ] Aktuelle Sicht von dauerhaft erkundetem Terrain unterscheiden: Ein noch unbekanntes Plateau darf von unten nicht erkundet werden. Bereits erkundetes Gelände bleibt bekannt, ohne dadurch aktuelle Feindpositionen preiszugeben.
-- [ ] Sichtquellen derselben Partei korrekt vereinigen: Ein eigener Beobachter oben kann Sicht liefern, auch wenn eine andere eigene Einheit unten steht. Nach Wegfall der oberen Quelle keine veraltete Sicht behalten.
-- [ ] Fog, Minimap, Auswahl/Zielzugriff und KI verwenden den gleichen resultierenden Sichtzustand. Multiplayer-Entitäten und Ereignisse serverseitig filtern; private Startzuordnung weiter schützen.
-- [ ] Kurze deterministische Tests: unten nach oben gesperrt, oben nach unten innerhalb der Reichweite sichtbar, gleiche Ebene unverändert, Rampenauf-/abstieg, mehrere Sichtquellen, Sichtverlust und erkundeter Speicher; beschlossene Luft-/Scan-Regeln ergänzen.
-- [ ] Unveränderte Flachkarten sowie Server-Sichtfilter gezielt prüfen. Standardtests durch den Hauptagenten zum Abschluss; KI-/Simulations-Langläufe weiterhin nur nach ausdrücklicher Nutzerfreigabe.
+- [x] Gemeinsame autoritative Sichtberechnung um den Höhenvertrag ergänzen; vorhandene CPU-Oberfläche verwenden, keine unabhängige Renderer-Höhenlogik.
+- [x] Aktuelle Sicht von dauerhaft erkundetem Terrain unterscheiden: Ein noch unbekanntes Plateau darf von unten nicht erkundet werden. Bereits erkundetes Gelände bleibt bekannt, ohne dadurch aktuelle Feindpositionen preiszugeben.
+- [x] Sichtquellen derselben Partei korrekt vereinigen: Ein eigener Beobachter oben kann Sicht liefern, auch wenn eine andere eigene Einheit unten steht. Nach Wegfall der oberen Quelle keine veraltete Sicht behalten.
+- [x] Fog, Minimap, Auswahl/Zielzugriff und KI verwenden den gleichen resultierenden Sichtzustand. Multiplayer-Entitäten und Ereignisse bleiben serverseitig über diesen Zustand gefiltert.
+- [x] Deterministische Kurztests für beide Richtungen, gleiche Ebene, Rampenschwelle, Quellenvereinigung, Sichtverlust, Erkundungsspeicher sowie Luft-/Scan-Regeln.
+- [x] Unveränderte Flachkarten und Server-Sichtfilter über die gemeinsamen Prüfungen absichern.
 - [ ] Menschlicher Test an beiden Seiten derselben Klippe und an einer Rampe, bevor weitere Karten adaptiert werden.
 
-Noch nicht implementiert. Technische Nachweise des bisherigen Prototyps prüfen weiterhin planare Sicht und gelten nicht als Abnahme dieser Änderung.
+Die technische Prüfung ersetzt keine visuelle oder spielerische Abnahme.

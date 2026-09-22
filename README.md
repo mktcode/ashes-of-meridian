@@ -13,11 +13,11 @@ npm run build
 
 Danach `index.html` direkt über `file://` in einem Browser mit WebGL 2 öffnen. Ein Server ist nicht erforderlich. HTML, Styles, Build-Ausgabe und lokale Laufzeitassets gemeinsam mitführen; es ist kein Ein-Datei-Paket. `npm run build:zip` erzeugt das direkt hochladbare HTML5-Paket `release/ashes-of-meridian-prototype.zip` für itch.io. Quellen und Ladevertrag: [Architektur](docs/architecture.md), Webhosting und Veröffentlichung: [Deployment](docs/deployment.md).
 
-## Höhenexperiment (dieser Branch)
+## Mothership-Höhenstufen
 
-Nach `npm run build` die lokale `index.html?experiment=height` im Browser öffnen. Dieser ausdrückliche Teststart lädt Mothership mit erhöhten Basisdecks, Rampen und zwei eigenen Startworkern; Profil und Expeditionscheckpoint bleiben flüchtig und berühren den normalen Speicher nicht. Reload startet den Versuch neu. Alien Planet und Desert sind noch nicht umgebaut; Sicht und Kampf erhalten keine Höhenboni. Testfragen und Grenzen stehen im [Höhenstufen-Issue](docs/issues/hoehenstufen/README.md).
+Mothership besitzt erhöhte Basisdecks, Rampen und ein tieferes Zentrum. Bodeneinheiten im Tiefland decken Hochplateaus nicht auf; Beobachter oben sehen innerhalb ihrer normalen Reichweite nach unten. Flugzeuge und Recon scans überbrücken Höhenstufen. Alien Planet und Desert bleiben vorerst unverändert. Offene menschliche Abnahme und eine mögliche spätere Übertragung auf weitere Karten stehen im [Höhenstufen-Issue](docs/issues/hoehenstufen/README.md).
 
-Für Netzwerktests ausschließlich Client und lokalen Server aus demselben Branch verwenden, nicht den öffentlichen Server mit dem experimentellen Kartenlayout mischen.
+Für einen isolierten Test startet `index.html?experiment=height` nach dem Build Mothership mit zwei eigenen Workern. Profil und Expeditionscheckpoint bleiben dabei flüchtig.
 
 ## Multiplayer-Prototyp
 

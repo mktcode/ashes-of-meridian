@@ -4,7 +4,7 @@ Abhängigkeit: [Ziel und offene Regelentscheidungen](README.md). Dieses Paket de
 
 ## Prototypstand
 
-Der Mothership-Durchstich auf `experiment/hoehenstufen` integriert den Oberflächen-/Segmentvertrag, radiusabhängige Klippenfreiräume, Arbeitszugänge, ebene Fundamente und sichere Produktions-/Verstärkungsplätze. Synthetische Geometrie- und kurze Mothership-Verhaltenstests liegen im Branch. Die Aufgaben unten bleiben kartenübergreifende Abnahmeziele; kein Nachweis für Großgruppen, alle Spawnkontexte oder die noch nicht umgebauten Karten. [Teststart und offene Grenzen](README.md#jetzt-manuell-testen).
+Der auf `main` integrierte Mothership-Durchstich verwendet den gemeinsamen Oberflächen-/Segmentvertrag, radiusabhängige Klippenfreiräume, Arbeitszugänge, ebene Fundamente und sichere Produktions-/Verstärkungsplätze. Synthetische Geometrie- und kurze Mothership-Verhaltenstests sichern den Vertrag ab. Die Aufgaben unten bleiben kartenübergreifende Abnahmeziele; kein Nachweis für Großgruppen, alle Spawnkontexte oder die noch nicht umgebauten Karten. [Teststart und offene Grenzen](README.md#jetzt-manuell-testen).
 
 ## Ausgangsbefund vor dem Experiment
 
