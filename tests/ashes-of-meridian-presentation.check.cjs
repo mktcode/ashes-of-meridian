@@ -573,6 +573,124 @@ test('effect drawing accepts frozen data without game/UI globals and matches the
   assert.deepEqual(effectViewSample(render), expected);
 });
 
+function effectCullingView() {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'effects', 'effects-view'],
+    { globals: { clamp: (value, min, max) => Math.max(min, Math.min(max, value)) } });
+  vm.runInContext('Math.random = () => { throw Error("View RNG"); }', context);
+  const api = vm.runInContext('({renderBattlefieldEffects, drawEffectRing, drawVisibleEffectBeam, effectBoundsVisible, M4})', context);
+  const R = createRendererStub({ record: true });
+  R.beam = (...args) => R.calls.push(['beam', ...args]);
+  R.quality = 0;
+  R.viewport = { left: 100, top: 50, width: 1000, height: 800 };
+  R.vp = new Float32Array([.1,0,0,0, 0,.1,0,0, 0,0,.01,0, 0,0,0,1]);
+  const world = { visible: [255], idx: () => 0, definition: { palette: { ground: 0x556677 } } };
+  const state = { time: 0, entities: [], fields: [], scans: [], strikes: [] };
+  const effects = { fx: [], combatBeams: new WeakMap() };
+  return { ...api, R, world, state, effects, render() {
+    R.calls.length = 0;
+    api.renderBattlefieldEffects(R, effects, world, state, [], 0);
+    return R.calls;
+  } };
+}
+
+test('effect bounds retain viewport-crossing shapes, heights, widths and perspective near-plane intersections', () => {
+  const h = effectCullingView(), { R, effectBoundsVisible: visible, drawVisibleEffectBeam: beam } = h;
+  assert.equal(visible(R, 20, 0, 0, 12, 1, 1), true, 'outside center, visible radius');
+  assert.equal(visible(R, 20, 0, 0, 1, 1, 1), false);
+  assert.equal(visible(R, 0, 30, 0, 1, 1, 1), false);
+  beam(R, [-30, 0, 0], [30, 0, 0], .1, 1, 1, 1);
+  assert.equal(R.calls.length, 1, 'both endpoints outside, segment crosses the screen');
+  beam(R, [12, -1, 0], [12, 1, 0], 1, 1, 1, 1);
+  assert.equal(R.calls.length, 2, 'beam thickness intersects the padded viewport');
+  beam(R, [50, -1, 0], [50, 1, 0], .1, 1, 1, 1);
+  assert.equal(R.calls.length, 2);
+  R.vp = h.M4.perspective(Math.PI / 2, 1, .1, 100);
+  assert.equal(visible(R, 0, 0, -.1, 1, 1, 1), true, 'straddling near plane is not rejected by a center projection');
+  assert.equal(visible(R, 0, 0, 5, .1, .1, .1), false, 'fully behind camera');
+  assert.equal(visible(R, 0, 0, -5, .1, .1, .1), true);
+});
+
+test('offscreen height rings skip sampling; visible segments reuse samples without changing positions', () => {
+  const { R, drawEffectRing: ring } = effectCullingView();
+  let samples = 0;
+  const height = (x, z) => x * .1 - 2;
+  R.surface = { heights: new Float32Array([-12, 8]), heightAt(x, z) { samples++; return height(x, z); } };
+  ring(R, 100, 0, 5, 1);
+  assert.equal(samples, 0); assert.equal(R.calls.length, 0);
+  const radius = 8, rot = .3, y = .16, count = Math.ceil(radius * Math.PI * 2 / 1.25);
+  ring(R, 0, 0, radius, 1, .6, y, rot);
+  assert.equal(samples, count + 1, 'one height query per endpoint, not three per segment');
+  assert.equal(R.calls.length, count);
+  for (let i = 0; i < count; i++) {
+    const point = j => {
+      const angle = rot + j * Math.PI * 2 / count, x = Math.sin(angle) * radius, z = Math.cos(angle) * radius;
+      return [x, height(x, z) + y, z];
+    };
+    assert.deepEqual(R.calls[i].map(v => Array.isArray(v) ? Array.from(v) : v),
+      ['beam', point(i), point(i+1), .045, 1, .45, .6]);
+  }
+  R.calls.length = 0;
+  ring(R, 20, 0, 12, 1);
+  assert.ok(R.calls.length > 0, 'large offscreen-centered ring remains visible');
+  R.calls.length = 0; samples = 0; ring(R, 0, 0, 60, 1);
+  assert.equal(R.calls.length, 192); assert.equal(samples, 193, 'bounded scratch covers maximum ring size');
+  // A new surface must invalidate the cached vertical envelope, including negative heights.
+  R.surface = { heights: new Float32Array([-40, -40]), heightAt: () => -40 };
+  R.vp[13] = 4;
+  R.calls.length = 0; ring(R, 0, 0, 2, 1);
+  assert.equal(R.calls.length, 1); assert.equal(R.calls[0][2], -39.9);
+  R.surface = { heights: new Float32Array([40, 40]), heightAt: () => 40 };
+  R.vp[13] = -4;
+  R.calls.length = 0; ring(R, 0, 0, 2, 1);
+  assert.equal(R.calls.length, 1); assert.equal(R.calls[0][2], 40.1);
+});
+
+test('offscreen non-casting effects disappear only from drawing, while dynamic casters remain', () => {
+  const h = effectCullingView(), common = { x: 100, y: 1, z: 0, life: .5, maxLife: 1, color: 1 };
+  h.effects.fx = [
+    { ...common, type: 'beam', tx: 105, ty: 2, tz: 0, width: .1 },
+    { ...common, type: 'blast', size: 2 }, { ...common, type: 'smoke', size: 2 },
+    { ...common, type: 'drop' }
+  ];
+  h.state.fields = [{ x: 100, z: 0, r: 12, until: 10, type: 'repair' }];
+  h.state.scans = [{ x: 100, z: 0, r: 32, until: 10 }];
+  h.state.strikes = [{ x: 100, z: 0, at: 10, type: 'orbital', team: 0 }];
+  const before = JSON.stringify([h.effects.fx, h.state]);
+  assert.equal(h.render().length, 0);
+  assert.equal(JSON.stringify([h.effects.fx, h.state]), before);
+  h.effects.fx.push({ ...common, type: 'particle', size: .1 },
+    { ...common, type: 'shell', tx: 110, tz: 0, startY: 1 });
+  const calls = h.render();
+  assert.deepEqual(calls.map(c => c[0]), ['box', 'sphere'], 'preserve possible offscreen shadows, cull only shell trail');
+  assert.ok(calls.every(c => c[13] !== 'effects'));
+  // Panning back rebuilds from current CPU effects, without having deleted them.
+  const offscreenCount = calls.length;
+  h.R.vp[12] = -10;
+  assert.ok(h.render().length > offscreenCount);
+});
+
+test('drop columns remain visible when their ground anchor is below the viewport', () => {
+  const h = effectCullingView();
+  h.R.vp[13] = -2;
+  h.effects.fx = [{ type: 'drop', x: 0, z: 0, life: 1, maxLife: 1, color: 1 }];
+  assert.deepEqual(h.render().map(c => c[0]), ['beam'], 'full vertical segment survives, ground ring is offscreen');
+});
+
+test('effect culling preserves visible output and does not redistribute the accent budget', () => {
+  const h = effectCullingView();
+  h.R.quality = 1;
+  const beam = x => ({ type: 'beam', x, y: 1, z: 0, tx: x+1, ty: 1, tz: 0,
+    width: .04, life: .1, maxLife: .2, color: 1 });
+  h.effects.fx = Array.from({ length: 16 }, () => beam(100));
+  h.effects.fx.push(beam(0));
+  for (const f of h.effects.fx) h.effects.combatBeams.set(f, .2);
+  assert.deepEqual(h.render().map(c => c[0]), ['beam'], 'offscreen accents still consume their existing budget');
+  h.effects.fx = [beam(0), { type: 'smoke', x: 1, y: 2, z: 0, size: 2, life: .5, maxLife: 1, color: 2 }];
+  const bounded = JSON.stringify(h.render());
+  h.R.vp = undefined;
+  assert.equal(JSON.stringify(h.render()), bounded, 'fully visible draw parameters and order are unchanged');
+});
+
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
 function appClock() {
   let now = 0;
