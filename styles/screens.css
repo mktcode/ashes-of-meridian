@@ -1251,7 +1251,7 @@
     }
 
     .result-next-preview.map-westmark {
-      background-image: linear-gradient(145deg, #647d68, #6c7547 52%, #a3aaa5)
+      background-image: url('../assets/textures/texture-westmark-meadow.webp')
     }
 
     .result-next-body {

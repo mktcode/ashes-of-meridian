@@ -1,6 +1,6 @@
 import { deflateRawSync } from 'node:zlib';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, relative, resolve, sep } from 'node:path';
+import { dirname, posix, relative, resolve, sep } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'release/ashes-of-meridian-prototype.zip');
@@ -27,12 +27,33 @@ async function filesBelow(directory, accept = () => true) {
   return files;
 }
 
+function localCssTargets(name, css) {
+  const targets = [];
+  for (const match of css.matchAll(/url\(\s*(?:"([^"]+)"|'([^']+)'|([^)'"\s]+))\s*\)/g)) {
+    const target = match[1] || match[2] || match[3];
+    if (/^(?:#|data:|https?:)/.test(target)) continue;
+    const fileTarget = target.split(/[?#]/, 1)[0];
+    if (!fileTarget || posix.isAbsolute(fileTarget)) throw new Error(`${name} has an unsupported asset URL: ${target}`);
+    const packagedTarget = posix.normalize(posix.join(posix.dirname(name), fileTarget));
+    if (packagedTarget.startsWith('../')) throw new Error(`${name} references an asset outside the package: ${target}`);
+    targets.push(packagedTarget);
+  }
+  return targets;
+}
+
+const stylePaths = await filesBelow('styles');
+const styleSources = await Promise.all(stylePaths.map(async name => ({
+  name,
+  css: await readFile(resolve(root, name), 'utf8')
+})));
+const cssAssets = [...new Set(styleSources.flatMap(({ name, css }) => localCssTargets(name, css)))];
 const paths = [
   'index.html',
-  ...(await filesBelow('styles')),
+  ...stylePaths,
   ...(await filesBelow('dist', path => path.endsWith('.js'))),
   ...runtimeAudio,
-  ...(await filesBelow('assets/portraits', path => path.endsWith('.webp')))
+  ...(await filesBelow('assets/portraits', path => path.endsWith('.webp'))),
+  ...cssAssets
 ].sort();
 
 if (new Set(paths).size !== paths.length) throw new Error('Duplicate path in itch.io package');
@@ -41,6 +62,11 @@ const packaged = new Set(paths);
 const html = entries.find(entry => entry.name === 'index.html').data.toString('utf8');
 for (const [, target] of html.matchAll(/(?:src|href)=["']\.\/([^"']+)["']/g)) {
   if (!packaged.has(target)) throw new Error(`index.html references an unpackaged file: ${target}`);
+}
+for (const { name, css } of styleSources) {
+  for (const target of localCssTargets(name, css)) {
+    if (!packaged.has(target)) throw new Error(`${name} references an unpackaged file: ${target}`);
+  }
 }
 
 const crcTable = Array.from({ length: 256 }, (_, value) => {

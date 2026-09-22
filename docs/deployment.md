@@ -4,7 +4,7 @@ Die [öffentliche Testversion](../README.md) wird über Dokploy ausgeliefert; zu
 
 ## Docker und Dokploy
 
-Das [Dockerfile](../Dockerfile) baut mit `npm ci` und `npm run build` und stellt die benötigten Laufzeitdateien für Nginx zusammen. Es ist die maßgebliche Auslieferungsliste: HTML, Styles, gebaute Skripte sowie lokale Audio- und Portraitdateien. WebGL-Texturen sind bereits eingebettet; Quelltexturen, Tests, Dokumentation und Source Maps gehören nicht ins Laufzeitimage.
+Das [Dockerfile](../Dockerfile) baut mit `npm ci` und `npm run build` und stellt die benötigten Laufzeitdateien für Nginx zusammen. Es ist die maßgebliche Auslieferungsliste: HTML, Styles, gebaute Skripte sowie lokale Audio-, Portrait- und Karten-Vorschaubilder. WebGL-Texturen sind bereits eingebettet; abgesehen von den zusätzlich durch CSS verwendeten Vorschaubildern gehören Quelltexturen, Tests, Dokumentation und Source Maps nicht ins Laufzeitimage.
 
 In Dokploy **Dockerfile** als Build-Typ und intern **HTTP-Port 8080** konfigurieren. Domain, öffentliches HTTPS und Zertifikate übernimmt der Proxy. `GET /` dient als Healthcheck, zusätzlich im Image hinterlegt. Keine weiteren Startbefehle nötig.
 
@@ -66,7 +66,7 @@ Das ist eine gezielte Reparatur für genau diesen nachgewiesenen Zustand, kein r
 npm run build:zip
 ```
 
-Der Befehl baut neu und erzeugt `release/ashes-of-meridian-prototype.zip`. Das Archiv enthält `index.html` direkt an seiner Wurzel sowie nur die benötigten Styles, kompilierten Skripte, Audio- und Portraitdateien. Source Maps, TypeScript-Quellen, Tests, Dokumentation und Quelltexturen bleiben draußen. Der Paketinhalt ist sortiert und mit festen Zeitstempeln reproduzierbar.
+Der Befehl baut neu und erzeugt `release/ashes-of-meridian-prototype.zip`. Das Archiv enthält `index.html` direkt an seiner Wurzel sowie nur die benötigten Styles, kompilierten Skripte, Audio-, Portrait- und Karten-Vorschaudateien. Lokale CSS-Bildreferenzen werden automatisch in den Paketumfang aufgenommen und gegen fehlende Dateien geprüft. Source Maps, TypeScript-Quellen, Tests, Dokumentation und sonstige Quelltexturen bleiben draußen. Der Paketinhalt ist sortiert und mit festen Zeitstempeln reproduzierbar.
 
 Das ZIP auf der itch.io-Projektseite als **HTML**-Build hochladen und **„This file will be played in the browser“** aktivieren. Wegen WebGL 2 und des bildschirmfüllenden Touch-Layouts den eingebetteten Viewport auf automatisch bzw. Vollbild konfigurierbar stellen; eine feste kleine Canvas-Größe vermeiden. Nach dem Upload mindestens Startmenü, Audiofreigabe, Gefechtsstart und Browserkonsole am tatsächlich von itch.io ausgelieferten Build prüfen.
 
