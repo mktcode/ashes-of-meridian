@@ -5,7 +5,7 @@ const { loadScripts } = require('./helpers/game-scripts.cjs');
 const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v3';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
-  version: 1, expeditionDepth: 0, aether: 0, upgrades: {},
+  version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false }
 };
 const benefitRules = {
@@ -52,6 +52,14 @@ test('profile defaults and normalization retain only permanent expedition progre
   assert.deepEqual(json(h.service.loadProfile()), { ...defaults, expeditionDepth: 25, aether: 120,
     upgrades: { startingAlloy: 0, startingWorkers: 5, aetherEvacuation: 0 },
     settings: { ...defaults.settings, volume: 1, quality: 0 } });
+});
+
+test('tutorial completion persists only as an explicit boolean', () => {
+  const h = setup();
+  for (const value of [true, false, 1, 'true', {}, null]) {
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, tutorialComplete: value }));
+    assert.equal(h.service.loadProfile().tutorialComplete, value === true);
+  }
 });
 
 test('profile settings reject foreign types without losing valid fields or progress', () => {

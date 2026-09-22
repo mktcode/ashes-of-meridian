@@ -39,6 +39,7 @@
         const pendingRadio = intro.pendingRadio;
         this.battleIntro = null;
         this.paused = false;
+        this.beginBattleTutorial();
         this.updateHUD();
         this.audio.setMode?.('battle');
         if (pendingRadio) this.radio(pendingRadio);

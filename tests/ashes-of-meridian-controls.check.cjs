@@ -127,7 +127,7 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, upgrades: {}, settings: { quality: 2 } },
+    { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {}, settings: { quality: 2 } },
     { saveProfile() {}, saveExpedition() {}, clearExpedition() {} });
   ui.view = 'game'; ui.paused = false;
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
@@ -267,6 +267,91 @@ test('later stages skip the stage-one camera introduction', () => {
   assert.equal(h.ui.battleIntro, null);
   assert.equal(h.ui.paused, false);
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
+});
+
+test('first-stage tutorial highlights the nested worker, refinery, barracks and rifle sequence and persists completion', () => {
+  const h = setup(), actions = h.document.getElementById('actions'), saved = [];
+  h.ui.setTab = h.UI.prototype.setTab;
+  h.ui.alert = () => {};
+  h.ui.persistence.saveProfile = profile => { saved.push(JSON.parse(JSON.stringify(profile))); return true; };
+  h.ui.game.s.depth = 0;
+  h.ui.game.s.rules = { kind: 'single-player' };
+  h.ui.game.s.entities = [];
+  const focused = action => new RegExp(`class="[^"]*tutorial-focus[^"]*" data-action="${action}"`).test(actions.innerHTML);
+
+  assert.equal(h.ui.beginBattleTutorial(), true);
+  h.ui.renderActions();
+  assert.equal(focused('tab:infantry'), true);
+  h.ui.setTab('infantry');
+  assert.equal(focused('train:worker'), true);
+  const producer = { id: 10, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1,
+    queue: [{ type: 'worker' }] };
+  h.ui.game.s.entities.push(producer);
+  h.ui.renderActions();
+  assert.equal(actions.innerHTML.includes('tutorial-focus'), false, 'queued target waits without prompting duplicates');
+  producer.queue = [];
+  h.ui.renderActions();
+  assert.equal(focused('train:worker'), true, 'cancelled target restores its prompt');
+
+  h.ui.event('trained', { type: 'worker' });
+  assert.equal(h.ui.tab, 'root');
+  assert.equal(focused('tab:build'), true);
+  h.ui.setTab('build');
+  assert.equal(focused('build:refinery'), true);
+  const foundation = { id: 11, team: 0, kind: 'building', type: 'refinery', hp: 100, progress: .2, queue: [] };
+  h.ui.game.s.entities.push(foundation);
+  h.ui.renderActions();
+  assert.equal(actions.innerHTML.includes('tutorial-focus'), false, 'placed foundation waits for completion');
+  h.ui.game.s.entities = h.ui.game.s.entities.filter(e => e !== foundation);
+  h.ui.renderActions();
+  assert.equal(focused('build:refinery'), true, 'cancelled foundation restores its prompt');
+
+  h.ui.event('complete', { type: 'refinery', x: 1, z: 2 });
+  assert.equal(h.ui.tab, 'build');
+  assert.equal(focused('build:barracks'), true);
+  h.ui.event('complete', { type: 'barracks', x: 1, z: 2 });
+  assert.equal(h.ui.tab, 'root');
+  assert.equal(focused('tab:infantry'), true);
+  h.ui.setTab('infantry');
+  assert.equal(focused('train:rifle'), true);
+
+  h.ui.event('trained', { type: 'rifle' });
+  assert.equal(h.ui.battleTutorial, null);
+  assert.equal(h.ui.profile.tutorialComplete, true);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].tutorialComplete, true);
+  assert.equal(actions.innerHTML.includes('tutorial-focus'), false);
+});
+
+test('tutorial remembers valid goals completed out of order instead of demanding duplicates', () => {
+  const h = setup(), saved = [];
+  h.ui.setTab = h.UI.prototype.setTab;
+  h.ui.persistence.saveProfile = profile => { saved.push(JSON.parse(JSON.stringify(profile))); return true; };
+  h.ui.game.s.depth = 0;
+  h.ui.game.s.rules = { kind: 'single-player' };
+  assert.equal(h.ui.beginBattleTutorial(), true);
+  h.ui.advanceBattleTutorial('complete', 'barracks');
+  h.ui.advanceBattleTutorial('trained', 'rifle');
+  h.ui.advanceBattleTutorial('complete', 'refinery');
+  assert.equal(h.ui.battleTutorial.step, 'trainWorker');
+  h.ui.advanceBattleTutorial('trained', 'worker');
+  assert.equal(h.ui.battleTutorial, null);
+  assert.equal(h.ui.profile.tutorialComplete, true);
+  assert.equal(saved.length, 1);
+});
+
+test('tutorial stays out of later progress, completed profiles and other factions', () => {
+  for (const [depth, bestDepth, complete, faction] of [[1, 0, false, 0], [0, 1, false, 0],
+    [0, 0, true, 0], [0, 0, false, 1]]) {
+    const h = setup();
+    h.ui.game.s.depth = depth;
+    h.ui.game.s.rules = { kind: 'single-player' };
+    h.ui.game.s.parties[0].faction = faction;
+    h.ui.profile.expeditionDepth = bestDepth;
+    h.ui.profile.tutorialComplete = complete;
+    assert.equal(h.ui.beginBattleTutorial(), false);
+    assert.equal(h.ui.battleTutorial, null);
+  }
 });
 
 test('world picking and captured releases outside the viewport cannot issue orders or target abilities', () => {

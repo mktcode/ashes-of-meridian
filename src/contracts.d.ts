@@ -126,6 +126,7 @@ interface MeridianProfile {
   version: 1;
   expeditionDepth: number;
   aether: number;
+  tutorialComplete: boolean;
   upgrades: Record<string, number>;
   settings: MeridianSettings;
 }

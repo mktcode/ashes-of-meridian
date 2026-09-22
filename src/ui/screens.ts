@@ -5,6 +5,7 @@
         this.multiplayer?.disconnect();
         this.game.s = null;
         this.battleIntro = null;
+        this.battleTutorial = null;
         this.view = 'home';
         this.paused = true;
         this.audio.setMode?.('menu');

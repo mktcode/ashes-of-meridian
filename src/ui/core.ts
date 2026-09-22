@@ -63,6 +63,7 @@
       miniCtx?: CanvasRenderingContext2D;
       miniImage?: ImageData;
       battleIntro: BattleIntro | null;
+      battleTutorial: BattleTutorialState | null;
       constructor(game: MeridianGame, renderer: MeridianRenderer, audio: MeridianAudio, profile: MeridianProfile, persistence: MeridianPersistence) {
         this.persistence = persistence;
         this.game = game;
@@ -92,6 +93,7 @@
         this.hudClock = 0;
         this.touchPoints = new Map();
         this.battleIntro = null;
+        this.battleTutorial = null;
         this.bind();
       }
       get localTeam(): PlayerTeam { return this.game.localTeam; }
@@ -166,7 +168,9 @@
           this.mode = null;
           this.tab = 'root';
           this.actionSignature = '';
+          this.battleTutorial = null;
           this.beginBattleIntro();
+          if (!this.battleIntro) this.beginBattleTutorial();
           this.audio.setMode?.(this.battleIntro ? 'silent' : 'battle');
           this.updateHUD();
           this.clearMode();
@@ -190,6 +194,7 @@
                   : FACTIONS[this.game.s!.parties[this.localTeam].faction].color
             });
         } else if (type === 'result') {
+          this.battleTutorial = null;
           const firstResult = this.resultAetherRecovered === undefined;
           let profileChanged = false;
           this.factionJustUnlocked = null;
@@ -240,11 +245,13 @@
             x: data.x,
             z: data.z
           });
+          this.advanceBattleTutorial('complete', data.type);
           this.actionSignature = '';
         } else if (type === 'trained') {
           this.audio.sound('trained');
           if (data.type === 'hero')
             this.radio('Expedition command|Commander reconstructed and ready.');
+          this.advanceBattleTutorial('trained', data.type);
           this.actionSignature = '';
         } else if (['scan', 'heal', 'queued', 'select'].includes(type))
           this.audio.sound(type);
