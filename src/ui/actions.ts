@@ -246,6 +246,26 @@
         if (entry) this.submitAction({ kind: 'cancelQueue', id: entry.b.id, index: entry.index });
       },
       updateQueues(this: MeridianUI) {
+        const team = this.localTeam, faction = this.game.s!.parties[team].faction,
+          inputs = this.queueInputs ||= [];
+        let index = 2, changed = this.queueSignature === undefined || inputs[0] !== team || inputs[1] !== faction;
+        inputs[0] = team; inputs[1] = faction;
+        // Compare values, not time or entity identity: local commands can change a
+        // queue between ticks, while multiplayer replaces objects on each snapshot.
+        // Keep this read-only scan; caching producers needs a simulation revision contract.
+        for (const b of this.game.s!.entities) {
+          if (!(b.hp > 0) || b.team !== team || b.kind !== 'building' || !b.queue) continue;
+          for (let i = 0; i < b.queue.length; i++) {
+            const q = b.queue[i];
+            if (inputs[index] !== q.type || inputs[index+1] !== i ||
+              inputs[index+2] !== q.progress || inputs[index+3] !== q.time) changed = true;
+            inputs[index++] = q.type; inputs[index++] = i;
+            inputs[index++] = q.progress; inputs[index++] = q.time;
+          }
+        }
+        if (inputs.length !== index) changed = true;
+        inputs.length = index;
+        if (!changed) return;
         let groups = this.recruitmentGroups(),
           types = contentKeys(UNITS).filter(type => groups[type]),
           signature = types.join(',');
@@ -257,15 +277,20 @@
         }
         // Keep the buttons stable while animating from simulation progress (also correct after pause/load).
         for (let button of $('productionQueue').querySelectorAll<HTMLButtonElement>('[data-queue-type]')) {
-          let type = button.dataset.queueType as UnitType, entries = groups[type]!,
-            next = entries.filter(e => e.index === 0)
-              .sort((a, b) => a.q.time * (1 - a.q.progress) - b.q.time * (1 - b.q.progress))[0]?.q,
-            remaining = next ? Math.ceil(next.time * (1 - next.progress)) + 's' : '…';
-          button.style.setProperty('--progress', (next ? clamp(next.progress, 0, 1) * 360 : 360) + 'deg');
-          button.classList.toggle('waiting', !next);
-          button.querySelector('.queue-count')!.textContent = String(entries.length);
-          button.querySelector('.queue-time')!.textContent = remaining;
-          button.setAttribute('aria-label', `${unitName(type, this.game.s!.parties[this.localTeam].faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`);
+          const type = button.dataset.queueType as UnitType, entries = groups[type]!;
+          let next: QueueItem | undefined;
+          // Strict comparison retains producer order for equal remaining times.
+          for (const entry of entries) if (entry.index === 0 &&
+            (!next || entry.q.time * (1 - entry.q.progress) < next.time * (1 - next.progress))) next = entry.q;
+          const remaining = next ? Math.ceil(next.time * (1 - next.progress)) + 's' : '…',
+            progress = (next ? clamp(next.progress, 0, 1) * 360 : 360) + 'deg',
+            count = button.querySelector('.queue-count')!, time = button.querySelector('.queue-time')!,
+            label = `${unitName(type, faction)} · ${entries.length} pending · ${next ? remaining : 'waiting'} · cancel one recruitment`;
+          if (button.style.getPropertyValue('--progress') !== progress) button.style.setProperty('--progress', progress);
+          if (button.classList.contains('waiting') !== !next) button.classList.toggle('waiting', !next);
+          if (count.textContent !== String(entries.length)) count.textContent = String(entries.length);
+          if (time.textContent !== remaining) time.textContent = remaining;
+          if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
         }
       },
       updateHUD(this: MeridianUI) {

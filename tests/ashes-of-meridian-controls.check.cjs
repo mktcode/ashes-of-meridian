@@ -39,7 +39,10 @@ test('screen templates render frozen data without DOM access, randomness or prof
 function setup() {
   const target = () => ({
     handlers: {}, firstChild: { textContent: '', remove() {} },
-    style: { setProperty(key, value) { this[key] = value; } }, classList: {
+    style: {
+      setProperty(key, value) { this[key] = value; },
+      getPropertyValue(key) { return this[key] || ''; }
+    }, classList: {
       names: new Set(), add(name) { this.names.add(name); }, remove(name) { this.names.delete(name); },
       contains(name) { return this.names.has(name); },
       toggle(name, on) { if (on) this.names.add(name); else this.names.delete(name); }
@@ -47,6 +50,7 @@ function setup() {
     addEventListener(type, handler) { this.handlers[type] = handler; },
     setPointerCapture() {},
     setAttribute(key, value) { this[key] = value; },
+    getAttribute(key) { return this[key] ?? null; },
     querySelector(selector) { return (this.parts ||= {})[selector] ||= target(); },
     querySelectorAll(selector) {
       assert.equal(selector, '[data-queue-type]');
@@ -1274,13 +1278,146 @@ test('recruitment groups combine own parallel and waiting orders with their prod
 
 test('queue rendering leaves production state and RNG untouched', () => {
   const h = setup(), g = h.ui.game;
-  g.s.entities = [{ id: 1, team: 0, kind: 'building', queue: [
+  g.s.entities = [{ id: 1, team: 0, kind: 'building', hp: 100, queue: [
     { type: 'rifle', progress: .2, time: 100 }, { type: 'medic', progress: 0, time: 10 }
   ] }];
   g.random = () => { throw Error('Queue rendering consumed simulation RNG'); };
   const before = JSON.stringify(g.s);
   h.ui.updateQueues(); h.ui.updateQueues();
   assert.equal(JSON.stringify(g.s), before);
+});
+
+function queueViewSetup() {
+  const h = setup(), g = h.ui.game;
+  g.alive = vm.runInContext('MeridianGame.prototype.alive', h.context).bind(g);
+  g.random = () => { throw Error('Queue view consumed simulation RNG'); };
+  g.s.entities = [{ id: 1, team: 0, kind: 'building', hp: 100, queue: [
+    { type: 'rifle', progress: .2, time: 10 }, { type: 'medic', progress: 0, time: 10 }
+  ] }];
+  h.buttons = () => h.document.getElementById('productionQueue').querySelectorAll('[data-queue-type]');
+  h.button = type => h.buttons().find(b => b.dataset.queueType === type);
+  return h;
+}
+
+function watchQueueWrites(h) {
+  const writes = [];
+  const property = (object, key, kind) => {
+    let value = object[key];
+    Object.defineProperty(object, key, { configurable: true, get: () => value,
+      set(next) { writes.push(kind); value = next; } });
+  };
+  property(h.document.getElementById('productionQueue'), 'innerHTML', 'structure');
+  for (const button of h.buttons()) {
+    property(button.querySelector('.queue-count'), 'textContent', 'count');
+    property(button.querySelector('.queue-time'), 'textContent', 'time');
+    for (const [object, key, kind] of [[button.style, 'setProperty', 'progress'],
+      [button.classList, 'toggle', 'waiting'], [button, 'setAttribute', 'label']]) {
+      const original = object[key];
+      object[key] = function(...args) { writes.push(kind); return original.apply(this, args); };
+    }
+  }
+  return writes;
+}
+
+test('queue view skips unchanged grouping and DOM writes, updating only changed display values', () => {
+  const h = queueViewSetup(), g = h.ui.game, original = h.ui.recruitmentGroups;
+  let groups = 0;
+  h.ui.recruitmentGroups = function() { groups++; return original.call(this); };
+  h.ui.updateQueues();
+  const writes = watchQueueWrites(h), buttons = h.buttons();
+  for (let i = 0; i < 120; i++) { g.s.time += .05; h.ui.updateQueues(); }
+  assert.equal(groups, 1, 'time advancing alone does not rebuild recruitment groups');
+  assert.deepEqual(writes, []);
+  const q = g.s.entities[0].queue[0];
+  q.progress = .21; h.ui.updateQueues();
+  assert.equal(groups, 2); assert.deepEqual(writes, ['progress'], 'same displayed second and count');
+  writes.length = 0;
+  q.progress = .31; h.ui.updateQueues();
+  assert.deepEqual(writes, ['progress', 'time', 'label']);
+  writes.length = 0;
+  g.s.entities[0].queue.push({ type: 'rifle', progress: 0, time: 10 });
+  h.ui.updateQueues();
+  assert.deepEqual(writes, ['count', 'label']);
+  assert.strictEqual(h.buttons()[0], buttons[0], 'same types retain clickable nodes');
+  assert.strictEqual(h.buttons()[1], buttons[1]);
+});
+
+test('queue view keeps parallel-producer minimum, stable ties, waiting status and current cancellation targets', () => {
+  const h = queueViewSetup(), g = h.ui.game, a = g.s.entities[0];
+  a.queue[0].progress = .5;
+  const b = { ...a, id: 2, queue: [{ type: 'rifle', progress: .75, time: 20 }] };
+  g.s.entities.push(b);
+  h.ui.updateQueues();
+  assert.equal(h.button('rifle').style.getPropertyValue('--progress'), '180deg', 'first producer wins equal remaining time');
+  assert.equal(h.button('medic').classList.contains('waiting'), true);
+  g.s.entities.reverse(); h.ui.updateQueues();
+  assert.equal(h.button('rifle').style.getPropertyValue('--progress'), '270deg');
+  b.queue[0].time = 40; h.ui.updateQueues();
+  assert.equal(h.button('rifle').style.getPropertyValue('--progress'), '180deg', 'duration changes can switch the earliest completion');
+  a.queue.shift(); h.ui.updateQueues();
+  assert.equal(h.button('medic').classList.contains('waiting'), false, 'new head becomes active without clock advance');
+  assert.equal(h.button('medic').style.getPropertyValue('--progress'), '0deg');
+  g.submitAction = (team, action) => { h.calls.push([team, action.id, action.index]); return true; };
+  h.ui.cancelRecruitment('rifle');
+  assert.deepEqual(h.calls, [[0, 2, 0]], 'actions still resolve live producer IDs rather than view cache');
+});
+
+test('queue view detects immediate queue edits, producer death and ownership changes without a new tick', () => {
+  const h = queueViewSetup(), g = h.ui.game, a = g.s.entities[0];
+  h.ui.updateQueues();
+  a.queue.push({ type: 'worker', progress: 0, time: 12 }); h.ui.updateQueues();
+  assert.ok(h.button('worker'));
+  a.queue.pop(); h.ui.updateQueues(); assert.equal(h.button('worker'), undefined);
+  a.hp = 0; h.ui.updateQueues(); assert.equal(h.buttons().length, 0);
+  assert.equal(h.ui.queueInputs.length, 2, 'removed queues release cached input slots');
+  a.hp = 100; h.ui.updateQueues(); assert.equal(h.buttons().length, 2);
+  a.team = 1; h.ui.updateQueues(); assert.equal(h.buttons().length, 0);
+  a.team = 0; h.ui.updateQueues(); assert.equal(h.buttons().length, 2);
+  g.s = { ...g.s, entities: [] }; h.ui.updateQueues(); assert.equal(h.buttons().length, 0);
+  assert.equal(g.s.time, 0);
+});
+
+test('queue view compares multiplayer values instead of snapshot identities and refreshes actor/faction labels', () => {
+  const h = queueViewSetup(), g = h.ui.game, original = h.ui.recruitmentGroups;
+  let groups = 0;
+  h.ui.recruitmentGroups = function() { groups++; return original.call(this); };
+  g.networkTeam = 0;
+  h.ui.updateQueues();
+  const writes = watchQueueWrites(h), first = h.button('rifle');
+  g.s.entities = JSON.parse(JSON.stringify(g.s.entities));
+  g.s.entities[0].id = 42;
+  h.ui.updateQueues();
+  assert.equal(groups, 1); assert.deepEqual(writes, []);
+  g.submitAction = (team, action) => { h.calls.push([team, action.id, action.index]); return true; };
+  h.ui.cancelRecruitment('rifle'); assert.deepEqual(h.calls, [[0, 42, 0]]);
+  g.s.entities[0].queue[0].progress = .6; h.ui.updateQueues();
+  assert.equal(first.style.getPropertyValue('--progress'), '216deg');
+  const label = first.getAttribute('aria-label');
+  g.s.parties[0].faction = 1; h.ui.updateQueues();
+  assert.notEqual(first.getAttribute('aria-label'), label);
+  g.s.parties.push({ id: 1, faction: 2 }); g.localTeam = g.networkTeam = 1;
+  h.ui.updateQueues(); assert.equal(h.buttons().length, 0);
+  g.s.entities[0].team = 1; h.ui.updateQueues(); assert.equal(h.buttons().length, 2);
+  // Explicit UI invalidation must still rebuild otherwise identical content.
+  const old = h.button('rifle'); h.ui.queueSignature = undefined;
+  h.document.getElementById('productionQueue').innerHTML = '';
+  h.buttons(); h.ui.updateQueues(); assert.notStrictEqual(h.button('rifle'), old);
+});
+
+test('queue view preserves pressed-node guard and pause/resume without wall-clock progress', () => {
+  const h = queueViewSetup(), g = h.ui.game;
+  h.ui.tick(0);
+  const first = h.button('rifle'), writes = watchQueueWrites(h);
+  h.ui.paused = true;
+  for (let i = 0; i < 10; i++) h.ui.tick(.1);
+  assert.deepEqual(writes, []);
+  h.ui.paused = false; h.ui.domPressed = true;
+  g.s.entities[0].queue[0].progress = .5; h.ui.tick(0);
+  assert.deepEqual(writes, []);
+  h.ui.domPressed = false; h.ui.tick(0);
+  assert.strictEqual(h.button('rifle'), first);
+  assert.equal(first.style.getPropertyValue('--progress'), '180deg');
+  assert.deepEqual(writes, ['progress', 'time', 'label']);
 });
 
 test('periodic HUD refresh does not duplicate the per-frame queue update', () => {

@@ -60,6 +60,7 @@
       touchGesture?: boolean;
       pinchDist?: number;
       queueSignature?: string;
+      queueInputs?: (number | UnitType)[];
       miniBuffer?: HTMLCanvasElement;
       miniCtx?: CanvasRenderingContext2D;
       miniImage?: ImageData;
