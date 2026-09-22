@@ -216,7 +216,7 @@
               }
               const currentUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
               if (currentUnlock > previousUnlock) this.factionJustUnlocked = currentUnlock;
-              this.expedition.encounter = this.createEncounter(this.expedition.depth);
+              this.expedition.encounter = this.createEncounter(this.expedition.depth, this.expedition.encounter.map);
               this.expedition.enemyBenefits = advanceEnemyBenefits(this.expedition.enemyBenefits,
                 this.expedition.encounter, this.expedition.depth);
               this.expedition.offers = this.createBenefitOffers(this.expedition);

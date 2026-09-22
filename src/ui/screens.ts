@@ -63,11 +63,12 @@
         return faction !== undefined && Number.isInteger(faction) && faction >= 0 && faction < FACTIONS.length &&
           faction <= this.unlockedFactionForDepth(this.profile.expeditionDepth);
       },
-      createEncounter(this: MeridianUI, depth = 0): ExpeditionEncounter {
-        const maps = contentKeys(BATTLEFIELDS);
+      createEncounter(this: MeridianUI, depth = 0, previousMap?: BattlefieldId): ExpeditionEncounter {
+        const maps = contentKeys(BATTLEFIELDS), alternatives = maps.filter(map => map !== previousMap),
+          mapPool = alternatives.length ? alternatives : maps;
         return {
           enemies: Array.from({ length: expeditionEnemyCount(depth) }, () => Math.floor(Math.random() * FACTIONS.length) as FactionId),
-          map: maps[Math.floor(Math.random() * maps.length)],
+          map: mapPool[Math.floor(Math.random() * mapPool.length)],
           seed: 1 + Math.floor(Math.random() * 99999999)
         };
       },

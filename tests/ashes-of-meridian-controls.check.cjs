@@ -889,8 +889,10 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.expedition = { version: 3, faction: 0, depth: 0, benefits: {}, enemyBenefits: [{}],
     encounter: { enemies: [1], map: 'desert', seed: 1409 }, offers: [] };
+  const previousMap = h.ui.expedition.encounter.map;
   h.ui.event('result', { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
   assert.equal(h.ui.expedition.depth, 1); assert.equal(saved.length, 1);
+  assert.notEqual(h.ui.expedition.encounter.map, previousMap);
   assert.equal(h.ui.expedition.offers.length, 3);
   const enemyBefore=JSON.stringify(h.ui.expedition.enemyBenefits);
   const totals = () => Array.from(h.ui.expedition.enemyBenefits, perks => Object.values(perks).reduce((a,b)=>a+b,0));
@@ -1068,6 +1070,13 @@ test('home preview prepares the known next expedition battlefield', () => {
   h.ui.onPreview = map => maps.push(map);
   h.ui.showHome();
   assert.deepEqual(maps, ['alien-planet']);
+});
+
+test('expedition encounter generation excludes the immediately previous map', () => {
+  const h = setup();
+  vm.runInContext('Math.random = () => 0;', h.context);
+  for (const previousMap of ['desert', 'alien-planet', 'mothership', 'westmark'])
+    assert.notEqual(h.ui.createEncounter(3, previousMap).map, previousMap);
 });
 
 test('expedition setup creates and saves a random pending encounter', () => {
