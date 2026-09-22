@@ -198,7 +198,7 @@
     }
 
     #cameraTools { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100% }
-    #commandTools { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+    #commandTools { grid-template-columns: repeat(3, minmax(0, 1fr)) }
 
     #cameraTools button,
     #commandTools button {

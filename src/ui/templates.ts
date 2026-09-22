@@ -55,7 +55,8 @@ function renderFieldManual() {
             ['Select', 'Tap or left-click your unit or building'],
             ['Move / attack', 'Select troops → tap ground / enemy · right-click'],
             ['Group visible units', 'Double-tap/click: same type · triple-tap: all except workers'],
-            ['Combat force', 'Group icon: select all combat units'],
+            ['Visible combat force', 'Framed group icon: select combat units in view'],
+            ['Combat force', 'Group icon: select all combat units on the map'],
             ['Attack-move', 'Crossed swords: gold = stop to fight'],
             ['Pan / zoom', 'Drag or middle-drag · wheel, pinch or ＋ / −'],
             ['Navigate', '⌂: base · minimap: tap, click or drag']

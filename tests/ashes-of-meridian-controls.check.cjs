@@ -712,6 +712,22 @@ test('attack-move toggle changes future ground orders for touch and mouse, not e
   }
 });
 
+test('visible combat force button selects living own non-workers projected inside the battlefield viewport', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 100, x: 100, z: 100 };
+  h.ui.game.s.entities = [unit, { ...unit, id: 2, type: 'medic', x: 200 },
+    { ...unit, id: 3, x: -10 }, { ...unit, id: 4, z: 700 }, { ...unit, id: 5, type: 'worker' },
+    { ...unit, id: 6, team: 1 }, { ...unit, id: 7, kind: 'building' }, { ...unit, id: 8, hp: 0 }];
+  h.ui.game.alive = predicate => h.ui.game.s.entities.filter(e => e.hp > 0 && predicate(e));
+  h.ui.lastClick = { id: 5, count: 2 };
+  h.document.getElementById('visibleCombatSelectBtn').onclick();
+  assert.deepEqual(h.ui.selected, [1, 2]);
+  assert.deepEqual(h.calls, [['select', [1, 2]]]);
+  assert.equal(Object.keys(h.ui.lastClick).length, 0);
+  h.ui.paused = true; h.document.getElementById('visibleCombatSelectBtn').onclick();
+  assert.deepEqual(h.calls, [['select', [1, 2]]]);
+});
+
 test('combat force button selects every living own non-worker without changing commands', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 100 };
