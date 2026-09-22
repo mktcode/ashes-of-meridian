@@ -255,7 +255,7 @@
             this.radio('Expedition command|Commander reconstructed and ready.');
           this.advanceBattleTutorial('trained', data.type);
           this.actionSignature = '';
-        } else if (['scan', 'heal', 'queued', 'select'].includes(type))
+        } else if (['scan', 'heal', 'queued'].includes(type))
           this.audio.sound(type);
       }
     }
