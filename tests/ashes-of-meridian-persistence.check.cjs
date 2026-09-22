@@ -181,11 +181,11 @@ test('new fleet upgrades normalize and reload through the real content catalog',
 test('new benefit keys round-trip with real content limits and exhausted offers disappear',()=>{
   const rules=vm.runInContext('({upgrades:META,benefits:EXPEDITION_BENEFITS})',loadScripts(['content']));
   const h=setup(new Map(),rules);
-  h.service.saveExpedition({...expedition,benefits:{surveyDrones:99,fieldWorkshop:99,commandCapacitor:1.9},
-    offers:['surveyDrones','fieldWorkshop','commandCapacitor','supplyCrate']});
+  h.service.saveExpedition({...expedition,benefits:{surveyDrones:99,fieldWorkshop:99,commandCapacitor:1.9,commandDrill:37},
+    offers:['surveyDrones','fieldWorkshop','commandCapacitor','commandDrill','supplyCrate']});
   const loaded=setup(h.data,rules).service.loadExpedition();
-  assert.deepEqual(json(loaded.benefits),{surveyDrones:1,fieldWorkshop:1,commandCapacitor:1});
-  assert.deepEqual(json(loaded.offers),['commandCapacitor','supplyCrate']);
+  assert.deepEqual(json(loaded.benefits),{commandDrill:37,surveyDrones:1,fieldWorkshop:1,commandCapacitor:1});
+  assert.deepEqual(json(loaded.offers),['commandCapacitor','commandDrill','supplyCrate']);
   assert.deepEqual(json(loaded.encounter),expedition.encounter);assert.equal(loaded.depth,8);
 });
 

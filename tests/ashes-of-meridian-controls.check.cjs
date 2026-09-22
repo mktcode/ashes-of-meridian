@@ -1044,8 +1044,8 @@ test('enemy choices use the shared three-offer pool and caps with deterministic 
   }
   assert.equal(Object.values(perks).reduce((a,b)=>a+b,0),100);
   const capped=Object.fromEntries(Object.entries(rules).filter(([,rule])=>rule.max).map(([key,rule])=>[key,rule.max]));
-  assert.deepEqual(Array.from(offers(capped,()=>.5)).sort(),['aetherAllocation','supplyCrate']);
-  for(const faction of [0,1,2])assert.ok(['aetherAllocation','supplyCrate'].includes(choose(faction,capped,1409,21)));
+  assert.deepEqual(Array.from(offers(capped,()=>.5)).sort(),['aetherAllocation','commandDrill','supplyCrate']);
+  for(const faction of [0,1,2])assert.ok(['aetherAllocation','commandDrill','supplyCrate'].includes(choose(faction,capped,1409,21)));
 });
 
 test('expedition benefits are offered deterministically and bounded on selection',()=>{
@@ -1065,6 +1065,10 @@ test('expedition benefits are offered deterministically and bounded on selection
     assert.equal(run.benefits[key],rules[key].max);
     assert.ok(!h.ui.createBenefitOffers(run).includes(key));
   }
+  assert.ok(seen.has('commandDrill'));assert.equal(rules.commandDrill.max,undefined);
+  run.offers=['commandDrill'];h.ui.chooseBenefit('commandDrill');
+  run.offers=['commandDrill'];h.ui.chooseBenefit('commandDrill');
+  assert.equal(run.benefits.commandDrill,2);
 });
 
 test('home preview prepares the known next expedition battlefield', () => {

@@ -56,6 +56,35 @@ test('party accessors share one state, while accounts and upgrade effects remain
   assert.equal(game.account(0).alloy, 240);
 });
 
+test('command drill linearly buffs each faction basic infantry only near its living commander', () => {
+  const game = state({ upgrades: {} }, { benefits: { commandDrill: 2 }, enemyBenefits: [{ commandDrill: 3 }] }),
+    unit = (id, type, team, faction, x) => ({ id, type, team, faction, x, z: 0, hp: 100, kind: 'unit', kills: 0 }),
+    commander = unit(1, 'hero', 0, 0, 0), rifle = unit(2, 'rifle', 0, 0, 11),
+    enemyCommander = unit(3, 'hero', 1, 2, 50), enemyRifle = unit(4, 'rifle', 1, 2, 61),
+    tank = unit(5, 'tank', 0, 0, 1);
+  game.s.entities = [commander, rifle, enemyCommander, enemyRifle, tank];
+  assert.equal(game.rangedStats(rifle).damage, 13 * 1.1);
+  assert.equal(game.rangedStats(enemyRifle).damage, 13 * 1.12 * 1.15);
+  assert.equal(game.rangedStats(tank).damage, 58);
+  assert.equal(game.rangedStats(commander).damage, 31);
+  for (const faction of [0, 1, 2]) {
+    rifle.faction = faction;
+    assert.equal(game.rangedStats(rifle).damage, 13 * (faction === 2 ? 1.12 : 1) * 1.1);
+  }
+  commander.x = -0.01;
+  assert.equal(game.rangedStats(rifle).damage, 13 * 1.12);
+  commander.x = 0; commander.hp = 0;
+  assert.equal(game.rangedStats(rifle).damage, 13 * 1.12);
+  commander.hp = 100; rifle.kills = 5;
+  assert.equal(game.rangedStats(rifle).damage, 13 * 1.12 * 1.12 * 1.1);
+
+  const withoutMandate = state({ upgrades: {} }, { benefits: { commandDrill: 37 } });
+  withoutMandate.s.entities = [unit(6, 'rifle', 0, 0, 0)];
+  assert.equal(withoutMandate.party(0).benefits.commandDrill, 37);
+  assert.equal(game.party(0).benefits.commanderMandate, undefined);
+  assert.equal(withoutMandate.rangedStats(withoutMandate.s.entities[0]).damage, 13);
+});
+
 test('controller assignment owns independent AI memory without altering faction, money or perks', () => {
   const game = state(), account = game.account(1), benefits = game.benefitsFor(1);
   assert.equal(game.aiFor(0), undefined);

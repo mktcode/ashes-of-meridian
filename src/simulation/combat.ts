@@ -74,10 +74,17 @@
           : UNITS[e.type],
           s = this.s!;
         let range = d.range || 0,
+          drillStacks = e.kind === 'unit' && e.type === 'rifle' && e.team !== -1
+            ? s.parties[e.team]?.benefits.commandDrill || 0
+            : 0,
+          inCommand = drillStacks > 0 && s.entities.some(n =>
+            n.hp > 0 && n.team === e.team && n.kind === 'unit' && n.type === 'hero' &&
+            distance(e, n) <= COMMAND_DRILL.radius),
           damage =
             (d.damage || 0) *
             (e.faction === FACTION_ID.THIRD ? 1.12 : 1) *
-            (e.kills >= 5 ? 1.12 : 1);
+            (e.kills >= 5 ? 1.12 : 1) *
+            (inCommand ? 1 + drillStacks * COMMAND_DRILL.damagePerStack : 1);
         return { ...d, range, damage };
       },
       fire(this: MeridianGame, e: UnitEntity | BuildingEntity, target: Entity) {

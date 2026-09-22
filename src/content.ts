@@ -305,6 +305,7 @@ const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
 const COMMAND_ENERGY = Object.freeze({ start: 25, max: 200, regeneration: .8 });
 const ABILITY_RULES = Object.freeze({ orbitalBuilding: 'factory' as const, reinforcementRange: 20 });
 const EXPEDITION_EFFECTS = Object.freeze({ alloy: 50, aether: 50, surveyRadius: 22, workshopSpeed: .5, energy: 15 });
+const COMMAND_DRILL = Object.freeze({ radius: 11, damagePerStack: .05 });
 const FLEET_EFFECTS = Object.freeze({ constructionSpeed: .05, supply: 2, repairDiscount: .05 });
 const fleetLevels = (step: number) => Array.from({ length: 6 }, (_, level) => level * step);
 
@@ -330,6 +331,11 @@ const EXPEDITION_BENEFITS = {
     icon: 'hero',
     desc: 'Deploys your faction commander at the start of every remaining battle.',
     max: 1
+  },
+  commandDrill: {
+    name: 'Command drill',
+    icon: 'rifle',
+    desc: `Basic infantry within ${COMMAND_DRILL.radius} meters of their commander deal ${COMMAND_DRILL.damagePerStack * 100}% more damage per stack.`
   },
   surveyDrones: {
     name: 'Survey drones',
