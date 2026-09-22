@@ -137,8 +137,11 @@
           return ready && id === worldRequest;
         });
         ui.showHome();
-        const SIMULATION_STEP_SECONDS = 0.05;
+        const SIMULATION_STEP_SECONDS = 0.05,
+          RENDER_INTERVAL_MS = 1000 / 60,
+          RENDER_TOLERANCE_MS = 0.1;
         let last = performance.now(),
+          nextRender = last,
           accumulator = 0,
           time = 0,
           frames = 0,
@@ -245,16 +248,7 @@
           let dt = Math.min(0.1, elapsed);
           last = now;
           time += dt;
-          frames++;
           frameClock += elapsed;
-          if (frameClock >= 1) {
-            fps = frames / frameClock;
-            const snapshots = ui.multiplayer?.takeSnapshotCount() ?? 0;
-            $('fpsReadout').textContent = `${Math.round(fps)} FPS` +
-              (game.networkTeam !== null ? ` · NET ${(snapshots / frameClock).toFixed(0)} Hz` : '');
-            frames = 0;
-            frameClock = 0;
-          }
           try {
             if (game.networkTeam == null && game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
               accumulator += dt * game.s.speed;
@@ -275,6 +269,24 @@
                   : 'silent'
                 : 'menu'
             );
+            // Keep simulation, UI clocks and network presentation on every rAF.
+            // Retain the render phase on e.g. 90/144 Hz displays instead of
+            // resetting to now + interval, which would systematically undershoot.
+            if (now + RENDER_TOLERANCE_MS < nextRender) {
+              requestAnimationFrame(draw);
+              return;
+            }
+            nextRender += Math.max(1, Math.floor((now - nextRender + RENDER_TOLERANCE_MS) / RENDER_INTERVAL_MS) + 1) * RENDER_INTERVAL_MS;
+            // Missed render slots are discarded, never drawn in a catch-up loop.
+            frames++;
+            if (frameClock >= 1) {
+              fps = frames / frameClock;
+              const snapshots = ui.multiplayer?.takeSnapshotCount() ?? 0;
+              $('fpsReadout').textContent = `${Math.round(fps)} FPS` +
+                (game.networkTeam !== null ? ` · NET ${(snapshots / frameClock).toFixed(0)} Hz` : '');
+              frames = 0;
+              frameClock = 0;
+            }
             R.begin();
             const viewTime = game.networkTeam !== null ? ui.multiplayer!.renderTime : game.s?.time;
             if (ui.view === 'game' && game.s) battlefield(viewTime!);

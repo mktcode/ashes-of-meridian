@@ -573,6 +573,131 @@ test('effect drawing accepts frozen data without game/UI globals and matches the
   assert.deepEqual(effectViewSample(render), expected);
 });
 
+// Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
+function appClock() {
+  let now = 0;
+  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [];
+  const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
+  const elements = new Map(), window = {};
+  const $ = id => {
+    if (!elements.has(id)) elements.set(id, {
+      handlers: {}, classList: { add() {}, remove() {} },
+      addEventListener(name, fn) { this.handlers[name] = fn; },
+      getContext: () => ({ setTransform() {} })
+    });
+    return elements.get(id);
+  };
+  loadScripts(['app'], { globals: {
+    $, window, URLSearchParams, location: { search: '' }, devicePixelRatio: 1,
+    performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
+    addEventListener() {}, ResizeObserver: class { observe() {} },
+    console: { error: e => errors.push(e), warn() {} },
+    META: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, UNITS: {}, BUILDINGS: {}, FACTIONS: {},
+    clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
+    createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
+    MeridianRenderer: class {
+      viewport = { width: 800, height: 600, left: 0, top: 0 };
+      resize() {} camera() {} begin() { renderWork.begin++; }
+      render(time) { draws.push({ now, time }); }
+    },
+    BattlefieldView: class { sync() {} },
+    MeridianAudio: class { update() {} },
+    MeridianGame: class {
+      networkTeam = null;
+      world = {};
+      s = { time: 0, speed: 1, entities: [], cam: { x: 0, z: 0, zoom: 65 } };
+      effects = { tick: dt => effectTicks.push(dt) };
+      step(dt) { steps.push(dt); this.s.time += dt; }
+    },
+    MeridianUI: class {
+      view = 'game'; paused = false; pointer = {}; pings = [];
+      showHome() {} drawMinimap() {} drawOverlay() { renderWork.overlay++; }
+      selectionIds() { return new Set(); }
+      tick(dt) { ticks.push(dt); }
+    },
+    MeridianMultiplayerClient: class {
+      renderTime = 0;
+      updatePresentation(t) { presentations.push(t); this.renderTime = t / 1000; }
+      takeSnapshotCount() { return 0; }
+      disconnect() {}
+    },
+    renderBattlefieldEffects() { renderWork.battlefield++; }
+  } });
+  assert.ok(window.Meridian, 'app initializes');
+  assert.deepEqual(errors, []);
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, $,
+    get performance() { return window.Meridian.performance; },
+    frame(t) {
+      assert.equal(pending.length, 1, 'exactly one outstanding rAF');
+      now = t;
+      pending.shift()(now);
+    }
+  };
+}
+
+for (const hz of [30, 59.94, 60, 90, 120, 144]) {
+  test(`app renders at most 60 FPS without slowing its clocks at ${hz} Hz`, () => {
+    const a = appClock(), count = Math.floor(hz * 10);
+    for (let i = 1; i <= count; i++) a.frame(i * 1000 / hz);
+    const seconds = count / hz;
+    assert.ok(Math.abs(a.draws.length - Math.min(60, hz) * seconds) <= 1);
+    assert.ok(Object.values(a.renderWork).every(count => count === a.draws.length),
+      'skipped frames omit instance/effect construction and overlay drawing too');
+    assert.equal(a.ticks.length, count, 'UI continues on skipped render callbacks');
+    assert.equal(a.presentations.length, count, 'network presentation keeps its existing cadence');
+    assert.ok(Math.abs(a.ticks.reduce((sum, dt) => sum + dt, 0) - seconds) < 1e-8);
+    assert.ok(Math.abs(a.steps.length - seconds * 20) <= 1);
+    assert.ok(a.steps.every(dt => dt === .05));
+    assert.deepEqual(a.effectTicks, a.steps, 'effects retain fixed-step ordering/cadence');
+    assert.ok(Math.abs(a.draws.at(-1).time - seconds) < .02);
+    assert.ok(Math.abs(a.performance.fps - Math.min(60, hz)) <= 1, 'FPS counts draws, not callbacks');
+    assert.equal(a.renderer.quality, 2);
+    assert.deepEqual(a.errors, []);
+  });
+}
+
+test('render phase tolerates timestamp jitter at 60 Hz and discards slots after a long gap', () => {
+  const a = appClock();
+  for (let i = 1; i <= 600; i++) a.frame(i * 1000 / 60 + (i % 2 ? -.06 : .06));
+  assert.equal(a.draws.length, 600, 'small jitter must not turn 60 Hz into 30 FPS');
+  const before = a.draws.length, steps = a.steps.length;
+  a.frame(20000);
+  assert.equal(a.draws.length, before + 1, 'no render catch-up batch');
+  assert.ok(a.steps.length - steps <= 2, 'existing 100 ms elapsed clamp is retained');
+  a.frame(20001);
+  assert.equal(a.draws.length, before + 1, 'no immediate replay of missed slots');
+  assert.deepEqual(a.errors, []);
+});
+
+test('frame cap leaves speed, pause and network simulation ownership unchanged', () => {
+  for (const mode of ['double', 'paused', 'network', 'menu']) {
+    const a = appClock();
+    if (mode === 'double') a.game.s.speed = 2;
+    if (mode === 'paused') a.ui.paused = true;
+    if (mode === 'network') a.game.networkTeam = 0;
+    if (mode === 'menu') a.ui.view = 'home';
+    for (let i = 1; i <= 120; i++) a.frame(i * 1000 / 120);
+    assert.ok(Math.abs(a.draws.length - 60) <= 1);
+    if (mode === 'double') assert.ok(Math.abs(a.steps.length - 40) <= 1);
+    else assert.equal(a.steps.length, 0);
+    assert.equal(a.presentations.length, 120);
+    assert.deepEqual(a.errors, []);
+  }
+});
+
+test('graphics loss and render errors stop scheduling even with the frame cap', () => {
+  for (const contextLoss of [true, false]) {
+    const a = appClock();
+    a.frame(1000 / 120);
+    if (contextLoss) a.$('world').handlers.webglcontextlost({ preventDefault() {} });
+    else a.renderer.render = () => { throw Error('test render failure'); };
+    a.frame(1000 / 60);
+    assert.equal(a.pending.length, 0);
+    assert.equal(a.ui.paused, true);
+    assert.equal(a.errors.length, contextLoss ? 0 : 1);
+  }
+});
+
 for (const [kind, expected] of Object.entries(fixture.effects)) {
   test(`effect payload, lifetime and RNG reference: ${kind}`, () => {
     assert.deepEqual(effectSample(kind), expected);
