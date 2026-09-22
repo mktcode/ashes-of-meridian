@@ -6,7 +6,8 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { fileURLToPath } = require('node:url');
-const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, DIAGNOSTIC_SCRIPTS, MULTIPLAYER_SCRIPTS, RENDERER_SCRIPTS,
+  SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
 const sample = `
@@ -75,6 +76,21 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.equal(buildingName('unknown-building'), 'unknown-building');
   assert.equal(icon('unknown-icon'), icon('hero'));
   assert.match(icon('worker'), /^<svg viewBox="0 0 24 24".*<path d="M8 15l-4 5/);
+});
+
+test('fragment groups completely mirror their index directories in document order', () => {
+  const scripts = readScripts(), groups = [
+    ['dist/src/battlefields/', BATTLEFIELD_SCRIPTS],
+    ['dist/src/renderer/', RENDERER_SCRIPTS],
+    ['dist/src/simulation/', SIMULATION_SCRIPTS],
+    ['dist/src/ui/', UI_SCRIPTS],
+    ['dist/src/multiplayer/', MULTIPLAYER_SCRIPTS],
+    ['dist/src/diagnostics/', DIAGNOSTIC_SCRIPTS]
+  ];
+  for (const [directory, expected] of groups) {
+    const actual = scripts.filter(script => script.filename.startsWith(directory)).map(script => script.name);
+    assert.deepEqual(actual, expected, `${directory} fragments must all belong to their VM group`);
+  }
 });
 
 test('CPU map recipes load without content, renderer or browser, with explicit names and IDs', () => {
