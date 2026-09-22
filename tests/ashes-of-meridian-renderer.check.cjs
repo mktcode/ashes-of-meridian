@@ -336,7 +336,7 @@ test('lighting profiles override shader colors without additional textures or re
   assert.ok(FRAG.indexOf('lit=finishLighting(lit)')<FRAG.indexOf('float field='),'compress highlights before fog and RGBA8 storage');
   assert.match(FRAG,/over\/\(1\.\+over\/\.35\)/);
   assert.match(VERT,/if\(a_material==-1\.\|\|a_material==-4\.\)v_modelPos=a_pos/);
-  const contact=FRAG.slice(FRAG.indexOf('if(v_mat==-1.)'),FRAG.indexOf('vec3 n=normalize(v_n)'));
+  const contact=FRAG.slice(FRAG.indexOf('if(v_mat==-1.)'),FRAG.indexOf('if(v_mat==-4.)'));
   assert.match(contact,/smoothstep\(\.05,1\.,length\(v_modelPos.xz\*2\.\)\)/);
   assert.match(contact,/smoothstep\(\.35,\.8,sight\)/);
   assert.doesNotMatch(contact,/shadow\(|u_metalTex|u_groundTex/);
@@ -505,7 +505,7 @@ test('bloom uses two quarter-size targets, three ordered passes and a clean allo
 
 test('scene geometry and blended effects resolve exactly once before post-processing', () => {
   const h = setup(); h.r.resize(); h.calls.length = 0; h.r.render(1);
-  assert.deepEqual(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[5],
+  assert.deepEqual(Array.from(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[5]),
     ['terrain','alienLanternPool'],'flat ground and projected light are not submitted as shadow casters');
   const staticScene=h.calls.filter(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'scene');
   assert.strictEqual(staticScene[0][4], h.r.vp,'static scene chunks use the camera projection for culling');
