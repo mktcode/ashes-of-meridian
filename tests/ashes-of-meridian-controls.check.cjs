@@ -269,7 +269,7 @@ test('later stages skip the stage-one camera introduction', () => {
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
 });
 
-test('first-stage tutorial highlights the nested worker, refinery, barracks and rifle sequence and persists completion', () => {
+test('first-stage tutorial highlights two workers, refinery, barracks and rifle in sequence and persists completion', () => {
   const h = setup(), actions = h.document.getElementById('actions'), saved = [];
   h.ui.setTab = h.UI.prototype.setTab;
   h.ui.alert = () => {};
@@ -293,6 +293,9 @@ test('first-stage tutorial highlights the nested worker, refinery, barracks and 
   h.ui.renderActions();
   assert.equal(focused('train:worker'), true, 'cancelled target restores its prompt');
 
+  h.ui.event('trained', { type: 'worker' });
+  assert.equal(h.ui.tab, 'infantry');
+  assert.equal(focused('train:worker'), true, 'the second Prospector is requested after the first finishes');
   h.ui.event('trained', { type: 'worker' });
   assert.equal(h.ui.tab, 'root');
   assert.equal(focused('tab:build'), true);
@@ -333,6 +336,8 @@ test('tutorial remembers valid goals completed out of order instead of demanding
   h.ui.advanceBattleTutorial('complete', 'barracks');
   h.ui.advanceBattleTutorial('trained', 'rifle');
   h.ui.advanceBattleTutorial('complete', 'refinery');
+  assert.equal(h.ui.battleTutorial.step, 'trainWorker');
+  h.ui.advanceBattleTutorial('trained', 'worker');
   assert.equal(h.ui.battleTutorial.step, 'trainWorker');
   h.ui.advanceBattleTutorial('trained', 'worker');
   assert.equal(h.ui.battleTutorial, null);

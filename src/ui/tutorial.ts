@@ -5,6 +5,7 @@ type BattleTutorialStep = 'trainWorker' | 'buildRefinery' | 'buildBarracks' | 't
 interface BattleTutorialState {
   step: BattleTutorialStep;
   achieved: Set<BattleTutorialStep>;
+  workersTrained: number;
 }
 
 const BATTLE_TUTORIAL_TARGETS: Record<BattleTutorialStep, { tab: UITab; action: string }> = {
@@ -21,7 +22,7 @@ const uiTutorialMethods = {
     if (!s || s.rules?.kind !== 'single-player' || s.depth !== 0 || this.localTeam !== 0 ||
         s.parties[0].faction !== FACTION_ID.FIRST || this.profile.expeditionDepth > 0 ||
         this.profile.tutorialComplete) return false;
-    this.battleTutorial = { step: 'trainWorker', achieved: new Set() };
+    this.battleTutorial = { step: 'trainWorker', achieved: new Set(), workersTrained: 0 };
     this.actionSignature = '';
     return true;
   },
@@ -47,11 +48,16 @@ const uiTutorialMethods = {
   advanceBattleTutorial(this: MeridianUI, event: 'complete' | 'trained', type: BuildingType | UnitType) {
     const tutorial = this.battleTutorial;
     if (!tutorial) return;
-    const achieved = event === 'trained' && type === 'worker' ? 'trainWorker'
+    if (event === 'trained' && type === 'worker') tutorial.workersTrained++;
+    const achieved = event === 'trained' && type === 'worker' && tutorial.workersTrained >= 2 ? 'trainWorker'
       : event === 'complete' && type === 'refinery' ? 'buildRefinery'
         : event === 'complete' && type === 'barracks' ? 'buildBarracks'
           : event === 'trained' && type === 'rifle' ? 'trainRifle' : null;
-    if (!achieved) return;
+    if (!achieved) {
+      this.actionSignature = '';
+      this.renderActions();
+      return;
+    }
     tutorial.achieved.add(achieved);
     while (this.battleTutorial?.achieved.has(this.battleTutorial.step)) {
       switch (this.battleTutorial.step) {
