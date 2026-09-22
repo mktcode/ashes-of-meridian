@@ -1,59 +1,105 @@
 # Mobile GPU-Last und WebGL-Kontextverlust
 
-Auf einem Google Pixel 7 unter Chrome wurde erstmals ein konkretes mobiles Lastproblem beobachtet. Dieses Issue bündelt Befund, statische Codeanalyse und nächste Mess-/Optimierungsschritte; allgemeine Geräteabnahme bleibt unter [Playtest-Validierung](playtest-validation.md), die bekannte Desert-Last unter [Desert](desert-map.md).
+Dieses Issue bündelt mobile Abbrüche, statische Lastbefunde und nächste Mess-/Optimierungsschritte. Allgemeine Geräteabnahme: [Playtest-Validierung](playtest-validation.md); kartenspezifische Abnahme: [Desert](desert-map.md), [Westmark](westmark-map.md).
 
-## Beobachteter Befund
+## Beobachtung und Aussagegrenze
 
-- Qualität: **High**.
-- Das Gerät wurde relativ schnell warm.
-- Nach längerer Spielzeit fror das Spiel ein; anschließend erschien die vorhandene Meldung zum Verlust der Grafikverbindung.
-- Ein unmittelbarer Reload endete mit „WebGL 2 is unavailable“. Nach einer Wartezeit ließ sich das Spiel wieder starten.
-- Karte, Spielsituation, Laufdauer, Entitätszahl, Framerate, Chrome-Version und Akkuzustand wurden nicht protokolliert.
+Erster dokumentierter Fall: **Google Pixel 7, Chrome, High**. Das Gerät wurde schnell warm; nach längerer Spielzeit fror das Spiel ein und meldete den Verlust der Grafikverbindung. Ein unmittelbarer Reload endete mit „WebGL 2 is unavailable“, nach einer Wartezeit war ein Start wieder möglich. Karte, Spielsituation, Laufdauer, Entitätszahl, FPS, Chrome-Version und Akkuzustand wurden nicht protokolliert. Der Nutzer meldet weiterhin gelegentliche Abbrüche und schnelle Erwärmung; aktuelle Gerätekonfiguration und genaue Abbruchumstände sind noch zu bestätigen.
 
-Die erste Meldung entspricht dem `webglcontextlost`-Pfad in `src/app.ts`; beim Reload lieferte `canvas.getContext('webgl2', …)` vorübergehend keinen Kontext. Das passt zu einem GPU-/Treiber-Reset unter Last oder Speicher-/Thermikdruck, beweist dessen genaue Ursache aber nicht. Ein fortlaufender WebGL-Ressourcen-Leak ist in der statischen Prüfung nicht belegt.
+Die erste Meldung entspricht `webglcontextlost`; beim Reload lieferte `getContext('webgl2', …)` vorübergehend keinen Kontext. Das passt zu GPU-/Treiber-Reset oder Speicher-/Thermikdruck, beweist aber keine dieser Ursachen. Ein fortlaufender unbeschränkter WebGL-Leak ist nicht belegt; **unnötig zurückgehaltene Kartengeometrie ist dagegen im Code nachweisbar** (M1).
 
-## Relevante Kostenformen im aktuellen Renderer
+Erneutes umfassendes Review auf `9fe6c4996bbd2b2893d35132f3408a835daa6e69`: zwei getrennte lesende Audits für GPU/Ressourcen und CPU/Simulation; Hauptagent prüfte Renderloop/UI/Lifecycle und die zentralen Befunde gegen die Quellen. Keine Builds, Tests, Benchmarks, Browser- oder Echtgeräteläufe; sämtliche Performancewirkungen bleiben ungemessen. Der Auftrag erlaubt Analyse, keine automatische Implementierung der folgenden Kandidaten. Keine RNG-, Kollisions-, Qualitäts- oder Spielregeländerung vorgenommen.
 
-- Dynamische Entitäten werden in `src/app.ts` bereits nach Sicht und projiziertem Viewport plus großem Puffer gefiltert. Die CPU durchläuft dafür weiterhin die gesamte Entitätsliste.
-- Im Ausgangsstand wurden statischer Boden, Relief, Felsen, Bäume und Dekoration nicht räumlich gecullt. Der Renderer teilt nun große statische Dreiecksmeshes und gruppiert Platzierungen in 32-Welteinheiten-Chunks; Szenen- und Schattenpass prüfen deren vollständige Welt-Bounds getrennt gegen Kamera- beziehungsweise Licht-Clipvolumen (`src/world-view.ts`, `src/renderer/runtime.ts`).
-- Desert zählt im dokumentierten Galerie-Stand rund 1,32 Millionen statische Dreiecke je Pass und 78,5 MiB aktive Terrain-Vertexdaten; diese Werte sind keine aktuelle Pixel-7-Messung.
-- High rendert bis zu 1,6× CSS-Auflösung je Achse, versucht bis zu 4× MSAA, nutzt eine 1536²-Schattenkarte, drei Bloom-Pässe und High-spezifisches Tilt-Shift. Der Renderloop besitzt kein eigenes Framelimit; auf Displays über 60 Hz können deshalb mehr Frames angefordert werden, obwohl die Simulation in 20-Hz-Schritten läuft und keine Renderinterpolation besitzt.
-- Im Ausgangsstand wurden alle eingebetteten Welt-/Materialtexturen beim Rendererstart auf die GPU geladen: etwa 11 Millionen Ausgangspixel beziehungsweise größenordnungsmäßig rund 56 MiB als RGBA mit Mipmaps vor Treiber-Overhead. Nun bleiben Himmel und die von Entitätsmodellen benötigten Metall-/Bio-Texturen gemeinsam resident; die vier Desert-spezifischen Texturen werden nur für dessen Vorschau oder Gefecht geladen und beim Wechsel auf Alien Planet beziehungsweise Mothership samt Mipmaps freigegeben.
-- Viele Kampfeffekte werden nach Sicht, aber nicht allgemein nach Kameraausschnitt gefiltert. Bewegungsstaub besitzt bereits enges Viewport-Culling.
-- Bewegung/Kollision besitzt bekannte skalierende CPU-Kosten durch wiederholte Live-Entitätsscans; das ist getrennt von der konkret beobachteten GPU-Störung zu messen und darf nicht auf den innerhalb eines Simulationsschritts veralteten Kampfhash umgestellt werden.
+### Audit-Übergabe
 
-## Kleine qualitätsneutrale Kandidaten
+Workflow `19d9eb10-58b0-49fa-809d-58a05efe6f61` ist abgeschlossen; beide Audits liefen mit Sol/high und hinterließen keine Quelländerungen. Die sauberen Analysebranches `aom/mobile-review-gpu` und `aom/mobile-review-cpu` auf dem genannten Ausgangscommit bleiben vorerst unter `/home/mkt/Projekte/experimental2/aom-mobile-review-{gpu,cpu}` erhalten. Child-Runs: GPU `eac5b5ab-de76-4609-8b43-7549e42a9f41`, CPU `d6c1e9dc-0baf-488a-864e-dd1401816aa9`; Originalübergaben jeweils `.tmp/mobile-review/findings.md`. Die entscheidungsrelevanten Befunde sind unten gesichert; es ist kein Codemerge offen.
 
-Drei lokale Pakete sind umgesetzt: dauerhaft leere Instanzbuckets verursachen keine wiederholten Null-Uploads mehr, der Übergang belegt → leer wird weiterhin einmal hochgeladen; der periodische HUD-Pfad dupliziert die ohnehin frameweise Queue-Aktualisierung nicht mehr; bereits typisierte Geometriedaten werden ohne vollständige zweite CPU-Kopie an WebGL übergeben. Auswahlprüfungen in 3D- und Overlaydurchlauf verwenden je Frame ein Set, Floating Text außerhalb eines sicheren Randpuffers wird nicht gezeichnet, und der flache Grundboden bleibt im Szenenpass, wird aber nicht mehr als wirkungsloser Schatten-Caster eingereicht. Kartenspezifische Texturresidenz bereitet bekannte nächste Gefechte im Menühintergrund vor und hält die Simulation bei einem ungecachten Start bis zum asynchronen Decode/Upload an. Renderer-/UI-Regressionen sichern diese Verträge ab. Die verbleibenden Kandidaten sind keine pauschale Implementierungsfreigabe:
+## Bereits vorhandene Entlastungen
 
-1. **Ruhende Ansichten:** vollständiges Battlefield-Rendering bei Pause, Settings, Ergebnis und verborgenem Tab aussetzen bzw. ereignisgesteuert neu zeichnen. Aktives Gameplay bleibt unverändert.
-2. **Effekt-Culling:** weitere Offscreen-Effekte anhand ihrer tatsächlichen Segment-/Radius-/Höhenbounds verwerfen; große Ringe, Strahlen und Schatteneinfluss dürfen nicht sichtbar aufpoppen.
-3. **Redundante Schattenframes:** die Schattenkarte wiederverwenden, solange Casterzustand, Karte, Qualität und Kamera-/Lichtprojektion unverändert sind. Vollständige Invalidierung ist Voraussetzung.
+- Große statische Meshes und Platzierungen sind in 32-Welteinheiten-Chunks organisiert. Szenen- und Schattenpass cullen konservativ gegen getrennte Kamera-/Lichtvolumen. Dynamische Entitäten werden nach Sicht und projiziertem Viewport mit Sicherheitspuffer gefiltert.
+- Leere Instanzbuckets verursachen nach dem einmaligen Übergang belegt → leer keine weiteren Null-Uploads. Typisierte Geometrie geht ohne weitere vollständige Konvertierungskopie an WebGL; Chunkaufteilung braucht allerdings zusätzliche temporäre Puffer.
+- Kartenspezifische Texturen werden profilabhängig geladen und bei Kartenwechsel freigegeben; gemeinsam benötigte Materialien bleiben resident. Vorschau/Vorladen und asynchrones Decode erhalten `file://`. Das ist von der noch offenen Geometrieresidenz zu unterscheiden.
+- Fog wird revisionsabhängig hochgeladen; HUD-Doppelupdates wurden reduziert, Auswahl nutzt Sets, Floating Text hat Viewport-Culling. Flacher Boden ist kein wirkungsloser Schatten-Caster mehr.
+- Performance entfernt Schattenrendering, MSAA, Bloom, Tilt-Shift und mehrere zusätzliche Effekte. Staub und Effektakzente sind begrenzt. Modelle und mehrere komplexe Materialshader bleiben jedoch dieselben.
 
-## Größere qualitätsneutrale Richtung
+Deserts dokumentierter Galerie-Stand mit rund 1,32 Millionen statischen Dreiecken je Pass und 78,5 MiB aktiven Terrain-Vertexdaten ist ein historischer Größenhinweis, **keine aktuelle Pixel-7-Messung**. Chunk-Culling senkt Einreichungen, nicht automatisch residente Meshbytes.
 
-Statische Weltgeometrie und Platzierungen sind ohne Änderung der Quelldreiecke räumlich gechunkt: große Meshes werden entlang vollständiger Dreiecke aufgeteilt, platzierte Meshes nach Weltbereich gruppiert und beide über transformierte AABBs konservativ gecullt. Szenenpass und Schattenpass verwenden getrennt Kamera- und Licht-Clipvolumen. Die erste manuelle Sichtprüfung zeigte keine Auffälligkeiten; Draw Calls und Stabilität auf dem Pixel 7 bleiben Teil der ausstehenden Vergleichsmessung.
+## Priorisierte Folgepakete
 
-## Stärkere Hebel mit Qualitätsabwägung
+### M1 – Nicht mehr benötigte Weltgeometrie freigeben
 
-Erst nach den qualitätsneutralen Maßnahmen und Messungen entscheiden:
+**Hohe Priorität für Speicher/Stabilität; ohne beabsichtigte Bildänderung.**
 
-- aktives Rendering auf 60 FPS begrenzen,
-- MSAA auf mobilen High-Profilen höchstens 2× verwenden oder gegen die erhöhte Renderauflösung abwägen,
-- High-Auflösung unter 1,6× senken,
-- Schattenauflösung/-filter oder Aktualisierungsrate reduzieren,
-- Tilt-Shift/Bloom günstiger ausführen,
-- zuletzt Relief-/Dekorationsgeometrie reduzieren; dies benötigt gesonderte visuelle Freigabe.
+`BattlefieldView.sync()` ersetzt bei Karten-/Vorschauwechseln statische Platzierungen und registriert die neue Geometrie (`src/world-view.ts:18–74`). `clearStatic()` löscht nur Instanzbuffer (`src/renderer/runtime.ts:656–658`); `geometry()` löscht alte VBOs/VAOs ausschließlich bei erneuter Registrierung **desselben Namens** (`:229–271`). Desert-, Westmark- und andere karteneigene Namen bleiben deshalb beim Wechsel auf Karten ohne diese Namen in `meshes`/`meshParts` erhalten, obwohl sie nicht mehr gezeichnet werden.
 
-## Nächste Diagnose
+Der Bestand ist durch die endlichen Meshnamen begrenzt, also kein Nachweis endlosen Wachstums. Dennoch kann der Speicherhöchststand nach mehreren Karten unnötig steigen. Kleinste Maßnahme: Weltmesh-Besitz explizit verfolgen und abwesende Weltmeshes einschließlich Chunkteilen löschen, ohne gemeinsame Entitätsmeshes anzutasten. Regression über Desert → Westmark → Mothership → Alien Planet → Desert: lebende VBOs/VAOs und geschätzte Bytes, Gleichnamenersatz und erhaltene gemeinsame Meshes prüfen. Kontextverlust damit nicht als behoben ausgeben.
 
-Auf dem Pixel 7 zunächst denselben reproduzierbaren Abschnitt getrennt mit High, Balanced und Performance prüfen und mindestens Karte, Laufdauer, Entitätszahl, FPS-Verlauf sowie Zeitpunkt von Wärme, Einfrieren oder Kontextverlust notieren. High gegen Balanced trennt vor allem erhöhte Renderauflösung und Tilt-Shift; Performance entfernt zusätzlich Schatten, MSAA, Bloom und mehrere Ergänzungseffekte. Danach gezielt erfassen:
+### M2 – Ruhende Ansichten tatsächlich entlasten
 
-- tatsächliche rAF-Rate und CPU-Zeit von Simulation, Renderaufbau und UI,
-- GPU-Zeit von Schatten-, Szenen-, Bloom- und Postpass, soweit `EXT_disjoint_timer_query_webgl2` verfügbar ist,
-- eingereichte statische Dreiecke/Instanzen je Pass, sichtbare dynamische Instanzen und Uploadbytes,
-- Renderzielgröße, gewählte MSAA-Samplezahl und Kontextverlustereignis,
-- Desert gegenüber Alien Planet und Mothership bei vergleichbarer Kamera und Armee,
-- mehrere sichtbare Veiled-Court-Portale oder Votive Pillars: das gemeinsame Energiematerial berechnet verzerrtes Rauschen pro Fragment (auch eingefroren in Performance). Der lokale Chromium-Check bestätigt Shaderkompilierung und zeitabhängige Pixel ohne WebGL-Fehler, nicht die GPU-Kosten auf dem Pixel 7.
+**Hohe Priorität für vermeidbare Dauerlast/Wärme.**
 
-Desktop-, Software-WebGL- und Node-Prüfungen ersetzen diese Echtgerätemessung nicht. Ein 60-FPS-Limit oder automatische Qualitätswahl nicht vorab als qualitätsneutral ausgeben.
+`src/app.ts:242–306` stoppt bei Pause oder Ergebnis nur die lokale Simulation, nicht `R.begin()`, Modell-/Effektaufbau, Schatten, Szene, Postprocessing und Overlay. Menüvorschauen laufen ebenfalls kontinuierlich. `visibilitychange` pausiert über die UI (`src/ui/input.ts:113–117`), besitzt aber keinen eigenen Render-Suspend-Pfad; Browser drosseln/stoppen verborgenes rAF üblicherweise bereits, daher keine belegte volle Hintergrundlast behaupten.
+
+Kleinste Maßnahme: für wirklich ruhende Einzelspieleransichten ereignisgesteuert zeichnen, versteckte Präsentation explizit aussetzen. Resize, Qualitätswechsel, Modalwechsel, Texturbereitschaft und Rückkehr müssen invalidieren. Wasser, Menüflug und andere bisher weiterlaufende kosmetische Animationen brauchen eine bewusste Pauseentscheidung. Intro ist trotz `paused` animiert; Multiplayer-Menüs pausieren **nicht** die Serverwelt. Netzwerk-/Resume-Verarbeitung und UI-/Audiouhren deshalb nicht pauschal mit dem Renderpfad stoppen. Später Frame-/Passzähler in Pause, Settings, Ergebnis, Menü und Tabwechsel prüfen, ohne Nachholstapel beim Resume.
+
+### M3 – Bewusstes Framebudget statt unbegrenztem Displaytakt
+
+**Starker möglicher Wärme-/Energiehebel, aber Änderung der Bewegungsflüssigkeit.**
+
+Die App fordert nach jedem Bild ein weiteres rAF an, ohne eigenes Limit (`src/app.ts:242–306`). Die Einzelspielsimulation läuft mit 20 Schritten pro Simulationssekunde und ohne Positionsinterpolation; Renderanimationen, Eingabereaktion und besonders Multiplayer-Interpolation profitieren trotzdem von höherer Bildrate. Auf 90-/120-Hz-Geräten können entsprechend mehr vollständige Bilder entstehen, soweit Browser/GPU sie liefern.
+
+Empfehlung zur Freigabe: 60-FPS-Obergrenze, optional ausdrücklicher 30-FPS-Energiesparmodus. Nicht als qualitätsneutral behandeln. Renderfrequenz von Simulation, Eingabe und Netzwerk trennen; Framepacing auch bei nicht ganzzahlig passenden Displayraten prüfen. Ein Limit spart nur, wenn es zuvor tatsächlich überschritten wird; es repariert keine bereits langsameren Frames.
+
+### M4 – Mobiles Pixel-/MSAA-Budget gezielt abstimmen
+
+**Starker möglicher GPU-Hebel mit sichtbarer Qualitätsabwägung.**
+
+High ist Standard für neue Profile (`src/persistence.ts:55`). Es rendert bis zu 1,6× CSS-Auflösung je Achse, also bis zu **2,56× so viele Szenenpixel wie Balanced**, mit bis zu 4× MSAA, 1536²-Schattenkarte und High-Tilt-Shift (`src/renderer/runtime.ts:319–440,804–940`; `src/renderer/shaders.ts:259–270`). Balanced behält MSAA, Schatten und Bloom; sein Name „native resolution“ bedeutet hier 1× CSS-Auflösung, nicht volle Hardware-DPR-Auflösung.
+
+Erst getrennt messen: MSAA maximal 2×, geringerer High-Skalierungsfaktor oder bewusst konservativerer Startwert. Nicht mehrere Schalter gleichzeitig ändern und daraus Einzelwirkungen ableiten. Die drei Bloom-Pässe laufen bereits nur auf Viertelbreite/-höhe; nicht allein wegen ihrer Anzahl als Hauptverursacher einstufen. Das unbenutzte Schattenziel bleibt auch unter Performance resident (`runtime.ts:114,188,295–318`); bedarfsabhängige Allokation wäre eine separate bildneutrale Speicheroption.
+
+### M5 – Offscreen-Effektaufbau und Höhenringe reduzieren
+
+**Bildneutral möglich, mittlere Priorität.**
+
+Viele Effekte sind sicht-, aber nicht kameraausschnittgefiltert (`src/effects-view.ts:63–202`). Auf Oberflächenkarten tastet ein Ring bis zu 192 Höhenpunkte ab; bei Höhenvariation entstehen bis zu 192 Beam-Instanzen und nochmals zwei Höhenabfragen je Segment (`:42–60`). Ein Scanradius 32 ergibt 161 Segmente. Das fällt je Renderframe an, auch wenn ein Effekt außerhalb des Bildes liegt.
+
+Nur den View-Aufbau anhand konservativer vollständiger Radius-/Segment-/Höhenbounds verwerfen; Zentrumstests reichen nicht. Bereits abgetastete Ringpunkte innerhalb des Aufrufs wiederverwenden. CPU-Effekte weiterhin vollständig erzeugen/ticken, da sie teilweise Simulations-RNG verbrauchen. Später Offscreen-/Randfälle, Höhenwechsel, Instanzen, Höhenabfragen und Uploadbytes prüfen.
+
+## Weitere GPU-/Präsentationskandidaten – erst Profilbeleg
+
+- **Schattenwiederverwendung:** `runtime.ts:814–829` zeichnet bei Balanced/High jeden Frame sämtliche relevanten Caster neu. Wiederverwendung nur bei unveränderter Welt, Qualität, Lichtprojektion und Casterpose. Animation, Baufortschritt und Kamerabewegung können häufig invalidieren. Zuerst potenzielle Cache-Trefferrate und Schatten-GPU-Zeit erfassen; vollständige Invalidierung ist wichtiger als bloßes Drosseln.
+- **Westmark- und Court-Materialien:** Westmarks großflächiger `LANDSCAPE`-Shader mischt mehrere Textur-/Noise-Schichten; das eingefrorene Court-Portalmaterial führt weiterhin denselben mehrstufigen Noise aus (`src/renderer/shaders.ts:98–110,139–165`). Performance friert dort Bewegung ein, vereinfacht aber die Rechenarbeit nicht. Nur bei gemessenem Szenenengpass günstigere Performance-Varianten erwägen, mit menschlicher Bildabnahme. Der bisherige lokale Portal-Check bewies Kompilierung/Animation, nicht mobile Kosten.
+- **Effekt-Overdraw:** Rauch und niedrig glühende Ringe durchlaufen teils den Hauptshader samt neun PCF-Schattenabfragen (`shaders.ts:48,149–221`; `runtime.ts:901–910`). Explizit schattenfreie Effektmaterialien wären eine Qualitätsentscheidung; keine pauschale Alpha-Abkürzung, die Wasser, Ghosts oder projizierte Lichter verändert.
+- **Instanzaufbau:** belegte dynamische Buckets werden pro Frame neu aufgebaut/hochgeladen; 88 Bytes je Instanz. Jeder neue Bucket startet mit 1024 Instanzen CPU-Kapazität, auch bei dauerhaft wenigen Einträgen (`runtime.ts:531–546,648–666`). Erst Belegung, Kapazität und Uploadbytes messen; keine pauschale Pooling-/Cachingarchitektur.
+- **Resize-Allokationen:** jeder `resize()`-Aufruf allokiert Renderziele neu, selbst bei gleichen Zielmaßen (`runtime.ts:319–440`). App-Start, ResizeObserver, Fensterresize und UI-Viewportwechsel bieten mehrere Aufrufwege (`src/app.ts:30–32,56–74`). Ein Größen-/Qualitätsguard kann unnötige Allokationen vermeiden, muss aber CSS-Clientoffsets weiterhin aktualisieren. Spitzen bei Start, Rotation und Browserleistenänderung getrennt von Dauerlast messen.
+- **Queue/UI:** `ui.tick()` baut Rekrutierungsgruppen in jedem Renderframe neu auf und schreibt Fortschritt/DOM auch bei unverändertem Zustand (`src/ui/presentation.ts:57–77`; `src/ui/actions.ts:234–269`). HUD/Minimap laufen bereits gedrosselt, aber weiterhin während Pause; die Minimap berechnet Terrain/Fog jedes Mal vollständig neu. Zustandsabhängige Aktualisierung und Fog-/Terraincache sind kleine Kandidaten, nachrangig gegenüber GPU-/Renderloopmaßnahmen. Auswahl, Sofortbefehle und Multiplayer-Fortschritt erhalten.
+
+## CPU/Simulation – separat messen, nicht als WebGL-Ursache ausgeben
+
+Alle folgenden Kostenformen sind statisch, keine gemessenen Engpässe. Tempo 2 erhöht Simulationsarbeit pro Realzeit; FFA besitzt bis zu vier Parteien und eine Versorgungskapazität je Partei statt einer globalen Grenze.
+
+| Pfad | Beleg und Grenze | Mögliche Richtung nach Messung |
+| --- | --- | --- |
+| Bewegung/Kollision/A* | Live-Vollscans je Bewegungsprobe und Yield-Kette (`src/simulation/movement.ts:4–20,40–74,155–260`); A* reserviert rastergroße Arbeitsfelder (`src/world.ts:242–278`). Direkter Weg, Retry-Drossel und frühe Abbrüche begrenzen die Kosten. | Größter bekannter CPU-Kandidat bei großen bewegten Armeen/Engstellen. Einen während Bewegung aktuellen Körperindex prüfen, **nicht** den innerhalb des Ticks veralteten Kampfhash verwenden. Arbeitsfeldwiederverwendung nur bei Allokationsbeleg. |
+| Fehlgeschlagene Arbeitersuche | Ohne verfügbare Kristalle ruft jeder untätige Worker jeden Tick `miningResource()` auf; neue Map und zwei Entitätenscans (`src/simulation/economy.ts:311–324,382–388,415–425`). | Negative Suche revisionsabhängig zwischenspeichern; ein Retry-Timer verändert Reaktionszeiten und ist keine verhaltensneutrale Kleinigkeit. Neue Erkundung, Ressourcen und Aufträge korrekt invalidieren, sequentielle Zuweisung erhalten. |
+| Kampfindex | `rehash()` baut pro Tick Stringschlüssel/Zellarrays neu auf, `near()` erzeugt Ergebnisarrays (`src/simulation/game.ts:320–348`). Kein monotoner Speicherzuwachs. | Allokationsprofil; gegebenenfalls numerische aliasfreie Schlüssel/wiederverwendete Buckets bei identischer Kandidatenreihenfolge. |
+| Mehrparteiensicht | Sicht wird schon auf 0,35 Simulationssekunden gedrosselt; Quellenmarkierung und mehrere Vollrasterdurchläufe bleiben (`src/world.ts:346–363`). | Fog-Ausgabe mit bestehendem Durchlauf verbinden; Arrays müssen bytegleich bleiben. Keine Sichtintervalle/-radien beiläufig ändern. |
+| Kampfwerte/KI/Effekte | `rangedStats()` kopiert Definitionen häufig (`src/simulation/combat.ts:71–180`); KI enthält gedrosselte quadratische Nachbarschaftswertungen; Effekttick ersetzt Arrays (`src/effects.ts:168–191`). | Niedriger priorisierte Allokationskandidaten; keine breiten Caches ohne Profilbeleg. Beobachtungskopien, Veteranengrenzen, Gleichstände, Effektfolge und RNG schützen. |
+| Multiplayer-Client | Zwei ID-Maps pro Snapshot plus Raster-/Hash-Rebuild (`src/multiplayer/client.ts:375–393`, `presentation.ts:91–97`), Interpolation pro Renderframe (`:99–135`). Timeline auf fünf Frames und 512 Events begrenzt. | Gemeinsame unveränderte Snapshot-ID-Map erwägen, nötige Clientnutzer vor Weglassen von Rebuilds belegen. Sichtverlust und stabile Poseidentität erhalten. Kein lokaler Simulationstick im Netzwerkspiel. |
+
+Die bekannten Bewegungs-/KI-Befunde stehen ergänzend im [ersten Audit](audit-welle-01-befunde.md#performance-erst-wirkung-und-kosten-abgrenzen). Ein allgemeines Refactoring ist daraus nicht freigegeben.
+
+## Messplan und Abnahme
+
+**Fehlende Diagnose ist selbst ein zentraler Arbeitsbedarf.** `window.Meridian.performance` liefert derzeit nur FPS, Draw Calls und Entitätszahl (`src/app.ts:320–334`); Kontextverlust stoppt ohne diagnostischen Verlaufsbericht (`:308–319`). FPS allein trennt CPU, GPU, Framebegrenzung und thermische Drosselung nicht.
+
+1. **Repro/Rahmen festhalten:** Gerät, Browser-/Buildversion, aktuelle Qualität, Einzel-/Multiplayer, Karte/Seed, Stage, Tempo, Laufzeit, Orientierung, tatsächliche rAF-Rate, Laden am Kabel/Akkustand und grober Ausgangszustand. Frisch gestartete Karte von bereits durchlaufenen Karten unterscheiden. Exakte Meldung bzw. Reload/Freeze/Context-loss unterscheiden.
+2. **Kleine optionale Diagnoseinstrumentierung freigeben:** begrenzter Ringpuffer, niedrige Ausgabefrequenz; keine Live-DOM-Logs pro Frame. CPU-Zeit von Simulation, Renderaufbau, UI und GL-Einreichung getrennt; Frametime-p50/p95/p99 und lange Frames. GL-Einreichungszeit ist keine GPU-Zeit.
+3. **GPU und Ressourcen:** asynchrone Pass-Timer mit `EXT_disjoint_timer_query_webgl2`, sofern verfügbar; Disjoint-Ergebnisse verwerfen, Abfragen begrenzen/freigeben, kein `gl.finish()` oder blockierendes Readback. Zielmaße, MSAA-Samples, Draw Calls/Dreiecke je Pass, Instanz-/Uploadbytes sowie lebende Mesh-/Textur-/Renderzielbestände erfassen. Bytewerte als Schätzung, nicht tatsächlichen Treiberspeicher ausgeben. Letzte Diagnosedaten bei Kontextverlust exportierbar erhalten; kein laufendes Gefecht automatisch wiederherstellen.
+4. **Kontrollierter Vergleich auf dem Handy:** gleicher Abschnitt getrennt in High/Balanced/Performance und später 60-/30-FPS-Prototypen. Zwischen Läufen vergleichbaren thermischen Ausgangszustand herstellen. Keine Prozentversprechen aus Pixelverhältnissen ableiten. Wärmebeginn, FPS-Verlauf und Abbruchzeitpunkt notieren; ohne Sensor keine Temperatur erfinden. Bei deutlicher Überhitzung/OS-Warnung abbrechen statt einen Crash zu erzwingen.
+5. **Gezielte Belastungsformen:** ruhige Kamera, Kamerafahrt, normale Schlacht, große bewegte Armee/Engstelle; Westmark-Materialien und mehrere Court-Portale; feste Kartenwechselfolge für M1. Nicht jedes Szenario mit jeder Einstellung kreuzen: nach Basismessung eingrenzen.
+
+**Empfohlene Umsetzung nach Freigabe:** zunächst Diagnose und M1, danach M2 plus ein ausdrücklich abgestimmtes Framebudget M3; anschließend anhand der Messung M4/M5 oder den bestätigten CPU-Pfad auswählen. Keine vorsorgliche Geometriereduktion oder Entfernung des gewünschten Tilt-Shift-Looks. Währenddessen ist Performance die vorhandene stärkste Entlastungsoption, keine zugesicherte Absturzbehebung.
+
+Für spätere Codeänderungen passende Renderer-/UI-/Navigationsregressionen und Build; bei gemeinsamen Simulations-/RNG-/Ladeverträgen die Standardtestsuite ausschließlich am Ende durch den Hauptagenten. Umfangreiche KI-/Simulationsläufe bleiben ausdrücklich freigabepflichtig. Desktop, Node und Software-WebGL ersetzen keine mobile Stabilitäts-/Thermikmessung; Bild- und Bedienabnahme bleibt menschlich.
