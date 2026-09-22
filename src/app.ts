@@ -136,6 +136,14 @@
           const ready = await R.prepareBattlefieldTextures(BATTLEFIELDS[map].render);
           return ready && id === worldRequest;
         });
+        const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R, () => ({
+          view: ui.view, paused: ui.paused, multiplayer: game.networkTeam != null,
+          map: worldView.world?.definition.name ?? null, seed: worldView.world?.seed ?? null,
+          simulationTime: ui.view === 'game' ? game.s?.time ?? null : null,
+          speed: ui.view === 'game' ? game.s?.speed ?? null : null,
+          entities: ui.view === 'game' ? game.s?.entities.length ?? 0 : preview.length,
+          effects: ui.view === 'game' ? game.effects.fx.length : 0
+        })) : undefined;
         ui.showHome();
         const SIMULATION_STEP_SECONDS = 0.05,
           RENDER_INTERVAL_MS = 1000 / 60,
@@ -244,6 +252,7 @@
         }
         function draw(now: number) {
           if (failed) return;
+          diagnostics?.recorder.beginFrame(now);
           const elapsed = Math.max(0, (now - last) / 1000);
           let dt = Math.min(0.1, elapsed);
           last = now;
@@ -260,8 +269,11 @@
                 if (game.s.result) break;
               }
             } else accumulator = 0;
+            diagnostics?.recorder.phase('networkPresentation');
             ui.multiplayer?.updatePresentation(now);
+            diagnostics?.recorder.phase('ui');
             ui.tick(dt);
+            diagnostics?.recorder.phase('audio');
             audio.update(
               ui.view === 'game'
                 ? game.s && !ui.paused && !game.s.result
@@ -269,10 +281,12 @@
                   : 'silent'
                 : 'menu'
             );
+            diagnostics?.recorder.phase();
             // Keep simulation, UI clocks and network presentation on every rAF.
             // Retain the render phase on e.g. 90/144 Hz displays instead of
             // resetting to now + interval, which would systematically undershoot.
             if (now + RENDER_TOLERANCE_MS < nextRender) {
+              diagnostics?.finishFrame(false);
               requestAnimationFrame(draw);
               return;
             }
@@ -287,6 +301,7 @@
               frames = 0;
               frameClock = 0;
             }
+            diagnostics?.recorder.phase('sceneBuild');
             R.begin();
             const viewTime = game.networkTeam !== null ? ui.multiplayer!.renderTime : game.s?.time;
             if (ui.view === 'game' && game.s) battlefield(viewTime!);
@@ -298,9 +313,13 @@
                 renderEntity(R, e, time);
               }
             }
+            diagnostics?.recorder.phase('glSubmission');
             R.render(time, ui.view === 'game' && game.s ? viewTime! : 0);
+            diagnostics?.recorder.phase('overlay');
             ui.drawOverlay(overlayContext);
+            diagnostics?.finishFrame(true);
           } catch (error) {
+            diagnostics?.stop('render-error');
             const network = game.networkTeam != null;
             if (network) ui.multiplayer?.disconnect();
             failed = true;
@@ -319,6 +338,7 @@
         }
         canvas.addEventListener('webglcontextlost', e => {
           e.preventDefault();
+          diagnostics?.stop('context-lost');
           const network = game.networkTeam != null;
           if (network) ui.multiplayer?.disconnect();
           ui.paused = true;
@@ -334,6 +354,7 @@
           ui,
           renderer: R,
           audio,
+          diagnostics,
           content: { units: UNITS, buildings: BUILDINGS, factions: FACTIONS },
           get performance() {
             return {

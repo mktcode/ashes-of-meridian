@@ -83,6 +83,7 @@ interface Window {
     audio: MeridianAudio;
     content: { units: typeof UNITS; buildings: typeof BUILDINGS; factions: typeof FACTIONS };
     readonly performance: { fps: number; drawCalls: number; entities: number };
+    diagnostics?: ReturnType<typeof createMeridianDiagnostics>;
     version: string;
   };
 }

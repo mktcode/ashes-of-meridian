@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fixture = require('./fixtures/presentation-v1.json');
 const { worldSample, effectSample } = require('./helpers/presentation-scenario.cjs');
 const vm = require('node:vm');
-const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const { DIAGNOSTIC_SCRIPTS, BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 for (const { seed, map, ...expected } of fixture.worlds) {
   test(`world ground reference and repeatable canyon presentation/navigation: ${seed} (${map})`, () => {
@@ -692,11 +692,12 @@ test('effect culling preserves visible output and does not redistribute the acce
 });
 
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
-function appClock() {
+function appClock(diagnostic = false) {
   let now = 0;
   const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
-  const elements = new Map(), window = {};
+  const elements = new Map(), window = {}, queryRequests = [];
+  const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
   const $ = id => {
     if (!elements.has(id)) elements.set(id, {
       handlers: {}, classList: { add() {}, remove() {} },
@@ -705,8 +706,9 @@ function appClock() {
     });
     return elements.get(id);
   };
-  loadScripts(['app'], { globals: {
-    $, window, URLSearchParams, location: { search: '' }, devicePixelRatio: 1,
+  loadScripts([...DIAGNOSTIC_SCRIPTS, 'app'], { globals: {
+    $, window, document, navigator: { userAgent: 'clock-test' }, URLSearchParams,
+    location: { search: diagnostic ? '?diagnostics=1' : '' }, devicePixelRatio: 1,
     performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
     addEventListener() {}, ResizeObserver: class { observe() {} },
     console: { error: e => errors.push(e), warn() {} },
@@ -715,8 +717,11 @@ function appClock() {
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
     MeridianRenderer: class {
       viewport = { width: 800, height: 600, left: 0, top: 0 };
+      gl = { getExtension(name) { queryRequests.push(name); return null; } };
+      meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
+      width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1;
       resize() {} camera() {} begin() { renderWork.begin++; }
-      render(time) { draws.push({ now, time }); }
+      render(time) { this.diagnostics?.beginFrame(); draws.push({ now, time }); }
     },
     BattlefieldView: class { sync() {} },
     MeridianAudio: class { update() {} },
@@ -724,7 +729,7 @@ function appClock() {
       networkTeam = null;
       world = {};
       s = { time: 0, speed: 1, entities: [], cam: { x: 0, z: 0, zoom: 65 } };
-      effects = { tick: dt => effectTicks.push(dt) };
+      effects = { fx: [], tick: dt => effectTicks.push(dt) };
       step(dt) { steps.push(dt); this.s.time += dt; }
     },
     MeridianUI: class {
@@ -743,7 +748,7 @@ function appClock() {
   } });
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
-  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, $,
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, queryRequests, $,
     get performance() { return window.Meridian.performance; },
     frame(t) {
       assert.equal(pending.length, 1, 'exactly one outstanding rAF');
@@ -773,6 +778,29 @@ for (const hz of [30, 59.94, 60, 90, 120, 144]) {
     assert.deepEqual(a.errors, []);
   });
 }
+
+test('opt-in diagnostics preserves real app cadence and stops with exportable history on graphics loss', () => {
+  const plain = appClock(), measured = appClock(true);
+  for (let i = 1; i <= 120; i++) { plain.frame(i * 1000 / 120); measured.frame(i * 1000 / 120); }
+  assert.equal(plain.diagnostics, undefined); assert.deepEqual(plain.queryRequests, []);
+  assert.deepEqual(measured.steps, plain.steps);
+  assert.deepEqual(measured.effectTicks, plain.effectTicks);
+  assert.deepEqual(measured.draws, plain.draws);
+  assert.deepEqual(measured.ticks, plain.ticks);
+  const report = measured.diagnostics.report();
+  assert.equal(report.recording.summary.callbacks, 120);
+  assert.equal(report.recording.summary.rendered, measured.draws.length);
+  assert.equal(report.gpu.status, 'unavailable');
+  assert.ok(report.recording.frames.some(f => !f.rendered && f.cpuMs.sceneBuild === undefined));
+  measured.$('world').handlers.webglcontextlost({ preventDefault() {} });
+  assert.equal(measured.diagnostics.report().recording.stopped, 'context-lost');
+  assert.equal(measured.diagnostics.report().recording.frames.length, 120);
+  assert.equal(measured.renderer.diagnostics, undefined);
+  const failed = appClock(true); failed.frame(20);
+  failed.renderer.render = () => { throw Error('synthetic error'); }; failed.frame(40);
+  assert.equal(failed.diagnostics.report().recording.stopped, 'render-error');
+  assert.equal(failed.diagnostics.report().recording.frames.length, 1);
+});
 
 test('render phase tolerates timestamp jitter at 60 Hz and discards slots after a long gap', () => {
   const a = appClock();

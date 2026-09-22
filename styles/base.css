@@ -41,6 +41,23 @@
       font-variant-numeric: tabular-nums
     }
 
+    #diagnosticControls {
+      position: fixed;
+      top: calc(var(--topbar-height) + 30px);
+      right: 6px;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 4px;
+      max-width: calc(100vw - 12px);
+      padding: 4px;
+      background: var(--bg);
+      font: 11px var(--mono)
+    }
+
+    #diagnosticControls button { padding: 5px; border: 1px solid var(--line) }
+
     html,
     body {
       margin: 0;

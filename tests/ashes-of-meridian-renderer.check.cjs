@@ -317,6 +317,29 @@ function setup(options = {}) {
   return { r, g, calls, options, framebuffers, buffers, textures, context, bindings: () => ({ draw, read, buffer }) };
 }
 
+test('diagnostic hooks bracket real render passes without changing GL work, including Performance exclusions', () => {
+  for (const quality of [0, 2]) {
+    const { r, calls } = setup(); r.quality = quality; r.resize();
+    calls.length = 0; r.render(3, 2);
+    const baseline = calls.slice(), hooks = [];
+    r.diagnostics = { beginFrame() { hooks.push('frame'); },
+      beginPass(pass) { hooks.push(pass); }, endPass() {}, draw() { hooks.push('draw'); },
+      upload(bytes) { hooks.push(bytes); } };
+    calls.length = 0; r.render(3, 2);
+    assert.deepEqual(calls, baseline, 'diagnostic hooks must not change GL submissions/state');
+    assert.deepEqual(hooks.filter(v => v !== 'draw'), quality === 0 ? ['frame', 'scene', 'post'] : ['frame', 'shadow', 'scene', 'bloom', 'post']);
+    assert.equal(hooks.filter(v => v === 'draw').length, quality === 0 ? 2 : 5, 'fullscreen triangles are counted too');
+    const bucket = { dirty: true, n: 2, data: new Float32Array(44), mesh: 'box', source: 'box' };
+    Object.getPrototypeOf(r).upload.call(r, { box: bucket });
+    assert.equal(hooks.at(-1), 176, 'instance upload bytes use the actual submitted slice');
+    r.meshes = { box: { count: 3, vao: {} } };
+    let submitted;
+    r.diagnostics.draw = (...args) => { submitted = args; };
+    Object.getPrototypeOf(r).drawBatches.call(r, { box: bucket });
+    assert.deepEqual(submitted, [3, 2]);
+  }
+});
+
 test('crystal shader preserves facets and adds texture-free internal depth', () => {
   const {context}=setup(),shader=vm.runInContext('FRAG',context);
   assert.match(shader,/float facet=\.58\+\.42\*abs\(dot\(localN/);

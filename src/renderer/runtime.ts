@@ -76,6 +76,7 @@
       width!: number;
       height!: number;
       drawCalls: number;
+      diagnostics?: MeridianRenderProbe;
       constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         const context = canvas.getContext('webgl2', {
@@ -407,6 +408,7 @@
             pass === 0 ? 1 / this.width : pass === 1 ? 1 / this.bloomWidth : 0,
             pass === 0 ? 1 / this.height : pass === 2 ? 1 / this.bloomHeight : 0);
           g.drawArrays(g.TRIANGLES, 0, 3);
+          this.diagnostics?.draw(3);
         }
       }
       releaseSceneMSAA() {
@@ -670,6 +672,7 @@
           if (b.dirty) {
             g.bindBuffer(g.ARRAY_BUFFER, b.buffer);
             g.bufferData(g.ARRAY_BUFFER, b.data.subarray(0, b.n * 22), g.DYNAMIC_DRAW);
+            this.diagnostics?.upload(b.n * 88);
             b.dirty = false;
           }
         }
@@ -717,6 +720,7 @@
           g.vertexAttribPointer(9, 1, g.FLOAT, false, 88, 84);
           g.vertexAttribDivisor(9, 1);
           g.drawArraysInstanced(g.TRIANGLES, 0, m.count, b.n);
+          this.diagnostics?.draw(m.count, b.n);
           this.drawCalls++;
         }
       }
@@ -812,6 +816,7 @@
         let g = this.gl;
         this.frame++;
         this.drawCalls = 0;
+        this.diagnostics?.beginFrame();
         this.upload(this.static);
         this.upload(this.dynamic);
         this.upload(this.effects);
@@ -819,6 +824,7 @@
         g.disable(g.BLEND);
         g.depthMask(true);
         if (this.quality > 0) {
+          this.diagnostics?.beginPass('shadow');
           g.bindFramebuffer(g.FRAMEBUFFER, this.shadowFbo);
           g.viewport(0, 0, this.shadowSize, this.shadowSize);
           g.clear(g.DEPTH_BUFFER_BIT);
@@ -834,7 +840,9 @@
             this.surface ? ['alienLanternPool', 'westmarkWater'] : ['terrain', 'alienLanternPool', 'westmarkWater']);
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
+          this.diagnostics?.endPass();
         }
+        this.diagnostics?.beginPass('scene');
         g.bindFramebuffer(g.FRAMEBUFFER, this.sceneMSAAFbo || this.sceneFbo);
         g.viewport(0, 0, this.width, this.height);
         g.clearColor(...this.haze, 1);
@@ -848,6 +856,7 @@
         g.uniform1i(this.uniform(this.skyProg, 'u_skyTex'), 0);
         g.bindVertexArray(this.fullVao);
         g.drawArrays(g.TRIANGLES, 0, 3);
+        this.diagnostics?.draw(3);
         g.enable(g.DEPTH_TEST);
         g.useProgram(this.program);
         g.uniformMatrix4fv(this.uniform(this.program, 'u_vp'), false, this.vp);
@@ -927,7 +936,11 @@
             g.COLOR_BUFFER_BIT, g.NEAREST
           );
         }
+        this.diagnostics?.endPass();
+        if (this.quality > 0 && this.bloomTargets.length === 2) this.diagnostics?.beginPass('bloom');
         this.renderBloom();
+        this.diagnostics?.endPass();
+        this.diagnostics?.beginPass('post');
         g.bindFramebuffer(g.FRAMEBUFFER, null);
         g.viewport(0, 0, this.width, this.height);
         g.disable(g.DEPTH_TEST);
@@ -944,6 +957,8 @@
         g.uniform1f(this.uniform(this.postProg, 'u_quality'), this.quality);
         g.bindVertexArray(this.fullVao);
         g.drawArrays(g.TRIANGLES, 0, 3);
+        this.diagnostics?.draw(3);
+        this.diagnostics?.endPass();
         g.bindVertexArray(null);
       }
     }

@@ -78,6 +78,23 @@ Unter der hohen Last lagen zwei Räume lokal bei p99 ca. 29 ms und maximal 38 ms
 
 Die Ziel-VM mit zwei virtuellen EPYC-Rome-Kernen wurde dabei nicht unter künstliche Last gesetzt. Da ein Node-Prozess die Räume seriell abarbeitet, bleibt die absolute Grenze von zwei Räumen bewusst konservativ. Vor jeder Erhöhung einen reproduzierbaren Test direkt auf der Zielklasse ausführen und mindestens Tick-p95/p99, verfehlte 50-ms-Intervalle, CPU, RSS und ausgehende Bytes erfassen. Solche Lastläufe sind Simulations-/Performanceprüfungen und benötigen wie andere umfangreiche Läufe einen ausdrücklichen aktuellen Auftrag.
 
+## Lokale Performancediagnose
+
+Nach dem Build `index.html?diagnostics=1` im normalen Browser öffnen, auch direkt über `file://`. Bei bereits vorhandenen URL-Parametern `&diagnostics=1` anhängen. Es werden weder Server noch Browser-Add-on oder besondere Sicherheitsflags benötigt. Ohne diesen Parameter gibt es keine Diagnose-Aufzeichnung, Bedienelemente oder Timerabfragen.
+
+- Normal spielen; rechts unter der FPS-Anzeige stehen **Export diagnostic JSON** und **Stop recording**. Export lädt einen lokalen JSON-Bericht herunter und lässt die Aufzeichnung weiterlaufen. Stop beendet nur die Messung, nicht das Spiel. Für eine neue Aufzeichnung neu laden; vor einem Reload bei Bedarf exportieren.
+- Die Aufzeichnung ist begrenzt: letzte 6000 rAF-Callbacks und letzte 120 Ressourcen-/Kontextproben, höchstens eine Probe pro Sekunde nach einem gezeichneten Frame. Die abgedeckte Zeit hängt von der Callbackrate ab. Es gibt keine automatische Speicherung, Übertragung oder Konsolenprotokollierung. Ein schließbarer Tab oder Browserabsturz kann den Bericht verlieren.
+- Bei behandeltem WebGL-Kontextverlust oder Renderfehler endet die Messung. Der bisherige Bericht bleibt über denselben Exportknopf erreichbar, solange die Seite noch bedienbar ist. Das ist keine automatische Wiederherstellung des Gefechts.
+- Der Bericht enthält Browserkennung, DPR, Kartenname/Seed, Qualität, Zielmaße, Spieltempo, Einzel-/Multiplayerstatus und aggregierte Zähler. Keine URLs, Spieler-/Raumnamen, Zugangstokens oder vollständigen Spiel-/Netzwerkzustände. Auf Wunsch ist derselbe Bericht über `window.Meridian.diagnostics.report()` in den Entwicklertools erreichbar.
+
+CPU-Phasen messen verstrichene Zeit für Simulation einschließlich Effekttick, Netzwerkpräsentation, UI, Audio, Szenenaufbau, GL-Einreichung und Overlay. Die gesamte Callbackmessung enthält auch Diagnoseaufwand; es handelt sich nicht um CPU-Auslastungsprozente. Callbackintervalle und Intervalle tatsächlich gezeichneter Bilder sind getrennt, damit das 60-FPS-Limit nicht als Engpass fehlinterpretiert wird. Hintergrundlücken bleiben enthalten. Perzentile beziehen sich auf den gespeicherten Ausschnitt, nicht automatisch auf ein ganzes Gefecht; Menüs, Qualitätswechsel und Pausen können darin gemischt sein.
+
+GPU-Zeiten werden nur bei verfügbarer `EXT_disjoint_timer_query_webgl2` asynchron und stichprobenartig gemessen. Schatten, Szene einschließlich MSAA-Auflösung, Bloom und Postprocessing sind getrennt. Nicht ausgeführte oder noch nicht verfügbare Messungen fehlen, statt als null Millisekunden einzufließen. Disjoint-Ergebnisse werden verworfen, offene Queries sind begrenzt und werden beim Stop freigegeben; kein `gl.finish()` oder blockierendes Readback. Nicht unterstützte/fehlgeschlagene Timer verhindern die CPU-Diagnose nicht.
+
+Zeichen-/Dreieckszähler umfassen eingereichte Arbeit einschließlich Vollbilddreiecken und wiederholten Schatteninstanzen, nicht sichtbare Pixel. Instanz-Uploads werden gezählt; Geometrie- und Renderzielbytes sind Schätzungen, CPU-Instanzkapazität ist separat. Materialtexturen werden bisher nur gezählt, ihre Bytes nicht geschätzt. Tatsächlicher Treiberspeicher, Browser-Compositor und Gerätetemperatur werden nicht gemessen. Ergebnisse der Workstation sind deshalb keine Pixel-7-Thermik- oder Stabilitätsbestätigung.
+
+Für Vergleiche denselben Abschnitt mit gleichen Einstellungen verwenden und getrennte Berichte erzeugen. Die Diagnose selbst verursacht Aufwand; keine Einsparungen oder Engpassursachen aus einer einzigen Aufnahme ableiten. Automatisierte Last-/Simulationsläufe sind damit nicht freigegeben. Offene Geräteabnahme und nächste Messfragen: [Mobile Performance](issues/mobile-performance.md#messplan-und-abnahme).
+
 ## Browser und menschliche Abnahme
 
 Ein bei konkretem Diagnosebedarf beauftragter technischer Browsercheck verwendet den aktuellen Build, ein isoliertes Profil und direkt `file://`, ohne abgeschwächte Sicherheitsflags. Nur betroffene Abläufe prüfen, etwa:
