@@ -4,17 +4,18 @@ Abhängigkeiten: [Welt/Navigation](01-welt-und-navigation.md) und [Darstellung/B
 
 ## Kartenplan
 
-### Mothership: erster spielbarer Versuch
+### Mothership: überarbeiteter Abnahmekandidat
 
-**Auf `main` technisch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Erstes Nutzerfeedback ist positiv; die [asymmetrische Höhensicht](04-hoehenabhaengige-sicht.md) ist integriert. Die übrigen Karten bleiben bis zu einem neuen Auftrag unverändert.
+**Technisch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Die [asymmetrische Höhensicht](04-hoehenabhaengige-sicht.md) ist integriert. Die übrigen Karten bleiben bis zu einem neuen Auftrag unverändert.
 
-Erhöhte industrielle Basisdecks in den vier Eckbereichen, große abgesenkte zentrale Gefechtsplattform, breite technische Rampen. Flankenzugänge sollen die vorhandene Schiffsarchitektur weiterführen; keine Naturklippen oder Bergkulisse.
+Der aktuelle Kandidat vergrößert die spielbare Ausdehnung von 90 auf 120. Vier abgerundete, weiterhin sechs Meter hohe Basisdecks umschließen eine große abgesenkte Gefechtsfläche; jede Basis besitzt eine breite Hauptrampe und einen getrennten Flankenzugang. Hangars und Maschineninseln verwenden angeschrägte sichtbare wie spielmechanische Umrisse. Eine kreuzförmig fortgeführte Außenhülle, detailliertere Fassaden und Dächer, Deckmarkierungen sowie zurückhaltende Signalleuchten sollen die Arena als Ausschnitt eines größeren Trägers lesbar machen.
 
-Das deterministische Layout ist für den ersten Durchstich überschaubarer als Desert. Allerdings stehen Hangars und Anlagen bereits an festen Orten, und Anfangsvorkommen liegen teils außerhalb einer kleinen kreisförmigen HQ-Reserve. Nicht einfach vier identische Scheiben unter die jetzigen HQs setzen. Deckmalerei, Cargo-Pads und Vent-Docks brauchen dieselbe Höhe wie das Nutzterrain; Außenhülle, Brücke und Hangardächer sind nicht automatisch spielbarer Boden. Ressourcenzugänge und Maschineninseln zusammen mit den Rampen planen.
+Anzahl und Ertrag der Anfangsvorkommen bleiben unverändert; ihre Positionen wurden auf die größeren Decks verteilt und ihre Primärdistanzen zwischen den vier Starts angeglichen. Deckmarkierungen, Cargo-Pads und Vent-Docks folgen derselben Höhe wie das Nutzterrain; Außenhülle, Brücke und Hangardächer bleiben nicht spielbarer Boden. Die Höhenmechanik selbst bleibt unverändert.
 
-- [ ] Vier vollständige Basispolygone mit ebener Wirtschafts-/Baufläche und reservierten Ausgängen entwerfen.
-- [ ] Hauptrampen zur offenen Mitte und alternative Zugänge gegen bestehende Hangar-/Anlagenumrisse prüfen; nötige Ortsänderungen ausdrücklich begrenzen.
+- [x] Vier vollständige Basispolygone mit ebener Wirtschafts-/Baufläche und reservierten Ausgängen entwerfen.
+- [x] Hauptrampen, alternative Zugänge, Ressourcenflächen und angeschrägte Architekturblocker technisch prüfen.
 - [ ] Verdeckung durch die vorderen Plateauränder bei fester Kamerarichtung abnehmen, nicht nur den Blick von einer bevorzugten Seite.
+- [ ] Atmosphäre, Orientierung, faire reale Laufwege und Kosten der höheren Geometriedichte in vollständigen Partien und auf Mobilgeräten menschlich abnehmen.
 
 ### Alien Planet: natürliche Terrassen
 

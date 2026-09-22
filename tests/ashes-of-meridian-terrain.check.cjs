@@ -665,25 +665,25 @@ test('Alien exterior and understory randomness cannot relocate solid roots',()=>
   } finally {Builder.prototype.cosmeticRandom=original;}
 });
 
-for(const seed of [43015,74408,90001]) test(`Mothership ${seed}: closed architecture with open deck, flanks and resource docks`,()=>{
+for(const seed of [43015,74408,90001]) test(`Mothership ${seed}: rounded high decks, chamfered architecture and open service lanes`,()=>{
   const w=new Battlefield(seed,'mothership'),p=w.renderData.placements;
-  assert.deepEqual([w.extent,w.gridSize,w.cellSize],[90,72,2.5]);
+  assert.deepEqual([w.extent,w.gridSize,w.cellSize],[120,96,2.5]);
   assert.equal(w.definition.render.groundTexture,'metal');assert.equal(w.definition.render.groundMirror,true);
   assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
   assert.equal(w.definition.worldEvent,'solarFlare');assert.equal(w.rocks.length,0);
-  assert.equal(w.renderData.features.length,6);
+  assert.equal(w.renderData.features.length,8);
   for(const f of w.renderData.features) {
-    assert.equal(f.outline.length,4);
+    assert.equal(f.outline.length,8,'blockers expose their chamfered visible footprint');
     const body=p.find(p=>p.position[0]===f.x&&p.position[2]===f.z&&['shipHangar','shipPlant'].includes(p.mesh));
     assert.ok(body);assert.deepEqual(Array.from(body.scale),[f.width,f.height,f.depth]);assert.equal(body.rotation[0],f.yaw);
-    assert.ok(f.outline.every(q=>Math.max(Math.abs(q.x),Math.abs(q.z))<83));
+    assert.ok(f.outline.every(q=>Math.max(Math.abs(q.x),Math.abs(q.z))<w.extent));
     assert.ok(w.blockedAt(f.x,f.z),'doors and plant islands are solid, not fake open portals');
   }
   for(let i=0;i<w.staticGrid.length;i++) {
-    const q=w.point(i),pad=w.cellSize*.5;
-    const blocked=w.renderData.features.some(f=>q.x>=Math.min(...f.outline.map(p=>p.x))-pad&&q.x<=Math.max(...f.outline.map(p=>p.x))+pad&&
-      q.z>=Math.min(...f.outline.map(p=>p.z))-pad&&q.z<=Math.max(...f.outline.map(p=>p.z))+pad);
-    const solid = +(blocked || !!w.surface.cliffs[i]);
+    const q=w.point(i),clearance=w.cellSize*Math.SQRT1_2,
+      blocked=w.renderData.features.some(f=>insidePolygon(q,f.outline)||f.outline.some((a,j)=>
+        pointSegment(q,a,f.outline[(j+1)%f.outline.length])<=clearance)),
+      solid=+(blocked||!!w.surface.cliffs[i]);
     assert.equal(w.staticGrid[i],solid);assert.equal(w.terrainFeatureGrid[i],solid);
   }
   assertMapAccess(w);
@@ -692,8 +692,9 @@ for(const seed of [43015,74408,90001]) test(`Mothership ${seed}: closed architec
     assert.ok(p.some(p=>p.mesh==='shipCargoPad'&&p.position[0]===site.x&&p.position[2]===site.z));
     assert.ok(p.some(p=>p.mesh==='shipVentDock'&&p.position[0]===site.x+(i?7:5)&&p.position[2]===site.z+(i?7:18)));
   }
-  assert.equal(p.filter(p=>p.mesh==='shipTransport').length,2);assert.equal(p.filter(p=>p.mesh==='shipBridge').length,1);
-  assert.equal(p.filter(p=>p.mesh==='shipHangar').length,12,'same modules continue outside the playable deck');
+  assert.equal(p.filter(p=>p.mesh==='shipTransport').length,4);assert.equal(p.filter(p=>p.mesh==='shipBridge').length,1);
+  assert.equal(p.filter(p=>p.mesh==='shipHangar').length,16,'the same detailed modules continue onto all four outer arms');
+  assert.ok(p.some(p=>p.mesh==='shipDeckLights'&&p.glow>1));
   assert.ok(!p.some(p=>/rock|mountain|massif|alien/.test(p.mesh)));
 });
 
@@ -710,20 +711,22 @@ test('Mothership exterior variety is deterministic and cannot alter its strategi
   } finally {Builder.prototype.cosmeticRandom=original;}
 });
 
-test('Mothership reusable architecture has finite normals, bounded meshes and a modest instanced budget',()=>{
-  const w=new Battlefield(43015,'mothership'),triangles={},budgets={shipHangar:900,shipHangarLights:100,shipPlant:600,
-    shipCrate:300,shipTransport:600,shipTransportLights:150,shipBridge:600,shipCargoPad:300,shipVentDock:150,
-    shipOuterDeck:8,shipHull:3500,shipDeckPaint:3500};
+test('Mothership reusable architecture has finite normals, bounded meshes and a deliberate detail budget',()=>{
+  const w=new Battlefield(43015,'mothership'),triangles={},budgets={shipHangar:2000,shipHangarLights:300,shipPlant:1400,
+    shipCrate:350,shipTransport:700,shipTransportLights:200,shipBridge:900,shipCargoPad:350,shipVentDock:350,
+    shipDeckMarks:2700,shipDeckLights:4700,shipOuterDeck:8,shipHull:6000};
   for(const d of w.renderData.geometries) {
     const mesh=TerrainModels.geometry(d);assert.equal(mesh.length%27,0);
     triangles[d.mesh]=mesh.length/27;assert.ok(triangles[d.mesh]>0&&triangles[d.mesh]<=budgets[d.model],d.model);
     assert.deepEqual(mesh,TerrainModels.geometry(d));
-    const large=['shipOuterDeck','shipHull','shipDeckPaint'].includes(d.model),pad=['shipCargoPad','shipVentDock'].includes(d.model);
+    const large=['shipOuterDeck','shipHull','shipDeckMarks','shipDeckLights'].includes(d.model),
+      pad=['shipCargoPad','shipVentDock'].includes(d.model);
+    if(['shipDeckMarks','shipDeckLights'].includes(d.model)) assert.equal(d.grounded,true);
     for(let i=0;i<mesh.length;i+=9) {
       for(let j=0;j<9;j++)assert.ok(Number.isFinite(mesh[i+j]));
       assert.ok(Math.abs(Math.hypot(...mesh.slice(i+3,i+6))-1)<1e-6);
-      assert.ok(Math.abs(mesh[i])<=(large?190:pad?6.1:1.1));assert.ok(Math.abs(mesh[i+2])<=(large?220:pad?6:1.1));
-      assert.ok(mesh[i+1]>=(large?-17:-.1)&&mesh[i+1]<=1.4);
+      assert.ok(Math.abs(mesh[i])<=(large?210:pad?6.1:1.2));assert.ok(Math.abs(mesh[i+2])<=(large?230:pad?6:1.2));
+      assert.ok(mesh[i+1]>=(large?-17:-.1)&&mesh[i+1]<=(large?.5:1.65));
       if(d.model==='shipOuterDeck') {assert.equal(mesh[i+1],-.13);assert.equal(mesh[i+4],1);}
     }
     for(let i=0;i<mesh.length;i+=27) {
@@ -731,8 +734,9 @@ test('Mothership reusable architecture has finite normals, bounded meshes and a 
       assert.ok(Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])>1e-10,'nondegenerate architecture');
     }
   }
-  const floorTriangles = (w.surface.size-1)**2*2;
-  assert.ok(w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+floorTriangles<95000);
+  const floorTriangles=(w.surface.size-1)**2*2,
+    total=w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+floorTriangles;
+  assert.ok(total<165000,`detailed carrier budget excluding entities/shadow repetition: ${total}`);
 });
 
 test('navigation follows canyon bends instead of crossing the relief', () => {

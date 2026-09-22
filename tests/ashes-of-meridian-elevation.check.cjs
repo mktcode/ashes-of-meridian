@@ -78,45 +78,50 @@ test('four high Mothership starts, flat initial economy and connected low centra
     const vent={x:p.x+(i?7:5),z:p.z+(i?7:18)};
     assert.ok(w.surface.foundation(vent,2.3),`vent ${i}`);
   }
-  assert.ok(Math.abs(w.surface.heightAt(42,28)-3)<1e-6);
-  assert.ok(w.terrainFree({x:42,z:10},{x:42,z:50},2));
-  assert.equal(w.terrainFree({x:80,z:20},{x:80,z:50}),false);
-  assert.equal(w.terrainFree({x:80,z:50},{x:80,z:20}),false);
+  const homeIndices=[0,1,4,5], distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),
+    homeDistances=sites.map((site,i)=>distance(site,w.layout.resourceSites[homeIndices[i]])),
+    ventDistances=sites.map((site,i)=>{const n=homeIndices[i],p=w.layout.resourceSites[n];return distance(site,{x:p.x+(n?7:5),z:p.z+(n?7:18)});});
+  assert.ok(Math.max(...homeDistances)-Math.min(...homeDistances)<2,'four starts have equivalent primary cargo distance');
+  assert.ok(Math.max(...ventDistances)-Math.min(...ventDistances)<2,'four starts have equivalent primary vent distance');
+  assert.ok(Math.abs(w.surface.heightAt(72,36.5)-3)<1e-6);
+  assert.ok(w.terrainFree({x:72,z:10},{x:72,z:60},2));
+  assert.equal(w.terrainFree({x:100,z:30},{x:100,z:65}),false);
+  assert.equal(w.terrainFree({x:100,z:65},{x:100,z:30}),false);
 });
 
 test('surface transition mask survives replacement of dynamic occupancy, and paths cannot smooth across cliffs',()=>{
   const w = new Battlefield(1409,'mothership'); w.blocked.fill(0);
-  const a={x:80,z:25}, b={x:80,z:50};
+  const a={x:100,z:30}, b={x:100,z:65};
   assert.equal(w.lineFree(a,b),false);
   const route=w.path(a.x,a.z,b.x,b.z,false,undefined,1);
   assert.equal(route.status,'complete'); assert.ok(route.points.length>1);
   let from=a; for(const p of route.points) {assert.ok(w.terrainFree(from,p,1));from=p;}
-  assert.equal(w.surface.fits(80,34,2),false,'body clearance before the cliff');
-  for(const radius of [1,2,3]) for(let x=-80;x<=80;x+=7) for(let z=-80;z<=80;z+=7) {
+  assert.equal(w.surface.fits(100,44,2),false,'body clearance before the cliff');
+  for(const radius of [1,2,3]) for(let x=-110;x<=110;x+=7) for(let z=-110;z<=110;z+=7) {
     if(w.surface.fits(x,z,radius)) assert.ok(w.surface.segment({x,z},{x,z},radius),'accepted positions are not trapped in expanded cliff bounds');
   }
 });
 
 test('ground step, yield and placement cannot tunnel across a cliff; aircraft can cross',()=>{
   const g=game(); g.s.entities=[];g.ids.clear();g.world.rebuild([]);
-  const w=g.spawnUnit('worker',80,30,0,0), air=g.spawnUnit('air',80,30,0,0);
+  const w=g.spawnUnit('worker',100,30,0,0), air=g.spawnUnit('air',100,30,0,0);
   assert.ok(w&&air);
-  assert.equal(g.canStep(w,80,45),false);
-  assert.equal(g.canStep(air,80,45),true);
-  w.yieldTo={x:80,z:45};w.yieldUntil=10;g.moveYield(w,10);
+  assert.equal(g.canStep(w,100,65),false);
+  assert.equal(g.canStep(air,100,65),true);
+  w.yieldTo={x:100,z:65};w.yieldUntil=10;g.moveYield(w,10);
   assert.equal(w.z,30,'large dt must not tunnel');
-  assert.equal(g.unitPosition({type:'worker',size:UNITS.worker.size,x:80,z:36}),null,'no teleport from a cliff into a nearby plateau');
+  assert.equal(g.unitPosition({type:'worker',size:UNITS.worker.size,x:100,z:50}),null,'no teleport from a cliff into a nearby plateau');
   const height=g.world.surface;
   assert.equal(height.entityHeight(air),6);
-  air.z=50;assert.equal(height.entityHeight(air),6,'fixed cruise height across a cliff');
+  air.z=65;assert.equal(height.entityHeight(air),6,'fixed cruise height across a cliff');
 });
 
 test('worker crosses a ramp up and down using ordinary orders',()=>{
   const g=game();g.s.entities=[];g.ids.clear();g.world.rebuild([]);
-  const w=g.spawnUnit('worker',42,10,0,0); assert.ok(w);
-  for (const goal of [{x:42,z:50},{x:42,z:10}]) {
+  const w=g.spawnUnit('worker',72,10,0,0); assert.ok(w);
+  for (const goal of [{x:72,z:65},{x:72,z:10}]) {
     g.setOrder(w,{type:'move',...goal}); let arrived=false;
-    for(let i=0;i<220&&!arrived;i++) {g.s.time+=.05;arrived=g.move(w,goal,.05);assert.ok(g.unitFits(w,w.x,w.z));}
+    for(let i=0;i<320&&!arrived;i++) {g.s.time+=.05;arrived=g.move(w,goal,.05);assert.ok(g.unitFits(w,w.x,w.z));}
     assert.ok(arrived,JSON.stringify(w));
   }
 });
@@ -124,13 +129,13 @@ test('worker crosses a ramp up and down using ordinary orders',()=>{
 test('foundations reject slopes/cliff edges; legal plateau production exits remain on its level',()=>{
   const g=game();g.world.sight[0].explored.fill(1);
   g.s.entities=[];g.ids.clear();g.world.rebuild([]);
-  const worker=g.spawnUnit('worker',42,55,0,0);assert.ok(worker);
-  assert.match(g.canBuild('depot',{x:42,z:28}),/level ground/);
-  assert.match(g.canBuild('depot',{x:80,z:40}),/level ground/);
-  assert.equal(g.canBuild('depot',{x:42,z:46}),'');
-  assert.ok(g.world.surface.foundation({x:76,z:-47},4.4));
-  assert.match(g.canBuild('hq',{x:76,z:-47}),/production exits/);
-  const h=g.spawnBuilding('hq',42,50,0,0);g.world.rebuild(g.s.entities);
+  const worker=g.spawnUnit('worker',-72,78,0,0);assert.ok(worker);
+  assert.match(g.canBuild('depot',{x:72,z:36.5}),/level ground/);
+  assert.match(g.canBuild('depot',{x:100,z:50}),/level ground/);
+  assert.equal(g.canBuild('depot',{x:72,z:65}),'');
+  assert.ok(g.world.surface.foundation({x:100,z:-72.5},4.4));
+  assert.match(g.canBuild('hq',{x:100,z:-72.5}),/production exits/);
+  const h=g.spawnBuilding('hq',72,65,0,0);g.world.rebuild(g.s.entities);
   const u=g.produceUnit(h,'worker');assert.ok(u?.exit);
   assert.equal(g.world.surface.heightAt(u.exit.x,u.exit.z),6);
   assert.ok(g.world.terrainFree(u,u.exit,u.size*UNIT_BODY_SCALE));
@@ -138,26 +143,26 @@ test('foundations reject slopes/cliff edges; legal plateau production exits rema
 
 test('close worker cannot repair or deliver through a cliff and area navigation seeks the accessible level',()=>{
   const g=game();g.s.entities=[];g.ids.clear();g.world.rebuild([]);
-  const b=g.spawnBuilding('hq',80,40,0,0), w=g.spawnUnit('worker',80,33,0,0);
+  const b=g.spawnBuilding('hq',110,66,0,0), w=g.spawnUnit('worker',110,60,0,0);
   assert.ok(w);b.hp-=100;w.order={type:'repair',id:b.id};
   const hp=b.hp;g.worker(w,.05);assert.equal(b.hp,hp);
   w.order={type:'mine',id:999};w.carry=18;w.returning=true;
   const alloy=g.account(0).alloy;g.worker(w,.05);assert.equal(g.account(0).alloy,alloy);
   assert.equal(w.carry,18);
-  const route=g.world.path(80,30,80,40,false,{x:80,z:40,radius:8});
-  assert.equal(route.status,'complete');assert.ok(route.goal.z>=40);
+  const route=g.world.path(110,60,110,66,false,{x:110,z:66,radius:8});
+  assert.equal(route.status,'complete');assert.ok(Math.hypot(route.goal.x-110,route.goal.z-66)<=8);
 });
 
 test('CPU effect origins, targets, shell landing and particle floor include surface height without extra RNG draws',()=>{
-  const g=game(), a={x:42,z:50,type:'tank',kind:'unit',team:0,faction:0,rot:0,size:1},
+  const g=game(), a={x:72,z:65,type:'tank',kind:'unit',team:0,faction:0,rot:0,size:1},
     b={...a,x:0,z:0}; let draws=0;
   g.effects.random=()=>{draws++;return .5;};
   g.effects.shot(a,b);let f=g.effects.fx.at(-1);
   assert.equal(f.y,7.45);assert.equal(f.ty,1);
   g.effects.shell(b,a,.85);f=g.effects.fx.at(-1);assert.equal(f.endY,6);
   assert.equal(draws,0);
-  g.effects.explosion(42,50);const before=draws;
-  const flat=new MeridianEffects(()=>.5);flat.explosion(42,50);
+  g.effects.explosion(72,65);const before=draws;
+  const flat=new MeridianEffects(()=>.5);flat.explosion(72,65);
   for(const [i,fx] of g.effects.fx.slice(2).entries()) if('y' in fx) assert.equal(fx.y-flat.fx[i].y,6);
   g.effects.tick(.05);assert.equal(draws,before);
 });
@@ -166,7 +171,7 @@ test('terrain picking roundtrips both plateaus and ramp while camera drag keeps 
   const w=new Battlefield(1409,'mothership'),r=Object.create(MeridianRenderer.prototype);
   Object.assign(r,{viewport:{left:0,top:0,right:1200,bottom:800,width:1200,height:800},quality:0,surface:w.surface});
   r.camera(42,30,85);
-  for(const [x,z] of [[42,50],[42,28],[0,0],[-42,-50]]) {
+  for(const [x,z] of [[72,65],[72,36.5],[0,0],[-72,-65]]) {
     const screen=r.project(x,w.surface.heightAt(x,z),z),hit=r.ground(screen.x,screen.y);
     assert.ok(Math.hypot(hit.x-x,hit.z-z)<1e-4,JSON.stringify({x,z,hit}));
     const flat=r.ground(screen.x,screen.y,false),p=r.project(flat.x,0,flat.z);
@@ -176,14 +181,15 @@ test('terrain picking roundtrips both plateaus and ramp while camera drag keeps 
 
 test('network interpolated ground poses sample the ramp rather than a chord through the terrain',()=>{
   const w=new Battlefield(1409,'mothership'),timeline=new MultiplayerTimeline(),
-    unit={id:1,x:42,z:16,rot:0,walk:0,kind:'unit',type:'rifle'};
+    unit={id:1,x:72,z:21,rot:0,walk:0,kind:'unit',type:'rifle'};
   // Use a short accepted interpolation interval around the lower ramp corner.
-  timeline.push({time:1,entities:[{...unit,z:16}],effects:[]},1000);
-  timeline.push({time:1.2,entities:[{...unit,z:22}],effects:[]},1200);
+  timeline.push({time:1,entities:[{...unit,z:21}],effects:[]},1000);
+  timeline.push({time:1.2,entities:[{...unit,z:27}],effects:[]},1200);
   timeline.advance(1220,()=>{});
-  const pose=timeline.poses.get(1);assert.ok(Math.abs(pose.z-19)<1e-7);
-  assert.ok(Math.abs(w.surface.entityHeight(pose)-.3)<1e-6);
-  assert.equal(unit.z,16,'no mutation of authoritative entities');
+  const pose=timeline.poses.get(1);assert.ok(Math.abs(pose.z-24)<1e-7);
+  const sampled=w.surface.heightAt(pose.x,pose.z), chord=(w.surface.heightAt(72,21)+w.surface.heightAt(72,27))/2;
+  assert.ok(Math.abs(w.surface.entityHeight(pose)-sampled)<1e-6);assert.ok(Math.abs(sampled-chord)>.1);
+  assert.equal(unit.z,21,'no mutation of authoritative entities');
 });
 
 test('rendered floor samples and models use the CPU surface in battle and menu cinema, and changing maps clears it',()=>{
@@ -197,10 +203,10 @@ test('rendered floor samples and models use the CPU surface in battle and menu c
   }
   for(const cinema of [false,true]) {
     r.cinema=cinema;
-    for(const e of [{id:1,x:42,z:50,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:.65},
-      {id:2,x:42,z:50,kind:'resource',type:'gas',hp:100,faction:0,team:-1,size:2},
-      {id:3,x:42,z:50,kind:'building',type:'depot',hp:100,faction:0,team:0,size:2.3,progress:.3},
-      {id:4,x:42,z:50,kind:'resource',type:'crystal',hp:100,faction:0,team:-1,size:2,amount:1800}]) {
+    for(const e of [{id:1,x:72,z:65,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:.65},
+      {id:2,x:72,z:65,kind:'resource',type:'gas',hp:100,faction:0,team:-1,size:2},
+      {id:3,x:72,z:65,kind:'building',type:'depot',hp:100,faction:0,team:0,size:2.3,progress:.3},
+      {id:4,x:72,z:65,kind:'resource',type:'crystal',hp:100,faction:0,team:-1,size:2,amount:1800}]) {
       r.calls=[];r.surface=null;renderEntity(r,e,1);const flat=r.calls;
       r.calls=[];r.surface=w.surface;renderEntity(r,e,1);
       assert.equal(r.calls.length,flat.length);
@@ -222,13 +228,13 @@ test('all eight vents admit real refinery placement and air recovery ignores cli
 
 test('cliff drops reject before spending; a plateau drop reserves four real landing bodies',()=>{
   const g=game();g.s.entities=[];g.ids.clear();g.world.rebuild([]);
-  g.spawnBuilding('hq',42,60,0,0);g.spawnUnit('worker',80,30,0,0);g.world.rebuild(g.s.entities);
+  g.spawnBuilding('hq',72,78,0,0);g.spawnUnit('worker',100,30,0,0);g.world.rebuild(g.s.entities);
   g.world.sight[0].explored.fill(1);g.account(0).energy=200;
   const energy=g.account(0).energy, cooldown=g.account(0).abilities.drop, count=g.s.entities.length;
-  assert.equal(g.ability('drop',{x:80,z:36},0),false);
+  assert.equal(g.ability('drop',{x:100,z:50},0),false);
   assert.equal(g.account(0).energy,energy);assert.equal(g.account(0).abilities.drop,cooldown);
   assert.equal(g.s.entities.length,count);
-  assert.equal(g.ability('drop',{x:42,z:48},0),true);
+  assert.equal(g.ability('drop',{x:72,z:65},0),true);
   const units=g.s.entities.filter(e=>e.type==='rifle');assert.equal(units.length,4);
   for(const e of units) {assert.equal(g.world.surface.heightAt(e.x,e.z),6);assert.ok(g.unitFits(e,e.x,e.z));}
 });

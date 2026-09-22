@@ -209,7 +209,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
   };
   renderer.fog=(data,size)=>{assert.equal(data.length,size*size);fogs.push([size,Array.from(data)]);};
   const view=new BattlefieldView(renderer);
-  for(const [map,extent,grid] of [['desert',90,72],['alien-planet',135,108],['mothership',90,72]]) {
+  for(const [map,extent,grid] of [['desert',90,72],['alien-planet',135,108],['mothership',120,96]]) {
     const w=new Battlefield(43015,map), count=fogs.length;
     view.sync(w,false);view.sync(w,true);view.sync(w,true);
     assert.equal(renderer.extent,extent);
