@@ -77,13 +77,13 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.match(icon('worker'), /^<svg viewBox="0 0 24 24".*<path d="M8 15l-4 5/);
 });
 
-test('three CPU map recipes load without content, renderer or browser, with explicit names and IDs', () => {
+test('CPU map recipes load without content, renderer or browser, with explicit names and IDs', () => {
   const scripts = readScripts(), context = loadScripts(BATTLEFIELD_SCRIPTS, { scripts });
   assert.deepEqual(scripts.filter(s => BATTLEFIELD_SCRIPTS.includes(s.name)).map(s => s.filename),
     BATTLEFIELD_SCRIPTS.map(name => `dist/src/battlefields/${name.replace('battlefield-', '')}.js`));
   const { BATTLEFIELDS, battlefieldId } = vm.runInContext('({BATTLEFIELDS, battlefieldId})', context);
-  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership']);
-  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP']);
+  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark']);
+  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK']);
   for (const id of Object.keys(BATTLEFIELDS)) assert.equal(battlefieldId(id), id);
   for (const invalid of [undefined, null, 4, '', 'unknown', 'toString', '__proto__'])
     assert.equal(battlefieldId(invalid), 'desert');

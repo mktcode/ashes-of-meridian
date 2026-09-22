@@ -1,6 +1,6 @@
 # Multiplayer-Prototyp
 
-Separater autoritativer Node-Server für zwei menschliche Parteien. Er verwendet dieselben Simulationsquellen wie das Offline-Spiel; keine kopierte Spielimplementierung. Alle drei Karten und Fraktionen sind beim Erstellen bzw. Beitreten verfügbar. Keine Konten, KI, Expeditionen, Belohnungen oder Speicherung. Kurze Verbindungsabbrüche können innerhalb derselben Serverprozess-Laufzeit wiederaufgenommen werden.
+Separater autoritativer Node-Server für zwei menschliche Parteien. Er verwendet dieselben Simulationsquellen wie das Offline-Spiel; keine kopierte Spielimplementierung. Alle Karten einschließlich Westmark und alle drei Fraktionen sind beim Erstellen bzw. Beitreten verfügbar. Für Westmark müssen Client und Server den neuen Kartenstand enthalten; den Server gemeinsam mit dem Client neu bauen und ausrollen. Keine Konten, KI, Expeditionen, Belohnungen oder Speicherung. Kurze Verbindungsabbrüche können innerhalb derselben Serverprozess-Laufzeit wiederaufgenommen werden.
 
 ## Lokal starten
 

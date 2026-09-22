@@ -11,6 +11,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-desert-terrain',
   'renderer-alien-terrain',
   'renderer-mothership-terrain',
+  'renderer-westmark-terrain',
   'renderer-model-kit',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',
@@ -63,6 +64,8 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-desert',
   'battlefield-alien-planet',
   'battlefield-mothership',
+  'battlefield-westmark-data',
+  'battlefield-westmark',
   'battlefield-catalog'
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([

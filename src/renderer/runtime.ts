@@ -53,6 +53,11 @@
       metalTex: WebGLTexture | null;
       bioTex: WebGLTexture | null;
       skyTex: WebGLTexture | null;
+      westmarkMeadowTex: WebGLTexture | null;
+      westmarkGraniteTex: WebGLTexture | null;
+      westmarkEarthTex: WebGLTexture | null;
+      westmarkBarkTex: WebGLTexture | null;
+      westmarkSpruceTex: WebGLTexture | null;
       textureResources: Record<ResidentTextureName, ResidentTexture>;
       textureLoads: Partial<Record<ResidentTextureName, Promise<boolean>>> = {};
       desiredTextures = new Set<ResidentTextureName>();
@@ -159,6 +164,11 @@
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
         this.skyTex = this.dataTexture([5, 9, 16]);
+        this.westmarkMeadowTex = this.dataTexture([103, 119, 64]);
+        this.westmarkGraniteTex = this.dataTexture([128, 134, 127]);
+        this.westmarkEarthTex = this.dataTexture([135, 112, 77]);
+        this.westmarkBarkTex = this.dataTexture([92, 78, 58]);
+        this.westmarkSpruceTex = this.dataTexture([0, 0, 0, 0]);
         this.textureResources = {
           ground: { texture: this.groundTex, fallback: [146, 101, 75], repeat: true, resident: false },
           desertRock: { texture: this.desertRockTex, fallback: [137, 99, 71], repeat: true, resident: false },
@@ -166,7 +176,12 @@
           desertShrubs: { texture: this.desertShrubsTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
           metal: { texture: this.metalTex, fallback: [128, 130, 136], repeat: true, resident: false },
           bio: { texture: this.bioTex, fallback: [77, 128, 119], repeat: true, resident: false },
-          sky: { texture: this.skyTex, fallback: [5, 9, 16], repeat: false, resident: false }
+          sky: { texture: this.skyTex, fallback: [5, 9, 16], repeat: false, resident: false },
+          westmarkMeadow: { texture: this.westmarkMeadowTex, fallback: [103, 119, 64], repeat: true, resident: false },
+          westmarkGranite: { texture: this.westmarkGraniteTex, fallback: [128, 134, 127], repeat: true, resident: false },
+          westmarkEarth: { texture: this.westmarkEarthTex, fallback: [135, 112, 77], repeat: true, resident: false },
+          westmarkBark: { texture: this.westmarkBarkTex, fallback: [92, 78, 58], repeat: true, resident: false },
+          westmarkSpruce: { texture: this.westmarkSpruceTex, fallback: [0, 0, 0, 0], repeat: false, resident: false }
         };
         this.shadowTex = gl.createTexture();
         this.shadowFbo = gl.createFramebuffer();
@@ -457,6 +472,7 @@
       textureNames(profile: BattlefieldRenderProfile) {
         const names = new Set<ResidentTextureName>(['sky', 'metal', 'bio', profile.groundTexture]);
         if (profile.rockSurface) names.add(profile.rockSurface.texture);
+        if (profile.landscape) for (const name of Object.values(profile.landscape)) names.add(name);
         if (profile.rockDecor.density > 0) names.add('rockClusters');
         if (profile.shrubDecor.density > 0) names.add('desertShrubs');
         return names;
@@ -801,6 +817,9 @@
           g.clear(g.DEPTH_BUFFER_BIT);
           g.useProgram(this.depthProg);
           g.uniformMatrix4fv(this.uniform(this.depthProg, 'u_vp'), false, this.lightVP);
+          g.activeTexture(g.TEXTURE10);
+          g.bindTexture(g.TEXTURE_2D, this.westmarkSpruceTex);
+          g.uniform1i(this.uniform(this.depthProg, 'u_foliageTex'), 10);
           g.enable(g.POLYGON_OFFSET_FILL);
           g.polygonOffset(1.5, 2);
           // The flat ground receives shadows in the scene pass but cannot cast a visible one itself.
@@ -816,6 +835,7 @@
         g.disable(g.DEPTH_TEST);
         g.useProgram(this.skyProg);
         g.uniform2f(this.uniform(this.skyProg, 'u_size'), this.width, this.height);
+        g.uniform1f(this.uniform(this.skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
         g.activeTexture(g.TEXTURE0);
         g.bindTexture(g.TEXTURE_2D, this[`${this.battlefieldProfile.skyTexture}Tex`]);
         g.uniform1i(this.uniform(this.skyProg, 'u_skyTex'), 0);
@@ -867,6 +887,15 @@
         g.activeTexture(g.TEXTURE7);
         g.bindTexture(g.TEXTURE_2D, this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`]);
         g.uniform1i(this.uniform(this.program, 'u_rockTex'), 7);
+        for (const [uniform, name, unit] of [
+          ['u_earthTex', profile.landscape?.earth ?? 'ground', 8],
+          ['u_barkTex', profile.landscape?.bark ?? 'metal', 9],
+          ['u_foliageTex', profile.landscape?.foliage ?? 'bio', 10]
+        ] as const) {
+          g.activeTexture(g.TEXTURE0 + unit);
+          g.bindTexture(g.TEXTURE_2D, this[`${name}Tex`]);
+          g.uniform1i(this.uniform(this.program, uniform), unit);
+        }
         this.drawBatches(this.static, this.vp, 'alienLanternPool');
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);

@@ -82,12 +82,15 @@ interface BattlefieldLighting {
 }
 
 interface BattlefieldRenderProfile {
-  groundTexture: 'ground' | 'metal' | 'bio';
+  groundTexture: 'ground' | 'metal' | 'bio' | 'westmarkMeadow';
   skyTexture: 'sky';
   groundPixelsPerMeter: number;
   groundMirror?: boolean;
   /** Optional albedo for ROCK/MASSIF; other profiles retain their ground-derived material. */
-  rockSurface?: { texture: 'desertRock'; metersPerTile: number };
+  rockSurface?: { texture: 'desertRock' | 'westmarkGranite'; metersPerTile: number };
+  /** Natural terrain's extra materials; absent on the established maps. */
+  landscape?: { earth: 'westmarkEarth'; bark: 'westmarkBark'; foliage: 'westmarkSpruce' };
+  daylight?: boolean;
   rockDecor: { density: number; opacity: number };
   shrubDecor: { density: number; opacity: number };
   haze: readonly [number, number, number];
@@ -106,6 +109,8 @@ interface BattlefieldDefinition {
   name: string;
   size: BattlefieldSize;
   layout: BattlefieldLayout;
+  /** Explicit start datum when decorative mountains exceed the base elevation. */
+  startHeight?: number;
   palette: BattlefieldPalette;
   render: BattlefieldRenderProfile;
   worldEvent: 'solarFlare' | null;
@@ -513,6 +518,8 @@ interface WorldRelief {
   size: number; // Includes one vertex of halo on every side, for seamless edge normals.
   heights: Float32Array;
   innerExtent: number;
+  /** Optional per-vertex material weights (road, rock, snow), not albedo tint. */
+  colors?: Float32Array;
 }
 
 type WorldGeometry = (

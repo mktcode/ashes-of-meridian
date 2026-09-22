@@ -12,11 +12,13 @@
       try {
         const params = new URLSearchParams(location.search),
           heightExperiment = params.get('experiment') === 'height',
-          visibleSimulation = !heightExperiment && params.get('simulation') === 'ai-vs-ai',
+          westmarkExperiment = params.get('experiment') === 'westmark',
+          mapExperiment = heightExperiment || westmarkExperiment,
+          visibleSimulation = !mapExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
             // The explicitly launched spectator run must not read or mutate the normal profile.
-            getStorage: () => visibleSimulation || heightExperiment ? volatileStorage : localStorage,
+            getStorage: () => visibleSimulation || mapExperiment ? volatileStorage : localStorage,
             clamp,
             upgrades: META,
             benefits: EXPEDITION_BENEFITS,
@@ -331,10 +333,10 @@
           version: '1.0.0'
         };
         // Manual spectator command only; normal launches still stop at the home screen.
-        if (heightExperiment) {
+        if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
           ui.expedition = { version: 3, faction: 0, depth: 0, benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
-            encounter: {map: 'mothership', seed: 1409, enemies: [2]}, offers: [] };
+            encounter: {map: westmarkExperiment ? 'westmark' : 'mothership', seed: 1409, enemies: [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {
           ui.showBattle();

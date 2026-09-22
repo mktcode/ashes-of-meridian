@@ -22,6 +22,9 @@ class BattlefieldView {
       R.extent = EXTENT;
       R.decorSeed = world.seed >>> 0;
       R.surface = world.surface;
+      // An authoritative recipe can supply its own ground skin, including material
+      // weights and decorative river beds underneath the one walkable bridge surface.
+      if (!layout.geometries.some(descriptor => descriptor.mesh === 'terrain')) {
       const data: number[] = [];
       let i = 0;
       if (world.surface) {
@@ -53,6 +56,7 @@ class BattlefieldView {
             [wx + CELL, -0.13, wz], layout.groundColors[i++], [0, 1, 0]);
         }
       R.geometry('terrain', data);
+      }
       for (const descriptor of layout.geometries) {
         const geometry = TerrainModels.geometry(descriptor);
         if (descriptor.grounded && world.surface) {

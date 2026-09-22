@@ -1079,7 +1079,7 @@ test('expedition setup creates and saves a random pending encounter', () => {
   assert.equal(saved.length, 1); assert.equal(saved[0].faction, 2); assert.equal(saved[0].depth, 0);
   assert.equal(saved[0].encounter.enemies.length, 1);
   assert.ok([0, 1, 2].includes(saved[0].encounter.enemies[0]));
-  assert.ok(['desert', 'alien-planet', 'mothership'].includes(saved[0].encounter.map));
+  assert.ok(['desert', 'alien-planet', 'mothership', 'westmark'].includes(saved[0].encounter.map));
   assert.ok(saved[0].encounter.seed > 0);
   assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {}, enemyBenefits: [{}], depth: 0 });
 });

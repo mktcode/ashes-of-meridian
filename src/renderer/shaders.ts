@@ -26,8 +26,8 @@ layout(location=0) in vec3 a_pos;layout(location=1) in vec3 a_normal;layout(loca
 layout(location=2) in mat4 a_model;layout(location=6) in vec4 a_color;layout(location=7) in float a_glow;layout(location=9) in float a_material;
 uniform mat4 u_vp;uniform mat4 u_light;
 out vec3 v_pos;out vec3 v_n;out vec4 v_col;out float v_glow;out vec4 v_shadow;flat out float v_mat;
-out vec3 v_modelPos;out vec3 v_modelN;
-void main(){vec4 p=a_model*vec4(a_pos,1.);v_pos=p.xyz;
+out vec3 v_modelPos;out vec3 v_modelN;out vec3 v_detail;
+void main(){v_detail=a_tint;vec4 p=a_model*vec4(a_pos,1.);v_pos=p.xyz;
 // Scaled mesh-local coordinates keep detail density without world-space sliding.
 vec3 textureScale=max(vec3(length(a_model[0].xyz),length(a_model[1].xyz),length(a_model[2].xyz)),vec3(.00001));
 v_modelPos=a_pos*textureScale;
@@ -39,7 +39,8 @@ vec3 normal=a_normal;if(a_material>3.5)normal/=vec3(dot(a_model[0].xyz,a_model[0
 precision highp float;
 precision highp int;
 in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in float v_mat;
-in vec3 v_modelPos;in vec3 v_modelN;
+in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
+uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform float u_groundPixelsPerMeter;uniform float u_groundMirror;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;
@@ -146,7 +147,28 @@ void main(){
  }
  vec3 n=normalize(v_n);vec3 base=v_col.rgb;
 float metal=float(v_mat>1.5&&v_mat<2.5),bio=float(v_mat>2.5&&v_mat<3.5),crystal=float(v_mat>4.5&&v_mat<5.5);
-if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
+if(v_mat==${MAT.LANDSCAPE}.){
+ vec2 uv=v_pos.xz*u_groundPixelsPerMeter/vec2(textureSize(u_groundTex,0));
+ vec2 warp=vec2(veilNoise(v_pos.xz*.12),veilNoise(v_pos.xz*.12+19.7))*.38;
+ vec3 grass=mix(texture(u_groundTex,uv+warp).rgb,texture(u_groundTex,uv*1.371+3.76+warp).rgb,.42);
+ grass*=mix(.87,1.08,veilNoise(v_pos.xz*.075));
+ vec3 stone=tri(u_rockTex,v_pos,n,u_rockScale);
+ base=mix(grass,stone,clamp(v_detail.y+(1.-smoothstep(.60,.92,n.y))*.6,0.,1.));
+ base=mix(base,texture(u_earthTex,v_pos.xz*.15).rgb,v_detail.x);
+ base=mix(base,vec3(.78,.82,.84),v_detail.z);
+}else if(v_mat==${MAT.BARK}.){
+ base=tri(u_barkTex,v_modelPos,normalize(v_modelN),.32);
+}else if(v_mat==${MAT.FOLIAGE}.){
+ vec4 leaf=texture(u_foliageTex,v_detail.xy);if(leaf.a<.3)discard;
+ base=leaf.rgb*v_detail.z*1.18;n=gl_FrontFacing?n:-n;
+}else if(v_mat==${MAT.WATER}.){
+ float phase=v_detail.y*2.1-u_time*.8;
+ n=normalize(vec3(sin(v_pos.x*1.7+phase)*.12,1.,cos(v_pos.z*1.3-phase)*.12));
+ float shore=smoothstep(.34,.49,abs(v_detail.x-.5));
+ float foam=shore*(.55+.25*sin(phase+veilNoise(v_pos.xz)*5.));
+ foam=max(foam,clamp(v_detail.z*2.,0.,.7)*(.6+.4*sin(phase*3.)));
+ base=mix(vec3(.055,.24,.28),vec3(.56,.69,.67),foam);
+}else if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
 // Local-normal variation restores readable facets; a restrained static caustic suggests internal depth.
 if(crystal>.5){
  vec3 localN=normalize(v_modelN);
@@ -163,6 +185,11 @@ float strength=.008+metal*.37+bio*.15+crystal*.45;
 float spec=pow(max(dot(n,normalize(light+viewDir)),0.),exponent)*strength*sh;
 vec3 specColor=mix(vec3(1.),mix(vec3(.85,.92,1.),base,.25),metal);
 lit+=spec*u_sun*specColor;
+if(v_mat==${MAT.WATER}.){
+ float reflection=pow(1.-max(dot(n,viewDir),0.),4.);
+ lit=mix(lit,vec3(.40,.57,.65),reflection*.65);
+ lit+=u_sun*pow(max(dot(n,normalize(light+viewDir)),0.),130.)*.6*sh;
+}
 float edge=1.-max(dot(n,viewDir),0.),fresnel=edge*edge*edge*edge*edge;
 vec3 environment=mix(u_bounce,u_skyLight,clamp(reflect(-viewDir,n).y*.5+.5,0.,1.));
 lit+=environment*((.07+fresnel*.22)*metal+(.025+fresnel*.05)*bio+fresnel*.42*crystal);
@@ -173,14 +200,19 @@ lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
 float field=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,v_col.a);}`;
     const DEPTHV = `#version 300 es
-precision highp float;layout(location=0)in vec3 a_pos;layout(location=2)in mat4 a_model;uniform mat4 u_vp;void main(){gl_Position=u_vp*a_model*vec4(a_pos,1.);}`;
+precision highp float;layout(location=0)in vec3 a_pos;layout(location=2)in mat4 a_model;
+layout(location=8)in vec3 a_tint;layout(location=9)in float a_material;
+out vec2 v_uv;flat out float v_mat;uniform mat4 u_vp;
+void main(){v_uv=a_tint.xy;v_mat=a_material;gl_Position=u_vp*a_model*vec4(a_pos,1.);}`;
     const DEPTHF = `#version 300 es
-precision highp float;void main(){}`;
+precision highp float;in vec2 v_uv;flat in float v_mat;uniform sampler2D u_foliageTex;
+void main(){if(v_mat==${MAT.WATER}.)discard;if(v_mat==${MAT.FOLIAGE}.&&texture(u_foliageTex,v_uv).a<.3)discard;}`;
     const FULLV = `#version 300 es
 out vec2 uv;void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);uv=p;gl_Position=vec4(p*2.-1.,0.,1.);}`;
     const SKYF = `#version 300 es
-precision highp float;in vec2 uv;out vec4 frag;uniform vec2 u_size;uniform sampler2D u_skyTex;
+precision highp float;in vec2 uv;out vec4 frag;uniform vec2 u_size;uniform sampler2D u_skyTex;uniform float u_daylight;
 void main(){
+ if(u_daylight>.5){frag=vec4(mix(vec3(.60,.69,.71),vec3(.22,.42,.58),smoothstep(0.,1.,uv.y)),1.);return;}
  // Cover the viewport without stretching; image uploads have their origin at the top.
  vec2 imageSize=vec2(textureSize(u_skyTex,0));
  float imageAspect=imageSize.x/imageSize.y,screenAspect=u_size.x/u_size.y;

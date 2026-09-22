@@ -29,7 +29,7 @@ async function fixture(t, options) {
   }
   return { connect, url, server };
 }
-for (const map of ['desert', 'alien-planet', 'mothership']) test(`two resumable actors on ${map}: map choice, filtered views, queued commands and reconnect`, async t => {
+for (const map of ['desert', 'alien-planet', 'mothership', 'westmark']) test(`two resumable actors on ${map}: map choice, filtered views, queued commands and reconnect`, async t => {
   const { connect } = await fixture(t), host = await connect(), guest = await connect();
   host.send({ type: 'create', version: 4, map, faction: 0 });
   const waiting = await host.receive(m => m.type === 'waiting');
