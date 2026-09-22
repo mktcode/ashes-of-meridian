@@ -118,6 +118,33 @@ test('Westmark mesh descriptors use bounded finite geometry and CPU surface samp
   }
 });
 
+test('spruce crowns fill every height/azimuth band within a bounded, deterministic tree envelope',()=>{
+  const build=seed=>TerrainModels.geometry({mesh:'westmarkSpruce',model:'westmarkSpruce',seed,extent:160});
+  for(const seed of [1409,43015,7919]) {
+    const mesh=build(seed),bands=Array.from({length:4},()=>Array(8).fill(0));
+    assert.deepEqual(mesh,build(seed));
+    assert.ok(mesh.length/27<=520,'per-tree triangle budget, before shadow repetition');
+    let minNY=1,maxNY=0;
+    for(let i=0;i<mesh.length;i+=9) {
+      const [x,y,z,nx,ny,nz,u,v,shade]=mesh.slice(i,i+9);
+      assert.ok(Math.hypot(x,z)<=3&&y>=.4&&y<=11.5,'keep the original crown envelope');
+      assert.ok(Math.abs(Math.hypot(nx,ny,nz)-1)<1e-5);
+      assert.ok(u>=0&&u<=1&&v>=0&&v<=1&&shade>=.8&&shade<=1);
+      minNY=Math.min(minNY,Math.abs(ny));maxNY=Math.max(maxNY,Math.abs(ny));
+    }
+    for(let i=0;i<mesh.length;i+=27) {
+      const x=(mesh[i]+mesh[i+9]+mesh[i+18])/3,
+        y=(mesh[i+1]+mesh[i+10]+mesh[i+19])/3,z=(mesh[i+2]+mesh[i+11]+mesh[i+20])/3,
+        band=Math.floor((y-2)/2),sector=Math.floor((Math.atan2(z,x)+Math.PI)/Math.PI*4)%8;
+      if(band>=0&&band<4)bands[band][sector]++;
+    }
+    // Geometry coverage only: alpha/lighting and the final silhouette still need human review.
+    assert.ok(bands.every(b=>b.every(n=>n>=4)),'no sparsely populated side of the crown');
+    assert.ok(minNY<.5&&maxNY>.9,'sprays must not all lie in nearly horizontal planes');
+  }
+  assert.notDeepEqual(build(1409),build(7919),'mesh-local variation remains seed based');
+});
+
 test('Westmark albedos preserve canonical WebP bytes and are only requested by the landscape profile',()=>{
   const w=new Battlefield(1409,'westmark'),names=MeridianRenderer.prototype.textureNames(w.definition.render);
   for(const [key,file]of Object.entries({westmarkMeadow:'meadow',westmarkGranite:'granite',westmarkEarth:'earth',westmarkBark:'bark',westmarkSpruce:'spruce'})) {

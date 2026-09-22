@@ -81,15 +81,23 @@
   };
   TerrainModels.westmarkSpruce=(seed:number)=>{
     const out:number[]=[],rand=seeded(seed^0x53505255);
-    for(let j=0;j<44;j++) {
-      const t=j/44,y=1.5+t*9.5,angle=j*2.39996,len=(1-t)*2.6+.25,
-        cs=Math.cos(angle),sn=Math.sin(angle),width=(1-t)*1.3+.24,
-        base=[cs*.15,y,sn*.15],tip=[cs*len,y+.3+rand()*.4,sn*len],
-        right=[-sn*width*.5,.15,cs*width*.5],
-        points=[V.sub(base,right),base.map((v,i)=>v+right[i]),tip.map((v,i)=>v+right[i]),V.sub(tip,right)],
-        uv=[[0,1],[1,1],[1,0],[0,0]],shade=.8+rand()*.2,
-        normal=V.norm(V.cross(V.sub(points[1],points[0]),V.sub(points[2],points[0])));
-      for(const i of [0,1,2,0,2,3])out.push(...points[i],...normal,...uv[i],shade);
+    // Overlapping radial whorls fill the crown rather than exposing a spiral of
+    // single flat fronds. Crossed sprays also retain volume in oblique views.
+    // Keep the existing tree envelope; this mesh-local RNG never places blockers.
+    for(let layer=0;layer<18;layer++)for(let arm=0;arm<7;arm++) {
+      const t=layer/18,y=1.65+t*9.35+(rand()-.5)*.15,
+        angle=arm*Math.PI*2/7+layer*2.39996+(rand()-.5)*.24,
+        len=((1-t)*2.45+.25)*(.86+rand()*.14),width=(1-t)*2.1+.30,
+        cs=Math.cos(angle),sn=Math.sin(angle),
+        base=[cs*.08,y,sn*.08],tip=[cs*len,y+.15+t*.35,sn*len],
+        uv=[[0,1],[1,1],[1,0],[0,0]],shade=.8+rand()*.2;
+      for(const tilt of [.2+rand()*.25,1.05+rand()*.25]) {
+        const spread=width*.5*Math.cos(tilt),rise=width*.5*Math.sin(tilt),
+          right=[-sn*spread,rise,cs*spread],
+          points=[V.sub(base,right),base.map((v,i)=>v+right[i]),tip.map((v,i)=>v+right[i]),V.sub(tip,right)],
+          normal=V.norm(V.cross(V.sub(points[1],points[0]),V.sub(points[2],points[0])));
+        for(const i of [0,1,2,0,2,3])out.push(...points[i],...normal,...uv[i],shade);
+      }
     }
     return out;
   };
