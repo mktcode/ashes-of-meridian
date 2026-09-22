@@ -518,7 +518,8 @@ interface WorldRelief {
   size: number; // Includes one vertex of halo on every side, for seamless edge normals.
   heights: Float32Array;
   innerExtent: number;
-  /** Optional per-vertex material weights (road, rock, snow), not albedo tint. */
+  /** Model-specific vertex data: landscape weights (negative snow = damp sediment),
+   * or signed water depth / flow X / flow Z; not albedo tint. */
   colors?: Float32Array;
 }
 

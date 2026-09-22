@@ -162,20 +162,32 @@ const WESTMARK_BATTLEFIELD: BattlefieldDefinition = {
           ground=bridge?plan.bed(wx,wz):h;
         heights[i]=ground-.13;
         const river=westmarkRiver(wx,wz),stone=clamp((ground-11)/5,0,1);
+        // Negative snow weights identify damp sediment without changing the CPU shore.
+        const wet=river.bank<4?clamp((river.y+1.8-ground)/3.5,0,1):0;
         colors.set([clamp(1-plan.road(wx,wz)/2.2,0,1)*(river.bank>2?1:0),
-          Math.max(stone,clamp(1-Math.abs(river.bank)/3,0,1)*.7),clamp((ground-39)/12,0,.85)],i*3);
+          stone,wet>0?-wet:clamp((ground-39)/12,0,.85)],i*3);
       }
       return {extent,step,size,heights,innerExtent,colors};
     };
-    w.renderData.geometries.push({mesh:'terrain',model:'westmarkRelief',relief:relief(w.extent,surface.step)},
+    const ground=relief(w.extent,surface.step),water:WorldRelief={...ground,
+      heights:new Float32Array(ground.heights.length),colors:new Float32Array(ground.heights.length*3)};
+    for(let row=0;row<ground.size;row++)for(let col=0;col<ground.size;col++) {
+      const i=row*ground.size+col,x=(col-1)*ground.step-ground.extent,z=(row-1)*ground.step-ground.extent,
+        river=westmarkRiver(x,z),length=Math.hypot(river.dx,river.dz)||1;
+      water.heights[i]=river.y;
+      // One clipped field joins both rivers without coplanar overlapping strips.
+      water.colors!.set([Math.max(-20,Math.min(river.y-ground.heights[i],.95-river.bank)),
+        river.dx/length,river.dz/length],i*3);
+    }
+    w.renderData.geometries.push({mesh:'terrain',model:'westmarkRelief',relief:ground},
       {mesh:'westmarkBackdrop',model:'westmarkRelief',relief:relief(480,5,w.extent)},
-      {mesh:'westmarkWater',model:'westmarkWater',seed:w.seed,extent:w.extent});
+      {mesh:'westmarkWater',model:'westmarkWater',relief:water});
     builder.place('westmarkBackdrop',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','LANDSCAPE');
     builder.place('westmarkWater',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','WATER');
     plan.bridges.forEach((b,i)=>{
       const mesh=`westmarkBridge${i}`;
       w.renderData.geometries.push({mesh,model:'westmarkBridge',feature:b});
-      builder.place(mesh,0,0,0,1,1,1,0xa9aaa3,0,0,0,0,1,'static','ROCK');
+      builder.place(mesh,0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','MASONRY');
     });
     for(const model of ['westmarkTrunk','westmarkSpruce','westmarkBeacon'])
       w.renderData.geometries.push({mesh:model,model,seed:w.seed,extent:w.extent});
@@ -216,9 +228,9 @@ const WESTMARK_BATTLEFIELD: BattlefieldDefinition = {
     // cells. Run after fixed rocks/beacons so neither their proposals nor their
     // RNG stream/acceptance can change when decorative density is adjusted.
     const grove=builder.cosmeticRandom(0x47524f56),anchors=w.renderData.placements.filter(p=>p.mesh==='westmarkSpruce'),
-      insideBlock=(x:number,z:number)=>{
+      insideBlock=(x:number,z:number,radius=.6)=>{
         const cell=(v:number)=>Math.floor((v+w.extent)/w.cellSize);
-        for(let row=cell(z-.6);row<=cell(z+.6);row++)for(let col=cell(x-.6);col<=cell(x+.6);col++)
+        for(let row=cell(z-radius);row<=cell(z+radius);row++)for(let col=cell(x-radius);col<=cell(x+radius);col++)
           if(row<0||col<0||row>=w.gridSize||col>=w.gridSize||!surface.cliffs[row*w.gridSize+col])return false;
         return true;
       };
@@ -234,6 +246,18 @@ const WESTMARK_BATTLEFIELD: BattlefieldDefinition = {
         builder.place('westmarkTrunk',x,y,z,scale,scale,scale,0xffffff,yaw,0,0,0,1,'static','BARK');
         builder.place('westmarkSpruce',x,y,z,scale,scale,scale,0xffffff,yaw,0,0,0,1,'static','FOLIAGE');
       }
+    }
+    // Partly buried bank stones interrupt the shoreline, entirely on existing blockers.
+    const shore=builder.cosmeticRandom(0x53484f52);
+    for(let j=0;j<360;j++) {
+      const segment=WESTMARK_SEGMENTS[Math.floor(shore()*WESTMARK_SEGMENTS.length)],t=shore(),side=shore()<.5?-1:1,
+        length=Math.sqrt(segment.length2)||1,r=.35+shore()*.85,
+        offset=(segment.a.r+(segment.b.r-segment.a.r)*t-.8+shore()*2.4)*side,
+        x=segment.a.x+segment.dx*t-segment.dz/length*offset,
+        z=segment.a.z+segment.dz*t+segment.dx/length*offset,yaw=shore()*Math.PI*2,sy=r*(.6+shore()*.6);
+      const patch=Math.sin(x*.12+Math.cos(z*.1)*2)+Math.cos(z*.16-x*.04);
+      if(patch<.35||plan.bridgeAt(x,z,r+1.5)||plan.reserve(x,z)<r+2||plan.road(x,z)<r+2||!insideBlock(x,z,r))continue;
+      builder.place('rockBoulder',x,surface.heightAt(x,z)-.2,z,r,sy,r*.8,0x899080,yaw,0,0,0,1,'static','ROCK');
     }
     w.staticGrid.set(surface.cliffs);w.terrainFeatureGrid.set(surface.cliffs);
     for(let i=0;i<w.staticGrid.length;i++) {

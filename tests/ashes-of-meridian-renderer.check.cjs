@@ -506,13 +506,15 @@ test('bloom uses two quarter-size targets, three ordered passes and a clean allo
 test('scene geometry and blended effects resolve exactly once before post-processing', () => {
   const h = setup(); h.r.resize(); h.calls.length = 0; h.r.render(1);
   assert.deepEqual(Array.from(h.calls.find(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'shadow')[5]),
-    ['terrain','alienLanternPool'],'flat ground and projected light are not submitted as shadow casters');
+    ['terrain','alienLanternPool','westmarkWater'],'flat ground, projected light and water are not submitted as shadow casters');
   const staticScene=h.calls.filter(c => c[0] === 'batch' && c[1] === 'static' && c[2] === 'scene');
   assert.strictEqual(staticScene[0][4], h.r.vp,'static scene chunks use the camera projection for culling');
-  assert.equal(staticScene[0][5],'alienLanternPool','projected light is excluded from the opaque static pass');
-  assert.equal(staticScene[1][6],'alienLanternPool','projected light receives its own blended static pass');
+  assert.deepEqual(Array.from(staticScene[0][5]),['alienLanternPool','westmarkWater'],'translucent surfaces are excluded from the opaque static pass');
+  assert.equal(staticScene[1][6],'westmarkWater','water blends after opaque ground, bridge and units');
+  assert.equal(staticScene[2][6],'alienLanternPool','projected light retains its own blended static pass');
+  assert.ok(h.calls.findIndex(c=>c[0]==='batch'&&c[1]==='dynamic'&&c[2]==='scene')<h.calls.indexOf(staticScene[1]));
   assert.ok(h.calls.findIndex(c=>c[0]==='depthMask'&&c[1]===false)<h.calls.indexOf(staticScene[1]),
-    'overlapping projected lights blend without depth writes');
+    'water and projected lights blend without depth writes');
   const resolve = h.calls.findIndex(c => c[0] === 'resolve');
   assert.equal(h.calls.filter(c => c[0] === 'resolve').length, 1);
   assert.deepEqual(h.calls[resolve], ['resolve', h.r.sceneMSAAFbo, h.r.sceneFbo,

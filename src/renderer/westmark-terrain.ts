@@ -27,22 +27,27 @@
     }
     return out;
   };
-  TerrainModels.westmarkWater=()=>{
-    const out:number[]=[];
-    for(const river of WESTMARK_RIVERS) {
-      let along=0;
-      for(let j=0;j<river.length-1;j++) {
-        const a=river[j],b=river[j+1],before=river[Math.max(0,j-1)],after=river[Math.min(river.length-1,j+2)],
-          side=(p:Position,q:Position)=>V.norm([-(q.z-p.z),0,q.x-p.x]),sa=side(before,b),sb=side(a,after),
-          next=along+Math.hypot(b.x-a.x,b.z-a.z),fall=Math.abs(b.y-a.y)/Math.max(.001,next-along),
-          point=(p:typeof a,s:number[],u:number)=>[p.x+s[0]*(p.r+.9)*u,p.y,p.z+s[2]*(p.r+.9)*u];
-        for(let k=0;k<8;k++) {
-          const u=k/8*2-1,v=(k+1)/8*2-1,points=[point(a,sa,u),point(b,sb,u),point(b,sb,v),point(a,sa,v)],
-            uv=[[k/8,along,fall],[k/8,next,fall],[(k+1)/8,next,fall],[(k+1)/8,along,fall]],
-            n=V.norm(V.cross(V.sub(points[1],points[0]),V.sub(points[2],points[0])));
-          for(const i of [0,1,2,0,2,3])out.push(...points[i],...n,...uv[i]);
+  TerrainModels.westmarkWater=(field:WorldRelief)=>{
+    const out:number[]=[],{size,step,extent,heights,colors}=field;
+    const vertex=(i:number)=>[(i%size-1)*step-extent,heights[i],(Math.floor(i/size)-1)*step-extent,
+      colors![i*3],colors![i*3+1],colors![i*3+2]];
+    for(let row=1;row<size-2;row++)for(let col=1;col<size-2;col++) {
+      const a=row*size+col,b=a+1,c=a+size+1,d=a+size;
+      for(const indices of [[a,d,c],[a,c,b]]) {
+        if(indices.every(i=>colors![i*3]<=0))continue;
+        const input=indices.map(vertex),polygon:number[][]=[];
+        for(let i=0;i<3;i++) {
+          const p=input[i],q=input[(i+1)%3];
+          if(p[3]>=0)polygon.push(p);
+          if(p[3]*q[3]<0) {
+            const t=p[3]/(p[3]-q[3]);polygon.push(p.map((v,k)=>v+(q[k]-v)*t));
+          }
         }
-        along=next;
+        for(let i=1;i<polygon.length-1;i++) {
+          const points=[polygon[0],polygon[i],polygon[i+1]],
+            normal=V.norm(V.cross(V.sub(points[1].slice(0,3),points[0].slice(0,3)),V.sub(points[2].slice(0,3),points[0].slice(0,3))));
+          for(const p of points)out.push(...p.slice(0,3),...normal,Math.max(0,p[3]),p[4],p[5]);
+        }
       }
     }
     return out;
@@ -50,7 +55,22 @@
   TerrainModels.westmarkBridge=(b:WorldTerrainFeature)=>{
     const out:number[]=[],c=Math.cos(b.yaw),s=Math.sin(b.yaw),
       p=(u:number,y:number,v:number)=>[b.x+u*c+v*s,y,b.z-u*s+v*c],
-      quad=(a:number[],b:number[],c:number[],d:number[])=>{geom.tri(out,a,b,c);geom.tri(out,a,c,d);};
+      quad=(a:number[],b:number[],c:number[],d:number[],tint=[.58,.60,.56])=>{geom.tri(out,a,b,c,tint);geom.tri(out,a,c,d,tint);},
+      rand=seeded(b.seed^0x42524944);
+    // Chamfered stone blocks: mortar joints, coping and paving are actual geometry.
+    // The roadway stays below the CPU deck; all raised masonry stays in the parapet band.
+    const block=(u:number,v:number,w:number,d:number,bottom:number,top:number,shade:number,sides=true)=>{
+      const bevel=Math.min(.065,w*.12,d*.12,(top-bottom)*.4),
+        lo=[[u-w/2,v-d/2],[u-w/2,v+d/2],[u+w/2,v+d/2],[u+w/2,v-d/2]],
+        hi=lo.map(([x,z])=>[x+Math.sign(u-x)*bevel,z+Math.sign(v-z)*bevel]),
+        tint=[shade,shade*.99,shade*.94],shoulder=sides?top-bevel:bottom;
+      quad(...hi.map(([x,z])=>p(x,top,z)) as [number[],number[],number[],number[]],tint);
+      for(let k=0;k<4;k++) {
+        const next=(k+1)%4,a=lo[k],d=lo[next],h=hi[k],j=hi[next];
+        if(sides)quad(p(a[0],bottom,a[1]),p(d[0],bottom,d[1]),p(d[0],shoulder,d[1]),p(a[0],shoulder,a[1]),tint);
+        quad(p(a[0],shoulder,a[1]),p(d[0],shoulder,d[1]),p(j[0],top,j[1]),p(h[0],top,h[1]),tint);
+      }
+    };
     const steps=Math.ceil(b.width*2/2);
     for(let j=0;j<steps;j++) {
       const a=-b.width+j*b.width*2/steps,d=-b.width+(j+1)*b.width*2/steps,
@@ -71,6 +91,38 @@
         quad(p(hi,y0,v0),p(hi,y1,v0),p(hi,y1,v1),p(hi,y0,v1));
       }
       quad(p(a,under(a),-b.depth),p(d,under(d),-b.depth),p(d,under(d),b.depth),p(a,under(a),b.depth));
+    }
+    const rows=Math.ceil((b.depth-1.1)*2/1.15),rowDepth=(b.depth-1.1)*2/rows;
+    for(let row=0;row<rows;row++) {
+      const v=-b.depth+1.1+(row+.5)*rowDepth,stagger=(row%2)*.8;
+      for(let u=-b.width-1.6+stagger;u<b.width;u+=1.6) {
+        const lo=Math.max(-b.width,u),hi=Math.min(b.width,u+1.6);
+        if(hi-lo<.15)continue;
+        block((lo+hi)/2,v,hi-lo-.045,rowDepth-.04,b.height-.12,b.height-.045,.76+rand()*.24,false);
+      }
+    }
+    for(const side of [-1,1]) {
+      for(let row=0;row<3;row++)for(let u=-b.width;u<b.width;u+=1.5) {
+        const hi=Math.min(b.width,u+1.5),offset=row%2?.32:0;
+        const lo=Math.min(hi-.08,u+offset);
+        block((lo+hi)/2,side*(b.depth-.35),hi-lo-.035,.72,b.height-.08+row*.26,b.height+.16+row*.26,.74+rand()*.23);
+      }
+      for(let u=-b.width;u<b.width;u+=1.8) {
+        const hi=Math.min(b.width,u+1.8);
+        block((u+hi)/2,side*(b.depth-.35),hi-u-.035,.92,b.height+.70,b.height+.94,.92+rand()*.10);
+      }
+      for(const u of [-b.width+1.8,0,b.width-1.8]) {
+        block(u,side*(b.depth-.35),1.15,1.08,b.height-.12,b.height+1.1,.85);
+        block(u,side*(b.depth-.35),1.34,1.20,b.height+1.1,b.height+1.3,.99);
+      }
+      // Radial voussoirs emphasize the shallow arch above the water.
+      for(let j=0;j<24;j++) {
+        const a=-b.width+j*b.width/12,d=-b.width+(j+1)*b.width/12,
+          under=(u:number)=>b.height-2.8+2.05*Math.sqrt(Math.max(0,1-(u/b.width)**2)),v=side*(b.depth+.015),
+          tint=[.76+rand()*.2,.76+rand()*.15,.70+rand()*.15];
+        quad(p(a+.025,under(a)+.04,v),p(d-.025,under(d)+.04,v),
+          p(d-.025,under(d)+.40,v),p(a+.025,under(a)+.40,v),tint);
+      }
     }
     return out;
   };

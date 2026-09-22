@@ -824,7 +824,7 @@
           g.polygonOffset(1.5, 2);
           // The flat ground receives shadows in the scene pass but cannot cast a visible one itself.
           this.drawBatches(this.static, this.lightVP,
-            this.surface ? 'alienLanternPool' : ['terrain', 'alienLanternPool']);
+            this.surface ? ['alienLanternPool', 'westmarkWater'] : ['terrain', 'alienLanternPool', 'westmarkWater']);
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
         }
@@ -896,11 +896,14 @@
           g.bindTexture(g.TEXTURE_2D, this[`${name}Tex`]);
           g.uniform1i(this.uniform(this.program, uniform), unit);
         }
-        this.drawBatches(this.static, this.vp, 'alienLanternPool');
+        this.drawBatches(this.static, this.vp, ['alienLanternPool', 'westmarkWater']);
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);
         g.blendFunc(g.SRC_ALPHA, g.ONE_MINUS_SRC_ALPHA);
         g.depthMask(false);
+        // A single non-overlapping water field blends over the riverbed/underwater stones,
+        // behind the opaque bridge. No depth writes, extra framebuffer or reflection pass.
+        this.drawBatches(this.static, this.vp, undefined, 'westmarkWater');
         // Persistent projected light is translucent static geometry: blend it without depth writes so
         // overlapping cyan/plum pools cannot fight over the same ground plane while the camera moves.
         this.drawBatches(this.static, this.vp, undefined, 'alienLanternPool');

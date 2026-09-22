@@ -25,6 +25,15 @@ for(const seed of [1409,43015,7919])test(`Westmark ${seed}: all public starts an
     for(const p of path.points){assert.ok(w.lineFree(previous,p,radius));previous=p;}
   }
   for(const p of starts)assert.equal(w.surface.visibilityLevelAt(p.x,p.z),0,'no implicit new high-ground rule');
+  const bankStones=w.renderData.placements.filter(p=>p.mesh==='rockBoulder'&&
+    !w.rocks.some(r=>r.x===p.position[0]&&r.z===p.position[2]));
+  assert.ok(bankStones.length>0&&bankStones.length<=360);
+  for(const p of bankStones) {
+    const [x,,z]=p.position,r=p.scale[0],cell=v=>Math.floor((v+w.extent)/w.cellSize);
+    assert.ok(!plan.bridgeAt(x,z,r+1.5)&&plan.reserve(x,z)>=r+2&&plan.road(x,z)>=r+2);
+    for(let row=cell(z-r);row<=cell(z+r);row++)for(let col=cell(x-r);col<=cell(x+r);col++)
+      assert.equal(w.staticGrid[row*w.gridSize+col],1,'bank stones never obstruct a traversable cell');
+  }
   const trees=w.renderData.placements.filter(p=>p.mesh==='westmarkSpruce'),
     anchors=trees.filter(p=>p.scale[0]>=.64),young=trees.filter(p=>p.scale[0]<.64);
   assert.ok(anchors.length>0&&young.length>=anchors.length,'existing groves gain at least one younger tree per anchor on average');
@@ -129,6 +138,42 @@ test('Westmark mesh descriptors use bounded finite geometry and CPU surface samp
   for(const b of plan.bridges) {
     const hit=w.surface.ray([b.x,50,b.z],[b.x,0,b.z]);
     assert.ok(hit&&Math.hypot(hit.x-b.x,hit.z-b.z)<1e-6,'picking selects the deck, not the river bed');
+  }
+});
+
+test('water clips a single field without overlapping strips or degenerate shoreline triangles',()=>{
+  const field={extent:1,step:1,size:5,innerExtent:0,heights:new Float32Array(25),colors:new Float32Array(75)};
+  const build=()=>TerrainModels.geometry({mesh:'westmarkWater',model:'westmarkWater',relief:field});
+  const area=mesh=>{
+    let total=0;
+    for(let i=0;i<mesh.length;i+=27) {
+      const cross=(mesh[i+9]-mesh[i])*(mesh[i+20]-mesh[i+2])-(mesh[i+11]-mesh[i+2])*(mesh[i+18]-mesh[i]);
+      assert.ok(Math.abs(cross)>1e-9,'no collapsed clipped triangles');total+=Math.abs(cross)/2;
+      for(const j of [i,i+9,i+18])assert.ok(mesh[j+6]>=0&&Math.abs(mesh[j+4]-1)<1e-6);
+    }
+    return total;
+  };
+  for(let i=0;i<25;i++)field.colors.set([1,1,0],i*3);
+  assert.equal(area(build()),4,'each cell is covered once, including shared edges');
+  for(let i=0;i<25;i++)field.colors[i*3]=i%5-2;
+  assert.equal(area(build()),2,'zero-depth vertices clip exactly at the bank');
+  for(let i=0;i<25;i++)field.colors[i*3]=-1;
+  assert.equal(build().length,0,'dry terrain does not receive water geometry');
+});
+
+test('detailed bridge masonry leaves the full central roadway below the CPU deck',()=>{
+  for(const b of vm.runInContext('westmarkBridges()',context)) {
+    const mesh=TerrainModels.geometry({mesh:'bridge',model:'westmarkBridge',feature:b});
+    assert.ok(mesh.length/27<10000,'bounded masonry detail');
+    let paving=0,raised=0;
+    for(let i=0;i<mesh.length;i+=9) {
+      const local=westmarkBridgePoint(b,mesh[i],mesh[i+2]);
+      if(Math.abs(local.v)<b.depth-1.05) {
+        assert.ok(mesh[i+1]<=b.height,'no stone blocks project into vehicle clearance');
+        if(mesh[i+1]>b.height-.1)paving++;
+      }else if(mesh[i+1]>b.height+.8)raised++;
+    }
+    assert.ok(paving>100&&raised>100,'paving and raised coping are actual geometry');
   }
 });
 
