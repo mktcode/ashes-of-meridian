@@ -4,6 +4,7 @@
       showHome(this: MeridianUI) {
         this.multiplayer?.disconnect();
         this.game.s = null;
+        this.battleIntro = null;
         this.view = 'home';
         this.paused = true;
         this.audio.setMode?.('menu');
@@ -137,7 +138,7 @@
         }
       },
       pause(this: MeridianUI) {
-        if (this.view !== 'game' || !this.game.s || this.game.s!.result) return;
+        if (this.battleIntro || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = true;
         this.audio.setMode?.('silent');
         this.clearMode();
@@ -157,7 +158,7 @@
         );
       },
       resume(this: MeridianUI) {
-        if (this.view !== 'game' || !this.game.s || this.game.s!.result) return;
+        if (this.battleIntro || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = false;
         this.modalKind = '';
         $('modal').classList.add('hidden');

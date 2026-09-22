@@ -1,7 +1,53 @@
     /* MeridianUI minimap and battlefield overlay drawing. Loaded after ui/core.js. */
     'use strict';
+    const BATTLE_INTRO_BY_STAGE: Partial<Record<number, { hold: number; travel: number }>> = {
+      1: { hold: 2.5, travel: 1.25 }
+    };
     const uiPresentationMethods = {
+      beginBattleIntro(this: MeridianUI) {
+        this.battleIntro = null;
+        const s = this.game.s, timing = s && BATTLE_INTRO_BY_STAGE[s.depth + 1];
+        if (!s || s.rules?.kind !== 'single-player' || !timing) return false;
+        const home = this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && e.type === 'hq')[0],
+          enemy = this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
+        if (!home || !enemy) return false;
+        const limit = this.game.world!.extent - 18,
+          cameraPoint = (e: Entity) => ({ x: clamp(e.x + 4, -limit, limit), z: clamp(e.z - 2, -limit, limit) }),
+          enemyCamera = cameraPoint(enemy), homeCamera = cameraPoint(home);
+        this.battleIntro = {
+          elapsed: 0,
+          hold: timing.hold,
+          travel: timing.travel,
+          enemy: enemyCamera,
+          home: homeCamera,
+          visibleEntityIds: new Set([enemy.id])
+        };
+        s.cam.x = enemyCamera.x;
+        s.cam.z = enemyCamera.z;
+        this.paused = true;
+        return true;
+      },
+      advanceBattleIntro(this: MeridianUI, dt: number) {
+        const intro = this.battleIntro, s = this.game.s;
+        if (!intro || !s) return;
+        intro.elapsed += Math.max(0, Number.isFinite(dt) ? dt : 0);
+        const progress = clamp((intro.elapsed - intro.hold) / intro.travel, 0, 1),
+          eased = progress * progress * (3 - 2 * progress);
+        s.cam.x = intro.enemy.x + (intro.home.x - intro.enemy.x) * eased;
+        s.cam.z = intro.enemy.z + (intro.home.z - intro.enemy.z) * eased;
+        if (intro.elapsed < intro.hold + intro.travel) return;
+        const pendingRadio = intro.pendingRadio;
+        this.battleIntro = null;
+        this.paused = false;
+        this.updateHUD();
+        this.audio.setMode?.('battle');
+        if (pendingRadio) this.radio(pendingRadio);
+      },
+      introObserves(this: MeridianUI, e: Entity) {
+        return !!this.battleIntro?.visibleEntityIds.has(e.id);
+      },
       tick(this: MeridianUI, dt: number) {
+        this.advanceBattleIntro(dt);
         let now = performance.now();
         if (this.toastUntil && now > this.toastUntil) {
           $('toast').classList.remove('show');

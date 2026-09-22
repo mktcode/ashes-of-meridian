@@ -148,11 +148,13 @@
             entities: s.entities.map(e => ui.multiplayer!.displayEntity(e)) } : s;
           worldView.sync(world);
           R.camera(s.cam.x, s.cam.z, s.cam.zoom);
-          R.fogOn = true;
+          // Stage intros are presentation-only: show the terrain and featured HQ without
+          // mutating either party's visibility/exploration buffers.
+          R.fogOn = !ui.battleIntro;
           const selectedIds = ui.selectionIds();
           for (let e of viewState.entities) {
             if (e.hp <= 0) continue;
-            if (!game.observed(e)) continue;
+            if (!game.observed(e) && !ui.introObserves(e)) continue;
             let p = R.project(e.x, 0, e.z);
             const v = R.viewport;
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))

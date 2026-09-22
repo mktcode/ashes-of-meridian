@@ -50,6 +50,7 @@
             return;
           }
           if (b.dataset.cam) {
+            if (this.battleIntro) return;
             if (b.dataset.cam === 'home') this.homeCamera();
             else if (this.game.s)
               this.game.s!.cam.zoom = clamp(

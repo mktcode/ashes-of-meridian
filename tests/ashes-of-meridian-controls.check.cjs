@@ -222,6 +222,53 @@ test('each battle start resets the music playlist before playback, but resume do
   assert.equal(calls.filter(value => value === 'reset').length, 2);
 });
 
+test('stage one holds simulation and controls while the camera introduces the enemy HQ, then travels home', () => {
+  const h = setup(), modes = [];
+  h.ui.audio.resetBattleMusic = () => modes.push('reset');
+  h.ui.audio.setMode = mode => modes.push(mode);
+  h.ui.game.s.depth = 0;
+  h.ui.game.s.rules = { kind: 'single-player' };
+  h.ui.game.s.entities = [
+    { id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, x: -60, z: 50 },
+    { id: 2, team: 1, kind: 'building', type: 'hq', hp: 100, x: 80, z: -70 }
+  ];
+  const explored = Array.from(h.ui.game.world.explored);
+  h.ui.event('start', {});
+  assert.equal(h.ui.paused, true);
+  assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
+  assert.equal(h.ui.introObserves(h.ui.game.s.entities[1]), true);
+  assert.equal(h.ui.introObserves(h.ui.game.s.entities[0]), false);
+  assert.deepEqual(modes, ['reset', 'silent']);
+  h.ui.resume(); h.ui.pause();
+  assert.equal(h.ui.paused, true, 'normal pause controls cannot bypass the intro');
+
+  h.ui.advanceBattleIntro(2.5);
+  assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
+  h.ui.advanceBattleIntro(.625);
+  assert.deepEqual(h.ui.game.s.cam, { x: 8, z: -12, zoom: 50 });
+  h.ui.advanceBattleIntro(.625);
+  assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
+  assert.equal(h.ui.battleIntro, null);
+  assert.equal(h.ui.paused, false);
+  assert.equal(h.ui.game.s.time, 0);
+  assert.deepEqual(Array.from(h.ui.game.world.explored), explored);
+  assert.deepEqual(modes, ['reset', 'silent', 'battle']);
+});
+
+test('later stages skip the stage-one camera introduction', () => {
+  const h = setup();
+  h.ui.game.s.depth = 1;
+  h.ui.game.s.rules = { kind: 'single-player' };
+  h.ui.game.s.entities = [
+    { id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, x: -60, z: 50 },
+    { id: 2, team: 1, kind: 'building', type: 'hq', hp: 100, x: 80, z: -70 }
+  ];
+  h.ui.event('start', {});
+  assert.equal(h.ui.battleIntro, null);
+  assert.equal(h.ui.paused, false);
+  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
+});
+
 test('world picking and captured releases outside the viewport cannot issue orders or target abilities', () => {
   for (const pointerType of ['touch', 'mouse']) for (const y of [40, 610]) {
     const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];

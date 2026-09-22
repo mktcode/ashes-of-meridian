@@ -11,6 +11,15 @@
     type UIMode = { kind: 'build'; arg: BuildingType } | { kind: 'ability'; arg: AbilityType } | { kind: 'rally'; arg?: undefined };
     type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'building';
     interface UIPing extends Position { life: number; maxLife: number; color: number; }
+    interface BattleIntro {
+      elapsed: number;
+      hold: number;
+      travel: number;
+      enemy: Position;
+      home: Position;
+      visibleEntityIds: Set<number>;
+      pendingRadio?: string;
+    }
     class MeridianUI {
       persistence: MeridianPersistence;
       game: MeridianGame;
@@ -53,6 +62,7 @@
       miniBuffer?: HTMLCanvasElement;
       miniCtx?: CanvasRenderingContext2D;
       miniImage?: ImageData;
+      battleIntro: BattleIntro | null;
       constructor(game: MeridianGame, renderer: MeridianRenderer, audio: MeridianAudio, profile: MeridianProfile, persistence: MeridianPersistence) {
         this.persistence = persistence;
         this.game = game;
@@ -81,6 +91,7 @@
         this.factionJustUnlocked = null;
         this.hudClock = 0;
         this.touchPoints = new Map();
+        this.battleIntro = null;
         this.bind();
       }
       get localTeam(): PlayerTeam { return this.game.localTeam; }
@@ -133,7 +144,6 @@
         if (type === 'start') {
           this.view = 'game';
           this.audio.resetBattleMusic?.();
-          this.audio.setMode?.('battle');
           this.factionJustUnlocked = null;
           this.resultAetherRecovered = undefined;
           this.resultBenefit = undefined;
@@ -156,10 +166,15 @@
           this.mode = null;
           this.tab = 'root';
           this.actionSignature = '';
+          this.beginBattleIntro();
+          this.audio.setMode?.(this.battleIntro ? 'silent' : 'battle');
           this.updateHUD();
           this.clearMode();
         } else if (type === 'toast') this.toast(data);
-        else if (type === 'radio') this.radio(data);
+        else if (type === 'radio') {
+          if (this.battleIntro) this.battleIntro.pendingRadio = data;
+          else this.radio(data);
+        }
         else if (type === 'alert') this.alert(data);
         else if (type === 'order') {
           this.audio.sound('order');
