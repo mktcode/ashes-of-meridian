@@ -226,13 +226,20 @@
         if (!(k in map)) map[k] = this.gl.getUniformLocation(p, k);
         return map[k];
       }
-      geometry(name: string, data: MeshData) {
-        const partsByName = this.meshParts ||= {}, oldParts = partsByName[name] || (this.meshes[name] ? [name] : []);
-        for (const part of oldParts) {
-          this.gl.deleteBuffer(this.meshes[part]?.vbo);
-          this.gl.deleteVertexArray(this.meshes[part]?.vao);
+      releaseGeometry(name: string) {
+        const parts = this.meshParts?.[name] || (this.meshes[name] ? [name] : []);
+        for (const part of parts) {
+          const mesh = this.meshes[part];
+          if (!mesh) continue;
+          this.gl.deleteBuffer(mesh.vbo);
+          this.gl.deleteVertexArray(mesh.vao);
           delete this.meshes[part];
         }
+        if (this.meshParts) delete this.meshParts[name];
+      }
+      geometry(name: string, data: MeshData) {
+        this.releaseGeometry(name);
+        const partsByName = this.meshParts ||= {};
         const chunkCounts = new Map<number, number>(), triangles = data.length / 27;
         let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
         for (let i = 0; i < data.length; i += 9) {

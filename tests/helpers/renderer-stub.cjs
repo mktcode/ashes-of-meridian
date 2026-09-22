@@ -6,6 +6,7 @@ function createRendererStub({ record = false } = {}) {
     fogPixels: null,
     clearStatic() { this.calls.length = 0; },
     geometry() {},
+    releaseGeometry() {},
     add(...args) { if (record) this.calls.push(args); },
     color(c) {
       if (Array.isArray(c) || c instanceof Float32Array) return c;

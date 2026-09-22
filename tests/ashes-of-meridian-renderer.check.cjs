@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { RENDERER_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 
 // API orchestration and shader-source contracts only: no GPU/GLSL execution in Node.
 test('metal/bio sampling uses scaled mesh-local positions and normals, not world coordinates', () => {
@@ -103,6 +103,82 @@ test('renderer reuses typed geometry and uploads a bucket transition to empty on
   occupied.n = 1; occupied.dirty = true;
   renderer.upload(renderer.dynamic);
   assert.equal(uploads.at(-1).data.length, 22, 'a reused bucket uploads new instances normally');
+});
+
+function geometryResidency(context) {
+  const Renderer = vm.runInContext('MeridianRenderer', context), buffers = new Map(), vaos = new Set();
+  let bound, uploads = 0, releases = 0;
+  const gl = new Proxy({
+    createBuffer() { const buffer = {}; buffers.set(buffer, 0); return buffer; },
+    createVertexArray() { const vao = {}; vaos.add(vao); return vao; },
+    bindBuffer(target, buffer) { bound = buffer; },
+    bufferData(target, data) { assert.ok(buffers.has(bound)); buffers.set(bound, data.byteLength); uploads++; },
+    deleteBuffer(buffer) { assert.ok(buffers.delete(buffer), 'delete a live VBO exactly once'); releases++; },
+    deleteVertexArray(vao) { assert.ok(vaos.delete(vao), 'delete a live VAO exactly once'); }
+  }, { get(target, name) {
+    if (!(name in target)) target[name] = () => {};
+    return target[name];
+  } });
+  const renderer = Object.assign(Object.create(Renderer.prototype), { gl, meshes: {}, meshParts: {}, static: {} });
+  return { renderer, buffers, vaos, get uploads() { return uploads; }, get releases() { return releases; },
+    get bytes() { return [...buffers.values()].reduce((sum, size) => sum + size, 0); } };
+}
+
+test('geometry replacement and release dispose every chunk without touching shared meshes', () => {
+  const context = loadScripts(RENDERER_SCRIPTS), h = geometryResidency(context), r = h.renderer;
+  const small = new Float32Array(27), vertices = [];
+  for (const x of [0, 64]) for (let triangle = 0; triangle < 32; triangle++)
+    for (const [px, pz] of [[x, 0], [x + .2, 0], [x, .2]]) vertices.push(px, 0, pz, 0, 1, 0, 1, 1, 1);
+  const wide = new Float32Array(vertices);
+  r.geometry('sharedUnit', small);
+  const shared = r.meshes.sharedUnit;
+  for (const data of [wide, small, wide]) {
+    r.geometry('world', data);
+    const parts = data === wide ? 2 : 1;
+    assert.equal(r.meshParts.world.length, parts);
+    assert.equal(h.buffers.size, parts + 1);
+    assert.equal(h.vaos.size, parts + 1);
+    assert.equal(Object.keys(r.meshes).length, parts + 1);
+    assert.equal(h.bytes, small.byteLength + data.byteLength);
+    assert.strictEqual(r.meshes.sharedUnit, shared);
+  }
+  r.releaseGeometry('world');
+  r.releaseGeometry('world');
+  r.releaseGeometry('absent');
+  assert.deepEqual(Object.keys(r.meshParts), ['sharedUnit']);
+  assert.deepEqual(Object.keys(r.meshes), ['sharedUnit']);
+  assert.equal(h.buffers.size, 1); assert.equal(h.vaos.size, 1);
+  assert.equal(h.bytes, small.byteLength);
+});
+
+test('map switches keep only current world meshes plus shared geometry, including returning to Desert', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
+  const { Battlefield, BattlefieldView, TerrainModels } = vm.runInContext('({Battlefield, BattlefieldView, TerrainModels})', context);
+  const h = geometryResidency(context), r = h.renderer, view = new BattlefieldView(r);
+  // Real map descriptors/ownership and GPU lifecycle; expensive model geometry has separate coverage.
+  TerrainModels.geometry = () => new Float32Array(27);
+  r.add = () => {}; r.fog = () => {};
+  r.geometry('sharedUnit', new Float32Array(27));
+  const shared = r.meshes.sharedUnit;
+  let firstDesertBytes;
+  for (const map of ['desert', 'westmark', 'mothership', 'alien-planet', 'desert']) {
+    const world = new Battlefield(1409, map), before = JSON.stringify(world.renderData);
+    const expected = new Set(['sharedUnit', 'terrain', ...world.renderData.geometries.map(d => d.mesh)]);
+    view.sync(world, false);
+    assert.deepEqual(new Set(Object.keys(r.meshParts)), expected, `${map}: no preceding map remains resident`);
+    const parts = Object.values(r.meshParts).flat();
+    assert.deepEqual(new Set(Object.keys(r.meshes)), new Set(parts));
+    assert.equal(h.buffers.size, parts.length); assert.equal(h.vaos.size, parts.length);
+    assert.strictEqual(r.meshes.sharedUnit, shared, 'shared model is never replaced or released');
+    const uploads = h.uploads, releases = h.releases;
+    view.sync(world, true); view.sync(world, false);
+    assert.equal(h.uploads, uploads); assert.equal(h.releases, releases, 'unchanged layout/fog changes do not churn geometry');
+    assert.equal(JSON.stringify(world.renderData), before, 'CPU terrain descriptors remain unchanged');
+    if (map === 'desert') {
+      if (firstDesertBytes === undefined) firstDesertBytes = h.bytes;
+      else assert.equal(h.bytes, firstDesertBytes, 'returning to Desert restores the original synthetic residency');
+    }
+  }
 });
 
 test('battlefield texture residency retains shared materials and releases map-only assets', async () => {
