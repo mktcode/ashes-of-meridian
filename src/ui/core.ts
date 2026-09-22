@@ -18,6 +18,7 @@
       enemy: Position;
       home: Position;
       visibleEntityIds: Set<number>;
+      objectiveShown: boolean;
       pendingRadio?: string;
     }
     class MeridianUI {

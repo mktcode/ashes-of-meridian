@@ -1,8 +1,10 @@
     /* MeridianUI minimap and battlefield overlay drawing. Loaded after ui/core.js. */
     'use strict';
     const BATTLE_INTRO_BY_STAGE: Partial<Record<number, { hold: number; travel: number }>> = {
-      1: { hold: 2.5, travel: 1.25 }
+      1: { hold: 5, travel: 1.25 }
     };
+    const BATTLE_INTRO_OBJECTIVE_DELAY = 1;
+    const BATTLE_INTRO_OBJECTIVE = 'Expedition command|Destroy the enemy base to advance.';
     const uiPresentationMethods = {
       beginBattleIntro(this: MeridianUI) {
         this.battleIntro = null;
@@ -20,7 +22,8 @@
           travel: timing.travel,
           enemy: enemyCamera,
           home: homeCamera,
-          visibleEntityIds: new Set([enemy.id])
+          visibleEntityIds: new Set([enemy.id]),
+          objectiveShown: false
         };
         s.cam.x = enemyCamera.x;
         s.cam.z = enemyCamera.z;
@@ -31,6 +34,10 @@
         const intro = this.battleIntro, s = this.game.s;
         if (!intro || !s) return;
         intro.elapsed += Math.max(0, Number.isFinite(dt) ? dt : 0);
+        if (!intro.objectiveShown && intro.elapsed >= BATTLE_INTRO_OBJECTIVE_DELAY) {
+          intro.objectiveShown = true;
+          this.radio(BATTLE_INTRO_OBJECTIVE);
+        }
         const progress = clamp((intro.elapsed - intro.hold) / intro.travel, 0, 1),
           eased = progress * progress * (3 - 2 * progress);
         s.cam.x = intro.enemy.x + (intro.home.x - intro.enemy.x) * eased;

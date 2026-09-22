@@ -38,7 +38,8 @@ test('screen templates render frozen data without DOM access, randomness or prof
 
 function setup() {
   const target = () => ({
-    handlers: {}, style: { setProperty(key, value) { this[key] = value; } }, classList: {
+    handlers: {}, firstChild: { textContent: '', remove() {} },
+    style: { setProperty(key, value) { this[key] = value; } }, classList: {
       names: new Set(), add(name) { this.names.add(name); }, remove(name) { this.names.delete(name); },
       contains(name) { return this.names.has(name); },
       toggle(name, on) { if (on) this.names.add(name); else this.names.delete(name); }
@@ -234,6 +235,7 @@ test('stage one holds simulation and controls while the camera introduces the en
   ];
   const explored = Array.from(h.ui.game.world.explored);
   h.ui.event('start', {});
+  h.ui.event('radio', 'Expedition command|Recruit your first two workers from Infantry.');
   assert.equal(h.ui.paused, true);
   assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
   assert.equal(h.ui.introObserves(h.ui.game.s.entities[1]), true);
@@ -242,12 +244,17 @@ test('stage one holds simulation and controls while the camera introduces the en
   h.ui.resume(); h.ui.pause();
   assert.equal(h.ui.paused, true, 'normal pause controls cannot bypass the intro');
 
-  h.ui.advanceBattleIntro(2.5);
+  h.ui.advanceBattleIntro(.999);
+  assert.equal(h.document.getElementById('radio').classList.contains('hidden'), true);
+  h.ui.advanceBattleIntro(.001);
+  assert.equal(h.document.getElementById('radioText').textContent, 'Destroy the enemy base to advance.');
+  h.ui.advanceBattleIntro(4);
   assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
   h.ui.advanceBattleIntro(.625);
   assert.deepEqual(h.ui.game.s.cam, { x: 8, z: -12, zoom: 50 });
   h.ui.advanceBattleIntro(.625);
   assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
+  assert.equal(h.document.getElementById('radioText').textContent, 'Recruit your first two workers from Infantry.');
   assert.equal(h.ui.battleIntro, null);
   assert.equal(h.ui.paused, false);
   assert.equal(h.ui.game.s.time, 0);
