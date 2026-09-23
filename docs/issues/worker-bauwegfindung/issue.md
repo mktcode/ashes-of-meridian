@@ -16,7 +16,7 @@ Die dauerhaften Regressionsfälle stehen in [den Navigationstests](../../../test
 
 Diese Befunde erklären eine passende Fehlerklasse, beweisen aber nicht den exakten Zustand eines der Screenshots. Die isolierten Kurztests sind kein Ersatz für Crowd-Langläufe oder menschliche Abnahme.
 
-Der vollständig freigegebene Simulationslauf auf `f0dba62` (Node v23.11.1) bestätigt den offenen Langlaufbefund: `worker traffic stays productive for six minutes: 1409/0/8, forced node true` scheitert mit `worker 64 stopped delivering in minute 1`. Die Variante ohne erzwungenen Knoten besteht. Ursache und Bezug zu den bisherigen Navigationseingriffen sind noch nicht eingegrenzt; keine Erwartungen, Radien oder Referenzen geändert.
+Der vollständig freigegebene Simulationslauf auf `f0dba62` (Node v23.11.1) zeigte zunächst einen vermeintlichen Langlaufbefund in `1409/0/8, forced node true`. Die Diagnose widerlegt einen Stillstand: Worker 64 hatte bei Sekunde 60 bereits volle Ladung und befand sich auf dem Rückweg, lieferte bis Sekunde 120 fünfmal und bis Minute 6 insgesamt 21-mal. Nur die feste Forderung nach einer abgeschlossenen Lieferung schon in jeder einzelnen Minute war für den künstlich auf einen Knoten gezwungenen Startpulk zu streng. Der Test erlaubt nun diese erste Anlaufminute nur bei nachweisbarem Abbaufortschritt und verlangt danach weiterhin von jedem Worker mindestens eine neue Lieferung je Minute; der vollständige Simulationsblock besteht mit 97/97 Fällen.
 
 ## Noch offen
 
@@ -24,7 +24,6 @@ Der vollständig freigegebene Simulationslauf auf `f0dba62` (Node v23.11.1) best
 - Tatsächlich unerreichbare Aufträge behalten ihren Auftrag und versuchen es mit begrenzter Retry-Frequenz erneut. Ein sichtbarer Blockiert-Status bzw. eine abschließende Fehlerreaktion fehlt noch; temporäre Einheitenbelegung darf nicht als dauerhafte Unerreichbarkeit behandelt werden.
 - Die Fortschrittsmessung ist weiterhin wegpunktbezogen, nicht auftragsweit. Wiederholte Yield-Manöver oder komplexe wechselnde Umwege können zusätzliche Liveness-Kontrolle benötigen. Servicepunkte sind bevorzugte Positionen, keine exklusiv reservierten Slots; eine allgemeine Fairness-/Gegenverkehrsgarantie besteht nicht.
 - Größenabhängige Terrain-Clearance, durchgängige Segment-Kollisionsprüfung und ein globales Suchbudget sind separate Erweiterungen. Bestehende Körperradien, Hindernisverteilung und RNG-Verträge dabei schützen.
-- Den oben genannten Minenverkehrsfall anhand von Auftrag, Ladung, Arbeitsbereich und Nachbargeometrie eingrenzen. Weitere Diagnose-Läufe gezielt freigeben lassen; keine breite Seed-/Kartenmatrix ohne konkreten Befund.
 
 ## Abhängigkeit: begehbare Höhenstufen
 

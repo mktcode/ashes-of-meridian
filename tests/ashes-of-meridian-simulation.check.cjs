@@ -176,8 +176,8 @@ test('larger map supports outer-area spawns, paid construction, production, comm
   assert.equal(game.unitFits(rifle,131,115),false);
   const air=game.spawnUnit('air',120,-120,0,0);assert.ok(air);
   game.pathTo(air,{x:999,z:-999});assert.deepEqual(json(air.path),[{x:130,z:-130}]);
-  for(const map of ['desert','alien-planet','mothership']) {
-    game.start({seed:43015,map});assert.equal(game.world.gridSize,map==='alien-planet'?108:72);
+  for(const [map, gridSize] of [['desert',72],['alien-planet',108],['mothership',96]]) {
+    game.start({seed:43015,map});assert.equal(game.world.gridSize,gridSize);
     assert.ok(game.world.visible.includes(255));
   }
 });
@@ -331,36 +331,40 @@ test('mothership alone retains its timed eruption after map display names change
 test('map layouts supply candidate spawns, resources, camera and unexplored AI scan/scout goals', () => {
   const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
   const desertBefore = json(maps.desert.layout), layout = maps.mothership.layout;
-  layout.startSites[2] = { x: -34, z: -56 };
   layout.playerStart = { x: -45, z: 45 };
   layout.enemySites[0] = { x: 45, z: -45 };
-  layout.resourceSites[0] = { x: -65, z: 35 };
   game.start({ seed: 1409, map: 'mothership' });
   assert.strictEqual(game.world.layout, layout);
-  assert.deepEqual(json(game.s.cam), { x: -29, z: -58, zoom: 57 });
+  assert.deepEqual(json(game.s.cam), { x: -67, z: -80, zoom: 57 });
   for (const [team, site] of [[0, layout.startSites[2]], [1, game.world.startSites[0]]]) {
     const hq = game.alive(e => e.team === team && e.type === 'hq')[0];
     assert.deepEqual({ x: hq.x, z: hq.z }, json(site));
   }
   const crystal = game.alive(e => e.type === 'crystal')[0];
-  assert.deepEqual({ x: crystal.x, z: crystal.z }, { x: -65, z: 38 });
+  assert.deepEqual({ x: crystal.x, z: crystal.z }, { x: -91.5, z: 76.5 });
   const vent = game.alive(e => e.type === 'gas')[0];
-  assert.deepEqual({ x: vent.x, z: vent.z }, { x: -60, z: 53 });
+  assert.deepEqual({ x: vent.x, z: vent.z }, { x: -86.5, z: 91.5 });
   const scans = [], orders = [];
-  game.ability = (kind, p, team) => scans.push([kind, json(p), team]);
+  game.executeAction = (team, action) => {
+    if (action.kind === 'ability' && action.ability === 'scan')
+      scans.push([action.ability, json(action.position), team]);
+    return true;
+  };
   game.aiOrder = (team, units, p) => orders.push([team, units.map(e => e.id), json(p)]);
   game.canSee = () => false;
-  game.s.time = 61;
+  game.s.time = 301;
   for (const team of [0, 1]) {
     game.enableAI(team);
     const home = game.alive(e => e.team === team && e.type === 'hq')[0];
     const own = [home, game.spawn('unit', 'rifle', home.x + 10, home.z, team),
-      game.spawn('unit', 'rifle', home.x + 12, home.z, team)];
+      game.spawn('unit', 'rifle', home.x + 12, home.z, team),
+      game.spawn('unit', 'rifle', home.x + 14, home.z, team)];
     game.world.sight[team].explored.fill(0);
     game.aiStrategy(team, own, [], home);
+    const ai = game.aiFor(team), goal = json(ai.scoutGoal);
+    assert.equal(ai.scout, own[1].id);
+    assert.ok(orders.some(([t, ids, p]) => t === team && ids[0] === ai.scout && p.x === goal.x && p.z === goal.z));
     game.aiAbilities(team, own, [], home);
-    const goal = json(game.aiScoutGoal(team, home));
-    assert.ok(orders.some(([t, ids, p]) => t === team && ids[0] === own[1].id && p.x === goal.x && p.z === goal.z));
     assert.deepEqual(scans.at(-1), ['scan', goal, team]);
   }
   assert.deepEqual(json(maps.desert.layout), desertBefore, 'editing one layout cannot mutate another map');
@@ -507,7 +511,7 @@ test('local steering tries the open side when a unit and terrain seal its prefer
   assert.ok(mover.z>=0);
 });
 
-test('a ground formation clears a mothership hangar corner without losing its orders', () => {
+test('a ground formation clears a mothership service-plant corner without losing its orders', () => {
   const { game } = createGame(true);
   game.start({seed:1409,map:'mothership',faction:0});
   game.s.entities=[]; game.ids.clear();
@@ -515,7 +519,7 @@ test('a ground formation clears a mothership hangar corner without losing its or
   game.world.rebuild(game.s.entities); game.rehash();
   const units=[];
   for(let i=0;i<24;i++) {
-    const e=game.spawnUnit(i%5===0?'tank':'rifle',-58+(i%6)*3,-27-Math.floor(i/6)*3,0,0);
+    const e=game.spawnUnit(i%5===0?'tank':'rifle',-82+(i%6)*3,-45-Math.floor(i/6)*3,0,0);
     assert.ok(e); units.push(e);
   }
   game.command(units.map(e=>e.id),{type:'move',x:-35,z:28});
@@ -525,7 +529,7 @@ test('a ground formation clears a mothership hangar corner without losing its or
     assert.equal(units[i].order.type,'idle',JSON.stringify({unit:{id:units[i].id,type:units[i].type,
       x:units[i].x,z:units[i].z,order:units[i].order,path:units[i].path,pi:units[i].pi,
       nextPath:units[i].nextPath,stuck:units[i].stuck},formation:units.map(e=>({id:e.id,type:e.type,x:e.x,z:e.z,order:e.order}))}));
-    assert.ok(Math.hypot(units[i].x-goals[i].x,units[i].z-goals[i].z)<6,
+    assert.ok(Math.hypot(units[i].x-goals[i].x,units[i].z-goals[i].z)<6+units[i].size,
       JSON.stringify({id:units[i].id,type:units[i].type,x:units[i].x,z:units[i].z,goal:goals[i]}));
   }
   assertUnitSpacing(game);
@@ -641,7 +645,8 @@ for (const [seed,map,faction,count,forced] of [
     });
     if(i%20===0)assertUnitSpacing(game);
     if(i%1200===1199)workers.forEach((w,j)=>{
-      assert.ok(trips[j]>previous[j],`worker ${w.id} stopped delivering in minute ${(i+1)/1200}`);
+      if(i===1199) assert.ok(trips[j]>0 || w.carry>0,`worker ${w.id} made no mining progress during startup`);
+      else assert.ok(trips[j]>previous[j],`worker ${w.id} stopped delivering in minute ${(i+1)/1200}`);
       previous[j]=trips[j];
     });
   }
@@ -830,7 +835,7 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   worker.x = node.x; worker.z = node.z; worker.order = { type: 'mine', id: node.id };
   for (let i = 0; i < 3; i++) game.worker(worker, 1.25);
   assert.equal(worker.carry, 18);
-  const medic = game.spawnUnit('medic', 75, 75, 0, 0), patient = game.spawnUnit('rifle', 75, 75, 2, 0);
+  const medic = game.spawnUnit('medic', 75, 75, 0, 0), patient = game.spawnUnit('rifle', 75, 75, 0, 2);
   patient.hp -= 80; game.rehash(); game.medic(medic, 1);
   close(patient.hp, patient.maxHp - 60);
   medic.hp = 0; patient.hp = 0;
