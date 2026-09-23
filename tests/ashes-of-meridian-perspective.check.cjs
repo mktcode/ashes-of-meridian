@@ -21,7 +21,8 @@ function fixture() {
   const base = { id: 4, team: 2, kind: 'building', type: 'hq', x: 0, z: 0, hp: 100, maxHp: 100, shield: 0 };
   game.s = { rules: { kind: 'scenario', hostilities: Array.from({ length: 4 }, (_, a) => Array.from({ length: 4 }, (_, b) => a !== b)), duration: 1 },
     parties: Array.from({ length: 4 }, (_, id) => ({ id, controller: { kind: 'human' } })),
-    entities: [medic, patient, victim, base], time: 1, stats: { damage: 0, kills: 0, lost: 0 }, triggers: {} };
+    entities: [medic, patient, victim, base], fields: [], time: 1,
+    stats: { damage: 0, kills: 0, lost: 0 }, triggers: {} };
   game.near = (x, z, radius, predicate) => game.s.entities.filter(predicate);
   game.resetRandom(1409);
   return { game, world, events, medic, patient, victim, base };

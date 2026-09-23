@@ -16,7 +16,8 @@ function fixture() {
   const sight = { visible: new Uint8Array([255, 255, 0]), explored: new Uint8Array([1, 1, 0]) };
   const game = { s, world: { sight: [sight], idx: x => x }, commandQueue: { tick: 7 },
     canSee: (team, e) => team === e.team || !!sight.visible[e.x],
-    party: team => ({ id: team, faction: 0, account: { alloy: 100, gas: 0, energy: 10, abilities: {} } }) };
+    party: team => ({ id: team, faction: 0, loadout: ['orbital', 'repair', 'scan', 'drop'],
+      account: { alloy: 100, gas: 0, energy: 10, abilities: {} } }) };
   return { game, sight };
 }
 test('party projection excludes hidden entities, opponent internals and hidden attack targets without mutating simulation', () => {

@@ -20,8 +20,9 @@
             // The explicitly launched spectator run must not read or mutate the normal profile.
             getStorage: () => visibleSimulation || mapExperiment ? volatileStorage : localStorage,
             clamp,
-            upgrades: META,
+            upgrades: PERMANENT_UPGRADES,
             benefits: EXPEDITION_BENEFITS,
+            abilities: ABILITIES,
             enemyCount: expeditionEnemyCount,
             battlefields: BATTLEFIELDS,
             warn: (...args) => console.warn(...args)
@@ -235,17 +236,10 @@
                 ring(foundation.x, foundation.z, d.size + 0.6, col, 0.9);
               }
             } else if (ui.mode.kind === 'ability') {
-              let kind = ui.mode.arg,
-                rad =
-                  kind === 'scan'
-                    ? 32
-                    : kind === 'orbital'
-                      ? s.parties[game.localTeam].faction === FACTION_ID.THIRD
-                        ? 8
-                        : 10
-                      : kind === 'repair'
-                        ? 12
-                        : 4;
+              let kind = ui.mode.arg, stats = game.abilityStats(kind, game.localTeam),
+                rad = kind === 'scan' ? stats.scanRadius! : kind === 'orbital'
+                  ? s.parties[game.localTeam].faction === FACTION_ID.THIRD ? 8 : 10
+                  : stats.radius || 4;
               ring(p.x, p.z, rad, kind === 'orbital' ? 0xf4c080 : 0x9bdddd, 0.75, 0.12);
               ring(p.x, p.z, 0.6, 0xf1deae, 0.8, 0.14);
             } else ring(p.x, p.z, 1.3, 0xa2ddd5, 0.9, 0.12);
@@ -369,7 +363,7 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 3, faction: 0, depth: 0, benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
+          ui.expedition = { version: 4, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
             encounter: {map: westmarkExperiment ? 'westmark' : 'mothership', seed: 1409, enemies: [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {

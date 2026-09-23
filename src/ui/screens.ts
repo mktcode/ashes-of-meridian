@@ -26,7 +26,7 @@
       },
       encounterBriefing(this: MeridianUI) {
         if (!this.expedition?.encounter) return '';
-        return `<div class="battle-note">${renderExpeditionOpponents(this.expedition)}</div>`;
+        return `<div class="battle-note">${renderAbilityLoadout(this.expedition.abilities, this.profile)}${renderExpeditionOpponents(this.expedition)}</div>`;
       },
       showExpeditionBenefits(this: MeridianUI) {
         if (!this.expedition) return;
@@ -34,7 +34,7 @@
           count > 0 && Object.hasOwn(EXPEDITION_BENEFITS, key));
         this.openModal(
           'expeditionBenefits',
-          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Run benefits.</h1><div class="expedition-benefit-list">${active.length ? active.map(([key, count]) => { const benefit = expeditionBenefit(key)!; return `<div class="expedition-benefit-row"><span class="sigil">${icon(benefit.icon)}</span><div><strong>${esc(benefit.name)}</strong><small>${esc(benefit.desc)}</small></div><b>×${count}</b></div>`; }).join('') : '<p class="empty-benefits">No benefits collected yet. Win this battle to choose your first.</p>'}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`
+          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Run benefits.</h1>${renderAbilityLoadout(this.expedition.abilities, this.profile)}<div class="expedition-benefit-list">${active.length ? active.map(([key, count]) => { const benefit = expeditionBenefit(key)!; return `<div class="expedition-benefit-row"><span class="sigil">${icon(benefit.icon)}</span><div><strong>${esc(benefit.name)}</strong><small>${esc(benefit.desc)}</small></div><b>×${count}</b></div>`; }).join('') : '<p class="empty-benefits">No benefits collected yet. Win this battle to choose your first.</p>'}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`
         );
       },
       showBattle(this: MeridianUI) {
@@ -50,8 +50,11 @@
         if (!this.factionUnlocked(this.battleFaction)) this.battleFaction = FACTION_ID.FIRST;
         let startingAlloyLevel = clamp(Math.floor(Number(this.profile.upgrades.startingAlloy) || 0), 0, STARTING_ALLOY.length - 1),
           startingAlloy = STARTING_ALLOY[startingAlloyLevel];
-        $('menu').innerHTML =
-          renderBattleScreen(this.profile, this.battleFaction, this.unlockedFactionForDepth(this.profile.expeditionDepth), startingAlloy);
+        if (this.battleAbilities.length > 4 || new Set(this.battleAbilities).size !== this.battleAbilities.length ||
+            this.battleAbilities.some(key => !Object.hasOwn(ABILITIES, key)))
+          this.battleAbilities = [...DEFAULT_ABILITY_LOADOUT];
+        $('menu').innerHTML = renderBattleScreen(this.profile, this.battleFaction,
+          this.unlockedFactionForDepth(this.profile.expeditionDepth), startingAlloy, this.battleAbilities);
       },
       unlockedFactionForDepth(this: MeridianUI, depth: number): FactionId {
         let unlocked: FactionId = FACTION_ID.FIRST;
@@ -75,10 +78,21 @@
       createBenefitOffers(this: MeridianUI, expedition: MeridianExpedition) {
         return expeditionBenefitOffers(expedition.benefits, seeded(expedition.encounter.seed + expedition.depth * 7919));
       },
+      selectBattleAbility(this: MeridianUI, ability: AbilityType) {
+        if (this.expedition) return;
+        const index = this.battleAbilities.indexOf(ability);
+        if (index >= 0) this.battleAbilities.splice(index, 1);
+        else if (this.battleAbilities.length < 4) this.battleAbilities.push(ability);
+        else { this.toast('Deselect a command module before choosing another.'); return; }
+        this.showBattle();
+      },
       startBattle(this: MeridianUI) {
         const faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : FACTION_ID.FIRST;
+        if (this.battleAbilities.length !== 4 || new Set(this.battleAbilities).size !== 4) {
+          this.toast('Select four command modules.'); return;
+        }
         this.battleFaction = faction;
-        this.expedition = { version: 3, faction, depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
+        this.expedition = { version: 4, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
         this.persistence.saveExpedition(this.expedition);
         this.startExpeditionBattle();
       },
@@ -86,7 +100,8 @@
         if (!this.expedition) return;
         this.audio.unlock();
         const options: BattleOptions = { faction: this.expedition.faction, ...this.expedition.encounter,
-          benefits: this.expedition.benefits, enemyBenefits: this.expedition.enemyBenefits, depth: this.expedition.depth };
+          abilities: this.expedition.abilities, benefits: this.expedition.benefits,
+          enemyBenefits: this.expedition.enemyBenefits, depth: this.expedition.depth };
         if (this.onLaunchBattle) this.onLaunchBattle(options);
         else this.game.start(options);
       },
@@ -209,8 +224,8 @@
         );
       },
       buyUpgrade(this: MeridianUI, key: string) {
-        if (!hasContentKey(META, key)) return;
-        let m = META[key];
+        if (!hasContentKey(PERMANENT_UPGRADES, key)) return;
+        let m = PERMANENT_UPGRADES[key];
         let n = this.profile.upgrades[key] || 0, cost = m.costs[n];
         if (n >= m.max || !Number.isFinite(cost) || this.profile.aether < cost) return;
         this.profile.aether -= cost;

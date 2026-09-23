@@ -77,7 +77,7 @@ function multiplayerFrame(game: MeridianGame, team: PlayerTeam, resources: Map<n
   entities.push(...resources.values());
   const party = game.party(team);
   return { type: 'frame', tick: game.commandQueue.tick, time: s.time,
-    party: { id: team, faction: party.faction, controller: { kind: 'human' },
+    party: { id: team, faction: party.faction, loadout: [...party.loadout], controller: { kind: 'human' },
       account: { ...party.account, abilities: { ...party.account.abilities } }, meta: {}, benefits: {},
       fieldWorkshopUsed: party.fieldWorkshopUsed },
     entities, fog: multiplayerFog(sight.visible, sight.explored), effects: takeMultiplayerEffects(game, team),

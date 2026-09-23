@@ -18,15 +18,21 @@ test('party snapshots retain single-player defaults and isolate normalized benef
   const defaults = singlePlayerParties({ upgrades: {} }, {});
   assert.deepEqual(Array.from(defaults, p => [p.id, p.faction]), [[0, 0], [1, 2]]);
   assert.deepEqual(json(defaults[0].account), {
-    alloy: 250, gas: 0, energy: 25, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+    alloy: 250, gas: 0, energy: 25, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0,
+      disruption: 0, bulwark: 0, surge: 0, recall: 0 }
   });
+  assert.deepEqual(json(defaults[0].loadout), ['orbital', 'repair', 'scan', 'drop']);
+  assert.deepEqual(json(defaults[1].loadout), ['orbital', 'scan', 'disruption', 'recall']);
   assert.deepEqual(json(defaults[0].account), json(defaults[1].account));
   assert.notStrictEqual(defaults[0].account.abilities, defaults[1].account.abilities);
   const perks = { supplyCrate: 2, commandCapacitor: 99, fieldWorkshop: 1, unknown: 8 },
-    profile = { upgrades: { startingAlloy: 99, logisticsFrame: 2.9, repairLogistics: -1, unknown: 5 } },
-    options = { faction: 1, enemies: [1], benefits: perks, enemyBenefits: [perks] },
+    profile = { upgrades: { startingAlloy: 99, logisticsFrame: 2.9, repairLogistics: -1, disruption: 2.9, unknown: 5 } },
+    options = { faction: 1, enemies: [1], abilities: ['disruption', 'bulwark', 'surge', 'recall'],
+      benefits: perks, enemyBenefits: [perks] },
     parties = singlePlayerParties(profile, options);
-  assert.deepEqual(json(parties[0].meta), { startingAlloy: 5, logisticsFrame: 2, repairLogistics: 0 });
+  assert.deepEqual(json(parties[0].meta), { startingAlloy: 5, logisticsFrame: 2, repairLogistics: 0, disruption: 2 });
+  assert.deepEqual(json(parties[0].loadout), options.abilities);
+  assert.deepEqual(json(parties[1].loadout), ['repair', 'drop', 'disruption', 'surge']);
   assert.deepEqual(json(parties[1].meta), {});
   assert.deepEqual(json(parties[0].benefits), { supplyCrate: 2, commandCapacitor: 2, fieldWorkshop: 1 });
   assert.deepEqual(json(parties[0].benefits), json(parties[1].benefits));

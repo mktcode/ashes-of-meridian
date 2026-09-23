@@ -18,7 +18,7 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const profile = Object.freeze({version: 1, expeditionDepth: 10, aether: 250,
     upgrades: Object.freeze({startingAlloy: 0, constructionProtocols: 1}),
     settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false, showFps: true})});
-  const expedition = Object.freeze({version: 3, faction: 1, depth: 10,
+  const expedition = Object.freeze({version: 4, faction: 1, abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
     enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({supplyCrate: 2}), Object.freeze({})]),
     benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
     encounter: Object.freeze({enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
@@ -27,7 +27,11 @@ test('screen templates render frozen data without DOM access, randomness or prof
   assert.equal(briefing, render.renderExpeditionOpponents(expedition));
   render.renderHomeScreen(expedition, 10, briefing);
   render.renderHomeScreen(null, 10, '');
-  render.renderBattleScreen(profile, 1, 1, 250);
+  const battle = render.renderBattleScreen(profile, 1, 1, 250, expedition.abilities);
+  assert.equal((battle.match(/data-loadout-ability=/g) || []).length, 8);
+  assert.equal((battle.match(/loadout-option active/g) || []).length, 4);
+  assert.match(render.renderBattleScreen(profile, 1, 1, 250, expedition.abilities.slice(0, 3)),
+    /data-ui="startBattle" disabled/);
   const settings = render.renderSettingsScreen(profile.settings);
   assert.match(settings, /data-setting="showFps" checked/);
   render.renderFieldManual();
@@ -40,6 +44,8 @@ test('screen templates render frozen data without DOM access, randomness or prof
   assert.match(armory, /data-upgrade="startingAlloy"[^>]*><span>100 AETHER<\/span><small>\+50 ALLOY<\/small>/);
   assert.match(armory, /data-upgrade="aetherEvacuation"[^>]*><span>500 AETHER<\/span><small>\+100 LIMIT · \+5 \/ BUILDING<\/small>/);
   assert.match(armory, /data-upgrade="constructionProtocols"[^>]*><span>350 AETHER<\/span><small>\+5% BUILD SPEED<\/small>/);
+  assert.match(armory, /FLEET SYSTEMS/); assert.match(armory, /COMMAND MODULES/);
+  assert.match(armory, /data-upgrade="orbital"[^>]*><span>250 AETHER<\/span><small>\+12% DAMAGE<\/small>/);
   assert.doesNotMatch(armory, /AETHER · LEVEL/);
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
@@ -131,7 +137,7 @@ function setup() {
     observed: vm.runInContext('MeridianGame.prototype.observed', context),
     world: { extent: 90, gridSize: 72, cellSize: 2.5, idx: () => 0, explored: new Uint8Array([1]) },
     s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [],
-      parties: [{id:0,faction:0,meta:{},benefits:{},controller:{kind:'human'},account:{alloy:0,gas:0,energy:100,abilities:{}}}] },
+      parties: [{id:0,faction:0,loadout:['orbital','repair','scan','drop'],meta:{},benefits:{},controller:{kind:'human'},account:{alloy:0,gas:0,energy:100,abilities:{}}}] },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
@@ -140,6 +146,8 @@ function setup() {
     get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
+    party: vm.runInContext('MeridianGame.prototype.party', context),
+    abilityStats: vm.runInContext('MeridianGame.prototype.abilityStats', context),
     command(...args) { calls.push(['command', ...args]); },
     // UI tests mock submission/execution; scheduling and permission checks have separate CPU tests.
     submitAction(team, action) { return this.executeAction(team, action); },
@@ -180,6 +188,20 @@ function setup() {
   return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
 
+test('expedition loadout selection keeps four unique ordered slots and locks an active run', () => {
+  const h = setup(); h.ui.view = 'battle'; h.ui.expedition = null;
+  assert.deepEqual(Array.from(h.ui.battleAbilities), ['orbital', 'repair', 'scan', 'drop']);
+  h.ui.selectBattleAbility('orbital');
+  h.ui.selectBattleAbility('disruption');
+  h.ui.selectBattleAbility('bulwark');
+  assert.deepEqual(Array.from(h.ui.battleAbilities), ['repair', 'scan', 'drop', 'disruption']);
+  h.ui.selectBattleAbility('scan'); h.ui.selectBattleAbility('bulwark');
+  assert.deepEqual(Array.from(h.ui.battleAbilities), ['repair', 'drop', 'disruption', 'bulwark']);
+  h.ui.expedition = { abilities: [...h.ui.battleAbilities] };
+  h.ui.selectBattleAbility('recall');
+  assert.deepEqual(Array.from(h.ui.battleAbilities), ['repair', 'drop', 'disruption', 'bulwark']);
+});
+
 test('FPS setting updates the readout immediately and remains a profile setting', () => {
   const h = setup(), readout = h.document.getElementById('fpsReadout');
   h.ui.profile.settings.showFps = false;
@@ -212,6 +234,7 @@ test('UI submits actor-bound action data and cannot set rally when execution rej
 test('scenario UI perspective resets local interaction, follows actor accounts and routes commands to that actor', () => {
   const h = setup(), g = h.ui.game, queries = [], actions = [];
   g.s.parties = Array.from({ length: 4 }, (_, id) => ({ id, faction: id % 3,
+    loadout: ['orbital', 'repair', 'scan', 'drop'], meta: {}, benefits: {},
     account: { alloy: 100 + id, gas: 200 + id, energy: 20 + id, abilities: {} } }));
   g.s.entities = [{ id: 7, team: 2, type: 'hq', kind: 'building', hp: 100, progress: 1, x: 20, z: 10, queue: [] }];
   g.supply = team => { queries.push(['supply', team]); return 3; };
@@ -921,12 +944,13 @@ test('pause and visibility changes preserve battle state and require explicit re
 
 test('pause restart reopens the secured encounter with its expedition benefits', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.ui.expedition = { faction: 1, encounter: { enemies: [2, 0], map: 'desert', seed: 1409 },
+  h.ui.expedition = { faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { enemies: [2, 0], map: 'desert', seed: 1409 },
     benefits: { supplyCrate: 2 }, enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }], offers: [], depth: 3 };
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.pause(); h.click({ ui: 'restartConfirm' }); h.click({ ui: 'restart' });
   assert.deepEqual(h.calls, [['start', { faction: 1, enemies: [2, 0], map: 'desert', seed: 1409,
-    benefits: { supplyCrate: 2 }, enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }], depth: 3 }]]);
+    abilities: ['orbital','repair','scan','drop'], benefits: { supplyCrate: 2 },
+    enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }], depth: 3 }]]);
 });
 
 test('victory checkpoints offers and chosen benefits; defeat clears the expedition', () => {
@@ -937,7 +961,7 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   h.ui.persistence.saveProfile = () => {};
   h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
-  h.ui.expedition = { version: 3, faction: 0, depth: 0, benefits: {}, enemyBenefits: [{}],
+  h.ui.expedition = { version: 4, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 0, benefits: {}, enemyBenefits: [{}],
     encounter: { enemies: [1], map: 'desert', seed: 1409 }, offers: [] };
   const previousMap = h.ui.expedition.encounter.map;
   h.ui.event('result', { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
@@ -1064,6 +1088,20 @@ test('fleet upgrades charge their prices, respect caps and never mutate an activ
   assert.equal(saves,15);assert.equal(JSON.stringify(h.ui.game.s),snapshot);
 });
 
+test('command module purchases use rank prices without changing the active battle snapshot', () => {
+  const h = setup(), snapshot = JSON.stringify(h.ui.game.s), rules = vm.runInContext('COMMAND_MODULES', h.context);
+  let saves = 0; h.ui.persistence.saveProfile = () => saves++;
+  for (let rank = 0; rank < 3; rank++) {
+    h.ui.profile.aether = rules.disruption.costs[rank] - 1; h.ui.buyUpgrade('disruption');
+    assert.equal(h.ui.profile.upgrades.disruption || 0, rank);
+    h.ui.profile.aether++; h.ui.buyUpgrade('disruption');
+    assert.equal(h.ui.profile.upgrades.disruption, rank + 1); assert.equal(h.ui.profile.aether, 0);
+  }
+  h.ui.profile.aether = 5000; h.ui.buyUpgrade('disruption');
+  assert.equal(h.ui.profile.upgrades.disruption, 3); assert.equal(h.ui.profile.aether, 5000);
+  assert.equal(saves, 3); assert.equal(JSON.stringify(h.ui.game.s), snapshot);
+});
+
 test('best expedition depth unlocks factions at 10 and 25', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   for (const [depth, unlocked] of [[0, 0], [9, 0], [10, 1], [24, 1], [25, 2]]) {
@@ -1072,7 +1110,7 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
       [true, unlocked >= 1, unlocked >= 2]);
   }
   h.ui.profile.expeditionDepth = 9;
-  h.ui.expedition = { version: 3, faction: 0, depth: 9, benefits: {}, enemyBenefits: [{}, {}, {}],
+  h.ui.expedition = { version: 4, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 9, benefits: {}, enemyBenefits: [{}, {}, {}],
     encounter: { enemies: [1, 2, 0], map: 'desert', seed: 1409 }, offers: [] };
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.showResult = () => {};
@@ -1135,7 +1173,7 @@ test('expedition benefits are offered deterministically and bounded on selection
 
 test('home preview prepares the known next expedition battlefield', () => {
   const h = setup(), maps = [];
-  h.ui.expedition = { faction: 0, depth: 2, benefits: {}, enemyBenefits: [{}], offers: [],
+  h.ui.expedition = { faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2, benefits: {}, enemyBenefits: [{}], offers: [],
     encounter: { enemies: [2], map: 'alien-planet', seed: 1409 } };
   h.ui.onPreview = map => maps.push(map);
   h.ui.showHome();
@@ -1160,7 +1198,8 @@ test('expedition setup creates and saves the fixed Free Marches opening encounte
   assert.deepEqual(saved[0].encounter.enemies, [0]);
   assert.ok(['desert', 'alien-planet', 'mothership', 'westmark'].includes(saved[0].encounter.map));
   assert.ok(saved[0].encounter.seed > 0);
-  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter, benefits: {}, enemyBenefits: [{}], depth: 0 });
+  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter,
+    abilities: ['orbital', 'repair', 'scan', 'drop'], benefits: {}, enemyBenefits: [{}], depth: 0 });
 });
 
 test('DOM press guard tracks pointer presses on controls', () => {

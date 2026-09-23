@@ -4,9 +4,9 @@
 // Dependencies are supplied by the app. Access storage lazily: even reading the
 // browser's localStorage property can throw. Each instance owns its fallback.
 function createMeridianPersistence(
-  { getStorage, clamp, upgrades, benefits, battlefields, enemyCount, warn }: PersistenceDependencies
+  { getStorage, clamp, upgrades, benefits, abilities, battlefields, enemyCount, warn }: PersistenceDependencies
 ): MeridianPersistence {
-    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v3';
+    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v4';
     const memoryStore: Record<string, string> = {};
     const Store = {
       available: true,
@@ -85,8 +85,10 @@ function createMeridianPersistence(
     function loadExpedition(): MeridianExpedition | null {
       try {
         const p = JSON.parse(Store.get(EXPEDITION_KEY) || 'null');
-        if (!p || p.version !== 3 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
-          !p.encounter || !Object.hasOwn(battlefields, p.encounter.map)) return null;
+        if (!p || p.version !== 4 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
+          !p.encounter || !Object.hasOwn(battlefields, p.encounter.map) || !Array.isArray(p.abilities) ||
+          p.abilities.length !== 4 || new Set(p.abilities).size !== 4 ||
+          p.abilities.some((key: unknown) => typeof key !== 'string' || !Object.hasOwn(abilities, key))) return null;
         const depth = clamp(Math.floor(Number(p.depth) || 0), 0, 999999), count = enemyCount(depth);
         if (!Array.isArray(p.encounter.enemies) || p.encounter.enemies.length !== count ||
           p.encounter.enemies.some((f: unknown) => !Number.isInteger(f) || Number(f) < 0 || Number(f) > 2) ||
@@ -101,8 +103,9 @@ function createMeridianPersistence(
           return result;
         };
         const normalized: MeridianExpedition = {
-          version: 3,
+          version: 4,
           faction: p.faction,
+          abilities: [...p.abilities],
           depth,
           benefits: normalize(p.benefits),
           enemyBenefits: p.enemyBenefits.map(normalize),

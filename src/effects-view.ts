@@ -207,30 +207,21 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
             if ((f.team ?? 0) !== localTeam && !world.visible[world.idx(f.x,f.z)]) continue;
             let left = f.until - s.time;
             if (left <= 0) continue;
-            ring(
-              f.x,
-              f.z,
-              f.r || 12,
-              f.type === 'bloom' ? 0xb5e794 : 0x91e5d3,
-              0.3 + 0.15 * Math.sin(t * 3)
-            );
+            const colors: Record<Field['type'], [number, number]> = {
+              bloom: [0xb5e794, 0xa3cc8b], repair: [0x91e5d3, 0x7ecebb],
+              disruption: [0xb49aef, 0x7964bd], bulwark: [0x7ed9f2, 0x5babc9], surge: [0xf1bc72, 0xd08d47]
+            }, color = colors[f.type];
+            ring(f.x, f.z, f.r || 12, color[0], 0.3 + 0.15 * Math.sin(t * 3));
             const y = (world.surface?.heightAt(f.x,f.z) ?? 0) + 0.25, radius = f.r || 12;
             if (effectBoundsVisible(R, f.x, y, f.z, radius, .16, radius)) R.add(
-              'sphere',
-              f.x,
-              y,
-              f.z,
-              f.r || 12,
-              0.16,
-              f.r || 12,
-              f.type === 'bloom' ? 0xa3cc8b : 0x7ecebb,
-              0,
-              0,
-              0,
-              0.3,
-              0.04,
-              'effects'
+              'sphere', f.x, y, f.z, f.r || 12, 0.16, f.r || 12, color[1],
+              0, 0, 0, 0.3, 0.04, 'effects'
             );
+          }
+          for (const recall of s.recalls || []) {
+            if (recall.team !== localTeam && !world.visible[world.idx(recall.x, recall.z)]) continue;
+            const life = clamp((recall.at - s.time) / 3, 0, 1);
+            ring(recall.x, recall.z, 9 * (.45 + life * .55), 0xd1b3f4, .45 + (1 - life) * .35, .14);
           }
           for (let scan of s.scans) {
             if ((scan.team ?? 0) !== localTeam) continue;
@@ -247,7 +238,7 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
             ring(
               a.x,
               a.z,
-              rad * clamp(wait / (a.type === 'flare' ? 5 : 2.2), 0.05, 1),
+              rad * clamp(wait / (a.type === 'flare' ? 5 : a.warning || 2.2), 0.05, 1),
               col,
               0.85,
               0.15

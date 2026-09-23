@@ -80,8 +80,13 @@
         }
       },
       movementSpeed(this: MeridianGame, e: UnitEntity) {
+        const active = this.s!.fields.filter(field => field.until > this.s!.time && distance(field, e) <= field.r),
+          disrupted = active.filter(field => field.type === 'disruption' && this.enemy(field, e))
+            .reduce((factor, field) => Math.min(factor, field.power || .65), 1),
+          surged = e.type !== 'worker' && UNITS[e.type].damage > 0 ? active.filter(field => field.type === 'surge' && field.team === e.team)
+            .reduce((factor, field) => Math.max(factor, field.power || 1.2), 1) : 1;
         return UNITS[e.type].speed * (e.faction === FACTION_ID.SECOND ? 1.1 : 1) *
-          (e.slowed! > this.s!.time ? 0.65 : 1);
+          (e.slowed! > this.s!.time ? 0.65 : 1) * disrupted * surged;
       },
       canStep(this: MeridianGame, e: UnitEntity, x: number, z: number) {
         return this.unitFits(e, x, z) && (!!(UNITS[e.type] as UnitDefinitionShape).flying ||

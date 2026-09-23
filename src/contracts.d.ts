@@ -35,8 +35,31 @@ interface BuildingDefinitionShape {
 }
 
 interface AbilityDefinition {
+  name: string;
+  icon: string;
+  desc: string;
   energy: number;
   cd: number;
+}
+
+interface AbilityStats extends AbilityDefinition {
+  rank: number;
+  radius?: number;
+  duration?: number;
+  damageMultiplier?: number;
+  strikeDelay?: number;
+  instantHull?: number;
+  instantShield?: number;
+  healing?: number;
+  scanRadius?: number;
+  unitTypes?: UnitType[];
+  supply?: number;
+  landingProtection?: number;
+  moveMultiplier?: number;
+  reloadMultiplier?: number;
+  damageReduction?: number;
+  recallSupply?: number;
+  recallDelay?: number;
 }
 
 interface ExpeditionBenefitDefinition {
@@ -144,8 +167,9 @@ interface ExpeditionEncounter {
 }
 
 interface MeridianExpedition {
-  version: 3;
+  version: 4;
   faction: FactionId;
+  abilities: AbilityType[];
   depth: number;
   benefits: Record<string, number>;
   enemyBenefits: Record<string, number>[];
@@ -164,6 +188,7 @@ interface PersistenceDependencies {
   clamp(value: number, min: number, max: number): number;
   upgrades: Record<string, { max: number }>;
   benefits: Record<string, { max?: number; name?: string }>;
+  abilities: Record<string, unknown>;
   battlefields: Record<string, unknown>;
   enemyCount(depth: number): number;
   warn(...values: unknown[]): void;
@@ -315,6 +340,7 @@ interface EntityBase extends Position {
   steerSide?: 1 | -1;
   steerLocked?: boolean;
   slowed?: number;
+  reinforcedUntil?: number;
   returning?: boolean;
   lastSource?: number;
   shieldFlash?: number;
@@ -360,6 +386,7 @@ interface BattleOptions {
   seed?: number;
   benefits?: Record<string, number>;
   enemyBenefits?: Record<string, number>[];
+  abilities?: AbilityType[];
 }
 
 // Bounded non-expedition scenarios; also used by the optional multiplayer host.
@@ -394,6 +421,7 @@ interface Strike extends Position {
   team: TeamId;
   type: 'shell' | 'orbital' | 'flare';
   source?: number;
+  warning?: number;
   done?: boolean;
 }
 
@@ -403,8 +431,17 @@ interface TimedArea extends Position {
 }
 
 interface Field extends TimedArea {
-  type: 'bloom' | 'repair';
+  type: 'bloom' | 'repair' | 'disruption' | 'bulwark' | 'surge';
   team: PlayerTeam;
+  power?: number;
+  reload?: number;
+}
+
+interface PendingRecall extends Position {
+  team: PlayerTeam;
+  hq: number;
+  at: number;
+  ids: number[];
 }
 
 interface Scan extends TimedArea { team?: PlayerTeam; }
@@ -462,6 +499,7 @@ type PartyController = { kind: 'human' } | { kind: 'ai'; state: AIState };
 interface PartyState {
   id: PlayerTeam;
   faction: FactionId;
+  loadout: AbilityType[];
   account: TeamState;
   meta: Record<string, number>;
   benefits: Record<string, number>;
@@ -483,6 +521,7 @@ interface RunState {
   scans: Scan[];
   strikes: Strike[];
   fields: Field[];
+  recalls: PendingRecall[];
   stats: RunStats;
   triggers: RunTriggers;
   cam: Position & { zoom: number };

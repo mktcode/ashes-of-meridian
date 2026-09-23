@@ -166,14 +166,15 @@
           repairReason = ready && !repairing ? this.game.canRepairBuilding(b!.id, this.localTeam) : '',
           sellReason = ready ? this.game.canSellBuilding(b!.id, this.localTeam) : '',
           noFreeWorker = this.tab === 'build' && !this.game.availableWorkers(this.localTeam).length,
-          sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
+          sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, s.parties[this.localTeam].loadout.join(','),
+            this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
             this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, this.tutorialAction()].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
-        $('abilityBar').innerHTML = [
-          ['orbital', 'Orbital strike', 'orbital'], ['repair', 'Repair field', 'heal'],
-          ['scan', 'Recon scan', 'scan'], ['drop', 'Reinforcements', 'drop']
-        ].map(([k, label, ic]) => this.actionButton('ability:' + k, label, ic)).join('');
+        $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => {
+          const ability = ABILITIES[key];
+          return this.actionButton('ability:' + key, ability.name, ability.icon);
+        }).join('');
         let html = '', f = s.parties[this.localTeam].faction;
         if (this.tab === 'root') {
           for (let [tab, label, ic] of [
@@ -337,8 +338,8 @@
           } else if (k === 'build' && hasContentKey(BUILDINGS, arg))
             disabled = !!this.game.canBuild(arg, null, this.localTeam) || !this.game.afford(this.game.cost(arg, 'building', this.localTeam), this.localTeam);
           else if (k === 'ability' && hasContentKey(ABILITIES, arg)) {
-            let energy = ABILITIES[arg]?.energy, requirement = this.game.abilityRequirement(arg, this.localTeam),
-              account = s.parties[this.localTeam].account;
+            let energy = this.game.abilityStats(arg, this.localTeam).energy,
+              requirement = this.game.abilityRequirement(arg, this.localTeam), account = s.parties[this.localTeam].account;
             disabled = !!requirement || account.energy < energy || account.abilities[arg] > s.time;
             let badge = b.querySelector('small');
             if (badge)

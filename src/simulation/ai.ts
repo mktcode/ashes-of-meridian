@@ -147,7 +147,7 @@ const aiMethods = {
     const s=this.s!, ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),s.depth),
       foes=visible.filter(e=>this.enemy({team},e));
     const ready=(kind:AbilityType)=>!this.abilityRequirement(kind,team) &&
-      this.account(team).energy>=ABILITIES[kind].energy && this.account(team).abilities[kind]<=s.time;
+      this.account(team).energy>=this.abilityStats(kind,team).energy && this.account(team).abilities[kind]<=s.time;
     if (ready('repair')) {
       const p=own.map(e=>({e,missing:own.filter(n=>n.progress>=1 && distance(e,n)<12).reduce((n,a)=>n+a.maxHp-a.hp,0)}))
         .sort((a,b)=>b.missing-a.missing)[0];
@@ -158,10 +158,29 @@ const aiMethods = {
         .sort((a,b)=>b.value-a.value)[0];
       if (p?.value>=rules.orbitalValue) this.executeAction(team,{kind:'ability',ability:'orbital',position:p.e});
     }
-    if (ready('drop') && this.supply(team)+8<=this.cap(team) &&
+    if (ready('drop') && this.supply(team)+this.abilityStats('drop',team).supply!<=this.cap(team) &&
       (ai.mode==='attack' || foes.some(e=>distance(e,home)<30))) {
       const p=ai.mode==='attack'?own.find(e=>ai.squad.includes(e.id)):home;
       if (p) this.executeAction(team,{kind:'ability',ability:'drop',position:p});
+    }
+    if (ready('bulwark') && foes.length) {
+      const p=own.filter(e=>e.kind!=='resource').map(e=>({e,value:own.filter(n=>n.kind!=='resource'&&distance(e,n)<10).length+
+        foes.filter(n=>distance(e,n)<15).length*2})).sort((a,b)=>b.value-a.value)[0];
+      if (p?.value>=6) this.executeAction(team,{kind:'ability',ability:'bulwark',position:p.e});
+    }
+    if (ready('disruption')) {
+      const p=foes.map(e=>({e,value:foes.filter(n=>distance(e,n)<11).length})).sort((a,b)=>b.value-a.value)[0];
+      if (p?.value>=3) this.executeAction(team,{kind:'ability',ability:'disruption',position:p.e});
+    }
+    if (ready('surge') && ai.mode==='attack') {
+      const p=own.filter(e=>e.kind==='unit'&&e.type!=='worker').map(e=>({e,value:own.filter(n=>n.kind==='unit'&&
+        n.type!=='worker'&&distance(e,n)<10).length})).sort((a,b)=>b.value-a.value)[0];
+      if (p?.value>=4) this.executeAction(team,{kind:'ability',ability:'surge',position:p.e});
+    }
+    if (ready('recall')) {
+      const p=own.filter(e=>e.kind==='unit'&&e.type!=='worker'&&e.hp/e.maxHp<.35)
+        .sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];
+      if (p && foes.some(e=>distance(e,p)<18)) this.executeAction(team,{kind:'ability',ability:'recall',position:p});
     }
     if (ready('scan') && s.time>rules.scanAfter && !foes.length && own.some(e=>e.type==='rifle')) {
       const p=ai.goal || this.aiScoutGoal(team,home);

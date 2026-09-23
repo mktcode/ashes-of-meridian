@@ -25,6 +25,10 @@
             $('factionTrait').textContent = FACTIONS[this.battleFaction].trait;
             return;
           }
+          if (hasContentKey(ABILITIES, b.dataset.loadoutAbility)) {
+            this.selectBattleAbility(b.dataset.loadoutAbility);
+            return;
+          }
           if (b.dataset.upgrade) {
             this.buyUpgrade(b.dataset.upgrade);
             return;

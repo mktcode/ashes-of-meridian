@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
-const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v3';
+const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v4';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
   version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {},
@@ -27,6 +27,7 @@ function setup(data = new Map(), rules = {}) {
     clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
     upgrades: { startingAlloy: { max: 5 }, startingWorkers: { max: 5 }, aetherEvacuation: { max: 5 } },
     benefits: benefitRules,
+    abilities: { orbital: {}, repair: {}, scan: {}, drop: {}, disruption: {}, bulwark: {}, surge: {}, recall: {} },
     enemyCount: vm.runInContext('expeditionEnemyCount', loadScripts(['content'])),
     ...rules,
     battlefields: { desert: {}, 'alien-planet': {}, mothership: {} },
@@ -36,7 +37,7 @@ function setup(data = new Map(), rules = {}) {
 }
 
 const expedition = {
-  version: 3, faction: 1, depth: 8,
+  version: 4, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8,
   benefits: { supplyCrate: 2, commanderMandate: 1 },
   enemyBenefits: [{ pioneerSquad: 2, fieldWorkshop: 1 }, { supplyCrate: 3 }, { aetherAllocation: 2 }],
   encounter: { enemies: [2, 1, 2], map: 'desert', seed: 1409 },
@@ -120,11 +121,11 @@ test('missing or malformed settings containers retain defaults independently of 
 test('the new expedition format resets old runs without migrating or changing the permanent profile', () => {
   const h=setup(), profile={...defaults,expeditionDepth:21,aether:432,upgrades:{startingAlloy:3}};
   h.service.saveProfile(profile);
-  h.data.set('meridian.expedition.v2',JSON.stringify({...expedition,version:2,depth:21}));
+  h.data.set('meridian.expedition.v3',JSON.stringify({...expedition,version:3,depth:21}));
   const before=JSON.stringify(h.service.loadProfile());
   assert.equal(h.service.loadExpedition(),null);
   assert.equal(JSON.stringify(h.service.loadProfile()),before);
-  assert.ok(!h.trace.some(([op,key])=>op==='get'&&key==='meridian.expedition.v2'));
+  assert.ok(!h.trace.some(([op,key])=>op==='get'&&key==='meridian.expedition.v3'));
 });
 
 test('profile and expedition use separate local keys and survive service recreation', () => {
@@ -146,8 +147,11 @@ test('profile and expedition use separate local keys and survive service recreat
 
 test('expedition normalization rejects invalid encounters and bounds known benefits and offers', () => {
   const h = setup();
-  for (const invalid of [null, {}, { ...expedition, version: 2 },
-    { ...expedition, faction: 3 }, { ...expedition, encounter: { enemies: [0, 1, 2], map: 'missing', seed: 1 } },
+  for (const invalid of [null, {}, { ...expedition, version: 3 },
+    { ...expedition, faction: 3 }, { ...expedition, abilities: ['orbital', 'repair', 'scan'] },
+    { ...expedition, abilities: ['orbital', 'repair', 'scan', 'scan'] },
+    { ...expedition, abilities: ['orbital', 'repair', 'scan', 'unknown'] },
+    { ...expedition, encounter: { enemies: [0, 1, 2], map: 'missing', seed: 1 } },
     ...[[], [0], [0, 1], [0, 1, 2, 0], [0, 1, 3], [0, 1, null], [0, 1, '2']].map(enemies =>
       ({ ...expedition, encounter: { ...expedition.encounter, enemies } })),
     ...[{}, [], [{}], [{}, {}, null], [{}, {}, []]].map(enemyBenefits => ({ ...expedition, enemyBenefits }))]) {
@@ -160,7 +164,7 @@ test('expedition normalization rejects invalid encounters and bounds known benef
     offers: ['commanderMandate', 'aetherAllocation', 'aetherAllocation', 'unknown', 'supplyCrate', 'pioneerSquad'],
     encounter: { enemies: [0, 0, 1], map: 'mothership', seed: -8 } }));
   assert.deepEqual(json(h.service.loadExpedition()), {
-    version: 3, faction: 1, depth: 9,
+    version: 4, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 9,
     benefits: { supplyCrate: 3, pioneerSquad: 5, commanderMandate: 1 },
     enemyBenefits: [{ pioneerSquad: 5, commanderMandate: 1 }, {}, { supplyCrate: 4 }],
     encounter: { enemies: [0, 0, 1], map: 'mothership', seed: 1 },
@@ -168,18 +172,20 @@ test('expedition normalization rejects invalid encounters and bounds known benef
   });
 });
 
-test('new fleet upgrades normalize and reload through the real content catalog',()=>{
-  const rules=vm.runInContext('({upgrades:META,benefits:EXPEDITION_BENEFITS})',loadScripts(['content']));
+test('fleet and command upgrades normalize and reload through the real content catalog',()=>{
+  const rules=vm.runInContext('({upgrades:PERMANENT_UPGRADES,benefits:EXPEDITION_BENEFITS,abilities:ABILITIES})',loadScripts(['content']));
   const h=setup(new Map(),rules);
-  h.service.saveProfile({...defaults,upgrades:{constructionProtocols:99,logisticsFrame:2.9,repairLogistics:-1}});
+  h.service.saveProfile({...defaults,upgrades:{constructionProtocols:99,logisticsFrame:2.9,repairLogistics:-1,
+    orbital:2.9,repair:99,recall:-4}});
   const loaded=setup(h.data,rules).service.loadProfile();
   assert.deepEqual(json(loaded.upgrades),{startingAlloy:0,startingWorkers:0,aetherEvacuation:0,
-    constructionProtocols:5,logisticsFrame:2,repairLogistics:0});
+    constructionProtocols:5,logisticsFrame:2,repairLogistics:0,
+    orbital:2,repair:3,scan:0,drop:0,disruption:0,bulwark:0,surge:0,recall:0});
   assert.equal(loaded.aether,0);assert.equal(h.service.loadExpedition(),null);
 });
 
 test('new benefit keys round-trip with real content limits and exhausted offers disappear',()=>{
-  const rules=vm.runInContext('({upgrades:META,benefits:EXPEDITION_BENEFITS})',loadScripts(['content']));
+  const rules=vm.runInContext('({upgrades:PERMANENT_UPGRADES,benefits:EXPEDITION_BENEFITS,abilities:ABILITIES})',loadScripts(['content']));
   const h=setup(new Map(),rules);
   h.service.saveExpedition({...expedition,benefits:{surveyDrones:99,fieldWorkshop:99,commandCapacitor:1.9,commandDrill:37},
     offers:['surveyDrones','fieldWorkshop','commandCapacitor','commandDrill','supplyCrate']});

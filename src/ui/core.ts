@@ -50,6 +50,7 @@
       hudClock: number;
       touchPoints: Map<number, {x: number; y: number}>;
       battleFaction?: FactionId;
+      battleAbilities: AbilityType[];
       resultAetherRecovered?: number;
       resultAetherEvacuated?: number;
       resultAetherStructures?: number;
@@ -96,6 +97,7 @@
         this.factionJustUnlocked = null;
         this.hudClock = 0;
         this.touchPoints = new Map();
+        this.battleAbilities = [...DEFAULT_ABILITY_LOADOUT];
         this.battleIntro = null;
         this.battleTutorial = null;
         this.bind();

@@ -16,7 +16,8 @@ function fixture(kind, visible) {
   const victim = { id: 3, team: 1, faction: 0, kind: 'unit', type: 'rifle', x: 5, z: 5,
     hp: 30, maxHp: 100, shield: 0 };
   game.s = { rules: kind === 'scenario' ? { kind, hostilities: [[false, true], [true, false]], duration: 1 } : { kind },
-    entities: [medic, patient, victim], time: 1, stats: { damage: 0, kills: 0, lost: 0 }, triggers: {} };
+    entities: [medic, patient, victim], fields: [], time: 1,
+    stats: { damage: 0, kills: 0, lost: 0 }, triggers: {} };
   game.resetRandom(1409);
   game.visible = () => visible;
   game.near = (x, z, radius, predicate) => game.s.entities.filter(predicate);

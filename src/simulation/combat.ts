@@ -1,9 +1,24 @@
     /* MeridianGame combat methods. Loaded after simulation/game.js. */
     'use strict';
     const combatMethods = {
+      weaponRate(this: MeridianGame, e: UnitEntity | BuildingEntity) {
+        const armed = e.kind === 'unit' ? UNITS[e.type].damage > 0 :
+          !!(BUILDINGS[e.type] as BuildingDefinitionShape).damage;
+        if (!armed) return 1;
+        const active = this.s!.fields.filter(field => field.until > this.s!.time && distance(field, e) <= field.r),
+          disrupted = e.kind === 'unit' ? active.filter(field => field.type === 'disruption' && this.enemy(field, e))
+            .reduce((factor, field) => Math.min(factor, field.reload || 1), 1) : 1,
+          surged = e.kind === 'unit' && e.type !== 'worker' ? active.filter(field => field.type === 'surge' && field.team === e.team)
+            .reduce((factor, field) => Math.max(factor, field.reload || 1), 1) : 1;
+        return disrupted * surged;
+      },
       damage(this: MeridianGame, e: Entity | null | undefined, amount: number, source: CombatSource | null | undefined, quiet = false) {
         if (!e || e.hp <= 0) return;
-        amount = Math.max(0.05, amount);
+        const bulwark = e.team === -1 ? 0 : this.s!.fields
+          .filter(field => field.type === 'bulwark' && field.team === e.team && field.until > this.s!.time && distance(field, e) <= field.r)
+          .reduce((reduction, field) => Math.max(reduction, field.power || 0), 0),
+          reinforcement = e.reinforcedUntil! > this.s!.time ? .2 : 0;
+        amount = Math.max(0.05, amount * (1 - bulwark) * (1 - reinforcement));
         e.lastHit = this.s!.time;
         e.lastSource = source?.id;
         if (e.shield > 0) {

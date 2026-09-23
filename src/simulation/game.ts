@@ -1,14 +1,15 @@
     /* Deterministic fixed-step RTS simulation. Rendering and UI are independent. */
     'use strict';
     const UNIT_BODY_SCALE = 1.4;
-    function createParty(id: PlayerTeam, faction: FactionId, meta: Record<string, number>, benefits: Record<string, number>): PartyState {
+    function createParty(id: PlayerTeam, faction: FactionId, meta: Record<string, number>, benefits: Record<string, number>,
+      loadout: readonly AbilityType[] = DEFAULT_ABILITY_LOADOUT): PartyState {
       return {
-        id, faction, meta, benefits, controller: { kind: 'human' },
+        id, faction, meta, benefits, loadout: normalizedAbilityLoadout(loadout), controller: { kind: 'human' },
         account: {
           alloy: STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy,
           gas: (benefits.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
           energy: COMMAND_ENERGY.start + (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy,
-          abilities: { orbital: 0, repair: 0, scan: 0, drop: 0 }
+          abilities: Object.fromEntries(contentKeys(ABILITIES).map(key => [key, 0])) as Record<AbilityType, number>
         }
       };
     }
@@ -43,14 +44,14 @@
         throw Error('Expedition battle requires 1–3 enemy factions');
       const savedMeta = profile.upgrades || {},
         meta = Object.fromEntries(
-          (Object.keys(META) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
-            [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, META[key].max)])
+          (Object.keys(PERMANENT_UPGRADES) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
+            [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, PERMANENT_UPGRADES[key].max)])
         );
       return [
         createParty(0, FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
-          meta, normalizedBenefits(opts.benefits)),
+          meta, normalizedBenefits(opts.benefits), normalizedAbilityLoadout(opts.abilities)),
         ...enemies.map((faction, slot) => createParty((slot + 1) as PlayerTeam, faction,
-          {}, normalizedBenefits(opts.enemyBenefits?.[slot])))
+          {}, normalizedBenefits(opts.enemyBenefits?.[slot]), FACTION_ABILITY_LOADOUTS[faction]))
       ];
     }
     function createCommandQueue(): CommandQueue {
@@ -144,7 +145,7 @@
           time: 0,
           parties, rules, stopped: false,
           nextId: 1,
-          entities: [], scans: [], strikes: [], fields: [],
+          entities: [], scans: [], strikes: [], fields: [], recalls: [],
           stats: { kills: 0, structuresDestroyed: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
           cam: { x: playerStart.x + 5, z: playerStart.z - 2, zoom: 57 },

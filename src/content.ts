@@ -290,13 +290,83 @@ type BuildingType = keyof typeof BUILDINGS;
 type BuildingDefinition = (typeof BUILDINGS)[BuildingType];
 
 const ABILITIES = {
-  orbital: { energy: 85, cd: 48 },
-  repair: { energy: 45, cd: 28 },
-  scan: { energy: 25, cd: 17 },
-  drop: { energy: 95, cd: 75 }
+  orbital: { name: 'Orbital strike', icon: 'orbital', energy: 85, cd: 48,
+    desc: 'Calls down a faction-specific orbital strike. Requires a completed vehicle factory and current vision.' },
+  repair: { name: 'Repair field', icon: 'heal', energy: 45, cd: 28,
+    desc: 'Restores allied hull and shields immediately, then repairs hull over time.' },
+  scan: { name: 'Recon scan', icon: 'scan', energy: 25, cd: 17,
+    desc: 'Reveals a remote area without creating a reinforcement landing anchor.' },
+  drop: { name: 'Reinforcements', icon: 'drop', energy: 95, cd: 75,
+    desc: 'Deploys four permanent basic infantry near an allied forward anchor.' },
+  disruption: { name: 'Disruption field', icon: 'disruption', energy: 50, cd: 40,
+    desc: 'Slows enemy movement in an area; upgraded fields also disrupt weapons.' },
+  bulwark: { name: 'Bulwark field', icon: 'shield', energy: 55, cd: 45,
+    desc: 'Reduces damage taken by allied units and structures in an area.' },
+  surge: { name: 'Command surge', icon: 'surge', energy: 60, cd: 45,
+    desc: 'Accelerates the movement and weapons of allied combat units.' },
+  recall: { name: 'Emergency recall', icon: 'recall', energy: 50, cd: 60,
+    desc: 'Extracts a limited group of allied ground troops to the nearest command center.' }
 } as const satisfies Record<string, AbilityDefinition>;
 
 type AbilityType = keyof typeof ABILITIES;
+const DEFAULT_ABILITY_LOADOUT: readonly AbilityType[] = Object.freeze(['orbital', 'repair', 'scan', 'drop']);
+const FACTION_ABILITY_LOADOUTS: Record<FactionId, readonly AbilityType[]> = Object.freeze({
+  0: Object.freeze<AbilityType[]>(['orbital', 'repair', 'bulwark', 'drop']),
+  1: Object.freeze<AbilityType[]>(['repair', 'drop', 'disruption', 'surge']),
+  2: Object.freeze<AbilityType[]>(['orbital', 'scan', 'disruption', 'recall'])
+});
+function normalizedAbilityLoadout(input: unknown, fallback: readonly AbilityType[] = DEFAULT_ABILITY_LOADOUT): AbilityType[] {
+  if (!Array.isArray(input)) return [...fallback];
+  const result = [...new Set(input.filter((key): key is AbilityType =>
+    typeof key === 'string' && Object.hasOwn(ABILITIES, key)))];
+  return result.length === 4 ? result : [...fallback];
+}
+function abilityStats(kind: AbilityType, rank = 0): AbilityStats {
+  const level = Math.max(0, Math.min(3, Math.floor(Number(rank) || 0))), base = ABILITIES[kind];
+  const stats: AbilityStats = { ...base, rank: level };
+  if (kind === 'orbital') {
+    stats.damageMultiplier = level >= 1 ? 1.12 : 1;
+    stats.strikeDelay = level >= 2 ? 1.8 : 2.2;
+    if (level >= 3) stats.cd = 40;
+  } else if (kind === 'repair') {
+    stats.instantHull = level >= 1 ? 230 : 180;
+    stats.instantShield = level >= 1 ? 130 : 100;
+    stats.healing = level >= 2 ? 15 : 10;
+    stats.radius = level >= 3 ? 14 : 12;
+    stats.duration = 8;
+  } else if (kind === 'scan') {
+    stats.duration = level >= 1 ? 28 : 22;
+    stats.scanRadius = level >= 2 ? 38 : 32;
+    if (level >= 3) stats.energy = 18;
+  } else if (kind === 'drop') {
+    stats.unitTypes = ['rifle', 'rifle', 'rifle', 'rifle'];
+    if (level >= 2) stats.unitTypes.push('medic');
+    stats.supply = stats.unitTypes.reduce((sum, type) => sum + UNITS[type].supply, 0);
+    stats.landingProtection = level >= 1 ? 12 : 0;
+    if (level >= 3) stats.cd = 62;
+  } else if (kind === 'disruption') {
+    stats.radius = 11;
+    stats.duration = level >= 3 ? 13 : 10;
+    stats.moveMultiplier = level >= 1 ? .55 : .65;
+    stats.reloadMultiplier = level >= 2 ? .8 : 1;
+  } else if (kind === 'bulwark') {
+    stats.radius = level >= 1 ? 12 : 10;
+    stats.duration = level >= 3 ? 13 : 10;
+    stats.damageReduction = level >= 2 ? .4 : .3;
+  } else if (kind === 'surge') {
+    stats.radius = 10;
+    stats.duration = level >= 1 ? 13 : 10;
+    stats.moveMultiplier = level >= 2 ? 1.3 : 1.2;
+    stats.reloadMultiplier = stats.moveMultiplier;
+    if (level >= 3) stats.cd = 36;
+  } else {
+    stats.radius = 9;
+    stats.recallSupply = level >= 1 ? 16 : 12;
+    stats.recallDelay = level >= 2 ? 2 : 3;
+    if (level >= 3) stats.cd = 48;
+  }
+  return stats;
+}
 
 const STARTING_ALLOY = [250, 300, 350, 400, 450, 500] as const;
 const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
@@ -472,7 +542,51 @@ const META = {
   }
 } as const satisfies Record<string, UpgradeDefinition>;
 
-type UpgradeType = keyof typeof META;
+type FleetUpgradeType = keyof typeof META;
+const COMMAND_MODULES = {
+  orbital: {
+    name: 'Orbital strike', icon: 'orbital', desc: 'Improves orbital payload, targeting time and recharge.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['+12% DAMAGE', 'FASTER IMPACT', '40s COOLDOWN'] }, max: 3, costs: [250, 600, 1200]
+  },
+  repair: {
+    name: 'Repair field', icon: 'heal', desc: 'Improves immediate restoration, sustained repair and field radius.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['STRONGER BURST', '+5 REPAIR / SECOND', '14m RADIUS'] }, max: 3, costs: [250, 600, 1200]
+  },
+  scan: {
+    name: 'Recon scan', icon: 'scan', desc: 'Extends scan duration and radius before reducing its energy cost.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['28s DURATION', '38m RADIUS', '18 ENERGY'] }, max: 3, costs: [250, 600, 1200]
+  },
+  drop: {
+    name: 'Reinforcements', icon: 'drop', desc: 'Protects arrivals, adds a faction medic and improves recharge.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['PROTECTED ARRIVAL', '+1 MEDIC', '62s COOLDOWN'] }, max: 3, costs: [250, 600, 1200]
+  },
+  disruption: {
+    name: 'Disruption field', icon: 'disruption', desc: 'Strengthens movement disruption, weapon interference and duration.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['45% SLOW', 'WEAPON DISRUPTION', '13s DURATION'] }, max: 3, costs: [250, 600, 1200]
+  },
+  bulwark: {
+    name: 'Bulwark field', icon: 'shield', desc: 'Expands the field, strengthens protection and extends its duration.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['12m RADIUS', '40% REDUCTION', '13s DURATION'] }, max: 3, costs: [250, 600, 1200]
+  },
+  surge: {
+    name: 'Command surge', icon: 'surge', desc: 'Extends and strengthens the combat acceleration before improving recharge.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['13s DURATION', '30% FASTER', '36s COOLDOWN'] }, max: 3, costs: [250, 600, 1200]
+  },
+  recall: {
+    name: 'Emergency recall', icon: 'recall', desc: 'Extracts more troops, resolves faster and recharges sooner.',
+    display: { label: 'COMMAND RANK', values: [0, 1, 2, 3], unit: 'RANK',
+      gains: ['16 SUPPLY', '2s EXTRACTION', '48s COOLDOWN'] }, max: 3, costs: [250, 600, 1200]
+  }
+} as const satisfies Record<AbilityType, UpgradeDefinition>;
+const PERMANENT_UPGRADES = Object.freeze({ ...META, ...COMMAND_MODULES });
+type UpgradeType = keyof typeof PERMANENT_UPGRADES;
 
 const ICON_PATHS = {
   worker: 'M8 15l-4 5m8-10 8-6 2 2-6 8M5 8l3-3 11 11-3 3z',
@@ -504,6 +618,9 @@ const ICON_PATHS = {
   cancel: 'M5 5l14 14M19 5L5 19',
   repair: 'M14 4l-4 4 2 4 4 2 4-4c2 5-3 9-7 7l-7 6-4-4 7-6C7 8 10 3 14 4z',
   drop: 'M4 10a8 8 0 0 1 16 0H4M4 10l6 8m10-8-6 8M8 18h8v4H8z',
+  disruption: 'M3 12h4l2-6 4 12 2-6h6M4 5l2 2m12-2-2 2M4 19l2-2m12 2-2-2',
+  surge: 'M4 13h5l2-9 3 16 2-7h4M3 7h4m10 10h4',
+  recall: 'M12 3a9 9 0 1 0 8 5M12 7v5l4 2M20 3v5h-5',
   save: 'M4 3h14l3 3v15H3V3zM7 3v7h10V3M7 21v-7h10v7',
   pause: 'M7 4v16M17 4v16'
 } as const satisfies Record<string, string>;
