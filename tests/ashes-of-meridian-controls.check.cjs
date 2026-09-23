@@ -23,8 +23,8 @@ test('screen templates render frozen data without DOM access, randomness or prof
     benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
     encounter: Object.freeze({enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
-  const briefing = render.renderExpeditionOpponents(expedition, 3);
-  assert.equal(briefing, render.renderExpeditionOpponents(expedition, 3));
+  const briefing = render.renderExpeditionOpponents(expedition);
+  assert.equal(briefing, render.renderExpeditionOpponents(expedition));
   render.renderHomeScreen(expedition, 10, briefing);
   render.renderHomeScreen(null, 10, '');
   render.renderBattleScreen(profile, 1, 1, 250);
@@ -34,6 +34,30 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
   assert.equal(JSON.stringify({profile, expedition}), before);
+});
+
+test('opponent briefing shows only present slots, factions and current upgrades', () => {
+  const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
+  const renderOpponents = vm.runInContext('renderExpeditionOpponents', context);
+  const expedition = {
+    enemyBenefits: [{}, { supplyCrate: 2 }, { surveyDrones: 1 }],
+    encounter: { enemies: [2, 1, 0] }
+  };
+  for (let count = 1; count <= 3; count++) {
+    const html = renderOpponents({
+      ...expedition,
+      enemyBenefits: expedition.enemyBenefits.slice(0, count),
+      encounter: { enemies: expedition.encounter.enemies.slice(0, count) }
+    });
+    assert.equal((html.match(/<b>OPPONENT /g) || []).length, count);
+    assert.match(html, /OPPONENT 1 · VEILED COURT/);
+    assert.equal(html.includes(`OPPONENT ${count + 1}`), false);
+    assert.doesNotMatch(html, /FREE-FOR-ALL|PRESSURE|Precision supremacy|Early technology|Regenerating swarm|Infantry masses/);
+  }
+  const html = renderOpponents(expedition);
+  assert.match(html, /OPPONENT 1 · VEILED COURT<\/b><br><small>UPGRADES · NONE/);
+  assert.match(html, /OPPONENT 2 · VERDANT CHOIR<\/b><br><small>UPGRADES · Supply crate ×2/);
+  assert.match(html, /OPPONENT 3 · FREE MARCHES<\/b><br><small>UPGRADES · Survey drones ×1/);
 });
 
 function setup() {

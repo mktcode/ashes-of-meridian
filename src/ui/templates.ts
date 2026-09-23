@@ -1,13 +1,12 @@
 /* Pure screen markup. No DOM, persistence, RNG or UI state changes. */
 'use strict';
 
-function renderExpeditionOpponents(expedition: MeridianExpedition, pressure: number): string {
-  return `<p>FREE-FOR-ALL · ${expedition.encounter.enemies.length} OPPONENTS · PRESSURE ${pressure}/5</p>` +
-    expedition.encounter.enemies.map((id, slot) => {
-      const faction = FACTIONS[id], perks = Object.entries(expedition.enemyBenefits[slot]).filter(([, count]) => count > 0)
-        .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · ');
-      return `<p><b>OPPONENT ${slot + 1} · ${esc(faction.short)}</b><br>${esc(faction.doctrine.name)} — ${esc(faction.doctrine.desc)}<br><small>BENEFITS · ${perks || 'NONE'}</small></p>`;
-    }).join('');
+function renderExpeditionOpponents(expedition: MeridianExpedition): string {
+  return expedition.encounter.enemies.map((id, slot) => {
+    const faction = FACTIONS[id], perks = Object.entries(expedition.enemyBenefits[slot]).filter(([, count]) => count > 0)
+      .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · ');
+    return `<p><b>OPPONENT ${slot + 1} · ${esc(faction.short)}</b><br><small>UPGRADES · ${perks || 'NONE'}</small></p>`;
+  }).join('');
 }
 
 function renderHomeScreen(expedition: MeridianExpedition | null, bestDepth: number, briefing: string) {
