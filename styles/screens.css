@@ -1444,15 +1444,10 @@
       color: #a7f5ff
     }
 
-    .result-confirm-benefit,
-    .result-benefit-armory {
+    .result-confirm-benefit {
       width: 100%;
       display: flex;
       justify-content: space-between
-    }
-
-    .result-benefit-armory {
-      margin-top: 10px
     }
 
     .result-actions {
@@ -1466,12 +1461,6 @@
     .result-actions button {
       width: 100%;
       justify-content: space-between
-    }
-
-    .result-actions .textbtn {
-      margin-top: 5px;
-      justify-content: center;
-      letter-spacing: 2px
     }
 
     .result-screen.defeat .result-reward {
