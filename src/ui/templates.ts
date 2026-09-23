@@ -75,7 +75,7 @@ function renderArmoryScreen(profile: MeridianProfile) {
             .map(([k, m]) => {
               let n = profile.upgrades[k] || 0, cost = m.costs[n], affordable = profile.aether >= cost,
                 effect = m.display.values[n];
-              return `<div class="upgrade-card"><div class="upgrade-heading"><div class="sigil">${icon(m.icon)}</div><div><h3>${m.name}</h3><span class="upgrade-rank">LEVEL ${n} / ${m.max}</span></div></div><p>${m.desc}</p><div class="upgrade-effect"><span>${m.display.label}</span><strong>${effect.toLocaleString()} <small>${m.display.unit}</small></strong></div><div class="upgrade-levels" aria-label="Level ${n} of ${m.max}">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || !affordable ? 'disabled' : ''}>${n >= m.max ? 'FULLY REQUISITIONED' : cost + ' AETHER · LEVEL ' + (n + 1)}</button></div>`;
+              return `<div class="upgrade-card"><div class="upgrade-heading"><div class="sigil">${icon(m.icon)}</div><div><h3>${m.name}</h3><span class="upgrade-rank">LEVEL ${n} / ${m.max}</span></div></div><p>${m.desc}</p><div class="upgrade-effect"><span>${m.display.label}</span><strong>${effect.toLocaleString()} <small>${m.display.unit}</small></strong></div><div class="upgrade-levels" aria-label="Level ${n} of ${m.max}">${Array.from({ length: m.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div><button class="secondary" data-upgrade="${k}" ${n >= m.max || !affordable ? 'disabled' : ''}>${n >= m.max ? '<span>FULLY REQUISITIONED</span>' : `<span>${cost} AETHER</span><small>${m.display.gains[n]}</small>`}</button></div>`;
             })
             .join(
               ''

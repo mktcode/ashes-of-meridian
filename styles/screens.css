@@ -1492,9 +1492,24 @@
     }
 
     .upgrade-card .secondary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       width: 100%;
       padding-inline: 8px;
       font-size: 9px
+    }
+
+    .upgrade-card .secondary small {
+      color: var(--gold);
+      font: inherit;
+      text-align: right
+    }
+
+    .upgrade-card .secondary > span:only-child {
+      width: 100%;
+      text-align: center
     }
 
     .home-screen,

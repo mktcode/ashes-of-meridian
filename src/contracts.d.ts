@@ -50,7 +50,7 @@ interface UpgradeDefinition {
   name: string;
   icon: string;
   desc: string;
-  display: { label: string; values: readonly number[]; unit: string };
+  display: { label: string; values: readonly number[]; unit: string; gains: readonly string[] };
   max: number;
   costs: readonly number[];
 }

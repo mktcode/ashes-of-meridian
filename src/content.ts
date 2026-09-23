@@ -419,7 +419,8 @@ const META = {
     name: 'Starting alloy',
     icon: 'crystal',
     desc: 'Adds 50 starting alloy per level.',
-    display: { label: 'STARTING RESERVES', values: STARTING_ALLOY, unit: 'ALLOY' },
+    display: { label: 'STARTING RESERVES', values: STARTING_ALLOY, unit: 'ALLOY',
+      gains: ['+50 ALLOY', '+50 ALLOY', '+50 ALLOY', '+50 ALLOY', '+50 ALLOY'] },
     max: 5,
     costs: [100, 200, 300, 450, 650]
   },
@@ -427,15 +428,18 @@ const META = {
     name: 'Starting workers',
     icon: 'worker',
     desc: 'Start each new battle with one additional worker per level, up to five.',
-    display: { label: 'STARTING WORKERS', values: [0, 1, 2, 3, 4, 5], unit: 'WORKERS' },
+    display: { label: 'STARTING WORKERS', values: [0, 1, 2, 3, 4, 5], unit: 'WORKERS',
+      gains: ['+1 WORKER', '+1 WORKER', '+1 WORKER', '+1 WORKER', '+1 WORKER'] },
     max: 5,
     costs: [300, 450, 650, 900, 1200]
   },
   aetherEvacuation: {
     name: 'Aether recovery',
     icon: 'save',
-    desc: 'Raises the aether evacuation limit per battle. Separately, each completed enemy building you destroy grants 5 more permanent aether per level, from 5 at level 0 up to 30.',
-    display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'AETHER / BATTLE' },
+    desc: 'Raises the evacuation limit and permanent aether recovered per destroyed enemy building.',
+    display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'AETHER / BATTLE',
+      gains: ['+100 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING',
+        '+250 LIMIT · +5 / BUILDING', '+250 LIMIT · +5 / BUILDING'] },
     max: 5,
     costs: [500, 800, 1200, 1800, 2600]
   },
@@ -443,7 +447,8 @@ const META = {
     name: 'Construction protocols',
     icon: 'factory',
     desc: `Adds ${FLEET_EFFECTS.constructionSpeed * 100}% of base construction speed per level. Adds to Field workshop, without faster repairs.`,
-    display: { label: 'CONSTRUCTION BONUS', values: fleetLevels(FLEET_EFFECTS.constructionSpeed * 100), unit: '% FASTER' },
+    display: { label: 'CONSTRUCTION BONUS', values: fleetLevels(FLEET_EFFECTS.constructionSpeed * 100), unit: '% FASTER',
+      gains: ['+5% BUILD SPEED', '+5% BUILD SPEED', '+5% BUILD SPEED', '+5% BUILD SPEED', '+5% BUILD SPEED'] },
     max: 5,
     costs: [200, 350, 550, 800, 1100]
   },
@@ -451,7 +456,8 @@ const META = {
     name: 'Logistics frame',
     icon: 'depot',
     desc: `Adds ${FLEET_EFFECTS.supply} supply capacity per level from battle start. The total limit remains 180.`,
-    display: { label: 'EXTRA CAPACITY', values: fleetLevels(FLEET_EFFECTS.supply), unit: 'SUPPLY' },
+    display: { label: 'EXTRA CAPACITY', values: fleetLevels(FLEET_EFFECTS.supply), unit: 'SUPPLY',
+      gains: ['+2 SUPPLY', '+2 SUPPLY', '+2 SUPPLY', '+2 SUPPLY', '+2 SUPPLY'] },
     max: 5,
     costs: [150, 250, 400, 600, 850]
   },
@@ -459,7 +465,8 @@ const META = {
     name: 'Repair logistics',
     icon: 'repair',
     desc: `Reduces worker repair alloy costs by ${FLEET_EFFECTS.repairDiscount * 100}% per level, without changing repair speed.`,
-    display: { label: 'REPAIR DISCOUNT', values: fleetLevels(FLEET_EFFECTS.repairDiscount * 100), unit: '% LESS ALLOY' },
+    display: { label: 'REPAIR DISCOUNT', values: fleetLevels(FLEET_EFFECTS.repairDiscount * 100), unit: '% LESS ALLOY',
+      gains: ['+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT'] },
     max: 5,
     costs: [150, 250, 400, 600, 850]
   }

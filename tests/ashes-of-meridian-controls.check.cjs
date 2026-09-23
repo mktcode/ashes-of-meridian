@@ -36,6 +36,10 @@ test('screen templates render frozen data without DOM access, randomness or prof
   assert.notEqual(aetherIcon, alloyIcon);
   assert.ok(armory.includes(`<span class="armory-aether-icon">${aetherIcon}</span>`));
   assert.ok(armory.includes(alloyIcon));
+  assert.match(armory, /data-upgrade="startingAlloy"[^>]*><span>100 AETHER<\/span><small>\+50 ALLOY<\/small>/);
+  assert.match(armory, /data-upgrade="aetherEvacuation"[^>]*><span>500 AETHER<\/span><small>\+100 LIMIT · \+5 \/ BUILDING<\/small>/);
+  assert.match(armory, /data-upgrade="constructionProtocols"[^>]*><span>350 AETHER<\/span><small>\+5% BUILD SPEED<\/small>/);
+  assert.doesNotMatch(armory, /AETHER · LEVEL/);
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
   assert.equal(JSON.stringify({profile, expedition}), before);
@@ -1018,7 +1022,7 @@ test('each result transfers capped unused aether plus structure recovery once at
   }
 });
 
-test('result screen shows evacuated and structure recovery beneath the combined aether total', () => {
+test('result screen shows evacuated and building-destruction aether beneath the combined total', () => {
   const h = setup();
   h.ui.resultAetherRecovered = 130;
   h.ui.resultAetherEvacuated = 100;

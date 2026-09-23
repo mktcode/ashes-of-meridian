@@ -56,13 +56,19 @@ test('content loads alone with reference catalog order, classic bindings and nam
   for (const upgrade of Object.values(META)) {
     assert.equal(upgrade.costs.length, upgrade.max);
     assert.equal(upgrade.display.values.length, upgrade.max + 1);
+    assert.equal(upgrade.display.gains.length, upgrade.max);
     assert.ok(upgrade.costs.every(cost => Number.isFinite(cost) && cost > 0));
   }
   assert.deepEqual(Array.from(META.startingAlloy.costs), [100, 200, 300, 450, 650]);
   assert.equal(META.startingWorkers.max, 5);
   assert.deepEqual(Array.from(META.aetherEvacuation.costs), [500, 800, 1200, 1800, 2600]);
   assert.equal(META.aetherEvacuation.name, 'Aether recovery');
-  assert.match(META.aetherEvacuation.desc, /Separately,.*5 more permanent aether per level, from 5 at level 0 up to 30/);
+  assert.equal(META.aetherEvacuation.desc,
+    'Raises the evacuation limit and permanent aether recovered per destroyed enemy building.');
+  assert.deepEqual(Array.from(META.aetherEvacuation.display.gains), [
+    '+100 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING',
+    '+250 LIMIT · +5 / BUILDING', '+250 LIMIT · +5 / BUILDING'
+  ]);
   assert.deepEqual(Array.from(vm.runInContext('STARTING_ALLOY', context)), [250, 300, 350, 400, 450, 500]);
   assert.deepEqual(Array.from(vm.runInContext('AETHER_EVACUATION_CAPS', context)), [100, 200, 350, 500, 750, 1000]);
   assert.deepEqual(Array.from(vm.runInContext('AETHER_STRUCTURE_RECOVERY', context)), [5, 10, 15, 20, 25, 30]);
