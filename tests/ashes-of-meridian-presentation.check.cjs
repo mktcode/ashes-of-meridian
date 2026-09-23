@@ -574,7 +574,7 @@ test('effect drawing accepts frozen data without game/UI globals and matches the
 });
 
 function effectCullingView() {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'effects', 'effects-view'],
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'effects', 'effects-view'],
     { globals: { clamp: (value, min, max) => Math.max(min, Math.min(max, value)) } });
   vm.runInContext('Math.random = () => { throw Error("View RNG"); }', context);
   const api = vm.runInContext('({renderBattlefieldEffects, drawEffectRing, drawVisibleEffectBeam, effectBoundsVisible, M4})', context);
@@ -592,6 +592,29 @@ function effectCullingView() {
     return R.calls;
   } };
 }
+
+test('command drill marks only visible living commanders of parties that own the benefit', () => {
+  const h = effectCullingView();
+  h.world.visible = [255, 0];
+  h.world.idx = x => x >= 10 ? 1 : 0;
+  h.state.parties = [
+    { benefits: { commandDrill: 2 } }, { benefits: { commandDrill: 1 } },
+    { benefits: {} }, { benefits: { commandDrill: 1 } }
+  ];
+  h.state.entities = [
+    { id: 1, kind: 'unit', type: 'hero', hp: 100, team: 0, x: 0, z: 1 },
+    { id: 2, kind: 'unit', type: 'hero', hp: 100, team: 1, x: 5, z: 2 },
+    { id: 3, kind: 'unit', type: 'hero', hp: 100, team: 2, x: 6, z: 3 },
+    { id: 4, kind: 'unit', type: 'hero', hp: 0, team: 3, x: 7, z: 4 },
+    { id: 5, kind: 'unit', type: 'hero', hp: 100, team: 3, x: 10, z: 5 },
+    { id: 6, kind: 'unit', type: 'rifle', hp: 100, team: 0, x: 8, z: 6 }
+  ];
+  const rings = h.render().filter(call => call[0] === 'ring');
+  assert.deepEqual(rings.map(call => [call[1], call[3], call[4], call[7]]), [
+    [0, 1, 11, 0x94e4d1], [5, 2, 11, 0xf2a490]
+  ]);
+  assert.ok(rings.every(call => call[12] >= .16 && call[12] <= .21));
+});
 
 test('effect bounds retain viewport-crossing shapes, heights, widths and perspective near-plane intersections', () => {
   const h = effectCullingView(), { R, effectBoundsVisible: visible, drawVisibleEffectBeam: beam } = h;

@@ -105,6 +105,13 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
         function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number, localTeam: PlayerTeam = 0) {
           const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
           renderMotionDust(R, world, s, localTeam);
+          for (const e of s.entities) {
+            if (e.kind !== 'unit' || e.type !== 'hero' || e.hp <= 0 || e.team === -1 ||
+              !(s.parties[e.team]?.benefits.commandDrill > 0) || !world.visible[world.idx(e.x,e.z)]) continue;
+            const color = e.team === localTeam ? 0x94e4d1 : 0xf2a490,
+              alpha = .16 + (.5 + .5 * Math.sin(t * 1.7 + e.id)) * .05;
+            ring(e.x, e.z, COMMAND_DRILL.radius, color, alpha, .11);
+          }
           // Culling must not redistribute the existing accent budget to later effects.
           let accents = R.quality > 1 ? 48 : R.quality > 0 ? 16 : 0;
           for (let f of effects.fx) {

@@ -16,7 +16,7 @@ function effectViewSample(render) {
     { ...common, x: 100, type: 'drop' }
   ] };
   const world = { visible: [255, 0], idx: x => x > 90 ? 1 : 0 };
-  const state = { time: 2,
+  const state = { time: 2, entities: [], parties: [],
     fields: [{ x: 1, z: 3, until: 10, type: 'bloom', r: 7 }, { x: 4, z: 5, until: 10, type: 'repair' }, { until: 1 }],
     scans: [{ x: 3, z: 4, until: 10 }, { until: 1 }],
     strikes: [{ type: 'shell' }, { x: 5, z: 6, type: 'flare', team: 1, at: 4, radius: 8 },
