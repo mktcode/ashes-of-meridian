@@ -8,11 +8,7 @@ Erster dokumentierter Fall: **Google Pixel 7, Chrome, High**. Das Gerät wurde s
 
 Die erste Meldung entspricht `webglcontextlost`; beim Reload lieferte `getContext('webgl2', …)` vorübergehend keinen Kontext. Das passt zu GPU-/Treiber-Reset oder Speicher-/Thermikdruck, beweist aber keine dieser Ursachen. Ein fortlaufender unbeschränkter WebGL-Leak ist nicht belegt. Die beim Review nachgewiesene unnötig zurückgehaltene Kartengeometrie wird inzwischen beim Weltwechsel freigegeben; die Auswirkung auf mobile Abbrüche ist noch nicht gemessen.
 
-Erneutes umfassendes Review auf `9fe6c4996bbd2b2893d35132f3408a835daa6e69`: zwei getrennte lesende Audits für GPU/Ressourcen und CPU/Simulation; Hauptagent prüfte Renderloop/UI/Lifecycle und die zentralen Befunde gegen die Quellen. Das statische Review enthielt keine Builds, Tests, Benchmarks, Browser- oder Echtgeräteläufe; sämtliche Performancewirkungen bleiben ungemessen. Die aktuelle Nutzerpriorität gilt der aktiven Ingame-Performance und künftigen Multiplayer-Expeditionen: nach dem 60-FPS-Limit Geometriefreigabe, Offscreen-Effekte und gezielte Messung. Pause-Entlastung ist zurückgestellt. Qualitätsänderungen und ein optionaler 30-FPS-Modus sind nicht beschlossen.
-
-### Audit-Übergabe
-
-Workflow `19d9eb10-58b0-49fa-809d-58a05efe6f61` ist abgeschlossen; beide Audits liefen mit Sol/high und hinterließen keine Quelländerungen. Die sauberen Analysebranches `aom/mobile-review-gpu` und `aom/mobile-review-cpu` auf dem genannten Ausgangscommit bleiben vorerst unter `/home/mkt/Projekte/experimental2/aom-mobile-review-{gpu,cpu}` erhalten. Child-Runs: GPU `eac5b5ab-de76-4609-8b43-7549e42a9f41`, CPU `d6c1e9dc-0baf-488a-864e-dd1401816aa9`; Originalübergaben jeweils `.tmp/mobile-review/findings.md`. Die entscheidungsrelevanten Befunde sind unten gesichert; es ist kein Codemerge offen.
+Ein umfassendes statisches Review trennte GPU-/Ressourcen- und CPU-/Simulationsrisiken; die entscheidungsrelevanten Befunde sind unten gesichert. Es enthielt keine Builds, Tests, Benchmarks, Browser- oder Echtgeräteläufe; sämtliche Performancewirkungen bleiben ungemessen. Die aktuelle Nutzerpriorität gilt der aktiven Ingame-Performance und künftigen Multiplayer-Expeditionen: nach dem 60-FPS-Limit, der Geometriefreigabe und dem Offscreen-Culling folgt gezielte Messung. Pause-Entlastung ist zurückgestellt. Qualitätsänderungen und ein optionaler 30-FPS-Modus sind nicht beschlossen.
 
 ## Bereits vorhandene Entlastungen
 
@@ -72,7 +68,7 @@ Die bekannten Bewegungs-/KI-Kostenformen sind Messkandidaten, keine Freigabe fü
 
 ## Erste lokale Nutzeraufnahme
 
-Quelle: `.tmp/ashes-of-meridian-diagnostics.json`, Schema 1, manuell gestoppt. Firefox 140 unter Linux/X11, DPR 1, Einzelspiel MOTHERSHIP, Seed 84473642, High mit 4× MSAA. Nutzerablauf: auf 2× gestellt, viele Einheiten gebaut und angegriffen. Konkrete CPU/GPU und Buildcommit fehlen im Bericht. Die folgenden Zahlen sichern den Befund unabhängig von der temporären Rohdatei; es ist keine Vorher-/Nachhermessung.
+Eine manuell gestoppte Diagnoseaufnahme mit Schema 1 entstand in Firefox 140 unter Linux/X11, DPR 1, Einzelspiel MOTHERSHIP, Seed 84473642, High mit 4× MSAA. Nutzerablauf: auf 2× gestellt, viele Einheiten gebaut und angegriffen. Konkrete CPU/GPU und Buildcommit fehlen im Bericht. Die folgenden Zahlen sichern den Befund; es ist keine Vorher-/Nachhermessung.
 
 - Von rund 553 Sekunden Aufzeichnungszeit sind nur die letzten 6000 Callbacks (450,917–553,000 s, rund 102 s) detailliert erhalten. Die 120 Kontextproben beginnen bei 432,634 s; alle zeigen bereits Tempo 2. Der Wechsel von 1× und die frühe Aufbauphase sind nicht mehr enthalten. Gesamtentitäten: 139–202 einschließlich Gebäuden/Ressourcen, keine reine Einheitenzählung.
 - Im detaillierten Ausschnitt rund 58,7 gezeichnete Bilder/s. Callback-Arbeit p50/p95/p99/max: 5/8/15/66 ms; Simulationsphase einschließlich Effekttick: 2/5/13/64 ms. UI p95 1 ms, Szenenaufbau und GL-Einreichung jeweils p95 2 ms. Die CPU-Zeitwerte sind ganzzahlig quantisiert; angezeigte 0 ms bedeuten nicht kostenlose Arbeit.

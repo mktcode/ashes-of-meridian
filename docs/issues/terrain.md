@@ -4,6 +4,6 @@ Das eigenständige Flugdeck ersetzt Bergkulisse und Felsblocker. Offen ist die m
 
 Änderungen auf Mothership begrenzen; [Desert](desert-map.md) und die freigegebene Alien-Gestaltung nicht mitverändern. Rezept und CPU-Umrisse: `src/battlefields/mothership.ts`; wiederverwendbare Architektur: `src/renderer/mothership-terrain.ts`. Gemeinsame Materialtexturen nach [Assetpflege](../rendering.md#texturen-und-portraits) behandeln.
 
-`main` enthält den [Höhenstand mit erhöhten Basisdecks und tieferem zentralem Schlachtfeld](hoehenstufen/03-karten-und-abnahme.md#mothership-erster-spielbarer-versuch) einschließlich [asymmetrischer Höhensicht](hoehenstufen/04-hoehenabhaengige-sicht.md). Rampen, Deckhöhen, versetzte Architektur/Vorkommen und Verdeckung benötigen weiterhin eine gezielte menschliche Abnahme.
+Der aktuelle Stand enthält erhöhte Basisdecks, ein tieferes zentrales Schlachtfeld und [asymmetrische Höhensicht](hoehenstufen/04-hoehenabhaengige-sicht.md). Der maßgebliche [manuelle Mothership-Test](hoehenstufen/README.md#jetzt-manuell-testen) umfasst Rampen, Deckhöhen, versetzte Architektur/Vorkommen und Verdeckung; dieses Issue ergänzt nur die oben genannten Gestaltungsfragen.
 
 Echte Geräte und menschliche vollständige Partien bleiben unter [Playtest-Validierung](playtest-validation.md) offen; automatisierte Prüfungen ersetzen diese Abnahme nicht.

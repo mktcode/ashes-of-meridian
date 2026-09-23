@@ -42,13 +42,13 @@ Der Server schreibt Verbindungs- und Raumeignisse als einzeilige JSON-Objekte na
 
 Das periodische Ereignis `metrics` enthält aktive Verbindungen/Räume und kumulierte Zähler für Verbindungen, logische Nutzbytes getrennt nach Kontrollnachrichten und Zustandsframes, ausgelassene beziehungsweise RTT-gedrosselte Zustandsframes, Backpressure, Heartbeat und Resume. Hinzu kommen RTT/Jitter, Zustandsframe-Maximum, Tick-p95/p99/Maximum sowie Prozess-CPU und RSS. Die Nutzbytes werden vor WebSocket-Kompression gezählt und sind daher kein Egress-Zähler. Werte gelten pro Prozess seit Start und sind kein dauerhaftes Monitoring. Die Erzeugerfunktion erlaubt Tests, Zeitquelle, Tick-/Sendetakt, Heartbeat, Schonfrist, Puffergrenzen, Kompression und Metrikintervall kontrolliert zu ersetzen; der Produktionsstart verwendet die dokumentierten Standardwerte.
 
-Für eine kurze reproduzierbare Nutzlastmessung auf allen Karten:
+Für eine kurze reproduzierbare Nutzlastmessung auf den derzeit im Messskript geführten Karten:
 
 ```sh
 npm run measure:network --prefix server
 ```
 
-Der Lauf erfasst 30 Öffnungsframes einer ruhenden Partei je Karte und schätzt Rohdatenrate, Deflate-Level-3-Rate, Framegrößen sowie lokale Kompressions-p95/p99. `SAMPLE_FRAMES=100` erhöht die Stichprobe bis höchstens 300. Das Profil ist absichtlich kurz und ersetzt weder ein belastetes Gefecht noch Egress-, Proxy- oder Ziel-VM-Messung; WebSocket-/TCP-/TLS-Rahmen sind nicht enthalten. Für echte Bandbreite ist zusätzlich der Netzwerkzähler am Container beziehungsweise Reverse-Proxy maßgeblich.
+Der Lauf erfasst 30 Öffnungsframes einer ruhenden Partei für Desert, Alien Planet und Mothership und schätzt Rohdatenrate, Deflate-Level-3-Rate, Framegrößen sowie lokale Kompressions-p95/p99. Westmark fehlt derzeit im manuell gepflegten Messkatalog; dieser Lauf ist daher kein vollständiger Kartenvergleich. `SAMPLE_FRAMES=100` erhöht die Stichprobe bis höchstens 300. Das Profil ist absichtlich kurz und ersetzt weder ein belastetes Gefecht noch Egress-, Proxy- oder Ziel-VM-Messung; WebSocket-/TCP-/TLS-Rahmen sind nicht enthalten. Für echte Bandbreite ist zusätzlich der Netzwerkzähler am Container beziehungsweise Reverse-Proxy maßgeblich.
 
 Der Browser protokolliert Phasenwechsel, Socketfehler/-Close, Wiederwahl und lokale Timeouts unter dem Präfix `[multiplayer]` in der Entwicklerkonsole. Dabei werden keine Aktionen oder Resume-Tokens protokolliert.
 

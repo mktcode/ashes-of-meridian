@@ -2,7 +2,7 @@
 
 ## Auftrag und Status
 
-Der Mothership-Durchstich ist auf `main` integriert. Gewünschtes Leitbild bleiben erhöhte Basen außen und ein großes tieferes Schlachtfeld in der Mitte, angelehnt an StarCraft 2. Der gemeinsame Oberflächenvertrag ist für spätere Karten nutzbar; Alien Planet und Desert bleiben auf ausdrücklichen Wunsch vorerst unverändert. Weitere SC2-Regeln oder Höhenboni sind nicht beauftragt.
+Der Mothership-Durchstich ist im aktuellen Stand integriert. Gewünschtes Leitbild bleiben erhöhte Basen außen und ein großes tieferes Schlachtfeld in der Mitte, angelehnt an StarCraft 2. Der gemeinsame Oberflächenvertrag ist für spätere Karten nutzbar; Alien Planet und Desert bleiben auf ausdrücklichen Wunsch vorerst unverändert. Weitere SC2-Regeln oder Höhenboni sind nicht beauftragt.
 
 **Stand: technisch integriert, menschliche Gesamt- und Mobilabnahme offen.** Vier öffentliche 6-m-Basisdecks, breite Innen-/Flankenrampen und tiefes Zentrum sind umgesetzt. Hangars, Anlagen und einige Vorkommen wurden für freie Rampen und ebene Vent-Fundamente versetzt; Mengen und RNG-Ziehungsreihenfolge bleiben unverändert. CPU-Höhenfeld, Klippen-/Segmentprüfung, Bau-/Arbeitszugänge, Produktionsausgänge und reservierte Verstärkungslandungen sind integriert. Darstellung, Picking und Effekte nutzen dieselbe Oberfläche.
 

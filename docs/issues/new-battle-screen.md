@@ -1,3 +1,5 @@
 # Späterer Skirmish-Dialog
 
-Der Expeditionsmodus bestimmt Gegner und Karte automatisch. Für den später vorgesehenen frei konfigurierbaren Skirmish-Modus soll die Kartenauswahl Vorschaubilder verwenden und die gegnerische Fraktion ebenso anschaulich wie die eigene darstellen, statt Dropdowns zu verwenden.
+Zurückgestellte Produktidee, kein Umsetzungsauftrag. Der Expeditionsmodus bestimmt Gegner und Karte weiterhin automatisch; Multiplayer besitzt seine eigene Kartenauswahl.
+
+Für einen späteren frei konfigurierbaren Skirmish-Modus sollen Kartenauswahl und gegnerische Fraktion als anschauliche Karten beziehungsweise Fraktionsfelder mit Vorschaubildern erscheinen, nicht als Dropdowns. Vor einer Umsetzung sind zunächst Skirmish-Regeln, verfügbare Parteien/KI, Startbedingungen und das Verhältnis zum Expeditionsprofil festzulegen. Die bestehende direkte `file://`-Auslieferung und schmale Displays bleiben dabei erhalten.

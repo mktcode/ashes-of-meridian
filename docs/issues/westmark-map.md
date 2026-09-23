@@ -8,7 +8,7 @@ Für einen isolierten menschlichen Test nach dem Build `index.html?experiment=we
 
 ## Grundlage und bewusste Anpassungen
 
-Vorlage: `/home/mkt/Downloads/Westmark_3D.html`, Titel „Westmark · Die vier Banner“, SHA-256 `3e598becfc97bfd0db17cb5ff9ce8b3875d21fa9117f34eaa00f76d50eda93cd`.
+Lokal gelieferte Vorlage: Titel „Westmark · Die vier Banner“, SHA-256 `3e598becfc97bfd0db17cb5ff9ce8b3875d21fa9117f34eaa00f76d50eda93cd`. Die Integration setzt den ursprünglichen Downloadpfad nicht voraus.
 
 Die eigenständige Landschaftsstudie besaß keine Ressourcen-, Bau- oder Navigationslogik. Der Spielstand ist deshalb keine unveränderte Rendererübernahme:
 
@@ -26,13 +26,13 @@ Die eigenständige Landschaftsstudie besaß keine Ressourcen-, Bau- oder Navigat
 - [ ] Verdichtete Fichtenkronen und Baumgruppen menschlich abnehmen: überlappende Astquirle und gekreuzte Zweigflächen füllen die Kronen, kleinere Begleitbäume lockern die zuvor vereinzelten Standorte auf. Der gezielte `file://`-Check in Chromium/SwiftShader (Balanced) zeigte keine WebGL-/JavaScriptfehler. Für drei Seeds bestätigte ein Vorher-/Nachher-Abgleich identische Terrain-/Bauraster, Höhen, Ressourcenlayout und ursprüngliche Platzierungen. Zusätzliche Alpha-Überzeichnung und Schattengeometrie auf Mobilgeräten noch prüfen.
 - [ ] Tal-/Bergübergänge, Kulisse am Kartenrand und Tageslicht menschlich abnehmen. Die Karte ist bewusst gröber als die Standalone-Vorlage; Kameraverdeckung und mobile GPU-Kosten separat bewerten.
 
-Das temporäre Bildbriefing mit Einzelprompts liegt unter `.tmp/westmark-integration/texture-prompts.md`; es ist nicht versioniert und kein dauerhafter Vertrag. Nach Bildänderungen die [Einbettung aus den kanonischen Quellen](../rendering.md#texturen-und-portraits) neu erzeugen. Höhen-/Materialdaten bleiben numerisch; keine WebP-Komprimierung technischer Masken.
+Nach Bildänderungen die [Einbettung aus den kanonischen Quellen](../rendering.md#texturen-und-portraits) neu erzeugen. Höhen-/Materialdaten bleiben numerisch; keine WebP-Komprimierung technischer Masken. Frühere temporäre Bildbriefings sind kein dauerhafter Vertrag.
 
 ## Prüfung und verbleibende Spielabnahme
 
 Gezielte CPU-Prüfungen belegen für drei Seeds die Verbindung aller vier Startbereiche und Ressourcen mit Fahrzeugfreiraum. Brückentests prüfen beide Fahrtrichtungen mit Panzerkörpern, Zufahrten, Brüstungen und Bauverbot; Wasser bleibt auch bei geleertem temporären Belegungsraster gesperrt. Vierparteien-Initialisierung prüft Standardvorkommen und bodengebundenen Arbeiterzugang. Geometrie-/Texturprüfungen prüfen endliche, budgetierte Meshes, gemeinsame CPU-Dreiecke, Deck-Picking, deterministische Blocker und die eingebetteten Bildbytes.
 
-Client- und Serverbuild, ZIP-Build samt Westmark-Skript-/Assetvergleich, abschließende Standardtestsuite und kurze Server-Sitzungstests einschließlich Westmark erfolgreich. Der technische `file://`-Check in Chromium/SwiftShader meldete auf allen drei Qualitätsstufen keine WebGL-/JavaScriptfehler; Deck-Picking und Texturfreigabe beim Profilwechsel funktionierten, keine externen HTTP(S)-Requests. Die Autoplay-Audiowarnung ohne Nutzergeste ist erwartbar. Diagnosen unter `.tmp/westmark-implementation/` sind temporär und keine Echtgeräte-Performanceabnahme.
+Client- und Serverbuild, ZIP-Build samt Westmark-Skript-/Assetvergleich, abschließende Standardtestsuite und kurze Server-Sitzungstests einschließlich Westmark waren zum Integrationsstand erfolgreich. Der technische `file://`-Check in Chromium/SwiftShader meldete auf allen drei Qualitätsstufen keine WebGL-/JavaScriptfehler; Deck-Picking und Texturfreigabe beim Profilwechsel funktionierten, keine externen HTTP(S)-Requests. Die Autoplay-Audiowarnung ohne Nutzergeste ist erwartbar. Diese historischen Diagnosen sind keine Echtgeräte-Performanceabnahme.
 
 Der gezielte technische Brücken-/Flussgabel-Check über `file://` bestätigte nach der Überarbeitung fehlerfreies WebGL auf allen Qualitätsstufen und Deck-Picking. Für drei Seeds blieben CPU-Höhen, Sperr-/Bauraster, Ressourcenlayout, feste Hindernisse und Baumplatzierungen im Vorher-/Nachher-Abgleich identisch. Synthetische Wassergeometrieprüfungen sichern einfache Flächendeckung, trockene Bereiche und beschnittene Ufer; der Pass-Test prüft Blending nach deckender Geometrie und vor Effekten. Das ist keine menschliche Wasser-/Material- oder Mobilabnahme.
 

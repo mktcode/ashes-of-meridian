@@ -8,7 +8,7 @@ Der Commander absorbiert innerhalb eines Radius einen Anteil des Schadens befreu
 
 ## Commander: Veteran
 
-Der Commander erhält dauerhaft 10 % mehr maximales Leben. Der Bonus muss sowohl beim Start als auch bei einer Rekonstruktion im HQ gelten. Sollte mehrfach in der Expedition vorkommen können und stacken.
+Vorschlagswert: Der Commander erhält dauerhaft 10 % mehr maximales Leben. Der Bonus muss sowohl beim Start als auch bei einer Rekonstruktion im HQ gelten. Sollte mehrfach in der Expedition vorkommen können und stacken.
 
 ## Commander: Feldlogistik
 
@@ -16,7 +16,7 @@ Worker innerhalb eines Commander-Radius gewinnen beim Abbau mehr Alloy. Der Bonu
 
 ## Bewegungsgeschwindigkeit
 
-Kampfeinheiten erhalten erhöhte Bewegungsgeschwindigkeit +1%, sollte mehrfach vorkommen können und stacken.
+Vorschlagswert: Kampfeinheiten erhalten +1 % Bewegungsgeschwindigkeit; der Vorteil sollte mehrfach vorkommen können und stacken.
 
 ## Erstes Turret kostenlos
 

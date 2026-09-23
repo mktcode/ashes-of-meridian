@@ -6,7 +6,7 @@ Expeditionen sollen außer dem heutigen **„als letzte Partei mit HQ übrig ble
 
 Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spielregeln](../gameplay.md#gefecht-und-fortschritt) starten je nach Tiefe zwei bis vier FFA-Parteien mit wirtschaftenden Standard-KIs und prüfen Ausscheiden sowie Sieg anhand des letzten HQs. Der Expeditionscheckpoint speichert Karte, Seed, mehrere Gegnerfraktionen und getrennte Vorteilsstapel, aber keine Missions-ID oder laufende Welt; Briefing und Hilfetexte setzen den Standardangriff voraus. Eine Sonderabfrage anhand der Karten-ID würde diese Kopplung verschärfen. Zustands-, Parteien-, Karten- und RNG-Grenzen stehen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen).
 
-Grobe Größenordnung für einen belastbaren ersten Piloten: mehrere getrennte Umsetzungspakete bzw. etwa **8–15 Entwicklungstage** für Missionsvertrag, Wellenregie, Kartenrezept, UI und automatisierte Prüfungen, danach zusätzliche menschliche Spiel- und Balance-Runden. Ein deutlich kleinerer Prototyp mit normaler Basisbau-KI und bloßem Überlebenstimer wäre mittlerer Aufwand, aber noch keine echte Tower-Defense-Karte mit lesbaren Wellen und kontrollierter Dramaturgie.
+Ein belastbarer erster Pilot benötigt mehrere getrennte Umsetzungspakete für Missionsvertrag, Wellenregie, Kartenrezept, UI und automatisierte Prüfungen, danach zusätzliche menschliche Spiel- und Balance-Runden. Ein deutlich kleinerer Prototyp mit normaler Basisbau-KI und bloßem Überlebenstimer wäre weniger umfangreich, aber noch keine echte Tower-Defense-Karte mit lesbaren Wellen und kontrollierter Dramaturgie.
 
 ## Produktentscheidungen vor der Umsetzung
 

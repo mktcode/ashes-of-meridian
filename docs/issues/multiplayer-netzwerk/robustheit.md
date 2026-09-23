@@ -68,7 +68,7 @@ Die kleinsten Varianten sind umgesetzt und messbar:
 3. [ ] Deltaframes mit regelmäßigen Voll-Keyframes und expliziten Löschungen nur bei nachgewiesenem weiterem Bedarf entwickeln.
 4. [ ] Ein kompaktes Binärformat ebenfalls nur bei weiterem Bedarf erwägen.
 
-`npm run measure:network --prefix server` misst das kurze, ruhende Öffnungsprofil auf allen Karten. Die Betriebsmetriken trennen logische Kontroll-/Zustandsbytes und ergänzen Frame-Maximum, Tick-p95/p99, CPU und RSS. Für den tatsächlichen Egress müssen Container- oder Proxyzähler verwendet werden, da die Prozessmetriken bewusst Nutzbytes vor Kompression zählen. Zwei volle Räume und belastete Gefechte auf der Ziel-VM bleiben offen.
+`npm run measure:network --prefix server` misst das kurze, ruhende Öffnungsprofil derzeit auf Desert, Alien Planet und Mothership; Westmark fehlt im manuell gepflegten Messkatalog. Die Betriebsmetriken trennen logische Kontroll-/Zustandsbytes und ergänzen Frame-Maximum, Tick-p95/p99, CPU und RSS. Für den tatsächlichen Egress müssen Container- oder Proxyzähler verwendet werden, da die Prozessmetriken bewusst Nutzbytes vor Kompression zählen. Zwei volle Räume und belastete Gefechte auf der Ziel-VM bleiben offen.
 
 Fog, Sichtkontakte, neutrale Ressourcen-Erinnerung und private Felder bleiben unverändert geschützt. Deltaframes würden eine belastbare Basis-/Sequenzkennung benötigen; nach Lücke oder Resume müsste immer ein Voll-Keyframe folgen. Eine spätere Protokolländerung erhöht die Version und wird gemeinsam mit Client und Server ausgerollt.
 
@@ -76,17 +76,16 @@ Fog, Sichtkontakte, neutrale Ressourcen-Erinnerung und private Felder bleiben un
 
 ### P2 – Netzwerksimulation und Abnahme
 
-- Serverintegrationstests für Socketverlust und Resume beider Parteien, ungültige/abgelaufene Tokens, Ersetzen eines alten Sockets, weiterlaufende Simulation und Schonfristende ergänzen.
-- Befehle rund um den Abbruch testen: vor Annahme verloren, angenommen ohne zugestelltes Ack, Ergebnis während Trennung und wiederholte Request-ID. Kein Fall darf eine Aktion doppelt ausführen.
-- [x] Backpressure mit kontrolliert langsamem Empfänger prüfen: Zustandsframes entfallen vor ihrer Erzeugung, während Kontrollausgänge und der Raum funktionsfähig bleiben.
-- [ ] Einen vollständigen reproduzierbaren Netzwerktest für Latenz, Jitter, Burst-Loss, Bandbreitenlimit und kurze Unterbrechung vorsehen. Kurze Integrationstests decken verzögerte/ausgelassene Heartbeat-Antworten, RTT-Drosselung, synthetischen Rückstau und Resume bereits ab; Kernel-/Proxy-Netzprofile sowie umfangreiche Last-/Simulationsläufe bleiben gesondert freigabepflichtig.
-- Abschließend zwei echte Geräte über Mobilfunk beziehungsweise Wi-Fi-Wechsel prüfen. Automatische Tests ersetzen diese menschliche Geräteabnahme nicht.
+Kurze Server- und Clientintegrationstests decken Socketverlust, Resume und Tokenrotation, Schonfristende, Befehlswiederholung, verzögerte Heartbeats und synthetischen Rückstau ab. Die Empfangsreihenfolge des Clients ist auch während asynchroner Kartenaufbereitung abgesichert; aufgestaute ersetzbare Vollansichten werden zusammengefasst. Diese technischen Fälle ersetzen die folgenden offenen Prüfungen nicht:
+
+- [ ] Einen vollständigen reproduzierbaren Netzwerktest für Latenz, Jitter, Burst-Loss, Bandbreitenlimit und kurze Unterbrechung vorsehen. Kernel-/Proxy-Netzprofile sowie umfangreiche Last-/Simulationsläufe bleiben gesondert freigabepflichtig.
+- [ ] Zwei echte Geräte über Mobilfunk beziehungsweise Wi-Fi-Wechsel prüfen. Automatische Tests ersetzen diese menschliche Geräteabnahme nicht.
 
 ## Offene Befunde aus dem kurzen Code-Review
 
 Die Lebenszyklus- und Datenschutzbefunde des Reviews sind behoben: bestätigte, befristet wiederholbare Tokenrotation, idempotentes `ready`, expliziter Abbruch veralteter Clientvorbereitungen, getaktete Request-Wiederholung und ausschließlich klassifizierte Close-Ursachen. Der Protokollvertrag steht maßgeblich in der [Serverdokumentation](../../../server/README.md#ablauf-und-grenzen). Folgende Folgearbeit bleibt offen:
 
-- [ ] **Messgrenze präzisieren:** `server/scripts/measure-network.mjs` nutzt zufällige Karten-/Startseeds und multipliziert Framegrößen mit nominalen 10 Hz. Es misst synchrone Roh-Deflate-Kompression statt des ausgehandelten WebSocket-Pfads. Für belastbare Vorher-/Nachhervergleiche feste Testfixtures, tatsächlich verstrichene Zeit und einen komprimierten Transportvergleich ergänzen. Die bisherigen Werte sind nur eine Öffnungsprofil-Schätzung; keine Freigabe für Hochlast.
+- [ ] **Messgrenze präzisieren:** `server/scripts/measure-network.mjs` nutzt zufällige Karten-/Startseeds, lässt Westmark aus und multipliziert Framegrößen mit nominalen 10 Hz. Es misst synchrone Roh-Deflate-Kompression statt des ausgehandelten WebSocket-Pfads. Für belastbare Vorher-/Nachhervergleiche den Server-Kartenkatalog, feste Testfixtures, tatsächlich verstrichene Zeit und einen komprimierten Transportvergleich verwenden. Die bisherigen Werte sind nur eine Öffnungsprofil-Schätzung; keine Freigabe für Hochlast.
 
 Wartbarkeit: Die Trennung `Connection`/`Seat`/`Room`, eine gemeinsame Simulationsquelle und begrenzte Puffer sind sinnvolle Grundlagen. Der nächste kleine Strukturauftrag sollte nach den Regressionstests den Client-Lebenszyklus (Phasen, Generationen, Timer) von Darstellung/UI trennen. Serverseitig sind Transportpolitik/Metriken eine mögliche zweite Grenze; keine generische Netzwerkplattform bauen und keine mechanische Dateizerlegung mit Verhaltenskorrekturen vermischen.
 

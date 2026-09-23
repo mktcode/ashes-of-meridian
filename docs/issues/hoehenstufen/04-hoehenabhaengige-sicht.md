@@ -2,7 +2,7 @@
 
 ## Auftrag und Reihenfolge
 
-Die Höhenregel ist für Mothership auf `main` technisch umgesetzt. Weitere Kartenumbauten und andere Höhenvorteile bleiben zurückgestellt. Offen ist die gezielte menschliche Abnahme an Klippe und Rampe. [Gesamtstand und Teststart](README.md).
+Die Höhenregel ist für Mothership im aktuellen Stand technisch umgesetzt. Weitere Kartenumbauten und andere Höhenvorteile bleiben zurückgestellt. Offen ist die gezielte menschliche Abnahme an Klippe und Rampe. [Gesamtstand und Teststart](README.md).
 
 ## Festgelegte Regel
 

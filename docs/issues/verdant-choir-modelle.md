@@ -1,4 +1,4 @@
-# Verdant Choir: unterscheidbare Gebäude und Einheiten
+# Verdant Choir: Abnahme unterscheidbarer Gebäude
 
 ## Gestaltungsrichtung
 

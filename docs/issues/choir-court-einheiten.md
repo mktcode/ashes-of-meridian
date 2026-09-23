@@ -1,8 +1,8 @@
-# Verdant Choir / Veiled Court: eigene Einheitensilhouetten
+# Verdant Choir / Veiled Court: Abnahme der Einheitensilhouetten
 
 ## Auftrag und Grenzen
 
-Alle sieben Einheiten beider Fraktionen haben eine eigene Gestaltung und Modellregistrierung. Rollen, technische IDs, Namen, Spielwerte, Kollisionsradien, Bewegungs-/Schusslogik und Simulations-RNG bleiben unverändert. Gebäude und Free Marches sind nicht Teil dieses Auftrags. Ergebnis zur Sichtung: lokale HTML-Übersicht unter `.tmp/unit-model-overview/`; HUD-Portraits erst nach dieser Gestaltungsrunde.
+Alle sieben Einheiten beider Fraktionen haben eine eigene Gestaltung und Modellregistrierung. Rollen, technische IDs, Namen, Spielwerte, Kollisionsradien, Bewegungs-/Schusslogik und Simulations-RNG bleiben unverändert. Gebäude und Free Marches sind nicht Teil dieses Auftrags. Offen sind die unten genannte menschliche Sichtung und anschließend die HUD-Portraits; eine aktuelle Übersicht kann dafür bei Bedarf neu erzeugt werden.
 
 ## Gestaltung
 
