@@ -30,8 +30,12 @@ test('screen templates render frozen data without DOM access, randomness or prof
   render.renderBattleScreen(profile, 1, 1, 250);
   render.renderSettingsScreen(profile.settings);
   render.renderFieldManual();
-  const armory = render.renderArmoryScreen(profile);
+  const armory = render.renderArmoryScreen(profile),
+    aetherIcon = vm.runInContext('icon("aether")', context), alloyIcon = vm.runInContext('icon("crystal")', context);
   assert.match(armory, /<h1>Permanent Upgrades<\/h1>/);
+  assert.notEqual(aetherIcon, alloyIcon);
+  assert.ok(armory.includes(`<span class="armory-aether-icon">${aetherIcon}</span>`));
+  assert.ok(armory.includes(alloyIcon));
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
   assert.equal(JSON.stringify({profile, expedition}), before);

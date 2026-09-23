@@ -492,6 +492,7 @@ const ICON_PATHS = {
   orbital: 'M12 2v8M7 3l2 7m8-7-2 7M4 17c0-4 16-4 16 0s-16 4-16 0M8 14l4-4 4 4M12 10v7',
   rally: 'M5 22V2M5 3h14l-3 5 3 5H5',
   energy: 'M14 1L4 14h7l-1 9 10-14h-7z',
+  aether: 'M12 2l9 5v10l-9 5-9-5V7z',
   crystal: 'M12 2l7 5 3 9-10 6-10-6 3-9zM12 2l-3 13 3 7 3-7zM2 16l7-1m6 0 7 1',
   cancel: 'M5 5l14 14M19 5L5 19',
   repair: 'M14 4l-4 4 2 4 4 2 4-4c2 5-3 9-7 7l-7 6-4-4 7-6C7 8 10 3 14 4z',

@@ -69,7 +69,7 @@ function renderFieldManual() {
 }
 
 function renderArmoryScreen(profile: MeridianProfile) {
-  return `<div class="armory-screen"><header class="armory-heading"><h1>Permanent Upgrades</h1><div class="armory-balance"><strong>${profile.aether.toLocaleString()}</strong><span class="armory-aether-icon">${icon('crystal')}</span></div></header><div class="armory-grid">${Object.entries(
+  return `<div class="armory-screen"><header class="armory-heading"><h1>Permanent Upgrades</h1><div class="armory-balance"><strong>${profile.aether.toLocaleString()}</strong><span class="armory-aether-icon">${icon('aether')}</span></div></header><div class="armory-grid">${Object.entries(
             META
           )
             .map(([k, m]) => {
