@@ -434,7 +434,7 @@ const META = {
   aetherEvacuation: {
     name: 'Aether recovery',
     icon: 'save',
-    desc: 'Raises the recovered aether limit per battle and the permanent aether recovered per destroyed enemy structure by 5.',
+    desc: 'Raises the aether evacuation limit per battle. Separately, each completed enemy building you destroy grants 5 more permanent aether per level, from 5 at level 0 up to 30.',
     display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'AETHER / BATTLE' },
     max: 5,
     costs: [500, 800, 1200, 1800, 2600]

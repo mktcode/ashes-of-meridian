@@ -62,6 +62,7 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.equal(META.startingWorkers.max, 5);
   assert.deepEqual(Array.from(META.aetherEvacuation.costs), [500, 800, 1200, 1800, 2600]);
   assert.equal(META.aetherEvacuation.name, 'Aether recovery');
+  assert.match(META.aetherEvacuation.desc, /Separately,.*5 more permanent aether per level, from 5 at level 0 up to 30/);
   assert.deepEqual(Array.from(vm.runInContext('STARTING_ALLOY', context)), [250, 300, 350, 400, 450, 500]);
   assert.deepEqual(Array.from(vm.runInContext('AETHER_EVACUATION_CAPS', context)), [100, 200, 350, 500, 750, 1000]);
   assert.deepEqual(Array.from(vm.runInContext('AETHER_STRUCTURE_RECOVERY', context)), [5, 10, 15, 20, 25, 30]);
