@@ -158,6 +158,37 @@ test('client resume rotates credentials and resends only requests unknown to the
   assert.equal(client.pending.has(1), false); assert.equal(events.length, 0);
 });
 
+test('socket input stays ordered across asynchronous resume preparation and coalesces queued frames', async t => {
+  const original = { WebSocket: context.WebSocket, document: context.document, performance: context.performance };
+  t.after(() => Object.assign(context, original));
+  context.document = { hidden: false, getElementById: () => null, addEventListener: () => {} };
+  context.performance = { now: () => 1000 };
+  const sockets = [];
+  context.WebSocket = class {
+    static OPEN = 1;
+    constructor() { this.readyState = 1; this.bufferedAmount = 0; sockets.push(this); }
+    send() {}
+    close() { this.readyState = 3; }
+  };
+  const client = new MeridianMultiplayerClient({ game: { networkTeam: null }, toast: () => {} }, async () => true);
+  const seen = [];
+  let finishResume;
+  client.receive = async message => {
+    seen.push(message);
+    if (message.type === 'resumed') await new Promise(resolve => { finishResume = resolve; });
+  };
+  client.openSocket({ type: 'resume' }, true);
+  const socket = sockets[0];
+  socket.onmessage({ data: JSON.stringify({ type: 'resumed' }) });
+  socket.onmessage({ data: JSON.stringify({ type: 'frame', tick: 1 }) });
+  socket.onmessage({ data: JSON.stringify({ type: 'frame', tick: 2 }) });
+  await Promise.resolve();
+  assert.deepEqual(seen.map(message => message.type), ['resumed']);
+  finishResume();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(seen.map(message => [message.type, message.tick]), [['resumed', undefined], ['frame', 2]]);
+});
+
 test('recent session credentials survive reload briefly and resume without re-entering the code', t => {
   const original = { localStorage: context.localStorage, WebSocket: context.WebSocket, document: context.document,
     URL: context.URL, performance: context.performance, setInterval: context.setInterval, clearInterval: context.clearInterval };

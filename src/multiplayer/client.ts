@@ -162,7 +162,20 @@ class MeridianMultiplayerClient {
     }, 5000);
   }
   private openSocket(message: Record<string, unknown>, reconnect: boolean) {
-    const socket = this.socket = new WebSocket(this.serverUrl);
+    const socket = this.socket = new WebSocket(this.serverUrl), inbox: Record<string, unknown>[] = [];
+    let receiving = false;
+    const drain = async () => {
+      if (receiving) return;
+      receiving = true;
+      try {
+        while (socket === this.socket && inbox.length) await this.receive(inbox.shift()!, socket);
+      } catch (error) {
+        if (socket === this.socket) this.end(String(error));
+      } finally {
+        receiving = false;
+        if (socket === this.socket && inbox.length) void drain();
+      }
+    };
     this.receivedAt = performance.now();
     if (reconnect) this.connectionAttempt++;
     this.setConnectionPhase(reconnect ? 'reconnecting' : 'connecting',
@@ -179,7 +192,12 @@ class MeridianMultiplayerClient {
       this.receivedAt = performance.now(); this.persistResume();
       try {
         if (typeof event.data !== 'string' || event.data.length > 4 * 1024 * 1024) throw Error('Invalid server message');
-        void this.receive(JSON.parse(event.data), socket).catch(error => { if (socket === this.socket) this.end(String(error)); });
+        const incoming = JSON.parse(event.data) as Record<string, unknown>;
+        // Preserve server order across asynchronous map preparation. Consecutive queued
+        // full views are replaceable; retaining only the newest bounds resume backlog.
+        if (incoming.type === 'frame' && inbox.at(-1)?.type === 'frame') inbox[inbox.length - 1] = incoming;
+        else inbox.push(incoming);
+        void drain();
       } catch { this.end('Invalid server message.'); }
     };
     socket.onerror = () => {
