@@ -17,7 +17,7 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const render = vm.runInContext('({renderHomeScreen, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderFieldManual, renderArmoryScreen, renderBenefitOptions})', context);
   const profile = Object.freeze({version: 1, expeditionDepth: 10, aether: 250,
     upgrades: Object.freeze({startingAlloy: 0, constructionProtocols: 1}),
-    settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false})});
+    settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false, showFps: true})});
   const expedition = Object.freeze({version: 3, faction: 1, depth: 10,
     enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({supplyCrate: 2}), Object.freeze({})]),
     benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
@@ -28,7 +28,8 @@ test('screen templates render frozen data without DOM access, randomness or prof
   render.renderHomeScreen(expedition, 10, briefing);
   render.renderHomeScreen(null, 10, '');
   render.renderBattleScreen(profile, 1, 1, 250);
-  render.renderSettingsScreen(profile.settings);
+  const settings = render.renderSettingsScreen(profile.settings);
+  assert.match(settings, /data-setting="showFps" checked/);
   render.renderFieldManual();
   const armory = render.renderArmoryScreen(profile),
     aetherIcon = vm.runInContext('icon("aether")', context), alloyIcon = vm.runInContext('icon("crystal")', context);
@@ -178,6 +179,18 @@ function setup() {
   const clickCamera = cam => click({ cam });
   return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
+
+test('FPS setting updates the readout immediately and remains a profile setting', () => {
+  const h = setup(), readout = h.document.getElementById('fpsReadout');
+  h.ui.profile.settings.showFps = false;
+  h.ui.audio.updateSettings = () => {};
+  h.ui.applySetting({ dataset: { setting: 'showFps' }, type: 'checkbox', checked: true });
+  assert.equal(h.ui.profile.settings.showFps, true);
+  assert.equal(readout.classList.contains('hidden'), false);
+  h.ui.applySetting({ dataset: { setting: 'showFps' }, type: 'checkbox', checked: false });
+  assert.equal(h.ui.profile.settings.showFps, false);
+  assert.equal(readout.classList.contains('hidden'), true);
+});
 
 test('UI submits actor-bound action data and cannot set rally when execution rejects it', () => {
   const h = setup(), actions = [];

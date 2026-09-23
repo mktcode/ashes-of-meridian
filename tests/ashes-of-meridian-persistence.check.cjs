@@ -6,7 +6,7 @@ const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v3';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
   version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {},
-  settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false }
+  settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false }
 };
 const benefitRules = {
   supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }, fieldWorkshop: { max: 1 }
@@ -67,7 +67,7 @@ test('profile settings reject foreign types without losing valid fields or progr
   for (const invalid of ['false', '1', '', 0, 1, null, {}, []]) {
     h.data.set(PROFILE, JSON.stringify({ ...defaults, expeditionDepth: 12, aether: 321,
       upgrades: { startingWorkers: 2 }, settings: { volume: 0.6, quality: 1,
-        music: invalid, sfx: invalid, healthbars: invalid, extra: true } }));
+        music: invalid, sfx: invalid, healthbars: invalid, showFps: invalid, extra: true } }));
     const loaded = json(h.service.loadProfile());
     assert.deepEqual(loaded.settings, { ...defaults.settings, volume: 0.6, quality: 1 }, JSON.stringify(invalid));
     assert.equal(loaded.expeditionDepth, 12);
@@ -76,9 +76,9 @@ test('profile settings reject foreign types without losing valid fields or progr
   }
   for (const invalid of ['0.5', '', false, true, null, {}, [], [1]]) {
     h.data.set(PROFILE, JSON.stringify({ ...defaults, settings: {
-      volume: invalid, quality: invalid, music: false, sfx: false, healthbars: true } }));
+      volume: invalid, quality: invalid, music: false, sfx: false, healthbars: true, showFps: true } }));
     assert.deepEqual(json(h.service.loadProfile().settings), {
-      ...defaults.settings, music: false, sfx: false, healthbars: true
+      ...defaults.settings, music: false, sfx: false, healthbars: true, showFps: true
     }, JSON.stringify(invalid));
   }
   assert.deepEqual(h.warnings, []);

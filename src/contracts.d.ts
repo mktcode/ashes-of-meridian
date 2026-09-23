@@ -125,6 +125,7 @@ type MeridianSettings = Record<string, number | boolean> & {
   sfx: boolean;
   quality: number;
   healthbars: boolean;
+  showFps: boolean;
 };
 
 interface MeridianProfile {

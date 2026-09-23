@@ -27,6 +27,7 @@
             warn: (...args) => console.warn(...args)
           });
         const profile = persistence.loadProfile();
+        if (profile.settings.showFps) $('fpsReadout').classList.remove('hidden');
         R = new MeridianRenderer(canvas);
         R.quality = profile.settings.quality;
         R.resize();

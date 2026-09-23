@@ -185,6 +185,10 @@
           this.R.quality = Number(v);
           this.R.resize();
         }
+        if (k === 'showFps') {
+          if (v) $('fpsReadout').classList.remove('hidden');
+          else $('fpsReadout').classList.add('hidden');
+        }
         this.persist();
       },
       showHelp(this: MeridianUI) {

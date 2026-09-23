@@ -53,7 +53,8 @@ function createMeridianPersistence(
           music: true,
           sfx: true,
           quality: 2,
-          healthbars: false
+          healthbars: false,
+          showFps: false
         }
       };
     }
