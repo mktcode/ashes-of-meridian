@@ -201,9 +201,20 @@
             (selected.includes(a.id) ? -100 : 0) -
             (selected.includes(b.id) ? -100 : 0)
         );
-        let w = workers[0];
-        let path = this.world!.path(w.x, w.z, p.x, p.z);
-        if (!path.points.length && distance(w, p) > 5) {
+        const world = this.world!, blocked = world.blocked;
+        let w: UnitEntity | undefined;
+        try {
+          // Validate the same reachable work area used after placement, with the
+          // planned foundation already blocking its footprint.
+          world.blocked = blocked.slice();
+          world.mark(world.blocked, p.x, p.z, BUILDINGS[type].size + 0.35);
+          const area = { x: p.x, z: p.z, radius: BUILDINGS[type].size + 2.9 };
+          w = workers.find(worker => world.path(worker.x, worker.z, p.x, p.z, false,
+            area, worker.size * UNIT_BODY_SCALE).status === 'complete');
+        } finally {
+          world.blocked = blocked;
+        }
+        if (!w) {
           this.notify(team, 'toast', 'A worker cannot reach this location.');
           return false;
         }

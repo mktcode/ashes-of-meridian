@@ -126,6 +126,29 @@ for (const task of ['build', 'repair']) {
   });
 }
 
+test('building selects the first worker that can reach the work radius around the planned foundation', () => {
+  const game = arena(), blockedWorker = game.spawnUnit('worker', -8, 0, 0, 0),
+    reachableWorker = game.spawnUnit('worker', 36, 0, 0, 0), position = { x: 12, z: 0 };
+  wall(game, 'x');
+  assert.ok(Math.hypot(blockedWorker.x - position.x, blockedWorker.z - position.z) <
+    Math.hypot(reachableWorker.x - position.x, reachableWorker.z - position.z));
+  const alloy = game.account(0).alloy;
+  assert.equal(game.build('depot', position), true);
+  const foundation = game.alive(e => e.kind === 'building' && e.type === 'depot')[0];
+  assert.ok(foundation); assert.equal(reachableWorker.order.type, 'build'); assert.equal(reachableWorker.order.id, foundation.id);
+  assert.equal(blockedWorker.order.type, 'idle'); assert.ok(game.account(0).alloy < alloy);
+});
+
+test('building rejects an unreachable work radius before payment or foundation creation', () => {
+  const game = arena(), worker = game.spawnUnit('worker', -8, 0, 0, 0), position = { x: 12, z: 0 };
+  wall(game, 'x'); game.random = () => { throw Error('Build reachability must not consume RNG'); };
+  const alloy = game.account(0).alloy, nextId = game.s.nextId, blocked = game.world.blocked;
+  assert.equal(game.build('depot', position, [worker.id]), false);
+  assert.equal(game.account(0).alloy, alloy); assert.equal(game.s.nextId, nextId);
+  assert.equal(game.alive(e => e.kind === 'building').length, 0);
+  assert.strictEqual(game.world.blocked, blocked); assert.equal(worker.order.type, 'idle');
+});
+
 test('a stalled miner can change passing side without pushing a holding blocker', () => {
   const game = arena(); wall(game, 'x');
   const w = game.spawnUnit('worker', 2.55, 0, 0, 0), blocker = game.spawnUnit('worker', 2.55, 1.83, 0, 0),
