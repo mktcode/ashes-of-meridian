@@ -30,7 +30,8 @@ test('screen templates render frozen data without DOM access, randomness or prof
   render.renderBattleScreen(profile, 1, 1, 250);
   render.renderSettingsScreen(profile.settings);
   render.renderFieldManual();
-  render.renderArmoryScreen(profile);
+  const armory = render.renderArmoryScreen(profile);
+  assert.match(armory, /<h1>Permanent Upgrades<\/h1>/);
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
   assert.equal(JSON.stringify({profile, expedition}), before);
@@ -992,13 +993,15 @@ test('permanent upgrades spend recovered aether, remain bounded and do not alter
   assert.deepEqual([h.ui.game.s.parties[0].account.alloy,h.ui.game.s.parties[0].account.gas,h.ui.game.s.parties[0].meta], [123,45,{}]);
 });
 
-test('each result transfers floored unused aether once, using the run-start evacuation limit through 1,000', () => {
-  for (const [level, gas, recovered] of [[0, 0, 0], [0, 42.9, 42], [0, 1000, 100],
-    [1, 1000, 200], [2, 1000, 350], [3, 1000, 500], [4, 1000, 750], [5, 2000, 1000]]) {
+test('each result transfers capped unused aether plus structure recovery once at the run-start upgrade level', () => {
+  for (const [level, gas, structures, recovered] of [[0, 0, 0, 0], [0, 42.9, 2, 52], [0, 1000, 2, 110],
+    [1, 1000, 2, 220], [2, 1000, 2, 380], [3, 1000, 2, 540], [4, 1000, 2, 800], [5, 2000, 2, 1060]]) {
     const h = setup(), saves = [];
     h.ui.persistence.saveProfile = p => saves.push(JSON.parse(JSON.stringify(p)));
     h.ui.showResult = () => {};
-    h.ui.game.s.parties[0].faction = 2; h.ui.game.s.parties[0].account.gas = gas; h.ui.game.s.parties[0].meta = { aetherEvacuation: level };
+    h.ui.game.s.parties[0].faction = 2; h.ui.game.s.parties[0].account.gas = gas;
+    h.ui.game.s.parties[0].meta = { aetherEvacuation: level };
+    h.ui.game.s.stats = { structuresDestroyed: structures };
     h.ui.event('result', { win: true });
     assert.equal(h.ui.resultAetherRecovered, recovered);
     assert.equal(h.ui.profile.aether, recovered);

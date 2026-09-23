@@ -41,7 +41,7 @@ test('HQ elimination withdraws assets without kills or RNG and cannot end the ba
   g.checkBattleResult();
   assert.equal(g.party(2).eliminated, true);
   assert.equal(unit.hp, 0); assert.equal(building.hp, 0); assert.equal(building.queue.length, 0);
-  assert.equal(g.s.stats.kills, 0); assert.equal(g.s.result, null);
+  assert.equal(g.s.stats.kills, 0); assert.equal(g.s.stats.structuresDestroyed, 0); assert.equal(g.s.result, null);
   assert.equal(g.s.fields.length, 0); assert.equal(g.s.scans.length, 0);
   assert.equal(g.s.strikes.length, 1, 'already launched strikes survive');
   assert.equal(g.executeAction(2, { kind: 'ability', ability: 'scan', position: { x: 0, z: 0 } }), false);
@@ -77,6 +77,21 @@ test('opponent-on-opponent kills never grant player score; player kills cover al
   assert.ok(!events.some(e => e.data.x !== undefined), 'hidden HQ deaths do not disclose locations');
   g.kill(hqs[3], hqs[0]); assert.equal(g.s.stats.kills, 1);
   g.kill(hqs[1], hqs[0]); assert.equal(g.s.stats.kills, 2);
+});
+
+test('only completed hostile structures destroyed by the player earn structure recovery', () => {
+  const { g, hqs } = battle();
+  g.effects.explosion = () => {};
+  const completed = g.spawnBuilding('barracks', 12, 0, 1, 1),
+    foundation = g.spawnBuilding('depot', 16, 0, 2, 1, { progress: .5 }),
+    unit = g.spawnUnit('rifle', 20, 0, 3, 1),
+    aiTarget = g.spawnBuilding('factory', 24, 0, 3, 1);
+  g.kill(completed, hqs[0]);
+  g.kill(foundation, hqs[0]);
+  g.kill(unit, hqs[0]);
+  g.kill(aiTarget, hqs[1]);
+  assert.equal(g.s.stats.kills, 3);
+  assert.equal(g.s.stats.structuresDestroyed, 1);
 });
 
 test('public FFA start snapshots every slot and preserves seeded terrain/resources on all maps', () => {

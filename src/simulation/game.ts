@@ -145,7 +145,7 @@
           parties, rules, stopped: false,
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [],
-          stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
+          stats: { kills: 0, structuresDestroyed: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
           cam: { x: playerStart.x + 5, z: playerStart.z - 2, zoom: 57 },
           result: null,

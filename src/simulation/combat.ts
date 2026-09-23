@@ -39,7 +39,10 @@
         e.deathAt = this.s!.time;
         e.target = null;
         if (e.kind === 'building') this.navDirty = true;
-        if (source?.team === 0 && this.enemy(source, e)) this.s!.stats.kills++;
+        if (source?.team === 0 && this.enemy(source, e)) {
+          this.s!.stats.kills++;
+          if (e.kind === 'building' && e.progress >= 1) this.s!.stats.structuresDestroyed++;
+        }
         if (source && source.id && this.enemy(source, e)) {
           source.kills!++;
           if (source.kills === 5) {

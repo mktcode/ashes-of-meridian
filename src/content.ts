@@ -300,6 +300,7 @@ type AbilityType = keyof typeof ABILITIES;
 
 const STARTING_ALLOY = [250, 300, 350, 400, 450, 500] as const;
 const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
+const AETHER_STRUCTURE_RECOVERY = [5, 10, 15, 20, 25, 30] as const;
 const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
 
 const COMMAND_ENERGY = Object.freeze({ start: 25, max: 200, regeneration: .8 });
@@ -431,9 +432,9 @@ const META = {
     costs: [300, 450, 650, 900, 1200]
   },
   aetherEvacuation: {
-    name: 'Aether evacuation',
+    name: 'Aether recovery',
     icon: 'save',
-    desc: 'Raises the recovered aether limit per battle.',
+    desc: 'Raises the recovered aether limit per battle and the permanent aether recovered per destroyed enemy structure by 5.',
     display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'AETHER / BATTLE' },
     max: 5,
     costs: [500, 800, 1200, 1800, 2600]

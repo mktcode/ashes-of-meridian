@@ -202,8 +202,10 @@
           this.factionJustUnlocked = null;
           if (firstResult) {
             let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.parties[0].meta?.aetherEvacuation || 0))),
-              limit = AETHER_EVACUATION_CAPS[level];
-            this.resultAetherRecovered = Math.min(limit, Math.max(0, Math.floor(this.game.s?.parties[0].account.gas || 0)));
+              limit = AETHER_EVACUATION_CAPS[level],
+              evacuated = Math.min(limit, Math.max(0, Math.floor(this.game.s?.parties[0].account.gas || 0))),
+              structures = Math.max(0, Math.floor(this.game.s?.stats.structuresDestroyed || 0));
+            this.resultAetherRecovered = evacuated + structures * AETHER_STRUCTURE_RECOVERY[level];
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
               profileChanged = true;

@@ -331,7 +331,7 @@ class MeridianMultiplayerClient {
         p.account.alloy = p.account.gas = p.account.energy = 0; return p; }),
       rules: { kind: 'scenario', duration: 3600, hostilities: [[false, true], [true, false]] },
       stopped: false, result: null, entities: [], scans: [], strikes: [], fields: [], triggers: {},
-      stats: { kills: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
+      stats: { kills: 0, structuresDestroyed: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
       speed: 1, cam: { x: 0, z: 0, zoom: 48 } };
     game.resetRandom(start.seed);
     if (sendReady) socket.send(JSON.stringify({ type: 'ready' }));

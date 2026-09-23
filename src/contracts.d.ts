@@ -378,6 +378,7 @@ type BattleRules = { kind: 'single-player' } |
 
 interface RunStats {
   kills: number;
+  structuresDestroyed: number;
   lost: number;
   trained: number;
   gathered: number;
