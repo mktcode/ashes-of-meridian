@@ -8,9 +8,10 @@ Prüfkontext: Mothership, Desert und Alien Planet bestehen mit jeweils drei und 
 
 ## Offene Befunde im gemeinsamen Unterbau
 
-Vollständige KI-/Simulationsläufe auf `0fd975b`, Node v23.11.1, ohne Namensfilter. Keine Referenzen oder Erwartungen geändert; eine Zuordnung der Fehler zu den Multiplayer-Änderungen oder einem älteren Stand ist noch nicht belegt.
+Vollständige KI-/Simulationsläufe auf `f0dba62`, Node v23.11.1, ohne Namensfilter. Keine Referenzen oder Erwartungen geändert. Der KI-Block bestand mit 39/40 Fällen, der Simulationsblock mit 92/97 Fällen. Eine Zuordnung der offenen Verhaltensfehler zu den jüngsten Änderungen oder einem älteren Stand ist noch nicht belegt.
 
-- [ ] KI-Test `autonomous 1 vs 1: paid economy, production, strategic pressure and completed battle`: Desert, Seed 1451, kein Ergebnis nach 24.000 Schritten à 0,05 Sekunden (20 simulierte Minuten). Produktion/Bauten/Angriffsaktivität bestehen ihre vorgelagerten Prüfungen. Ursache des ausbleibenden Abschlusses eingrenzen, nicht pauschal das Zeitlimit erhöhen.
-- [ ] Der [Worker-Langlaufbefund](worker-bauwegfindung/issue.md#belastbarer-befund-und-abgrenzung) bleibt ausschließlich im Worker-Issue maßgeblich und benötigt vor einer erneuten Ausführung eine aktuelle Freigabe.
+- [ ] KI-Test `autonomous 2 vs 0: paid economy, production, strategic pressure and completed battle`: Mothership, Seed 1471, kein Ergebnis nach 24.000 Schritten à 0,05 Sekunden (20 simulierte Minuten). Produktion, Bauten und Angriffsaktivität bestehen ihre vorgelagerten Prüfungen. Der zuvor auf `0fd975b` ausgefallene Fall `autonomous 1 vs 1` besteht im aktuellen Lauf. Ursache des neuen ausbleibenden Abschlusses eingrenzen, nicht pauschal das Zeitlimit erhöhen.
+- [ ] Der weiterhin reproduzierbare [Worker-Langlaufbefund](worker-bauwegfindung/issue.md#belastbarer-befund-und-abgrenzung) bleibt ausschließlich im Worker-Issue maßgeblich.
+- [ ] Vier Simulationsfixtures an den aktuellen Vertrag anpassen, ohne Spielverhalten zu ändern: Mothership besitzt Rastergröße 96 statt der alten 72; der synthetisch überschriebene Startpunkt und die Hangar-Formation liegen im heutigen Höhenlayout nicht mehr auf garantiert freiem Boden; der Heiltest erzeugt seinen Patienten als feindliches Team und erwartet dennoch Heilung. Diese veralteten Erwartungen getrennt von den beiden echten Liveness-Befunden korrigieren.
 
 Weitere Simulations-/KI-Läufe benötigen gemäß [Prüfverfahren](../testing.md) gesonderte aktuelle Freigabe. Visuelle Abnahme und Perspektivwechsel in einer laufenden Partie bleiben im [Perspektivpaket](multiplayer-karten-und-darstellung.md) offen; Ergebnisstatistik bleibt ein Einzelspieler-Vertrag; keine Referenzwerte zum Grünmachen ändern.

@@ -16,7 +16,7 @@ Die dauerhaften Regressionsfälle stehen in [den Navigationstests](../../../test
 
 Diese Befunde erklären eine passende Fehlerklasse, beweisen aber nicht den exakten Zustand eines der Screenshots. Die isolierten Kurztests sind kein Ersatz für Crowd-Langläufe oder menschliche Abnahme.
 
-Der vollständig freigegebene Simulationslauf auf `0fd975b` (Node v23.11.1) findet zusätzlich einen offenen Langlaufbefund: `worker traffic stays productive for six minutes: 1409/0/8, forced node true` scheitert mit `worker 64 stopped delivering in minute 1`. Die Variante ohne erzwungenen Knoten besteht. Ursache und Bezug zu den bisherigen Navigationseingriffen sind noch nicht eingegrenzt; keine Erwartungen, Radien oder Referenzen geändert.
+Der vollständig freigegebene Simulationslauf auf `f0dba62` (Node v23.11.1) bestätigt den offenen Langlaufbefund: `worker traffic stays productive for six minutes: 1409/0/8, forced node true` scheitert mit `worker 64 stopped delivering in minute 1`. Die Variante ohne erzwungenen Knoten besteht. Ursache und Bezug zu den bisherigen Navigationseingriffen sind noch nicht eingegrenzt; keine Erwartungen, Radien oder Referenzen geändert.
 
 ## Noch offen
 
