@@ -1003,6 +1003,8 @@ test('each result transfers capped unused aether plus structure recovery once at
     h.ui.game.s.parties[0].meta = { aetherEvacuation: level };
     h.ui.game.s.stats = { structuresDestroyed: structures };
     h.ui.event('result', { win: true });
+    assert.equal(h.ui.resultAetherEvacuated, Math.min([100, 200, 350, 500, 750, 1000][level], Math.floor(gas)));
+    assert.equal(h.ui.resultAetherStructures, structures * (5 + level * 5));
     assert.equal(h.ui.resultAetherRecovered, recovered);
     assert.equal(h.ui.profile.aether, recovered);
     assert.equal(saves.length, recovered ? 1 : 0);
@@ -1010,6 +1012,18 @@ test('each result transfers capped unused aether plus structure recovery once at
     assert.equal(h.ui.profile.aether, recovered, 'same result cannot pay twice');
     assert.equal(saves.length, recovered ? 1 : 0);
   }
+});
+
+test('result screen shows evacuated and structure recovery beneath the combined aether total', () => {
+  const h = setup();
+  h.ui.resultAetherRecovered = 130;
+  h.ui.resultAetherEvacuated = 100;
+  h.ui.resultAetherStructures = 30;
+  h.ui.showResult({ win: false, text: 'Defeat', time: 1, score: 0, integrity: 0 });
+  const html = h.document.getElementById('result').innerHTML;
+  assert.match(html, /AETHER RECOVERED<\/span><strong>130<\/strong>/);
+  assert.match(html, /EVACUATED 100/);
+  assert.match(html, /STRUCTURE RECOVERY 30/);
 });
 
 test('fleet upgrades charge their prices, respect caps and never mutate an active battle',()=>{

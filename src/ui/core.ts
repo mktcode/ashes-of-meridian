@@ -51,6 +51,8 @@
       touchPoints: Map<number, {x: number; y: number}>;
       battleFaction?: FactionId;
       resultAetherRecovered?: number;
+      resultAetherEvacuated?: number;
+      resultAetherStructures?: number;
       resultBenefit?: string;
       onViewportChange?: () => void;
       multiplayer?: MeridianMultiplayerClient;
@@ -150,6 +152,8 @@
           this.audio.resetBattleMusic?.();
           this.factionJustUnlocked = null;
           this.resultAetherRecovered = undefined;
+          this.resultAetherEvacuated = undefined;
+          this.resultAetherStructures = undefined;
           this.resultBenefit = undefined;
           this.paused = false;
           this.modalKind = '';
@@ -205,7 +209,9 @@
               limit = AETHER_EVACUATION_CAPS[level],
               evacuated = Math.min(limit, Math.max(0, Math.floor(this.game.s?.parties[0].account.gas || 0))),
               structures = Math.max(0, Math.floor(this.game.s?.stats.structuresDestroyed || 0));
-            this.resultAetherRecovered = evacuated + structures * AETHER_STRUCTURE_RECOVERY[level];
+            this.resultAetherEvacuated = evacuated;
+            this.resultAetherStructures = structures * AETHER_STRUCTURE_RECOVERY[level];
+            this.resultAetherRecovered = this.resultAetherEvacuated + this.resultAetherStructures;
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
               profileChanged = true;

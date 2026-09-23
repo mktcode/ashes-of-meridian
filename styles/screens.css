@@ -1267,6 +1267,15 @@
       text-shadow: 0 0 15px #31dcff99
     }
 
+    .result-reward-breakdown {
+      display: flex;
+      gap: 18px;
+      margin-top: 8px;
+      color: #a7d4dc;
+      font: 11px var(--mono);
+      letter-spacing: 1.2px
+    }
+
     .result-next {
       min-height: 210px;
       display: grid;
@@ -1583,6 +1592,13 @@
 
       .result-reward strong {
         font-size: 37px
+      }
+
+      .result-reward-breakdown {
+        gap: 10px;
+        margin-top: 3px;
+        font-size: 8px;
+        letter-spacing: .7px
       }
 
       .result-benefits {
