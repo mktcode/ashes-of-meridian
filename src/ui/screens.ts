@@ -67,7 +67,7 @@
         const maps = contentKeys(BATTLEFIELDS), alternatives = maps.filter(map => map !== previousMap),
           mapPool = alternatives.length ? alternatives : maps;
         return {
-          enemies: Array.from({ length: expeditionEnemyCount(depth) }, () => Math.floor(Math.random() * FACTIONS.length) as FactionId),
+          enemies: expeditionEnemyFactions(depth, Math.random),
           map: mapPool[Math.floor(Math.random() * mapPool.length)],
           seed: 1 + Math.floor(Math.random() * 99999999)
         };

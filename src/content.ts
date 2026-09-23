@@ -359,10 +359,17 @@ const EXPEDITION_BENEFITS = {
 
 type ExpeditionBenefit = keyof typeof EXPEDITION_BENEFITS;
 
-// Early entry thresholds requested for playtesting; stage = completed depth + 1.
-const EXPEDITION_ENEMY_ENTRY_STAGES = [1, 2, 3] as const;
+// Stage = completed depth + 1. The opening visits each faction once before FFA expands.
+const EXPEDITION_ENEMY_ENTRY_STAGES = [1, 4, 8] as const;
+const EXPEDITION_OPENING_ENEMIES = [FACTION_ID.FIRST, FACTION_ID.SECOND, FACTION_ID.THIRD] as const;
 function expeditionEnemyCount(depth: number): number {
   return EXPEDITION_ENEMY_ENTRY_STAGES.filter(stage => depth + 1 >= stage).length;
+}
+function expeditionEnemyFactions(depth: number, random: () => number): FactionId[] {
+  if (depth >= 0 && depth < EXPEDITION_OPENING_ENEMIES.length)
+    return [EXPEDITION_OPENING_ENEMIES[depth]];
+  return Array.from({ length: expeditionEnemyCount(depth) }, () =>
+    Math.floor(random() * FACTIONS.length) as FactionId);
 }
 
 function normalizedBenefits(input: Record<string, number> = {}): Record<string, number> {

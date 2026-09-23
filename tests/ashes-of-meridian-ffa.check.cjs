@@ -4,8 +4,8 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core', 'content', 'effects', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS]);
-const { MeridianGame, expeditionEnemyCount, advanceEnemyBenefits, chooseEnemyBenefit } =
-  vm.runInContext('({ MeridianGame, expeditionEnemyCount, advanceEnemyBenefits, chooseEnemyBenefit })', context);
+const { MeridianGame, expeditionEnemyCount, expeditionEnemyFactions, advanceEnemyBenefits, chooseEnemyBenefit } =
+  vm.runInContext('({ MeridianGame, expeditionEnemyCount, expeditionEnemyFactions, advanceEnemyBenefits, chooseEnemyBenefit })', context);
 
 function battle(count = 4, scenario = false) {
   const events = [], g = new MeridianGame({ upgrades: {} }, (type, data) => events.push({ type, data }));
@@ -106,17 +106,18 @@ test('public FFA start snapshots every slot and preserves seeded terrain/resourc
   }
 });
 
-test('stage 2/3 entrants start empty and accumulate independent benefits across random factions', () => {
-  assert.deepEqual([0, 1, 2, 3, 14, 999999].map(expeditionEnemyCount), [1, 2, 3, 3, 3, 3]);
+test('opening factions are fixed and stage 4/8 entrants accumulate independent benefits', () => {
+  assert.deepEqual([0, 1, 2].map(depth => Array.from(expeditionEnemyFactions(depth, () => 0.99))), [[0], [1], [2]]);
+  assert.deepEqual([0, 1, 2, 3, 6, 7, 999999].map(expeditionEnemyCount), [1, 1, 1, 2, 2, 3, 3]);
   let perks = [{}];
-  for (let depth = 1; depth <= 5; depth++) {
+  for (let depth = 1; depth <= 9; depth++) {
     const encounter = { seed: 1409 + depth, map: 'desert',
       enemies: Array.from({ length: expeditionEnemyCount(depth) }, (_, slot) => (depth + slot) % 3) };
     const before = JSON.stringify(perks);
     const next = advanceEnemyBenefits(perks, encounter, depth);
     assert.equal(JSON.stringify(perks), before);
     assert.deepEqual(Array.from(next, p => Object.values(p).reduce((sum, count) => sum + count, 0)),
-      Array.from({ length: expeditionEnemyCount(depth) }, (_, slot) => depth - slot));
+      [depth, Math.max(0, depth - 3), Math.max(0, depth - 7)].slice(0, expeditionEnemyCount(depth)));
     assert.equal(JSON.stringify(next), JSON.stringify(advanceEnemyBenefits(perks, encounter, depth)));
     perks = next;
   }
