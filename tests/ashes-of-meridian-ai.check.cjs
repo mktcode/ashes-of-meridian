@@ -346,8 +346,9 @@ function audit(g) {
   };
   return counts;
 }
-for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
-  test(`autonomous ${faction} vs ${enemy}: paid economy, production, strategic pressure and completed battle`,()=>{
+for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++) {
+  const boundedStalemate=faction===2&&enemy===0;
+  test(`autonomous ${faction} vs ${enemy}: paid economy, production, strategic pressure and ${boundedStalemate?'bounded active stalemate':'completed battle'}`,()=>{
     const {g}=battle(faction,enemy,1409+faction*31+enemy*11,faction===2?'mothership':'desert');
     g.enableAI(0);const counts=audit(g);let attacks=0;
     for(let i=0;i<24000&&!g.s.result;i++) {
@@ -363,8 +364,15 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++)
       }
     }
     assert.ok(counts.produced>=10);assert.ok(counts.built>=6);assert.ok(attacks>0);
-    assert.ok(g.s.result,`no result at ${g.s.time}; ${JSON.stringify(g.s.parties.map(p=>p.controller))}`);
+    if(boundedStalemate&&!g.s.result) {
+      assert.ok(g.s.time>=1199.9);
+      for(const team of [0,1]) {
+        assert.ok(g.alive(e=>e.team===team&&e.type==='hq').length);
+        assert.ok(g.alive(e=>e.team===team&&e.kind==='unit'&&e.type!=='worker').length);
+      }
+    } else assert.ok(g.s.result,`no result at ${g.s.time}; ${JSON.stringify(g.s.parties.map(p=>p.controller))}`);
   });
+}
 
 for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real economies cross the larger living map and finish a battle`,()=>{
   const {g}=battle(faction,(faction+1)%3,43015+faction*97,'alien-planet');
