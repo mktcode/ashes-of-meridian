@@ -2,11 +2,12 @@
 'use strict';
 
 function renderExpeditionOpponents(expedition: MeridianExpedition): string {
-  return expedition.encounter.enemies.map((id, slot) => {
+  return `<div class="opponent-list">${expedition.encounter.enemies.map((id, slot) => {
     const faction = FACTIONS[id], perks = Object.entries(expedition.enemyBenefits[slot]).filter(([, count]) => count > 0)
-      .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · ');
-    return `<p><b>OPPONENT ${slot + 1} · ${esc(faction.short)}</b><br><small>UPGRADES · ${perks || 'NONE'}</small></p>`;
-  }).join('');
+      .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)} ×${count}`).join(' · '),
+      color = `#${faction.color.toString(16).padStart(6, '0')}`;
+    return `<div class="opponent-card" style="--opponent-color:${color}"><span class="opponent-sigil" aria-hidden="true">${esc(faction.sigil)}</span><span class="opponent-copy"><span class="opponent-label">OPPONENT ${slot + 1}</span><strong>${esc(faction.short)}</strong><small>UPGRADES · ${perks || 'NONE'}</small></span></div>`;
+  }).join('')}</div>`;
 }
 
 function renderHomeScreen(expedition: MeridianExpedition | null, bestDepth: number, briefing: string) {

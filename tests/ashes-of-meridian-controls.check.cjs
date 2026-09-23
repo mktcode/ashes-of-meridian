@@ -49,15 +49,15 @@ test('opponent briefing shows only present slots, factions and current upgrades'
       enemyBenefits: expedition.enemyBenefits.slice(0, count),
       encounter: { enemies: expedition.encounter.enemies.slice(0, count) }
     });
-    assert.equal((html.match(/<b>OPPONENT /g) || []).length, count);
-    assert.match(html, /OPPONENT 1 · VEILED COURT/);
+    assert.equal((html.match(/class="opponent-card"/g) || []).length, count);
+    assert.match(html, /OPPONENT 1<\/span><strong>VEILED COURT/);
     assert.equal(html.includes(`OPPONENT ${count + 1}`), false);
     assert.doesNotMatch(html, /FREE-FOR-ALL|PRESSURE|Precision supremacy|Early technology|Regenerating swarm|Infantry masses/);
   }
   const html = renderOpponents(expedition);
-  assert.match(html, /OPPONENT 1 · VEILED COURT<\/b><br><small>UPGRADES · NONE/);
-  assert.match(html, /OPPONENT 2 · VERDANT CHOIR<\/b><br><small>UPGRADES · Supply crate ×2/);
-  assert.match(html, /OPPONENT 3 · FREE MARCHES<\/b><br><small>UPGRADES · Survey drones ×1/);
+  assert.match(html, /opponent-sigil[^>]*>◇<\/span>.*OPPONENT 1<\/span><strong>VEILED COURT<\/strong><small>UPGRADES · NONE/);
+  assert.match(html, /opponent-sigil[^>]*>❋<\/span>.*OPPONENT 2<\/span><strong>VERDANT CHOIR<\/strong><small>UPGRADES · Supply crate ×2/);
+  assert.match(html, /opponent-sigil[^>]*>◈<\/span>.*OPPONENT 3<\/span><strong>FREE MARCHES<\/strong><small>UPGRADES · Survey drones ×1/);
 });
 
 function setup() {
