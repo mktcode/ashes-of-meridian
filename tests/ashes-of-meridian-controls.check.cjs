@@ -1023,7 +1023,7 @@ test('result screen shows evacuated and structure recovery beneath the combined 
   const html = h.document.getElementById('result').innerHTML;
   assert.match(html, /AETHER RECOVERED<\/span><strong>130<\/strong>/);
   assert.match(html, /EVACUATED 100/);
-  assert.match(html, /STRUCTURE RECOVERY 30/);
+  assert.match(html, /BUILDINGS DESTROYED 30/);
 });
 
 test('fleet upgrades charge their prices, respect caps and never mutate an active battle',()=>{
