@@ -40,7 +40,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 ## Entwicklung
 
 - [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
-- [Story und Welt](docs/story.md): maßgebliche Geschichte, Fraktionen und Einheiten; im Startmenü über **Codex** lesbar. Nicht implementierte Missionsansätze bleiben als Entwürfe gekennzeichnet.
+- [Story und Welt](docs/story.md): spielergerichteter Einstieg in Meridian, Ressourcen und Fraktionen; im Startmenü über **Codex** lesbar.
 - [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
 - [Grafik und Assets](docs/rendering.md): Modell-/Texturpflege und Darstellungsgrenzen.
 - [Prüfungen](docs/testing.md): gezielte Tests, Standardtestsuite, ausdrücklich beauftragte KI-/Simulationsläufe und Aussagegrenzen; [optionale lokale Performancediagnose](docs/testing.md#lokale-performancediagnose).
