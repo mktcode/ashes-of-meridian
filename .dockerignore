@@ -7,7 +7,6 @@
 !tsconfig.json
 !scripts/
 !scripts/clean-dist.mjs
-!scripts/embed-story.mjs
 !src/
 !src/**
 !index.html

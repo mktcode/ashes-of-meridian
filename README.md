@@ -40,7 +40,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 ## Entwicklung
 
 - [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
-- [Story und Welt](docs/story.md): deutsche interne Fassung des Einstiegs; die [englische Spielfassung](src/ui/story.en.md) ist im Startmenü über **Codex** lesbar.
+- [Story und Welt](docs/story.md): deutsche interne Fassung des Einstiegs; die [englische Spielfassung](src/ui/codex.ts) ist im Startmenü über **Codex** lesbar.
 - [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
 - [Grafik und Assets](docs/rendering.md): Modell-/Texturpflege und Darstellungsgrenzen.
 - [Prüfungen](docs/testing.md): gezielte Tests, Standardtestsuite, ausdrücklich beauftragte KI-/Simulationsläufe und Aussagegrenzen; [optionale lokale Performancediagnose](docs/testing.md#lokale-performancediagnose).

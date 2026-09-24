@@ -7,7 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
 COPY tsconfig.json ./
-COPY scripts/clean-dist.mjs scripts/embed-story.mjs ./scripts/
+COPY scripts/clean-dist.mjs ./scripts/clean-dist.mjs
 COPY src/ ./src/
 RUN npm run build && find dist -type f -name '*.map' -delete
 

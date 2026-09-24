@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {readFileSync,existsSync} = require('node:fs');
+const {existsSync} = require('node:fs');
 const {join} = require('node:path');
 const vm = require('node:vm');
 const {loadScripts,UI_SCRIPTS} = require('./helpers/game-scripts.cjs');
@@ -9,10 +9,8 @@ const root = join(__dirname,'..');
 test('codex shows every faction and authored portrait without a profile unlock', () => {
   const context=loadScripts(['core','content',...UI_SCRIPTS]);
   vm.runInContext('Math.random = seeded = () => { throw Error("Codex RNG"); }',context);
-  const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS,story} =
-    vm.runInContext('({renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS,story:CODEX_STORY_MARKDOWN})',context);
-  const source=readFileSync(join(root,'src/ui/story.en.md'),'utf8');
-  assert.equal(story,source);
+  const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS} =
+    vm.runInContext('({renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS})',context);
   assert.match(renderHomeScreen(null,0,''),/data-ui="codex"/);
   for(let faction=0;faction<3;faction++) {
     const html=renderCodexScreen(faction);
