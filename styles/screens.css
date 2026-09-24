@@ -490,7 +490,8 @@
 
     @media(max-width:600px) {
       .home-layout {
-        grid-template-rows: 1fr auto
+        grid-template-rows: 1fr auto;
+        gap: 24px
       }
 
       .home-screen .menu-header,
@@ -508,9 +509,26 @@
         font-size: 12px
       }
 
+      .home-screen .menu-buttons {
+        gap: 7px
+      }
+
       .home-screen .menu-buttons button {
-        padding: 14px 20px;
+        min-height: 46px;
+        padding: 10px 18px;
         font-size: 12px
+      }
+
+      .home-screen .menu-buttons .primary {
+        min-height: 48px
+      }
+
+      .home-screen .continue-row {
+        gap: 7px
+      }
+
+      .home-screen .menu-subnav {
+        margin-top: 11px
       }
 
       .home-screen .menu-subnav button {
