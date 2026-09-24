@@ -11,7 +11,7 @@ test('codex shows every faction and authored portrait without a profile unlock',
   vm.runInContext('Math.random = seeded = () => { throw Error("Codex RNG"); }',context);
   const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS,story} =
     vm.runInContext('({renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS,story:CODEX_STORY_MARKDOWN})',context);
-  const source=readFileSync(join(root,'docs/story.md'),'utf8');
+  const source=readFileSync(join(root,'src/ui/story.en.md'),'utf8');
   assert.equal(story,source);
   assert.match(renderHomeScreen(null,0,''),/data-ui="codex"/);
   for(let faction=0;faction<3;faction++) {
@@ -31,11 +31,11 @@ test('codex shows every faction and authored portrait without a profile unlock',
     }
   }
   const storyHtml=renderStoryScreen();
-  assert.match(storyHtml,/Drei Ansprüche/);
+  assert.match(storyHtml,/Three Claims/);
   assert.equal((storyHtml.match(/id="codex-chapter-/g) || []).length,4);
-  assert.match(storyHtml,/Sternenschlacke \(Cinder\)/);
-  assert.match(storyHtml,/Nachhall \(Echo\)/);
-  assert.match(storyHtml,/Die Siebte Vermessung|Siebten Vermessung/);
-  assert.match(storyHtml,/<blockquote>[^<]+<br>— Inschrift[^<]+<\/blockquote>/);
-  assert.doesNotMatch(storyHtml,/Alloy|Aether|Missionsansätze aus derselben Welt/);
+  assert.match(storyHtml,/<strong>Cinder<\/strong>/);
+  assert.match(storyHtml,/<strong>Echo<\/strong>/);
+  assert.match(storyHtml,/Seventh Survey/);
+  assert.match(storyHtml,/<blockquote>[^<]+<br>— Inscription[^<]+<\/blockquote>/);
+  assert.doesNotMatch(storyHtml,/Alloy|Aether|Sternenschlacke|Nachhall|Missionsansätze/);
 });

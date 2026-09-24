@@ -32,7 +32,7 @@ function storyInline(text: string): string {
     .replace(/`([^`]+)`/g,'<code>$1</code>');
 }
 function renderStoryScreen(): string {
-  // docs/story.md is embedded at build time: no fetch (which is blocked on many file:// browsers).
+  // src/ui/story.en.md is embedded at build time: no fetch (which is blocked on many file:// browsers).
   const lines = CODEX_STORY_MARKDOWN.split(/\r?\n/);
   let html = '', paragraph: string[] = [], list: string[] = [], ordered: string[] = [], table: string[] = [], quote: string[] = [], chapter = 0;
   const chapters = lines.filter(line => /^## \d+\. /.test(line)).map((line,index) =>
