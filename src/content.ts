@@ -239,13 +239,6 @@ type UnitType = keyof typeof UNITS;
 type UnitDefinition = (typeof UNITS)[UnitType];
 const isFlyingUnitType = (type: EntityType) =>
   !!(UNITS as Partial<Record<EntityType, UnitDefinitionShape>>)[type]?.flying;
-const DESTROYER_LORE = [
-  'Breakwater — a converted convoy escort built to hold a corridor open under fire.',
-  'Crownwing — an ancient living carrier whose thorns once defended migrating seed colonies.',
-  'Catafalque — a silent reliquary barge escorting a legacy that must never be taken.'
-] as const;
-const unitDescription = (type: UnitType, faction: FactionId) =>
-  type === 'destroyer' ? `${DESTROYER_LORE[faction]} ${UNITS.destroyer.desc}` : UNITS[type].desc;
 
 const BUILDING_YAW = Math.PI / 15;
 const BUILDINGS = {

@@ -104,14 +104,13 @@ test('multiplayer projects visible destroyers and own pending production without
 
 test('destroyer is a costly flying hangar unit; its area hit accepts air and applies faction damage', () => {
   const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS]);
-  const {MeridianGame,UNITS,FACTIONS,isFlyingUnitType,unitDescription,parseBattleAction}=
-    vm.runInContext('({MeridianGame,UNITS,FACTIONS,isFlyingUnitType,unitDescription,parseBattleAction})',context);
+  const {MeridianGame,UNITS,FACTIONS,isFlyingUnitType,parseBattleAction}=
+    vm.runInContext('({MeridianGame,UNITS,FACTIONS,isFlyingUnitType,parseBattleAction})',context);
   assert.deepEqual([UNITS.destroyer.cost,UNITS.destroyer.gas,UNITS.destroyer.supply,UNITS.destroyer.time], [850,500,16,70]);
   assert.equal(UNITS.destroyer.from,'hangar'); assert.equal(isFlyingUnitType('destroyer'),true);
   assert.equal(parseBattleAction({kind:'train',unit:'destroyer'}).unit,'destroyer');
   for(const faction of [0,1,2]) {
     assert.ok(FACTIONS[faction].units.destroyer);
-    assert.ok(unitDescription('destroyer',faction).includes(FACTIONS[faction].units.destroyer));
     const g=Object.create(MeridianGame.prototype), hits=[];
     g.s={fields:[],parties:[{benefits:{commandDrill:0}}],time:0};
     g.factionFor=()=>faction;g.account=()=>({alloy:1000,gas:600});
