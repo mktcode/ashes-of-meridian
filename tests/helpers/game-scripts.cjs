@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const projectRoot = join(__dirname, '../..');
 const RENDERER_SCRIPTS = Object.freeze([
   'renderer-assets',
+  'heavy-assets',
   'renderer-geometry',
   'renderer-terrain-models',
   'renderer-desert-landscape',
@@ -13,6 +14,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-mothership-terrain',
   'renderer-westmark-terrain',
   'renderer-model-kit',
+  'renderer-heavy-mesh',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',
   'model-faction-0-building-hangar',
@@ -40,6 +42,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-faction-0-unit-tank',
   'model-faction-0-unit-artillery',
   'model-faction-0-unit-air',
+  'model-faction-0-unit-destroyer',
   'model-faction-0-unit-hero',
   'model-faction-1-unit-worker',
   'model-faction-1-unit-rifle',
@@ -47,6 +50,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-faction-1-unit-tank',
   'model-faction-1-unit-artillery',
   'model-faction-1-unit-air',
+  'model-faction-1-unit-destroyer',
   'model-faction-1-unit-hero',
   'model-faction-2-unit-worker',
   'model-faction-2-unit-rifle',
@@ -54,6 +58,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-faction-2-unit-tank',
   'model-faction-2-unit-artillery',
   'model-faction-2-unit-air',
+  'model-faction-2-unit-destroyer',
   'model-faction-2-unit-hero',
   'renderer-shaders',
   'renderer-runtime'

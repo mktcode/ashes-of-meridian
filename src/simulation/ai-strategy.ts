@@ -21,7 +21,7 @@ const aiStrategyMethods = {
       return !!d.damage;
     }
     const d: UnitDefinitionShape=UNITS[unit.type as UnitType];
-    return !!d.damage && !(d.groundOnly && target.type==='air');
+    return !!d.damage && !(d.groundOnly && target.kind==='unit' && !!(UNITS[target.type as UnitType] as UnitDefinitionShape)?.flying);
   },
   aiTargets(this: MeridianGame, team: PlayerTeam, visible: AIContact[], origin: Position): AITarget[] {
     const ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),this.s!.depth),

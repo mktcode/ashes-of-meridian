@@ -21,7 +21,7 @@ function projectMultiplayerEffect(game: MeridianGame, team: PlayerTeam, event: S
     if (!seen(event.source) || !seen(event.target)) {
       // An audible visible muzzle must not disclose an unseen endpoint (or vice versa).
       return event.kind === 'shot' && seen(event.source)
-        ? { kind: 'sound', time, point: point(event.source), heavy: event.source.type === 'tank' || !!event.travel } : null;
+        ? { kind: 'sound', time, point: point(event.source), heavy: event.source.type === 'tank' || event.source.type === 'destroyer' || !!event.travel } : null;
     }
     return { kind: event.kind, time, source: effectPose(event.source), target: effectPose(event.target), travel: event.travel };
   }

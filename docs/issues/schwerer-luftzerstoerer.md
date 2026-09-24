@@ -74,6 +74,12 @@ Die drei Bilder möglichst mit identischer Kamerahöhe, Beleuchtung und neutrale
 
 Nicht Teil des Auftrags sind neue Gebäude, ein generelles Tech-Tree-System, eine Stückobergrenze, weitere Flugzeugtypen oder Änderungen der bestehenden Flugzeuge.
 
+## Stand und offene Abnahme
+
+Der erste spielbare Stand nutzt die drei gelieferten GLBs als Quellen (Breakwater, Crownwing, Catafalque). Die Geometrie bleibt zunächst vollständig erhalten; nur glTF-Material-/Animationsparameter werden in den bestehenden Renderer-/Simulationszeitvertrag übertragen. Originalanimationen werden nicht als Keyframes abgespielt: Flügel, Rotoren, Kreisel und Tafeln nutzen feste sinus-/zeitbasierte Bewegungen. Die Varianten besitzen Portraits aus den tatsächlichen Spielmeshes. Ein gemeinsamer `destroyer`-Typ erhält die oben genannten Kosten sowie vorläufig 145 Schaden, 2,6 Sekunden Nachladezeit und 2,8 Flächenradius. Die KI spart erst mit Hangar, hinreichender Armee und Aetherwirtschaft für ein Exemplar; die Zielwerte sind keine abschließende Balanceentscheidung.
+
+Die technische Standardtestsuite und ein gezielter `file://`-Rendererlauf für die Portraits sind erfolgreich; letzterer bestätigt weder die Darstellung im Gefecht noch auf einem Zielgerät. Offen bleiben menschliche Abnahme von Farbe, Silhouette und Animation im normalen Zoom auf allen Karten und einem echten Zielgerät sowie der Balancevergleich unten. Die GLB-Detailmeshes samt neutraler Vorschau verdoppeln den GPU-Geometriespeicher für diesen Einheitentyp; Performance bei mehreren sichtbaren Exemplaren messen, bevor gezielt unauffällige Details reduziert werden. Umfangreiche KI- und Simulationslangläufe wurden nicht freigegeben und bleiben ausstehend.
+
 ## Prüfung und Abnahme
 
 - Build sowie gezielte Tests für Content-/Typverträge, Produktion und Erstattung, Versorgung, Boden-/Luftzielwahl, Flächenschaden, Fraktionsmodifikatoren, KI-Entscheidungen und Multiplayer-Projektion.

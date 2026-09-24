@@ -121,11 +121,19 @@ const aiMethods = {
       units=own.filter(e=>e.kind==='unit' && e.type!=='worker'),
       count=(type:UnitType)=>units.filter(e=>e.type===type).length +
         own.reduce((n,e)=>n+e.queue.filter(q=>q.type===type).length,0),
-      needAA=visible.some(e=>this.enemy({team},e)&&e.type==='air'),
+      needAA=visible.some(e=>this.enemy({team},e)&&e.kind==='unit' && !!(UNITS[e.type as UnitType] as UnitDefinitionShape)?.flying),
       siege=Object.values(this.aiFor(team)!.contacts).some(e=>this.enemy({team},e)&&e.kind==='building'),
       choices: UnitType[] = [];
     if (needAA) choices.push('rifle');
     if (units.length>=8 && !count('hero')) choices.push('hero');
+    const canBuildDestroyer=this.has('hangar',team) && units.length>=10 &&
+      count('destroyer')<Math.max(1,Math.floor(units.length/14)) && (!needAA || count('rifle')>=4);
+    // Save only after a viable army and economy exist; avoid a rifle purchase resetting the goal.
+    const destroyerCost=this.cost('destroyer','unit',team), account=this.account(team);
+    if (canBuildDestroyer && account.gas>=destroyerCost.gas*.65) {
+      if (account.gas<destroyerCost.gas || account.alloy<destroyerCost.cost+reserve) return;
+      choices.push('destroyer');
+    }
     if (this.has('hangar',team) && count('air')<Math.max(1,units.length*rules.airShare)) choices.push('air');
     if (units.length>=4 && this.has('factory',team) && !needAA) {
       if (siege && count('artillery')<Math.max(1,count('tank')/2)) choices.push('artillery');

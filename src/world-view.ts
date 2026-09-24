@@ -110,7 +110,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
         sn = Math.sin(rot);
       const ground = R.surface?.entityHeight(e) ?? 0;
       let y = ground + (
-        e.type === 'air'
+        isFlyingUnitType(e.type)
           ? 3.8 - (e.exit ? 3 * clamp(distance(e, e.exit) / e.exit.length, 0, 1) : 0) +
             Math.sin(time * 2 + e.id) * 0.22
           : e.faction === FACTION_ID.THIRD && e.kind === 'unit'
@@ -275,7 +275,7 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       if (R.quality > 0 && !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic') {
         const width = (e.size || 1) * (e.kind === 'building' ? 3.2 : 3.6);
         R.add('plane', e.x, (R.surface?.heightAt(e.x,e.z) ?? 0) - .02, e.z, width, 1, width * (e.kind === 'building' ? 1 : .8),
-          0xffffff, rot, 0, 0, 0, e.kind === 'building' ? .32 : e.type === 'air' ? .12 : .26,
+          0xffffff, rot, 0, 0, 0, e.kind === 'building' ? .32 : isFlyingUnitType(e.type) ? .12 : .26,
           'effects', CONTACT_SHADOW_MATERIAL);
       }
       if (e.kind === 'building') {

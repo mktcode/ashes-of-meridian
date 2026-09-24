@@ -223,14 +223,14 @@
             continue;
           if (e.kind === 'resource' && !selected && !hover) continue;
           let y =
-              e.type === 'air'
+              isFlyingUnitType(e.type)
                 ? 6.1
                 : e.kind === 'building'
                     ? Math.min(8, e.size + 2.5)
                     : 3.0,
             p = this.R.project(e.x, y + (g.world?.surface?.entityHeight(e) ?? 0), e.z);
           if (!p || !this.R.containsPoint(p.x, p.y)) continue;
-          let w = e.kind === 'building' ? 56 : e.type === 'hero' ? 42 : 30;
+          let w = e.kind === 'building' ? 56 : e.type === 'hero' || e.type === 'destroyer' ? 42 : 30;
           ctx.fillStyle = '#07101deb';
           ctx.fillRect(p.x - w / 2 - 2, p.y - 2, w + 4, e.maxShield ? 10 : 7);
           ctx.fillStyle = '#344350';

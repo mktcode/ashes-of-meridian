@@ -194,7 +194,7 @@
               R.add(
                 'sphere',
                 e.x,
-                (world.surface?.entityHeight(e) ?? 0) + (e.type === 'air' ? 4.7 : 1.4),
+                (world.surface?.entityHeight(e) ?? 0) + (isFlyingUnitType(e.type) ? 4.7 : 1.4),
                 e.z,
                 e.size * 1.5,
                 e.size * 1.7,

@@ -252,7 +252,7 @@ class MeridianMultiplayerClient {
       case 'shot':
         if (event.travel) fx.shell(event.source, event.target, event.travel);
         else fx.shot(event.source, event.target, game.localTeam);
-        if (audible) this.ui.event('shot', { ...event.source, heavy: event.source.type === 'tank' || !!event.travel });
+        if (audible) this.ui.event('shot', { ...event.source, heavy: event.source.type === 'tank' || event.source.type === 'destroyer' || !!event.travel });
         break;
       case 'sound': if (audible) this.ui.event('shot', { ...event.point, heavy: event.heavy }); break;
       case 'explosion':

@@ -261,7 +261,7 @@
           if (e.hp <= 0) continue;
           if (!this.game.observed(e)) continue;
           let y =
-              e.type === 'air' ? 4.4 : e.kind === 'building' ? 2.0 : 1,
+              isFlyingUnitType(e.type) ? 4.4 : e.kind === 'building' ? 2.0 : 1,
             p = this.R.project(e.x, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
           if (!p) continue;
           let edge = this.R.project(e.x + e.size, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z),

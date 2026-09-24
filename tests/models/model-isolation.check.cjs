@@ -57,6 +57,8 @@ test('requested entity redesigns preserve every unrelated unit and building draw
     assert.notEqual(actual[id], expected[id], 'requested refinement has its own geometry/variant test');
     delete actual[id]; delete expected[id];
   }
+  // The newly added destroyers have an independent GLB geometry/variant contract.
+  for (const faction of [0,1,2]) delete actual[`faction-${faction}/unit/destroyer`];
   assert.equal(Object.keys(actual).length, 9);
   assert.deepEqual(actual, expected);
 });

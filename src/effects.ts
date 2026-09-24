@@ -66,7 +66,7 @@ class MeridianEffects {
           });
       }
       shell(e: EffectPose, target: EffectPose, travel: number) {
-        const height = this.entityHeight(e) + (e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45);
+        const height = this.entityHeight(e) + (isFlyingUnitType(e.type) ? 4.5 : e.kind === 'building' ? 3 : 1.45);
         const endY = this.groundHeight(target.x,target.z);
         this.fx.push({
             type: 'shell',
@@ -83,8 +83,8 @@ class MeridianEffects {
           });
       }
       shot(e: EffectPose, target: EffectPose, localTeam: PlayerTeam = 0) {
-        const height = this.entityHeight(e) + (e.type === 'air' ? 4.5 : e.kind === 'building' ? 3 : 1.45),
-          th = this.entityHeight(target) + (target.type === 'air' ? 4.5 : target.kind === 'building' ? 2.4 : 1);
+        const height = this.entityHeight(e) + (isFlyingUnitType(e.type) ? 4.5 : e.kind === 'building' ? 3 : 1.45),
+          th = this.entityHeight(target) + (isFlyingUnitType(target.type) ? 4.5 : target.kind === 'building' ? 2.4 : 1);
         this.fx.push({
               type: 'beam',
               x: e.x + Math.sin(e.rot) * 0.7,
@@ -103,7 +103,7 @@ class MeridianEffects {
                     : e.team !== localTeam
                       ? 0xf49685
                       : 0xffd2a0,
-              width: e.type === 'tank' ? 0.075 : 0.035
+              width: e.type === 'tank' || e.type === 'destroyer' ? 0.075 : 0.035
             });
         this.combatBeams.set(this.fx[this.fx.length - 1], target.size);
       }
@@ -147,7 +147,7 @@ class MeridianEffects {
               y: this.entityHeight(e) + 1.2,
               z: e.z,
               tx: t.x,
-              ty: this.entityHeight(t) + (t.type === 'air' ? 4 : 1.1),
+              ty: this.entityHeight(t) + (isFlyingUnitType(t.type) ? 4 : 1.1),
               tz: t.z,
               life: 0.25,
               maxLife: 0.25,

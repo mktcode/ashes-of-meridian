@@ -7,6 +7,7 @@
       'train:tank': 'assets/portraits/faction-0-unit-tank.webp',
       'train:artillery': 'assets/portraits/faction-0-unit-artillery.webp',
       'train:air': 'assets/portraits/faction-0-unit-air.webp',
+      'train:destroyer': 'assets/portraits/faction-0-unit-destroyer.webp',
       'train:hero': 'assets/portraits/faction-0-unit-hero.webp',
       'build:hq': 'assets/portraits/faction-0-building-hq.webp',
       'build:barracks': 'assets/portraits/faction-0-building-barracks.webp',
@@ -146,10 +147,14 @@
             ? FACTION_0_ACTION_PORTRAITS[key]
             : faction !== undefined && BUILDING_PORTRAIT_ACTIONS.has(key)
               ? `assets/portraits/faction-${faction}-building-${key.slice('build:'.length)}.webp`
-              : undefined;
+              : faction !== undefined && key === 'train:destroyer'
+                ? `assets/portraits/faction-${faction}-unit-destroyer.webp`
+                : undefined;
         // Fixed renders of the actual models: no additional WebGL scenes in the HUD.
         const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
-        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
+        const title = faction !== undefined && key === 'train:destroyer'
+          ? ` title="${esc(unitDescription('destroyer', faction))}"` : '';
+        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${title}${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
         this.renderActionMarkup();
@@ -193,7 +198,7 @@
               cost: this.game.cost(k, 'building', this.localTeam)
             });
         } else {
-          let types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air'] };
+          let types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
           for (let k of types[this.tab] || [])
             html += this.actionButton('train:' + k, k === 'hero' ? 'Commander' : unitName(k, f), k, {
               cost: this.game.cost(k, 'unit', this.localTeam)
@@ -205,7 +210,8 @@
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?
-            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}</p>` : '');
+            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}</p>` :
+            this.tab === 'aircraft' ? `<p class="building-status">${esc(unitDescription('destroyer', f))}</p>` : '');
       },
       buildingAction(this: MeridianUI, action: string, id: number) {
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s!.result) return;

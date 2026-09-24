@@ -35,7 +35,9 @@ function checkUnit({ type, meshes: specs, min, max, totalTriangles, maxInstances
     x:12, z:-7, rot:.7, walk:0, carry:0 }, primary = calls => calls.find(c => c[0] === mesh), normal = h.draw(e);
   assert.equal(h.EntityModels.find(e).id, id); assert.ok(Object.isFrozen(h.EntityModels.find(e)));
   for (const faction of [1,2]) assert.notEqual(h.EntityModels.find({...e, faction})?.id, id);
-  for (const other of Object.keys(h.UNITS).filter(t => t !== type)) assert.notEqual(h.EntityModels.find({...e, type:other}).id, id);
+  // Authored GLB destroyers have their own opt-in model contract (and a larger test heap footprint).
+  for (const other of Object.keys(h.UNITS).filter(t => t !== type && t !== 'destroyer'))
+    assert.notEqual(h.EntityModels.find({...e, type:other}).id, id);
   assert.equal(h.EntityModels.find({...e, kind:'building'}), undefined);
   assert.equal(normal.filter(c => c[0] === mesh).length, 1);
   for (const carry of [0,10]) {

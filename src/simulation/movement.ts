@@ -100,7 +100,7 @@
         const nx = e.x + dx / d * step, nz = e.z + dz / d * step;
         if (step > 0 && this.canStep(e, nx, nz)) {
           e.x = nx; e.z = nz;
-          e.rot = angleLerp(e.rot, Math.atan2(dx, dz), dt * 9);
+          e.rot = angleLerp(e.rot, Math.atan2(dx, dz), dt * (e.type === 'destroyer' ? 2.5 : 9));
           e.walk += step;
           if (step >= d) delete e.yieldTo;
         } else if (this.s!.time >= e.yieldUntil!) {
@@ -259,7 +259,7 @@
           e.stuck = 0;
         } else this.recoverMovement(e, p, dt, area);
         if (moved) {
-          e.rot = angleLerp(e.rot, heading, dt * 9);
+          e.rot = angleLerp(e.rot, heading, dt * (e.type === 'destroyer' ? 2.5 : 9));
           e.walk += dt * speed;
         }
         return false;

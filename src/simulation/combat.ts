@@ -72,16 +72,17 @@
         if (e.team !== -1 && e.kind === 'unit' && e.type === 'hero')
           this.notify(e.team, 'radio',
             'Expedition command|The commander is down. We have a recovery signal. Reconstruct the command team at headquarters.');
-        this.presentation?.({ kind: 'explosion', point: e, size: e.kind === 'building' ? 3.5 : 1.2,
-          color: e.faction === FACTION_ID.SECOND ? 0xaee2ac : 0xf3b17c, big: e.kind === 'building' || e.type === 'tank' });
+        this.presentation?.({ kind: 'explosion', point: e, size: e.kind === 'building' ? 3.5 : e.type === 'destroyer' ? 3 : 1.2,
+          color: e.faction === FACTION_ID.SECOND ? 0xaee2ac : e.faction === FACTION_ID.THIRD ? 0xb9a9e8 : 0xf3b17c,
+          big: e.kind === 'building' || e.type === 'tank' || e.type === 'destroyer' });
         if (this.visible(e)) {
           this.effects.explosion(
             e.x,
             e.z,
-            e.kind === 'building' ? 3.5 : 1.2,
-            e.faction === FACTION_ID.SECOND ? 0xaee2ac : 0xf3b17c
+            e.kind === 'building' ? 3.5 : e.type === 'destroyer' ? 3 : 1.2,
+            e.faction === FACTION_ID.SECOND ? 0xaee2ac : e.faction === FACTION_ID.THIRD ? 0xb9a9e8 : 0xf3b17c
           );
-          this.emit('explosion', { x: e.x, z: e.z, big: e.kind === 'building' || e.type === 'tank' });
+          this.emit('explosion', { x: e.x, z: e.z, big: e.kind === 'building' || e.type === 'tank' || e.type === 'destroyer' });
         }
         if (e.type === 'hq' && this.enemy({ team: this.localTeam }, e) && this.visible(e))
           this.emit('alert', { text: 'Enemy command center destroyed.', x: e.x, z: e.z });
@@ -137,7 +138,7 @@
               this.damage(n, d.damage * 0.45, e, true);
           if (this.visible(e) || this.visible(target)) {
             this.effects.shot(e, target, this.localTeam);
-            this.emit('shot', { x: e.x, z: e.z, heavy: e.type === 'tank' });
+            this.emit('shot', { x: e.x, z: e.z, heavy: e.type === 'tank' || e.type === 'destroyer' });
           }
         }
       },
@@ -184,8 +185,10 @@
         if (!t || !this.canSee(e.team as PlayerTeam, t)) return false;
         let dist = distance(e, t) - t.size * 0.72;
         if (dist <= d.range && dist >= (d.minRange || 0)) {
-          e.rot = angleLerp(e.rot, Math.atan2(t.x - e.x, t.z - e.z), dt * 8);
-          if (e.cd <= 0) this.fire(e, t);
+          const aim = Math.atan2(t.x - e.x, t.z - e.z);
+          e.rot = angleLerp(e.rot, aim, dt * (e.type === 'destroyer' ? 2.5 : 8));
+          if (e.cd <= 0 && (e.type !== 'destroyer' ||
+            Math.abs(Math.atan2(Math.sin(aim - e.rot), Math.cos(aim - e.rot))) < .13)) this.fire(e, t);
           return !['move', 'follow'].includes(o.type);
         }
         if (

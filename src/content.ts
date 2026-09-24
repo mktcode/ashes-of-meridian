@@ -24,6 +24,7 @@ const FACTIONS = [
       tank: 'Ironclad',
       artillery: 'Longbow',
       air: 'Kestrel',
+      destroyer: 'Breakwater',
       hero: 'Field commander'
     },
     buildings: {
@@ -56,6 +57,7 @@ const FACTIONS = [
       tank: 'Rootbeast',
       artillery: 'Sporecaller',
       air: 'Mothwing',
+      destroyer: 'Crownwing',
       hero: 'The First Voice'
     },
     buildings: {
@@ -87,6 +89,7 @@ const FACTIONS = [
       tank: 'Sepulcher',
       artillery: 'Elegist',
       air: 'Seraph',
+      destroyer: 'Catafalque',
       hero: 'The Unmasked'
     },
     buildings: {
@@ -198,6 +201,23 @@ const UNITS = {
     flying: true,
     desc: 'Strike aircraft. Crosses terrain and attacks ground or air. Excellent for flanking artillery and striking exposed objectives.'
   },
+  destroyer: {
+    cost: 850,
+    gas: 500,
+    hp: 1500,
+    damage: 145,
+    range: 14,
+    reload: 2.6,
+    speed: 4.2,
+    size: 2.7,
+    supply: 16,
+    time: 70,
+    from: 'hangar',
+    vision: 29,
+    splash: 2.8,
+    flying: true,
+    desc: 'Rare heavy aerial destroyer. Bombards ground and air with a heavy area-impact battery. Protect it from concentrated anti-air fire.'
+  },
   hero: {
     cost: 300,
     gas: 100,
@@ -217,6 +237,15 @@ const UNITS = {
 
 type UnitType = keyof typeof UNITS;
 type UnitDefinition = (typeof UNITS)[UnitType];
+const isFlyingUnitType = (type: EntityType) =>
+  !!(UNITS as Partial<Record<EntityType, UnitDefinitionShape>>)[type]?.flying;
+const DESTROYER_LORE = [
+  'Breakwater — a converted convoy escort built to hold a corridor open under fire.',
+  'Crownwing — an ancient living carrier whose thorns once defended migrating seed colonies.',
+  'Catafalque — a silent reliquary barge escorting a legacy that must never be taken.'
+] as const;
+const unitDescription = (type: UnitType, faction: FactionId) =>
+  type === 'destroyer' ? `${DESTROYER_LORE[faction]} ${UNITS.destroyer.desc}` : UNITS[type].desc;
 
 const BUILDING_YAW = Math.PI / 15;
 const BUILDINGS = {
@@ -595,6 +624,7 @@ const ICON_PATHS = {
   tank: 'M3 15h18v5H3zM6 15V9h11v6M12 9V5h9M5 18h14',
   artillery: 'M4 19h16M5 16l3-7h7l4 7M11 9l7-6 3 2-7 7M8 19v2m8-2v2',
   air: 'M12 2l3 9 7 6v2l-9-3-1 6-1-6-9 3v-2l7-6z',
+  destroyer: 'M12 2l4 5 6 3v4l-6-1-2 8h-4l-2-8-6 1v-4l6-3z',
   hero: 'M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z',
   hq: 'M3 20V9l9-6 9 6v11zM7 20V12h10v8M10 3V1m4 2V1M2 9h20M9 15h6',
   barracks: 'M3 20V8l5-4h9l4 4v12zM8 20v-9h8v9M3 8h18M10 4v3m4-3v3',
