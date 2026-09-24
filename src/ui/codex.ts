@@ -34,7 +34,7 @@ function storyInline(text: string): string {
 function renderStoryScreen(): string {
   // docs/story.md is embedded at build time: no fetch (which is blocked on many file:// browsers).
   const lines = CODEX_STORY_MARKDOWN.split(/\r?\n/);
-  let html = '', paragraph: string[] = [], list: string[] = [], ordered: string[] = [], table: string[] = [], chapter = 0;
+  let html = '', paragraph: string[] = [], list: string[] = [], ordered: string[] = [], table: string[] = [], quote: string[] = [], chapter = 0;
   const chapters = lines.filter(line => /^## \d+\. /.test(line)).map((line,index) =>
     `<a href="#codex-chapter-${index + 1}">${storyInline(line.slice(3))}</a>`).join('');
   function flush() {
@@ -42,17 +42,21 @@ function renderStoryScreen(): string {
     if (list.length) { html += `<ul>${list.map(item => `<li>${storyInline(item)}</li>`).join('')}</ul>`; list = []; }
     if (ordered.length) { html += `<ol>${ordered.map(item => `<li>${storyInline(item)}</li>`).join('')}</ol>`; ordered = []; }
     if (table.length) { html += `<pre class="codex-table">${esc(table.join('\n'))}</pre>`; table = []; }
+    if (quote.length) { html += `<blockquote>${quote.map(storyInline).join('<br>')}</blockquote>`; quote = []; }
   }
   for (const line of lines) {
     const heading = /^(#{1,3}) (.*)/.exec(line);
     if (heading) { flush(); const level = heading[1].length;
       html += `<h${level}${level === 2 ? ` id="codex-chapter-${++chapter}"` : ''}>${storyInline(heading[2])}</h${level}>`; }
-    else if (!line.trim() || line === '>') flush();
-    else if (line.startsWith('|')) { if (paragraph.length || list.length || ordered.length) flush(); table.push(line); }
-    else if (/^[-*] /.test(line)) { if (paragraph.length || table.length || ordered.length) flush(); list.push(line.slice(2)); }
-    else if (/^\d+\. /.test(line)) { if (paragraph.length || table.length || list.length) flush(); ordered.push(line.replace(/^\d+\. /,'')); }
-    else if (line.startsWith('> ')) { flush(); html += `<blockquote>${storyInline(line.slice(2))}</blockquote>`; }
-    else { if (list.length || ordered.length || table.length) flush(); paragraph.push(line); }
+    else if (line.startsWith('>')) {
+      if (!quote.length) flush();
+      if (line.startsWith('> ')) quote.push(line.slice(2));
+    }
+    else if (!line.trim()) flush();
+    else if (line.startsWith('|')) { if (paragraph.length || list.length || ordered.length || quote.length) flush(); table.push(line); }
+    else if (/^[-*] /.test(line)) { if (paragraph.length || table.length || ordered.length || quote.length) flush(); list.push(line.slice(2)); }
+    else if (/^\d+\. /.test(line)) { if (paragraph.length || table.length || list.length || quote.length) flush(); ordered.push(line.replace(/^\d+\. /,'')); }
+    else { if (list.length || ordered.length || table.length || quote.length) flush(); paragraph.push(line); }
   }
   flush();
   return `<div class="subscreen codex-story-screen"><header class="sub-header"><div><div class="eyebrow">THE MERIDIAN / ARCHIVE</div><h1>The Story</h1></div><button class="textbtn" data-ui="codex">← CODEX</button></header><nav class="codex-chapters" aria-label="Story chapters">${chapters}</nav><article class="codex-story">${html}</article></div>`;
