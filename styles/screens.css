@@ -148,13 +148,6 @@
       vertical-align: middle
     }
 
-    .home-screen .menu-tagline {
-      font: italic 18px/1.45 Georgia, serif;
-      color: #b8cbd3;
-      margin: 12px 0 0;
-      text-shadow: 0 2px 8px #000
-    }
-
     .home-screen .expedition-stage {
       position: absolute;
       left: calc(100% + clamp(80px, 15vw, 230px));
@@ -434,10 +427,6 @@
         font-size: 70px
       }
 
-      .home-screen .menu-tagline {
-        font-size: 17px
-      }
-
       .home-screen .version,
       .home-screen .menu-footer {
         font-size: 8px
@@ -511,16 +500,12 @@
       }
 
       .home-screen .wordmark {
-        font-size: clamp(44px, 15vw, 70px);
+        font-size: clamp(30px, 9vw, 40px);
         letter-spacing: -2px
       }
 
       .home-screen .wordmark-first b {
-        font-size: 14px
-      }
-
-      .home-screen .menu-tagline {
-        font-size: 16px
+        font-size: 12px
       }
 
       .home-screen .menu-buttons button {
@@ -1704,14 +1689,6 @@
         padding: 0
       }
 
-      .home-screen .wordmark {
-        font-size: clamp(40px, 12.5vw, 52px)
-      }
-
-      .home-screen .menu-tagline {
-        margin-top: 10px
-      }
-
       .subscreen > div {
         padding: 16px
       }
@@ -1920,11 +1897,6 @@
 
       .home-screen .wordmark {
         font-size: 52px
-      }
-
-      .home-screen .menu-tagline {
-        font-size: 15px;
-        margin-top: 7px
       }
 
       .home-screen .menu-buttons {
