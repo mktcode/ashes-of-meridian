@@ -101,8 +101,9 @@ function registerHeavyModel(name: HeavyModelId, faction: FactionId) {
         const flap = name === 'crownwing' ? Math.sin(phase) * (node.name.includes('Main_') ? .22 : .13) * (x < 0 ? -1 : 1) : 0;
         const spin = name === 'breakwater' ? time * 2.5 : name === 'catafalque' && node.name.includes('gyroscope') ? time * .4 : 0;
         const bob = name === 'catafalque' && node.name.includes('Mandate_tablet') ? Math.sin(phase + index) * .07 : 0;
+        // The Breakwater's front-facing GLB rotors spin around local Z, not the hull's Y axis.
         part(`${prefix}Part${index}${neutral}`,x*scale,(y+bob)*scale,z*scale,scale,scale,scale,
-          surface,spin,0,flap);
+          surface,name === 'breakwater' ? 0 : spin,0,name === 'breakwater' ? spin : flap);
       }
     }});
 }

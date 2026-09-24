@@ -33,6 +33,18 @@ test('authored destroyers keep GLB triangles, independent moving parts and unifo
     assert.ok(h.draw(entity,{tint:0x99e4c6},2).every(call =>
       (call[0].endsWith('Neutral') || call[0].endsWith('Team') || call[0] === 'sphere') && call[7] === 0x99e4c6));
     assert.deepEqual(regular,h.draw(entity,{},2));
+    if (faction === 0) {
+      const start = h.draw(entity,{},0), turned = h.draw(entity,{},1);
+      for (const index of [9,11,13,15]) {
+        const name = `heavy0Part${index}`;
+        const before = start.find(call => call[0] === name), after = turned.find(call => call[0] === name);
+        assert.ok(before && after, `rotor ${index} is rendered`);
+        assert.equal(after[8],before[8], 'rotor must not yaw around the vertical axis');
+        assert.equal(after[9],0);
+        assert.equal(after[10]-before[10],2.5, 'rotor spins around its forward local Z axis');
+        assert.equal(after[1],before[1]);assert.equal(after[3],before[3]);
+      }
+    }
     assert.equal(h.draw({...entity,hp:0}).length,0);
   }
 });
