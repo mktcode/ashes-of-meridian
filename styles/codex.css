@@ -21,8 +21,7 @@
 .codex-model-screen .sub-header, .codex-model-caption { pointer-events: auto }
 .codex-model-screen .sub-header { max-width: 1200px; width: 100%; margin: 0 auto }
 .codex-model-caption { max-width: 720px; padding: 12px 20px; margin: 0 auto; border: 1px solid #6b83975c; background: #061623dc; color: #dce9e7 }
-.codex-model-caption p { line-height: 1.5; margin: 0 0 8px }
-.codex-model-caption small { color: #a6c2c9 }
+.codex-model-caption p { line-height: 1.5; margin: 0 }
 .codex-chapters { max-width: 820px; margin: 0 auto 26px; display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 8px }
 .codex-chapters a { color: #b9d8df; font: 11px/1.4 var(--mono); text-decoration: none; padding: 9px 12px; border: 1px solid #6a85976e; background: #0a202ddd }
 .codex-chapters a:hover, .codex-chapters a:focus-visible { border-color: #7ee6ec; color: #fff }

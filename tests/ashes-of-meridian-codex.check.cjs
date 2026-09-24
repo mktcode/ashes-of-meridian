@@ -26,7 +26,10 @@ test('codex shows every faction and authored portrait without a profile unlock',
         const portrait=`assets/portraits/faction-${faction}-${kind}-${type}.webp`;
         assert.ok(existsSync(join(root,portrait)),portrait);
         assert.ok(html.includes(`src="${portrait}"`));
-        assert.ok(renderCodexModelScreen(faction,kind,type).includes(FACTIONS[faction][`${kind}s`][type]));
+        const detail=renderCodexModelScreen(faction,kind,type);
+        assert.ok(detail.includes(FACTIONS[faction][`${kind}s`][type]));
+        assert.ok(detail.includes(catalog[type].desc));
+        assert.doesNotMatch(detail,/Animated game model|automatic rotation|no faction unlock required/);
       }
     }
   }

@@ -23,7 +23,7 @@ function renderCodexScreen(faction: FactionId): string {
 function renderCodexModelScreen(faction: FactionId, kind: 'unit' | 'building', type: UnitType | BuildingType): string {
   const name = kind === 'unit' ? unitName(type,faction) : buildingName(type,faction);
   const desc = kind === 'unit' ? UNITS[type as UnitType].desc : BUILDINGS[type as BuildingType].desc;
-  return `<div class="codex-model-screen"><header class="sub-header"><div><div class="eyebrow">${esc(FACTIONS[faction].name)} / ${kind.toUpperCase()}</div><h1>${esc(name)}</h1></div><button class="textbtn" data-ui="codex">← CODEX</button></header><div class="codex-model-caption"><p>${esc(desc)}</p><small>Animated game model · automatic rotation · no faction unlock required</small></div></div>`;
+  return `<div class="codex-model-screen"><header class="sub-header"><div><div class="eyebrow">${esc(FACTIONS[faction].name)} / ${kind.toUpperCase()}</div><h1>${esc(name)}</h1></div><button class="textbtn" data-ui="codex">← CODEX</button></header><div class="codex-model-caption"><p>${esc(desc)}</p></div></div>`;
 }
 
 function storyInline(text: string): string {
