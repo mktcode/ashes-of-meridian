@@ -213,7 +213,7 @@
         if (rules.kind === 'scenario') return s;
         this.emit('start', {});
         this.emit('radio', startingWorkers
-          ? 'Expedition command|Your starting workers will harvest alloy automatically. Expand your economy, then outlast every opposing party.'
+          ? 'Expedition command|Your starting workers will harvest Cinder automatically. Expand your economy, then outlast every opposing party.'
           : 'Expedition command|Recruit your first two workers from Infantry to establish your economy, then outlast every opposing party.');
         return s;
       },

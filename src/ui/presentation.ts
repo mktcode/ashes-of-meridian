@@ -255,8 +255,8 @@
                 ? buildingName(e.type, e.faction)
                 : e.kind === 'resource'
                   ? e.type === 'gas'
-                    ? 'AETHER VENT'
-                    : 'ALLOY CRYSTALS'
+                    ? 'ECHO VENT'
+                    : 'CINDER CRYSTALS'
                   : unitName(e.type, e.faction));
             ctx.font = '10px ui-monospace,Consolas,monospace';
             ctx.lineWidth = 3;

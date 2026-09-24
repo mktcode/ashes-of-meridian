@@ -38,7 +38,7 @@ Heute reserviert `desertCanyonPlan` tiefe flache Startbecken und verbindet Resso
 
 - [ ] Alle vier Kandidaten sind unabhängig von der späteren Parteienzuordnung hochgelegen und besitzen nutzbare Baufläche. HQ-Suche kann die Höhenvorgabe nicht umgehen.
 - [ ] Eine große zusammenhängende tiefe Kampfzone ist von jedem Start erreichbar; Rampen haben Körperfreiraum auch nach Rasterung. Umwege zwischen benachbarten und diagonal gegenüberliegenden Starts vergleichen, nicht nur Entfernung zur Mitte.
-- [ ] Anfangs-Alloy, Vent, Abbau-/Abladeseiten und Produktionsausgänge sind erreichbar. Mengen/Anzahl bleiben unverändert; notwendige Umplatzierung separat prüfen und als Layoutänderung behandeln.
+- [ ] Anfangs-Sternenschlacke, Vent, Abbau-/Abladeseiten und Produktionsausgänge sind erreichbar. Mengen/Anzahl bleiben unverändert; notwendige Umplatzierung separat prüfen und als Layoutänderung behandeln.
 - [ ] Dekoration kann keine neuen Passagen sperren. Kein Terrainunterschied aufgrund aktiver Parteien, Perspektive oder privatem Multiplayer-Startseed.
 - [ ] Rampen dürfen nicht unbeabsichtigt durch ein einzelnes legales Fundament sämtliche Basiszugänge verlieren. Ob absichtliches Walling erlaubt sein soll, bleibt eine Designentscheidung, keine stillschweigende globale Bausperre.
 

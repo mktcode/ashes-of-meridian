@@ -13,7 +13,7 @@ Der Luftzerstörer ist eine fliegende Großkampfeinheit mit hoher Hüllenstärke
 Als Ausgangspunkt für die erste Implementierung und menschliche Balanceprüfung:
 
 - ungefähr die Investition von vier bis fünf normalen Flugzeugen;
-- **850 Alloy, 500 Aether, 16 Supply und 70 Sekunden Bauzeit** vor Fraktionsmodifikatoren;
+- **850 Cinder, 500 Echo, 16 Supply und 70 Sekunden Bauzeit** vor Fraktionsmodifikatoren;
 - **1.500 Basishülle**, Geschwindigkeit etwa 4,2 und deutlich größere Kollisions-/Auswahlsilhouette als das vorhandene Flugzeug;
 - Reichweite etwa 14, kräftiger Hauptschuss gegen Boden und Luft sowie begrenzter Flächenschaden um das getroffene Ziel;
 - kein neues Produktionsgebäude und keine neue globale Stückgrenze; die vorhandene Hangar-Technologiekette bleibt maßgeblich.

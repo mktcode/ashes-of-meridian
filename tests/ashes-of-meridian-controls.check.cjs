@@ -41,11 +41,11 @@ test('screen templates render frozen data without DOM access, randomness or prof
   assert.notEqual(aetherIcon, alloyIcon);
   assert.ok(armory.includes(`<span class="armory-aether-icon">${aetherIcon}</span>`));
   assert.ok(armory.includes(alloyIcon));
-  assert.match(armory, /data-upgrade="startingAlloy"[^>]*><span>100 AETHER<\/span><small>\+50 ALLOY<\/small>/);
-  assert.match(armory, /data-upgrade="aetherEvacuation"[^>]*><span>500 AETHER<\/span><small>\+100 LIMIT · \+5 \/ BUILDING<\/small>/);
-  assert.match(armory, /data-upgrade="constructionProtocols"[^>]*><span>350 AETHER<\/span><small>\+5% BUILD SPEED<\/small>/);
+  assert.match(armory, /data-upgrade="startingAlloy"[^>]*><span>100 ECHO<\/span><small>\+50 CINDER<\/small>/);
+  assert.match(armory, /data-upgrade="aetherEvacuation"[^>]*><span>500 ECHO<\/span><small>\+100 LIMIT · \+5 \/ BUILDING<\/small>/);
+  assert.match(armory, /data-upgrade="constructionProtocols"[^>]*><span>350 ECHO<\/span><small>\+5% BUILD SPEED<\/small>/);
   assert.match(armory, /FLEET SYSTEMS/); assert.match(armory, /COMMAND MODULES/);
-  assert.match(armory, /data-upgrade="orbital"[^>]*><span>250 AETHER<\/span><small>\+12% DAMAGE<\/small>/);
+  assert.match(armory, /data-upgrade="orbital"[^>]*><span>250 ECHO<\/span><small>\+12% DAMAGE<\/small>/);
   assert.doesNotMatch(armory, /AETHER · LEVEL/);
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
@@ -1066,7 +1066,7 @@ test('result screen shows evacuated and building-destruction aether beneath the 
   h.ui.resultAetherStructures = 30;
   h.ui.showResult({ win: false, text: 'Defeat', time: 1, score: 0, integrity: 0 });
   const html = h.document.getElementById('result').innerHTML;
-  assert.match(html, /AETHER RECOVERED<\/span><strong>130<\/strong>/);
+  assert.match(html, /ECHO RECOVERED<\/span><strong>130<\/strong>/);
   assert.match(html, /EVACUATED 100/);
   assert.match(html, /BUILDINGS DESTROYED 30/);
 });

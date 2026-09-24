@@ -48,7 +48,7 @@ const FACTIONS = [
     desc: 'Many lives. Shared care.',
     doctrine: { name: 'Regenerating swarm', desc: 'Infantry masses, frequent attacks and economic targets.' },
     trait:
-      'Units cost 15% less alloy, move 10% faster and regenerate outside combat. Lighter hulls.',
+      'Units cost 15% less Cinder, move 10% faster and regenerate outside combat. Lighter hulls.',
     ability: 'Bloom of unmaking',
     units: {
       worker: 'Tender',
@@ -80,7 +80,7 @@ const FACTIONS = [
     dark: 0x3c3b50,
     desc: 'Beautiful. Ancient. Afraid.',
     doctrine: { name: 'Precision supremacy', desc: 'Early technology, aircraft and high-value targets.' },
-    trait: 'Units have regenerative shields and deal 12% more damage. Alloy costs are 12% higher.',
+    trait: 'Units have regenerative shields and deal 12% more damage. Cinder costs are 12% higher.',
     ability: 'Judgment beam',
     units: {
       worker: 'Custodian',
@@ -117,7 +117,7 @@ const UNITS = {
     time: 9,
     from: 'hq',
     vision: 15,
-    desc: 'Harvests alloy automatically. Free workers construct newly placed structures without interrupting builders or repairers. Select a worker, then tap an own foundation to resume building, a damaged allied building/unit to repair, or crystals to mine.'
+    desc: 'Harvests Cinder automatically. Free workers construct newly placed structures without interrupting builders or repairers. Select a worker, then tap an own foundation to resume building, a damaged allied building/unit to repair, or crystals to mine.'
   },
   rifle: {
     cost: 75,
@@ -249,7 +249,7 @@ const BUILDINGS = {
     size: 4.4,
     time: 45,
     cap: 24,
-    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver alloy here; it provides no passive resources.'
+    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver Cinder here; it provides no passive resources.'
   },
   barracks: {
     cost: 145,
@@ -274,7 +274,7 @@ const BUILDINGS = {
     hp: 850,
     size: 2.3,
     time: 20,
-    desc: 'Place within 6 meters of an explored aether vent; the foundation snaps to its center. Generates 1.7 aether per second; no worker is needed after construction.'
+    desc: 'Place within 6 meters of an explored Echo vent; the foundation snaps to its center. Generates 1.7 Echo per second; no worker is needed after construction.'
   },
   factory: {
     cost: 225,
@@ -406,12 +406,12 @@ const EXPEDITION_BENEFITS = {
   supplyCrate: {
     name: 'Supply crate',
     icon: 'crystal',
-    desc: `Adds ${EXPEDITION_EFFECTS.alloy} alloy to your reserves at the start of every remaining battle.`
+    desc: `Adds ${EXPEDITION_EFFECTS.alloy} Cinder to your reserves at the start of every remaining battle.`
   },
   aetherAllocation: {
-    name: 'Aether allocation',
+    name: 'Echo allocation',
     icon: 'save',
-    desc: `Adds ${EXPEDITION_EFFECTS.aether} aether at the start of every remaining battle.`
+    desc: `Adds ${EXPEDITION_EFFECTS.aether} Echo at the start of every remaining battle.`
   },
   pioneerSquad: {
     name: 'Pioneer squad',
@@ -508,11 +508,11 @@ function advanceEnemyBenefits(previous: Record<string, number>[], encounter: Exp
 
 const META = {
   startingAlloy: {
-    name: 'Starting alloy',
+    name: 'Starting Cinder',
     icon: 'crystal',
-    desc: 'Adds 50 starting alloy per level.',
-    display: { label: 'STARTING RESERVES', values: STARTING_ALLOY, unit: 'ALLOY',
-      gains: ['+50 ALLOY', '+50 ALLOY', '+50 ALLOY', '+50 ALLOY', '+50 ALLOY'] },
+    desc: 'Adds 50 starting Cinder per level.',
+    display: { label: 'STARTING RESERVES', values: STARTING_ALLOY, unit: 'CINDER',
+      gains: ['+50 CINDER', '+50 CINDER', '+50 CINDER', '+50 CINDER', '+50 CINDER'] },
     max: 5,
     costs: [100, 200, 300, 450, 650]
   },
@@ -526,10 +526,10 @@ const META = {
     costs: [300, 450, 650, 900, 1200]
   },
   aetherEvacuation: {
-    name: 'Aether recovery',
+    name: 'Echo recovery',
     icon: 'save',
-    desc: 'Raises the evacuation limit and permanent aether recovered per destroyed enemy building.',
-    display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'AETHER / BATTLE',
+    desc: 'Raises the evacuation limit and permanent Echo recovered per destroyed enemy building.',
+    display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'ECHO / BATTLE',
       gains: ['+100 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING',
         '+250 LIMIT · +5 / BUILDING', '+250 LIMIT · +5 / BUILDING'] },
     max: 5,
@@ -556,8 +556,8 @@ const META = {
   repairLogistics: {
     name: 'Repair logistics',
     icon: 'repair',
-    desc: `Reduces worker repair alloy costs by ${FLEET_EFFECTS.repairDiscount * 100}% per level, without changing repair speed.`,
-    display: { label: 'REPAIR DISCOUNT', values: fleetLevels(FLEET_EFFECTS.repairDiscount * 100), unit: '% LESS ALLOY',
+    desc: `Reduces worker repair Cinder costs by ${FLEET_EFFECTS.repairDiscount * 100}% per level, without changing repair speed.`,
+    display: { label: 'REPAIR DISCOUNT', values: fleetLevels(FLEET_EFFECTS.repairDiscount * 100), unit: '% LESS CINDER',
       gains: ['+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT'] },
     max: 5,
     costs: [150, 250, 400, 600, 850]

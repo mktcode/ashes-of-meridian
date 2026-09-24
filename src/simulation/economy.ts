@@ -49,8 +49,8 @@
           this.notify(team,
             'toast',
             this.account(team).alloy < c.cost
-              ? 'Insufficient alloy. Assign more workers to crystals.'
-              : 'Insufficient aether. Build a refinery beside a vent.'
+              ? 'Insufficient Cinder. Assign more workers to crystals.'
+              : 'Insufficient Echo. Build a refinery beside a vent.'
           );
           return false;
         }
@@ -145,7 +145,7 @@
         if (!p) return '';
         const gas = type === 'refinery' ? this.refineryVent(p, team) : null;
         if (type === 'refinery' && !gas)
-          return `Place within ${REFINERY_PLACEMENT_RANGE} meters of an explored aether vent.`;
+          return `Place within ${REFINERY_PLACEMENT_RANGE} meters of an explored Echo vent.`;
         p = gas ? { x: gas.x, z: gas.z } : p;
         let r = d.size;
         if (this.world!.surface) {
@@ -261,7 +261,7 @@
         if (!b) return 'Select a completed own structure.';
         if (b.hp >= b.maxHp) return 'Hull full';
         if (!this.availableWorkers(team).length) return 'No free worker';
-        if (this.account(team).alloy <= 0.1) return 'No alloy';
+        if (this.account(team).alloy <= 0.1) return 'No Cinder';
         return '';
       },
       toggleBuildingRepair(this: MeridianGame, id: number, team: PlayerTeam = 0) {

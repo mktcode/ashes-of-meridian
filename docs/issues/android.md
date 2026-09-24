@@ -10,7 +10,7 @@ Vor weiterer Planung auf echten Geräten WebGL 2, Kontextverlust, Startzeit, Spe
 
 ## Werbung und Veröffentlichung
 
-- AdMob über ein gepflegtes Capacitor-Plugin oder eigene native Brücke erst nach stabilem werbefreiem Prototyp bewerten. Freiwillige Rewarded Ads an Ergebnis-/Menüübergängen sind ein Kandidat; Belohnung und Einfluss auf Aether-Ökonomie bleiben offen. Nur bestätigte Abschlüsse einmalig belohnen.
+- AdMob über ein gepflegtes Capacitor-Plugin oder eigene native Brücke erst nach stabilem werbefreiem Prototyp bewerten. Freiwillige Rewarded Ads an Ergebnis-/Menüübergängen sind ein Kandidat; Belohnung und Einfluss auf Nachhall-Ökonomie bleiben offen. Nur bestätigte Abschlüsse einmalig belohnen.
 - Interstitials allenfalls an natürlichen Unterbrechungen, nicht im Gefecht; Banner passen schlecht zum dichten HUD. Offline-/Werbefehler dürfen das Spiel nicht blockieren. Pause, Audio und Rückkehr behandeln, ohne Werbeabhängigkeit im Simulations-RNG.
 - Nur Testanzeigen in Entwicklung. Aktuelle Einwilligungs-/Datenschutzvorgaben, UMP, Datenschutzerklärung, Zielgruppe, Play Data Safety und App-Verifizierung prüfen. Echtgeldkäufe sind nicht geplant; gegebenenfalls Play-Billing-Regeln neu bewerten.
 - Bei Umsetzung Kontovoraussetzungen, Signierung, Target-API/SDK, Store-Inhalte, Testanforderungen und Freigabe anhand der dann geltenden Vorgaben klären. Eine WebView-Hülle garantiert keine Store-Zulassung.

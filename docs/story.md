@@ -12,9 +12,9 @@ Eine Linie ungewöhnlicher Schwerkraftverhältnisse dient seit Jahrhunderten als
 
 ## 2. Was die Flotten suchen
 
-**Sternenschlacke**, auch Cinder oder Alloy genannt, bildet metallisch schimmernde Kristalle. Sie lässt sich vor Ort zu Panzerungen, Werkzeugen und Trägern für lebendes Gewebe verarbeiten. Wo eine Expedition landet, macht sie den schnellen Aufbau eines Brückenkopfs möglich.
+**Sternenschlacke (Cinder)** bildet metallisch schimmernde Kristalle. Sie lässt sich vor Ort zu Panzerungen, Werkzeugen und Trägern für lebendes Gewebe verarbeiten. Wo eine Expedition landet, macht sie den schnellen Aufbau eines Brückenkopfs möglich.
 
-Seltener ist **Nachhall**, den viele Flotten als Echo oder Aether führen. Er steigt an bestimmten Verwerfungen mit mineralischen Ausdünstungen auf und wird in abgeschirmten Kernen gebunden. Diese Kerne halten empfindliche Maschinen, Schutzfelder und biologische Prozesse selbst unter schweren Störungen stabil. Wenn ihre Feldspur verbraucht ist, lässt sie sich nicht einfach wiederherstellen.
+Seltener ist **Nachhall (Echo)**. Er steigt an bestimmten Verwerfungen mit mineralischen Ausdünstungen auf und wird in abgeschirmten Kernen gebunden. Diese Kerne halten empfindliche Maschinen, Schutzfelder und biologische Prozesse selbst unter schweren Störungen stabil. Wenn ihre Feldspur verbraucht ist, lässt sie sich nicht einfach wiederherstellen.
 
 Die Quellen liegen oft jenseits sicherer Routen. In den **Dunkelsäumen** wechseln die Bedingungen für die Fernnavigation; manche Ziele sind nur für begrenzte Zeit zuverlässig erreichbar. Eine gemeinsame Kartierungsfahrt, die **Siebte Vermessung**, fand dort neue Korridore und ungewöhnlich reiche Nachhallvorkommen. Nicht alle ihre Schiffe kehrten zurück. Was blieb, waren Karten, verstreute Proben und ein letzter Bericht mit Messwerten, die niemand seither erklären konnte.
 

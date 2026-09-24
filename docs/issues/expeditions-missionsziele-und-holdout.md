@@ -35,7 +35,7 @@ Mission und Landschaft bleiben getrennte Begriffe. Das gespeicherte Encounter-Re
 ### 1. Missionsrahmen ohne Verhaltensänderung
 
 - [ ] Missionstypen und Katalog für zulässige Karten-/Missionskombinationen einführen; alle bisherigen Encounters explizit als Standardangriff erzeugen und normalisieren.
-- [ ] Die heutigen FFA-Ausscheidungs- und HQ-Siegregeln in eine Standardmission verschieben, dabei gleichzeitige Ausscheidungen, Vorrang des Spielerverlusts, Score, Aether-Auszahlung und genau einmalige Ergebnisverarbeitung unverändert erhalten.
+- [ ] Die heutigen FFA-Ausscheidungs- und HQ-Siegregeln in eine Standardmission verschieben, dabei gleichzeitige Ausscheidungen, Vorrang des Spielerverlusts, Score, Nachhall-Auszahlung und genau einmalige Ergebnisverarbeitung unverändert erhalten.
 - [ ] Checkpointformat und Persistenztests auf das neue Encounter-Rezept umstellen. Reload startet weiterhin nur den gesicherten Gefechtsanfang.
 - [ ] Briefing, Ergebnisvorschau und Feldhandbuch aus Missionsmetadaten speisen, nicht mit Karten-ID- oder Text-Sonderfällen.
 
@@ -71,7 +71,7 @@ Mission und Landschaft bleiben getrennte Begriffe. Das gespeicherte Encounter-Re
 - Holdout gewinnt ausschließlich nach erfüllter Haltebedingung und verliert beim festgelegten Schutzobjektverlust. Gleichzeitige Grenzfälle liefern genau ein reproduzierbares Ergebnisereignis.
 - Wellen laufen über reguläre Navigation und Kampfregeln. Blockierte oder unbrauchbare Eingänge führen weder zu Hängen noch zu Teleports oder direkten Schadensskripten.
 - Briefing und HUD erklären vor und während des Gefechts klar, was geschützt werden muss, wann die nächste Welle kommt und wodurch gewonnen wird.
-- Aether-Auszahlung, Tiefenfortschritt, Vorteilsangebote, gegnerischer Fortschritt und Fraktionsfreischaltung werden pro Ergebnis höchstens einmal verarbeitet.
+- Nachhall-Auszahlung, Tiefenfortschritt, Vorteilsangebote, gegnerischer Fortschritt und Fraktionsfreischaltung werden pro Ergebnis höchstens einmal verarbeitet.
 - Standardkarten und ihre RNG-Referenzen werden nicht neu erzeugt oder zur Reparatur angepasst.
 - Die Mission ist mit allen drei spielbaren Fraktionen technisch möglich; Schwierigkeit und Spielspaß bleiben menschliche Abnahme.
 

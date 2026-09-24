@@ -14,7 +14,7 @@ Die beauftragte [KI-Planung](../architecture.md#teamzustand-sicht-und-ki) ersetz
 
 ## Menschliche Neubewertung der Rush- und Startökonomie
 
-Vergleichsfall vor der beauftragten Balanceanpassung: Nach Einführung zufälliger Eckstarts erreicht der Spieler Stage 21 ohne größere Probleme, besonders durch Startressourcen und Scans/Reinforcements/Orbital Strike. Gemeldete Stapel: Supply crate ×8, Aether allocation ×4, Pioneer squad ×3, Commander mandate ×1, Survey drones ×1, Field workshop ×1, Command capacitor ×2. Fraktion und permanente Upgrade-Stufen fehlen noch.
+Vergleichsfall vor der beauftragten Balanceanpassung: Nach Einführung zufälliger Eckstarts erreicht der Spieler Stage 21 ohne größere Probleme, besonders durch Startressourcen und Scans/Reinforcements/Orbital Strike. Gemeldete Stapel: Supply crate ×8, Echo allocation ×4, Pioneer squad ×3, Commander mandate ×1, Survey drones ×1, Field workshop ×1, Command capacitor ×2. Fraktion und permanente Upgrade-Stufen fehlen noch.
 
 Erste menschliche Rückmeldung nach der Anpassung: „schon viel viel besser“. Neue erreichte Stage, Fraktion und Flottenausstattung sind noch nicht angegeben; daraus folgt noch keine Abnahme tiefer Runs.
 
@@ -24,9 +24,9 @@ Mit einem neuen Run prüfen, ob halbierte Supply crates, geringere Startenergie,
 
 Der Verhaltensdruck erreicht ab Tiefe 16 seine letzte Stufe; unbegrenzte Ressourcen-Vorteile wachsen bei Spieler und Gegner-Slots weiter. Ob die begrenzten Workerziele und Produktionspläne der KI ihre zusätzlichen Startmittel in sehr tiefen Runs ausreichend nutzen, bleibt offen. Erst nach erneuten menschlichen Runs weitere Verhaltensstufen, Vorteilsgrenzen oder zusätzliche Produktionskapazität entscheiden; keine heimlichen Ressourcen- oder Kampfwertboni ergänzen.
 
-## Permanenter Start-Aether
+## Permanenter Start-Nachhall
 
-Ein permanentes Upgrade für Start-Aether bleibt zurückgestellt: Die bestehende Evakuierung überträgt auch ungenutzten Start-Aether in die Metawährung. Das gilt bereits für den Run-Vorteil Aether allocation und wurde nicht nebenbei geändert. Ein permanentes Start-Aether-Upgrade könnte ohne eigene Förderung wiederholt Reserve erzeugen. Vor einer Umsetzung entscheiden, ob Evakuierung an Förderung gebunden oder Start-Aether getrennt verrechnet werden soll; keine pauschale Änderung der bestehenden Auszahlung ohne Auftrag.
+Ein permanentes Upgrade für Start-Nachhall bleibt zurückgestellt: Die bestehende Evakuierung überträgt auch ungenutzten Start-Nachhall in die Metawährung. Das gilt bereits für den Run-Vorteil Echo allocation und wurde nicht nebenbei geändert. Ein permanentes Start-Nachhall-Upgrade könnte ohne eigene Förderung wiederholt Reserve erzeugen. Vor einer Umsetzung entscheiden, ob Evakuierung an Förderung gebunden oder Start-Nachhall getrennt verrechnet werden soll; keine pauschale Änderung der bestehenden Auszahlung ohne Auftrag.
 
 ## Weitere Kandidaten, noch keine Umsetzungsvorgabe
 

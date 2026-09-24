@@ -12,10 +12,7 @@ test('codex shows every faction and authored portrait without a profile unlock',
   const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS,story} =
     vm.runInContext('({renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS,story:CODEX_STORY_MARKDOWN})',context);
   const source=readFileSync(join(root,'docs/story.md'),'utf8');
-  assert.equal(story,source.replace(/\n> \*\*Ashes of Meridian bleibt der Titel\.\*\*[^\n]*\n\n/, '\n')
-    .replace(/\n\*In den Spielregeln und technischen Verträgen weiterhin[^\n]*\n/g, '')
-    .replace(/\n## 10\. Missionsansätze[\s\S]*?(?=\n## 11\.)/, '')
-    .replace('## 11. Was unbekannt bleiben darf','## 10. Was unbekannt bleiben darf'));
+  assert.equal(story,source);
   assert.match(renderHomeScreen(null,0,''),/data-ui="codex"/);
   for(let faction=0;faction<3;faction++) {
     const html=renderCodexScreen(faction);
@@ -34,10 +31,11 @@ test('codex shows every faction and authored portrait without a profile unlock',
     }
   }
   const storyHtml=renderStoryScreen();
-  assert.match(storyHtml,/Die drei Fraktionen/);
-  assert.equal((storyHtml.match(/id="codex-chapter-/g) || []).length,10);
-  assert.match(storyHtml,/Breakwater/);
+  assert.match(storyHtml,/Drei Ansprüche/);
+  assert.equal((storyHtml.match(/id="codex-chapter-/g) || []).length,4);
+  assert.match(storyHtml,/Sternenschlacke \(Cinder\)/);
+  assert.match(storyHtml,/Nachhall \(Echo\)/);
   assert.match(storyHtml,/Die Siebte Vermessung|Siebten Vermessung/);
-  assert.match(storyHtml,/<ol><li>.*?Meridian/);
-  assert.doesNotMatch(storyHtml,/Dies ist die maßgebliche Geschichte|Missionsansätze aus derselben Welt/);
+  assert.match(storyHtml,/<blockquote>[^<]+<br>— Inschrift[^<]+<\/blockquote>/);
+  assert.doesNotMatch(storyHtml,/Alloy|Aether|Missionsansätze aus derselben Welt/);
 });

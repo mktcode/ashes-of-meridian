@@ -4,7 +4,7 @@
 
 - [ ] Verhältnis menschlicher Spieler, Parteien und KI für jeder gegen jeden bestimmen; keine 2on2-/Allianzplanung im aktuellen Umfang.
 - [ ] Sieg, Ausscheiden, Niederlage, Aufgabe, Pause/Tempo und Umgang mit fehlenden Spielern dauerhaft definieren. Die begrenzten [Prototyp-Sitzungsregeln](../../server/README.md#ablauf-und-grenzen) ersetzen diese Produktentscheidungen nicht.
-- [ ] Gemeinsamen Run, Vorteilswahl, persönliche Flottenupgrades, Aether-Auszahlung und Freischaltungen gestalten; Gegneraufstellung und Progression entscheiden.
+- [ ] Gemeinsamen Run, Vorteilswahl, persönliche Flottenupgrades, Nachhall-Auszahlung und Freischaltungen gestalten; Gegneraufstellung und Progression entscheiden.
 - [ ] Run-Besitz, Speichern/Fortsetzen, Wiedereinstieg und Host-Ausfall regeln; erst danach Checkpoint und Ergebnisfluss verändern.
 - [ ] Karten-/Ressourcenbalance und Schwierigkeit später mit menschlichen Runs bewerten, nicht aus der Zahl der Startpunkte ableiten.
 

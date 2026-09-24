@@ -12,7 +12,7 @@ Vorschlagswert: Der Commander erhält dauerhaft 10 % mehr maximales Leben. Der B
 
 ## Commander: Feldlogistik
 
-Worker innerhalb eines Commander-Radius gewinnen beim Abbau mehr Alloy. Der Bonus soll beim tatsächlichen Abbau gelten, nicht beim Abliefern am HQ; damit bleibt die räumliche Positionierung des Commanders relevant.
+Worker innerhalb eines Commander-Radius gewinnen beim Abbau mehr Sternenschlacke. Der Bonus soll beim tatsächlichen Abbau gelten, nicht beim Abliefern am HQ; damit bleibt die räumliche Positionierung des Commanders relevant.
 
 ## Bewegungsgeschwindigkeit
 

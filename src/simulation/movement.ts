@@ -292,7 +292,7 @@
             .sort((a, b) => distance(a, target) - distance(b, target) || a.id - b.id)[0];
           if (worker) {
             if (task === 'repair' && this.account(team).alloy <= 0.1) {
-              this.notify(team, 'toast', 'No alloy');
+              this.notify(team, 'toast', 'No Cinder');
               return false;
             }
             // Explicit orders may replace a builder, but never add construction speed.

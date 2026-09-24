@@ -62,9 +62,9 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.deepEqual(Array.from(META.startingAlloy.costs), [100, 200, 300, 450, 650]);
   assert.equal(META.startingWorkers.max, 5);
   assert.deepEqual(Array.from(META.aetherEvacuation.costs), [500, 800, 1200, 1800, 2600]);
-  assert.equal(META.aetherEvacuation.name, 'Aether recovery');
+  assert.equal(META.aetherEvacuation.name, 'Echo recovery');
   assert.equal(META.aetherEvacuation.desc,
-    'Raises the evacuation limit and permanent aether recovered per destroyed enemy building.');
+    'Raises the evacuation limit and permanent Echo recovered per destroyed enemy building.');
   assert.deepEqual(Array.from(META.aetherEvacuation.display.gains), [
     '+100 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING',
     '+250 LIMIT · +5 / BUILDING', '+250 LIMIT · +5 / BUILDING'

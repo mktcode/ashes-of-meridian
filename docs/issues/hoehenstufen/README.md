@@ -14,7 +14,7 @@ Im Haupt-Worktree `npm run build`, dann die lokale `index.html?experiment=height
 
 1. Erkennbarkeit von hoher Basis, Rampen und tiefer Mitte bei normalem Zoom beurteilen; insbesondere verdeckte Einheiten am vorderen Plateaurand.
 2. Worker auswählen, hinunter und wieder hinauf schicken; Klickziele, Auswahlrahmen, Kameraziehen und MiniMap prüfen.
-3. Alloy abbauen/abliefern, Refinery setzen, auf beiden Ebenen bauen und Einheiten produzieren. Rampen-/Klippenbau muss abgelehnt werden, Ausfahrten müssen benutzbar bleiben.
+3. Sternenschlacke abbauen/abliefern, Refinery setzen, auf beiden Ebenen bauen und Einheiten produzieren. Rampen-/Klippenbau muss abgelehnt werden, Ausfahrten müssen benutzbar bleiben.
 4. Kleine Gruppen/Gegenverkehr und Gefechte an Rampen anschauen. Sichtverlust beidseits einer Klippe und beim Überqueren der Rampenmitte prüfen; andere Höhenvorteile bleiben ausgeschlossen.
 
 Flugzeuge nutzen eine feste Reiseflughöhe über der höchsten spielbaren Ebene mit Übergang beim Produktionsstart; keine Höhensprünge an Klippen. Hohe Dekorhindernisse werden dadurch nicht automatisch umflogen.
@@ -45,7 +45,7 @@ Weitere Karten müssen denselben CPU-Oberflächenvertrag verwenden und dürfen k
 - **Luftfahrt:** feste Reiseflughöhe über der maximalen spielbaren Ebene; Produktionsausfahrt steigt von der lokalen Oberfläche dorthin an.
 - **Bauen:** Empfehlung: nur ebene Flächen, Rampen und Klippenränder nicht bebaubar; kein automatisches Terraforming. Sollen weitere Gebäude auch im Tiefland erlaubt sein? Vorschlag: ja; die Höhenvorgabe betrifft die Startbasen.
 - **Interaktion:** Bau, Abbau und Reparatur dürfen nicht durch Klippen hindurch erfolgen. Fernheilung/Fähigkeitsflächen zunächst wie Kampf behandeln; deren Höhenregeln ausdrücklich bestätigen.
-- **Layout:** Anfangs-Alloy und zugehöriger Vent auf dem Plateau als Vorschlag; zusätzliche Vorkommen im Tiefland als umkämpfte Ziele. Bestehende Mengen erhalten, nötige Ortsänderungen sichtbar prüfen.
+- **Layout:** Anfangs-Sternenschlacke und zugehöriger Vent auf dem Plateau als Vorschlag; zusätzliche Vorkommen im Tiefland als umkämpfte Ziele. Bestehende Mengen erhalten, nötige Ortsänderungen sichtbar prüfen.
 
 ## Nächste Freigabe
 
