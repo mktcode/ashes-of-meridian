@@ -15,6 +15,19 @@
             this.uiAction(b.dataset.ui);
             return;
           }
+          if (this.view === 'codex' && b.dataset.codexFaction !== undefined) {
+            const faction = Number(b.dataset.codexFaction);
+            if (!Number.isInteger(faction) || faction < 0 || faction >= FACTIONS.length) return;
+            this.codexFaction = faction as FactionId;
+            this.showCodex();
+            return;
+          }
+          if (this.view === 'codex' && b.dataset.codexType !== undefined) {
+            const type = b.dataset.codexType;
+            if (b.dataset.codexKind === 'unit' && hasContentKey(UNITS,type)) this.showCodexModel('unit',type);
+            else if (b.dataset.codexKind === 'building' && hasContentKey(BUILDINGS,type)) this.showCodexModel('building',type);
+            return;
+          }
           if (b.dataset.faction !== undefined) {
             let faction = +b.dataset.faction;
             if (!this.factionUnlocked(faction)) return;
@@ -219,6 +232,12 @@
             break;
           case 'armory':
             this.showArmory();
+            break;
+          case 'codex':
+            this.showCodex();
+            break;
+          case 'codexStory':
+            if (this.view === 'codex') this.showCodexStory();
             break;
           case 'settings':
             this.showSettings();

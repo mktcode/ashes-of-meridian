@@ -18,6 +18,7 @@
       'build:turret': 'assets/portraits/faction-0-building-turret.webp'
     };
     const BUILDING_PORTRAIT_ACTIONS = new Set(Object.keys(FACTION_0_ACTION_PORTRAITS).filter(key => key.startsWith('build:')));
+    const UNIT_PORTRAIT_ACTIONS = new Set(Object.keys(FACTION_0_ACTION_PORTRAITS).filter(key => key.startsWith('train:')));
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
         // Local scenario control follows the view; this is not network authentication.
@@ -147,8 +148,8 @@
             ? FACTION_0_ACTION_PORTRAITS[key]
             : faction !== undefined && BUILDING_PORTRAIT_ACTIONS.has(key)
               ? `assets/portraits/faction-${faction}-building-${key.slice('build:'.length)}.webp`
-              : faction !== undefined && key === 'train:destroyer'
-                ? `assets/portraits/faction-${faction}-unit-destroyer.webp`
+              : faction !== undefined && UNIT_PORTRAIT_ACTIONS.has(key)
+                ? `assets/portraits/faction-${faction}-unit-${key.slice('train:'.length)}.webp`
                 : undefined;
         // Fixed renders of the actual models: no additional WebGL scenes in the HUD.
         const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
@@ -198,7 +199,7 @@
         } else {
           let types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
           for (let k of types[this.tab] || [])
-            html += this.actionButton('train:' + k, k === 'hero' ? 'Commander' : unitName(k, f), k, {
+            html += this.actionButton('train:' + k, unitName(k, f), k, {
               cost: this.game.cost(k, 'unit', this.localTeam)
             });
         }

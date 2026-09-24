@@ -117,7 +117,7 @@
           const id = ++worldRequest, mapId = battlefieldId(map), world = new Battlefield(40517, mapId),
             profile = BATTLEFIELDS[mapId].render;
           void R.prepareBattlefieldTextures(profile).then(ready => {
-            if (!ready || id !== worldRequest || ui.view === 'game') return;
+            if (!ready || id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') return;
             worldView.sync(world, false);
             R.fogOn = false;
             previewEntities();
@@ -300,7 +300,14 @@
             R.begin();
             const viewTime = game.networkTeam !== null ? ui.multiplayer!.renderTime : game.s?.time;
             if (ui.view === 'game' && game.s) battlefield(viewTime!);
-            else {
+            else if (ui.view === 'codexModel' && ui.codexSelection) {
+              const {kind,type,faction} = ui.codexSelection;
+              const d = kind === 'unit' ? UNITS[type as UnitType] : BUILDINGS[type as BuildingType];
+              R.fogOn = false;
+              R.camera(0,0,kind === 'building' ? 21 : type === 'destroyer' ? 30 : 13);
+              renderEntity(R, {id:7,kind,type,x:0,z:0,faction,team:0,hp:d.hp,maxHp:d.hp,size:d.size,
+                rot:time*.23,walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0},time,{localTeam:0});
+            } else {
               R.fogOn = false;
               R.camera(0, 0, 65, true, time);
               for (let e of preview) {
@@ -309,7 +316,7 @@
               }
             }
             diagnostics?.recorder.phase('glSubmission');
-            R.render(time, ui.view === 'game' && game.s ? viewTime! : 0);
+            R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0);
             diagnostics?.recorder.phase('overlay');
             ui.drawOverlay(overlayContext);
             diagnostics?.finishFrame(true);

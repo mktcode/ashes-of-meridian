@@ -1,6 +1,6 @@
 # Ashes of Meridian — Geschichte und Welt
 
-> **Ashes of Meridian bleibt der Titel.** Dieses Dokument ist der erzählerische Entwurf, nicht die Beschreibung bereits eingebauter Inhalte. Neue Namen gelten vorerst ausschließlich hier. Spielregeln, Modelle, Assets und Texte im Spiel bleiben unverändert; maßgeblich für das aktuelle Verhalten ist [Gameplay](gameplay.md).
+> **Ashes of Meridian bleibt der Titel.** Dies ist die maßgebliche Geschichte und die Quelle des offline eingebetteten Codex. Figuren, Welt und Namen sind Kanon; Spielregeln, tatsächlich spielbare Inhalte und noch nicht umgesetzte Missionsansätze beschreibt weiterhin [Gameplay](gameplay.md).
 
 > „Wir nennen es Asche, weil wir hoffen, dass das Feuer vorbei ist.“
 >
@@ -24,7 +24,7 @@ Und doch findet man in Böden, Organismen und Trümmern dieselben merkwürdigen 
 
 ### Sternenschlacke — **Cinder**
 
-*Ersetzt im Storyentwurf: Alloy.*
+*In den Spielregeln und technischen Verträgen weiterhin Alloy genannt.*
 
 Sternenschlacke sieht nicht wie grauer Staub aus. Sie wächst in kantigen, metallisch schimmernden Kristallverbänden, eingeschlossen in Fels, freigelegt durch Erosion oder geborgen aus alten Ladungsbehältern. „Schlacke“ war ursprünglich ein abschätziger Bergmannsname: Das Material verdarb gewöhnliche Schmelzen, bevor man lernte, es zu bearbeiten.
 
@@ -36,7 +36,7 @@ Für eine Fördermannschaft ist die Antwort weniger dringlich als die Frage, wer
 
 ### Nachhall — **Echo**
 
-*Ersetzt im Storyentwurf: Aether; zugleich Name der dauerhaft gesicherten Ressource.*
+*In den Spielregeln und technischen Verträgen weiterhin Aether genannt; auch dauerhaft gesicherte Ressource.*
 
 Nachhall ist kein gewöhnliches Gas und keine magische Universalenergie. Es ist ein seltener Zustand von Materie, der eine winzige räumliche Spannung des Meridian festhält. Das Trägermaterial scheint auf ein Gravitationsfeld zu reagieren, das am Fundort gar nicht mehr vorhanden ist. Physiker sprechen von einer **gebundenen Feldspur**. Bergleute sagen: Etwas hält sich noch immer an dem fest, was dort einmal war.
 
@@ -76,11 +76,7 @@ Manche Begegnungen enden mit Handel. Gespielt werden die, bei denen mehrere Part
 
 Die Fraktionen verkörpern keine drei kosmischen Prinzipien und keine sauber getrennten Lager „Technik, Natur, Religion“. Alle betreiben Forschung, besitzen eine Wirtschaft und kennen Fürsorge wie Gewalt. Ihre unterschiedlichen Körper und Maschinen spiegeln vor allem wider, **was ihre Gesellschaften erhalten wollen**.
 
-| Bisher im Spiel | Name dieses Entwurfs | Was auf dem Spiel steht |
-| --- | --- | --- |
-| The Free Marches | **Der Aschenbund — The Cinder Pact** | Die Unabhängigkeit bewohnter Welten |
-| The Verdant Choir | **Die Vielwurzel — The Manyroot** | Die Fortsetzung voneinander abhängiger Lebenslinien |
-| The Veiled Court | **Die Trauerhäuser — The Mourning Houses** | Verpflichtungen gegenüber untergegangenen Gesellschaften |
+Der **Aschenbund (The Cinder Pact)** kämpft für die Unabhängigkeit bewohnter Welten, die **Vielwurzel (The Manyroot)** für voneinander abhängige Lebenslinien und die **Trauerhäuser (The Mourning Houses)** für ihre Verpflichtungen gegenüber untergegangenen Gesellschaften.
 
 ### Der Aschenbund
 
@@ -166,27 +162,27 @@ Es gibt keine Zeitschleife. Ein neuer Run ist ein neuer Vorstoß. Ein erneutes L
 
 ## 6. Einheiten: dieselben Körper, andere Geschichten
 
-Die bisherigen Namen in Klammern dienen nur der Zuordnung. Rollen und Silhouetten bleiben erhalten. Die Texte sind als kurze Lorezusätze neben weiterhin eindeutigen taktischen Beschreibungen gedacht; sie versprechen keine neuen Fähigkeiten.
-
 ### Aschenbund
 
 - **Prospector — Schürfer** *(unverändert; Worker).* Das Bohrfahrzeug trägt die Werkzeuge, mit denen eine Expedition ihren ersten bewohnbaren Platz schafft. Viele Besatzungen benennen es nach der Person, die ihnen die erste Reparatur beigebracht hat.
-- **Oathguard — Eidwache** *(Vanguard; Infanterie).* Unter den Panzerplatten stecken Menschen, deren Gemeinden Anspruch auf ihre Rückkehr haben. Der Eid gilt nicht einem Herrscher, sondern den Kameraden und denen, die hinter der Linie arbeiten.
+- **Oathguard — Eidwache** *(Infanterie).* Unter den Panzerplatten stecken Menschen, deren Gemeinden Anspruch auf ihre Rückkehr haben. Der Eid gilt nicht einem Herrscher, sondern den Kameraden und denen, die hinter der Linie arbeiten.
 - **Field Medic — Feldsanitäter** *(unverändert; Unterstützung).* Die tragbare Ausrüstung versorgt Verwundete und setzt beschädigte Schutzsysteme instand. Ein Sanitäter führt zwei Listen: wen er zurückgebracht hat und wen die nächste Bergungsmannschaft noch suchen muss.
 - **Ironclad — Panzerkoloss** *(unverändert; Panzer).* Ketten, massive Hülle, ein Geschütz, das jede Werft des Bundes warten kann. Für seine Besatzung ist er weniger eine Waffe als ein Versprechen, dass zwischen ihr und dem nächsten Einschlag noch etwas liegen wird.
-- **Faultbreaker — Bruchhammer** *(Longbow; Artillerie).* Das schwere Kettenfahrzeug stammt aus einer Familie von Geräten zur Fernsprengung instabiler Felswände. Heute werden seine Ziele häufiger bewohnt, als den älteren Geschützführern lieb ist.
+- **Faultbreaker — Bruchhammer** *(Artillerie).* Das schwere Kettenfahrzeug stammt aus einer Familie von Geräten zur Fernsprengung instabiler Felswände. Heute werden seine Ziele häufiger bewohnt, als den älteren Geschützführern lieb ist.
 - **Kestrel — Turmfalke** *(unverändert; Flugzeug).* Der zweistrahlige Deltaflieger begleitet Transporte durch unübersichtliches Gelände. Seine Piloten lernen zuerst, ein beladenes Schiff nach Hause zu bringen, und danach, eines abzuschießen.
-- **Breach Marshal — Vorstoßmarschall** *(Field commander; Commander).* Die größere Feldrüstung macht den Träger sichtbar, nicht unersetzlich. Sein wichtigster Ausrüstungsgegenstand ist eine Liste mit Namen und zugesagten Abholorten.
+- **Breakwater — Wellenbrecher** *(schwerer Luftzerstörer).* Als Begleiter für Evakuierungs- und Versorgungskonvois gebaut, hält er einen Korridor auch unter schwerem Beschuss offen. Immer öfter muss er dafür befestigte Stellungen niederkämpfen.
+- **Breach Marshal — Vorstoßmarschall** *(Commander).* Die größere Feldrüstung macht den Träger sichtbar, nicht unersetzlich. Sein wichtigster Ausrüstungsgegenstand ist eine Liste mit Namen und zugesagten Abholorten.
 
 ### Vielwurzel
 
 - **Tender — Heger** *(unverändert; Worker).* Der sechsbeinige Sammler trägt Schlacke in Blattkörben und prüft Boden mit seinen Greifern. Er unterscheidet sorgfältig zwischen Material, das genommen werden kann, und Wurzeln, die jemand anderes noch braucht.
 - **Thornling — Dornläufer** *(unverändert; Infanterie).* Die aufrechte Pflanzenmantis hält ihren Dornenwerfer wie einen sorgfältig gepflegten Ast. Dornläufer sind keine kurzlebige Munition; außerhalb des Gefechts schützen sie Bestäuber und begleiten wandernde Brutverbände.
-- **Mender Bloom — Heilblüte** *(Lifesinger; Unterstützung).* Die Kelchblüte auf vier Wurzelbeinen verteilt heilende Sekrete und mineralische Reparaturstoffe. Nach einem langen Gefecht trägt sie oft den Geruch aller Körper, die sie erhalten hat.
+- **Mender Bloom — Heilblüte** *(Unterstützung).* Die Kelchblüte auf vier Wurzelbeinen verteilt heilende Sekrete und mineralische Reparaturstoffe. Nach einem langen Gefecht trägt sie oft den Geruch aller Körper, die sie erhalten hat.
 - **Rootbeast — Wurzelriese** *(unverändert; Panzer).* Ein vierbeiniger Borkenkörper mit schweren Platten und einem Hornwerfer. Wurzelriesen bereiteten einst hartes Gelände für wandernde Haine auf; dieselbe Kraft bricht heute befestigte Stellungen.
 - **Sporecaller — Sporenträger** *(unverändert; Artillerie).* Unter der Spiralschale reifen druckgefüllte Kapseln für die große Sporentrompete. Ihre zivile Verwandtschaft sät über Schluchten hinweg. Diese hier wurde für Böden herangezogen, auf denen zunächst nichts bleiben soll.
 - **Mothwing — Blattfalter** *(unverändert; Flugeinheit).* Vier geäderte Flügel tragen ein selbstständiges, empfindsames Wesen. Seine Vorfahren folgten Blütezeiten über Kontinente; es folgt heute den kurzen sicheren Passagen zwischen Feuerstellungen.
-- **Grovekeeper — Hainhüterin** *(The First Voice; Commander).* Astkrone, Blütenmantel und Samenzepter gehören einer Pflegerin, die alle Lebenslinien des Expeditionshains kennt. Sie führt, weil sie entscheiden kann, was gemeinsam überleben muss — nicht weil alle Körper ihrem Willen gehören.
+- **Crownwing — Kronenschwinge** *(schwerer Luftzerstörer).* Kronenschwingen trugen einst ganze Keimverbände über unbewohnbare Regionen. Ihre Dornen wehrten große Räuber ab; befestigte Feuerstellungen sind eine neuere Art von Bedrohung.
+- **Grovekeeper — Hainhüterin** *(Commander).* Astkrone, Blütenmantel und Samenzepter gehören einer Pflegerin, die alle Lebenslinien des Expeditionshains kennt. Sie führt, weil sie entscheiden kann, was gemeinsam überleben muss — nicht weil alle Körper ihrem Willen gehören.
 
 ### Trauerhäuser
 
@@ -195,16 +191,17 @@ Die bisherigen Namen in Klammern dienen nur der Zuordnung. Rollen und Silhouette
 - **Absolver — Löser** *(unverändert; Unterstützung).* Das schwebende Gefäß in seinem offenen Reliquiar löst schädliche Rückstände und bringt beschädigte Materie wieder in einen stabilen Zustand. Das Ritual darum erinnert die Bediener daran, dass Heilung nicht jede Verletzung ungeschehen macht.
 - **Sepulcher — Gruftpanzer** *(unverändert; Panzer).* Unter der flachen Sarkophaghülle liegen Geschütztechnik und ein besonders geschützter Nachlasskern. Ein Haus kann einen zerstörten Panzer ersetzen; den letzten unverfälschten Datenträger einer Stadt nicht.
 - **Elegist — Klageorgel** *(unverändert; Artillerie).* Die hohen Resonanzpfeifen kalibrieren den Schlag der vorderen Fokussiergabel. Ihr Ton ist kein Lied für den Feind. Er gehört zum Namenregister des Hauses, das den Feuerbefehl verantwortet.
-- **Vigil — Totenwacht** *(Seraph; Flugzeug).* Der starre Sicheljäger entstand für Patrouillen über versiegelten Anlagen. Für seine Besatzung endet eine Wache nicht deshalb, weil unten seit Jahrhunderten niemand mehr das Licht einschaltet.
-- **The Unveiled — Der Unverhüllte** *(The Unmasked; Commander).* Der schwebende Regent legt für das Feldmandat seine Maske ab. Die Tafeln neben seiner Aureole führen die übernommenen Pflichten. Wer einen Krieg im Namen Abwesender beginnt, soll wenigstens sein eigenes Gesicht zeigen.
+- **Vigil — Totenwacht** *(Flugzeug).* Der starre Sicheljäger entstand für Patrouillen über versiegelten Anlagen. Für seine Besatzung endet eine Wache nicht deshalb, weil unten seit Jahrhunderten niemand mehr das Licht einschaltet.
+- **Catafalque — Katafalk** *(schwerer Luftzerstörer).* Die stille Prozessionsbarke trägt einen Nachlass, der niemals in Feindeshand fallen darf. Ihre Bewaffnung ist Eskorte und Vollstreckung eines jahrhundertealten Anspruchs.
+- **The Unveiled — Der Unverhüllte** *(Commander).* Der schwebende Regent legt für das Feldmandat seine Maske ab. Die Tafeln neben seiner Aureole führen die übernommenen Pflichten. Wer einen Krieg im Namen Abwesender beginnt, soll wenigstens sein eigenes Gesicht zeigen.
 
 ### Gebäude bleiben verständlich
 
-Der Aschenbund errichtet modulare Werkstätten, Kasernen, Depots und befestigte Kommandostellen. Beim Aufschlagen des Lagers entsteht eine kleine Industriestadt, keine neue Art fremdartiger Architektur. **Aether refinery** hieße im Entwurf **Echo Refinery / Nachhallraffinerie**; die übrigen vorhandenen Gebäudenamen können bleiben.
+Der Aschenbund errichtet modulare Werkstätten, Kasernen, Depots und befestigte Kommandostellen. Beim Aufschlagen des Lagers entsteht eine kleine Industriestadt, keine neue Art fremdartiger Architektur. Die **Echo refinery / Nachhallraffinerie** nutzt den bisherigen Gebäudetyp `refinery`; die übrigen Gebäudenamen bleiben.
 
 Bei der Vielwurzel bleibt die **Bloom Queen** eine hummelartige Königin auf einer großen Blüte. Sie ist Mittelpunkt des örtlichen Brut- und Versorgungsverbands, nicht Alleinherrscherin der Fraktion. Die mobile Hainhüterin und die ortsfeste Königin erfüllen verschiedene Aufgaben. Brutbeete, Wabennest, Saftbrunnen, Wurzelhöhle, Mottenkokon und Samenkanone erhalten ihre vorhandenen Formen und Funktionen. Auf einem Schiffsdeck wächst eine mitgebrachte, versorgte Keimstätte; nicht spontan ein kompletter Planetendschungel.
 
-Bei den Trauerhäusern passen **Silent Throne**, Prozessionstor, Votivspeicher, Gruftschmiede, Flugportal und bewaffneter Obelisk zur mitgeführten Nachlassverwaltung. Der Thron beherbergt das örtliche Mandat, nicht einen körperlich anwesenden Gott. **Aether prism** würde **Echo Prism / Nachhallprisma** heißen. Die Grabästhetik bezeichnet Verantwortung für Verstorbene; sie verlangt weder Untotenarmeen noch neue Modelle.
+Bei den Trauerhäusern passen **Silent Throne**, Prozessionstor, Votivspeicher, Gruftschmiede, Flugportal und bewaffneter Obelisk zur mitgeführten Nachlassverwaltung. Der Thron beherbergt das örtliche Mandat, nicht einen körperlich anwesenden Gott. Das **Echo prism / Nachhallprisma** nutzt den bisherigen Gebäudetyp `refinery`. Die Grabästhetik bezeichnet Verantwortung für Verstorbene; sie verlangt weder Untotenarmeen noch neue Modelle.
 
 ## 7. Schauplätze im Ring
 

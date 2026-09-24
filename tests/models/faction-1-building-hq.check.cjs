@@ -88,7 +88,7 @@ test('Bloom queen: five separate petal lobes and a rounded, compact bumblebee si
 
 test('Bloom queen: flower replaces ONLY the HQ mound, while building role and all preview contracts survive', () => {
   const h = modelHarness();
-  assert.equal(h.FACTIONS[1].buildings.hq,'Bloom queen');
+  assert.equal(h.FACTIONS[1].buildings.hq,'Bloom Queen');
   assert.equal(h.BUILDINGS.hq.size,4.4); assert.equal(h.BUILDINGS.hq.hp,2600); assert.equal(h.BUILDINGS.hq.cap,24);
   const model = h.EntityModels.find(entity);
   assert.equal(model.id,'faction-1/building/hq'); assert.ok(Object.isFrozen(model));

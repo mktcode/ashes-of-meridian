@@ -80,8 +80,8 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.equal(unitName('worker', 2), 'Custodian');
   assert.equal(unitName('unknown-unit'), 'unknown-unit');
   assert.equal(buildingName('hq'), 'Command center');
-  assert.equal(buildingName('hq', 1), 'Bloom queen');
-  assert.equal(buildingName('hq', 2), 'Silent throne');
+  assert.equal(buildingName('hq', 1), 'Bloom Queen');
+  assert.equal(buildingName('hq', 2), 'Silent Throne');
   assert.equal(buildingName('unknown-building'), 'unknown-building');
   assert.equal(icon('unknown-icon'), icon('hero'));
   assert.match(icon('worker'), /^<svg viewBox="0 0 24 24".*<path d="M8 15l-4 5/);

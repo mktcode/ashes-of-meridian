@@ -22,27 +22,27 @@ Schaden, Nachladezeit, Flächenradius und genaue Hüllenstärke sind erst im Zus
 
 ## Fraktionsvarianten
 
-### Free Marches / Aschenbund: **Breakwater — Wellenbrecher**
+### The Cinder Pact / Aschenbund: **Breakwater — Wellenbrecher**
 
 Eine breite, kantige fliegende Festung mit Hammerkopf-Silhouette, massivem Mittelrumpf, vier großen Schubwerken und sichtbar austauschbaren Panzerplatten. Zwei schwere Geschütze sitzen unter den seitlichen Schultern, eine dritte Kanone im Bug. Wartungsklappen, Streben, Gebrauchsspuren, orange Teammarkierungen und warme Triebwerksglut betonen den pragmatischen Werftbau. Die Form darf nicht wie ein lediglich vergrößerter Kestrel wirken.
 
 Der Wellenbrecher entstand als schwerer Begleiter für Evakuierungs- und Versorgungskonvois. Seine heutige Aufgabe, einen Korridor offenzuhalten, schließt immer häufiger die gewaltsame Beseitigung befestigter Stellungen ein.
 
-### Verdant Choir / Vielwurzel: **Crownwing — Kronenschwinge**
+### The Manyroot / Vielwurzel: **Crownwing — Kronenschwinge**
 
 Ein großes, eigenständig empfindendes Flugwesen statt eines Fahrzeugs: breiter gepanzerter Samenkörper, flache Käferform, zwei kräftige Hauptflügel und vier kleinere Steuerflügel. Überlappende Borkenplatten schützen den Rücken, zwischen ihnen leuchten organische Adern. Unter dem Körper hängen drei schwere Dornenorgane. Der langsame, kraftvolle Flügelschlag und die kompakte Masse unterscheiden es klar vom leichten vierflügeligen Mothwing. Kein Cockpit, keine Metallmaschine und kein schwebender Kristall.
 
 Kronenschwingen trugen einst ganze Keimverbände über unbewohnbare Regionen. Ihre Dornen hielten große Räuber fern; befestigte Feuerstellungen sind für sie nur eine neuere Art von Bedrohung.
 
-### Veiled Court / Trauerhäuser: **Catafalque — Katafalk**
+### The Mourning Houses / Trauerhäuser: **Catafalque — Katafalk**
 
-Eine lange, starre Prozessionsbarke mit schmaler Silhouette statt der Sichelform des Seraph. Ein dunkler und elfenbeinfarbener Hauptkörper umschließt einen leuchtenden Reliquiarkern in offenen Seitenbögen. Drei nach unten und vorne gerichtete Energielanzen bilden die Waffen. Kleine geometrische Mandatstafeln schweben geordnet hinter dem Rumpf. Keine sichtbaren konventionellen Triebwerke: Der Katafalk gleitet vollkommen ruhig, mit kalter cyan- und lilafarbener Feldglut.
+Eine lange, starre Prozessionsbarke mit schmaler Silhouette statt der Sichelform des Vigil. Ein dunkler und elfenbeinfarbener Hauptkörper umschließt einen leuchtenden Reliquiarkern in offenen Seitenbögen. Drei nach unten und vorne gerichtete Energielanzen bilden die Waffen. Kleine geometrische Mandatstafeln schweben geordnet hinter dem Rumpf. Keine sichtbaren konventionellen Triebwerke: Der Katafalk gleitet vollkommen ruhig, mit kalter cyan- und lilafarbener Feldglut.
 
 Ein Katafalk transportiert einen Nachlass, der niemals in Feindeshand fallen darf. Seine Bewaffnung ist zugleich Eskorte und Vollstreckung eines jahrhundertealten Anspruchs.
 
 ## Gemeinsame visuelle Lesbarkeit
 
-- Die Einheit muss im normalen RTS-Spielzoom sofort größer und schwerer als Kestrel, Mothwing beziehungsweise Seraph lesbar sein, ohne nur deren Modell hochzuskalieren.
+- Die Einheit muss im normalen RTS-Spielzoom sofort größer und schwerer als Kestrel, Mothwing beziehungsweise Vigil lesbar sein, ohne nur deren Modell hochzuskalieren.
 - Jede Variante besitzt drei klar erkennbare schwere Waffenpositionen und eine breite oder lange Großkampfsilhouette.
 - Langsame Richtungswechsel, gewichtige Bewegung und ein markanter Hauptschuss vermitteln Masse; kosmetische Animationen dürfen weder Simulations-RNG noch Kampfwerte beeinflussen.
 - Teamfarbe, Ghost-/Preview-Tönung, Fog, Schatten, Bauausfahrt, Portrait und Performance-Qualität folgen den bestehenden Modell- und Renderverträgen.

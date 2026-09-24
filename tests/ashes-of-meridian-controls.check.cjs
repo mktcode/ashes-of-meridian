@@ -66,14 +66,14 @@ test('opponent briefing shows only present slots, factions and current upgrades'
       encounter: { enemies: expedition.encounter.enemies.slice(0, count) }
     });
     assert.equal((html.match(/class="opponent-card"/g) || []).length, count);
-    assert.match(html, /OPPONENT 1<\/span><strong>VEILED COURT/);
+    assert.match(html, /OPPONENT 1<\/span><strong>MOURNING HOUSES/);
     assert.equal(html.includes(`OPPONENT ${count + 1}`), false);
     assert.doesNotMatch(html, /FREE-FOR-ALL|PRESSURE|Precision supremacy|Early technology|Regenerating swarm|Infantry masses/);
   }
   const html = renderOpponents(expedition);
-  assert.match(html, /opponent-sigil[^>]*>◇<\/span>.*OPPONENT 1<\/span><strong>VEILED COURT<\/strong><small>UPGRADES · NONE/);
-  assert.match(html, /opponent-sigil[^>]*>❋<\/span>.*OPPONENT 2<\/span><strong>VERDANT CHOIR<\/strong><small>UPGRADES · Supply crate ×2/);
-  assert.match(html, /opponent-sigil[^>]*>◈<\/span>.*OPPONENT 3<\/span><strong>FREE MARCHES<\/strong><small>UPGRADES · Survey drones ×1/);
+  assert.match(html, /opponent-sigil[^>]*>◇<\/span>.*OPPONENT 1<\/span><strong>MOURNING HOUSES<\/strong><small>UPGRADES · NONE/);
+  assert.match(html, /opponent-sigil[^>]*>❋<\/span>.*OPPONENT 2<\/span><strong>MANYROOT<\/strong><small>UPGRADES · Supply crate ×2/);
+  assert.match(html, /opponent-sigil[^>]*>◈<\/span>.*OPPONENT 3<\/span><strong>CINDER PACT<\/strong><small>UPGRADES · Survey drones ×1/);
 });
 
 function setup() {
@@ -1577,7 +1577,7 @@ test('recruitment delegates producer choice to the simulation, independent of se
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
-test('building actions use the model portrait of the active faction', () => {
+test('building and unit actions use the model portrait of the active faction', () => {
   const h = setup();
   for (const faction of [0, 1, 2]) {
     h.ui.game.s.parties[0].faction = faction;
@@ -1585,8 +1585,12 @@ test('building actions use the model portrait of the active faction', () => {
     assert.match(html, new RegExp(`assets/portraits/faction-${faction}-building-hq\\.webp`));
     assert.match(html, /class="action-model"/);
   }
-  h.ui.game.s.parties[0].faction = 1;
-  assert.doesNotMatch(h.UI.prototype.actionButton.call(h.ui, 'train:worker', 'Worker', 'worker'), /action-model/);
+  for (const faction of [0, 1, 2]) {
+    h.ui.game.s.parties[0].faction = faction;
+    const html = h.UI.prototype.actionButton.call(h.ui, 'train:worker', 'Worker', 'worker');
+    assert.match(html, new RegExp(`assets/portraits/faction-${faction}-unit-worker\\.webp`));
+    assert.match(html, /class="action-model"/);
+  }
 });
 
 test('action availability refreshes synchronously without a HUD tick', () => {

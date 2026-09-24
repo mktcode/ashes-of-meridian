@@ -28,7 +28,9 @@
       audio: MeridianAudio;
       profile: MeridianProfile;
       expedition: MeridianExpedition | null;
-      view: 'home' | 'battle' | 'transition' | 'game';
+      view: 'home' | 'battle' | 'transition' | 'game' | 'codex' | 'codexModel' | 'story';
+      codexFaction: FactionId;
+      codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType } | null;
       paused: boolean;
       modalKind: string;
       sellBuildingId: number | null;
@@ -77,6 +79,8 @@
         this.profile = profile;
         this.expedition = this.persistence.loadExpedition?.() || null;
         this.view = 'home';
+        this.codexFaction = FACTION_ID.FIRST;
+        this.codexSelection = null;
         this.paused = true;
         this.modalKind = '';
         this.sellBuildingId = null;

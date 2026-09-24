@@ -29,7 +29,9 @@ Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen 
 
 ## Spielen
 
-Mit **New expedition** eine freigeschaltete Fraktion wählen. Die ersten drei Gefechte führen nacheinander gegen Free Marches, Verdant Choir und Veiled Court. Ab Stage 4 treten zwei, ab Stage 8 drei Gegner im **Free-for-all** an; deren Fraktionen werden wie Karte und Seed für jedes Gefecht neu bestimmt. Alle bekämpfen einander, die letzte Partei mit HQ gewinnt. Jeder Gegner-Slot sammelt eigene Expeditionsvorteile; neue Gegner beginnen ohne Vorteile. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Alloy, Raffinerien an Vents erzeugen Aether. Ein Sieg führt zur Vorteilswahl und zum nächsten Gefecht; Verlust des letzten eigenen HQs beendet die Expedition.
+Über **Codex** im Startmenü sind alle drei Fraktionen mit Einheiten, Gebäuden, Portraits, animierter Modellansicht und der Geschichte auch vor ihrer spielerischen Freischaltung zugänglich. Der Codex verändert den Spielstand nicht.
+
+Mit **New expedition** eine freigeschaltete Fraktion wählen. Die ersten drei Gefechte führen nacheinander gegen The Cinder Pact, The Manyroot und The Mourning Houses. Ab Stage 4 treten zwei, ab Stage 8 drei Gegner im **Free-for-all** an; deren Fraktionen werden wie Karte und Seed für jedes Gefecht neu bestimmt. Alle bekämpfen einander, die letzte Partei mit HQ gewinnt. Jeder Gegner-Slot sammelt eigene Expeditionsvorteile; neue Gegner beginnen ohne Vorteile. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Alloy, Raffinerien an Vents erzeugen Aether. Ein Sieg führt zur Vorteilswahl und zum nächsten Gefecht; Verlust des letzten eigenen HQs beendet die Expedition.
 
 Fingerziehen/Pinch oder Mausziehen/Mausrad bewegt die Kamera; Tap bzw. Linksklick wählt, Rechtsklick erteilt Kontextbefehle. Basis- und Zoomknöpfe liegen unter der Minimap; der mittige Schwerter-Schalter aktiviert Attack-move. Das eingerahmte Gruppensymbol wählt eigene Kampfeinheiten im sichtbaren Bereich, das danebenliegende Gruppensymbol alle eigenen Kampfeinheiten außer Workern auf der gesamten Karte. Bau und Rekrutierung liegen rechts, Fähigkeiten mittig, Minimap links. **Cancel** beendet eine Zielauswahl.
 
@@ -38,7 +40,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 ## Entwicklung
 
 - [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
-- [Story und Welt](docs/story.md): erzählerische Grundlage, Fraktionen, Einheiten und mögliche Missionsansätze.
+- [Story und Welt](docs/story.md): maßgebliche Geschichte, Fraktionen und Einheiten; im Startmenü über **Codex** lesbar. Nicht implementierte Missionsansätze bleiben als Entwürfe gekennzeichnet.
 - [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
 - [Grafik und Assets](docs/rendering.md): Modell-/Texturpflege und Darstellungsgrenzen.
 - [Prüfungen](docs/testing.md): gezielte Tests, Standardtestsuite, ausdrücklich beauftragte KI-/Simulationsläufe und Aussagegrenzen; [optionale lokale Performancediagnose](docs/testing.md#lokale-performancediagnose).

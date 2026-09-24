@@ -7,6 +7,7 @@
         this.battleIntro = null;
         this.battleTutorial = null;
         this.view = 'home';
+        this.codexSelection = null;
         this.paused = true;
         this.audio.setMode?.('menu');
         this.modalKind = '';
@@ -23,6 +24,24 @@
         if (this.onPreview) this.onPreview(this.expedition?.encounter.map || 'desert');
         $('menu').innerHTML =
           renderHomeScreen(this.expedition, this.profile.expeditionDepth, this.encounterBriefing());
+      },
+      showCodex(this: MeridianUI) {
+        if (this.view === 'codexModel') this.onPreview?.();
+        this.view = 'codex';
+        this.codexSelection = null;
+        $('menu').classList.remove('hidden');
+        $('menu').innerHTML = renderCodexScreen(this.codexFaction);
+      },
+      showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType) {
+        this.codexSelection = {faction:this.codexFaction,kind,type};
+        this.R.clearStatic();
+        this.view = 'codexModel';
+        $('menu').innerHTML = renderCodexModelScreen(this.codexFaction,kind,type);
+      },
+      showCodexStory(this: MeridianUI) {
+        this.view = 'story';
+        this.codexSelection = null;
+        $('menu').innerHTML = renderStoryScreen();
       },
       encounterBriefing(this: MeridianUI) {
         if (!this.expedition?.encounter) return '';

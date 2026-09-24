@@ -6,8 +6,8 @@ type FactionId = (typeof FACTION_ID)[keyof typeof FACTION_ID];
 
 const FACTIONS = [
   {
-    name: 'The Free Marches',
-    short: 'FREE MARCHES',
+    name: 'The Cinder Pact',
+    short: 'CINDER PACT',
     sigil: '◈',
     color: 0x78ded3,
     accent: 0xebb979,
@@ -19,33 +19,33 @@ const FACTIONS = [
     ability: 'Orbital barrage',
     units: {
       worker: 'Prospector',
-      rifle: 'Vanguard',
-      medic: 'Field medic',
+      rifle: 'Oathguard',
+      medic: 'Field Medic',
       tank: 'Ironclad',
-      artillery: 'Longbow',
+      artillery: 'Faultbreaker',
       air: 'Kestrel',
       destroyer: 'Breakwater',
-      hero: 'Field commander'
+      hero: 'Breach Marshal'
     },
     buildings: {
       hq: 'Command center',
       barracks: 'Muster station',
       depot: 'Logistics depot',
-      refinery: 'Aether refinery',
+      refinery: 'Echo Refinery',
       factory: 'War foundry',
       hangar: 'Flight deck',
       turret: 'Sentinel turret'
     }
   },
   {
-    name: 'The Verdant Choir',
-    short: 'VERDANT CHOIR',
+    name: 'The Manyroot',
+    short: 'MANYROOT',
     sigil: '❋',
     color: 0x8bdfad,
     accent: 0xd2abe8,
     metal: 0x526d64,
     dark: 0x263f3a,
-    desc: 'A thousand lives. One memory.',
+    desc: 'Many lives. Shared care.',
     doctrine: { name: 'Regenerating swarm', desc: 'Infantry masses, frequent attacks and economic targets.' },
     trait:
       'Units cost 15% less alloy, move 10% faster and regenerate outside combat. Lighter hulls.',
@@ -53,15 +53,15 @@ const FACTIONS = [
     units: {
       worker: 'Tender',
       rifle: 'Thornling',
-      medic: 'Lifesinger',
+      medic: 'Mender Bloom',
       tank: 'Rootbeast',
       artillery: 'Sporecaller',
       air: 'Mothwing',
       destroyer: 'Crownwing',
-      hero: 'The First Voice'
+      hero: 'Grovekeeper'
     },
     buildings: {
-      hq: 'Bloom queen',
+      hq: 'Bloom Queen',
       barracks: 'Bloom nursery',
       depot: 'Living canopy',
       refinery: 'Sap well',
@@ -71,8 +71,8 @@ const FACTIONS = [
     }
   },
   {
-    name: 'The Veiled Court',
-    short: 'VEILED COURT',
+    name: 'The Mourning Houses',
+    short: 'MOURNING HOUSES',
     sigil: '◇',
     color: 0xcab7f2,
     accent: 0x79d9e3,
@@ -88,15 +88,15 @@ const FACTIONS = [
       medic: 'Absolver',
       tank: 'Sepulcher',
       artillery: 'Elegist',
-      air: 'Seraph',
+      air: 'Vigil',
       destroyer: 'Catafalque',
-      hero: 'The Unmasked'
+      hero: 'The Unveiled'
     },
     buildings: {
-      hq: 'Silent throne',
+      hq: 'Silent Throne',
       barracks: 'Processional gate',
       depot: 'Votive pillar',
-      refinery: 'Aether prism',
+      refinery: 'Echo Prism',
       factory: 'Tomb forge',
       hangar: 'Sky sepulcher',
       turret: 'Mourning obelisk'
