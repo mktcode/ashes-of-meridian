@@ -1,7 +1,7 @@
 ---
 name: aom-perf-auditor
 description: Untersucht mögliche Performance- und Skalierungsrisiken in Simulation und Rendering von Ashes of Meridian, ausschließlich statisch lesend.
-model: openai-codex/gpt-5.6-sol
+model: openai-codex/gpt-6-sol
 thinking: high
 tools: read, grep, find, ls, contact_supervisor
 extensions:

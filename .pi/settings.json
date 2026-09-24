@@ -3,20 +3,19 @@
     "git:github.com/nicobailon/pi-subagents@63eb567009ac2f4a421951e718e1502149c546a0"
   ],
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
+  "defaultModel": "gpt-6-sol",
   "defaultThinkingLevel": "medium",
   "subagents": {
     "disableBuiltins": true,
-    "defaultModel": "openai-codex/gpt-5.6-sol",
+    "defaultModel": "openai-codex/gpt-6-luna",
     "defaultThinking": "low",
     "maxThinking": "high",
     "modelScope": {
       "enforce": true,
       "strict": true,
       "allow": [
-        "openai-codex/gpt-5.6-terra",
-        "openai-codex/gpt-5.6-sol",
-        "openai-codex/gpt-6-astra"
+        "openai-codex/gpt-6-luna",
+        "openai-codex/gpt-6-sol"
       ]
     }
   }

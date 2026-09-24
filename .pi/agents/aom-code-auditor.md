@@ -1,7 +1,7 @@
 ---
 name: aom-code-auditor
 description: Prüft Wartbarkeit, Codequalität und belegbare historische Altlasten von Ashes of Meridian, ausschließlich lesend.
-model: openai-codex/gpt-5.6-sol
+model: openai-codex/gpt-6-sol
 thinking: high
 tools: read, grep, find, ls, contact_supervisor
 extensions:
