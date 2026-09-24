@@ -14,7 +14,7 @@ Als Ausgangspunkt für die erste Implementierung und menschliche Balanceprüfung
 
 - ungefähr die Investition von vier bis fünf normalen Flugzeugen;
 - **850 Cinder, 500 Echo, 16 Supply und 70 Sekunden Bauzeit** vor Fraktionsmodifikatoren;
-- **1.500 Basishülle**, Geschwindigkeit etwa 4,2 und deutlich größere Kollisions-/Auswahlsilhouette als das vorhandene Flugzeug;
+- **1.500 Basishülle**, Geschwindigkeit etwa 2,8 und deutlich größere Kollisions-/Auswahlsilhouette als das vorhandene Flugzeug;
 - Reichweite etwa 14, kräftiger Hauptschuss gegen Boden und Luft sowie begrenzter Flächenschaden um das getroffene Ziel;
 - kein neues Produktionsgebäude und keine neue globale Stückgrenze; die vorhandene Hangar-Technologiekette bleibt maßgeblich.
 
@@ -76,7 +76,7 @@ Nicht Teil des Auftrags sind neue Gebäude, ein generelles Tech-Tree-System, ein
 
 ## Stand und offene Abnahme
 
-Der erste spielbare Stand nutzt die drei gelieferten GLBs als Quellen (Breakwater, Crownwing, Catafalque). Die Geometrie bleibt zunächst vollständig erhalten; nur glTF-Material-/Animationsparameter werden in den bestehenden Renderer-/Simulationszeitvertrag übertragen. Originalanimationen werden nicht als Keyframes abgespielt: Flügel, Rotoren, Kreisel und Tafeln nutzen feste sinus-/zeitbasierte Bewegungen. Die Varianten besitzen Portraits aus den tatsächlichen Spielmeshes. Ein gemeinsamer `destroyer`-Typ erhält die oben genannten Kosten sowie vorläufig 145 Schaden, 2,6 Sekunden Nachladezeit und 2,8 Flächenradius. Die KI spart erst mit Hangar, hinreichender Armee und Aetherwirtschaft für ein Exemplar; die Zielwerte sind keine abschließende Balanceentscheidung.
+Der erste spielbare Stand nutzt die drei gelieferten GLBs als Quellen (Breakwater, Crownwing, Catafalque). Die Geometrie bleibt zunächst vollständig erhalten; nur glTF-Material-/Animationsparameter werden in den bestehenden Renderer-/Simulationszeitvertrag übertragen. Originalanimationen werden nicht als Keyframes abgespielt: Flügel, Rotoren, Kreisel und Tafeln nutzen feste sinus-/zeitbasierte Bewegungen. Die Varianten besitzen Portraits aus den tatsächlichen Spielmeshes. Ein gemeinsamer `destroyer`-Typ erhält die oben genannten Kosten sowie vorläufig 145 Schaden, 2,6 Sekunden Nachladezeit und 2,8 Flächenradius. Die KI spart erst mit Hangar, hinreichender Armee und Aetherwirtschaft für ein Exemplar. Die gemeinsame Basisgeschwindigkeit wurde von 4,2 auf 2,8 gesenkt, damit alle drei Varianten deutlich langsamer als das Strike aircraft sind; der Manyroot-Bewegungsbonus gilt weiterhin. Die Zielwerte sind keine abschließende Balanceentscheidung, insbesondere die langsamere Anreise und Verwundbarkeit müssen im Spiel geprüft werden.
 
 Die technische Standardtestsuite und ein gezielter `file://`-Rendererlauf für die Portraits sind erfolgreich; letzterer bestätigt weder die Darstellung im Gefecht noch auf einem Zielgerät. Offen bleiben menschliche Abnahme von Farbe, Silhouette und Animation im normalen Zoom auf allen Karten und einem echten Zielgerät sowie der Balancevergleich unten. Die GLB-Detailmeshes samt neutraler Vorschau verdoppeln den GPU-Geometriespeicher für diesen Einheitentyp; Performance bei mehreren sichtbaren Exemplaren messen, bevor gezielt unauffällige Details reduziert werden. Umfangreiche KI- und Simulationslangläufe wurden nicht freigegeben und bleiben ausstehend.
 

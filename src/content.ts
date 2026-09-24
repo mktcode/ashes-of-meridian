@@ -208,7 +208,7 @@ const UNITS = {
     damage: 145,
     range: 14,
     reload: 2.6,
-    speed: 4.2,
+    speed: 2.8,
     size: 2.7,
     supply: 16,
     time: 70,
