@@ -14,11 +14,12 @@ const AURELION_AIR_LANES = [
   {route:'north-south',center:[0,68],radius:[10,42],angles:[-Math.PI/2,Math.PI/2],length:86,offset:0,height:-50,speed:9,count:4,direction:-1,kinds:[2,0,0,1]},
   {route:'north-south',center:[0,-68],radius:[10,42],angles:[Math.PI/2,3*Math.PI/2],length:86,offset:0,height:-47,speed:10,count:4,direction:1,kinds:[2,0,0,1]},
   {route:'north-south',center:[0,-68],radius:[10,42],angles:[Math.PI/2,3*Math.PI/2],length:86,offset:0,height:-54,speed:9,count:4,direction:-1,kinds:[2,0,0,1]},
-  // Slower side streets occupy the opposite canyon arcs and feed the main portals.
-  {route:'side',center:[75,0],radius:[49,20],angles:[Math.PI,2*Math.PI],length:113,offset:0,height:-48,speed:7,count:4,direction:1,kinds:[0]},
-  {route:'side',center:[-75,0],radius:[49,20],angles:[Math.PI,2*Math.PI],length:113,offset:0,height:-51,speed:7,count:4,direction:-1,kinds:[0]},
-  {route:'side',center:[0,68],radius:[10,42],angles:[Math.PI/2,3*Math.PI/2],length:86,offset:0,height:-49,speed:7,count:4,direction:-1,kinds:[0,1]},
-  {route:'side',center:[0,-68],radius:[10,42],angles:[-Math.PI/2,Math.PI/2],length:86,offset:0,height:-52,speed:7,count:4,direction:1,kinds:[0,1]}
+  // Shorter feeder streets occupy only selected opposite-canyon sections; together they no
+  // longer complete the other halves of the old local loops.
+  {route:'side',center:[75,0],radius:[49,20],angles:[1.12*Math.PI,1.68*Math.PI],length:63,offset:0,height:-48,speed:7,count:4,direction:1,kinds:[0]},
+  {route:'side',center:[-75,0],radius:[49,20],angles:[1.28*Math.PI,1.82*Math.PI],length:61,offset:0,height:-51,speed:7,count:4,direction:-1,kinds:[0]},
+  {route:'side',center:[0,68],radius:[10,42],angles:[.68*Math.PI,1.28*Math.PI],length:52,offset:0,height:-49,speed:7,count:4,direction:-1,kinds:[0,1]},
+  {route:'side',center:[0,-68],radius:[10,42],angles:[-.32*Math.PI,.28*Math.PI],length:52,offset:0,height:-52,speed:7,count:4,direction:1,kinds:[0,1]}
 ] as const;
 interface AurelionFlight { lane:number; phase:number; altitudeOffset:number; kind:number; scale:number; color:number }
 function createAurelionFlights(): AurelionFlight[] {
@@ -127,7 +128,7 @@ function drawAurelionFlights(renderer: Pick<MeridianRenderer,'add'|'beam'>, flig
       const wing=[1.2,2.4,3.4][flight.kind]*side*s;
       let a=[p.x-Math.sin(p.yaw)*tail+Math.cos(p.yaw)*wing,p.y,p.z-Math.cos(p.yaw)*tail-Math.sin(p.yaw)*wing];
       for (let segment=0;segment<3;segment++) {
-        const q=sampleAurelionFlight(flight,time-(segment+1)*.10);
+        const q=sampleAurelionFlight(flight,time-(segment+1)*.18);
         if (q.cycle!==p.cycle||q.visibility<.02) break;
         const b=[q.x-Math.sin(q.yaw)*tail+Math.cos(q.yaw)*wing,q.y,q.z-Math.cos(q.yaw)*tail-Math.sin(q.yaw)*wing];
         renderer.beam(a,b,(.13-segment*.035)*s,0x84dfff,2,(.45-segment*.13)*Math.min(p.visibility,q.visibility));a=b;

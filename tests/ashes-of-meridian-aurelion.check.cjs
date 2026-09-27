@@ -20,6 +20,14 @@ function surfaceHeight(data, x, z) {
   return height;
 }
 
+test('Aurelion visual time retains real elapsed motion under slow completed frames', () => {
+  const context=loadScripts(['experiment-aurelion']);
+  const advance=vm.runInContext('advanceAurelionVisualTime',context);
+  assert.equal(advance(12,0,9000),12,'the first visible frame establishes the clock without a jump');
+  assert.equal(advance(12,1000,3500),14.5,'slow rendering must not cap motion to a tenth of a second');
+  assert.equal(advance(14.5,3500,3516),14.516);
+});
+
 test('Aurelion light footprints are convex and their shared walkways have valid height ranges', () => {
   const context=loadScripts(['core','renderer-geometry','renderer-model-kit','renderer-aurelion-geometry']);
   const {outline,walkways,crown,height}=vm.runInContext('({outline:AURELION_DECK_OUTLINE,walkways:AURELION_WALKWAYS,crown:AURELION_CROWN_FLOOR,height:AURELION_SECTOR_HEIGHT})',context);
@@ -141,6 +149,9 @@ test('Aurelion geometry preserves broad precincts, clear approaches, a closed pl
     'all civilian routes stay below the map, without an upper exception');
   assert.deepEqual(new Set(fleet.lanes.map(l=>l.route)),new Set(['east-west','north-south','side']),
     'two multi-lane trunks and separate side streets replace visible local loops');
+  assert.ok(fleet.lanes.filter(l=>l.route!=='side').every(l=>Math.abs(Math.abs(l.angles[1]-l.angles[0])-Math.PI)<1e-9));
+  assert.ok(fleet.lanes.filter(l=>l.route==='side').every(l=>Math.abs(l.angles[1]-l.angles[0])<Math.PI*.7),
+    'feeder streets cannot recombine into the missing halves of the old loops');
   for (const flight of fleet.flights) {
     const lane=fleet.lanes[flight.lane],routeLength=lane.length,
       parts=fleet.models.filter(m=>m.name.startsWith(`aurelionAir${flight.kind}`)),

@@ -88,14 +88,14 @@ void main(){
   float detail=(texture(u_cloudNoise,p*.73+vec3(.11,.61,.29)).r-.5)*.34;
   float geography=max(dot(p,normalize(vec3(.82,.22,.52)))+detail,
     max(dot(p,normalize(vec3(-.68,-.18,.71)))+detail*.8,dot(p,normalize(vec3(.12,.76,-.64)))+detail*.65));
-  float land=smoothstep(.36,.50,geography),coast=1.-smoothstep(.025,.075,abs(geography-.43));
+  float land=smoothstep(.62,.74,geography),coast=1.-smoothstep(.018,.055,abs(geography-.68));
   float longitude=atan(p.z,p.x),latitude=asin(clamp(p.y,-1.,1.));
   float grid=max(1.-smoothstep(.025,.055,abs(sin(longitude*6.))),1.-smoothstep(.025,.055,abs(sin(latitude*6.))));
   float prime=1.-smoothstep(.025,.075,abs(sin(longitude*.5)));
   float sweep=exp(-pow((p.y-sin(u_time*.28))/.065,2.));
-  vec3 color=mix(vec3(.06,.55,1.05),vec3(.10,.90,1.35),land);
-  frag=vec4(film(color*(1.05+rim*1.5+land*.28+coast*.45+grid*.16+sweep*.18)+vec3(.30,1.15,1.45)*prime),
-    alpha*(.09+rim*.55+land*.48+coast*.18+prime*.42));return;
+  vec3 color=mix(vec3(.025,.28,.65),vec3(.08,1.18,1.55),land);
+  frag=vec4(film(color*(1.0+rim*1.5+land*.65+coast*.75+grid*.18+sweep*.18)+vec3(.35,1.45,.82)*prime),
+    alpha*(.07+rim*.42+land*.72+coast*.24+prime*.48));return;
  }
  if(v_mat==${AURELION_HALO_MATERIAL}.){
   float r=length(v_modelPos.xz),mask=exp(-r*r*.008);

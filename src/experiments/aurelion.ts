@@ -1,5 +1,8 @@
 /* Opt-in visual review. No game, UI controller, storage, simulation clock or map registration. */
 'use strict';
+function advanceAurelionVisualTime(time: number, lastTime: number, now: number) {
+  return lastTime ? time+(now-lastTime)/1000 : time;
+}
 async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   const renderer = new AurelionAtmosphereRenderer(canvas);
   renderer.quality = 1; // Native CSS resolution + MSAA; the normal quality presets remain untouched.
@@ -34,7 +37,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   renderer.geometry('aurelionHologram',new Float32Array(globe));renderer.geometry('aurelionHalo',new Float32Array(halo));
   const panel = document.createElement('section');
   panel.className = 'aurelion-review';
-  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 08</small><h1>AURELION</h1>
+  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 09</small><h1>AURELION</h1>
     <p>Eine Stadt über den Wolken</p></header>
     <footer><span>Ziehen: verschieben · Rechts ziehen: drehen · Mausrad: Zoom · H: Bildmodus</span>
     <nav><button type="button" data-view="reset">Referenzblick</button><button type="button" data-view="top">Draufsicht</button>
@@ -50,12 +53,17 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   const camera = {x:0,z:0,height:-22,zoom:290,yaw:.04,pitch:.80,perspective:true,fov:.18},
     params=new URLSearchParams(location.search),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)'),
     motionButton=panel.querySelector<HTMLButtonElement>('[data-action="motion"]')!,
-    atmosphereButton=panel.querySelector<HTMLButtonElement>('[data-action="atmosphere"]')!;
-  let failed=false,frameRequest=0,paused=params.get('still')==='1'||reducedMotion.matches,time=12,lastTime=0,nextDraw=0;
+    atmosphereButton=panel.querySelector<HTMLButtonElement>('[data-action="atmosphere"]')!,
+    status=panel.querySelector<HTMLElement>('[data-status]')!;
+  let failed=false,frameRequest=0,
+    paused=params.get('motion')==='1'?false:params.get('still')==='1'||reducedMotion.matches,
+    time=12,lastTime=0,nextDraw=0;
   function syncMotion() {
     motionButton.textContent=paused?'Bewegung fortsetzen':'Bewegung pausieren';
     motionButton.setAttribute('aria-pressed',String(paused));
     canvas.dataset.motion=paused?'paused':'playing';
+    status.textContent=paused?'Bewegung pausiert · Leertaste: fortsetzen · keine spielbare Karte':
+      'Bewegung läuft · Leertaste: pausieren · keine spielbare Karte';
   }
   function draw() {
     const bounds = canvas.getBoundingClientRect();
@@ -74,7 +82,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
     renderer.begin();
     drawAurelionFlights(renderer,flights,time);
     renderer.add('aurelionHalo',0,.42,0,24,1,24,0xffffff,0,0,0,1,.4,'effects',AURELION_HALO_MATERIAL);
-    renderer.add('aurelionHologram',0,15,0,10.08,10.08,10.08,0xffffff,time*.035,.18,.08,2,.7,'effects',AURELION_HOLOGRAM_MATERIAL);
+    renderer.add('aurelionHologram',0,15,0,10.08,10.08,10.08,0xffffff,time*.06,.18,.08,2,.7,'effects',AURELION_HOLOGRAM_MATERIAL);
     renderer.render(time);
     const w=Math.round(v.width*dpr),h=Math.round(v.height*dpr);
     if (overlay.width!==w || overlay.height!==h) {overlay.width=w;overlay.height=h;}
@@ -91,7 +99,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
     canvas.dataset.aircraftTriangles=String(aircraftTriangles);canvas.dataset.aircraft=String(flights.length);
     canvas.dataset.drawCalls=String(renderer.drawCalls);canvas.dataset.visualTime=time.toFixed(4);
     canvas.dataset.depthEffects=String(renderer.depthAvailable);canvas.dataset.frames=String(renderer.frame);
-    if (!renderer.depthAvailable) panel.querySelector('[data-status]')!.textContent='Tiefeneffekte nicht verfügbar · Licht/Bloom aktiv · keine spielbare Karte';
+    if (!renderer.depthAvailable) status.textContent='Tiefeneffekte nicht verfügbar · Licht/Bloom aktiv · keine spielbare Karte';
   }
   function tick(now: number) {
     frameRequest=0;
@@ -101,7 +109,9 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
     try {
       if (!renderer.frameReady()) {invalidate();return;}
       nextDraw=now+1000/60-(nextDraw?(now-nextDraw)%(1000/60):0);
-      if (!paused&&lastTime) time+=Math.min((now-lastTime)/1000,.1);
+      // Hidden tabs reset lastTime. On a slow GPU keep real visual time instead of turning
+      // every animation into extreme slow motion by capping progress per completed frame.
+      if (!paused) time=advanceAurelionVisualTime(time,lastTime,now);
       lastTime=now;draw();
     } catch(error) {failed=true;showFailure(error);return;}
     if (!paused) invalidate();
