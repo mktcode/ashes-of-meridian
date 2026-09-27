@@ -20,7 +20,7 @@ function surfaceHeight(data, x, z) {
   return height;
 }
 
-test('Aurelion has bounded CPU-only geometry, four broad elevated precincts and continuous sloped approaches', () => {
+test('Aurelion geometry preserves broad precincts, clear approaches, a closed plaza and sub-deck flight corridors', () => {
   const context = loadScripts(['core','renderer-geometry','renderer-model-kit','renderer-aurelion-geometry','renderer-aurelion-traffic']);
   vm.runInContext('Math.random = () => { throw Error("ambient RNG used"); }', context);
   const meshes = vm.runInContext('createAurelionGeometry()', context);
@@ -80,34 +80,60 @@ test('Aurelion has bounded CPU-only geometry, four broad elevated precincts and 
     }
   }
   assert.ok(surfaceHeight(structure,20,6)<1, 'the central plaza remains below the four corner districts');
+  const plaza=[];
+  for (let i=0;i<structure.length;i+=27) {
+    if (structure[i+4]>.99 && [0,9,18].every(k=>Math.abs(structure[i+k+1]-.15)<1e-5 &&
+        Math.hypot(structure[i+k],structure[i+k+2])<41.01)) plaza.push(...structure.subarray(i,i+27));
+  }
+  for (let x=-40;x<=40;x+=2) for (let z=-40;z<=40;z+=2) if (Math.hypot(x,z)<40.5)
+    assert.ok(Math.abs(surfaceHeight(plaza,x,z)-.15)<1e-5,`continuous circular floor, including former moat: ${x}/${z}`);
+  let plazaArea=0;
+  for (let i=0;i<plaza.length;i+=27) plazaArea+=Math.abs((plaza[i+9]-plaza[i])*(plaza[i+20]-plaza[i+2])-
+    (plaza[i+18]-plaza[i])*(plaza[i+11]-plaza[i+2]))/2;
+  assert.ok(Math.abs(plazaArea-Math.PI*41**2)<10,'one full disk, not overlapping strips or a perforated ring');
   const backdrop = vm.runInContext('createAurelionBackdrop()', context);
   assert.ok(backdrop.data.length/27<18000, 'distant silhouettes have their own small budget');
   for (const value of backdrop.data) assert.ok(Number.isFinite(value));
-  // A conservative ceiling raster from actual triangles, not a duplicated list of building heights.
-  const size=144,cell=5,extent=360,ceiling=new Float32Array(size*size).fill(-Infinity);
+  // Three-dimensional surface occupancy allows underpasses; a highest-roof raster would forbid them.
+  // Triangle AABBs conservatively include railings, bridge undersides and tower facades.
+  const size=360,cell=2,extent=360,bottom=-160,levels=170,occupied=new Uint8Array(size*size*levels);
   for (const {data} of [...meshes,backdrop]) for (let i=0;i<data.length;i+=27) {
-    const minX=Math.min(data[i],data[i+9],data[i+18]),maxX=Math.max(data[i],data[i+9],data[i+18]),
-      minZ=Math.min(data[i+2],data[i+11],data[i+20]),maxZ=Math.max(data[i+2],data[i+11],data[i+20]),
-      height=Math.max(data[i+1],data[i+10],data[i+19]);
-    for (let z=Math.max(0,Math.floor((minZ+extent)/cell));z<=Math.min(size-1,Math.floor((maxZ+extent)/cell));z++)
-      for (let x=Math.max(0,Math.floor((minX+extent)/cell));x<=Math.min(size-1,Math.floor((maxX+extent)/cell));x++)
-        ceiling[z*size+x]=Math.max(ceiling[z*size+x],height);
+    const lo=[0,1,2].map(k=>Math.min(data[i+k],data[i+k+9],data[i+k+18])),
+      hi=[0,1,2].map(k=>Math.max(data[i+k],data[i+k+9],data[i+k+18])),
+      x0=Math.max(0,Math.floor((lo[0]+extent)/cell)),x1=Math.min(size-1,Math.floor((hi[0]+extent)/cell));
+    if (x1<x0) continue;
+    for (let y=Math.max(0,Math.floor((lo[1]-bottom)/cell));y<=Math.min(levels-1,Math.floor((hi[1]-bottom)/cell));y++)
+      for (let z=Math.max(0,Math.floor((lo[2]+extent)/cell));z<=Math.min(size-1,Math.floor((hi[2]+extent)/cell));z++) {
+        const row=(y*size+z)*size;occupied.fill(1,row+x0,row+x1+1);
+      }
   }
   const fleet=vm.runInContext('({flights:createAurelionFlights(),models:createAurelionAircraft(),lanes:AURELION_AIR_LANES,sample:sampleAurelionFlight})',context);
+  assert.ok(fleet.flights.filter(f=>fleet.lanes[f.lane].height<0).length/fleet.flights.length>.8,
+    'the great majority of civilian traffic is below the map, not above the plazas');
   for (const flight of fleet.flights) {
-    const lane=fleet.lanes[flight.lane],data=fleet.models.find(m=>m.name===`aurelionAir${flight.kind}`).data;
-    let radius=0,bottom=Infinity;
-    for (let i=0;i<data.length;i+=9) {
-      radius=Math.max(radius,Math.hypot(data[i],data[i+1],data[i+2])*flight.scale);
-      bottom=Math.min(bottom,(data[i]*Math.sin(lane.direction*.075)+data[i+1]*Math.cos(lane.direction*.075))*flight.scale);
+    const lane=fleet.lanes[flight.lane],parts=fleet.models.filter(m=>m.name.startsWith(`aurelionAir${flight.kind}`)),
+      lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+    for (const {data} of parts) for (let i=0;i<data.length;i+=9) for (let k=0;k<3;k++) {
+      lo[k]=Math.min(lo[k],data[i+k]);hi[k]=Math.max(hi[k],data[i+k]);
     }
-    for (let step=0;step<96;step++) {
-      const t=step/96*Math.PI*(lane.rx+lane.rz)/lane.speed,p=fleet.sample(flight,t);
-      let roof=-Infinity;
-      for (let z=Math.floor((p.z-radius+extent)/cell);z<=Math.floor((p.z+radius+extent)/cell);z++)
-        for (let x=Math.floor((p.x-radius+extent)/cell);x<=Math.floor((p.x+radius+extent)/cell);x++)
-          roof=Math.max(roof,ceiling[z*size+x]);
-      assert.ok(p.y+bottom>roof+2,`civilian route clears real scenery: lane ${flight.lane}, ${p.x}/${p.z}, ship ${p.y+bottom}, roof ${roof}`);
+    for (let step=0;step<192;step++) {
+      const t=step/192*Math.PI*(lane.rx+lane.rz)/lane.speed,p=fleet.sample(flight,t),
+        a=[Infinity,Infinity,Infinity],b=[-Infinity,-Infinity,-Infinity];
+      for (const x of [lo[0],hi[0]]) for (const y of [lo[1],hi[1]]) for (const z of [lo[2],hi[2]]) {
+        const bx=x*Math.cos(p.bank)-y*Math.sin(p.bank),by=x*Math.sin(p.bank)+y*Math.cos(p.bank),
+          q=[p.x+flight.scale*(bx*Math.cos(p.yaw)+z*Math.sin(p.yaw)),p.y+flight.scale*by,
+            p.z+flight.scale*(-bx*Math.sin(p.yaw)+z*Math.cos(p.yaw))];
+        for (let k=0;k<3;k++) {a[k]=Math.min(a[k],q[k]-2);b[k]=Math.max(b[k],q[k]+2);}
+      }
+      if (lane.height<0) assert.ok(b[1]<-10,'entire lower aircraft stays safely below deck height');
+      let blocked='';
+      for (let y=Math.floor((a[1]-bottom)/cell);y<=Math.floor((b[1]-bottom)/cell)&&!blocked;y++)
+        for (let z=Math.floor((a[2]+extent)/cell);z<=Math.floor((b[2]+extent)/cell)&&!blocked;z++)
+          for (let x=Math.floor((a[0]+extent)/cell);x<=Math.floor((b[0]+extent)/cell);x++) {
+            assert.ok(x>=0&&x<size&&z>=0&&z<size&&y>=0&&y<levels);
+            if (occupied[(y*size+z)*size+x]) {blocked=[x*cell-extent,y*cell+bottom,z*cell-extent].join('/');break;}
+          }
+      assert.equal(blocked,'',`aircraft envelope clears real scenery: lane ${flight.lane}, kind ${flight.kind}, pose ${p.x}/${p.y}/${p.z}`);
     }
   }
   for (const name of ['MeridianGame','Battlefield','document','window'])

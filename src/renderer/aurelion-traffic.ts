@@ -1,17 +1,23 @@
 /* Civilian scenery, not game entities. Analytic routes and an entirely private cosmetic seed. */
 'use strict';
+// Local canyon loops pass below the decks, around—not through—their supporting towers.
+// Only a small, distant freight lane remains above the skyline.
 const AURELION_AIR_LANES = [
-  {rx:64,rz:64,height:52,speed:13,count:12,direction:1},
-  {rx:37,rz:142,height:84,speed:18,count:10,direction:-1},
-  {rx:270,rz:215,height:132,speed:26,count:16,direction:1},
-  {rx:326,rz:264,height:163,speed:32,count:20,direction:-1}
+  {x:0,z:68,rx:10,rz:42,height:-43,speed:9,count:12,direction:1,kinds:[1,0,0]},
+  {x:0,z:-68,rx:10,rz:42,height:-47,speed:10,count:12,direction:-1,kinds:[1,0,0]},
+  // Wingless taxis fit between the eastern/western approach piers and the central service towers.
+  {x:75,z:0,rx:49,rz:20,height:-44,speed:12,count:12,direction:1,kinds:[0]},
+  {x:-75,z:0,rx:49,rz:20,height:-49,speed:11,count:12,direction:-1,kinds:[0]},
+  {x:0,z:0,rx:270,rz:215,height:132,speed:26,count:10,direction:1,kinds:[2,0,0,1,0]}
 ] as const;
-interface AurelionFlight { lane:number; phase:number; kind:number; scale:number; color:number }
+interface AurelionFlight { lane:number; phase:number; altitudeOffset:number; kind:number; scale:number; color:number }
 function createAurelionFlights(): AurelionFlight[] {
   const random = seeded(0x464c5934), flights: AurelionFlight[] = [], colors = [0xcab78b,0xd5dce1,0x839aab,0xd89464,0x88bbcf];
   for (const [lane,path] of AURELION_AIR_LANES.entries()) for (let i = 0; i < path.count; i++) {
     flights.push({lane,phase:(i+.12+random()*.32)/path.count*Math.PI*2,
-      kind:lane>=2&&i%5===0?2:i%3===0?1:0,scale:lane===3?.55+random()*.25:.7+random()*.45,
+      // Interleaved heights leave room between neighbours in the narrower canyon lanes.
+      altitudeOffset:path.height<0?-(i%2)*7:0,
+      kind:path.kinds[i%path.kinds.length],scale:path.height>0?.55+random()*.25:.7+random()*.35,
       color:colors[Math.floor(random()*colors.length)]});
   }
   return flights;
@@ -19,7 +25,7 @@ function createAurelionFlights(): AurelionFlight[] {
 function sampleAurelionFlight(flight: AurelionFlight, time: number) {
   const path = AURELION_AIR_LANES[flight.lane], a = flight.phase+time*path.speed/((path.rx+path.rz)/2)*path.direction,
     dx = -path.rx*Math.sin(a)*path.direction, dz = path.rz*Math.cos(a)*path.direction;
-  return {x:Math.cos(a)*path.rx,y:path.height+Math.sin(a*3+flight.phase)*.65,z:Math.sin(a)*path.rz,
+  return {x:path.x+Math.cos(a)*path.rx,y:path.height+flight.altitudeOffset+Math.sin(a*3+flight.phase)*.65,z:path.z+Math.sin(a)*path.rz,
     yaw:Math.atan2(dx,dz),bank:path.direction*.075};
 }
 function createAurelionAircraft() {

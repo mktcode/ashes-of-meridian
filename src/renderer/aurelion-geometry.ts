@@ -585,9 +585,12 @@ function createAurelionGeometry() {
     billboard(board.x,board.y,board.z,board.w,board.h,0xffffff);
   }
 
-  // Central crown: thick annular road, separated inner plaza, buttresses and luminous armillary.
-  annulus(0,0,0,41,6,3,steel);
-  annulus(0,.15,0,40,4,0,paving);
+  // One continuous circular plaza: the former inner moat and its four footbridges are closed.
+  const crown = Array.from({length:96},(_,i) => {
+    const a=i*Math.PI*2/96;return [Math.sin(a)*41,Math.cos(a)*41];
+  });
+  polygonPrism(crown,0,3,steel);
+  polygonPrism(crown,.15,.15,paving);
   annulus(0,.23,0,40.2,.32,0,ice,lights);
   annulus(0,.23,0,35.6,.35,0,warm,lights);
   annulus(0,-3.2,0,41.7,1.4,1,trim);
@@ -607,15 +610,8 @@ function createAurelionGeometry() {
     line(pt(a,43,-8),pt(b,41,-3.5),.4,.4,trim);
     box(Math.sin(a)*41,-1.4,Math.cos(a)*41,1.6,.4,.4,ice,a,lights);
   }
-  disc(0,-2,0,26,4,steel);
-  disc(0,.1,0,25.4,.5,paving);
-  for (const side of [-1,1]) {
-    bridge(side*23,0,side*37,0,10);
-    bridge(0,side*23,0,side*37,10);
-  }
-  annulus(0,.5,0,24.7,1.6,0,warm,lights);
-  annulus(0,.55,0,19,.30,0,dark);
-  annulus(0,-.6,0,26.5,.8,1,trim);
+  annulus(0,.23,0,24.7,1.6,0,warm,lights);
+  annulus(0,.20,0,19,.30,0,dark);
   for (let i = 0; i < 16; i++) {
     const a = i*Math.PI/8;
     line([Math.sin(a)*15,.22,Math.cos(a)*15],[Math.sin(a)*24,.22,Math.cos(a)*24],.18,.04,dark);
@@ -627,9 +623,9 @@ function createAurelionGeometry() {
   }
   for (let i = 0; i < 32; i++) {
     const a = i*Math.PI/16;
-    box(Math.sin(a)*22,.62,Math.cos(a)*22,.7,.14,2.3,trim,a);
+    box(Math.sin(a)*22,.23,Math.cos(a)*22,.7,.14,2.3,trim,a);
   }
-  disc(0,1.8,0,14,3,dark);
+  disc(0,1.7,0,14,3.2,dark);
   disc(0,3.5,0,12,1,steel);
   annulus(0,4.1,0,11.9,.8,0,ice,lights);
   for (let i = 0; i < 12; i++) {
