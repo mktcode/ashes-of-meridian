@@ -25,7 +25,7 @@ Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen 
 
 ## Aurelion · Visualstudie
 
-`index.html?experiment=aurelion` öffnet nach dem Build eine dreh- und zoombare nächtliche Stadtvorschau mit gezielt beleuchteten Plattformen, dunklen Tiefenwolken, leuchtenden Reklamen, Hologramm und zivilem Flugverkehr ausschließlich unter den Decks. Noch keine spielbare Karte, keine Profilzugriffe. Die Gestaltung wird anhand der Bildvorlage abgestimmt; Spielintegration bleibt bis zur menschlichen Abnahme zurückgestellt. [Bedienung, Stand und nächster Haltepunkt](docs/issues/aurelion-map.md).
+`index.html?experiment=aurelion` öffnet nach dem Build eine dreh- und zoombare nächtliche Stadtvorschau mit gezielt beleuchteten Plattformen, dunklen Tiefenwolken, leuchtenden Reklamen, langsam rotierendem Hologlobus und gegliedertem zivilem Flugverkehr ausschließlich unter den Decks. Noch keine spielbare Karte, keine Profilzugriffe. Die Gestaltung wird anhand der Bildvorlage abgestimmt; Spielintegration bleibt bis zur menschlichen Abnahme zurückgestellt. [Bedienung, Stand und nächster Haltepunkt](docs/issues/aurelion-map.md).
 
 ## Multiplayer-Prototyp
 

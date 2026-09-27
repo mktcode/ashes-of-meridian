@@ -139,15 +139,21 @@ test('Aurelion geometry preserves broad precincts, clear approaches, a closed pl
   const fleet=vm.runInContext('({flights:createAurelionFlights(),models:createAurelionAircraft(),lanes:AURELION_AIR_LANES,sample:sampleAurelionFlight})',context);
   assert.ok(fleet.flights.every(f=>fleet.lanes[f.lane].height<0),
     'all civilian routes stay below the map, without an upper exception');
+  assert.deepEqual(new Set(fleet.lanes.map(l=>l.route)),new Set(['east-west','north-south','side']),
+    'two multi-lane trunks and separate side streets replace visible local loops');
   for (const flight of fleet.flights) {
-    const lane=fleet.lanes[flight.lane],parts=fleet.models.filter(m=>m.name.startsWith(`aurelionAir${flight.kind}`)),
+    const lane=fleet.lanes[flight.lane],routeLength=lane.length,
+      parts=fleet.models.filter(m=>m.name.startsWith(`aurelionAir${flight.kind}`)),
       lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
     for (const {data} of parts) for (let i=0;i<data.length;i+=9) for (let k=0;k<3;k++) {
       lo[k]=Math.min(lo[k],data[i+k]);hi[k]=Math.max(hi[k],data[i+k]);
     }
+    let visibleSamples=0;
     for (let step=0;step<192;step++) {
-      const t=step/192*Math.PI*(lane.rx+lane.rz)/lane.speed,p=fleet.sample(flight,t),
-        a=[Infinity,Infinity,Infinity],b=[-Infinity,-Infinity,-Infinity];
+      const t=step/192*routeLength/lane.speed,p=fleet.sample(flight,t);
+      if (p.visibility<.02) continue;
+      visibleSamples++;
+      const a=[Infinity,Infinity,Infinity],b=[-Infinity,-Infinity,-Infinity];
       for (const x of [lo[0],hi[0]]) for (const y of [lo[1],hi[1]]) for (const z of [lo[2],hi[2]]) {
         const bx=x*Math.cos(p.bank)-y*Math.sin(p.bank),by=x*Math.sin(p.bank)+y*Math.cos(p.bank),
           q=[p.x+flight.scale*(bx*Math.cos(p.yaw)+z*Math.sin(p.yaw)),p.y+flight.scale*by,
@@ -164,6 +170,7 @@ test('Aurelion geometry preserves broad precincts, clear approaches, a closed pl
           }
       assert.equal(blocked,'',`aircraft envelope clears real scenery: lane ${flight.lane}, kind ${flight.kind}, pose ${p.x}/${p.y}/${p.z}`);
     }
+    assert.ok(visibleSamples>140,'portal fades hide only short route ends');
   }
   for (const name of ['MeridianGame','Battlefield','document','window'])
     assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
@@ -201,14 +208,17 @@ test('civilian aircraft are bounded, non-degenerate models with deterministic co
     for (const t of [0,12,300,3600]) {
       const a=api.sample(flight,t),b=api.sample(flight,t+.01);
       for (const value of Object.values(a)) assert.ok(Number.isFinite(value));
-      assert.ok(Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)<.8,'no route-end teleports');
+      if (a.cycle===b.cycle) assert.ok(Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)<.8,'visible street motion stays continuous');
+      else assert.ok(Math.min(a.visibility,b.visibility)<.03,'analytic route wrap is hidden inside a portal fade');
       assert.deepEqual(api.sample(flight,t),a,'sampling does not advance any clock or random stream');
     }
   }
   const draws=[],beams=[],renderer={add:(...args)=>draws.push(args),beam:(...args)=>beams.push(args)};
   api.draw(renderer,api.flights,12);
-  assert.equal(draws.length,api.flights.length*2);assert.equal(beams.length,api.flights.length*6);
-  assert.ok(draws.every(args=>args[13]==='dynamic'));
+  assert.ok(draws.length>api.flights.length&&draws.length<=api.flights.length*2&&draws.length%2===0);
+  assert.ok(beams.length>api.flights.length*4&&beams.length<=api.flights.length*6);
+  assert.ok(draws.every(args=>['dynamic','effects'].includes(args[13])&&args[12]>0&&args[12]<=1));
+  assert.ok(draws.some(args=>args[13]==='dynamic'),'traffic remains opaque away from short portal fades');
   assert.equal(JSON.stringify(api.flights),before);
   for (const [a,b,width,,glow,alpha] of beams) {
     assert.ok([...a,...b,width,glow,alpha].every(Number.isFinite));

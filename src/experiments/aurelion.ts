@@ -34,7 +34,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   renderer.geometry('aurelionHologram',new Float32Array(globe));renderer.geometry('aurelionHalo',new Float32Array(halo));
   const panel = document.createElement('section');
   panel.className = 'aurelion-review';
-  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 07</small><h1>AURELION</h1>
+  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 08</small><h1>AURELION</h1>
     <p>Eine Stadt über den Wolken</p></header>
     <footer><span>Ziehen: verschieben · Rechts ziehen: drehen · Mausrad: Zoom · H: Bildmodus</span>
     <nav><button type="button" data-view="reset">Referenzblick</button><button type="button" data-view="top">Draufsicht</button>
@@ -74,7 +74,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
     renderer.begin();
     drawAurelionFlights(renderer,flights,time);
     renderer.add('aurelionHalo',0,.42,0,24,1,24,0xffffff,0,0,0,1,.4,'effects',AURELION_HALO_MATERIAL);
-    renderer.add('aurelionHologram',0,15,0,10.08,10.08,10.08,0xffffff,time*.025,0,0,2,.7,'effects',AURELION_HOLOGRAM_MATERIAL);
+    renderer.add('aurelionHologram',0,15,0,10.08,10.08,10.08,0xffffff,time*.035,.18,.08,2,.7,'effects',AURELION_HOLOGRAM_MATERIAL);
     renderer.render(time);
     const w=Math.round(v.width*dpr),h=Math.round(v.height*dpr);
     if (overlay.width!==w || overlay.height!==h) {overlay.width=w;overlay.height=h;}

@@ -1,31 +1,47 @@
 /* Civilian scenery, not game entities. Analytic routes and an entirely private cosmetic seed. */
 'use strict';
-// Local canyon loops pass below the decks, around—not through—their supporting towers.
-// All civilian traffic, including compact freighters, stays strictly below the map.
+// Two multi-lane trunks run through the east/west and north/south canyons. Their ends
+// disappear into tower portals; side streets use separate curves instead of visible circles.
+// All civilian traffic, including compact freighters, remains strictly below the map.
 const AURELION_AIR_LANES = [
-  {x:0,z:68,rx:10,rz:42,height:-43,speed:9,count:12,direction:1,kinds:[2,0,0,1,0,0]},
-  {x:0,z:-68,rx:10,rz:42,height:-47,speed:10,count:12,direction:-1,kinds:[2,0,0,1,0,0]},
-  // Wingless taxis fit between the eastern/western approach piers and the central service towers.
-  {x:75,z:0,rx:49,rz:20,height:-44,speed:12,count:12,direction:1,kinds:[0]},
-  {x:-75,z:0,rx:49,rz:20,height:-49,speed:11,count:12,direction:-1,kinds:[0]}
+  // East/west trunk: paired lanes on both sides of the central interchange.
+  {route:'east-west',center:[75,0],radius:[49,20],angles:[Math.PI,0],length:113,offset:0,height:-43,speed:12,count:4,direction:1,kinds:[0]},
+  {route:'east-west',center:[75,0],radius:[49,20],angles:[Math.PI,0],length:113,offset:0,height:-50,speed:11,count:4,direction:-1,kinds:[0]},
+  {route:'east-west',center:[-75,0],radius:[49,20],angles:[Math.PI,0],length:113,offset:0,height:-46,speed:12,count:4,direction:1,kinds:[0]},
+  {route:'east-west',center:[-75,0],radius:[49,20],angles:[Math.PI,0],length:113,offset:0,height:-53,speed:11,count:4,direction:-1,kinds:[0]},
+  // North/south trunk: the second paired artery, vertically separated at its crossings.
+  {route:'north-south',center:[0,68],radius:[10,42],angles:[-Math.PI/2,Math.PI/2],length:86,offset:0,height:-43,speed:10,count:4,direction:1,kinds:[2,0,0,1]},
+  {route:'north-south',center:[0,68],radius:[10,42],angles:[-Math.PI/2,Math.PI/2],length:86,offset:0,height:-50,speed:9,count:4,direction:-1,kinds:[2,0,0,1]},
+  {route:'north-south',center:[0,-68],radius:[10,42],angles:[Math.PI/2,3*Math.PI/2],length:86,offset:0,height:-47,speed:10,count:4,direction:1,kinds:[2,0,0,1]},
+  {route:'north-south',center:[0,-68],radius:[10,42],angles:[Math.PI/2,3*Math.PI/2],length:86,offset:0,height:-54,speed:9,count:4,direction:-1,kinds:[2,0,0,1]},
+  // Slower side streets occupy the opposite canyon arcs and feed the main portals.
+  {route:'side',center:[75,0],radius:[49,20],angles:[Math.PI,2*Math.PI],length:113,offset:0,height:-48,speed:7,count:4,direction:1,kinds:[0]},
+  {route:'side',center:[-75,0],radius:[49,20],angles:[Math.PI,2*Math.PI],length:113,offset:0,height:-51,speed:7,count:4,direction:-1,kinds:[0]},
+  {route:'side',center:[0,68],radius:[10,42],angles:[Math.PI/2,3*Math.PI/2],length:86,offset:0,height:-49,speed:7,count:4,direction:-1,kinds:[0,1]},
+  {route:'side',center:[0,-68],radius:[10,42],angles:[-Math.PI/2,Math.PI/2],length:86,offset:0,height:-52,speed:7,count:4,direction:1,kinds:[0,1]}
 ] as const;
 interface AurelionFlight { lane:number; phase:number; altitudeOffset:number; kind:number; scale:number; color:number }
 function createAurelionFlights(): AurelionFlight[] {
   const random = seeded(0x464c5934), flights: AurelionFlight[] = [], colors = [0xcab78b,0xd5dce1,0x839aab,0xd89464,0x88bbcf];
   for (const [lane,path] of AURELION_AIR_LANES.entries()) for (let i = 0; i < path.count; i++) {
     const kind=path.kinds[i%path.kinds.length];
-    flights.push({lane,phase:(i+.12+random()*.32)/path.count*Math.PI*2,
-      // Interleaved heights leave room between neighbours; compact freight fits the courier corridors.
-      altitudeOffset:-(i%2)*7,kind,scale:kind===2?.5+random()*.1:.7+random()*.35,
+    flights.push({lane,phase:(i+.12+random()*.32)/path.count,
+      // Adjacent lanes already carry separate heights; this smaller offset breaks up convoys.
+      altitudeOffset:-(i%2)*2,kind,scale:kind===2?.5+random()*.1:.7+random()*.35,
       color:colors[Math.floor(random()*colors.length)]});
   }
   return flights;
 }
 function sampleAurelionFlight(flight: AurelionFlight, time: number) {
-  const path = AURELION_AIR_LANES[flight.lane], a = flight.phase+time*path.speed/((path.rx+path.rz)/2)*path.direction,
-    dx = -path.rx*Math.sin(a)*path.direction, dz = path.rz*Math.cos(a)*path.direction;
-  return {x:path.x+Math.cos(a)*path.rx,y:path.height+flight.altitudeOffset+Math.sin(a*3+flight.phase)*.65,z:path.z+Math.sin(a)*path.rz,
-    yaw:Math.atan2(dx,dz),bank:path.direction*.075};
+  const path=AURELION_AIR_LANES[flight.lane],cycle=flight.phase+time*path.speed/path.length*path.direction,
+    u=cycle-Math.floor(cycle),span=path.angles[1]-path.angles[0],a=path.angles[0]+span*u,
+    x=path.center[0]+Math.cos(a)*path.radius[0],z=path.center[1]+Math.sin(a)*path.radius[1],
+    dx=-Math.sin(a)*path.radius[0]*span*path.direction,dz=Math.cos(a)*path.radius[1]*span*path.direction,
+    ddx=-Math.cos(a)*path.radius[0]*span*span,ddz=-Math.sin(a)*path.radius[1]*span*span,
+    tangent=Math.max(.001,Math.hypot(dx,dz)),visibility=Math.min(1,u/.09,(1-u)/.09);
+  return {x:x+dz/tangent*path.offset,y:path.height+flight.altitudeOffset+Math.sin(u*Math.PI*4+flight.phase*Math.PI*2)*.45,
+    z:z-dx/tangent*path.offset,yaw:Math.atan2(dx,dz),bank:Math.max(-.11,Math.min(.11,(dx*ddz-dz*ddx)/(tangent*tangent)*.35)),
+    visibility:Math.max(0,visibility),cycle:Math.floor(cycle)};
 }
 function createAurelionAircraft() {
   const cube = geom.box(), engine = geom.cylinder(12), meshes: {name:string;data:Float32Array;glow:number}[] = [];
@@ -101,16 +117,20 @@ function createAurelionAircraft() {
 }
 function drawAurelionFlights(renderer: Pick<MeridianRenderer,'add'|'beam'>, flights: readonly AurelionFlight[], time: number) {
   for (const flight of flights) {
-    const p = sampleAurelionFlight(flight,time), s=flight.scale, tail=[3.6,4.7,9][flight.kind]*s;
-    renderer.add(`aurelionAir${flight.kind}`,p.x,p.y,p.z,s,s,s,flight.color,p.yaw,0,p.bank,0,1,'dynamic',MAT.METAL);
-    renderer.add(`aurelionAir${flight.kind}Lights`,p.x,p.y,p.z,s,s,s,0xffffff,p.yaw,0,p.bank,2,1,'dynamic',MAT.METAL);
+    const p=sampleAurelionFlight(flight,time),s=flight.scale,tail=[3.6,4.7,9][flight.kind]*s;
+    // Portal fades hide the analytic wrap; no wake may bridge one end of a street to the other.
+    if (p.visibility<.02) continue;
+    const layer=p.visibility<1?'effects':'dynamic';
+    renderer.add(`aurelionAir${flight.kind}`,p.x,p.y,p.z,s,s,s,flight.color,p.yaw,0,p.bank,0,p.visibility,layer,MAT.METAL);
+    renderer.add(`aurelionAir${flight.kind}Lights`,p.x,p.y,p.z,s,s,s,0xffffff,p.yaw,0,p.bank,2,p.visibility,layer,MAT.METAL);
     for (const side of [-1,1]) {
       const wing=[1.2,2.4,3.4][flight.kind]*side*s;
       let a=[p.x-Math.sin(p.yaw)*tail+Math.cos(p.yaw)*wing,p.y,p.z-Math.cos(p.yaw)*tail-Math.sin(p.yaw)*wing];
       for (let segment=0;segment<3;segment++) {
-        const q=sampleAurelionFlight(flight,time-(segment+1)*.10),
-          b=[q.x-Math.sin(q.yaw)*tail+Math.cos(q.yaw)*wing,q.y,q.z-Math.cos(q.yaw)*tail-Math.sin(q.yaw)*wing];
-        renderer.beam(a,b,(.13-segment*.035)*s,0x84dfff,2,.45-segment*.13); a=b;
+        const q=sampleAurelionFlight(flight,time-(segment+1)*.10);
+        if (q.cycle!==p.cycle||q.visibility<.02) break;
+        const b=[q.x-Math.sin(q.yaw)*tail+Math.cos(q.yaw)*wing,q.y,q.z-Math.cos(q.yaw)*tail-Math.sin(q.yaw)*wing];
+        renderer.beam(a,b,(.13-segment*.035)*s,0x84dfff,2,(.45-segment*.13)*Math.min(p.visibility,q.visibility));a=b;
       }
     }
   }
