@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
+const { createHash } = require('node:crypto');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
 
 // Intersect actual upward mesh triangles, not a second hand-built height recipe.
@@ -29,6 +30,7 @@ test('Aurelion has bounded CPU-only geometry, four broad elevated precincts and 
   for (const mesh of meshes) {
     const data = mesh.data;
     assert.ok(data.length > 0 && data.length % 27 === 0);
+    assert.equal(Object.prototype.toString.call(data), '[object Float32Array]', 'packed storage for the detailed scene');
     triangles += data.length / 27;
     for (let i = 0; i < data.length; i += 9) {
       for (let k = 0; k < 9; k++) assert.ok(Number.isFinite(data[i+k]));
@@ -43,17 +45,18 @@ test('Aurelion has bounded CPU-only geometry, four broad elevated precincts and 
       assert.ok(Math.hypot(ay*bz-az*by,az*bx-ax*bz,ax*by-ay*bx) > 1e-8, 'no collapsed triangles');
     }
   }
-  assert.ok(triangles < 200000, `bounded geometry-review budget (${triangles}), not a mobile performance claim`);
+  // The approved high-detail pass deliberately replaces the coarse 200k massing-study budget.
+  assert.ok(triangles < 650000, `bounded detailed-review budget (${triangles}), not a mobile performance claim`);
   const structure = meshes.find(mesh => mesh.name === 'aurelionStructure').data;
   for (const sx of [-1,1]) for (const sz of [-1,1]) {
     for (const [x,z] of [[55,90],[83,52],[130,48],[145,110],[72,119],[90,112]]) {
       const height = surfaceHeight(structure,sx*x,sz*z);
-      assert.ok(Math.abs(height-14)<.2, `whole corner precinct is raised, including former bridge/interstitial areas: ${sx*x}/${sz*z} -> ${height}`);
+      assert.ok(Math.abs(height-8)<.2, `whole corner precinct is raised, including former bridge/interstitial areas: ${sx*x}/${sz*z} -> ${height}`);
     }
     let area = 0;
     for (let i = 0; i < structure.length; i += 27) {
       if (structure[i]*sx<0 || structure[i+2]*sz<0 || structure[i+4]<.99 ||
-          [1,10,19].some(k => Math.abs(structure[i+k]-14) > 1e-6)) continue;
+          [1,10,19].some(k => Math.abs(structure[i+k]-8) > 1e-6)) continue;
       area += Math.abs((structure[i+9]-structure[i])*(structure[i+20]-structure[i+2])-
         (structure[i+18]-structure[i])*(structure[i+11]-structure[i+2]))/2;
     }
@@ -63,11 +66,24 @@ test('Aurelion has bounded CPU-only geometry, four broad elevated precincts and 
       for (const t of [.03,.1,.25,.5,.75,.95]) for (const offset of [-4,0,4]) {
         const x = sx*(ax+(bx-ax)*t+nx*offset), z = sz*(az+(bz-az)*t+nz*offset),
           height = surfaceHeight(structure,x,z);
-        assert.ok(Math.abs(height-(14+(low-14)*t))<.2, `continuous central ramp lane without cornice obstructions: ${x}/${z} -> ${height}`);
+        assert.ok(Math.abs(height-(8+(low-8)*t))<.2, `continuous central ramp lane without cornice obstructions: ${x}/${z} -> ${height}`);
+      }
+    }
+    const length = Math.hypot(18,17);
+    for (const offset of [-4,0,4]) {
+      const ax = 43-17/length*offset, az = 36+18/length*offset, dot = ax*18+az*17,
+        crossing = (dot-Math.sqrt(dot*dot-length*length*(ax*ax+az*az-41*41)))/(length*length);
+      for (const t of [.1,.25,.4,.5,.6,.75,.9,crossing]) {
+        const x = sx*(ax-18*t), z = sz*(az-17*t), height = surfaceHeight(structure,x,z);
+        assert.ok(height>=-.01 && height<.4, `lower approach stays clear of the crown's new railing: ${x}/${z} -> ${height}`);
       }
     }
   }
   assert.ok(surfaceHeight(structure,20,6)<1, 'the central plaza remains below the four corner districts');
   for (const name of ['MeridianGame','Battlefield','document','window'])
     assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
+  const digest = meshes => meshes.map(({data}) => createHash('sha256')
+    .update(Buffer.from(data.buffer,data.byteOffset,data.byteLength)).digest('hex')).join('/');
+  assert.equal(digest(vm.runInContext('createAurelionGeometry()', context)), digest(meshes),
+    'rebuilding resets every local layout/facade stream and packed buffer');
 });

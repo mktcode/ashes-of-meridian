@@ -24,12 +24,12 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   }
   const panel = document.createElement('section');
   panel.className = 'aurelion-review';
-  panel.innerHTML = `<header><small>THE CROWN DISTRICT · GEOMETRY STUDY 02</small><h1>AURELION</h1>
-    <p>Proportionen & Architektur · noch keine spielbare Karte</p></header>
+  panel.innerHTML = `<header><small>THE CROWN DISTRICT · GEOMETRY STUDY 03</small><h1>AURELION</h1>
+    <p>Architektur & Detailgeometrie · noch keine spielbare Karte</p></header>
     <footer><span>Ziehen: verschieben · Rechts ziehen: drehen · Mausrad: Zoom</span>
     <nav><button type="button" data-view="reset">Referenzblick</button><button type="button" data-view="top">Draufsicht</button>
     <button type="button" data-view="detail">Zentrum</button><button type="button" data-view="sector">Hochplateau</button>
-    <a href="./index.html">Zurück zum Spiel</a></nav>
+    <button type="button" data-view="skyline">Skyline</button><a href="./index.html">Zurück zum Spiel</a></nav>
     <small>Reklameflächen: Platzhalter · Materialien, Wolken und Flugverkehr folgen nach Geometrieabnahme</small></footer>`;
   document.body.append(panel);
   const overlay = $('overlay'), context = overlay.getContext('2d');
@@ -87,6 +87,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
       case 'top': Object.assign(camera,{x:0,z:0,height:0,zoom:350,yaw:0,pitch:1.48}); break;
       case 'detail': Object.assign(camera,{x:0,z:0,height:0,zoom:122,yaw:.07,pitch:.76}); break;
       case 'sector': Object.assign(camera,{x:88,z:78,height:10,zoom:145,yaw:.38,pitch:.65}); break;
+      case 'skyline': Object.assign(camera,{x:171,z:14,height:7,zoom:185,yaw:-.4,pitch:.58}); break;
       default: return;
     }
     invalidate();
