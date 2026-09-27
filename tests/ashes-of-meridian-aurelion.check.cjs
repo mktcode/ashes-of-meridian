@@ -20,6 +20,27 @@ function surfaceHeight(data, x, z) {
   return height;
 }
 
+test('Aurelion light footprints are convex and their shared walkways have valid height ranges', () => {
+  const context=loadScripts(['core','renderer-geometry','renderer-model-kit','renderer-aurelion-geometry']);
+  const {outline,walkways,crown,height}=vm.runInContext('({outline:AURELION_DECK_OUTLINE,walkways:AURELION_WALKWAYS,crown:AURELION_CROWN_FLOOR,height:AURELION_SECTOR_HEIGHT})',context);
+  assert.ok(outline.length>=3);
+  for (let i=0;i<outline.length;i++) {
+    const [ax,az]=outline[i],[bx,bz]=outline[(i+1)%outline.length];
+    assert.ok([ax,az,bx,bz].every(Number.isFinite));
+    assert.ok(Math.hypot(bx-ax,bz-az)>0);
+    for (const [x,z] of outline)
+      assert.ok((bx-ax)*(z-az)-(bz-az)*(x-ax)>=0,'convex counter-clockwise perimeter required by the light mask');
+  }
+  for (const path of walkways) {
+    assert.equal(path.length,7);
+    assert.ok(path.every(Number.isFinite));
+    const [ax,az,bx,bz,width,ay,by]=path;
+    assert.ok(Math.hypot(bx-ax,bz-az)>0&&width>3);
+    assert.ok(ay>=0&&ay<=height&&by>=0&&by<=height,'light mask follows the ramp endpoints');
+  }
+  assert.ok(crown.radius>0&&crown.height>=0&&crown.height<height);
+});
+
 test('Aurelion geometry preserves broad precincts, clear approaches, a closed plaza and sub-deck flight corridors', () => {
   const context = loadScripts(['core','renderer-geometry','renderer-model-kit','renderer-aurelion-geometry','renderer-aurelion-traffic']);
   vm.runInContext('Math.random = () => { throw Error("ambient RNG used"); }', context);

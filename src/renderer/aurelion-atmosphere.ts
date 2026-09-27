@@ -30,6 +30,46 @@ float shadow(vec3 n){
 const int adCount=${AURELION_BILLBOARDS.length};
 const vec4 adRect[adCount]=vec4[adCount](AURELION_AD_RECTS);
 const vec2 adDepth[adCount]=vec2[adCount](AURELION_AD_DEPTHS);
+const int deckEdges=${AURELION_DECK_OUTLINE.length},walkCount=${AURELION_WALKWAYS.length};
+const vec2 deckOutline[deckEdges]=vec2[deckEdges](AURELION_DECK_OUTLINE);
+const vec4 walkPaths[walkCount]=vec4[walkCount](AURELION_WALK_PATHS);
+const vec3 walkLevels[walkCount]=vec3[walkCount](AURELION_WALK_LEVELS);
+const vec2 crownFloor=vec2(AURELION_CROWN_FLOOR);
+const float deckHeight=float(${AURELION_SECTOR_HEIGHT});
+float floorMask(float height){return 1.-smoothstep(.18,.38,abs(v_pos.y-height));}
+// Local area-light approximation plus flush light strips. No exposure/sky/fog change,
+// extra geometry, shadow passes or illumination of the facades below the decks.
+vec3 deckLighting(vec3 base,float aa){
+ vec2 q=abs(v_pos.xz);float edge=1e5,perimeter=0.;
+ for(int i=0;i<deckEdges;i++){
+  vec2 a=deckOutline[i],e=deckOutline[(i+1)%deckEdges]-a;
+  float len=length(e),d=(e.x*(q.y-a.y)-e.y*(q.x-a.x))/len;
+  if(d<edge){edge=d;perimeter=dot(q-a,e)/len;}
+ }
+ float platform=smoothstep(-.1,.1,edge)*floorMask(deckHeight),road=0.,roadWash=0.,roadStrip=0.;
+ for(int i=0;i<walkCount;i++){
+  vec2 a=walkPaths[i].xy,e=walkPaths[i].zw-a;float len=length(e),along=dot(q-a,e)/len;
+  float t=clamp(along/len,0.,1.),side=abs(e.x*(q.y-a.y)-e.y*(q.x-a.x))/len;
+  float rim=walkLevels[i].x*.5-side;
+  float mask=smoothstep(-.1,.1,rim)*floorMask(mix(walkLevels[i].y,walkLevels[i].z,t));
+  mask*=smoothstep(-5.,-3.,along)*(1.-smoothstep(len+3.,len+5.,along));
+  road=max(road,mask);
+  float falloff=(rim-1.5)/5.;
+  roadWash=max(roadWash,mask*exp(-falloff*falloff));
+  float ends=smoothstep(1.,4.,along)*(1.-smoothstep(len-4.,len-1.,along));
+  float dash=1.-smoothstep(3.,3.+aa,abs(mod(along+6.,12.)-6.));
+  roadStrip=max(roadStrip,mask*ends*dash*(1.-smoothstep(.12,.12+aa,abs(rim-1.5))));
+ }
+ float plaza=(1.-smoothstep(crownFloor.x-.2,crownFloor.x+.2,length(q)))*floorMask(crownFloor.y);
+ float border=platform*exp(-max(edge,0.)/13.);
+ vec2 warmA=(q-vec2(133.,65.))/vec2(27.,23.),warmB=(q-vec2(85.,124.))/vec2(32.,22.);
+ float pools=platform*(exp(-dot(warmA,warmA))+.7*exp(-dot(warmB,warmB)));
+ float dash=1.-smoothstep(2.5,2.5+aa,abs(mod(perimeter+8.,16.)-8.));
+ float strip=platform*(1.-road)*dash*(1.-smoothstep(.12,.12+aa,abs(edge-1.5)));
+ vec3 fill=base*vec3(.58,.72,.85)*max(platform,max(road,plaza*.65));
+ fill+=base*vec3(.55,.34,.15)*(border*.7+pools*.65+roadWash*.5);
+ return fill+vec3(2.2,1.45,.60)*strip+vec3(.50,1.5,1.9)*roadStrip;
+}
 void main(){
  vec3 n=normalize(v_n),view=normalize(u_eye-v_pos),base=v_col.rgb;
  float alpha=v_col.a;
@@ -86,6 +126,9 @@ void main(){
  vec3 reflected=reflect(-view,n);
  vec3 env=mix(vec3(.012,.027,.05),vec3(.12,.20,.32),smoothstep(-.3,.8,reflected.y));
  lit+=env*(.035+fresnel*.28+glass*.18);
+ float deckAA=max(length(fwidth(v_pos.xz))*.65,.06);
+ if(v_mat>=0.&&n.y>.85&&v_pos.y>-.3&&v_pos.y<deckHeight+.4)
+  lit+=deckLighting(base,deckAA)*smoothstep(.85,.95,n.y);
  // Local emissive spill is an artistic light approximation, not extra shadow-casting lights.
  float crown=exp(-dot(v_pos.xz,v_pos.xz)/580.)*exp(-abs(v_pos.y-5.)*.10);
  lit+=vec3(.025,.42,.7)*crown*(.35+max(n.y,0.));
@@ -199,7 +242,11 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
     const number = (n:number) => Number.isInteger(n)?`${n}.`:String(n);
     const surface=AURELION_SURFACE_FRAGMENT
       .replace('AURELION_AD_RECTS',AURELION_BILLBOARDS.map(b=>`vec4(${[b.x,b.y,b.w,b.h].map(number).join(',')})`).join(','))
-      .replace('AURELION_AD_DEPTHS',AURELION_BILLBOARDS.map(b=>`vec2(${number(b.z)},${number(b.design)})`).join(','));
+      .replace('AURELION_AD_DEPTHS',AURELION_BILLBOARDS.map(b=>`vec2(${number(b.z)},${number(b.design)})`).join(','))
+      .replace('AURELION_DECK_OUTLINE',AURELION_DECK_OUTLINE.map(p=>`vec2(${p.map(number).join(',')})`).join(','))
+      .replace('AURELION_WALK_PATHS',AURELION_WALKWAYS.map(p=>`vec4(${p.slice(0,4).map(number).join(',')})`).join(','))
+      .replace('AURELION_WALK_LEVELS',AURELION_WALKWAYS.map(p=>`vec3(${p.slice(4).map(number).join(',')})`).join(','))
+      .replace('AURELION_CROWN_FLOOR',[AURELION_CROWN_FLOOR.radius,AURELION_CROWN_FLOOR.height].map(number).join(','));
     replace('program',VERT,surface);replace('skyProg',FULLV,AURELION_SKY_FRAGMENT);replace('postProg',FULLV,AURELION_POST_FRAGMENT);
     const noise=g.createTexture(),advertising=g.createTexture();
     if (!noise||!advertising) throw Error('Could not allocate Aurelion textures');

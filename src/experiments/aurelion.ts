@@ -34,7 +34,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   renderer.geometry('aurelionHologram',new Float32Array(globe));renderer.geometry('aurelionHalo',new Float32Array(halo));
   const panel = document.createElement('section');
   panel.className = 'aurelion-review';
-  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 06</small><h1>AURELION</h1>
+  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 07</small><h1>AURELION</h1>
     <p>Eine Stadt über den Wolken</p></header>
     <footer><span>Ziehen: verschieben · Rechts ziehen: drehen · Mausrad: Zoom · H: Bildmodus</span>
     <nav><button type="button" data-view="reset">Referenzblick</button><button type="button" data-view="top">Draufsicht</button>
