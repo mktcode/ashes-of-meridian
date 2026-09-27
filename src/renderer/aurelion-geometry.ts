@@ -1,6 +1,15 @@
 /* Aurelion architecture study. CPU-only scenery, deliberately not a playable battlefield. */
 'use strict';
 const AURELION_SECTOR_HEIGHT = 8;
+// Shared scenery/light footprints, not a gameplay surface or navigation contract.
+const AURELION_DECK_OUTLINE = [[74,40],[143,40],[157,54],[157,124],[144,137],[61,137],[47,123],[47,67]] as const;
+const AURELION_CROWN_FLOOR = {radius:41,height:.15} as const;
+// ax, az, bx, bz, width, start height, end height. First four: mirrored approaches; last two: crossings.
+const AURELION_WALKWAYS = [
+  [112,40,112,18,22,AURELION_SECTOR_HEIGHT,2], [47,103,24,103,20,AURELION_SECTOR_HEIGHT,2],
+  [60.5,53.5,43,36,24,AURELION_SECTOR_HEIGHT,0], [43,36,25,19,15,0,0],
+  [112,-18,112,18,22,2,2], [-24,103,24,103,20,2,2]
+] as const;
 // Shared only by the preview's physical cabinets and its atlas projection; all faces point toward +Z.
 const AURELION_BILLBOARDS = [
   {x:-180,y:47,z:-91.8,w:22,h:48,design:0}, {x:182,y:64,z:-73.8,w:22,h:48,design:1},
@@ -399,8 +408,7 @@ function createAurelionGeometry() {
   tower(56,-168,21,22,81,1);
 
   // Each entire corner is an upper city precinct, not an elevated pedestal on a flat bridge network.
-  const precinct = [[74,40],[143,40],[157,54],[157,124],[144,137],[61,137],[47,123],[47,67]],
-    deck = AURELION_SECTOR_HEIGHT;
+  const precinct = AURELION_DECK_OUTLINE, deck = AURELION_SECTOR_HEIGHT;
   for (const sx of [-1,1]) for (const sz of [-1,1]) {
     const p = precinct.map(([px,pz]) => [sx*px,sz*pz]),
       skirt = precinct.map(([px,pz]) => [sx*(102+(px-102)*1.035),sz*(89+(pz-89)*1.035)]);
@@ -514,10 +522,8 @@ function createAurelionGeometry() {
       box(sx*px,deck+3.2,sz*(pz+d/2+1),w*.8,.4,2,steel);
     }
     // Sloped causeways terminate at the actual perimeter openings, not through a railing or raised wall.
-    bridge(sx*112,sz*40,sx*112,sz*18,22,deck,2);
-    bridge(sx*47,sz*103,sx*24,sz*103,20,deck,2);
-    bridge(sx*60.5,sz*53.5,sx*43,sz*36,24,deck,0);
-    bridge(sx*43,sz*36,sx*25,sz*19,15);
+    for (const [ax,az,bx,bz,width,ay,by] of AURELION_WALKWAYS.slice(0,4))
+      bridge(sx*ax,sz*az,sx*bx,sz*bz,width,ay,by);
     tower(sx*43,sz*36,19,19,-6,1);
     disc(sx*43,-1.18,sz*36,12,2,steel);
     annulus(sx*43,.12,sz*36,10,.4,0,trim);
@@ -537,8 +543,10 @@ function createAurelionGeometry() {
     flush();
   }
   for (const side of [-1,1]) {
-    bridge(side*112,-18,side*112,18,22,2);
-    bridge(-24,side*103,24,side*103,20,2);
+    for (const [i,[ax,az,bx,bz,width,ay,by]] of AURELION_WALKWAYS.slice(4).entries()) {
+      const sx=i===0?side:1,sz=i===1?side:1;
+      bridge(sx*ax,sz*az,sx*bx,sz*bz,width,ay,by);
+    }
     // Service blocks carry the lower cross-sector streets, well below the four upper districts.
     for (const [px,pz,w,d] of [[side*112,0,24,25],[0,side*103,25,22]]) {
       prism(px,1,pz,w,36,d,dark,3);
@@ -561,10 +569,10 @@ function createAurelionGeometry() {
 
   // One continuous circular plaza: the former inner moat and its four footbridges are closed.
   const crown = Array.from({length:96},(_,i) => {
-    const a=i*Math.PI*2/96;return [Math.sin(a)*41,Math.cos(a)*41];
+    const a=i*Math.PI*2/96;return [Math.sin(a)*AURELION_CROWN_FLOOR.radius,Math.cos(a)*AURELION_CROWN_FLOOR.radius];
   });
   polygonPrism(crown,0,3,steel);
-  polygonPrism(crown,.15,.15,paving);
+  polygonPrism(crown,AURELION_CROWN_FLOOR.height,AURELION_CROWN_FLOOR.height,paving);
   annulus(0,.23,0,40.2,.32,0,ice,lights);
   annulus(0,.23,0,35.6,.35,0,warm,lights);
   annulus(0,-3.2,0,41.7,1.4,1,trim);
