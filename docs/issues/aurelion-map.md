@@ -1,47 +1,58 @@
-# Aurelion: Geometrie nach Bildreferenz, mit menschlichen Haltepunkten
+# Aurelion: Visualstudie nach Bildreferenz, mit menschlichen Haltepunkten
 
 ## Auftrag und Abnahmegrenze
 
-Die gelieferte Vorlage zeigt „Aurelion · The Crown District – Sector 07“: vier Eckplattformen, Ringzentrum mit blauem Globus, Brücken über tiefen Stadtschluchten, gestaffelte Hochhäuser, große Fassaden-Reklamen und eine kühle, dunstige Stadt mit warmen Fensterlichtern. Gewünscht ist außerdem fliegender Fahrzeugverkehr im Stil einer vertikalen Science-Fiction-Metropole.
+Die gelieferte Vorlage zeigt „Aurelion · The Crown District – Sector 07“: vier Eckplattformen, Ringzentrum mit blauem Globus, Brücken über tiefen Stadtschluchten, gestaffelte Hochhäuser, große Fassaden-Reklamen und eine kühle, dunstige Stadt mit warmen Fensterlichtern. Zusätzlich gewünscht ist fliegender Fahrzeugverkehr im Stil einer vertikalen Science-Fiction-Metropole.
 
-**Aktuelle Freigabe: zuerst nur Geometrie.** Spielimplementierung erst, wenn der Nutzer mit der Gestaltung zufrieden ist. Nach jedem abgegrenzten Gestaltungsstand einen echten Renderer-Screenshot mit der Vorlage vergleichen und auf menschliches Feedback warten, nicht selbstständig alle Phasen durcharbeiten.
+**Aktuelle Freigabe: umfassender Atmosphärenpass einschließlich Flugzeugen/Raumschiffen**, mit möglichst großer Annäherung an die Vorlage. Die frühere Beschränkung auf reine Geometrie gilt für diesen Auftrag nicht mehr. Das ist keine nachträgliche Geometrieabnahme und **keine Freigabe zur Spielintegration**. Nach jedem abgegrenzten Gestaltungsstand echte Renderer-Screenshots mit der Vorlage vergleichen und auf menschliches Feedback warten.
 
-**Gestaltungsvorgaben:** Die gesamten vier relativ separaten Ecksektoren sollen erhaben sein, nicht nur kleine Mittelstücke. Nach dem zweiten Entwurf wünscht der Nutzer einen geringeren Höhenunterschied zum Zentrum und ausdrücklich eine sehr starke Detaillierung der gesamten Geometrie. Diese Detailrunde ist freigegeben, nicht die Spielintegration oder der Gesamtlook.
+Die vier Ecksektoren bleiben breitflächig erhaben; der auf Nutzerwunsch verringerte Höhenversatz und die detaillierte Architektur bleiben erhalten. Beschriftungen, Startmarken und dargestellte Wege sind weiterhin kein beschlossener Spielregelvertrag.
 
-Lokale Originalvorlage: `.tmp/aurelion.png`, SHA-256 `5b4affbf4e80c73f58dc84f4eb6bcffdaba27f69612ddf42379e42c2bc9dfe0b`. Sie ist kein Laufzeitasset und wird nicht mit ausgeliefert. Die Beschriftungen und aus dem Bild erschlossenen Wege sind noch kein beschlossener Spielregelvertrag.
+Lokale Originalvorlage: `.tmp/aurelion.png`, SHA-256 `5b4affbf4e80c73f58dc84f4eb6bcffdaba27f69612ddf42379e42c2bc9dfe0b`. Sie ist kein Laufzeitasset und wird nicht mit ausgeliefert.
 
-## Aufruf und Isolation
+## Aufruf und Bedienung
 
-Nach dem Build `index.html?experiment=aurelion` direkt über `file://` öffnen. Ziehen verschiebt, Rechtsziehen dreht, das Mausrad zoomt; die Vorschau bietet Referenzblick, Draufsicht, Zentrum sowie Nahansichten „Hochplateau“ und „Skyline“. Rückkehr ins Spiel lädt den normalen Einstieg neu.
+Nach dem Build `index.html?experiment=aurelion` direkt über `file://` öffnen. Ziehen verschiebt, Rechtsziehen dreht, das Mausrad zoomt. Referenzblick verwendet eine schwache Langbrennweiten-Perspektive; „Alte Kamera“ behält die orthografische Kamera des vorigen Geometriestands, nicht dessen Beleuchtung. Hinzu kommen Draufsicht, Zentrum, Hochplateau und Skyline.
 
-Die Studie verwendet den vorhandenen WebGL-Renderer, aber erzeugt weder `MeridianGame` noch `Battlefield`, liest/schreibt keine Profile und ist nicht im Kartenkatalog registriert. Geometrie entsteht einmalig aus eigenen festen kosmetischen Seeds; Layout und Fassadendetails haben getrennte lokale Ströme, damit Fensteränderungen nicht mehr die Hintergrundbauten verschieben. Es gibt keine Simulations-RNG-Aufrufe. Die Szene wird nur bei Ansichtänderung neu gezeichnet. Balanced ist für diese Beurteilung fest eingestellt; die normalen Qualitätsstufen und Shader bleiben unverändert.
+- Mit Bewegungsknopf bzw. Leertaste lässt sich die gesamte visuelle Uhr pausieren/fortsetzen: Verkehr, Wolken, Hologramm und Reklameeffekte.
+- `&still=1` startet reproduzierbar eingefroren. `prefers-reduced-motion: reduce` startet ebenfalls pausiert; Bewegung kann bewusst eingeschaltet werden.
+- „Atmosphäre“ schaltet Tiefenwolken, SSAO und Bloom zur technischen Gegenüberstellung aus/ein; neue Materialien, Werbemotive und Geometrie bleiben bestehen.
+- `H` blendet die Bedienleiste für Bildvergleiche aus/ein. Rückkehr ins Spiel lädt den normalen Einstieg neu.
 
-## Aktueller Haltepunkt: niedrigere Plateaus und detaillierte Architektur
+## Isolation und Pflege
 
-Die großen, zusammenhängenden Eckplateaus behalten ihre Grundfläche. Ihr Versatz zum Zentrum wurde deutlich reduziert; die Rampen sind entsprechend flacher. Seitliche Verbindungen bleiben unterhalb der Startbereiche. Schmale Treppen flankieren weiterhin die durchgehenden Rampenflächen. Das ist nur Geometrie, kein geprüfter Fahrwegvertrag.
+Die Vorschau erzeugt weder `MeridianGame` noch `Battlefield`, greift nicht auf Profile zu und ist nicht im Kartenkatalog registriert. Architektur, Fernstadt, Reklamemotive, Noise und Verkehr haben eigene feste kosmetische Seeds. Kein gemeinsamer Simulations-RNG, keine Spielentitäten, Ressourcen oder Navigation. Flugbahnen sind analytische Dekorrouten, keine KI oder Kollisionsvermeidung im Spiel.
 
-Die Detailrunde erfasst Skyline, Sektoren, Verbindungen und Zentrum: gestaffelte, geteilte und runde Turmkronen, gegliederte Glas-/Fensterfelder mit vorspringenden Rippen, zusätzliche Dach- und Anbauten, Empfangsschüsseln, Lüfter, Antennen, Vordächer und Wartungsbalkone. Unter den Brücken liegen sichtbare Fachwerkträger und Querstreben; Reklameträger besitzen Gehäuse, Halterungen und Wartungsstege. Ringzentrum und Projektorsockel sind stärker gegliedert, der Globus verwendet geschlossene Röhren statt einseitiger Bänder. Bodenfugen, Einlagen und Inspektionsluken bleiben flach; Rampenmitten bleiben frei. Pavillons, Leuchtmarken und Bildschirmmotive sind weiterhin neutrale Platzhalter, keine HQs, Ressourcen oder fertigen Werbeassets.
+Die Vorschau verwendet eine lokale Renderer-Unterklasse mit eigenen Oberflächen-, Himmel- und Postprogrammen. Die normalen Shader, Qualitätsstufen und gemeinsam verwendeten Texturbilder bleiben unverändert. Unbenutzte, vom Basiskonstruktor angelegte Modellmeshes werden nur in dieser Rendererinstanz freigegeben; das gemeinsame Strahlprimitiv bleibt für Triebwerksspuren erhalten.
 
-Die ausdrücklich gewünschte Detailrunde ersetzt das Budget der Grobstudie durch ein größeres, weiterhin getestetes Studienbudget. Kleine Rundteile und tiefe Nebendetails sind sparsamer als die großen sichtbaren Bauformen. Begrenzte Arbeitsarrays werden abschnittsweise in typisierte Puffer gepackt; das vermeidet einen einzigen riesigen Zahlenarray, ist aber kein Mobil- oder Echtzeitnachweis.
+- Physische Reklamerechtecke und Atlasprojektion lesen dieselben Deskriptoren. Vier originale, prozedurale Canvas-Motive werden einmalig lokal hochgeladen, ohne Bildabrufe oder zweckentfremdete Portraits. Künftige gepflegte Rastermotive müssen dem [Assetverfahren](../rendering.md#texturen-und-portraits) folgen.
+- Die deckende Szenentiefe wird nach dem Szenenpass aus dem normalen bzw. multisamplefähigen Tiefenpuffer in eine eigene Textur aufgelöst. Größe und Tiefenformat müssen übereinstimmen. Der Postpass rekonstruiert daraus Weltpositionen für Kontaktabdunklung, Dunst und einen höhenbegrenzten Wolken-Raymarch mit lokalem 3D-Noise und Lichtabschattung.
+- Tiefenziele werden bei Resize ersetzt, nicht im Animationsframe neu angelegt. Bei fehlgeschlagener Allokation/Auflösung entfallen Tiefeneffekte mit sichtbarem Hinweis; Licht und Bloom bleiben verfügbar. Eigene Texturen, Tiefenziele und GPU-Fences werden beim endgültigen Verlassen freigegeben.
+- Die Animation zeichnet höchstens 60-mal pro Sekunde und hält höchstens einen GPU-Frame in Arbeit. Ein Fence wird ohne Wartezeit abgefragt; kein `gl.finish()` und kein blockierendes GPU-Warten. Hintergrundtabs setzen die visuelle Uhr aus. Pausiert wird nur bei Änderungen neu gezeichnet. Stadtgeometrie und Reklame-/Noise-Texturen bleiben während der Animation unverändert.
 
-Vergleich mit der Vorlage:
+Das ist eine gezielt inszenierte WebGL-Studie, kein physikalisch vollständiger Renderer: RGBA8-Szenenziel statt HDR, angenäherte Reflexionen/Leuchtflächen-Abstrahlung statt zusätzlicher Echtzeitlichter. SSAO und Wolkenkomposition verwenden die deckende Tiefe; transparente Effekte erhalten keine separate Tiefenschicht. Diese Grenzen insbesondere bei extremen Kamerawinkeln mitbeurteilen.
 
-- Referenzblick und Plateau-Nahansicht behalten Kamera und Licht des vorherigen Entwurfs. Der Vergleich zeigt zusätzliche Architektur statt einer durch andere Beleuchtung vorgetäuschten Detaillierung.
-- Trotz deutlich reicherer Dächer und Silhouetten sind Flächen, Brückenführung und Fassadenraster weiterhin regelmäßiger als die komplex verzahnte Vorlage. Die vier großen Plätze wirken noch großzügig und geordnet, nicht wie ein eng gewachsenes Stadtnetz.
-- Höhenwirkung, Detaildichte und die noch sichtbare Wiederholung der Baufamilien benötigen menschliches Feedback. Eine Übereinstimmung mit dem Referenzlook ist noch nicht erreicht.
-- Ansicht ist orthografisch; die perspektivische Tiefenwirkung der Vorlage ist nicht exakt getroffen. Der sichtbare untere Stadtdatum-Boden ist nur ein geometrischer Abschluss, keine Wolkendecke.
-- Fassadenmaterialien, kräftige Reklamebilder, atmosphärische Lichtstaffelung und Flugverkehr fehlen bewusst. Der dünne Globus ist nur eine geometrische Stellvertretung des Hologramms.
+## Aktueller Haltepunkt: Atmosphärenstudie 04
 
-Lokale Vergleichsaufnahmen liegen unter `.tmp/aurelion-geometry-03/` (Übersicht, Draufsicht, Hochplateau, Zentrum, Skyline, Schrägblick sowie Referenz- und Vorher-/Nachher-Vergleiche einschließlich gleicher Plateau-Nahansicht). Sie sind temporäre Abnahmehilfen; dauerhafte Entscheidungen gehören hierher. Noch keine menschliche Abnahme dieses Stands.
+Sichtbar sind bewegte Tiefenwolken, abgestufter Dunst, kräftigere warm/kühle Lichttrennung, Glanzakzente, Kontaktabdunklung und Bloom. Ein dichter, geometrisch einfacher Fernstadtring schließt den vormals leeren Hintergrund. Größere Reklamen zeigen eigene Motive; der Globus ergänzt seine Röhrengeometrie um eine transparente, animierte Hologrammhaut und Lichtschein. Lufttaxis, Flügelkuriere und Frachter fliegen mit Triebwerkslichtern und kurzen Spuren auf getrennten Höhen.
+
+Lokale Abnahmebilder: `.tmp/aurelion-atmosphere-04/` mit Übersicht, Zentrum, Hochplateau, Skyline, Draufsicht, Schrägblick, alter Kamera und Effekt-Gegenprobe. Referenz-/Vorher-Nachher-Vergleiche liegen daneben. Diese Bilder sind temporäre Abnahmehilfen, keine freigegebenen Laufzeitassets.
+
+**Vergleichsgrenzen:** Der Look nähert sich durch Reklamen, Licht und atmosphärische Tiefenstaffelung deutlich an. Die Vorlage besitzt aber stärker verzahnte Zwischenräume, unregelmäßigere Silhouetten/Fassaden und feinere Material- und Lichtdetails. Große Plätze, Brückenführung und Baukörper bleiben sichtbar regelmäßiger; der Wolkenlook und die prozeduralen Werbemotive benötigen menschliche Beurteilung. Keine Behauptung einer exakten Übereinstimmung oder visuellen Abnahme.
+
+## Technischer Prüfkontext und offene Kosten
+
+Die CPU-Prüfung erhält die abgesenkten, breiten Sektorflächen und freien Rampenübergänge anhand echter Dreiecke. Sie prüft zusätzlich deterministische Fernstadt/Flugmodelle, nicht degenerierte Fluggeometrie, stetige Routen und abgetasteten Freiraum gegen ein konservatives Höhenraster der tatsächlich erzeugten Stadt. GPU-Orchestrierungsprüfungen decken Tiefenziel-Wiederverwendung, Resize, Allokations-/Resolvefehler und nicht blockierende Fence-Abfragen ab. Das ist kein Navigations- oder kontinuierlicher Kollisionsnachweis.
+
+Technischer Chromium-Check bei 1672 × 941 über `file://`: Shader/Tiefenauflösung einschließlich MSAA und Single-Sample, Ansichtwechsel, Bewegung/Pause, Effektumschaltung, Resize, Reduced Motion und Rückkehr zum normalen Menü ohne JavaScript-/WebGL-Fehler. Keine HTTP(S)-Anfragen, Profilzugriffe oder gestartete Simulation im Experiment. Der Browser verwendete SwiftShader ohne zusätzlich freigeschaltete unsichere Browserflags; dessen Software-Warnung und screenshotbedingte Readback-Warnungen sind keine Hardwareabnahme.
+
+Relevante Kosten dieses Ausschnitts: 661.874 statische Stadtdreiecke plus instanzierte Flug-/Effektgeometrie; bis zu rund 1,37 Mio. eingereichte Dreiecke und 1.356 GL-Zeichenaufrufe einschließlich Schatten/Vollbildpässen. Mesh-VBOs belegen rechnerisch rund 69 MiB, Renderziele/Texturen kommen hinzu. Im kurzen Bewegungsausschnitt keine Textur-/Renderziel-Neuallokationen und höchstens rund 40 KiB Instanzupload je Frame. Gemessene CPU-Einreichzeiten sind ausdrücklich **keine GPU-Zeiten oder Geräte-FPS**; GPU-Timer waren im Softwarekontext nicht verfügbar. Ein erster Dauerlauf staute GPU-Arbeit auf und erschwerte die Bedienung; die anschließende nicht blockierende Einzel-Frame-Begrenzung bestand den Bewegungs-/Pausencheck. Hardware- und Mobilkosten bleiben offen.
 
 ## Nächste Entscheidungen
 
-- [ ] Nutzerfeedback zum reduzierten Höhenversatz und zur umfassenden Detailrunde abwarten.
-- [ ] Erst danach nächsten Gestaltungsumfang festlegen: bei weiterem Geometriebedarf insbesondere stärker verzahnte Zwischenflächen, vielfältigere Verbindungssilhouetten und weniger regelmäßige Baureihen; erneut Screenshotvergleich und Halt.
-- [ ] Materialien/Atmosphäre und fertige Werbemotive separat abstimmen; keine gemeinsam verwendeten Texturen austauschen. Reklamen und spätere Flugfahrzeuge müssen aus verschiedenen Kamerawinkeln überzeugen.
-- [ ] Erst nach Zufriedenheit mit der Gestaltung spielbare Flächen, Höhen, Baureserven, Navigation, Ressourcen und Katalogintegration festlegen. Die Studie ist dafür keine gültige CPU-Oberfläche oder Kollisionsmaske.
-- [ ] Später Darstellungsbudget und mobile Kosten untersuchen. Die Studie backt viele Fenster/Rippen und verwendet bestehendes räumliches Mesh-Chunking; Instanzierung allein ist kein Performancenachweis.
+- [ ] Menschliches Feedback zu Atmosphäre, Referenznähe, Reklamen, Hologramm und Verkehr abwarten; danach erst den nächsten Gestaltungsumfang festlegen.
+- [ ] Auf dem Zielgerät Bewegung/Bedienbarkeit und Qualität bewerten. Das hohe Studienbudget ist kein Freibrief für eine spätere Echtzeitkarte.
+- [ ] Falls weitere Annäherung gewünscht ist: zuerst klären, ob die regelmäßige Geometrie, Wolken/Licht oder Werbemotive nachgearbeitet werden sollen; erneut Screenshotvergleich und Halt.
+- [ ] Erst nach Zufriedenheit mit der Gestaltung spielbare Flächen, Höhen, Baureserven, Navigation, Ressourcen und Katalogintegration festlegen. Die Studie liefert dafür keine gültige CPU-Oberfläche oder Kollisionsmaske.
 
-Gezielte Geometrieprüfung: endliche, nicht degenerierte Dreiecke im Detailbudget, typisierte Ausgabe und identische Wiederholung ohne Ambient-RNG; große obere Sektorflächen auf dem abgesenkten Niveau und kontinuierliche Rampenmitten samt seitlichem Freiraum und unversperrte Übergänge zum Ring anhand der tatsächlich erzeugten Mesh-Dreiecke. Die Geländeröffnungen am Ring folgen den tatsächlichen schrägen Einmündungen, nicht einem gleichmäßigen Winkelraster. Das ist keine CPU-Navigation oder Spielabnahme.
-
-Technischer `file://`-Browsercheck: Übersicht/Ansichtwechsel einschließlich Hochplateau/Skyline/Rotation/Zoom und Rückkehr zum normalen Menü ohne JavaScript- oder WebGL-Fehler. Keine HTTP(S)-Requests und kein Storagezugriff im Experiment. Das ersetzt weder visuelle Freigabe noch Echtgeräteprüfung. KI-/Simulations-Langläufe sind nicht beauftragt und nicht ausgeführt.
+KI-/Simulations-Langläufe sind nicht beauftragt. Technische Prüfungen ersetzen weder menschliche Darstellungsabnahme noch Echtgeräteprüfung.

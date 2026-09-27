@@ -23,9 +23,9 @@ Für einen isolierten Test startet `index.html?experiment=height` nach dem Build
 
 Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Der erste spielbare Stand verwendet die vorhandenen Vorlagenmaterialien; Texturen und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
 
-## Aurelion · Geometriestudie
+## Aurelion · Visualstudie
 
-`index.html?experiment=aurelion` öffnet nach dem Build eine dreh- und zoombare Architekturvorschau im Spielrenderer. Noch keine spielbare Karte, keine Profilzugriffe. Grundaufbau und Proportionen werden zuerst anhand der Bildvorlage abgestimmt; Materialien, Reklameinhalte, Flugverkehr und Spielintegration folgen erst nach den vereinbarten Abnahmen. [Stand und nächster Haltepunkt](docs/issues/aurelion-map.md).
+`index.html?experiment=aurelion` öffnet nach dem Build eine dreh- und zoombare Stadtvorschau mit Tiefenwolken, leuchtenden Reklamen, Hologramm und zivilem Flugverkehr. Noch keine spielbare Karte, keine Profilzugriffe. Die Gestaltung wird anhand der Bildvorlage abgestimmt; Spielintegration bleibt bis zur menschlichen Abnahme zurückgestellt. [Bedienung, Stand und nächster Haltepunkt](docs/issues/aurelion-map.md).
 
 ## Multiplayer-Prototyp
 

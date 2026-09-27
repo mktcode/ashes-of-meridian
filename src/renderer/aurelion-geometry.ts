@@ -1,6 +1,32 @@
 /* Aurelion architecture study. CPU-only scenery, deliberately not a playable battlefield. */
 'use strict';
 const AURELION_SECTOR_HEIGHT = 8;
+// Shared only by the preview's physical cabinets and its atlas projection; all faces point toward +Z.
+const AURELION_BILLBOARDS = [
+  {x:-180,y:47,z:-91.8,w:22,h:48,design:0}, {x:182,y:64,z:-73.8,w:22,h:48,design:1},
+  {x:-188,y:12,z:88.2,w:22,h:48,design:2}, {x:187,y:23,z:81.2,w:22,h:48,design:3},
+  {x:-30,y:18,z:-42.1,w:6.2,h:17,design:0}, {x:30,y:18,z:53.9,w:6.2,h:17,design:1}
+] as const;
+// Deliberately inexpensive silhouettes fill the horizon; they never enlarge the four precincts.
+function createAurelionBackdrop() {
+  const data: number[]=[],random=seeded(0x44495354),cube=geom.box();
+  function box(x:number,y:number,z:number,w:number,h:number,d:number,color:number) {
+    ModelMesh.bake(data,cube,{x,y,z,sx:w,sy:h,sz:d,tint:[(color>>16&255)/255,(color>>8&255)/255,(color&255)/255]});
+  }
+  for (let iz=-10;iz<=6;iz++) for (let ix=-9;ix<=9;ix++) {
+    const x=ix*61+(random()-.5)*20,z=iz*61+(random()-.5)*20;
+    if (Math.abs(x)<325&&z>-275&&z<235) continue;
+    const w=24+random()*23,d=24+random()*24,top=z>200?-75+random()*35:15+random()*115,
+      bottom=-155,shoulder=top-16-random()*12;
+    box(x,(bottom+shoulder)/2,z,w,shoulder-bottom,d,0x344a5a);
+    box(x,shoulder+1,z,w+1.3,2,d+1.3,0x899798);
+    box(x,(shoulder+top)/2,z,w*.7,top-shoulder,d*.73,0x415362);
+    box(x,top+1,z,w*.77,2,d*.8,0x899798);
+    box(x-w*.13,top+3,z+d*.1,w*.35,3,d*.32,0x526673);
+    if ((ix+iz)%3===0) box(x+w*.19,top+8,z-d*.15,1.1,14,1.1,0x9aa9ad);
+  }
+  return {name:'aurelionBackdrop',data:new Float32Array(data)};
+}
 function createAurelionGeometry() {
   const solid: number[] = [], lights: number[] = [], screens: number[] = [],
     cube = geom.box(), cylinder = geom.cylinder(32), smallCylinder = geom.cylinder(12),
@@ -336,14 +362,9 @@ function createAurelionGeometry() {
       }
     }
     for (let yy = -h/2+4; yy < h/2; yy += 4) box(x,y+yy,z+.8,w,.06,.025,0x415878,0,screens);
-    // Abstract placeholder, not final advertising artwork: retain the screen's physical scale.
-    box(x,y-h*.33,z+.83,w*.70,.25,.10,ice,0,lights);
-    box(x,y-h*.38,z+.83,w*.42,.18,.10,ice,0,lights);
-    for (let i = 0; i < 3; i++)
-      box(x+(i-1)*w*.19,y+h*.08,z+.84,w*.10,h*(.26+i*.08),.10,ice,0,lights);
   }
 
-  // A neutral lower-city datum closes the view; cloud/fog materials are a later approval stage.
+  // Geometric closure beneath the preview's depth-composited cloud layer.
   box(0,-156,0,1600,2,1600,0x526d82);
   // Separate layout samples from facade detail, so further window work cannot move whole city blocks.
   const city: {x:number;z:number;w:number;d:number;top:number;ix:number;iz:number}[] = [];
@@ -371,11 +392,8 @@ function createAurelionGeometry() {
     flush();
   }
   // Tall advertisement landmarks frame the four platforms without occupying them.
-  for (const [x,z,top,c] of [[-180,-104,75,0x345599],[182,-86,92,0x56477f],
-      [-188,76,40,0x31557e],[187,69,51,0x394fa5]]) {
+  for (const [x,z,top] of [[-180,-104,75],[182,-86,92],[-188,76,40],[187,69,51]])
     tower(x,z,26,23,top,0);
-    billboard(x,top-28,z+12.2,18,40,c);
-  }
   tower(0,159,18,20,-11,0);
   tower(-67,-156,16,18,64,0);
   tower(56,-168,21,22,81,1);
@@ -548,11 +566,23 @@ function createAurelionGeometry() {
     bridge(side*112,-18,side*112,18,22,2);
     bridge(-24,side*103,24,side*103,20,2);
     // Service blocks carry the lower cross-sector streets, well below the four upper districts.
-    prism(side*112,1,0,24,36,25,dark,3);
-    prism(0,1,side*103,25,36,22,dark,3);
+    for (const [px,pz,w,d] of [[side*112,0,24,25],[0,side*103,25,22]]) {
+      prism(px,1,pz,w,36,d,dark,3);
+      for (let face=0;face<4;face++) {
+        const a=face*Math.PI/2,nx=Math.sin(a),nz=Math.cos(a),tx=Math.cos(a),tz=-Math.sin(a),
+          depth=(face%2?w:d)/2+.06;
+        for (let row=0;row<8;row++) for (let col=0;col<6;col++) {
+          if ((col*7+row*3+face)%5===0) continue;
+          const u=(col-2.5)*2.5;
+          windowQuad(px+nx*depth+tx*u,-29+row*3.2,pz+nz*depth+tz*u,1.1,1.15,a,warm);
+        }
+      }
+    }
     // Slender skyline pylons and their oversized media faces.
     tower(side*30,side*48,9,11,29,0);
-    billboard(side*30,18,side*48+5.9,6.2,17,side>0?0x6f4487:0x296a7b);
+  }
+  for (const board of AURELION_BILLBOARDS) {
+    billboard(board.x,board.y,board.z,board.w,board.h,0xffffff);
   }
 
   // Central crown: thick annular road, separated inner plaza, buttresses and luminous armillary.
