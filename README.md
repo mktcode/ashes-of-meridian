@@ -23,6 +23,10 @@ Für einen isolierten Test startet `index.html?experiment=height` nach dem Build
 
 Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Der erste spielbare Stand verwendet die vorhandenen Vorlagenmaterialien; Texturen und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
 
+## Aurelion · Geometriestudie
+
+`index.html?experiment=aurelion` öffnet nach dem Build eine dreh- und zoombare Architekturvorschau im Spielrenderer. Noch keine spielbare Karte, keine Profilzugriffe. Grundaufbau und Proportionen werden zuerst anhand der Bildvorlage abgestimmt; Materialien, Reklameinhalte, Flugverkehr und Spielintegration folgen erst nach den vereinbarten Abnahmen. [Stand und nächster Haltepunkt](docs/issues/aurelion-map.md).
+
 ## Multiplayer-Prototyp
 
 Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen bzw. per Code beitreten, mit freier Karten- und Fraktionswahl. Voreingestellt ist `wss://aoms.markus-kottlaender.de`; alternativ ist ein separat laufender [Multiplayerserver](server/README.md) nutzbar. Bewegungen werden geglättet, Kampf-Effekte und Audio sicht-/parteigefiltert übertragen; kurze Transportabbrüche werden innerhalb einer begrenzten Schonfrist automatisch wiederaufgenommen. Der letzte Raumcode wird im Browser vorausgefüllt. Nach Reload oder erneutem Öffnen innerhalb der Schonfrist bietet das Multiplayer-Menü an, die letzte Sitzung mit lokal gespeicherten, kurzlebigen Zugangsdaten fortzusetzen; bewusstes Verlassen, Sitzungsende oder Fristablauf entfernt diese wieder. Noch keine Expeditionen, Belohnungen oder Wiederherstellung nach Serverneustart. Das bisherige Einzelspiel bleibt offline nutzbar.

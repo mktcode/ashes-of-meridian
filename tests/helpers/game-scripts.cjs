@@ -14,6 +14,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-mothership-terrain',
   'renderer-westmark-terrain',
   'renderer-model-kit',
+  'renderer-aurelion-geometry',
   'renderer-heavy-mesh',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',
