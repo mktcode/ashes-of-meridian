@@ -53,6 +53,14 @@ test('Aurelion geometry preserves broad precincts, clear approaches, a closed pl
       const height = surfaceHeight(structure,sx*x,sz*z);
       assert.ok(Math.abs(height-8)<.2, `whole corner precinct is raised, including former bridge/interstitial areas: ${sx*x}/${sz*z} -> ${height}`);
     }
+    // Open starting courts and generous bridge-side floor, verified against the actual mesh.
+    const openPoints=[[124,55],[133,55],[140,55],[70,76],[58,73],[62,116]];
+    for (let x=87;x<=135;x+=6) for (let z=70;z<=118;z+=6)
+      if (Math.hypot(x-111,z-94)<27) openPoints.push([x,z]);
+    for (const [x,z] of openPoints) {
+      const height=surfaceHeight(structure,sx*x,sz*z);
+      assert.ok(height>=7.99&&height<8.25,`clear starting court and bridge-side floor: ${sx*x}/${sz*z} -> ${height}`);
+    }
     let area = 0;
     for (let i = 0; i < structure.length; i += 27) {
       if (structure[i]*sx<0 || structure[i+2]*sz<0 || structure[i+4]<.99 ||
@@ -108,8 +116,8 @@ test('Aurelion geometry preserves broad precincts, clear approaches, a closed pl
       }
   }
   const fleet=vm.runInContext('({flights:createAurelionFlights(),models:createAurelionAircraft(),lanes:AURELION_AIR_LANES,sample:sampleAurelionFlight})',context);
-  assert.ok(fleet.flights.filter(f=>fleet.lanes[f.lane].height<0).length/fleet.flights.length>.8,
-    'the great majority of civilian traffic is below the map, not above the plazas');
+  assert.ok(fleet.flights.every(f=>fleet.lanes[f.lane].height<0),
+    'all civilian routes stay below the map, without an upper exception');
   for (const flight of fleet.flights) {
     const lane=fleet.lanes[flight.lane],parts=fleet.models.filter(m=>m.name.startsWith(`aurelionAir${flight.kind}`)),
       lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
@@ -125,7 +133,7 @@ test('Aurelion geometry preserves broad precincts, clear approaches, a closed pl
             p.z+flight.scale*(-bx*Math.sin(p.yaw)+z*Math.cos(p.yaw))];
         for (let k=0;k<3;k++) {a[k]=Math.min(a[k],q[k]-2);b[k]=Math.max(b[k],q[k]+2);}
       }
-      if (lane.height<0) assert.ok(b[1]<-10,'entire lower aircraft stays safely below deck height');
+      assert.ok(b[1]<-10,'every complete aircraft envelope stays safely below the lowest deck');
       let blocked='';
       for (let y=Math.floor((a[1]-bottom)/cell);y<=Math.floor((b[1]-bottom)/cell)&&!blocked;y++)
         for (let z=Math.floor((a[2]+extent)/cell);z<=Math.floor((b[2]+extent)/cell)&&!blocked;z++)
@@ -149,7 +157,8 @@ test('civilian aircraft are bounded, non-degenerate models with deterministic co
   const context=loadScripts(['core','renderer-geometry','renderer-model-kit','renderer-aurelion-traffic'],{globals:{MAT:{METAL:2}}});
   vm.runInContext('Math.random=()=>{throw Error("ambient RNG used")}',context);
   const api=vm.runInContext('({models:createAurelionAircraft(),flights:createAurelionFlights(),create:createAurelionFlights,sample:sampleAurelionFlight,draw:drawAurelionFlights})',context);
-  assert.equal(api.models.length,6);assert.equal(api.flights.length,58);
+  assert.equal(api.models.length,6);assert.equal(api.flights.length,48);
+  assert.equal(new Set(api.flights.map(f=>f.kind)).size,3,'taxis, couriers and compact freight all remain in the lower city');
   assert.ok(api.models.reduce((s,m)=>s+m.data.length/27,0)<5000);
   for (const {data} of api.models) {
     assert.equal(Object.prototype.toString.call(data),'[object Float32Array]');
@@ -183,6 +192,7 @@ test('civilian aircraft are bounded, non-degenerate models with deterministic co
   for (const [a,b,width,,glow,alpha] of beams) {
     assert.ok([...a,...b,width,glow,alpha].every(Number.isFinite));
     assert.ok(width>0&&alpha>0&&alpha<=1);
+    assert.ok(Math.max(a[1],b[1])+width<0,'engine wakes also stay below the map');
     assert.ok(Math.hypot(...a.map((v,i)=>v-b[i]))>0);
   }
   for (const name of ['MeridianGame','Battlefield','document','window']) assert.equal(vm.runInContext(`typeof ${name}`,context),'undefined');

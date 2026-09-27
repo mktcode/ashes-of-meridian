@@ -1,23 +1,22 @@
 /* Civilian scenery, not game entities. Analytic routes and an entirely private cosmetic seed. */
 'use strict';
 // Local canyon loops pass below the decks, around—not through—their supporting towers.
-// Only a small, distant freight lane remains above the skyline.
+// All civilian traffic, including compact freighters, stays strictly below the map.
 const AURELION_AIR_LANES = [
-  {x:0,z:68,rx:10,rz:42,height:-43,speed:9,count:12,direction:1,kinds:[1,0,0]},
-  {x:0,z:-68,rx:10,rz:42,height:-47,speed:10,count:12,direction:-1,kinds:[1,0,0]},
+  {x:0,z:68,rx:10,rz:42,height:-43,speed:9,count:12,direction:1,kinds:[2,0,0,1,0,0]},
+  {x:0,z:-68,rx:10,rz:42,height:-47,speed:10,count:12,direction:-1,kinds:[2,0,0,1,0,0]},
   // Wingless taxis fit between the eastern/western approach piers and the central service towers.
   {x:75,z:0,rx:49,rz:20,height:-44,speed:12,count:12,direction:1,kinds:[0]},
-  {x:-75,z:0,rx:49,rz:20,height:-49,speed:11,count:12,direction:-1,kinds:[0]},
-  {x:0,z:0,rx:270,rz:215,height:132,speed:26,count:10,direction:1,kinds:[2,0,0,1,0]}
+  {x:-75,z:0,rx:49,rz:20,height:-49,speed:11,count:12,direction:-1,kinds:[0]}
 ] as const;
 interface AurelionFlight { lane:number; phase:number; altitudeOffset:number; kind:number; scale:number; color:number }
 function createAurelionFlights(): AurelionFlight[] {
   const random = seeded(0x464c5934), flights: AurelionFlight[] = [], colors = [0xcab78b,0xd5dce1,0x839aab,0xd89464,0x88bbcf];
   for (const [lane,path] of AURELION_AIR_LANES.entries()) for (let i = 0; i < path.count; i++) {
+    const kind=path.kinds[i%path.kinds.length];
     flights.push({lane,phase:(i+.12+random()*.32)/path.count*Math.PI*2,
-      // Interleaved heights leave room between neighbours in the narrower canyon lanes.
-      altitudeOffset:path.height<0?-(i%2)*7:0,
-      kind:path.kinds[i%path.kinds.length],scale:path.height>0?.55+random()*.25:.7+random()*.35,
+      // Interleaved heights leave room between neighbours; compact freight fits the courier corridors.
+      altitudeOffset:-(i%2)*7,kind,scale:kind===2?.5+random()*.1:.7+random()*.35,
       color:colors[Math.floor(random()*colors.length)]});
   }
   return flights;

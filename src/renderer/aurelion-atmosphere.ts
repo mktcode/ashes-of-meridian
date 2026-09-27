@@ -84,7 +84,7 @@ void main(){
  float spec=pow(max(dot(n,normalize(sunDirection+view)),0.),mix(48.,100.,glass));
  lit+=u_sun*spec*sh*mix(.45,.9,glass);
  vec3 reflected=reflect(-view,n);
- vec3 env=mix(vec3(.12,.22,.32),vec3(.62,.78,.9),smoothstep(-.3,.8,reflected.y));
+ vec3 env=mix(vec3(.012,.027,.05),vec3(.12,.20,.32),smoothstep(-.3,.8,reflected.y));
  lit+=env*(.035+fresnel*.28+glass*.18);
  // Local emissive spill is an artistic light approximation, not extra shadow-casting lights.
  float crown=exp(-dot(v_pos.xz,v_pos.xz)/580.)*exp(-abs(v_pos.y-5.)*.10);
@@ -94,16 +94,11 @@ void main(){
   float spill=max(dot(n,normalize(delta)),0.)/(1.+dot(delta,delta)*.015);
   lit+=mix(vec3(.12,.28,.8),vec3(.5,.16,.65),mod(float(i),2.))*spill*.75;
  }
- if(paving){
-  vec2 site=abs(v_pos.xz)-vec2(111.,94.);
-  float ring=exp(-pow((length(site)-25.)/3.5,2.));
-  lit+=vec3(.015,.095,.15)*ring;
- }
  frag=vec4(film(lit),alpha);
 }`;
 const AURELION_SKY_FRAGMENT = `#version 300 es
 precision highp float;in vec2 uv;out vec4 frag;
-void main(){frag=vec4(mix(vec3(.62,.73,.80),vec3(.19,.31,.43),smoothstep(0.,1.,uv.y)),1.);}`;
+void main(){frag=vec4(mix(vec3(.028,.047,.08),vec3(.006,.012,.029),smoothstep(0.,1.,uv.y)),1.);}`;
 const AURELION_POST_FRAGMENT = `#version 300 es
 precision highp float;precision highp sampler3D;
 in vec2 uv;out vec4 frag;
@@ -117,7 +112,7 @@ float cloud(vec3 p){
  float f=noise(p*.0019+wind)*.62+noise(p*.0046+wind*1.7+4.1)*.26+noise(p*.012+wind*2.1)*.12;
  float top=-35.+(noise(vec3(p.x*.0012,.27,p.z*.0012)+wind)-.5)*50.;
  float layer=1.-smoothstep(top-65.,top,p.y);
- return smoothstep(.28,.70,f+layer*.28)*layer*.052;
+ return smoothstep(.28,.70,f+layer*.28)*layer*.036;
 }
 float sunlight(vec3 p){
  vec4 v=u_light*vec4(p,1.);vec3 q=v.xyz/v.w*.5+.5;
@@ -158,14 +153,15 @@ void main(){
      float density=cloud(q),a=1.-exp(-density*stepSize);
      float sky=smoothstep(-145.,-45.,q.y),direct=sunlight(q);
      float edge=clamp((cloud(q)-cloud(q+vec3(-5.,9.,3.)))*15.+.55,0.,1.);
-     vec3 light=mix(vec3(.26,.38,.51),vec3(.91,.95,.96),.20+sky*.26+direct*edge*.48);
+     // Low blue night scatter keeps the canyons dark rather than filling them with white daylight.
+     vec3 light=mix(vec3(.01,.018,.035),vec3(.075,.12,.20),.20+sky*.26+direct*edge*.48);
      scattered+=transmittance*a*light;transmittance*=1.-a;
      if(transmittance<.015)break;
     }
    }
   }
-  float haze=(1.-exp(-max(length(p.xz-u_eye.xz)-u_hazeStart,0.)*.0018))*(.65+.35*(1.-smoothstep(-70.,80.,p.y)));
-  c=mix(c,vec3(.40,.55,.67),haze*.85);
+  float haze=(1.-exp(-max(length(p.xz-u_eye.xz)-u_hazeStart,0.)*.0014))*(.65+.35*(1.-smoothstep(-70.,80.,p.y)));
+  c=mix(c,vec3(.025,.04,.075),haze*.70);
   c=c*transmittance+scattered;bloom*=transmittance;
  }
  vec3 streak=vec3(0.);

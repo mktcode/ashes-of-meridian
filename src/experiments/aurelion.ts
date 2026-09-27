@@ -6,8 +6,8 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   renderer.resize();
   renderer.battlefieldProfile = {
     groundTexture:'metal',skyTexture:'sky',groundPixelsPerMeter:30,
-    rockDecor:{density:0,opacity:0},shrubDecor:{density:0,opacity:0},haze:[.40,.55,.67],
-    lighting:{sun:[1.90,1.72,1.46],sky:[.24,.34,.47],bounce:[.10,.15,.21]}
+    rockDecor:{density:0,opacity:0},shrubDecor:{density:0,opacity:0},haze:[.025,.04,.075],
+    lighting:{sun:[.42,.52,.72],sky:[.085,.12,.19],bounce:[.016,.025,.045]}
   };
   renderer.haze = renderer.battlefieldProfile.haze;
   renderer.fogOn = false; renderer.cinema = false; renderer.extent = 300;
@@ -34,7 +34,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
   renderer.geometry('aurelionHologram',new Float32Array(globe));renderer.geometry('aurelionHalo',new Float32Array(halo));
   const panel = document.createElement('section');
   panel.className = 'aurelion-review';
-  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 05</small><h1>AURELION</h1>
+  panel.innerHTML = `<header><small>THE CROWN DISTRICT · VISUAL STUDY 06</small><h1>AURELION</h1>
     <p>Eine Stadt über den Wolken</p></header>
     <footer><span>Ziehen: verschieben · Rechts ziehen: drehen · Mausrad: Zoom · H: Bildmodus</span>
     <nav><button type="button" data-view="reset">Referenzblick</button><button type="button" data-view="top">Draufsicht</button>
@@ -43,7 +43,7 @@ async function launchAurelionPreview(canvas: HTMLCanvasElement) {
     <button type="button" data-action="motion" aria-pressed="false">Bewegung pausieren</button>
     <button type="button" data-action="atmosphere" aria-pressed="true">Atmosphäre an</button>
     <a href="./index.html">Zurück zum Spiel</a></nav>
-    <small data-status>Atmosphärenstudie · keine spielbare Karte · Leertaste: Bewegung</small></footer>`;
+    <small data-status>Nachtstudie · keine spielbare Karte · Leertaste: Bewegung</small></footer>`;
   document.body.append(panel);
   const overlay = $('overlay'), context = overlay.getContext('2d');
   if (!context) throw Error('Canvas 2D is unavailable');

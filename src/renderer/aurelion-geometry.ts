@@ -402,7 +402,7 @@ function createAurelionGeometry() {
   const precinct = [[74,40],[143,40],[157,54],[157,124],[144,137],[61,137],[47,123],[47,67]],
     deck = AURELION_SECTOR_HEIGHT;
   for (const sx of [-1,1]) for (const sz of [-1,1]) {
-    const x = sx*111, z = sz*94, p = precinct.map(([px,pz]) => [sx*px,sz*pz]),
+    const p = precinct.map(([px,pz]) => [sx*px,sz*pz]),
       skirt = precinct.map(([px,pz]) => [sx*(102+(px-102)*1.035),sz*(89+(pz-89)*1.035)]);
     // Broad interlocking shafts and a continuous shoulder replace four exposed thin stilts.
     for (const [px,pz,w,d,top] of [[78,112,36,34,3],[130,108,36,38,7],[126,63,37,29,5],[67,77,29,30,0]])
@@ -411,7 +411,6 @@ function createAurelionGeometry() {
     polygonPrism(skirt,deck-2,2,steel);
     polygonPrism(p,deck,2,paving);
     // Low inlaid approach lanes, inspection hatches and drains detail the floor without filling its open courts.
-    prism(x,deck+.025,z,51,.025,47,0x77878e,7);
     for (const [ax,az,bx,bz] of [[112,41,112,81],[48,103,96,103],[61,54,94,77]]) {
       line([sx*ax,deck+.04,sz*az],[sx*bx,deck+.04,sz*bz],5,.04,0x617580);
       line([sx*ax,deck+.07,sz*az],[sx*bx,deck+.07,sz*bz],.18,.035,trim);
@@ -469,7 +468,7 @@ function createAurelionGeometry() {
       }
     }
     // Low service roofs and recessed terraces make the precinct read as an inhabited building crown.
-    for (const [px,pz,w,d,h] of [[89,130,22,8,6],[149,88,9,24,5],[62,116,13,17,4]]) {
+    for (const [px,pz,w,d,h] of [[89,130,22,8,6],[149,88,9,24,5]]) {
       prism(sx*px,deck+1,sz*pz,w+2,1,d+2,dark,2);
       prism(sx*px,deck+h,sz*pz,w,h,d,steel,2);
       armor(sx*px,deck+h+.5,sz*pz,w+1,.7,d+1,trim);
@@ -502,42 +501,17 @@ function createAurelionGeometry() {
           [sx*px+side*(w/2-1),deck-2.5,sz*pz+d*.3]);
       }
     }
-    // Smaller connected roof blocks form streets and pockets around the open arrival court.
-    for (const [px,pz,w,d,h] of [[133,55,20,11,10],[133,125,16,8,5],[70,76,11,13,7],[58,73,8,8,4]]) {
+    // Keep peripheral service roofs; arrival courts and the bridge-adjacent floor stay open.
+    for (const [px,pz,w,d,h] of [[133,125,16,8,5]]) {
       shaft(sx*px,sz*pz,w,d,deck,deck+h,sx===sz?3:1);
       armor(sx*px,deck+h+.7,sz*pz,w+1,.7,d+1,trim);
-      if (pz!==55) machinery(sx*px,deck+h+.7,sz*pz,w*.4,d*.48,sx===sz?1:0);
+      machinery(sx*px,deck+h+.7,sz*pz,w*.4,d*.48,sx===sz?1:0);
       for (const side of [-1,1]) {
         box(sx*px+side*(w/2-1),deck+1.6,sz*(pz+d/2+.5),1.2,3.2,1.2,steel);
         line([sx*px+side*(w/2-1),deck+3,sz*(pz+d/2+2.5)],
           [sx*px+side*(w/2-1),deck+3,sz*(pz+d/2)],.35,.35,trim);
       }
       box(sx*px,deck+3.2,sz*(pz+d/2+1),w*.8,.4,2,steel);
-    }
-    // Reception array on an asymmetric stepped roof; the four precincts keep equal open floor reserves.
-    prism(sx*132,deck+15,sz*54,10,4.3,7,steel,1.4);
-    armor(sx*132,deck+15.6,sz*54,11,.6,8,trim);
-    dish(sx*132,deck+15.6,sz*54,2.4);
-    // Neutral pavilion and light markers stay on the new upper datum, with generous surrounding floor.
-    prism(x,deck+1.2,z,19,1.1,16,dark,4);
-    prism(x,deck+3.6,z,15,2.4,12,steel,3);
-    prism(x,deck+4.3,z,13,.7,10,trim,2);
-    disc(x,deck+4.6,z,3,.65,dark);
-    annulus(x,deck+4.95,z,3,.28,0,warm,lights,32);
-    fan(x,deck+5,z,1.9);
-    for (const side of [-1,1]) {
-      armor(x+side*7.5,deck+3,z,4,2.1,7,steel);
-      box(x+side*8,deck+3.05,z,3,.15,5.8,trim);
-      windowQuad(x,deck+2.8,z+side*6.1,8,1,side>0?0:Math.PI,ice);
-      for (let i = -2; i <= 2; i++) box(x+i*2,deck+2.8,z+side*6.2,.3,1.3,.35,trim);
-      box(x,deck+2,z+side*8,7,.35,2.5,steel);
-    }
-    for (let i = 0; i < 15; i++) {
-      const a = i/14*Math.PI*1.4+Math.PI*.3, px = x+Math.cos(a)*25, pz = z+Math.sin(a)*23;
-      prism(px,deck+.5,pz,2.2,.5,2.2,dark,.3);
-      armor(px,deck+.8,pz,2.6,.35,2.6,trim);
-      box(px,deck+1.55,pz,1,1.4,1,ice,0,lights);
-      box(px,deck+2.3,pz,1.5,.25,1.5,steel);
     }
     // Sloped causeways terminate at the actual perimeter openings, not through a railing or raised wall.
     bridge(sx*112,sz*40,sx*112,sz*18,22,deck,2);
