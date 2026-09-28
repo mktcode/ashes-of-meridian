@@ -110,7 +110,7 @@ test('invalid and over-capacity submissions consume no sequence and queue memory
 });
 
 test('single-player submissions stay immediate and fresh battle queues do not share pending data', () => {
-  const { game } = fixture(); game.s.rules = { kind: 'single-player' };
+  const { game } = fixture(); game.s.rules = { kind: 'single-player', mission: {id:'hq-elimination'} };
   assert.equal(game.queueAction(0, hold()), null);
   assert.equal(game.submitAction(0, hold()), true); assert.equal(game.get(3).order.type, 'hold');
   assert.equal(game.commandQueue.tick, 0); assert.equal(game.commandQueue.pending.length, 0);

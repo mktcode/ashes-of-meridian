@@ -92,6 +92,8 @@ interface BattlefieldLayout {
   playerStart: Position;
   enemySites: Position[];
   centralClearings: Position[];
+  /** Public mission anchor, not a source of unit visibility. */
+  controlZone?: Position & { radius: number };
   outerClearings: Position[];
   resourceSites: Position[];
   additionalClearings: Position[];
@@ -133,6 +135,7 @@ interface BattlefieldDefinition {
   name: string;
   /** Opt-in map review; excluded from normal expedition and multiplayer selection. */
   experimental?: boolean;
+  multiplayer?: boolean;
   size: BattlefieldSize;
   layout: BattlefieldLayout;
   /** Explicit start datum when decorative mountains exceed the base elevation. */
@@ -159,21 +162,32 @@ interface MeridianProfile {
   expeditionDepth: number;
   aether: number;
   tutorialComplete: boolean;
+  hillIntroComplete: boolean;
   upgrades: Record<string, number>;
   settings: MeridianSettings;
 }
 
-type MissionId = 'hq-elimination';
+type MissionId = 'hq-elimination' | 'king-of-the-hill';
 interface MissionDefinition {
   readonly name: string;
   readonly maps: readonly BattlefieldId[];
+  readonly firstStage: number;
   readonly objective: string;
+  readonly briefing?: string;
   readonly intro: string;
   readonly victory: string;
   readonly defeat: string;
 }
 // Fresh per battle; future objective progress belongs here, never in the checkpoint.
-type MissionState = { id: 'hq-elimination' };
+interface HillMissionState {
+  id: 'king-of-the-hill';
+  zone: Position & { radius: number };
+  counts: number[];
+  leader: PlayerTeam | null;
+  controlledSince: number | null;
+  heldSeconds: number;
+}
+type MissionState = { id: 'hq-elimination' } | HillMissionState;
 
 interface ExpeditionEncounter {
   mission: MissionId;

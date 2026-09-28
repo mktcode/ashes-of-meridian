@@ -151,7 +151,7 @@ const aiMethods = {
       return;
     }
   },
-  aiAbilities(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
+  aiAbilities(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: Position) {
     const s=this.s!, ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),s.depth),
       foes=visible.filter(e=>this.enemy({team},e));
     const ready=(kind:AbilityType)=>!this.abilityRequirement(kind,team) &&
@@ -212,6 +212,15 @@ const aiMethods = {
     ai.observation=undefined;
     ai.nextThink=s.time+Math.max(0,rules.think-rules.reactionDelay);
     const home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
+    if (s.rules.kind === 'single-player' && s.rules.mission.id === 'king-of-the-hill') {
+      const base = home || own.find(e => e.kind === 'building' && e.progress >= 1) as BuildingEntity | undefined;
+      const reserve = base ? this.aiEconomy(team, own, base) : 0;
+      this.aiProduction(team, own, visible, reserve);
+      this.aiHillStrategy(team, own, visible, base);
+      const anchor = base || own.find(e => e.kind === 'unit');
+      if (anchor) this.aiAbilities(team, own, visible, anchor);
+      return;
+    }
     if (!home) return;
     // Actions still validate live ownership, visibility, technology and resources.
     const reserve=this.aiEconomy(team,own,home);

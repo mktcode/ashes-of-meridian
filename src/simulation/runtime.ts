@@ -154,10 +154,15 @@
             });
           }
         }
-        this.resultClock += dt;
-        if (this.resultClock >= 0.2) {
+        if (s.rules.kind === 'single-player' && s.rules.mission.id === 'king-of-the-hill') {
+          // Sample every simulation step: even a one-tick tie must break the streak.
           this.checkBattleResult();
-          this.resultClock = 0;
+        } else {
+          this.resultClock += dt;
+          if (this.resultClock >= 0.2) {
+            this.checkBattleResult();
+            this.resultClock = 0;
+          }
         }
         this.fogClock += dt;
         if (this.fogClock >= 0.35) {
@@ -179,7 +184,36 @@
         if (s.result || s.rules.kind === 'scenario') return;
         switch (s.rules.mission.id) {
           case 'hq-elimination': return this.checkHQElimination();
+          case 'king-of-the-hill': return this.checkHillResult(s.rules.mission);
         }
+      },
+      checkHillResult(this: MeridianGame, mission: HillMissionState) {
+        const s = this.s!, alive = this.alive(e => e.team !== -1 && (e.kind === 'unit' || e.kind === 'building'));
+        mission.counts.fill(0);
+        for (const e of alive) if (e.kind === 'unit' && !this.party(e.team as PlayerTeam).eliminated &&
+          distance(e, mission.zone) <= mission.zone.radius) mission.counts[e.team]++;
+        for (const party of s.parties) if (!party.eliminated && !alive.some(e => e.team === party.id)) {
+          party.eliminated = true;
+          s.fields = s.fields.filter(f => f.team !== party.id);
+          s.scans = s.scans.filter(scan => scan.team !== party.id);
+          s.recalls = s.recalls.filter(recall => recall.team !== party.id);
+          if (party.id !== 0) this.emit('alert', { text: `Opponent ${party.id} eliminated.` });
+        }
+        const most = Math.max(...mission.counts), leaders = s.parties.filter(p => mission.counts[p.id] === most),
+          leader = most > 0 && leaders.length === 1 ? leaders[0].id : null;
+        if (leader !== mission.leader || leader === null) {
+          mission.controlledSince = leader === null ? null : s.time;
+          mission.heldSeconds = 0;
+        }
+        mission.leader = leader;
+        mission.heldSeconds = mission.controlledSince === null ? 0 : Math.min(HILL_HOLD_SECONDS, s.time - mission.controlledSince);
+        // Complete annihilation has priority, including a simultaneous loss of every party.
+        if (this.party(0).eliminated) this.finish(false, MISSIONS[mission.id].defeat);
+        else if (s.parties.every(p => p.id === 0 || p.eliminated)) this.finish(true, MISSIONS[mission.id].victory);
+        else if (leader !== null && mission.heldSeconds >= HILL_HOLD_SECONDS)
+          this.finish(leader === 0, leader === 0
+            ? `You held the zone for ${HILL_HOLD_SECONDS} uninterrupted seconds.`
+            : `Opponent ${leader} held the zone for ${HILL_HOLD_SECONDS} uninterrupted seconds.`);
       },
       checkHQElimination(this: MeridianGame) {
         const s = this.s!, mission = MISSIONS['hq-elimination'];

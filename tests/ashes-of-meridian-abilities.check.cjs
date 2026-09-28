@@ -20,7 +20,7 @@ function fixture(upgrades = {}, abilities = ['disruption', 'bulwark', 'surge', '
   const ownHq = entity(1, 0, 'hq', 0, 0, 'building'), own = entity(2, 0, 'rifle', 5, 0),
     worker = entity(3, 0, 'worker', 4, 0), enemy = entity(4, 1, 'rifle', 6, 0),
     turret = entity(5, 1, 'turret', 6, 1, 'building');
-  game.s = { parties, rules: { kind: 'single-player' }, result: null, stopped: false, time: 0,
+  game.s = { parties, rules: { kind: 'single-player', mission: {id:'hq-elimination'} }, result: null, stopped: false, time: 0,
     entities: [ownHq, own, worker, enemy, turret], fields: [], recalls: [], scans: [], strikes: [],
     stats: { damage: 0, kills: 0, lost: 0 }, triggers: {} };
   game.ids = new Map(game.s.entities.map(e => [e.id, e]));

@@ -39,7 +39,7 @@ const aiStrategyMethods = {
       return {contact,defense,finish,score};
     }).sort((a,b)=>b.score-a.score || a.contact.id-b.contact.id);
   },
-  aiScoutGoal(this: MeridianGame, team: PlayerTeam, home: BuildingEntity): Position {
+  aiScoutGoal(this: MeridianGame, team: PlayerTeam, home: Position): Position {
     const world=this.world!, unexplored=(p:Position)=>!world.sight[team].explored[world.idx(p.x,p.z)],
       corners=world.startSites.filter(p=>distance(p,home)>25)
         .sort((a,b)=>distance(a,home)-distance(b,home)),
@@ -74,6 +74,44 @@ const aiStrategyMethods = {
     }
     ai.goal={x:e.x,z:e.z}; ai.squad=squad.map(u=>u.id);
     this.aiOrder(team,squad,ai.goal);
+  },
+  aiHillStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home?: BuildingEntity) {
+    const rules = this.s!.rules;
+    if (rules.kind !== 'single-player' || rules.mission.id !== 'king-of-the-hill') return;
+    const zone = rules.mission.zone, ai = this.aiFor(team)!, world = this.world!,
+      hasHQ = own.some(e => e.type === 'hq'),
+      army = own.filter(e => e.kind === 'unit' && !e.exit && (e.type !== 'worker' || !hasHQ)) as UnitEntity[],
+      danger = home && visible.find(e => this.enemy({team}, e) && e.kind === 'unit' && distance(e, home) < 30),
+      guards = danger ? army.filter(e => e.type !== 'worker' && distance(e, home!) < 35).slice(0, 2) : [];
+    // Local reserves may defend, but do not recall the occupying force to hunt HQs.
+    if (danger) this.aiOrder(team, guards, danger);
+    const occupying = army.filter(e => !guards.includes(e)), reserved: (Position & { size: number; flying: boolean })[] = [];
+    this.aiSetMode(team, occupying.length ? 'attack' : 'bootstrap');
+    ai.squad = occupying.map(e => e.id); ai.goal = { x: zone.x, z: zone.z }; ai.attackProgress = undefined;
+    for (const unit of occupying) {
+      const flying = !!(UNITS[unit.type] as UnitDefinitionShape).flying;
+      if (distance(unit, zone) <= zone.radius) {
+        if (unit.order.type !== 'hold') this.executeAction(team, {kind:'order', ids:[unit.id], order:{type:'hold'}}, false);
+        reserved.push({...unit, flying});
+        continue;
+      }
+      // Public terrain only, never live hidden occupants. Individual move orders avoid
+      // formation offsets and ranged units stopping to shoot outside the capture radius.
+      const candidates = Array.from({length:32}, (_, i) => {
+        const angle = i * Math.PI / 16, radius = zone.radius - 1.25;
+        const p = {x:zone.x + Math.cos(angle)*radius, z:zone.z + Math.sin(angle)*radius};
+        // Ground targets must fit at the actual pathfinding cell center as well.
+        return flying ? p : world.point(world.idx(p.x,p.z));
+      }).filter(p => distance(p,zone) < zone.radius - 1 &&
+        (flying || (!world.staticGrid[world.idx(p.x,p.z)] && world.terrainFree(p,p,unit.size*UNIT_BODY_SCALE))))
+        .sort((a,b) => distance(a,unit)-distance(b,unit));
+      const target = candidates.find(p => reserved.every(other => other.flying !== flying ||
+        distance(p,other) > (unit.size+other.size)*UNIT_BODY_SCALE+.2)) || candidates[0];
+      if (target) {
+        this.aiOrder(team, [unit], target, false);
+        reserved.push({...target, size:unit.size, flying});
+      }
+    }
   },
   aiStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home: BuildingEntity) {
     const s=this.s!, ai=this.aiFor(team)!, rules=aiRulesFor(this.factionFor(team),s.depth),

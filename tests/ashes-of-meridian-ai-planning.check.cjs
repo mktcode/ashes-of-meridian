@@ -9,7 +9,7 @@ const { MeridianGame, UNITS, BUILDINGS, aiRulesFor, AI_TUNING } =
 const json = x => JSON.parse(JSON.stringify(x));
 function fixture(faction = 0, depth = 0) {
   const g = Object.create(MeridianGame.prototype), orders = [];
-  g.s = { time: 100, depth, rules: { kind: 'single-player' }, entities: [], parties:
+  g.s = { time: 100, depth, rules: { kind: 'single-player', mission: {id:'hq-elimination'} }, entities: [], parties:
     Array.from({ length: 4 }, (_, id) => ({ id, faction, controller: { kind: 'human' } })) };
   g.world = { cellSize: 2, idx: () => 0, startSites: [{x:60,z:0},{x:0,z:60}],
     layout: {resourceSites:[]}, sight: Array.from({length:4}, () => ({visible:[0],explored:[1]})) };

@@ -179,7 +179,7 @@
             entities: s.entities.map(e => ui.multiplayer!.displayEntity(e)) } : s;
           worldView.sync(world);
           R.camera(s.cam.x, s.cam.z, s.cam.zoom);
-          // Stage intros are presentation-only: show the terrain and featured HQ without
+          // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
           R.fogOn = !ui.battleIntro;
           const selectedIds = ui.selectionIds();
@@ -384,10 +384,10 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 5, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: aurelionExperiment ? 7 : 0,
-            benefits: {pioneerSquad: 2}, enemyBenefits: aurelionExperiment ? [{pioneerSquad:2},{pioneerSquad:2},{pioneerSquad:2}] : [{}],
-            encounter: {mission: DEFAULT_MISSION, map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : 'mothership', seed: 1409,
-              enemies: aurelionExperiment ? [0,1,2] : [2]}, offers: [] };
+          ui.expedition = { version: 5, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: aurelionExperiment ? 3 : 0,
+            benefits: {pioneerSquad: 2}, enemyBenefits: aurelionExperiment ? [{pioneerSquad:2},{pioneerSquad:2}] : [{}],
+            encounter: {mission: aurelionExperiment ? 'king-of-the-hill' : DEFAULT_MISSION, map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : 'mothership', seed: 1409,
+              enemies: aurelionExperiment ? [1,2] : [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {
           ui.showBattle();

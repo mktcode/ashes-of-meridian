@@ -3,6 +3,12 @@
 const AURELION_SECTOR_HEIGHT = 8;
 const AURELION_DECK_OUTLINE = [[74,40],[143,40],[157,54],[157,124],[144,137],[61,137],[47,123],[47,67]] as const;
 const AURELION_CROWN_FLOOR = {radius:41,height:.15} as const;
+// Keep the four diagonal entrances to the inner objective open for vehicle bodies.
+// Retain every lamp, moving the diagonal four to the outer cardinal rim.
+const AURELION_CROWN_LAMPS = Array.from({length:16}, (_, i) => {
+  const moved = i%4 === 2, angle = i*Math.PI/8 - (moved ? Math.PI/4 : 0), radius = moved ? 34 : 26;
+  return {x:Math.sin(angle)*radius,z:Math.cos(angle)*radius,angle,index:i};
+}).filter(lamp => lamp.index%4);
 // ax, az, bx, bz, width, start height, end height. First four: mirrored approaches; last two: crossings.
 const AURELION_WALKWAYS = [
   [112,40,112,18,22,AURELION_SECTOR_HEIGHT,2], [47,103,24,103,20,AURELION_SECTOR_HEIGHT,2],
@@ -23,6 +29,7 @@ function aurelionLayout(): BattlefieldLayout {
   return {
     startSites, playerStart:startSites[0], enemySites:startSites.slice(1),
     centralClearings:[{x:0,z:0}], outerClearings:[], additionalClearings:[],
+    controlZone:{x:0,z:0,radius:AURELION_CROWN_FLOOR.radius/2},
     // Two deposits per precinct, clear of HQs, service roofs and all three approaches.
     // Vents retain the common recipe's positive x/z offsets, including slot zero's +5/+18.
     resourceSites:[{x:-126,z:91},{x:126,z:-91},{x:-126,z:-91},{x:126,z:91},
@@ -61,11 +68,9 @@ function aurelionWalkable(x: number,z: number) {
   // The hologlobe's real plinth and supports remain solid, not a walk-through objective.
   const radius=Math.hypot(x,z);
   if (radius<16) return false;
-  // Small raised lamps on the inner ring also have physical footprints.
-  for (let i=0;i<16;i++) if (i%4) {
-    const a=i*Math.PI/8;
-    if (Math.hypot(x-Math.abs(Math.sin(a)*26),z-Math.abs(Math.cos(a)*26))<1.7) return false;
-  }
+  // Rendered raised lamps retain matching physical footprints.
+  for (const lamp of AURELION_CROWN_LAMPS)
+    if (Math.hypot(x-Math.abs(lamp.x),z-Math.abs(lamp.z))<1.7) return false;
   // Bridge rails continue onto the circular plaza/landings; their overlap is still solid.
   for (const road of AURELION_WALKWAYS) {
     const p=aurelionRoadPoint(road,x,z),ramp=road[5]!==road[6];

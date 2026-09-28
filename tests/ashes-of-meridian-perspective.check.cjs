@@ -55,7 +55,7 @@ test('invalid, missing and single-player perspective requests cannot change the 
   const { game, world } = fixture();
   for (const team of [-1, 4, .5, NaN, '2']) assert.equal(game.setPerspective(team), false);
   assert.equal(world.viewTeam, 0); assert.equal(world.fogVersion, 1);
-  game.s.rules = { kind: 'single-player' };
+  game.s.rules = { kind: 'single-player', mission: {id:'hq-elimination'} };
   assert.equal(game.setPerspective(2), false); assert.equal(game.setPerspective(0), true);
   game.s = null; assert.equal(game.setPerspective(0), false);
   assert.equal(world.viewTeam, 0);

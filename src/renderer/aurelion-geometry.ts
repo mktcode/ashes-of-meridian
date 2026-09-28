@@ -588,10 +588,10 @@ function createAurelionGeometry() {
     const a = i*Math.PI/8;
     line([Math.sin(a)*15,.22,Math.cos(a)*15],[Math.sin(a)*24,.22,Math.cos(a)*24],.18,.04,dark);
     line([Math.sin(a)*24,-9,Math.cos(a)*24],[Math.sin(a)*25.5,-1,Math.cos(a)*25.5],1.1,1.1,steel);
-    if (i%4) {
-      box(Math.sin(a)*26,-.3,Math.cos(a)*26,2,1.2,2,steel,a);
-      box(Math.sin(a)*26,.4,Math.cos(a)*26,.8,.2,.8,warm,0,lights);
-    }
+  }
+  for (const lamp of AURELION_CROWN_LAMPS) {
+    box(lamp.x,-.3,lamp.z,2,1.2,2,steel,lamp.angle);
+    box(lamp.x,.4,lamp.z,.8,.2,.8,warm,0,lights);
   }
   for (let i = 0; i < 32; i++) {
     const a = i*Math.PI/16;

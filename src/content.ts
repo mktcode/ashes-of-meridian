@@ -651,17 +651,28 @@ const ICON_PATHS = {
 type IconType = keyof typeof ICON_PATHS;
 type FactionDefinition = (typeof FACTIONS)[FactionId];
 
-// Mission identity is independent of terrain. Experimental maps remain gated by
-// availableBattlefields(); this list also permits their isolated HQ playtests.
+// Mission identity is independent of terrain; selection draws once from eligible pairs.
 const DEFAULT_MISSION: MissionId = 'hq-elimination';
+const HILL_HOLD_SECONDS = 60;
 const MISSIONS: Readonly<Record<MissionId, MissionDefinition>> = Object.freeze({
   'hq-elimination': Object.freeze({
     name: 'HQ supremacy',
-    maps: Object.freeze(['desert', 'alien-planet', 'mothership', 'westmark', 'aurelion'] as const),
+    maps: Object.freeze(['desert', 'alien-planet', 'mothership', 'westmark'] as const),
+    firstStage: 1,
     objective: 'Free-for-all: be the last party with an HQ. Losing the last HQ eliminates a party and removes its remaining forces. Protect yours.',
     intro: 'Expedition command|Destroy the enemy base to advance.',
     victory: 'You are the last remaining party.',
     defeat: 'Your last command center has fallen.'
+  }),
+  'king-of-the-hill': Object.freeze({
+    name: 'King of the Hill',
+    briefing: `Hold the marked inner zone with the most units for ${HILL_HOLD_SECONDS} uninterrupted seconds. Ties reset progress; HQ loss alone does not eliminate a party.`,
+    maps: Object.freeze(['aurelion'] as const),
+    firstStage: 4,
+    objective: `Hold the inner zone around the hologlobe for ${HILL_HOLD_SECONDS} uninterrupted simulation seconds with more units than each other party. All living units count equally, including workers, commanders and aircraft; buildings do not. Ties, an empty zone or losing the lead reset progress. Losing your HQ alone does not eliminate you: only losing all units and buildings does. Defeat all opponents to win immediately. If everyone is wiped out together, you lose. Zone counts and control progress are public; enemy positions still require vision.`,
+    intro: `Expedition command|Secure the marked inner zone around the hologlobe. Lead in unit count for ${HILL_HOLD_SECONDS} uninterrupted seconds. A tie or loss of control resets the timer. Your HQ is not the objective.`,
+    victory: 'All opposing parties have been defeated.',
+    defeat: 'All your units and buildings have been lost.'
   })
 });
 

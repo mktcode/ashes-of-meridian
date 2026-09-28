@@ -1,7 +1,7 @@
 /* The crown district: four buildable precincts above a non-playable city. */
 'use strict';
 const AURELION_BATTLEFIELD: BattlefieldDefinition = {
-  name:'AURELION', experimental:true,
+  name:'AURELION', multiplayer:false,
   size:{extent:170,cellSize:2}, layout:aurelionLayout(),startHeight:AURELION_SECTOR_HEIGHT,
   palette:{ground:0x899396,rock:0x52616b,accent:0x83ccec,flora:0x25333f},
   render:{groundTexture:'metal',skyTexture:'sky',groundPixelsPerMeter:30,scenery:'aurelion',

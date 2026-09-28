@@ -47,6 +47,7 @@ function createMeridianPersistence(
         expeditionDepth: 0,
         aether: 0,
         tutorialComplete: false,
+        hillIntroComplete: false,
         upgrades: {},
         settings: {
           volume: 0.28,
@@ -66,6 +67,7 @@ function createMeridianPersistence(
           d.expeditionDepth = clamp(Math.floor(Number(p.expeditionDepth) || 0), 0, 999999);
           d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
           d.tutorialComplete = p.tutorialComplete === true;
+          d.hillIntroComplete = p.hillIntroComplete === true;
           for (let k in upgrades)
             d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
           for (let key of Object.keys(d.settings)) {

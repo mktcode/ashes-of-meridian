@@ -314,6 +314,7 @@
         speedButton.textContent = this.game.networkTeam != null ? 'SERVER' : speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
+        this.updateMissionHUD();
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },

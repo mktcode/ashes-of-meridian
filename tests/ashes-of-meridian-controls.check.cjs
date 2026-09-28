@@ -11,11 +11,11 @@ test('escaping converts values and protects HTML delimiters independently of scr
     assert.equal(esc(input), expected);
 });
 
-test('encounters add mission identity without changing faction, map or seed draws', () => {
+test('opening HQ encounters retain their faction, map and seed draws', () => {
   const h = setup();
-  for (const depth of [0, 3, 7]) {
+  for (const depth of [0, 1, 2]) {
     const expected = vm.runInContext(`(() => {
-      const random = seeded(1409), maps = availableBattlefields().filter(map => map !== 'desert');
+      const random = seeded(1409), maps = ['alien-planet','mothership','westmark'];
       return {mission: DEFAULT_MISSION, enemies: expeditionEnemyFactions(${depth}, random),
         map: maps[Math.floor(random() * maps.length)], seed: 1 + Math.floor(random() * 99999999), next: random()};
     })()`, h.context);
@@ -24,6 +24,24 @@ test('encounters add mission identity without changing faction, map or seed draw
     assert.deepEqual(JSON.parse(JSON.stringify({...encounter, next: vm.runInContext('Math.random()', h.context)})),
       JSON.parse(JSON.stringify(expected)));
     assert.notEqual(encounter.map, 'aurelion');
+  }
+});
+
+test('Aurelion enters at stage four with equal map weight, normal party counts and no immediate repeat', () => {
+  const h = setup();
+  for (const depth of [2,3,6,7]) {
+    const found = new Set(), count = depth<3 ? 4 : 5;
+    for (let index=0;index<count;index++) {
+      let draws=0;
+      vm.runInContext('Math',h.context).random=()=>{draws++;return (index+.5)/count;};
+      const e=h.ui.createEncounter(depth);
+      found.add(e.map);
+      assert.equal(e.mission,e.map==='aurelion'?'king-of-the-hill':'hq-elimination');
+      assert.equal(e.enemies.length,depth<3?1:depth<7?2:3);
+      assert.equal(draws,(depth<3?0:e.enemies.length)+2,'no extra mission draw');
+      assert.notEqual(h.ui.createEncounter(depth,e.map).map,e.map);
+    }
+    assert.equal(found.has('aurelion'),depth>=3); assert.equal(found.size,count);
   }
 });
 
@@ -350,6 +368,56 @@ test('stage one holds simulation and controls while the camera introduces the en
   assert.equal(h.ui.game.s.time, 0);
   assert.deepEqual(Array.from(h.ui.game.world.explored), explored);
   assert.deepEqual(modes, ['reset', 'silent', 'battle']);
+});
+
+test('first hill introduction focuses the zone without revealing an enemy; completion persists independently', () => {
+  const h=setup(), saved=[];
+  h.ui.profile.hillIntroComplete=false;
+  h.ui.persistence.saveProfile=p=>saved.push(JSON.parse(JSON.stringify(p)));
+  h.ui.game.s.depth=3;
+  h.ui.game.s.rules={kind:'single-player',mission:{id:'king-of-the-hill',zone:{x:0,z:0,radius:20.5},counts:[0,0,0],leader:null,heldSeconds:0}};
+  h.ui.game.s.entities=[{id:1,team:0,kind:'building',type:'hq',hp:100,x:-60,z:50},
+    {id:2,team:1,kind:'building',type:'hq',hp:100,x:60,z:-50}];
+  const explored=Array.from(h.ui.game.world.explored);
+  h.ui.event('start',{});
+  assert.equal(h.ui.paused,true); assert.equal(h.ui.game.s.cam.x,0); assert.equal(h.ui.game.s.cam.z,0);
+  assert.equal(h.ui.introObserves(h.ui.game.s.entities[1]),false);
+  assert.equal(h.ui.battleIntro.visibleEntityIds.size,0);
+  assert.equal(saved.length,0);
+  h.ui.advanceBattleIntro(10);
+  assert.equal(h.ui.profile.hillIntroComplete,false); assert.equal(h.ui.game.s.cam.x,0);
+  h.ui.advanceBattleIntro(1.5);
+  assert.equal(h.ui.paused,false); assert.equal(h.ui.battleIntro,null);
+  assert.equal(h.ui.profile.hillIntroComplete,true); assert.equal(saved.length,1);
+  assert.equal(saved[0].tutorialComplete,false);
+  assert.equal(h.ui.game.s.time,0); assert.deepEqual(Array.from(h.ui.game.world.explored),explored);
+  assert.equal(h.ui.beginBattleIntro(),false,'later hills skip the first-visit intro');
+  h.ui.game.s.rules={kind:'single-player',mission:{id:'hq-elimination'}}; h.ui.game.s.depth=0;
+  assert.equal(h.ui.beginBattleIntro(),true,'standard stage-one intro is independent');
+});
+
+test('an interrupted hill intro stays unseen, and its public marker/HUD never mutate the mission or fog', () => {
+  const h=setup(); h.ui.game.s.depth=3;
+  const mission={id:'king-of-the-hill',zone:{x:0,z:0,radius:20.5},counts:[2,3,1],leader:1,heldSeconds:12.5};
+  h.ui.game.s.rules={kind:'single-player',mission};
+  h.ui.game.s.entities=[{id:1,team:0,kind:'building',type:'hq',hp:100,x:-60,z:50}];
+  assert.equal(h.ui.beginBattleIntro(),true);
+  h.ui.advanceBattleIntro(2); h.ui.battleIntro=null;
+  assert.notEqual(h.ui.profile.hillIntroComplete,true); assert.equal(h.ui.beginBattleIntro(),true);
+  const before=JSON.stringify(h.ui.game.s), points=[];
+  vm.runInContext('Math.random = seeded = () => { throw Error("UI RNG"); };',h.context);
+  h.ui.R.project=(x,y,z)=>{points.push({x,z}); return {x,y:z};};
+  h.ui.drawMissionZone({save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}});
+  assert.equal(points.length,65); assert.ok(points.every(p=>Math.abs(Math.hypot(p.x,p.z)-20.5)<1e-9));
+  h.ui.updateMissionHUD();
+  const el=h.document.getElementById('missionObjective');
+  assert.equal(el.classList.contains('hidden'),false);
+  assert.ok(el.textContent.includes('12 / 60s')); assert.ok(el.textContent.includes('OPP 1: 3'));
+  assert.equal(JSON.stringify(h.ui.game.s),before);
+  h.ui.battleIntro=null; h.UI.prototype.bind.call(h.ui); h.clickCamera('objective');
+  assert.equal(h.ui.game.s.cam.x,0); assert.equal(h.ui.game.s.cam.z,0);
+  h.ui.game.s.rules={kind:'single-player',mission:{id:'hq-elimination'}};
+  h.ui.updateMissionHUD(); assert.equal(el.classList.contains('hidden'),true);
 });
 
 test('later stages skip the stage-one camera introduction', () => {

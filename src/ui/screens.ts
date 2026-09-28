@@ -86,14 +86,14 @@
           faction <= this.unlockedFactionForDepth(this.profile.expeditionDepth);
       },
       createEncounter(this: MeridianUI, depth = 0, previousMap?: BattlefieldId): ExpeditionEncounter {
-        const mission = DEFAULT_MISSION, maps = availableBattlefields().filter(map => MISSIONS[mission].maps.includes(map)), alternatives = maps.filter(map => map !== previousMap),
-          mapPool = alternatives.length ? alternatives : maps;
-        return {
-          mission,
-          enemies: expeditionEnemyFactions(depth, Math.random),
-          map: mapPool[Math.floor(Math.random() * mapPool.length)],
-          seed: 1 + Math.floor(Math.random() * 99999999)
-        };
+        const maps = availableBattlefields(), choices = contentKeys(MISSIONS)
+          .filter(id => depth + 1 >= MISSIONS[id].firstStage)
+          .flatMap(mission => MISSIONS[mission].maps.filter(map => maps.includes(map)).map(map => ({ mission, map }))),
+          alternatives = choices.filter(choice => choice.map !== previousMap),
+          pool = alternatives.length ? alternatives : choices;
+        // Preserve the faction → map → seed draw order, with no extra mission draw.
+        const enemies = expeditionEnemyFactions(depth, Math.random), choice = pool[Math.floor(Math.random() * pool.length)];
+        return { ...choice, enemies, seed: 1 + Math.floor(Math.random() * 99999999) };
       },
       createBenefitOffers(this: MeridianUI, expedition: MeridianExpedition) {
         return expeditionBenefitOffers(expedition.benefits, seeded(expedition.encounter.seed + expedition.depth * 7919));
@@ -268,7 +268,7 @@
         const offers = result.win && this.expedition ? this.expedition.offers : [];
         if (!offers.includes(this.resultBenefit || '')) this.resultBenefit = offers[0];
         const next = result.win && this.expedition ? this.expedition.encounter : null,
-          nextPanel = next ? `<section class="result-next"><div class="result-next-preview map-${next.map}" aria-hidden="true"><span>${esc(BATTLEFIELDS[next.map].name)}</span></div><div class="result-next-body"><div class="result-next-heading"><div><div class="eyebrow">NEXT / STAGE ${this.expedition!.depth + 1}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2></div></div>${renderExpeditionOpponents(this.expedition!)}</div></section>` : '',
+          nextPanel = next ? `<section class="result-next"><div class="result-next-preview map-${next.map}" aria-hidden="true"><span>${esc(BATTLEFIELDS[next.map].name)}</span></div><div class="result-next-body"><div class="result-next-heading"><div><div class="eyebrow">NEXT / STAGE ${this.expedition!.depth + 1}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2></div></div>${renderMissionBriefing(next.mission)}${renderExpeditionOpponents(this.expedition!)}</div></section>` : '',
           benefitPanel = offers.length ? `<section class="result-benefits"><h3><span></span>CHOOSE AN EXPEDITION BENEFIT<span></span></h3><div class="benefit-options compact">${renderBenefitOptions(offers, this.resultBenefit)}</div><button class="primary result-confirm-benefit" data-ui="confirmBenefit">CONTINUE EXPEDITION <span>→</span></button></section>` : '';
         $('modal').classList.add('hidden');
         $('result').innerHTML = `<main class="result-screen ${result.win ? 'victory' : 'defeat'}"><div class="result-shell"><header class="result-hero"><h1>${result.win ? 'VICTORY' : 'DEFEAT'}</h1><p>${result.win ? `EXPEDITION DEPTH ${this.expedition?.depth || 0} SECURED` : esc(result.text)}</p></header><section class="result-reward"><span class="result-reward-sigil">⬡</span><div><span>ECHO RECOVERED</span><strong>${(this.resultAetherRecovered || 0).toLocaleString()}</strong><small class="result-reward-breakdown"><span>EVACUATED ${(this.resultAetherEvacuated || 0).toLocaleString()}</span><span>BUILDINGS DESTROYED ${(this.resultAetherStructures || 0).toLocaleString()}</span></small></div></section>${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}${benefitPanel}${nextPanel}<nav class="result-actions">${result.win && !offers.length ? '<button class="primary" data-ui="continueExpedition">CONTINUE EXPEDITION <span>→</span></button>' : !result.win ? '<button class="primary" data-ui="battle">NEW EXPEDITION <span>→</span></button>' : ''}<button class="secondary" data-ui="armory">FLEET UPGRADES <span>→</span></button><button class="secondary" data-ui="home">MAIN MENU <span>→</span></button></nav></div></main>`;

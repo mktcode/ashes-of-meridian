@@ -13,8 +13,9 @@ test('Aurelion has four buildable precincts with vehicle routes to the crown and
   for(const a of starts) {
     assert.equal(w.surface.heightAt(a.x,a.z),8);assert.ok(w.surface.foundation(a,7));
     assert.equal(w.surface.visibilityLevelAt(a.x,a.z),1);
-    const crown={x:Math.sign(a.x)*22,z:Math.sign(a.z)*19};
-    for(const b of [crown,...starts,...w.layout.resourceSites]) {
+    const crown={x:Math.sign(a.x)*22,z:Math.sign(a.z)*19}, inner={x:Math.sign(a.x)*19,z:Math.sign(a.z)*3};
+    assert.ok(Math.hypot(inner.x,inner.z)<w.layout.controlZone.radius);
+    for(const b of [crown,inner,...starts,...w.layout.resourceSites]) {
       const path=w.path(a.x,a.z,b.x,b.z,false,undefined,radius);
       assert.equal(path.status,'complete',JSON.stringify({a,b}));
       let previous=a;
@@ -45,7 +46,7 @@ test('city voids, roofs, plinth and rails stay impassable even with an empty tem
 });
 
 test('four parties initialize reproducibly with harvest routes, buildable vents and room for production',()=>{
-  const g=new MeridianGame({upgrades:{}}),options={map:'aurelion',seed:1409,enemies:[0,1,2],benefits:{pioneerSquad:2},
+  const g=new MeridianGame({upgrades:{}}),options={mission:'king-of-the-hill',map:'aurelion',seed:1409,enemies:[0,1,2],benefits:{pioneerSquad:2},
     enemyBenefits:[{pioneerSquad:2},{pioneerSquad:2},{pioneerSquad:2}]};
   g.start(options);const w=g.world,entities=g.s.entities;
   const snapshot=JSON.stringify(entities);

@@ -23,9 +23,11 @@ Für einen isolierten Test startet `index.html?experiment=height` nach dem Build
 
 Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Der erste spielbare Stand verwendet die vorhandenen Vorlagenmaterialien; Texturen und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
 
-## Aurelion · Kartenprobelauf und Visualstudie
+## Aurelion · King of the Hill und Visualstudie
 
-`index.html?experiment=aurelion-playable` startet nach dem Build den isolierten Kartenprobelauf: vier FFA-Parteien mit je zwei Workern auf den erhöhten Stadtplattformen, Ressourcen und befahrbare Verbindungen zur zentralen Plaza. Profil und Expeditionscheckpoint bleiben flüchtig. **Noch gelten die bisherigen HQ-Siegregeln**, nicht King of the Hill. Aurelion bleibt bis zu den vereinbarten Zwischenabnahmen aus zufälligen Expeditionen und Multiplayer ausgeschlossen. [Umsetzung, Spielregeln und Haltepunkte](docs/issues/aurelion-king-of-the-hill.md).
+Aurelion ergänzt Expeditionen ab Stage 4 um **King of the Hill**: die zentrale Zone 60 Simulationssekunden ununterbrochen mit der allein größten Einheitenzahl kontrollieren. [Spielregeln](docs/gameplay.md#king-of-the-hill-auf-aurelion). Im Multiplayer bleibt die Karte ausgeschlossen.
+
+`index.html?experiment=aurelion-playable` startet nach dem Build einen isolierten Probelauf auf Stage 4 mit drei FFA-Parteien und je zwei Workern. Profil und Expeditionscheckpoint bleiben flüchtig. [Offene Spiel- und Kartenabnahme](docs/issues/aurelion-king-of-the-hill.md).
 
 `index.html?experiment=aurelion` öffnet weiterhin die getrennte dreh- und zoombare Nacht-Visualstudie ohne Spielsimulation oder Profilzugriffe. [Bedienung und offene Darstellungsabnahme](docs/issues/aurelion-map.md).
 
@@ -37,7 +39,7 @@ Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen 
 
 Über **Codex** im Startmenü sind alle drei Fraktionen mit Einheiten, Gebäuden, Portraits, animierter Modellansicht und der Geschichte auch vor ihrer spielerischen Freischaltung zugänglich. Der Codex verändert den Spielstand nicht.
 
-Mit **New expedition** eine freigeschaltete Fraktion wählen. Die ersten drei Gefechte führen nacheinander gegen The Cinder Pact, The Manyroot und The Mourning Houses. Ab Stage 4 treten zwei, ab Stage 8 drei Gegner im **Free-for-all** an; deren Fraktionen werden wie Karte und Seed für jedes Gefecht neu bestimmt. Alle bekämpfen einander, die letzte Partei mit HQ gewinnt. Jeder Gegner-Slot sammelt eigene Expeditionsvorteile; neue Gegner beginnen ohne Vorteile. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Sternenschlacke, Raffinerien an Vents gewinnen Nachhall. Ein Sieg führt zur Vorteilswahl und zum nächsten Gefecht; Verlust des letzten eigenen HQs beendet die Expedition.
+Mit **New expedition** eine freigeschaltete Fraktion wählen. Die ersten drei Gefechte führen nacheinander gegen The Cinder Pact, The Manyroot und The Mourning Houses. Ab Stage 4 treten zwei, ab Stage 8 drei Gegner im **Free-for-all** an; deren Fraktionen werden wie Karte und Seed für jedes Gefecht neu bestimmt. Alle bekämpfen einander; das Missionsziel steht im Briefing. Jeder Gegner-Slot sammelt eigene Expeditionsvorteile; neue Gegner beginnen ohne Vorteile. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Sternenschlacke, Raffinerien an Vents gewinnen Nachhall. Ein Sieg führt zur Vorteilswahl und zum nächsten Gefecht; eine Niederlage beendet die Expedition.
 
 Fingerziehen/Pinch oder Mausziehen/Mausrad bewegt die Kamera; Tap bzw. Linksklick wählt, Rechtsklick erteilt Kontextbefehle. Basis- und Zoomknöpfe liegen unter der Minimap; der mittige Schwerter-Schalter aktiviert Attack-move. Das eingerahmte Gruppensymbol wählt eigene Kampfeinheiten im sichtbaren Bereich, das danebenliegende Gruppensymbol alle eigenen Kampfeinheiten außer Workern auf der gesamten Karte. Bau und Rekrutierung liegen rechts, Fähigkeiten mittig, Minimap links. **Cancel** beendet eine Zielauswahl.
 

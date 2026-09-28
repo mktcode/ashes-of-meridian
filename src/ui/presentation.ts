@@ -7,25 +7,31 @@
     const uiPresentationMethods = {
       beginBattleIntro(this: MeridianUI) {
         this.battleIntro = null;
-        const s = this.game.s, timing = s && BATTLE_INTRO_BY_STAGE[s.depth + 1];
-        if (!s || s.rules?.kind !== 'single-player' || !timing) return false;
+        const s = this.game.s;
+        if (!s || s.rules?.kind !== 'single-player') return false;
+        const mission = s.rules.mission, hill = mission.id === 'king-of-the-hill',
+          timing = hill ? (this.profile.hillIntroComplete ? undefined : { hold: 10, travel: 1.5 })
+            : BATTLE_INTRO_BY_STAGE[s.depth + 1];
+        if (!timing) return false;
         const home = this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && e.type === 'hq')[0],
-          enemy = this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
-        if (!home || !enemy) return false;
+          enemy = !hill && this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
+        if (!home || (!hill && !enemy)) return false;
         const limit = this.game.world!.extent - 18,
-          cameraPoint = (e: Entity) => ({ x: clamp(e.x + 4, -limit, limit), z: clamp(e.z - 2, -limit, limit) }),
-          enemyCamera = cameraPoint(enemy), homeCamera = cameraPoint(home);
+          cameraPoint = (e: Position) => ({ x: clamp(e.x + 4, -limit, limit), z: clamp(e.z - 2, -limit, limit) }),
+          focus = mission.id === 'king-of-the-hill' ? { x: mission.zone.x, z: mission.zone.z } : cameraPoint(enemy as Entity),
+          homeCamera = cameraPoint(home);
         this.battleIntro = {
           elapsed: 0,
           hold: timing.hold,
           travel: timing.travel,
-          enemy: enemyCamera,
+          focus,
+          mission: mission.id,
           home: homeCamera,
-          visibleEntityIds: new Set([enemy.id]),
+          visibleEntityIds: new Set(enemy ? [enemy.id] : []),
           objectiveShown: false
         };
-        s.cam.x = enemyCamera.x;
-        s.cam.z = enemyCamera.z;
+        s.cam.x = focus.x;
+        s.cam.z = focus.z;
         this.paused = true;
         return true;
       },
@@ -39,10 +45,14 @@
         }
         const progress = clamp((intro.elapsed - intro.hold) / intro.travel, 0, 1),
           eased = progress * progress * (3 - 2 * progress);
-        s.cam.x = intro.enemy.x + (intro.home.x - intro.enemy.x) * eased;
-        s.cam.z = intro.enemy.z + (intro.home.z - intro.enemy.z) * eased;
+        s.cam.x = intro.focus.x + (intro.home.x - intro.focus.x) * eased;
+        s.cam.z = intro.focus.z + (intro.home.z - intro.focus.z) * eased;
         if (intro.elapsed < intro.hold + intro.travel) return;
         const pendingRadio = intro.pendingRadio;
+        if (intro.mission === 'king-of-the-hill') {
+          this.profile.hillIntroComplete = true;
+          this.persist();
+        }
         this.battleIntro = null;
         this.paused = false;
         this.beginBattleTutorial();
@@ -52,6 +62,39 @@
       },
       introObserves(this: MeridianUI, e: Entity) {
         return !!this.battleIntro?.visibleEntityIds.has(e.id);
+      },
+      hillMission(this: MeridianUI): HillMissionState | null {
+        const rules = this.game.s?.rules;
+        return rules?.kind === 'single-player' && rules.mission.id === 'king-of-the-hill' ? rules.mission : null;
+      },
+      updateMissionHUD(this: MeridianUI) {
+        const mission = this.hillMission(), el = $('missionObjective');
+        el.classList.toggle('hidden', !mission);
+        if (!mission) return;
+        const label = (team: number) => team === this.localTeam ? 'YOU' : `OPP ${team}`,
+          status = mission.leader === null ? (mission.counts.some(n => n > 0) ? 'TIED · TIMER RESET' : 'EMPTY · TIMER RESET')
+            : `${label(mission.leader)} HOLDING · ${Math.floor(mission.heldSeconds)} / ${HILL_HOLD_SECONDS}s`;
+        el.textContent = `KING OF THE HILL\n${status}\n${mission.counts.map((n, team) => `${label(team)}: ${n}`).join(' · ')}`;
+        el.title = `${MISSIONS[mission.id].objective} Tap to center on the zone.`;
+        el.setAttribute('aria-label', `${el.textContent}. Tap to center on the zone.`);
+      },
+      drawMissionZone(this: MeridianUI, ctx: CanvasRenderingContext2D) {
+        const mission = this.hillMission();
+        if (!mission) return;
+        const { x, z, radius } = mission.zone;
+        ctx.save();
+        ctx.strokeStyle = mission.leader === null ? '#efc990' : mission.leader === this.localTeam ? '#79dbcc' : '#eb8e80';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let connected = false;
+        for (let i = 0; i <= 64; i++) {
+          const angle = i * Math.PI / 32, px = x + Math.cos(angle) * radius, pz = z + Math.sin(angle) * radius,
+            p = this.R.project(px, .25 + (this.game.world?.surface?.heightAt(px, pz) ?? 0), pz);
+          if (!p) { connected = false; continue; }
+          if (connected) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
+          connected = true;
+        }
+        ctx.stroke(); ctx.restore();
       },
       tick(this: MeridianUI, dt: number) {
         this.advanceBattleIntro(dt);
@@ -142,6 +185,13 @@
             ctx.fill();
           }
         }
+        const mission = this.hillMission();
+        if (mission) {
+          const p = map(mission.zone);
+          ctx.strokeStyle = mission.leader === null ? '#efc990' : mission.leader === this.localTeam ? '#79dbcc' : '#eb8e80';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(p.x, p.y, mission.zone.radius * w / span, 0, Math.PI * 2); ctx.stroke();
+        }
         ctx.strokeStyle = '#e3ffff';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -172,6 +222,7 @@
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,
           s = g.s!;
+        this.drawMissionZone(ctx);
         const selectedIds = this.selectionIds();
         ctx.font = '10px ui-monospace,Consolas,monospace';
         ctx.textAlign = 'center';

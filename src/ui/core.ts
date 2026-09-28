@@ -15,7 +15,8 @@
       elapsed: number;
       hold: number;
       travel: number;
-      enemy: Position;
+      focus: Position;
+      mission: MissionId;
       home: Position;
       visibleEntityIds: Set<number>;
       objectiveShown: boolean;

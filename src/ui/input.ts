@@ -69,7 +69,11 @@
           if (b.dataset.cam) {
             if (this.battleIntro) return;
             if (b.dataset.cam === 'home') this.homeCamera();
-            else if (this.game.s)
+            else if (b.dataset.cam === 'objective') {
+              const rules = this.game.s?.rules;
+              if (rules?.kind === 'single-player' && rules.mission.id === 'king-of-the-hill')
+                this.center(rules.mission.zone.x, rules.mission.zone.z);
+            } else if (this.game.s)
               this.game.s!.cam.zoom = clamp(
                 this.game.s!.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18),
                 27.2,

@@ -111,8 +111,9 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
   const { BATTLEFIELDS, battlefieldId } = vm.runInContext('({BATTLEFIELDS, battlefieldId})', context);
   assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'aurelion']);
   assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'AURELION']);
-  assert.deepEqual(Array.from(vm.runInContext('availableBattlefields()',context)), ['desert', 'alien-planet', 'mothership', 'westmark'],
-    'Aurelion remains opt-in until its mission and human map review are complete');
+  assert.deepEqual(Array.from(vm.runInContext('availableBattlefields()',context)), Object.keys(BATTLEFIELDS));
+  assert.deepEqual(Array.from(vm.runInContext("availableBattlefields('multiplayer')",context)), ['desert', 'alien-planet', 'mothership', 'westmark'],
+    'objective missions do not expand the multiplayer offering');
   for (const id of Object.keys(BATTLEFIELDS)) assert.equal(battlefieldId(id), id);
   for (const invalid of [undefined, null, 4, '', 'unknown', 'toString', '__proto__'])
     assert.equal(battlefieldId(invalid), 'desert');

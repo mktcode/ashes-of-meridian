@@ -128,8 +128,12 @@
         const mission = opts.mission === undefined ? DEFAULT_MISSION : opts.mission;
         if (typeof mission !== 'string' || !Object.hasOwn(MISSIONS, mission) || !MISSIONS[mission].maps.includes(battlefieldId(opts.map)))
           throw new Error('Unsupported mission/map combination');
-        const parties = singlePlayerParties(this.profile, opts);
-        return this.startBattle(opts, parties, { kind: 'single-player', mission: { id: mission } }, parties.slice(1).map(p => p.id));
+        const parties = singlePlayerParties(this.profile, opts), zone = BATTLEFIELDS[battlefieldId(opts.map)].layout.controlZone;
+        if (mission === 'king-of-the-hill' && !zone) throw new Error('Mission requires a control zone');
+        const state: MissionState = mission === 'king-of-the-hill'
+          ? { id: mission, zone: { ...zone! }, counts: parties.map(() => 0), leader: null, controlledSince: null, heldSeconds: 0 }
+          : { id: mission };
+        return this.startBattle(opts, parties, { kind: 'single-player', mission: state }, parties.slice(1).map(p => p.id));
       },
       startScenario(this: MeridianGame, opts: ScenarioOptions) {
         const { parties, rules, aiTeams } = scenarioSetup(opts);
@@ -215,7 +219,9 @@
         // CPU scenarios must never enter the expedition UI or pay out profile rewards.
         if (rules.kind === 'scenario') return s;
         this.emit('start', {});
-        this.emit('radio', startingWorkers
+        this.emit('radio', rules.mission.id === 'king-of-the-hill'
+          ? 'Expedition command|Build your economy, then move troops inside the marked inner ring. Every unit counts; keep the lead without interruption.'
+          : startingWorkers
           ? 'Expedition command|Your starting workers will harvest Cinder automatically. Expand your economy, then outlast every opposing party.'
           : 'Expedition command|Recruit your first two workers from Infantry to establish your economy, then outlast every opposing party.');
         return s;

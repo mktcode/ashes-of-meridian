@@ -66,7 +66,7 @@ test('effect provider follows mode and reset without retaining an earlier battle
   game.cosmeticRandom = () => { cosmetic++; return .5; };
   effects.mining({}, {}, 0, () => false);
   assert.deepEqual([main, cosmetic], [0, 1]);
-  game.s.rules = { kind: 'single-player' };
+  game.s.rules = { kind: 'single-player', mission: {id:'hq-elimination'} };
   effects.mining({}, {}, 0, () => false);
   assert.deepEqual([main, cosmetic], [1, 1]);
   game.s.rules = { kind: 'scenario', hostilities: [], duration: 1 };

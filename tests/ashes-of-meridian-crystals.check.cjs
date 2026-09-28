@@ -99,7 +99,8 @@ function separated(game) {
 
 test('all factions and maps retain 40 distinct accessible crystals in five-slot ellipses', () => {
   for (const faction of [0,1,2]) for (const [i, map] of Object.keys(BATTLEFIELDS).entries()) {
-    const game = fresh(); game.start({ seed: 12345 + i * 31, faction, enemies: [i % 3], map });
+    const game = fresh(); game.start({ seed: 12345 + i * 31, faction, enemies: [i % 3], map,
+      mission: map === 'aurelion' ? 'king-of-the-hill' : 'hq-elimination' });
     const nodes = crystals(game); assert.equal(nodes.length, 40); separated(game);
     assert.equal(game.s.entities.filter(e => e.type === 'gas').length, 8);
     for (let i = 0; i < 8; i++) {
