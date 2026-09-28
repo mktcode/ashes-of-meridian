@@ -812,6 +812,44 @@
           g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, size, size, g.RED, g.UNSIGNED_BYTE, data);
         }
       }
+      bindSceneProgram(time: number, modelTime: number, program = this.program) {
+        const g = this.gl, profile = this.battlefieldProfile, lighting = profile.lighting ?? DEFAULT_LIGHTING;
+        g.useProgram(program);
+        g.uniformMatrix4fv(this.uniform(program, 'u_vp'), false, this.vp);
+        g.uniformMatrix4fv(this.uniform(program, 'u_light'), false, this.lightVP);
+        g.uniform3fv(this.uniform(program, 'u_eye'), this.eye);
+        g.uniform3fv(this.uniform(program, 'u_haze'), this.haze as [number, number, number]);
+        g.uniform1f(this.uniform(program, 'u_extent'), this.extent);
+        g.uniform1ui(this.uniform(program, 'u_decorSeed'), this.decorSeed);
+        g.uniform3fv(this.uniform(program, 'u_sun'), lighting.sun as [number, number, number]);
+        g.uniform3fv(this.uniform(program, 'u_skyLight'), lighting.sky as [number, number, number]);
+        g.uniform3fv(this.uniform(program, 'u_bounce'), lighting.bounce as [number, number, number]);
+        g.uniform1f(this.uniform(program, 'u_shadowBias'), this.shadowBias);
+        g.uniform1f(this.uniform(program, 'u_groundPixelsPerMeter'), profile.groundPixelsPerMeter);
+        g.uniform1f(this.uniform(program, 'u_groundMirror'), profile.groundMirror ? 1 : 0);
+        g.uniform1f(this.uniform(program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
+        g.uniform4f(this.uniform(program, 'u_groundDecor'), profile.rockDecor.density,
+          profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
+        g.uniform1f(this.uniform(program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
+        g.uniform1f(this.uniform(program, 'u_fogOn'), this.fogOn ? 1 : 0);
+        g.uniform1f(this.uniform(program, 'u_time'), time);
+        g.uniform1f(this.uniform(program, 'u_portalTime'), this.quality > 0 && !this.cinema ? modelTime : 0);
+        for (const [uniform, texture, unit] of [
+          ['u_shadow', this.shadowTex, 0], ['u_fog', this.fogTex, 1],
+          ['u_groundTex', this[`${profile.groundTexture}Tex`], 2],
+          ['u_rockClustersTex', this.rockClustersTex, 3], ['u_desertShrubsTex', this.desertShrubsTex, 4],
+          ['u_metalTex', this.metalTex, 5], ['u_bioTex', this.bioTex, 6],
+          ['u_rockTex', this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`], 7],
+          ['u_earthTex', this[`${profile.landscape?.earth ?? 'ground'}Tex`], 8],
+          ['u_barkTex', this[`${profile.landscape?.bark ?? 'metal'}Tex`], 9],
+          ['u_foliageTex', this[`${profile.landscape?.foliage ?? 'bio'}Tex`], 10]
+        ] as const) {
+          g.activeTexture([g.TEXTURE0,g.TEXTURE1,g.TEXTURE2,g.TEXTURE3,g.TEXTURE4,g.TEXTURE5,
+            g.TEXTURE6,g.TEXTURE7,g.TEXTURE8,g.TEXTURE9,g.TEXTURE10][unit]);
+          g.bindTexture(g.TEXTURE_2D, texture);
+          g.uniform1i(this.uniform(program, uniform), unit);
+        }
+      }
       render(time: number, modelTime = time) {
         let g = this.gl;
         this.frame++;
@@ -858,60 +896,7 @@
         g.drawArrays(g.TRIANGLES, 0, 3);
         this.diagnostics?.draw(3);
         g.enable(g.DEPTH_TEST);
-        g.useProgram(this.program);
-        g.uniformMatrix4fv(this.uniform(this.program, 'u_vp'), false, this.vp);
-        g.uniformMatrix4fv(this.uniform(this.program, 'u_light'), false, this.lightVP);
-        g.uniform3fv(this.uniform(this.program, 'u_eye'), this.eye);
-        g.uniform3fv(this.uniform(this.program, 'u_haze'), this.haze as [number, number, number]);
-        g.uniform1f(this.uniform(this.program, 'u_extent'), this.extent);
-        g.uniform1ui(this.uniform(this.program, 'u_decorSeed'), this.decorSeed);
-        const profile = this.battlefieldProfile, lighting = profile.lighting ?? DEFAULT_LIGHTING;
-        g.uniform3fv(this.uniform(this.program, 'u_sun'), lighting.sun as [number, number, number]);
-        g.uniform3fv(this.uniform(this.program, 'u_skyLight'), lighting.sky as [number, number, number]);
-        g.uniform3fv(this.uniform(this.program, 'u_bounce'), lighting.bounce as [number, number, number]);
-        g.uniform1f(this.uniform(this.program, 'u_shadowBias'), this.shadowBias);
-        g.uniform1f(this.uniform(this.program, 'u_groundPixelsPerMeter'), profile.groundPixelsPerMeter);
-        g.uniform1f(this.uniform(this.program, 'u_groundMirror'), profile.groundMirror ? 1 : 0);
-        g.uniform1f(this.uniform(this.program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
-        g.uniform4f(this.uniform(this.program, 'u_groundDecor'), profile.rockDecor.density,
-          profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
-        g.uniform1f(this.uniform(this.program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
-        g.uniform1f(this.uniform(this.program, 'u_fogOn'), this.fogOn ? 1 : 0);
-        g.uniform1f(this.uniform(this.program, 'u_time'), time);
-        g.uniform1f(this.uniform(this.program, 'u_portalTime'), this.quality > 0 && !this.cinema ? modelTime : 0);
-        g.activeTexture(g.TEXTURE0);
-        g.bindTexture(g.TEXTURE_2D, this.shadowTex);
-        g.uniform1i(this.uniform(this.program, 'u_shadow'), 0);
-        g.activeTexture(g.TEXTURE1);
-        g.bindTexture(g.TEXTURE_2D, this.fogTex);
-        g.uniform1i(this.uniform(this.program, 'u_fog'), 1);
-        g.activeTexture(g.TEXTURE2);
-        g.bindTexture(g.TEXTURE_2D, this[`${profile.groundTexture}Tex`]);
-        g.uniform1i(this.uniform(this.program, 'u_groundTex'), 2);
-        g.activeTexture(g.TEXTURE3);
-        g.bindTexture(g.TEXTURE_2D, this.rockClustersTex);
-        g.uniform1i(this.uniform(this.program, 'u_rockClustersTex'), 3);
-        g.activeTexture(g.TEXTURE4);
-        g.bindTexture(g.TEXTURE_2D, this.desertShrubsTex);
-        g.uniform1i(this.uniform(this.program, 'u_desertShrubsTex'), 4);
-        g.activeTexture(g.TEXTURE5);
-        g.bindTexture(g.TEXTURE_2D, this.metalTex);
-        g.uniform1i(this.uniform(this.program, 'u_metalTex'), 5);
-        g.activeTexture(g.TEXTURE6);
-        g.bindTexture(g.TEXTURE_2D, this.bioTex);
-        g.uniform1i(this.uniform(this.program, 'u_bioTex'), 6);
-        g.activeTexture(g.TEXTURE7);
-        g.bindTexture(g.TEXTURE_2D, this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`]);
-        g.uniform1i(this.uniform(this.program, 'u_rockTex'), 7);
-        for (const [uniform, name, unit] of [
-          ['u_earthTex', profile.landscape?.earth ?? 'ground', 8],
-          ['u_barkTex', profile.landscape?.bark ?? 'metal', 9],
-          ['u_foliageTex', profile.landscape?.foliage ?? 'bio', 10]
-        ] as const) {
-          g.activeTexture(g.TEXTURE0 + unit);
-          g.bindTexture(g.TEXTURE_2D, this[`${name}Tex`]);
-          g.uniform1i(this.uniform(this.program, uniform), unit);
-        }
+        this.bindSceneProgram(time, modelTime);
         this.drawBatches(this.static, this.vp, ['alienLanternPool', 'westmarkWater']);
         this.drawBatches(this.dynamic);
         g.enable(g.BLEND);
