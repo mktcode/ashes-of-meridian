@@ -90,6 +90,30 @@ test('gameplay renderer routes city meshes separately from standard combat mater
   draws.length=0;r.battlefieldProfile={};r.drawBatches(map);assert.equal(draws.length,1,'normal maps do not split batches');
 });
 
+test('plaza fill lights only Aurelion combat materials, at every quality and without changing the city profile',()=>{
+  const c=loadScripts(['core',...RENDERER_SCRIPTS]),{Base,City,lighting}=vm.runInContext(
+    '({Base:MeridianRenderer,City:AurelionBattleRenderer,lighting:AURELION_ENTITY_LIGHTING})',c),writes=[];
+  const profile={scenery:'aurelion',lighting:{sun:[.42,.52,.72],sky:[.085,.12,.19],bounce:[.016,.025,.045]}},before=JSON.stringify(profile);
+  const r=Object.assign(Object.create(City.prototype),{
+    battlefieldProfile:profile,program:'city',standardPrograms:{program:'combat'},
+    uniform:(program,name)=>`${program}/${name}`,
+    gl:{uniform3fv:(location,value)=>writes.push([location,Array.from(value)])}
+  });
+  Base.prototype.bindSceneProgram=function(time,modelTime,program){
+    assert.equal(time,12);assert.equal(modelTime,4);writes.push(['base',program]);
+  };
+  for(const quality of [0,1,2]) {
+    r.quality=quality;writes.length=0;r.bindSceneProgram(12,4,'combat');
+    assert.deepEqual(writes,[['base','combat'],['combat/u_sun',Array.from(lighting.sun)],
+      ['combat/u_skyLight',Array.from(lighting.sky)],['combat/u_bounce',Array.from(lighting.bounce)]]);
+    writes.length=0;r.bindSceneProgram(12,4);
+    assert.deepEqual(writes,[['base','city']],'city keeps its own night lighting');
+  }
+  assert.equal(JSON.stringify(profile),before,'never mutate the shared map profile');
+  r.battlefieldProfile={};writes.length=0;r.bindSceneProgram(12,4,'combat');
+  assert.deepEqual(writes,[['base','combat']],'switching maps must not leak plaza fill');
+});
+
 test('all three precinct approaches connect without turning roofs or chasms into shortcuts',()=>{
   const w=new Battlefield(1409,'aurelion'),radius=UNITS.tank.size*UNIT_BODY_SCALE;
   for(const sx of [-1,1])for(const sz of [-1,1])for(const [a,b] of [

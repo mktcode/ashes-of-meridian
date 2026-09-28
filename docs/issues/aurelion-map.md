@@ -63,6 +63,7 @@ Die bereinigte Geometrie liegt bei rund 635.000 statischen Stadtdreiecken plus i
 
 ## Nächste Entscheidungen
 
+- [ ] Neue Beleuchtung der Spielmodelle menschlich beurteilen: Auf der hellen Plattform waren Gebäude und Einheiten zu dunkel. Der Spieladapter ergänzt nun kühles Fülllicht und warmes Deck-Reflexlicht ausschließlich für die normalen Modellmaterialien; Nachtstadt, Plattformbeleuchtung und Visualstudie bleiben unverändert. Build und 39 gezielte Karten-/Renderertests bestanden. Ein pausierter Chromium-Vorher/nachher-Vergleich derselben Basis über `file://` blieb ohne JS-/GL-Fehler oder Netzabrufe (`.tmp/alight/before.png`, `.tmp/alight/after.png`); kein Gefechtslauf oder Echtgeräte-Nachweis.
 - [ ] Die nicht sichtbare Rotation des dominanten Hologlobus-Liniengerüsts getrennt untersuchen; dazu [eigenes Issue](aurelion-hologlobus-rotation.md). Bis dahin nicht erneut auf Verdacht weitere Gitter überlagern.
 - [ ] Menschlich bestätigen, dass das Verkehrsnetz sichtbar fortschreitet und nicht mehr als vier kleine Rundkurse wirkt. Danach erst den nächsten Gestaltungsumfang festlegen.
 - [ ] Auf dem Zielgerät Bewegung/Bedienbarkeit und Qualität bewerten. Das hohe Studienbudget ist kein Freibrief für eine spätere Echtzeitkarte.

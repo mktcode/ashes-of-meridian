@@ -17,6 +17,13 @@ function createAurelionBattlefieldMeshes() {
 // Named scenery collections are generated once per world, not once per constituent mesh.
 const TerrainScenery = { aurelion: createAurelionBattlefieldMeshes };
 
+// Combat models do not receive the city shader's local deck illumination. Give
+// them cool plaza fill and a restrained warm deck bounce, not brighter emission.
+// Keep the city's night exposure, light direction and shadow passes unchanged.
+const AURELION_ENTITY_LIGHTING: BattlefieldLighting = {
+  sun:[.62,.70,.84],sky:[.43,.52,.64],bounce:[.30,.255,.22]
+};
+
 class AurelionBattleRenderer extends AurelionAtmosphereRenderer {
   private cityPrograms: Pick<MeridianRenderer,'program'|'skyProg'|'postProg'>;
   private flights=createAurelionFlights();
@@ -32,6 +39,12 @@ class AurelionBattleRenderer extends AurelionAtmosphereRenderer {
   override bindSceneProgram(time:number,modelTime:number,program=this.program) {
     this.scenePass=true;this.sceneTime=time;this.modelTime=modelTime;
     super.bindSceneProgram(time,modelTime,program);this.boundProgram=program;
+    if (this.battlefieldProfile.scenery==='aurelion' && program===this.standardPrograms!.program) {
+      const g=this.gl,lighting=AURELION_ENTITY_LIGHTING;
+      g.uniform3fv(this.uniform(program,'u_sun'),lighting.sun);
+      g.uniform3fv(this.uniform(program,'u_skyLight'),lighting.sky);
+      g.uniform3fv(this.uniform(program,'u_bounce'),lighting.bounce);
+    }
   }
   override drawBatches(map:RenderBatches,matrix?:Float32Array,excluded?:string|readonly string[],included?:string) {
     if (!this.scenePass || this.battlefieldProfile.scenery!=='aurelion') {
