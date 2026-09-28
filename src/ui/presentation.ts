@@ -4,7 +4,6 @@
       1: { hold: 5, travel: 1.25 }
     };
     const BATTLE_INTRO_OBJECTIVE_DELAY = 1;
-    const BATTLE_INTRO_OBJECTIVE = 'Expedition command|Destroy the enemy base to advance.';
     const uiPresentationMethods = {
       beginBattleIntro(this: MeridianUI) {
         this.battleIntro = null;
@@ -36,7 +35,7 @@
         intro.elapsed += Math.max(0, Number.isFinite(dt) ? dt : 0);
         if (!intro.objectiveShown && intro.elapsed >= BATTLE_INTRO_OBJECTIVE_DELAY) {
           intro.objectiveShown = true;
-          this.radio(BATTLE_INTRO_OBJECTIVE);
+          if (s.rules.kind === 'single-player') this.radio(MISSIONS[s.rules.mission.id].intro);
         }
         const progress = clamp((intro.elapsed - intro.hold) / intro.travel, 0, 1),
           eased = progress * progress * (3 - 2 * progress);

@@ -45,7 +45,7 @@
       },
       encounterBriefing(this: MeridianUI) {
         if (!this.expedition?.encounter) return '';
-        return `<div class="battle-note">${renderAbilityLoadout(this.expedition.abilities, this.profile)}${renderExpeditionOpponents(this.expedition)}</div>`;
+        return `<div class="battle-note">${renderMissionBriefing(this.expedition.encounter.mission)}${renderAbilityLoadout(this.expedition.abilities, this.profile)}${renderExpeditionOpponents(this.expedition)}</div>`;
       },
       showExpeditionBenefits(this: MeridianUI) {
         if (!this.expedition) return;
@@ -86,9 +86,10 @@
           faction <= this.unlockedFactionForDepth(this.profile.expeditionDepth);
       },
       createEncounter(this: MeridianUI, depth = 0, previousMap?: BattlefieldId): ExpeditionEncounter {
-        const maps = availableBattlefields(), alternatives = maps.filter(map => map !== previousMap),
+        const mission = DEFAULT_MISSION, maps = availableBattlefields().filter(map => MISSIONS[mission].maps.includes(map)), alternatives = maps.filter(map => map !== previousMap),
           mapPool = alternatives.length ? alternatives : maps;
         return {
+          mission,
           enemies: expeditionEnemyFactions(depth, Math.random),
           map: mapPool[Math.floor(Math.random() * mapPool.length)],
           seed: 1 + Math.floor(Math.random() * 99999999)
@@ -111,7 +112,7 @@
           this.toast('Select four command modules.'); return;
         }
         this.battleFaction = faction;
-        this.expedition = { version: 4, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
+        this.expedition = { version: 5, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
         this.persistence.saveExpedition(this.expedition);
         this.startExpeditionBattle();
       },
@@ -229,7 +230,8 @@
         if (this.view === 'game') this.paused = true;
         this.openModal(
           'help',
-          renderFieldManual(),
+          renderFieldManual(this.game.s?.rules.kind === 'single-player'
+            ? this.game.s.rules.mission.id : this.expedition?.encounter.mission ?? DEFAULT_MISSION),
           true
         );
       },

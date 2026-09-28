@@ -735,7 +735,7 @@ function appClock(diagnostic = false) {
     performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
     addEventListener() {}, ResizeObserver: class { observe() {} },
     console: { error: e => errors.push(e), warn() {} },
-    META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, UNITS: {}, BUILDINGS: {}, FACTIONS: {},
+    META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, MISSIONS: {}, UNITS: {}, BUILDINGS: {}, FACTIONS: {},
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
     MeridianRenderer: class {

@@ -125,8 +125,11 @@
         this.cosmeticRandom = seeded(seed ^ 0x4658524e);
       },
       start(this: MeridianGame, opts: BattleOptions = {}) {
+        const mission = opts.mission === undefined ? DEFAULT_MISSION : opts.mission;
+        if (typeof mission !== 'string' || !Object.hasOwn(MISSIONS, mission) || !MISSIONS[mission].maps.includes(battlefieldId(opts.map)))
+          throw new Error('Unsupported mission/map combination');
         const parties = singlePlayerParties(this.profile, opts);
-        return this.startBattle(opts, parties, { kind: 'single-player' }, parties.slice(1).map(p => p.id));
+        return this.startBattle(opts, parties, { kind: 'single-player', mission: { id: mission } }, parties.slice(1).map(p => p.id));
       },
       startScenario(this: MeridianGame, opts: ScenarioOptions) {
         const { parties, rules, aiTeams } = scenarioSetup(opts);

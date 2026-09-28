@@ -19,6 +19,25 @@ function battle(count = 4, scenario = false) {
   return { g, hqs, events };
 }
 
+test('explicit HQ mission and default starts share state and RNG; each start owns its mission state', () => {
+  const { g } = battle();
+  const options = { seed: 1409, map: 'desert', enemies: [1, 1, 1] };
+  const state = JSON.stringify(g.s), mission = g.s.rules.mission, next = g.random();
+  assert.equal(mission.id, 'hq-elimination');
+  g.start({ ...options, mission: 'hq-elimination' });
+  assert.equal(JSON.stringify(g.s), state);
+  assert.equal(g.random(), next);
+  assert.notStrictEqual(g.s.rules.mission, mission);
+  const current = g.s, world = g.world, math = vm.runInContext('Math', context), random = math.random;
+  math.random = () => { throw Error('Invalid mission must not draw RNG'); };
+  try {
+    for (const invalid of ['king-of-the-hill', 'toString', '', null, ['hq-elimination']]) {
+      assert.throws(() => g.start({ mission: invalid }), /Unsupported mission/);
+      assert.strictEqual(g.s, current); assert.strictEqual(g.world, world);
+    }
+  } finally { math.random = random; }
+});
+
 test('FFA hostility is symmetric for every party, even with identical factions; resources stay neutral', () => {
   const { g } = battle();
   for (const a of [-1, 0, 1, 2, 3]) for (const b of [-1, 0, 1, 2, 3])
@@ -143,6 +162,7 @@ test('opening factions are fixed and stage 4/8 entrants accumulate independent b
 
 test('HQ elimination and expedition results do not leak into internal/network scenarios', () => {
   const { g, hqs } = battle(4, true);
+  assert.equal('mission' in g.s.rules, false);
   hqs.forEach(h => { h.hp = 0; });
   g.checkBattleResult();
   assert.equal(g.s.result, null);

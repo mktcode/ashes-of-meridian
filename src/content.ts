@@ -651,6 +651,20 @@ const ICON_PATHS = {
 type IconType = keyof typeof ICON_PATHS;
 type FactionDefinition = (typeof FACTIONS)[FactionId];
 
+// Mission identity is independent of terrain. Experimental maps remain gated by
+// availableBattlefields(); this list also permits their isolated HQ playtests.
+const DEFAULT_MISSION: MissionId = 'hq-elimination';
+const MISSIONS: Readonly<Record<MissionId, MissionDefinition>> = Object.freeze({
+  'hq-elimination': Object.freeze({
+    name: 'HQ supremacy',
+    maps: Object.freeze(['desert', 'alien-planet', 'mothership', 'westmark', 'aurelion'] as const),
+    objective: 'Free-for-all: be the last party with an HQ. Losing the last HQ eliminates a party and removes its remaining forces. Protect yours.',
+    intro: 'Expedition command|Destroy the enemy base to advance.',
+    victory: 'You are the last remaining party.',
+    defeat: 'Your last command center has fallen.'
+  })
+});
+
 function contentKeys<T extends object>(catalog: T): Array<Extract<keyof T, string>> {
   return Object.keys(catalog) as Array<Extract<keyof T, string>>;
 }

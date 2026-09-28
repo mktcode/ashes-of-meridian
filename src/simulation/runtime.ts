@@ -177,6 +177,12 @@
       checkBattleResult(this: MeridianGame) {
         const s = this.s!;
         if (s.result || s.rules.kind === 'scenario') return;
+        switch (s.rules.mission.id) {
+          case 'hq-elimination': return this.checkHQElimination();
+        }
+      },
+      checkHQElimination(this: MeridianGame) {
+        const s = this.s!, mission = MISSIONS['hq-elimination'];
         // Resolve all HQ losses together; simultaneous player elimination is always a loss.
         const eliminated = s.parties.filter(p => !p.eliminated &&
           !this.alive(e => e.team === p.id && e.type === 'hq').length);
@@ -197,9 +203,9 @@
         }
         if (eliminated.length) this.world!.reveal(s.entities, s.scans);
         if (this.party(0).eliminated)
-          this.finish(false, 'Your last command center has fallen.');
+          this.finish(false, mission.defeat);
         else if (s.parties.every(p => p.id === 0 || p.eliminated))
-          this.finish(true, 'You are the last remaining party.');
+          this.finish(true, mission.victory);
       },
       abilityStats(this: MeridianGame, kind: AbilityType, team: PlayerTeam = 0): AbilityStats {
         return abilityStats(kind, this.party(team).meta[kind] || 0);

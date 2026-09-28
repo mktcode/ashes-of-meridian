@@ -163,14 +163,27 @@ interface MeridianProfile {
   settings: MeridianSettings;
 }
 
+type MissionId = 'hq-elimination';
+interface MissionDefinition {
+  readonly name: string;
+  readonly maps: readonly BattlefieldId[];
+  readonly objective: string;
+  readonly intro: string;
+  readonly victory: string;
+  readonly defeat: string;
+}
+// Fresh per battle; future objective progress belongs here, never in the checkpoint.
+type MissionState = { id: 'hq-elimination' };
+
 interface ExpeditionEncounter {
+  mission: MissionId;
   enemies: FactionId[];
   map: BattlefieldId;
   seed: number;
 }
 
 interface MeridianExpedition {
-  version: 4;
+  version: 5;
   faction: FactionId;
   abilities: AbilityType[];
   depth: number;
@@ -193,6 +206,7 @@ interface PersistenceDependencies {
   benefits: Record<string, { max?: number; name?: string }>;
   abilities: Record<string, unknown>;
   battlefields: Record<string, unknown>;
+  missions: Record<string, Pick<MissionDefinition, 'maps'>>;
   enemyCount(depth: number): number;
   warn(...values: unknown[]): void;
 }
@@ -382,6 +396,7 @@ type UnitBody = Pick<UnitEntity, 'type' | 'size'> & Partial<UnitEntity>;
 type UnitPlacement = UnitBody & Position;
 
 interface BattleOptions {
+  mission?: MissionId;
   depth?: number;
   faction?: number;
   enemies?: FactionId[];
@@ -404,7 +419,7 @@ interface ScenarioOptions {
   hostilities: boolean[][];
   duration: number;
 }
-type BattleRules = { kind: 'single-player' } |
+type BattleRules = { kind: 'single-player'; mission: MissionState } |
   { kind: 'scenario'; hostilities: boolean[][]; duration: number };
 
 interface RunStats {

@@ -4,11 +4,11 @@
 
 Expeditionen sollen außer dem heutigen **„als letzte Partei mit HQ übrig bleiben / letztes eigenes HQ verlieren“** weitere Sieg- und Niederlagebedingungen enthalten können. Der hier vorgeschlagene Pilot ist eine Tower-Defense-artige **Holdout-Mission** auf einer dafür entworfenen Karte: Basis und Wirtschaft aufbauen, das eigene Kommandozentrum gegen angekündigte Angriffswellen halten und nach Ablauf der Einsatzdauer gewinnen.
 
-Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spielregeln](../gameplay.md#gefecht-und-fortschritt) starten je nach Tiefe zwei bis vier FFA-Parteien mit wirtschaftenden Standard-KIs und prüfen Ausscheiden sowie Sieg anhand des letzten HQs. Der Expeditionscheckpoint speichert Karte, Seed, mehrere Gegnerfraktionen und getrennte Vorteilsstapel, aber keine Missions-ID oder laufende Welt; Briefing und Hilfetexte setzen den Standardangriff voraus. Eine Sonderabfrage anhand der Karten-ID würde diese Kopplung verschärfen. Zustands-, Parteien-, Karten- und RNG-Grenzen stehen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen).
+Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spielregeln](../gameplay.md#gefecht-und-fortschritt) starten je nach Tiefe zwei bis vier FFA-Parteien mit wirtschaftenden Standard-KIs und prüfen Ausscheiden sowie Sieg anhand des letzten HQs. Der allgemeine [Missionsvertrag](../architecture.md#einzelspieler-missionen) trennt inzwischen Missionskennung und Karte; der Checkpoint speichert weiterhin keine laufende Welt. Bisher ist nur die HQ-Standardmission implementiert, noch keine Wellenregie. Zustands-, Parteien-, Karten- und RNG-Grenzen stehen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen).
 
 Ein belastbarer erster Pilot benötigt mehrere getrennte Umsetzungspakete für Missionsvertrag, Wellenregie, Kartenrezept, UI und automatisierte Prüfungen, danach zusätzliche menschliche Spiel- und Balance-Runden. Ein deutlich kleinerer Prototyp mit normaler Basisbau-KI und bloßem Überlebenstimer wäre weniger umfangreich, aber noch keine echte Tower-Defense-Karte mit lesbaren Wellen und kontrollierter Dramaturgie.
 
-**Aktuelle Abhängigkeit:** Als erster konkreter Modus ist inzwischen [Aurelion / King of the Hill](aurelion-king-of-the-hill.md) mit eigenen Regeln und zwei menschlichen Haltepunkten beauftragt. Dessen Paket 2 bereitet den kleinen gemeinsamen Missionsvertrag vor. Holdout, Wellenregie und die folgenden Holdout-Produktentscheidungen sind dadurch nicht zur Umsetzung freigegeben.
+**Aktuelle Abhängigkeit:** Als erster konkreter Modus ist inzwischen [Aurelion / King of the Hill](aurelion-king-of-the-hill.md) mit eigenen Regeln und zwei menschlichen Haltepunkten beauftragt. Dessen Paket 2 hat den kleinen gemeinsamen Missionsvertrag technisch eingeführt und wartet auf menschliches Feedback. Holdout, Wellenregie und die folgenden Holdout-Produktentscheidungen sind dadurch nicht zur Umsetzung freigegeben.
 
 ## Produktentscheidungen vor der Umsetzung
 
@@ -22,11 +22,11 @@ Ein belastbarer erster Pilot benötigt mehrere getrennte Umsetzungspakete für M
 
 ## Technischer Zielvertrag
 
-Mission und Landschaft bleiben getrennte Begriffe. Das gespeicherte Encounter-Rezept erhält neben `map` eine stabile `mission`-ID; zulässige Kombinationen kommen aus einem kleinen Katalog. Die erste Holdout-Mission darf auf genau eine dedizierte Karte begrenzt sein, ohne dass die Simulation anhand des Kartennamens ihre Regeln errät.
+Holdout erweitert den bestehenden Missionsvertrag, statt eine Sonderabfrage anhand der Karte einzuführen. Die erste Holdout-Mission darf im Katalog auf genau eine dedizierte Karte begrenzt sein.
 
 - `BattleRules` bzw. ein eigener Einzelspieler-Missionszustand beschreibt Zielart und deterministischen Laufzeitzustand. Ergebnisprüfung delegiert an die Mission, statt Ausscheiden und Sieg ausschließlich aus den HQ-Beständen der heutigen FFA-Parteien abzuleiten.
 - Das Kartenrezept deklariert nur räumliche Anker wie Spielerstart, Wellenzugänge, Sammel-/Warnpositionen und zu schützende Bauflächen. Wellentakt, Sieg und Progression gehören nicht in Renderer oder Geländegenerator.
-- Der Encounter-Checkpoint speichert weiterhin kein laufendes Gefecht. `mission`, Karte, Gegner, Seed und nötige statische Parameter reichen aus, um denselben Start und dieselbe Wellenfolge wiederherzustellen. Wegen des geänderten Rezepts den Checkpoint bewusst auf eine neue Version heben; alte Runs werden gemäß Prototypregel verworfen, nicht migriert.
+- Der Encounter-Checkpoint speichert weiterhin kein laufendes Gefecht. `mission`, Karte, Gegner, Seed und nötige statische Parameter reichen aus, um denselben Start und dieselbe Wellenfolge wiederherzustellen. Falls zusätzliche statische Parameter das Rezept erweitern, den Checkpoint erneut versionieren; alte Runs werden gemäß Prototypregel verworfen, nicht migriert.
 - Der Wellenregisseur verwendet einen eigenen, aus Encounter-Seed und Mission abgeleiteten Zufallsstrom. Gelände-, Startplatz-, Kampf- und Effekt-RNG dürfen sich dadurch nicht verschieben. Anzeigen oder erneutes Öffnen des Briefings würfeln keine Welle neu.
 - Angreifer werden als reguläre Einheiten derselben Simulation erzeugt und benutzen bestehende Bewegung, Sicht und Kampfregeln. Missionsskripte verursachen keinen direkten unsichtbaren Schaden und umgehen keine Kollisions- oder Zielregeln.
 - Der Missionszustand enthält mindestens Phase, nächste Welle, verbleibende Zeit und deterministische Spawnplanung. UI liest diesen Zustand nur; sie entscheidet weder Sieg noch Spawnzeitpunkte.
@@ -36,12 +36,7 @@ Mission und Landschaft bleiben getrennte Begriffe. Das gespeicherte Encounter-Re
 
 ### 1. Missionsrahmen ohne Verhaltensänderung
 
-- [ ] Missionstypen und Katalog für zulässige Karten-/Missionskombinationen einführen; alle bisherigen Encounters explizit als Standardangriff erzeugen und normalisieren.
-- [ ] Die heutigen FFA-Ausscheidungs- und HQ-Siegregeln in eine Standardmission verschieben, dabei gleichzeitige Ausscheidungen, Vorrang des Spielerverlusts, Score, Nachhall-Auszahlung und genau einmalige Ergebnisverarbeitung unverändert erhalten.
-- [ ] Checkpointformat und Persistenztests auf das neue Encounter-Rezept umstellen. Reload startet weiterhin nur den gesicherten Gefechtsanfang.
-- [ ] Briefing, Ergebnisvorschau und Feldhandbuch aus Missionsmetadaten speisen, nicht mit Karten-ID- oder Text-Sonderfällen.
-
-**Zwischenabnahme:** Bestehende Expeditionen spielen sich seed- und RNG-identisch; alle vier heutigen Karten verwenden weiterhin ausschließlich den Standardangriff.
+Technisch durch Aurelion-Paket 2 umgesetzt; dessen [Haltepunkt und offene Abnahme](aurelion-king-of-the-hill.md#haltepunkt-nach-paket-2-allgemeiner-missionsvertrag) sind maßgeblich. Die vier regulären Karten verwenden weiterhin ausschließlich den Standardangriff. Holdout-spezifische HUD-, Wellen- und Briefingdaten folgen erst nach eigener Freigabe.
 
 ### 2. Deterministische Holdout-Simulation
 
