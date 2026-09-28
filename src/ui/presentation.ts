@@ -9,16 +9,16 @@
         this.battleIntro = null;
         const s = this.game.s;
         if (!s || s.rules?.kind !== 'single-player') return false;
-        const mission = s.rules.mission, hill = mission.id === 'king-of-the-hill',
-          timing = hill ? (this.profile.hillIntroComplete ? undefined : { hold: 10, travel: 1.5 })
+        const mission = s.rules.mission, salvage = mission.id === 'echo-salvage',
+          timing = salvage ? (this.profile.salvageIntroComplete ? undefined : { hold: 10, travel: 1.5 })
             : BATTLE_INTRO_BY_STAGE[s.depth + 1];
         if (!timing) return false;
         const home = this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && e.type === 'hq')[0],
-          enemy = !hill && this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
-        if (!home || (!hill && !enemy)) return false;
+          enemy = !salvage && this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
+        if (!home || (!salvage && !enemy)) return false;
         const limit = this.game.world!.extent - 18,
           cameraPoint = (e: Position) => ({ x: clamp(e.x + 4, -limit, limit), z: clamp(e.z - 2, -limit, limit) }),
-          focus = mission.id === 'king-of-the-hill' ? { x: mission.zone.x, z: mission.zone.z } : cameraPoint(enemy as Entity),
+          focus = mission.id === 'echo-salvage' ? { x: mission.site.x, z: mission.site.z } : cameraPoint(enemy as Entity),
           homeCamera = cameraPoint(home);
         this.battleIntro = {
           elapsed: 0,
@@ -49,8 +49,8 @@
         s.cam.z = intro.focus.z + (intro.home.z - intro.focus.z) * eased;
         if (intro.elapsed < intro.hold + intro.travel) return;
         const pendingRadio = intro.pendingRadio;
-        if (intro.mission === 'king-of-the-hill') {
-          this.profile.hillIntroComplete = true;
+        if (intro.mission === 'echo-salvage') {
+          this.profile.salvageIntroComplete = true;
           this.persist();
         }
         this.battleIntro = null;
@@ -63,27 +63,27 @@
       introObserves(this: MeridianUI, e: Entity) {
         return !!this.battleIntro?.visibleEntityIds.has(e.id);
       },
-      hillMission(this: MeridianUI): HillMissionState | null {
+      salvageMission(this: MeridianUI): SalvageMissionState | null {
         const rules = this.game.s?.rules;
-        return rules?.kind === 'single-player' && rules.mission.id === 'king-of-the-hill' ? rules.mission : null;
+        return rules?.kind === 'single-player' && rules.mission.id === 'echo-salvage' ? rules.mission : null;
       },
       updateMissionHUD(this: MeridianUI) {
-        const mission = this.hillMission(), el = $('missionObjective');
+        const mission = this.salvageMission(), el = $('missionObjective');
         el.classList.toggle('hidden', !mission);
         if (!mission) return;
         const label = (team: number) => team === this.localTeam ? 'YOU' : `OPP ${team}`,
-          status = mission.leader === null ? (mission.counts.some(n => n > 0) ? 'TIED · TIMER RESET' : 'EMPTY · TIMER RESET')
-            : `${label(mission.leader)} HOLDING · ${Math.floor(mission.heldSeconds)} / ${HILL_HOLD_SECONDS}s`;
-        el.textContent = `KING OF THE HILL\n${status}\n${mission.counts.map((n, team) => `${label(team)}: ${n}`).join(' · ')}`;
-        el.title = `${MISSIONS[mission.id].objective} Tap to center on the zone.`;
-        el.setAttribute('aria-label', `${el.textContent}. Tap to center on the zone.`);
+          cargo=this.game.alive(e=>e.team===this.localTeam && e.kind==='unit')
+            .reduce((n,e)=>n+((e as UnitEntity).salvageCarry || 0),0);
+        el.textContent = `ECHO SALVAGE · FIRST TO ${SALVAGE_RULES.goal}\n${mission.delivered.map((n, team) => `${label(team)}: ${Math.floor(n)}`).join(' · ')}\nYOUR CARGO: ${Math.floor(cargo)} · DELIVER TO HQ`;
+        el.title = `${MISSIONS[mission.id].objective} Tap to center on the core.`;
+        el.setAttribute('aria-label', `${el.textContent}. Tap to center on the core.`);
       },
       drawMissionZone(this: MeridianUI, ctx: CanvasRenderingContext2D) {
-        const mission = this.hillMission();
+        const mission = this.salvageMission();
         if (!mission) return;
-        const { x, z, radius } = mission.zone;
+        const { x, z, radius } = mission.site;
         ctx.save();
-        ctx.strokeStyle = mission.leader === null ? '#efc990' : mission.leader === this.localTeam ? '#79dbcc' : '#eb8e80';
+        ctx.strokeStyle = '#79dbcc';
         ctx.lineWidth = 2;
         ctx.beginPath();
         let connected = false;
@@ -94,7 +94,19 @@
           if (connected) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
           connected = true;
         }
-        ctx.stroke(); ctx.restore();
+        ctx.stroke();
+        // Extraction is presentation-only: no effect RNG, no new vision or invisible enemy jobs.
+        const workers=this.game.alive(e=>e.kind==='unit' && e.type==='worker' && this.game.observed(e)) as UnitEntity[];
+        for(const worker of workers) {
+          if(worker.order.type!=='salvage' || worker.returning || !worker.salvagePoint ||
+            distance(worker,worker.salvagePoint)>.8 || (worker.salvageCarry || 0)>=SALVAGE_RULES.load) continue;
+          const d=distance(worker,mission.site),a=this.R.project(worker.x,1.4+(this.game.world?.surface?.heightAt(worker.x,worker.z) ?? 0),worker.z),
+            b=this.R.project(x+(worker.x-x)*14.5/d,4.5,z+(worker.z-z)*14.5/d);
+          if(!a || !b) continue;
+          ctx.strokeStyle='#a4e9ed';ctx.lineWidth=1.3;
+          ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+        }
+        ctx.restore();
       },
       tick(this: MeridianUI, dt: number) {
         this.advanceBattleIntro(dt);
@@ -185,12 +197,12 @@
             ctx.fill();
           }
         }
-        const mission = this.hillMission();
+        const mission = this.salvageMission();
         if (mission) {
-          const p = map(mission.zone);
-          ctx.strokeStyle = mission.leader === null ? '#efc990' : mission.leader === this.localTeam ? '#79dbcc' : '#eb8e80';
+          const p = map(mission.site);
+          ctx.strokeStyle = '#79dbcc';
           ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(p.x, p.y, mission.zone.radius * w / span, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(p.x, p.y, mission.site.radius * w / span, 0, Math.PI * 2); ctx.stroke();
         }
         ctx.strokeStyle = '#e3ffff';
         ctx.lineWidth = 1.5;

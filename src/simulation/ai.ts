@@ -52,7 +52,7 @@ const aiMethods = {
     if (changed.length) this.executeAction(team, {kind:'order',ids:changed.map(e=>e.id),
       order:{type:attack?'attackMove':'move',x:p.x,z:p.z}},false);
   },
-  aiBuild(this: MeridianGame, team: PlayerTeam, type: BuildingType, home: BuildingEntity) {
+  aiBuild(this: MeridianGame, team: PlayerTeam, type: BuildingType, home: Position) {
     const s=this.s!, ai=this.aiFor(team)!;
     if ((s.time < ai.nextBuild && ai.buildWindowAt !== s.time) || ai.buildAttempts[type] === s.time ||
       this.canBuild(type,null,team) || !this.afford(this.cost(type,'building',team),team)) return false;
@@ -91,7 +91,8 @@ const aiMethods = {
       queued=(type:UnitType)=>buildings.reduce((n,b)=>n+b.queue.filter(q=>q.type===type).length,0),
       desired=rules.workers+(count('factory')?2:0)+(count('hangar')?2:0);
     if (workers.length+queued('worker') < desired && queued('worker')<2) this.executeAction(team,{kind:'train',unit:'worker'});
-    const free=this.availableWorkers(team);
+    const free=this.availableWorkers(team).sort((a,b)=>
+      Number(a.order.type==='salvage')-Number(b.order.type==='salvage'));
     for (const b of buildings.filter(b=>b.progress<1)) {
       if (!workers.some(w=>w.order.type==='build' && w.order.id===b.id) && free.length) {
         const w=free.shift()!;
@@ -212,12 +213,13 @@ const aiMethods = {
     ai.observation=undefined;
     ai.nextThink=s.time+Math.max(0,rules.think-rules.reactionDelay);
     const home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
-    if (s.rules.kind === 'single-player' && s.rules.mission.id === 'king-of-the-hill') {
-      const base = home || own.find(e => e.kind === 'building' && e.progress >= 1) as BuildingEntity | undefined;
-      const reserve = base ? this.aiEconomy(team, own, base) : 0;
-      this.aiProduction(team, own, visible, reserve);
-      this.aiHillStrategy(team, own, visible, base);
-      const anchor = base || own.find(e => e.kind === 'unit');
+    if (s.rules.kind === 'single-player' && s.rules.mission.id === 'echo-salvage') {
+      if(home) ai.salvageHome={x:home.x,z:home.z};
+      if(!home && ai.salvageHome && !own.some(e=>e.type==='hq')) this.aiBuild(team,'hq',ai.salvageHome);
+      const reserve = home ? this.aiEconomy(team, own, home) : this.cost('hq','building',team).cost;
+      if(home) this.aiProduction(team, own, visible, reserve);
+      this.aiSalvageStrategy(team, own, visible, home);
+      const anchor = home || own.find(e => e.kind === 'unit');
       if (anchor) this.aiAbilities(team, own, visible, anchor);
       return;
     }

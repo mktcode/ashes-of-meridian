@@ -36,7 +36,7 @@ test('Aurelion enters at stage four with equal map weight, normal party counts a
       vm.runInContext('Math',h.context).random=()=>{draws++;return (index+.5)/count;};
       const e=h.ui.createEncounter(depth);
       found.add(e.map);
-      assert.equal(e.mission,e.map==='aurelion'?'king-of-the-hill':'hq-elimination');
+      assert.equal(e.mission,e.map==='aurelion'?'echo-salvage':'hq-elimination');
       assert.equal(e.enemies.length,depth<3?1:depth<7?2:3);
       assert.equal(draws,(depth<3?0:e.enemies.length)+2,'no extra mission draw');
       assert.notEqual(h.ui.createEncounter(depth,e.map).map,e.map);
@@ -370,12 +370,12 @@ test('stage one holds simulation and controls while the camera introduces the en
   assert.deepEqual(modes, ['reset', 'silent', 'battle']);
 });
 
-test('first hill introduction focuses the zone without revealing an enemy; completion persists independently', () => {
+test('first salvage introduction focuses the core without revealing an enemy; completion persists independently', () => {
   const h=setup(), saved=[];
-  h.ui.profile.hillIntroComplete=false;
+  h.ui.profile.salvageIntroComplete=false;
   h.ui.persistence.saveProfile=p=>saved.push(JSON.parse(JSON.stringify(p)));
   h.ui.game.s.depth=3;
-  h.ui.game.s.rules={kind:'single-player',mission:{id:'king-of-the-hill',zone:{x:0,z:0,radius:20.5},counts:[0,0,0],leader:null,heldSeconds:0}};
+  h.ui.game.s.rules={kind:'single-player',mission:{id:'echo-salvage',site:{x:0,z:0,radius:20.5},delivered:[0,0,0]}};
   h.ui.game.s.entities=[{id:1,team:0,kind:'building',type:'hq',hp:100,x:-60,z:50},
     {id:2,team:1,kind:'building',type:'hq',hp:100,x:60,z:-50}];
   const explored=Array.from(h.ui.game.world.explored);
@@ -385,25 +385,25 @@ test('first hill introduction focuses the zone without revealing an enemy; compl
   assert.equal(h.ui.battleIntro.visibleEntityIds.size,0);
   assert.equal(saved.length,0);
   h.ui.advanceBattleIntro(10);
-  assert.equal(h.ui.profile.hillIntroComplete,false); assert.equal(h.ui.game.s.cam.x,0);
+  assert.equal(h.ui.profile.salvageIntroComplete,false); assert.equal(h.ui.game.s.cam.x,0);
   h.ui.advanceBattleIntro(1.5);
   assert.equal(h.ui.paused,false); assert.equal(h.ui.battleIntro,null);
-  assert.equal(h.ui.profile.hillIntroComplete,true); assert.equal(saved.length,1);
+  assert.equal(h.ui.profile.salvageIntroComplete,true); assert.equal(saved.length,1);
   assert.equal(saved[0].tutorialComplete,false);
   assert.equal(h.ui.game.s.time,0); assert.deepEqual(Array.from(h.ui.game.world.explored),explored);
-  assert.equal(h.ui.beginBattleIntro(),false,'later hills skip the first-visit intro');
+  assert.equal(h.ui.beginBattleIntro(),false,'later salvage missions skip the first-visit intro');
   h.ui.game.s.rules={kind:'single-player',mission:{id:'hq-elimination'}}; h.ui.game.s.depth=0;
   assert.equal(h.ui.beginBattleIntro(),true,'standard stage-one intro is independent');
 });
 
-test('an interrupted hill intro stays unseen, and its public marker/HUD never mutate the mission or fog', () => {
+test('an interrupted salvage intro stays unseen, and its public marker/HUD never mutate the mission or fog', () => {
   const h=setup(); h.ui.game.s.depth=3;
-  const mission={id:'king-of-the-hill',zone:{x:0,z:0,radius:20.5},counts:[2,3,1],leader:1,heldSeconds:12.5};
+  const mission={id:'echo-salvage',site:{x:0,z:0,radius:20.5},delivered:[20,30,10]};
   h.ui.game.s.rules={kind:'single-player',mission};
   h.ui.game.s.entities=[{id:1,team:0,kind:'building',type:'hq',hp:100,x:-60,z:50}];
   assert.equal(h.ui.beginBattleIntro(),true);
   h.ui.advanceBattleIntro(2); h.ui.battleIntro=null;
-  assert.notEqual(h.ui.profile.hillIntroComplete,true); assert.equal(h.ui.beginBattleIntro(),true);
+  assert.notEqual(h.ui.profile.salvageIntroComplete,true); assert.equal(h.ui.beginBattleIntro(),true);
   const before=JSON.stringify(h.ui.game.s), points=[];
   vm.runInContext('Math.random = seeded = () => { throw Error("UI RNG"); };',h.context);
   h.ui.R.project=(x,y,z)=>{points.push({x,z}); return {x,y:z};};
@@ -412,12 +412,25 @@ test('an interrupted hill intro stays unseen, and its public marker/HUD never mu
   h.ui.updateMissionHUD();
   const el=h.document.getElementById('missionObjective');
   assert.equal(el.classList.contains('hidden'),false);
-  assert.ok(el.textContent.includes('12 / 60s')); assert.ok(el.textContent.includes('OPP 1: 3'));
+  assert.ok(el.textContent.includes('FIRST TO 100')); assert.ok(el.textContent.includes('OPP 1: 30'));
   assert.equal(JSON.stringify(h.ui.game.s),before);
   h.ui.battleIntro=null; h.UI.prototype.bind.call(h.ui); h.clickCamera('objective');
   assert.equal(h.ui.game.s.cam.x,0); assert.equal(h.ui.game.s.cam.z,0);
   h.ui.game.s.rules={kind:'single-player',mission:{id:'hq-elimination'}};
   h.ui.updateMissionHUD(); assert.equal(el.classList.contains('hidden'),true);
+});
+
+test('mouse and touch commands at the core assign only selected own workers to salvage',()=>{
+  for(const [pointerType,button] of [['mouse',0],['mouse',2],['touch',0]]) {
+    const h=setup();h.UI.prototype.bind.call(h.ui);
+    h.ui.game.s.rules={kind:'single-player',mission:{id:'echo-salvage',site:{x:0,z:0,radius:20.5},delivered:[0,0]}};
+    h.ui.game.s.entities=[{id:1,kind:'unit',type:'worker',team:0,hp:100},{id:2,kind:'unit',type:'rifle',team:0,hp:100}];
+    h.ui.selected=[1,2];h.calls.length=0;
+    h.pointer('pointerdown',100,100,{pointerType,button});h.pointer('pointerup',100,100,{pointerType,button});
+    const commands=h.calls.filter(c=>c[0]==='command');assert.equal(commands.length,2);
+    assert.deepEqual(JSON.parse(JSON.stringify(commands[0])),['command',[1],{type:'salvage',x:0,z:0}]);
+    assert.equal(commands[1][2].type,'move');assert.deepEqual(Array.from(commands[1][1]),[2]);
+  }
 });
 
 test('later stages skip the stage-one camera introduction', () => {

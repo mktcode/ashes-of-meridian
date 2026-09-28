@@ -26,7 +26,7 @@ function createAurelionBackdrop() {
   }
   return {name:'aurelionBackdrop',data:new Float32Array(data)};
 }
-function createAurelionGeometry() {
+function createAurelionGeometry(salvage = false) {
   const solid: number[] = [], lights: number[] = [], screens: number[] = [],
     cube = geom.box(), cylinder = geom.cylinder(32), smallCylinder = geom.cylinder(12),
     random = seeded(0x41555245),
@@ -582,7 +582,8 @@ function createAurelionGeometry() {
     line(pt(a,43,-8),pt(b,41,-3.5),.4,.4,trim);
     box(Math.sin(a)*41,-1.4,Math.cos(a)*41,1.6,.4,.4,ice,a,lights);
   }
-  annulus(0,.23,0,24.7,1.6,0,warm,lights);
+  // In the playable salvage scene, keep this rim subordinate to the reactor facets.
+  annulus(0,.23,0,24.7,salvage ? .45 : 1.6,0,salvage ? 0x846d48 : warm,lights);
   annulus(0,.20,0,19,.30,0,dark);
   for (let i = 0; i < 16; i++) {
     const a = i*Math.PI/8;
@@ -599,7 +600,7 @@ function createAurelionGeometry() {
   }
   disc(0,1.7,0,14,3.2,dark);
   disc(0,3.5,0,12,1,steel);
-  annulus(0,4.1,0,11.9,.8,0,ice,lights);
+  annulus(0,4.1,0,11.9,salvage ? .3 : .8,0,salvage ? 0x487d89 : ice,lights);
   for (let i = 0; i < 12; i++) {
     const a = i*Math.PI/6, x = Math.sin(a)*13, z = Math.cos(a)*13;
     box(x,2.4,z,1.8,5,2.8,trim,a);
@@ -622,8 +623,10 @@ function createAurelionGeometry() {
       geom.tri(lights,a,b,c,tint); geom.tri(lights,a,c,d,tint);
     }
   }
-  for (let i = 0; i < 8; i++) globeRing(15,10,Math.PI/2,i*Math.PI/8);
-  for (let i = -4; i <= 4; i++) globeRing(15+i*2,Math.sqrt(100-i*i*4));
+  if (!salvage) {
+    for (let i = 0; i < 8; i++) globeRing(15,10,Math.PI/2,i*Math.PI/8);
+    for (let i = -4; i <= 4; i++) globeRing(15+i*2,Math.sqrt(100-i*i*4));
+  }
   // A recessed city foundation under the crown, not a second playable floor.
   tower(0,0,20,20,-6,1);
   for (const side of [-1,1]) {

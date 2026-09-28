@@ -75,34 +75,45 @@ const aiStrategyMethods = {
     ai.goal={x:e.x,z:e.z}; ai.squad=squad.map(u=>u.id);
     this.aiOrder(team,squad,ai.goal);
   },
-  aiHillStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home?: BuildingEntity) {
+  aiSalvageStrategy(this: MeridianGame, team: PlayerTeam, own: Entity[], visible: AIContact[], home?: BuildingEntity) {
     const rules = this.s!.rules;
-    if (rules.kind !== 'single-player' || rules.mission.id !== 'king-of-the-hill') return;
-    const zone = rules.mission.zone, ai = this.aiFor(team)!, world = this.world!,
-      hasHQ = own.some(e => e.type === 'hq'),
-      army = own.filter(e => e.kind === 'unit' && !e.exit && (e.type !== 'worker' || !hasHQ)) as UnitEntity[],
+    if (rules.kind !== 'single-player' || rules.mission.id !== 'echo-salvage') return;
+    const zone = rules.mission.site, ai = this.aiFor(team)!, world = this.world!,
+      workers = own.filter(e=>e.kind==='unit' && e.type==='worker' && !e.exit) as UnitEntity[],
+      available = workers.filter(e=>['idle','mine','salvage'].includes(this.get(e.id)?.order.type || '')),
+      salvagers = available.sort((a,b)=>(a.order.type==='salvage'?-1:0)-(b.order.type==='salvage'?-1:0)||a.id-b.id)
+        .slice(0,home ? Math.min(4,Math.max(0,Math.floor((workers.length-2)/2))) : 0),
+      army = own.filter(e => e.kind === 'unit' && !e.exit && e.type !== 'worker') as UnitEntity[];
+    for(const worker of salvagers) if(worker.order.type!=='salvage')
+      this.executeAction(team,{kind:'order',ids:[worker.id],order:{type:'salvage',x:zone.x,z:zone.z}},false);
+    // A small escort follows the most exposed observed carrier; the rest secures extraction.
+    const carrier=salvagers.filter(e=>(e.salvageCarry || 0)>0).sort((a,b)=>distance(b,zone)-distance(a,zone))[0],
+      escort=carrier ? army.slice(0,2) : [];
+    for(const unit of escort) if(unit.order.type!=='follow' || unit.order.id!==carrier!.id)
+      this.executeAction(team,{kind:'order',ids:[unit.id],order:{type:'follow',id:carrier!.id}},false);
+    const
       danger = home && visible.find(e => this.enemy({team}, e) && e.kind === 'unit' && distance(e, home) < 30),
-      guards = danger ? army.filter(e => e.type !== 'worker' && distance(e, home!) < 35).slice(0, 2) : [];
+      guards = danger ? army.filter(e => !escort.includes(e) && distance(e, home!) < 35).slice(0, 2) : [];
     // Local reserves may defend, but do not recall the occupying force to hunt HQs.
     if (danger) this.aiOrder(team, guards, danger);
-    const occupying = army.filter(e => !guards.includes(e)), reserved: (Position & { size: number; flying: boolean })[] = [];
+    const occupying = army.filter(e => !guards.includes(e) && !escort.includes(e)), reserved: (Position & { size: number; flying: boolean })[] = [];
     this.aiSetMode(team, occupying.length ? 'attack' : 'bootstrap');
     ai.squad = occupying.map(e => e.id); ai.goal = { x: zone.x, z: zone.z }; ai.attackProgress = undefined;
     for (const unit of occupying) {
       const flying = !!(UNITS[unit.type] as UnitDefinitionShape).flying;
-      if (distance(unit, zone) <= zone.radius) {
+      if (distance(unit, zone) <= zone.radius + 4) {
         if (unit.order.type !== 'hold') this.executeAction(team, {kind:'order', ids:[unit.id], order:{type:'hold'}}, false);
         reserved.push({...unit, flying});
         continue;
       }
       // Public terrain only, never live hidden occupants. Individual move orders avoid
-      // formation offsets and ranged units stopping to shoot outside the capture radius.
+      // formation offsets and ranged units stopping to shoot outside the extraction perimeter.
       const candidates = Array.from({length:32}, (_, i) => {
-        const angle = i * Math.PI / 16, radius = zone.radius - 1.25;
+        const angle = i * Math.PI / 16, radius = zone.radius + 2;
         const p = {x:zone.x + Math.cos(angle)*radius, z:zone.z + Math.sin(angle)*radius};
         // Ground targets must fit at the actual pathfinding cell center as well.
         return flying ? p : world.point(world.idx(p.x,p.z));
-      }).filter(p => distance(p,zone) < zone.radius - 1 &&
+      }).filter(p => distance(p,zone) < zone.radius + 4 &&
         (flying || (!world.staticGrid[world.idx(p.x,p.z)] && world.terrainFree(p,p,unit.size*UNIT_BODY_SCALE))))
         .sort((a,b) => distance(a,unit)-distance(b,unit));
       const target = candidates.find(p => reserved.every(other => other.flying !== flying ||

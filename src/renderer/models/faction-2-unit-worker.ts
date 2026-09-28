@@ -37,7 +37,7 @@
         p('box',s*.48,.45,-.13,.12,.05,.52,team,0,0,0,.5);
       }
       p('box',0,.86,-.486,.23,.075,.04,team,0,0,0,.65);
-      if((e.carry||0)>0) p('courtCustodianCargo',0,0,0,1,1,1,c(0xd8b474));
+      if((e.carry||0)>0 || (e.salvageCarry||0)>0) p('courtCustodianCargo',0,0,0,1,1,1,c((e.salvageCarry||0)>0?0x91e6eb:0xd8b474));
     }
   });
 })();

@@ -70,7 +70,7 @@
         p('choirTenderLeg',s*.25,.46,-.5+i*.4,1,1,1,dark,(s<0?Math.PI:0)+s*swing,0,lift);
       }
       for(const s of [-1,1]) p('octa',s*.2,.63,.91,.065,.055,.035,team,0,0,0,.5);
-      if((e.carry||0)>0) p('choirTenderCargo',0,0,0,1,1,1,c(0xdcb670));
+      if((e.carry||0)>0 || (e.salvageCarry||0)>0) p('choirTenderCargo',0,0,0,1,1,1,c((e.salvageCarry||0)>0?0x91e6eb:0xdcb670));
     }
   });
 })();

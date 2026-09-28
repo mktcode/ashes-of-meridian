@@ -386,7 +386,7 @@
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
           ui.expedition = { version: 5, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: aurelionExperiment ? 3 : 0,
             benefits: {pioneerSquad: 2}, enemyBenefits: aurelionExperiment ? [{pioneerSquad:2},{pioneerSquad:2}] : [{}],
-            encounter: {mission: aurelionExperiment ? 'king-of-the-hill' : DEFAULT_MISSION, map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : 'mothership', seed: 1409,
+            encounter: {mission: aurelionExperiment ? 'echo-salvage' : DEFAULT_MISSION, map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : 'mothership', seed: 1409,
               enemies: aurelionExperiment ? [1,2] : [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {

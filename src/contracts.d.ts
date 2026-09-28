@@ -93,7 +93,7 @@ interface BattlefieldLayout {
   enemySites: Position[];
   centralClearings: Position[];
   /** Public mission anchor, not a source of unit visibility. */
-  controlZone?: Position & { radius: number };
+  salvageSite?: Position & { radius: number };
   outerClearings: Position[];
   resourceSites: Position[];
   additionalClearings: Position[];
@@ -162,12 +162,12 @@ interface MeridianProfile {
   expeditionDepth: number;
   aether: number;
   tutorialComplete: boolean;
-  hillIntroComplete: boolean;
+  salvageIntroComplete: boolean;
   upgrades: Record<string, number>;
   settings: MeridianSettings;
 }
 
-type MissionId = 'hq-elimination' | 'king-of-the-hill';
+type MissionId = 'hq-elimination' | 'echo-salvage';
 interface MissionDefinition {
   readonly name: string;
   readonly maps: readonly BattlefieldId[];
@@ -179,15 +179,12 @@ interface MissionDefinition {
   readonly defeat: string;
 }
 // Fresh per battle; future objective progress belongs here, never in the checkpoint.
-interface HillMissionState {
-  id: 'king-of-the-hill';
-  zone: Position & { radius: number };
-  counts: number[];
-  leader: PlayerTeam | null;
-  controlledSince: number | null;
-  heldSeconds: number;
+interface SalvageMissionState {
+  id: 'echo-salvage';
+  site: Position & { radius: number };
+  delivered: number[];
 }
-type MissionState = { id: 'hq-elimination' } | HillMissionState;
+type MissionState = { id: 'hq-elimination' } | SalvageMissionState;
 
 interface ExpeditionEncounter {
   mission: MissionId;
@@ -292,7 +289,7 @@ interface QueueItem extends Cost {
 type UnitOrder =
   | { type: 'idle'; x?: number; z?: number }
   | { type: 'hold' | 'stop'; x?: number; z?: number }
-  | ({ type: 'move' | 'attackMove' | 'guard' } & Position)
+  | ({ type: 'move' | 'attackMove' | 'guard' | 'salvage' } & Position)
   | ({ type: 'attack' | 'build' } & Position & { id: number })
   | { type: 'mine' | 'follow' | 'repair'; id: number; x?: number; z?: number };
 
@@ -385,6 +382,9 @@ interface EntityBase extends Position {
 interface UnitEntity extends EntityBase {
   kind: 'unit';
   type: UnitType;
+  /** Mission cargo is never spendable Cinder/Echo. It stays aboard when orders change. */
+  salvageCarry?: number;
+  salvagePoint?: Position;
 }
 
 interface BuildingEntity extends EntityBase {
@@ -497,6 +497,7 @@ interface AIContact extends Position {
   areaVisible?: boolean;
 }
 interface AIState {
+  salvageHome?: Position;
   nextThink: number;
   observation?: { readyAt: number; own: Entity[]; visible: AIContact[] };
   attackProgress?: { targetId: number; distance: number; hp: number; at: number; startedAt: number };

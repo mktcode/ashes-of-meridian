@@ -29,7 +29,7 @@ function aurelionLayout(): BattlefieldLayout {
   return {
     startSites, playerStart:startSites[0], enemySites:startSites.slice(1),
     centralClearings:[{x:0,z:0}], outerClearings:[], additionalClearings:[],
-    controlZone:{x:0,z:0,radius:AURELION_CROWN_FLOOR.radius/2},
+    salvageSite:{x:0,z:0,radius:AURELION_CROWN_FLOOR.radius/2},
     // Two deposits per precinct, clear of HQs, service roofs and all three approaches.
     // Vents retain the common recipe's positive x/z offsets, including slot zero's +5/+18.
     resourceSites:[{x:-126,z:91},{x:126,z:-91},{x:-126,z:-91},{x:126,z:91},
@@ -65,7 +65,7 @@ function aurelionFloor(x: number,z: number) {
 function aurelionWalkable(x: number,z: number) {
   x=Math.abs(x);z=Math.abs(z);
   if (AURELION_DECK_BUILDINGS.some(b=>Math.abs(x-b.x)<=b.width/2+1 && Math.abs(z-b.z)<=b.depth/2+1)) return false;
-  // The hologlobe's real plinth and supports remain solid, not a walk-through objective.
+  // The reactor's plinth and supports remain solid, not a walk-through objective.
   const radius=Math.hypot(x,z);
   if (radius<16) return false;
   // Rendered raised lamps retain matching physical footprints.

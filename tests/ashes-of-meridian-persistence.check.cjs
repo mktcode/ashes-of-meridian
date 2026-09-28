@@ -5,7 +5,7 @@ const { loadScripts } = require('./helpers/game-scripts.cjs');
 const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v5';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
-  version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, hillIntroComplete: false, upgrades: {},
+  version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, salvageIntroComplete: false, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false }
 };
 const benefitRules = {
@@ -64,21 +64,21 @@ test('tutorial completion persists only as an explicit boolean', () => {
   }
 });
 
-test('hill introduction completion is independent, strictly boolean and survives recreation', () => {
+test('salvage introduction completion is independent, strictly boolean and survives recreation', () => {
   const h = setup();
   for (const value of [true, false, 1, 'true', null, {}, []]) {
-    h.data.set(PROFILE, JSON.stringify({...defaults, hillIntroComplete:value}));
+    h.data.set(PROFILE, JSON.stringify({...defaults, salvageIntroComplete:value}));
     const restored = setup(h.data).service.loadProfile();
-    assert.equal(restored.hillIntroComplete, value === true);
+    assert.equal(restored.salvageIntroComplete, value === true);
     assert.equal(restored.tutorialComplete, false);
   }
 });
 
-test('hill checkpoint restores only the recipe, never running progress, and rejects mismatched maps', () => {
-  const h = setup(), checkpoint = {...expedition, encounter:{...expedition.encounter, mission:'king-of-the-hill', map:'aurelion'}};
-  h.service.saveExpedition({...checkpoint, encounter:{...checkpoint.encounter, heldSeconds:59, leader:0}});
+test('salvage checkpoint restores only the recipe, never running progress, and rejects mismatched maps', () => {
+  const h = setup(), checkpoint = {...expedition, encounter:{...expedition.encounter, mission:'echo-salvage', map:'aurelion'}};
+  h.service.saveExpedition({...checkpoint, encounter:{...checkpoint.encounter, delivered:[90,10,0], salvageCarry:10}});
   assert.deepEqual(json(setup(h.data).service.loadExpedition()), checkpoint);
-  for (const encounter of [{...checkpoint.encounter, map:'desert'}, {...checkpoint.encounter, mission:'hq-elimination'}]) {
+  for (const encounter of [{...checkpoint.encounter, map:'desert'}, {...checkpoint.encounter, mission:'hq-elimination'}, {...checkpoint.encounter, mission:'king-of-the-hill'}]) {
     h.service.saveExpedition({...checkpoint, encounter});
     assert.equal(h.service.loadExpedition(), null);
   }

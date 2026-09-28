@@ -653,7 +653,7 @@ type FactionDefinition = (typeof FACTIONS)[FactionId];
 
 // Mission identity is independent of terrain; selection draws once from eligible pairs.
 const DEFAULT_MISSION: MissionId = 'hq-elimination';
-const HILL_HOLD_SECONDS = 60;
+const SALVAGE_RULES = Object.freeze({ goal:100, load:10, rate:2 });
 const MISSIONS: Readonly<Record<MissionId, MissionDefinition>> = Object.freeze({
   'hq-elimination': Object.freeze({
     name: 'HQ supremacy',
@@ -664,15 +664,15 @@ const MISSIONS: Readonly<Record<MissionId, MissionDefinition>> = Object.freeze({
     victory: 'You are the last remaining party.',
     defeat: 'Your last command center has fallen.'
   }),
-  'king-of-the-hill': Object.freeze({
-    name: 'King of the Hill',
-    briefing: `Hold the marked inner zone with the most units for ${HILL_HOLD_SECONDS} uninterrupted seconds. Ties reset progress; HQ loss alone does not eliminate a party.`,
+  'echo-salvage': Object.freeze({
+    name: 'Echo salvage',
+    briefing: `Send workers to the shattered alien core. Deliver ${SALVAGE_RULES.goal} fragments to your HQ first; protect the return route.`,
     maps: Object.freeze(['aurelion'] as const),
     firstStage: 4,
-    objective: `Hold the inner zone around the hologlobe for ${HILL_HOLD_SECONDS} uninterrupted simulation seconds with more units than each other party. All living units count equally, including workers, commanders and aircraft; buildings do not. Ties, an empty zone or losing the lead reset progress. Losing your HQ alone does not eliminate you: only losing all units and buildings does. Defeat all opponents to win immediately. If everyone is wiped out together, you lose. Zone counts and control progress are public; enemy positions still require vision.`,
-    intro: `Expedition command|Secure the marked inner zone around the hologlobe. Lead in unit count for ${HILL_HOLD_SECONDS} uninterrupted seconds. A tie or loss of control resets the timer. Your HQ is not the objective.`,
-    victory: 'All opposing parties have been defeated.',
-    defeat: 'All your units and buildings have been lost.'
+    objective: `Select workers and tap the marked alien core to salvage fragments. Each carries up to ${SALVAGE_RULES.load} back to a completed own HQ; only delivery scores. First to ${SALVAGE_RULES.goal} wins. Destroyed workers lose their cargo. Fragments are mission points, not spendable Echo. Deliveries remain secured; there is no control timer. Losing all completed HQs AND all workers eliminates a party, even if combat units or other buildings remain. Defeat all opponents to win immediately. Simultaneous elimination or reaching the goal in the same tick as an opponent counts as a player defeat. Scores are public; enemy positions still require vision.`,
+    intro: `Expedition command|An unknown reactor lies fractured beneath the Crown. Send workers to recover its Echo fragments and escort them home. Deliver ${SALVAGE_RULES.goal} to your HQ before your rivals.`,
+    victory: 'All opposing salvage operations have been eliminated.',
+    defeat: 'No command center or worker remains to continue the operation.'
   })
 });
 

@@ -16,6 +16,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-model-kit',
   'battlefield-aurelion-layout',
   'renderer-aurelion-geometry',
+  'renderer-aurelion-relic',
   'renderer-heavy-mesh',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',

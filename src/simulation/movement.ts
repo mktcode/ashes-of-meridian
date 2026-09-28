@@ -48,7 +48,7 @@
           (!(UNITS[e.type] as UnitDefinitionShape).flying && this.world!.blockedAt(x, z))) return;
         for (const other of this.s!.entities) {
           if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team || other.exit ||
-            other.yieldTo || other.yieldUntil! > this.s!.time || !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
+            other.yieldTo || other.yieldUntil! > this.s!.time || !['idle', 'mine', 'salvage', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
             !!(UNITS[other.type] as UnitDefinitionShape).flying !== !!(UNITS[e.type] as UnitDefinitionShape).flying) continue;
           // Loaded workers get out first. Otherwise a stable ID priority prevents mutual pushing.
           const loaded = priority.type === 'worker' && (priority.returning || priority.carry >= 18),
@@ -267,6 +267,7 @@
       setOrder(this: MeridianGame, e: Entity, order: UnitOrder) {
         if (e.kind === 'building') return;
         e.order = { ...order };
+        if(e.kind==='unit') delete e.salvagePoint;
         e.target = null;
         e.path = [];
         e.pi = 0;

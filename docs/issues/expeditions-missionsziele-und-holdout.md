@@ -2,13 +2,13 @@
 
 ## Ziel und Aufwand
 
-Expeditionen sollen außer **HQ elimination** und **King of the Hill** weitere Sieg- und Niederlagebedingungen enthalten können. Der hier vorgeschlagene Pilot ist eine Tower-Defense-artige **Holdout-Mission** auf einer dafür entworfenen Karte: Basis und Wirtschaft aufbauen, das eigene Kommandozentrum gegen angekündigte Angriffswellen halten und nach Ablauf der Einsatzdauer gewinnen.
+Expeditionen sollen außer **HQ elimination** und **Echo salvage** weitere Sieg- und Niederlagebedingungen enthalten können. Der hier vorgeschlagene Pilot ist eine Tower-Defense-artige **Holdout-Mission** auf einer dafür entworfenen Karte: Basis und Wirtschaft aufbauen, das eigene Kommandozentrum gegen angekündigte Angriffswellen halten und nach Ablauf der Einsatzdauer gewinnen.
 
-Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spielregeln](../gameplay.md#gefecht-und-fortschritt) starten je nach Tiefe zwei bis vier FFA-Parteien mit wirtschaftenden KIs und missionsabhängiger Ergebnisprüfung. Der allgemeine [Missionsvertrag](../architecture.md#einzelspieler-missionen) trennt inzwischen Missionskennung und Karte; der Checkpoint speichert weiterhin keine laufende Welt. HQ-Standardmission und King of the Hill sind implementiert, aber keine Wellenregie. Zustands-, Parteien-, Karten- und RNG-Grenzen stehen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen).
+Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spielregeln](../gameplay.md#gefecht-und-fortschritt) starten je nach Tiefe zwei bis vier FFA-Parteien mit wirtschaftenden KIs und missionsabhängiger Ergebnisprüfung. Der allgemeine [Missionsvertrag](../architecture.md#einzelspieler-missionen) trennt inzwischen Missionskennung und Karte; der Checkpoint speichert weiterhin keine laufende Welt. HQ-Standardmission und Echo-Bergung sind implementiert, aber keine Wellenregie. Zustands-, Parteien-, Karten- und RNG-Grenzen stehen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen).
 
 Ein belastbarer erster Pilot benötigt mehrere getrennte Umsetzungspakete für Missionsvertrag, Wellenregie, Kartenrezept, UI und automatisierte Prüfungen, danach zusätzliche menschliche Spiel- und Balance-Runden. Ein deutlich kleinerer Prototyp mit normaler Basisbau-KI und bloßem Überlebenstimer wäre weniger umfangreich, aber noch keine echte Tower-Defense-Karte mit lesbaren Wellen und kontrollierter Dramaturgie.
 
-**Freigabegrenze:** [Aurelion / King of the Hill](aurelion-king-of-the-hill.md) verwendet den gemeinsamen Missionsvertrag. Holdout, Wellenregie und die folgenden Holdout-Produktentscheidungen sind dadurch nicht zur Umsetzung freigegeben.
+**Freigabegrenze:** [Aurelion / Echo-Bergung](aurelion-echo-bergung.md) verwendet den gemeinsamen Missionsvertrag. Holdout, Wellenregie und die folgenden Holdout-Produktentscheidungen sind dadurch nicht zur Umsetzung freigegeben.
 
 ## Produktentscheidungen vor der Umsetzung
 

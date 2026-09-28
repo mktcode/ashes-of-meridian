@@ -1,16 +1,12 @@
 /* GPU-only city adapter. No gameplay entities or simulation RNG are created here. */
 'use strict';
 function createAurelionBattlefieldMeshes() {
-  const globe:number[]=[],halo:number[]=[];
-  ModelMesh.lobedShell(globe,{sx:1,sy:1,sz:1,lobes:4,depth:0,segments:64,rings:32});
-  geom.tri(halo,[-1,0,-1],[-1,0,1],[1,0,1]);geom.tri(halo,[-1,0,-1],[1,0,1],[1,0,-1]);
   return [
-    ...createAurelionGeometry().map(mesh=>({...mesh,static:true,
+    ...createAurelionGeometry(true).map(mesh=>({...mesh,static:true,
       material:mesh.name==='aurelionScreens'?AURELION_SCREEN_MATERIAL:MAT.METAL})),
     {...createAurelionBackdrop(),glow:0,static:true,material:AURELION_BACKDROP_MATERIAL},
     ...createAurelionAircraft().map(mesh=>({...mesh,static:false,material:MAT.METAL})),
-    {name:'aurelionHologram',data:new Float32Array(globe),glow:2,static:false,material:AURELION_HOLOGRAM_MATERIAL},
-    {name:'aurelionHalo',data:new Float32Array(halo),glow:1,static:false,material:AURELION_HALO_MATERIAL}
+    ...createAurelionRelic()
   ];
 }
 
@@ -50,7 +46,7 @@ class AurelionBattleRenderer extends AurelionAtmosphereRenderer {
     if (!this.scenePass || this.battlefieldProfile.scenery!=='aurelion') {
       super.drawBatches(map,matrix,excluded,included);return;
     }
-    // Static city, moving traffic and hologram use the city's shader. Combat models,
+    // Static city and moving traffic use the city's shader. The relic and combat models,
     // resources, selection rings and ability effects retain their normal materials/fog.
     const city:RenderBatches={},entities:RenderBatches={};
     for (const [key,bucket] of Object.entries(map))
@@ -68,8 +64,6 @@ class AurelionBattleRenderer extends AurelionAtmosphereRenderer {
     if (!city) {MeridianRenderer.prototype.render.call(this,time,modelTime);return;}
     // Use the already paused/scaled presentation clock, not a second simulation timer.
     drawAurelionFlights(this,this.flights,modelTime);
-    this.add('aurelionHalo',0,.42,0,24,1,24,0xffffff,0,0,0,1,.4,'effects',AURELION_HALO_MATERIAL);
-    this.add('aurelionHologram',0,15,0,10.08,10.08,10.08,0xffffff,modelTime*.06,.18,.08,2,.7,'effects',AURELION_HOLOGRAM_MATERIAL);
     super.render(time,modelTime);
   }
   override renderBloom() {
