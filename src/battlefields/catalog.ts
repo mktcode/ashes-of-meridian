@@ -4,10 +4,14 @@ const BATTLEFIELDS = {
   desert: DESERT_BATTLEFIELD,
   'alien-planet': ALIEN_PLANET_BATTLEFIELD,
   mothership: MOTHERSHIP_BATTLEFIELD,
-  westmark: WESTMARK_BATTLEFIELD
+  westmark: WESTMARK_BATTLEFIELD,
+  aurelion: AURELION_BATTLEFIELD
 } as const;
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';
+function availableBattlefields(): BattlefieldId[] {
+  return (Object.keys(BATTLEFIELDS) as BattlefieldId[]).filter(id=>!BATTLEFIELDS[id].experimental);
+}
 function battlefieldId(value: unknown): BattlefieldId {
   return typeof value === 'string' && Object.hasOwn(BATTLEFIELDS, value)
     ? value as BattlefieldId : DEFAULT_BATTLEFIELD;

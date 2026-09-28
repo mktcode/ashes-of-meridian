@@ -21,7 +21,8 @@
         }
         const heightExperiment = params.get('experiment') === 'height',
           westmarkExperiment = params.get('experiment') === 'westmark',
-          mapExperiment = heightExperiment || westmarkExperiment,
+          aurelionExperiment = params.get('experiment') === 'aurelion-playable',
+          mapExperiment = heightExperiment || westmarkExperiment || aurelionExperiment,
           visibleSimulation = !mapExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
@@ -37,7 +38,11 @@
           });
         const profile = persistence.loadProfile();
         if (profile.settings.showFps) $('fpsReadout').classList.remove('hidden');
-        R = new MeridianRenderer(canvas);
+        const cityRenderer = aurelionExperiment ? new AurelionBattleRenderer(canvas) : null;
+        R = cityRenderer || new MeridianRenderer(canvas);
+        if (cityRenderer) addEventListener('pagehide',event=>{
+          if (!event.persisted) cityRenderer.disposeAtmosphere();
+        });
         R.quality = profile.settings.quality;
         R.resize();
         audio = new MeridianAudio(profile.settings);
@@ -288,7 +293,7 @@
             // Keep simulation, UI clocks and network presentation on every rAF.
             // Retain the render phase on e.g. 90/144 Hz displays instead of
             // resetting to now + interval, which would systematically undershoot.
-            if (now + RENDER_TOLERANCE_MS < nextRender) {
+            if (now + RENDER_TOLERANCE_MS < nextRender || (cityRenderer && !cityRenderer.frameReady())) {
               diagnostics?.finishFrame(false);
               requestAnimationFrame(draw);
               return;
@@ -378,8 +383,10 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 4, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
-            encounter: {map: westmarkExperiment ? 'westmark' : 'mothership', seed: 1409, enemies: [2]}, offers: [] };
+          ui.expedition = { version: 4, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: aurelionExperiment ? 7 : 0,
+            benefits: {pioneerSquad: 2}, enemyBenefits: aurelionExperiment ? [{pioneerSquad:2},{pioneerSquad:2},{pioneerSquad:2}] : [{}],
+            encounter: {map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : 'mothership', seed: 1409,
+              enemies: aurelionExperiment ? [0,1,2] : [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {
           ui.showBattle();

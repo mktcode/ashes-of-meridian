@@ -1,4 +1,4 @@
-/* Preview-owned programs and depth resolve. The normal renderer and its shader sources stay untouched. */
+/* City-owned programs and depth resolve; the gameplay adapter retains the normal entity shaders. */
 'use strict';
 const AURELION_SCREEN_MATERIAL = -20, AURELION_HOLOGRAM_MATERIAL = -21,
   AURELION_HALO_MATERIAL = -22, AURELION_BACKDROP_MATERIAL = -23;
@@ -236,24 +236,32 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
   private cloudNoise: WebGLTexture;
   private advertising: WebGLTexture;
   private frameFence: WebGLSync | null = null;
-  constructor(canvas: HTMLCanvasElement) {
+  protected standardPrograms?: Pick<MeridianRenderer,'program'|'skyProg'|'postProg'>;
+  constructor(canvas: HTMLCanvasElement, gameplay = false) {
     super(canvas);
     const g=this.gl;
-    // This renderer never draws faction units or terrain; retain only the shared wake primitive.
-    for (const name of Object.keys(this.meshParts)) if (name!=='hex') this.releaseGeometry(name);
+    if (gameplay) this.standardPrograms={program:this.program,skyProg:this.skyProg,postProg:this.postProg};
+    // The isolated study needs no faction models. Gameplay keeps them and their material program.
+    else for (const name of Object.keys(this.meshParts)) if (name!=='hex') this.releaseGeometry(name);
     const replace = (key:'program'|'skyProg'|'postProg', vertex:string, fragment:string) => {
       const program=this.programOf(vertex,fragment),old=this[key];
       for (const p of [program,old]) for (const shader of g.getAttachedShaders(p)||[]) {g.detachShader(p,shader);g.deleteShader(shader);}
-      this[key]=program;g.deleteProgram(old);this.uniformCache.delete(old);
+      this[key]=program;
+      if (!gameplay) {g.deleteProgram(old);this.uniformCache.delete(old);}
     };
     const number = (n:number) => Number.isInteger(n)?`${n}.`:String(n);
-    const surface=AURELION_SURFACE_FRAGMENT
+    let surface=AURELION_SURFACE_FRAGMENT
       .replace('AURELION_AD_RECTS',AURELION_BILLBOARDS.map(b=>`vec4(${[b.x,b.y,b.w,b.h].map(number).join(',')})`).join(','))
       .replace('AURELION_AD_DEPTHS',AURELION_BILLBOARDS.map(b=>`vec2(${number(b.z)},${number(b.design)})`).join(','))
       .replace('AURELION_DECK_OUTLINE',AURELION_DECK_OUTLINE.map(p=>`vec2(${p.map(number).join(',')})`).join(','))
       .replace('AURELION_WALK_PATHS',AURELION_WALKWAYS.map(p=>`vec4(${p.slice(0,4).map(number).join(',')})`).join(','))
       .replace('AURELION_WALK_LEVELS',AURELION_WALKWAYS.map(p=>`vec3(${p.slice(4).map(number).join(',')})`).join(','))
       .replace('AURELION_CROWN_FLOOR',[AURELION_CROWN_FLOOR.radius,AURELION_CROWN_FLOOR.height].map(number).join(','));
+    if (gameplay) surface=surface.replace('void main(){','void cityMain(){')
+      .replace('float shadow(vec3 n){','uniform float u_shadowOn;\nfloat shadow(vec3 n){\n if(u_shadowOn<.5)return 1.;')+
+      `\nuniform sampler2D u_fog;uniform float u_fogOn;uniform float u_extent;
+      void main(){cityMain();float sight=texture(u_fog,clamp((v_pos.xz+u_extent)/(2.*u_extent),0.,1.)).r;
+      frag.rgb*=mix(1.,mix(.16,1.,sight),u_fogOn);}`;
     replace('program',VERT,surface);replace('skyProg',FULLV,AURELION_SKY_FRAGMENT);replace('postProg',FULLV,AURELION_POST_FRAGMENT);
     const noise=g.createTexture(),advertising=g.createTexture();
     if (!noise||!advertising) throw Error('Could not allocate Aurelion textures');
@@ -268,7 +276,7 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
     g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
     g.generateMipmap(g.TEXTURE_2D);
     g.activeTexture(g.TEXTURE0);
-    this.shadowSize=Math.min(3072,g.getParameter(g.MAX_TEXTURE_SIZE));this.setupShadow();
+    if (!gameplay) {this.shadowSize=Math.min(3072,g.getParameter(g.MAX_TEXTURE_SIZE));this.setupShadow();}
   }
   private prepareDepth() {
     const size=`${this.width}x${this.height}`;

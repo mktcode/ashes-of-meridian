@@ -157,13 +157,16 @@ test('map switches keep only current world meshes plus shared geometry, includin
   const h = geometryResidency(context), r = h.renderer, view = new BattlefieldView(r);
   // Real map descriptors/ownership and GPU lifecycle; expensive model geometry has separate coverage.
   TerrainModels.geometry = () => new Float32Array(27);
+  vm.runInContext(`TerrainScenery.aurelion=()=>['aurelionStructure','aurelionHologram','aurelionAir0'].map(name=>
+    ({name,data:new Float32Array(27),static:name==='aurelionStructure',glow:0,material:2}))`,context);
   r.add = () => {}; r.fog = () => {};
   r.geometry('sharedUnit', new Float32Array(27));
   const shared = r.meshes.sharedUnit;
   let firstDesertBytes;
-  for (const map of ['desert', 'westmark', 'mothership', 'alien-planet', 'desert']) {
+  for (const map of ['desert', 'westmark', 'aurelion', 'mothership', 'alien-planet', 'aurelion', 'desert']) {
     const world = new Battlefield(1409, map), before = JSON.stringify(world.renderData);
-    const expected = new Set(['sharedUnit', 'terrain', ...world.renderData.geometries.map(d => d.mesh)]);
+    const expected = new Set(['sharedUnit', ...(world.renderData.scenery
+      ? ['aurelionStructure','aurelionHologram','aurelionAir0'] : ['terrain']), ...world.renderData.geometries.map(d => d.mesh)]);
     view.sync(world, false);
     assert.deepEqual(new Set(Object.keys(r.meshParts)), expected, `${map}: no preceding map remains resident`);
     const parts = Object.values(r.meshParts).flat();

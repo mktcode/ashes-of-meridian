@@ -98,7 +98,9 @@ test('fragment groups completely mirror their index directories in document orde
   ];
   for (const [directory, expected] of groups) {
     const actual = scripts.filter(script => script.filename.startsWith(directory)).map(script => script.name);
-    assert.deepEqual(actual, expected, `${directory} fragments must all belong to their VM group`);
+    // Renderer group also loads the CPU-owned city footprints used by its deck-light shader.
+    const owned = directory === 'dist/src/renderer/' ? expected.filter(name=>!name.startsWith('battlefield-')) : expected;
+    assert.deepEqual(actual, owned, `${directory} fragments must all belong to their VM group`);
   }
 });
 
@@ -107,8 +109,10 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
   assert.deepEqual(scripts.filter(s => BATTLEFIELD_SCRIPTS.includes(s.name)).map(s => s.filename),
     BATTLEFIELD_SCRIPTS.map(name => `dist/src/battlefields/${name.replace('battlefield-', '')}.js`));
   const { BATTLEFIELDS, battlefieldId } = vm.runInContext('({BATTLEFIELDS, battlefieldId})', context);
-  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark']);
-  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK']);
+  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'aurelion']);
+  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'AURELION']);
+  assert.deepEqual(Array.from(vm.runInContext('availableBattlefields()',context)), ['desert', 'alien-planet', 'mothership', 'westmark'],
+    'Aurelion remains opt-in until its mission and human map review are complete');
   for (const id of Object.keys(BATTLEFIELDS)) assert.equal(battlefieldId(id), id);
   for (const invalid of [undefined, null, 4, '', 'unknown', 'toString', '__proto__'])
     assert.equal(battlefieldId(invalid), 'desert');
@@ -119,7 +123,8 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
 });
 
 test('renderer fragments expose the existing bindings and class API in document order', () => {
-  const expectedFiles = RENDERER_SCRIPTS.map(name => name.startsWith('model-')
+  const expectedFiles = RENDERER_SCRIPTS.map(name => name.startsWith('battlefield-')
+    ? `dist/src/battlefields/${name.replace('battlefield-', '')}.js` : name.startsWith('model-')
     ? `dist/src/renderer/models/${name.replace('model-', '')}.js`
     : `dist/src/renderer/${name.replace('renderer-', '')}.js`),
     scripts = readScripts(), context = loadScripts(RENDERER_SCRIPTS, { scripts });

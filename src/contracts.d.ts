@@ -105,6 +105,7 @@ interface BattlefieldLighting {
 }
 
 interface BattlefieldRenderProfile {
+  scenery?: 'aurelion';
   groundTexture: 'ground' | 'metal' | 'bio' | 'westmarkMeadow';
   skyTexture: 'sky';
   groundPixelsPerMeter: number;
@@ -130,6 +131,8 @@ interface BattlefieldSize {
 
 interface BattlefieldDefinition {
   name: string;
+  /** Opt-in map review; excluded from normal expedition and multiplayer selection. */
+  experimental?: boolean;
   size: BattlefieldSize;
   layout: BattlefieldLayout;
   /** Explicit start datum when decorative mountains exceed the base elevation. */
@@ -570,6 +573,7 @@ type WorldGeometry = (
   | { mesh: string; model: string; relief: WorldRelief }) & { grounded?: boolean };
 
 interface WorldRenderData {
+  scenery?: 'aurelion';
   features: WorldTerrainFeature[];
   groundColors: number[][];
   placements: WorldPlacement[];

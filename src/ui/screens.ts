@@ -86,7 +86,7 @@
           faction <= this.unlockedFactionForDepth(this.profile.expeditionDepth);
       },
       createEncounter(this: MeridianUI, depth = 0, previousMap?: BattlefieldId): ExpeditionEncounter {
-        const maps = contentKeys(BATTLEFIELDS), alternatives = maps.filter(map => map !== previousMap),
+        const maps = availableBattlefields(), alternatives = maps.filter(map => map !== previousMap),
           mapPool = alternatives.length ? alternatives : maps;
         return {
           enemies: expeditionEnemyFactions(depth, Math.random),

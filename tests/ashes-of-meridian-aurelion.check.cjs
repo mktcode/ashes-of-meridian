@@ -29,7 +29,7 @@ test('Aurelion visual time retains real elapsed motion under slow completed fram
 });
 
 test('Aurelion light footprints are convex and their shared walkways have valid height ranges', () => {
-  const context=loadScripts(['core','renderer-geometry','renderer-model-kit','renderer-aurelion-geometry']);
+  const context=loadScripts(['core','renderer-geometry','renderer-model-kit','battlefield-aurelion-layout','renderer-aurelion-geometry']);
   const {outline,walkways,crown,height}=vm.runInContext('({outline:AURELION_DECK_OUTLINE,walkways:AURELION_WALKWAYS,crown:AURELION_CROWN_FLOOR,height:AURELION_SECTOR_HEIGHT})',context);
   assert.ok(outline.length>=3);
   for (let i=0;i<outline.length;i++) {
@@ -50,7 +50,7 @@ test('Aurelion light footprints are convex and their shared walkways have valid 
 });
 
 test('Aurelion geometry preserves broad precincts, clear approaches, a closed plaza and sub-deck flight corridors', () => {
-  const context = loadScripts(['core','renderer-geometry','renderer-model-kit','renderer-aurelion-geometry','renderer-aurelion-traffic']);
+  const context = loadScripts(['core','renderer-geometry','renderer-model-kit','battlefield-aurelion-layout','renderer-aurelion-geometry','renderer-aurelion-traffic']);
   vm.runInContext('Math.random = () => { throw Error("ambient RNG used"); }', context);
   const meshes = vm.runInContext('createAurelionGeometry()', context);
   assert.equal(meshes.length, 3);

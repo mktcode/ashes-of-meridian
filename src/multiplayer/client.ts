@@ -101,7 +101,7 @@ class MeridianMultiplayerClient {
       ${stored ? '<div class="launch-row"><button class="primary" data-ui="networkResume">CONTINUE RECENT SESSION</button></div>' : ''}
       <div class="settings-row"><label for="netServer">Server address</label><input id="netServer" type="url" value="${esc(stored?.serverUrl ?? this.serverUrl)}" placeholder="wss://your-server.example"></div>
       <div class="settings-row"><label for="netFaction">Your faction</label><select id="netFaction">${FACTIONS.map((f,i) => `<option value="${i}">${esc(f.name)}</option>`).join('')}</select></div>
-      <div class="settings-row"><label for="netMap">Map (session creator)</label><select id="netMap">${contentKeys(BATTLEFIELDS).map(id => `<option value="${id}">${esc(BATTLEFIELDS[id].name)}</option>`).join('')}</select></div>
+      <div class="settings-row"><label for="netMap">Map (session creator)</label><select id="netMap">${availableBattlefields().map(id => `<option value="${id}">${esc(BATTLEFIELDS[id].name)}</option>`).join('')}</select></div>
       <div class="launch-row"><button id="netCreate" class="primary" data-ui="networkCreate">CREATE SESSION</button></div>
       <div class="settings-row"><label for="netCode">Session code</label><input id="netCode" maxlength="10" autocomplete="off" spellcheck="false" value="${esc(code)}" placeholder="Code from your friend"></div>
       <div class="launch-row"><button id="netJoin" class="primary" data-ui="networkJoin">JOIN SESSION</button><button class="secondary" data-ui="networkCopy">COPY CODE</button></div>

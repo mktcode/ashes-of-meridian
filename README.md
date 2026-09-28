@@ -23,9 +23,11 @@ Für einen isolierten Test startet `index.html?experiment=height` nach dem Build
 
 Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Der erste spielbare Stand verwendet die vorhandenen Vorlagenmaterialien; Texturen und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
 
-## Aurelion · Visualstudie
+## Aurelion · Kartenprobelauf und Visualstudie
 
-`index.html?experiment=aurelion` öffnet nach dem Build eine dreh- und zoombare nächtliche Stadtvorschau mit gezielt beleuchteten Plattformen, dunklen Tiefenwolken, leuchtenden Reklamen, langsam rotierendem Hologlobus und gegliedertem zivilem Flugverkehr ausschließlich unter den Decks. Noch keine spielbare Karte, keine Profilzugriffe. Die Gestaltung wird anhand der Bildvorlage abgestimmt; Spielintegration bleibt bis zur menschlichen Abnahme zurückgestellt. [Bedienung, Stand und nächster Haltepunkt](docs/issues/aurelion-map.md).
+`index.html?experiment=aurelion-playable` startet nach dem Build den isolierten Kartenprobelauf: vier FFA-Parteien mit je zwei Workern auf den erhöhten Stadtplattformen, Ressourcen und befahrbare Verbindungen zur zentralen Plaza. Profil und Expeditionscheckpoint bleiben flüchtig. **Noch gelten die bisherigen HQ-Siegregeln**, nicht King of the Hill. Aurelion bleibt bis zu den vereinbarten Zwischenabnahmen aus zufälligen Expeditionen und Multiplayer ausgeschlossen. [Umsetzung, Spielregeln und Haltepunkte](docs/issues/aurelion-king-of-the-hill.md).
+
+`index.html?experiment=aurelion` öffnet weiterhin die getrennte dreh- und zoombare Nacht-Visualstudie ohne Spielsimulation oder Profilzugriffe. [Bedienung und offene Darstellungsabnahme](docs/issues/aurelion-map.md).
 
 ## Multiplayer-Prototyp
 

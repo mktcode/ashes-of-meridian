@@ -1,15 +1,5 @@
-/* Aurelion architecture study. CPU-only scenery, deliberately not a playable battlefield. */
+/* Aurelion scenery, shared by the visual study and the playable city. */
 'use strict';
-const AURELION_SECTOR_HEIGHT = 8;
-// Shared scenery/light footprints, not a gameplay surface or navigation contract.
-const AURELION_DECK_OUTLINE = [[74,40],[143,40],[157,54],[157,124],[144,137],[61,137],[47,123],[47,67]] as const;
-const AURELION_CROWN_FLOOR = {radius:41,height:.15} as const;
-// ax, az, bx, bz, width, start height, end height. First four: mirrored approaches; last two: crossings.
-const AURELION_WALKWAYS = [
-  [112,40,112,18,22,AURELION_SECTOR_HEIGHT,2], [47,103,24,103,20,AURELION_SECTOR_HEIGHT,2],
-  [60.5,53.5,43,36,24,AURELION_SECTOR_HEIGHT,0], [43,36,25,19,15,0,0],
-  [112,-18,112,18,22,2,2], [-24,103,24,103,20,2,2]
-] as const;
 // Shared only by the preview's physical cabinets and its atlas projection; all faces point toward +Z.
 const AURELION_BILLBOARDS = [
   {x:-180,y:47,z:-91.8,w:22,h:48,design:0}, {x:182,y:64,z:-73.8,w:22,h:48,design:1},
