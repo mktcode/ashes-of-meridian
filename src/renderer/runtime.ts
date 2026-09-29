@@ -863,6 +863,7 @@
       bindAtmosphere(program: WebGLProgram) {
         const atmosphere = this.battlefieldProfile.atmosphere, g = this.gl;
         g.uniform1f(this.uniform(program, 'u_atmosphereOn'), atmosphere ? 1 : 0);
+        g.uniform1f(this.uniform(program, 'u_worldHeightScale'), this.battlefieldProfile.variation?.heightScale ?? 1);
         if (!atmosphere) return;
         g.uniform3fv(this.uniform(program, 'u_atmosphereHorizon'), atmosphere.horizon as [number, number, number]);
         g.uniform3fv(this.uniform(program, 'u_atmosphereZenith'), atmosphere.zenith as [number, number, number]);
@@ -873,6 +874,7 @@
           e ? ECOLOGY_WEATHER.indexOf(e.weather) : 0, e?.cover ?? 0, e?.phase ?? 0);
         g.uniform2f(this.uniform(program, 'u_wind'), e && this.quality > 0 && !this.cinema ? e.wind : 0, time);
         g.uniform1f(this.uniform(program, 'u_weatherTime'), this.quality > 0 ? time : 0);
+        g.uniform1f(this.uniform(program, 'u_habitatOn'), e && e.natural !== false ? 1 : 0);
         g.uniform3fv(this.uniform(program, 'u_haze'), this.haze as [number, number, number]);
         if (e) for (const [uniform, color] of [['u_biomeDry',e.dry],['u_biomeLush',e.lush],
           ['u_biomeSoil',e.soil],['u_biomeStone',e.stone]] as const)
@@ -1026,7 +1028,7 @@
         g.uniform1i(this.uniform(postProg, 'u_bloom'), 1);
         g.uniform1f(this.uniform(postProg, 'u_bloomOn'), this.quality > 0 && this.bloomTargets.length === 2 ? 1 : 0);
         g.uniform2f(this.uniform(postProg, 'u_size'), this.width, this.height);
-        g.uniform1f(this.uniform(postProg, 'u_time'), time);
+        g.uniform1f(this.uniform(postProg, 'u_time'), environment ? modelTime : time);
         g.uniform1f(this.uniform(postProg, 'u_quality'), this.quality);
         g.bindVertexArray(this.fullVao);
         g.drawArrays(g.TRIANGLES, 0, 3);

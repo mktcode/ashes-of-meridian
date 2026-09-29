@@ -5,7 +5,7 @@ const {createHash}=require('node:crypto');
 const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS}=require('./helpers/game-scripts.cjs');
 const {createRendererStub}=require('./helpers/renderer-stub.cjs');
 const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
-  'renderer-geometry','renderer-terrain-models','renderer-upland','renderer-ecology','effects-view','ui-core','ui-templates'],
+  'renderer-geometry','renderer-terrain-models','renderer-upland','renderer-ecology','renderer-world-variation','effects-view','ui-core','ui-templates'],
   {globals:{CONTACT_SHADOW_MATERIAL:-1}});
 const api=vm.runInContext(`({Battlefield,BATTLEFIELDS,battlefieldEcology,ecologyHabitat,ecologyFootprint,TerrainModels,
   MeridianGame,MeridianEffects,expeditionOpening,renderMissionBriefing,renderEcologyWeather,renderBattleScars,battleScarViews,
@@ -79,8 +79,8 @@ test('ecology clusters protect complete blocker envelopes, routes, resources and
         }
       }
     }
-    const crowns=(counts.Grove||0)+(counts.Acacia||0)+(counts.Conifer||0)+(counts.Fungus||0);
-    assert.ok(crowns>0&&crowns<=144);assert.equal(counts.Trunk,counts.Fungus?0:crowns);
+    const crowns=(counts.Grove||0)+(counts.Acacia||0)+(counts.Conifer||0)+(counts.Fungus||0)+(counts.Coral||0);
+    assert.ok(crowns>0&&crowns<=144);assert.equal(counts.Trunk,counts.Fungus||counts.Coral?0:crowns);
     assert.ok(counts.Tuft>0&&counts.Tuft<=650);
     assert.ok(counts.Stone<=84);assert.ok(counts.Relic+counts.Spire<=6);landmarks+=counts.Relic+counts.Spire;
     assert.equal(w.renderData.geometries.filter(g=>g.detail).length,3);

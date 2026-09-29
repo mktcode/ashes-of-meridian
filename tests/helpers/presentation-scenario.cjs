@@ -6,13 +6,20 @@ const { populateBase } = require('./populated-battle.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
-const { Battlefield, BattlefieldView, MeridianGame } = vm.runInContext('({Battlefield, BattlefieldView, MeridianGame})', context);
-
-function worldSample(seed, map) {
+const { Battlefield, BattlefieldView, MeridianGame, BATTLEFIELDS, DESERT_BATTLEFIELD } =
+  vm.runInContext('({Battlefield, BattlefieldView, MeridianGame, BATTLEFIELDS, DESERT_BATTLEFIELD})', context);
+// Historical ground/effect fixtures describe the uncomposed, flat playable recipe.
+// Keep those inputs exact; composed worlds are sampled separately, never normalized back.
+function originalDesert(run) {
+  const current=BATTLEFIELDS.desert;
+  try {BATTLEFIELDS.desert=DESERT_BATTLEFIELD;return run();}
+  finally {BATTLEFIELDS.desert=current;}
+}
+function worldSample(seed, map, uncomposed = false) {
   const renderer = createRendererStub({ record: true });
   let terrain;
   renderer.geometry = (name, data) => { if (name === 'terrain') terrain = digest(data); };
-  const world = new Battlefield(seed, map);
+  const world = uncomposed ? originalDesert(()=>new Battlefield(seed,map)) : new Battlefield(seed, map);
   new BattlefieldView(renderer).sync(world);
   const entities = [
     { kind: 'building', team: 0, x: -51, z: 49, size: 5, hp: 100 },
@@ -33,7 +40,7 @@ function worldSample(seed, map) {
 
 function effectSample(kind) {
   const game = new MeridianGame({ upgrades: {} });
-  game.start({ seed: 1409, map: 'desert', faction: 0 });
+  originalDesert(()=>game.start({ seed: 1409, map: 'desert', faction: 0 }));
   populateBase(game);
   // Fixed effect-test RNG entry point from presentation-v1, independent of battle loadout.
   game.random = vm.runInContext('seeded(1486)', context);

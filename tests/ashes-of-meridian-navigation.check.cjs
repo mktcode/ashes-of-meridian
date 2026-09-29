@@ -10,6 +10,10 @@ function arena() {
   const Game = vm.runInContext('MeridianGame', context), game = new Game({ upgrades: {} });
   game.start({ seed: 1409, map: 'alien-planet' });
   game.s.entities = []; game.ids.clear();
+  // This synthetic work-radius arena is deliberately level, not a random Alien hillside.
+  const Surface=vm.runInContext('BattlefieldSurface',context);
+  game.world.surface=new Surface(game.world.extent,game.world.cellSize,()=>0);
+  game.world.terrainFeatureGrid.fill(0);
   game.world.staticGrid.fill(0); game.world.rebuild([]); game.world.sight[0].explored.fill(1);
   return game;
 }

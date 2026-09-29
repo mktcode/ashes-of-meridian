@@ -33,17 +33,18 @@ function ecologyFootprint(world:Battlefield,x:number,z:number,r:number):boolean 
   return true;
 }
 function decorateEcology(builder:BattlefieldBuilder) {
-  const w=builder.world,style=w.renderProfile.ecology;if(!style)return;
+  const w=builder.world,style=w.renderProfile.ecology;if(!style||style.natural===false)return;
   const relief=w.renderData.geometries.find(d=>d.model==='desertRelief'&&'relief' in d&&!d.relief.innerExtent),
     skin=relief&&'relief' in relief?relief.relief:null,
     rand=builder.cosmeticRandom(0x48414249),height=(x:number,z:number)=>w.surface?.heightAt(x,z)??(skin?desertReliefHeight(skin,x,z):0),
-    family=style.biome==='mycelium'?'Fungus':style.biome==='rime'?'Conifer':style.biome==='ochre'?'Acacia':'Grove',
+    family=style.flora??(style.biome==='mycelium'?'Fungus':style.biome==='rime'?'Conifer':style.biome==='ochre'?'Acacia':'Grove'),
+    woody=family==='Grove'||family==='Acacia'||family==='Conifer',
     occupied:{x:number;z:number;r:number}[]=[],groundSites:Position[]=[],landmarks:Position[]=[];
   // Replace only this recipe's previous cosmetic families, never authored geometry.
   w.renderData.placements=w.renderData.placements.filter(p=>!p.mesh.startsWith('upland'));
   w.renderData.geometries=w.renderData.geometries.filter(p=>!p.mesh.startsWith('upland'));
   for(let variant=0;variant<3;variant++) {
-    for(const part of [...(family==='Fungus'?[]:['Trunk']),family,'Tuft','Relic','Spire'])w.renderData.geometries.push({
+    for(const part of [...(woody?['Trunk']:[]),...new Set([family,'Tuft','Relic','Spire'])])w.renderData.geometries.push({
       mesh:`ecology${part}${variant}`,model:`ecology${part}`,seed:193+variant*7919,
       extent:part==='Trunk'&&family==='Acacia'?1:0,detail:part==='Tuft'});
     w.renderData.geometries.push({mesh:`ecologyStone${variant}`,model:'uplandStone',seed:173+variant*7919,extent:0});
@@ -73,7 +74,7 @@ function decorateEcology(builder:BattlefieldBuilder) {
         hi=Math.max(y,height(x-r,z),height(x+r,z),height(x,z-r),height(x,z+r));
       if(trees<144&&habitat>.36&&hi-lo<4.8) {
         const h=5+habitat*5+rand()*2;
-        if(family!=='Fungus')place('Trunk',v,x,y-.35,z,r,h,0xb0a18c,yaw,'BARK');
+        if(woody)place('Trunk',v,x,y-.35,z,r,h,0xb0a18c,yaw,'BARK');
         place(family,v,x,y-.35,z,r,h,style.leaf,yaw,'LEAF',style.biome==='mycelium'?.18:0);
         occupied.push({x,z,r:r*.78});trees++;
       }else if(stones<84&&hi-lo<2.8) {

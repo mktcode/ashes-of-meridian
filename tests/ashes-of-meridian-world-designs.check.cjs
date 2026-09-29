@@ -53,8 +53,14 @@ test('named designs pin landscape and material settings, not encounter seeds or 
   assert.equal(a.seed,1);assert.equal(b.seed,7919);
   assert.equal(a.terrainSeed,40517);
   assert.equal(signature(a),signature(b));
-  // First named Frontier-v1 design: retain its topology when adding future recipes.
-  assert.equal(signature(a),'89873ccd25de7d66034ee1c1d5777e35de8d69e63034bce78462cfaed07a0712');
+  // The uncomposed first design remains reproducible; the active Haven now opts into relief/ecology.
+  const current=BATTLEFIELDS.haven;
+  try {
+    BATTLEFIELDS.haven=vm.runInContext('HAVEN_BATTLEFIELD',context);
+    const original=new Battlefield(1,'haven');
+    assert.equal(signature(original),'89873ccd25de7d66034ee1c1d5777e35de8d69e63034bce78462cfaed07a0712');
+    assert.notEqual(signature(a),signature(original));
+  }finally{BATTLEFIELDS.haven=current;}
   assert.deepEqual(json(a.renderData),json(b.renderData));
   assert.equal(a.renderProfile.atmosphere.timeOfDay,18.5);
   assert.equal(BATTLEFIELDS.haven.design.atmosphere.materialSeed,40517);

@@ -132,9 +132,12 @@ test('Westmark mesh descriptors use bounded finite geometry and CPU surface samp
       if(d.mesh==='westmarkSpruce')assert.ok(mesh[i+6]>=0&&mesh[i+6]<=1&&mesh[i+7]>=0&&mesh[i+7]<=1);
     }
   }
-  const triangles=w.renderData.placements.reduce((sum,p)=>sum+(counts[p.mesh]??100),0);
-  // Denser groves add up to two young trees per existing anchor, sharing the same meshes.
-  assert.ok(triangles<400000,`static world budget excluding shadow repetition: ${triangles}`);
+  const sum=placements=>placements.reduce((n,p)=>n+(counts[p.mesh]??100),0),
+    original=sum(w.renderData.placements.filter(p=>!p.mesh.startsWith('ecology'))),
+    ecology=sum(w.renderData.placements.filter(p=>p.mesh.startsWith('ecology')));
+  // Preserve the original grove budget and bound the newly composed opaque scenery separately.
+  assert.ok(original<400000,`original static world budget: ${original}`);
+  assert.ok(ecology<400000,`additional ecology budget: ${ecology}`);
   for(const b of plan.bridges) {
     const hit=w.surface.ray([b.x,50,b.z],[b.x,0,b.z]);
     assert.ok(hit&&Math.hypot(hit.x-b.x,hit.z-b.z)<1e-6,'picking selects the deck, not the river bed');

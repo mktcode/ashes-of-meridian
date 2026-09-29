@@ -121,6 +121,19 @@ interface BattlefieldDesign {
 
 type EcologyBiome = 'verdant' | 'ochre' | 'rime' | 'mycelium';
 type EcologyWeather = 'clear' | 'mist' | 'rain' | 'snow' | 'ash';
+type EcologyFlora = 'Grove' | 'Acacia' | 'Conifer' | 'Fungus' | 'Coral' | 'Fan' | 'Spire' | 'Pod' | 'Arch' | 'Reed' | 'Shelf' | 'Cactus' | 'Palm';
+type WorldVariationFamily = 'alien' | 'desert' | 'ship' | 'alpine' | 'city' | 'frontier' | 'haven';
+type WorldReliefForm = 'rolling' | 'dunes' | 'basin' | 'folds' | 'craters' | 'terraces' | 'deck';
+interface WorldVariation {
+  readonly id: string;
+  readonly name: string;
+  readonly family: WorldVariationFamily;
+  readonly relief: WorldReliefForm;
+  readonly amplitude: number;
+  readonly heightScale: number;
+  readonly flora: EcologyFlora;
+  readonly landmark: 'Relic' | 'Spire' | 'Radar' | 'Wreck' | 'Pylon';
+}
 interface BattlefieldEcology {
   biome: EcologyBiome;
   weather: EcologyWeather;
@@ -133,9 +146,14 @@ interface BattlefieldEcology {
   stone: readonly [number, number, number];
   leaf: number;
   bloom: number;
+  /** Artificial decks receive weather/material aging, not meadow habitat shading. */
+  natural?: boolean;
+  flora?: EcologyFlora;
 }
 
 interface BattlefieldRenderProfile {
+  variationFamily?: WorldVariationFamily;
+  variation?: WorldVariation;
   /** Opt-in seeded habitat/weather; resolved once into ecology for CPU/view sharing. */
   wilderness?: EcologyBiome | 'seeded';
   ecology?: BattlefieldEcology;
@@ -644,6 +662,8 @@ type WorldGeometry = (
 
 interface WorldRenderData {
   scenery?: 'aurelion';
+  /** Shared vertical scale for authored scenery and its CPU surface. */
+  heightScale?: number;
   features: WorldTerrainFeature[];
   groundColors: number[][];
   placements: WorldPlacement[];

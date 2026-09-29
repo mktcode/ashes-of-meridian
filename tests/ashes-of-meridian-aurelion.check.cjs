@@ -257,8 +257,8 @@ test('city depth targets are reused, replaced on resize and released on failed a
       checkFramebufferStatus:()=>failure==='incomplete'?0:1,getError:()=>failure==='resolve'?1282:0,
       blitFramebuffer:(...args)=>blits.push(args),getUniformLocation:()=>({})};
     for (const method of ['activeTexture','bindTexture','texImage2D','texParameteri','bindFramebuffer','framebufferTexture2D',
-        'drawBuffers','readBuffer','useProgram','uniform1i','uniform1f','uniformMatrix4fv','uniform3fv']) gl[method]=()=>{};
-    const r={gl,width:100,height:80,quality:1,uniform:()=>({}),uniformCache:new Map(),
+        'drawBuffers','readBuffer','useProgram','uniform1i','uniform1f','uniform2f','uniformMatrix4fv','uniform3fv']) gl[method]=()=>{};
+    const r={gl,width:100,height:80,quality:1,battlefieldProfile:{},uniform:()=>({}),uniformCache:new Map(),
       sceneFbo:{},sceneMSAAFbo:null,eye:[0,0,0],inverseVP:new Float32Array(16),lightVP:new Float32Array(16)};
     const renderer=Object.assign(Object.create(Atmosphere.prototype),{renderer:r,programs:[],postProg:{},
       depthSize:'',depthAvailable:false,depthVerified:false,cityDepth:null,cityDepthFbo:null});

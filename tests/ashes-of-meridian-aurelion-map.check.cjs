@@ -11,7 +11,7 @@ test('Aurelion has four buildable precincts with vehicle routes to the crown and
   const w=new Battlefield(1409,'aurelion',4),starts=battlefieldStartSites(w),radius=UNITS.tank.size*UNIT_BODY_SCALE;
   assert.equal(starts.length,4);assert.equal(w.layout.resourceSites.length,8);
   for(const a of starts) {
-    assert.equal(w.surface.heightAt(a.x,a.z),8);assert.ok(w.surface.foundation(a,7));
+    assert.equal(w.surface.heightAt(a.x,a.z),Math.fround(8*w.renderProfile.variation.heightScale));assert.ok(w.surface.foundation(a,7));
     assert.equal(w.surface.visibilityLevelAt(a.x,a.z),1);
     const crown={x:Math.sign(a.x)*22,z:Math.sign(a.z)*19}, inner={x:Math.sign(a.x)*19,z:Math.sign(a.z)*3};
     assert.ok(Math.hypot(inner.x,inner.z)<w.layout.salvageSite.radius);
@@ -41,7 +41,7 @@ test('city voids, roofs, plinth and rails stay impassable even with an empty tem
   }
   for(const road of AURELION_WALKWAYS)for(const t of [.2,.5,.8]) {
     const x=road[0]+(road[2]-road[0])*t,z=road[1]+(road[3]-road[1])*t;
-    assert.ok(Math.abs(w.surface.heightAt(x,z)-aurelionFloor(x,z))<.16,'sampled surface follows the visible ramp');
+    assert.ok(Math.abs(w.surface.heightAt(x,z)-aurelionFloor(x,z)*w.renderProfile.variation.heightScale)<.16,'sampled surface follows the visible ramp');
   }
 });
 
@@ -113,7 +113,7 @@ test('all three precinct approaches connect without turning roofs or chasms into
 
 test('navigable cells match actual city triangles, including ramp heights and retained roof collisions',()=>{
   const w=new Battlefield(1409,'aurelion'),render=loadScripts(['core',...RENDERER_SCRIPTS]),
-    meshes=vm.runInContext('createAurelionGeometry()',render),data=meshes.find(m=>m.name==='aurelionStructure').data,
+    meshes=vm.runInContext(`createAurelionBattlefieldMeshes(${w.renderData.heightScale})`,render),data=meshes.find(m=>m.name==='aurelionStructure').data,
     floors=new Float32Array(w.staticGrid.length).fill(-Infinity),tops=new Float32Array(w.staticGrid.length).fill(-Infinity);
   // Rasterize upward physical triangles at every navigation-cell center. Lights are not solids.
   for(let i=0;i<data.length;i+=27) {

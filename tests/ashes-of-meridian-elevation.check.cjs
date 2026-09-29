@@ -9,6 +9,7 @@ const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','ef
 const {Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity,
   battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect, modelFrameRotation} = vm.runInContext(
   '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect, modelFrameRotation})',context);
+const deckHeight=w=>Math.fround(6*w.renderProfile.variation.heightScale);
 function game() {
   const g = new MeridianGame({upgrades:{}}); g.start({seed:1409,map:'mothership'});
   g.s.parties.forEach(p=>p.controller={kind:'human'});
@@ -67,7 +68,7 @@ test('four high Mothership starts, flat initial economy and connected low centra
   const w = new Battlefield(1409,'mothership'), sites = battlefieldStartSites(w);
   assert.equal(w.surface.heightAt(0,0),0);
   for (const site of sites) {
-    assert.equal(w.surface.heightAt(site.x,site.z),6);
+    assert.equal(w.surface.heightAt(site.x,site.z),deckHeight(w));
     assert.ok(w.surface.foundation(site,7));
     const route = w.path(site.x,site.z,0,0,false,undefined,UNITS.tank.size*UNIT_BODY_SCALE);
     assert.equal(route.status,'complete',JSON.stringify(site));
@@ -83,7 +84,7 @@ test('four high Mothership starts, flat initial economy and connected low centra
     ventDistances=sites.map((site,i)=>{const n=homeIndices[i],p=w.layout.resourceSites[n];return distance(site,{x:p.x+(n?7:5),z:p.z+(n?7:18)});});
   assert.ok(Math.max(...homeDistances)-Math.min(...homeDistances)<2,'four starts have equivalent primary cargo distance');
   assert.ok(Math.max(...ventDistances)-Math.min(...ventDistances)<2,'four starts have equivalent primary vent distance');
-  assert.ok(Math.abs(w.surface.heightAt(72,36.5)-3)<1e-6);
+  assert.ok(Math.abs(w.surface.heightAt(72,36.5)-deckHeight(w)/2)<1e-6);
   assert.ok(w.terrainFree({x:72,z:10},{x:72,z:60},2));
   assert.equal(w.terrainFree({x:100,z:30},{x:100,z:65}),false);
   assert.equal(w.terrainFree({x:100,z:65},{x:100,z:30}),false);
@@ -112,8 +113,8 @@ test('ground step, yield and placement cannot tunnel across a cliff; aircraft ca
   assert.equal(w.z,30,'large dt must not tunnel');
   assert.equal(g.unitPosition({type:'worker',size:UNITS.worker.size,x:100,z:50}),null,'no teleport from a cliff into a nearby plateau');
   const height=g.world.surface;
-  assert.equal(height.entityHeight(air),6);
-  air.z=65;assert.equal(height.entityHeight(air),6,'fixed cruise height across a cliff');
+  assert.ok(Math.abs(height.entityHeight(air)-deckHeight(g.world))<1e-6);
+  air.z=65;assert.ok(Math.abs(height.entityHeight(air)-deckHeight(g.world))<1e-6,'fixed cruise height across a cliff');
 });
 
 test('worker crosses a ramp up and down using ordinary orders',()=>{
@@ -137,7 +138,7 @@ test('foundations reject slopes/cliff edges; legal plateau production exits rema
   assert.match(g.canBuild('hq',{x:100,z:-72.5}),/production exits/);
   const h=g.spawnBuilding('hq',72,65,0,0);g.world.rebuild(g.s.entities);
   const u=g.produceUnit(h,'worker');assert.ok(u?.exit);
-  assert.equal(g.world.surface.heightAt(u.exit.x,u.exit.z),6);
+  assert.equal(g.world.surface.heightAt(u.exit.x,u.exit.z),deckHeight(g.world));
   assert.ok(g.world.terrainFree(u,u.exit,u.size*UNIT_BODY_SCALE));
 });
 
@@ -158,12 +159,12 @@ test('CPU effect origins, targets, shell landing and particle floor include surf
     b={...a,x:0,z:0}; let draws=0;
   g.effects.random=()=>{draws++;return .5;};
   g.effects.shot(a,b);let f=g.effects.fx.at(-1);
-  assert.equal(f.y,7.45);assert.equal(f.ty,1);
-  g.effects.shell(b,a,.85);f=g.effects.fx.at(-1);assert.equal(f.endY,6);
+  assert.equal(f.y,deckHeight(g.world)+1.45);assert.equal(f.ty,1);
+  g.effects.shell(b,a,.85);f=g.effects.fx.at(-1);assert.equal(f.endY,deckHeight(g.world));
   assert.equal(draws,0);
   g.effects.explosion(72,65);const before=draws;
   const flat=new MeridianEffects(()=>.5);flat.explosion(72,65);
-  for(const [i,fx] of g.effects.fx.slice(2).entries()) if('y' in fx) assert.equal(fx.y-flat.fx[i].y,6);
+  for(const [i,fx] of g.effects.fx.slice(2).entries()) if('y' in fx) assert.ok(Math.abs(fx.y-flat.fx[i].y-deckHeight(g.world))<1e-6);
   g.effects.tick(.05);assert.equal(draws,before);
 });
 
@@ -192,7 +193,7 @@ test('network interpolated ground poses sample the ramp rather than a chord thro
   assert.equal(unit.z,21,'no mutation of authoritative entities');
 });
 
-test('rendered floor samples and models use the CPU surface in battle and menu cinema, and changing maps clears it',()=>{
+test('rendered floor samples and models use the CPU surface in battle and menu cinema, and map changes replace it',()=>{
   const w=new Battlefield(1409,'mothership'),r=createRendererStub({record:true}),meshes=new Map();
   r.geometry=(name,data)=>{meshes.set(name,data);};r.quality=0;
   const view=new BattlefieldView(r);view.sync(w);
@@ -210,10 +211,11 @@ test('rendered floor samples and models use the CPU surface in battle and menu c
       r.calls=[];r.surface=null;renderEntity(r,e,1);const flat=r.calls;
       r.calls=[];r.surface=w.surface;renderEntity(r,e,1);
       assert.equal(r.calls.length,flat.length);
-      r.calls.forEach((call,i)=>assert.ok(Math.abs(call[2]-flat[i][2]-6)<1e-6));
+      r.calls.forEach((call,i)=>assert.ok(Math.abs(call[2]-flat[i][2]-deckHeight(w))<1e-6));
     }
   }
-  view.sync(new Battlefield(1409,'alien-planet'));assert.equal(r.surface,null);
+  const alien=new Battlefield(1409,'alien-planet');view.sync(alien);
+  assert.strictEqual(r.surface,alien.surface);assert.notStrictEqual(r.surface,w.surface);
 });
 
 // Independent sequential rotations, also used to inspect the actual instance matrices.
@@ -329,5 +331,5 @@ test('cliff drops reject before spending; a plateau drop reserves four real land
   assert.equal(g.s.entities.length,count);
   assert.equal(g.ability('drop',{x:72,z:65},0),true);
   const units=g.s.entities.filter(e=>e.type==='rifle');assert.equal(units.length,4);
-  for(const e of units) {assert.equal(g.world.surface.heightAt(e.x,e.z),6);assert.ok(g.unitFits(e,e.x,e.z));}
+  for(const e of units) {assert.equal(g.world.surface.heightAt(e.x,e.z),deckHeight(g.world));assert.ok(g.unitFits(e,e.x,e.z));}
 });

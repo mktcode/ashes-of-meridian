@@ -11,7 +11,8 @@ precision highp float;
 in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in float v_mat;
 uniform vec3 u_eye;uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;
 uniform sampler2D u_shadow;uniform sampler2D u_metalTex;uniform sampler2D u_advertising;
-uniform float u_shadowBias;uniform float u_time;
+uniform float u_shadowBias;uniform float u_time;uniform float u_worldHeightScale;
+uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;
 uniform float u_atmosphereOn;uniform vec3 u_atmosphereHorizon;uniform vec3 u_atmosphereZenith;
 out vec4 frag;
 const vec3 sunDirection=normalize(vec3(-64.,110.,43.));
@@ -34,7 +35,7 @@ const vec4 walkPaths[walkCount]=vec4[walkCount](AURELION_WALK_PATHS);
 const vec3 walkLevels[walkCount]=vec3[walkCount](AURELION_WALK_LEVELS);
 const vec2 crownFloor=vec2(AURELION_CROWN_FLOOR);
 const float deckHeight=float(${AURELION_SECTOR_HEIGHT});
-float floorMask(float height){return 1.-smoothstep(.18,.38,abs(v_pos.y-height));}
+float floorMask(float height){return 1.-smoothstep(.18,.38,abs(v_pos.y-height*u_worldHeightScale));}
 // Local area-light approximation plus flush light strips. No exposure/sky/fog change,
 // extra geometry, shadow passes or illumination of the facades below the decks.
 vec3 deckLighting(vec3 base,float aa){
@@ -70,11 +71,11 @@ vec3 deckLighting(vec3 base,float aa){
 }
 void main(){
  vec3 n=normalize(v_n),view=normalize(u_eye-v_pos),base=v_col.rgb;
- float alpha=v_col.a;
+ float alpha=v_col.a;vec3 authored=vec3(v_pos.x,v_pos.y/u_worldHeightScale,v_pos.z);
  if(v_mat==${AURELION_SCREEN_MATERIAL}.){
   int board=0;float best=1e9;
-  for(int i=0;i<adCount;i++){float d=distance(v_pos,vec3(adRect[i].x,adRect[i].y,adDepth[i].x));if(d<best){best=d;board=i;}}
-  vec2 p=clamp((v_pos.xy-adRect[board].xy)/adRect[board].zw+.5,vec2(.004),vec2(.996));
+  for(int i=0;i<adCount;i++){float d=distance(authored,vec3(adRect[i].x,adRect[i].y,adDepth[i].x));if(d<best){best=d;board=i;}}
+  vec2 p=clamp((authored.xy-adRect[board].xy)/adRect[board].zw+.5,vec2(.004),vec2(.996));
   vec3 art=texture(u_advertising,vec2((adDepth[board].y+p.x)/4.,1.-p.y)).rgb;
   float scan=.96+.04*sin(p.y*700.+u_time*.6);
   vec3 lit=art*(2.7+.12*sin(u_time*.33+float(board)))*scan;
@@ -83,13 +84,17 @@ void main(){
  if(v_glow>.5){
   bool warm=base.r>base.b;
   vec3 emission=pow(base,vec3(1.5))*(warm?vec3(1.18,.99,.70):vec3(.84,1.12,1.35));
-  float central=1.-smoothstep(10.5,13.,distance(v_pos,vec3(0.,15.,0.)));
+  float central=1.-smoothstep(10.5,13.,distance(authored,vec3(0.,15.,0.)));
   frag=vec4(film(emission*(3.1+central*.7)),alpha);return;
  }
  vec2 p=abs(n.y)>.7?v_pos.xz:abs(n.x)>.7?v_pos.zy:v_pos.xy;
  float grain=dot(texture(u_metalTex,p*.075).rgb,vec3(.333));
  base*=.87+grain*.25;
- bool paving=n.y>.9&&v_pos.y>-.2&&v_pos.y<9.&&max(base.r,base.g)>.32;
+ if(u_ecology.x>.5){
+  base=mix(base,u_biomeDry*(.5+dot(base,vec3(.333))),.2);
+  if(u_ecology.y==2.)base*=.88;
+ }
+ bool paving=n.y>.9&&authored.y>-.2&&authored.y<9.&&max(base.r,base.g)>.32;
  if(paving){
   vec2 tile=floor(v_pos.xz/6.),q=abs(fract(v_pos.xz/6.)-.5)*6.;
   float seam=smoothstep(2.93,2.99,max(q.x,q.y));
@@ -108,19 +113,19 @@ void main(){
  }
  float fresnel=pow(1.-max(dot(n,view),0.),4.);
  float spec=pow(max(dot(n,normalize(sunDirection+view)),0.),mix(48.,100.,glass));
- lit+=u_sun*spec*sh*mix(.45,.9,glass);
+ lit+=u_sun*spec*sh*(mix(.45,.9,glass)+(u_ecology.y==2.?max(n.y,0.)*.25:0.));
  vec3 reflected=reflect(-view,n);
  vec3 env=u_atmosphereOn>.5?mix(u_atmosphereHorizon,u_atmosphereZenith,smoothstep(-.3,.8,reflected.y)):
   mix(vec3(.012,.027,.05),vec3(.12,.20,.32),smoothstep(-.3,.8,reflected.y));
  lit+=env*(.035+fresnel*.28+glass*.18);
  float deckAA=max(length(fwidth(v_pos.xz))*.65,.06);
- if(v_mat>=0.&&n.y>.85&&v_pos.y>-.3&&v_pos.y<deckHeight+.4)
+ if(v_mat>=0.&&n.y>.85&&authored.y>-.3&&authored.y<deckHeight+.4)
   lit+=deckLighting(base,deckAA)*smoothstep(.85,.95,n.y);
  // Local emissive spill is an artistic light approximation, not extra shadow-casting lights.
- float crown=exp(-dot(v_pos.xz,v_pos.xz)/580.)*exp(-abs(v_pos.y-5.)*.10);
+ float crown=exp(-dot(v_pos.xz,v_pos.xz)/580.)*exp(-abs(authored.y-5.)*.10);
  lit+=vec3(.025,.42,.7)*crown*(.35+max(n.y,0.));
  for(int i=0;i<adCount;i++){
-  vec3 delta=vec3(adRect[i].x,adRect[i].y,adDepth[i].x+4.)-v_pos;
+  vec3 delta=vec3(adRect[i].x,adRect[i].y*u_worldHeightScale,adDepth[i].x+4.)-v_pos;
   float spill=max(dot(n,normalize(delta)),0.)/(1.+dot(delta,delta)*.015);
   lit+=mix(vec3(.12,.28,.8),vec3(.5,.16,.65),mod(float(i),2.))*spill*.75;
  }
@@ -136,16 +141,17 @@ precision highp float;precision highp sampler3D;
 in vec2 uv;out vec4 frag;
 uniform sampler2D u_tex;uniform sampler2D u_bloom;uniform sampler2D u_cityDepth;uniform sampler2D u_sunDepth;
 uniform sampler3D u_cloudNoise;uniform mat4 u_inverseVP;uniform mat4 u_light;
+uniform vec2 u_cloudStyle;
 uniform float u_atmosphereOn;uniform vec3 u_atmosphereHorizon;uniform vec3 u_atmosphereZenith;
 uniform vec3 u_eye;uniform vec2 u_size;uniform float u_time;uniform float u_bloomOn;uniform float u_depthOn;uniform float u_amount;uniform float u_hazeStart;
 vec3 world(vec2 p,float depth){vec4 v=u_inverseVP*vec4(p*2.-1.,depth*2.-1.,1.);return v.xyz/v.w;}
 float noise(vec3 p){return texture(u_cloudNoise,p).r;}
 float cloud(vec3 p){
- vec3 wind=vec3(u_time*.00035,0.,u_time*.00012);
+ vec3 wind=vec3(u_time*.00035,0.,u_time*.00012)+vec3(u_cloudStyle.y*.07,0.,0.);
  float f=noise(p*.0019+wind)*.62+noise(p*.0046+wind*1.7+4.1)*.26+noise(p*.012+wind*2.1)*.12;
  float top=-35.+(noise(vec3(p.x*.0012,.27,p.z*.0012)+wind)-.5)*50.;
  float layer=1.-smoothstep(top-65.,top,p.y);
- return smoothstep(.28,.70,f+layer*.28)*layer*.036;
+ return smoothstep(.28,.70,f+layer*.28)*layer*(.024+u_cloudStyle.x*.024);
 }
 float sunlight(vec3 p){
  vec4 v=u_light*vec4(p,1.);vec3 q=v.xyz/v.w*.5+.5;
@@ -343,6 +349,7 @@ class AurelionAtmosphere {
     g.uniform1f(r.uniform(this.postProg,'u_depthOn'),this.depthAvailable?1:0);
     g.uniform1f(r.uniform(this.postProg,'u_amount'),r.quality>0?1:0);
     g.uniform1f(r.uniform(this.postProg,'u_hazeStart'),100);
+    g.uniform2f(r.uniform(this.postProg,'u_cloudStyle'),r.battlefieldProfile.ecology?.cover??.5,r.battlefieldProfile.ecology?.phase??0);
   }
   dispose() {
     const r=this.renderer,g=r.gl;

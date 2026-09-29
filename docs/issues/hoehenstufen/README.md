@@ -2,11 +2,11 @@
 
 ## Auftrag und Status
 
-Der Mothership-Durchstich ist im aktuellen Stand integriert. Gewünschtes Leitbild bleiben erhöhte Basen außen und ein großes tieferes Schlachtfeld in der Mitte, angelehnt an StarCraft 2. Der gemeinsame Oberflächenvertrag ist für spätere Karten nutzbar; Alien Planet und Desert bleiben auf ausdrücklichen Wunsch vorerst unverändert. Weitere SC2-Regeln oder Höhenboni sind nicht beauftragt.
+Der Mothership-Durchstich ist im aktuellen Stand integriert. Gewünschtes Leitbild bleiben erhöhte Basen außen und ein großes tieferes Schlachtfeld in der Mitte, angelehnt an StarCraft 2. Der Folgeauftrag in [Project Tomorrow](../project-tomorrow.md) hat den gemeinsamen technischen Vertrag ausdrücklich auf sämtliche Karten erweitert, einschließlich echter begehbarer Unebenheiten auf Alien Planet und Desert. Natürliche Familien übernehmen nicht pauschal Motherships Plateau-Grundriss. Weitere SC2-Regeln oder Höhenboni sind nicht beauftragt.
 
-**Stand: technisch integriert, menschliche Gesamt- und Mobilabnahme offen.** Vier öffentliche 6-m-Basisdecks, breite Innen-/Flankenrampen und tiefes Zentrum sind umgesetzt. Hangars, Anlagen und einige Vorkommen wurden für freie Rampen und ebene Vent-Fundamente versetzt; Mengen und RNG-Ziehungsreihenfolge bleiben unverändert. CPU-Höhenfeld, Klippen-/Segmentprüfung, Bau-/Arbeitszugänge, Produktionsausgänge und reservierte Verstärkungslandungen sind integriert. Darstellung, Picking und Effekte nutzen dieselbe Oberfläche.
+**Stand: technisch integriert, menschliche Gesamt- und Mobilabnahme offen.** Vier öffentliche, je Trägerfassung unterschiedlich hohe Basisdecks, breite Innen-/Flankenrampen und tiefes Zentrum sind umgesetzt. Hangars, Anlagen und einige Vorkommen wurden für freie Rampen und ebene Vent-Fundamente versetzt; Mengen und RNG-Ziehungsreihenfolge bleiben unverändert. CPU-Höhenfeld, Klippen-/Segmentprüfung, Bau-/Arbeitszugänge, Produktionsausgänge und reservierte Verstärkungslandungen sind integriert. Darstellung, Picking und Effekte nutzen dieselbe Oberfläche.
 
-Die [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) ist autoritativ integriert: Tiefland-Bodensicht deckt kein Plateau auf, Hochsicht reicht innerhalb der bestehenden Reichweite nach unten. Flugzeuge und Recon scans überbrücken Sichtstufen. Weitere Kartenumbauten sind zurückgestellt, nicht automatisch der nächste Auftrag.
+Die [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) ist autoritativ integriert: Tiefland-Bodensicht deckt kein Plateau auf, Hochsicht reicht innerhalb der bestehenden Reichweite nach unten. Flugzeuge und Recon scans überbrücken Sichtstufen. Natürliche Höhen auf den anderen Landschaftskarten erhalten dadurch keine neuen Sichtstufen.
 
 ### Jetzt manuell testen
 
@@ -35,7 +35,7 @@ Automatisierte Höhenprüfungen decken Oberfläche, Übergänge, Sichtstufen, Be
 Der technische Welt-, Navigations-, Darstellungs- und Bedienvertrag ist für Mothership umgesetzt und maßgeblich in der [Architektur](../../architecture.md#welt-darstellung-und-zufall) dokumentiert. Die abgeschlossenen Planungsissues wurden entfernt.
 
 1. [Höhenabhängige Sicht](04-hoehenabhaengige-sicht.md): technisch umgesetzt; menschlicher Rampen-/Klippencheck bleibt offen.
-2. [Karten und Abnahme](03-karten-und-abnahme.md): Mothership abnehmen; Alien Planet und Desert erst mit neuem Auftrag adaptieren.
+2. [Karten und Abnahme](03-karten-und-abnahme.md): sämtliche neuen Kartenoberflächen menschlich abnehmen; vorgeschlagene weitere Grundrissänderungen separat entscheiden.
 
 Weitere Karten müssen denselben CPU-Oberflächenvertrag verwenden und dürfen keine inkompatiblen Höhenabfragen oder Renderer-Sonderlogik einführen.
 
@@ -49,4 +49,4 @@ Weitere Karten müssen denselben CPU-Oberflächenvertrag verwenden und dürfen k
 
 ## Nächste Freigabe
 
-Als nächstes steht die gezielte menschliche Mothership-Abnahme an. Alien Planet und Desert bleiben zurückgestellt; ihre mögliche spätere Adaption ist ein eigener Auftrag. Backlog-Einträge sind keine automatische Freigabe weiterer Karten oder zusätzlicher Langläufe.
+Als nächstes steht die gezielte menschliche Abnahme aller neuen Oberflächen an. Technischer Ausbau und die vorgeschlagene Umkehr einzelner Grundrisse zu erhöhten Randbasen sind unterschiedliche Entscheidungen. Backlog-Einträge sind keine automatische Freigabe weiterer Layoutänderungen oder zusätzlicher Langläufe.

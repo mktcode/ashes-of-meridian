@@ -116,21 +116,21 @@ function createAurelionAircraft() {
   }
   return meshes;
 }
-function drawAurelionFlights(renderer: Pick<MeridianRenderer,'add'|'beam'>, flights: readonly AurelionFlight[], time: number) {
+function drawAurelionFlights(renderer: Pick<MeridianRenderer,'add'|'beam'>, flights: readonly AurelionFlight[], time: number, heightScale = 1) {
   for (const flight of flights) {
     const p=sampleAurelionFlight(flight,time),s=flight.scale,tail=[3.6,4.7,9][flight.kind]*s;
     // Portal fades hide the analytic wrap; no wake may bridge one end of a street to the other.
     if (p.visibility<.02) continue;
     const layer=p.visibility<1?'effects':'dynamic';
-    renderer.add(`aurelionAir${flight.kind}`,p.x,p.y,p.z,s,s,s,flight.color,p.yaw,0,p.bank,0,p.visibility,layer,MAT.METAL);
-    renderer.add(`aurelionAir${flight.kind}Lights`,p.x,p.y,p.z,s,s,s,0xffffff,p.yaw,0,p.bank,2,p.visibility,layer,MAT.METAL);
+    renderer.add(`aurelionAir${flight.kind}`,p.x,p.y*heightScale,p.z,s,s,s,flight.color,p.yaw,0,p.bank,0,p.visibility,layer,MAT.METAL);
+    renderer.add(`aurelionAir${flight.kind}Lights`,p.x,p.y*heightScale,p.z,s,s,s,0xffffff,p.yaw,0,p.bank,2,p.visibility,layer,MAT.METAL);
     for (const side of [-1,1]) {
       const wing=[1.2,2.4,3.4][flight.kind]*side*s;
-      let a=[p.x-Math.sin(p.yaw)*tail+Math.cos(p.yaw)*wing,p.y,p.z-Math.cos(p.yaw)*tail-Math.sin(p.yaw)*wing];
+      let a=[p.x-Math.sin(p.yaw)*tail+Math.cos(p.yaw)*wing,p.y*heightScale,p.z-Math.cos(p.yaw)*tail-Math.sin(p.yaw)*wing];
       for (let segment=0;segment<3;segment++) {
         const q=sampleAurelionFlight(flight,time-(segment+1)*.18);
         if (q.cycle!==p.cycle||q.visibility<.02) break;
-        const b=[q.x-Math.sin(q.yaw)*tail+Math.cos(q.yaw)*wing,q.y,q.z-Math.cos(q.yaw)*tail-Math.sin(q.yaw)*wing];
+        const b=[q.x-Math.sin(q.yaw)*tail+Math.cos(q.yaw)*wing,q.y*heightScale,q.z-Math.cos(q.yaw)*tail-Math.sin(q.yaw)*wing];
         renderer.beam(a,b,(.13-segment*.035)*s,0x84dfff,2,(.45-segment*.13)*Math.min(p.visibility,q.visibility));a=b;
       }
     }

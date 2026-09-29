@@ -1,13 +1,22 @@
 /* GPU-only city adapter. No gameplay entities or simulation RNG are created here. */
 'use strict';
-function createAurelionBattlefieldMeshes() {
-  return [
+function createAurelionBattlefieldMeshes(heightScale = 1) {
+  const meshes = [
     ...createAurelionGeometry().map(mesh=>({...mesh,static:true,
       material:mesh.name==='aurelionScreens'?AURELION_SCREEN_MATERIAL:MAT.METAL})),
     {...createAurelionBackdrop(),glow:0,static:true,material:AURELION_BACKDROP_MATERIAL},
     ...createAurelionAircraft().map(mesh=>({...mesh,static:false,material:MAT.METAL})),
     ...createAurelionRelic()
   ];
+  // Scale authored world scenery only. Aircraft stay rigid and follow scaled flight paths.
+  if(heightScale!==1)for(const mesh of meshes)if(!mesh.name.startsWith('aurelionAir')) {
+    for(let i=0;i<mesh.data.length;i+=9) {
+      mesh.data[i+1]*=heightScale;
+      const normal=V.norm([mesh.data[i+3],mesh.data[i+4]/heightScale,mesh.data[i+5]]);
+      mesh.data[i+3]=normal[0];mesh.data[i+4]=normal[1];mesh.data[i+5]=normal[2];
+    }
+  }
+  return meshes;
 }
 
 // Named scenery collections are generated once per world, not once per constituent mesh.
@@ -28,7 +37,7 @@ function createAurelionEnvironment(renderer: MeridianRenderer): BattlefieldEnvir
     beginFrame(modelTime) {
       boundProgram=null;
       // Use the paused/scaled presentation clock, not a second simulation timer.
-      drawAurelionFlights(renderer,flights,modelTime);
+      drawAurelionFlights(renderer,flights,modelTime,renderer.battlefieldProfile.variation?.heightScale ?? 1);
       atmosphere.beginFrame();
     },
     drawSceneBatches(time,modelTime,map,matrix,excluded,included) {

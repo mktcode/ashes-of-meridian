@@ -1,10 +1,10 @@
 # Aurelion: offene Karten- und Darstellungsabnahme
 
-Aurelion ist eine spielbare Nachtstadt mit vier erhöhten Startplattformen, Brücken, Ringzentrum, gestaffelten Hochhäusern und Unterdeckverkehr. Im Zentrum steht der Reaktorkern der [Echo-Bergung](aurelion-echo-bergung.md). Probelauf nach dem Build: `index.html?experiment=aurelion-playable`; normale Browser-Spielstände bleiben unberührt.
+Aurelion ist eine spielbare Stadt mit vier erhöhten Startplattformen, Brücken, Ringzentrum, gestaffelten Hochhäusern und Unterdeckverkehr. Im Zentrum steht der Reaktorkern der [Echo-Bergung](aurelion-echo-bergung.md). Probelauf nach dem Build: `index.html?experiment=aurelion-playable`; normale Browser-Spielstände bleiben unberührt.
 
 Die separate Hologlobus-Visualstudie ist durch die Spielintegration überholt und entfernt. Ihre Rotationsaufgabe entfällt mit dem Objekt, nicht durch eine behauptete visuelle Fehlerbehebung. Gestaltungshistorie bleibt in Git. Pflege und technische Grenzen stehen in [Rendering](../rendering.md#terrain-und-renderpässe) und [Architektur](../architecture.md#welt-darstellung-und-zufall).
 
-[Project Tomorrow](project-tomorrow.md) ergänzt einen optionalen gemeinsamen Tageszeitvertrag auch für Aurelion-Designs: Stadt-/Modelllicht, Himmel, Reflexion und Wolkenfarben lesen dieselbe Atmosphäre. Das bestehende Aurelion bleibt ausdrücklich bei seiner Nachtgestaltung und festen Geometrie; alternative Tageszeitdesigns brauchen eine eigene Kontrast-/Wolkenabnahme und sind kein laufender Tag-Nacht-Zyklus.
+Der Alle-Karten-Auftrag in [Project Tomorrow](project-tomorrow.md) komponiert nun vier Stadtfassungen mit unterschiedlichen Deck-/Silhouettenhöhen, Architekturakzenten, Tagesstimmungen und Wetter. Grundriss, Wege und Echo-Bergung bleiben erhalten. CPU-Oberfläche, Stadtmeshes, Anzeigenprojektion, Decklicht und Verkehrswege verwenden denselben Höhenmaßstab. Stadt-/Modelllicht, Reflexion und Wolken lesen die gemeinsame Atmosphäre; Regen beeinflusst nur die Darstellung. Insbesondere Plattformkanten, Anzeigen, Lampenmasken, Verkehr und Wolken bei den unterschiedlichen Höhen sowie Nacht-/Dämmerungskontrast menschlich prüfen. Kein laufender Tag-Nacht-Zyklus.
 
 ## Menschlich zu prüfen
 

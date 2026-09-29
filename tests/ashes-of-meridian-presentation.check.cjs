@@ -9,7 +9,7 @@ const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 for (const { seed, map, ...expected } of fixture.worlds) {
   test(`world ground reference and repeatable canyon presentation/navigation: ${seed} (${map})`, () => {
     const actual = worldSample(seed, map);
-    assert.equal(actual.terrain, expected.terrain, 'ground sampling remains protected by the historical fixture');
+    assert.equal(worldSample(seed,map,true).terrain, expected.terrain, 'uncomposed ground samples retain their historical fixture');
     assert.deepEqual(actual, worldSample(seed, map), 'new geometry, placement and navigation are seeded');
   });
 }
@@ -175,9 +175,9 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   const view = new BattlefieldView(renderer), before = JSON.stringify(world.renderData);
   view.sync(world, false); view.sync(world, false);
   assert.equal(renderer.decorSeed, 1409);
-  assert.equal(meshes, 1 + world.renderData.geometries.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
+  assert.equal(meshes, world.renderData.geometries.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
   world.reveal([], [{ x: 0, z: 0, r: 7 }]); view.sync(world); view.sync(world);
-  assert.equal(meshes, 1 + world.renderData.geometries.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
+  assert.equal(meshes, world.renderData.geometries.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(world.fogPixels)); assert.ok(fogPixels.includes(255));
   assert.equal(JSON.stringify(world.renderData), before);
   const next = new Battlefield(43015, 'desert'); next.reveal([]);
@@ -185,7 +185,7 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   assert.equal(fogs, 2); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(next.fogPixels)); assert.ok(fogPixels.every(v => v === 0));
   assert.equal(renderer.decorSeed, 43015, 'new world updates cosmetic seed without sampling world RNG');
-  assert.equal(meshes, 2 + world.renderData.geometries.length + next.renderData.geometries.length);
+  assert.equal(meshes, world.renderData.geometries.length + next.renderData.geometries.length);
 });
 
 test('world view switches ground bounds, boundary descriptors and fog sizes between worlds', () => {
@@ -213,7 +213,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
     const w=new Battlefield(43015,map), count=fogs.length;
     view.sync(w,false);view.sync(w,true);view.sync(w,true);
     assert.equal(renderer.extent,extent);
-    assert.deepEqual(uploads.at(-1),[grid*grid*2,-extent,extent]);
+    assert.deepEqual(uploads.at(-1),[(w.surface.size-1)**2*2,-extent,extent]);
     assert.deepEqual(boundaries.at(-1),[extent+150,extent]);
     assert.equal(fogs.length,count+1);assert.equal(fogs.at(-1)[0],grid);
     assert.ok(fogs.at(-1)[1].every(v=>v===0), 'unrevealed world never reuses old fog');
@@ -235,8 +235,8 @@ test('world view dispatches declared terrain models and profiles without assumin
   view.sync(world); view.sync(world);
   assert.deepEqual(uploads.map(([name]) => name), ['terrain', 'custom']);
   assert.strictEqual(inputs[0], feature); assert.equal(inputs.length, 1);
-  assert.strictEqual(renderer.battlefieldProfile, world.definition.render);
-  assert.strictEqual(renderer.haze, world.definition.render.haze);
+  assert.strictEqual(renderer.battlefieldProfile, world.renderProfile);
+  assert.strictEqual(renderer.haze, world.renderProfile.haze);
   assert.equal(JSON.stringify(world.renderData), before);
   assert.throws(() => TerrainModels.geometry({ model: 'missing', seed: 1 }), /Unknown terrain model/);
   assert.throws(() => TerrainModels.geometry({ model: 'toString', seed: 1 }), /Unknown terrain model/);

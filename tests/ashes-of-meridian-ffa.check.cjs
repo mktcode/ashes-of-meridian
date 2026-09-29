@@ -103,7 +103,8 @@ test('only completed hostile structures destroyed by the player earn structure r
   g.effects.explosion = () => {};
   const completed = g.spawnBuilding('barracks', 12, 0, 1, 1),
     foundation = g.spawnBuilding('depot', 16, 0, 2, 1, { progress: .5 }),
-    unit = g.spawnUnit('rifle', 20, 0, 3, 1),
+    // Direct fixture body: this score test does not ask a random hillside for a legal spawn.
+    unit = g.spawn('unit', 'rifle', 20, 0, 3, 1),
     aiTarget = g.spawnBuilding('factory', 24, 0, 3, 1);
   g.kill(completed, hqs[0]);
   g.kill(foundation, hqs[0]);

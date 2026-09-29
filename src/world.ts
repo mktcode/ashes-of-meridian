@@ -106,7 +106,9 @@
         this.seed = seed;
         this.definition = BATTLEFIELDS[battlefieldId(map)];
         this.terrainSeed = this.definition.design?.terrainSeed ?? seed;
-        this.renderProfile = battlefieldEcology(battlefieldAtmosphere(this.definition.render, this.definition.design?.atmosphere, seed), this.terrainSeed);
+        const profile = battlefieldVariation(this.definition.render, this.terrainSeed);
+        this.renderProfile = battlefieldAtmosphere(profile.ecology ? profile : battlefieldEcology(profile, this.terrainSeed),
+          this.definition.design?.atmosphere, seed);
         const size = this.definition.createSize?.(this.terrainSeed) ?? this.definition.size;
         this.extent = size.extent;
         this.cellSize = size.cellSize;
@@ -132,7 +134,9 @@
         this.pathVersion = 0;
         const builder = new BattlefieldBuilder(this);
         this.definition.generate(builder);
+        evolveBattlefield(builder);
         decorateEcology(builder);
+        decorateWorldVariation(builder);
         this.blocked.set(this.staticGrid);
         this.startSites = this.layout.startSites;
       }

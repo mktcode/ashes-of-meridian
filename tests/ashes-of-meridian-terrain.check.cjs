@@ -9,6 +9,11 @@ const { BATTLEFIELD_SCRIPTS, readScripts, loadScripts } = require('./helpers/gam
 
 const scripts = readScripts();
 const context = loadScripts(['core', 'renderer-assets', 'renderer-geometry', 'renderer-terrain-models', 'renderer-desert-landscape', 'renderer-desert-terrain', 'renderer-alien-terrain', 'renderer-mothership-terrain', 'content', ...BATTLEFIELD_SCRIPTS, 'world'], { scripts });
+// These assertions pin the original canyon/woodland/carrier recipe contracts.
+// Composed catalog worlds (all styles, real relief and new morphology) have their own checks.
+const originalRecipes = `BATTLEFIELDS.desert=DESERT_BATTLEFIELD;
+  BATTLEFIELDS['alien-planet']=ALIEN_PLANET_BATTLEFIELD; BATTLEFIELDS.mothership=MOTHERSHIP_BATTLEFIELD;`;
+vm.runInContext(originalRecipes,context);
 const { geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS } =
   vm.runInContext('({geom, TerrainModels, Battlefield, insidePolygon, pointSegment, BATTLEFIELDS})', context);
 
@@ -757,6 +762,7 @@ test('map recipes and new cosmetic streams are isolated without shifting existin
 
 test('terrain feature validation accepts non-mountain polygons and rasterizes their corners', () => {
   const local = loadScripts(['core', ...BATTLEFIELD_SCRIPTS, 'world']);
+  vm.runInContext(originalRecipes,local);
   const { Battlefield: World, BattlefieldBuilder: Builder } = vm.runInContext('({Battlefield, BattlefieldBuilder})', local);
   const w = new World(1409, 'desert');
   w.staticGrid.fill(0); w.terrainFeatureGrid.fill(0);

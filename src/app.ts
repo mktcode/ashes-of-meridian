@@ -11,12 +11,10 @@
         overlay = $('overlay');
       try {
         const params = new URLSearchParams(location.search);
-        const heightExperiment = params.get('experiment') === 'height',
-          westmarkExperiment = params.get('experiment') === 'westmark',
-          aurelionExperiment = params.get('experiment') === 'aurelion-playable',
-          frontierExperiment = params.get('experiment') === 'frontier',
-          havenExperiment = params.get('experiment') === 'haven',
-          mapExperiment = heightExperiment || westmarkExperiment || aurelionExperiment || frontierExperiment || havenExperiment,
+        const experiment = params.get('experiment'),
+          mapExperiment: BattlefieldId | null = experiment === 'height' ? 'mothership' : experiment === 'aurelion-playable' ? 'aurelion' :
+            experiment && Object.prototype.hasOwnProperty.call(BATTLEFIELDS, experiment) ? experiment as BattlefieldId : null,
+          aurelionExperiment = mapExperiment === 'aurelion',
           visibleSimulation = !mapExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
@@ -379,8 +377,8 @@
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
           ui.expedition = { version: 5, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: aurelionExperiment ? 3 : 0,
             benefits: {pioneerSquad: 2}, enemyBenefits: aurelionExperiment ? [{pioneerSquad:2},{pioneerSquad:2}] : [{}],
-            encounter: {mission: aurelionExperiment ? 'echo-salvage' : DEFAULT_MISSION, map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : frontierExperiment ? 'frontier' : havenExperiment ? 'haven' : 'mothership',
-              seed: (frontierExperiment || havenExperiment) && /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,
+            encounter: {mission: aurelionExperiment ? 'echo-salvage' : DEFAULT_MISSION, map: mapExperiment,
+              seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,
               enemies: aurelionExperiment ? [1,2] : [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {

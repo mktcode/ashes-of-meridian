@@ -20,6 +20,7 @@ Die eigenständige Landschaftsstudie besaß keine Ressourcen-, Bau- oder Navigat
 
 ## Offene Textur- und Darstellungsarbeit
 
+- [ ] Den durch [Project Tomorrow](project-tomorrow.md) freigegebenen Ausbau mit Frühling, Herbsttal, Winter und Hochwiesen abnehmen: sanfte zusätzliche Geländeformen außerhalb geschützter Fluss-/Brücken-/Wirtschaftsbereiche, neue Pflanzengruppen, Wetter, Kronen- und Schneekontrast. Flussgrund/Sediment und Brücken bleiben eigene technische Verträge.
 - [ ] Prozedurale Wiese, Granit, Erde und Rinde auf Kachelung, Maßstab, Mikrorelief und Übergänge menschlich abnehmen. Die gelieferte Wiesen-WebP bleibt als Quelle erhalten, ist aber kein aktives WebGL-Albedo mehr. Der Fichtenzweig ist weiterhin das unveränderte Bildasset. Die gemeinsame Umstellung ist Teil von [Project Tomorrow](project-tomorrow.md); weitere Westmark-Gestaltung nicht unbemerkt auf andere Materialien ausweiten.
 - [ ] Vor öffentlicher Weitergabe Herkunft/Nutzungsfreigabe der eingebetteten Vorlagenbilder klären.
 - [ ] Wasser-/Uferdarstellung und Brückendetails menschlich abnehmen. Flussgabeln verwenden nun ein gemeinsames, überlappungsfreies Wassergitter; das Alpha-Blending erhält den sichtbaren Grund und versunkene Steine. Wasserfälle bleiben geneigte Wasserflächen mit prozeduralem Schaum, ohne Spritzwasserpartikel, Brechung oder echte Szenenreflexion. Diese Erweiterungen bei Bedarf separat beurteilen, nicht mit neuen Wasser-Navigationsregeln verbinden.
