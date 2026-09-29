@@ -7,8 +7,8 @@ const {loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, RENDERER_SCRIPTS} =
 const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
   ...RENDERER_SCRIPTS,'world-view','effects-view','multiplayer-presentation','multiplayer-state'], {globals:{innerHeight:800}});
 const {Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity,
-  battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect} = vm.runInContext(
-  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect})',context);
+  battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect, modelFrameRotation} = vm.runInContext(
+  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, battlefieldStartSites, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect, modelFrameRotation})',context);
 function game() {
   const g = new MeridianGame({upgrades:{}}); g.start({seed:1409,map:'mothership'});
   g.s.parties.forEach(p=>p.controller={kind:'human'});
@@ -214,6 +214,99 @@ test('rendered floor samples and models use the CPU surface in battle and menu c
     }
   }
   view.sync(new Battlefield(1409,'alien-planet'));assert.equal(r.surface,null);
+});
+
+// Independent sequential rotations, also used to inspect the actual instance matrices.
+function rotatePart([x,y,z],ry,rx,rz) {
+  [x,y]=[x*Math.cos(rz)-y*Math.sin(rz),x*Math.sin(rz)+y*Math.cos(rz)];
+  [y,z]=[y*Math.cos(rx)-z*Math.sin(rx),y*Math.sin(rx)+z*Math.cos(rx)];
+  return [x*Math.cos(ry)+z*Math.sin(ry),y,-x*Math.sin(ry)+z*Math.cos(ry)];
+}
+const axes=[[1,0,0],[0,1,0],[0,0,1]], normalize=v=>v.map(n=>n/Math.hypot(...v)),
+  cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+  applyFrame=(f,v)=>axes.map((_,i)=>f[0][i]*v[0]+f[1][i]*v[1]+f[2][i]*v[2]);
+function closeVector(actual,expected,message) {
+  assert.ok(Math.hypot(...actual.map((v,i)=>v-expected[i]))<1e-6,`${message}: ${actual} != ${expected}`);
+}
+function drawPose(e,surface,quality=0) {
+  const r=createRendererStub({record:true});Object.assign(r,{surface,quality});
+  renderEntity(r,Object.freeze(e),1);return r.calls;
+}
+
+test('vehicles follow uphill, downhill and cross slopes as rigid assemblies, preserving heading and hover',()=>{
+  const surface=new BattlefieldSurface(10,2.5,(x,z)=>4+x*.25+z*.375), up=normalize([-.25,1,-.375]);
+  for(const faction of [0,1,2]) for(const type of ['worker','tank','artillery']) {
+    const e={id:4,x:0,z:0,rot:0,kind:'unit',type,hp:100,faction,team:0,size:UNITS[type].size,walk:2,carry:10},
+      hover=faction===2?.3+Math.sin(2+e.id)*.08:0, flat=drawPose(e,null);
+    for(const rot of [0,Math.PI/2,Math.PI,Math.PI*1.5,.7]) {
+      const forward=normalize([Math.sin(rot),.25*Math.sin(rot)+.375*Math.cos(rot),Math.cos(rot)]),
+        frame=[cross(up,forward),up,forward], calls=drawPose({...e,rot},surface);
+      assert.equal(calls.length,flat.length);
+      for(const [i,c] of calls.entries()) {
+        const local=flat[i], position=applyFrame(frame,[local[1],local[2]-hover,local[3]]);
+        position[1]+=4+hover;
+        closeVector(c.slice(1,4),position,`${faction}/${type} part ${i} position`);
+        for(const axis of axes) closeVector(rotatePart(axis,...c.slice(8,11)),
+          applyFrame(frame,rotatePart(axis,...local.slice(8,11))),`${faction}/${type} part ${i} orientation`);
+        assert.deepEqual(c.slice(4,8),local.slice(4,8),'scale and color are unchanged');
+        assert.deepEqual(c.slice(11),local.slice(11),'material, glow and layer are unchanged');
+      }
+    }
+  }
+});
+
+test('vehicle rotation composition handles vertical part pitch without tearing attached geometry',()=>{
+  const root=[.5,.3,0], frame=axes.map(axis=>rotatePart(axis,...root));
+  for(const pitch of [Math.PI/2,-Math.PI/2]) {
+    const local=[0,pitch-.3,.8], result=modelFrameRotation(frame.flat(),...local);
+    for(const axis of axes) closeVector(rotatePart(axis,...result),rotatePart(rotatePart(axis,...local),...root),'vertical part');
+  }
+});
+
+test('vehicle ramp joins remain continuous and nearby cliffs cannot overturn the chassis',()=>{
+  const surface=new BattlefieldSurface(10,2.5,(_x,z)=>Math.max(0,Math.min(2.5,z*.25))),
+    e={id:1,x:0,z:0,rot:0,kind:'unit',type:'tank',hp:100,faction:0,team:0,size:UNITS.tank.size};
+  // The tank hull is the first rigid part. Crossing a CPU triangle/ramp edge must not snap its normal.
+  for(const boundary of [-e.size,0,1.25,e.size,2.5]) {
+    const a=drawPose({...e,z:boundary-1e-5},surface)[0],b=drawPose({...e,z:boundary+1e-5},surface)[0];
+    assert.ok(Math.hypot(...rotatePart(axes[1],...a.slice(8,11)).map((v,i)=>v-rotatePart(axes[1],...b.slice(8,11))[i]))<1e-5);
+  }
+  const cliff=new BattlefieldSurface(10,2.5,(_x,z)=>z>0?20:0),call=drawPose(e,cliff)[0],up=rotatePart(axes[1],...call.slice(8,11));
+  assert.ok(up.every(Number.isFinite));assert.ok(up[1]>=1/Math.hypot(1,.65)-1e-6);
+  assert.deepEqual(drawPose({...e,z:-4},surface),drawPose({...e,z:-4},null),'flat floor keeps the original draw calls');
+});
+
+test('slope alignment leaves infantry, aircraft, buildings and resources upright and does not mutate terrain',()=>{
+  const surface=new BattlefieldSurface(10,2.5,(x,z)=>4+x*.25+z*.375), heights=Array.from(surface.heights), cliffs=Array.from(surface.cliffs);
+  for(const [kind,type] of [['unit','rifle'],['unit','medic'],['unit','hero'],['unit','air'],['unit','destroyer'],['building','depot'],['resource','gas']]) {
+    const e={id:2,x:0,z:0,rot:.7,kind,type,hp:100,faction:0,team:0,size:1,progress:1},flat=drawPose(e,null),calls=drawPose(e,surface);
+    assert.equal(calls.length,flat.length);
+    calls.forEach((c,i)=>{
+      assert.ok(Math.abs(c[2]-flat[i][2]-surface.entityHeight(e))<1e-6);
+      assert.deepEqual(c.filter((_,j)=>j!==2),flat[i].filter((_,j)=>j!==2));
+    });
+  }
+  drawPose({id:1,x:0,z:0,rot:.7,kind:'unit',type:'tank',hp:100,faction:0,team:0,size:1.3},surface);
+  assert.deepEqual(Array.from(surface.heights),heights);assert.deepEqual(Array.from(surface.cliffs),cliffs);
+});
+
+test('network vehicles derive slope from interpolated positions and GPU instances retain their complete pose',()=>{
+  const w=new Battlefield(1409,'mothership'),timeline=new MultiplayerTimeline(),
+    e={id:1,x:72,z:21,rot:0,walk:0,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:UNITS.worker.size}, before=JSON.stringify(e);
+  timeline.push({time:1,entities:[e],effects:[]},1000);
+  timeline.push({time:1.2,entities:[{...e,z:27}],effects:[]},1200);timeline.advance(1220,()=>{});
+  const pose=timeline.poses.get(1),calls=drawPose(pose,w.surface),hull=calls.find(c=>c[0]==='workerHull');
+  assert.ok(Math.abs(pose.z-24)<1e-7);assert.ok(hull[9]<0,'front rises along the ramp');
+  assert.notEqual(hull[9],drawPose(e,w.surface)[0][9],'uses the interpolated position, not the received endpoint');
+  const radius=Math.max(.75,e.size),slope=(w.surface.heightAt(pose.x,pose.z+radius)-w.surface.heightAt(pose.x,pose.z-radius))/(2*radius);
+  closeVector(rotatePart(axes[1],...hull.slice(8,11)),normalize([0,1,-slope]),'interpolated ground normal');
+  const r=Object.create(MeridianRenderer.prototype);
+  Object.assign(r,{dynamic:{},effects:{},meshes:{},colors:new Map(),gl:{createBuffer:()=>({})}});
+  for(const c of calls) r.add(...c);
+  const matrix=r.dynamic.workerHull.data;
+  for(let i=0;i<3;i++) closeVector(Array.from(matrix.slice(i*4,i*4+3)),rotatePart(axes[i],...hull.slice(8,11)),'GPU basis');
+  closeVector(Array.from(matrix.slice(12,15)),hull.slice(1,4),'GPU origin');
+  assert.equal(JSON.stringify(e),before,'no authoritative pose mutation');
 });
 
 test('all eight vents admit real refinery placement and air recovery ignores cliff masks',()=>{

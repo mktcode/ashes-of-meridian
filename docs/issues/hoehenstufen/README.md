@@ -13,7 +13,7 @@ Die [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) ist autoritativ integ
 Im Haupt-Worktree `npm run build`, dann die lokale `index.html?experiment=height` öffnen. Der ausdrückliche Teststart verwendet Mothership/Seed 1409 mit zwei Startworkern. Profil und Checkpoint sind flüchtig; normales Savegame und Fortschritt werden weder gelesen noch geschrieben. Reload setzt diesen Test zurück.
 
 1. Erkennbarkeit von hoher Basis, Rampen und tiefer Mitte bei normalem Zoom beurteilen; insbesondere verdeckte Einheiten am vorderen Plateaurand.
-2. Worker auswählen, hinunter und wieder hinauf schicken; Klickziele, Auswahlrahmen, Kameraziehen und MiniMap prüfen.
+2. Worker auswählen, hinunter und wieder hinauf schicken; Klickziele, Auswahlrahmen, Kameraziehen und MiniMap prüfen. Die ergänzte [Fahrzeug-Hanglage](../../rendering.md#einzeln-wartbare-modelle) auch quer zur Rampe und an ihren Übergängen begutachten.
 3. Sternenschlacke abbauen/abliefern, Refinery setzen, auf beiden Ebenen bauen und Einheiten produzieren. Rampen-/Klippenbau muss abgelehnt werden, Ausfahrten müssen benutzbar bleiben.
 4. Kleine Gruppen/Gegenverkehr und Gefechte an Rampen anschauen. Sichtverlust beidseits einer Klippe und beim Überqueren der Rampenmitte prüfen; andere Höhenvorteile bleiben ausgeschlossen.
 

@@ -101,6 +101,36 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
     hp: 1, maxHp: 1, progress: 1, size: BUILDINGS[type].size, queue: [] };
 }
 
+// View-only rigid chassis frame. Four footprint samples smooth triangle/ramp joins without
+// history, extra RNG or changes to the authoritative pose. Infantry stays upright.
+function vehicleGroundFrame(surface: BattlefieldSurface | null, e: RenderEntity, cs: number, sn: number): number[] | null {
+  if (!surface || e.kind !== 'unit' || (e.type !== 'worker' && e.type !== 'tank' && e.type !== 'artillery')) return null;
+  const r = Math.max(.75, e.size),
+    dx = (surface.heightAt(e.x+r,e.z)-surface.heightAt(e.x-r,e.z))/(2*r),
+    dz = (surface.heightAt(e.x,e.z+r)-surface.heightAt(e.x,e.z-r))/(2*r);
+  if (Math.hypot(dx,dz) < 1e-6) return null;
+  // A neighbouring cliff must not tip the chassis beyond the walkable slope envelope.
+  const limit = Math.max(1,Math.hypot(dx,dz)/.65), gx = dx/limit, gz = dz/limit,
+    up = V.norm([-gx,1,-gz]), forward = V.norm([sn,gx*sn+gz*cs,cs]), right = V.cross(up,forward);
+  // Column-major orthonormal basis: retain the heading's horizontal projection.
+  return [...right,...up,...forward];
+}
+
+// Compose the chassis with each part's existing Y * X * Z rotation, not Euler sums.
+// This keeps drills, cargo, limbs and weapons attached even on diagonal slopes.
+function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: number): [number, number, number] {
+  const cy = Math.cos(ry), sy = Math.sin(ry), cx = Math.cos(rx), sx = Math.sin(rx), cz = Math.cos(rz), sz = Math.sin(rz),
+    xx = cy*cz+sy*sx*sz, xy = cx*sz, xz = -sy*cz+cy*sx*sz,
+    yx = -cy*sz+sy*sx*cz, yy = cx*cz, yz = sy*sz+cy*sx*cz,
+    zx = sy*cx, zy = -sx, zz = cy*cx,
+    z0 = f[0]*zx+f[3]*zy+f[6]*zz, z1 = f[1]*zx+f[4]*zy+f[7]*zz, z2 = f[2]*zx+f[5]*zy+f[8]*zz,
+    pitch = Math.asin(clamp(-z1,-1,1));
+  if (Math.abs(z1) < 1-1e-10) return [Math.atan2(z0,z2),pitch,
+    Math.atan2(f[1]*xx+f[4]*xy+f[7]*xz,f[1]*yx+f[4]*yy+f[7]*yz)];
+  // At vertical part pitch, yaw and roll share one axis; choose an equivalent zero roll.
+  return [Math.atan2(-(f[2]*xx+f[5]*xy+f[8]*xz),f[0]*xx+f[3]*xy+f[6]*xz),pitch,0];
+}
+
     // Cosmetic building yaw only; placement, collision radii and save data stay unchanged.
     function renderEntity(R: MeridianRenderer, e: RenderEntity, time: number, options: RenderEntityOptions = {}) {
       if (e.hp <= 0) return;
@@ -114,7 +144,8 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
       const rot = e.kind === 'building' ? (e.team === 1 ? Math.PI : 0) + BUILDING_YAW : e.rot || 0,
         cs = Math.cos(rot),
         sn = Math.sin(rot);
-      const ground = R.surface?.entityHeight(e) ?? 0;
+      const ground = R.surface?.entityHeight(e) ?? 0,
+        frame = vehicleGroundFrame(R.surface, e, cs, sn);
       let y = ground + (
         isFlyingUnitType(e.type)
           ? 3.8 - (e.exit ? 3 * clamp(distance(e, e.exit) / e.exit.length, 0, 1) : 0) +
@@ -168,16 +199,22 @@ function createBuildingPreview(type: BuildingType, p: Position, faction: Faction
           e.faction === FACTION_ID.THIRD && e.kind === 'building' && shape === 'octa' && glow >= .3
             ? MAT.CRYSTAL
             : m;
+        const height = ly * build,
+          px = frame ? e.x+frame[0]*lx+frame[3]*height+frame[6]*lz : e.x+lx*cs+lz*sn,
+          py = frame ? y+frame[1]*lx+frame[4]*height+frame[7]*lz : y+height,
+          pz = frame ? e.z+frame[2]*lx+frame[5]*height+frame[8]*lz : e.z-lx*sn+lz*cs;
+        if (frame) [ry,rx,rz] = modelFrameRotation(frame,ry,rx,rz);
+        else ry += rot;
         R.add(
           shape,
-          e.x + lx * cs + lz * sn,
-          y + ly * build,
-          e.z - lx * sn + lz * cs,
+          px,
+          py,
+          pz,
           sx,
           sy * build,
           sz,
           c,
-          rot + ry,
+          ry,
           rx,
           rz,
           animated && glow >= .3 ? glow * (1 + (e.faction === FACTION_ID.SECOND ? .22 : .12) *
