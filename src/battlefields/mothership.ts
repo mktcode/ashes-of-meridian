@@ -112,7 +112,7 @@ const MOTHERSHIP_BATTLEFIELD: BattlefieldDefinition = {
   layout: mothershipLayout(),
   palette: { ground: 0x424f5d, rock: 0xffffff, accent: 0xf0b764, flora: 0x79aab5 },
   render: {
-    groundTexture: 'metal', skyTexture: 'sky', groundPixelsPerMeter: 30, groundMirror: true,
+    groundTexture: 'metal', skyTexture: 'sky',
     rockDecor: { density: 0, opacity: 0 }, shrubDecor: { density: 0, opacity: 0 },
     haze: [.035,.055,.09], terrainReceiverHeight: 16,
     lighting: { sun: [1.12,.98,.84], sky: [.30,.40,.55], bounce: [.13,.18,.25] }

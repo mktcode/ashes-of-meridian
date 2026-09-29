@@ -204,11 +204,13 @@ test('spruce crowns fill every height/azimuth band within a bounded, determinist
   assert.notDeepEqual(build(1409),build(7919),'mesh-local variation remains seed based');
 });
 
-test('Westmark albedos preserve canonical WebP bytes and are only requested by the landscape profile',()=>{
+test('Westmark surfaces and foliage are only requested by the landscape profile',()=>{
   const w=new Battlefield(1409,'westmark'),names=MeridianRenderer.prototype.textureNames(w.definition.render);
   for(const [key,file]of Object.entries({westmarkMeadow:'meadow',westmarkGranite:'granite',westmarkEarth:'earth',westmarkBark:'bark',westmarkSpruce:'spruce'})) {
     assert.ok(names.has(key));
-    assert.deepEqual(Buffer.from(MERIDIAN_TEXTURES[key].split(',')[1],'base64'),readFileSync(join(__dirname,`../assets/textures/texture-westmark-${file}.webp`)));
+    if(key==='westmarkSpruce')
+      assert.deepEqual(Buffer.from(MERIDIAN_TEXTURES[key].split(',')[1],'base64'),readFileSync(join(__dirname,`../assets/textures/texture-westmark-${file}.webp`)));
+    else assert.ok(vm.runInContext(`isProceduralMaterial('${key}')`,context));
   }
   const desert=vm.runInContext('BATTLEFIELDS.desert.render',context);
   assert.ok([...MeridianRenderer.prototype.textureNames(desert)].every(name=>!name.startsWith('westmark')));

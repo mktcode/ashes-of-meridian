@@ -13,9 +13,28 @@ Most people assume a team made this, but it was made by one nerdy dude. Hi. To m
 Arbeitsbranch: `aom/project-tomorrow`, Ausgangsstand `56840d4`. Der handgeschriebene Laufzeitcode ist bereits strikt geprüftes TypeScript; eine Sprachmigration ist daher nicht nötig. Ziel ist eine wiederverwendbare, seedbasierte Erzeugung statt einer zweiten Engine. Unity DOTS/Burst sind keine direkt übertragbaren Browser-APIs.
 
 - Hauptagent: Material-/Weltgenerierung, Integration, Issue-Pflege und Abschlussprüfungen. Bestehende Karten, Simulationsregeln, Kollisionsradien und RNG-Reihenfolgen bleiben Referenzen; neue kosmetische Variation erhält unabhängige Seeds.
-- Lesender Architektur-Audit: Wiederverwendung der heutigen Karten-/Renderverträge und Grenzen eines prozeduralen Materialsystems; eigener Worktree/Branch `aom/project-tomorrow-audit`. Keine Änderungen, Programme oder Tests durch den Auditor. Der Hauptagent prüft und übergibt vor Start die Git-Identität.
+- Der lesende Architektur-Audit bestätigte die vorhandenen CPU-/GPU-, Residenz- und RNG-Grenzen; kein belegter Grund für ECS-/Worker-Neuimplementierung. Lauf `c256109a-7bf4-496a-8690-1e0ad67af0aa`, Kind `24cd8eb0-e504-41ab-ad7f-9993a2d0e284`, Sol/high auf sauberem Branch `aom/project-tomorrow-audit` bei `2c68821`, Worktree `/home/mkt/Projekte/experimental2/aom-project-tomorrow-audit` (nach gesicherter Übergabe bereinigt). Keine Quelländerungen oder Programmläufe. Die Runtime klassifizierte den lesenden Auftrag fälschlich als Implementierungsabnahme (`acceptance: rejected`, erforderliche Implementierung als nicht anwendbar gemeldet); die statischen Hinweise sind Beratung, kein bestandener Implementierungsreview.
 - Technische Abnahme: deterministische Rezepte, begrenzte Ressourcenresidenz, keine Frame-Allokation für statische Materialien, unveränderte Mechanik und `file://`-Auslieferung; gezielte Tests und abschließend Standardtestsuite durch den Hauptagenten. KI-/Simulations-Langläufe sind nicht freigegeben.
 - „Grafisch besser“ und „flüssiger“ benötigen menschliche Darstellungskontrolle bzw. Messungen auf Zielgeräten. Eine endliche Seedrepräsentation bedeutet viele reproduzierbare Varianten, nicht mathematisch unendlich viele unterschiedliche Welten. Das Issue bleibt offen, solange diese Zielabnahme oder Implementierungspakete fehlen.
+
+### Implementierter Zwischenstand
+
+Die acht opaken Oberflächen werden vollständig aus begrenzten TypeScript-Rezepten gebacken statt aus einzelnen Albedo-Bildern geladen. Gemeinsame Rezepte erzeugen Farbe und Mikrohöhe; Weltseed und Material bestimmen rein kosmetische Farb-/Offsetvarianten. Die bestehenden fünf CPU-Kartenrezepte, Hindernisse, Ressourcen, Sicht und RNG-Reihenfolgen bleiben unverändert. Keine zusätzliche Weltgeometrie, kein Cache je Seed und keine Texturerzeugung im Frame. [Pflege- und Lebenszyklusvertrag](../rendering.md#prozedurale-oberflächen).
+
+Himmel, alpha-getestete Zweige und Bodendekoratlanten bleiben Bildassets; ihre Form-/Transparenzverträge sind nicht durch Farbrauschen ersetzt. Ehemalige Albedo-WebPs bleiben als Quellen bzw. Karten-Vorschaubilder erhalten. Die eingebettete Texturdatei schrumpft von 4.201.929 auf 1.395.903 Bytes; das ist eine Größenreduktion, kein FPS-Nachweis. Feines Oberflächenrelief kostet in High/Balanced zusätzliche Samples und entfällt in Performance.
+
+Partikel-/Rauchobjekte werden mit begrenztem Freispeicher wiederverwendet; Effekt-/Textarrays bleiben bei Ticks stabil statt neu gefiltert zu werden. Geschosse, Strahlen und Simulationseinheiten behalten ihre bisherigen Identitätsverträge. Referenztests schützen Effektwerte, Reihenfolge, Lebenszeiten und Zufallsverbrauch.
+
+### Technischer Prüfstand
+
+Client- und Serverbuild, Einbettungs-Bytevergleich und Standardtestsuite (`npm test`: 504 bestanden) erfolgreich. Zusätzlich gezielte Material-/Renderer-/Westmark- sowie Effekt-RNG-/Präsentationstests; bestehende Referenzdateien unverändert. Ein direkter `file://`-Check in isoliertem Chromium prüfte alle fünf Karten auf drei Qualitätsstufen und Rückwechsel zu Desert: keine JavaScript-/WebGL-Fehler, profilabhängige Residenz erhalten. Browser-Sandbox aktiv, keine Lockerung von Datei-/Websicherheit. Das ist keine menschliche Grafik- oder Geräteperformance-Abnahme. Die separaten KI-/Simulations-Langläufe wurden nicht gestartet.
+
+### Noch nicht erreicht / Abnahme
+
+- [ ] Menschliche Beurteilung von Materialstil, Kachelmaßstab, Wiederholung und Einheiten-/Boden-/Minimap-Kontrast auf allen Karten und in Modellvorschauen. Der breite Materialersatz ist durch diesen Auftrag beabsichtigt, ersetzt aber nicht die frühere Kartenabnahme. Insbesondere [Desert](desert-map.md), [Westmark](westmark-map.md) und [Mothership](terrain.md) neu beurteilen.
+- [ ] FPS, Latenz, Start-/Kartenwechselzeit und Thermik auf echten Zielgeräten mit vergleichbaren Szenen messen. Weniger Bild-/Texturspeicher und Allokationen garantieren keine bessere Gesamtperformance.
+- [ ] Neue **spielbare Topologien/Biome** über die vorhandenen fünf Rezepte hinaus: CPU-Layout, Höhen, Starts, Ressourcen und fahrzeugbreite Verbindungen gemeinsam generieren/validieren. Die jetzigen Materialvarianten sind ausdrücklich kein solcher Weltgenerator. Keine neue Karte automatisch in Expeditionen/Multiplayer aufnehmen, bevor diese Verträge geprüft sind.
+- [ ] Regelbasierte Ersetzung von Himmel, Zweigen und Dekor steht noch aus; dabei die menschlich abgenommene Stilrichtung, Silhouetten und Transparenzverträge erhalten.
 
 ## Auftrag
 

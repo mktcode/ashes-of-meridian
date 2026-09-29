@@ -6,7 +6,7 @@ const DESERT_BATTLEFIELD: BattlefieldDefinition = {
   layout: standardBattleLayout(),
   palette: { ground: 0x59443a, rock: 0x74544a, accent: 0xf0b67b, flora: 0x806348 },
   render: {
-    groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 22,
+    groundTexture: 'ground', skyTexture: 'sky',
     rockSurface: { texture: 'desertRock', metersPerTile: 18 },
     rockDecor: { density: .55, opacity: .72 }, shrubDecor: { density: .08, opacity: .78 },
     haze: [0.11, 0.085, 0.1], terrainReceiverHeight: 46,

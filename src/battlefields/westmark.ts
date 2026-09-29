@@ -123,7 +123,7 @@ function westmarkPlan(layout: BattlefieldLayout) {
 const WESTMARK_BATTLEFIELD: BattlefieldDefinition = {
   name:'WESTMARK',size:{extent:160,cellSize:2.5},layout:westmarkLayout(),startHeight:WESTMARK_FLOOR,
   palette:{ground:0x637344,rock:0x828783,accent:0xbad49c,flora:0x355b3a},
-  render:{groundTexture:'westmarkMeadow',skyTexture:'sky',groundPixelsPerMeter:80,
+  render:{groundTexture:'westmarkMeadow',skyTexture:'sky',
     rockSurface:{texture:'westmarkGranite',metersPerTile:9},
     landscape:{earth:'westmarkEarth',bark:'westmarkBark',foliage:'westmarkSpruce'},
     daylight:true,rockDecor:{density:0,opacity:0},shrubDecor:{density:0,opacity:0},

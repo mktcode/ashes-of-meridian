@@ -110,8 +110,8 @@ interface BattlefieldRenderProfile {
   scenery?: 'aurelion';
   groundTexture: 'ground' | 'metal' | 'bio' | 'westmarkMeadow';
   skyTexture: 'sky';
-  groundPixelsPerMeter: number;
-  groundMirror?: boolean;
+  /** Optional artistic override; otherwise use the material recipe's physical tile size. */
+  groundMetersPerTile?: readonly [number, number];
   /** Optional albedo for ROCK/MASSIF; other profiles retain their ground-derived material. */
   rockSurface?: { texture: 'desertRock' | 'westmarkGranite'; metersPerTile: number };
   /** Natural terrain's extra materials; absent on the established maps. */

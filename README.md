@@ -21,7 +21,7 @@ Für einen isolierten Test startet `index.html?experiment=height` nach dem Build
 
 ## Westmark
 
-Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Der erste spielbare Stand verwendet die vorhandenen Vorlagenmaterialien; Texturen und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
+Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Die opaken Oberflächen verwenden prozedurale Materialrezepte, die Fichtenzweige weiterhin das Vorlagenbild; Materialien und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
 
 ## Aurelion · Echo-Bergung
 
@@ -48,7 +48,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 - [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
 - [Story und Welt](docs/story.md): deutsche interne Fassung des Einstiegs; die [englische Spielfassung](src/ui/codex.ts) ist im Startmenü über **Codex** lesbar.
 - [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
-- [Grafik und Assets](docs/rendering.md): Modell-/Texturpflege und Darstellungsgrenzen.
+- [Grafik und Assets](docs/rendering.md): prozedurale Oberflächen, Modell-/Texturpflege und Darstellungsgrenzen. [Project Tomorrow](docs/issues/project-tomorrow.md) hält die noch offene Weltgenerator- und Materialabnahme fest.
 - [Prüfungen](docs/testing.md): gezielte Tests, Standardtestsuite, ausdrücklich beauftragte KI-/Simulationsläufe und Aussagegrenzen; [optionale lokale Performancediagnose](docs/testing.md#lokale-performancediagnose).
 - [Feste Testreferenzen](docs/reference-tests.md): Umgang mit Fixtures.
 - [Issues](docs/issues/): offene Aufgaben und Entscheidungen, darunter [Geräte-/Run-Validierung](docs/issues/playtest-validation.md).

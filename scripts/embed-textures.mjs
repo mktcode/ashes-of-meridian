@@ -5,16 +5,8 @@ const root = new URL('../', import.meta.url);
 const target = new URL('src/renderer/assets.js', root);
 const textures = [
   ['sky', 'assets/textures/skybox.webp'],
-  ['ground', 'assets/textures/texture-ground-dirt-base.webp'],
-  ['desertRock', 'assets/textures/texture-rock-desert.webp'],
   ['rockClusters', 'assets/textures/texture-ground-rock-clusters.webp'],
   ['desertShrubs', 'assets/textures/texture-ground-desert-shrubs.webp'],
-  ['metal', 'assets/textures/texture-floor-mothership.webp'],
-  ['bio', 'assets/textures/texture-floor-alien-planet.webp'],
-  ['westmarkMeadow', 'assets/textures/texture-westmark-meadow.webp'],
-  ['westmarkGranite', 'assets/textures/texture-westmark-granite.webp'],
-  ['westmarkEarth', 'assets/textures/texture-westmark-earth.webp'],
-  ['westmarkBark', 'assets/textures/texture-westmark-bark.webp'],
   ['westmarkSpruce', 'assets/textures/texture-westmark-spruce.webp']
 ];
 

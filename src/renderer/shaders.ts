@@ -41,21 +41,41 @@ precision highp int;
 in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in float v_mat;
 in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
-uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform float u_groundPixelsPerMeter;uniform float u_groundMirror;uniform vec4 u_groundDecor;
+uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
-uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;
+uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;
 out vec4 frag;
 float shadow(){if(u_shadowOn<.5||v_glow>1.)return 1.;vec3 p=v_shadow.xyz/v_shadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float bias=max(u_shadowBias*2.5*(1.-dot(normalize(v_n),normalize(vec3(-64.,110.,43.)))),u_shadowBias);float s=0.;vec2 texel=1./vec2(textureSize(u_shadow,0));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)s+=p.z-bias>texture(u_shadow,p.xy+vec2(x,y)*texel).r?.36:1.;return s/9.;}
 float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
 vec3 tri(sampler2D tex,vec3 p,vec3 n,float scale){vec3 an=pow(abs(n),vec3(4.));an/=max(an.x+an.y+an.z,.0001);vec3 tx=texture(tex,p.yz*scale).rgb;vec3 ty=texture(tex,p.xz*scale).rgb;vec3 tz=texture(tex,p.xy*scale).rgb;return tx*an.x+ty*an.y+tz*an.z;}
-vec3 groundBase(vec2 world){vec2 pixels=vec2(textureSize(u_groundTex,0));if(u_groundMirror>.5){vec2 uv=world*u_groundPixelsPerMeter/pixels;return texture(u_groundTex,1.-abs(mod(uv,2.)-1.)).rgb;}return texture(u_groundTex,world*u_groundPixelsPerMeter/pixels).rgb;}
+vec2 groundUV(vec2 world){return world/u_groundTile+u_surfaceOffset;}
+vec3 groundBase(vec2 world){
+ vec3 color=texture(u_groundTex,groundUV(world)).rgb;
+ float region=sin(world.x*.047+u_surfaceOffset.x*6.28)*sin(world.y*.039+u_surfaceOffset.y*6.28);
+ return color*u_surfaceTint*(1.+region*.08);
+}
+// Height occupies alpha only in baked opaque surfaces, never in foliage/decals.
+float triHeight(sampler2D tex,vec3 p,vec3 n,float scale){
+ vec3 w=pow(abs(n),vec3(4.));w/=max(w.x+w.y+w.z,.0001);
+ return dot(vec3(texture(tex,p.yz*scale).a,texture(tex,p.xz*scale).a,texture(tex,p.xy*scale).a),w);
+}
+// Surface-gradient bump mapping needs no tangents, normal textures or new geometry.
+// Derivatives refer to world position even when the height field uses model coordinates.
+vec3 reliefNormal(vec3 n,float height){
+ vec3 dx=dFdx(v_pos),dy=dFdy(v_pos),r1=cross(dy,n),r2=cross(n,dx);
+ float det=dot(dx,r1);
+ vec3 gradient=sign(det)*(dFdx(height)*r1+dFdy(height)*r2)/max(abs(det),.000001);
+ // Bound grazing-angle gradients, including degenerate projected triangles.
+ gradient/=max(1.,length(gradient)*2.);
+ return normalize(n-gradient);
+}
 // Dedicated tileable rock albedo with regular world-space repetition.
 // Both vertical projections keep sediment layers horizontal; the foot blends into local soil.
 vec3 rockSurface(vec3 n){
  vec3 p=v_pos*u_rockScale;
  vec3 weights=pow(abs(n),vec3(4.));weights/=max(weights.x+weights.y+weights.z,.0001);
  vec3 stone=texture(u_rockTex,p.zy).rgb*weights.x+texture(u_rockTex,p.xz).rgb*weights.y+texture(u_rockTex,p.xy).rgb*weights.z;
- stone=mix(stone,v_col.rgb,.18);
+ stone=mix(stone*u_surfaceTint,v_col.rgb,.18);
  return mix(groundBase(v_pos.xz),stone,smoothstep(-.1,1.8,v_pos.y));
 }
 ${Object.entries(GROUND_DECOR_ATLAS).map(([name, rects]) =>
@@ -148,10 +168,10 @@ void main(){
  vec3 n=normalize(v_n);vec3 base=v_col.rgb;float surfaceAlpha=v_col.a;
 float metal=float(v_mat>1.5&&v_mat<2.5),bio=float(v_mat>2.5&&v_mat<3.5),crystal=float(v_mat>4.5&&v_mat<5.5);
 if(v_mat==${MAT.LANDSCAPE}.){
- vec2 uv=v_pos.xz*u_groundPixelsPerMeter/vec2(textureSize(u_groundTex,0));
+ vec2 uv=groundUV(v_pos.xz);
  vec2 warp=vec2(veilNoise(v_pos.xz*.12),veilNoise(v_pos.xz*.12+19.7))*.38;
  vec3 grass=mix(texture(u_groundTex,uv+warp).rgb,texture(u_groundTex,uv*1.371+3.76+warp).rgb,.42);
- grass*=mix(.87,1.08,veilNoise(v_pos.xz*.075));
+ grass*=u_surfaceTint*mix(.87,1.08,veilNoise(v_pos.xz*.075));
  vec3 stone=tri(u_rockTex,v_pos,n,u_rockScale);
  base=mix(grass,stone,clamp(v_detail.y+(1.-smoothstep(.60,.92,n.y))*.6,0.,1.));
  base=mix(base,texture(u_earthTex,v_pos.xz*.15).rgb,v_detail.x);
@@ -182,6 +202,32 @@ if(v_mat==${MAT.LANDSCAPE}.){
  base=mix(base,vec3(.65,.73,.67),foam);
  surfaceAlpha=(.22+.54*(1.-exp(-depth*.9))+foam*.18)*smoothstep(0.,.16+veilNoise(v_pos.xz*.9)*.25,depth);
 }else if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
+// All surface detail remains cosmetic: never displace the CPU-authoritative ground.
+// Performance omits the extra height sampling, retaining exactly the same albedo recipes.
+if(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96&&v_mat!=${MAT.FOLIAGE}.&&v_mat!=${MAT.WATER}.){
+ float h=0.;
+ if(v_mat==${MAT.LANDSCAPE}.){
+  float stone=clamp(v_detail.y+(1.-smoothstep(.60,.92,n.y))*.6,0.,1.);
+  vec2 uv=groundUV(v_pos.xz),warp=vec2(veilNoise(v_pos.xz*.12),veilNoise(v_pos.xz*.12+19.7))*.38;
+  float grass=mix(texture(u_groundTex,uv+warp).a,texture(u_groundTex,uv*1.371+3.76+warp).a,.42);
+  h=mix(grass*u_surfaceRelief.x,triHeight(u_rockTex,v_pos,n,u_rockScale)*u_surfaceRelief.y,stone);
+  h=mix(h,texture(u_earthTex,v_pos.xz*.15).a*u_landscapeRelief.x,v_detail.x);
+  h*=1.-clamp(v_detail.z,0.,1.);
+ }else if(v_mat==${MAT.MASONRY}.)h=triHeight(u_rockTex,v_pos,n,u_rockScale*2.)*u_surfaceRelief.y;
+ else if(v_mat==${MAT.BARK}.)h=triHeight(u_barkTex,v_modelPos,normalize(v_modelN),.32)*u_landscapeRelief.y;
+ else if(v_mat==${MAT.ROCK}.||v_mat==${MAT.MASSIF}.){
+  if(u_rockScale>0.){
+   vec3 p=v_pos*u_rockScale,w=pow(abs(n),vec3(4.));w/=max(w.x+w.y+w.z,.0001);
+   h=dot(vec3(texture(u_rockTex,p.zy).a,texture(u_rockTex,p.xz).a,texture(u_rockTex,p.xy).a),w)*u_surfaceRelief.y;
+   h=mix(texture(u_groundTex,groundUV(v_pos.xz)).a*u_surfaceRelief.x,h,smoothstep(-.1,1.8,v_pos.y));
+  }else h=triHeight(u_groundTex,v_pos,n,v_mat==${MAT.ROCK}.?.28:.16)*u_surfaceRelief.x;
+ }
+ else if(v_mat==${MAT.ALIEN}.)h=triHeight(u_bioTex,v_pos,n,.014)*u_surfaceRelief.w;
+ else if(bio>.5)h=triHeight(u_bioTex,v_modelPos,normalize(v_modelN),.17)*u_surfaceRelief.w;
+ else if(metal>.5)h=triHeight(u_metalTex,v_modelPos,normalize(v_modelN),.33)*u_surfaceRelief.z;
+ else if(v_mat==${MAT.GROUND}.||(v_mat==${MAT.AUTO}.&&v_pos.y<.22&&n.y>.66))h=texture(u_groundTex,groundUV(v_pos.xz)).a*u_surfaceRelief.x;
+ n=reliefNormal(n,h);
+}
 // Local-normal variation restores readable facets; a restrained static caustic suggests internal depth.
 if(crystal>.5){
  vec3 localN=normalize(v_modelN);

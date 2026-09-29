@@ -122,9 +122,8 @@ test('embedded skybox preserves the canonical WebP bytes and is wired as a non-r
   assert.ok(runtime.includes('img.src = MERIDIAN_TEXTURES[name];'));
 });
 
-test('embedded ground textures preserve the canonical WebP bytes without conversion', () => {
+test('embedded ground atlases preserve the canonical WebP bytes without conversion', () => {
   for (const [key, file] of Object.entries({
-    ground: 'texture-ground-dirt-base.webp',
     rockClusters: 'texture-ground-rock-clusters.webp',
     desertShrubs: 'texture-ground-desert-shrubs.webp'
   })) {
@@ -136,32 +135,11 @@ test('embedded ground textures preserve the canonical WebP bytes without convers
     assert.equal(image.toString('ascii', 0, 4), 'RIFF');
     assert.equal(image.toString('ascii', 8, 12), 'WEBP');
   }
-  assert.equal(vm.runInContext("'terrainOverlay' in MERIDIAN_TEXTURES", context), false);
-  assert.ok(scripts.find(s => s.name === 'renderer-runtime').source.includes(
-    'ground: { texture: this.groundTex, fallback: [146, 101, 75], repeat: true, resident: false }'
-  ));
 });
 
-test('embedded material textures preserve the canonical WebP bytes without conversion', () => {
-  for (const [key, file] of Object.entries({
-    metal: 'texture-floor-mothership.webp',
-    bio: 'texture-floor-alien-planet.webp',
-    desertRock: 'texture-rock-desert.webp'
-  })) {
-    const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
-    assert.match(url, /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/);
-    const payload = url.split(',')[1], image = Buffer.from(payload, 'base64');
-    assert.equal(image.toString('base64'), payload);
-    assert.deepEqual(image, readFileSync(join(__dirname, '..', 'assets/textures', file)));
-    assert.equal(image.toString('ascii', 0, 4), 'RIFF');
-    assert.equal(image.toString('ascii', 8, 12), 'WEBP');
-  }
-});
-
-test('Desert alone opts into the dedicated rock albedo and repeats its ground without mirroring', () => {
+test('Desert opts into its dedicated rock surface', () => {
   const desert = BATTLEFIELDS.desert.render;
   assert.equal(desert.groundTexture, 'ground');
-  assert.ok(!desert.groundMirror);
   assert.equal(desert.rockSurface.texture, 'desertRock');
   assert.ok(Number.isFinite(desert.rockSurface.metersPerTile) && desert.rockSurface.metersPerTile > 0);
   for (const map of ['alien-planet', 'mothership']) {
@@ -564,7 +542,7 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
   const w=new Battlefield(seed,'alien-planet'),p=w.renderData.placements;
   assert.deepEqual([w.extent,w.gridSize,w.cellSize],[135,108,2.5]);
   assert.equal((w.extent/BATTLEFIELDS.desert.size.extent)**2,2.25);
-  assert.equal(w.definition.render.groundTexture,'bio');assert.equal(w.definition.render.groundMirror,true);
+  assert.equal(w.definition.render.groundTexture,'bio');
   assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
   const edge=p=>Math.max(Math.abs(p.position[0]),Math.abs(p.position[2])),
     trees=p.filter(p=>p.mesh.startsWith('alienTree')||p.mesh==='alienSapling'),
@@ -668,7 +646,7 @@ test('Alien exterior and understory randomness cannot relocate solid roots',()=>
 for(const seed of [43015,74408,90001]) test(`Mothership ${seed}: rounded high decks, chamfered architecture and open service lanes`,()=>{
   const w=new Battlefield(seed,'mothership'),p=w.renderData.placements;
   assert.deepEqual([w.extent,w.gridSize,w.cellSize],[120,96,2.5]);
-  assert.equal(w.definition.render.groundTexture,'metal');assert.equal(w.definition.render.groundMirror,true);
+  assert.equal(w.definition.render.groundTexture,'metal');
   assert.equal(w.definition.render.rockDecor.opacity,0);assert.equal(w.definition.render.shrubDecor.opacity,0);
   assert.equal(w.definition.worldEvent,'solarFlare');assert.equal(w.rocks.length,0);
   assert.equal(w.renderData.features.length,8);

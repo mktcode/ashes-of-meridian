@@ -1,6 +1,6 @@
 /* CPU/GPU boundary contracts; erased by the classic-script build. */
 type RenderLayer = 'static' | 'dynamic' | 'effects';
-type ResidentTextureName = keyof typeof MERIDIAN_TEXTURES;
+type ResidentTextureName = keyof typeof MERIDIAN_TEXTURES | ProceduralMaterialName;
 type RenderColor = number | string | readonly number[] | Float32Array;
 type MeshData = number[] | Float32Array;
 interface RenderBucket {

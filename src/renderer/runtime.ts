@@ -7,7 +7,7 @@
     const CINEMA_ORBIT_SPEED = .04;
     // Standalone model previews also render without a BattlefieldView.
     const DEFAULT_TERRAIN_RENDER_PROFILE: BattlefieldRenderProfile = {
-      groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14, haze: [0.055, 0.09, 0.13],
+      groundTexture: 'ground', skyTexture: 'sky', haze: [0.055, 0.09, 0.13],
       rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 }
     };
     // Factories register at script load; GPU resources are created only for the active scenery.
@@ -35,6 +35,7 @@
       surface: BattlefieldSurface | null = null;
       decorSeed: number;
       battlefieldProfile: BattlefieldRenderProfile;
+      surfaceStyle = surfaceWorldStyle('ground', 0);
       private environment: BattlefieldEnvironment | null = null;
       haze: readonly [number, number, number];
       eye: number[];
@@ -203,7 +204,7 @@
         gl.depthFunc(gl.LEQUAL);
         this.drawCalls = 0;
       }
-      setBattlefieldProfile(profile: BattlefieldRenderProfile) {
+      setBattlefieldProfile(profile: BattlefieldRenderProfile, seed = 0) {
         if (profile.scenery !== this.battlefieldProfile.scenery || (profile.scenery && !this.environment)) {
           // Construct first: a failed allocation must not orphan the active environment.
           const factory = profile.scenery ? BattlefieldEnvironments[profile.scenery] : undefined;
@@ -212,6 +213,7 @@
           this.releaseEnvironment();
           this.environment = next ?? null;
         }
+        this.surfaceStyle = surfaceWorldStyle(profile.groundTexture, seed);
         this.battlefieldProfile = profile;
         this.haze = profile.haze;
       }
@@ -535,6 +537,20 @@
         const active = this.textureLoads[name];
         if (active) return active;
         const load = new Promise<boolean>(resolve => {
+          if (isProceduralMaterial(name)) {
+            // Bake only on a residency miss. Retain no CPU pixels or per-seed cache.
+            const image = bakeSurface(name), g = this.gl;
+            g.bindTexture(g.TEXTURE_2D, resource.texture);
+            g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, image.width, image.height, 0, g.RGBA, g.UNSIGNED_BYTE, image.pixels);
+            g.generateMipmap(g.TEXTURE_2D);
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.REPEAT);
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.REPEAT);
+            resource.resident = true;
+            resolve(true);
+            return;
+          }
           const img = new Image();
           img.decoding = 'async';
           img.onload = () => {
@@ -856,8 +872,18 @@
         g.uniform3fv(this.uniform(program, 'u_skyLight'), lighting.sky as [number, number, number]);
         g.uniform3fv(this.uniform(program, 'u_bounce'), lighting.bounce as [number, number, number]);
         g.uniform1f(this.uniform(program, 'u_shadowBias'), this.shadowBias);
-        g.uniform1f(this.uniform(program, 'u_groundPixelsPerMeter'), profile.groundPixelsPerMeter);
-        g.uniform1f(this.uniform(program, 'u_groundMirror'), profile.groundMirror ? 1 : 0);
+        const ground = PROCEDURAL_MATERIALS[profile.groundTexture],
+          rock = PROCEDURAL_MATERIALS[profile.rockSurface?.texture ?? profile.groundTexture],
+          style = this.surfaceStyle;
+        g.uniform2fv(this.uniform(program, 'u_groundTile'), profile.groundMetersPerTile ?? ground.tile);
+        g.uniform3fv(this.uniform(program, 'u_surfaceTint'), style.tint);
+        g.uniform2fv(this.uniform(program, 'u_surfaceOffset'), style.offset);
+        g.uniform4f(this.uniform(program, 'u_surfaceRelief'), ground.relief, rock.relief,
+          PROCEDURAL_MATERIALS.metal.relief, PROCEDURAL_MATERIALS.bio.relief);
+        g.uniform2f(this.uniform(program, 'u_landscapeRelief'),
+          PROCEDURAL_MATERIALS[profile.landscape?.earth ?? 'ground'].relief,
+          PROCEDURAL_MATERIALS[profile.landscape?.bark ?? 'metal'].relief);
+        g.uniform1f(this.uniform(program, 'u_reliefOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
         g.uniform4f(this.uniform(program, 'u_groundDecor'), profile.rockDecor.density,
           profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
