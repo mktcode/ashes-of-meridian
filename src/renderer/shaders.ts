@@ -4,7 +4,7 @@
     const CONTACT_SHADOW_MATERIAL = -1;
     // Dedicated procedural surfaces; the alloy pool makes deposits visibly illuminate the ground.
     const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3, ALLOY_LIGHT_MATERIAL = -4,
-      ALIEN_LIGHT_MATERIAL = -5;
+      ALIEN_LIGHT_MATERIAL = -5, SNOWFLAKE_MATERIAL = -6;
     // Pixel rectangles (left, top, right, bottom) in the 1254² Desert WebP atlases.
     // Keep a transparent margin around each motif; the plant sheet is not a regular grid.
     const GROUND_DECOR_ATLAS = {
@@ -44,6 +44,7 @@ void main(){v_detail=a_tint;vec4 p=ecologyPosition(a_model,a_pos,a_material);v_p
 vec3 textureScale=max(vec3(length(a_model[0].xyz),length(a_model[1].xyz),length(a_model[2].xyz)),vec3(.00001));
 v_modelPos=a_pos*textureScale;
 if(a_material==${CONTACT_SHADOW_MATERIAL}.||a_material==${ALLOY_LIGHT_MATERIAL}.)v_modelPos=a_pos;
+if(a_material==${SNOWFLAKE_MATERIAL}.)v_modelPos=a_pos;
 if(a_material==${PORTAL_MATERIAL}.||a_material==${PORTAL_STILL_MATERIAL}.)v_modelPos=a_pos;
 v_modelN=a_normal/textureScale;
 vec3 normal=a_normal;if(a_material>3.5)normal/=vec3(dot(a_model[0].xyz,a_model[0].xyz),dot(a_model[1].xyz,a_model[1].xyz),dot(a_model[2].xyz,a_model[2].xyz));v_n=normalize(mat3(a_model)*normal);v_col=vec4(a_color.rgb*a_tint,a_color.a);v_glow=a_glow;v_shadow=u_light*p;v_mat=a_material;gl_Position=u_vp*p;}`;
@@ -177,6 +178,17 @@ vec3 veilSurface(vec2 p,float time){
        +mix(hue,vec3(.85,.66,1.),.45)*(threads*.95+edge*.22);
 }
 void main(){
+ if(v_mat==${SNOWFLAKE_MATERIAL}.){
+  // Soft six-armed flakes on shared camera-facing quads, no particle texture.
+  // Reuse the paused/scaled material clock, not wall time, for their slow spin.
+  vec2 p=v_modelPos.xz*2.;float r=length(p);
+  float turn=atan(p.y,p.x+.00001)+u_portalTime*.65+v_pos.x*.23+v_pos.z*.19;
+  float arms=pow(.5+.5*cos(turn*6.),4.)*(1.-smoothstep(.28,.95,r));
+  float mask=max(1.-smoothstep(.08,.62,r),arms*.72);
+  float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
+  float visible=mix(1.,smoothstep(.35,.8,sight),u_fogOn);
+  frag=vec4(v_col.rgb*(.72+min(.28,dot(u_skyLight,vec3(.333)))),v_col.a*mask*visible);return;
+ }
  if(v_mat==${CONTACT_SHADOW_MATERIAL}.){
   float mask=1.-smoothstep(.05,1.,length(v_modelPos.xz*2.));
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;

@@ -6,7 +6,7 @@ const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS}=require('./helpers/ga
 const {createRendererStub}=require('./helpers/renderer-stub.cjs');
 const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
   'renderer-geometry','renderer-terrain-models','renderer-upland','renderer-ecology','renderer-world-variation','effects-view','ui-core','ui-templates'],
-  {globals:{CONTACT_SHADOW_MATERIAL:-1}});
+  {globals:{CONTACT_SHADOW_MATERIAL:-1,SNOWFLAKE_MATERIAL:-6}});
 const api=vm.runInContext(`({Battlefield,BATTLEFIELDS,battlefieldEcology,ecologyHabitat,ecologyFootprint,TerrainModels,
   MeridianGame,MeridianEffects,expeditionOpening,renderMissionBriefing,renderEcologyWeather,renderBattleScars,battleScarViews,
   renderWeaponSignature,UNIT_BODY_SCALE})`,context);
@@ -120,7 +120,8 @@ test('weather and battle scars are bounded, view-owned and clear with quality, t
   const state={time:1,cam:{x:0,z:0}},before=JSON.stringify([world,state]);
   for(const weather of ['rain','snow','ash','mist']){
     world.renderProfile.ecology.weather=weather;R.calls.length=0;api.renderEcologyWeather(R,world,state);
-    assert.ok(R.calls.length>0&&R.calls.length<=121);assert.ok(R.calls.every(c=>c[0]==='beam'||c[2]>=4));
+    assert.ok(R.calls.length>0&&R.calls.length<=(weather==='rain'||weather==='snow'?605:121));
+    assert.ok(R.calls.every(c=>c[0]==='beam'||c[2]>=4));
     const draws=JSON.stringify(R.calls);R.calls.length=0;api.renderEcologyWeather(R,world,state);assert.equal(JSON.stringify(R.calls),draws);
     world.visible[0]=0;R.calls.length=0;api.renderEcologyWeather(R,world,state);assert.equal(R.calls.length,0);world.visible[0]=1;
   }
@@ -136,6 +137,60 @@ test('weather and battle scars are bounded, view-owned and clear with quality, t
   R.calls.length=0;api.renderEcologyWeather(R,world,state);assert.equal(R.calls.length,0);
   R.quality=2;api.renderBattleScars(R,{fx:[]},{...world},1,1);assert.equal(api.battleScarViews.get(R).scars.length,0);
   assert.equal(JSON.stringify(effects),effectBefore);
+});
+
+test('rain displacement follows its streak on flat and sloped ground, with no clock or RNG mutation',()=>{
+  vm.runInContext('Math.random=()=>{throw Error("Weather RNG");}',context);
+  for(const slope of [0,.3]) {
+    const R=createRendererStub({record:true});R.quality=2;R.beam=(...a)=>R.calls.push(['beam',...a]);
+    const world={terrainSeed:7,extent:512,visible:[1],idx:()=>0,surface:{heightAt:(x,z)=>4+slope*x},
+      renderProfile:{ecology:{weather:'rain',phase:.2}}},state={time:1.234,cam:{x:0,z:0}},before=JSON.stringify([world,state]),
+      capture=time=>{R.calls.length=0;api.renderEcologyWeather(R,world,{...state,time});return json(R.calls);},
+      a=capture(state.time),b=capture(state.time+.00001);
+    assert.ok(a.length>121&&a.length<=605,'denser but bounded rain');assert.equal(a.length,b.length);
+    let compared=0;
+    for(let i=0;i<a.length;i++) {
+      const head=a[i][1],tail=a[i][2],next=b[i][1],move=next.map((v,j)=>v-head[j]),axis=head.map((v,j)=>v-tail[j]);
+      if(move[1]>=0)continue; // reset to the cloud is faded, not a falling segment
+      compared++;
+      const dot=move.reduce((sum,v,j)=>sum+v*axis[j],0)/(Math.hypot(...move)*Math.hypot(...axis));
+      assert.ok(dot>1-1e-8,'rain moves along the visible line, including on slopes');
+      assert.ok(Math.abs(move[0])>0&&Math.abs(move[2])>0);
+      assert.ok(head[1]>=world.surface.heightAt(head[0],head[2]));
+      assert.ok(a[i][3]>.017&&a[i][6]>0&&a[i][6]<=1,'readable width and valid opacity');
+    }
+    assert.ok(compared>100);assert.equal(JSON.stringify([world,state]),before);
+    assert.deepEqual(capture(state.time),a,'pause and arbitrary replay retain exactly the same rain');
+    R.quality=1;assert.ok(capture(state.time).length<=147);
+    world.idx=(x,z)=>x>0?0:1;world.visible=[1,0];
+    for(const c of capture(state.time))assert.ok(c[1][0]>0&&c[2][0]>0,'test actual wind-displaced endpoints against fog');
+    R.cinema=true;assert.equal(capture(state.time).length,0);
+  }
+});
+
+test('snowflakes have soft-quad geometry, varied sizes and drifting speeds with bounded visibility',()=>{
+  const R=createRendererStub({record:true});R.quality=2;R.eye=[0,110,82];
+  const world={terrainSeed:11,extent:512,visible:[1],idx:()=>0,surface:{heightAt:()=>4},
+    renderProfile:{ecology:{weather:'snow',phase:.2}}},state={time:2,cam:{x:0,z:0}},
+    capture=time=>{R.calls.length=0;api.renderEcologyWeather(R,world,{...state,time});return json(R.calls);},
+    a=capture(2),b=capture(2.01);
+  assert.ok(a.length>121&&a.length<=605);assert.equal(b.length,a.length);
+  assert.ok(a.every(c=>c[0]==='plane'&&c[14]===-6&&c[13]==='effects'));
+  assert.ok(new Set(a.map(c=>c[4].toFixed(2))).size>10,'varied flake sizes, not identical dots');
+  const velocities=[];
+  for(let i=0;i<a.length;i++) {
+    const c=a[i],next=b[i];assert.ok(c[2]>=4&&c[12]>0&&c[12]<=1);
+    assert.ok(Math.abs(c[9]-Math.atan2(82,110))<1e-10,'flake faces the actual camera');
+    if(next[2]<c[2])velocities.push([next[1]-c[1],next[2]-c[2],next[3]-c[3]]);
+  }
+  assert.ok(new Set(velocities.map(v=>v[1].toFixed(4))).size>10,'different fall speeds');
+  assert.ok(new Set(velocities.map(v=>v[0].toFixed(3))).size>3,'individual lateral flutter');
+  assert.deepEqual(capture(2),a,'snow is stateless and pauses with presentation time');
+  R.quality=1;assert.ok(capture(2).length<=147);
+  R.vp=vm.runInContext('M4.identity()',context);R.viewport={width:800,height:600};
+  assert.equal(capture(2).length,0,'offscreen flakes are culled');
+  R.vp=null;world.visible[0]=0;assert.equal(capture(2).length,0);
+  world.visible[0]=1;R.quality=0;assert.equal(capture(2).length,0);
 });
 
 test('weapon identities add distinct bounded view signatures without sampling RNG or changing beams',()=>{

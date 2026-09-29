@@ -34,22 +34,47 @@ function renderBattleScars(R:MeridianRenderer,effects:MeridianEffects,world:Batt
 function renderEcologyWeather(R:MeridianRenderer,world:Battlefield,s:RunState) {
   const e=world.renderProfile?.ecology;
   if(!e||!(R.quality>0)||R.cinema||e.weather==='clear')return;
-  const radius=R.quality>1?5:3,cx=Math.floor(s.cam.x/12),cz=Math.floor(s.cam.z/12),time=s.time;
+  const radius=R.quality>1?5:3,cx=Math.floor(s.cam.x/12),cz=Math.floor(s.cam.z/12),time=s.time,
+    rain=e.weather==='rain',snow=e.weather==='snow',precipitation=rain||snow,
+    count=precipitation?(R.quality>1?5:3):1,angle=(e.phase??0)+.4,
+    windX=Math.cos(angle)*.36,windZ=Math.sin(angle)*.36,
+    eyeX=(R.eye?.[0]??s.cam.x)-s.cam.x,eyeZ=(R.eye?.[2]??s.cam.z+.82)-s.cam.z,
+    yaw=Math.atan2(eyeX,eyeZ),pitch=Math.atan2(Math.hypot(eyeX,eyeZ),R.eye?.[1]??1.1),
+    visible=(x:number,z:number)=>Math.max(Math.abs(x),Math.abs(z))<world.extent&&!!world.visible[world.idx(x,z)];
   for(let dz=-radius;dz<=radius;dz++)for(let dx=-radius;dx<=radius;dx++) {
-    const ix=cx+dx,iz=cz+dz,hash=(Math.imul(ix,374761393)^Math.imul(iz,668265263)^world.terrainSeed)>>>0,
-      a=((Math.imul(hash^(hash>>>13),1274126177)>>>0)%65536)/65536,
-      x=ix*12+a*10,z=iz*12+((a*7.31)%1)*10;
-    if(Math.max(Math.abs(x),Math.abs(z))>=world.extent||!world.visible[world.idx(x,z)])continue;
-    const floor=world.surface?.heightAt(x,z)??0;
-    if(e.weather==='mist') {
-      if(hash%8)continue;
-      const r=4+a*3,y=floor+.35;
-      if(effectBoundsVisible(R,x,y,z,r,.5,r))R.add('sphere',x,y,z,r,.45,r,e.dry,0,0,0,.15,.035,'effects');
-    }else{
-      const fall=(a+time*(e.weather==='rain'?1.4:.22))%1,y=floor+(1-fall)*12+.1;
-      if(e.weather==='rain')drawVisibleEffectBeam(R,[x,y,z],[x-.24,y+.9,z-.12],.017,0xb0c7ca,.3,.18);
-      else if(effectBoundsVisible(R,x,y,z,.18,.18,.18))R.add('octa',x+Math.sin(time*.6+a*9)*.6,y,z,.10,.035,.10,
-        e.weather==='snow'?0xdfeaf0:0xc6a681,time+a*9,0,time*.3,.25,.36,'effects');
+    const ix=cx+dx,iz=cz+dz,hash=(Math.imul(ix,374761393)^Math.imul(iz,668265263)^world.terrainSeed)>>>0;
+    for(let i=0;i<count;i++) {
+      const bits=Math.imul(hash^Math.imul(i+1,1597334677),1274126177)>>>0,
+        a=precipitation?(bits&65535)/65536:((Math.imul(hash^(hash>>>13),1274126177)>>>0)%65536)/65536,
+        b=bits/4294967296,tx=ix*12+a*(precipitation?12:10),tz=iz*12+(precipitation?b*12:((a*7.31)%1)*10);
+      if(!visible(tx,tz))continue;
+      const floor=world.surface?.heightAt(tx,tz)??0;
+      if(e.weather==='mist') {
+        if(hash%8)continue;
+        const r=4+a*3,y=floor+.35;
+        if(effectBoundsVisible(R,tx,y,tz,r,.5,r))R.add('sphere',tx,y,tz,r,.45,r,e.dry,0,0,0,.15,.035,'effects');
+      }else if(precipitation) {
+        const fall=((a+b*.37)+time*(rain?1+b*.35:.085+b*.055))%1,
+          height=(1-fall)*(rain?18:16),fade=Math.min(1,fall*12,(1-fall)*15),
+          sway=snow?Math.sin(fall*Math.PI):0,phase=time*(.65+a*.4)+a*Math.PI*2,
+          x=tx-windX*height+Math.sin(phase)*sway*(.4+a*.7),
+          z=tz-windZ*height+Math.cos(phase*.73)*sway*.6,y=floor+.08+height;
+        // Anchor the flight to its landing height, not the changing ground beneath
+        // the moving drop. Otherwise slopes bend its trajectory away from the streak.
+        if(!visible(x,z)||y<(world.surface?.heightAt(x,z)??0)+.04||fade<=0)continue;
+        if(rain) {
+          const length=1.2+a*.8,bx=x-windX*length,bz=z-windZ*length;
+          if(visible(bx,bz))drawVisibleEffectBeam(R,[x,y,z],[bx,y+length,bz],.04+b*.025,0xc4dbe6,.45,(.42+b*.2)*fade);
+        }else {
+          const size=.30+b*.45;
+          if(effectBoundsVisible(R,x,y,z,size,size,size))R.add('plane',x,y,z,size,1,size,0xe5eff5,yaw,pitch,0,0,
+            (.60+a*.26)*fade,'effects',SNOWFLAKE_MATERIAL);
+        }
+      }else {
+        const fall=(a+time*.22)%1,y=floor+(1-fall)*12+.1;
+        if(effectBoundsVisible(R,tx,y,tz,.18,.18,.18))R.add('octa',tx+Math.sin(time*.6+a*9)*.6,y,tz,.10,.035,.10,
+          0xc6a681,time+a*9,0,time*.3,.25,.36,'effects');
+      }
     }
   }
 }
