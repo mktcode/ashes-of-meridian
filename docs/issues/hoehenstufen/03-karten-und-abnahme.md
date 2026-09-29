@@ -6,7 +6,7 @@ Abhängigkeiten: der integrierte [Welt-, Navigations- und Darstellungsvertrag](.
 
 ### Mothership: überarbeiteter Abnahmekandidat
 
-**Technisch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Die [asymmetrische Höhensicht](04-hoehenabhaengige-sicht.md) ist integriert. Die übrigen Karten bleiben bis zu einem neuen Auftrag unverändert.
+**Technisch umgesetzt, menschliche Abnahme ausstehend:** [Teststart und offene Grenzen](README.md#jetzt-manuell-testen). Die [asymmetrische Höhensicht](04-hoehenabhaengige-sicht.md) ist integriert. Dieser Abnahmekandidat ändert nur Mothership. Frontier erhält im getrennten [Project-Tomorrow-Auftrag](../project-tomorrow.md) natürliches begehbares Relief über denselben CPU-Oberflächenvertrag; das verändert Motherships feste Plateaus nicht und gibt die folgenden Alien-/Desert-Umbauten nicht frei.
 
 Der aktuelle Kandidat vergrößert die spielbare Ausdehnung von 90 auf 120. Vier abgerundete, weiterhin sechs Meter hohe Basisdecks umschließen eine große abgesenkte Gefechtsfläche; jede Basis besitzt eine breite Hauptrampe und einen getrennten Flankenzugang. Hangars und Maschineninseln verwenden angeschrägte sichtbare wie spielmechanische Umrisse. Eine kreuzförmig fortgeführte Außenhülle, detailliertere Fassaden und Dächer, Deckmarkierungen sowie zurückhaltende Signalleuchten sollen die Arena als Ausschnitt eines größeren Trägers lesbar machen.
 

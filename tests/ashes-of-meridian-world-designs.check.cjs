@@ -43,7 +43,7 @@ test('Frontier seeds change real layouts and terrain while retaining vehicle-wid
     for(const p of w.layout.startSites) assert.ok(w.surface.foundation(p,7));
     assert.ok(w.staticGrid.some(v=>v===1));
     assert.ok(w.renderData.placements.length<=618);
-    assert.ok(w.surface.maxHeight<=24);
+    assert.ok(w.surface.maxHeight<=40);
   }
   assert.equal(signatures.size,5);
   assert.equal(JSON.stringify(BATTLEFIELDS.frontier),definition,'no shared layout/profile mutation');
@@ -116,7 +116,7 @@ test('upland scenery is bounded, repeatable and contained by the unchanged CPU b
       }
       for(let i=0;i<mesh.length;i+=9) {
         const x=px+mesh[i]*sx*c+mesh[i+2]*sz*sin,z=pz-mesh[i]*sx*sin+mesh[i+2]*sz*c;
-        if(family==='Grass')assert.ok(mesh[i+1]*sy+py<.5,'traversable low groundcover, not a hidden obstacle');
+        if(family==='Grass')assert.ok(mesh[i+1]*sy+py-w.surface.heightAt(x,z)<.5,'traversable low groundcover follows local terrain');
         else assert.equal(w.staticGrid[w.idx(x,z)],1,`${seed}: ${p.mesh} over walkable cell`);
       }
     }
@@ -136,8 +136,14 @@ test('upland scenery is bounded, repeatable and contained by the unchanged CPU b
   }
   assert.deepEqual(json(new Battlefield(1409,'frontier').renderData),json(new Battlefield(1409,'frontier').renderData));
 });
-test('upland presentation retains Frontier-v1 geometry, encounter state and RNG',()=>{
-  assert.equal(signature(new Battlefield(1409,'frontier')),'e2c68f8592f59cfb72c758aa7b46eab560602dd671a398b30389913aca8086d5');
+test('Frontier-v1 remains a stable recipe for named designs, separate from the new highlands',()=>{
+  const original=BATTLEFIELDS.frontier;
+  try {
+    BATTLEFIELDS.frontier=vm.runInContext("createFrontierRecipe({biome:'meadow',relief:24})",context);
+    assert.equal(signature(new Battlefield(1409,'frontier')),'e2c68f8592f59cfb72c758aa7b46eab560602dd671a398b30389913aca8086d5');
+  } finally {BATTLEFIELDS.frontier=original;}
+});
+test('upland presentation retains encounter state and RNG on rolling terrain',()=>{
   const make=()=>{const g=new MeridianGame({upgrades:{}},()=>{});g.start({map:'frontier',seed:1409,faction:0,enemies:[1]});return g;};
   const decorated=make(),scenery=vm.runInContext('frontierMeadowScenery',context);
   try {
@@ -155,11 +161,13 @@ test('battle initialization places both minerals and vents from the generated la
   for(const [i,p] of sites.entries()) {
     const vent=resources.find(e=>e.type==='gas'&&e.x===p.x+(i?7:5)&&e.z===p.z+(i?7:18));
     assert.ok(vent,`missing generated vent ${i}`);
-    assert.equal(game.world.surface.heightAt(vent.x,vent.z),0);
+    const level=game.world.surface.heightAt(p.x,p.z);
+    assert.equal(game.world.surface.heightAt(vent.x,vent.z),level);
+    assert.ok(game.world.surface.foundation(vent,3),'a real refinery foundation fits on the local terrace');
     for(let j=0;j<5;j++) {
       const q=game.crystalPosition(i,j);
       assert.ok(resources.some(e=>e.type==='crystal'&&e.x===q.x&&e.z===q.z));
-      assert.equal(game.world.surface.heightAt(q.x,q.z),0);
+      assert.equal(game.world.surface.heightAt(q.x,q.z),level);
     }
   }
   assert.equal(game.s.entities.filter(e=>e.kind==='building'&&e.type==='hq').length,4);

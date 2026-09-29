@@ -152,10 +152,12 @@ interface BattlefieldDefinition {
   multiplayer?: boolean;
   size: BattlefieldSize;
   layout: BattlefieldLayout;
-  createLayout?: (terrainSeed: number) => BattlefieldLayout;
+  /** Resolve dimensions before layout and buffer allocation, without encounter RNG. */
+  createSize?: (terrainSeed: number) => BattlefieldSize;
+  createLayout?: (terrainSeed: number, size: BattlefieldSize) => BattlefieldLayout;
   design?: BattlefieldDesign;
-  /** Explicit start datum when decorative mountains exceed the base elevation. */
-  startHeight?: number;
+  /** Explicit datum, or each anchor's local plateau when bases have different heights. */
+  startHeight?: number | 'local';
   palette: BattlefieldPalette;
   render: BattlefieldRenderProfile;
   worldEvent: 'solarFlare' | null;

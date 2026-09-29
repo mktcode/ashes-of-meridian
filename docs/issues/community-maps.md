@@ -2,7 +2,7 @@
 
 **Produktziel, noch kein Implementierungsauftrag.** Spieler sollen eigenständig gestaltete 3D-Karten, auch mit KI-Unterstützung, als Datei erhalten und im Spiel importieren können. Mittel- bis langfristig sollen sie Karten veröffentlichen, finden und miteinander teilen können; eine Plattform dafür darf ein separates Webprojekt sein. **Im Spiel ist zunächst nur lokaler Import nötig**, weder Upload noch integrierter Editor oder Community-Katalog.
 
-Die internen [Weltrezepte und festen Designs](../architecture.md#weltrezepte-und-feste-designs) trennen inzwischen Landschaftsseed und Atmosphäre und erlauben kuratierten Content. Das ist **kein** Importformat und ersetzt nicht den hier geforderten Import eigener Geometrie; für fremde Pakete weiterhin ausschließlich validierte Daten akzeptieren.
+Die internen [Weltrezepte und festen Designs](../architecture.md#weltrezepte-und-feste-designs) trennen inzwischen Landschaftsseed und Atmosphäre und erlauben kuratierten Content, variable Instanzmaße und begehbares Relief. Das ist **kein** Importformat und ersetzt nicht den hier geforderten Import eigener Geometrie; für fremde Pakete weiterhin ausschließlich validierte Daten akzeptieren.
 
 ## Erster nutzbarer Umfang
 

@@ -106,15 +106,16 @@
         this.seed = seed;
         this.definition = BATTLEFIELDS[battlefieldId(map)];
         this.terrainSeed = this.definition.design?.terrainSeed ?? seed;
-        this.layout = this.definition.createLayout?.(this.terrainSeed) ?? this.definition.layout;
         this.renderProfile = battlefieldAtmosphere(this.definition.render, this.definition.design?.atmosphere, seed);
-        this.extent = this.definition.size.extent;
-        this.cellSize = this.definition.size.cellSize;
+        const size = this.definition.createSize?.(this.terrainSeed) ?? this.definition.size;
+        this.extent = size.extent;
+        this.cellSize = size.cellSize;
         this.gridSize = this.extent * 2 / this.cellSize;
         if (!Number.isFinite(this.extent) || this.extent <= 18 ||
             !Number.isFinite(this.cellSize) || this.cellSize <= 0 ||
             !Number.isSafeInteger(this.gridSize) || this.gridSize < 3)
           throw new Error('Battlefield size must have extent > 18 and a whole grid of at least 3 cells per side');
+        this.layout = this.definition.createLayout?.(this.terrainSeed, size) ?? this.definition.layout;
         const GRID = this.gridSize;
         this.staticGrid = new Uint8Array(GRID * GRID);
         this.terrainFeatureGrid = new Uint8Array(GRID * GRID);

@@ -142,8 +142,12 @@ function createFrontierRecipe(settings: FrontierSettings): BattlefieldDefinition
 }
 // Presentation-only habitat rules: full rock/crown envelopes stay in existing
 // blocked cells; low groundcover is traversable. No writes to terrain or simulation RNG.
-function frontierMeadowScenery(builder: BattlefieldBuilder, trail: (x:number,z:number)=>number) {
-  const w=builder.world,surface=w.surface!,random=builder.cosmeticRandom(0x554c414e),n=w.gridSize;
+function frontierMeadowScenery(builder: BattlefieldBuilder, trail: (x:number,z:number)=>number,
+  options:{treeLine?:number;groundcover?:(x:number,z:number)=>number|null}={}) {
+  const w=builder.world,surface=w.surface!,random=builder.cosmeticRandom(0x554c414e),n=w.gridSize,
+    groundcover=options.groundcover??((x:number,z:number)=>surface.heightAt(x,z)===0&&
+      surface.heightAt(x-1.4,z)===0&&surface.heightAt(x+1.4,z)===0&&
+      surface.heightAt(x,z-1.4)===0&&surface.heightAt(x,z+1.4)===0?0:null);
   for(let variant=0;variant<3;variant++) for(const family of ['Stone','Trunk','Crown','Grass'])
     w.renderData.geometries.push({mesh:`upland${family}${variant}`,model:`upland${family}`,seed:173+variant*7919,extent:0});
   const blocked=(x:number,z:number,r:number)=>{
@@ -159,13 +163,13 @@ function frontierMeadowScenery(builder: BattlefieldBuilder, trail: (x:number,z:n
   const trees:Position[]=[];
   let stones=0,grass=0;
   for(let i=0;i<2600;i++) {
-    const x=(random()-.5)*174,z=(random()-.5)*174,choice=random(),variant=Math.floor(random()*3),
+    const x=(random()-.5)*(w.extent*2-6),z=(random()-.5)*(w.extent*2-6),choice=random(),variant=Math.floor(random()*3),
       r=1.4+random()*1.7,yaw=random()*Math.PI*2,h=surface.heightAt(x,z),
       patch=Math.sin(x*.091+Math.sin(z*.07)*2)+Math.cos(z*.113-x*.041);
     if(h>.6&&blocked(x,z,r+.25)) {
       const samples=[surface.heightAt(x-r,z),surface.heightAt(x+r,z),surface.heightAt(x,z-r),surface.heightAt(x,z+r)],
         lo=Math.min(...samples),hi=Math.max(...samples);
-      if(choice<.7&&trees.length<60&&patch>-.4&&hi-lo<5&&h<16&&trees.every(p=>Math.hypot(x-p.x,z-p.z)>4.5)) {
+      if(choice<.7&&trees.length<60&&patch>-.4&&hi-lo<5&&h<(options.treeLine??16)&&trees.every(p=>Math.hypot(x-p.x,z-p.z)>4.5)) {
         const height=5.5+random()*3;
         place('Trunk',variant,x,h-.25,z,r,height,yaw,'BARK');
         place('Crown',variant,x,h-.25,z,r,height,yaw,'LEAF');
@@ -173,17 +177,15 @@ function frontierMeadowScenery(builder: BattlefieldBuilder, trail: (x:number,z:n
       } else if(stones<96&&hi-lo<2.8) {
         place('Stone',variant,x,lo-.4,z,r,1.2+r*.5+hi-lo,yaw,'ROCK',0xa4a58a);stones++;
       }
-    } else if(grass<400&&h===0&&!w.staticGrid[w.idx(x,z)]&&patch>.1&&trail(x,z)<.08&&
-      surface.heightAt(x-1.4,z)===0&&surface.heightAt(x+1.4,z)===0&&
-      surface.heightAt(x,z-1.4)===0&&surface.heightAt(x,z+1.4)===0&&
+    } else if(grass<400&&!w.staticGrid[w.idx(x,z)]&&patch>.1&&trail(x,z)<.08&&
       w.layout.startSites.every(p=>Math.hypot(x-p.x,z-p.z)>12)&&
       w.layout.resourceSites.every((p,i)=>Math.hypot(x-p.x,z-p.z)>10&&Math.hypot(x-p.x-(i?7:5),z-p.z-(i?7:18))>7)) {
-      place('Grass',variant,x,-.12,z,.8+random()*.6,.24+random()*.24,yaw,'LEAF');grass++;
+      const floor=groundcover(x,z);
+      if(floor===null)continue;
+      place('Grass',variant,x,floor-.12,z,.8+random()*.6,.24+random()*.24,yaw,'LEAF');grass++;
     }
   }
 }
-const FRONTIER_BATTLEFIELD=battlefieldDesign(createFrontierRecipe({biome:'meadow',relief:24}),'FRONTIER',
-  {atmosphere:{timeOfDay:'seeded'}});
 // A permanent catalog design from exactly the same system; encounter seeds still
 // control teams, economy and effects. The pinned landscape and dusk stay independent.
 const HAVEN_BATTLEFIELD=battlefieldDesign(createFrontierRecipe({biome:'arid',relief:18}),'HAVEN',

@@ -64,7 +64,8 @@ function battlefieldStartSites(world: Battlefield): Position[] {
     const site = candidates.find(p => {
       if (Math.abs(p.x) > world.extent - 12 || Math.abs(p.z) > world.extent - 12) return false;
       if (!world.layout.resourceSites.some(r => distance(p, r) <= 23)) return false;
-      if (world.surface && (Math.abs(world.surface.heightAt(p.x,p.z) - (world.definition.startHeight ?? world.surface.maxHeight)) > .05 ||
+      const datum = world.definition.startHeight === 'local' ? world.surface?.heightAt(anchor.x,anchor.z) : world.definition.startHeight;
+      if (world.surface && (Math.abs(world.surface.heightAt(p.x,p.z) - (datum ?? world.surface.maxHeight)) > .05 ||
         !world.surface.foundation(p, 7))) return false;
       if (world.layout.resourceSites.some((r, i) => distance(p, r) < 11 ||
         distance(p, {x: r.x + (i ? 7 : 5), z: r.z + (i ? 7 : 18)}) < 8)) return false;

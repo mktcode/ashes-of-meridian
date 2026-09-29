@@ -85,6 +85,7 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-westmark',
   'battlefield-aurelion',
   'battlefield-frontier',
+  'battlefield-highlands',
   'battlefield-catalog'
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([
