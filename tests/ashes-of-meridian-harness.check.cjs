@@ -361,13 +361,33 @@ test('loader rejects absent, duplicate, unnamed and non-classic script blocks', 
 });
 
 test('VM contexts are isolated and browser globals are not silently mocked', () => {
-  const scripts = readScripts('<script data-meridian-script="base">let value = input;</script>');
+  const scripts = readScripts('<script data-meridian-script="base">let value = input; const items = []; function read() { return value; }</script>');
   const a = loadScripts(['base'], { scripts, globals: { input: 1 } });
   const b = loadScripts(['base'], { scripts, globals: { input: 2 } });
-  vm.runInContext('value = 3', a);
-  assert.equal(vm.runInContext('value', b), 2);
+  vm.runInContext('value = 3; items.push(1); Object.prototype.contextA = true;', a);
+  assert.equal(vm.runInContext('read()', a), 3);
+  assert.equal(vm.runInContext('read()', b), 2);
+  assert.equal(vm.runInContext('items.length', b), 0);
+  assert.equal(vm.runInContext('({}).contextA', b), undefined);
   assert.equal(vm.runInContext('typeof document', a), 'undefined');
   assert.equal(vm.runInContext('typeof window', a), 'undefined');
+});
+
+test('compiled loader follows changed explicit sources and filenames and skips unrequested syntax errors', () => {
+  const scripts = readScripts('<script data-meridian-script="base">const value = 1;</script><script data-meridian-script="unused">invalid syntax !</script>');
+  assert.equal(vm.runInContext('value', loadScripts(['base'], { scripts })), 1);
+  scripts[0].source = 'const value = 2;';
+  assert.equal(vm.runInContext('value', loadScripts(['base'], { scripts })), 2);
+  scripts[0].source = 'throw Error("fixture failure");';
+  assert.throws(() => loadScripts(['base'], { scripts }), error => /index\.html#base/.test(error.stack));
+  scripts[0].filename = 'changed.js';
+  assert.throws(() => loadScripts(['base'], { scripts }), error => /changed\.js:1/.test(error.stack));
+});
+
+test('default project bytecode still creates independent content objects', () => {
+  const a = loadScripts(['content']), b = loadScripts(['content']);
+  vm.runInContext('UNITS.worker.cost = -1', a);
+  assert.ok(vm.runInContext('UNITS.worker.cost', b) > 0);
 });
 
 test('script failures identify the named source', () => {

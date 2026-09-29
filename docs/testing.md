@@ -58,6 +58,8 @@ npm run test:simulation
 
 Im Abschluss Standardlauf, gezielte Tests und ausdrücklich beauftragte Langläufe getrennt benennen. Ein grünes `npm test` bedeutet nicht, dass auch die beiden optionalen Blöcke geprüft wurden.
 
+Der VM-Harness liest den gebauten Skriptbestand je Testprozess einmal und kompiliert angeforderte Skripte wiederverwendbar. Jeder `loadScripts`-Aufruf erzeugt trotzdem einen frischen VM-Kontext: keine gemeinsamen Contentobjekte, Prototypen oder Spielzustände. Explizite `readScripts`-Aufrufe lesen weiterhin frisch; eigene Loader-Fixtures können Quellen und Dateinamen austauschen. Nach einem neuen Build einen neuen Testprozess starten, keinen bestehenden Prozess als Watch-Runner verwenden.
+
 CPU-Simulationstests laden keinen Renderer; Grafikgeometrie und Uploads separat prüfen. Tests für einzelne Einheitenregeln isolieren den strategischen Controller, KI-Abnahmen verwenden echte Aktionen/Produktion. Neue Abdeckung fachlich klein halten, keine redundanten Karten-/Fraktions-/Upgrade-Kreuzprodukte ohne zusätzlichen Erkenntniswert. Umgang mit Sollwerten: [Feste Referenzen](reference-tests.md).
 
 ## Multiplayer-Prototyp

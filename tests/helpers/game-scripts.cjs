@@ -151,7 +151,11 @@ function readScripts(html, { rootDir = projectRoot } = {}) {
   return scripts;
 }
 
-function loadScripts(names, { scripts = readScripts(), globals = {} } = {}) {
+// A test process consumes one build. Cache source/bytecode, never a VM context or game state.
+// Explicit readScripts calls stay fresh for loader fixtures and alternate source roots.
+let defaultScripts;
+const compiledScripts = new WeakMap();
+function loadScripts(names, { scripts = (defaultScripts ??= readScripts()), globals = {} } = {}) {
   const requested = new Set(names);
   for (const name of requested) {
     if (!scripts.some(script => script.name === name)) throw new Error(`Missing script: ${name}`);
@@ -160,7 +164,14 @@ function loadScripts(names, { scripts = readScripts(), globals = {} } = {}) {
   // Match the browser, not request order. Dependencies remain explicit at call
   // sites; reading a script never executes it and the app is not auto-loaded.
   for (const script of scripts) {
-    if (requested.has(script.name)) vm.runInContext(script.source, context, { filename: script.filename });
+    if (!requested.has(script.name)) continue;
+    let cached = compiledScripts.get(script);
+    if (!cached || cached.source !== script.source || cached.filename !== script.filename) {
+      cached = { source: script.source, filename: script.filename,
+        program: new vm.Script(script.source, { filename: script.filename }) };
+      compiledScripts.set(script, cached);
+    }
+    cached.program.runInContext(context);
   }
   return context;
 }
