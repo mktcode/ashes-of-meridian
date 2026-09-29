@@ -75,7 +75,8 @@ function createFrontierRecipe(settings: FrontierSettings): BattlefieldDefinition
       {ground:0x59443a,rock:0x74544a,accent:0xf0b67b,flora:0x806348},
     render:{groundTexture:meadow?'westmarkMeadow':'ground',skyTexture:'sky',
       rockSurface:{texture:meadow?'westmarkGranite':'desertRock',metersPerTile:meadow?9:18},
-      rockDecor:{density:0,opacity:0},shrubDecor:{density:0,opacity:0},haze:[.38,.45,.50],terrainReceiverHeight:relief},
+      ...(meadow?{upland:true,landscape:{earth:'westmarkEarth' as const,bark:'westmarkBark' as const}}:{}),
+      rockDecor:{density:0,opacity:0},shrubDecor:{density:0,opacity:0},haze:[.38,.45,.50],terrainReceiverHeight:relief+(meadow?10:0)},
     worldEvent:null,
     generate(builder) {
       const w=builder.world,height=frontierHeight(w.layout,w.terrainSeed,relief),
@@ -90,13 +91,27 @@ function createFrontierRecipe(settings: FrontierSettings): BattlefieldDefinition
       builder.ground();
       w.renderData.placements=w.renderData.placements.filter(p=>p.mesh!=='box');
       w.renderData.placements.find(p=>p.mesh==='terrain')!.material='LANDSCAPE';
+      // Trail pigment follows the existing graph, never creates a navigable route.
+      const segments=w.layout.corridors.flatMap(route=>route.slice(1).map(([x,z],i)=>{
+        const [ax,az]=route[i],dx=x-ax,dz=z-az;return {ax,az,dx,dz,length2:dx*dx+dz*dz||1};
+      }));
+      const trail=(x:number,z:number)=>{
+        let d=Infinity;
+        for(const s of segments) {
+          const t=clamp(((x-s.ax)*s.dx+(z-s.az)*s.dz)/s.length2,0,1);
+          d=Math.min(d,Math.hypot(x-s.ax-s.dx*t,z-s.az-s.dz*t));
+        }
+        const clearing=Math.min(...w.layout.startSites.map(p=>Math.hypot(x-p.x,z-p.z)));
+        return clamp((3.8-d)/3.2,0,1)*clamp((clearing-9)/8,0,1);
+      };
       const field=(extent:number,step:number,innerExtent=0):WorldRelief=>{
         const size=Math.round(extent*2/step)+3,heights=new Float32Array(size*size),colors=new Float32Array(size*size*3);
         for(let z=0;z<size;z++) for(let x=0;x<size;x++) {
           const wx=(x-1)*step-extent,wz=(z-1)*step-extent,i=z*size+x,
             h=Math.max(Math.abs(wx),Math.abs(wz))<=w.extent?surface.heightAt(wx,wz):height(wx,wz);
           heights[i]=h-.13;
-          colors[i*3]=0;colors[i*3+1]=Math.min(1,h/4);colors[i*3+2]=0;
+          colors[i*3]=meadow?trail(wx,wz)*clamp(1-h,0,1):0;
+          colors[i*3+1]=Math.min(1,h/4);colors[i*3+2]=0;
         }
         return {extent,step,size,heights,colors,innerExtent};
       };
@@ -105,7 +120,7 @@ function createFrontierRecipe(settings: FrontierSettings): BattlefieldDefinition
       builder.place('frontierBackdrop',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','LANDSCAPE');
       // Bounded, independent scenery. Large rocks stay completely inside existing blockers.
       const decor=builder.cosmeticRandom(0x53434154);
-      for(let i=0;i<240;i++) {
+      if(!meadow) for(let i=0;i<240;i++) {
         const x=(decor()-.5)*172,z=(decor()-.5)*172,r=.6+decor()*1.2,h=surface.heightAt(x,z);
         if(h<2||surface.fits(x,z,r+3)) continue;
         const cell=w.idx(x,z),cx=cell%n,cz=Math.floor(cell/n);
@@ -115,6 +130,7 @@ function createFrontierRecipe(settings: FrontierSettings): BattlefieldDefinition
         if(!embedded)continue;
         builder.place('rockBoulder',x,h-.3,z,r,1+decor()*2,r,builder.palette.rock,decor()*6.28,0,0,0,1,'static','ROCK');
       }
+      if(meadow) frontierMeadowScenery(builder,trail);
       // Fail a broken recipe explicitly rather than silently rerolling or clearing collision.
       for(const route of w.layout.corridors) for(let i=1;i<route.length;i++) {
         const [ax,az]=route[i-1],[bx,bz]=route[i];
@@ -123,6 +139,48 @@ function createFrontierRecipe(settings: FrontierSettings): BattlefieldDefinition
       battlefieldStartSites(w);
     }
   };
+}
+// Presentation-only habitat rules: full rock/crown envelopes stay in existing
+// blocked cells; low groundcover is traversable. No writes to terrain or simulation RNG.
+function frontierMeadowScenery(builder: BattlefieldBuilder, trail: (x:number,z:number)=>number) {
+  const w=builder.world,surface=w.surface!,random=builder.cosmeticRandom(0x554c414e),n=w.gridSize;
+  for(let variant=0;variant<3;variant++) for(const family of ['Stone','Trunk','Crown','Grass'])
+    w.renderData.geometries.push({mesh:`upland${family}${variant}`,model:`upland${family}`,seed:173+variant*7919,extent:0});
+  const blocked=(x:number,z:number,r:number)=>{
+    if(Math.max(Math.abs(x),Math.abs(z))+r>w.extent-2)return false;
+    const lo=w.idx(x-r,z-r),hi=w.idx(x+r,z+r);
+    for(let row=Math.floor(lo/n);row<=Math.floor(hi/n);row++)for(let col=lo%n;col<=hi%n;col++)
+      if(!w.staticGrid[row*n+col])return false;
+    return true;
+  };
+  const place=(family:string,variant:number,x:number,y:number,z:number,r:number,h:number,yaw:number,
+    material:NonNullable<WorldPlacement['material']>,color=0xffffff)=>
+    builder.place(`upland${family}${variant}`,x,y,z,r,h,r,color,yaw,0,0,0,1,'static',material);
+  const trees:Position[]=[];
+  let stones=0,grass=0;
+  for(let i=0;i<2600;i++) {
+    const x=(random()-.5)*174,z=(random()-.5)*174,choice=random(),variant=Math.floor(random()*3),
+      r=1.4+random()*1.7,yaw=random()*Math.PI*2,h=surface.heightAt(x,z),
+      patch=Math.sin(x*.091+Math.sin(z*.07)*2)+Math.cos(z*.113-x*.041);
+    if(h>.6&&blocked(x,z,r+.25)) {
+      const samples=[surface.heightAt(x-r,z),surface.heightAt(x+r,z),surface.heightAt(x,z-r),surface.heightAt(x,z+r)],
+        lo=Math.min(...samples),hi=Math.max(...samples);
+      if(choice<.7&&trees.length<60&&patch>-.4&&hi-lo<5&&h<16&&trees.every(p=>Math.hypot(x-p.x,z-p.z)>4.5)) {
+        const height=5.5+random()*3;
+        place('Trunk',variant,x,h-.25,z,r,height,yaw,'BARK');
+        place('Crown',variant,x,h-.25,z,r,height,yaw,'LEAF');
+        trees.push({x,z});
+      } else if(stones<96&&hi-lo<2.8) {
+        place('Stone',variant,x,lo-.4,z,r,1.2+r*.5+hi-lo,yaw,'ROCK',0xa4a58a);stones++;
+      }
+    } else if(grass<400&&h===0&&!w.staticGrid[w.idx(x,z)]&&patch>.1&&trail(x,z)<.08&&
+      surface.heightAt(x-1.4,z)===0&&surface.heightAt(x+1.4,z)===0&&
+      surface.heightAt(x,z-1.4)===0&&surface.heightAt(x,z+1.4)===0&&
+      w.layout.startSites.every(p=>Math.hypot(x-p.x,z-p.z)>12)&&
+      w.layout.resourceSites.every((p,i)=>Math.hypot(x-p.x,z-p.z)>10&&Math.hypot(x-p.x-(i?7:5),z-p.z-(i?7:18))>7)) {
+      place('Grass',variant,x,-.12,z,.8+random()*.6,.24+random()*.24,yaw,'LEAF');grass++;
+    }
+  }
 }
 const FRONTIER_BATTLEFIELD=battlefieldDesign(createFrontierRecipe({biome:'meadow',relief:24}),'FRONTIER',
   {atmosphere:{timeOfDay:'seeded'}});

@@ -513,7 +513,7 @@
       textureNames(profile: BattlefieldRenderProfile) {
         const names = new Set<ResidentTextureName>(['sky', 'metal', 'bio', profile.groundTexture]);
         if (profile.rockSurface) names.add(profile.rockSurface.texture);
-        if (profile.landscape) for (const name of Object.values(profile.landscape)) names.add(name);
+        if (profile.landscape) for (const name of Object.values(profile.landscape)) if (name) names.add(name);
         if (profile.rockDecor.density > 0) names.add('rockClusters');
         if (profile.shrubDecor.density > 0) names.add('desertShrubs');
         return names;
@@ -891,6 +891,7 @@
         g.uniform2f(this.uniform(program, 'u_landscapeRelief'),
           PROCEDURAL_MATERIALS[profile.landscape?.earth ?? 'ground'].relief,
           PROCEDURAL_MATERIALS[profile.landscape?.bark ?? 'metal'].relief);
+        g.uniform1f(this.uniform(program, 'u_upland'), profile.upland ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_reliefOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
         g.uniform4f(this.uniform(program, 'u_groundDecor'), profile.rockDecor.density,

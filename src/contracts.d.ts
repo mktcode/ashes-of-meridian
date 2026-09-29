@@ -129,7 +129,9 @@ interface BattlefieldRenderProfile {
   /** Optional albedo for ROCK/MASSIF; other profiles retain their ground-derived material. */
   rockSurface?: { texture: 'desertRock' | 'westmarkGranite'; metersPerTile: number };
   /** Natural terrain's extra materials; absent on the established maps. */
-  landscape?: { earth: 'westmarkEarth'; bark: 'westmarkBark'; foliage: 'westmarkSpruce' };
+  landscape?: { earth: 'westmarkEarth'; bark: 'westmarkBark'; foliage?: 'westmarkSpruce' };
+  /** Opt-in weathered stone, meadow mosaics and deposited trail soil. */
+  upland?: boolean;
   daylight?: boolean;
   rockDecor: { density: number; opacity: number };
   shrubDecor: { density: number; opacity: number };

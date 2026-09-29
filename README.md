@@ -25,7 +25,7 @@ Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen 
 
 ## Frontier und feste Kartendesigns
 
-Frontier ergänzt Expeditionen um seedbasierte Landschaften: Wege, Ressourcenflächen und Höhenformen entstehen zusammen. Haven zeigt dieselbe Generierung als dauerhaft benanntes arides Design mit festem Landschaftsseed und Abendlicht. Tageszeit und Materialvariante sind unabhängig von der Geometrie; bestehende Spezialkarten wie Aurelion behalten ihre feste Gestaltung. [Rezepte und Designpflege](docs/architecture.md#weltrezepte-und-feste-designs).
+Frontier ergänzt Expeditionen um seedbasierte Landschaften: Wege, Ressourcenflächen und Höhenformen entstehen zusammen. Prozedurale Laubbäume, geschichtete Steine, Gräser und Blüten sowie hangabhängige Materialien gestalten das Wiesenrezept; sichtbare Erdwege folgen dem vorhandenen Wegenetz. Haven zeigt dieselbe Generierung als dauerhaft benanntes arides Design mit festem Landschaftsseed und Abendlicht. Tageszeit und Materialvariante sind unabhängig von der Geometrie; bestehende Spezialkarten wie Aurelion behalten ihre feste Gestaltung. [Rezepte und Designpflege](docs/architecture.md#weltrezepte-und-feste-designs).
 
 `index.html?experiment=frontier&seed=1409` beziehungsweise `index.html?experiment=haven&seed=1409` starten isolierte Probeläufe ohne dauerhafte Profiländerungen. Andere positive Seeds mit bis zu acht Stellen erzeugen auf Frontier andere Landschaften; Haven behält seine Landschaft. Das Pausenmenü zeigt die Seeds und gegebenenfalls Tageszeit. Menschliche Karten-/Nachtkontrastabnahme und Multiplayerfreigabe bleiben [offen](docs/issues/project-tomorrow.md#noch-nicht-erreicht--abnahme).
 

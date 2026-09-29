@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
-  'renderer-geometry','renderer-terrain-models','renderer-landscape']);
+  'renderer-geometry','renderer-terrain-models','renderer-landscape','renderer-upland']);
 const { Battlefield, BATTLEFIELDS, MeridianGame, battlefieldStartSites, battlefieldDesign, battlefieldAtmosphere, TerrainModels } =
   vm.runInContext('({Battlefield,BATTLEFIELDS,MeridianGame,battlefieldStartSites,battlefieldDesign,battlefieldAtmosphere,TerrainModels})',context);
 const json = value => JSON.parse(JSON.stringify(value));
@@ -42,7 +42,7 @@ test('Frontier seeds change real layouts and terrain while retaining vehicle-wid
     }
     for(const p of w.layout.startSites) assert.ok(w.surface.foundation(p,7));
     assert.ok(w.staticGrid.some(v=>v===1));
-    assert.ok(w.renderData.placements.length<=242);
+    assert.ok(w.renderData.placements.length<=618);
     assert.ok(w.surface.maxHeight<=24);
   }
   assert.equal(signatures.size,5);
@@ -99,6 +99,53 @@ test('generated relief uses the CPU samples and shared mesh diagonal, never a se
     assert.ok(Math.abs(y-(s.heightAt(x,z)-.13))<.00001);
     assert.ok(mesh[i+4]>0,'upward surface normal');
   }
+});
+test('upland scenery is bounded, repeatable and contained by the unchanged CPU blockers',()=>{
+  const meshCache=new Map();
+  for(const seed of [1,1409,40517,7919,0xffffffff]) {
+    const w=new Battlefield(seed,'frontier'),counts={Stone:0,Trunk:0,Crown:0,Grass:0};
+    for(const p of w.renderData.placements.filter(p=>p.mesh.startsWith('upland'))) {
+      const family=p.mesh.match(/^upland([A-Za-z]+)/)[1];counts[family]++;
+      if(!meshCache.has(p.mesh))meshCache.set(p.mesh,TerrainModels.geometry(w.renderData.geometries.find(g=>g.mesh===p.mesh)));
+      const mesh=meshCache.get(p.mesh),[px,py,pz]=p.position,[sx,sy,sz]=p.scale,c=Math.cos(p.rotation[0]),sin=Math.sin(p.rotation[0]);
+      assert.equal(p.layer,'static');assert.equal(p.alpha,1);
+      if(family!=='Grass') {
+        const n=w.gridSize,lo=w.idx(px-sx,pz-sz),hi=w.idx(px+sx,pz+sz);
+        for(let row=Math.floor(lo/n);row<=Math.floor(hi/n);row++)for(let col=lo%n;col<=hi%n;col++)
+          assert.equal(w.staticGrid[row*n+col],1,'whole footprint, not just its vertices, stays blocked');
+      }
+      for(let i=0;i<mesh.length;i+=9) {
+        const x=px+mesh[i]*sx*c+mesh[i+2]*sz*sin,z=pz-mesh[i]*sx*sin+mesh[i+2]*sz*c;
+        if(family==='Grass')assert.ok(mesh[i+1]*sy+py<.5,'traversable low groundcover, not a hidden obstacle');
+        else assert.equal(w.staticGrid[w.idx(x,z)],1,`${seed}: ${p.mesh} over walkable cell`);
+      }
+    }
+    assert.ok(counts.Stone>0&&counts.Stone<=96);
+    assert.ok(counts.Crown>0&&counts.Crown<=60);assert.equal(counts.Trunk,counts.Crown);
+    assert.ok(counts.Grass>0&&counts.Grass<=400);
+  }
+  for(const [name,mesh] of meshCache) {
+    assert.ok(mesh.length%27===0&&mesh.length/27<=2700,`${name}: bounded triangles`);
+    assert.ok(Array.from(mesh).every(Number.isFinite));
+    for(let i=0;i<mesh.length;i+=9) {
+      assert.ok(Math.hypot(mesh[i],mesh[i+2])<=1.001,`${name}: unit footprint`);
+      assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-5,`${name}: unit normals`);
+      if(name.includes('Stone')&&mesh[i+1]>.99)assert.ok(mesh[i+4]>-.3,'stone crowns must not have inverted normals');
+    }
+    assert.deepEqual(mesh,TerrainModels[name.replace(/\d$/,'')](173+Number(name.at(-1))*7919,0));
+  }
+  assert.deepEqual(json(new Battlefield(1409,'frontier').renderData),json(new Battlefield(1409,'frontier').renderData));
+});
+test('upland presentation retains Frontier-v1 geometry, encounter state and RNG',()=>{
+  assert.equal(signature(new Battlefield(1409,'frontier')),'e2c68f8592f59cfb72c758aa7b46eab560602dd671a398b30389913aca8086d5');
+  const make=()=>{const g=new MeridianGame({upgrades:{}},()=>{});g.start({map:'frontier',seed:1409,faction:0,enemies:[1]});return g;};
+  const decorated=make(),scenery=vm.runInContext('frontierMeadowScenery',context);
+  try {
+    vm.runInContext('frontierMeadowScenery=()=>{}',context);
+    const bare=make();assert.deepEqual(json(decorated.s),json(bare.s));
+    assert.equal(signature(decorated.world),signature(bare.world));
+    assert.equal(decorated.random(),bare.random());
+  } finally {context.restoreScenery=scenery;vm.runInContext('frontierMeadowScenery=restoreScenery',context);delete context.restoreScenery;}
 });
 test('battle initialization places both minerals and vents from the generated layout',()=>{
   const game=new MeridianGame({upgrades:{}},()=>{});

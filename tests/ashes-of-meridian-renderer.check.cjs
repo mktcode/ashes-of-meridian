@@ -167,7 +167,7 @@ test('map switches keep only current world meshes plus shared geometry, includin
   r.geometry('sharedUnit', new Float32Array(27));
   const shared = r.meshes.sharedUnit;
   let firstDesertBytes;
-  for (const map of ['desert', 'westmark', 'aurelion', 'mothership', 'alien-planet', 'aurelion', 'desert']) {
+  for (const map of ['desert', 'frontier', 'haven', 'westmark', 'aurelion', 'mothership', 'alien-planet', 'aurelion', 'desert']) {
     const world = new Battlefield(1409, map), before = JSON.stringify(world.renderData);
     const expected = new Set(['sharedUnit', ...(world.renderData.scenery
       ? ['aurelionStructure','echoRelicCrystal','aurelionAir0'] : ['terrain']), ...world.renderData.geometries.map(d => d.mesh)]);
@@ -444,6 +444,22 @@ test('dedicated rock material is opt-in and resets on profile changes without te
   for (const projection of ['zy', 'xz', 'xy']) assert.ok(material.includes(`texture(u_rockTex,p.${projection})`));
   assert.ok(material.includes('groundBase(v_pos.xz)'), 'rock foot blends with the local ground');
   assert.doesNotMatch(material, /mod\(|fract\(|u_time|u_eye|u_decorSeed/, 'no mirrored tiling or moving detail');
+});
+
+test('upland weathering is opt-in, resets on map changes and needs no foliage image',()=>{
+  const h=setup(),maps=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS]);h.r.resize();
+  for(const map of ['frontier','haven','westmark','desert','frontier']) {
+    const profile=vm.runInContext(`BATTLEFIELDS.${map}.render`,maps);
+    h.r.setBattlefieldProfile(profile,1409);h.calls.length=0;h.r.render(0);
+    assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_upland'&&c[2]===(map==='frontier'?1:0)));
+    const textures=h.r.textureNames(profile);
+    if(map==='frontier') {
+      assert.ok(textures.has('westmarkEarth')&&textures.has('westmarkBark'));
+      assert.ok(!textures.has('westmarkSpruce'),'opaque procedural crowns do not decode branch cards');
+      assert.deepEqual(h.r.textureNames({...profile,landscape:{...profile.landscape,foliage:undefined}}),textures);
+    }
+    assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
+  }
 });
 
 test('lighting profiles override shader colors without additional textures or render passes',()=>{

@@ -43,7 +43,7 @@ in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
-uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;
+uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
 out vec4 frag;
 float shadow(){if(u_shadowOn<.5||v_glow>1.)return 1.;vec3 p=v_shadow.xyz/v_shadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float bias=max(u_shadowBias*2.5*(1.-dot(normalize(v_n),normalize(vec3(-64.,110.,43.)))),u_shadowBias);float s=0.;vec2 texel=1./vec2(textureSize(u_shadow,0));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)s+=p.z-bias>texture(u_shadow,p.xy+vec2(x,y)*texel).r?.36:1.;return s/9.;}
 float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
@@ -121,6 +121,16 @@ float veilNoise(vec2 p){
  return mix(mix(veilHash(i),veilHash(i+vec2(1,0)),f.x),mix(veilHash(i+vec2(0,1)),veilHash(i+vec2(1,1)),f.x),f.y);
 }
 float veilCloud(vec2 p){return veilNoise(p)*.57+veilNoise(p*2.03+7.1)*.29+veilNoise(p*4.07-3.4)*.14;}
+// Opt-in upland stone: bedding follows elevation; exposed faces bleach while
+// upward shelves collect lichen. Pure shading, never GPU terrain displacement.
+vec3 uplandStone(vec3 stone,vec3 n){
+ float weather=veilNoise(v_pos.xz*.19),seam=sin(v_pos.y*1.1+weather*7.+v_pos.x*.06);
+ float strata=smoothstep(-.75,.35,seam);
+ stone=mix(stone*vec3(.92,.99,1.03),vec3(.59,.56,.43),.24);
+ stone*=mix(.91,1.06,strata);
+ float cap=smoothstep(.63,.94,n.y)*smoothstep(.28,.76,weather);
+ return mix(stone,stone*vec3(.77,.91,.57),cap*.58);
+}
 vec3 veilSurface(vec2 p,float time){
  vec2 drift=vec2(time*.12,-time*.24);
  vec2 warp=vec2(veilCloud(p*1.35+drift),veilCloud(p*1.35-drift+9.7));
@@ -173,6 +183,7 @@ if(v_mat==${MAT.LANDSCAPE}.){
  vec3 grass=mix(texture(u_groundTex,uv+warp).rgb,texture(u_groundTex,uv*1.371+3.76+warp).rgb,.42);
  grass*=u_surfaceTint*mix(.87,1.08,veilNoise(v_pos.xz*.075));
  vec3 stone=tri(u_rockTex,v_pos,n,u_rockScale);
+ if(u_upland<.5){
  base=mix(grass,stone,clamp(v_detail.y+(1.-smoothstep(.60,.92,n.y))*.6,0.,1.));
  base=mix(base,texture(u_earthTex,v_pos.xz*.15).rgb,v_detail.x);
  float wet=clamp(-v_detail.z,0.,1.);
@@ -183,10 +194,22 @@ if(v_mat==${MAT.LANDSCAPE}.){
  vec3 bank=mix(earth,stone*.82,gravel*.55);
  base=mix(base,bank,sediment*.88);base*=1.-wet*.23;
  base=mix(base,vec3(.78,.82,.84),max(0.,v_detail.z));
+ }else{
+  float meadowMix=veilCloud(v_pos.xz*.042+u_surfaceOffset);
+  grass*=mix(vec3(.63,.83,.70),vec3(1.08,.99,.63),smoothstep(.25,.78,meadowMix));
+  float exposed=clamp((1.-smoothstep(.55,.94,n.y))*.92+v_detail.y*.22,0.,1.);
+  base=mix(grass,uplandStone(stone,n),exposed);
+  float edgeNoise=veilNoise(v_pos.xz*.8),trail=smoothstep(.05,.88,v_detail.x+(edgeNoise-.5)*.26);
+  vec3 soil=texture(u_earthTex,v_pos.xz*.15).rgb*vec3(1.24,1.15,.91);
+  base=mix(base,soil,trail*.87);
+ }
+}else if(v_mat==${MAT.LEAF}.){
+ base=v_col.rgb;n=gl_FrontFacing?n:-n;
 }else if(v_mat==${MAT.MASONRY}.){
  base=tri(u_rockTex,v_pos,n,u_rockScale*2.)*v_col.rgb;
 }else if(v_mat==${MAT.BARK}.){
  base=tri(u_barkTex,v_modelPos,normalize(v_modelN),.32);
+ if(u_upland>.5)base=mix(base,vec3(.57,.55,.43),.55)*v_col.rgb;
 }else if(v_mat==${MAT.FOLIAGE}.){
  vec4 leaf=texture(u_foliageTex,v_detail.xy);if(leaf.a<.3)discard;
  base=leaf.rgb*v_detail.z*1.18;n=gl_FrontFacing?n:-n;
@@ -202,12 +225,13 @@ if(v_mat==${MAT.LANDSCAPE}.){
  base=mix(base,vec3(.65,.73,.67),foam);
  surfaceAlpha=(.22+.54*(1.-exp(-depth*.9))+foam*.18)*smoothstep(0.,.16+veilNoise(v_pos.xz*.9)*.25,depth);
 }else if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
+if(u_upland>.5&&v_mat==${MAT.ROCK}.)base=uplandStone(base,n);
 // All surface detail remains cosmetic: never displace the CPU-authoritative ground.
 // Performance omits the extra height sampling, retaining exactly the same albedo recipes.
-if(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96&&v_mat!=${MAT.FOLIAGE}.&&v_mat!=${MAT.WATER}.){
+if(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96&&v_mat!=${MAT.FOLIAGE}.&&v_mat!=${MAT.WATER}.&&v_mat!=${MAT.LEAF}.){
  float h=0.;
  if(v_mat==${MAT.LANDSCAPE}.){
-  float stone=clamp(v_detail.y+(1.-smoothstep(.60,.92,n.y))*.6,0.,1.);
+  float stone=u_upland>.5?clamp((1.-smoothstep(.55,.94,n.y))*.92+v_detail.y*.22,0.,1.):clamp(v_detail.y+(1.-smoothstep(.60,.92,n.y))*.6,0.,1.);
   vec2 uv=groundUV(v_pos.xz),warp=vec2(veilNoise(v_pos.xz*.12),veilNoise(v_pos.xz*.12+19.7))*.38;
   float grass=mix(texture(u_groundTex,uv+warp).a,texture(u_groundTex,uv*1.371+3.76+warp).a,.42);
   h=mix(grass*u_surfaceRelief.x,triHeight(u_rockTex,v_pos,n,u_rockScale)*u_surfaceRelief.y,stone);
@@ -244,6 +268,7 @@ float strength=.008+metal*.37+bio*.15+crystal*.45;
 float spec=pow(max(dot(n,normalize(light+viewDir)),0.),exponent)*strength*sh;
 vec3 specColor=mix(vec3(1.),mix(vec3(.85,.92,1.),base,.25),metal);
 lit+=spec*u_sun*specColor;
+if(v_mat==${MAT.LEAF}.)lit+=base*u_sun*(.12+.18*max(dot(-n,light),0.))*sh;
 if(v_mat==${MAT.WATER}.){
  float reflection=.07+.55*pow(1.-max(dot(n,viewDir),0.),3.);
  lit=mix(lit,vec3(.43,.58,.64),reflection);
