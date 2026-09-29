@@ -1287,12 +1287,13 @@ test('home and transition previews use the actual next landscape and atmosphere 
 test('expedition encounter generation excludes the immediately previous map', () => {
   const h = setup();
   vm.runInContext('Math.random = () => 0;', h.context);
-  for (const previousMap of ['desert', 'alien-planet', 'mothership', 'westmark'])
+  for (const previousMap of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven'])
     assert.notEqual(h.ui.createEncounter(3, previousMap).map, previousMap);
 });
 
 test('expedition setup creates and saves the fixed Free Marches opening encounter', () => {
   const h = setup(); h.ui.profile.expeditionDepth = 25; h.ui.battleFaction = 2;
+  vm.runInContext('Math.random = () => .999;', h.context);
   const saved = []; h.ui.persistence.saveExpedition = value => saved.push(JSON.parse(JSON.stringify(value)));
   h.ui.game.start = () => { throw Error('Battle started before renderer preparation'); };
   h.ui.onLaunchBattle = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
@@ -1300,7 +1301,9 @@ test('expedition setup creates and saves the fixed Free Marches opening encounte
   assert.equal(saved.length, 1); assert.equal(saved[0].faction, 2); assert.equal(saved[0].depth, 0);
   assert.equal(saved[0].encounter.enemies.length, 1);
   assert.deepEqual(saved[0].encounter.enemies, [0]);
-  assert.ok(['desert', 'alien-planet', 'mothership', 'westmark'].includes(saved[0].encounter.map));
+  assert.equal(saved[0].encounter.mission, 'hq-elimination');
+  const openingMaps = vm.runInContext("MISSIONS['hq-elimination'].maps", h.context);
+  assert.ok(openingMaps.includes(saved[0].encounter.map));
   assert.ok(saved[0].encounter.seed > 0);
   assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter,
     abilities: ['orbital', 'repair', 'scan', 'drop'], benefits: {}, enemyBenefits: [{}], depth: 0 });
