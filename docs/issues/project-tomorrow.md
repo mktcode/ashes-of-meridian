@@ -1,6 +1,6 @@
 # Project Tomorrow
 
-Project Tomorrow ist ein Projekt eines Entwicklers, der wirklich uns bei der Entwicklung von Ashes of Meridian helfen könnte. Hier beschreibt er genau, wie er bei der Entwicklung seines Spiels vorgegangen ist, um mit wenig Aufwand möglichst viel rauszuholen.
+Project Tomorrow ist ein Projekt eines Entwicklers, der uns wirklich bei der Entwicklung von Ashes of Meridian helfen könnte. Hier beschreibt er genau, wie er bei der Entwicklung seines Spiels vorgegangen ist, um mit wenig Aufwand möglichst viel rauszuholen.
 
 ## YouTube Transcript
 
