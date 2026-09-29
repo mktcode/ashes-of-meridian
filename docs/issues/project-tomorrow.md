@@ -10,6 +10,6 @@ Most people assume a team made this, but it was made by one nerdy dude. Hi. To m
 
 ## Auftrag
 
-Lass dich davon inspirieren und koordiniere ein umfassendes Refactoring bzw. sogar eine vollständige Neuimplementierung in Typescript. Ersetze vorhandene Texturen bzw. Systeme vollständig durch neue, "smartere" und skalierbare Systeme, wie sie im Video beschieben werden. Höre nicht auf, bis das Spiel diesen Anforderungen genügt und beliebig viele abwechslungsreiche Spielwelten erzeugen kann. An der grundsätzlichen Mechanik des Spiels soll sich nichts ändern. Es soll grafisch besser und variantenreicher aussehen, einfach erweiterbar sein und dabei idealerweise sogar flüssiger laufen.
+Lass dich davon inspirieren und koordiniere ein umfassendes Refactoring bzw. sogar eine vollständige Neuimplementierung von Ashes of Meridian in Typescript. Ersetze vorhandene Texturen bzw. Systeme vollständig durch neue, "smartere" und skalierbare Systeme, wie sie im Video beschieben werden. Höre nicht auf, bis das Spiel diesen Anforderungen genügt und beliebig viele abwechslungsreiche Spielwelten erzeugen kann. An der grundsätzlichen Mechanik des Spiels soll sich nichts ändern. Es soll grafisch besser und variantenreicher aussehen, einfach erweiterbar sein und dabei idealerweise sogar flüssiger laufen.
 
 Beginne diese Arbeiten nun auf einem eigenen Git-Branch und melde dich bitte erst, wenn dieses Ziel erreicht ist.
