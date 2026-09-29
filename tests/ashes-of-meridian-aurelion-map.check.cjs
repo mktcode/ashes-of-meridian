@@ -73,45 +73,31 @@ test('four parties initialize reproducibly with harvest routes, buildable vents 
   g.start(options);assert.equal(JSON.stringify(g.s.entities),snapshot);
 });
 
-test('gameplay renderer routes city meshes separately from standard combat materials, without affecting shadows',()=>{
-  const c=loadScripts(['core',...RENDERER_SCRIPTS]),{Base,City}=vm.runInContext(
-    '({Base:MeridianRenderer,City:AurelionBattleRenderer})',c),draws=[];
-  const r=Object.assign(Object.create(City.prototype),{
-    scenePass:false,battlefieldProfile:{scenery:'aurelion'},boundProgram:'depth',sceneTime:12,modelTime:4,
-    cityPrograms:{program:'city'},standardPrograms:{program:'combat'},
-    bindSceneProgram(time,modelTime,program){assert.equal(time,12);assert.equal(modelTime,4);this.boundProgram=program;}
-  });
-  Base.prototype.drawBatches=function(map,matrix,excluded,included){draws.push({program:this.boundProgram,sources:Object.values(map).map(b=>b.source),matrix,excluded,included});};
-  const map={unit:{source:'tank',n:1},traffic:{source:'aurelionAir0',n:1},effect:{source:'ring',n:1}},matrix=new Float32Array(16);
-  r.drawBatches(map,matrix,['skip']);assert.equal(draws.length,1);assert.equal(draws[0].program,'depth');
-  draws.length=0;r.scenePass=true;r.drawBatches(map,matrix,['skip']);
-  assert.deepEqual(draws.map(d=>[d.program,Array.from(d.sources)]),[['city',['aurelionAir0']],['combat',['tank','ring']]]);
-  assert.ok(draws.every(d=>d.matrix===matrix&&d.excluded[0]==='skip'));
-  draws.length=0;r.battlefieldProfile={};r.drawBatches(map);assert.equal(draws.length,1,'normal maps do not split batches');
-});
-
-test('plaza fill lights only Aurelion combat materials, at every quality and without changing the city profile',()=>{
-  const c=loadScripts(['core',...RENDERER_SCRIPTS]),{Base,City,lighting}=vm.runInContext(
-    '({Base:MeridianRenderer,City:AurelionBattleRenderer,lighting:AURELION_ENTITY_LIGHTING})',c),writes=[];
+test('Aurelion environment routes city and model batches through shared binding with separate lighting',()=>{
+  const c=loadScripts(['core',...RENDERER_SCRIPTS]);
+  // Real batch routing; program/texture allocation is checked separately.
+  vm.runInContext(`AurelionAtmosphere=class {
+    program='city';skyProg='sky';postProg='post';beginFrame() {}
+  }`,c);
+  const {create,lighting}=vm.runInContext('({create:createAurelionEnvironment,lighting:AURELION_ENTITY_LIGHTING})',c);
   const profile={scenery:'aurelion',lighting:{sun:[.42,.52,.72],sky:[.085,.12,.19],bounce:[.016,.025,.045]}},before=JSON.stringify(profile);
-  const r=Object.assign(Object.create(City.prototype),{
-    battlefieldProfile:profile,program:'city',standardPrograms:{program:'combat'},
-    uniform:(program,name)=>`${program}/${name}`,
-    gl:{uniform3fv:(location,value)=>writes.push([location,Array.from(value)])}
-  });
-  Base.prototype.bindSceneProgram=function(time,modelTime,program){
-    assert.equal(time,12);assert.equal(modelTime,4);writes.push(['base',program]);
+  const draws=[],bindings=[],r={program:'combat',battlefieldProfile:profile,add(){},beam(){},
+    bindSceneProgram(time,modelTime,program,light){
+      assert.equal(time,12);assert.equal(modelTime,4);this.boundProgram=program;bindings.push([program,light]);
+    },
+    drawBatches(map,matrix,excluded,included){draws.push({program:this.boundProgram,sources:Object.values(map).map(b=>b.source),matrix,excluded,included});}
   };
-  for(const quality of [0,1,2]) {
-    r.quality=quality;writes.length=0;r.bindSceneProgram(12,4,'combat');
-    assert.deepEqual(writes,[['base','combat'],['combat/u_sun',Array.from(lighting.sun)],
-      ['combat/u_skyLight',Array.from(lighting.sky)],['combat/u_bounce',Array.from(lighting.bounce)]]);
-    writes.length=0;r.bindSceneProgram(12,4);
-    assert.deepEqual(writes,[['base','city']],'city keeps its own night lighting');
+  const environment=create(r),matrix=new Float32Array(16),map={unit:{source:'tank',n:1},traffic:{source:'aurelionAir0',n:1},
+    relic:{source:'echoRelicCrystal',n:1},effect:{source:'ring',n:1}};
+  for (const quality of [0,1,2]) {
+    r.quality=quality;draws.length=0;bindings.length=0;environment.beginFrame(4);
+    environment.drawSceneBatches(12,4,map,matrix,['skip']);
+    assert.deepEqual(draws.map(d=>[d.program,Array.from(d.sources)]),[['city',['aurelionAir0']],['combat',['tank','echoRelicCrystal','ring']]]);
+    assert.ok(draws.every(d=>d.matrix===matrix&&d.excluded[0]==='skip'));
+    assert.deepEqual(bindings,[['city',undefined],['combat',lighting]],'city keeps profile lighting; models get plaza fill');
   }
-  assert.equal(JSON.stringify(profile),before,'never mutate the shared map profile');
-  r.battlefieldProfile={};writes.length=0;r.bindSceneProgram(12,4,'combat');
-  assert.deepEqual(writes,[['base','combat']],'switching maps must not leak plaza fill');
+  assert.equal(JSON.stringify(profile),before);
+  assert.equal(r.program,'combat','environment never replaces the common renderer program');
 });
 
 test('all three precinct approaches connect without turning roofs or chasms into shortcuts',()=>{

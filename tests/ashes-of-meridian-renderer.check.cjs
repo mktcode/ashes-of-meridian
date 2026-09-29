@@ -119,7 +119,8 @@ function geometryResidency(context) {
     if (!(name in target)) target[name] = () => {};
     return target[name];
   } });
-  const renderer = Object.assign(Object.create(Renderer.prototype), { gl, meshes: {}, meshParts: {}, static: {} });
+  const renderer = Object.assign(Object.create(Renderer.prototype), { gl, meshes: {}, meshParts: {}, static: {},
+    battlefieldProfile: vm.runInContext('DEFAULT_TERRAIN_RENDER_PROFILE', context) });
   return { renderer, buffers, vaos, get uploads() { return uploads; }, get releases() { return releases; },
     get bytes() { return [...buffers.values()].reduce((sum, size) => sum + size, 0); } };
 }
@@ -159,6 +160,9 @@ test('map switches keep only current world meshes plus shared geometry, includin
   TerrainModels.geometry = () => new Float32Array(27);
   vm.runInContext(`TerrainScenery.aurelion=()=>['aurelionStructure','echoRelicCrystal','aurelionAir0'].map(name=>
     ({name,data:new Float32Array(27),static:name==='aurelionStructure',glow:0,material:2}))`,context);
+  const environments=vm.runInContext('BattlefieldEnvironments',context);
+  let creations=0,disposals=0;
+  environments.aurelion=()=>{creations++;return {dispose(){disposals++;}};};
   r.add = () => {}; r.fog = () => {};
   r.geometry('sharedUnit', new Float32Array(27));
   const shared = r.meshes.sharedUnit;
@@ -173,8 +177,10 @@ test('map switches keep only current world meshes plus shared geometry, includin
     assert.deepEqual(new Set(Object.keys(r.meshes)), new Set(parts));
     assert.equal(h.buffers.size, parts.length); assert.equal(h.vaos.size, parts.length);
     assert.strictEqual(r.meshes.sharedUnit, shared, 'shared model is never replaced or released');
-    const uploads = h.uploads, releases = h.releases;
+    const uploads = h.uploads, releases = h.releases, activeCreations=creations;
     view.sync(world, true); view.sync(world, false);
+    assert.equal(creations,activeCreations,'fog changes reuse the environment');
+    assert.equal(creations-disposals,map==='aurelion'?1:0,'normal world sync activates and releases map presentation');
     assert.equal(h.uploads, uploads); assert.equal(h.releases, releases, 'unchanged layout/fog changes do not churn geometry');
     assert.equal(JSON.stringify(world.renderData), before, 'CPU terrain descriptors remain unchanged');
     if (map === 'desert') {
@@ -433,6 +439,17 @@ test('lighting profiles override shader colors without additional textures or re
     assert.equal(calls.filter(c=>c[0]==='program'&&c[1]==='shadow').length,1);
     assert.ok(!calls.some(c=>['texImage2D','createTexture'].includes(c[0])));
   }
+  const override=vm.runInContext('AURELION_ENTITY_LIGHTING',context),profileBefore=JSON.stringify(r.battlefieldProfile);
+  for (const quality of [0,1,2]) {
+    r.quality=quality;
+    for (const light of [override,undefined]) {
+      calls.length=0;r.bindSceneProgram(12,4,r.program,light);
+      for (const [uniform,key] of [['u_sun','sun'],['u_skyLight','sky'],['u_bounce','bounce']])
+        assert.deepEqual(Array.from(calls.find(c=>c[0]==='uniform3fv'&&c[1]===uniform)[2]),
+          Array.from((light||r.battlefieldProfile.lighting)[key]),'binding overrides never leak to subsequent default bindings');
+    }
+  }
+  assert.equal(JSON.stringify(r.battlefieldProfile),profileBefore);
   const {FRAG,VERT}=vm.runInContext('({FRAG,VERT})',context);
   assert.match(FRAG,/float metal=.*v_mat>1.5/);assert.match(FRAG,/strength=\.008\+metal/);
   assert.ok(FRAG.indexOf('lit=finishLighting(lit)')<FRAG.indexOf('float field='),'compress highlights before fog and RGBA8 storage');

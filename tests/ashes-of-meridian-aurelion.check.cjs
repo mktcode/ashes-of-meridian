@@ -247,7 +247,7 @@ test('Aurelion cloud noise and media descriptors are local, repeatable and bound
 
 test('city depth targets are reused, replaced on resize and released on failed allocation or resolve', () => {
   const warnings=[],context=loadScripts(['core',...RENDERER_SCRIPTS],{globals:{console:{warn:message=>warnings.push(message)}}});
-  const Renderer=vm.runInContext('AurelionAtmosphereRenderer',context);
+  const Atmosphere=vm.runInContext('AurelionAtmosphere',context);
   for (const failure of [null,'texture','framebuffer','incomplete','resolve']) {
     const textures=new Set(),framebuffers=new Set(),blits=[];let allocations=0;
     const gl={NO_ERROR:0,FRAMEBUFFER_COMPLETE:1,TEXTURE11:11,TEXTURE14:14,
@@ -258,23 +258,25 @@ test('city depth targets are reused, replaced on resize and released on failed a
       blitFramebuffer:(...args)=>blits.push(args),getUniformLocation:()=>({})};
     for (const method of ['activeTexture','bindTexture','texImage2D','texParameteri','bindFramebuffer','framebufferTexture2D',
         'drawBuffers','readBuffer','useProgram','uniform1i','uniform1f','uniformMatrix4fv','uniform3fv']) gl[method]=()=>{};
-    const renderer=Object.assign(Object.create(Renderer.prototype),{gl,width:100,height:80,quality:0,
-      depthSize:'',depthAvailable:false,depthVerified:false,cityDepth:null,cityDepthFbo:null,uniformCache:new Map(),postProg:{},
-      sceneFbo:{},sceneMSAAFbo:null,eye:[0,0,0],inverseVP:new Float32Array(16),lightVP:new Float32Array(16)});
-    renderer.renderBloom();
+    const r={gl,width:100,height:80,quality:1,uniform:()=>({}),uniformCache:new Map(),
+      sceneFbo:{},sceneMSAAFbo:null,eye:[0,0,0],inverseVP:new Float32Array(16),lightVP:new Float32Array(16)};
+    const renderer=Object.assign(Object.create(Atmosphere.prototype),{renderer:r,programs:[],postProg:{},
+      depthSize:'',depthAvailable:false,depthVerified:false,cityDepth:null,cityDepthFbo:null});
+    renderer.preparePost();
     assert.equal(renderer.depthAvailable,failure===null);
     assert.equal(textures.size,failure===null?1:0);assert.equal(framebuffers.size,failure===null?1:0);
     assert.equal(blits.length,failure===null||failure==='resolve'?1:0);
     if (blits.length) assert.deepEqual(blits[0].slice(0,8),[0,0,100,80,0,0,100,80]);
-    renderer.renderBloom();assert.equal(allocations,1,'no allocations or retries on subsequent same-size frames');
-    renderer.width=200;renderer.height=120;renderer.renderBloom();assert.equal(allocations,2);
+    renderer.preparePost();assert.equal(allocations,1,'no allocations or retries on subsequent same-size frames');
+    r.width=200;r.height=120;renderer.preparePost();assert.equal(allocations,2);
     assert.equal(textures.size,failure===null?1:0,'old depth target is not retained across resize');
-    renderer.disposeAtmosphere();assert.equal(textures.size,0);assert.equal(framebuffers.size,0);
+    r.quality=0;renderer.preparePost();assert.equal(textures.size,0);assert.equal(framebuffers.size,0);
+    renderer.dispose();assert.equal(textures.size,0);assert.equal(framebuffers.size,0);
   }
   assert.equal(warnings.length,8,'each failed target size reports its fallback once');
   let status=2,deleted=0;const waits=[],fence={};
-  const renderer=Object.assign(Object.create(Renderer.prototype),{frameFence:fence,gl:{TIMEOUT_EXPIRED:2,WAIT_FAILED:3,
-    clientWaitSync:(...args)=>{waits.push(args);return status;},deleteSync:()=>{deleted++;}}});
+  const renderer=Object.assign(Object.create(Atmosphere.prototype),{frameFence:fence,renderer:{gl:{TIMEOUT_EXPIRED:2,WAIT_FAILED:3,
+    clientWaitSync:(...args)=>{waits.push(args);return status;},deleteSync:()=>{deleted++;}}}});
   assert.equal(renderer.frameReady(),false);assert.equal(deleted,0);
   assert.deepEqual(waits[0],[fence,0,0],'GPU polling has zero timeout and never blocks the event loop');
   status=1;assert.equal(renderer.frameReady(),true);assert.equal(deleted,1);

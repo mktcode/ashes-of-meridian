@@ -10,6 +10,9 @@
       groundTexture: 'ground', skyTexture: 'sky', groundPixelsPerMeter: 14, haze: [0.055, 0.09, 0.13],
       rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 }
     };
+    // Factories register at script load; GPU resources are created only for the active scenery.
+    const BattlefieldEnvironments: Partial<Record<NonNullable<BattlefieldRenderProfile['scenery']>,
+      (renderer: MeridianRenderer) => BattlefieldEnvironment>> = {};
     class MeridianRenderer {
       canvas: HTMLCanvasElement;
       gl: WebGL2RenderingContext;
@@ -32,6 +35,7 @@
       surface: BattlefieldSurface | null = null;
       decorSeed: number;
       battlefieldProfile: BattlefieldRenderProfile;
+      private environment: BattlefieldEnvironment | null = null;
       haze: readonly [number, number, number];
       eye: number[];
       vp: Float32Array;
@@ -199,24 +203,49 @@
         gl.depthFunc(gl.LEQUAL);
         this.drawCalls = 0;
       }
-      programOf(v: string, f: string) {
-        let gl = this.gl,
-          p = gl.createProgram();
-        if (!p) throw Error('Could not allocate WebGL program');
-        for (let [s, t] of [
-          [v, gl.VERTEX_SHADER],
-          [f, gl.FRAGMENT_SHADER]
-        ] as const) {
-          let sh = gl.createShader(t);
-          if (!sh) throw Error('Could not allocate WebGL shader');
-          gl.shaderSource(sh, s);
-          gl.compileShader(sh);
-          if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(sh) || 'Shader compilation failed');
-          gl.attachShader(p, sh);
+      setBattlefieldProfile(profile: BattlefieldRenderProfile) {
+        if (profile.scenery !== this.battlefieldProfile.scenery || (profile.scenery && !this.environment)) {
+          // Construct first: a failed allocation must not orphan the active environment.
+          const factory = profile.scenery ? BattlefieldEnvironments[profile.scenery] : undefined;
+          if (profile.scenery && !factory) throw Error(`Missing render environment: ${profile.scenery}`);
+          const next = factory ? factory(this) : null;
+          this.releaseEnvironment();
+          this.environment = next ?? null;
         }
-        gl.linkProgram(p);
-        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(p) || 'Program linking failed');
-        return p;
+        this.battlefieldProfile = profile;
+        this.haze = profile.haze;
+      }
+      useModelPreview() {
+        this.setBattlefieldProfile(DEFAULT_TERRAIN_RENDER_PROFILE);
+        this.surface = null;
+      }
+      releaseEnvironment() {
+        this.environment?.dispose();
+        this.environment = null;
+      }
+      frameReady() { return this.environment?.frameReady() ?? true; }
+      programOf(v: string, f: string) {
+        const gl = this.gl, p = gl.createProgram(), shaders: WebGLShader[] = [];
+        if (!p) throw Error('Could not allocate WebGL program');
+        let linked = false;
+        try {
+          for (const [s, t] of [[v, gl.VERTEX_SHADER], [f, gl.FRAGMENT_SHADER]] as const) {
+            const sh = gl.createShader(t);
+            if (!sh) throw Error('Could not allocate WebGL shader');
+            shaders.push(sh);
+            gl.attachShader(p, sh);
+            gl.shaderSource(sh, s);
+            gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(sh) || 'Shader compilation failed');
+          }
+          gl.linkProgram(p);
+          if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(p) || 'Program linking failed');
+          linked = true;
+          return p;
+        } finally {
+          for (const shader of shaders) { gl.detachShader(p, shader); gl.deleteShader(shader); }
+          if (!linked) gl.deleteProgram(p);
+        }
       }
       uniform(p: WebGLProgram, k: string) {
         let map = this.uniformCache.get(p);
@@ -359,6 +388,7 @@
         g.framebufferRenderbuffer(g.FRAMEBUFFER, g.DEPTH_ATTACHMENT, g.RENDERBUFFER, this.sceneDepth);
         this.resizeSceneMSAA();
         this.resizeBloom();
+        this.environment?.resize();
         g.bindRenderbuffer(g.RENDERBUFFER, null);
         g.bindFramebuffer(g.FRAMEBUFFER, null);
       }
@@ -812,8 +842,9 @@
           g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, size, size, g.RED, g.UNSIGNED_BYTE, data);
         }
       }
-      bindSceneProgram(time: number, modelTime: number, program = this.program) {
-        const g = this.gl, profile = this.battlefieldProfile, lighting = profile.lighting ?? DEFAULT_LIGHTING;
+      bindSceneProgram(time: number, modelTime: number, program = this.program,
+        lighting = this.battlefieldProfile.lighting ?? DEFAULT_LIGHTING) {
+        const g = this.gl, profile = this.battlefieldProfile;
         g.useProgram(program);
         g.uniformMatrix4fv(this.uniform(program, 'u_vp'), false, this.vp);
         g.uniformMatrix4fv(this.uniform(program, 'u_light'), false, this.lightVP);
@@ -851,7 +882,10 @@
         }
       }
       render(time: number, modelTime = time) {
-        let g = this.gl;
+        const g = this.gl, environment = this.environment,
+          skyProg = environment?.skyProg ?? this.skyProg, postProg = environment?.postProg ?? this.postProg,
+          drawScene = environment ? environment.drawSceneBatches.bind(environment, time, modelTime) : this.drawBatches.bind(this);
+        environment?.beginFrame(modelTime);
         this.frame++;
         this.drawCalls = 0;
         this.diagnostics?.beginFrame();
@@ -886,29 +920,29 @@
         g.clearColor(...this.haze, 1);
         g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
         g.disable(g.DEPTH_TEST);
-        g.useProgram(this.skyProg);
-        g.uniform2f(this.uniform(this.skyProg, 'u_size'), this.width, this.height);
-        g.uniform1f(this.uniform(this.skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
+        g.useProgram(skyProg);
+        g.uniform2f(this.uniform(skyProg, 'u_size'), this.width, this.height);
+        g.uniform1f(this.uniform(skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
         g.activeTexture(g.TEXTURE0);
         g.bindTexture(g.TEXTURE_2D, this[`${this.battlefieldProfile.skyTexture}Tex`]);
-        g.uniform1i(this.uniform(this.skyProg, 'u_skyTex'), 0);
+        g.uniform1i(this.uniform(skyProg, 'u_skyTex'), 0);
         g.bindVertexArray(this.fullVao);
         g.drawArrays(g.TRIANGLES, 0, 3);
         this.diagnostics?.draw(3);
         g.enable(g.DEPTH_TEST);
-        this.bindSceneProgram(time, modelTime);
-        this.drawBatches(this.static, this.vp, ['alienLanternPool', 'westmarkWater']);
-        this.drawBatches(this.dynamic);
+        if (!environment) this.bindSceneProgram(time, modelTime);
+        drawScene(this.static, this.vp, ['alienLanternPool', 'westmarkWater']);
+        drawScene(this.dynamic);
         g.enable(g.BLEND);
         g.blendFunc(g.SRC_ALPHA, g.ONE_MINUS_SRC_ALPHA);
         g.depthMask(false);
         // A single non-overlapping water field blends over the riverbed/underwater stones,
         // behind the opaque bridge. No depth writes, extra framebuffer or reflection pass.
-        this.drawBatches(this.static, this.vp, undefined, 'westmarkWater');
+        drawScene(this.static, this.vp, undefined, 'westmarkWater');
         // Persistent projected light is translucent static geometry: blend it without depth writes so
         // overlapping cyan/plum pools cannot fight over the same ground plane while the camera moves.
-        this.drawBatches(this.static, this.vp, undefined, 'alienLanternPool');
-        this.drawBatches(this.effects);
+        drawScene(this.static, this.vp, undefined, 'alienLanternPool');
+        drawScene(this.effects);
         g.depthMask(true);
         g.disable(g.BLEND);
         if (this.sceneSamples > 1) {
@@ -923,27 +957,29 @@
         }
         this.diagnostics?.endPass();
         if (this.quality > 0 && this.bloomTargets.length === 2) this.diagnostics?.beginPass('bloom');
+        environment?.preparePost();
         this.renderBloom();
         this.diagnostics?.endPass();
         this.diagnostics?.beginPass('post');
         g.bindFramebuffer(g.FRAMEBUFFER, null);
         g.viewport(0, 0, this.width, this.height);
         g.disable(g.DEPTH_TEST);
-        g.useProgram(this.postProg);
+        g.useProgram(postProg);
         g.activeTexture(g.TEXTURE0);
         g.bindTexture(g.TEXTURE_2D, this.sceneTex);
-        g.uniform1i(this.uniform(this.postProg, 'u_tex'), 0);
+        g.uniform1i(this.uniform(postProg, 'u_tex'), 0);
         g.activeTexture(g.TEXTURE1);
         g.bindTexture(g.TEXTURE_2D, this.bloomTargets[0]?.texture || this.sceneTex);
-        g.uniform1i(this.uniform(this.postProg, 'u_bloom'), 1);
-        g.uniform1f(this.uniform(this.postProg, 'u_bloomOn'), this.quality > 0 && this.bloomTargets.length === 2 ? 1 : 0);
-        g.uniform2f(this.uniform(this.postProg, 'u_size'), this.width, this.height);
-        g.uniform1f(this.uniform(this.postProg, 'u_time'), time);
-        g.uniform1f(this.uniform(this.postProg, 'u_quality'), this.quality);
+        g.uniform1i(this.uniform(postProg, 'u_bloom'), 1);
+        g.uniform1f(this.uniform(postProg, 'u_bloomOn'), this.quality > 0 && this.bloomTargets.length === 2 ? 1 : 0);
+        g.uniform2f(this.uniform(postProg, 'u_size'), this.width, this.height);
+        g.uniform1f(this.uniform(postProg, 'u_time'), time);
+        g.uniform1f(this.uniform(postProg, 'u_quality'), this.quality);
         g.bindVertexArray(this.fullVao);
         g.drawArrays(g.TRIANGLES, 0, 3);
         this.diagnostics?.draw(3);
         this.diagnostics?.endPass();
         g.bindVertexArray(null);
+        environment?.endFrame();
       }
     }

@@ -743,6 +743,7 @@ function appClock(diagnostic = false) {
       gl = { getExtension(name) { queryRequests.push(name); return null; } };
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1;
+      frameReady() { return true; } releaseEnvironment() {}
       resize() {} camera() {} begin() { renderWork.begin++; }
       render(time) { this.diagnostics?.beginFrame(); draws.push({ now, time }); }
     },

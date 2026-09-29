@@ -4,10 +4,6 @@ Aurelion ist eine spielbare Nachtstadt mit vier erhöhten Startplattformen, Brü
 
 Die separate Hologlobus-Visualstudie ist durch die Spielintegration überholt und entfernt. Ihre Rotationsaufgabe entfällt mit dem Objekt, nicht durch eine behauptete visuelle Fehlerbehebung. Gestaltungshistorie bleibt in Git. Pflege und technische Grenzen stehen in [Rendering](../rendering.md#terrain-und-renderpässe) und [Architektur](../architecture.md#welt-darstellung-und-zufall).
 
-## Offener Integrationsbefund
-
-Statische Repo-Prüfung: `src/app.ts` erzeugt `AurelionBattleRenderer` nur für `experiment=aurelion-playable`, ansonsten `MeridianRenderer`. Der normale Expeditionsstart bereitet Kartentexturen vor, wechselt aber nicht den Renderer. Damit fehlt dort der Stadt-/Atmosphären- und Modelllichtadapter; die bisherigen Probelauf-Browserchecks decken diesen Einstieg nicht ab. Den Adapter für reguläre Aurelion-Expeditionen gezielt integrieren, einschließlich Kartenwechseln, GPU-Ressourcenbesitz und unveränderten anderen Karten. Nicht durch vorsorgliches Laden aller Stadtprogramme/-texturen auf jeder Karte kaschieren. Dieser bereits bestehende Unterschied wurde bei der Bereinigung nicht beiläufig verändert.
-
 ## Menschlich zu prüfen
 
 - [ ] Lesbarkeit der Einheiten und Gebäude im kühlen Fülllicht/warmen Deck-Reflexlicht beurteilen. Die Stadt behält ihre dunklen Schluchten, hellen Decks, Fenster und Reklamen; das Modelllicht verändert nicht die globale Nachtbeleuchtung.

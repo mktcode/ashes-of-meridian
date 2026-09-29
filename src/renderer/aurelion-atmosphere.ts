@@ -203,25 +203,27 @@ void main(){
  float grain=(fract(sin(dot(uv*u_size,vec2(12.9898,78.233)))*43758.5453)-.5)/420.;
  frag=vec4(clamp(c*vignette+grain,0.,1.),1.);
 }`;
-class AurelionAtmosphereRenderer extends MeridianRenderer {
-  hazeStart = 100;
+// Owns only the city's GPU programs, textures, depth target and submission fence.
+// Common render passes and entity resources stay with MeridianRenderer.
+class AurelionAtmosphere {
+  program!: WebGLProgram;
+  skyProg!: WebGLProgram;
+  postProg!: WebGLProgram;
+  private programs: WebGLProgram[] = [];
   depthAvailable = false;
   private cityDepth: WebGLTexture | null = null;
   private cityDepthFbo: WebGLFramebuffer | null = null;
   private depthSize = '';
   private depthVerified = false;
-  private cloudNoise: WebGLTexture;
-  private advertising: WebGLTexture;
+  private cloudNoise: WebGLTexture | null = null;
+  private advertising: WebGLTexture | null = null;
   private frameFence: WebGLSync | null = null;
-  protected standardPrograms: Pick<MeridianRenderer,'program'|'skyProg'|'postProg'>;
-  constructor(canvas: HTMLCanvasElement) {
-    super(canvas);
-    const g=this.gl;
-    this.standardPrograms={program:this.program,skyProg:this.skyProg,postProg:this.postProg};
-    const replace = (key:'program'|'skyProg'|'postProg', vertex:string, fragment:string) => {
-      const program=this.programOf(vertex,fragment),old=this[key];
-      for (const p of [program,old]) for (const shader of g.getAttachedShaders(p)||[]) {g.detachShader(p,shader);g.deleteShader(shader);}
-      this[key]=program;
+  constructor(private readonly renderer: MeridianRenderer) {
+    const g=renderer.gl;
+    const create = (vertex:string, fragment:string) => {
+      const program=renderer.programOf(vertex,fragment);
+      this.programs.push(program);
+      return program;
     };
     const number = (n:number) => Number.isInteger(n)?`${n}.`:String(n);
     let surface=AURELION_SURFACE_FRAGMENT
@@ -236,31 +238,37 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
       `\nuniform sampler2D u_fog;uniform float u_fogOn;uniform float u_extent;
       void main(){cityMain();float sight=texture(u_fog,clamp((v_pos.xz+u_extent)/(2.*u_extent),0.,1.)).r;
       frag.rgb*=mix(1.,mix(.16,1.,sight),u_fogOn);}`;
-    replace('program',VERT,surface);replace('skyProg',FULLV,AURELION_SKY_FRAGMENT);replace('postProg',FULLV,AURELION_POST_FRAGMENT);
-    const noise=g.createTexture(),advertising=g.createTexture();
-    if (!noise||!advertising) throw Error('Could not allocate Aurelion textures');
-    this.cloudNoise=noise;this.advertising=advertising;
-    g.activeTexture(g.TEXTURE12);g.bindTexture(g.TEXTURE_3D,noise);
-    g.texImage3D(g.TEXTURE_3D,0,g.R8,32,32,32,0,g.RED,g.UNSIGNED_BYTE,createAurelionNoiseVolume());
-    for (const axis of [g.TEXTURE_WRAP_S,g.TEXTURE_WRAP_T,g.TEXTURE_WRAP_R]) g.texParameteri(g.TEXTURE_3D,axis,g.REPEAT);
-    g.texParameteri(g.TEXTURE_3D,g.TEXTURE_MIN_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_3D,g.TEXTURE_MAG_FILTER,g.LINEAR);
-    g.activeTexture(g.TEXTURE13);g.bindTexture(g.TEXTURE_2D,advertising);
-    g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,createAurelionAdvertisingAtlas());
-    g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR_MIPMAP_LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);
-    g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
-    g.generateMipmap(g.TEXTURE_2D);
-    g.activeTexture(g.TEXTURE0);
+    try {
+      this.program=create(VERT,surface);this.skyProg=create(FULLV,AURELION_SKY_FRAGMENT);this.postProg=create(FULLV,AURELION_POST_FRAGMENT);
+      const noise=this.cloudNoise=g.createTexture(),advertising=this.advertising=g.createTexture();
+      if (!noise||!advertising) throw Error('Could not allocate Aurelion textures');
+      g.activeTexture(g.TEXTURE12);g.bindTexture(g.TEXTURE_3D,noise);
+      g.texImage3D(g.TEXTURE_3D,0,g.R8,32,32,32,0,g.RED,g.UNSIGNED_BYTE,createAurelionNoiseVolume());
+      for (const axis of [g.TEXTURE_WRAP_S,g.TEXTURE_WRAP_T,g.TEXTURE_WRAP_R]) g.texParameteri(g.TEXTURE_3D,axis,g.REPEAT);
+      g.texParameteri(g.TEXTURE_3D,g.TEXTURE_MIN_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_3D,g.TEXTURE_MAG_FILTER,g.LINEAR);
+      g.activeTexture(g.TEXTURE13);g.bindTexture(g.TEXTURE_2D,advertising);
+      g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,createAurelionAdvertisingAtlas());
+      g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR_MIPMAP_LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);
+      g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
+      g.generateMipmap(g.TEXTURE_2D);
+    } catch (error) {
+      this.dispose();
+      throw error;
+    } finally { g.activeTexture(g.TEXTURE0); }
+  }
+  resize() {
+    const g=this.renderer.gl;
+    g.deleteTexture(this.cityDepth);g.deleteFramebuffer(this.cityDepthFbo);
+    this.cityDepth=null;this.cityDepthFbo=null;this.depthAvailable=false;this.depthVerified=false;this.depthSize='';
   }
   private prepareDepth() {
-    const size=`${this.width}x${this.height}`;
+    const {gl:g,width,height}=this.renderer,size=`${width}x${height}`;
     if (size===this.depthSize) return;
-    const g=this.gl;
-    g.deleteTexture(this.cityDepth);g.deleteFramebuffer(this.cityDepthFbo);
-    this.cityDepth=null;this.cityDepthFbo=null;this.depthAvailable=false;this.depthVerified=false;this.depthSize=size;
+    this.resize();this.depthSize=size;
     const texture=g.createTexture(),fbo=g.createFramebuffer();
     if (texture&&fbo) {
       g.activeTexture(g.TEXTURE11);g.bindTexture(g.TEXTURE_2D,texture);
-      g.texImage2D(g.TEXTURE_2D,0,g.DEPTH_COMPONENT24,this.width,this.height,0,g.DEPTH_COMPONENT,g.UNSIGNED_INT,null);
+      g.texImage2D(g.TEXTURE_2D,0,g.DEPTH_COMPONENT24,width,height,0,g.DEPTH_COMPONENT,g.UNSIGNED_INT,null);
       g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.NEAREST);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.NEAREST);
       g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
       g.bindFramebuffer(g.FRAMEBUFFER,fbo);
@@ -275,33 +283,36 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
   }
   frameReady() {
     if (!this.frameFence) return true;
-    const g=this.gl,status=g.clientWaitSync(this.frameFence,0,0);
+    const g=this.renderer.gl,status=g.clientWaitSync(this.frameFence,0,0);
     if (status===g.TIMEOUT_EXPIRED) return false;
     g.deleteSync(this.frameFence);this.frameFence=null;
     if (status===g.WAIT_FAILED) throw Error('Aurelion GPU frame synchronization failed');
     return true;
   }
-  override render(time:number,modelTime=time) {
-    const g=this.gl;
+  beginFrame() {
+    const g=this.renderer.gl;
     if (this.frameFence) {g.deleteSync(this.frameFence);this.frameFence=null;}
     g.activeTexture(g.TEXTURE12);g.bindTexture(g.TEXTURE_3D,this.cloudNoise);
     g.activeTexture(g.TEXTURE13);g.bindTexture(g.TEXTURE_2D,this.advertising);
     g.useProgram(this.program);
-    g.uniform1i(this.uniform(this.program,'u_advertising'),13);
-    super.render(time,modelTime);
+    g.uniform1i(this.renderer.uniform(this.program,'u_advertising'),13);
+  }
+  endFrame() {
+    const g=this.renderer.gl;
     // Only one scene may be in flight. Poll with zero timeout in rAF, never block with finish/wait.
     this.frameFence=g.fenceSync(g.SYNC_GPU_COMMANDS_COMPLETE,0);
     if (!this.frameFence) throw Error('Could not synchronize the Aurelion GPU frame');
     g.flush();
   }
-  override renderBloom() {
-    const g=this.gl;
-    this.prepareDepth();
+  preparePost() {
+    const r=this.renderer,g=r.gl;
+    if (r.quality>0) this.prepareDepth();
+    else this.resize();
     if (this.depthAvailable) {
       // Same dimensions and DEPTH_COMPONENT24 on both sides, with NEAREST multisample resolve.
-      g.bindFramebuffer(g.READ_FRAMEBUFFER,this.sceneMSAAFbo||this.sceneFbo);
+      g.bindFramebuffer(g.READ_FRAMEBUFFER,r.sceneMSAAFbo||r.sceneFbo);
       g.bindFramebuffer(g.DRAW_FRAMEBUFFER,this.cityDepthFbo);
-      g.blitFramebuffer(0,0,this.width,this.height,0,0,this.width,this.height,g.DEPTH_BUFFER_BIT,g.NEAREST);
+      g.blitFramebuffer(0,0,r.width,r.height,0,0,r.width,r.height,g.DEPTH_BUFFER_BIT,g.NEAREST);
       if (!this.depthVerified) {
         const error=g.getError();this.depthVerified=true;
         if (error!==g.NO_ERROR) {
@@ -312,23 +323,27 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
         }
       }
     }
-    super.renderBloom();
-    g.activeTexture(g.TEXTURE11);g.bindTexture(g.TEXTURE_2D,this.depthAvailable?this.cityDepth:this.fogTex);
-    g.activeTexture(g.TEXTURE14);g.bindTexture(g.TEXTURE_2D,this.shadowTex);
+    g.activeTexture(g.TEXTURE11);g.bindTexture(g.TEXTURE_2D,this.depthAvailable?this.cityDepth:r.fogTex);
+    g.activeTexture(g.TEXTURE14);g.bindTexture(g.TEXTURE_2D,r.shadowTex);
     g.useProgram(this.postProg);
-    g.uniform1i(this.uniform(this.postProg,'u_cityDepth'),11);g.uniform1i(this.uniform(this.postProg,'u_cloudNoise'),12);
-    g.uniform1i(this.uniform(this.postProg,'u_sunDepth'),14);
-    g.uniformMatrix4fv(this.uniform(this.postProg,'u_inverseVP'),false,this.inverseVP);
-    g.uniformMatrix4fv(this.uniform(this.postProg,'u_light'),false,this.lightVP);
-    g.uniform3fv(this.uniform(this.postProg,'u_eye'),this.eye);
-    g.uniform1f(this.uniform(this.postProg,'u_depthOn'),this.depthAvailable?1:0);
-    g.uniform1f(this.uniform(this.postProg,'u_amount'),1);
-    g.uniform1f(this.uniform(this.postProg,'u_hazeStart'),this.hazeStart);
+    // Also initialize samplers on the first Performance frame: 2D and 3D samplers
+    // cannot alias the default unit zero, even when their effect branch is disabled.
+    g.uniform1i(r.uniform(this.postProg,'u_cityDepth'),11);g.uniform1i(r.uniform(this.postProg,'u_cloudNoise'),12);
+    g.uniform1i(r.uniform(this.postProg,'u_sunDepth'),14);
+    g.uniformMatrix4fv(r.uniform(this.postProg,'u_inverseVP'),false,r.inverseVP);
+    g.uniformMatrix4fv(r.uniform(this.postProg,'u_light'),false,r.lightVP);
+    g.uniform3fv(r.uniform(this.postProg,'u_eye'),r.eye);
+    g.uniform1f(r.uniform(this.postProg,'u_depthOn'),this.depthAvailable?1:0);
+    g.uniform1f(r.uniform(this.postProg,'u_amount'),r.quality>0?1:0);
+    g.uniform1f(r.uniform(this.postProg,'u_hazeStart'),100);
   }
-  disposeAtmosphere() {
-    if (this.frameFence) {this.gl.deleteSync(this.frameFence);this.frameFence=null;}
-    this.gl.deleteTexture(this.cityDepth);this.gl.deleteFramebuffer(this.cityDepthFbo);
-    this.gl.deleteTexture(this.cloudNoise);this.gl.deleteTexture(this.advertising);
-    this.cityDepth=null;this.cityDepthFbo=null;this.depthAvailable=false;
+  dispose() {
+    const r=this.renderer,g=r.gl;
+    if (this.frameFence) {g.deleteSync(this.frameFence);this.frameFence=null;}
+    this.resize();
+    g.deleteTexture(this.cloudNoise);g.deleteTexture(this.advertising);
+    this.cloudNoise=null;this.advertising=null;
+    for (const program of this.programs) {g.deleteProgram(program);r.uniformCache.delete(program);}
+    this.programs=[];
   }
 }

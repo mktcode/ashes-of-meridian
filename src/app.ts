@@ -31,10 +31,9 @@
           });
         const profile = persistence.loadProfile();
         if (profile.settings.showFps) $('fpsReadout').classList.remove('hidden');
-        const cityRenderer = aurelionExperiment ? new AurelionBattleRenderer(canvas) : null;
-        R = cityRenderer || new MeridianRenderer(canvas);
-        if (cityRenderer) addEventListener('pagehide',event=>{
-          if (!event.persisted) cityRenderer.disposeAtmosphere();
+        R = new MeridianRenderer(canvas);
+        addEventListener('pagehide',event=>{
+          if (!event.persisted) R.releaseEnvironment();
         });
         R.quality = profile.settings.quality;
         R.resize();
@@ -286,7 +285,7 @@
             // Keep simulation, UI clocks and network presentation on every rAF.
             // Retain the render phase on e.g. 90/144 Hz displays instead of
             // resetting to now + interval, which would systematically undershoot.
-            if (now + RENDER_TOLERANCE_MS < nextRender || (cityRenderer && !cityRenderer.frameReady())) {
+            if (now + RENDER_TOLERANCE_MS < nextRender || !R.frameReady()) {
               diagnostics?.finishFrame(false);
               requestAnimationFrame(draw);
               return;

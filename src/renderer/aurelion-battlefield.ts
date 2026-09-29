@@ -20,59 +20,37 @@ const AURELION_ENTITY_LIGHTING: BattlefieldLighting = {
   sun:[.62,.70,.84],sky:[.43,.52,.64],bounce:[.30,.255,.22]
 };
 
-class AurelionBattleRenderer extends AurelionAtmosphereRenderer {
-  private cityPrograms: Pick<MeridianRenderer,'program'|'skyProg'|'postProg'>;
-  private flights=createAurelionFlights();
-  private scenePass=false;
-  private sceneTime=0;
-  private modelTime=0;
-  private boundProgram: WebGLProgram | null=null;
-  constructor(canvas: HTMLCanvasElement) {
-    super(canvas);
-    this.cityPrograms={program:this.program,skyProg:this.skyProg,postProg:this.postProg};
-  }
-  override bindSceneProgram(time:number,modelTime:number,program=this.program) {
-    this.scenePass=true;this.sceneTime=time;this.modelTime=modelTime;
-    super.bindSceneProgram(time,modelTime,program);this.boundProgram=program;
-    if (this.battlefieldProfile.scenery==='aurelion' && program===this.standardPrograms.program) {
-      const g=this.gl,lighting=AURELION_ENTITY_LIGHTING;
-      g.uniform3fv(this.uniform(program,'u_sun'),lighting.sun);
-      g.uniform3fv(this.uniform(program,'u_skyLight'),lighting.sky);
-      g.uniform3fv(this.uniform(program,'u_bounce'),lighting.bounce);
-    }
-  }
-  override drawBatches(map:RenderBatches,matrix?:Float32Array,excluded?:string|readonly string[],included?:string) {
-    if (!this.scenePass || this.battlefieldProfile.scenery!=='aurelion') {
-      super.drawBatches(map,matrix,excluded,included);return;
-    }
-    // Static city and moving traffic use the city's shader. The relic and combat models,
-    // resources, selection rings and ability effects retain their normal materials/fog.
-    const city:RenderBatches={},entities:RenderBatches={};
-    for (const [key,bucket] of Object.entries(map))
-      (bucket.source.startsWith('aurelion')?city:entities)[key]=bucket;
-    for (const [batches,program] of [[city,this.cityPrograms.program],[entities,this.standardPrograms.program]] as const) {
-      if (!Object.values(batches).some(b=>b.n)) continue;
-      if (this.boundProgram!==program) this.bindSceneProgram(this.sceneTime,this.modelTime,program);
-      super.drawBatches(batches,matrix,excluded,included);
-    }
-  }
-  override render(time:number,modelTime=time) {
-    this.scenePass=false;this.boundProgram=null;
-    const city=this.battlefieldProfile.scenery==='aurelion';
-    Object.assign(this,city?this.cityPrograms:this.standardPrograms);
-    if (!city) {MeridianRenderer.prototype.render.call(this,time,modelTime);return;}
-    // Use the already paused/scaled presentation clock, not a second simulation timer.
-    drawAurelionFlights(this,this.flights,modelTime);
-    super.render(time,modelTime);
-  }
-  override renderBloom() {
-    if (this.battlefieldProfile.scenery!=='aurelion') {MeridianRenderer.prototype.renderBloom.call(this);return;}
-    if (this.quality===0) {
-      MeridianRenderer.prototype.renderBloom.call(this);
-      const g=this.gl;g.useProgram(this.postProg);
-      g.uniform1f(this.uniform(this.postProg,'u_depthOn'),0);g.uniform1f(this.uniform(this.postProg,'u_amount'),0);
-      return;
-    }
-    super.renderBloom();
-  }
+function createAurelionEnvironment(renderer: MeridianRenderer): BattlefieldEnvironment {
+  const flights=createAurelionFlights(),atmosphere=new AurelionAtmosphere(renderer);
+  let boundProgram: WebGLProgram | null=null;
+  return {
+    skyProg:atmosphere.skyProg,postProg:atmosphere.postProg,
+    beginFrame(modelTime) {
+      boundProgram=null;
+      // Use the paused/scaled presentation clock, not a second simulation timer.
+      drawAurelionFlights(renderer,flights,modelTime);
+      atmosphere.beginFrame();
+    },
+    drawSceneBatches(time,modelTime,map,matrix,excluded,included) {
+      // City and traffic use city lighting. Relic, combat models and effects retain
+      // standard materials/fog. Shadow batches never enter this scene-only hook.
+      const city:RenderBatches={},entities:RenderBatches={};
+      for (const [key,bucket] of Object.entries(map))
+        (bucket.source.startsWith('aurelion')?city:entities)[key]=bucket;
+      for (const [batches,program] of [[city,atmosphere.program],[entities,renderer.program]] as const) {
+        if (!Object.values(batches).some(b=>b.n)) continue;
+        if (boundProgram!==program) {
+          renderer.bindSceneProgram(time,modelTime,program,program===renderer.program?AURELION_ENTITY_LIGHTING:undefined);
+          boundProgram=program;
+        }
+        renderer.drawBatches(batches,matrix,excluded,included);
+      }
+    },
+    preparePost:()=>atmosphere.preparePost(),
+    endFrame:()=>atmosphere.endFrame(),
+    frameReady:()=>atmosphere.frameReady(),
+    resize:()=>atmosphere.resize(),
+    dispose:()=>atmosphere.dispose()
+  };
 }
+BattlefieldEnvironments.aurelion=createAurelionEnvironment;

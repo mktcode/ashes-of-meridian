@@ -13,6 +13,18 @@ interface RenderBucket {
   bounds?: [number, number, number, number, number, number];
 }
 type RenderBatches = Record<string, RenderBucket>;
+// Optional map-owned presentation. The renderer retains all common passes and models.
+interface BattlefieldEnvironment {
+  readonly skyProg: WebGLProgram;
+  readonly postProg: WebGLProgram;
+  beginFrame(modelTime: number): void;
+  drawSceneBatches(time: number, modelTime: number, ...args: Parameters<MeridianRenderer['drawBatches']>): void;
+  preparePost(): void;
+  endFrame(): void;
+  frameReady(): boolean;
+  resize(): void;
+  dispose(): void;
+}
 interface RenderMesh {
   vao: WebGLVertexArrayObject | null;
   vbo: WebGLBuffer | null;

@@ -5,6 +5,8 @@ function createRendererStub({ record = false } = {}) {
     calls: [],
     fogPixels: null,
     clearStatic() { this.calls.length = 0; },
+    setBattlefieldProfile(profile) { this.battlefieldProfile = profile; this.haze = profile.haze; },
+    useModelPreview() {},
     geometry() {},
     releaseGeometry() {},
     add(...args) { if (record) this.calls.push(args); },

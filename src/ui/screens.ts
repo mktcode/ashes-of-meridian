@@ -35,6 +35,7 @@
       showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType) {
         this.codexSelection = {faction:this.codexFaction,kind,type};
         this.R.clearStatic();
+        this.R.useModelPreview();
         this.view = 'codexModel';
         $('menu').innerHTML = renderCodexModelScreen(this.codexFaction,kind,type);
       },
