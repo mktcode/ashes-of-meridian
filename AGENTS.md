@@ -9,7 +9,7 @@
 ## Leitplanken
 
 - Kleinste sinnvolle Änderung; Formatierung, strukturelles Refactoring und Verhaltensänderungen getrennt halten. Keine beiläufigen Änderungen an Balancing, Darstellung oder Regeln; bekannte Probleme nicht stillschweigend korrigieren.
-- Breites Refactoring und weitere TypeScript-Migration bleiben ohne neuen Auftrag pausiert. Issues und Prüfprioritäten sind keine automatische Implementierungsfreigabe.
+- Issues und Prüfprioritäten sind keine automatische Implementierungsfreigabe.
 - Seedbasierte Hindernisverteilung, Kollisionsradien und RNG-Aufrufreihenfolge schützen. Auch kosmetische Effekte nutzen teilweise den Simulations-RNG. [Referenzwerte](docs/reference-tests.md) nicht zur Reparatur fehlgeschlagener Tests neu erzeugen.
 - Entwicklungsprototyp: keine Rückwärtskompatibilität, Migrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag.
 - Quellen statt Build-Ausgaben bearbeiten; `dist/` nie direkt bearbeiten oder einchecken. Die generierte `src/renderer/assets.js` ausschließlich mit `npm run embed:textures` aus den Texturquellen aktualisieren.
