@@ -155,6 +155,7 @@
         const SIMULATION_STEP_SECONDS = 0.05,
           RENDER_INTERVAL_MS = 1000 / 60,
           RENDER_TOLERANCE_MS = 0.1;
+        let weatherState: RunState | null = null, weatherTime = 0;
         let last = performance.now(),
           nextRender = last,
           accumulator = 0,
@@ -218,7 +219,8 @@
                 ring(b.x, b.z, b.size + 1, 0xe5ba79, 0.25, 0.11, t * 0.1);
             }
           }
-          renderBattlefieldEffects(R, game.effects, world, viewState, ui.pings, t, game.localTeam);
+          renderBattlefieldEffects(R, game.effects, world, viewState, ui.pings, t, game.localTeam,
+            game.networkTeam !== null ? t : weatherTime);
           if (ui.mode && ui.pointer.inside && !ui.paused) {
             let p = R.ground(ui.pointer.x, ui.pointer.y);
             const limit = world.extent - 4;
@@ -273,6 +275,14 @@
             ui.multiplayer?.updatePresentation(now);
             diagnostics?.recorder.phase('ui');
             ui.tick(dt);
+            if (weatherState !== game.s) {
+              weatherState = game.s;
+              weatherTime = game.s?.time ?? 0;
+            }
+            // Only weather interpolates the local fixed-step remainder.
+            // Keep its last pose when pausing; neither gameplay nor effect ages advance.
+            if (game.networkTeam === null && game.s && ui.view === 'game' && !ui.paused && !game.s.result)
+              weatherTime = Math.max(weatherTime, game.s.time + accumulator);
             diagnostics?.recorder.phase('audio');
             audio.update(
               ui.view === 'game'

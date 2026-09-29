@@ -717,7 +717,7 @@ test('effect culling preserves visible output and does not redistribute the acce
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
 function appClock(diagnostic = false) {
   let now = 0;
-  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [];
+  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [], weatherClocks = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
   const elements = new Map(), window = {}, queryRequests = [];
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
@@ -768,11 +768,14 @@ function appClock(diagnostic = false) {
       takeSnapshotCount() { return 0; }
       disconnect() {}
     },
-    renderBattlefieldEffects() { renderWork.battlefield++; }
+    renderBattlefieldEffects(R,e,w,s,p,time,team,weatherTime) {
+      renderWork.battlefield++;
+      weatherClocks.push({now,state:s.time,effects:time,weather:weatherTime});
+    }
   } });
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
-  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, queryRequests, $,
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, queryRequests, weatherClocks, $,
     get performance() { return window.Meridian.performance; },
     frame(t) {
       assert.equal(pending.length, 1, 'exactly one outstanding rAF');
@@ -853,6 +856,35 @@ test('frame cap leaves speed, pause and network simulation ownership unchanged',
     assert.equal(a.presentations.length, 120);
     assert.deepEqual(a.errors, []);
   }
+});
+
+test('precipitation interpolates only its view clock, freezes on pause and resets per battle', () => {
+  const a=appClock();
+  for(let i=1;i<=120;i++)a.frame(i*1000/120);
+  assert.ok(new Set(a.weatherClocks.map(c=>c.weather)).size>50);
+  for(const c of a.weatherClocks) {
+    assert.equal(c.effects,c.state,'CPU effect ages/model clocks are unchanged');
+    assert.ok(c.weather>=c.state-1e-10&&c.weather<c.state+.05+1e-10);
+    assert.ok(Math.abs(c.weather-c.now/1000)<1e-10,'smooth within the 20 Hz tick');
+  }
+  a.frame(1017);const paused=a.weatherClocks.at(-1).weather;
+  a.ui.paused=true;
+  for(const t of [1034,1051,1068])a.frame(t);
+  assert.ok(a.weatherClocks.slice(-3).every(c=>c.weather===paused),'no snap backwards when remainder is discarded');
+  a.ui.paused=false;a.game.s.speed=2;
+  for(const t of [1085,1102,1119])a.frame(t);
+  const resumed=a.weatherClocks.slice(-3);
+  assert.ok(resumed[0].weather>=paused);
+  assert.ok(Math.abs(resumed[2].weather-resumed[1].weather-.034)<1e-10);
+  a.game.s={...a.game.s,time:0};a.frame(1136);
+  assert.ok(a.weatherClocks.at(-1).weather<.1,'new battle forgets previous weather clock');
+  a.game.networkTeam=0;a.game.s.time=90;
+  for(const t of [1153,1170,1187])a.frame(t);
+  for(const c of a.weatherClocks.slice(-3)) {
+    assert.equal(c.weather,c.effects,'network uses the existing interpolation clock');
+    assert.ok(Math.abs(c.weather-c.now/1000)<1e-10);
+  }
+  assert.deepEqual(a.errors,[]);
 });
 
 test('graphics loss and render errors stop scheduling even with the frame cap', () => {

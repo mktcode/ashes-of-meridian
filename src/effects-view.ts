@@ -31,22 +31,32 @@ function renderBattleScars(R:MeridianRenderer,effects:MeridianEffects,world:Batt
     }
   }
 }
-function renderEcologyWeather(R:MeridianRenderer,world:Battlefield,s:RunState) {
+function weatherHash(value:number) {
+  value=Math.imul(value^(value>>>16),0x7feb352d);
+  value=Math.imul(value^(value>>>15),0x846ca68b);
+  return (value^(value>>>16))>>>0;
+}
+function renderEcologyWeather(R:MeridianRenderer,world:Battlefield,s:RunState,time=s.time) {
   const e=world.renderProfile?.ecology;
   if(!e||!(R.quality>0)||R.cinema||e.weather==='clear')return;
-  const radius=R.quality>1?5:3,cx=Math.floor(s.cam.x/12),cz=Math.floor(s.cam.z/12),time=s.time,
+  const radius=R.quality>1?5:3,cx=Math.floor(s.cam.x/12),cz=Math.floor(s.cam.z/12),
     rain=e.weather==='rain',snow=e.weather==='snow',precipitation=rain||snow,
     count=precipitation?(R.quality>1?5:3):1,angle=(e.phase??0)+.4,
     windX=Math.cos(angle)*.36,windZ=Math.sin(angle)*.36,
+    rainYaw=Math.atan2(-windX,-windZ),rainPitch=-Math.atan2(1,.36),rainScale=Math.hypot(1,.36),
     eyeX=(R.eye?.[0]??s.cam.x)-s.cam.x,eyeZ=(R.eye?.[2]??s.cam.z+.82)-s.cam.z,
     yaw=Math.atan2(eyeX,eyeZ),pitch=Math.atan2(Math.hypot(eyeX,eyeZ),R.eye?.[1]??1.1),
     visible=(x:number,z:number)=>Math.max(Math.abs(x),Math.abs(z))<world.extent&&!!world.visible[world.idx(x,z)];
+  let splashes=R.quality>1?24:10;
   for(let dz=-radius;dz<=radius;dz++)for(let dx=-radius;dx<=radius;dx++) {
     const ix=cx+dx,iz=cz+dz,hash=(Math.imul(ix,374761393)^Math.imul(iz,668265263)^world.terrainSeed)>>>0;
     for(let i=0;i<count;i++) {
-      const bits=Math.imul(hash^Math.imul(i+1,1597334677),1274126177)>>>0,
+      const seed=weatherHash(hash^Math.imul(i+1,1597334677)),
+        clock=seed/4294967296+time*(.85+(seed&255)/255*.4),cycle=Math.floor(clock),
+        bits=rain?weatherHash(seed^Math.imul(cycle,0x9e3779b9)):seed,
         a=precipitation?(bits&65535)/65536:((Math.imul(hash^(hash>>>13),1274126177)>>>0)%65536)/65536,
-        b=bits/4294967296,tx=ix*12+a*(precipitation?12:10),tz=iz*12+(precipitation?b*12:((a*7.31)%1)*10);
+        b=(bits>>>16)/65536,depth=weatherHash(bits^0x68bc21eb)/4294967296,
+        tx=ix*12+a*(precipitation?12:10),tz=iz*12+(precipitation?b*12:((a*7.31)%1)*10);
       if(!visible(tx,tz))continue;
       const floor=world.surface?.heightAt(tx,tz)??0;
       if(e.weather==='mist') {
@@ -54,21 +64,42 @@ function renderEcologyWeather(R:MeridianRenderer,world:Battlefield,s:RunState) {
         const r=4+a*3,y=floor+.35;
         if(effectBoundsVisible(R,tx,y,tz,r,.5,r))R.add('sphere',tx,y,tz,r,.45,r,e.dry,0,0,0,.15,.035,'effects');
       }else if(precipitation) {
-        const fall=((a+b*.37)+time*(rain?1+b*.35:.085+b*.055))%1,
-          height=(1-fall)*(rain?18:16),fade=Math.min(1,fall*12,(1-fall)*15),
+        const fall=rain?(clock-cycle)/.88:((a+b*.37)+time*(.085+b*.055))%1;
+        // The final part of each rain cycle is a quiet ground impact. Its location
+        // changes only between cycles, so drops do not follow permanent dotted rails.
+        if(rain&&fall>=1) {
+          if(i!==0||splashes<=0||world.staticGrid?.[world.idx(tx,tz)])continue;
+          const age=(clock-cycle-.88)/.12,r=.16+age*.3,
+            gx=((world.surface?.heightAt(tx+r,tz)??0)-(world.surface?.heightAt(tx-r,tz)??0))/(2*r),
+            gz=((world.surface?.heightAt(tx,tz+r)??0)-(world.surface?.heightAt(tx,tz-r)??0))/(2*r),
+            rx=-Math.atan(gz),rz=Math.atan(gx*Math.cos(rx));
+          // No rings over chasms, cliffs or unseen edges; depth testing hides them
+          // under buildings. The skin lies .13 m below the playable CPU surface.
+          if(Math.hypot(gx,gz)>.6||!visible(tx-r,tz-r)||!visible(tx+r,tz+r))continue;
+          if(effectBoundsVisible(R,tx,floor-.09,tz,r,r,r)) {
+            splashes--;
+            R.add('plane',tx,floor-.09,tz,r*2,1,r*2,0xb2c9cc,0,rx,rz,0,
+              .18*Math.sin(age*Math.PI)*(1-age),'effects',RAIN_SPLASH_MATERIAL);
+          }
+          continue;
+        }
+        const near=depth>.86,height=(1-fall)*(rain?(near?24:10+depth*10):16),
+          fade=Math.min(1,fall*10,(1-fall)*12),
           sway=snow?Math.sin(fall*Math.PI):0,phase=time*(.65+a*.4)+a*Math.PI*2,
           x=tx-windX*height+Math.sin(phase)*sway*(.4+a*.7),
           z=tz-windZ*height+Math.cos(phase*.73)*sway*.6,y=floor+.08+height;
-        // Anchor the flight to its landing height, not the changing ground beneath
-        // the moving drop. Otherwise slopes bend its trajectory away from the streak.
+        // A fixed landing height keeps the flight parallel to the streak on slopes.
         if(!visible(x,z)||y<(world.surface?.heightAt(x,z)??0)+.04||fade<=0)continue;
         if(rain) {
-          const length=1.2+a*.8,bx=x-windX*length,bz=z-windZ*length;
-          if(visible(bx,bz))drawVisibleEffectBeam(R,[x,y,z],[bx,y+length,bz],.04+b*.025,0xc4dbe6,.45,(.42+b*.2)*fade);
+          const length=(near?1.25:.55)+depth*.7,width=near?.32:.18+depth*.08,
+            bx=x-windX*length,bz=z-windZ*length,mx=(x+bx)/2,my=y+length/2,mz=(z+bz)/2;
+          if(visible(bx,bz)&&effectBoundsVisible(R,mx,my,mz,Math.abs(x-bx)/2+width,length/2+width,Math.abs(z-bz)/2+width))
+            R.add('plane',mx,my,mz,width,1,length*rainScale,0xb6c9d0,rainYaw,rainPitch,0,0,
+              (near?.24:.10+depth*.10)*fade,'effects',RAIN_STREAK_MATERIAL);
         }else {
-          const size=.30+b*.45;
+          const size=.22+b*.32+(near?.18:0);
           if(effectBoundsVisible(R,x,y,z,size,size,size))R.add('plane',x,y,z,size,1,size,0xe5eff5,yaw,pitch,0,0,
-            (.60+a*.26)*fade,'effects',SNOWFLAKE_MATERIAL);
+            (.42+a*.24)*fade,'effects',SNOWFLAKE_MATERIAL);
         }
       }else {
         const fall=(a+time*.22)%1,y=floor+(1-fall)*12+.1;
@@ -201,10 +232,10 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
             }
           } else R.add('ring', x, y, z, r, 1, r, color, rot, 0, 0, 0.45, alpha, 'effects');
         }
-        function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number, localTeam: PlayerTeam = 0) {
+        function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number, localTeam: PlayerTeam = 0, weatherTime = s.time) {
           const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
           renderMotionDust(R, world, s, localTeam);
-          renderEcologyWeather(R, world, s);
+          renderEcologyWeather(R, world, s, weatherTime);
           renderBattleScars(R, effects, world, s.time, localTeam);
           for (const e of s.entities) {
             if (e.kind !== 'unit' || e.type !== 'hero' || e.hp <= 0 || e.team === -1 ||
