@@ -179,8 +179,8 @@ const WESTMARK_BATTLEFIELD: BattlefieldDefinition = {
       water.colors!.set([Math.max(-20,Math.min(river.y-ground.heights[i],.95-river.bank)),
         river.dx/length,river.dz/length],i*3);
     }
-    w.renderData.geometries.push({mesh:'terrain',model:'westmarkRelief',relief:ground},
-      {mesh:'westmarkBackdrop',model:'westmarkRelief',relief:relief(480,5,w.extent)},
+    w.renderData.geometries.push({mesh:'terrain',model:'landscapeRelief',relief:ground},
+      {mesh:'westmarkBackdrop',model:'landscapeRelief',relief:relief(480,5,w.extent)},
       {mesh:'westmarkWater',model:'westmarkWater',relief:water});
     builder.place('westmarkBackdrop',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','LANDSCAPE');
     builder.place('westmarkWater',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','WATER');
@@ -190,8 +190,8 @@ const WESTMARK_BATTLEFIELD: BattlefieldDefinition = {
       builder.place(mesh,0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','MASONRY');
     });
     for(const model of ['westmarkTrunk','westmarkSpruce','westmarkBeacon'])
-      w.renderData.geometries.push({mesh:model,model,seed:w.seed,extent:w.extent});
-    const fixed=seeded(w.seed^0x57455354),decor=builder.cosmeticRandom(0x50494e45);
+      w.renderData.geometries.push({mesh:model,model,seed:w.terrainSeed,extent:w.extent});
+    const fixed=seeded(w.terrainSeed^0x57455354),decor=builder.cosmeticRandom(0x50494e45);
     const protectedAt=(x:number,z:number,r:number)=>plan.reserve(x,z)<r+3||plan.road(x,z)<r+6||
       !!plan.bridgeAt(x,z,r+10)||westmarkRiver(x,z).bank<r+4;
     const block=(x:number,z:number,r:number)=>{

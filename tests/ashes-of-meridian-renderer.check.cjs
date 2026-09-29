@@ -407,6 +407,23 @@ test('map render profiles select cached textures and independent decor uniforms 
   for (const component of ['x','y','z','w']) assert.ok(frag.includes('u_groundDecor.' + component));
 });
 
+test('atmosphere uniforms follow the world on all qualities and reset for previews without resource uploads', () => {
+  const h=setup();h.r.resize();
+  const base=h.r.battlefieldProfile, atmosphere={timeOfDay:7,horizon:[.68,.34,.23],zenith:[.12,.20,.34]};
+  for(const quality of [0,1,2]) for(const active of [true,false]) {
+    h.r.quality=quality;
+    h.r.setBattlefieldProfile(active?{...base,atmosphere}:base);
+    h.calls.length=0;h.r.render(0);
+    const flags=h.calls.filter(c=>c[0]==='uniform1f'&&c[1]==='u_atmosphereOn');
+    assert.ok(flags.length>=3,'scene, sky and post use the same profile');
+    assert.ok(flags.every(c=>c[2]===(active?1:0)));
+    if(active) assert.ok(h.calls.some(c=>JSON.stringify(c)===JSON.stringify(['uniform3fv','u_atmosphereHorizon',atmosphere.horizon])));
+    assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
+  }
+  h.r.setBattlefieldProfile({...base,atmosphere});h.r.useModelPreview();
+  assert.equal(h.r.battlefieldProfile.atmosphere,undefined);
+});
+
 test('dedicated rock material is opt-in and resets on profile changes without texture uploads', () => {
   const h = setup(); h.r.resize();
   h.r.desertRockTex = 'desert-stone'; h.r.groundTex = 'dirt'; h.r.bioTex = 'bio'; h.r.metalTex = 'metal';

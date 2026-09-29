@@ -8,6 +8,14 @@ function renderAbilityLoadout(loadout: readonly AbilityType[], profile?: Meridia
   }).join('')}</div>`;
 }
 
+function renderWorldDesign(world: Battlefield | null): string {
+  if (!world) return '';
+  const hour = world.renderProfile.atmosphere?.timeOfDay,
+    minutes = hour === undefined ? null : Math.floor(hour * 60),
+    clock = minutes === null ? '' : ` · ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  return `<p class="muted">${esc(world.definition.name)} · LANDSCAPE ${world.terrainSeed}${world.definition.design?.terrainSeed !== undefined ? ' · FIXED DESIGN' : ''}${clock}<br>BATTLE SEED ${world.seed}</p>`;
+}
+
 function renderMissionBriefing(id: MissionId): string {
   const mission = MISSIONS[id];
   return `<p title="${esc(mission.objective)}"><b>${esc(mission.name)}</b> · ${esc(mission.briefing ?? mission.objective)}</p>`;

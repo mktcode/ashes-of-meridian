@@ -23,6 +23,12 @@ Für einen isolierten Test startet `index.html?experiment=height` nach dem Build
 
 Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Die opaken Oberflächen verwenden prozedurale Materialrezepte, die Fichtenzweige weiterhin das Vorlagenbild; Materialien und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
 
+## Frontier und feste Kartendesigns
+
+Frontier ergänzt Expeditionen um seedbasierte Landschaften: Wege, Ressourcenflächen und Höhenformen entstehen zusammen. Haven zeigt dieselbe Generierung als dauerhaft benanntes arides Design mit festem Landschaftsseed und Abendlicht. Tageszeit und Materialvariante sind unabhängig von der Geometrie; bestehende Spezialkarten wie Aurelion behalten ihre feste Gestaltung. [Rezepte und Designpflege](docs/architecture.md#weltrezepte-und-feste-designs).
+
+`index.html?experiment=frontier&seed=1409` beziehungsweise `index.html?experiment=haven&seed=1409` starten isolierte Probeläufe ohne dauerhafte Profiländerungen. Andere positive Seeds mit bis zu acht Stellen erzeugen auf Frontier andere Landschaften; Haven behält seine Landschaft. Das Pausenmenü zeigt die Seeds und gegebenenfalls Tageszeit. Menschliche Karten-/Nachtkontrastabnahme und Multiplayerfreigabe bleiben [offen](docs/issues/project-tomorrow.md#noch-nicht-erreicht--abnahme).
+
 ## Aurelion · Echo-Bergung
 
 Aurelion ergänzt Expeditionen ab Stage 4 um **Echo salvage**: Worker bergen Fragmente aus einem zerborstenen fremdartigen Reaktorkern und bringen sie zum HQ. Die erste Partei mit 100 abgelieferten Fragmenten gewinnt. [Spielregeln](docs/gameplay.md#echo-bergung-auf-aurelion). Im Multiplayer bleibt die Karte ausgeschlossen.
@@ -48,7 +54,7 @@ Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine 
 - [AGENTS.md](AGENTS.md): Arbeitsregeln für KI-Agenten.
 - [Story und Welt](docs/story.md): deutsche interne Fassung des Einstiegs; die [englische Spielfassung](src/ui/codex.ts) ist im Startmenü über **Codex** lesbar.
 - [Architektur](docs/architecture.md): technische Grenzen und nicht offensichtliche Verträge.
-- [Grafik und Assets](docs/rendering.md): prozedurale Oberflächen, Modell-/Texturpflege und Darstellungsgrenzen. [Project Tomorrow](docs/issues/project-tomorrow.md) hält die noch offene Weltgenerator- und Materialabnahme fest.
+- [Grafik und Assets](docs/rendering.md): prozedurale Oberflächen, Modell-/Texturpflege und Darstellungsgrenzen. [Project Tomorrow](docs/issues/project-tomorrow.md) hält die noch offene Karten-, Material- und Geräteabnahme fest.
 - [Prüfungen](docs/testing.md): gezielte Tests, Standardtestsuite, ausdrücklich beauftragte KI-/Simulationsläufe und Aussagegrenzen; [optionale lokale Performancediagnose](docs/testing.md#lokale-performancediagnose).
 - [Feste Testreferenzen](docs/reference-tests.md): Umgang mit Fixtures.
 - [Issues](docs/issues/): offene Aufgaben und Entscheidungen, darunter [Geräte-/Run-Validierung](docs/issues/playtest-validation.md).

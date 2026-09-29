@@ -141,9 +141,10 @@
       },
       startBattle(this: MeridianGame, opts: BattleOptions & { startSeed?: number }, parties: PartyState[], rules: BattleRules, aiTeams: PlayerTeam[]) {
         const [{ faction, meta, benefits }, { faction: enemy }] = parties,
-          map = battlefieldId(opts.map), layout = BATTLEFIELDS[map].layout,
+          map = battlefieldId(opts.map),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.world = new Battlefield(seed, map, parties.length);
+        const layout = this.world.layout;
         this.world.startSites = battlefieldStartSites(this.world);
         const starts = this.startingPositions(rules.kind === 'scenario' ? opts.startSeed ?? seed : seed, parties.length), [playerStart, enemyStart] = starts;
         this.s = {

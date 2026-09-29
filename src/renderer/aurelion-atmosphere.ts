@@ -12,6 +12,7 @@ in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in
 uniform vec3 u_eye;uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;
 uniform sampler2D u_shadow;uniform sampler2D u_metalTex;uniform sampler2D u_advertising;
 uniform float u_shadowBias;uniform float u_time;
+uniform float u_atmosphereOn;uniform vec3 u_atmosphereHorizon;uniform vec3 u_atmosphereZenith;
 out vec4 frag;
 const vec3 sunDirection=normalize(vec3(-64.,110.,43.));
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -109,7 +110,8 @@ void main(){
  float spec=pow(max(dot(n,normalize(sunDirection+view)),0.),mix(48.,100.,glass));
  lit+=u_sun*spec*sh*mix(.45,.9,glass);
  vec3 reflected=reflect(-view,n);
- vec3 env=mix(vec3(.012,.027,.05),vec3(.12,.20,.32),smoothstep(-.3,.8,reflected.y));
+ vec3 env=u_atmosphereOn>.5?mix(u_atmosphereHorizon,u_atmosphereZenith,smoothstep(-.3,.8,reflected.y)):
+  mix(vec3(.012,.027,.05),vec3(.12,.20,.32),smoothstep(-.3,.8,reflected.y));
  lit+=env*(.035+fresnel*.28+glass*.18);
  float deckAA=max(length(fwidth(v_pos.xz))*.65,.06);
  if(v_mat>=0.&&n.y>.85&&v_pos.y>-.3&&v_pos.y<deckHeight+.4)
@@ -126,12 +128,15 @@ void main(){
 }`;
 const AURELION_SKY_FRAGMENT = `#version 300 es
 precision highp float;in vec2 uv;out vec4 frag;
-void main(){frag=vec4(mix(vec3(.028,.047,.08),vec3(.006,.012,.029),smoothstep(0.,1.,uv.y)),1.);}`;
+uniform float u_atmosphereOn;uniform vec3 u_atmosphereHorizon;uniform vec3 u_atmosphereZenith;
+void main(){vec3 horizon=u_atmosphereOn>.5?u_atmosphereHorizon:vec3(.028,.047,.08),zenith=u_atmosphereOn>.5?u_atmosphereZenith:vec3(.006,.012,.029);
+frag=vec4(mix(horizon,zenith,smoothstep(0.,1.,uv.y)),1.);}`;
 const AURELION_POST_FRAGMENT = `#version 300 es
 precision highp float;precision highp sampler3D;
 in vec2 uv;out vec4 frag;
 uniform sampler2D u_tex;uniform sampler2D u_bloom;uniform sampler2D u_cityDepth;uniform sampler2D u_sunDepth;
 uniform sampler3D u_cloudNoise;uniform mat4 u_inverseVP;uniform mat4 u_light;
+uniform float u_atmosphereOn;uniform vec3 u_atmosphereHorizon;uniform vec3 u_atmosphereZenith;
 uniform vec3 u_eye;uniform vec2 u_size;uniform float u_time;uniform float u_bloomOn;uniform float u_depthOn;uniform float u_amount;uniform float u_hazeStart;
 vec3 world(vec2 p,float depth){vec4 v=u_inverseVP*vec4(p*2.-1.,depth*2.-1.,1.);return v.xyz/v.w;}
 float noise(vec3 p){return texture(u_cloudNoise,p).r;}
@@ -182,14 +187,16 @@ void main(){
      float sky=smoothstep(-145.,-45.,q.y),direct=sunlight(q);
      float edge=clamp((cloud(q)-cloud(q+vec3(-5.,9.,3.)))*15.+.55,0.,1.);
      // Low blue night scatter keeps the canyons dark rather than filling them with white daylight.
-     vec3 light=mix(vec3(.01,.018,.035),vec3(.075,.12,.20),.20+sky*.26+direct*edge*.48);
+     vec3 low=u_atmosphereOn>.5?u_atmosphereZenith*.25:vec3(.01,.018,.035),
+       high=u_atmosphereOn>.5?u_atmosphereHorizon*.4:vec3(.075,.12,.20);
+     vec3 light=mix(low,high,.20+sky*.26+direct*edge*.48);
      scattered+=transmittance*a*light;transmittance*=1.-a;
      if(transmittance<.015)break;
     }
    }
   }
   float haze=(1.-exp(-max(length(p.xz-u_eye.xz)-u_hazeStart,0.)*.0014))*(.65+.35*(1.-smoothstep(-70.,80.,p.y)));
-  c=mix(c,vec3(.025,.04,.075),haze*.70);
+  c=mix(c,u_atmosphereOn>.5?u_atmosphereHorizon*.7:vec3(.025,.04,.075),haze*.70);
   c=c*transmittance+scattered;bloom*=transmittance;
  }
  vec3 streak=vec3(0.);

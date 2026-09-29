@@ -657,7 +657,7 @@ const SALVAGE_RULES = Object.freeze({ goal:100, load:10, rate:2 });
 const MISSIONS: Readonly<Record<MissionId, MissionDefinition>> = Object.freeze({
   'hq-elimination': Object.freeze({
     name: 'HQ supremacy',
-    maps: Object.freeze(['desert', 'alien-planet', 'mothership', 'westmark'] as const),
+    maps: Object.freeze(['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven'] as const),
     firstStage: 1,
     objective: 'Free-for-all: be the last party with an HQ. Losing the last HQ eliminates a party and removes its remaining forces. Protect yours.',
     intro: 'Expedition command|Destroy the enemy base to advance.',

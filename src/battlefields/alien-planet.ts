@@ -50,8 +50,8 @@ function alienForestDensity(seed: number, extent: number) {
 
 function populateAlienPlanet(builder: BattlefieldBuilder) {
   const { world, place } = builder, extent = world.extent,
-    density = alienForestDensity(world.seed, extent),
-    trees = seeded(world.seed ^ 0x54524545),
+    density = alienForestDensity(world.terrainSeed, extent),
+    trees = seeded(world.terrainSeed ^ 0x54524545),
     exterior = builder.cosmeticRandom(0x4f555445),
     decor = builder.cosmeticRandom(0x53504f52),
     protectedSites = [
@@ -70,7 +70,7 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
   for (const model of ['alienTreePlum', 'alienTreeJade', 'alienTreeUmbrella', 'alienSapling', 'alienPod',
     'alienFern', 'alienSpore', 'alienGlowTuft', 'alienLanternPool',
     'alienCapGillsPlum', 'alienCapGillsJade', 'alienCapGillsUmbrella'])
-    world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent });
+    world.renderData.geometries.push({ mesh: model, model, seed: world.terrainSeed, extent });
 
   // A deep, irregular stand beyond every edge, not two rows on a raised square bank.
   // These instances never mark the navigation grid or consume the interior placement RNG.
@@ -98,7 +98,7 @@ function populateAlienPlanet(builder: BattlefieldBuilder) {
   }
 
   // Keep the little root colonies as occasional accents, never as a template for entire woods.
-  const colonies = seeded(world.seed ^ 0x414c4945);
+  const colonies = seeded(world.terrainSeed ^ 0x414c4945);
   for (let i = 0; i < 60; i++) {
     const p = { x: (colonies() - .5) * (extent * 2 - 28), z: (colonies() - .5) * (extent * 2 - 28) }, r = 2.1 + colonies() * 1.2;
     if (safe(p, r + 3) || lane(p, r + 7) || world.rocks.some(q => distance(p, q) < r + q.r + 7)) continue;

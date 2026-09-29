@@ -109,8 +109,8 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
   assert.deepEqual(scripts.filter(s => BATTLEFIELD_SCRIPTS.includes(s.name)).map(s => s.filename),
     BATTLEFIELD_SCRIPTS.map(name => `dist/src/battlefields/${name.replace('battlefield-', '')}.js`));
   const { BATTLEFIELDS, battlefieldId } = vm.runInContext('({BATTLEFIELDS, battlefieldId})', context);
-  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'aurelion']);
-  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'AURELION']);
+  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'aurelion', 'frontier', 'haven']);
+  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'AURELION', 'FRONTIER', 'HAVEN']);
   assert.deepEqual(Array.from(vm.runInContext('availableBattlefields()',context)), Object.keys(BATTLEFIELDS));
   assert.deepEqual(Array.from(vm.runInContext("availableBattlefields('multiplayer')",context)), ['desert', 'alien-planet', 'mothership', 'westmark'],
     'objective missions do not expand the multiplayer offering');

@@ -25,9 +25,9 @@ class BattlefieldView {
         ...scenery.map(mesh=>mesh.name)]);
       for (const name of this.worldMeshes) if (!nextMeshes.has(name)) R.releaseGeometry(name);
       this.worldMeshes = nextMeshes;
-      R.setBattlefieldProfile(world.definition.render, world.seed);
+      R.setBattlefieldProfile(world.renderProfile, world.definition.design?.atmosphere?.materialSeed ?? world.seed);
       R.extent = EXTENT;
-      R.decorSeed = world.seed >>> 0;
+      R.decorSeed = world.terrainSeed >>> 0;
       R.surface = world.surface;
       // An authoritative recipe can supply its own ground skin, including material
       // weights and decorative river beds underneath the one walkable bridge surface.

@@ -14,7 +14,9 @@
         const heightExperiment = params.get('experiment') === 'height',
           westmarkExperiment = params.get('experiment') === 'westmark',
           aurelionExperiment = params.get('experiment') === 'aurelion-playable',
-          mapExperiment = heightExperiment || westmarkExperiment || aurelionExperiment,
+          frontierExperiment = params.get('experiment') === 'frontier',
+          havenExperiment = params.get('experiment') === 'haven',
+          mapExperiment = heightExperiment || westmarkExperiment || aurelionExperiment || frontierExperiment || havenExperiment,
           visibleSimulation = !mapExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
@@ -118,9 +120,9 @@
           loader.innerHTML = `<div class="eyebrow">UPLINK INTERRUPTED</div><h2>Texture preparation failed.</h2><p>${esc(error instanceof Error ? error.message : String(error))}</p>`;
           loader.classList.remove('hidden');
         }
-        ui.onPreview = map => {
-          const id = ++worldRequest, mapId = battlefieldId(map), world = new Battlefield(40517, mapId),
-            profile = BATTLEFIELDS[mapId].render;
+        ui.onPreview = (map, seed = 40517) => {
+          const id = ++worldRequest, mapId = battlefieldId(map), world = new Battlefield(seed, mapId),
+            profile = world.renderProfile;
           void R.prepareBattlefieldTextures(profile).then(ready => {
             if (!ready || id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') return;
             worldView.sync(world, false);
@@ -377,7 +379,8 @@
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
           ui.expedition = { version: 5, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: aurelionExperiment ? 3 : 0,
             benefits: {pioneerSquad: 2}, enemyBenefits: aurelionExperiment ? [{pioneerSquad:2},{pioneerSquad:2}] : [{}],
-            encounter: {mission: aurelionExperiment ? 'echo-salvage' : DEFAULT_MISSION, map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : 'mothership', seed: 1409,
+            encounter: {mission: aurelionExperiment ? 'echo-salvage' : DEFAULT_MISSION, map: aurelionExperiment ? 'aurelion' : westmarkExperiment ? 'westmark' : frontierExperiment ? 'frontier' : havenExperiment ? 'haven' : 'mothership',
+              seed: (frontierExperiment || havenExperiment) && /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,
               enemies: aurelionExperiment ? [1,2] : [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {

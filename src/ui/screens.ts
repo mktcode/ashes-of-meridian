@@ -21,7 +21,7 @@
         $('radio').classList.add('hidden');
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
-        if (this.onPreview) this.onPreview(this.expedition?.encounter.map || 'desert');
+        if (this.onPreview) this.onPreview(this.expedition?.encounter.map || 'desert', this.expedition?.encounter.seed);
         $('menu').innerHTML =
           renderHomeScreen(this.expedition, this.profile.expeditionDepth, this.encounterBriefing());
       },
@@ -141,7 +141,7 @@
         $('modal').classList.add('hidden');
         $('result').classList.add('hidden');
         $('menu').classList.remove('hidden');
-        if (this.onPreview) this.onPreview(this.expedition.encounter.map);
+        if (this.onPreview) this.onPreview(this.expedition.encounter.map, this.expedition.encounter.seed);
         const benefits = Object.entries(this.expedition.benefits).filter(([, count]) => count)
           .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)}${count > 1 ? ` ×${count}` : ''}`).join(' · ');
         $('menu').innerHTML = `<div class="subscreen expedition-transition"><header class="sub-header"><div><div class="eyebrow">CHECKPOINT SECURED / DEPTH ${this.expedition.depth}</div><h1>Choose an expedition benefit.</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header>${this.encounterBriefing()}<p class="muted">The benefit remains active until this expedition ends.</p><div class="benefit-options">${renderBenefitOptions(this.expedition.offers)}</div><p class="battle-note">ACTIVE · ${benefits || 'NO BENEFITS YET'}</p><div class="launch-row"><button class="secondary" data-ui="armory">FLEET UPGRADES</button></div></div>`;
@@ -192,7 +192,7 @@
         }
         this.openModal(
           'pause',
-          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1><div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">SETTINGS</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="restartConfirm">RESTART OPERATION</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p style="font-size:11px;margin-bottom:0">Main menu, closing or reloading discards this battle but keeps its secured pre-battle checkpoint. Abandoning ends the expedition.</p>`
+          `<div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">SETTINGS</button><button class="secondary" data-ui="help">FIELD MANUAL</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="restartConfirm">RESTART OPERATION</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p style="font-size:11px;margin-bottom:0">Main menu, closing or reloading discards this battle but keeps its secured pre-battle checkpoint. Abandoning ends the expedition.</p>`
         );
       },
       resume(this: MeridianUI) {

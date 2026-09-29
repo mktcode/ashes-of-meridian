@@ -36,7 +36,7 @@ function populateMothership(builder: BattlefieldBuilder) {
   const models = ['shipHangar', 'shipHangarLights', 'shipPlant', 'shipCrate', 'shipTransport',
     'shipTransportLights', 'shipBridge', 'shipCargoPad', 'shipVentDock'];
   for (const model of models)
-    world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent: world.extent });
+    world.renderData.geometries.push({ mesh: model, model, seed: world.terrainSeed, extent: world.extent });
 
   // Chamfered footprints match the visible foundations. The closed blast doors remain solid.
   const block = (model: 'shipHangar' | 'shipPlant', x: number, z: number,
@@ -46,7 +46,7 @@ function populateMothership(builder: BattlefieldBuilder) {
         [sx-bevel,sz], [-sx+bevel,sz], [-sx,sz-bevel], [-sx,-sz+bevel]
       ], cs = Math.cos(yaw), sn = Math.sin(yaw),
       outline = local.map(([a,b]) => ({ x: x + a*cs+b*sn, z: z-a*sn+b*cs })),
-      feature: WorldTerrainFeature = { x, z, width: sx, depth: sz, height: h, yaw, seed: world.seed, outline },
+      feature: WorldTerrainFeature = { x, z, width: sx, depth: sz, height: h, yaw, seed: world.terrainSeed, outline },
       clearance = world.cellSize * Math.SQRT1_2;
     world.renderData.features.push(feature);
     for (let i = 0; i < world.staticGrid.length; i++) {
@@ -99,7 +99,7 @@ function populateMothership(builder: BattlefieldBuilder) {
 
   // Grounded meshes add panel rhythm, runway guidance and emissive edge lighting without collision or RNG.
   for (const [model,glow] of [['shipDeckMarks',0],['shipDeckLights',1.15]] as const) {
-    world.renderData.geometries.push({ mesh: model, model, seed: world.seed, extent: world.extent, grounded: true });
+    world.renderData.geometries.push({ mesh: model, model, seed: world.terrainSeed, extent: world.extent, grounded: true });
     place(model,0,0,0,1,1,1,0xffffff,0,0,0,glow,1,'static','METAL');
   }
   builder.boundary('shipOuterDeck','GROUND');

@@ -60,7 +60,7 @@
       resultBenefit?: string;
       onViewportChange?: () => void;
       multiplayer?: MeridianMultiplayerClient;
-      onPreview?: (map?: BattlefieldId) => void;
+      onPreview?: (map?: BattlefieldId, seed?: number) => void;
       onLaunchBattle?: (options: BattleOptions) => void;
       domPressed?: boolean;
       touchGesture?: boolean;

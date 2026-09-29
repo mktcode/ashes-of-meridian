@@ -66,6 +66,8 @@
       declare fogVersion: number;
       viewTeam: PlayerTeam = 0;
       declare seed: number;
+      readonly terrainSeed: number;
+      readonly renderProfile: BattlefieldRenderProfile;
       declare definition: BattlefieldDefinition;
       declare layout: BattlefieldLayout;
       declare staticGrid: Uint8Array;
@@ -103,7 +105,9 @@
         this.fogVersion = 0;
         this.seed = seed;
         this.definition = BATTLEFIELDS[battlefieldId(map)];
-        this.layout = this.definition.layout;
+        this.terrainSeed = this.definition.design?.terrainSeed ?? seed;
+        this.layout = this.definition.createLayout?.(this.terrainSeed) ?? this.definition.layout;
+        this.renderProfile = battlefieldAtmosphere(this.definition.render, this.definition.design?.atmosphere, seed);
         this.extent = this.definition.size.extent;
         this.cellSize = this.definition.size.cellSize;
         this.gridSize = this.extent * 2 / this.cellSize;

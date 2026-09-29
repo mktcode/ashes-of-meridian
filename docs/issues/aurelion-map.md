@@ -4,6 +4,8 @@ Aurelion ist eine spielbare Nachtstadt mit vier erhöhten Startplattformen, Brü
 
 Die separate Hologlobus-Visualstudie ist durch die Spielintegration überholt und entfernt. Ihre Rotationsaufgabe entfällt mit dem Objekt, nicht durch eine behauptete visuelle Fehlerbehebung. Gestaltungshistorie bleibt in Git. Pflege und technische Grenzen stehen in [Rendering](../rendering.md#terrain-und-renderpässe) und [Architektur](../architecture.md#welt-darstellung-und-zufall).
 
+[Project Tomorrow](project-tomorrow.md) ergänzt einen optionalen gemeinsamen Tageszeitvertrag auch für Aurelion-Designs: Stadt-/Modelllicht, Himmel, Reflexion und Wolkenfarben lesen dieselbe Atmosphäre. Das bestehende Aurelion bleibt ausdrücklich bei seiner Nachtgestaltung und festen Geometrie; alternative Tageszeitdesigns brauchen eine eigene Kontrast-/Wolkenabnahme und sind kein laufender Tag-Nacht-Zyklus.
+
 ## Menschlich zu prüfen
 
 - [ ] Lesbarkeit der Einheiten und Gebäude im kühlen Fülllicht/warmen Deck-Reflexlicht beurteilen. Die Stadt behält ihre dunklen Schluchten, hellen Decks, Fenster und Reklamen; das Modelllicht verändert nicht die globale Nachtbeleuchtung.

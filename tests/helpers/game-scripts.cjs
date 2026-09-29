@@ -13,6 +13,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-desert-terrain',
   'renderer-alien-terrain',
   'renderer-mothership-terrain',
+  'renderer-landscape',
   'renderer-westmark-terrain',
   'renderer-model-kit',
   'battlefield-aurelion-layout',
@@ -74,6 +75,7 @@ const RENDERER_SCRIPTS = Object.freeze([
 const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-aurelion-layout',
   'battlefield-surface',
+  'battlefield-design',
   'battlefield-shared',
   'battlefield-desert',
   'battlefield-alien-planet',
@@ -81,6 +83,7 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-westmark-data',
   'battlefield-westmark',
   'battlefield-aurelion',
+  'battlefield-frontier',
   'battlefield-catalog'
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([

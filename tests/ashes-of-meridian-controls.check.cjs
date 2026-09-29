@@ -11,11 +11,11 @@ test('escaping converts values and protects HTML delimiters independently of scr
     assert.equal(esc(input), expected);
 });
 
-test('opening HQ encounters retain their faction, map and seed draws', () => {
+test('opening HQ encounters keep faction → map → seed draw order with the extended map pool', () => {
   const h = setup();
   for (const depth of [0, 1, 2]) {
     const expected = vm.runInContext(`(() => {
-      const random = seeded(1409), maps = ['alien-planet','mothership','westmark'];
+      const random = seeded(1409), maps = ['alien-planet','mothership','westmark','frontier','haven'];
       return {mission: DEFAULT_MISSION, enemies: expeditionEnemyFactions(${depth}, random),
         map: maps[Math.floor(random() * maps.length)], seed: 1 + Math.floor(random() * 99999999), next: random()};
     })()`, h.context);
@@ -30,7 +30,7 @@ test('opening HQ encounters retain their faction, map and seed draws', () => {
 test('Aurelion enters at stage four with equal map weight, normal party counts and no immediate repeat', () => {
   const h = setup();
   for (const depth of [2,3,6,7]) {
-    const found = new Set(), count = depth<3 ? 4 : 5;
+    const found = new Set(), count = depth<3 ? 6 : 7;
     for (let index=0;index<count;index++) {
       let draws=0;
       vm.runInContext('Math',h.context).random=()=>{draws++;return (index+.5)/count;};
@@ -155,7 +155,8 @@ function setup() {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00'
   } });
-  const UI = vm.runInContext('MeridianUI', context), calls = [];
+  const UI = vm.runInContext('MeridianUI', context), calls = [],
+    definition = vm.runInContext('BATTLEFIELDS.desert', context);
   class TestUI extends UI {
     bind() {} updateHUD() {} drawMinimap() {}
     setMode(...args) { calls.push(['mode', ...args]); }
@@ -170,7 +171,8 @@ function setup() {
     localTeam: 0,
     visible: () => true,
     observed: vm.runInContext('MeridianGame.prototype.observed', context),
-    world: { extent: 90, gridSize: 72, cellSize: 2.5, idx: () => 0, explored: new Uint8Array([1]) },
+    world: { extent: 90, gridSize: 72, cellSize: 2.5, idx: () => 0, explored: new Uint8Array([1]),
+      seed: 1409, terrainSeed: 1409, definition, renderProfile: definition.render },
     s: { cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [],
       parties: [{id:0,faction:0,loadout:['orbital','repair','scan','drop'],meta:{},benefits:{},controller:{kind:'human'},account:{alloy:0,gas:0,energy:100,abilities:{}}}] },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
@@ -1270,13 +1272,16 @@ test('expedition benefits are offered deterministically and bounded on selection
   assert.equal(run.benefits.commandDrill,2);
 });
 
-test('home preview prepares the known next expedition battlefield', () => {
+test('home and transition previews use the actual next landscape and atmosphere seed', () => {
   const h = setup(), maps = [];
   h.ui.expedition = { faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2, benefits: {}, enemyBenefits: [{}], offers: [],
-    encounter: { mission: 'hq-elimination', enemies: [2], map: 'alien-planet', seed: 1409 } };
-  h.ui.onPreview = map => maps.push(map);
+    encounter: { mission: 'hq-elimination', enemies: [2], map: 'frontier', seed: 1409 } };
+  h.ui.onPreview = (map, seed) => maps.push([map, seed]);
   h.ui.showHome();
-  assert.deepEqual(maps, ['alien-planet']);
+  assert.deepEqual(maps, [['frontier',1409]]);
+  h.ui.expedition.encounter.seed=7919;
+  h.ui.showExpeditionTransition();
+  assert.deepEqual(maps, [['frontier',1409],['frontier',7919]]);
 });
 
 test('expedition encounter generation excludes the immediately previous map', () => {

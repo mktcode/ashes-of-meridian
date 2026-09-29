@@ -858,10 +858,18 @@
           g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, size, size, g.RED, g.UNSIGNED_BYTE, data);
         }
       }
+      bindAtmosphere(program: WebGLProgram) {
+        const atmosphere = this.battlefieldProfile.atmosphere, g = this.gl;
+        g.uniform1f(this.uniform(program, 'u_atmosphereOn'), atmosphere ? 1 : 0);
+        if (!atmosphere) return;
+        g.uniform3fv(this.uniform(program, 'u_atmosphereHorizon'), atmosphere.horizon as [number, number, number]);
+        g.uniform3fv(this.uniform(program, 'u_atmosphereZenith'), atmosphere.zenith as [number, number, number]);
+      }
       bindSceneProgram(time: number, modelTime: number, program = this.program,
         lighting = this.battlefieldProfile.lighting ?? DEFAULT_LIGHTING) {
         const g = this.gl, profile = this.battlefieldProfile;
         g.useProgram(program);
+        this.bindAtmosphere(program);
         g.uniformMatrix4fv(this.uniform(program, 'u_vp'), false, this.vp);
         g.uniformMatrix4fv(this.uniform(program, 'u_light'), false, this.lightVP);
         g.uniform3fv(this.uniform(program, 'u_eye'), this.eye);
@@ -947,6 +955,7 @@
         g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
         g.disable(g.DEPTH_TEST);
         g.useProgram(skyProg);
+        this.bindAtmosphere(skyProg);
         g.uniform2f(this.uniform(skyProg, 'u_size'), this.width, this.height);
         g.uniform1f(this.uniform(skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
         g.activeTexture(g.TEXTURE0);
@@ -991,6 +1000,7 @@
         g.viewport(0, 0, this.width, this.height);
         g.disable(g.DEPTH_TEST);
         g.useProgram(postProg);
+        this.bindAtmosphere(postProg);
         g.activeTexture(g.TEXTURE0);
         g.bindTexture(g.TEXTURE_2D, this.sceneTex);
         g.uniform1i(this.uniform(postProg, 'u_tex'), 0);

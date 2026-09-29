@@ -40,7 +40,7 @@ function createAurelionEnvironment(renderer: MeridianRenderer): BattlefieldEnvir
       for (const [batches,program] of [[city,atmosphere.program],[entities,renderer.program]] as const) {
         if (!Object.values(batches).some(b=>b.n)) continue;
         if (boundProgram!==program) {
-          renderer.bindSceneProgram(time,modelTime,program,program===renderer.program?AURELION_ENTITY_LIGHTING:undefined);
+          renderer.bindSceneProgram(time,modelTime,program,program===renderer.program&&!renderer.battlefieldProfile.atmosphere?AURELION_ENTITY_LIGHTING:undefined);
           boundProgram=program;
         }
         renderer.drawBatches(batches,matrix,excluded,included);

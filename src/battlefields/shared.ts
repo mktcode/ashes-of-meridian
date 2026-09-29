@@ -86,7 +86,7 @@ class BattlefieldBuilder {
   constructor(readonly world: Battlefield) {
     // Preserve the established interleaved ground/obstacle/decor sample order.
     // New cosmetic generators can use cosmeticRandom() without shifting this stream.
-    this.random = seeded(world.seed);
+    this.random = seeded(world.terrainSeed);
     this.palette = world.definition.palette;
     world.renderData = { features: [], groundColors: [], placements: [], geometries: [] };
     this.safe = [
@@ -108,7 +108,7 @@ class BattlefieldBuilder {
       )
     ];
   }
-  cosmeticRandom(salt: number) { return seeded(this.world.seed ^ salt); }
+  cosmeticRandom(salt: number) { return seeded(this.world.terrainSeed ^ salt); }
   color(c: number) { return [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255]; }
   place = (
     mesh: string, x: number, y: number, z: number,
@@ -142,7 +142,7 @@ class BattlefieldBuilder {
     place('box', 0, -8, 0, EXTENT * 2, 15, EXTENT * 2, 0x242c36, 0, 0, 0, 0, 1, 'static');
   }
   boundary(model: string, material: WorldPlacement['material'], grounded = false) {
-    this.world.renderData.geometries.push({ mesh: model, model, seed: this.world.seed, extent: this.world.extent,
+    this.world.renderData.geometries.push({ mesh: model, model, seed: this.world.terrainSeed, extent: this.world.extent,
       ...(grounded ? {grounded: true} : {}) });
     this.place(model, 0, 0, 0, 1, 1, 1, this.palette.rock, 0, 0, 0, 0, 1, 'static', material);
   }
@@ -297,7 +297,7 @@ class BattlefieldBuilder {
   }
   features(candidate: (rand: () => number, world: Battlefield) => WorldTerrainFeature, model: string, material: WorldPlacement['material']) {
     const world = this.world, { gridSize: GRID, cellSize: CELL } = world;
-    const rand = seeded(world.seed ^ 0x57494445),
+    const rand = seeded(world.terrainSeed ^ 0x57494445),
       protectedSites = [
         { ...world.layout.playerStart, r: 20 }, { ...world.layout.enemySites[0], r: 21 },
         ...battlefieldStartSites(world).slice(2).map(p => ({ ...p, r: 12 })),

@@ -106,7 +106,21 @@ interface BattlefieldLighting {
   bounce: readonly [number, number, number];
 }
 
+interface BattlefieldAtmosphere {
+  timeOfDay: number;
+  horizon: readonly [number, number, number];
+  zenith: readonly [number, number, number];
+}
+
+/** Content design, independent of encounter RNG and team assignment. */
+interface BattlefieldDesign {
+  /** Omit for a fresh landscape per encounter. Pin to retain a named landscape. */
+  terrainSeed?: number;
+  atmosphere?: { timeOfDay: number | 'seeded'; materialSeed?: number };
+}
+
 interface BattlefieldRenderProfile {
+  atmosphere?: BattlefieldAtmosphere;
   scenery?: 'aurelion';
   groundTexture: 'ground' | 'metal' | 'bio' | 'westmarkMeadow';
   skyTexture: 'sky';
@@ -136,6 +150,8 @@ interface BattlefieldDefinition {
   multiplayer?: boolean;
   size: BattlefieldSize;
   layout: BattlefieldLayout;
+  createLayout?: (terrainSeed: number) => BattlefieldLayout;
+  design?: BattlefieldDesign;
   /** Explicit start datum when decorative mountains exceed the base elevation. */
   startHeight?: number;
   palette: BattlefieldPalette;

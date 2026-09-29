@@ -162,9 +162,9 @@ function desertReliefHeight(surface: WorldRelief, x: number, z: number) {
 
 function populateDesertCanyons(builder: BattlefieldBuilder) {
   const { world, palette, place } = builder, extent = world.extent,
-    plan = desertCanyonPlan(world.layout, world.seed), elevation = desertElevation(world.seed, extent, plan),
-    proposalElevation = desertElevation(world.seed, extent, { ...plan, siteClearance: plan.circleClearance }, false),
-    decor = builder.cosmeticRandom(0x53435245), rocks = seeded(world.seed ^ 0x524f434b);
+    plan = desertCanyonPlan(world.layout, world.terrainSeed), elevation = desertElevation(world.terrainSeed, extent, plan),
+    proposalElevation = desertElevation(world.terrainSeed, extent, { ...plan, siteClearance: plan.circleClearance }, false),
+    decor = builder.cosmeticRandom(0x53435245), rocks = seeded(world.terrainSeed ^ 0x524f434b);
   // Corridors are seed-specific, instance-local terrain data; never mutate the map definition.
   world.layout = { ...world.layout, corridors: plan.routes.map(route => route.map(p => [p.x, p.z])) };
   const surface = (radius: number, innerExtent: number): WorldRelief => {
@@ -216,7 +216,7 @@ function populateDesertCanyons(builder: BattlefieldBuilder) {
   world.staticGrid.set(world.terrainFeatureGrid);
   const meshes = ['desertBoulder', 'desertCrag', 'desertRidge', 'desertShelf', 'desertTalus', 'desertFlake', 'desertPebble', 'desertChip', 'desertButtress', 'desertScree'];
   for (const [i, model] of meshes.entries())
-    world.renderData.geometries.push({ mesh: model, model, seed: world.seed ^ (0x524f434b + i), extent });
+    world.renderData.geometries.push({ mesh: model, model, seed: world.terrainSeed ^ (0x524f434b + i), extent });
   const clear = (p: Position, margin: number, siteClearance = plan.siteClearance) => plan.sites.every(s => siteClearance(s, p.x, p.z) >= margin) &&
     plan.routes.every(route => route.slice(1).every((b, i) => pointSegment(p, route[i], b) >= plan.halfWidth + margin));
   // Distributed spurs and detached boulders at different scales, rooted in the relief.

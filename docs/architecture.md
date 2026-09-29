@@ -95,6 +95,34 @@ Ein optionaler synchroner Präsentations-Observer liest Simulationsereignisse, o
 
 Begrenzte Ereignisbündel reisen mit den Zustandsupdates. Der Client erzeugt kurzlebige Effekte mit seinem kosmetischen RNG und spielt sie auf der Darstellungsuhr ab; alte Effekte, verdeckte-Tab-Rückstände und Sitzungswechsel dürfen keine Ereignissalve nachspielen. Arbeitsstrahlen werden gedrosselt, überlaufende Effektpuffer verwerfen die ältesten Einträge. Die Ereignisse sind keine verlässliche Historie. Eine zusätzliche clientseitige Meldungsfreigabe verhindert ausdrücklich, dass Netzwerkereignisse in Start-/Ergebnis- oder Persistenzpfade gelangen. Der Einzelspiel-Effekt-/RNG-Pfad bleibt unverändert.
 
+## Weltrezepte und feste Designs
+
+Eine Kartendefinition ist ein Rezept, kein zwangsläufig handgezeichnetes Einzelstück. `createLayout(terrainSeed)` kann ein instanzlokales Layout liefern; ohne diese Funktion bleibt das authored `layout` maßgeblich. Ressourceninitialisierung und Weltaufbau lesen anschließend dasselbe `world.layout`, nie parallel das Kataloglayout. CPU-Höhensamples bleiben auch bei prozeduralen Landschaften die Quelle für Kollision, Picking und Meshes.
+
+`battlefieldDesign` komponiert ein Rezept mit einem Namen und unabhängigen Vorgaben:
+
+- Ohne `terrainSeed` folgt die Landschaft dem Gefechtsseed; ein fester Wert erhält ein benanntes Design über verschiedene Gefechte hinweg. Gelände, feste Hindernisse und Dekoration lesen ausschließlich den aufgelösten `world.terrainSeed`.
+- `atmosphere.timeOfDay` ist eine feste Stunde in `[0, 24)` oder `'seeded'`. Die seedbasierte Wahl hat einen eigenen Stream, verändert weder Landschaft noch Gefechts-RNG und läuft während eines Gefechts nicht weiter. Ohne Atmosphärenvorgabe bleibt die bisherige Kartengestaltung erhalten.
+- `atmosphere.materialSeed` kann auch die rein kosmetische Materialvariante fixieren. Ohne Vorgabe folgt sie weiterhin dem Gefechtsseed, unabhängig vom Landschaftsseed.
+
+Der Gefechtsseed bleibt in `world.seed` und im bestehenden Encounter-Rezept erhalten; er bestimmt weiterhin Startzuordnung, Ressourcenmengen und Simulationszufall. Ein festes Terrain ist **kein** festgespieltes Match. Für ein reproduzierbares vollständiges Startsetup denselben Encounter-Seed, dieselben Parteien und Loadouts verwenden. Der vorhandene Expeditionscheckpoint speichert dieses Rezept; keine neue Speicherung laufender Welten oder Migration. Vorschauen eines Checkpoints verwenden dessen tatsächlichen Seed. Im Einzelspieler-Pausenmenü stehen Landschafts-/Gefechtsseed und gegebenenfalls Tageszeit zum Wiederfinden guter Varianten.
+
+Beispiel für dauerhaft kuratierten Content, ohne Kopie der Generierungslogik:
+
+```ts
+const design = battlefieldDesign(
+  createFrontierRecipe({ biome: 'arid', relief: 18 }),
+  'NAMED DESIGN',
+  { terrainSeed: 40517, atmosphere: { timeOfDay: 18.5, materialSeed: 40517 } }
+);
+```
+
+Das Design unter einer eigenen ID in `BATTLEFIELDS` eintragen und explizit einer zulässigen Mission zuordnen; eine Multiplayerfreigabe ist eine separate Entscheidung. Derselbe Kompositionsweg akzeptiert feste Spezialrezepte wie Aurelion, etwa mit anderer Atmosphäre, ohne Stadtgeometrie neu zu würfeln. Es gibt noch keinen Spieler-Karteneditor oder lokalen Favoritenkatalog.
+
+Frontier v1 erzeugt zuerst Start-/Ressourcenreserven und ein verbundenes Wegenetz mit Flankenalternativen, dann seedabhängige Höhenformen um diese Freiräume. Erhöhte Geologie ist dort blockierend, keine zweite Spielebene. Konservative Rasterung und anschließende Körperfreiraumprüfung verhindern stille Abweichungen zwischen sichtbarem Berg und Weg; bei einem verletzten Vertrag wird abgebrochen statt unsichtbar freigeräumt oder neu gewürfelt. Der Renderer teilt die Landschafts-Meshfabrik mit Westmark. Frontier variiert, Haven ist ein fixiertes arides Design desselben Generators. Beide sind zunächst nur für Expeditionen freigegeben.
+
+Ein Seed konserviert eine Landschaft nur zusammen mit dem Rezept. Deshalb Frontier-v1-Algorithmus und Parameter bestehender benannter Designs nicht beim Hinzufügen neuer Varianten verändern; Havens Layout-/Kollisions-/Höhensignatur ist zusätzlich fest geprüft. Neue inkompatible Generatoren als neue Rezepte ergänzen. Das ist ein Contentvertrag, kein Legacy-Ladeadapter.
+
 ## Welt, Darstellung und Zufall
 
 Kartenrezepte besitzen Größe, Layout, Renderprofil und explizite Bauphasen. Gemeinsame CPU-Helfer und der GPU-Adapter sollen keine Karten-Sonderzweige benötigen. Navigation, Sicht, Bau-/Bewegungsgrenzen und Minimap lesen Instanzmaße; eine größere Karte skaliert nicht automatisch Positionen, Körper, Reichweiten oder Dekoranzahl. Lokales Steering bevorzugt eine stabile Passierseite. Kampfgruppen und Worker mit Bau-/Reparaturauftrag dürfen bei einer versperrten Seite deterministisch auf die Gegenseite wechseln; regulärer Minenverkehr erst nach erkanntem Stillstand. Recovery erfasst auch leere und verbrauchte Pfade, hält Wiederholungsversuche mit wachsendem Retry-Abstand auseinander und versucht periodisch eine Route ohne temporäre Einheiten-Rasterblocker. Yield prüft weiterhin direkte Live-Körper statt des nur einmal je Schritt erneuerten Kampf-Hashs.

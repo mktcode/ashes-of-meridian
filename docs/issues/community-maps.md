@@ -2,6 +2,8 @@
 
 **Produktziel, noch kein Implementierungsauftrag.** Spieler sollen eigenständig gestaltete 3D-Karten, auch mit KI-Unterstützung, als Datei erhalten und im Spiel importieren können. Mittel- bis langfristig sollen sie Karten veröffentlichen, finden und miteinander teilen können; eine Plattform dafür darf ein separates Webprojekt sein. **Im Spiel ist zunächst nur lokaler Import nötig**, weder Upload noch integrierter Editor oder Community-Katalog.
 
+Die internen [Weltrezepte und festen Designs](../architecture.md#weltrezepte-und-feste-designs) trennen inzwischen Landschaftsseed und Atmosphäre und erlauben kuratierten Content. Das ist **kein** Importformat und ersetzt nicht den hier geforderten Import eigener Geometrie; für fremde Pakete weiterhin ausschließlich validierte Daten akzeptieren.
+
 ## Erster nutzbarer Umfang
 
 - Eine lokale Kartendatei per Dateiauswahl öffnen und vor dem Spielstart prüfen. Das Spiel bleibt ohne Server über `file://` nutzbar. Als erster Modus bietet sich ein isoliertes Test-/Skirmish-Gefecht ohne Expeditionsfortschritt an; konkrete Parteienwahl und Start-UI vor Umsetzung festlegen. Importierte Karten nicht still in zufällige Expeditionen oder Multiplayer aufnehmen.
