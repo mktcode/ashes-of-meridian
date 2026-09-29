@@ -119,7 +119,26 @@ interface BattlefieldDesign {
   atmosphere?: { timeOfDay: number | 'seeded'; materialSeed?: number };
 }
 
+type EcologyBiome = 'verdant' | 'ochre' | 'rime' | 'mycelium';
+type EcologyWeather = 'clear' | 'mist' | 'rain' | 'snow' | 'ash';
+interface BattlefieldEcology {
+  biome: EcologyBiome;
+  weather: EcologyWeather;
+  phase: number;
+  cover: number;
+  wind: number;
+  dry: readonly [number, number, number];
+  lush: readonly [number, number, number];
+  soil: readonly [number, number, number];
+  stone: readonly [number, number, number];
+  leaf: number;
+  bloom: number;
+}
+
 interface BattlefieldRenderProfile {
+  /** Opt-in seeded habitat/weather; resolved once into ecology for CPU/view sharing. */
+  wilderness?: EcologyBiome | 'seeded';
+  ecology?: BattlefieldEcology;
   atmosphere?: BattlefieldAtmosphere;
   scenery?: 'aurelion';
   groundTexture: 'ground' | 'metal' | 'bio' | 'westmarkMeadow';
@@ -150,6 +169,8 @@ interface BattlefieldSize {
 interface BattlefieldDefinition {
   name: string;
   multiplayer?: boolean;
+  /** Public, symmetric expedition landing forces; never applied in CPU/network scenarios. */
+  expeditionOpenings?: boolean;
   size: BattlefieldSize;
   layout: BattlefieldLayout;
   /** Resolve dimensions before layout and buffer allocation, without encounter RNG. */
@@ -566,6 +587,7 @@ interface RunState {
   time: number;
   parties: PartyState[];
   rules: BattleRules;
+  opening?: ExpeditionOpening;
   stopped: boolean;
   nextId: number;
   entities: Entity[];
@@ -618,7 +640,7 @@ interface WorldRelief {
 type WorldGeometry = (
   | { mesh: string; model: string; seed: number; extent: number }
   | { mesh: string; model: string; feature: WorldTerrainFeature }
-  | { mesh: string; model: string; relief: WorldRelief }) & { grounded?: boolean };
+  | { mesh: string; model: string; relief: WorldRelief }) & { grounded?: boolean; detail?: boolean };
 
 interface WorldRenderData {
   scenery?: 'aurelion';

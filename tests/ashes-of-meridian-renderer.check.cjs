@@ -251,7 +251,7 @@ test('large static geometry and placements are chunked and conservatively culled
 });
 
 function setup(options = {}) {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS], { globals: {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'battlefield-ecology'], { globals: {
     innerWidth: 800, innerHeight: 600, devicePixelRatio: 2
   } });
   const Renderer = vm.runInContext('MeridianRenderer', context), calls = [];
@@ -460,6 +460,31 @@ test('upland weathering is opt-in, resets on map changes and needs no foliage im
       assert.deepEqual(h.r.textureNames({...profile,landscape:{...profile.landscape,foliage:undefined}}),textures);
     }
     assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
+  }
+});
+
+test('ecology uniforms reset, leaf shadows share displacement and Performance omits only detail meshes',()=>{
+  const h=setup();h.r.cinema=false;
+  const profile=vm.runInContext("battlefieldEcology({...DEFAULT_TERRAIN_RENDER_PROFILE,wilderness:'rime'},1409)",h.context);
+  h.r.setBattlefieldProfile(profile,1409);
+  for(const quality of [0,1,2]){
+    h.r.quality=quality;h.r.resize();h.calls.length=0;h.r.render(1,7.5);
+    const winds=h.calls.filter(c=>c[0]==='uniform2f'&&c[1]==='u_wind');
+    assert.equal(winds.length,quality?3:2,'scene, sky, and optional shadow pass');
+    assert.ok(winds.every(c=>c[2]===(quality?profile.ecology.wind:0)&&c[3]===7.5));
+    assert.ok(h.calls.some(c=>c[0]==='uniform4f'&&c[1]==='u_ecology'&&c[2]===3&&c[3]===3));
+    assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
+  }
+  const {VERT,DEPTHV,ECOLOGY_WIND}=vm.runInContext('({VERT,DEPTHV,ECOLOGY_WIND})',h.context);
+  assert.ok(VERT.includes(ECOLOGY_WIND)&&DEPTHV.includes(ECOLOGY_WIND));
+  h.r.setBattlefieldProfile(vm.runInContext('DEFAULT_TERRAIN_RENDER_PROFILE',h.context));h.calls.length=0;h.r.render(1,7.5);
+  assert.ok(h.calls.filter(c=>c[0]==='uniform4f'&&c[1]==='u_ecology').every(c=>c.slice(2).every(v=>v===0)));
+  assert.ok(h.calls.filter(c=>c[0]==='uniform2f'&&c[1]==='u_wind').every(c=>c[2]===0));
+  h.r.meshes={tuft:{count:6,vao:{}},landmark:{count:12,vao:{}}};h.r.detailMeshes=new Set(['tuft']);
+  const buckets={tuft:{n:1,source:'tuft',mesh:'tuft'},landmark:{n:1,source:'landmark',mesh:'landmark'}};
+  for(const quality of [0,1,2]){
+    h.r.quality=quality;h.calls.length=0;Object.getPrototypeOf(h.r).drawBatches.call(h.r,buckets);
+    assert.deepEqual(h.calls.filter(c=>c[0]==='drawArraysInstanced').map(c=>c[3]),quality?[6,12]:[12]);
   }
 });
 

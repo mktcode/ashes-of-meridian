@@ -1,5 +1,79 @@
 /* View-only embellishments: never mutate CPU effects or consume simulation RNG. */
 'use strict';
+interface BattleScar { x:number; z:number; at:number; radius:number; }
+const battleScarViews=new WeakMap<MeridianRenderer,{world:Battlefield;team:PlayerTeam;seen:WeakSet<BattlefieldEffect>;scars:BattleScar[]}>();
+function renderBattleScars(R:MeridianRenderer,effects:MeridianEffects,world:Battlefield,time:number,team:PlayerTeam) {
+  if(!(R.quality>0)||R.cinema){battleScarViews.delete(R);return;}
+  let view=battleScarViews.get(R);
+  if(!view||view.world!==world||view.team!==team){view={world,team,seen:new WeakSet(),scars:[]};battleScarViews.set(R,view);}
+  for(const f of effects.fx)if(f.type==='blast'&&!view.seen.has(f)) {
+    view.seen.add(f);
+    if(!world.visible[world.idx(f.x,f.z)])continue;
+    const radius=clamp(f.size*.8,.6,3.5);
+    view.scars.push({x:f.x,z:f.z,at:time,radius});
+    if(view.scars.length>32)view.scars.shift();
+  }
+  let live=0;
+  for(const scar of view.scars)if(time-scar.at<38)view.scars[live++]=scar;
+  view.scars.length=live;
+  let budget=R.quality>1?24:10;
+  for(let i=view.scars.length-1;i>=0&&budget>0;i--) {
+    const f=view.scars[i],life=1-clamp((time-f.at)/38,0,1);
+    if(!world.visible[world.idx(f.x,f.z)])continue;
+    budget--;
+    // Small local patches follow the slope; they never deform terrain or become obstacles.
+    for(let j=0;j<3;j++) {
+      const angle=j*2.39996+f.x*.17,x=f.x+Math.cos(angle)*f.radius*.28,z=f.z+Math.sin(angle)*f.radius*.28,
+        y=(world.surface?.heightAt(x,z)??0)+.035,r=f.radius*(j?.68:1),
+        dx=((world.surface?.heightAt(x+.35,z)??0)-(world.surface?.heightAt(x-.35,z)??0))/.7,
+        dz=((world.surface?.heightAt(x,z+.35)??0)-(world.surface?.heightAt(x,z-.35)??0))/.7;
+      if(effectBoundsVisible(R,x,y,z,r,.5,r))R.add('plane',x,y,z,r*2,1,r*2,0x302b29,0,-Math.atan(dz),Math.atan(dx),0,life*.19,'effects',CONTACT_SHADOW_MATERIAL);
+    }
+  }
+}
+function renderEcologyWeather(R:MeridianRenderer,world:Battlefield,s:RunState) {
+  const e=world.renderProfile?.ecology;
+  if(!e||!(R.quality>0)||R.cinema||e.weather==='clear')return;
+  const radius=R.quality>1?5:3,cx=Math.floor(s.cam.x/12),cz=Math.floor(s.cam.z/12),time=s.time;
+  for(let dz=-radius;dz<=radius;dz++)for(let dx=-radius;dx<=radius;dx++) {
+    const ix=cx+dx,iz=cz+dz,hash=(Math.imul(ix,374761393)^Math.imul(iz,668265263)^world.terrainSeed)>>>0,
+      a=((Math.imul(hash^(hash>>>13),1274126177)>>>0)%65536)/65536,
+      x=ix*12+a*10,z=iz*12+((a*7.31)%1)*10;
+    if(Math.max(Math.abs(x),Math.abs(z))>=world.extent||!world.visible[world.idx(x,z)])continue;
+    const floor=world.surface?.heightAt(x,z)??0;
+    if(e.weather==='mist') {
+      if(hash%8)continue;
+      const r=4+a*3,y=floor+.35;
+      if(effectBoundsVisible(R,x,y,z,r,.5,r))R.add('sphere',x,y,z,r,.45,r,e.dry,0,0,0,.15,.035,'effects');
+    }else{
+      const fall=(a+time*(e.weather==='rain'?1.4:.22))%1,y=floor+(1-fall)*12+.1;
+      if(e.weather==='rain')drawVisibleEffectBeam(R,[x,y,z],[x-.24,y+.9,z-.12],.017,0xb0c7ca,.3,.18);
+      else if(effectBoundsVisible(R,x,y,z,.18,.18,.18))R.add('octa',x+Math.sin(time*.6+a*9)*.6,y,z,.10,.035,.10,
+        e.weather==='snow'?0xdfeaf0:0xc6a681,time+a*9,0,time*.3,.25,.36,'effects');
+    }
+  }
+}
+function renderWeaponSignature(R:MeridianRenderer,f:Extract<BattlefieldEffect,{type:'beam'}>,faction:FactionId) {
+  const life=clamp(f.life/(faction===FACTION_ID.THIRD?.19:.1),0,1),age=1-life,dx=f.tx-f.x,dz=f.tz-f.z,len=Math.hypot(dx,dz)||1,
+    sx=-dz/len,sz=dx/len;
+  if(faction===FACTION_ID.SECOND) {
+    // Helical seed pulses, not the Pact's instantaneous luminous tracer.
+    for(let i=0;i<4;i++) {
+      const t=clamp(age*1.4-i*.13,0,1),curl=Math.sin(t*12+f.x)*.19;
+      const x=f.x+dx*t+sx*curl,z=f.z+dz*t+sz*curl,y=f.y+(f.ty-f.y)*t;
+      if(effectBoundsVisible(R,x,y,z,.15,.15,.15))R.add('octa',x,y,z,.10,.13,.10,0xc5ed97,t*6,0,0,1.2,life*.8,'effects');
+    }
+  }else if(faction===FACTION_ID.THIRD) {
+    const width=.10*(1-age);
+    for(const side of [-1,1])drawVisibleEffectBeam(R,[f.x+sx*width*side,f.y,f.z+sz*width*side],
+      [f.tx,f.ty,f.tz],f.width*.30,0x96dfed,1.8,life*.7);
+    drawVisibleEffectBeam(R,[f.tx-sx*.3,f.ty-.3,f.tz-sz*.3],[f.tx+sx*.3,f.ty+.3,f.tz+sz*.3],.035,0xe3cdff,1.8,life*.65);
+  }else{
+    const start=clamp(age*1.5,0,1),end=clamp(start+.18,0,1);
+    drawVisibleEffectBeam(R,[f.x+dx*start,f.y+(f.ty-f.y)*start,f.z+dz*start],
+      [f.x+dx*end,f.y+(f.ty-f.y)*end,f.z+dz*end],f.width*.65,0xffedb8,2.1,life);
+  }
+}
 interface MotionDustTrack {
   walk: number;
   emitted: number;
@@ -10,7 +84,7 @@ function renderMotionDust(R: MeridianRenderer, world: Battlefield, s: RunState, 
   if (!(R.quality > 0) || R.cinema) { motionDustViews.delete(R); return; }
   let view = motionDustViews.get(R);
   if (!view || view.world !== world || view.team !== localTeam) {
-    view = { world, team: localTeam, color: Array.from(R.color(world.definition.palette.ground), c => c * .55 + .35), tracks: new Map() };
+    view = { world, team: localTeam, color: Array.from(world.renderProfile?.ecology?.dry ?? R.color(world.definition.palette.ground), c => c * .55 + .35), tracks: new Map() };
     motionDustViews.set(R, view);
   }
   const seen = new Set<UnitEntity>(), cap = R.quality > 1 ? 48 : 24, now = s.time;
@@ -105,6 +179,8 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
         function renderBattlefieldEffects(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, pings: UIPing[], t: number, localTeam: PlayerTeam = 0) {
           const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
           renderMotionDust(R, world, s, localTeam);
+          renderEcologyWeather(R, world, s);
+          renderBattleScars(R, effects, world, s.time, localTeam);
           for (const e of s.entities) {
             if (e.kind !== 'unit' || e.type !== 'hero' || e.hp <= 0 || e.team === -1 ||
               !(s.parties[e.team]?.benefits.commandDrill > 0) || !world.visible[world.idx(e.x,e.z)]) continue;
@@ -113,13 +189,18 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
             ring(e.x, e.z, COMMAND_DRILL.radius, color, alpha, .11);
           }
           // Culling must not redistribute the existing accent budget to later effects.
-          let accents = R.quality > 1 ? 48 : R.quality > 0 ? 16 : 0;
+          let accents = R.quality > 1 ? 48 : R.quality > 0 ? 16 : 0,
+            signatures = R.quality > 1 ? 32 : R.quality > 0 ? 12 : 0;
           for (let f of effects.fx) {
             if (!world.visible[world.idx(f.x, f.z)] && (f.type !== 'drop' || (f.team ?? 0) !== localTeam)) continue;
             let life = clamp(f.life / f.maxLife, 0, 1),
               age = 1 - life;
             if (f.type === 'beam') {
               drawVisibleEffectBeam(R, [f.x, f.y, f.z], [f.tx, f.ty, f.tz], f.width, f.color, 1.6, Math.min(1, life * 3));
+              const faction=effects.weaponFactions?.get(f);
+              if(signatures>0&&faction!==undefined&&world.visible[world.idx(f.tx,f.tz)]){
+                signatures--;renderWeaponSignature(R,f,faction);
+              }
               if (accents > 0 && effects.combatBeams.has(f)) {
                 accents--;
                 const flash = clamp(f.life / .1, 0, 1), radius = .14 + f.width * 2;
@@ -176,6 +257,15 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
                 'effects'
               );
               ring(f.x, f.z, r * 1.7, f.color, life * 0.8, 0.16);
+              if(signatures>0){
+                signatures--;
+                for(let i=0;i<(R.quality>1?3:1);i++){
+                  const a=i*2.39996+f.x*.31+f.z*.19,x=f.x+Math.sin(a)*r*.48,z=f.z+Math.cos(a)*r*.48,
+                    py=y+Math.sin(a+age*4)*r*.18,size=r*(.38+i*.05);
+                  if(effectBoundsVisible(R,x,py,z,size,size,size))R.add('sphere',x,py,z,size,size*.7,size,
+                    i%2?f.color:0xffdfac,0,0,0,1.4,life*.23,'effects');
+                }
+              }
             } else if (f.type === 'particle')
               R.add(
                 'box',

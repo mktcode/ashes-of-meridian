@@ -213,6 +213,9 @@ test('Westmark surfaces and foliage are only requested by the landscape profile'
     else assert.ok(vm.runInContext(`isProceduralMaterial('${key}')`,context));
   }
   const desert=vm.runInContext('BATTLEFIELDS.desert.render',context);
-  assert.ok([...MeridianRenderer.prototype.textureNames(desert)].every(name=>!name.startsWith('westmark')));
+  const desertTextures=MeridianRenderer.prototype.textureNames(desert);
+  assert.ok(desertTextures.has('westmarkEarth')&&desertTextures.has('westmarkBark'),'ecology shares the procedural earth/bark recipes');
+  assert.ok(!desertTextures.has('westmarkSpruce')&&!desertTextures.has('westmarkMeadow'),'no imported foliage or meadow');
+  assert.ok([...MeridianRenderer.prototype.textureNames({...desert,landscape:undefined})].every(name=>!name.startsWith('westmark')));
   assert.equal(names.has('ground'),false);assert.equal(names.has('desertRock'),false);
 });

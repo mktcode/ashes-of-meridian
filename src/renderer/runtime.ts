@@ -31,6 +31,7 @@
       effects: RenderBatches;
       colors: Map<number | string, readonly number[] | Float32Array>;
       quality: number;
+      detailMeshes = new Set<string>();
       extent: number;
       surface: BattlefieldSurface | null = null;
       decorSeed: number;
@@ -725,10 +726,10 @@
       }
       bucketVisible(b: RenderBucket, matrix?: Float32Array) {
         if (!matrix || !b.bounds) return true;
-        const a = b.bounds;
+        const a = b.bounds, wind = this.battlefieldProfile?.ecology ? .4 : 0;
         let left = true, right = true, bottom = true, top = true, near = true, far = true;
         for (let corner = 0; corner < 8; corner++) {
-          const x = a[corner & 1 ? 3 : 0], y = a[corner & 2 ? 4 : 1], z = a[corner & 4 ? 5 : 2],
+          const x = a[corner & 1 ? 3 : 0] + (corner & 1 ? wind : -wind), y = a[corner & 2 ? 4 : 1], z = a[corner & 4 ? 5 : 2] + (corner & 4 ? wind : -wind),
             cx = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
             cy = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
             cz = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14],
@@ -746,7 +747,8 @@
         let g = this.gl;
         for (const b of Object.values(map)) {
           const excluded = typeof excludedNames === 'string' ? b.source === excludedNames : excludedNames?.includes(b.source);
-          if (!b.n || excluded || (includedName !== undefined && b.source !== includedName) || !this.bucketVisible(b, matrix)) continue;
+          if (!b.n || excluded || (this.quality === 0 && this.detailMeshes?.has(b.source)) ||
+            (includedName !== undefined && b.source !== includedName) || !this.bucketVisible(b, matrix)) continue;
           let m = this.meshes[b.mesh];
           if (!m) continue;
           g.bindVertexArray(m.vao);
@@ -865,11 +867,23 @@
         g.uniform3fv(this.uniform(program, 'u_atmosphereHorizon'), atmosphere.horizon as [number, number, number]);
         g.uniform3fv(this.uniform(program, 'u_atmosphereZenith'), atmosphere.zenith as [number, number, number]);
       }
+      bindEcology(program: WebGLProgram, time: number) {
+        const g = this.gl, e = this.battlefieldProfile.ecology;
+        g.uniform4f(this.uniform(program, 'u_ecology'), e ? ECOLOGY_BIOMES.indexOf(e.biome) + 1 : 0,
+          e ? ECOLOGY_WEATHER.indexOf(e.weather) : 0, e?.cover ?? 0, e?.phase ?? 0);
+        g.uniform2f(this.uniform(program, 'u_wind'), e && this.quality > 0 && !this.cinema ? e.wind : 0, time);
+        g.uniform1f(this.uniform(program, 'u_weatherTime'), this.quality > 0 ? time : 0);
+        g.uniform3fv(this.uniform(program, 'u_haze'), this.haze as [number, number, number]);
+        if (e) for (const [uniform, color] of [['u_biomeDry',e.dry],['u_biomeLush',e.lush],
+          ['u_biomeSoil',e.soil],['u_biomeStone',e.stone]] as const)
+          g.uniform3fv(this.uniform(program, uniform), color as [number, number, number]);
+      }
       bindSceneProgram(time: number, modelTime: number, program = this.program,
         lighting = this.battlefieldProfile.lighting ?? DEFAULT_LIGHTING) {
         const g = this.gl, profile = this.battlefieldProfile;
         g.useProgram(program);
         this.bindAtmosphere(program);
+        this.bindEcology(program, modelTime);
         g.uniformMatrix4fv(this.uniform(program, 'u_vp'), false, this.vp);
         g.uniformMatrix4fv(this.uniform(program, 'u_light'), false, this.lightVP);
         g.uniform3fv(this.uniform(program, 'u_eye'), this.eye);
@@ -936,6 +950,7 @@
           g.viewport(0, 0, this.shadowSize, this.shadowSize);
           g.clear(g.DEPTH_BUFFER_BIT);
           g.useProgram(this.depthProg);
+          this.bindEcology(this.depthProg, modelTime);
           g.uniformMatrix4fv(this.uniform(this.depthProg, 'u_vp'), false, this.lightVP);
           g.activeTexture(g.TEXTURE10);
           g.bindTexture(g.TEXTURE_2D, this.westmarkSpruceTex);
@@ -957,6 +972,7 @@
         g.disable(g.DEPTH_TEST);
         g.useProgram(skyProg);
         this.bindAtmosphere(skyProg);
+        this.bindEcology(skyProg, modelTime);
         g.uniform2f(this.uniform(skyProg, 'u_size'), this.width, this.height);
         g.uniform1f(this.uniform(skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
         g.activeTexture(g.TEXTURE0);

@@ -13,12 +13,13 @@ function renderWorldDesign(world: Battlefield | null): string {
   const hour = world.renderProfile.atmosphere?.timeOfDay,
     minutes = hour === undefined ? null : Math.floor(hour * 60),
     clock = minutes === null ? '' : ` · ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-  return `<p class="muted">${esc(world.definition.name)} · LANDSCAPE ${world.terrainSeed}${world.definition.design?.terrainSeed !== undefined ? ' · FIXED DESIGN' : ''}${clock}<br>${world.extent * 2} × ${world.extent * 2} m · BATTLE SEED ${world.seed}</p>`;
+  const ecology=world.renderProfile.ecology;
+  return `<p class="muted">${esc(world.definition.name)}${ecology?` · ${esc(ecology.biome.toUpperCase())} / ${esc(ecology.weather.toUpperCase())}`:''} · LANDSCAPE ${world.terrainSeed}${world.definition.design?.terrainSeed !== undefined ? ' · FIXED DESIGN' : ''}${clock}<br>${world.extent * 2} × ${world.extent * 2} m · BATTLE SEED ${world.seed}</p>`;
 }
 
-function renderMissionBriefing(id: MissionId): string {
-  const mission = MISSIONS[id];
-  return `<p title="${esc(mission.objective)}"><b>${esc(mission.name)}</b> · ${esc(mission.briefing ?? mission.objective)}</p>`;
+function renderMissionBriefing(id: MissionId, encounter?: ExpeditionEncounter): string {
+  const mission = MISSIONS[id], opening = encounter && id==='hq-elimination' ? expeditionOpening(encounter.map,encounter.seed) : null;
+  return `<p title="${esc(mission.objective)}"><b>${esc(mission.name)}</b> · ${esc(mission.briefing ?? mission.objective)}</p>${opening?`<p><b>${esc(opening.name)}</b> · ${esc(opening.briefing)}</p>`:''}`;
 }
 
 function renderExpeditionOpponents(expedition: MeridianExpedition): string {

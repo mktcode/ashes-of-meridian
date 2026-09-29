@@ -549,7 +549,9 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
     interior=trees.filter(p=>edge(p)<135),exterior=trees.filter(p=>edge(p)>135),
     solid=[...interior,...p.filter(p=>p.mesh==='alienPod')];
   assert.ok(interior.length>=100&&interior.length<=300);assert.ok(exterior.length>=480&&exterior.length<=650);
-  assert.ok(p.length>=2800&&p.length<=3500);
+  const basePlacements=p.filter(p=>!p.mesh.startsWith('ecology'));
+  assert.ok(basePlacements.length>=2800&&basePlacements.length<=3500,'original Alien layer keeps its budget');
+  assert.ok(p.length-basePlacements.length<=1028,'the composed ecology has its own bounded budget');
   assert.equal(w.rocks.length,solid.length);
   const gills=p.filter(p=>p.mesh.startsWith('alienCapGills')),understory=p.filter(p=>
     ['alienFern','alienSpore','alienGlowTuft'].includes(p.mesh));
@@ -580,10 +582,12 @@ for(const seed of [9017,1905,6633,4442,38744,43015]) test(`Alien Planet ${seed}:
       assert.ok(pointSegment(q,{x:route[i-1][0],z:route[i-1][1]},{x:route[i][0],z:route[i][1]})>=r+7);
   }
   assert.deepEqual(Buffer.from(w.staticGrid),Buffer.from(reconstructed),'only individual root footprints block, no invisible grove mats');
+  const ecology=w.renderProfile.ecology,habitat=vm.runInContext('ecologyHabitat',context);
   for(let i=0;i<w.staticGrid.length;i++) for(let c=0;c<3;c++) {
-    const byte=new Uint8ClampedArray([w.renderData.groundColors[i*2][c]*[175,190,200][c]]);
-    if(w.staticGrid[i])byte[0]*=.65;
-    assert.equal(w.terrainColors[i*4+c],byte[0],'minimap marks actual solid ground');
+    const point=w.point(i),h=habitat(ecology.phase,point.x,point.z),
+      meadow=ecology.dry[c]*(1-h)+ecology.lush[c]*h,
+      byte=new Uint8ClampedArray([(w.staticGrid[i]?(meadow*.35+ecology.stone[c]*.65)*.68:meadow)*180*.83]);
+    assert.equal(w.terrainColors[i*4+c],byte[0],'ecology palette preserves actual solid-ground contrast');
   }
   assert.equal(p.filter(p=>p.mesh==='alienForestFloor'&&p.material==='GROUND').length,1);
   assertMapAccess(w);
@@ -605,7 +609,7 @@ test('Alien mesh factories are deterministic, finite, bounded and remain below e
   const budgets={alienForestFloor:8,alienTreePlum:500,alienTreeJade:500,alienTreeUmbrella:500,
     alienPod:2200,alienFern:100,alienSpore:350,alienGlowTuft:120,alienLanternPool:180,
     alienCapGillsPlum:2500,alienCapGillsJade:2500,alienCapGillsUmbrella:2500,alienSapling:500},triangles={};
-  for(const descriptor of w.renderData.geometries) {
+  for(const descriptor of w.renderData.geometries.filter(d=>d.mesh.startsWith('alien'))) {
     const mesh=TerrainModels.geometry(descriptor);assert.equal(mesh.length%27,0);
     assert.ok(mesh.length/27>0&&mesh.length/27<=budgets[descriptor.model],`${descriptor.model}: ${mesh.length/27}`);
     assert.deepEqual(mesh,TerrainModels.geometry(descriptor));
@@ -628,7 +632,7 @@ test('Alien mesh factories are deterministic, finite, bounded and remain below e
     }
   }
   const total=w.renderData.placements.reduce((n,p)=>n+(triangles[p.mesh]||0),0)+w.gridSize**2*2;
-  assert.ok(total<=1250000,`whole planted world budget (excluding units/shadow repetition): ${total}`);
+  assert.ok(total<=1250000,`original Alien layer budget (ecology, units and shadow repetition have separate budgets): ${total}`);
 });
 
 test('Alien exterior and understory randomness cannot relocate solid roots',()=>{

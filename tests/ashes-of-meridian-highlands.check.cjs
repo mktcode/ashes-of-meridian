@@ -65,11 +65,13 @@ test('all three sizes have reachable elevated bases, broad traversable relief an
 test('pinned highland designs pin dimensions and layout, while invalid sizes fail before layout allocation',()=>{
   const original=BATTLEFIELDS.frontier;
   try {
-    BATTLEFIELDS.frontier=battlefieldDesign(createHighlandRecipe(),'FIXED HIGHLANDS',{terrainSeed:3,atmosphere:{timeOfDay:12}});
+    BATTLEFIELDS.frontier=battlefieldDesign({...createHighlandRecipe(),render:original.render},'FIXED HIGHLANDS',{terrainSeed:3,atmosphere:{timeOfDay:12}});
     const a=new Battlefield(1409,'frontier'),b=new Battlefield(7919,'frontier');
     assert.equal(a.extent,140);assert.equal(b.extent,140);
     assert.deepEqual(json(a.layout),json(b.layout));assert.deepEqual(a.surface.heights,b.surface.heights);
     assert.deepEqual(a.staticGrid,b.staticGrid);assert.notEqual(a.seed,b.seed);
+    assert.deepEqual(json(a.renderProfile.ecology),json(b.renderProfile.ecology));
+    assert.deepEqual(json(a.renderData.placements.filter(p=>p.mesh.startsWith('ecology'))),json(b.renderData.placements.filter(p=>p.mesh.startsWith('ecology'))));
     BATTLEFIELDS.frontier={...original,createSize:()=>({extent:95,cellSize:3}),createLayout:()=>{throw Error('layout ran before size validation');}};
     assert.throws(()=>new Battlefield(1,'frontier'),/whole grid/);
   } finally {BATTLEFIELDS.frontier=original;}

@@ -11,6 +11,7 @@ class MeridianEffects {
       private pooled = new WeakSet<BattlefieldEffect>();
       // View-only combat marker/hull radius: keep serialized effects and RNG samples unchanged.
       readonly combatBeams = new WeakMap<BattlefieldEffect, number>();
+      readonly weaponFactions = new WeakMap<BattlefieldEffect, FactionId>();
       groundHeight: (x: number, z: number) => number = () => 0;
       entityHeight: (e: Position & { type: string }) => number = e => this.groundHeight(e.x,e.z);
 
@@ -100,6 +101,7 @@ class MeridianEffects {
             maxLife: travel,
             color: e.faction === FACTION_ID.SECOND ? 0xb8eba3 : 0xffce8f
           });
+        this.weaponFactions.set(this.fx[this.fx.length - 1], e.faction);
       }
       shot(e: EffectPose, target: EffectPose, localTeam: PlayerTeam = 0) {
         const height = this.entityHeight(e) + (isFlyingUnitType(e.type) ? 4.5 : e.kind === 'building' ? 3 : 1.45),
@@ -125,6 +127,7 @@ class MeridianEffects {
               width: e.type === 'tank' || e.type === 'destroyer' ? 0.075 : 0.035
             });
         this.combatBeams.set(this.fx[this.fx.length - 1], target.size);
+        this.weaponFactions.set(this.fx[this.fx.length - 1], e.faction);
       }
       construction(e: EffectPose, b: EffectPose, dt: number) {
         if (this.random() < dt * 4)

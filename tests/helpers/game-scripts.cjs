@@ -15,6 +15,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-mothership-terrain',
   'renderer-landscape',
   'renderer-upland',
+  'renderer-ecology',
   'renderer-westmark-terrain',
   'renderer-model-kit',
   'battlefield-aurelion-layout',
@@ -86,9 +87,11 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-aurelion',
   'battlefield-frontier',
   'battlefield-highlands',
+  'battlefield-ecology',
   'battlefield-catalog'
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([
+  'simulation-openings',
   'simulation-game',
   'simulation-movement',
   'simulation-economy',

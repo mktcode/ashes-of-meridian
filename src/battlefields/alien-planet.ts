@@ -157,7 +157,8 @@ const ALIEN_PLANET_BATTLEFIELD: BattlefieldDefinition = {
   layout: alienBattleLayout(),
   palette: { ground: 0x63516c, rock: 0xffffff, accent: 0xcfa1ce, flora: 0x648d87 },
   render: {
-    groundTexture: 'bio', skyTexture: 'sky',
+    groundTexture: 'bio', skyTexture: 'sky', wilderness: 'mycelium',
+    landscape: { earth: 'westmarkEarth', bark: 'westmarkBark' },
     rockDecor: { density: 0, opacity: 0 }, shrubDecor: { density: 0, opacity: 0 },
     haze: [.035, .045, .095],
     lighting: { sun: [.42, .52, .78], sky: [.14, .20, .34], bounce: [.055, .085, .16] }

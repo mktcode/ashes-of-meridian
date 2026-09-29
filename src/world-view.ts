@@ -25,6 +25,7 @@ class BattlefieldView {
         ...scenery.map(mesh=>mesh.name)]);
       for (const name of this.worldMeshes) if (!nextMeshes.has(name)) R.releaseGeometry(name);
       this.worldMeshes = nextMeshes;
+      R.detailMeshes = new Set(layout.geometries.filter(d => d.detail).map(d => d.mesh));
       R.setBattlefieldProfile(world.renderProfile, world.definition.design?.atmosphere?.materialSeed ?? world.seed);
       R.extent = EXTENT;
       R.decorSeed = world.terrainSeed >>> 0;

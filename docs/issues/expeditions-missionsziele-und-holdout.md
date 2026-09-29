@@ -8,7 +8,7 @@ Das ist ein **großes Feature**, keine reine Kartenvariante. Die heutigen [Spiel
 
 Ein belastbarer erster Pilot benötigt mehrere getrennte Umsetzungspakete für Missionsvertrag, Wellenregie, Kartenrezept, UI und automatisierte Prüfungen, danach zusätzliche menschliche Spiel- und Balance-Runden. Ein deutlich kleinerer Prototyp mit normaler Basisbau-KI und bloßem Überlebenstimer wäre weniger umfangreich, aber noch keine echte Tower-Defense-Karte mit lesbaren Wellen und kontrollierter Dramaturgie.
 
-**Freigabegrenze:** [Aurelion / Echo-Bergung](aurelion-echo-bergung.md) verwendet den gemeinsamen Missionsvertrag. Holdout, Wellenregie und die folgenden Holdout-Produktentscheidungen sind dadurch nicht zur Umsetzung freigegeben.
+**Freigabegrenze:** [Aurelion / Echo-Bergung](aurelion-echo-bergung.md) verwendet den gemeinsamen Missionsvertrag. Auch die symmetrischen, seedbasierten Frontier-Landungspakete aus [Project Tomorrow](project-tomorrow.md) sind nur Startvarianten der HQ-Mission, keine Wellenregie. Holdout und die folgenden Holdout-Produktentscheidungen sind dadurch nicht zur Umsetzung freigegeben.
 
 ## Produktentscheidungen vor der Umsetzung
 
@@ -36,7 +36,7 @@ Holdout erweitert den bestehenden Missionsvertrag, statt eine Sonderabfrage anha
 
 ### 1. Missionsrahmen ohne Verhaltensänderung
 
-Der allgemeine [Missionsrahmen](../architecture.md#einzelspieler-missionen) ist umgesetzt. Die vier bisherigen Karten verwenden weiterhin ausschließlich den Standardangriff. Holdout-spezifische HUD-, Wellen- und Briefingdaten folgen erst nach eigener Freigabe.
+Der allgemeine [Missionsrahmen](../architecture.md#einzelspieler-missionen) ist umgesetzt. Alle Karten außer Aurelion verwenden weiterhin die HQ-Standardmission. Holdout-spezifische HUD-, Wellen- und Briefingdaten folgen erst nach eigener Freigabe.
 
 ### 2. Deterministische Holdout-Simulation
 

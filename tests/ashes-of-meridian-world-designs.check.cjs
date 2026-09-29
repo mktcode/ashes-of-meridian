@@ -42,7 +42,7 @@ test('Frontier seeds change real layouts and terrain while retaining vehicle-wid
     }
     for(const p of w.layout.startSites) assert.ok(w.surface.foundation(p,7));
     assert.ok(w.staticGrid.some(v=>v===1));
-    assert.ok(w.renderData.placements.length<=618);
+    assert.ok(w.renderData.placements.length<=1030);
     assert.ok(w.surface.maxHeight<=40);
   }
   assert.equal(signatures.size,5);
@@ -100,7 +100,10 @@ test('generated relief uses the CPU samples and shared mesh diagonal, never a se
     assert.ok(mesh[i+4]>0,'upward surface normal');
   }
 });
-test('upland scenery is bounded, repeatable and contained by the unchanged CPU blockers',()=>{
+test('uncomposed highlands retain bounded upland scenery inside the unchanged CPU blockers',()=>{
+  const original=BATTLEFIELDS.frontier;
+  try {
+  BATTLEFIELDS.frontier=vm.runInContext('createHighlandRecipe()',context);
   const meshCache=new Map();
   for(const seed of [1,1409,40517,7919,0xffffffff]) {
     const w=new Battlefield(seed,'frontier'),counts={Stone:0,Trunk:0,Crown:0,Grass:0};
@@ -135,6 +138,7 @@ test('upland scenery is bounded, repeatable and contained by the unchanged CPU b
     assert.deepEqual(mesh,TerrainModels[name.replace(/\d$/,'')](173+Number(name.at(-1))*7919,0));
   }
   assert.deepEqual(json(new Battlefield(1409,'frontier').renderData),json(new Battlefield(1409,'frontier').renderData));
+  } finally {BATTLEFIELDS.frontier=original;}
 });
 test('Frontier-v1 remains a stable recipe for named designs, separate from the new highlands',()=>{
   const original=BATTLEFIELDS.frontier;
@@ -143,15 +147,15 @@ test('Frontier-v1 remains a stable recipe for named designs, separate from the n
     assert.equal(signature(new Battlefield(1409,'frontier')),'e2c68f8592f59cfb72c758aa7b46eab560602dd671a398b30389913aca8086d5');
   } finally {BATTLEFIELDS.frontier=original;}
 });
-test('upland presentation retains encounter state and RNG on rolling terrain',()=>{
+test('ecology presentation retains encounter state and RNG on rolling terrain',()=>{
   const make=()=>{const g=new MeridianGame({upgrades:{}},()=>{});g.start({map:'frontier',seed:1409,faction:0,enemies:[1]});return g;};
-  const decorated=make(),scenery=vm.runInContext('frontierMeadowScenery',context);
+  const decorated=make(),scenery=vm.runInContext('decorateEcology',context);
   try {
-    vm.runInContext('frontierMeadowScenery=()=>{}',context);
+    vm.runInContext('decorateEcology=()=>{}',context);
     const bare=make();assert.deepEqual(json(decorated.s),json(bare.s));
     assert.equal(signature(decorated.world),signature(bare.world));
     assert.equal(decorated.random(),bare.random());
-  } finally {context.restoreScenery=scenery;vm.runInContext('frontierMeadowScenery=restoreScenery',context);delete context.restoreScenery;}
+  } finally {context.restoreScenery=scenery;vm.runInContext('decorateEcology=restoreScenery',context);delete context.restoreScenery;}
 });
 test('battle initialization places both minerals and vents from the generated layout',()=>{
   const game=new MeridianGame({upgrades:{}},()=>{});

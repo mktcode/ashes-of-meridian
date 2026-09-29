@@ -150,15 +150,15 @@ test('combat accents exclude work/healing beams, obey both endpoint visibility a
   const world={visible:[1,1],idx:x=>x<10?0:1,definition:{palette:{ground:0xab9876}}},s={entities:[],fields:[],scans:[],strikes:[],time:0};
   const frame=()=>{const before=JSON.stringify(effects.fx);R.calls.length=0;render(R,effects,world,s,[],0);assert.equal(JSON.stringify(effects.fx),before);return R.calls;};
   assert.equal(frame().filter(c=>c[0]==='sphere').length,1);
-  assert.equal(R.calls.filter(c=>c[0]==='beam').length,7,'four original beams and three combat sparks');
+  assert.equal(R.calls.filter(c=>c[0]==='beam').length,8,'four original beams, a Pact tracer and three combat sparks');
   assert.equal(effects.combatBeams.get(shot),1.3);
-  for(const c of R.calls.filter(c=>c[0]==='beam').slice(1,4)) assert.ok(Math.abs(Math.hypot(c[1][0]-20,c[1][2])-1.3)<.0001,'sparks start at the hull, not its center');
+  for(const c of R.calls.filter(c=>c[0]==='beam').slice(2,5)) assert.ok(Math.abs(Math.hypot(c[1][0]-20,c[1][2])-1.3)<.0001,'sparks start at the hull, not its center');
   world.visible[1]=0;assert.equal(frame().filter(c=>c[0]==='beam').length,4);
   world.visible[0]=0;assert.equal(frame().length,0);world.visible=[1,1];
   effects.fx=Array.from({length:100},()=>shot);
-  for(const [quality,cap,sparks] of [[0,0,0],[1,16,1],[2,48,3]]) {
+  for(const [quality,cap,sparks,signatures] of [[0,0,0,0],[1,16,1,12],[2,48,3,32]]) {
     R.quality=quality;frame();assert.equal(R.calls.filter(c=>c[0]==='sphere').length,cap);
-    assert.equal(R.calls.filter(c=>c[0]==='beam').length,100+cap*sparks);
+    assert.equal(R.calls.filter(c=>c[0]==='beam').length,100+cap*sparks+signatures);
   }
   effects.reset();effects.shell(shooter,target,.8);R.quality=2;
   assert.equal(frame().filter(c=>c[0]==='sphere').length,2,'projectile plus short launch flash');

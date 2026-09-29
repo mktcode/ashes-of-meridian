@@ -20,6 +20,17 @@
         [29,860,310,1183], [317,845,584,1166], [613,892,906,1175], [941,873,1237,1191]
       ]
     };
+    // Identical displacement in scene and shadow passes; only cosmetic foliage moves.
+    const ECOLOGY_WIND = `uniform vec2 u_wind;
+vec4 ecologyPosition(mat4 model,vec3 position,float material){
+ vec4 p=model*vec4(position,1.);
+ if(material==${MAT.LEAF}.&&u_wind.x>0.){
+  float phase=model[3].x*.13+model[3].z*.17+u_wind.y*1.4;
+  float bend=clamp(position.y,0.,1.);
+  p.x+=sin(phase+position.y)*u_wind.x*bend;
+  p.z+=cos(phase*.83+position.y*.7)*u_wind.x*bend*.65;
+ }return p;
+}`;
     const VERT = `#version 300 es
 precision highp float;
 layout(location=0) in vec3 a_pos;layout(location=1) in vec3 a_normal;layout(location=8) in vec3 a_tint;
@@ -27,7 +38,8 @@ layout(location=2) in mat4 a_model;layout(location=6) in vec4 a_color;layout(loc
 uniform mat4 u_vp;uniform mat4 u_light;
 out vec3 v_pos;out vec3 v_n;out vec4 v_col;out float v_glow;out vec4 v_shadow;flat out float v_mat;
 out vec3 v_modelPos;out vec3 v_modelN;out vec3 v_detail;
-void main(){v_detail=a_tint;vec4 p=a_model*vec4(a_pos,1.);v_pos=p.xyz;
+${ECOLOGY_WIND}
+void main(){v_detail=a_tint;vec4 p=ecologyPosition(a_model,a_pos,a_material);v_pos=p.xyz;
 // Scaled mesh-local coordinates keep detail density without world-space sliding.
 vec3 textureScale=max(vec3(length(a_model[0].xyz),length(a_model[1].xyz),length(a_model[2].xyz)),vec3(.00001));
 v_modelPos=a_pos*textureScale;
@@ -44,6 +56,7 @@ uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_fol
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
+uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
 out vec4 frag;
 float shadow(){if(u_shadowOn<.5||v_glow>1.)return 1.;vec3 p=v_shadow.xyz/v_shadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float bias=max(u_shadowBias*2.5*(1.-dot(normalize(v_n),normalize(vec3(-64.,110.,43.)))),u_shadowBias);float s=0.;vec2 texel=1./vec2(textureSize(u_shadow,0));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)s+=p.z-bias>texture(u_shadow,p.xy+vec2(x,y)*texel).r?.36:1.;return s/9.;}
 float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
@@ -121,6 +134,27 @@ float veilNoise(vec2 p){
  return mix(mix(veilHash(i),veilHash(i+vec2(1,0)),f.x),mix(veilHash(i+vec2(0,1)),veilHash(i+vec2(1,1)),f.x),f.y);
 }
 float veilCloud(vec2 p){return veilNoise(p)*.57+veilNoise(p*2.03+7.1)*.29+veilNoise(p*4.07-3.4)*.14;}
+float habitat(vec2 p){
+ float warp=sin(p.x*.017+p.y*.031+u_ecology.w)*9.;
+ return clamp(.5+sin(p.x*.041+warp*.08+u_ecology.w)*.24+cos(p.y*.036-p.x*.015-u_ecology.w)*.23,0.,1.);
+}
+vec3 habitatGround(vec3 sampleColor,vec3 normal,float road){
+ float zone=habitat(v_pos.xz),grain=veilNoise(v_pos.xz*.64),band=smoothstep(.27,.74,zone+(grain-.5)*.13);
+ vec3 color=mix(u_biomeDry,u_biomeLush,band)*( .69+luma(sampleColor)*.95);
+ // Deposited soil, exposed bedding and cold caps respond to geometry rather than another atlas.
+ float exposed=1.-smoothstep(.63,.94,normal.y);
+ color=mix(color,u_biomeStone*(.72+grain*.38),exposed*.8);
+ color=mix(color,u_biomeSoil*(.86+grain*.28),smoothstep(.05,.9,road)*.84);
+ if(u_ecology.x==3.){
+  float frost=smoothstep(.6,.88,normal.y)*smoothstep(.45,.82,zone+v_pos.y*.012);
+  color=mix(color,vec3(.78,.85,.88)*( .92+grain*.08),frost*.88);
+ }
+ if(u_ecology.x==4.){
+  float veins=pow(1.-abs(sin(v_pos.x*.32+sin(v_pos.z*.21)*2.+zone*5.)),12.);
+  color=mix(color,vec3(.41,.52,.57),veins*band*.20);
+ }
+ return color;
+}
 // Opt-in upland stone: bedding follows elevation; exposed faces bleach while
 // upward shelves collect lichen. Pure shading, never GPU terrain displacement.
 vec3 uplandStone(vec3 stone,vec3 n){
@@ -203,6 +237,7 @@ if(v_mat==${MAT.LANDSCAPE}.){
   vec3 soil=texture(u_earthTex,v_pos.xz*.15).rgb*vec3(1.24,1.15,.91);
   base=mix(base,soil,trail*.87);
  }
+ if(u_ecology.x>.5)base=habitatGround(grass,n,v_detail.x);
 }else if(v_mat==${MAT.LEAF}.){
  base=v_col.rgb;n=gl_FrontFacing?n:-n;
 }else if(v_mat==${MAT.MASONRY}.){
@@ -226,6 +261,15 @@ if(v_mat==${MAT.LANDSCAPE}.){
  surfaceAlpha=(.22+.54*(1.-exp(-depth*.9))+foam*.18)*smoothstep(0.,.16+veilNoise(v_pos.xz*.9)*.25,depth);
 }else if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5))){base=rockSurface(n);}else if(v_mat>6.5){vec3 t=tri(u_bioTex,v_pos,n,.014);float grain=luma(tri(u_bioTex,v_pos,n,.045));base=detail(base,t,.85)*(.85+grain*.3);base=mix(base,groundBase(v_pos.xz),1.-smoothstep(.0,.9,v_pos.y));}else if(v_mat>5.5){vec3 t=tri(u_groundTex,v_pos,n,.16);float grain=luma(tri(u_groundTex,v_pos,n,.73));base=detail(base,t,.8)*(.92+.16*grain);vec3 soil=tri(u_groundTex,v_pos,n,.012);base=mix(base,mix(detail(v_col.rgb,soil,.74),soil,.32),(1.-smoothstep(.0,1.8,v_pos.y))*.85);}else if(v_mat<4.5&&v_glow<.2&&v_col.a>.96){if(v_mat>3.5){vec3 t=tri(u_groundTex,v_pos,n,.28);float strata=sin(v_pos.y*4.+luma(t)*2.5+sin(v_pos.x*.6+v_pos.z*.4)*.7);base=detail(base,t,.9)*(.88+.12*smoothstep(-.45,.45,strata));}else if(v_mat>2.5){vec3 t=tri(u_bioTex,v_modelPos,normalize(v_modelN),.17);base=mix(detail(base,t,.76),mix(base,t,.18),.35);}else if(v_mat>1.5){vec3 t=tri(u_metalTex,v_modelPos,normalize(v_modelN),.33);base=detail(base,t,.72);}else if(v_mat>.5||(v_pos.y<.22&&n.y>.66)){vec3 t=groundBase(v_pos.xz);base=t;vec4 rocks=groundDecor(u_rockClustersTex,v_pos.xz,false);base=mix(base,rocks.rgb,rocks.a*u_groundDecor.z);vec4 shrubs=groundDecor(u_desertShrubsTex,v_pos.xz,true);base=mix(base,shrubs.rgb,shrubs.a*u_groundDecor.w);}}
 if(u_upland>.5&&v_mat==${MAT.ROCK}.)base=uplandStone(base,n);
+if(u_ecology.x>.5){
+ if(v_mat==${MAT.GROUND}.)base=habitatGround(base,n,0.);
+ if(v_mat==${MAT.ROCK}.||v_mat==${MAT.MASSIF}.||v_mat==${MAT.MASONRY}.){
+  float strata=.83+.17*sin(v_pos.y*1.4+veilNoise(v_pos.xz*.17)*5.);
+  base=mix(base,u_biomeStone*(.6+luma(base))*.86,.76)*strata;
+  float growth=smoothstep(.65,.97,n.y)*smoothstep(.52,.8,habitat(v_pos.xz));
+  base=mix(base,u_ecology.x==3.?vec3(.77,.83,.87):u_biomeLush,growth*.52);
+ }
+}
 // All surface detail remains cosmetic: never displace the CPU-authoritative ground.
 // Performance omits the extra height sampling, retaining exactly the same albedo recipes.
 if(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96&&v_mat!=${MAT.FOLIAGE}.&&v_mat!=${MAT.WATER}.&&v_mat!=${MAT.LEAF}.){
@@ -260,11 +304,18 @@ if(crystal>.5){
  base=mix(base*facet,mix(base,vec3(.88,.95,1.),.48),caustic*.2);
 }
 vec3 light=normalize(vec3(-64.,110.,43.));float nd=max(dot(n,light),0.);float sh=shadow();
+if(u_ecology.x>.5){
+ float cloud=veilNoise(v_pos.xz*.025+vec2(u_weatherTime*.013,u_weatherTime*.009)+u_ecology.w);
+ sh*=1.-smoothstep(1.-u_ecology.z,.94,cloud)*.22;
+ // Wet surfaces catch light, but the effect never changes physics or unit statistics.
+ if(u_ecology.y==2.&&v_glow<.2)base*=.88;
+}
 vec3 ambient=mix(u_bounce,u_skyLight,n.y*.5+.5);
 vec3 lit=base*(ambient+u_sun*nd*sh),viewDir=normalize(u_eye-v_pos);
 // Painted metal, soft organic gloss and crystals share the existing material IDs.
 float exponent=8.+metal*36.+bio*6.+crystal*56.;
 float strength=.008+metal*.37+bio*.15+crystal*.45;
+if(u_ecology.x>.5&&u_ecology.y==2.){strength+=.12*max(n.y,0.);exponent+=26.;}
 float spec=pow(max(dot(n,normalize(light+viewDir)),0.),exponent)*strength*sh;
 vec3 specColor=mix(vec3(1.),mix(vec3(.85,.92,1.),base,.25),metal);
 lit+=spec*u_sun*specColor;
@@ -287,7 +338,8 @@ float field=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;float fow=mix(1.,
 precision highp float;layout(location=0)in vec3 a_pos;layout(location=2)in mat4 a_model;
 layout(location=8)in vec3 a_tint;layout(location=9)in float a_material;
 out vec2 v_uv;flat out float v_mat;uniform mat4 u_vp;
-void main(){v_uv=a_tint.xy;v_mat=a_material;gl_Position=u_vp*a_model*vec4(a_pos,1.);}`;
+${ECOLOGY_WIND}
+void main(){v_uv=a_tint.xy;v_mat=a_material;gl_Position=u_vp*ecologyPosition(a_model,a_pos,a_material);}`;
     const DEPTHF = `#version 300 es
 precision highp float;in vec2 v_uv;flat in float v_mat;uniform sampler2D u_foliageTex;
 void main(){if(v_mat==${MAT.WATER}.)discard;if(v_mat==${MAT.FOLIAGE}.&&texture(u_foliageTex,v_uv).a<.3)discard;}`;
@@ -296,7 +348,20 @@ out vec2 uv;void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);uv=p;gl_Po
     const SKYF = `#version 300 es
 precision highp float;in vec2 uv;out vec4 frag;uniform vec2 u_size;uniform sampler2D u_skyTex;uniform float u_daylight;
 uniform float u_atmosphereOn;uniform vec3 u_atmosphereHorizon;uniform vec3 u_atmosphereZenith;
+uniform vec4 u_ecology;uniform float u_weatherTime;uniform vec3 u_haze;
+float skyHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float skyNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(skyHash(i),skyHash(i+vec2(1,0)),f.x),mix(skyHash(i+vec2(0,1)),skyHash(i+vec2(1,1)),f.x),f.y);}
 void main(){
+ if(u_ecology.x>.5){
+  vec3 horizon=u_atmosphereOn>.5?u_atmosphereHorizon:mix(u_haze,vec3(.62,.63,.59),u_ecology.x==4.?.12:.58),
+       zenith=u_atmosphereOn>.5?u_atmosphereZenith:(u_ecology.x==4.?vec3(.035,.045,.13):vec3(.23,.39,.50));
+  vec2 p=vec2(uv.x*u_size.x/u_size.y,uv.y)*vec2(3.8,5.)+vec2(u_weatherTime*.006,0.)+u_ecology.w;
+  float cloud=skyNoise(p)*.6+skyNoise(p*2.03+7.1)*.28+skyNoise(p*4.07)*.12;
+  float mask=smoothstep(.78-u_ecology.z*.47,.92-u_ecology.z*.27,cloud);
+  vec3 sky=mix(horizon,zenith,smoothstep(0.,1.,uv.y));
+  sky=mix(sky,mix(horizon,vec3(.73,.77,.79),.26)*(.62+cloud*.46),mask*.82);
+  frag=vec4(sky,1.);return;
+ }
  if(u_atmosphereOn>.5){frag=vec4(mix(u_atmosphereHorizon,u_atmosphereZenith,smoothstep(0.,1.,uv.y)),1.);return;}
  if(u_daylight>.5){frag=vec4(mix(vec3(.60,.69,.71),vec3(.22,.42,.58),smoothstep(0.,1.,uv.y)),1.);return;}
  // Cover the viewport without stretching; image uploads have their origin at the top.

@@ -126,7 +126,7 @@ function createHighlandRecipe(settings:HighlandSettings={}):BattlefieldDefinitio
         {mesh:'frontierBackdrop',model:'landscapeRelief',relief:field(w.extent+150,5,w.extent)});
       builder.place('frontierBackdrop',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','LANDSCAPE');
       // A small local height spread embeds low tufts on gentle slopes, not just y=0.
-      frontierMeadowScenery(builder,plan.trail,{treeLine:32,groundcover:(x,z)=>{
+      if(!w.renderProfile.ecology)frontierMeadowScenery(builder,plan.trail,{treeLine:32,groundcover:(x,z)=>{
         const heights=[s.heightAt(x,z),s.heightAt(x-1.4,z),s.heightAt(x+1.4,z),s.heightAt(x,z-1.4),s.heightAt(x,z+1.4)];
         return Math.max(...heights)-Math.min(...heights)<.22?Math.min(...heights):null;
       }});
@@ -143,4 +143,8 @@ function createHighlandRecipe(settings:HighlandSettings={}):BattlefieldDefinitio
     }
   };
 }
-const FRONTIER_BATTLEFIELD=battlefieldDesign(createHighlandRecipe(),'FRONTIER',{atmosphere:{timeOfDay:'seeded'}});
+const FRONTIER_BATTLEFIELD=(()=>{
+  const recipe=createHighlandRecipe();
+  return battlefieldDesign({...recipe,expeditionOpenings:true,render:{...recipe.render,wilderness:'seeded'}},
+    'FRONTIER',{atmosphere:{timeOfDay:'seeded'}});
+})();
