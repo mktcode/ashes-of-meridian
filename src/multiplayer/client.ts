@@ -276,7 +276,7 @@ class MeridianMultiplayerClient {
         break;
       }
     }
-    if (fx.fx.length > 500) fx.fx.splice(0, fx.fx.length - 500);
+    fx.trim(500);
   }
   private status(text: string) {
     const element = document.getElementById('netStatus');

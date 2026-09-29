@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts, SIMULATION_SCRIPTS } = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core', 'content', 'effects', ...SIMULATION_SCRIPTS]);
-const { MeridianGame, seeded } = vm.runInContext('({ MeridianGame, seeded })', context);
+const { MeridianGame, MeridianEffects, seeded } = vm.runInContext('({ MeridianGame, MeridianEffects, seeded })', context);
 vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness"); }', context);
 const json = value => JSON.parse(JSON.stringify(value));
 
@@ -72,6 +72,44 @@ test('effect provider follows mode and reset without retaining an earlier battle
   game.s.rules = { kind: 'scenario', hostilities: [], duration: 1 };
   effects.mining({}, {}, 0, () => false);
   assert.deepEqual([main, cosmetic], [1, 2]);
+});
+
+test('particles and smoke reuse storage with complete reset and identical RNG samples', () => {
+  let random = seeded(1409);
+  const effects = new MeridianEffects(() => random());
+  effects.explosion(2, 3, 2, 0xff8844);
+  const reused = new Set(effects.fx.filter(f => f.type === 'particle' || f.type === 'smoke'));
+  const array = effects.fx, floats = effects.floats;
+  effects.tick(3);
+  assert.equal(effects.fx.length, 0);
+  assert.strictEqual(effects.fx, array); assert.strictEqual(effects.floats, floats);
+  random = seeded(7919);
+  effects.groundHeight = () => 7;
+  effects.explosion(-5, 4, 2, 0x336699);
+  const fresh = new MeridianEffects(seeded(7919)); fresh.groundHeight = () => 7;
+  fresh.explosion(-5, 4, 2, 0x336699);
+  assert.equal(effects.fx.filter(f => reused.has(f)).length, reused.size);
+  assert.deepEqual(json(effects.fx), json(fresh.fx));
+  assert.equal(random(), fresh.random(), 'pool hit consumes the same complete RNG sequence');
+  const beforeReset = new Set(effects.fx);
+  effects.reset(); effects.explosion(0, 0, 2);
+  assert.ok(effects.fx.every(f => !beforeReset.has(f)), 'world reset releases old storage');
+});
+
+test('effect trimming and expiry preserve order, active identities and a bounded free pool', () => {
+  const effects = new MeridianEffects(() => .5);
+  for (let i = 0; i < 80; i++) {
+    effects.explosion(i, -i, 5);
+    assert.ok(effects.fx.length <= 500);
+    assert.equal(new Set(effects.fx).size, effects.fx.length, 'no active slot reused');
+    assert.ok(effects.freeParticles.length + effects.freeSmoke.length <= 500);
+  }
+  const retained = effects.fx.slice(-9);
+  effects.trim(9); assert.deepEqual(effects.fx, retained);
+  const survivors = effects.fx.filter(f => f.life > 1);
+  effects.tick(1); assert.deepEqual(effects.fx, survivors);
+  effects.tick(10);
+  assert.ok(effects.freeParticles.length + effects.freeSmoke.length <= 500);
 });
 
 test('single-player retains its existing visibility gates and explosion RNG consumption', () => {

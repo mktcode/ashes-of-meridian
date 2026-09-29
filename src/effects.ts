@@ -5,6 +5,10 @@ class MeridianEffects {
       declare random: () => number;
       declare fx: BattlefieldEffect[];
       declare floats: FloatingText[];
+      // Only short-lived particles/smoke are reused. Simulation entities and shell identities are not pooled.
+      private freeParticles: Extract<BattlefieldEffect, { type: 'particle' }>[] = [];
+      private freeSmoke: Extract<BattlefieldEffect, { type: 'smoke' }>[] = [];
+      private pooled = new WeakSet<BattlefieldEffect>();
       // View-only combat marker/hull radius: keep serialized effects and RNG samples unchanged.
       readonly combatBeams = new WeakMap<BattlefieldEffect, number>();
       groundHeight: (x: number, z: number) => number = () => 0;
@@ -18,6 +22,20 @@ class MeridianEffects {
       reset() {
         this.fx = [];
         this.floats = [];
+        this.freeParticles.length = this.freeSmoke.length = 0;
+        this.pooled = new WeakSet();
+      }
+      private recycle(f: BattlefieldEffect) {
+        if (!this.pooled.has(f) || this.freeParticles.length + this.freeSmoke.length >= 500) return;
+        if (f.type === 'particle') this.freeParticles.push(f);
+        else if (f.type === 'smoke') this.freeSmoke.push(f);
+      }
+      trim(limit: number) {
+        const count = this.fx.length - limit;
+        if (count <= 0) return;
+        for (let i = 0; i < count; i++) this.recycle(this.fx[i]);
+        this.fx.copyWithin(0, count);
+        this.fx.length = limit;
       }
       explosion(x: number, z: number, size = 1, color = 0xefb17c) {
         this.fx.push({ type: 'blast', x, z, size, life: 0.45, maxLife: 0.45, color });
@@ -25,33 +43,34 @@ class MeridianEffects {
         for (let i = 0; i < n; i++) {
           let a = this.random() * 6.28,
             sp = (1 + this.random() * 4) * Math.sqrt(size);
-          this.fx.push({
-            type: 'particle',
-            x,
-            y: this.groundHeight(x,z) + 0.8 + this.random() * size,
-            z,
-            vx: Math.sin(a) * sp,
-            vz: Math.cos(a) * sp,
-            vy: 3 + this.random() * 6,
-            size: 0.08 + this.random() * 0.17,
-            color: i % 3 ? color : 0x667278,
-            life: 0.65 + this.random() * 0.7,
-            maxLife: 1.4
-          });
+          let f = this.freeParticles.pop();
+          if (!f) {
+            f = { type: 'particle', x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, size: 0, color: 0, life: 0, maxLife: 1.4 };
+            this.pooled.add(f);
+          }
+          // Keep the existing sample order, including hidden single-player effects.
+          f.x = x; f.y = this.groundHeight(x,z) + 0.8 + this.random() * size; f.z = z;
+          f.vx = Math.sin(a) * sp; f.vz = Math.cos(a) * sp;
+          f.vy = 3 + this.random() * 6;
+          f.size = 0.08 + this.random() * 0.17;
+          f.color = i % 3 ? color : 0x667278;
+          f.life = 0.65 + this.random() * 0.7; f.maxLife = 1.4;
+          this.fx.push(f);
         }
-        for (let i = 0; i < 4; i++)
-          this.fx.push({
-            type: 'smoke',
-            x: x + (this.random() - 0.5) * size,
-            y: this.groundHeight(x,z) + 0.6 + this.random(),
-            z: z + (this.random() - 0.5) * size,
-            vy: 1,
-            life: 2.5,
-            maxLife: 2.5,
-            size: size * 0.6 + 0.5,
-            color: 0x64707c
-          });
-        if (this.fx.length > 500) this.fx.splice(0, this.fx.length - 500);
+        for (let i = 0; i < 4; i++) {
+          let f = this.freeSmoke.pop();
+          if (!f) {
+            f = { type: 'smoke', x: 0, y: 0, z: 0, vy: 1, life: 0, maxLife: 2.5, size: 0, color: 0 };
+            this.pooled.add(f);
+          }
+          f.x = x + (this.random() - 0.5) * size;
+          f.y = this.groundHeight(x,z) + 0.6 + this.random();
+          f.z = z + (this.random() - 0.5) * size;
+          f.vy = 1; f.life = f.maxLife = 2.5;
+          f.size = size * 0.6 + 0.5; f.color = 0x64707c;
+          this.fx.push(f);
+        }
+        this.trim(500);
       }
       damageNumber(e: Pick<EntityBase, 'x' | 'z' | 'team'>, amount: number, localTeam: PlayerTeam = 0) {
         if (this.floats.length < 35)
@@ -183,11 +202,19 @@ class MeridianEffects {
           }
           if (f.type === 'smoke') f.y += dt * f.vy;
         }
-        this.fx = this.fx.filter(f => f.life > 0);
+        // Stable compaction preserves draw order without allocating two arrays every tick.
+        let live = 0;
+        for (const f of this.fx) {
+          if (f.life > 0) this.fx[live++] = f;
+          else this.recycle(f);
+        }
+        this.fx.length = live;
+        live = 0;
         for (let f of this.floats) {
           f.life -= dt;
           f.y += dt * 1.5;
+          if (f.life > 0) this.floats[live++] = f;
         }
-        this.floats = this.floats.filter(f => f.life > 0);
+        this.floats.length = live;
       }
 }
