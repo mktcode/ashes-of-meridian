@@ -23,13 +23,11 @@ Für einen isolierten Test startet `index.html?experiment=height` nach dem Build
 
 Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen und fahrzeugbreiten Steinbrücken. Der erste spielbare Stand verwendet die vorhandenen Vorlagenmaterialien; Texturen und Darstellung werden noch abgestimmt. `index.html?experiment=westmark` startet nach dem Build einen isolierten Probelauf mit zwei eigenen Workern, ohne normales Profil oder Expeditionscheckpoint zu verändern. [Offene Abnahme und Texturarbeiten](docs/issues/westmark-map.md).
 
-## Aurelion · Echo-Bergung und Visualstudie
+## Aurelion · Echo-Bergung
 
 Aurelion ergänzt Expeditionen ab Stage 4 um **Echo salvage**: Worker bergen Fragmente aus einem zerborstenen fremdartigen Reaktorkern und bringen sie zum HQ. Die erste Partei mit 100 abgelieferten Fragmenten gewinnt. [Spielregeln](docs/gameplay.md#echo-bergung-auf-aurelion). Im Multiplayer bleibt die Karte ausgeschlossen.
 
 `index.html?experiment=aurelion-playable` startet nach dem Build einen isolierten Probelauf auf Stage 4 mit drei FFA-Parteien und je zwei Workern. Profil und Expeditionscheckpoint bleiben flüchtig. [Offene Spiel- und Modellabnahme](docs/issues/aurelion-echo-bergung.md).
-
-`index.html?experiment=aurelion` öffnet weiterhin die getrennte dreh- und zoombare Nacht-Visualstudie ohne Spielsimulation oder Profilzugriffe. [Bedienung und offene Darstellungsabnahme](docs/issues/aurelion-map.md).
 
 ## Multiplayer-Prototyp
 

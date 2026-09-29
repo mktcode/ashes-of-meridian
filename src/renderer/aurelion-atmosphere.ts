@@ -1,7 +1,6 @@
 /* City-owned programs and depth resolve; the gameplay adapter retains the normal entity shaders. */
 'use strict';
-const AURELION_SCREEN_MATERIAL = -20, AURELION_HOLOGRAM_MATERIAL = -21,
-  AURELION_HALO_MATERIAL = -22, AURELION_BACKDROP_MATERIAL = -23;
+const AURELION_SCREEN_MATERIAL = -20, AURELION_BACKDROP_MATERIAL = -23;
 function createAurelionNoiseVolume() {
   const random = seeded(0x434c4f55), data = new Uint8Array(32*32*32);
   for (let i=0;i<data.length;i++) data[i]=Math.floor(random()*256);
@@ -9,12 +8,10 @@ function createAurelionNoiseVolume() {
 }
 const AURELION_SURFACE_FRAGMENT = `#version 300 es
 precision highp float;
-precision highp sampler3D;
 in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in float v_mat;
-in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform vec3 u_eye;uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;
 uniform sampler2D u_shadow;uniform sampler2D u_metalTex;uniform sampler2D u_advertising;
-uniform sampler3D u_cloudNoise;uniform float u_shadowBias;uniform float u_time;
+uniform float u_shadowBias;uniform float u_time;
 out vec4 frag;
 const vec3 sunDirection=normalize(vec3(-64.,110.,43.));
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -81,25 +78,6 @@ void main(){
   float scan=.96+.04*sin(p.y*700.+u_time*.6);
   vec3 lit=art*(2.7+.12*sin(u_time*.33+float(board)))*scan;
   frag=vec4(film(lit),1.);return;
- }
- if(v_mat==${AURELION_HOLOGRAM_MATERIAL}.){
-  if(!gl_FrontFacing)discard;
-  vec3 p=normalize(v_modelPos);float rim=pow(1.-abs(dot(n,view)),2.);
-  float detail=(texture(u_cloudNoise,p*.73+vec3(.11,.61,.29)).r-.5)*.34;
-  float geography=max(dot(p,normalize(vec3(.82,.22,.52)))+detail,
-    max(dot(p,normalize(vec3(-.68,-.18,.71)))+detail*.8,dot(p,normalize(vec3(.12,.76,-.64)))+detail*.65));
-  float land=smoothstep(.62,.74,geography),coast=1.-smoothstep(.018,.055,abs(geography-.68));
-  float longitude=atan(p.z,p.x),latitude=asin(clamp(p.y,-1.,1.));
-  float grid=max(1.-smoothstep(.025,.055,abs(sin(longitude*6.))),1.-smoothstep(.025,.055,abs(sin(latitude*6.))));
-  float prime=1.-smoothstep(.025,.075,abs(sin(longitude*.5)));
-  float sweep=exp(-pow((p.y-sin(u_time*.28))/.065,2.));
-  vec3 color=mix(vec3(.025,.28,.65),vec3(.08,1.18,1.55),land);
-  frag=vec4(film(color*(1.0+rim*1.5+land*.65+coast*.75+grid*.18+sweep*.18)+vec3(.35,1.45,.82)*prime),
-    alpha*(.07+rim*.42+land*.72+coast*.24+prime*.48));return;
- }
- if(v_mat==${AURELION_HALO_MATERIAL}.){
-  float r=length(v_modelPos.xz),mask=exp(-r*r*.008);
-  frag=vec4(.12,.76,1.,alpha*mask);return;
  }
  if(v_glow>.5){
   bool warm=base.r>base.b;
@@ -226,8 +204,7 @@ void main(){
  frag=vec4(clamp(c*vignette+grain,0.,1.),1.);
 }`;
 class AurelionAtmosphereRenderer extends MeridianRenderer {
-  atmosphere = 1;
-  hazeStart = 230;
+  hazeStart = 100;
   depthAvailable = false;
   private cityDepth: WebGLTexture | null = null;
   private cityDepthFbo: WebGLFramebuffer | null = null;
@@ -236,18 +213,15 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
   private cloudNoise: WebGLTexture;
   private advertising: WebGLTexture;
   private frameFence: WebGLSync | null = null;
-  protected standardPrograms?: Pick<MeridianRenderer,'program'|'skyProg'|'postProg'>;
-  constructor(canvas: HTMLCanvasElement, gameplay = false) {
+  protected standardPrograms: Pick<MeridianRenderer,'program'|'skyProg'|'postProg'>;
+  constructor(canvas: HTMLCanvasElement) {
     super(canvas);
     const g=this.gl;
-    if (gameplay) this.standardPrograms={program:this.program,skyProg:this.skyProg,postProg:this.postProg};
-    // The isolated study needs no faction models. Gameplay keeps them and their material program.
-    else for (const name of Object.keys(this.meshParts)) if (name!=='hex') this.releaseGeometry(name);
+    this.standardPrograms={program:this.program,skyProg:this.skyProg,postProg:this.postProg};
     const replace = (key:'program'|'skyProg'|'postProg', vertex:string, fragment:string) => {
       const program=this.programOf(vertex,fragment),old=this[key];
       for (const p of [program,old]) for (const shader of g.getAttachedShaders(p)||[]) {g.detachShader(p,shader);g.deleteShader(shader);}
       this[key]=program;
-      if (!gameplay) {g.deleteProgram(old);this.uniformCache.delete(old);}
     };
     const number = (n:number) => Number.isInteger(n)?`${n}.`:String(n);
     let surface=AURELION_SURFACE_FRAGMENT
@@ -257,7 +231,7 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
       .replace('AURELION_WALK_PATHS',AURELION_WALKWAYS.map(p=>`vec4(${p.slice(0,4).map(number).join(',')})`).join(','))
       .replace('AURELION_WALK_LEVELS',AURELION_WALKWAYS.map(p=>`vec3(${p.slice(4).map(number).join(',')})`).join(','))
       .replace('AURELION_CROWN_FLOOR',[AURELION_CROWN_FLOOR.radius,AURELION_CROWN_FLOOR.height].map(number).join(','));
-    if (gameplay) surface=surface.replace('void main(){','void cityMain(){')
+    surface=surface.replace('void main(){','void cityMain(){')
       .replace('float shadow(vec3 n){','uniform float u_shadowOn;\nfloat shadow(vec3 n){\n if(u_shadowOn<.5)return 1.;')+
       `\nuniform sampler2D u_fog;uniform float u_fogOn;uniform float u_extent;
       void main(){cityMain();float sight=texture(u_fog,clamp((v_pos.xz+u_extent)/(2.*u_extent),0.,1.)).r;
@@ -276,7 +250,6 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
     g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
     g.generateMipmap(g.TEXTURE_2D);
     g.activeTexture(g.TEXTURE0);
-    if (!gameplay) {this.shadowSize=Math.min(3072,g.getParameter(g.MAX_TEXTURE_SIZE));this.setupShadow();}
   }
   private prepareDepth() {
     const size=`${this.width}x${this.height}`;
@@ -314,7 +287,7 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
     g.activeTexture(g.TEXTURE12);g.bindTexture(g.TEXTURE_3D,this.cloudNoise);
     g.activeTexture(g.TEXTURE13);g.bindTexture(g.TEXTURE_2D,this.advertising);
     g.useProgram(this.program);
-    g.uniform1i(this.uniform(this.program,'u_cloudNoise'),12);g.uniform1i(this.uniform(this.program,'u_advertising'),13);
+    g.uniform1i(this.uniform(this.program,'u_advertising'),13);
     super.render(time,modelTime);
     // Only one scene may be in flight. Poll with zero timeout in rAF, never block with finish/wait.
     this.frameFence=g.fenceSync(g.SYNC_GPU_COMMANDS_COMPLETE,0);
@@ -349,7 +322,7 @@ class AurelionAtmosphereRenderer extends MeridianRenderer {
     g.uniformMatrix4fv(this.uniform(this.postProg,'u_light'),false,this.lightVP);
     g.uniform3fv(this.uniform(this.postProg,'u_eye'),this.eye);
     g.uniform1f(this.uniform(this.postProg,'u_depthOn'),this.depthAvailable?1:0);
-    g.uniform1f(this.uniform(this.postProg,'u_amount'),this.atmosphere);
+    g.uniform1f(this.uniform(this.postProg,'u_amount'),1);
     g.uniform1f(this.uniform(this.postProg,'u_hazeStart'),this.hazeStart);
   }
   disposeAtmosphere() {

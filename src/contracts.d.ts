@@ -133,8 +133,6 @@ interface BattlefieldSize {
 
 interface BattlefieldDefinition {
   name: string;
-  /** Opt-in map review; excluded from normal expedition and multiplayer selection. */
-  experimental?: boolean;
   multiplayer?: boolean;
   size: BattlefieldSize;
   layout: BattlefieldLayout;

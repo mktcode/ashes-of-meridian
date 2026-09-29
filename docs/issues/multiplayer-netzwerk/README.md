@@ -6,7 +6,7 @@ Der freigegebene vertikale Prototyp ist umgesetzt: separater autoritativer [Serv
 - [ ] Öffentlichen Betrieb absichern: Content-Hash-Handshake, Metadaten-/ID-Seitenkanäle und Missbrauchsschutz prüfen.
 - [ ] Zwei volle Räume reproduzierbar auf der Ziel-VM messen: Tick-p99, verfehlte 50-ms-Intervalle, CPU, RSS und Egress. Lokale Nutzlast-, Tick-, CPU- und RSS-Metriken sowie ein kurzes Öffnungsprofil sind vorhanden; Raumgrenze vorher nicht erhöhen.
 - [x] WebSocket-Kompression und adaptive Zustandsrate vor Skalierung umsetzen und kurz messen. Delta-/Binärframes bleiben vom nachgewiesenen weiteren Bedarf abhängig; Vollzustände erzeugten lokal unter hoher Sichtlast vor diesen Maßnahmen ca. 1,4 MiB/s je Raum.
-- [ ] Erst nach Abnahme auf drei/vier menschliche Parteien erweitern; FFA beibehalten. KI und die [offenen Unterbau-Befunde](../multiplayer-simulationsmodell.md#offene-befunde-im-gemeinsamen-unterbau) separat behandeln.
+- [ ] Erst nach Abnahme auf drei/vier menschliche Parteien erweitern; FFA beibehalten. KI und die [tolerierten Unterbau-Grenzen](../multiplayer-simulationsmodell.md#tolerierte-grenzen-im-gemeinsamen-unterbau) separat behandeln.
 - [ ] Zustandsumfang für spätere Wiederherstellung/Replays bestimmen, einschließlich Befehlsqueue/RNG. Die übertragene Sicht ist kein Simulationssnapshot; der Expeditionscheckpoint ebenfalls nicht.
 
 - [ ] [Mess- und Strukturfolgearbeiten](robustheit.md#offene-befunde-aus-dem-kurzen-code-review) getrennt von den behobenen Lebenszyklusfehlern angehen; kein breites Refactoring.

@@ -2,7 +2,7 @@
 'use strict';
 function createAurelionBattlefieldMeshes() {
   return [
-    ...createAurelionGeometry(true).map(mesh=>({...mesh,static:true,
+    ...createAurelionGeometry().map(mesh=>({...mesh,static:true,
       material:mesh.name==='aurelionScreens'?AURELION_SCREEN_MATERIAL:MAT.METAL})),
     {...createAurelionBackdrop(),glow:0,static:true,material:AURELION_BACKDROP_MATERIAL},
     ...createAurelionAircraft().map(mesh=>({...mesh,static:false,material:MAT.METAL})),
@@ -28,14 +28,13 @@ class AurelionBattleRenderer extends AurelionAtmosphereRenderer {
   private modelTime=0;
   private boundProgram: WebGLProgram | null=null;
   constructor(canvas: HTMLCanvasElement) {
-    super(canvas,true);
+    super(canvas);
     this.cityPrograms={program:this.program,skyProg:this.skyProg,postProg:this.postProg};
-    this.hazeStart=100;
   }
   override bindSceneProgram(time:number,modelTime:number,program=this.program) {
     this.scenePass=true;this.sceneTime=time;this.modelTime=modelTime;
     super.bindSceneProgram(time,modelTime,program);this.boundProgram=program;
-    if (this.battlefieldProfile.scenery==='aurelion' && program===this.standardPrograms!.program) {
+    if (this.battlefieldProfile.scenery==='aurelion' && program===this.standardPrograms.program) {
       const g=this.gl,lighting=AURELION_ENTITY_LIGHTING;
       g.uniform3fv(this.uniform(program,'u_sun'),lighting.sun);
       g.uniform3fv(this.uniform(program,'u_skyLight'),lighting.sky);
@@ -51,7 +50,7 @@ class AurelionBattleRenderer extends AurelionAtmosphereRenderer {
     const city:RenderBatches={},entities:RenderBatches={};
     for (const [key,bucket] of Object.entries(map))
       (bucket.source.startsWith('aurelion')?city:entities)[key]=bucket;
-    for (const [batches,program] of [[city,this.cityPrograms.program],[entities,this.standardPrograms!.program]] as const) {
+    for (const [batches,program] of [[city,this.cityPrograms.program],[entities,this.standardPrograms.program]] as const) {
       if (!Object.values(batches).some(b=>b.n)) continue;
       if (this.boundProgram!==program) this.bindSceneProgram(this.sceneTime,this.modelTime,program);
       super.drawBatches(batches,matrix,excluded,included);

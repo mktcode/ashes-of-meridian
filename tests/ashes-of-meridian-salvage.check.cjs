@@ -114,5 +114,4 @@ test('the detailed opaque relic is deterministic, finite, bounded by the protect
   assert.ok(top>20&&top<27);assert.ok(triangles>3000&&triangles<12000,triangles);
   const gameplay=vm.runInContext('createAurelionBattlefieldMeshes()',r);
   assert.ok(gameplay.some(m=>m.name==='echoRelicCrystal'));
-  assert.ok(!gameplay.some(m=>m.name==='aurelionHologram'||m.name==='aurelionHalo'));
 });

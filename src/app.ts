@@ -11,14 +11,6 @@
         overlay = $('overlay');
       try {
         const params = new URLSearchParams(location.search);
-        if (params.get('experiment') === 'aurelion') {
-          void launchAurelionPreview(canvas).catch(error => {
-            console.error(error);
-            $('loading').textContent = `Aurelion preview: ${error instanceof Error ? error.message : String(error)}`;
-            $('loading').classList.remove('hidden');
-          });
-          return;
-        }
         const heightExperiment = params.get('experiment') === 'height',
           westmarkExperiment = params.get('experiment') === 'westmark',
           aurelionExperiment = params.get('experiment') === 'aurelion-playable',

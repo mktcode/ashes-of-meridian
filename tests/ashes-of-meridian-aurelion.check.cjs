@@ -20,14 +20,6 @@ function surfaceHeight(data, x, z) {
   return height;
 }
 
-test('Aurelion visual time retains real elapsed motion under slow completed frames', () => {
-  const context=loadScripts(['experiment-aurelion']);
-  const advance=vm.runInContext('advanceAurelionVisualTime',context);
-  assert.equal(advance(12,0,9000),12,'the first visible frame establishes the clock without a jump');
-  assert.equal(advance(12,1000,3500),14.5,'slow rendering must not cap motion to a tenth of a second');
-  assert.equal(advance(14.5,3500,3516),14.516);
-});
-
 test('Aurelion light footprints are convex and their shared walkways have valid height ranges', () => {
   const context=loadScripts(['core','renderer-geometry','renderer-model-kit','battlefield-aurelion-layout','renderer-aurelion-geometry']);
   const {outline,walkways,crown,height}=vm.runInContext('({outline:AURELION_DECK_OUTLINE,walkways:AURELION_WALKWAYS,crown:AURELION_CROWN_FLOOR,height:AURELION_SECTOR_HEIGHT})',context);
@@ -74,8 +66,7 @@ test('Aurelion geometry preserves broad precincts, clear approaches, a closed pl
       assert.ok(Math.hypot(ay*bz-az*by,az*bx-ax*bz,ax*by-ay*bx) > 1e-8, 'no collapsed triangles');
     }
   }
-  // The approved high-detail pass deliberately replaces the coarse 200k massing-study budget.
-  assert.ok(triangles < 650000, `bounded detailed-review budget (${triangles}), not a mobile performance claim`);
+  assert.ok(triangles < 650000, `bounded city geometry (${triangles}), not a mobile performance claim`);
   const structure = meshes.find(mesh => mesh.name === 'aurelionStructure').data;
   for (const sx of [-1,1]) for (const sz of [-1,1]) {
     for (const [x,z] of [[55,90],[83,52],[130,48],[145,110],[72,119],[90,112]]) {
@@ -254,7 +245,7 @@ test('Aurelion cloud noise and media descriptors are local, repeatable and bound
   assert.equal(vm.runInContext('typeof document',context),'undefined','loading visual programs allocates no browser or GPU resources');
 });
 
-test('preview depth targets are reused, replaced on resize and released on failed allocation or resolve', () => {
+test('city depth targets are reused, replaced on resize and released on failed allocation or resolve', () => {
   const warnings=[],context=loadScripts(['core',...RENDERER_SCRIPTS],{globals:{console:{warn:message=>warnings.push(message)}}});
   const Renderer=vm.runInContext('AurelionAtmosphereRenderer',context);
   for (const failure of [null,'texture','framebuffer','incomplete','resolve']) {
@@ -267,7 +258,7 @@ test('preview depth targets are reused, replaced on resize and released on faile
       blitFramebuffer:(...args)=>blits.push(args),getUniformLocation:()=>({})};
     for (const method of ['activeTexture','bindTexture','texImage2D','texParameteri','bindFramebuffer','framebufferTexture2D',
         'drawBuffers','readBuffer','useProgram','uniform1i','uniform1f','uniformMatrix4fv','uniform3fv']) gl[method]=()=>{};
-    const renderer=Object.assign(Object.create(Renderer.prototype),{gl,width:100,height:80,quality:0,atmosphere:1,
+    const renderer=Object.assign(Object.create(Renderer.prototype),{gl,width:100,height:80,quality:0,
       depthSize:'',depthAvailable:false,depthVerified:false,cityDepth:null,cityDepthFbo:null,uniformCache:new Map(),postProg:{},
       sceneFbo:{},sceneMSAAFbo:null,eye:[0,0,0],inverseVP:new Float32Array(16),lightVP:new Float32Array(16)});
     renderer.renderBloom();

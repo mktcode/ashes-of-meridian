@@ -10,8 +10,8 @@ const BATTLEFIELDS = {
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';
 function availableBattlefields(scope: 'expedition' | 'multiplayer' = 'expedition'): BattlefieldId[] {
-  return (Object.keys(BATTLEFIELDS) as BattlefieldId[]).filter(id=>!BATTLEFIELDS[id].experimental &&
-    (scope !== 'multiplayer' || BATTLEFIELDS[id].multiplayer !== false));
+  return (Object.keys(BATTLEFIELDS) as BattlefieldId[]).filter(id=>
+    scope !== 'multiplayer' || BATTLEFIELDS[id].multiplayer !== false);
 }
 function battlefieldId(value: unknown): BattlefieldId {
   return typeof value === 'string' && Object.hasOwn(BATTLEFIELDS, value)
