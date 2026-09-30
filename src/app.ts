@@ -225,7 +225,7 @@
             R.geometry(GUIDE_MESH, data);
             placementGuide = { world, key };
           }
-          R.add(GUIDE_MESH, cx, 0, cz, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 0.42, 'effects', PLACEMENT_GUIDE_MATERIAL);
+          R.add(GUIDE_MESH, cx, 0, cz, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 0.65, 'effects', PLACEMENT_GUIDE_MATERIAL);
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;

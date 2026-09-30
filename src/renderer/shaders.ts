@@ -212,9 +212,11 @@ void main(){
  }
  if(v_mat==${PLACEMENT_GUIDE_MATERIAL}.){
   float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
-  vec2 cell=abs(fract(v_pos.xz/1.5)-.5);
-  float seam=smoothstep(.43,.49,max(cell.x,cell.y));
-  frag=vec4(v_col.rgb,v_col.a*step(.75,sight)*clamp(max(v_col.r,max(v_col.g,v_col.b))*2.,0.,1.)*(1.-seam*.24));return;
+  // Fine world-anchored hologram lines; the interior contributes no color at all.
+  vec2 cell=abs(fract(v_pos.xz/.75+.5)-.5)*.75;
+  float pixel=max(fwidth(v_pos.x),fwidth(v_pos.z));
+  float line=1.-smoothstep(.008,.018+min(pixel*.75,.04),min(cell.x,cell.y));
+  frag=vec4(v_col.rgb,v_col.a*line*step(.75,sight)*clamp(max(v_col.r,max(v_col.g,v_col.b))*2.,0.,1.));return;
  }
  if(v_mat==${CONTACT_SHADOW_MATERIAL}.){
   float mask=1.-smoothstep(.05,1.,length(v_modelPos.xz*2.));

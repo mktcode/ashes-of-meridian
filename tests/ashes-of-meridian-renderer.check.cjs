@@ -571,13 +571,15 @@ test('lighting profiles override shader colors without additional textures or re
   assert.doesNotMatch(contact,/shadow\(|u_metalTex|u_groundTex/);
 });
 
-test('placement guide is blended, fog-gated and unlit without terrain material sampling', () => {
+test('placement guide draws only fine fog-gated hologram lines without shading the cell interior', () => {
   const {context}=setup(), fragment=vm.runInContext('FRAG',context);
   const guide=fragment.slice(fragment.indexOf('if(v_mat==-9.)'),fragment.indexOf('if(v_mat==-1.)'));
   assert.match(guide,/texture\(u_fog/);
   assert.match(guide,/step\(\.75,sight\)/);
-  assert.match(guide,/fract\(v_pos\.xz\/1\.5\)/);
-  assert.match(guide,/frag=vec4\(v_col\.rgb,v_col\.a/);
+  assert.match(guide,/fract\(v_pos\.xz\/\.75\+\.5\)/);
+  assert.match(guide,/fwidth\(v_pos\.x\)/);
+  assert.match(guide,/line=1\.-smoothstep\(/);
+  assert.match(guide,/frag=vec4\(v_col\.rgb,v_col\.a\*line\*/);
   assert.doesNotMatch(guide,/shadow\(|groundBase|u_groundTex/);
 });
 
