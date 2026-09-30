@@ -1,6 +1,6 @@
 # Projektanalyse und Fahrplan nach Project Tomorrow
 
-**Analysebasis:** sauberer Ausgangsstand `41243af` auf `aom/project-tomorrow`. Dieser Bericht ist eine Empfehlung und Entscheidungsgrundlage, **kein Implementierungsauftrag**. Er bündelt die nächsten Prioritäten; technische Einzelheiten und Abnahmen bleiben in den verlinkten Fachissues. Nach Umsetzung bzw. neuer Planung aktualisieren oder auflösen, nicht als dauerhaftes Worklog fortschreiben.
+**Analysebasis:** Commit `41243af`. Dieser Bericht ist eine Empfehlung und Entscheidungsgrundlage, **kein Implementierungsauftrag**. Er bündelt die nächsten Prioritäten; technische Einzelheiten und Abnahmen bleiben in den verlinkten Fachissues. Nach Umsetzung bzw. neuer Planung aktualisieren oder auflösen, nicht als dauerhaftes Worklog fortschreiben.
 
 ## Kurzurteil
 
