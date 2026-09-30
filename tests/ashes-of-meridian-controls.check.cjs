@@ -837,21 +837,31 @@ test('codex dragging takes over the displayed rotation without affecting zoom or
     assert.equal(h.ui.codexModelRotation(20),10*.23+.5,'manual rotation starts from the displayed heading');
     h.pointer('pointerup',250,230,{pointerType});
     h.pointer('pointermove',300,230,{pointerType});
-    assert.equal(h.ui.codexModelRotation(30),10*.23+.5,'released view remains stationary');
+    assert.equal(h.ui.codexManualRotation,false);
+    const resumed = h.ui.codexModelRotation(.1);
+    assert.ok(Math.abs(resumed-(10*.23+.5+.023))<1e-10,'release resumes smoothly from the chosen heading');
     h.pointer('pointerdown',300,230,{pointerType});
     h.pointer('pointermove',200,230,{pointerType});
-    assert.ok(Math.abs(h.ui.codexModelRotation(40)-1.8)<1e-10);
+    assert.ok(Math.abs(h.ui.codexModelRotation(.1)-(resumed-1))<1e-10);
     h.window.handlers.blur();
     assert.equal(h.ui.codexDrag,undefined);
+    assert.equal(h.ui.codexManualRotation,false);
     h.pointer('pointermove',300,230,{pointerType});
-    assert.ok(Math.abs(h.ui.codexRotation-1.8)<1e-10);
+    assert.ok(Math.abs(h.ui.codexRotation-(resumed-1))<1e-10);
+    const afterBlur = h.ui.codexModelRotation(.1);
+    assert.ok(Math.abs(afterBlur-(resumed-1+.023))<1e-10);
+    h.pointer('pointerdown',200,200,{pointerType});
+    h.pointer('pointermove',220,200,{pointerType});
+    h.world.handlers.pointercancel();
+    assert.equal(h.ui.codexManualRotation,false);
+    assert.ok(Math.abs(h.ui.codexModelRotation(.1)-(afterBlur+.2+.023))<1e-10);
     assert.equal(h.ui.codexZoom,1);
     assert.deepEqual(h.ui.game.s.cam,camera); assert.deepEqual(h.calls,[]);
     h.ui.R.clearStatic = () => {}; h.ui.R.useModelPreview = () => {};
     h.ui.showCodexModel('building','hq');
     assert.equal(h.ui.codexManualRotation,false);
     assert.equal(h.ui.codexDrag,undefined);
-    assert.equal(h.ui.codexModelRotation(50),11.5);
+    assert.equal(h.ui.codexModelRotation(.1),.1*.23);
   }
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.view = 'codexModel';
   for (const button of [1,2]) {
@@ -874,6 +884,7 @@ test('codex pinch captures both fingers, keeps rotation separate and clears stal
   h.pointer('pointerdown',320,200,{pointerId:2});
   const rotation = h.ui.codexRotation;
   assert.equal(h.ui.codexDrag,undefined);
+  assert.equal(h.ui.codexManualRotation,false,'pinch resumes automatic rotation');
   h.pointer('pointermove',420,200,{pointerId:2});
   assert.equal(h.ui.codexZoom,.5); assert.deepEqual(captured,[1,2]);
   h.pointer('pointermove',1000,200,{pointerId:2}); assert.equal(h.ui.codexZoom,.3);

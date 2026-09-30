@@ -113,9 +113,9 @@
         this.battleTutorial = null;
         this.bind();
       }
-      codexModelRotation(time: number) {
-        // Remember the displayed heading so taking over never snaps the model.
-        if (!this.codexManualRotation) this.codexRotation = time * .23;
+      codexModelRotation(dt: number) {
+        // Increment the current heading so releasing a drag never snaps it back.
+        if (!this.codexManualRotation) this.codexRotation += dt * .23;
         return this.codexRotation;
       }
       get localTeam(): PlayerTeam { return this.game.localTeam; }

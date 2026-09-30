@@ -322,6 +322,7 @@
         this.codexTouches.clear();
         this.codexPinchDist = undefined;
         this.codexDrag = undefined;
+        this.codexManualRotation = false;
       },
       codexTouchDistance(this: MeridianUI) {
         const points = [...this.codexTouches.values()];
@@ -340,6 +341,7 @@
           // Pinch takes precedence. Its remaining finger cannot accidentally rotate.
           this.codexDrag = this.codexTouches.size <= 1
             ? {pointerId:e.pointerId,x:e.clientX} : undefined;
+          if (!this.codexDrag) this.codexManualRotation = false;
           return;
         }
         if (this.view !== 'game' || this.paused || !this.R.containsPoint(e.clientX, e.clientY)) return;
@@ -428,7 +430,10 @@
         if (this.view === 'codexModel') {
           this.codexTouches.delete(e.pointerId);
           this.codexPinchDist = this.codexTouchDistance();
-          if (this.codexDrag?.pointerId === e.pointerId) this.codexDrag = undefined;
+          if (this.codexDrag?.pointerId === e.pointerId) {
+            this.codexDrag = undefined;
+            this.codexManualRotation = false;
+          }
           return;
         }
         let previousClick = this.lastClick;

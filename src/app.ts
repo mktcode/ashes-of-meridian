@@ -387,7 +387,7 @@
               R.fogOn = false;
               R.camera(0,0,(kind === 'building' ? 21 : type === 'destroyer' ? 30 : 13) * ui.codexZoom);
               renderEntity(R, {id:7,kind,type,x:0,z:0,faction,team:0,hp:d.hp,maxHp:d.hp,size:d.size,
-                rot:ui.codexModelRotation(time),walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0},time,{localTeam:0});
+                rot:ui.codexModelRotation(dt),walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0},time,{localTeam:0});
             } else {
               clearPlacementGuide();
               R.fogOn = false;
