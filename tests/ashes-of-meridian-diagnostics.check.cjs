@@ -75,16 +75,19 @@ test('GPU probe is sparse, asynchronous and counts submitted work independently 
   for (let i = 0; i <= 15; i++) {
     if (i === 15) gl.ready = true;
     r.beginFrame(i * 16); p.beginFrame(); p.upload(88);
-    for (const pass of ['shadow', 'scene', 'bloom', 'post']) {
+    for (const pass of ['thumbnails', 'shadow', 'scene', 'bloom', 'post']) {
       p.beginPass(pass); p.draw(6, 3); p.endPass();
     }
     r.finishFrame(true);
     if (i < 15) assert.equal(gl.calls.filter(c => c === 'result').length, 0);
   }
-  assert.equal(gl.calls.filter(c => c === 'create').length, 8);
-  assert.equal(gl.calls.filter(c => c === 'result').length, 4);
+  assert.equal(gl.calls.filter(c => c === 'create').length, 10);
+  assert.equal(gl.calls.filter(c => c === 'result').length, 5);
   const first = r.report().frames[0];
   assert.equal(first.gpuMs.scene, 2.5);
+  assert.equal(first.gpuMs.thumbnails, 2.5);
+  assert.equal(first.render.passes.thumbnails.triangles, 6);
+  assert.equal(r.report().summary.gpuMs.thumbnails.p50, 2.5);
   assert.equal(first.render.instanceUploadBytes, 88);
   assert.equal(first.render.passes.scene.drawCalls, 1);
   assert.equal(first.render.passes.scene.triangles, 6);

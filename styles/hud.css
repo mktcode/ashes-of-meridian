@@ -442,7 +442,7 @@
       margin-top: 2px
     }
 
-    /* Model portraits replace only the icon, preserving its layout space and button size. */
+    /* Shared-renderer model tiles preserve the icon's layout space and button size. */
     .model-action { overflow: hidden }
     .model-action .model-space { width: 25px; height: 25px }
     .model-action .action-model {
@@ -450,8 +450,6 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      object-position: center 45%;
       pointer-events: none
     }
     .model-action::after {

@@ -73,6 +73,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-aurelion-art',
   'renderer-aurelion-traffic',
   'renderer-aurelion-atmosphere',
+  'renderer-model-thumbnails',
   'renderer-aurelion-battlefield'
 ]);
 const BATTLEFIELD_SCRIPTS = Object.freeze([
@@ -107,7 +108,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
 ]);
 const MULTIPLAYER_SCRIPTS = Object.freeze(['multiplayer-presentation', 'multiplayer-state', 'multiplayer-client']);
 const DIAGNOSTIC_SCRIPTS = Object.freeze(['diagnostics-recorder', 'diagnostics-gpu', 'diagnostics-browser']);
-const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-codex', 'ui-screens', 'ui-tutorial', 'ui-actions', 'ui-input', 'ui-presentation']);
+const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-model-thumbnail', 'ui-codex', 'ui-screens', 'ui-tutorial', 'ui-actions', 'ui-input', 'ui-presentation']);
 
 // Deliberately not a general HTML parser. Only the project's named classic
 // scripts with quoted attributes and synchronous document order are supported.

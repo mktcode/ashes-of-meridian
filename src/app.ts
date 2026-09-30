@@ -32,8 +32,9 @@
         const profile = persistence.loadProfile();
         if (profile.settings.showFps) $('fpsReadout').classList.remove('hidden');
         R = new MeridianRenderer(canvas);
+        const thumbnails = new MeridianModelThumbnails(R);
         addEventListener('pagehide',event=>{
-          if (!event.persisted) R.releaseEnvironment();
+          if (!event.persisted) { thumbnails.dispose(); R.releaseEnvironment(); }
         });
         R.quality = profile.settings.quality;
         R.resize();
@@ -398,7 +399,9 @@
               }
             }
             diagnostics?.recorder.phase('glSubmission');
-            R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0);
+            R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
+              ui.view === 'codex' ? () => thumbnails.update($('menu'),time) :
+                ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel'),time) : undefined);
             diagnostics?.recorder.phase('overlay');
             ui.drawOverlay(overlayContext);
             diagnostics?.finishFrame(true);

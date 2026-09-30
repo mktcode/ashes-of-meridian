@@ -1,24 +1,5 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
-    const FACTION_0_ACTION_PORTRAITS: Partial<Record<string, string>> = {
-      'train:worker': 'assets/portraits/faction-0-unit-worker.webp',
-      'train:rifle': 'assets/portraits/faction-0-unit-rifle.webp',
-      'train:medic': 'assets/portraits/faction-0-unit-medic.webp',
-      'train:tank': 'assets/portraits/faction-0-unit-tank.webp',
-      'train:artillery': 'assets/portraits/faction-0-unit-artillery.webp',
-      'train:air': 'assets/portraits/faction-0-unit-air.webp',
-      'train:destroyer': 'assets/portraits/faction-0-unit-destroyer.webp',
-      'train:hero': 'assets/portraits/faction-0-unit-hero.webp',
-      'build:hq': 'assets/portraits/faction-0-building-hq.webp',
-      'build:barracks': 'assets/portraits/faction-0-building-barracks.webp',
-      'build:depot': 'assets/portraits/faction-0-building-depot.webp',
-      'build:refinery': 'assets/portraits/faction-0-building-refinery.webp',
-      'build:factory': 'assets/portraits/faction-0-building-factory.webp',
-      'build:hangar': 'assets/portraits/faction-0-building-hangar.webp',
-      'build:turret': 'assets/portraits/faction-0-building-turret.webp'
-    };
-    const BUILDING_PORTRAIT_ACTIONS = new Set(Object.keys(FACTION_0_ACTION_PORTRAITS).filter(key => key.startsWith('build:')));
-    const UNIT_PORTRAIT_ACTIONS = new Set(Object.keys(FACTION_0_ACTION_PORTRAITS).filter(key => key.startsWith('train:')));
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
         // Local scenario control follows the view; this is not network authentication.
@@ -153,16 +134,12 @@
         const active = this.isModeAction(key), tutorialFocus = this.tutorialAction() === key,
           renderedLabel = active ? 'Cancel' : label;
         const faction = this.game.s?.parties[this.localTeam].faction;
-        let badge = active ? '' : opts.badge || '',
-          preview = faction === FACTION_ID.FIRST
-            ? FACTION_0_ACTION_PORTRAITS[key]
-            : faction !== undefined && BUILDING_PORTRAIT_ACTIONS.has(key)
-              ? `assets/portraits/faction-${faction}-building-${key.slice('build:'.length)}.webp`
-              : faction !== undefined && UNIT_PORTRAIT_ACTIONS.has(key)
-                ? `assets/portraits/faction-${faction}-unit-${key.slice('train:'.length)}.webp`
-                : undefined;
-        // Fixed renders of the actual models: no additional WebGL scenes in the HUD.
-        const visual = preview ? `<img class="action-model" src="${preview}" alt="" draggable="false"><i class="model-space" aria-hidden="true"></i>` : icon(ic);
+        const badge = active ? '' : opts.badge || '', [kind,type] = key.split(':');
+        const preview = faction !== undefined && kind === 'build' && hasContentKey(BUILDINGS,type)
+          ? renderModelThumbnail(faction,'building',type,'action-model')
+          : faction !== undefined && kind === 'train' && hasContentKey(UNITS,type)
+            ? renderModelThumbnail(faction,'unit',type,'action-model') : '';
+        const visual = preview ? `${preview}<i class="model-space" aria-hidden="true"></i>` : icon(ic);
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {

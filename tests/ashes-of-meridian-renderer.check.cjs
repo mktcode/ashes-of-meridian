@@ -378,6 +378,23 @@ test('occlusion draws against static depth before entities, never into shadows, 
   }
 });
 
+test('tile callback runs before the full scene and is counted in its own diagnostic pass', () => {
+  const {r,calls} = setup(), hooks=[];
+  r.diagnostics={beginFrame(){hooks.push('frame');},beginPass(pass){hooks.push(pass);},endPass(){},draw(){},upload(){}};
+  calls.length=0;
+  r.render(3,2,()=>{
+    hooks.push('tile');
+    r.gl.bindFramebuffer(r.gl.FRAMEBUFFER,null);
+    r.gl.viewport(0,0,64,64);
+    calls.push(['tile']);
+  });
+  assert.deepEqual(hooks.slice(0,3),['frame','thumbnails','tile']);
+  const at=calls.findIndex(c=>c[0]==='tile');
+  assert.ok(at>=0);
+  assert.ok(calls.slice(at+1).some(c=>c[0]==='viewport'&&c[3]===r.width&&c[4]===r.height),'full-size scene replaces scratch rectangle');
+  assert.ok(calls.slice(at+1).some(c=>c[0]==='batch'&&c[1]==='dynamic'&&c[2]==='scene'));
+});
+
 test('diagnostic hooks bracket real render passes without changing GL work, including Performance exclusions', () => {
   for (const quality of [0, 2]) {
     const { r, calls } = setup(); r.quality = quality; r.resize();

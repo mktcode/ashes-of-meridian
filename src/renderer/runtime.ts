@@ -979,7 +979,7 @@
           g.uniform1i(this.uniform(program, uniform), unit);
         }
       }
-      render(time: number, modelTime = time) {
+      render(time: number, modelTime = time, thumbnails?: () => void) {
         const g = this.gl, environment = this.environment,
           skyProg = environment?.skyProg ?? this.skyProg, postProg = environment?.postProg ?? this.postProg,
           drawScene = environment ? environment.drawSceneBatches.bind(environment, time, modelTime) : this.drawBatches.bind(this);
@@ -987,6 +987,11 @@
         this.frame++;
         this.drawCalls = 0;
         this.diagnostics?.beginFrame();
+        if (thumbnails) {
+          this.diagnostics?.beginPass('thumbnails');
+          thumbnails();
+          this.diagnostics?.endPass();
+        }
         this.upload(this.static);
         this.upload(this.dynamic);
         this.upload(this.effects);

@@ -333,7 +333,7 @@ test('scenario UI perspective resets local interaction, follows actor accounts a
   assert.deepEqual(queries, [['supply', 2], ['cap', 2]]);
   h.ui.issueOrder([7], { type: 'hold' });
   assert.deepEqual(actions, [[2, { kind: 'order', ids: [7], order: { type: 'hold' } }]]);
-  assert.match(h.ui.actionButton('build:hq', 'HQ', 'hq'), /faction-2-building-hq/);
+  assert.match(h.ui.actionButton('build:hq', 'HQ', 'hq'), /data-model-faction="2" data-model-kind="building" data-model-type="hq"/);
   h.ui.modalKind = 'sell'; assert.equal(h.ui.setPerspective(3), false); assert.equal(g.localTeam, 2);
 });
 
@@ -1835,18 +1835,18 @@ test('recruitment delegates producer choice to the simulation, independent of se
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
-test('building and unit actions use the model portrait of the active faction', () => {
+test('building and unit actions request the current model of the active faction', () => {
   const h = setup();
   for (const faction of [0, 1, 2]) {
     h.ui.game.s.parties[0].faction = faction;
     const html = h.UI.prototype.actionButton.call(h.ui, 'build:hq', 'HQ', 'hq');
-    assert.match(html, new RegExp(`assets/portraits/faction-${faction}-building-hq\\.webp`));
+    assert.ok(html.includes(`data-model-faction="${faction}" data-model-kind="building" data-model-type="hq"`));
     assert.match(html, /class="action-model"/);
   }
   for (const faction of [0, 1, 2]) {
     h.ui.game.s.parties[0].faction = faction;
     const html = h.UI.prototype.actionButton.call(h.ui, 'train:worker', 'Worker', 'worker');
-    assert.match(html, new RegExp(`assets/portraits/faction-${faction}-unit-worker\\.webp`));
+    assert.ok(html.includes(`data-model-faction="${faction}" data-model-kind="unit" data-model-type="worker"`));
     assert.match(html, /class="action-model"/);
   }
 });

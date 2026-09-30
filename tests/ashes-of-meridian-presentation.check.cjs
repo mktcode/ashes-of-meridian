@@ -777,8 +777,9 @@ function appClock(diagnostic = false) {
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1;
       frameReady() { return true; } releaseEnvironment() {}
       resize() {} camera() {} project() { return {x:400,y:300}; } begin() { renderWork.begin++; }
-      render(time) { this.diagnostics?.beginFrame(); draws.push({ now, time }); }
+      render(time, modelTime, thumbnails) { this.diagnostics?.beginFrame(); thumbnails?.(); draws.push({ now, time }); }
     },
+    MeridianModelThumbnails: class { update() {} dispose() {} },
     BattlefieldView: class { sync() {} },
     MeridianAudio: class { update() {} },
     MeridianGame: class {

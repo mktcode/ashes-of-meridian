@@ -14,7 +14,7 @@
 .codex-grid { max-width: 1200px; margin: auto; display: grid; grid-template-columns: repeat(auto-fill,minmax(155px,1fr)); gap: 12px }
 .codex-card { min-width: 0; padding: 0 0 12px; border: 1px solid #758f985c; background: #0a1b27; color: #e3f1ee; text-align: left; cursor: pointer; }
 .codex-card:hover, .codex-card:focus-visible { border-color: #7ee6ec; background: #163647 }
-.codex-card img { width: 100%; aspect-ratio: 1; display: block; object-fit: cover; background: #0b1822; }
+.codex-card .codex-thumbnail { width: 100%; height: auto; aspect-ratio: 1; display: block; background: #0b1822; pointer-events: none; }
 .codex-card strong { display: block; padding: 9px 12px 2px; font-size: 13px }
 .codex-card span { display: block; padding: 0 12px; font: 10px var(--mono); color: #8bb9c3 }
 .codex-model-screen { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: clamp(18px, 4vw, 52px) max(20px, 6vw); background: linear-gradient(#05101bd9,transparent 28%,transparent 63%,#05101bea); pointer-events: none }

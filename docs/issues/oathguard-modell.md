@@ -5,7 +5,7 @@ Der Cinder-Pact-Oathguard (`faction-0/unit/rifle`) besitzt nun konturierte Rüst
 ## Noch offen
 
 - Menschliche Sichtprüfung im Codex und bei normalem Gefechtszoom: Silhouette, Teamfarben, Visierhelligkeit und Lesbarkeit kleiner Rüstungsteile. Die Breakwater dient als Detailreferenz, nicht als gleiches Geometriebudget.
-- Bestehendes Portrait nach der Modellabnahme bei Bedarf manuell aus dem fertigen Modell erneuern, gemäß [Modell-/Portraitpflege](../rendering.md#texturen-und-portraits).
+- Codex- und Aktionskacheln verwenden jetzt direkt das aktuelle Modell; dafür ist keine Portraiterneuerung nötig. Ihre Abnahme steht im [Modellkachel-Issue](modell-kacheln.md).
 - Mehr Geometrie wird auch im Schattenpass wiederholt. Die technischen Modellchecks bestätigen keine Mobilperformance; bei auffälligen Kosten im Gefecht die [Diagnose](../testing.md#lokale-performancediagnose) nutzen.
 
 Eine Schuss-/Halteanimation ist ausdrücklich nicht Teil dieser Verfeinerung und benötigt einen separaten Auftrag.

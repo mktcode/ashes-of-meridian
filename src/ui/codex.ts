@@ -51,9 +51,9 @@ const CODEX_FACTION_STORIES = [
 
 function renderCodexScreen(faction: FactionId): string {
   const f = FACTIONS[faction];
-  const cards = (kind: 'unit' | 'building', types: string[]) => types.map(type => {
+  const cards = (kind: 'unit' | 'building', types: (UnitType | BuildingType)[]) => types.map(type => {
     const name = kind === 'unit' ? unitName(type,faction) : buildingName(type,faction);
-    return `<button class="codex-card" data-codex-kind="${kind}" data-codex-type="${type}"><img src="assets/portraits/faction-${faction}-${kind}-${type}.webp" alt="" loading="lazy"><strong>${esc(name)}</strong><span>VIEW MODEL ↗</span></button>`;
+    return `<button class="codex-card" data-codex-kind="${kind}" data-codex-type="${type}">${renderModelThumbnail(faction,kind,type,'codex-thumbnail')}<strong>${esc(name)}</strong><span>VIEW MODEL ↗</span></button>`;
   }).join('');
   return `<div class="subscreen codex-screen"><header class="sub-header"><div><div class="eyebrow">FIELD ARCHIVE</div><h1>Codex</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header>
     <nav class="codex-nav" aria-label="Codex sections">${FACTIONS.map((item,index) => `<button data-codex-faction="${index}" class="${index === faction ? 'active' : ''}" aria-pressed="${index === faction}">${esc(item.name)}</button>`).join('')}<button data-ui="codexStory">READ THE STORY ↗</button></nav>

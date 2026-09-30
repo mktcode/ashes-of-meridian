@@ -1,7 +1,7 @@
 /* Optional, bounded measurements. No game state, DOM, storage or network access. */
 'use strict';
 type DiagnosticCpuPhase = 'simulation' | 'networkPresentation' | 'ui' | 'audio' | 'sceneBuild' | 'glSubmission' | 'overlay';
-type DiagnosticGpuPass = 'shadow' | 'scene' | 'bloom' | 'post';
+type DiagnosticGpuPass = 'thumbnails' | 'shadow' | 'scene' | 'bloom' | 'post';
 interface DiagnosticFrame {
   id: number;
   atMs: number;
@@ -82,7 +82,7 @@ class MeridianDiagnosticRecorder {
       gpu: Partial<Record<DiagnosticGpuPass, ReturnType<typeof distribution>>> = {};
     for (const phase of ['simulation', 'networkPresentation', 'ui', 'audio', 'sceneBuild', 'glSubmission', 'overlay'] as const)
       cpu[phase] = distribution(frames.flatMap(f => f.cpuMs[phase] === undefined ? [] : [f.cpuMs[phase]!]));
-    for (const pass of ['shadow', 'scene', 'bloom', 'post'] as const)
+    for (const pass of ['thumbnails', 'shadow', 'scene', 'bloom', 'post'] as const)
       gpu[pass] = distribution(frames.flatMap(f => f.gpuMs[pass] === undefined ? [] : [f.gpuMs[pass]!]));
     return { capacity: this.capacity, callbacksSeen: this.sequence, stopped: this.stopped,
       summary: { callbacks: frames.length, rendered: frames.filter(f => f.rendered).length,

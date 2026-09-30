@@ -1,12 +1,8 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {existsSync} = require('node:fs');
-const {join} = require('node:path');
 const vm = require('node:vm');
 const {loadScripts,UI_SCRIPTS} = require('./helpers/game-scripts.cjs');
-const root = join(__dirname,'..');
-
-test('codex shows every faction and authored portrait without a profile unlock', () => {
+test('codex exposes current-model tiles for every faction without a profile unlock', () => {
   const context=loadScripts(['core','content',...UI_SCRIPTS]);
   vm.runInContext('Math.random = seeded = () => { throw Error("Codex RNG"); }',context);
   const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS} =
@@ -18,9 +14,7 @@ test('codex shows every faction and authored portrait without a profile unlock',
     assert.match(html,/data-ui="codexStory"/);
     for(const [kind,catalog] of [['unit',UNITS],['building',BUILDINGS]]) {
       for(const type of Object.keys(catalog)) {
-        const portrait=`assets/portraits/faction-${faction}-${kind}-${type}.webp`;
-        assert.ok(existsSync(join(root,portrait)),portrait);
-        assert.ok(html.includes(`src="${portrait}"`));
+        assert.ok(html.includes(`data-model-faction="${faction}" data-model-kind="${kind}" data-model-type="${type}"`));
         const detail=renderCodexModelScreen(faction,kind,type);
         assert.ok(detail.includes(FACTIONS[faction][`${kind}s`][type]));
         assert.ok(detail.includes(catalog[type].desc));

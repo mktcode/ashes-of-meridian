@@ -22,7 +22,7 @@ class MeridianRenderProbe {
     const frame = this.recorder.current;
     if (!frame || this.closed) return;
     frame.render = { instanceUploadBytes: 0, passes: {} };
-    // Four passes every fifteenth rendered frame, never one query per rAF.
+    // Passes every fifteenth rendered frame, never one query per rAF.
     this.sample = this.rendered++ % 15 === 0;
     if (this.sample && this.extension && this.status === 'available') {
       try {
