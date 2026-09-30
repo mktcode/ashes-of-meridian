@@ -1,4 +1,4 @@
-#menu:has(> .codex-model-screen) { background: transparent }
+#menu:has(> .codex-model-screen) { background: transparent; pointer-events: none }
 .codex-screen, .codex-story-screen { background: #07131eea; padding: clamp(18px, 4vw, 52px) max(20px, 6vw); }
 .codex-screen .sub-header, .codex-story-screen .sub-header { max-width: 1200px; margin: 0 auto 22px }
 .codex-nav { max-width: 1200px; margin: 0 auto 26px; display: flex; flex-wrap: wrap; gap: 9px }

@@ -385,7 +385,7 @@
               const {kind,type,faction} = ui.codexSelection;
               const d = kind === 'unit' ? UNITS[type as UnitType] : BUILDINGS[type as BuildingType];
               R.fogOn = false;
-              R.camera(0,0,kind === 'building' ? 21 : type === 'destroyer' ? 30 : 13);
+              R.camera(0,0,(kind === 'building' ? 21 : type === 'destroyer' ? 30 : 13) * ui.codexZoom);
               renderEntity(R, {id:7,kind,type,x:0,z:0,faction,team:0,hp:d.hp,maxHp:d.hp,size:d.size,
                 rot:time*.23,walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0},time,{localTeam:0});
             } else {

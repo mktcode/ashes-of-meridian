@@ -799,6 +799,65 @@ test('successful targeting clears the mode; failed placement allows retry', () =
   assert.equal(h.ui.mode, null);
 });
 
+test('codex wheel zoom is bounded, normalizes delta modes and stays separate from battle camera', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.ui.view = 'codexModel'; h.ui.paused = true;
+  const camera = {...h.ui.game.s.cam};
+  let prevented = 0;
+  const wheel = (deltaY, deltaMode = 0, clientY = 200) => h.world.handlers.wheel({
+    deltaY, deltaMode, clientX:200, clientY, preventDefault:()=>prevented++
+  });
+  for (const [delta, mode] of [[120,0],[7.5,1],[.15,2]]) {
+    h.ui.codexZoom = 1; wheel(delta, mode);
+    assert.ok(Math.abs(h.ui.codexZoom - Math.exp(.18)) < 1e-10);
+  }
+  for (let i=0;i<20;i++) wheel(-1000);
+  assert.equal(h.ui.codexZoom,.3);
+  for (let i=0;i<20;i++) wheel(1000);
+  assert.equal(h.ui.codexZoom,2);
+  wheel(-120,0,10); assert.equal(h.ui.codexZoom,2);
+  h.ui.view = 'codex'; wheel(-120); assert.equal(h.ui.codexZoom,2);
+  assert.equal(prevented,43);
+  assert.deepEqual(h.ui.game.s.cam,camera); assert.deepEqual(h.calls,[]);
+  h.ui.view = 'codexModel'; h.ui.game.s = null;
+  wheel(-120); assert.ok(h.ui.codexZoom<2,'preview works without a running battle');
+});
+
+test('codex pinch captures both fingers, ignores single-finger motion and clears stale gestures', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.ui.view = 'codexModel'; h.ui.paused = true;
+  const camera = {...h.ui.game.s.cam}, captured = [];
+  h.world.setPointerCapture = id => captured.push(id);
+  h.pointer('pointerdown',200,200);
+  h.pointer('pointermove',220,200);
+  assert.equal(h.ui.codexZoom,1);
+  h.pointer('pointerdown',320,200,{pointerId:2});
+  h.pointer('pointermove',420,200,{pointerId:2});
+  assert.equal(h.ui.codexZoom,.5); assert.deepEqual(captured,[1,2]);
+  h.pointer('pointermove',1000,200,{pointerId:2}); assert.equal(h.ui.codexZoom,.3);
+  h.pointer('pointermove',221,200,{pointerId:2}); assert.equal(h.ui.codexZoom,2);
+  h.pointer('pointerup',221,200,{pointerId:2});
+  h.pointer('pointermove',250,200); assert.equal(h.ui.codexZoom,2);
+  h.pointer('pointerdown',350,200,{pointerId:3});
+  h.pointer('pointerdown',400,200,{pointerId:4});
+  h.pointer('pointermove',420,200,{pointerId:4}); assert.equal(h.ui.codexZoom,2,'third touch suspends pinch');
+  h.pointer('pointerup',420,200,{pointerId:4});
+  h.pointer('pointermove',450,200,{pointerId:3}); assert.equal(h.ui.codexZoom,1);
+  h.world.handlers.pointercancel();
+  assert.equal(h.ui.codexTouches.size,0); assert.equal(h.ui.codexPinchDist,undefined);
+  h.pointer('pointerdown',200,200); h.window.handlers.blur();
+  assert.equal(h.ui.codexTouches.size,0);
+  assert.deepEqual(h.ui.game.s.cam,camera); assert.deepEqual(h.calls,[]);
+  h.ui.R.clearStatic = () => {}; h.ui.R.useModelPreview = () => {};
+  for (const [kind,type] of [['unit','rifle'],['building','hq'],['unit','destroyer']]) {
+    h.ui.codexZoom = .3; h.pointer('pointerdown',200,200);
+    h.ui.showCodexModel(kind,type);
+    assert.equal(h.ui.codexZoom,1); assert.equal(h.ui.codexTouches.size,0);
+  }
+  h.pointer('pointerdown',200,200); h.ui.showCodex();
+  assert.equal(h.ui.codexTouches.size,0);
+});
+
 test('mouse wheel zoom and middle-button pan respect camera limits without issuing commands', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   assert.equal(typeof h.world.handlers.wheel, 'function');

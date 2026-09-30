@@ -7,6 +7,7 @@
         this.battleIntro = null;
         this.battleTutorial = null;
         this.view = 'home';
+        this.resetCodexGesture();
         this.codexSelection = null;
         this.paused = true;
         this.audio.setMode?.('menu');
@@ -28,12 +29,15 @@
       showCodex(this: MeridianUI) {
         if (this.view === 'codexModel') this.onPreview?.();
         this.view = 'codex';
+        this.resetCodexGesture();
         this.codexSelection = null;
         $('menu').classList.remove('hidden');
         $('menu').innerHTML = renderCodexScreen(this.codexFaction);
       },
       showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType) {
         this.codexSelection = {faction:this.codexFaction,kind,type};
+        this.codexZoom = 1;
+        this.resetCodexGesture();
         this.R.clearStatic();
         this.R.useModelPreview();
         this.view = 'codexModel';

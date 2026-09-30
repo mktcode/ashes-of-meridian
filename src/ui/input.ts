@@ -128,6 +128,7 @@
           this.radioUntil = 0;
         };
         window.addEventListener('blur', () => {
+          this.resetCodexGesture();
           this.domPressed = false;
           this.drag = null;
         });
@@ -139,6 +140,12 @@
         const c = $('world');
         c.addEventListener('contextmenu', e => e.preventDefault());
         c.addEventListener('wheel', e => {
+          if (this.view === 'codexModel' && this.R.containsPoint(e.clientX, e.clientY)) {
+            e.preventDefault();
+            const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
+            this.codexZoom = clamp(this.codexZoom * Math.exp(clamp(pixels, -240, 240) * .0015), .3, 2);
+            return;
+          }
           if (this.view !== 'game' || this.paused || !this.game.s ||
               !this.R.containsPoint(e.clientX, e.clientY)) return;
           e.preventDefault();
@@ -151,6 +158,7 @@
         c.addEventListener('pointermove', e => this.pointerMove(e));
         c.addEventListener('pointerup', e => this.pointerUp(e));
         c.addEventListener('pointercancel', () => {
+          this.resetCodexGesture();
           this.lastClick = {};
           this.drag = null;
           this.touchPoints.clear();
@@ -310,7 +318,23 @@
         }
         return best;
       },
+      resetCodexGesture(this: MeridianUI) {
+        this.codexTouches.clear();
+        this.codexPinchDist = undefined;
+      },
+      codexTouchDistance(this: MeridianUI) {
+        const points = [...this.codexTouches.values()];
+        return points.length === 2 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : undefined;
+      },
       pointerDown(this: MeridianUI, e: PointerEvent) {
+        if (this.view === 'codexModel') {
+          if (e.pointerType !== 'touch' || !this.R.containsPoint(e.clientX, e.clientY)) return;
+          e.preventDefault();
+          $('world').setPointerCapture(e.pointerId);
+          this.codexTouches.set(e.pointerId, {x:e.clientX,y:e.clientY});
+          this.codexPinchDist = this.codexTouchDistance();
+          return;
+        }
         if (this.view !== 'game' || this.paused || !this.R.containsPoint(e.clientX, e.clientY)) return;
         e.preventDefault();
         if (e.pointerType === 'mouse' && ![0, 1, 2].includes(e.button)) return;
@@ -336,6 +360,16 @@
         };
       },
       pointerMove(this: MeridianUI, e: PointerEvent) {
+        if (this.view === 'codexModel') {
+          if (!this.codexTouches.has(e.pointerId)) return;
+          e.preventDefault();
+          this.codexTouches.set(e.pointerId, {x:e.clientX,y:e.clientY});
+          const distance = this.codexTouchDistance();
+          if (distance !== undefined && this.codexPinchDist && this.codexPinchDist > 0)
+            this.codexZoom = clamp(this.codexZoom * this.codexPinchDist / Math.max(10, distance), .3, 2);
+          this.codexPinchDist = distance;
+          return;
+        }
         this.pointer = { x: e.clientX, y: e.clientY,
           inside: e.target === $('world') && this.R.containsPoint(e.clientX, e.clientY) };
         if (this.view !== 'game' || this.paused) return;
@@ -373,6 +407,11 @@
         }
       },
       pointerUp(this: MeridianUI, e: PointerEvent) {
+        if (this.view === 'codexModel') {
+          this.codexTouches.delete(e.pointerId);
+          this.codexPinchDist = this.codexTouchDistance();
+          return;
+        }
         let previousClick = this.lastClick;
         this.lastClick = {};
         if (e.pointerType === 'touch') this.touchPoints.delete(e.pointerId);

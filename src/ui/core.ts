@@ -32,6 +32,9 @@
       view: 'home' | 'battle' | 'transition' | 'game' | 'codex' | 'codexModel' | 'story';
       codexFaction: FactionId;
       codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType } | null;
+      codexZoom = 1;
+      codexTouches = new Map<number, {x: number; y: number}>();
+      codexPinchDist?: number;
       paused: boolean;
       modalKind: string;
       sellBuildingId: number | null;
