@@ -4,7 +4,9 @@
 
 ## Einrichtung und Projektkontext
 
-[pi-subagents](https://github.com/nicobailon/pi-subagents) ist in [`.pi/settings.json`](../.pi/settings.json) auf einen Git-Commit gepinnt. Pi installiert fehlende Projektpakete nach Projektfreigabe; `.pi/git/` enthält den ignorierten Download, nicht eingecheckte Extension-Quellen. Nach Installation `/reload` ausführen, bei neuer Projektfreigabe Pi neu starten. `/subagents-doctor` prüft die Einrichtung. Updates bewusst mit `pi install -l git:github.com/nicobailon/pi-subagents@<neuer-Commit>` vornehmen und prüfen.
+[pi-subagents](https://github.com/nicobailon/pi-subagents) wird als **Benutzerpaket** installiert (`pi install git:github.com/nicobailon/pi-subagents@<geprüfter-Commit>`; ohne `-l`). Der Pin steht in `~/.pi/agent/settings.json`, der ignorierte Download in `~/.pi/agent/git/`; dieses Repository enthält keine eigene Extension-Kopie. So ist die Extension auch außerhalb dieses Projekts verfügbar. Updates bewusst am Benutzerpaket vornehmen und prüfen; danach Pi neu starten bzw. in einer laufenden Sitzung `/reload` ausführen. `/subagents-doctor` prüft die Einrichtung.
+
+Projektbezogene Einstellungen in [`.pi/settings.json`](../.pi/settings.json) gelten nur hier und überschreiben Benutzerwerte. Agent-Definitionen in [`.pi/agents/`](../.pi/agents/) haben bei gleichem Namen Vorrang vor Benutzer- und Paketagenten; für kleinere Anpassungen eines gemeinsamen Agenten ist `subagents.agentOverrides.<name>` in den Projekteinstellungen geeignet. `disableBuiltins: true` ist nur für dieses Projekt gesetzt: In anderen Projekten bleiben die global installierte Extension und ihre eingebauten Agenten verfügbar. Bei einer projektspezifisch abweichenden Paketversion ist zu beachten, dass ein lokaler Paketeintrag den globalen ersetzt.
 
 Die gemeinsame `AGENTS.md` ist **keine live geteilte Datei**: Jeder Worktree hat eine Kopie seines ausgecheckten Standes. Deshalb Regeln und Einrichtung vor dem Start einer Arbeitswelle committen. Notwendige spätere Regeländerungen ausdrücklich an laufende Agenten übermitteln und vor weiterer Arbeit bestätigen lassen.
 
