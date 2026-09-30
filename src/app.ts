@@ -165,6 +165,35 @@
           fps = 60,
           failed = false;
         const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
+        // A bounded, sampled placement guide; never modifies the simulation grid or fog.
+        let placementGuide: { world: Battlefield; key: string; cells: { x: number; z: number; ok: boolean }[] } | null = null;
+        function drawPlacementGuide(type: BuildingType, s: RunState, world: Battlefield) {
+          if (!world.surface || !world.sight[game.localTeam] || ui.battleIntro) return;
+          const spacing = 4, radius = Math.min(40, Math.max(24, Math.ceil(s.cam.zoom * 0.65 / spacing) * spacing)),
+            cx = Math.round(s.cam.x / spacing) * spacing, cz = Math.round(s.cam.z / spacing) * spacing,
+            key = `${type}:${game.localTeam}:${cx}:${cz}:${radius}:${world.fogVersion}:${Math.floor(s.time * 3)}`;
+          if (placementGuide?.world !== world || placementGuide.key !== key) {
+            const cells: { x: number; z: number; ok: boolean }[] = [], sight = world.sight[game.localTeam],
+              size = BUILDINGS[type].size;
+            for (let z = cz - radius; z <= cz + radius; z += spacing) for (let x = cx - radius; x <= cx + radius; x += spacing) {
+              if (Math.abs(x) >= world.extent - 4 || Math.abs(z) >= world.extent - 4 || !sight.visible[world.idx(x, z)]) continue;
+              const pos = { x, z }, screen = R.project(x, world.surface.heightAt(x, z), z), v = R.viewport;
+              if (!screen || screen.x < v.left - 16 || screen.x > v.right + 16 || screen.y < v.top - 16 || screen.y > v.bottom + 16) continue;
+              // Never disclose an unseen entity through a red placement sample.
+              if (s.entities.some(e => e.hp > 0 && !game.observed(e) && (
+                distance(pos, e) < size + (e.kind === 'unit' ? e.size * UNIT_BODY_SCALE + 1 : e.size + 0.8) ||
+                (e.kind === 'unit' && e.exit && distance(pos, e.exit) < size + e.size * UNIT_BODY_SCALE + 1)))) continue;
+              cells.push({ x, z, ok: !game.canBuild(type, pos, game.localTeam) });
+            }
+            placementGuide = { world, key, cells };
+          }
+          for (const cell of placementGuide.cells) {
+            if (!world.sight[game.localTeam].visible[world.idx(cell.x, cell.z)]) continue;
+            const y = world.surface.heightAt(cell.x, cell.z) + 0.07, color = cell.ok ? 0x91e8db : 0xf18983;
+            R.add('plane', cell.x, y, cell.z, 2.5, 1, 2.5, color, 0, 0, 0, 0.15, 0.23, 'effects');
+            R.add('ring', cell.x, y + 0.01, cell.z, 1.3, 1, 1.3, color, 0, 0, 0, 0.3, 0.5, 'effects');
+          }
+        }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
           const viewState = game.networkTeam !== null ? { ...s, time: t,
@@ -221,6 +250,9 @@
           }
           renderBattlefieldEffects(R, game.effects, world, viewState, ui.pings, t, game.localTeam,
             game.networkTeam !== null ? t : weatherTime);
+          if (ui.mode?.kind === 'build' && !ui.paused && BUILDINGS[ui.mode.arg])
+            drawPlacementGuide(ui.mode.arg, s, world);
+          else placementGuide = null;
           if (ui.mode && ui.pointer.inside && !ui.paused) {
             let p = ui.targetPosition(ui.pointer.x, ui.pointer.y);
             const limit = world.extent - 4;
