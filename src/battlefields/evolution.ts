@@ -2,8 +2,60 @@
  * displacement. Original placement streams/layouts survive; the new surface owns
  * navigation, foundations, model grounding and the rendered triangle samples. */
 'use strict';
+// Bounded macro-geology: a few linked summits or a broken crater rim, rather than
+// uniform noise everywhere. Valley reserves are planned before sampling the skin.
+function alienMountainField(world:Battlefield,style:WorldVariation):(x:number,z:number)=>number {
+  const {Math}=globalThis,rand=seeded(world.terrainSeed^0x4d4f554e),extent=world.extent,
+    angle=rand()*Math.PI,cs=Math.cos(angle),sn=Math.sin(angle),phase=rand()*Math.PI*2,
+    centre={x:(rand()-.5)*24,z:(rand()-.5)*24},
+    summits=Array.from({length:6},(_,i)=>({
+      u:(i%3-1)*extent*.52+(rand()-.5)*18,v:(i<3?-1:1)*extent*.37+(rand()-.5)*24,
+      width:13+rand()*9,length:26+rand()*16,height:style.amplitude*(.65+rand()*.35)
+    })),
+    pads=[...world.layout.startSites.map(p=>({...p,r:31})),...world.layout.resourceSites.map(p=>({...p,r:12})),
+      ...world.layout.resourceSites.map((p,i)=>({x:p.x+(i?7:5),z:p.z+(i?7:18),r:9}))],
+    routes=[...world.layout.corridors,
+      ...world.layout.startSites.map(p=>[[p.x,p.z],[0,0]])],
+    segments=routes.flatMap(route=>route.slice(1).map(([x,z],i)=>{
+      const [ax,az]=route[i],dx=x-ax,dz=z-az;
+      return {ax,az,dx,dz,length2:dx*dx+dz*dz||1};
+    })),
+    // The first approach stays gentle; beyond it mountain walls may become cliffs.
+    approach=(room:number)=>{
+      const t=Math.max(0,room-10);
+      return room<=0?0:room*.38+1.42*(t<6?t*t/12:t-3);
+    },
+    radius=extent*(.35+rand()*.15),rimWidth=11+rand()*7;
+  return (x,z)=>{
+    let room=extent-Math.max(Math.abs(x),Math.abs(z))-5;
+    for(const p of pads)room=Math.min(room,Math.hypot(x-p.x,z-p.z)-p.r);
+    for(const s of segments) {
+      const t=clamp(((x-s.ax)*s.dx+(z-s.az)*s.dz)/s.length2,0,1);
+      room=Math.min(room,Math.hypot(x-s.ax-t*s.dx,z-s.az-t*s.dz)-10);
+    }
+    if(room<=0)return 0;
+    const u=(x-centre.x)*cs-(z-centre.z)*sn,v=(x-centre.x)*sn+(z-centre.z)*cs;
+    let mass=0;
+    if(style.relief==='ridges') {
+      // Max, not sum: overlapping peaks never exceed the fixed height envelope.
+      for(const p of summits) {
+        const across=(v-p.v+Math.sin(u*.025+phase)*7)/p.width,along=(u-p.u)/p.length;
+        mass=Math.max(mass,p.height*Math.exp(-across*across-along*along));
+      }
+    }else {
+      const a=Math.atan2(v,u),r=Math.hypot(u,v),
+        rim=radius+Math.sin(a*3+phase)*7+Math.cos(a*5-phase)*3,
+        broken=.62+.38*Math.sin(a*3+phase)**2;
+      mass=style.amplitude*Math.exp(-(((r-rim)/rimWidth)**2))*broken;
+    }
+    // Low-frequency bedding breaks uniform contours without fine sawtooth slopes.
+    mass*=.91+.09*Math.sin(u*.055+Math.sin(v*.04)+phase);
+    return Math.max(0,Math.min(mass,approach(room)));
+  };
+}
 function worldReliefField(world:Battlefield,style:WorldVariation):(x:number,z:number)=>number {
   const {Math}=globalThis;
+  if(style.family==='alien')return alienMountainField(world,style);
   if(style.relief==='deck')return ()=>0;
   const rand=seeded(world.terrainSeed^0x52454c46),angle=rand()*Math.PI*2,phase=rand()*Math.PI*2,
     cs=Math.cos(angle),sn=Math.sin(angle),extent=world.extent,

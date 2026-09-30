@@ -123,7 +123,7 @@ type EcologyBiome = 'verdant' | 'ochre' | 'rime' | 'mycelium';
 type EcologyWeather = 'clear' | 'mist' | 'rain' | 'snow' | 'ash';
 type EcologyFlora = 'Grove' | 'Acacia' | 'Conifer' | 'Fungus' | 'Coral' | 'Fan' | 'Spire' | 'Pod' | 'Arch' | 'Reed' | 'Shelf' | 'Cactus' | 'Palm';
 type WorldVariationFamily = 'alien' | 'desert' | 'ship' | 'alpine' | 'city' | 'frontier' | 'haven';
-type WorldReliefForm = 'rolling' | 'dunes' | 'basin' | 'folds' | 'craters' | 'terraces' | 'deck';
+type WorldReliefForm = 'rolling' | 'dunes' | 'basin' | 'folds' | 'craters' | 'terraces' | 'deck' | 'ridges' | 'broken-crater';
 interface WorldVariation {
   readonly id: string;
   readonly name: string;

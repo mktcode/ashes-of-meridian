@@ -25,9 +25,9 @@ Westmark ergänzt die Kartenauswahl um ein alpines Tal mit Ressourcen, Flüssen 
 
 ## Landschaftsvarianten auf allen Karten
 
-Alle Karten verbinden echte Höhen, geerdete Geometrie, Fahrzeug-Hanglage, Gelände-Picking und ebene Wirtschaftsflächen mit seedbasiertem Landschaftscharakter und Wetter. Alien Planet besitzt acht Formfamilien statt nur verschiedenfarbiger Pilzwälder; Desert ergänzt Dünen, Mesas, Oasentäler und Salzfalten. Westmark behält Flüsse/Brücken, Mothership seine Trägerdecks und Aurelion seine Stadtplattformen. Haven bleibt ein festes Design.
+Alle Karten verbinden echte Höhen, geerdete Geometrie, Fahrzeug-Hanglage, Gelände-Picking und ebene Wirtschaftsflächen mit seedbasiertem Landschaftscharakter und Wetter. Alien Planet kombiniert acht Pflanzen-/Materialfamilien mit seedbasierten Bergzügen oder aufgebrochenen Kraterrändern: breite Talwege verbinden ebene Wirtschaftsflächen, steile Bergflanken sind gesperrt. Desert ergänzt Dünen, Mesas, Oasentäler und Salzfalten. Westmark behält Flüsse/Brücken, Mothership seine Trägerdecks und Aurelion seine Stadtplattformen. Haven bleibt ein festes Design.
 
-Isolierte Vergleiche nach dem Build: `index.html?experiment=alien-planet&seed=1` für Knochenbögen, Seed `7` für Pilzbecken, `9` für Glassteppe, `10` für Korallenhochland. Ebenso funktionieren `experiment=desert`, `mothership`, `westmark`, `aurelion`, `frontier` und `haven` mit `&seed=…`. Diese Probeläufe verändern keine normalen Spielstände. [Gestaltung und offene Abnahme](docs/issues/project-tomorrow.md).
+Isolierte Vergleiche nach dem Build: `index.html?experiment=alien-planet&seed=1` für Knochenbögen, Seed `7` für Pilzbecken, `9` für Glassteppe, `10` für Korallenhochland. Alien-Seed `9` kombiniert die Glassteppe mit Bergzügen, Seed `7` die Pilzlandschaft mit einem aufgebrochenen Kraterrand; das Pausenmenü benennt beide Ebenen. Ebenso funktionieren `experiment=desert`, `mothership`, `westmark`, `aurelion`, `frontier` und `haven` mit `&seed=…`. Diese Probeläufe verändern keine normalen Spielstände. [Gestaltung und offene Abnahme](docs/issues/project-tomorrow.md).
 
 ## Frontier und feste Kartendesigns
 

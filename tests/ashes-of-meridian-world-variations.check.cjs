@@ -74,6 +74,46 @@ for(const [family,map] of Object.entries(families))test(`${map}: every family ha
   if(family!=='haven')assert.ok(signatures.size>1,'not just palette swaps');
 });
 
+test('Alien macro-geology combines both landforms with every habitat, independent of atmosphere',()=>{
+  const combinations=new Map();
+  for(let seed=1;seed<=128;seed++) {
+    const p=api.battlefieldVariation(api.BATTLEFIELDS['alien-planet'].render,seed),v=p.variation;
+    if(!combinations.has(v.id))combinations.set(v.id,new Set());
+    combinations.get(v.id).add(v.relief);
+    assert.ok(v.amplitude>=36&&v.amplitude<46);
+    assert.ok(v.name.includes(v.relief==='ridges'?'RIDGE COUNTRY':'BROKEN CRATER'));
+  }
+  assert.equal(combinations.size,8);
+  for(const forms of combinations.values())assert.deepEqual([...forms].sort(),['broken-crater','ridges']);
+});
+
+test('Alien mountains have significant sampled height and real cliffs, with wide protected valley floors',()=>{
+  const forms=new Set(),signatures=new Set();
+  for(const seed of [1,7,9,1409,40517]) {
+    const w=new api.Battlefield(seed,'alien-planet'),s=w.surface;
+    forms.add(w.renderProfile.variation.relief);signatures.add(topology(w));
+    assert.ok(s.maxHeight>18&&s.maxHeight<=46,`seed ${seed}: mountain height ${s.maxHeight}`);
+    const cliffs=s.cliffs.reduce((a,b)=>a+b,0);
+    assert.ok(cliffs>25&&cliffs<s.cliffs.length*.12,'bounded, genuinely impassable mountain faces');
+    for(const route of w.layout.corridors)for(let j=1;j<route.length;j++) {
+      const [ax,az]=route[j-1],[bx,bz]=route[j];
+      for(let t=0;t<=1;t+=.1) {
+        const x=ax+(bx-ax)*t,z=az+(bz-az)*t;
+        assert.equal(s.heightAt(x,z),0,'authored valley floor remains level');
+        assert.ok(s.fits(x,z,4),'valley has vehicle body clearance, not just a free centreline');
+      }
+    }
+    for(const p of [...w.layout.startSites,...w.layout.resourceSites]) {
+      assert.equal(s.heightAt(p.x,p.z),0,'economy datum remains unchanged');
+      assert.ok(s.fits(p.x,p.z,7),'economy approaches stay clear of mountain cliffs');
+    }
+    const repeated=new api.Battlefield(seed,'alien-planet');
+    assert.equal(topology(w),topology(repeated),'no retry seeds or cosmetic random terrain');
+    assert.equal(w.renderData.geometries.filter(g=>g.mesh==='terrain').length,1,'one sampled ground skin');
+  }
+  assert.deepEqual([...forms].sort(),['broken-crater','ridges']);assert.equal(signatures.size,5);
+});
+
 test('new habitat and architecture meshes have deterministic, finite, normalized bounded geometry',()=>{
   const flora=['Coral','Fan','Spire','Pod','Arch','Reed','Shelf','Cactus','Palm'];
   for(const part of [...flora.map(p=>'ecology'+p),'variationRadar','variationPylon','variationWreck'])for(const seed of [197,7919,0xffffffff]) {
@@ -132,7 +172,7 @@ test('surface queries never reevaluate generation fields in the per-frame visibi
   context.countedField=(...args)=>{const field=original(...args);return (...p)=>{reads++;return field(...p);};};
   vm.runInContext('worldReliefField=countedField',context);
   try {
-    for(const map of ['westmark','mothership','aurelion']) {
+    for(const map of ['alien-planet','westmark','mothership','aurelion']) {
       const w=new api.Battlefield(1,map),before=reads;
       for(let i=0;i<w.staticGrid.length;i++) {const p=w.point(i);w.surface.heightAt(p.x,p.z);w.surface.visibilityLevelAt(p.x,p.z);}
       assert.equal(reads,before,map+' reads sampled heights, not pad/noise generation');
