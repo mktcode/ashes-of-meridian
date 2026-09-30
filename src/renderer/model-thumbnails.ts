@@ -5,6 +5,11 @@ class MeridianModelThumbnails {
   private applied = new WeakMap<HTMLCanvasElement, string>();
   private readonly cache = new Map<string, HTMLCanvasElement>();
   private readonly cacheLimit = 96;
+  private supportsMSAA: boolean | undefined;
+  private msaaWidth = 0;
+  private msaaHeight = 0;
+  private msaa: {fbo: WebGLFramebuffer; color: WebGLRenderbuffer; depth: WebGLRenderbuffer;
+    resolve: WebGLFramebuffer; output: WebGLRenderbuffer} | null = null;
   constructor(private readonly renderer: MeridianRenderer) {
     // A drawing facade owns only instance buffers and view state. GPU programs,
     // textures and mesh geometry remain owned by the main renderer.
@@ -92,23 +97,46 @@ class MeridianModelThumbnails {
     const halfHeight = Math.max(.5,(max[0]-min[0])/2/(width/height),(max[1]-min[1])/2)*1.03;
     p.vp = M4.mul(M4.ortho(-halfHeight*width/height,halfHeight*width/height,-halfHeight,halfHeight,.1,radius*12+10),view);
     p.drawCalls = 0;
-    // A cold miss copies the scratch rectangle once into the 2D image cache.
+    // Cold misses use native 2x MSAA or average two quarter-pixel jittered
+    // samples. Only the initial capture crosses WebGL/2D; cache hits do neither.
     // The normal full scene overwrites it in the same rAF, before presentation.
-    g.bindFramebuffer(g.FRAMEBUFFER,null);
+    const framebuffer = this.multisampleTarget(width,height);
+    g.bindFramebuffer(g.FRAMEBUFFER,framebuffer);
     g.viewport(0,0,width,height); g.enable(g.SCISSOR_TEST); g.scissor(0,0,width,height);
+    const vp = p.vp, samples = framebuffer ? 1 : 2;
     try {
-      g.enable(g.DEPTH_TEST); g.depthMask(true); g.disable(g.BLEND);
-      g.clearColor(...p.haze,1); g.clear(g.COLOR_BUFFER_BIT|g.DEPTH_BUFFER_BIT);
       p.upload(p.dynamic); p.upload(p.effects);
-      p.bindSceneProgram(0,0);
-      g.uniform1f(p.uniform(p.program,'u_shadowOn'),0);
-      p.drawBatches(p.dynamic);
-      g.enable(g.BLEND); g.blendFunc(g.SRC_ALPHA,g.ONE_MINUS_SRC_ALPHA); g.depthMask(false);
-      p.drawBatches(p.effects);
-      imageContext.drawImage(r.canvas,0,r.canvas.height-height,width,height,0,0,width,height);
+      for (let sample=0;sample<samples;sample++) {
+        if (!framebuffer) {
+          p.vp = new Float32Array(vp);
+          const shift = sample === 0 ? .5 : -.5;
+          p.vp[12] += shift/width; p.vp[13] += shift/height;
+        }
+        g.enable(g.DEPTH_TEST); g.depthMask(true); g.disable(g.BLEND);
+        g.clearColor(...p.haze,1); g.clear(g.COLOR_BUFFER_BIT|g.DEPTH_BUFFER_BIT);
+        p.bindSceneProgram(0,0);
+        g.uniform1f(p.uniform(p.program,'u_shadowOn'),0);
+        p.drawBatches(p.dynamic);
+        g.enable(g.BLEND); g.blendFunc(g.SRC_ALPHA,g.ONE_MINUS_SRC_ALPHA); g.depthMask(false);
+        p.drawBatches(p.effects);
+        if (framebuffer) {
+          g.bindFramebuffer(g.READ_FRAMEBUFFER,framebuffer);
+          // MSAA requires identical color formats. Resolve into RGBA8 first;
+          // the opaque default canvas may use a different internal format.
+          g.bindFramebuffer(g.DRAW_FRAMEBUFFER,this.msaa!.resolve);
+          g.blitFramebuffer(0,0,width,height,0,0,width,height,g.COLOR_BUFFER_BIT,g.NEAREST);
+          g.bindFramebuffer(g.READ_FRAMEBUFFER,this.msaa!.resolve);
+          g.bindFramebuffer(g.DRAW_FRAMEBUFFER,null);
+          g.blitFramebuffer(0,0,width,height,0,0,width,height,g.COLOR_BUFFER_BIT,g.NEAREST);
+        }
+        imageContext.globalAlpha = sample === 0 ? 1 : .5;
+        imageContext.drawImage(r.canvas,0,r.canvas.height-height,width,height,0,0,width,height);
+      }
       r.drawCalls += p.drawCalls;
     } finally {
+      p.vp = vp; imageContext.globalAlpha = 1;
       g.disable(g.SCISSOR_TEST); g.disable(g.BLEND); g.depthMask(true); g.bindVertexArray(null);
+      g.bindFramebuffer(g.FRAMEBUFFER,null);
     }
     this.cache.set(key,image);
     if (this.cache.size > this.cacheLimit) {
@@ -118,6 +146,55 @@ class MeridianModelThumbnails {
     this.apply(tile,context,image,key);
     return 'rendered';
   }
+  private multisampleTarget(width: number, height: number): WebGLFramebuffer | null {
+    const g = this.renderer.gl;
+    if (this.supportsMSAA === undefined) {
+      const counts = (format: number) => Array.from<number>(g.getInternalformatParameter(g.RENDERBUFFER,format,g.SAMPLES) || []);
+      // Never substitute 4x; unsupported devices use two jittered samples.
+      this.supportsMSAA = counts(g.RGBA8).includes(2) && counts(g.DEPTH_COMPONENT24).includes(2);
+    }
+    if (!this.supportsMSAA) return null;
+    if (width === this.msaaWidth && height === this.msaaHeight) return this.msaa?.fbo ?? null;
+    this.releaseMultisampleTarget();
+    this.msaaWidth = width; this.msaaHeight = height;
+    const fbo = g.createFramebuffer(), color = g.createRenderbuffer(), depth = g.createRenderbuffer(),
+      resolve = g.createFramebuffer(), output = g.createRenderbuffer();
+    if (!fbo || !color || !depth || !resolve || !output) {
+      for (const framebuffer of [fbo,resolve]) if (framebuffer) g.deleteFramebuffer(framebuffer);
+      for (const buffer of [color,depth,output]) if (buffer) g.deleteRenderbuffer(buffer);
+      return null;
+    }
+    this.msaa = {fbo,color,depth,resolve,output};
+    g.bindFramebuffer(g.FRAMEBUFFER,fbo);
+    try {
+      let exact = true;
+      for (const [buffer,format,attachment] of [[color,g.RGBA8,g.COLOR_ATTACHMENT0],[depth,g.DEPTH_COMPONENT24,g.DEPTH_ATTACHMENT]] as const) {
+        g.bindRenderbuffer(g.RENDERBUFFER,buffer);
+        g.renderbufferStorageMultisample(g.RENDERBUFFER,2,format,width,height);
+        exact = exact && g.getRenderbufferParameter(g.RENDERBUFFER,g.RENDERBUFFER_SAMPLES) === 2;
+        g.framebufferRenderbuffer(g.FRAMEBUFFER,attachment,g.RENDERBUFFER,buffer);
+      }
+      if (!exact || g.checkFramebufferStatus(g.FRAMEBUFFER) !== g.FRAMEBUFFER_COMPLETE) this.releaseMultisampleTarget();
+      else {
+        g.bindFramebuffer(g.FRAMEBUFFER,resolve);
+        g.bindRenderbuffer(g.RENDERBUFFER,output);
+        g.renderbufferStorage(g.RENDERBUFFER,g.RGBA8,width,height);
+        g.framebufferRenderbuffer(g.FRAMEBUFFER,g.COLOR_ATTACHMENT0,g.RENDERBUFFER,output);
+        if (g.checkFramebufferStatus(g.FRAMEBUFFER) !== g.FRAMEBUFFER_COMPLETE) this.releaseMultisampleTarget();
+      }
+    } finally {
+      g.bindRenderbuffer(g.RENDERBUFFER,null);
+      g.bindFramebuffer(g.FRAMEBUFFER,null);
+    }
+    return this.msaa?.fbo ?? null;
+  }
+  private releaseMultisampleTarget() {
+    if (!this.msaa) return;
+    const g = this.renderer.gl;
+    g.deleteFramebuffer(this.msaa.fbo); g.deleteFramebuffer(this.msaa.resolve);
+    g.deleteRenderbuffer(this.msaa.color); g.deleteRenderbuffer(this.msaa.depth); g.deleteRenderbuffer(this.msaa.output);
+    this.msaa = null;
+  }
   private apply(tile: HTMLCanvasElement, context: CanvasRenderingContext2D, image: HTMLCanvasElement, key: string) {
     if (tile.width !== image.width) tile.width = image.width;
     if (tile.height !== image.height) tile.height = image.height;
@@ -125,6 +202,8 @@ class MeridianModelThumbnails {
     this.applied.set(tile,key);
   }
   dispose() {
+    this.releaseMultisampleTarget();
+    this.msaaWidth = this.msaaHeight = 0;
     this.applied = new WeakMap();
     for (const image of this.cache.values()) image.width = image.height = 0;
     this.cache.clear();

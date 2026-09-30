@@ -3,12 +3,21 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const {modelHarness} = require('./helpers/model-contract.cjs');
 
-function setup() {
+function setup(msaa={}) {
   const h = modelHarness();
   Object.assign(h.context,{innerWidth:800,innerHeight:600,devicePixelRatio:2});
   const {Renderer,Thumbnails} = vm.runInContext('({Renderer:MeridianRenderer,Thumbnails:MeridianModelThumbnails})',h.context);
+  let framebuffers=0,statusChecks=0;
   const calls = [], deleted = [], gl = new Proxy({
     COLOR_BUFFER_BIT:1,DEPTH_BUFFER_BIT:2,
+    getInternalformatParameter(target,format,samples) {
+      calls.push(['getInternalformatParameter',target,format,samples]);
+      return format==='RGBA8' ? msaa.colorSamples ?? [] : msaa.depthSamples ?? [];
+    },
+    getRenderbufferParameter(...args) {calls.push(['getRenderbufferParameter',...args]);return msaa.actualSamples ?? 2;},
+    checkFramebufferStatus(...args) {calls.push(['checkFramebufferStatus',...args]);return (++statusChecks%2===0?msaa.resolveStatus:msaa.status) ?? 'FRAMEBUFFER_COMPLETE';},
+    createFramebuffer() {const fbo={};calls.push(['createFramebuffer',fbo]);framebuffers++;return msaa.failAllocation==='framebuffer'||(msaa.failAllocation==='resolve'&&framebuffers%2===0)?null:fbo;},
+    createRenderbuffer() {const buffer={};calls.push(['createRenderbuffer',buffer]);return msaa.failAllocation==='renderbuffer'?null:buffer;},
     createBuffer() { const buffer={}; calls.push(['createBuffer',buffer]); return buffer; },
     deleteBuffer(buffer) { deleted.push(buffer); }
   },{get(target,key) {
@@ -36,10 +45,10 @@ function setup() {
   h.EntityModels.upload(r);
   const rect={left:20,top:20,right:180,bottom:180,width:160,height:160};
   function tile(faction=0,kind='unit',type='rifle',bounds=rect) {
-    const copies=[];
+    const copies=[],alphas=[],context={globalAlpha:1,drawImage(...args){copies.push(args);alphas.push(this.globalAlpha);}};
     return {dataset:{modelFaction:String(faction),modelKind:kind,modelType:type},
-      width:300,height:150,copies,getBoundingClientRect:()=>bounds,
-      getContext(kind){assert.equal(kind,'2d');return {drawImage(...args){copies.push(args);}};}};
+      width:300,height:150,copies,alphas,getBoundingClientRect:()=>bounds,
+      getContext(kind){assert.equal(kind,'2d');return context;}};
   }
   const images=[];
   h.context.document={createElement(tag){assert.equal(tag,'canvas');const image=tile();images.push(image);return image;}};
@@ -133,4 +142,73 @@ test('snapshot storage stays bounded across resized menus and releases evicted c
   assert.ok(images.slice(0,6).every(image=>image.width===0&&image.height===0));
   thumbs.dispose();assert.equal(thumbs.cache.size,0);
   assert.ok(images.every(image=>image.width===0&&image.height===0));
+});
+
+test('preview MSAA uses exactly 2x, resolves once per cold image and reuses its own small target', () => {
+  const {thumbs,r,tile,rect,calls,images}=setup({colorSamples:[4,2],depthSamples:[4,2]});
+  r.quality=0;
+  const scene={};r.sceneMSAAFbo=scene;r.sceneSamples=4;
+  assert.equal(thumbs.draw(tile()),'rendered');
+  const target=thumbs.msaa;
+  assert.ok(target);
+  assert.deepEqual(calls.filter(c=>c[0]==='renderbufferStorageMultisample'),[
+    ['renderbufferStorageMultisample','RENDERBUFFER',2,'RGBA8',256,256],
+    ['renderbufferStorageMultisample','RENDERBUFFER',2,'DEPTH_COMPONENT24',256,256]
+  ]);
+  assert.deepEqual(calls.filter(c=>c[0]==='blitFramebuffer'),[
+    ['blitFramebuffer',0,0,256,256,0,0,256,256,1,'NEAREST'],
+    ['blitFramebuffer',0,0,256,256,0,0,256,256,1,'NEAREST']
+  ]);
+  assert.ok(calls.some(c=>c[0]==='bindFramebuffer'&&c[1]==='DRAW_FRAMEBUFFER'&&c[2]===target.resolve),'MSAA resolves into matching RGBA8, not directly into the opaque default canvas');
+  assert.ok(calls.some(c=>c[0]==='bindFramebuffer'&&c[1]==='READ_FRAMEBUFFER'&&c[2]===target.fbo));
+  assert.ok(calls.some(c=>c[0]==='bindFramebuffer'&&c[1]==='DRAW_FRAMEBUFFER'&&c[2]===null));
+  assert.deepEqual(calls.at(-1),['bindFramebuffer','FRAMEBUFFER',null]);
+  const settled=calls.length;
+  assert.equal(thumbs.draw(tile()),'cached');assert.equal(calls.length,settled);
+  thumbs.draw(tile(0,'building','hq'));
+  assert.equal(thumbs.msaa,target,'same dimensions reuse the MSAA target');
+  assert.equal(calls.filter(c=>c[0]==='createFramebuffer').length,2);
+  assert.equal(calls.filter(c=>c[0]==='blitFramebuffer').length,4);
+  assert.equal(images.length,2);
+  assert.ok(images.every(image=>image.copies.length===1),'one WebGL copy per resolved image, not per sample');
+  thumbs.draw(tile(0,'building','hq',{...rect,width:160,height:80}));
+  assert.notEqual(thumbs.msaa,target,'resize replaces the bounded scratch target');
+  assert.equal(calls.filter(c=>c[0]==='deleteFramebuffer'&&c[1]===target.fbo).length,1);
+  assert.equal(r.sceneMSAAFbo,scene);assert.equal(r.sceneSamples,4,'main-view settings and targets are untouched');
+  thumbs.dispose();thumbs.dispose();
+  assert.equal(calls.filter(c=>c[0]==='deleteFramebuffer').length,4);
+  assert.equal(calls.filter(c=>c[0]==='deleteRenderbuffer').length,6);
+  assert.equal(thumbs.msaa,null);
+});
+
+for(const [name,options] of Object.entries({
+  '4x-only device':{colorSamples:[4],depthSamples:[4]},
+  'mismatched attachment support':{colorSamples:[2],depthSamples:[4]},
+  'incomplete target':{colorSamples:[2],depthSamples:[2],status:'FRAMEBUFFER_INCOMPLETE_ATTACHMENT'},
+  'incomplete resolve target':{colorSamples:[2],depthSamples:[2],resolveStatus:'FRAMEBUFFER_INCOMPLETE_ATTACHMENT'},
+  'missing resolve framebuffer':{colorSamples:[2],depthSamples:[2],failAllocation:'resolve'},
+  'driver rounds up to 4x':{colorSamples:[2],depthSamples:[2],actualSamples:4},
+  'missing framebuffer':{colorSamples:[2],depthSamples:[2],failAllocation:'framebuffer'},
+  'missing renderbuffer':{colorSamples:[2],depthSamples:[2],failAllocation:'renderbuffer'}
+})) test(`preview AA falls back cleanly without 4x for ${name}`, () => {
+  const {thumbs,tile,calls,images}=setup(options);
+  assert.equal(thumbs.draw(tile()),'rendered');assert.equal(thumbs.msaa,null);
+  assert.equal(images[0].copies.length,2);
+  assert.deepEqual(images[0].alphas,[1,.5],'two opaque subpixel samples are averaged equally');
+  assert.equal(images[0].getContext('2d').globalAlpha,1);
+  assert.ok(!calls.some(c=>c[0]==='blitFramebuffer'),'fallback averages two single-sample scratch images');
+  const location=thumbs.preview.uniform(thumbs.preview.program,'u_vp'),
+    matrices=calls.filter(c=>c[0]==='uniformMatrix4fv'&&c[1]===location).map(c=>c[3]);
+  assert.equal(matrices.length,2);
+  assert.ok(Math.abs(matrices[0][12]-matrices[1][12]-1/256)<1e-6);
+  assert.ok(Math.abs(matrices[0][13]-matrices[1][13]-1/256)<1e-6);
+  assert.deepEqual(calls.at(-1),['bindFramebuffer','FRAMEBUFFER',null]);
+  assert.ok(calls.filter(c=>c[0]==='renderbufferStorageMultisample').every(c=>c[2]===2));
+  assert.deepEqual(calls.at(-1),['bindFramebuffer','FRAMEBUFFER',null]);
+  const allocations=calls.filter(c=>c[0]==='createFramebuffer').length;
+  thumbs.draw(tile(0,'building','hq'));
+  assert.equal(calls.filter(c=>c[0]==='createFramebuffer').length,allocations,'failed dimensions are not allocated repeatedly');
+  thumbs.dispose();
+  const deleted=calls.filter(c=>c[0]==='deleteFramebuffer'||c[0]==='deleteRenderbuffer').map(c=>c[1]);
+  assert.equal(new Set(deleted).size,deleted.length,'partial resources are released only once');
 });
