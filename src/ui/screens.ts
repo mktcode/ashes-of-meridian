@@ -37,6 +37,8 @@
       showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType) {
         this.codexSelection = {faction:this.codexFaction,kind,type};
         this.codexZoom = 1;
+        this.codexRotation = 0;
+        this.codexManualRotation = false;
         this.resetCodexGesture();
         this.R.clearStatic();
         this.R.useModelPreview();

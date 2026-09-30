@@ -47,7 +47,7 @@ Unter **Multiplayer · prototype** können zwei Menschen eine Session erstellen 
 
 ## Spielen
 
-Über **Codex** im Startmenü sind alle drei Fraktionen mit Einheiten, Gebäuden, Portraits, animierter Modellansicht und der Geschichte auch vor ihrer spielerischen Freischaltung zugänglich. In der Modellansicht zoomen Scrollrad oder Zwei-Finger-Pinch; jedes neu geöffnete Modell startet mit passender Ausgangsgröße. Der Codex verändert den Spielstand nicht.
+Über **Codex** im Startmenü sind alle drei Fraktionen mit Einheiten, Gebäuden, Portraits, animierter Modellansicht und der Geschichte auch vor ihrer spielerischen Freischaltung zugänglich. In der Modellansicht zoomen Scrollrad oder Zwei-Finger-Pinch; horizontales Ziehen mit linker Maustaste oder einem Finger dreht das Modell und hält die automatische Drehung an. Jedes neu geöffnete Modell startet wieder mit automatischer Drehung und passender Ausgangsgröße. Der Codex verändert den Spielstand nicht.
 
 Mit **New expedition** eine freigeschaltete Fraktion wählen. Die ersten drei Gefechte führen nacheinander gegen The Cinder Pact, The Manyroot und The Mourning Houses. Ab Stage 4 treten zwei, ab Stage 8 drei Gegner im **Free-for-all** an; deren Fraktionen werden wie Karte und Seed für jedes Gefecht neu bestimmt. Alle bekämpfen einander; das Missionsziel steht im Briefing. Jeder Gegner-Slot sammelt eigene Expeditionsvorteile; neue Gegner beginnen ohne Vorteile. Ohne Startworker zuerst unter **Infantry** einen Worker rekrutieren. Worker liefern Sternenschlacke, Raffinerien an Vents gewinnen Nachhall. Ein Sieg führt zur Vorteilswahl und zum nächsten Gefecht; eine Niederlage beendet die Expedition.
 

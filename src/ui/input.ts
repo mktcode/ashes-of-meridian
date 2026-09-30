@@ -321,6 +321,7 @@
       resetCodexGesture(this: MeridianUI) {
         this.codexTouches.clear();
         this.codexPinchDist = undefined;
+        this.codexDrag = undefined;
       },
       codexTouchDistance(this: MeridianUI) {
         const points = [...this.codexTouches.values()];
@@ -328,11 +329,17 @@
       },
       pointerDown(this: MeridianUI, e: PointerEvent) {
         if (this.view === 'codexModel') {
-          if (e.pointerType !== 'touch' || !this.R.containsPoint(e.clientX, e.clientY)) return;
+          if (!this.R.containsPoint(e.clientX, e.clientY) ||
+              (e.pointerType !== 'touch' && e.button !== 0)) return;
           e.preventDefault();
           $('world').setPointerCapture(e.pointerId);
-          this.codexTouches.set(e.pointerId, {x:e.clientX,y:e.clientY});
-          this.codexPinchDist = this.codexTouchDistance();
+          if (e.pointerType === 'touch') {
+            this.codexTouches.set(e.pointerId, {x:e.clientX,y:e.clientY});
+            this.codexPinchDist = this.codexTouchDistance();
+          }
+          // Pinch takes precedence. Its remaining finger cannot accidentally rotate.
+          this.codexDrag = this.codexTouches.size <= 1
+            ? {pointerId:e.pointerId,x:e.clientX} : undefined;
           return;
         }
         if (this.view !== 'game' || this.paused || !this.R.containsPoint(e.clientX, e.clientY)) return;
@@ -361,13 +368,24 @@
       },
       pointerMove(this: MeridianUI, e: PointerEvent) {
         if (this.view === 'codexModel') {
-          if (!this.codexTouches.has(e.pointerId)) return;
-          e.preventDefault();
-          this.codexTouches.set(e.pointerId, {x:e.clientX,y:e.clientY});
-          const distance = this.codexTouchDistance();
-          if (distance !== undefined && this.codexPinchDist && this.codexPinchDist > 0)
-            this.codexZoom = clamp(this.codexZoom * this.codexPinchDist / Math.max(10, distance), .3, 2);
-          this.codexPinchDist = distance;
+          const drag = this.codexDrag;
+          if (drag?.pointerId === e.pointerId) {
+            e.preventDefault();
+            const dx = e.clientX - drag.x;
+            if (dx !== 0) {
+              this.codexRotation += dx * .01;
+              this.codexManualRotation = true;
+            }
+            drag.x = e.clientX;
+          }
+          if (this.codexTouches.has(e.pointerId)) {
+            e.preventDefault();
+            this.codexTouches.set(e.pointerId, {x:e.clientX,y:e.clientY});
+            const distance = this.codexTouchDistance();
+            if (distance !== undefined && this.codexPinchDist && this.codexPinchDist > 0)
+              this.codexZoom = clamp(this.codexZoom * this.codexPinchDist / Math.max(10, distance), .3, 2);
+            this.codexPinchDist = distance;
+          }
           return;
         }
         this.pointer = { x: e.clientX, y: e.clientY,
@@ -410,6 +428,7 @@
         if (this.view === 'codexModel') {
           this.codexTouches.delete(e.pointerId);
           this.codexPinchDist = this.codexTouchDistance();
+          if (this.codexDrag?.pointerId === e.pointerId) this.codexDrag = undefined;
           return;
         }
         let previousClick = this.lastClick;

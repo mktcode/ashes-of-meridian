@@ -33,6 +33,9 @@
       codexFaction: FactionId;
       codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType } | null;
       codexZoom = 1;
+      codexRotation = 0;
+      codexManualRotation = false;
+      codexDrag?: {pointerId: number; x: number};
       codexTouches = new Map<number, {x: number; y: number}>();
       codexPinchDist?: number;
       paused: boolean;
@@ -109,6 +112,11 @@
         this.battleIntro = null;
         this.battleTutorial = null;
         this.bind();
+      }
+      codexModelRotation(time: number) {
+        // Remember the displayed heading so taking over never snaps the model.
+        if (!this.codexManualRotation) this.codexRotation = time * .23;
+        return this.codexRotation;
       }
       get localTeam(): PlayerTeam { return this.game.localTeam; }
       selectionIds() {

@@ -823,7 +823,47 @@ test('codex wheel zoom is bounded, normalizes delta modes and stays separate fro
   wheel(-120); assert.ok(h.ui.codexZoom<2,'preview works without a running battle');
 });
 
-test('codex pinch captures both fingers, ignores single-finger motion and clears stale gestures', () => {
+test('codex dragging takes over the displayed rotation without affecting zoom or battle controls', () => {
+  for (const pointerType of ['mouse','touch']) {
+    const h = setup(); h.UI.prototype.bind.call(h.ui);
+    h.ui.view = 'codexModel'; h.ui.paused = true;
+    const camera = {...h.ui.game.s.cam};
+    assert.equal(h.ui.codexModelRotation(10),10*.23);
+    h.pointer('pointerdown',200,200,{pointerType});
+    h.pointer('pointermove',200,230,{pointerType});
+    assert.equal(h.ui.codexManualRotation,false,'vertical motion does not stop automatic rotation');
+    h.pointer('pointermove',250,230,{pointerType});
+    assert.equal(h.ui.codexManualRotation,true);
+    assert.equal(h.ui.codexModelRotation(20),10*.23+.5,'manual rotation starts from the displayed heading');
+    h.pointer('pointerup',250,230,{pointerType});
+    h.pointer('pointermove',300,230,{pointerType});
+    assert.equal(h.ui.codexModelRotation(30),10*.23+.5,'released view remains stationary');
+    h.pointer('pointerdown',300,230,{pointerType});
+    h.pointer('pointermove',200,230,{pointerType});
+    assert.ok(Math.abs(h.ui.codexModelRotation(40)-1.8)<1e-10);
+    h.window.handlers.blur();
+    assert.equal(h.ui.codexDrag,undefined);
+    h.pointer('pointermove',300,230,{pointerType});
+    assert.ok(Math.abs(h.ui.codexRotation-1.8)<1e-10);
+    assert.equal(h.ui.codexZoom,1);
+    assert.deepEqual(h.ui.game.s.cam,camera); assert.deepEqual(h.calls,[]);
+    h.ui.R.clearStatic = () => {}; h.ui.R.useModelPreview = () => {};
+    h.ui.showCodexModel('building','hq');
+    assert.equal(h.ui.codexManualRotation,false);
+    assert.equal(h.ui.codexDrag,undefined);
+    assert.equal(h.ui.codexModelRotation(50),11.5);
+  }
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.view = 'codexModel';
+  for (const button of [1,2]) {
+    h.pointer('pointerdown',200,200,{pointerType:'mouse',button});
+    h.pointer('pointermove',300,200,{pointerType:'mouse',button});
+    assert.equal(h.ui.codexManualRotation,false); assert.equal(h.ui.codexDrag,undefined);
+  }
+  h.pointer('pointerdown',200,10,{pointerType:'mouse'});
+  assert.equal(h.ui.codexDrag,undefined,'press outside viewport cannot start rotation');
+});
+
+test('codex pinch captures both fingers, keeps rotation separate and clears stale gestures', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.view = 'codexModel'; h.ui.paused = true;
   const camera = {...h.ui.game.s.cam}, captured = [];
@@ -832,12 +872,15 @@ test('codex pinch captures both fingers, ignores single-finger motion and clears
   h.pointer('pointermove',220,200);
   assert.equal(h.ui.codexZoom,1);
   h.pointer('pointerdown',320,200,{pointerId:2});
+  const rotation = h.ui.codexRotation;
+  assert.equal(h.ui.codexDrag,undefined);
   h.pointer('pointermove',420,200,{pointerId:2});
   assert.equal(h.ui.codexZoom,.5); assert.deepEqual(captured,[1,2]);
   h.pointer('pointermove',1000,200,{pointerId:2}); assert.equal(h.ui.codexZoom,.3);
   h.pointer('pointermove',221,200,{pointerId:2}); assert.equal(h.ui.codexZoom,2);
   h.pointer('pointerup',221,200,{pointerId:2});
   h.pointer('pointermove',250,200); assert.equal(h.ui.codexZoom,2);
+  assert.equal(h.ui.codexRotation,rotation,'pinch and its surviving finger do not rotate');
   h.pointer('pointerdown',350,200,{pointerId:3});
   h.pointer('pointerdown',400,200,{pointerId:4});
   h.pointer('pointermove',420,200,{pointerId:4}); assert.equal(h.ui.codexZoom,2,'third touch suspends pinch');
@@ -845,6 +888,7 @@ test('codex pinch captures both fingers, ignores single-finger motion and clears
   h.pointer('pointermove',450,200,{pointerId:3}); assert.equal(h.ui.codexZoom,1);
   h.world.handlers.pointercancel();
   assert.equal(h.ui.codexTouches.size,0); assert.equal(h.ui.codexPinchDist,undefined);
+  assert.equal(h.ui.codexDrag,undefined);
   h.pointer('pointerdown',200,200); h.window.handlers.blur();
   assert.equal(h.ui.codexTouches.size,0);
   assert.deepEqual(h.ui.game.s.cam,camera); assert.deepEqual(h.calls,[]);
