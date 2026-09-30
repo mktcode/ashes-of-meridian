@@ -442,21 +442,15 @@
       margin-top: 2px
     }
 
-    /* Shared-renderer model tiles preserve the icon's layout space and button size. */
-    .model-action { overflow: hidden }
-    .model-action .model-space { width: 25px; height: 25px }
+    /* Keep the model above its caption rather than underneath a dark text overlay. */
+    .model-action { overflow: hidden; justify-content: flex-start; padding: 4px 3px 6px }
+    .model-action .model-space { width: 100%; height: 82px; flex-shrink: 0 }
     .model-action .action-model {
       position: absolute;
-      inset: 0;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 100%;
-      pointer-events: none
-    }
-    .model-action::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, transparent 22%, #03101c55 45%, #03101ce8 100%);
+      height: 86px;
       pointer-events: none
     }
     .model-action span { position: relative; z-index: 1; text-shadow: 0 1px 3px #000 }
@@ -558,7 +552,7 @@
     #commandTools button:hover { background: #254859 }
     #commandDeck button:focus-visible { outline-offset: -2px }
     #hud .action.disabled:hover { background: #101f2b }
-    .action.disabled .action-model { opacity: .35 }
+    .action.disabled .action-model { opacity: .65 }
     .action.disabled small,
     .action.disabled .cost { color: #80929d }
 

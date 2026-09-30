@@ -400,8 +400,8 @@
             }
             diagnostics?.recorder.phase('glSubmission');
             R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
-              ui.view === 'codex' ? () => thumbnails.update($('menu'),time) :
-                ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel'),time) : undefined);
+              ui.view === 'codex' ? () => thumbnails.update($('menu')) :
+                ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined);
             diagnostics?.recorder.phase('overlay');
             ui.drawOverlay(overlayContext);
             diagnostics?.finishFrame(true);
