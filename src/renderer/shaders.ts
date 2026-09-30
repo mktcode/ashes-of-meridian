@@ -1,7 +1,7 @@
     /* WebGL shader sources. */
     'use strict';
     // Effect-only material; no texture or changes to the embedded material catalog.
-    const CONTACT_SHADOW_MATERIAL = -1;
+    const CONTACT_SHADOW_MATERIAL = -1, PLACEMENT_GUIDE_MATERIAL = -9;
     // Dedicated procedural surfaces; the alloy pool makes deposits visibly illuminate the ground.
     const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3, ALLOY_LIGHT_MATERIAL = -4,
       ALIEN_LIGHT_MATERIAL = -5, SNOWFLAKE_MATERIAL = -6, RAIN_STREAK_MATERIAL = -7, RAIN_SPLASH_MATERIAL = -8;
@@ -209,6 +209,12 @@ void main(){
   float visible=mix(1.,smoothstep(.35,.8,sight),u_fogOn);
   float light=v_mat==${SNOWFLAKE_MATERIAL}.?.72+min(.28,dot(u_skyLight,vec3(.333))):.55+min(.35,dot(u_skyLight,vec3(.333)));
   frag=vec4(v_col.rgb*light,v_col.a*mask*visible);return;
+ }
+ if(v_mat==${PLACEMENT_GUIDE_MATERIAL}.){
+  float sight=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;
+  vec2 cell=abs(fract(v_pos.xz/1.5)-.5);
+  float seam=smoothstep(.43,.49,max(cell.x,cell.y));
+  frag=vec4(v_col.rgb,v_col.a*step(.75,sight)*clamp(max(v_col.r,max(v_col.g,v_col.b))*2.,0.,1.)*(1.-seam*.24));return;
  }
  if(v_mat==${CONTACT_SHADOW_MATERIAL}.){
   float mask=1.-smoothstep(.05,1.,length(v_modelPos.xz*2.));

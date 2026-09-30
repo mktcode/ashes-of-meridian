@@ -766,6 +766,7 @@ function appClock(diagnostic = false) {
     addEventListener() {}, ResizeObserver: class { observe() {} },
     console: { error: e => errors.push(e), warn() {} },
     META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
+    PLACEMENT_GUIDE_MATERIAL: -9,
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
     createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}), drawEffectRing() {},
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
@@ -836,25 +837,33 @@ test('real app build preview validates and draws the same screen target used by 
   assert.deepEqual(a.errors,[]);
 });
 
-test('placement guide samples visible terrain, uses the build validator, and clears outside build mode', () => {
-  const a=appClock(), marks=[], samples=[];
+test('placement guide makes one fine, continuous terrain mesh from bounded visible build samples', () => {
+  const a=appClock(), marks=[], samples=[], uploads=[], releases=[];
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.ui.paused=true;
-  a.setBuilding('depot',{size:2});
-  a.game.localTeam=0;
-  a.game.world={extent:30, surface:{heightAt:()=>3}, sight:[{visible:new Uint8Array([1])}], idx:()=>0};
+  a.setBuilding('depot',{size:2});a.game.localTeam=0;
+  a.game.world={extent:50, fogVersion:0, surface:{heightAt:(x,z)=>3+x*.01},
+    sight:[{visible:new Uint8Array([1])}], idx:()=>0};
+  a.game.s.cam.zoom=40;
   a.game.canBuild=(type,p,team)=>{samples.push([type,p.x,p.z,team]);return p.x<0?'blocked':'';};
   a.renderer.add=(...args)=>marks.push(args);
-  a.ui.paused=false;
-  a.frame(20);
+  a.renderer.geometry=(name,data)=>uploads.push({name,data});
+  a.renderer.releaseGeometry=name=>releases.push(name);
+  a.ui.paused=false;a.frame(20);
   assert.ok(samples.length>0 && samples.length<500);
-  assert.ok(marks.some(m=>m[0]==='plane' && m[7]===0xf18983));
-  assert.ok(marks.some(m=>m[0]==='plane' && m[7]===0x91e8db));
-  assert.ok(marks.every(m=>m[2] >= 3 && m[13]==='effects'));
-  const count=samples.length;marks.length=0;
-  a.frame(40);assert.equal(samples.length,count,'reuse samples between simulation revisions');
-  a.game.world.sight[0].visible[0]=0;marks.length=0;
-  a.frame(60);assert.equal(marks.length,0,'visibility loss hides cached samples immediately');
-  a.ui.mode=null;a.frame(80);assert.equal(marks.length,0);
+  assert.equal(uploads.length,1);
+  assert.equal(uploads[0].name,'placementGuide');
+  assert.ok(uploads[0].data.length>samples.length*54,'finer triangles than validation samples');
+  const colors=[];
+  for(let i=0;i<uploads[0].data.length;i+=9) colors.push(uploads[0].data.slice(i+6,i+9));
+  assert.ok(colors.some(c=>c[0]>c[1]),'red where blocked');
+  assert.ok(colors.some(c=>c[1]>c[0]),'turquoise where buildable');
+  assert.ok(colors.some(c=>c[0]>.42&&c[0]<.94),'smooth transition between samples');
+  assert.ok(marks.every(m=>m[0]==='placementGuide'&&m[13]==='effects'));
+  assert.deepEqual(a.errors,[]);
+  const count=samples.length;a.frame(40);assert.equal(samples.length,count,'reuse mesh between revisions');
+  a.game.world.sight[0].visible[0]=0;a.game.world.fogVersion++;a.frame(60);
+  assert.equal(samples.length,count,'do not probe unseen terrain');
+  a.ui.mode=null;a.frame(80);assert.deepEqual(releases,['placementGuide']);
   assert.deepEqual(a.errors,[]);
 });
 

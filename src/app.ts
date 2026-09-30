@@ -165,34 +165,67 @@
           fps = 60,
           failed = false;
         const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
-        // A bounded, sampled placement guide; never modifies the simulation grid or fog.
-        let placementGuide: { world: Battlefield; key: string; cells: { x: number; z: number; ok: boolean }[] } | null = null;
+        // Coarse validation samples become a continuous, terrain-following color field.
+        // Its fine mesh and GPU storage are view-owned; neither changes world geometry or RNG.
+        const GUIDE_MESH = 'placementGuide', GUIDE_SAMPLE = 3, GUIDE_STEP = 1.5;
+        let placementGuide: { world: Battlefield; key: string } | null = null;
+        function clearPlacementGuide() {
+          if (placementGuide) R.releaseGeometry(GUIDE_MESH);
+          placementGuide = null;
+        }
         function drawPlacementGuide(type: BuildingType, s: RunState, world: Battlefield) {
-          if (!world.surface || !world.sight[game.localTeam] || ui.battleIntro) return;
-          const spacing = 4, radius = Math.min(40, Math.max(24, Math.ceil(s.cam.zoom * 0.65 / spacing) * spacing)),
-            cx = Math.round(s.cam.x / spacing) * spacing, cz = Math.round(s.cam.z / spacing) * spacing,
+          if (!world.surface || !world.sight[game.localTeam] || ui.battleIntro) { clearPlacementGuide(); return; }
+          const radius = Math.min(36, Math.max(24, Math.ceil(s.cam.zoom * 0.55 / GUIDE_SAMPLE) * GUIDE_SAMPLE)),
+            cx = Math.round(s.cam.x / GUIDE_SAMPLE) * GUIDE_SAMPLE,
+            cz = Math.round(s.cam.z / GUIDE_SAMPLE) * GUIDE_SAMPLE,
             key = `${type}:${game.localTeam}:${cx}:${cz}:${radius}:${world.fogVersion}:${Math.floor(s.time * 3)}`;
           if (placementGuide?.world !== world || placementGuide.key !== key) {
-            const cells: { x: number; z: number; ok: boolean }[] = [], sight = world.sight[game.localTeam],
-              size = BUILDINGS[type].size;
-            for (let z = cz - radius; z <= cz + radius; z += spacing) for (let x = cx - radius; x <= cx + radius; x += spacing) {
+            const startX = cx - radius, startZ = cz - radius, count = radius * 2 / GUIDE_SAMPLE + 1,
+              samples = new Float32Array(count * count), sight = world.sight[game.localTeam], size = BUILDINGS[type].size;
+            for (let j = 0; j < count; j++) for (let i = 0; i < count; i++) {
+              const x = startX + i * GUIDE_SAMPLE, z = startZ + j * GUIDE_SAMPLE, pos = { x, z };
               if (Math.abs(x) >= world.extent - 4 || Math.abs(z) >= world.extent - 4 || !sight.visible[world.idx(x, z)]) continue;
-              const pos = { x, z }, screen = R.project(x, world.surface.heightAt(x, z), z), v = R.viewport;
-              if (!screen || screen.x < v.left - 16 || screen.x > v.right + 16 || screen.y < v.top - 16 || screen.y > v.bottom + 16) continue;
-              // Never disclose an unseen entity through a red placement sample.
+              // An unseen blocker must not be revealed by a changed color at its position.
               if (s.entities.some(e => e.hp > 0 && !game.observed(e) && (
                 distance(pos, e) < size + (e.kind === 'unit' ? e.size * UNIT_BODY_SCALE + 1 : e.size + 0.8) ||
                 (e.kind === 'unit' && e.exit && distance(pos, e.exit) < size + e.size * UNIT_BODY_SCALE + 1)))) continue;
-              cells.push({ x, z, ok: !game.canBuild(type, pos, game.localTeam) });
+              samples[j * count + i] = game.canBuild(type, pos, game.localTeam) ? -1 : 1;
             }
-            placementGuide = { world, key, cells };
+            const fine = (count - 1) * 2, row = fine + 1,
+              points = new Float32Array(row * row * 6), data = new Float32Array(fine * fine * 54);
+            for (let j = 0; j <= fine; j++) for (let i = 0; i <= fine; i++) {
+              const x = startX + i * GUIDE_STEP, z = startZ + j * GUIDE_STEP,
+                si = Math.min(count - 2, Math.floor(i / 2)), sj = Math.min(count - 2, Math.floor(j / 2)),
+                u = i / 2 - si, v = j / 2 - sj, base = sj * count + si,
+                a = samples[base], b = samples[base + 1], c = samples[base + count], d = samples[base + count + 1],
+                // Missing visibility fades to transparency rather than becoming red.
+                visibility = (1-u)*(1-v)*Math.abs(a) + u*(1-v)*Math.abs(b) + (1-u)*v*Math.abs(c) + u*v*Math.abs(d),
+                weight = visibility * Math.max(0, Math.min(1, (radius - Math.abs(x - cx)) / GUIDE_SAMPLE,
+                  (radius - Math.abs(z - cz)) / GUIDE_SAMPLE)),
+                score = (1-u)*(1-v)*a + u*(1-v)*b + (1-u)*v*c + u*v*d,
+                blend = visibility ? Math.max(0, Math.min(1, (score / visibility + 1) / 2)) : 0,
+                p = (j * row + i) * 6;
+              // Local X/Z keep chunk bucket names stable as the camera pans.
+              points[p] = x - cx; points[p + 1] = world.surface.heightAt(x, z) + 0.065; points[p + 2] = z - cz;
+              points[p + 3] = (.94 - .52 * blend) * weight;
+              points[p + 4] = (.38 + .52 * blend) * weight;
+              points[p + 5] = (.36 + .49 * blend) * weight;
+            }
+            let offset = 0;
+            const vertex = (index: number) => {
+              const p = index * 6;
+              data[offset++] = points[p]; data[offset++] = points[p + 1]; data[offset++] = points[p + 2];
+              data[offset++] = 0; data[offset++] = 1; data[offset++] = 0;
+              data[offset++] = points[p + 3]; data[offset++] = points[p + 4]; data[offset++] = points[p + 5];
+            };
+            for (let j = 0; j < fine; j++) for (let i = 0; i < fine; i++) {
+              const a = j * row + i, b = a + 1, d = a + row, c = d + 1;
+              vertex(a); vertex(d); vertex(c); vertex(a); vertex(c); vertex(b);
+            }
+            R.geometry(GUIDE_MESH, data);
+            placementGuide = { world, key };
           }
-          for (const cell of placementGuide.cells) {
-            if (!world.sight[game.localTeam].visible[world.idx(cell.x, cell.z)]) continue;
-            const y = world.surface.heightAt(cell.x, cell.z) + 0.07, color = cell.ok ? 0x91e8db : 0xf18983;
-            R.add('plane', cell.x, y, cell.z, 2.5, 1, 2.5, color, 0, 0, 0, 0.15, 0.23, 'effects');
-            R.add('ring', cell.x, y + 0.01, cell.z, 1.3, 1, 1.3, color, 0, 0, 0, 0.3, 0.5, 'effects');
-          }
+          R.add(GUIDE_MESH, cx, 0, cz, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 0.42, 'effects', PLACEMENT_GUIDE_MATERIAL);
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
@@ -252,7 +285,7 @@
             game.networkTeam !== null ? t : weatherTime);
           if (ui.mode?.kind === 'build' && !ui.paused && BUILDINGS[ui.mode.arg])
             drawPlacementGuide(ui.mode.arg, s, world);
-          else placementGuide = null;
+          else clearPlacementGuide();
           if (ui.mode && ui.pointer.inside && !ui.paused) {
             let p = ui.targetPosition(ui.pointer.x, ui.pointer.y);
             const limit = world.extent - 4;
@@ -348,6 +381,7 @@
             const viewTime = game.networkTeam !== null ? ui.multiplayer!.renderTime : game.s?.time;
             if (ui.view === 'game' && game.s) battlefield(viewTime!);
             else if (ui.view === 'codexModel' && ui.codexSelection) {
+              clearPlacementGuide();
               const {kind,type,faction} = ui.codexSelection;
               const d = kind === 'unit' ? UNITS[type as UnitType] : BUILDINGS[type as BuildingType];
               R.fogOn = false;
@@ -355,6 +389,7 @@
               renderEntity(R, {id:7,kind,type,x:0,z:0,faction,team:0,hp:d.hp,maxHp:d.hp,size:d.size,
                 rot:time*.23,walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0},time,{localTeam:0});
             } else {
+              clearPlacementGuide();
               R.fogOn = false;
               R.camera(0, 0, 65, true, time);
               for (let e of preview) {
