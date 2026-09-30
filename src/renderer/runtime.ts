@@ -81,6 +81,7 @@
       viewport!: Pick<DOMRect, 'left' | 'top' | 'right' | 'bottom' | 'width' | 'height'>;
       width!: number;
       height!: number;
+      private targetQuality?: number;
       drawCalls: number;
       diagnostics?: MeridianRenderProbe;
       constructor(canvas: HTMLCanvasElement) {
@@ -364,8 +365,13 @@
         const rect = this.canvas.getBoundingClientRect();
         this.viewport = { left: rect.left, top: rect.top, width: Math.max(1, rect.width), height: Math.max(1, rect.height),
           right: rect.left + Math.max(1, rect.width), bottom: rect.top + Math.max(1, rect.height) };
-        this.width = Math.max(1, Math.round(this.viewport.width * scale));
-        this.height = Math.max(1, Math.round(this.viewport.height * scale));
+        const width = Math.max(1, Math.round(this.viewport.width * scale)),
+          height = Math.max(1, Math.round(this.viewport.height * scale));
+        // Client offsets still refresh above. Reuse successful targets (or their clean
+        // allocation fallback) until dimensions/quality change; never retry every observer callback.
+        if (width === this.width && height === this.height && this.targetQuality === this.quality) return;
+        this.width = width;
+        this.height = height;
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         g.bindTexture(g.TEXTURE_2D, this.sceneTex);
@@ -394,6 +400,7 @@
         this.environment?.resize();
         g.bindRenderbuffer(g.RENDERBUFFER, null);
         g.bindFramebuffer(g.FRAMEBUFFER, null);
+        this.targetQuality = this.quality;
       }
       releaseBloom() {
         for (const target of this.bloomTargets) {

@@ -642,6 +642,34 @@ test('incomplete targets and null GPU allocations leave a clean single-sample fa
   }
 });
 
+test('unchanged resize preserves targets and fallbacks while refreshing client offsets', () => {
+  for (const failure of [{}, { reject: () => true, rejectBloom: true }]) {
+    const h = setup(failure), r = h.r;
+    h.context.devicePixelRatio = 1;
+    r.resize();
+    const targets = [r.sceneMSAAFbo, r.sceneMSAAColor, r.sceneMSAADepth, ...r.bloomTargets],
+      counts = [h.framebuffers.size, h.buffers.size, h.textures.size];
+    let environmentResizes = 0;
+    r.environment = { resize() { environmentResizes++; } };
+    h.calls.length = 0;
+    h.options.viewport = { left: 17, top: 63, width: 800, height: 600 };
+    r.resize(); r.resize();
+    assert.deepEqual([r.sceneMSAAFbo, r.sceneMSAAColor, r.sceneMSAADepth, ...r.bloomTargets], targets);
+    assert.deepEqual([h.framebuffers.size, h.buffers.size, h.textures.size], counts);
+    assert.equal(h.calls.length, 0, 'same-sized resize performs no GL work, even after fallback');
+    assert.equal(environmentResizes, 0, 'city depth target is not invalidated');
+    r.camera(0, 0, 57);
+    const center = r.project(0, 0, 0);
+    assert.ok(Math.abs(center.x - 417) < .001 && Math.abs(center.y - 363) < .001);
+    const ground = r.ground(center.x, center.y);
+    assert.ok(Math.abs(ground.x) < .001 && Math.abs(ground.z) < .001);
+    h.calls.length = 0;
+    r.quality = 1; r.resize();
+    assert.ok(h.calls.some(c => c[0] === 'texImage2D'), 'quality change rebuilds even at DPR 1 with unchanged dimensions');
+    assert.equal(environmentResizes, 1);
+  }
+});
+
 test('resize and quality switches release old attachments and rebuild matching dimensions', () => {
   const h = setup(); h.r.resize(); const old = h.r.sceneMSAAFbo;
   h.context.innerWidth = 1000; h.context.innerHeight = 700; h.r.resize();
