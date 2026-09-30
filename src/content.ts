@@ -239,6 +239,11 @@ type UnitType = keyof typeof UNITS;
 type UnitDefinition = (typeof UNITS)[UnitType];
 const isFlyingUnitType = (type: EntityType) =>
   !!(UNITS as Partial<Record<EntityType, UnitDefinitionShape>>)[type]?.flying;
+// Shared presentation pose; usable by models without loading a battlefield surface.
+function flightLaunchRemaining(e: Position & { exit?: Pick<ExitPath, 'x' | 'z' | 'length'>; flightLaunch?: number }): number {
+  const value = e.flightLaunch ?? (e.exit && e.exit.length > 0 ? Math.hypot(e.x-e.exit.x,e.z-e.exit.z)/e.exit.length : 0);
+  return Math.max(0, Math.min(1, value));
+}
 
 const BUILDING_YAW = Math.PI / 15;
 const BUILDINGS = {

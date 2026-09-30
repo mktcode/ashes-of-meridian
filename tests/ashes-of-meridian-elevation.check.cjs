@@ -113,8 +113,88 @@ test('ground step, yield and placement cannot tunnel across a cliff; aircraft ca
   assert.equal(w.z,30,'large dt must not tunnel');
   assert.equal(g.unitPosition({type:'worker',size:UNITS.worker.size,x:100,z:50}),null,'no teleport from a cliff into a nearby plateau');
   const height=g.world.surface;
-  assert.ok(Math.abs(height.entityHeight(air)-deckHeight(g.world))<1e-6);
-  air.z=65;assert.ok(Math.abs(height.entityHeight(air)-deckHeight(g.world))<1e-6,'fixed cruise height across a cliff');
+  assert.ok(height.entityHeight(air)>=height.heightAt(air.x,air.z));
+  assert.ok(height.entityHeight(air)<=deckHeight(g.world),'local climb, not a global maximum datum');
+  air.z=65;assert.ok(Math.abs(height.entityHeight(air)-deckHeight(g.world))<1e-6,'cruise clears the upper deck');
+});
+
+test('both flight classes use continuous local envelopes and clear their complete footprints over narrow peaks',()=>{
+  let reads=0;
+  const s=new BattlefieldSurface(90,2.5,(x,z)=>{reads++;return x>=20&&x<=25&&Math.abs(z)<=5?30:0;}),before=reads;
+  for(const [type,radius,belly] of [['air',3.5,0],['destroyer',10,-2.5]]) {
+    const far={type,x:-75,z:-75};assert.equal(s.entityHeight(far),type==='air'?0:3,'distant peaks do not lift valley flight');
+    let previous;
+    for(let x=-40;x<=60;x+=.25) {
+      const e=Object.freeze({type,x,z:0}),h=s.entityHeight(e);
+      if(previous!==undefined)assert.ok(Math.abs(h-previous)<=.5*.25+1e-5,'bounded gradual climb/descent');
+      previous=h;
+      // Include worst downward bob and the lower destroyer belly, not just the origin.
+      const bottom=h+3.8-.22+belly;
+      for(let z=-radius;z<=radius;z+=1.25)for(let dx=-radius;dx<=radius;dx+=1.25)
+        assert.ok(bottom>s.heightAt(x+dx,z)+.5,`${type} hull clearance at ${x+dx}/${z}`);
+    }
+  }
+  assert.equal(reads,before,'queries use precomputed samples only');
+  assert.equal(s.entityHeight({type:'tank',x:20,z:0}),30,'ground units remain on the terrain');
+});
+
+test('local flight clearance covers the seven active map surfaces, including mountains and high decks',()=>{
+  for(const [map,seed] of [['alien-planet',9],['desert',1409],['mothership',1409],['westmark',1409],['aurelion',1],['frontier',3],['haven',1409]]) {
+    const w=new Battlefield(seed,map),s=w.surface;
+    let peak={x:0,z:0},highest=-Infinity;
+    for(let i=0;i<w.staticGrid.length;i++) {
+      const p=w.point(i),h=s.heightAt(p.x,p.z);
+      if(Math.max(Math.abs(p.x),Math.abs(p.z))<w.extent-12&&h>highest){peak=p;highest=h;}
+    }
+    for(const p of [peak,{x:0,z:0},...w.layout.startSites])for(const [type,radius,belly] of [['air',3.5,0],['destroyer',10,-2.5]]) {
+      const e={...p,type},bottom=s.entityHeight(e)+3.8-.22+belly;
+      for(let z=-radius;z<=radius;z+=2.5)for(let x=-radius;x<=radius;x+=2.5)
+        assert.ok(bottom>s.heightAt(p.x+x,p.z+z)+.5,`${map}/${type}: full hull clears terrain`);
+    }
+    assert.ok(s.entityHeight({...peak,type:'destroyer'})>s.entityHeight({...peak,type:'air'}),'heavy ships do not fly below light aircraft');
+  }
+});
+
+test('launch altitude is shared by models and effects, without double lowering or hillside intersections',()=>{
+  const flat=new BattlefieldSurface(30,2.5,()=>0),wall=new BattlefieldSurface(30,2.5,x=>x>=0?30:0);
+  for(const type of ['air','destroyer']) {
+    const exit={building:99,x:4,z:0,length:24},datum=type==='air'?0:3;
+    for(const x of [-20,-8,4]) {
+      const e={id:3,kind:'unit',type,x,z:0,exit,hp:100,faction:0,team:0,size:UNITS[type].size},
+        remaining=(4-x)/24,expected=datum-3*remaining;
+      assert.equal(flat.entityHeight(e),expected);
+      const calls=drawPose(e,flat),noExit=drawPose({...e,exit:undefined},flat);
+      calls.forEach((c,i)=>assert.ok(Math.abs(c[2]-noExit[i][2]+3*remaining)<1e-6,'launch lowering applied once'));
+      const effects=new MeridianEffects(()=>{throw Error('flight height RNG');});effects.entityHeight=p=>flat.entityHeight(p);
+      effects.shot(e,{...e,exit:undefined});const shot=effects.fx.at(-1);
+      assert.equal(shot.y,expected+4.5);assert.equal(shot.ty,datum+4.5);
+      const bottom=wall.entityHeight(e)+3.8-.22+(type==='destroyer'?-2.5:0),radius=type==='destroyer'?10:3.5;
+      for(let dx=-radius;dx<=radius;dx+=1)assert.ok(bottom>wall.heightAt(x+dx,0)+.5,'launch never blends the hull into a cliff');
+    }
+  }
+});
+
+test('network flight poses sample the local envelope and visible launch effects omit the hangar identity',()=>{
+  const surface=new BattlefieldSurface(30,2.5,x=>x>=0?30:0),timeline=new MultiplayerTimeline(),
+    e={id:1,x:-8,z:0,rot:0,kind:'unit',type:'air',hp:100,faction:0,team:0,size:1,flightLaunch:1},end={...e,x:-2};
+  delete end.flightLaunch;
+  timeline.push({time:1,entities:[e],effects:[]},1000);
+  timeline.push({time:1.2,entities:[end],effects:[]},1200);timeline.advance(1220,()=>{});
+  const pose=timeline.poses.get(1);assert.ok(Math.abs(pose.x+5)<1e-7);assert.ok(Math.abs(pose.flightLaunch-.5)<1e-7);
+  const chord=(surface.entityHeight(e)+surface.entityHeight(end))/2;
+  assert.ok(Math.abs(surface.entityHeight(pose)-chord)>.05,'resample the envelope, not a height chord through a crest');
+  timeline.advance(1400,()=>{});assert.equal(pose.flightLaunch,0,'launch completion does not retain the earlier fraction');
+  const g=game();g.canSee=()=>true;
+  const source=g.spawnUnit('air',-8,0,0,0),target=g.spawnUnit('destroyer',-2,0,1,2);
+  source.exit={building:987,x:0,z:0,length:8};
+  const projected=projectMultiplayerEffect(g,0,{kind:'shot',source,target}),
+    publicPlane=multiplayerFrame(g,1,new Map()).entities.find(p=>p.id===source.id);
+  for(const p of [projected.source,publicPlane]) {
+    assert.equal(p.exit,undefined,'neither exit coordinates nor the hangar identity are public');
+    assert.equal(p.flightLaunch,1);
+    assert.equal(surface.entityHeight(p),surface.entityHeight(source),'network pose and shot keep the launch height');
+  }
+  assert.equal(projected.target.flightLaunch,undefined);
 });
 
 test('worker crosses a ramp up and down using ordinary orders',()=>{

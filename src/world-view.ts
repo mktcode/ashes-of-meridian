@@ -144,12 +144,12 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       const rot = e.kind === 'building' ? (e.team === 1 ? Math.PI : 0) + BUILDING_YAW : e.rot || 0,
         cs = Math.cos(rot),
         sn = Math.sin(rot);
-      const ground = R.surface?.entityHeight(e) ?? 0,
+      const ground = R.surface?.entityHeight(e) ??
+          (isFlyingUnitType(e.type) ? -3 * flightLaunchRemaining(e) : 0),
         frame = vehicleGroundFrame(R.surface, e, cs, sn);
       let y = ground + (
         isFlyingUnitType(e.type)
-          ? 3.8 - (e.exit ? 3 * clamp(distance(e, e.exit) / e.exit.length, 0, 1) : 0) +
-            Math.sin(time * 2 + e.id) * 0.22
+          ? 3.8 + Math.sin(time * 2 + e.id) * 0.22
           : e.faction === FACTION_ID.THIRD && e.kind === 'unit'
             ? 0.3 + Math.sin(time * 2 + e.id) * 0.08
             : 0);

@@ -49,6 +49,29 @@ test('authored destroyers keep GLB triangles, independent moving parts and unifo
   }
 });
 
+test('local flight envelopes keep the complete animated aircraft and destroyer meshes above mountain triangles', () => {
+  const h=modelHarness({heavyModels:true}),meshes={},Surface=vm.runInContext('BattlefieldSurface',h.context);
+  h.EntityModels.upload({meshes,geometry(name,data){meshes[name]=data;}});
+  const surface=new Surface(30,2.5,(x,z)=>Math.max(0,40-Math.hypot(x,z)*12)),
+    rotate=([x,y,z],ry,rx,rz)=>{
+      [x,y]=[x*Math.cos(rz)-y*Math.sin(rz),x*Math.sin(rz)+y*Math.cos(rz)];
+      [y,z]=[y*Math.cos(rx)-z*Math.sin(rx),y*Math.sin(rx)+z*Math.cos(rx)];
+      return [x*Math.cos(ry)+z*Math.sin(ry),y,-x*Math.sin(ry)+z*Math.cos(ry)];
+    };
+  for(const faction of [0,1,2])for(const type of ['air','destroyer'])for(const time of [0,1]) {
+    const e={id:7,kind:'unit',type,faction,team:0,hp:1500,size:h.UNITS[type].size,x:-6,z:-6,rot:Math.PI/4},
+      calls=h.draw(e,{},time),datum=surface.entityHeight(e);
+    for(const call of calls) {
+      const mesh=meshes[call[0]];if(!mesh)continue;
+      for(let i=0;i<mesh.length;i+=9) {
+        const p=rotate([mesh[i]*call[4],mesh[i+1]*call[5],mesh[i+2]*call[6]],...call.slice(8,11)),
+          x=call[1]+p[0],y=call[2]+p[1]+datum,z=call[3]+p[2];
+        assert.ok(y>surface.heightAt(x,z)+.5,`${faction}/${type}: actual transformed vertex clears the mountain`);
+      }
+    }
+  }
+});
+
 test('source GLBs match the supported embedded data layout and portraits exist', () => {
   const counts = {breakwater:20528,crownwing:49848,catafalque:31664};
   for (const [index,name] of Object.keys(counts).entries()) {

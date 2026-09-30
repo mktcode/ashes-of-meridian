@@ -112,7 +112,7 @@
           this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker')
             .filter(e => {
               const pose = this.multiplayer?.displayEntity(e) ?? e;
-              const y = 1 + (this.game.world?.surface?.entityHeight(pose) ?? 0),
+              const y = (isFlyingUnitType(pose.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(pose) ?? 0),
                 p = this.R.project(pose.x, y, pose.z);
               return p && this.R.containsPoint(p.x, p.y);
             }).map(e => e.id));
@@ -436,7 +436,7 @@
                 (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
                 const pose = this.multiplayer?.displayEntity(e) ?? e;
-                let q = this.R.project(pose.x, 1 + (this.game.world?.surface?.entityHeight(pose) ?? 0), pose.z);
+                let q = this.R.project(pose.x, (isFlyingUnitType(pose.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(pose) ?? 0), pose.z);
                 return q && this.R.containsPoint(q.x, q.y);
               });
             this.select(units.map(e => e.id));

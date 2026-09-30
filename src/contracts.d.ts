@@ -376,7 +376,10 @@ interface CommandQueue {
   processing: boolean;
 }
 
-type EffectPose = Pick<EntityBase, 'x' | 'z' | 'kind' | 'type' | 'team' | 'faction' | 'rot' | 'size'>;
+type EffectPose = Pick<EntityBase, 'x' | 'z' | 'kind' | 'type' | 'team' | 'faction' | 'rot' | 'size'> & {
+  exit?: Pick<ExitPath, 'x' | 'z' | 'length'>;
+  flightLaunch?: number;
+};
 type SimulationPresentation =
   | { kind: 'shot' | 'healing' | 'mining' | 'construction'; source: Entity; target: Entity; travel?: number }
   | { kind: 'damage'; target: Entity; amount: number }
@@ -412,6 +415,8 @@ interface EntityBase extends Position {
   maxShield: number;
   target?: number | null;
   exit?: ExitPath;
+  /** Read-model launch fraction only; authoritative units retain their private exit path. */
+  flightLaunch?: number;
   yieldTo?: Position;
   yieldUntil?: number;
   pathGoal?: Position;

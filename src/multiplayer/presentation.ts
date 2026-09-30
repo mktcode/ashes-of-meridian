@@ -12,7 +12,8 @@ type MultiplayerEffect = { time: number } & (
 );
 const multiplayerEffectBoxes = new WeakMap<MeridianGame, Map<PlayerTeam, MultiplayerEffect[]>>();
 function effectPose(e: Entity): EffectPose {
-  return { x: e.x, z: e.z, kind: e.kind, type: e.type, team: e.team, faction: e.faction, rot: e.rot, size: e.size };
+  return { x: e.x, z: e.z, kind: e.kind, type: e.type, team: e.team, faction: e.faction, rot: e.rot, size: e.size,
+    ...(e.exit && isFlyingUnitType(e.type) ? { flightLaunch: flightLaunchRemaining(e) } : {}) };
 }
 function projectMultiplayerEffect(game: MeridianGame, team: PlayerTeam, event: SimulationPresentation): MultiplayerEffect | null {
   const time = game.s!.time, point = (p: Position) => ({ x: p.x, z: p.z });
@@ -128,6 +129,7 @@ class MultiplayerTimeline {
       const angle = Math.atan2(Math.sin(b.rot - a.rot), Math.cos(b.rot - a.rot));
       pose.x = a.x + (b.x - a.x) * alpha; pose.z = a.z + (b.z - a.z) * alpha;
       pose.rot = a.rot + angle * alpha; pose.walk = a.walk + (b.walk - a.walk) * alpha;
+      if (isFlyingUnitType(entity.type)) pose.flightLaunch = (a.flightLaunch ?? 0) + ((b.flightLaunch ?? 0) - (a.flightLaunch ?? 0)) * alpha;
     }
     const due: MultiplayerEffect[] = [];
     while (this.effects.length && this.effects[0].time <= this.time) due.push(this.effects.shift()!);

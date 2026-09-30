@@ -6,6 +6,8 @@ class BattlefieldSurface {
   readonly heights: Float32Array;
   readonly cliffs: Uint8Array;
   readonly maxHeight: number;
+  // Immutable flight envelopes, baked with the terrain, never searched per unit/frame.
+  private readonly flights: readonly { floor: Float32Array; cruise: Float32Array }[];
   /** Walkable structures may still forbid foundations (for example bridge decks). */
   buildBlocked?: Uint8Array;
   constructor(readonly extent: number, readonly cellSize: number, height: (x: number, z: number) => number,
@@ -28,13 +30,49 @@ class BattlefieldSurface {
       if (Math.max(Math.hypot(c - d, d - a), Math.hypot(b - a, c - b)) / this.step > .65)
         this.cliffs[Math.floor(z / 2) * grid + Math.floor(x / 2)] = 1;
     }
+    // Conservative yaw/animation footprints for the light aircraft and authored destroyers.
+    this.flights = [this.flightEnvelope(3.5), this.flightEnvelope(10)];
+  }
+  private flightEnvelope(radius: number) {
+    const n = this.size, reach = Math.ceil(radius / this.step) + 1,
+      scratch = new Float32Array(this.heights.length), floor = new Float32Array(this.heights.length),
+      queue = new Int32Array(n);
+    // Separable sliding maxima cover the whole hull, including terrain triangle corners.
+    const scan = (input: Float32Array, output: Float32Array, start: number, stride: number) => {
+      let head = 0, tail = 0, right = 0;
+      for (let i = 0; i < n; i++) {
+        while (right < n && right <= i + reach) {
+          while (tail > head && input[start + queue[tail - 1] * stride] <= input[start + right * stride]) tail--;
+          queue[tail++] = right++;
+        }
+        while (queue[head] < i - reach) head++;
+        output[start + i * stride] = input[start + queue[head] * stride];
+      }
+    };
+    for (let z = 0; z < n; z++) scan(this.heights, scratch, z * n, 1);
+    for (let x = 0; x < n; x++) scan(scratch, floor, x, n);
+    const cruise = floor.slice(), rise = this.step * .5;
+    // Max-plus distance transform: nearby peaks cause gradual approach/departure,
+    // but a distant summit no longer dictates the altitude of the entire map.
+    for (let z = 0; z < n; z++) {
+      for (let x = 1; x < n; x++) { const i = z * n + x; cruise[i] = Math.max(cruise[i], cruise[i - 1] - rise); }
+      for (let x = n - 2; x >= 0; x--) { const i = z * n + x; cruise[i] = Math.max(cruise[i], cruise[i + 1] - rise); }
+    }
+    for (let x = 0; x < n; x++) {
+      for (let z = 1; z < n; z++) { const i = z * n + x; cruise[i] = Math.max(cruise[i], cruise[i - n] - rise); }
+      for (let z = n - 2; z >= 0; z--) { const i = z * n + x; cruise[i] = Math.max(cruise[i], cruise[i + n] - rise); }
+    }
+    return { floor, cruise };
   }
   heightAt(x: number, z: number): number {
+    return this.sampleHeight(this.heights, x, z);
+  }
+  private sampleHeight(heights: Float32Array, x: number, z: number): number {
     const gx = Math.max(0, Math.min(this.size - 1, (x + this.extent) / this.step)),
       gz = Math.max(0, Math.min(this.size - 1, (z + this.extent) / this.step)),
       col = Math.min(this.size - 2, Math.floor(gx)), row = Math.min(this.size - 2, Math.floor(gz)),
       u = gx - col, v = gz - row, i = row * this.size + col,
-      a = this.heights[i], b = this.heights[i + 1], c = this.heights[i + this.size + 1], d = this.heights[i + this.size];
+      a = heights[i], b = heights[i + 1], c = heights[i + this.size + 1], d = heights[i + this.size];
     return v >= u ? a + (c - d) * u + (d - a) * v : a + (b - a) * u + (c - b) * v;
   }
   visibilityLevelAt(x: number, z: number): number {
@@ -67,12 +105,15 @@ class BattlefieldSurface {
     }
     return Number.isFinite(best) ? {x:a[0]+dx*best,z:a[2]+dz*best} : null;
   }
-  entityHeight(e: Position & { type: string; exit?: ExitPath }): number {
-    const floor = this.heightAt(e.x,e.z);
-    if (e.type !== 'air') return floor;
-    // Fixed cruise datum prevents jumps at cliffs; a low hangar still launches at its own height.
-    const remaining = e.exit ? Math.min(1,Math.hypot(e.x-e.exit.x,e.z-e.exit.z)/e.exit.length) : 0;
-    return this.maxHeight + (floor-this.maxHeight)*remaining;
+  entityHeight(e: Position & { type: string; exit?: Pick<ExitPath, 'x' | 'z' | 'length'>; flightLaunch?: number }): number {
+    const floor = this.heightAt(e.x,e.z), index = e.type === 'air' ? 0 : e.type === 'destroyer' ? 1 : -1;
+    if (index < 0) return floor;
+    const profile = this.flights[index], cruise = this.sampleHeight(profile.cruise, e.x, e.z),
+      hullFloor = this.sampleHeight(profile.floor, e.x, e.z),
+      remaining = flightLaunchRemaining(e);
+    // Include launch lowering here so effects, picking and models agree. Never blend
+    // the hull into a hillside; the larger ships also need a higher belly datum.
+    return Math.max(hullFloor, cruise + (floor-cruise)*remaining) + (index === 1 ? 3 : 0) - 3*remaining;
   }
   fits(x: number, z: number, radius = 0): boolean {
     const n = this.extent * 2 / this.cellSize, cell = this.cellSize;

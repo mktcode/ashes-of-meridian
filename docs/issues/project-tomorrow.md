@@ -67,6 +67,14 @@ Vergleich nach dem Build: `experiment=alien-planet&seed=9` (Glassteppe/Bergzüge
 
 - [ ] Neue Großformen menschlich abnehmen: räumliche Gliederung statt leerer Fläche, Bergsilhouetten und Material-/Pflanzenauflage an steilen Flanken, Einheitenverdeckung, Bauflächen und faire Umwege. Besonders Glassteppe bei normalem Zoom/Nebel sowie Fluggeräte über den höheren Bergen prüfen. Bestehende Pflanzenpositionen sind erhalten; technische Erdung ist keine künstlerische Abnahme der Hangvegetation. Mobilkosten und KI-/Balance-Langläufe bleiben separat offen.
 
+### Flugfreiraum nach dem Reliefausbau
+
+Nutzerbefund: Flugzeuge zu hoch, Zerstörer zu niedrig und Flug durch Berge. Bestätigte Ursachen: Nur `air` las das globale Oberflächenmaximum; `destroyer` folgte fälschlich dem örtlichen Boden. Beide Klassen nutzen jetzt vorberechnete lokale Freiraumhüllen mit vollständigem Modell-Fußabdruck, geglätteten An-/Abstiegen und höherem Zerstörer-Bauchdatum. Hangarausfahrt, Modell, Picking und Effekte teilen die Höhenabfrage. Netzwerkansichten übertragen nur den Startanteil, keine private Hangar-/Ausfahrtsinformation. [Maßgeblicher Vertrag und Grenzen](../architecture.md#welt-darstellung-und-zufall).
+
+Gezielte technische Prüfungen decken alle sieben aktiven Oberflächen, schmale Gipfel, vollständige animierte Flugzeug-/Zerstörermeshes, Hangarstarts, Netzwerkinterpolation und die Redaktion privater Ausfahrtsdaten ab. Client-/Serverbuild, Standardtestsuite und kurze Servertests bestanden. Der technische `file://`-Check zeichnet Alien Planet, Desert und Mothership auf drei Qualitätsstufen einschließlich Picking ohne JavaScript-/WebGL-Fehler oder externe Abrufe. KI-/Simulations-Langläufe und Echtgeräte-Messungen wurden nicht ausgeführt.
+
+- [ ] Die korrigierten Flugbahnen im normalen Spiel auf Bergen, Tälern und Decks sowie während der Produktion menschlich abnehmen: Bodenabstand, Verhältnis von leichtem Flugzeug/Zerstörer und An-/Abstiege. Terrainfreiheit ist technisch geprüft, nicht die komplette Vermeidung hoher Dekorbauten/Baumkronen oder separater Außenkulisse. Keine Änderungen an planaren Kampf-, Sicht-, Geschwindigkeits- oder Flugpfadregeln.
+
 ### Variabler Gefechtsauftakt
 
 Frontier-HQ-Expeditionen wählen aus dem Encounter-Seed ein angekündigtes Pionier-, Aufklärungs-, Panzer- oder Artilleriepaket. Alle Parteien erhalten dieselbe Zusammensetzung in ihrer eigenen Fraktion zusätzlich zu bestehenden Vorteilen. Auswahl/Briefing verwenden einen unabhängigen Stream; die Einheiten entstehen nach der geschützten Ressourceninitialisierung mit regulärer Platzierungsprüfung. CPU-/Netzwerkszenarien und andere Karten übernehmen diese Starts nicht. Sieg, Vorteilswahl, Aufstieg und Persistenz bleiben unverändert. Das ist keine Holdout-/Wellenimplementierung; [eigene Freigabegrenze](expeditions-missionsziele-und-holdout.md).

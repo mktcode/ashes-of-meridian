@@ -54,6 +54,8 @@ function multiplayerEntity(e: Entity, team: PlayerTeam, known: Set<number>): Ent
     path: [], pi: 0, order,
     queue: own ? e.queue.map(q => ({ type: q.type, progress: q.progress, time: q.time, cost: q.cost, gas: q.gas })) : []
   } as Entity;
+  // Public launch pose only, never the private hangar id or exit target coordinates.
+  if (isFlyingUnitType(e.type) && e.exit) result.flightLaunch = flightLaunchRemaining(e);
   if (e.kind === 'resource' && result.kind === 'resource') result.amount = e.amount;
   if (own) {
     if (e.rally) result.rally = { x: e.rally.x, z: e.rally.z };
