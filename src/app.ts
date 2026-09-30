@@ -222,7 +222,7 @@
           renderBattlefieldEffects(R, game.effects, world, viewState, ui.pings, t, game.localTeam,
             game.networkTeam !== null ? t : weatherTime);
           if (ui.mode && ui.pointer.inside && !ui.paused) {
-            let p = R.ground(ui.pointer.x, ui.pointer.y);
+            let p = ui.targetPosition(ui.pointer.x, ui.pointer.y);
             const limit = world.extent - 4;
             p.x = clamp(p.x, -limit, limit);
             p.z = clamp(p.z, -limit, limit);

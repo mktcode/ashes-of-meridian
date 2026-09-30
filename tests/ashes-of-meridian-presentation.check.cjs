@@ -749,7 +749,7 @@ function appClock(diagnostic = false) {
   let now = 0;
   const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [], weatherClocks = [], entitiesDrawn = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
-  const elements = new Map(), window = {}, queryRequests = [];
+  const elements = new Map(), window = {}, queryRequests = [], buildings = {};
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
   const $ = id => {
     if (!elements.has(id)) elements.set(id, {
@@ -765,8 +765,9 @@ function appClock(diagnostic = false) {
     performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
     addEventListener() {}, ResizeObserver: class { observe() {} },
     console: { error: e => errors.push(e), warn() {} },
-    META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, MISSIONS: {}, UNITS: {}, BUILDINGS: {}, FACTIONS: {},
+    META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
+    createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}), drawEffectRing() {},
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
     MeridianRenderer: class {
       viewport = { width: 800, height: 600, left: 0, top: 0 };
@@ -808,6 +809,7 @@ function appClock(diagnostic = false) {
   assert.deepEqual(errors, []);
   return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, queryRequests, weatherClocks, entitiesDrawn, $,
     get performance() { return window.Meridian.performance; },
+    setBuilding(name,value) { buildings[name]=value; },
     frame(t) {
       assert.equal(pending.length, 1, 'exactly one outstanding rAF');
       now = t;
@@ -815,6 +817,24 @@ function appClock(diagnostic = false) {
     }
   };
 }
+
+test('real app build preview validates and draws the same screen target used by placement', () => {
+  const a=appClock(), target={x:20,z:30}, checks=[];
+  a.ui.mode={kind:'build',arg:'refinery'};a.ui.pointer={inside:true,x:440,y:350};
+  a.ui.targetPosition=(x,y)=>{assert.deepEqual([x,y],[440,350]);return {...target};};
+  a.game.world.extent=90;a.game.s.parties=[{faction:0}];
+  a.game.foundationPosition=(type,p,team)=>{checks.push(['foundation',type,{...p},team]);return {...p};};
+  a.game.canBuild=(type,p,team)=>{checks.push(['validate',type,{...p},team]);return '';};
+  a.game.localTeam=0;
+  // The helper's app context uses no real renderer; provide only the chosen metadata.
+  a.setBuilding('refinery',{size:3});
+  a.frame(20);
+  assert.deepEqual(checks,[['foundation','refinery',target,0],['validate','refinery',target,0]]);
+  const preview=a.entitiesDrawn[0];
+  assert.equal(preview.entity.x,20);assert.equal(preview.entity.z,30);
+  assert.equal(preview.options.alpha,.3);assert.equal(preview.options.layer,'effects');
+  assert.deepEqual(a.errors,[]);
+});
 
 test('real app loop gates occlusion by party observation, excludes intro-only contacts and uses network poses', () => {
   const a = appClock(); a.ui.paused = true; a.game.localTeam = 2;

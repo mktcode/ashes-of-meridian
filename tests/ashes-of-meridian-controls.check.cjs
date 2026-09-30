@@ -225,6 +225,43 @@ function setup() {
   return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
 
+test('refinery screen targeting uses the explored vent behind terrain, including overlapping units and network poses', () => {
+  for (const pointerType of ['mouse','touch']) {
+    const h=setup(), ui=h.ui;
+    ui.pick=h.UI.prototype.pick.bind(ui);
+    ui.R.project=(x,y,z)=>({x:400+x*2,y:300+z*2-y*10});
+    // The screen ray strikes the foreground mountain far outside the vent's 6 m range.
+    const mountain={x:-30,z:-40};ui.R.ground=()=>({...mountain});
+    const vent={id:7,kind:'resource',type:'gas',team:-1,hp:100,size:2,x:20,z:30},
+      unit={id:8,kind:'unit',type:'hero',team:0,hp:100,size:2,x:20,z:30};
+    ui.game.s.entities=[unit,vent];
+    const screen=ui.R.project(vent.x,1,vent.z);
+    assert.equal(ui.pick(screen.x,screen.y).id,unit.id,'normal selection still prioritizes the overlapping unit');
+    ui.mode={kind:'build',arg:'refinery'};
+    assert.deepEqual({...ui.targetPosition(screen.x,screen.y)},{x:20,z:30});
+    ui.game.build=(type,p)=>{h.calls.push(['build',type,{...p}]);return false;};
+    h.UI.prototype.bind.call(ui);
+    h.pointer('pointerdown',screen.x,screen.y,{pointerType});h.pointer('pointerup',screen.x,screen.y,{pointerType});
+    assert.deepEqual(h.calls.filter(c=>c[0]==='build'),[['build','refinery',{x:20,z:30}]]);
+    assert.equal(ui.mode.arg,'refinery','a failed validation keeps the placement mode');
+    ui.game.world.explored[0]=0;
+    assert.deepEqual({...ui.targetPosition(screen.x,screen.y)},mountain,'unexplored vent is not a target');
+    ui.game.world.explored[0]=1;vent.hp=0;
+    assert.deepEqual({...ui.targetPosition(screen.x,screen.y)},mountain,'dead vent is not a target');
+    vent.hp=100;
+    for(const mode of [null,{kind:'build',arg:'depot'},{kind:'ability',arg:'orbital'},{kind:'rally'}]) {
+      ui.mode=mode;assert.deepEqual({...ui.targetPosition(screen.x,screen.y)},mountain,'other modes retain terrain picking');
+    }
+    ui.mode={kind:'build',arg:'refinery'};
+    assert.deepEqual({...ui.targetPosition(screen.x+100,screen.y)},mountain,'off-silhouette taps retain terrain picking');
+    ui.multiplayer={displayEntity:e=>({...e,x:25,z:35})};
+    const networkScreen=ui.R.project(25,1,35);
+    assert.deepEqual({...ui.targetPosition(networkScreen.x,networkScreen.y)},{x:25,z:35});
+    assert.deepEqual({...ui.targetPosition(screen.x+200,screen.y)},mountain);
+    assert.deepEqual({...vent},{id:7,kind:'resource',type:'gas',team:-1,hp:100,size:2,x:20,z:30},'view resolution does not mutate authority');
+  }
+});
+
 test('expedition loadout selection keeps four unique ordered slots and locks an active run', () => {
   const h = setup(); h.ui.view = 'battle'; h.ui.expedition = null;
   assert.deepEqual(Array.from(h.ui.battleAbilities), ['orbital', 'repair', 'scan', 'drop']);

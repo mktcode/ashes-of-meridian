@@ -275,7 +275,17 @@
             break;
         }
       },
-      pick(this: MeridianUI, sx: number, sy: number) {
+      targetPosition(this: MeridianUI, sx: number, sy: number): Position {
+        // A refinery targets a known vent, not the mountain hit by the same screen
+        // ray. Share this resolution with the preview; other modes keep terrain picking.
+        if (this.mode?.kind === 'build' && this.mode.arg === 'refinery') {
+          const vent = this.pick(sx, sy, e => e.kind === 'resource' && e.type === 'gas' && e.team === -1);
+          if (vent?.kind === 'resource' && vent.type === 'gas' && vent.team === -1)
+            return { x: vent.x, z: vent.z };
+        }
+        return this.R.ground(sx, sy);
+      },
+      pick(this: MeridianUI, sx: number, sy: number, filter?: (entity: Entity) => boolean) {
         if (!this.R.containsPoint(sx, sy)) return null;
         let best = null,
           score = Infinity;
@@ -283,6 +293,7 @@
           e = this.multiplayer?.displayEntity(e) ?? e;
           if (e.hp <= 0) continue;
           if (!this.game.observed(e)) continue;
+          if (filter && !filter(e)) continue;
           let y =
               isFlyingUnitType(e.type) ? 4.4 : e.kind === 'building' ? 2.0 : 1,
             p = this.R.project(e.x, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
@@ -379,7 +390,7 @@
         let d = this.drag;
         this.drag = null;
         if (!d || !this.R.containsPoint(e.clientX, e.clientY)) return;
-        let p = this.R.ground(e.clientX, e.clientY),
+        let p = this.targetPosition(e.clientX, e.clientY),
           target = this.pick(e.clientX, e.clientY);
         const limit = this.game.world!.extent - 4;
         p.x = clamp(p.x, -limit, limit);
