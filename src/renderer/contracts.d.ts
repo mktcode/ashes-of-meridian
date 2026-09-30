@@ -75,6 +75,8 @@ interface EntityModelDefinition {
   render: (context: EntityModelContext) => void;
 }
 interface RenderEntityOptions {
+  /** Caller has applied current party visibility (exploration for neutral resources). */
+  occlusion?: boolean;
   localTeam?: PlayerTeam;
   layer?: RenderLayer;
   alpha?: number;

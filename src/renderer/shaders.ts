@@ -380,6 +380,33 @@ lit=mix(lit,base*1.35,glowMix);lit+=base*max(v_glow-1.,0.)*.38;
 lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
 float field=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
+    // A depth-inverted, unlit contour silhouette. Visibility is decided by the
+    // caller per entity, never by the terrain fog under the occluding mountain.
+    const OCCLUSIONV = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 a_pos;layout(location=1) in vec3 a_normal;
+layout(location=2) in mat4 a_model;layout(location=6) in vec4 a_color;
+uniform mat4 u_vp;uniform vec3 u_eye;
+out vec3 v_normal;out vec3 v_view;out vec3 v_color;
+void main(){
+ vec4 p=a_model*vec4(a_pos,1.);
+ vec3 scale2=vec3(dot(a_model[0].xyz,a_model[0].xyz),dot(a_model[1].xyz,a_model[1].xyz),dot(a_model[2].xyz,a_model[2].xyz));
+ v_normal=mat3(a_model)*(a_normal/max(scale2,vec3(.000001)));
+ v_view=u_eye-p.xyz;v_color=a_color.rgb;
+ gl_Position=u_vp*p;
+ // Equal-depth foundations are not occluded. Avoid contact precision shimmer.
+ gl_Position.z-=.00002*gl_Position.w;
+}`;
+    const OCCLUSIONF = `#version 300 es
+precision highp float;
+in vec3 v_normal;in vec3 v_view;in vec3 v_color;out vec4 fragColor;
+void main(){
+ float rim=1.-abs(dot(normalize(v_normal),normalize(v_view)));
+ // A restrained interior keeps faceted/small models recognizable; stronger rims
+ // read as contours without full-bright x-ray models or material texture work.
+ float alpha=.13+.55*smoothstep(.25,.85,rim);
+ fragColor=vec4(v_color,alpha);
+}`;
     const DEPTHV = `#version 300 es
 precision highp float;layout(location=0)in vec3 a_pos;layout(location=2)in mat4 a_model;
 layout(location=8)in vec3 a_tint;layout(location=9)in float a_material;

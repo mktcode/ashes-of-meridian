@@ -18,6 +18,8 @@
       gl: WebGL2RenderingContext;
       program: WebGLProgram;
       depthProg: WebGLProgram;
+      occlusionProg: WebGLProgram;
+      private activeSceneProgram?: WebGLProgram;
       skyProg: WebGLProgram;
       postProg: WebGLProgram;
       bloomProg: WebGLProgram;
@@ -29,6 +31,8 @@
       static: RenderBatches;
       dynamic: RenderBatches;
       effects: RenderBatches;
+      occlusion: RenderBatches = {};
+      private occlusionInstances = 0;
       colors: Map<number | string, readonly number[] | Float32Array>;
       quality: number;
       detailMeshes = new Set<string>();
@@ -99,6 +103,7 @@
         const gl = this.gl = context;
         this.program = this.programOf(VERT, FRAG);
         this.depthProg = this.programOf(DEPTHV, DEPTHF);
+        this.occlusionProg = this.programOf(OCCLUSIONV, OCCLUSIONF);
         this.skyProg = this.programOf(FULLV, SKYF);
         this.postProg = this.programOf(FULLV, POSTF);
         this.bloomProg = this.programOf(FULLV, BLOOMF);
@@ -661,6 +666,39 @@
           b.dirty = true;
         }
       }
+      recordOcclusion(name: string, color: RenderColor) {
+        // Reuse the exact model-part transform already assembled in add(), including
+        // animated parts, build height, vehicle slope and network interpolation.
+        const c = this.color(color);
+        for (const meshName of this.meshParts[name] || [name]) {
+          const source = this.dynamic[meshName];
+          if (!source?.n) continue;
+          const b = this.bucket(this.occlusion, meshName, meshName, name, 32), o = this.reserve(b);
+          b.data.set(source.data.subarray((source.n - 1) * 22, source.n * 22), o);
+          b.data[o + 16] = c[0]; b.data[o + 17] = c[1]; b.data[o + 18] = c[2];
+          b.dirty = true;
+          this.occlusionInstances++;
+        }
+      }
+      drawOcclusion() {
+        if (!this.occlusionInstances || this.cinema) return;
+        const g = this.gl;
+        g.useProgram(this.occlusionProg);
+        g.uniformMatrix4fv(this.uniform(this.occlusionProg, 'u_vp'), false, this.vp);
+        g.uniform3fv(this.uniform(this.occlusionProg, 'u_eye'), this.eye);
+        // Compare only with opaque scenery, before entities write their own depth.
+        // Back faces must not double-blend a closed shell; no depth/shadow writes.
+        g.depthFunc(g.GREATER);
+        g.depthMask(false);
+        g.enable(g.CULL_FACE); g.cullFace(g.BACK);
+        g.enable(g.BLEND); g.blendFunc(g.SRC_ALPHA, g.ONE_MINUS_SRC_ALPHA);
+        this.drawBatches(this.occlusion);
+        g.disable(g.BLEND); g.disable(g.CULL_FACE);
+        g.depthMask(true); g.depthFunc(g.LEQUAL);
+        // Preserve the city's cached shader binding without GL queries or rebinding
+        // its lighting/textures. Uniforms on that program were not changed.
+        g.useProgram(this.activeSceneProgram ?? this.program);
+      }
       extendBounds(b: RenderBucket, mesh: RenderMesh | undefined, d: Float32Array, o: number) {
         if (!mesh) return;
         const a = mesh.bounds, center = [(a[0] + a[3]) / 2, (a[1] + a[4]) / 2, (a[2] + a[5]) / 2],
@@ -709,8 +747,9 @@
         bucket.dirty = true;
       }
       begin() {
-        for (let map of [this.dynamic, this.effects])
-          for (let b of Object.values(map)) {
+        this.occlusionInstances = 0;
+        for (let map of [this.dynamic, this.effects, this.occlusion])
+          for (let b of Object.values(map ?? {})) {
             // Upload the transition to empty once, but leave persistently empty buckets alone.
             b.dirty = b.n > 0;
             b.n = 0;
@@ -890,6 +929,7 @@
       bindSceneProgram(time: number, modelTime: number, program = this.program,
         lighting = this.battlefieldProfile.lighting ?? DEFAULT_LIGHTING) {
         const g = this.gl, profile = this.battlefieldProfile;
+        this.activeSceneProgram = program;
         g.useProgram(program);
         this.bindAtmosphere(program);
         this.bindEcology(program, modelTime);
@@ -950,6 +990,7 @@
         this.upload(this.static);
         this.upload(this.dynamic);
         this.upload(this.effects);
+        this.upload(this.occlusion);
         g.enable(g.DEPTH_TEST);
         g.disable(g.BLEND);
         g.depthMask(true);
@@ -993,6 +1034,7 @@
         g.enable(g.DEPTH_TEST);
         if (!environment) this.bindSceneProgram(time, modelTime);
         drawScene(this.static, this.vp, ['alienLanternPool', 'westmarkWater']);
+        this.drawOcclusion();
         drawScene(this.dynamic);
         g.enable(g.BLEND);
         g.blendFunc(g.SRC_ALPHA, g.ONE_MINUS_SRC_ALPHA);

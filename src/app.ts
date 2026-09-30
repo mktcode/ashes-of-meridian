@@ -182,7 +182,7 @@
             const v = R.viewport;
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))
               continue;
-            renderEntity(R, e, t, { localTeam: game.localTeam });
+            renderEntity(R, e, t, { localTeam: game.localTeam, occlusion: !ui.battleIntro && game.observed(e) });
             let selected = selectedIds.has(e.id),
               hover = ui.hover === e.id;
             if (selected || hover) {

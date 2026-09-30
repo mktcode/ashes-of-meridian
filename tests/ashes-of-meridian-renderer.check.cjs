@@ -328,6 +328,56 @@ function setup(options = {}) {
   return { r, g, calls, options, framebuffers, buffers, textures, context, bindings: () => ({ draw, read, buffer }) };
 }
 
+test('occlusion reuses model transforms in bounded growing buckets and resets without stale contacts', () => {
+  const {r} = setup();
+  Object.assign(r, {meshParts:{piece:['piece0','piece1']}, meshes:{}, colors:new Map(),
+    static:{},dynamic:{},effects:{},occlusion:{},occlusionInstances:0});
+  const part = () => r.add('piece',3,4,5,2,.4,3,0xffffff,.3,.2,.1,.8,1);
+  part(); r.recordOcclusion('piece',0x65e5e9);
+  for (const name of ['piece0','piece1']) {
+    const actual = r.occlusion[name], source = r.dynamic[name];
+    assert.deepEqual(Array.from(actual.data.slice(0,16)),Array.from(source.data.slice(0,16)));
+    assert.deepEqual(Array.from(actual.data.slice(19,22)),Array.from(source.data.slice(19,22)));
+    assert.ok(Math.abs(actual.data[16]-101/255)<1e-6);
+    assert.equal(actual.data.length,32*22,'small independent start capacity, not 1024 duplicated instances');
+  }
+  const first = r.occlusion.piece0;
+  for (let i=0;i<40;i++) {part();r.recordOcclusion('piece',0x65e5e9);}
+  assert.equal(first.n,41);assert.equal(first.data.length,64*22,'capacity grows only as needed');
+  assert.equal(r.occlusionInstances,82);
+  r.begin();
+  assert.equal(r.occlusionInstances,0);assert.equal(first.n,0);assert.equal(first.dirty,true);
+  r.upload = Object.getPrototypeOf(r).upload;
+  r.upload(r.occlusion);r.begin();
+  assert.equal(first.dirty,false,'no repeated empty uploads');
+  part();r.recordOcclusion('piece',0xe98680);
+  assert.strictEqual(r.occlusion.piece0,first);
+  assert.equal(first.n,1,'only newly observed parts remain');
+});
+
+test('occlusion draws against static depth before entities, never into shadows, and restores city program/state', () => {
+  for (const quality of [0,1,2]) {
+    const h=setup(),r=h.r;r.quality=quality;r.resize();
+    r.occlusion='occlusion';r.occlusionInstances=1;r.occlusionProg='contours';r.eye=[0,60,50];
+    h.calls.length=0;r.render(0);
+    const contours=h.calls.filter(c=>c[0]==='batch'&&c[1]==='occlusion');
+    assert.equal(contours.length,1);assert.equal(contours[0][2],'contours');
+    const i=h.calls.indexOf(contours[0]);
+    assert.ok(i>h.calls.findIndex(c=>c[0]==='batch'&&c[1]==='static'&&c[2]==='scene'));
+    assert.ok(i<h.calls.findIndex(c=>c[0]==='batch'&&c[1]==='dynamic'&&c[2]==='scene'));
+    assert.ok(h.calls.slice(0,i).some(c=>c[0]==='depthFunc'&&c[1]==='GREATER'));
+    const restored=h.calls.slice(i+1);
+    assert.ok(restored.some(c=>c[0]==='depthMask'&&c[1]===true));
+    assert.ok(restored.some(c=>c[0]==='depthFunc'&&c[1]==='LEQUAL'));
+    assert.ok(restored.some(c=>c[0]==='disable'&&c[1]==='CULL_FACE'));
+    assert.ok(restored.some(c=>c[0]==='program'&&c[1]==='scene'));
+    r.activeSceneProgram='city';h.calls.length=0;r.drawOcclusion();
+    assert.deepEqual(h.calls.at(-1),['program','city'],'preserve cached city binding without a GL query');
+    r.occlusionInstances=0;h.calls.length=0;r.drawOcclusion();assert.equal(h.calls.length,0);
+    r.occlusionInstances=1;r.cinema=true;r.drawOcclusion();assert.equal(h.calls.length,0);
+  }
+});
+
 test('diagnostic hooks bracket real render passes without changing GL work, including Performance exclusions', () => {
   for (const quality of [0, 2]) {
     const { r, calls } = setup(); r.quality = quality; r.resize();

@@ -7,7 +7,7 @@ interface DiagnosticContext {
 function diagnosticResources(R: MeridianRenderer) {
   let meshes = 0, geometryBytes = 0, buckets = 0, instances = 0, instanceCapacityBytes = 0;
   for (const mesh of Object.values(R.meshes)) { meshes++; geometryBytes += mesh.count * 9 * 4; }
-  for (const map of [R.static, R.dynamic, R.effects]) for (const b of Object.values(map)) {
+  for (const map of [R.static, R.dynamic, R.effects, R.occlusion]) for (const b of Object.values(map ?? {})) {
     buckets++; instances += b.n; instanceCapacityBytes += b.data.byteLength;
   }
   // Depth storage is estimated at four bytes/pixel; driver allocation/padding is unknown.

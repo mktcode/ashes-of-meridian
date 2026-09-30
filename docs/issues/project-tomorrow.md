@@ -95,6 +95,8 @@ Direkte `file://`-Checks in isoliertem Chromium prüften alle sieben Karten auf 
 
 ### Noch nicht erreicht / Abnahme
 
+- [ ] Neue [Kontursilhouetten](../rendering.md#kontursilhouetten-bei-verdeckung) menschlich abnehmen: erkundete Echo-Vents/Kristalle und beobachtete Einheiten/Gebäude hinter Bergen, Kronen und statischer Stadtgeometrie; eigene/feindliche Farben, normaler Spielzoom, dichte Gruppen sowie Performance/Balanced/High. Keine Freigabe durch Intro oder Sichtnebel. Der technische `file://`-Check prüft verdeckte/unverdeckte Modellteile auf drei Qualitätsstufen im normalen und Aurelion-Renderer ohne Seiten-/WebGL-Fehler oder externe Abrufe; unverdeckte Vergleichsbilder bleiben pixelgleich. Wirkung auf Mobilperformance bleibt offen. Dynamische Gebäude/Armeen und nicht tiefenschreibende Transparenz sind bewusst keine Auslöser.
+
 - [ ] Menschliche Beurteilung von Materialstil, Kachelmaßstab, Wiederholung und Einheiten-/Boden-/Minimap-Kontrast auf allen Karten und in Modellvorschauen. Der breite Materialersatz ist durch diesen Auftrag beabsichtigt, ersetzt aber nicht die frühere Kartenabnahme. Insbesondere [Desert](desert-map.md), [Westmark](westmark-map.md) und [Mothership](terrain.md) neu beurteilen.
 - [ ] Neue Frontier-Landungspakete mit allen Fraktionen und Expeditionsvorteilen menschlich spielen: frühe Aufklärung, Panzer-/Artillerievorteil, Wirtschaftsaufbau und Schwierigkeitskurve. Symmetrische Zusammensetzung garantiert keine gleichwertige Fraktionsbalance. Gesonderte KI-/Simulations-Langläufe sind weiterhin nicht freigegeben.
 - [ ] FPS, Latenz, Start-/Kartenwechselzeit und Thermik auf echten Zielgeräten mit vergleichbaren Szenen messen. Weniger Bild-/Texturspeicher und Allokationen garantieren keine bessere Gesamtperformance.

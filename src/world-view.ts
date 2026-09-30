@@ -175,6 +175,8 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
             : MAT.AUTO;
       // Only model lamps/cores breathe; keep low glow below the shader's texture cutoff.
       // Tactical rings and previews stay unchanged.
+      const occlusion = options.occlusion && !R.cinema && !ghost && options.tint === undefined && alpha === 1 && layer === 'dynamic',
+        occlusionColor = e.kind === 'resource' ? e.type === 'gas' ? 0x65e5e9 : 0xe7b969 : team;
       const animated = (e.kind === 'unit' || e.kind === 'building') && R.quality > 0 && !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic';
       const phase = time * (e.faction === FACTION_ID.SECOND ? 1.8 : 1.1) + e.id * 2.39996;
       const p: ModelPart = (
@@ -223,6 +225,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           layer,
           resolvedMaterial === PORTAL_MATERIAL && !animated ? PORTAL_STILL_MATERIAL : resolvedMaterial
         );
+        if (occlusion && a === 1) R.recordOcclusion(shape, occlusionColor);
       };
       const ring: ModelRing = (radius, h, color = team, a = 0.7, rx = 0, ry = 0, glow = 1.2) =>
         R.add('ring', e.x, y + h, e.z, radius, 1, radius, color, ry, rx, 0, glow, a, 'effects');

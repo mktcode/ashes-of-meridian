@@ -62,6 +62,36 @@ test('effect markers use the local actor for scans, drops, fields and strike war
   }
 });
 
+test('occlusion records exact opaque model parts only for explicit in-battle opt-in', () => {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', 'world-view']);
+  vm.runInContext('Math.random=()=>{throw Error("Render RNG");}', context);
+  const render = vm.runInContext('renderEntity', context), R = createRendererStub({record:true});
+  R.cinema = false;
+  const recorded = [];
+  R.recordOcclusion = (name, color) => recorded.push({part:R.calls.at(-1),name,color});
+  for (const [kind,type] of [['unit','worker'],['building','hq'],['resource','gas'],['resource','crystal']]) {
+    const e = Object.freeze({id:42,kind,type,hp:100,team:kind==='resource'?-1:2,faction:1,size:2,x:12,z:-23,rot:.3,walk:1,progress:.4});
+    for (const quality of [0,1,2]) {
+      R.quality = quality; R.calls.length = 0; recorded.length = 0;
+      render(R,e,3,{localTeam:2,occlusion:true});
+      const opaque = R.calls.filter(c => c[13]==='dynamic' && c[12]===1);
+      assert.equal(recorded.length,opaque.length);
+      assert.ok(recorded.length>0);
+      assert.ok(recorded.every((entry,i)=>entry.part===opaque[i] && entry.name===opaque[i][0]));
+      assert.equal(recorded[0].color,kind==='resource'?(type==='gas'?0x65e5e9:0xe7b969):0x8bdfad);
+      R.calls.length=0;recorded.length=0;
+      render(R,e,3,{localTeam:0,occlusion:true});
+      assert.equal(recorded[0].color,kind==='resource'?(type==='gas'?0x65e5e9:0xe7b969):0xe98680);
+    }
+    for (const options of [{},{occlusion:false},{occlusion:true,ghost:true},{occlusion:true,tint:0xffffff},
+      {occlusion:true,alpha:.3},{occlusion:true,layer:'effects'}]) {
+      recorded.length=0; render(R,e,3,options); assert.equal(recorded.length,0);
+    }
+    R.cinema=true;recorded.length=0;render(R,e,3,{occlusion:true});assert.equal(recorded.length,0);R.cinema=false;
+    recorded.length=0;render(R,{...e,hp:0},3,{occlusion:true});assert.equal(recorded.length,0);
+  }
+});
+
 test('contact shadows add one effect quad per unit/building on Balanced/High without changing models or previews',()=>{
   const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world-view']);
   vm.runInContext('Math.random=()=>{throw Error("Render RNG");}',context);
@@ -717,7 +747,7 @@ test('effect culling preserves visible output and does not redistribute the acce
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
 function appClock(diagnostic = false) {
   let now = 0;
-  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [], weatherClocks = [];
+  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [], weatherClocks = [], entitiesDrawn = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
   const elements = new Map(), window = {}, queryRequests = [];
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
@@ -744,7 +774,7 @@ function appClock(diagnostic = false) {
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1;
       frameReady() { return true; } releaseEnvironment() {}
-      resize() {} camera() {} begin() { renderWork.begin++; }
+      resize() {} camera() {} project() { return {x:400,y:300}; } begin() { renderWork.begin++; }
       render(time) { this.diagnostics?.beginFrame(); draws.push({ now, time }); }
     },
     BattlefieldView: class { sync() {} },
@@ -768,6 +798,7 @@ function appClock(diagnostic = false) {
       takeSnapshotCount() { return 0; }
       disconnect() {}
     },
+    renderEntity(R,e,t,options) { entitiesDrawn.push({entity:e,options}); },
     renderBattlefieldEffects(R,e,w,s,p,time,team,weatherTime) {
       renderWork.battlefield++;
       weatherClocks.push({now,state:s.time,effects:time,weather:weatherTime});
@@ -775,7 +806,7 @@ function appClock(diagnostic = false) {
   } });
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
-  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, queryRequests, weatherClocks, $,
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, queryRequests, weatherClocks, entitiesDrawn, $,
     get performance() { return window.Meridian.performance; },
     frame(t) {
       assert.equal(pending.length, 1, 'exactly one outstanding rAF');
@@ -784,6 +815,33 @@ function appClock(diagnostic = false) {
     }
   };
 }
+
+test('real app loop gates occlusion by party observation, excludes intro-only contacts and uses network poses', () => {
+  const a = appClock(); a.ui.paused = true; a.game.localTeam = 2;
+  a.game.s.entities = [
+    {id:1,kind:'unit',type:'rifle',team:2,hp:100},
+    {id:2,kind:'building',type:'hq',team:1,hp:100},
+    {id:3,kind:'resource',type:'gas',team:-1,hp:100},
+    {id:4,kind:'resource',type:'gas',team:-1,hp:100},
+    {id:5,kind:'unit',type:'worker',team:1,hp:100}
+  ];
+  const observed = new Set([1,2,3]);
+  a.game.observed = e => observed.has(e.id);
+  a.ui.introObserves = e => !!a.ui.battleIntro && e.id===5;
+  a.frame(20);
+  assert.deepEqual(a.entitiesDrawn.map(v=>v.entity.id),[1,2,3]);
+  assert.ok(a.entitiesDrawn.every(v=>v.options.occlusion && v.options.localTeam===2));
+  observed.delete(2);a.entitiesDrawn.length=0;a.frame(40);
+  assert.deepEqual(a.entitiesDrawn.map(v=>v.entity.id),[1,3],'visibility loss is applied next frame');
+  a.ui.battleIntro={};a.entitiesDrawn.length=0;a.frame(60);
+  assert.deepEqual(a.entitiesDrawn.map(v=>v.entity.id),[1,3,5]);
+  assert.ok(a.entitiesDrawn.every(v=>!v.options.occlusion),'intro presentation never grants x-ray visibility');
+  a.ui.battleIntro=null;a.game.networkTeam=2;a.entitiesDrawn.length=0;
+  a.ui.multiplayer.displayEntity=e=>({...e,x:17,z:23});a.frame(80);
+  assert.deepEqual(a.entitiesDrawn.map(v=>v.entity.id),[1,3]);
+  assert.ok(a.entitiesDrawn.every(v=>v.entity.x===17 && v.entity.z===23 && v.options.occlusion));
+  assert.deepEqual(a.errors,[]);
+});
 
 for (const hz of [30, 59.94, 60, 90, 120, 144]) {
   test(`app renders at most 60 FPS without slowing its clocks at ${hz} Hz`, () => {
