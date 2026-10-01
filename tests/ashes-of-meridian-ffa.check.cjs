@@ -7,20 +7,57 @@ const context = loadScripts(['core', 'content', 'effects', ...BATTLEFIELD_SCRIPT
 const { MeridianGame, expeditionEnemyCount, expeditionEnemyFactions, advanceEnemyBenefits, chooseEnemyBenefit } =
   vm.runInContext('({ MeridianGame, expeditionEnemyCount, expeditionEnemyFactions, advanceEnemyBenefits, chooseEnemyBenefit })', context);
 
-function battle(count = 4, scenario = false) {
+function battle(count = 4, scenario = false, developed = true) {
   const events = [], g = new MeridianGame({ upgrades: {} }, (type, data) => events.push({ type, data }));
   const opts = { seed: 1409, map: 'desert', duration: 1,
     parties: Array.from({ length: count }, () => ({ faction: 1, controller: 'ai' })),
     hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b)) };
   if (scenario) g.startScenario(opts);
   else g.start({ seed: opts.seed, map: opts.map, enemies: Array(count - 1).fill(1) });
+  // Elimination fixtures describe established bases, not initial deployment.
+  if (developed) for (const party of g.s.parties) {
+    const home = g.startingPositions(opts.seed, count)[party.id];
+    g.spawnBuilding('hq', home.x, home.z, party.id, party.faction);
+    party.deploymentPending = false;
+  }
   const hqs = g.alive(e => e.type === 'hq');
   events.length = 0;
   return { g, hqs, events };
 }
 
+test('deployment starts with one worker and paid HQ reserves; HQ survival begins only after completion', () => {
+  const { g } = battle(2, false, false);
+  assert.equal(g.alive(e => e.type === 'hq').length, 0);
+  for (const party of g.s.parties) {
+    assert.equal(g.alive(e => e.team === party.id && e.type === 'worker').length, 1);
+    const start = g.startingPositions(g.s.seed, 2)[party.id], before = party.account.alloy;
+    assert.equal(g.executeAction(party.id, { kind: 'build', building: 'hq', position: start, selected: [] }), true);
+    assert.equal(party.account.alloy, before - g.cost('hq', 'building', party.id).cost);
+  }
+  g.checkBattleResult();
+  assert.equal(g.s.result, null);
+  const hq = g.alive(e => e.team === 0 && e.type === 'hq')[0];
+  hq.hp = 0;
+  g.checkBattleResult();
+  assert.equal(g.s.result, null, 'initial foundation loss can be retried while the worker survives');
+  hq.hp = hq.maxHp; hq.progress = .999999;
+  const builder = g.alive(e => e.team === 0 && e.type === 'worker')[0];
+  builder.x = hq.x - 7; builder.z = hq.z;
+  g.worker(builder, .05);
+  assert.equal(hq.progress, 1);
+  assert.equal(g.party(0).deploymentPending, false, 'completion ends grace immediately, before result polling');
+  g.checkBattleResult();
+  hq.hp = 0;
+  g.checkBattleResult();
+  assert.equal(g.s.result.win, false, 'after establishment, a surviving worker does not bypass HQ elimination');
+  const second = battle(2, false, false).g;
+  second.alive(e => e.team === 0 && e.type === 'worker')[0].hp = 0;
+  second.checkBattleResult();
+  assert.equal(second.s.result.win, false, 'losing the deployment worker before an HQ is also defeat');
+});
+
 test('explicit HQ mission and default starts share state and RNG; each start owns its mission state', () => {
-  const { g } = battle();
+  const { g } = battle(4, false, false);
   const options = { seed: 1409, map: 'desert', enemies: [1, 1, 1] };
   const state = JSON.stringify(g.s), mission = g.s.rules.mission, next = g.random();
   assert.equal(mission.id, 'hq-elimination');
@@ -124,11 +161,12 @@ test('public FFA start snapshots every slot and preserves seeded terrain/resourc
     g.start(opts);
     assert.equal(resourceSnapshot(), resources);
     assert.equal(g.world.sight.length, 4);
-    const hqs = g.alive(e => e.type === 'hq');
-    assert.equal(new Set(hqs.map(h => `${h.x}/${h.z}`)).size, 4);
-    assert.deepEqual(Array.from(g.s.parties, p => p.account.alloy), [350, 350, 250, 250]);
-    assert.equal(g.alive(e => e.team === 2 && e.type === 'worker').length, 1);
-    assert.equal(g.alive(e => e.team === 3 && e.type === 'worker').length, 0);
+    assert.equal(g.alive(e => e.type === 'hq').length, 0);
+    const workers = g.alive(e => e.type === 'worker');
+    assert.equal(new Set(workers.map(w => w.team)).size, 4);
+    assert.deepEqual(Array.from(g.s.parties, p => p.account.alloy), [750, 750, 650, 650]);
+    assert.equal(g.alive(e => e.team === 2 && e.type === 'worker').length, 2);
+    assert.equal(g.alive(e => e.team === 3 && e.type === 'worker').length, 1);
     assert.ok(g.s.parties.slice(1).every(p => Object.keys(p.meta).length === 0));
     const snapshot = JSON.stringify(g.s), nextRandom = g.random();
     g.start(opts); assert.equal(JSON.stringify(g.s), snapshot); assert.equal(g.random(), nextRandom);

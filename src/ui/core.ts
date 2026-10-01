@@ -21,6 +21,8 @@
       visibleEntityIds: Set<number>;
       objectiveShown: boolean;
       pendingRadio?: string;
+      kind?: 'recon';
+      origin?: Position;
     }
     class MeridianUI {
       persistence: MeridianPersistence;
@@ -42,6 +44,7 @@
       codexTouches = new Map<number, {x: number; y: number}>();
       codexPinchDist?: number;
       paused: boolean;
+      get controlsLocked(): boolean { return this.paused || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }
       modalKind: string;
       sellBuildingId: number | null;
       selected: number[];
@@ -197,13 +200,14 @@
           this.tab = 'root';
           this.actionSignature = '';
           this.battleTutorial = null;
+          this.beginBattleTutorial();
           this.beginBattleIntro();
-          if (!this.battleIntro) this.beginBattleTutorial();
           this.audio.setMode?.(this.battleIntro ? 'silent' : 'battle');
           this.updateHUD();
           this.clearMode();
         } else if (type === 'toast') this.toast(data);
         else if (type === 'radio') {
+          if (this.battleTutorial?.step === 'arrival' || this.battleTutorial?.step === 'buildHQ' || this.battleIntro?.kind === 'recon') return;
           if (this.battleIntro) this.battleIntro.pendingRadio = data;
           else this.radio(data);
         }
@@ -222,6 +226,7 @@
                   : FACTIONS[this.game.s!.parties[this.localTeam].faction].color
             });
         } else if (type === 'result') {
+          this.battleIntro = null;
           this.battleTutorial = null;
           const firstResult = this.resultAetherRecovered === undefined;
           let profileChanged = false;

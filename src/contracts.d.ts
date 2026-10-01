@@ -607,6 +607,8 @@ interface PartyState {
   benefits: Record<string, number>;
   controller: PartyController;
   fieldWorkshopUsed?: boolean;
+  /** Before the first completed HQ, survival depends on a deployment worker. */
+  deploymentPending?: boolean;
   eliminated?: boolean;
 }
 

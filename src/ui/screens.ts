@@ -245,7 +245,7 @@
         }
       },
       pause(this: MeridianUI) {
-        if (this.battleIntro || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
+        if ((this.battleIntro && this.battleIntro.kind !== 'recon') || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = true;
         this.audio.setMode?.('silent');
         this.clearMode();
@@ -265,7 +265,7 @@
         );
       },
       resume(this: MeridianUI) {
-        if (this.battleIntro || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
+        if ((this.battleIntro && this.battleIntro.kind !== 'recon') || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = false;
         this.modalKind = '';
         $('modal').classList.add('hidden');

@@ -66,12 +66,13 @@ const aiMethods = {
     const centers: Position[] = type==='refinery' ? vents : [home];
     for (const center of centers) for (let j=0;j<(type==='refinery'?1:64);j++) {
       const i=(j+ai.search)%64, angle=(i%16)*Math.PI/8,
-        radius=11+Math.floor(i/16)*5,
+        deploying=type==='hq' && !!this.party(team).deploymentPending,
+        radius=deploying ? 7+Math.floor(i/16)*2 : 11+Math.floor(i/16)*5,
         p=type==='refinery'?{x:center.x,z:center.z}:
           {x:center.x+Math.sin(angle)*radius,z:center.z+Math.cos(angle)*radius};
       // Inspect the full footprint before the common validator checks live bodies. Otherwise
       // its rejection could reveal an unseen unit to the controller.
-      const margin=BUILDINGS[type].size+3, CELL=this.world!.cellSize;
+      const margin=BUILDINGS[type].size+(deploying?0:3), CELL=this.world!.cellSize;
       let observed=true;
       for (let z=p.z-margin;z<=p.z+margin+CELL;z+=CELL)
         for (let x=p.x-margin;x<=p.x+margin+CELL;x+=CELL)
@@ -213,6 +214,13 @@ const aiMethods = {
     ai.observation=undefined;
     ai.nextThink=s.time+Math.max(0,rules.think-rules.reactionDelay);
     const home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
+    if (!home && this.party(team).deploymentPending) {
+      const worker = own.find(e => e.type === 'worker'), foundation = own.find(e => e.type === 'hq' && e.progress < 1);
+      if (worker && !foundation) this.aiBuild(team, 'hq', worker);
+      else if (worker && foundation && !own.some(e => e.type === 'worker' && e.order.type === 'build' && e.order.id === foundation.id))
+        this.executeAction(team, { kind: 'order', ids: [worker.id], order: { type: 'build', id: foundation.id, x: foundation.x, z: foundation.z } });
+      return;
+    }
     if (s.rules.kind === 'single-player' && s.rules.mission.id === 'echo-salvage') {
       if(home) ai.salvageHome={x:home.x,z:home.z};
       if(!home && ai.salvageHome && !own.some(e=>e.type==='hq')) this.aiBuild(team,'hq',ai.salvageHome);

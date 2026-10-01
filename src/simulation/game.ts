@@ -140,13 +140,12 @@
         return this.startBattle(opts, parties, rules, aiTeams);
       },
       startBattle(this: MeridianGame, opts: BattleOptions & { startSeed?: number }, parties: PartyState[], rules: BattleRules, aiTeams: PlayerTeam[]) {
-        const [{ faction, meta, benefits }, { faction: enemy }] = parties,
-          map = battlefieldId(opts.map),
+        const map = battlefieldId(opts.map),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.world = new Battlefield(seed, map, parties.length);
         const layout = this.world.layout;
         this.world.startSites = battlefieldStartSites(this.world);
-        const starts = this.startingPositions(rules.kind === 'scenario' ? opts.startSeed ?? seed : seed, parties.length), [playerStart, enemyStart] = starts;
+        const starts = this.startingPositions(rules.kind === 'scenario' ? opts.startSeed ?? seed : seed, parties.length), [playerStart] = starts;
         this.s = {
           seed, map,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
@@ -168,8 +167,8 @@
         this.fogClock = 0;
         this.resultClock = 0;
         let s = this.s!;
-        // The base starts with an HQ; upgrade workers are added after the seeded setup.
-        this.spawnBuilding('hq', playerStart.x, playerStart.z, 0, faction);
+        // Reserve the former HQ's ID/RNG draw without placing a starting structure.
+        this.random(); s.nextId++;
         // Keep the former default loadout's RNG entry point for crystal amounts and enemy spawns.
         for (let i = 0; i < 24; i++) this.random();
         for (let [i, site] of layout.resourceSites.entries()) {
@@ -179,14 +178,12 @@
           }
           this.spawnResource('gas', site.x + (i === 0 ? 5 : 7), site.z + (i === 0 ? 18 : 7), 999999);
         }
-        let site = enemyStart;
-        this.spawnBuilding('hq', site.x, site.z, 1, enemy);
+        this.random(); s.nextId++;
         // Preserve the established resource/bonus-worker RNG entry points, not the old loadout.
         for (let i = 0; i < 11; i++) this.random();
-        // Extra HQs follow the protected two-party/resource RNG sequence.
-        for (const party of parties.slice(2)) {
-          const home = starts[party.id];
-          this.spawnBuilding('hq', home.x, home.z, party.id, party.faction);
+        // Former extra-HQ slots follow the protected two-party/resource RNG sequence.
+        for (let i = 2; i < parties.length; i++) {
+          this.random(); s.nextId++;
         }
         this.world.rebuild(s.entities);
         this.rehash();
@@ -197,7 +194,6 @@
             Object.assign(e, p);
           }
         // Add bonus units only after the original layout and enemy RNG draws.
-        const startingWorkers = (meta.startingWorkers || 0) + (benefits.pioneerSquad || 0);
         for (const party of parties) {
           const team = party.id, perks = party.benefits, home = starts[team],
             workers = (party.meta.startingWorkers || 0) + (perks.pioneerSquad || 0);
@@ -207,6 +203,13 @@
           if (perks.commanderMandate &&
             !this.spawnUnit('hero', home.x - 9, home.z + 7, team, this.factionFor(team)))
             throw new Error('No free space for starting commander.');
+        }
+        for (const party of parties) {
+          const home = starts[party.id];
+          party.deploymentPending = true;
+          party.account.alloy += BUILDINGS.hq.cost;
+          if (!this.spawnUnit('worker', home.x - 9, home.z - 4, party.id, party.faction))
+            throw new Error('No free space for deployment worker.');
         }
         this.rehash();
         this.world.reveal(s.entities);
@@ -221,10 +224,8 @@
         if (rules.kind === 'scenario') return s;
         this.emit('start', {});
         this.emit('radio', rules.mission.id === 'echo-salvage'
-          ? 'Expedition command|Keep workers on Cinder for your economy. Send a separate salvage team to the core, and escort their cargo back to your HQ.'
-          : startingWorkers
-          ? 'Expedition command|Your starting workers will harvest Cinder automatically. Expand your economy, then outlast every opposing party.'
-          : 'Expedition command|Recruit your first two workers from Infantry to establish your economy, then outlast every opposing party.');
+          ? 'Expedition command|Deploy your HQ first. Keep workers on Cinder for your economy, then escort a separate salvage team to the core and back.'
+          : 'Expedition command|Deploy your command outpost from Build to establish a base. Your worker is ready, and the construction reserves are aboard.');
         return s;
       },
       benefitsFor(this: MeridianGame, team: PlayerTeam): Record<string, number> {

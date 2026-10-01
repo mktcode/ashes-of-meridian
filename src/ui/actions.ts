@@ -2,6 +2,8 @@
     'use strict';
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
+        // Confirmation dialogs may submit while paused, but never during a cinematic.
+        if (this.battleIntro || this.battleTutorial?.step === 'arrival') return false;
         // Local scenario control follows the view; this is not network authentication.
         return this.game.submitAction(this.localTeam, action);
       },
@@ -40,13 +42,14 @@
         return true;
       },
       center(this: MeridianUI, x: number, z: number) {
-        if (!this.game.s) return;
+        if (!this.game.s || this.controlsLocked) return;
         const limit = this.game.world!.extent - 18;
         this.game.s!.cam.x = clamp(x, -limit, limit);
         this.game.s!.cam.z = clamp(z, -limit, limit);
       },
       homeCamera(this: MeridianUI) {
-        let e = this.game.alive(e => e.team === this.localTeam && e.type === 'hq')[0];
+        let e = this.game.alive(e => e.team === this.localTeam && e.type === 'hq')[0] ||
+          this.game.alive(e => e.team === this.localTeam && e.type === 'worker')[0];
         if (e) this.center(e.x + 4, e.z - 2);
       },
       select(this: MeridianUI, ids: number[]) {
@@ -71,7 +74,7 @@
         return action === (this.mode.kind === 'rally' ? 'rally' : `${this.mode.kind}:${this.mode.arg}`);
       },
       setMode(this: MeridianUI, ...[kind, arg]: ['build', BuildingType] | ['ability', AbilityType] | ['rally']) {
-        if (this.paused) return;
+        if (this.controlsLocked) return;
         const action = kind === 'rally' ? 'rally' : `${kind}:${arg}`;
         if (this.isModeAction(action)) {
           this.clearMode();
@@ -97,7 +100,7 @@
         this.actionSignature = '';
       },
       perform(this: MeridianUI, action: string) {
-        if (!this.game.s || this.paused || this.game.s!.result) return;
+        if (!this.game.s || this.controlsLocked || this.game.s!.result) return;
         let [kind, arg] = action.split(':');
         if (kind === 'tab') {
           this.setTab(arg);
@@ -343,7 +346,7 @@
           if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||
             (!this.game.buildingRepairers(this.selected[0], this.localTeam).length && !!this.game.canRepairBuilding(this.selected[0], this.localTeam));
           if (k === 'sell') disabled = !!this.mode || !!this.game.canSellBuilding(this.selected[0], this.localTeam);
-          disabled ||= this.paused || !!s.result;
+          disabled ||= this.controlsLocked || !!s.result;
           b.disabled = disabled;
           b.classList.toggle('disabled', disabled);
         }

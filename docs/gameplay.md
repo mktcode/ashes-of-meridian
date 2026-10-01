@@ -6,9 +6,11 @@ Regelkonzept; aktuelle Preise, Ränge, Eintrittsschwellen und Fraktionsboni steh
 
 **New expedition** wählt freigeschaltete Fraktion und vier verschiedene Command-Fähigkeiten in HUD-Reihenfolge. Dieses Loadout bleibt für den Run fest. Frühe Stages führen nacheinander gegen die drei Fraktionen; später treten weitere Gegner-Slots im Free-for-all ein. Alle Parteien sind feindlich, auch bei gleicher Fraktion. Gegner, Karte und Seed werden am Übergang festgeschrieben; keine unmittelbare Kartenwiederholung, kein Neuwürfeln durch Reload.
 
-In **HQ elimination** gewinnt die letzte Partei mit HQ. Letztes HQ verloren → Ausscheiden samt Restarmee; bereits abgefeuerte Geschosse bleiben. Eigener Verlust hat bei Gleichzeitigkeit Vorrang. Commander-Verlust allein beendet nichts. KI-gegen-KI-Abschüsse und Ausscheidungsbereinigung geben keine Spieler-Killpunkte.
+Jede Partei startet ohne Gebäude mit einem Worker; Flottenupgrades und Expeditionsvorteile können zusätzliche Start-Einheiten liefern. Die Baukosten eines HQ kommen zu den bisherigen Startreserven hinzu. Das erste HQ wird regulär platziert, bezahlt und vom Worker gebaut, auch durch die KI.
 
-Sieg erhöht Tiefe und bietet einen Vorteil für folgende Gefechte. Bestehende Gegner-Slots sammeln eigene Vorteile desselben Pools, behalten sie bei Fraktionswechsel; neue Slots beginnen leer. Permanente Flottenupgrades gelten nur für den Spieler und werden beim Start kopiert. Worker liefern Cinder, Raffinerien an Vents Echo; ohne Startworker zunächst einen rekrutieren.
+In **HQ elimination** hält vor dem ersten fertigen HQ ein lebender Worker die Partei im Spiel. Nach dessen Fertigstellung gewinnt die letzte Partei mit HQ. Letztes HQ verloren → Ausscheiden samt Restarmee; bereits abgefeuerte Geschosse bleiben. Eigener Verlust hat bei Gleichzeitigkeit Vorrang. Commander-Verlust allein beendet nichts. KI-gegen-KI-Abschüsse und Ausscheidungsbereinigung geben keine Spieler-Killpunkte.
+
+Sieg erhöht Tiefe und bietet einen Vorteil für folgende Gefechte. Bestehende Gegner-Slots sammeln eigene Vorteile desselben Pools, behalten sie bei Fraktionswechsel; neue Slots beginnen leer. Permanente Flottenupgrades gelten nur für den Spieler und werden beim Start kopiert. Worker liefern Cinder zum fertigen HQ, Raffinerien an Vents Echo.
 
 Ungenutztes Echo wird begrenzt evakuiert; vom Spieler zerstörte fertige Feindgebäude liefern zusätzliche permanente Bergung. Reserve finanziert Fleet Systems und Command Modules. Besttiefe schaltet Fraktionen frei; Score ist keine Währung. Auszahlung/Fortschritt erfolgt nur einmal, auch bei erneutem Ergebnisaufruf.
 
@@ -28,7 +30,7 @@ Eine Partei scheidet ohne fertiges lebendes HQ **und** lebenden Worker aus. Alle
 - Doppeltap auf dieselbe eigene Einheit gruppiert sichtbare Einheiten dieses Typs; Dreifachtap sichtbare Nicht-Worker. Gruppenschalter ergänzen sichtbare/gesamte Kampfauswahl. Pan, Zielwechsel und Befehle unterbrechen Tapfolgen.
 - Boden-Tap mit Auswahl bewegt; Schwerter-Schalter aktiviert Attack-move für zukünftige Kampfbefehle, nicht Worker. Ziel-Tap/Rechtsklick erteilt Kontextbefehle. Neuer Auftrag ersetzt den bisherigen, keine Befehlsqueue.
 - **Cancel** beendet Zielwahl ohne Verbrauch. Fehlplatzierung erlaubt Wiederholung. Keine Hotkeys, Rechteck-/Shift-Auswahl oder Kontrollgruppen.
-- Einführungsfahrten halten Simulation/Eingaben an und verändern keine Sicht. Die Fahrt vom gegnerischen zum eigenen HQ gehört nur zum Wirtschaftstutorial, nicht zu jedem Expeditionsstart. Die HUD-Anleitung führt während des Spiels durch den Wirtschaftseinstieg; abgeschlossene Anleitungen werden im Profil vermerkt.
+- Das erste Wirtschaftstutorial beginnt mit Worker-Ankunft und HQ-Bau. Danach fährt die Kamera zum eigenen HQ, zum Gegner und zurück. Während Ankunft und Aufklärungsfahrt sind Spiel-/Kameraeingaben gesperrt, nicht die Simulation; das Pausenmenü bleibt verfügbar. Die Fahrt gewährt keine Simulationssicht, zeigt aber den gegnerischen Außenposten vorübergehend in der Darstellung. Die separate erste Echo-Bergungsfahrt hält weiterhin die Simulation an. Abgeschlossene Anleitungen werden im Profil vermerkt.
 
 ## Wirtschaft, Bau und Produktion
 

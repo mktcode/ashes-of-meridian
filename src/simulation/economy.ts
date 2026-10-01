@@ -421,6 +421,7 @@
             b.progress = Math.min(1, b.progress + rate);
             b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);
             if (b.progress >= 1) {
+              if (b.type === 'hq') this.party(team).deploymentPending = false;
               if (team === 0) s.stats.built++;
               this.notify(team, 'complete', { type: b.type, x: b.x, z: b.z });
               this.finishOrder(e);

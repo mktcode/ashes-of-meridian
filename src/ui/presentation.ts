@@ -1,25 +1,19 @@
     /* MeridianUI minimap and battlefield overlay drawing. Loaded after ui/core.js. */
     'use strict';
-    const BATTLE_INTRO_BY_STAGE: Partial<Record<number, { hold: number; travel: number }>> = {
-      1: { hold: 5, travel: 1.25 }
-    };
     const BATTLE_INTRO_OBJECTIVE_DELAY = 1;
     const uiPresentationMethods = {
       beginBattleIntro(this: MeridianUI) {
         this.battleIntro = null;
         const s = this.game.s;
         if (!s || s.rules?.kind !== 'single-player') return false;
-        const mission = s.rules.mission, salvage = mission.id === 'echo-salvage',
-          timing = salvage ? (this.profile.salvageIntroComplete ? undefined : { hold: 10, travel: 1.5 })
-            : (this.shouldBeginBattleTutorial() ? BATTLE_INTRO_BY_STAGE[s.depth + 1] : undefined);
-        if (!timing) return false;
-        const home = this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && e.type === 'hq')[0],
-          enemy = !salvage && this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
-        if (!home || (!salvage && !enemy)) return false;
+        const mission = s.rules.mission;
+        if (mission.id !== 'echo-salvage' || this.profile.salvageIntroComplete) return false;
+        const timing = { hold: 10, travel: 1.5 },
+          home = this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
         const limit = this.game.world!.extent - 18,
           cameraPoint = (e: Position) => ({ x: clamp(e.x + 4, -limit, limit), z: clamp(e.z - 2, -limit, limit) }),
-          focus = mission.id === 'echo-salvage' ? { x: mission.site.x, z: mission.site.z } : cameraPoint(enemy as Entity),
-          homeCamera = cameraPoint(home);
+          focus = { x: mission.site.x, z: mission.site.z },
+          homeCamera = home ? cameraPoint(home) : { x: s.cam.x, z: s.cam.z };
         this.battleIntro = {
           elapsed: 0,
           hold: timing.hold,
@@ -27,7 +21,7 @@
           focus,
           mission: mission.id,
           home: homeCamera,
-          visibleEntityIds: new Set(enemy ? [enemy.id] : []),
+          visibleEntityIds: new Set<number>(),
           objectiveShown: false
         };
         s.cam.x = focus.x;
@@ -35,10 +29,52 @@
         this.paused = true;
         return true;
       },
+      beginTutorialRecon(this: MeridianUI) {
+        const s = this.game.s;
+        if (!s) return false;
+        const home = this.game.alive(e => e.team === this.localTeam && e.type === 'hq' && e.progress >= 1)[0],
+          enemy = this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.type === 'hq')[0] ||
+            this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.type === 'worker')[0];
+        if (!home || !enemy) return false;
+        const limit = this.game.world!.extent - 18,
+          point = (p: Position) => ({ x: clamp(p.x + 4, -limit, limit), z: clamp(p.z - 2, -limit, limit) });
+        this.battleIntro = { kind: 'recon', elapsed: 0, hold: 4, travel: 2.5,
+          origin: { x: s.cam.x, z: s.cam.z }, home: point(home), focus: point(enemy),
+          mission: 'hq-elimination', visibleEntityIds: new Set([enemy.id]), objectiveShown: false };
+        this.drag = null;
+        this.touchPoints.clear();
+        this.touchGesture = false;
+        this.pinchDist = undefined;
+        this.selected = [];
+        this.clearMode();
+        return true;
+      },
       advanceBattleIntro(this: MeridianUI, dt: number) {
         const intro = this.battleIntro, s = this.game.s;
-        if (!intro || !s) return;
+        if (!intro || !s || this.view !== 'game' || s.result || (intro.kind === 'recon' && this.paused)) return;
         intro.elapsed += Math.max(0, Number.isFinite(dt) ? dt : 0);
+        if (intro.kind === 'recon') {
+          const travel = intro.travel, t = intro.elapsed;
+          if (!intro.objectiveShown && t >= 2.5) {
+            intro.objectiveShown = true;
+            this.radio('Commander|Looks like we are not alone. We need to be prepared for battle.');
+            this.radioUntil = Infinity;
+          }
+          const segment = t < 1.25 ? [intro.origin!, intro.home, t / 1.25] as const
+            : t < 2.5 + travel ? [intro.home, intro.focus, (t - 2.5) / travel] as const
+              : [intro.focus, intro.home, (t - 2.5 - travel - intro.hold) / travel] as const;
+          const p = clamp(segment[2], 0, 1), eased = p * p * (3 - 2 * p);
+          s.cam.x = segment[0].x + (segment[1].x - segment[0].x) * eased;
+          s.cam.z = segment[0].z + (segment[1].z - segment[0].z) * eased;
+          // The enemy may still be constructing its first HQ when our flight begins.
+          for (const e of this.game.alive(e => e.team !== -1 && e.team !== this.localTeam &&
+            e.type === 'hq' && distance(e, intro.focus) < 35)) intro.visibleEntityIds.add(e.id);
+          if (t < 2.5 + travel * 2 + intro.hold) return;
+          this.battleIntro = null;
+          this.finishTutorialRecon();
+          this.updateHUD();
+          return;
+        }
         if (!intro.objectiveShown && intro.elapsed >= BATTLE_INTRO_OBJECTIVE_DELAY) {
           intro.objectiveShown = true;
           if (s.rules.kind === 'single-player') this.radio(MISSIONS[s.rules.mission.id].intro);
@@ -109,6 +145,7 @@
         ctx.restore();
       },
       tick(this: MeridianUI, dt: number) {
+        this.advanceTutorialArrival(dt);
         this.advanceBattleIntro(dt);
         let now = performance.now();
         if (this.toastUntil && now > this.toastUntil) {

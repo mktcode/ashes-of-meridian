@@ -467,43 +467,51 @@ test('each battle start resets the music playlist before playback, but resume do
   assert.equal(calls.filter(value => value === 'reset').length, 2);
 });
 
-test('stage one holds simulation and controls while the camera introduces the enemy HQ, then travels home', () => {
-  const h = setup(), modes = [];
-  h.ui.audio.resetBattleMusic = () => modes.push('reset');
-  h.ui.audio.setMode = mode => modes.push(mode);
+test('tutorial begins with worker arrival and HQ placement, then locks only controls for a round-trip camera flight', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.game.s.depth = 0;
+  h.ui.alert = () => {};
   h.ui.game.s.rules = { kind: 'single-player', mission: { id: 'hq-elimination' } };
   h.ui.game.s.entities = [
-    { id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, x: -60, z: 50 },
-    { id: 2, team: 1, kind: 'building', type: 'hq', hp: 100, x: 80, z: -70 }
+    { id: 3, team: 0, kind: 'unit', type: 'worker', hp: 100, x: -69, z: 46, queue: [] },
+    { id: 2, team: 1, kind: 'building', type: 'hq', hp: 100, x: 80, z: -70, progress: 1, queue: [] }
   ];
   const explored = Array.from(h.ui.game.world.explored);
   h.ui.event('start', {});
-  h.ui.event('radio', 'Expedition command|Recruit your first two workers from Infantry.');
-  assert.equal(h.ui.paused, true);
-  assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
+  assert.equal(h.ui.battleTutorial.step, 'arrival');
+  assert.equal(h.ui.paused, false);
+  assert.equal(h.ui.controlsLocked, true);
+  assert.notEqual(h.ui.game.s.cam.z, 0, 'arrival begins with the camera looking ahead of the worker');
+  h.ui.advanceTutorialArrival(3);
+  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
+  assert.equal(h.ui.battleTutorial.step, 'buildHQ');
+  assert.equal(h.ui.controlsLocked, false);
+  assert.equal(h.ui.tutorialAction(), 'tab:build');
+  h.ui.game.s.entities.push({ id: 1, team: 0, kind: 'building', type: 'hq', hp: 100,
+    x: -60, z: 50, progress: 1, queue: [] });
+  h.ui.advanceBattleTutorial('complete', 'hq');
+  assert.equal(h.ui.battleTutorial.step, 'recon');
+  assert.equal(h.ui.paused, false, 'simulation clock remains enabled');
+  assert.equal(h.ui.controlsLocked, true);
   assert.equal(h.ui.introObserves(h.ui.game.s.entities[1]), true);
-  assert.equal(h.ui.introObserves(h.ui.game.s.entities[0]), false);
-  assert.deepEqual(modes, ['reset', 'silent']);
-  h.ui.resume(); h.ui.pause();
-  assert.equal(h.ui.paused, true, 'normal pause controls cannot bypass the intro');
-
-  h.ui.advanceBattleIntro(.999);
-  assert.equal(h.document.getElementById('radio').classList.contains('hidden'), true);
-  h.ui.advanceBattleIntro(.001);
-  assert.equal(h.document.getElementById('radioText').textContent, 'Destroy the enemy base to advance.');
+  const camera = { ...h.ui.game.s.cam };
+  h.clickCamera('home'); h.clickCamera('in');
+  h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
+  h.ui.perform('train:worker');
+  assert.deepEqual(h.ui.game.s.cam, camera);
+  assert.equal(h.ui.drag, null);
+  h.ui.advanceBattleIntro(1.25);
+  assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
+  h.ui.advanceBattleIntro(3.75);
+  assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
   h.ui.advanceBattleIntro(4);
   assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
-  h.ui.advanceBattleIntro(.625);
-  assert.deepEqual(h.ui.game.s.cam, { x: 8, z: -12, zoom: 50 });
-  h.ui.advanceBattleIntro(.625);
+  h.ui.advanceBattleIntro(2.5);
   assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
-  assert.equal(h.document.getElementById('radioText').textContent, 'Recruit your first two workers from Infantry.');
   assert.equal(h.ui.battleIntro, null);
-  assert.equal(h.ui.paused, false);
-  assert.equal(h.ui.game.s.time, 0);
+  assert.equal(h.ui.battleTutorial.step, 'trainWorker');
+  assert.equal(h.ui.controlsLocked, false);
   assert.deepEqual(Array.from(h.ui.game.world.explored), explored);
-  assert.deepEqual(modes, ['reset', 'silent', 'battle']);
 });
 
 test('first salvage introduction focuses the core without revealing an enemy; completion persists independently', () => {
@@ -529,7 +537,7 @@ test('first salvage introduction focuses the core without revealing an enemy; co
   assert.equal(h.ui.game.s.time,0); assert.deepEqual(Array.from(h.ui.game.world.explored),explored);
   assert.equal(h.ui.beginBattleIntro(),false,'later salvage missions skip the first-visit intro');
   h.ui.game.s.rules={kind:'single-player',mission:{id:'hq-elimination'}}; h.ui.game.s.depth=0;
-  assert.equal(h.ui.beginBattleIntro(),true,'standard stage-one intro is independent');
+  assert.equal(h.ui.beginBattleIntro(),false,'HQ reconnaissance waits for player construction');
 });
 
 test('an interrupted salvage intro stays unseen, and its public marker/HUD never mutate the mission or fog', () => {
@@ -595,6 +603,10 @@ test('first-stage tutorial highlights two workers, refinery, barracks and rifle 
 
   assert.equal(h.ui.beginBattleTutorial(), true);
   h.ui.renderActions();
+  assert.equal(focused('tab:build'), true);
+  h.ui.setTab('build');
+  assert.equal(focused('build:hq'), true);
+  h.ui.advanceBattleTutorial('complete', 'hq');
   assert.equal(focused('tab:infantry'), true);
   h.ui.setTab('infantry');
   assert.equal(focused('train:worker'), true);
@@ -651,6 +663,7 @@ test('tutorial remembers valid goals completed out of order instead of demanding
   h.ui.game.s.depth = 0;
   h.ui.game.s.rules = { kind: 'single-player', mission: { id: 'hq-elimination' } };
   assert.equal(h.ui.beginBattleTutorial(), true);
+  h.ui.advanceBattleTutorial('complete', 'hq');
   h.ui.advanceBattleTutorial('complete', 'barracks');
   h.ui.advanceBattleTutorial('trained', 'rifle');
   h.ui.advanceBattleTutorial('complete', 'refinery');

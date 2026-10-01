@@ -412,7 +412,8 @@ class MeridianMultiplayerClient {
         if (!this.started) {
           this.started = true;
           this.setConnectionPhase('playing');
-          const home = frame.entities.find(e => e.team === game.networkTeam && e.type === 'hq');
+          const home = frame.entities.find(e => e.team === game.networkTeam && e.type === 'hq') ||
+            frame.entities.find(e => e.team === game.networkTeam && e.type === 'worker');
           if (home) { game.s.cam.x = home.x; game.s.cam.z = home.z; }
           this.ui.event('start', {});
           this.ui.toast(`Session ${this.code} · server time · menus do not pause`);

@@ -58,16 +58,16 @@
             return;
           }
           if (b.dataset.action) {
-            if (!this.paused) this.perform(b.dataset.action);
+            if (!this.controlsLocked) this.perform(b.dataset.action);
             return;
           }
-          if (hasContentKey(UNITS, b.dataset.queueType) && !this.paused && !this.game.s?.result) {
+          if (hasContentKey(UNITS, b.dataset.queueType) && !this.controlsLocked && !this.game.s?.result) {
             this.cancelRecruitment(b.dataset.queueType);
             this.updateHUD();
             return;
           }
           if (b.dataset.cam) {
-            if (this.battleIntro) return;
+            if (this.controlsLocked) return;
             if (b.dataset.cam === 'home') this.homeCamera();
             else if (b.dataset.cam === 'objective') {
               const rules = this.game.s?.rules;
@@ -91,7 +91,7 @@
         });
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
         $('speedBtn').onclick = () => {
-          if (this.game.networkTeam != null) return;
+          if (this.game.networkTeam != null || this.controlsLocked) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           const speeds = [1, 1.5, 2, 0.75];
           this.game.s!.speed = speeds[(speeds.indexOf(this.game.s!.speed) + 1) % speeds.length];
@@ -99,6 +99,7 @@
           this.updateHUD();
         };
         $('attackMoveBtn').onclick = () => {
+          if (this.controlsLocked) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           this.attackMove = !this.attackMove;
           $('attackMoveBtn').setAttribute('aria-pressed', String(this.attackMove));
@@ -108,6 +109,7 @@
             : 'Move: troops prioritize reaching the destination.');
         };
         $('visibleCombatSelectBtn').onclick = () => {
+          if (this.controlsLocked) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker')
             .filter(e => {
@@ -119,6 +121,7 @@
           this.lastClick = {};
         };
         $('combatSelectBtn').onclick = () => {
+          if (this.controlsLocked) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker').map(e => e.id));
           this.lastClick = {};
@@ -146,7 +149,7 @@
             this.codexZoom = clamp(this.codexZoom * Math.exp(clamp(pixels, -240, 240) * .0015), .3, 2);
             return;
           }
-          if (this.view !== 'game' || this.paused || !this.game.s ||
+          if (this.view !== 'game' || this.controlsLocked || !this.game.s ||
               !this.R.containsPoint(e.clientX, e.clientY)) return;
           e.preventDefault();
           // WheelEvent delta modes are pixels, lines and pages respectively.
@@ -181,7 +184,7 @@
         };
         let miniDrag = false;
         map.addEventListener('pointerdown', e => {
-          if (this.paused || this.view !== 'game') return;
+          if (this.controlsLocked || this.view !== 'game') return;
           e.preventDefault();
           let p = minimapPosition(e);
           if (e.button === 2) {
@@ -204,7 +207,7 @@
           }
         });
         map.addEventListener('pointermove', e => {
-          if (!miniDrag) return;
+          if (!miniDrag || this.controlsLocked) return;
           let p = minimapPosition(e);
           this.center(p.x, p.z);
         });
@@ -350,7 +353,7 @@
           if (!this.codexDrag) this.codexManualRotation = false;
           return;
         }
-        if (this.view !== 'game' || this.paused || !this.R.containsPoint(e.clientX, e.clientY)) return;
+        if (this.view !== 'game' || this.controlsLocked || !this.R.containsPoint(e.clientX, e.clientY)) return;
         e.preventDefault();
         if (e.pointerType === 'mouse' && ![0, 1, 2].includes(e.button)) return;
         this.pointer = { x: e.clientX, y: e.clientY, inside: true };
@@ -398,7 +401,7 @@
         }
         this.pointer = { x: e.clientX, y: e.clientY,
           inside: e.target === $('world') && this.R.containsPoint(e.clientX, e.clientY) };
-        if (this.view !== 'game' || this.paused) return;
+        if (this.view !== 'game' || this.controlsLocked) return;
         if (e.pointerType === 'touch' && this.touchPoints.has(e.pointerId)) {
           this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
           if (this.touchPoints.size === 2) {
@@ -452,7 +455,7 @@
           }
           return;
         }
-        if (this.view !== 'game' || this.paused) {
+        if (this.view !== 'game' || this.controlsLocked) {
           this.drag = null;
           return;
         }

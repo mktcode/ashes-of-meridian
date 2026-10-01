@@ -8,6 +8,12 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 - [ ] KI-gegen-KI-Druck, Ausscheiden und HQ-Abschluss beobachten. Gegen passiven/verteidigenden Spieler: erfolgreiche Belagerung fortsetzen, sinnvoller Rückzug bei Bedrohung, Reserven gegen Ablenkung, stabile FFA-Ziele.
 - [ ] Einstieg ohne Flottenupgrades und tiefe Ressourcenstapel balancieren; [Progressionsbefunde](expeditions-schwierigkeit-und-upgrades.md). Faire Wege/Wirtschaft aller Eckstarts prüfen.
 
+## Worker-Start und Tutorial
+
+- [ ] Worker-Ankunft, Lesedauer der Textdialoge und Fahrt eigenes HQ → Gegner → eigenes HQ menschlich abnehmen, insbesondere im Hochformat. Platzieren des ersten HQ ohne Vorwissen verständlich?
+- [ ] Bezahlten KI-HQ-Aufbau aus Worker-Sicht auf den spielbaren Karten gezielt prüfen; KI-/Simulationsläufe brauchen separate Freigabe. Danach Wirtschaft und frühe Angriffe unter dem längeren Aufbau vergleichen, kein automatisches Balancing.
+- [ ] Multiplayer-Start mit Worker und HQ-Platzierung auf zwei Geräten prüfen.
+
 ## Commands und Bedienung
 
 - [ ] Viererauswahl/-reihenfolge, Armory-Ränge, feste Slots/Loadouts über Übergänge und Reload verständlich.

@@ -212,9 +212,12 @@
       },
       checkHQElimination(this: MeridianGame) {
         const s = this.s!, mission = MISSIONS['hq-elimination'];
-        // Resolve all HQ losses together; simultaneous player elimination is always a loss.
+        // Deployment is not an HQ loss. Once established, the normal HQ rule resumes.
+        for (const party of s.parties)
+          if (party.deploymentPending && this.has('hq', party.id)) party.deploymentPending = false;
+        // Resolve all losses together; simultaneous player elimination is always a loss.
         const eliminated = s.parties.filter(p => !p.eliminated &&
-          !this.alive(e => e.team === p.id && e.type === 'hq').length);
+          !this.alive(e => e.team === p.id && (p.deploymentPending ? e.type === 'worker' : e.type === 'hq')).length);
         for (const party of eliminated) {
           party.eliminated = true;
           // Withdrawal, not combat kills: no score, promotions, explosions or RNG draws.
