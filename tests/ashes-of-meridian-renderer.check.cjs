@@ -602,6 +602,24 @@ test('menu camera keeps its gentle orbit at the increased rate', () => {
   assert.ok(Math.abs(h.r.eye[2] - 78) < 1e-9);
 });
 
+test('menu camera follows raised terrain at its target and stays above hills throughout its orbit', () => {
+  const {r}=setup();r.resize();
+  for(const sample of [()=>36,(x,z)=>Math.hypot(x,z)>70?65:12]) {
+    r.surface={heightAt:sample};
+    for(const t of [0,25,50,75,100,125,150]) {
+      r.camera(0,0,65,true,t);
+      assert.ok(r.eye[1]>=sample(r.eye[0],r.eye[2])+24,'never orbit under the terrain');
+      assert.ok(r.eye[1]>=sample(0,-4)+24,'retain height above the preview target');
+      const p=r.project(0,sample(0,-4)+7,-4);
+      assert.ok(Math.abs(p.x-(r.viewport.left+r.viewport.width/2))<1e-3);
+      assert.ok(Math.abs(p.y-(r.viewport.top+r.viewport.height/2))<1e-3);
+      assert.ok(Array.from(r.lightVP).every(Number.isFinite));
+    }
+  }
+  r.camera(3,7,65);
+  assert.deepEqual(Array.from(r.eye),[3,65*1.1,7+65*.82],'gameplay camera is unchanged');
+});
+
 test('fitted shadow projection covers ground and elevated view corners at zoom limits and different viewport shapes',()=>{
   for(const receiverHeight of [undefined,46]) for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
     const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context);

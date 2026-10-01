@@ -823,10 +823,13 @@
         let a = this.viewport.width / this.viewport.height;
         // Preserve the existing pixels-per-world-unit zoom while clipping HUD space.
         let viewHeight = zoom * this.viewport.height / innerHeight;
-        let target = cinema ? [0, 7, -4] : [x, 0, z];
+        const datum = cinema ? this.surface?.heightAt(0, -4) ?? 0 : 0;
+        let target = cinema ? [0, datum + 7, -4] : [x, 0, z];
         this.eye = cinema
           ? [62 + Math.sin(t * CINEMA_ORBIT_SPEED) * 8, 24, 78 + Math.cos(t * CINEMA_ORBIT_SPEED) * 5]
           : [x, zoom * 1.1, z + zoom * 0.82];
+        // The menu orbit must stay above the seeded surface, not the old zero-height map.
+        if (cinema) this.eye[1] += Math.max(datum, this.surface?.heightAt(this.eye[0], this.eye[2]) ?? 0);
         let view = M4.look(this.eye, target),
           proj = cinema
             ? M4.perspective(0.74, a, 0.5, 400)
@@ -835,7 +838,7 @@
         this.inverseVP = M4.inverse(this.vp);
         if (this.quality === 0) this.lightVP = M4.identity();
         else if (cinema) {
-          this.lightVP = M4.mul(M4.ortho(-78, 78, -78, 78, 1, 250), M4.look([-64, 110, 43], [0, 0, 0]));
+          this.lightVP = M4.mul(M4.ortho(-78, 78, -78, 78, 1, 250), M4.look([-64, 110 + datum, 43], [0, datum, 0]));
           this.shadowBias = .00022;
         } else this.fitShadow();
       }

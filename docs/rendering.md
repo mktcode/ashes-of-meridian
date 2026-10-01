@@ -65,6 +65,8 @@ Effektculling enthält ganze Strahlen, Radien und Höhenhüllen, nicht nur Zentr
 
 ## Menü-Landschaftswechsel
 
+Die Menükamera richtet ihr Ziel an der CPU-Geländehöhe aus und hält den Orbit oberhalb des Bodens am Kamerastandort. Erhöhte Landschaften dürfen nicht die alte Nullhöhen-Kulisse voraussetzen; das Schattenvolumen folgt dem gleichen Ziel-Datum. Die Gefechtskamera bleibt davon getrennt.
+
 Ein Stage-Wechsel kopiert das fertig gerenderte Canvas **einmal im Rendercallback** in ein temporäres 2D-Canvas. Kein `preserveDrawingBuffer`, kontinuierliches Readback oder zweite live Welt. Das Standbild überbrückt Welt-/Texturladen; erst der erste fertige neue Frame startet die Compositor-Überblendung.
 
 Ersetzende Vorschau/Gefechtsstart verwirft Animation/Bildspeicher und entwertet alte asynchrone Ergebnisse. Reduced motion überspringt Animation, nicht Bereitschaft. [Archivzustand](architecture.md#zustands--und-verantwortungsgrenzen).
