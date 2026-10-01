@@ -1,6 +1,6 @@
 # Teststrategie · Review und offene Entscheidungen
 
-Lesendes Review des aktuellen Testaufbaus, der Runnerauswahl und der Prüf-/Architekturreferenzen. Keine Tests, Builds, Browserläufe oder Laufzeitmessungen ausgeführt; Aussagen zu Kosten sind Strukturindikatoren, keine gemessene Rangliste. Kein Auftrag zur Umsetzung der folgenden Vorschläge. Ein vollständiges Quellcodeaudit bleibt ein eigener Folgeschritt.
+Umsetzung freigegeben: Testauswahl und aktuelle Verträge überarbeiten, obsolete Arbeitsnachweise aus Tests und Dokumentation entfernen. Keine Spiel-/Balancing-/RNG-Änderungen oder Assetlöschungen. Hauptagent bearbeitet und prüft den kombinierten Stand mit `npm test`; KI-/Simulationslangläufe sind nicht freigegeben. Ein lesender Dokumentationsaudit unterstützt die Sichtung historischer Referenzen und Issues in einem eigenen Worktree; er führt keine Programme aus und verändert keine Dateien. Offene menschliche Abnahmen bleiben erhalten.
 
 ## Konkrete Befunde
 
