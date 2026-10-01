@@ -310,8 +310,33 @@ test('expedition loadout selection keeps four unique ordered slots and locks an 
   h.ui.selectBattleAbility('scan'); h.ui.selectBattleAbility('bulwark');
   assert.deepEqual(Array.from(h.ui.battleAbilities), ['repair', 'drop', 'disruption', 'bulwark']);
   h.ui.expedition = { abilities: [...h.ui.battleAbilities] };
+  h.ui.view = 'game';
+  h.ui.selectBattleAbility('repair');
   h.ui.selectBattleAbility('recall');
   assert.deepEqual(Array.from(h.ui.battleAbilities), ['repair', 'drop', 'disruption', 'bulwark']);
+});
+
+test('new expedition modules remain editable with an existing checkpoint without changing the saved run', () => {
+  const h = setup(), ui = h.ui;
+  const expedition = Object.freeze({ version: 5, faction: 0, depth: 2,
+    abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']),
+    benefits: Object.freeze({}), enemyBenefits: Object.freeze([Object.freeze({})]),
+    offers: Object.freeze([]),
+    encounter: Object.freeze({ mission: 'hq-elimination', enemies: Object.freeze([2]), map: 'desert', seed: 1409 }) });
+  ui.expedition = expedition;
+  ui.persistence.saveExpedition = () => { throw Error('Loadout editing must not save a run'); };
+  ui.persistence.clearExpedition = () => { throw Error('Loadout editing must not discard a run'); };
+  ui.uiAction('battle');
+  ui.selectBattleAbility('orbital');
+  assert.deepEqual(Array.from(ui.battleAbilities), ['repair', 'scan', 'drop']);
+  ui.selectBattleAbility('disruption');
+  assert.deepEqual(Array.from(ui.battleAbilities), ['repair', 'scan', 'drop', 'disruption']);
+  assert.strictEqual(ui.expedition, expedition);
+  ui.game.start = options => h.calls.push(['start', options]);
+  ui.continueExpedition();
+  const options = h.calls.at(-1)[1];
+  assert.deepEqual(Array.from(options.abilities), ['orbital', 'repair', 'scan', 'drop']);
+  assert.equal(options.seed, 1409);
 });
 
 test('FPS setting updates the readout immediately and remains a profile setting', () => {

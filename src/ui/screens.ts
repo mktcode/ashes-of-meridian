@@ -158,7 +158,7 @@
         return expeditionBenefitOffers(expedition.benefits, seeded(expedition.encounter.seed + expedition.depth * 7919));
       },
       selectBattleAbility(this: MeridianUI, ability: AbilityType) {
-        if (this.expedition) return;
+        if (this.view !== 'battle') return;
         const index = this.battleAbilities.indexOf(ability);
         if (index >= 0) this.battleAbilities.splice(index, 1);
         else if (this.battleAbilities.length < 4) this.battleAbilities.push(ability);
