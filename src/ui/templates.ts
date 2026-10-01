@@ -74,7 +74,8 @@ function renderFieldManual(mission: MissionId = DEFAULT_MISSION) {
             ['Visible combat force', 'Framed group icon: select combat units in view'],
             ['Combat force', 'Group icon: select all combat units on the map'],
             ['Attack-move', 'Crossed swords: gold = stop to fight'],
-            ['Pan / zoom', 'Drag or middle-drag · wheel, pinch or ＋ / −'],
+            ['Pan / zoom', 'Drag · wheel, pinch or ＋ / −'],
+            ['Rotate camera', 'Twist two fingers or middle-drag'],
             ['Navigate', '⌂: base · minimap: tap, click or drag']
           ])}<p style="font-size:12px">Turn Attack-move off to prioritize moving or retreating. Workers always move normally.</p><h3>Battle controls</h3>${renderHelpLines([
             ['Abilities', 'Choose in the bottom-center bar → tap target'],

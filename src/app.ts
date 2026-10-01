@@ -70,7 +70,7 @@
           overlayContext.setTransform(d, 0, 0, d, -v.left * d, -v.top * d);
           if (ui.view === 'game' && game.s) {
             const cam = game.s.cam;
-            R.camera(cam.x, cam.z, cam.zoom);
+            R.camera(cam.x, cam.z, cam.zoom, false, 0, cam.yaw);
             ui.drawMinimap();
           }
         }
@@ -285,7 +285,7 @@
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
           worldView.sync(world);
-          R.camera(s.cam.x, s.cam.z, s.cam.zoom);
+          R.camera(s.cam.x, s.cam.z, s.cam.zoom, false, 0, s.cam.yaw);
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
           R.fogOn = !ui.battleIntro;

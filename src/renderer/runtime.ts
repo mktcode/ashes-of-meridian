@@ -818,7 +818,7 @@
           this.drawCalls++;
         }
       }
-      camera(x: number, z: number, zoom: number, cinema = false, t = 0) {
+      camera(x: number, z: number, zoom: number, cinema = false, t = 0, yaw = 0) {
         this.cinema = cinema;
         let a = this.viewport.width / this.viewport.height;
         // Preserve the existing pixels-per-world-unit zoom while clipping HUD space.
@@ -827,7 +827,7 @@
         let target = cinema ? [0, datum + 7, -4] : [x, 0, z];
         this.eye = cinema
           ? [62 + Math.sin(t * CINEMA_ORBIT_SPEED) * 8, 24, 78 + Math.cos(t * CINEMA_ORBIT_SPEED) * 5]
-          : [x, zoom * 1.1, z + zoom * 0.82];
+          : [x + Math.sin(yaw) * zoom * 0.82, zoom * 1.1, z + Math.cos(yaw) * zoom * 0.82];
         // The menu orbit must stay above the seeded surface, not the old zero-height map.
         if (cinema) this.eye[1] += Math.max(datum, this.surface?.heightAt(this.eye[0], this.eye[2]) ?? 0);
         let view = M4.look(this.eye, target),

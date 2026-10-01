@@ -93,6 +93,7 @@
       domPressed?: boolean;
       touchGesture?: boolean;
       pinchDist?: number;
+      touchAngle?: number;
       queueSignature?: string;
       queueInputs?: (number | UnitType)[];
       miniBuffer?: HTMLCanvasElement;

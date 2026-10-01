@@ -150,7 +150,7 @@
           entities: [], scans: [], strikes: [], fields: [], recalls: [],
           stats: { kills: 0, structuresDestroyed: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
           triggers: {},
-          cam: { x: playerStart.x + 5, z: playerStart.z - 2, zoom: 57 },
+          cam: { x: playerStart.x + 5, z: playerStart.z - 2, zoom: 57, yaw: 0 },
           result: null,
           speed: 1
         };

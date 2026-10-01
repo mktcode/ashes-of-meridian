@@ -1032,7 +1032,7 @@ test('codex pinch captures both fingers, keeps rotation separate and clears stal
   assert.equal(h.ui.codexTouches.size,0);
 });
 
-test('mouse wheel zoom and middle-button pan respect camera limits without issuing commands', () => {
+test('mouse wheel zoom and middle-button rotation respect camera guards without issuing commands', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
   assert.equal(typeof h.world.handlers.wheel, 'function');
   let prevented = 0;
@@ -1050,10 +1050,12 @@ test('mouse wheel zoom and middle-button pan respect camera limits without issui
   h.pointer('pointermove', 240, 230, { pointerType: 'mouse', button: 1 });
   h.pointer('pointerup', 240, 230, { pointerType: 'mouse', button: 1 });
   assert.equal(h.ui.drag, null);
-  assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 27.2 });
+  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 27.2, yaw: .4 });
   assert.deepEqual(h.ui.selected, [7]); assert.deepEqual(h.calls, []);
   h.ui.paused = true; wheel(120); assert.equal(prevented, 41);
-  assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 27.2 });
+  h.pointer('pointerdown', 200, 200, { pointerType: 'mouse', button: 1 });
+  h.pointer('pointermove', 280, 200, { pointerType: 'mouse', button: 1 });
+  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 27.2, yaw: .4 });
 });
 
 test('one-finger drag preserves pan, camera bounds and no command on release', () => {
@@ -1083,6 +1085,40 @@ test('pinch preserves zoom limits and does not pan or issue commands', () => {
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 115 });
   assert.equal(h.ui.touchGesture, false); assert.equal(h.ui.touchPoints.size, 0);
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
+});
+
+test('two-finger twist combines rotation and zoom and guards surviving or extra fingers', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+  h.pointer('pointerdown', 200, 200);
+  h.pointer('pointerdown', 300, 200, { pointerId: 2 });
+  h.pointer('pointermove', 200, 400, { pointerId: 2 });
+  assert.ok(Math.abs(h.ui.game.s.cam.yaw - Math.PI / 2) < 1e-10);
+  assert.equal(h.ui.game.s.cam.zoom, 27.2);
+  assert.equal(h.ui.game.s.cam.x, 0); assert.equal(h.ui.game.s.cam.z, 0);
+  const before = { ...h.ui.game.s.cam };
+  h.pointer('pointerdown', 400, 200, { pointerId: 3 });
+  h.pointer('pointermove', 240, 400, { pointerId: 2 });
+  assert.deepEqual(h.ui.game.s.cam, before, 'third finger suspends the gesture');
+  h.pointer('pointerup', 400, 200, { pointerId: 3 });
+  h.pointer('pointermove', 240, 400, { pointerId: 2 });
+  assert.deepEqual(h.ui.game.s.cam, before, 'two-finger resumption starts at a fresh baseline');
+  h.pointer('pointerup', 240, 400, { pointerId: 2 });
+  h.pointer('pointermove', 260, 260);
+  h.pointer('pointerup', 260, 260);
+  assert.deepEqual(h.ui.game.s.cam, before, 'surviving finger neither pans nor rotates');
+  assert.deepEqual(h.ui.selected, [7]); assert.deepEqual(h.calls, []);
+  h.pointer('pointerdown', 200, 200);
+  h.pointer('pointerdown', 300, 200, { pointerId: 2 });
+  h.world.handlers.pointercancel();
+  assert.equal(h.ui.touchAngle, undefined); assert.equal(h.ui.pinchDist, undefined);
+});
+
+test('two-finger rotation crosses the angle seam by the shortest arc', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui);
+  h.pointer('pointerdown', 300, 300);
+  h.pointer('pointerdown', 200, 301, { pointerId: 2 });
+  h.pointer('pointermove', 200, 299, { pointerId: 2 });
+  assert.ok(Math.abs(h.ui.game.s.cam.yaw - 2 * Math.atan(.01)) < 1e-10);
 });
 
 test('touch taps still issue orders; pause, cancel and blur retain gesture guards', () => {

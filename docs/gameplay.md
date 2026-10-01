@@ -22,7 +22,7 @@ Desert, Alien Planet, Mothership, Westmark, Frontier und Haven sind seedbasierte
 
 ## Kamera und Befehle
 
-- Ziehen mit Finger/linker/mittlerer Maus verschiebt, Pinch/Mausrad zoomt. Minimap sowie Basis-/Zoomknöpfe ergänzen die Navigation. Tap/Linksklick wählt.
+- Ziehen mit einem Finger/linker Maus verschiebt, Ziehen mit mittlerer Maus dreht die Kamera um ihren Blickmittelpunkt. Zwei Finger drehen per Drehgeste und zoomen per Pinch; das Mausrad zoomt. Minimap sowie Basis-/Zoomknöpfe ergänzen die Navigation. Tap/Linksklick wählt.
 - Doppeltap auf dieselbe eigene Einheit gruppiert sichtbare Einheiten dieses Typs; Dreifachtap sichtbare Nicht-Worker. Gruppenschalter ergänzen sichtbare/gesamte Kampfauswahl. Pan, Zielwechsel und Befehle unterbrechen Tapfolgen.
 - Boden-Tap mit Auswahl bewegt; Schwerter-Schalter aktiviert Attack-move für zukünftige Kampfbefehle, nicht Worker. Ziel-Tap/Rechtsklick erteilt Kontextbefehle. Neuer Auftrag ersetzt den bisherigen, keine Befehlsqueue.
 - **Cancel** beendet Zielwahl ohne Verbrauch. Fehlplatzierung erlaubt Wiederholung. Keine Hotkeys, Rechteck-/Shift-Auswahl oder Kontrollgruppen.

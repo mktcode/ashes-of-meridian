@@ -20,6 +20,7 @@
         this.touchGesture = false;
         this.domPressed = false;
         this.pinchDist = undefined;
+        this.touchAngle = undefined;
         this.pings = [];
         this.audio.stopVoice?.();
         this.radioVoiceId = null;

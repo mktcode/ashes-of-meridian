@@ -600,7 +600,7 @@ interface RunState {
   recalls: PendingRecall[];
   stats: RunStats;
   triggers: RunTriggers;
-  cam: Position & { zoom: number };
+  cam: Position & { zoom: number; yaw: number };
   result: BattleResult | null;
   speed: number;
 }

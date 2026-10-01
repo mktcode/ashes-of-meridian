@@ -163,6 +163,7 @@
           this.drag = null;
           this.touchPoints.clear();
           this.touchGesture = false;
+          this.pinchDist = this.touchAngle = undefined;
         });
         c.addEventListener('pointerleave', () => {
           this.pointer.inside = false;
@@ -306,8 +307,11 @@
               isFlyingUnitType(e.type) ? 4.4 : e.kind === 'building' ? 2.0 : 1,
             p = this.R.project(e.x, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
           if (!p) continue;
-          let edge = this.R.project(e.x + e.size, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z),
-            r = Math.max(e.kind === 'unit' ? 12 : 16, edge ? Math.abs(edge.x - p.x) : 18),
+          const height = y + (this.game.world?.surface?.entityHeight(e) ?? 0);
+          let edge = this.R.project(e.x + e.size, height, e.z),
+            edgeZ = this.R.project(e.x, height, e.z + e.size),
+            r = Math.max(e.kind === 'unit' ? 12 : 16,
+              edge && edgeZ ? Math.hypot(edge.x - p.x, edgeZ.x - p.x) : 18),
             dx = (sx - p.x) / (r + 5),
             dy = (sy - p.y) / (r * 0.9 + 8),
             d = dx * dx + dy * dy;
@@ -327,6 +331,18 @@
       codexTouchDistance(this: MeridianUI) {
         const points = [...this.codexTouches.values()];
         return points.length === 2 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : undefined;
+      },
+      battleTouchBaseline(this: MeridianUI) {
+        const points = [...this.touchPoints.values()];
+        this.pinchDist = points.length === 2
+          ? Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) : undefined;
+        this.touchAngle = points.length === 2 && this.pinchDist! >= 10
+          ? Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x) : undefined;
+      },
+      rotateCamera(this: MeridianUI, delta: number) {
+        if (delta === 0) return;
+        const cam = this.game.s!.cam, yaw = (cam.yaw ?? 0) + delta;
+        cam.yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
       },
       pointerDown(this: MeridianUI, e: PointerEvent) {
         if (this.view === 'codexModel') {
@@ -348,16 +364,16 @@
         e.preventDefault();
         if (e.pointerType === 'mouse' && ![0, 1, 2].includes(e.button)) return;
         this.pointer = { x: e.clientX, y: e.clientY, inside: true };
+        $('world').setPointerCapture(e.pointerId);
         if (e.pointerType === 'touch') {
           this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
-          if (this.touchPoints.size === 2) {
-            let a = [...this.touchPoints.values()];
-            this.pinchDist = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+          this.battleTouchBaseline();
+          if (this.touchPoints.size >= 2 || this.touchGesture) {
             this.touchGesture = true;
+            this.drag = null;
             return;
           }
         }
-        $('world').setPointerCapture(e.pointerId);
         this.drag = {
           sx: e.clientX,
           sy: e.clientY,
@@ -404,14 +420,25 @@
                 27.2,
                 115
               );
+            const angle = d >= 10 ? Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x) : undefined;
+            if (angle !== undefined && this.touchAngle !== undefined) {
+              // Shortest signed arc also handles crossing the ±π seam.
+              const delta = angle - this.touchAngle;
+              this.rotateCamera(Math.atan2(Math.sin(delta), Math.cos(delta)));
+            }
             this.pinchDist = d;
+            this.touchAngle = angle;
             return;
           }
+          // Extra fingers and the last surviving finger must not resume a stale drag.
+          if (this.touchGesture) return;
         }
         if (this.drag) {
           let drag = this.drag;
           if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
-          if (drag.moved && (drag.type === 'touch' || (drag.type === 'mouse' && drag.button !== 2))) {
+          if (drag.moved && drag.type === 'mouse' && drag.button === 1) {
+            this.rotateCamera((e.clientX - drag.x) * .01);
+          } else if (drag.moved && (drag.type === 'touch' || (drag.type === 'mouse' && drag.button === 0))) {
             let a = this.R.ground(drag.x, drag.y, false),
               b = this.R.ground(e.clientX, e.clientY, false);
             this.center(this.game.s!.cam.x + a.x - b.x, this.game.s!.cam.z + a.z - b.z);
@@ -438,7 +465,10 @@
         }
         let previousClick = this.lastClick;
         this.lastClick = {};
-        if (e.pointerType === 'touch') this.touchPoints.delete(e.pointerId);
+        if (e.pointerType === 'touch') {
+          this.touchPoints.delete(e.pointerId);
+          this.battleTouchBaseline();
+        }
         if (this.touchGesture) {
           if (!this.touchPoints.size) {
             this.touchGesture = false;

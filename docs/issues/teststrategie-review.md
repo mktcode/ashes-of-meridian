@@ -11,4 +11,6 @@
 
 - [ ] Historische Effektfixtures in `presentation-v1.json` von der entfernten unkomponierten Desert-Geografie entkoppeln; aktuelle Helper laden das prozedurale Rezept. RNG-Referenzen bleiben unverändert. Diese Fälle wurden für den Terrainumbau nicht als Abschlussnachweis ausgeführt.
 
+- [ ] Renderer-Fixtures für Upland und Beleuchtungsprofile an die aktuellen Profilverträge anbinden: Der gezielte Renderer-Dateilauf scheitert bei `upland weathering` (historische Frontier-Annahme für `u_upland`) und `lighting profiles override` (fehlendes `AURELION_ENTITY_LIGHTING`). Beide Fehler sind auch mit zurückgenommener Kameradrehung reproduzierbar; keine Shader-/Profiländerung zum Grünmachen.
+
 Kein automatischer Mess-/Umbauauftrag; keine geteilten mutablen VM-Kontexte als Laufzeitabkürzung.

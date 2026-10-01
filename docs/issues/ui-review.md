@@ -27,6 +27,9 @@ unbeschnittene Kontroll-Fokusrahmen bei 375×667, 1280×800 und 844×390. HUD-Di
 mit pausierter Welt und angehaltener WebGL-Bildfolge: vier Slots, Kategorie-/Modellkacheln,
 Cancel-/Cooldown-/TECH-Anzeigen, Queue-Overlay, Funk-Dismiss über aufgeklapptem
 Produktionspanel und Pause-/Restart-Dialog. Keine Shader-/Performanceabnahme.
+Kameradrehung technisch mit `file://`/Software-WebGL geprüft: Mittelmausziehen,
+emulierte Zwei-Finger-Drehung mit Pinch und Picking bei gedrehter Kamera.
+Drehgefühl und kombinierte Gesten auf echten Mobilgeräten bleiben menschlich abzunehmen.
 Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und

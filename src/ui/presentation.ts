@@ -17,6 +17,7 @@
         this.touchPoints.clear();
         this.touchGesture = false;
         this.pinchDist = undefined;
+        this.touchAngle = undefined;
         this.selected = [];
         this.clearMode();
         return true;

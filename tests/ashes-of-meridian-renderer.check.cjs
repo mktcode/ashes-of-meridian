@@ -620,12 +620,29 @@ test('menu camera follows raised terrain at its target and stays above hills thr
   assert.deepEqual(Array.from(r.eye),[3,65*1.1,7+65*.82],'gameplay camera is unchanged');
 });
 
+test('rotated gameplay camera preserves its pivot and projection/picking roundtrips', () => {
+  const {r}=setup(); r.resize();
+  for (const yaw of [0, Math.PI / 4, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+    r.camera(3,7,57,false,0,yaw);
+    assert.ok(Math.abs(r.eye[0] - (3 + Math.sin(yaw) * 57 * .82)) < 1e-9);
+    assert.ok(Math.abs(r.eye[2] - (7 + Math.cos(yaw) * 57 * .82)) < 1e-9);
+    const pivot = r.project(3,0,7);
+    assert.ok(Math.abs(pivot.x - (r.viewport.left + r.viewport.width / 2)) < 1e-3);
+    assert.ok(Math.abs(pivot.y - (r.viewport.top + r.viewport.height / 2)) < 1e-3);
+    for (const [x,z] of [[3,7],[-10,15],[20,-8]]) {
+      const p=r.project(x,0,z), ground=r.ground(p.x,p.y,false);
+      assert.ok(Math.abs(ground.x-x)<1e-3 && Math.abs(ground.z-z)<1e-3);
+    }
+    assert.ok(Array.from(r.lightVP).every(Number.isFinite));
+  }
+});
+
 test('fitted shadow projection covers ground and elevated view corners at zoom limits and different viewport shapes',()=>{
   for(const receiverHeight of [undefined,46]) for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
     const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context);
     r.battlefieldProfile=receiverHeight?{terrainReceiverHeight:receiverHeight}:undefined; r.resize();
-    for(const zoom of [27.2,57,115])for(const [x,z] of [[0,0],[-83,83],[83,-83]]) {
-      r.camera(x,z,zoom);
+    for(const zoom of [27.2,57,115])for(const [x,z] of [[0,0],[-83,83],[83,-83]])for(const yaw of [0,Math.PI/4,Math.PI/2]) {
+      r.camera(x,z,zoom,false,0,yaw);
       assert.ok(Array.from(r.lightVP).every(Number.isFinite));assert.ok(r.shadowBias>0&&r.shadowBias<.001);
       for(const [sx,sy] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
         const a=M4.point(r.inverseVP,sx,sy,-1),b=M4.point(r.inverseVP,sx,sy,1);
