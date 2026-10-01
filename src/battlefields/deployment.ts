@@ -41,15 +41,37 @@ function battlefieldDeploymentCandidates(world: Battlefield): Position[] {
   for (const site of world.layout.resourceSites)
     if (!reachable[world.idx(site.x, site.z)] || !reachable[world.idx(site.x + 7, site.z + 7)])
       throw Error('Resource region is disconnected from deployment terrain');
-  const candidates: Position[] = [], add = (p: Position) => {
+  const candidates: Position[] = [], add = (p: Position, pool = candidates) => {
     if (Math.max(Math.abs(p.x), Math.abs(p.z)) > world.extent - 17 || !reachable[world.idx(p.x, p.z)] ||
-      !battlefieldDeploymentSpace(world, p) || candidates.some(q => distance(p, q) < 5)) return;
-    candidates.push({ ...p });
+      !battlefieldDeploymentSpace(world, p) || pool.some(q => distance(p, q) < 5)) return;
+    pool.push({ ...p });
   };
   for (const site of world.layout.resourceSites) add({ x: site.x - 6, z: site.z + 6 });
   for (let z = 4; z < n - 4; z += 4) for (let x = 4; x < n - 4; x += 4) add(world.point(z * n + x));
-  if (candidates.filter(p => battlefieldEconomyDistance(world, p) > 24).length < 8)
-    throw Error('Insufficient exploration deployment space');
+  const sufficient = () => {
+    const exploration = candidates.filter(p => battlefieldEconomyDistance(world, p) > 24), minimum = Math.min(65, world.extent * .55);
+    if (exploration.length < 8) return false;
+    const separated = (chosen: Position[], from: number): boolean => {
+      if (chosen.length === 4) return true;
+      for (let i = from; i <= exploration.length - (4 - chosen.length); i++)
+        if (chosen.every(p => distance(p, exploration[i]) >= minimum) && separated([...chosen, exploration[i]], i + 1)) return true;
+      return false;
+    };
+    return separated([], 0);
+  };
+  // Keep the coarse pool unchanged when adequate. Narrow shelves can lie between
+  // its samples: refine deterministically without reshaping terrain or consuming RNG.
+  if (!sufficient()) {
+    // Thin the refined exploration pool independently: a coarse candidate just
+    // inside an economy radius must not suppress a valid shelf just outside it.
+    const refined: Position[] = [];
+    for (let z = 4; z < n - 4; z++) for (let x = 4; x < n - 4; x++) {
+      const p = world.point(z * n + x);
+      if (battlefieldEconomyDistance(world, p) > 24) add(p, refined);
+    }
+    candidates.push(...refined.filter(p => !candidates.some(q => distance(p, q) < .01)));
+  }
+  if (!sufficient()) throw Error('Insufficient exploration deployment space');
   return candidates;
 }
 function allocateBattlefieldStarts(world: Battlefield, seed: number, count: number, mode: DeploymentMode): Position[] {

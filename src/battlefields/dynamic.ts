@@ -42,45 +42,79 @@ function dynamicTerrainPlan(world: Battlefield) {
     industrial = style?.family === 'ship', form = industrial ? 'terraces' : style?.relief || 'rolling',
     cs = Math.cos(angle), sn = Math.sin(angle), extent = world.extent,
     hills = Array.from({ length: 12 }, () => ({ x: (random() - .5) * extent * 1.9,
-      z: (random() - .5) * extent * 1.9, radius: 14 + random() * 23, height: 7 + random() * 19 })),
+      z: (random() - .5) * extent * 1.9, radius: 42 + random() * 38, height: 9 + random() * 17 })),
+    // Morphology has its own stream: extra landforms never shift economy or decor draws.
+    morphology = seeded(world.terrainSeed ^ 0x4d4f5250),
+    valley = { offset: (morphology() - .5) * extent * .7, bend: 14 + morphology() * 22,
+      width: 12 + morphology() * 12, depth: 12 + morphology() * 12, phase: morphology() * Math.PI * 2 },
+    ridge = { offset: (morphology() - .5) * extent, width: 28 + morphology() * 20, height: 12 + morphology() * 12 },
+    canyon = !industrial && (form === 'basin' || form === 'broken-crater' || morphology() < .5),
     smooth = (t: number) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); },
-    datum = (x: number, z: number) => 7 + amplitude * (.5 + .22 * Math.sin((x * cs + z * sn) / 110 + phase) +
-      .18 * Math.cos((z * cs - x * sn) / 125 - phase)),
-    raw = (x: number, z: number) => {
-      const u = x * cs + z * sn, v = z * cs - x * sn;
-      let h = datum(x, z);
-      if (form === 'dunes') h += 4 * Math.sin(u / 20 + Math.sin(v / 50));
-      if (form === 'basin' || form === 'broken-crater') h += 8 * smooth((Math.hypot(x, z) / extent - .3) / .55);
-      if (form === 'ridges' || form === 'folds') h += 5 * Math.pow(Math.sin(u / 28 + phase), 2);
+    datum = (x: number, z: number) => {
+      let h = 18 + amplitude * (.5 + .22 * Math.sin((x * cs + z * sn) / 160 + phase) +
+        .18 * Math.cos((z * cs - x * sn) / 185 - phase));
       for (const hill of hills) {
-        const d = Math.hypot(x - hill.x, z - hill.z) / hill.radius;
-        h += hill.height * (form === 'terraces' ? 1 - smooth((d - .55) / .7) : Math.exp(-d * d * 2));
+        const d = Math.hypot(x - hill.x, z - hill.z) / (hill.radius * 2.5);
+        h += hill.height * .2 * Math.exp(-d * d);
       }
       return h;
     },
-    pads = world.layout.resourceSites.map(p => ({ ...p, y: datum(p.x, p.z) })),
+    raw = (x: number, z: number, grade = datum(x, z)) => {
+      const u = x * cs + z * sn, v = z * cs - x * sn;
+      let h = grade;
+      if (form === 'dunes') h += 5 * Math.sin(u / 34 + .6 * Math.sin(v / 75));
+      if (form === 'basin' || form === 'broken-crater') h += 12 * smooth((Math.hypot(x, z) / extent - .3) / .55);
+      if (form === 'ridges' || form === 'folds') {
+        const d = (v - ridge.offset - 12 * Math.sin(u / 85 + phase)) / ridge.width;
+        h += ridge.height * Math.exp(-d * d);
+      }
+      let hillRelief = 0;
+      for (const hill of hills) {
+        const d = Math.hypot(x - hill.x, z - hill.z) / hill.radius;
+        // A smooth maximum joins broad hills without stacking them into one giant mound.
+        const relief = hill.height * (form === 'terraces' ? 1 - smooth((d - .35) / 1.3) : Math.exp(-d * d));
+        hillRelief += relief ** 6;
+      }
+      h += Math.pow(hillRelief, 1 / 6);
+      if (canyon) {
+        const d = Math.abs(v - valley.offset - valley.bend * Math.sin(u / 85 + valley.phase));
+        h -= valley.depth * (1 - smooth((d - valley.width) / 26));
+      }
+      return h;
+    },
+    pads = world.layout.resourceSites.map(p => {
+      const angle = morphology() * Math.PI;
+      return { ...p, cs: Math.cos(angle), sn: Math.sin(angle), stretch: .85 + morphology() * .3, phase: morphology() * Math.PI * 2 };
+    }),
     routes = world.layout.corridors.map(route => {
       const [a, b] = route, dx = b[0] - a[0], dz = b[1] - a[1];
-      return { x: a[0], z: a[1], dx, dz, length2: dx * dx + dz * dz,
-        a: datum(a[0], a[1]), b: datum(b[0], b[1]) };
+      return { x: a[0], z: a[1], dx, dz, length2: dx * dx + dz * dz };
     }),
     height = (x: number, z: number) => {
-      let h = raw(x, z), roadWeight = 0, roadDatum = 0, roadBlend = 0;
+      const grade = datum(x, z);
+      let h = raw(x, z, grade), roadBlend = 0;
       for (const r of routes) {
         const t = clamp(((x - r.x) * r.dx + (z - r.z) * r.dz) / r.length2, 0, 1),
-          d = Math.hypot(x - r.x - t * r.dx, z - r.z - t * r.dz), influence = 1 - smooth((d - 7) / 9);
-        roadWeight += influence; roadDatum += (r.a + (r.b - r.a) * t) * influence;
+          d = Math.hypot(x - r.x - t * r.dx, z - r.z - t * r.dz), influence = 1 - smooth((d - 7) / 26);
         roadBlend = Math.max(roadBlend, influence);
       }
-      if (roadWeight) h += (roadDatum / roadWeight - h) * roadBlend;
-      // Resource clearings are economy/builder space, never predefined bases.
-      let weight = 0, datum = 0, blend = 0;
+      // Intersections share one gently graded datum: averaging roads at unrelated
+      // elevations can otherwise cut the guaranteed vehicle network into islands.
+      h += (grade - h) * roadBlend;
+      // Buildable cores retain a gentle continuous grade instead of punched-out discs.
+      // Irregular elongated shoulders merge them into the surrounding landscape.
+      let blend = 0;
       for (const p of pads) {
-        const influence = 1 - smooth((Math.hypot(x - p.x, z - p.z) - 20) / 10);
-        weight += influence; datum += p.y * influence; blend = Math.max(blend, influence);
+        const dx = x - p.x, dz = z - p.z,
+          u = (dx * p.cs + dz * p.sn) / p.stretch, v = (dz * p.cs - dx * p.sn) * p.stretch,
+          d = Math.pow(u ** 4 + v ** 4, .25), theta = Math.atan2(v, u),
+          shoulder = 28 + 5 * Math.sin(theta * 3 + p.phase) + 3 * Math.cos(theta * 5 - p.phase),
+          influence = 1 - smooth((d - 18) / shoulder);
+        blend = Math.max(blend, influence);
       }
-      if (weight) h += (datum / weight - h) * blend;
-      return clamp(h, 0, 72);
+      h += (grade - h) * blend;
+      // Ease tall overlapping shoulders into the ceiling instead of slicing summits flat.
+      return Math.max(0, h > 60 ? 60 + 12 * (1 - Math.exp(-(h - 60) / 12)) : h);
     };
   return { height, industrial };
 }
@@ -88,8 +122,8 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
   const industrial = family === 'ship', palette: BattlefieldPalette = industrial
     ? { ground: 0x424f5d, rock: 0x7c8e9b, accent: 0xf0b764, flora: 0x79aab5 }
     : { ground: 0x637344, rock: 0x828783, accent: 0xbad49c, flora: 0x355b3a };
-  return { name, size: { extent: 120, cellSize: 2.5 }, palette, worldEvent: industrial ? 'solarFlare' : null,
-    createSize: seed => ({ extent: [100, 120, 140][Math.floor(seeded(seed ^ 0x53495a45)() * 3)], cellSize: 2.5 }),
+  return { name, size: { extent: 160, cellSize: 2.5 }, palette, worldEvent: industrial ? 'solarFlare' : null,
+    createSize: seed => ({ extent: [140, 160, 180][Math.floor(seeded(seed ^ 0x53495a45)() * 3)], cellSize: 2.5 }),
     createLayout: (seed, size) => dynamicBattlefieldLayout(seed, size.extent),
     render: { groundTexture: industrial ? 'metal' : family === 'desert' ? 'ground' : family === 'alien' ? 'bio' : 'westmarkMeadow', skyTexture: 'sky',
       rockSurface: { texture: family === 'desert' ? 'desertRock' : 'westmarkGranite', metersPerTile: 8 },

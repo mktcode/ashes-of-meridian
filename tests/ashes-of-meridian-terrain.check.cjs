@@ -23,6 +23,10 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
     assert.ok(w.startSites.length > 4, 'candidate pool is not four authored bases');
     assert.ok(w.layout.resourceSites.length >= 8 && w.layout.resourceSites.length <= 9);
     assert.ok(w.surface.maxHeight > 12 && w.surface.maxHeight <= 72);
+    const connectedHeights = [...w.deploymentReachable].flatMap((free,i) => free ? [w.surface.heightAt(w.point(i).x,w.point(i).z)] : []);
+    const low = Math.min(...connectedHeights), high = Math.max(...connectedHeights);
+    assert.ok(high - low > 15, 'connected vehicle terrain includes genuinely different elevations');
+    assert.ok(connectedHeights.filter(h => h > low + 10).length > 100, 'elevated ground has explorable area, not just pointed summits');
     assert.deepEqual(w.staticGrid, w.surface.cliffs, 'decorations never create a second obstacle distribution');
     assert.ok(w.renderProfile.variation && w.renderProfile.ecology && w.renderProfile.atmosphere);
     for (const site of w.layout.resourceSites) {
@@ -56,6 +60,54 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
   });
 }
 
+test('saved alien exploration seed can deploy four parties on the enlarged terrain', () => {
+  const api = scope(), w = new api.Battlefield(52920759, 'alien-planet', 4);
+  assert.ok(w.extent >= 140);
+  for (const count of [2,4]) {
+    const starts = api.allocateBattlefieldStarts(w, 52920759, count, 'exploration');
+    assert.equal(starts.length, count);
+    for (let i = 0; i < starts.length; i++) {
+      assert.ok(api.battlefieldDeploymentSpace(w, starts[i]));
+      assert.ok(api.battlefieldEconomyDistance(w, starts[i]) > 24);
+      for (let j = 0; j < i; j++) assert.ok(distance(starts[i], starts[j]) >= Math.min(65, w.extent * .55));
+    }
+  }
+});
+
+test('deployment refinement finds off-grid shelves even when a large coarse pool is clustered', () => {
+  for (const clustered of [false,true]) {
+    const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'], { scripts });
+    const result = vm.runInContext(`(() => {
+      const world = {extent:100,gridSize:80,layout:{resourceSites:[]},surface:{fits:()=>true},
+        point:Battlefield.prototype.point,idx:Battlefield.prototype.idx,cellSize:2.5};
+      battlefieldEconomyDistance = () => 30;
+      battlefieldDeploymentSpace = (w,p) => {
+        const x = Math.round((p.x+100)/2.5-.5), z = Math.round((p.z+100)/2.5-.5);
+        return ([14,17,62,65].includes(x) && [14,17,62,65].includes(z)) ||
+          (${clustered} && [4,8,12].includes(x) && [4,8,12].includes(z));
+      };
+      const coarse = [];
+      for(let z=4;z<76;z+=4)for(let x=4;x<76;x+=4) {
+        const p = world.point(z*80+x);
+        if(battlefieldDeploymentSpace(world,p))coarse.push(p);
+      }
+      const rng = seeded;
+      seeded = () => { throw Error('Public refinement must not draw private RNG'); };
+      world.startSites = battlefieldDeploymentCandidates(world);
+      seeded = rng;
+      const starts = allocateBattlefieldStarts(world,52920759,4,'exploration');
+      battlefieldDeploymentSpace = (w,p) => p.x < -40 && p.z < -40;
+      let rejected = false;
+      try { battlefieldDeploymentCandidates(world); } catch(e) { rejected = /Insufficient exploration/.test(e.message); }
+      return {coarse,starts,rejected};
+    })()`, context);
+    assert.equal(result.coarse.length, clustered ? 9 : 0);
+    assert.equal(result.starts.length,4);
+    assert.equal(result.rejected,true,'refinement never relaxes separation or accepts an unplayable pool');
+    for(let i=0;i<4;i++)for(let j=0;j<i;j++)assert.ok(distance(result.starts[i],result.starts[j])>=55);
+  }
+});
+
 test('party count and private deployment draws cannot reshape terrain, resources or decorations', () => {
   const api = scope(), two = new api.Battlefield(9017, 'frontier', 2), four = new api.Battlefield(9017, 'frontier', 4);
   assert.equal(topology(two), topology(four));
@@ -72,7 +124,7 @@ test('resource regions scatter across seeds and every family has variable dimens
     json(api.dynamicBattlefieldLayout(9017, 120).resourceSites));
   for (const definition of Object.values(api.BATTLEFIELDS)) {
     const sizes = new Set(Array.from({ length: 40 }, (_, seed) => definition.createSize(seed + 1).extent));
-    assert.deepEqual([...sizes].sort((a, b) => a - b), [100, 120, 140]);
+    assert.deepEqual([...sizes].sort((a, b) => a - b), [140, 160, 180]);
   }
   const original = api.BATTLEFIELDS.frontier.createSize;
   try {
