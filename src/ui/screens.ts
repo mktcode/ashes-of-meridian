@@ -152,7 +152,8 @@
           pool = alternatives.length ? alternatives : choices;
         // Preserve the faction → map → seed draw order, with no extra mission draw.
         const enemies = expeditionEnemyFactions(depth, Math.random), choice = pool[Math.floor(Math.random() * pool.length)];
-        return { ...choice, enemies, seed: 1 + Math.floor(Math.random() * 99999999) };
+        return { ...choice, deployment: depth === 0 && this.profile.expeditionDepth === 0 && !this.profile.tutorialComplete ? 'resource-start' : 'exploration',
+          enemies, seed: 1 + Math.floor(Math.random() * 99999999) };
       },
       createBenefitOffers(this: MeridianUI, expedition: MeridianExpedition) {
         return expeditionBenefitOffers(expedition.benefits, seeded(expedition.encounter.seed + expedition.depth * 7919));
@@ -180,7 +181,7 @@
           this.toast('Select four command modules.'); return;
         }
         this.battleFaction = faction;
-        this.expedition = { version: 5, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
+        this.expedition = { version: 6, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
         this.persistence.saveExpedition(this.expedition);
         this.stageHistory = [];
         this.rememberStage();
@@ -245,7 +246,7 @@
         }
       },
       pause(this: MeridianUI) {
-        if ((this.battleIntro && this.battleIntro.kind !== 'recon') || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
+        if ( this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = true;
         this.audio.setMode?.('silent');
         this.clearMode();
@@ -265,7 +266,7 @@
         );
       },
       resume(this: MeridianUI) {
-        if ((this.battleIntro && this.battleIntro.kind !== 'recon') || this.view !== 'game' || !this.game.s || this.game.s!.result) return;
+        if ( this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = false;
         this.modalKind = '';
         $('modal').classList.add('hidden');

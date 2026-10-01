@@ -150,7 +150,7 @@
         let r = d.size;
         if (this.world!.surface) {
           if (!this.world!.surface.foundation(p, r))
-            return 'Build on level ground, away from ramps and cliffs.';
+            return 'Build on stable ground or a gentle slope, away from cliffs.';
           const yaw = BUILDING_YAW + (team === 1 ? Math.PI : 0);
           for (const unit of Object.values(UNITS) as UnitDefinitionShape[]) {
             if (unit.from !== type || unit.flying) continue;
@@ -355,53 +355,10 @@
         const snapped = this.world!.nearest(p.x,p.z);
         return distance(snapped, n) <= 2.15 ? snapped : p;
       },
-      salvagePoints(this: MeridianGame, e: UnitEntity): Position[] {
-        const rules=this.s!.rules;
-        if(rules.kind!=='single-player' || rules.mission.id!=='echo-salvage') return [];
-        const site=rules.mission.site,w=this.world!;
-        return Array.from({length:32},(_,i)=>{
-          const a=i*Math.PI/16,r=site.radius-1.5;
-          return w.point(w.idx(site.x+Math.sin(a)*r,site.z+Math.cos(a)*r));
-        }).filter(p=>!w.staticGrid[w.idx(p.x,p.z)] && w.terrainFree(p,p,e.size*UNIT_BODY_SCALE));
-      },
-      salvageWorker(this: MeridianGame, e: UnitEntity, dt: number) {
-        const s=this.s!,rules=s.rules,team=e.team as PlayerTeam;
-        if(e.hp<=0 || s.result || s.stopped || rules.kind!=='single-player' || rules.mission.id!=='echo-salvage') return;
-        const mission=rules.mission;
-        if((e.salvageCarry || 0)>=SALVAGE_RULES.load || e.carry>0 || e.returning) {
-          e.returning=true;
-          const h=this.closest(e,n=>n.kind==='building' && n.team===team && n.type==='hq' && n.progress>=1);
-          if(!h) return; // Keep cargo aboard while a surviving worker rebuilds the HQ.
-          const range=h.size+3.1,dropoff=this.workerDropoff(e,h);
-          if(distance(e,h)>range || !this.world!.terrainFree(e,h)) {
-            this.move(e,dropoff,dt,.45,false,{x:h.x,z:h.z,radius:range-.1});return;
-          }
-          mission.delivered[team]=Math.min(SALVAGE_RULES.goal,mission.delivered[team]+(e.salvageCarry || 0));
-          // Existing Cinder cargo is returned, never relabelled as mission fragments.
-          this.account(team).alloy+=e.carry;
-          if(team===0) s.stats.gathered+=e.carry;
-          e.carry=0;e.salvageCarry=0;e.returning=false;delete e.salvagePoint;
-          e.path=[];e.nextPath=0;e.stuck=0;e.recoveryAttempts=0;e.nextRecovery=0;
-          return;
-        }
-        if(!e.salvagePoint) {
-          const others=this.alive(n=>n.team===team && n.kind==='unit' && n.type==='worker' && n.id!==e.id) as UnitEntity[];
-          const score=(p:Position)=>distance(e,p)+others.filter(n=>n.salvagePoint && distance(n.salvagePoint,p)<2).length*12;
-          e.salvagePoint=this.salvagePoints(e).sort((a,b)=>score(a)-score(b))[0];
-        }
-        const p=e.salvagePoint;
-        if(!p) return;
-        if(distance(e,p)>.8 || !this.world!.terrainFree(e,p)) {
-          this.move(e,p,dt,.7,false,{...p,radius:.7});return;
-        }
-        e.rot=angleLerp(e.rot,Math.atan2(mission.site.x-e.x,mission.site.z-e.z),dt*8);
-        e.salvageCarry=Math.min(SALVAGE_RULES.load,(e.salvageCarry || 0)+dt*SALVAGE_RULES.rate);
-      },
       worker(this: MeridianGame, e: UnitEntity, dt: number) {
         const team = e.team as PlayerTeam;
         let o = e.order,
           s = this.s!;
-        if(o.type==='salvage') {this.salvageWorker(e,dt);return true;}
         if (['move', 'attackMove', 'hold', 'stop', 'attack', 'follow'].includes(o.type)) return false;
         if (o.type === 'build' || o.type === 'repair') {
           let b = this.get(o.id) as BuildingEntity | null;

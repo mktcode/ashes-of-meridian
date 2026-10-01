@@ -14,7 +14,7 @@ npm run build --prefix server
 npm start --prefix server
 ```
 
-`index.html` in zwei Browsern direkt über `file://` öffnen. **Multiplayer · prototype** wählen. Die Oberfläche schlägt den öffentlichen Server `wss://aoms.markus-kottlaender.de` vor; für einen lokalen Test auf beiden Clients `ws://localhost:8787` eintragen. Anschließend wählt der Ersteller Karte/Fraktion und teilt den angezeigten Code, der andere wählt seine Fraktion und tritt bei. Der Server startet erst, wenn beide Clients die Karte geladen haben. Ohne Startworker zunächst einen Worker rekrutieren.
+`index.html` in zwei Browsern direkt über `file://` öffnen. **Multiplayer · prototype** wählen. Die Oberfläche schlägt den öffentlichen Server `wss://aoms.markus-kottlaender.de` vor; für einen lokalen Test auf beiden Clients `ws://localhost:8787` eintragen. Anschließend wählt der Ersteller Karte/Fraktion und teilt den angezeigten Code, der andere wählt seine Fraktion und tritt bei. Der Server startet erst, wenn beide Clients die Karte geladen haben. Beide Parteien starten mit einem Worker ohne HQ und erkunden vor dem bezahlten Basisbau.
 
 Für ein zweites Gerät den Server ausdrücklich an das LAN binden (`HOST=0.0.0.0 npm start --prefix server`), den Port gezielt in der Firewall freigeben und auf beiden Clients `ws://<Server-LAN-IP>:8787` eintragen. `localhost` bezeichnet immer das jeweilige Gerät. Der Raumcode allein genügt nicht: beide benötigen auch die Serveradresse und denselben Client-/Serverstand.
 
@@ -33,7 +33,7 @@ docker run --rm -p 8787:8787 -e ALLOWED_ORIGINS=https://your-client.example meri
 - Es gelten absolut höchstens zwei Räume einschließlich wartender Sessions. `MAX_ROOMS=1` kann die Grenze reduzieren; Werte über zwei werden auf zwei begrenzt.
 - `ALLOWED_ORIGINS` ist eine kommagetrennte exakte Liste. Standard `null` erlaubt direkte `file://`-Clients; für eine gehostete Spielseite deren HTTPS-Origin ergänzen. Keine Wildcard. `null` ist keine Identitätsprüfung und kann auch von anderen opaken Origins stammen.
 - Öffentliche Nutzung nur hinter TLS-Reverse-Proxy mit WebSocket-Upgrade; HTTPS-Clients benötigen `wss://`. Pfad `/` ist der WebSocket-Endpunkt, `GET /health` der Healthcheck. Originprüfung ist kein Ersatz für Netzwerk-/Zugriffsschutz.
-- Buildstände gemeinsam ausrollen: Server nach Neubau neu starten und Browser neu laden. Der Darstellungsstream nutzt Protokollversion 4; alte Clients/Server werden abgewiesen. Die Protokollversion prüft die Nachrichtenform, ist noch kein Content-Hash-Handshake.
+- Buildstände gemeinsam ausrollen: Server nach Neubau neu starten und Browser neu laden. Der Darstellungsstream nutzt Protokollversion 5; alte Clients/Server werden abgewiesen. Die Protokollversion prüft die Nachrichtenform, ist noch kein Content-Hash-Handshake.
 - Kein Produktionsbetrieb unter beliebiger öffentlicher Last zugesichert: maximal zwei Räume/24 kurzzeitig angenommene Verbindungen pro Prozess, begrenzte Nachrichten, Warteschlangen und ausgehende Puffer; keine horizontale Verteilung oder DDoS-Abwehr.
 
 ## Betriebsdiagnose

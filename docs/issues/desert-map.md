@@ -7,4 +7,4 @@ Warme trockene Canyonlandschaft erhalten, keine dunkle Basaltästhetik. Grundges
 - [ ] Gegenverkehr, Expansionsbau, Startchancen und lesbare Kämpfe hinter Wänden in vollständigen Partien.
 - [ ] Aktuelle Lade-/Geometrie-/GPU-Kosten auf Zielgerät messen; alte Galeriegrößen sind kein heutiger Flaschenhalsnachweis.
 
-Geschützte Wirtschaftsbecken/Zugänge, ursprüngliche feste Felsvorschläge und [RNG-/CPU-Oberfläche](../architecture.md#welt-darstellung-und-zufall) erhalten. Erhöhte Randbasen/ein einziges tiefes Mittelfeld wäre eine zusätzliche Layoutentscheidung. Kein nebenher geänderter Bloom/Tilt-Shift oder Eingriff in andere Karten. [Performance](mobile-performance.md).
+Seedbasierte Wirtschaftsflächen/Zugänge und [RNG-/CPU-Oberfläche](../architecture.md#welt-darstellung-und-zufall) erhalten; alte feste Felsvorschläge und Eckbasen sind keine Layoutvorgaben. Kein nebenher geänderter Bloom/Tilt-Shift oder Eingriff in andere Karten. [Performance](mobile-performance.md).

@@ -2,10 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts } = require('./helpers/game-scripts.cjs');
-const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v5';
+const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v6';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
-  version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, salvageIntroComplete: false, upgrades: {},
+  version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false }
 };
 const benefitRules = {
@@ -31,17 +31,17 @@ function setup(data = new Map(), rules = {}) {
     enemyCount: vm.runInContext('expeditionEnemyCount', loadScripts(['content'])),
     missions: vm.runInContext('MISSIONS', loadScripts(['content'])),
     ...rules,
-    battlefields: { desert: {}, 'alien-planet': {}, mothership: {}, aurelion: {} },
+    battlefields: { desert: {}, 'alien-planet': {}, mothership: {} },
     warn: (...args) => warnings.push(args)
   });
   return { data, trace, fail, warnings, service };
 }
 
 const expedition = {
-  version: 5, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8,
+  version: 6, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8,
   benefits: { supplyCrate: 2, commanderMandate: 1 },
   enemyBenefits: [{ pioneerSquad: 2, fieldWorkshop: 1 }, { supplyCrate: 3 }, { aetherAllocation: 2 }],
-  encounter: { mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 },
+  encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 },
   offers: ['pioneerSquad', 'aetherAllocation']
 };
 
@@ -104,24 +104,30 @@ test('tutorial completion persists only as an explicit boolean', () => {
   }
 });
 
-test('salvage introduction completion is independent, strictly boolean and survives recreation', () => {
-  const h = setup();
-  for (const value of [true, false, 1, 'true', null, {}, []]) {
-    h.data.set(PROFILE, JSON.stringify({...defaults, salvageIntroComplete:value}));
-    const restored = setup(h.data).service.loadProfile();
-    assert.equal(restored.salvageIntroComplete, value === true);
-    assert.equal(restored.tutorialComplete, false);
+test('retired mission/map checkpoints and old recipes are rejected without changing the profile', () => {
+  const h = setup(); h.service.saveProfile(defaults);
+  const profile = h.data.get(PROFILE);
+  for (const checkpoint of [
+    {...expedition, version: 5},
+    {...expedition, encounter: {...expedition.encounter, mission:'echo-salvage', map:'aurelion'}},
+    {...expedition, encounter: {...expedition.encounter, map:'aurelion'}},
+    {...expedition, encounter: {...expedition.encounter, deployment:undefined}},
+    {...expedition, encounter: {...expedition.encounter, deployment:'unknown'}}
+  ]) {
+    h.service.saveExpedition(checkpoint);
+    assert.equal(h.service.loadExpedition(), null);
+    assert.equal(h.data.get(PROFILE), profile);
   }
 });
 
-test('salvage checkpoint restores only the recipe, never running progress, and rejects mismatched maps', () => {
-  const h = setup(), checkpoint = {...expedition, encounter:{...expedition.encounter, mission:'echo-salvage', map:'aurelion'}};
-  h.service.saveExpedition({...checkpoint, encounter:{...checkpoint.encounter, delivered:[90,10,0], salvageCarry:10}});
+test('deployment policy survives tutorial completion and removed-map archives reset only history', () => {
+  const h = setup(), checkpoint = {...expedition, encounter:{...expedition.encounter, deployment:'resource-start'}};
+  h.service.saveExpedition(checkpoint);
+  h.service.saveProfile({...defaults, tutorialComplete:true});
   assert.deepEqual(json(setup(h.data).service.loadExpedition()), checkpoint);
-  for (const encounter of [{...checkpoint.encounter, map:'desert'}, {...checkpoint.encounter, mission:'hq-elimination'}, {...checkpoint.encounter, mission:'king-of-the-hill'}]) {
-    h.service.saveExpedition({...checkpoint, encounter});
-    assert.equal(h.service.loadExpedition(), null);
-  }
+  h.service.saveStageHistory([{stage:8,map:'aurelion',seed:82},{stage:9,map:'desert',seed:1409}]);
+  assert.deepEqual(json(h.service.loadStageHistory(checkpoint)), [{stage:9,map:'desert',seed:1409}]);
+  assert.deepEqual(json(h.service.loadExpedition()), checkpoint);
 });
 
 test('profile settings reject foreign types without losing valid fields or progress', () => {
@@ -215,12 +221,12 @@ test('expedition normalization rejects invalid encounters and bounds known benef
     benefits: { supplyCrate: '3.9', pioneerSquad: 99, commanderMandate: 4, unknown: 7 },
     enemyBenefits: [{ supplyCrate: -3, pioneerSquad: 99, commanderMandate: 2.9, unknown: 7 }, {}, { supplyCrate: 4 }],
     offers: ['commanderMandate', 'aetherAllocation', 'aetherAllocation', 'unknown', 'supplyCrate', 'pioneerSquad'],
-    encounter: { mission: 'hq-elimination', enemies: [0, 0, 1], map: 'mothership', seed: -8 } }));
+    encounter: { deployment:'exploration', mission: 'hq-elimination', enemies: [0, 0, 1], map: 'mothership', seed: -8 } }));
   assert.deepEqual(json(h.service.loadExpedition()), {
-    version: 5, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 9,
+    version: 6, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 9,
     benefits: { supplyCrate: 3, pioneerSquad: 5, commanderMandate: 1 },
     enemyBenefits: [{ pioneerSquad: 5, commanderMandate: 1 }, {}, { supplyCrate: 4 }],
-    encounter: { mission: 'hq-elimination', enemies: [0, 0, 1], map: 'mothership', seed: 1 },
+    encounter: { deployment:'exploration', mission: 'hq-elimination', enemies: [0, 0, 1], map: 'mothership', seed: 1 },
     offers: ['aetherAllocation', 'supplyCrate']
   });
 });

@@ -8,16 +8,6 @@
         return this.game.submitAction(this.localTeam, action);
       },
       issueOrder(this: MeridianUI, ids: number[], order: CommandOrder) {
-        const mission=this.salvageMission();
-        if(mission && (order.type==='move' || order.type==='attackMove') && distance(order,mission.site)<=mission.site.radius) {
-          const workers=ids.filter(id=>{const e=this.game.get(id);return e?.kind==='unit' && e.team===this.localTeam && e.type==='worker';});
-          if(workers.length) {
-            const applied=this.submitAction({kind:'order',ids:workers,order:{type:'salvage',x:mission.site.x,z:mission.site.z}});
-            const others=ids.filter(id=>!workers.includes(id));
-            if(others.length) this.submitAction({kind:'order',ids:others,order});
-            return applied;
-          }
-        }
         return this.submitAction({ kind: 'order', ids, order });
       },
       setPerspective(this: MeridianUI, team: PlayerTeam) {
@@ -308,7 +298,6 @@
         speedButton.textContent = this.game.networkTeam != null ? 'SERVER' : speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
-        this.updateMissionHUD();
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },

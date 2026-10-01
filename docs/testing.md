@@ -52,8 +52,7 @@ Für Vergleiche denselben Abschnitt/Einstellungen verwenden und getrennt exporti
 
 Nach Build isoliert ohne normales Profil/Checkpoint:
 
-- `index.html?experiment=<karten-id>&seed=<positiver-seed>` für Katalogkarten; IDs im [Katalog](../src/battlefields/catalog.ts). Seed maximal acht Stellen; Haven behält sein festes Terrain.
-- `index.html?experiment=height`: Mothership-Rampen/Sicht mit zwei Workern.
-- `index.html?experiment=aurelion-playable`: Stage-4-Echo-Bergung mit drei Parteien.
+- `index.html?experiment=<karten-id>&seed=<positiver-seed>` für Katalogkarten; IDs im [Katalog](../src/battlefields/catalog.ts). Seed maximal acht Stellen; alle sechs Katalogfamilien erzeugen Terrain aus dem Seed.
+- `index.html?experiment=height`: prozedurale Mothership-Höhen/Sicht mit zwei Workern.
 
 Vergleichsseeds nur im betroffenen Issue halten. `npm run simulate:visible` ist eine persönliche Zuschauerpartie, **nie automatisch durch Agenten öffnen**. Allgemeine menschliche Abnahme: [vollständige Runs](issues/playtest-validation.md).

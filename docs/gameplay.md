@@ -6,7 +6,7 @@ Regelkonzept; aktuelle Preise, Ränge, Eintrittsschwellen und Fraktionsboni steh
 
 **New expedition** wählt freigeschaltete Fraktion und vier verschiedene Command-Fähigkeiten in HUD-Reihenfolge. Dieses Loadout bleibt für den Run fest. Frühe Stages führen nacheinander gegen die drei Fraktionen; später treten weitere Gegner-Slots im Free-for-all ein. Alle Parteien sind feindlich, auch bei gleicher Fraktion. Gegner, Karte und Seed werden am Übergang festgeschrieben; keine unmittelbare Kartenwiederholung, kein Neuwürfeln durch Reload.
 
-Jede Partei startet ohne Gebäude mit einem Worker; Flottenupgrades und Expeditionsvorteile können zusätzliche Start-Einheiten liefern. Die Baukosten eines HQ kommen zu den bisherigen Startreserven hinzu. Das erste HQ wird regulär platziert, bezahlt und vom Worker gebaut, auch durch die KI.
+Jede Partei startet ohne Gebäude mit einem Worker; Flottenupgrades und Expeditionsvorteile können zusätzliche Start-Einheiten liefern. Die Baukosten eines HQ kommen zu den bisherigen Startreserven hinzu. Das erste HQ wird regulär platziert, bezahlt und vom Worker gebaut, auch durch die KI. Nur der erste Tutorialstart eines neuen Profils stellt Ressourcen in Sicht bereit; spätere Gefechte und neue Runs erfahrener Profile beginnen mit Erkundung. Diese Startregel wird mit dem Gefecht gespeichert.
 
 In **HQ elimination** hält vor dem ersten fertigen HQ ein lebender Worker die Partei im Spiel. Nach dessen Fertigstellung gewinnt die letzte Partei mit HQ. Letztes HQ verloren → Ausscheiden samt Restarmee; bereits abgefeuerte Geschosse bleiben. Eigener Verlust hat bei Gleichzeitigkeit Vorrang. Commander-Verlust allein beendet nichts. KI-gegen-KI-Abschüsse und Ausscheidungsbereinigung geben keine Spieler-Killpunkte.
 
@@ -16,13 +16,9 @@ Ungenutztes Echo wird begrenzt evakuiert; vom Spieler zerstörte fertige Feindge
 
 Die KI nutzt bezahlte Aktionen, eigene Sicht und verzögerte Beobachtung, keine künstlichen Wellen/Sichtcheats. Doktrin und begrenzter Verhaltensdruck hängen von Fraktion/Tiefe ab; Vorteilsstapel können weiter wachsen. Wetter, Ruinen und Kampfspuren sind dekorativ. Aktuelle Sicht und Erkundung sind verschieden: bekanntes Gelände verrät keine aktuelle Feindposition. Auf Karten mit Sichtstufen sehen Bodenquellen nur gleich hoch/nach unten; Flugzeuge und Recon scans umgehen diese Grenze, ohne weitere Höhenkampfboni.
 
-## Echo-Bergung auf Aurelion
+## Landschaften
 
-Aurelion verwendet **Echo salvage**, nicht HQ elimination. Worker auswählen und den markierten Kern anklicken/antippen: Sie bergen Fragmente und transportieren sie wiederholt zum fertigen eigenen HQ. Gemischte Kampfeinheiten erhalten normale Bewegung.
-
-Nur abgelieferte Fragmente zählen zum öffentlichen Missionsziel; keine Wirtschaftswährung/zusätzliche Echo-Auszahlung. Der Kern erschöpft nicht. Andere Aufträge erhalten Fracht an Bord, Worker-Tod verliert sie. Ohne fertiges HQ wartet der Transport; überlebende Worker können mit vorhandenen Mitteln ein HQ wiederbauen.
-
-Eine Partei scheidet ohne fertiges lebendes HQ **und** lebenden Worker aus. Alle Gegner ausgeschieden → Sieg. Eigene Eliminierung hat Vorrang; gleichzeitiges Punktziel mit einem Gegner bedeutet Spielerniederlage. Kein Haltetimer/Einheitenmehrheitsziel. Anzeigen geben keine zusätzliche Sicht. Die KI nutzt reguläre Sammler, Eskorte und Wirtschaft.
+Desert, Alien Planet, Mothership, Westmark, Frontier und Haven sind seedbasierte Landschaftsfamilien für Expedition und Multiplayer. Maße, Höhen, Ressourcenverteilung und Varianten wechseln zwischen Gefechten; es gibt keine festen Eckbasen. Wirtschaftsflächen und Wege werden vor den getrennten Parteienstarts erzeugt. Hohe Positionen behalten ihre Sichtvorteile; dekorative Dächer sind nicht begehbar. [Technische Weltgrenzen](architecture.md#weltrezepte-und-feste-designs).
 
 ## Kamera und Befehle
 
@@ -30,7 +26,7 @@ Eine Partei scheidet ohne fertiges lebendes HQ **und** lebenden Worker aus. Alle
 - Doppeltap auf dieselbe eigene Einheit gruppiert sichtbare Einheiten dieses Typs; Dreifachtap sichtbare Nicht-Worker. Gruppenschalter ergänzen sichtbare/gesamte Kampfauswahl. Pan, Zielwechsel und Befehle unterbrechen Tapfolgen.
 - Boden-Tap mit Auswahl bewegt; Schwerter-Schalter aktiviert Attack-move für zukünftige Kampfbefehle, nicht Worker. Ziel-Tap/Rechtsklick erteilt Kontextbefehle. Neuer Auftrag ersetzt den bisherigen, keine Befehlsqueue.
 - **Cancel** beendet Zielwahl ohne Verbrauch. Fehlplatzierung erlaubt Wiederholung. Keine Hotkeys, Rechteck-/Shift-Auswahl oder Kontrollgruppen.
-- Das erste Wirtschaftstutorial beginnt mit Worker-Ankunft und HQ-Bau. Danach fährt die Kamera zum eigenen HQ, zum Gegner und zurück. Während Ankunft und Aufklärungsfahrt sind Spiel-/Kameraeingaben gesperrt, nicht die Simulation; das Pausenmenü bleibt verfügbar. Die Fahrt gewährt keine Simulationssicht, zeigt aber den gegnerischen Außenposten vorübergehend in der Darstellung. Die separate erste Echo-Bergungsfahrt hält weiterhin die Simulation an. Abgeschlossene Anleitungen werden im Profil vermerkt.
+- Das erste Wirtschaftstutorial beginnt mit Worker-Ankunft und HQ-Bau. Danach fährt die Kamera zum eigenen HQ, zum Gegner und zurück. Während Ankunft und Aufklärungsfahrt sind Spiel-/Kameraeingaben gesperrt, nicht die Simulation; das Pausenmenü bleibt verfügbar. Die Fahrt gewährt keine Simulationssicht, zeigt aber den gegnerischen Außenposten vorübergehend in der Darstellung. Abgeschlossene Anleitungen werden im Profil vermerkt.
 
 ## Wirtschaft, Bau und Produktion
 
@@ -38,7 +34,7 @@ Rekrutierung verteilt neue Aufträge auf die kürzeste passende Produktionsqueue
 
 Worker verteilen Abbau-/Rücktransport auf Servicepunkte. Raffinerievorschau rastet auf erkundete Vents ein; im Baumodus ist auch ein verdeckter Vent über seine Kontursilhouette ansteuerbar. Raffinerien arbeiten ohne dauerhaft gebundenen Worker. Einheiten halten Körperabstand, beladene Worker haben Ausweichvorrang; keine allgemeine Crowd-Garantie.
 
-Bau braucht einen freien Worker, erreichbaren Arbeitsbereich und freie ebene Baufläche; Fahrt zu Bau/Reparatur belegt ihn bereits. Worker-Tap auf eigenes Fundament überträgt den Auftrag an genau einen Worker, ohne Mehrarbeiterbonus. Unterbrochene Arbeit nimmt nicht automatisch wieder auf.
+Bau braucht einen freien Worker, erreichbaren Arbeitsbereich und freie stabile Baufläche, auch auf sanften Hängen; Fahrt zu Bau/Reparatur belegt ihn bereits. Worker-Tap auf eigenes Fundament überträgt den Auftrag an genau einen Worker, ohne Mehrarbeiterbonus. Unterbrochene Arbeit nimmt nicht automatisch wieder auf.
 
 Gebäudeaktionen: **Sell**, **Repair/Stop repair**, **Rally point**, bei Fundamenten **Cancel build**. Reparatur kostet Cinder und beginnt erst am Ziel. Verkauf bestätigt pausiert die ursprüngliche Gebäude-ID; letztes fertiges HQ ist geschützt. Verkauf/Bauabbruch erstatten anteilig, offene Rekrutierungen vollständig. Versorgungsverlust entfernt keine bestehenden Truppen.
 
@@ -46,6 +42,6 @@ Fähigkeiten brauchen Energie/Cooldown und ihre jeweiligen Technologie-/Zielbedi
 
 ## Speichern und Lebenszyklus
 
-Profil und genau ein Expeditionsübergang liegen lokal im Browser. **Continue expedition** startet den gesicherten Gefechtsanfang; Menü, Reload oder Schließen verwerfen laufenden Zustand. Pause/Hintergrund hält nur die geöffnete Seite, Rückkehr setzt nicht automatisch fort. Niederlage/Abbruch löscht den Run. Storage-Ausfall bedeutet flüchtigen Fortschritt.
+Profil und genau ein Expeditionsübergang liegen lokal im Browser. **Continue expedition** startet den gesicherten Gefechtsanfang; Menü, Reload oder Schließen verwerfen laufenden Zustand. Pause/Hintergrund hält nur die geöffnete Seite, Rückkehr setzt nicht automatisch fort. Niederlage/Abbruch löscht den Run. Storage-Ausfall bedeutet flüchtigen Fortschritt. Alte Checkpointversionen werden nicht migriert; permanente Profilfortschritte bleiben davon getrennt.
 
 Checkpoint-Pfeile zeigen nur aufgezeichnete Landschaften, keine historischen Armeen; sie verändern Continue nicht. Archiv endet mit dem Run, fehlende frühere Seeds werden nicht erfunden. Neustart verwendet dasselbe Rezept, aber inzwischen gekaufte Flottenupgrades. Kein frei konfigurierbarer Skirmish oder Ingame-Forschung. [Offene Abnahme](issues/playtest-validation.md).

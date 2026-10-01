@@ -128,11 +128,9 @@
         const mission = opts.mission === undefined ? DEFAULT_MISSION : opts.mission;
         if (typeof mission !== 'string' || !Object.hasOwn(MISSIONS, mission) || !MISSIONS[mission].maps.includes(battlefieldId(opts.map)))
           throw new Error('Unsupported mission/map combination');
-        const parties = singlePlayerParties(this.profile, opts), site = BATTLEFIELDS[battlefieldId(opts.map)].layout.salvageSite;
-        if (mission === 'echo-salvage' && !site) throw new Error('Mission requires a salvage site');
-        const state: MissionState = mission === 'echo-salvage'
-          ? { id: mission, site: { ...site! }, delivered: parties.map(() => 0) }
-          : { id: mission };
+        if (opts.deployment !== undefined && !['resource-start', 'exploration'].includes(opts.deployment))
+          throw Error('Unsupported deployment mode');
+        const parties = singlePlayerParties(this.profile, opts), state: MissionState = { id: mission };
         return this.startBattle(opts, parties, { kind: 'single-player', mission: state }, parties.slice(1).map(p => p.id));
       },
       startScenario(this: MeridianGame, opts: ScenarioOptions) {
@@ -144,8 +142,9 @@
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.world = new Battlefield(seed, map, parties.length);
         const layout = this.world.layout;
-        this.world.startSites = battlefieldStartSites(this.world);
-        const starts = this.startingPositions(rules.kind === 'scenario' ? opts.startSeed ?? seed : seed, parties.length), [playerStart] = starts;
+        const deployment = rules.kind === 'scenario' ? 'exploration' : opts.deployment ??
+          ((opts.depth ?? 0) === 0 && this.profile.expeditionDepth === 0 && !this.profile.tutorialComplete ? 'resource-start' : 'exploration');
+        const starts = allocateBattlefieldStarts(this.world, rules.kind === 'scenario' ? opts.startSeed ?? seed : seed, parties.length, deployment), [playerStart] = starts;
         this.s = {
           seed, map,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
@@ -176,7 +175,8 @@
             let p = this.crystalPosition(i, j);
             this.spawnResource('crystal', p.x, p.z, 1800 + Math.floor(this.random() * 900));
           }
-          this.spawnResource('gas', site.x + (i === 0 ? 5 : 7), site.z + (i === 0 ? 18 : 7), 999999);
+          const gas = battlefieldGasPosition(site);
+          this.spawnResource('gas', gas.x, gas.z, 999999);
         }
         this.random(); s.nextId++;
         // Preserve the established resource/bonus-worker RNG entry points, not the old loadout.
@@ -198,17 +198,17 @@
           const team = party.id, perks = party.benefits, home = starts[team],
             workers = (party.meta.startingWorkers || 0) + (perks.pioneerSquad || 0);
           for (let i = 0; i < workers; i++)
-            if (!this.spawnUnit('worker', home.x - 7, home.z - 4 + i * 2, team, this.factionFor(team)))
+            if (!this.spawnDeploymentUnit('worker', { x: home.x - 7, z: home.z - 4 + i * 2 }, home, team, this.factionFor(team)))
               throw new Error('No free space for starting workers.');
           if (perks.commanderMandate &&
-            !this.spawnUnit('hero', home.x - 9, home.z + 7, team, this.factionFor(team)))
+            !this.spawnDeploymentUnit('hero', { x: home.x - 9, z: home.z + 7 }, home, team, this.factionFor(team)))
             throw new Error('No free space for starting commander.');
         }
         for (const party of parties) {
           const home = starts[party.id];
           party.deploymentPending = true;
           party.account.alloy += BUILDINGS.hq.cost;
-          if (!this.spawnUnit('worker', home.x - 9, home.z - 4, party.id, party.faction))
+          if (!this.spawnDeploymentUnit('worker', home, home, party.id, party.faction, true))
             throw new Error('No free space for deployment worker.');
         }
         this.rehash();
@@ -223,20 +223,16 @@
         // CPU scenarios must never enter the expedition UI or pay out profile rewards.
         if (rules.kind === 'scenario') return s;
         this.emit('start', {});
-        this.emit('radio', rules.mission.id === 'echo-salvage'
-          ? 'Expedition command|Deploy your HQ first. Keep workers on Cinder for your economy, then escort a separate salvage team to the core and back.'
-          : 'Expedition command|Deploy your command outpost from Build to establish a base. Your worker is ready, and the construction reserves are aboard.');
+        this.emit('radio', deployment === 'resource-start'
+          ? 'Expedition command|Resources are in sight. Deploy your command outpost from Build to establish a base.'
+          : 'Expedition command|Explore with your worker and find resources before choosing a site for your command outpost. Construction reserves are aboard.');
         return s;
       },
       benefitsFor(this: MeridianGame, team: PlayerTeam): Record<string, number> {
         return this.party(team).benefits;
       },
       startingPositions(this: MeridianGame, seed: number, count = 2): Position[] {
-        // The first two draws are identical to single-player, including RNG consumption.
-        if (!Number.isInteger(count) || count < 2 || count > 4 || count > this.world!.startSites.length)
-          throw Error('Invalid starting party count');
-        const random = seeded(seed ^ 0x53544152), available = [...this.world!.startSites];
-        return Array.from({ length: count }, () => available.splice(Math.floor(random() * available.length), 1)[0]);
+        return allocateBattlefieldStarts(this.world!, seed, count, 'exploration');
       },
       spawn<K extends EntityKind>(this: MeridianGame, kind: K, type: EntityTypeForKind<K>, x: number, z: number, team: TeamId, faction: FactionId = FACTION_ID.FIRST, extra: SpawnExtra = {}): EntityForKind<K> {
         let s = this.s!,
@@ -291,11 +287,21 @@
         if (!p) return null;
         return this.spawn('unit', type, p.x, p.z, team, faction, { ...extra, ...p });
       },
+      spawnDeploymentUnit(this: MeridianGame, type: UnitType, preferred: Position, home: Position,
+        team: PlayerTeam, faction: FactionId, primary = false) {
+        const world = this.world!, size = UNITS[type].size, points: Position[] = [preferred, home];
+        for (let i = 0; i < world.deploymentReachable.length; i++) if (world.deploymentReachable[i]) {
+          const p = world.point(i); if (distance(p, home) <= 20) points.push(p);
+        }
+        points.sort((a, b) => distance(a, preferred) - distance(b, preferred));
+        const p = points.find(p => world.deploymentReachable[world.idx(p.x, p.z)] &&
+          (primary || distance(p, home) >= (size + UNITS.worker.size) * UNIT_BODY_SCALE) &&
+          world.surface!.segment(p, world.point(world.idx(p.x, p.z)), size * UNIT_BODY_SCALE) &&
+          this.unitFits({ ...p, type, size }, p.x, p.z));
+        return p ? this.spawnUnit(type, p.x, p.z, team, faction) : null;
+      },
       crystalPosition(this: MeridianGame, siteIndex: number, depositIndex: number): Position {
-        // Leave a gap toward the adjacent starting factory at the eastern site.
-        const phase = siteIndex === 5 ? 4.7 : siteIndex * 0.8;
-        const site = this.world!.layout.resourceSites[siteIndex], a = (depositIndex * Math.PI * 2) / 5 + phase;
-        return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3.0 };
+        return battlefieldCrystalPosition(this.world!.layout.resourceSites[siteIndex], siteIndex, depositIndex);
       },
       spawnResource(this: MeridianGame, type: ResourceType, x: number, z: number, amount: number) {
         return this.spawn('resource', type, x, z, -1, FACTION_ID.FIRST, { amount, size: type === 'gas' ? 1.5 : 1.3 });

@@ -19,7 +19,7 @@ function runtime() {
 
 test('common renderer lazily owns map presentation, keeps shadow passes, and restores normal/model previews',()=>{
   const {r,calls,factories,profile}=runtime();let created=0,disposed=0,resized=0,pending=true;
-  factories.aurelion=renderer=>{
+  factories.fixture=renderer=>{
     assert.equal(renderer,r);created++;
     return {skyProg:'citySky',postProg:'cityPost',
       beginFrame:t=>calls.push(['begin',t]),endFrame:()=>calls.push(['end']),
@@ -29,7 +29,7 @@ test('common renderer lazily owns map presentation, keeps shadow passes, and res
   };
   r.setBattlefieldProfile(profile);r.render(12,4);
   const standard=calls.splice(0);assert.equal(created,0);assert.equal(r.frameReady(),true);
-  const city={...profile,scenery:'aurelion'};
+  const city={...profile,scenery:'fixture'};
   r.setBattlefieldProfile(city);r.setBattlefieldProfile({...city});
   assert.equal(created,1,'same environment is reused across worlds with the same scenery');
   assert.equal(r.frameReady(),false);pending=false;assert.equal(r.frameReady(),true);
@@ -49,43 +49,12 @@ test('common renderer lazily owns map presentation, keeps shadow passes, and res
 });
 
 test('failed or missing environment factories do not silently select the wrong renderer or change the active profile',()=>{
-  const {r,factories,profile}=runtime(),city={...profile,scenery:'aurelion'};
-  delete factories.aurelion;
+  const {r,factories,profile}=runtime(),city={...profile,scenery:'fixture'};
+  delete factories.fixture;
   assert.throws(()=>r.setBattlefieldProfile(city),/Missing render environment/);
-  factories.aurelion=()=>{throw Error('allocation failed');};
+  factories.fixture=()=>{throw Error('allocation failed');};
   assert.throws(()=>r.setBattlefieldProfile(city),/allocation failed/);
   assert.equal(r.battlefieldProfile,profile);assert.equal(r.frameReady(),true);
-});
-
-test('Aurelion owns and releases only its programs, textures, depth targets and fences, including partial construction',()=>{
-  for(const failure of [null,'program1','program2','program3','texture1','texture2','atlas']) {
-    const {context,r}=runtime(),programs=new Set(),textures=new Set(),fbos=new Set(),fences=new Set();
-    let programCount=0,textureCount=0;
-    vm.runInContext(`createAurelionAdvertisingAtlas=()=>{${failure==='atlas'?'throw Error("atlas failed");':'return {};'}}`,context);
-    const Atmosphere=vm.runInContext('AurelionAtmosphere',context);
-    r.uniformCache=new Map([['shared',{}]]);
-    r.programOf=()=>{if(failure===`program${++programCount}`)throw Error('program failed');const p={};programs.add(p);r.uniformCache.set(p,{});return p;};
-    r.gl=new Proxy({
-      createTexture(){if(failure===`texture${++textureCount}`)return null;const t={};textures.add(t);return t;},
-      createFramebuffer(){const f={};fbos.add(f);return f;},
-      deleteTexture(t){if(t)assert.ok(textures.delete(t));},deleteFramebuffer(f){if(f)assert.ok(fbos.delete(f));},
-      deleteProgram(p){assert.ok(programs.delete(p));},
-      fenceSync(){const f={};fences.add(f);return f;},deleteSync(f){assert.ok(fences.delete(f));},
-      checkFramebufferStatus:()=> 'FRAMEBUFFER_COMPLETE',getError:()=> 'NO_ERROR'
-    },{get:(o,k)=>k in o?o[k]:/^[A-Z0-9_]+$/.test(k)?k:()=>{}});
-    if(failure)assert.throws(()=>new Atmosphere(r),/failed|allocate/);
-    else {
-      const atmosphere=new Atmosphere(r);assert.equal(programs.size,3);assert.equal(textures.size,2);
-      r.width=100;r.height=80;r.quality=0;
-      atmosphere.beginFrame();atmosphere.preparePost();atmosphere.endFrame();
-      assert.equal(textures.size,2,'first Performance frame allocates no depth target');assert.equal(fences.size,1);
-      r.quality=2;atmosphere.preparePost();assert.equal(textures.size,3);assert.equal(fbos.size,1);
-      atmosphere.resize();assert.equal(textures.size,2);assert.equal(fbos.size,0);
-      atmosphere.dispose();atmosphere.dispose();
-    }
-    assert.equal(programs.size+textures.size+fbos.size+fences.size,0,failure||'normal disposal');
-    assert.deepEqual([...r.uniformCache.keys()],['shared'],'common program/uniform ownership stays with the renderer');
-  }
 });
 
 test('program compilation releases intermediate shaders on success and every allocation/compile/link failure',()=>{

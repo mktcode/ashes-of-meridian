@@ -65,7 +65,7 @@ test('opening HQ encounters keep faction → map → seed draw order with the ex
   for (const depth of [0, 1, 2]) {
     const expected = vm.runInContext(`(() => {
       const random = seeded(1409), maps = ['alien-planet','mothership','westmark','frontier','haven'];
-      return {mission: DEFAULT_MISSION, enemies: expeditionEnemyFactions(${depth}, random),
+      return {mission: DEFAULT_MISSION, deployment: ${depth} === 0 ? 'resource-start' : 'exploration', enemies: expeditionEnemyFactions(${depth}, random),
         map: maps[Math.floor(random() * maps.length)], seed: 1 + Math.floor(random() * 99999999), next: random()};
     })()`, h.context);
     vm.runInContext('Math.random = seeded(1409);', h.context);
@@ -76,21 +76,21 @@ test('opening HQ encounters keep faction → map → seed draw order with the ex
   }
 });
 
-test('Aurelion enters at stage four with equal map weight, normal party counts and no immediate repeat', () => {
+test('six procedural worlds retain equal map weight, normal party counts and no immediate repeat', () => {
   const h = setup();
   for (const depth of [2,3,6,7]) {
-    const found = new Set(), count = depth<3 ? 6 : 7;
+    const found = new Set(), count = 6;
     for (let index=0;index<count;index++) {
       let draws=0;
       vm.runInContext('Math',h.context).random=()=>{draws++;return (index+.5)/count;};
       const e=h.ui.createEncounter(depth);
       found.add(e.map);
-      assert.equal(e.mission,e.map==='aurelion'?'echo-salvage':'hq-elimination');
+      assert.equal(e.mission,'hq-elimination');
       assert.equal(e.enemies.length,depth<3?1:depth<7?2:3);
       assert.equal(draws,(depth<3?0:e.enemies.length)+2,'no extra mission draw');
       assert.notEqual(h.ui.createEncounter(depth,e.map).map,e.map);
     }
-    assert.equal(found.has('aurelion'),depth>=3); assert.equal(found.size,count);
+    assert.equal(found.has('aurelion'),false); assert.equal(found.size,count);
   }
 });
 
@@ -518,66 +518,12 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   assert.deepEqual(Array.from(h.ui.game.world.explored), explored);
 });
 
-test('first salvage introduction focuses the core without revealing an enemy; completion persists independently', () => {
-  const h=setup(), saved=[];
-  h.ui.profile.salvageIntroComplete=false;
-  h.ui.persistence.saveProfile=p=>saved.push(JSON.parse(JSON.stringify(p)));
-  h.ui.game.s.depth=3;
-  h.ui.game.s.rules={kind:'single-player',mission:{id:'echo-salvage',site:{x:0,z:0,radius:20.5},delivered:[0,0,0]}};
-  h.ui.game.s.entities=[{id:1,team:0,kind:'building',type:'hq',hp:100,x:-60,z:50},
-    {id:2,team:1,kind:'building',type:'hq',hp:100,x:60,z:-50}];
-  const explored=Array.from(h.ui.game.world.explored);
-  h.ui.event('start',{});
-  assert.equal(h.ui.paused,true); assert.equal(h.ui.game.s.cam.x,0); assert.equal(h.ui.game.s.cam.z,0);
-  assert.equal(h.ui.introObserves(h.ui.game.s.entities[1]),false);
-  assert.equal(h.ui.battleIntro.visibleEntityIds.size,0);
-  assert.equal(saved.length,0);
-  h.ui.advanceBattleIntro(10);
-  assert.equal(h.ui.profile.salvageIntroComplete,false); assert.equal(h.ui.game.s.cam.x,0);
-  h.ui.advanceBattleIntro(1.5);
-  assert.equal(h.ui.paused,false); assert.equal(h.ui.battleIntro,null);
-  assert.equal(h.ui.profile.salvageIntroComplete,true); assert.equal(saved.length,1);
-  assert.equal(saved[0].tutorialComplete,false);
-  assert.equal(h.ui.game.s.time,0); assert.deepEqual(Array.from(h.ui.game.world.explored),explored);
-  assert.equal(h.ui.beginBattleIntro(),false,'later salvage missions skip the first-visit intro');
-  h.ui.game.s.rules={kind:'single-player',mission:{id:'hq-elimination'}}; h.ui.game.s.depth=0;
-  assert.equal(h.ui.beginBattleIntro(),false,'HQ reconnaissance waits for player construction');
-});
-
-test('an interrupted salvage intro stays unseen, and its public marker/HUD never mutate the mission or fog', () => {
-  const h=setup(); h.ui.game.s.depth=3;
-  const mission={id:'echo-salvage',site:{x:0,z:0,radius:20.5},delivered:[20,30,10]};
-  h.ui.game.s.rules={kind:'single-player',mission};
-  h.ui.game.s.entities=[{id:1,team:0,kind:'building',type:'hq',hp:100,x:-60,z:50}];
-  assert.equal(h.ui.beginBattleIntro(),true);
-  h.ui.advanceBattleIntro(2); h.ui.battleIntro=null;
-  assert.notEqual(h.ui.profile.salvageIntroComplete,true); assert.equal(h.ui.beginBattleIntro(),true);
-  const before=JSON.stringify(h.ui.game.s), points=[];
-  vm.runInContext('Math.random = seeded = () => { throw Error("UI RNG"); };',h.context);
-  h.ui.R.project=(x,y,z)=>{points.push({x,z}); return {x,y:z};};
-  h.ui.drawMissionZone({save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}});
-  assert.equal(points.length,65); assert.ok(points.every(p=>Math.abs(Math.hypot(p.x,p.z)-20.5)<1e-9));
-  h.ui.updateMissionHUD();
-  const el=h.document.getElementById('missionObjective');
-  assert.equal(el.classList.contains('hidden'),false);
-  assert.ok(el.textContent.includes('FIRST TO 100')); assert.ok(el.textContent.includes('OPP 1: 30'));
-  assert.equal(JSON.stringify(h.ui.game.s),before);
-  h.ui.battleIntro=null; h.UI.prototype.bind.call(h.ui); h.clickCamera('objective');
-  assert.equal(h.ui.game.s.cam.x,0); assert.equal(h.ui.game.s.cam.z,0);
-  h.ui.game.s.rules={kind:'single-player',mission:{id:'hq-elimination'}};
-  h.ui.updateMissionHUD(); assert.equal(el.classList.contains('hidden'),true);
-});
-
-test('mouse and touch commands at the core assign only selected own workers to salvage',()=>{
-  for(const [pointerType,button] of [['mouse',0],['mouse',2],['touch',0]]) {
-    const h=setup();h.UI.prototype.bind.call(h.ui);
-    h.ui.game.s.rules={kind:'single-player',mission:{id:'echo-salvage',site:{x:0,z:0,radius:20.5},delivered:[0,0]}};
-    h.ui.game.s.entities=[{id:1,kind:'unit',type:'worker',team:0,hp:100},{id:2,kind:'unit',type:'rifle',team:0,hp:100}];
-    h.ui.selected=[1,2];h.calls.length=0;
-    h.pointer('pointerdown',100,100,{pointerType,button});h.pointer('pointerup',100,100,{pointerType,button});
-    const commands=h.calls.filter(c=>c[0]==='command');assert.equal(commands.length,2);
-    assert.deepEqual(JSON.parse(JSON.stringify(commands[0])),['command',[1],{type:'salvage',x:0,z:0}]);
-    assert.equal(commands[1][2].type,'move');assert.deepEqual(Array.from(commands[1][1]),[2]);
+test('resource-adjacent deployment belongs only to the first tutorial, not every new stage-one run', () => {
+  const h = setup();
+  for (const [depth, best, complete, expected] of [[0,0,false,'resource-start'], [0,0,true,'exploration'],
+    [0,1,false,'exploration'], [1,0,false,'exploration']]) {
+    h.ui.profile.expeditionDepth = best; h.ui.profile.tutorialComplete = complete;
+    assert.equal(h.ui.createEncounter(depth).deployment, expected);
   }
 });
 

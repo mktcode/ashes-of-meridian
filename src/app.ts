@@ -12,9 +12,8 @@
       try {
         const params = new URLSearchParams(location.search);
         const experiment = params.get('experiment'),
-          mapExperiment: BattlefieldId | null = experiment === 'height' ? 'mothership' : experiment === 'aurelion-playable' ? 'aurelion' :
+          mapExperiment: BattlefieldId | null = experiment === 'height' ? 'mothership' :
             experiment && Object.prototype.hasOwnProperty.call(BATTLEFIELDS, experiment) ? experiment as BattlefieldId : null,
-          aurelionExperiment = mapExperiment === 'aurelion',
           visibleSimulation = !mapExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
@@ -531,11 +530,11 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 5, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: aurelionExperiment ? 3 : 0,
-            benefits: {pioneerSquad: 2}, enemyBenefits: aurelionExperiment ? [{pioneerSquad:2},{pioneerSquad:2}] : [{}],
-            encounter: {mission: aurelionExperiment ? 'echo-salvage' : DEFAULT_MISSION, map: mapExperiment,
+          ui.expedition = { version: 6, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0,
+            benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
+            encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,
-              enemies: aurelionExperiment ? [1,2] : [2]}, offers: [] };
+              enemies: [2]}, offers: [] };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {
           ui.showBattle();

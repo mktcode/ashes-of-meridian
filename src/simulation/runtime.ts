@@ -154,15 +154,10 @@
             });
           }
         }
-        if (s.rules.kind === 'single-player' && s.rules.mission.id === 'echo-salvage') {
-          // Resolve deliveries and elimination together after combat, never inside a worker update.
+        this.resultClock += dt;
+        if (this.resultClock >= 0.2) {
           this.checkBattleResult();
-        } else {
-          this.resultClock += dt;
-          if (this.resultClock >= 0.2) {
-            this.checkBattleResult();
-            this.resultClock = 0;
-          }
+          this.resultClock = 0;
         }
         this.fogClock += dt;
         if (this.fogClock >= 0.35) {
@@ -182,33 +177,7 @@
       checkBattleResult(this: MeridianGame) {
         const s = this.s!;
         if (s.result || s.rules.kind === 'scenario') return;
-        switch (s.rules.mission.id) {
-          case 'hq-elimination': return this.checkHQElimination();
-          case 'echo-salvage': return this.checkSalvageResult(s.rules.mission);
-        }
-      },
-      checkSalvageResult(this: MeridianGame, mission: SalvageMissionState) {
-        const s=this.s!, alive=this.alive(e=>e.team!==-1);
-        const eliminated=s.parties.filter(p=>!p.eliminated && !alive.some(e=>e.team===p.id &&
-          ((e.kind==='building' && e.type==='hq' && e.progress>=1) || (e.kind==='unit' && e.type==='worker'))));
-        for (const party of eliminated) {
-          party.eliminated=true;
-          // Withdraw stranded forces without kill credit, explosions or RNG draws.
-          for (const e of alive.filter(e=>e.team===party.id)) {
-            e.hp=0; e.deathAt=s.time; e.target=null; e.queue=[];
-            if(e.kind==='building') this.navDirty=true;
-          }
-          s.fields=s.fields.filter(f=>f.team!==party.id);
-          s.scans=s.scans.filter(f=>f.team!==party.id);
-          s.recalls=s.recalls.filter(f=>f.team!==party.id);
-          if(party.id!==0) this.emit('alert',{text:`Opponent ${party.id} eliminated.`});
-        }
-        if(eliminated.length) this.world!.reveal(s.entities,s.scans);
-        const opponent=s.parties.find(p=>p.id!==0 && !p.eliminated && mission.delivered[p.id]>=SALVAGE_RULES.goal);
-        if(this.party(0).eliminated) this.finish(false,MISSIONS[mission.id].defeat);
-        else if(s.parties.every(p=>p.id===0 || p.eliminated)) this.finish(true,MISSIONS[mission.id].victory);
-        else if(opponent) this.finish(false,`Opponent ${opponent.id} secured ${SALVAGE_RULES.goal} fragments.`);
-        else if(mission.delivered[0]>=SALVAGE_RULES.goal) this.finish(true,`You secured ${SALVAGE_RULES.goal} fragments.`);
+        return this.checkHQElimination();
       },
       checkHQElimination(this: MeridianGame) {
         const s = this.s!, mission = MISSIONS['hq-elimination'];

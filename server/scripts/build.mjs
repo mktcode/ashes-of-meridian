@@ -7,9 +7,8 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 execFileSync(process.execPath, [resolve(root, '../node_modules/typescript/bin/tsc'), '-p', resolve(root, '../tsconfig.json')], { stdio: 'inherit' });
 rmSync(resolve(root, 'dist'), { recursive: true, force: true });
 mkdirSync(resolve(root, 'dist'), { recursive: true });
-const files = ['core', 'content', 'battlefields/surface', 'battlefields/design', 'battlefields/shared', 'battlefields/desert', 'battlefields/alien-planet',
-  'battlefields/mothership', 'battlefields/westmark-data', 'battlefields/westmark',
-  'battlefields/aurelion-layout', 'battlefields/aurelion', 'battlefields/frontier', 'battlefields/highlands', 'battlefields/ecology', 'battlefields/variations', 'battlefields/evolution', 'battlefields/catalog', 'world', 'effects', 'simulation/game', 'simulation/movement',
+const files = ['core', 'content', 'battlefields/surface', 'battlefields/design', 'battlefields/shared',
+  'battlefields/ecology', 'battlefields/variations', 'battlefields/dynamic', 'battlefields/deployment', 'battlefields/catalog', 'world', 'effects', 'simulation/game', 'simulation/movement',
   'simulation/economy', 'simulation/combat', 'simulation/commands', 'simulation/ai-rules', 'simulation/ai-strategy', 'simulation/ai', 'simulation/runtime', 'multiplayer/presentation', 'multiplayer/state'];
 const source = files.map(name => readFileSync(resolve(root, '../dist/src', name + '.js'), 'utf8')).join('\n');
 writeFileSync(resolve(root, 'dist/simulation.js'), source + `\n({ version: MULTIPLAYER_VERSION, maps: availableBattlefields('multiplayer'),

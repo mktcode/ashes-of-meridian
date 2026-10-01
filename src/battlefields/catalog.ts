@@ -1,19 +1,17 @@
-/* Named battlefield recipes; no numeric IDs or compatibility aliases. */
+/* All playable worlds share procedural topology; families supply art and landforms. */
 'use strict';
 const BATTLEFIELDS = {
-  desert: withWorldVariation(DESERT_BATTLEFIELD, 'desert'),
-  'alien-planet': withWorldVariation(ALIEN_PLANET_BATTLEFIELD, 'alien'),
-  mothership: withWorldVariation(MOTHERSHIP_BATTLEFIELD, 'ship'),
-  westmark: withWorldVariation(WESTMARK_BATTLEFIELD, 'alpine'),
-  aurelion: withWorldVariation(AURELION_BATTLEFIELD, 'city'),
-  frontier: withWorldVariation(FRONTIER_BATTLEFIELD, 'frontier'),
-  haven: withWorldVariation(HAVEN_BATTLEFIELD, 'haven')
+  desert: createDynamicBattlefield('DESERT', 'desert'),
+  'alien-planet': createDynamicBattlefield('ALIEN PLANET', 'alien'),
+  mothership: createDynamicBattlefield('MOTHERSHIP', 'ship'),
+  westmark: createDynamicBattlefield('WESTMARK', 'alpine'),
+  frontier: createDynamicBattlefield('FRONTIER', 'frontier'),
+  haven: createDynamicBattlefield('HAVEN', 'haven')
 } as const;
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';
-function availableBattlefields(scope: 'expedition' | 'multiplayer' = 'expedition'): BattlefieldId[] {
-  return (Object.keys(BATTLEFIELDS) as BattlefieldId[]).filter(id=>
-    scope !== 'multiplayer' || BATTLEFIELDS[id].multiplayer !== false);
+function availableBattlefields(_scope: 'expedition' | 'multiplayer' = 'expedition'): BattlefieldId[] {
+  return Object.keys(BATTLEFIELDS) as BattlefieldId[];
 }
 function battlefieldId(value: unknown): BattlefieldId {
   return typeof value === 'string' && Object.hasOwn(BATTLEFIELDS, value)

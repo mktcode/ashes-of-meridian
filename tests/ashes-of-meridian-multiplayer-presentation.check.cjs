@@ -146,7 +146,7 @@ test('client resume rotates credentials and resends only requests unknown to the
   client.socket = socket; client.code = 'AABBCCDDEE'; client.started = true; client.request = 2;
   client.pending.set(1, { kind: 'train', unit: 'worker' });
   client.pending.set(2, { kind: 'order', ids: [1], order: { type: 'move', x: 1, z: 1 } });
-  const start = { type: 'start', version: 4, code: client.code, team: 0, map: 'desert', seed: 42,
+  const start = { type: 'start', version: 5, code: client.code, team: 0, map: 'desert', seed: 42,
     factions: [0, 1], token: 'B'.repeat(32), graceMs: 45000 };
   await client.receive({ type: 'resumed', token: 'B'.repeat(32), graceMs: 45000,
     phase: 'playing', lastRequest: 1, start }, socket);
@@ -218,7 +218,7 @@ test('recent session credentials survive reload briefly and resume without re-en
   assert.ok(restored.storedResume());
   restored.resumeStored(); sockets[0].onopen();
   assert.equal(sockets[0].url, 'wss://example.test/socket');
-  assert.deepEqual(sockets[0].sent, { type: 'resume', version: 4, code: first.code, token: 'T'.repeat(32) });
+  assert.deepEqual(sockets[0].sent, { type: 'resume', version: 5, code: first.code, token: 'T'.repeat(32) });
   assert.equal(restored.request, 17);
   restored.disconnect();
   assert.equal(values.has('ashes.multiplayer.resume.v1'), false);
@@ -229,7 +229,7 @@ test('expired or malformed stored multiplayer credentials are discarded', t => {
   const original = { localStorage: context.localStorage, URL: context.URL };
   t.after(() => Object.assign(context, original));
   context.URL = URL;
-  const values = new Map([['ashes.multiplayer.resume.v1', JSON.stringify({ version: 4, serverUrl: 'wss://example.test',
+  const values = new Map([['ashes.multiplayer.resume.v1', JSON.stringify({ version: 5, serverUrl: 'wss://example.test',
     code: 'A1B2C3D4E5', token: 'T'.repeat(32), graceMs: 45000, expiresAt: Date.now() - 1, request: 0 })]]);
   context.localStorage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value),
     removeItem: key => values.delete(key) };
@@ -266,7 +266,7 @@ test('cancelled asynchronous resume preparation cannot change a newer client pha
   const client = new MeridianMultiplayerClient({ game, toast: () => {} }, () => new Promise(resolve => { complete = resolve; }));
   const socket = { readyState: 1, send: () => {}, close: () => {} };
   client.socket = socket;
-  const start = { type: 'start', version: 4, code: 'AABBCCDDEE', team: 0, map: 'desert', seed: 42,
+  const start = { type: 'start', version: 5, code: 'AABBCCDDEE', team: 0, map: 'desert', seed: 42,
     factions: [0, 1], token: 'B'.repeat(32), graceMs: 45000 };
   const receiving = client.receive({ type: 'resumed', token: start.token, graceMs: 45000,
     phase: 'loading', lastRequest: 0, start }, socket);

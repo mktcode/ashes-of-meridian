@@ -31,6 +31,6 @@ registerEntityModel({
     p('cylinder', -0.3, 1.28, -0.4, 0.18, 0.4, 0.18, accent);
     p('cylinder', -.3, 1.49, -.4, .19, .055, .19, dark);
     p('sphere', -.3, 1.53, -.4, .095, .035, .095, team, 0, 0, 0, .5);
-    if ((e.carry || 0) > 0 || (e.salvageCarry || 0) > 0) p('octa', 0, 1.4, -0.4, 0.32, 0.46, 0.3, (e.salvageCarry || 0)>0 ? 0x91e6eb : 0xecc88a, 0, 0, 0, 0.35);
+    if ((e.carry || 0) > 0) p('octa', 0, 1.4, -0.4, 0.32, 0.46, 0.3, 0xecc88a, 0, 0, 0, 0.35);
   }
 });

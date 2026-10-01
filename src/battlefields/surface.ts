@@ -105,9 +105,9 @@ class BattlefieldSurface {
     }
     return Number.isFinite(best) ? {x:a[0]+dx*best,z:a[2]+dz*best} : null;
   }
-  entityHeight(e: Position & { type: string; exit?: Pick<ExitPath, 'x' | 'z' | 'length'>; flightLaunch?: number }): number {
+  entityHeight(e: Position & { type: string; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'>; flightLaunch?: number }): number {
     const floor = this.heightAt(e.x,e.z), index = e.type === 'air' ? 0 : e.type === 'destroyer' ? 1 : -1;
-    if (index < 0) return floor;
+    if (index < 0) return e.kind === 'building' && e.size !== undefined ? this.foundationBounds(e, e.size).max : floor;
     const profile = this.flights[index], cruise = this.sampleHeight(profile.cruise, e.x, e.z),
       hullFloor = this.sampleHeight(profile.floor, e.x, e.z),
       remaining = flightLaunchRemaining(e);
@@ -156,7 +156,7 @@ class BattlefieldSurface {
     return true;
   }
   foundation(p: Position, radius: number): boolean {
-    const h = this.heightAt(p.x,p.z), margin = radius + 1;
+    const margin = radius + 1;
     if (!this.fits(p.x,p.z,margin)) return false;
     if (this.buildBlocked) {
       const n = this.extent * 2 / this.cellSize,
@@ -169,9 +169,21 @@ class BattlefieldSurface {
     // Off-grid sample rings can miss a height extremum inside a large foundation.
     const first = (v: number) => Math.floor((v-margin+this.extent)/this.step)*this.step-this.extent,
       last = (v: number) => Math.ceil((v+margin+this.extent)/this.step)*this.step-this.extent;
+    const center = this.heightAt(p.x, p.z), dx = (this.heightAt(p.x + this.step, p.z) - this.heightAt(p.x - this.step, p.z)) / (2 * this.step),
+      dz = (this.heightAt(p.x, p.z + this.step) - this.heightAt(p.x, p.z - this.step)) / (2 * this.step);
+    if (Math.hypot(dx, dz) > .12) return false;
     for (let z = first(p.z); z <= last(p.z); z += this.step)
       for (let x = first(p.x); x <= last(p.x); x += this.step)
-        if (Math.abs(this.heightAt(x,z)-h) > .05) return false;
+        if (Math.abs(this.heightAt(x,z) - (center + dx * (x - p.x) + dz * (z - p.z))) > .18) return false;
     return true;
+  }
+  foundationBounds(p: Position, radius: number): { min: number; max: number } {
+    const margin = radius + 1, first = (v: number) => Math.floor((v - margin + this.extent) / this.step) * this.step - this.extent,
+      last = (v: number) => Math.ceil((v + margin + this.extent) / this.step) * this.step - this.extent;
+    let min = Infinity, max = -Infinity;
+    for (let z = first(p.z); z <= last(p.z); z += this.step) for (let x = first(p.x); x <= last(p.x); x += this.step) {
+      const h = this.heightAt(x, z); min = Math.min(min, h); max = Math.max(max, h);
+    }
+    return { min, max };
   }
 }

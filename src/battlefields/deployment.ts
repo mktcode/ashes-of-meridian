@@ -1,0 +1,76 @@
+/* Public, terrain-derived worker candidates. Assignment uses a separate private RNG. */
+'use strict';
+type DeploymentMode = 'resource-start' | 'exploration';
+function battlefieldGasPosition(site: Position): Position { return { x: site.x + 7, z: site.z + 7 }; }
+function battlefieldCrystalPosition(site: Position, index: number, deposit: number): Position {
+  const a = deposit * Math.PI * 2 / 5 + index * .8;
+  return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3 };
+}
+function battlefieldEconomyDistance(world: Battlefield, p: Position): number {
+  return Math.min(...world.layout.resourceSites.flatMap((site, i) => [battlefieldGasPosition(site),
+    ...Array.from({ length: 5 }, (_, j) => battlefieldCrystalPosition(site, i, j))]).map(r => distance(p, r)));
+}
+function battlefieldDeploymentSpace(world: Battlefield, p: Position): boolean {
+  if (!world.surface!.fits(p.x, p.z, 3) || battlefieldEconomyDistance(world, p) < 4) return false;
+  for (const radius of [7, 11]) for (let i = 0; i < 16; i++) {
+    const q = { x: p.x + Math.sin(i * Math.PI / 8) * radius, z: p.z + Math.cos(i * Math.PI / 8) * radius };
+    if (world.deploymentReachable[world.idx(q.x, q.z)] && world.surface!.foundation(q, BUILDINGS.hq.size) && battlefieldEconomyDistance(world, q) > BUILDINGS.hq.size + 2.2 &&
+      world.surface!.segment(p, q, 1.5)) return true;
+  }
+  return false;
+}
+function battlefieldDeploymentCandidates(world: Battlefield): Position[] {
+  const n = world.gridSize, free = new Uint8Array(n * n), visited = new Uint8Array(n * n), groups: number[][] = [];
+  for (let i = 0; i < free.length; i++) {
+    const p = world.point(i); free[i] = world.surface!.fits(p.x, p.z, 2.6) ? 1 : 0;
+  }
+  // All parties and all guaranteed economy regions share the main vehicle component.
+  for (let root = 0; root < free.length; root++) if (free[root] && !visited[root]) {
+    const queue = [root]; visited[root] = 1;
+    for (let head = 0; head < queue.length; head++) {
+      const i = queue[head], x = i % n, z = Math.floor(i / n);
+      for (const j of [x ? i - 1 : -1, x < n - 1 ? i + 1 : -1, z ? i - n : -1, z < n - 1 ? i + n : -1])
+        if (j >= 0 && free[j] && !visited[j]) { visited[j] = 1; queue.push(j); }
+    }
+    groups.push(queue);
+  }
+  const component = groups.sort((a, b) => b.length - a.length)[0];
+  if (!component) throw Error('No connected deployment terrain');
+  const reachable = world.deploymentReachable = new Uint8Array(n * n);
+  for (const i of component) reachable[i] = 1;
+  for (const site of world.layout.resourceSites)
+    if (!reachable[world.idx(site.x, site.z)] || !reachable[world.idx(site.x + 7, site.z + 7)])
+      throw Error('Resource region is disconnected from deployment terrain');
+  const candidates: Position[] = [], add = (p: Position) => {
+    if (Math.max(Math.abs(p.x), Math.abs(p.z)) > world.extent - 17 || !reachable[world.idx(p.x, p.z)] ||
+      !battlefieldDeploymentSpace(world, p) || candidates.some(q => distance(p, q) < 5)) return;
+    candidates.push({ ...p });
+  };
+  for (const site of world.layout.resourceSites) add({ x: site.x - 6, z: site.z + 6 });
+  for (let z = 4; z < n - 4; z += 4) for (let x = 4; x < n - 4; x += 4) add(world.point(z * n + x));
+  if (candidates.filter(p => battlefieldEconomyDistance(world, p) > 24).length < 8)
+    throw Error('Insufficient exploration deployment space');
+  return candidates;
+}
+function allocateBattlefieldStarts(world: Battlefield, seed: number, count: number, mode: DeploymentMode): Position[] {
+  if (!Number.isInteger(count) || count < 2 || count > 4) throw Error('Invalid starting party count');
+  const random = seeded(seed ^ 0x53544152), shuffle = (points: Position[]) => {
+    const result = [...points];
+    for (let i = result.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [result[i], result[j]] = [result[j], result[i]]; }
+    return result;
+  }, exploration = shuffle(world.startSites.filter(p => battlefieldEconomyDistance(world, p) > 24)),
+    first = mode === 'resource-start' ? shuffle(world.layout.resourceSites.map(site => ({ x: site.x - 6, z: site.z + 6 }))
+      .filter(p => world.deploymentReachable[world.idx(p.x, p.z)] && battlefieldDeploymentSpace(world, p))) : exploration,
+    minimum = Math.min(65, world.extent * .55);
+  const search = (chosen: Position[]): Position[] | null => {
+    if (chosen.length === count) return chosen;
+    const pool = chosen.length ? exploration : first;
+    for (const p of pool) if (chosen.every(q => distance(p, q) >= minimum)) {
+      const result = search([...chosen, p]); if (result) return result;
+    }
+    return null;
+  };
+  const starts = search([]);
+  if (!starts) throw Error('No separated deployment allocation');
+  return starts.map(p => ({ ...p }));
+}

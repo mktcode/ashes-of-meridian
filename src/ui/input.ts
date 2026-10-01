@@ -69,11 +69,7 @@
           if (b.dataset.cam) {
             if (this.controlsLocked) return;
             if (b.dataset.cam === 'home') this.homeCamera();
-            else if (b.dataset.cam === 'objective') {
-              const rules = this.game.s?.rules;
-              if (rules?.kind === 'single-player' && rules.mission.id === 'echo-salvage')
-                this.center(rules.mission.site.x, rules.mission.site.z);
-            } else if (this.game.s)
+            else if (this.game.s)
               this.game.s!.cam.zoom = clamp(
                 this.game.s!.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18),
                 27.2,
@@ -486,11 +482,6 @@
           return;
         }
         if (d.moved) return;
-        const salvage=this.salvageMission();
-        if(!target && salvage && distance(p,salvage.site)<=salvage.site.radius &&
-          this.selected.some(id=>this.game.get(id)?.type==='worker')) {
-          this.issueOrder(this.selected,{type:'move',...p});return;
-        }
         if (target && this.game.workerTask(target, this.localTeam) && this.selected.some(id => {
           const worker = this.game.get(id);
           return worker?.team === this.localTeam && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;

@@ -34,7 +34,7 @@ function parseBattleAction(value: unknown, maxIds: number): BattleAction | null 
       switch (o.type) {
         case 'idle': case 'hold': case 'stop':
           order = { type: o.type }; break;
-        case 'move': case 'attackMove': case 'guard': case 'salvage':
+        case 'move': case 'attackMove': case 'guard':
           if (!position(o)) return null;
           order = { type: o.type, ...point(o) }; break;
         case 'attack': case 'build': case 'smart':
@@ -160,8 +160,6 @@ const commandMethods = {
         if (order.x !== undefined && order.z !== undefined && !inBounds({ x: order.x, z: order.z })) return false;
         const own = action.ids.filter(id => { const e = this.get(id); return e?.team === team && e.kind === 'unit'; });
         if (!own.length) return false;
-        if (order.type === 'salvage' && (s.rules.kind !== 'single-player' || s.rules.mission.id !== 'echo-salvage' ||
-          own.some(id => this.get(id)!.type !== 'worker'))) return false;
         if ('id' in order) {
           const target = this.get(order.id);
           if (!target) return false;

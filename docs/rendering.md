@@ -24,7 +24,7 @@ Windfunktion/Uhr müssen in Szenen- und Schattenpass übereinstimmen; Culling-Bo
 
 Modelle registrieren technische ID, synchrone Meshfabriken und `render(context)` ohne GPU-Zugriff oder frühe Contentauswertung. Neue Dateien gemäß [Ladevertrag](architecture.md#auslieferung) einbinden. Geometrie entsteht einmal, nicht im Frame; Modellcode zeichnet über den Kontext, nicht über direkten Simulationszugriff.
 
-Gemeinsamer Adapter besitzt Welt-/Bauhöhe, Team-/Ghost-/Previewtönung und Standardfundamente; modelllokale Fundamente dürfen nicht zusätzlich die Standardplatte bekommen. Feste Farbflächen ebenfalls über `surfaceColor` führen. Gebäudegrundrotation und Turmkopfwinkel nicht vermischen. Hanglage und Flugpose lesen die CPU-Oberfläche, keine eigene Fahrphysik/IK.
+Gemeinsamer Adapter besitzt Welt-/Bauhöhe, Team-/Ghost-/Previewtönung, Standardfundamente und nötige Hangunterbauten; auch Bauvorschauen verwenden das höchste konservative Fundamentdatum. Modelllokale Formen bleiben aufrecht; modelllokale Fundamente dürfen nicht zusätzlich die Standardplatte bekommen. Feste Farbflächen ebenfalls über `surfaceColor` führen. Gebäudegrundrotation und Turmkopfwinkel nicht vermischen. Hanglage und Flugpose lesen die CPU-Oberfläche, keine eigene Fahrphysik/IK.
 
 Schwere Luftzerstörer verwenden autorisierte GLBs. Der Importer ist **kein allgemeiner glTF-Loader**; nur seine unterstützten Mesh-/Farb-/Knotenverträge gelten. Neutralmeshes für Vorschauen erhöhen zusätzlich die Residenzkosten. Originalquellen nicht stillschweigend vereinfachen oder ersetzen.
 
@@ -43,10 +43,10 @@ Ein gemeinsamer Renderer bedient alle Modi/Karten. `BattlefieldView` übernimmt 
 Komponierte Umgebungen besitzen nur eigene Programme/Texturen/Tiefenziele/Fences. Registrierung allokiert nichts; Wechsel, Resize und Seitenende geben jeweils betroffene Ressourcen frei, niemals gemeinsam geliehene Programme. Neue Terrainmodelle deklarativ registrieren statt Karten-Sonderzweige im GPU-Adapter einzubauen.
 
 - GPU-Boden folgt CPU-Dreiecken; Dekorauflage niemals aus unabhängigem Noise/bilinearen Samples ableiten. Außenkulisse und dekorativer Flussgrund dürfen abweichen, sind aber kein spielbarer Boden.
-- Vertex-Tint ist bei Spezialmaterialien **kein gewöhnliches RGB**: Landschaftsgewichte, Foliage-UV/Helligkeit und Wasser-Tiefe/Flussrichtung haben eigene Belegungen. Alpha-Cutoff in Schatten/Szene identisch halten.
+- Metallhaut verwendet RGB-Vertex-Tint. Bei Spezialmaterialien ist Vertex-Tint **kein gewöhnliches RGB**: Landschaftsgewichte, Foliage-UV/Helligkeit und Wasser-Tiefe/Flussrichtung haben eigene Belegungen. Alpha-Cutoff in Schatten/Szene identisch halten.
 - Wasser zeichnet ein überlappungsfreies Feld ohne Tiefenschreiben nach opaker Szene, vor Effekten. Reflexion ist analytisch, kein zusätzlicher Szenenpass.
 - Chunk-/Instanzculling muss vollständige transformierte Bounds einschließlich hoher Geometrie und außerhalb der Kamera liegender Schatten-Caster erhalten. Draw Calls allein sind kein Optimierungsmaß.
-- Szenenziel → optional MSAA-Resolve → Bloom → Postprocessing; Schatten separat. Allokationsfehler brauchen saubere Fallbacks, Resize gibt alte Ziele frei. Aurelions Tiefenresolve verlangt passende Maße/Format und `NEAREST`.
+- Szenenziel → optional MSAA-Resolve → Bloom → Postprocessing; Schatten separat. Allokationsfehler brauchen saubere Fallbacks, Resize gibt alte Ziele frei. Resolve-Pfade benötigen passende Maße und Formate.
 - Texturwechsel lädt neue Ressourcen vor Freigabe alter kartenspezifischer Bestände. Bereitschaft nicht durch feste Wartezeit oder `gl.finish()` ersetzen.
 
 High/Balanced teilen Modelle, Schatten/MSAA/Bloom; High ergänzt den ausdrücklich gewünschten Tilt-Shift-Look. Performance reduziert Auflösung und kosmetische Arbeit. HUD bleibt ungefiltert. Atmosphäre wird einmal pro Welt aufgelöst; gemeinsame Licht-/Schattenrichtung bleibt künstlerisch, nicht astronomisch. RGBA8 ist kein HDR.
@@ -55,7 +55,7 @@ High/Balanced teilen Modelle, Schatten/MSAA/Bloom; High ergänzt den ausdrückli
 
 Nur beobachtete Entitäten und erkundete Ressourcen dürfen hinter opaker **statischer** Geometrie erscheinen. Silhouetten verleihen keine Sicht/Befehlsrechte; Intro, Fog, Ghosts und Vorschauen dürfen nicht optieren. Netzwerk nutzt nur sichtgefilterte Renderposen. Dynamische Armeen/Gebäude und nicht tiefenschreibende Transparenz sind keine Auslöser.
 
-Bereits aufgebaute Modelltransforms werden nach statischer Szene, vor normalen Entitäten mit invertiertem Tiefentest gezeichnet; kein erneuter Animationsaufbau. GL-Zustand anschließend vollständig wiederherstellen, einschließlich gecachter Stadtbindungen. Zusätzliche Geometriedurchläufe sind reale Kosten.
+Bereits aufgebaute Modelltransforms werden nach statischer Szene, vor normalen Entitäten mit invertiertem Tiefentest gezeichnet; kein erneuter Animationsaufbau. GL-Zustand anschließend vollständig wiederherstellen, einschließlich gecachter Programmbindungen. Zusätzliche Geometriedurchläufe sind reale Kosten.
 
 ## Lichtanimation und Kampfakzente
 

@@ -59,7 +59,7 @@ type ModelRing = (radius: number, height: number, color?: number, alpha?: number
   rx?: number, ry?: number, glow?: number) => void;
 // Previews need visual properties, not live simulation paths, cooldowns or orders.
 type RenderEntity = Pick<EntityBase, 'id' | 'kind' | 'type' | 'x' | 'z' | 'hp' | 'faction' | 'team' | 'size'> &
-  Partial<EntityBase> & { amount?: number; salvageCarry?: number };
+  Partial<EntityBase> & { amount?: number };
 interface EntityModelContext {
   entity: RenderEntity;
   time: number;

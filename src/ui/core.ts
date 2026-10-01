@@ -20,8 +20,7 @@
       home: Position;
       visibleEntityIds: Set<number>;
       objectiveShown: boolean;
-      pendingRadio?: string;
-      kind?: 'recon';
+      kind: 'recon';
       origin?: Position;
     }
     class MeridianUI {
@@ -212,15 +211,14 @@
           this.actionSignature = '';
           this.battleTutorial = null;
           this.beginBattleTutorial();
-          this.beginBattleIntro();
+          this.battleIntro = null;
           this.audio.setMode?.(this.battleIntro ? 'silent' : 'battle');
           this.updateHUD();
           this.clearMode();
         } else if (type === 'toast') this.toast(data);
         else if (type === 'radio') {
           if (this.battleTutorial?.step === 'arrival' || this.battleTutorial?.step === 'buildHQ' || this.battleIntro?.kind === 'recon') return;
-          if (this.battleIntro) this.battleIntro.pendingRadio = data;
-          else this.radio(data);
+          this.radio(data);
         }
         else if (type === 'alert') this.alert(data);
         else if (type === 'order') {

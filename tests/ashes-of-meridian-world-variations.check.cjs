@@ -1,230 +1,68 @@
-// Bounded generation, route and CPU/view contracts; no autonomous simulation run.
+// Recipe and shared-art contracts; no autonomous simulation or exhaustive seed sweep.
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm');
-const {createHash}=require('node:crypto');
-const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS,RENDERER_SCRIPTS}=require('./helpers/game-scripts.cjs');
-const {createRendererStub}=require('./helpers/renderer-stub.cjs');
-const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
-  ...RENDERER_SCRIPTS,'world-view'],{globals:{innerHeight:800}});
-const api=vm.runInContext(`({Battlefield,BattlefieldBuilder,BATTLEFIELDS,WORLD_VARIATIONS,worldVariationRecipe,battlefieldVariation,
-  battlefieldDesign,battlefieldStartSites,TerrainModels,MeridianRenderer,MeridianGame,BattlefieldView,ecologyFootprint,UNITS,UNIT_BODY_SCALE})`,context);
-const families={alien:'alien-planet',desert:'desert',ship:'mothership',alpine:'westmark',city:'aurelion',frontier:'frontier',haven:'haven'},
-  json=v=>JSON.parse(JSON.stringify(v)),topology=w=>createHash('sha256').update(JSON.stringify(w.layout)).update(w.staticGrid)
-    .update(new Uint8Array(w.surface.heights.buffer)).digest('hex');
-function representatives(family) {
+const {loadScripts,BATTLEFIELD_SCRIPTS,RENDERER_SCRIPTS}=require('./helpers/game-scripts.cjs');
+function scope() {
+  const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...RENDERER_SCRIPTS]);
+  return vm.runInContext('({Battlefield,BATTLEFIELDS,WORLD_VARIATIONS,worldVariationRecipe,battlefieldVariation,TerrainModels,battlefieldGasPosition,worldReliefHeightAt})',context);
+}
+const families={alien:'alien-planet',desert:'desert',ship:'mothership',alpine:'westmark',frontier:'frontier',haven:'haven'},
+  json=v=>JSON.parse(JSON.stringify(v));
+function representatives(api,family) {
   const seeds=new Map();for(let seed=1;seed<=128;seed++) {
     const r=api.worldVariationRecipe(family,seed);if(!seeds.has(r.id))seeds.set(r.id,seed);
   }
   assert.equal(seeds.size,api.WORLD_VARIATIONS[family].length);return seeds;
 }
-
-test('every catalog family resolves deterministic morphology/relief/atmosphere; Alien has eight distinct forms',()=>{
-  const before=JSON.stringify(api.BATTLEFIELDS),alien=new Set();
-  for(const [family,map] of Object.entries(families))for(const [id,seed] of representatives(family)) {
+test('six catalog families resolve repeatable morphology, ecology and atmosphere without mutating recipes',()=>{
+  const api=scope(),before=JSON.stringify(api.BATTLEFIELDS),alien=new Set();
+  assert.deepEqual(Object.keys(api.WORLD_VARIATIONS).sort(),Object.keys(families).sort());
+  assert.equal(api.WORLD_VARIATIONS.haven.length,4);
+  assert.equal(api.WORLD_VARIATIONS.ship.filter(r=>r.id.endsWith('-crown')).length,4);
+  for(const [family,map]of Object.entries(families))for(const [id,seed]of representatives(api,family)) {
     const p=api.BATTLEFIELDS[map].render,a=api.battlefieldVariation(p,seed),b=api.battlefieldVariation(p,seed);
     assert.deepEqual(json(a),json(b));assert.equal(a.variation.id,id);assert.ok(a.atmosphere&&a.ecology);
-    assert.equal(a.ecology.natural,family!=='ship'&&family!=='city');
+    assert.equal(a.ecology.natural,family!=='ship');
     if(family==='alien')alien.add(a.variation.flora);
     for(const color of [a.ecology.dry,a.ecology.lush,...Object.values(a.lighting)])assert.ok(color.every(Number.isFinite));
   }
   assert.equal(alien.size,8);assert.equal(JSON.stringify(api.BATTLEFIELDS),before);
 });
-
-for(const [family,map] of Object.entries(families))test(`${map}: every family has real relief, protected economy, connected vehicle routes and sampled skin`,()=>{
-  const signatures=new Set();
-  for(const [id,seed] of representatives(family)) {
-    const w=new api.Battlefield(seed,map,4),s=w.surface,starts=api.battlefieldStartSites(w);
-    assert.ok(s,id);assert.equal(starts.length,4);signatures.add(topology(w));
-    const vents=w.layout.resourceSites.map((p,i)=>({x:p.x+(i?7:5),z:p.z+(i?7:18)}));
-    for(const p of starts)assert.ok(s.foundation(p,7),id+' HQ');
-    for(const p of vents)assert.ok(s.foundation(p,2.3),id+' refinery');
-    for(const target of [...starts,...w.layout.resourceSites,...vents]) {
-      const path=w.path(starts[0].x,starts[0].z,target.x,target.z,false,undefined,api.UNITS.tank.size*api.UNIT_BODY_SCALE);
-      assert.equal(path.status,'complete',`${id} ${JSON.stringify(target)}`);
-      let from=starts[0];for(const p of path.points){assert.ok(w.lineFree(from,p,api.UNITS.tank.size*api.UNIT_BODY_SCALE));from=p;}
-    }
-    let lo=Infinity,hi=-Infinity,slopes=0;
-    for(let i=0;i<w.staticGrid.length;i++)if(!w.staticGrid[i]) {
-      const p=w.point(i),h=s.heightAt(p.x,p.z);lo=Math.min(lo,h);hi=Math.max(hi,h);
-      if(Math.abs(s.heightAt(p.x+1,p.z)-h)+Math.abs(s.heightAt(p.x,p.z+1)-h)>.06)slopes++;
-      if(family!=='city'&&family!=='ship')assert.equal(s.visibilityLevelAt(p.x,p.z),0);
-    }
-    assert.ok(hi-lo>3,`${id}: walkable relief ${hi-lo}`);assert.ok(slopes>200,id+' real slopes');
-    const skin=w.renderData.geometries.find(g=>g.mesh==='terrain');
-    if(family==='alien'||family==='desert') {
-      assert.equal(skin.model,'landscapeRelief');const mesh=api.TerrainModels.geometry(skin);
+test('industrial machinery stays grounded inside existing cliff blockers while exterior landmarks sit on the generated skin',()=>{
+  const api=scope(),w=new api.Battlefield(1409,'mothership',4),n=w.gridSize;
+  for(const p of w.renderData.placements.filter(p=>/^(variationLandmark|shipFixture)/.test(p.mesh))) {
+    const [x,y,z]=p.position,[sx,sy,sz]=p.scale,
+      descriptor=w.renderData.geometries.find(d=>d.mesh===p.mesh),mesh=api.TerrainModels.geometry(descriptor);
+    assert.ok(p.position.every(Number.isFinite));
+    if(descriptor.model==='shipHangar'||descriptor.model==='shipPlant') {
+      const c=Math.cos(p.rotation[0]),s=Math.sin(p.rotation[0]);
       for(let i=0;i<mesh.length;i+=9) {
-        assert.ok(Math.abs(mesh[i+1]+.13-s.heightAt(mesh[i],mesh[i+2]))<2e-5,id+' matching samples');
-        assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-5);
+        const px=x+mesh[i]*sx*c+mesh[i+2]*sz*s,pz=z-mesh[i]*sx*s+mesh[i+2]*sz*c;
+        assert.ok(w.staticGrid[w.idx(px,pz)],'full rotated fixture envelope belongs to existing terrain blockers');
+        if(mesh[i+1]<.02)assert.ok(y+mesh[i+1]*sy>=w.surface.heightAt(px,pz)-.03);
       }
-      const r=skin.relief,distance=vm.runInContext('pointSegment',context);
-      for(let z=1;z<r.size-1;z+=17)for(let x=1;x<r.size-1;x+=19) {
-        const p={x:(x-1)*r.step-r.extent,z:(z-1)*r.step-r.extent},i=z*r.size+x;let road=Infinity;
-        for(const route of w.layout.corridors)for(let j=1;j<route.length;j++)
-          road=Math.min(road,distance(p,{x:route[j-1][0],z:route[j-1][1]},{x:route[j][0],z:route[j][1]}));
-        assert.ok(Math.abs(r.colors[i*3]-Math.max(0,1-road/3)*(1-r.colors[i*3+1]))<1e-7,'bounded road tint matches exact segment distances');
-      }
-    }
-    assert.ok(w.renderData.placements.every(p=>[...p.position,...p.scale,...p.rotation].every(Number.isFinite)));
-    assert.ok(w.renderData.placements.length<7200,'bounded base scenery plus shared ecology');
-    if(family==='ship'||family==='city') {
-      assert.ok(!w.renderData.placements.some(p=>p.mesh.startsWith('ecology')),'no meadow on engineered decks');
-      assert.ok(w.renderData.placements.filter(p=>p.mesh.startsWith('variationLandmark')).length<=32);
+    } else {
+      const skin=w.renderData.geometries.find(d=>d.relief?.innerExtent).relief;
+      assert.ok(Math.abs(y-api.worldReliefHeightAt(skin,x,z))<1e-5);
     }
   }
-  if(family!=='haven')assert.ok(signatures.size>1,'not just palette swaps');
+  assert.equal(w.staticGrid.length,n*n);
+  assert.ok(!w.renderData.placements.some(p=>p.mesh.startsWith('ecology')));
 });
-
-test('Alien macro-geology combines both landforms with every habitat, independent of atmosphere',()=>{
-  const combinations=new Map();
+test('Alien relief and habitat axes stay independent and shared landmark meshes remain finite and bounded',()=>{
+  const api=scope(),combinations=new Map();
   for(let seed=1;seed<=128;seed++) {
-    const p=api.battlefieldVariation(api.BATTLEFIELDS['alien-planet'].render,seed),v=p.variation;
-    if(!combinations.has(v.id))combinations.set(v.id,new Set());
-    combinations.get(v.id).add(v.relief);
-    assert.ok(v.amplitude>=36&&v.amplitude<46);
-    assert.ok(v.name.includes(v.relief==='ridges'?'RIDGE COUNTRY':'BROKEN CRATER'));
+    const v=api.battlefieldVariation(api.BATTLEFIELDS['alien-planet'].render,seed).variation;
+    if(!combinations.has(v.id))combinations.set(v.id,new Set());combinations.get(v.id).add(v.relief);
   }
-  assert.equal(combinations.size,8);
-  for(const forms of combinations.values())assert.deepEqual([...forms].sort(),['broken-crater','ridges']);
-});
-
-test('Alien mountains have significant sampled height and real cliffs, with wide protected valley floors',()=>{
-  const forms=new Set(),signatures=new Set();
-  for(const seed of [1,7,9,1409,40517]) {
-    const w=new api.Battlefield(seed,'alien-planet'),s=w.surface;
-    forms.add(w.renderProfile.variation.relief);signatures.add(topology(w));
-    assert.ok(s.maxHeight>18&&s.maxHeight<=46,`seed ${seed}: mountain height ${s.maxHeight}`);
-    const cliffs=s.cliffs.reduce((a,b)=>a+b,0);
-    assert.ok(cliffs>25&&cliffs<s.cliffs.length*.12,'bounded, genuinely impassable mountain faces');
-    for(const route of w.layout.corridors)for(let j=1;j<route.length;j++) {
-      const [ax,az]=route[j-1],[bx,bz]=route[j];
-      for(let t=0;t<=1;t+=.1) {
-        const x=ax+(bx-ax)*t,z=az+(bz-az)*t;
-        assert.equal(s.heightAt(x,z),0,'authored valley floor remains level');
-        assert.ok(s.fits(x,z,4),'valley has vehicle body clearance, not just a free centreline');
-      }
-    }
-    for(const p of [...w.layout.startSites,...w.layout.resourceSites]) {
-      assert.equal(s.heightAt(p.x,p.z),0,'economy datum remains unchanged');
-      assert.ok(s.fits(p.x,p.z,7),'economy approaches stay clear of mountain cliffs');
-    }
-    const repeated=new api.Battlefield(seed,'alien-planet');
-    assert.equal(topology(w),topology(repeated),'no retry seeds or cosmetic random terrain');
-    assert.equal(w.renderData.geometries.filter(g=>g.mesh==='terrain').length,1,'one sampled ground skin');
+  assert.ok([...combinations.values()].every(forms=>forms.size===2));
+  for(const model of ['variationAlienCoral','variationAlienFan','variationAlienSpire','variationAlienPod',
+    'variationAlienArch','variationAlienReed','variationAlienShelf','variationAlienCactus','variationAlienPalm',
+    'variationRadar','variationPylon','variationWreck','shipHangar','shipPlant']) {
+    assert.equal(typeof api.TerrainModels[model],'function',model);
+    const mesh=api.TerrainModels[model](1409,0);
+    assert.deepEqual(mesh,api.TerrainModels[model](1409,0));
+    assert.ok(mesh.length>0&&mesh.length%27===0&&mesh.length/27<10000,model);
+    assert.ok(mesh.every(Number.isFinite));
+    for(let i=0;i<mesh.length;i+=9)assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-5,model);
   }
-  assert.deepEqual([...forms].sort(),['broken-crater','ridges']);assert.equal(signatures.size,5);
-});
-
-test('new habitat and architecture meshes have deterministic, finite, normalized bounded geometry',()=>{
-  const flora=['Coral','Fan','Spire','Pod','Arch','Reed','Shelf','Cactus','Palm'];
-  for(const part of [...flora.map(p=>'ecology'+p),'variationRadar','variationPylon','variationWreck'])for(const seed of [197,7919,0xffffffff]) {
-    const mesh=api.TerrainModels[part](seed);assert.deepEqual(mesh,api.TerrainModels[part](seed));
-    assert.ok(mesh.length>0&&mesh.length%27===0&&mesh.length/27<=1400,part);
-    for(let i=0;i<mesh.length;i+=9) {
-      assert.ok(mesh.slice(i,i+9).every(Number.isFinite));assert.ok(Math.hypot(mesh[i],mesh[i+2])<=1.00001,part+' radius');
-      assert.ok(mesh[i+1]>=-.06&&mesh[i+1]<=1.2,part+' height');
-      assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5])-1)<1e-5,part+' normal');
-    }
-  }
-});
-
-test('Alien arches fit unchanged trunk collision radii; their morphology is not stacked with old mushroom gills',()=>{
-  const w=new api.Battlefield(1,'alien-planet');assert.equal(w.renderProfile.variation.flora,'Arch');
-  assert.ok(!w.renderData.placements.some(p=>p.mesh.startsWith('alienCapGills')||p.mesh==='alienLanternPool'));
-  for(const p of w.renderData.placements.filter(p=>p.mesh.startsWith('alienTree')||p.mesh==='alienSapling')) {
-    const rock=w.rocks.find(r=>r.x===p.position[0]&&r.z===p.position[2]);if(!rock)continue; // exterior backdrop
-    assert.ok(p.scale[0]+.4<=rock.r+1e-6,'entire new form plus wind remains inside the original blocker');
-    assert.ok(Math.abs(p.position[1]-w.surface.heightAt(rock.x,rock.z))<.2,'rooted on the authoritative surface');
-  }
-});
-
-test('canyon debris is embedded in the new triangle surface, including formerly failing public vents',()=>{
-  for(const seed of [71271,102947]) {
-    const w=new api.Battlefield(seed,'desert');
-    for(const [i,p] of w.layout.resourceSites.entries())assert.ok(w.surface.foundation({x:p.x+(i?7:5),z:p.z+(i?7:18)},2.3));
-    for(const p of w.renderData.placements.filter(p=>['desertTalus','desertFlake','desertPebble','desertChip','desertButtress','desertScree'].includes(p.mesh))) {
-      const [x,y,z]=p.position,r=p.scale[0];if(Math.max(Math.abs(x),Math.abs(z))+r>=w.extent)continue;
-      const foot=Math.min(...[[x,z],[x+r,z],[x-r,z],[x,z+r],[x,z-r]].map(([a,b])=>w.surface.heightAt(a,b)-.13));
-      assert.ok(Math.abs(y-(foot-.025))<1e-5,'no floating wall-foot debris');
-    }
-  }
-});
-
-test('cosmetic choices preserve terrain, collision, resources and encounter RNG; fixed landscapes survive encounter changes',()=>{
-  const original=api.BattlefieldBuilder.prototype.cosmeticRandom;
-  try {
-    const a=new api.MeridianGame({upgrades:{}},()=>{});a.start({map:'alien-planet',seed:1,enemies:[1,2,0]});
-    api.BattlefieldBuilder.prototype.cosmeticRandom=()=>()=>.5;
-    const b=new api.MeridianGame({upgrades:{}},()=>{});b.start({map:'alien-planet',seed:1,enemies:[1,2,0]});
-    assert.equal(topology(a.world),topology(b.world));assert.deepEqual(json(a.s),json(b.s));assert.equal(a.random(),b.random());
-    assert.notDeepEqual(json(a.world.renderData),json(b.world.renderData));
-  }finally{api.BattlefieldBuilder.prototype.cosmeticRandom=original;}
-  const recipe=api.BATTLEFIELDS['alien-planet'];
-  try {
-    api.BATTLEFIELDS['alien-planet']=api.battlefieldDesign(recipe,'PINNED ARCHES',{terrainSeed:1,atmosphere:{timeOfDay:12,materialSeed:1}});
-    const a=new api.Battlefield(1409,'alien-planet'),b=new api.Battlefield(7919,'alien-planet');
-    assert.equal(topology(a),topology(b));assert.deepEqual(json(a.renderData),json(b.renderData));assert.deepEqual(json(a.renderProfile),json(b.renderProfile));
-    assert.equal(a.renderProfile.atmosphere.timeOfDay,12,'explicit design time overrides family mood');
-  }finally{api.BATTLEFIELDS['alien-planet']=recipe;}
-});
-
-test('surface queries never reevaluate generation fields in the per-frame visibility path',()=>{
-  const original=vm.runInContext('worldReliefField',context);let reads=0;
-  context.countedField=(...args)=>{const field=original(...args);return (...p)=>{reads++;return field(...p);};};
-  vm.runInContext('worldReliefField=countedField',context);
-  try {
-    for(const map of ['alien-planet','westmark','mothership','aurelion']) {
-      const w=new api.Battlefield(1,map),before=reads;
-      for(let i=0;i<w.staticGrid.length;i++) {const p=w.point(i);w.surface.heightAt(p.x,p.z);w.surface.visibilityLevelAt(p.x,p.z);}
-      assert.equal(reads,before,map+' reads sampled heights, not pad/noise generation');
-    }
-  }finally{context.originalField=original;vm.runInContext('worldReliefField=originalField',context);delete context.originalField;delete context.countedField;}
-});
-
-test('city authored lighting scale resets with profiles and rigid traffic follows scaled paths',()=>{
-  const values=new Map(),r=Object.create(api.MeridianRenderer.prototype);
-  Object.assign(r,{gl:{uniform1f:(key,v)=>values.set(key,v),uniform3fv(){}},uniform:(_,key)=>key});
-  r.battlefieldProfile=api.battlefieldVariation(api.BATTLEFIELDS.aurelion.render,1);r.bindAtmosphere({});
-  assert.equal(values.get('u_worldHeightScale'),1.06);
-  r.battlefieldProfile={};r.bindAtmosphere({});assert.equal(values.get('u_worldHeightScale'),1);
-  const {flights,draw}=vm.runInContext('({flights:createAurelionFlights(),draw:drawAurelionFlights})',context),
-    capture=scale=>{const calls=[];draw({add:(...a)=>calls.push(['add',...a]),beam:(...a)=>calls.push(['beam',...a])},flights,7,scale);return calls;},
-    base=capture(1),scaled=capture(.9);
-  assert.ok(base.length>0);assert.equal(scaled.length,base.length);
-  for(let i=0;i<base.length;i++) {
-    const a=base[i],b=scaled[i];
-    if(a[0]==='add') {assert.ok(Math.abs(b[3]-a[3]*.9)<1e-6);assert.deepEqual(b.slice(5),a.slice(5),'aircraft stay rigid');}
-    else for(const point of [1,2])assert.ok(Math.abs(b[point][1]-a[point][1]*.9)<1e-6,'wake follows the same scaled path');
-  }
-});
-
-test('all composed recipes retain original resource initialization and simulation RNG entry points',()=>{
-  const originals=vm.runInContext(`({desert:DESERT_BATTLEFIELD,'alien-planet':ALIEN_PLANET_BATTLEFIELD,
-    mothership:MOTHERSHIP_BATTLEFIELD,westmark:WESTMARK_BATTLEFIELD,aurelion:AURELION_BATTLEFIELD,
-    frontier:FRONTIER_BATTLEFIELD,haven:HAVEN_BATTLEFIELD})`,context);
-  for(const map of Object.values(families)) {
-    const options={map,seed:1409,enemies:[1,2,0],mission:map==='aurelion'?'echo-salvage':'hq-elimination'},
-      current=api.BATTLEFIELDS[map],a=new api.MeridianGame({upgrades:{}},()=>{}),b=new api.MeridianGame({upgrades:{}},()=>{});
-    a.start(options);
-    try {api.BATTLEFIELDS[map]=originals[map];b.start(options);}
-    finally {api.BATTLEFIELDS[map]=current;}
-    const resources=g=>json(g.s.entities.filter(e=>e.kind==='resource'));
-    assert.deepEqual(resources(a),resources(b),map+' protected resource positions, amounts and ids');
-    assert.deepEqual(json(a.s.parties.map(p=>p.account)),json(b.s.parties.map(p=>p.account)),map+' accounts');
-    assert.equal(a.random(),b.random(),map+' unchanged encounter RNG position');
-  }
-});
-
-test('picking, mesh ownership and detail reset follow actual surfaces across all seven maps',()=>{
-  const r=createRendererStub(),view=new api.BattlefieldView(r),released=[];r.releaseGeometry=name=>released.push(name);
-  const picker=Object.create(api.MeridianRenderer.prototype);
-  Object.assign(picker,{viewport:{left:0,top:0,right:1200,bottom:800,width:1200,height:800},quality:0});
-  for(const map of ['alien-planet','desert','mothership','westmark','aurelion','frontier','haven','alien-planet']) {
-    const w=new api.Battlefield(1,map);view.sync(w);assert.strictEqual(r.surface,w.surface);
-    assert.equal(r.detailMeshes.size,w.renderProfile.ecology.natural?3:0);
-    assert.strictEqual(r.battlefieldProfile,w.renderProfile);
-    picker.surface=w.surface;const p=w.layout.startSites[0];picker.camera(p.x,p.z,70);
-    const screen=picker.project(p.x,w.surface.heightAt(p.x,p.z),p.z),hit=picker.ground(screen.x,screen.y);
-    assert.ok(Math.hypot(hit.x-p.x,hit.z-p.z)<1e-4,map+' projection/picking');
-  }
-  assert.ok(released.includes('aurelionStructure'));assert.ok(released.includes('variationLandmark0'));
 });

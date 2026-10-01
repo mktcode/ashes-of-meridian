@@ -34,9 +34,7 @@ function ecologyFootprint(world:Battlefield,x:number,z:number,r:number):boolean 
 }
 function decorateEcology(builder:BattlefieldBuilder) {
   const w=builder.world,style=w.renderProfile.ecology;if(!style||style.natural===false)return;
-  const relief=w.renderData.geometries.find(d=>d.model==='desertRelief'&&'relief' in d&&!d.relief.innerExtent),
-    skin=relief&&'relief' in relief?relief.relief:null,
-    rand=builder.cosmeticRandom(0x48414249),height=(x:number,z:number)=>w.surface?.heightAt(x,z)??(skin?desertReliefHeight(skin,x,z):0),
+  const rand=builder.cosmeticRandom(0x48414249),height=(x:number,z:number)=>w.surface?.heightAt(x,z)??0,
     family=style.flora??(style.biome==='mycelium'?'Fungus':style.biome==='rime'?'Conifer':style.biome==='ochre'?'Acacia':'Grove'),
     woody=family==='Grove'||family==='Acacia'||family==='Conifer',
     occupied:{x:number;z:number;r:number}[]=[],groundSites:Position[]=[],landmarks:Position[]=[];
@@ -49,8 +47,8 @@ function decorateEcology(builder:BattlefieldBuilder) {
       extent:part==='Trunk'&&family==='Acacia'?1:0,detail:part==='Tuft'});
     w.renderData.geometries.push({mesh:`ecologyStone${variant}`,model:'uplandStone',seed:173+variant*7919,extent:0});
   }
-  const safe=(x:number,z:number,r:number)=>w.layout.startSites.every(p=>Math.hypot(x-p.x,z-p.z)>r+13)&&
-    w.layout.resourceSites.every((p,i)=>Math.hypot(x-p.x,z-p.z)>r+8&&Math.hypot(x-p.x-(i?7:5),z-p.z-(i?7:18))>r+6),
+  const safe=(x:number,z:number,r:number)=>w.layout.resourceSites.every(p=>Math.hypot(x-p.x,z-p.z)>r+8&&
+    distance({x,z},battlefieldGasPosition(p))>r+6),
     clear=(x:number,z:number,r:number)=>occupied.every(p=>Math.hypot(x-p.x,z-p.z)>r+p.r),
     place=(part:string,v:number,x:number,y:number,z:number,r:number,h:number,color:number,yaw:number,mat:WorldPlacement['material'],glow=0)=>
       builder.place(`ecology${part}${v}`,x,y,z,r,h,r,color,yaw,0,0,glow,1,'static',mat);

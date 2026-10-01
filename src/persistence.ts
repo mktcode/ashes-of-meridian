@@ -6,7 +6,7 @@
 function createMeridianPersistence(
   { getStorage, clamp, upgrades, benefits, abilities, battlefields, missions, enemyCount, warn }: PersistenceDependencies
 ): MeridianPersistence {
-    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v5',
+    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v6',
       STAGE_HISTORY_KEY = 'meridian.stage-history.v1';
     const memoryStore: Record<string, string> = {};
     const Store = {
@@ -48,7 +48,6 @@ function createMeridianPersistence(
         expeditionDepth: 0,
         aether: 0,
         tutorialComplete: false,
-        salvageIntroComplete: false,
         upgrades: {},
         settings: {
           volume: 0.28,
@@ -68,7 +67,6 @@ function createMeridianPersistence(
           d.expeditionDepth = clamp(Math.floor(Number(p.expeditionDepth) || 0), 0, 999999);
           d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
           d.tutorialComplete = p.tutorialComplete === true;
-          d.salvageIntroComplete = p.salvageIntroComplete === true;
           for (let k in upgrades)
             d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
           for (let key of Object.keys(d.settings)) {
@@ -88,10 +86,11 @@ function createMeridianPersistence(
     function loadExpedition(): MeridianExpedition | null {
       try {
         const p = JSON.parse(Store.get(EXPEDITION_KEY) || 'null');
-        if (!p || p.version !== 5 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
+        if (!p || p.version !== 6 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
           !p.encounter || !Object.hasOwn(battlefields, p.encounter.map) ||
           typeof p.encounter.mission !== 'string' || !Object.hasOwn(missions, p.encounter.mission) ||
-          !missions[p.encounter.mission].maps.includes(p.encounter.map) || !Array.isArray(p.abilities) ||
+          !missions[p.encounter.mission].maps.includes(p.encounter.map) ||
+          !['resource-start', 'exploration'].includes(p.encounter.deployment) || !Array.isArray(p.abilities) ||
           p.abilities.length !== 4 || new Set(p.abilities).size !== 4 ||
           p.abilities.some((key: unknown) => typeof key !== 'string' || !Object.hasOwn(abilities, key))) return null;
         const depth = clamp(Math.floor(Number(p.depth) || 0), 0, 999999), count = enemyCount(depth);
@@ -108,13 +107,14 @@ function createMeridianPersistence(
           return result;
         };
         const normalized: MeridianExpedition = {
-          version: 5,
+          version: 6,
           faction: p.faction,
           abilities: [...p.abilities],
           depth,
           benefits: normalize(p.benefits),
           enemyBenefits: p.enemyBenefits.map(normalize),
           encounter: {
+            deployment: p.encounter.deployment,
             mission: p.encounter.mission,
             enemies: [...p.encounter.enemies],
             map: p.encounter.map,

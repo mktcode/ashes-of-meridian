@@ -93,7 +93,7 @@ const aiMethods = {
       desired=rules.workers+(count('factory')?2:0)+(count('hangar')?2:0);
     if (workers.length+queued('worker') < desired && queued('worker')<2) this.executeAction(team,{kind:'train',unit:'worker'});
     const free=this.availableWorkers(team).sort((a,b)=>
-      Number(a.order.type==='salvage')-Number(b.order.type==='salvage'));
+      a.id - b.id);
     for (const b of buildings.filter(b=>b.progress<1)) {
       if (!workers.some(w=>w.order.type==='build' && w.order.id===b.id) && free.length) {
         const w=free.shift()!;
@@ -197,6 +197,41 @@ const aiMethods = {
       if (!this.canSee(team,p) && !s.scans.some(scan=>scan.team===team)) this.executeAction(team,{kind:'ability',ability:'scan',position:p});
     }
   },
+  aiDeployment(this: MeridianGame, team: PlayerTeam, own: Entity[]) {
+    const worker = own.find(e => e.kind === 'unit' && e.type === 'worker') as UnitEntity | undefined,
+      foundation = own.find(e => e.type === 'hq' && e.progress < 1), ai = this.aiFor(team)!, world = this.world!, now = this.s!.time;
+    if (!worker) return;
+    if (foundation) {
+      if (!own.some(e => e.type === 'worker' && e.order.type === 'build' && e.order.id === foundation.id))
+        this.executeAction(team, { kind: 'order', ids: [worker.id], order: { type: 'build', id: foundation.id, x: foundation.x, z: foundation.z } });
+      return;
+    }
+    // Only observed deposits can justify a base. Never read hidden resource entities/layout anchors.
+    const resource = Object.values(ai.contacts).filter(c => c.kind === 'resource' && c.type === 'crystal')
+      .sort((a, b) => distance(a, worker) - distance(b, worker) || a.id - b.id)[0];
+    if (resource && distance(resource, worker) < 13) {
+      if (this.aiBuild(team, 'hq', worker)) ai.deploymentGoal = undefined;
+      return;
+    }
+    if (ai.deploymentGoal && worker.order.type === 'move' && distance(worker, ai.deploymentGoal) > 4 &&
+      worker.pathStatus !== 'unreachable' && now - (ai.deploymentGoalAt || 0) < 18) return;
+    const targets: Position[] = [];
+    if (resource && distance(resource, worker) >= 13) targets.push({ x: resource.x - 6, z: resource.z + 6 });
+    for (let z = 4; z < world.gridSize - 4; z += 4) for (let x = 4; x < world.gridSize - 4; x += 4) {
+      const i = z * world.gridSize + x, p = world.point(i), d = distance(p, worker);
+      if (world.deploymentReachable[i] && !world.sight[team].explored[i] && d > 12 &&
+        (!ai.deploymentGoal || distance(p, ai.deploymentGoal) > 6)) targets.push(p);
+    }
+    const choices = resource ? targets : targets.sort((a, b) => distance(a, worker) - distance(b, worker));
+    for (const p of choices.slice(0, 12)) {
+      // The public vehicle component already guarantees a terrain route for this worker.
+      // Inspecting live navigation here would leak unseen opponent foundations.
+      if (!world.deploymentReachable[world.idx(p.x, p.z)] || !world.surface!.fits(p.x, p.z, worker.size * UNIT_BODY_SCALE)) continue;
+      if (this.executeAction(team, { kind: 'order', ids: [worker.id], order: { type: 'move', ...p } }, false)) {
+        ai.deploymentGoal = { ...p }; ai.deploymentGoalAt = now; return;
+      }
+    }
+  },
   aiTick(this: MeridianGame, team: PlayerTeam) {
     const s=this.s!, ai=this.aiFor(team);
     if (!ai || this.party(team).eliminated || s.result || s.stopped || s.time<ai.nextThink) return;
@@ -215,20 +250,7 @@ const aiMethods = {
     ai.nextThink=s.time+Math.max(0,rules.think-rules.reactionDelay);
     const home=own.find(e=>e.type==='hq'&&e.progress>=1) as BuildingEntity | undefined;
     if (!home && this.party(team).deploymentPending) {
-      const worker = own.find(e => e.type === 'worker'), foundation = own.find(e => e.type === 'hq' && e.progress < 1);
-      if (worker && !foundation) this.aiBuild(team, 'hq', worker);
-      else if (worker && foundation && !own.some(e => e.type === 'worker' && e.order.type === 'build' && e.order.id === foundation.id))
-        this.executeAction(team, { kind: 'order', ids: [worker.id], order: { type: 'build', id: foundation.id, x: foundation.x, z: foundation.z } });
-      return;
-    }
-    if (s.rules.kind === 'single-player' && s.rules.mission.id === 'echo-salvage') {
-      if(home) ai.salvageHome={x:home.x,z:home.z};
-      if(!home && ai.salvageHome && !own.some(e=>e.type==='hq')) this.aiBuild(team,'hq',ai.salvageHome);
-      const reserve = home ? this.aiEconomy(team, own, home) : this.cost('hq','building',team).cost;
-      if(home) this.aiProduction(team, own, visible, reserve);
-      this.aiSalvageStrategy(team, own, visible, home);
-      const anchor = home || own.find(e => e.kind === 'unit');
-      if (anchor) this.aiAbilities(team, own, visible, anchor);
+      this.aiDeployment(team, own);
       return;
     }
     if (!home) return;

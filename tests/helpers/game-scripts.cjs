@@ -19,9 +19,6 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-world-variation',
   'renderer-westmark-terrain',
   'renderer-model-kit',
-  'battlefield-aurelion-layout',
-  'renderer-aurelion-geometry',
-  'renderer-aurelion-relic',
   'renderer-heavy-mesh',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',
@@ -70,28 +67,16 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-faction-2-unit-hero',
   'renderer-shaders',
   'renderer-runtime',
-  'renderer-aurelion-art',
-  'renderer-aurelion-traffic',
-  'renderer-aurelion-atmosphere',
-  'renderer-model-thumbnails',
-  'renderer-aurelion-battlefield'
+  'renderer-model-thumbnails'
 ]);
 const BATTLEFIELD_SCRIPTS = Object.freeze([
-  'battlefield-aurelion-layout',
   'battlefield-surface',
   'battlefield-design',
   'battlefield-shared',
-  'battlefield-desert',
-  'battlefield-alien-planet',
-  'battlefield-mothership',
-  'battlefield-westmark-data',
-  'battlefield-westmark',
-  'battlefield-aurelion',
-  'battlefield-frontier',
-  'battlefield-highlands',
   'battlefield-ecology',
   'battlefield-variations',
-  'battlefield-evolution',
+  'battlefield-dynamic',
+  'battlefield-deployment',
   'battlefield-catalog'
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([

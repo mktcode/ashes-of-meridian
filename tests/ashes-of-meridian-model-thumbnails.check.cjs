@@ -30,7 +30,7 @@ function setup(msaa={}) {
     dynamic:{},effects:{},static:{},occlusion:{},surface:{heightAt(){throw Error('Thumbnail sampled world');}},
     quality:2,cinema:false,fogOn:true,extent:140,decorSeed:17,
     eye:[10,20,30],vp:new Float32Array(16),lightVP:new Float32Array(16),
-    battlefieldProfile:{scenery:'aurelion'},canvas:{width:800,height:600},drawCalls:0,
+    battlefieldProfile:{scenery:'fixture'},canvas:{width:800,height:600},drawCalls:0,
     geometry(name,data) {
       const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
       for(let i=0;i<data.length;i+=9) for(let k=0;k<3;k++) {

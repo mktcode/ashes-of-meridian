@@ -86,17 +86,10 @@ interface BattlefieldPalette {
 }
 
 interface BattlefieldLayout {
-  /** Public corner candidates, independent of team assignment. */
-  startSites: [Position, Position, Position, Position];
-  /** Terrain-generation anchors; these do not identify the live teams. */
-  playerStart: Position;
-  enemySites: Position[];
-  centralClearings: Position[];
-  /** Public mission anchor, not a source of unit visibility. */
-  salvageSite?: Position & { radius: number };
-  outerClearings: Position[];
+  /** Public terrain-derived worker candidates, independent of team assignment. */
+  startSites: Position[];
+  /** Economy regions are generated before deployment; none identify live parties. */
   resourceSites: Position[];
-  additionalClearings: Position[];
   corridors: [number, number][][];
 }
 
@@ -122,7 +115,7 @@ interface BattlefieldDesign {
 type EcologyBiome = 'verdant' | 'ochre' | 'rime' | 'mycelium';
 type EcologyWeather = 'clear' | 'mist' | 'rain' | 'snow' | 'ash';
 type EcologyFlora = 'Grove' | 'Acacia' | 'Conifer' | 'Fungus' | 'Coral' | 'Fan' | 'Spire' | 'Pod' | 'Arch' | 'Reed' | 'Shelf' | 'Cactus' | 'Palm';
-type WorldVariationFamily = 'alien' | 'desert' | 'ship' | 'alpine' | 'city' | 'frontier' | 'haven';
+type WorldVariationFamily = 'alien' | 'desert' | 'ship' | 'alpine' | 'frontier' | 'haven';
 type WorldReliefForm = 'rolling' | 'dunes' | 'basin' | 'folds' | 'craters' | 'terraces' | 'deck' | 'ridges' | 'broken-crater';
 interface WorldVariation {
   readonly id: string;
@@ -158,7 +151,7 @@ interface BattlefieldRenderProfile {
   wilderness?: EcologyBiome | 'seeded';
   ecology?: BattlefieldEcology;
   atmosphere?: BattlefieldAtmosphere;
-  scenery?: 'aurelion';
+  scenery?: string;
   groundTexture: 'ground' | 'metal' | 'bio' | 'westmarkMeadow';
   skyTexture: 'sky';
   /** Optional artistic override; otherwise use the material recipe's physical tile size. */
@@ -188,20 +181,15 @@ interface BattlefieldDefinition {
   name: string;
   multiplayer?: boolean;
   size: BattlefieldSize;
-  layout: BattlefieldLayout;
   /** Resolve dimensions before layout and buffer allocation, without encounter RNG. */
   createSize?: (terrainSeed: number) => BattlefieldSize;
-  createLayout?: (terrainSeed: number, size: BattlefieldSize) => BattlefieldLayout;
+  createLayout: (terrainSeed: number, size: BattlefieldSize) => BattlefieldLayout;
   design?: BattlefieldDesign;
-  /** Explicit datum, or each anchor's local plateau when bases have different heights. */
-  startHeight?: number | 'local';
   palette: BattlefieldPalette;
   render: BattlefieldRenderProfile;
   worldEvent: 'solarFlare' | null;
   generate: (builder: BattlefieldBuilder) => void;
 }
-type BattlefieldProp = (builder: BattlefieldBuilder, x: number, z: number) => void;
-type BattlefieldPatch = (builder: BattlefieldBuilder, x: number, z: number, radius: number) => void;
 
 type MeridianSettings = Record<string, number | boolean> & {
   volume: number;
@@ -217,12 +205,11 @@ interface MeridianProfile {
   expeditionDepth: number;
   aether: number;
   tutorialComplete: boolean;
-  salvageIntroComplete: boolean;
   upgrades: Record<string, number>;
   settings: MeridianSettings;
 }
 
-type MissionId = 'hq-elimination' | 'echo-salvage';
+type MissionId = 'hq-elimination';
 interface MissionDefinition {
   readonly name: string;
   readonly maps: readonly BattlefieldId[];
@@ -234,14 +221,10 @@ interface MissionDefinition {
   readonly defeat: string;
 }
 // Fresh per battle; future objective progress belongs here, never in the checkpoint.
-interface SalvageMissionState {
-  id: 'echo-salvage';
-  site: Position & { radius: number };
-  delivered: number[];
-}
-type MissionState = { id: 'hq-elimination' } | SalvageMissionState;
+type MissionState = { id: 'hq-elimination' };
 
 interface ExpeditionEncounter {
+  deployment: DeploymentMode;
   mission: MissionId;
   enemies: FactionId[];
   map: BattlefieldId;
@@ -256,7 +239,7 @@ interface ExpeditionStagePreview {
 }
 
 interface MeridianExpedition {
-  version: 5;
+  version: 6;
   faction: FactionId;
   abilities: AbilityType[];
   depth: number;
@@ -353,7 +336,7 @@ interface QueueItem extends Cost {
 type UnitOrder =
   | { type: 'idle'; x?: number; z?: number }
   | { type: 'hold' | 'stop'; x?: number; z?: number }
-  | ({ type: 'move' | 'attackMove' | 'guard' | 'salvage' } & Position)
+  | ({ type: 'move' | 'attackMove' | 'guard' } & Position)
   | ({ type: 'attack' | 'build' } & Position & { id: number })
   | { type: 'mine' | 'follow' | 'repair'; id: number; x?: number; z?: number };
 
@@ -451,9 +434,6 @@ interface EntityBase extends Position {
 interface UnitEntity extends EntityBase {
   kind: 'unit';
   type: UnitType;
-  /** Mission cargo is never spendable Cinder/Echo. It stays aboard when orders change. */
-  salvageCarry?: number;
-  salvagePoint?: Position;
 }
 
 interface BuildingEntity extends EntityBase {
@@ -480,6 +460,7 @@ type UnitPlacement = UnitBody & Position;
 
 interface BattleOptions {
   mission?: MissionId;
+  deployment?: DeploymentMode;
   depth?: number;
   faction?: number;
   enemies?: FactionId[];
@@ -566,7 +547,8 @@ interface AIContact extends Position {
   areaVisible?: boolean;
 }
 interface AIState {
-  salvageHome?: Position;
+  deploymentGoal?: Position;
+  deploymentGoalAt?: number;
   nextThink: number;
   observation?: { readyAt: number; own: Entity[]; visible: AIContact[] };
   attackProgress?: { targetId: number; distance: number; hp: number; at: number; startedAt: number };
@@ -663,8 +645,8 @@ interface WorldRelief {
   size: number; // Includes one vertex of halo on every side, for seamless edge normals.
   heights: Float32Array;
   innerExtent: number;
-  /** Model-specific vertex data: landscape weights (negative snow = damp sediment),
-   * or signed water depth / flow X / flow Z; not albedo tint. */
+  /** Model-specific vertex data: natural landscape weights (negative snow = damp sediment),
+   * engineered-skin RGB tint, or signed water depth / flow X / flow Z. */
   colors?: Float32Array;
 }
 
@@ -674,9 +656,6 @@ type WorldGeometry = (
   | { mesh: string; model: string; relief: WorldRelief }) & { grounded?: boolean; detail?: boolean };
 
 interface WorldRenderData {
-  scenery?: 'aurelion';
-  /** Shared vertical scale for authored scenery and its CPU surface. */
-  heightScale?: number;
   features: WorldTerrainFeature[];
   groundColors: number[][];
   placements: WorldPlacement[];

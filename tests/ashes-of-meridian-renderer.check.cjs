@@ -158,30 +158,23 @@ test('map switches keep only current world meshes plus shared geometry, includin
   const h = geometryResidency(context), r = h.renderer, view = new BattlefieldView(r);
   // Real map descriptors/ownership and GPU lifecycle; expensive model geometry has separate coverage.
   TerrainModels.geometry = () => new Float32Array(27);
-  vm.runInContext(`TerrainScenery.aurelion=()=>['aurelionStructure','echoRelicCrystal','aurelionAir0'].map(name=>
-    ({name,data:new Float32Array(27),static:name==='aurelionStructure',glow:0,material:2}))`,context);
-  const environments=vm.runInContext('BattlefieldEnvironments',context);
-  let creations=0,disposals=0;
-  environments.aurelion=()=>{creations++;return {dispose(){disposals++;}};};
   r.add = () => {}; r.fog = (pixels,size) => {assert.equal(pixels.length,size*size);r.fogSize=size;};
   r.geometry('sharedUnit', new Float32Array(27));
   const shared = r.meshes.sharedUnit;
   let firstDesertBytes;
-  for (const [map,seed=1409] of [['desert'], ['frontier',3], ['frontier'], ['haven'], ['westmark'], ['aurelion'], ['mothership'], ['alien-planet'], ['aurelion'], ['desert']]) {
+  for (const [map,seed=1409] of [['desert'], ['frontier',3], ['frontier'], ['haven'], ['westmark'], ['mothership'], ['alien-planet'], ['desert']]) {
     const world = new Battlefield(seed, map), before = JSON.stringify(world.renderData);
-    const expected = new Set(['sharedUnit', ...(world.renderData.scenery
-      ? ['aurelionStructure','echoRelicCrystal','aurelionAir0'] : ['terrain']), ...world.renderData.geometries.map(d => d.mesh)]);
+    const expected = new Set(['sharedUnit', 'terrain', ...world.renderData.geometries.map(d => d.mesh)]);
     view.sync(world, false);
     assert.deepEqual(new Set(Object.keys(r.meshParts)), expected, `${map}: no preceding map remains resident`);
     const parts = Object.values(r.meshParts).flat();
     assert.deepEqual(new Set(Object.keys(r.meshes)), new Set(parts));
     assert.equal(h.buffers.size, parts.length); assert.equal(h.vaos.size, parts.length);
     assert.strictEqual(r.meshes.sharedUnit, shared, 'shared model is never replaced or released');
-    const uploads = h.uploads, releases = h.releases, activeCreations=creations;
+    const uploads = h.uploads, releases = h.releases;
     view.sync(world, true); view.sync(world, false);
     assert.equal(r.extent,world.extent);assert.equal(r.fogSize,world.gridSize);assert.strictEqual(r.surface,world.surface);
-    assert.equal(creations,activeCreations,'fog changes reuse the environment');
-    assert.equal(creations-disposals,map==='aurelion'?1:0,'normal world sync activates and releases map presentation');
+    assert.equal(!!r.environment, false, 'retained worlds use the shared renderer');
     assert.equal(h.uploads, uploads); assert.equal(h.releases, releases, 'unchanged layout/fog changes do not churn geometry');
     assert.equal(JSON.stringify(world.renderData), before, 'CPU terrain descriptors remain unchanged');
     if (map === 'desert') {

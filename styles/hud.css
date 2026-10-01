@@ -104,22 +104,6 @@
       color: #c5d6df
     }
 
-    #missionObjective {
-      position: absolute;
-      top: calc(var(--topbar-height) + 10px);
-      left: 12px;
-      max-width: calc(100% - 110px);
-      padding: 8px 12px;
-      border: 1px solid #dbae6a88;
-      background: #0c1523ed;
-      color: var(--gold);
-      font: 11px/1.5 var(--mono);
-      text-align: left;
-      white-space: pre-line;
-      pointer-events: auto;
-      cursor: pointer
-    }
-
     #alerts {
       position: absolute;
       right: 24px;

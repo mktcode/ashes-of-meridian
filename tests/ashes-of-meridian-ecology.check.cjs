@@ -8,7 +8,7 @@ const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effe
   'renderer-geometry','renderer-terrain-models','renderer-upland','renderer-ecology','renderer-world-variation','effects-view','ui-core','ui-templates'],
   {globals:{CONTACT_SHADOW_MATERIAL:-1,SNOWFLAKE_MATERIAL:-6,RAIN_STREAK_MATERIAL:-7,RAIN_SPLASH_MATERIAL:-8}});
 const api=vm.runInContext(`({Battlefield,BATTLEFIELDS,battlefieldEcology,ecologyHabitat,ecologyFootprint,TerrainModels,
-  MeridianEffects,renderEcologyWeather,renderBattleScars,battleScarViews,
+  MeridianEffects,battlefieldGasPosition,renderEcologyWeather,renderBattleScars,battleScarViews,
   renderWeaponSignature,UNIT_BODY_SCALE})`,context);
 const json=v=>JSON.parse(JSON.stringify(v));
 function topology(w){const h=createHash('sha256').update(JSON.stringify(w.layout)).update(w.staticGrid);
@@ -32,7 +32,7 @@ test('ecology resolves four repeatable biomes and weather without mutating profi
     }
   }
   assert.equal(styles.size,4);assert.equal(weather.size,5);
-  for(const id of ['haven','westmark','mothership','aurelion'])assert.strictEqual(api.battlefieldEcology(api.BATTLEFIELDS[id].render,7),api.BATTLEFIELDS[id].render);
+  for(const id of Object.keys(api.BATTLEFIELDS))assert.ok(api.battlefieldEcology(api.BATTLEFIELDS[id].render,7).ecology);
   assert.equal(JSON.stringify(api.BATTLEFIELDS),before);
   for(const [map,seed] of [['frontier',11],['desert',1409],['alien-planet',1409]]){
     const decorated=new api.Battlefield(seed,map),undecorated=bare(()=>new api.Battlefield(seed,map));
@@ -65,10 +65,10 @@ test('ecology clusters protect complete blocker envelopes, routes, resources and
       assert.equal(p.layer,'static');assert.equal(p.alpha,1);
       if(part!=='Tuft'){
         assert.ok(api.ecologyFootprint(w,x,z,sx+.4),p.mesh+' complete footprint and wind envelope');
-        for(const start of w.layout.startSites)assert.ok(Math.hypot(start.x-x,start.z-z)>sx+13);
-        for(const [i,site] of w.layout.resourceSites.entries()){
+        for(const site of w.layout.resourceSites){
+          const gas=api.battlefieldGasPosition(site);
           assert.ok(Math.hypot(site.x-x,site.z-z)>sx+8);
-          assert.ok(Math.hypot(site.x+(i?7:5)-x,site.z+(i?7:18)-z)>sx+6);
+          assert.ok(Math.hypot(gas.x-x,gas.z-z)>sx+6);
         }
       }else{
         if(!meshes.has(p.mesh))meshes.set(p.mesh,api.TerrainModels.geometry(w.renderData.geometries.find(g=>g.mesh===p.mesh)));

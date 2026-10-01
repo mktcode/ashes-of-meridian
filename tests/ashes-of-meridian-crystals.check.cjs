@@ -97,13 +97,14 @@ function separated(game) {
   }
 }
 
-test('all factions and maps retain 40 distinct accessible crystals in five-slot ellipses', () => {
-  for (const faction of [0,1,2]) for (const [i, map] of Object.keys(BATTLEFIELDS).entries()) {
-    const game = fresh(); game.start({ seed: 12345 + i * 31, faction, enemies: [i % 3], map,
-      mission: map === 'aurelion' ? 'echo-salvage' : 'hq-elimination' });
-    const nodes = crystals(game); assert.equal(nodes.length, 40); separated(game);
-    assert.equal(game.s.entities.filter(e => e.type === 'gas').length, 8);
-    for (let i = 0; i < 8; i++) {
+test('all maps and factions retain distinct accessible crystals in five-slot ellipses', () => {
+  for (const [i, map] of Object.keys(BATTLEFIELDS).entries()) {
+    const faction = i % 3, game = fresh();
+    game.start({ seed: 12345 + i * 31, faction, enemies: [(i + 1) % 3], map });
+    const nodes = crystals(game), count = game.world.layout.resourceSites.length;
+    assert.equal(nodes.length, count * 5); separated(game);
+    assert.equal(game.s.entities.filter(e => e.type === 'gas').length, count);
+    for (let i = 0; i < count; i++) {
       const group = nodes.slice(i * 5, i * 5 + 5);
       const cx = group.reduce((sum, e) => sum + e.x, 0) / 5, cz = group.reduce((sum, e) => sum + e.z, 0) / 5;
       for (const e of group) {
@@ -117,17 +118,29 @@ test('all factions and maps retain 40 distinct accessible crystals in five-slot 
   }
 });
 
-test('HQ-only start preserves the existing seed 9897 crystal-amount reference', () => {
+test('Worker deployment preserves the existing seed 9897 first-eight-region crystal-amount reference', () => {
   // Captured from 187c936 before research removal; do not regenerate to mask RNG shifts.
   const game = fresh(); game.start({ seed: 9897 });
   assert.equal(game.alive(e => e.type === 'lab').length, 0);
-  assert.deepEqual(json(crystals(game).map(e => e.amount)), [2009,1898,2252,1862,2134,2163,2441,1808,2452,1987,2118,2596,2622,2599,2559,2307,1910,2364,2159,2190,2230,2244,2523,2412,2023,2596,1997,1844,2478,2381,2625,2226,2309,1994,1835,1836,2011,2361,2026,2065]);
+  assert.deepEqual(json(crystals(game).slice(0,40).map(e => e.amount)), [2009,1898,2252,1862,2134,2163,2441,1808,2452,1987,2118,2596,2622,2599,2559,2307,1910,2364,2159,2190,2230,2244,2523,2412,2023,2596,1997,1844,2478,2381,2625,2226,2309,1994,1835,1836,2011,2361,2026,2065]);
 });
 
 test('mining delivers alloy without moving the resource layout', () => {
-  const game = fresh(); game.start({ seed: 1409 });
+  const game = fresh(); game.start({ seed: 1409, deployment:'resource-start' });
+  game.s.parties.forEach(p => p.controller = {kind:'human'});
+  const worker = game.alive(e => e.team === 0 && e.type === 'worker')[0];
+  game.world.explored.fill(255);
+  let hq;
+  for (const r of [7,11]) for (let i=0;i<16&&!hq;i++) {
+    const p={x:worker.x+Math.sin(i*Math.PI/8)*r,z:worker.z+Math.cos(i*Math.PI/8)*r};
+    if (!game.canBuild('hq',p)&&game.build('hq',p,[worker.id])) hq=game.alive(e=>e.type==='hq'&&e.team===0)[0];
+  }
+  assert.ok(hq,'real reachable paid foundation');
+  hq.progress=1; // Completed-base economy fixture, not a construction-duration assertion.
   const positions = () => json(crystals(game).map(e => [e.id,e.x,e.z]));
-  const before = positions();
+  const before = positions(), resource = crystals(game).reduce((a,b)=>
+    Math.hypot(a.x-hq.x,a.z-hq.z)<Math.hypot(b.x-hq.x,b.z-hq.z)?a:b);
+  worker.x = resource.x; worker.z = resource.z; worker.order = {type:'mine',id:resource.id};
   assert.equal(game.train('worker'), true);
   for (let i = 0; i < 900; i++) { game.step(.05); game.effects.tick(.05); }
   assert.ok(game.s.stats.gathered > 0);

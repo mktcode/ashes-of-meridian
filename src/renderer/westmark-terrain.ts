@@ -2,6 +2,8 @@
  * attribute only for their explicit materials; entity vertex contracts are unchanged. */
 'use strict';
 (() => {
+  // The retained bridge art factory owns its ramp profile; no authored map data is loaded.
+  const westmarkDeckHeight = (b: WorldTerrainFeature, u: number) => 10 + (b.height - 10) * clamp((b.width - Math.abs(u)) / 7, 0, 1);
   TerrainModels.westmarkWater=(field:WorldRelief)=>{
     const out:number[]=[],{size,step,extent,heights,colors}=field;
     const vertex=(i:number)=>[(i%size-1)*step-extent,heights[i],(Math.floor(i/size)-1)*step-extent,

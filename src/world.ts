@@ -82,6 +82,7 @@
       declare pathVersion: number;
       declare renderData: WorldRenderData;
       declare startSites: Position[];
+      declare deploymentReachable: Uint8Array;
       surface: BattlefieldSurface | null = null;
       terrainFree(a: Position, b: Position, radius = 0) {
         return !this.surface || this.surface.segment(a, b, radius);
@@ -117,7 +118,7 @@
             !Number.isFinite(this.cellSize) || this.cellSize <= 0 ||
             !Number.isSafeInteger(this.gridSize) || this.gridSize < 3)
           throw new Error('Battlefield size must have extent > 18 and a whole grid of at least 3 cells per side');
-        this.layout = this.definition.createLayout?.(this.terrainSeed, size) ?? this.definition.layout;
+        this.layout = this.definition.createLayout(this.terrainSeed, size);
         const GRID = this.gridSize;
         this.staticGrid = new Uint8Array(GRID * GRID);
         this.terrainFeatureGrid = new Uint8Array(GRID * GRID);
@@ -134,11 +135,11 @@
         this.pathVersion = 0;
         const builder = new BattlefieldBuilder(this);
         this.definition.generate(builder);
-        evolveBattlefield(builder);
         decorateEcology(builder);
         decorateWorldVariation(builder);
         this.blocked.set(this.staticGrid);
-        this.startSites = this.layout.startSites;
+        this.startSites = battlefieldDeploymentCandidates(this);
+        this.layout.startSites = this.startSites;
       }
       idx(x: number, z: number) {
         const { extent: EXTENT, cellSize: CELL, gridSize: GRID } = this;

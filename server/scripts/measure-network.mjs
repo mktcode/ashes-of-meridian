@@ -38,9 +38,9 @@ async function measureMap(map) {
   const url = `ws://127.0.0.1:${server.http.address().port}`;
   const host = await connect(url), guest = await connect(url);
   try {
-    host.send({ type: 'create', version: 4, map, faction: 0 });
+    host.send({ type: 'create', version: 5, map, faction: 0 });
     const waiting = JSON.parse(await host.receive(message => message.type === 'waiting'));
-    guest.send({ type: 'join', version: 4, code: waiting.code, faction: 1 });
+    guest.send({ type: 'join', version: 5, code: waiting.code, faction: 1 });
     await host.receive(message => message.type === 'start'); await guest.receive(message => message.type === 'start');
     host.send({ type: 'ready' }); guest.send({ type: 'ready' });
     const payloads = [];

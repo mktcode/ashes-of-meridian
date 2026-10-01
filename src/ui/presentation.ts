@@ -1,34 +1,6 @@
     /* MeridianUI minimap and battlefield overlay drawing. Loaded after ui/core.js. */
     'use strict';
-    const BATTLE_INTRO_OBJECTIVE_DELAY = 1;
     const uiPresentationMethods = {
-      beginBattleIntro(this: MeridianUI) {
-        this.battleIntro = null;
-        const s = this.game.s;
-        if (!s || s.rules?.kind !== 'single-player') return false;
-        const mission = s.rules.mission;
-        if (mission.id !== 'echo-salvage' || this.profile.salvageIntroComplete) return false;
-        const timing = { hold: 10, travel: 1.5 },
-          home = this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && e.type === 'hq')[0];
-        const limit = this.game.world!.extent - 18,
-          cameraPoint = (e: Position) => ({ x: clamp(e.x + 4, -limit, limit), z: clamp(e.z - 2, -limit, limit) }),
-          focus = { x: mission.site.x, z: mission.site.z },
-          homeCamera = home ? cameraPoint(home) : { x: s.cam.x, z: s.cam.z };
-        this.battleIntro = {
-          elapsed: 0,
-          hold: timing.hold,
-          travel: timing.travel,
-          focus,
-          mission: mission.id,
-          home: homeCamera,
-          visibleEntityIds: new Set<number>(),
-          objectiveShown: false
-        };
-        s.cam.x = focus.x;
-        s.cam.z = focus.z;
-        this.paused = true;
-        return true;
-      },
       beginTutorialRecon(this: MeridianUI) {
         const s = this.game.s;
         if (!s) return false;
@@ -75,74 +47,9 @@
           this.updateHUD();
           return;
         }
-        if (!intro.objectiveShown && intro.elapsed >= BATTLE_INTRO_OBJECTIVE_DELAY) {
-          intro.objectiveShown = true;
-          if (s.rules.kind === 'single-player') this.radio(MISSIONS[s.rules.mission.id].intro);
-        }
-        const progress = clamp((intro.elapsed - intro.hold) / intro.travel, 0, 1),
-          eased = progress * progress * (3 - 2 * progress);
-        s.cam.x = intro.focus.x + (intro.home.x - intro.focus.x) * eased;
-        s.cam.z = intro.focus.z + (intro.home.z - intro.focus.z) * eased;
-        if (intro.elapsed < intro.hold + intro.travel) return;
-        const pendingRadio = intro.pendingRadio;
-        if (intro.mission === 'echo-salvage') {
-          this.profile.salvageIntroComplete = true;
-          this.persist();
-        }
-        this.battleIntro = null;
-        this.paused = false;
-        this.beginBattleTutorial();
-        this.updateHUD();
-        this.audio.setMode?.('battle');
-        if (pendingRadio) this.radio(pendingRadio);
       },
       introObserves(this: MeridianUI, e: Entity) {
         return !!this.battleIntro?.visibleEntityIds.has(e.id);
-      },
-      salvageMission(this: MeridianUI): SalvageMissionState | null {
-        const rules = this.game.s?.rules;
-        return rules?.kind === 'single-player' && rules.mission.id === 'echo-salvage' ? rules.mission : null;
-      },
-      updateMissionHUD(this: MeridianUI) {
-        const mission = this.salvageMission(), el = $('missionObjective');
-        el.classList.toggle('hidden', !mission);
-        if (!mission) return;
-        const label = (team: number) => team === this.localTeam ? 'YOU' : `OPP ${team}`,
-          cargo=this.game.alive(e=>e.team===this.localTeam && e.kind==='unit')
-            .reduce((n,e)=>n+((e as UnitEntity).salvageCarry || 0),0);
-        el.textContent = `ECHO SALVAGE · FIRST TO ${SALVAGE_RULES.goal}\n${mission.delivered.map((n, team) => `${label(team)}: ${Math.floor(n)}`).join(' · ')}\nYOUR CARGO: ${Math.floor(cargo)} · DELIVER TO HQ`;
-        el.title = `${MISSIONS[mission.id].objective} Tap to center on the core.`;
-        el.setAttribute('aria-label', `${el.textContent}. Tap to center on the core.`);
-      },
-      drawMissionZone(this: MeridianUI, ctx: CanvasRenderingContext2D) {
-        const mission = this.salvageMission();
-        if (!mission) return;
-        const { x, z, radius } = mission.site;
-        ctx.save();
-        ctx.strokeStyle = '#79dbcc';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        let connected = false;
-        for (let i = 0; i <= 64; i++) {
-          const angle = i * Math.PI / 32, px = x + Math.cos(angle) * radius, pz = z + Math.sin(angle) * radius,
-            p = this.R.project(px, .25 + (this.game.world?.surface?.heightAt(px, pz) ?? 0), pz);
-          if (!p) { connected = false; continue; }
-          if (connected) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
-          connected = true;
-        }
-        ctx.stroke();
-        // Extraction is presentation-only: no effect RNG, no new vision or invisible enemy jobs.
-        const workers=this.game.alive(e=>e.kind==='unit' && e.type==='worker' && this.game.observed(e)) as UnitEntity[];
-        for(const worker of workers) {
-          if(worker.order.type!=='salvage' || worker.returning || !worker.salvagePoint ||
-            distance(worker,worker.salvagePoint)>.8 || (worker.salvageCarry || 0)>=SALVAGE_RULES.load) continue;
-          const d=distance(worker,mission.site),a=this.R.project(worker.x,1.4+(this.game.world?.surface?.heightAt(worker.x,worker.z) ?? 0),worker.z),
-            b=this.R.project(x+(worker.x-x)*14.5/d,4.5,z+(worker.z-z)*14.5/d);
-          if(!a || !b) continue;
-          ctx.strokeStyle='#a4e9ed';ctx.lineWidth=1.3;
-          ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-        }
-        ctx.restore();
       },
       tick(this: MeridianUI, dt: number) {
         this.advanceTutorialArrival(dt);
@@ -236,13 +143,6 @@
             ctx.fill();
           }
         }
-        const mission = this.salvageMission();
-        if (mission) {
-          const p = map(mission.site);
-          ctx.strokeStyle = '#79dbcc';
-          ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(p.x, p.y, mission.site.radius * w / span, 0, Math.PI * 2); ctx.stroke();
-        }
         ctx.strokeStyle = '#e3ffff';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -273,7 +173,6 @@
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,
           s = g.s!;
-        this.drawMissionZone(ctx);
         const selectedIds = this.selectionIds();
         ctx.font = '10px ui-monospace,Consolas,monospace';
         ctx.textAlign = 'center';
