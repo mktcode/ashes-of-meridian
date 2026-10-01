@@ -163,7 +163,16 @@
         if (index >= 0) this.battleAbilities.splice(index, 1);
         else if (this.battleAbilities.length < 4) this.battleAbilities.push(ability);
         else { this.toast('Deselect a command module before choosing another.'); return; }
-        this.showBattle();
+        // Keep the screen and focused controls alive; do not replay its entrance animation.
+        document.querySelectorAll<HTMLButtonElement>('#menu [data-loadout-ability]').forEach(button => {
+          const slot = this.battleAbilities.indexOf(button.dataset.loadoutAbility as AbilityType);
+          button.classList.toggle('active', slot >= 0);
+          button.setAttribute('aria-pressed', String(slot >= 0));
+          button.querySelector<HTMLElement>('.loadout-slot')!.textContent = slot >= 0 ? String(slot + 1) : '';
+        });
+        $('menu').querySelector<HTMLElement>('.loadout-picker-heading > span')!.textContent = `${this.battleAbilities.length} / 4`;
+        $('menu').querySelector<HTMLButtonElement>('[data-ui="startBattle"]')!.disabled =
+          this.battleAbilities.length !== 4 || new Set(this.battleAbilities).size !== 4;
       },
       startBattle(this: MeridianUI) {
         const faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : FACTION_ID.FIRST;

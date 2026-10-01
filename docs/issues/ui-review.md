@@ -7,7 +7,7 @@ Gefechts-HUD ausdrücklich ausgenommen. [Designsystem](../ui-design-system.md).
 
 `openModal` ersetzt Markup ohne Dialogrolle, initialen Fokus, Tab-Begrenzung oder
 Fokusrückgabe. Hintergrundkontrollen bleiben per Tastatur erreichbar. Auch vollständige
-Neurenderings der Loadout-Auswahl und nach Upgrade-Käufen können den Fokus verlieren.
+Neurenderings nach Upgrade-Käufen können den Fokus verlieren.
 Eine gemeinsame Fokus-/Dialogverwaltung muss Rückkehr zu Pause, Ergebnis und Hauptmenü
 unterscheiden; Escape darf keinen laufenden Multiplayer fälschlich pausieren oder eine
 Bestätigung überspringen. Keine bloße CSS-Lösung.

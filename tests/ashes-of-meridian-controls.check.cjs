@@ -339,6 +339,40 @@ test('new expedition modules remain editable with an existing checkpoint without
   assert.equal(options.seed, 1409);
 });
 
+test('module selection updates existing controls without replacing the screen or losing focus and scroll', () => {
+  const h = setup(), ui = h.ui, menu = h.document.getElementById('menu');
+  ui.showBattle();
+  const buttons = ['orbital', 'repair', 'scan', 'drop', 'disruption'].map(key => {
+    const button = menu.querySelector(key);
+    button.dataset = { loadoutAbility: key };
+    return button;
+  });
+  h.document.querySelectorAll = selector => {
+    assert.equal(selector, '#menu [data-loadout-ability]');
+    return buttons;
+  };
+  const focused = buttons[0], start = menu.querySelector('[data-ui="startBattle"]');
+  h.document.activeElement = focused;
+  menu.scrollTop = 120;
+  const markup = menu.innerHTML;
+  Object.defineProperty(menu, 'innerHTML', { get: () => markup,
+    set: () => { throw Error('Module selection must not replace the screen'); } });
+  ui.showBattle = () => { throw Error('Module selection must not reopen the screen'); };
+  ui.selectBattleAbility('orbital');
+  assert.equal(buttons[0].getAttribute('aria-pressed'), 'false');
+  assert.equal(buttons[0].querySelector('.loadout-slot').textContent, '');
+  assert.equal(buttons[1].querySelector('.loadout-slot').textContent, '1');
+  assert.equal(start.disabled, true);
+  ui.selectBattleAbility('disruption');
+  assert.equal(buttons[4].getAttribute('aria-pressed'), 'true');
+  assert.equal(buttons[4].classList.contains('active'), true);
+  assert.equal(buttons[4].querySelector('.loadout-slot').textContent, '4');
+  assert.equal(start.disabled, false);
+  assert.equal(parseInt(menu.querySelector('.loadout-picker-heading > span').textContent), 4);
+  assert.strictEqual(h.document.activeElement, focused);
+  assert.equal(menu.scrollTop, 120);
+});
+
 test('FPS setting updates the readout immediately and remains a profile setting', () => {
   const h = setup(), readout = h.document.getElementById('fpsReadout');
   h.ui.profile.settings.showFps = false;
