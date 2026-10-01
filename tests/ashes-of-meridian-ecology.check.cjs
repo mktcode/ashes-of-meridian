@@ -8,7 +8,7 @@ const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effe
   'renderer-geometry','renderer-terrain-models','renderer-upland','renderer-ecology','renderer-world-variation','effects-view','ui-core','ui-templates'],
   {globals:{CONTACT_SHADOW_MATERIAL:-1,SNOWFLAKE_MATERIAL:-6,RAIN_STREAK_MATERIAL:-7,RAIN_SPLASH_MATERIAL:-8}});
 const api=vm.runInContext(`({Battlefield,BATTLEFIELDS,battlefieldEcology,ecologyHabitat,ecologyFootprint,TerrainModels,
-  MeridianGame,MeridianEffects,expeditionOpening,renderMissionBriefing,renderEcologyWeather,renderBattleScars,battleScarViews,
+  MeridianEffects,renderEcologyWeather,renderBattleScars,battleScarViews,
   renderWeaponSignature,UNIT_BODY_SCALE})`,context);
 const json=v=>JSON.parse(JSON.stringify(v));
 function topology(w){const h=createHash('sha256').update(JSON.stringify(w.layout)).update(w.staticGrid);
@@ -88,30 +88,6 @@ test('ecology clusters protect complete blocker envelopes, routes, resources and
     assert.ok(w.renderData.placements.length<=1030);
   }
   assert.ok(landmarks>0,'representative worlds actually contain landmarks');
-});
-
-test('Frontier landing choices are public, symmetric, reproducible and excluded from scenarios and other maps',()=>{
-  const choices=new Map();for(let seed=1;seed<64;seed++){const o=api.expeditionOpening('frontier',seed);choices.set(o.name,seed);}
-  assert.equal(choices.size,4);
-  for(const map of ['haven','desert','alien-planet','mothership','westmark','aurelion'])assert.equal(api.expeditionOpening(map,7),null);
-  // Initialization contracts only: no AI/simulation long run.
-  for(const [name,seed] of choices){
-    const make=()=>{const g=new api.MeridianGame({upgrades:{}},()=>{});g.start({map:'frontier',seed,faction:0,enemies:[1,2,0]});return g;};
-    const game=bare(make),again=bare(make),s=game.s;
-    assert.equal(s.opening.name,name);assert.deepEqual(json(s),json(again.s));assert.equal(game.random(),again.random());
-    assert.equal(s.rules.mission.id,'hq-elimination');assert.equal(s.stats.trained,0);
-    for(const p of s.parties){
-      const units=s.entities.filter(e=>e.kind==='unit'&&e.team===p.id);
-      assert.deepEqual(Array.from(units,e=>e.type).sort(),Array.from(s.opening.units).sort());
-      assert.equal(p.account.alloy,250);assert.equal(p.account.gas,0);
-      for(const u of units){assert.equal(u.faction,p.faction);assert.ok(game.unitFits(u,u.x,u.z));}
-    }
-    assert.ok(api.renderMissionBriefing('hq-elimination',{map:'frontier',seed,mission:'hq-elimination'}).includes(name));
-    const scenario=new api.MeridianGame({upgrades:{}},()=>{});
-    bare(()=>scenario.startScenario({map:'frontier',seed,duration:1,hostilities:[[false,true],[true,false]],parties:[{faction:0,controller:'human'},{faction:1,controller:'human'}]}));
-    assert.equal(scenario.s.opening,undefined);assert.equal(scenario.s.entities.filter(e=>e.kind==='unit').length,0);
-    assert.deepEqual(json(s.entities.filter(e=>e.kind==='resource')),json(scenario.s.entities.filter(e=>e.kind==='resource')),'landing additions follow protected resource initialization');
-  }
 });
 
 test('weather and battle scars are bounded, view-owned and clear with quality, time, fog and world changes',()=>{

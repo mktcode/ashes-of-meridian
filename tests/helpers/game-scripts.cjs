@@ -95,7 +95,6 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-catalog'
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([
-  'simulation-openings',
   'simulation-game',
   'simulation-movement',
   'simulation-economy',

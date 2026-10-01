@@ -144,15 +144,14 @@
           map = battlefieldId(opts.map),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.world = new Battlefield(seed, map, parties.length);
-        const layout = this.world.layout,
-          opening = rules.kind === 'single-player' && rules.mission.id === 'hq-elimination' ? expeditionOpening(map,seed) : null;
+        const layout = this.world.layout;
         this.world.startSites = battlefieldStartSites(this.world);
         const starts = this.startingPositions(rules.kind === 'scenario' ? opts.startSeed ?? seed : seed, parties.length), [playerStart, enemyStart] = starts;
         this.s = {
           seed, map,
           depth: clamp(Math.floor(Number(opts.depth) || 0), 0, 999999),
           time: 0,
-          parties, rules, ...(opening ? {opening} : {}), stopped: false,
+          parties, rules, stopped: false,
           nextId: 1,
           entities: [], scans: [], strikes: [], fields: [], recalls: [],
           stats: { kills: 0, structuresDestroyed: 0, lost: 0, trained: 0, gathered: 0, built: 0, damage: 0 },
@@ -209,14 +208,6 @@
             !this.spawnUnit('hero', home.x - 9, home.z + 7, team, this.factionFor(team)))
             throw new Error('No free space for starting commander.');
         }
-        if (opening) for (const party of parties) {
-          const home = starts[party.id], positions = [[-8,8],[-4,11],[0,12],[5,11],[9,8]];
-          for (const [i,type] of opening.units.entries()) {
-            const [x,z] = positions[i];
-            if (!this.spawnUnit(type,home.x+x,home.z+z,party.id,party.faction))
-              throw new Error('No free space for expedition landing force.');
-          }
-        }
         this.rehash();
         this.world.reveal(s.entities);
         for (const party of parties) if (party.benefits.surveyDrones) {
@@ -229,7 +220,7 @@
         // CPU scenarios must never enter the expedition UI or pay out profile rewards.
         if (rules.kind === 'scenario') return s;
         this.emit('start', {});
-        this.emit('radio', opening ? `Expedition command|${opening.name}: ${opening.briefing}` : rules.mission.id === 'echo-salvage'
+        this.emit('radio', rules.mission.id === 'echo-salvage'
           ? 'Expedition command|Keep workers on Cinder for your economy. Send a separate salvage team to the core, and escort their cargo back to your HQ.'
           : startingWorkers
           ? 'Expedition command|Your starting workers will harvest Cinder automatically. Expand your economy, then outlast every opposing party.'

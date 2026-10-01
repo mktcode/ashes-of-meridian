@@ -17,9 +17,9 @@ function renderWorldDesign(world: Battlefield | null): string {
   return `<p class="muted">${esc(world.definition.name)}${variation?` · ${esc(variation.name)}`:''}${ecology?` · ${esc(ecology.biome.toUpperCase())} / ${esc(ecology.weather.toUpperCase())}`:''} · LANDSCAPE ${world.terrainSeed}${world.definition.design?.terrainSeed !== undefined ? ' · FIXED DESIGN' : ''}${clock}<br>${world.extent * 2} × ${world.extent * 2} m · BATTLE SEED ${world.seed}</p>`;
 }
 
-function renderMissionBriefing(id: MissionId, encounter?: ExpeditionEncounter): string {
-  const mission = MISSIONS[id], opening = encounter && id==='hq-elimination' ? expeditionOpening(encounter.map,encounter.seed) : null;
-  return `<p title="${esc(mission.objective)}"><b>${esc(mission.name)}</b> · ${esc(mission.briefing ?? mission.objective)}</p>${opening?`<p><b>${esc(opening.name)}</b> · ${esc(opening.briefing)}</p>`:''}`;
+function renderMissionBriefing(id: MissionId): string {
+  const mission = MISSIONS[id];
+  return `<p title="${esc(mission.objective)}"><b>${esc(mission.name)}</b> · ${esc(mission.briefing ?? mission.objective)}</p>`;
 }
 
 function renderExpeditionOpponents(expedition: MeridianExpedition): string {

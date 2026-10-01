@@ -145,6 +145,6 @@ function createHighlandRecipe(settings:HighlandSettings={}):BattlefieldDefinitio
 }
 const FRONTIER_BATTLEFIELD=(()=>{
   const recipe=createHighlandRecipe();
-  return battlefieldDesign({...recipe,expeditionOpenings:true,render:{...recipe.render,wilderness:'seeded'}},
+  return battlefieldDesign({...recipe,render:{...recipe.render,wilderness:'seeded'}},
     'FRONTIER',{atmosphere:{timeOfDay:'seeded'}});
 })();

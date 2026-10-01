@@ -187,8 +187,6 @@ interface BattlefieldSize {
 interface BattlefieldDefinition {
   name: string;
   multiplayer?: boolean;
-  /** Public, symmetric expedition landing forces; never applied in CPU/network scenarios. */
-  expeditionOpenings?: boolean;
   size: BattlefieldSize;
   layout: BattlefieldLayout;
   /** Resolve dimensions before layout and buffer allocation, without encounter RNG. */
@@ -610,7 +608,6 @@ interface RunState {
   time: number;
   parties: PartyState[];
   rules: BattleRules;
-  opening?: ExpeditionOpening;
   stopped: boolean;
   nextId: number;
   entities: Entity[];
