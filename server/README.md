@@ -1,6 +1,6 @@
 # Multiplayer-Prototyp
 
-Separater autoritativer Node-Server für zwei menschliche Parteien. Er verwendet dieselben Simulationsquellen wie das Offline-Spiel; keine kopierte Spielimplementierung. Alle Karten einschließlich Westmark und alle drei Fraktionen sind beim Erstellen bzw. Beitreten verfügbar. Für Westmark müssen Client und Server den neuen Kartenstand enthalten; den Server gemeinsam mit dem Client neu bauen und ausrollen. Keine Konten, KI, Expeditionen, Belohnungen oder Speicherung. Kurze Verbindungsabbrüche können innerhalb derselben Serverprozess-Laufzeit wiederaufgenommen werden.
+Separater autoritativer Node-Server für zwei menschliche Parteien. Er verwendet dieselben Simulationsquellen wie das Offline-Spiel; keine kopierte Spielimplementierung. Die freigegebenen Karten aus `src/battlefields/catalog.ts` und alle drei Fraktionen sind beim Erstellen bzw. Beitreten verfügbar. Client und Server gemeinsam aus demselben Stand bauen und ausrollen. Keine Konten, KI, Expeditionen, Belohnungen oder Speicherung. Kurze Verbindungsabbrüche können innerhalb derselben Serverprozess-Laufzeit wiederaufgenommen werden.
 
 ## Lokal starten
 
@@ -60,4 +60,4 @@ Die Simulation läuft mit 50-ms-Schritten bei 1×, die Ansichten werden regulär
 
 Nur eigene Konten/Queues und sichtbare fremde Entitäten werden übertragen. Ressourcen im Nebel behalten den letzten beobachteten Stand. Gelände ist öffentlich aus dem Karten-Seed rekonstruierbar; die Startzuordnung verwendet einen separaten privaten Server-Seed. Die Ansichten sind Render-/Bedienzustände, keine vollständigen Gefechtssnapshots. Sicht-/parteigefilterte Ereignisse ergänzen Schüsse, Artillerie, Explosionen, Treffer-, Arbeits-/Heileffekte und Audio. Darstellung und Ereignisse sind gepuffert und begrenzt; Einzelheiten zum Sichtschutz und zur Interpolation stehen in der [Architektur](../docs/architecture.md#netzwerkprototyp).
 
-Prüfungen nach Build: `npm test --prefix server` für kurze Verbindungs-/Befehlsfälle auf allen Karten; `npm test` im Root für die Standardtests. Die gesonderten KI-/Simulations-Langläufe bleiben gemäß [Projektregeln](../AGENTS.md#risikobasiert-prüfen) freigabepflichtig. Browsertechnik, visuelle/akustische Abnahme und Echtgeräte-Performance nicht gleichsetzen.
+Prüfungen nach [Risiko und Zeitbudget](../docs/testing.md): nach Serverbuild `npm test --prefix server` für kurze Verbindungs-/Befehlsfälle. Breite Root-Suite und KI-/Simulations-Langläufe nur im ausdrücklich freigegebenen Umfang; keine automatische Abschlussprüfung. Browsertechnik, visuelle/akustische Abnahme und Echtgeräte-Performance nicht gleichsetzen.

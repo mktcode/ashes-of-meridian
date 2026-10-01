@@ -1,95 +1,41 @@
-# Parallele Entwicklung mit Pi-Subagents
+# Subagent-Arbeitsablauf
 
-[AGENTS.md](../AGENTS.md#parallele-arbeit-und-subagents) legt Zuständigkeiten und Grenzen fest. Diese Referenz beschreibt die technische Durchführung; konkrete Aufträge, Entscheidungen und nötige Übergaben bleiben in [Issues](issues/), nicht in einem zweiten Aufgabenboard oder Worklog.
+Verbindliche Rollen-/Freigabegrenzen: [AGENTS](../AGENTS.md#delegation). Hier stehen nur projektspezifische Durchführung und Fallen.
 
 ## Einrichtung und Projektkontext
 
-[pi-subagents](https://github.com/nicobailon/pi-subagents) wird als **Benutzerpaket** installiert (`pi install git:github.com/nicobailon/pi-subagents@<geprüfter-Commit>`; ohne `-l`). Der Pin steht in `~/.pi/agent/settings.json`, der ignorierte Download in `~/.pi/agent/git/`; dieses Repository enthält keine eigene Extension-Kopie. So ist die Extension auch außerhalb dieses Projekts verfügbar. Updates bewusst am Benutzerpaket vornehmen und prüfen; danach Pi neu starten bzw. in einer laufenden Sitzung `/reload` ausführen. `/subagents-doctor` prüft die Einrichtung.
+Pi-Subagents ist als gepinntes Benutzerpaket installiert; das Repository enthält keine Extension-Kopie. Projektwerte in [`.pi/settings.json`](../.pi/settings.json), eigene Profile in [`.pi/agents/`](../.pi/agents/) überschreiben Defaults. Builtins sind nur projektlokal deaktiviert; eine Diagnoseanzeige deaktivierter Rollen bedeutet keine Verfügbarkeit.
 
-Projektbezogene Einstellungen in [`.pi/settings.json`](../.pi/settings.json) gelten nur hier und überschreiben Benutzerwerte. Agent-Definitionen in [`.pi/agents/`](../.pi/agents/) haben bei gleichem Namen Vorrang vor Benutzer- und Paketagenten; für kleinere Anpassungen eines gemeinsamen Agenten ist `subagents.agentOverrides.<name>` in den Projekteinstellungen geeignet. `disableBuiltins: true` ist nur für dieses Projekt gesetzt: In anderen Projekten bleiben die global installierte Extension und ihre eingebauten Agenten verfügbar. Bei einer projektspezifisch abweichenden Paketversion ist zu beachten, dass ein lokaler Paketeintrag den globalen ersetzt.
+Vor Start effektives Profil (`action: "get"`), Rollenverfügbarkeit (`action: "list", capabilities: true`) und Kontextvererbung prüfen. Worktrees erhalten die ausgecheckte AGENTS-Version, keine live geteilten Regeln. Einrichtung vor einer Welle committen; ein Gesprächs-Fork ersetzt keinen Worktree/Identitätscheck.
 
-Die gemeinsame `AGENTS.md` ist **keine live geteilte Datei**: Jeder Worktree hat eine Kopie seines ausgecheckten Standes. Deshalb Regeln und Einrichtung vor dem Start einer Arbeitswelle committen. Notwendige spätere Regeländerungen ausdrücklich an laufende Agenten übermitteln und vor weiterer Arbeit bestätigen lassen.
-
-Die eingebauten Agenten sind projektlokal mit `subagents.disableBuiltins: true` abgeschaltet, einschließlich externer CLI-Rollen und ihrer Aliase. Das entfernt keine Extension-Dateien und ändert andere Projekte nicht. Eigene sowie zusätzlich installierte Paket-/Benutzerprofile werden dadurch nicht deaktiviert. Eigene Projektprofile unter `.pi/agents/` müssen `inheritProjectContext: true` setzen, da sie den Repositorykontext nicht automatisch erben. Vor jedem Start die effektive Definition mit `subagent({ action: "get", agent: "…" })` prüfen; lokale/globale Overrides können Profilwerte ersetzen. Der Auftrag nennt zusätzlich die zu lesende `AGENTS.md` im Zielworktree. Ein Fork des Gesprächs ersetzt weder diesen Check noch einen Git-Worktree.
-
-`/subagents-models` zeigt in der installierten Version auch deaktivierte Rollen samt Aliasen mit `source: …; disabled`; das ist eine Diagnoseansicht, keine Liste ausführbarer Agenten. Für die tatsächlich verfügbaren Agenten `subagent({ action: "list", capabilities: true })` verwenden. Die Modellregistry am Ende der Diagnose wird durch die Abschaltung ebenfalls nicht reduziert.
-
-## Projektteam für lesende Audits
-
-- [`aom-doc-auditor`](../.pi/agents/aom-doc-auditor.md) prüft Dokumentationsaussagen und Issue-Aktualität gegen Quellen und gelesene Tests.
-- [`aom-code-auditor`](../.pi/agents/aom-code-auditor.md) untersucht Wartbarkeit, fragile Verträge und belegbare historische Altlasten.
-- [`aom-perf-auditor`](../.pi/agents/aom-perf-auditor.md) untersucht statisch mögliche Laufzeit-/Skalierungsrisiken, ohne Messungen oder Optimierungen auszuführen.
-
-Modelle und Thinking sind direkt in diesen Profilen definiert. Der fachliche Dokumentationsabgleich benötigt mehr als einfache Erkundung; die beiden Code-Audits müssen übergreifende Zusammenhänge beurteilen. Daher nutzen diese Rollen Sol mit medium bzw. high statt des allgemeinen low-Startwerts. Die Rollen erhalten frischen Kontext und Repositoryregeln. Ihre explizite Werkzeugliste besteht nur aus `read`, `grep`, `find`, `ls` und dem nativen `contact_supervisor`; ambient geladene Extensions sind abgeschaltet. Die Liste ersetzt keine Dateisystem-Sandbox: der Auftrag begrenzt die Lesewege auf den eigenen Worktree und die ausdrücklich benötigten Referenzen.
-
-Die Audit-Profile bleiben auch bei Folgefragen ausschließlich lesend, schreiben keine Scratch-Berichte und führen keine Programme aus. Tests werden nur gelesen, Performancewirkungen ausdrücklich als ungemessen markiert. Ein späterer Umsetzungsauftrag benötigt ein gesondert freigegebenes Schreibprofil; Audit-Werkzeuge nicht für eine schnelle Korrektur erweitern. Die Standardtestsuite läuft ausschließlich beim Hauptagenten ganz am Schluss, nach Integration aller freigegebenen Änderungen. Für zusätzliche KI-/Simulationsläufe gilt die [ausdrückliche Nutzerfreigabe](../AGENTS.md#risikobasiert-prüfen).
-
-Da die Audits keine Shell haben, prüft der Hauptagent vor ihrem Start Git-Pfad, Branch, Ausgangscommit und sauberen Status und übergibt die konkreten Ausgaben im Auftrag. Die Agenten gleichen diesen Nachweis mit ihrem Kontext ab; bei fehlenden Angaben fragen sie nach, statt selbst Git auszuführen. Einrichtung und Git-Prüfung erfolgen vor der lesenden Analysephase; für diese ist kein `npm ci` oder Build nötig. Die Übergabe nennt untersuchte und ausgelassene Bereiche, priorisierte Befunde mit Pfad/Zeile, Auswirkungen, Unsicherheiten, kleinste mögliche Maßnahmen und spätere Prüfempfehlungen. Querverweise statt doppelter Befunde; keine künstliche Befundquote.
-
-Ein unabhängiger Review erhält ausdrücklich einen Auftrag ohne Quelländerungen und ebenfalls einen eigenen Worktree auf dem zu prüfenden Commit.
+Audit-Profile besitzen nur Lesewerkzeuge und bleiben auch bei Folgefragen lesend. Spätere Umsetzung braucht einen freigegebenen Schreibauftrag, keine spontane Werkzeugerweiterung. Hauptagent liefert bei fehlender Shell den Git-Nachweis; kein `npm ci`/Build für reine Audits.
 
 ## Modelle und Thinking
 
-Maßgeblich für die Startwerte ist [`.pi/settings.json`](../.pi/settings.json): Pi-eigene `defaultProvider`, `defaultModel` und `defaultThinkingLevel` betreffen den Hauptagenten; `subagents.defaultModel`, `defaultThinking` und `agentOverrides` betreffen die Kinder. Die getrennte Vorgabe verhindert, dass normale Subagents unabsichtlich das teurere Hauptmodell übernehmen. Die Datei setzt für neue Hauptsessions GPT-6 Sol/medium; für kleine, klare Aufgaben lässt sich GPT-6 Luna/low über `/model` und `/thinking` wählen. Bereits laufende oder fortgesetzte Sessions und explizite CLI-Vorgaben können davon abweichen.
+Hauptmodell- und Kinddefaults sind getrennt in den Projekteinstellungen. Vor Start effektive Profil-/Overridewerte prüfen; Luna/low für kleine klare Aufgaben, Sol/medium oder high für fachliche Unsicherheit/Reviews. Modellkatalog beweist noch keinen erfolgreichen Provideraufruf.
 
-Für eigene Profile gilt GPT-6 Luna/low als allgemeiner Startwert für kleine, klare Aufgaben; GPT-6 Sol/medium oder high eignet sich für Reviews und Aufgaben mit mehr Abwägung. Auch Dokumentation und Tests können anspruchsvoll sein: fachliche Unsicherheit, gemeinsame Verträge und kreative Entscheidungen sind wichtiger als Dateiendung oder Textmenge. Abweichende Rollenwerte werden in den eigenen Profilen oder gezielten `agentOverrides` konfiguriert, nicht durch Reaktivieren der Standardagenten.
+Explizite Ausnahme je Run providerqualifiziert mit Thinking-Suffix, etwa `openai-codex/gpt-6-luna:low`; kein separates Dispatch-`thinking`-Feld. Native Kinder sind durch `modelScope`/`maxThinking` begrenzt; externe CLI ist kein Ausweichweg. `resume` behält den Modellvertrag: vor einem Modellwechsel Zustand sichern und neu beauftragen. Konfigurationsänderungen über `/reload` prüfen; keine globalen Einstellungen nebenbei ändern.
 
-Bei kleinen, klaren Aufgaben kann der Hauptagent ein schreibendes Profil ausdrücklich auf GPT-6 Luna/low setzen. Aufgaben mit mehr fachlicher Unsicherheit, schwierige Implementierungen oder Reviews erhalten GPT-6 Sol/medium bzw. high. Keine automatische Eskalation bei Fehlern oder langen Laufzeiten. Modellwechsel eines Kindes nicht über dessen `resume` versuchen: Fortsetzungen behalten den gespeicherten Modellvertrag. Erst Zustand/Übergabe sichern, dann gegebenenfalls einen neuen Auftrag mit begründeter Modellwahl starten.
+## Worktrees und Aufträge
 
-Vor einer Welle `/subagents-models` bzw. `subagent({ action: "models" })` prüfen. Für Ausnahmen im jeweiligen `runs.run`-/`runs.all`-Eintrag ein **providerqualifiziertes Modell mit Thinking-Suffix** angeben, etwa `model: "openai-codex/gpt-6-luna:low"` oder `model: "openai-codex/gpt-6-sol:high"`. Ein separates `thinking`-Feld ist kein unterstützter Dispatch-Parameter. Kein Modell am gesamten Workflow setzen, wenn die Kinder unterschiedliche Rollenstandards nutzen sollen. Die effektive Auswahl nach dem Start anhand der Laufzeitangaben kontrollieren, nicht nur anhand der angeforderten Werte.
+1. Sauberen Ausgangscommit festhalten; fremde Änderungen nicht committen/stashen.
+2. Eindeutigen Branch/absoluten Worktree außerhalb Hauptcheckout und Pi-Suchpfaden anlegen: `git worktree add -b <branch> <pfad> <commit>`.
+3. Auftrag mit Ziel, Issue, Pfad/Branch/Commit, Grenzen, Abhängigkeiten, Prüfung und Stopbedingungen übergeben. Ignorierte Dateien werden nicht mitgenommen; bei tatsächlichem Buildbedarf eigene Abhängigkeiten installieren, keine geteilten Symlinks.
+4. Kind mit eigenem `cwd` und explizitem `worktree: false` starten. Extension-eigene `worktree: true`-Bereinigung passt nicht zur erhaltenen Branchintegration. Identität/Status vor Arbeit abgleichen.
+5. Nacharbeit im selben erhaltenen Worktree, aber erst nach Ende des vorherigen Bearbeiters. Hauptagent verändert keinen aktiv bearbeiteten Kind-Worktree.
 
-`defaultThinking` ersetzt kein explizites Thinking eines Profils. Eigene Profile können Defaults überschreiben und sind vor dem Start zu prüfen; gezielte `agentOverrides` haben Vorrang vor Profilwerten. `modelScope` begrenzt native Kinder strikt auf GPT-6 Luna und GPT-6 Sol; `maxThinking` weist Werte oberhalb high zurück. Die Wahl zwischen Luna und Sol ist eine Orchestrierungsregel, keine automatische Budgetkontrolle. Externe CLI-Runner unterliegen diesen nativen Modell-/Thinking-Grenzen nicht und sind kein Ausweichweg.
-
-Nach Konfigurationsänderungen `/reload` und `/subagents-models` verwenden; für einen Hauptsession-Startwert eine neue Sitzung bzw. explizite Modellwahl nutzen. Änderungen bleiben projektlokal, globale Einstellungen unangetastet. Modellkatalog und erfolgreiche Auflösung beweisen noch keinen erfolgreichen Provideraufruf; dieser Nachweis gehört in den realen Worktree-Testlauf.
-
-## Arbeitspakete und Worktree-Lebenszyklus
-
-Vor einer Welle hält der Hauptagent im betroffenen Issue knapp fest: Ziel/Nicht-Ziele, erlaubte Dateien oder Verträge, Abhängigkeiten, Abnahmekriterien und Zuständigkeit. Bei aktiver Delegation kommen Branch, Ausgangscommit, absoluter Worktree-Pfad und Run-ID hinzu, soweit für Wiederaufnahme nötig. Fachliche Abhängigkeiten entscheiden über Parallelität: Tests und Dokumentation zu einer noch offenen Verhaltensänderung brauchen zuerst einen vereinbarten Vertrag oder den fertigen Implementierungsstand.
-
-Wir verwenden **vom Hauptagenten angelegte und bis zur Integration erhaltene Git-Worktrees**. Die Extension bietet zwar `worktree: true`, kann dabei aber nach Patch-/Manifest-Erfassung ihre temporären Worktrees und Branches automatisch entfernen. Dieser Lebenszyklus passt nicht zu unserer Branch-basierten Integration.
-
-1. Hauptcheckout und Ausgangsstand prüfen. Fremde Änderungen weder mitnehmen noch automatisch committen/stashen. Für die Welle einen geprüften Commit festhalten.
-2. Pro Aufgabe einen eindeutigen Branch, etwa `aom/<auftrag>-<teilaufgabe>`, und einen Worktree außerhalb des Hauptcheckouts und außerhalb der Pi-Extension-Suchpfade anlegen. Beispiel: `git worktree add -b <branch> <absoluter-pfad> <ausgangscommit>`. Pfade und Namen vorher auf bestehende Belegung prüfen.
-3. Projektkontext, benötigte Pi-Ressourcen und Abhängigkeiten im neuen Worktree bereitstellen. Ignorierte Dateien werden von Git **nicht** mitgenommen. Bei Build-/Testbedarf `npm ci` im jeweiligen Worktree ausführen; `node_modules/` und `dist/` nicht aus einem anderen Worktree verlinken. Keine globale Pi-Konfiguration nebenbei ändern.
-4. Den Subagenten über das native `subagent`-Tool mit dem **absoluten Worktree-Pfad als `cwd` und explizitem `worktree: false`** starten. Das deaktiviert nur die zusätzliche automatische Worktree-Erzeugung der Extension; der Prozess arbeitet bereits im zuvor isolierten Worktree. Niemals den Hauptcheckout als Subagent-`cwd` einsetzen.
-5. Der Subagent prüft Identität und Arbeitsbaum (bei Audit-Profilen anhand des übergebenen Git-Nachweises), liest die lokalen Regeln und arbeitet im erlaubten Umfang. Schreibende Aufträge committen geprüfte Änderungen. Ein reiner Analyseauftrag erzeugt weder Änderungen noch einen leeren Commit.
-6. Bei Nacharbeit bleibt derselbe Worktree erhalten. Erst sicherstellen, dass kein vorheriger Run mehr darin arbeitet, bevor ein neuer Bearbeiter übernimmt. Auch der Hauptagent verändert keinen aktiv bearbeiteten Subagent-Worktree.
-
-Jeder Auftrag muss ohne Gesprächshistorie verständlich sein: Ziel, Issue, cwd/Branch/Ausgangscommit, Schreibgrenzen, maßgebliche Quellen/Verträge, Prüfungen, Ausgabe und Stop-/Rückfragebedingungen. Der Hauptagent prüft vor dem Start mit `action: "list", capabilities: true` die Rollenverfügbarkeit; eine reine Auflistung beweist noch keinen erfolgreichen Modellstart.
+Abhängige Pakete starten erst mit vereinbartem Vertrag bzw. integriertem Ergebnis; verschiedene Verzeichnisse beweisen keine Unabhängigkeit. Reine Analyse erzeugt weder Änderungen noch leeren Commit.
 
 ## Temporäre Isolation
 
-`.gitignore` schließt `.tmp/` aus. Das verhindert versehentliches Einchecken, erzeugt aber weder das Verzeichnis noch eine Sandbox. Für selbst gestartete Hilfsprogramme im jeweiligen Worktree beispielsweise:
+Pro Lauf eigenes `<worktree>/.tmp/<lauf>/` anlegen und `TMPDIR`, `TMP`, `TEMP` sowie Profile/Logs/Ausgabewege absolut dorthin setzen. Shell-Exports wirken nicht auf spätere Toolaufrufe oder die laufende Pi-Instanz. Auch steuerbare Runtime-`output`-Felder explizit setzen; bloße Dateiangaben im Auftrag reichen nicht.
 
-```bash
-root="$(git rev-parse --show-toplevel)"
-mkdir -p "$root/.tmp"
-scratch="$(mktemp -d "$root/.tmp/task-XXXXXX")"
-export TMPDIR="$scratch" TMP="$scratch" TEMP="$scratch"
-# Hilfsprogramme in dieser Shell starten; Ausgabe-/Browserprofilpfade unter "$scratch".
-```
+Pi-eigene Sessions/IPC/automatische Toolausgaben haben separate Laufzeitpfade. Diese nicht global umbiegen/löschen; `.tmp/` ist keine Sandbox. Fest kodierte externe Toolpfade vor paralleler Nutzung klären. Nötige dauerhafte Befunde vor Bereinigung ins Issue übernehmen.
 
-Vorher muss der Worktree mit dem Auftrag abgeglichen sein. Bei späteren Shell-Toolaufrufen die absoluten Pfade und Umgebungsvariablen erneut setzen. Ein `export` in einem Toolaufruf verändert weder die bereits laufende Pi-Instanz noch automatisch spätere Aufrufe. Für explizite Ergebnisdateien im Subagent-Aufruf auch das tatsächliche `output`-Feld auf einen eindeutigen absoluten Pfad unter dem jeweiligen `.tmp/` setzen; eine Dateiangabe nur im Aufgabentext steuert die Runtime-Ausgabe nicht zuverlässig.
+## Kommunikation und Integration
 
-Pi-/Extension-eigene Sessions, IPC und automatisch erzeugte Tool-Ausgaben haben einen gesonderten Laufzeitvertrag und können weiterhin in benutzer-/laufbezogenen Systemverzeichnissen liegen. Diese Infrastruktur nicht durch globale Umgebungsänderungen oder Symlinks zwischen Agenten umbiegen oder löschen. Die Projektregel isoliert unsere selbst angelegten Arbeitsdateien und steuerbaren Hilfsprozesse; sie behauptet nicht, dass jede Runtime-Datei bereits im Worktree liegt. Fest kodierte externe Temp-Pfade eines benötigten Werkzeugs vor paralleler Nutzung klären, nicht stillschweigend auf gemeinsame Dateinamen ausweichen.
+Koordinierte Welle als asynchrones WorkflowScript, unabhängige Runs über `runs.all`, maximal drei gleichzeitig. Syntax gegen installierte Hilfe prüfen und vor Start validieren. Rückfragen via `contact_supervisor`; Hauptagent antwortet im nativen Supervisor mit konkreter `replyTo`-ID. Abschluss kommt nativ: keine Polling-/Sleep-Schleifen, kein zusätzliches Intercom/Worklog.
 
-Eigene Browserprofile, Logs und Scratch-Skripte bleiben bis zum Abschluss benötigter Prüfungen erhalten. Relevante Befunde vor dem Aufräumen ins Issue übernehmen. Versionierte Fixtures gehören weiterhin zu den Tests; reguläre Build-Ausgaben bleiben im worktree-eigenen `dist/`.
+Bei Start-/Kommunikationsfehlern Run-ID und Git-Zustand sichern, nicht unisoliert oder per Ersatz-CLI fortfahren. Übergabe nennt Branch/Commit, Diffumfang, tatsächliche Prüfungen, Risiken/Entscheidungen. Hauptagent prüft Diff seit Ausgangscommit und Status, integriert einzeln (bevorzugt `git merge --no-ff`) und prüft kombiniert nach [Risiko/Zeitbudget](testing.md), nicht automatisch per Vollsuite.
 
-## Asynchrone Kommunikation
-
-Eine koordinierte Welle startet als ein `workflowScript` mit `async: true`; unabhängige Aufträge über `runs.all`, abhängige Schritte erst nach dem benötigten Ergebnis. Zunächst maximal drei gleichzeitige Kinder, im Workflow über `globalConcurrencyLimit: 3` begrenzen. Jeder Eintrag bekommt einen eindeutigen `key`, ein kurzes `label`, sein eigenes `cwd` und `worktree: false`. Die konkrete Syntax vor dem Start gegen die installierte Hilfe (`/subagents-guide workflows`, `/subagents-guide tool-reference`) prüfen und das Script mit `action: "validate"` ohne Kinderstart validieren. Das ist keine Worktree- oder Modellabnahme.
-
-- Kinder stellen blockierende Rückfragen mit `contact_supervisor({ reason: "need_decision", message: "…" })`; relevante nichtblockierende Meldungen verwenden `reason: "progress_update"`.
-- Der Hauptagent prüft offene Fragen mit `subagent_supervisor({ action: "pending" })` und antwortet mit `action: "reply"`, der konkreten `replyTo`-ID und `message`. Fragen gehören zur startenden Pi-Session; eine andere Session im selben Repository ist kein Ersatzempfänger. Fachliche Freigaben außerhalb des Auftrags gehen an den Nutzer.
-- Nachträgliche Hinweise an laufende Kinder über `steer`, abgeschlossene Kinder nur nach geprüftem Status über `resume` oder einen neuen Auftrag fortsetzen. Zustellbestätigung beweist noch keine Umsetzung.
-- Abschlussmeldungen liefert die Extension nativ. Keine Polling-/Sleep-Schleifen; wenn keine unabhängige Arbeit ansteht, auf die Benachrichtigung reagieren. `/subagents-fleet` und `action: "status"` dienen gezielter Diagnose.
-
-Dafür ist keine zusätzliche Intercom-Extension nötig. Laufzeitstatus und Nachrichten transportieren Arbeit, sind aber kein paralleles fachliches Issue-System. Bei Start-, Kommunikations- oder Toolfehlern Fehler, Run-ID und Git-Zustand sichern; keine Ersatz-CLI oder unisolierten Runs starten. Ohne funktionierenden Supervisor-Kanal nicht mit entscheidungsabhängiger Arbeit weitermachen.
-
-## Integration und Abschluss
-
-Die Übergabe erfolgt im normalen Ergebnis: Status, Branch/Commit, geänderte Dateien, tatsächlich ausgeführte Prüfungen samt Resultat, Restprobleme und nötige Entscheidungen; bei größeren Logs zusätzlich der eigene `.tmp/`-Pfad. Der Hauptagent prüft den vollständigen Diff seit dem Ausgangscommit und den Status auf uncommittete oder unerwartete Dateien. Eine Erfolgsmeldung allein ist keine Merge-Freigabe.
-
-Ergebnisse nacheinander in den sauberen Integrationsbranch übernehmen, vorzugsweise als `git merge --no-ff <aufgabenbranch>` nach Review. Abhängige Aufgaben starten auf dem dafür integrierten Stand; nicht auf zufällig fortgeschrittenem `HEAD`. Konflikte in gemeinsamen Verträgen inhaltlich lösen oder an den zuständigen Bearbeiter zurückgeben, nie pauschal eine Seite bevorzugen. Kein Push oder Deployment allein wegen erfolgreicher lokaler Integration.
-
-Den kombinierten Stand gemäß [Prüfverfahren](testing.md) testen; Einzelprüfungen freigegebener Umsetzungsaufträge reichen dafür nicht aus. Die Standardtestsuite und ausdrücklich freigegebene zusätzliche Langläufe führt nur der Hauptagent ganz zum Schluss aus, nie ein Audit-Subagent. Erst danach Issues aktualisieren bzw. erledigte Issue-Dateien löschen. Worktrees nur nach beendeten Runs/Hilfsprozessen, gesicherter Übergabe und nicht mehr benötigter Nachprüfung entfernen. Vorher auch ignorierte Dateien prüfen (`git status --short --ignored`), nötige Belege sichern und nur eigene entbehrliche Dateien löschen. Reguläres `git worktree remove <pfad>` und nach nachgewiesenem Merge `git branch -d <branch>` bevorzugen; kein pauschales `--force`, `git clean -fdx` oder Löschen fremder Worktrees. Bei unklarer Integration oder Verwerfung Worktree und Branch erhalten und die nächste Entscheidung im Issue festhalten.
+Nach gesicherter Integration/Verwerfung und beendeten Prozessen ignorierte Dateien prüfen, Belege sichern, regulär `git worktree remove` und bei nachgewiesenem Merge `git branch -d` verwenden. Kein pauschales Force/Clean oder Löschen fremder Arbeit. Bei Unklarheit Branch/Worktree erhalten und Entscheidung im Issue festhalten.

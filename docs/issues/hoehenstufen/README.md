@@ -1,52 +1,14 @@
-# Begehbare Höhenstufen: erhöhte Basen, gemeinsames Tiefland
+# Höhen: verbleibende Spielabnahme
 
-## Auftrag und Status
+Gemeinsame CPU-Oberfläche und diskrete Sichtstufen sind integriert; [Vertrag](../../architecture.md#welt-darstellung-und-zufall), [Spielregeln](../../gameplay.md). Keine zusätzliche SC2-Regel oder allgemeine Gelände-Sichtlinie.
 
-Der Mothership-Durchstich ist im aktuellen Stand integriert. Gewünschtes Leitbild bleiben erhöhte Basen außen und ein großes tieferes Schlachtfeld in der Mitte, angelehnt an StarCraft 2. Der Folgeauftrag in [Project Tomorrow](../project-tomorrow.md) hat den gemeinsamen technischen Vertrag ausdrücklich auf sämtliche Karten erweitert, einschließlich echter begehbarer Unebenheiten auf Alien Planet und Desert. Natürliche Familien übernehmen nicht pauschal Motherships Plateau-Grundriss. Weitere SC2-Regeln oder Höhenboni sind nicht beauftragt.
+Teststart nach Build: `index.html?experiment=height` (Mothership, Seed 1409, zwei Worker, flüchtiges Profil).
 
-**Stand: technisch integriert, menschliche Gesamt- und Mobilabnahme offen.** Vier öffentliche, je Trägerfassung unterschiedlich hohe Basisdecks, breite Innen-/Flankenrampen und tiefes Zentrum sind umgesetzt. Hangars, Anlagen und einige Vorkommen wurden für freie Rampen und ebene Vent-Fundamente versetzt; Mengen und RNG-Ziehungsreihenfolge bleiben unverändert. CPU-Höhenfeld, Klippen-/Segmentprüfung, Bau-/Arbeitszugänge, Produktionsausgänge und reservierte Verstärkungslandungen sind integriert. Darstellung, Picking und Effekte nutzen dieselbe Oberfläche.
+- [ ] Hohe Basen, Rampen und tiefes Zentrum bei normalem Zoom erkennen; Verdeckung insbesondere an vorderen Plateaurändern prüfen.
+- [ ] Worker/Gruppen hinunter und hinauf schicken: Picking, Minimap, Hanglage, Rampen-Gegenverkehr und Produktionsausgänge.
+- [ ] Abbau/Rücktransport, Raffinerien und ebene Fundamente auf beiden Ebenen; keine Arbeit durch Klippen oder Bau auf Rampen.
+- [ ] Sicht von unten/oben, Rampenmitte, Quellenvereinigung/-verlust und Flugzeug/Scan prüfen; keine Schaden-/Reichweitenboni.
+- [ ] Zwei-Client-Sicht/Effekte und interpolierte Bodenposen mit passendem Serverstand prüfen; Touch/Mobilkosten und vollständige Partien abnehmen.
+- [ ] Faire Wege/Ressourcenzugänge aller vier öffentlichen Starts; Walling darf nicht unbeabsichtigt jeden Ausgang schließen. Gewünschte absichtliche Walling-Regel bleibt offen.
 
-Die [höhenabhängige Sicht](04-hoehenabhaengige-sicht.md) ist autoritativ integriert: Tiefland-Bodensicht deckt kein Plateau auf, Hochsicht reicht innerhalb der bestehenden Reichweite nach unten. Flugzeuge und Recon scans überbrücken Sichtstufen. Natürliche Höhen auf den anderen Landschaftskarten erhalten dadurch keine neuen Sichtstufen.
-
-### Jetzt manuell testen
-
-Im Haupt-Worktree `npm run build`, dann die lokale `index.html?experiment=height` öffnen. Der ausdrückliche Teststart verwendet Mothership/Seed 1409 mit zwei Startworkern. Profil und Checkpoint sind flüchtig; normales Savegame und Fortschritt werden weder gelesen noch geschrieben. Reload setzt diesen Test zurück.
-
-1. Erkennbarkeit von hoher Basis, Rampen und tiefer Mitte bei normalem Zoom beurteilen; insbesondere verdeckte Einheiten am vorderen Plateaurand.
-2. Worker auswählen, hinunter und wieder hinauf schicken; Klickziele, Auswahlrahmen, Kameraziehen und MiniMap prüfen. Die ergänzte [Fahrzeug-Hanglage](../../rendering.md#einzeln-wartbare-modelle) auch quer zur Rampe und an ihren Übergängen begutachten.
-3. Sternenschlacke abbauen/abliefern, Refinery setzen, auf beiden Ebenen bauen und Einheiten produzieren. Rampen-/Klippenbau muss abgelehnt werden, Ausfahrten müssen benutzbar bleiben.
-4. Kleine Gruppen/Gegenverkehr und Gefechte an Rampen anschauen. Sichtverlust beidseits einer Klippe und beim Überqueren der Rampenmitte prüfen; andere Höhenvorteile bleiben ausgeschlossen.
-
-Flugzeuge und Zerstörer verwenden lokale Freiraumhüllen; [maßgeblicher Höhenvertrag](../../architecture.md#welt-darstellung-und-zufall). Hohe Dekorhindernisse werden nicht automatisch umflogen. Die [menschliche Flugabnahme](../project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau) bleibt offen.
-
-Automatisierte Höhenprüfungen decken Oberfläche, Übergänge, Sichtstufen, Bedienprojektion, Modelle, Effekt-Y und interpolierte Netzwerkposen ab. Offen bleiben gezielte menschliche Abnahme, Zwei-Browser-Höhentest, Touch/Mobilkosten und länger laufende Crowd-/KI-Szenarien. `test:ai` und `test:simulation` benötigen weiterhin ausdrückliche Freigabe; feste Referenzwerte nicht zur Reparatur neu erzeugen.
-
-## Ziel und vorgeschlagene Grenzen
-
-- Auf Mothership besitzen alle **vier öffentlichen Startkandidaten** ein brauchbares Hochplateau, nicht nur die tatsächlich belegten Starts. Jede künftig adaptierte Karte muss denselben Schutz der geheimen Multiplayer-Startzuordnung einhalten.
-- Das Plateau umfasst HQ, Anfangswirtschaft und ausreichend Bau-/Ausfahrtsfläche; nicht lediglich einen Sockel unter dem HQ. Die Mitte bietet eine große zusammenhängende Kampfzone. Seitliche Flankenwege bleiben möglich, ohne die zentrale Fläche durch ein enges Wegenetz zu ersetzen.
-- Vorschlag für den ersten Versuch: Tiefland `0 m`, Plateaus `+6 m`, breite Rampen mit etwa `18–24 m` Laufstrecke. **Versuchsparameter, kein beschlossenes Balancing.** Plateaugrößen müssen je Karte aus Bauflächen und Ressourcenzugängen folgen.
-- Vorschlag: zwei räumlich getrennte Ausgänge pro Basis, eine breite Hauptrampe zur Mitte und ein Flankenzugang. Ein einziger schmaler SC2-artiger Engpass wäre mit der heutigen Crowd-Navigation besonders riskant. Anzahl/Breite nach menschlichem Spieltest entscheiden.
-- Zunächst statisches 2,5D-Gelände: genau eine begehbare Bodenhöhe je `x/z`, keine Brücken mit Unterführung, Tunnel, Aufzüge, Terrainverformung oder frei bewegliche Z-Achse.
-- Keine neuen Ressourcenmengen, Einheitenwerte oder Höhenboni außer dem ausdrücklich beauftragten Sichtvorteil. Ein neuer Kartenaufbau verändert allerdings bewusst Laufwege und strategisches Balancing; das lässt sich nicht als verhaltensneutrale Grafikänderung behandeln.
-
-## Verbleibende Pakete und Reihenfolge
-
-Der technische Welt-, Navigations-, Darstellungs- und Bedienvertrag ist für Mothership umgesetzt und maßgeblich in der [Architektur](../../architecture.md#welt-darstellung-und-zufall) dokumentiert. Die abgeschlossenen Planungsissues wurden entfernt.
-
-1. [Höhenabhängige Sicht](04-hoehenabhaengige-sicht.md): technisch umgesetzt; menschlicher Rampen-/Klippencheck bleibt offen.
-2. [Karten und Abnahme](03-karten-und-abnahme.md): sämtliche neuen Kartenoberflächen menschlich abnehmen; vorgeschlagene weitere Grundrissänderungen separat entscheiden.
-
-Weitere Karten müssen denselben CPU-Oberflächenvertrag verwenden und dürfen keine inkompatiblen Höhenabfragen oder Renderer-Sonderlogik einführen.
-
-## Entscheidungen vor spielbarer Abnahme
-
-- **Sicht:** Von unten kein Aufdecken des höheren Plateaus, von oben Sicht ins Tiefland innerhalb bestehender Reichweiten. Die Rampenmitte trennt die logischen Stufen; Flugzeuge und Recon scans überbrücken sie. Keine allgemeine Gelände-Occlusion. **Kampf:** keine weiteren Höhenboni und keine neue physische Schussblockierung; bestehende Zielsichtanforderungen bleiben bestehen.
-- **Luftfahrt:** lokale Freiraumhülle gemäß Architektur; Produktionsübergänge und Bodenabstand menschlich abnehmen.
-- **Bauen:** Empfehlung: nur ebene Flächen, Rampen und Klippenränder nicht bebaubar; kein automatisches Terraforming. Sollen weitere Gebäude auch im Tiefland erlaubt sein? Vorschlag: ja; die Höhenvorgabe betrifft die Startbasen.
-- **Interaktion:** Bau, Abbau und Reparatur dürfen nicht durch Klippen hindurch erfolgen. Fernheilung/Fähigkeitsflächen zunächst wie Kampf behandeln; deren Höhenregeln ausdrücklich bestätigen.
-- **Layout:** Anfangs-Sternenschlacke und zugehöriger Vent auf dem Plateau als Vorschlag; zusätzliche Vorkommen im Tiefland als umkämpfte Ziele. Bestehende Mengen erhalten, nötige Ortsänderungen sichtbar prüfen.
-
-## Nächste Freigabe
-
-Als nächstes steht die gezielte menschliche Abnahme aller neuen Oberflächen an. Technischer Ausbau und die vorgeschlagene Umkehr einzelner Grundrisse zu erhöhten Randbasen sind unterschiedliche Entscheidungen. Backlog-Einträge sind keine automatische Freigabe weiterer Layoutänderungen oder zusätzlicher Langläufe.
+Naturkarten besitzen eigenes Relief, nicht automatisch Motherships Plateau-Grundriss. Einheitliche erhöhte Randbasen auf Alien/Desert bleiben eine eigene Layoutentscheidung; keine Fortsetzung alter Planpakete. [Landschaftsabnahme](../project-tomorrow.md), [Mothership-Gestaltung](../terrain.md), [Worker-Grenzen](../worker-bauwegfindung/issue.md). Flugfreiraum separat unter [Landschaften](../project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau).

@@ -1,21 +1,12 @@
-# Aurelion / Echo-Bergung: offene Spiel- und Modellabnahme
+# Aurelion: offene Spiel-, Modell- und Kartenabnahme
 
-## Stand und Grenze
+Teststart nach Build: `index.html?experiment=aurelion-playable` (Stage 4, drei Parteien, zwei Worker je Partei; flüchtiges Profil). [Bergungsregeln](../gameplay.md#echo-bergung-auf-aurelion) · [Missionsvertrag](../architecture.md#einzelspieler-missionen).
 
-Der freigegebene Bergungsauftrag ersetzt King of the Hill vollständig: detaillierter fremdartiger Reaktorkern statt Globus, Worker-Rücktransport und gesicherte Fragmente statt Einheitenmehrheit/Haltetimer. Maßgebliche [Spielregeln](../gameplay.md#echo-bergung-auf-aurelion) und [Missionsvertrag](../architecture.md#einzelspieler-missionen). Kein Holdout, keine Multiplayer-Erweiterung.
+- [ ] Einführung, Kernauftrag, ungesicherte Fracht und gesicherte Punkte verständlich? Gemischte Auswahl, Abbruch/Wiederaufnahme und HQ-Wiederaufbau spielen.
+- [ ] Wirtschaft/Bergung/Eskorte, Gegenverkehr und Angriffe auf Transportwege in echten FFA-Partien balancieren. Gleichzeitiges Zielerreichen/Eliminierung und Ergebnis/Reload abnehmen.
+- [ ] Reaktorkern: Facetten, Einfassung und Details bei normalem Zoom lesbar, nicht von Licht überstrahlt? Geometrie bleibt innerhalb des gesperrten Sockels; Wege/Radien nicht nebenbei ändern.
+- [ ] Stadtvarianten: Plattformkanten, Lampenmasken, Anzeigen, Unterdeckverkehr, Wolken und Nacht-/Dämmerungskontrast bei verschiedenen Höhen beurteilen. Unterdeckverkehr ist Dekor, keine Hindernisvermeidung für Spielflugzeuge.
+- [ ] **Schwarze Rechteckfläche links oben:** pausierter Chromium-Check bei 1280×900, etwa 200×136 px unter der HUD-Leiste, bereits vor Missions-HUD. Ursache und Echtgeräteauftreten offen; keine GL-Fehler ist keine Darstellungsbestätigung.
+- [ ] Eingabelatenz, Weltwechsel-/GPU-Kosten auf Zielgeräten messen. Hohe Stadtgeometrie und fehlender Flugschutz gegen hohe Dekorbauten bleiben Grenzen.
 
-Nach dem Build startet `index.html?experiment=aurelion-playable` einen flüchtigen Probelauf auf Stage 4 mit drei Parteien und je zwei Workern. Worker auswählen und den markierten Kern antippen/anklicken; der Auftrag wiederholt Bergung und HQ-Rücktransport. Permanente Browserdaten bleiben unberührt. Die separate Visualstudie wurde entfernt; verbleibende [Karten-/Darstellungsbefunde](aurelion-map.md) beziehen sich auf die spielbare Karte.
-
-Alte Hügel-Checkpoints werden wegen der entfernten Missionskennung verworfen, nicht umgedeutet. Permanente Upgrades/Reserve bleiben erhalten. Die neue Bergungseinführung besitzt ihren eigenen Abschlussmarker.
-
-## Menschlich zu prüfen
-
-- [ ] Reaktorkern als Mittelpunkt: kristalline Facetten, zerborstene Einfassung, Radiatoren, Befestigungen und eingelassene fremdartige Zeichen beurteilen. Leuchtringe sind im Spiel zurückgenommen, damit sie die Kristalle nicht überstrahlen. Die gesamte neue Geometrie bleibt auf dem bestehenden gesperrten Sockel; keine Änderung an Wegen, Kollisionsradien oder Lampenpositionen.
-- [ ] Verständlichkeit von Einführung, Bergungsauftrag, Fracht und gesicherter Punktzahl. Gemischte Auswahl schickt nur Worker zur Bergung; Kampfeinheiten behalten Bewegungs-/Kampfbefehle. Abgebrochene Transporte behalten Fracht an Bord, bis der Bergungsauftrag erneut erteilt wird.
-- [ ] Wirtschaft, Bergung und Eskorte gegeneinander abwägen: Zielwert 100 und Transportrate sind ein erster Balancingstand. Die KI reserviert Wirtschaftsworker, entsendet Sammler, eskortiert beladene Worker und sichert das Zentrum; echte FFA-Partien, Gegenverkehr und Angriffe auf Transportwege sind noch menschlich zu bewerten.
-- [ ] HQ-Wiederaufbau mit überlebendem Worker und vorhandenen Mitteln, sofortige Niederlage ohne fertiges HQ und Worker, Ergebnis/Vorteilswahl sowie Reload desselben Gefechtsanfangs prüfen. Bei gleichzeitigem Zielerreichen im selben Tick gilt wie bei gleichzeitiger Eliminierung die konservative Spielerniederlage; kein Vorteil durch Entitätsreihenfolge.
-- [ ] Nachtlesbarkeit, Bedienbarkeit und Kosten auf Zielgeräten. Das hohe Stadtbudget und fehlende Hindernisvermeidung von Flugzeugen an hohen Dekorbauten bleiben offene Grenzen. Keine allgemeine Karten-/Darstellungsabnahme durch die Umsetzung.
-
-## Prüfgrenze
-
-Begrenzte Bergungs-, Eingabe-, Checkpoint- und Modellregressionen ersetzen keine autonome Partie, Balancing-, visuelle oder Echtgeräteabnahme. Umfangreiche KI-/Simulationsläufe benötigen einen ausdrücklichen aktuellen Auftrag; [Prüfverfahren](../testing.md). Ressourcen-/RNG-Isolation und bestehender Sockelumriss bleiben technische Schutzverträge.
+Keine Multiplayerfreigabe oder weitere Mission aus dieser Abnahme ableiten. Gemeinsame [Geräteprüfung](playtest-validation.md), [Performance](mobile-performance.md).

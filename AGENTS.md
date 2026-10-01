@@ -1,56 +1,43 @@
-# Einstieg für KI-Agenten
+# Arbeitsregeln für KI-Agenten
 
-## Orientierung
+## Einstieg
 
-1. [README.md](README.md) für Start und Projektüberblick lesen, `git status --short` prüfen.
-2. Betroffenes [Issue](docs/issues/), Quellen und Tests erkunden; `rg`/`find` statt einer gepflegten Codekarte nutzen.
-3. Fachreferenzen nur nach Bedarf lesen: [Spielregeln](docs/gameplay.md), [Architektur](docs/architecture.md), [Grafik/Assets](docs/rendering.md), [Prüfverfahren](docs/testing.md). Vor strukturellen Änderungen Architektur lesen.
+1. [README](README.md) lesen, `git status --short` prüfen.
+2. Betroffenes [Issue](docs/issues/), Quellen und Tests mit `rg`/`find` erkunden.
+3. Fachreferenzen nur nach Bedarf; vor strukturellen Änderungen [Architektur](docs/architecture.md) lesen.
 
-## Leitplanken
+## Änderungen
 
-- Kleinste sinnvolle Änderung; Formatierung, strukturelles Refactoring und Verhaltensänderungen getrennt halten. Keine beiläufigen Änderungen an Balancing, Darstellung oder Regeln; bekannte Probleme nicht stillschweigend korrigieren.
-- Issues und Prüfprioritäten sind keine automatische Implementierungsfreigabe.
-- Seedbasierte Hindernisverteilung, Kollisionsradien und RNG-Aufrufreihenfolge schützen. Auch kosmetische Effekte nutzen teilweise den Simulations-RNG. [Referenzwerte](docs/reference-tests.md) nicht zur Reparatur fehlgeschlagener Tests neu erzeugen.
-- Entwicklungsprototyp: keine Rückwärtskompatibilität, Migrationen oder Legacy-Adapter ohne ausdrücklichen Auftrag.
-- Quellen statt Build-Ausgaben bearbeiten; `dist/` nie direkt bearbeiten oder einchecken. Die generierte `src/renderer/assets.js` ausschließlich mit `npm run embed:textures` aus den Texturquellen aktualisieren.
-- Bildassets ausschließlich als WebP mit Qualität 80 pflegen, keine PNGs einchecken. Assets nicht wegen vermeintlicher Redundanz löschen oder austauschen; [Pflegeverfahren](docs/rendering.md) beachten.
-- Direkte `file://`-Auslieferung erhalten: kein erforderlicher Server, CDN, Laufzeit-Import oder abgeschwächte Browser-Sicherheitsflags.
-- Zusammenhängende, geprüfte Änderungen eigenständig committen. Fremde oder unzusammenhängende vorhandene Änderungen nicht aufnehmen.
+- Kleinster sinnvoller Umfang. Formatierung, Struktur und Verhalten getrennt halten; kein beiläufiges Balancing, Darstellungs-/Regelkorrekturen oder Abarbeiten des Backlogs. Issues sind keine Implementierungsfreigabe.
+- Hindernisverteilung, Körperradien und RNG-Reihenfolge schützen; kosmetische Effekte nutzen teilweise Simulations-RNG. [Referenzen](docs/reference-tests.md) nicht zum Grünmachen regenerieren.
+- Prototyp: keine Migrationen, Rückwärtskompatibilität oder Legacy-Adapter ohne Auftrag.
+- Quellen statt `dist/` bearbeiten. Generierte Asset-Einbettungen nur über ihre [Generatorskripte](docs/rendering.md#texturen-und-portraits) aktualisieren. Rasterassets ausschließlich WebP/Qualität 80; keine unbeauftragte Löschung/Ersetzung.
+- Direkte `file://`-Auslieferung ohne erforderlichen Server, CDN, Laufzeit-Imports oder gelockerte Browser-Sicherheit erhalten.
+- Zusammenhängende geprüfte Änderungen eigenständig committen; fremde Änderungen nicht aufnehmen. Kein eigenständiger Push/Deployment.
 
-## Parallele Arbeit und Subagents
+## Prüfungen und Zeitbudget
 
-- Der Hauptagent orchestriert freigegebene Arbeitspakete, beantwortet Rückfragen, pflegt Issues und integriert Änderungen. Delegation ist innerhalb des erteilten Auftrags erlaubt, keine Freigabe zum selbstständigen Abarbeiten des Backlogs. Zunächst höchstens drei Subagents gleichzeitig; keine weitere Delegation durch Subagents.
-- Jeder Subagent arbeitet in einem eigenen, vom Hauptagenten angelegten Git-Worktree mit eigenem Branch, auch bei Analyse-, Dokumentations- oder Testaufträgen. Pro Worktree nur ein aktiver Bearbeiter. Vor Arbeitsbeginn absoluten Worktree-Pfad, Branch, Ausgangscommit und `git status --short` gegen den Auftrag prüfen; bei Abweichung stoppen und rückfragen. Bei Audit-Profilen ohne Shell führt der Hauptagent diese Git-Prüfung vor dem Start durch und übergibt den Nachweis; der Subagent gleicht ihn mit seinem Worktree-Kontext ab und fragt bei fehlenden oder widersprüchlichen Angaben nach.
-- Alle Subagents befolgen diese `AGENTS.md` in der Version ihres Worktrees. Der Hauptagent stellt die Projektkontext-Vererbung sicher; eigene Agentenprofile benötigen `inheritProjectContext: true`. Regeln während einer Arbeitswelle nicht nebenbei ändern.
-- Modellwahl nach Aufgabenschwierigkeit, nicht nach dem gerade aktiven Hauptmodell: GPT-6 Luna mit niedrigem Thinking für kleine, klare Aufgaben; GPT-6 Sol mit medium/high für Aufgaben mit mehr Abwägung oder Komplexität. Der Hauptagent begründet Ausnahmen vom Rollenstandard im Auftrag und prüft vor dem Start die effektive Zuordnung. Konfiguration und Aufrufsyntax: [Modelle und Thinking](docs/subagents.md#modelle-und-thinking).
-- Jeder Auftrag benennt Ziel, erlaubte Dateien/Verträge, Nicht-Ziele, Abhängigkeiten, Prüfungen und erwartete Übergabe. Überschneidungen und gemeinsame Simulations-/RNG-/Ladeverträge vorab klären; unterschiedliche Verzeichnisse allein beweisen keine Unabhängigkeit. Umfangserweiterungen und unklare Entscheidungen an den Hauptagenten melden statt raten.
-- Die erste Audit-Phase ist ausschließlich lesend: keine Änderungen oder Scratch-Dateien, keine Befehle, Builds, Tests, Benchmarks oder Browserläufe durch Audit-Subagents. Ergebnisse und Rückfragen über den normalen Ergebnis-/Supervisor-Kanal liefern. Ausführungsbedarf nur als spätere Prüfung vorschlagen. Die Standardtestsuite führt ausschließlich der Hauptagent ganz zum Schluss nach Integration der freigegebenen Änderungen aus; zusätzliche Langläufe unterliegen der ausdrücklichen Nutzerfreigabe unten.
-- Subagents committen ausschließlich ihre geprüften Änderungen im eigenen Branch. Keine Änderungen in anderen Worktrees, keine Merges, eigenständigen Rebases, Pushes, Branch-/Worktree-Löschungen oder Änderungen gemeinsamer Git-Konfiguration. `docs/issues/` und die gemeinsamen Arbeitsregeln pflegt nur der Hauptagent; Befunde und Folgearbeiten an ihn zurückmelden.
-- Rückfragen und relevante Zwischenmeldungen über den nativen Supervisor-Kanal senden; Abschluss über das normale Ergebnis. Übergabe enthält Branch/Commit, geänderte Dateien, ausgeführte Prüfungen samt Ergebnis, offene Risiken und nötige Entscheidungen. Bei Fehlern oder unklarer Prozesszuständigkeit Arbeit erhalten, keinen zweiten Bearbeiter starten oder stillschweigend den Ausführungsmodus wechseln.
-- Nur der Hauptagent integriert geprüfte Ergebnisse einzeln, prüft den kombinierten Stand und schließt Issues. Worktrees erst nach gesicherter Übergabe, beendeten Prozessen und abgeschlossener Integration bzw. geklärter Verwerfung bereinigen. Einrichtung, Kommunikation und Merge-Verfahren: [Subagent-Arbeitsablauf](docs/subagents.md).
+- Kurze gezielte Rückkopplung zuerst: lokale Logik mit Build/betroffenen Fällen, mechanische Kleinständerung mit Build/Diff, Dokumentation nur mit Diff/Links/Angaben. [Auswahl und Befehle](docs/testing.md).
+- Mehrminütige oder zeitlich unbekannte breite Läufe benötigen aktuelle ausdrückliche Freigabe samt konkretem Erkenntnisziel. Gemeinsame Verträge begründen Prüfbedarf, keine automatische Vollsuite. Breite Integrationstests nur einmal am integrierten Stand durch den Hauptagenten; Wiederholung nur bei neuem relevantem Risiko.
+- `test:ai`/`test:simulation` immer nur durch den Hauptagenten auf ausdrücklichen aktuellen Nutzerauftrag, auch direkte/gefilterte Fälle. Implementierung oder Abschlussprüfung ist keine Freigabe. Bedarf vorschlagen, sonst als nicht ausgeführt nennen.
+- Browserchecks nur für konkrete technische Fragen, keine Screenshotserien auf Vorrat. Visuelle/akustische und Echtgeräteabnahme bleibt menschlich. Prüfungen und relevante offene Grenzen im Abschluss benennen.
+
+## Delegation
+
+- Innerhalb freigegebener Arbeit erlaubt; Hauptagent orchestriert, beantwortet Rückfragen, pflegt Issues und integriert. Höchstens drei Kinder gleichzeitig, keine Weiterdelegation.
+- Jedes Kind erhält eigenen vom Hauptagenten angelegten Worktree/Branch, auch bei Analyse. Vor Start absoluten Pfad, Branch, Ausgangscommit und Status prüfen; Abweichung → stoppen/rückfragen. Audit ohne Shell erhält den Git-Nachweis vom Hauptagenten.
+- Lokale AGENTS-Version gilt; Kontextvererbung sicherstellen (`inheritProjectContext: true`). Regeln während einer Welle nicht nebenbei ändern. Luna/low für klare kleine Aufgaben, Sol/medium oder high für Abwägung/Reviews; Ausnahmen begründen und effektive Zuordnung prüfen.
+- Auftrag enthält Ziel/Nicht-Ziele, Schreibgrenzen/Verträge, Abhängigkeiten, Prüfungen und Übergabe. Fachliche Überschneidungen vorab klären; Umfangserweiterung an Hauptagenten melden.
+- Erste Audit-Phase ausschließlich lesend: keine Änderungen/Scratch-Dateien, Befehle, Builds, Tests, Benchmarks oder Browserläufe durch Audit-Kinder. Ausführungsbedarf nur vorschlagen.
+- Kinder committen nur geprüfte eigene Änderungen. Keine fremden Worktrees, Merges/Rebases/Pushes, gemeinsame Git-Konfiguration oder Worktree-/Branch-Löschungen; `docs/issues/` und Arbeitsregeln nur durch Hauptagenten ändern.
+- Fragen/Zwischenmeldungen über nativen Supervisor, Abschluss mit Branch/Commit, Dateien, Prüfungen/Resultat, Risiken/Entscheidungen. Fehlerzustand erhalten, nicht still den Ausführungsmodus wechseln. Integration und Bereinigung ausschließlich durch Hauptagenten nach gesicherter Übergabe/beendeten Prozessen. [Verfahren](docs/subagents.md).
 
 ## Temporäre Arbeit
 
-- Für Hauptagent und Subagents gilt: selbst angelegte temporäre Skripte, Downloads, Diagnosebilder, Browserprofile, Logs und sonstige Scratch-Dateien ausschließlich unter `<eigener-Worktree>/.tmp/` ablegen, nie unter gemeinsam benannten `/tmp/`-Pfaden. Pro Aufgabe/Lauf ein eigenes Unterverzeichnis verwenden. `.tmp/` ist ignoriert und wird auch nicht mit `git add -f` eingecheckt.
-- Bei gestarteten Hilfsprogrammen `TMPDIR`, `TMP` und `TEMP` auf das absolute eigene Scratch-Verzeichnis setzen; explizite Ausgabe-/Profilpfade ebenfalls dorthin richten. Shell-Exports gelten nicht automatisch im nächsten Toolaufruf. Einrichtung und Grenzen für Pi-eigene Laufzeitdateien: [temporäre Isolation](docs/subagents.md#temporäre-isolation).
-- Keine schreibend geteilten `.tmp/`-, `dist/`- oder `node_modules/`-Verzeichnisse/Symlinks zwischen Worktrees. Nur eigene temporäre Dateien bereinigen, nachdem die zugehörigen Prozesse beendet sind. Dauerhafte Befunde gehören über den Hauptagenten ins Issue, nicht ausschließlich in vergängliche Logs.
+Selbst angelegte Skripte, Downloads, Profile, Bilder und Logs nur unter `<eigener-Worktree>/.tmp/<lauf>/`; nie gemeinsam benannte `/tmp/`-Pfade. Bei Hilfsprogrammen `TMPDIR`, `TMP`, `TEMP` und Ausgabewege explizit dorthin setzen, in jedem Toolaufruf erneut. Keine schreibend geteilten `.tmp/`, `dist/`, `node_modules/` oder Symlinks zwischen Worktrees. Nur eigene Dateien nach Prozessende bereinigen; [Runtime-Grenzen](docs/subagents.md#temporäre-isolation).
 
-## Risikobasiert prüfen
+## Dokumentation und Issues
 
-- Prüfungen nach betroffenem Verhalten und Reichweite wählen, nicht pauschal nach Dateiendung. Lokale Änderungen brauchen meist Build und gezielte Tests; mechanische, verhaltensneutrale Kleinständerungen können mit Build und Diff geprüft werden.
-- Standardtestsuite (`npm test`) bei gemeinsamen Simulations-/RNG-/Ladeverträgen, breiten Eingriffen oder nicht sinnvoll eingrenzbaren Auswirkungen.
-- Die umfangreichen KI- und Simulations-Testblöcke (`npm run test:ai`, `npm run test:simulation`) startet ausschließlich der Hauptagent und nur auf ausdrücklichen aktuellen Nutzerauftrag. Das gilt auch für direkte Node-Aufrufe und gefilterte Einzelfälle daraus. Ein Implementierungsauftrag, ein Prüfbedarf oder die übliche Abschlussprüfung ist keine Freigabe dafür. Bei Bedarf vorschlagen und Freigabe abwarten, sonst als nicht ausgeführt benennen.
-- Dokumentation mit Diff und betroffenen Links/Angaben prüfen. Browserchecks nur bei einer konkreten technischen Fragestellung; keine automatischen Screenshotserien auf Vorrat.
-- Visuelle und akustische Abnahme erfolgt durch den Menschen. Technische Prüfung ist keine Darstellungs-, Hör- oder Echtgerätebestätigung. Ausgeführte Prüfungen und relevante offene Grenzen im Abschluss nennen; nötige Folgearbeiten ins Issue. Details und Befehle: [Prüfverfahren](docs/testing.md).
+Dauerhafte Entscheidungen, Grenzen und Pflegeverfahren dokumentieren, keine Codekarte, Wertetabellen oder Test-/Änderungshistorie. Ein maßgeblicher Ort je Information; andere Stellen verlinken. README ist Einstieg, AGENTS Regelwerk, offene Arbeit ausschließlich in `docs/issues/`, abgeschlossene Historie in Git; kein zusätzliches Worklog.
 
-## Dokumentation pflegen
-
-- Dokumentiere dauerhafte Entscheidungen, Begründungen, nicht offensichtliche Fallen und Pflegeverfahren; keine vollständigen Datei-/Methodenlisten, aus Code ablesbaren Wertetabellen oder nacherzählten Tests.
-- Jede Information hat einen maßgeblichen Ort. Andere Stellen verlinken dorthin. README bleibt Einstieg, AGENTS.md Regelwerk; offene Arbeit gehört in Issues, abgeschlossene Historie nach Git. Kein zusätzliches Worklog.
-- Bei Änderungen nur tatsächlich betroffene Dokumentation aktualisieren und dort veraltete Angaben, Wiederholungen und tote Links entfernen. Keine routinemäßigen Änderungsberichte oder Testzahlen an Fachreferenzen anhängen.
-- Dokumentationsbereinigung ist eine regelmäßige Wartungsaufgabe: bei Wartungsrunden `docs/` auf Relevanz, Redundanzen und erledigte Issues durchsehen. Größere Bereinigungen als eigenen Auftrag bzw. eigenes Issue bündeln, nicht als Nebenarbeit jedes Codeauftrags.
-
-## Issues
-
-- Offene Aufgaben, Entscheidungen, Kommentare und nötige Übergaben ausschließlich in `docs/issues/` führen. Tatsächliche Befunde knapp mit Prüfkontext festhalten, nicht jeden Arbeitsschritt protokollieren.
-- Auswirkungen auf andere bestehende Issues dort ergänzen. Erledigte Issue-Dateien löschen; ihre Historie bleibt in Git.
+Nur betroffene Dokumentation pflegen; bei Wartungsaufträgen Redundanzen/Altlasten entfernen. Befunde knapp mit relevantem Prüfkontext ins Issue, Auswirkungen auf andere Issues dort ergänzen. Erledigte Issue-Dateien löschen.

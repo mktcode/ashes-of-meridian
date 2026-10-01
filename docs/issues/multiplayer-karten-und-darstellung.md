@@ -1,14 +1,8 @@
-# Multiplayer-Vorbereitung: Perspektive, Karten und Last
+# Multiplayer: Perspektive, Karten und Last
 
-Nach dem [Parteienmodell und lokalen Harness](multiplayer-simulationsmodell.md); der freigegebene [Netzwerkprototyp](multiplayer-netzwerk/README.md) besitzt jetzt eine Session-Oberfläche mit Kartenauswahl. Keine Balanceänderung.
+- [ ] Beide fest zugewiesenen Perspektiven in echter Partie: eigene/fremde Kennzeichnung, Fog, Auswahl, Effekte/Audio und Glättung.
+- [ ] [Mothership-Höhen](hoehenstufen/README.md) und [Westmark-Brücken](westmark-map.md) mit passend neu gebautem Client/Server menschlich spielen.
+- [ ] Ressourcen-/Raffineriezugang, weitere Seeds und reale Rush-Wege bei konkretem Bedarf; freie Starts sind kein Fairnessnachweis.
+- [ ] Mehrparteienlast vor Erweiterung messen; individuelle Vier-Parteienfarben sind noch nicht gestaltet. [Performance](mobile-performance.md).
 
-- [ ] Beide Spielerperspektiven im Netzwerkprototyp einschließlich Bewegungsglättung, Kampf-Effekten und Audio durch den Menschen abnehmen. Ein manueller Parteiwechsel ist dort gesperrt; eigene/fremde Kennzeichnung ist perspektivabhängig, individuelle Farben für vier Parteien sind nicht gestaltet.
-- [ ] Bei gesonderter Freigabe Perspektivwechsel im laufenden Mehrparteien-Gefecht prüfen; vorhandene Zustands-/HUD-/Renderprüfungen ersetzen keine vollständige Partie.
-- [ ] Verbleibende Kartenfragen gezielt prüfen: bei Bedarf Gas-/Raffineriezugang und weitere Seeds; begrenzte Start-/Sternenschlacke-Nachweise stehen in den [Mehrparteien-Prüfungen](multiplayer-simulationsmodell.md). Keine Zusage gleicher Ressourcen oder fairer Rush-Distanzen.
-- [ ] Mehrparteienlast gezielt messen, bevor Limits/Optimierungen beschlossen werden; vorhandene [mobile Lastbefunde](mobile-performance.md) berücksichtigen. Zusätzliche Langläufe gesondert freigeben lassen.
-
-Technischer Stand: [Lokale Szenarioperspektive](../architecture.md#teamzustand-sicht-und-ki) und [Szenario-Effekttrennung](../architecture.md#welt-darstellung-und-zufall) sind umgesetzt. Synthetische Zustandsprüfungen decken echte Sichtumschaltung, gleiche Kampfzustände/RNG und lokale Alarmfilter ab; technische UI-/Renderprüfungen decken Akteursbindung, Fog, Auswahl, HUD, Marker und unveränderte Gebäudeausrichtung ab. Der technische Zwei-Client-Browsernachweis und seine Grenzen stehen im [Netzwerkpaket](multiplayer-netzwerk/README.md). Keine Hör- oder Echtgeräteabnahme. Einzelspiel bleibt auf Partei 0.
-
-Der integrierte [Mothership-Höhenstand](hoehenstufen/README.md) besitzt erhöhte Startplateaus für alle vier öffentlichen Kandidaten, unabhängig von der privaten Startzuordnung. Autoritative [asymmetrische Höhensicht](hoehenstufen/04-hoehenabhaengige-sicht.md), Sichtprojektion, Ereignisfilter und interpolierte Bodenpose verwenden die gemeinsame CPU-Oberfläche. Offen bleiben der menschliche Zwei-Client-Höhentest und die spielerische Rampenabnahme; Alien Planet und Desert sind nicht auf Höhenstufen umgebaut. Die zusätzliche [Westmark-Karte](westmark-map.md) teilt CPU-Höhen, Wasser-/Brückenbarrieren und Ressourcen mit dem Server; keine eigenen Höhen-Sichtstufen. Client und Server gemeinsam neu bauen/ausrollen. Menschliche Zwei-Client-Brückenabnahme und Lastmessung sind weiterhin offen.
-
-Codebefund: Alle vier Rezepte in `src/battlefields/` deklarieren vier `startSites`; `battlefieldStartSites` sucht passende HQ-Plätze, `startingPositions` kann bis zu vier vergeben; FFA-Expeditionen nutzen je nach Stage zwei bis vier Parteien, der Netzwerkprototyp weiterhin zwei. Prüfnachweise und ihre Grenzen führen die [Mehrparteien-Prüfungen](multiplayer-simulationsmodell.md). Vier Kandidaten sind kein Balance- oder Performancenachweis.
+Lokaler Szenarioperspektivwechsel ist kein Recht auf andere Netzwerkidentität. Kurze Zustands-/Projektionstests ersetzen keine vollständige Partie; zusätzliche KI-Fälle unter [Mehrparteien-Prüfungen](multiplayer-simulationsmodell.md).

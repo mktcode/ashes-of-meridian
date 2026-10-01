@@ -1,17 +1,9 @@
-# Modellkacheln · Abnahme
+# Modellkacheln: Lesbarkeit und Performance
 
-Codex-Übersicht und Bau-/Rekrutierungsmenü verwenden die aktuellen Modelle statt Portraitdateien. Technischer Vertrag und Kostenbegrenzung: [Rendering](../rendering.md#modellkacheln).
+Nutzer meldete beim Öffnen von Codex/Baumenü Einbruch von 60 auf 30 FPS oder weniger; Gerät/Browser/Diagnose fehlen. Kleine Kacheln sind inzwischen statisch gecacht, große Detailansicht bleibt live. Erstaufnahme kann weiter synchronisieren; [Cache-/Rendervertrag](../rendering.md#modellkacheln).
 
-## Performancebefund
+- [ ] Erst-/Wiederöffnen auf betroffenem Desktop und Mobilgerät vergleichen, bei Kosten [Diagnose](../testing.md#lokale-performancediagnose) mit Pass `thumbnails` sichern.
+- [ ] Modellgröße/-ausschnitt, Teamfarben, Kontrast/Kanten, Namen/Kosten und deaktivierte Aktionen in Codex/HUD.
+- [ ] Scrollen/Tippen auf Smartphone unter Last, nicht nur arrangiertes Standbild.
 
-Der Nutzer meldet nach Einführung der Modellkacheln einen Einbruch von zuvor 60 auf 30 FPS oder weniger beim Öffnen der Codex-Übersicht und des Baumenüs. Gerät, Browser und Diagnosebericht liegen noch nicht vor; die Zuordnung einzelner Kosten ist daher nicht gemessen.
-
-Die kleinen Vorschauen sind jetzt auf ausdrücklichen Nutzerauftrag nicht animiert und verwenden einen begrenzten flüchtigen Standbildcache. Dadurch entfällt der kontinuierliche WebGL-zu-2D-Kopierpfad. Beim erstmaligen Erzeugen eines noch nicht vorhandenen Bildes bleiben solche Kopien nötig (eine mit nativem 2× MSAA, zwei beim Subpixel-Fallback); erneutes Öffnen nutzt vorhandene Bilder. Die große Detailansicht bleibt live. Quellen-/Regressionstests für ausbleibende Zeichnungen und Kopien im eingeschwungenen Zustand ersetzen keine erneute FPS-Abnahme auf dem betroffenen Gerät.
-
-Die vom Nutzer vorgelegten Desktop-/Mobilansichten zeigten außerdem zu kleine beziehungsweise kaum erkennbare Gebäudemodelle. Engere kameraseitige Teilmesh-Bounds und eine höhere, nicht von Text/Verlauf überlagerte Modellfläche im Aktionsmenü vergrößern die Darstellung. Deaktivierte Aktionen behalten eine gedämpfte, aber weniger dunkle Vorschau.
-
-## Offen
-
-- Menschliche Sichtprüfung aller Fraktionen im Codex und bei normalen HUD-Größen: Bildausschnitt, Teamfarben, Kontrast, Kantenqualität mit [2×-Vorschau-MSAA und Gerätefallback](../rendering.md#modellkacheln) sowie Lesbarkeit von Namen/Kosten unter dem Modell, auch bei deaktivierten Aktionen.
-- Erneute FPS-Abnahme beim Erstöffnen und Wiederöffnen auf dem betroffenen Desktop und Mobilgerät. Smartphone-Abnahme außerdem für Scrollen der Codex-/Aktionsliste und Tippen auf Kacheln; einmalige Cache-Misses können weiterhin CPU-/GPU-Synchronisation verursachen. Eingeschwungener Cache und geteilte Geometrie sind kein Echtgeräte-/Thermiknachweis.
-- Bei auffälligen Kosten mit [Diagnoseberichten](../testing.md#lokale-performancediagnose) vergleichen; der zusätzliche Pass heißt `thumbnails`. Statische Portraitquellen bleiben erhalten, ihre Löschung ist nicht beauftragt.
+Korrektur zu kleiner Gebäudemodelle ist integriert, menschliche Wiederabnahme offen. Portraitquellen bleiben erhalten.

@@ -1,11 +1,10 @@
-# Multiplayer: Prototyp und nächste Freigaben
+# Multiplayer-Rahmen
 
-**Zwei-Spieler-Netzwerkprototyp mit Kartenauswahl freigegeben und umgesetzt; weitere Pakete erst nach eigenem Go.** Bestehendes Einzelspiel, Roguelite-Fortschritt, RNG-Verträge und direkte `file://`-Auslieferung bleiben erhalten. Betrieb und bewusste Grenzen: [Serverdokumentation](../../server/README.md).
+Zwei-Menschen-Prototyp umgesetzt; Erweiterungen nur nach eigenem Go. Offline-Spiel, Fortschritt und [Architekturgrenzen](../architecture.md) erhalten.
 
-1. [Netzwerkprototyp](multiplayer-netzwerk/README.md): zwei echte Geräte, öffentlichen Betrieb und zwei volle Räume auf der Ziel-VM abnehmen.
-2. [Perspektive und Karten](multiplayer-karten-und-darstellung.md): Zwei-Client-Darstellung, Höhen/Brücken und Mehrparteienlast gezielt prüfen.
-3. [Mehrparteien-Prüfungen](multiplayer-simulationsmodell.md): echte FFA-KI-Fälle nur nach gesonderter Freigabe eingrenzen; der technische CPU-Szenariovertrag ist integriert.
-4. Drei oder vier menschliche Parteien erst nach diesen Abnahmen eigens freigeben.
-5. [Spielmechanik und Expeditionen](multiplayer-expeditionen.md): später gemeinsam definieren, bis dahin blockiert.
+1. [Netzwerk-/Zwei-Geräte-Abnahme](multiplayer-netzwerk/README.md).
+2. [Perspektiven, Karten und Last](multiplayer-karten-und-darstellung.md).
+3. Bei Freigabe [echte FFA-KI-Prüfung](multiplayer-simulationsmodell.md).
+4. Erst danach drei/vier Menschen entscheiden; [Expeditionsregeln](multiplayer-expeditionen.md) separat.
 
-Technisches Ziel: bis zu vier Parteien, unabhängig von Fraktion und Controller. Vier Startbereiche bedeuten weder vier menschliche Spieler noch vier Menschen plus zusätzliche KI-Parteien. Aktueller Umfang ist ausschließlich jeder gegen jeden (FFA); 2on2-KI, Allianzen und geteilte Kontrolle bleiben außen vor. Ergebnisse und Expeditionsregeln sind weiterhin offen; die technischen Testvorgaben ersetzen keine Produktregeln.
+Ziel höchstens vier Parteien unabhängig von Fraktion/Controller, vorerst ausschließlich FFA. Keine Allianzen, 2on2 oder geteilte Kontrolle; vier Starts sind weder vier Menschen zugesagt noch vier Menschen plus zusätzliche KI.
