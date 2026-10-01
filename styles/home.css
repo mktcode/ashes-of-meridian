@@ -7,6 +7,7 @@
   font-display: swap;
 }
 #menu .home-screen {
+  --home-checkpoint-size: clamp(105px, 17vh, 150px);
   --home-cut: 8px;
   --home-shape: polygon(var(--home-cut) 0, calc(100% - var(--home-cut)) 0,
     100% var(--home-cut), 100% calc(100% - var(--home-cut)),
@@ -89,7 +90,7 @@
 #menu .home-screen .stage-map { font-size: 11px; letter-spacing: 1px }
 #menu .home-screen .stage-status { font-size: 10px; letter-spacing: .5px }
 #menu .home-screen .stage-crystal {
-  width: clamp(105px, 17vh, 150px);
+  width: var(--home-checkpoint-size);
   aspect-ratio: 420 / 403;
   background: url('../assets/ui/checkpoint.webp') center / contain no-repeat;
 }
@@ -99,7 +100,52 @@
   transform: translateY(.06em);
   text-shadow: 0 0 14px #92faff88;
 }
-#menu .home-screen .stage-arrow { height: 64px; background: transparent }
+/* Arrow paths, sizing and glow copied from the demo; positioning uses our badge size. */
+#menu .home-screen .stage-navigation { position: relative }
+#menu .home-screen .stage-arrow {
+  position: absolute;
+  top: 50%;
+  width: 48px;
+  height: 54px;
+  padding: 8px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #69e7ff;
+  transform: translateY(-50%);
+  transition: color .16s, filter .16s;
+}
+#menu .home-screen .stage-arrow.previous { right: calc(50% + var(--home-checkpoint-size) / 2 + 20px) }
+#menu .home-screen .stage-arrow.next { left: calc(50% + var(--home-checkpoint-size) / 2 + 20px) }
+#menu .home-screen .stage-arrow svg {
+  width: 32px;
+  height: 36px;
+  overflow: visible;
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  filter: none;
+}
+#menu .home-screen .stage-arrow.previous svg { transform: scaleX(-1) }
+#menu .home-screen .stage-arrow .trailing-chevron { opacity: .4 }
+#menu .home-screen .stage-arrow:focus-visible { background: transparent; border: 0 }
+#menu .home-screen .stage-arrow:hover:not(:disabled) {
+  color: #bafaff;
+  background: transparent;
+  transform: translateY(-50%);
+  filter: drop-shadow(0 0 5px #69e7ff88);
+}
+#menu .home-screen .stage-arrow:not(:disabled):active { transform: translateY(-50%) }
+@media (prefers-reduced-motion: reduce) {
+  #menu .home-screen .stage-arrow:not(:disabled):hover { transform: translateY(-50%) !important }
+}
+#menu .home-screen .stage-arrow:disabled {
+  opacity: .2;
+  color: #69e7ff !important; /* Override the shared disabled-control text colour. */
+  background: transparent;
+}
 #menu .home-screen .menu-buttons { width: 100%; gap: 10px }
 #menu .home-screen .menu-buttons button {
   --home-edge: #4ebddeaa;
@@ -115,6 +161,7 @@
   font: 400 13px/1.4 Aldrich, sans-serif;
   letter-spacing: 1.5px;
   color: #c0dcea;
+  transition: filter .16s, color .16s, transform .16s;
 }
 #menu .home-screen .menu-buttons button::before,
 #menu .home-screen .menu-buttons button::after {
@@ -133,8 +180,15 @@
   --home-edge: #a6f3ff;
   --home-fill: linear-gradient(140deg, #116180, #063449 43%, #073348 71%, #12506a);
   color: #f3fdff;
+  font-weight: 650;
   box-shadow: 0 0 21px #17c9ee30;
+  filter: drop-shadow(0 0 4px #50d8ff50);
 }
+#menu .home-screen .menu-buttons .primary::after {
+  inset: 1.5px;
+  box-shadow: inset 0 0 12px #5ee8ff38;
+}
+#menu .home-screen .menu-buttons .primary:hover { filter: drop-shadow(0 0 7px #65e8ff8a) }
 #menu .home-screen .menu-buttons button:hover {
   --home-edge: #bafaff;
   background: transparent;
@@ -178,7 +232,7 @@
   #menu .home-screen .menu-main { gap: 18px }
   #menu .home-screen .menu-brand { width: 72%; gap: 4px }
   #menu .home-screen .menu-brand .menu-emblem { width: 32px; height: 33px }
-  #menu .home-screen .stage-crystal { width: 100px }
+  #menu .home-screen { --home-checkpoint-size: 100px }
   #menu .home-screen .stage-crystal strong { font-size: 44px }
   #menu .home-screen .menu-buttons button { min-height: 46px; font-size: 12px; padding-block: 10px }
   #menu .home-screen .menu-subnav { margin-top: 12px }
