@@ -11,7 +11,7 @@
         if (!s || s.rules?.kind !== 'single-player') return false;
         const mission = s.rules.mission, salvage = mission.id === 'echo-salvage',
           timing = salvage ? (this.profile.salvageIntroComplete ? undefined : { hold: 10, travel: 1.5 })
-            : BATTLE_INTRO_BY_STAGE[s.depth + 1];
+            : (this.shouldBeginBattleTutorial() ? BATTLE_INTRO_BY_STAGE[s.depth + 1] : undefined);
         if (!timing) return false;
         const home = this.game.alive(e => e.team === this.localTeam && e.kind === 'building' && e.type === 'hq')[0],
           enemy = !salvage && this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.kind === 'building' && e.type === 'hq')[0];

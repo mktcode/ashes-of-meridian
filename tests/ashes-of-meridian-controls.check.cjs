@@ -663,7 +663,7 @@ test('tutorial remembers valid goals completed out of order instead of demanding
   assert.equal(saved.length, 1);
 });
 
-test('tutorial stays out of later progress, completed profiles and other factions', () => {
+test('tutorial and camera introduction stay out of later progress, completed profiles and other factions', () => {
   for (const [depth, bestDepth, complete, faction] of [[1, 0, false, 0], [0, 1, false, 0],
     [0, 0, true, 0], [0, 0, false, 1]]) {
     const h = setup();
@@ -672,6 +672,16 @@ test('tutorial stays out of later progress, completed profiles and other faction
     h.ui.game.s.parties[0].faction = faction;
     h.ui.profile.expeditionDepth = bestDepth;
     h.ui.profile.tutorialComplete = complete;
+    h.ui.game.s.entities = [
+      { id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, x: -60, z: 50 },
+      { id: 2, team: 1, kind: 'building', type: 'hq', hp: 100, x: 80, z: -70 }
+    ];
+    const camera = { ...h.ui.game.s.cam };
+    h.ui.event('start', {});
+    assert.equal(h.ui.battleIntro, null);
+    assert.equal(h.ui.paused, false);
+    assert.deepEqual(h.ui.game.s.cam, camera);
+    assert.equal(h.ui.introObserves(h.ui.game.s.entities[1]), false);
     assert.equal(h.ui.beginBattleTutorial(), false);
     assert.equal(h.ui.battleTutorial, null);
   }

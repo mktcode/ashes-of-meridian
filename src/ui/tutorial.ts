@@ -16,12 +16,15 @@ const BATTLE_TUTORIAL_TARGETS: Record<BattleTutorialStep, { tab: UITab; action: 
 };
 
 const uiTutorialMethods = {
+  shouldBeginBattleTutorial(this: MeridianUI) {
+    const s = this.game.s;
+    return !!s && s.rules?.kind === 'single-player' && s.depth === 0 && this.localTeam === 0 &&
+      s.parties[0].faction === FACTION_ID.FIRST && this.profile.expeditionDepth === 0 &&
+      !this.profile.tutorialComplete;
+  },
   beginBattleTutorial(this: MeridianUI) {
     this.battleTutorial = null;
-    const s = this.game.s;
-    if (!s || s.rules?.kind !== 'single-player' || s.depth !== 0 || this.localTeam !== 0 ||
-        s.parties[0].faction !== FACTION_ID.FIRST || this.profile.expeditionDepth > 0 ||
-        this.profile.tutorialComplete) return false;
+    if (!this.shouldBeginBattleTutorial()) return false;
     this.battleTutorial = { step: 'trainWorker', achieved: new Set(), workersTrained: 0 };
     this.actionSignature = '';
     return true;
