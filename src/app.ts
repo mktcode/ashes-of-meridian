@@ -80,6 +80,19 @@
         addEventListener('resize', resize);
         resize();
         let worldRequest = 0;
+        const previewSnapshot = $('previewTransition'), snapshotContext = previewSnapshot.getContext('2d');
+        let previewChange: {
+          id: number; map: BattlefieldId; seed: number; phase: 'capture' | 'loading' | 'ready' | 'blend';
+          world?: Battlefield; animation?: Animation; resolve: (ready: boolean) => void;
+        } | null = null;
+        function finishPreviewChange(ready: boolean) {
+          const change = previewChange;
+          previewChange = null;
+          previewSnapshot.classList.add('hidden');
+          previewSnapshot.width = previewSnapshot.height = 0;
+          change?.animation?.cancel();
+          change?.resolve(ready);
+        }
         function previewEntities() {
           preview = [];
           let id = 0;
@@ -119,18 +132,65 @@
           loader.innerHTML = `<div class="eyebrow">UPLINK INTERRUPTED</div><h2>Texture preparation failed.</h2><p>${esc(error instanceof Error ? error.message : String(error))}</p>`;
           loader.classList.remove('hidden');
         }
-        ui.onPreview = (map, seed = 40517) => {
-          const id = ++worldRequest, mapId = battlefieldId(map), world = new Battlefield(seed, mapId),
-            profile = world.renderProfile;
-          void R.prepareBattlefieldTextures(profile).then(ready => {
-            if (!ready || id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') return;
+        ui.onPreview = async (map, seed = 40517, smooth = false) => {
+          finishPreviewChange(false);
+          const id = ++worldRequest, mapId = battlefieldId(map);
+          if (smooth && ui.view === 'home' && snapshotContext) {
+            // Capture inside the render callback: WebGL's default buffer is not
+            // preserved between frames. No preserveDrawingBuffer or readback loop.
+            return new Promise<boolean>(resolve => {
+              previewChange = { id, map: mapId, seed, phase: 'capture', resolve };
+            });
+          }
+          try {
+            const world = new Battlefield(seed, mapId), ready = await R.prepareBattlefieldTextures(world.renderProfile);
+            if (!ready || id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') return false;
             worldView.sync(world, false);
             R.fogOn = false;
             previewEntities();
             $('loading').classList.add('hidden');
-          }).catch(textureFailure);
+            return true;
+          } catch (error) {
+            if (id === worldRequest) textureFailure(error);
+            return false;
+          }
         };
+        function advancePreviewChange() {
+          const change = previewChange;
+          if (!change) return;
+          if (change.phase === 'capture') {
+            previewSnapshot.width = canvas.width;
+            previewSnapshot.height = canvas.height;
+            snapshotContext!.drawImage(canvas, 0, 0);
+            previewSnapshot.style.opacity = '1';
+            previewSnapshot.classList.remove('hidden');
+            change.phase = 'loading';
+            // Keep just one frozen image while building/loading; old map textures
+            // can be released safely and no second live world is rendered.
+            void Promise.resolve().then(async () => {
+              if (previewChange !== change) return;
+              const world = new Battlefield(change.seed, change.map), ready = await R.prepareBattlefieldTextures(world.renderProfile);
+              if (previewChange !== change) return;
+              if (!ready || change.id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') { finishPreviewChange(false); return; }
+              change.world = world;
+              change.phase = 'ready';
+            }).catch(error => {
+              if (previewChange !== change) return;
+              finishPreviewChange(false);
+              textureFailure(error);
+            });
+          } else if (change.phase === 'blend' && !change.animation) {
+            if (matchMedia('(prefers-reduced-motion: reduce)').matches) { finishPreviewChange(true); return; }
+            // Opacity runs on the compositor, independently of the live scene's FPS.
+            change.animation = previewSnapshot.animate([{ opacity: 1 }, { opacity: 0 }],
+              { duration: 560, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+            void change.animation.finished.then(() => {
+              if (previewChange === change) finishPreviewChange(true);
+            }).catch(() => {}); // Superseding previews cancel only their own animation.
+          }
+        }
         ui.onLaunchBattle = options => {
+          finishPreviewChange(false);
           const id = ++worldRequest, mapId = battlefieldId(options.map), profile = BATTLEFIELDS[mapId].render;
           if (!R.hasBattlefieldTextures(profile)) loadingBattlefield('Preparing operation');
           void R.prepareBattlefieldTextures(profile).then(ready => {
@@ -367,6 +427,19 @@
               return;
             }
             nextRender += Math.max(1, Math.floor((now - nextRender + RENDER_TOLERANCE_MS) / RENDER_INTERVAL_MS) + 1) * RENDER_INTERVAL_MS;
+            if (previewChange && (ui.view === 'game' || ui.view === 'codexModel')) finishPreviewChange(false);
+            if (previewChange?.phase === 'loading') {
+              diagnostics?.finishFrame(false);
+              requestAnimationFrame(draw);
+              return;
+            }
+            if (previewChange?.phase === 'ready') {
+              worldView.sync(previewChange.world!, false);
+              R.fogOn = false;
+              previewEntities();
+              previewChange.world = undefined;
+              previewChange.phase = 'blend';
+            }
             // Missed render slots are discarded, never drawn in a catch-up loop.
             frames++;
             if (frameClock >= 1) {
@@ -402,10 +475,12 @@
             R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
               ui.view === 'codex' ? () => thumbnails.update($('menu')) :
                 ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined);
+            advancePreviewChange();
             diagnostics?.recorder.phase('overlay');
             ui.drawOverlay(overlayContext);
             diagnostics?.finishFrame(true);
           } catch (error) {
+            finishPreviewChange(false);
             diagnostics?.stop('render-error');
             const network = game.networkTeam != null;
             if (network) ui.multiplayer?.disconnect();
@@ -425,6 +500,7 @@
         }
         canvas.addEventListener('webglcontextlost', e => {
           e.preventDefault();
+          finishPreviewChange(false);
           diagnostics?.stop('context-lost');
           const network = game.networkTeam != null;
           if (network) ui.multiplayer?.disconnect();

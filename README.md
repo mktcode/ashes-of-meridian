@@ -53,7 +53,7 @@ Mit **New expedition** eine freigeschaltete Fraktion wählen. Die ersten drei Ge
 
 Fingerziehen/Pinch oder Mausziehen/Mausrad bewegt die Kamera; Tap bzw. Linksklick wählt, Rechtsklick erteilt Kontextbefehle. Basis- und Zoomknöpfe liegen unter der Minimap; der mittige Schwerter-Schalter aktiviert Attack-move. Das eingerahmte Gruppensymbol wählt eigene Kampfeinheiten im sichtbaren Bereich, das danebenliegende Gruppensymbol alle eigenen Kampfeinheiten außer Workern auf der gesamten Karte. Bau und Rekrutierung liegen rechts, Fähigkeiten mittig, Minimap links. **Cancel** beendet eine Zielauswahl.
 
-Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine laufende Expedition wird **zwischen Gefechten** automatisch gesichert; Reload oder Schließen verwirft nur das aktuelle Gefecht und setzt am letzten Übergang fort. Genaue Regeln und Bedienung: [Gameplay](docs/gameplay.md).
+Reserve, Upgrades, Expeditionstiefe und Einstellungen bleiben gespeichert. Eine laufende Expedition wird **zwischen Gefechten** automatisch gesichert; Reload oder Schließen verwirft nur das aktuelle Gefecht und setzt am letzten Übergang fort. Die Pfeile am Checkpoint-Kristall blättern mit weicher Überblendung durch die aufgezeichneten Landschaften der laufenden Expedition, ohne den fortzusetzenden Checkpoint zu ändern. Genaue Regeln und Bedienung: [Gameplay](docs/gameplay.md).
 
 ## Entwicklung
 

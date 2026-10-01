@@ -228,6 +228,12 @@
           case 'startBattle':
             this.startBattle();
             break;
+          case 'previousStage':
+            void this.browseStage(-1);
+            break;
+          case 'nextStage':
+            void this.browseStage(1);
+            break;
           case 'continueExpedition':
             this.continueExpedition();
             break;

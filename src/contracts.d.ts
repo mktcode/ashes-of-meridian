@@ -248,6 +248,13 @@ interface ExpeditionEncounter {
   seed: number;
 }
 
+// Visual landscape archive, not a battle snapshot or a selectable checkpoint.
+interface ExpeditionStagePreview {
+  stage: number;
+  map: BattlefieldId;
+  seed: number;
+}
+
 interface MeridianExpedition {
   version: 5;
   faction: FactionId;
@@ -303,6 +310,8 @@ interface MeridianPersistence {
   loadExpedition(): MeridianExpedition | null;
   saveExpedition(expedition: MeridianExpedition): boolean;
   clearExpedition(): boolean;
+  loadStageHistory(expedition: MeridianExpedition | null): ExpeditionStagePreview[];
+  saveStageHistory(stages: readonly ExpeditionStagePreview[]): boolean;
 }
 
 type TeamId = -1 | PlayerTeam;

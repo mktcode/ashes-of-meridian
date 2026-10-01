@@ -4,6 +4,55 @@ const vm = require('node:vm');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 // Logic behind UI actions; copy, layout and full navigation flows are checked manually.
 
+test('stage browsing is bounded and purely visual; continue always launches the real checkpoint', async () => {
+  const h = setup(), ui = h.ui, saved = [], previews = [];
+  ui.expedition = { version: 5, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2,
+    benefits: { supplyCrate: 1 }, enemyBenefits: [{}], offers: [],
+    encounter: { mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
+  ui.stageHistory = [{ stage: 1, map: 'mothership', seed: 11 }, { stage: 2, map: 'alien-planet', seed: 22 }];
+  ui.persistence.saveStageHistory = stages => saved.push(JSON.stringify(stages));
+  ui.rememberStage(); ui.rememberStage();
+  assert.equal(saved.length, 1, 'revisiting a checkpoint does not duplicate history');
+  ui.onPreview = async (...args) => { previews.push(args); return true; };
+  ui.showHome(); previews.length = 0;
+  const before = JSON.stringify({ expedition: ui.expedition, profile: ui.profile, history: ui.stageHistory });
+  vm.runInContext('Math.random = () => { throw Error("Browsing consumed RNG"); };', h.context);
+  await ui.browseStage(1); assert.equal(previews.length, 0);
+  await ui.browseStage(-1); await ui.browseStage(-1); await ui.browseStage(-1);
+  assert.deepEqual(previews, [['alien-planet', 22, true], ['mothership', 11, true]]);
+  assert.equal(ui.stagePreviewIndex, 0);
+  assert.equal(JSON.stringify({ expedition: ui.expedition, profile: ui.profile, history: ui.stageHistory }), before);
+  assert.equal(saved.length, 1);
+  ui.game.start = options => h.calls.push(['start', options]);
+  ui.continueExpedition();
+  const options = h.calls.at(-1)[1];
+  assert.equal(options.map, 'desert'); assert.equal(options.seed, 1409); assert.equal(options.depth, 2);
+  await ui.browseStage(1); await ui.browseStage(1); await ui.browseStage(1);
+  assert.equal(ui.stagePreviewIndex, 2);
+  assert.equal(previews.length, 4);
+});
+
+test('stage previews ignore overlapping input, failures, dialogs and stale screen completions', async () => {
+  const h = setup(), ui = h.ui;
+  ui.expedition = { depth: 1, encounter: { mission: 'hq-elimination', enemies: [], map: 'desert', seed: 1409 }, abilities: [], enemyBenefits: [], offers: [] };
+  ui.stageHistory = [{ stage: 1, map: 'mothership', seed: 11 }, { stage: 2, map: 'desert', seed: 1409 }];
+  ui.showHome();
+  let resolve, calls = 0;
+  ui.onPreview = () => { calls++; return new Promise(done => { resolve = done; }); };
+  const pending = ui.browseStage(-1);
+  assert.equal(ui.stagePreviewBusy, true);
+  await ui.browseStage(-1); assert.equal(calls, 1);
+  resolve(false); await pending;
+  assert.equal(ui.stagePreviewIndex, 1); assert.equal(ui.stagePreviewBusy, false);
+  ui.modalKind = 'settings'; await ui.browseStage(-1); assert.equal(calls, 1); ui.modalKind = '';
+  const stale = ui.browseStage(-1);
+  ui.view = 'codex'; resolve(true); await stale;
+  assert.equal(ui.stagePreviewIndex, 1, 'a left screen must not commit preview selection');
+  ui.onPreview = async () => true;
+  ui.showHome(); assert.equal(ui.stagePreviewBusy, false); assert.equal(ui.stagePreviewIndex, 1);
+  ui.view = 'game'; await ui.browseStage(-1); assert.equal(ui.stagePreviewIndex, 1);
+});
+
 test('escaping converts values and protects HTML delimiters independently of screen wording', () => {
   const context = loadScripts(['ui-core']), esc = vm.runInContext('esc', context);
   for (const [input, expected] of [[null, ''], [undefined, ''], [42, '42'],
@@ -142,7 +191,7 @@ function setup() {
   let now = 0;
   const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
-    formatTime: () => '00:00'
+    formatTime: () => '00:00', matchMedia: () => ({ matches: true })
   } });
   const UI = vm.runInContext('MeridianUI', context), calls = [],
     definition = vm.runInContext('BATTLEFIELDS.desert', context);
@@ -1206,6 +1255,10 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   const previousMap = h.ui.expedition.encounter.map;
   h.ui.event('result', { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
   assert.equal(h.ui.expedition.depth, 1); assert.equal(saved.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.ui.stageHistory)), [
+    { stage: 1, map: previousMap, seed: 1409 },
+    { stage: 2, map: h.ui.expedition.encounter.map, seed: h.ui.expedition.encounter.seed }
+  ]);
   assert.equal(saved[0].encounter.mission, 'hq-elimination');
   assert.notEqual(h.ui.expedition.encounter.map, previousMap);
   assert.equal(h.ui.expedition.offers.length, 3);
@@ -1215,6 +1268,7 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   assert.deepEqual(Array.from(h.ui.expedition.encounter.enemies), [1]);
   h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
   assert.equal(saved.length,1);assert.equal(JSON.stringify(h.ui.expedition.enemyBenefits),enemyBefore);
+  assert.equal(h.ui.stageHistory.length, 2, 'repeated results do not append visual history');
   const choice = h.ui.expedition.offers[0]; h.click({ benefit: choice });
   assert.equal(h.ui.expedition.benefits[choice], 1); assert.equal(h.ui.expedition.offers.length, 0);
   assert.equal(saved.length, 2); assert.equal(h.calls.length, 1);

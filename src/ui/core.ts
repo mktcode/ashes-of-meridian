@@ -1,6 +1,6 @@
     /* Front end, permanent upgrades, HUD, controls, field manual. */
     'use strict';
-    function $(id: 'world' | 'overlay' | 'minimap'): HTMLCanvasElement;
+    function $(id: 'world' | 'overlay' | 'minimap' | 'previewTransition'): HTMLCanvasElement;
     function $(id: string): HTMLElement;
     function $(id: string): HTMLElement { return document.getElementById(id)!; }
     const esc = (s: unknown) =>
@@ -29,6 +29,9 @@
       audio: MeridianAudio;
       profile: MeridianProfile;
       expedition: MeridianExpedition | null;
+      stageHistory: ExpeditionStagePreview[] = [];
+      stagePreviewIndex = 0;
+      stagePreviewBusy = false;
       view: 'home' | 'battle' | 'transition' | 'game' | 'codex' | 'codexModel' | 'story';
       codexFaction: FactionId;
       codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType } | null;
@@ -66,7 +69,7 @@
       resultBenefit?: string;
       onViewportChange?: () => void;
       multiplayer?: MeridianMultiplayerClient;
-      onPreview?: (map?: BattlefieldId, seed?: number) => void;
+      onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean) => Promise<boolean>;
       onLaunchBattle?: (options: BattleOptions) => void;
       domPressed?: boolean;
       touchGesture?: boolean;
@@ -85,6 +88,7 @@
         this.audio = audio;
         this.profile = profile;
         this.expedition = this.persistence.loadExpedition?.() || null;
+        this.stageHistory = this.persistence.loadStageHistory?.(this.expedition) || [];
         this.view = 'home';
         this.codexFaction = FACTION_ID.FIRST;
         this.codexSelection = null;
@@ -236,6 +240,7 @@
             }
             if (data.win && this.expedition) {
               const previousUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
+              this.rememberStage();
               this.expedition.depth++;
               if (this.expedition.depth > this.profile.expeditionDepth) {
                 this.profile.expeditionDepth = this.expedition.depth;
@@ -248,6 +253,7 @@
                 this.expedition.encounter, this.expedition.depth);
               this.expedition.offers = this.createBenefitOffers(this.expedition);
               this.persistence.saveExpedition(this.expedition);
+              this.rememberStage();
             } else if (!data.win) {
               this.persistence.clearExpedition?.();
               this.expedition = null;

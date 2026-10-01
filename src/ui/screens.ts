@@ -23,8 +23,60 @@
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
         if (this.onPreview) this.onPreview(this.expedition?.encounter.map || 'desert', this.expedition?.encounter.seed);
+        this.rememberStage();
+        this.stagePreviewIndex = Math.max(0, this.stageHistory.length - 1);
+        this.stagePreviewBusy = false;
         $('menu').innerHTML =
-          renderHomeScreen(this.expedition, this.profile.expeditionDepth, this.encounterBriefing());
+          renderHomeScreen(this.expedition, this.profile.expeditionDepth, this.encounterBriefing(), this.stageHistory.length > 1,
+            this.expedition ? BATTLEFIELDS[this.expedition.encounter.map].name : '');
+      },
+      rememberStage(this: MeridianUI) {
+        if (!this.expedition) { this.stageHistory = []; return; }
+        const current = { stage: this.expedition.depth + 1, map: this.expedition.encounter.map, seed: this.expedition.encounter.seed },
+          last = this.stageHistory[this.stageHistory.length - 1];
+        if (last?.stage === current.stage && last.map === current.map && last.seed === current.seed) return;
+        if (!last || last.stage !== current.stage - 1) this.stageHistory = [];
+        this.stageHistory.push(current);
+        this.persistence.saveStageHistory?.(this.stageHistory);
+      },
+      async browseStage(this: MeridianUI, direction: -1 | 1) {
+        if (this.view !== 'home' || this.modalKind || !this.expedition || this.stagePreviewBusy) return;
+        const index = this.stagePreviewIndex + direction, entry = this.stageHistory[index];
+        if (!entry || !this.onPreview) return;
+        const panel = $('menu').querySelector<HTMLElement>('.expedition-stage');
+        if (!panel) return;
+        this.stagePreviewBusy = true;
+        this.updateStagePreview();
+        try {
+          const ready = await this.onPreview(entry.map, entry.seed, true);
+          if (!ready || this.view !== 'home' || $('menu').querySelector('.expedition-stage') !== panel) return;
+          this.stagePreviewIndex = index;
+          this.updateStagePreview();
+          const crystal = panel.querySelector<HTMLElement>('.stage-crystal');
+          if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+            crystal?.animate?.([{ opacity: .35, transform: `translateX(${direction * 8}px) scale(.96)` },
+              { opacity: 1, transform: 'translateX(0) scale(1)' }], { duration: 280, easing: 'ease-out' });
+        } finally {
+          // A newly opened home screen owns its own controls, not this stale request.
+          if ($('menu').querySelector('.expedition-stage') === panel) {
+            this.stagePreviewBusy = false;
+            this.updateStagePreview();
+          }
+        }
+      },
+      updateStagePreview(this: MeridianUI) {
+        const panel = $('menu').querySelector<HTMLElement>('.expedition-stage'), entry = this.stageHistory[this.stagePreviewIndex];
+        if (!panel || !entry || !this.expedition) return;
+        const archived = entry.stage !== this.expedition.depth + 1;
+        panel.classList.toggle('archived', archived);
+        panel.setAttribute('aria-busy', String(this.stagePreviewBusy));
+        panel.querySelector('.stage-label')!.textContent = archived ? 'STAGE ARCHIVE' : 'CHECKPOINT';
+        panel.querySelector('.stage-crystal strong')!.textContent = String(entry.stage);
+        panel.querySelector('.stage-map')!.textContent = BATTLEFIELDS[entry.map].name;
+        panel.querySelector('.stage-status')!.textContent = this.stagePreviewBusy ? 'PREPARING LANDSCAPE…' :
+          archived ? `CLEARED · CONTINUE AT ${this.expedition.depth + 1}` : 'CURRENT · LANDSCAPE PREVIEW';
+        panel.querySelector<HTMLButtonElement>('[data-ui="previousStage"]')!.disabled = this.stagePreviewBusy || this.stagePreviewIndex === 0;
+        panel.querySelector<HTMLButtonElement>('[data-ui="nextStage"]')!.disabled = this.stagePreviewBusy || this.stagePreviewIndex === this.stageHistory.length - 1;
       },
       showCodex(this: MeridianUI) {
         if (this.view === 'codexModel') this.onPreview?.();
@@ -121,6 +173,8 @@
         this.battleFaction = faction;
         this.expedition = { version: 5, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
         this.persistence.saveExpedition(this.expedition);
+        this.stageHistory = [];
+        this.rememberStage();
         this.startExpeditionBattle();
       },
       startExpeditionBattle(this: MeridianUI) {

@@ -117,6 +117,12 @@ Waffen erhalten zusätzlich fraktionsabhängige Tracer, Samenimpulse oder geteil
 
 Staub bei schweren Bodeneinheiten wird ausschließlich im View aus tatsächlich beobachteter Bewegung abgeleitet. Die kurzlebigen Wolken bleiben nach dem Ausstoß an ihrer Weltposition und altern mit Simulationszeit. Pro Renderer/Welt begrenzter Zustand wird bei Sichtverlust, Verlassen des Ausschnitts, Wechsel zu Performance oder Weltwechsel verworfen; es gibt kein Nachspielen unsichtbarer Bewegung und keine dauerhaften Bodenspuren. Bestehende CPU-Effekte weiterhin unverändert erzeugen/ticken: deren [RNG-Vertrag](architecture.md#welt-darstellung-und-zufall) ist davon unabhängig.
 
+## Menü-Landschaftswechsel
+
+Die [Stage-Historie](architecture.md#zustands--und-verantwortungsgrenzen) nutzt denselben Welt-/Texturpfad wie die aktuelle Checkpoint-Vorschau. Für einen Pfeilwechsel kopiert die App genau einmal das fertig gerenderte Hauptcanvas innerhalb des Rendercallbacks in ein temporäres 2D-Canvas. Außerhalb dieses Callbacks ist der nicht konservierte WebGL-Defaultbuffer keine zuverlässige Bildquelle. Kein `preserveDrawingBuffer`, keine fortlaufenden Bildkopien und keine zweite live gerenderte Welt.
+
+Das Standbild hält die Darstellung während Weltaufbau und Texturwechsel fest; erst nach dem ersten gezeichneten Frame der neuen Welt blendet eine Compositor-Opacityanimation aus. Dadurch dürfen alte Kartentexturen wie bisher freigegeben werden, ohne sie noch zeichnen zu müssen. Abschluss oder ersetzende Vorschau/Gefechtsstart verwerfen Animation und Bildspeicher; alte asynchrone Ergebnisse dürfen die neue Ansicht nicht überschreiben. `prefers-reduced-motion` überspringt die Animation, nicht die Bereitschaftsprüfung. Die Vorschau enthält weiterhin dekorative Menüentitäten, keinen historischen Gefechtszustand.
+
 ## Viewport und HUD
 
 `#worldViewport` begrenzt Canvas, Overlay und Vignette. Im Gefecht reicht er von der Topbar bis zum mittleren Werkzeugblock; höhere Seitenpanels überdecken die unteren Weltecken und fangen dort DOM-Eingaben ab. Menüvorschauen nutzen den ganzen Bildschirm.

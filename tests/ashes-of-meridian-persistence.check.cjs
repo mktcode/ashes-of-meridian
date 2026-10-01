@@ -45,6 +45,46 @@ const expedition = {
   offers: ['pioneerSquad', 'aetherAllocation']
 };
 
+test('landscape history survives reload independently of the real checkpoint and clears with its run', () => {
+  const h = setup(), current = { stage: 9, map: 'desert', seed: 1409 },
+    stages = [{ stage: 7, map: 'mothership', seed: 7 }, { stage: 8, map: 'alien-planet', seed: 82 }, current];
+  h.service.saveExpedition(expedition);
+  h.service.saveProfile(defaults);
+  const checkpoint = h.data.get(EXPEDITION), profile = h.data.get(PROFILE);
+  assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current], 'an existing run starts at its known stage');
+  assert.equal(h.service.saveStageHistory(stages), true);
+  assert.deepEqual(json(setup(h.data).service.loadStageHistory(expedition)), stages);
+  assert.equal(h.data.get(EXPEDITION), checkpoint);
+  const loaded = h.service.loadStageHistory(expedition);
+  loaded[0].seed = 999;
+  assert.deepEqual(json(h.service.loadStageHistory(expedition)), stages, 'reads return independent records');
+  h.service.clearExpedition();
+  assert.equal(h.data.has('meridian.stage-history.v1'), false);
+  assert.equal(h.data.get(PROFILE), profile);
+  assert.deepEqual(json(h.service.loadStageHistory(null)), []);
+});
+
+test('invalid, foreign and incomplete landscape archives never damage the checkpoint or invent past seeds', () => {
+  const h = setup(), current = { stage: 9, map: 'desert', seed: 1409 }, previous = { stage: 8, map: 'mothership', seed: 82 };
+  h.service.saveExpedition(expedition);
+  const before = h.data.get(EXPEDITION);
+  for (const stages of [[], [previous], [previous, { ...current, seed: 1410 }],
+    [previous, { ...current, map: 'mothership' }], [{ ...previous, stage: 7 }, current],
+    ...[0, -1, 1.5, '82', 100000000, null].map(seed => [{ ...previous, seed }, current]),
+    [{ ...previous, map: 'toString' }, current], [null, current]]) {
+    h.service.saveStageHistory(stages);
+    assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current]);
+    assert.deepEqual(json(h.service.loadExpedition()), expedition);
+    assert.equal(h.data.get(EXPEDITION), before);
+  }
+  h.data.set('meridian.stage-history.v1', '{');
+  assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current]);
+  assert.equal(h.service.loadExpedition().depth, 8);
+  h.fail.access = true;
+  assert.equal(h.service.saveStageHistory([previous, current]), false);
+  assert.deepEqual(json(h.service.loadStageHistory(expedition)), [previous, current]);
+});
+
 test('profile defaults and normalization retain only permanent expedition progress', () => {
   const h = setup();
   assert.deepEqual(json(h.service.loadProfile()), defaults);

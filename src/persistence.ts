@@ -6,7 +6,8 @@
 function createMeridianPersistence(
   { getStorage, clamp, upgrades, benefits, abilities, battlefields, missions, enemyCount, warn }: PersistenceDependencies
 ): MeridianPersistence {
-    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v5';
+    const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v5',
+      STAGE_HISTORY_KEY = 'meridian.stage-history.v1';
     const memoryStore: Record<string, string> = {};
     const Store = {
       available: true,
@@ -142,7 +143,32 @@ function createMeridianPersistence(
         return Store.set(EXPEDITION_KEY, JSON.stringify(expedition));
       },
       clearExpedition() {
-        return Store.remove(EXPEDITION_KEY);
+        const cleared = Store.remove(EXPEDITION_KEY);
+        Store.remove(STAGE_HISTORY_KEY);
+        return cleared;
+      },
+      loadStageHistory(expedition) {
+        if (!expedition) return [];
+        const current = { stage: expedition.depth + 1, map: expedition.encounter.map, seed: expedition.encounter.seed };
+        try {
+          const record = JSON.parse(Store.get(STAGE_HISTORY_KEY) || 'null'), stages = record?.stages;
+          // Only a contiguous suffix ending at this exact checkpoint belongs to this run.
+          // Missing/corrupt visual data must never invalidate the real checkpoint.
+          if (record?.version !== 1 || !Array.isArray(stages) || !stages.length || stages.length > current.stage ||
+            stages.some((s, index) => !s || !Number.isInteger(s.stage) || s.stage < 1 ||
+              s.stage !== current.stage - stages.length + index + 1 ||
+              typeof s.map !== 'string' || !Object.hasOwn(battlefields, s.map) ||
+              !Number.isInteger(s.seed) || s.seed < 1 || s.seed > 99999999)) return [current];
+          const last = stages[stages.length - 1];
+          if (last.map !== current.map || last.seed !== current.seed) return [current];
+          return stages.map(s => ({ stage: s.stage, map: s.map, seed: s.seed }));
+        } catch (e) {
+          warn('Stage history reset:', e instanceof Error ? e.message : String(e));
+          return [current];
+        }
+      },
+      saveStageHistory(stages) {
+        return Store.set(STAGE_HISTORY_KEY, JSON.stringify({ version: 1, stages }));
       }
     };
 }
