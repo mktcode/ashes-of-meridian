@@ -1,0 +1,185 @@
+/* Start screen only. Shared non-HUD styling remains in design-system.css. */
+@font-face {
+  font-family: Aldrich;
+  src: url('../assets/fonts/aldrich/Aldrich-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+#menu .home-screen {
+  --home-cut: 8px;
+  --home-shape: polygon(var(--home-cut) 0, calc(100% - var(--home-cut)) 0,
+    100% var(--home-cut), 100% calc(100% - var(--home-cut)),
+    calc(100% - var(--home-cut)) 100%, var(--home-cut) 100%,
+    0 calc(100% - var(--home-cut)), 0 var(--home-cut));
+  font-family: Aldrich, 'Segoe UI', sans-serif;
+  background: linear-gradient(90deg, #03111cbb, #03111c33 60%, transparent),
+    linear-gradient(0deg, #03111cdd, transparent 65%);
+}
+#menu .home-layout {
+  display: flex;
+  align-items: center;
+  min-height: 100%;
+  padding: max(24px, env(safe-area-inset-top)) max(32px, 6vw, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(32px, 6vw, env(safe-area-inset-left));
+  gap: 0;
+}
+#menu .home-screen .menu-main {
+  width: 430px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  align-self: center;
+  gap: clamp(24px, 4vh, 40px);
+}
+#menu .home-screen .menu-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 82%;
+  max-width: 340px;
+  margin: 0 auto;
+  gap: 7px;
+}
+#menu .home-screen .menu-brand > span,
+#menu .home-screen .menu-icon {
+  display: block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  flex-shrink: 0;
+}
+#menu .home-screen .menu-brand .menu-emblem {
+  width: 52px;
+  height: 53px;
+  background-image: url('../assets/ui/emblem.webp');
+  filter: none;
+}
+#menu .home-screen .logo-ashes {
+  width: 100%; aspect-ratio: 840 / 166;
+  background-image: url('../assets/ui/logo-ashes.webp');
+}
+#menu .home-screen .logo-of {
+  width: 98%; aspect-ratio: 820 / 59;
+  background-image: url('../assets/ui/logo-of.webp');
+}
+#menu .home-screen .logo-meridian {
+  width: 96%; aspect-ratio: 800 / 74;
+  background-image: url('../assets/ui/logo-meridian.webp');
+}
+#menu .home-screen .expedition-stage {
+  position: relative;
+  inset: auto;
+  transform: none;
+  width: 270px;
+  max-width: 100%;
+  margin: 0 auto;
+  filter: none;
+  gap: 4px;
+}
+#menu .home-screen .stage-label {
+  order: 1;
+  margin: 0;
+  font: 11px/1.5 Aldrich, sans-serif;
+  color: var(--stage-accent);
+  letter-spacing: 2px;
+  text-shadow: none;
+}
+#menu .home-screen .stage-caption { order: 2; margin-top: 6px; gap: 4px }
+#menu .home-screen .stage-map { font-size: 11px; letter-spacing: 1px }
+#menu .home-screen .stage-status { font-size: 10px; letter-spacing: .5px }
+#menu .home-screen .stage-crystal {
+  width: clamp(105px, 17vh, 150px);
+  aspect-ratio: 420 / 403;
+  background: url('../assets/ui/checkpoint.webp') center / contain no-repeat;
+}
+#menu .home-screen .stage-crystal strong {
+  font: 400 clamp(44px, 7vh, 62px)/1 Aldrich, sans-serif;
+  letter-spacing: 0;
+  transform: translateY(.06em);
+  text-shadow: 0 0 14px #92faff88;
+}
+#menu .home-screen .stage-arrow { height: 64px; background: transparent }
+#menu .home-screen .menu-buttons { width: 100%; gap: 10px }
+#menu .home-screen .menu-buttons button {
+  --home-edge: #4ebddeaa;
+  --home-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8);
+  isolation: isolate;
+  position: relative;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 52px;
+  padding: 13px 18px;
+  font: 400 13px/1.4 Aldrich, sans-serif;
+  letter-spacing: 1.5px;
+  color: #c0dcea;
+}
+#menu .home-screen .menu-buttons button::before,
+#menu .home-screen .menu-buttons button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  clip-path: var(--home-shape);
+  pointer-events: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--home-edge);
+}
+#menu .home-screen .menu-buttons button::after { inset: 1px; background: var(--home-fill) }
+#menu .home-screen .menu-buttons .primary {
+  --home-edge: #a6f3ff;
+  --home-fill: linear-gradient(140deg, #116180, #063449 43%, #073348 71%, #12506a);
+  color: #f3fdff;
+  box-shadow: 0 0 21px #17c9ee30;
+}
+#menu .home-screen .menu-buttons button:hover {
+  --home-edge: #bafaff;
+  background: transparent;
+  color: white;
+}
+#menu .home-screen .continue-row { gap: 10px }
+#menu .home-screen .continue-row .primary { justify-content: center; text-align: center }
+#menu .home-screen .continue-row .primary > span { display: none }
+#menu .home-screen .continue-row .expedition-perks-button { flex-basis: 54px; width: 54px; padding: 12px }
+#menu .home-screen .menu-icon { width: 25px; height: 25px }
+#menu .home-screen .menu-buttons .expedition-icon {
+  background-image: url('../assets/ui/expedition.webp');
+  filter: sepia(1) saturate(2.5);
+}
+#menu .home-screen .manual-icon { background-image: url('../assets/ui/manual.webp') }
+#menu .home-screen .settings-icon { background-image: url('../assets/ui/settings.webp') }
+#menu .home-screen .menu-subnav {
+  width: 100%;
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid #507c8c69;
+}
+#menu .home-screen .menu-subnav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 7px;
+  font: 400 11px/1.4 Aldrich, sans-serif;
+  letter-spacing: 1px;
+  white-space: normal;
+}
+@media (max-width: 740px) {
+  #menu .home-layout { justify-content: center; padding-inline: max(20px, env(safe-area-inset-left), env(safe-area-inset-right)) }
+  #menu .home-screen { background: linear-gradient(0deg, #03111ce6, #03111c22 70%) }
+  #menu .home-screen .menu-main { width: 390px; gap: 24px }
+}
+@media (max-height: 700px) {
+  #menu .home-layout { padding-block: max(18px, env(safe-area-inset-top), env(safe-area-inset-bottom)) }
+  #menu .home-screen .menu-main { gap: 18px }
+  #menu .home-screen .menu-brand { width: 72%; gap: 4px }
+  #menu .home-screen .menu-brand .menu-emblem { width: 32px; height: 33px }
+  #menu .home-screen .stage-crystal { width: 100px }
+  #menu .home-screen .stage-crystal strong { font-size: 44px }
+  #menu .home-screen .menu-buttons button { min-height: 46px; font-size: 12px; padding-block: 10px }
+  #menu .home-screen .menu-subnav { margin-top: 12px }
+}

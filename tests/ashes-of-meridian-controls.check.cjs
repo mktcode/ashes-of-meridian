@@ -109,8 +109,8 @@ test('screen templates render frozen data without DOM access, randomness or prof
   render.renderMissionBriefing(expedition.encounter.mission);
   const briefing = render.renderExpeditionOpponents(expedition);
   assert.equal(briefing, render.renderExpeditionOpponents(expedition));
-  render.renderHomeScreen(expedition, 10, briefing);
-  render.renderHomeScreen(null, 10, '');
+  render.renderHomeScreen(expedition, true, 'Desert');
+  render.renderHomeScreen(null);
   const battle = render.renderBattleScreen(profile, 1, 1, 250, expedition.abilities);
   assert.equal((battle.match(/data-loadout-ability=/g) || []).length, 8);
   assert.equal((battle.match(/loadout-option active/g) || []).length, 4);

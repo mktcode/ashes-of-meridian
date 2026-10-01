@@ -8,6 +8,19 @@ Rasterquellen ausschließlich WebP, Qualität 80; benötigten Alphakanal erhalte
 
 Alte Portrait-/Albedoquellen nicht wegen fehlender aktueller WebGL-Nutzung löschen. Neue Bildassets brauchen einen konkreten Bedarf; Codex-/Aktionskacheln verwenden Modelle. Assetnamen folgen [technischen IDs](architecture.md#technische-ids-und-anzeigenamen).
 
+## UI-Branding
+
+Startbildschirm-Motive liegen als WebP mit Alpha unter `assets/ui/`; Aldrich samt
+SIL-OFL-Lizenz unter `assets/fonts/aldrich/`. `styles/home.css` referenziert sie lokal,
+das ZIP übernimmt CSS-Assets und die Fontlizenz. Keine Renderer-Einbettung nötig.
+
+Gezielter Neuimport aus dem externen UI-Paket (Python mit Pillow):
+`python3 scripts/import-menu-assets.py <pfad>/Ashes-of-Meridian-Demo.html`.
+Der Importer liest nur die ausgewählten Einzelmotive aus `window.AOM_ASSETS` und
+kopiert den benachbarten Font samt Lizenz. Demo-Hintergründe, Audio und Mockup-Logik
+werden nicht importiert. Originalquellen bleiben unberührt; weitere Motive brauchen
+eine explizite semantische Zuordnung statt eines vollständigen Atlasimports.
+
 ## Prozedurale Oberflächen
 
 `src/renderer/materials.ts` ist die Quelle für opake Materialien. Albedo und Mikrohöhe werden einmal bei fehlender Residenz gebacken; der Alphakanal trägt dort Höhe, **nicht Transparenz**. Foliage/Dekor behalten ihren eigenen Alphavertrag. Keine Pixelarchive je Seed oder Materialuploads pro Frame.

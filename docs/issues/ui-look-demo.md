@@ -1,22 +1,25 @@
-# UI-Look aus der externen Demo übernehmen
+# UI-Look: weitere Flächen aus der externen Demo
 
-Vorbereitung für einen späteren Umsetzungsauftrag; noch kein UI-/Asset-Umbau.
+Offen sind die übrigen Menüs und das Gefechts-HUD; kein automatischer Folgeauftrag.
 Ziel ist der Look der HTML-Demo, nicht deren simuliertes Spiel oder eine pixelgenaue
 Übernahme des Smartphone-Layouts. Audio ist ausgeschlossen.
+Startbildschirm und Sternchen-Übersicht folgen dem [Designsystem](../ui-design-system.md);
+Details zum aktuellen Run bleiben in dieser Übersicht statt auf dem Startbildschirm.
 
 ## Referenz und Befund
 
 Lokale Vorlage: `/home/mkt/Downloads/Ashes-of-Meridian-Assets/Ashes-of-Meridian-Demo.html`.
 Das benachbarte `README.txt` beschreibt Branding und Icon-Atlanten; die PNG-Mockups
 sind ergänzende Bildreferenzen, nicht identisch mit der HTML-Gestaltung.
-Die Vorlage liegt außerhalb des Projekts: vor Umsetzung benötigte Quellen gezielt
+Die Vorlage liegt außerhalb des Projekts: weitere benötigte Quellen gezielt
 sichern, nicht auf den Downloads-Pfad als Laufzeitabhängigkeit verweisen.
 
-Quellprüfung der Demo, ihrer Assetstruktur und der aktuellen UI sowie Sichtung von
-Hauptmenü-Mockup, Logo und HUD-Atlas: der Look ist mit dem bestehenden HTML/CSS-System
-vereinbar. Die Datei enthält zusätzlich JavaScript, eigene Speicherung und eine
-HUD-Simulation. Diese sind keine Vorlage für Controller, Regeln oder Persistenz.
-Keine Browser-/Echtgeräteabnahme, keine Builds oder Tests in dieser Vorbereitung.
+Die Vorlage ist mit dem bestehenden HTML/CSS-System vereinbar, enthält aber zusätzlich
+JavaScript, eigene Speicherung und eine HUD-Simulation. Diese sind keine Vorlage für
+Controller, Regeln oder Persistenz. Technischer Browserkontext für den Startbildschirm:
+`file://`, lokale Motive/Font, erreichbare Controls ohne horizontales Overflow bei
+375×667, 1280×800 und 844×390; Run-Übersicht mit drei Gegnern. Das ist keine visuelle
+oder Echtgeräteabnahme der übrigen Flächen. Allgemeine Fokusgrenzen bleiben offen.
 
 ## Übernehmbarer Look
 
@@ -36,7 +39,6 @@ Keine Browser-/Echtgeräteabnahme, keine Builds oder Tests in dieser Vorbereitun
 
 | Fläche | Look-Vorlage und notwendige Anpassung |
 | --- | --- |
-| Hauptmenü | Logo, Checkpoint und Aktionshierarchie übernehmen; Codex-Zugang und echte Briefings mit allen Gegnern erhalten. Archivpfeile bleiben reine Landschaftsvorschau, nicht Checkpoint-/Run-Auswahl. |
 | Neue Expedition | Fraktionskarten gestalten, aber heutige Namen/Freischaltungen/Traits verwenden. Auswahl von vier aus acht Command-Modulen samt Reihenfolge und Rängen muss Platz behalten. Startinfo aus heutigen Deployment-Regeln, nicht aus Demo-Texten. |
 | Pause, Einstellungen, Manual | Panel-/Buttonstil übernehmen; nur vorhandene Optionen und Inhalte. Keine neuen Glow-/Motion-Einstellungen oder Demo-Reset-Funktion. Fokus-/Dialogverwaltung ist gesonderte technische Arbeit, siehe [UI-Review](ui-review.md). |
 | Ergebnis/Vorteile | Belohnung, Auswahlkarten und nächstes Briefing gestalten; Niederlage, Freischaltungen, reale Angebote und mehrere Gegner berücksichtigen. Evakuierung und Gebäudeauszahlung getrennt sichtbar halten. Keine erfundenen Statistiken/Score-/HQ-Integrity-Anzeigen. Auszahlung und Bestätigung nicht verändern. |
@@ -51,9 +53,9 @@ Technische IDs und Contentwerte bleiben unverändert.
 ## Asset-Vorbereitung bei Umsetzung
 
 Die HTML-Demo enthält bereits einzeln zugeschnittene Motive in `window.AOM_ASSETS`.
-Diese vor erneutem Atlas-Cropping mit den PNG-Quellen vergleichen; die Atlasraster
-sind laut Paket-README keine pixelgenauen Sprite-Koordinaten. Ein kleiner reproduzierbarer
-Importer mit expliziter Motivauswahl wäre sinnvoll, kein kompletter Demo-Import.
+Weitere Motive vor erneutem Atlas-Cropping mit den PNG-Quellen vergleichen; die
+Atlasraster sind laut Paket-README keine pixelgenauen Sprite-Koordinaten.
+Den [gezielten Importer](../rendering.md#ui-branding) erweitern, kein kompletter Demo-Import.
 Rasterausgaben nur als WebP Qualität 80 mit Alpha nach [Assetvertrag](../rendering.md#texturen-und-portraits).
 Originale außerhalb des Projekts nicht ersetzen/löschen. Font lokal samt Lizenz bündeln;
 `file://` und ZIP-Auslieferung ohne Netzwerkzugriffe prüfen.
@@ -67,12 +69,13 @@ Die gemeinsam verwendete `icon()`-Funktion nicht blind global auf Rasterbilder u
 
 ## Empfohlene Umsetzungsschritte
 
-1. Benötigte Motive/Font sichern, Import und semantische Zuordnung festlegen.
-   Gemeinsame Panel-/Button-/Typografiestile zuerst auf Nicht-HUD-Flächen umsetzen.
-   Bestehendes [Designsystem](../ui-design-system.md) weiterentwickeln, keine zweite
-   konkurrierende Theme-Schicht anhängen. Geometrie und Gestaltung getrennt halten.
-2. Hauptmenü als erste abnehmbare Fläche, danach Expeditionsvorbereitung, Dialoge,
-   Upgrades, Ergebnis und Codex. Produktinhalte und Controller unverändert lassen.
+1. Weitere benötigte Motive und semantische Zuordnung festlegen. Gemeinsame
+   Panel-/Button-/Typografiestile für die weiteren Nicht-HUD-Flächen umsetzen.
+   Bestehendes [Designsystem](../ui-design-system.md) weiterentwickeln; das lokale
+   Startbildschirm-Styling nicht als zweite globale Theme-Schicht ausweiten.
+   Geometrie und Gestaltung getrennt halten.
+2. Expeditionsvorbereitung, Dialoge, Upgrades, Ergebnis und Codex anpassen.
+   Produktinhalte und Controller unverändert lassen.
 3. HUD separat integrieren. Die heutige Theme-Begrenzung schließt HUD, Toasts und
    Funk ausdrücklich aus; Erweiterung bewusst dokumentieren und Selektoren eingrenzen,
    nicht Demo-`:root`-/Buttonregeln kopieren. Alte CSS-Layoutkopplung berücksichtigen,

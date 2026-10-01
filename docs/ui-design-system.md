@@ -4,8 +4,12 @@
 
 `styles/design-system.css` ist die maßgebliche gemeinsame Gestaltung für Hauptmenü,
 Expeditionsvorbereitung/-übergang, Codex, Dialoge, Flottenupgrades, Ergebnisse und
-Ladebildschirm. Es wird nach den bestehenden Stylesheets geladen. Bildschirmgeometrie,
-responsive Layouts und Modellvorschau bleiben in `screens.css` bzw. `codex.css`.
+Ladebildschirm. Es folgt auf die Basis-/Layoutstyles; `styles/home.css` ergänzt danach
+nur den Startbildschirm mit Demo-Branding, Aldrich und abgeschrägten dekorativen
+Buttonflächen. Dessen Layout und lokale Assetreferenzen liegen ebenfalls dort;
+übrige Bildschirmgeometrie und Modellvorschau bleiben in `screens.css` bzw. `codex.css`.
+Run-Briefing, Loadout, Gegner und Vorteile stehen im Sternchen-Modal, nicht zwischen
+den Startaktionen. Die Checkpoint-/Landschaftsvorschau bleibt auf dem Startbildschirm.
 
 Die Theme-Schicht begrenzt Tokens und Selektoren ausdrücklich auf `#menu`, `#modal`,
 `#result` und `#loading`. Keine Theme-Tokens auf `:root`, keine globalen Buttonregeln:
@@ -27,7 +31,8 @@ Diese Begrenzung ist auch bei neuen Komponenten zu erhalten.
   Auf schmalen Displays bleiben Informationen einspaltig und Inhalte scrollbar.
 - Einblendungen sind kurz und einmalig; keine dauernden Glanzläufe oder animierten
   Filter. `prefers-reduced-motion` deaktiviert die CSS-Bewegung einschließlich Ladepunkten.
-  Keine zusätzlichen Assets, externen Fonts, Laufzeitdienste oder Zufallsziehungen.
+  Keine externen Fonts, Laufzeitdienste oder Zufallsziehungen. Startbildschirm-Assets
+  und Aldrich werden lokal mitgeliefert; [Importpflege](rendering.md#ui-branding).
 
 ## Grenzen der Prüfung
 

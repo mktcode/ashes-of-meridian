@@ -1,5 +1,5 @@
-/* Non-HUD theme. Loaded last; IDs intentionally contain the legacy cascade.
-   Layout/preview geometry belongs to screens.css and codex.css. No :root tokens. */
+/* Shared non-HUD theme; IDs intentionally contain the legacy cascade.
+   Start-screen specifics follow in home.css. No :root tokens. */
 :is(#menu, #modal, #result, #loading) {
   --ui-ink: #edfaff;
   --ui-muted: #b1ccd9;
@@ -132,21 +132,13 @@
   border-top: 1px solid var(--ui-line);
   font-size: 12px;
 }
-#menu .home-screen {
-  background: linear-gradient(90deg, #03111cf5, #061724c9 40%, #03101b40 75%),
-    linear-gradient(0deg, #03111bd9, transparent 60%);
-}
-#menu .home-screen .wordmark { color: var(--ui-ink) }
-#menu .home-screen .menu-buttons { gap: 12px }
-#menu .home-screen .menu-subnav button { font-size: 11px; min-height: 44px }
-#menu .home-screen .battle-note {
+#modal .battle-note {
   padding: 12px;
   border-left: 2px solid var(--ui-line);
   background: #041420e6;
   line-height: 1.6;
 }
-#menu .home-screen .battle-note > p { margin-top: 0 }
-#menu .home-screen .stage-status { font-size: 10px }
+#modal .battle-note > p { margin-top: 0 }
 #menu .subscreen { background: linear-gradient(110deg, #03111cf7, #081d2eee 70%, #061725ce) }
 :is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option,
   .upgrade-card, .expedition-benefit-row, .codex-card, .codex-nav button, .codex-chapters a) {
@@ -180,10 +172,10 @@
 }
 #menu :is(.loadout-option em, .loadout-summary > span, .loadout-summary b) { font-size: 10px }
 #menu .loadout-option .sigil, #result .benefit-option .sigil { color: var(--ui-accent) }
-#menu .opponent-card { background: #071c29f2; backdrop-filter: none }
-:is(#menu, #result) .opponent-label { color: var(--ui-muted); font-size: 10px }
-:is(#menu, #result) .opponent-copy strong { font-size: 11px }
-:is(#menu, #result) .opponent-copy small {
+:is(#menu, #modal) .opponent-card { background: #071c29f2; backdrop-filter: none }
+:is(#menu, #modal, #result) .opponent-label { color: var(--ui-muted); font-size: 10px }
+:is(#menu, #modal, #result) .opponent-copy strong { font-size: 11px }
+:is(#menu, #modal, #result) .opponent-copy small {
   overflow: visible;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -271,9 +263,6 @@
   to { opacity: 1; transform: translateY(0) }
 }
 @media (max-width: 600px) {
-  #menu .home-layout { padding: 24px max(18px, env(safe-area-inset-left)); gap: 24px }
-  #menu .home-screen .menu-buttons button { font-size: 12px; min-height: 48px }
-  #menu .home-screen .menu-buttons { gap: 10px }
   #menu .subscreen { padding: 20px 16px }
   #menu .sub-header { align-items: flex-start; gap: 12px }
   #menu .sub-header .textbtn { max-width: 110px; flex-shrink: 0 }

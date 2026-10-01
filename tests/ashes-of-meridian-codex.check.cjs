@@ -7,7 +7,7 @@ test('codex exposes current-model tiles for every faction without a profile unlo
   vm.runInContext('Math.random = seeded = () => { throw Error("Codex RNG"); }',context);
   const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS} =
     vm.runInContext('({renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS})',context);
-  assert.match(renderHomeScreen(null,0,''),/data-ui="codex"/);
+  assert.match(renderHomeScreen(null),/data-ui="codex"/);
   for(let faction=0;faction<3;faction++) {
     const html=renderCodexScreen(faction);
     assert.match(html,new RegExp(FACTIONS[faction].name));

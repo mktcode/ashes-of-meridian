@@ -26,7 +26,7 @@
         this.stagePreviewIndex = Math.max(0, this.stageHistory.length - 1);
         this.stagePreviewBusy = false;
         $('menu').innerHTML =
-          renderHomeScreen(this.expedition, this.profile.expeditionDepth, this.encounterBriefing(), this.stageHistory.length > 1,
+          renderHomeScreen(this.expedition, this.stageHistory.length > 1,
             this.expedition ? BATTLEFIELDS[this.expedition.encounter.map].name : '');
       },
       rememberStage(this: MeridianUI) {
@@ -111,7 +111,7 @@
           count > 0 && Object.hasOwn(EXPEDITION_BENEFITS, key));
         this.openModal(
           'expeditionBenefits',
-          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Run benefits.</h1>${renderAbilityLoadout(this.expedition.abilities, this.profile)}<div class="expedition-benefit-list">${active.length ? active.map(([key, count]) => { const benefit = expeditionBenefit(key)!; return `<div class="expedition-benefit-row"><span class="sigil">${icon(benefit.icon)}</span><div><strong>${esc(benefit.name)}</strong><small>${esc(benefit.desc)}</small></div><b>×${count}</b></div>`; }).join('') : '<p class="empty-benefits">No benefits collected yet. Win this battle to choose your first.</p>'}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`
+          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Current expedition.</h1><p class="muted">${esc(FACTIONS[this.expedition.faction].name)} · ${this.expedition.depth} sectors cleared<br>Next destination · ${esc(BATTLEFIELDS[this.expedition.encounter.map].name)}</p>${this.encounterBriefing()}<h2>Expedition benefits</h2><div class="expedition-benefit-list">${active.length ? active.map(([key, count]) => { const benefit = expeditionBenefit(key)!; return `<div class="expedition-benefit-row"><span class="sigil">${icon(benefit.icon)}</span><div><strong>${esc(benefit.name)}</strong><small>${esc(benefit.desc)}</small></div><b>×${count}</b></div>`; }).join('') : '<p class="empty-benefits">No benefits collected yet. Win this battle to choose your first.</p>'}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`
         );
       },
       showBattle(this: MeridianUI) {
