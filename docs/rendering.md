@@ -10,15 +10,19 @@ Alte Portrait-/Albedoquellen nicht wegen fehlender aktueller WebGL-Nutzung lösc
 
 ## UI-Branding
 
-Startbildschirm-Motive liegen als WebP mit Alpha unter `assets/ui/`; Aldrich samt
-SIL-OFL-Lizenz unter `assets/fonts/aldrich/`. `styles/home.css` referenziert sie lokal,
-das ZIP übernimmt CSS-Assets und die Fontlizenz. Keine Renderer-Einbettung nötig.
+UI-Motive liegen als WebP mit Alpha unter `assets/ui/`; Aldrich samt SIL-OFL-Lizenz
+unter `assets/fonts/aldrich/`. Die UI referenziert sie lokal per CSS oder dekorativem
+Bild. Das ZIP übernimmt das UI-Assetverzeichnis, CSS-Assets und die Fontlizenz;
+keine Renderer-Einbettung nötig. Der Präsentationshelfer `uiIcon()` ordnet Motive nach
+Bedeutung zu, bei Vorteilen und Upgrades auch nach Kontext. Fehlende Entsprechungen
+bleiben SVG; die gemeinsame Contentfunktion `icon()` und Modellkacheln bleiben
+unverändert. Keine Kategorieicons als Ersatz für Einheiten-/Gebäudemodelle.
 
 Gezielter Neuimport aus dem externen UI-Paket (Python mit Pillow):
 `python3 scripts/import-menu-assets.py <pfad>/Ashes-of-Meridian-Demo.html`.
-Der Importer liest nur die ausgewählten Einzelmotive aus `window.AOM_ASSETS` und
-kopiert den benachbarten Font samt Lizenz. Demo-Hintergründe, Audio und Mockup-Logik
-werden nicht importiert. Originalquellen bleiben unberührt; weitere Motive brauchen
+Der Importer liest nur explizit ausgewählte Einzelmotive aus `window.AOM_ASSETS`
+und kopiert den benachbarten Font samt Lizenz. Demo-Hintergründe, alte Fraktions-Crops,
+Audio und Mockup-Logik werden nicht importiert. Originalquellen bleiben unberührt; weitere Motive brauchen
 eine explizite semantische Zuordnung statt eines vollständigen Atlasimports.
 
 ## Prozedurale Oberflächen

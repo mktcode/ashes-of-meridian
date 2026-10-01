@@ -1,10 +1,8 @@
 # UI: offene technische Grenzen
 
-Review-Kontext: Menüs, Codex, Dialoge, Flottenupgrades und Ergebnisansicht;
-Gefechts-HUD ausdrücklich ausgenommen. [Designsystem](../ui-design-system.md).
-Die [Vorbereitung zur externen UI-Demo](ui-look-demo.md) behandelt den gewünschten
-Look einschließlich einer separat zu integrierenden HUD-Gestaltung; die folgenden
-technischen Grenzen bleiben dabei bestehen.
+Geltungsbereich: Menüs, Codex, Dialoge, Flottenupgrades, Ergebnisse und Gefechts-HUD
+im gemeinsamen [Designsystem](../ui-design-system.md). Die folgenden technischen
+Grenzen bestehen unabhängig vom übernommenen Demo-Look.
 
 ## Fokus und Dialogsemantik
 
@@ -24,8 +22,13 @@ Aktions-/Funk-/Queuezustände. Nicht einfach die globalen Tokens ersetzen.
 
 ## Technische und menschliche Abnahme
 
-Gezielte Browserdiagnose erfolgt über `file://` mit isoliertem Profil. Statische
-HUD-Vergleiche schützen keine noch nicht erzeugten dynamischen Elemente. Noch offen:
+Technischer Prüfkontext: `file://`, lokale Motive/Font, Menü-Scrollaktionen und
+unbeschnittene Kontroll-Fokusrahmen bei 375×667, 1280×800 und 844×390. HUD-Diagnose
+mit pausierter Welt und angehaltener WebGL-Bildfolge: vier Slots, Kategorie-/Modellkacheln,
+Cancel-/Cooldown-/TECH-Anzeigen, Queue-Overlay, Funk-Dismiss über aufgeklapptem
+Produktionspanel und Pause-/Restart-Dialog. Keine Shader-/Performanceabnahme.
+Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
+Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und
 Screenreader-Bedienung. Reduzierte Filterkosten sind kein gemessener Performancegewinn;
 GPU-/Gerätemessungen erst mit konkretem Vergleichsziel.

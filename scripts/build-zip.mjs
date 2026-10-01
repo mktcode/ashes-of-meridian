@@ -61,6 +61,7 @@ const paths = [
   ...runtimeAudio,
   'assets/fonts/aldrich/OFL.txt',
   ...(await filesBelow('assets/portraits', path => path.endsWith('.webp'))),
+  ...(await filesBelow('assets/ui', path => path.endsWith('.webp'))).filter(path => !cssAssets.includes(path)),
   ...cssAssets
 ].sort();
 

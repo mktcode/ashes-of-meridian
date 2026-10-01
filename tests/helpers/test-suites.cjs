@@ -8,7 +8,7 @@ const groups = Object.freeze({
     'persistence', 'simulation-validation'],
   terrain: ['terrain', 'elevation', 'westmark', 'crystals', 'world-designs',
     'ecology', 'world-variations', 'environment'],
-  presentation: ['presentation', 'diagnostics', 'controls', 'codex', 'renderer', 'materials', 'model-thumbnails'],
+  presentation: ['presentation', 'diagnostics', 'controls', 'codex', 'ui-assets', 'renderer', 'materials', 'model-thumbnails'],
   ai: ['ai'],
   simulation: ['simulation']
 });

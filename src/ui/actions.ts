@@ -136,7 +136,7 @@
           ? renderModelThumbnail(faction,'building',type,'action-model')
           : faction !== undefined && kind === 'train' && hasContentKey(UNITS,type)
             ? renderModelThumbnail(faction,'unit',type,'action-model') : '';
-        const visual = preview ? `${preview}<i class="model-space" aria-hidden="true"></i>` : icon(ic);
+        const visual = preview ? `${preview}<i class="model-space" aria-hidden="true"></i>` : uiIcon(kind === 'tab' ? key : ic, ic);
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
@@ -189,7 +189,7 @@
         }
         const tutorialBack = this.tutorialAction() === 'tab:root';
         $('actions').innerHTML = (this.tab === 'root' ? '' :
-          `<button class="menu-back${tutorialBack ? ' tutorial-focus' : ''}" data-action="tab:root">← Back</button>`) +
+          `<button class="menu-back${tutorialBack ? ' tutorial-focus' : ''}" data-action="tab:root">${uiIcon('back')}Back</button>`) +
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?

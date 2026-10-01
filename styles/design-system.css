@@ -1,22 +1,30 @@
-/* Shared non-HUD theme; IDs intentionally contain the legacy cascade.
-   Start-screen specifics follow in home.css. No :root tokens. */
-:is(#menu, #modal, #result, #loading) {
-  --ui-ink: #edfaff;
-  --ui-muted: #b1ccd9;
-  --ui-accent: #69e6fa;
-  --ui-line: #39758b;
+/* Demo visual language adapted to the real UI. Geometry stays in screens/codex/hud.css.
+   Scope excludes world canvases and diagnostics; no :root tokens or global button rules. */
+@font-face {
+  font-family: Aldrich;
+  src: url('../assets/fonts/aldrich/Aldrich-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+:is(#menu, #modal, #result, #loading, #hud, #toast) {
+  --ui-ink: #e4f6ff;
+  --ui-muted: #a1bfd1;
+  --ui-accent: #69e7ff;
+  --ui-line: #397d94;
   --ui-gold: #f2c17d;
   --ui-danger: #ff9693;
-  --ui-surface: linear-gradient(135deg, #102c3bfa, #051521fa 75%);
-  --ui-raised: linear-gradient(135deg, #153c4d, #081d2c 75%);
-  --ui-selected: linear-gradient(125deg, #176078, #082c40 75%);
-  --ui-radius: 12px 2px 12px 2px;
-  --ui-shadow: inset 0 1px #c5f6ff24, 0 12px 32px #0005;
-  --ui-glow: inset 0 1px #d8fbff65, inset 0 0 24px #30d6f015, 0 0 18px #19ccec24;
+  --ui-cut: 8px;
+  --ui-shape: polygon(var(--ui-cut) 0, calc(100% - var(--ui-cut)) 0,
+    100% var(--ui-cut), 100% calc(100% - var(--ui-cut)),
+    calc(100% - var(--ui-cut)) 100%, var(--ui-cut) 100%,
+    0 calc(100% - var(--ui-cut)), 0 var(--ui-cut));
+  --ui-inset: 1px;
+  --ui-edge: var(--ui-line);
+  --ui-fill: linear-gradient(145deg, #072334f0, #021421f5);
   --ui-fast: 160ms;
-  --ui-enter: 280ms;
-  --ui-ease: cubic-bezier(.2, .7, .2, 1);
-  /* Legacy text helpers inherit locally; battlefield tokens are untouched. */
+  --ui-enter: 220ms;
+  --ui-ease: ease-out;
   --ink: var(--ui-ink);
   --muted: var(--ui-muted);
   --gold: var(--ui-gold);
@@ -25,141 +33,183 @@
   font-variant-numeric: tabular-nums;
   color-scheme: dark;
 }
-
-:is(#menu, #modal, #result, #loading) :is(button, a, input, select) {
-  touch-action: manipulation;
-  transition: background var(--ui-fast), border-color var(--ui-fast),
-    color var(--ui-fast), box-shadow var(--ui-fast), transform var(--ui-fast) var(--ui-ease);
+:is(#menu, #modal, #result, #loading, #hud) .ui-icon {
+  display: inline-block;
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
+  flex-shrink: 0;
+  vertical-align: middle;
+  pointer-events: none;
 }
-:is(#menu, #modal, #result, #loading) :is(button, a, input, select):focus-visible {
+:is(#menu, #modal, #result, #loading, #hud) :is(button, a, input, select) {
+  touch-action: manipulation;
+  transition: filter var(--ui-fast), color var(--ui-fast),
+    background var(--ui-fast), border-color var(--ui-fast), transform var(--ui-fast);
+}
+:is(#menu, #modal, #result, #loading, #hud) :is(button, a, input, select):focus-visible {
   outline: 2px solid var(--ui-ink);
   outline-offset: 3px;
 }
-:is(#menu, #modal, #result) button:disabled {
+/* Only decorative layers are chamfered: never clip controls, focus rings or text. */
+:is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
+  .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
+  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next),
+#modal .modal-frame,
+#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action),
+#hud #radio {
+  isolation: isolate;
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
+  .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
+  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::before,
+:is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
+  .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
+  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
+#modal .modal-frame::before, #modal .modal-frame::after,
+#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::before,
+#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::after,
+#hud #radio::before, #hud #radio::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  transform: none;
+  clip-path: var(--ui-shape);
+  pointer-events: none;
+  z-index: -1;
   opacity: 1;
-  color: #8ba8b7 !important;
-  border-color: #365361;
-  background: #0a1c28;
+  background: var(--ui-edge);
+}
+:is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
+  .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
+  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
+#modal .modal-frame::after,
+#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::after,
+#hud #radio::after { inset: var(--ui-inset); background: var(--ui-fill) }
+:is(#menu, #modal, #result) :is(.primary, .secondary) {
+  --ui-edge: #4ec1dea6;
+  --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 17px;
+  font: 400 13px/1.3 Aldrich, sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #c0dcea;
+}
+:is(#menu, #modal, #result) :is(.primary, .secondary):hover {
+  --ui-edge: #bafaff;
+  color: white;
+  filter: drop-shadow(0 0 6px #52d4f933);
+}
+:is(#menu, #modal, #result) .primary {
+  --ui-edge: #a6f3ff;
+  --ui-inset: 1.5px;
+  --ui-fill: linear-gradient(140deg, #116180, #063449 43%, #073348 71%, #12506a);
+  color: #f3fdff;
+  font-weight: 650;
+  box-shadow: 0 0 21px #17c9ee30;
+  filter: drop-shadow(0 0 4px #50d8ff50);
+}
+:is(#menu, #modal, #result) .primary::after { box-shadow: inset 0 0 12px #5ee8ff38 }
+:is(#menu, #modal, #result) .primary:hover { filter: drop-shadow(0 0 7px #65e8ff8a) }
+:is(#menu, #modal, #result) button:disabled {
+  --ui-edge: #315b6b;
+  --ui-fill: linear-gradient(120deg, #0a2230cc, #071b28d9);
+  opacity: 1;
+  color: #8ba8b7;
+  background: transparent;
   box-shadow: none;
   filter: none;
   transform: none;
 }
+:is(#menu, #modal, #result) button:disabled::after { box-shadow: none }
+:is(#menu, #modal, #result) button:disabled .ui-icon { opacity: .42 }
 :is(#menu, #modal, #result) button:not(:disabled):active { transform: translateY(1px) }
 :is(#menu, #modal, #result) .eyebrow {
   color: var(--ui-accent);
-  font-size: 11px;
-  letter-spacing: .16em;
-}
-:is(#menu, #modal, #result) :is(.primary, .secondary) {
-  position: relative;
-  min-height: 48px;
-  padding: 13px 20px;
-  border: 1px solid var(--ui-line);
-  border-radius: var(--ui-radius);
-  background: var(--ui-surface);
-  box-shadow: inset 0 1px #c5f6ff24;
-  color: var(--ui-muted);
-  font-size: 12px;
-  letter-spacing: .13em;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
-:is(#menu, #modal, #result) .primary {
-  border-color: var(--ui-accent);
-  background: var(--ui-selected);
-  color: var(--ui-ink) !important;
-  box-shadow: var(--ui-glow);
-  font-weight: 700;
-}
-:is(#menu, #modal, #result) .primary::before {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  border-left: 1px solid #a5f4ff60;
-  border-right: 1px solid #a5f4ff60;
-  border-radius: 8px 1px;
-  pointer-events: none;
-}
-:is(#menu, #modal, #result) .primary:disabled::before { display: none }
-@media (hover: hover) {
-  :is(#menu, #modal, #result) :is(.primary, .secondary):not(:disabled):hover {
-    border-color: #c9f8ff;
-    background: var(--ui-selected);
-    color: var(--ui-ink);
-    box-shadow: var(--ui-glow);
-  }
+  font: 400 11px/1.5 Aldrich, sans-serif;
+  letter-spacing: 1.8px;
 }
 :is(#menu, #modal, #result) .textbtn {
   min-height: 44px;
   color: var(--ui-muted);
-  font-size: 11px;
+  font: 400 11px/1.4 Aldrich, sans-serif;
+  letter-spacing: 1.2px;
 }
-:is(#menu, #modal, #result) .textbtn:hover { color: var(--ui-accent) }
+:is(#menu, #modal, #result) .textbtn:hover { color: #bafaff }
+:is(#menu, #modal, #result) :is(h1, h2, h3) { font-family: Aldrich, sans-serif; font-weight: 400 }
 :is(#menu, #modal, #result) :is(.sub-header, .armory-heading) {
   border-bottom: 1px solid var(--ui-line);
   padding-bottom: 16px;
 }
 :is(#menu, #modal, #result) :is(.sub-header h1, .modal-card h1) {
-  font: 600 clamp(24px, 3vw, 36px)/1.2 "Segoe UI", Arial, sans-serif;
-  letter-spacing: .06em;
+  font: 400 clamp(24px, 3vw, 32px)/1.25 Aldrich, sans-serif;
+  letter-spacing: 3px;
+  text-transform: uppercase;
   color: var(--ui-ink);
 }
-:is(#menu, #modal, #result) :is(.modal-card, .subscreen > div:not(.codex-grid), .codex-model-caption) {
-  border-color: var(--ui-line);
-  border-radius: var(--ui-radius);
-  background: var(--ui-surface);
-  box-shadow: var(--ui-shadow);
-}
+#menu .subscreen { background: linear-gradient(110deg, #03111cf2, #081d2ee3 70%, #061725b3) }
+#menu .subscreen > div { border: 0; background: transparent; box-shadow: none }
 #modal .modal-shade {
-  background: radial-gradient(ellipse at 50% 40%, #092d4166, #020812e6);
+  background: #010c16a8;
   backdrop-filter: none;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
+/* The stationary frame owns the decoration, the inner card scrolls independently. */
+#modal .modal-frame {
+  --ui-cut: 10px;
+  --ui-edge: #98ecfb;
+  --ui-fill: linear-gradient(150deg, #062639f7, #011320fa 65%);
+  filter: drop-shadow(0 0 8px #34c5ef33);
+}
 #modal .modal-card {
-  max-width: 100%;
   max-height: calc(100dvh - 48px);
-  border-color: var(--ui-accent);
-  padding: clamp(20px, 4vw, 36px);
-  box-shadow: var(--ui-glow), 0 24px 64px #0009;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: clamp(20px, 4vw, 32px);
 }
-#modal .modal-card p { color: var(--ui-muted) }
-#modal .btnstack { gap: 10px }
-#modal [data-ui="abandon"], #modal [data-ui="restartConfirm"] { color: var(--ui-danger) }
-#modal .ui-note {
-  margin: 20px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--ui-line);
-  font-size: 12px;
+#modal .modal-card::before { display: none }
+#modal .modal-card h1 { text-align: center; margin-bottom: 22px }
+#modal .modal-card h2 { font-size: 20px; letter-spacing: 1px }
+#modal .modal-card h3 { font-size: 14px; letter-spacing: 1px }
+#modal .modal-card p { color: #bad1df }
+#modal .modal-symbol { text-align: center; margin-bottom: 8px }
+#modal .modal-symbol .ui-icon { width: 38px; height: 44px }
+#modal .btnstack { gap: 8px }
+#modal [data-ui="abandon"], #modal [data-ui="restartConfirm"] { --ui-edge: #83675b; color: #e5ad92 }
+#modal :is([data-ui="restart"], [data-ui="confirmSale"]) {
+  --ui-edge: #ff9b81;
+  --ui-fill: linear-gradient(135deg, #573133, #221e2b);
+  color: #ffe0d1;
 }
-#modal .battle-note {
-  padding: 12px;
-  border-left: 2px solid var(--ui-line);
-  background: #041420e6;
-  line-height: 1.6;
-}
+#modal .ui-note { margin: 20px 0 0; padding-top: 14px; border-top: 1px solid #497183; font-size: 12px }
+#modal .battle-note { padding: 12px; border-left: 2px solid var(--ui-line); background: #041420e6; line-height: 1.6 }
 #modal .battle-note > p { margin-top: 0 }
-#menu .subscreen { background: linear-gradient(110deg, #03111cf7, #081d2eee 70%, #061725ce) }
-:is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option,
-  .upgrade-card, .expedition-benefit-row, .codex-card, .codex-nav button, .codex-chapters a) {
-  border: 1px solid var(--ui-line);
-  border-radius: var(--ui-radius);
-  background: var(--ui-surface);
-  box-shadow: inset 0 1px #c5f6ff24;
+:is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option, .codex-nav button).active {
+  --ui-edge: #9bf3ff;
+  --ui-fill: linear-gradient(140deg, #0c516fdd, #062d42f0);
+  filter: drop-shadow(0 0 4px #46d5f64d);
 }
-:is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option,
-  .codex-nav button).active {
-  border-color: var(--ui-accent);
-  background: var(--ui-selected);
-  box-shadow: var(--ui-glow);
-}
-@media (hover: hover) {
-  :is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option,
-    .codex-card, .codex-nav button, .codex-chapters a):not(:disabled):hover {
-    border-color: var(--ui-accent);
-    background: var(--ui-raised);
-  }
-}
+#menu .faction-option.active { --ui-edge: var(--ui-gold); --ui-fill: linear-gradient(90deg, #20323c, #0b2334 85%); filter: drop-shadow(0 0 4px #ffc46d54) }
+#menu .faction-option.locked { --ui-edge: #486374; filter: none }
+#menu .faction-option strong { font: 400 15px/1.4 Aldrich, sans-serif }
 :is(#menu, #modal, #result) :is(.faction-option small, .loadout-option small,
   .benefit-option small, .expedition-benefit-row small, .upgrade-card p) {
   color: var(--ui-muted);
@@ -167,101 +217,146 @@
   line-height: 1.55;
 }
 :is(#menu, #modal, #result) :is(.loadout-option strong, .benefit-option strong, .upgrade-card h3) {
-  font-size: 13px;
-  letter-spacing: .04em;
+  font: 400 13px/1.4 Aldrich, sans-serif;
+  letter-spacing: .6px;
 }
+#menu .loadout-option:hover, :is(#menu, #result) .benefit-option:hover { --ui-edge: #bafaff }
 #menu :is(.loadout-option em, .loadout-summary > span, .loadout-summary b) { font-size: 10px }
-#menu .loadout-option .sigil, #result .benefit-option .sigil { color: var(--ui-accent) }
-:is(#menu, #modal) .opponent-card { background: #071c29f2; backdrop-filter: none }
+:is(#menu, #modal, #result) .loadout-summary .ui-icon { width: 18px; height: 18px }
+#menu .loadout-option .ui-icon { width: 30px; height: 30px }
+:is(#menu, #modal, #result) .benefit-option .ui-icon { width: 34px; height: 34px }
+:is(#menu, #modal, #result) .expedition-benefit-row .ui-icon { width: 25px; height: 25px }
+:is(#menu, #modal, #result) .opponent-card { --ui-cut: 6px; --ui-edge: var(--opponent-color); --ui-fill: #071c29f2; backdrop-filter: none }
 :is(#menu, #modal, #result) .opponent-label { color: var(--ui-muted); font-size: 10px }
-:is(#menu, #modal, #result) .opponent-copy strong { font-size: 11px }
-:is(#menu, #modal, #result) .opponent-copy small {
-  overflow: visible;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  font-size: 10px;
-  line-height: 1.5;
-}
+:is(#menu, #modal, #result) .opponent-copy strong { font-size: 12px }
+:is(#menu, #modal, #result) .opponent-copy small { overflow: visible; white-space: normal; overflow-wrap: anywhere; font-size: 11px; line-height: 1.5 }
 #modal .armory-heading h1 { text-transform: uppercase }
-#modal .armory-balance {
-  border-color: var(--ui-accent);
-  background: var(--ui-surface);
-  border-radius: var(--ui-radius);
-}
-#modal :is(.armory-balance strong, .armory-aether-icon) { color: var(--ui-accent) }
-#modal .upgrade-rank { font-size: 11px; letter-spacing: .1em }
-#modal .upgrade-effect { background: #092333; border-color: var(--ui-gold) }
+#modal .armory-balance { --ui-cut: 6px; --ui-edge: #75cadd }
+#modal .armory-balance strong { font: 400 25px Aldrich, sans-serif }
+#modal .upgrade-card { --ui-cut: 7px; --ui-edge: #4797ac }
+#modal .upgrade-card:has(button:not(:disabled)) { --ui-edge: #79e4f7 }
+#modal .upgrade-card .sigil .ui-icon { width: 36px; height: 39px }
+#modal .upgrade-rank { font-size: 11px; letter-spacing: 1.1px }
+#modal .upgrade-effect { background: #092333; border: 1px solid #305768; border-radius: 0 }
 #modal .upgrade-effect :is(span, small) { font-size: 10px }
-#modal .upgrade-effect strong { font-size: 18px }
-#modal .upgrade-levels { gap: 6px }
-#modal .upgrade-levels i { height: 7px }
-#modal .upgrade-card .secondary { font-size: 11px; min-height: 48px }
+#modal .upgrade-effect strong { font: 400 20px Aldrich, sans-serif; color: var(--ui-gold) }
+#modal .upgrade-levels { gap: 4px }
+#modal .upgrade-levels i { height: 5px; border: 1px solid #405f6e; background: #304b58 }
+#modal .upgrade-levels i.on { background: #72edff; border-color: #abf7ff; box-shadow: 0 0 7px #4ad5f899 }
+#modal .upgrade-card .secondary { --ui-cut: 5px; font-size: 11px; min-height: 48px; letter-spacing: .4px }
 #modal .upgrade-card .secondary:disabled small { color: inherit }
-#modal .settings-row { gap: 16px; padding-block: 16px; border-color: var(--ui-line) }
+#modal .settings-row { gap: 16px; padding-block: 15px; border-color: #2d546666 }
 #modal .settings-row label { font-size: 14px }
-#modal .settings-row label small { font-size: 12px }
+#modal .settings-row label small { font-size: 12px; color: #89aabe }
 :is(#menu, #modal) :is(input, select) { accent-color: var(--ui-accent); max-width: 100% }
-#modal .settings-row input[type=checkbox] { width: 24px; height: 24px; flex-shrink: 0 }
-#modal .settings-row input[type=range] { min-height: 32px }
-#modal .help-line { color: var(--ui-ink); line-height: 1.55 }
-#modal .help-input { color: var(--ui-muted); font-size: 11px }
-#menu .codex-card { overflow: hidden }
-#menu .codex-card span { color: var(--ui-muted); font-size: 11px }
-#menu .codex-section-title { color: var(--ui-gold); letter-spacing: .1em }
-#result .result-screen { backdrop-filter: none }
-#result .result-hero h1 { font-weight: 500; letter-spacing: .16em }
-#result .defeat .result-hero h1 { color: var(--ui-danger); text-shadow: 0 0 24px #ff69692b }
-#result :is(.result-reward, .result-next, .benefit-option) {
-  clip-path: none; /* Keep keyboard outlines and shadows visible. */
-  border-radius: var(--ui-radius);
-  border: 1px solid var(--ui-line);
-  background: var(--ui-surface);
-  box-shadow: var(--ui-shadow);
+#modal .settings-row input[type=checkbox] {
+  appearance: none;
+  width: 43px;
+  height: 25px;
+  flex-shrink: 0;
+  border: 1px solid #4a6c7f;
+  border-radius: 15px;
+  background: radial-gradient(circle at 11.5px 50%, #6d8da0 8px, transparent 8.5px), #163345;
+  cursor: pointer;
 }
-#result :is(.result-reward, .result-next, .benefit-option)::before { display: none }
-#result .result-reward { border-color: var(--ui-accent); background: var(--ui-selected); box-shadow: var(--ui-glow) }
-#result .defeat .result-reward { border-color: var(--ui-danger); background: var(--ui-surface) }
-#result .benefit-option.active { background: var(--ui-selected); border-color: var(--ui-accent); box-shadow: var(--ui-glow) }
+#modal .settings-row input[type=checkbox]:checked {
+  border-color: #7bd7e9;
+  background: radial-gradient(circle at 29.5px 50%, #c6faff 8px, transparent 8.5px), #106780;
+}
+#modal .settings-row input[type=range] { min-height: 32px }
+#modal .help-line { color: var(--ui-ink); line-height: 1.55; padding-block: 12px; border-color: #2b506377 }
+#modal .help-input { color: #97b8cb; font-size: 11px }
+#menu .codex-card { overflow: visible; --ui-cut: 6px }
+#menu .codex-card span { color: var(--ui-muted); font-size: 11px }
+#menu .codex-section-title { color: var(--ui-gold); letter-spacing: 1px }
+#menu :is(.codex-nav button, .codex-chapters a) { padding: 12px; font: 400 12px/1.4 Aldrich, sans-serif }
+#menu :is(.codex-nav button, .codex-chapters a, .codex-card):hover { --ui-edge: #bafaff }
+#result .result-screen { backdrop-filter: none; background: linear-gradient(0deg, #03131ce6, #03131c66) }
+#result .result-hero h1 { font: 400 clamp(35px, 5vw, 60px)/1.2 Aldrich, sans-serif; letter-spacing: 7px }
+#result .result-symbol .ui-icon { width: 35px; height: 38px }
+#result .defeat .result-hero h1 { color: var(--ui-danger); text-shadow: 0 0 24px #ff69692b }
+#result :is(.result-reward, .result-next, .benefit-option) { clip-path: none }
+#result .result-reward { --ui-edge: #92efff; --ui-fill: linear-gradient(130deg, #064665e6, #052436ec 58%, #07344be6); filter: drop-shadow(0 0 6px #37cfea5e) }
+#result .result-reward-sigil .ui-icon { width: 76px; height: 87px }
+#result .result-reward strong { font: 400 54px/1.1 Aldrich, sans-serif; color: #d5fbff; text-shadow: 0 0 20px #11c3fb79 }
+#result .defeat .result-reward { --ui-edge: var(--ui-danger); --ui-fill: linear-gradient(145deg, #072334f0, #021421f5); filter: none }
 #result .result-reward-breakdown { flex-wrap: wrap; letter-spacing: .05em }
 #result .result-hero p { justify-content: center; line-height: 1.6 }
 #result .result-next p { color: var(--ui-muted) }
+#result .benefit-option { --ui-cut: 6px; --ui-edge: #3f91ac }
+#result .benefit-option.active { --ui-edge: #9bf3ff }
 #loading { background: radial-gradient(ellipse at 50% 40%, #123b50, #040e19 65%) }
-#loading .crest { color: var(--ui-accent); text-shadow: 0 0 24px #69e6fa55 }
-#loading h2 { color: var(--ui-ink); letter-spacing: .05em }
+#loading .crest .ui-icon { width: 60px; height: 60px }
+#loading h2 { font-family: Aldrich, sans-serif; color: var(--ui-ink); letter-spacing: 1px }
 
-/* Fleet systems are readable rows; compact command modules remain a card grid. */
+/* HUD geometry, world viewport, picking, minimap and model thumbnails are unchanged. */
+#hud #commandDeck button:focus-visible { outline-offset: -2px } /* Dense scroll rails keep the ring inside the control. */
+#hud #topbar { background: linear-gradient(180deg, #071b28f5, #081d2cec); border-color: #76d7ed; box-shadow: 0 3px 9px #05131e77 }
+#hud .resource .ui-icon { width: 24px; height: 28px }
+#hud .resource small { color: #aacddd }
+#hud #pauseBtn { --ui-cut: 5px; padding: 8px }
+#hud #pauseBtn .ui-icon { width: 14px; height: 17px }
+#hud :is(#cameraTools, #commandTools, #abilityBar, .root-grid) { gap: 4px; background: transparent }
+#hud :is(#commandTools button, #cameraTools button, #pauseBtn, .root-grid .action) { --ui-cut: 5px; --ui-edge: #276c86; --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8) }
+#hud #cameraTools .ui-icon { width: 19px; height: 19px }
+#hud :is(#commandTools button, #cameraTools button, #pauseBtn):hover { --ui-edge: #bafaff; color: #bafaff; background: transparent }
+#hud #commandTools #attackMoveBtn[aria-pressed="true"] { --ui-edge: var(--ui-gold); --ui-fill: #493d2b; color: var(--ui-gold); background: transparent }
+#hud #abilityBar { --ui-cut: 5px; --ui-edge: #2b849f; padding: 4px 2px; gap: 0 }
+#hud #abilityBar .action { background: transparent; padding: 8px 2px 3px }
+#hud #abilityBar .action + .action { border-left: 1px solid #244e60 }
+#hud #abilityBar .action .ui-icon { width: 25px; height: 25px; margin: 0 }
+#hud #abilityBar .action:hover { background: #12577566 }
+#hud #abilityBar .action.active { background: #125775; color: #effaff; box-shadow: inset 0 0 0 1px #83edff }
+#hud .action.disabled .ui-icon { opacity: .42; filter: saturate(.45) }
+#hud .action.disabled { color: #89aabe }
+#hud #abilityBar .action.disabled { background: transparent }
+#hud .action small { color: #dbc3ff; font-size: 10px; z-index: 1 }
+#hud .action.disabled small { color: #adb0ce }
+#hud .root-grid .action { font-family: Aldrich, sans-serif; color: #b9d6e8 }
+#hud .root-grid .action .ui-icon { width: 32px; height: 31px; margin: 0 }
+#hud .root-grid .action span { margin-top: 2px }
+#hud .root-grid .action:hover:not(:disabled) { --ui-edge: #83edff; --ui-fill: linear-gradient(160deg, #125775, #073143); background: transparent }
+#hud #actionPanel { background: transparent }
+#hud #actionPanel:has(.menu-back) { background: #041722f5; outline: 1px solid #64dff7 }
+#hud .menu-back { background: #0b3345; color: #bafaff; font-family: Aldrich, sans-serif }
+#hud .menu-back .ui-icon { width: 19px; height: 19px; margin-right: 7px }
+:is(#menu, #modal) .textbtn .ui-icon { width: 19px; height: 19px; margin-right: 7px }
+#hud .model-action { background: #102e3d; box-shadow: inset 0 0 0 1px #376b80 }
+#hud .model-action:hover { background: #16475b }
+#hud .model-action.disabled { background: #101f2b; box-shadow: inset 0 0 0 1px #294656 }
+#hud .model-action.active { background: #125775; box-shadow: inset 0 0 0 1px #83edff }
+#hud .minimap-panel { background: transparent }
+#hud #minimap { outline: 1px solid #53bcda; outline-offset: -1px }
+#hud .queue-item { border-color: #53bcda; background: #092737; border-radius: 0 }
+/* Queue ::after is reserved for its conic progress overlay. */
+#hud #radio { position: absolute; z-index: 4; --ui-edge: #43c3de; --ui-fill: linear-gradient(145deg, #072334f0, #021421f5); padding-right: 48px }
+#hud #radioName { font-family: Aldrich, sans-serif; color: #b4ebff; letter-spacing: 1.5px; font-size: 10px }
+#hud #radioText { color: #c3e4f1 }
+#hud #radioClose { width: 44px; height: 44px; padding: 13px }
+#hud #radioClose .ui-icon { width: 17px; height: 17px }
+#hud .alert { background: #092737f2; border-color: var(--ui-gold); color: #d7f3ff }
+#hud .alert.danger { border-color: var(--ui-danger); color: #ffd8b8 }
+#toast { background: #092737f2; border-color: #59bdd59c; border-radius: 5px; color: #d7f3ff; box-shadow: 0 8px 24px #0008; line-height: 1.5 }
+
 @media (min-width: 700px) {
-  #modal .armory-grid:not(.command-module-grid) { grid-template-columns: 1fr; gap: 16px }
+  #modal .armory-grid:not(.command-module-grid) { grid-template-columns: 1fr; gap: 12px }
   #modal .armory-grid:not(.command-module-grid) .upgrade-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 210px;
-    grid-template-areas: "heading effect" "description effect" "levels purchase";
+    grid-template-areas: 'heading effect' 'description effect' 'levels purchase';
     gap: 10px 24px;
     padding: 22px;
   }
   #modal .armory-grid:not(.command-module-grid) .upgrade-heading { grid-area: heading; grid-template-columns: 48px minmax(0, 1fr) }
   #modal .armory-grid:not(.command-module-grid) .sigil { width: 42px; height: 42px }
   #modal .armory-grid:not(.command-module-grid) p { grid-area: description; margin: 0 }
-  #modal .armory-grid:not(.command-module-grid) .upgrade-effect {
-    grid-area: effect;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    margin: 0;
-    border: 1px solid var(--ui-line);
-    padding: 12px;
-  }
+  #modal .armory-grid:not(.command-module-grid) .upgrade-effect { grid-area: effect; flex-direction: column; justify-content: center; align-items: center; margin: 0; padding: 12px }
   #modal .armory-grid:not(.command-module-grid) .upgrade-levels { grid-area: levels; align-self: center; margin: 0 }
   #modal .armory-grid:not(.command-module-grid) .secondary { grid-area: purchase }
 }
-
-/* Entrance only: no idle sweeps, particles, animated blur or perpetual glows. */
-#menu :is(.home-layout, .subscreen, .codex-model-screen), #modal .modal-card,
+#menu :is(.home-layout, .subscreen, .codex-model-screen), #modal .modal-frame,
 #result .result-shell { animation: ui-arrive var(--ui-enter) var(--ui-ease) both }
-@keyframes ui-arrive {
-  from { opacity: 0; transform: translateY(8px) }
-  to { opacity: 1; transform: translateY(0) }
-}
+@keyframes ui-arrive { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: translateY(0) } }
 @media (max-width: 600px) {
   #menu .subscreen { padding: 20px 16px }
   #menu .sub-header { align-items: flex-start; gap: 12px }
@@ -272,17 +367,25 @@
   #modal .armory-heading h1 { font-size: 24px }
   #result .result-screen { padding: 24px 16px 32px }
   #result .result-shell { gap: 18px }
-  #result .result-benefits h3 { font-size: 11px; line-height: 1.5; letter-spacing: .1em }
+  #result .result-benefits h3 { font-size: 11px; line-height: 1.5; letter-spacing: 1px }
   #result .benefit-option { padding: 16px }
   #result .benefit-option strong { font-size: 13px }
   #result .benefit-option small { font-size: 12px; margin-top: 5px }
   #result .result-reward { min-height: 108px }
   #result .result-reward-breakdown { font-size: 10px; gap: 4px 12px }
+  #hud #abilityBar .action { padding: 8px 2px 2px }
+  #hud #abilityBar .action .ui-icon { width: 22px; height: 22px }
+  #hud #abilityBar .action span { margin-top: 2px }
+  #hud .resource .ui-icon { width: 15px; height: 21px }
+  #hud .resource:has(#supplyCount) .ui-icon { width: 19px }
+  #hud #radioName { font-size: 9px; letter-spacing: 1px }
 }
+@media (max-width: 360px) { #hud .resource .ui-icon { width: 12px; height: 17px } }
 @media (prefers-reduced-motion: reduce) {
-  :is(#menu, #modal, #result, #loading),
-  :is(#menu, #modal, #result, #loading) * {
+  :is(#menu, #modal, #result, #loading, #hud, #toast),
+  :is(#menu, #modal, #result, #loading, #hud, #toast) * {
     animation: none !important;
     transition: none !important;
   }
+  #hud :is(.action, .menu-back).tutorial-focus { box-shadow: inset 0 0 0 3px #fff0b4, 0 0 10px #f2c45daa }
 }

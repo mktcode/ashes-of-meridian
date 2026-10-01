@@ -23,6 +23,15 @@ selected = {
     "logo-of": "logo-of", "logo-meridian": "logo-meridian",
     "checkpoint": "checkpoint", "score": "expedition",
     "manual": "manual", "settings": "settings",
+    "aether-hero": "echo-reward", "aether": "echo", "alloy": "cinder",
+    "supply": "supply", "energy": "energy", "shield": "shield", "skull": "skull",
+    "scan": "scan", "repair": "repair", "strike": "orbital", "reinforce": "drop",
+    "buildings": "buildings", "infantry": "infantry", "vehicles": "vehicles", "aircraft": "aircraft",
+    "home": "home", "plus": "plus", "minus": "minus", "pause": "pause",
+    "back": "back", "close": "close",
+    "starting-alloy": "starting-cinder", "workers": "workers", "evacuation": "evacuation",
+    "logistics": "logistics", "repair-logistics": "repair-logistics", "construction": "construction",
+    "crate": "crate", "survey": "survey", "pioneers": "pioneers", "workshop": "workshop",
 }
 output = root / "assets" / "ui"
 output.mkdir(parents=True, exist_ok=True)
@@ -39,4 +48,4 @@ shutil.copyfile(font / "Aldrich-Regular.ttf", font_output / "Aldrich-Regular.ttf
 # Keep the license text, normalizing trailing whitespace for repository checks.
 license_text = (font / "OFL.txt").read_text()
 (font_output / "OFL.txt").write_text("\n".join(line.rstrip() for line in license_text.splitlines()) + "\n")
-print(f"Imported {len(selected)} menu motifs and Aldrich with its license")
+print(f"Imported {len(selected)} UI motifs and Aldrich with its license")

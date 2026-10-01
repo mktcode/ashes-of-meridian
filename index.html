@@ -22,7 +22,7 @@
   </div>
   <div id="fpsReadout" class="hidden" aria-hidden="true" title="Rendered frames per second; NET shows received state updates">FPS —</div>
   <div id="loading">
-    <div class="crest">◈</div>
+    <div class="crest"><img class="ui-icon" src="./assets/ui/emblem.webp" alt="" aria-hidden="true"></div>
     <div class="eyebrow">MERIDIAN EXPEDITIONARY COMMAND</div>
     <h2>Establishing uplink<span class="dots">...</span></h2>
     <p>Preparing the frontier</p>
@@ -34,21 +34,21 @@
     <header id="topbar"><div id="battleLabel"></div>
       <div class="top-spacer"></div>
       <div class="resource-strip" aria-label="Resources">
-        <div class="resource"><span class="resicon alloy" aria-hidden="true">◆</span>
+        <div class="resource"><span class="resicon alloy" aria-hidden="true"><img class="ui-icon" src="./assets/ui/cinder.webp" alt=""></span>
           <div><strong id="alloyCount">0</strong><small>CINDER</small></div>
         </div>
-        <div class="resource"><span class="resicon aether" aria-hidden="true">⬡</span>
+        <div class="resource"><span class="resicon aether" aria-hidden="true"><img class="ui-icon" src="./assets/ui/echo.webp" alt=""></span>
           <div><strong id="gasCount">0</strong><small>ECHO</small></div>
         </div>
-        <div class="resource"><span class="resicon" aria-hidden="true">▥</span>
+        <div class="resource"><span class="resicon" aria-hidden="true"><img class="ui-icon" src="./assets/ui/supply.webp" alt=""></span>
           <div><strong id="supplyCount">0 / 0</strong><small>SUPPLY</small></div>
         </div>
-        <div class="resource power"><span class="resicon energy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 1L4 14h7l-1 9 10-14h-7z"/></svg></span>
+        <div class="resource power"><span class="resicon energy" aria-hidden="true"><img class="ui-icon" src="./assets/ui/energy.webp" alt=""></span>
           <div><strong id="energyCount">0</strong><small>ENERGY</small></div>
         </div>
       </div>
       <div class="clock"><strong id="gameTime">00:00</strong><button id="speedBtn" aria-label="Simulation speed: 1×. Tap to change.">1×</button></div><button
-        id="pauseBtn" class="square" aria-label="Pause">Ⅱ</button>
+        id="pauseBtn" class="square" aria-label="Pause"><img class="ui-icon" src="./assets/ui/pause.webp" alt="" aria-hidden="true"></button>
     </header>
     <div id="alerts"></div>
     <div id="radio" class="glass hidden">
@@ -56,14 +56,14 @@
       <div>
         <div id="radioName" class="eyebrow"></div>
         <p id="radioText"></p>
-      </div><button id="radioClose" class="textbtn">×</button>
+      </div><button id="radioClose" class="textbtn" aria-label="Dismiss transmission"><img class="ui-icon" src="./assets/ui/close.webp" alt="" aria-hidden="true"></button>
     </div>
     <div id="productionQueue" role="group" aria-label="Recruitment queues · tap to cancel one order"></div>
     <footer id="commandDeck">
       <section class="minimap-panel" aria-label="Tactical map">
         <canvas id="minimap" aria-label="Minimap" width="210" height="210"></canvas>
-        <div id="cameraTools" role="group" aria-label="Map navigation"><button data-cam="home" aria-label="Center on command">⌂</button><button data-cam="in"
-          aria-label="Zoom in">＋</button><button data-cam="out" aria-label="Zoom out">−</button></div>
+        <div id="cameraTools" role="group" aria-label="Map navigation"><button data-cam="home" aria-label="Center on command"><img class="ui-icon" src="./assets/ui/home.webp" alt="" aria-hidden="true"></button><button data-cam="in"
+          aria-label="Zoom in"><img class="ui-icon" src="./assets/ui/plus.webp" alt="" aria-hidden="true"></button><button data-cam="out" aria-label="Zoom out"><img class="ui-icon" src="./assets/ui/minus.webp" alt="" aria-hidden="true"></button></div>
       </section>
       <section id="commandCenter" aria-label="Command abilities">
     <div id="commandTools"><button id="attackMoveBtn" aria-label="Attack-move" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 3l4 1 12 15-2 2L4 6zM20 3l-4 1L4 19l2 2L20 6zM3 16l5 5M16 21l5-5"/></svg></button><button id="visibleCombatSelectBtn" aria-label="Select combat units in view"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V4h4m10 0h4v4m0 8v4h-4M7 20H3v-4M8 16v-1.5a4 4 0 0 1 8 0V16M12 7a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5"/></svg></button><button id="combatSelectBtn" aria-label="Select all combat units"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4m8 0h4v4m0 8v4h-4M8 20H4v-4M12 6a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm-5 3a2 2 0 1 1 0 4m10-4a2 2 0 1 1 0 4M8 19v-2.5a4 4 0 0 1 8 0V19M3 19v-1.5a3 3 0 0 1 3-3m15 4.5v-1.5a3 3 0 0 0-3-3"/></svg></button></div>

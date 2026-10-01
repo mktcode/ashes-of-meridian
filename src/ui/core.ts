@@ -8,6 +8,23 @@
         /[&<>"']/g,
         c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>)[c]
       );
+    // Presentation-only motifs. Missing semantics keep the original SVG, never a category substitute.
+    const UI_ICON_ASSETS: Readonly<Record<string, string>> = Object.freeze({
+      aether: 'echo', crystal: 'cinder', energy: 'energy', shield: 'shield', skull: 'skull',
+      scan: 'scan', heal: 'repair', orbital: 'orbital', drop: 'drop', repair: 'repair', bulwark: 'shield',
+      'tab:build': 'buildings', 'tab:infantry': 'infantry', 'tab:vehicles': 'vehicles', 'tab:aircraft': 'aircraft',
+      startingAlloy: 'starting-cinder', startingWorkers: 'workers', aetherEvacuation: 'evacuation',
+      constructionProtocols: 'construction', logisticsFrame: 'logistics', repairLogistics: 'repair-logistics',
+      supplyCrate: 'crate', aetherAllocation: 'echo', pioneerSquad: 'pioneers',
+      surveyDrones: 'survey', fieldWorkshop: 'workshop', commandCapacitor: 'energy',
+      'echo-reward': 'echo-reward', pause: 'pause', settings: 'settings', manual: 'manual',
+      back: 'back', close: 'close'
+    });
+    function uiIcon(name: string, fallback = name): string {
+      return Object.hasOwn(UI_ICON_ASSETS, name)
+        ? `<img class="ui-icon" src="./assets/ui/${UI_ICON_ASSETS[name]}.webp" alt="" aria-hidden="true" draggable="false">`
+        : icon(fallback);
+    }
     type UIMode = { kind: 'build'; arg: BuildingType } | { kind: 'ability'; arg: AbilityType } | { kind: 'rally'; arg?: undefined };
     type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'building';
     interface UIPing extends Position { life: number; maxLife: number; color: number; }

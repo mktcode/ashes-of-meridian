@@ -1,18 +1,6 @@
-/* Start screen only. Shared non-HUD styling remains in design-system.css. */
-@font-face {
-  font-family: Aldrich;
-  src: url('../assets/fonts/aldrich/Aldrich-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* Start screen geometry and branding; shared controls/font live in design-system.css. */
 #menu .home-screen {
   --home-checkpoint-size: clamp(105px, 17vh, 150px);
-  --home-cut: 8px;
-  --home-shape: polygon(var(--home-cut) 0, calc(100% - var(--home-cut)) 0,
-    100% var(--home-cut), 100% calc(100% - var(--home-cut)),
-    calc(100% - var(--home-cut)) 100%, var(--home-cut) 100%,
-    0 calc(100% - var(--home-cut)), 0 var(--home-cut));
   font-family: Aldrich, 'Segoe UI', sans-serif;
   background: linear-gradient(90deg, #03111cbb, #03111c33 60%, transparent),
     linear-gradient(0deg, #03111cdd, transparent 65%);
@@ -143,56 +131,17 @@
 }
 #menu .home-screen .stage-arrow:disabled {
   opacity: .2;
-  color: #69e7ff !important; /* Override the shared disabled-control text colour. */
+  color: #69e7ff;
   background: transparent;
 }
 #menu .home-screen .menu-buttons { width: 100%; gap: 10px }
 #menu .home-screen .menu-buttons button {
-  --home-edge: #4ebddeaa;
-  --home-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8);
-  isolation: isolate;
-  position: relative;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
   min-height: 52px;
   padding: 13px 18px;
-  font: 400 13px/1.4 Aldrich, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
   letter-spacing: 1.5px;
-  color: #c0dcea;
-  transition: filter .16s, color .16s, transform .16s;
-}
-#menu .home-screen .menu-buttons button::before,
-#menu .home-screen .menu-buttons button::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  clip-path: var(--home-shape);
-  pointer-events: none;
-  border: 0;
-  border-radius: 0;
-  background: var(--home-edge);
-}
-#menu .home-screen .menu-buttons button::after { inset: 1px; background: var(--home-fill) }
-#menu .home-screen .menu-buttons .primary {
-  --home-edge: #a6f3ff;
-  --home-fill: linear-gradient(140deg, #116180, #063449 43%, #073348 71%, #12506a);
-  color: #f3fdff;
-  font-weight: 650;
-  box-shadow: 0 0 21px #17c9ee30;
-  filter: drop-shadow(0 0 4px #50d8ff50);
-}
-#menu .home-screen .menu-buttons .primary::after {
-  inset: 1.5px;
-  box-shadow: inset 0 0 12px #5ee8ff38;
-}
-#menu .home-screen .menu-buttons .primary:hover { filter: drop-shadow(0 0 7px #65e8ff8a) }
-#menu .home-screen .menu-buttons button:hover {
-  --home-edge: #bafaff;
-  background: transparent;
-  color: white;
+  justify-content: space-between;
 }
 #menu .home-screen .continue-row { gap: 10px }
 #menu .home-screen .continue-row .primary { justify-content: center; text-align: center }

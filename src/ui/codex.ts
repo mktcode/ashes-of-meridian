@@ -55,7 +55,7 @@ function renderCodexScreen(faction: FactionId): string {
     const name = kind === 'unit' ? unitName(type,faction) : buildingName(type,faction);
     return `<button class="codex-card" data-codex-kind="${kind}" data-codex-type="${type}">${renderModelThumbnail(faction,kind,type,'codex-thumbnail')}<strong>${esc(name)}</strong><span>VIEW MODEL ↗</span></button>`;
   }).join('');
-  return `<div class="subscreen codex-screen"><header class="sub-header"><div><div class="eyebrow">FIELD ARCHIVE</div><h1>Codex</h1></div><button class="textbtn" data-ui="home">← MAIN MENU</button></header>
+  return `<div class="subscreen codex-screen"><header class="sub-header"><div><div class="eyebrow">FIELD ARCHIVE</div><h1>Codex</h1></div><button class="textbtn" data-ui="home">${uiIcon('back')}MAIN MENU</button></header>
     <nav class="codex-nav" aria-label="Codex sections">${FACTIONS.map((item,index) => `<button data-codex-faction="${index}" class="${index === faction ? 'active' : ''}" aria-pressed="${index === faction}">${esc(item.name)}</button>`).join('')}<button data-ui="codexStory">READ THE STORY ↗</button></nav>
     <section class="codex-faction"><span class="codex-sigil">${esc(f.sigil)}</span><div><h2>${esc(f.name)}</h2><p>${esc(CODEX_FACTION_STORIES[faction])}</p><small>${esc(f.trait)}</small></div></section>
     <h2 class="codex-section-title">Units</h2><div class="codex-grid">${cards('unit',contentKeys(UNITS))}</div>
@@ -65,7 +65,7 @@ function renderCodexScreen(faction: FactionId): string {
 function renderCodexModelScreen(faction: FactionId, kind: 'unit' | 'building', type: UnitType | BuildingType): string {
   const name = kind === 'unit' ? unitName(type,faction) : buildingName(type,faction);
   const desc = kind === 'unit' ? UNITS[type as UnitType].desc : BUILDINGS[type as BuildingType].desc;
-  return `<div class="codex-model-screen"><header class="sub-header"><div><div class="eyebrow">${esc(FACTIONS[faction].name)} / ${kind.toUpperCase()}</div><h1>${esc(name)}</h1></div><button class="textbtn" data-ui="codex">← CODEX</button></header><div class="codex-model-caption"><p>${esc(desc)}</p></div></div>`;
+  return `<div class="codex-model-screen"><header class="sub-header"><div><div class="eyebrow">${esc(FACTIONS[faction].name)} / ${kind.toUpperCase()}</div><h1>${esc(name)}</h1></div><button class="textbtn" data-ui="codex">${uiIcon('back')}CODEX</button></header><div class="codex-model-caption"><p>${esc(desc)}</p></div></div>`;
 }
 
 function storyInline(text: string): string {
@@ -100,5 +100,5 @@ function renderStoryScreen(): string {
     else { if (list.length || ordered.length || table.length || quote.length) flush(); paragraph.push(line); }
   }
   flush();
-  return `<div class="subscreen codex-story-screen"><header class="sub-header"><div><div class="eyebrow">THE MERIDIAN / ARCHIVE</div><h1>The Story</h1></div><button class="textbtn" data-ui="codex">← CODEX</button></header><nav class="codex-chapters" aria-label="Story chapters">${chapters}</nav><article class="codex-story">${html}</article></div>`;
+  return `<div class="subscreen codex-story-screen"><header class="sub-header"><div><div class="eyebrow">THE MERIDIAN / ARCHIVE</div><h1>The Story</h1></div><button class="textbtn" data-ui="codex">${uiIcon('back')}CODEX</button></header><nav class="codex-chapters" aria-label="Story chapters">${chapters}</nav><article class="codex-story">${html}</article></div>`;
 }

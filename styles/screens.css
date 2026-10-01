@@ -770,10 +770,16 @@
       overflow: auto
     }
 
-    .modal-card {
+    .modal-frame {
       position: relative;
       width: 540px;
-      max-width: 96vw;
+      max-width: 100%;
+    }
+
+    .modal-card {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
       max-height: 94dvh;
       padding: 26px;
       overflow: auto;
@@ -795,7 +801,7 @@
       background: linear-gradient(90deg, #b9f8ff8c, #4edcf018 62%, transparent)
     }
 
-    .modal-card.wide {
+    .modal-frame.wide {
       width: 860px
     }
 

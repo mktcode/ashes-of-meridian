@@ -8,8 +8,9 @@ Das Spiel muss nach `npm run build` direkt über `file://` funktionieren. Deshal
 
 Neue Skripte in `index.html` und den betroffenen Gruppen von `tests/helpers/game-scripts.cjs` eintragen. Prototypfragmente erweitern Klassen über nicht aufzählbare Methoden und Declaration Merging. **Ladereihenfolge ist Vertrag**, ebenso die gesamte CSS-Kaskade. Quellen bearbeiten, nie `dist/` oder generierte Einbettungen von Hand.
 
-Das [UI-Designsystem](ui-design-system.md) beschreibt die auf Nicht-HUD-Flächen begrenzte
-Theme-Schicht und ihre Pflegegrenzen.
+Das [UI-Designsystem](ui-design-system.md) beschreibt die auf UI-Wurzeln begrenzte
+Theme-Schicht einschließlich Gefechts-HUD und Meldungen sowie ihre Pflegegrenzen.
+Weltcanvas, Viewport-/Picking-Geometrie und Diagnoseanzeigen gehören nicht zur Theme-Schicht.
 
 [Webhosting](deployment.md) liefert denselben statischen Singleplayer-Stand. Es gibt keinen Spielserver oder Netzwerkmodus.
 
