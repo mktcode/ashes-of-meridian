@@ -12,13 +12,13 @@ function battle(enemies=[1,2]) {
   const assign=w=>g.executeAction(w.team,{kind:'order',ids:[w.id],order:{type:'salvage',x:0,z:0}},false);
   return {g,mission:g.s.rules.mission,events,home,worker,assign};
 }
-test('salvage state is fresh, old hill and incompatible mission/map pairs are rejected',()=>{
+test('salvage state is fresh; unknown and incompatible mission/map pairs are rejected',()=>{
   const {g,mission}=battle();assert.deepEqual(Array.from(mission.delivered),[0,0,0]);
   mission.delivered[0]=99;mission.site.radius=100;
   g.start({mission:'echo-salvage',map:'aurelion',enemies:[0,0,0],seed:1409});
   assert.deepEqual(Array.from(g.s.rules.mission.delivered),[0,0,0,0]);assert.equal(g.s.rules.mission.site.radius,20.5);
   const state=g.s;
-  for(const opts of [{mission:'king-of-the-hill',map:'aurelion'},{mission:'echo-salvage',map:'desert'},{mission:'hq-elimination',map:'aurelion'}])
+  for(const opts of [{mission:'unknown-mission',map:'aurelion'},{mission:'echo-salvage',map:'desert'},{mission:'hq-elimination',map:'aurelion'}])
     assert.throws(()=>g.start(opts),/Unsupported/);
   assert.strictEqual(g.s,state);
 });

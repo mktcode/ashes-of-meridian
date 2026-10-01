@@ -5,7 +5,7 @@ const { BATTLEFIELD_SCRIPTS, loadScripts, RENDERER_SCRIPTS } = require('./game-s
 const { createRendererStub } = require('./renderer-stub.cjs');
 
 function modelHarness(options = {}) {
-  // Legacy model contracts do not need the large authored GLBs. Their own model
+  // Procedural model contracts do not need the large authored GLBs. Their own model
   // contract explicitly opts in; keep the 128 MB test worker budget effective.
   const renderer = options.heavyModels ? RENDERER_SCRIPTS : RENDERER_SCRIPTS.filter(name =>
     name !== 'heavy-assets' && name !== 'renderer-heavy-mesh' && !name.endsWith('-unit-destroyer'));
@@ -44,18 +44,19 @@ function assertMesh(factory, { minTriangles, maxTriangles, min, max }) {
 }
 
 // Compact per-model baseline: all teams, build states and preview options, in fixed order.
-function modelDrawDigests(h) {
+function modelDrawDigests(h, ids) {
   const result = {};
-  for (const faction of [0, 1, 2]) for (const [kind, defs] of [['unit', h.UNITS], ['building', h.BUILDINGS]]) {
-    for (const [type, d] of Object.entries(defs)) {
-      const hash = createHash('sha256');
-      for (const team of [0, 1]) for (const progress of [0, .4, 1])
-        for (const options of [{}, { ghost: true }, { tint: 0x99e4c6, alpha: .3, layer: 'effects' }]) {
-          hash.update(JSON.stringify(h.draw({ id: 17, kind, type, faction, team, hp: d.hp,
-            size: d.size, x: 12, z: -7, progress, rot: .7, walk: 2, carry: 10 }, options)));
-        }
-      result[`faction-${faction}/${kind}/${type}`] = hash.digest('hex');
-    }
+  for (const id of ids) {
+    const [, factionId, kind, type] = /^faction-([0-2])\/(unit|building)\/([a-z]+)$/.exec(id) || [];
+    const d = (kind === 'unit' ? h.UNITS : h.BUILDINGS)[type];
+    assert.ok(d, `known model reference: ${id}`);
+    const hash = createHash('sha256');
+    for (const team of [0, 1]) for (const progress of [0, .4, 1])
+      for (const options of [{}, { ghost: true }, { tint: 0x99e4c6, alpha: .3, layer: 'effects' }]) {
+        hash.update(JSON.stringify(h.draw({ id: 17, kind, type, faction: Number(factionId), team, hp: d.hp,
+          size: d.size, x: 12, z: -7, progress, rot: .7, walk: 2, carry: 10 }, options)));
+      }
+    result[id] = hash.digest('hex');
   }
   return result;
 }

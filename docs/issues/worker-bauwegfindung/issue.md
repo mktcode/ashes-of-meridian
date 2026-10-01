@@ -16,7 +16,7 @@ Die dauerhaften Regressionsfälle stehen in [den Navigationstests](../../../test
 
 Diese Befunde erklären eine passende Fehlerklasse, beweisen aber nicht den exakten Zustand eines der Screenshots. Die isolierten Kurztests sind kein Ersatz für Crowd-Langläufe oder menschliche Abnahme.
 
-Der vollständig freigegebene Simulationslauf auf `f0dba62` (Node v23.11.1) zeigte zunächst einen vermeintlichen Langlaufbefund in `1409/0/8, forced node true`. Die Diagnose widerlegt einen Stillstand: Worker 64 hatte bei Sekunde 60 bereits volle Ladung und befand sich auf dem Rückweg, lieferte bis Sekunde 120 fünfmal und bis Minute 6 insgesamt 21-mal. Nur die feste Forderung nach einer abgeschlossenen Lieferung schon in jeder einzelnen Minute war für den künstlich auf einen Knoten gezwungenen Startpulk zu streng. Der Test erlaubt nun diese erste Anlaufminute nur bei nachweisbarem Abbaufortschritt und verlangt danach weiterhin von jedem Worker mindestens eine neue Lieferung je Minute; der vollständige Simulationsblock besteht mit 97/97 Fällen.
+Die Langlaufprüfung für künstlich auf einen Knoten gezwungene Startworker erlaubt die erste Anlaufminute nur bei nachweisbarem Abbaufortschritt. Danach muss jeder Worker weiterhin mindestens eine neue Lieferung je Minute abschließen. Diese enge Ausnahme ist keine allgemeine Stillstandstoleranz.
 
 ## Noch offen
 

@@ -17,7 +17,7 @@ Im Haupt-Worktree `npm run build`, dann die lokale `index.html?experiment=height
 3. Sternenschlacke abbauen/abliefern, Refinery setzen, auf beiden Ebenen bauen und Einheiten produzieren. Rampen-/Klippenbau muss abgelehnt werden, Ausfahrten müssen benutzbar bleiben.
 4. Kleine Gruppen/Gegenverkehr und Gefechte an Rampen anschauen. Sichtverlust beidseits einer Klippe und beim Überqueren der Rampenmitte prüfen; andere Höhenvorteile bleiben ausgeschlossen.
 
-Flugzeuge nutzen eine feste Reiseflughöhe über der höchsten spielbaren Ebene mit Übergang beim Produktionsstart; keine Höhensprünge an Klippen. Hohe Dekorhindernisse werden dadurch nicht automatisch umflogen.
+Flugzeuge und Zerstörer verwenden lokale Freiraumhüllen; [maßgeblicher Höhenvertrag](../../architecture.md#welt-darstellung-und-zufall). Hohe Dekorhindernisse werden nicht automatisch umflogen. Die [menschliche Flugabnahme](../project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau) bleibt offen.
 
 Automatisierte Höhenprüfungen decken Oberfläche, Übergänge, Sichtstufen, Bedienprojektion, Modelle, Effekt-Y und interpolierte Netzwerkposen ab. Offen bleiben gezielte menschliche Abnahme, Zwei-Browser-Höhentest, Touch/Mobilkosten und länger laufende Crowd-/KI-Szenarien. `test:ai` und `test:simulation` benötigen weiterhin ausdrückliche Freigabe; feste Referenzwerte nicht zur Reparatur neu erzeugen.
 
@@ -42,7 +42,7 @@ Weitere Karten müssen denselben CPU-Oberflächenvertrag verwenden und dürfen k
 ## Entscheidungen vor spielbarer Abnahme
 
 - **Sicht:** Von unten kein Aufdecken des höheren Plateaus, von oben Sicht ins Tiefland innerhalb bestehender Reichweiten. Die Rampenmitte trennt die logischen Stufen; Flugzeuge und Recon scans überbrücken sie. Keine allgemeine Gelände-Occlusion. **Kampf:** keine weiteren Höhenboni und keine neue physische Schussblockierung; bestehende Zielsichtanforderungen bleiben bestehen.
-- **Luftfahrt:** feste Reiseflughöhe über der maximalen spielbaren Ebene; Produktionsausfahrt steigt von der lokalen Oberfläche dorthin an.
+- **Luftfahrt:** lokale Freiraumhülle gemäß Architektur; Produktionsübergänge und Bodenabstand menschlich abnehmen.
 - **Bauen:** Empfehlung: nur ebene Flächen, Rampen und Klippenränder nicht bebaubar; kein automatisches Terraforming. Sollen weitere Gebäude auch im Tiefland erlaubt sein? Vorschlag: ja; die Höhenvorgabe betrifft die Startbasen.
 - **Interaktion:** Bau, Abbau und Reparatur dürfen nicht durch Klippen hindurch erfolgen. Fernheilung/Fähigkeitsflächen zunächst wie Kampf behandeln; deren Höhenregeln ausdrücklich bestätigen.
 - **Layout:** Anfangs-Sternenschlacke und zugehöriger Vent auf dem Plateau als Vorschlag; zusätzliche Vorkommen im Tiefland als umkämpfte Ziele. Bestehende Mengen erhalten, nötige Ortsänderungen sichtbar prüfen.

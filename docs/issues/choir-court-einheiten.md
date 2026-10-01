@@ -2,7 +2,7 @@
 
 ## Auftrag und Grenzen
 
-Alle sieben Einheiten beider Fraktionen haben eine eigene Gestaltung und Modellregistrierung. Rollen, technische IDs, Namen, Spielwerte, Kollisionsradien, Bewegungs-/Schusslogik und Simulations-RNG bleiben unverändert. Gebäude und Free Marches sind nicht Teil dieses Auftrags. Offen sind die unten genannte menschliche Sichtung und anschließend die HUD-Portraits; eine aktuelle Übersicht kann dafür bei Bedarf neu erzeugt werden.
+Alle sieben Einheiten beider Fraktionen haben eine eigene Gestaltung und Modellregistrierung. Rollen, technische IDs, Namen, Spielwerte, Kollisionsradien, Bewegungs-/Schusslogik und Simulations-RNG bleiben unverändert. Gebäude und Free Marches sind nicht Teil dieses Auftrags. Offen ist die unten genannte menschliche Sichtung; Vorschaukacheln werden im [Modellkachel-Issue](modell-kacheln.md) gepflegt.
 
 ## Gestaltung
 
@@ -21,4 +21,4 @@ Alle sieben Einheiten beider Fraktionen haben eine eigene Gestaltung und Modellr
 - Technische Modellprüfungen decken Normalen, vollständige Bounds, Dreiecks-/Instanzbudgets, Fracht, Team-/Ghost-/Tönungsvarianten und RNG-Isolation ab. Die historischen Referenzfixtures bleiben unverändert; nicht beteiligte Gebäude bleiben im Isolationsvergleich.
 - Standbilder und `file://`-Rendering sind in allen Qualitätsstufen sowie eigenen/feindlichen Teamfarben und Vorschauvarianten ohne WebGL-Fehler geprüft. Das ist kein Mobilperformance- oder menschlicher Darstellungsnachweis. Keine KI-/Simulationslangläufe beauftragt.
 - Die Gestaltung wurde vom Nutzer positiv bewertet; beanstandet wurde die kaum sichtbare Tender-Laufbewegung. Sie verwendet nun einen distanzgesteuerten Dreibeingang mit deutlichem Vorschwingen und Fußhub, ohne Bewegung des Rumpfs oder der Sammelwerkzeuge. Die korrigierte Laufanimation ist noch menschlich zu sichten.
-- Lesbarkeit unter Gefechtsbedingungen und Echtgeräteperformance bleiben gesondert zu beurteilen. HUD-Portraits sind der nächste gestalterische Folgeschritt.
+- Lesbarkeit unter Gefechtsbedingungen und Echtgeräteperformance bleiben gesondert zu beurteilen. Vorschaukacheln: [Modellkacheln](modell-kacheln.md).

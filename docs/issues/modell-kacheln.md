@@ -12,7 +12,6 @@ Die vom Nutzer vorgelegten Desktop-/Mobilansichten zeigten außerdem zu kleine b
 
 ## Offen
 
-- Die dedizierte Datei `tests/ashes-of-meridian-model-thumbnails.check.cjs` ist derzeit in keinem npm-Testskript enthalten. Ihre Cache-/Isolations-/MSAA-Verträge in die technische Standardauswahl aufnehmen; Befund und offene Entscheidung im [Teststrategie-Review](teststrategie-review.md#standardauswahl-lässt-modellkachel-verträge-aus). Eine solche Aufnahme ersetzt die Geräteabnahme nicht.
 - Menschliche Sichtprüfung aller Fraktionen im Codex und bei normalen HUD-Größen: Bildausschnitt, Teamfarben, Kontrast, Kantenqualität mit [2×-Vorschau-MSAA und Gerätefallback](../rendering.md#modellkacheln) sowie Lesbarkeit von Namen/Kosten unter dem Modell, auch bei deaktivierten Aktionen.
 - Erneute FPS-Abnahme beim Erstöffnen und Wiederöffnen auf dem betroffenen Desktop und Mobilgerät. Smartphone-Abnahme außerdem für Scrollen der Codex-/Aktionsliste und Tippen auf Kacheln; einmalige Cache-Misses können weiterhin CPU-/GPU-Synchronisation verursachen. Eingeschwungener Cache und geteilte Geometrie sind kein Echtgeräte-/Thermiknachweis.
 - Bei auffälligen Kosten mit [Diagnoseberichten](../testing.md#lokale-performancediagnose) vergleichen; der zusätzliche Pass heißt `thumbnails`. Statische Portraitquellen bleiben erhalten, ihre Löschung ist nicht beauftragt.

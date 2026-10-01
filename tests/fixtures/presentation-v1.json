@@ -4,23 +4,17 @@
     {
       "seed": 1409,
       "map": "desert",
-      "terrain": "48150e08ddf3629513db7aeec44ab2ccdd4dea73a054358de4b8f61b47477f68",
-      "placements": "9c0008ec190bd26beee359e85c3b084d02aee3455583b7cb1aa92ba3f5931895",
-      "navigation": "ab5560ad49253e7af1d8f7fc77e23e4b452f7b5257a49a8aaf685576f615d5ee"
+      "terrain": "48150e08ddf3629513db7aeec44ab2ccdd4dea73a054358de4b8f61b47477f68"
     },
     {
       "seed": 2219,
       "map": "desert",
-      "terrain": "9b770a139fd5879bc52ea05838e96b7e071d95fe735e7ed5c424e85607dd3b3d",
-      "placements": "21db849449d1af12183ed14f025d28c2eecef2362edda0714c4be409d0e79c80",
-      "navigation": "8c782596ac1d90623050ffe8ca5f204df79be6b6744e4c89c3f502af0c7a43bc"
+      "terrain": "9b770a139fd5879bc52ea05838e96b7e071d95fe735e7ed5c424e85607dd3b3d"
     },
     {
       "seed": 24080,
       "map": "desert",
-      "terrain": "3489ed543b33612a1347837c7122574c8653a01fd30b56852e75aa1cc2bf25f2",
-      "placements": "82e06f0ed23477050294dbd7b3690e835218fc9e7cec26ef1fd23ef31a2613ed",
-      "navigation": "f12f3d2a0518c19fa3a5d6e721e0cb68aa85dfe3425a82fedb7c4d8f3c3fce29"
+      "terrain": "3489ed543b33612a1347837c7122574c8653a01fd30b56852e75aa1cc2bf25f2"
     }
   ],
   "effects": {

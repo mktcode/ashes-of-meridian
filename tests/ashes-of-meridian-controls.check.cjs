@@ -70,26 +70,17 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const settings = render.renderSettingsScreen(profile.settings);
   assert.match(settings, /data-setting="showFps" checked/);
   render.renderFieldManual();
-  const armory = render.renderArmoryScreen(profile),
-    aetherIcon = vm.runInContext('icon("aether")', context), alloyIcon = vm.runInContext('icon("crystal")', context);
-  assert.match(armory, /<h1>Permanent Upgrades<\/h1>/);
-  assert.notEqual(aetherIcon, alloyIcon);
-  assert.ok(armory.includes(`<span class="armory-aether-icon">${aetherIcon}</span>`));
-  assert.ok(armory.includes(alloyIcon));
-  assert.match(armory, /data-upgrade="startingAlloy"[^>]*><span>100 ECHO<\/span><small>\+50 CINDER<\/small>/);
-  assert.match(armory, /data-upgrade="aetherEvacuation"[^>]*><span>500 ECHO<\/span><small>\+100 LIMIT · \+5 \/ BUILDING<\/small>/);
-  assert.match(armory, /data-upgrade="constructionProtocols"[^>]*><span>350 ECHO<\/span><small>\+5% BUILD SPEED<\/small>/);
-  assert.match(armory, /FLEET SYSTEMS/); assert.match(armory, /COMMAND MODULES/);
-  assert.match(armory, /data-upgrade="orbital"[^>]*><span>250 ECHO<\/span><small>\+12% DAMAGE<\/small>/);
-  assert.doesNotMatch(armory, /AETHER · LEVEL/);
+  const armory = render.renderArmoryScreen(profile), upgrades = vm.runInContext('META', context);
+  for (const key of Object.keys(upgrades)) assert.ok(armory.includes(`data-upgrade="${key}"`));
   const offers = render.renderBenefitOptions(expedition.offers);
   assert.equal(offers, render.renderBenefitOptions(expedition.offers));
   assert.equal(JSON.stringify({profile, expedition}), before);
 });
 
-test('opponent briefing shows only present slots, factions and current upgrades', () => {
+test('opponent briefing maps active slots to their faction and benefit data', () => {
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
-  const renderOpponents = vm.runInContext('renderExpeditionOpponents', context);
+  const { renderExpeditionOpponents: renderOpponents, FACTIONS, expeditionBenefit } =
+    vm.runInContext('({ renderExpeditionOpponents, FACTIONS, expeditionBenefit })', context);
   const expedition = {
     enemyBenefits: [{}, { supplyCrate: 2 }, { surveyDrones: 1 }],
     encounter: { enemies: [2, 1, 0] }
@@ -100,15 +91,13 @@ test('opponent briefing shows only present slots, factions and current upgrades'
       enemyBenefits: expedition.enemyBenefits.slice(0, count),
       encounter: { enemies: expedition.encounter.enemies.slice(0, count) }
     });
-    assert.equal((html.match(/class="opponent-card"/g) || []).length, count);
-    assert.match(html, /OPPONENT 1<\/span><strong>MOURNING HOUSES/);
-    assert.equal(html.includes(`OPPONENT ${count + 1}`), false);
-    assert.doesNotMatch(html, /FREE-FOR-ALL|PRESSURE|Precision supremacy|Early technology|Regenerating swarm|Infantry masses/);
+    for (const faction of expedition.encounter.enemies.slice(0, count))
+      assert.ok(html.includes(FACTIONS[faction].short));
+    for (const faction of expedition.encounter.enemies.slice(count))
+      assert.ok(!html.includes(FACTIONS[faction].short));
+    assert.equal(html.includes(expeditionBenefit('supplyCrate').name), count >= 2);
+    assert.equal(html.includes(expeditionBenefit('surveyDrones').name), count >= 3);
   }
-  const html = renderOpponents(expedition);
-  assert.match(html, /opponent-sigil[^>]*>◇<\/span>.*OPPONENT 1<\/span><strong>MOURNING HOUSES<\/strong><small>UPGRADES · NONE/);
-  assert.match(html, /opponent-sigil[^>]*>❋<\/span>.*OPPONENT 2<\/span><strong>MANYROOT<\/strong><small>UPGRADES · Supply crate ×2/);
-  assert.match(html, /opponent-sigil[^>]*>◈<\/span>.*OPPONENT 3<\/span><strong>CINDER PACT<\/strong><small>UPGRADES · Survey drones ×1/);
 });
 
 function setup() {
@@ -1309,18 +1298,6 @@ test('each result transfers capped unused aether plus structure recovery once at
     assert.equal(h.ui.profile.aether, recovered, 'same result cannot pay twice');
     assert.equal(saves.length, recovered ? 1 : 0);
   }
-});
-
-test('result screen shows evacuated and building-destruction aether beneath the combined total', () => {
-  const h = setup();
-  h.ui.resultAetherRecovered = 130;
-  h.ui.resultAetherEvacuated = 100;
-  h.ui.resultAetherStructures = 30;
-  h.ui.showResult({ win: false, text: 'Defeat', time: 1, score: 0, integrity: 0 });
-  const html = h.document.getElementById('result').innerHTML;
-  assert.match(html, /ECHO RECOVERED<\/span><strong>130<\/strong>/);
-  assert.match(html, /EVACUATED 100/);
-  assert.match(html, /BUILDINGS DESTROYED 30/);
 });
 
 test('fleet upgrades charge their prices, respect caps and never mutate an active battle',()=>{

@@ -16,10 +16,6 @@ Alte Hügel-Checkpoints werden wegen der entfernten Missionskennung verworfen, n
 - [ ] HQ-Wiederaufbau mit überlebendem Worker und vorhandenen Mitteln, sofortige Niederlage ohne fertiges HQ und Worker, Ergebnis/Vorteilswahl sowie Reload desselben Gefechtsanfangs prüfen. Bei gleichzeitigem Zielerreichen im selben Tick gilt wie bei gleichzeitiger Eliminierung die konservative Spielerniederlage; kein Vorteil durch Entitätsreihenfolge.
 - [ ] Nachtlesbarkeit, Bedienbarkeit und Kosten auf Zielgeräten. Das hohe Stadtbudget und fehlende Hindernisvermeidung von Flugzeugen an hohen Dekorbauten bleiben offene Grenzen. Keine allgemeine Karten-/Darstellungsabnahme durch die Umsetzung.
 
-## Technischer Prüfkontext
+## Prüfgrenze
 
-Build, alle 495 Standardtests sowie Serverbuild und 15 kurze Servertests bestanden. Die vier bisherigen Karten behalten gegenüber dem Vor-Missionsstand Startzustände, Terrainraster und die nächsten acht Simulations-RNG-Ziehungen. Das Netzwerkangebot bleibt unverändert.
-
-Begrenzte Verträge prüfen physische Bergung/Anlieferung, getrennte Fracht/Währung, Verlust und Auftragswechsel, Ergebnispriorität, Parteienausscheiden, bezahlte KI-Aufträge, Eingaben und Checkpoints. Worker-only-Prüfung: je ein vollständiger Hin-/Rücktransport aus allen vier Starts, ohne KI-Gefechtslauf. Modellprüfung: deterministische endliche Geometrie, Normalen, bestehender Sockelumriss und begrenztes Dreiecksbudget. Keine neuen Echtzeitlichter, Shader oder Renderpässe.
-
-Der pausierte Chromium-Check über `file://` (1280 × 900, KI deaktiviert) prüft Zentrumseinführung ohne Gegnerfreigabe, neues Modell und eine gezielt gesetzte Bergungs-/Lieferprobe ohne Echo-Gutschrift. Keine JS-/GL-Fehler oder HTTP(S)-Anfragen. Die temporären Bilder und Logs wurden bei der Repo-Bereinigung gelöscht; dieser Prüfkontext bleibt erhalten. Das ist keine autonome Gefechts-, visuelle oder Echtgeräteabnahme. Umfangreiche KI-/Simulations-Langläufe sind nicht beauftragt.
+Begrenzte Bergungs-, Eingabe-, Checkpoint- und Modellregressionen ersetzen keine autonome Partie, Balancing-, visuelle oder Echtgeräteabnahme. Umfangreiche KI-/Simulationsläufe benötigen einen ausdrücklichen aktuellen Auftrag; [Prüfverfahren](../testing.md). Ressourcen-/RNG-Isolation und bestehender Sockelumriss bleiben technische Schutzverträge.

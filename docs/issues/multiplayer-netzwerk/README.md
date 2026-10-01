@@ -9,11 +9,11 @@ Der freigegebene vertikale Prototyp ist umgesetzt: separater autoritativer [Serv
 - [ ] Erst nach Abnahme auf drei/vier menschliche Parteien erweitern; FFA beibehalten. KI und die [tolerierten Unterbau-Grenzen](../multiplayer-simulationsmodell.md#tolerierte-grenzen-im-gemeinsamen-unterbau) separat behandeln.
 - [ ] Zustandsumfang für spätere Wiederherstellung/Replays bestimmen, einschließlich Befehlsqueue/RNG. Die übertragene Sicht ist kein Simulationssnapshot; der Expeditionscheckpoint ebenfalls nicht.
 
-- [ ] [Mess- und Strukturfolgearbeiten](robustheit.md#offene-befunde-aus-dem-kurzen-code-review) getrennt von den behobenen Lebenszyklusfehlern angehen; kein breites Refactoring.
+- [ ] [Mess- und Strukturfolgearbeiten](robustheit.md#offene-messung-und-abnahme) getrennt von den behobenen Lebenszyklusfehlern angehen; kein breites Refactoring.
 
 ## Mobilfunkrobustheit
 
-Mehrere menschliche Tests über ein Mobilfunknetz endeten durch Verbindungsabbruch. Diagnose, automatische Wiederwahl, Resume-Schonfrist, toleranterer Heartbeat, Backpressure-Behandlung, adaptive Zustandsrate und Transportkompression sind inzwischen technisch umgesetzt; Ziel-VM-, Zielgeräte- und vollständige Netzprofilabnahme bleiben offen. Befund, Prioritäten und Umsetzungspakete stehen im [Robustheitsplan](robustheit.md).
+Mehrere menschliche Tests über ein Mobilfunknetz endeten durch Verbindungsabbruch. Diagnose, automatische Wiederwahl, Resume-Schonfrist, toleranterer Heartbeat, Backpressure-Behandlung, adaptive Zustandsrate und Transportkompression sind inzwischen technisch umgesetzt; Ziel-VM-, Zielgeräte- und vollständige Netzprofilabnahme bleiben offen. Befund und verbleibende Mess-/Abnahmefragen stehen im [Robustheitsplan](robustheit.md).
 
 Prüfkontext: Kurze echte WebSocket-Verbindungen decken alle Karten, Akteursbindung, verborgene Gegner, Queue-Ergebnisse, geschlossene Räume und Abbruch ab. Synthetische Projektionstests prüfen verborgene Ziel-/Queue-Daten und Ressourcen-Gedächtnis. Ein gezielter `file://`-Browsercheck mit zwei isolierten Chromium-Profilen auf Mothership/Performance prüft Join, HUD-Rekrutierung, Worker-Bewegung beider Parteien, weiterlaufenden Server bei lokalem Menü, Abbruch und unveränderte lokale Speicherung. Der Darstellungscheck ergänzt Zwischenpositionen, FPS-/NET-Anzeige und Audioaufrufe für echte Produktionsereignisse; Schuss-/Artillerie-/Explosionsdarstellung wurde im Browser gezielt eingespeist, ihr serverseitiger Ursprung/Sichtschutz separat geprüft. Das separate Containerimage besteht Build, Healthcheck, Zwei-Verbindungs-Start und autoritative Befehlsausführung. Keine visuelle/akustische, Ziel-VM-/Produktionslast-, Echtgeräte- oder vollständige Internetabnahme.
 

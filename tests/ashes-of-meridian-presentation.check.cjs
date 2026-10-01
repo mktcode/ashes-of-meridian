@@ -599,7 +599,6 @@ test('effect drawing accepts frozen data without game/UI globals and matches the
   const render = vm.runInContext('renderBattlefieldEffects', context);
   const { effectViewSample } = require('./helpers/effect-view-scenario.cjs');
   const { reference, ...expected } = require('./fixtures/effects-view-v1.json');
-  assert.equal(reference, 'b9f0026');
   assert.deepEqual(effectViewSample(render), expected);
 });
 

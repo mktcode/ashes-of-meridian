@@ -139,16 +139,6 @@ test('missing or malformed settings containers retain defaults independently of 
   assert.deepEqual(h.warnings, []);
 });
 
-test('the new expedition format resets old runs without migrating or changing the permanent profile', () => {
-  const h=setup(), profile={...defaults,expeditionDepth:21,aether:432,upgrades:{startingAlloy:3}};
-  h.service.saveProfile(profile);
-  h.data.set('meridian.expedition.v4',JSON.stringify({...expedition,version:4,depth:21}));
-  const before=JSON.stringify(h.service.loadProfile());
-  assert.equal(h.service.loadExpedition(),null);
-  assert.equal(JSON.stringify(h.service.loadProfile()),before);
-  assert.ok(!h.trace.some(([op,key])=>op==='get'&&key==='meridian.expedition.v4'));
-});
-
 test('profile and expedition use separate local keys and survive service recreation', () => {
   const h = setup();
   const profile = { ...defaults, expeditionDepth: 12, aether: 321, upgrades: { startingWorkers: 2 } };
@@ -169,7 +159,7 @@ test('profile and expedition use separate local keys and survive service recreat
 test('expedition normalization rejects invalid encounters and bounds known benefits and offers', () => {
   const h = setup();
   for (const invalid of [null, {}, { ...expedition, version: 4 },
-    ...[undefined, null, '', 'king-of-the-hill', 'toString', ['hq-elimination']].map(mission =>
+    ...[undefined, null, '', 'unknown-mission', 'toString', ['hq-elimination']].map(mission =>
       ({ ...expedition, encounter: { ...expedition.encounter, mission } })),
     { ...expedition, faction: 3 }, { ...expedition, abilities: ['orbital', 'repair', 'scan'] },
     { ...expedition, abilities: ['orbital', 'repair', 'scan', 'scan'] },

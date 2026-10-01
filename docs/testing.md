@@ -45,7 +45,18 @@ Die passende Datei bzw. den Namen in `tests/` suchen (`rg 'test\(' tests`); kein
 npm test
 ```
 
-baut neu und führt die Standardtestsuite **ohne die beiden umfangreichen KI- und Simulations-Testdateien** aus. Terrain-, Präsentations- und übrige technische Tests bleiben enthalten; auch der Standardlauf ist daher nicht ausschließlich eine schnelle Unit-Test-Suite. Die genaue Auswahl und Runneroptionen stehen in `package.json`. **`npm test -- …` ist kein Ersatz für einen gezielten Dateilauf** mit dem obigen Node-Befehl.
+baut neu und führt die Standardtestsuite **ohne die beiden umfangreichen KI- und Simulations-Testdateien** aus. Terrain-, Präsentations- und übrige technische Tests bleiben enthalten; auch der Standardlauf ist daher nicht ausschließlich eine schnelle Unit-Test-Suite. Die Zuordnung steht in `tests/helpers/test-suites.cjs`: jede Root-Testdatei gehört genau einem Bereich, Modelltests werden im Modellverzeichnis erfasst. Fehlende oder nicht zugeordnete Root-Dateien brechen die Auswahl ab, statt unbemerkt Abdeckung zu verlieren oder Langläufe aufzunehmen. **`npm test -- …` ist kein Ersatz für einen gezielten Dateilauf** mit dem obigen Node-Befehl.
+
+Für eingegrenzte Änderungen gibt es Bereichsläufe, jeweils mit Build:
+
+```bash
+npm run test:logic
+npm run test:terrain
+npm run test:presentation
+npm run test:models
+```
+
+Mit `node scripts/run-tests.mjs <bereich> --list` lässt sich die Auswahl ohne Build oder Ausführung anzeigen (`standard` für die gesamte Standardauswahl). Bereiche sind fachliche Auswahlhilfen, keine Zeitgarantie; Terrain enthält bewusst breite Seedprüfungen. Kurze Wirtschaftsvalidatoren stehen unabhängig von Langläufen in der Logikgruppe. Bei einem bereichsübergreifenden Vertrag mehrere betroffene Gruppen oder den Standardlauf wählen.
 
 Die beiden umfangreichen Blöcke sind getrennt ausführbar und bauen jeweils vorher neu:
 

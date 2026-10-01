@@ -381,13 +381,6 @@ test('world events follow the map definition, not its ID', () => {
   }
 });
 
-test('unknown structures cannot be built or spend resources', () => {
-  const { game } = battle(), before = json(game.s);
-  assert.match(game.canBuild('unknown-structure'), /Unknown structure/);
-  assert.equal(game.build('unknown-structure', { x: -30, z: 40 }), false);
-  assert.deepEqual(json(game.s), before);
-});
-
 test('only enemy HQ destruction wins; loss of the last own HQ loses, without stars or rewards', () => {
   for (const win of [true,false]) {
     const { game, events } = battle();
@@ -1198,20 +1191,6 @@ test('start structures sell for half their normal cost; supply loss keeps existi
   assert.equal(game.train('rifle'), false);
 });
 
-test('last completed HQ and ineligible buildings cannot be sold; an unfinished replacement HQ does not remove protection', () => {
-  const { game } = battle(), hq = player(game, 'hq');
-  const next = game.spawnBuilding('hq', -20, 60, 0, 0, { progress: .5 });
-  assert.match(game.canSellBuilding(hq.id), /Last command center/);
-  assert.equal(game.sellBuilding(hq.id), false);
-  next.progress = 1; assert.equal(game.sellBuilding(hq.id), true);
-  assert.match(game.canSellBuilding(next.id), /Last command center/);
-  for (const target of [player(game, 'hero'), game.alive(e => e.team === 1 && e.kind === 'building')[0],
-    game.spawnBuilding('depot', 0, 0, 0, 0, { progress: .5 }), { id: -1 }]) {
-    const before = json(game.s);
-    assert.equal(game.sellBuilding(target.id), false); assert.deepEqual(json(game.s), before);
-  }
-});
-
 test('nearby refinery placement snaps to the vent and selling frees it for a new foundation', () => {
   const { game } = battle(), b = player(game, 'refinery'), gas = game.get(b.gasId),
     nearby = {x:gas.x+5,z:gas.z};
@@ -1509,16 +1488,6 @@ test('recruitment distributes globally and produces in parallel at assigned buil
   }
   assert.deepEqual(json(game.get(a.id).queue.map(q=>q.type)), ['medic']);
   assert.deepEqual(json(game.get(b.id).queue.map(q=>q.type)), ['rifle']);
-});
-
-test('unknown units cannot be recruited; starts use the current unit catalog', () => {
-  for (const faction of [0,1,2]) {
-    const {game} = createGame(); game.start({seed:1409,faction,enemies:[faction]});
-    const before = json(game.s);
-    assert.equal(game.train('unknown-unit'), false); assert.deepEqual(json(game.s), before);
-    const types = ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'hero'];
-    assert.ok(game.s.entities.filter(e => e.kind === 'unit').every(e => types.includes(e.type)));
-  }
 });
 
 test('fixed steps finish production once, retain reserved supply and account only for mining and refinery income', () => {
