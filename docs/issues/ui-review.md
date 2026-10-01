@@ -2,6 +2,9 @@
 
 Review-Kontext: Menüs, Codex, Dialoge, Flottenupgrades und Ergebnisansicht;
 Gefechts-HUD ausdrücklich ausgenommen. [Designsystem](../ui-design-system.md).
+Die [Vorbereitung zur externen UI-Demo](ui-look-demo.md) behandelt den gewünschten
+Look einschließlich einer separat zu integrierenden HUD-Gestaltung; die folgenden
+technischen Grenzen bleiben dabei bestehen.
 
 ## Fokus und Dialogsemantik
 
