@@ -26,6 +26,7 @@ Ziehen/Pinch oder Mausziehen/Mausrad bewegt die Kamera; Tap/Linksklick wählt, Z
 - [AGENTS.md](AGENTS.md): verbindliche Arbeitsregeln.
 - [Architektur](docs/architecture.md): Systemgrenzen, Lade-, Zustands- und RNG-Verträge.
 - [Grafik und Assets](docs/rendering.md): Erweiterung, Besitz und Pflege.
+- [Audio und Sprachinhalte](docs/audio.md): Aufnahmen, Texte und Wiedergabeverträge.
 - [Prüfungen](docs/testing.md): kurze gezielte Rückkopplung, Freigaben und Diagnose.
 - [Subagents](docs/subagents.md): isolierte parallele Arbeit.
 - [Projektprioritäten](docs/issues/projektfahrplan.md) und [offene Issues](docs/issues/).

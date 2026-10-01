@@ -12,6 +12,8 @@
     const INFANTRY_SHOT_URL = './audio/sfx-infantry-shot.wav';
     const INFANTRY_SHOT_POOL_SIZE = 5;
     type MusicMode = 'menu' | 'battle' | 'silent';
+    type VoiceKind = 'dialogue' | 'selection';
+    interface VoicePlayback { id: VoiceLineId; kind: VoiceKind; suspended: boolean; attempt: number; }
     interface Window { webkitAudioContext?: typeof AudioContext; }
     class MeridianAudio {
       settings: MeridianSettings;
@@ -34,7 +36,11 @@
       lastShot: number;
       started: boolean;
       noiseBuffer?: AudioBuffer;
-      constructor(settings: MeridianSettings) {
+      voiceTrack: HTMLAudioElement | null = null;
+      activeVoice: VoicePlayback | null = null;
+      lastSelectionLine: VoiceLineId | null = null;
+      selectionNextAt = 0;
+      constructor(settings: MeridianSettings, private voiceRandom: () => number = Math.random) {
         this.settings = settings;
         this.ctx = null;
         this.master = null;
@@ -85,6 +91,7 @@
           this.effectsGain.connect(this.master);
           this.createBattleTrack();
           this.createInfantryShots();
+          this.createVoiceTrack();
           this.updateSettings();
           this.noiseBuffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
           let arr = this.noiseBuffer.getChannelData(0),
@@ -150,7 +157,98 @@
           if (playing && typeof playing.catch === 'function') playing.catch(() => {});
         } catch (_) {}
       }
+      createVoiceTrack() {
+        if (this.voiceTrack || typeof Audio !== 'function') return;
+        try {
+          const track = new Audio();
+          track.preload = 'metadata';
+          (track as HTMLAudioElement & { playsInline: boolean }).playsInline = true;
+          track.addEventListener('ended', () => {
+            if (track.ended && this.activeVoice) this.stopVoice();
+          });
+          track.addEventListener('error', () => {
+            if (track.error && this.activeVoice) this.voiceFailed(this.activeVoice);
+          });
+          this.voiceTrack = track;
+        } catch (error) {
+          console.warn('Speech unavailable:', error instanceof Error ? error.message : String(error));
+        }
+      }
+      voiceFailed(playback: VoicePlayback) {
+        // An interrupted request can reject after a newer line has already begun.
+        if (this.activeVoice !== playback) return;
+        console.warn(`Speech unavailable: ${playback.id}`);
+        this.stopVoice();
+      }
+      startVoice(playback: VoicePlayback) {
+        const track = this.voiceTrack;
+        if (!track || this.activeVoice !== playback || playback.suspended) return;
+        const attempt = ++playback.attempt;
+        try {
+          const playing = track.play();
+          if (playing && typeof playing.catch === 'function')
+            playing.catch(() => { if (playback.attempt === attempt) this.voiceFailed(playback); });
+        } catch (_) { this.voiceFailed(playback); }
+      }
+      playVoice(id: VoiceLineId, kind: VoiceKind = 'dialogue'): boolean {
+        const line = voiceLine(id), track = this.voiceTrack;
+        if (!line.audio || !track || !this.ctx || !this.settings.sfx || this.settings.volume <= 0 || this.musicMode === 'menu') return false;
+        if (kind === 'selection' && (this.musicMode !== 'battle' || this.activeVoice?.kind === 'dialogue')) return false;
+        this.stopVoice();
+        const playback: VoicePlayback = { id, kind, suspended: this.musicMode === 'silent', attempt: 0 };
+        this.activeVoice = playback;
+        try {
+          track.src = line.audio;
+          track.currentTime = 0;
+          track.volume = Math.max(0, Math.min(1, this.settings.volume));
+          this.syncBattleTrack();
+          this.startVoice(playback);
+          return this.activeVoice === playback;
+        } catch (_) {
+          this.voiceFailed(playback);
+          return false;
+        }
+      }
+      selectionVoice(units: readonly Pick<UnitEntity, 'type'>[], group = false): boolean {
+        if (!units.length) return false;
+        let pool = [...new Set(units.flatMap(e => SELECTION_VOICE_LINES[e.type] || []))];
+        // HUD group buttons always get one random response, even for unvoiced unit types.
+        if (!pool.length && group) pool = [...new Set(Object.values(SELECTION_VOICE_LINES).flatMap(lines => lines || []))];
+        if (!pool.length || !this.ctx || !this.voiceTrack || !this.settings.sfx || this.settings.volume <= 0) return false;
+        // Suppressed responses are handled, not replaced by a flood of selection beeps.
+        if (this.activeVoice?.kind === 'dialogue' || this.ctx.currentTime < this.selectionNextAt) return true;
+        if (pool.length > 1) pool = pool.filter(id => id !== this.lastSelectionLine);
+        const id = pool[Math.min(pool.length - 1, Math.floor(this.voiceRandom() * pool.length))];
+        if (!this.playVoice(id, 'selection')) return false;
+        this.lastSelectionLine = id;
+        this.selectionNextAt = this.ctx.currentTime + .35;
+        return true;
+      }
+      isVoiceActive(id: VoiceLineId): boolean { return this.activeVoice?.id === id; }
+      stopVoice(kind?: VoiceKind) {
+        if (!this.activeVoice || (kind && this.activeVoice.kind !== kind)) return;
+        this.activeVoice = null;
+        this.voiceTrack?.pause();
+        try { if (this.voiceTrack) this.voiceTrack.currentTime = 0; } catch (_) {}
+        this.syncBattleTrack();
+      }
+      syncVoiceMode() {
+        const playback = this.activeVoice;
+        if (!playback) return;
+        if (this.musicMode === 'menu' || !this.settings.sfx || this.settings.volume <= 0) {
+          this.stopVoice();
+        } else if (this.musicMode === 'silent') {
+          if (playback.kind === 'selection') this.stopVoice();
+          else { playback.suspended = true; playback.attempt++; this.voiceTrack?.pause(); }
+        } else if (playback.suspended) {
+          playback.suspended = false;
+          this.startVoice(playback);
+        }
+      }
       resetBattleMusic() {
+        this.stopVoice();
+        this.lastSelectionLine = null;
+        this.selectionNextAt = 0;
         this.battleGapRemaining = BATTLE_MUSIC_GAP;
         this.battleGapUntil = null;
         this.battlePlayFailed = false;
@@ -166,7 +264,8 @@
       syncBattleTrack() {
         let track = this.battleTrack;
         if (!track) return;
-        track.volume = this.settings.music ? Math.max(0, Math.min(1, this.settings.volume)) * 0.1 : 0;
+        track.volume = this.settings.music ? Math.max(0, Math.min(1, this.settings.volume)) * 0.1 *
+          (this.activeVoice && !this.activeVoice.suspended ? .35 : 1) : 0;
         // Audio-clock seconds, never simulation time or game-speed-scaled dt.
         let now = this.ctx!.currentTime;
         if (this.musicMode !== 'battle' || !this.settings.music) {
@@ -227,6 +326,7 @@
           this.battleTrack.pause();
           if (mode === 'menu') this.resetBattleMusic();
         }
+        this.syncVoiceMode();
         this.syncBattleTrack();
       }
       updateSettings() {
@@ -243,6 +343,8 @@
           ? Math.max(0, Math.min(1, this.settings.volume)) * 0.16
           : 0;
         for (const shot of this.infantryShots) shot.volume = infantryShotVolume;
+        if (this.voiceTrack) this.voiceTrack.volume = this.settings.sfx ? Math.max(0, Math.min(1, this.settings.volume)) : 0;
+        this.syncVoiceMode();
         this.syncBattleTrack();
       }
       tone(freq: number, duration = 0.1, volume = 0.12, type: OscillatorType = 'sine', dest: AudioNode | null = null, delay = 0, endFreq: number | null = null) {

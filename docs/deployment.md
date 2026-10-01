@@ -24,7 +24,7 @@ Bei 502 trotz gesundem Container Domain/Port und gemeinsame Erreichbarkeit im `d
 
 ## itch.io
 
-`npm run build:zip` erzeugt `release/ashes-of-meridian-prototype.zip` mit `index.html` an der Wurzel. Als HTML-Build hochladen, „This file will be played in the browser“ aktivieren und Vollbild/responsiven Viewport ermöglichen. Neue lokale Assets in ZIP- und Docker-Paketweg gemeinsam berücksichtigen.
+`npm run build:zip` erzeugt `release/ashes-of-meridian-prototype.zip` mit `index.html` an der Wurzel. Als HTML-Build hochladen, „This file will be played in the browser“ aktivieren und Vollbild/responsiven Viewport ermöglichen. Neue lokale Assets in ZIP- und Docker-Paketweg gemeinsam berücksichtigen; für Sprache gilt der [Katalog-/Paketvertrag](audio.md). `node scripts/build-zip.mjs <ziel.zip>` erlaubt nach dem Build einen abweichenden Ausgabeweg, etwa für isolierte Paketprüfungen.
 
 `npm run capture:itch` erzeugt Präsentationsmedien unter `release/itch-media/`; benötigt Chromium (`CHROMIUM_PATH` für abweichenden Pfad). Arrangierte Motive sind kein Spiel-/Balancingnachweis; nicht routinemäßig als Prüfung starten.
 

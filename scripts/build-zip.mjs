@@ -1,9 +1,15 @@
 import { deflateRawSync } from 'node:zlib';
+import { runInNewContext } from 'node:vm';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, posix, relative, resolve, sep } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const output = resolve(root, 'release/ashes-of-meridian-prototype.zip');
+const output = resolve(root, process.argv[2] || 'release/ashes-of-meridian-prototype.zip');
+// Evaluate the built, data-only catalogue: voice paths have one authoritative source.
+const voiceSource = await readFile(resolve(root, 'dist/src/voice-content.js'), 'utf8');
+const voiceAudio = runInNewContext(`${voiceSource}\nObject.values(VOICE_LINES).flatMap(line => line.audio ? [line.audio] : [])`);
+if (voiceAudio.some(url => !/^\.\/audio\/voices\/[a-z0-9-]+\.mp3$/.test(url)))
+  throw new Error('Voice catalogue has an unsupported local audio path');
 const runtimeAudio = [
   'audio/music-ratchet-theory.mp3',
   'audio/music-last-light-relay.mp3',
@@ -11,7 +17,8 @@ const runtimeAudio = [
   'audio/music-black-channel.mp3',
   'audio/music-sporewake.mp3',
   'audio/music-rootmind.mp3',
-  'audio/sfx-infantry-shot.wav'
+  'audio/sfx-infantry-shot.wav',
+  ...new Set(voiceAudio.map(url => url.slice(2)))
 ];
 
 async function filesBelow(directory, accept = () => true) {

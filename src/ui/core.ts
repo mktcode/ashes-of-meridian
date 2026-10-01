@@ -59,6 +59,7 @@
       pings: UIPing[];
       lastClick: Partial<{ id: number; type: string; time: number; count: number }>;
       radioUntil: number;
+      radioVoiceId: VoiceLineId | null = null;
       toastUntil: number;
       actionSignature: string;
       factionJustUnlocked: FactionId | null;
@@ -155,6 +156,12 @@
         setTimeout(() => el.remove(), 5800);
         while ($('alerts').children.length > 5) $('alerts').firstChild!.remove();
       }
+      radioLine(id: VoiceLineId) {
+        const line = voiceLine(id);
+        this.radio(`${line.speaker}|${line.text}`);
+        this.radioVoiceId = line.audio ? id : null;
+        if (this.radioVoiceId) this.audio.playVoice?.(this.radioVoiceId);
+      }
       radio(text: string) {
         if (!text) return;
         let parts = text.split('|'),
@@ -169,6 +176,8 @@
           .slice(0, 2)
           .join('');
         this.radioUntil = performance.now() + Math.max(7000, body.length * 54);
+        this.audio.stopVoice?.();
+        this.radioVoiceId = null;
         this.audio.sound('radio');
       }
       event(...[type, data]: GameEvent) {
@@ -192,6 +201,8 @@
           $('worldViewport').classList.add('in-battle');
           if (this.onViewportChange) this.onViewportChange();
           $('radio').classList.add('hidden');
+          this.radioVoiceId = null;
+          this.radioUntil = 0;
           $('alerts').innerHTML = '';
           this.selected = [];
           this.attackMove = false;
@@ -226,6 +237,7 @@
                   : FACTIONS[this.game.s!.parties[this.localTeam].faction].color
             });
         } else if (type === 'result') {
+          this.audio.stopVoice?.();
           this.battleIntro = null;
           this.battleTutorial = null;
           const firstResult = this.resultAetherRecovered === undefined;

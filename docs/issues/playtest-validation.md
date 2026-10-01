@@ -11,6 +11,7 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 ## Worker-Start und Tutorial
 
 - [ ] Worker-Ankunft, Lesedauer der Textdialoge und Fahrt eigenes HQ → Gegner → eigenes HQ menschlich abnehmen, insbesondere im Hochformat. Platzieren des ersten HQ ohne Vorwissen verständlich?
+- [ ] Tutorial-/Auswahlstimmen, Verständlichkeit gegenüber Musik/Kampf, Pause/Fortsetzen, SFX-Stummschaltung und verspätete mobile Autoplay-Freigabe akustisch prüfen. Letzte Phrase von `infantry-selected-3.mp3` gegen die automatische Katalogtranskription bestätigen. [Pflegevertrag](../audio.md).
 - [ ] Bezahlten KI-HQ-Aufbau aus Worker-Sicht auf den spielbaren Karten gezielt prüfen; KI-/Simulationsläufe brauchen separate Freigabe. Danach Wirtschaft und frühe Angriffe unter dem längeren Aufbau vergleichen, kein automatisches Balancing.
 - [ ] Multiplayer-Start mit Worker und HQ-Platzierung auf zwei Geräten prüfen.
 

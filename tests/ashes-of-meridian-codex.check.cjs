@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const {loadScripts,UI_SCRIPTS} = require('./helpers/game-scripts.cjs');
 test('codex exposes current-model tiles for every faction without a profile unlock', () => {
-  const context=loadScripts(['core','content',...UI_SCRIPTS]);
+  const context=loadScripts(['core','content','voice-content',...UI_SCRIPTS]);
   vm.runInContext('Math.random = seeded = () => { throw Error("Codex RNG"); }',context);
   const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS} =
     vm.runInContext('({renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS})',context);

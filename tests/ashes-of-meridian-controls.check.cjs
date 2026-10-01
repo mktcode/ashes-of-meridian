@@ -189,7 +189,7 @@ function setup() {
   };
   const window = target();
   let now = 0;
-  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
+  const context = loadScripts(['core', 'content', 'voice-content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00', matchMedia: () => ({ matches: true })
   } });
@@ -471,6 +471,8 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.game.s.depth = 0;
   h.ui.alert = () => {};
+  const spoken = [];
+  h.ui.audio.playVoice = id => spoken.push(id);
   h.ui.game.s.rules = { kind: 'single-player', mission: { id: 'hq-elimination' } };
   h.ui.game.s.entities = [
     { id: 3, team: 0, kind: 'unit', type: 'worker', hp: 100, x: -69, z: 46, queue: [] },
@@ -485,6 +487,7 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   h.ui.advanceTutorialArrival(3);
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
   assert.equal(h.ui.battleTutorial.step, 'buildHQ');
+  assert.deepEqual(spoken, ['tutorial.settle']);
   assert.equal(h.ui.controlsLocked, false);
   assert.equal(h.ui.tutorialAction(), 'tab:build');
   h.ui.game.s.entities.push({ id: 1, team: 0, kind: 'building', type: 'hq', hp: 100,
@@ -503,6 +506,7 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   h.ui.advanceBattleIntro(1.25);
   assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
   h.ui.advanceBattleIntro(3.75);
+  assert.deepEqual(spoken, ['tutorial.settle', 'tutorial.warning']);
   assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
   h.ui.advanceBattleIntro(4);
   assert.deepEqual(h.ui.game.s.cam, { x: 72, z: -72, zoom: 50 });
@@ -882,6 +886,59 @@ test('triple mouse clicks keep same-type selection; buildings never trigger comb
     }
     assert.deepEqual(h.ui.selected,kind === 'unit' ? [1,2] : [1]);
   }
+});
+
+test('selection feedback uses only living owned units and HUD group selection requests exactly one response', () => {
+  const h = setup(), requests = [], sounds = [];
+  h.ui.select = h.UI.prototype.select.bind(h.ui);
+  h.ui.audio.selectionVoice = (units, group) => { requests.push({ types: Array.from(units, e => e.type), group }); return units.length > 0; };
+  h.ui.audio.sound = sound => sounds.push(sound);
+  h.ui.game.observed = () => true;
+  h.ui.game.s.entities = [
+    { id: 1, kind: 'unit', type: 'worker', team: 0, hp: 100, x: 100, z: 100 },
+    { id: 2, kind: 'unit', type: 'rifle', team: 0, hp: 100, x: 200, z: 200 },
+    { id: 3, kind: 'unit', type: 'tank', team: 0, hp: 100, x: 300, z: 300 },
+    { id: 4, kind: 'unit', type: 'rifle', team: 1, hp: 100, x: 400, z: 400 },
+    { id: 5, kind: 'unit', type: 'worker', team: 0, hp: 0, x: 100, z: 100 }
+  ];
+  h.ui.select([1, 1, 4, 5]);
+  assert.deepEqual(requests.pop(), { types: ['worker'], group: false });
+  assert.deepEqual(sounds, []);
+  h.ui.select([4]); assert.deepEqual(requests.pop().types, []);
+  assert.deepEqual(sounds, ['select'], 'enemy selection never impersonates an owned unit');
+  h.UI.prototype.bind.call(h.ui);
+  for (const button of ['combatSelectBtn', 'visibleCombatSelectBtn']) {
+    requests.length = 0;
+    h.document.getElementById(button).onclick();
+    assert.deepEqual(requests, [{ types: ['rifle', 'tank'], group: true }]);
+  }
+});
+
+test('catalogue dialogue shares subtitle and recording identity, outlives its voice and stops on close', () => {
+  const h = setup(), spoken = [], stopped = [];
+  let active = null;
+  h.ui.audio.playVoice = id => { spoken.push(id); active = id; return true; };
+  h.ui.audio.isVoiceActive = id => active === id;
+  h.ui.audio.stopVoice = kind => { stopped.push(kind); active = null; };
+  h.ui.updateQueues = () => {};
+  h.UI.prototype.bind.call(h.ui);
+  for (const id of ['tutorial.settle', 'tutorial.warning']) {
+    const line = vm.runInContext(`voiceLine('${id}')`, h.context);
+    h.ui.radioLine(id);
+    assert.equal(h.document.getElementById('radioText').textContent, line.text);
+    assert.equal(h.document.getElementById('radioName').textContent, line.speaker + ' / SECURE CHANNEL');
+    assert.equal(spoken.at(-1), id);
+  }
+  h.ui.radioUntil = 1;
+  h.setTime(20000); h.ui.tick(0);
+  assert.equal(h.document.getElementById('radio').classList.contains('hidden'), false, 'late media loading or long playback must not hide its subtitles');
+  active = null; h.ui.tick(0);
+  assert.equal(h.document.getElementById('radio').classList.contains('hidden'), true);
+  h.ui.radioLine('tutorial.settle');
+  h.document.getElementById('radioClose').onclick();
+  assert.equal(stopped.at(-1), 'dialogue');
+  assert.equal(h.ui.radioVoiceId, null);
+  assert.equal(h.document.getElementById('radio').classList.contains('hidden'), true);
 });
 
 test('selection deduplicates IDs and excludes missing entities', () => {

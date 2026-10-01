@@ -57,7 +57,7 @@
           const travel = intro.travel, t = intro.elapsed;
           if (!intro.objectiveShown && t >= 2.5) {
             intro.objectiveShown = true;
-            this.radio('Commander|Looks like we are not alone. We need to be prepared for battle.');
+            this.radioLine('tutorial.warning');
             this.radioUntil = Infinity;
           }
           const segment = t < 1.25 ? [intro.origin!, intro.home, t / 1.25] as const
@@ -152,9 +152,11 @@
           $('toast').classList.remove('show');
           this.toastUntil = 0;
         }
-        if (this.radioUntil && now > this.radioUntil) {
+        if (this.radioUntil && now > this.radioUntil &&
+          (!this.radioVoiceId || !this.audio.isVoiceActive?.(this.radioVoiceId))) {
           $('radio').classList.add('hidden');
           this.radioUntil = 0;
+          this.radioVoiceId = null;
         }
         for (let p of this.pings) p.life -= dt;
         this.pings = this.pings.filter(p => p.life > 0);

@@ -73,4 +73,4 @@ Ersetzende Vorschau/Gefechtsstart verwirft Animation/Bildspeicher und entwertet 
 
 Projektion, Picking und Overlay lesen dieselben gemessenen CSS-Clientgrenzen von `#worldViewport`, einschließlich Offset. Resize/Moduswechsel synchronisieren sie; kein DOM-Messen je Einheit. Orthografischer Zoom bleibt an Fensterhöhe gebunden. Gesamte CSS-Kaskade prüfen; UI-Fortschritt folgt Simulation, keiner zweiten Queue/CSS-Uhr.
 
-Bauflächenfarben sind abgetastete Orientierung, kein Ersatz für den Validator am tatsächlichen Klick. Nie ungesehene Einheiten über Farbe offenlegen. [Prüfwahl](testing.md) · [Darstellungsabnahme](issues/project-tomorrow.md) · [Musikpflege](../music-drafts/README.md#herstellung-und-grenzen).
+Bauflächenfarben sind abgetastete Orientierung, kein Ersatz für den Validator am tatsächlichen Klick. Nie ungesehene Einheiten über Farbe offenlegen. [Prüfwahl](testing.md) · [Darstellungsabnahme](issues/project-tomorrow.md) · [Audio und Sprachpflege](audio.md).

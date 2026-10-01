@@ -6,7 +6,7 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { fileURLToPath } = require('node:url');
-const { BATTLEFIELD_SCRIPTS, DIAGNOSTIC_SCRIPTS, MULTIPLAYER_SCRIPTS, RENDERER_SCRIPTS,
+const { AUDIO_SCRIPTS, BATTLEFIELD_SCRIPTS, DIAGNOSTIC_SCRIPTS, MULTIPLAYER_SCRIPTS, RENDERER_SCRIPTS,
   SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
@@ -157,7 +157,7 @@ test('simulation fragments assemble the existing non-enumerable MeridianGame API
 test('UI fragments assemble the existing non-enumerable MeridianUI API in document order', () => {
   const names = UI_SCRIPTS,
     expectedFiles = names.map(name => `dist/src/ui/${name.replace('ui-', '')}.js`),
-    scripts = readScripts(), context = loadScripts(names, { scripts });
+    scripts = readScripts(), context = loadScripts(['voice-content', ...names], { scripts });
   assert.deepEqual(scripts.filter(script => names.includes(script.name)).map(script => script.filename), expectedFiles);
   assert.equal(vm.runInContext('Object.keys(MeridianUI.prototype).length', context), 0);
   for (const method of ['event', 'showHome', 'renderActions', 'pointerUp', 'drawOverlay']) {
@@ -194,7 +194,7 @@ function setupAudio() {
     finish() { this.paused = true; this.ended = true; this.listeners.ended(); }
   }
   const settings = { volume: 0.28, music: true, sfx: true },
-    context = loadScripts(['audio'], { globals: { window: { AudioContext }, Audio, settings } });
+    context = loadScripts(AUDIO_SCRIPTS, { globals: { window: { AudioContext }, Audio, settings } });
   const evaluate = code => vm.runInContext(code, context);
   evaluate('audio = new MeridianAudio(settings); audio.unlock()');
   return { evaluate, settings, plays, tracks, audio: evaluate('audio'),
@@ -211,7 +211,7 @@ test('battle playlist starts after ten seconds and plays the approved recordings
     ['sporewake', '06-sporewake.mp3'],
     ['rootmind', '07-rootmind.mp3']
   ];
-  assert.equal(h.tracks.length, 6, 'one music element and five overlapping infantry-shot voices are prepared');
+  assert.equal(h.tracks.length, 7, 'music, five overlapping shots and one shared speech channel are prepared');
   assert.equal(track.loop, false);
   assert.equal(audio.master.gain.value, .28, 'master volume remains unchanged');
   assert.equal(audio.musicGain.gain.value, 1, 'menu music remains unchanged');
@@ -248,7 +248,7 @@ test('battle playlist starts after ten seconds and plays the approved recordings
 });
 
 test('light shots use the approved recording with throttled overlapping voices', async () => {
-  const h = setupAudio(), { audio, plays, settings } = h, shots = h.tracks.slice(1);
+  const h = setupAudio(), { audio, plays, settings } = h, shots = audio.infantryShots;
   assert.equal(shots.length, 5);
   assert.ok(shots.every(shot => shot.src === './audio/sfx-infantry-shot.wav'));
   assert.ok(shots.every(shot => Math.abs(shot.volume - .0448) < 1e-12));
@@ -272,6 +272,114 @@ test('light shots use the approved recording with throttled overlapping voices',
   assert.ok(shots.every(shot => shot.volume === 0));
   audio.ctx.currentTime += 1; audio.sound('shot', false); await h.flush();
   assert.equal(plays.length, 2);
+});
+
+test('speech catalogue resolves local recordings and selection pools without browser dependencies', () => {
+  const context = loadScripts(['voice-content']);
+  const lines = vm.runInContext('VOICE_LINES', context), pools = vm.runInContext('SELECTION_VOICE_LINES', context);
+  for (const line of Object.values(lines)) {
+    assert.ok(line.speaker && line.text);
+    if (line.audio) {
+      assert.match(line.audio, /^\.\/audio\/voices\/[a-z0-9-]+\.mp3$/);
+      assert.ok(readFileSync(join(__dirname, '..', line.audio)).length > 1000);
+    }
+  }
+  assert.equal(lines['tutorial.settle'].speaker, lines['tutorial.warning'].speaker);
+  for (const ids of Object.values(pools)) for (const id of ids) assert.ok(lines[id]?.audio);
+});
+
+test('selection speech uses one channel, matching pools, random group fallback and no immediate repeat', async () => {
+  const h = setupAudio(), { audio, plays } = h;
+  audio.setMode('battle');
+  h.evaluate('audio.voiceRandom = () => 0; Math.random = () => { throw Error("No global or simulation RNG in speech selection"); }');
+  assert.equal(audio.selectionVoice([{ type: 'worker' }]), true);
+  await h.flush();
+  assert.equal(plays.at(-1), './audio/voices/worker-selected-1.mp3');
+  const count = plays.length;
+  assert.equal(audio.selectionVoice([{ type: 'worker' }]), true);
+  assert.equal(plays.length, count, 'rapid clicks are suppressed without adding a queue');
+  audio.ctx.currentTime += .4;
+  audio.selectionVoice([{ type: 'worker' }]); await h.flush();
+  assert.equal(plays.at(-1), './audio/voices/worker-selected-2.mp3');
+  audio.ctx.currentTime += .4;
+  audio.selectionVoice(Array.from({ length: 100 }, () => ({ type: 'rifle' })), true); await h.flush();
+  assert.equal(plays.at(-1), './audio/voices/infantry-selected-1.mp3');
+  audio.stopVoice(); audio.ctx.currentTime += .4;
+  assert.equal(audio.selectionVoice([{ type: 'tank' }]), false, 'unvoiced individual units retain their normal UI tone');
+  assert.equal(audio.selectionVoice([] , true), false, 'an empty group never speaks');
+  assert.equal(audio.selectionVoice([{ type: 'tank' }], true), true);
+  assert.equal(plays.at(-1), './audio/voices/worker-selected-1.mp3', 'HUD group fallback uses the selection catalogue, not tutorial dialogue');
+  assert.equal(h.tracks.length, 7, 'all speech reuses the same media element');
+});
+
+test('dialogue preempts selection speech and ducks music; lower-priority selection cannot cut it off', async () => {
+  const h = setupAudio(), { audio, plays } = h;
+  audio.setMode('battle');
+  audio.selectionVoice([{ type: 'rifle' }]);
+  assert.equal(audio.playVoice('tutorial.settle'), true);
+  await h.flush();
+  assert.equal(plays.at(-1), './audio/voices/tutorial-1.mp3');
+  assert.ok(Math.abs(audio.battleTrack.volume - .28 * .1 * .35) < 1e-12);
+  const count = plays.length;
+  audio.ctx.currentTime += 1;
+  assert.equal(audio.selectionVoice([{ type: 'worker' }], true), true);
+  assert.equal(plays.length, count);
+  assert.equal(audio.isVoiceActive('tutorial.settle'), true);
+  audio.voiceTrack.listeners.ended();
+  assert.equal(audio.isVoiceActive('tutorial.settle'), true, 'a stale ended event does not clear the current line');
+  audio.voiceTrack.finish();
+  assert.equal(audio.activeVoice, null);
+  assert.ok(Math.abs(audio.battleTrack.volume - .028) < 1e-12);
+});
+
+test('speech pauses with dialogue, drops selection on pause, follows SFX volume and never leaks to a new battle or menu', async () => {
+  const h = setupAudio(), { audio, settings } = h;
+  audio.setMode('battle'); audio.playVoice('tutorial.settle'); await h.flush();
+  audio.voiceTrack.currentTime = 2;
+  audio.setMode('silent');
+  assert.equal(audio.voiceTrack.paused, true);
+  assert.equal(audio.isVoiceActive('tutorial.settle'), true);
+  audio.setMode('battle'); await h.flush();
+  assert.equal(audio.voiceTrack.currentTime, 2);
+  settings.music = false; settings.volume = .6; audio.updateSettings();
+  assert.equal(audio.voiceTrack.volume, .6);
+  assert.equal(audio.voiceTrack.paused, false, 'speech is not controlled by the music switch');
+  settings.sfx = false; audio.updateSettings();
+  assert.equal(audio.voiceTrack.volume, 0); assert.equal(audio.activeVoice, null);
+  settings.sfx = true; audio.updateSettings();
+  assert.equal(audio.voiceTrack.paused, true, 'unmuting never replays an obsolete line');
+  audio.selectionVoice([{ type: 'worker' }]);
+  audio.setMode('silent'); assert.equal(audio.activeVoice, null);
+  audio.setMode('battle'); audio.playVoice('tutorial.warning');
+  audio.resetBattleMusic(); assert.equal(audio.activeVoice, null);
+  audio.playVoice('tutorial.warning');
+  audio.setMode('menu'); assert.equal(audio.activeVoice, null);
+});
+
+test('speech play rejections are bounded and stale promises cannot cancel a newer line or a resumed dialogue', async () => {
+  const h = setupAudio(), { audio } = h, track = audio.voiceTrack;
+  audio.setMode('battle');
+  let reject;
+  track.play = () => new Promise((_, no) => { reject = no; });
+  audio.playVoice('worker.selected.1', 'selection');
+  const rejectOld = reject;
+  track.play = () => Promise.resolve();
+  audio.playVoice('tutorial.warning');
+  rejectOld(new Error('old request interrupted')); await h.flush();
+  assert.equal(audio.isVoiceActive('tutorial.warning'), true);
+  track.play = () => new Promise((_, no) => { reject = no; });
+  audio.playVoice('tutorial.settle');
+  const rejectPaused = reject;
+  audio.setMode('silent');
+  track.play = () => Promise.resolve(); audio.setMode('battle');
+  rejectPaused(new Error('paused request interrupted')); await h.flush();
+  assert.equal(audio.isVoiceActive('tutorial.settle'), true);
+  let attempts = 0;
+  track.play = () => { attempts++; return Promise.reject(new Error('blocked')); };
+  audio.playVoice('tutorial.warning'); await h.flush();
+  assert.equal(audio.activeVoice, null);
+  for (let i = 0; i < 10; i++) audio.update();
+  assert.equal(attempts, 1, 'failed speech does not retry on each frame');
 });
 
 test('music pause/mute preserve track and gap position; menu and new battles reset the playlist', async () => {

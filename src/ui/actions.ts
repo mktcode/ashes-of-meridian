@@ -31,6 +31,8 @@
         this.domPressed = false;
         this.pinchDist = undefined;
         this.pings = [];
+        this.audio.stopVoice?.();
+        this.radioVoiceId = null;
         this.radioUntil = this.toastUntil = 0;
         $('radio').classList.add('hidden');
         $('toast').classList.remove('show');
@@ -52,9 +54,11 @@
           this.game.alive(e => e.team === this.localTeam && e.type === 'worker')[0];
         if (e) this.center(e.x + 4, e.z - 2);
       },
-      select(this: MeridianUI, ids: number[]) {
+      select(this: MeridianUI, ids: number[], groupVoice = false) {
         this.selected = [...new Set(ids)].filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
-        this.audio.sound('select');
+        const units = this.selected.map(id => this.game.get(id))
+          .filter((e): e is UnitEntity => !!e && e.kind === 'unit' && e.team === this.localTeam && e.hp > 0);
+        if (!this.audio.selectionVoice?.(units, groupVoice)) this.audio.sound('select');
         this.setTab(this.selectedBuilding() ? 'building' : 'root');
       },
       selectedBuilding(this: MeridianUI) {

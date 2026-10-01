@@ -55,7 +55,7 @@ const uiTutorialMethods = {
     }
     if (tutorial.elapsed < 3) return;
     tutorial.arrivalCamera = undefined;
-    this.radio("Prospector|Commander, I've found something. We should settle here for a while and harvest these resources. Shall I deploy a command outpost here?");
+    this.radioLine('tutorial.settle');
     this.setBattleTutorialStep('buildHQ', 'root');
   },
   tutorialAction(this: MeridianUI): string | null {
@@ -76,7 +76,7 @@ const uiTutorialMethods = {
   },
   finishTutorialRecon(this: MeridianUI) {
     this.setBattleTutorialStep('trainWorker', 'root');
-    this.radio('Commander|First, recruit two more Prospectors from Infantry. Then build a refinery beside an Echo vent and prepare our fighting force.');
+    this.radioLine('tutorial.economy');
     // Reconcile goals already completed while the camera was travelling.
     this.advanceBattleTutorial('complete', 'hq');
   },

@@ -117,16 +117,18 @@
               const y = (isFlyingUnitType(pose.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(pose) ?? 0),
                 p = this.R.project(pose.x, y, pose.z);
               return p && this.R.containsPoint(p.x, p.y);
-            }).map(e => e.id));
+            }).map(e => e.id), true);
           this.lastClick = {};
         };
         $('combatSelectBtn').onclick = () => {
           if (this.controlsLocked) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
-          this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker').map(e => e.id));
+          this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker').map(e => e.id), true);
           this.lastClick = {};
         };
         $('radioClose').onclick = () => {
+          this.audio.stopVoice?.('dialogue');
+          this.radioVoiceId = null;
           $('radio').classList.add('hidden');
           this.radioUntil = 0;
         };
