@@ -315,7 +315,12 @@ test('selection speech uses one channel, matching pools, random group fallback a
 test('dialogue preempts selection speech and ducks music; lower-priority selection cannot cut it off', async () => {
   const h = setupAudio(), { audio, plays } = h;
   audio.setMode('battle');
+  const musicVolume = audio.battleTrack.volume;
   audio.selectionVoice([{ type: 'rifle' }]);
+  assert.equal(audio.battleTrack.volume, musicVolume, 'unit selection must not duck music');
+  audio.stopVoice(); audio.ctx.currentTime += 1;
+  audio.selectionVoice([{ type: 'tank' }], true);
+  assert.equal(audio.battleTrack.volume, musicVolume, 'HUD group selection must not duck music either');
   assert.equal(audio.playVoice('tutorial.settle'), true);
   await h.flush();
   assert.equal(plays.at(-1), './audio/voices/tutorial-1.mp3');

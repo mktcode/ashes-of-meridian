@@ -271,7 +271,7 @@
         let track = this.battleTrack;
         if (!track) return;
         track.volume = this.settings.music ? Math.max(0, Math.min(1, this.settings.volume)) * 0.1 *
-          (this.activeVoice && !this.activeVoice.suspended ? .35 : 1) : 0;
+          (this.activeVoice?.kind === 'dialogue' && !this.activeVoice.suspended ? .35 : 1) : 0;
         // Audio-clock seconds, never simulation time or game-speed-scaled dt.
         let now = this.ctx!.currentTime;
         if (this.musicMode !== 'battle' || !this.settings.music) {
