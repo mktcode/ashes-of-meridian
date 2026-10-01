@@ -168,7 +168,7 @@
 
     .primary {
       background: var(--gold);
-      color: #14202b !important;
+      color: #14202b;
       padding: 15px 28px;
       font-weight: 700;
       letter-spacing: 1.2px;

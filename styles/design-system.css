@@ -291,10 +291,31 @@
 
 /* HUD geometry, world viewport, picking, minimap and model thumbnails are unchanged. */
 #hud #commandDeck button:focus-visible { outline-offset: -2px } /* Dense scroll rails keep the ring inside the control. */
-#hud #topbar { background: linear-gradient(180deg, #071b28f5, #081d2cec); border-color: #76d7ed; box-shadow: 0 3px 9px #05131e77 }
+#hud #topbar {
+  isolation: isolate;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+#hud #topbar::before, #hud #topbar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px),
+    calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px));
+  background: #76d7ed;
+}
+#hud #topbar::after {
+  inset: 0 1px 1px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px),
+    calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px));
+  background: linear-gradient(180deg, #071b28f5, #081d2cec);
+}
 #hud .resource .ui-icon { width: 24px; height: 28px }
 #hud .resource small { color: #aacddd }
-#hud #pauseBtn { --ui-cut: 5px; padding: 8px }
+#hud #pauseBtn { --ui-cut: 5px; display: grid; place-items: center; padding: 0 }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
 #hud :is(#cameraTools, #commandTools, #abilityBar, .root-grid) { gap: 4px; background: transparent }
 #hud :is(#commandTools button, #cameraTools button, #pauseBtn, .root-grid .action) { --ui-cut: 5px; --ui-edge: #276c86; --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8) }
