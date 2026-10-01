@@ -1,7 +1,7 @@
 /* Local-only diagnostic adapter. Explicit metadata allowlist, no persistence/telemetry. */
 'use strict';
 interface DiagnosticContext {
-  view: string; paused: boolean; multiplayer: boolean; map: string | null; seed: number | null;
+  view: string; paused: boolean; map: string | null; seed: number | null;
   simulationTime: number | null; speed: number | null; entities: number; effects: number;
 }
 function diagnosticResources(R: MeridianRenderer) {

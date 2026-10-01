@@ -71,7 +71,6 @@
       resultAetherStructures?: number;
       resultBenefit?: string;
       onViewportChange?: () => void;
-      multiplayer?: MeridianMultiplayerClient;
       onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean) => Promise<boolean>;
       onLaunchBattle?: (options: BattleOptions) => void;
       domPressed?: boolean;

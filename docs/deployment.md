@@ -16,11 +16,7 @@ Dokploy: Dockerfile-Build, Repository-Root als Kontext, kein Build-Target. HTTPS
 | Dienst | Dockerfile | interner Port | Healthcheck | öffentlicher Endpunkt |
 | --- | --- | --- | --- | --- |
 | Spiel | `Dockerfile` | 8080 | `GET /` | `https://aom.markus-kottlaender.de` |
-| Multiplayer | `server/Dockerfile` | 8787 | `GET /health` | `wss://aoms.markus-kottlaender.de` |
-
-Server separat aus demselben Commit bauen/ausrollen; `server/` allein ist kein ausreichender Build-Kontext. `/` am Server ist der WebSocket-Endpunkt und ohne Upgrade keine Website. Konfiguration und flüchtige Sessiongrenzen: [Serverbetrieb](../server/README.md#separat-deployen).
-
-Bei 502 trotz gesundem Container Domain/Port und gemeinsame Erreichbarkeit im `dokploy-network` prüfen. DNS/öffentliche Verbindung zuerst, dann Backend aus Traefik erreichen. Keine pauschalen Netzwerkreparaturen ohne Zustandsprüfung.
+Das Singleplayer-Spiel benötigt keinen separaten Spielserver. Eine gegebenenfalls noch aktive frühere Multiplayerinstallation muss außerhalb des Quellcodeumbaus abgeschaltet werden; [offene Betriebsbereinigung](issues/multiplayer.md#betrieb-bereinigen).
 
 ## itch.io
 
@@ -28,4 +24,4 @@ Bei 502 trotz gesundem Container Domain/Port und gemeinsame Erreichbarkeit im `d
 
 `npm run capture:itch` erzeugt Präsentationsmedien unter `release/itch-media/`; benötigt Chromium (`CHROMIUM_PATH` für abweichenden Pfad). Arrangierte Motive sind kein Spiel-/Balancingnachweis; nicht routinemäßig als Prüfung starten.
 
-Nach tatsächlichem Paket-/Hostingwechsel gezielt Assets/404/MIME, Start und Audiofreigabe prüfen. WebSocket-Origin des eingebetteten itch.io-Builds prüfen, nicht aus der Projektseiten-URL ableiten. [Prüfwahl](testing.md). Android bleibt eine [zurückgestellte Option](issues/android.md).
+Nach tatsächlichem Paket-/Hostingwechsel gezielt Assets/404/MIME, Start und Audiofreigabe prüfen. [Prüfwahl](testing.md). Android bleibt eine [zurückgestellte Option](issues/android.md).

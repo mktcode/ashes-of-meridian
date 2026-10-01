@@ -19,7 +19,7 @@ Danach `index.html` direkt im Browser öffnen (`file://`, kein Server nötig). H
 
 Ziehen/Pinch oder Mausziehen/Mausrad bewegt die Kamera; Tap/Linksklick wählt, Ziel-Tap/Rechtsklick erteilt Kontextbefehle. Minimap links, Fähigkeiten mittig, Bau/Rekrutierung rechts. [Regeln und Bedienung](docs/gameplay.md).
 
-**Multiplayer · prototype** verbindet zwei Menschen über Session-Code und einen [separaten Server](server/README.md). Keine Multiplayer-Expeditionen oder Belohnungen; Offline-Spiel bleibt dienstfrei.
+Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine spätere [Multiplayer-Neubewertung](docs/issues/multiplayer.md) ist zurückgestellt, bis die grundlegenden Spielmechaniken feststehen.
 
 ## Entwicklung
 

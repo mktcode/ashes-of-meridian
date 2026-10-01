@@ -87,7 +87,7 @@
         });
         $('pauseBtn').onclick = () => (this.paused ? this.resume() : this.pause());
         $('speedBtn').onclick = () => {
-          if (this.game.networkTeam != null || this.controlsLocked) return;
+          if (this.controlsLocked) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           const speeds = [1, 1.5, 2, 0.75];
           this.game.s!.speed = speeds[(speeds.indexOf(this.game.s!.speed) + 1) % speeds.length];
@@ -109,9 +109,8 @@
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
           this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker')
             .filter(e => {
-              const pose = this.multiplayer?.displayEntity(e) ?? e;
-              const y = (isFlyingUnitType(pose.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(pose) ?? 0),
-                p = this.R.project(pose.x, y, pose.z);
+              const y = (isFlyingUnitType(e.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(e) ?? 0),
+                p = this.R.project(e.x, y, e.z);
               return p && this.R.containsPoint(p.x, p.y);
             }).map(e => e.id), true);
           this.lastClick = {};
@@ -215,11 +214,6 @@
       uiAction(this: MeridianUI, action: string) {
         this.audio.sound('select');
         switch (action) {
-          case 'multiplayer': this.multiplayer?.show(); break;
-          case 'networkCreate': this.multiplayer?.connect('create'); break;
-          case 'networkJoin': this.multiplayer?.connect('join'); break;
-          case 'networkResume': this.multiplayer?.resumeStored(); break;
-          case 'networkCopy': void this.multiplayer?.copyCode(); break;
           case 'home':
             this.showHome();
             break;
@@ -305,7 +299,6 @@
         let best = null,
           score = Infinity;
         for (let e of this.game.s!.entities) {
-          e = this.multiplayer?.displayEntity(e) ?? e;
           if (e.hp <= 0) continue;
           if (!this.game.observed(e)) continue;
           if (filter && !filter(e)) continue;
@@ -511,8 +504,7 @@
               .alive(e => e.team === this.localTeam && e.kind === 'unit' &&
                 (combat ? e.type !== 'worker' : e.type === target.type))
               .filter(e => {
-                const pose = this.multiplayer?.displayEntity(e) ?? e;
-                let q = this.R.project(pose.x, (isFlyingUnitType(pose.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(pose) ?? 0), pose.z);
+                let q = this.R.project(e.x, (isFlyingUnitType(e.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
                 return q && this.R.containsPoint(q.x, q.y);
               });
             this.select(units.map(e => e.id));

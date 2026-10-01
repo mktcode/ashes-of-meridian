@@ -6,7 +6,7 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { fileURLToPath } = require('node:url');
-const { AUDIO_SCRIPTS, BATTLEFIELD_SCRIPTS, DIAGNOSTIC_SCRIPTS, MULTIPLAYER_SCRIPTS, RENDERER_SCRIPTS,
+const { AUDIO_SCRIPTS, BATTLEFIELD_SCRIPTS, DIAGNOSTIC_SCRIPTS, RENDERER_SCRIPTS,
   SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 
@@ -93,7 +93,6 @@ test('fragment groups completely mirror their index directories in document orde
     ['dist/src/renderer/', RENDERER_SCRIPTS],
     ['dist/src/simulation/', SIMULATION_SCRIPTS],
     ['dist/src/ui/', UI_SCRIPTS],
-    ['dist/src/multiplayer/', MULTIPLAYER_SCRIPTS],
     ['dist/src/diagnostics/', DIAGNOSTIC_SCRIPTS]
   ];
   for (const [directory, expected] of groups) {
@@ -110,7 +109,6 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
   assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven']);
   assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'FRONTIER', 'HAVEN']);
   assert.deepEqual(Array.from(vm.runInContext('availableBattlefields()',context)), Object.keys(BATTLEFIELDS));
-  assert.deepEqual(Array.from(vm.runInContext("availableBattlefields('multiplayer')",context)), Object.keys(BATTLEFIELDS));
   for (const id of Object.keys(BATTLEFIELDS)) assert.equal(battlefieldId(id), id);
   for (const invalid of [undefined, null, 4, '', 'unknown', 'toString', '__proto__'])
     assert.equal(battlefieldId(invalid), 'desert');

@@ -72,9 +72,6 @@
       cosmeticRandom: () => number;
       effects: MeridianEffects;
       commandQueue: CommandQueue = createCommandQueue();
-      presentation?: (event: SimulationPresentation) => void;
-      networkTeam: PlayerTeam | null = null;
-      networkSubmit?: (action: BattleAction) => boolean;
 
       get localTeam(): PlayerTeam { return this.world?.viewTeam ?? 0; }
 
@@ -111,8 +108,7 @@
     }
     const gameMethods = {
       setPerspective(this: MeridianGame, team: PlayerTeam): boolean {
-        if ((this.networkTeam != null && team !== this.networkTeam) ||
-            !this.s || !this.world || !this.s.parties.some(p => p.id === team) ||
+        if (!this.s || !this.world || !this.s.parties.some(p => p.id === team) ||
             (this.s.rules.kind === 'single-player' && team !== 0)) return false;
         if (team === this.localTeam) return true;
         if (!this.world.selectView(team)) return false;
@@ -312,7 +308,6 @@
         return this.party(team).faction;
       },
       notify(this: MeridianGame, team: PlayerTeam, ...event: GameEvent) {
-        this.presentation?.({ kind: 'notice', team, event });
         if (team === this.localTeam) this.emit(...event);
       },
       get(this: MeridianGame, id: number | null | undefined): Entity | null {

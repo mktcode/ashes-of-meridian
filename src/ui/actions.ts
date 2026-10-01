@@ -4,7 +4,7 @@
       submitAction(this: MeridianUI, action: BattleAction) {
         // Confirmation dialogs may submit while paused, but never during a cinematic.
         if (this.battleIntro || this.battleTutorial?.step === 'arrival') return false;
-        // Local scenario control follows the view; this is not network authentication.
+        // Local scenario control follows the selected view.
         return this.game.submitAction(this.localTeam, action);
       },
       issueOrder(this: MeridianUI, ids: number[], order: CommandOrder) {
@@ -240,7 +240,7 @@
         let index = 2, changed = this.queueSignature === undefined || inputs[0] !== team || inputs[1] !== faction;
         inputs[0] = team; inputs[1] = faction;
         // Compare values, not time or entity identity: local commands can change a
-        // queue between ticks, while multiplayer replaces objects on each snapshot.
+        // queue between ticks; presentation caches compare current values.
         // Keep this read-only scan; caching producers needs a simulation revision contract.
         for (const b of this.game.s!.entities) {
           if (!(b.hp > 0) || b.team !== team || b.kind !== 'building' || !b.queue) continue;
@@ -294,8 +294,7 @@
         $('energyCount').textContent = String(Math.floor(account.energy));
         $('gameTime').textContent = formatTime(s.time);
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
-        (speedButton as HTMLButtonElement).disabled = this.game.networkTeam != null;
-        speedButton.textContent = this.game.networkTeam != null ? 'SERVER' : speedLabel;
+        speedButton.textContent = speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });

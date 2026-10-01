@@ -23,7 +23,7 @@ Vorhandene Entlastungen sind implementiert, nicht auf dem Handy abgenommen: 60-F
 ## Messplan und Abnahme
 
 - [ ] Kurze vergleichbare CPU-/GPU-Aufnahmen mit Kontext sichern; fehlende Timer nicht als Nullkosten lesen.
-- [ ] Reale Kartenwechsel, Kamerafahrt, Engstelle/große bewegte Armee und Multiplayer prüfen; nach erster Messung eingrenzen, kein Vollkreuzprodukt.
+- [ ] Reale Kartenwechsel, Kamerafahrt, Engstelle/große bewegte Armee prüfen; nach erster Messung eingrenzen, kein Vollkreuzprodukt.
 - [ ] Culling-Ränder, Bewegungswirkung des Limits und HUD unter Last menschlich abnehmen.
 - [ ] Wärme, Framerate und Stabilität auf betroffenem Handy erneut beurteilen; Desktop/Software-WebGL ist kein Ersatz.
 

@@ -389,7 +389,6 @@
             b.hp += amount;
             this.account(team).alloy -= amount * .1 * repairFactor;
           } else this.finishOrder(e);
-          this.presentation?.({ kind: 'construction', source: e, target: b });
           this.effects.construction(e, b, dt);
           return true;
         }
@@ -458,7 +457,6 @@
             n.deathAt = s.time;
           }
         }
-        this.presentation?.({ kind: 'mining', source: e, target: n });
         this.effects.mining(e, n, dt, () => this.visible(e));
         return true;
       },

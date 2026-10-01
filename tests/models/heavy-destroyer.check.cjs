@@ -124,19 +124,6 @@ test('AI saves for one supported destroyer instead of blocking its own economy p
   assert.deepEqual(trained.map(a=>a.unit),['air'],'without the aether economy the army keeps producing');
 });
 
-test('multiplayer projects visible destroyers and own pending production without leaking opponent queues', () => {
-  const context=loadScripts(['core','content','multiplayer-state']);
-  const project=vm.runInContext('multiplayerEntity',context);
-  const entity={id:3,kind:'unit',type:'destroyer',team:0,faction:1,x:0,z:0,hp:1500,maxHp:1500,
-    size:2.7,rot:0,progress:1,walk:0,shield:0,maxShield:0,carry:0,lastHit:0,shieldFlash:0,
-    kills:0,order:{type:'idle'},queue:[]};
-  const own=project(entity,0,new Set([3])),opponent=project({...entity,team:1},0,new Set([3]));
-  assert.equal(own.type,'destroyer');assert.equal(opponent.type,'destroyer');
-  const hangar={...entity,id:4,kind:'building',type:'hangar',queue:[{type:'destroyer',progress:.3,time:70,cost:850,gas:500}]};
-  assert.deepEqual(JSON.parse(JSON.stringify(project(hangar,0,new Set([4])).queue)),hangar.queue);
-  assert.deepEqual(Array.from(project({...hangar,team:1},0,new Set([4])).queue),[]);
-});
-
 test('destroyer is a costly flying hangar unit; its area hit accepts air and applies faction damage', () => {
   const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS]);
   const {MeridianGame,UNITS,FACTIONS,isFlyingUnitType,parseBattleAction}=

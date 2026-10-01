@@ -90,7 +90,6 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-ai',
   'simulation-runtime'
 ]);
-const MULTIPLAYER_SCRIPTS = Object.freeze(['multiplayer-presentation', 'multiplayer-state', 'multiplayer-client']);
 const DIAGNOSTIC_SCRIPTS = Object.freeze(['diagnostics-recorder', 'diagnostics-gpu', 'diagnostics-browser']);
 const AUDIO_SCRIPTS = Object.freeze(['voice-content', 'audio']);
 const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-model-thumbnail', 'ui-codex', 'ui-screens', 'ui-tutorial', 'ui-actions', 'ui-input', 'ui-presentation']);
@@ -174,4 +173,4 @@ function loadScripts(names, { scripts = (defaultScripts ??= readScripts()), glob
   return context;
 }
 
-module.exports = { AUDIO_SCRIPTS, DIAGNOSTIC_SCRIPTS, MULTIPLAYER_SCRIPTS, BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };
+module.exports = { AUDIO_SCRIPTS, DIAGNOSTIC_SCRIPTS, BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, readScripts, loadScripts };

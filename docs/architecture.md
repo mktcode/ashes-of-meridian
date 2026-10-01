@@ -11,11 +11,11 @@ Neue Skripte in `index.html` und den betroffenen Gruppen von `tests/helpers/game
 Das [UI-Designsystem](ui-design-system.md) beschreibt die auf Nicht-HUD-Flächen begrenzte
 Theme-Schicht und ihre Pflegegrenzen.
 
-[Webhosting](deployment.md) liefert denselben statischen Stand. Der [Multiplayerserver](../server/README.md) ist ein separater optionaler Dienst.
+[Webhosting](deployment.md) liefert denselben statischen Singleplayer-Stand. Es gibt keinen Spielserver oder Netzwerkmodus.
 
 ## Zustands- und Verantwortungsgrenzen
 
-- **Simulation:** `MeridianGame` besitzt CPU-Welt und Effekte, keinen Renderer. Feste Simulationsticks sind von rAF-basierten UI-/Audio-/Netzwerkuhren und dem 60-FPS-Renderbudget getrennt. Verpasste Rendertermine werden nicht nachgeholt. Spieltempo skaliert Simulationszeit, nicht die Audio-Uhr.
+- **Simulation:** `MeridianGame` besitzt CPU-Welt und Effekte, keinen Renderer. Feste Simulationsticks sind von rAF-basierten UI-/Audiouhren und dem 60-FPS-Renderbudget getrennt. Verpasste Rendertermine werden nicht nachgeholt. Spieltempo skaliert Simulationszeit, nicht die Audio-Uhr.
 - **UI:** orchestriert Expedition, Befehle, Dialoge und Profil. Templates erzeugen nur Markup; DOM, Speicherung und Zufall bleiben beim Controller. Ergebnisverarbeitung und Auszahlung müssen pro Gefecht genau einmal erfolgen.
 - **Persistenz:** Profil und Expeditionscheckpoint werden unabhängig normalisiert; Regeln und Storage sind injiziert, keine UI-/Spielabhängigkeit. Der Checkpoint speichert das Startrezept samt Deployment-Policy, Loadout und slotgebundenen Vorteilen, **keine Entitäten oder laufende Welt**. Alte Checkpointformate werden verworfen, nicht migriert. Storage-Ausfälle bieten nur flüchtigen Ersatz.
 - **Lebenszyklus:** Gefechtsstart erzeugt Welt, Indizes, RNG und Sicht neu. `game.s`/`world` können fehlen; eine noch referenzierte Menüwelt ist kein aktives Gefecht. Reload, Menü oder Grafikverlust verwerfen das Gefecht; Tab-Rückkehr setzt eine Pause nicht automatisch fort. Kein Snapshot-/Restore-API.
@@ -37,23 +37,15 @@ Parteizustand bündelt Fraktion, Controller, Konten, Loadout, Deployment-Grace u
 
 Szenarioeingaben laufen in Annahmereihenfolge vor den übrigen Tickphasen; KI handelt unmittelbar in ihrer festen Phase. Rekursive Ticks sind gesperrt. Neustart ersetzt Queue/Tickets, Stopp verwirft Eingaben. Unerwartete Ausführungsfehler stoppen das Szenario ohne automatischen Retry oder zugesicherten Rollback. Die Queue ist keine Replay-Historie oder Netzwerkauthentifizierung.
 
-Jede Partei besitzt eigene Sicht/Erkundung. Lokale Perspektivwechsel verwerfen Auswahl, Gesten und Effekte, verändern aber keine Simulation oder Zufallsströme. Einzelspiel bleibt auf Partei 0, Netzwerk auf die zugewiesene Partei beschränkt. Interne Szenarien haben begrenzte Dauer und keine Expeditionsauszahlung; Nichtfeindschaft bedeutet weder Allianz noch geteilte Kontrolle/Sicht.
-
-## Netzwerkprototyp
-
-Der Node-Host lädt dieselben kompilierten CPU-Skripte in einen VM-Kontext je Raum. Er ist autoritativ; der Browser simuliert nicht, sondern hält ein flüchtiges Bedien-/Renderabbild. Räume werden seriell verarbeitet, zusätzliche vCPUs sind keine zusätzlichen Simulationsworker. Die Zwei-Raum-Grenze darf ohne Zielmaschinen-Lastnachweis nicht erhöht werden.
-
-Übertragung nutzt eine ausdrückliche Feldfreigabe: eigenes Konto/Queues, eigene Sicht und sichtbare Fremdentitäten; keine vollständigen Zustände mit bloß clientseitigem Fog. Ressourcen im Nebel behalten den zuletzt beobachteten Stand. Gelände-Seed ist öffentlich, Startzuordnung verwendet einen privaten Seed. Effekte werden **zum Ereigniszeitpunkt je Partei** gefiltert; Ereignisbündel sind begrenzt und keine verlässliche Historie.
-
-Clientinterpolation verändert nur Renderkopien. Sichtverlust entfernt Kontakte sofort; keine Extrapolation, Vorhersage oder Wiedergabe alter Effektstapel. Netzwerkereignisse dürfen niemals Profil-/Ergebnisfortschritt auslösen. Verbindungsidentität, Resume, Deduplizierung, Backpressure und Betriebsparameter stehen ausschließlich im [Serververtrag](../server/README.md#ablauf-und-grenzen). Prozessneustarts sind nicht wiederherstellbar.
+Jede Partei besitzt eigene Sicht/Erkundung. Lokale Perspektivwechsel verwerfen Auswahl, Gesten und Effekte, verändern aber keine Simulation oder Zufallsströme. Expeditionen bleiben auf Partei 0 beschränkt. Interne Szenarien haben begrenzte Dauer und keine Expeditionsauszahlung; Nichtfeindschaft bedeutet weder Allianz noch geteilte Kontrolle/Sicht.
 
 ## Weltrezepte und feste Designs
 
-Die sechs Katalogfamilien verwenden gemeinsame seedbasierte Erzeugung mit variablen Maßen, verteilten Wirtschaftsregionen und verbindenden Wegen. Terrain, Wirtschaft und Dekor entstehen vor der Parteienzuordnung; weder Parteienzahl noch privater Startseed dürfen sie verändern. Alle Nutzer lesen dasselbe aufgelöste Layout. Katalog und Modusfreigaben: `src/battlefields/catalog.ts`.
+Die sechs Katalogfamilien verwenden gemeinsame seedbasierte Erzeugung mit variablen Maßen, verteilten Wirtschaftsregionen und verbindenden Wegen. Terrain, Wirtschaft und Dekor entstehen vor der Parteienzuordnung; weder Parteienzahl noch privater Startseed dürfen sie verändern. Alle Nutzer lesen dasselbe aufgelöste Layout. Katalog: `src/battlefields/catalog.ts`.
 
 Landschaftsseed, Gefechtsseed und Atmosphäre sind getrennt: ein festes Design fixiert Terrain/Dekor, nicht Startzuordnung oder Kampfzufall. Tageszeit ist eine einmalige Gestaltung, kein laufender Zyklus. Reproduzierbarer Gefechtsanfang braucht Rezept, Seed, Parteien und Loadouts; Seed allein konserviert keine Landschaft über Rezeptänderungen hinweg.
 
-Geländeerzeugung formt Wirtschaftsflächen und Wege, keine vier vorbestimmten Basen. Die CPU-Oberfläche entsteht **vor** kosmetischer Ökologie. Letztere darf weder Blocker, Ressourcen noch Navigation verändern. Unspielbare Konstruktionen scheitern, statt einen Ersatzseed zu würfeln. Gemeinsame CPU-Rezeptänderungen erfordern passenden Client-/Server-Rollout.
+Geländeerzeugung formt Wirtschaftsflächen und Wege, keine vier vorbestimmten Basen. Die CPU-Oberfläche entsteht **vor** kosmetischer Ökologie. Letztere darf weder Blocker, Ressourcen noch Navigation verändern. Unspielbare Konstruktionen scheitern, statt einen Ersatzseed zu würfeln. CPU-Rezepte und Darstellung werden als ein zusammenhängender Browserstand ausgeliefert.
 
 ## Welt, Darstellung und Zufall
 

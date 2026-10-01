@@ -747,7 +747,7 @@ test('effect culling preserves visible output and does not redistribute the acce
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
 function appClock(diagnostic = false) {
   let now = 0;
-  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], presentations = [], errors = [], weatherClocks = [], entitiesDrawn = [];
+  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
   const elements = new Map(), window = {}, queryRequests = [], buildings = {};
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
@@ -783,7 +783,6 @@ function appClock(diagnostic = false) {
     BattlefieldView: class { sync() {} },
     MeridianAudio: class { update() {} },
     MeridianGame: class {
-      networkTeam = null;
       world = {};
       s = { time: 0, speed: 1, entities: [], cam: { x: 0, z: 0, zoom: 65 } };
       effects = { fx: [], tick: dt => effectTicks.push(dt) };
@@ -795,12 +794,6 @@ function appClock(diagnostic = false) {
       selectionIds() { return new Set(); }
       tick(dt) { ticks.push(dt); }
     },
-    MeridianMultiplayerClient: class {
-      renderTime = 0;
-      updatePresentation(t) { presentations.push(t); this.renderTime = t / 1000; }
-      takeSnapshotCount() { return 0; }
-      disconnect() {}
-    },
     renderEntity(R,e,t,options) { entitiesDrawn.push({entity:e,options}); },
     renderBattlefieldEffects(R,e,w,s,p,time,team,weatherTime) {
       renderWork.battlefield++;
@@ -809,7 +802,7 @@ function appClock(diagnostic = false) {
   } });
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
-  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, presentations, errors, pending, queryRequests, weatherClocks, entitiesDrawn, $,
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, $,
     get performance() { return window.Meridian.performance; },
     setBuilding(name,value) { buildings[name]=value; },
     frame(t) {
@@ -868,7 +861,7 @@ test('placement guide makes one fine, continuous terrain mesh from bounded visib
   assert.deepEqual(a.errors,[]);
 });
 
-test('real app loop gates occlusion by party observation, excludes intro-only contacts and uses network poses', () => {
+test('real app loop gates occlusion by party observation and excludes intro-only contacts', () => {
   const a = appClock(); a.ui.paused = true; a.game.localTeam = 2;
   a.game.s.entities = [
     {id:1,kind:'unit',type:'rifle',team:2,hp:100},
@@ -888,10 +881,6 @@ test('real app loop gates occlusion by party observation, excludes intro-only co
   a.ui.battleIntro={};a.entitiesDrawn.length=0;a.frame(60);
   assert.deepEqual(a.entitiesDrawn.map(v=>v.entity.id),[1,3,5]);
   assert.ok(a.entitiesDrawn.every(v=>!v.options.occlusion),'intro presentation never grants x-ray visibility');
-  a.ui.battleIntro=null;a.game.networkTeam=2;a.entitiesDrawn.length=0;
-  a.ui.multiplayer.displayEntity=e=>({...e,x:17,z:23});a.frame(80);
-  assert.deepEqual(a.entitiesDrawn.map(v=>v.entity.id),[1,3]);
-  assert.ok(a.entitiesDrawn.every(v=>v.entity.x===17 && v.entity.z===23 && v.options.occlusion));
   assert.deepEqual(a.errors,[]);
 });
 
@@ -904,7 +893,6 @@ for (const hz of [30, 59.94, 60, 90, 120, 144]) {
     assert.ok(Object.values(a.renderWork).every(count => count === a.draws.length),
       'skipped frames omit instance/effect construction and overlay drawing too');
     assert.equal(a.ticks.length, count, 'UI continues on skipped render callbacks');
-    assert.equal(a.presentations.length, count, 'network presentation keeps its existing cadence');
     assert.ok(Math.abs(a.ticks.reduce((sum, dt) => sum + dt, 0) - seconds) < 1e-8);
     assert.ok(Math.abs(a.steps.length - seconds * 20) <= 1);
     assert.ok(a.steps.every(dt => dt === .05));
@@ -952,18 +940,16 @@ test('render phase tolerates timestamp jitter at 60 Hz and discards slots after 
   assert.deepEqual(a.errors, []);
 });
 
-test('frame cap leaves speed, pause and network simulation ownership unchanged', () => {
-  for (const mode of ['double', 'paused', 'network', 'menu']) {
+test('frame cap leaves local speed, pause and menu simulation ownership unchanged', () => {
+  for (const mode of ['double', 'paused', 'menu']) {
     const a = appClock();
     if (mode === 'double') a.game.s.speed = 2;
     if (mode === 'paused') a.ui.paused = true;
-    if (mode === 'network') a.game.networkTeam = 0;
     if (mode === 'menu') a.ui.view = 'home';
     for (let i = 1; i <= 120; i++) a.frame(i * 1000 / 120);
     assert.ok(Math.abs(a.draws.length - 60) <= 1);
     if (mode === 'double') assert.ok(Math.abs(a.steps.length - 40) <= 1);
     else assert.equal(a.steps.length, 0);
-    assert.equal(a.presentations.length, 120);
     assert.deepEqual(a.errors, []);
   }
 });
@@ -988,12 +974,6 @@ test('precipitation interpolates only its view clock, freezes on pause and reset
   assert.ok(Math.abs(resumed[2].weather-resumed[1].weather-.034)<1e-10);
   a.game.s={...a.game.s,time:0};a.frame(1136);
   assert.ok(a.weatherClocks.at(-1).weather<.1,'new battle forgets previous weather clock');
-  a.game.networkTeam=0;a.game.s.time=90;
-  for(const t of [1153,1170,1187])a.frame(t);
-  for(const c of a.weatherClocks.slice(-3)) {
-    assert.equal(c.weather,c.effects,'network uses the existing interpolation clock');
-    assert.ok(Math.abs(c.weather-c.now/1000)<1e-10);
-  }
   assert.deepEqual(a.errors,[]);
 });
 

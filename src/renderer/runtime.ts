@@ -668,7 +668,7 @@
       }
       recordOcclusion(name: string, color: RenderColor) {
         // Reuse the exact model-part transform already assembled in add(), including
-        // animated parts, build height, vehicle slope and network interpolation.
+        // animated parts, build height and vehicle slope.
         const c = this.color(color);
         for (const meshName of this.meshParts[name] || [name]) {
           const source = this.dynamic[meshName];

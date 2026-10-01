@@ -10,7 +10,7 @@ const BATTLEFIELDS = {
 } as const;
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';
-function availableBattlefields(_scope: 'expedition' | 'multiplayer' = 'expedition'): BattlefieldId[] {
+function availableBattlefields(): BattlefieldId[] {
   return Object.keys(BATTLEFIELDS) as BattlefieldId[];
 }
 function battlefieldId(value: unknown): BattlefieldId {

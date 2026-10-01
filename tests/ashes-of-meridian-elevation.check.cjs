@@ -5,10 +5,10 @@ const vm = require('node:vm');
 const {createRendererStub} = require('./helpers/renderer-stub.cjs');
 const {loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, RENDERER_SCRIPTS} = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
-  ...RENDERER_SCRIPTS,'world-view','effects-view','multiplayer-presentation','multiplayer-state'], {globals:{innerHeight:800}});
+  ...RENDERER_SCRIPTS,'world-view','effects-view'], {globals:{innerHeight:800}});
 const {Battlefield: ProceduralBattlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity,
-  BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect, modelFrameRotation} = vm.runInContext(
-  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, MultiplayerTimeline, multiplayerFrame, projectMultiplayerEffect, modelFrameRotation})',context);
+  BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, modelFrameRotation} = vm.runInContext(
+  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, modelFrameRotation})',context);
 const deckHeight=w=>Math.fround(6*w.renderProfile.variation.heightScale);
 // A synthetic ramp/cliff fixture isolates surface contracts from procedural catalog geography.
 function withRamp(run) {
@@ -74,19 +74,6 @@ test('ground sight respects declared tiers while sources combine and air or scan
   assert.equal(w.sight[0].visible[highCell],255,'aircraft see independently of ground tier');
   w.reveal([low,high],[{team:0,x:80,z:30,r:17,until:10}]);
   assert.equal(w.sight[0].visible[highCell],255,'reconnaissance scans cross visibility tiers');
-});
-
-test('server projections and events do not disclose plateau contacts to a low observer',()=>{
-  const g=game();g.s.entities=[];g.ids.clear();g.world.rebuild([]);
-  const low=g.spawnUnit('rifle',80,30,0,0),high=g.spawnUnit('rifle',80,42,1,2);
-  assert.ok(low&&high);g.world.reveal(g.s.entities);
-  let frame=multiplayerFrame(g,0,new Map());
-  assert.equal(frame.entities.some(e=>e.id===high.id),false);
-  assert.equal(projectMultiplayerEffect(g,0,{kind:'explosion',point:high,size:2,big:true}),null);
-  g.s.scans=[{team:0,x:80,z:30,r:17,until:10}];g.world.reveal(g.s.entities,g.s.scans);
-  frame=multiplayerFrame(g,0,new Map());
-  assert.equal(frame.entities.some(e=>e.id===high.id),true);
-  assert.equal(projectMultiplayerEffect(g,0,{kind:'explosion',point:high,size:2,big:true}).kind,'explosion');
 });
 
 test('surface transition mask survives replacement of dynamic occupancy, and paths cannot smooth across cliffs',()=>{
@@ -173,29 +160,6 @@ test('launch altitude is shared by models and effects, without double lowering o
   }
 });
 
-test('network flight poses sample the local envelope and visible launch effects omit the hangar identity',()=>{
-  const surface=new BattlefieldSurface(30,2.5,x=>x>=0?30:0),timeline=new MultiplayerTimeline(),
-    e={id:1,x:-8,z:0,rot:0,kind:'unit',type:'air',hp:100,faction:0,team:0,size:1,flightLaunch:1},end={...e,x:-2};
-  delete end.flightLaunch;
-  timeline.push({time:1,entities:[e],effects:[]},1000);
-  timeline.push({time:1.2,entities:[end],effects:[]},1200);timeline.advance(1220,()=>{});
-  const pose=timeline.poses.get(1);assert.ok(Math.abs(pose.x+5)<1e-7);assert.ok(Math.abs(pose.flightLaunch-.5)<1e-7);
-  const chord=(surface.entityHeight(e)+surface.entityHeight(end))/2;
-  assert.ok(Math.abs(surface.entityHeight(pose)-chord)>.05,'resample the envelope, not a height chord through a crest');
-  timeline.advance(1400,()=>{});assert.equal(pose.flightLaunch,0,'launch completion does not retain the earlier fraction');
-  const g=game();g.canSee=()=>true;
-  const source=g.spawnUnit('air',-8,0,0,0),target=g.spawnUnit('destroyer',-2,0,1,2);
-  source.exit={building:987,x:0,z:0,length:8};
-  const projected=projectMultiplayerEffect(g,0,{kind:'shot',source,target}),
-    publicPlane=multiplayerFrame(g,1,new Map()).entities.find(p=>p.id===source.id);
-  for(const p of [projected.source,publicPlane]) {
-    assert.equal(p.exit,undefined,'neither exit coordinates nor the hangar identity are public');
-    assert.equal(p.flightLaunch,1);
-    assert.equal(surface.entityHeight(p),surface.entityHeight(source),'network pose and shot keep the launch height');
-  }
-  assert.equal(projected.target.flightLaunch,undefined);
-});
-
 test('worker crosses a ramp up and down using ordinary orders',()=>{
   const g=game();g.s.entities=[];g.ids.clear();g.world.rebuild([]);
   const w=g.spawnUnit('worker',72,10,0,0); assert.ok(w);
@@ -263,19 +227,6 @@ test('terrain picking roundtrips both plateaus and ramp while camera drag keeps 
     const flat=r.ground(screen.x,screen.y,false),p=r.project(flat.x,0,flat.z);
     assert.ok(Math.hypot(p.x-screen.x,p.y-screen.y)<1e-4);
   }
-});
-
-test('network interpolated ground poses sample the ramp rather than a chord through the terrain',()=>{
-  const w=new Battlefield(1409,'mothership'),timeline=new MultiplayerTimeline(),
-    unit={id:1,x:72,z:30,rot:0,walk:0,kind:'unit',type:'rifle'};
-  // Use a short accepted interpolation interval around the lower ramp corner.
-  timeline.push({time:1,entities:[unit],effects:[]},1000);
-  timeline.push({time:1.2,entities:[{...unit,z:38}],effects:[]},1200);
-  timeline.advance(1220,()=>{});
-  const pose=timeline.poses.get(1);assert.ok(Math.abs(pose.z-34)<1e-7);
-  const sampled=w.surface.heightAt(pose.x,pose.z), chord=(w.surface.heightAt(72,30)+w.surface.heightAt(72,38))/2;
-  assert.ok(Math.abs(w.surface.entityHeight(pose)-sampled)<1e-6);assert.ok(Math.abs(sampled-chord)>.1);
-  assert.equal(unit.z,30,'no mutation of authoritative entities');
 });
 
 test('rendered floor samples and models use the CPU surface in battle and menu cinema, and map changes replace it',()=>{
@@ -379,16 +330,13 @@ test('slope alignment leaves infantry, aircraft, buildings and resources upright
   assert.deepEqual(Array.from(surface.heights),heights);assert.deepEqual(Array.from(surface.cliffs),cliffs);
 });
 
-test('network vehicles derive slope from interpolated positions and GPU instances retain their complete pose',()=>{
-  const w=new Battlefield(1409,'mothership'),timeline=new MultiplayerTimeline(),
-    e={id:1,x:72,z:30,rot:0,walk:0,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:UNITS.worker.size}, before=JSON.stringify(e);
-  timeline.push({time:1,entities:[e],effects:[]},1000);
-  timeline.push({time:1.2,entities:[{...e,z:38}],effects:[]},1200);timeline.advance(1220,()=>{});
-  const pose=timeline.poses.get(1),calls=drawPose(pose,w.surface),hull=calls.find(c=>c[0]==='workerHull');
-  assert.ok(Math.abs(pose.z-34)<1e-7);assert.ok(hull[9]<0,'front rises along the ramp');
-  assert.notEqual(hull[9],drawPose(e,w.surface)[0][9],'uses the interpolated position, not the received endpoint');
-  const radius=Math.max(.75,e.size),slope=(w.surface.heightAt(pose.x,pose.z+radius)-w.surface.heightAt(pose.x,pose.z-radius))/(2*radius);
-  closeVector(rotatePart(axes[1],...hull.slice(8,11)),normalize([0,1,-slope]),'interpolated ground normal');
+test('GPU instances retain the complete vehicle slope pose without mutating entities',()=>{
+  const w=new Battlefield(1409,'mothership'),
+    e={id:1,x:72,z:34,rot:0,walk:0,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:UNITS.worker.size}, before=JSON.stringify(e),
+    calls=drawPose(e,w.surface),hull=calls.find(c=>c[0]==='workerHull');
+  assert.ok(hull[9]<0,'front rises along the ramp');
+  const radius=Math.max(.75,e.size),slope=(w.surface.heightAt(e.x,e.z+radius)-w.surface.heightAt(e.x,e.z-radius))/(2*radius);
+  closeVector(rotatePart(axes[1],...hull.slice(8,11)),normalize([0,1,-slope]),'ground normal');
   const r=Object.create(MeridianRenderer.prototype);
   Object.assign(r,{dynamic:{},effects:{},meshes:{},colors:new Map(),gl:{createBuffer:()=>({})}});
   for(const c of calls) r.add(...c);

@@ -199,7 +199,7 @@ test('opening factions are fixed and stage 4/8 entrants accumulate independent b
   assert.equal(new Set(streamChoices).size, 3, 'same faction still has separate slot streams');
 });
 
-test('HQ elimination and expedition results do not leak into internal/network scenarios', () => {
+test('HQ elimination and expedition results do not leak into local non-expedition scenarios', () => {
   const { g, hqs } = battle(4, true);
   assert.equal('mission' in g.s.rules, false);
   hqs.forEach(h => { h.hp = 0; });

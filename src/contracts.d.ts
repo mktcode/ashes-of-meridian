@@ -179,7 +179,6 @@ interface BattlefieldSize {
 
 interface BattlefieldDefinition {
   name: string;
-  multiplayer?: boolean;
   size: BattlefieldSize;
   /** Resolve dimensions before layout and buffer allocation, without encounter RNG. */
   createSize?: (terrainSeed: number) => BattlefieldSize;
@@ -368,14 +367,7 @@ interface CommandQueue {
 
 type EffectPose = Pick<EntityBase, 'x' | 'z' | 'kind' | 'type' | 'team' | 'faction' | 'rot' | 'size'> & {
   exit?: Pick<ExitPath, 'x' | 'z' | 'length'>;
-  flightLaunch?: number;
 };
-type SimulationPresentation =
-  | { kind: 'shot' | 'healing' | 'mining' | 'construction'; source: Entity; target: Entity; travel?: number }
-  | { kind: 'damage'; target: Entity; amount: number }
-  | { kind: 'explosion'; point: Position & { team?: TeamId }; size: number; color?: number; big: boolean }
-  | { kind: 'drop'; point: Position; team: PlayerTeam; color: number }
-  | { kind: 'notice'; team: PlayerTeam | null; event: GameEvent };
 
 interface EntityBase extends Position {
   id: number;
@@ -405,8 +397,6 @@ interface EntityBase extends Position {
   maxShield: number;
   target?: number | null;
   exit?: ExitPath;
-  /** Read-model launch fraction only; authoritative units retain their private exit path. */
-  flightLaunch?: number;
   yieldTo?: Position;
   yieldUntil?: number;
   pathGoal?: Position;
@@ -471,7 +461,7 @@ interface BattleOptions {
   abilities?: AbilityType[];
 }
 
-// Bounded non-expedition scenarios; also used by the optional multiplayer host.
+// Bounded local non-expedition scenarios for development and CPU checks.
 interface ScenarioOptions {
   seed: number;
   /** Optional private deployment draw, independent of the public terrain seed. */

@@ -145,7 +145,7 @@ test('local adapter exports only allowlisted metadata and keeps export usable af
     addEventListener: (name, fn) => { events[name] = fn; }, Blob,
     URL: { createObjectURL(blob) { urls.push(blob); return 'blob:local'; }, revokeObjectURL(url) { urls.push(url); } },
     setTimeout: fn => timers.push(fn) });
-  const R = fakeRenderer(gpuGL({ supported: false })), context = { view: 'game', paused: false, multiplayer: true,
+  const R = fakeRenderer(gpuGL({ supported: false })), context = { view: 'game', paused: false,
     map: 'Desert', seed: 1, simulationTime: 20, speed: 1, entities: 4, effects: 0 };
   const d = create(R, () => ({ ...context }));
   for (let i = 0; i < 130; i++) {

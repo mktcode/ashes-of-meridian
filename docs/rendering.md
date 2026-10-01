@@ -18,7 +18,7 @@ Materialvariation ist kosmetisch und RNG-neutral. Mikrorelief verändert weder S
 
 Habitat, Dekor und Wetter folgen eigenen Landschaftsseed-Quellen nach dem [CPU-Weltaufbau](architecture.md#weltrezepte-und-feste-designs). Große Dekorumrisse einschließlich Windreserve bleiben in gesperrten Bereichen; niedriger Bodendekor darf befahrbar sein. Platzierungsbudgets skalieren nicht automatisch mit Kartengröße.
 
-Windfunktion/Uhr müssen in Szenen- und Schattenpass übereinstimmen; Culling-Bounds enthalten Bewegung. Wetter verwendet begrenzte View-Instanzen, keine Simulationspartikel. Seine Uhr hält bei Pause; im Netzwerk gilt die Interpolationsuhr. Performance darf kosmetische Arbeit auslassen, niemals CPU-Layout verändern.
+Windfunktion/Uhr müssen in Szenen- und Schattenpass übereinstimmen; Culling-Bounds enthalten Bewegung. Wetter verwendet begrenzte View-Instanzen, keine Simulationspartikel. Seine lokale View-Uhr hält bei Pause. Performance darf kosmetische Arbeit auslassen, niemals CPU-Layout verändern.
 
 ## Einzeln wartbare Modelle
 
@@ -53,7 +53,7 @@ High/Balanced teilen Modelle, Schatten/MSAA/Bloom; High ergänzt den ausdrückli
 
 ## Kontursilhouetten bei Verdeckung
 
-Nur beobachtete Entitäten und erkundete Ressourcen dürfen hinter opaker **statischer** Geometrie erscheinen. Silhouetten verleihen keine Sicht/Befehlsrechte; Intro, Fog, Ghosts und Vorschauen dürfen nicht optieren. Netzwerk nutzt nur sichtgefilterte Renderposen. Dynamische Armeen/Gebäude und nicht tiefenschreibende Transparenz sind keine Auslöser.
+Nur beobachtete Entitäten und erkundete Ressourcen dürfen hinter opaker **statischer** Geometrie erscheinen. Silhouetten verleihen keine Sicht/Befehlsrechte; Intro, Fog, Ghosts und Vorschauen dürfen nicht optieren. Dynamische Armeen/Gebäude und nicht tiefenschreibende Transparenz sind keine Auslöser.
 
 Bereits aufgebaute Modelltransforms werden nach statischer Szene, vor normalen Entitäten mit invertiertem Tiefentest gezeichnet; kein erneuter Animationsaufbau. GL-Zustand anschließend vollständig wiederherstellen, einschließlich gecachter Programmbindungen. Zusätzliche Geometriedurchläufe sind reale Kosten.
 

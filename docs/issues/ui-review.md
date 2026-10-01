@@ -9,8 +9,7 @@ Gefechts-HUD ausdrücklich ausgenommen. [Designsystem](../ui-design-system.md).
 Fokusrückgabe. Hintergrundkontrollen bleiben per Tastatur erreichbar. Auch vollständige
 Neurenderings nach Upgrade-Käufen können den Fokus verlieren.
 Eine gemeinsame Fokus-/Dialogverwaltung muss Rückkehr zu Pause, Ergebnis und Hauptmenü
-unterscheiden; Escape darf keinen laufenden Multiplayer fälschlich pausieren oder eine
-Bestätigung überspringen. Keine bloße CSS-Lösung.
+unterscheiden; Escape darf keine erforderliche Bestätigung überspringen. Keine bloße CSS-Lösung.
 
 ## CSS-Verantwortung
 

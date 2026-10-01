@@ -30,7 +30,7 @@ Dateien/Namen mit `rg 'test\(' tests` suchen; übersprungene Tests sind keine be
 
 `node scripts/run-tests.mjs <bereich> --list` zeigt Auswahl ohne Build/Lauf. Bereiche: `logic`, `terrain`, `presentation`, `models`, `standard`. `npm run test:logic`, `test:terrain`, `test:presentation` und `test:models` bauen jeweils neu; Gruppen sind keine Zeitgarantie. `npm test` baut und führt die Standardauswahl ohne die beiden optionalen Langblöcke aus, kann dennoch mehrere Minuten dauern. `npm test -- …` ersetzt keinen gezielten Dateilauf.
 
-`npm run test:ai` und `npm run test:simulation` nur im ausdrücklich freigegebenen Umfang. Eine Freigabe für einen Fall erlaubt weder ganze Datei noch anderen Block. Kurze Serververträge separat mit `npm run build --prefix server` und `npm test --prefix server`; [Servereinrichtung](../server/README.md#lokal-starten).
+`npm run test:ai` und `npm run test:simulation` nur im ausdrücklich freigegebenen Umfang. Eine Freigabe für einen Fall erlaubt weder ganze Datei noch anderen Block.
 
 ## Testpflege und Aussagegrenzen
 
@@ -46,7 +46,7 @@ Node führt kein GLSL aus. Browserchecks nutzen aktuellen Build, isoliertes Prof
 
 Der begrenzte Ausschnitt enthält CPU-Phasen, Callback-/Renderintervalle, optional asynchrone GPU-Passzeiten und Ressourcen-/Uploadschätzungen. Fehlende/disjoint GPU-Werte sind keine Nullkosten. CPU-Zeiten sind keine Auslastungsprozente, geschätzte Bytes kein Treiberspeicher. Keine Tokens oder vollständigen Spielzustände; Browserkennung und Karte/Seed sind enthalten.
 
-Für Vergleiche denselben Abschnitt/Einstellungen verwenden und getrennt exportieren. Pause, Qualitätswechsel und Hintergrundlücken abgrenzen; Diagnose verursacht selbst Aufwand. Messbedarf und Befunde: [Mobile Performance](issues/mobile-performance.md#messplan-und-abnahme). Serverkapazität/Transportmessung: [Netzwerkrobustheit](issues/multiplayer-netzwerk/robustheit.md).
+Für Vergleiche denselben Abschnitt/Einstellungen verwenden und getrennt exportieren. Pause, Qualitätswechsel und Hintergrundlücken abgrenzen; Diagnose verursacht selbst Aufwand. Messbedarf und Befunde: [Mobile Performance](issues/mobile-performance.md#messplan-und-abnahme).
 
 ## Manuelle Probeläufe
 

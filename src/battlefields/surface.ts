@@ -105,7 +105,7 @@ class BattlefieldSurface {
     }
     return Number.isFinite(best) ? {x:a[0]+dx*best,z:a[2]+dz*best} : null;
   }
-  entityHeight(e: Position & { type: string; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'>; flightLaunch?: number }): number {
+  entityHeight(e: Position & { type: string; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'> }): number {
     const floor = this.heightAt(e.x,e.z), index = e.type === 'air' ? 0 : e.type === 'destroyer' ? 1 : -1;
     if (index < 0) return e.kind === 'building' && e.size !== undefined ? this.foundationBounds(e, e.size).max : floor;
     const profile = this.flights[index], cruise = this.sampleHeight(profile.cruise, e.x, e.z),

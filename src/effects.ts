@@ -13,7 +13,7 @@ class MeridianEffects {
       readonly combatBeams = new WeakMap<BattlefieldEffect, number>();
       readonly weaponFactions = new WeakMap<BattlefieldEffect, FactionId>();
       groundHeight: (x: number, z: number) => number = () => 0;
-      entityHeight: (e: Pick<EffectPose, 'x' | 'z' | 'type' | 'exit' | 'flightLaunch'>) => number = e => this.groundHeight(e.x,e.z);
+      entityHeight: (e: Pick<EffectPose, 'x' | 'z' | 'type' | 'exit'>) => number = e => this.groundHeight(e.x,e.z);
 
       constructor(random: () => number) {
         // The provider resolves the current game's selected effect RNG after each start.

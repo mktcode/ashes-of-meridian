@@ -18,7 +18,7 @@ Die KI nutzt bezahlte Aktionen, eigene Sicht und verzögerte Beobachtung, keine 
 
 ## Landschaften
 
-Desert, Alien Planet, Mothership, Westmark, Frontier und Haven sind seedbasierte Landschaftsfamilien für Expedition und Multiplayer. Maße, Höhen, Ressourcenverteilung und Varianten wechseln zwischen Gefechten; es gibt keine festen Eckbasen. Wirtschaftsflächen und Wege werden vor den getrennten Parteienstarts erzeugt. Hohe Positionen behalten ihre Sichtvorteile; dekorative Dächer sind nicht begehbar. [Technische Weltgrenzen](architecture.md#weltrezepte-und-feste-designs).
+Desert, Alien Planet, Mothership, Westmark, Frontier und Haven sind seedbasierte Landschaftsfamilien für Expeditionen. Maße, Höhen, Ressourcenverteilung und Varianten wechseln zwischen Gefechten; es gibt keine festen Eckbasen. Wirtschaftsflächen und Wege werden vor den getrennten Parteienstarts erzeugt. Hohe Positionen behalten ihre Sichtvorteile; dekorative Dächer sind nicht begehbar. [Technische Weltgrenzen](architecture.md#weltrezepte-und-feste-designs).
 
 ## Kamera und Befehle
 

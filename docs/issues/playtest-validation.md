@@ -13,7 +13,6 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 - [ ] Worker-Ankunft, Lesedauer der Textdialoge und Fahrt eigenes HQ → Gegner → eigenes HQ menschlich abnehmen, insbesondere im Hochformat. Platzieren des ersten HQ ohne Vorwissen verständlich?
 - [ ] Tutorial-/Auswahlstimmen, Verständlichkeit gegenüber Musik/Kampf, Pause/Fortsetzen, SFX-Stummschaltung und verspätete mobile Autoplay-Freigabe akustisch prüfen. Letzte Phrase von `infantry-selected-3.mp3` gegen die automatische Katalogtranskription bestätigen. [Pflegevertrag](../audio.md).
 - [ ] Bezahlten KI-HQ-Aufbau aus Worker-Sicht auf den spielbaren Karten gezielt prüfen; KI-/Simulationsläufe brauchen separate Freigabe. Danach Wirtschaft und frühe Angriffe unter dem längeren Aufbau vergleichen, kein automatisches Balancing.
-- [ ] Multiplayer-Start mit Worker und HQ-Platzierung auf zwei Geräten prüfen.
 
 ## Commands und Bedienung
 
@@ -27,4 +26,4 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 - [ ] Profil/Checkpoint unter `file://` und Webhosting; Reload/Grafikverlust verwirft Gefecht, erhält letzten Übergang, Run-Ende löscht ihn. Pause/Audio/Rückkehr prüfen.
 - [ ] Landschaftsarchiv: Pfeile/Labels, weiche Wechsel bei teuren Karten, Reduced motion und Reload; betrachtete Stage niemals mit Continue-Checkpoint verwechseln.
 
-Karten-/Darstellung zentral unter [Landschaften](project-tomorrow.md), Worker-Gegenverkehr unter [Navigation](worker-bauwegfindung/issue.md), Wärme/Stabilität unter [Performance](mobile-performance.md), Zwei-Geräte-Netzwerk unter [Multiplayer](multiplayer-netzwerk/README.md). Keine automatische Test-/Balancingfreigabe aus dieser Liste.
+Karten-/Darstellung zentral unter [Landschaften](project-tomorrow.md), Worker-Gegenverkehr unter [Navigation](worker-bauwegfindung/issue.md), Wärme/Stabilität unter [Performance](mobile-performance.md). Keine automatische Test-/Balancingfreigabe aus dieser Liste.

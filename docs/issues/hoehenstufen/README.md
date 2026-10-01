@@ -8,7 +8,7 @@ Teststart nach Build: `index.html?experiment=height` (Mothership, Seed 1409, zwe
 - [ ] Worker/Gruppen hinunter und hinauf schicken: Picking, Minimap, Hanglage, Rampen-Gegenverkehr und Produktionsausgänge.
 - [ ] Abbau/Rücktransport, Raffinerien und stabile Fundamente einschließlich sanfter Hänge; keine Arbeit durch Klippen oder Bau auf steilen Übergängen.
 - [ ] Sicht von unten/oben, Rampenmitte, Quellenvereinigung/-verlust und Flugzeug/Scan prüfen; keine Schaden-/Reichweitenboni.
-- [ ] Zwei-Client-Sicht/Effekte und interpolierte Bodenposen mit passendem Serverstand prüfen; Touch/Mobilkosten und vollständige Partien abnehmen.
+- [ ] Lokale Sicht/Effekte und Bodenposen, Touch/Mobilkosten und vollständige Singleplayer-Partien abnehmen.
 - [ ] Faire Wege/Ressourcenzugänge der getrennt zugeteilten Parteienstarts; Walling darf nicht unbeabsichtigt jeden Ausgang schließen. Gewünschte absichtliche Walling-Regel bleibt offen.
 
 Alle Familien verwenden seedbasierte Höhen; der alte Mothership-Plateaugrundriss ist keine Vorgabe. [Landschaftsabnahme](../project-tomorrow.md), [Mothership-Gestaltung](../terrain.md), [Worker-Grenzen](../worker-bauwegfindung/issue.md). Flugfreiraum separat unter [Landschaften](../project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau).

@@ -2,7 +2,7 @@
     'use strict';
     const runtimeMethods = {
       step(this: MeridianGame, dt: number) {
-        if (this.networkTeam != null || !this.s || this.s.result || this.s.stopped) return;
+        if (!this.s || this.s.result || this.s.stopped) return;
         let s = this.s!;
         if (s.rules.kind === 'scenario') {
           if (!Number.isFinite(dt) || dt <= 0) return;
@@ -94,7 +94,6 @@
             if (dist < strike.radius + e.size * 0.7)
               this.damage(e, strike.damage * (dist < strike.radius * 0.5 ? 1 : 0.65), source);
           }
-          this.presentation?.({ kind: 'explosion', point: strike, size: strike.type === 'orbital' ? 5 : 2, big: true });
           this.effects.explosion(
             strike.x,
             strike.z,
@@ -143,9 +142,6 @@
               team: -1,
               type: 'flare'
             });
-            this.presentation?.({ kind: 'notice', team: null, event: ['alert', {
-              text: 'Stellar eruption detected. Leave the marked area.', danger: true, x: target.x + 5, z: target.z
-            }] });
             this.emit('alert', {
               text: 'Stellar eruption detected. Leave the marked area.',
               danger: true,
@@ -228,8 +224,6 @@
             unit.x = position.x; unit.z = position.z;
             this.setOrder(unit, { type: 'idle' });
             reserved.push({ type: unit.type, size: unit.size, ...position });
-            this.presentation?.({ kind: 'drop', point: position, team: recall.team,
-              color: FACTIONS[this.factionFor(recall.team)].color });
             this.effects.drop(position, FACTIONS[this.factionFor(recall.team)].color, recall.team);
           }
         }
@@ -338,7 +332,6 @@
               loc = landings?.[i] ?? this.world!.nearest(p.x + offset.x, p.z + offset.z),
               unit = this.spawnUnit(type, loc.x, loc.z, team, faction);
             if (unit && d.landingProtection) unit.reinforcedUntil = s.time + d.landingProtection;
-            this.presentation?.({ kind: 'drop', point: loc, team, color: FACTIONS[faction].color });
             this.effects.drop(loc, FACTIONS[faction].color, team);
           }
           this.notify(team, 'radio', 'Reinforcement channel|Boots on the ground. Point us at the trouble.');

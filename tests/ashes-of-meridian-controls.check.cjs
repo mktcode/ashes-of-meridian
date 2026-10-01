@@ -263,7 +263,7 @@ function setup() {
   return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
 
-test('refinery screen targeting uses the explored vent behind terrain, including overlapping units and network poses', () => {
+test('refinery screen targeting uses the explored vent behind terrain, including overlapping units', () => {
   for (const pointerType of ['mouse','touch']) {
     const h=setup(), ui=h.ui;
     ui.pick=h.UI.prototype.pick.bind(ui);
@@ -292,10 +292,6 @@ test('refinery screen targeting uses the explored vent behind terrain, including
     }
     ui.mode={kind:'build',arg:'refinery'};
     assert.deepEqual({...ui.targetPosition(screen.x+100,screen.y)},mountain,'off-silhouette taps retain terrain picking');
-    ui.multiplayer={displayEntity:e=>({...e,x:25,z:35})};
-    const networkScreen=ui.R.project(25,1,35);
-    assert.deepEqual({...ui.targetPosition(networkScreen.x,networkScreen.y)},{x:25,z:35});
-    assert.deepEqual({...ui.targetPosition(screen.x+200,screen.y)},mountain);
     assert.deepEqual({...vent},{id:7,kind:'resource',type:'gas',team:-1,hp:100,size:2,x:20,z:30},'view resolution does not mutate authority');
   }
 });
@@ -1856,11 +1852,10 @@ test('queue view detects immediate queue edits, producer death and ownership cha
   assert.equal(g.s.time, 0);
 });
 
-test('queue view compares multiplayer values instead of snapshot identities and refreshes actor/faction labels', () => {
+test('queue view compares values instead of entity identities and refreshes actor/faction labels', () => {
   const h = queueViewSetup(), g = h.ui.game, original = h.ui.recruitmentGroups;
   let groups = 0;
   h.ui.recruitmentGroups = function() { groups++; return original.call(this); };
-  g.networkTeam = 0;
   h.ui.updateQueues();
   const writes = watchQueueWrites(h), first = h.button('rifle');
   g.s.entities = JSON.parse(JSON.stringify(g.s.entities));
@@ -1874,7 +1869,7 @@ test('queue view compares multiplayer values instead of snapshot identities and 
   const label = first.getAttribute('aria-label');
   g.s.parties[0].faction = 1; h.ui.updateQueues();
   assert.notEqual(first.getAttribute('aria-label'), label);
-  g.s.parties.push({ id: 1, faction: 2 }); g.localTeam = g.networkTeam = 1;
+  g.s.parties.push({ id: 1, faction: 2 }); g.localTeam = 1;
   h.ui.updateQueues(); assert.equal(h.buttons().length, 0);
   g.s.entities[0].team = 1; h.ui.updateQueues(); assert.equal(h.buttons().length, 2);
   // Explicit UI invalidation must still rebuild otherwise identical content.

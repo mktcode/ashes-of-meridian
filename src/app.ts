@@ -198,13 +198,8 @@
             $('loading').classList.add('hidden');
           }).catch(textureFailure);
         };
-        ui.multiplayer = new MeridianMultiplayerClient(ui, async map => {
-          const id = ++worldRequest;
-          const ready = await R.prepareBattlefieldTextures(BATTLEFIELDS[map].render);
-          return ready && id === worldRequest;
-        });
         const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R, () => ({
-          view: ui.view, paused: ui.paused, multiplayer: game.networkTeam != null,
+          view: ui.view, paused: ui.paused,
           map: worldView.world?.definition.name ?? null, seed: worldView.world?.seed ?? null,
           simulationTime: ui.view === 'game' ? game.s?.time ?? null : null,
           speed: ui.view === 'game' ? game.s?.speed ?? null : null,
@@ -289,15 +284,13 @@
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
-          const viewState = game.networkTeam !== null ? { ...s, time: t,
-            entities: s.entities.map(e => ui.multiplayer!.displayEntity(e)) } : s;
           worldView.sync(world);
           R.camera(s.cam.x, s.cam.z, s.cam.zoom);
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
           R.fogOn = !ui.battleIntro;
           const selectedIds = ui.selectionIds();
-          for (let e of viewState.entities) {
+          for (let e of s.entities) {
             if (e.hp <= 0) continue;
             if (!game.observed(e) && !ui.introObserves(e)) continue;
             let p = R.project(e.x, world.surface?.entityHeight(e) ?? 0, e.z);
@@ -341,8 +334,7 @@
                 ring(b.x, b.z, b.size + 1, 0xe5ba79, 0.25, 0.11, t * 0.1);
             }
           }
-          renderBattlefieldEffects(R, game.effects, world, viewState, ui.pings, t, game.localTeam,
-            game.networkTeam !== null ? t : weatherTime);
+          renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t, game.localTeam, weatherTime);
           if (ui.mode?.kind === 'build' && !ui.paused && BUILDINGS[ui.mode.arg])
             drawPlacementGuide(ui.mode.arg, s, world);
           else clearPlacementGuide();
@@ -386,7 +378,7 @@
           time += dt;
           frameClock += elapsed;
           try {
-            if (game.networkTeam == null && game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
+            if (game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
               accumulator += dt * game.s.speed;
               let steps = 0;
               while (accumulator >= SIMULATION_STEP_SECONDS && steps++ < 12) {
@@ -396,8 +388,6 @@
                 if (game.s.result) break;
               }
             } else accumulator = 0;
-            diagnostics?.recorder.phase('networkPresentation');
-            ui.multiplayer?.updatePresentation(now);
             diagnostics?.recorder.phase('ui');
             ui.tick(dt);
             if (weatherState !== game.s) {
@@ -406,7 +396,7 @@
             }
             // Only weather interpolates the local fixed-step remainder.
             // Keep its last pose when pausing; neither gameplay nor effect ages advance.
-            if (game.networkTeam === null && game.s && ui.view === 'game' && !ui.paused && !game.s.result)
+            if (game.s && ui.view === 'game' && !ui.paused && !game.s.result)
               weatherTime = Math.max(weatherTime, game.s.time + accumulator);
             diagnostics?.recorder.phase('audio');
             audio.update(
@@ -417,7 +407,7 @@
                 : 'menu'
             );
             diagnostics?.recorder.phase();
-            // Keep simulation, UI clocks and network presentation on every rAF.
+            // Keep simulation and UI clocks on every rAF.
             // Retain the render phase on e.g. 90/144 Hz displays instead of
             // resetting to now + interval, which would systematically undershoot.
             if (now + RENDER_TOLERANCE_MS < nextRender || !R.frameReady()) {
@@ -443,15 +433,13 @@
             frames++;
             if (frameClock >= 1) {
               fps = frames / frameClock;
-              const snapshots = ui.multiplayer?.takeSnapshotCount() ?? 0;
-              $('fpsReadout').textContent = `${Math.round(fps)} FPS` +
-                (game.networkTeam !== null ? ` · NET ${(snapshots / frameClock).toFixed(0)} Hz` : '');
+              $('fpsReadout').textContent = `${Math.round(fps)} FPS`;
               frames = 0;
               frameClock = 0;
             }
             diagnostics?.recorder.phase('sceneBuild');
             R.begin();
-            const viewTime = game.networkTeam !== null ? ui.multiplayer!.renderTime : game.s?.time;
+            const viewTime = game.s?.time;
             if (ui.view === 'game' && game.s) battlefield(viewTime!);
             else if (ui.view === 'codexModel' && ui.codexSelection) {
               clearPlacementGuide();
@@ -481,8 +469,6 @@
           } catch (error) {
             finishPreviewChange(false);
             diagnostics?.stop('render-error');
-            const network = game.networkTeam != null;
-            if (network) ui.multiplayer?.disconnect();
             failed = true;
             console.error(error);
             ui.paused = true;
@@ -491,8 +477,7 @@
             loader.innerHTML =
               '<div class="eyebrow">UPLINK INTERRUPTED</div><h2>The renderer encountered a problem.</h2><p>' +
               esc(error instanceof Error ? error.message : String(error)) +
-              (network ? '</p><p>The multiplayer session ended. Reload to return to the menu.</p>'
-                : '</p><p>Reload this file to return to the last secured expedition checkpoint.</p>');
+              '</p><p>Reload this file to return to the last secured expedition checkpoint.</p>';
             return;
           }
           requestAnimationFrame(draw);
@@ -501,13 +486,11 @@
           e.preventDefault();
           finishPreviewChange(false);
           diagnostics?.stop('context-lost');
-          const network = game.networkTeam != null;
-          if (network) ui.multiplayer?.disconnect();
           ui.paused = true;
           $('loading').classList.remove('hidden');
           $('loading').innerHTML =
             '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>' +
-            (network ? 'The multiplayer session ended. Reload to return to the menu.' : 'Reload this file to reconnect from the last secured expedition checkpoint.') +
+            'Reload this file to reconnect from the last secured expedition checkpoint.' +
             ' Use Performance quality in Settings for a lighter graphics load.</p>';
           failed = true;
         });
