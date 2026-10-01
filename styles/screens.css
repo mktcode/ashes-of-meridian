@@ -5,7 +5,7 @@
         radial-gradient(circle at 28% 45%, #27cce812, transparent 38%)
     }
 
-    /* Home screen only; other menus retain the existing shared controls. */
+    /* Screen layouts; shared visual contracts live in design-system.css. */
     #menu:has(> .home-screen) {
       background: transparent
     }
@@ -366,48 +366,9 @@
       min-height: 50px
     }
 
-    .home-screen .primary {
-      font-size: 13px;
-      letter-spacing: 1.6px;
-      color: #edfaff !important;
-      border-color: #55ddf2d0;
-      background: linear-gradient(145deg, #1a4b61e8, #082131f2 60%, #12394af0);
-      box-shadow: inset 0 1px #d8fcff59, inset 0 -8px 16px #03101c55,
-        0 0 14px #00cfff38
-    }
 
-    .home-screen .primary:before {
-      content: "";
-      position: absolute;
-      inset: -7px;
-      pointer-events: none;
-      background:
-        linear-gradient(#83ecfa, #83ecfa) left top / 18px 1px no-repeat,
-        linear-gradient(#83ecfa, #83ecfa) left top / 1px 20px no-repeat,
-        linear-gradient(#83ecfa, #83ecfa) right top / 18px 1px no-repeat,
-        linear-gradient(#83ecfa, #83ecfa) right top / 1px 20px no-repeat,
-        linear-gradient(#83ecfa, #83ecfa) left bottom / 18px 1px no-repeat,
-        linear-gradient(#83ecfa, #83ecfa) left bottom / 1px 20px no-repeat,
-        linear-gradient(#83ecfa, #83ecfa) right bottom / 18px 1px no-repeat,
-        linear-gradient(#83ecfa, #83ecfa) right bottom / 1px 20px no-repeat
-    }
 
-    .home-screen .primary:hover {
-      filter: brightness(1.12)
-    }
 
-    .home-screen .secondary {
-      font-size: 13px;
-      color: #a9cddd;
-      border-color: #7aa2b573;
-      background: linear-gradient(115deg, #10202bae, #0a1720b8 55%, #25424b9e);
-      box-shadow: inset 0 1px 1px #a4ccdc1a, 0 3px 14px #0003
-    }
-
-    .home-screen .secondary:hover {
-      background: linear-gradient(115deg, #20485be8, #0c2938ee);
-      border-color: #b5f7ff
-    }
 
     .home-screen .menu-subnav {
       display: flex;
@@ -867,36 +828,7 @@
       gap: 7px
     }
 
-    .screen .primary,
-    .screen .secondary {
-      min-height: 42px;
-      border-radius: 5px 2px;
-      box-shadow: inset 0 1px #d8fcff32, inset 0 -7px 14px #03101c48
-    }
 
-    .screen .primary {
-      color: #f2fbff !important;
-      border-color: #56dff3c5;
-      background: linear-gradient(145deg, #1b4d63, #082131 62%, #123b4d);
-      box-shadow: inset 0 1px #e2fdff5c, inset 0 -8px 16px #03101c50,
-        0 0 10px #00cfff2b
-    }
-
-    .screen .primary:hover {
-      border-color: #c4fbff;
-      background: linear-gradient(145deg, #25657e, #0c3044);
-      box-shadow: inset 0 0 14px #4edcf02e, 0 0 14px #00cfff3d
-    }
-
-    .screen .secondary {
-      border-color: #48cfe98c;
-      background: linear-gradient(145deg, #153344c9, #061725e8)
-    }
-
-    .screen .secondary:hover {
-      border-color: #b5f7ff;
-      background: linear-gradient(145deg, #20485bd8, #0b2938e8)
-    }
 
     .settings-row {
       display: flex;

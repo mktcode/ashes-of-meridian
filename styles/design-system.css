@@ -1,0 +1,299 @@
+/* Non-HUD theme. Loaded last; IDs intentionally contain the legacy cascade.
+   Layout/preview geometry belongs to screens.css and codex.css. No :root tokens. */
+:is(#menu, #modal, #result, #loading) {
+  --ui-ink: #edfaff;
+  --ui-muted: #b1ccd9;
+  --ui-accent: #69e6fa;
+  --ui-line: #39758b;
+  --ui-gold: #f2c17d;
+  --ui-danger: #ff9693;
+  --ui-surface: linear-gradient(135deg, #102c3bfa, #051521fa 75%);
+  --ui-raised: linear-gradient(135deg, #153c4d, #081d2c 75%);
+  --ui-selected: linear-gradient(125deg, #176078, #082c40 75%);
+  --ui-radius: 12px 2px 12px 2px;
+  --ui-shadow: inset 0 1px #c5f6ff24, 0 12px 32px #0005;
+  --ui-glow: inset 0 1px #d8fbff65, inset 0 0 24px #30d6f015, 0 0 18px #19ccec24;
+  --ui-fast: 160ms;
+  --ui-enter: 280ms;
+  --ui-ease: cubic-bezier(.2, .7, .2, 1);
+  /* Legacy text helpers inherit locally; battlefield tokens are untouched. */
+  --ink: var(--ui-ink);
+  --muted: var(--ui-muted);
+  --gold: var(--ui-gold);
+  --teal: var(--ui-accent);
+  color: var(--ui-ink);
+  font-variant-numeric: tabular-nums;
+  color-scheme: dark;
+}
+
+:is(#menu, #modal, #result, #loading) :is(button, a, input, select) {
+  touch-action: manipulation;
+  transition: background var(--ui-fast), border-color var(--ui-fast),
+    color var(--ui-fast), box-shadow var(--ui-fast), transform var(--ui-fast) var(--ui-ease);
+}
+:is(#menu, #modal, #result, #loading) :is(button, a, input, select):focus-visible {
+  outline: 2px solid var(--ui-ink);
+  outline-offset: 3px;
+}
+:is(#menu, #modal, #result) button:disabled {
+  opacity: 1;
+  color: #8ba8b7 !important;
+  border-color: #365361;
+  background: #0a1c28;
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+:is(#menu, #modal, #result) button:not(:disabled):active { transform: translateY(1px) }
+:is(#menu, #modal, #result) .eyebrow {
+  color: var(--ui-accent);
+  font-size: 11px;
+  letter-spacing: .16em;
+}
+:is(#menu, #modal, #result) :is(.primary, .secondary) {
+  position: relative;
+  min-height: 48px;
+  padding: 13px 20px;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  box-shadow: inset 0 1px #c5f6ff24;
+  color: var(--ui-muted);
+  font-size: 12px;
+  letter-spacing: .13em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+:is(#menu, #modal, #result) .primary {
+  border-color: var(--ui-accent);
+  background: var(--ui-selected);
+  color: var(--ui-ink) !important;
+  box-shadow: var(--ui-glow);
+  font-weight: 700;
+}
+:is(#menu, #modal, #result) .primary::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-left: 1px solid #a5f4ff60;
+  border-right: 1px solid #a5f4ff60;
+  border-radius: 8px 1px;
+  pointer-events: none;
+}
+:is(#menu, #modal, #result) .primary:disabled::before { display: none }
+@media (hover: hover) {
+  :is(#menu, #modal, #result) :is(.primary, .secondary):not(:disabled):hover {
+    border-color: #c9f8ff;
+    background: var(--ui-selected);
+    color: var(--ui-ink);
+    box-shadow: var(--ui-glow);
+  }
+}
+:is(#menu, #modal, #result) .textbtn {
+  min-height: 44px;
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+:is(#menu, #modal, #result) .textbtn:hover { color: var(--ui-accent) }
+:is(#menu, #modal, #result) :is(.sub-header, .armory-heading) {
+  border-bottom: 1px solid var(--ui-line);
+  padding-bottom: 16px;
+}
+:is(#menu, #modal, #result) :is(.sub-header h1, .modal-card h1) {
+  font: 600 clamp(24px, 3vw, 36px)/1.2 "Segoe UI", Arial, sans-serif;
+  letter-spacing: .06em;
+  color: var(--ui-ink);
+}
+:is(#menu, #modal, #result) :is(.modal-card, .subscreen > div:not(.codex-grid), .codex-model-caption) {
+  border-color: var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  box-shadow: var(--ui-shadow);
+}
+#modal .modal-shade {
+  background: radial-gradient(ellipse at 50% 40%, #092d4166, #020812e6);
+  backdrop-filter: none;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+#modal .modal-card {
+  max-width: 100%;
+  max-height: calc(100dvh - 48px);
+  border-color: var(--ui-accent);
+  padding: clamp(20px, 4vw, 36px);
+  box-shadow: var(--ui-glow), 0 24px 64px #0009;
+}
+#modal .modal-card p { color: var(--ui-muted) }
+#modal .btnstack { gap: 10px }
+#modal [data-ui="abandon"], #modal [data-ui="restartConfirm"] { color: var(--ui-danger) }
+#modal .ui-note {
+  margin: 20px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--ui-line);
+  font-size: 12px;
+}
+#menu .home-screen {
+  background: linear-gradient(90deg, #03111cf5, #061724c9 40%, #03101b40 75%),
+    linear-gradient(0deg, #03111bd9, transparent 60%);
+}
+#menu .home-screen .wordmark { color: var(--ui-ink) }
+#menu .home-screen .menu-buttons { gap: 12px }
+#menu .home-screen .menu-subnav button { font-size: 11px; min-height: 44px }
+#menu .home-screen .battle-note {
+  padding: 12px;
+  border-left: 2px solid var(--ui-line);
+  background: #041420e6;
+  line-height: 1.6;
+}
+#menu .home-screen .battle-note > p { margin-top: 0 }
+#menu .home-screen .stage-status { font-size: 10px }
+#menu .subscreen { background: linear-gradient(110deg, #03111cf7, #081d2eee 70%, #061725ce) }
+:is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option,
+  .upgrade-card, .expedition-benefit-row, .codex-card, .codex-nav button, .codex-chapters a) {
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  box-shadow: inset 0 1px #c5f6ff24;
+}
+:is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option,
+  .codex-nav button).active {
+  border-color: var(--ui-accent);
+  background: var(--ui-selected);
+  box-shadow: var(--ui-glow);
+}
+@media (hover: hover) {
+  :is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option,
+    .codex-card, .codex-nav button, .codex-chapters a):not(:disabled):hover {
+    border-color: var(--ui-accent);
+    background: var(--ui-raised);
+  }
+}
+:is(#menu, #modal, #result) :is(.faction-option small, .loadout-option small,
+  .benefit-option small, .expedition-benefit-row small, .upgrade-card p) {
+  color: var(--ui-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+:is(#menu, #modal, #result) :is(.loadout-option strong, .benefit-option strong, .upgrade-card h3) {
+  font-size: 13px;
+  letter-spacing: .04em;
+}
+#menu :is(.loadout-option em, .loadout-summary > span, .loadout-summary b) { font-size: 10px }
+#menu .loadout-option .sigil, #result .benefit-option .sigil { color: var(--ui-accent) }
+#menu .opponent-card { background: #071c29f2; backdrop-filter: none }
+:is(#menu, #result) .opponent-label { color: var(--ui-muted); font-size: 10px }
+:is(#menu, #result) .opponent-copy strong { font-size: 11px }
+:is(#menu, #result) .opponent-copy small {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  line-height: 1.5;
+}
+#modal .armory-heading h1 { text-transform: uppercase }
+#modal .armory-balance {
+  border-color: var(--ui-accent);
+  background: var(--ui-surface);
+  border-radius: var(--ui-radius);
+}
+#modal :is(.armory-balance strong, .armory-aether-icon) { color: var(--ui-accent) }
+#modal .upgrade-rank { font-size: 11px; letter-spacing: .1em }
+#modal .upgrade-effect { background: #092333; border-color: var(--ui-gold) }
+#modal .upgrade-effect :is(span, small) { font-size: 10px }
+#modal .upgrade-effect strong { font-size: 18px }
+#modal .upgrade-levels { gap: 6px }
+#modal .upgrade-levels i { height: 7px }
+#modal .upgrade-card .secondary { font-size: 11px; min-height: 48px }
+#modal .upgrade-card .secondary:disabled small { color: inherit }
+#modal .settings-row { gap: 16px; padding-block: 16px; border-color: var(--ui-line) }
+#modal .settings-row label { font-size: 14px }
+#modal .settings-row label small { font-size: 12px }
+:is(#menu, #modal) :is(input, select) { accent-color: var(--ui-accent); max-width: 100% }
+#modal .settings-row input[type=checkbox] { width: 24px; height: 24px; flex-shrink: 0 }
+#modal .settings-row input[type=range] { min-height: 32px }
+#modal .help-line { color: var(--ui-ink); line-height: 1.55 }
+#modal .help-input { color: var(--ui-muted); font-size: 11px }
+#menu .codex-card { overflow: hidden }
+#menu .codex-card span { color: var(--ui-muted); font-size: 11px }
+#menu .codex-section-title { color: var(--ui-gold); letter-spacing: .1em }
+#result .result-screen { backdrop-filter: none }
+#result .result-hero h1 { font-weight: 500; letter-spacing: .16em }
+#result .defeat .result-hero h1 { color: var(--ui-danger); text-shadow: 0 0 24px #ff69692b }
+#result :is(.result-reward, .result-next, .benefit-option) {
+  clip-path: none; /* Keep keyboard outlines and shadows visible. */
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+  box-shadow: var(--ui-shadow);
+}
+#result :is(.result-reward, .result-next, .benefit-option)::before { display: none }
+#result .result-reward { border-color: var(--ui-accent); background: var(--ui-selected); box-shadow: var(--ui-glow) }
+#result .defeat .result-reward { border-color: var(--ui-danger); background: var(--ui-surface) }
+#result .benefit-option.active { background: var(--ui-selected); border-color: var(--ui-accent); box-shadow: var(--ui-glow) }
+#result .result-reward-breakdown { flex-wrap: wrap; letter-spacing: .05em }
+#result .result-hero p { justify-content: center; line-height: 1.6 }
+#result .result-next p { color: var(--ui-muted) }
+#loading { background: radial-gradient(ellipse at 50% 40%, #123b50, #040e19 65%) }
+#loading .crest { color: var(--ui-accent); text-shadow: 0 0 24px #69e6fa55 }
+#loading h2 { color: var(--ui-ink); letter-spacing: .05em }
+
+/* Fleet systems are readable rows; compact command modules remain a card grid. */
+@media (min-width: 700px) {
+  #modal .armory-grid:not(.command-module-grid) { grid-template-columns: 1fr; gap: 16px }
+  #modal .armory-grid:not(.command-module-grid) .upgrade-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 210px;
+    grid-template-areas: "heading effect" "description effect" "levels purchase";
+    gap: 10px 24px;
+    padding: 22px;
+  }
+  #modal .armory-grid:not(.command-module-grid) .upgrade-heading { grid-area: heading; grid-template-columns: 48px minmax(0, 1fr) }
+  #modal .armory-grid:not(.command-module-grid) .sigil { width: 42px; height: 42px }
+  #modal .armory-grid:not(.command-module-grid) p { grid-area: description; margin: 0 }
+  #modal .armory-grid:not(.command-module-grid) .upgrade-effect {
+    grid-area: effect;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    border: 1px solid var(--ui-line);
+    padding: 12px;
+  }
+  #modal .armory-grid:not(.command-module-grid) .upgrade-levels { grid-area: levels; align-self: center; margin: 0 }
+  #modal .armory-grid:not(.command-module-grid) .secondary { grid-area: purchase }
+}
+
+/* Entrance only: no idle sweeps, particles, animated blur or perpetual glows. */
+#menu :is(.home-layout, .subscreen, .codex-model-screen), #modal .modal-card,
+#result .result-shell { animation: ui-arrive var(--ui-enter) var(--ui-ease) both }
+@keyframes ui-arrive {
+  from { opacity: 0; transform: translateY(8px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+@media (max-width: 600px) {
+  #menu .home-layout { padding: 24px max(18px, env(safe-area-inset-left)); gap: 24px }
+  #menu .home-screen .menu-buttons button { font-size: 12px; min-height: 48px }
+  #menu .home-screen .menu-buttons { gap: 10px }
+  #menu .subscreen { padding: 20px 16px }
+  #menu .sub-header { align-items: flex-start; gap: 12px }
+  #menu .sub-header .textbtn { max-width: 110px; flex-shrink: 0 }
+  #modal .settings-row { flex-wrap: wrap }
+  #modal .settings-row select { width: 100% }
+  #modal .armory-heading { flex-wrap: wrap }
+  #modal .armory-heading h1 { font-size: 24px }
+  #result .result-screen { padding: 24px 16px 32px }
+  #result .result-shell { gap: 18px }
+  #result .result-benefits h3 { font-size: 11px; line-height: 1.5; letter-spacing: .1em }
+  #result .benefit-option { padding: 16px }
+  #result .benefit-option strong { font-size: 13px }
+  #result .benefit-option small { font-size: 12px; margin-top: 5px }
+  #result .result-reward { min-height: 108px }
+  #result .result-reward-breakdown { font-size: 10px; gap: 4px 12px }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#menu, #modal, #result, #loading),
+  :is(#menu, #modal, #result, #loading) * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
