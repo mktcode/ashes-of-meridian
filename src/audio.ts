@@ -13,6 +13,7 @@
     const INFANTRY_SHOT_POOL_SIZE = 5;
     type MusicMode = 'menu' | 'battle' | 'silent';
     type VoiceKind = 'dialogue' | 'selection';
+    const VOICE_GAIN: Record<VoiceKind, number> = { dialogue: .75, selection: .25 };
     interface VoicePlayback { id: VoiceLineId; kind: VoiceKind; suspended: boolean; attempt: number; }
     interface Window { webkitAudioContext?: typeof AudioContext; }
     class MeridianAudio {
@@ -200,7 +201,7 @@
         try {
           track.src = line.audio;
           track.currentTime = 0;
-          track.volume = Math.max(0, Math.min(1, this.settings.volume));
+          this.syncVoiceVolume();
           this.syncBattleTrack();
           this.startVoice(playback);
           return this.activeVoice === playback;
@@ -231,6 +232,11 @@
         this.voiceTrack?.pause();
         try { if (this.voiceTrack) this.voiceTrack.currentTime = 0; } catch (_) {}
         this.syncBattleTrack();
+      }
+      syncVoiceVolume() {
+        if (this.voiceTrack) this.voiceTrack.volume = this.settings.sfx
+          ? Math.max(0, Math.min(1, this.settings.volume)) * VOICE_GAIN[this.activeVoice?.kind || 'dialogue']
+          : 0;
       }
       syncVoiceMode() {
         const playback = this.activeVoice;
@@ -343,7 +349,7 @@
           ? Math.max(0, Math.min(1, this.settings.volume)) * 0.16
           : 0;
         for (const shot of this.infantryShots) shot.volume = infantryShotVolume;
-        if (this.voiceTrack) this.voiceTrack.volume = this.settings.sfx ? Math.max(0, Math.min(1, this.settings.volume)) : 0;
+        this.syncVoiceVolume();
         this.syncVoiceMode();
         this.syncBattleTrack();
       }

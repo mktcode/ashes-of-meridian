@@ -342,7 +342,7 @@ test('speech pauses with dialogue, drops selection on pause, follows SFX volume 
   audio.setMode('battle'); await h.flush();
   assert.equal(audio.voiceTrack.currentTime, 2);
   settings.music = false; settings.volume = .6; audio.updateSettings();
-  assert.equal(audio.voiceTrack.volume, .6);
+  assert.equal(audio.voiceTrack.volume, .6 * h.evaluate('VOICE_GAIN.dialogue'));
   assert.equal(audio.voiceTrack.paused, false, 'speech is not controlled by the music switch');
   settings.sfx = false; audio.updateSettings();
   assert.equal(audio.voiceTrack.volume, 0); assert.equal(audio.activeVoice, null);
@@ -354,6 +354,20 @@ test('speech pauses with dialogue, drops selection on pause, follows SFX volume 
   audio.resetBattleMusic(); assert.equal(audio.activeVoice, null);
   audio.playVoice('tutorial.warning');
   audio.setMode('menu'); assert.equal(audio.activeVoice, null);
+});
+
+test('selection speech remains quieter than dialogue and both preserve their gain when master volume changes', () => {
+  const h = setupAudio(), { audio, settings } = h;
+  audio.setMode('battle');
+  audio.playVoice('worker.selected.1', 'selection');
+  const selectionGain = audio.voiceTrack.volume / settings.volume;
+  settings.volume = .6; audio.updateSettings();
+  assert.equal(audio.voiceTrack.volume, settings.volume * selectionGain);
+  audio.playVoice('tutorial.settle');
+  const dialogueGain = audio.voiceTrack.volume / settings.volume;
+  assert.ok(selectionGain > 0 && selectionGain < dialogueGain && dialogueGain < 1);
+  settings.volume = .4; audio.updateSettings();
+  assert.equal(audio.voiceTrack.volume, settings.volume * dialogueGain);
 });
 
 test('speech play rejections are bounded and stale promises cannot cancel a newer line or a resumed dialogue', async () => {
