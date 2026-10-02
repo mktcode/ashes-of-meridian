@@ -21,6 +21,18 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
         const distance=Math.hypot(v.x-p.x,v.z-p.z),inset=.5*(1-Math.cos(t*Math.PI/2));
         return [v.x+(p.x-v.x)*inset/distance,top-.5+.5*Math.sin(t*Math.PI/2),
           v.z+(p.z-v.z)*inset/distance];
+      },
+      footNormals=corners.map((v,i)=>{
+        const before=corners[(i+corners.length-1)%corners.length],after=corners[(i+1)%corners.length],
+          incoming=Math.hypot(v.x-before.x,v.z-before.z),outgoing=Math.hypot(after.x-v.x,after.z-v.z),
+          ax=-(v.z-before.z)/incoming,az=(v.x-before.x)/incoming,
+          bx=-(after.z-v.z)/outgoing,bz=(after.x-v.x)/outgoing,
+          divisor=1+ax*bx+az*bz;
+        return {x:(ax+bx)/divisor,z:(az+bz)/divisor};
+      }),
+      foot=(i:number,t:number)=>{
+        const v=corners[i],n=footNormals[i],outset=.5*(1-Math.cos(t*Math.PI/2));
+        return [v.x+n.x*outset,base+.012+.45*(1-Math.sin(t*Math.PI/2)),v.z+n.z*outset];
       };
     for(let side=0;side<corners.length;side++){
       const a=corners[side],b=corners[(side+1)%corners.length],dx=b.x-a.x,dz=b.z-a.z,
@@ -28,6 +40,10 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
       geom.tri(out,[p.x,top,p.z],rim(a,1),rim(b,1),paint);
       for(let band=0;band<3;band++)quad(rim(a,band/3),rim(b,band/3),rim(b,(band+1)/3),rim(a,(band+1)/3),[.56,.65,.72]);
       quad([a.x,top-.5,a.z],[a.x,base,a.z],[b.x,base,b.z],[b.x,top-.5,b.z],[.35,.45,.54]);
+      // A continuous coved skirting softens the wall/floor joint, including corners.
+      // Its half-metre apron remains inside the conservative blocked edge margin.
+      for(let band=0;band<3;band++)quad(foot(side,band/3),foot(side,(band+1)/3),
+        foot((side+1)%corners.length,(band+1)/3),foot((side+1)%corners.length,band/3),[.48,.57,.64]);
       const panel=(from:number,to:number,low:number,high:number,color:number[],offset=.02)=>{
         const point=(u:number,y:number)=>[a.x+dx*u/length+nx*offset,y,a.z+dz*u/length+nz*offset];
         quad(point(from,high),point(from,low),point(to,low),point(to,high),color);
