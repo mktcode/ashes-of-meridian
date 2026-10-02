@@ -8,8 +8,10 @@ const PLATFORM_TIER_HEIGHT=6;
 const PLATFORM_RAMP_LENGTH=22.5;
 const PLATFORM_LANDING=15;
 interface BattlefieldRamp { x: number; z: number; dx: number; dz: number; length: number; width: number; rise: number; base: number }
+interface BattlefieldPlatformScenery extends Position { height:number; width:number; depth:number }
 interface BattlefieldPlatformPlan {
   extent: number; floor: number; detailSeed: number; platforms: BattlefieldPlatform[]; ramps: BattlefieldRamp[];
+  scenery: BattlefieldPlatformScenery[];
 }
 function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatformPlan {
   const random=seeded(seed^0x504c4154),snap=(v:number)=>Math.round(v/2.5)*2.5,
@@ -25,7 +27,7 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
     if(x)rooms.push({...r,x:r.x-(length-first)/2,width:first},{...r,x:r.x+(length-second)/2,width:second});
     else rooms.push({...r,z:r.z-(length-first)/2,depth:first},{...r,z:r.z+(length-second)/2,depth:second});
   }
-  const plan={extent,floor,detailSeed:seed^0x50444543,platforms,ramps},supports: BattlefieldPlatform[]=[];
+  const plan:BattlefieldPlatformPlan={extent,floor,detailSeed:seed^0x50444543,platforms,ramps,scenery:[]},supports: BattlefieldPlatform[]=[];
   for(const room of rooms){
     const p:BattlefieldPlatform={...room,height:floor+PLATFORM_TIER_HEIGHT,base:floor,corners:[0,0,0,0]};
     if(random()<.7&&room.width>=75){
@@ -144,6 +146,45 @@ function platformResourceSites(plan:BattlefieldPlatformPlan,seed:number):Positio
   return sites;
 }
 // Closed technical profile: no habitat, soil/rock textures, vegetation or outdoor weather.
+// Separate cosmetic RNG. Modules occupy already blocked edge cells; never shrink build/movement areas.
+function decoratePlatformStations(builder:BattlefieldBuilder,plan:BattlefieldPlatformPlan,resources:Position[]){
+  const w=builder.world,s=w.surface!,random=seeded(plan.detailSeed^0x53544154),
+    models=['shipHangar','shipPlant','shipBridge','shipCrate'];
+  for(const model of [...models,'shipHangarLights'])w.renderData.geometries.push({mesh:'platform'+model,model,seed:0,extent:0});
+  const candidates:Position[]=[];
+  for(let i=0;i<w.staticGrid.length;i++)if(w.staticGrid[i]&&s.cliffs[i]){
+    const p=w.point(i),height=platformBattlefieldHeight(plan,p.x,p.z);
+    if(height<=plan.floor||Math.abs(p.x)>w.extent-15||Math.abs(p.z)>w.extent-15)continue;
+    if([-1.2,0,1.2].some(dx=>[-1.2,0,1.2].some(dz=>Math.abs(platformBattlefieldHeight(plan,p.x+dx,p.z+dz)-height)>.001)))continue;
+    candidates.push(p);
+  }
+  for(let attempt=0;attempt<240&&candidates.length&&plan.scenery.length<24;attempt++){
+    const p=candidates.splice(Math.floor(random()*candidates.length),1)[0],{x,z}=p;
+    if(resources.some(q=>distance(p,q)<32)||plan.scenery.some(q=>distance(p,q)<14))continue;
+    if(plan.ramps.some(r=>{
+      const dx=x-r.x,dz=z-r.z,u=dx*r.dx+dz*r.dz,v=dx*r.dz-dz*r.dx;
+      return u>=-PLATFORM_LANDING-18&&u<=r.length+PLATFORM_LANDING+18&&Math.abs(v)<=r.width/2+18;
+    }))continue;
+    const height=platformBattlefieldHeight(plan,x,z),width=w.cellSize,depth=w.cellSize,model=models[Math.floor(random()*models.length)],
+      yaw=Math.floor(random()*4)*Math.PI/2,scale=.9,h=1.2+random()*.8;
+    plan.scenery.push({x,z,height,width,depth});
+    builder.place('box',x,height+.10,z,width,.46,depth,0x394a53,0,0,0,0,1,'static','METAL');
+    builder.place('platform'+model,x,height+.33,z,scale,h,scale,
+      random()<.5?0x9cacb3:0xaa9a80,yaw,0,0,0,1,'static','METAL');
+    if(model==='shipHangar')builder.place('platformshipHangarLights',x,height+.33,z,scale,h,scale,0xffffff,yaw,0,0,.65,1,'static','AUTO');
+    // Flush perimeter warning paint outlines the existing blocked cell.
+    for(const side of [-1,1]){
+      builder.place('box',x+side*(width/2-.12),height+.35,z,.12,.03,depth-.24,0xc8aa56,0,0,0,0,1,'static','AUTO');
+      builder.place('box',x,height+.35,z+side*(depth/2-.12),width-.24,.03,.12,0xc8aa56,0,0,0,0,1,'static','AUTO');
+    }
+  }
+  // Larger docks and communication buildings are entirely beyond the playable rectangle.
+  for(const side of [-1,1])for(let z=-150;z<=150;z+=75){
+    const model=models[Math.floor(random()*3)];
+    builder.place('platform'+model,side*(w.extent+34),plan.floor,z,7,6,7,
+      0x8397a0,side*Math.PI/2,0,0,0,1,'static','METAL');
+  }
+}
 function createPlatformBattlefield(): BattlefieldDefinition {
   return {
     name:'ORBITAL PLATFORM',size:{extent:160,cellSize:2.5},
@@ -177,9 +218,10 @@ function createPlatformBattlefield(): BattlefieldDefinition {
         {mesh:'platformFixtures',model:'shipPlant',seed:197,extent:0},
         {mesh:'platformSignals',model:'platformSignals',plan},
         {mesh:'platformFloor',model:'platformFloor',plan});
-      builder.place('terrain',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
+      decoratePlatformStations(builder,plan,platformResourceSites(plan,w.terrainSeed));
+      builder.place('terrain',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','TECHNICAL');
       builder.place('platformSignals',0,0,0,1,1,1,0xffffff,0,0,0,.65,1,'static','AUTO');
-      builder.place('platformFloor',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
+      builder.place('platformFloor',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','TECHNICAL');
       // Machinery is outside the playable rectangle, never an invisible nav obstacle.
       for(const side of [-1,1])for(let z=-120;z<=120;z+=60)
         builder.place('platformFixtures',side*(w.extent+25),plan.floor,z,5,7,5,

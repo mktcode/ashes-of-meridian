@@ -143,6 +143,49 @@ float veilNoise(vec2 p){
  return mix(mix(veilHash(i),veilHash(i+vec2(1,0)),f.x),mix(veilHash(i+vec2(0,1)),veilHash(i+vec2(1,1)),f.x),f.y);
 }
 float veilCloud(vec2 p){return veilNoise(p)*.57+veilNoise(p*2.03+7.1)*.29+veilNoise(p*4.07-3.4)*.14;}
+// Engineered maps only: actual surface structures, not the shared tiny METAL tiles.
+float technicalHash(vec2 p){
+ vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);
+}
+vec3 technicalSurface(vec3 normal){
+ vec2 p=normal.y>.65?v_pos.xz:(abs(normal.x)>abs(normal.z)?v_pos.zy:v_pos.xy);
+ vec2 seed=vec2(float(u_decorSeed&65535u),float((u_decorSeed>>16)&65535u))*.001;
+ vec2 zone=floor(p/vec2(24.,36.))+floor(v_pos.y/6.)*vec2(11.,-7.);
+ float kind=floor(technicalHash(zone+seed)*5.);
+ float grain=technicalHash(floor(p*15.)),wear=veilNoise(p*.47+seed),structure=1.,height=0.;
+ if(normal.y<.65)kind=0.;
+ if(kind<1.){
+  // Staggered, large welded sheets, irregular repair tones, recessed seams and fasteners.
+  vec2 q=p+vec2(mod(floor(p.y/11.),2.)*4.,0.),cell=vec2(8.,11.),f=mod(q,cell),edge=min(f,cell-f);
+  float seam=1.-smoothstep(.025,.10,min(edge.x,edge.y));
+  float bolt=1.-smoothstep(.085,.15,length(edge-vec2(.32)));
+  structure=(.90+technicalHash(floor(q/cell)+seed)*.16)*(1.-seam*.58)+bolt*.24;height=bolt*.026-seam*.032;
+ }else if(kind<2.){
+  // Alternating diagonal raised treads / diamond plate.
+  vec2 q=p/.72;q.x+=mod(floor(q.y),2.)*.5;vec2 f=fract(q)-.5;
+  float tread=(1.-smoothstep(.30,.37,abs(f.x+f.y)))*(1.-smoothstep(.065,.11,abs(f.x-f.y)));
+  structure=.75+tread*.43;height=tread*.038;
+ }else if(kind<3.){
+  // Recessed open-looking service grating; still an authoritative solid floor.
+  vec2 f=abs(fract(p/.62)-.5);
+  float rail=smoothstep(.32,.41,max(f.x,f.y));
+  structure=mix(.28,1.12,rail);height=rail*.024;
+ }else if(kind<4.){
+  // Ribbed, dark shock-absorbing service matting.
+  float rib=smoothstep(.27,.40,abs(fract(p.x/.42)-.5));
+  structure=.60+rib*.22;height=rib*.021;
+ }else{
+  // Brushed non-grid cast deck: aggregate, pits and long machining streaks.
+  float brush=technicalHash(floor(vec2(p.x*31.,p.y*.65)));
+  structure=.85+brush*.19-(1.-smoothstep(.19,.29,grain))*.13;height=(grain-.5)*.018;
+ }
+ float footprint=max(length(dFdx(p)),length(dFdy(p))),detailFade=1.-smoothstep(.15,.8,footprint);
+ structure=mix(kind==2.?.62:(kind==3.?.71:.94),structure,detailFade);height*=detailFade;
+ grain=mix(.5,grain,1.-smoothstep(.02,.11,footprint));
+ float scratch=pow(technicalHash(floor(vec2(p.x*7.,p.y*.21))+seed),11.)*detailFade;
+ float stain=smoothstep(.62,.85,wear)*.26;
+ return vec3(structure*(.91+grain*.09)-stain+scratch*.28,height,stain);
+}
 float habitat(vec2 p){
  float warp=sin(p.x*.017+p.y*.031+u_ecology.w)*9.;
  return clamp(.5+sin(p.x*.041+warp*.08+u_ecology.w)*.24+cos(p.y*.036-p.x*.015-u_ecology.w)*.23,0.,1.);
@@ -250,9 +293,12 @@ void main(){
   float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);
   frag=vec4(mix(lit,u_haze,mist),v_col.a);return;
  }
- vec3 n=normalize(v_n);vec3 base=v_col.rgb;float surfaceAlpha=v_col.a;
+ vec3 n=normalize(v_n);vec3 base=v_col.rgb;float surfaceAlpha=v_col.a,technicalHeight=0.;
 float metal=float(v_mat>1.5&&v_mat<2.5),bio=float(v_mat>2.5&&v_mat<3.5),crystal=float(v_mat>4.5&&v_mat<5.5);
-if(v_mat==${MAT.LANDSCAPE}.){
+if(v_mat==${MAT.TECHNICAL}.){
+ vec3 surface=technicalSurface(n);base*=surface.x;technicalHeight=surface.y;
+ base=mix(base,base*vec3(1.16,.89,.69),surface.z*.6);metal=1.;
+}else if(v_mat==${MAT.LANDSCAPE}.){
  vec2 uv=groundUV(v_pos.xz);
  vec2 warp=vec2(veilNoise(v_pos.xz*.12),veilNoise(v_pos.xz*.12+19.7))*.38;
  vec3 grass=mix(texture(u_groundTex,uv+warp).rgb,texture(u_groundTex,uv*1.371+3.76+warp).rgb,.42);
@@ -328,7 +374,8 @@ if(u_ecology.x>.5&&u_habitatOn<.5&&v_mat==${MAT.GROUND}.){
 // Performance omits the extra height sampling, retaining exactly the same albedo recipes.
 if(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96&&v_mat!=${MAT.FOLIAGE}.&&v_mat!=${MAT.WATER}.&&v_mat!=${MAT.LEAF}.){
  float h=0.;
- if(v_mat==${MAT.LANDSCAPE}.){
+ if(v_mat==${MAT.TECHNICAL}.)h=technicalHeight;
+ else if(v_mat==${MAT.LANDSCAPE}.){
   float stone=u_upland>.5?clamp((1.-smoothstep(.55,.94,n.y))*.92+v_detail.y*.22,0.,1.):clamp(v_detail.y+(1.-smoothstep(.60,.92,n.y))*.6,0.,1.);
   vec2 uv=groundUV(v_pos.xz),warp=vec2(veilNoise(v_pos.xz*.12),veilNoise(v_pos.xz*.12+19.7))*.38;
   float grass=mix(texture(u_groundTex,uv+warp).a,texture(u_groundTex,uv*1.371+3.76+warp).a,.42);

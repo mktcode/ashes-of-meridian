@@ -60,6 +60,17 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
           panel(u+.6,end-.6,base+2.3,base+2.5,[.22,.30,.37],.065);
         }
       }
+      // Edge-band safety rails, with deliberately wide openings at both ramp mouths.
+      if(length>7)for(let u=2;u<length-5;u+=12){
+        const x=a.x+dx*(u+2)/length,z=a.z+dz*(u+2)/length;
+        if(plan.ramps.some(r=>[0,r.length].some(t=>Math.hypot(x-r.x-r.dx*t,z-r.z-r.dz*t)<r.width/2+18)))continue;
+        panel(u,u+4,top+.82,top+.97,[.61,.68,.71],.04);
+        panel(u,u+.16,top,top+1.05,[.39,.48,.54],.04);
+        panel(u+3.84,u+4,top,top+1.05,[.39,.48,.54],.04);
+        // A matching inward face keeps rails visible from either side.
+        const point=(v:number,y:number)=>[a.x+dx*v/length-nx*.10,y,a.z+dz*v/length-nz*.10];
+        quad(point(u,top+.82),point(u,top+.97),point(u+4,top+.97),point(u+4,top+.82),[.61,.68,.71]);
+      }
       if(length>7){
         panel(.5,length-.5,base+.5,base+.7,[.55,.63,.67],.12);
         panel(.5,length-.5,top-1.1,top-.9,[.74,.60,.34],.075);
@@ -153,7 +164,8 @@ TerrainModels.platformFloor=(plan:BattlefieldPlatformPlan)=>{
     passable=new Uint8Array(size*size),point=(i:number)=>({x:start+(i%size)*step,z:start+Math.floor(i/size)*step});
   for(let i=0;i<passable.length;i++){
     const p=point(i);
-    if([-4.5,0,4.5].every(dx=>[-4.5,0,4.5].every(dz=>
+    if(!plan.scenery.some(q=>Math.abs(p.x-q.x)<q.width/2+4.5&&Math.abs(p.z-q.z)<q.depth/2+4.5)&&
+      [-4.5,0,4.5].every(dx=>[-4.5,0,4.5].every(dz=>
       Math.abs(platformBattlefieldHeight(plan,p.x+dx,p.z+dz)-plan.floor)<.001)))passable[i]=1;
   }
   const goals:number[]=[];

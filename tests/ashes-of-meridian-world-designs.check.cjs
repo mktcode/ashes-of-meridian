@@ -6,7 +6,7 @@ const { loadScripts, BATTLEFIELD_SCRIPTS } = require('./helpers/game-scripts.cjs
 const json = value => JSON.parse(JSON.stringify(value));
 function scope(extra = []) {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...extra]);
-  return vm.runInContext('({Battlefield,BATTLEFIELDS,MISSIONS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,platformBattlefieldPlan,platformBattlefieldHeight,platformOutline,platformContains,availableBattlefields,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
+  return vm.runInContext('({Battlefield,BattlefieldSurface,BATTLEFIELDS,MISSIONS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,platformBattlefieldPlan,platformBattlefieldHeight,platformOutline,platformContains,availableBattlefields,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
 }
 function signature(world) {
   return createHash('sha256').update(JSON.stringify(world.layout)).update(world.staticGrid)
@@ -108,6 +108,29 @@ test('platform prototype has flat tiers, usable ramps and a closed technical env
   for(const site of w.layout.resourceSites)assert.ok(w.surface.fits(site.x,site.z,4));
   assert.deepEqual(json(plan),json(api.platformBattlefieldPlan(1409,w.extent)));
   assert.notDeepEqual(json(plan),json(api.platformBattlefieldPlan(1410,w.extent)));
+});
+test('platform scenery occupies only existing blocked edge cells without changing navigation or build space',()=>{
+  const api=scope(),w=new api.Battlefield(3,'platform-deck',4),
+    plan=w.renderData.geometries.find(d=>d.mesh==='terrain').plan;
+  assert.ok(plan.scenery.length>0&&plan.scenery.length<=24);
+  const original=new api.BattlefieldSurface(w.extent,w.cellSize,(x,z)=>api.platformBattlefieldHeight(plan,x,z));
+  assert.deepEqual(Array.from(w.surface.cliffs),Array.from(original.cliffs));
+  assert.deepEqual(Array.from(w.staticGrid),Array.from(original.cliffs));
+  assert.equal(w.renderData.placements.find(p=>p.mesh==='terrain').material,'TECHNICAL');
+  for(const p of plan.scenery){
+    assert.equal(w.staticGrid[w.idx(p.x,p.z)],1);
+    assert.equal(w.terrainFeatureGrid[w.idx(p.x,p.z)],1);
+    assert.equal(w.surface.foundation(p,3),false);
+    assert.equal(w.surface.segment({x:p.x-8,z:p.z},{x:p.x+8,z:p.z},1),false);
+    for(const q of w.layout.resourceSites)assert.ok(Math.hypot(p.x-q.x,p.z-q.z)>=32);
+    const plinth=w.renderData.placements.find(q=>q.mesh==='box'&&q.position[0]===p.x&&q.position[2]===p.z&&q.scale[0]===p.width&&q.scale[2]===p.depth);
+    assert.ok(plinth,'occupied footprint is rendered, not invisible');
+    for(let i=0;i<w.staticGrid.length;i++){
+      const q=w.point(i);
+      if(Math.abs(q.x-p.x)<p.width/2&&Math.abs(q.z-p.z)<p.depth/2)
+        assert.equal(w.surface.cliffs[i],1);
+    }
+  }
 });
 test('platform plans vary their partition and tier distribution without four player-slot pads',()=>{
   const api=scope(),counts=new Set(),shapes=new Set(),heights=new Set();

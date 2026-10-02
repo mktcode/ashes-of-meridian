@@ -273,6 +273,18 @@ test('world view dispatches declared terrain models and profiles without assumin
   assert.throws(() => TerrainModels.geometry({ model: 'toString', seed: 1 }), /Unknown terrain model/);
 });
 
+test('technical map material dispatch stays separate from shared unit METAL and matches foundation fills',()=>{
+  const context=loadScripts(['core',...RENDERER_SCRIPTS,'content',...BATTLEFIELD_SCRIPTS,'world','world-view']),
+    {Battlefield,BattlefieldView,buildingGroundGeometry,MAT}=vm.runInContext(
+      '({Battlefield,BattlefieldView,buildingGroundGeometry,MAT})',context),
+    world=new Battlefield(3,'platform-deck'),renderer=createRendererStub({record:true});
+  new BattlefieldView(renderer).sync(world);
+  for(const mesh of ['terrain','platformFloor'])
+    assert.equal(renderer.calls.find(c=>c[0]===mesh)[14],MAT.TECHNICAL);
+  assert.notEqual(MAT.TECHNICAL,MAT.METAL);
+  assert.ok(renderer.calls.some(c=>c[0]==='box'&&c[14]===MAT.METAL));
+  assert.equal(buildingGroundGeometry(world,{...world.layout.resourceSites[0],size:4}).material,MAT.TECHNICAL);
+});
 test('produced aircraft rise smoothly from the hangar without changing draw state or RNG', () => {
   const context=loadScripts(['core',...RENDERER_SCRIPTS,'content',...BATTLEFIELD_SCRIPTS, 'world','world-view']);
   vm.runInContext('Math.random = () => { throw Error("Draw RNG"); }',context);
