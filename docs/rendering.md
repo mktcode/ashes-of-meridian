@@ -8,7 +8,7 @@ Rasterquellen ausschließlich WebP, Qualität 80; benötigten Alphakanal erhalte
 
 Alte Portrait-/Albedoquellen nicht wegen fehlender aktueller WebGL-Nutzung löschen. Neue Bildassets brauchen einen konkreten Bedarf; Codex-/Aktionskacheln verwenden Modelle. Assetnamen folgen [technischen IDs](architecture.md#technische-ids-und-anzeigenamen).
 
-Technische Plattformkarten besitzen einen eigenen Plan-Meshpfad statt des geglätteten Landschaftsskins: ebene Deckoberseiten, harte Wandnormalen und geneigte Rampen aus dem CPU-Konstruktionsplan. Stahlmaterial, bündige Plattenfugen und Rampenmarkierungen sind von Naturmaterialien getrennt; keine neuen Rasterassets. Senkrechte Wände sind Darstellung innerhalb konservativer CPU-Klippenränder, keine separat pickbare/begehbare Oberfläche. Ein fortgesetztes Außendeck hält die spielbare Grenze aus dem normalen Kamerabild. [Weltvertrag](architecture.md#weltrezepte-und-feste-designs).
+Technische Plattformkarten besitzen einen eigenen Plan-Meshpfad statt des geglätteten Landschaftsskins: ebene polygonale Deckoberseiten mit seedabhängig abgeschrägten Ecken, harte Wandnormalen und geneigte Rampen aus dem CPU-Konstruktionsplan. Kontur und CPU-Flächenprüfung verwenden dieselben Eckabschnitte; gemalte Plattenfugen bleiben innerhalb der Kontur. Stahlmaterial, bündige Plattenfugen und Rampenmarkierungen sind von Naturmaterialien getrennt; keine neuen Rasterassets. Senkrechte Wände sind Darstellung innerhalb konservativer CPU-Klippenränder, keine separat pickbare/begehbare Oberfläche. Ein fortgesetztes Außendeck hält die spielbare Grenze aus dem normalen Kamerabild. [Weltvertrag](architecture.md#weltrezepte-und-feste-designs).
 
 ## UI-Branding
 

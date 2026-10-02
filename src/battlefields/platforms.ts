@@ -1,6 +1,12 @@
 /* Engineered topology is planned explicitly, never quantized from landscape noise. */
 'use strict';
-interface BattlefieldPlatform { x: number; z: number; width: number; depth: number; height: number; base: number }
+interface BattlefieldPlatform {
+  x: number; z: number; width: number; depth: number; height: number; base: number;
+  corners: readonly [number,number,number,number];
+}
+const PLATFORM_TIER_HEIGHT=6;
+const PLATFORM_RAMP_LENGTH=22.5;
+const PLATFORM_LANDING=15;
 interface BattlefieldRamp { x: number; z: number; dx: number; dz: number; length: number; width: number; rise: number; base: number }
 interface BattlefieldPlatformPlan {
   extent: number; floor: number; platforms: BattlefieldPlatform[]; ramps: BattlefieldRamp[];
@@ -21,7 +27,7 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
   }
   const plan={extent,floor,platforms,ramps},supports: BattlefieldPlatform[]=[];
   for(const room of rooms){
-    const p={...room,height:24,base:floor};
+    const p:BattlefieldPlatform={...room,height:floor+PLATFORM_TIER_HEIGHT,base:floor,corners:[0,0,0,0]};
     if(random()<.7&&room.width>=75){
       const sx=random()<.5?-1:1,sz=random()<.5?-1:1,cw=snap(15+random()*10),cd=snap(15+random()*15),
         main={...p,x:p.x-sx*cw/2,width:p.width-cw},
@@ -32,49 +38,80 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
   // High decks are always seated on a middle deck, accessed from that deck only.
   let highDecks=0;
   for(const p of supports){
-    if(Math.min(p.width,p.depth)<50||Math.max(p.width,p.depth)<75)continue;
+    if(Math.min(p.width,p.depth)<50||Math.max(p.width,p.depth)<80)continue;
     if(highDecks&&random()<.35)continue;
     const alongX=p.width>p.depth,sign=random()<.5?-1:1,
       long=alongX?p.width:p.depth,short=alongX?p.depth:p.width,
-      size=snap(Math.min(55,long-50,short-20)),
+      size=Math.floor(Math.min(55,long-52.5,short-20)/2.5)*2.5,
       across=snap((random()-.5)*Math.max(0,short-size-20)),
-      along=sign*(long/2-size/2-7.5),
+      along=sign*(long/2-size/2-10),
       x=p.x+(alongX?along:across),z=p.z+(alongX?across:along),dx=alongX?sign:0,dz=alongX?0:sign,
-      upper={x,z,width:size,depth:size,height:36,base:24},length=32.5;
+      upper:BattlefieldPlatform={x,z,width:size,depth:size,height:floor+PLATFORM_TIER_HEIGHT*2,
+        base:floor+PLATFORM_TIER_HEIGHT,corners:[0,0,0,0]},length=PLATFORM_RAMP_LENGTH;
     platforms.push(upper);highDecks++;
-    ramps.push({x:x-dx*(size/2+length),z:z-dz*(size/2+length),dx,dz,length,width:25,rise:12,base:24});
+    ramps.push({x:x-dx*(size/2+length),z:z-dz*(size/2+length),dx,dz,length,width:25,rise:PLATFORM_TIER_HEIGHT,base:upper.base});
   }
   if(!highDecks)throw Error('Platform partition lacks a supported high deck');
-  const bounds=(r:BattlefieldRamp)=>({x:r.x+r.dx*r.length/2,z:r.z+r.dz*r.length/2,
-    width:r.dx?r.length+6:r.width+6,depth:r.dz?r.length+6:r.width+6});
-  for(const room of rooms){
+  // Shape RNG is independent: corner detail never shifts the partition/access draws.
+  const shape=seeded(seed^0x50434f52);
+  for(const p of platforms){
+    const max=p.height>floor+PLATFORM_TIER_HEIGHT?Math.min(5,(p.width-25)/2):Math.min(12.5,p.width/4,p.depth/4);
+    p.corners=Array.from({length:4},()=>max<2.5||shape()<.15?0:Math.floor((2.5+shape()*(max-2.5))/2.5)*2.5) as [number,number,number,number];
+  }
+  const bounds=(r:BattlefieldRamp,landing=PLATFORM_LANDING)=>({x:r.x+r.dx*r.length/2,z:r.z+r.dz*r.length/2,
+    width:r.dx?r.length+landing*2:r.width+10,
+    depth:r.dz?r.length+landing*2:r.width+10});
+  const overlaps=(a:ReturnType<typeof bounds>,b:ReturnType<typeof bounds>)=>
+    Math.abs(a.x-b.x)<(a.width+b.width)/2&&Math.abs(a.z-b.z)<(a.depth+b.depth)/2;
+  const entrances=rooms.map(room=>{
     const candidates:BattlefieldRamp[]=[];
-    for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])for(const offset of [-.25,0,.25]){
-      const x=room.x-dx*room.width/2+(dz?offset*room.width:0),
-        z=room.z-dz*room.depth/2+(dx?offset*room.depth:0),length=32.5;
-      candidates.push({x:x-dx*length,z:z-dz*length,dx,dz,length,width:25,rise:12,base:floor});
+    for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const reach=(dx?room.depth:room.width)/2-20,offsets=[0];
+      for(let offset=-reach;offset<=reach;offset+=5)if(offset!==0)offsets.push(offset);
+      for(const offset of offsets){
+        const x=room.x-dx*room.width/2+(dz?offset:0),
+          z=room.z-dz*room.depth/2+(dx?offset:0),length=PLATFORM_RAMP_LENGTH;
+        candidates.push({x:x-dx*length,z:z-dz*length,dx,dz,length,width:25,rise:PLATFORM_TIER_HEIGHT,base:floor});
+      }
     }
     for(let i=candidates.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
-    let added=0;const wanted=random()<.65?2:1;
+    return {candidates,wanted:random()<.65?2:1};
+  });
+  // Reserve one access per room before any optional second entrance can crowd it out.
+  for(let pass=0;pass<2;pass++)for(const {candidates,wanted} of entrances){
+    if(pass===1&&wanted===1)continue;
+    let added=0;
     for(const r of candidates){
       const b=bounds(r);
-      if(ramps.some(q=>{const a=bounds(q);return Math.abs(a.x-b.x)<(a.width+b.width)/2&&Math.abs(a.z-b.z)<(a.depth+b.depth)/2;}))continue;
+      // Flat landings may merge; no ramp body may intrude into another landing.
+      if(ramps.some(q=>overlaps(bounds(q,0),b)||overlaps(bounds(q),bounds(r,0))))continue;
       let valid=true;
-      for(const u of [-5,0,16,30,35.5,42.5])for(const v of [-15,0,15]){
+      for(const u of [-PLATFORM_LANDING,-7.5,0,r.length/2,r.length-2.5,r.length+5,r.length+PLATFORM_LANDING])for(const v of [-17.5,0,17.5]){
         const h=platformBattlefieldHeight(plan,r.x+r.dx*u-r.dz*v,r.z+r.dz*u+r.dx*v);
-        if(Math.abs(h-(u>32.5?24:floor))>.001)valid=false;
+        if(Math.abs(h-(u>r.length?floor+PLATFORM_TIER_HEIGHT:floor))>.001)valid=false;
       }
       if(!valid)continue;
-      ramps.push(r);if(++added===wanted)break;
+      ramps.push(r);added++;break;
     }
-    if(!added)throw Error('Platform room has no clear ground ramp');
+    if(pass===0&&!added)throw Error('Platform room has no clear ground ramp');
   }
   return plan;
+}
+function platformContains(p:BattlefieldPlatform,x:number,z:number):boolean {
+  const u=x-p.x+p.width/2,v=z-p.z+p.depth/2,[a,b,c,d]=p.corners;
+  return u>=0&&u<=p.width&&v>=0&&v<=p.depth&&u+v>=a&&u+p.depth-v>=b&&
+    p.width-u+p.depth-v>=c&&p.width-u+v>=d;
+}
+function platformOutline(p:BattlefieldPlatform):Position[]{
+  const l=p.x-p.width/2,r=p.x+p.width/2,n=p.z-p.depth/2,f=p.z+p.depth/2,[a,b,c,d]=p.corners;
+  return [{x:l,z:n+a},{x:l,z:f-b},{x:l+b,z:f},{x:r-c,z:f},
+    {x:r,z:f-c},{x:r,z:n+d},{x:r-d,z:n},{x:l+a,z:n}]
+    .filter((v,i,all)=>v.x!==all[(i+1)%all.length].x||v.z!==all[(i+1)%all.length].z);
 }
 function platformBattlefieldHeight(plan: BattlefieldPlatformPlan,x:number,z:number):number {
   let height=plan.floor;
   for(const p of plan.platforms)
-    if(Math.abs(x-p.x)<=p.width/2&&Math.abs(z-p.z)<=p.depth/2)height=Math.max(height,p.height);
+    if(platformContains(p,x,z))height=Math.max(height,p.height);
   for(const r of plan.ramps){
     const dx=x-r.x,dz=z-r.z,u=dx*r.dx+dz*r.dz,v=dx*r.dz-dz*r.dx;
     if(u>=0&&u<=r.length&&Math.abs(v)<=r.width/2)height=Math.max(height,r.base+r.rise*u/r.length);
@@ -82,7 +119,7 @@ function platformBattlefieldHeight(plan: BattlefieldPlatformPlan,x:number,z:numb
   return height;
 }
 function platformResourceSites(plan:BattlefieldPlatformPlan,seed:number):Position[]{
-  const random=seeded(seed^0x5045434f),candidates:Position[]=plan.platforms.filter(p=>p.height===36).map(p=>({x:p.x-2.5,z:p.z-2.5})),sites:Position[]=[];
+  const random=seeded(seed^0x5045434f),candidates:Position[]=plan.platforms.filter(p=>p.height===plan.floor+PLATFORM_TIER_HEIGHT*2).map(p=>({x:p.x-2.5,z:p.z-2.5})),sites:Position[]=[];
   for(let z=-plan.extent+30;z<=plan.extent-30;z+=20)for(let x=-plan.extent+30;x<=plan.extent-30;x+=20)candidates.push({x,z});
   for(let i=candidates.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
   for(const p of candidates){
@@ -111,7 +148,7 @@ function createPlatformBattlefield(): BattlefieldDefinition {
     generate(builder){
       const w=builder.world,plan=platformBattlefieldPlan(w.terrainSeed,w.extent),
         surface=w.surface=new BattlefieldSurface(w.extent,w.cellSize,
-          (x,z)=>platformBattlefieldHeight(plan,x,z),height=>Math.floor((height-plan.floor+1e-5)/12));
+          (x,z)=>platformBattlefieldHeight(plan,x,z),height=>Math.floor((height-plan.floor+1e-5)/PLATFORM_TIER_HEIGHT));
       w.staticGrid.set(surface.cliffs);w.terrainFeatureGrid.set(surface.cliffs);
       // Ramps remain traversable but cannot be obstructed by foundations.
       surface.buildBlocked=new Uint8Array(w.staticGrid.length);
@@ -119,7 +156,7 @@ function createPlatformBattlefield(): BattlefieldDefinition {
         const p=w.point(i),h=surface.heightAt(p.x,p.z);
         if(plan.ramps.some(r=>{
           const dx=p.x-r.x,dz=p.z-r.z,u=dx*r.dx+dz*r.dz,v=dx*r.dz-dz*r.dx;
-          return u>=-2.5&&u<=r.length+2.5&&Math.abs(v)<=r.width/2+2.5;
+          return u>=-PLATFORM_LANDING&&u<=r.length+PLATFORM_LANDING&&Math.abs(v)<=r.width/2+5;
         }))surface.buildBlocked[i]=1;
         w.terrainColors.set([62+h*.8,79+h*.9,91+h,255],i*4);
         w.renderData.groundColors.push([.55,.65,.72],[.55,.65,.72]);

@@ -14,18 +14,28 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
   rectangle(0,0,(plan.extent+400)*2,(plan.extent+400)*2,floor,[.46,.57,.64]);
   for(const p of plan.platforms){
     const top=p.height-.13,base=p.base-.13,left=p.x-p.width/2,right=p.x+p.width/2,
-      near=p.z-p.depth/2,far=p.z+p.depth/2,
-      corners=[[left,near],[left,far],[right,far],[right,near]];
-    rectangle(p.x,p.z,p.width,p.depth,top,[.68,.78,.85]);
-    for(let side=0;side<4;side++){
-      const a=corners[side],b=corners[(side+1)%4];
-      quad([a[0],top,a[1]],[a[0],base,a[1]],[b[0],base,b[1]],[b[0],top,b[1]],[.35,.45,.54]);
+      near=p.z-p.depth/2,far=p.z+p.depth/2,corners=platformOutline(p);
+    for(let side=0;side<corners.length;side++){
+      const a=corners[side],b=corners[(side+1)%corners.length];
+      geom.tri(out,[p.x,top,p.z],[a.x,top,a.z],[b.x,top,b.z],[.68,.78,.85]);
+      quad([a.x,top,a.z],[a.x,base,a.z],[b.x,base,b.z],[b.x,top,b.z],[.35,.45,.54]);
     }
-    // Flush inset panel seams; cosmetic, not curbs or new collision.
-    for(let x=left+10;x<right-3;x+=10)
-      rectangle(x,p.z,.22,p.depth-4,top+.012,[.25,.34,.41]);
-    for(let z=near+10;z<far-3;z+=10)
-      rectangle(p.x,z,p.width-4,.22,top+.014,[.25,.34,.41]);
+    // Clip painted seams to the inset polygon, never across removed corners.
+    const seam=(start:Position,end:Position)=>{
+      let a={...start},b={...end};
+      for(let i=0;i<corners.length;i++){
+        const c=corners[i],d=corners[(i+1)%corners.length],dx=d.x-c.x,dz=d.z-c.z,
+          value=(v:Position)=>dx*(v.z-c.z)-dz*(v.x-c.x)+Math.hypot(dx,dz)*.5,
+          av=value(a),bv=value(b);
+        if(av>0&&bv>0)return;
+        if(av>0||bv>0){const t=av/(av-bv),v={x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t};if(av>0)a=v;else b=v;}
+      }
+      const length=Math.hypot(b.x-a.x,b.z-a.z);if(length<.1)return;
+      const nx=-(b.z-a.z)/length*.11,nz=(b.x-a.x)/length*.11,y=top+.014;
+      quad([a.x-nx,y,a.z-nz],[a.x+nx,y,a.z+nz],[b.x+nx,y,b.z+nz],[b.x-nx,y,b.z-nz],[.25,.34,.41]);
+    };
+    for(let x=left+10;x<right-3;x+=10)seam({x,z:near+2},{x,z:far-2});
+    for(let z=near+10;z<far-3;z+=10)seam({x:left+2,z},{x:right-2,z});
   }
   for(const r of plan.ramps){
     const base=r.base-.13,nx=-r.dz*r.width/2,nz=r.dx*r.width/2,
