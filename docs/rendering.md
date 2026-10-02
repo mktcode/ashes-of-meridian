@@ -88,6 +88,8 @@ Effektculling enthält ganze Strahlen, Radien und Höhenhüllen, nicht nur Zentr
 
 Menügebäude suchen deterministisch nahe ihren Kompositionsankern baubares, hindernisfreies Gelände mit Abstand zu anderen Gebäuden. Es gilt derselbe Fundamentvalidator wie im Gefecht; ohne geeigneten nahen Platz entfällt das dekorative Gebäude. Weder Terrain noch Simulations-RNG werden verändert.
 
+Nur auf `home` ersetzt ein eigener seedbasierter Hintergrund den normalen Himmel: farbige Atmosphären oder wolkenloser Sternraum, mit wenigen perspektivischen Planetenkugeln und optionaler Sonne. Diese Gestaltung ist unabhängig von der physikalischen Weltatmosphäre und der Gefechtstageszeit. Eigene Seedquelle, kein Simulations-/Terrain-RNG; keine Weltinstanzen, Schatten, Sicht- oder Navigationswirkung. Ein gemeinsam genutztes Kugelmesh und eigene Programme werden erst bei Bedarf angelegt, bei Menüausstieg/Seitenende freigegeben. Himmelskörper zeichnen vor dem Terrain mit isolierter Tiefe; Codex und Gefecht behalten ihre bisherigen Hintergründe. Keine neuen Rasterassets.
+
 Die Menükamera richtet ihr Ziel an der CPU-Geländehöhe aus und hält den Orbit oberhalb des Bodens am Kamerastandort. Erhöhte Landschaften dürfen nicht die alte Nullhöhen-Kulisse voraussetzen; das Schattenvolumen folgt dem gleichen Ziel-Datum. Die Gefechtskamera bleibt davon getrennt.
 
 Ein Stage-Wechsel kopiert das fertig gerenderte Canvas **einmal im Rendercallback** in ein temporäres 2D-Canvas. Kein `preserveDrawingBuffer`, kontinuierliches Readback oder zweite live Welt. Das Standbild überbrückt Welt-/Texturladen; erst der erste fertige neue Frame startet die Compositor-Überblendung.

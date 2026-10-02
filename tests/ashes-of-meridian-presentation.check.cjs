@@ -775,12 +775,17 @@ function appClock(diagnostic = false) {
       gl = { getExtension(name) { queryRequests.push(name); return null; } };
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1;
-      frameReady() { return true; } releaseEnvironment() {}
+      frameReady() { return true; } releaseEnvironment() {} releaseMenuSky() {}
+      setBattlefieldTime(time) { this.battlefieldTime=time; }
+      setMenuSky(seed,family) { this.menuSky={seed,family}; }
       resize() {} camera() {} project() { return {x:400,y:300}; } begin() { renderWork.begin++; }
       render(time, modelTime, thumbnails) { this.diagnostics?.beginFrame(); thumbnails?.(); draws.push({ now, time }); }
     },
     MeridianModelThumbnails: class { update() {} dispose() {} },
-    BattlefieldView: class { sync() {} retainBuildingGround() {} drawBuildingGround() {} },
+    BattlefieldView: class {
+      world={terrainSeed:7,definition:{render:{groundTexture:'ground'}}};
+      sync() {} retainBuildingGround() {} drawBuildingGround() {}
+    },
     MeridianAudio: class { update() {} },
     MeridianGame: class {
       world = {};
@@ -812,6 +817,18 @@ function appClock(diagnostic = false) {
     }
   };
 }
+
+test('app enables celestial backdrops only on home, never in combat or codex',()=>{
+  const a=appClock();
+  a.frame(0);assert.equal(a.renderer.menuSky.seed,null);
+  a.ui.view='home';a.frame(20);
+  assert.deepEqual(a.renderer.menuSky,{seed:7,family:'ground'});
+  assert.equal(a.renderer.battlefieldTime,0);
+  a.ui.view='codex';a.frame(40);assert.equal(a.renderer.menuSky.seed,null);
+  a.ui.view='game';a.frame(60);assert.equal(a.renderer.menuSky.seed,null);
+  assert.equal(a.renderer.battlefieldTime,a.game.s.time);
+  assert.deepEqual(a.errors,[]);
+});
 
 test('real app build preview validates and draws the same screen target used by placement', () => {
   const a=appClock(), target={x:20,z:30}, checks=[];

@@ -41,6 +41,9 @@
       decorSeed: number;
       battlefieldProfile: BattlefieldRenderProfile;
       private dayCycleProfile: BattlefieldRenderProfile | null = null;
+      private menuSky: MeridianMenuSky | null = null;
+      private menuSkySeed: number | null = null;
+      private menuSkyFamily = '';
       surfaceStyle = surfaceWorldStyle('ground', 0);
       private environment: BattlefieldEnvironment | null = null;
       haze: readonly [number, number, number];
@@ -230,6 +233,16 @@
         this.dayCycleProfile = this.battlefieldProfile.atmosphere
           ? battlefieldDayCycle(this.battlefieldProfile, elapsedSeconds) : null;
         this.haze = (this.dayCycleProfile ?? this.battlefieldProfile).haze;
+      }
+      setMenuSky(seed: number | null, family = '') {
+        this.menuSkySeed = seed;
+        this.menuSkyFamily = family;
+        if (seed === null) this.releaseMenuSky();
+      }
+      releaseMenuSky() {
+        this.menuSky?.dispose();
+        this.menuSky = null;
+        this.menuSkySeed = null;
       }
       useModelPreview() {
         this.setBattlefieldProfile(DEFAULT_TERRAIN_RENDER_PROFILE);
@@ -1041,17 +1054,22 @@
         g.clearColor(...this.haze, 1);
         g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
         g.disable(g.DEPTH_TEST);
-        g.useProgram(skyProg);
-        this.bindAtmosphere(skyProg);
-        this.bindEcology(skyProg, modelTime);
-        g.uniform2f(this.uniform(skyProg, 'u_size'), this.width, this.height);
-        g.uniform1f(this.uniform(skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
-        g.activeTexture(g.TEXTURE0);
-        g.bindTexture(g.TEXTURE_2D, this[`${this.battlefieldProfile.skyTexture}Tex`]);
-        g.uniform1i(this.uniform(skyProg, 'u_skyTex'), 0);
-        g.bindVertexArray(this.fullVao);
-        g.drawArrays(g.TRIANGLES, 0, 3);
-        this.diagnostics?.draw(3);
+        if (this.menuSkySeed !== null && this.menuSkySeed !== undefined) {
+          this.menuSky ??= new MeridianMenuSky(this);
+          this.menuSky.draw(this.menuSkySeed, this.menuSkyFamily);
+        } else {
+          g.useProgram(skyProg);
+          this.bindAtmosphere(skyProg);
+          this.bindEcology(skyProg, modelTime);
+          g.uniform2f(this.uniform(skyProg, 'u_size'), this.width, this.height);
+          g.uniform1f(this.uniform(skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
+          g.activeTexture(g.TEXTURE0);
+          g.bindTexture(g.TEXTURE_2D, this[`${this.battlefieldProfile.skyTexture}Tex`]);
+          g.uniform1i(this.uniform(skyProg, 'u_skyTex'), 0);
+          g.bindVertexArray(this.fullVao);
+          g.drawArrays(g.TRIANGLES, 0, 3);
+          this.diagnostics?.draw(3);
+        }
         g.enable(g.DEPTH_TEST);
         if (!environment) this.bindSceneProgram(time, modelTime);
         drawScene(this.static, this.vp, ['alienLanternPool', 'westmarkWater']);

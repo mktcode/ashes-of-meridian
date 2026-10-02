@@ -33,7 +33,7 @@
         R = new MeridianRenderer(canvas);
         const thumbnails = new MeridianModelThumbnails(R);
         addEventListener('pagehide',event=>{
-          if (!event.persisted) { thumbnails.dispose(); R.releaseEnvironment(); }
+          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseEnvironment(); }
         });
         R.quality = profile.settings.quality;
         R.resize();
@@ -482,6 +482,8 @@
             // Simulation time freezes with pause/result and scales with game speed.
             // Menu/archive previews always retain the seed's starting atmosphere.
             R.setBattlefieldTime(ui.view === 'game' && game.s ? game.s.time : 0);
+            const menuWorld = ui.view === 'home' ? worldView.world : null;
+            R.setMenuSky(menuWorld?.terrainSeed ?? null, menuWorld?.definition.render.groundTexture ?? '');
             R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
               ui.view === 'codex' ? () => thumbnails.update($('menu')) :
                 ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined);

@@ -66,6 +66,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-faction-2-unit-destroyer',
   'model-faction-2-unit-hero',
   'renderer-shaders',
+  'renderer-menu-sky',
   'renderer-runtime',
   'renderer-model-thumbnails'
 ]);
