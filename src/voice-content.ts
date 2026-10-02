@@ -26,8 +26,7 @@ const VOICE_LINES = {
   'worker.selected.4': { speaker: 'Worker', text: 'What?', audio: './audio/voices/worker-selected-4.mp3' },
   'infantry.selected.1': { speaker: 'Infantry', text: 'Laser charged.', audio: './audio/voices/infantry-selected-1.mp3' },
   'infantry.selected.2': { speaker: 'Infantry', text: 'Ready when you are.', audio: './audio/voices/infantry-selected-2.mp3' },
-  // The last phrase's automatic transcript still needs human confirmation.
-  'infantry.selected.3': { speaker: 'Infantry', text: 'Pew, pew, pew! Shitface.', audio: './audio/voices/infantry-selected-3.mp3' },
+  'infantry.selected.3': { speaker: 'Infantry', text: 'Pew pew pew yourself!', audio: './audio/voices/infantry-selected-3.mp3' },
   'infantry.selected.4': { speaker: 'Infantry', text: 'Boots on the ground.', audio: './audio/voices/infantry-selected-4.mp3' }
 } as const satisfies Record<string, VoiceLineDefinition>;
 type VoiceLineId = keyof typeof VOICE_LINES;
