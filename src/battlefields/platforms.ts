@@ -175,9 +175,11 @@ function createPlatformBattlefield(): BattlefieldDefinition {
       }
       w.renderData.geometries.push({mesh:'terrain',model:'platformDeck',plan},
         {mesh:'platformFixtures',model:'shipPlant',seed:197,extent:0},
-        {mesh:'platformSignals',model:'platformSignals',plan});
+        {mesh:'platformSignals',model:'platformSignals',plan},
+        {mesh:'platformFloor',model:'platformFloor',plan});
       builder.place('terrain',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
       builder.place('platformSignals',0,0,0,1,1,1,0xffffff,0,0,0,.65,1,'static','AUTO');
+      builder.place('platformFloor',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
       // Machinery is outside the playable rectangle, never an invisible nav obstacle.
       for(const side of [-1,1])for(let z=-120;z<=120;z+=60)
         builder.place('platformFixtures',side*(w.extent+25),plan.floor,z,5,7,5,

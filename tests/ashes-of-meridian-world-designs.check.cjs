@@ -133,6 +133,19 @@ test('rounded platform outlines agree with CPU containment and cut back the box 
   }
   assert.ok(beveled>0);
 });
+test('platform floor zoning, routes and flush channels add detail without changing the CPU plan',()=>{
+  const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-terrain']),
+    plan=api.platformBattlefieldPlan(3,180),before=JSON.stringify(plan),
+    mesh=api.TerrainModels.geometry({mesh:'platformFloor',model:'platformFloor',plan}),colors=new Set();
+  assert.equal(JSON.stringify(plan),before);
+  assert.ok(mesh.length>0&&mesh.length<600000);
+  for(let i=0;i<mesh.length;i+=9){
+    assert.ok(mesh.slice(i,i+9).every(Number.isFinite));
+    assert.ok(Math.abs(mesh[i+3])+Math.abs(mesh[i+4]-1)+Math.abs(mesh[i+5])<1e-5);
+    if(i%90===0)colors.add(mesh.slice(i+6,i+9).map(v=>v.toFixed(2)).join(','));
+  }
+  assert.ok(colors.size>10,'graded material variation, not a uniform plane');
+});
 test('platform mesh uses flat deck and ramp normals rather than smoothed landscape shoulders',()=>{
   const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-terrain']),
     plan=api.platformBattlefieldPlan(1409,160),mesh=api.TerrainModels.geometry({mesh:'terrain',model:'platformDeck',plan});

@@ -113,6 +113,96 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
   }
   return out;
 };
+/* Presentation-only zoning and maintenance routes; never a navigation replacement. */
+TerrainModels.platformFloor=(plan:BattlefieldPlatformPlan)=>{
+  const out:number[]=[],random=seeded(plan.detailSeed^0x464c4f52),phase=random()*Math.PI*2,
+    floor=plan.floor-.13,extent=plan.extent,
+    strip=(a:Position,b:Position,width:number,y:number,color:number[],offset=0)=>{
+      const length=Math.hypot(b.x-a.x,b.z-a.z);if(length<.01)return;
+      const nx=-(b.z-a.z)/length,nz=(b.x-a.x)/length,
+        point=(p:Position,s:number)=>[p.x+nx*(offset+s),y,p.z+nz*(offset+s)];
+      geom.tri(out,point(a,-width/2),point(a,width/2),point(b,width/2),color);
+      geom.tri(out,point(a,-width/2),point(b,width/2),point(b,-width/2),color);
+    },
+    rectangle=(x:number,z:number,w:number,d:number,y:number,color:number[])=>
+      strip({x:x-w/2,z},{x:x+w/2,z},d,y,color),
+    tint=(x:number,z:number)=>{
+      const region=.5+.28*Math.sin(x*.026+phase)+.22*Math.cos(z*.031-phase),
+        wear=.94+.06*Math.sin(x*.14+z*.09+phase),
+        fade=clamp((extent+35-Math.max(Math.abs(x),Math.abs(z)))/35,0,1),
+        dark=[.31,.40,.47],light=[.56,.59,.53],base=[.46,.57,.64];
+      return base.map((v,i)=>v*(1-fade)+(dark[i]*(1-region)+light[i]*region)*wear*fade);
+    };
+  // Large graded material zones, fading into the uninterrupted exterior apron.
+  for(let z=-extent-40;z<extent+40;z+=10)for(let x=-extent-40;x<extent+40;x+=10){
+    for(const [dx,dz] of [[0,0],[0,10],[10,10],[0,0],[10,10],[10,0]])
+      out.push(x+dx,floor+.006,z+dz,0,1,0,...tint(x+dx,z+dz));
+  }
+  // Inset replacement plates on upper decks; existing seams/covers remain above them.
+  for(const p of plan.platforms)for(let z=p.z-p.depth/2+5;z<p.z+p.depth/2-4;z+=10)
+    for(let x=p.x-p.width/2+5;x<p.x+p.width/2-4;x+=10){
+      if([-4,4].some(dx=>[-4,4].some(dz=>!platformContains(p,x+dx,z+dz)||
+        Math.abs(platformBattlefieldHeight(plan,x+dx,z+dz)-p.height)>.001)))continue;
+      if(random()<.3)continue;
+      const c=tint(x,z),shade=.93+random()*.15;
+      rectangle(x,z,7.8,7.8,p.height-.13+.008,c.map(v=>v*shade*1.18));
+    }
+  // A coarse flat-floor graph paints connected, right-angled service aisles to ground ramps.
+  // Shared landings stay flat; channels are flush markings, not raised pipes/blockers.
+  const step=5,start=-extent+10,size=Math.floor((extent*2-20)/step)+1,
+    passable=new Uint8Array(size*size),point=(i:number)=>({x:start+(i%size)*step,z:start+Math.floor(i/size)*step});
+  for(let i=0;i<passable.length;i++){
+    const p=point(i);
+    if([-4.5,0,4.5].every(dx=>[-4.5,0,4.5].every(dz=>
+      Math.abs(platformBattlefieldHeight(plan,p.x+dx,p.z+dz)-plan.floor)<.001)))passable[i]=1;
+  }
+  const goals:number[]=[];
+  for(const r of plan.ramps.filter(r=>r.base===plan.floor)){
+    const target={x:r.x-r.dx*7.5,z:r.z-r.dz*7.5};let best=-1,distance=Infinity;
+    for(let i=0;i<passable.length;i++)if(passable[i]){
+      const p=point(i),d=(p.x-target.x)**2+(p.z-target.z)**2;
+      if(d<distance){best=i;distance=d;}
+    }
+    if(best>=0&&distance<225&&!goals.includes(best))goals.push(best);
+  }
+  const painted=new Set<string>(),connected=new Set<number>(goals.slice(0,1));
+  for(const goal of goals.slice(1)){
+    const parent=new Int32Array(passable.length).fill(-1),queue=new Int32Array(passable.length);
+    let head=0,tail=0,found=-1;
+    for(const i of connected){parent[i]=i;queue[tail++]=i;}
+    while(head<tail){
+      const i=queue[head++];if(i===goal){found=i;break;}
+      const x=i%size,z=Math.floor(i/size);
+      for(const j of [x>0?i-1:-1,x<size-1?i+1:-1,z>0?i-size:-1,z<size-1?i+size:-1])
+        if(j>=0&&passable[j]&&parent[j]<0){parent[j]=i;queue[tail++]=j;}
+    }
+    if(found<0)continue;
+    for(let i=found;parent[i]!==i;i=parent[i]){
+      const j=parent[i],key=Math.min(i,j)+':'+Math.max(i,j);connected.add(i);
+      if(painted.has(key))continue;painted.add(key);
+      const a=point(i),b=point(j);
+      strip(a,b,4.5,floor+.021,[.28,.37,.42]);
+      for(const side of [-1,1])strip(a,b,.16,floor+.028,[.73,.61,.36],side*2.05);
+      strip(a,b,.75,floor+.022,[.17,.24,.29],3.25);
+      strip(a,b,.22,floor+.025,[.49,.56,.59],3.25);
+    }
+  }
+  // Sparse scuffs and embedded access grilles break the clean factory-new finish.
+  for(let i=0;i<140;i++){
+    const x=(random()*2-1)*(extent-12),z=(random()*2-1)*(extent-12),height=platformBattlefieldHeight(plan,x,z);
+    if([-3,3].some(dx=>[-3,3].some(dz=>Math.abs(platformBattlefieldHeight(plan,x+dx,z+dz)-height)>.001)))continue;
+    const y=height-.13;
+    if(i%5===0){
+      rectangle(x,z,3.5,2.5,y+.031,[.23,.32,.38]);
+      for(let slot=-1.2;slot<=1.2;slot+=.4)rectangle(x+slot,z,.13,2,y+.033,[.48,.53,.55]);
+    }else{
+      const length=1+random()*3;
+      for(let scratch=0;scratch<3;scratch++)strip({x:x-length/2,z:z+scratch*.18},
+        {x:x+length/2,z:z+scratch*.18},.055,y+.032,[.36,.43,.46]);
+    }
+  }
+  return out;
+};
 TerrainModels.platformSignals=(plan:BattlefieldPlatformPlan)=>{
   const out:number[]=[],random=seeded(plan.detailSeed^0x4c494748);
   for(const p of plan.platforms){
