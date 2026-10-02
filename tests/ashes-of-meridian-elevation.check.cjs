@@ -319,7 +319,7 @@ test('slope alignment leaves infantry, aircraft, buildings and resources upright
   for(const [kind,type] of [['unit','rifle'],['unit','medic'],['unit','hero'],['unit','air'],['unit','destroyer'],['building','depot'],['resource','gas']]) {
     const e={id:2,x:0,z:0,rot:.7,kind,type,hp:100,faction:0,team:0,size:1,progress:1},flat=drawPose(e,null),drawn=drawPose(e,surface),
       calls=kind==='building'?drawn.slice(1):drawn;
-    if(kind==='building')assert.equal(drawn[0][0],'box','slope support is separate from upright model parts');
+    if(kind==='building')assert.equal(drawn[0][0],'terrainFooting','slope support is separate from upright model parts');
     assert.equal(calls.length,flat.length);
     calls.forEach((c,i)=>{
       assert.ok(Math.abs(c[2]-flat[i][2]-surface.entityHeight(e))<1e-6);
@@ -328,6 +328,38 @@ test('slope alignment leaves infantry, aircraft, buildings and resources upright
   }
   drawPose({id:1,x:0,z:0,rot:.7,kind:'unit',type:'tank',hp:100,faction:0,team:0,size:1.3},surface);
   assert.deepEqual(Array.from(surface.heights),heights);assert.deepEqual(Array.from(surface.cliffs),cliffs);
+});
+
+test('cinematic foundations relocate off steep terrain, respect blockers and spacing, or are omitted',()=>{
+  const find = vm.runInContext('cinematicBuildingPosition',context), extent=40, cell=2.5, n=32,
+    world={gridSize:n,staticGrid:new Uint8Array(n*n),
+      idx:(x,z)=>Math.floor((z+extent)/cell)*n+Math.floor((x+extent)/cell),
+      surface:new BattlefieldSurface(extent,cell,(x)=>20+Math.max(0,x)*.4)};
+  const preferred={x:12,z:0}, before=Array.from(world.surface.heights), placed=[];
+  const p=find(world,preferred,3,placed);
+  assert.ok(p);assert.ok(world.surface.foundation(p,3));assert.notDeepEqual({...p},preferred);
+  assert.deepEqual({...find(world,preferred,3,placed)},{...p},'deterministic without RNG');
+  placed.push({kind:'building',size:3,...p});
+  const q=find(world,preferred,3,placed);
+  assert.ok(q);assert.ok(Math.hypot(q.x-p.x,q.z-p.z)>=8);
+  world.staticGrid.fill(1);assert.equal(find(world,preferred,3,[]),null);
+  assert.deepEqual(Array.from(world.surface.heights),before,'search never changes terrain');
+  world.staticGrid.fill(0);world.surface=new BattlefieldSurface(extent,cell,x=>20+x*.4);
+  assert.equal(find(world,preferred,3,[]),null,'no suitable nearby ground means no cinematic prop');
+});
+
+test('terrain footings have level seats, rounded shoulders and wider buried toes',()=>{
+  const geom=vm.runInContext('geom',context), mesh=geom.terrainFooting();
+  assert.deepEqual(mesh,geom.terrainFooting(),'fixed reusable geometry');
+  let top=0,bottom=0,sloped=0;
+  for(let i=0;i<mesh.length;i+=9){
+    const [x,y,z,nx,ny,nz]=mesh.slice(i,i+6);
+    assert.ok([x,y,z,nx,ny,nz].every(Number.isFinite));
+    if(y===.5)top=Math.max(top,Math.abs(x),Math.abs(z));
+    if(y===-.5)bottom=Math.max(bottom,Math.abs(x),Math.abs(z));
+    if(ny>0&&ny<.99)sloped++;
+  }
+  assert.ok(Math.abs(top-1)<1e-12);assert.ok(bottom>top);assert.ok(sloped>0,'no sheer support walls');
 });
 
 test('GPU instances retain the complete vehicle slope pose without mutating entities',()=>{

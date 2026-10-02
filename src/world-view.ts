@@ -1,6 +1,28 @@
 /* GPU adapter for CPU-generated world data, plus entity models. */
 'use strict';
 
+// Cinematic buildings obey the same ground restrictions as player foundations.
+// Search only nearby; omitting a prop is preferable to a tower on an unsuitable hillside.
+function cinematicBuildingPosition(world: Battlefield, preferred: Position, size: number,
+    placed: readonly RenderEntity[]): Position | null {
+  const offsets: Position[] = [];
+  for (let z = -24; z <= 24; z += 2) for (let x = -24; x <= 24; x += 2)
+    if (x*x + z*z <= 24*24) offsets.push({x,z});
+  offsets.sort((a,b) => a.x*a.x + a.z*a.z - b.x*b.x - b.z*b.z || a.z-b.z || a.x-b.x);
+  for (const offset of offsets) {
+    const p = {x: preferred.x + offset.x, z: preferred.z + offset.z};
+    if (!world.surface?.foundation(p, size)) continue;
+    if (placed.some(e => e.kind === 'building' && Math.hypot(e.x-p.x, e.z-p.z) < (e.size || 1) + size + 2)) continue;
+    const margin = size + 1, first = world.idx(p.x-margin, p.z-margin), last = world.idx(p.x+margin, p.z+margin);
+    let blocked = false;
+    for (let z = Math.floor(first / world.gridSize); z <= Math.floor(last / world.gridSize); z++)
+      for (let x = first % world.gridSize; x <= last % world.gridSize; x++)
+        if (world.staticGrid[z * world.gridSize + x]) blocked = true;
+    if (!blocked) return p;
+  }
+  return null;
+}
+
 class BattlefieldView {
   R: MeridianRenderer;
   data: WorldRenderData | null;
@@ -322,8 +344,9 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         let s = e.size || 3;
         if (R.surface) {
           const support = R.surface.foundationBounds(e, s), rise = ground - support.min;
-          if (rise > .05) R.add('box', e.x, ground - rise / 2 - .1, e.z, s * 2, rise + .2, s * 2,
-            ghost ? 0x68717d : options.tint || dark, 0, 0, 0, 0, alpha, layer, options.material ?? MAT.MASONRY);
+          // Rounded shoulders and a buried, flared toe replace sheer masonry walls.
+          if (rise > .05) R.add('terrainFooting', e.x, ground - rise / 2 - .1, e.z, s * 1.18, rise + .2, s * 1.18,
+            ghost ? 0x68717d : options.tint || 0x705b46, 0, 0, 0, 0, alpha, layer, options.material ?? MAT.ROCK);
         }
         if (e.faction === FACTION_ID.SECOND) {
           // The queen sits in her model-owned five-petal flower, with no soil plinth.

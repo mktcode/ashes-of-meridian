@@ -7,6 +7,7 @@ Teststart nach Build: `index.html?experiment=height` (Mothership, Seed 1409, zwe
 - [ ] Höhen, begehbare Verbindungen und Klippen der prozeduralen Landschaft bei normalem Zoom erkennen; keine vier hohen Basen oder festes tiefes Zentrum voraussetzen.
 - [ ] Worker/Gruppen hinunter und hinauf schicken: Picking, Minimap, Hanglage, Rampen-Gegenverkehr und Produktionsausgänge.
 - [ ] Abbau/Rücktransport, Raffinerien und stabile Fundamente einschließlich sanfter Hänge; keine Arbeit durch Klippen oder Bau auf steilen Übergängen.
+- [ ] Geböschte Hangfundamente und Menü-Bauplätze visuell abnehmen: keine hohen Säulen, glaubwürdiger Terrainanschluss, erhaltene Menükomposition. Gezielte CPU-Prüfungen sichern Platzsuche, unverändertes Terrain und aufrechte Modelle, nicht den GPU-Bildeindruck; [Darstellungsvertrag](../../rendering.md#einzeln-wartbare-modelle).
 - [ ] Sicht von unten/oben, Rampenmitte, Quellenvereinigung/-verlust und Flugzeug/Scan prüfen; keine Schaden-/Reichweitenboni.
 - [ ] Lokale Sicht/Effekte und Bodenposen, Touch/Mobilkosten und vollständige Singleplayer-Partien abnehmen.
 - [ ] Faire Wege/Ressourcenzugänge der getrennt zugeteilten Parteienstarts; Walling darf nicht unbeabsichtigt jeden Ausgang schließen. Gewünschte absichtliche Walling-Regel bleibt offen.

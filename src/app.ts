@@ -97,6 +97,11 @@
           let id = 0;
           function e<K extends EntityKind>(kind: K, type: EntityTypeForKind<K>, x: number, z: number, faction: FactionId = FACTION_ID.FIRST, team: TeamId = 0) {
             let d: { hp?: number; size?: number } = kind === 'building' ? BUILDINGS[type as BuildingType] : UNITS[type as UnitType] || {};
+            if (kind === 'building' && worldView.world) {
+              const p = cinematicBuildingPosition(worldView.world, {x,z}, d.size || 1, preview);
+              if (!p) return;
+              x = p.x; z = p.z;
+            }
             preview.push({
               id: ++id, kind, type, x, z, faction, team,
               hp: d.hp || 100, maxHp: d.hp || 100, size: d.size || 1,

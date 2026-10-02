@@ -41,7 +41,7 @@ Windfunktion/Uhr müssen in Szenen- und Schattenpass übereinstimmen; Culling-Bo
 
 Modelle registrieren technische ID, synchrone Meshfabriken und `render(context)` ohne GPU-Zugriff oder frühe Contentauswertung. Neue Dateien gemäß [Ladevertrag](architecture.md#auslieferung) einbinden. Geometrie entsteht einmal, nicht im Frame; Modellcode zeichnet über den Kontext, nicht über direkten Simulationszugriff.
 
-Gemeinsamer Adapter besitzt Welt-/Bauhöhe, Team-/Ghost-/Previewtönung, Standardfundamente und nötige Hangunterbauten; auch Bauvorschauen verwenden das höchste konservative Fundamentdatum. Modelllokale Formen bleiben aufrecht; modelllokale Fundamente dürfen nicht zusätzlich die Standardplatte bekommen. Feste Farbflächen ebenfalls über `surfaceColor` führen. Gebäudegrundrotation und Turmkopfwinkel nicht vermischen. Hanglage und Flugpose lesen die CPU-Oberfläche, keine eigene Fahrphysik/IK.
+Gemeinsamer Adapter besitzt Welt-/Bauhöhe, Team-/Ghost-/Previewtönung, Standardfundamente und nötige Hangunterbauten; auch Bauvorschauen verwenden das höchste konservative Fundamentdatum. Hangunterbauten bilden abgerundete Erdwerke mit geböschtem, im Terrain versenktem Fuß statt senkrechter Säulen. Modelllokale Formen bleiben aufrecht; modelllokale Fundamente dürfen nicht zusätzlich die Standardplatte bekommen. Feste Farbflächen ebenfalls über `surfaceColor` führen. Gebäudegrundrotation und Turmkopfwinkel nicht vermischen. Hanglage und Flugpose lesen die CPU-Oberfläche, keine eigene Fahrphysik/IK.
 
 Schwere Luftzerstörer verwenden autorisierte GLBs. Der Importer ist **kein allgemeiner glTF-Loader**; nur seine unterstützten Mesh-/Farb-/Knotenverträge gelten. Neutralmeshes für Vorschauen erhöhen zusätzlich die Residenzkosten. Originalquellen nicht stillschweigend vereinfachen oder ersetzen.
 
@@ -81,6 +81,8 @@ Kosmetische Akzente folgen Simulations-/Interpolationszeit und eigenen begrenzte
 Effektculling enthält ganze Strahlen, Radien und Höhenhüllen, nicht nur Zentren; dynamische Schatten-Caster bleiben erhalten. Gepoolte Partikelreferenzen gelten nur bis Ablauf/Verdrängung/Reset. In-place-Verdichtung muss Zeichenreihenfolge und RNG-Aufrufe erhalten.
 
 ## Menü-Landschaftswechsel
+
+Menügebäude suchen deterministisch nahe ihren Kompositionsankern baubares, hindernisfreies Gelände mit Abstand zu anderen Gebäuden. Es gilt derselbe Fundamentvalidator wie im Gefecht; ohne geeigneten nahen Platz entfällt das dekorative Gebäude. Weder Terrain noch Simulations-RNG werden verändert.
 
 Die Menükamera richtet ihr Ziel an der CPU-Geländehöhe aus und hält den Orbit oberhalb des Bodens am Kamerastandort. Erhöhte Landschaften dürfen nicht die alte Nullhöhen-Kulisse voraussetzen; das Schattenvolumen folgt dem gleichen Ziel-Datum. Die Gefechtskamera bleibt davon getrennt.
 
