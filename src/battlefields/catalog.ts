@@ -1,4 +1,4 @@
-/* All playable worlds share procedural topology; families supply art and landforms. */
+/* Established landscape families plus explicitly selectable engineered prototypes. */
 'use strict';
 const BATTLEFIELDS = {
   desert: createDynamicBattlefield('DESERT', 'desert'),
@@ -6,12 +6,14 @@ const BATTLEFIELDS = {
   mothership: createDynamicBattlefield('MOTHERSHIP', 'ship'),
   westmark: createDynamicBattlefield('WESTMARK', 'alpine'),
   frontier: createDynamicBattlefield('FRONTIER', 'frontier'),
-  haven: createDynamicBattlefield('HAVEN', 'haven')
+  haven: createDynamicBattlefield('HAVEN', 'haven'),
+  'platform-deck': createPlatformBattlefield()
 } as const;
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';
 function availableBattlefields(): BattlefieldId[] {
-  return Object.keys(BATTLEFIELDS) as BattlefieldId[];
+  // Platform prototype is explicitly selectable for feedback, not yet rolled into expeditions.
+  return (Object.keys(BATTLEFIELDS) as BattlefieldId[]).filter(id => id !== 'platform-deck');
 }
 function battlefieldId(value: unknown): BattlefieldId {
   return typeof value === 'string' && Object.hasOwn(BATTLEFIELDS, value)

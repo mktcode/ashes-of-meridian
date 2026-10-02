@@ -643,7 +643,8 @@ interface WorldRelief {
 type WorldGeometry = (
   | { mesh: string; model: string; seed: number; extent: number }
   | { mesh: string; model: string; feature: WorldTerrainFeature }
-  | { mesh: string; model: string; relief: WorldRelief }) & { grounded?: boolean; detail?: boolean };
+  | { mesh: string; model: string; relief: WorldRelief }
+  | { mesh: string; model: string; plan: BattlefieldPlatformPlan }) & { grounded?: boolean; detail?: boolean };
 
 interface WorldRenderData {
   features: WorldTerrainFeature[];

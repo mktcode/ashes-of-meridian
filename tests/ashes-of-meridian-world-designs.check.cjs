@@ -6,7 +6,7 @@ const { loadScripts, BATTLEFIELD_SCRIPTS } = require('./helpers/game-scripts.cjs
 const json = value => JSON.parse(JSON.stringify(value));
 function scope(extra = []) {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...extra]);
-  return vm.runInContext('({Battlefield,BATTLEFIELDS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
+  return vm.runInContext('({Battlefield,BATTLEFIELDS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,platformBattlefieldPlan,platformBattlefieldHeight,availableBattlefields,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
 }
 function signature(world) {
   return createHash('sha256').update(JSON.stringify(world.layout)).update(world.staticGrid)
@@ -72,7 +72,7 @@ test('all landscape families share a seed-owned starting hour and readable midni
     const expected = api.battlefieldAtmosphere(api.BATTLEFIELDS.desert.render, {timeOfDay:'seeded'}, seed).atmosphere.timeOfDay;
     hours.add(expected);
     for (const recipe of Object.values(api.BATTLEFIELDS)) {
-      const start = api.battlefieldVariation(recipe.render, seed);
+      const start = api.battlefieldAtmosphere(api.battlefieldVariation(recipe.render, seed), recipe.design?.atmosphere, seed);
       assert.equal(start.atmosphere.timeOfDay, expected);
       const night = api.battlefieldDayCycle(start, (24-expected)*25);
       assert.ok(Math.abs(night.atmosphere.timeOfDay) < 1e-10);
@@ -82,6 +82,41 @@ test('all landscape families share a seed-owned starting hour and readable midni
   }
   assert.equal(hours.size,4);
 });
+test('platform prototype has flat tiers, usable ramps and a closed technical environment',()=>{
+  const api=scope(),w=new api.Battlefield(1409,'platform-deck',4),plan=api.platformBattlefieldPlan(1409,w.extent);
+  assert.ok(w.startSites.length>=4);
+  assert.equal(w.renderProfile.groundTexture,'metal');
+  assert.equal(w.renderProfile.ecology,undefined);assert.equal(w.renderProfile.landscape,undefined);
+  assert.equal(w.renderProfile.shrubDecor.opacity,0);
+  assert.ok(!api.availableBattlefields().includes('platform-deck'),'prototype does not change encounter selection');
+  for(const p of plan.platforms){
+    assert.equal(w.surface.heightAt(p.x,p.z),p.height);
+    assert.ok(w.surface.foundation(p,6));
+    assert.equal(w.surface.fits(p.x+p.width/2+.25,p.z+p.depth/2-5,1),false);
+  }
+  for(const r of plan.ramps){
+    const a={x:r.x-r.dx*3,z:r.z-r.dz*3},b={x:r.x+r.dx*(r.length+3),z:r.z+r.dz*(r.length+3)};
+    assert.ok(w.surface.segment(a,b,3),'vehicle clearance on ramp');
+    const p={x:r.x+r.dx*r.length*.5,z:r.z+r.dz*r.length*.5};
+    assert.ok(Math.abs(w.surface.heightAt(p.x,p.z)-(plan.floor+r.rise*.5))<1e-5);
+    assert.equal(w.surface.foundation(p,3),false);
+  }
+  for(const site of w.layout.resourceSites)assert.ok(w.surface.fits(site.x,site.z,4));
+  assert.deepEqual(json(plan),json(api.platformBattlefieldPlan(1409,w.extent)));
+  assert.notDeepEqual(json(plan),json(api.platformBattlefieldPlan(1410,w.extent)));
+});
+test('platform mesh uses flat deck and ramp normals rather than smoothed landscape shoulders',()=>{
+  const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-terrain']),
+    plan=api.platformBattlefieldPlan(1409,160),mesh=api.TerrainModels.geometry({mesh:'terrain',model:'platformDeck',plan});
+  assert.ok(mesh.length>0&&mesh.length<20000);
+  for(let i=0;i<mesh.length;i+=9){
+    assert.ok(mesh.slice(i,i+9).every(Number.isFinite));
+    assert.ok(Math.abs(Math.hypot(...mesh.slice(i+3,i+6))-1)<1e-6);
+  }
+  assert.ok(mesh.some((v,i)=>i%9===4&&v===1),'flat upper faces');
+  assert.ok(mesh.some((v,i)=>i%9===4&&v>0&&v<1),'inclined ramps');
+});
+
 test('generated geometry uses CPU samples and matching triangle interpolation with finite unit normals', () => {
   const api = scope(['renderer-geometry','renderer-terrain-models','renderer-landscape']),
     w = new api.Battlefield(1409, 'frontier'), descriptor = w.renderData.geometries.find(g => g.mesh === 'terrain'),

@@ -86,7 +86,7 @@ interface RenderEntityOptions {
 }
 interface TerrainModelCatalog {
   [model: string]: ((seed: number, extent: number) => MeshData) |
-    ((feature: WorldTerrainFeature) => MeshData) | ((relief: WorldRelief) => MeshData) | ((descriptor: WorldGeometry) => MeshData);
+    ((feature: WorldTerrainFeature) => MeshData) | ((relief: WorldRelief) => MeshData) | ((plan: BattlefieldPlatformPlan) => MeshData) | ((descriptor: WorldGeometry) => MeshData);
   geometry: (descriptor: WorldGeometry) => MeshData;
 }
 interface Window {
