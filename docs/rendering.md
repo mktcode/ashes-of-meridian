@@ -70,7 +70,7 @@ Komponierte Umgebungen besitzen nur eigene Programme/Texturen/Tiefenziele/Fences
 - Szenenziel → optional MSAA-Resolve → Bloom → Postprocessing; Schatten separat. Allokationsfehler brauchen saubere Fallbacks, Resize gibt alte Ziele frei. Resolve-Pfade benötigen passende Maße und Formate.
 - Texturwechsel lädt neue Ressourcen vor Freigabe alter kartenspezifischer Bestände. Bereitschaft nicht durch feste Wartezeit oder `gl.finish()` ersetzen.
 
-High/Balanced teilen Modelle, Schatten/MSAA/Bloom; High ergänzt den ausdrücklich gewünschten Tilt-Shift-Look. Performance reduziert Auflösung und kosmetische Arbeit. HUD bleibt ungefiltert. Atmosphäre wird einmal pro Welt aufgelöst; gemeinsame Licht-/Schattenrichtung bleibt künstlerisch, nicht astronomisch. RGBA8 ist kein HDR.
+High/Balanced teilen Modelle, Schatten/MSAA/Bloom; High ergänzt den ausdrücklich gewünschten Tilt-Shift-Look. Performance reduziert Auflösung und kosmetische Arbeit. HUD bleibt ungefiltert. Die Startatmosphäre wird pro Welt aufgelöst. Im Gefecht wechseln Lichtfarben/-stärke, Himmel und Dunst kontinuierlich mit dem [simulationszeitgebundenen Tageszyklus](architecture.md#weltrezepte-und-feste-designs). Kühles Nachtfülllicht hält Gelände und Modelle lesbar; gemeinsame Licht-/Schattenrichtung bleibt künstlerisch, nicht astronomisch. RGBA8 ist kein HDR.
 
 ## Kontursilhouetten bei Verdeckung
 

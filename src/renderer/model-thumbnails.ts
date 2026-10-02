@@ -17,6 +17,8 @@ class MeridianModelThumbnails {
     p.dynamic = {}; p.effects = {}; p.static = {}; p.occlusion = {};
     p.surface = null; p.cinema = true; p.fogOn = false;
     p.battlefieldProfile = DEFAULT_TERRAIN_RENDER_PROFILE;
+    // Do not inherit the main renderer's current day-cycle profile through the facade.
+    p.setBattlefieldTime(0);
     p.haze = [.035,.065,.09];
     p.surfaceStyle = surfaceWorldStyle('ground',0);
     p.extent = 90; p.decorSeed = 0; p.lightVP = M4.identity();

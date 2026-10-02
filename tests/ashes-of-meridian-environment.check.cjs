@@ -4,8 +4,8 @@ const vm=require('node:vm');
 const {loadScripts,RENDERER_SCRIPTS}=require('./helpers/game-scripts.cjs');
 
 function runtime() {
-  const context=loadScripts(['core',...RENDERER_SCRIPTS],{globals:{devicePixelRatio:1}});
-  const api=vm.runInContext('({Renderer:MeridianRenderer,factories:BattlefieldEnvironments,profile:DEFAULT_TERRAIN_RENDER_PROFILE})',context);
+  const context=loadScripts(['core','battlefield-design',...RENDERER_SCRIPTS],{globals:{devicePixelRatio:1}});
+  const api=vm.runInContext('({Renderer:MeridianRenderer,Thumbnails:MeridianModelThumbnails,defaultLighting:DEFAULT_LIGHTING,factories:BattlefieldEnvironments,profile:DEFAULT_TERRAIN_RENDER_PROFILE})',context);
   const calls=[];let program;
   const gl=new Proxy({useProgram:p=>{program=p;},drawArrays:()=>calls.push(['quad',program])},
     {get:(o,k)=>k in o?o[k]:/^[A-Z0-9_]+$/.test(k)?k:()=>{}});
@@ -46,6 +46,34 @@ test('common renderer lazily owns map presentation, keeps shadow passes, and res
   assert.equal(r.battlefieldProfile,profile);
   r.setBattlefieldProfile(city);r.releaseEnvironment();r.releaseEnvironment();assert.equal(disposed,3);
   r.setBattlefieldProfile(city);assert.equal(created,4,'explicit release can be followed by reactivation');
+});
+
+test('renderer binds cycle lighting, sky and haze without changing the world profile or preview defaults',()=>{
+  const {r,profile,context,Thumbnails,defaultLighting}=runtime();
+  const api=vm.runInContext('({battlefieldAtmosphere,battlefieldDayCycle})',context),
+    origin=api.battlefieldAtmosphere(profile,{timeOfDay:12},1), before=JSON.stringify(origin), uniforms={};
+  r.eye=[0,0,0];
+  r.gl.uniform3fv=(name,value)=>{uniforms[name]=Array.from(value);};
+  r.setBattlefieldProfile(origin);r.setBattlefieldTime(300);
+  r.bindSceneProgram(0,0);
+  const night=api.battlefieldDayCycle(origin,300);
+  assert.deepEqual(uniforms.u_sun,Array.from(night.lighting.sun));
+  assert.deepEqual(uniforms.u_skyLight,Array.from(night.lighting.sky));
+  assert.deepEqual(uniforms.u_bounce,Array.from(night.lighting.bounce));
+  assert.deepEqual(uniforms.u_atmosphereHorizon,Array.from(night.atmosphere.horizon));
+  assert.deepEqual(uniforms.u_haze,Array.from(night.haze));
+  assert.equal(JSON.stringify(origin),before);assert.strictEqual(r.battlefieldProfile,origin);
+  r.setBattlefieldTime(0);assert.deepEqual(Array.from(r.haze),Array.from(origin.haze));
+  r.setBattlefieldTime(300);r.setBattlefieldProfile(origin);
+  assert.deepEqual(Array.from(r.haze),Array.from(origin.haze));
+  r.useModelPreview();r.setBattlefieldTime(300);
+  assert.strictEqual(r.battlefieldProfile,profile);assert.strictEqual(r.haze,profile.haze);
+  const thumbnails=new Thumbnails(r);
+  r.setBattlefieldProfile(origin);r.setBattlefieldTime(300);
+  thumbnails.preview.bindSceneProgram(0,0);
+  assert.deepEqual(uniforms.u_sun,Array.from(defaultLighting.sun), 'thumbnail facade never inherits live night lighting');
+  r.bindSceneProgram(0,0);
+  assert.deepEqual(uniforms.u_sun,Array.from(night.lighting.sun));
 });
 
 test('failed or missing environment factories do not silently select the wrong renderer or change the active profile',()=>{

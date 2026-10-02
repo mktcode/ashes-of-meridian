@@ -479,6 +479,9 @@
               }
             }
             diagnostics?.recorder.phase('glSubmission');
+            // Simulation time freezes with pause/result and scales with game speed.
+            // Menu/archive previews always retain the seed's starting atmosphere.
+            R.setBattlefieldTime(ui.view === 'game' && game.s ? game.s.time : 0);
             R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
               ui.view === 'codex' ? () => thumbnails.update($('menu')) :
                 ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined);

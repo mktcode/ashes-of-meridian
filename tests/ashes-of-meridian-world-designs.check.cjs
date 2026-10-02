@@ -6,7 +6,7 @@ const { loadScripts, BATTLEFIELD_SCRIPTS } = require('./helpers/game-scripts.cjs
 const json = value => JSON.parse(JSON.stringify(value));
 function scope(extra = []) {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...extra]);
-  return vm.runInContext('({Battlefield,BATTLEFIELDS,battlefieldDesign,battlefieldAtmosphere,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
+  return vm.runInContext('({Battlefield,BATTLEFIELDS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
 }
 function signature(world) {
   return createHash('sha256').update(JSON.stringify(world.layout)).update(world.staticGrid)
@@ -47,6 +47,40 @@ test('atmosphere remains bounded, deterministic and independent of terrain gener
   api.BATTLEFIELDS.frontier = api.battlefieldDesign(original, 'NIGHT', {atmosphere:{timeOfDay:0}});
   const b = new api.Battlefield(1409, 'frontier');
   assert.equal(signature(a), signature(b)); assert.deepEqual(json(a.renderData), json(b.renderData));
+});
+test('day cycle wraps after ten simulation minutes without mutating its seeded origin', () => {
+  const api = scope(), start = api.battlefieldAtmosphere(api.BATTLEFIELDS.desert.render, {timeOfDay:23}, 1),
+    before = JSON.stringify(start), cycle = seconds => api.battlefieldDayCycle(start, seconds);
+  assert.equal(cycle(25).atmosphere.timeOfDay, 0);
+  assert.equal(cycle(150).atmosphere.timeOfDay, 5);
+  assert.deepEqual(json(cycle(600)), json(start));
+  assert.deepEqual(json(cycle(1200)), json(start));
+  assert.deepEqual(json(cycle(75)), json(cycle(675)));
+  assert.deepEqual(json(cycle(75)), json(cycle(75)), 'a frozen simulation clock freezes lighting');
+  assert.equal(JSON.stringify(start), before);
+  assert.strictEqual(api.battlefieldDayCycle(api.BATTLEFIELDS.desert.render, 100), api.BATTLEFIELDS.desert.render);
+  for (const hour of [0,6,12,18]) {
+    const profile = api.battlefieldAtmosphere(start, {timeOfDay:hour}, 1),
+      a = api.battlefieldDayCycle(profile, 599.999), b = api.battlefieldDayCycle(profile, 600.001);
+    for (const key of ['sun','sky','bounce'])
+      a.lighting[key].forEach((v,i) => assert.ok(Math.abs(v-b.lighting[key][i]) < .0001));
+  }
+});
+test('all landscape families share a seed-owned starting hour and readable midnight fill', () => {
+  const api = scope(), hours = new Set();
+  for (const seed of [1,7,9,1409]) {
+    const expected = api.battlefieldAtmosphere(api.BATTLEFIELDS.desert.render, {timeOfDay:'seeded'}, seed).atmosphere.timeOfDay;
+    hours.add(expected);
+    for (const recipe of Object.values(api.BATTLEFIELDS)) {
+      const start = api.battlefieldVariation(recipe.render, seed);
+      assert.equal(start.atmosphere.timeOfDay, expected);
+      const night = api.battlefieldDayCycle(start, (24-expected)*25);
+      assert.ok(Math.abs(night.atmosphere.timeOfDay) < 1e-10);
+      assert.ok(night.lighting.sky.every(v => v >= .38));
+      assert.ok(night.lighting.bounce.every(v => v >= .18));
+    }
+  }
+  assert.equal(hours.size,4);
 });
 test('generated geometry uses CPU samples and matching triangle interpolation with finite unit normals', () => {
   const api = scope(['renderer-geometry','renderer-terrain-models','renderer-landscape']),

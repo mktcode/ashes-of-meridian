@@ -40,6 +40,7 @@
       surface: BattlefieldSurface | null = null;
       decorSeed: number;
       battlefieldProfile: BattlefieldRenderProfile;
+      private dayCycleProfile: BattlefieldRenderProfile | null = null;
       surfaceStyle = surfaceWorldStyle('ground', 0);
       private environment: BattlefieldEnvironment | null = null;
       haze: readonly [number, number, number];
@@ -222,7 +223,13 @@
         }
         this.surfaceStyle = surfaceWorldStyle(profile.groundTexture, seed);
         this.battlefieldProfile = profile;
+        this.dayCycleProfile = null;
         this.haze = profile.haze;
+      }
+      setBattlefieldTime(elapsedSeconds: number) {
+        this.dayCycleProfile = this.battlefieldProfile.atmosphere
+          ? battlefieldDayCycle(this.battlefieldProfile, elapsedSeconds) : null;
+        this.haze = (this.dayCycleProfile ?? this.battlefieldProfile).haze;
       }
       useModelPreview() {
         this.setBattlefieldProfile(DEFAULT_TERRAIN_RENDER_PROFILE);
@@ -916,7 +923,7 @@
         }
       }
       bindAtmosphere(program: WebGLProgram) {
-        const atmosphere = this.battlefieldProfile.atmosphere, g = this.gl;
+        const atmosphere = (this.dayCycleProfile ?? this.battlefieldProfile).atmosphere, g = this.gl;
         g.uniform1f(this.uniform(program, 'u_atmosphereOn'), atmosphere ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_worldHeightScale'), this.battlefieldProfile.variation?.heightScale ?? 1);
         if (!atmosphere) return;
@@ -936,7 +943,7 @@
           g.uniform3fv(this.uniform(program, uniform), color as [number, number, number]);
       }
       bindSceneProgram(time: number, modelTime: number, program = this.program,
-        lighting = this.battlefieldProfile.lighting ?? DEFAULT_LIGHTING) {
+        lighting = (this.dayCycleProfile ?? this.battlefieldProfile).lighting ?? DEFAULT_LIGHTING) {
         const g = this.gl, profile = this.battlefieldProfile;
         this.activeSceneProgram = program;
         g.useProgram(program);
