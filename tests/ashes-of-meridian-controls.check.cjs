@@ -538,10 +538,10 @@ test('tutorial camera targets compensate terrain height along the viewing axis',
   h.ui.advanceBattleIntro(6.5);
   close(s.cam.z, home.z - 2 - 8.2);
   s.cam.yaw = Math.PI / 2;
-  const rotated = h.ui.tutorialCameraPoint(home, 11);
+  const rotated = h.ui.terrainCameraPoint(home, 11);
   close(rotated.x, home.x - 8.2);
   close(rotated.z, home.z);
-  const edge = h.ui.tutorialCameraPoint({ x: -72, z: 0 }, 22);
+  const edge = h.ui.terrainCameraPoint({ x: -72, z: 0 }, 22);
   assert.equal(edge.x, -72);
   close(edge.z, 0);
 });
@@ -567,6 +567,42 @@ test('later stages skip the stage-one camera introduction', () => {
   assert.equal(h.ui.battleIntro, null);
   assert.equal(h.ui.paused, false);
   assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 50 });
+});
+
+test('non-tutorial starts compensate worker height without changing zoom or running a camera introduction', () => {
+  for (const [depth,complete,faction] of [[1,false,0],[0,true,0],[0,false,1]]) {
+    const h=setup(),s=h.ui.game.s;
+    s.depth=depth;s.rules={kind:'single-player',mission:{id:'hq-elimination'}};
+    s.parties[0].faction=faction;h.ui.profile.tutorialComplete=complete;
+    s.cam={x:-55,z:48,zoom:57,yaw:0};
+    s.entities=[{id:3,team:0,kind:'unit',type:'worker',hp:100,x:-60,z:50}];
+    h.ui.game.world.surface={entityHeight:()=>20};
+    h.ui.battleIntro={kind:'recon'}; // A previous introduction must not block centering.
+    h.ui.event('start',{});
+    assert.equal(h.ui.battleTutorial,null);assert.equal(h.ui.battleIntro,null);
+    assert.equal(s.cam.x,-55);assert.ok(Math.abs(s.cam.z-(48-20*.82/1.1))<1e-9);
+    assert.equal(s.cam.zoom,57);assert.equal(s.cam.yaw,0);assert.deepEqual(h.calls,[]);
+  }
+});
+
+test('home camera compensates HQ or worker height along the current yaw and retains limits', () => {
+  const h=setup(),s=h.ui.game.s;
+  h.ui.homeCamera=h.UI.prototype.homeCamera;
+  h.ui.game.alive=predicate=>s.entities.filter(e=>e.hp>0&&predicate(e));
+  const worker={id:3,team:0,kind:'unit',type:'worker',hp:100,x:-30,z:20},
+    hq={id:4,team:0,kind:'building',type:'hq',hp:100,x:10,z:30};
+  s.entities=[worker,hq];h.ui.game.world.surface={entityHeight:e=>e.type==='hq'?20:10};
+  for(const yaw of [0,Math.PI/2,-Math.PI/4]) {
+    s.cam.yaw=yaw;h.ui.homeCamera();
+    assert.ok(Math.abs(s.cam.x-(14-Math.sin(yaw)*20*.82/1.1))<1e-9);
+    assert.ok(Math.abs(s.cam.z-(28-Math.cos(yaw)*20*.82/1.1))<1e-9);
+  }
+  hq.hp=0;s.cam.yaw=Math.PI/2;h.ui.homeCamera();
+  assert.ok(Math.abs(s.cam.x-(-26-10*.82/1.1))<1e-9);assert.equal(s.cam.z,18);
+  worker.x=-72;h.ui.homeCamera();assert.equal(s.cam.x,-72);
+  const before={...s.cam};h.ui.paused=true;worker.z=40;h.ui.homeCamera();
+  assert.deepEqual(s.cam,before,'pause still guards the home button');
+  assert.deepEqual(h.calls,[]);
 });
 
 test('first-stage tutorial highlights two workers, refinery, barracks and rifle in sequence and persists completion', () => {

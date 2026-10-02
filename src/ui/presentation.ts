@@ -8,7 +8,7 @@
           enemy = this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.type === 'hq')[0] ||
             this.game.alive(e => e.team !== -1 && e.team !== this.localTeam && e.type === 'worker')[0];
         if (!home || !enemy) return false;
-        const point = (e: Entity) => this.tutorialCameraPoint({ x: e.x + 4, z: e.z - 2 },
+        const point = (e: Entity) => this.terrainCameraPoint({ x: e.x + 4, z: e.z - 2 },
           this.game.world!.surface?.entityHeight(e) ?? 0);
         this.battleIntro = { kind: 'recon', elapsed: 0, hold: 4, travel: 2.5,
           origin: { x: s.cam.x, z: s.cam.z }, home: point(home), focus: point(enemy),

@@ -675,6 +675,23 @@ test('camera rotation holds the central terrain anchor across heights, slopes an
   assert.equal(ui.game.s.cam.z,162,'map bounds take precedence over the anchor');
 });
 
+test('terrain camera focus frames elevated start and home targets at every heading', () => {
+  const {r,context}=setup({viewport:{left:0,top:63,width:800,height:428},
+    scripts:['battlefield-surface','world','ui-core','ui-actions']}),
+    Surface=vm.runInContext('BattlefieldSurface',context), UI=vm.runInContext('MeridianUI',context),
+    ui=Object.create(UI.prototype);
+  r.resize();ui.R=r;ui.game={world:{extent:180},s:{cam:{zoom:57,yaw:0}}};
+  const target={x:10,z:30},v=r.viewport;
+  for(const height of [0,20,72]) for(const yaw of [0,Math.PI/2,Math.PI,-Math.PI/4]) {
+    r.surface=new Surface(180,2.5,()=>height);ui.game.s.cam.yaw=yaw;
+    const point=ui.terrainCameraPoint(target,height);
+    r.camera(point.x,point.z,57,false,0,yaw);
+    const p=r.project(target.x,height,target.z);
+    assert.ok(Math.hypot(p.x-(v.left+v.width/2),p.y-(v.top+v.height/2))<.003,
+      'elevated focus is centered rather than projecting toward the upper edge');
+  }
+});
+
 test('orthographic close zoom keeps raised terrain ahead of the camera without changing framing or picking',()=>{
   const maps=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS]),Surface=vm.runInContext('BattlefieldSurface',maps);
   for(const height of [72,140])for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {

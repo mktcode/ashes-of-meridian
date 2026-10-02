@@ -30,8 +30,10 @@ Produktionspanel und Pause-/Restart-Dialog. Keine Shader-/Performanceabnahme.
 Kameradrehung technisch mit `file://`/Software-WebGL geprüft: Mittelmausziehen,
 emulierte Zwei-Finger-Drehung mit Pinch und Picking bei gedrehter Kamera.
 Drehgefühl und kombinierte Gesten auf echten Mobilgeräten bleiben menschlich abzunehmen,
-insbesondere der feste [Geländeanker](../gameplay.md#kamera-und-befehle) auf Höhen/Hängen
-und die Begrenzung am Kartenrand.
+insbesondere der feste [Geländeanker](../gameplay.md#kamera-und-befehle) auf Höhen/Hängen,
+die Begrenzung am Kartenrand und die Höhenzentrierung beim Stage-Start ohne Tutorial
+sowie beim Basis-Knopf. Gezielte Node-Prüfungen decken Start-/Basis-/Tutorial-Framing
+und Projektion auf erhöhtem Terrain ab, nicht das tatsächliche Kameragefühl.
 Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und

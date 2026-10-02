@@ -227,8 +227,15 @@
           this.tab = 'root';
           this.actionSignature = '';
           this.battleTutorial = null;
-          this.beginBattleTutorial();
           this.battleIntro = null;
+          if (!this.beginBattleTutorial()) {
+            const worker = this.game.alive(e => e.team === this.localTeam && e.type === 'worker')[0];
+            if (worker) {
+              const point = this.terrainCameraPoint(this.game.s!.cam,
+                this.game.world!.surface?.entityHeight(worker) ?? 0);
+              this.center(point.x, point.z);
+            }
+          }
           this.audio.setMode?.(this.battleIntro ? 'silent' : 'battle');
           this.updateHUD();
           this.clearMode();

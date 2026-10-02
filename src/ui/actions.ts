@@ -40,10 +40,21 @@
         this.game.s!.cam.x = clamp(x, -limit, limit);
         this.game.s!.cam.z = clamp(z, -limit, limit);
       },
+      terrainCameraPoint(this: MeridianUI, point: Position, height: number): Position {
+        const limit = this.game.world!.extent - 18, yaw = this.game.s!.cam.yaw ?? 0;
+        // Project an elevated focus onto the renderer's y=0 target plane.
+        const shift = height * .82 / 1.1;
+        return { x: clamp(point.x - Math.sin(yaw) * shift, -limit, limit),
+          z: clamp(point.z - Math.cos(yaw) * shift, -limit, limit) };
+      },
       homeCamera(this: MeridianUI) {
         let e = this.game.alive(e => e.team === this.localTeam && e.type === 'hq')[0] ||
           this.game.alive(e => e.team === this.localTeam && e.type === 'worker')[0];
-        if (e) this.center(e.x + 4, e.z - 2);
+        if (e) {
+          const point = this.terrainCameraPoint({ x: e.x + 4, z: e.z - 2 },
+            this.game.world!.surface?.entityHeight(e) ?? 0);
+          this.center(point.x, point.z);
+        }
       },
       select(this: MeridianUI, ids: number[], groupVoice = false) {
         this.selected = [...new Set(ids)].filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
