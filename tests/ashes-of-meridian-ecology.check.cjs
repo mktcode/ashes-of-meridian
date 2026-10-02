@@ -32,7 +32,11 @@ test('ecology resolves four repeatable biomes and weather without mutating profi
     }
   }
   assert.equal(styles.size,4);assert.equal(weather.size,5);
-  for(const id of Object.keys(api.BATTLEFIELDS))assert.ok(api.battlefieldEcology(api.BATTLEFIELDS[id].render,7).ecology);
+  for(const id of Object.keys(api.BATTLEFIELDS)){
+    const profile=api.BATTLEFIELDS[id].render,resolved=api.battlefieldEcology(profile,7);
+    if(profile.wilderness)assert.ok(resolved.ecology);
+    else assert.strictEqual(resolved,profile,'technical maps do not acquire vegetation or weather');
+  }
   assert.equal(JSON.stringify(api.BATTLEFIELDS),before);
   for(const [map,seed] of [['frontier',11],['desert',1409],['alien-planet',1409]]){
     const decorated=new api.Battlefield(seed,map),undecorated=bare(()=>new api.Battlefield(seed,map));
@@ -41,6 +45,18 @@ test('ecology resolves four repeatable biomes and weather without mutating profi
   }
 });
 
+test('vegetation abundance has a high seeded minimum without shifting habitat or wind',()=>{
+  const profile=api.BATTLEFIELDS.frontier.render,densities=new Set();
+  for(let seed=1;seed<=32;seed++){
+    const a=api.battlefieldEcology(profile,seed).ecology,b=api.battlefieldEcology(profile,seed).ecology;
+    assert.ok(a.vegetationDensity>=1.35&&a.vegetationDensity<2);
+    assert.deepEqual(json(a),json(b));densities.add(a.vegetationDensity);
+    const random=vm.runInContext(`seeded(${seed}^0x45434f4c)`,context);
+    random();random();assert.equal(a.phase,random()*Math.PI*2);
+    assert.equal(a.wind,.12+random()*.16);
+  }
+  assert.ok(densities.size>20);
+});
 test('habitat models are finite, deterministic, bounded opaque meshes with unit normals',()=>{
   for(const part of ['Trunk','Grove','Acacia','Conifer','Fungus','Tuft','Relic','Spire'])for(let v=0;v<3;v++){
     const seed=193+v*7919,mesh=api.TerrainModels['ecology'+part](seed,0);
@@ -80,12 +96,13 @@ test('ecology clusters protect complete blocker envelopes, routes, resources and
       }
     }
     const crowns=(counts.Grove||0)+(counts.Acacia||0)+(counts.Conifer||0)+(counts.Fungus||0)+(counts.Coral||0);
-    assert.ok(crowns>0&&crowns<=144);assert.equal(counts.Trunk,counts.Fungus||counts.Coral?0:crowns);
-    assert.ok(counts.Tuft>0&&counts.Tuft<=650);
+    assert.ok(crowns>0&&crowns<=Math.floor(144*w.renderProfile.ecology.vegetationDensity));assert.equal(counts.Trunk,counts.Fungus||counts.Coral?0:crowns);
+    assert.ok(counts.Tuft>0&&counts.Tuft<=Math.floor(650*w.renderProfile.ecology.vegetationDensity));
     assert.ok(counts.Stone<=84);assert.ok(counts.Relic+counts.Spire<=6);landmarks+=counts.Relic+counts.Spire;
     assert.equal(w.renderData.geometries.filter(g=>g.detail).length,3);
     assert.ok(w.renderData.geometries.filter(g=>g.detail).every(g=>g.model==='ecologyTuft'));
-    assert.ok(w.renderData.placements.length<=1030);
+    assert.ok(w.renderData.placements.length<=Math.floor(144*w.renderProfile.ecology.vegetationDensity)*2+
+      Math.floor(650*w.renderProfile.ecology.vegetationDensity)+154);
   }
   assert.ok(landmarks>0,'representative worlds actually contain landmarks');
 });

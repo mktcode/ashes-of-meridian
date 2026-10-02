@@ -147,7 +147,22 @@ function platformBattlefieldHeight(plan: BattlefieldPlatformPlan,x:number,z:numb
   }
   return height;
 }
+function platformBattlefieldSurface(plan:BattlefieldPlatformPlan,cellSize:number):BattlefieldSurface{
+  const surface=new BattlefieldSurface(plan.extent,cellSize,
+    (x,z)=>platformBattlefieldHeight(plan,x,z),height=>Math.floor((height-plan.floor+1e-5)/PLATFORM_TIER_HEIGHT)),
+    n=plan.extent*2/cellSize;
+  surface.buildBlocked=new Uint8Array(n*n);
+  for(let i=0;i<n*n;i++){
+    const x=(i%n+.5)*cellSize-plan.extent,z=(Math.floor(i/n)+.5)*cellSize-plan.extent;
+    if(plan.ramps.some(r=>{
+      const dx=x-r.x,dz=z-r.z,u=dx*r.dx+dz*r.dz,v=dx*r.dz-dz*r.dx;
+      return u>=-PLATFORM_LANDING&&u<=r.length+PLATFORM_LANDING&&Math.abs(v)<=r.width/2+5;
+    }))surface.buildBlocked[i]=1;
+  }
+  return surface;
+}
 function platformResourceSites(plan:BattlefieldPlatformPlan,seed:number):Position[]{
+  const surface=platformBattlefieldSurface(plan,2.5);
   const random=seeded(seed^0x5045434f),candidates:Position[]=plan.platforms.filter(p=>p.height===plan.floor+PLATFORM_TIER_HEIGHT*2).map(p=>({x:p.x-2.5,z:p.z-2.5})),sites:Position[]=[];
   for(let z=-plan.extent+30;z<=plan.extent-30;z+=20)for(let x=-plan.extent+30;x<=plan.extent-30;x+=20)candidates.push({x,z});
   for(let i=candidates.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
@@ -155,6 +170,7 @@ function platformResourceSites(plan:BattlefieldPlatformPlan,seed:number):Positio
     const h=platformBattlefieldHeight(plan,p.x,p.z);
     if(sites.some(q=>distance(p,q)<45))continue;
     if([-12,0,12].some(dx=>[-12,0,12].some(dz=>Math.abs(platformBattlefieldHeight(plan,p.x+dx,p.z+dz)-h)>.001)))continue;
+    if(!surface.foundation(battlefieldGasPosition(p),BUILDINGS.refinery.size))continue;
     sites.push(p);if(sites.length===9)break;
   }
   if(sites.length<6)throw Error('Platform plan lacks economic space');
@@ -164,7 +180,8 @@ function platformResourceSites(plan:BattlefieldPlatformPlan,seed:number):Positio
 // Separate cosmetic RNG. Modules occupy already blocked edge cells; never shrink build/movement areas.
 function decoratePlatformStations(builder:BattlefieldBuilder,plan:BattlefieldPlatformPlan,resources:Position[]){
   const w=builder.world,s=w.surface!,random=seeded(plan.detailSeed^0x53544154),
-    models=['shipHangar','shipPlant','shipBridge','shipCrate'];
+    density=seeded(plan.detailSeed^0x44454e53)(),stationLimit=18+Math.floor(density*7),
+    hardwareLimit=36+Math.floor(density*13),models=['shipHangar','shipPlant','shipBridge','shipCrate'];
   for(const model of [...models,'shipHangarLights'])w.renderData.geometries.push({mesh:'platform'+model,model,seed:0,extent:0});
   const candidates:Position[]=[],hardwareCandidates:Position[]=[];
   for(let i=0;i<w.staticGrid.length;i++)if(w.staticGrid[i]&&s.cliffs[i]){
@@ -174,7 +191,7 @@ function decoratePlatformStations(builder:BattlefieldBuilder,plan:BattlefieldPla
     hardwareCandidates.push(p);
     if(height>plan.floor)candidates.push(p);
   }
-  for(let attempt=0;attempt<240&&candidates.length&&plan.scenery.length<24;attempt++){
+  for(let attempt=0;attempt<240&&candidates.length&&plan.scenery.length<stationLimit;attempt++){
     const p=candidates.splice(Math.floor(random()*candidates.length),1)[0],{x,z}=p;
     if(resources.some(q=>distance(p,q)<32)||plan.scenery.some(q=>distance(p,q)<14))continue;
     if(plan.ramps.some(r=>{
@@ -214,7 +231,7 @@ function decoratePlatformStations(builder:BattlefieldBuilder,plan:BattlefieldPla
       plan.greebles.push({...p,height,width:w.cellSize,depth:10,kind:4,yaw});break;
     }
   }
-  for(let attempt=0;attempt<360&&hardwareCandidates.length&&plan.greebles.length<48;attempt++){
+  for(let attempt=0;attempt<360&&hardwareCandidates.length&&plan.greebles.length<hardwareLimit;attempt++){
     const p=hardwareCandidates.splice(Math.floor(detail()*hardwareCandidates.length),1)[0];
     if(resources.some(q=>distance(p,q)<18)||plan.scenery.some(q=>distance(p,q)<5)||
       plan.greebles.some(q=>distance(p,q)<6))continue;
@@ -278,17 +295,10 @@ function createPlatformBattlefield(): BattlefieldDefinition {
     },
     generate(builder){
       const w=builder.world,plan=platformBattlefieldPlan(w.terrainSeed,w.extent),
-        surface=w.surface=new BattlefieldSurface(w.extent,w.cellSize,
-          (x,z)=>platformBattlefieldHeight(plan,x,z),height=>Math.floor((height-plan.floor+1e-5)/PLATFORM_TIER_HEIGHT));
+        surface=w.surface=platformBattlefieldSurface(plan,w.cellSize);
       w.staticGrid.set(surface.cliffs);w.terrainFeatureGrid.set(surface.cliffs);
-      // Ramps remain traversable but cannot be obstructed by foundations.
-      surface.buildBlocked=new Uint8Array(w.staticGrid.length);
       for(let i=0;i<w.staticGrid.length;i++){
         const p=w.point(i),h=surface.heightAt(p.x,p.z);
-        if(plan.ramps.some(r=>{
-          const dx=p.x-r.x,dz=p.z-r.z,u=dx*r.dx+dz*r.dz,v=dx*r.dz-dz*r.dx;
-          return u>=-PLATFORM_LANDING&&u<=r.length+PLATFORM_LANDING&&Math.abs(v)<=r.width/2+5;
-        }))surface.buildBlocked[i]=1;
         w.terrainColors.set([62+h*.8,79+h*.9,91+h,255],i*4);
         w.renderData.groundColors.push([.55,.65,.72],[.55,.65,.72]);
       }
@@ -296,7 +306,7 @@ function createPlatformBattlefield(): BattlefieldDefinition {
         {mesh:'platformFixtures',model:'shipPlant',seed:197,extent:0},
         {mesh:'platformSignals',model:'platformSignals',plan},
         {mesh:'platformFloor',model:'platformFloor',plan});
-      decoratePlatformStations(builder,plan,platformResourceSites(plan,w.terrainSeed));
+      decoratePlatformStations(builder,plan,w.layout.resourceSites);
       decoratePlatformSkyline(builder,plan);
       builder.place('terrain',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','TECHNICAL');
       builder.place('platformSignals',0,0,0,1,1,1,0xffffff,0,0,0,.65,1,'static','AUTO');

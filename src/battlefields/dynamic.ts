@@ -86,6 +86,12 @@ function dynamicTerrainPlan(world: Battlefield) {
       const angle = morphology() * Math.PI;
       return { ...p, cs: Math.cos(angle), sn: Math.sin(angle), stretch: .85 + morphology() * .3, phase: morphology() * Math.PI * 2 };
     }),
+    vents = world.layout.resourceSites.map(battlefieldGasPosition).map(p => {
+      const dx=(datum(p.x+1,p.z)-datum(p.x-1,p.z))/2,
+        dz=(datum(p.x,p.z+1)-datum(p.x,p.z-1))/2,
+        scale=Math.max(1,Math.hypot(dx,dz)/.06);
+      return {...p,height:datum(p.x,p.z),dx:dx/scale,dz:dz/scale};
+    }),
     routes = world.layout.corridors.map(route => {
       const [a, b] = route, dx = b[0] - a[0], dz = b[1] - a[1];
       return { x: a[0], z: a[1], dx, dz, length2: dx * dx + dz * dz };
@@ -114,6 +120,13 @@ function dynamicTerrainPlan(world: Battlefield) {
         padRetention *= smooth((d - 18) / shoulder);
       }
       h = grade + (h - grade) * padRetention;
+      // Refinery snapping requires a complete gentle foundation at every public vent.
+      // Keep the surrounding relief and blend into a local supporting plane, not a cliff cut.
+      for(const vent of vents){
+        const dx=x-vent.x,dz=z-vent.z,d=Math.max(Math.abs(dx),Math.abs(dz));
+        if(d<14){const plane=vent.height+vent.dx*dx+vent.dz*dz;
+          h=plane+(h-plane)*smooth((d-6)/8);}
+      }
       // Ease tall overlapping shoulders into the ceiling instead of slicing summits flat.
       return Math.max(0, h > 60 ? 60 + 12 * (1 - Math.exp(-(h - 60) / 12)) : h);
     };

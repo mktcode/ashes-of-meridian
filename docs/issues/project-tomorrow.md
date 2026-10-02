@@ -15,6 +15,7 @@ Glassteppe wirkte laut Nutzer trotz Pflanzenvariation leer. Seedbasierte Großfo
 ## Noch nicht erreicht / Abnahme
 
 - [ ] Gemeldeten verdeckten Echo-Vent erneut mit Raffinerie belegen und Bau abschließen; Originalkarte/Seed fehlen. Silhouetten-Zielklick ist integriert, Originalfall nicht reproduziert.
+- [ ] Seedabhängig erhöhte Vegetationsdichte bei normalem Zoom/Nebel visuell und auf Zielgeräten abnehmen; große Pflanzen bleiben auf vorhandenen Sperrflächen, mehr befahrbarer Bodendekor ersetzt keine neuen Waldhindernisse. Frontier-Seed `3` wurde mit erhöhter Dichte über die echte Chromium-Auslieferung ohne GL-/Seitenfehler geöffnet; keine Framerate-/Allseedabnahme.
 - [ ] Bauflächenlinien: Hang-/Blockerübergänge, Sichtgrenzen, Vents, Klickvorschau und mobile Kosten. Farbe zwischen Validatorproben bleibt nur Orientierung.
 - [ ] Kontursilhouetten: normaler Zoom, Parteienfarben, dichte Gruppen und Verdeckung durch statische Berge/Kronen/Stadt. Keine Sichtfreigabe durch Intro/Fog.
 - [ ] Materialmaßstab/-wiederholung, Boden-/Einheiten-/Minimap-Kontrast der sechs prozeduralen Weltfamilien vergleichen; [Desert](desert-map.md), [Westmark](westmark-map.md), [Mothership](terrain.md).

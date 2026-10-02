@@ -15,7 +15,8 @@ function battlefieldEcology(profile:BattlefieldRenderProfile, seed:number):Battl
     biome=profile.wilderness==='seeded'?choice:profile.wilderness,
     weather:EcologyWeather=weatherChoice<.3?'clear':weatherChoice<.55?'mist':
       biome==='rime'?'snow':biome==='ochre'?'ash':'rain';
-  return {...profile,ecology:{biome,weather,phase:random()*Math.PI*2,cover:weather==='clear'?.18:weather==='mist'?.58:.8,
+  const vegetationDensity=1.35+seeded(seed^0x56454744)()*.65;
+  return {...profile,ecology:{vegetationDensity,biome,weather,phase:random()*Math.PI*2,cover:weather==='clear'?.18:weather==='mist'?.58:.8,
     wind:.12+random()*.16,...ECOLOGY_PALETTES[biome]}};
 }
 // Same bounded field in the scene shader. Its broad regions are world-anchored,
@@ -52,6 +53,9 @@ function decorateEcology(builder:BattlefieldBuilder) {
     clear=(x:number,z:number,r:number)=>occupied.every(p=>Math.hypot(x-p.x,z-p.z)>r+p.r),
     place=(part:string,v:number,x:number,y:number,z:number,r:number,h:number,color:number,yaw:number,mat:WorldPlacement['material'],glow=0)=>
       builder.place(`ecology${part}${v}`,x,y,z,r,h,r,color,yaw,0,0,glow,1,'static',mat);
+  const density=style.vegetationDensity,treeLimit=Math.floor(144*density),
+    tuftLimit=Math.floor(650*density),attempts=Math.floor(4200*density),
+    tuftSpacing=1.9/Math.sqrt(density);
   let trees=0,stones=0,tufts=0;
   // Landmark clusters first: their complete silhouettes occupy already blocked rock.
   // No new collision, rewards or phantom buildings hidden inside decorative ruins.
@@ -63,14 +67,14 @@ function decorateEcology(builder:BattlefieldBuilder) {
     place(part,v,x,y-.45,z,r,part==='Relic'?5+rand()*4:7+rand()*6,0xffffff,rand()*Math.PI*2,part==='Relic'?'MASONRY':'CRYSTAL',part==='Spire'?.18:0);
     occupied.push({x,z,r:r+1});landmarks.push({x,z});
   }
-  for(let i=0;i<4200;i++) {
+  for(let i=0;i<attempts;i++) {
     const x=(rand()-.5)*(w.extent*2-8),z=(rand()-.5)*(w.extent*2-8),v=i%3,habitat=ecologyHabitat(style.phase,x,z),
       r=1.6+rand()*2.2,yaw=rand()*Math.PI*2,y=height(x,z);
     if(!safe(x,z,1))continue;
     if(safe(x,z,r)&&ecologyFootprint(w,x,z,r+.4)&&clear(x,z,r*.72)) {
       const lo=Math.min(y,height(x-r,z),height(x+r,z),height(x,z-r),height(x,z+r)),
         hi=Math.max(y,height(x-r,z),height(x+r,z),height(x,z-r),height(x,z+r));
-      if(trees<144&&habitat>.36&&hi-lo<4.8) {
+      if(trees<treeLimit&&habitat>.36&&hi-lo<4.8) {
         const h=5+habitat*5+rand()*2;
         if(woody)place('Trunk',v,x,y-.35,z,r,h,0xb0a18c,yaw,'BARK');
         place(family,v,x,y-.35,z,r,h,style.leaf,yaw,'LEAF',style.biome==='mycelium'?.18:0);
@@ -79,7 +83,7 @@ function decorateEcology(builder:BattlefieldBuilder) {
         place('Stone',v,x,lo-.35,z,r,1.3+r*.55+hi-lo,0xffffff,yaw,'ROCK');
         occupied.push({x,z,r:r*.65});stones++;
       }
-    }else if(tufts<650&&habitat>.48&&!w.staticGrid[w.idx(x,z)]&&groundSites.every(p=>Math.hypot(x-p.x,z-p.z)>1.9)) {
+    }else if(tufts<tuftLimit&&habitat>.48&&!w.staticGrid[w.idx(x,z)]&&groundSites.every(p=>Math.hypot(x-p.x,z-p.z)>tuftSpacing)) {
       // Avoid route centres and keep every small plant visibly traversable.
       if(w.layout.corridors.some(route=>route.slice(1).some(([bx,bz],j)=>{
         const [ax,az]=route[j];return pointSegment({x,z},{x:ax,z:az},{x:bx,z:bz})<2.5;

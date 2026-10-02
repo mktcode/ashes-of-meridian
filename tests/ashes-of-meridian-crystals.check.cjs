@@ -118,6 +118,21 @@ test('all maps and factions retain distinct accessible crystals in five-slot ell
   }
 });
 
+test('Echo vents have buildable snapped refinery foundations on landscapes and platform ramps',()=>{
+  for(const map of Object.keys(BATTLEFIELDS)){
+    const game=fresh();game.start({seed:3,map,deployment:'resource-start'});
+    game.world.sight[0].explored.fill(1);
+    // Isolate terrain/resource placement from temporary live-unit occupancy.
+    for(const e of game.s.entities)if(e.kind==='unit'){e.x=0;e.z=0;delete e.exit;}
+    const vents=game.s.entities.filter(e=>e.kind==='resource'&&e.type==='gas');
+    assert.ok(vents.length>=6);
+    for(const vent of vents){
+      const p={x:vent.x+1,z:vent.z-1};
+      assert.deepEqual(json(game.foundationPosition('refinery',p)),{x:vent.x,z:vent.z});
+      assert.equal(game.canBuild('refinery',p),'',`${map}/${vent.x}/${vent.z}`);
+    }
+  }
+});
 test('Worker deployment preserves the existing seed 9897 first-eight-region crystal-amount reference', () => {
   // Captured from 187c936 before research removal; do not regenerate to mask RNG shifts.
   const game = fresh(); game.start({ seed: 9897 });

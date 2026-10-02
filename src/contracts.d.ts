@@ -128,6 +128,8 @@ interface WorldVariation {
   readonly landmark: 'Relic' | 'Spire' | 'Radar' | 'Wreck' | 'Pylon';
 }
 interface BattlefieldEcology {
+  /** Seed-owned cosmetic abundance; does not change terrain or collision. */
+  vegetationDensity: number;
   biome: EcologyBiome;
   weather: EcologyWeather;
   phase: number;
