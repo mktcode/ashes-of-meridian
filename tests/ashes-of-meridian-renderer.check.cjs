@@ -637,6 +637,30 @@ test('rotated gameplay camera preserves its pivot and projection/picking roundtr
   }
 });
 
+test('orthographic close zoom keeps raised terrain ahead of the camera without changing framing or picking',()=>{
+  const maps=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS]),Surface=vm.runInContext('BattlefieldSurface',maps);
+  for(const height of [72,140])for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
+    const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context),surface=new Surface(180,2.5,()=>height);r.resize();
+    for(const zoom of [27.2,57,115])for(const yaw of [0,Math.PI/4,Math.PI/2,Math.PI]) {
+      r.surface=undefined;r.camera(3,7,zoom,false,0,yaw);
+      const before=r.project(5,height,10);
+      r.surface=surface;r.camera(3,7,zoom,false,0,yaw);
+      assert.ok(r.eye[1]>height+24,'virtual eye stays above terrain and decorations at closest zoom');
+      const p=r.project(5,height,10),hit=r.ground(p.x,p.y);
+      assert.ok(Math.abs(p.x-before.x)<.001&&Math.abs(p.y-before.y)<.001,'retreat preserves screen framing');
+      assert.ok(Math.hypot(hit.x-5,hit.z-10)<.001,'raised surface picking roundtrips');
+      for(const [sx,sy] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+        const a=M4.point(r.inverseVP,sx,sy,-1),b=M4.point(r.inverseVP,sx,sy,1);
+        for(let i=0;i<3;i++){a[i]/=a[3];b[i]/=b[3];}
+        for(const y of [0,height,height+24]) {
+          const t=(y-a[1])/(b[1]-a[1]);
+          assert.ok(t>0&&t<1,'every visible terrain/decoration height fits between the near and far planes');
+        }
+      }
+    }
+  }
+});
+
 test('fitted shadow projection covers ground and elevated view corners at zoom limits and different viewport shapes',()=>{
   for(const receiverHeight of [undefined,46]) for(const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
     const {r,context}=setup({viewport}),M4=vm.runInContext('M4',context);

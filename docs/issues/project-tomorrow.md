@@ -6,7 +6,7 @@ Welt-/Materialrezepte sind integriert. Technische [Weltgrenzen](../architecture.
 
 Glassteppe wirkte laut Nutzer trotz Pflanzenvariation leer. Seedbasierte Großformen sind integriert; die frühere feste Geografie ist keine Vorgabe mehr. Vergleich nach Build: `experiment=alien-planet&seed=9` (Glassteppe/Bergzüge), Seed `7` (Pilzlandschaft/Kraterrand).
 
-- [ ] Großformen, Hangvegetation/-material, Verdeckung, Bauflächen und faire Umwege bei normalem Zoom/Nebel beurteilen. Technische Erdung ist keine künstlerische Abnahme.
+- [ ] Großformen, rundere Kuppen zwischen Weg-/Bauschultern statt pyramidenartiger Grate, Hangvegetation/-material, Verdeckung, Bauflächen und faire Umwege bei normalem Zoom/Nebel beurteilen. Technische Erdung ist keine künstlerische Abnahme.
 
 ## Flugfreiraum nach dem Reliefausbau
 

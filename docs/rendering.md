@@ -90,6 +90,6 @@ Ersetzende Vorschau/Gefechtsstart verwirft Animation/Bildspeicher und entwertet 
 
 ## Viewport und HUD
 
-Projektion, Picking und Overlay lesen dieselben gemessenen CSS-Clientgrenzen von `#worldViewport`, einschließlich Offset. Resize/Moduswechsel synchronisieren sie; kein DOM-Messen je Einheit. Orthografischer Zoom bleibt an Fensterhöhe gebunden. Gesamte CSS-Kaskade prüfen; UI-Fortschritt folgt Simulation, keiner zweiten Queue/CSS-Uhr.
+Projektion, Picking und Overlay lesen dieselben gemessenen CSS-Clientgrenzen von `#worldViewport`, einschließlich Offset. Resize/Moduswechsel synchronisieren sie; kein DOM-Messen je Einheit. Orthografischer Zoom bleibt an Fensterhöhe gebunden und steuert den Bildausschnitt, nicht die physische Nähe zum Boden. Die Gefechtskamera hält entlang derselben Blickachse Abstand zur höchsten CPU-Terrainhöhe einschließlich Dekorreserve; der Tiefenbereich wächst bei Bedarf mit. Pivot, Bildmaßstab und Picking bleiben dadurch unverändert, ohne bei engem Zoom Gelände an der Nahfläche abzuschneiden. Gesamte CSS-Kaskade prüfen; UI-Fortschritt folgt Simulation, keiner zweiten Queue/CSS-Uhr.
 
 Bauflächenfarben sind abgetastete Orientierung, kein Ersatz für den Validator am tatsächlichen Klick. Nie ungesehene Einheiten über Farbe offenlegen. [Prüfwahl](testing.md) · [Darstellungsabnahme](issues/project-tomorrow.md) · [Audio und Sprachpflege](audio.md).

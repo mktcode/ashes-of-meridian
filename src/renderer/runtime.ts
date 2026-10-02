@@ -825,15 +825,21 @@
         let viewHeight = zoom * this.viewport.height / innerHeight;
         const datum = cinema ? this.surface?.heightAt(0, -4) ?? 0 : 0;
         let target = cinema ? [0, datum + 7, -4] : [x, 0, z];
+        // Orthographic zoom controls framing, not physical proximity to the ground.
+        // Retreat along the same viewing axis: raised terrain and its decorations
+        // stay ahead of the near plane without moving the pivot or changing picking.
+        const ceiling = this.surface?.maxHeight ?? 0,
+          distance = zoom + (ceiling > 0 ? (ceiling + 32) / 1.1 : 0);
         this.eye = cinema
           ? [62 + Math.sin(t * CINEMA_ORBIT_SPEED) * 8, 24, 78 + Math.cos(t * CINEMA_ORBIT_SPEED) * 5]
-          : [x + Math.sin(yaw) * zoom * 0.82, zoom * 1.1, z + Math.cos(yaw) * zoom * 0.82];
+          : [x + Math.sin(yaw) * distance * 0.82, distance * 1.1, z + Math.cos(yaw) * distance * 0.82];
         // The menu orbit must stay above the seeded surface, not the old zero-height map.
         if (cinema) this.eye[1] += Math.max(datum, this.surface?.heightAt(this.eye[0], this.eye[2]) ?? 0);
+        const far = Math.max(350, distance * Math.hypot(1.1, .82) + viewHeight + 64);
         let view = M4.look(this.eye, target),
           proj = cinema
             ? M4.perspective(0.74, a, 0.5, 400)
-            : M4.ortho((-viewHeight * a) / 2, (viewHeight * a) / 2, -viewHeight / 2, viewHeight / 2, 0.1, 350);
+            : M4.ortho((-viewHeight * a) / 2, (viewHeight * a) / 2, -viewHeight / 2, viewHeight / 2, 0.1, far);
         this.vp = M4.mul(proj, view);
         this.inverseVP = M4.inverse(this.vp);
         if (this.quality === 0) this.lightVP = M4.identity();

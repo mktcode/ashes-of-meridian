@@ -60,6 +60,21 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
   });
 }
 
+test('overlapping road shoulders join without an angular summit and keep their graded cores', () => {
+  const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world']);
+  const result = vm.runInContext(`(() => {
+    const world={terrainSeed:1409,extent:160,renderProfile:{variation:{family:'alpine',relief:'rolling',heightScale:1}},
+      layout:{resourceSites:[],corridors:[[[-100,-20],[100,-20]],[[-100,20],[100,20]]]}};
+    const joined=dynamicTerrainPlan(world).height, eps=.001,
+      left=(joined(0,0)-joined(0,-eps))/eps, right=(joined(0,eps)-joined(0,0))/eps;
+    world.layout.corridors=[[[-100,-20],[100,-20]]];
+    const single=dynamicTerrainPlan(world).height;
+    return {jump:Math.abs(left-right),joined:joined(0,-20),single:single(0,-20)};
+  })()`,context);
+  assert.ok(result.jump<.001,'equal road influences must not introduce a cusp');
+  assert.equal(result.joined,result.single,'overlap does not alter the guaranteed road core');
+});
+
 test('saved alien exploration seed can deploy four parties on the enlarged terrain', () => {
   const api = scope(), w = new api.Battlefield(52920759, 'alien-planet', 4);
   assert.ok(w.extent >= 140);

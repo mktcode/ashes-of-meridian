@@ -92,27 +92,28 @@ function dynamicTerrainPlan(world: Battlefield) {
     }),
     height = (x: number, z: number) => {
       const grade = datum(x, z);
-      let h = raw(x, z, grade), roadBlend = 0;
+      let h = raw(x, z, grade), roadRetention = 1;
       for (const r of routes) {
         const t = clamp(((x - r.x) * r.dx + (z - r.z) * r.dz) / r.length2, 0, 1),
-          d = Math.hypot(x - r.x - t * r.dx, z - r.z - t * r.dz), influence = 1 - smooth((d - 7) / 26);
-        roadBlend = Math.max(roadBlend, influence);
+          d = Math.hypot(x - r.x - t * r.dx, z - r.z - t * r.dz);
+        // Multiply retained relief instead of selecting the nearest road. A hard
+        // maximum of influences makes sharp ridgelines between overlapping shoulders.
+        roadRetention *= smooth((d - 7) / 26);
       }
       // Intersections share one gently graded datum: averaging roads at unrelated
       // elevations can otherwise cut the guaranteed vehicle network into islands.
-      h += (grade - h) * roadBlend;
+      h = grade + (h - grade) * roadRetention;
       // Buildable cores retain a gentle continuous grade instead of punched-out discs.
       // Irregular elongated shoulders merge them into the surrounding landscape.
-      let blend = 0;
+      let padRetention = 1;
       for (const p of pads) {
         const dx = x - p.x, dz = z - p.z,
           u = (dx * p.cs + dz * p.sn) / p.stretch, v = (dz * p.cs - dx * p.sn) * p.stretch,
           d = Math.pow(u ** 4 + v ** 4, .25), theta = Math.atan2(v, u),
-          shoulder = 28 + 5 * Math.sin(theta * 3 + p.phase) + 3 * Math.cos(theta * 5 - p.phase),
-          influence = 1 - smooth((d - 18) / shoulder);
-        blend = Math.max(blend, influence);
+          shoulder = 28 + 5 * Math.sin(theta * 3 + p.phase) + 3 * Math.cos(theta * 5 - p.phase);
+        padRetention *= smooth((d - 18) / shoulder);
       }
-      h += (grade - h) * blend;
+      h = grade + (h - grade) * padRetention;
       // Ease tall overlapping shoulders into the ceiling instead of slicing summits flat.
       return Math.max(0, h > 60 ? 60 + 12 * (1 - Math.exp(-(h - 60) / 12)) : h);
     };
