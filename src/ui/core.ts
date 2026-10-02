@@ -77,6 +77,7 @@
       radioUntil: number;
       radioVoiceId: VoiceLineId | null = null;
       toastUntil: number;
+      storageWarningShown = false;
       actionSignature: string;
       factionJustUnlocked: FactionId | null;
       hudClock: number;
@@ -136,6 +137,7 @@
         this.battleIntro = null;
         this.battleTutorial = null;
         this.bind();
+        this.notifyStorageFailure();
       }
       codexModelRotation(dt: number) {
         // Increment the current heading so releasing a drag never snaps it back.
@@ -152,6 +154,13 @@
       }
       persist() {
         this.persistence.saveProfile(this.profile);
+        this.notifyStorageFailure();
+      }
+      notifyStorageFailure() {
+        if (this.persistence.available !== false || this.storageWarningShown) return;
+        this.storageWarningShown = true;
+        this.toast('Saving is unavailable. Changes stay in this tab only; reloading may restore older progress.');
+        this.toastUntil = performance.now() + 12000;
       }
       toast(text: string) {
         $('toast').textContent = text;

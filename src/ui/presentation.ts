@@ -53,6 +53,7 @@
         return !!this.battleIntro?.visibleEntityIds.has(e.id);
       },
       tick(this: MeridianUI, dt: number) {
+        this.notifyStorageFailure();
         this.advanceTutorialArrival(dt);
         this.advanceBattleIntro(dt);
         let now = performance.now();

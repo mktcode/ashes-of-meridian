@@ -2,6 +2,15 @@
     'use strict';
     const runtimeMethods = {
       step(this: MeridianGame, dt: number) {
+        if (this.stepping) return;
+        this.stepping = true;
+        try {
+          this.stepTick(dt);
+        } finally {
+          this.stepping = false;
+        }
+      },
+      stepTick(this: MeridianGame, dt: number) {
         if (!this.s || this.s.result || this.s.stopped) return;
         let s = this.s!;
         if (s.rules.kind === 'scenario') {

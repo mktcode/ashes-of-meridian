@@ -30,15 +30,18 @@ test('unknown units cannot be recruited or mutate the battle', () => {
 });
 
 test('only an owned completed replacement HQ permits sale of the current HQ', () => {
-  const game = battle(), hq = game.alive(e => e.team === 0 && e.type === 'hq')[0];
+  const game = battle();
+  // This validator needs an established base, not the worker-only starting recipe.
+  const hq = game.spawnBuilding('hq', -50, 40, 0, 0),
+    enemy = game.spawnBuilding('hq', 50, -40, 1, 0);
   const next = game.spawnBuilding('hq', -20, 60, 0, 0, { progress: .5 });
   assert.match(game.canSellBuilding(hq.id), /Last command center/);
   assert.equal(game.sellBuilding(hq.id), false);
   next.progress = 1;
   assert.equal(game.sellBuilding(hq.id), true);
   assert.match(game.canSellBuilding(next.id), /Last command center/);
-  for (const target of [game.spawnUnit('hero', 0, 0, 0, 0),
-    game.alive(e => e.team === 1 && e.kind === 'building')[0],
+  for (const target of [game.spawn('unit', 'hero', 0, 0, 0, 0),
+    enemy,
     game.spawnBuilding('depot', 0, 0, 0, 0, { progress: .5 }), { id: -1 }]) {
     const before = json(game.s);
     assert.equal(game.sellBuilding(target.id), false);

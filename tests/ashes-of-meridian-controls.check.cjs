@@ -280,6 +280,36 @@ function setup() {
   return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
 }
 
+test('storage failures notify once on writes or later ticks and remain visible in settings', () => {
+  const startup = setup();
+  const uiAtStartup = new startup.UI(startup.ui.game, startup.ui.R, startup.ui.audio,
+    startup.ui.profile, { available: false });
+  assert.equal(uiAtStartup.storageWarningShown, true);
+  assert.ok(startup.document.getElementById('toast').classList.contains('show'));
+  for (const failurePath of ['write', 'read']) {
+    const h = setup(), ui = h.ui, notices = [];
+    ui.toast = text => notices.push(text);
+    ui.persistence.available = true;
+    ui.notifyStorageFailure(); assert.equal(notices.length, 0);
+    if (failurePath === 'write') {
+      ui.persistence.saveProfile = () => { ui.persistence.available = false; return false; };
+      ui.persist();
+    } else {
+      ui.persistence.available = false;
+      ui.view = 'home'; ui.tick(0);
+    }
+    assert.equal(notices.length, 1);
+    assert.ok(ui.toastUntil > 3500, 'storage failure is not just a brief action toast');
+    ui.notifyStorageFailure(); ui.persist();
+    assert.equal(notices.length, 1, 'no repeated warnings on every tick or setting write');
+    ui.openModal = (kind, html) => h.calls.push([kind, html]);
+    ui.showSettings();
+    assert.match(h.calls.at(-1)[1], /role="status"/);
+    ui.persistence.available = true; ui.showSettings();
+    assert.doesNotMatch(h.calls.at(-1)[1], /role="status"/);
+  }
+});
+
 test('refinery screen targeting uses the explored vent behind terrain, including overlapping units', () => {
   for (const pointerType of ['mouse','touch']) {
     const h=setup(), ui=h.ui;

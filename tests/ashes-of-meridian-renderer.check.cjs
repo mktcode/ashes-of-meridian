@@ -509,12 +509,12 @@ test('dedicated rock material is opt-in and resets on profile changes without te
 
 test('upland weathering is opt-in, resets on map changes and needs no foliage image',()=>{
   const h=setup(),maps=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS]);h.r.resize();
-  for(const map of ['frontier','haven','westmark','desert','frontier']) {
-    const profile=vm.runInContext(`BATTLEFIELDS.${map}.render`,maps);
+  for(const map of ['frontier','mothership','westmark','desert','platform-deck','frontier']) {
+    const profile=vm.runInContext(`BATTLEFIELDS['${map}'].render`,maps);
     h.r.setBattlefieldProfile(profile,1409);h.calls.length=0;h.r.render(0);
-    assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_upland'&&c[2]===(map==='frontier'?1:0)));
+    assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_upland'&&c[2]===(profile.upland?1:0)));
     const textures=h.r.textureNames(profile);
-    if(map==='frontier') {
+    if(profile.upland) {
       assert.ok(textures.has('westmarkEarth')&&textures.has('westmarkBark'));
       assert.ok(!textures.has('westmarkSpruce'),'opaque procedural crowns do not decode branch cards');
       assert.deepEqual(h.r.textureNames({...profile,landscape:{...profile.landscape,foliage:undefined}}),textures);
@@ -559,7 +559,8 @@ test('lighting profiles override shader colors without additional textures or re
     assert.equal(calls.filter(c=>c[0]==='program'&&c[1]==='shadow').length,1);
     assert.ok(!calls.some(c=>['texImage2D','createTexture'].includes(c[0])));
   }
-  const override=vm.runInContext('AURELION_ENTITY_LIGHTING',context),profileBefore=JSON.stringify(r.battlefieldProfile);
+  const override={sun:[.8,.9,1.3],sky:[.5,.3,.7],bounce:[.1,.2,.4]},
+    profileBefore=JSON.stringify(r.battlefieldProfile);
   for (const quality of [0,1,2]) {
     r.quality=quality;
     for (const light of [override,undefined]) {

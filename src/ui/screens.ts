@@ -273,7 +273,7 @@
         let st = this.profile.settings;
         this.openModal(
           'settings',
-          renderSettingsScreen(st)
+          renderSettingsScreen(st, this.persistence.available !== false)
         );
       },
       applySetting(this: MeridianUI, el: HTMLInputElement | HTMLSelectElement) {

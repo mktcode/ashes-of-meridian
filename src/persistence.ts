@@ -2,25 +2,28 @@
 'use strict';
 
 // Dependencies are supplied by the app. Access storage lazily: even reading the
-// browser's localStorage property can throw. Each instance owns its fallback.
+// browser's localStorage property can throw. Cache reads as well as writes; after
+// any storage failure this instance stays volatile, never reviving stale records.
 function createMeridianPersistence(
   { getStorage, clamp, upgrades, benefits, abilities, battlefields, missions, enemyCount, warn }: PersistenceDependencies
 ): MeridianPersistence {
     const PROFILE_KEY = 'meridian.profile.v1', EXPEDITION_KEY = 'meridian.expedition.v6',
       STAGE_HISTORY_KEY = 'meridian.stage-history.v1';
-    const memoryStore: Record<string, string> = {};
+    const memoryStore: Record<string, string | null> = {};
     const Store = {
       available: true,
       get(k: string) {
+        if (!this.available) return memoryStore[k] ?? null;
         try {
-          return getStorage().getItem(k);
+          return memoryStore[k] = getStorage().getItem(k);
         } catch (e) {
           this.available = false;
-          return memoryStore[k] || null;
+          return memoryStore[k] ?? null;
         }
       },
       set(k: string, v: string) {
         memoryStore[k] = v;
+        if (!this.available) return false;
         try {
           getStorage().setItem(k, v);
           return true;
@@ -30,7 +33,8 @@ function createMeridianPersistence(
         }
       },
       remove(k: string) {
-        delete memoryStore[k];
+        memoryStore[k] = null;
+        if (!this.available) return false;
         try {
           const storage = getStorage();
           if (storage.removeItem) storage.removeItem(k);

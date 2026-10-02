@@ -1,4 +1,5 @@
-// Scheduler/state tests only: no battlefield generation, autonomous AI or simulated combat ticks.
+// Scheduler/state tests only: no battlefield generation, autonomous AI or combat.
+// Tick-guard cases use empty worlds and stubbed runtime phases.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
@@ -75,6 +76,8 @@ test('commands admitted by callbacks wait for the following tick and cannot reen
   game.emit = () => {
     next = game.queueAction(1, hold(4));
     assert.equal(game.beginCommandTick(), false);
+    game.step(.05);
+    assert.equal(game.s.time, 0, 'queue callbacks cannot enter runtime phases');
   };
   game.queueAction(0, { kind: 'train', unit: 'worker' });
   game.beginCommandTick();
@@ -144,6 +147,53 @@ test('unexpected execution errors stop the scenario without retrying partially a
   assert.equal(game.beginCommandTick(), false);
 });
 
+function emptyRuntime() {
+  const { game } = fixture();
+  Object.assign(game.s, { entities: [], strikes: [], fields: [], scans: [], recalls: [], triggers: {} });
+  game.world.definition = {};
+  game.world.reveal = () => {};
+  game.rehash = game.resolveRecalls = () => {};
+  return game;
+}
+
+test('the whole scenario tick rejects recursion and defers late callback inputs to the next tick', () => {
+  const game = emptyRuntime(); let callbacks = 0;
+  game.executeAction = () => true;
+  game.resolveRecalls = () => {
+    callbacks++;
+    assert.equal(game.commandQueue.processing, false, 'the command batch has already finished');
+    assert.ok(game.queueAction(0, { kind: 'train', unit: 'worker' }));
+    game.step(.05);
+  };
+  const energy = game.account(0).energy;
+  game.step(.05);
+  assert.equal(callbacks, 1); assert.equal(game.s.time, .05);
+  assert.equal(game.commandQueue.tick, 1);
+  assert.equal(game.commandQueue.pending.length, 1);
+  assert.equal(game.commandQueue.pending[0].tick, 2);
+  assert.equal(game.account(0).energy, energy + .05 * vm.runInContext('COMMAND_ENERGY.regeneration', context));
+  assert.equal(game.stepping, false);
+  game.resolveRecalls = () => {};
+  game.step(.05);
+  assert.equal(game.s.time, .1); assert.equal(game.commandQueue.tick, 2);
+  assert.deepEqual(Array.from(game.commandQueue.lastResults, r => r.status), ['applied']);
+});
+
+test('tick guard survives callback state replacement and releases after runtime errors', () => {
+  const game = emptyRuntime(), replacement = emptyRuntime(), failure = Error('phase failed');
+  game.resolveRecalls = () => {
+    game.s = replacement.s; game.commandQueue = replacement.commandQueue;
+    game.step(.05);
+    assert.equal(game.s.time, 0); assert.equal(game.commandQueue.tick, 0);
+    throw failure;
+  };
+  assert.throws(() => game.step(.05), error => error === failure);
+  assert.equal(game.stepping, false);
+  game.resolveRecalls = () => {};
+  game.step(.05);
+  assert.equal(game.s.time, .05); assert.equal(game.commandQueue.tick, 1);
+});
+
 test('runtime gates the batch before advancing time; invalid or expired steps execute no commands', () => {
   const { game } = fixture(); let entered = 0;
   game.queueAction(0, hold());
@@ -158,4 +208,6 @@ test('runtime gates the batch before advancing time; invalid or expired steps ex
   assert.equal(game.s.stopped, true); assert.equal(game.commandQueue.tick, 0);
   assert.equal(game.get(3).order.type, 'idle'); assert.equal(game.commandQueue.pending.length, 0);
   assert.equal(game.commandQueue.lastResults[0].status, 'cancelled');
+  assert.equal(game.stepping, false);
+  game.step(.05); assert.equal(game.commandQueue.tick, 0);
 });

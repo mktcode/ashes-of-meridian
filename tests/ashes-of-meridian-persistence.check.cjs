@@ -289,6 +289,61 @@ test('denied storage remains a per-service volatile fallback for both records', 
   assert.equal(other.service.loadExpedition(), null);
 });
 
+test('write-only failure keeps current progress and cached records volatile without retrying storage', () => {
+  const h = setup(), profile = { ...defaults, aether: 10 };
+  h.service.saveProfile(profile); h.service.saveExpedition(expedition);
+  const current = { stage: 9, map: 'desert', seed: 1409 };
+  h.service.saveStageHistory([current]);
+  const reloaded = setup(h.data);
+  reloaded.service.loadProfile(); reloaded.service.loadExpedition();
+  reloaded.service.loadStageHistory(expedition);
+  reloaded.fail.set = true;
+  assert.equal(reloaded.service.saveProfile({ ...profile, aether: 20 }), false);
+  assert.equal(reloaded.service.available, false);
+  const calls = reloaded.trace.length;
+  assert.equal(reloaded.service.loadProfile().aether, 20);
+  assert.deepEqual(json(reloaded.service.loadExpedition()), expedition);
+  assert.deepEqual(json(reloaded.service.loadStageHistory(expedition)), [current]);
+  reloaded.fail.set = false;
+  assert.equal(reloaded.service.saveExpedition({ ...expedition, depth: 9 }), false);
+  assert.equal(reloaded.service.loadExpedition().depth, 9);
+  assert.equal(reloaded.trace.length, calls, 'a volatile service never retries recovered storage');
+  assert.equal(setup(h.data).service.loadProfile().aether, 10, 'reload can still see the older durable record');
+});
+
+test('remove-only failure never revives the abandoned checkpoint or its archive in this service', () => {
+  const h = setup();
+  h.service.saveProfile({ ...defaults, aether: 30 }); h.service.saveExpedition(expedition);
+  h.service.saveStageHistory([{ stage: 9, map: 'desert', seed: 1409 }]);
+  h.fail.set = true;
+  assert.equal(h.service.clearExpedition(), false);
+  const calls = h.trace.length;
+  assert.equal(h.service.loadExpedition(), null);
+  assert.equal(h.service.loadProfile().aether, 30);
+  const next = { ...expedition, encounter: { ...expedition.encounter, seed: 1410 } };
+  assert.equal(h.service.saveExpedition(next), false);
+  assert.deepEqual(json(h.service.loadStageHistory(next)), [{ stage: 9, map: 'desert', seed: 1410 }]);
+  assert.equal(h.trace.length, calls);
+  assert.deepEqual(json(setup(h.data).service.loadExpedition()), expedition);
+});
+
+test('read-only failure retains last successful snapshots independently of later durable changes', () => {
+  const h = setup();
+  h.data.set(PROFILE, JSON.stringify({ ...defaults, aether: 40 }));
+  h.data.set(EXPEDITION, JSON.stringify(expedition));
+  assert.equal(h.service.loadProfile().aether, 40);
+  assert.deepEqual(json(h.service.loadExpedition()), expedition);
+  h.data.set(PROFILE, JSON.stringify({ ...defaults, aether: 99 }));
+  h.fail.get = true;
+  assert.equal(h.service.loadProfile().aether, 40);
+  h.fail.get = false;
+  const calls = h.trace.length;
+  assert.deepEqual(json(h.service.loadExpedition()), expedition);
+  assert.equal(h.service.loadProfile().aether, 40);
+  assert.equal(h.trace.length, calls);
+  assert.equal(h.service.available, false);
+});
+
 test('invalid JSON resets only the affected record and reports the failure', () => {
   const h = setup(new Map([[PROFILE, '{'], [EXPEDITION, '{']]));
   assert.deepEqual(json(h.service.loadProfile()), defaults);

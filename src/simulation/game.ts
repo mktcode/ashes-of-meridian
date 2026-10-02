@@ -72,6 +72,8 @@
       cosmeticRandom: () => number;
       effects: MeridianEffects;
       commandQueue: CommandQueue = createCommandQueue();
+      // Game-owned, not queue-owned: a restart inside a callback cannot bypass it.
+      stepping = false;
 
       get localTeam(): PlayerTeam { return this.world?.viewTeam ?? 0; }
 
