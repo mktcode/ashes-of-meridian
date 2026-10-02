@@ -6,7 +6,7 @@ const { loadScripts, BATTLEFIELD_SCRIPTS } = require('./helpers/game-scripts.cjs
 const json = value => JSON.parse(JSON.stringify(value));
 function scope(extra = []) {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...extra]);
-  return vm.runInContext('({Battlefield,BATTLEFIELDS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,platformBattlefieldPlan,platformBattlefieldHeight,availableBattlefields,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
+  return vm.runInContext('({Battlefield,BATTLEFIELDS,MISSIONS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,platformBattlefieldPlan,platformBattlefieldHeight,availableBattlefields,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
 }
 function signature(world) {
   return createHash('sha256').update(JSON.stringify(world.layout)).update(world.staticGrid)
@@ -85,25 +85,40 @@ test('all landscape families share a seed-owned starting hour and readable midni
 test('platform prototype has flat tiers, usable ramps and a closed technical environment',()=>{
   const api=scope(),w=new api.Battlefield(1409,'platform-deck',4),plan=api.platformBattlefieldPlan(1409,w.extent);
   assert.ok(w.startSites.length>=4);
+  assert.ok(api.MISSIONS['hq-elimination'].maps.includes('platform-deck'),'explicit experiment mission supports the map');
   assert.equal(w.renderProfile.groundTexture,'metal');
   assert.equal(w.renderProfile.ecology,undefined);assert.equal(w.renderProfile.landscape,undefined);
   assert.equal(w.renderProfile.shrubDecor.opacity,0);
   assert.ok(!api.availableBattlefields().includes('platform-deck'),'prototype does not change encounter selection');
-  for(const p of plan.platforms){
+  for(const p of plan.platforms.filter(p=>p.height===36)){
     assert.equal(w.surface.heightAt(p.x,p.z),p.height);
     assert.ok(w.surface.foundation(p,6));
     assert.equal(w.surface.fits(p.x+p.width/2+.25,p.z+p.depth/2-5,1),false);
   }
   for(const r of plan.ramps){
     const a={x:r.x-r.dx*3,z:r.z-r.dz*3},b={x:r.x+r.dx*(r.length+3),z:r.z+r.dz*(r.length+3)};
+    assert.equal(r.rise,12,'ramps connect adjacent tiers only');
+    assert.equal(w.surface.heightAt(a.x,a.z),r.base);
+    assert.equal(w.surface.heightAt(b.x,b.z),r.base+12);
     assert.ok(w.surface.segment(a,b,3),'vehicle clearance on ramp');
     const p={x:r.x+r.dx*r.length*.5,z:r.z+r.dz*r.length*.5};
-    assert.ok(Math.abs(w.surface.heightAt(p.x,p.z)-(plan.floor+r.rise*.5))<1e-5);
+    assert.ok(Math.abs(w.surface.heightAt(p.x,p.z)-(r.base+r.rise*.5))<1e-5);
     assert.equal(w.surface.foundation(p,3),false);
   }
   for(const site of w.layout.resourceSites)assert.ok(w.surface.fits(site.x,site.z,4));
   assert.deepEqual(json(plan),json(api.platformBattlefieldPlan(1409,w.extent)));
   assert.notDeepEqual(json(plan),json(api.platformBattlefieldPlan(1410,w.extent)));
+});
+test('platform plans vary their partition and tier distribution without four player-slot pads',()=>{
+  const api=scope(),counts=new Set(),shapes=new Set(),heights=new Set();
+  for(const seed of [1,2,3,7,1409,1410,40517]){
+    const size=api.BATTLEFIELDS['platform-deck'].createSize(seed),plan=api.platformBattlefieldPlan(seed,size.extent);
+    counts.add(plan.platforms.length);shapes.add(JSON.stringify(plan.platforms));
+    heights.add(plan.platforms.filter(p=>p.height===36).length);
+    for(const r of plan.ramps){assert.equal(r.rise,12);assert.ok(r.base===12||r.base===24);}
+    for(const p of plan.platforms.filter(p=>p.height===36))assert.equal(p.base,24);
+  }
+  assert.ok(counts.size>=3);assert.equal(shapes.size,7);assert.ok(heights.size>=2);
 });
 test('platform mesh uses flat deck and ramp normals rather than smoothed landscape shoulders',()=>{
   const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-terrain']),
