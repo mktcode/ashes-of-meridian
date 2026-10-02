@@ -90,16 +90,20 @@ test('platform prototype has flat tiers, usable ramps and a closed technical env
   assert.equal(w.renderProfile.ecology,undefined);assert.equal(w.renderProfile.landscape,undefined);
   assert.equal(w.renderProfile.shrubDecor.opacity,0);
   assert.ok(!api.availableBattlefields().includes('platform-deck'),'prototype does not change encounter selection');
-  for(const p of plan.platforms.filter(p=>p.height===24)){
+  for(const p of plan.platforms.filter(p=>p.height===18)){
     assert.equal(w.surface.heightAt(p.x,p.z),p.height);
     assert.ok(w.surface.foundation(p,6));
     assert.equal(w.surface.fits(p.x+p.width/2+.25,p.z+p.depth/2-5,1),false);
   }
   for(const r of plan.ramps){
     const a={x:r.x-r.dx*10,z:r.z-r.dz*10},b={x:r.x+r.dx*(r.length+10),z:r.z+r.dz*(r.length+10)};
-    assert.equal(r.rise,6,'ramps connect adjacent tiers only');
+    assert.equal(r.rise,3,'lower ramps still connect adjacent tiers only');
+    assert.equal(r.length,12.5,'compact ramp length');
     assert.equal(w.surface.heightAt(a.x,a.z),r.base);
-    assert.equal(w.surface.heightAt(b.x,b.z),r.base+6);
+    assert.equal(w.surface.heightAt(b.x,b.z),r.base+3);
+    const level=r.base===plan.floor?0:1;
+    assert.equal(w.surface.visibilityLevelAt(a.x,a.z),level);
+    assert.equal(w.surface.visibilityLevelAt(b.x,b.z),level+1);
     assert.ok(w.surface.segment(a,b,3),'vehicle clearance on ramp');
     const p={x:r.x+r.dx*r.length*.5,z:r.z+r.dz*r.length*.5};
     assert.ok(Math.abs(w.surface.heightAt(p.x,p.z)-(r.base+r.rise*.5))<1e-5);
@@ -137,9 +141,9 @@ test('platform plans vary their partition and tier distribution without four pla
   for(const seed of [1,2,3,7,1409,1410,40517]){
     const size=api.BATTLEFIELDS['platform-deck'].createSize(seed),plan=api.platformBattlefieldPlan(seed,size.extent);
     counts.add(plan.platforms.length);shapes.add(JSON.stringify(plan.platforms));
-    heights.add(plan.platforms.filter(p=>p.height===24).length);
-    for(const r of plan.ramps){assert.equal(r.rise,6);assert.ok(r.base===12||r.base===18);}
-    for(const p of plan.platforms.filter(p=>p.height===24))assert.equal(p.base,18);
+    heights.add(plan.platforms.filter(p=>p.height===18).length);
+    for(const r of plan.ramps){assert.equal(r.rise,3);assert.equal(r.length,12.5);assert.ok(r.base===12||r.base===15);}
+    for(const p of plan.platforms.filter(p=>p.height===18))assert.equal(p.base,15);
   }
   assert.ok(counts.size>=3);assert.equal(shapes.size,7);assert.ok(heights.size>=2);
 });

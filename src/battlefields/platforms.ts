@@ -4,8 +4,8 @@ interface BattlefieldPlatform {
   x: number; z: number; width: number; depth: number; height: number; base: number;
   corners: readonly [number,number,number,number];
 }
-const PLATFORM_TIER_HEIGHT=6;
-const PLATFORM_RAMP_LENGTH=22.5;
+const PLATFORM_TIER_HEIGHT=3;
+const PLATFORM_RAMP_LENGTH=12.5;
 const PLATFORM_LANDING=15;
 interface BattlefieldRamp { x: number; z: number; dx: number; dz: number; length: number; width: number; rise: number; base: number }
 interface BattlefieldPlatformScenery extends Position { height:number; width:number; depth:number }

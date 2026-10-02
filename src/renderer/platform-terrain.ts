@@ -14,7 +14,7 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
   // Continuous exterior apron keeps the playable boundary out of the battle view.
   rectangle(0,0,(plan.extent+400)*2,(plan.extent+400)*2,floor,[.46,.57,.64]);
   for(const p of plan.platforms){
-    const top=p.height-.13,base=p.base-.13,left=p.x-p.width/2,right=p.x+p.width/2,
+    const top=p.height-.13,base=p.base-.13,wallScale=(top-base)/6,left=p.x-p.width/2,right=p.x+p.width/2,
       near=p.z-p.depth/2,far=p.z+p.depth/2,corners=platformOutline(p),
       paint=palettes[Math.floor(random()*palettes.length)],
       rim=(v:Position,t:number)=>{
@@ -51,13 +51,14 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
       // All hardware stays on retaining walls inside the CPU's blocked edge band.
       if(length>7)for(let u=2;u<length-3;u+=9){
         const end=Math.min(u+6,length-1),vent=random()<.45;
-        panel(u,end,base+1,base+4.25,[.21,.29,.35]);
-        panel(u-.35,u+.25,base+.3,top-.65,[.59,.65,.68],.10);
+        panel(u,end,base+wallScale,base+4.25*wallScale,[.21,.29,.35]);
+        panel(u-.35,u+.25,base+.3*wallScale,top-.65,[.59,.65,.68],.10);
         if(vent){
-          for(let y=base+1.5;y<base+4;y+=.55)panel(u+.4,end-.4,y,y+.14,[.49,.56,.61],.05);
+          for(let y=base+1.5*wallScale;y<base+4*wallScale;y+=.55*wallScale)
+            panel(u+.4,end-.4,y,y+.14*wallScale,[.49,.56,.61],.05);
         }else{
-          panel(u+.35,end-.35,base+1.35,base+3.75,[.42,.48,.52],.04);
-          panel(u+.6,end-.6,base+2.3,base+2.5,[.22,.30,.37],.065);
+          panel(u+.35,end-.35,base+1.35*wallScale,base+3.75*wallScale,[.42,.48,.52],.04);
+          panel(u+.6,end-.6,base+2.3*wallScale,base+2.5*wallScale,[.22,.30,.37],.065);
         }
       }
       // Edge-band safety rails, with deliberately wide openings at both ramp mouths.
