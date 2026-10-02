@@ -244,7 +244,7 @@ test('large static geometry and placements are chunked and conservatively culled
 });
 
 function setup(options = {}) {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'battlefield-ecology'], { globals: {
+  const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'battlefield-ecology', ...(options.scripts ?? [])], { globals: {
     innerWidth: 800, innerHeight: 600, devicePixelRatio: 2
   } });
   const Renderer = vm.runInContext('MeridianRenderer', context), calls = [];
@@ -635,6 +635,44 @@ test('rotated gameplay camera preserves its pivot and projection/picking roundtr
     }
     assert.ok(Array.from(r.lightVP).every(Number.isFinite));
   }
+});
+
+test('camera rotation holds the central terrain anchor across heights, slopes and consecutive input before rendering', () => {
+  const {r,context}=setup({viewport:{left:17,top:63,width:800,height:428},
+    scripts:['battlefield-surface','world','ui-core','ui-actions','ui-input']}),
+    Surface=vm.runInContext('BattlefieldSurface',context), UI=vm.runInContext('MeridianUI',context);
+  r.resize();
+  const ui=Object.create(UI.prototype);
+  ui.R=r;ui.game={world:{extent:180},s:{cam:{x:3,z:7,zoom:57,yaw:0}}};
+  const v=r.viewport,sx=v.left+v.width/2,sy=v.top+v.height/2;
+  for(const sample of [()=>0,()=>20,(x,z)=>30+.1*x+.2*z]) {
+    r.surface=new Surface(180,2.5,sample);
+    const cam=ui.game.s.cam;Object.assign(cam,{x:3,z:7,zoom:57,yaw:0});
+    r.camera(cam.x,cam.z,cam.zoom,false,0,cam.yaw);
+    const anchor=r.ground(sx,sy),height=r.surface.heightAt(anchor.x,anchor.z);
+    // Zoom changes and stale projections must not displace the anchor.
+    for(const [delta,zoom] of [[Math.PI/2,27.2],[-.3,115],[Math.PI,57],[.2,57]]) {
+      cam.zoom=zoom;ui.rotateCamera(delta);
+      r.camera(cam.x,cam.z,cam.zoom,false,0,cam.yaw);
+      const p=r.project(anchor.x,height,anchor.z);
+      assert.ok(Math.hypot(p.x-sx,p.y-sy)<.003,'original terrain point stays central');
+      // Leave the renderer stale for the next input.
+      r.camera(-20,-30,40,false,0,0);
+    }
+    // A pan changes the anchor; rotation must use that new camera position.
+    cam.x+=5;cam.z-=4;
+    r.camera(cam.x,cam.z,cam.zoom,false,0,cam.yaw);
+    const panned=r.ground(sx,sy),pannedHeight=r.surface.heightAt(panned.x,panned.z);
+    r.camera(-20,-30,40,false,0,0);
+    ui.rotateCamera(.6);r.camera(cam.x,cam.z,cam.zoom,false,0,cam.yaw);
+    const p=r.project(panned.x,pannedHeight,panned.z);
+    assert.ok(Math.hypot(p.x-sx,p.y-sy)<.003,'panned terrain anchor stays central');
+    assert.ok(Math.abs(cam.x)<162&&Math.abs(cam.z)<162);
+  }
+  r.surface=new Surface(180,2.5,()=>20);
+  Object.assign(ui.game.s.cam,{x:162,z:162,yaw:0});
+  ui.rotateCamera(Math.PI);
+  assert.equal(ui.game.s.cam.z,162,'map bounds take precedence over the anchor');
 });
 
 test('orthographic close zoom keeps raised terrain ahead of the camera without changing framing or picking',()=>{

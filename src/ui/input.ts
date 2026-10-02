@@ -342,6 +342,18 @@
       rotateCamera(this: MeridianUI, delta: number) {
         if (delta === 0) return;
         const cam = this.game.s!.cam, yaw = (cam.yaw ?? 0) + delta;
+        if (this.R.surface) {
+          // Input can arrive more than once between frames (or after a pinch/pan).
+          // Pick against the current camera, not the last rendered projection.
+          this.R.camera(cam.x, cam.z, cam.zoom, false, 0, cam.yaw ?? 0);
+          const v = this.R.viewport, sx = v.left + v.width / 2, sy = v.top + v.height / 2,
+            terrain = this.R.ground(sx, sy), flat = this.R.ground(sx, sy, false),
+            dx = terrain.x - flat.x, dz = terrain.z - flat.z,
+            c = Math.cos(delta), s = Math.sin(delta);
+          // Rotate the viewing-axis offset, keeping the visible terrain anchor fixed.
+          // Existing map limits take precedence if the required center leaves them.
+          this.center(cam.x + dx - (c * dx + s * dz), cam.z + dz - (-s * dx + c * dz));
+        }
         cam.yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
       },
       pointerDown(this: MeridianUI, e: PointerEvent) {
