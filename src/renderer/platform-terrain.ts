@@ -11,8 +11,8 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
       const left=x-width/2,right=x+width/2,near=z-depth/2,far=z+depth/2;
       quad([left,y,near],[left,y,far],[right,y,far],[right,y,near],color);
     };
-  // Continuous exterior apron keeps the playable boundary out of the battle view.
-  rectangle(0,0,(plan.extent+400)*2,(plan.extent+400)*2,floor,[.46,.57,.64]);
+  // The inner apron joins the thick exterior dock ring without coplanar overlapping decks.
+  rectangle(0,0,(plan.extent+24)*2,(plan.extent+24)*2,floor,[.46,.57,.64]);
   for(const p of plan.platforms){
     const top=p.height-.13,base=p.base-.13,wallScale=(top-base)/6,left=p.x-p.width/2,right=p.x+p.width/2,
       near=p.z-p.depth/2,far=p.z+p.depth/2,corners=platformOutline(p),

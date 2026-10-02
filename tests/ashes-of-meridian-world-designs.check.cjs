@@ -203,6 +203,38 @@ test('platform skyline surrounds all sides outside play bounds with finite bound
   assert.equal(JSON.stringify(plan),before);
   assert.equal(w.surface.maxHeight,18,'cosmetic skyline never enters terrain/flight envelopes');
 });
+test('platform dockyard connects open hangars and defense/service structures outside play space',()=>{
+  const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-dockyard']),
+    w=new api.Battlefield(3,'platform-deck',4),plan=w.renderData.geometries.find(d=>d.mesh==='terrain').plan,
+    before=JSON.stringify(plan);
+  assert.equal(plan.dockyard.length,16);assert.equal(plan.dockyard.filter(p=>p.kind==='hangar').length,8);
+  assert.equal(new Set(plan.dockyard.map(p=>p.kind)).size,5);
+  for(const tower of plan.skyline)for(const dock of plan.dockyard){
+    const turned=Math.abs(Math.sin(dock.yaw))>.5,dx=(turned?dock.depth:dock.width)/2,dz=(turned?dock.width:dock.depth)/2;
+    assert.ok(Math.abs(tower.x-dock.x)>tower.width/2+dx||Math.abs(tower.z-dock.z)>tower.depth/2+dz,
+      'rear towers cannot pierce hangar interiors');
+  }
+  assert.ok(plan.greebles.length>0&&plan.greebles.length<=48);
+  assert.ok(plan.greebles.some(p=>p.kind===4),'some continuous blocked cliff bands host larger rail guns');
+  for(const model of ['platformDockyard','platformDockyardLights','platformHardware','platformHardwareLights']){
+    const mesh=api.TerrainModels.geometry({mesh:model,model,plan});
+    assert.ok(mesh.length>0&&mesh.length<2000000,'bounded static dock/hardware mesh budget');
+    for(let i=0;i<mesh.length;i+=9){
+      assert.ok(mesh.slice(i,i+9).every(Number.isFinite));
+      assert.ok(Math.abs(Math.hypot(...mesh.slice(i+3,i+6))-1)<1e-6);
+      if(model.startsWith('platformDockyard')){
+        assert.ok(Math.abs(mesh[i])>w.extent+12||Math.abs(mesh[i+2])>w.extent+12);
+        assert.ok(Math.max(Math.abs(mesh[i]),Math.abs(mesh[i+2]))<w.renderProfile.sceneryBounds.extent);
+        assert.ok(mesh[i+1]<w.renderProfile.sceneryBounds.maxHeight);
+      }else{
+        const cell=w.idx(mesh[i],mesh[i+2]);
+        assert.ok(w.staticGrid[cell]&&w.surface.cliffs[cell],'every hardware vertex stays over an existing blocked cell');
+      }
+    }
+  }
+  assert.equal(JSON.stringify(plan),before);
+  assert.equal(w.surface.maxHeight,18);
+});
 test('platform floor zoning, routes and flush channels add detail without changing the CPU plan',()=>{
   const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-terrain']),
     plan=api.platformBattlefieldPlan(3,180),before=JSON.stringify(plan),

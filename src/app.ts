@@ -122,6 +122,20 @@
           e('unit', 'air', 30, 6);
           for (let i = 0; i < 9; i++) e('unit', 'rifle', 15 + (i % 3) * 1.8, 16 + Math.floor(i / 3) * 2);
           for (let i = 0; i < 7; i++) e('resource', 'crystal', -19 + Math.sin(i * 2) * 4, 25 + Math.cos(i * 2) * 4);
+          if (worldView.world?.definition && worldView.world.definition === BATTLEFIELDS['platform-deck']) {
+            // Busy home-only dock staging; none of these actors enter a battle or consume RNG.
+            e('building', 'depot', -54, -20);
+            e('building', 'depot', -66, -22);
+            e('building', 'factory', -70, -48);
+            e('building', 'turret', -52, -36);
+            e('building', 'turret', 52, -48);
+            for (let i = 0; i < 4; i++) {
+              e('unit', 'worker', -45 + i * 5, -16 - (i % 2) * 5);
+              e('unit', 'tank', 36 + i * 9, -26 - (i % 2) * 6);
+            }
+            e('unit', 'artillery', -39, -45);
+            e('unit', 'artillery', 45, -58);
+          }
           e('building', 'hq', -30, -48, FACTION_ID.THIRD, 1);
           e('building', 'turret', -20, -39, FACTION_ID.THIRD, 1);
         }

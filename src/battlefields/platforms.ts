@@ -10,6 +10,11 @@ const PLATFORM_RAMP_LENGTH=12.5;
 const PLATFORM_LANDING=15;
 interface BattlefieldRamp { x: number; z: number; dx: number; dz: number; length: number; width: number; rise: number; base: number }
 interface BattlefieldPlatformScenery extends Position { height:number; width:number; depth:number }
+interface BattlefieldPlatformGreeble extends BattlefieldPlatformScenery { kind:number; yaw:number }
+interface BattlefieldPlatformDockyard extends Position {
+  width:number; depth:number; height:number; yaw:number;
+  kind:'hangar'|'battery'|'sensor'|'gantry'|'hall';
+}
 interface BattlefieldPlatformSkyline extends Position {
   width:number; depth:number; height:number; style:number;
 }
@@ -17,6 +22,8 @@ interface BattlefieldPlatformPlan {
   extent: number; floor: number; detailSeed: number; platforms: BattlefieldPlatform[]; ramps: BattlefieldRamp[];
   scenery: BattlefieldPlatformScenery[];
   skyline: BattlefieldPlatformSkyline[];
+  dockyard: BattlefieldPlatformDockyard[];
+  greebles: BattlefieldPlatformGreeble[];
 }
 function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatformPlan {
   const random=seeded(seed^0x504c4154),snap=(v:number)=>Math.round(v/2.5)*2.5,
@@ -32,7 +39,7 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
     if(x)rooms.push({...r,x:r.x-(length-first)/2,width:first},{...r,x:r.x+(length-second)/2,width:second});
     else rooms.push({...r,z:r.z-(length-first)/2,depth:first},{...r,z:r.z+(length-second)/2,depth:second});
   }
-  const plan:BattlefieldPlatformPlan={extent,floor,detailSeed:seed^0x50444543,platforms,ramps,scenery:[],skyline:[]},supports: BattlefieldPlatform[]=[];
+  const plan:BattlefieldPlatformPlan={extent,floor,detailSeed:seed^0x50444543,platforms,ramps,scenery:[],skyline:[],dockyard:[],greebles:[]},supports: BattlefieldPlatform[]=[];
   for(const room of rooms){
     const p:BattlefieldPlatform={...room,height:floor+PLATFORM_TIER_HEIGHT,base:floor,corners:[0,0,0,0],cornerStyle:'round'};
     if(random()<.7&&room.width>=75){
@@ -159,12 +166,13 @@ function decoratePlatformStations(builder:BattlefieldBuilder,plan:BattlefieldPla
   const w=builder.world,s=w.surface!,random=seeded(plan.detailSeed^0x53544154),
     models=['shipHangar','shipPlant','shipBridge','shipCrate'];
   for(const model of [...models,'shipHangarLights'])w.renderData.geometries.push({mesh:'platform'+model,model,seed:0,extent:0});
-  const candidates:Position[]=[];
+  const candidates:Position[]=[],hardwareCandidates:Position[]=[];
   for(let i=0;i<w.staticGrid.length;i++)if(w.staticGrid[i]&&s.cliffs[i]){
     const p=w.point(i),height=platformBattlefieldHeight(plan,p.x,p.z);
-    if(height<=plan.floor||Math.abs(p.x)>w.extent-15||Math.abs(p.z)>w.extent-15)continue;
+    if(Math.abs(p.x)>w.extent-15||Math.abs(p.z)>w.extent-15)continue;
     if([-1.2,0,1.2].some(dx=>[-1.2,0,1.2].some(dz=>Math.abs(platformBattlefieldHeight(plan,p.x+dx,p.z+dz)-height)>.001)))continue;
-    candidates.push(p);
+    hardwareCandidates.push(p);
+    if(height>plan.floor)candidates.push(p);
   }
   for(let attempt=0;attempt<240&&candidates.length&&plan.scenery.length<24;attempt++){
     const p=candidates.splice(Math.floor(random()*candidates.length),1)[0],{x,z}=p;
@@ -186,12 +194,41 @@ function decoratePlatformStations(builder:BattlefieldBuilder,plan:BattlefieldPla
       builder.place('box',x,height+.35,z+side*(depth/2-.12),width-.24,.03,.12,0xc8aa56,0,0,0,0,1,'static','AUTO');
     }
   }
-  // Larger docks and communication buildings are entirely beyond the playable rectangle.
-  for(const side of [-1,1])for(let z=-150;z<=150;z+=75){
-    const model=models[Math.floor(random()*3)];
-    builder.place('platform'+model,side*(w.extent+34),plan.floor,z,7,6,7,
-      0x8397a0,side*Math.PI/2,0,0,0,1,'static','METAL');
+  // Additional small hardware uses only unused, already blocked edge cells.
+  const detail=seeded(plan.detailSeed^0x47524545),gun=seeded(plan.detailSeed^0x47554e53);
+  const gunCandidates=hardwareCandidates.slice();
+  for(let attempt=0;attempt<240&&gunCandidates.length&&plan.greebles.length<8;attempt++){
+    const p=gunCandidates.splice(Math.floor(gun()*gunCandidates.length),1)[0],height=platformBattlefieldHeight(plan,p.x,p.z);
+    if(height<=plan.floor||resources.some(q=>distance(p,q)<26)||plan.scenery.some(q=>distance(p,q)<10)||
+      plan.greebles.some(q=>distance(p,q)<22))continue;
+    // A long rail gun must lie along a continuous blocked cliff band, never across free floor.
+    const angles=[0,Math.PI/2,Math.PI,-Math.PI/2],offset=Math.floor(gun()*4);
+    for(let index=0;index<4;index++){
+      const yaw=angles[(index+offset)%4],cx=Math.cos(yaw),sx=Math.sin(yaw);
+      let clear=true;
+      for(let u=-1.1;u<=1.11;u+=1.1)for(let v=-2.1;v<=7.41;v+=.5){
+        const x=p.x+u*cx+v*sx,z=p.z-u*sx+v*cx,cell=w.idx(x,z);
+        if(!w.staticGrid[cell]||!s.cliffs[cell]||Math.abs(platformBattlefieldHeight(plan,x,z)-height)>.001)clear=false;
+      }
+      if(!clear)continue;
+      plan.greebles.push({...p,height,width:w.cellSize,depth:10,kind:4,yaw});break;
+    }
   }
+  for(let attempt=0;attempt<360&&hardwareCandidates.length&&plan.greebles.length<48;attempt++){
+    const p=hardwareCandidates.splice(Math.floor(detail()*hardwareCandidates.length),1)[0];
+    if(resources.some(q=>distance(p,q)<18)||plan.scenery.some(q=>distance(p,q)<5)||
+      plan.greebles.some(q=>distance(p,q)<6))continue;
+    if(plan.ramps.some(r=>{
+      const dx=p.x-r.x,dz=p.z-r.z,u=dx*r.dx+dz*r.dz,v=dx*r.dz-dz*r.dx;
+      return u>=-PLATFORM_LANDING-12&&u<=r.length+PLATFORM_LANDING+12&&Math.abs(v)<=r.width/2+12;
+    }))continue;
+    plan.greebles.push({...p,height:platformBattlefieldHeight(plan,p.x,p.z),width:w.cellSize,depth:w.cellSize,
+      kind:Math.floor(detail()*4),yaw:Math.floor(detail()*4)*Math.PI/2});
+  }
+  w.renderData.geometries.push({mesh:'platformHardware',model:'platformHardware',plan},
+    {mesh:'platformHardwareLights',model:'platformHardwareLights',plan});
+  builder.place('platformHardware',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
+  builder.place('platformHardwareLights',0,0,0,1,1,1,0xffffff,0,0,0,.5,1,'static','AUTO');
 }
 // A bounded exterior ring; tall foreground silhouettes stay clear of the playable floor.
 function decoratePlatformSkyline(builder:BattlefieldBuilder,plan:BattlefieldPlatformPlan){
@@ -199,7 +236,7 @@ function decoratePlatformSkyline(builder:BattlefieldBuilder,plan:BattlefieldPlat
   for(let side=0;side<4;side++)for(let slot=0;slot<8;slot++){
     const width=18+random()*12,depth=18+random()*12,height=28+random()*40,
       along=-(plan.extent+32)+(slot+.5)*(plan.extent+32)/4+(random()-.5)*10,
-      outside=plan.extent+Math.max(width,depth)/2+28+height*.85,
+      outside=Math.max(plan.extent+Math.max(width,depth)/2+28+height*.85,plan.extent+111+height*.1),
       sign=side<2?1:-1;
     plan.skyline.push({x:side%2?along:sign*outside,z:side%2?sign*outside:along,
       width,depth,height,style:Math.floor(random()*4)});
@@ -207,8 +244,21 @@ function decoratePlatformSkyline(builder:BattlefieldBuilder,plan:BattlefieldPlat
   // Corner landmarks close the diagonal panorama gaps between the four side rows.
   for(const x of [-1,1])for(const z of [-1,1])plan.skyline.push({
     x:x*(plan.extent+105),z:z*(plan.extent+105),width:24,depth:24,height:60+random()*16,style:2});
-  builder.world.renderData.geometries.push({mesh:'platformSkyline',model:'platformSkyline',plan},
+  // Connected megastructure modules replace the isolated-tower look without entering play space.
+  const dock=seeded(plan.detailSeed^0x444f434b),yaw=[-Math.PI/2,Math.PI,Math.PI/2,0],
+    kinds=[['sensor','gantry'],['hall','battery'],['battery','hall'],['sensor','gantry']] as const;
+  for(let side=0;side<4;side++)for(let slot=0;slot<4;slot++){
+    const width=(plan.extent+32)/2,depth=58+dock()*10,height=26+dock()*12,
+      along=-(plan.extent+32)+(slot+.5)*width,outside=plan.extent+28+depth/2,sign=side<2?1:-1;
+    plan.dockyard.push({x:side%2?along:sign*outside,z:side%2?sign*outside:along,
+      width,depth,height,yaw:yaw[side],kind:slot===1||slot===2?'hangar':kinds[side][slot===0?0:1]});
+  }
+  builder.world.renderData.geometries.push({mesh:'platformDockyard',model:'platformDockyard',plan},
+    {mesh:'platformDockyardLights',model:'platformDockyardLights',plan},
+    {mesh:'platformSkyline',model:'platformSkyline',plan},
     {mesh:'platformSkylineLights',model:'platformSkylineLights',plan});
+  builder.place('platformDockyard',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','TECHNICAL');
+  builder.place('platformDockyardLights',0,0,0,1,1,1,0xffffff,0,0,0,1.8,1,'static','AUTO');
   builder.place('platformSkyline',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
   builder.place('platformSkylineLights',0,0,0,1,1,1,0xffffff,0,0,0,.5,1,'static','AUTO');
 }
