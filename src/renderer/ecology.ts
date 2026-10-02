@@ -88,6 +88,24 @@
     }
     return finish(out);
   };
+  // Low, opaque shrub/fern mounds: visibly substantial but still traversable cover.
+  TerrainModels.ecologyBrush=(seed:number)=>{
+    const out:number[]=[],rand=seeded(seed);
+    for(let clump=0;clump<5;clump++){
+      const angle=clump*2.39996,reach=clump? .38:0,
+        x=Math.cos(angle)*reach,z=Math.sin(angle)*reach,r=.28+rand()*.2,h=.65+rand()*.35,
+        points=Array.from({length:8},(_,i)=>{
+          const a=i*Math.PI/4,spread=r*(.8+rand()*.2);
+          return [x+Math.cos(a)*spread,.1+rand()*.12,z+Math.sin(a)*spread];
+        });
+      for(let i=0;i<8;i++){
+        const shade=.62+rand()*.35,c=[shade*.91,shade,shade*.8];
+        geom.tri(out,[x,h,z],points[(i+1)%8],points[i],c);
+        geom.tri(out,[x,.02,z],points[i],points[(i+1)%8],c);
+      }
+    }
+    return finish(out);
+  };
   TerrainModels.ecologyRelic=(seed:number)=>{
     const out:number[]=[],rand=seeded(seed),box=geom.box();
     const stone=(x:number,y:number,z:number,sx:number,sy:number,sz:number,ry:number,color:number[])=>{

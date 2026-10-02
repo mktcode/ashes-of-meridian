@@ -8,7 +8,7 @@ const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effe
   'renderer-geometry','renderer-terrain-models','renderer-upland','renderer-ecology','renderer-world-variation','effects-view','ui-core','ui-templates'],
   {globals:{CONTACT_SHADOW_MATERIAL:-1,SNOWFLAKE_MATERIAL:-6,RAIN_STREAK_MATERIAL:-7,RAIN_SPLASH_MATERIAL:-8}});
 const api=vm.runInContext(`({Battlefield,BATTLEFIELDS,battlefieldEcology,ecologyHabitat,ecologyFootprint,TerrainModels,
-  MeridianEffects,battlefieldGasPosition,renderEcologyWeather,renderBattleScars,battleScarViews,
+  MeridianEffects,BattlefieldBuilder,decorateEcology,battlefieldGasPosition,renderEcologyWeather,renderBattleScars,battleScarViews,
   renderWeaponSignature,UNIT_BODY_SCALE})`,context);
 const json=v=>JSON.parse(JSON.stringify(v));
 function topology(w){const h=createHash('sha256').update(JSON.stringify(w.layout)).update(w.staticGrid);
@@ -49,7 +49,7 @@ test('vegetation abundance has a high seeded minimum without shifting habitat or
   const profile=api.BATTLEFIELDS.frontier.render,densities=new Set();
   for(let seed=1;seed<=32;seed++){
     const a=api.battlefieldEcology(profile,seed).ecology,b=api.battlefieldEcology(profile,seed).ecology;
-    assert.ok(a.vegetationDensity>=1.35&&a.vegetationDensity<2);
+    assert.ok(a.vegetationDensity>=3&&a.vegetationDensity<12);
     assert.deepEqual(json(a),json(b));densities.add(a.vegetationDensity);
     const random=vm.runInContext(`seeded(${seed}^0x45434f4c)`,context);
     random();random();assert.equal(a.phase,random()*Math.PI*2);
@@ -57,8 +57,23 @@ test('vegetation abundance has a high seeded minimum without shifting habitat or
   }
   assert.ok(densities.size>20);
 });
+test('maximum density actually thickens existing plant bands and scatters low cover in open habitat',()=>{
+  const w=bare(()=>new api.Battlefield(3,'frontier')),before=topology(w),counts=[];
+  for(const density of [3,12]){
+    w.renderProfile={...w.renderProfile,ecology:{...w.renderProfile.ecology,vegetationDensity:density}};
+    api.decorateEcology(new api.BattlefieldBuilder(w));
+    const plants=w.renderData.placements,crowns=plants.filter(p=>p.mesh.startsWith('ecologyAcacia')),
+      cover=plants.filter(p=>p.mesh.startsWith('ecologyTuft')||p.mesh.startsWith('ecologyBrush'));
+    counts.push({crowns:crowns.length,cover:cover.length});
+    assert.ok(cover.some(p=>api.ecologyHabitat(w.renderProfile.ecology.phase,p.position[0],p.position[2])<=.42),
+      'open, less lush habitat also receives scattered plants');
+    assert.equal(topology(w),before,'density never adds blockers or changes terrain/economy');
+  }
+  assert.ok(counts[1].crowns>counts[0].crowns*2,'maximum is visibly more than a budget-only change');
+  assert.ok(counts[1].cover>counts[0].cover*2);
+});
 test('habitat models are finite, deterministic, bounded opaque meshes with unit normals',()=>{
-  for(const part of ['Trunk','Grove','Acacia','Conifer','Fungus','Tuft','Relic','Spire'])for(let v=0;v<3;v++){
+  for(const part of ['Trunk','Grove','Acacia','Conifer','Fungus','Tuft','Brush','Relic','Spire'])for(let v=0;v<3;v++){
     const seed=193+v*7919,mesh=api.TerrainModels['ecology'+part](seed,0);
     assert.deepEqual(mesh,api.TerrainModels['ecology'+part](seed,0));
     assert.ok(mesh.length>0&&mesh.length%27===0&&mesh.length/27<=1400,part);
@@ -79,7 +94,7 @@ test('ecology clusters protect complete blocker envelopes, routes, resources and
       const part=p.mesh.match(/^ecology([A-Za-z]+)/)[1];counts[part]=(counts[part]||0)+1;
       const [x,y,z]=p.position,[sx,sy,sz]=p.scale;
       assert.equal(p.layer,'static');assert.equal(p.alpha,1);
-      if(part!=='Tuft'){
+      if(part!=='Tuft'&&part!=='Brush'){
         assert.ok(api.ecologyFootprint(w,x,z,sx+.4),p.mesh+' complete footprint and wind envelope');
         for(const site of w.layout.resourceSites){
           const gas=api.battlefieldGasPosition(site);
@@ -87,6 +102,12 @@ test('ecology clusters protect complete blocker envelopes, routes, resources and
           assert.ok(Math.hypot(gas.x-x,gas.z-z)>sx+6);
         }
       }else{
+        assert.equal(w.staticGrid[w.idx(x,z)],0,'scattered cover does not add a navigation blocker');
+        for(const route of w.layout.corridors)for(let j=1;j<route.length;j++){
+          const [ax,az]=route[j-1],[bx,bz]=route[j],dx=bx-ax,dz=bz-az,
+            t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz)));
+          assert.ok(Math.hypot(x-ax-t*dx,z-az-t*dz)>=2.5,'route centres stay clear');
+        }
         if(!meshes.has(p.mesh))meshes.set(p.mesh,api.TerrainModels.geometry(w.renderData.geometries.find(g=>g.mesh===p.mesh)));
         const mesh=meshes.get(p.mesh),c=Math.cos(p.rotation[0]),s=Math.sin(p.rotation[0]);
         for(let i=0;i<mesh.length;i+=9){
@@ -97,10 +118,11 @@ test('ecology clusters protect complete blocker envelopes, routes, resources and
     }
     const crowns=(counts.Grove||0)+(counts.Acacia||0)+(counts.Conifer||0)+(counts.Fungus||0)+(counts.Coral||0);
     assert.ok(crowns>0&&crowns<=Math.floor(144*w.renderProfile.ecology.vegetationDensity));assert.equal(counts.Trunk,counts.Fungus||counts.Coral?0:crowns);
-    assert.ok(counts.Tuft>0&&counts.Tuft<=Math.floor(650*w.renderProfile.ecology.vegetationDensity));
+    assert.ok(counts.Tuft>0&&counts.Brush>0);
+    assert.ok(counts.Tuft+counts.Brush<=Math.floor(650*w.renderProfile.ecology.vegetationDensity));
     assert.ok(counts.Stone<=84);assert.ok(counts.Relic+counts.Spire<=6);landmarks+=counts.Relic+counts.Spire;
-    assert.equal(w.renderData.geometries.filter(g=>g.detail).length,3);
-    assert.ok(w.renderData.geometries.filter(g=>g.detail).every(g=>g.model==='ecologyTuft'));
+    assert.equal(w.renderData.geometries.filter(g=>g.detail).length,6);
+    assert.ok(w.renderData.geometries.filter(g=>g.detail).every(g=>g.model==='ecologyTuft'||g.model==='ecologyBrush'));
     assert.ok(w.renderData.placements.length<=Math.floor(144*w.renderProfile.ecology.vegetationDensity)*2+
       Math.floor(650*w.renderProfile.ecology.vegetationDensity)+154);
   }
