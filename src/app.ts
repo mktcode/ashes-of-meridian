@@ -235,33 +235,44 @@
         }
         function drawPlacementGuide(type: BuildingType, s: RunState, world: Battlefield) {
           if (!world.surface || !world.sight[game.localTeam] || ui.battleIntro) { clearPlacementGuide(); return; }
-          const radius = Math.min(36, Math.max(24, Math.ceil(s.cam.zoom * 0.55 / GUIDE_SAMPLE) * GUIDE_SAMPLE)),
-            cx = Math.round(s.cam.x / GUIDE_SAMPLE) * GUIDE_SAMPLE,
-            cz = Math.round(s.cam.z / GUIDE_SAMPLE) * GUIDE_SAMPLE,
-            key = `${type}:${game.localTeam}:${cx}:${cz}:${radius}:${world.fogVersion}:${Math.floor(s.time * 3)}`;
+          // Project the whole viewport, not a capped square around the zero-height pivot.
+          // Raised ground shifts towards the camera along its fixed viewing axis.
+          const viewport = R.viewport, height = world.surface.maxHeight,
+            dx = Math.sin(s.cam.yaw) * .82 / 1.1 * height,
+            dz = Math.cos(s.cam.yaw) * .82 / 1.1 * height,
+            corners = [[viewport.left, viewport.top], [viewport.left + viewport.width, viewport.top],
+              [viewport.left, viewport.top + viewport.height], [viewport.left + viewport.width, viewport.top + viewport.height]]
+              .flatMap(([x, y]) => { const p = R.ground(x, y, false); return [p, { x: p.x + dx, z: p.z + dz }]; }),
+            lower = (values: number[]) => Math.floor(Math.max(-world.extent, Math.min(...values) - GUIDE_SAMPLE * 2) / GUIDE_SAMPLE) * GUIDE_SAMPLE,
+            upper = (values: number[]) => Math.ceil(Math.min(world.extent, Math.max(...values) + GUIDE_SAMPLE * 2) / GUIDE_SAMPLE) * GUIDE_SAMPLE,
+            startX = lower(corners.map(p => p.x)), startZ = lower(corners.map(p => p.z)),
+            endX = upper(corners.map(p => p.x)), endZ = upper(corners.map(p => p.z)),
+            cx = (startX + endX) / 2, cz = (startZ + endZ) / 2,
+            key = `${type}:${game.localTeam}:${startX}:${startZ}:${endX}:${endZ}:${world.fogVersion}:${Math.floor(s.time * 3)}`;
+          if (endX <= startX || endZ <= startZ) { clearPlacementGuide(); return; }
           if (placementGuide?.world !== world || placementGuide.key !== key) {
-            const startX = cx - radius, startZ = cz - radius, count = radius * 2 / GUIDE_SAMPLE + 1,
-              samples = new Float32Array(count * count), sight = world.sight[game.localTeam], size = BUILDINGS[type].size;
-            for (let j = 0; j < count; j++) for (let i = 0; i < count; i++) {
+            const columns = (endX - startX) / GUIDE_SAMPLE + 1, rows = (endZ - startZ) / GUIDE_SAMPLE + 1,
+              samples = new Float32Array(columns * rows), sight = world.sight[game.localTeam], size = BUILDINGS[type].size;
+            for (let j = 0; j < rows; j++) for (let i = 0; i < columns; i++) {
               const x = startX + i * GUIDE_SAMPLE, z = startZ + j * GUIDE_SAMPLE, pos = { x, z };
               if (Math.abs(x) >= world.extent - 4 || Math.abs(z) >= world.extent - 4 || !sight.visible[world.idx(x, z)]) continue;
               // An unseen blocker must not be revealed by a changed color at its position.
               if (s.entities.some(e => e.hp > 0 && !game.observed(e) && (
                 distance(pos, e) < size + (e.kind === 'unit' ? e.size * UNIT_BODY_SCALE + 1 : e.size + 0.8) ||
                 (e.kind === 'unit' && e.exit && distance(pos, e.exit) < size + e.size * UNIT_BODY_SCALE + 1)))) continue;
-              samples[j * count + i] = game.canBuild(type, pos, game.localTeam) ? -1 : 1;
+              samples[j * columns + i] = game.canBuild(type, pos, game.localTeam) ? -1 : 1;
             }
-            const fine = (count - 1) * 2, row = fine + 1,
-              points = new Float32Array(row * row * 6), data = new Float32Array(fine * fine * 54);
-            for (let j = 0; j <= fine; j++) for (let i = 0; i <= fine; i++) {
+            const fineX = (columns - 1) * 2, fineZ = (rows - 1) * 2, row = fineX + 1,
+              points = new Float32Array(row * (fineZ + 1) * 6), data = new Float32Array(fineX * fineZ * 54);
+            for (let j = 0; j <= fineZ; j++) for (let i = 0; i <= fineX; i++) {
               const x = startX + i * GUIDE_STEP, z = startZ + j * GUIDE_STEP,
-                si = Math.min(count - 2, Math.floor(i / 2)), sj = Math.min(count - 2, Math.floor(j / 2)),
-                u = i / 2 - si, v = j / 2 - sj, base = sj * count + si,
-                a = samples[base], b = samples[base + 1], c = samples[base + count], d = samples[base + count + 1],
+                si = Math.min(columns - 2, Math.floor(i / 2)), sj = Math.min(rows - 2, Math.floor(j / 2)),
+                u = i / 2 - si, v = j / 2 - sj, base = sj * columns + si,
+                a = samples[base], b = samples[base + 1], c = samples[base + columns], d = samples[base + columns + 1],
                 // Missing visibility fades to transparency rather than becoming red.
                 visibility = (1-u)*(1-v)*Math.abs(a) + u*(1-v)*Math.abs(b) + (1-u)*v*Math.abs(c) + u*v*Math.abs(d),
-                weight = visibility * Math.max(0, Math.min(1, (radius - Math.abs(x - cx)) / GUIDE_SAMPLE,
-                  (radius - Math.abs(z - cz)) / GUIDE_SAMPLE)),
+                weight = visibility * Math.max(0, Math.min(1, (x - startX) / GUIDE_SAMPLE, (endX - x) / GUIDE_SAMPLE,
+                  (z - startZ) / GUIDE_SAMPLE, (endZ - z) / GUIDE_SAMPLE)),
                 score = (1-u)*(1-v)*a + u*(1-v)*b + (1-u)*v*c + u*v*d,
                 blend = visibility ? Math.max(0, Math.min(1, (score / visibility + 1) / 2)) : 0,
                 p = (j * row + i) * 6;
@@ -278,7 +289,7 @@
               data[offset++] = 0; data[offset++] = 1; data[offset++] = 0;
               data[offset++] = points[p + 3]; data[offset++] = points[p + 4]; data[offset++] = points[p + 5];
             };
-            for (let j = 0; j < fine; j++) for (let i = 0; i < fine; i++) {
+            for (let j = 0; j < fineZ; j++) for (let i = 0; i < fineX; i++) {
               const a = j * row + i, b = a + 1, d = a + row, c = d + 1;
               vertex(a); vertex(d); vertex(c); vertex(a); vertex(c); vertex(b);
             }

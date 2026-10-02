@@ -784,7 +784,7 @@ function appClock(diagnostic = false) {
     MeridianAudio: class { update() {} },
     MeridianGame: class {
       world = {};
-      s = { time: 0, speed: 1, entities: [], cam: { x: 0, z: 0, zoom: 65 } };
+      s = { time: 0, speed: 1, entities: [], cam: { x: 0, z: 0, zoom: 65, yaw: 0 } };
       effects = { fx: [], tick: dt => effectTicks.push(dt) };
       step(dt) { steps.push(dt); this.s.time += dt; }
     },
@@ -835,7 +835,8 @@ test('placement guide makes one fine, continuous terrain mesh from bounded visib
   const a=appClock(), marks=[], samples=[], uploads=[], releases=[];
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.ui.paused=true;
   a.setBuilding('depot',{size:2});a.game.localTeam=0;
-  a.game.world={extent:50, fogVersion:0, surface:{heightAt:(x,z)=>3+x*.01},
+  a.renderer.ground=(x,y,terrain)=>{assert.equal(terrain,false);return {x:(x-400)/20,z:(y-300)/20};};
+  a.game.world={extent:50, fogVersion:0, surface:{maxHeight:4,heightAt:(x,z)=>3+x*.01},
     sight:[{visible:new Uint8Array([1])}], idx:()=>0};
   a.game.s.cam.zoom=40;
   a.game.canBuild=(type,p,team)=>{samples.push([type,p.x,p.z,team]);return p.x<0?'blocked':'';};
@@ -858,6 +859,38 @@ test('placement guide makes one fine, continuous terrain mesh from bounded visib
   a.game.world.sight[0].visible[0]=0;a.game.world.fogVersion++;a.frame(60);
   assert.equal(samples.length,count,'do not probe unseen terrain');
   a.ui.mode=null;a.frame(80);assert.deepEqual(releases,['placementGuide']);
+  assert.deepEqual(a.errors,[]);
+});
+
+test('placement guide covers wide viewports and raised ground, updating on rotation and resize', () => {
+  const a=appClock(), uploads=[], marks=[];
+  a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};
+  a.setBuilding('depot',{size:2});a.game.localTeam=0;
+  a.game.world={extent:135,fogVersion:0,surface:{maxHeight:60,heightAt:()=>60},
+    sight:[{visible:new Uint8Array([1])}],idx:()=>0};
+  a.game.canBuild=()=>'';
+  a.renderer.geometry=(name,data)=>uploads.push(data);
+  a.renderer.add=(...args)=>marks.push(args);
+  a.renderer.ground=(x,y,terrain)=>{
+    assert.equal(terrain,false);
+    return {x:(x-400)/8,z:(y-300)/15};
+  };
+  const colorAt=(x,z)=>{
+    const data=uploads.at(-1), mark=marks.at(-1);
+    for(let i=0;i<data.length;i+=9)
+      if(Math.abs(data[i]+mark[1]-x)<.01 && Math.abs(data[i+2]+mark[3]-z)<.01)
+        return data[i+7];
+    return 0;
+  };
+  a.frame(20);
+  assert.ok(colorAt(48,63)>.8,'wide edge of elevated visible ground is not capped at 36');
+  const count=uploads.length;a.frame(40);assert.equal(uploads.length,count);
+  a.game.s.cam.yaw=Math.PI/2;a.frame(60);
+  assert.equal(uploads.length,count+1,'rotation changes the elevated ground footprint');
+  assert.ok(colorAt(93,0)>.8,'raised terrain shifts along the rotated camera axis');
+  a.renderer.viewport.width=960;a.frame(80);
+  assert.equal(uploads.length,count+2,'viewport resizing invalidates the mesh');
+  assert.ok(colorAt(111,0)>.8,'newly exposed right edge is covered');
   assert.deepEqual(a.errors,[]);
 });
 
