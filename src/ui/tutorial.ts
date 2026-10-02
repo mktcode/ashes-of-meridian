@@ -21,6 +21,14 @@ const BATTLE_TUTORIAL_TARGETS: Record<BattleTutorialStep, { tab: UITab; action: 
 };
 
 const uiTutorialMethods = {
+  tutorialCameraPoint(this: MeridianUI, point: Position, height: number): Position {
+    const limit = this.game.world!.extent - 18, yaw = this.game.s!.cam.yaw ?? 0;
+    // The renderer pivots at y=0. Project an elevated target onto that plane
+    // along its viewing axis so the intro does not frame ground south of it.
+    const shift = height * .82 / 1.1;
+    return { x: clamp(point.x - Math.sin(yaw) * shift, -limit, limit),
+      z: clamp(point.z - Math.cos(yaw) * shift, -limit, limit) };
+  },
   shouldBeginBattleTutorial(this: MeridianUI) {
     const s = this.game.s;
     return !!s && s.rules?.kind === 'single-player' && s.rules.mission.id === 'hq-elimination' && s.depth === 0 && this.localTeam === 0 &&
@@ -33,9 +41,10 @@ const uiTutorialMethods = {
     const worker = this.game.alive(e => e.team === this.localTeam && e.type === 'worker')[0];
     this.battleTutorial = { step: worker ? 'arrival' : 'buildHQ', achieved: new Set(), workersTrained: 0, elapsed: 0 };
     if (worker) {
-      const s = this.game.s!, limit = this.game.world!.extent - 18,
-        home = { x: s.cam.x, z: s.cam.z },
-        from = { x: home.x, z: clamp(worker.z + (worker.z < 0 ? 1 : -1) * s.cam.zoom, -limit, limit) };
+      const s = this.game.s!, height = this.game.world!.surface?.entityHeight(worker) ?? 0,
+        home = this.tutorialCameraPoint(s.cam, height),
+        from = this.tutorialCameraPoint({ x: s.cam.x,
+          z: worker.z + (worker.z < 0 ? 1 : -1) * s.cam.zoom }, height);
       this.battleTutorial.arrivalCamera = { from, home };
       s.cam.x = from.x; s.cam.z = from.z;
       this.game.submitAction(this.localTeam, { kind: 'order', ids: [worker.id], order: { type: 'move', x: worker.x + 7, z: worker.z - 7 } });

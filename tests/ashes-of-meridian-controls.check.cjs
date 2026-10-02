@@ -514,6 +514,38 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   assert.deepEqual(Array.from(h.ui.game.world.explored), explored);
 });
 
+test('tutorial camera targets compensate terrain height along the viewing axis', () => {
+  const h = setup(), s = h.ui.game.s;
+  s.depth = 0;
+  s.rules = { kind: 'single-player', mission: { id: 'hq-elimination' } };
+  s.cam = { x: -55, z: 48, zoom: 50, yaw: 0 };
+  const worker = { id: 3, team: 0, kind: 'unit', type: 'worker', hp: 100, x: -60, z: 50 };
+  const home = { id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, x: -60, z: 50, progress: 1 };
+  const enemy = { id: 2, team: 1, kind: 'building', type: 'hq', hp: 100, x: 60, z: -50, progress: 1 };
+  s.entities = [worker, home, enemy];
+  h.ui.game.world.surface = { entityHeight: e => e.team === 0 ? 11 : 22 };
+  const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
+  assert.equal(h.ui.beginBattleTutorial(), true);
+  close(s.cam.z, -8.2);
+  h.ui.advanceTutorialArrival(3);
+  close(s.cam.z, 48 - 8.2);
+  assert.equal(s.cam.x, -55);
+  assert.equal(h.ui.beginTutorialRecon(), true);
+  h.ui.advanceBattleIntro(1.25);
+  close(s.cam.z, home.z - 2 - 8.2);
+  h.ui.advanceBattleIntro(3.75);
+  close(s.cam.z, enemy.z - 2 - 16.4);
+  h.ui.advanceBattleIntro(6.5);
+  close(s.cam.z, home.z - 2 - 8.2);
+  s.cam.yaw = Math.PI / 2;
+  const rotated = h.ui.tutorialCameraPoint(home, 11);
+  close(rotated.x, home.x - 8.2);
+  close(rotated.z, home.z);
+  const edge = h.ui.tutorialCameraPoint({ x: -72, z: 0 }, 22);
+  assert.equal(edge.x, -72);
+  close(edge.z, 0);
+});
+
 test('resource-adjacent deployment belongs only to the first tutorial, not every new stage-one run', () => {
   const h = setup();
   for (const [depth, best, complete, expected] of [[0,0,false,'resource-start'], [0,0,true,'exploration'],
