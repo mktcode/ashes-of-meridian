@@ -107,7 +107,7 @@ class BattlefieldSurface {
   }
   entityHeight(e: Position & { type: string; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'> }): number {
     const floor = this.heightAt(e.x,e.z), index = e.type === 'air' ? 0 : e.type === 'destroyer' ? 1 : -1;
-    if (index < 0) return e.kind === 'building' && e.size !== undefined ? this.foundationBounds(e, e.size).max : floor;
+    if (index < 0) return e.kind === 'building' && e.size !== undefined ? this.buildingPose(e, e.size).height : floor;
     const profile = this.flights[index], cruise = this.sampleHeight(profile.cruise, e.x, e.z),
       hullFloor = this.sampleHeight(profile.floor, e.x, e.z),
       remaining = flightLaunchRemaining(e);
@@ -176,6 +176,27 @@ class BattlefieldSurface {
       for (let x = first(p.x); x <= last(p.x); x += this.step)
         if (Math.abs(this.heightAt(x,z) - (center + dx * (x - p.x) + dz * (z - p.z))) > .18) return false;
     return true;
+  }
+  // A restrained lean reduces downhill fill without changing buildability or the playable surface.
+  // Choose the lowest supporting plane for that lean; never sink a model into the uphill ground.
+  buildingPose(p: Position, radius: number): { height: number; dx: number; dz: number; fill: number } {
+    const r = Math.max(this.step, radius),
+      dx = (this.heightAt(p.x+r,p.z)-this.heightAt(p.x-r,p.z))/(2*r),
+      dz = (this.heightAt(p.x,p.z+r)-this.heightAt(p.x,p.z-r))/(2*r),
+      limit = Math.max(1,Math.hypot(dx,dz)/.045), gx = dx/limit, gz = dz/limit,
+      margin = radius * 1.08;
+    let height = this.heightAt(p.x,p.z), low = height;
+    // Include footprint edges and all interior terrain vertices, but no unrelated margin heights.
+    const axis = (v: number) => {
+      const values = [v-margin,v+margin];
+      for (let q = Math.ceil((v-margin+this.extent)/this.step)*this.step-this.extent; q < v+margin; q += this.step) values.push(q);
+      return values;
+    };
+    for (const z of axis(p.z)) for (const x of axis(p.x)) {
+      const residual = this.heightAt(x,z)-gx*(x-p.x)-gz*(z-p.z);
+      height = Math.max(height,residual); low = Math.min(low,residual);
+    }
+    return {height,dx:gx,dz:gz,fill:height-low};
   }
   foundationBounds(p: Position, radius: number): { min: number; max: number } {
     const margin = radius + 1, first = (v: number) => Math.floor((v - margin + this.extent) / this.step) * this.step - this.extent,

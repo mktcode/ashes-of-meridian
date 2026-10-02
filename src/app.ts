@@ -290,6 +290,7 @@
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
           worldView.sync(world);
+          worldView.retainBuildingGround(s.entities);
           R.camera(s.cam.x, s.cam.z, s.cam.zoom, false, 0, s.cam.yaw);
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
@@ -302,6 +303,7 @@
             const v = R.viewport;
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))
               continue;
+            worldView.drawBuildingGround(e);
             renderEntity(R, e, t, { localTeam: game.localTeam, occlusion: !ui.battleIntro && game.observed(e) });
             let selected = selectedIds.has(e.id),
               hover = ui.hover === e.id;
@@ -458,8 +460,10 @@
               clearPlacementGuide();
               R.fogOn = false;
               R.camera(0, 0, 65, true, time);
+              worldView.retainBuildingGround(preview);
               for (let e of preview) {
                 if (e.type === 'air') e.z = 6 + Math.sin(time * 0.3) * 5;
+                worldView.drawBuildingGround(e);
                 renderEntity(R, e, time);
               }
             }

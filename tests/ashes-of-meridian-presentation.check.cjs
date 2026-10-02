@@ -780,7 +780,7 @@ function appClock(diagnostic = false) {
       render(time, modelTime, thumbnails) { this.diagnostics?.beginFrame(); thumbnails?.(); draws.push({ now, time }); }
     },
     MeridianModelThumbnails: class { update() {} dispose() {} },
-    BattlefieldView: class { sync() {} },
+    BattlefieldView: class { sync() {} retainBuildingGround() {} drawBuildingGround() {} },
     MeridianAudio: class { update() {} },
     MeridianGame: class {
       world = {};

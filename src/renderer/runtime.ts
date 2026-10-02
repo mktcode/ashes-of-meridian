@@ -132,7 +132,6 @@
           cylinder: geom.cylinder(10),
           hex: geom.cylinder(6),
           choirMound: geom.choirMound(),
-          terrainFooting: geom.terrainFooting(),
           cone: geom.cylinder(7, 0),
           octa: geom.octa(),
           sphere: geom.sphere(),

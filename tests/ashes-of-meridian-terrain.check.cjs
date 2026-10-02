@@ -152,7 +152,7 @@ test('resource regions scatter across seeds and every family has variable dimens
   for (const count of [0, 1, 5, 2.5, NaN]) assert.throws(() => new api.Battlefield(1, 'frontier', count));
 });
 
-test('gentle planar slopes support upright buildings while steep slopes, roughness and build-only masks reject them', () => {
+test('gentle planar slopes support buildings while steep slopes, roughness and build-only masks reject them', () => {
   const { BattlefieldSurface } = scope(), p = {x:0,z:0},
     gentle = new BattlefieldSurface(20, 2.5, (x,z) => 20 + x * .08 + z * .04),
     steep = new BattlefieldSurface(20, 2.5, x => 20 + x * .2),
@@ -163,7 +163,10 @@ test('gentle planar slopes support upright buildings while steep slopes, roughne
   assert.equal(bump.foundation(p, 4), false, 'conservative vertex coverage catches interior extrema');
   const bounds = gentle.foundationBounds(p, 4);
   assert.ok(bounds.min < 20 && bounds.max > 20);
-  assert.equal(gentle.entityHeight({...p,type:'hq',kind:'building',size:4}), bounds.max);
+  const pose = gentle.buildingPose(p,4);
+  assert.equal(gentle.entityHeight({...p,type:'hq',kind:'building',size:4}), pose.height);
+  assert.ok(pose.height < bounds.max,'restrained lean reduces the required fill');
+  assert.ok(Math.hypot(pose.dx,pose.dz) <= .045 + 1e-9);
   assert.equal(gentle.entityHeight({...p,type:'worker',kind:'unit',size:.65}), 20);
   gentle.buildBlocked = new Uint8Array(16 * 16); gentle.buildBlocked[8 * 16 + 8] = 1;
   assert.ok(gentle.fits(0, 0, 4), 'build-only restrictions do not change movement');

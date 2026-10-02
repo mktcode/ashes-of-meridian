@@ -66,30 +66,6 @@
         }
         return o;
       },
-      // Reusable rounded-square earthwork: level seat, softened shoulder, flared buried toe.
-      // Terrain intersects the downhill apron; no per-building meshes or random samples.
-      terrainFooting() {
-        const out: number[] = [], contour: number[][] = [];
-        for (let corner = 0; corner < 4; corner++) {
-          const a = corner * Math.PI / 2, cx = Math.cos(a + Math.PI / 4) * Math.SQRT2 * .85,
-            cz = Math.sin(a + Math.PI / 4) * Math.SQRT2 * .85;
-          for (let j = 0; j <= 4; j++) {
-            const angle = a + j * Math.PI / 8;
-            contour.push([cx + .15 * Math.cos(angle), cz + .15 * Math.sin(angle)]);
-          }
-        }
-        const vertex = (i: number, scale: number, y: number) => [contour[i][0] * scale, y, contour[i][1] * scale];
-        for (let i = 0; i < contour.length; i++) {
-          const k = (i + 1) % contour.length, top = vertex(i, 1, .5), next = vertex(k, 1, .5);
-          this.tri(out, [0,.5,0], next, top);
-          for (const [upper, uy, lower, ly] of [[1,.5,1.05,.3], [1.05,.3,1.18,-.5]]) {
-            const a = vertex(i, upper, uy), b = vertex(k, upper, uy), c = vertex(k, lower, ly), d = vertex(i, lower, ly);
-            this.tri(out, a, b, c); this.tri(out, a, c, d);
-          }
-          this.tri(out, [0,-.5,0], vertex(i, 1.18, -.5), vertex(k, 1.18, -.5));
-        }
-        return out;
-      },
       // Shared Choir foundation: a low earth mound with an uneven, feathered edge.
       // Fixed contour, 40 triangles; no entity/world RNG and no vertical platform walls.
       choirMound() {

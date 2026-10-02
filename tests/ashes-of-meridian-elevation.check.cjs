@@ -314,12 +314,10 @@ test('vehicle ramp joins remain continuous and nearby cliffs cannot overturn the
   assert.deepEqual(drawPose({...e,z:-4},surface),drawPose({...e,z:-4},null),'flat floor keeps the original draw calls');
 });
 
-test('slope alignment leaves infantry, aircraft, buildings and resources upright and does not mutate terrain',()=>{
+test('slope alignment leaves infantry, aircraft and resources upright and does not mutate terrain',()=>{
   const surface=new BattlefieldSurface(10,2.5,(x,z)=>4+x*.25+z*.375), heights=Array.from(surface.heights), cliffs=Array.from(surface.cliffs);
-  for(const [kind,type] of [['unit','rifle'],['unit','medic'],['unit','hero'],['unit','air'],['unit','destroyer'],['building','depot'],['resource','gas']]) {
-    const e={id:2,x:0,z:0,rot:.7,kind,type,hp:100,faction:0,team:0,size:1,progress:1},flat=drawPose(e,null),drawn=drawPose(e,surface),
-      calls=kind==='building'?drawn.slice(1):drawn;
-    if(kind==='building')assert.equal(drawn[0][0],'terrainFooting','slope support is separate from upright model parts');
+  for(const [kind,type] of [['unit','rifle'],['unit','medic'],['unit','hero'],['unit','air'],['unit','destroyer'],['resource','gas']]) {
+    const e={id:2,x:0,z:0,rot:.7,kind,type,hp:100,faction:0,team:0,size:1,progress:1},flat=drawPose(e,null),calls=drawPose(e,surface);
     assert.equal(calls.length,flat.length);
     calls.forEach((c,i)=>{
       assert.ok(Math.abs(c[2]-flat[i][2]-surface.entityHeight(e))<1e-6);
@@ -346,20 +344,6 @@ test('cinematic foundations relocate off steep terrain, respect blockers and spa
   assert.deepEqual(Array.from(world.surface.heights),before,'search never changes terrain');
   world.staticGrid.fill(0);world.surface=new BattlefieldSurface(extent,cell,x=>20+x*.4);
   assert.equal(find(world,preferred,3,[]),null,'no suitable nearby ground means no cinematic prop');
-});
-
-test('terrain footings have level seats, rounded shoulders and wider buried toes',()=>{
-  const geom=vm.runInContext('geom',context), mesh=geom.terrainFooting();
-  assert.deepEqual(mesh,geom.terrainFooting(),'fixed reusable geometry');
-  let top=0,bottom=0,sloped=0;
-  for(let i=0;i<mesh.length;i+=9){
-    const [x,y,z,nx,ny,nz]=mesh.slice(i,i+6);
-    assert.ok([x,y,z,nx,ny,nz].every(Number.isFinite));
-    if(y===.5)top=Math.max(top,Math.abs(x),Math.abs(z));
-    if(y===-.5)bottom=Math.max(bottom,Math.abs(x),Math.abs(z));
-    if(ny>0&&ny<.99)sloped++;
-  }
-  assert.ok(Math.abs(top-1)<1e-12);assert.ok(bottom>top);assert.ok(sloped>0,'no sheer support walls');
 });
 
 test('GPU instances retain the complete vehicle slope pose without mutating entities',()=>{
