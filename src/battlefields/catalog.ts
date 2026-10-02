@@ -1,4 +1,4 @@
-/* Established landscape families plus explicitly selectable engineered prototypes. */
+/* Expedition map catalog: procedural landscapes and engineered platform decks. */
 'use strict';
 const BATTLEFIELDS = {
   desert: createDynamicBattlefield('DESERT', 'desert'),
@@ -12,8 +12,7 @@ const BATTLEFIELDS = {
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';
 function availableBattlefields(): BattlefieldId[] {
-  // Platform prototype is explicitly selectable for feedback, not yet rolled into expeditions.
-  return (Object.keys(BATTLEFIELDS) as BattlefieldId[]).filter(id => id !== 'platform-deck');
+  return Object.keys(BATTLEFIELDS) as BattlefieldId[];
 }
 function battlefieldId(value: unknown): BattlefieldId {
   return typeof value === 'string' && Object.hasOwn(BATTLEFIELDS, value)

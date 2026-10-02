@@ -82,14 +82,14 @@ test('all landscape families share a seed-owned starting hour and readable midni
   }
   assert.equal(hours.size,4);
 });
-test('platform prototype has flat tiers, usable ramps and a closed technical environment',()=>{
+test('platform expedition map has flat tiers, usable ramps and a closed technical environment',()=>{
   const api=scope(),w=new api.Battlefield(1409,'platform-deck',4),plan=api.platformBattlefieldPlan(1409,w.extent);
   assert.ok(w.startSites.length>=4);
-  assert.ok(api.MISSIONS['hq-elimination'].maps.includes('platform-deck'),'explicit experiment mission supports the map');
+  assert.ok(api.MISSIONS['hq-elimination'].maps.includes('platform-deck'),'ordinary HQ-elimination mission supports the map');
   assert.equal(w.renderProfile.groundTexture,'metal');
   assert.equal(w.renderProfile.ecology,undefined);assert.equal(w.renderProfile.landscape,undefined);
   assert.equal(w.renderProfile.shrubDecor.opacity,0);
-  assert.ok(!api.availableBattlefields().includes('platform-deck'),'prototype does not change encounter selection');
+  assert.ok(api.availableBattlefields().includes('platform-deck'),'platform map is included in expedition selection');
   for(const p of plan.platforms.filter(p=>p.height===18)){
     assert.equal(w.surface.heightAt(p.x,p.z),p.height);
     assert.ok(w.surface.foundation(p,6));

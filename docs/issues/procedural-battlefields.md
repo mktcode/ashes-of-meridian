@@ -10,6 +10,6 @@
 
 Prüfkontext für die verbleibende Landschaftsabnahme: vollständig aufgedeckte Vogelperspektiven von `alien-planet`/`52920759`, `desert`/`1409`, `westmark`/`1` und `haven`/`1746973` über `file://`/Software-WebGL. Entfernungsschleier und Wetter nur für diese Diagnose ausgeblendet; gestrichelte Linie markiert die spielbare Fläche. CPU-/GPU-Höhenstichproben stimmen überein. Diese Ansichten ersetzen weder Spielbarkeit noch Geräteleistung. Der gemeldete gespeicherte Alien-Checkpoint lässt sich einschließlich Commander nach Reload fortsetzen; breitere Seed-/KI-Abnahme bleibt offen.
 
-Der zusätzliche technische Generator wird getrennt unter [Plattformkarten](platform-battlefields.md) abgenommen und ist noch nicht Teil der zufälligen Expeditionen; diese Naturkarten-Abnahme bleibt unverändert.
+Der zusätzliche technische Generator wird getrennt unter [Plattformkarten](platform-battlefields.md) abgenommen und gehört ebenfalls zum regulären Expeditionspool; diese Naturkarten-Abnahme bleibt unverändert.
 
 Künstlerische und Geräteabnahme zentral unter [Landschaften](project-tomorrow.md); bestehende HQ-/Referenzfixtures unter [Testpflege](teststrategie-review.md). Kein automatischer KI-/Simulationslaufauftrag.
