@@ -2,7 +2,8 @@
  * Wall/ramp margins are blocked by the CPU raster; no second playable surface. */
 'use strict';
 TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
-  const out:number[]=[],floor=plan.floor-.13,
+  const out:number[]=[],floor=plan.floor-.13,random=seeded(plan.detailSeed),
+    palettes=[[.64,.76,.84],[.73,.75,.77],[.67,.72,.65],[.66,.69,.78]],
     quad=(a:number[],b:number[],c:number[],d:number[],color:number[])=>{
       geom.tri(out,a,b,c,color);geom.tri(out,a,c,d,color);
     },
@@ -14,11 +15,39 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
   rectangle(0,0,(plan.extent+400)*2,(plan.extent+400)*2,floor,[.46,.57,.64]);
   for(const p of plan.platforms){
     const top=p.height-.13,base=p.base-.13,left=p.x-p.width/2,right=p.x+p.width/2,
-      near=p.z-p.depth/2,far=p.z+p.depth/2,corners=platformOutline(p);
+      near=p.z-p.depth/2,far=p.z+p.depth/2,corners=platformOutline(p),
+      paint=palettes[Math.floor(random()*palettes.length)],
+      rim=(v:Position,t:number)=>{
+        const distance=Math.hypot(v.x-p.x,v.z-p.z),inset=.5*(1-Math.cos(t*Math.PI/2));
+        return [v.x+(p.x-v.x)*inset/distance,top-.5+.5*Math.sin(t*Math.PI/2),
+          v.z+(p.z-v.z)*inset/distance];
+      };
     for(let side=0;side<corners.length;side++){
-      const a=corners[side],b=corners[(side+1)%corners.length];
-      geom.tri(out,[p.x,top,p.z],[a.x,top,a.z],[b.x,top,b.z],[.68,.78,.85]);
-      quad([a.x,top,a.z],[a.x,base,a.z],[b.x,base,b.z],[b.x,top,b.z],[.35,.45,.54]);
+      const a=corners[side],b=corners[(side+1)%corners.length],dx=b.x-a.x,dz=b.z-a.z,
+        length=Math.hypot(dx,dz),nx=-dz/length,nz=dx/length;
+      geom.tri(out,[p.x,top,p.z],rim(a,1),rim(b,1),paint);
+      for(let band=0;band<3;band++)quad(rim(a,band/3),rim(b,band/3),rim(b,(band+1)/3),rim(a,(band+1)/3),[.56,.65,.72]);
+      quad([a.x,top-.5,a.z],[a.x,base,a.z],[b.x,base,b.z],[b.x,top-.5,b.z],[.35,.45,.54]);
+      const panel=(from:number,to:number,low:number,high:number,color:number[],offset=.02)=>{
+        const point=(u:number,y:number)=>[a.x+dx*u/length+nx*offset,y,a.z+dz*u/length+nz*offset];
+        quad(point(from,high),point(from,low),point(to,low),point(to,high),color);
+      };
+      // All hardware stays on retaining walls inside the CPU's blocked edge band.
+      if(length>7)for(let u=2;u<length-3;u+=9){
+        const end=Math.min(u+6,length-1),vent=random()<.45;
+        panel(u,end,base+1,base+4.25,[.21,.29,.35]);
+        panel(u-.35,u+.25,base+.3,top-.65,[.59,.65,.68],.10);
+        if(vent){
+          for(let y=base+1.5;y<base+4;y+=.55)panel(u+.4,end-.4,y,y+.14,[.49,.56,.61],.05);
+        }else{
+          panel(u+.35,end-.35,base+1.35,base+3.75,[.42,.48,.52],.04);
+          panel(u+.6,end-.6,base+2.3,base+2.5,[.22,.30,.37],.065);
+        }
+      }
+      if(length>7){
+        panel(.5,length-.5,base+.5,base+.7,[.55,.63,.67],.12);
+        panel(.5,length-.5,top-1.1,top-.9,[.74,.60,.34],.075);
+      }
     }
     // Clip painted seams to the inset polygon, never across removed corners.
     const seam=(start:Position,end:Position)=>{
@@ -36,6 +65,19 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
     };
     for(let x=left+10;x<right-3;x+=10)seam({x,z:near+2},{x,z:far-2});
     for(let z=near+10;z<far-3;z+=10)seam({x:left+2,z},{x:right-2,z});
+    // Flush service covers: readable deck detail, never a hidden movement obstacle.
+    for(let j=0;j<3;j++){
+      const x=p.x+(random()-.5)*(p.width-18),z=p.z+(random()-.5)*(p.depth-18);
+      if([-4,4].some(dx=>[-4,4].some(dz=>!platformContains(p,x+dx,z+dz)||
+        Math.abs(platformBattlefieldHeight(plan,x+dx,z+dz)-p.height)>.01)))continue;
+      if(plan.ramps.some(r=>{
+        const u=(x-r.x)*r.dx+(z-r.z)*r.dz,v=(x-r.x)*r.dz-(z-r.z)*r.dx;
+        return u>=-PLATFORM_LANDING-4&&u<=r.length+PLATFORM_LANDING+4&&Math.abs(v)<r.width/2+8;
+      }))continue;
+      rectangle(x,z,6,5,top+.023,[.30,.40,.47]);
+      rectangle(x,z,5.5,4.5,top+.025,[.56,.61,.63]);
+      for(let slot=-1.5;slot<=1.5;slot+=.6)rectangle(x+slot,z,.18,3.5,top+.03,[.27,.35,.41]);
+    }
   }
   for(const r of plan.ramps){
     const base=r.base-.13,nx=-r.dz*r.width/2,nz=r.dx*r.width/2,
@@ -51,6 +93,23 @@ TerrainModels.platformDeck=(plan:BattlefieldPlatformPlan)=>{
         r.x+r.dx*u-r.dz*v,base+r.rise*u/r.length+.025,r.z+r.dz*u+r.dx*v];
       quad(paint(0,offset-.5),paint(0,offset+.5),
         paint(r.length,offset+.5),paint(r.length,offset-.5),[1,.72,.24]);
+    }
+  }
+  return out;
+};
+TerrainModels.platformSignals=(plan:BattlefieldPlatformPlan)=>{
+  const out:number[]=[],random=seeded(plan.detailSeed^0x4c494748);
+  for(const p of plan.platforms){
+    const outline=platformOutline(p),color=random()<.7?[.25,.66,.82]:[.90,.57,.18];
+    for(let i=0;i<outline.length;i++){
+      const a=outline[i],b=outline[(i+1)%outline.length],dx=b.x-a.x,dz=b.z-a.z,
+        length=Math.hypot(dx,dz);if(length<9)continue;
+      const nx=-dz/length,nz=dx/length,y=p.height-1.6;
+      for(let u=3;u<length-2;u+=18){
+        const point=(t:number,h:number)=>[a.x+dx*t/length+nx*.06,h,a.z+dz*t/length+nz*.06];
+        geom.tri(out,point(u,y),point(u,y-.18),point(u+1.5,y-.18),color);
+        geom.tri(out,point(u,y),point(u+1.5,y-.18),point(u+1.5,y),color);
+      }
     }
   }
   return out;

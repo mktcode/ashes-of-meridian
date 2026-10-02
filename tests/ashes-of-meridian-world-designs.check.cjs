@@ -120,12 +120,12 @@ test('platform plans vary their partition and tier distribution without four pla
   }
   assert.ok(counts.size>=3);assert.equal(shapes.size,7);assert.ok(heights.size>=2);
 });
-test('chamfered platform outlines agree with CPU containment and cut back the box corners',()=>{
+test('rounded platform outlines agree with CPU containment and cut back the box corners',()=>{
   const api=scope(),plan=api.platformBattlefieldPlan(3,180);
   let beveled=0;
   for(const p of plan.platforms){
     const outline=api.platformOutline(p);
-    assert.ok(outline.length>=4&&outline.length<=8);
+    assert.ok(outline.length>=4&&outline.length<=20);
     for(const v of outline)assert.ok(api.platformContains(p,v.x,v.z));
     if(p.corners[0]>0){
       beveled++;assert.equal(api.platformContains(p,p.x-p.width/2,p.z-p.depth/2),false);
@@ -136,13 +136,16 @@ test('chamfered platform outlines agree with CPU containment and cut back the bo
 test('platform mesh uses flat deck and ramp normals rather than smoothed landscape shoulders',()=>{
   const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-terrain']),
     plan=api.platformBattlefieldPlan(1409,160),mesh=api.TerrainModels.geometry({mesh:'terrain',model:'platformDeck',plan});
-  assert.ok(mesh.length>0&&mesh.length<20000);
+  assert.ok(mesh.length>0&&mesh.length<150000);
   for(let i=0;i<mesh.length;i+=9){
     assert.ok(mesh.slice(i,i+9).every(Number.isFinite));
     assert.ok(Math.abs(Math.hypot(...mesh.slice(i+3,i+6))-1)<1e-6);
   }
   assert.ok(mesh.some((v,i)=>i%9===4&&v===1),'flat upper faces');
-  assert.ok(mesh.some((v,i)=>i%9===4&&v>0&&v<1),'inclined ramps');
+  assert.ok(mesh.some((v,i)=>i%9===4&&v>0&&v<1),'inclined ramps and rolled edges');
+  const signals=api.TerrainModels.geometry({mesh:'platformSignals',model:'platformSignals',plan});
+  assert.ok(signals.length>0&&signals.length<15000);
+  assert.ok(signals.every(Number.isFinite));
 });
 
 test('generated geometry uses CPU samples and matching triangle interpolation with finite unit normals', () => {

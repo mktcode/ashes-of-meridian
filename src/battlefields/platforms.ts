@@ -9,7 +9,7 @@ const PLATFORM_RAMP_LENGTH=22.5;
 const PLATFORM_LANDING=15;
 interface BattlefieldRamp { x: number; z: number; dx: number; dz: number; length: number; width: number; rise: number; base: number }
 interface BattlefieldPlatformPlan {
-  extent: number; floor: number; platforms: BattlefieldPlatform[]; ramps: BattlefieldRamp[];
+  extent: number; floor: number; detailSeed: number; platforms: BattlefieldPlatform[]; ramps: BattlefieldRamp[];
 }
 function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatformPlan {
   const random=seeded(seed^0x504c4154),snap=(v:number)=>Math.round(v/2.5)*2.5,
@@ -25,7 +25,7 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
     if(x)rooms.push({...r,x:r.x-(length-first)/2,width:first},{...r,x:r.x+(length-second)/2,width:second});
     else rooms.push({...r,z:r.z-(length-first)/2,depth:first},{...r,z:r.z+(length-second)/2,depth:second});
   }
-  const plan={extent,floor,platforms,ramps},supports: BattlefieldPlatform[]=[];
+  const plan={extent,floor,detailSeed:seed^0x50444543,platforms,ramps},supports: BattlefieldPlatform[]=[];
   for(const room of rooms){
     const p:BattlefieldPlatform={...room,height:floor+PLATFORM_TIER_HEIGHT,base:floor,corners:[0,0,0,0]};
     if(random()<.7&&room.width>=75){
@@ -97,16 +97,28 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
   }
   return plan;
 }
+const PLATFORM_ARC_NORMALS=Array.from({length:4},(_,i)=>{
+  const angle=(i+.5)*Math.PI/8;return {x:Math.cos(angle),z:Math.sin(angle)};
+});
 function platformContains(p:BattlefieldPlatform,x:number,z:number):boolean {
-  const u=x-p.x+p.width/2,v=z-p.z+p.depth/2,[a,b,c,d]=p.corners;
-  return u>=0&&u<=p.width&&v>=0&&v<=p.depth&&u+v>=a&&u+p.depth-v>=b&&
-    p.width-u+p.depth-v>=c&&p.width-u+v>=d;
+  const u=x-p.x+p.width/2,v=z-p.z+p.depth/2;
+  if(u<0||u>p.width||v<0||v>p.depth)return false;
+  const cut=(dx:number,dz:number,r:number)=>dx<r&&dz<r&&
+    PLATFORM_ARC_NORMALS.some(n=>(r-dx)*n.x+(r-dz)*n.z>r*Math.cos(Math.PI/16)+1e-8);
+  return !cut(u,v,p.corners[0])&&!cut(u,p.depth-v,p.corners[1])&&
+    !cut(p.width-u,p.depth-v,p.corners[2])&&!cut(p.width-u,v,p.corners[3]);
 }
 function platformOutline(p:BattlefieldPlatform):Position[]{
-  const l=p.x-p.width/2,r=p.x+p.width/2,n=p.z-p.depth/2,f=p.z+p.depth/2,[a,b,c,d]=p.corners;
-  return [{x:l,z:n+a},{x:l,z:f-b},{x:l+b,z:f},{x:r-c,z:f},
-    {x:r,z:f-c},{x:r,z:n+d},{x:r-d,z:n},{x:l+a,z:n}]
-    .filter((v,i,all)=>v.x!==all[(i+1)%all.length].x||v.z!==all[(i+1)%all.length].z);
+  const l=p.x-p.width/2,r=p.x+p.width/2,n=p.z-p.depth/2,f=p.z+p.depth/2,[a,b,c,d]=p.corners,
+    out:Position[]=[];
+  for(const [x,z,radius,angle] of [[l+b,f-b,b,Math.PI],[r-c,f-c,c,Math.PI/2],
+    [r-d,n+d,d,0],[l+a,n+a,a,-Math.PI/2]]){
+    for(let i=0;i<=4;i++){
+      const t=angle-i*Math.PI/8;
+      out.push({x:x+radius*Math.cos(t),z:z+radius*Math.sin(t)});
+    }
+  }
+  return out.filter((v,i,all)=>Math.hypot(v.x-all[(i+1)%all.length].x,v.z-all[(i+1)%all.length].z)>1e-7);
 }
 function platformBattlefieldHeight(plan: BattlefieldPlatformPlan,x:number,z:number):number {
   let height=plan.floor;
@@ -162,8 +174,10 @@ function createPlatformBattlefield(): BattlefieldDefinition {
         w.renderData.groundColors.push([.55,.65,.72],[.55,.65,.72]);
       }
       w.renderData.geometries.push({mesh:'terrain',model:'platformDeck',plan},
-        {mesh:'platformFixtures',model:'shipPlant',seed:197,extent:0});
+        {mesh:'platformFixtures',model:'shipPlant',seed:197,extent:0},
+        {mesh:'platformSignals',model:'platformSignals',plan});
       builder.place('terrain',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
+      builder.place('platformSignals',0,0,0,1,1,1,0xffffff,0,0,0,.65,1,'static','AUTO');
       // Machinery is outside the playable rectangle, never an invisible nav obstacle.
       for(const side of [-1,1])for(let z=-120;z<=120;z+=60)
         builder.place('platformFixtures',side*(w.extent+25),plan.floor,z,5,7,5,
