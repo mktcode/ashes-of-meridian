@@ -17,6 +17,8 @@ COPY styles/ /site/styles/
 COPY audio/music-ratchet-theory.mp3 audio/music-last-light-relay.mp3 audio/music-breach-protocol.mp3 audio/music-black-channel.mp3 audio/music-sporewake.mp3 audio/music-rootmind.mp3 audio/sfx-infantry-shot.wav /site/audio/
 COPY audio/voices/ /site/audio/voices/
 COPY assets/portraits/ /site/assets/portraits/
+COPY assets/ui/ /site/assets/ui/
+COPY assets/fonts/aldrich/ /site/assets/fonts/aldrich/
 COPY assets/textures/texture-ground-dirt-base.webp assets/textures/texture-floor-alien-planet.webp assets/textures/texture-floor-mothership.webp assets/textures/texture-westmark-meadow.webp /site/assets/textures/
 RUN find /site -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
       -exec gzip -9 -k {} \;

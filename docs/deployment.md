@@ -4,7 +4,7 @@ Derselbe statische Browserstand funktioniert über `file://`, Webhosting und itc
 
 ## Docker und Dokploy
 
-[Dockerfile](../Dockerfile) ist die maßgebliche Web-Laufzeitliste. Quellen, Tests und Source Maps bleiben draußen; lokale CSS-/Audioassets zusätzlich zu eingebetteten WebGL-Assets mitführen. [Nginx](../nginx.conf) liefert fehlende Dateien bewusst als 404, ohne SPA-Fallback; Revalidierung verhindert gemischte Versionen bei unhashed Dateinamen.
+[Dockerfile](../Dockerfile) ist die maßgebliche Web-Laufzeitliste. Quellen, Tests und Source Maps bleiben draußen; lokale UI-Grafiken, Schriftdateien, CSS- und Audioassets zusätzlich zu eingebetteten WebGL-Assets mitführen. Bei neuen Laufzeitassets auch die Freigaben in [`.dockerignore`](../.dockerignore) ergänzen. [Nginx](../nginx.conf) liefert fehlende Dateien bewusst als 404, ohne SPA-Fallback; Revalidierung verhindert gemischte Versionen bei unhashed Dateinamen.
 
 ```bash
 docker build -t ashes-of-meridian .

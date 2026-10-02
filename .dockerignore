@@ -15,6 +15,11 @@
 !assets/
 !assets/portraits/
 !assets/portraits/**
+!assets/ui/
+!assets/ui/**
+!assets/fonts/
+!assets/fonts/aldrich/
+!assets/fonts/aldrich/**
 !assets/textures/
 !assets/textures/texture-ground-dirt-base.webp
 !assets/textures/texture-floor-alien-planet.webp
