@@ -6,6 +6,8 @@
 
 **Lokale Nutzeraufnahme:** Firefox 140/Linux, Mothership Seed 84473642, High/4× MSAA, Tempo 2, 139–202 Gesamtentitäten. Im letzten rund 102-s-Ausschnitt etwa 58,7 Render-FPS; Callback-p99 15 ms, Maximum 66 ms, davon bis 64 ms Simulation/Effekttick. Starke Spitzen um 543 s. Keine GPU-Timer, keine Buildkennung, keine konkrete Unterpfadursache. Spätere Pause/Resize separat betrachten; kein Vorher-/Nachhervergleich.
 
+**Diagnose-Zuordnung:** Statische Codeprüfung auf Stand `e588cf2`: [Diagnoseexport](../../src/diagnostics/browser.ts) übernimmt `applicationVersion` aus der fest eingetragenen Runtime-Version `1.0.0` in [der Anwendung](../../src/app.ts). Eine eindeutige Build-/Commitkennung fehlt; verschiedene Quellstände sind damit im Export nicht zuverlässig unterscheidbar.
+
 ## Nächste Eingrenzung
 
 1. Simulationsphase bei Bedarf feiner messen: Schritte je Callback, Bewegung/A*, KI, Sicht, Kampf/Wirtschaft, Effekte. Bisherige Spitzen rechtfertigen keine pauschale Optimierung eines Vollscans.
@@ -22,6 +24,7 @@ Vorhandene Entlastungen sind implementiert, nicht auf dem Handy abgenommen: 60-F
 
 ## Messplan und Abnahme
 
+- [ ] Eindeutige Kennung des ausgelieferten Builds im Diagnoseexport ergänzen, ohne Laufzeit-Git, Serverpflicht oder zusätzliche Telemetrie. Gezielter Nachweis: unterschiedliche Builds sind unterscheidbar, Kennung entspricht dem ausgelieferten Stand. Bis dahin den Commit/Build bei jeder Aufnahme separat notieren.
 - [ ] Kurze vergleichbare CPU-/GPU-Aufnahmen mit Kontext sichern; fehlende Timer nicht als Nullkosten lesen.
 - [ ] Reale Kartenwechsel, Kamerafahrt, Engstelle/große bewegte Armee prüfen; nach erster Messung eingrenzen, kein Vollkreuzprodukt.
 - [ ] Culling-Ränder, Bewegungswirkung des Limits und HUD unter Last menschlich abnehmen.
