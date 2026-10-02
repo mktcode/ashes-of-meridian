@@ -255,7 +255,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
 });
 
 test('world view dispatches declared terrain models and profiles without assuming mountains', () => {
-  const context = loadScripts(['core', ...RENDERER_SCRIPTS, ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
+  const context = loadScripts(['core', 'content', ...RENDERER_SCRIPTS, ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const { Battlefield, BattlefieldView, TerrainModels } = vm.runInContext('({Battlefield, BattlefieldView, TerrainModels})', context);
   const world = new Battlefield(1409, 'mothership'), renderer = createRendererStub(), uploads = [], inputs = [];
   const feature = world.renderData.features[0];

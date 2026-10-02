@@ -160,6 +160,49 @@ test('rounded platform outlines agree with CPU containment and cut back the box 
   }
   assert.ok(beveled>0);
 });
+test('platform corner styles mix rounded arcs and single chamfers with matching CPU outlines',()=>{
+  const api=scope(),styles=new Set();
+  for(const seed of [3,7,1409])for(const p of api.platformBattlefieldPlan(seed,180).platforms){
+    styles.add(p.cornerStyle);
+    const outline=api.platformOutline(p);
+    assert.ok(outline.length<=(p.cornerStyle==='chamfer'?8:20));
+    for(const v of outline)assert.ok(api.platformContains(p,v.x,v.z));
+    if(p.corners[0]>0){
+      const radius=p.corners[0],x=p.x-p.width/2+radius*.35,z=p.z-p.depth/2+radius*.35;
+      assert.ok(api.platformContains({...p,cornerStyle:'round'},x,z));
+      assert.equal(api.platformContains({...p,cornerStyle:'chamfer'},x,z),false);
+    }
+  }
+  assert.deepEqual([...styles].sort(),['chamfer','round']);
+});
+test('platform skyline surrounds all sides outside play bounds with finite bounded body/light meshes',()=>{
+  const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-skyline']),
+    w=new api.Battlefield(3,'platform-deck',4),plan=w.renderData.geometries.find(d=>d.mesh==='terrain').plan,
+    before=JSON.stringify(plan);
+  assert.equal(plan.skyline.length,36);
+  assert.ok(new Set(plan.skyline.map(p=>p.style)).size>=3);
+  for(const side of [-1,1]){
+    assert.ok(plan.skyline.some(p=>p.x*side>w.extent));
+    assert.ok(plan.skyline.some(p=>p.z*side>w.extent));
+  }
+  for(const p of plan.skyline){
+    assert.ok(Math.abs(p.x)-p.width/2>w.extent+15||Math.abs(p.z)-p.depth/2>w.extent+15);
+    assert.ok(p.height>=28&&p.height<=76);
+  }
+  for(const model of ['platformSkyline','platformSkylineLights']){
+    const mesh=api.TerrainModels.geometry({mesh:model,model,plan});
+    assert.ok(mesh.length>0&&mesh.length<900000,'bounded exterior mesh budget');
+    for(let i=0;i<mesh.length;i+=9){
+      assert.ok(mesh.slice(i,i+9).every(Number.isFinite));
+      assert.ok(Math.abs(Math.hypot(...mesh.slice(i+3,i+6))-1)<1e-6);
+      assert.ok(Math.abs(mesh[i])>w.extent+12||Math.abs(mesh[i+2])>w.extent+12,'no geometry over the playable rectangle');
+      assert.ok(Math.max(Math.abs(mesh[i]),Math.abs(mesh[i+2]))<w.renderProfile.sceneryBounds.extent);
+      assert.ok(mesh[i+1]<w.renderProfile.sceneryBounds.maxHeight);
+    }
+  }
+  assert.equal(JSON.stringify(plan),before);
+  assert.equal(w.surface.maxHeight,18,'cosmetic skyline never enters terrain/flight envelopes');
+});
 test('platform floor zoning, routes and flush channels add detail without changing the CPU plan',()=>{
   const api=scope(['renderer-geometry','renderer-terrain-models','renderer-platform-terrain']),
     plan=api.platformBattlefieldPlan(3,180),before=JSON.stringify(plan),

@@ -3,15 +3,20 @@
 interface BattlefieldPlatform {
   x: number; z: number; width: number; depth: number; height: number; base: number;
   corners: readonly [number,number,number,number];
+  cornerStyle: 'round' | 'chamfer';
 }
 const PLATFORM_TIER_HEIGHT=3;
 const PLATFORM_RAMP_LENGTH=12.5;
 const PLATFORM_LANDING=15;
 interface BattlefieldRamp { x: number; z: number; dx: number; dz: number; length: number; width: number; rise: number; base: number }
 interface BattlefieldPlatformScenery extends Position { height:number; width:number; depth:number }
+interface BattlefieldPlatformSkyline extends Position {
+  width:number; depth:number; height:number; style:number;
+}
 interface BattlefieldPlatformPlan {
   extent: number; floor: number; detailSeed: number; platforms: BattlefieldPlatform[]; ramps: BattlefieldRamp[];
   scenery: BattlefieldPlatformScenery[];
+  skyline: BattlefieldPlatformSkyline[];
 }
 function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatformPlan {
   const random=seeded(seed^0x504c4154),snap=(v:number)=>Math.round(v/2.5)*2.5,
@@ -27,9 +32,9 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
     if(x)rooms.push({...r,x:r.x-(length-first)/2,width:first},{...r,x:r.x+(length-second)/2,width:second});
     else rooms.push({...r,z:r.z-(length-first)/2,depth:first},{...r,z:r.z+(length-second)/2,depth:second});
   }
-  const plan:BattlefieldPlatformPlan={extent,floor,detailSeed:seed^0x50444543,platforms,ramps,scenery:[]},supports: BattlefieldPlatform[]=[];
+  const plan:BattlefieldPlatformPlan={extent,floor,detailSeed:seed^0x50444543,platforms,ramps,scenery:[],skyline:[]},supports: BattlefieldPlatform[]=[];
   for(const room of rooms){
-    const p:BattlefieldPlatform={...room,height:floor+PLATFORM_TIER_HEIGHT,base:floor,corners:[0,0,0,0]};
+    const p:BattlefieldPlatform={...room,height:floor+PLATFORM_TIER_HEIGHT,base:floor,corners:[0,0,0,0],cornerStyle:'round'};
     if(random()<.7&&room.width>=75){
       const sx=random()<.5?-1:1,sz=random()<.5?-1:1,cw=snap(15+random()*10),cd=snap(15+random()*15),
         main={...p,x:p.x-sx*cw/2,width:p.width-cw},
@@ -49,14 +54,15 @@ function platformBattlefieldPlan(seed: number, extent: number): BattlefieldPlatf
       along=sign*(long/2-size/2-10),
       x=p.x+(alongX?along:across),z=p.z+(alongX?across:along),dx=alongX?sign:0,dz=alongX?0:sign,
       upper:BattlefieldPlatform={x,z,width:size,depth:size,height:floor+PLATFORM_TIER_HEIGHT*2,
-        base:floor+PLATFORM_TIER_HEIGHT,corners:[0,0,0,0]},length=PLATFORM_RAMP_LENGTH;
+        base:floor+PLATFORM_TIER_HEIGHT,corners:[0,0,0,0],cornerStyle:'round'},length=PLATFORM_RAMP_LENGTH;
     platforms.push(upper);highDecks++;
     ramps.push({x:x-dx*(size/2+length),z:z-dz*(size/2+length),dx,dz,length,width:25,rise:PLATFORM_TIER_HEIGHT,base:upper.base});
   }
   if(!highDecks)throw Error('Platform partition lacks a supported high deck');
   // Shape RNG is independent: corner detail never shifts the partition/access draws.
-  const shape=seeded(seed^0x50434f52);
+  const shape=seeded(seed^0x50434f52),style=seeded(seed^0x50434544);
   for(const p of platforms){
+    p.cornerStyle=style()<.5?'round':'chamfer';
     const max=p.height>floor+PLATFORM_TIER_HEIGHT?Math.min(5,(p.width-25)/2):Math.min(12.5,p.width/4,p.depth/4);
     p.corners=Array.from({length:4},()=>max<2.5||shape()<.15?0:Math.floor((2.5+shape()*(max-2.5))/2.5)*2.5) as [number,number,number,number];
   }
@@ -106,7 +112,8 @@ function platformContains(p:BattlefieldPlatform,x:number,z:number):boolean {
   const u=x-p.x+p.width/2,v=z-p.z+p.depth/2;
   if(u<0||u>p.width||v<0||v>p.depth)return false;
   const cut=(dx:number,dz:number,r:number)=>dx<r&&dz<r&&
-    PLATFORM_ARC_NORMALS.some(n=>(r-dx)*n.x+(r-dz)*n.z>r*Math.cos(Math.PI/16)+1e-8);
+    (p.cornerStyle==='chamfer'?dx+dz<r-1e-8:
+      PLATFORM_ARC_NORMALS.some(n=>(r-dx)*n.x+(r-dz)*n.z>r*Math.cos(Math.PI/16)+1e-8));
   return !cut(u,v,p.corners[0])&&!cut(u,p.depth-v,p.corners[1])&&
     !cut(p.width-u,p.depth-v,p.corners[2])&&!cut(p.width-u,v,p.corners[3]);
 }
@@ -115,8 +122,9 @@ function platformOutline(p:BattlefieldPlatform):Position[]{
     out:Position[]=[];
   for(const [x,z,radius,angle] of [[l+b,f-b,b,Math.PI],[r-c,f-c,c,Math.PI/2],
     [r-d,n+d,d,0],[l+a,n+a,a,-Math.PI/2]]){
-    for(let i=0;i<=4;i++){
-      const t=angle-i*Math.PI/8;
+    const segments=p.cornerStyle==='chamfer'?1:4;
+    for(let i=0;i<=segments;i++){
+      const t=angle-i*Math.PI/2/segments;
       out.push({x:x+radius*Math.cos(t),z:z+radius*Math.sin(t)});
     }
   }
@@ -185,6 +193,25 @@ function decoratePlatformStations(builder:BattlefieldBuilder,plan:BattlefieldPla
       0x8397a0,side*Math.PI/2,0,0,0,1,'static','METAL');
   }
 }
+// A bounded exterior ring; tall foreground silhouettes stay clear of the playable floor.
+function decoratePlatformSkyline(builder:BattlefieldBuilder,plan:BattlefieldPlatformPlan){
+  const random=seeded(plan.detailSeed^0x534b594c);
+  for(let side=0;side<4;side++)for(let slot=0;slot<8;slot++){
+    const width=18+random()*12,depth=18+random()*12,height=28+random()*40,
+      along=-(plan.extent+32)+(slot+.5)*(plan.extent+32)/4+(random()-.5)*10,
+      outside=plan.extent+Math.max(width,depth)/2+28+height*.85,
+      sign=side<2?1:-1;
+    plan.skyline.push({x:side%2?along:sign*outside,z:side%2?sign*outside:along,
+      width,depth,height,style:Math.floor(random()*4)});
+  }
+  // Corner landmarks close the diagonal panorama gaps between the four side rows.
+  for(const x of [-1,1])for(const z of [-1,1])plan.skyline.push({
+    x:x*(plan.extent+105),z:z*(plan.extent+105),width:24,depth:24,height:60+random()*16,style:2});
+  builder.world.renderData.geometries.push({mesh:'platformSkyline',model:'platformSkyline',plan},
+    {mesh:'platformSkylineLights',model:'platformSkylineLights',plan});
+  builder.place('platformSkyline',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','METAL');
+  builder.place('platformSkylineLights',0,0,0,1,1,1,0xffffff,0,0,0,.5,1,'static','AUTO');
+}
 function createPlatformBattlefield(): BattlefieldDefinition {
   return {
     name:'ORBITAL PLATFORM',size:{extent:160,cellSize:2.5},
@@ -192,6 +219,7 @@ function createPlatformBattlefield(): BattlefieldDefinition {
     design:{atmosphere:{timeOfDay:'seeded'}},
     palette:{ground:0x637b89,rock:0x637b89,accent:0xffc56b,flora:0x637b89},worldEvent:null,
     render:{groundTexture:'metal',skyTexture:'sky',daylight:true,terrainReceiverHeight:48,
+      sceneryBounds:{extent:360,maxHeight:112},
       rockDecor:{density:0,opacity:0},shrubDecor:{density:0,opacity:0},haze:[.035,.06,.09]},
     createLayout(seed,size){
       const plan=platformBattlefieldPlan(seed,size.extent),resourceSites=platformResourceSites(plan,seed);
@@ -219,6 +247,7 @@ function createPlatformBattlefield(): BattlefieldDefinition {
         {mesh:'platformSignals',model:'platformSignals',plan},
         {mesh:'platformFloor',model:'platformFloor',plan});
       decoratePlatformStations(builder,plan,platformResourceSites(plan,w.terrainSeed));
+      decoratePlatformSkyline(builder,plan);
       builder.place('terrain',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','TECHNICAL');
       builder.place('platformSignals',0,0,0,1,1,1,0xffffff,0,0,0,.65,1,'static','AUTO');
       builder.place('platformFloor',0,0,0,1,1,1,0xffffff,0,0,0,0,1,'static','TECHNICAL');

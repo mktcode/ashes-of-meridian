@@ -169,6 +169,8 @@ interface BattlefieldRenderProfile {
   lighting?: BattlefieldLighting;
   /** Highest terrain receiver included in the fitted shadow projection; default 32 m. */
   terrainReceiverHeight?: number;
+  /** Optical clipping envelope for non-playable exterior scenery, never a CPU terrain height. */
+  sceneryBounds?: Readonly<{ extent:number; maxHeight:number }>;
 }
 
 interface BattlefieldSize {
