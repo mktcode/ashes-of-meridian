@@ -37,6 +37,60 @@ function fixture(faction = 0, depth = 0) {
   return {g,ai,home,orders,entity,contact,own,launch};
 }
 
+function deploymentFixture() {
+  const f = fixture(), {g,ai,entity} = f, worker = entity('worker');
+  g.s.entities = [worker];
+  ai.contacts[99] = {id:99,kind:'resource',type:'crystal',x:2,z:0,seenAt:100};
+  Object.assign(g.world, {gridSize:13, deploymentReachable:new Uint8Array(169).fill(1),
+    idx:(x,z) => (Math.round(z / 2) + 4) * 13 + Math.round(x / 2) + 4,
+    point:i => ({x:(i % 13 - 4) * 2,z:(Math.floor(i / 13) - 4) * 2}),
+    surface:{fits:() => true}});
+  g.world.sight[1].explored = new Uint8Array(169).fill(1);
+  const actions = []; let searches = 0;
+  g.aiBuild = () => { searches++; ai.buildAttempts.hq = g.s.time; return false; };
+  g.executeAction = (team, action) => { actions.push(json(action)); worker.order = {...action.order}; return true; };
+  return {...f,worker,actions,searches:() => searches};
+}
+
+test('deployment relocates after a failed HQ search even on fully explored terrain, then retries', () => {
+  const {g,ai,worker,actions,searches} = deploymentFixture();
+  g.aiDeployment(1,[worker]);
+  assert.equal(searches(),1); assert.equal(actions.length,1);
+  assert.equal(actions[0].order.type,'move');
+  assert.ok(Math.hypot(ai.deploymentGoal.x,ai.deploymentGoal.z) > 6);
+  g.s.time++;
+  g.aiDeployment(1,[worker]);
+  assert.equal(searches(),1,'an ongoing relocation must not restart the old HQ search');
+  assert.equal(actions.length,1,'preserve movement/path progress');
+  Object.assign(worker,ai.deploymentGoal);
+  g.aiBuild = () => { assert.equal(worker.x,ai.deploymentGoal.x); return true; };
+  g.aiDeployment(1,[worker]);
+  assert.equal(ai.deploymentGoal,undefined);
+  assert.equal(actions.length,1,'successful construction must not issue a move');
+});
+
+test('deployment does not relocate when HQ search is skipped by cooldown or prerequisites', () => {
+  const {g,ai,worker,actions} = deploymentFixture();
+  ai.buildAttempts.hq = 99;
+  g.aiBuild = () => false;
+  g.aiDeployment(1,[worker]);
+  assert.equal(actions.length,0);
+});
+
+test('deployment can replace unreachable relocation and still prioritizes existing foundations', () => {
+  const {g,ai,worker,actions,entity,searches} = deploymentFixture();
+  ai.deploymentGoal = {x:0,z:8}; ai.deploymentGoalAt = 100;
+  worker.order = {type:'move',...ai.deploymentGoal}; worker.pathStatus = 'unreachable';
+  g.aiDeployment(1,[worker]);
+  assert.equal(searches(),1); assert.equal(actions.length,1);
+  assert.notDeepEqual(json(ai.deploymentGoal),{x:0,z:8});
+  const foundation = entity('hq',1,7,0); foundation.progress = .06;
+  g.aiDeployment(1,[worker,foundation]);
+  assert.equal(actions[1].order.type,'build');
+  assert.equal(actions[1].order.id,foundation.id);
+  assert.equal(searches(),1);
+});
+
 test('AI stage knobs saturate and enforce reaction/decision floors without random draws', () => {
   for (const faction of [0,1,2]) {
     let previous;

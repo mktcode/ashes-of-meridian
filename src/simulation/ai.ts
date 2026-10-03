@@ -209,20 +209,23 @@ const aiMethods = {
     // Only observed deposits can justify a base. Never read hidden resource entities/layout anchors.
     const resource = Object.values(ai.contacts).filter(c => c.kind === 'resource' && c.type === 'crystal')
       .sort((a, b) => distance(a, worker) - distance(b, worker) || a.id - b.id)[0];
-    if (resource && distance(resource, worker) < 13) {
-      if (this.aiBuild(team, 'hq', worker)) ai.deploymentGoal = undefined;
-      return;
-    }
     if (ai.deploymentGoal && worker.order.type === 'move' && distance(worker, ai.deploymentGoal) > 4 &&
       worker.pathStatus !== 'unreachable' && now - (ai.deploymentGoalAt || 0) < 18) return;
+    const nearbyResource = !!resource && distance(resource, worker) < 13;
+    if (nearbyResource) {
+      if (this.aiBuild(team, 'hq', worker)) { ai.deploymentGoal = undefined; return; }
+      // Only relocate after an actual failed search, not during its retry cooldown
+      // or when the worker/resources are temporarily unavailable.
+      if (ai.buildAttempts.hq !== now) return;
+    }
     const targets: Position[] = [];
     if (resource && distance(resource, worker) >= 13) targets.push({ x: resource.x - 6, z: resource.z + 6 });
     for (let z = 4; z < world.gridSize - 4; z += 4) for (let x = 4; x < world.gridSize - 4; x += 4) {
       const i = z * world.gridSize + x, p = world.point(i), d = distance(p, worker);
-      if (world.deploymentReachable[i] && !world.sight[team].explored[i] && d > 12 &&
+      if (world.deploymentReachable[i] && (nearbyResource || !world.sight[team].explored[i]) && d > (nearbyResource ? 6 : 12) &&
         (!ai.deploymentGoal || distance(p, ai.deploymentGoal) > 6)) targets.push(p);
     }
-    const choices = resource ? targets : targets.sort((a, b) => distance(a, worker) - distance(b, worker));
+    const choices = resource && !nearbyResource ? targets : targets.sort((a, b) => distance(a, worker) - distance(b, worker));
     for (const p of choices.slice(0, 12)) {
       // The public vehicle component already guarantees a terrain route for this worker.
       // Inspecting live navigation here would leak unseen opponent foundations.
