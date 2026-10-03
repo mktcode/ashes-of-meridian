@@ -60,6 +60,27 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
   });
 }
 
+test('desert economy retains nearby legal HQ footprints and snapped refinery foundations', () => {
+  const api = scope(['effects', ...SIMULATION_SCRIPTS]);
+  // Seed 3 had several HQ footprints rejected by the old curved resource grade.
+  // Initialization/build validation only: no simulation ticks or autonomous AI.
+  for (const seed of [1, 3, 1409]) {
+    const g = new api.Game({upgrades:{}});
+    g.start({seed, map:'desert', deployment:'exploration'});
+    const worker = g.alive(e => e.type === 'worker' && e.team === 0)[0];
+    for (const e of g.s.entities) if (e.kind === 'unit' && e !== worker) e.hp = 0;
+    g.world.sight[0].explored.fill(255);
+    for (const site of g.world.layout.resourceSites) {
+      const hq = {x:site.x - 11, z:site.z - 4}, vent = api.battlefieldGasPosition(site);
+      worker.x = site.x - 22; worker.z = site.z - 4;
+      assert.equal(g.canBuild('hq', hq), '', `seed ${seed}: nearby HQ at ${hq.x},${hq.z}`);
+      assert.equal(g.canBuild('refinery', {x:vent.x + 2, z:vent.z}), '', `seed ${seed}: snapped vent`);
+      assert.ok(g.world.deploymentReachable[g.world.idx(hq.x, hq.z)]);
+      assert.ok(g.world.surface.segment(site, hq, 1.5), 'resource work connects to the HQ area');
+    }
+  }
+});
+
 test('overlapping road shoulders join without an angular summit and keep their graded cores', () => {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world']);
   const result = vm.runInContext(`(() => {

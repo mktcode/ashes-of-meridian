@@ -130,7 +130,34 @@ function dynamicTerrainPlan(world: Battlefield) {
       // Ease tall overlapping shoulders into the ceiling instead of slicing summits flat.
       return Math.max(0, h > 60 ? 60 + 12 * (1 - Math.exp(-(h - 60) / 12)) : h);
     };
-  return { height, industrial };
+  // Guarantee one nearby HQ footprint without widening all economy regions. Probe
+  // the real triangulated grid; stable sites keep their original heights exactly.
+  const repairs = world.layout.resourceSites.flatMap(site => {
+    const p = { x: site.x - 11, z: site.z - 4 },
+      ox = Math.round(p.x / world.cellSize) * world.cellSize,
+      oz = Math.round(p.z / world.cellSize) * world.cellSize,
+      probe = new BattlefieldSurface(12.5, world.cellSize, (x, z) => height(x + ox, z + oz)),
+      q = { x: p.x - ox, z: p.z - oz };
+    // Reserve all-direction exit clearance, independent of party yaw and simulation.
+    if (probe.foundation(q, BUILDINGS.hq.size) && probe.fits(q.x, q.z, 9)) return [];
+    const dx = (height(p.x + 1, p.z) - height(p.x - 1, p.z)) / 2,
+      dz = (height(p.x, p.z + 1) - height(p.x, p.z - 1)) / 2,
+      scale = Math.max(1, Math.hypot(dx, dz) / .06);
+    return [{ ...p, height: height(p.x, p.z), dx: dx / scale, dz: dz / scale }];
+  });
+  return { height: (x: number, z: number) => {
+    let h = height(x, z);
+    for (const p of repairs) {
+      const dx = x - p.x, dz = z - p.z, d = Math.max(Math.abs(dx), Math.abs(dz));
+      // 8m covers HQ margins, grid vertices and worker exits; the smooth 5m
+      // shoulder ends before any refinery footprint. No step or raised platform.
+      if (d < 13) {
+        const plane = p.height + p.dx * dx + p.dz * dz;
+        h = plane + (h - plane) * smooth((d - 8) / 5);
+      }
+    }
+    return h;
+  }, industrial };
 }
 function createDynamicBattlefield(name: string, family: WorldVariationFamily): BattlefieldDefinition {
   const industrial = family === 'ship', palette: BattlefieldPalette = industrial
