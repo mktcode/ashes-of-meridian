@@ -15,15 +15,18 @@ registerEntityModel({
       return out;
     }
   },
-  render({entity:e,part:p,metal,dark,team,accent,surfaceColor}) {
+  render({entity:e,part:p,metal,dark,team,accent,surfaceColor,nightLight=0,lightPool}) {
     p('workerHull', 0, 0, 0, 1, 1, 1, surfaceColor(0xb7a27b));
     p('faction0WorkerFittings', 0, 0, 0, 1, 1, 1, surfaceColor(0xb7a27b));
     p('box', 0, 1.05, 0.295, 0.67, 0.20, 0.065, dark);
     p('box', 0, 1.065, 0.334, 0.49, 0.105, 0.025, team, 0, 0, 0, 0.65);
     for (const side of [-1, 1]) {
-      p('box', side * .43, .60, .731, .11, .07, .025, 0xffe4aa, 0, 0, 0, .55);
+      // The existing paired front lenses become work lamps only after dusk.
+      p('box', side * .43, .60, .731, .11, .07, .025,
+        surfaceColor(0xc5efff), 0, 0, 0, 2.4 * nightLight);
       p('box', side * .62, .80, -.08, .065, .025, .66, accent);
     }
+    if (nightLight > 0) lightPool(0, 1.65, 2.5, 2.8, 0xa6ddff, nightLight);
     p('box', 0.67, 0.94, 0.45, 0.18, 0.2, 0.95, accent, 0, -0.35);
     p('cylinder', .63, .95, .08, .14, .18, .14, metal, 0, 0, Math.PI/2);
     p('cylinder', .67, .86, .88, .21, .13, .21, dark, 0, -1.1);

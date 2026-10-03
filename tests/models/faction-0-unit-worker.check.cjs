@@ -22,6 +22,13 @@ test('faction-0 worker: restrained fittings preserve the entire established asse
   const oldAssembly=createHash('sha256');
   for(const team of [0,1]) for(const progress of [0,.4,1])
     for(const options of [{},{ghost:true},{tint:0x99e4c6,alpha:.3,layer:'effects'}])
-      oldAssembly.update(JSON.stringify(h.draw({...e,team,progress,walk:2,carry:10},options).filter(c=>c[0]!=='faction0WorkerFittings')));
-  assert.equal(oldAssembly.digest('hex'),baseline['faction-0/unit/worker'],'only the supplementary mesh changes the old 18 variants');
+      oldAssembly.update(JSON.stringify(h.draw({...e,team,progress,walk:2,carry:10},options)
+        .filter(c=>c[0]!=='faction0WorkerFittings').map(c=> {
+          // Only the two existing front lenses intentionally change color/emission.
+          if(c[0]==='box' && c[4]===.11 && c[5]===.07 && c[6]===.025) {
+            c[7]=0xffe4aa; c[11]=.55;
+          }
+          return c;
+        })));
+  assert.equal(oldAssembly.digest('hex'),baseline['faction-0/unit/worker'],'all non-lamp parts retain the established 18 variants');
 });

@@ -291,6 +291,13 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
   return [Math.atan2(-(f[2]*xx+f[5]*xy+f[8]*xz),f[0]*xx+f[3]*xy+f[6]*xz),pitch,0];
 }
 
+    // Lights fade on at 18–19h and off at 5–6h using the world's simulation-bound clock.
+    function workerNightLight(hour: number | undefined): number {
+      if (hour === undefined) return 0;
+      const t = clamp(hour >= 12 ? hour - 18 : 6 - hour, 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
     // Distinct fixed assemblies, not scaled versions of one box. All fit inside
     // the existing reserved cache footprint; rotations are cosmetic and RNG-free.
     const SUPPLY_CACHE_ASSEMBLIES: Record<SupplyCache['tier'], readonly (readonly [number, number, number, number])[]> = {
@@ -559,7 +566,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         }
         const model = EntityModels.find(e);
         if (model) {
-          model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+          model.render({ entity: e, time, nightLight: 0, lightPool: () => {}, part: p, ring, metal, dark, team, accent, baseRotation: rot,
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {
@@ -588,7 +595,20 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       }
       const model = EntityModels.find(e);
       if (model) {
-        model.render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+        const nightLight = !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic'
+          ? workerNightLight(R.battlefieldHour) : 0;
+        const lightPool: EntityModelContext['lightPool'] = (lx,lz,width,length,color,strength) => {
+          if (nightLight <= 0 || R.quality === 0) return;
+          const x = e.x+lx*cs+lz*sn, z = e.z-lx*sn+lz*cs,
+            height = R.surface?.heightAt(x,z) ?? ground;
+          // A short cosmetic pool, not a real light or new visibility source. Hide it at
+          // uneven edges rather than bridging cliffs with a floating luminous rectangle.
+          if (R.surface && [[-width/2,-length/2],[width/2,-length/2],[-width/2,length/2],[width/2,length/2]]
+            .some(([dx,dz]) => Math.abs(R.surface!.heightAt(x+dx*cs+dz*sn,z-dx*sn+dz*cs)-height) > .16)) return;
+          R.add('plane',x,height+.025,z,width,1,length,color,rot,0,0,0,strength,
+            'effects',ALLOY_LIGHT_MATERIAL);
+        };
+        model.render({ entity: e, time, nightLight, lightPool, part: p, ring, metal, dark, team, accent, baseRotation: rot,
           surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         return;
       }

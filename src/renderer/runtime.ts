@@ -230,6 +230,9 @@
         this.dayCycleProfile = null;
         this.haze = profile.haze;
       }
+      get battlefieldHour(): number | undefined {
+        return (this.dayCycleProfile ?? this.battlefieldProfile).atmosphere?.timeOfDay;
+      }
       setBattlefieldTime(elapsedSeconds: number) {
         this.dayCycleProfile = this.battlefieldProfile.atmosphere
           ? battlefieldDayCycle(this.battlefieldProfile, elapsedSeconds) : null;

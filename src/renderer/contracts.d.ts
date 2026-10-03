@@ -63,6 +63,9 @@ type RenderEntity = Pick<EntityBase, 'id' | 'kind' | 'type' | 'x' | 'z' | 'hp' |
 interface EntityModelContext {
   entity: RenderEntity;
   time: number;
+  /** Dusk/dawn fade; zero in previews and without a world atmosphere. */
+  nightLight: number;
+  lightPool: (x: number, z: number, width: number, length: number, color: number, strength: number) => void;
   part: ModelPart;
   ring: ModelRing;
   metal: number; dark: number; team: number; accent: number;
