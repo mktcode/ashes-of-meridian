@@ -1482,6 +1482,28 @@ function savedUIBattle() {
   return { ...h, saves };
 }
 
+test('pause abandonment requires confirmation; cancel preserves the expedition and stale confirmations do nothing', () => {
+  const h = savedUIBattle(), ui = h.ui;
+  h.UI.prototype.bind.call(ui);
+  const expedition = ui.expedition, battle = ui.game.s, profile = JSON.stringify(ui.profile);
+  const cleared = () => h.saves.filter(save => save.expedition === null).length;
+  h.click({ ui: 'confirmAbandon' });
+  assert.equal(cleared(), 0, 'confirmation outside its dialog is ignored');
+  ui.pause();
+  h.click({ ui: 'abandon' });
+  assert.equal(ui.modalKind, 'abandonExpedition');
+  assert.strictEqual(ui.expedition, expedition); assert.strictEqual(ui.game.s, battle);
+  assert.equal(ui.paused, true); assert.equal(cleared(), 0);
+  h.click({ ui: 'closeModal' });
+  assert.equal(ui.modalKind, 'pause'); assert.equal(ui.paused, true);
+  assert.strictEqual(ui.expedition, expedition); assert.strictEqual(ui.game.s, battle);
+  h.click({ ui: 'confirmAbandon' }); assert.equal(cleared(), 0, 'cancel invalidates confirmation');
+  h.click({ ui: 'abandon' }); h.click({ ui: 'confirmAbandon' });
+  assert.equal(ui.expedition, null); assert.equal(ui.game.s, null); assert.equal(ui.view, 'home');
+  assert.equal(cleared(), 1); assert.equal(JSON.stringify(ui.profile), profile);
+  h.click({ ui: 'confirmAbandon' }); assert.equal(cleared(), 1, 'duplicate confirmation is ignored');
+});
+
 test('battle autosave, pagehide and main menu preserve tutorial goals and restore paused without redeployment', () => {
   const h = savedUIBattle(), ui = h.ui;
   h.UI.prototype.bind.call(ui);

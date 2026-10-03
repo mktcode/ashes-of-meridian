@@ -254,6 +254,12 @@
             this.showExpeditionBenefits();
             break;
           case 'abandon':
+            if (this.view !== 'game' || !this.paused || !this.expedition || this.modalKind !== 'pause') break;
+            this.openModal('abandonExpedition', `<div class="eyebrow">END EXPEDITION</div><h1>Abandon this expedition?</h1><p>This ends the entire expedition and discards its saved battle, depth and expedition benefits. Your permanent fleet upgrades and reserve are kept. This cannot be undone.</p><div class="btnstack"><button class="primary" data-ui="closeModal">KEEP PLAYING</button><button class="secondary" data-ui="confirmAbandon">ABANDON EXPEDITION</button></div>`);
+            break;
+          case 'confirmAbandon':
+            if (this.view !== 'game' || !this.paused || !this.expedition || this.modalKind !== 'abandonExpedition') break;
+            this.modalKind = '';
             this.expedition = null;
             this.persistence.saveProgress(this.profile, null);
             this.notifyStorageFailure();
