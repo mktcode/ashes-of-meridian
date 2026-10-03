@@ -264,8 +264,6 @@
   background: radial-gradient(circle at 29.5px 50%, #c6faff 8px, transparent 8.5px), #106780;
 }
 #modal .settings-row input[type=range] { min-height: 32px }
-#modal .help-line { color: var(--ui-ink); line-height: 1.55; padding-block: 12px; border-color: #2b506377 }
-#modal .help-input { color: #97b8cb; font-size: 11px }
 #menu .codex-card { overflow: visible; --ui-cut: 6px }
 #menu .codex-card span { color: var(--ui-muted); font-size: 11px }
 #menu .codex-section-title { color: var(--ui-gold); letter-spacing: 1px }

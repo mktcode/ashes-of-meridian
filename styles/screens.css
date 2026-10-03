@@ -370,31 +370,6 @@
 
 
 
-    .home-screen .menu-subnav {
-      display: flex;
-      align-items: center;
-      margin-top: 14px;
-      width: 414px;
-      max-width: 100%
-    }
-
-    .home-screen .menu-subnav button {
-      color: #a9d9e5;
-      font: 9px var(--mono);
-      letter-spacing: .5px;
-      padding: 8px 12px;
-      flex: 1;
-      white-space: nowrap
-    }
-
-    .home-screen .menu-subnav button + button {
-      border-left: 1px solid #90b6c526
-    }
-
-    .home-screen .menu-subnav button:hover {
-      color: #f4ca88
-    }
-
     .home-screen .menu-footer {
       position: relative;
       display: flex;
@@ -509,10 +484,6 @@
         height: 40px
       }
 
-      .home-screen .menu-subnav {
-        margin-top: 16px
-      }
-
       .home-screen .menu-footer {
         padding-top: 10px
       }
@@ -587,15 +558,6 @@
 
       .home-screen .continue-row {
         gap: 7px
-      }
-
-      .home-screen .menu-subnav {
-        margin-top: 11px
-      }
-
-      .home-screen .menu-subnav button {
-        font-size: 8px;
-        padding: 8px
       }
 
       .home-screen .menu-frame {
@@ -864,29 +826,6 @@
       accent-color: var(--cyan);
       width: 18px;
       height: 18px
-    }
-
-    .help-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 24px
-    }
-
-    .help-line {
-      font-size: 12px;
-      color: #b7c7d2;
-      padding: 6px 0;
-      border-bottom: 1px solid #4edcf026;
-      display: flex;
-      justify-content: space-between;
-      gap: 15px
-    }
-
-    .help-input {
-      font: 10px var(--mono);
-      color: #a5b8c8;
-      max-width: 55%;
-      text-align: right
     }
 
     .faction-options {
@@ -1964,10 +1903,6 @@
       .home-screen .menu-buttons .primary {
         min-height: 42px;
         padding: 9px 18px
-      }
-
-      .home-screen .menu-subnav {
-        margin-top: 7px
       }
 
       .home-screen .menu-footer {

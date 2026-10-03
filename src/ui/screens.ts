@@ -295,7 +295,7 @@
         this.saveBattle();
         this.openModal(
           'pause',
-          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="help">${uiIcon('manual')}FIELD MANUAL</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p class="ui-note">This battle is autosaved and Continue expedition restores it paused. A hard interruption may return to the last successful autosave. Abandoning ends the expedition.</p>`
+          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p class="ui-note">This battle is autosaved and Continue expedition restores it paused. A hard interruption may return to the last successful autosave. Abandoning ends the expedition.</p>`
         );
       },
       resume(this: MeridianUI) {
@@ -330,15 +330,6 @@
           else $('fpsReadout').classList.add('hidden');
         }
         this.persist();
-      },
-      showHelp(this: MeridianUI) {
-        if (this.view === 'game') this.paused = true;
-        this.openModal(
-          'help',
-          renderFieldManual(this.game.s?.rules.kind === 'single-player'
-            ? this.game.s.rules.mission.id : this.expedition?.encounter.mission ?? DEFAULT_MISSION),
-          true
-        );
       },
       showArmory(this: MeridianUI) {
         let previous = this.view;

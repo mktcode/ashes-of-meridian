@@ -647,10 +647,6 @@
         padding: 25px
       }
 
-      .help-grid {
-        gap: 6px 20px
-      }
-
       .sub-header .secondary {
         font-size: 9px;
         padding: 10px
@@ -722,10 +718,6 @@
       }
 
       .armory-grid {
-        grid-template-columns: 1fr
-      }
-
-      .help-grid {
         grid-template-columns: 1fr
       }
 

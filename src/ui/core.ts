@@ -1,4 +1,4 @@
-    /* Front end, permanent upgrades, HUD, controls, field manual. */
+    /* Front end, permanent upgrades, HUD, controls. */
     'use strict';
     function $(id: 'world' | 'overlay' | 'minimap' | 'previewTransition'): HTMLCanvasElement;
     function $(id: string): HTMLElement;
@@ -17,7 +17,7 @@
       constructionProtocols: 'construction', logisticsFrame: 'logistics', repairLogistics: 'repair-logistics',
       supplyCrate: 'crate', aetherAllocation: 'echo', pioneerSquad: 'pioneers',
       surveyDrones: 'survey', fieldWorkshop: 'workshop', commandCapacitor: 'energy',
-      'echo-reward': 'echo-reward', pause: 'pause', settings: 'settings', manual: 'manual',
+      'echo-reward': 'echo-reward', pause: 'pause', settings: 'settings',
       back: 'back', close: 'close'
     });
     function uiIcon(name: string, fallback = name): string {

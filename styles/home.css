@@ -152,25 +152,6 @@
   background-image: url('../assets/ui/expedition.webp');
   filter: sepia(1) saturate(2.5);
 }
-#menu .home-screen .manual-icon { background-image: url('../assets/ui/manual.webp') }
-#menu .home-screen .settings-icon { background-image: url('../assets/ui/settings.webp') }
-#menu .home-screen .menu-subnav {
-  width: 100%;
-  margin-top: 18px;
-  padding-top: 10px;
-  border-top: 1px solid #507c8c69;
-}
-#menu .home-screen .menu-subnav button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 7px;
-  font: 400 11px/1.4 Aldrich, sans-serif;
-  letter-spacing: 1px;
-  white-space: normal;
-}
 @media (max-width: 740px) {
   #menu .home-layout { justify-content: center; padding-inline: max(20px, env(safe-area-inset-left), env(safe-area-inset-right)) }
   #menu .home-screen { background: linear-gradient(0deg, #03111ce6, #03111c22 70%) }
@@ -184,5 +165,4 @@
   #menu .home-screen { --home-checkpoint-size: 100px }
   #menu .home-screen .stage-crystal strong { font-size: 44px }
   #menu .home-screen .menu-buttons button { min-height: 46px; font-size: 12px; padding-block: 10px }
-  #menu .home-screen .menu-subnav { margin-top: 12px }
 }

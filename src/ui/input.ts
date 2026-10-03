@@ -277,9 +277,6 @@
           case 'settings':
             this.showSettings();
             break;
-          case 'help':
-            this.showHelp();
-            break;
           case 'resume':
             this.resume();
             break;

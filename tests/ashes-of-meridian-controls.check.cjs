@@ -114,7 +114,7 @@ test('ordinary landscape encounters are checkpointed and continued without exper
 test('screen templates render frozen data without DOM access, randomness or profile mutation', () => {
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
   vm.runInContext('Math.random = seeded = () => { throw Error("Template RNG"); };', context);
-  const render = vm.runInContext('({renderHomeScreen, renderMissionBriefing, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderFieldManual, renderArmoryScreen, renderBenefitOptions})', context);
+  const render = vm.runInContext('({renderHomeScreen, renderMissionBriefing, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderArmoryScreen, renderBenefitOptions})', context);
   const profile = Object.freeze({version: 1, expeditionDepth: 10, aether: 250,
     upgrades: Object.freeze({startingAlloy: 0, constructionProtocols: 1}),
     settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false, showFps: true})});
@@ -135,7 +135,6 @@ test('screen templates render frozen data without DOM access, randomness or prof
     /data-ui="startBattle" disabled/);
   const settings = render.renderSettingsScreen(profile.settings);
   assert.match(settings, /data-setting="showFps" checked/);
-  render.renderFieldManual();
   const armory = render.renderArmoryScreen(profile), upgrades = vm.runInContext('META', context);
   for (const key of Object.keys(upgrades)) assert.ok(armory.includes(`data-upgrade="${key}"`));
   const offers = render.renderBenefitOptions(expedition.offers);
