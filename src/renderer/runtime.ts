@@ -148,6 +148,7 @@
           rockShelf: geom.rock(853, 'shelf'),
           alloyShard: geom.crystal(),
           aetherVent: geom.aetherVent(),
+          supplyCrateHull: geom.supplyCrateHull(),
           commandHull: geom.commandHull(),
           workerHull: geom.workerHull(),
           workerDrill: geom.workerDrill(),

@@ -321,6 +321,27 @@
         armor(turretHead, 0,2.3,.72,.52,.40,.20,dark);
         return { turretBase, turretHead };
       },
+      // Unit-sized cargo shell with clipped corners and bevelled lid/foot edges.
+      supplyCrateHull() {
+        const out: number[] = [];
+        const ring = (inset: number, y: number) => {
+          const r = .5 - inset, c = .11;
+          return [[-r+c,r],[r-c,r],[r,r-c],[r,-r+c],
+            [r-c,-r],[-r+c,-r],[-r,-r+c],[-r,r-c]].map(([x,z]) => [x,y,z]);
+        };
+        const rings = [ring(.055,-.5),ring(0,-.42),ring(0,.42),ring(.055,.5)];
+        for (let i = 0; i < 8; i++) {
+          const k = (i + 1) % 8;
+          for (let j = 0; j < 3; j++) {
+            const shade = j === 1 ? [1,1,1] : [1.16,1.16,1.16];
+            this.tri(out,rings[j][i],rings[j][k],rings[j+1][k],shade);
+            this.tri(out,rings[j][i],rings[j+1][k],rings[j+1][i],shade);
+          }
+          this.tri(out,[0,.5,0],rings[3][i],rings[3][k],[1,1,1]);
+          this.tri(out,[0,-.5,0],rings[0][k],rings[0][i],[.7,.7,.7]);
+        }
+        return out;
+      },
       // Faction 0 HQ armor, baked at its existing world dimensions.
       // Vertex tints multiply the faction metal (also preserving preview/ghost tinting).
       commandHull() {

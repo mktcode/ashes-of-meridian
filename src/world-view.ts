@@ -224,25 +224,62 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
   return [Math.atan2(-(f[2]*xx+f[5]*xy+f[8]*xz),f[0]*xx+f[3]*xy+f[6]*xz),pitch,0];
 }
 
-    // Reuse shared primitives: no per-frame mesh allocation or simulation RNG.
+    // Distinct fixed assemblies, not scaled versions of one box. All fit inside
+    // the existing reserved cache footprint; rotations are cosmetic and RNG-free.
+    const SUPPLY_CACHE_ASSEMBLIES: Record<SupplyCache['tier'], readonly (readonly [number, number, number, number])[]> = {
+      1: [[0,0,0,.12]],
+      2: [[-.82,0,0,0],[.82,0,0,0],[0,1.42,0,0]],
+      3: [[-.82,0,.66,0],[.82,0,.66,0],[-.82,0,-.66,0],[.82,0,-.66,0],
+        [-.82,1.42,0,0],[.82,1.42,0,0],[.1,0,-1.95,-.28]]
+    };
     function renderSupplyCache(R: MeridianRenderer, world: Battlefield, cache: SupplyCache) {
-      const echo = cache.resource === 'gas', accent = echo ? 0x65e5e9 : 0xf1ae45;
-      for (let i = 0; i < cache.tier; i++) {
-        const x = cache.x + (i - (cache.tier - 1) / 2) * 1.65, z = cache.z,
-          y = world.surface!.heightAt(x, z);
-        const part = (dx: number, dy: number, dz: number, sx: number, sy: number, sz: number, color: number, glow = 0) =>
-          R.add('box', x + dx, y + dy, z + dz, sx, sy, sz, color, 0, 0, 0, glow, 1, 'dynamic', MAT.METAL);
-        part(0, .16, 0, 1.5, .3, 1.3, 0x252e3b);
-        part(0, .72, 0, 1.35, .85, 1.15, echo ? 0x344959 : 0x56504a);
-        part(0, 1.22, 0, 1.5, .18, 1.3, 0x87939d);
-        // Reinforced corners and luminous cargo designation bands.
-        for (const side of [-1, 1]) {
-          part(side * .56, .73, 0, .13, 1, 1.23, 0x252e3b);
-          part(side * .35, 1.325, 0, .16, .035, 1.05, accent, .8);
+      const echo = cache.resource === 'gas', accent = echo ? 0x65e5e9 : 0xf1ae45,
+        shell = echo ? 0x385568 : 0x6b6153, dark = 0x222d38, edge = 0x89969e,
+        assembly = SUPPLY_CACHE_ASSEMBLIES[cache.tier];
+      // Upper boxes rest on the highest supporting lower lid, not a fresh ground sample.
+      const stackGround = Math.max(...assembly.filter(p => p[1] === 0 && p[2] > -1.5)
+        .map(p => world.surface!.heightAt(cache.x+p[0],cache.z+p[2])));
+      for (const [lx, ly, lz, yaw] of assembly) {
+        const x = cache.x + lx, z = cache.z + lz,
+          y = (ly ? stackGround : world.surface!.heightAt(x,z)) + ly,
+          cs = Math.cos(yaw), sn = Math.sin(yaw);
+        const part = (shape: string, dx: number, dy: number, dz: number, sx: number, sy: number, sz: number,
+          color: number, glow = 0, rz = 0, rx = 0) => R.add(shape,
+            x+dx*cs+dz*sn,y+dy,z-dx*sn+dz*cs,sx,sy,sz,color,yaw,rx,rz,glow,1,'dynamic',MAT.METAL);
+        // Chamfered pressure shell, dark gasket, two inset lid panels and stacking feet.
+        part('supplyCrateHull',0,.71,0,1.5,1.12,1.16,shell);
+        part('supplyCrateHull',0,.17,0,1.62,.24,1.28,dark);
+        part('supplyCrateHull',0,1.27,0,1.62,.2,1.28,edge);
+        part('box',0,1.38,0,1.33,.025,1.04,dark);
+        for (const side of [-1,1]) {
+          part('supplyCrateHull',side*.34,1.4,0,.58,.035,.96,shell);
+          part('box',side*.52,.74,0,.115,1.15,1.23,dark);
+          part('box',side*.52,1.44,0,.115,.055,1.18,accent);
+          // Recessed carry handles and end vents are readable from the sides.
+          part('box',side*.755,.88,0,.035,.35,.67,dark);
+          part('box',side*.80,.98,0,.065,.07,.48,edge);
+          for (const zz of [-.22,.22]) part('box',side*.80,.88,zz,.065,.2,.065,edge);
+          for (let j = 0; j < 3; j++) part('box',side*.776,.45,j*.15-.15,.04,.045,.09,edge);
+          for (const front of [-1,1]) {
+            part('supplyCrateHull',side*.66,.72,front*.5,.2,1.12,.22,edge);
+            part('box',side*.52,.83,front*.64,.22,.27,.075,edge);
+            part('box',side*.52,.85,front*.688,.09,.12,.025,dark);
+            part('hex',side*.66,1.293,front*.5,.055,.025,.055,dark);
+          }
         }
-        part(0, .79, -.59, .55, .25, .04, accent, 1.2);
-        if (echo) part(0, .78, .59, .28, .5, .04, accent, 1.2);
-        else part(0, .79, .59, .55, .25, .04, accent, 1.2);
+        // Cargo badge, recessed label panel and short bright status bar on each face.
+        for (const front of [-1,1]) {
+          part('box',0,.72,front*.592,.72,.53,.025,dark);
+          part('box',.21,.9,front*.613,.19,.035,.015,accent,.45);
+          for (let j = 0; j < 3; j++) part('box',.15+j*.065,.55,front*.613,.027,.08,.015,edge);
+          if (echo) {
+            part('box',-.16,.75,front*.623,.2,.2,.03,accent,.45,Math.PI/4);
+            part('box',-.16,.75,front*.643,.085,.085,.012,dark,0,Math.PI/4);
+          } else {
+            part('box',-.21,.75,front*.622,.09,.28,.02,accent,.2,-.55);
+            part('box',-.06,.75,front*.622,.09,.28,.02,accent,.2,.55);
+          }
+        }
       }
     }
 

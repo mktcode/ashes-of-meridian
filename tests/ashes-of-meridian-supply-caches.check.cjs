@@ -68,15 +68,40 @@ test('only visible reachable caches pay once to the nearest living ground unit, 
   assert.equal(game.canBuild('depot', cache), '', 'collected caches no longer reserve construction space');
 });
 
-test('both cargo models render one, two or three reinforced crates with distinct markings and no mutation', () => {
+test('cargo shell bevels form finite non-degenerate outward-facing triangles', () => {
+  const ctx = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
+  const mesh = vm.runInContext('geom.supplyCrateHull()', ctx);
+  assert.ok(mesh.every(Number.isFinite));
+  assert.equal(mesh.length, 64 * 3 * 9);
+  for (let i = 0; i < mesh.length; i += 27) {
+    const a = mesh.slice(i, i + 3), b = mesh.slice(i + 9, i + 12), c = mesh.slice(i + 18, i + 21), n = mesh.slice(i + 3, i + 6);
+    const u = b.map((v, j) => v - a[j]), v = c.map((v, j) => v - a[j]);
+    assert.ok(Math.hypot(u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]) > 1e-8);
+    assert.ok(Math.abs(Math.hypot(...n) - 1) < 1e-6);
+    assert.ok(n.reduce((sum, value, j) => sum + value * (a[j]+b[j]+c[j])/3, 0) > 0);
+  }
+});
+
+test('cargo tiers have distinct single, stacked and piled assemblies within the reserved footprint', () => {
   const ctx = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const render = vm.runInContext('renderSupplyCache', ctx), world = { surface: { heightAt: () => 2 } };
   for (const resource of ['alloy', 'gas']) for (const tier of [1, 2, 3]) {
     const cache = Object.freeze({ x: 0, z: 0, resource, tier, amount: 100, collected: false });
     const renderer = createRendererStub({ record: true });
     render(renderer, world, cache);
-    assert.equal(renderer.calls.length, 9 * tier);
-    assert.ok(renderer.calls.every(call => call[0] === 'box'));
+    const shells = renderer.calls.filter(call => call[0] === 'supplyCrateHull' && call[4] === 1.5 && call[5] === 1.12);
+    assert.equal(shells.length, [1, 3, 7][tier - 1]);
+    assert.ok(shells.every(call => call[4] === 1.5 && call[6] === 1.16), 'same-sized containers, not scaled tier models');
+    assert.equal(shells.some(call => call[2] > 3), tier > 1, 'higher tiers have upper stacked containers');
     assert.ok(renderer.calls.some(call => call[7] === (resource === 'gas' ? 0x65e5e9 : 0xf1ae45)));
+    for (const call of renderer.calls) {
+      assert.ok(call.slice(1, 7).every(Number.isFinite));
+      const radius = Math.hypot(call[4], call[6]) / 2;
+      assert.ok(Math.hypot(call[1], call[3]) + radius < 3, 'within unchanged reserved radius');
+      assert.ok(call[2] - call[5] / 2 >= 2, 'no geometry below ground');
+    }
+    const again = createRendererStub({ record: true });
+    render(again, world, cache);
+    assert.deepEqual(again.calls, renderer.calls);
   }
 });
