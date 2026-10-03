@@ -51,22 +51,23 @@
   registerEntityModel({
     id: 'faction-0/building/hangar',
     meshes: { faction0HangarHull: createHangarHull },
-    render({ part: p, metal, team, accent }) {
+    render({ part: p, metal, team, accent, nightLight=0 }) {
+      const glow=(base=0)=>base+(3.2-base)*nightLight;
       p('faction0HangarHull', 0, 0, 0, 1, 1, 1, metal);
-      p('box', 0, 3.07, 1.667, 3.92, .095, .025, team, 0, 0, 0, .75);
-      p('box', 0, 2.48, -2.458, 3.4, .12, .025, team, 0, 0, 0, .4);
+      p('box', 0, 3.07, 1.667, 3.92, .095, .025, team, 0, 0, 0, glow(.75));
+      p('box', 0, 2.48, -2.458, 3.4, .12, .025, team, 0, 0, 0, glow(.4));
       // Broad H plus paired approach lights, readable from the battle camera.
       for (const side of [-1, 1]) {
-        p('box', side * .65, .407, 3.25, .14, .025, 1.8, team, 0, 0, 0, .2);
+        p('box', side * .65, .407, 3.25, .14, .025, 1.8, team, 0, 0, 0, glow(.2));
         for (const z of [2.2, 3.3, 4.4])
-          p('box', side * 1.95, .406, z, .19, .035, .22, team, 0, 0, 0, .65);
-        p('box', side * 2.64, 2.36, 1.753, .44, .105, .025, accent, 0, 0, 0, .3);
-        p('box', side * 2.66, 3.601, -.68, .08, .025, 2.85, team, 0, 0, 0, .25);
+          p('box', side * 1.95, .406, z, .19, .035, .22, team, 0, 0, 0, glow(.65));
+        p('box', side * 2.64, 2.36, 1.753, .44, .105, .025, accent, 0, 0, 0, glow(.3));
+        p('box', side * 2.66, 3.601, -.68, .08, .025, 2.85, team, 0, 0, 0, glow(.25));
       }
-      p('box', 0, .407, 3.25, 1.3, .025, .14, team, 0, 0, 0, .2);
-      p('box', -2.6, 4.91, -.938, .81, .3, .025, team, 0, 0, 0, .65);
-      p('box', -3.188, 4.91, -1.5, .025, .3, .68, team, 0, 0, 0, .5);
-      p('box', -2.6, 5.383, -1.5, .22, .035, .22, accent, 0, 0, 0, .4);
+      p('box', 0, .407, 3.25, 1.3, .025, .14, team, 0, 0, 0, glow(.2));
+      p('box', -2.6, 4.91, -.938, .81, .3, .025, team, 0, 0, 0, glow(.65));
+      p('box', -3.188, 4.91, -1.5, .025, .3, .68, team, 0, 0, 0, glow(.5));
+      p('box', -2.6, 5.383, -1.5, .22, .035, .22, accent, 0, 0, 0, glow(.4));
     }
   });
 })();

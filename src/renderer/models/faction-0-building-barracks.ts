@@ -43,17 +43,18 @@
   registerEntityModel({
     id: 'faction-0/building/barracks',
     meshes: { faction0BarracksHull: createBarracksHull },
-    render({ part: p, metal, team, accent }) {
+    render({ part: p, metal, team, accent, nightLight=0 }) {
+      const glow=(base=0)=>base+(3.2-base)*nightLight;
       p('faction0BarracksHull', 0, 0, 0, 1, 1, 1, metal);
       // Front lintel, flanking entry lights and roof stripes read at battle zoom.
-      p('box', 0, 2.53, 2.256, 2.18, .095, .025, team, 0, 0, 0, .8);
+      p('box', 0, 2.53, 2.256, 2.18, .095, .025, team, 0, 0, 0, glow(.8));
       for (const side of [-1, 1]) {
-        p('box', side * 1.28, 1.88, 2.23, .17, .09, .025, accent, 0, 0, 0, .4);
-        p('box', side * 2.35, 2.922, -.38, .07, .025, 2.3, team, 0, 0, 0, .25);
-        p('box', side * 2.705, 1.55, 1.359, .4, .26, .025, team, 0, 0, 0, .25);
+        p('box', side * 1.28, 1.88, 2.23, .17, .09, .025, accent, 0, 0, 0, glow(.4));
+        p('box', side * 2.35, 2.922, -.38, .07, .025, 2.3, team, 0, 0, 0, glow(.25));
+        p('box', side * 2.705, 1.55, 1.359, .4, .26, .025, team, 0, 0, 0, glow(.25));
       }
-      p('box', .9, 3.585, -1.27, .42, .035, .4, accent, 0, 0, 0, .35);
-      p('box', -1.62, 4.1, -1.3, .8, .6, .035, team);
+      p('box', .9, 3.585, -1.27, .42, .035, .4, accent, 0, 0, 0, glow(.35));
+      p('box', -1.62, 4.1, -1.3, .8, .6, .035, team, 0, 0, 0, glow());
     }
   });
 })();

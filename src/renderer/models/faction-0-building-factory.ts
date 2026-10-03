@@ -62,15 +62,16 @@
   registerEntityModel({
     id: 'faction-0/building/factory',
     meshes: { faction0FactoryHull: createFactoryHull },
-    render({ part: p, metal, team, accent }) {
+    render({ part: p, metal, team, accent, nightLight=0 }) {
+      const glow=(base=0)=>base+(3.2-base)*nightLight;
       p('faction0FactoryHull', 0, 0, 0, 1, 1, 1, metal);
-      p('box', 0, 3.07, 1.657, 3.9, .1, .025, team, 0, 0, 0, .75);
-      p('box', 0, 2.43, -2.451, 3.6, .1, .025, 0xed975d, 0, 0, 0, .5);
+      p('box', 0, 3.07, 1.657, 3.9, .1, .025, team, 0, 0, 0, glow(.75));
+      p('box', 0, 2.43, -2.451, 3.6, .1, .025, 0xed975d, 0, 0, 0, glow(.5));
       for (const side of [-1, 1]) {
-        p('box', side * 2.62, 2.28, 1.746, .39, .12, .025, accent, 0, 0, 0, .35);
-        p('box', side * 3.278, 2.83, -.9, .025, .13, 2.2, team, 0, 0, 0, .3);
+        p('box', side * 2.62, 2.28, 1.746, .39, .12, .025, accent, 0, 0, 0, glow(.35));
+        p('box', side * 3.278, 2.83, -.9, .025, .13, 2.2, team, 0, 0, 0, glow(.3));
         for (let i = 0; i < 3; i++)
-          p('box', side * 2.62, 1.35 + i * .21, 1.746, .44, .08, .025, accent, 0, 0, side * -.35);
+          p('box', side * 2.62, 1.35 + i * .21, 1.746, .44, .08, .025, accent, 0, 0, side * -.35, glow());
       }
       // Open truss crane: two rails and diagonal braces instead of a glowing stick.
       for (const y of [4.9, 5.22]) p('box', 1.33, y, -1.3, 2.8, .09, .18, accent);

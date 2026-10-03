@@ -33,15 +33,16 @@
   }
   registerEntityModel({
     id:'faction-0/building/refinery', meshes:{faction0RefineryHull:hull},
-    render({part:p,time,metal,dark,team,accent}) {
+    render({part:p,time,metal,dark,team,accent,nightLight=0}) {
+      const glow=(base=0)=>base+(3.2-base)*nightLight;
       p('faction0RefineryHull',0,0,0,1,1,1,metal);
       for(const side of [-1,1]) {
         const h=side<0?4.5:3.5;
-        p('cylinder',side*1.13,h*.6,-.15,.88,.25,.88,team,0,0,0,.8);
-        p('box',side*1.13,1.325,1.65,.32,.035,.07,accent);
-        p('box',side*1.13,.822,-1.25,.65,.03,.22,accent);
+        p('cylinder',side*1.13,h*.6,-.15,.88,.25,.88,team,0,0,0,glow(.8));
+        p('box',side*1.13,1.325,1.65,.32,.035,.07,accent,0,0,0,glow());
+        p('box',side*1.13,.822,-1.25,.65,.03,.22,accent,0,0,0,glow());
       }
-      p('octa',0,2.1,1.1,.55,1.2,.5,0x8ff0de,time*.22,0,0,1);
+      p('octa',0,2.1,1.1,.55,1.2,.5,0x8ff0de,time*.22,0,0,glow(1));
     }
   });
 })();

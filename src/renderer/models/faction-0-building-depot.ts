@@ -30,12 +30,13 @@
   }
   registerEntityModel({
     id: 'faction-0/building/depot', meshes: { faction0DepotHull: hull },
-    render({part:p,metal,team,accent}) {
+    render({part:p,metal,team,accent,nightLight=0}) {
+      const glow=(base=0)=>base+(3.2-base)*nightLight;
       p('faction0DepotHull',0,0,0,1,1,1,metal);
       for (const side of [-1,1]) {
-        p('box',side*1.05,1.43,1.699,1.1,.17,.035,team,0,0,0,.5);
-        p('box',side*1.05,2.133,0,.16,.025,2.72,accent);
-        for (const dx of [-.62,.62]) p('box',side*1.05+dx,.54,1.703,.18,.055,.035,accent);
+        p('box',side*1.05,1.43,1.699,1.1,.17,.035,team,0,0,0,glow(.5));
+        p('box',side*1.05,2.133,0,.16,.025,2.72,accent,0,0,0,glow());
+        for (const dx of [-.62,.62]) p('box',side*1.05+dx,.54,1.703,.18,.055,.035,accent,0,0,0,glow());
       }
     }
   });

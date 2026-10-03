@@ -405,6 +405,8 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       // Tactical rings and previews stay unchanged.
       const occlusion = options.occlusion && !R.cinema && !ghost && options.tint === undefined && alpha === 1 && layer === 'dynamic',
         occlusionColor = e.kind === 'resource' ? e.type === 'gas' ? 0x65e5e9 : 0xe7b969 : team;
+      const nightLight = !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic' && build === 1
+        ? workerNightLight(R.battlefieldHour) : 0;
       const animated = (e.kind === 'unit' || e.kind === 'building') && R.quality > 0 && !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic';
       const phase = time * (e.faction === FACTION_ID.SECOND ? 1.8 : 1.1) + e.id * 2.39996;
       const p: ModelPart = (
@@ -566,7 +568,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         }
         const model = EntityModels.find(e);
         if (model) {
-          model.render({ entity: e, time, nightLight: 0, lightPool: () => {}, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+          model.render({ entity: e, time, nightLight, lightPool: () => {}, part: p, ring, metal, dark, team, accent, baseRotation: rot,
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {
@@ -595,8 +597,6 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       }
       const model = EntityModels.find(e);
       if (model) {
-        const nightLight = !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic'
-          ? workerNightLight(R.battlefieldHour) : 0;
         const lightPool: EntityModelContext['lightPool'] = (lx,lz,width,length,color,strength) => {
           if (nightLight <= 0 || R.quality === 0) return;
           const x = e.x+lx*cs+lz*sn, z = e.z-lx*sn+lz*cs,
