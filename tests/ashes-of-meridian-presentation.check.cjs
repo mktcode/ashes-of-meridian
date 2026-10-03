@@ -775,11 +775,24 @@ function appClock(diagnostic = false) {
       gl = { getExtension(name) { queryRequests.push(name); return null; } };
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1;
-      frameReady() { return true; } releaseEnvironment() {} releaseMenuSky() {}
+      frameReady() { return true; } releaseEnvironment() {} releaseMenuSky() {} releaseGeometry() {}
       setBattlefieldTime(time) { this.battlefieldTime=time; }
       setMenuSky(seed,family) { this.menuSky={seed,family}; }
       resize() {} camera() {} project() { return {x:400,y:300}; } begin() { renderWork.begin++; }
       render(time, modelTime, thumbnails) { this.diagnostics?.beginFrame(); thumbnails?.(); draws.push({ now, time }); }
+    },
+    // This fixture tests app mesh/lifecycle behavior; shared placement rules have their own tests.
+    PlacementGuideSampler: class {
+      constructor(game,type,team) { Object.assign(this,{game,type,team}); }
+      refresh() {
+        this.pending=!!this.game.guidePendingFrames;
+        if(this.pending) this.game.guidePendingFrames--;
+      }
+      sample(p) {
+        const {game,type,team}=this, world=game.world;
+        if (Math.abs(p.x)>=world.extent-4 || Math.abs(p.z)>=world.extent-4 || !world.sight[team].visible[world.idx(p.x,p.z)]) return 0;
+        return game.canBuild(type,p,team)?-1:1;
+      }
     },
     MeridianModelThumbnails: class { update() {} dispose() {} },
     BattlefieldView: class {
@@ -789,13 +802,13 @@ function appClock(diagnostic = false) {
     MeridianAudio: class { update() {} },
     MeridianGame: class {
       world = {};
-      s = { time: 0, speed: 1, entities: [], cam: { x: 0, z: 0, zoom: 65, yaw: 0 } };
+      s = { time: 0, speed: 1, entities: [], supplyCaches: [], cam: { x: 0, z: 0, zoom: 65, yaw: 0 } };
       effects = { fx: [], tick: dt => effectTicks.push(dt) };
       step(dt) { steps.push(dt); this.s.time += dt; }
     },
     MeridianUI: class {
       view = 'game'; paused = false; pointer = {}; pings = [];
-      showHome() {} drawMinimap() {} drawOverlay() { renderWork.overlay++; }
+      showHome() {} saveBattle() {} autosaveBattle() {} drawMinimap() {} drawOverlay() { renderWork.overlay++; }
       selectionIds() { return new Set(); }
       tick(dt) { ticks.push(dt); }
     },
@@ -858,7 +871,7 @@ test('placement guide makes one fine, continuous terrain mesh from bounded visib
   a.game.s.cam.zoom=40;
   a.game.canBuild=(type,p,team)=>{samples.push([type,p.x,p.z,team]);return p.x<0?'blocked':'';};
   a.renderer.add=(...args)=>marks.push(args);
-  a.renderer.geometry=(name,data)=>uploads.push({name,data});
+  a.renderer.streamGeometry=(name,data)=>uploads.push({name,data});
   a.renderer.releaseGeometry=name=>releases.push(name);
   a.ui.paused=false;a.frame(20);
   assert.ok(samples.length>0 && samples.length<500);
@@ -873,9 +886,16 @@ test('placement guide makes one fine, continuous terrain mesh from bounded visib
   assert.ok(marks.every(m=>m[0]==='placementGuide'&&m[13]==='effects'));
   assert.deepEqual(a.errors,[]);
   const count=samples.length;a.frame(40);assert.equal(samples.length,count,'reuse mesh between revisions');
-  a.game.world.sight[0].visible[0]=0;a.game.world.fogVersion++;a.frame(60);
-  assert.equal(samples.length,count,'do not probe unseen terrain');
-  a.ui.mode=null;a.frame(80);assert.deepEqual(releases,['placementGuide']);
+  a.game.world.fogVersion++;a.frame(60);
+  assert.equal(uploads.length,1,'unchanged sampled colors do not upload on fog revisions');
+  assert.equal(samples.length,count*2);
+  a.game.canBuild=()=>'';a.game.world.fogVersion++;a.frame(80);
+  assert.equal(uploads.length,2);
+  assert.strictEqual(uploads[0].data,uploads[1].data,'reuse CPU mesh storage for changed colors');
+  const afterChange=samples.length;
+  a.game.world.sight[0].visible[0]=0;a.game.world.fogVersion++;a.frame(100);
+  assert.equal(samples.length,afterChange,'do not probe unseen terrain');
+  a.ui.mode=null;a.frame(120);assert.deepEqual(releases,['placementGuide']);
   assert.deepEqual(a.errors,[]);
 });
 
@@ -886,7 +906,7 @@ test('placement guide covers wide viewports and raised ground, updating on rotat
   a.game.world={extent:135,fogVersion:0,surface:{maxHeight:60,heightAt:()=>60},
     sight:[{visible:new Uint8Array([1])}],idx:()=>0};
   a.game.canBuild=()=>'';
-  a.renderer.geometry=(name,data)=>uploads.push(data);
+  a.renderer.streamGeometry=(name,data)=>uploads.push(data);
   a.renderer.add=(...args)=>marks.push(args);
   a.renderer.ground=(x,y,terrain)=>{
     assert.equal(terrain,false);
@@ -900,6 +920,7 @@ test('placement guide covers wide viewports and raised ground, updating on rotat
     return 0;
   };
   a.frame(20);
+  assert.deepEqual(a.errors,[]);
   assert.ok(colorAt(48,63)>.8,'wide edge of elevated visible ground is not capped at 36');
   const count=uploads.length;a.frame(40);assert.equal(uploads.length,count);
   a.game.s.cam.yaw=Math.PI/2;a.frame(60);
@@ -909,6 +930,23 @@ test('placement guide covers wide viewports and raised ground, updating on rotat
   assert.equal(uploads.length,count+2,'viewport resizing invalidates the mesh');
   assert.ok(colorAt(111,0)>.8,'newly exposed right edge is covered');
   assert.deepEqual(a.errors,[]);
+});
+
+test('placement guide batches cold terrain across frames before uploading and hides stale fields',()=>{
+  const a=appClock(),uploads=[],marks=[];
+  a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.game.localTeam=0;a.game.guidePendingFrames=2;
+  a.setBuilding('depot',{size:2});
+  a.game.world={extent:50,fogVersion:0,surface:{maxHeight:0,heightAt:()=>3},sight:[{visible:new Uint8Array([1])}],idx:()=>0};
+  a.game.canBuild=()=>'';
+  a.renderer.ground=(x,y)=>({x:(x-400)/20,z:(y-300)/20});
+  a.renderer.streamGeometry=(name,data)=>uploads.push(data);a.renderer.add=(...args)=>marks.push(args);
+  a.frame(20);a.frame(40);assert.equal(uploads.length,0);assert.equal(marks.length,0);
+  a.frame(60);assert.equal(uploads.length,1);assert.equal(marks.length,1);
+  assert.ok(Math.abs(uploads[0][1]-3.065)<1e-5,'positions initialize when a deferred mesh is first uploaded');
+  a.game.guidePendingFrames=1;a.game.world.fogVersion++;a.frame(80);
+  assert.equal(marks.length,1,'do not draw stale colors while new samples are pending');
+  a.frame(100);assert.equal(marks.length,2);assert.equal(uploads.length,1,'reuse unchanged completed field');
+  a.ui.mode=null;a.frame(120);assert.deepEqual(a.errors,[]);
 });
 
 test('real app loop gates occlusion by party observation and excludes intro-only contacts', () => {

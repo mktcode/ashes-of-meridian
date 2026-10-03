@@ -1,6 +1,46 @@
     /* MeridianGame economy methods. Loaded after simulation/game.js. */
     'use strict';
     const REFINERY_PLACEMENT_RANGE = 6;
+    // Shared read-only placement rules. The view may cache terrain, never live build permission.
+    function buildingFoundationReason(world: Battlefield, type: BuildingType, p: Position, team: PlayerTeam): string {
+      const r = BUILDINGS[type].size;
+      if (world.surface) {
+        if (!world.surface.foundation(p, r)) return 'Build on stable ground or a gentle slope, away from cliffs.';
+        const yaw = BUILDING_YAW + (team === 1 ? Math.PI : 0);
+        for (const unit of Object.values(UNITS) as UnitDefinitionShape[]) {
+          if (unit.from !== type || unit.flying) continue;
+          const body = unit.size * UNIT_BODY_SCALE, reach = r + body + 1.5,
+            exit = {x:p.x+Math.sin(yaw)*reach,z:p.z+Math.cos(yaw)*reach};
+          if (!world.terrainFree(p, exit, body)) return 'Leave clear terrain for production exits.';
+        }
+      }
+      const limit = world.extent - 1 - r;
+      return Math.abs(p.x) > limit || Math.abs(p.z) > limit ? 'Too close to the battlefield boundary.' : '';
+    }
+    function buildingTerrainObstructed(world: Battlefield, p: Position, r: number): boolean {
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        if (world.staticGrid[world.idx(p.x + Math.sin(a) * r, p.z + Math.cos(a) * r)]) return true;
+      }
+      return !!world.staticGrid[world.idx(p.x, p.z)];
+    }
+    function buildingBlockerReason(p: Position, r: number, e: Entity): string {
+      if (e.hp <= 0) return '';
+      if (e.kind === 'unit') {
+        const clearance = r + e.size * UNIT_BODY_SCALE + 1;
+        return distance(p, e) < clearance || (e.exit && distance(p, e.exit) < clearance)
+          ? 'Leave room around units and production exits.' : '';
+      }
+      return distance(p, e) < r + e.size + 0.8 ? 'Leave room around structures and resources.' : '';
+    }
+    function nearestRefineryVent(p: Position, vents: readonly ResourceEntity[]): ResourceEntity | null {
+      let best: ResourceEntity | null = null, d = Infinity;
+      for (const vent of vents) {
+        const dd = distance(p, vent);
+        if (dd < d) { d = dd; best = vent; }
+      }
+      return d <= REFINERY_PLACEMENT_RANGE ? best : null;
+    }
     const economyMethods = {
       produceUnit(this: MeridianGame, b: BuildingEntity, type: UnitType): UnitEntity | null {
         if (this.s!.entities.some(e => e.hp > 0 && e.exit?.building === b.id)) return null;
@@ -125,9 +165,8 @@
         return null;
       },
       refineryVent(this: MeridianGame, p: Position, team: PlayerTeam = 0): ResourceEntity | null {
-        const gas = this.closest(p, e => e.kind === 'resource' && e.type === 'gas' &&
-          !!this.world!.sight[team].explored[this.world!.idx(e.x, e.z)]) as ResourceEntity | null;
-        return gas && distance(p, gas) <= REFINERY_PLACEMENT_RANGE ? gas : null;
+        return nearestRefineryVent(p, this.alive(e => e.kind === 'resource' && e.type === 'gas' &&
+          !!this.world!.sight[team].explored[this.world!.idx(e.x, e.z)]) as ResourceEntity[]);
       },
       foundationPosition(this: MeridianGame, type: BuildingType, p: Position, team: PlayerTeam = 0): Position {
         const gas = type === 'refinery' ? this.refineryVent(p, team) : null;
@@ -147,42 +186,17 @@
         if (type === 'refinery' && !gas)
           return `Place within ${REFINERY_PLACEMENT_RANGE} meters of an explored Echo vent.`;
         p = gas ? { x: gas.x, z: gas.z } : p;
-        let r = d.size;
-        if (this.world!.surface) {
-          if (!this.world!.surface.foundation(p, r))
-            return 'Build on stable ground or a gentle slope, away from cliffs.';
-          const yaw = BUILDING_YAW + (team === 1 ? Math.PI : 0);
-          for (const unit of Object.values(UNITS) as UnitDefinitionShape[]) {
-            if (unit.from !== type || unit.flying) continue;
-            const body = unit.size * UNIT_BODY_SCALE, reach = r + body + 1.5,
-              exit = {x:p.x+Math.sin(yaw)*reach,z:p.z+Math.cos(yaw)*reach};
-            if (!this.world!.terrainFree(p,exit,body)) return 'Leave clear terrain for production exits.';
-          }
-        }
-        // Match the foundation's one-meter margin instead of reserving a wide empty border.
-        const limit = this.world!.extent - 1 - r;
-        if (Math.abs(p.x) > limit || Math.abs(p.z) > limit)
-          return 'Too close to the battlefield boundary.';
+        const r = d.size, foundationReason = buildingFoundationReason(this.world!, type, p, team);
+        if (foundationReason) return foundationReason;
         if (!this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
           return 'Scout this location before building.';
-        for (let i = 0; i < 12; i++) {
-          let a = (i / 12) * Math.PI * 2;
-          if (this.world!.staticGrid[this.world!.idx(p.x + Math.sin(a) * r, p.z + Math.cos(a) * r)])
-            return 'Terrain obstructs the foundation.';
-        }
-        if (this.world!.staticGrid[this.world!.idx(p.x, p.z)]) return 'Terrain obstructs the foundation.';
+        if (buildingTerrainObstructed(this.world!, p, r)) return 'Terrain obstructs the foundation.';
         if (this.s!.supplyCaches.some(cache => !cache.collected && distance(p, cache) < r + 3))
           return 'Recover nearby supply caches before building here.';
         for (let e of this.s!.entities) {
-          if (e.hp <= 0) continue;
-          if (e.kind === 'unit') {
-            const clearance = r + e.size * UNIT_BODY_SCALE + 1;
-            if (distance(p, e) < clearance || (e.exit && distance(p, e.exit) < clearance))
-              return 'Leave room around units and production exits.';
-            continue;
-          }
           if (e === gas) continue;
-          if (distance(p, e) < r + e.size + 0.8) return 'Leave room around structures and resources.';
+          const reason = buildingBlockerReason(p, r, e);
+          if (reason) return reason;
         }
         if (gas && this.alive(e => e.type === 'refinery' && e.gasId === gas.id).length)
           return 'This vent already supplies a refinery.';

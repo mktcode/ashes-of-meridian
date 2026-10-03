@@ -105,6 +105,31 @@ test('renderer reuses typed geometry and uploads a bucket transition to empty on
   assert.equal(uploads.at(-1).data.length, 22, 'a reused bucket uploads new instances normally');
 });
 
+test('streamed viewport geometry retains GPU storage and updates bounds without static chunking', () => {
+  const context=loadScripts(RENDERER_SCRIPTS), Renderer=vm.runInContext('MeridianRenderer',context);
+  const buffers=new Set(), vaos=new Set(), uploads=[], updates=[];let bound;
+  const gl={ARRAY_BUFFER:1,STATIC_DRAW:2,DYNAMIC_DRAW:3,FLOAT:4,
+    createBuffer(){const b={};buffers.add(b);return b;},createVertexArray(){const v={};vaos.add(v);return v;},
+    bindBuffer(target,b){bound=b;},bindVertexArray(){},enableVertexAttribArray(){},vertexAttribPointer(){},
+    bufferData(target,data,usage){uploads.push({bound,data,usage});},
+    bufferSubData(target,offset,data){updates.push({bound,offset,data});},
+    deleteBuffer(b){assert.ok(buffers.delete(b));},deleteVertexArray(v){assert.ok(vaos.delete(v));}};
+  const r=Object.assign(Object.create(Renderer.prototype),{gl,meshes:{},meshParts:{}});
+  const data=new Float32Array(200*27);data[0]=-100;data[9]=100;data[10]=4;
+  r.streamGeometry('guide',data);
+  const {vao,vbo}=r.meshes.guide;
+  assert.deepEqual(Array.from(r.meshParts.guide),['guide'],'viewport mesh is not repartitioned');
+  assert.equal(buffers.size,1);assert.equal(vaos.size,1);assert.equal(uploads[0].usage,gl.DYNAMIC_DRAW);
+  data[0]=-120;data[10]=8;r.streamGeometry('guide',data);
+  assert.strictEqual(r.meshes.guide.vao,vao);assert.strictEqual(r.meshes.guide.vbo,vbo);
+  assert.equal(uploads.length,1);assert.equal(updates.length,1);assert.equal(updates[0].offset,0);
+  assert.strictEqual(updates[0].data,data);assert.equal(r.meshes.guide.bounds[0],-120);assert.equal(r.meshes.guide.bounds[4],8);
+  r.streamGeometry('guide',new Float32Array(27));
+  assert.equal(buffers.size,1);assert.equal(vaos.size,1);assert.equal(uploads.length,2);
+  r.releaseGeometry('guide');assert.equal(buffers.size,0);assert.equal(vaos.size,0);
+  assert.equal(r.meshParts.guide,undefined);
+});
+
 function geometryResidency(context) {
   const Renderer = vm.runInContext('MeridianRenderer', context), buffers = new Map(), vaos = new Set();
   let bound, uploads = 0, releases = 0;

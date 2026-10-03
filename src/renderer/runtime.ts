@@ -337,27 +337,40 @@
         }
         partsByName[name] = parts;
       }
-      createGeometry(name: string, data: MeshData) {
+      // Bounded view overlays need no static chunk rebuild. Reuse VAO/VBO storage.
+      streamGeometry(name: string, data: Float32Array) {
+        const mesh = this.meshes[name];
+        if (!mesh || mesh.count !== data.length / 9 || this.meshParts[name]?.length !== 1) {
+          this.releaseGeometry(name);
+          this.createGeometry(name, data, this.gl.DYNAMIC_DRAW);
+          this.meshParts[name] = [name];
+          return;
+        }
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, mesh.vbo);
+        this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, data);
+        mesh.bounds = this.geometryBounds(data);
+      }
+      private geometryBounds(storage: MeshData): RenderMesh['bounds'] {
+        const bounds: RenderMesh['bounds'] = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+        for (let i = 0; i < storage.length; i += 9) for (let axis = 0; axis < 3; axis++) {
+          bounds[axis] = Math.min(bounds[axis], storage[i + axis]);
+          bounds[axis + 3] = Math.max(bounds[axis + 3], storage[i + axis]);
+        }
+        return bounds;
+      }
+      createGeometry(name: string, data: MeshData, usage: number = this.gl.STATIC_DRAW) {
         const gl = this.gl, storage = Array.isArray(data) ? new Float32Array(data) : data;
         let vao = gl.createVertexArray(), vbo = gl.createBuffer();
         gl.bindVertexArray(vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
         // Large terrain factories already return their final typed storage; do not duplicate it before upload.
-        gl.bufferData(gl.ARRAY_BUFFER, storage, gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, storage, usage);
         for (let [i, offset] of [[0, 0], [1, 12], [8, 24]]) {
           gl.enableVertexAttribArray(i);
           gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 36, offset);
         }
         gl.bindVertexArray(null);
-        const bounds: [number, number, number, number, number, number] =
-          [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
-        for (let i = 0; i < storage.length; i += 9) {
-          for (let axis = 0; axis < 3; axis++) {
-            bounds[axis] = Math.min(bounds[axis], storage[i + axis]);
-            bounds[axis + 3] = Math.max(bounds[axis + 3], storage[i + axis]);
-          }
-        }
-        this.meshes[name] = { vao, vbo, count: storage.length / 9, bounds };
+        this.meshes[name] = { vao, vbo, count: storage.length / 9, bounds: this.geometryBounds(storage) };
       }
       setupShadow() {
         let g = this.gl;

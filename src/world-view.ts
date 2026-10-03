@@ -1,6 +1,73 @@
 /* GPU adapter for CPU-generated world data, plus entity models. */
 'use strict';
 
+// A viewport-owned, read-only batch: static rules are cached only for this footprint.
+// Live blockers are indexed afresh, including production exits and unseen entities.
+class PlacementGuideSampler {
+  private terrain = new Map<string, boolean>();
+  private buckets = new Map<string, Entity[]>();
+  private unseen = new Set<Entity>();
+  private vents: ResourceEntity[] = [];
+  private occupiedVents = new Set<number>();
+  private ready = false;
+  private terrainBudget = 0;
+  pending = false;
+  private readonly world: Battlefield;
+  private readonly size: number;
+  constructor(private game: MeridianGame, private type: BuildingType, private team: PlayerTeam) {
+    this.world = game.world!;
+    this.size = BUILDINGS[type].size;
+  }
+  private key(p: Position) { return `${Math.floor(p.x / 10)},${Math.floor(p.z / 10)}`; }
+  refresh(terrainBudget = 64) {
+    this.terrainBudget = terrainBudget; this.pending = false;
+    this.ready = !this.game.canBuild(this.type, null, this.team);
+    this.buckets.clear(); this.unseen.clear(); this.vents = []; this.occupiedVents.clear();
+    const add = (e: Entity, p: Position, radius: number) => {
+      for (let z = Math.floor((p.z - radius) / 10); z <= Math.floor((p.z + radius) / 10); z++)
+        for (let x = Math.floor((p.x - radius) / 10); x <= Math.floor((p.x + radius) / 10); x++) {
+          const key = `${x},${z}`, bucket = this.buckets.get(key);
+          if (!bucket) this.buckets.set(key, [e]);
+          else if (bucket[bucket.length - 1] !== e) bucket.push(e);
+        }
+    };
+    for (const e of this.game.s!.entities) {
+      if (e.hp <= 0) continue;
+      if (!this.game.observed(e)) this.unseen.add(e);
+      const radius = this.size + (e.kind === 'unit' ? e.size * UNIT_BODY_SCALE + 1 : e.size + .8);
+      add(e, e, radius);
+      if (e.kind === 'unit' && e.exit) add(e, e.exit, radius);
+      if (e.kind === 'resource' && e.type === 'gas' && this.world.sight[this.team].explored[this.world.idx(e.x, e.z)])
+        this.vents.push(e);
+      if (e.type === 'refinery' && e.gasId !== undefined) this.occupiedVents.add(e.gasId);
+    }
+  }
+  sample(pos: Position): number {
+    const world = this.world, r = this.size;
+    if (Math.abs(pos.x) >= world.extent - 4 || Math.abs(pos.z) >= world.extent - 4 ||
+        !world.sight[this.team].visible[world.idx(pos.x, pos.z)]) return 0;
+    // Test the original sample before vent snapping, just like the visibility guard.
+    if (this.buckets.get(this.key(pos))?.some(e => this.unseen.has(e) && buildingBlockerReason(pos, r, e))) return 0;
+    if (!this.ready) return -1;
+    const gas = this.type === 'refinery' ? nearestRefineryVent(pos, this.vents) : null;
+    if (this.type === 'refinery' && !gas) return -1;
+    const p = gas || pos, key = `${p.x}:${p.z}`;
+    let terrain = this.terrain.get(key);
+    if (terrain === undefined) {
+      // Keep menu opening/camera movement responsive. Unknown samples are never shown as buildable.
+      if (this.terrainBudget <= 0) { this.pending = true; return 0; }
+      this.terrainBudget--;
+      terrain = !buildingFoundationReason(world, this.type, p, this.team) && !buildingTerrainObstructed(world, p, r);
+      this.terrain.set(key, terrain);
+    }
+    if (!terrain || !world.sight[this.team].explored[world.idx(p.x, p.z)] ||
+        this.game.s!.supplyCaches.some(cache => !cache.collected && distance(p, cache) < r + 3) ||
+        this.buckets.get(this.key(p))?.some(e => e !== gas && buildingBlockerReason(p, r, e)) ||
+        (gas && this.occupiedVents.has(gas.id))) return -1;
+    return 1;
+  }
+}
+
 // Cinematic buildings obey the same ground restrictions as player foundations.
 // Search only nearby; omitting a prop is preferable to a tower on an unsuitable hillside.
 function cinematicBuildingPosition(world: Battlefield, preferred: Position, size: number,

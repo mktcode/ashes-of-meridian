@@ -234,7 +234,8 @@
         // Coarse validation samples become a continuous, terrain-following color field.
         // Its fine mesh and GPU storage are view-owned; neither changes world geometry or RNG.
         const GUIDE_MESH = 'placementGuide', GUIDE_SAMPLE = 3, GUIDE_STEP = 1.5;
-        let placementGuide: { world: Battlefield; key: string } | null = null;
+        let placementGuide: { world: Battlefield; key: string; revision: string; uploaded: boolean; dirty: boolean;
+          sampler: PlacementGuideSampler; samples: Float32Array; points: Float32Array; data: Float32Array } | null = null;
         function clearPlacementGuide() {
           if (placementGuide) R.releaseGeometry(GUIDE_MESH);
           placementGuide = null;
@@ -254,55 +255,68 @@
             startX = lower(corners.map(p => p.x)), startZ = lower(corners.map(p => p.z)),
             endX = upper(corners.map(p => p.x)), endZ = upper(corners.map(p => p.z)),
             cx = (startX + endX) / 2, cz = (startZ + endZ) / 2,
-            key = `${type}:${game.localTeam}:${startX}:${startZ}:${endX}:${endZ}:${world.fogVersion}:${Math.floor(s.time * 3)}`;
+            key = `${type}:${game.localTeam}:${startX}:${startZ}:${endX}:${endZ}`,
+            revision = `${world.fogVersion}:${Math.floor(s.time * 3)}`,
+            columns = (endX - startX) / GUIDE_SAMPLE + 1, rows = (endZ - startZ) / GUIDE_SAMPLE + 1,
+            fineX = (columns - 1) * 2, fineZ = (rows - 1) * 2, row = fineX + 1;
           if (endX <= startX || endZ <= startZ) { clearPlacementGuide(); return; }
-          if (placementGuide?.world !== world || placementGuide.key !== key) {
-            const columns = (endX - startX) / GUIDE_SAMPLE + 1, rows = (endZ - startZ) / GUIDE_SAMPLE + 1,
-              samples = new Float32Array(columns * rows), sight = world.sight[game.localTeam], size = BUILDINGS[type].size;
-            for (let j = 0; j < rows; j++) for (let i = 0; i < columns; i++) {
-              const x = startX + i * GUIDE_SAMPLE, z = startZ + j * GUIDE_SAMPLE, pos = { x, z };
-              if (Math.abs(x) >= world.extent - 4 || Math.abs(z) >= world.extent - 4 || !sight.visible[world.idx(x, z)]) continue;
-              // An unseen blocker must not be revealed by a changed color at its position.
-              if (s.entities.some(e => e.hp > 0 && !game.observed(e) && (
-                distance(pos, e) < size + (e.kind === 'unit' ? e.size * UNIT_BODY_SCALE + 1 : e.size + 0.8) ||
-                (e.kind === 'unit' && e.exit && distance(pos, e.exit) < size + e.size * UNIT_BODY_SCALE + 1)))) continue;
-              samples[j * columns + i] = game.canBuild(type, pos, game.localTeam) ? -1 : 1;
-            }
-            const fineX = (columns - 1) * 2, fineZ = (rows - 1) * 2, row = fineX + 1,
-              points = new Float32Array(row * (fineZ + 1) * 6), data = new Float32Array(fineX * fineZ * 54);
-            for (let j = 0; j <= fineZ; j++) for (let i = 0; i <= fineX; i++) {
-              const x = startX + i * GUIDE_STEP, z = startZ + j * GUIDE_STEP,
-                si = Math.min(columns - 2, Math.floor(i / 2)), sj = Math.min(rows - 2, Math.floor(j / 2)),
-                u = i / 2 - si, v = j / 2 - sj, base = sj * columns + si,
-                a = samples[base], b = samples[base + 1], c = samples[base + columns], d = samples[base + columns + 1],
-                // Missing visibility fades to transparency rather than becoming red.
-                visibility = (1-u)*(1-v)*Math.abs(a) + u*(1-v)*Math.abs(b) + (1-u)*v*Math.abs(c) + u*v*Math.abs(d),
-                weight = visibility * Math.max(0, Math.min(1, (x - startX) / GUIDE_SAMPLE, (endX - x) / GUIDE_SAMPLE,
-                  (z - startZ) / GUIDE_SAMPLE, (endZ - z) / GUIDE_SAMPLE)),
-                score = (1-u)*(1-v)*a + u*(1-v)*b + (1-u)*v*c + u*v*d,
-                blend = visibility ? Math.max(0, Math.min(1, (score / visibility + 1) / 2)) : 0,
-                p = (j * row + i) * 6;
-              // Local X/Z keep chunk bucket names stable as the camera pans.
-              points[p] = x - cx; points[p + 1] = world.surface.heightAt(x, z) + 0.065; points[p + 2] = z - cz;
-              points[p + 3] = (.94 - .52 * blend) * weight;
-              points[p + 4] = (.38 + .52 * blend) * weight;
-              points[p + 5] = (.36 + .49 * blend) * weight;
-            }
-            let offset = 0;
-            const vertex = (index: number) => {
-              const p = index * 6;
-              data[offset++] = points[p]; data[offset++] = points[p + 1]; data[offset++] = points[p + 2];
-              data[offset++] = 0; data[offset++] = 1; data[offset++] = 0;
-              data[offset++] = points[p + 3]; data[offset++] = points[p + 4]; data[offset++] = points[p + 5];
-            };
-            for (let j = 0; j < fineZ; j++) for (let i = 0; i < fineX; i++) {
-              const a = j * row + i, b = a + 1, d = a + row, c = d + 1;
-              vertex(a); vertex(d); vertex(c); vertex(a); vertex(c); vertex(b);
-            }
-            R.geometry(GUIDE_MESH, data);
-            placementGuide = { world, key };
+          const newFootprint = placementGuide?.world !== world || placementGuide.key !== key;
+          if (newFootprint) {
+            clearPlacementGuide();
+            placementGuide = { world, key, revision: '', uploaded: false, dirty: false, sampler: new PlacementGuideSampler(game, type, game.localTeam),
+              samples: new Float32Array(columns * rows).fill(2),
+              points: new Float32Array(row * (fineZ + 1) * 6), data: new Float32Array(fineX * fineZ * 54) };
           }
-          R.add(GUIDE_MESH, cx, 0, cz, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 0.65, 'effects', PLACEMENT_GUIDE_MATERIAL);
+          const guide = placementGuide!;
+          if (guide.revision !== revision || guide.sampler.pending) {
+            const { samples, points, data, sampler } = guide;
+            sampler.refresh();
+            for (let j = 0; j < rows; j++) for (let i = 0; i < columns; i++) {
+              const sample = sampler.sample({ x: startX + i * GUIDE_SAMPLE, z: startZ + j * GUIDE_SAMPLE }), index = j * columns + i;
+              if (samples[index] !== sample) { samples[index] = sample; guide.dirty = true; }
+            }
+            // Fog revisions and moving blockers often leave the sampled field unchanged.
+            // Finish the bounded terrain batch before building/uploading the field once.
+            if (guide.dirty && !sampler.pending) {
+              for (let j = 0; j <= fineZ; j++) for (let i = 0; i <= fineX; i++) {
+                const x = startX + i * GUIDE_STEP, z = startZ + j * GUIDE_STEP,
+                  si = Math.min(columns - 2, Math.floor(i / 2)), sj = Math.min(rows - 2, Math.floor(j / 2)),
+                  u = i / 2 - si, v = j / 2 - sj, base = sj * columns + si,
+                  a = samples[base], b = samples[base + 1], c = samples[base + columns], d = samples[base + columns + 1],
+                  // Missing visibility fades to transparency rather than becoming red.
+                  visibility = (1-u)*(1-v)*Math.abs(a) + u*(1-v)*Math.abs(b) + (1-u)*v*Math.abs(c) + u*v*Math.abs(d),
+                  weight = visibility * Math.max(0, Math.min(1, (x - startX) / GUIDE_SAMPLE, (endX - x) / GUIDE_SAMPLE,
+                    (z - startZ) / GUIDE_SAMPLE, (endZ - z) / GUIDE_SAMPLE)),
+                  score = (1-u)*(1-v)*a + u*(1-v)*b + (1-u)*v*c + u*v*d,
+                  blend = visibility ? Math.max(0, Math.min(1, (score / visibility + 1) / 2)) : 0,
+                  p = (j * row + i) * 6;
+                // The viewport footprint owns stable local positions; only colors change.
+                if (!guide.uploaded) {
+                  points[p] = x - cx; points[p + 1] = world.surface.heightAt(x, z) + 0.065; points[p + 2] = z - cz;
+                }
+                points[p + 3] = (.94 - .52 * blend) * weight;
+                points[p + 4] = (.38 + .52 * blend) * weight;
+                points[p + 5] = (.36 + .49 * blend) * weight;
+              }
+              let offset = 0;
+              const vertex = (index: number) => {
+                const p = index * 6;
+                data[offset++] = points[p]; data[offset++] = points[p + 1]; data[offset++] = points[p + 2];
+                data[offset++] = 0; data[offset++] = 1; data[offset++] = 0;
+                data[offset++] = points[p + 3]; data[offset++] = points[p + 4]; data[offset++] = points[p + 5];
+              };
+              for (let j = 0; j < fineZ; j++) for (let i = 0; i < fineX; i++) {
+                const a = j * row + i, b = a + 1, d = a + row, c = d + 1;
+                vertex(a); vertex(d); vertex(c); vertex(a); vertex(c); vertex(b);
+              }
+              R.streamGeometry(GUIDE_MESH, data);
+              guide.uploaded = true; guide.dirty = false;
+            }
+            guide.revision = revision;
+          }
+          // Hide the previous field while new terrain samples are pending; never leak stale sight/occupancy.
+          if (guide.uploaded && !guide.sampler.pending)
+            R.add(GUIDE_MESH, cx, 0, cz, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 0.65, 'effects', PLACEMENT_GUIDE_MATERIAL);
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
