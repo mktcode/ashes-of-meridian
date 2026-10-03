@@ -154,7 +154,7 @@
           triggers: {},
           cam: { x: playerStart.x + 5, z: playerStart.z - 2, zoom: 57, yaw: 0 },
           result: null,
-          speed: 1
+          speed: GAME_SPEED.defaultMultiplier
         };
         this.resetRandom(seed);
         this.commandQueue = createCommandQueue();

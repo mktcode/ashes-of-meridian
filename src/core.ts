@@ -1,5 +1,11 @@
-/* Shared matrix/vector math and seeded RNG; classic script, no browser dependencies. */
+/* Shared clock configuration, matrix/vector math and seeded RNG; no browser dependencies. */
 'use strict';
+// HUD multipliers are relative to the base pace; fixed simulation steps stay unchanged.
+const GAME_SPEED = Object.freeze({
+  base: 1.5,
+  multipliers: Object.freeze([1, 2, 3]),
+  defaultMultiplier: 1
+});
 const M4 = {
   identity: () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
   mul(a: ArrayLike<number>, b: ArrayLike<number>) {

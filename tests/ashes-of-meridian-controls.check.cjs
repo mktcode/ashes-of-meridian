@@ -1267,7 +1267,7 @@ test('speed changes are transient, pause-guarded and preserve commands and RNG',
   g.s.entities = [{ id: 7, kind: 'unit', team: 0, hp: 100, order }];
   h.ui.selected = [7]; h.ui.mode = mode; h.ui.attackMove = true;
   h.ui.updateHUD();
-  for (const speed of [1.5, 2, .75, 1, 1.5, 2, .75, 1]) {
+  for (const speed of [2, 3, 1, 2, 3, 1]) {
     h.ui.lastClick = { id: 7, count: 1 };
     button.onclick();
     assert.equal(g.s.speed, speed);
@@ -1276,10 +1276,10 @@ test('speed changes are transient, pause-guarded and preserve commands and RNG',
     assert.equal(Object.keys(h.ui.lastClick).length, 0);
   }
   assert.deepEqual(h.calls, []); assert.equal(JSON.stringify(h.ui.profile), profile);
-  button.onclick(); h.ui.pause(); button.onclick(); assert.equal(g.s.speed, 1.5);
-  h.ui.resume(); assert.equal(g.s.speed, 1.5);
-  g.s.result = {}; button.onclick(); assert.equal(g.s.speed, 1.5);
-  g.s.result = null; h.ui.view = 'home'; button.onclick(); assert.equal(g.s.speed, 1.5);
+  button.onclick(); h.ui.pause(); button.onclick(); assert.equal(g.s.speed, 2);
+  h.ui.resume(); assert.equal(g.s.speed, 2);
+  g.s.result = {}; button.onclick(); assert.equal(g.s.speed, 2);
+  g.s.result = null; h.ui.view = 'home'; button.onclick(); assert.equal(g.s.speed, 2);
   h.ui.view = 'game'; const run = g.s; g.s = null; button.onclick(); assert.equal(g.s, null);
   g.s = run;
 });

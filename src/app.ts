@@ -411,7 +411,7 @@
           frameClock += elapsed;
           try {
             if (game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
-              accumulator += dt * game.s.speed;
+              accumulator += dt * GAME_SPEED.base * game.s.speed;
               let steps = 0;
               while (accumulator >= SIMULATION_STEP_SECONDS && steps++ < 12) {
                 game.step(SIMULATION_STEP_SECONDS);

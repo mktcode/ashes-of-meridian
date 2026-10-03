@@ -771,7 +771,7 @@ function appClock(diagnostic = false) {
     });
     return elements.get(id);
   };
-  loadScripts([...DIAGNOSTIC_SCRIPTS, 'app'], { globals: {
+  loadScripts(['core', ...DIAGNOSTIC_SCRIPTS, 'app'], { globals: {
     $, window, document, navigator: { userAgent: 'clock-test' }, URLSearchParams,
     location: { search: diagnostic ? '?diagnostics=1' : '' }, devicePixelRatio: 1,
     performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
@@ -956,7 +956,7 @@ for (const hz of [30, 59.94, 60, 90, 120, 144]) {
       'skipped frames omit instance/effect construction and overlay drawing too');
     assert.equal(a.ticks.length, count, 'UI continues on skipped render callbacks');
     assert.ok(Math.abs(a.ticks.reduce((sum, dt) => sum + dt, 0) - seconds) < 1e-8);
-    assert.ok(Math.abs(a.steps.length - seconds * 20) <= 1);
+    assert.ok(Math.abs(a.steps.length - seconds * 30) <= 1);
     assert.ok(a.steps.every(dt => dt === .05));
     assert.deepEqual(a.effectTicks, a.steps, 'effects retain fixed-step ordering/cadence');
     assert.ok(Math.abs(a.draws.at(-1).time - seconds) < .02);
@@ -996,22 +996,25 @@ test('render phase tolerates timestamp jitter at 60 Hz and discards slots after 
   const before = a.draws.length, steps = a.steps.length;
   a.frame(20000);
   assert.equal(a.draws.length, before + 1, 'no render catch-up batch');
-  assert.ok(a.steps.length - steps <= 2, 'existing 100 ms elapsed clamp is retained');
+  assert.ok(a.steps.length - steps <= 3, 'existing 100 ms elapsed clamp is retained');
   a.frame(20001);
   assert.equal(a.draws.length, before + 1, 'no immediate replay of missed slots');
   assert.deepEqual(a.errors, []);
 });
 
 test('frame cap leaves local speed, pause and menu simulation ownership unchanged', () => {
-  for (const mode of ['double', 'paused', 'menu']) {
+  for (const mode of ['normal', 'double', 'triple', 'paused', 'menu']) {
     const a = appClock();
-    if (mode === 'double') a.game.s.speed = 2;
+    const multiplier = mode === 'triple' ? 3 : mode === 'double' ? 2 : 1;
+    a.game.s.speed = multiplier;
     if (mode === 'paused') a.ui.paused = true;
     if (mode === 'menu') a.ui.view = 'home';
     for (let i = 1; i <= 120; i++) a.frame(i * 1000 / 120);
     assert.ok(Math.abs(a.draws.length - 60) <= 1);
-    if (mode === 'double') assert.ok(Math.abs(a.steps.length - 40) <= 1);
-    else assert.equal(a.steps.length, 0);
+    if (mode === 'paused' || mode === 'menu') assert.equal(a.steps.length, 0);
+    else assert.ok(Math.abs(a.steps.length - 30 * multiplier) <= 1);
+    assert.ok(a.steps.every(dt => dt === .05));
+    assert.deepEqual(a.effectTicks, a.steps);
     assert.deepEqual(a.errors, []);
   }
 });
@@ -1023,7 +1026,7 @@ test('precipitation interpolates only its view clock, freezes on pause and reset
   for(const c of a.weatherClocks) {
     assert.equal(c.effects,c.state,'CPU effect ages/model clocks are unchanged');
     assert.ok(c.weather>=c.state-1e-10&&c.weather<c.state+.05+1e-10);
-    assert.ok(Math.abs(c.weather-c.now/1000)<1e-10,'smooth within the 20 Hz tick');
+    assert.ok(Math.abs(c.weather-c.now/1000*1.5)<1e-10,'smooth interpolation at the new base pace');
   }
   a.frame(1017);const paused=a.weatherClocks.at(-1).weather;
   a.ui.paused=true;
@@ -1033,7 +1036,7 @@ test('precipitation interpolates only its view clock, freezes on pause and reset
   for(const t of [1085,1102,1119])a.frame(t);
   const resumed=a.weatherClocks.slice(-3);
   assert.ok(resumed[0].weather>=paused);
-  assert.ok(Math.abs(resumed[2].weather-resumed[1].weather-.034)<1e-10);
+  assert.ok(Math.abs(resumed[2].weather-resumed[1].weather-.051)<1e-10);
   a.game.s={...a.game.s,time:0};a.frame(1136);
   assert.ok(a.weatherClocks.at(-1).weather<.1,'new battle forgets previous weather clock');
   assert.deepEqual(a.errors,[]);

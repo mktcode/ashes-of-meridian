@@ -89,7 +89,7 @@
         $('speedBtn').onclick = () => {
           if (this.controlsLocked) return;
           if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
-          const speeds = [1, 1.5, 2, 0.75];
+          const speeds = GAME_SPEED.multipliers;
           this.game.s!.speed = speeds[(speeds.indexOf(this.game.s!.speed) + 1) % speeds.length];
           this.lastClick = {};
           this.updateHUD();

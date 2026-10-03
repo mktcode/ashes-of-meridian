@@ -22,6 +22,8 @@ Desert, Alien Planet, Mothership, Westmark, Frontier und Haven sind seedbasierte
 
 ## Kamera und Befehle
 
+Der Tempoknopf neben der Gefechtsuhr wechselt zwischen **1×, 2× und 3×** der Basisgeschwindigkeit. Jedes Gefecht startet mit 1×; die Auswahl wird nicht gespeichert. Die Basis entspricht 1,5 Sekunden Simulationszeit pro realer Sekunde. UI und Audio bleiben in Echtzeit.
+
 - Ziehen mit einem Finger/linker Maus verschiebt, Ziehen mit mittlerer Maus dreht die Kamera. Zwei Finger drehen per Drehgeste und zoomen per Pinch; das Mausrad zoomt. Beim Drehen bleibt der sichtbare Geländepunkt in der Mitte des Spielfeldfensters fest, nicht die Mitte zwischen den Fingern oder die gesamte Bildschirmmitte. Am Kartenrand haben die Kameragrenzen Vorrang. Minimap sowie Basis-/Zoomknöpfe ergänzen die Navigation. Tap/Linksklick wählt.
 - Doppeltap auf dieselbe eigene Einheit gruppiert sichtbare Einheiten dieses Typs; Dreifachtap sichtbare Nicht-Worker. Gruppenschalter ergänzen sichtbare/gesamte Kampfauswahl. Pan, Zielwechsel und Befehle unterbrechen Tapfolgen.
 - Boden-Tap mit Auswahl bewegt; Schwerter-Schalter aktiviert Attack-move für zukünftige Kampfbefehle, nicht Worker. Ziel-Tap/Rechtsklick erteilt Kontextbefehle. Neuer Auftrag ersetzt den bisherigen, keine Befehlsqueue.
