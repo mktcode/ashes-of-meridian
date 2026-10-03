@@ -44,12 +44,13 @@
   }
   registerEntityModel({
     id:'faction-0/unit/medic', meshes:{faction0MedicHull:hull,faction0MedicLeg:leg},
-    render({entity:e,part:p,metal,dark,team,accent}) {
+    render({entity:e,part:p,metal,dark,team,accent,nightLight=0,lightPool}) {
       const h=1, step=Math.sin((e.walk||0)*7)*.23;
       p('faction0MedicHull',0,0,0,1,1,1,0xb9c3be);
       for(const side of [-1,1]) p('faction0MedicLeg',side*.24,0,side*step,1,1,1,dark);
       p('box',0,1.16*h,.28,.48,.26,.1,team,0,0,0,.35);
-      p('box',0,1.65*h,.25,.43,.115,.08,0x84dfc1,0,0,0,.85);
+      p('box',0,1.65*h,.25,.43,.115,.08,0x84dfc1,0,0,0,.85+1.55*nightLight);
+      if (nightLight > 0) lightPool(0,1.3,1.8,2.3,0x84dfc1,.65*nightLight);
       p('box',0,1.15,-.53,.36,.11,.02,0x92e5c5,0,0,0,.7);
       p('box',0,1.15,-.53,.11,.38,.02,0x92e5c5,0,0,0,.7);
       p('box',-.5,1.512,0,.21,.025,.07,0x92e5c5,0,0,0,.4);

@@ -52,12 +52,13 @@
     for(const s of [-1,1]) leaf(o,.62,1.8,.53,.16,.57,s*.9,-1.15,[1.18,1.22,.87]);return o;
   }
   registerEntityModel({id:'faction-1/unit/hero',meshes:{choirFirstVoiceBody:body,choirFirstVoiceRoot:rootFoot,choirFirstVoiceMantle:mantle,choirFirstVoiceSceptre:sceptre},
-    render({entity:e,time,part:p,metal,team,surfaceColor:c}) {
+    render({entity:e,time,part:p,metal,team,surfaceColor:c,nightLight=0,lightPool}) {
       p('choirFirstVoiceBody',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) p('choirFirstVoiceRoot',s*.15,0,Math.sin((e.walk||0)*5)*s*.12,1,1,1,metal,s<0?Math.PI:0);
       p('choirFirstVoiceMantle',0,0,0,1,1,1,c(0xb991b0),0,Math.sin(time*1.2)*.015);
       p('choirFirstVoiceSceptre',0,0,0,1,1,1,metal);
-      p('octa',.62,2.08,.53,.14,.24,.14,team,0,0,0,.65);
+      p('octa',.62,2.08,.53,.14,.24,.14,team,0,0,0,.65+1.75*nightLight);
+      if (nightLight > 0) lightPool(.62,1.3,1.8,2.3,team,.65*nightLight);
       for(const s of [-1,1]) p('octa',s*.11,2.09,.27,.04,.09,.045,team,0,0,0,.45);
       p('octa',0,1.45,.26,.15,.22,.07,team,0,0,0,.4);
     }

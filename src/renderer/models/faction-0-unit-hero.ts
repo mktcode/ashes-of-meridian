@@ -44,12 +44,13 @@
   }
   registerEntityModel({
     id:'faction-0/unit/hero', meshes:{faction0HeroHull:hull,faction0HeroLeg:leg},
-    render({entity:e,part:p,metal,dark,team,accent}) {
+    render({entity:e,part:p,metal,dark,team,accent,nightLight=0,lightPool}) {
       const h=1.17, step=Math.sin((e.walk||0)*7)*.23;
       p('faction0HeroHull',0,0,0,1,1,1,metal);
       for(const side of [-1,1]) p('faction0HeroLeg',side*.24,0,side*step,1,1,1,dark);
       p('box',0,1.16*h,.28,.48,.26,.1,team,0,0,0,.35);
-      p('box',0,1.65*h,.25,.43,.115,.08,0x8ce1e2,0,0,0,.85);
+      p('box',0,1.65*h,.25,.43,.115,.08,0x8ce1e2,0,0,0,.85+1.55*nightLight);
+      if (nightLight > 0) lightPool(0,1.3,1.8,2.3,0x8ce1e2,.65*nightLight);
       p('box',0,.91,-.49,.86,1.2,.06,0xa6835b,0,-.1);
       for(const side of [-1,1]) p('box',side*.54,1.48,.02,.42,.16,.59,accent);
       for(let j=0;j<3;j++) p('box',-.27,1.38+j*.055,.332,.18,.022,.025,accent);

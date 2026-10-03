@@ -55,10 +55,11 @@
     for(const s of [-1,1]) rod(o,[.66,1.99,.41],[.66+s*.18,2.39,.41],.045,[1.15,1.11,1],.4);return o;
   }
   registerEntityModel({id:'faction-2/unit/hero',meshes:{courtUnmaskedBody:body,courtUnmaskedTablet:tablet,courtUnmaskedStaff:staff},
-    render({time,part:p,metal,team,surfaceColor:c}) {
+    render({time,part:p,metal,team,surfaceColor:c,nightLight=0,lightPool}) {
       p('courtUnmaskedBody',0,0,0,1,1,1,metal);p('courtUnmaskedStaff',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) p('courtUnmaskedTablet',s*.98,1.38+Math.sin(time*1.1+s)*.06,-.1,1,1,1,metal,s*.24,0,s*.09);
-      p('octa',.66,2.26,.41,.12,.22,.1,c(0x79d9e3),0,0,0,.6);
+      p('octa',.66,2.26,.41,.12,.22,.1,c(0x79d9e3),0,0,0,.6+1.8*nightLight);
+      if (nightLight > 0) lightPool(.66,1.2,1.8,2.3,0x79d9e3,.65*nightLight);
       p('octa',0,1.35,.23,.15,.23,.055,team,0,0,0,.5);
       for(const s of [-1,1]) p('box',s*.055,1.98,.184,.031,.022,.015,team,0,0,0,.35);
     }

@@ -110,12 +110,13 @@
   registerEntityModel({
     id:'faction-0/unit/rifle', meshes:{faction0RifleHull:hull,faction0RifleLeg:leg,
       faction0RifleLivery:livery,faction0RifleVisor:visor},
-    render({entity:e,part:p,metal,dark,team,surfaceColor}) {
+    render({entity:e,part:p,metal,dark,team,surfaceColor,nightLight=0,lightPool}) {
       const step=Math.sin((e.walk||0)*7)*.23;
       p('faction0RifleHull',0,0,0,1,1,1,metal);
       for(const side of [-1,1]) p('faction0RifleLeg',side*.24,0,side*step,1,1,1,dark);
       p('faction0RifleLivery',0,0,0,1,1,1,team,0,0,0,.2);
-      p('faction0RifleVisor',0,1.65,.257,1,1,1,surfaceColor(0x8ce1e2),0,0,0,.85);
+      p('faction0RifleVisor',0,1.65,.257,1,1,1,surfaceColor(0x8ce1e2),0,0,0,.85+1.55*nightLight);
+      if (nightLight > 0) lightPool(0,1.3,1.8,2.3,0x8ce1e2,.65*nightLight);
     }
   });
 })();

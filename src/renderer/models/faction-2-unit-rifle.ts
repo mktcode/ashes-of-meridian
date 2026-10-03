@@ -39,11 +39,12 @@
     return o;
   }
   registerEntityModel({id:'faction-2/unit/rifle',meshes:{courtPallbearerBody:body,courtPallbearerLance:lance},
-    render({part:p,metal,dark,team,surfaceColor:c}) {
+    render({part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool}) {
       p('courtPallbearerBody',0,0,0,1,1,1,metal);p('courtPallbearerLance',0,0,0,1,1,1,metal);
       p('box',0,1.77,.187,.16,.04,.03,team,0,0,0,.65);
       p('octa',0,1.24,.205,.105,.2,.055,team,0,0,0,.4);
-      p('box',.44,1.1,.84,.055,.055,.28,c(0x79d9e3),0,0,0,.6);
+      p('box',.44,1.1,.84,.055,.055,.28,c(0x79d9e3),0,0,0,.6+1.8*nightLight);
+      if (nightLight > 0) lightPool(.44,1.6,1.8,2.3,0x79d9e3,.65*nightLight);
     }
   });
 })();

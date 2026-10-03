@@ -35,11 +35,12 @@
   function rootLeg() {const o: number[]=[];rod(o,[0,.5,0],[.41,.31,.1],.105);rod(o,[.41,.31,.1],[.51,.05,.28],.06,[1,1,.8],.35);return o;}
   function heart() {const o: number[]=[];shell(o,0,0,0,.22,.28,.22);return o;}
   registerEntityModel({id:'faction-1/unit/medic',meshes:{choirLifesingerStem:stem,choirLifesingerPetal:petal,choirLifesingerRoot:rootLeg,choirLifesingerHeart:heart},
-    render({entity:e,time,part:p,metal,dark,team,surfaceColor:c}) {
+    render({entity:e,time,part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool}) {
       p('choirLifesingerStem',0,0,0,1,1,1,metal);
       for(let i=0;i<4;i++) p('choirLifesingerRoot',0,0,0,1,1,1,dark,i*Math.PI/2,Math.sin((e.walk||0)*6+i*Math.PI)*.12);
       for(let i=0;i<5;i++) p('choirLifesingerPetal',0,1.35,0,1,1,1,c(0xd4a4bf),i*Math.PI*2/5,-.15+Math.sin(time*1.3)*.025);
-      p('choirLifesingerHeart',0,1.51,0,1,1,1,team,0,0,0,.6);
+      p('choirLifesingerHeart',0,1.51,0,1,1,1,team,0,0,0,.6+1.8*nightLight);
+      if (nightLight > 0) lightPool(0,.8,1.8,2.3,team,.65*nightLight);
       for(let i=0;i<5;i++) {const a=i*Math.PI*2/5;p('octa',Math.cos(a)*.28,1.75,Math.sin(a)*.28,.065,.14,.065,c(0xf0d796),0,0,0,.4);}
     }
   });
