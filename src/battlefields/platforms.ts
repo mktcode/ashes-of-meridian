@@ -148,9 +148,13 @@ function platformBattlefieldHeight(plan: BattlefieldPlatformPlan,x:number,z:numb
   return height;
 }
 function platformBattlefieldSurface(plan:BattlefieldPlatformPlan,cellSize:number):BattlefieldSurface{
-  const surface=new BattlefieldSurface(plan.extent,cellSize,
-    (x,z)=>platformBattlefieldHeight(plan,x,z),height=>Math.floor((height-plan.floor+1e-5)/PLATFORM_TIER_HEIGHT)),
-    n=plan.extent*2/cellSize;
+  return new BattlefieldSurface(plan.extent,cellSize,
+    (x,z)=>platformBattlefieldHeight(plan,x,z),height=>Math.floor((height-plan.floor+1e-5)/PLATFORM_TIER_HEIGHT));
+}
+function platformResourceSites(plan:BattlefieldPlatformPlan,seed:number):Position[]{
+  const cellSize=2.5,surface=platformBattlefieldSurface(plan,cellSize),n=plan.extent*2/cellSize;
+  // Keep generated economy away from access lanes, without forbidding player foundations.
+  // This private selection mask preserves the seeded resource distribution.
   surface.buildBlocked=new Uint8Array(n*n);
   for(let i=0;i<n*n;i++){
     const x=(i%n+.5)*cellSize-plan.extent,z=(Math.floor(i/n)+.5)*cellSize-plan.extent;
@@ -159,10 +163,6 @@ function platformBattlefieldSurface(plan:BattlefieldPlatformPlan,cellSize:number
       return u>=-PLATFORM_LANDING&&u<=r.length+PLATFORM_LANDING&&Math.abs(v)<=r.width/2+5;
     }))surface.buildBlocked[i]=1;
   }
-  return surface;
-}
-function platformResourceSites(plan:BattlefieldPlatformPlan,seed:number):Position[]{
-  const surface=platformBattlefieldSurface(plan,2.5);
   const random=seeded(seed^0x5045434f),candidates:Position[]=plan.platforms.filter(p=>p.height===plan.floor+PLATFORM_TIER_HEIGHT*2).map(p=>({x:p.x-2.5,z:p.z-2.5})),sites:Position[]=[];
   for(let z=-plan.extent+30;z<=plan.extent-30;z+=20)for(let x=-plan.extent+30;x<=plan.extent-30;x+=20)candidates.push({x,z});
   for(let i=candidates.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}

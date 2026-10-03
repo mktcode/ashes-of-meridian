@@ -105,10 +105,13 @@ test('platform expedition map has flat tiers, usable ramps and a closed technica
     assert.equal(w.surface.visibilityLevelAt(a.x,a.z),level);
     assert.equal(w.surface.visibilityLevelAt(b.x,b.z),level+1);
     assert.ok(w.surface.segment(a,b,3),'vehicle clearance on ramp');
+    assert.ok(w.surface.foundation(a,1.7),'turret may block the flat lower ramp approach');
+    assert.ok(w.surface.foundation(b,1.7),'turret may block the flat upper ramp approach');
     const p={x:r.x+r.dx*r.length*.5,z:r.z+r.dz*r.length*.5};
     assert.ok(Math.abs(w.surface.heightAt(p.x,p.z)-(r.base+r.rise*.5))<1e-5);
-    assert.equal(w.surface.foundation(p,3),false);
+    assert.equal(w.surface.foundation(p,3),false,'ramp slope remains too steep, without an access reservation');
   }
+  assert.equal(w.surface.buildBlocked,undefined,'no invisible ramp-access building exclusion');
   for(const site of w.layout.resourceSites)assert.ok(w.surface.fits(site.x,site.z,4));
   assert.deepEqual(json(plan),json(api.platformBattlefieldPlan(1409,w.extent)));
   assert.notDeepEqual(json(plan),json(api.platformBattlefieldPlan(1410,w.extent)));
