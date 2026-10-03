@@ -1,7 +1,12 @@
     /* MeridianUI menus, dialogs and permanent profile screens. Loaded after ui/core.js. */
     'use strict';
     const uiScreenMethods = {
-      showHome(this: MeridianUI) {
+      showHome(this: MeridianUI, leaveUnsaved = false) {
+        if (!this.saveBattle() && !leaveUnsaved) {
+          this.paused = true;
+          this.openModal('saveUnavailable', `<div class="eyebrow">SAVE UNAVAILABLE</div><h1>Progress is only in this tab.</h1><p>The current battle has not been saved to this browser. You can continue in this tab, but closing or reloading may restore older progress.</p><div class="launch-row"><button class="primary" data-ui="backPause">KEEP PLAYING</button><button class="secondary" data-ui="leaveUnsaved">MAIN MENU ANYWAY</button></div>`);
+          return;
+        }
         this.game.s = null;
         this.battleIntro = null;
         this.battleTutorial = null;
@@ -28,6 +33,12 @@
         $('menu').innerHTML =
           renderHomeScreen(this.expedition, this.stageHistory.length > 1,
             this.expedition ? BATTLEFIELDS[this.expedition.encounter.map].name : '');
+        if (this.battleSaveError) this.showBattleSaveError();
+      },
+      showBattleSaveError(this: MeridianUI) {
+        this.paused = true;
+        this.audio.setMode?.('silent');
+        this.openModal('battleSaveError', `<div class="eyebrow">EXPEDITION SAVE UNAVAILABLE</div><h1>Cannot restore this expedition.</h1><p>${esc(this.battleSaveError)}</p><p>The battle will not restart from its beginning. Your fleet upgrades and reserve are kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">KEEP SAVE</button><button class="primary" data-ui="discardExpeditionSave">ABANDON EXPEDITION</button></div>`);
       },
       rememberStage(this: MeridianUI) {
         if (!this.expedition) { this.stageHistory = []; return; }
@@ -115,6 +126,9 @@
         );
       },
       showBattle(this: MeridianUI) {
+        if (this.battleSaveError) return this.showBattleSaveError();
+        this.saveBattle();
+        this.game.s = null;
         this.view = 'battle';
         this.paused = true;
         this.audio.setMode?.('menu');
@@ -174,28 +188,47 @@
         $('menu').querySelector<HTMLButtonElement>('[data-ui="startBattle"]')!.disabled =
           this.battleAbilities.length !== 4 || new Set(this.battleAbilities).size !== 4;
       },
-      startBattle(this: MeridianUI) {
+      startBattle(this: MeridianUI, replaceExpedition = false) {
+        if (this.launchingBattle) return;
+        if (this.battleSaveError) return this.showBattleSaveError();
+        if (this.expedition && !replaceExpedition) {
+          this.openModal('replaceExpedition', `<div class="eyebrow">NEW EXPEDITION</div><h1>Abandon the current expedition?</h1><p>Starting a new expedition permanently discards your current run and its battle save.</p><div class="launch-row"><button class="primary" data-ui="replaceExpedition">ABANDON AND START NEW</button><button class="secondary" data-ui="closeModal">CANCEL</button></div>`);
+          return;
+        }
         const faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : FACTION_ID.FIRST;
         if (this.battleAbilities.length !== 4 || new Set(this.battleAbilities).size !== 4) {
           this.toast('Select four command modules.'); return;
         }
         this.battleFaction = faction;
-        this.expedition = { version: 6, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
-        this.persistence.saveExpedition(this.expedition);
+        this.expedition = { version: 7, battle: null, faction, abilities: [...this.battleAbilities], depth: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
+        this.persistence.saveProgress(this.profile, this.expedition);
+        this.notifyStorageFailure();
         this.stageHistory = [];
         this.rememberStage();
         this.startExpeditionBattle();
       },
-      startExpeditionBattle(this: MeridianUI) {
-        if (!this.expedition) return;
+      async startExpeditionBattle(this: MeridianUI) {
+        if (!this.expedition || this.launchingBattle || this.expedition.offers.length) return;
+        if (this.battleSaveError) return this.showBattleSaveError();
+        if (this.view === 'game' && this.game.s && !this.game.s.result) return this.showPause();
+        const expedition = this.expedition;
+        this.launchingBattle = true;
         this.audio.unlock();
         const options: BattleOptions = { faction: this.expedition.faction, ...this.expedition.encounter,
           abilities: this.expedition.abilities, benefits: this.expedition.benefits,
           enemyBenefits: this.expedition.enemyBenefits, depth: this.expedition.depth };
-        if (this.onLaunchBattle) this.onLaunchBattle(options);
-        else this.game.start(options);
+        try {
+          if (this.onLaunchBattle) await this.onLaunchBattle(options, expedition);
+          else if (expedition.battle) this.game.restoreBattle(expedition);
+          else this.game.start(options);
+        } catch (e) {
+          console.error('Expedition launch failed:', e);
+          this.battleSaveError = e instanceof Error ? e.message : String(e);
+          this.showBattleSaveError();
+        } finally { this.launchingBattle = false; }
       },
       continueExpedition(this: MeridianUI) {
+        if (this.battleSaveError) return this.showBattleSaveError();
         if (!this.expedition) return this.showBattle();
         if (this.expedition.offers.length) this.showExpeditionTransition();
         else this.startExpeditionBattle();
@@ -221,10 +254,12 @@
         if (benefit.max !== undefined && count >= benefit.max) return;
         this.expedition.benefits[key] = count + 1;
         this.expedition.offers = [];
-        this.persistence.saveExpedition(this.expedition);
-        this.startExpeditionBattle();
+        this.persistence.saveProgress(this.profile, this.expedition);
+        this.notifyStorageFailure();
+        void this.startExpeditionBattle();
       },
       openModal(this: MeridianUI, kind: string, html: string, wide = false) {
+        if (this.view === 'game' && this.paused && !['pause', 'saveUnavailable', 'battleSaveError'].includes(kind)) this.saveBattle();
         if (kind !== 'sell') this.sellBuildingId = null;
         this.modalKind = kind;
         $('modal').innerHTML =
@@ -236,7 +271,8 @@
         this.modalKind = '';
         $('modal').classList.add('hidden');
         if (this.view === 'game' && !this.game.s?.result) {
-          if (kind === 'pause') this.paused = false;
+          if (kind === 'battleSaveError') return this.showHome();
+          if (kind === 'pause') this.resume();
           else this.showPause();
         } else if (kind === 'armory') {
           if (this.view === 'game' && this.game.s?.result) this.showResult(this.game.s!.result);
@@ -255,12 +291,15 @@
         let s = this.game.s;
         if (!s) return;
         this.paused = true;
+        this.audio.setMode?.('silent');
+        this.saveBattle();
         this.openModal(
           'pause',
-          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="help">${uiIcon('manual')}FIELD MANUAL</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="restartConfirm">RESTART OPERATION</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p class="ui-note">Main menu, closing or reloading discards this battle but keeps its secured pre-battle checkpoint. Abandoning ends the expedition.</p>`
+          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="help">${uiIcon('manual')}FIELD MANUAL</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p class="ui-note">This battle is autosaved and Continue expedition restores it paused. A hard interruption may return to the last successful autosave. Abandoning ends the expedition.</p>`
         );
       },
       resume(this: MeridianUI) {
+        if (this.battleSaveError) return this.showBattleSaveError();
         if ( this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = false;
         this.modalKind = '';

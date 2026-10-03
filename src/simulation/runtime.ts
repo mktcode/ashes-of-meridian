@@ -4,8 +4,10 @@
       step(this: MeridianGame, dt: number) {
         if (this.stepping) return;
         this.stepping = true;
+        this.snapshotSafe = false;
         try {
           this.stepTick(dt);
+          this.snapshotSafe = true;
         } finally {
           this.stepping = false;
         }

@@ -68,12 +68,13 @@
       fogClock: number;
       resultClock: number;
       navDirty: boolean;
-      random: () => number;
-      cosmeticRandom: () => number;
+      random: SeededRandom;
+      cosmeticRandom: SeededRandom;
       effects: MeridianEffects;
       commandQueue: CommandQueue = createCommandQueue();
       // Game-owned, not queue-owned: a restart inside a callback cannot bypass it.
       stepping = false;
+      snapshotSafe = true;
 
       get localTeam(): PlayerTeam { return this.world?.viewTeam ?? 0; }
 
@@ -118,6 +119,52 @@
         this.effects.reset();
         return true;
       },
+      snapshotBattle(this: MeridianGame): ExpeditionBattleSave {
+        if (this.stepping || !this.snapshotSafe || !this.s || !this.world || this.s.rules.kind !== 'single-player' || this.s.result || this.s.stopped)
+          throw Error('Only a completed, running expedition tick can be saved');
+        return {
+          version: 1, state: JSON.parse(JSON.stringify(this.s)) as RunState,
+          randomState: this.random.state, fogClock: this.fogClock, resultClock: this.resultClock,
+          navDirty: this.navDirty, pathVersion: this.world.pathVersion, gridSize: this.world.gridSize,
+          blocked: packBattleGrid(this.world.blocked),
+          sight: this.world.sight.map(v => ({ visible: packBattleGrid(v.visible), explored: packBattleGrid(v.explored) })),
+          spatial: [...this.spatial].map(([key, entities]) => [key, entities.map(e => e.id)]), tutorial: null
+        };
+      },
+      restoreBattle(this: MeridianGame, expedition: MeridianExpedition) {
+        const save = expedition.battle;
+        if (this.stepping || !save || !validExpeditionBattle(save, expedition, {
+          abilities: ABILITIES, units: UNITS, buildings: BUILDINGS, upgrades: PERMANENT_UPGRADES,
+          benefits: EXPEDITION_BENEFITS, battlefields: BATTLEFIELDS, missions: MISSIONS,
+          enemyCount: expeditionEnemyCount, clamp, getStorage: () => { throw Error('No storage in simulation'); }, warn: () => {}
+        })) throw Error('Invalid expedition battle snapshot');
+        // Reconstruct in isolation. Failed validation/world generation cannot replace a live game.
+        const state = JSON.parse(JSON.stringify(save.state)) as RunState,
+          world = new Battlefield(state.seed, state.map, state.parties.length);
+        if (world.gridSize !== save.gridSize) throw Error('Saved battlefield dimensions are incompatible');
+        world.blocked.set(unpackBattleGrid(save.blocked, world.blocked.length));
+        world.pathVersion = save.pathVersion;
+        for (const [i, sight] of save.sight.entries()) {
+          world.sight[i].visible.set(unpackBattleGrid(sight.visible, world.visible.length));
+          world.sight[i].explored.set(unpackBattleGrid(sight.explored, world.explored.length));
+        }
+        // Do not reveal early: the saved fog clock owns the next observation update.
+        for (let i = 0; i < world.fogPixels.length; i++)
+          world.fogPixels[i] = world.visible[i] ? 255 : world.explored[i] ? 80 : 0;
+        world.fogVersion++;
+        const ids = new Map(state.entities.map(e => [e.id, e]));
+        this.s = state; this.world = world; this.ids = ids;
+        this.spatial = new Map(save.spatial.map(([key, members]) => [key, members.map(id => ids.get(id)!)]));
+        this.random = seeded(save.randomState);
+        this.cosmeticRandom = seeded(state.seed ^ 0x4658524e);
+        this.fogClock = save.fogClock; this.resultClock = save.resultClock;
+        this.navDirty = save.navDirty; this.acc = 0;
+        this.commandQueue = createCommandQueue();
+        this.snapshotSafe = true;
+        this.effects.reset();
+        this.emit('start', { restored: true });
+        return state;
+      },
       resetRandom(this: MeridianGame, seed: number) {
         this.random = seeded(seed + 77);
         this.cosmeticRandom = seeded(seed ^ 0x4658524e);
@@ -136,6 +183,7 @@
         return this.startBattle(opts, parties, rules, aiTeams);
       },
       startBattle(this: MeridianGame, opts: BattleOptions & { startSeed?: number }, parties: PartyState[], rules: BattleRules, aiTeams: PlayerTeam[]) {
+        this.snapshotSafe = false;
         const map = battlefieldId(opts.map),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
         this.world = new Battlefield(seed, map, parties.length);
@@ -164,6 +212,7 @@
         this.acc = 0;
         this.fogClock = 0;
         this.resultClock = 0;
+        this.navDirty = false;
         let s = this.s!;
         // Reserve the former HQ's ID/RNG draw without placing a starting structure.
         this.random(); s.nextId++;
@@ -219,6 +268,7 @@
           if (site) this.world.explore(team, site, EXPEDITION_EFFECTS.surveyRadius);
         }
         for (const team of aiTeams) this.enableAI(team);
+        this.snapshotSafe = true;
         // CPU scenarios must never enter the expedition UI or pay out profile rewards.
         if (rules.kind === 'scenario') return s;
         this.emit('start', {});

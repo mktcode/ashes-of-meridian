@@ -2,7 +2,7 @@
 
 [Weltvertrag](../architecture.md#weltrezepte-und-feste-designs) und [Startregeln](../gameplay.md#gefecht-und-fortschritt) sind maßgeblich. Keine festen Eckstarts oder zweite begehbare Dekorebene wieder einführen.
 
-- [ ] Ressourcenstart des ersten Tutorials und Erkundung erfahrener Profile vollständig menschlich spielen; HQ-Bezahlung, Bonusworker/Commander, Aufklärung und Checkpoint-Neustart beurteilen.
+- [ ] Ressourcenstart des ersten Tutorials und Erkundung erfahrener Profile vollständig menschlich spielen; HQ-Bezahlung, Bonusworker/Commander und Aufklärung beurteilen; Fortsetzen statt Neustart nach [Spielstandsabnahme](expeditions-spielstand.md).
 - [ ] Nach separater Freigabe gezielte autonome KI-Fälle: Ressourcenkontakte entdecken, bezahltes erstes HQ fertigstellen, unterbrochene Fundamente übernehmen und danach normale Wirtschaft aufnehmen. CPU-Generationsproben ersetzen diese Abnahme nicht.
 Echo-Fundamentregression: Seed `3` zeigte zu steile Landschafts-Vorkommen sowie Klippen-/Vorflächensperren auf Plattformen. Ein gezielter Initialisierungs-/Bauvalidator-Fall prüft sämtliche Vorkommen dieses Seeds auf allen Katalogkarten einschließlich Fangposition der Raffinerie; keine laufende Simulation oder Allseedgarantie. Weitere Seeds und tatsächlichen Bauabschluss menschlich abnehmen.
 

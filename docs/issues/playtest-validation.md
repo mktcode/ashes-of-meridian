@@ -23,7 +23,7 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 ## Fortschritt und Lebenszyklus
 
 - [ ] Mehrere Siege/Vorteilswahlen, Upgrades, Niederlage/Abbruch und Fraktionsfreischaltungen. Auszahlung nicht durch erneuten Ergebnisaufruf vervielfachen.
-- [ ] Profil/Checkpoint unter `file://` und Webhosting; Reload/Grafikverlust verwirft Gefecht, erhält letzten Übergang, Run-Ende löscht ihn. Speicher-Ausfallhinweis bei Start und während des Spiels sowie Status in Einstellungen menschlich abnehmen; bei fehlgeschlagener Speicherung kann Reload ältere Werte laden. Pause/Audio/Rückkehr prüfen.
+- [ ] Profil/Expedition unter `file://` und Webhosting sowie Pause/Audio/Rückkehr menschlich abnehmen; Snapshot-Restore, Run-Ende und Speicherfehler nach [Spielstandsabnahme](expeditions-spielstand.md).
 - [ ] Landschaftsarchiv: Pfeile/Labels, weiche Wechsel bei teuren Karten, Reduced motion und Reload; betrachtete Stage niemals mit Continue-Checkpoint verwechseln.
 
 Karten-/Darstellung zentral unter [Landschaften](project-tomorrow.md), Worker-Gegenverkehr unter [Navigation](worker-bauwegfindung/issue.md), Wärme/Stabilität unter [Performance](mobile-performance.md). Keine automatische Test-/Balancingfreigabe aus dieser Liste.

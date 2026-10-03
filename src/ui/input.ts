@@ -132,6 +132,7 @@
           this.domPressed = false;
           this.drag = null;
         });
+        window.addEventListener('pagehide', () => { this.saveBattle(); });
         document.addEventListener('visibilitychange', () => {
           if (document.hidden && this.view === 'game' && !this.game.s?.result) {
             this.pause();
@@ -224,6 +225,19 @@
           case 'startBattle':
             this.startBattle();
             break;
+          case 'replaceExpedition':
+            this.startBattle(true);
+            break;
+          case 'leaveUnsaved':
+            this.showHome(true);
+            break;
+          case 'discardExpeditionSave':
+            this.battleSaveError = null;
+            this.expedition = null;
+            this.persistence.saveProgress(this.profile, null);
+            this.notifyStorageFailure();
+            this.showHome();
+            break;
           case 'previousStage':
             void this.browseStage(-1);
             break;
@@ -240,8 +254,9 @@
             this.showExpeditionBenefits();
             break;
           case 'abandon':
-            this.persistence.clearExpedition?.();
             this.expedition = null;
+            this.persistence.saveProgress(this.profile, null);
+            this.notifyStorageFailure();
             this.showHome();
             break;
           case 'armory':
@@ -271,17 +286,8 @@
           case 'cancelSale':
             this.finishBuildingSale(false);
             break;
-          case 'restartConfirm':
-            this.openModal(
-              'confirm',
-              `<div class="eyebrow">REDEPLOY EXPEDITION</div><h1>Restart this operation?</h1><p>The current battle will restart from its secured expedition checkpoint. Permanent upgrades are unaffected.</p><div class="launch-row"><button class="primary" data-ui="restart">RESTART</button><button class="secondary" data-ui="backPause">CANCEL</button></div>`
-            );
-            break;
           case 'backPause':
             this.showPause();
-            break;
-          case 'restart':
-            if (this.expedition) this.startExpeditionBattle();
             break;
         }
       },

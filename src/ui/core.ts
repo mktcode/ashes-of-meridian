@@ -78,6 +78,11 @@
       radioVoiceId: VoiceLineId | null = null;
       toastUntil: number;
       storageWarningShown = false;
+      battleSaveError: string | null = null;
+      launchingBattle = false;
+      lastBattleSaveAt = 0;
+      battleSaveBytes = 0;
+      battleSaveMilliseconds = 0;
       actionSignature: string;
       factionJustUnlocked: FactionId | null;
       hudClock: number;
@@ -90,7 +95,7 @@
       resultBenefit?: string;
       onViewportChange?: () => void;
       onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean) => Promise<boolean>;
-      onLaunchBattle?: (options: BattleOptions) => void;
+      onLaunchBattle?: (options: BattleOptions, expedition: MeridianExpedition) => Promise<void>;
       domPressed?: boolean;
       touchGesture?: boolean;
       pinchDist?: number;
@@ -109,6 +114,7 @@
         this.audio = audio;
         this.profile = profile;
         this.expedition = this.persistence.loadExpedition?.() || null;
+        this.battleSaveError = this.persistence.expeditionError;
         this.stageHistory = this.persistence.loadStageHistory?.(this.expedition) || [];
         this.view = 'home';
         this.codexFaction = FACTION_ID.FIRST;
@@ -155,6 +161,37 @@
       persist() {
         this.persistence.saveProfile(this.profile);
         this.notifyStorageFailure();
+      }
+      saveBattle() {
+        const s = this.game.s, expedition = this.expedition;
+        if (this.battleSaveError || this.view !== 'game' || !s || s.result || !expedition || s.rules.kind !== 'single-player' ||
+          s.map !== expedition.encounter.map || s.seed !== expedition.encounter.seed || s.depth !== expedition.depth) return true;
+        if (this.game.stepping || !this.game.snapshotSafe) return false;
+        const started = performance.now();
+        this.lastBattleSaveAt = started;
+        try {
+          const battle = this.game.snapshotBattle(), tutorial = this.battleTutorial;
+          if (tutorial) {
+            battle.tutorial = { step: tutorial.step, achieved: [...tutorial.achieved], workersTrained: tutorial.workersTrained };
+            const cameraHome = tutorial.arrivalCamera?.home ?? this.battleIntro?.home;
+            if (cameraHome) battle.tutorial.cameraHome = { ...cameraHome };
+          }
+          expedition.battle = battle;
+          const saved = this.persistence.saveProgress(this.profile, expedition);
+          this.lastBattleSaveAt = performance.now();
+          this.battleSaveBytes = this.persistence.saveBytes;
+          this.battleSaveMilliseconds = performance.now() - started;
+          this.notifyStorageFailure();
+          return saved;
+        } catch (e) {
+          console.error('Battle save failed:', e);
+          this.toast('The battle could not be saved. Keep this page open; reloading may lose progress.');
+          return false;
+        }
+      }
+      autosaveBattle() {
+        if (this.view === 'game' && !this.paused && performance.now() - this.lastBattleSaveAt >= 5000)
+          this.saveBattle();
       }
       notifyStorageFailure() {
         if (this.persistence.available !== false || this.storageWarningShown) return;
@@ -214,7 +251,7 @@
           this.resultAetherEvacuated = undefined;
           this.resultAetherStructures = undefined;
           this.resultBenefit = undefined;
-          this.paused = false;
+          this.paused = !!data.restored;
           this.modalKind = '';
           this.sellBuildingId = null;
           this.lastClick = {};
@@ -237,7 +274,17 @@
           this.actionSignature = '';
           this.battleTutorial = null;
           this.battleIntro = null;
-          if (!this.beginBattleTutorial()) {
+          if (data.restored) {
+            const tutorial = this.expedition?.battle?.tutorial;
+            if (tutorial) {
+              this.battleTutorial = { step: tutorial.step, achieved: new Set(tutorial.achieved),
+                workersTrained: tutorial.workersTrained, elapsed: 0 };
+              // Skip cinematics without forgetting already achieved tutorial goals.
+              if (tutorial.cameraHome) Object.assign(this.game.s!.cam, tutorial.cameraHome);
+              if (tutorial.step === 'arrival') this.battleTutorial.step = 'buildHQ';
+              else if (tutorial.step === 'recon') this.finishTutorialRecon();
+            }
+          } else if (!this.beginBattleTutorial()) {
             const worker = this.game.alive(e => e.team === this.localTeam && e.type === 'worker')[0];
             if (worker) {
               const point = this.terrainCameraPoint(this.game.s!.cam,
@@ -245,9 +292,12 @@
               this.center(point.x, point.z);
             }
           }
-          this.audio.setMode?.(this.battleIntro ? 'silent' : 'battle');
+          this.audio.setMode?.(this.paused || this.battleIntro ? 'silent' : 'battle');
           this.updateHUD();
           this.clearMode();
+          // Start is outside a tick, so the initial CPU/UI snapshot precedes free play.
+          if (data.restored) this.showPause();
+          else this.saveBattle();
         } else if (type === 'toast') this.toast(data);
         else if (type === 'radio') {
           if (this.battleTutorial?.step === 'arrival' || this.battleTutorial?.step === 'buildHQ' || this.battleIntro?.kind === 'recon') return;
@@ -272,7 +322,6 @@
           this.battleIntro = null;
           this.battleTutorial = null;
           const firstResult = this.resultAetherRecovered === undefined;
-          let profileChanged = false;
           this.factionJustUnlocked = null;
           if (firstResult) {
             let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.parties[0].meta?.aetherEvacuation || 0))),
@@ -284,7 +333,6 @@
             this.resultAetherRecovered = this.resultAetherEvacuated + this.resultAetherStructures;
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
-              profileChanged = true;
             }
             if (data.win && this.expedition) {
               const previousUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
@@ -292,7 +340,6 @@
               this.expedition.depth++;
               if (this.expedition.depth > this.profile.expeditionDepth) {
                 this.profile.expeditionDepth = this.expedition.depth;
-                profileChanged = true;
               }
               const currentUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
               if (currentUnlock > previousUnlock) this.factionJustUnlocked = currentUnlock;
@@ -300,13 +347,14 @@
               this.expedition.enemyBenefits = advanceEnemyBenefits(this.expedition.enemyBenefits,
                 this.expedition.encounter, this.expedition.depth);
               this.expedition.offers = this.createBenefitOffers(this.expedition);
-              this.persistence.saveExpedition(this.expedition);
-              this.rememberStage();
+              this.expedition.battle = null;
             } else if (!data.win) {
-              this.persistence.clearExpedition?.();
               this.expedition = null;
             }
-            if (profileChanged) this.persist();
+            // One localStorage write owns both payout and retirement of the old battle.
+            this.persistence.saveProgress(this.profile, this.expedition);
+            this.notifyStorageFailure();
+            if (data.win) this.rememberStage();
             this.audio.setMode?.('silent');
             this.audio.sound(data.win ? 'victory' : 'defeat');
           }

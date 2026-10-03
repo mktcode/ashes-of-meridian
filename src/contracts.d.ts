@@ -242,7 +242,8 @@ interface ExpeditionStagePreview {
 }
 
 interface MeridianExpedition {
-  version: 6;
+  version: 7;
+  battle: ExpeditionBattleSave | null;
   faction: FactionId;
   abilities: AbilityType[];
   depth: number;
@@ -250,6 +251,33 @@ interface MeridianExpedition {
   enemyBenefits: Record<string, number>[];
   encounter: ExpeditionEncounter;
   offers: string[];
+}
+
+// One save format owns the recipe, CPU state and tutorial progress. No live objects.
+interface ExpeditionBattleSave {
+  version: 1;
+  state: RunState;
+  randomState: number;
+  fogClock: number;
+  resultClock: number;
+  navDirty: boolean;
+  pathVersion: number;
+  gridSize: number;
+  blocked: string;
+  sight: { visible: string; explored: string }[];
+  // Keep the hash's tick-boundary membership/order, even if units moved since rehash.
+  spatial: [string, number[]][];
+  tutorial: null | {
+    step: BattleTutorialStep;
+    achieved: BattleTutorialStep[];
+    workersTrained: number;
+    cameraHome?: Position;
+  };
+}
+
+interface SeededRandom {
+  (): number;
+  readonly state: number;
 }
 
 interface ProfileStorage {
@@ -264,6 +292,8 @@ interface PersistenceDependencies {
   upgrades: Record<string, { max: number }>;
   benefits: Record<string, { max?: number; name?: string }>;
   abilities: Record<string, unknown>;
+  units: Record<string, unknown>;
+  buildings: Record<string, unknown>;
   battlefields: Record<string, unknown>;
   missions: Record<string, Pick<MissionDefinition, 'maps'>>;
   enemyCount(depth: number): number;
@@ -271,7 +301,7 @@ interface PersistenceDependencies {
 }
 
 interface GameEventMap {
-  start: Record<string, never>;
+  start: { restored?: boolean };
   toast: string;
   radio: string;
   alert: string | ({ text: string; danger?: boolean } & Partial<Position>);
@@ -292,11 +322,12 @@ type GameEventSink = (...event: GameEvent) => void;
 
 interface MeridianPersistence {
   readonly available: boolean;
+  readonly expeditionError: string | null;
+  readonly saveBytes: number;
   loadProfile(): MeridianProfile;
   saveProfile(profile: MeridianProfile): boolean;
   loadExpedition(): MeridianExpedition | null;
-  saveExpedition(expedition: MeridianExpedition): boolean;
-  clearExpedition(): boolean;
+  saveProgress(profile: MeridianProfile, expedition: MeridianExpedition | null): boolean;
   loadStageHistory(expedition: MeridianExpedition | null): ExpeditionStagePreview[];
   saveStageHistory(stages: readonly ExpeditionStagePreview[]): boolean;
 }

@@ -2,7 +2,7 @@
 
 Kein Android-Projekt oder SDK, kein Implementierungsauftrag. Erst [Zielgeräte/volle Runs](playtest-validation.md) validieren. Werbefreier Capacitor-Prototyp ist Kandidat, keine Werkzeugentscheidung; bestehende `file://`-Browserauslieferung erhalten.
 
-- [ ] WebView: WebGL/Stabilität, Touch/Safe Areas, Zurück/Ausrichtung, Hintergrund/Audio, Speicher/Wärme/Akku und Checkpoint nach Prozessende/Update prüfen. Kein Profiltransfer zugesagt.
+- [ ] WebView: WebGL/Stabilität, Touch/Safe Areas, Zurück/Ausrichtung, Hintergrund/Audio, Speicher/Wärme/Akku und [gespeichertes Gefecht](expeditions-spielstand.md) nach Prozessende/Update prüfen. Kein Profiltransfer zugesagt.
 - [ ] Paketumfang, Berechtigungen, Asset-/Audio-Lizenzen und aktuelle Store-/Target-API-/Signierungs-/Testanforderungen klären.
 - [ ] Werbung erst danach: freiwillige Rewarded Ads an Übergängen, bestätigte Belohnung genau einmal; kein Gefechtszwang oder Offlineblocker. Ökonomie, Datenschutz/Einwilligung/Zielgruppe und AdMob-Integration entscheiden; Entwicklung nur Testanzeigen.
 

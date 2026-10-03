@@ -23,6 +23,8 @@
             upgrades: PERMANENT_UPGRADES,
             benefits: EXPEDITION_BENEFITS,
             abilities: ABILITIES,
+            units: UNITS,
+            buildings: BUILDINGS,
             enemyCount: expeditionEnemyCount,
             battlefields: BATTLEFIELDS,
             missions: MISSIONS,
@@ -207,15 +209,19 @@
             }).catch(() => {}); // Superseding previews cancel only their own animation.
           }
         }
-        ui.onLaunchBattle = options => {
+        ui.onLaunchBattle = async (options, expedition) => {
           finishPreviewChange(false);
           const id = ++worldRequest, mapId = battlefieldId(options.map), profile = BATTLEFIELDS[mapId].render;
           if (!R.hasBattlefieldTextures(profile)) loadingBattlefield('Preparing operation');
-          void R.prepareBattlefieldTextures(profile).then(ready => {
-            if (!ready || id !== worldRequest) return;
-            game.start(options);
-            $('loading').classList.add('hidden');
-          }).catch(textureFailure);
+          let ready: boolean;
+          try { ready = await R.prepareBattlefieldTextures(profile); }
+          catch (e) { if (id === worldRequest) textureFailure(e); return; }
+          if (id !== worldRequest || expedition !== ui.expedition) return;
+          if (!ready) { textureFailure(Error('Required battlefield textures are unavailable')); return; }
+          try {
+            if (expedition.battle) game.restoreBattle(expedition);
+            else game.start(options);
+          } finally { $('loading').classList.add('hidden'); }
         };
         const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R, () => ({
           view: ui.view, paused: ui.paused,
@@ -424,6 +430,7 @@
             } else accumulator = 0;
             diagnostics?.recorder.phase('ui');
             ui.tick(dt);
+            ui.autosaveBattle();
             if (weatherState !== game.s) {
               weatherState = game.s;
               weatherTime = game.s?.time ?? 0;
@@ -513,12 +520,13 @@
             failed = true;
             console.error(error);
             ui.paused = true;
+            ui.saveBattle();
             let loader = $('loading');
             loader.classList.remove('hidden');
             loader.innerHTML =
               '<div class="eyebrow">UPLINK INTERRUPTED</div><h2>The renderer encountered a problem.</h2><p>' +
               esc(error instanceof Error ? error.message : String(error)) +
-              '</p><p>Reload this file to return to the last secured expedition checkpoint.</p>';
+              '</p><p>Reload this file to restore the last saved expedition battle or transition.</p>';
             return;
           }
           requestAnimationFrame(draw);
@@ -528,10 +536,11 @@
           finishPreviewChange(false);
           diagnostics?.stop('context-lost');
           ui.paused = true;
+          ui.saveBattle();
           $('loading').classList.remove('hidden');
           $('loading').innerHTML =
             '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>' +
-            'Reload this file to reconnect from the last secured expedition checkpoint.' +
+            'Reload this file to restore the last saved expedition battle or transition.' +
             ' Use Performance quality in Settings for a lighter graphics load.</p>';
           failed = true;
         });
@@ -554,7 +563,7 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 6, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0,
+          ui.expedition = { version: 7, battle: null, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0,
             benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
             encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,
