@@ -26,6 +26,25 @@ function fixture() {
   return { g, events };
 }
 
+test('building near the map edge retains only the foundation margin and still respects cliffs', () => {
+  const { BattlefieldSurface, BUILDINGS } = vm.runInContext('({ BattlefieldSurface, BUILDINGS })', context);
+  for (const type of ['turret', 'depot']) for (const axis of ['x', 'z']) for (const sign of [-1, 1]) {
+    const { g } = fixture();
+    g.s.supplyCaches = [];
+    g.world.staticGrid = new Uint8Array(1);
+    const radius = BUILDINGS[type].size, limit = g.world.extent - radius - 1,
+      allowed = { x: 0, z: 0, [axis]: sign * (limit - .01) },
+      outside = { x: 0, z: 0, [axis]: sign * (limit + .01) };
+    assert.equal(g.canBuild(type, allowed), '', 'flat edge space is usable without a surface');
+    assert.match(g.canBuild(type, outside), /boundary/);
+    g.world.surface = new BattlefieldSurface(g.world.extent, 2.5, () => 0);
+    assert.equal(g.canBuild(type, allowed), '', 'flat edge space is usable with a real foundation');
+    assert.ok(g.canBuild(type, outside), 'foundation cannot cross the retained margin');
+    g.world.surface.cliffs.fill(1);
+    assert.match(g.canBuild(type, allowed), /stable ground/, 'cliff clearance is not relaxed');
+  }
+});
+
 test('action parser copies known data and rejects malformed values before dispatch', () => {
   const action = { kind: 'order', ids: [1, 1, 2], team: 3, order: { type: 'move', x: 3, z: 4, team: 3 } };
   const parsed = parseBattleAction(action, 10);

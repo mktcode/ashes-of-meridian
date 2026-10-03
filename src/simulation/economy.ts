@@ -159,7 +159,8 @@
             if (!this.world!.terrainFree(p,exit,body)) return 'Leave clear terrain for production exits.';
           }
         }
-        const limit = this.world!.extent - 7 - r;
+        // Match the foundation's one-meter margin instead of reserving a wide empty border.
+        const limit = this.world!.extent - 1 - r;
         if (Math.abs(p.x) > limit || Math.abs(p.z) > limit)
           return 'Too close to the battlefield boundary.';
         if (!this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
