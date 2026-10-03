@@ -86,7 +86,8 @@ function battlefieldSupplyCaches(world: Battlefield): SupplyCache[] {
     const j = Math.floor(random() * (i + 1));
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
-  const caches: SupplyCache[] = [], budget = clamp(Math.round(world.extent / 10), 8, 18);
+  const caches: SupplyCache[] = [], platform = world.definition === BATTLEFIELDS['platform-deck'],
+    budget = platform ? clamp(Math.round(world.extent / 10), 8, 18) : clamp(Math.round(world.extent / 20), 4, 9);
   for (const p of candidates) {
     if (caches.some(q => distance(p, q) < 26)) continue;
     const tier = (1 + Math.floor(random() * 3)) as SupplyCache['tier'];

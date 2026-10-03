@@ -320,6 +320,8 @@
           const v = this.R.viewport!;
           if (p && p.x > v.left - 100 && p.x < v.right + 100 && p.y > v.top - 100 && p.y < v.bottom)
             this.audio.sound('explosion', data.big);
+        } else if (type === 'supplyCollected') {
+          this.audio.sound('pickup');
         } else if (type === 'complete') {
           this.audio.sound('complete');
           this.alert({

@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
 const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 const { MeridianGame, BATTLEFIELDS, battlefieldSupplyCaches, battlefieldEconomyDistance } = vm.runInContext(
@@ -17,6 +17,10 @@ test('caches fill connected free terrain away from deposits on every expedition 
   for (const map of Object.keys(BATTLEFIELDS)) {
     const game = fresh(map), world = game.world, caches = game.s.supplyCaches;
     assert.ok(caches.length >= 4, map);
+    const budget = map === 'platform-deck' ? Math.min(18, Math.max(8, Math.round(world.extent / 10)))
+      : Math.min(9, Math.max(4, Math.round(world.extent / 20)));
+    assert.ok(caches.length <= budget, `${map}: map-family density budget`);
+    if (map === 'platform-deck') assert.equal(caches.length, budget, 'this sample retains its platform count');
     assert.ok(caches.filter(c => c.resource === 'gas').length < caches.filter(c => c.resource === 'alloy').length);
     const grid = Array.from(world.blocked), entities = json(game.s.entities), random = game.random;
     game.random = () => { throw Error('Cache generation must not draw battle RNG'); };
@@ -36,7 +40,8 @@ test('caches fill connected free terrain away from deposits on every expedition 
 });
 
 test('only visible reachable caches pay once to the nearest living ground unit, including enemy collectors', () => {
-  const game = fresh(), world = game.world, cache = game.s.supplyCaches[0];
+  const game = fresh(), world = game.world, cache = game.s.supplyCaches[0], events = [];
+  game.emit = (...event) => events.push(event);
   game.s.supplyCaches = [cache];
   world.sight[0].explored.fill(1);
   assert.equal(game.canBuild('depot', cache), 'Recover nearby supply caches before building here.');
@@ -64,8 +69,50 @@ test('only visible reachable caches pay once to the nearest living ground unit, 
   assert.equal(game.account(1)[cache.resource], start + cache.amount);
   game.collectSupplyCaches();
   assert.equal(game.account(1)[cache.resource], start + cache.amount);
+  assert.equal(events.length, 0, 'enemy pickups do not announce themselves');
+  assert.equal(game.effects.floats.length, 0, 'enemy pickups do not create local numbers');
+  // Both cargo currencies use local feedback exactly once, without any RNG draw.
+  game.random = () => { throw Error('Pickup feedback must not draw simulation RNG'); };
+  enemy.hp = 0;
+  for (const resource of ['alloy', 'gas']) {
+    const localCache = { ...cache, resource, amount: resource === 'gas' ? 15 : 60, collected: false };
+    game.s.supplyCaches = [localCache];
+    const before = game.account(0)[resource], count = events.length;
+    game.collectSupplyCaches(); game.collectSupplyCaches();
+    assert.equal(game.account(0)[resource], before + localCache.amount);
+    assert.equal(events.length, count + 1);
+    assert.equal(events.at(-1)[0], 'supplyCollected');
+    assert.equal(game.effects.floats.at(-1).text, `+${localCache.amount} ${resource === 'gas' ? 'Echo' : 'Cinder'}`);
+    assert.equal(game.effects.floats.at(-1).style, 'supply');
+  }
+  const number = game.effects.floats[0], y = number.y;
+  game.effects.tick(.4);
+  assert.ok(number.y > y && number.life < number.maxLife, 'number rises and fades');
+  game.effects.tick(2);
+  assert.equal(game.effects.floats.length, 0, 'feedback expires');
   for (const e of game.s.entities) if (e.kind === 'unit') Object.assign(e, { x: world.extent + 100, z: world.extent + 100 });
   assert.equal(game.canBuild('depot', cache), '', 'collected caches no longer reserve construction space');
+});
+
+test('supply feedback uses outlined rising text and a sound, never a toast or radio dialog', () => {
+  const ctx = loadScripts(['core', 'content', 'voice-content', ...UI_SCRIPTS]);
+  const UI = vm.runInContext('MeridianUI', ctx), sounds = [], texts = [];
+  const ui = { audio: { sound: name => sounds.push(name) },
+    toast() { throw Error('Unexpected toast'); }, radio() { throw Error('Unexpected dialog'); } };
+  UI.prototype.event.call(ui, 'supplyCollected', { x: 3, z: 4, resource: 'alloy', amount: 60 });
+  assert.deepEqual(sounds, ['pickup']);
+  Object.assign(ui, { view: 'game', selected: [], selectionIds: () => new Set(),
+    game: { s: { entities: [] }, effects: { floats: [{ x: 3, z: 4, y: 3, text: '+60 Cinder', color: '#f1ae45', style: 'supply', life: .8, maxLife: 1.6 }] } },
+    R: { viewport: { left: 0, top: 0, width: 500, height: 500, right: 500, bottom: 500 }, project: () => ({x: 200, y: 220}) } });
+  const canvas = { clearRect() {}, save() {}, restore() {},
+    strokeText(text, x, y) { texts.push(['outline',text,x,y]); },
+    fillText(text, x, y) { texts.push(['fill',text,x,y,this.font,this.fillStyle,this.globalAlpha]); } };
+  UI.prototype.drawOverlay.call(ui, canvas);
+  assert.equal(texts[0][0], 'outline');
+  assert.equal(texts[1][1], '+60 Cinder');
+  assert.ok(texts[1][4].includes('18px'));
+  assert.equal(texts[1][5], '#f1ae45');
+  assert.equal(texts[1][6], .5);
 });
 
 test('cargo shell bevels form finite non-degenerate outward-facing triangles', () => {

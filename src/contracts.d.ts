@@ -285,6 +285,7 @@ interface GameEventMap {
   build: BuildingEntity;
   heal: Position;
   scan: Position;
+  supplyCollected: Position & { resource: SupplyCache['resource']; amount: number };
 }
 type GameEvent = { [K in keyof GameEventMap]: [type: K, data: GameEventMap[K]] }[keyof GameEventMap];
 type GameEventSink = (...event: GameEvent) => void;
@@ -706,6 +707,7 @@ interface EffectBase extends Position {
 }
 
 interface FloatingText extends Position {
+  style?: 'supply';
   y: number;
   text: string;
   color: string;

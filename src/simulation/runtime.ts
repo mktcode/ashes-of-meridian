@@ -196,7 +196,8 @@
           cache.collected = true;
           const team = collector.team as PlayerTeam;
           this.account(team)[cache.resource] += cache.amount;
-          this.notify(team, 'toast', `Supply cache recovered: +${cache.amount} ${cache.resource === 'alloy' ? 'Cinder' : 'Echo'}.`);
+          if (team === this.localTeam) this.effects.supplyNumber(cache);
+          this.notify(team, 'supplyCollected', { x: cache.x, z: cache.z, resource: cache.resource, amount: cache.amount });
         }
       },
       checkBattleResult(this: MeridianGame) {

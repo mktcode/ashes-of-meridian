@@ -196,6 +196,23 @@ function setupAudio() {
     flush: () => new Promise(resolve => setImmediate(resolve)) };
 }
 
+test('supply pickup plays a short ascending procedural cue and respects the SFX switch', () => {
+  const { audio, settings } = setupAudio(), tones = [];
+  audio.tone = (...args) => tones.push(args);
+  audio.sound('pickup');
+  assert.equal(tones.length, 3);
+  assert.ok(tones[0][1] < .1, 'brief cargo latch');
+  assert.ok(tones[2][0] > tones[1][0], 'ascending confirmation');
+  assert.ok(tones[2][5] > tones[1][5], 'notes scheduled in sequence');
+  tones.length = 0;
+  settings.sfx = false;
+  audio.sound('pickup');
+  assert.equal(tones.length, 0);
+  settings.sfx = true; audio.ctx = null;
+  audio.sound('pickup');
+  assert.equal(tones.length, 0, 'no deferred cue before audio unlock');
+});
+
 test('battle playlist starts after ten seconds and plays the approved recordings with ten-second gaps', async () => {
   const h = setupAudio(), { audio, plays } = h, track = h.tracks[0];
   const recordings = [

@@ -273,7 +273,14 @@
           if (!p || p.x < v.left - 40 || p.x > v.right + 40 || p.y < v.top - 20 || p.y > v.bottom + 20) continue;
           ctx.globalAlpha = f.life / f.maxLife;
           ctx.fillStyle = f.color;
-          ctx.font = 'bold 12px ui-monospace,Consolas,monospace';
+          ctx.font = `bold ${f.style === 'supply' ? 18 : 12}px ui-monospace,Consolas,monospace`;
+          if (f.style === 'supply') {
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#10202b';
+            ctx.strokeText(f.text, p.x, p.y);
+            ctx.restore();
+          }
           ctx.fillText(f.text, p.x, p.y);
         }
         ctx.globalAlpha = 1;

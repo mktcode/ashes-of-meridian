@@ -85,6 +85,17 @@ class MeridianEffects {
             maxLife: 0.8
           });
       }
+      supplyNumber(cache: SupplyCache) {
+        // Local collection feedback has its own deterministic style, never draws RNG.
+        if (this.floats.length >= 35) this.floats.shift();
+        this.floats.push({
+          x: cache.x, z: cache.z,
+          y: this.groundHeight(cache.x,cache.z) + (cache.tier === 1 ? 2.1 : 3.5),
+          text: `+${cache.amount} ${cache.resource === 'alloy' ? 'Cinder' : 'Echo'}`,
+          color: cache.resource === 'alloy' ? '#f1ae45' : '#65e5e9',
+          style: 'supply', life: 1.6, maxLife: 1.6
+        });
+      }
       shell(e: EffectPose, target: EffectPose, travel: number) {
         const height = this.entityHeight(e) + (isFlyingUnitType(e.type) ? 4.5 : e.kind === 'building' ? 3 : 1.45);
         const endY = this.groundHeight(target.x,target.z);

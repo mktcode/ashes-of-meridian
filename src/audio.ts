@@ -436,6 +436,11 @@
         } else if (type === 'order') {
           this.tone(500, 0.05, 0.075, 'sine');
           this.tone(710, 0.07, 0.065, 'sine', null, 0.055);
+        } else if (type === 'pickup') {
+          // Short cargo-latch click followed by an ascending confirmation chime.
+          this.tone(160, 0.04, 0.045, 'triangle', null, 0, 80);
+          this.tone(660, 0.12, 0.065, 'sine', null, 0.045);
+          this.tone(990, 0.2, 0.05, 'sine', null, 0.12);
         } else if (type === 'select') {
           this.tone(680, 0.05, 0.05, 'sine');
         } else if (type === 'complete' || type === 'research' || type === 'trained') {
