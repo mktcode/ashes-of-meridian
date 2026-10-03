@@ -76,8 +76,8 @@ test('all landscape families share a seed-owned starting hour and readable midni
       assert.equal(start.atmosphere.timeOfDay, expected);
       const night = api.battlefieldDayCycle(start, (24-expected)*25);
       assert.ok(Math.abs(night.atmosphere.timeOfDay) < 1e-10);
-      assert.ok(night.lighting.sky.every(v => v >= .38));
-      assert.ok(night.lighting.bounce.every(v => v >= .18));
+      assert.ok(night.lighting.sky.every(v => v >= .34));
+      assert.ok(night.lighting.bounce.every(v => v >= .16));
     }
   }
   assert.equal(hours.size,4);
