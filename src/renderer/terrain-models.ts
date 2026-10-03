@@ -5,7 +5,6 @@ const TerrainModels = {
         const factory = Object.hasOwn(TerrainModels, descriptor.model) && TerrainModels[descriptor.model];
         if (typeof factory !== 'function' || descriptor.model === 'geometry')
           throw new Error('Unknown terrain model: ' + descriptor.model);
-        if ('plan' in descriptor) return (factory as (plan: BattlefieldPlatformPlan) => MeshData)(descriptor.plan);
         if ('relief' in descriptor) return (factory as (relief: WorldRelief) => MeshData)(descriptor.relief);
         // Descriptors distinguish feature meshes from seeded reusable scenery.
         return 'feature' in descriptor

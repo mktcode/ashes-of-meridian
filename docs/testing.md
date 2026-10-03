@@ -53,7 +53,6 @@ Für Vergleiche denselben Abschnitt/Einstellungen verwenden und getrennt exporti
 Nach Build isoliert ohne normales Profil/Checkpoint:
 
 - `index.html?experiment=<karten-id>&seed=<positiver-seed>` für Katalogkarten; IDs im [Katalog](../src/battlefields/catalog.ts). Seed maximal acht Stellen; alle Katalogkarten erzeugen Terrain aus dem Seed.
-- `index.html?experiment=platform-deck&seed=1409`: isolierter Start der regulären technischen Expeditionskarte; [Abnahme](issues/platform-battlefields.md).
 - `index.html?experiment=height`: prozedurale Mothership-Höhen/Sicht mit zwei Workern.
 
 Vergleichsseeds nur im betroffenen Issue halten. `npm run simulate:visible` ist eine persönliche Zuschauerpartie, **nie automatisch durch Agenten öffnen**. Allgemeine menschliche Abnahme: [vollständige Runs](issues/playtest-validation.md).

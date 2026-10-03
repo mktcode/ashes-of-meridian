@@ -6,12 +6,11 @@ const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...RE
 const {Battlefield,BattlefieldBuilder,BattlefieldSurface,BATTLEFIELDS,TerrainModels,MeridianRenderer,MERIDIAN_TEXTURES}=
   vm.runInContext('({Battlefield,BattlefieldBuilder,BattlefieldSurface,BATTLEFIELDS,TerrainModels,MeridianRenderer,MERIDIAN_TEXTURES})',context);
 
-test('build-only masks retain walkability and strict map bounds',()=>{
-  const s=new BattlefieldSurface(10,2,()=>0);s.buildBlocked=new Uint8Array(100);s.buildBlocked[40]=1;
+test('foundation margins retain strict map bounds without blocking movement',()=>{
+  const s=new BattlefieldSurface(10,2,()=>0);
   assert.equal(s.foundation({x:6.9,z:-2},2),true);
   assert.equal(s.foundation({x:7,z:-2},2),false);
-  s.buildBlocked[49]=1;assert.equal(s.foundation({x:6.9,z:-2},2),false);
-  assert.equal(s.fits(6.9,-2,2),true);
+  assert.equal(s.fits(7,-2,2),true);
 });
 test('private cosmetic randomness cannot relocate terrain, public candidates or resources',()=>{
   const a=new Battlefield(1409,'westmark'),original=BattlefieldBuilder.prototype.cosmeticRandom;
@@ -19,7 +18,7 @@ test('private cosmetic randomness cannot relocate terrain, public candidates or 
     BattlefieldBuilder.prototype.cosmeticRandom=()=>()=>.5;
     const b=new Battlefield(1409,'westmark');
     assert.deepEqual(a.staticGrid,b.staticGrid);assert.deepEqual(a.surface.heights,b.surface.heights);
-    assert.deepEqual(a.surface.buildBlocked,b.surface.buildBlocked);assert.deepEqual(a.layout,b.layout);
+    assert.deepEqual(a.layout,b.layout);
   }finally{BattlefieldBuilder.prototype.cosmeticRandom=original;}
 });
 test('water clips a single field without overlapping strips or degenerate shoreline triangles',()=>{

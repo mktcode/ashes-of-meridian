@@ -17,26 +17,6 @@ function runtime() {
   return {...api,context,r,calls};
 }
 
-test('exterior scenery extends optical far planes without moving the camera or changing terrain projection',()=>{
-  const {r,context,profile}=runtime(),math=vm.runInContext('M4',context),farPlanes=[];
-  context.innerHeight=1080;r.viewport={width:1920,height:1080};r.quality=0;
-  r.surface={maxHeight:18,heightAt:()=>12};
-  const perspective=math.perspective,ortho=math.ortho;
-  math.perspective=(...args)=>{farPlanes.push(args[3]);return perspective(...args);};
-  math.ortho=(...args)=>{farPlanes.push(args[5]);return ortho(...args);};
-  r.camera(0,0,95,true);const cinemaEye=Array.from(r.eye);
-  assert.equal(farPlanes.at(-1),400);
-  r.battlefieldProfile={...profile,sceneryBounds:{extent:360,maxHeight:112}};
-  r.camera(0,0,95,true);
-  assert.deepEqual(Array.from(r.eye),cinemaEye);assert.ok(farPlanes.at(-1)>700);
-  r.battlefieldProfile=profile;r.camera(0,0,95,false,0,-.7);
-  const eye=Array.from(r.eye),a=math.point(r.vp,25,12,-20);
-  r.battlefieldProfile={...profile,sceneryBounds:{extent:360,maxHeight:112}};
-  r.camera(0,0,95,false,0,-.7);const b=math.point(r.vp,25,12,-20);
-  assert.deepEqual(Array.from(r.eye),eye);
-  for(const i of [0,1])assert.ok(Math.abs(a[i]/a[3]-b[i]/b[3])<1e-6);
-  assert.ok(Array.from(r.vp).every(Number.isFinite));
-});
 test('common renderer lazily owns map presentation, keeps shadow passes, and restores normal/model previews',()=>{
   const {r,calls,factories,profile}=runtime();let created=0,disposed=0,resized=0,pending=true;
   factories.fixture=renderer=>{

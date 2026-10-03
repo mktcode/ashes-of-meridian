@@ -106,8 +106,8 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
   assert.deepEqual(scripts.filter(s => BATTLEFIELD_SCRIPTS.includes(s.name)).map(s => s.filename),
     BATTLEFIELD_SCRIPTS.map(name => `dist/src/battlefields/${name.replace('battlefield-', '')}.js`));
   const { BATTLEFIELDS, battlefieldId } = vm.runInContext('({BATTLEFIELDS, battlefieldId})', context);
-  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven', 'platform-deck']);
-  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'FRONTIER', 'HAVEN', 'ORBITAL PLATFORM']);
+  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven']);
+  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'FRONTIER', 'HAVEN']);
   assert.deepEqual(Array.from(vm.runInContext('availableBattlefields()',context)), Object.keys(BATTLEFIELDS));
   for (const id of Object.keys(BATTLEFIELDS)) assert.equal(battlefieldId(id), id);
   for (const invalid of [undefined, null, 4, '', 'unknown', 'toString', '__proto__'])

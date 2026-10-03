@@ -8,8 +8,6 @@ class BattlefieldSurface {
   readonly maxHeight: number;
   // Immutable flight envelopes, baked with the terrain, never searched per unit/frame.
   private readonly flights: readonly { floor: Float32Array; cruise: Float32Array }[];
-  /** Walkable structures may still forbid foundations (for example bridge decks). */
-  buildBlocked?: Uint8Array;
   constructor(readonly extent: number, readonly cellSize: number, height: (x: number, z: number) => number,
       readonly visibilityLevel: (height: number, x: number, z: number) => number = () => 0) {
     this.step = cellSize / 2;
@@ -158,13 +156,6 @@ class BattlefieldSurface {
   foundation(p: Position, radius: number): boolean {
     const margin = radius + 1;
     if (!this.fits(p.x,p.z,margin)) return false;
-    if (this.buildBlocked) {
-      const n = this.extent * 2 / this.cellSize,
-        cell = (v: number) => clamp(Math.floor((v + this.extent) / this.cellSize), 0, n - 1);
-      for (let z = cell(p.z-margin); z <= cell(p.z+margin); z++)
-        for (let x = cell(p.x-margin); x <= cell(p.x+margin); x++)
-          if (this.buildBlocked[z*n+x]) return false;
-    }
     // Cover all vertices of every touched triangle (conservative square footprint).
     // Off-grid sample rings can miss a height extremum inside a large foundation.
     const first = (v: number) => Math.floor((v-margin+this.extent)/this.step)*this.step-this.extent,

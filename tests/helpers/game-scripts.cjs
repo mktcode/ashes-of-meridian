@@ -14,9 +14,6 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-alien-terrain',
   'renderer-mothership-terrain',
   'renderer-landscape',
-  'renderer-platform-terrain',
-  'renderer-platform-dockyard',
-  'renderer-platform-skyline',
   'renderer-upland',
   'renderer-ecology',
   'renderer-world-variation',
@@ -80,7 +77,6 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-ecology',
   'battlefield-variations',
   'battlefield-dynamic',
-  'battlefield-platforms',
   'battlefield-deployment',
   'battlefield-catalog'
 ]);

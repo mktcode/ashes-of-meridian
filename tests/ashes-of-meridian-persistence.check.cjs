@@ -42,7 +42,7 @@ function runningSave() {
   const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, 'effects', 'persistence']);
   const Game = vm.runInContext('MeridianGame', context), game = new Game(json(defaults));
   const run = { ...json(expedition), faction: 0, depth: 0, benefits: {}, enemyBenefits: [{}], offers: [],
-    encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2], map: 'platform-deck', seed: 1409 } };
+    encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
   game.start({ ...run.encounter, faction: run.faction, abilities: run.abilities, depth: run.depth });
   const worker = game.s.entities.find(e => e.team === 0 && e.type === 'worker');
   for (const [kind, team] of [['alloy', 0], ['gas', 0], ['alloy', 1]]) {
@@ -151,6 +151,29 @@ test('invalid recipes, benefits and offers are rejected instead of silently repa
   assert.equal(restricted.service.loadExpedition().encounter.map, 'mothership');
 });
 
+test('removed map recipes and snapshots stay blocked while permanent profile data survives', () => {
+  const profile = { ...defaults, aether: 250, expeditionDepth: 25, tutorialComplete: true,
+    upgrades: { startingWorkers: 2 }, settings: { ...defaults.settings, music: false } };
+  const running = savedBattle();
+  running.encounter.map = running.battle.state.map = 'platform-deck';
+  for (const run of [{ ...running, battle: null }, running]) {
+    const h = setup(); put(h, run, profile);
+    const before = h.data.get(PROFILE), permanent = json(h.service.loadProfile());
+    assert.equal(h.service.loadExpedition(), null);
+    assert.ok(h.service.expeditionError);
+    assert.equal(h.data.get(PROFILE), before, 'no silent remapping or destructive read');
+    h.service.saveProfile(permanent);
+    const reloaded = setup(h.data);
+    assert.deepEqual(json(reloaded.service.loadProfile()), permanent);
+    assert.equal(reloaded.service.loadExpedition(), null);
+    assert.ok(reloaded.service.expeditionError, 'settings writes do not resurrect the removed map');
+    reloaded.service.saveProgress(permanent, null);
+    assert.equal(reloaded.service.loadExpedition(), null);
+    assert.equal(reloaded.service.expeditionError, null, 'explicit discard clears the blocked run');
+    assert.deepEqual(json(setup(h.data).service.loadProfile()), permanent);
+  }
+});
+
 test('deployment and opponent slots round-trip across stage boundaries without shared benefits', () => {
   for (const depth of [0, 1, 2, 3, 7, 20]) {
     const count = catalogs.enemyCount(depth), run = { ...json(expedition), depth,
@@ -168,7 +191,7 @@ test('landscape archive remains independent, discards foreign history and clears
   h.service.saveStageHistory([previous, current]);
   assert.deepEqual(json(setup(h.data).service.loadStageHistory(expedition)), [previous, current]);
   for (const stages of [[], [previous], [{ ...previous, stage: 7 }, current], [previous, { ...current, seed: 1410 }],
-    [{ ...previous, map: 'aurelion' }, current], [null, current]]) {
+    [{ ...previous, map: 'aurelion' }, current], [{ ...previous, map: 'platform-deck' }, current], [null, current]]) {
     h.service.saveStageHistory(stages); assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current]);
     assert.equal(h.data.get(PROFILE), before);
   }

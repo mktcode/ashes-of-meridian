@@ -856,13 +856,10 @@
           : [x + Math.sin(yaw) * distance * 0.82, distance * 1.1, z + Math.cos(yaw) * distance * 0.82];
         // The menu orbit must stay above the seeded surface, not the old zero-height map.
         if (cinema) this.eye[1] += Math.max(datum, this.surface?.heightAt(this.eye[0], this.eye[2]) ?? 0);
-        // Exterior skyline belongs to presentation bounds, not terrain/flight envelopes.
-        const scenery=this.battlefieldProfile?.sceneryBounds,
-          sceneryFar=scenery?Math.hypot(...this.eye)+Math.SQRT2*scenery.extent+scenery.maxHeight+32:0,
-          far = Math.max(350, distance * Math.hypot(1.1, .82) + viewHeight + 64,sceneryFar);
+        const far = Math.max(350, distance * Math.hypot(1.1, .82) + viewHeight + 64);
         let view = M4.look(this.eye, target),
           proj = cinema
-            ? M4.perspective(0.74, a, 0.5, Math.max(400,sceneryFar))
+            ? M4.perspective(0.74, a, 0.5, 400)
             : M4.ortho((-viewHeight * a) / 2, (viewHeight * a) / 2, -viewHeight / 2, viewHeight / 2, 0.1, far);
         this.vp = M4.mul(proj, view);
         this.inverseVP = M4.inverse(this.vp);

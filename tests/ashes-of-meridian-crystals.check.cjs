@@ -118,7 +118,7 @@ test('all maps and factions retain distinct accessible crystals in five-slot ell
   }
 });
 
-test('Echo vents have buildable snapped refinery foundations on landscapes and platform ramps',()=>{
+test('Echo vents have buildable snapped refinery foundations on every landscape family',()=>{
   for(const map of Object.keys(BATTLEFIELDS)){
     const game=fresh();game.start({seed:3,map,deployment:'resource-start'});
     game.world.sight[0].explored.fill(1);

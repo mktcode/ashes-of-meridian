@@ -60,11 +60,11 @@ test('escaping converts values and protects HTML delimiters independently of scr
     assert.equal(esc(input), expected);
 });
 
-test('opening HQ encounters keep faction → map → seed draw order with the extended map pool', () => {
+test('opening HQ encounters keep faction → map → seed draw order with the landscape pool', () => {
   const h = setup();
   for (const depth of [0, 1, 2]) {
     const expected = vm.runInContext(`(() => {
-      const random = seeded(1409), maps = ['alien-planet','mothership','westmark','frontier','haven','platform-deck'];
+      const random = seeded(1409), maps = ['alien-planet','mothership','westmark','frontier','haven'];
       return {mission: DEFAULT_MISSION, deployment: ${depth} === 0 ? 'resource-start' : 'exploration', enemies: expeditionEnemyFactions(${depth}, random),
         map: maps[Math.floor(random() * maps.length)], seed: 1 + Math.floor(random() * 99999999), next: random()};
     })()`, h.context);
@@ -76,10 +76,10 @@ test('opening HQ encounters keep faction → map → seed draw order with the ex
   }
 });
 
-test('seven expedition maps retain equal map weight, normal party counts and no immediate repeat', () => {
+test('six expedition landscapes retain equal map weight, normal party counts and no immediate repeat', () => {
   const h = setup();
   for (const depth of [2,3,6,7]) {
-    const found = new Set(), count = 7;
+    const found = new Set(), count = 6;
     for (let index=0;index<count;index++) {
       let draws=0;
       vm.runInContext('Math',h.context).random=()=>{draws++;return (index+.5)/count;};
@@ -91,11 +91,10 @@ test('seven expedition maps retain equal map weight, normal party counts and no 
       assert.notEqual(h.ui.createEncounter(depth,e.map).map,e.map);
     }
     assert.equal(found.has('aurelion'),false); assert.equal(found.size,count);
-    assert.ok(found.has('platform-deck'),'orbital platforms participate in ordinary expedition selection');
   }
 });
 
-test('ordinary platform encounters are checkpointed and continued without experiment settings',()=>{
+test('ordinary landscape encounters are checkpointed and continued without experiment settings',()=>{
   const h=setup(),saved=[];
   h.ui.profile.tutorialComplete=true;
   vm.runInContext('Math.random=()=>.99;',h.context);
@@ -103,11 +102,11 @@ test('ordinary platform encounters are checkpointed and continued without experi
   h.ui.persistence.saveProgress=(profile,value)=>saved.push(JSON.parse(JSON.stringify(value)));
   h.ui.game.start=options=>h.calls.push(['start',JSON.parse(JSON.stringify(options))]);
   h.ui.startBattle();
-  assert.equal(saved[0].encounter.map,'platform-deck');
+  assert.equal(saved[0].encounter.map,'haven');
   assert.equal(saved[0].encounter.mission,'hq-elimination');
   assert.equal(saved[0].encounter.deployment,'exploration');
   const first=h.calls.find(c=>c[0]==='start')[1];
-  assert.equal(first.map,'platform-deck');
+  assert.equal(first.map,'haven');
   h.ui.showHome();h.ui.continueExpedition();
   const resumed=h.calls.filter(c=>c[0]==='start').at(-1)[1];
   assert.equal(resumed.map,first.map);assert.equal(resumed.seed,first.seed);
@@ -1783,7 +1782,7 @@ test('home and transition previews use the actual next landscape and atmosphere 
 test('expedition encounter generation excludes the immediately previous map', () => {
   const h = setup();
   vm.runInContext('Math.random = () => 0;', h.context);
-  for (const previousMap of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven', 'platform-deck'])
+  for (const previousMap of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven'])
     assert.notEqual(h.ui.createEncounter(3, previousMap).map, previousMap);
 });
 

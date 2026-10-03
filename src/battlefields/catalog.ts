@@ -1,4 +1,4 @@
-/* Expedition map catalog: procedural landscapes and engineered platform decks. */
+/* Expedition map catalog: families of the shared procedural landscape generator. */
 'use strict';
 const BATTLEFIELDS = {
   desert: createDynamicBattlefield('DESERT', 'desert'),
@@ -6,8 +6,7 @@ const BATTLEFIELDS = {
   mothership: createDynamicBattlefield('MOTHERSHIP', 'ship'),
   westmark: createDynamicBattlefield('WESTMARK', 'alpine'),
   frontier: createDynamicBattlefield('FRONTIER', 'frontier'),
-  haven: createDynamicBattlefield('HAVEN', 'haven'),
-  'platform-deck': createPlatformBattlefield()
+  haven: createDynamicBattlefield('HAVEN', 'haven')
 } as const;
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';

@@ -17,10 +17,8 @@ test('caches fill connected free terrain away from deposits on every expedition 
   for (const map of Object.keys(BATTLEFIELDS)) {
     const game = fresh(map), world = game.world, caches = game.s.supplyCaches;
     assert.ok(caches.length >= 4, map);
-    const budget = map === 'platform-deck' ? Math.min(18, Math.max(8, Math.round(world.extent / 10)))
-      : Math.min(9, Math.max(4, Math.round(world.extent / 20)));
-    assert.ok(caches.length <= budget, `${map}: map-family density budget`);
-    if (map === 'platform-deck') assert.equal(caches.length, budget, 'this sample retains its platform count');
+    const budget = Math.min(9, Math.max(4, Math.round(world.extent / 20)));
+    assert.ok(caches.length <= budget, `${map}: landscape density budget`);
     assert.ok(caches.filter(c => c.resource === 'gas').length < caches.filter(c => c.resource === 'alloy').length);
     const grid = Array.from(world.blocked), entities = json(game.s.entities), random = game.random;
     game.random = () => { throw Error('Cache generation must not draw battle RNG'); };
