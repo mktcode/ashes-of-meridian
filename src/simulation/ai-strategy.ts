@@ -40,13 +40,19 @@ const aiStrategyMethods = {
     }).sort((a,b)=>b.score-a.score || a.contact.id-b.contact.id);
   },
   aiScoutGoal(this: MeridianGame, team: PlayerTeam, home: Position): Position {
-    const world = this.world!, sites: Position[] = [];
+    const world = this.world!, ai=this.aiFor(team), sites: Position[] = [],
+      unexplored=(p: Position)=>!world.sight[team].explored[world.idx(p.x,p.z)],
+      starts=world.startSites.filter(p=>distance(p,home)>25 && unexplored(p))
+        .sort((a,b)=>distance(a,home)-distance(b,home));
+    // Probe plausible landing regions before slowly sweeping the local fog boundary.
+    if (starts.length) return starts[(ai?.scoutSite || 0)%starts.length];
     for (let z = 4; z < world.gridSize - 4; z += 4) for (let x = 4; x < world.gridSize - 4; x += 4) {
       const i = z * world.gridSize + x;
       if (world.deploymentReachable[i] && !world.sight[team].explored[i]) sites.push(world.point(i));
     }
     sites.sort((a, b) => distance(a, home) - distance(b, home));
-    return sites[0] || world.startSites[(this.aiFor(team)?.scoutSite || 0) % world.startSites.length] || home;
+    return sites.length ? sites[(ai?.scoutSite || 0)%sites.length] :
+      world.startSites[(ai?.scoutSite || 0)%world.startSites.length] || home;
   },
   aiRetreat(this: MeridianGame, team: PlayerTeam, squad: UnitEntity[], home: BuildingEntity) {
     const ai=this.aiFor(team)!;
@@ -130,8 +136,9 @@ const aiStrategyMethods = {
       }
       // Destroyed/invalidated objectives can be replaced immediately, without a failure penalty.
     }
-    if (army.length>=3 && (!ai.scout || !army.some(e=>e.id===ai.scout)))
-      ai.scout=(army.find(e=>e.type==='rifle') || army.find(e=>UNITS[e.type].damage))?.id;
+    const fitScouts=army.filter(e=>UNITS[e.type].damage && e.hp>=e.maxHp*.4);
+    if (army.length>=3 && !fitScouts.some(e=>e.id===ai.scout))
+      ai.scout=(fitScouts.find(e=>e.type==='rifle') || fitScouts[0])?.id;
     const scout=army.find(e=>e.id===ai.scout),
       pool=army.filter(e=>e.id!==ai.scout && !(danger.length && holding && guards.includes(e))),
       regular=ai.mode==='attack'?squad:pool.slice(rules.reserve),
@@ -149,14 +156,24 @@ const aiStrategyMethods = {
         this.aiAttackGoal(team,attackers,target);return;
       }
     }
-    if (scout && !(danger.length && holding && guards.includes(scout)) && s.time-ai.lastScout>rules.scoutInterval) {
-      if (ai.scoutGoal && distance(scout,ai.scoutGoal)<10) ai.scoutSite=(ai.scoutSite || 0)+1;
-      ai.scoutGoal=this.aiScoutGoal(team,home);
-      this.aiOrder(team,[scout],scout.hp<scout.maxHp*.4?home:ai.scoutGoal,false);ai.lastScout=s.time;
+    // Armed reconnaissance can engage exposed workers instead of walking past them.
+    // Leave the doctrine's reserves at home and never steal guards during a base raid.
+    const searchParty=scout && !danger.length && scout.hp>=scout.maxHp*.4 ? [scout,...pool.slice(rules.reserve)
+      .filter(e=>fitScouts.includes(e)).sort((a,b)=>distance(a,scout)-distance(b,scout)||a.id-b.id)
+      .slice(0,AI_TUNING.searchPartySize-1)] : [];
+    if (scout && !danger.length && s.time-ai.lastScout>rules.scoutInterval) {
+      if (ai.scoutGoal && (distance(scout,ai.scoutGoal)<10 || scout.pathStatus==='unreachable')) {
+        ai.scoutSite=(ai.scoutSite || 0)+1;ai.scoutGoal=undefined;
+      }
+      // Keep a distant destination through periodic orders; do not redirect each interval.
+      ai.scoutGoal ||= this.aiScoutGoal(team,home);
+      ai.lastScout=s.time;
     }
+    if (scout && !danger.length && ai.scoutGoal)
+      this.aiOrder(team,searchParty.length?searchParty:[scout],searchParty.length?ai.scoutGoal:home,!!searchParty.length);
     this.aiSetMode(team,army.length?'assemble':'bootstrap');ai.squad=[];ai.attackProgress=undefined;
     const rally={x:home.x-Math.sign(home.x)*13,z:home.z-Math.sign(home.z)*13};
-    this.aiOrder(team,pool,rally);
+    this.aiOrder(team,pool.filter(e=>!searchParty.includes(e)),rally);
   }
 };
 type AIStrategyMethods = typeof aiStrategyMethods;

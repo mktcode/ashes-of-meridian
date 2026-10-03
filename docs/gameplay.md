@@ -16,7 +16,7 @@ Expeditionskarten verteilen einmalige Vorratsfunde auf erreichbaren Freiflächen
 
 Ungenutztes Echo wird begrenzt evakuiert; vom Spieler zerstörte fertige Feindgebäude liefern zusätzliche permanente Bergung. Reserve finanziert Fleet Systems und Command Modules. Besttiefe schaltet Fraktionen frei; Score ist keine Währung. Auszahlung/Fortschritt erfolgt nur einmal, auch bei erneutem Ergebnisaufruf.
 
-Die KI nutzt bezahlte Aktionen, eigene Sicht und verzögerte Beobachtung, keine künstlichen Wellen/Sichtcheats. Doktrin und begrenzter Verhaltensdruck hängen von Fraktion/Tiefe ab; Vorteilsstapel können weiter wachsen. Wetter, Ruinen und Kampfspuren sind dekorativ. Aktuelle Sicht und Erkundung sind verschieden: bekanntes Gelände verrät keine aktuelle Feindposition. Auf Karten mit Sichtstufen sehen Bodenquellen nur gleich hoch/nach unten; Flugzeuge und Recon scans umgehen diese Grenze, ohne weitere Höhenkampfboni.
+Die KI nutzt bezahlte Aktionen, eigene Sicht und verzögerte Beobachtung, keine künstlichen Wellen/Sichtcheats. Kleine bewaffnete Suchtrupps erkunden unbekannte Landungsregionen und Gelände; die Basisreserve bleibt zurück. Doktrin und begrenzter Verhaltensdruck hängen von Fraktion/Tiefe ab; Vorteilsstapel können weiter wachsen. Wetter, Ruinen und Kampfspuren sind dekorativ. Aktuelle Sicht und Erkundung sind verschieden: bekanntes Gelände verrät keine aktuelle Feindposition. Auf Karten mit Sichtstufen sehen Bodenquellen nur gleich hoch/nach unten; Flugzeuge und Recon scans umgehen diese Grenze, ohne weitere Höhenkampfboni.
 
 ## Landschaften
 

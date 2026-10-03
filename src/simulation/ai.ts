@@ -48,7 +48,8 @@ const aiMethods = {
   aiOrder(this: MeridianGame, team: PlayerTeam, units: UnitEntity[], p: Position, attack = true) {
     // Do not erase path progress every strategic tick. The command API handles formation/ownership.
     const changed = units.filter(e => !e.exit &&
-      (e.order.type !== (attack ? 'attackMove' : 'move') || distance(e.order as Position,p) > 8));
+      (e.order.type !== (attack ? 'attackMove' : 'move') || distance(e.order as Position,p) > 8 ||
+        (e.pathStatus==='unreachable' && distance(e.order as Position,p)>.1)));
     if (changed.length) this.executeAction(team, {kind:'order',ids:changed.map(e=>e.id),
       order:{type:attack?'attackMove':'move',x:p.x,z:p.z}},false);
   },

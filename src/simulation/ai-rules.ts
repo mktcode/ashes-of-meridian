@@ -5,7 +5,7 @@ const AI_TUNING = {
   depthPerTier: 4, maxTier: 4,
   decisionSeconds: [1.5, 1], reactionSeconds: [1, .6],
   attackWaitReduction: 5, forceRatio: [1.15, .99],
-  scoutSeconds: [15, 7], recoverySeconds: [30, 18],
+  scoutSeconds: [15, 7], searchPartySize: 3, recoverySeconds: [30, 18],
   stalledSeconds: 45, targetCommitSeconds: 12, targetSwitchMargin: 40,
   finishWaitSeconds: 8, finishBonus: 100,
   targetRadius: 25, failedGoalSeconds: 90,

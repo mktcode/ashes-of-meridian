@@ -116,6 +116,86 @@ test('AI stage knobs saturate and enforce reaction/decision floors without rando
   }
 });
 
+test('armed search parties leave reserves at home and keep a distant goal between scouting intervals', () => {
+  const {g,ai,entity,own,home,orders} = fixture();
+  const troops = Array.from({length:10},()=>entity('rifle',1,home.x,home.z));
+  const first = {x:60,z:0}; let searches = 0;
+  g.aiScoutGoal = () => { searches++; return searches===1 ? first : {x:0,z:60}; };
+  g.aiStrategy(1,own(),[],home);
+  assert.equal(searches,1);
+  let search = orders.find(o=>o.x===first.x && o.z===first.z);
+  assert.equal(search.ids.length,3); assert.equal(search.attack,true);
+  const rally = orders.find(o=>o.x!==first.x);
+  assert.equal(rally.ids.length,7);
+  assert.ok(rally.ids.every(id=>!search.ids.includes(id)),'rally must not cancel reconnaissance');
+  assert.ok(troops.slice(1,4).every(u=>rally.ids.includes(u.id)),'doctrine reserves remain home');
+  orders.length = 0; g.s.time += 20;
+  g.aiStrategy(1,own(),[],home);
+  assert.equal(searches,1,'a timer alone cannot redirect the search party');
+  assert.ok(orders.some(o=>o.x===first.x && o.ids.length===3));
+  Object.assign(troops[0],first); g.s.time += 20;
+  g.aiStrategy(1,own(),[],home);
+  assert.equal(searches,2); assert.equal(ai.scoutSite,1);
+});
+
+test('search replaces an unreachable destination and an injured scout without consuming RNG', () => {
+  const {g,ai,entity,own,home,orders} = fixture();
+  const troops = Array.from({length:8},()=>entity('rifle',1,home.x,home.z));
+  g.aiScoutGoal = () => ({x:60,z:ai.scoutSite || 0});
+  g.aiStrategy(1,own(),[],home);
+  troops[0].pathStatus = 'unreachable'; g.s.time += 20;
+  g.aiStrategy(1,own(),[],home);
+  assert.equal(ai.scoutSite,1); assert.equal(ai.scoutGoal.z,1);
+  troops[0].hp = troops[0].maxHp*.3; orders.length = 0;
+  g.aiStrategy(1,own(),[],home);
+  assert.notEqual(ai.scout,troops[0].id);
+  const search = orders.find(o=>o.x===60);
+  assert.equal(search.ids.length,3); assert.ok(!search.ids.includes(troops[0].id));
+});
+
+test('scouting prioritizes unexplored public landing regions, then reachable fog, never hidden entities', () => {
+  const {g,ai,home,entity} = fixture();
+  const hidden = entity('hq',0,60,0);
+  Object.assign(g.world,{gridSize:13, deploymentReachable:new Uint8Array(169).fill(1),
+    point:i=>({x:i%13,z:Math.floor(i/13)}), idx:(x,z)=>z===60?1:z===0?2:3});
+  g.world.sight[1].explored = new Uint8Array(169);
+  const first = json(g.aiScoutGoal(1,home));
+  assert.ok(g.world.startSites.some(p=>p.x===first.x && p.z===first.z));
+  hidden.x = -80; hidden.z = 80;
+  assert.deepEqual(json(g.aiScoutGoal(1,home)),first,'hidden enemy assignment cannot guide search');
+  g.world.sight[1].explored[g.world.idx(first.x,first.z)] = 1;
+  const next = json(g.aiScoutGoal(1,home));
+  assert.notDeepEqual(next,first);
+  g.world.sight[1].explored[1] = g.world.sight[1].explored[2] = 1;
+  const frontier = g.aiScoutGoal(1,home);
+  assert.equal(g.world.deploymentReachable[frontier.z*13+frontier.x],1);
+  assert.equal(g.world.sight[1].explored[frontier.z*13+frontier.x],0);
+  ai.scoutSite = (ai.scoutSite || 0)+1;
+  assert.notDeepEqual(json(g.aiScoutGoal(1,home)),json(frontier),'failed candidates can be skipped');
+});
+
+test('nearby replacement goals renew unreachable orders without resetting an ongoing path', () => {
+  const {g,entity} = fixture(), troop = entity('rifle'), actions = [];
+  troop.order = {type:'attackMove',x:60,z:0};
+  g.executeAction = (team,action) => actions.push(json(action));
+  MeridianGame.prototype.aiOrder.call(g,1,[troop],{x:60,z:8});
+  assert.equal(actions.length,0,'preserve an ongoing formation/path');
+  troop.pathStatus = 'unreachable';
+  MeridianGame.prototype.aiOrder.call(g,1,[troop],{x:60,z:0});
+  assert.equal(actions.length,0,'do not retry the same blocked goal every tick');
+  MeridianGame.prototype.aiOrder.call(g,1,[troop],{x:60,z:8});
+  assert.equal(actions.length,1); assert.equal(actions[0].order.z,8);
+});
+
+test('a viable observed target launches the main wave rather than reserving all search escorts', () => {
+  const {g,ai,entity,contact,own,home,orders} = fixture();
+  Array.from({length:8},()=>entity('rifle',1,home.x,home.z));
+  const worker = contact(entity('worker',0,60,0));
+  g.aiStrategy(1,own(),[worker],home);
+  assert.equal(ai.mode,'attack'); assert.equal(ai.squad.length,4);
+  assert.equal(orders.length,1); assert.equal(orders[0].x,worker.x);
+});
+
 test('productive attacks survive the old 150 second limit without resetting sortie age', () => {
   const {g,ai,entity,contact,own,home,launch} = fixture();
   const troop = entity('rifle',1,8,0), hq = contact(entity('hq',0));
