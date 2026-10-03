@@ -52,7 +52,7 @@
     id: 'faction-0/building/hangar',
     meshes: { faction0HangarHull: createHangarHull },
     render({ part: p, metal, team, accent, nightLight=0 }) {
-      const glow=(base=0)=>base+(3.2-base)*nightLight;
+      const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0HangarHull', 0, 0, 0, 1, 1, 1, metal);
       p('box', 0, 3.07, 1.667, 3.92, .095, .025, team, 0, 0, 0, glow(.75));
       p('box', 0, 2.48, -2.458, 3.4, .12, .025, team, 0, 0, 0, glow(.4));

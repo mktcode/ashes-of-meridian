@@ -31,7 +31,7 @@
   registerEntityModel({
     id: 'faction-0/building/depot', meshes: { faction0DepotHull: hull },
     render({part:p,metal,team,accent,nightLight=0}) {
-      const glow=(base=0)=>base+(3.2-base)*nightLight;
+      const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0DepotHull',0,0,0,1,1,1,metal);
       for (const side of [-1,1]) {
         p('box',side*1.05,1.43,1.699,1.1,.17,.035,team,0,0,0,glow(.5));

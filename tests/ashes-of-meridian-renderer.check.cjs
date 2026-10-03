@@ -895,6 +895,24 @@ test('resize and quality switches release old attachments and rebuild matching d
   assert.equal(h.framebuffers.size, 4); assert.equal(h.buffers.size, 3);
 });
 
+test('night bloom strengthens smoothly without changing passes or retaining preview lighting',()=>{
+  const h=setup(); h.r.resize();
+  const base=h.r.battlefieldProfile, targets=[...h.r.bloomTargets];
+  for(const [hour,strength] of [[0,1.65],[5,1.65],[5.5,1.15],[6,.65],[12,.65],[18,.65],[18.5,1.15],[19,1.65]]) {
+    h.r.setBattlefieldProfile({...base,atmosphere:{timeOfDay:hour,horizon:[.1,.1,.1],zenith:[.05,.05,.05]}});
+    for(let i=0;i<2;i++) {
+      h.calls.length=0; h.r.render(0);
+      const uniform=h.calls.find(c=>c[0]==='uniform1f'&&c[1]==='u_bloomStrength');
+      assert.ok(Math.abs(uniform[2]-strength)<1e-12);
+      assert.equal(h.calls.filter(c=>c[0]==='quad'&&c[1]==='bloom').length,3);
+      assert.equal(h.r.bloomTargets.length,targets.length);
+      h.r.bloomTargets.forEach((target,i)=>assert.equal(target,targets[i],'no extra targets for stronger night glow'));
+    }
+  }
+  h.r.useModelPreview(); h.calls.length=0; h.r.render(0);
+  assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_bloomStrength'&&c[2]===.65));
+});
+
 test('bloom uses two quarter-size targets, three ordered passes and a clean allocation fallback',()=>{
   const h=setup();h.r.resize();
   assert.equal(h.r.bloomWidth,320);assert.equal(h.r.bloomHeight,240);assert.equal(h.textures.size,2);

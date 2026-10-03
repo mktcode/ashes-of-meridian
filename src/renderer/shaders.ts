@@ -472,7 +472,7 @@ void main(){
  frag=vec4(c,1.);
 }`;
     const POSTF = `#version 300 es
-precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_size;uniform float u_time;uniform float u_quality;uniform sampler2D u_bloom;uniform float u_bloomOn;
+precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_size;uniform float u_time;uniform float u_quality;uniform sampler2D u_bloom;uniform float u_bloomOn;uniform float u_bloomStrength;
 // Screen-space tilt-shift approximation: wide sharp band, at most eight extra taps.
 // Radius follows the shorter render dimension, keeping the look stable across DPR.
 vec3 tiltShift(vec3 sharp,vec2 px){
@@ -486,4 +486,4 @@ vec3 tiltShift(vec3 sharp,vec2 px){
          +texture(u_tex,uv+vec2(d.x,-d.y)).rgb+texture(u_tex,uv+vec2(-d.x,d.y)).rgb;
  return blurred/16.;
 }
-void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;if(u_quality>1.5)c=tiltShift(c,px);if(u_bloomOn>.5)c+=texture(u_bloom,uv).rgb*.65*(1.-c);float vignette=1.-smoothstep(.25,.85,length((uv-.5)*vec2(1.,.8)))*.20;float grain=(fract(sin(dot(uv*u_size+u_time,vec2(12.9898,78.233)))*43758.5453)-.5)/260.;c=pow(max(c*vignette+grain,0.),vec3(.96));frag=vec4(c,1.);}`;
+void main(){vec2 px=1./u_size;vec3 c=texture(u_tex,uv).rgb;if(u_quality>1.5)c=tiltShift(c,px);if(u_bloomOn>.5)c+=texture(u_bloom,uv).rgb*u_bloomStrength*(1.-c);float vignette=1.-smoothstep(.25,.85,length((uv-.5)*vec2(1.,.8)))*.20;float grain=(fract(sin(dot(uv*u_size+u_time,vec2(12.9898,78.233)))*43758.5453)-.5)/260.;c=pow(max(c*vignette+grain,0.),vec3(.96));frag=vec4(c,1.);}`;

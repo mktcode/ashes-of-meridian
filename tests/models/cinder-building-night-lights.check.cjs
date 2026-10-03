@@ -26,7 +26,7 @@ for(const type of ['hq','depot','barracks','factory','hangar','refinery','turret
         'same meshes, pose, colors, alpha, material and layer');
       if(night[i][11]!==day[i][11]) {
         lamps++;
-        assert.equal(night[i][11],3.2,'bright emissive trim even in performance mode');
+        assert.equal(night[i][11],5,'bright emissive trim even in performance mode');
         assert.ok(Math.abs(dusk[i][11]-(day[i][11]+night[i][11])/2)<1e-12,'dusk fade');
       }
     }
@@ -48,12 +48,12 @@ for(const type of ['hq','depot','barracks','factory','hangar','refinery','turret
       const roof=night.filter(c=>c[0]==='box'&&c[4]===.16&&c[5]===.025&&c[6]===2.72),
         door=night.filter(c=>c[0]==='box'&&c[4]===1.1&&c[5]===.17&&c[6]===.035);
       assert.equal(roof.length,2); assert.equal(door.length,2);
-      assert.ok([...roof,...door].every(c=>c[11]===3.2),'both screenshot-marked depot trims glow');
+      assert.ok([...roof,...door].every(c=>c[11]===5),'both screenshot-marked depot trims glow');
     }
     if(type==='hq') {
       for(const [sx,sy,sz] of [[.28,.03,1.1],[1.65,.17,1.65],[.85,.1,.85]]) {
         const marked=night.filter(c=>c[0]==='box'&&c[4]===sx&&c[5]===sy&&c[6]===sz);
-        assert.ok(marked.length>0&&marked.every(c=>c[11]===3.2),'screenshot-marked ramp and roof panels glow');
+        assert.ok(marked.length>0&&marked.every(c=>c[11]===5),'screenshot-marked ramp and roof panels glow');
       }
     }
   });

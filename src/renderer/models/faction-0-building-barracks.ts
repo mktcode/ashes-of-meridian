@@ -44,7 +44,7 @@
     id: 'faction-0/building/barracks',
     meshes: { faction0BarracksHull: createBarracksHull },
     render({ part: p, metal, team, accent, nightLight=0 }) {
-      const glow=(base=0)=>base+(3.2-base)*nightLight;
+      const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0BarracksHull', 0, 0, 0, 1, 1, 1, metal);
       // Front lintel, flanking entry lights and roof stripes read at battle zoom.
       p('box', 0, 2.53, 2.256, 2.18, .095, .025, team, 0, 0, 0, glow(.8));

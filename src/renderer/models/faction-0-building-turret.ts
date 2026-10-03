@@ -13,7 +13,7 @@ function fittings() {
 registerEntityModel({
   id: 'faction-0/building/turret', meshes: { faction0TurretFittings: fittings },
   render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation, nightLight=0 }) {
-    const glow=(base=0)=>base+(3.2-base)*nightLight;
+    const glow=(base=0)=>base+(5-base)*nightLight;
     p('turretBase', 0, 0, 0, 1, 1, 1, metal);
     p('faction0TurretFittings', 0, 0, 0, 1, 1, 1, metal);
     // Keep the aiming head independent of the fixed foundation orientation.

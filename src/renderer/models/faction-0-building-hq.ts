@@ -13,7 +13,7 @@ function fittings() {
 registerEntityModel({
   id: 'faction-0/building/hq', meshes: { faction0HqFittings: fittings },
   render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation, nightLight=0 }) {
-    const glow=(base=0)=>base+(3.2-base)*nightLight;
+    const glow=(base=0)=>base+(5-base)*nightLight;
     p('commandHull', 0, 0, 0, 1, 1, 1, metal);
     p('faction0HqFittings', 0, 0, 0, 1, 1, 1, metal);
     p('box', 0, 2.5, 2.35, 5.6, 0.23, 0.12, team, 0, 0, 0, glow(0.7));

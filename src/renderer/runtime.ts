@@ -233,6 +233,12 @@
       get battlefieldHour(): number | undefined {
         return (this.dayCycleProfile ?? this.battlefieldProfile).atmosphere?.timeOfDay;
       }
+      get bloomStrength(): number {
+        const hour = this.battlefieldHour;
+        if (this.cinema || hour === undefined) return .65;
+        const t = Math.max(0,Math.min(1,hour >= 12 ? hour - 18 : 6 - hour));
+        return .65 + t*t*(3-2*t);
+      }
       setBattlefieldTime(elapsedSeconds: number) {
         this.dayCycleProfile = this.battlefieldProfile.atmosphere
           ? battlefieldDayCycle(this.battlefieldProfile, elapsedSeconds) : null;
@@ -1132,6 +1138,7 @@
         g.bindTexture(g.TEXTURE_2D, this.bloomTargets[0]?.texture || this.sceneTex);
         g.uniform1i(this.uniform(postProg, 'u_bloom'), 1);
         g.uniform1f(this.uniform(postProg, 'u_bloomOn'), this.quality > 0 && this.bloomTargets.length === 2 ? 1 : 0);
+        g.uniform1f(this.uniform(postProg, 'u_bloomStrength'), this.bloomStrength);
         g.uniform2f(this.uniform(postProg, 'u_size'), this.width, this.height);
         g.uniform1f(this.uniform(postProg, 'u_time'), environment ? modelTime : time);
         g.uniform1f(this.uniform(postProg, 'u_quality'), this.quality);

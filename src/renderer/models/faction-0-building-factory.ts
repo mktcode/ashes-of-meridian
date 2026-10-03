@@ -63,7 +63,7 @@
     id: 'faction-0/building/factory',
     meshes: { faction0FactoryHull: createFactoryHull },
     render({ part: p, metal, team, accent, nightLight=0 }) {
-      const glow=(base=0)=>base+(3.2-base)*nightLight;
+      const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0FactoryHull', 0, 0, 0, 1, 1, 1, metal);
       p('box', 0, 3.07, 1.657, 3.9, .1, .025, team, 0, 0, 0, glow(.75));
       p('box', 0, 2.43, -2.451, 3.6, .1, .025, 0xed975d, 0, 0, 0, glow(.5));
