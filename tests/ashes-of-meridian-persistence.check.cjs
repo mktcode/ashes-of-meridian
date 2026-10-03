@@ -1,352 +1,262 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { loadScripts } = require('./helpers/game-scripts.cjs');
-const PROFILE = 'meridian.profile.v1', EXPEDITION = 'meridian.expedition.v6';
+const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
+const PROFILE = 'meridian.profile.v1', HISTORY = 'meridian.stage-history.v1';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
   version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false }
 };
-const benefitRules = {
-  supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }, fieldWorkshop: { max: 1 }
-};
-
-function setup(data = new Map(), rules = {}) {
-  const trace = [], fail = {}, warnings = [];
-  const context = loadScripts(['persistence']);
-  const service = vm.runInContext('createMeridianPersistence', context)({
-    getStorage() {
-      if (fail.access) throw Error('storage getter denied');
-      return {
-        getItem(k) { trace.push(['get', k]); if (fail.get) throw Error('get denied'); return data.get(k) ?? null; },
-        setItem(k, v) { trace.push(['set', k, v]); if (fail.set) throw Error('set denied'); data.set(k, v); },
-        removeItem(k) { trace.push(['remove', k]); if (fail.set) throw Error('remove denied'); data.delete(k); }
-      };
-    },
-    clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
-    upgrades: { startingAlloy: { max: 5 }, startingWorkers: { max: 5 }, aetherEvacuation: { max: 5 } },
-    benefits: benefitRules,
-    abilities: { orbital: {}, repair: {}, scan: {}, drop: {}, disruption: {}, bulwark: {}, surge: {}, recall: {} },
-    enemyCount: vm.runInContext('expeditionEnemyCount', loadScripts(['content'])),
-    missions: vm.runInContext('MISSIONS', loadScripts(['content'])),
-    ...rules,
-    battlefields: { desert: {}, 'alien-planet': {}, mothership: {} },
-    warn: (...args) => warnings.push(args)
-  });
-  return { data, trace, fail, warnings, service };
-}
-
+const content = loadScripts(['content']);
+const catalogs = vm.runInContext('({units:UNITS,buildings:BUILDINGS,abilities:ABILITIES,battlefields:Object.fromEntries(MISSIONS["hq-elimination"].maps.map(id=>[id,{}])),missions:MISSIONS,enemyCount:expeditionEnemyCount})', content);
+const upgrades = { startingAlloy: { max: 5 }, startingWorkers: { max: 5 }, aetherEvacuation: { max: 5 } };
+const benefits = { supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }, fieldWorkshop: { max: 1 } };
 const expedition = {
-  version: 6, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8,
+  version: 7, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8,
   benefits: { supplyCrate: 2, commanderMandate: 1 },
   enemyBenefits: [{ pioneerSquad: 2, fieldWorkshop: 1 }, { supplyCrate: 3 }, { aetherAllocation: 2 }],
   encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 },
   offers: ['pioneerSquad', 'aetherAllocation']
 };
+function setup(data = new Map(), rules = {}) {
+  const trace = [], fail = {}, warnings = [], context = loadScripts(['persistence']);
+  const service = vm.runInContext('createMeridianPersistence', context)({
+    getStorage() {
+      if (fail.access) throw Error('storage getter denied');
+      return {
+        getItem(k) { trace.push(['get', k]); if (fail.get) throw Error('get denied'); return data.get(k) ?? null; },
+        setItem(k, v) { trace.push(['set', k, v]); if (fail.set) throw Error('quota exceeded'); data.set(k, v); },
+        removeItem(k) { trace.push(['remove', k]); if (fail.remove) throw Error('remove denied'); data.delete(k); }
+      };
+    },
+    clamp: (v, min, max) => Math.max(min, Math.min(max, v)), ...catalogs, upgrades, benefits, ...rules,
+    warn: (...args) => warnings.push(args)
+  });
+  return { data, trace, fail, warnings, service };
+}
+function put(h, run = expedition, profile = defaults) { return h.service.saveProgress(profile, run); }
 
-test('landscape history survives reload independently of the real checkpoint and clears with its run', () => {
-  const h = setup(), current = { stage: 9, map: 'desert', seed: 1409 },
-    stages = [{ stage: 7, map: 'mothership', seed: 7 }, { stage: 8, map: 'alien-planet', seed: 82 }, current];
-  h.service.saveExpedition(expedition);
-  h.service.saveProfile(defaults);
-  const checkpoint = h.data.get(EXPEDITION), profile = h.data.get(PROFILE);
-  assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current], 'an existing run starts at its known stage');
-  assert.equal(h.service.saveStageHistory(stages), true);
-  assert.deepEqual(json(setup(h.data).service.loadStageHistory(expedition)), stages);
-  assert.equal(h.data.get(EXPEDITION), checkpoint);
-  const loaded = h.service.loadStageHistory(expedition);
-  loaded[0].seed = 999;
-  assert.deepEqual(json(h.service.loadStageHistory(expedition)), stages, 'reads return independent records');
-  h.service.clearExpedition();
-  assert.equal(h.data.has('meridian.stage-history.v1'), false);
-  assert.equal(h.data.get(PROFILE), profile);
-  assert.deepEqual(json(h.service.loadStageHistory(null)), []);
-});
-
-test('invalid, foreign and incomplete landscape archives never damage the checkpoint or invent past seeds', () => {
-  const h = setup(), current = { stage: 9, map: 'desert', seed: 1409 }, previous = { stage: 8, map: 'mothership', seed: 82 };
-  h.service.saveExpedition(expedition);
-  const before = h.data.get(EXPEDITION);
-  for (const stages of [[], [previous], [previous, { ...current, seed: 1410 }],
-    [previous, { ...current, map: 'mothership' }], [{ ...previous, stage: 7 }, current],
-    ...[0, -1, 1.5, '82', 100000000, null].map(seed => [{ ...previous, seed }, current]),
-    [{ ...previous, map: 'toString' }, current], [null, current]]) {
-    h.service.saveStageHistory(stages);
-    assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current]);
-    assert.deepEqual(json(h.service.loadExpedition()), expedition);
-    assert.equal(h.data.get(EXPEDITION), before);
+// One bounded CPU fixture, not an AI match or a simulation/balance run.
+function runningSave() {
+  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, 'effects', 'persistence']);
+  const Game = vm.runInContext('MeridianGame', context), game = new Game(json(defaults));
+  const run = { ...json(expedition), faction: 0, depth: 0, benefits: {}, enemyBenefits: [{}], offers: [],
+    encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2], map: 'platform-deck', seed: 1409 } };
+  game.start({ ...run.encounter, faction: run.faction, abilities: run.abilities, depth: run.depth });
+  const worker = game.s.entities.find(e => e.team === 0 && e.type === 'worker');
+  for (const [kind, team] of [['alloy', 0], ['gas', 0], ['alloy', 1]]) {
+    const cache = game.s.supplyCaches.find(c => c.resource === kind && !c.collected);
+    assert.ok(cache, `fixture has ${kind} cargo`);
+    const collector = game.s.entities.find(e => e.team === team && e.type === 'worker'), before = game.account(team)[kind];
+    Object.assign(collector, { x: cache.x, z: cache.z }); game.world.reveal(game.s.entities); game.collectSupplyCaches();
+    assert.equal(cache.collected, true); assert.equal(game.account(team)[kind], before + cache.amount);
   }
-  h.data.set('meridian.stage-history.v1', '{');
-  assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current]);
-  assert.equal(h.service.loadExpedition().depth, 8);
-  h.fail.access = true;
-  assert.equal(h.service.saveStageHistory([previous, current]), false);
-  assert.deepEqual(json(h.service.loadStageHistory(expedition)), [previous, current]);
+  const building = game.spawnBuilding('barracks', worker.x + 10, worker.z, 0, 0, { progress: .4 });
+  building.hp /= 2; building.queue = [{ type: 'rifle', progress: .3, time: 10, cost: 50, gas: 0 }];
+  worker.order = { type: 'build', id: building.id, x: building.x, z: building.z };
+  worker.path = [{ x: worker.x + 2, z: worker.z }]; worker.pathVersion = game.world.pathVersion;
+  game.s.time = 12; game.s.speed = 3; game.s.scans.push({ x: worker.x, z: worker.z, team: 0, r: 8, until: 20 });
+  game.s.strikes.push({ x: worker.x + 4, z: worker.z, at: 15, damage: 100, radius: 5, team: 0, type: 'orbital' });
+  game.s.fields.push({ x: worker.x, z: worker.z, r: 5, until: 22, team: 0, type: 'repair', power: 2 });
+  game.s.recalls.push({ x: worker.x, z: worker.z, team: 0, hq: building.id, at: 18, ids: [worker.id] });
+  const ai = game.s.parties[1].controller.state;
+  ai.nextThink = 13;
+  ai.observation = { readyAt: 13, own: json(game.s.entities.filter(e => e.team === 1)), visible: [] };
+  game.fogClock = .1; game.resultClock = .05; game.navDirty = true;
+  game.rehash(); // Save hash membership before a subsequent movement, not a fresh rehash on restore.
+  worker.x += 20;
+  run.battle = json(game.snapshotBattle());
+  return { context, Game, game, run };
+}
+
+// No terrain construction in pure persistence cases; the running fixture is shared as immutable input.
+let fixture;
+const savedBattle = () => json((fixture ??= runningSave()).run);
+
+test('profile and expedition commit together; settings writes preserve the battle and clearing preserves rewards', () => {
+  const h = setup(), run = savedBattle(), profile = { ...defaults, aether: 123, upgrades: { startingWorkers: 2 } };
+  assert.equal(put(h, run, profile), true);
+  assert.deepEqual(h.trace.filter(c => c[0] === 'set').map(c => c[1]), [PROFILE]);
+  assert.deepEqual([...h.data.keys()], [PROFILE]);
+  const loaded = setup(h.data); loaded.service.loadProfile();
+  assert.deepEqual(json(loaded.service.loadExpedition()), run);
+  loaded.service.saveProfile({ ...profile, settings: { ...defaults.settings, music: false } });
+  assert.deepEqual(json(setup(h.data).service.loadExpedition()), run);
+  assert.equal(loaded.service.saveProgress({ ...profile, aether: 150 }, null), true);
+  assert.equal(setup(h.data).service.loadExpedition(), null);
+  assert.equal(setup(h.data).service.loadProfile().aether, 150);
 });
 
-test('profile defaults and normalization retain only permanent expedition progress', () => {
-  const h = setup();
-  assert.deepEqual(json(h.service.loadProfile()), defaults);
-  h.data.set(PROFILE, JSON.stringify({ version: 1, expeditionDepth: '25.9', factionUnlockLevel: 2,
-    aether: '120.9', upgrades: { startingWorkers: 99, extra: 8 },
-    settings: { ...defaults.settings, volume: 7, quality: -2, extra: true } }));
+test('running snapshot restores exact CPU state, RNG, fog and consumed cargo without applying new fleet upgrades', () => {
+  const { game, Game, run } = fixture ??= runningSave(), h = setup(); put(h, run);
+  const restored = new Game({ ...json(defaults), upgrades: { startingWorkers: 5, startingAlloy: 5 } });
+  restored.restoreBattle(h.service.loadExpedition());
+  assert.deepEqual(json(restored.snapshotBattle()), run.battle);
+  const observation = restored.s.parties[1].controller.state.observation.own[0];
+  assert.notStrictEqual(observation, restored.get(observation.id), 'delayed observation remains a value copy');
+  const accounts = json(restored.s.parties.map(p => p.account));
+  restored.collectSupplyCaches();
+  assert.deepEqual(json(restored.s.parties.map(p => p.account)), accounts, 'consumed cargo cannot pay again');
+  assert.deepEqual([restored.random(), restored.random(), restored.random()], [game.random(), game.random(), game.random()]);
+  game.step(.05); restored.step(.05);
+  assert.deepEqual(json(restored.snapshotBattle()), json(game.snapshotBattle()), 'one bounded continuation tick stays identical');
+  game.stepping = true; assert.throws(() => game.snapshotBattle(), /completed/); game.stepping = false;
+  game.snapshotSafe = false; assert.throws(() => game.snapshotBattle(), /completed/); game.snapshotSafe = true;
+});
+
+test('damaged snapshots and mismatched recipes are blocked, never downgraded to a fresh battle', () => {
+  const original = savedBattle();
+  for (const change of [
+    r => { delete r.battle; }, r => { r.battle.version++; }, r => { r.battle.state.seed++; },
+    r => { r.battle.state.entities[0].type = 'missing'; }, r => { r.battle.state.entities.push(r.battle.state.entities[0]); },
+    r => { r.battle.sight[0].visible = 'bad'; }, r => { r.battle.state.supplyCaches[0].collected = 'false'; },
+    r => { r.battle.randomState = null; }, r => { r.battle.state.parties[1].controller.state.observation.readyAt = null; }
+  ]) {
+    const h = setup(), damaged = json(original); change(damaged); put(h, damaged);
+    const before = h.data.get(PROFILE);
+    assert.equal(h.service.loadExpedition(), null); assert.ok(h.service.expeditionError);
+    assert.equal(h.data.get(PROFILE), before, 'reading does not rewrite the bad save');
+    h.service.saveProfile({ ...defaults, aether: 90 });
+    assert.equal(setup(h.data).service.loadExpedition(), null, 'settings writes preserve the blocked save');
+    h.service.saveProgress(defaults, null); assert.equal(h.service.expeditionError, null);
+  }
+});
+
+test('old separate recipes are ignored while permanent profile data survives', () => {
+  const h = setup(new Map([[PROFILE, JSON.stringify({ ...defaults, aether: 250 })],
+    ['meridian.expedition.v6', JSON.stringify({ ...expedition, version: 6 })]]));
+  assert.equal(h.service.loadProfile().aether, 250); assert.equal(h.service.loadExpedition(), null);
+  assert.equal(h.service.expeditionError, null);
+});
+
+test('invalid recipes, benefits and offers are rejected instead of silently repaired', () => {
+  for (const invalid of [
+    { ...expedition, version: 6 }, { ...expedition, faction: 3 }, { ...expedition, depth: '8' },
+    { ...expedition, abilities: ['orbital', 'repair', 'scan', 'scan'] },
+    { ...expedition, benefits: { pioneerSquad: 99 } }, { ...expedition, offers: ['pioneerSquad', 'pioneerSquad'] },
+    { ...expedition, offers: ['missing'] }, { ...expedition, enemyBenefits: [{}] },
+    { ...expedition, encounter: { ...expedition.encounter, seed: -1 } },
+    { ...expedition, encounter: { ...expedition.encounter, deployment: 'unknown' } },
+    { ...expedition, encounter: { ...expedition.encounter, mission: 'echo-salvage' } },
+    { ...expedition, encounter: { ...expedition.encounter, map: 'aurelion' } }
+  ]) {
+    const h = setup(); put(h, invalid, { ...defaults, aether: 40 });
+    assert.equal(h.service.loadExpedition(), null); assert.ok(h.service.expeditionError);
+    assert.equal(h.service.loadProfile().aether, 40);
+  }
+  const restricted = setup(new Map(), { missions: { 'hq-elimination': { maps: ['mothership'] } } });
+  put(restricted); assert.equal(restricted.service.loadExpedition(), null);
+  put(restricted, { ...expedition, encounter: { ...expedition.encounter, map: 'mothership' } });
+  assert.equal(restricted.service.loadExpedition().encounter.map, 'mothership');
+});
+
+test('deployment and opponent slots round-trip across stage boundaries without shared benefits', () => {
+  for (const depth of [0, 1, 2, 3, 7, 20]) {
+    const count = catalogs.enemyCount(depth), run = { ...json(expedition), depth,
+      enemyBenefits: Array.from({ length: count }, (_, slot) => ({ supplyCrate: slot + 1 })),
+      encounter: { ...expedition.encounter, deployment: 'resource-start', enemies: Array.from({ length: count }, (_, slot) => slot % 3) } };
+    const h = setup(); put(h, run, { ...defaults, tutorialComplete: true });
+    const restored = setup(h.data).service.loadExpedition(); assert.deepEqual(json(restored), run);
+    restored.enemyBenefits[0].supplyCrate = 999; assert.deepEqual(json(h.service.loadExpedition()), run);
+  }
+});
+
+test('landscape archive remains independent, discards foreign history and clears with the run', () => {
+  const h = setup(), current = { stage: 9, map: 'desert', seed: 1409 }, previous = { stage: 8, map: 'mothership', seed: 82 };
+  put(h); const before = h.data.get(PROFILE);
+  h.service.saveStageHistory([previous, current]);
+  assert.deepEqual(json(setup(h.data).service.loadStageHistory(expedition)), [previous, current]);
+  for (const stages of [[], [previous], [{ ...previous, stage: 7 }, current], [previous, { ...current, seed: 1410 }],
+    [{ ...previous, map: 'aurelion' }, current], [null, current]]) {
+    h.service.saveStageHistory(stages); assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current]);
+    assert.equal(h.data.get(PROFILE), before);
+  }
+  h.service.saveProgress(defaults, null); assert.equal(h.data.has(HISTORY), false);
+});
+
+test('quota failure keeps payout and retired battle together in memory and old durable data together on reload', () => {
+  const h = setup(); put(h, savedBattle(), { ...defaults, aether: 10 });
+  h.fail.set = true;
+  assert.equal(h.service.saveProgress({ ...defaults, aether: 110 }, null), false);
+  const calls = h.trace.length;
+  assert.equal(h.service.loadProfile().aether, 110); assert.equal(h.service.loadExpedition(), null);
+  h.fail.set = false; h.service.saveProfile({ ...defaults, aether: 120 });
+  assert.equal(h.trace.length, calls, 'volatile service never retries');
+  const reloaded = setup(h.data);
+  assert.equal(reloaded.service.loadProfile().aether, 10);
+  assert.deepEqual(json(reloaded.service.loadExpedition()), savedBattle(), 'unpaid durable battle remains paired with old reserve');
+});
+
+test('storage access/read/delete failures stay volatile without reviving stale progress or archives', () => {
+  const denied = setup(); denied.fail.access = true; assert.equal(put(denied), false);
+  assert.deepEqual(json(denied.service.loadExpedition()), expedition); assert.equal(denied.service.available, false);
+  const h = setup(); put(h, expedition, { ...defaults, aether: 40 }); h.service.loadProfile(); h.service.loadExpedition();
+  h.data.set(PROFILE, JSON.stringify({ ...defaults, aether: 99, expedition: null })); h.fail.get = true;
+  assert.equal(h.service.loadProfile().aether, 40); const calls = h.trace.length; h.fail.get = false;
+  assert.deepEqual(json(h.service.loadExpedition()), expedition); assert.equal(h.trace.length, calls);
+  const deletion = setup(); put(deletion); deletion.service.saveStageHistory([{ stage: 9, map: 'desert', seed: 1409 }]);
+  deletion.fail.remove = true; deletion.service.saveProgress(defaults, null);
+  assert.equal(deletion.service.available, false); assert.equal(deletion.service.loadExpedition(), null);
+  assert.deepEqual(json(deletion.service.loadStageHistory(null)), []);
+  assert.equal(setup(deletion.data).service.loadExpedition(), null, 'authoritative retirement was committed before cosmetic deletion failed');
+});
+
+test('invalid JSON reports a blocked save and later settings writes cannot resurrect a fresh run', () => {
+  const h = setup(new Map([[PROFILE, '{']])); assert.deepEqual(json(h.service.loadProfile()), defaults);
+  assert.equal(h.service.loadExpedition(), null); assert.ok(h.service.expeditionError);
+  assert.equal(h.warnings.length, 2);
+  h.service.saveProfile(defaults); assert.equal(setup(h.data).service.loadExpedition(), null);
+  h.service.saveProgress(defaults, null);
+  const cleared = setup(h.data); assert.equal(cleared.service.loadExpedition(), null); assert.equal(cleared.service.expeditionError, null);
+});
+
+test('profile defaults, upgrade normalization and explicit tutorial completion remain independent of expedition schema', () => {
+  const h = setup(); assert.deepEqual(json(h.service.loadProfile()), defaults);
+  h.data.set(PROFILE, JSON.stringify({ version: 1, expeditionDepth: '25.9', aether: '120.9',
+    upgrades: { startingWorkers: 99, extra: 8 }, settings: { ...defaults.settings, volume: 7, quality: -2, extra: true } }));
   assert.deepEqual(json(h.service.loadProfile()), { ...defaults, expeditionDepth: 25, aether: 120,
-    upgrades: { startingAlloy: 0, startingWorkers: 5, aetherEvacuation: 0 },
-    settings: { ...defaults.settings, volume: 1, quality: 0 } });
-});
-
-test('tutorial completion persists only as an explicit boolean', () => {
-  const h = setup();
+    upgrades: { startingAlloy: 0, startingWorkers: 5, aetherEvacuation: 0 }, settings: { ...defaults.settings, volume: 1, quality: 0 } });
   for (const value of [true, false, 1, 'true', {}, null]) {
     h.data.set(PROFILE, JSON.stringify({ ...defaults, tutorialComplete: value }));
     assert.equal(h.service.loadProfile().tutorialComplete, value === true);
   }
 });
 
-test('retired mission/map checkpoints and old recipes are rejected without changing the profile', () => {
-  const h = setup(); h.service.saveProfile(defaults);
-  const profile = h.data.get(PROFILE);
-  for (const checkpoint of [
-    {...expedition, version: 5},
-    {...expedition, encounter: {...expedition.encounter, mission:'echo-salvage', map:'aurelion'}},
-    {...expedition, encounter: {...expedition.encounter, map:'aurelion'}},
-    {...expedition, encounter: {...expedition.encounter, deployment:undefined}},
-    {...expedition, encounter: {...expedition.encounter, deployment:'unknown'}}
-  ]) {
-    h.service.saveExpedition(checkpoint);
-    assert.equal(h.service.loadExpedition(), null);
-    assert.equal(h.data.get(PROFILE), profile);
-  }
-});
-
-test('deployment policy survives tutorial completion and removed-map archives reset only history', () => {
-  const h = setup(), checkpoint = {...expedition, encounter:{...expedition.encounter, deployment:'resource-start'}};
-  h.service.saveExpedition(checkpoint);
-  h.service.saveProfile({...defaults, tutorialComplete:true});
-  assert.deepEqual(json(setup(h.data).service.loadExpedition()), checkpoint);
-  h.service.saveStageHistory([{stage:8,map:'aurelion',seed:82},{stage:9,map:'desert',seed:1409}]);
-  assert.deepEqual(json(h.service.loadStageHistory(checkpoint)), [{stage:9,map:'desert',seed:1409}]);
-  assert.deepEqual(json(h.service.loadExpedition()), checkpoint);
-});
-
-test('profile settings reject foreign types without losing valid fields or progress', () => {
+test('profile settings reject foreign types and nonfinite values while valid numeric values stay bounded', () => {
   const h = setup();
   for (const invalid of ['false', '1', '', 0, 1, null, {}, []]) {
-    h.data.set(PROFILE, JSON.stringify({ ...defaults, expeditionDepth: 12, aether: 321,
-      upgrades: { startingWorkers: 2 }, settings: { volume: 0.6, quality: 1,
-        music: invalid, sfx: invalid, healthbars: invalid, showFps: invalid, extra: true } }));
-    const loaded = json(h.service.loadProfile());
-    assert.deepEqual(loaded.settings, { ...defaults.settings, volume: 0.6, quality: 1 }, JSON.stringify(invalid));
-    assert.equal(loaded.expeditionDepth, 12);
-    assert.equal(loaded.aether, 321);
-    assert.equal(loaded.upgrades.startingWorkers, 2);
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, aether: 321, settings: { volume: .6, quality: 1,
+      music: invalid, sfx: invalid, healthbars: invalid, showFps: invalid } }));
+    assert.deepEqual(json(h.service.loadProfile().settings), { ...defaults.settings, volume: .6, quality: 1 });
+    assert.equal(h.service.loadProfile().aether, 321);
   }
   for (const invalid of ['0.5', '', false, true, null, {}, [], [1]]) {
-    h.data.set(PROFILE, JSON.stringify({ ...defaults, settings: {
-      volume: invalid, quality: invalid, music: false, sfx: false, healthbars: true, showFps: true } }));
-    assert.deepEqual(json(h.service.loadProfile().settings), {
-      ...defaults.settings, music: false, sfx: false, healthbars: true, showFps: true
-    }, JSON.stringify(invalid));
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, settings: { volume: invalid, quality: invalid } }));
+    assert.deepEqual(json(h.service.loadProfile().settings), defaults.settings);
   }
-  assert.deepEqual(h.warnings, []);
-});
-
-test('profile numeric settings stay finite and quality rounds down within the supported levels', () => {
-  const h = setup();
-  for (const [volume, quality, expectedVolume, expectedQuality] of [
-    [0, 0, 0, 0], [0.37, 1, 0.37, 1], [1, 2, 1, 2],
-    [-2, -2, 0, 0], [7, 7, 1, 2], [0.5, 0.9, 0.5, 0], [0.5, 1.5, 0.5, 1]
-  ]) {
+  for (const [volume, quality, expectedVolume, expectedQuality] of [[0, 0, 0, 0], [.37, 1, .37, 1], [1, 2, 1, 2],
+    [-2, -2, 0, 0], [7, 7, 1, 2], [.5, .9, .5, 0], [.5, 1.5, .5, 1]]) {
     h.data.set(PROFILE, JSON.stringify({ ...defaults, settings: { volume, quality } }));
-    assert.deepEqual(json(h.service.loadProfile().settings), {
-      ...defaults.settings, volume: expectedVolume, quality: expectedQuality
-    });
+    assert.deepEqual(json(h.service.loadProfile().settings), { ...defaults.settings, volume: expectedVolume, quality: expectedQuality });
   }
-  // JSON numbers can overflow even though JSON.stringify(Infinity) produces null.
   for (const value of ['1e309', '-1e309']) {
     h.data.set(PROFILE, `{"version":1,"settings":{"volume":${value},"quality":${value}}}`);
     assert.deepEqual(json(h.service.loadProfile().settings), defaults.settings);
   }
-});
-
-test('missing or malformed settings containers retain defaults independently of expedition data', () => {
-  const h = setup();
-  h.service.saveExpedition(expedition);
-  const checkpoint = h.data.get(EXPEDITION);
   for (const settings of [undefined, null, false, 1, 'settings', [], {}]) {
-    h.data.set(PROFILE, JSON.stringify({ ...defaults, expeditionDepth: 12, settings }));
-    const before = h.data.get(PROFILE);
-    assert.deepEqual(json(h.service.loadProfile().settings), defaults.settings);
-    assert.equal(h.service.loadProfile().expeditionDepth, 12);
-    assert.equal(h.data.get(PROFILE), before, 'loading must not rewrite stored data');
-    assert.equal(h.data.get(EXPEDITION), checkpoint);
-  }
-  assert.deepEqual(h.warnings, []);
-});
-
-test('profile and expedition use separate local keys and survive service recreation', () => {
-  const h = setup();
-  const profile = { ...defaults, expeditionDepth: 12, aether: 321, upgrades: { startingWorkers: 2 } };
-  assert.equal(h.service.saveProfile(profile), true);
-  assert.equal(h.service.saveExpedition(expedition), true);
-  const reloaded = setup(h.data);
-  const normalizedProfile = { ...profile, upgrades: {
-    startingAlloy: 0, startingWorkers: 2, aetherEvacuation: 0
-  } };
-  assert.deepEqual(json(reloaded.service.loadProfile()), normalizedProfile);
-  assert.deepEqual(json(reloaded.service.loadExpedition()), expedition);
-  assert.deepEqual([...h.data.keys()].sort(), [EXPEDITION, PROFILE]);
-  assert.equal(reloaded.service.clearExpedition(), true);
-  assert.equal(reloaded.service.loadExpedition(), null);
-  assert.deepEqual(json(reloaded.service.loadProfile()), normalizedProfile);
-});
-
-test('expedition normalization rejects invalid encounters and bounds known benefits and offers', () => {
-  const h = setup();
-  for (const invalid of [null, {}, { ...expedition, version: 4 },
-    ...[undefined, null, '', 'unknown-mission', 'toString', ['hq-elimination']].map(mission =>
-      ({ ...expedition, encounter: { ...expedition.encounter, mission } })),
-    { ...expedition, faction: 3 }, { ...expedition, abilities: ['orbital', 'repair', 'scan'] },
-    { ...expedition, abilities: ['orbital', 'repair', 'scan', 'scan'] },
-    { ...expedition, abilities: ['orbital', 'repair', 'scan', 'unknown'] },
-    { ...expedition, encounter: { mission: 'hq-elimination', enemies: [0, 1, 2], map: 'missing', seed: 1 } },
-    ...[[], [0], [0, 1], [0, 1, 2, 0], [0, 1, 3], [0, 1, null], [0, 1, '2']].map(enemies =>
-      ({ ...expedition, encounter: { ...expedition.encounter, enemies } })),
-    ...[{}, [], [{}], [{}, {}, null], [{}, {}, []]].map(enemyBenefits => ({ ...expedition, enemyBenefits }))]) {
-    h.data.set(EXPEDITION, JSON.stringify(invalid));
-    assert.equal(h.service.loadExpedition(), null);
-  }
-  h.data.set(EXPEDITION, JSON.stringify({ ...expedition, depth: '9.8',
-    benefits: { supplyCrate: '3.9', pioneerSquad: 99, commanderMandate: 4, unknown: 7 },
-    enemyBenefits: [{ supplyCrate: -3, pioneerSquad: 99, commanderMandate: 2.9, unknown: 7 }, {}, { supplyCrate: 4 }],
-    offers: ['commanderMandate', 'aetherAllocation', 'aetherAllocation', 'unknown', 'supplyCrate', 'pioneerSquad'],
-    encounter: { deployment:'exploration', mission: 'hq-elimination', enemies: [0, 0, 1], map: 'mothership', seed: -8 } }));
-  assert.deepEqual(json(h.service.loadExpedition()), {
-    version: 6, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 9,
-    benefits: { supplyCrate: 3, pioneerSquad: 5, commanderMandate: 1 },
-    enemyBenefits: [{ pioneerSquad: 5, commanderMandate: 1 }, {}, { supplyCrate: 4 }],
-    encounter: { deployment:'exploration', mission: 'hq-elimination', enemies: [0, 0, 1], map: 'mothership', seed: 1 },
-    offers: ['aetherAllocation', 'supplyCrate']
-  });
-});
-
-test('known missions reject maps outside their injected allowed combinations', () => {
-  const h = setup(new Map(), { missions: { 'hq-elimination': { maps: ['mothership'] } } });
-  h.service.saveExpedition(expedition);
-  assert.equal(h.service.loadExpedition(), null);
-  h.service.saveExpedition({ ...expedition, encounter: { ...expedition.encounter, map: 'mothership' } });
-  assert.equal(h.service.loadExpedition().encounter.mission, 'hq-elimination');
-});
-
-test('fleet and command upgrades normalize and reload through the real content catalog',()=>{
-  const rules=vm.runInContext('({upgrades:PERMANENT_UPGRADES,benefits:EXPEDITION_BENEFITS,abilities:ABILITIES})',loadScripts(['content']));
-  const h=setup(new Map(),rules);
-  h.service.saveProfile({...defaults,upgrades:{constructionProtocols:99,logisticsFrame:2.9,repairLogistics:-1,
-    orbital:2.9,repair:99,recall:-4}});
-  const loaded=setup(h.data,rules).service.loadProfile();
-  assert.deepEqual(json(loaded.upgrades),{startingAlloy:0,startingWorkers:0,aetherEvacuation:0,
-    constructionProtocols:5,logisticsFrame:2,repairLogistics:0,
-    orbital:2,repair:3,scan:0,drop:0,disruption:0,bulwark:0,surge:0,recall:0});
-  assert.equal(loaded.aether,0);assert.equal(h.service.loadExpedition(),null);
-});
-
-test('new benefit keys round-trip with real content limits and exhausted offers disappear',()=>{
-  const rules=vm.runInContext('({upgrades:PERMANENT_UPGRADES,benefits:EXPEDITION_BENEFITS,abilities:ABILITIES})',loadScripts(['content']));
-  const h=setup(new Map(),rules);
-  h.service.saveExpedition({...expedition,benefits:{surveyDrones:99,fieldWorkshop:99,commandCapacitor:1.9,commandDrill:37},
-    offers:['surveyDrones','fieldWorkshop','commandCapacitor','commandDrill','supplyCrate']});
-  const loaded=setup(h.data,rules).service.loadExpedition();
-  assert.deepEqual(json(loaded.benefits),{commandDrill:37,surveyDrones:1,fieldWorkshop:1,commandCapacitor:1});
-  assert.deepEqual(json(loaded.offers),['commandCapacitor','commandDrill','supplyCrate']);
-  assert.deepEqual(json(loaded.encounter),expedition.encounter);assert.equal(loaded.depth,8);
-});
-
-test('every stage boundary reloads exact opponent slots without rerolls or shared benefits', () => {
-  const h = setup(), enemyCount = vm.runInContext('expeditionEnemyCount', loadScripts(['content']));
-  for (const depth of [0, 1, 2, 3, 20]) {
-    const count = enemyCount(depth), checkpoint = { ...expedition, depth,
-      enemyBenefits: Array.from({ length: count }, (_, slot) => depth > slot ? { supplyCrate: depth - slot } : {}),
-      encounter: { ...expedition.encounter, enemies: Array.from({ length: count }, (_, slot) => slot % 3) } };
-    h.service.saveExpedition(checkpoint);
-    const restored = setup(h.data).service.loadExpedition();
-    assert.deepEqual(json(restored), checkpoint);
-    restored.enemyBenefits[0].supplyCrate = 999;
-    if (count > 1) assert.notEqual(restored.enemyBenefits[1].supplyCrate, 999);
-    assert.deepEqual(json(h.service.loadExpedition()), checkpoint);
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, settings })); const before = h.data.get(PROFILE);
+    assert.deepEqual(json(h.service.loadProfile().settings), defaults.settings); assert.equal(h.data.get(PROFILE), before);
   }
 });
 
-test('denied storage remains a per-service volatile fallback for both records', () => {
-  const h = setup(); h.fail.access = true;
-  assert.equal(h.service.saveProfile({ ...defaults, expeditionDepth: 4 }), false);
-  assert.equal(h.service.saveExpedition(expedition), false);
-  assert.equal(h.service.loadProfile().expeditionDepth, 4);
-  assert.deepEqual(json(h.service.loadExpedition()), expedition);
-  assert.equal(h.service.available, false);
-  const other = setup(); other.fail.access = true;
-  assert.deepEqual(json(other.service.loadProfile()), defaults);
-  assert.equal(other.service.loadExpedition(), null);
-});
-
-test('write-only failure keeps current progress and cached records volatile without retrying storage', () => {
-  const h = setup(), profile = { ...defaults, aether: 10 };
-  h.service.saveProfile(profile); h.service.saveExpedition(expedition);
-  const current = { stage: 9, map: 'desert', seed: 1409 };
-  h.service.saveStageHistory([current]);
-  const reloaded = setup(h.data);
-  reloaded.service.loadProfile(); reloaded.service.loadExpedition();
-  reloaded.service.loadStageHistory(expedition);
-  reloaded.fail.set = true;
-  assert.equal(reloaded.service.saveProfile({ ...profile, aether: 20 }), false);
-  assert.equal(reloaded.service.available, false);
-  const calls = reloaded.trace.length;
-  assert.equal(reloaded.service.loadProfile().aether, 20);
-  assert.deepEqual(json(reloaded.service.loadExpedition()), expedition);
-  assert.deepEqual(json(reloaded.service.loadStageHistory(expedition)), [current]);
-  reloaded.fail.set = false;
-  assert.equal(reloaded.service.saveExpedition({ ...expedition, depth: 9 }), false);
-  assert.equal(reloaded.service.loadExpedition().depth, 9);
-  assert.equal(reloaded.trace.length, calls, 'a volatile service never retries recovered storage');
-  assert.equal(setup(h.data).service.loadProfile().aether, 10, 'reload can still see the older durable record');
-});
-
-test('remove-only failure never revives the abandoned checkpoint or its archive in this service', () => {
-  const h = setup();
-  h.service.saveProfile({ ...defaults, aether: 30 }); h.service.saveExpedition(expedition);
-  h.service.saveStageHistory([{ stage: 9, map: 'desert', seed: 1409 }]);
-  h.fail.set = true;
-  assert.equal(h.service.clearExpedition(), false);
-  const calls = h.trace.length;
-  assert.equal(h.service.loadExpedition(), null);
-  assert.equal(h.service.loadProfile().aether, 30);
-  const next = { ...expedition, encounter: { ...expedition.encounter, seed: 1410 } };
-  assert.equal(h.service.saveExpedition(next), false);
-  assert.deepEqual(json(h.service.loadStageHistory(next)), [{ stage: 9, map: 'desert', seed: 1410 }]);
-  assert.equal(h.trace.length, calls);
-  assert.deepEqual(json(setup(h.data).service.loadExpedition()), expedition);
-});
-
-test('read-only failure retains last successful snapshots independently of later durable changes', () => {
-  const h = setup();
-  h.data.set(PROFILE, JSON.stringify({ ...defaults, aether: 40 }));
-  h.data.set(EXPEDITION, JSON.stringify(expedition));
-  assert.equal(h.service.loadProfile().aether, 40);
-  assert.deepEqual(json(h.service.loadExpedition()), expedition);
-  h.data.set(PROFILE, JSON.stringify({ ...defaults, aether: 99 }));
-  h.fail.get = true;
-  assert.equal(h.service.loadProfile().aether, 40);
-  h.fail.get = false;
-  const calls = h.trace.length;
-  assert.deepEqual(json(h.service.loadExpedition()), expedition);
-  assert.equal(h.service.loadProfile().aether, 40);
-  assert.equal(h.trace.length, calls);
-  assert.equal(h.service.available, false);
-});
-
-test('invalid JSON resets only the affected record and reports the failure', () => {
-  const h = setup(new Map([[PROFILE, '{'], [EXPEDITION, '{']]));
-  assert.deepEqual(json(h.service.loadProfile()), defaults);
-  assert.equal(h.service.loadExpedition(), null);
-  assert.deepEqual(h.warnings.map(w => w[0]), ['Profile reset:', 'Expedition reset:']);
+test('fleet and command upgrades normalize through real content; valid benefit stacks and offers round-trip', () => {
+  const rules = vm.runInContext('({upgrades:PERMANENT_UPGRADES,benefits:EXPEDITION_BENEFITS})', content), h = setup(new Map(), rules);
+  h.service.saveProfile({ ...defaults, upgrades: { constructionProtocols: 99, logisticsFrame: 2.9, repairLogistics: -1, orbital: 2.9, repair: 99, recall: -4 } });
+  const loaded = setup(h.data, rules).service.loadProfile();
+  assert.equal(loaded.upgrades.constructionProtocols, 5); assert.equal(loaded.upgrades.logisticsFrame, 2);
+  assert.equal(loaded.upgrades.orbital, 2); assert.equal(loaded.upgrades.repair, 3); assert.equal(loaded.upgrades.recall, 0);
+  const run = { ...json(expedition), benefits: { surveyDrones: 1, fieldWorkshop: 1, commandCapacitor: 1, commandDrill: 37 },
+    offers: ['commandCapacitor', 'commandDrill', 'supplyCrate'] };
+  put(h, run, loaded); assert.deepEqual(json(setup(h.data, rules).service.loadExpedition()), run);
 });
