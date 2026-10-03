@@ -601,11 +601,25 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           if (nightLight <= 0 || R.quality === 0) return;
           const x = e.x+lx*cs+lz*sn, z = e.z-lx*sn+lz*cs,
             height = R.surface?.heightAt(x,z) ?? ground;
-          // A short cosmetic pool, not a real light or new visibility source. Hide it at
-          // uneven edges rather than bridging cliffs with a floating luminous rectangle.
-          if (R.surface && [[-width/2,-length/2],[width/2,-length/2],[-width/2,length/2],[width/2,length/2]]
-            .some(([dx,dz]) => Math.abs(R.surface!.heightAt(x+dx*cs+dz*sn,z-dx*sn+dz*cs)-height) > .16)) return;
-          R.add('plane',x,height+.025,z,width,1,length,color,rot,0,0,0,strength,
+          // Fit at the light's footprint, not the chassis: ordinary slopes must not
+          // trigger the cliff guard. Test residuals against the tilted plane itself.
+          const surface = R.surface, radius = .75,
+            dx = surface ? (surface.heightAt(x+radius,z)-surface.heightAt(x-radius,z))/(2*radius) : 0,
+            dz = surface ? (surface.heightAt(x,z+radius)-surface.heightAt(x,z-radius))/(2*radius) : 0,
+            poolFrame = buildingGroundFrame({dx,dz},cs,sn);
+          let lift = 0;
+          if (surface) for (const u of [-width/2,0,width/2]) for (const v of [-length/2,0,length/2]) {
+            const px = poolFrame ? poolFrame[0]*u+poolFrame[6]*v : u*cs+v*sn,
+              pz = poolFrame ? poolFrame[2]*u+poolFrame[8]*v : -u*sn+v*cs,
+              py = poolFrame ? poolFrame[1]*u+poolFrame[7]*v : 0,
+              residual = surface.heightAt(x+px,z+pz)-height-py;
+            // Still omit pools across sharp edges; bounded lift avoids terrain clipping
+            // on small triangle/ramp joins without creating a floating cliff bridge.
+            if (Math.abs(residual) > .16) return;
+            lift = Math.max(lift,residual);
+          }
+          const [ry,rx,rz] = poolFrame ? modelFrameRotation(poolFrame,0,0,0) : [rot,0,0];
+          R.add('plane',x,height+lift+.025,z,width,1,length,color,ry,rx,rz,0,strength,
             'effects',ALLOY_LIGHT_MATERIAL);
         };
         model.render({ entity: e, time, nightLight, lightPool, part: p, ring, metal, dark, team, accent, baseRotation: rot,

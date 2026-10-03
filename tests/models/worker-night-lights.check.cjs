@@ -46,3 +46,26 @@ test('worker lamps follow world dusk/dawn, pose and preview boundaries without R
   })()`,h.context);
   assert.deepEqual(Array.from(clock),[19,19,0],'same simulation time freezes lights; world hour wraps at midnight');
 });
+
+test('worker light pool follows uphill, downhill and cross-slope terrain at any heading', () => {
+  const h=modelHarness(), material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context);
+  for(const [dx,dz] of [[.3,0],[-.3,0],[0,.35],[.24,-.28]]) {
+    for(const rot of [0,Math.PI/2,.7,Math.PI]) {
+      const heightAt=(x,z)=>8+dx*x+dz*z,
+        e={id:17,kind:'unit',type:'worker',faction:0,team:0,hp:100,size:1,x:12,z:-7,rot},
+        r=createRendererStub({record:true});
+      Object.assign(r,{battlefieldHour:22,quality:1,surface:{heightAt,entityHeight:()=>heightAt(e.x,e.z)}});
+      h.renderEntity(r,Object.freeze(e),9);
+      const pool=r.calls.find(c=>c[14]===material);
+      assert.ok(pool,`pool stays visible on slope ${dx}/${dz}, heading ${rot}`);
+      const vertices=[];
+      h.ModelMesh.bake(vertices,h.geom.plane(),{
+        x:pool[1],y:pool[2],z:pool[3],sx:pool[4],sy:pool[5],sz:pool[6],ry:pool[8],rx:pool[9],rz:pool[10]
+      });
+      for(let i=0;i<vertices.length;i+=9) {
+        assert.ok(Math.abs(vertices[i+1]-heightAt(vertices[i],vertices[i+2])-.025)<1e-9,
+          'every light-plane vertex stays just above terrain, not buried or floating');
+      }
+    }
+  }
+});

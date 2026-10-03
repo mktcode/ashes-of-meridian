@@ -80,7 +80,7 @@ Bereits aufgebaute Modelltransforms werden nach statischer Szene, vor normalen E
 
 ## Lichtanimation und Kampfakzente
 
-Der Prospector dient als Nachtlicht-Pilot: Seine Frontlampen folgen der Welt-Tageszeit, nicht einer eigenen Uhr. Modellvorschauen bleiben unbeleuchtet. Der kurze kosmetische Bodenschein nutzt den vorhandenen Lichtpool-Pass, entfällt an unebenen Kanten sowie im Performance-Modus und ist keine echte Lichtquelle für benachbarte Geometrie oder Sichtregeln.
+Der Prospector dient als Nachtlicht-Pilot: Seine Frontlampen folgen der Welt-Tageszeit, nicht einer eigenen Uhr. Modellvorschauen bleiben unbeleuchtet. Der kurze kosmetische Bodenschein nutzt den vorhandenen Lichtpool-Pass und folgt einer lokal aus der CPU-Oberfläche abgeleiteten geneigten Ebene. Kleine Geländeabweichungen werden durch begrenztes Anheben überbrückt; scharfe Kanten oder starke Krümmung blenden den Schein weiterhin aus. Im Performance-Modus entfällt er. Er ist keine echte Lichtquelle für benachbarte Geometrie oder Sichtregeln.
 
 Kosmetische Akzente folgen Simulations-/Interpolationszeit und eigenen begrenzten View-Budgets, ohne neue Spielzustände oder Simulations-RNG. Sichtverlust/Welt-/Perspektivwechsel darf keine alten Spuren oder Effektstapel nachspielen. CPU-Effekte weiterhin gemäß ihrem [RNG-Vertrag](architecture.md#welt-darstellung-und-zufall) erzeugen/ticken.
 
