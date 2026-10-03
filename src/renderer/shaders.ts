@@ -64,9 +64,27 @@ in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
+uniform int u_pointLightCount;uniform vec4 u_pointLightPosition[8];uniform vec4 u_pointLightColor[8];
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
 uniform float u_habitatOn;uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
 out vec4 frag;
+// Bounded shadowless diffuse lighting in the existing scene pass; no light textures/passes.
+vec3 localLighting(vec3 position,vec3 normal){
+ if(u_pointLightCount==0)return vec3(0.);
+ vec3 result=vec3(0.);
+ for(int i=0;i<8;i++){
+  if(i>=u_pointLightCount)break;
+  vec3 delta=u_pointLightPosition[i].xyz-position;
+  float d2=dot(delta,delta),radius=u_pointLightPosition[i].w;
+  if(d2>=radius*radius)continue;
+  float edge=1.-d2/(radius*radius);
+  float diffuse=max(dot(normal,delta*inversesqrt(max(d2,.0001))),0.);
+  result+=u_pointLightColor[i].rgb*u_pointLightColor[i].a*diffuse*edge*edge/(1.+d2*.12);
+ }
+ // Do not brighten merely explored/unseen terrain across a sight boundary.
+ if(u_fogOn>.5)result*=smoothstep(.75,1.,texture(u_fog,(position.xz+u_extent)/(u_extent*2.)).r);
+ return result;
+}
 float shadow(){if(u_shadowOn<.5||v_glow>1.)return 1.;vec3 p=v_shadow.xyz/v_shadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float bias=max(u_shadowBias*2.5*(1.-dot(normalize(v_n),normalize(vec3(-64.,110.,43.)))),u_shadowBias);float s=0.;vec2 texel=1./vec2(textureSize(u_shadow,0));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)s+=p.z-bias>texture(u_shadow,p.xy+vec2(x,y)*texel).r?.36:1.;return s/9.;}
 float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
 vec3 tri(sampler2D tex,vec3 p,vec3 n,float scale){vec3 an=pow(abs(n),vec3(4.));an/=max(an.x+an.y+an.z,.0001);vec3 tx=texture(tex,p.yz*scale).rgb;vec3 ty=texture(tex,p.xz*scale).rgb;vec3 tz=texture(tex,p.xy*scale).rgb;return tx*an.x+ty*an.y+tz*an.z;}
@@ -385,6 +403,7 @@ lit+=environment*((.07+fresnel*.22)*metal+(.025+fresnel*.05)*bio+fresnel*.42*cry
 // Crystal glow preserves directional shading instead of flattening every face to one color.
 float glowMix=clamp(v_glow,0.,1.)*(1.-crystal*.58);
 lit=mix(lit,base*1.35,glowMix);lit+=base*max(v_glow-1.,0.)*.38;
+lit+=base*localLighting(v_pos,n)*(1.-clamp(v_glow,0.,1.));
 lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
 float field=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
@@ -453,7 +472,7 @@ void main(){
  frag=vec4(texture(u_skyTex,skyUV).rgb,1.);
 }`;
     const BLOOMF = `#version 300 es
-precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_step;uniform bool u_extract;
+precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_step;uniform bool u_extract;uniform float u_lampPrefilter;
 vec3 bright(vec2 p){
  vec3 c=texture(u_tex,p).rgb;
  float peak=max(max(c.r,c.g),c.b),lum=dot(c,vec3(.2126,.7152,.0722));
@@ -463,7 +482,16 @@ void main(){
  vec3 c;
  if(u_extract){
   // Threshold before averaging: small lamps survive the quarter-size reduction.
-  c=(bright(uv+u_step)+bright(uv-u_step)+bright(uv+vec2(u_step.x,-u_step.y))+bright(uv+vec2(-u_step.x,u_step.y)))*.25;
+  if(u_lampPrefilter>.5){
+   // HQ pilot: cover every texel of the 4x4 footprint instead of missing thin trim
+   // between four diagonal taps. A bounded peak floor preserves subpixel lamps.
+   vec3 sum=vec3(0.),peak=vec3(0.);
+   for(int y=0;y<4;y++)for(int x=0;x<4;x++){
+    vec3 sampleColor=bright(uv+(vec2(float(x),float(y))-1.5)*u_step);
+    sum+=sampleColor;peak=max(peak,sampleColor);
+   }
+   c=max(sum/16.,peak*.28);
+  }else c=(bright(uv+u_step)+bright(uv-u_step)+bright(uv+vec2(u_step.x,-u_step.y))+bright(uv+vec2(-u_step.x,u_step.y)))*.25;
  }else{
   c=texture(u_tex,uv).rgb*.227027;
   c+=(texture(u_tex,uv+u_step*1.384615).rgb+texture(u_tex,uv-u_step*1.384615).rgb)*.316216;

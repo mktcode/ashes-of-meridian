@@ -459,6 +459,13 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       };
       const ring: ModelRing = (radius, h, color = team, a = 0.7, rx = 0, ry = 0, glow = 1.2) =>
         R.add('ring', e.x, y + h, e.z, radius, 1, radius, color, ry, rx, 0, glow, a, 'effects');
+      const pointLight: EntityModelContext['pointLight'] = (lx,ly,lz,radius,color,intensity) => {
+        if (nightLight <= 0) return;
+        const px = frame ? e.x+frame[0]*lx+frame[3]*ly+frame[6]*lz : e.x+lx*cs+lz*sn,
+          py = frame ? y+frame[1]*lx+frame[4]*ly+frame[7]*lz : y+ly,
+          pz = frame ? e.z+frame[2]*lx+frame[5]*ly+frame[8]*lz : e.z-lx*sn+lz*cs;
+        R.addPointLight?.(px,py,pz,radius,color,intensity*nightLight);
+      };
       if (e.kind === 'resource') {
         if (e.type === 'crystal') {
           // Cosmetic RNG only: stable per deposit, independent of time, saves and mining RNG.
@@ -568,7 +575,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         }
         const model = EntityModels.find(e);
         if (model) {
-          model.render({ entity: e, time, nightLight, lightPool: () => {}, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+          model.render({ entity: e, time, nightLight, pointLight, lightPool: () => {}, part: p, ring, metal, dark, team, accent, baseRotation: rot,
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {
@@ -622,7 +629,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           R.add('plane',x,height+lift+.025,z,width,1,length,color,ry,rx,rz,0,strength,
             'effects',ALLOY_LIGHT_MATERIAL);
         };
-        model.render({ entity: e, time, nightLight, lightPool, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+        model.render({ entity: e, time, nightLight, pointLight, lightPool, part: p, ring, metal, dark, team, accent, baseRotation: rot,
           surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         return;
       }

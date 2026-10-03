@@ -12,7 +12,13 @@ function fittings() {
 }
 registerEntityModel({
   id: 'faction-0/building/hq', meshes: { faction0HqFittings: fittings },
-  render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation, nightLight=0 }) {
+  render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation, nightLight=0, pointLight }) {
+    // Two deliberately broad, shadowless light islands. Positions follow the shared
+    // foundation frame; daytime, unfinished HQs and previews never register lights.
+    if (nightLight > 0) {
+      pointLight(0, 2.8, 3.3, 14, 0x75dce9, 5);
+      pointLight(1.6, 4.8, -1.4, 10, 0xffb65e, 4);
+    }
     const glow=(base=0)=>base+(5-base)*nightLight;
     p('commandHull', 0, 0, 0, 1, 1, 1, metal);
     p('faction0HqFittings', 0, 0, 0, 1, 1, 1, metal);

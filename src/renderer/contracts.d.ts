@@ -65,6 +65,8 @@ interface EntityModelContext {
   time: number;
   /** Dusk/dawn fade; zero in previews and without a world atmosphere. */
   nightLight: number;
+  /** View-only diffuse light; adapter owns pose, visibility and renderer budget. */
+  pointLight: (x: number, y: number, z: number, radius: number, color: number, intensity: number) => void;
   lightPool: (x: number, z: number, width: number, length: number, color: number, strength: number) => void;
   part: ModelPart;
   ring: ModelRing;

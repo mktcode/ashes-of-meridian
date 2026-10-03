@@ -33,6 +33,9 @@
       effects: RenderBatches;
       occlusion: RenderBatches = {};
       private occlusionInstances = 0;
+      private pointLightCount = 0;
+      private pointLightPositions = new Float32Array(8 * 4);
+      private pointLightColors = new Float32Array(8 * 4);
       colors: Map<number | string, readonly number[] | Float32Array>;
       quality: number;
       detailMeshes = new Set<string>();
@@ -228,6 +231,7 @@
         this.surfaceStyle = surfaceWorldStyle(profile.groundTexture, seed);
         this.battlefieldProfile = profile;
         this.dayCycleProfile = null;
+        this.pointLightCount = 0;
         this.haze = profile.haze;
       }
       get battlefieldHour(): number | undefined {
@@ -487,6 +491,7 @@
         g.bindVertexArray(this.fullVao);
         g.activeTexture(g.TEXTURE0);
         g.uniform1i(this.uniform(this.bloomProg, 'u_tex'), 0);
+        g.uniform1f(this.uniform(this.bloomProg, 'u_lampPrefilter'), !this.cinema && this.pointLightCount > 0 ? 1 : 0);
         for (let pass = 0; pass < 3; pass++) {
           // Extract, horizontal blur, vertical blur. Never sample the attached target.
           g.bindFramebuffer(g.FRAMEBUFFER, this.bloomTargets[pass === 1 ? 1 : 0].fbo);
@@ -789,7 +794,40 @@
         d[o + 21] = MAT.AUTO;
         bucket.dirty = true;
       }
+      addPointLight(x: number, y: number, z: number, radius: number, color: RenderColor, intensity: number) {
+        if (this.cinema || radius <= 0 || intensity <= 0) return;
+        const m = this.vp;
+        if (m) {
+          // Cull the influence sphere, not the emitter: off-screen lamps may still light the scene.
+          const cx=m[0]*x+m[4]*y+m[8]*z+m[12], cy=m[1]*x+m[5]*y+m[9]*z+m[13],
+            cz=m[2]*x+m[6]*y+m[10]*z+m[14], cw=m[3]*x+m[7]*y+m[11]*z+m[15];
+          if (Math.abs(cx)>cw+radius*Math.hypot(m[0],m[4],m[8]) ||
+              Math.abs(cy)>cw+radius*Math.hypot(m[1],m[5],m[9]) ||
+              Math.abs(cz)>cw+radius*Math.hypot(m[2],m[6],m[10])) return;
+        }
+        const limit = this.quality === 0 ? 2 : 8, positions = this.pointLightPositions,
+          colors = this.pointLightColors, eye = this.eye ?? [0,0,0],
+          distance = (px: number,py: number,pz: number) => (px-eye[0])**2+(py-eye[1])**2+(pz-eye[2])**2;
+        let index = this.pointLightCount;
+        if (index >= limit) {
+          let farthest = distance(x,y,z); index = -1;
+          for (let i=0;i<limit;i++) {
+            const d = distance(positions[i*4],positions[i*4+1],positions[i*4+2]);
+            if (d > farthest) { farthest=d; index=i; }
+          }
+          if (index < 0) return;
+        } else this.pointLightCount++;
+        const offset=index*4, rgb=this.color(color);
+        positions.set([x,y,z,radius],offset);
+        colors.set([rgb[0],rgb[1],rgb[2],intensity],offset);
+      }
       begin() {
+        // Thumbnail facades must own these CPU buffers, never overwrite live world lights.
+        if (!Object.hasOwn(this,'pointLightPositions')) {
+          this.pointLightPositions = new Float32Array(8 * 4);
+          this.pointLightColors = new Float32Array(8 * 4);
+        }
+        this.pointLightCount = 0;
         this.occlusionInstances = 0;
         for (let map of [this.dynamic, this.effects, this.occlusion])
           for (let b of Object.values(map ?? {})) {
@@ -985,6 +1023,12 @@
         g.useProgram(program);
         this.bindAtmosphere(program);
         this.bindEcology(program, modelTime);
+        const pointLights = this.cinema ? 0 : this.pointLightCount ?? 0;
+        g.uniform1i(this.uniform(program, 'u_pointLightCount'), pointLights);
+        if (pointLights) {
+          g.uniform4fv(this.uniform(program, 'u_pointLightPosition[0]'), this.pointLightPositions);
+          g.uniform4fv(this.uniform(program, 'u_pointLightColor[0]'), this.pointLightColors);
+        }
         g.uniformMatrix4fv(this.uniform(program, 'u_vp'), false, this.vp);
         g.uniformMatrix4fv(this.uniform(program, 'u_light'), false, this.lightVP);
         g.uniform3fv(this.uniform(program, 'u_eye'), this.eye);
