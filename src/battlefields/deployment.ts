@@ -74,6 +74,34 @@ function battlefieldDeploymentCandidates(world: Battlefield): Position[] {
   if (!sufficient()) throw Error('Insufficient exploration deployment space');
   return candidates;
 }
+// Optional exploration rewards: never modify terrain, economy, navigation or start RNG.
+function battlefieldSupplyCaches(world: Battlefield): SupplyCache[] {
+  const random = seeded(world.terrainSeed ^ 0x43524154), candidates: Position[] = [];
+  for (let z = 4; z < world.gridSize - 4; z += 3) for (let x = 4; x < world.gridSize - 4; x += 3) {
+    const p = world.point(z * world.gridSize + x);
+    if (world.deploymentReachable[world.idx(p.x, p.z)] && battlefieldEconomyDistance(world, p) >= 28 &&
+        world.surface!.fits(p.x, p.z, 4) && world.surface!.foundation(p, 3.5)) candidates.push(p);
+  }
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const caches: SupplyCache[] = [], budget = clamp(Math.round(world.extent / 10), 8, 18);
+  for (const p of candidates) {
+    if (caches.some(q => distance(p, q) < 26)) continue;
+    const tier = (1 + Math.floor(random() * 3)) as SupplyCache['tier'];
+    caches.push({ ...p, resource: 'alloy', tier, amount: [60, 120, 200][tier - 1], collected: false });
+    if (caches.length >= budget) break;
+  }
+  // The shuffled placement order randomizes Echo locations, with a strict minority.
+  const echoCount = Math.floor(caches.length / 4);
+  for (let i = 0; i < echoCount; i++) {
+    caches[i].resource = 'gas';
+    caches[i].amount = [15, 30, 50][caches[i].tier - 1];
+  }
+  return caches;
+}
+
 function allocateBattlefieldStarts(world: Battlefield, seed: number, count: number, mode: DeploymentMode): Position[] {
   if (!Number.isInteger(count) || count < 2 || count > 4) throw Error('Invalid starting party count');
   const random = seeded(seed ^ 0x53544152), shuffle = (points: Position[]) => {

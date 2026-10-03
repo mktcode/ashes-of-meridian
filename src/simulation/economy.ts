@@ -170,6 +170,8 @@
             return 'Terrain obstructs the foundation.';
         }
         if (this.world!.staticGrid[this.world!.idx(p.x, p.z)]) return 'Terrain obstructs the foundation.';
+        if (this.s!.supplyCaches.some(cache => !cache.collected && distance(p, cache) < r + 3))
+          return 'Recover nearby supply caches before building here.';
         for (let e of this.s!.entities) {
           if (e.hp <= 0) continue;
           if (e.kind === 'unit') {

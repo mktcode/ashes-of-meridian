@@ -89,6 +89,7 @@
             else this.finishOrder(e);
           } else if (o.type === 'guard' && distance(e, o) > 5) this.move(e, o, dt, 3.5);
         }
+        this.collectSupplyCaches();
         for (let strike of s.strikes) {
           if (s.time < strike.at) continue;
           strike.done = true;
@@ -177,6 +178,25 @@
         if (s.rules.kind === 'scenario' && s.time >= s.rules.duration) {
           s.stopped = true;
           this.cancelQueuedActions();
+        }
+      },
+      collectSupplyCaches(this: MeridianGame) {
+        const s = this.s!, world = this.world!;
+        for (const cache of s.supplyCaches) {
+          if (cache.collected) continue;
+          // Nearest eligible ground unit wins; entity order breaks exact ties.
+          let collector: UnitEntity | undefined, best = 4;
+          for (const e of s.entities) {
+            if (e.hp <= 0 || e.kind !== 'unit' || e.team === -1 || e.exit || isFlyingUnitType(e.type) ||
+                this.party(e.team as PlayerTeam).eliminated || !this.canSee(e.team as PlayerTeam, cache)) continue;
+            const d = distance(e, cache);
+            if (d < best && world.surface!.segment(e, cache, .5)) { collector = e; best = d; }
+          }
+          if (!collector) continue;
+          cache.collected = true;
+          const team = collector.team as PlayerTeam;
+          this.account(team)[cache.resource] += cache.amount;
+          this.notify(team, 'toast', `Supply cache recovered: +${cache.amount} ${cache.resource === 'alloy' ? 'Cinder' : 'Echo'}.`);
         }
       },
       checkBattleResult(this: MeridianGame) {

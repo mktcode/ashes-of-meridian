@@ -224,6 +224,28 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
   return [Math.atan2(-(f[2]*xx+f[5]*xy+f[8]*xz),f[0]*xx+f[3]*xy+f[6]*xz),pitch,0];
 }
 
+    // Reuse shared primitives: no per-frame mesh allocation or simulation RNG.
+    function renderSupplyCache(R: MeridianRenderer, world: Battlefield, cache: SupplyCache) {
+      const echo = cache.resource === 'gas', accent = echo ? 0x65e5e9 : 0xf1ae45;
+      for (let i = 0; i < cache.tier; i++) {
+        const x = cache.x + (i - (cache.tier - 1) / 2) * 1.65, z = cache.z,
+          y = world.surface!.heightAt(x, z);
+        const part = (dx: number, dy: number, dz: number, sx: number, sy: number, sz: number, color: number, glow = 0) =>
+          R.add('box', x + dx, y + dy, z + dz, sx, sy, sz, color, 0, 0, 0, glow, 1, 'dynamic', MAT.METAL);
+        part(0, .16, 0, 1.5, .3, 1.3, 0x252e3b);
+        part(0, .72, 0, 1.35, .85, 1.15, echo ? 0x344959 : 0x56504a);
+        part(0, 1.22, 0, 1.5, .18, 1.3, 0x87939d);
+        // Reinforced corners and luminous cargo designation bands.
+        for (const side of [-1, 1]) {
+          part(side * .56, .73, 0, .13, 1, 1.23, 0x252e3b);
+          part(side * .35, 1.325, 0, .16, .035, 1.05, accent, .8);
+        }
+        part(0, .79, -.59, .55, .25, .04, accent, 1.2);
+        if (echo) part(0, .78, .59, .28, .5, .04, accent, 1.2);
+        else part(0, .79, .59, .55, .25, .04, accent, 1.2);
+      }
+    }
+
     // Cosmetic building yaw only; placement, collision radii and save data stay unchanged.
     function renderEntity(R: MeridianRenderer, e: RenderEntity, time: number, options: RenderEntityOptions = {}) {
       if (e.hp <= 0) return;

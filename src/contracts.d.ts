@@ -588,6 +588,13 @@ interface PartyState {
   eliminated?: boolean;
 }
 
+interface SupplyCache extends Position {
+  resource: 'alloy' | 'gas';
+  tier: 1 | 2 | 3;
+  amount: number;
+  collected: boolean;
+}
+
 interface RunState {
   depth: number;
   seed: number;
@@ -598,6 +605,7 @@ interface RunState {
   stopped: boolean;
   nextId: number;
   entities: Entity[];
+  supplyCaches: SupplyCache[];
   scans: Scan[];
   strikes: Strike[];
   fields: Field[];

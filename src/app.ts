@@ -321,6 +321,8 @@
           // mutating either party's visibility/exploration buffers.
           R.fogOn = !ui.battleIntro;
           const selectedIds = ui.selectionIds();
+          for (const cache of s.supplyCaches)
+            if (!cache.collected && world.explored[world.idx(cache.x, cache.z)]) renderSupplyCache(R, world, cache);
           for (let e of s.entities) {
             if (e.hp <= 0) continue;
             if (!game.observed(e) && !ui.introObserves(e)) continue;
