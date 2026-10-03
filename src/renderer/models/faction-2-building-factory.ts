@@ -174,8 +174,9 @@
   registerEntityModel({
     id:'faction-2/building/factory',
     meshes:{faction2FactoryHull:()=>broad(hull()),faction2FactoryPortal:()=>broad(portal()),faction2FactoryRibbons:()=>broad(ribbons())},
-    render({entity:e,part:p,metal,dark,team,accent,surfaceColor}) {
+    render({entity:e,nightPart:p,metal,dark,team,accent,surfaceColor,pointLight}) {
       const s=(e.size||3.8)/3.8, x=s*1.35, z=s*1.18;
+      pointLight(0, 2.2, 2.4*z, 11, 0x9561ec, 4);
       p('faction2FactoryHull',0,0,0,s,1,s,metal);
       p('faction2FactoryPortal',0,0,0,s,1,s,surfaceColor(0x9561ec),0,0,0,0,undefined,PORTAL_MATERIAL);
       p('faction2FactoryRibbons',0,0,0,s,1,s,team,0,0,0,.85);

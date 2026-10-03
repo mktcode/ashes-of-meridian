@@ -74,8 +74,9 @@
     id:'faction-1/building/depot',
     meshes:{faction1DepotHull:hull, faction1DepotMembranes:() => contents(true),
       faction1DepotStores:() => contents(false)},
-    render({entity:e,part:p,metal,team,accent}) {
+    render({entity:e,nightPart:p,metal,team,accent,pointLight}) {
       const scale = (e.size || 2.3)/2.3;
+      pointLight(0, 1.6, 1.8*scale, 8, accent, 3);
       p('faction1DepotHull',0,0,0,scale,1,scale,metal);
       p('faction1DepotMembranes',0,0,0,scale,1,scale,team,0,0,0,.32);
       p('faction1DepotStores',0,0,0,scale,1,scale,accent,0,0,0,.30);

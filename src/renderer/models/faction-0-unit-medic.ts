@@ -44,7 +44,8 @@
   }
   registerEntityModel({
     id:'faction-0/unit/medic', meshes:{faction0MedicHull:hull,faction0MedicLeg:leg},
-    render({entity:e,part:p,metal,dark,team,accent,nightLight=0,lightPool}) {
+    render({entity:e,part:p,metal,dark,team,accent,nightLight=0,lightPool,pointLight}) {
+      pointLight(0, 1.65, .32, 4, 0x84dfc1, 1.5);
       const h=1, step=Math.sin((e.walk||0)*7)*.23;
       p('faction0MedicHull',0,0,0,1,1,1,0xb9c3be);
       for(const side of [-1,1]) p('faction0MedicLeg',side*.24,0,side*step,1,1,1,dark);

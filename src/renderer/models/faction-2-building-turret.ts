@@ -111,10 +111,11 @@
     id:'faction-2/building/turret',
     meshes:{faction2TurretHull:baseHull,faction2TurretHead:headHull,
       faction2TurretLights:baseLights,faction2TurretHeadLights:headLights},
-    render({entity:e,time,part:p,metal,team,accent,surfaceColor,baseRotation}) {
+    render({entity:e,time,nightPart:p,metal,team,accent,surfaceColor,baseRotation,pointLight}) {
       const s=(e.size||1.7)/1.7,aim=(e.rot||0)-baseRotation,ac=Math.cos(aim),as=Math.sin(aim),
         head=(mesh: string,x: number,y: number,z: number,sx: number,sy: number,sz: number,color: number,ry=0,rx=0,glow=0)=>
           p(mesh,x*ac+z*as,y,-x*as+z*ac,sx,sy,sz,color,aim+ry,rx,0,glow);
+      pointLight(2.35*as, 3.18, 2.35*ac, 7, accent, 3);
       p('faction2TurretHull',0,0,0,s,1,s,metal);
       p('faction2TurretLights',0,0,0,s,1,s,surfaceColor(team),0,0,0,1.15);
       head('faction2TurretHead',0,0,0,s,1,s,metal);

@@ -39,7 +39,8 @@
     return o;
   }
   registerEntityModel({id:'faction-2/unit/rifle',meshes:{courtPallbearerBody:body,courtPallbearerLance:lance},
-    render({part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool}) {
+    render({part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool,pointLight}) {
+      pointLight(.44, 1.1, .98, 4, 0x79d9e3, 1.5);
       p('courtPallbearerBody',0,0,0,1,1,1,metal);p('courtPallbearerLance',0,0,0,1,1,1,metal);
       p('box',0,1.77,.187,.16,.04,.03,team,0,0,0,.65);
       p('octa',0,1.24,.205,.105,.2,.055,team,0,0,0,.4);

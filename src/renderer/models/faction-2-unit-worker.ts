@@ -30,7 +30,8 @@
     const o: number[]=[];for(let i=0;i<3;i++) ModelMesh.bake(o,geom.crystal(),{x:(i-1)*.15,y:.57,z:-.23,sx:.12,sy:.3+i*.025,sz:.13,ry:i,tint:[1,.9,.6]});return o;
   }
   registerEntityModel({id:'faction-2/unit/worker',meshes:{courtCustodianBody:body,courtCustodianClaw:claw,courtCustodianCargo:cargo},
-    render({entity:e,time,part:p,metal,dark,team,surfaceColor:c}) {
+    render({entity:e,time,nightPart:p,metal,dark,team,surfaceColor:c,pointLight}) {
+      pointLight(0, .9, -.55, 5, team, 2);
       p('courtCustodianBody',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) {
         p('courtCustodianClaw',s*.62,.43,.78,1,1,1,metal,s*.16+Math.sin(time*1.6)*s*.035);

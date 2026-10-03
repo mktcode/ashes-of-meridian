@@ -35,7 +35,8 @@
   function rootLeg() {const o: number[]=[];rod(o,[0,.5,0],[.41,.31,.1],.105);rod(o,[.41,.31,.1],[.51,.05,.28],.06,[1,1,.8],.35);return o;}
   function heart() {const o: number[]=[];shell(o,0,0,0,.22,.28,.22);return o;}
   registerEntityModel({id:'faction-1/unit/medic',meshes:{choirLifesingerStem:stem,choirLifesingerPetal:petal,choirLifesingerRoot:rootLeg,choirLifesingerHeart:heart},
-    render({entity:e,time,part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool}) {
+    render({entity:e,time,part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool,pointLight}) {
+      pointLight(0, 1.65, 0, 4, team, 1.5);
       p('choirLifesingerStem',0,0,0,1,1,1,metal);
       for(let i=0;i<4;i++) p('choirLifesingerRoot',0,0,0,1,1,1,dark,i*Math.PI/2,Math.sin((e.walk||0)*6+i*Math.PI)*.12);
       for(let i=0;i<5;i++) p('choirLifesingerPetal',0,1.35,0,1,1,1,c(0xd4a4bf),i*Math.PI*2/5,-.15+Math.sin(time*1.3)*.025);

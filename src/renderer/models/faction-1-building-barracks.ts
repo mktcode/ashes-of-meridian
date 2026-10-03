@@ -99,8 +99,9 @@
   registerEntityModel({
     id:'faction-1/building/barracks',
     meshes:{ faction1BarracksHull:hull, faction1BarracksTissue:tissue, faction1BarracksSeeds:seeds },
-    render({entity:e,part:p,metal,team,accent}) {
+    render({entity:e,nightPart:p,metal,team,accent,pointLight}) {
       const scale = (e.size || 3) / 3;
+      pointLight(0, 2.2, 2.5*scale, 10, accent, 4);
       p('faction1BarracksHull',0,0,0,scale,1,scale,metal);
       p('faction1BarracksTissue',0,0,0,scale,1,scale,team,0,0,0,.32);
       p('faction1BarracksSeeds',0,0,0,scale,1,scale,accent,0,0,0,.35);

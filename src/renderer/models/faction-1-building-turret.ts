@@ -53,12 +53,13 @@
   function bud() {const out: number[]=[];shell(out,0,0,0,.22,.28,.22,[1,1,1],4);return out;}
   registerEntityModel({
     id:'faction-1/building/turret',meshes:{faction1TurretHull:hull,faction1TurretWeapon:weapon,faction1TurretBud:bud},
-    render({entity:e,time,part:p,metal,dark,team,accent,baseRotation,surfaceColor}) {
+    render({entity:e,time,nightPart:p,metal,dark,team,accent,baseRotation,surfaceColor,pointLight}) {
       const scale=(e.size||1.7)/1.7,aim=(e.rot??baseRotation)-baseRotation,
         muzzle=(distance: number)=>[Math.sin(aim)*distance*scale,3.23,Math.cos(aim)*distance*scale];
       p('faction1TurretHull',0,0,0,scale,1,scale,metal);
       p('faction1TurretWeapon',0,3.18,0,scale,1,scale,dark,aim);
       const bud=muzzle(2.57),rim=muzzle(2.74);
+      pointLight(rim[0], rim[1], rim[2], 7, team, 3);
       p('faction1TurretBud',bud[0],bud[1],bud[2],.78,.78,.78,surfaceColor(team),aim,0,0,.72+.08*Math.sin(time*2+e.id));
       p('ring',rim[0],rim[1],rim[2],.34,.34,.34,accent,aim,Math.PI/2,0,.7);
     }

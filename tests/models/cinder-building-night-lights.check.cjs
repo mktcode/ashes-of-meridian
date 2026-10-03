@@ -58,17 +58,3 @@ for(const type of ['hq','depot','barracks','factory','hangar','refinery','turret
     }
   });
 }
-
-test('other building factions keep their existing night presentation', () => {
-  const h=modelHarness();
-  for(const faction of [1,2]) for(const type of ['hq','depot','barracks','factory','hangar','refinery','turret']) {
-    const d=h.BUILDINGS[type],e={id:17,kind:'building',type,faction,team:0,hp:d.hp,size:d.size,x:0,z:0,progress:1};
-    const draw=hour=> {
-      const r=createRendererStub({record:true});
-      Object.assign(r,{battlefieldHour:hour,quality:0});
-      h.renderEntity(r,e,9);
-      return r.calls;
-    };
-    assert.deepEqual(draw(22),draw(12));
-  }
-});

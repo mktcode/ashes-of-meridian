@@ -86,8 +86,9 @@
   registerEntityModel({
     id:'faction-2/building/hangar',
     meshes:{faction2HangarHull:hull,faction2HangarPortal:portal,faction2HangarRibbons:ribbons},
-    render({entity:e,part:p,metal,team,surfaceColor}) {
+    render({entity:e,nightPart:p,metal,team,surfaceColor,pointLight}) {
       const s=(e.size||3.8)/3.8;
+      pointLight(0, 1.8, 0, 11, 0x8e59e8, 4);
       p('faction2HangarHull',0,0,0,s,1,s,metal);
       p('faction2HangarPortal',0,0,0,s,1,s,surfaceColor(0x8e59e8),0,0,0,0,undefined,PORTAL_MATERIAL);
       p('faction2HangarRibbons',0,0,0,s,1,s,team,0,0,0,.9);

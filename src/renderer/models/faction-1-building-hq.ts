@@ -215,9 +215,10 @@
     id:'faction-1/building/hq',
     meshes:{faction1HqFlower:flower,faction1HqHull:hull,faction1HqAbdomen:abdomen,
       faction1HqWings:wings,faction1HqEyes:eyes,faction1HqSenses:senses,faction1HqAntenna:antenna},
-    render({entity:e,time,part:p,metal,team,accent,surfaceColor}) {
+    render({entity:e,time,nightPart:p,metal,team,accent,surfaceColor,pointLight}) {
       const scale = (e.size||4.4)/4.4, phase = time*1.4+e.id*.61,
         breath = 1+Math.sin(phase)*.014;
+      pointLight(0, 2.3, 2.6*scale, 12, team, 4);
       p('faction1HqFlower',0,0,0,scale,1,scale,surfaceColor(accent));
       p('faction1HqHull',0,0,0,scale,1,scale,metal);
       p('faction1HqAbdomen',0,.56,-1.02*scale,scale,breath,scale,metal);

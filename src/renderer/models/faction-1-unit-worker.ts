@@ -59,7 +59,8 @@
     return o;
   }
   registerEntityModel({id:'faction-1/unit/worker',meshes:{choirTenderBody:body,choirTenderLeg:leg,choirTenderBasket:basket,choirTenderCargo:cargo},
-    render({entity:e,part:p,metal,dark,team,surfaceColor:c}) {
+    render({entity:e,nightPart:p,metal,dark,team,surfaceColor:c,pointLight}) {
+      pointLight(0, .68, 1, 5, team, 2);
       p('choirTenderBody',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) p('choirTenderBasket',s*.4,.68,-.35,1,1,1,metal);
       for(const s of [-1,1]) for(let i=0;i<3;i++) {

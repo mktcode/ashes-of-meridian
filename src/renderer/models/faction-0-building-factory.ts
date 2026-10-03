@@ -62,7 +62,8 @@
   registerEntityModel({
     id: 'faction-0/building/factory',
     meshes: { faction0FactoryHull: createFactoryHull },
-    render({ part: p, metal, team, accent, nightLight=0 }) {
+    render({ part: p, metal, team, accent, nightLight=0, pointLight }) {
+      pointLight(0, 3.1, 2, 11, team, 4);
       const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0FactoryHull', 0, 0, 0, 1, 1, 1, metal);
       p('box', 0, 3.07, 1.657, 3.9, .1, .025, team, 0, 0, 0, glow(.75));

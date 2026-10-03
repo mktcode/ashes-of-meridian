@@ -31,8 +31,9 @@
   }
   registerEntityModel({
     id:'faction-1/building/factory', meshes:{faction1FactoryHull:hull},
-    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
+    render({entity:e,time,nightPart:p,ring,metal,dark,team,accent,pointLight}) {
       const s=e.size||3, h=3.8;
+      pointLight(0, h+Math.sin(time+e.id)*.14, 0, 11, accent, 4);
       p('faction1FactoryHull',0,0,0,s/3.8,1,s/3.8,metal);
       p('octa',0,h*.77,0,s*.5,h*.65,s*.5,dark,.3);
       for(let i=0;i<6;i++) {

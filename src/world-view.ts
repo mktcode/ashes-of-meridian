@@ -457,6 +457,10 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         );
         if (occlusion && a === 1) R.recordOcclusion(shape, occlusionColor);
       };
+      const nightPart: ModelPart = (shape,x,y,z,sx,sy,sz,color,ry=0,rx=0,rz=0,glow=0,alpha,material) =>
+        p(shape,x,y,z,sx,sy,sz,color,ry,rx,rz,
+          glow > 0 ? glow + (Math.max(glow, e.kind === 'building' ? 5 : 2.4) - glow) * nightLight : glow,
+          alpha,material);
       const ring: ModelRing = (radius, h, color = team, a = 0.7, rx = 0, ry = 0, glow = 1.2) =>
         R.add('ring', e.x, y + h, e.z, radius, 1, radius, color, ry, rx, 0, glow, a, 'effects');
       const pointLight: EntityModelContext['pointLight'] = (lx,ly,lz,radius,color,intensity) => {
@@ -575,7 +579,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         }
         const model = EntityModels.find(e);
         if (model) {
-          model.render({ entity: e, time, nightLight, pointLight, lightPool: () => {}, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+          model.render({ entity: e, time, nightLight, pointLight, lightPool: () => {}, part: p, nightPart, ring, metal, dark, team, accent, baseRotation: rot,
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {
@@ -629,7 +633,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           R.add('plane',x,height+lift+.025,z,width,1,length,color,ry,rx,rz,0,strength,
             'effects',ALLOY_LIGHT_MATERIAL);
         };
-        model.render({ entity: e, time, nightLight, pointLight, lightPool, part: p, ring, metal, dark, team, accent, baseRotation: rot,
+        model.render({ entity: e, time, nightLight, pointLight, lightPool, part: p, nightPart, ring, metal, dark, team, accent, baseRotation: rot,
           surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         return;
       }

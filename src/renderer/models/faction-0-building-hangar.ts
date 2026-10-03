@@ -51,7 +51,8 @@
   registerEntityModel({
     id: 'faction-0/building/hangar',
     meshes: { faction0HangarHull: createHangarHull },
-    render({ part: p, metal, team, accent, nightLight=0 }) {
+    render({ part: p, metal, team, accent, nightLight=0, pointLight }) {
+      pointLight(0, 1.5, 3.25, 11, team, 4);
       const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0HangarHull', 0, 0, 0, 1, 1, 1, metal);
       p('box', 0, 3.07, 1.667, 3.92, .095, .025, team, 0, 0, 0, glow(.75));

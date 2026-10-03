@@ -40,7 +40,8 @@
     return o;
   }
   registerEntityModel({id:'faction-2/unit/air',meshes:{courtSeraphHull:hull},
-    render({part:p,metal,team,surfaceColor:c}) {
+    render({nightPart:p,metal,team,surfaceColor:c,pointLight}) {
+      pointLight(0, .9, .8, 6, team, 2.5);
       p('courtSeraphHull',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) {
         p('box',s*.63,.57,-1.823,.2,.13,.035,c(0x79d9e3),0,0,0,.8);

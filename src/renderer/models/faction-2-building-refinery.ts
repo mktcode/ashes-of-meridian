@@ -38,8 +38,9 @@
   }
   registerEntityModel({
     id:'faction-2/building/refinery', meshes:{faction2RefineryHull:hull},
-    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
+    render({entity:e,time,nightPart:p,ring,metal,dark,team,accent,pointLight}) {
       const s=e.size||3, h=5.5;
+      pointLight(0, h*.79, 0, 10, team, 4);
       p('faction2RefineryHull',0,0,0,s/2.3,1,s/2.3,metal);
       p('octa',0,h*.48,0,s*.5,h*.53,s*.5,dark,.4);
       // Retain the original core's instanced normals, local texture frame and pale highlights.

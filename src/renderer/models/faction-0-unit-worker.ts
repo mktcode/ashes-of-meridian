@@ -15,7 +15,8 @@ registerEntityModel({
       return out;
     }
   },
-  render({entity:e,part:p,metal,dark,team,accent,surfaceColor,nightLight=0,lightPool}) {
+  render({entity:e,part:p,metal,dark,team,accent,surfaceColor,nightLight=0,lightPool,pointLight}) {
+    pointLight(0, .65, .85, 5, 0xa6ddff, 2);
     p('workerHull', 0, 0, 0, 1, 1, 1, surfaceColor(0xb7a27b));
     p('faction0WorkerFittings', 0, 0, 0, 1, 1, 1, surfaceColor(0xb7a27b));
     p('box', 0, 1.05, 0.295, 0.67, 0.20, 0.065, dark);

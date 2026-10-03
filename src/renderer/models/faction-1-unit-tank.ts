@@ -35,7 +35,8 @@
   function leg() {const o: number[]=[];shell(o,0,.58,0,.3,.42,.36);rod(o,[0,.51,0],[.17,.14,.12],.22);for(let i=-1;i<=1;i++)rod(o,[.17+i*.13,.16,.12],[.17+i*.17,.05,.48],.095,[1.3,1.16,.82],.25);return o;}
   function muzzle() {const o: number[]=[];cup(o,.63,.25,.3);return o;}
   registerEntityModel({id:'faction-1/unit/tank',meshes:{choirRootbeastBody:body,choirRootbeastLeg:leg,choirRootbeastHorn:muzzle},
-    render({entity:e,part:p,metal,dark,team}) {
+    render({entity:e,nightPart:p,metal,dark,team,pointLight}) {
+      pointLight(0, 1.15, 1.5, 6, team, 2.5);
       p('choirRootbeastBody',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) for(const f of [-1,1]) p('choirRootbeastLeg',s*.85,0,f*.69,1,1,1,dark,s<0?Math.PI:0,Math.sin((e.walk||0)*5+s*f)*.16);
       p('choirRootbeastHorn',0,1.11,1.13,1,1,1,dark,0,1.3);

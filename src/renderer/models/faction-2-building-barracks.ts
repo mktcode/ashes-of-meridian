@@ -151,8 +151,9 @@
   registerEntityModel({
     id:'faction-2/building/barracks',
     meshes:{faction2BarracksHull:hull,faction2BarracksPortal:portal,faction2BarracksRibbons:ribbons},
-    render({entity:e,part:p,metal,dark,team,accent,surfaceColor}) {
+    render({entity:e,nightPart:p,metal,dark,team,accent,surfaceColor,pointLight}) {
       const s=(e.size||3)/3;
+      pointLight(0, 2, 2.4*s, 10, 0x9561ec, 4);
       p('faction2BarracksHull',0,0,0,s,1,s,metal);
       p('faction2BarracksPortal',0,0,0,s,1,s,surfaceColor(0x9561ec),0,0,0,0,undefined,PORTAL_MATERIAL);
       p('faction2BarracksRibbons',0,0,0,s,1,s,team,0,0,0,.85);

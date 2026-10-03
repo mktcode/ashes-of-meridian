@@ -42,8 +42,9 @@
   }
   registerEntityModel({
     id:'faction-1/building/hangar',meshes:{faction1HangarHull:hull,faction1HangarMembrane:membrane},
-    render({entity:e,time,part:p,ring,metal,team,accent,surfaceColor}) {
+    render({entity:e,time,nightPart:p,ring,metal,team,accent,surfaceColor,pointLight}) {
       const scale=(e.size||3.8)/3.8;
+      pointLight(0, 1.3, 2.5*scale, 11, team, 4);
       p('faction1HangarHull',0,0,0,scale,1,scale,metal);
       p('faction1HangarMembrane',0,0,0,scale,1,scale,surfaceColor(team),0,0,0,.72+.08*Math.sin(time*1.6+e.id));
       ring((e.size||3.8)*.76,.43,accent,.48,0,time*.08,.65);

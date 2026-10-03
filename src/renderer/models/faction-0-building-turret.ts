@@ -12,7 +12,7 @@ function fittings() {
 }
 registerEntityModel({
   id: 'faction-0/building/turret', meshes: { faction0TurretFittings: fittings },
-  render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation, nightLight=0 }) {
+  render({ entity: e, time, part: p, ring, metal, dark, team, accent, baseRotation, nightLight=0, pointLight }) {
     const glow=(base=0)=>base+(5-base)*nightLight;
     p('turretBase', 0, 0, 0, 1, 1, 1, metal);
     p('faction0TurretFittings', 0, 0, 0, 1, 1, 1, metal);
@@ -20,6 +20,7 @@ registerEntityModel({
     const aim = (e.rot || 0) - baseRotation,
       ac = Math.cos(aim),
       as = Math.sin(aim);
+    pointLight(.9*as, 2.3, .9*ac, 7, team, 3);
     const head = (x: number, y: number, z: number, sx: number, sy: number, sz: number, c: number, glow = 0) =>
       p('box', x * ac + z * as, y, -x * as + z * ac, sx, sy, sz, c, aim, 0, 0, glow);
     p('turretHead', 0, 0, 0, 1, 1, 1, metal, aim);

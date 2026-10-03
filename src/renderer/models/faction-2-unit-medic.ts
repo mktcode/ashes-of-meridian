@@ -39,7 +39,8 @@
   }
   function pendulum() {const o: number[]=[];rod(o,[0,0,0],[0,-.32,0],.018);ModelMesh.bake(o,geom.octa(),{y:-.38,sx:.07,sy:.12,sz:.07});return o;}
   registerEntityModel({id:'faction-2/unit/medic',meshes:{courtAbsolverFrame:frame,courtAbsolverCenser:censer,courtAbsolverPendulum:pendulum},
-    render({time,part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool}) {
+    render({time,part:p,metal,dark,team,surfaceColor:c,nightLight=0,lightPool,pointLight}) {
+      pointLight(0, 1.03, .25, 4, 0x79d9e3, 1.5);
       p('courtAbsolverFrame',0,0,0,1,1,1,metal);p('courtAbsolverCenser',0,0,0,1,1,1,metal);
       for(let i=0;i<3;i++) {const a=i*2*Math.PI/3;p('courtAbsolverPendulum',Math.cos(a)*.21,.62,Math.sin(a)*.21,1,1,1,metal,0,Math.sin(time*1.4+i)*.08);}
       p('octa',0,1.33,0,.18,.28,.18,team,time*.22,0,0,.6);

@@ -807,13 +807,16 @@
         }
         const limit = this.quality === 0 ? 2 : 8, positions = this.pointLightPositions,
           colors = this.pointLightColors, eye = this.eye ?? [0,0,0],
-          distance = (px: number,py: number,pz: number) => (px-eye[0])**2+(py-eye[1])**2+(pz-eye[2])**2;
+          // Approximate visible contribution, not just emitter proximity: a tiny visor
+          // must not displace every broad entrance light in a mixed army/base scene.
+          cost = (px: number,py: number,pz: number,r: number,power: number) =>
+            (1+(px-eye[0])**2+(py-eye[1])**2+(pz-eye[2])**2)/(r*r*power);
         let index = this.pointLightCount;
         if (index >= limit) {
-          let farthest = distance(x,y,z); index = -1;
+          let weakest = cost(x,y,z,radius,intensity); index = -1;
           for (let i=0;i<limit;i++) {
-            const d = distance(positions[i*4],positions[i*4+1],positions[i*4+2]);
-            if (d > farthest) { farthest=d; index=i; }
+            const o=i*4, c=cost(positions[o],positions[o+1],positions[o+2],positions[o+3],colors[o+3]);
+            if (c > weakest) { weakest=c; index=i; }
           }
           if (index < 0) return;
         } else this.pointLightCount++;

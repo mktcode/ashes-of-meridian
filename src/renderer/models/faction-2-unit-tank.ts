@@ -17,7 +17,8 @@
     panel(o,0,1.15,.43,.23,.22,.29,[.46,.46,.55]);return o;
   }
   registerEntityModel({id:'faction-2/unit/tank',meshes:{courtSepulcherHull:hull},
-    render({part:p,metal,team,surfaceColor:c}) {
+    render({nightPart:p,metal,team,surfaceColor:c,pointLight}) {
+      pointLight(0, 1.2, 1.5, 6, 0x79d9e3, 2.5);
       p('courtSepulcherHull',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) {
         p('box',s*1.03,.285,-.06,.21,.06,1.96,team,0,0,0,.5);

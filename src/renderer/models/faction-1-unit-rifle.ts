@@ -56,7 +56,8 @@
   }
   function muzzle() { const o: number[]=[];cup(o,.32,.105,.13);return o; }
   registerEntityModel({id:'faction-1/unit/rifle',meshes:{choirThornlingBody:body,choirThornlingLeg:leg,choirThornlingMuzzle:muzzle},
-    render({entity:e,part:p,metal,dark,team,nightLight=0,lightPool}) {
+    render({entity:e,part:p,metal,dark,team,nightLight=0,lightPool,pointLight}) {
+      pointLight(0, 1.48, .3, 4, team, 1.5);
       p('choirThornlingBody',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) p('choirThornlingLeg',s*.13,0,0,1,1,1,dark,s<0?Math.PI:0,Math.sin((e.walk||0)*7)*s*.2);
       p('choirThornlingMuzzle',.43,1.12,.9,1,1,1,dark,0,Math.PI/2);

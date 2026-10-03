@@ -52,7 +52,8 @@
     for(const s of [-1,1]) leaf(o,.62,1.8,.53,.16,.57,s*.9,-1.15,[1.18,1.22,.87]);return o;
   }
   registerEntityModel({id:'faction-1/unit/hero',meshes:{choirFirstVoiceBody:body,choirFirstVoiceRoot:rootFoot,choirFirstVoiceMantle:mantle,choirFirstVoiceSceptre:sceptre},
-    render({entity:e,time,part:p,metal,team,surfaceColor:c,nightLight=0,lightPool}) {
+    render({entity:e,time,part:p,metal,team,surfaceColor:c,nightLight=0,lightPool,pointLight}) {
+      pointLight(.62, 2.08, .53, 4.5, team, 1.8);
       p('choirFirstVoiceBody',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) p('choirFirstVoiceRoot',s*.15,0,Math.sin((e.walk||0)*5)*s*.12,1,1,1,metal,s<0?Math.PI:0);
       p('choirFirstVoiceMantle',0,0,0,1,1,1,c(0xb991b0),0,Math.sin(time*1.2)*.015);

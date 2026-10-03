@@ -90,10 +90,13 @@ function registerHeavyModel(name: HeavyModelId, faction: FactionId) {
     meshes[`${prefix}Part${index}Neutral`] = () => heavyMesh(name,index,indexes,true);
   }
   registerEntityModel({id:`faction-${faction}/unit/destroyer`,meshes,
-    render({entity,time,part,team,surfaceColor}) {
+    render({entity,time,nightPart:part,part:basePart,nightLight,team,surfaceColor,pointLight}) {
       const scale = .72, surface = surfaceColor(0xffffff), neutral = surface !== 0xffffff ? 'Neutral' : '';
+      // The authored hull remains nonemissive; use its existing team detail as the lamp.
+      pointLight(0, name === 'crownwing' ? 1.9 : name === 'catafalque' ? 2.1 : 1,
+        name === 'crownwing' ? 1.1 : name === 'catafalque' ? 2.8 : 3, 10, team, 3);
       part(`${prefix}Body${neutral}`,0,0,0,scale,scale,scale,surface);
-      if (name === 'breakwater') part(`${prefix}Team`,0,0,0,scale,scale,scale,surfaceColor(team));
+      if (name === 'breakwater') basePart(`${prefix}Team`,0,0,0,scale,scale,scale,surfaceColor(team),0,0,0,2.4*nightLight);
       else part('sphere',0,name === 'crownwing' ? 1.9 : 2.1,
         name === 'crownwing' ? 1.1 : 2.8,.16,.08,.16,surfaceColor(team),0,0,0,.35);
       for (const {node,index} of moving) {

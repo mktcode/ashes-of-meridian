@@ -46,7 +46,8 @@
   }
   registerEntityModel({
     id:'faction-0/unit/artillery', meshes:{faction0ArtilleryHull:hull},
-    render({part:p,metal,team,accent}) {
+    render({nightPart:p,metal,team,accent,pointLight}) {
+      pointLight(0, .9, 1.7, 6, 0xffe4aa, 2.5);
       p('faction0ArtilleryHull',0,0,0,1,1,1,metal);
       for(const side of [-1,1]) {
         p('box',side*1.35,1.2,.5,.18,.08,1.6,team,0,0,0,.3);

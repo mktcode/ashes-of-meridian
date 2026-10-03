@@ -33,7 +33,8 @@
   }
   registerEntityModel({
     id:'faction-0/building/refinery', meshes:{faction0RefineryHull:hull},
-    render({part:p,time,metal,dark,team,accent,nightLight=0}) {
+    render({part:p,time,metal,dark,team,accent,nightLight=0,pointLight}) {
+      pointLight(0, 2.1, 1.6, 10, 0x8ff0de, 4);
       const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0RefineryHull',0,0,0,1,1,1,metal);
       for(const side of [-1,1]) {

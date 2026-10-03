@@ -47,8 +47,9 @@
   registerEntityModel({
     id:'faction-2/building/depot',
     meshes:{faction2DepotHull:hull,faction2DepotCharge:charge},
-    render({entity:e,part:p,metal,team,surfaceColor}) {
+    render({entity:e,nightPart:p,metal,team,surfaceColor,pointLight}) {
       const s=(e.size||2.3)/2.3,energy=surfaceColor(0x9a68ee);
+      pointLight(0, 2.2, 0, 8, energy, 3);
       p('faction2DepotHull',0,0,0,s,1,s,metal);
       for(const [y,h] of [[1.65,.98],[3.07,.98]])
         p('faction2DepotCharge',0,y,0,.92*s,h,.92*s,energy,0,0,0,0,undefined,PORTAL_MATERIAL);

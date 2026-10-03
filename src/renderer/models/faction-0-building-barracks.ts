@@ -43,7 +43,8 @@
   registerEntityModel({
     id: 'faction-0/building/barracks',
     meshes: { faction0BarracksHull: createBarracksHull },
-    render({ part: p, metal, team, accent, nightLight=0 }) {
+    render({ part: p, metal, team, accent, nightLight=0, pointLight }) {
+      pointLight(0, 2.53, 2.5, 10, team, 4);
       const glow=(base=0)=>base+(5-base)*nightLight;
       p('faction0BarracksHull', 0, 0, 0, 1, 1, 1, metal);
       // Front lintel, flanking entry lights and roof stripes read at battle zoom.

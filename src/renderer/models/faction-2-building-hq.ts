@@ -165,8 +165,9 @@
     meshes:{faction2HqHull:hull,faction2HqRibbons:ribbons,faction2HqCore:core,
       faction2HqLowerOrbit:lowerOrbit,faction2HqMiddleOrbit:middleOrbit,
       faction2HqUpperOrbit:upperOrbit,faction2HqCrownOrbit:crownOrbit},
-    render({entity:e,time,part:p,metal,dark,team,accent,surfaceColor}) {
+    render({entity:e,time,nightPart:p,metal,dark,team,accent,surfaceColor,pointLight}) {
       const s=(e.size||4.4)/4.4;
+      pointLight(0, 2, 2.8*s, 12, team, 4);
       p('faction2HqHull',0,0,0,s,1,s,metal);
       p('faction2HqCore',0,0,0,s,1,s,dark);
       p('faction2HqLowerOrbit',0,0,0,s,1,s,surfaceColor(team),time*.42,0,0,1);

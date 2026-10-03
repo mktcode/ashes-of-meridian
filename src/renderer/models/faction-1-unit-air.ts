@@ -69,7 +69,8 @@
   }
   registerEntityModel({id:'faction-1/unit/air',meshes:{choirMothwingBody:body,choirMothwingFore:wing,choirMothwingHind:hindwing,
     choirMothwingForeLeft:()=>mirror(wing),choirMothwingHindLeft:()=>mirror(hindwing)},
-    render({time,part:p,metal,team,surfaceColor:c}) {
+    render({time,nightPart:p,metal,team,surfaceColor:c,pointLight}) {
+      pointLight(0, .85, 1.1, 6, team, 2.5);
       p('choirMothwingBody',0,0,0,1,1,1,metal);
       const flap=Math.sin(time*7)*.23;
       for(const s of [-1,1]) {

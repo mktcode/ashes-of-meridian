@@ -40,7 +40,8 @@
   }
   registerEntityModel({
     id:'faction-0/unit/air', meshes:{faction0AirHull:hull},
-    render({part:p,metal,dark,team,accent}) {
+    render({nightPart:p,metal,dark,team,accent,pointLight}) {
+      pointLight(0, 1.05, 1.1, 6, 0x81bdcc, 2.5);
       // The adapter alone supplies flight height, exit climb and bobbing.
       p('faction0AirHull',0,0,0,1,1,1,metal);
       p('box',0,.99,.8,.42,.14,.75,0x81bdcc,0,0,0,.4);

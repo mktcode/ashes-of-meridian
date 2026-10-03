@@ -33,8 +33,9 @@
     id:'faction-1/building/refinery', meshes:{faction1RefineryHull:hull, faction1RefineryOrgan() {
       const out: number[]=[]; ModelMesh.lobedShell(out,{x:0,y:0,z:0,sx:.7,sy:1.5,sz:.7,lobes:3,segments:12,rings:6}); return out;
     }},
-    render({entity:e,time,part:p,ring,metal,dark,team,accent}) {
+    render({entity:e,time,nightPart:p,ring,metal,dark,team,accent,pointLight}) {
       const s=e.size||3, h=3.8;
+      pointLight(0, h+Math.sin(time+e.id)*.14, 0, 10, accent, 4);
       p('faction1RefineryHull',0,0,0,s/2.3,1,s/2.3,metal);
       p('octa',0,h*.77,0,s*.5,h*.65,s*.5,dark,.3);
       for(let i=0;i<6;i++) {

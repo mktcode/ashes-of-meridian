@@ -41,7 +41,8 @@
   }
   function trumpet() {const o: number[]=[];cup(o,1.1,.24,.58);for(let i=0;i<8;i++){const a=i*Math.PI/4;rod(o,[Math.cos(a)*.24,.12,Math.sin(a)*.24],[Math.cos(a)*.56,1.07,Math.sin(a)*.56],.037,[1.3,1.13,.87]);}return o;}
   registerEntityModel({id:'faction-1/unit/artillery',meshes:{choirSporecallerBody:body,choirSporecallerCoil:coil,choirSporecallerTrumpet:trumpet},
-    render({entity:e,part:p,metal,team,surfaceColor:c}) {
+    render({entity:e,nightPart:p,metal,team,surfaceColor:c,pointLight}) {
+      pointLight(0, 1.2, 1.5, 6, team, 2.5);
       p('choirSporecallerBody',0,0,0,1,1,1,metal);
       p('choirSporecallerCoil',0,0,0,1,1,1,c(0x877451));
       p('choirSporecallerTrumpet',0,1.24,.46,1,1,1,c(0xc995b3),0,.62);

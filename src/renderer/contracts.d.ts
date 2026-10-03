@@ -69,6 +69,8 @@ interface EntityModelContext {
   pointLight: (x: number, y: number, z: number, radius: number, color: number, intensity: number) => void;
   lightPool: (x: number, z: number, width: number, length: number, color: number, strength: number) => void;
   part: ModelPart;
+  /** Opt-in dusk boost for existing emissive parts; opaque shells and rings stay unchanged. */
+  nightPart: ModelPart;
   ring: ModelRing;
   metal: number; dark: number; team: number; accent: number;
   baseRotation: number;

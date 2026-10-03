@@ -30,7 +30,8 @@
     return o;
   }
   registerEntityModel({id:'faction-2/unit/artillery',meshes:{courtElegistSled:sled,courtElegistOrgan:organ},
-    render({part:p,metal,dark,team,surfaceColor:c}) {
+    render({nightPart:p,metal,dark,team,surfaceColor:c,pointLight}) {
+      pointLight(0, 1.1, 1.1, 6, 0x79d9e3, 2.5);
       p('courtElegistSled',0,0,0,1,1,1,metal);p('courtElegistOrgan',0,0,0,1,1,1,metal);
       for(const s of [-1,1]) p('box',s*.7,.23,-.62,.13,.05,1.27,team,0,0,0,.45);
       for(let i=-1;i<=1;i++) p('octa',i*.39,i===0?2.82:2.28,-.425,.07,.17,.04,team,0,0,0,.65);

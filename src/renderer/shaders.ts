@@ -483,7 +483,7 @@ void main(){
  if(u_extract){
   // Threshold before averaging: small lamps survive the quarter-size reduction.
   if(u_lampPrefilter>.5){
-   // HQ pilot: cover every texel of the 4x4 footprint instead of missing thin trim
+   // Local lamps: cover every texel of the 4x4 footprint instead of missing thin trim
    // between four diagonal taps. A bounded peak floor preserves subpixel lamps.
    vec3 sum=vec3(0.),peak=vec3(0.);
    for(int y=0;y<4;y++)for(int x=0;x<4;x++){

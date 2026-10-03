@@ -901,7 +901,7 @@ test('local diffuse lighting respects current fog visibility and has a no-light 
   assert.ok(shader.includes('if(u_fogOn>.5)result*=smoothstep(.75,1.,texture(u_fog,(position.xz+u_extent)/(u_extent*2.)).r);'));
 });
 
-test('HQ point lights have bounded CPU storage, nearest-light selection and no extra render passes',()=>{
+test('model point lights have bounded CPU storage, contribution selection and no extra render passes',()=>{
   const h=setup(), r=h.r;
   Object.assign(r,{dynamic:{},effects:{},occlusion:{},colors:new Map(),eye:[0,0,0]});
   r.begin(); const positions=r.pointLightPositions, colors=r.pointLightColors;
@@ -923,6 +923,13 @@ test('HQ point lights have bounded CPU storage, nearest-light selection and no e
   for(let i=0;i<10;i++)r.addPointLight(i,2,0,14,0x75dce9,5);
   assert.equal(r.pointLightCount,2,'performance uses a smaller per-fragment budget');
   r.begin();r.quality=1;
+  for(let i=0;i<8;i++)r.addPointLight(i,2,0,4,0xffffff,1.5);
+  r.addPointLight(12,3,0,12,0xffffff,4);
+  assert.ok(Array.from(positions).includes(12),'broad entrance survives nearby small optics');
+  const selected=Array.from(positions);
+  r.addPointLight(0,2,0,1,0xffffff,.1);
+  assert.deepEqual(Array.from(positions),selected,'weak small source cannot evict a useful light');
+  r.begin();
   r.vp=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
   r.addPointLight(5,0,0,1,0xffffff,1);assert.equal(r.pointLightCount,0,'fully off-screen influence is culled');
   r.addPointLight(5,0,0,6,0xffffff,1);assert.equal(r.pointLightCount,1,'off-screen emitter can illuminate visible ground');
