@@ -797,7 +797,11 @@ function appClock(diagnostic = false) {
     },
     // This fixture tests app mesh/lifecycle behavior; shared placement rules have their own tests.
     PlacementGuideSampler: class {
-      constructor(game,type,team) { Object.assign(this,{game,type,team}); }
+      constructor(game,type,team) {
+        Object.assign(this,{game,type,team});
+        (game.guideSamplers ??= []).push(this);
+      }
+      retainTerrainFootprint(...bounds) { this.bounds=bounds; }
       refresh() {
         this.pending=!!this.game.guidePendingFrames;
         if(this.pending) this.game.guidePendingFrames--;
@@ -988,6 +992,35 @@ test('placement guide covers wide viewports and raised ground, updating on rotat
   a.renderer.viewport.width=960;a.frame(80);
   assert.equal(uploads.length,count+2,'viewport resizing invalidates the mesh');
   assert.ok(colorAt(111,0)>.8,'newly exposed right edge is covered');
+  assert.deepEqual(a.errors,[]);
+});
+
+test('placement guide reuses terrain sampler on camera changes, but not across build contexts',()=>{
+  const a=appClock();
+  a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.game.localTeam=0;
+  a.setBuilding('depot',{size:2});a.setBuilding('hq',{size:4});
+  a.game.world={extent:50,fogVersion:0,surface:{maxHeight:0,heightAt:()=>0},
+    sight:[{visible:new Uint8Array([1])},{visible:new Uint8Array([1])}],idx:()=>0};
+  a.game.canBuild=()=>'';
+  let pan=0;
+  a.renderer.ground=(x,y)=>({x:(x-400)/20+pan,z:(y-300)/20});
+  a.renderer.streamGeometry=()=>{};a.renderer.add=()=>{};
+  a.frame(20);
+  const first=a.game.guideSamplers[0], initialBounds=[...first.bounds];
+  pan=6;a.frame(40);
+  assert.equal(a.game.guideSamplers.length,1,'pan retains the sampler');
+  assert.notDeepEqual(first.bounds,initialBounds,'new footprint prunes its terrain cache');
+  a.renderer.viewport.width=960;a.frame(60);
+  assert.equal(a.game.guideSamplers.length,1,'resize retains the sampler');
+  a.ui.mode={kind:'build',arg:'hq'};a.frame(80);
+  assert.equal(a.game.guideSamplers.length,2,'building type replaces sampler');
+  a.game.localTeam=1;a.frame(100);
+  assert.equal(a.game.guideSamplers.length,3,'team replaces sampler');
+  a.game.world={...a.game.world};a.frame(120);
+  assert.equal(a.game.guideSamplers.length,4,'world replaces sampler');
+  a.ui.mode=null;a.frame(140);
+  a.ui.mode={kind:'build',arg:'hq'};a.frame(160);
+  assert.equal(a.game.guideSamplers.length,5,'ending build mode releases the cache');
   assert.deepEqual(a.errors,[]);
 });
 

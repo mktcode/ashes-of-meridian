@@ -91,6 +91,34 @@ test('cold terrain validation has a per-frame budget and completes without stale
   assert.equal(calls,3);assert.equal(sampler.pending,false);
 });
 
+test('overlapping footprints reuse terrain, prune departed samples and keep blockers live',()=>{
+  const {game,world,unit}=fixture();let calls=0;
+  const foundation=world.surface.foundation.bind(world.surface);
+  world.surface.foundation=(...args)=>{calls++;return foundation(...args);};
+  const sampler=new PlacementGuideSampler(game,'depot',0), points=[{x:0,z:0},{x:6,z:0},{x:12,z:0}];
+  sampler.refresh();assert.deepEqual(points.map(p=>sampler.sample(p)),[1,1,1]);
+  assert.equal(calls,3);
+  sampler.retainTerrainFootprint(0,-3,6,3);
+  sampler.refresh(0);
+  assert.deepEqual(points.map(p=>sampler.sample(p)),[1,1,0]);
+  assert.equal(calls,3,'overlap needs no new terrain checks; departed sample is unknown');
+  assert.equal(sampler.pending,true);
+  game.s.entities.push(unit(20,0,0));
+  sampler.refresh();assert.deepEqual(points.map(p=>sampler.sample(p)),[-1,1,1]);
+  assert.equal(calls,4,'only the pruned sample is checked again');
+});
+
+test('refinery footprint retention includes snapped vents outside the rectangle',()=>{
+  const {game,world}=fixture();let calls=0;
+  const foundation=world.surface.foundation.bind(world.surface);
+  world.surface.foundation=(...args)=>{calls++;return foundation(...args);};
+  const sampler=new PlacementGuideSampler(game,'refinery',0), p={x:24,z:-10};
+  sampler.refresh();assert.equal(sampler.sample(p),1);assert.equal(calls,1);
+  sampler.retainTerrainFootprint(24,-10,30,-4);
+  sampler.refresh(0);assert.equal(sampler.sample(p),1);
+  assert.equal(calls,1);assert.equal(sampler.pending,false);
+});
+
 test('unseen blockers and exits remain transparent, before refinery snapping too',()=>{
   const {game,world,unit}=fixture();
   const hidden=unit(20,24,-10,'rifle',{team:1,exit:{x:-5,z:0,building:2}});

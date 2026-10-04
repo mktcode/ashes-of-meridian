@@ -1,7 +1,7 @@
 /* GPU adapter for CPU-generated world data, plus entity models. */
 'use strict';
 
-// A viewport-owned, read-only batch: static rules are cached only for this footprint.
+// A build-context-owned, read-only batch: static terrain survives overlapping viewports.
 // Live blockers are indexed afresh, including production exits and unseen entities.
 class PlacementGuideSampler {
   private terrain = new Map<string, boolean>();
@@ -17,6 +17,16 @@ class PlacementGuideSampler {
   constructor(private game: MeridianGame, private type: BuildingType, private team: PlayerTeam) {
     this.world = game.world!;
     this.size = BUILDINGS[type].size;
+  }
+  // Bound the cache to the requested footprint, retaining overlap on camera changes.
+  // Refinery samples may resolve to a vent just outside the sampled rectangle.
+  retainTerrainFootprint(startX: number, startZ: number, endX: number, endZ: number) {
+    const margin = this.type === 'refinery' ? REFINERY_PLACEMENT_RANGE : 0;
+    for (const key of this.terrain.keys()) {
+      const separator = key.indexOf(':'), x = Number(key.slice(0, separator)), z = Number(key.slice(separator + 1));
+      if (x < startX - margin || x > endX + margin || z < startZ - margin || z > endZ + margin)
+        this.terrain.delete(key);
+    }
   }
   private key(p: Position) { return `${Math.floor(p.x / 10)},${Math.floor(p.z / 10)}`; }
   refresh(terrainBudget = 64) {

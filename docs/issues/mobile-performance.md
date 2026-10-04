@@ -12,6 +12,12 @@
 
 **Rasterentlastung implementiert, Geräteabnahme offen:** Wiederholte vollständige Bauprüfungen und Chunk-/Pufferneubauten sind durch einen begrenzten View-Cache und frische Belegungsbatches ersetzt; [Besitz-/Sicht-/Verzögerungsvertrag](../rendering.md#viewport-und-hud). Gezielter Node-CPU-Vergleich mit echter App-/Renderergeometrieschleife, Desert Seed 29973391, synthetischen 150 Entitäten, vollständig sichtbarem 120×90-Ausschnitt, ohne Simulationsschritte/GPU: wiederholte Rasterupdates etwa 315 → 6 ms; erster Callback etwa 331 → 12 ms. Abschluss des kalten Meshaufbaus hatte weiterhin eine Spitze bis etwa 82 ms. Keine Echtgeräte-FPS oder Rekonstruktion des Nutzerstands. Chromium über `file://` bestätigt Wiederverwendung/Freigabe der Streaming-Puffer ohne GL-Fehler; kein vollständiger laufender Baumodus- oder Performancecheck. [Modellkacheln](modell-kacheln.md) bleiben separat.
 
+### Baugrid bei Kamerabewegung
+
+Nutzer meldet vollständiges Verschwinden beim Zoomen/Verschieben. Der Bildausschnittwechsel ersetzt das Overlay-Mesh; solange neue Geländeproben ausstehen, wird das gesamte Raster ausgeblendet. Überlappende Terrainproben bleiben inzwischen erhalten; [Cachevertrag](../rendering.md#viewport-und-hud). Gezielte Node-Prüfungen sichern Wiederverwendung, Cachebegrenzung und weiterhin frische Blockerprüfung, keine FPS-/GPU-Messung.
+
+Offen im schrittweisen Refactoring: bekannte Bereiche trotz ausstehender neuer Proben aktuell anzeigen, Geometriespeicher wiederverwenden und Uploads unveränderter Positionen/Normalen vermeiden. Kachelgröße gegen zusätzliche Draw Calls abwägen; keine Änderung der Bau-/Sichtregeln. Kontinuierliche Kamerabewegung und bewegte Blocker bei gleichem Ausschnitt vergleichen, CPU-/Uploadkosten und Frame-Spitzen getrennt erfassen. Vor dem nächsten Umsetzungsschritt Rücksprache mit dem Nutzer.
+
 ## Codebasierter Verbesserungsplan
 
 Ausgangsbefund: langsame Menüs, zusätzliche Last durch viele Einheiten/Gebäude und kurze Hänger bei Befehlen. Die Laptop-Menülast wurde inzwischen lokal eingegrenzt und entlastet; der Nutzer bestätigt auf `937914e` **„spürbar besser“**, ohne neue quantitative Aufnahme oder getrennte Gefechts-/Mobilabnahme. Die folgenden CPU-Kandidaten beruhen weiterhin auf statischer Quellprüfung, nicht auf einem Nachweis ihres Anteils am aktuellen Engpass. Ziel bleibt unnötige Arbeit zu entfernen, nicht Details, Schatten, Licht, Bloom oder Tilt-Shift abzuschalten. P0–P3 hier bezeichnen lokale Arbeitsschritte, nicht die allgemeinen [Projektprioritäten](projektfahrplan.md).

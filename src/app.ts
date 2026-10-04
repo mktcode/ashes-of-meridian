@@ -241,7 +241,7 @@
         // Coarse validation samples become a continuous, terrain-following color field.
         // Its fine mesh and GPU storage are view-owned; neither changes world geometry or RNG.
         const GUIDE_MESH = 'placementGuide', GUIDE_SAMPLE = 3, GUIDE_STEP = 1.5;
-        let placementGuide: { world: Battlefield; key: string; revision: string; uploaded: boolean; dirty: boolean;
+        let placementGuide: { world: Battlefield; context: string; key: string; revision: string; uploaded: boolean; dirty: boolean;
           sampler: PlacementGuideSampler; samples: Float32Array; points: Float32Array; data: Float32Array } | null = null;
         function clearPlacementGuide() {
           if (placementGuide) R.releaseGeometry(GUIDE_MESH);
@@ -262,15 +262,19 @@
             startX = lower(corners.map(p => p.x)), startZ = lower(corners.map(p => p.z)),
             endX = upper(corners.map(p => p.x)), endZ = upper(corners.map(p => p.z)),
             cx = (startX + endX) / 2, cz = (startZ + endZ) / 2,
-            key = `${type}:${game.localTeam}:${startX}:${startZ}:${endX}:${endZ}`,
+            context = `${type}:${game.localTeam}`,
+            key = `${context}:${startX}:${startZ}:${endX}:${endZ}`,
             revision = `${world.fogVersion}:${Math.floor(s.time * 3)}`,
             columns = (endX - startX) / GUIDE_SAMPLE + 1, rows = (endZ - startZ) / GUIDE_SAMPLE + 1,
             fineX = (columns - 1) * 2, fineZ = (rows - 1) * 2, row = fineX + 1;
           if (endX <= startX || endZ <= startZ) { clearPlacementGuide(); return; }
           const newFootprint = placementGuide?.world !== world || placementGuide.key !== key;
           if (newFootprint) {
+            const sampler = placementGuide?.world === world && placementGuide.context === context
+              ? placementGuide.sampler : new PlacementGuideSampler(game, type, game.localTeam);
+            sampler.retainTerrainFootprint(startX, startZ, endX, endZ);
             clearPlacementGuide();
-            placementGuide = { world, key, revision: '', uploaded: false, dirty: false, sampler: new PlacementGuideSampler(game, type, game.localTeam),
+            placementGuide = { world, context, key, revision: '', uploaded: false, dirty: false, sampler,
               samples: new Float32Array(columns * rows).fill(2),
               points: new Float32Array(row * (fineZ + 1) * 6), data: new Float32Array(fineX * fineZ * 54) };
           }
