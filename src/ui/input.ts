@@ -360,10 +360,10 @@
             dx = terrain.x - flat.x, dz = terrain.z - flat.z,
             c = Math.cos(delta), s = Math.sin(delta);
           // Rotate the viewing-axis offset, keeping the visible terrain anchor fixed.
-          // Existing map limits take precedence if the required center leaves them.
+          // Apply bounds for the new heading, not the previous terrain offset.
+          cam.yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
           this.center(cam.x + dx - (c * dx + s * dz), cam.z + dz - (-s * dx + c * dz));
-        }
-        cam.yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
+        } else cam.yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
       },
       pointerDown(this: MeridianUI, e: PointerEvent) {
         if (this.view === 'codexModel') {

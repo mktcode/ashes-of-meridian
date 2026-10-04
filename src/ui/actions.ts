@@ -36,16 +36,23 @@
       },
       center(this: MeridianUI, x: number, z: number) {
         if (!this.game.s || this.controlsLocked) return;
-        const limit = this.game.world!.extent - 18;
-        this.game.s!.cam.x = clamp(x, -limit, limit);
-        this.game.s!.cam.z = clamp(z, -limit, limit);
+        Object.assign(this.game.s.cam, this.clampCameraPoint({ x, z }));
+      },
+      clampCameraPoint(this: MeridianUI, point: Position): Position {
+        const world = this.game.world!, limit = world.extent, yaw = this.game.s!.cam.yaw ?? 0,
+          shift = (world.surface?.maxHeight ?? 0) * .82 / 1.1,
+          dx = Math.sin(yaw) * shift, dz = Math.cos(yaw) * shift;
+        // Every map edge must be reachable even at close zoom. Raised terrain
+        // projects away from the y=0 pivot, so extend bounds along that offset.
+        return { x: clamp(point.x, -limit - Math.max(0, dx), limit - Math.min(0, dx)),
+          z: clamp(point.z, -limit - Math.max(0, dz), limit - Math.min(0, dz)) };
       },
       terrainCameraPoint(this: MeridianUI, point: Position, height: number): Position {
-        const limit = this.game.world!.extent - 18, yaw = this.game.s!.cam.yaw ?? 0;
+        const yaw = this.game.s!.cam.yaw ?? 0;
         // Project an elevated focus onto the renderer's y=0 target plane.
         const shift = height * .82 / 1.1;
-        return { x: clamp(point.x - Math.sin(yaw) * shift, -limit, limit),
-          z: clamp(point.z - Math.cos(yaw) * shift, -limit, limit) };
+        return this.clampCameraPoint({ x: point.x - Math.sin(yaw) * shift,
+          z: point.z - Math.cos(yaw) * shift });
       },
       homeCamera(this: MeridianUI) {
         let e = this.game.alive(e => e.team === this.localTeam && e.type === 'hq')[0] ||
