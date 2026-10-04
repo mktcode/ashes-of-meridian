@@ -226,6 +226,22 @@
 
     #speedBtn:hover { background: #50d6ed20 }
 
+    .clock { position: relative }
+
+    #speedHint {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      width: min(260px, 75vw);
+      padding: 12px;
+      color: var(--gold);
+      font: 12px/1.5 var(--mono);
+      white-space: normal;
+      pointer-events: none
+    }
+
+    #speedBtn.tutorial-focus { color: var(--gold); border-color: var(--gold) }
+
     #attackMoveBtn {
       display: inline-flex;
       align-items: center;
@@ -380,7 +396,8 @@
     }
 
     .action.tutorial-focus,
-    .menu-back.tutorial-focus {
+    .menu-back.tutorial-focus,
+    #speedBtn.tutorial-focus {
       z-index: 2;
       animation: tutorial-focus 1.15s ease-in-out infinite
     }
@@ -392,7 +409,8 @@
 
     @media (prefers-reduced-motion: reduce) {
       .action.tutorial-focus,
-      .menu-back.tutorial-focus {
+      .menu-back.tutorial-focus,
+      #speedBtn.tutorial-focus {
         animation: none;
         box-shadow: inset 0 0 0 3px #fff0b4, 0 0 10px #f2c45daa
       }

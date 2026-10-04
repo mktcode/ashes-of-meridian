@@ -7,6 +7,7 @@ interface BattleTutorialState {
   achieved: Set<BattleTutorialStep>;
   workersTrained: number;
   elapsed: number;
+  speedHintUntil?: number;
   arrivalCamera?: { from: Position; home: Position };
 }
 
@@ -58,6 +59,21 @@ const uiTutorialMethods = {
     tutorial.arrivalCamera = undefined;
     this.radioLine('tutorial.settle');
     this.setBattleTutorialStep('buildHQ', 'root');
+  },
+  updateTutorialSpeedHint(this: MeridianUI, now: number) {
+    const tutorial = this.battleTutorial,
+      inBattle = this.view === 'game' && !!this.game.s && !this.game.s.result;
+    if (tutorial && inBattle && !this.paused && tutorial.step === 'buildHQ' &&
+      tutorial.speedHintUntil === undefined && this.game.alive(e =>
+        e.team === this.localTeam && e.type === 'hq' && e.progress < 1).length > 0) {
+      // Presentation time: speeding up the simulation must not shorten the hint.
+      tutorial.speedHintUntil = now + 5000;
+    }
+    const visible = !!tutorial && inBattle && now < (tutorial.speedHintUntil ?? 0);
+    $('speedBtn').classList.toggle('tutorial-focus', visible);
+    $('speedHint').classList.toggle('hidden', !visible);
+    if (visible) $('speedBtn').setAttribute('aria-describedby', 'speedHint');
+    else $('speedBtn').removeAttribute('aria-describedby');
   },
   tutorialAction(this: MeridianUI): string | null {
     if (!this.battleTutorial || this.battleTutorial.step === 'arrival' || this.battleTutorial.step === 'recon') return null;

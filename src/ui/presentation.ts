@@ -57,6 +57,7 @@
         this.advanceTutorialArrival(dt);
         this.advanceBattleIntro(dt);
         let now = performance.now();
+        this.updateTutorialSpeedHint(now);
         if (this.toastUntil && now > this.toastUntil) {
           $('toast').classList.remove('show');
           this.toastUntil = 0;

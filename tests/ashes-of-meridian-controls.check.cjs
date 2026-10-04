@@ -184,6 +184,7 @@ function setup() {
     addEventListener(type, handler) { this.handlers[type] = handler; },
     setPointerCapture() {},
     setAttribute(key, value) { this[key] = value; },
+    removeAttribute(key) { delete this[key]; },
     getAttribute(key) { return this[key] ?? null; },
     querySelector(selector) { return (this.parts ||= {})[selector] ||= target(); },
     querySelectorAll(selector) {
@@ -563,6 +564,38 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   assert.equal(h.ui.battleTutorial.step, 'trainWorker');
   assert.equal(h.ui.controlsLocked, false);
   assert.deepEqual(Array.from(h.ui.game.world.explored), explored);
+});
+
+test('tutorial speed hint starts at HQ construction and expires without a click or simulation-time dependency', () => {
+  const h = setup(), ui = h.ui, s = ui.game.s;
+  s.depth = 0;
+  ui.beginBattleTutorial();
+  const button = h.document.getElementById('speedBtn'), hint = h.document.getElementById('speedHint');
+  ui.updateTutorialSpeedHint(100);
+  assert.equal(button.classList.contains('tutorial-focus'), false);
+  s.entities.push({ id: 1, team: 1, type: 'hq', kind: 'building', progress: 0 });
+  ui.updateTutorialSpeedHint(200);
+  assert.equal(button.classList.contains('tutorial-focus'), false, 'enemy HQ does not trigger hint');
+  s.entities.push({ id: 2, team: 0, type: 'hq', kind: 'building', progress: 0 });
+  ui.updateTutorialSpeedHint(300);
+  assert.equal(button.classList.contains('tutorial-focus'), true);
+  assert.equal(hint.classList.contains('hidden'), false);
+  assert.equal(button.getAttribute('aria-describedby'), 'speedHint');
+  s.speed = 3; s.time = 100;
+  ui.updateTutorialSpeedHint(5299);
+  assert.equal(button.classList.contains('tutorial-focus'), true);
+  ui.updateTutorialSpeedHint(5300);
+  assert.equal(button.classList.contains('tutorial-focus'), false);
+  assert.equal(hint.classList.contains('hidden'), true);
+  assert.equal(button.getAttribute('aria-describedby'), null);
+  ui.updateTutorialSpeedHint(6000);
+  assert.equal(button.classList.contains('tutorial-focus'), false, 'no repeated hint while construction continues');
+  assert.equal(ui.battleTutorial.step, 'buildHQ', 'hint does not advance or gate tutorial goals');
+  ui.battleTutorial.speedHintUntil = 12000;
+  ui.view = 'home'; ui.updateTutorialSpeedHint(7000);
+  assert.equal(hint.classList.contains('hidden'), true);
+  ui.view = 'game'; ui.battleTutorial = null; ui.updateTutorialSpeedHint(8000);
+  assert.equal(button.classList.contains('tutorial-focus'), false);
 });
 
 test('tutorial camera targets compensate terrain height along the viewing axis', () => {
