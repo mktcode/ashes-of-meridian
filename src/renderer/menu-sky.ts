@@ -96,8 +96,16 @@ void main(){
  if(u_kind>1.5)color=mix(u_color,vec3(1.,.96,.77),.55)*(.9+.1*noise(n*22.));
  frag=vec4(color,1.);
 }`;
+const MENU_SKY_COPY_FRAGMENT = `#version 300 es
+precision highp float;out vec4 frag;uniform sampler2D u_cachedSky;
+void main(){frag=texelFetch(u_cachedSky,ivec2(gl_FragCoord.xy),0);}`;
 class MeridianMenuSky {
   private sky: WebGLProgram;
+  private copy: WebGLProgram;
+  private cacheTexture: WebGLTexture | null = null;
+  private cacheFbo: WebGLFramebuffer | null = null;
+  private targetKey = '';
+  private cached = false;
   private body: WebGLProgram;
   private vao: WebGLVertexArrayObject;
   private buffer: WebGLBuffer;
@@ -111,6 +119,7 @@ class MeridianMenuSky {
     try {
       this.sky=renderer.programOf(FULLV,MENU_SKY_FRAGMENT);ownedPrograms.push(this.sky);
       this.body=renderer.programOf(MENU_BODY_VERTEX,MENU_BODY_FRAGMENT);ownedPrograms.push(this.body);
+      this.copy=renderer.programOf(FULLV,MENU_SKY_COPY_FRAGMENT);ownedPrograms.push(this.copy);
       const vao=g.createVertexArray(),buffer=g.createBuffer();
       if(vao)ownedVaos.push(vao);if(buffer)ownedBuffers.push(buffer);
       if(!vao||!buffer)throw Error('Menu sky allocation failed');
@@ -126,10 +135,64 @@ class MeridianMenuSky {
       throw error;
     }
   }
+  private releaseTarget() {
+    const g=this.renderer.gl;
+    if(this.cacheTexture)g.deleteTexture(this.cacheTexture);
+    if(this.cacheFbo)g.deleteFramebuffer(this.cacheFbo);
+    this.cacheTexture=null;this.cacheFbo=null;this.cached=false;
+  }
+  private prepareTarget() {
+    const r=this.renderer,g=r.gl,key=[r.width,r.height,r.quality,r.sceneSamples].join(':');
+    if(key===this.targetKey)return;
+    this.releaseTarget();this.targetKey=key;
+    // One full-resolution RGBA8 image, no second depth/MSAA allocation. Remember
+    // failed allocation until target configuration changes rather than retrying each frame.
+    this.cacheTexture=g.createTexture();this.cacheFbo=g.createFramebuffer();
+    try {
+      if(!this.cacheTexture||!this.cacheFbo){this.releaseTarget();return;}
+      g.activeTexture(g.TEXTURE0);
+      g.bindTexture(g.TEXTURE_2D,this.cacheTexture);
+      g.texImage2D(g.TEXTURE_2D,0,g.RGBA8,r.width,r.height,0,g.RGBA,g.UNSIGNED_BYTE,null);
+      g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.NEAREST);
+      g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.NEAREST);
+      g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);
+      g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
+      g.bindFramebuffer(g.FRAMEBUFFER,this.cacheFbo);
+      g.framebufferTexture2D(g.FRAMEBUFFER,g.COLOR_ATTACHMENT0,g.TEXTURE_2D,this.cacheTexture,0);
+      if(g.checkFramebufferStatus(g.FRAMEBUFFER)!==g.FRAMEBUFFER_COMPLETE)this.releaseTarget();
+    } finally {
+      g.bindFramebuffer(g.FRAMEBUFFER,r.sceneMSAAFbo||r.sceneFbo);
+    }
+  }
   draw(seed: number, family: string) {
     const r=this.renderer,g=r.gl;
-    if(seed!==this.seed||family!==this.family){this.recipe=menuSkyRecipe(seed,family);this.seed=seed;this.family=family;}
-    const recipe=this.recipe;
+    if(seed!==this.seed||family!==this.family){
+      this.recipe=menuSkyRecipe(seed,family);this.seed=seed;this.family=family;this.cached=false;
+    }
+    this.prepareTarget();
+    if(this.cached){
+      // A single-sample -> MSAA blit is not legal in WebGL 2. Draw an exact
+      // texel copy instead; planet edges already contain the scene's MSAA resolve.
+      g.useProgram(this.copy);g.activeTexture(g.TEXTURE0);
+      g.bindTexture(g.TEXTURE_2D,this.cacheTexture);
+      g.uniform1i(r.uniform(this.copy,'u_cachedSky'),0);
+      g.bindVertexArray(r.fullVao);g.drawArrays(g.TRIANGLES,0,3);
+      r.diagnostics?.draw(3);r.drawCalls++;
+      return;
+    }
+    this.drawBackdrop();
+    if(this.cacheFbo){
+      // Capture before terrain, bloom and post. The scene target supplies the
+      // original depth and sample count, so the cold frame follows the old path.
+      g.bindFramebuffer(g.READ_FRAMEBUFFER,r.sceneMSAAFbo||r.sceneFbo);
+      g.bindFramebuffer(g.DRAW_FRAMEBUFFER,this.cacheFbo);
+      g.blitFramebuffer(0,0,r.width,r.height,0,0,r.width,r.height,g.COLOR_BUFFER_BIT,g.NEAREST);
+      g.bindFramebuffer(g.FRAMEBUFFER,r.sceneMSAAFbo||r.sceneFbo);
+      this.cached=true;
+    }
+  }
+  private drawBackdrop() {
+    const r=this.renderer,g=r.gl,recipe=this.recipe;
     g.useProgram(this.sky);
     g.uniform2f(r.uniform(this.sky,'u_size'),r.width,r.height);
     g.uniform3fv(r.uniform(this.sky,'u_horizon'),recipe.horizon);
@@ -155,8 +218,9 @@ class MeridianMenuSky {
   }
   dispose(){
     const r=this.renderer,g=r.gl;
-    g.deleteProgram(this.sky);g.deleteProgram(this.body);
-    r.uniformCache.delete(this.sky);r.uniformCache.delete(this.body);
+    this.releaseTarget();
+    g.deleteProgram(this.sky);g.deleteProgram(this.body);g.deleteProgram(this.copy);
+    r.uniformCache.delete(this.sky);r.uniformCache.delete(this.body);r.uniformCache.delete(this.copy);
     g.deleteBuffer(this.buffer);g.deleteVertexArray(this.vao);
   }
 }
