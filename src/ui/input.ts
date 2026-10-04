@@ -70,11 +70,7 @@
             if (this.controlsLocked) return;
             if (b.dataset.cam === 'home') this.homeCamera();
             else if (this.game.s)
-              this.game.s!.cam.zoom = clamp(
-                this.game.s!.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18),
-                27.2,
-                115
-              );
+              this.zoomCamera(this.game.s.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18));
           }
         });
         document.addEventListener('change', e => {
@@ -152,7 +148,7 @@
           e.preventDefault();
           // WheelEvent delta modes are pixels, lines and pages respectively.
           const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
-          this.game.s.cam.zoom = clamp(this.game.s.cam.zoom * Math.exp(clamp(pixels, -240, 240) * .0015), 27.2, 115);
+          this.zoomCamera(this.game.s.cam.zoom * Math.exp(clamp(pixels, -240, 240) * .0015));
           this.lastClick = {};
         }, { passive: false });
         c.addEventListener('pointerdown', e => this.pointerDown(e));
@@ -436,11 +432,7 @@
             let a = [...this.touchPoints.values()],
               d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
             if (this.pinchDist && this.pinchDist > 0)
-              this.game.s!.cam.zoom = clamp(
-                (this.game.s!.cam.zoom * this.pinchDist) / Math.max(10, d),
-                27.2,
-                115
-              );
+              this.zoomCamera((this.game.s!.cam.zoom * this.pinchDist) / Math.max(10, d));
             const angle = d >= 10 ? Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x) : undefined;
             if (angle !== undefined && this.touchAngle !== undefined) {
               // Shortest signed arc also handles crossing the ±π seam.

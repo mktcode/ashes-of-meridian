@@ -324,6 +324,9 @@
           const s = game.s!, world = game.world!;
           worldView.sync(world);
           worldView.retainBuildingGround(s.entities);
+          // Revalidate restored cameras and resized viewports, including while paused.
+          if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')
+            Object.assign(s.cam, ui.clampCameraPoint(s.cam));
           R.camera(s.cam.x, s.cam.z, s.cam.zoom, false, 0, s.cam.yaw);
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.

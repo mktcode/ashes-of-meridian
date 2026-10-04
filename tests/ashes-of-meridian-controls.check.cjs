@@ -3,6 +3,11 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 // Logic behind UI actions; copy, layout and full navigation flows are checked manually.
+function flatCameraLimits(ui) {
+  const v=ui.R.viewport,cam=ui.game.s.cam,e=ui.game.world.extent,
+    x=cam.zoom*v.width/800/2,z=cam.zoom*v.height/800/2*Math.hypot(1.1,.82)/1.1;
+  return {x:Math.max(0,e-x+Math.min(8,x*.15)),z:Math.max(0,e-z+Math.min(8,z*.15))};
+}
 
 test('stage browsing is bounded and purely visual; continue always launches the real checkpoint', async () => {
   const h = setup(), ui = h.ui, saved = [], previews = [];
@@ -549,9 +554,9 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
   h.ui.advanceBattleIntro(3.75);
   assert.deepEqual(spoken, ['tutorial.settle', 'tutorial.warning']);
-  assert.deepEqual(h.ui.game.s.cam, { x: 84, z: -72, zoom: 50 });
+  assert.deepEqual(h.ui.game.s.cam, { x: flatCameraLimits(h.ui).x, z: -72, zoom: 50 });
   h.ui.advanceBattleIntro(4);
-  assert.deepEqual(h.ui.game.s.cam, { x: 84, z: -72, zoom: 50 });
+  assert.deepEqual(h.ui.game.s.cam, { x: flatCameraLimits(h.ui).x, z: -72, zoom: 50 });
   h.ui.advanceBattleIntro(2.5);
   assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
   assert.equal(h.ui.battleIntro, null);
@@ -569,7 +574,7 @@ test('tutorial camera targets compensate terrain height along the viewing axis',
   const home = { id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, x: -60, z: 50, progress: 1 };
   const enemy = { id: 2, team: 1, kind: 'building', type: 'hq', hp: 100, x: 60, z: -50, progress: 1 };
   s.entities = [worker, home, enemy];
-  h.ui.game.world.surface = { maxHeight: 22, entityHeight: e => e.team === 0 ? 11 : 22 };
+  h.ui.game.world.surface = { maxHeight: 22, heightAt:()=>22, entityHeight: e => e.team === 0 ? 11 : 22 };
   const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
   assert.equal(h.ui.beginBattleTutorial(), true);
   close(s.cam.z, -8.2);
@@ -588,7 +593,7 @@ test('tutorial camera targets compensate terrain height along the viewing axis',
   close(rotated.x, home.x - 8.2);
   close(rotated.z, home.z);
   const edge = h.ui.terrainCameraPoint({ x: -90, z: 0 }, 22);
-  close(edge.x, -90 - 16.4);
+  close(edge.x, -flatCameraLimits(h.ui).z - 16.4);
   close(edge.z, 0);
 });
 
@@ -620,13 +625,13 @@ test('non-tutorial starts compensate worker height without changing zoom or runn
     const h=setup(),s=h.ui.game.s;
     s.depth=depth;s.rules={kind:'single-player',mission:{id:'hq-elimination'}};
     s.parties[0].faction=faction;h.ui.profile.tutorialComplete=complete;
-    s.cam={x:-55,z:48,zoom:57,yaw:0};
-    s.entities=[{id:3,team:0,kind:'unit',type:'worker',hp:100,x:-60,z:50}];
+    s.cam={x:-25,z:48,zoom:57,yaw:0};
+    s.entities=[{id:3,team:0,kind:'unit',type:'worker',hp:100,x:-30,z:50}];
     h.ui.game.world.surface={entityHeight:()=>20};
     h.ui.battleIntro={kind:'recon'}; // A previous introduction must not block centering.
     h.ui.event('start',{});
     assert.equal(h.ui.battleTutorial,null);assert.equal(h.ui.battleIntro,null);
-    assert.equal(s.cam.x,-55);assert.ok(Math.abs(s.cam.z-(48-20*.82/1.1))<1e-9);
+    assert.equal(s.cam.x,-25);assert.ok(Math.abs(s.cam.z-(48-20*.82/1.1))<1e-9);
     assert.equal(s.cam.zoom,57);assert.equal(s.cam.yaw,0);assert.deepEqual(h.calls,[]);
   }
 });
@@ -637,7 +642,7 @@ test('home camera compensates HQ or worker height along the current yaw and reta
   h.ui.game.alive=predicate=>s.entities.filter(e=>e.hp>0&&predicate(e));
   const worker={id:3,team:0,kind:'unit',type:'worker',hp:100,x:-30,z:20},
     hq={id:4,team:0,kind:'building',type:'hq',hp:100,x:10,z:30};
-  s.entities=[worker,hq];h.ui.game.world.surface={maxHeight:20,entityHeight:e=>e.type==='hq'?20:10};
+  s.entities=[worker,hq];h.ui.game.world.surface={maxHeight:20,heightAt:()=>20,entityHeight:e=>e.type==='hq'?20:10};
   for(const yaw of [0,Math.PI/2,-Math.PI/4]) {
     s.cam.yaw=yaw;h.ui.homeCamera();
     assert.ok(Math.abs(s.cam.x-(14-Math.sin(yaw)*20*.82/1.1))<1e-9);
@@ -645,7 +650,7 @@ test('home camera compensates HQ or worker height along the current yaw and reta
   }
   hq.hp=0;s.cam.yaw=Math.PI/2;h.ui.homeCamera();
   assert.ok(Math.abs(s.cam.x-(-26-10*.82/1.1))<1e-9);assert.equal(s.cam.z,18);
-  worker.x=-200;h.ui.homeCamera();assert.ok(Math.abs(s.cam.x-(-90-20*.82/1.1))<1e-9);
+  worker.x=-200;h.ui.homeCamera();assert.ok(Math.abs(s.cam.x-(-flatCameraLimits(h.ui).z-20*.82/1.1))<1e-9);
   const before={...s.cam};h.ui.paused=true;worker.z=40;h.ui.homeCamera();
   assert.deepEqual(s.cam,before,'pause still guards the home button');
   assert.deepEqual(h.calls,[]);
@@ -810,7 +815,8 @@ test('minimap input, camera limits and world targets use the active map size aft
     h.ui.game.world.extent=extent;
     h.pointer('pointerdown',180,0,{target:h.minimap});
     h.pointer('pointerup',180,0,{target:h.minimap});
-    assert.deepEqual(h.ui.game.s.cam,{x:extent,z:-extent,zoom:50});
+    const limits=flatCameraLimits(h.ui);
+    assert.deepEqual(h.ui.game.s.cam,{x:limits.x,z:-limits.z,zoom:50});
     h.calls.length=0;
     h.pointer('pointerdown',162,18,{target:h.minimap,button:2});
     const target=h.calls[0][2];
@@ -1178,7 +1184,8 @@ test('one-finger drag preserves pan, camera bounds and no command on release', (
   h.pointer('pointermove', 240, 230);
   assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 50 });
   h.pointer('pointermove', 1240, 1230);
-  assert.deepEqual(h.ui.game.s.cam, { x: -90, z: -90, zoom: 50 });
+  const limits=flatCameraLimits(h.ui);
+  assert.deepEqual(h.ui.game.s.cam, { x: -limits.x, z: -limits.z, zoom: 50 });
   h.pointer('pointerup', 1240, 1230);
   assert.equal(h.ui.drag, null); assert.equal(h.ui.touchPoints.size, 0);
   assert.deepEqual(h.calls, []);
@@ -1389,14 +1396,15 @@ test('camera buttons and minimap tap/drag navigate to the full map bounds', () =
   for (let i = 0; i < 20; i++) h.clickCamera('out');
   assert.equal(h.ui.game.s.cam.zoom, 115);
   h.pointer('pointerdown', 100, 110, { target: h.minimap });
-  assert.ok(Math.abs(h.ui.game.s.cam.x - 10) < 1e-10);
+  assert.ok(Math.abs(h.ui.game.s.cam.x - Math.min(10,flatCameraLimits(h.ui).x)) < 1e-10);
   assert.ok(Math.abs(h.ui.game.s.cam.z - 20) < 1e-10);
   assert.equal(h.ui.game.s.cam.zoom, 115);
   h.pointer('pointermove', 180, 0, { target: h.minimap });
-  assert.deepEqual(h.ui.game.s.cam, { x: 90, z: -90, zoom: 115 });
+  const limits=flatCameraLimits(h.ui);
+  assert.deepEqual(h.ui.game.s.cam, { x: limits.x, z: -limits.z, zoom: 115 });
   h.pointer('pointerup', 180, 0, { target: h.minimap });
   h.pointer('pointermove', 90, 90, { target: h.minimap });
-  assert.deepEqual(h.ui.game.s.cam, { x: 90, z: -90, zoom: 115 });
+  assert.deepEqual(h.ui.game.s.cam, { x: limits.x, z: -limits.z, zoom: 115 });
   assert.deepEqual(h.calls, []);
 });
 

@@ -752,8 +752,9 @@ test('camera rotation holds the central terrain anchor across heights, slopes an
   ui.game.world.surface=r.surface;
   Object.assign(ui.game.s.cam,{x:162,z:162,yaw:0});
   ui.rotateCamera(Math.PI);
-  assert.ok(Math.abs(ui.game.s.cam.z-(162+2*20*.82/1.1))<.003,
-    'rotation can retain an elevated edge anchor beyond the ground-plane map bounds');
+  r.camera(ui.game.s.cam.x,ui.game.s.cam.z,ui.game.s.cam.zoom,false,0,ui.game.s.cam.yaw);
+  const center=r.ground(sx,sy);
+  assert.ok(Math.abs(center.x)<180&&Math.abs(center.z)<180,'bounds take precedence and keep the central terrain anchor on-map');
 });
 
 test('terrain camera focus frames elevated start and home targets at every heading', () => {
@@ -773,7 +774,7 @@ test('terrain camera focus frames elevated start and home targets at every headi
   }
 });
 
-test('camera can center all map edges at close zoom including elevated terrain and rotated headings', () => {
+test('camera can reach all map edges without centering exterior scenery across zoom, elevation and headings', () => {
   for (const viewport of [{left:0,top:55,width:390,height:518},{left:17,top:63,width:1000,height:401.5}]) {
     const {r,context}=setup({viewport,scripts:['battlefield-surface','world','ui-core','ui-actions']}),
       Surface=vm.runInContext('BattlefieldSurface',context), UI=vm.runInContext('MeridianUI',context),
@@ -784,25 +785,49 @@ test('camera can center all map edges at close zoom including elevated terrain a
       for (const yaw of [0,Math.PI/4,Math.PI/2,Math.PI,-Math.PI/2]) {
         ui.game.s.cam.yaw=yaw;
         for (const [x,z] of [[-180,-180],[180,-180],[-180,180],[180,180],[0,-180],[0,180]]) {
-          const focus=ui.terrainCameraPoint({x,z},height);
-          ui.center(focus.x,focus.z);
           for (const zoom of [115,27.2]) {
-            const cam=ui.game.s.cam;cam.zoom=zoom;r.camera(cam.x,cam.z,zoom,false,0,yaw);
+            const cam=ui.game.s.cam;cam.zoom=zoom;
+            const focus=ui.terrainCameraPoint({x,z},height);
+            ui.center(focus.x,focus.z);r.camera(cam.x,cam.z,zoom,false,0,yaw);
             const p=r.project(x,height,z),v=r.viewport;
-            assert.ok(Math.hypot(p.x-(v.left+v.width/2),p.y-(v.top+v.height/2))<.003,
-              'map edge remains reachable and centered after zooming in');
+            assert.ok(p.x>v.left&&p.x<v.right&&p.y>v.top&&p.y<v.bottom,
+              'map edge remains reachable inside the visible rectangle');
             // Stay inside the surface for ray intersections at floating-point boundaries.
             const px=x*.98,pz=z*.98,pick=r.project(px,height,pz),hit=r.ground(pick.x,pick.y);
             assert.ok(Math.hypot(hit.x-px,hit.z-pz)<.003,'buildable edge terrain remains pickable');
           }
         }
         ui.center(1e6,-1e6);
-        const cam=ui.game.s.cam,shift=height*.82/1.1;
-        assert.ok(Math.abs(cam.x-(180-Math.min(0,Math.sin(yaw)*shift)))<1e-9);
-        assert.ok(Math.abs(cam.z-(-180-Math.max(0,Math.cos(yaw)*shift)))<1e-9);
+        const cam=ui.game.s.cam,v=r.viewport;
+        r.camera(cam.x,cam.z,cam.zoom,false,0,yaw);
+        const anchor=r.ground(v.left+v.width/2,v.top+v.height/2);
+        assert.ok(Math.abs(anchor.x)<=180.003&&Math.abs(anchor.z)<=180.003,'central terrain anchor stays on-map');
       }
     }
   }
+});
+
+test('bottom camera limit uses local terrain and viewport size, not the highest mountain', () => {
+  const {r,context}=setup({viewport:{left:0,top:63,width:1600,height:428},
+    scripts:['battlefield-surface','world','ui-core','ui-actions']}),
+    Surface=vm.runInContext('BattlefieldSurface',context), UI=vm.runInContext('MeridianUI',context),ui=Object.create(UI.prototype);
+  r.resize();r.surface=new Surface(180,2.5,(x,z)=>z<0?72:20);
+  ui.R=r;ui.game={world:{extent:180,surface:r.surface},s:{cam:{zoom:115,yaw:0}}};
+  for(const zoom of [115,27.2]) {
+    ui.game.s.cam.zoom=zoom;ui.center(0,1e6);
+    const cam=ui.game.s.cam,v=r.viewport;r.camera(cam.x,cam.z,zoom);
+    let outside=0,total=0;
+    for(let y=0;y<20;y++)for(let x=0;x<20;x++) {
+      const p=r.ground(v.left+(x+.5)*v.width/20,v.top+(y+.5)*v.height/20);
+      total++;if(Math.abs(p.x)>180||Math.abs(p.z)>180)outside++;
+    }
+    assert.ok(outside/total<=.15,'exterior cannot occupy most of the view at the lower limit');
+    const edge=r.project(0,20,176);
+    assert.ok(edge.y>v.top&&edge.y<v.bottom,'buildable bottom edge stays visible');
+  }
+  ui.zoomCamera(115);
+  const before=ui.game.s.cam.z;ui.zoomCamera(27.2);ui.center(0,1e6);
+  assert.ok(ui.game.s.cam.z>before,'close zoom allows approaching the edge again');
 });
 
 test('orthographic close zoom keeps raised terrain ahead of the camera without changing framing or picking',()=>{

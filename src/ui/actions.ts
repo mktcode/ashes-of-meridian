@@ -1,5 +1,6 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
+    const cameraMapBounds = new WeakMap<Battlefield, { yaw: number; extent: number; surface: BattlefieldSurface | null; low: number; high: number }>();
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
         // Confirmation dialogs may submit while paused, but never during a cinematic.
@@ -39,13 +40,51 @@
         Object.assign(this.game.s.cam, this.clampCameraPoint({ x, z }));
       },
       clampCameraPoint(this: MeridianUI, point: Position): Position {
-        const world = this.game.world!, limit = world.extent, yaw = this.game.s!.cam.yaw ?? 0,
-          shift = (world.surface?.maxHeight ?? 0) * .82 / 1.1,
-          dx = Math.sin(yaw) * shift, dz = Math.cos(yaw) * shift;
-        // Every map edge must be reachable even at close zoom. Raised terrain
-        // projects away from the y=0 pivot, so extend bounds along that offset.
-        return { x: clamp(point.x, -limit - Math.max(0, dx), limit - Math.min(0, dx)),
-          z: clamp(point.z, -limit - Math.max(0, dz), limit - Math.min(0, dz)) };
+        const world = this.game.world!, limit = world.extent, cam = this.game.s!.cam,
+          yaw = cam.yaw ?? 0, sn = Math.sin(yaw), cs = Math.cos(yaw), surface = world.surface,
+          v = this.R.viewport, windowHeight = typeof innerHeight === 'number' ? innerHeight : v.height,
+          halfX = cam.zoom * v.width / windowHeight / 2,
+          halfZ = cam.zoom * v.height / windowHeight / 2 * Math.hypot(1.1, .82) / 1.1;
+        let bounds = cameraMapBounds.get(world);
+        if (!bounds || bounds.yaw !== yaw || bounds.extent !== limit || bounds.surface !== surface) {
+          let low = Infinity, high = -Infinity;
+          const sample = (x: number, z: number, height: number) => {
+            const p = sn * x + cs * z - height * .82 / 1.1;
+            low = Math.min(low, p); high = Math.max(high, p);
+          };
+          if (surface?.heights) {
+            for (let z = 0; z < surface.size; z++) for (let x = 0; x < surface.size; x++)
+              sample(x * surface.step - limit, z * surface.step - limit, surface.heights[z * surface.size + x]);
+          } else for (const x of [-limit, limit]) for (const z of [-limit, limit])
+            sample(x, z, surface?.heightAt?.(x, z) ?? 0);
+          bounds = { yaw, extent: limit, surface, low, high }; cameraMapBounds.set(world, bounds);
+        }
+        // Clamp the visible rectangle, not its y=0 pivot. A small inside-screen
+        // margin keeps edge targets reachable without centering the exterior.
+        const horizontal = limit * (Math.abs(sn) + Math.abs(cs)),
+          insetX = Math.max(0, halfX - Math.min(8, halfX * .15)),
+          insetZ = Math.max(0, halfZ - Math.min(8, halfZ * .15)),
+          fit = (p: number, lo: number, hi: number, inset: number) =>
+            lo + inset > hi - inset ? (lo + hi) / 2 : clamp(p, lo + inset, hi - inset),
+          u = fit(cs * point.x - sn * point.z, -horizontal, horizontal, insetX),
+          w = fit(sn * point.x + cs * point.z, bounds.low, bounds.high, insetZ),
+          x = cs * u + sn * w, z = -sn * u + cs * w;
+        // A rotated map's projected AABB contains empty corners. Keep the
+        // central terrain anchor on the map as well, using local—not peak—height.
+        let height = surface?.heightAt?.(x, z) ?? 0;
+        for (let i = 0; i < 6; i++) height = surface?.heightAt?.(
+          x + sn * height * .82 / 1.1, z + cs * height * .82 / 1.1) ?? 0;
+        const ax = x + sn * height * .82 / 1.1, az = z + cs * height * .82 / 1.1;
+        if (Math.abs(ax) <= limit && Math.abs(az) <= limit) return { x, z };
+        const anchor = { x: clamp(ax, -limit, limit), z: clamp(az, -limit, limit) },
+          shift = (surface?.heightAt?.(anchor.x, anchor.z) ?? 0) * .82 / 1.1;
+        return { x: anchor.x - sn * shift, z: anchor.z - cs * shift };
+      },
+      zoomCamera(this: MeridianUI, zoom: number) {
+        if (!this.game.s || this.controlsLocked) return;
+        const cam = this.game.s.cam;
+        cam.zoom = clamp(zoom, 27.2, 115);
+        Object.assign(cam, this.clampCameraPoint(cam));
       },
       terrainCameraPoint(this: MeridianUI, point: Position, height: number): Position {
         const yaw = this.game.s!.cam.yaw ?? 0;

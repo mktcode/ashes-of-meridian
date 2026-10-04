@@ -9,6 +9,23 @@ function setup() {
     { globals: { innerHeight: 1000 } });
   return vm.runInContext('({TerrainModels, BattlefieldView})', context);
 }
+test('edge recon reveals only its clipped circular footprint, not a corridor inside the playable map', () => {
+  const context=loadScripts(['core','world']),Battlefield=vm.runInContext('Battlefield',context),
+    world=Object.create(Battlefield.prototype),extent=40,cellSize=2,gridSize=40,
+    visible=new Uint8Array(gridSize*gridSize),explored=new Uint8Array(visible.length),
+    scan={x:35,z:35,r:9,team:0};
+  Object.assign(world,{extent,cellSize,gridSize,visible,explored,surface:null,
+    sight:[{visible,explored}],fogPixels:new Uint8Array(visible.length),fogVersion:0});
+  world.reveal([], [scan]);
+  assert.ok(visible.some(v=>v===255));
+  for(let z=0;z<gridSize;z++)for(let x=0;x<gridSize;x++) {
+    const inside=Math.hypot((x+.5)*cellSize-extent-scan.x,(z+.5)*cellSize-extent-scan.z)<scan.r+cellSize*.4,
+      i=z*gridSize+x;
+    assert.equal(visible[i],inside?255:0);
+    assert.equal(world.fogPixels[i],inside?255:0);
+  }
+});
+
 function relief(extent, innerExtent = 0) {
   const step = 5, size = extent * 2 / step + 3;
   return { extent, innerExtent, step, size,

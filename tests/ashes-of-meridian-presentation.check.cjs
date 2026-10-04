@@ -810,6 +810,8 @@ function appClock(diagnostic = false) {
       view = 'game'; paused = false; pointer = {}; pings = [];
       showHome() {} saveBattle() {} autosaveBattle() {} drawMinimap() {} drawOverlay() { renderWork.overlay++; }
       selectionIds() { return new Set(); }
+      cameraClamp = p => ({x:p.x,z:p.z});
+      clampCameraPoint(p) { return this.cameraClamp(p); }
       tick(dt) { ticks.push(dt); }
     },
     renderEntity(R,e,t,options) { entitiesDrawn.push({entity:e,options}); },
@@ -830,6 +832,18 @@ function appClock(diagnostic = false) {
     }
   };
 }
+
+test('app revalidates restored and resized cameras while paused but leaves cinematic travel alone',()=>{
+  const h=appClock(),cam=h.game.s.cam;let calls=0;
+  h.ui.paused=true;cam.x=1000;
+  h.ui.cameraClamp=p=>{calls++;return {x:Math.min(5,p.x),z:p.z};};
+  h.frame(0);assert.equal(cam.x,5);assert.ok(calls>0);
+  h.renderer.viewport.width=1600;cam.x=1000;
+  h.frame(20);assert.equal(cam.x,5);
+  const before=calls;h.ui.battleIntro={};cam.x=1000;
+  h.frame(40);assert.equal(cam.x,1000);assert.equal(calls,before);
+  assert.deepEqual(h.errors,[]);assert.deepEqual(h.steps,[]);
+});
 
 test('result background retains scene construction but invalidates camera, resize, quality and view changes',()=>{
   const a=appClock();a.game.s.result={win:true};a.ui.paused=true;a.ui.modalKind='result';
