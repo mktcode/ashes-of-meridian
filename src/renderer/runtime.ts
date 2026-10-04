@@ -20,6 +20,7 @@
       depthProg: WebGLProgram;
       occlusionProg: WebGLProgram;
       private activeSceneProgram?: WebGLProgram;
+      private materialPrograms: Partial<Record<number, WebGLProgram>> = {};
       skyProg: WebGLProgram;
       postProg: WebGLProgram;
       bloomProg: WebGLProgram;
@@ -109,6 +110,9 @@
           );
         const gl = this.gl = context;
         this.program = this.programOf(VERT, FRAG);
+        // Bounded, context-lifetime variants; never compile on material/frame changes.
+        for (const material of [MAT.LANDSCAPE, MAT.LEAF])
+          this.materialPrograms[material] = this.programOf(VERT, sceneMaterialFragment(material));
         this.depthProg = this.programOf(DEPTHV, DEPTHF);
         this.occlusionProg = this.programOf(OCCLUSIONV, OCCLUSIONF);
         this.skyProg = this.programOf(FULLV, SKYF);
@@ -909,6 +913,11 @@
         let g = this.gl;
         for (let b of Object.values(map)) {
           if (b.dirty) {
+            b.sceneMaterial = b.n ? b.data[21] : undefined;
+            if (b.sceneMaterial !== MAT.LANDSCAPE && b.sceneMaterial !== MAT.LEAF) b.sceneMaterial = undefined;
+            if (b.sceneMaterial !== undefined) for (let i = 1; i < b.n; i++) {
+              if (b.data[i * 22 + 21] !== b.sceneMaterial) { b.sceneMaterial = undefined; break; }
+            }
             g.bindBuffer(g.ARRAY_BUFFER, b.buffer);
             g.bufferData(g.ARRAY_BUFFER, b.data.subarray(0, b.n * 22), g.DYNAMIC_DRAW);
             this.diagnostics?.upload(b.n * 88);
@@ -935,7 +944,8 @@
         }
         return !(left || right || bottom || top || near || far);
       }
-      drawBatches(map: RenderBatches, matrix?: Float32Array, excludedNames?: string | readonly string[], includedName?: string) {
+      drawBatches(map: RenderBatches, matrix?: Float32Array, excludedNames?: string | readonly string[], includedName?: string,
+        sceneTime?: number, modelTime = sceneTime) {
         let g = this.gl;
         for (const b of Object.values(map)) {
           const excluded = typeof excludedNames === 'string' ? b.source === excludedNames : excludedNames?.includes(b.source);
@@ -943,6 +953,12 @@
             (includedName !== undefined && b.source !== includedName) || !this.bucketVisible(b, matrix)) continue;
           let m = this.meshes[b.mesh];
           if (!m) continue;
+          // Explicit scene-only opt-in: depth, occlusion and custom environments
+          // retain their own programs. Mixed/other materials use the shared shader.
+          if (sceneTime !== undefined) {
+            const program = (b.sceneMaterial === undefined ? undefined : this.materialPrograms[b.sceneMaterial]) ?? this.program;
+            if (program !== this.activeSceneProgram) this.bindSceneProgram(sceneTime, modelTime ?? sceneTime, program);
+          }
           g.bindVertexArray(m.vao);
           g.bindBuffer(g.ARRAY_BUFFER, b.buffer);
           for (let i = 0; i < 4; i++) {
@@ -1143,7 +1159,10 @@
       render(time: number, modelTime = time, thumbnails?: () => void, retainScene = false) {
         const g = this.gl, environment = this.environment,
           skyProg = environment?.skyProg ?? this.skyProg,
-          drawScene = environment ? environment.drawSceneBatches.bind(environment, time, modelTime) : this.drawBatches.bind(this);
+          drawScene = (map: RenderBatches, matrix?: Float32Array, excluded?: string | readonly string[], included?: string) => {
+            if (environment) environment.drawSceneBatches(time, modelTime, map, matrix, excluded, included);
+            else this.drawBatches(map, matrix, excluded, included, time, modelTime);
+          };
         environment?.beginFrame(modelTime);
         this.frame++;
         this.drawCalls = 0;

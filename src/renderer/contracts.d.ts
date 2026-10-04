@@ -10,6 +10,8 @@ interface RenderBucket {
   dirty: boolean;
   mesh: string;
   source: string;
+  // Eligible homogeneous material, derived from the instance data on upload.
+  sceneMaterial?: number;
   bounds?: [number, number, number, number, number, number];
 }
 type RenderBatches = Record<string, RenderBucket>;

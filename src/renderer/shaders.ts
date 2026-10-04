@@ -59,7 +59,12 @@ vec3 normal=a_normal;if(a_material>3.5)normal/=vec3(dot(a_model[0].xyz,a_model[0
     const FRAG = `#version 300 es
 precision highp float;
 precision highp int;
-in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;flat in float v_mat;
+in vec3 v_pos;in vec3 v_n;in vec4 v_col;in float v_glow;in vec4 v_shadow;
+#ifndef SCENE_MATERIAL
+flat in float v_mat;
+#else
+const float v_mat=SCENE_MATERIAL;
+#endif
 in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
@@ -407,6 +412,11 @@ lit+=base*localLighting(v_pos,n)*(1.-clamp(v_glow,0.,1.));
 lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
 float field=texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.)).r;float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
+    // Only homogeneous landscape/leaf batches opt in. All lighting and material
+    // formulas stay shared; the compiler can eliminate unrelated material paths.
+    function sceneMaterialFragment(material: number) {
+      return FRAG.replace('#version 300 es', `#version 300 es\n#define SCENE_MATERIAL ${material}.`);
+    }
     // A depth-inverted, unlit contour silhouette. Visibility is decided by the
     // caller per entity, never by the terrain fog under the occluding mountain.
     const OCCLUSIONV = `#version 300 es

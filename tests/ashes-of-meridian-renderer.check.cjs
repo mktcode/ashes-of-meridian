@@ -4,6 +4,57 @@ const vm = require('node:vm');
 const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 
 // API orchestration and shader-source contracts only: no GPU/GLSL execution in Node.
+test('scene material variants share every material and lighting formula with the general shader', () => {
+  const context = loadScripts(RENDERER_SCRIPTS);
+  const { FRAG, MAT, sceneMaterialFragment } = vm.runInContext('({FRAG, MAT, sceneMaterialFragment})', context);
+  for (const material of [MAT.LANDSCAPE, MAT.LEAF]) {
+    const shader = sceneMaterialFragment(material), define = `#define SCENE_MATERIAL ${material}.\n`;
+    assert.ok(shader.startsWith('#version 300 es\n' + define));
+    assert.equal(shader.replace(define, ''), FRAG, 'specialization only supplies a compile-time material');
+  }
+});
+
+test('upload tracks eligible homogeneous materials and clears stale specialization on reuse', () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
+  const uploads = [], r = Object.assign(Object.create(Renderer.prototype), { gl: {
+    bindBuffer() {}, bufferData(target, data) { uploads.push(data.length); }
+  } });
+  const b = { n: 2, data: new Float32Array(44), buffer: {}, dirty: true };
+  const upload = (...materials) => {
+    b.n = materials.length; materials.forEach((m, i) => b.data[i * 22 + 21] = m); b.dirty = true; r.upload({ b });
+  };
+  upload(8, 8); assert.equal(b.sceneMaterial, 8);
+  r.upload({ b }); assert.equal(uploads.length, 1, 'unchanged static buckets are not uploaded/rescanned');
+  upload(8, 13); assert.equal(b.sceneMaterial, undefined, 'mixed instanced material values cannot specialize');
+  upload(13, 13); assert.equal(b.sceneMaterial, 13);
+  upload(2); assert.equal(b.sceneMaterial, undefined, 'models retain the general shader');
+  upload(8); upload(); assert.equal(b.sceneMaterial, undefined, 'empty reuse clears the old material');
+  upload(13); assert.equal(b.sceneMaterial, 13);
+});
+
+test('specialized scene draws preserve order, filter before binding and leave other passes alone', () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
+  const bindings = [], draws = []; let active = 'depth';
+  const gl = new Proxy({ drawArraysInstanced() { draws.push(active); } }, {
+    get: (o, key) => key in o ? o[key] : () => {}
+  });
+  const r = Object.assign(Object.create(Renderer.prototype), { gl, quality: 2, meshes: { mesh: { vao: {}, count: 3 } },
+    materialPrograms: { 8: 'landscape', 13: 'leaf' }, program: 'general', drawCalls: 0,
+    bindSceneProgram(time, modelTime, program) {
+      bindings.push([time, modelTime, program]); active = this.activeSceneProgram = program;
+    }
+  });
+  const bucket = (material, source = 'visible') => ({ mesh: 'mesh', source, n: 1, buffer: {}, sceneMaterial: material });
+  const map = { a: bucket(8), b: bucket(8), hidden: bucket(13, 'skip'), c: bucket(13), d: bucket(undefined) };
+  r.drawBatches(map, undefined, 'skip', undefined, 12, 7);
+  assert.deepEqual(draws, ['landscape', 'landscape', 'leaf', 'general']);
+  assert.deepEqual(bindings, [[12, 7, 'landscape'], [12, 7, 'leaf'], [12, 7, 'general']]);
+  bindings.length = draws.length = 0; active = 'depth';
+  r.drawBatches(map, undefined, 'skip');
+  assert.deepEqual(bindings, [], 'depth/occlusion/custom passes do not opt into material binding');
+  assert.deepEqual(draws, ['depth', 'depth', 'depth', 'depth']);
+});
+
 test('metal/bio sampling uses scaled mesh-local positions and normals, not world coordinates', () => {
   const context = loadScripts(RENDERER_SCRIPTS);
   const { VERT, FRAG } = vm.runInContext('({VERT, FRAG})', context);
