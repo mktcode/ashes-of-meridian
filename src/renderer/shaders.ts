@@ -68,16 +68,20 @@ const float v_mat=SCENE_MATERIAL;
 in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
-uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
+uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;uniform float u_fogExtent;
 uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
 uniform float u_habitatOn;uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
 out vec4 frag;
-float battlefieldFog(vec2 position){
- vec2 uv=(position+u_extent)/(u_extent*2.);
- // CLAMP_TO_EDGE must not extrude recon visibility into the exterior scenery.
+float sceneryFog(vec2 position){
+ vec2 uv=(position+u_fogExtent)/(u_fogExtent*2.);
  if(any(lessThan(uv,vec2(0.)))||any(greaterThan(uv,vec2(1.))))return 0.;
  return texture(u_fog,uv).r;
+}
+float battlefieldFog(vec2 position){
+ // Gameplay overlays stay bounded; opaque scenery uses the circular visual halo.
+ if(any(greaterThan(abs(position),vec2(u_extent))))return 0.;
+ return sceneryFog(position);
 }
 // Spatially indexed shadowless diffuse lighting in the existing scene pass.
 vec4 lightTexel(int index){
@@ -102,7 +106,7 @@ vec3 localLighting(vec3 position,vec3 normal){
   result+=color.rgb*color.a*diffuse*edge*edge/(1.+d2*.12);
  }
  // Do not brighten merely explored/unseen terrain across a sight boundary.
- if(u_fogOn>.5)result*=smoothstep(.75,1.,battlefieldFog(position.xz));
+ if(u_fogOn>.5)result*=smoothstep(.75,1.,sceneryFog(position.xz));
  return result;
 }
 float shadow(){if(u_shadowOn<.5||v_glow>1.)return 1.;vec3 p=v_shadow.xyz/v_shadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float bias=max(u_shadowBias*2.5*(1.-dot(normalize(v_n),normalize(vec3(-64.,110.,43.)))),u_shadowBias);float s=0.;vec2 texel=1./vec2(textureSize(u_shadow,0));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)s+=p.z-bias>texture(u_shadow,p.xy+vec2(x,y)*texel).r?.36:1.;return s/9.;}
@@ -250,10 +254,11 @@ void main(){
  }
  if(v_mat==${PLACEMENT_GUIDE_MATERIAL}.){
   float sight=battlefieldFog(v_pos.xz);
-  // Fine world-anchored hologram lines; the interior contributes no color at all.
-  vec2 cell=abs(fract(v_pos.xz/.75+.5)-.5)*.75;
-  float pixel=max(fwidth(v_pos.x),fwidth(v_pos.z));
-  float line=1.-smoothstep(.008,.018+min(pixel*.75,.04),min(cell.x,cell.y));
+  // Fixed world spacing, pixel-wide analytic AA; do not draw unresolved stripes.
+  vec2 q=v_pos.xz/3.,pixel=max(fwidth(q),vec2(.00001));
+  vec2 cell=abs(fract(q+.5)-.5)/pixel;
+  float line=(1.-smoothstep(.5,1.5,min(cell.x,cell.y)))
+    *(1.-smoothstep(1./8.,1./4.,max(pixel.x,pixel.y)));
   frag=vec4(v_col.rgb,v_col.a*line*step(.75,sight)*clamp(max(v_col.r,max(v_col.g,v_col.b))*2.,0.,1.));return;
  }
  if(v_mat==${CONTACT_SHADOW_MATERIAL}.){
@@ -426,7 +431,7 @@ lit=mix(lit,base*1.35,glowMix);lit+=base*max(v_glow-1.,0.)*.38;
 lit+=base*localLighting(v_pos,n)*(1.-clamp(v_glow,0.,1.));
 lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
-float field=battlefieldFog(v_pos.xz);float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
+float field=sceneryFog(v_pos.xz);float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
     // Only homogeneous landscape/leaf batches opt in. All lighting and material
     // formulas stay shared; the compiler can eliminate unrelated material paths.
     function sceneMaterialFragment(material: number) {

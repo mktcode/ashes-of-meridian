@@ -66,6 +66,7 @@
       uniformCache: Map<WebGLProgram, Record<string, WebGLUniformLocation | null>>;
       fullVao: WebGLVertexArrayObject | null;
       fogSize: number;
+      fogExtent: number;
       fogTex: WebGLTexture | null;
       groundTex: WebGLTexture | null;
       desertRockTex: WebGLTexture | null;
@@ -168,6 +169,7 @@
         EntityModels.upload(this);
         // Model/menu previews only need an opaque texel; each world supplies its own raster.
         this.fogSize = 1;
+        this.fogExtent = this.extent;
         this.fogTex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this.fogTex);
         gl.texImage2D(
@@ -1125,7 +1127,8 @@
         let t = -a[1] / (b[1] - a[1]);
         return { x: a[0] + (b[0] - a[0]) * t, z: a[2] + (b[2] - a[2]) * t };
       }
-      fog(data: Uint8Array<ArrayBuffer>, size: number) {
+      fog(data: Uint8Array<ArrayBuffer>, size: number, extent = this.extent) {
+        this.fogExtent = extent;
         let g = this.gl;
         g.bindTexture(g.TEXTURE_2D, this.fogTex);
         g.pixelStorei(g.UNPACK_ALIGNMENT, 1);
@@ -1179,6 +1182,7 @@
         g.uniform3fv(this.uniform(program, 'u_eye'), this.eye);
         g.uniform3fv(this.uniform(program, 'u_haze'), this.haze as [number, number, number]);
         g.uniform1f(this.uniform(program, 'u_extent'), this.extent);
+        g.uniform1f(this.uniform(program, 'u_fogExtent'), this.fogExtent ?? this.extent);
         g.uniform1ui(this.uniform(program, 'u_decorSeed'), this.decorSeed);
         g.uniform3fv(this.uniform(program, 'u_sun'), lighting.sun as [number, number, number]);
         g.uniform3fv(this.uniform(program, 'u_skyLight'), lighting.sky as [number, number, number]);

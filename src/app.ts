@@ -327,7 +327,7 @@
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
-          worldView.sync(world);
+          worldView.sync(world, true, s);
           worldView.retainBuildingGround(s.entities);
           // Revalidate restored cameras and resized viewports, including while paused.
           if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')

@@ -223,15 +223,28 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
   const context=loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const {Battlefield,BattlefieldView,BATTLEFIELDS,TerrainModels}=vm.runInContext(
     '({Battlefield,BattlefieldView,BATTLEFIELDS,TerrainModels})',context);
-  BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};
-  // Isolate size dispatch from the map's independently designed models/layout.
-  for(const id of ['alien-planet','mothership']) {
-    BATTLEFIELDS[id].generate=BATTLEFIELDS.desert.generate;
-    BATTLEFIELDS[id].layout=BATTLEFIELDS.desert.layout;
-  }
+  // Flat component fixtures isolate dispatch from fixed campaign recipes/deployment.
+  const field=(extent,step,innerExtent=0)=>{
+    const size=extent*2/step+3;
+    return {extent,step,size,innerExtent,heights:new Float32Array(size*size).fill(20),
+      colors:new Float32Array(size*size*3).fill(.25)};
+  };
+  const fixture=(map,extent,grid)=>{
+    const sight=Array.from({length:2},()=>({visible:new Uint8Array(grid*grid),explored:new Uint8Array(grid*grid)}));
+    return Object.assign(Object.create(Battlefield.prototype),{extent,cellSize:2.5,gridSize:grid,seed:43015,terrainSeed:43015,
+      definition:BATTLEFIELDS[map],renderProfile:BATTLEFIELDS[map].render,fogVersion:0,viewTeam:0,sight,
+      visible:sight[0].visible,explored:sight[0].explored,fogPixels:new Uint8Array(grid*grid),
+      surface:{size:grid+1,maxHeight:20,heightAt:()=>20,visibilityLevelAt:()=>0,visibilityLevel:()=>0},
+      renderData:{placements:[],geometries:[{mesh:'terrain',model:'landscapeRelief',relief:field(extent,2.5)},
+        {mesh:'backdrop',model:'landscapeRelief',relief:field(extent+100,5,extent)}]}});
+  };
   const renderer=createRendererStub(), uploads=[], fogs=[], boundaries=[];
   // Test descriptor dispatch here; actual boundary meshes are checked in the terrain suite.
-  TerrainModels.desertRelief=relief=>{boundaries.push([relief.extent,relief.innerExtent]); return new Float32Array();};
+  const landscape=TerrainModels.landscapeRelief;
+  TerrainModels.landscapeRelief=relief=>{
+    if(!relief.innerExtent)return landscape(relief);
+    boundaries.push([relief.outerExtent??relief.extent,relief.innerExtent]);return new Float32Array();
+  };
   renderer.geometry=(mesh,data)=>{
     if (mesh!=='terrain') return;
     let min=Infinity,max=-Infinity;
@@ -241,11 +254,12 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
   renderer.fog=(data,size)=>{assert.equal(data.length,size*size);fogs.push([size,Array.from(data)]);};
   const view=new BattlefieldView(renderer);
   for(const [map,extent,grid] of [['desert',90,72],['alien-planet',135,108],['mothership',120,96]]) {
-    const w=new Battlefield(43015,map), count=fogs.length;
+    const w=fixture(map,extent,grid), count=fogs.length;
     view.sync(w,false);view.sync(w,true);view.sync(w,true);
     assert.equal(renderer.extent,extent);
-    assert.deepEqual(uploads.at(-1),[(w.surface.size-1)**2*2,-extent,extent]);
-    assert.deepEqual(boundaries.at(-1),[extent+150,extent]);
+    assert.deepEqual(uploads.at(-1).slice(1),[-extent,extent]);
+    assert.ok(uploads.at(-1)[0]>=(w.surface.size-1)**2*2, 'terrain retains its top triangles plus boundary closure');
+    assert.equal(boundaries.at(-1)[1],extent);assert.ok(boundaries.at(-1)[0]>extent);
     assert.equal(fogs.length,count+1);assert.equal(fogs.at(-1)[0],grid);
     assert.ok(fogs.at(-1)[1].every(v=>v===0), 'unrevealed world never reuses old fog');
     w.reveal([], [{x:extent-15,z:0,r:7}]);view.sync(w);

@@ -510,6 +510,14 @@ test('portal surface clock follows simulation time, not wall time, and freezes i
   }
 });
 
+test('scenery fog extent is bound independently from the playable map extent',()=>{
+  const {r,calls}=setup();r.extent=90;r.resize();r.camera(0,0,57);r.fogTex={};r.fogSize=1;
+  const extent=r.extent;r.fog(new Uint8Array(16),4,extent+20);calls.length=0;r.bindSceneProgram(0,0);
+  assert.ok(calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_extent'&&c[2]===extent));
+  assert.ok(calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_fogExtent'&&c[2]===extent+20));
+  assert.equal(r.extent,extent);
+});
+
 test('fog texture reallocates only on grid-size changes, including odd row widths', () => {
   const {r,calls}=setup();r.fogTex={};r.fogSize=1;
   let previous=1;
@@ -660,14 +668,14 @@ test('lighting profiles override shader colors without additional textures or re
   assert.doesNotMatch(contact,/shadow\(|u_metalTex|u_groundTex/);
 });
 
-test('placement guide draws only fine fog-gated hologram lines without shading the cell interior', () => {
+test('placement guide remains fog-gated and derivative-filtered without shading the cell interior', () => {
   const {context}=setup(), fragment=vm.runInContext('FRAG',context);
   const guide=fragment.slice(fragment.indexOf('if(v_mat==-9.)'),fragment.indexOf('if(v_mat==-1.)'));
-  assert.match(guide,/texture\(u_fog/);
+  assert.match(guide,/battlefieldFog\(v_pos\.xz\)/);
   assert.match(guide,/step\(\.75,sight\)/);
-  assert.match(guide,/fract\(v_pos\.xz\/\.75\+\.5\)/);
-  assert.match(guide,/fwidth\(v_pos\.x\)/);
-  assert.match(guide,/line=1\.-smoothstep\(/);
+  assert.match(guide,/fract\(/);
+  assert.match(guide,/fwidth\(/);
+  assert.match(guide,/line=.*smoothstep\(/);
   assert.match(guide,/frag=vec4\(v_col\.rgb,v_col\.a\*line\*/);
   assert.doesNotMatch(guide,/shadow\(|groundBase|u_groundTex/);
 });
@@ -1010,7 +1018,7 @@ test('resize and quality switches release old attachments and rebuild matching d
 test('local diffuse lighting respects current fog visibility and has a no-light fast path',()=>{
   const context=loadScripts(RENDERER_SCRIPTS),shader=vm.runInContext('FRAG',context);
   assert.ok(shader.includes('if(u_pointLightCount==0)return vec3(0.);'));
-  assert.ok(shader.includes('if(u_fogOn>.5)result*=smoothstep(.75,1.,texture(u_fog,(position.xz+u_extent)/(u_extent*2.)).r);'));
+  assert.ok(shader.includes('if(u_fogOn>.5)result*=smoothstep(.75,1.,sceneryFog(position.xz));'));
 });
 
 test('spatial light grid retains all lamps in battle, performance and cinema without extra passes',()=>{

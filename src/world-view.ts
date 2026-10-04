@@ -132,11 +132,86 @@ function buildingGroundGeometry(world: Battlefield, e: RenderEntity): { geometry
   return {geometry,material};
 }
 
+// Continue a narrow decorative rim with existing clusters, without new RNG draws,
+// assets, blockers or an area-scaled density budget. Keep complete multipart plants.
+function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
+  const backdrop = world.renderData.geometries.find(d => d.model === 'landscapeRelief' && 'relief' in d && d.relief.innerExtent),
+    result: WorldPlacement[] = [], extent = world.extent;
+  if (!backdrop || !('relief' in backdrop) || !world.surface) return result;
+  for (let side = 0; side < 4; side++) {
+    const axis = side % 2 ? 2 : 0, sign = side < 2 ? -1 : 1, groups = new Map<string, WorldPlacement[]>();
+    for (const p of world.renderData.placements) {
+      if (p.layer !== 'static' || !p.mesh.startsWith('ecology') || /^ecology(Relic|Spire)/.test(p.mesh) ||
+          Math.max(Math.abs(p.position[0]), Math.abs(p.position[2])) > extent) continue;
+      const distance = extent - sign * p.position[axis];
+      if (distance < 0 || distance > 24) continue;
+      const key = `${p.position[0]}:${p.position[2]}`, group = groups.get(key) ?? [];
+      group.push(p); groups.set(key, group);
+    }
+    const clusters = [...groups.values()].sort((a, b) => a[0].position[axis === 0 ? 2 : 0] - b[0].position[axis === 0 ? 2 : 0]),
+      count = Math.min(6, clusters.length);
+    for (let i = 0; i < count; i++) for (const p of clusters[Math.floor((i + .5) * clusters.length / count)]) {
+      const outside = sign * extent + (sign * extent - p.position[axis]) * .35,
+        x = axis === 0 ? outside : p.position[0], z = axis === 2 ? outside : p.position[2],
+        y = p.position[1] + worldReliefHeightAt(backdrop.relief, x, z) + .13 - world.surface.heightAt(p.position[0], p.position[2]);
+      result.push({ ...p, position: [x, y, z] });
+    }
+  }
+  return result;
+}
+
+// Render-only visibility halo. Authoritative fog remains exactly the playable raster.
+// Outside terrain follows real local sight/scan circles, never stretched edge texels.
+class SceneryFogField {
+  padding = 1;
+  size: number;
+  pixels: Uint8Array<ArrayBuffer>;
+  constructor(readonly extent: number, readonly cell: number, readonly grid: number) {
+    this.size = grid + 2;
+    this.pixels = new Uint8Array(this.size * this.size);
+  }
+  update(data: Uint8Array, sources: readonly { x: number; z: number; r: number; level?: number }[],
+      visible?: (x: number, z: number, level: number) => boolean) {
+    let padding = this.padding;
+    for (const s of sources) padding = Math.max(padding,
+      Math.ceil((Math.max(Math.abs(s.x), Math.abs(s.z)) + s.r - this.extent) / this.cell) + 1);
+    if (padding > this.padding) {
+      const size = this.grid + padding * 2, pixels = new Uint8Array(size * size), offset = padding - this.padding;
+      for (let z = 0; z < this.size; z++) pixels.set(this.pixels.subarray(z * this.size, (z + 1) * this.size), (z + offset) * size + offset);
+      this.padding = padding; this.size = size; this.pixels = pixels;
+    }
+    const { pixels, size, grid, cell } = this, p = this.padding, extent = this.extent + p * cell;
+    for (let i = 0; i < pixels.length; i++) pixels[i] = pixels[i] ? 80 : 0;
+    for (let z = 0; z < grid; z++) pixels.set(data.subarray(z * grid, (z + 1) * grid), (z + p) * size + p);
+    // A single explored halo cell joins saved edge terrain smoothly on reload.
+    // Live visibility is supplied exclusively by the circular sources below.
+    for (let z = p - 1; z <= p + grid; z++) for (let x = p - 1; x <= p + grid; x++) {
+      if (x >= p && x < p + grid && z >= p && z < p + grid) continue;
+      const edge = data[clamp(z - p, 0, grid - 1) * grid + clamp(x - p, 0, grid - 1)];
+      if (edge) pixels[z * size + x] = Math.max(pixels[z * size + x], 80);
+    }
+    for (const s of sources) {
+      if (Math.max(Math.abs(s.x), Math.abs(s.z)) + s.r <= this.extent) continue;
+      const loX = Math.max(0, Math.floor((s.x - s.r + extent) / cell)), hiX = Math.min(size - 1, Math.floor((s.x + s.r + extent) / cell)),
+        loZ = Math.max(0, Math.floor((s.z - s.r + extent) / cell)), hiZ = Math.min(size - 1, Math.floor((s.z + s.r + extent) / cell));
+      for (let z = loZ; z <= hiZ; z++) for (let x = loX; x <= hiX; x++) {
+        if (x >= p && x < p + grid && z >= p && z < p + grid) continue;
+        const dx = (x + .5) * cell - extent - s.x, dz = (z + .5) * cell - extent - s.z;
+        if (dx * dx + dz * dz < (s.r + cell * .4) ** 2 &&
+            (!visible || visible(dx + s.x, dz + s.z, s.level ?? Infinity))) pixels[z * size + x] = 255;
+      }
+    }
+    return extent;
+  }
+}
+
 class BattlefieldView {
   R: MeridianRenderer;
   data: WorldRenderData | null;
   world: Battlefield | null;
   fogVersion: number;
+  private sceneryFog: SceneryFogField | null = null;
+  private sceneryTeam: PlayerTeam | null = null;
   private exteriorExtent = 0;
   private exteriorCeiling = 0;
   private exteriorMeshes: WorldGeometry[] = [];
@@ -148,7 +223,7 @@ class BattlefieldView {
     this.world = null;
     this.fogVersion = -1;
   }
-  sync(world: Battlefield, fogOn = true) {
+  sync(world: Battlefield, fogOn = true, state?: RunState) {
     const R = this.R, layout = world.renderData,
       { extent: EXTENT, cellSize: CELL, gridSize: GRID } = world;
     if (this.data !== layout) {
@@ -226,7 +301,7 @@ class BattlefieldView {
         }
         R.geometry(descriptor.mesh, geometry);
       }
-      for (const p of layout.placements) {
+      for (const p of [...layout.placements, ...sceneryEdgeDecor(world)]) {
         const args: Parameters<MeridianRenderer['add']> = [p.mesh, ...p.position, ...p.scale, p.color, ...p.rotation,
           p.glow, p.alpha, p.layer];
         if (p.material !== undefined) args.push(p.material === 'ALIEN_LIGHT' ? ALIEN_LIGHT_MATERIAL : MAT[p.material]);
@@ -239,8 +314,26 @@ class BattlefieldView {
         R.geometry(descriptor.mesh, TerrainModels.geometry(viewDescriptor(descriptor)));
       this.exteriorExtent = exteriorExtent;
     }
-    if (this.world !== world || this.fogVersion !== world.fogVersion || (fogOn && !R.fogOn)) {
-      if (world.fogVersion > 0 || fogOn) R.fog(world.fogPixels, GRID);
+    if (this.world !== world || this.sceneryTeam !== world.viewTeam) {
+      this.sceneryFog = null; this.sceneryTeam = world.viewTeam;
+    }
+    if (this.world !== world || this.fogVersion !== world.fogVersion || (fogOn && !R.fogOn) || (state && !this.sceneryFog)) {
+      if (world.fogVersion > 0 || fogOn) {
+        if (state) {
+          const team = world.viewTeam, sources = state.entities.filter(e => e.hp > 0 && e.team === team && e.kind !== 'resource')
+            .map(e => ({ x: e.x, z: e.z, r: e.vision || (e.kind === 'building' ? 21 : 17),
+              level: e.kind === 'unit' && (UNITS[e.type] as UnitDefinitionShape | undefined)?.flying ? Infinity : world.surface?.visibilityLevelAt(e.x, e.z) ?? 0 }));
+          for (const scan of state.scans) if ((scan.team ?? 0) === team && scan.until > state.time)
+            sources.push({ x: scan.x, z: scan.z, r: scan.r || 31, level: Infinity });
+          const field = this.sceneryFog ??= new SceneryFogField(EXTENT, CELL, GRID), exterior = this.exteriorMeshes[0],
+            extent = field.update(world.fogPixels, sources, (x, z, level) => {
+              if (level === Infinity || !world.surface) return true;
+              const height = exterior && 'relief' in exterior ? worldReliefHeightAt(exterior.relief, x, z) + .13 : world.surface.heightAt(x, z);
+              return world.surface.visibilityLevel(height, x, z) <= level;
+            });
+          R.fog(field.pixels, field.size, extent);
+        } else R.fog(world.fogPixels, GRID);
+      }
       this.world = world;
       this.fogVersion = world.fogVersion;
     }

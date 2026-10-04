@@ -41,6 +41,11 @@ auch der Anteil der Außenkulisse an den Pan-Grenzen und die Erreichbarkeit
 bebaubarer Ränder nach Zoom-/Fenstergrößenwechseln.
 Lebendige Randgestaltung soll aus passender Verteilung vorhandener Dekoration entstehen,
 nicht aus unnötig großer Kulisse oder pauschal erhöhten Instanzbudgets.
+Material-/Bewuchsübergang und kreisförmiger Sichtsaum am Rand sind menschlich abzunehmen;
+CPU-Fog-Isolation, Partei-/Sichtstufenfilter und ausbleibende Scan-Korridore sind gezielt geprüft.
+Auch die fest verankerten, kantengeglätteten Baugrid-Linien benötigen visuelle Abnahme
+bei weitem Zoom, niedriger Renderauflösung und Drehung: GPU-Stichproben prüfen die
+Linienfilterung, nicht flimmerfreie Bewegung auf Zielgeräten.
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und
 Screenreader-Bedienung. Reduzierte Filterkosten sind kein gemessener Performancegewinn;
