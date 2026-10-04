@@ -1,14 +1,16 @@
 # Teststrategie: offene Folgearbeit
 
-[Prüfverfahren/Zeitbudget](../testing.md) sind maßgeblich.
+[Prüfverfahren/Zeitbudget](../testing.md) sind maßgeblich. Kein automatischer Mess-/Umbauauftrag; keine geteilten mutablen VM-Kontexte als Laufzeitabkürzung.
 
-- [ ] Laufzeiten nach Build/Datei/Szenario erst aus vorhandenen Ergebnissen erfassen; neue breite Messung freigeben lassen. Danach gezielte Auswahl verbessern, nicht Terrain-Sweeps allein wegen Dauer löschen oder Concurrency/Heap blind ändern.
+## Vorrang: fachlich veraltete Startannahmen
+
+- [ ] Etablierte HQ-Fixtures und Gefechtsreferenzen gegen den [Worker-Start](../gameplay.md#gefecht-und-fortschritt) prüfen. Statischer Abgleich auf `937914e`: Der Helper `battle()` in [den KI-Prüfungen](../../tests/ashes-of-meridian-ai.check.cjs) ruft nur `g.start()` auf; bereits der Fall `scouting and scans visit unexplored candidate corners…` greift anschließend auf `own(..., 'hq')[0]` zu. [Der aktuelle Start](../../src/simulation/game.ts) setzt dagegen Landungsworker und `deploymentPending`, kein fertiges HQ. Das ist ein konkreter Fixture-Widerspruch, kein neu ausgeführtes Testergebnis. Auch Annahmen über feste Eckstarts fachlich prüfen.
+- [ ] Etablierte Basen in Fachtests ausdrücklich aufbauen; echte Deploymentprüfungen müssen den bezahlten Worker→HQ-Ablauf beobachten. Tutorial- und gezielte FFA-Verträge decken Teile des Starts bereits ab. Die alten KI-/Simulationsblöcke sind kein aktueller Abschlussnachweis. Referenzen nicht allein zum Grünmachen regenerieren; Ausführung und Referenzpflege separat freigeben lassen. Abhängige [FFA-Prüfungen](mehrparteien-simulation.md) und [Startabnahme](procedural-battlefields.md) erst auf passenden Fixtures bewerten.
+- [ ] Historische Effektfixtures in `presentation-v1.json` von der entfernten unkomponierten Desert-Geografie entkoppeln; aktuelle Helper laden das prozedurale Rezept. RNG-Referenzen bleiben unverändert. Diese Fälle wurden für den Terrainumbau nicht als Abschlussnachweis ausgeführt.
+
+## Prüfkosten und Abdeckung bei fachlicher Pflege
+
+- [ ] Laufzeiten nach Build/Datei/Szenario erst aus vorhandenen Ergebnissen erfassen; neue breite Messung freigeben lassen. Konkreter Auswahlhinweis aus der Shaderprüfung auf `937914e`: `map switches keep only current world meshes…` in der Rendererdatei brauchte lokal rund 45 s, die meisten dortigen Shader-/Orchestrierungsfälle nur Millisekunden. Für solche Kleinständerungen Namensfilter statt ungeprüft die ganze Datei wählen. Terrain-/Residenzabdeckung nicht allein wegen Dauer löschen oder Concurrency/Heap blind ändern.
 - [ ] Gemischte Testdateien bei fachlicher Pflege trennen; kurze Validatoren ohne doppelte Abdeckung von autonomen Partien separieren.
 - [ ] Shader-Stringtests auf relevante Verdrahtung statt Formelschreibweise begrenzen; keine behauptete GLSL-Kompilierung.
 - [ ] Modell-/Präsentationsüberschneidungen nach Vertragsvergleich reduzieren; Bounds/Winding/Varianten/RNG können unabhängig schützen.
-
-- [ ] Übrige etablierte HQ-Fixtures und Gefechtsreferenzen gegen den neuen [Worker-Start](../gameplay.md#gefecht-und-fortschritt) prüfen. Tutorial- und gezielte FFA-Verträge decken den Start bereits ab; die KI-/Simulationsblöcke wurden dafür nicht ausgeführt. Etablierte Basen in Fachtests ausdrücklich aufbauen, Referenzen nicht allein zum Grünmachen regenerieren. Breite Ausführung und Referenzpflege separat freigeben lassen.
-
-- [ ] Historische Effektfixtures in `presentation-v1.json` von der entfernten unkomponierten Desert-Geografie entkoppeln; aktuelle Helper laden das prozedurale Rezept. RNG-Referenzen bleiben unverändert. Diese Fälle wurden für den Terrainumbau nicht als Abschlussnachweis ausgeführt.
-
-Kein automatischer Mess-/Umbauauftrag; keine geteilten mutablen VM-Kontexte als Laufzeitabkürzung.

@@ -6,8 +6,8 @@ Grenzen bestehen unabhängig vom übernommenen Demo-Look.
 
 ## Fokus und Dialogsemantik
 
-`openModal` ersetzt Markup ohne Dialogrolle, initialen Fokus, Tab-Begrenzung oder
-Fokusrückgabe. Hintergrundkontrollen bleiben per Tastatur erreichbar. Auch vollständige
+Statischer Abgleich auf `937914e`: [`openModal`](../../src/ui/screens.ts) ersetzt
+Markup weiterhin ohne Dialogrolle, initialen Fokus, Tab-Begrenzung oder Fokusrückgabe. Hintergrundkontrollen bleiben per Tastatur erreichbar. Auch vollständige
 Neurenderings nach Upgrade-Käufen können den Fokus verlieren.
 Eine gemeinsame Fokus-/Dialogverwaltung muss Rückkehr zu Pause, Ergebnis und Hauptmenü
 unterscheiden; Escape darf keine erforderliche Bestätigung überspringen. Keine bloße CSS-Lösung.

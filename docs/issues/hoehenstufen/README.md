@@ -12,4 +12,4 @@ Teststart nach Build: `index.html?experiment=height` (Mothership, Seed 1409, zwe
 - [ ] Lokale Sicht/Effekte und Bodenposen, Touch/Mobilkosten und vollständige Singleplayer-Partien abnehmen.
 - [ ] Faire Wege/Ressourcenzugänge der getrennt zugeteilten Parteienstarts; Walling darf nicht unbeabsichtigt jeden Ausgang schließen. Gewünschte absichtliche Walling-Regel bleibt offen.
 
-Alle Familien verwenden seedbasierte Höhen; der alte Mothership-Plateaugrundriss ist keine Vorgabe. [Landschaftsabnahme](../project-tomorrow.md), [Mothership-Gestaltung](../terrain.md), [Worker-Grenzen](../worker-bauwegfindung/issue.md). Flugfreiraum separat unter [Landschaften](../project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau).
+Alle Familien verwenden seedbasierte Höhen; der alte Mothership-Plateaugrundriss ist keine Vorgabe. [Landschaftsabnahme](../project-tomorrow.md), [Mothership-Gestaltung](../project-tomorrow.md#mothership-prozedurale-industrieflächen), [Worker-Grenzen](../worker-bauwegfindung/issue.md). Flugfreiraum separat unter [Landschaften](../project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau).
