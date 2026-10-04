@@ -373,7 +373,7 @@
   #modal .armory-grid:not(.command-module-grid) .upgrade-levels { grid-area: levels; align-self: center; margin: 0 }
   #modal .armory-grid:not(.command-module-grid) .secondary { grid-area: purchase }
 }
-#menu :is(.home-layout, .subscreen, .codex-model-screen), #modal .modal-frame,
+#menu :is(.subscreen, .codex-model-screen), #modal .modal-frame,
 #result .result-shell { animation: ui-arrive var(--ui-enter) var(--ui-ease) both }
 @keyframes ui-arrive { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: translateY(0) } }
 @media (max-width: 600px) {

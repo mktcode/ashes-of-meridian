@@ -140,6 +140,7 @@
           loader.innerHTML = `<div class="eyebrow">UPLINK INTERRUPTED</div><h2>Texture preparation failed.</h2><p>${esc(error instanceof Error ? error.message : String(error))}</p>`;
           loader.classList.remove('hidden');
         }
+        let initialHomeReveal = true;
         ui.onPreview = async (map, seed = 40517, smooth = false) => {
           finishPreviewChange(false);
           const id = ++worldRequest, mapId = battlefieldId(map);
@@ -157,6 +158,10 @@
             R.fogOn = false;
             previewEntities();
             $('loading').classList.add('hidden');
+            if (initialHomeReveal && ui.view === 'home') {
+              initialHomeReveal = false;
+              $('worldViewport').classList.add('home-scene-reveal');
+            }
             return true;
           } catch (error) {
             if (id === worldRequest) textureFailure(error);

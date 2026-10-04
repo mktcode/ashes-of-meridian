@@ -1,4 +1,44 @@
 /* Start screen geometry and branding; shared controls/font live in design-system.css. */
+/* Keep the entrance at its first frame until the uplink has finished preparing. */
+#worldViewport.home-scene-reveal {
+  animation: home-fade-in 900ms ease-out both;
+}
+#menu .home-screen {
+  animation: home-fade-in 700ms ease-out both;
+}
+#menu .home-screen .menu-brand {
+  animation: home-brand-in 850ms cubic-bezier(.16, 1, .3, 1) 120ms backwards;
+}
+#menu .home-screen .expedition-stage {
+  animation: home-rise-in 650ms cubic-bezier(.16, 1, .3, 1) 260ms backwards;
+}
+#menu .home-screen .menu-buttons > * {
+  animation: home-rise-in 600ms cubic-bezier(.16, 1, .3, 1) backwards;
+  animation-delay: 360ms;
+}
+#menu .home-screen .menu-buttons > :nth-child(2) { animation-delay: 440ms }
+#menu .home-screen .menu-buttons > :nth-child(3) { animation-delay: 520ms }
+#menu .home-screen .menu-buttons > :nth-child(4) { animation-delay: 600ms }
+#menu .home-screen .menu-buttons > :nth-child(5) { animation-delay: 680ms }
+body:has(#loading:not(.hidden)) #menu .home-screen,
+body:has(#loading:not(.hidden)) #menu .home-screen * {
+  animation-play-state: paused;
+}
+@keyframes home-fade-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+@keyframes home-brand-in {
+  from { opacity: 0; transform: translateY(18px) scale(.96) }
+  to { opacity: 1; transform: translateY(0) scale(1) }
+}
+@keyframes home-rise-in {
+  from { opacity: 0; transform: translateY(14px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+@media (prefers-reduced-motion: reduce) {
+  #worldViewport.home-scene-reveal { animation: none }
+}
 #menu .home-screen {
   --home-checkpoint-size: clamp(105px, 17vh, 150px);
   font-family: Aldrich, 'Segoe UI', sans-serif;
