@@ -36,7 +36,7 @@ sowie beim Basis-Knopf. Gezielte Node-Prüfungen decken Start-/Basis-/Tutorial-F
 und Projektion auf erhöhtem Terrain ab, nicht das tatsächliche Kameragefühl.
 Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
 Die Außenkulisse bleibt visuell abzunehmen: breite Sichtfenster, erhöhte Kartenränder
-und gedrehte Kamera ohne sichtbares Ende oder Durchblick unter das Terrain;
+und gedrehte Kamera ohne sichtbares Ende, helle Anschlussnaht oder Durchblick unter das Terrain;
 auch der Anteil der Außenkulisse an den Pan-Grenzen und die Erreichbarkeit
 bebaubarer Ränder nach Zoom-/Fenstergrößenwechseln.
 Lebendige Randgestaltung soll aus passender Verteilung vorhandener Dekoration entstehen,

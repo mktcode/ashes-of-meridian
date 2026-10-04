@@ -120,6 +120,32 @@ test('landscape skin retains its top triangles and closes all raised edges to th
   assert.equal(JSON.stringify(field), before);
 });
 
+test('higher coarse edges close the hole above the fine skin, including between edge samples', () => {
+  const { TerrainModels } = setup();
+  for (const innerExtent of [10, 12]) {
+    const field = relief(20, innerExtent), before = JSON.stringify(field),
+      mesh = TerrainModels.geometry({ mesh: 'backdrop', model: 'landscapeRelief', relief: field }),
+      hole = Math.floor(innerExtent / field.step) * field.step;
+    // A ray from inside at height 15 is below the coarse top (20), but above
+    // a lower fine edge (10). Each hole wall must intercept it, not just its corners.
+    for (const [axis, sign] of [[0,-1],[0,1],[2,-1],[2,1]]) {
+      const other = axis === 0 ? 2 : 0;
+      for (const along of [-7.5,-2.5,2.5,7.5]) {
+        let hit = false;
+        for (let i = 0; i < mesh.length; i += 27) {
+          const a=mesh.subarray(i,i+9),b=mesh.subarray(i+9,i+18),c=mesh.subarray(i+18,i+27);
+          if (![a,b,c].every(v=>v[axis]===sign*hole) || a[3+axis]*sign>=0) continue;
+          const cross=(u,v)=>(u[other]-along)*(v[1]-15)-(u[1]-15)*(v[other]-along),
+            sides=[cross(a,b),cross(b,c),cross(c,a)];
+          if (sides.every(v=>v>=0)||sides.every(v=>v<=0)) {hit=true;break;}
+        }
+        assert.ok(hit,`closed inward-facing edge ${axis}:${sign}, between samples at ${along}`);
+      }
+    }
+    assert.equal(JSON.stringify(field),before,'no playable height/material changes');
+  }
+});
+
 test('exterior continuation preserves its inner mesh and has constant geometry cost regardless of width', () => {
   const { TerrainModels } = setup(), field = relief(20, 10), before = JSON.stringify(field),
     build = outerExtent => TerrainModels.geometry({ mesh: 'backdrop', model: 'landscapeRelief',
