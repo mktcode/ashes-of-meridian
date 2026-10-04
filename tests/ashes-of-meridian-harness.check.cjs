@@ -73,7 +73,8 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.deepEqual(Array.from(vm.runInContext('AETHER_EVACUATION_CAPS', context)), [100, 200, 350, 500, 750, 1000]);
   assert.deepEqual(Array.from(vm.runInContext('AETHER_STRUCTURE_RECOVERY', context)), [5, 10, 15, 20, 25, 30]);
   assert.deepEqual(Object.keys(UNITS), ['worker', 'rifle', 'medic', 'tank', 'artillery', 'air', 'destroyer', 'hero']);
-  assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret']);
+  assert.deepEqual(Object.keys(BUILDINGS), ['hq', 'barracks', 'depot', 'refinery', 'factory', 'hangar', 'turret',
+    'fieldlab', 'researchhub', 'researchspire']);
 
   assert.equal(unitName('worker'), 'Prospector');
   assert.equal(unitName('worker', 1), 'Tender');

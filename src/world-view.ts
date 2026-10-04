@@ -67,7 +67,7 @@ class PlacementGuideSampler {
       // Keep menu opening/camera movement responsive. Unknown samples are never shown as buildable.
       if (this.terrainBudget <= 0) { this.pending = true; return 0; }
       this.terrainBudget--;
-      terrain = !buildingFoundationReason(world, this.type, p, this.team) && !buildingTerrainObstructed(world, p, r);
+      terrain = !buildingFoundationReason(world, this.type, p, this.team) && !buildingTerrainObstructed(world, p, r, isCivilizationBuildingType(this.type));
       this.terrain.set(key, terrain);
     }
     if (!terrain || !world.sight[this.team].explored[world.idx(p.x, p.z)] ||
@@ -109,6 +109,7 @@ function buildingGroundFrame(pose: { dx: number; dz: number }, cs: number, sn: n
 // Local visual grading, not a plinth: only the necessary fill, with zero height/gradient at the rim.
 // The original terrain remains underneath; world-aligned triangles and material weights match it.
 function buildingGroundGeometry(world: Battlefield, e: RenderEntity): { geometry: number[]; material: number } {
+  if (isCivilizationBuildingType(e.type)) return {geometry:[],material:MAT.METAL};
   const surface = world.surface!, pose = surface.buildingPose(e,e.size), inner = e.size * 1.18, outer = inner + 3,
     descriptor = world.renderData.geometries.find(d => d.mesh === 'terrain'),
     relief = descriptor && 'relief' in descriptor ? descriptor.relief : undefined,
@@ -562,7 +563,8 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       ) => {
         // Glowing Court prisms use the existing crystal shader instead of flat painted metal.
         // Explicit preview/material overrides retain authority over this model-level default.
-        const resolvedMaterial = options.material === undefined && m === surfaceMat &&
+        const resolvedMaterial = options.material !== undefined && e.kind === 'building' && isCivilizationBuildingType(e.type)
+          ? options.material : options.material === undefined && m === surfaceMat &&
           e.faction === FACTION_ID.THIRD && e.kind === 'building' && shape === 'octa' && glow >= .3
             ? MAT.CRYSTAL
             : m;
@@ -702,7 +704,9 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       }
       if (e.kind === 'building') {
         let s = e.size || 3;
-        if (e.faction === FACTION_ID.SECOND) {
+        if (isCivilizationBuildingType(e.type)) {
+          // Shared civilian models own their decks and adaptive feet for every faction.
+        } else if (e.faction === FACTION_ID.SECOND) {
           // The queen sits in her model-owned five-petal flower, with no soil plinth.
           // Other Choir buildings retain the shared mound, including in build previews.
           if (e.type !== 'hq') p('choirMound', 0, 0, 0, s, 1, s, ghost ? 0x68717d : options.tint || 0x70523b,
@@ -715,6 +719,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         const model = EntityModels.find(e);
         if (model) {
           model.render({ entity: e, time, nightLight, pointLight, lightPool: () => {}, part: p, nightPart, ring, metal, dark, team, accent, baseRotation: rot,
+            groundHeight: R.surface ? (lx,lz) => R.surface!.heightAt(e.x+lx*cs+lz*sn,e.z-lx*sn+lz*cs)-ground : undefined,
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {

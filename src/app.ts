@@ -587,7 +587,7 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 7, battle: null, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0,
+          ui.expedition = { version: 7, battle: null, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, civilizationScore: 0,
             benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
             encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,

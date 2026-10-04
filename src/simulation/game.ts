@@ -305,7 +305,7 @@
           hp,
           maxHp: hp,
           size: d.size || 2,
-          vision: d.vision || (kind === 'building' ? 21 : 17),
+          vision: kind === 'building' && isCivilizationBuildingType(type) ? 0 : d.vision || (kind === 'building' ? 21 : 17),
           rot: team === 1 ? Math.PI : 0,
           progress: 1,
           queue: [],

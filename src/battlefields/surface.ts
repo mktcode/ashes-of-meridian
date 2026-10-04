@@ -170,11 +170,12 @@ class BattlefieldSurface {
   }
   // A restrained lean reduces downhill fill without changing buildability or the playable surface.
   // Choose the lowest supporting plane for that lean; never sink a model into the uphill ground.
-  buildingPose(p: Position, radius: number): { height: number; dx: number; dz: number; fill: number } {
+  buildingPose(p: Position & { type?: string }, radius: number): { height: number; dx: number; dz: number; fill: number } {
+    const civil = p.type !== undefined && isCivilizationBuildingType(p.type);
     const r = Math.max(this.step, radius),
       dx = (this.heightAt(p.x+r,p.z)-this.heightAt(p.x-r,p.z))/(2*r),
       dz = (this.heightAt(p.x,p.z+r)-this.heightAt(p.x,p.z-r))/(2*r),
-      limit = Math.max(1,Math.hypot(dx,dz)/.045), gx = dx/limit, gz = dz/limit,
+      limit = Math.max(1,Math.hypot(dx,dz)/.045), gx = civil ? 0 : dx/limit, gz = civil ? 0 : dz/limit,
       margin = radius * 1.08;
     let height = this.heightAt(p.x,p.z), low = height;
     // Include footprint edges and all interior terrain vertices, but no unrelated margin heights.
@@ -187,7 +188,8 @@ class BattlefieldSurface {
       const residual = this.heightAt(x,z)-gx*(x-p.x)-gz*(z-p.z);
       height = Math.max(height,residual); low = Math.min(low,residual);
     }
-    return {height,dx:gx,dz:gz,fill:height-low};
+    // Level civilian decks use model-owned terrain-sampled legs, not terrain grading.
+    return {height:height+(civil ? .7 : 0),dx:gx,dz:gz,fill:civil ? 0 : height-low};
   }
   foundationBounds(p: Position, radius: number): { min: number; max: number } {
     const margin = radius + 1, first = (v: number) => Math.floor((v - margin + this.extent) / this.step) * this.step - this.extent,

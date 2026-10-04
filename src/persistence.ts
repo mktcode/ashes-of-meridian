@@ -163,7 +163,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     }
   };
   function defaultProfile(): MeridianProfile {
-    return { version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {},
+    return { version: 1, expeditionDepth: 0, lastCivilizationScore: 0, aether: 0, tutorialComplete: false, upgrades: {},
       settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false } };
   }
   function loadProfile() {
@@ -174,6 +174,8 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
       if (p && p.version === 1) {
         d.expeditionDepth = clamp(Math.floor(Number(p.expeditionDepth) || 0), 0, 999999);
         d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
+        if (Number.isSafeInteger(p.lastCivilizationScore) && p.lastCivilizationScore >= 0)
+          d.lastCivilizationScore = p.lastCivilizationScore;
         d.tutorialComplete = p.tutorialComplete === true;
         for (const k in upgrades) d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
         for (const key of Object.keys(d.settings)) {
@@ -205,6 +207,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
         !['resource-start', 'exploration'].includes(p.encounter.deployment) || !Array.isArray(p.abilities) ||
         p.abilities.length !== 4 || new Set(p.abilities).size !== 4 ||
         p.abilities.some((key: unknown) => typeof key !== 'string' || !Object.hasOwn(abilities, key)) ||
+        (p.civilizationScore !== undefined && (!Number.isSafeInteger(p.civilizationScore) || p.civilizationScore < 0)) ||
         !Number.isInteger(p.depth) || p.depth < 0 || p.depth > 999999 ||
         !Number.isInteger(p.encounter.seed) || p.encounter.seed < 1 || p.encounter.seed > 99999999)
         throw Error('Incompatible expedition recipe');
@@ -221,7 +224,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
         return { ...input } as Record<string, number>;
       };
       const normalized: MeridianExpedition = {
-        version: 7, faction: p.faction, abilities: [...p.abilities], depth: p.depth,
+        version: 7, faction: p.faction, abilities: [...p.abilities], depth: p.depth, civilizationScore: p.civilizationScore ?? 0,
         benefits: copyBenefits(p.benefits), enemyBenefits: p.enemyBenefits.map(copyBenefits),
         encounter: { ...p.encounter, enemies: [...p.encounter.enemies] }, offers: [], battle: null
       };

@@ -61,6 +61,17 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
   align-self: center;
   gap: clamp(24px, 4vh, 40px);
 }
+#menu .home-screen .civilization-score {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  margin: 0 0 14px;
+  color: #a1cbd0;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+#menu .home-screen .civilization-score strong { color: #7bdfeb; font-size: 18px }
+#menu .home-screen .civilization-score small { grid-column: 1 / -1; font-size: 9px; color: #91a5ae }
 #menu .home-screen .menu-brand {
   display: flex;
   flex-direction: column;

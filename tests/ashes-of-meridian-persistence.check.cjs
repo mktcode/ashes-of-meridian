@@ -5,7 +5,7 @@ const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./help
 const PROFILE = 'meridian.profile.v1', HISTORY = 'meridian.stage-history.v1';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
-  version: 1, expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {},
+  version: 1, expeditionDepth: 0, lastCivilizationScore: 0, aether: 0, tutorialComplete: false, upgrades: {},
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false }
 };
 const content = loadScripts(['content']);
@@ -13,7 +13,7 @@ const catalogs = vm.runInContext('({units:UNITS,buildings:BUILDINGS,abilities:AB
 const upgrades = { startingAlloy: { max: 5 }, startingWorkers: { max: 5 }, aetherEvacuation: { max: 5 } };
 const benefits = { supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }, fieldWorkshop: { max: 1 } };
 const expedition = {
-  version: 7, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8,
+  version: 7, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, civilizationScore: 0,
   benefits: { supplyCrate: 2, commanderMandate: 1 },
   enemyBenefits: [{ pioneerSquad: 2, fieldWorkshop: 1 }, { supplyCrate: 3 }, { aetherAllocation: 2 }],
   encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 },
@@ -52,6 +52,9 @@ function runningSave() {
     Object.assign(collector, { x: cache.x, z: cache.z }); game.world.reveal(game.s.entities); game.collectSupplyCaches();
     assert.equal(cache.collected, true); assert.equal(game.account(team)[kind], before + cache.amount);
   }
+  run.civilizationScore = 15;
+  for (const [i,type] of ['fieldlab','researchhub','researchspire'].entries())
+    game.spawnBuilding(type,worker.x+12+i*10,worker.z+20,0,0,{progress:i===2?.4:1,paid:{cost:0,gas:catalogs.buildings[type].gas}});
   const building = game.spawnBuilding('barracks', worker.x + 10, worker.z, 0, 0, { progress: .4 });
   building.hp /= 2; building.queue = [{ type: 'rifle', progress: .3, time: 10, cost: 50, gas: 0 }];
   worker.order = { type: 'build', id: building.id, x: building.x, z: building.z };
@@ -74,6 +77,19 @@ function runningSave() {
 let fixture;
 const savedBattle = () => json((fixture ??= runningSave()).run);
 
+test('civilization scores round-trip independently per expedition and reject damaged totals', () => {
+  const h=setup(),run={...json(expedition),civilizationScore:35},profile={...defaults,lastCivilizationScore:20};
+  put(h,run,profile);
+  assert.equal(setup(h.data).service.loadExpedition().civilizationScore,35);
+  assert.equal(setup(h.data).service.loadProfile().lastCivilizationScore,20);
+  h.service.saveProgress({...profile,lastCivilizationScore:40},null);
+  assert.equal(setup(h.data).service.loadProfile().lastCivilizationScore,40);
+  for(const invalid of [-5,1.2,'5',null,Number.MAX_SAFE_INTEGER+1]){
+    put(h,{...run,civilizationScore:invalid},profile);const reload=setup(h.data);
+    assert.equal(reload.service.loadExpedition(),null);assert.ok(reload.service.expeditionError);
+  }
+});
+
 test('profile and expedition commit together; settings writes preserve the battle and clearing preserves rewards', () => {
   const h = setup(), run = savedBattle(), profile = { ...defaults, aether: 123, upgrades: { startingWorkers: 2 } };
   assert.equal(put(h, run, profile), true);
@@ -93,6 +109,7 @@ test('running snapshot restores exact CPU state, RNG, fog and consumed cargo wit
   const restored = new Game({ ...json(defaults), upgrades: { startingWorkers: 5, startingAlloy: 5 } });
   restored.restoreBattle(h.service.loadExpedition());
   assert.deepEqual(json(restored.snapshotBattle()), run.battle);
+  for(const type of ['fieldlab','researchhub','researchspire'])assert.ok(restored.s.entities.some(e=>e.type===type));
   const observation = restored.s.parties[1].controller.state.observation.own[0];
   assert.notStrictEqual(observation, restored.get(observation.id), 'delayed observation remains a value copy');
   const accounts = json(restored.s.parties.map(p => p.account));

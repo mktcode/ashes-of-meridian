@@ -76,6 +76,8 @@ interface EntityModelContext {
   ring: ModelRing;
   metal: number; dark: number; team: number; accent: number;
   baseRotation: number;
+  /** Terrain height relative to the model datum at a local X/Z point; absent in thumbnails. */
+  groundHeight?: (x: number, z: number) => number;
   surfaceColor: (color: number) => number;
 }
 interface EntityModelDefinition {

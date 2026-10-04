@@ -5,7 +5,10 @@
     function buildingFoundationReason(world: Battlefield, type: BuildingType, p: Position, team: PlayerTeam): string {
       const r = BUILDINGS[type].size;
       if (world.surface) {
-        if (!world.surface.foundation(p, r)) return 'Build on stable ground or a gentle slope, away from cliffs.';
+        if (isCivilizationBuildingType(type)) {
+          // Stilts absorb uneven terrain; impassable cliffs and the map edge stay protected.
+          if (!world.surface.fits(p.x, p.z, r + .35)) return 'Leave clear, accessible terrain around the structure.';
+        } else if (!world.surface.foundation(p, r)) return 'Build on stable ground or a gentle slope, away from cliffs.';
         const yaw = BUILDING_YAW + (team === 1 ? Math.PI : 0);
         for (const unit of Object.values(UNITS) as UnitDefinitionShape[]) {
           if (unit.from !== type || unit.flying) continue;
@@ -17,7 +20,14 @@
       const limit = world.extent - 1 - r;
       return Math.abs(p.x) > limit || Math.abs(p.z) > limit ? 'Too close to the battlefield boundary.' : '';
     }
-    function buildingTerrainObstructed(world: Battlefield, p: Position, r: number): boolean {
+    function buildingTerrainObstructed(world: Battlefield, p: Position, r: number, fullFootprint = false): boolean {
+      if (fullFootprint) {
+        const first = world.idx(p.x-r,p.z-r), last = world.idx(p.x+r,p.z+r);
+        for (let z=Math.floor(first/world.gridSize);z<=Math.floor(last/world.gridSize);z++)
+          for (let x=first%world.gridSize;x<=last%world.gridSize;x++)
+            if (world.staticGrid[z*world.gridSize+x]) return true;
+        return false;
+      }
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
         if (world.staticGrid[world.idx(p.x + Math.sin(a) * r, p.z + Math.cos(a) * r)]) return true;
@@ -190,7 +200,7 @@
         if (foundationReason) return foundationReason;
         if (!this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
           return 'Scout this location before building.';
-        if (buildingTerrainObstructed(this.world!, p, r)) return 'Terrain obstructs the foundation.';
+        if (buildingTerrainObstructed(this.world!, p, r, isCivilizationBuildingType(type))) return 'Terrain obstructs the foundation.';
         if (this.s!.supplyCaches.some(cache => !cache.collected && distance(p, cache) < r + 3))
           return 'Recover nearby supply caches before building here.';
         for (let e of this.s!.entities) {

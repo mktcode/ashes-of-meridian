@@ -34,7 +34,10 @@ const FACTIONS = [
       refinery: 'Echo Refinery',
       factory: 'War foundry',
       hangar: 'Flight deck',
-      turret: 'Sentinel turret'
+      turret: 'Sentinel turret',
+      fieldlab: 'Field laboratory',
+      researchhub: 'Research hub',
+      researchspire: 'Research spire'
     }
   },
   {
@@ -67,7 +70,10 @@ const FACTIONS = [
       refinery: 'Sap well',
       factory: 'Root hollow',
       hangar: 'Chrysalis',
-      turret: 'Thorn spire'
+      turret: 'Thorn spire',
+      fieldlab: 'Field laboratory',
+      researchhub: 'Research hub',
+      researchspire: 'Research spire'
     }
   },
   {
@@ -99,7 +105,10 @@ const FACTIONS = [
       refinery: 'Echo Prism',
       factory: 'Tomb forge',
       hangar: 'Sky sepulcher',
-      turret: 'Mourning obelisk'
+      turret: 'Mourning obelisk',
+      fieldlab: 'Field laboratory',
+      researchhub: 'Research hub',
+      researchspire: 'Research spire'
     }
   }
 ] as const;
@@ -310,11 +319,31 @@ const BUILDINGS = {
     reload: 1.05,
     vision: 20,
     desc: 'Automated ground and air defense. Protects workers and choke points, but can be outranged by artillery.'
+  },
+  fieldlab: {
+    cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, vision: 0, civilizationPoints: 5,
+    desc: 'Civilian field laboratory. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
+  },
+  researchhub: {
+    cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, vision: 0, civilizationPoints: 5,
+    desc: 'Terraced civilian research hub. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
+  },
+  researchspire: {
+    cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, vision: 0, civilizationPoints: 5,
+    desc: 'Civilian research tower with three dish antennas. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
 
 type BuildingType = keyof typeof BUILDINGS;
 type BuildingDefinition = (typeof BUILDINGS)[BuildingType];
+
+function isCivilizationBuildingType(type: string): boolean {
+  return Object.hasOwn(BUILDINGS, type) && !!(BUILDINGS[type as BuildingType] as BuildingDefinitionShape).civilizationPoints;
+}
+function civilizationScoreForBuildings(entities: readonly Entity[], team: PlayerTeam): number {
+  return entities.reduce((score, e) => score + (e.kind === 'building' && e.team === team && e.hp > 0 && e.progress >= 1
+    ? (BUILDINGS[e.type] as BuildingDefinitionShape).civilizationPoints || 0 : 0), 0);
+}
 
 const ABILITIES = {
   orbital: { name: 'Orbital strike', icon: 'orbital', energy: 85, cd: 48,

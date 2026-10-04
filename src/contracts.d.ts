@@ -20,6 +20,7 @@ interface UnitDefinitionShape {
 }
 
 interface BuildingDefinitionShape {
+  civilizationPoints?: number;
   cost: number;
   gas: number;
   hp: number;
@@ -204,6 +205,7 @@ type MeridianSettings = Record<string, number | boolean> & {
 interface MeridianProfile {
   version: 1;
   expeditionDepth: number;
+  lastCivilizationScore: number;
   aether: number;
   tutorialComplete: boolean;
   upgrades: Record<string, number>;
@@ -245,6 +247,7 @@ interface MeridianExpedition {
   faction: FactionId;
   abilities: AbilityType[];
   depth: number;
+  civilizationScore: number;
   benefits: Record<string, number>;
   enemyBenefits: Record<string, number>[];
   encounter: ExpeditionEncounter;
@@ -553,6 +556,7 @@ interface PendingRecall extends Position {
 interface Scan extends TimedArea { team?: PlayerTeam; }
 
 interface BattleResult {
+  civilizationScore: number;
   win: boolean;
   text: string;
   time: number;

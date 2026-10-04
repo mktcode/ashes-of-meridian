@@ -195,7 +195,7 @@
           : faction !== undefined && kind === 'train' && hasContentKey(UNITS,type)
             ? renderModelThumbnail(faction,'unit',type,'action-model') : '';
         const visual = preview ? `${preview}<i class="model-space" aria-hidden="true"></i>` : uiIcon(kind === 'tab' ? key : ic, ic);
-        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost}◆${opts.cost.gas ? ' ' + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
+        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost || !opts.cost.gas ? opts.cost.cost + '◆' : ''}${opts.cost.gas ? (opts.cost.cost ? ' ' : '') + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
         this.renderActionMarkup();
@@ -231,7 +231,7 @@
           if (ready) {
             html += this.actionButton('sell', 'Sell', 'cancel', { disabled: !!sellReason });
             html += this.actionButton('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
-            html += this.actionButton('rally', 'Rally point', 'rally');
+            if (!isCivilizationBuildingType(b!.type)) html += this.actionButton('rally', 'Rally point', 'rally');
           } else html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
           for (let k of contentKeys(BUILDINGS))

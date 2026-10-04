@@ -20,6 +20,7 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-westmark-terrain',
   'renderer-model-kit',
   'renderer-heavy-mesh',
+  'model-civilization-buildings',
   'model-faction-0-building-barracks',
   'model-faction-0-building-factory',
   'model-faction-0-building-hangar',

@@ -215,6 +215,8 @@
         // Resolve all losses together; simultaneous player elimination is always a loss.
         const eliminated = s.parties.filter(p => !p.eliminated &&
           !this.alive(e => e.team === p.id && (p.deploymentPending ? e.type === 'worker' : e.type === 'hq')).length);
+        // Tally before defeated parties withdraw; withdrawal is not building destruction.
+        const civilization = eliminated.length ? civilizationScoreForBuildings(s.entities, 0) : 0;
         for (const party of eliminated) {
           party.eliminated = true;
           // Withdrawal, not combat kills: no score, promotions, explosions or RNG draws.
@@ -232,9 +234,9 @@
         }
         if (eliminated.length) this.world!.reveal(s.entities, s.scans);
         if (this.party(0).eliminated)
-          this.finish(false, mission.defeat);
+          this.finish(false, mission.defeat, civilization);
         else if (s.parties.every(p => p.id === 0 || p.eliminated))
-          this.finish(true, mission.victory);
+          this.finish(true, mission.victory, civilization);
       },
       abilityStats(this: MeridianGame, kind: AbilityType, team: PlayerTeam = 0): AbilityStats {
         return abilityStats(kind, this.party(team).meta[kind] || 0);
@@ -309,7 +311,7 @@
           this.notify(team, 'toast', 'Orbital strike requires current vision at the target.'); return false;
         }
         if (kind === 'drop' && !this.alive(e => e.team === team &&
-          (e.kind === 'unit' || (e.kind === 'building' && e.progress >= 1)) &&
+          (e.kind === 'unit' || (e.kind === 'building' && e.progress >= 1 && !isCivilizationBuildingType(e.type))) &&
           distance(e, p) <= ABILITY_RULES.reinforcementRange).length) {
           this.notify(team, 'toast', `Reinforcements require own troops or a completed structure within ${ABILITY_RULES.reinforcementRange} meters.`);
           return false;
@@ -378,12 +380,13 @@
         }
         return true;
       },
-      finish(this: MeridianGame, win: boolean, text: string) {
+      finish(this: MeridianGame, win: boolean, text: string, civilizationScore = civilizationScoreForBuildings(this.s!.entities, 0)) {
         if (this.s!.result || this.s!.rules.kind === 'scenario') return;
         let s = this.s!,
           h = this.alive(e => e.team === 0 && e.type === 'hq') as BuildingEntity[],
           integrity = h.length ? Math.max(...h.map(e => e.hp / e.maxHp)) : 0;
         s.result = {
+          civilizationScore,
           win,
           text,
           time: s.time,

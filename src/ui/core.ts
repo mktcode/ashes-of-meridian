@@ -96,6 +96,8 @@
       resultAetherRecovered?: number;
       resultAetherEvacuated?: number;
       resultAetherStructures?: number;
+      resultCivilizationEarned?: number;
+      resultCivilizationTotal?: number;
       resultBenefit?: string;
       onViewportChange?: () => void;
       onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean) => Promise<boolean>;
@@ -254,6 +256,8 @@
           this.resultAetherRecovered = undefined;
           this.resultAetherEvacuated = undefined;
           this.resultAetherStructures = undefined;
+          this.resultCivilizationEarned = undefined;
+          this.resultCivilizationTotal = undefined;
           this.resultBenefit = undefined;
           this.paused = !!data.restored;
           this.modalKind = '';
@@ -338,6 +342,13 @@
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
             }
+            this.resultCivilizationEarned = this.expedition ? data.civilizationScore || 0 : 0;
+            if (this.expedition) {
+              this.expedition.civilizationScore = Math.min(Number.MAX_SAFE_INTEGER,
+                (this.expedition.civilizationScore || 0) + this.resultCivilizationEarned);
+              this.profile.lastCivilizationScore = this.expedition.civilizationScore;
+            }
+            this.resultCivilizationTotal = this.expedition?.civilizationScore || 0;
             if (data.win && this.expedition) {
               const previousUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
               this.rememberStage();
