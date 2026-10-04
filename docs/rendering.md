@@ -102,11 +102,19 @@ Nur auf `home` ersetzt ein eigener seedbasierter Hintergrund den normalen Himmel
 
 Der zeit- und kameraunabhängige Himmel samt Planeten wird als ein einziges GPU-Bild in voller Szenenauflösung (`RGBA8`, etwa vier Bytes je Pixel) wiederverwendet. Der erste Frame zeichnet in das vorhandene Szenenziel und kopiert nur dessen Farbe vor Terrain/Bloom/Post; dadurch bleibt die vorhandene MSAA-Kantenglättung im gespeicherten Hintergrund enthalten, ohne zusätzliche MSAA-/Tiefenziele. Folgebilder kopieren exakte Texel per Vollbildshader, da WebGL 2 keinen Single-Sample-zu-MSAA-Blit erlaubt. Weltkamera, Landschaft, Modelle und Postprocessing bleiben live. Seed/Familie erneuern den Inhalt; Größe, Qualität oder Samplezahl ersetzen das Ziel. Menüausstieg/Seitenende geben es frei. Bei fehlgeschlagener Cacheallokation bleibt die direkte Darstellung erhalten; erst eine geänderte Zielkonfiguration erlaubt einen neuen Allokationsversuch. Keine CPU-Bildkopie und keine Laufzeit-Rasterassets.
 
+Die bewegte Landschaftskulisse hinter `home` und den anderen Menüs verwendet zusätzlich einen Tiefencache nur für **statische** Schattenwerfer. Die feste Kino-Lichtprojektion erlaubt Wiederverwendung trotz Kameraorbit; dynamische Gebäude-/Einheitenschatten werden nach jeder Tiefenkopie frisch eingezeichnet. Ein zusätzliches `DEPTH_COMPONENT24`-Ziel gleicher Schattenauflösung kostet geschätzt vier Bytes je Texel. Lichtmatrix, Modellzeit, statische Buckets, Mesh- und Profiländerungen entwerten den Inhalt; Schattenauflösung/Qualität ersetzen den Speicher. Verlassen der Kinokamera, Performance-Qualität und Seitenende geben ihn frei. Fehlgeschlagene Allokation fällt ohne Frame-für-Frame-Retry auf direktes Zeichnen zurück. Kein Schattenqualitätsverlust und kein Einfrieren der sichtbaren Szene.
+
 Die Menükamera richtet ihr Ziel an der CPU-Geländehöhe aus und hält den Orbit oberhalb des Bodens am Kamerastandort. Erhöhte Landschaften dürfen nicht die alte Nullhöhen-Kulisse voraussetzen; das Schattenvolumen folgt dem gleichen Ziel-Datum. Die Gefechtskamera bleibt davon getrennt.
 
 Ein Stage-Wechsel kopiert das fertig gerenderte Canvas **einmal im Rendercallback** in ein temporäres 2D-Canvas. Kein `preserveDrawingBuffer`, kontinuierliches Readback oder zweite live Welt. Das Standbild überbrückt Welt-/Texturladen; erst der erste fertige neue Frame startet die Compositor-Überblendung.
 
 Ersetzende Vorschau/Gefechtsstart verwirft Animation/Bildspeicher und entwertet alte asynchrone Ergebnisse. Reduced motion überspringt Animation, nicht Bereitschaft. [Archivzustand](architecture.md#zustands--und-verantwortungsgrenzen).
+
+## Ergebnisdarstellung
+
+Sieg/Niederlage stoppen bereits die Simulation. Bei unverändertem Ergebniszustand und unveränderter Kamera bleiben deshalb die vorhandenen Szenen-/Bloomziele und das passende Overlay erhalten: keine erneuten Modellinstanzen, Uploads, Schatten-, Szenen- oder Bloomdurchläufe und kein zusätzlicher Bildspeicher. Der Post-Pass zeichnet weiter in das nicht dauerhaft erhaltene Hauptcanvas; Filmkorn, Tilt-Shift, Bloomwirkung, CSS-Filter und DOM-Animationen bleiben bestehen. Größen-/Qualitäts-, Welt-/Zustands-, Kamera-, Perspektiv-/Fog- und Auswahländerungen erzwingen eine frische Darstellung. Intros, aktive Modi und auslaufende Pings verhindern Wiederverwendung. Echtzeit-Fließwasser und eigene Renderumgebungen bleiben mangels Stillstandsvertrag vollständig live; gewöhnliche Pause bleibt unverändert.
+
+Das unsichtbare Ergebnis-HUD aktualisiert weder Queues noch Minimap. UI-/Audio- und Meldungsuhren laufen weiter; Auflösung, Simulations-/Ergebnisverarbeitung und Eingaben bleiben davon unabhängig.
 
 ## Viewport und HUD
 

@@ -18,7 +18,7 @@ function diagnosticResources(R: MeridianRenderer) {
   return { quality: R.quality, width: R.width, height: R.height, msaaSamples: R.sceneSamples,
     meshes, geometryBytesEstimate: geometryBytes, buckets, instances, instanceCapacityBytes,
     residentMaterialTextures: Object.values(R.textureResources).filter(t => t.resident).length,
-    renderTargetBytesEstimate: sceneBytes + msaaBytes + bloomBytes + shadowBytes,
+    renderTargetBytesEstimate: sceneBytes + msaaBytes + bloomBytes + shadowBytes + (R.menuShadowBytes ?? 0),
     materialTextureBytes: null };
 }
 function createMeridianDiagnostics(R: MeridianRenderer, context: () => DiagnosticContext) {

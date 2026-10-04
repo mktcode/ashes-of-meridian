@@ -43,6 +43,8 @@ test('resource estimates include reusable contour capacity and repeated draw ins
   assert.equal(after.instances,before.instances+2);
   assert.equal(after.instanceCapacityBytes,before.instanceCapacityBytes+22*32*4);
   assert.equal(after.renderTargetBytesEstimate,before.renderTargetBytesEstimate,'contours have no additional render targets');
+  R.menuShadowBytes=1536*1536*4;
+  assert.equal(resources(R).renderTargetBytesEstimate,after.renderTargetBytesEstimate+R.menuShadowBytes);
 });
 
 test('diagnostic recorder separates callback/render cadence and CPU phases in a bounded chronological ring', () => {

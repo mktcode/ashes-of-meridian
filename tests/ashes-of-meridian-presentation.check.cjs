@@ -774,12 +774,12 @@ function appClock(diagnostic = false) {
       viewport = { width: 800, height: 600, left: 0, top: 0 };
       gl = { getExtension(name) { queryRequests.push(name); return null; } };
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
-      width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1;
+      width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1; canRetainScene = true;
       frameReady() { return true; } releaseEnvironment() {} releaseMenuSky() {} releaseGeometry() {}
       setBattlefieldTime(time) { this.battlefieldTime=time; }
       setMenuSky(seed,family) { this.menuSky={seed,family}; }
       resize() {} camera() {} project() { return {x:400,y:300}; } begin() { renderWork.begin++; }
-      render(time, modelTime, thumbnails) { this.diagnostics?.beginFrame(); thumbnails?.(); draws.push({ now, time }); }
+      render(time, modelTime, thumbnails, retainScene) { this.diagnostics?.beginFrame(); thumbnails?.(); draws.push({ now, time, retainScene }); }
     },
     // This fixture tests app mesh/lifecycle behavior; shared placement rules have their own tests.
     PlacementGuideSampler: class {
@@ -830,6 +830,37 @@ function appClock(diagnostic = false) {
     }
   };
 }
+
+test('result background retains scene construction but invalidates camera, resize, quality and view changes',()=>{
+  const a=appClock();a.game.s.result={win:true};a.ui.paused=true;a.ui.modalKind='result';
+  a.frame(20);a.frame(40);
+  assert.deepEqual(a.draws.map(d=>d.retainScene),[false,true]);
+  assert.deepEqual(a.renderWork,{begin:1,battlefield:1,overlay:1});
+  assert.equal(a.ticks.length,2);assert.equal(a.steps.length,0);
+  const redraw=change=>{change();a.frame(a.draws.at(-1).now+20);assert.equal(a.draws.at(-1).retainScene,false);};
+  redraw(()=>a.game.s.cam.x++);
+  redraw(()=>a.renderer.quality=1);
+  redraw(()=>a.renderer.canRetainScene=false);a.renderer.canRetainScene=true;
+  redraw(()=>a.ui.onViewportChange());
+  redraw(()=>a.ui.pings.push({life:1}));
+  a.ui.pings=[];redraw(()=>{});
+  a.frame(a.draws.at(-1).now+20);assert.equal(a.draws.at(-1).retainScene,true);
+  redraw(()=>a.game.s={...a.game.s});
+  redraw(()=>a.ui.view='codex');redraw(()=>a.ui.view='game');
+  redraw(()=>{a.game.s.result=null;a.ui.paused=false;a.ui.modalKind=null;});
+  a.frame(a.draws.at(-1).now+60);
+  assert.ok(a.steps.length>0);assert.deepEqual(a.errors,[]);
+});
+
+test('result UI advances transient clocks without updating the hidden HUD or minimap',()=>{
+  const context=loadScripts(['ui-presentation'],{globals:{defineMeridianUIMethods(){},performance:{now:()=>0}}}),
+    tick=vm.runInContext('uiPresentationMethods.tick',context),calls=[];
+  const ui={view:'game',game:{s:{result:{win:false}}},pings:[{life:.1}],hudClock:0,
+    notifyStorageFailure(){calls.push('storage');},advanceTutorialArrival(){},advanceBattleIntro(){},
+    updateQueues(){calls.push('queues');},updateHUD(){calls.push('hud');},drawMinimap(){calls.push('minimap');}};
+  tick.call(ui,.3);assert.deepEqual(calls,['storage']);assert.equal(ui.pings.length,0);
+  ui.game.s.result=null;tick.call(ui,.3);assert.deepEqual(calls,['storage','storage','queues','hud','minimap']);
+});
 
 test('app enables celestial backdrops only on home, never in combat or codex',()=>{
   const a=appClock();

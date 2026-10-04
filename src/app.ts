@@ -6,7 +6,8 @@
         ui: MeridianUI,
         audio: MeridianAudio,
         overlayContext: CanvasRenderingContext2D,
-        preview: RenderEntity[] = [];
+        preview: RenderEntity[] = [],
+        retainedResult: { state: RunState; world: Battlefield | null; key: string } | null = null;
       const canvas = $('world'),
         overlay = $('overlay');
       try {
@@ -35,7 +36,7 @@
         R = new MeridianRenderer(canvas);
         const thumbnails = new MeridianModelThumbnails(R);
         addEventListener('pagehide',event=>{
-          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseEnvironment(); }
+          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releaseEnvironment(); }
         });
         R.quality = profile.settings.quality;
         R.resize();
@@ -63,6 +64,7 @@
         if (!context) throw Error('Canvas 2D is unavailable');
         overlayContext = context;
         function resize() {
+          retainedResult = null;
           R.resize();
           let d = Math.min(devicePixelRatio || 1, 2);
           const v = R.viewport;
@@ -479,9 +481,18 @@
               frameClock = 0;
             }
             diagnostics?.recorder.phase('sceneBuild');
-            R.begin();
-            const viewTime = game.s?.time;
-            if (ui.view === 'game' && game.s) battlefield(viewTime!);
+            const viewTime = game.s?.time,
+              resultKey = ui.view === 'game' && game.s?.result && !ui.battleIntro && !ui.mode && !ui.pings.length
+                ? [viewTime, weatherTime, R.width, R.height, R.quality, game.localTeam,
+                    game.s.cam.x, game.s.cam.z, game.s.cam.zoom, game.s.cam.yaw,
+                    game.world?.fogVersion, ui.hover, ...ui.selectionIds()].join('/') : null,
+              retainResultScene = resultKey !== null && R.canRetainScene && retainedResult?.state === game.s &&
+                retainedResult.world === game.world && retainedResult.key === resultKey;
+            if (!retainResultScene) R.begin();
+            if (retainResultScene) {
+              // Result state and camera are stationary. Keep scene/bloom GPU targets
+              // and the matching overlay; post grain and DOM animation remain live.
+            } else if (ui.view === 'game' && game.s) battlefield(viewTime!);
             else if (ui.view === 'codexModel' && ui.codexSelection) {
               clearPlacementGuide();
               const {kind,type,faction} = ui.codexSelection;
@@ -509,10 +520,11 @@
             R.setMenuSky(menuWorld?.terrainSeed ?? null, menuWorld?.definition.render.groundTexture ?? '');
             R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
               ui.view === 'codex' ? () => thumbnails.update($('menu')) :
-                ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined);
+                ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined, retainResultScene);
+            retainedResult = resultKey === null ? null : { state: game.s!, world: game.world, key: resultKey };
             advancePreviewChange();
             diagnostics?.recorder.phase('overlay');
-            ui.drawOverlay(overlayContext);
+            if (!retainResultScene) ui.drawOverlay(overlayContext);
             diagnostics?.finishFrame(true);
           } catch (error) {
             finishPreviewChange(false);

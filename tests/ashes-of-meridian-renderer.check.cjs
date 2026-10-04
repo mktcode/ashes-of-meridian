@@ -314,6 +314,7 @@ function setup(options = {}) {
     checkFramebufferStatus() {
       const c = draw.attachments.COLOR_ATTACHMENT0, d = draw.attachments.DEPTH_ATTACHMENT;
       if(!d) { assert.ok(c.width>0&&c.height>0);return options.rejectBloom ? 'FRAMEBUFFER_UNSUPPORTED' : 'FRAMEBUFFER_COMPLETE'; }
+      if(!c) { assert.equal(d.format,'DEPTH_COMPONENT24');return options.rejectShadow ? 'FRAMEBUFFER_UNSUPPORTED' : 'FRAMEBUFFER_COMPLETE'; }
       assert.equal(c.samples, d.samples); assert.equal(c.width, d.width); assert.equal(c.height, d.height);
       return options.reject?.(c.samples) ? 'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE' : 'FRAMEBUFFER_COMPLETE';
     },
@@ -334,7 +335,7 @@ function setup(options = {}) {
     bloomTargets: [], bloomProg: 'bloom',
     surfaceStyle: vm.runInContext("surfaceWorldStyle('ground', 0)", context),
     battlefieldProfile: vm.runInContext('DEFAULT_TERRAIN_RENDER_PROFILE', context),
-    frame: 0, shadowSize: 1536, shadowBias: .00022, haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
+    frame: 0, shadowSize: 1536, shadowBias: .00022, lightVP: vm.runInContext('M4.identity()',context), haze: [0, 0, 0], static: 'static', dynamic: 'dynamic', effects: 'effects',
     program: 'scene', depthProg: 'shadow', skyProg: 'sky', postProg: 'post', shadowFbo: 'shadow-target',
     upload() {}, uniform(p, name) { return name; },
     drawBatches(batch, matrix, excludedNames, includedName) {
@@ -979,6 +980,56 @@ test('bloom uses two quarter-size targets, three ordered passes and a clean allo
   const shader=vm.runInContext('BLOOMF',h.context);
   assert.match(shader,/smoothstep\(\.76,\.90,peak\)\*smoothstep\(\.48,\.74,lum\)/);
   assert.ok(Math.abs(.227027+2*.316216+2*.070270-1)<.00001);
+});
+
+test('menu shadows reuse only static depth while dynamic casters and the scene remain live', () => {
+  const h=setup(),r=h.r;r.resize();
+  Object.assign(r,{cinema:true,static:{},lightVP:new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])});
+  const draw=(time=0)=>{h.calls.length=0;r.render(time,0);},
+    staticShadow=()=>h.calls.filter(c=>c[0]==='batch'&&c[1]===r.static&&c[2]==='shadow');
+  draw();assert.equal(staticShadow().length,1);assert.equal(r.menuShadowBytes,1536*1536*4);
+  const cache=r.menuShadows;
+  draw(1);assert.equal(staticShadow().length,0);assert.strictEqual(r.menuShadows,cache);
+  assert.ok(h.calls.some(c=>c[0]==='resolve'&&c[1]===cache.fbo&&c[2]===r.shadowFbo&&c.at(-2)===h.g.DEPTH_BUFFER_BIT));
+  assert.ok(h.calls.some(c=>c[0]==='batch'&&c[1]===r.dynamic&&c[2]==='shadow'));
+  assert.ok(h.calls.some(c=>c[0]==='batch'&&c[1]===r.static&&c[2]==='scene'));
+  r.lightVP[12]=1;draw();assert.equal(staticShadow().length,1);
+  r.static={};draw();assert.equal(staticShadow().length,1);
+  r.static.test={dirty:true};draw();assert.equal(staticShadow().length,1);
+  r.static.test.dirty=false;draw();assert.equal(staticShadow().length,0);
+  h.calls.length=0;r.render(3,1);assert.equal(staticShadow().length,1,'vegetation time invalidates depth');
+  r.setBattlefieldProfile(r.battlefieldProfile);assert.equal(r.menuShadowBytes,0);
+  assert.ok(!h.framebuffers.has(cache.fbo));assert.ok(!h.buffers.has(cache.depth));
+  draw();r.cinema=false;draw();assert.equal(r.menuShadowBytes,0);assert.equal(staticShadow().length,1);
+});
+
+test('menu shadow allocation failure falls back without retrying every frame', () => {
+  const h=setup({rejectShadow:true}),r=h.r;r.resize();
+  Object.assign(r,{cinema:true,static:{},lightVP:new Float32Array(16)});
+  let attempts=0;const create=h.g.createFramebuffer;h.g.createFramebuffer=()=>{attempts++;return create();};
+  const sizes=[h.framebuffers.size,h.buffers.size];
+  for(let i=0;i<3;i++)r.render(i,0);
+  assert.equal(attempts,1);assert.equal(r.menuShadowBytes,0);
+  assert.deepEqual([h.framebuffers.size,h.buffers.size],sizes);
+  assert.equal(h.calls.filter(c=>c[0]==='batch'&&c[1]===r.static&&c[2]==='shadow').length,3);
+  r.quality=1;r.render(4,0);assert.equal(attempts,2);
+  r.quality=0;r.render(5,0);assert.equal(r.menuShadowAttempt,undefined);
+});
+
+test('retained result scene redraws post only and invalidates on target or profile changes', () => {
+  const h=setup(),r=h.r;r.resize();r.render(1,7);
+  h.calls.length=0;r.render(2,7,undefined,true);
+  assert.deepEqual(h.calls.filter(c=>c[0]==='quad').map(c=>c[1]),['post']);
+  assert.ok(!h.calls.some(c=>c[0]==='batch'||c[0]==='resolve'));
+  assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_time'&&c[2]===2),'grain keeps its live clock');
+  r.quality=1;r.resize();h.calls.length=0;r.render(3,7,undefined,true);
+  assert.ok(h.calls.some(c=>c[0]==='batch'));
+  r.setBattlefieldProfile(r.battlefieldProfile);h.calls.length=0;r.render(4,7,undefined,true);
+  assert.ok(h.calls.some(c=>c[0]==='batch'));
+  r.static={water:{source:'westmarkWater',n:1}};
+  assert.equal(r.canRetainScene,false,'wall-clock water must remain live even at a result');
+  h.calls.length=0;r.render(5,7,undefined,true);assert.ok(h.calls.some(c=>c[0]==='batch'));
+  r.static={};r.environment={};assert.equal(r.canRetainScene,false,'custom animation needs its own retention contract');
 });
 
 test('scene geometry and blended effects resolve exactly once before post-processing', () => {

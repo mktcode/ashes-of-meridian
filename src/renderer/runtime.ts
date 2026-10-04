@@ -220,6 +220,8 @@
         this.drawCalls = 0;
       }
       setBattlefieldProfile(profile: BattlefieldRenderProfile, seed = 0) {
+        this.releaseMenuShadows();
+        this.retainedSceneReady = false;
         if (profile.scenery !== this.battlefieldProfile.scenery || (profile.scenery && !this.environment)) {
           // Construct first: a failed allocation must not orphan the active environment.
           const factory = profile.scenery ? BattlefieldEnvironments[profile.scenery] : undefined;
@@ -300,6 +302,7 @@
         return map[k];
       }
       releaseGeometry(name: string) {
+        if (this.menuShadows) this.menuShadows.key = '';
         const parts = this.meshParts?.[name] || (this.meshes[name] ? [name] : []);
         for (const part of parts) {
           const mesh = this.meshes[part];
@@ -352,6 +355,7 @@
       }
       // Bounded view overlays need no static chunk rebuild. Reuse VAO/VBO storage.
       streamGeometry(name: string, data: Float32Array) {
+        if (this.menuShadows) this.menuShadows.key = '';
         const mesh = this.meshes[name];
         if (!mesh || mesh.count !== data.length / 9 || this.meshParts[name]?.length !== 1) {
           this.releaseGeometry(name);
@@ -372,6 +376,7 @@
         return bounds;
       }
       createGeometry(name: string, data: MeshData, usage: number = this.gl.STATIC_DRAW) {
+        if (this.menuShadows) this.menuShadows.key = '';
         const gl = this.gl, storage = Array.isArray(data) ? new Float32Array(data) : data;
         let vao = gl.createVertexArray(), vbo = gl.createBuffer();
         gl.bindVertexArray(vao);
@@ -385,7 +390,63 @@
         gl.bindVertexArray(null);
         this.meshes[name] = { vao, vbo, count: storage.length / 9, bounds: this.geometryBounds(storage) };
       }
+      private menuShadows?: { fbo: WebGLFramebuffer; depth: WebGLRenderbuffer; key: string; statics: RenderBatches };
+      private menuShadowAttempt?: string;
+      private retainedSceneReady = false;
+      get menuShadowBytes() { return this.menuShadows ? this.shadowSize * this.shadowSize * 4 : 0; }
+      get canRetainScene() {
+        // Water uses wall-clock flow, unlike frozen model/weather time. Custom
+        // environments likewise own their animation contract: never freeze either.
+        return this.retainedSceneReady && !this.environment &&
+          !Object.values(this.static).some(b => b.n && b.source === 'westmarkWater');
+      }
+      releaseMenuShadows() {
+        if (this.menuShadows) {
+          this.gl.deleteFramebuffer(this.menuShadows.fbo);
+          this.gl.deleteRenderbuffer(this.menuShadows.depth);
+        }
+        this.menuShadows = undefined;
+        this.menuShadowAttempt = undefined;
+      }
+      private prepareMenuShadows(modelTime: number) {
+        if (!this.cinema || this.quality === 0) { this.releaseMenuShadows(); return null; }
+        const g = this.gl, configuration = `${this.shadowSize}/${this.quality}`;
+        if (this.menuShadowAttempt !== configuration) {
+          this.releaseMenuShadows();
+          this.menuShadowAttempt = configuration;
+          const fbo = g.createFramebuffer(), depth = g.createRenderbuffer();
+          let ready = false;
+          try {
+            if (fbo && depth) {
+              g.bindRenderbuffer(g.RENDERBUFFER, depth);
+              g.renderbufferStorage(g.RENDERBUFFER, g.DEPTH_COMPONENT24, this.shadowSize, this.shadowSize);
+              g.bindFramebuffer(g.FRAMEBUFFER, fbo);
+              g.framebufferRenderbuffer(g.FRAMEBUFFER, g.DEPTH_ATTACHMENT, g.RENDERBUFFER, depth);
+              g.drawBuffers([g.NONE]); g.readBuffer(g.NONE);
+              ready = g.checkFramebufferStatus(g.FRAMEBUFFER) === g.FRAMEBUFFER_COMPLETE;
+            }
+          } finally {
+            g.bindRenderbuffer(g.RENDERBUFFER, null);
+            g.bindFramebuffer(g.FRAMEBUFFER, null);
+            if (!ready) { if (fbo) g.deleteFramebuffer(fbo); if (depth) g.deleteRenderbuffer(depth); }
+          }
+          if (ready) this.menuShadows = { fbo: fbo!, depth: depth!, key: '', statics: this.static };
+        }
+        const cache = this.menuShadows;
+        if (!cache) return null;
+        const key = `${modelTime}/${Array.from(this.lightVP).join('/')}`;
+        if (cache.statics !== this.static || Object.values(this.static).some(b => b.dirty)) cache.key = '';
+        return { cache, key, valid: cache.key === key };
+      }
+      private copyShadowDepth(from: WebGLFramebuffer | null, to: WebGLFramebuffer | null) {
+        const g = this.gl, n = this.shadowSize;
+        g.bindFramebuffer(g.READ_FRAMEBUFFER, from);
+        g.bindFramebuffer(g.DRAW_FRAMEBUFFER, to);
+        g.blitFramebuffer(0, 0, n, n, 0, 0, n, n, g.DEPTH_BUFFER_BIT, g.NEAREST);
+        g.bindFramebuffer(g.FRAMEBUFFER, this.shadowFbo);
+      }
       setupShadow() {
+        this.releaseMenuShadows();
         let g = this.gl;
         g.bindTexture(g.TEXTURE_2D, this.shadowTex);
         g.texImage2D(
@@ -422,6 +483,7 @@
         // Client offsets still refresh above. Reuse successful targets (or their clean
         // allocation fallback) until dimensions/quality change; never retry every observer callback.
         if (width === this.width && height === this.height && this.targetQuality === this.quality) return;
+        this.retainedSceneReady = false;
         this.width = width;
         this.height = height;
         this.canvas.width = this.width;
@@ -1078,9 +1140,9 @@
           g.uniform1i(this.uniform(program, uniform), unit);
         }
       }
-      render(time: number, modelTime = time, thumbnails?: () => void) {
+      render(time: number, modelTime = time, thumbnails?: () => void, retainScene = false) {
         const g = this.gl, environment = this.environment,
-          skyProg = environment?.skyProg ?? this.skyProg, postProg = environment?.postProg ?? this.postProg,
+          skyProg = environment?.skyProg ?? this.skyProg,
           drawScene = environment ? environment.drawSceneBatches.bind(environment, time, modelTime) : this.drawBatches.bind(this);
         environment?.beginFrame(modelTime);
         this.frame++;
@@ -1091,6 +1153,13 @@
           thumbnails();
           this.diagnostics?.endPass();
         }
+        if (retainScene && this.canRetainScene && !thumbnails) {
+          environment?.preparePost();
+          this.present(time, modelTime);
+          environment?.endFrame();
+          return;
+        }
+        const menuShadows = this.prepareMenuShadows(modelTime);
         this.upload(this.static);
         this.upload(this.dynamic);
         this.upload(this.effects);
@@ -1102,7 +1171,8 @@
           this.diagnostics?.beginPass('shadow');
           g.bindFramebuffer(g.FRAMEBUFFER, this.shadowFbo);
           g.viewport(0, 0, this.shadowSize, this.shadowSize);
-          g.clear(g.DEPTH_BUFFER_BIT);
+          if (menuShadows?.valid) this.copyShadowDepth(menuShadows.cache.fbo, this.shadowFbo);
+          else g.clear(g.DEPTH_BUFFER_BIT);
           g.useProgram(this.depthProg);
           this.bindEcology(this.depthProg, modelTime);
           g.uniformMatrix4fv(this.uniform(this.depthProg, 'u_vp'), false, this.lightVP);
@@ -1112,8 +1182,15 @@
           g.enable(g.POLYGON_OFFSET_FILL);
           g.polygonOffset(1.5, 2);
           // The flat ground receives shadows in the scene pass but cannot cast a visible one itself.
-          this.drawBatches(this.static, this.lightVP,
-            this.surface ? ['alienLanternPool', 'westmarkWater'] : ['terrain', 'alienLanternPool', 'westmarkWater']);
+          if (!menuShadows?.valid) {
+            this.drawBatches(this.static, this.lightVP,
+              this.surface ? ['alienLanternPool', 'westmarkWater'] : ['terrain', 'alienLanternPool', 'westmarkWater']);
+            if (menuShadows) {
+              this.copyShadowDepth(this.shadowFbo, menuShadows.cache.fbo);
+              menuShadows.cache.key = menuShadows.key;
+              menuShadows.cache.statics = this.static;
+            }
+          }
           this.drawBatches(this.dynamic);
           g.disable(g.POLYGON_OFFSET_FILL);
           this.diagnostics?.endPass();
@@ -1172,6 +1249,12 @@
         environment?.preparePost();
         this.renderBloom();
         this.diagnostics?.endPass();
+        this.retainedSceneReady = true;
+        this.present(time, modelTime);
+        environment?.endFrame();
+      }
+      private present(time: number, modelTime: number) {
+        const g = this.gl, environment = this.environment, postProg = environment?.postProg ?? this.postProg;
         this.diagnostics?.beginPass('post');
         g.bindFramebuffer(g.FRAMEBUFFER, null);
         g.viewport(0, 0, this.width, this.height);
@@ -1194,6 +1277,5 @@
         this.diagnostics?.draw(3);
         this.diagnostics?.endPass();
         g.bindVertexArray(null);
-        environment?.endFrame();
       }
     }

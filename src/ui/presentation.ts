@@ -69,7 +69,7 @@
         }
         for (let p of this.pings) p.life -= dt;
         this.pings = this.pings.filter(p => p.life > 0);
-        if (this.view !== 'game' || !this.game.s) return;
+        if (this.view !== 'game' || !this.game.s || this.game.s.result) return;
         if (!this.domPressed) this.updateQueues();
         this.hudClock += dt;
         if (this.hudClock > 0.25) {
