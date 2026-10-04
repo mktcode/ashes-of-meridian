@@ -132,12 +132,18 @@ function buildingGroundGeometry(world: Battlefield, e: RenderEntity): { geometry
   return {geometry,material};
 }
 
+function sceneryRelief(world: Battlefield, relief: WorldRelief): WorldRelief {
+  const skin = world.renderData.geometries.find(d => d.mesh === 'terrain' && d.model === 'landscapeRelief' && 'relief' in d);
+  return { ...relief, innerRelief: skin && 'relief' in skin ? skin.relief : undefined };
+}
+
 // Continue a narrow decorative rim with existing clusters, without new RNG draws,
 // assets, blockers or an area-scaled density budget. Keep complete multipart plants.
 function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
   const backdrop = world.renderData.geometries.find(d => d.model === 'landscapeRelief' && 'relief' in d && d.relief.innerExtent),
     result: WorldPlacement[] = [], extent = world.extent;
   if (!backdrop || !('relief' in backdrop) || !world.surface) return result;
+  const relief = sceneryRelief(world, backdrop.relief);
   for (let side = 0; side < 4; side++) {
     const axis = side % 2 ? 2 : 0, sign = side < 2 ? -1 : 1, groups = new Map<string, WorldPlacement[]>();
     for (const p of world.renderData.placements) {
@@ -153,7 +159,7 @@ function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
     for (let i = 0; i < count; i++) for (const p of clusters[Math.floor((i + .5) * clusters.length / count)]) {
       const outside = sign * extent + (sign * extent - p.position[axis]) * .35,
         x = axis === 0 ? outside : p.position[0], z = axis === 2 ? outside : p.position[2],
-        y = p.position[1] + worldReliefHeightAt(backdrop.relief, x, z) + .13 - world.surface.heightAt(p.position[0], p.position[2]);
+        y = p.position[1] + landscapeReliefHeightAt(relief, x, z) + .13 - world.surface.heightAt(p.position[0], p.position[2]);
       result.push({ ...p, position: [x, y, z] });
     }
   }
@@ -195,7 +201,7 @@ class SceneryFogField {
       const loX = Math.max(0, Math.floor((s.x - s.r + extent) / cell)), hiX = Math.min(size - 1, Math.floor((s.x + s.r + extent) / cell)),
         loZ = Math.max(0, Math.floor((s.z - s.r + extent) / cell)), hiZ = Math.min(size - 1, Math.floor((s.z + s.r + extent) / cell));
       for (let z = loZ; z <= hiZ; z++) for (let x = loX; x <= hiX; x++) {
-        if (x >= p && x < p + grid && z >= p && z < p + grid) continue;
+        if ((x >= p && x < p + grid && z >= p && z < p + grid) || pixels[z * size + x] === 255) continue;
         const dx = (x + .5) * cell - extent - s.x, dz = (z + .5) * cell - extent - s.z;
         if (dx * dx + dz * dz < (s.r + cell * .4) ** 2 &&
             (!visible || visible(dx + s.x, dz + s.z, s.level ?? Infinity))) pixels[z * size + x] = 255;
@@ -242,7 +248,7 @@ class BattlefieldView {
           + this.exteriorCeiling * .82 / 1.1),
       exteriorExtent = Math.ceil((EXTENT + viewRadius + 8) / 4) * 4,
       viewDescriptor = (d: WorldGeometry): WorldGeometry => this.exteriorMeshes.includes(d) && 'relief' in d
-        ? { ...d, relief: { ...d.relief, outerExtent: exteriorExtent } } : d;
+        ? { ...d, relief: { ...sceneryRelief(world, d.relief), outerExtent: exteriorExtent } } : d;
     if (this.data !== layout) {
       R.clearStatic();
       for (const patch of this.buildingGround.values()) if (patch.mesh) this.releaseBuildingGround(patch.mesh);
@@ -326,9 +332,10 @@ class BattlefieldView {
           for (const scan of state.scans) if ((scan.team ?? 0) === team && scan.until > state.time)
             sources.push({ x: scan.x, z: scan.z, r: scan.r || 31, level: Infinity });
           const field = this.sceneryFog ??= new SceneryFogField(EXTENT, CELL, GRID), exterior = this.exteriorMeshes[0],
+            relief = exterior && 'relief' in exterior ? sceneryRelief(world, exterior.relief) : null,
             extent = field.update(world.fogPixels, sources, (x, z, level) => {
               if (level === Infinity || !world.surface) return true;
-              const height = exterior && 'relief' in exterior ? worldReliefHeightAt(exterior.relief, x, z) + .13 : world.surface.heightAt(x, z);
+              const height = relief ? landscapeReliefHeightAt(relief, x, z) + .13 : world.surface.heightAt(x, z);
               return world.surface.visibilityLevel(height, x, z) <= level;
             });
           R.fog(field.pixels, field.size, extent);

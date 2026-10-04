@@ -679,6 +679,8 @@ interface WorldRelief {
   innerExtent: number;
   /** View-owned exterior continuation; never part of the playable height field. */
   outerExtent?: number;
+  /** View-owned stitch source: exact playable edge vertices, never a CPU terrain change. */
+  innerRelief?: WorldRelief;
   /** Model-specific vertex data: natural landscape weights (negative snow = damp sediment),
    * engineered-skin RGB tint, or signed water depth / flow X / flow Z. */
   colors?: Float32Array;

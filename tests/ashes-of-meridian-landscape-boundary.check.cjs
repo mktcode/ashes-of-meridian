@@ -7,7 +7,7 @@ function setup() {
   const context = loadScripts(['core', 'renderer-materials', 'renderer-geometry',
     'renderer-terrain-models', 'renderer-landscape', 'content', 'battlefield-shared', 'world', 'world-view'],
     { globals: { innerHeight: 1000 } });
-  return vm.runInContext('({TerrainModels, BattlefieldView, SceneryFogField, sceneryEdgeDecor})', context);
+  return vm.runInContext('({TerrainModels, BattlefieldView, SceneryFogField, sceneryEdgeDecor, landscapeReliefHeightAt})', context);
 }
 test('edge recon reveals only its clipped circular footprint, not a corridor inside the playable map', () => {
   const context=loadScripts(['core','world']),Battlefield=vm.runInContext('Battlefield',context),
@@ -120,30 +120,47 @@ test('landscape skin retains its top triangles and closes all raised edges to th
   assert.equal(JSON.stringify(field), before);
 });
 
-test('higher coarse edges close the hole above the fine skin, including between edge samples', () => {
-  const { TerrainModels } = setup();
-  for (const innerExtent of [10, 12]) {
-    const field = relief(20, innerExtent), before = JSON.stringify(field),
-      mesh = TerrainModels.geometry({ mesh: 'backdrop', model: 'landscapeRelief', relief: field }),
-      hole = Math.floor(innerExtent / field.step) * field.step;
-    // A ray from inside at height 15 is below the coarse top (20), but above
-    // a lower fine edge (10). Each hole wall must intercept it, not just its corners.
-    for (const [axis, sign] of [[0,-1],[0,1],[2,-1],[2,1]]) {
-      const other = axis === 0 ? 2 : 0;
-      for (const along of [-7.5,-2.5,2.5,7.5]) {
-        let hit = false;
-        for (let i = 0; i < mesh.length; i += 27) {
-          const a=mesh.subarray(i,i+9),b=mesh.subarray(i+9,i+18),c=mesh.subarray(i+18,i+27);
-          if (![a,b,c].every(v=>v[axis]===sign*hole) || a[3+axis]*sign>=0) continue;
-          const cross=(u,v)=>(u[other]-along)*(v[1]-15)-(u[1]-15)*(v[other]-along),
-            sides=[cross(a,b),cross(b,c),cross(c,a)];
-          if (sides.every(v=>v>=0)||sides.every(v=>v<=0)) {hit=true;break;}
-        }
-        assert.ok(hit,`closed inward-facing edge ${axis}:${sign}, between samples at ${along}`);
-      }
+test('stitched exterior shares every fine edge attribute and its cosmetic grounding follows the actual apron', () => {
+  const {TerrainModels,landscapeReliefHeightAt}=setup(),make=(extent,step,innerExtent=0)=>{
+    const size=extent*2/step+3,heights=new Float32Array(size*size),colors=new Float32Array(size*size*3);
+    for(let z=0;z<size;z++)for(let x=0;x<size;x++) {
+      const wx=(x-1)*step-extent,wz=(z-1)*step-extent,i=z*size+x;
+      heights[i]=20+3*Math.cos(wx*Math.PI/5)+2*Math.sin(wz*Math.PI/5);
+      colors.set([.2+(wx+20)*.001,.3+(wz+20)*.001,.4],i*3);
     }
-    assert.equal(JSON.stringify(field),before,'no playable height/material changes');
+    return {extent,step,size,innerExtent,heights,colors};
+  },fine=make(10,1.25),coarse=make(20,5,10),before=JSON.stringify([fine,coarse]),
+    build=outerExtent=>TerrainModels.geometry({mesh:'backdrop',model:'landscapeRelief',
+      relief:{...coarse,innerRelief:fine,outerExtent}}),mesh=build(20),wide=build(400),
+    skin=TerrainModels.geometry({mesh:'terrain',model:'landscapeRelief',relief:fine}),expected=new Map(),seen=new Set();
+  for(let i=0;i<(fine.size-3)**2*54;i+=9)if(Math.max(Math.abs(skin[i]),Math.abs(skin[i+2]))===10)
+    expected.set(`${skin[i]}:${skin[i+2]}`,Array.from(skin.subarray(i,i+9)));
+  for(let i=0;i<mesh.length;i+=9) {
+    assert.ok(mesh[i+1]>10,'no exposed vertical hole wall or overlap underneath the join');
+    if(Math.max(Math.abs(mesh[i]),Math.abs(mesh[i+2]))!==10)continue;
+    const key=`${mesh[i]}:${mesh[i+2]}`;seen.add(key);
+    assert.deepEqual(Array.from(mesh.subarray(i,i+9)),expected.get(key),'height, normal and material match exactly');
   }
+  assert.equal(seen.size,expected.size,'every fine edge sample is stitched, not just coarse endpoints');
+  const points=[];
+  for(const sign of [-1,1])for(const along of [-9.4,-6.3,-1.1,2.7,8.8])
+    points.push([sign*12.1,along],[along,sign*12.1]);
+  for(const x of [-12.1,12.1])for(const z of [-12.3,12.3])points.push([x,z]);
+  for(const [x,z] of points) {
+    let rendered;
+    for(let i=0;i<mesh.length;i+=27) {
+      const a=mesh.subarray(i,i+3),b=mesh.subarray(i+9,i+12),c=mesh.subarray(i+18,i+21),
+        cross=(a,b,p)=>(b[0]-a[0])*(p[1]-a[2])-(b[2]-a[2])*(p[0]-a[0]),
+        area=cross(a,b,[c[0],c[2]]),u=cross(b,c,[x,z])/area,v=cross(c,a,[x,z])/area,w=1-u-v;
+      if(u>=-1e-7&&v>=-1e-7&&w>=-1e-7){rendered=u*a[1]+v*b[1]+w*c[1];break;}
+    }
+    assert.notEqual(rendered,undefined,'apron and corner have no uncovered footprint');
+    assert.ok(Math.abs(landscapeReliefHeightAt({...coarse,innerRelief:fine},x,z)-rendered)<1e-6,
+      'decoration and exterior sight tiers use the same triangles as the GPU');
+  }
+  assert.deepEqual(wide.subarray(0,mesh.length),mesh);
+  assert.equal(wide.length-mesh.length,4*(coarse.size-3)*54,'viewport growth adds only the bounded outer strips');
+  assert.equal(JSON.stringify([fine,coarse]),before);
 });
 
 test('exterior continuation preserves its inner mesh and has constant geometry cost regardless of width', () => {
