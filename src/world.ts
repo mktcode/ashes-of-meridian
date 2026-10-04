@@ -19,15 +19,17 @@
       return inside;
     };
     class Heap {
-      declare a: [number, number][];
+      private a: [number, number][] = [];
+      private count = 0;
 
-      constructor() {
-        this.a = [];
+      clear() {
+        this.count = 0;
       }
       push(n: number, p: number) {
         let a = this.a,
-          i = a.length;
-        a.push([n, p]);
+          i = this.count++;
+        if (a[i]) { a[i][0] = n; a[i][1] = p; }
+        else a[i] = [n, p];
         while (i > 0) {
           let q = (i - 1) >> 1;
           if (a[q][1] <= p) break;
@@ -38,16 +40,17 @@
       pop() {
         let a = this.a,
           first = a[0],
-          last = a.pop();
-        if (a.length) {
-          a[0] = last!;
+          last = a[--this.count];
+        if (this.count) {
+          a[0] = last;
+          a[this.count] = first;
           let i = 0;
           while (true) {
             let l = i * 2 + 1,
               r = l + 1,
               j = i;
-            if (l < a.length && a[l][1] < a[j][1]) j = l;
-            if (r < a.length && a[r][1] < a[j][1]) j = r;
+            if (l < this.count && a[l][1] < a[j][1]) j = l;
+            if (r < this.count && a[r][1] < a[j][1]) j = r;
             if (j === i) break;
             [a[i], a[j]] = [a[j], a[i]];
             i = j;
@@ -56,7 +59,32 @@
         return first![0];
       }
       get length() {
-        return this.a.length;
+        return this.count;
+      }
+    }
+    // Per-world scratch only: never cache routes or occupancy, and never persist it.
+    class NavigationWorkspace {
+      readonly cost: Float32Array;
+      readonly parent: Int32Array;
+      readonly closed: Uint8Array;
+      readonly touched: Int32Array;
+      readonly heap = new Heap();
+      touchedCount = 0;
+      busy = false;
+      constructor(size: number) {
+        this.cost = new Float32Array(size); this.cost.fill(Infinity);
+        this.parent = new Int32Array(size); this.parent.fill(-1);
+        this.closed = new Uint8Array(size);
+        this.touched = new Int32Array(size);
+      }
+      reset() {
+        for (let j = 0; j < this.touchedCount; j++) {
+          const i = this.touched[j];
+          this.cost[i] = Infinity; this.parent[i] = -1; this.closed[i] = 0;
+        }
+        this.touchedCount = 0;
+        this.heap.clear();
+        this.busy = false;
       }
     }
     class Battlefield {
@@ -84,6 +112,7 @@
       declare startSites: Position[];
       declare deploymentReachable: Uint8Array;
       surface: BattlefieldSurface | null = null;
+      private pathWorkspace?: NavigationWorkspace;
       terrainFree(a: Position, b: Position, radius = 0) {
         return !this.surface || this.surface.segment(a, b, radius);
       }
@@ -251,100 +280,106 @@
         let s = this.idx(x, z),
           end = this.idx(target.x, target.z);
         if (s === end && inArea(target) && !this.blockedAt(target.x, target.z) && surfaceFree(start, target, radius)) return complete(target);
-        let cost = new Float32Array(GRID * GRID);
-        cost.fill(Infinity);
-        cost[s] = 0;
-        let parent = new Int32Array(GRID * GRID);
-        parent.fill(-1);
-        let closed = new Uint8Array(GRID * GRID),
-          heap = new Heap();
-        heap.push(s, 0);
-        let ex = end % GRID,
-          ez = Math.floor(end / GRID),
-          found = false,
-          tries = 0,
-          best = s,
-          bestDistance = Infinity;
-        const steps: [number, number, number][] = [
-          [-1, 0, 1],
-          [1, 0, 1],
-          [0, -1, 1],
-          [0, 1, 1],
-          [-1, -1, 1.414],
-          [1, -1, 1.414],
-          [-1, 1, 1.414],
-          [1, 1, 1.414]
-        ];
-        const areaX = area ? (area.x + this.extent) / this.cellSize - 0.5 : 0,
-          areaZ = area ? (area.z + this.extent) / this.cellSize - 0.5 : 0,
-          areaRadius = area ? area.radius / this.cellSize : 0;
-        const heuristic = (i: number) => {
-          // Stay admissible for the existing rounded diagonal cost (1.414).
-          // Grid coordinates avoid allocating a position for every relaxation.
-          if (area) return Math.max(0, Math.hypot(i % GRID - areaX, Math.floor(i / GRID) - areaZ) - areaRadius) * (1.414 / Math.SQRT2);
-          const ax = Math.abs(ex - i % GRID), az = Math.abs(ez - Math.floor(i / GRID));
-          return Math.max(ax, az) + 0.414 * Math.min(ax, az);
-        };
-        // Preserve the 72×72 search budget; larger grids need proportionally more heap pops.
-        const searchLimit = Math.ceil(5600 * (GRID / 72) ** 2);
-        while (heap.length && tries++ < searchLimit) {
-          let i = heap.pop();
-          if (closed[i]) continue;
-          let targetDistance = area ? heuristic(i) ** 2 : ((i % GRID) - ex) ** 2 + (Math.floor(i / GRID) - ez) ** 2;
-          if (targetDistance < bestDistance) {
-            bestDistance = targetDistance;
-            best = i;
-          }
-          if (area ? targetDistance === 0 && !this.blocked[i] && inArea(this.point(i)) : i === end && surfaceFree(this.point(i), target, radius)) {
-            found = true;
-            if (area) { end = i; target = this.point(i); }
-            break;
-          }
-          closed[i] = 1;
-          let gx = i % GRID,
-            gz = Math.floor(i / GRID);
-          for (let [dx, dz, w] of steps) {
-            let xx = gx + dx,
-              zz = gz + dz;
-            if (xx < 1 || zz < 1 || xx >= GRID - 1 || zz >= GRID - 1) continue;
-            let q = zz * GRID + xx;
-            if (closed[q] || this.blocked[q] || !fits(q)) continue;
-            if (!surfaceFree(i === s ? start : this.point(i), this.point(q), radius)) continue;
-            if (dx && dz && (this.blocked[gz * GRID + xx] || this.blocked[zz * GRID + gx])) continue;
-            let nc = cost[i] + w;
-            if (nc < cost[q]) {
-              cost[q] = nc;
-              parent[q] = i;
-              heap.push(q, nc + heuristic(q));
+        const reusable = this.pathWorkspace ??= new NavigationWorkspace(GRID * GRID),
+          // A nested caller must not overwrite an active search; only the ordinary
+          // synchronous workspace is retained by the world.
+          workspace = reusable.busy ? new NavigationWorkspace(GRID * GRID) : reusable,
+          { cost, parent, closed, heap } = workspace;
+        workspace.busy = true;
+        try {
+          workspace.touched[workspace.touchedCount++] = s;
+          cost[s] = 0;
+          heap.push(s, 0);
+          let ex = end % GRID,
+            ez = Math.floor(end / GRID),
+            found = false,
+            tries = 0,
+            best = s,
+            bestDistance = Infinity;
+          const steps: [number, number, number][] = [
+            [-1, 0, 1],
+            [1, 0, 1],
+            [0, -1, 1],
+            [0, 1, 1],
+            [-1, -1, 1.414],
+            [1, -1, 1.414],
+            [-1, 1, 1.414],
+            [1, 1, 1.414]
+          ];
+          const areaX = area ? (area.x + this.extent) / this.cellSize - 0.5 : 0,
+            areaZ = area ? (area.z + this.extent) / this.cellSize - 0.5 : 0,
+            areaRadius = area ? area.radius / this.cellSize : 0;
+          const heuristic = (i: number) => {
+            // Stay admissible for the existing rounded diagonal cost (1.414).
+            // Grid coordinates avoid allocating a position for every relaxation.
+            if (area) return Math.max(0, Math.hypot(i % GRID - areaX, Math.floor(i / GRID) - areaZ) - areaRadius) * (1.414 / Math.SQRT2);
+            const ax = Math.abs(ex - i % GRID), az = Math.abs(ez - Math.floor(i / GRID));
+            return Math.max(ax, az) + 0.414 * Math.min(ax, az);
+          };
+          // Preserve the 72×72 search budget; larger grids need proportionally more heap pops.
+          const searchLimit = Math.ceil(5600 * (GRID / 72) ** 2);
+          while (heap.length && tries++ < searchLimit) {
+            let i = heap.pop();
+            if (closed[i]) continue;
+            let targetDistance = area ? heuristic(i) ** 2 : ((i % GRID) - ex) ** 2 + (Math.floor(i / GRID) - ez) ** 2;
+            if (targetDistance < bestDistance) {
+              bestDistance = targetDistance;
+              best = i;
+            }
+            if (area ? targetDistance === 0 && !this.blocked[i] && inArea(this.point(i)) : i === end && surfaceFree(this.point(i), target, radius)) {
+              found = true;
+              if (area) { end = i; target = this.point(i); }
+              break;
+            }
+            closed[i] = 1;
+            let gx = i % GRID,
+              gz = Math.floor(i / GRID);
+            for (let [dx, dz, w] of steps) {
+              let xx = gx + dx,
+                zz = gz + dz;
+              if (xx < 1 || zz < 1 || xx >= GRID - 1 || zz >= GRID - 1) continue;
+              let q = zz * GRID + xx;
+              if (closed[q] || this.blocked[q] || !fits(q)) continue;
+              if (!surfaceFree(i === s ? start : this.point(i), this.point(q), radius)) continue;
+              if (dx && dz && (this.blocked[gz * GRID + xx] || this.blocked[zz * GRID + gx])) continue;
+              let nc = cost[i] + w;
+              if (nc < cost[q]) {
+                if (cost[q] === Infinity) workspace.touched[workspace.touchedCount++] = q;
+                cost[q] = nc;
+                parent[q] = i;
+                heap.push(q, nc + heuristic(q));
+              }
             }
           }
+          const exhausted = !found && heap.length > 0;
+          if (!found) {
+            if (best === s || bestDistance > 25)
+              return { points: [], goal: target, status: exhausted ? 'budget-exhausted' : 'unreachable' };
+            end = best;
+            target = this.point(best);
+          }
+          let nodes: Position[] = [],
+            i = end;
+          while (i !== s && i >= 0) {
+            nodes.push(this.point(i));
+            i = parent[i];
+          }
+          nodes.reverse();
+          nodes.push(target);
+          let smooth: Position[] = [],
+            anchor = start,
+            j = 0;
+          while (j < nodes.length) {
+            let k = j;
+            while (k + 1 < nodes.length && this.lineFree(anchor, nodes[k + 1], radius, ignoreSurface)) k++;
+            smooth.push(nodes[k]);
+            anchor = nodes[k];
+            j = k + 1;
+          }
+          return { points: smooth, goal: target, status: found ? 'complete' : exhausted ? 'budget-exhausted' : 'partial' };
+        } finally {
+          workspace.reset();
         }
-        const exhausted = !found && heap.length > 0;
-        if (!found) {
-          if (best === s || bestDistance > 25)
-            return { points: [], goal: target, status: exhausted ? 'budget-exhausted' : 'unreachable' };
-          end = best;
-          target = this.point(best);
-        }
-        let nodes: Position[] = [],
-          i = end;
-        while (i !== s && i >= 0) {
-          nodes.push(this.point(i));
-          i = parent[i];
-        }
-        nodes.reverse();
-        nodes.push(target);
-        let smooth: Position[] = [],
-          anchor = start,
-          j = 0;
-        while (j < nodes.length) {
-          let k = j;
-          while (k + 1 < nodes.length && this.lineFree(anchor, nodes[k + 1], radius, ignoreSurface)) k++;
-          smooth.push(nodes[k]);
-          anchor = nodes[k];
-          j = k + 1;
-        }
-        return { points: smooth, goal: target, status: found ? 'complete' : exhausted ? 'budget-exhausted' : 'partial' };
       }
       explore(team: PlayerTeam, p: Position, radius: number) {
         this.mark(this.sight[team].explored, p.x, p.z, radius, 1);

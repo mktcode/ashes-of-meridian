@@ -182,3 +182,98 @@ test('production exit still ignores only its own building and keeps its reservat
   assert.equal(w.exit, undefined); assert.ok(game.unitFits(w, w.x, w.z));
   assert.ok(Math.hypot(w.x - end.x, w.z - end.z) < .001);
 });
+
+// Pure navigation fixtures: no world generation or simulation tick required.
+function pathArena() {
+  const context = loadScripts(['world'], { scripts });
+  const { Battlefield, Heap } = vm.runInContext('({Battlefield,Heap})', context);
+  const world = Object.assign(Object.create(Battlefield.prototype), {
+    gridSize: 24, extent: 30, cellSize: 2.5, surface: null, blocked: new Uint8Array(24 * 24)
+  });
+  // Force A* around a short wall, while leaving both sides connected.
+  for (let z = 7; z <= 16; z++) world.blocked[z * 24 + 12] = 1;
+  return { world, Heap };
+}
+const pathValue = value => JSON.parse(JSON.stringify(value));
+function assertWorkspaceReset(workspace) {
+  assert.equal(workspace.busy, false); assert.equal(workspace.touchedCount, 0);
+  assert.equal(workspace.heap.length, 0);
+  assert.ok(workspace.cost.every(v => v === Infinity));
+  assert.ok(workspace.parent.every(v => v === -1));
+  assert.ok(workspace.closed.every(v => v === 0));
+}
+
+test('path workspace preserves heap ties and reuses entries after pop and clear', () => {
+  const { Heap } = pathArena(), heap = new Heap();
+  for (let i = 0; i < 6; i++) heap.push(i, 1);
+  const entries = new Set(heap.a), popped = [];
+  while (heap.length) popped.push(heap.pop());
+  assert.deepEqual(popped, [0, 5, 4, 3, 2, 1]);
+  for (let i = 0; i < 6; i++) heap.push(i, 6 - i);
+  assert.equal(heap.pop(), 5); heap.push(6, 0); assert.equal(heap.pop(), 6);
+  heap.clear(); assert.equal(heap.length, 0);
+  for (let i = 0; i < 6; i++) heap.push(i, i);
+  assert.equal(heap.a.length, 6); assert.ok(heap.a.every(entry => entries.has(entry)));
+  assert.deepEqual(Array.from({ length: 6 }, () => heap.pop()), [0, 1, 2, 3, 4, 5]);
+});
+
+test('path workspace stays lazy on fast paths and reuses clean fields without retaining routes', () => {
+  const { world } = pathArena();
+  assert.equal(world.path(-20, -20, -10, -20).status, 'complete');
+  assert.equal(world.path(-20, 0, 20, 0, true).status, 'complete');
+  assert.equal(world.pathWorkspace, undefined);
+  const first = world.path(-20, 0, 20, 0), expected = pathValue(first), workspace = world.pathWorkspace;
+  assert.equal(first.status, 'complete'); assertWorkspaceReset(workspace);
+  const fields = [workspace.cost, workspace.parent, workspace.closed, workspace.touched],
+    entries = new Set(workspace.heap.a);
+  assert.deepEqual(pathValue(world.path(-20, 0, 20, 0)), expected);
+  assert.strictEqual(world.pathWorkspace, workspace);
+  [workspace.cost, workspace.parent, workspace.closed, workspace.touched].forEach((field, i) => assert.strictEqual(field, fields[i]));
+  assert.ok(workspace.heap.a.every(entry => entries.has(entry)));
+  // Closed layout, partial result, reopened layout and independent output ownership.
+  for (let z = 0; z < 24; z++) world.blocked[z * 24 + 12] = 1;
+  assert.equal(world.path(-20, 0, 20, 0).status, 'unreachable'); assertWorkspaceReset(workspace);
+  assert.equal(world.path(-20, 0, 6, 0).status, 'partial'); assertWorkspaceReset(workspace);
+  world.blocked.fill(0);
+  assert.equal(world.path(-20, 0, 20, 0).points.length, 1);
+  assert.deepEqual(pathValue(first), expected, 'later searches cannot mutate returned paths');
+  const other = pathArena().world; other.path(-20, 0, 20, 0);
+  assert.notStrictEqual(other.pathWorkspace.cost, workspace.cost, 'worlds never share scratch');
+});
+
+test('path workspace is isolated during nested searches and cleared after terrain errors', () => {
+  const { world } = pathArena(), forward = pathValue(world.path(-20, 0, 20, 0)),
+    reverse = pathValue(world.path(20, 0, -20, 0)), workspace = world.pathWorkspace;
+  let nested = false, inner;
+  world.terrainFree = () => {
+    if (!nested && workspace.busy && workspace.touchedCount > 2) {
+      nested = true; inner = pathValue(world.path(20, 0, -20, 0));
+      assert.equal(workspace.busy, true, 'inner cleanup must not release outer scratch');
+    }
+    return true;
+  };
+  assert.deepEqual(pathValue(world.path(-20, 0, 20, 0)), forward);
+  assert.ok(nested); assert.deepEqual(inner, reverse); assertWorkspaceReset(workspace);
+  world.terrainFree = () => {
+    if (workspace.busy && workspace.touchedCount > 2) throw Error('terrain failure');
+    return true;
+  };
+  assert.throws(() => world.path(-20, 0, 20, 0), /terrain failure/);
+  assertWorkspaceReset(workspace);
+  delete world.terrainFree;
+  assert.deepEqual(pathValue(world.path(-20, 0, 20, 0)), forward);
+});
+
+test('path workspace discards pending heap entries on search budget exhaustion', () => {
+  const { world, Heap } = pathArena(), pop = Heap.prototype.pop;
+  let pops = 0;
+  // Keep a duplicate pending: closed-node pops must still count against the old budget.
+  Heap.prototype.pop = function () { const id = pop.call(this); pops++; this.push(id, 0); return id; };
+  try {
+    assert.equal(world.path(-20, 0, 20, 0).status, 'budget-exhausted');
+    assert.equal(pops, Math.ceil(5600 * (24 / 72) ** 2));
+    assertWorkspaceReset(world.pathWorkspace);
+  } finally { Heap.prototype.pop = pop; }
+  assert.equal(world.path(-20, 0, 20, 0).status, 'complete');
+  assertWorkspaceReset(world.pathWorkspace);
+});
