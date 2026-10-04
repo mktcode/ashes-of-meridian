@@ -35,6 +35,10 @@ die Begrenzung am Kartenrand und die Höhenzentrierung beim Stage-Start ohne Tut
 sowie beim Basis-Knopf. Gezielte Node-Prüfungen decken Start-/Basis-/Tutorial-Framing
 und Projektion auf erhöhtem Terrain ab, nicht das tatsächliche Kameragefühl.
 Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
+Die Außenkulisse bleibt visuell abzunehmen: breite Sichtfenster, erhöhte Kartenränder
+und gedrehte Kamera ohne sichtbares Ende oder Durchblick unter das Terrain.
+Lebendige Randgestaltung soll aus passender Verteilung vorhandener Dekoration entstehen,
+nicht aus unnötig großer Kulisse oder pauschal erhöhten Instanzbudgets.
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und
 Screenreader-Bedienung. Reduzierte Filterkosten sind kein gemessener Performancegewinn;

@@ -1284,10 +1284,10 @@
         g.clearColor(...this.haze, 1);
         g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
         g.disable(g.DEPTH_TEST);
-        if (this.menuSkySeed !== null && this.menuSkySeed !== undefined) {
+        if (this.cinema && this.menuSkySeed !== null && this.menuSkySeed !== undefined) {
           this.menuSky ??= new MeridianMenuSky(this);
           this.menuSky.draw(this.menuSkySeed, this.menuSkyFamily);
-        } else {
+        } else if (this.cinema) {
           g.useProgram(skyProg);
           this.bindAtmosphere(skyProg);
           this.bindEcology(skyProg, modelTime);

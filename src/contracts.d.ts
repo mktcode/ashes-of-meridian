@@ -677,6 +677,8 @@ interface WorldRelief {
   size: number; // Includes one vertex of halo on every side, for seamless edge normals.
   heights: Float32Array;
   innerExtent: number;
+  /** View-owned exterior continuation; never part of the playable height field. */
+  outerExtent?: number;
   /** Model-specific vertex data: natural landscape weights (negative snow = damp sediment),
    * engineered-skin RGB tint, or signed water depth / flow X / flow Z. */
   colors?: Float32Array;

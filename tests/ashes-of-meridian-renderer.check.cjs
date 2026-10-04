@@ -554,7 +554,7 @@ test('atmosphere uniforms follow the world on all qualities and reset for previe
     h.r.setBattlefieldProfile(active?{...base,atmosphere}:base);
     h.calls.length=0;h.r.render(0);
     const flags=h.calls.filter(c=>c[0]==='uniform1f'&&c[1]==='u_atmosphereOn');
-    assert.ok(flags.length>=3,'scene, sky and post use the same profile');
+    assert.ok(flags.length>=2,'scene and post use the same profile');
     assert.ok(flags.every(c=>c[2]===(active?1:0)));
     if(active) assert.ok(h.calls.some(c=>JSON.stringify(c)===JSON.stringify(['uniform3fv','u_atmosphereHorizon',atmosphere.horizon])));
     assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
@@ -608,7 +608,7 @@ test('ecology uniforms reset, leaf shadows share displacement and Performance om
   for(const quality of [0,1,2]){
     h.r.quality=quality;h.r.resize();h.calls.length=0;h.r.render(1,7.5);
     const winds=h.calls.filter(c=>c[0]==='uniform2f'&&c[1]==='u_wind');
-    assert.equal(winds.length,quality?3:2,'scene, sky, and optional shadow pass');
+    assert.equal(winds.length,quality?2:1,'scene and optional shadow pass, without a gameplay sky');
     assert.ok(winds.every(c=>c[2]===(quality?profile.ecology.wind:0)&&c[3]===7.5));
     assert.ok(h.calls.some(c=>c[0]==='uniform4f'&&c[1]==='u_ecology'&&c[2]===3&&c[3]===3));
     assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
@@ -1169,12 +1169,25 @@ test('scene geometry and blended effects resolve exactly once before post-proces
   assert.deepEqual(h.bindings(), { draw: null, read: null, buffer: null });
 });
 
+test('sky rendering is restricted to the menu camera, even with a stale menu seed', () => {
+  const h=setup();h.r.resize();
+  const menu=[];h.r.menuSky={draw:(...args)=>menu.push(args)};
+  for (const cinema of [false,true]) {
+    h.r.cinema=cinema;h.r.menuSkySeed=null;h.calls.length=0;h.r.render(1);
+    assert.equal(h.calls.some(c=>c[0]==='quad'&&c[1]==='sky'),cinema);
+    h.r.menuSkySeed=1409;h.r.menuSkyFamily='ground';menu.length=0;
+    h.calls.length=0;h.r.render(1);
+    assert.equal(menu.length,cinema?1:0);
+    assert.equal(h.calls.some(c=>c[0]==='quad'&&c[1]==='sky'),false);
+  }
+});
+
 test('low quality and unsupported hardware draw directly to the existing scene texture without resolve', () => {
   for (const quality of [0, 2]) {
     const h = setup({ color: [], depth: [] }); h.r.quality = quality; h.r.resize();
     h.calls.length = 0; h.r.render(1);
     assert.equal(h.calls.some(c => c[0] === 'resolve'), false);
-    assert.equal(h.calls.find(c => c[0] === 'quad' && c[1] === 'sky')[2], h.r.sceneFbo);
+    assert.equal(h.calls.some(c => c[0] === 'quad' && c[1] === 'sky'), false);
     assert.equal(h.calls.find(c => c[0] === 'batch' && c[1] === 'effects')[3], h.r.sceneFbo);
     assert.equal(h.calls.find(c => c[0] === 'quad' && c[1] === 'post')[2], null);
   }

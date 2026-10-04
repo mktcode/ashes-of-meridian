@@ -137,6 +137,9 @@ class BattlefieldView {
   data: WorldRenderData | null;
   world: Battlefield | null;
   fogVersion: number;
+  private exteriorExtent = 0;
+  private exteriorCeiling = 0;
+  private exteriorMeshes: WorldGeometry[] = [];
   private worldMeshes = new Set<string>();
   private buildingGround = new Map<number, { key: string; mesh: string; material: number }>();
   constructor(renderer: MeridianRenderer) {
@@ -148,6 +151,23 @@ class BattlefieldView {
   sync(world: Battlefield, fogOn = true) {
     const R = this.R, layout = world.renderData,
       { extent: EXTENT, cellSize: CELL, gridSize: GRID } = world;
+    if (this.data !== layout) {
+      this.exteriorExtent = 0;
+      this.exteriorCeiling = world.surface?.maxHeight ?? 0;
+      this.exteriorMeshes = layout.geometries.filter(d => d.model === 'landscapeRelief' && 'relief' in d && d.relief.innerExtent > 0);
+      for (const d of this.exteriorMeshes) if ('relief' in d)
+        for (const h of d.relief.heights) this.exteriorCeiling = Math.max(this.exteriorCeiling, h);
+    }
+    // Cover all headings at maximum zoom, including camera and terrain
+    // elevation offsets. Resize the sparse rim, never add terrain/decor cells.
+    const v = R.viewport, windowHeight = typeof innerHeight === 'number' ? innerHeight : v?.height ?? 600,
+      viewRadius = Math.hypot(
+        115 * .5 * (v?.width ?? windowHeight) / windowHeight,
+        115 * .5 * (v?.height ?? windowHeight) / windowHeight * Math.hypot(1.1, .82) / 1.1
+          + this.exteriorCeiling * .82 / 1.1),
+      exteriorExtent = Math.ceil((EXTENT + viewRadius + 8) / 4) * 4,
+      viewDescriptor = (d: WorldGeometry): WorldGeometry => this.exteriorMeshes.includes(d) && 'relief' in d
+        ? { ...d, relief: { ...d.relief, outerExtent: exteriorExtent } } : d;
     if (this.data !== layout) {
       R.clearStatic();
       for (const patch of this.buildingGround.values()) if (patch.mesh) this.releaseBuildingGround(patch.mesh);
@@ -198,7 +218,7 @@ class BattlefieldView {
       R.geometry('terrain', data);
       }
       for (const descriptor of layout.geometries) {
-        const geometry = TerrainModels.geometry(descriptor);
+        const geometry = TerrainModels.geometry(viewDescriptor(descriptor));
         if (descriptor.grounded && world.surface) {
           // Painted deck furniture is baked once; terrain remains CPU authoritative.
           for (let i = 0; i < geometry.length; i += 9)
@@ -213,6 +233,11 @@ class BattlefieldView {
         R.add(...args);
       }
       this.data = layout;
+      this.exteriorExtent = exteriorExtent;
+    } else if (exteriorExtent !== this.exteriorExtent) {
+      for (const descriptor of this.exteriorMeshes)
+        R.geometry(descriptor.mesh, TerrainModels.geometry(viewDescriptor(descriptor)));
+      this.exteriorExtent = exteriorExtent;
     }
     if (this.world !== world || this.fogVersion !== world.fogVersion || (fogOn && !R.fogOn)) {
       if (world.fogVersion > 0 || fogOn) R.fog(world.fogPixels, GRID);
