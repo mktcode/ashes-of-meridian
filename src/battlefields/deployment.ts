@@ -120,7 +120,44 @@ function allocateBattlefieldStarts(world: Battlefield, seed: number, count: numb
     }
     return null;
   };
-  const starts = search([]);
+  let starts = search([]);
   if (!starts) throw Error('No separated deployment allocation');
+  // Compare a bounded set of farthest-first allocations, not every combination.
+  // Nearby economy is a placement preference only; it assigns no ownership and
+  // does not reveal resources to the AI. Shuffled order breaks all ties privately.
+  const regions = new Map<Position, number>();
+  for (const p of [...first, ...exploration]) {
+    let nearest = -1, best = Infinity;
+    for (const [i, site] of world.layout.resourceSites.entries()) {
+      const d = distance(p, site);
+      if (d < best) { nearest = i; best = d; }
+    }
+    regions.set(p, nearest);
+  }
+  const regionCount = (points: Position[]) => new Set(points.map(p => regions.get(p))).size;
+  const separation = (points: Position[]) => Math.min(...points.flatMap((p, i) => points.slice(0, i).map(q => distance(p, q))));
+  let bestRegions = regionCount(starts), bestSeparation = separation(starts);
+  for (const anchor of first.slice(0, 24)) {
+    const chosen = [anchor];
+    while (chosen.length < count) {
+      const used = new Set(chosen.map(p => regions.get(p)));
+      let next: Position | undefined, nextNewRegion = -1, nextDistance = -1;
+      for (const p of exploration) {
+        const d = Math.min(...chosen.map(q => distance(p, q)));
+        if (d < minimum) continue;
+        const newRegion = used.has(regions.get(p)) ? 0 : 1;
+        if (newRegion > nextNewRegion || (newRegion === nextNewRegion && d > nextDistance)) {
+          next = p; nextNewRegion = newRegion; nextDistance = d;
+        }
+      }
+      if (!next) break;
+      chosen.push(next);
+    }
+    if (chosen.length !== count) continue;
+    const distinct = regionCount(chosen), spread = separation(chosen);
+    if (distinct > bestRegions || (distinct === bestRegions && spread > bestSeparation)) {
+      starts = chosen; bestRegions = distinct; bestSeparation = spread;
+    }
+  }
   return starts.map(p => ({ ...p }));
 }

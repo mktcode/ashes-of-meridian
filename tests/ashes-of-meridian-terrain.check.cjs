@@ -144,6 +144,42 @@ test('deployment refinement finds off-grid shelves even when a large coarse pool
   }
 });
 
+test('deployment improves compact valid starts for two, three and four parties', () => {
+  const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'], { scripts });
+  const results = vm.runInContext(`(() => {
+    seeded = () => () => .999999; // Keep candidate order: the old first fit is compact.
+    battlefieldEconomyDistance = () => 30;
+    const world = {extent:140, layout:{resourceSites:[
+      {x:-80,z:-80},{x:80,z:-80},{x:-80,z:80},{x:80,z:80}]},
+      startSites:[{x:-35,z:-35},{x:35,z:-35},{x:-35,z:35},{x:35,z:35},
+        {x:-80,z:-80},{x:80,z:-80},{x:-80,z:80},{x:80,z:80}]};
+    return [2,3,4].map(count => allocateBattlefieldStarts(world,19,count,'exploration'));
+  })()`, context);
+  for (const starts of results) {
+    for (let i=0;i<starts.length;i++) for(let j=0;j<i;j++)
+      assert.ok(distance(starts[i],starts[j]) >= 160, 'spread improves beyond the valid 70-unit first fit');
+    assert.equal(new Set(starts.map(p => `${Math.sign(p.x)},${Math.sign(p.z)}`)).size, starts.length);
+  }
+});
+
+test('deployment prefers separate nearby resource regions but permits shared economy when necessary', () => {
+  const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'], { scripts });
+  const result = vm.runInContext(`(() => {
+    seeded = () => () => .999999;
+    battlefieldEconomyDistance = () => 30;
+    const world = {extent:140,layout:{resourceSites:[{x:0,z:0},{x:-80,z:100}]},
+      startSites:[{x:-80,z:0},{x:80,z:0},{x:-80,z:80}]};
+    const pair = allocateBattlefieldStarts(world,19,2,'exploration');
+    const shared = allocateBattlefieldStarts(world,19,3,'exploration');
+    world.layout.resourceSites = [{x:0,z:0}];
+    const singleRegion = allocateBattlefieldStarts(world,19,3,'exploration');
+    return {pair,shared,singleRegion};
+  })()`, context);
+  assert.ok(result.pair.some(p => p.z === 80), 'avoid the farther pair targeting the same region');
+  assert.equal(result.shared.length,3, 'fewer regions than parties is not an allocation failure');
+  assert.equal(result.singleRegion.length,3);
+});
+
 test('party count and private deployment draws cannot reshape terrain, resources or decorations', () => {
   const api = scope(), two = new api.Battlefield(9017, 'frontier', 2), four = new api.Battlefield(9017, 'frontier', 4);
   assert.equal(topology(two), topology(four));
