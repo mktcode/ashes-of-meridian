@@ -53,8 +53,7 @@ test('every faction building and unit has posed night lights, unchanged geometry
       assert.equal(draw(h,e,22,options).lights.length,0);
       assert.deepEqual(draw(h,e,22,options).calls,draw(h,e,12,options).calls);
     }
-    assert.equal(draw(h,e,22,{}, {cinema:true}).lights.length,0);
-    assert.deepEqual(draw(h,e,22,{}, {cinema:true}).calls,draw(h,e,12,{}, {cinema:true}).calls);
+    assert.deepEqual(draw(h,e,22,{}, {cinema:true}),night,'cinema retains all model night effects');
     assert.deepEqual(draw(h,{...e,hp:0},22),{calls:[],lights:[]});
     if(e.kind==='building') {
       assert.equal(draw(h,{...e,progress:.4},22).lights.length,0);

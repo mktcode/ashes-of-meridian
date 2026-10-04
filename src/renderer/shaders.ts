@@ -69,22 +69,31 @@ in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;
-uniform int u_pointLightCount;uniform vec4 u_pointLightPosition[8];uniform vec4 u_pointLightColor[8];
+uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
 uniform float u_habitatOn;uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
 out vec4 frag;
-// Bounded shadowless diffuse lighting in the existing scene pass; no light textures/passes.
+// Spatially indexed shadowless diffuse lighting in the existing scene pass.
+vec4 lightTexel(int index){
+ int width=textureSize(u_lightData,0).x;
+ return texelFetch(u_lightData,ivec2(index%width,index/width),0);
+}
 vec3 localLighting(vec3 position,vec3 normal){
  if(u_pointLightCount==0)return vec3(0.);
  vec3 result=vec3(0.);
- for(int i=0;i<8;i++){
-  if(i>=u_pointLightCount)break;
-  vec3 delta=u_pointLightPosition[i].xyz-position;
-  float d2=dot(delta,delta),radius=u_pointLightPosition[i].w;
+ ivec2 size=textureSize(u_lightGrid,0);
+ ivec2 cell=clamp(ivec2(floor((position.xz+u_extent)/(u_extent*2.)*vec2(size))),ivec2(0),size-1);
+ vec2 range=texelFetch(u_lightGrid,cell,0).xy;
+ for(int i=0;i<int(range.y);i++){
+  int index=int(range.x)+i*2;
+  vec4 lamp=lightTexel(index);
+  vec3 delta=lamp.xyz-position;
+  float d2=dot(delta,delta),radius=lamp.w;
   if(d2>=radius*radius)continue;
   float edge=1.-d2/(radius*radius);
   float diffuse=max(dot(normal,delta*inversesqrt(max(d2,.0001))),0.);
-  result+=u_pointLightColor[i].rgb*u_pointLightColor[i].a*diffuse*edge*edge/(1.+d2*.12);
+  vec4 color=lightTexel(index+1);
+  result+=color.rgb*color.a*diffuse*edge*edge/(1.+d2*.12);
  }
  // Do not brighten merely explored/unseen terrain across a sight boundary.
  if(u_fogOn>.5)result*=smoothstep(.75,1.,texture(u_fog,(position.xz+u_extent)/(u_extent*2.)).r);

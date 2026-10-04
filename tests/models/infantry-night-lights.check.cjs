@@ -40,7 +40,9 @@ for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
     for(const options of [{ghost:true},{tint:0x99e4c6},{alpha:.3},{layer:'effects'}]) {
       assert.deepEqual(draw(22,options),draw(12,options),'preview never acquires night effects');
     }
-    assert.deepEqual(draw(22,{}, {cinema:true}),draw(12,{}, {cinema:true}));
+    assert.ok(parts(draw(22,{}, {cinema:true})).some((c,i)=>c[11]>parts(draw(12,{}, {cinema:true}))[i][11]),
+      'cinema retains night emission');
+    assert.equal(pools(draw(22,{}, {cinema:true})).length,1);
     assert.deepEqual(draw(undefined),day,'no atmosphere means no additional lighting');
     assert.deepEqual(draw(22,{}, {},{...e,hp:0}),[]);
     assert.equal(pools(draw(22,{}, {quality:0})).length,0,'performance skips pools');

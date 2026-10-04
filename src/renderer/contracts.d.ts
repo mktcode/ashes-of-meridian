@@ -65,9 +65,9 @@ type RenderEntity = Pick<EntityBase, 'id' | 'kind' | 'type' | 'x' | 'z' | 'hp' |
 interface EntityModelContext {
   entity: RenderEntity;
   time: number;
-  /** Dusk/dawn fade; zero in previews and without a world atmosphere. */
+  /** Dusk/dawn fade; zero without a world atmosphere or on placement ghosts. */
   nightLight: number;
-  /** View-only diffuse light; adapter owns pose, visibility and renderer budget. */
+  /** View-only diffuse light; adapter owns pose/visibility; renderer owns spatial indexing. */
   pointLight: (x: number, y: number, z: number, radius: number, color: number, intensity: number) => void;
   lightPool: (x: number, z: number, width: number, length: number, color: number, strength: number) => void;
   part: ModelPart;

@@ -35,7 +35,7 @@ for(const type of ['hq','depot','barracks','factory','hangar','refinery','turret
       .every(c=>c[11]===0),'structural armor stays opaque and unlit');
     for(const options of [{ghost:true},{tint:0x99e4c6},{alpha:.3},{layer:'effects'}])
       assert.deepEqual(draw(22,options),draw(12,options),'no night enhancement in previews');
-    assert.deepEqual(draw(22,{},e,{cinema:true}),draw(12,{},e,{cinema:true}));
+    assert.deepEqual(draw(22,{},e,{cinema:true}),night,'cinema retains night emission');
     assert.deepEqual(draw(undefined),day);
     assert.deepEqual(draw(22,{}, {...e,progress:.4}),draw(12,{}, {...e,progress:.4}),'unfinished structures stay unchanged');
     assert.deepEqual(draw(22,{}, {...e,hp:0}),[]);

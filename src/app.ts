@@ -36,7 +36,7 @@
         R = new MeridianRenderer(canvas);
         const thumbnails = new MeridianModelThumbnails(R);
         addEventListener('pagehide',event=>{
-          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releaseEnvironment(); }
+          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releasePointLights(); R.releaseEnvironment(); }
         });
         R.quality = profile.settings.quality;
         R.resize();

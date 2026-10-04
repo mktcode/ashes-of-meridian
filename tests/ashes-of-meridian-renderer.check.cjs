@@ -329,6 +329,7 @@ function setup(options = {}) {
   let draw = null, read = null, buffer = null, program = null, next = 0;
   const api = {
     COLOR_BUFFER_BIT: 1, DEPTH_BUFFER_BIT: 2,
+    getParameter(name) { if(name==='MAX_TEXTURE_SIZE')return 4096; },
     createTexture() { if(options.failTexture||options.failTextureAt===textures.size+1)return null;const t={id:++next};textures.add(t);return t; },
     deleteTexture(t) { assert.ok(textures.delete(t)); },
     activeTexture(unit) { activeUnit=unit;calls.push(['activeTexture',unit]); },
@@ -953,39 +954,62 @@ test('local diffuse lighting respects current fog visibility and has a no-light 
   assert.ok(shader.includes('if(u_fogOn>.5)result*=smoothstep(.75,1.,texture(u_fog,(position.xz+u_extent)/(u_extent*2.)).r);'));
 });
 
-test('model point lights have bounded CPU storage, contribution selection and no extra render passes',()=>{
+test('spatial light grid retains all lamps in battle, performance and cinema without extra passes',()=>{
   const h=setup(), r=h.r;
-  Object.assign(r,{dynamic:{},effects:{},occlusion:{},colors:new Map(),eye:[0,0,0]});
-  r.begin(); const positions=r.pointLightPositions, colors=r.pointLightColors;
-  for(let i=0;i<8;i++)r.addPointLight(20+i,2,0,14,0x75dce9,5);
-  r.addPointLight(0,2,0,14,0xffb65e,4);
-  assert.equal(r.pointLightCount,8);
-  assert.equal(positions[7*4],0,'new nearby light occupies the farthest slot');
-  assert.ok(!Array.from(positions).includes(27),'nearest light replaces the farthest at capacity');
-  r.resize(); h.calls.length=0; r.render(0);
-  assert.ok(h.calls.some(c=>c[0]==='uniform1i'&&c[1]==='u_pointLightCount'&&c[2]===8));
-  assert.ok(h.calls.some(c=>c[0]==='uniform4fv'&&c[1]==='u_pointLightPosition[0]'&&c[2]===positions));
+  Object.assign(r,{dynamic:{},effects:{},occlusion:{},colors:new Map(),extent:64});
+  for(const quality of [0,1,2]) for(const cinema of [false,true]) {
+    r.begin();r.quality=quality;r.cinema=cinema;
+    for(let i=0;i<40;i++)r.addPointLight(i-20,2,0,8,0x75dce9,3);
+    assert.equal(r.pointLightCount,40,'no lamp is evicted by another entity');
+    r.preparePointLights();
+    const state=r.lightGrid, cellWidth=r.extent*2/state.size;
+    for(let i=0;i<40;i++) {
+      const x=i-20;
+      for(const receiver of [x-7.9,x,x+7.9]) {
+        const cx=Math.floor((receiver+r.extent)/cellWidth),cz=Math.floor(r.extent/cellWidth),
+          o=(cz*state.size+cx)*4,offset=state.gridData[o],count=state.gridData[o+1];
+        const lamps=Array.from({length:count},(_,j)=>state.lampData[(offset+j*2)*4]);
+        assert.ok(lamps.includes(x),'lamp reaches all intersecting receiver cells');
+      }
+    }
+    const grid=state.grid,lamps=state.lamps;
+    h.calls.length=0;r.bindSceneProgram(0,0);
+    assert.ok(!h.calls.some(c=>c[0]==='texImage2D'||c[0]==='texSubImage2D'),'shader switches reuse uploads');
+    r.begin();assert.equal(r.pointLightCount,0);
+    r.addPointLight(0,2,0,8,0xffffff,3);r.preparePointLights();
+    assert.equal(r.lightGrid.grid,grid);assert.equal(r.lightGrid.lamps,lamps,'texture objects are reused');
+  }
+  r.quality=2;r.cinema=false;r.resize();h.calls.length=0;r.render(0);
+  assert.ok(h.calls.some(c=>c[0]==='uniform1i'&&c[1]==='u_pointLightCount'&&c[2]===1));
   assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_lampPrefilter'&&c[2]===1));
   assert.equal(h.calls.filter(c=>c[0]==='quad'&&c[1]==='bloom').length,3);
   const p=Object.create(r);p.dynamic={};p.effects={};p.occlusion={};p.cinema=true;p.begin();
-  assert.notEqual(p.pointLightPositions,positions,'preview never shares mutable light storage');
-  assert.equal(r.pointLightCount,8);assert.equal(p.pointLightCount,0);
-  r.begin();assert.equal(r.pointLightCount,0);assert.equal(r.pointLightPositions,positions);assert.equal(r.pointLightColors,colors);
-  r.quality=0;
-  for(let i=0;i<10;i++)r.addPointLight(i,2,0,14,0x75dce9,5);
-  assert.equal(r.pointLightCount,2,'performance uses a smaller per-fragment budget');
-  r.begin();r.quality=1;
-  for(let i=0;i<8;i++)r.addPointLight(i,2,0,4,0xffffff,1.5);
-  r.addPointLight(12,3,0,12,0xffffff,4);
-  assert.ok(Array.from(positions).includes(12),'broad entrance survives nearby small optics');
-  const selected=Array.from(positions);
-  r.addPointLight(0,2,0,1,0xffffff,.1);
-  assert.deepEqual(Array.from(positions),selected,'weak small source cannot evict a useful light');
-  r.begin();
-  r.vp=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+  assert.notEqual(p.pointLightPositions,r.pointLightPositions,'preview owns CPU storage');
+  assert.equal(p.lightGrid,null,'preview does not inherit live GPU light storage');
+  assert.equal(r.pointLightCount,1);assert.equal(p.pointLightCount,0);
+  r.begin();r.vp=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
   r.addPointLight(5,0,0,1,0xffffff,1);assert.equal(r.pointLightCount,0,'fully off-screen influence is culled');
   r.addPointLight(5,0,0,6,0xffffff,1);assert.equal(r.pointLightCount,1,'off-screen emitter can illuminate visible ground');
-  r.setBattlefieldProfile(r.battlefieldProfile);assert.equal(r.pointLightCount,0,'world/profile switch clears lights');
+  r.setBattlefieldProfile(r.battlefieldProfile);assert.equal(r.pointLightCount,0,'world switch clears lights');
+  const textures=h.textures.size;r.releasePointLights();assert.equal(h.textures.size,textures-2);
+  r.releasePointLights();assert.equal(h.textures.size,textures-2,'release is idempotent');
+});
+
+test('light grid allocation failures are explicit and release partial resources',()=>{
+  for(const failure of [{failTexture:true},{failTextureAt:2}]) {
+    const h=setup(failure),r=h.r;
+    Object.assign(r,{dynamic:{},effects:{},colors:new Map(),extent:64});r.begin();
+    r.addPointLight(0,2,0,8,0xffffff,3);
+    assert.throws(()=>r.preparePointLights(),/Could not allocate local light textures/);
+    assert.equal(h.textures.size,0,'no orphaned partial allocation');
+    assert.equal(r.lightGrid,null);assert.equal(r.lightGridDirty,true);
+  }
+  const h=setup(),r=h.r;
+  h.g.getParameter=()=>4;
+  Object.assign(r,{dynamic:{},effects:{},colors:new Map(),extent:64});r.begin();
+  r.addPointLight(0,2,0,8,0xffffff,3);
+  assert.throws(()=>r.preparePointLights(),/exceeds GPU texture capacity/);
+  assert.equal(h.textures.size,0);
 });
 
 test('night bloom strengthens smoothly without changing passes or retaining preview lighting',()=>{
@@ -993,7 +1017,10 @@ test('night bloom strengthens smoothly without changing passes or retaining prev
   const base=h.r.battlefieldProfile, targets=[...h.r.bloomTargets];
   for(const [hour,strength] of [[0,1.65],[5,1.65],[5.5,1.15],[6,.65],[12,.65],[18,.65],[18.5,1.15],[19,1.65]]) {
     h.r.setBattlefieldProfile({...base,atmosphere:{timeOfDay:hour,horizon:[.1,.1,.1],zenith:[.05,.05,.05]}});
-    for(let i=0;i<2;i++) {
+    for(const cinema of [false,true]) {
+      h.r.cinema=cinema;
+      assert.ok(Math.abs(h.r.bloomStrength-strength)<1e-12,'night strength also applies in cinema');
+      h.r.cinema=false;
       h.calls.length=0; h.r.render(0);
       const uniform=h.calls.find(c=>c[0]==='uniform1f'&&c[1]==='u_bloomStrength');
       assert.ok(Math.abs(uniform[2]-strength)<1e-12);

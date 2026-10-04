@@ -37,6 +37,9 @@
       private pointLightCount = 0;
       private pointLightPositions = new Float32Array(8 * 4);
       private pointLightColors = new Float32Array(8 * 4);
+      private lightGrid: { grid: WebGLTexture; lamps: WebGLTexture; size: number;
+        gridData: Float32Array; lampData: Float32Array; width: number; height: number } | null = null;
+      private lightGridDirty = true;
       colors: Map<number | string, readonly number[] | Float32Array>;
       quality: number;
       detailMeshes = new Set<string>();
@@ -245,7 +248,7 @@
       }
       get bloomStrength(): number {
         const hour = this.battlefieldHour;
-        if (this.cinema || hour === undefined) return .65;
+        if (hour === undefined) return .65;
         const t = Math.max(0,Math.min(1,hour >= 12 ? hour - 18 : 6 - hour));
         return .65 + t*t*(3-2*t);
       }
@@ -557,7 +560,7 @@
         g.bindVertexArray(this.fullVao);
         g.activeTexture(g.TEXTURE0);
         g.uniform1i(this.uniform(this.bloomProg, 'u_tex'), 0);
-        g.uniform1f(this.uniform(this.bloomProg, 'u_lampPrefilter'), !this.cinema && this.pointLightCount > 0 ? 1 : 0);
+        g.uniform1f(this.uniform(this.bloomProg, 'u_lampPrefilter'), this.pointLightCount > 0 ? 1 : 0);
         for (let pass = 0; pass < 3; pass++) {
           // Extract, horizontal blur, vertical blur. Never sample the attached target.
           g.bindFramebuffer(g.FRAMEBUFFER, this.bloomTargets[pass === 1 ? 1 : 0].fbo);
@@ -861,7 +864,7 @@
         bucket.dirty = true;
       }
       addPointLight(x: number, y: number, z: number, radius: number, color: RenderColor, intensity: number) {
-        if (this.cinema || radius <= 0 || intensity <= 0) return;
+        if (radius <= 0 || intensity <= 0) return;
         const m = this.vp;
         if (m) {
           // Cull the influence sphere, not the emitter: off-screen lamps may still light the scene.
@@ -871,31 +874,25 @@
               Math.abs(cy)>cw+radius*Math.hypot(m[1],m[5],m[9]) ||
               Math.abs(cz)>cw+radius*Math.hypot(m[2],m[6],m[10])) return;
         }
-        const limit = this.quality === 0 ? 2 : 8, positions = this.pointLightPositions,
-          colors = this.pointLightColors, eye = this.eye ?? [0,0,0],
-          // Approximate visible contribution, not just emitter proximity: a tiny visor
-          // must not displace every broad entrance light in a mixed army/base scene.
-          cost = (px: number,py: number,pz: number,r: number,power: number) =>
-            (1+(px-eye[0])**2+(py-eye[1])**2+(pz-eye[2])**2)/(r*r*power);
-        let index = this.pointLightCount;
-        if (index >= limit) {
-          let weakest = cost(x,y,z,radius,intensity); index = -1;
-          for (let i=0;i<limit;i++) {
-            const o=i*4, c=cost(positions[o],positions[o+1],positions[o+2],positions[o+3],colors[o+3]);
-            if (c > weakest) { weakest=c; index=i; }
-          }
-          if (index < 0) return;
-        } else this.pointLightCount++;
-        const offset=index*4, rgb=this.color(color);
-        positions.set([x,y,z,radius],offset);
-        colors.set([rgb[0],rgb[1],rgb[2],intensity],offset);
+        const offset=this.pointLightCount++*4, rgb=this.color(color);
+        if (offset >= this.pointLightPositions.length) {
+          const positions=new Float32Array(this.pointLightPositions.length*2),
+            colors=new Float32Array(this.pointLightColors.length*2);
+          positions.set(this.pointLightPositions); colors.set(this.pointLightColors);
+          this.pointLightPositions=positions; this.pointLightColors=colors;
+        }
+        this.pointLightPositions.set([x,y,z,radius],offset);
+        this.pointLightColors.set([rgb[0],rgb[1],rgb[2],intensity],offset);
+        this.lightGridDirty = true;
       }
       begin() {
         // Thumbnail facades must own these CPU buffers, never overwrite live world lights.
         if (!Object.hasOwn(this,'pointLightPositions')) {
           this.pointLightPositions = new Float32Array(8 * 4);
           this.pointLightColors = new Float32Array(8 * 4);
+          this.lightGrid = null;
         }
+        this.lightGridDirty = true;
         this.pointLightCount = 0;
         this.occlusionInstances = 0;
         for (let map of [this.dynamic, this.effects, this.occlusion])
@@ -904,6 +901,68 @@
             b.dirty = b.n > 0;
             b.n = 0;
           }
+      }
+      releasePointLights() {
+        if (Object.hasOwn(this,'lightGrid') && this.lightGrid) {
+          this.gl.deleteTexture(this.lightGrid.grid);
+          this.gl.deleteTexture(this.lightGrid.lamps);
+        }
+        this.lightGrid = null;
+        this.lightGridDirty = true;
+      }
+      private preparePointLights() {
+        if (!this.lightGridDirty || !this.pointLightCount) return;
+        const g=this.gl, extent=this.extent, size=Math.max(1,Math.ceil(extent*2/16)),
+          cellWidth=extent*2/size, cells: number[][]=Array.from({length:size*size},()=>[]),
+          cell=(v: number)=>Math.max(0,Math.min(size-1,Math.floor((v+extent)/cellWidth)));
+        // Conservative X/Z overlap: every influencing lamp reaches every receiver cell.
+        // No global or per-cell selection budget; the shader rejects the exact 3D radius.
+        for (let i=0;i<this.pointLightCount;i++) {
+          const o=i*4, x=this.pointLightPositions[o], z=this.pointLightPositions[o+2], r=this.pointLightPositions[o+3];
+          for (let cz=cell(z-r);cz<=cell(z+r);cz++)
+            for (let cx=cell(x-r);cx<=cell(x+r);cx++) cells[cz*size+cx].push(i);
+        }
+        let state=this.lightGrid;
+        const maxSize=g.getParameter(g.MAX_TEXTURE_SIZE) as number,
+          width=Math.min(256,maxSize), texels=cells.reduce((sum,c)=>sum+c.length*2,0),
+          requiredHeight=Math.max(1,Math.ceil(texels/width));
+        if (requiredHeight>maxSize || size>maxSize) throw new Error('Local light grid exceeds GPU texture capacity');
+        // Retain capacity as the orbit/sight changes; do not reallocate GPU storage per lamp count.
+        const height=Math.min(maxSize,Math.max(state?.height ?? 1,2**Math.ceil(Math.log2(requiredHeight)))),
+          gridData=state?.size===size ? state.gridData : new Float32Array(size*size*4),
+          lampData=state?.width===width && state.height===height ? state.lampData : new Float32Array(width*height*4);
+        let cursor=0;
+        cells.forEach((lights,index)=> {
+          gridData[index*4]=cursor; gridData[index*4+1]=lights.length;
+          for (const i of lights) {
+            lampData.set(this.pointLightPositions.subarray(i*4,i*4+4),cursor*4);
+            lampData.set(this.pointLightColors.subarray(i*4,i*4+4),(cursor+1)*4);
+            cursor+=2;
+          }
+        });
+        if (!state) {
+          const grid=g.createTexture(), lamps=g.createTexture();
+          if (!grid || !lamps) {
+            if (grid) g.deleteTexture(grid);
+            if (lamps) g.deleteTexture(lamps);
+            throw new Error('Could not allocate local light textures');
+          }
+          state=this.lightGrid={grid,lamps,size:0,gridData,lampData,width:0,height:0};
+        }
+        const upload=(texture: WebGLTexture, unit: number, w: number,h: number,data: Float32Array,resize: boolean)=> {
+          g.activeTexture(g.TEXTURE0+unit); g.bindTexture(g.TEXTURE_2D,texture);
+          if (resize) {
+            g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.NEAREST);
+            g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.NEAREST);
+            g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);
+            g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
+            g.texImage2D(g.TEXTURE_2D,0,g.RGBA32F,w,h,0,g.RGBA,g.FLOAT,data);
+          } else g.texSubImage2D(g.TEXTURE_2D,0,0,0,w,h,g.RGBA,g.FLOAT,data);
+        };
+        upload(state.grid,11,size,size,gridData,state.size!==size);
+        upload(state.lamps,12,width,height,lampData,state.width!==width || state.height!==height);
+        Object.assign(state,{size,gridData,lampData,width,height});
+        this.lightGridDirty=false;
       }
       clearStatic() {
         for (let b of Object.values(this.static)) this.gl.deleteBuffer(b.buffer);
@@ -1104,11 +1163,16 @@
         g.useProgram(program);
         this.bindAtmosphere(program);
         this.bindEcology(program, modelTime);
-        const pointLights = this.cinema ? 0 : this.pointLightCount ?? 0;
+        const pointLights = this.pointLightCount ?? 0;
         g.uniform1i(this.uniform(program, 'u_pointLightCount'), pointLights);
         if (pointLights) {
-          g.uniform4fv(this.uniform(program, 'u_pointLightPosition[0]'), this.pointLightPositions);
-          g.uniform4fv(this.uniform(program, 'u_pointLightColor[0]'), this.pointLightColors);
+          this.preparePointLights();
+          for (const [name,texture,unit] of [
+            ['u_lightGrid',this.lightGrid!.grid,11], ['u_lightData',this.lightGrid!.lamps,12]
+          ] as const) {
+            g.activeTexture(g.TEXTURE0+unit); g.bindTexture(g.TEXTURE_2D,texture);
+            g.uniform1i(this.uniform(program,name),unit);
+          }
         }
         g.uniformMatrix4fv(this.uniform(program, 'u_vp'), false, this.vp);
         g.uniformMatrix4fv(this.uniform(program, 'u_light'), false, this.lightVP);
