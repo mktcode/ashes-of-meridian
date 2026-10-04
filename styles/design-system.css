@@ -230,7 +230,33 @@
 :is(#menu, #modal, #result) .opponent-label { color: var(--ui-muted); font-size: 10px }
 :is(#menu, #modal, #result) .opponent-copy strong { font-size: 12px }
 :is(#menu, #modal, #result) .opponent-copy small { overflow: visible; white-space: normal; overflow-wrap: anywhere; font-size: 11px; line-height: 1.5 }
-#modal .armory-heading h1 { text-transform: uppercase }
+#modal .modal-card:has(> .armory-screen) {
+  height: calc(100dvh - 48px);
+  display: flex;
+  overflow: hidden;
+}
+#modal .armory-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+#modal .armory-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+}
+#modal .armory-heading h1 { text-transform: uppercase; margin: 0; text-align: left }
+#modal .armory-content {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #4edcf080 #06131e;
+  padding: 8px;
+}
 #modal .armory-balance { --ui-cut: 6px; --ui-edge: #75cadd }
 #modal .armory-balance strong { font: 400 25px Aldrich, sans-serif }
 #modal .upgrade-card { --ui-cut: 7px; --ui-edge: #4797ac }
@@ -382,8 +408,8 @@
   #menu .sub-header .textbtn { max-width: 110px; flex-shrink: 0 }
   #modal .settings-row { flex-wrap: wrap }
   #modal .settings-row select { width: 100% }
-  #modal .armory-heading { flex-wrap: wrap }
-  #modal .armory-heading h1 { font-size: 24px }
+  #modal .armory-heading { grid-template-columns: minmax(0, 1fr) auto }
+  #modal .armory-heading h1 { font-size: 24px; grid-column: 1 / -1 }
   #result .result-screen { padding: 24px 16px 32px }
   #result .result-shell { gap: 18px }
   #result .result-benefits h3 { font-size: 11px; line-height: 1.5; letter-spacing: 1px }
