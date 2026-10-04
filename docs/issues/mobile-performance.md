@@ -12,19 +12,58 @@
 
 **Rasterentlastung implementiert, Geräteabnahme offen:** Wiederholte vollständige Bauprüfungen und Chunk-/Pufferneubauten sind durch einen begrenzten View-Cache und frische Belegungsbatches ersetzt; [Besitz-/Sicht-/Verzögerungsvertrag](../rendering.md#viewport-und-hud). Gezielter Node-CPU-Vergleich mit echter App-/Renderergeometrieschleife, Desert Seed 29973391, synthetischen 150 Entitäten, vollständig sichtbarem 120×90-Ausschnitt, ohne Simulationsschritte/GPU: wiederholte Rasterupdates etwa 315 → 6 ms; erster Callback etwa 331 → 12 ms. Abschluss des kalten Meshaufbaus hatte weiterhin eine Spitze bis etwa 82 ms. Keine Echtgeräte-FPS oder Rekonstruktion des Nutzerstands. Chromium über `file://` bestätigt Wiederverwendung/Freigabe der Streaming-Puffer ohne GL-Fehler; kein vollständiger laufender Baumodus- oder Performancecheck. [Modellkacheln](modell-kacheln.md) bleiben separat.
 
-## Nächste Eingrenzung
+## Codebasierter Verbesserungsplan
 
-1. Rasterentlastung auf dem Nutzergerät mit gleichem Spielstand abnehmen: geschlossenes Menü, geöffnetes Menü ohne Bauauswahl und aktives Bauplatzraster unterscheiden. Verzögertes Erscheinen, Kamerafahrt und verbleibende Erst-Meshspitze prüfen; keine pauschale Raster-/Qualitätsreduktion.
-2. Befehls-Hänger eingrenzen: Befehlstyp, Zahl ausgewählter Einheiten, freies Ziel versus Engstelle sowie sofortiger Eingabehänger versus folgende Bewegung sichern. Pfadberechnung/Ausweichsuche sind nur Kandidaten; noch kein Profilbeleg.
-3. Simulationsphase bei Bedarf feiner messen: Schritte je Callback, Bewegung/A*, KI, Sicht, Kampf/Wirtschaft, Effekte. Bisherige Spitzen rechtfertigen keine pauschale Optimierung eines Vollscans.
-4. Handy-Reproduktion mit Gerät/Browser/Build, Karte/Seed, Qualität, Tempo, Dauer, Kartenwechsel und Akku/Ladezustand sichern. Freeze, Context-loss und Reloadfehler unterscheiden.
-5. Gleichen kurzen Abschnitt getrennt in High/Balanced/Performance aufzeichnen; vergleichbaren thermischen Start herstellen, bei Überhitzungswarnung abbrechen. [Diagnosebedienung](../testing.md#lokale-performancediagnose).
+Aktueller Nutzerbericht: auch der Startbildschirm fällt teilweise unter 60 FPS; viele Einheiten/Gebäude verschärfen die Last, Einheitenbefehle verursachen kurze Hänger. Gerät, Browser, Qualität und Spielstand für diesen Bericht fehlen. Folgende Befunde stammen aus **statischer Quellprüfung auf `6d49078`**, nicht aus einem neuen Laufzeitprofil. Aufwand ist vorhanden, sein Anteil an den gemeldeten Framezeiten noch nicht bewiesen. Ziel: unnötige Arbeit entfernen, nicht Details, Schatten, Licht, Bloom oder Tilt-Shift abschalten.
 
-## Kandidaten erst nach Profilbeleg
+### P0 – kurze Messung richtig zuordnen
 
-- **GPU:** Pixel-/MSAA-Budget, Schattenzeit, Materialshader, Effekt-Overdraw und Instanzuploads getrennt prüfen. High erhöht Szenenpixel gegenüber Balanced erheblich; weder Draw Calls noch kurze GL-Einreichung schließen einen GPU-Engpass aus.
-- **CPU:** Bewegungs-/Yield-Vollscans und A*-Arbeitsfelder, erfolglose Worker-Ressourcensuche, Kampfhash-Allokationen, Mehrparteien-Sicht und Snapshot-/Interpolationsarbeit. Ein Körperindex muss während Bewegung aktuell sein, nicht der möglicherweise veraltete Kampfhash. Reihenfolge, Sicht und RNG erhalten.
-- **Speicher:** tatsächliche Meshresidenz, Renderziel-/Resize-Spitzen und Materialbytes prüfen; Diagnosebytes sind Schätzungen, keine Treibermessung.
+- [ ] Diagnose um opt-in Unterphasen/Zähler ergänzen: Eingabehandler/Befehlsausführung **außerhalb rAF**, Schritte je Callback, Wegsuche (Anzahl, expandierte Knoten, Direktweg versus A*), Bewegung/Yield, KI, Sicht sowie Autosave getrennt von allgemeiner UI. Keine Timer je Nachbar-/Shaderoperation; begrenzte Aggregate. Der bestehende Export kann einen Eingabehänger nicht ausreichend dem Befehlspfad zuordnen.
+- [ ] Ein Menüabschnitt und ein dichter Gefechtsabschnitt auf betroffener Hardware: CPU-Framezeit und GPU `shadow`/`scene`/`bloom`/`post`, Renderintervalle und lange Einzelbilder erfassen. Für Menü zusätzlich Himmel separat messen; Browsertrace bei niedriger FPS trotz kurzer CPU-/GPU-Phasen für Compositor, GC und Scheduling. Warmzustand und Erstöffnung getrennt halten.
+- [ ] Im selben Gefechtsstand Einzel- und Gruppenbefehl, freies Ziel und Hindernis unterscheiden. Eingabe bis erstes neues Bild sowie unmittelbar folgende Ticks messen. Nicht vorsorglich alle Karten/Qualitäten kreuzen.
+
+### P1 – identische Arbeit wiederverwenden
+
+**Menühimmel (GPU; kleiner bis mittlerer Eingriff).** [`MeridianMenuSky.draw`](../../src/renderer/menu-sky.ts) zeichnet jedes Bild Vollbild-Noise/Sterne und prozedural texturierte Planetenkugeln. Rezept und Bild hängen nur von Seed/Familie und Rendergröße ab; weder Zeit noch umlaufende Weltkamera gehen ein. Nur das Rezept, nicht das fertige Bild ist gecacht. [`render`](../../src/renderer/runtime.ts) führt daneben auch im Menü Schatten, Welt, MSAA-Resolve, Bloom und Post aus: ein Startbildschirm ist hier keine billige 2D-Ansicht.
+
+- [ ] Nur den unveränderten Himmels-/Planetenhintergrund in gleicher Auflösung/Format und passender Kantenglättung in ein begrenztes GPU-Ziel rendern und anschließend kopieren/abtasten. Keine eingefrorene Welt, kein Readback. Bei Seed/Familie/Größe/Qualität invalidieren, bei Menüausstieg freigeben. Mehrresidenz gegen gesparte GPU-Zeit prüfen; Tiefenisolation und Planetenkanten erhalten. Menüszene und Post bleiben live. Erst empfehlen, wenn der isolierte Himmel messbar kostet.
+
+**Wegsuche (CPU/Allokationen; mittlerer Eingriff).** [`setOrder`](../../src/simulation/movement.ts) leert Wege und setzt `nextPath = 0` für jede betroffene Einheit. `command` selbst berechnet bei normalen Bewegungsbefehlen **keine Wege**; im folgenden Tick ruft `move` je Einheit `pathTo` auf. Hindernisse können so viele synchrone A*-Suchen bündeln. [`World.path`](../../src/world.ts) hat bereits einen Direktweg-Fastpath, legt sonst aber pro Suche drei rastergroße Arbeitsfelder an und initialisiert sie vollständig; pro expandierter Kante folgen wiederholte Terrain-/Clearanceprüfungen. Ein Gruppenpfad ist wegen verschiedener Start-/Formationsziele und Radien nicht einfach austauschbar.
+
+- [ ] Zuerst weltgebundene A*-Arbeitsfelder/Heap wiederverwenden; besuchte Zellen per Suchgeneration oder berührter Liste zurücksetzen. Numerik, Nachbar-/Heap-Reihenfolge, Budgetzählung und vollständige/Teil-/Fehlerstatus exakt erhalten; Reentranz und Weltwechsel absichern.
+- [ ] Danach statische Zell-/Kanten-Clearance für die tatsächlich verwendeten Körperradien begrenzt cachen, wenn Terrainprüfungen dominieren. Dynamische Belegung, exakte Start-/Zielsegmente, Arbeitsbereiche und Recovery-Raster weiter frisch prüfen. Nicht allein nach `pathVersion` vermeintlich identische Suchen teilen.
+- [ ] Kein vorgezogener Scheduler-/Flowfield-Umbau: ein globales Pfadbudget oder verteilte Gruppenplanung ändert Reaktionszeit und Tickverhalten. Nur gesondert entscheiden, falls identische Wiederverwendung die Spitzen nicht ausreichend senkt; [Navigationsgrenzen](worker-bauwegfindung/issue.md).
+
+### P2 – Skalierung bei Armeen und Basen
+
+**Live-Körperindex (CPU; höheres Verhaltensrisiko).** [`unitFits`, `move`, `yieldUnitSpace`](../../src/simulation/movement.ts) scannen wiederholt `s.entities`. Bis zu sieben Lenkwinkel, weitere Gleitversuche und rekursives Yield verstärken die Kosten in Engstellen. Bei vielen bewegten Einheiten entsteht ein annähernd quadratischer Anteil, inklusive unnötiger Prüfung weit entfernter Einheiten/Ressourcen/Gebäude.
+
+- [ ] Eigenen räumlichen Broadphase-Index für Live-Körper und reservierte Exitpositionen einsetzen, nicht den einmal pro Tick gebauten Kampfhash. Jede Positionsänderung, Spawn, Tod, Recall, Exitänderung und Restore berücksichtigen. Kandidaten in bisheriger Entitätsreihenfolge prüfen; exakte Kollisionsprüfung, Radien, Flug/Boden-Trennung und Yield-Prioritäten bleiben gleich. Zunächst Vollscan/Index auf identische Ergebnisse vergleichen. Keine Grafikänderung, aber gezielte Navigations-/Simulationsregression erforderlich.
+
+**Modellaufbau und Uploads (CPU/GPU; mittlerer bis größerer Eingriff).** [`battlefield`](../../src/app.ts) ruft für sichtbare Entitäten je Renderbild `renderEntity` auf. [`begin`/`upload`](../../src/renderer/runtime.ts) leeren dynamische Instanzzahlen und laden schmutzige Buckets mit `bufferData` neu. Meshgeometrie selbst wird bereits wiederverwendet; betroffen sind Modellaufbau, Transforms und Instanzdaten, nicht ein Neubau sämtlicher Meshes. Auch Gebäude mit vielen unbewegten Teilen laufen durch diesen Pfad; Verdeckungskonturen und Schatten zeichnen zusätzliche Geometrie.
+
+- [ ] Bei dominanter `sceneBuild`-/Uploadzeit zuerst feste Gebäudeteile von Türmen, Baufortschritt, Nachtakzenten und Animationen trennen bzw. fertige Instanzdaten cachen. Invalidierung bei Pose, Bau-/Schadensdarstellung, Teamtönung, Tageszeit und Weltwechsel definieren; Lichtmeldung und Konturen müssen aktuell bleiben. Keinesfalls ganze Gebäudeanimationen einfrieren.
+- [ ] Pufferkapazität behalten und nur geänderte Bereiche hochladen; `bufferSubData` gegen bisheriges Orphaning messen, nicht pauschal als schneller annehmen (Treiberstalls möglich). Instanzbytes und CPU/GPU-Zeit statt nur Draw Calls vergleichen.
+- [ ] Erst bei bestätigter GPU-Geometrielast dynamische Buckets räumlich unterteilen. Entitäts-/Terrainculling existiert bereits; zusätzliche Grenzen müssen große Modelle, Konturen und außerhalb des Bildes liegende Schattenwerfer erhalten. Mehr Buckets können zusätzliche Draw Calls kosten.
+
+### P3 – weitere Spitzen gezielt statt pauschal angehen
+
+- **Autosave:** [`autosaveBattle`](../../src/ui/core.ts) sichert im aktiven Spiel alle fünf Sekunden synchron Snapshot und Profil über `localStorage` im rAF-Pfad. Savezeit/-bytes existieren bereits als UI-Werte. Periodische Spitzen damit korrelieren; erst dann Kopien/Serialisierung reduzieren. Ein bloßes `setTimeout` beseitigt die Hauptthreadblockade nicht. Speicherintervall, konsistenter Tick-Snapshot und Lebenszyklussicherungen nicht still ändern; [Spielstand](expeditions-spielstand.md).
+- **Sicht/KI/Wirtschaft:** Sicht wird bereits nur alle 0,35 Simulationssekunden erneuert, HUD/Minimap etwa alle 0,25 Echtzeitsekunden. Wiederkehrende Vollscans allein belegen keinen Hauptengpass. Nur dominante Unterphase weiter untersuchen; Sichtfrequenz und KI-Reaktion nicht vorsorglich reduzieren.
+- **Kacheln/Bauplatzraster:** Standbildcache beziehungsweise View-Cache sind bereits implementiert. Verbleibende Erstaufnahme kann synchron aus WebGL nach Canvas kopieren; Thumbnail-Update liest außerdem jedes Renderbild DOM-Rechtecke, auch bei Cachetreffern. Bei Layoutkosten Dirty-/Resize-/Scroll-getriebene Sichtbarkeitsprüfung prüfen. Kalte Raster-Meshspitze separat messen. Nicht dieselben Caches erneut planen; [Kacheln](modell-kacheln.md), Rasterbefund oben.
+- **Material-/Postshader:** neun Schattenabfragen, triplanare Materialien, bis zu acht lokale Lampen und High-Tilt-Shift sind reale Fragmentarbeit, aber ohne GPU-Profil keine belegte Ursache. Bei Bedarf gleiche Resultate günstiger berechnen oder verdeckte Arbeit vermeiden; keine pauschale Senkung von Auflösung, MSAA, Lichtbudget oder Details. Statische Schatten nicht blind cachen: animierte Modelle/Vegetation und veränderliche Projektionsgrenzen bleiben relevant.
+
+### Reihenfolge und Erfolgskriterien
+
+P0 schafft Zuordnung, danach den gemessenen Hauptpfad wählen: für Menü P1-Himmel, für Befehle P1-Wegsuche, für laufende dichte Armeen P2-Körperindex, für dichte sichtbare Basen P2-Instanzdaten. Kleine Einzeländerungen mit gleichem Ausgangsstand vergleichen, keine gleichzeitige Großsanierung.
+
+Ziel sind gleichmäßigere Renderintervalle bei 60 FPS (16,7 ms Budget), kleinere p95/p99-/Maximalspitzen und kürzere Befehlslatenz bei gleicher Szene/Qualität/Spielgeschwindigkeit; keine zugesagten FPS-Gewinne ohne Messung. CPU und GPU nicht einfach addieren, da ihre Arbeit überlappen kann. Mehr Cache darf keinen unbeschränkten Speicheranstieg verursachen. Culling-/Cacheänderungen technisch auf Weltwechsel, Resize, Nacht, Fog und Schattenränder prüfen, Bildwirkung menschlich abnehmen. Navigation zusätzlich auf identische Wege, Ergebnisse, Reihenfolge und RNG prüfen, ohne Referenzen neu zu erzeugen. `test:ai`/`test:simulation` auch gefiltert nur mit gesondertem aktuellem Auftrag.
+
+## Ergänzende Geräteabnahme
+
+- Rasterentlastung mit gleichem Spielstand abnehmen: geschlossenes Menü, geöffnetes Menü ohne Bauauswahl und aktives Bauplatzraster unterscheiden. Verzögertes Erscheinen, Kamerafahrt und verbleibende Erst-Meshspitze prüfen.
+- Handy-Reproduktion mit Gerät/Browser/Build, Karte/Seed, Qualität, Tempo, Dauer, Kartenwechsel und Akku/Ladezustand sichern. Freeze, Context-loss und Reloadfehler unterscheiden. Tatsächliche Meshresidenz, Renderziel-/Resize-Spitzen und Materialbytes prüfen; Diagnosebytes sind Schätzungen, keine Treibermessung.
+- Qualitätsvergleich nur zur Eingrenzung eines bestätigten GPU-Problems: gleicher kurzer Abschnitt, vergleichbarer thermischer Start, bei Überhitzungswarnung abbrechen. High erhöht das Pixelbudget gegenüber Balanced; weder Draw Calls noch kurze GL-Einreichung schließen einen GPU-Engpass aus. [Diagnosebedienung](../testing.md#lokale-performancediagnose).
 
 Vorhandene Entlastungen sind implementiert, nicht auf dem Handy abgenommen: 60-FPS-Renderlimit, Freigabe alter Weltgeometrie, Chunk-/Effektculling, Resize-Guards und reduzierte UI-Schreibarbeit. Keine neue Qualitätsreduktion daraus ableiten. Pause-Entlastung und 30-FPS-Modus bleiben zurückgestellt; gewünschter Tilt-Shift bleibt erhalten.
 
