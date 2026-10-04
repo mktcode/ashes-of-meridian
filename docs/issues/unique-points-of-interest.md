@@ -4,7 +4,6 @@ Jede Karte soll genau einen zufällig ausgewählten und platzierten, einzigartig
 
 Erste unverbindliche Motivideen, noch keine festgelegte Auswahl:
 
-- Ein abgestürztes Raumschiff.
 - Ein riesiges Vorkommen von Echo-Kristallen.
 - Ein kleiner Vulkan.
 - Ein gigantisches, halb im Boden versunkenes Skelett eines außerirdischen Wesens. Seine Rippen ragen wie gewaltige Torbögen aus der Landschaft; zwischen den Knochen glimmen vereinzelte Echo-Kristalle. Was es war und wie lange es dort liegt, bleibt unerklärt.
