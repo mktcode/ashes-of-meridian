@@ -676,8 +676,24 @@ test('placement guide remains fog-gated and derivative-filtered without shading 
   assert.match(guide,/fract\(/);
   assert.match(guide,/fwidth\(/);
   assert.match(guide,/line=.*smoothstep\(/);
+  assert.match(guide,/q=v_pos\.xz\/3\./);
+  assert.match(guide,/finePixel=pixel\*2\./);
+  assert.match(guide,/max\(finePixel\.x,finePixel\.y\)/,'fine lines have their own density filter');
+  assert.match(guide,/line=max\(line,fineLine\*u_placementGridDetail\)/,'nested lines do not double opacity');
   assert.match(guide,/frag=vec4\(v_col\.rgb,v_col\.a\*line\*/);
   assert.doesNotMatch(guide,/shadow\(|groundBase|u_groundTex/);
+});
+
+test('placement guide fades in half-spacing lines between gameplay zoom endpoints', () => {
+  const {r}=setup();r.resize();
+  const values=[];
+  for(const zoom of [150,115,71.1,27.2,20]) {
+    r.camera(0,0,zoom);values.push(r.placementGridDetail);
+  }
+  assert.equal(values[0],0);assert.equal(values[1],0);
+  assert.ok(Math.abs(values[2]-.5)<1e-9);
+  assert.equal(values[3],1);assert.equal(values[4],1);
+  r.camera(0,0,27.2,true);assert.equal(r.placementGridDetail,0,'menu cameras do not enable finer lines');
 });
 
 test('menu camera keeps its gentle orbit at the increased rate', () => {

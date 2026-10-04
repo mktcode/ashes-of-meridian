@@ -14,9 +14,9 @@
 
 ### Baugrid bei Kamerabewegung
 
-Nutzer meldet vollständiges Verschwinden beim Zoomen/Verschieben. Der Bildausschnittwechsel ersetzt das Overlay-Mesh; solange neue Geländeproben ausstehen, wird das gesamte Raster ausgeblendet. Überlappende Terrainproben bleiben inzwischen erhalten; [Cachevertrag](../rendering.md#viewport-und-hud). Gezielte Node-Prüfungen sichern Wiederverwendung, Cachebegrenzung und weiterhin frische Blockerprüfung, keine FPS-/GPU-Messung.
+Nach Wiederverwendung überlappender Terrainproben bestätigt der Nutzer die Darstellung: kein beobachtetes Verschwinden mehr, aktuell keine größeren Probleme. Der Bildausschnittwechsel ersetzt technisch weiterhin das Overlay-Mesh; ausstehende Geländeproben können das Raster noch vollständig ausblenden. [Cache-/Linienvertrag](../rendering.md#viewport-und-hud). Gezielte Node-Prüfungen sichern Wiederverwendung, Cachebegrenzung und weiterhin frische Blockerprüfung, keine FPS-/GPU-Messung.
 
-Offen im schrittweisen Refactoring: bekannte Bereiche trotz ausstehender neuer Proben aktuell anzeigen, Geometriespeicher wiederverwenden und Uploads unveränderter Positionen/Normalen vermeiden. Kachelgröße gegen zusätzliche Draw Calls abwägen; keine Änderung der Bau-/Sichtregeln. Kontinuierliche Kamerabewegung und bewegte Blocker bei gleichem Ausschnitt vergleichen, CPU-/Uploadkosten und Frame-Spitzen getrennt erfassen. Vor dem nächsten Umsetzungsschritt Rücksprache mit dem Nutzer.
+Weitere Arbeit ausdrücklich auf offensichtliche, günstige Performanceverbesserungen begrenzen; kein größerer Kachel-/Rendererumbau ohne neuen Bedarf und Rücksprache. Weltverankerte Zwischenlinien beim Reinzoomen sind die gewünschte Darstellungsanpassung, keine höhere Geländeabtastung. Moiré-/Bewegungsabnahme auf Zielgeräten bleibt menschlich.
 
 ## Codebasierter Verbesserungsplan
 

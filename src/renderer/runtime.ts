@@ -61,6 +61,7 @@
       frame: number;
       fogOn: boolean;
       cinema: boolean;
+      private placementGridDetail = 0;
       shadowSize: number;
       shadowBias = .00022;
       uniformCache: Map<WebGLProgram, Record<string, WebGLUniformLocation | null>>;
@@ -1043,6 +1044,9 @@
       }
       camera(x: number, z: number, zoom: number, cinema = false, t = 0, yaw = 0) {
         this.cinema = cinema;
+        // Match the gameplay zoom endpoints; only line visibility changes, never mesh density.
+        const gridZoom = Math.max(0, Math.min(1, (115 - zoom) / (115 - 27.2)));
+        this.placementGridDetail = cinema ? 0 : gridZoom * gridZoom * (3 - 2 * gridZoom);
         let a = this.viewport.width / this.viewport.height;
         // Preserve the existing pixels-per-world-unit zoom while clipping HUD space.
         let viewHeight = zoom * this.viewport.height / innerHeight;
@@ -1206,6 +1210,7 @@
           profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
         g.uniform1f(this.uniform(program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_fogOn'), this.fogOn ? 1 : 0);
+        g.uniform1f(this.uniform(program, 'u_placementGridDetail'), this.placementGridDetail);
         g.uniform1f(this.uniform(program, 'u_time'), time);
         g.uniform1f(this.uniform(program, 'u_portalTime'), this.quality > 0 && !this.cinema ? modelTime : 0);
         for (const [uniform, texture, unit] of [

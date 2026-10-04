@@ -70,6 +70,7 @@ uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_fol
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_rockClustersTex;uniform sampler2D u_desertShrubsTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform highp uint u_decorSeed;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;uniform vec4 u_groundDecor;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;uniform float u_fogExtent;
 uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
+uniform float u_placementGridDetail;
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
 uniform float u_habitatOn;uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
 out vec4 frag;
@@ -254,11 +255,18 @@ void main(){
  }
  if(v_mat==${PLACEMENT_GUIDE_MATERIAL}.){
   float sight=battlefieldFog(v_pos.xz);
-  // Fixed world spacing, pixel-wide analytic AA; do not draw unresolved stripes.
+  // Fixed nested world grids: zoom fades in halfway lines without moving existing ones.
+  // Pixel-wide analytic AA and independent density filtering suppress unresolved stripes.
   vec2 q=v_pos.xz/3.,pixel=max(fwidth(q),vec2(.00001));
   vec2 cell=abs(fract(q+.5)-.5)/pixel;
   float line=(1.-smoothstep(.5,1.5,min(cell.x,cell.y)))
     *(1.-smoothstep(1./8.,1./4.,max(pixel.x,pixel.y)));
+  if(u_placementGridDetail>0.){
+   vec2 finePixel=pixel*2.,fineCell=abs(fract(q*2.+.5)-.5)/finePixel;
+   float fineLine=(1.-smoothstep(.5,1.5,min(fineCell.x,fineCell.y)))
+     *(1.-smoothstep(1./8.,1./4.,max(finePixel.x,finePixel.y)));
+   line=max(line,fineLine*u_placementGridDetail);
+  }
   frag=vec4(v_col.rgb,v_col.a*line*step(.75,sight)*clamp(max(v_col.r,max(v_col.g,v_col.b))*2.,0.,1.));return;
  }
  if(v_mat==${CONTACT_SHADOW_MATERIAL}.){
