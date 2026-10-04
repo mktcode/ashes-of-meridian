@@ -18,6 +18,7 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 
 - [ ] Viererauswahl/-reihenfolge, Armory-Ränge, feste Slots/Loadouts über Übergänge und Reload verständlich.
 - [ ] Fähigkeiten/Zielbedingungen und dominante Kombinationen im Gefecht; große Gruppen, Recall an belegten HQ-Ausgängen/Höhen und geschützte Reinforcements.
+- [ ] [Rechteckauswahl](../gameplay.md#kamera-und-befehle): Haltezeit, Bereitschaftsring und Fingerverdeckung auf echten Touchgeräten abnehmen; frühes Kameraziehen sicher von Halten-und-Ziehen unterscheidbar? Desktop: Linksziehen zur Auswahl und Rechtsziehen zum Kameraschwenken verständlich?
 - [ ] Touch unter Last: Pan/Pinch, Tapfolgen, Minimap, kleine Aktionen, Scroll/Back/Zielwahl, Ausrichtung und Hintergrundrückkehr. Desktopsteuerung auch im tatsächlich eingebetteten itch.io-Build.
 
 ## Fortschritt und Lebenszyklus

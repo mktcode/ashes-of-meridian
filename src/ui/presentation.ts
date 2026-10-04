@@ -57,6 +57,8 @@
         this.advanceTutorialArrival(dt);
         this.advanceBattleIntro(dt);
         let now = performance.now();
+        if (this.view !== 'game' || this.controlsLocked || this.game.s?.result) this.drag = null;
+        else this.armRectangleSelection();
         this.updateTutorialSpeedHint(now);
         if (this.toastUntil && now > this.toastUntil) {
           $('toast').classList.remove('show');
@@ -175,6 +177,25 @@
         if (this.view !== 'game' || !this.game.s) return;
         let g = this.game,
           s = g.s!;
+        const d = this.drag;
+        if (d?.selecting && !this.controlsLocked && !this.mode) {
+          ctx.save();
+          ctx.strokeStyle = '#91daca';
+          ctx.fillStyle = '#91daca22';
+          ctx.lineWidth = 2;
+          if (d.moved) {
+            const x = Math.min(d.sx, d.x), y = Math.min(d.sy, d.y),
+              width = Math.abs(d.x - d.sx), height = Math.abs(d.y - d.sy);
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeRect(x, y, width, height);
+          } else if (d.type === 'touch') {
+            // Visible outside the fingertip once the long press is armed.
+            ctx.beginPath();
+            ctx.arc(d.sx, d.sy, 24, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
         const selectedIds = this.selectionIds();
         ctx.font = '10px ui-monospace,Consolas,monospace';
         ctx.textAlign = 'center';

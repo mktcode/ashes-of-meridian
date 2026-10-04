@@ -885,13 +885,87 @@ test('minimap reallocates its raster on size changes and scales markers and came
   assert.deepEqual(images,[[72,72],[108,108],[72,72]]);
 });
 
-test('left mouse dragging pans without issuing commands or changing selection', () => {
+test('right mouse dragging pans without issuing commands or changing selection', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-  h.pointer('pointerdown', 200, 200, { pointerType: 'mouse' });
-  h.pointer('pointermove', 240, 230, { pointerType: 'mouse' });
-  h.pointer('pointerup', 240, 230, { pointerType: 'mouse' });
+  h.pointer('pointerdown', 200, 200, { pointerType: 'mouse', button: 2 });
+  h.pointer('pointermove', 240, 230, { pointerType: 'mouse', button: 2 });
+  h.pointer('pointerup', 240, 230, { pointerType: 'mouse', button: 2 });
   assert.deepEqual(h.calls, []); assert.deepEqual(h.ui.selected, [7]);
   assert.deepEqual(h.ui.game.s.cam, { x: -4, z: -3, zoom: 50 });
+});
+
+test('rectangle selection replaces with living own units in either drag direction, including elevated air units', () => {
+  for (const pointerType of ['mouse','touch']) for (const reverse of [false,true]) {
+    const h=setup(),ui=h.ui;h.UI.prototype.bind.call(ui);ui.selected=[99];
+    ui.game.localTeam=2;
+    ui.game.world.surface={entityHeight:()=>12};
+    const heights=[];ui.R.project=(x,y,z)=>{heights.push(y);return {x,y:z-y};};
+    ui.game.s.entities=[
+      {id:1,team:2,type:'rifle',x:220,z:220},
+      {id:2,team:2,type:'worker',x:240,z:230},
+      {id:3,team:0,type:'rifle',x:220,z:220},
+      {id:4,team:2,type:'rifle',x:260,z:240,hp:0},
+      {id:5,team:2,type:'hq',x:230,z:230,kind:'building'},
+      {id:6,team:2,type:'rifle',x:310,z:220},
+      {id:7,team:2,type:'air',x:280,z:315}
+    ].map(e=>({kind:'unit',hp:100,...e}));
+    const from=reverse?[300,300]:[200,200],to=reverse?[200,200]:[300,300];
+    h.pointer('pointerdown',...from,{pointerType});
+    if(pointerType==='touch')h.setTime(400);
+    h.pointer('pointermove',...to,{pointerType});
+    h.pointer('pointerup',...to,{pointerType});
+    assert.deepEqual(ui.selected,[1,2,7]);
+    assert.ok(heights.includes(16.4),'flying center includes terrain height');
+    assert.deepEqual(ui.game.s.cam,{x:0,z:0,zoom:50});
+    assert.deepEqual(h.calls,[['select',[1,2,7]]]);
+  }
+});
+
+test('rectangle long press tolerates jitter, signals readiness and release alone or empty selection does nothing', () => {
+  const h=setup(),ui=h.ui;h.UI.prototype.bind.call(ui);ui.selected=[7];
+  h.pointer('pointerdown',200,200);
+  h.setTime(399);h.pointer('pointermove',203,202);
+  assert.equal(ui.drag.selecting,false);
+  h.setTime(400);ui.tick(0);
+  assert.equal(ui.drag.selecting,true);
+  const arcs=[],ctx=new Proxy({arc(...args){arcs.push(args);}}, {get:(o,k)=>o[k]||(()=>{})});
+  ui.game.effects={floats:[]};h.UI.prototype.drawOverlay.call(ui,ctx);
+  assert.equal(arcs.some(a=>a[0]===200&&a[1]===200&&a[2]===24),true);
+  h.pointer('pointerup',203,202);
+  assert.deepEqual(ui.selected,[7]);assert.deepEqual(h.calls,[]);
+  for(const pointerType of ['touch','mouse']) {
+    h.pointer('pointerdown',200,200,{pointerType});h.setTime(900);
+    h.pointer('pointermove',300,300,{pointerType});h.pointer('pointerup',300,300,{pointerType});
+    assert.deepEqual(ui.selected,[7]);assert.deepEqual(h.calls,[]);
+  }
+});
+
+test('rectangle long press cannot take over an early camera pan, explicit targeting or a multi-touch gesture', () => {
+  const h=setup(),ui=h.ui;h.UI.prototype.bind.call(ui);ui.selected=[7];
+  h.pointer('pointerdown',200,200);h.setTime(100);h.pointer('pointermove',220,200);
+  h.setTime(700);h.pointer('pointermove',240,230);h.pointer('pointerup',240,230);
+  assert.deepEqual(ui.game.s.cam,{x:-4,z:-3,zoom:50});assert.deepEqual(h.calls,[]);
+  ui.mode={kind:'ability',arg:'scan'};
+  h.pointer('pointerdown',200,200);h.setTime(1200);ui.tick(0);
+  assert.equal(ui.drag.selecting,false);
+  h.pointer('pointermove',240,230);h.pointer('pointerup',240,230);
+  assert.deepEqual(h.calls,[]);ui.mode=null;
+  h.pointer('pointerdown',200,200);h.setTime(1700);ui.tick(0);
+  assert.equal(ui.drag.selecting,true);
+  h.pointer('pointerdown',300,300,{pointerId:2});assert.equal(ui.drag,null);
+  h.pointer('pointerup',300,300,{pointerId:2});h.pointer('pointermove',250,250);h.pointer('pointerup',250,250);
+  assert.deepEqual(ui.selected,[7]);assert.deepEqual(h.calls,[]);
+});
+
+test('rectangle cancellation, pause and captured release outside viewport preserve selection', () => {
+  for(const interruption of ['cancel','pause','outside']) {
+    const h=setup(),ui=h.ui;h.UI.prototype.bind.call(ui);ui.selected=[7];
+    h.pointer('pointerdown',200,200);h.setTime(400);h.pointer('pointermove',300,300);
+    if(interruption==='cancel')h.pointer('pointercancel',300,300);
+    if(interruption==='pause'){ui.paused=true;ui.tick(0);}
+    h.pointer('pointerup',300,interruption==='outside'?610:300);
+    assert.equal(ui.drag,null);assert.deepEqual(ui.selected,[7]);assert.deepEqual(h.calls,[]);
+  }
 });
 
 test('touch single/double tap preserves selection and visible same-type filtering', () => {

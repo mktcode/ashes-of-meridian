@@ -17,7 +17,7 @@ Danach `index.html` direkt im Browser öffnen (`file://`, kein Server nötig). H
 
 **New expedition** startet einen Run mit festem Vierer-Command-Loadout. Alle Parteien landen mit Workern und bauen ihr HQ selbst. Beim ersten Tutorial liegen Ressourcen in Sicht, später wird vor der Basiswahl erkundet. Sechs Landschaftsfamilien des gemeinsamen prozeduralen Generators stehen als seedbasierte Expeditionskarten zur Verfügung. Siege liefern Vorteile für folgende Gefechte; Niederlage beendet den Run. **Continue expedition** stellt das zuletzt gespeicherte Gefecht pausiert wieder her. Laufende Gefechte werden automatisch gespeichert und können nicht neu gestartet werden; [Speichergrenzen](docs/gameplay.md#speichern-und-lebenszyklus). Die Checkpoint-Pfeile blättern nur durch Landschaftsvorschauen. **Codex** zeigt alle Fraktionen und Modelle unabhängig von Freischaltungen.
 
-Ein-Finger-/Linksmausziehen verschiebt die Kamera, Zwei-Finger-Drehen/Mittelmausziehen dreht sie, Pinch/Mausrad zoomt; Tap/Linksklick wählt, Ziel-Tap/Rechtsklick erteilt Kontextbefehle. Minimap links, Fähigkeiten mittig, Bau/Rekrutierung rechts. [Regeln und Bedienung](docs/gameplay.md).
+Ein-Finger-/Rechtsmausziehen verschiebt die Kamera, Zwei-Finger-Drehen/Mittelmausziehen dreht sie, Pinch/Mausrad zoomt; Tap/Linksklick wählt, Linksmausziehen oder Halten-und-Ziehen auf Touch wählt mehrere Einheiten. Ziel-Tap/Rechtsklick erteilt Kontextbefehle. Minimap links, Fähigkeiten mittig, Bau/Rekrutierung rechts. [Regeln und Bedienung](docs/gameplay.md).
 
 Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine spätere [Multiplayer-Neubewertung](docs/issues/multiplayer.md) ist zurückgestellt, bis die grundlegenden Spielmechaniken feststehen.
 

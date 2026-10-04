@@ -361,6 +361,23 @@
           this.center(cam.x + dx - (c * dx + s * dz), cam.z + dz - (-s * dx + c * dz));
         } else cam.yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
       },
+      armRectangleSelection(this: MeridianUI) {
+        const d = this.drag;
+        if (d && d.type === 'touch' && !d.moved && !this.mode && !this.controlsLocked &&
+            this.view === 'game' && performance.now() - d.startedAt >= 400) d.selecting = true;
+      },
+      selectRectangle(this: MeridianUI, d: UIDrag) {
+        const left = Math.min(d.sx, d.x), right = Math.max(d.sx, d.x),
+          top = Math.min(d.sy, d.y), bottom = Math.max(d.sy, d.y);
+        const units = this.game.alive(e => e.hp > 0 && e.team === this.localTeam && e.kind === 'unit')
+          .filter(e => {
+            const p = this.R.project(e.x, (isFlyingUnitType(e.type) ? 4.4 : 1) +
+              (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
+            return p && this.R.containsPoint(p.x, p.y) &&
+              p.x >= left && p.x <= right && p.y >= top && p.y <= bottom;
+          });
+        if (units.length) this.select(units.map(e => e.id), true);
+      },
       pointerDown(this: MeridianUI, e: PointerEvent) {
         if (this.view === 'codexModel') {
           if (!this.R.containsPoint(e.clientX, e.clientY) ||
@@ -398,7 +415,10 @@
           y: e.clientY,
           button: e.button,
           type: e.pointerType,
-          moved: false
+          moved: false,
+          pointerId: e.pointerId,
+          startedAt: performance.now(),
+          selecting: e.pointerType === 'mouse' && e.button === 0 && !this.mode
         };
       },
       pointerMove(this: MeridianUI, e: PointerEvent) {
@@ -448,10 +468,13 @@
         }
         if (this.drag) {
           let drag = this.drag;
+          if (drag.pointerId !== e.pointerId) return;
+          this.armRectangleSelection();
           if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
-          if (drag.moved && drag.type === 'mouse' && drag.button === 1) {
+          // The camera stays fixed for the whole rectangle gesture.
+          if (!drag.selecting && drag.moved && drag.type === 'mouse' && drag.button === 1) {
             this.rotateCamera((e.clientX - drag.x) * .01);
-          } else if (drag.moved && (drag.type === 'touch' || (drag.type === 'mouse' && drag.button === 0))) {
+          } else if (!drag.selecting && drag.moved && (drag.type === 'touch' || (drag.type === 'mouse' && (drag.button === 0 || drag.button === 2)))) {
             let a = this.R.ground(drag.x, drag.y, false),
               b = this.R.ground(e.clientX, e.clientY, false);
             this.center(this.game.s!.cam.x + a.x - b.x, this.game.s!.cam.z + a.z - b.z);
@@ -476,6 +499,7 @@
           }
           return;
         }
+        if (this.drag && this.drag.pointerId !== e.pointerId) return;
         let previousClick = this.lastClick;
         this.lastClick = {};
         if (e.pointerType === 'touch') {
@@ -493,15 +517,23 @@
           this.drag = null;
           return;
         }
+        this.armRectangleSelection();
         let d = this.drag;
         this.drag = null;
         if (!d || !this.R.containsPoint(e.clientX, e.clientY)) return;
+        if (d.selecting && (d.type === 'touch' || d.moved ||
+            Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6)) {
+          d.x = e.clientX; d.y = e.clientY;
+          if (Math.hypot(d.x - d.sx, d.y - d.sy) > 6) this.selectRectangle(d);
+          return;
+        }
+        if (d.moved) return;
         let p = this.targetPosition(e.clientX, e.clientY),
           target = this.pick(e.clientX, e.clientY);
         const limit = this.game.world!.extent - 4;
         p.x = clamp(p.x, -limit, limit);
         p.z = clamp(p.z, -limit, limit);
-        if ((d.type === 'touch' && d.moved) || d.button === 1) return;
+        if (d.button === 1) return;
         if (d.button === 2) {
           if (this.selectedBuilding()) this.select([]);
           else this.issueOrder(
@@ -517,7 +549,6 @@
           if (!d.moved) this.applyTarget(p);
           return;
         }
-        if (d.moved) return;
         if (target && this.game.workerTask(target, this.localTeam) && this.selected.some(id => {
           const worker = this.game.get(id);
           return worker?.team === this.localTeam && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;

@@ -28,6 +28,10 @@
     type UIMode = { kind: 'build'; arg: BuildingType } | { kind: 'ability'; arg: AbilityType } | { kind: 'rally'; arg?: undefined };
     type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'building';
     interface UIPing extends Position { life: number; maxLife: number; color: number; }
+    interface UIDrag {
+      sx: number; sy: number; x: number; y: number; button: number; type: string; moved: boolean;
+      pointerId: number; startedAt: number; selecting: boolean;
+    }
     interface BattleIntro {
       elapsed: number;
       hold: number;
@@ -71,7 +75,7 @@
       mode: UIMode | null;
       hover: number | null;
       pointer: { x: number; y: number; inside: boolean };
-      drag: { sx: number; sy: number; x: number; y: number; button: number; type: string; moved: boolean } | null;
+      drag: UIDrag | null;
       pings: UIPing[];
       lastClick: Partial<{ id: number; type: string; time: number; count: number }>;
       radioUntil: number;
