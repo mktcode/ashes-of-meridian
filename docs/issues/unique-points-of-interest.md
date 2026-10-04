@@ -7,6 +7,9 @@ Erste unverbindliche Motivideen, noch keine festgelegte Auswahl:
 - Ein abgestürztes Raumschiff.
 - Ein riesiges Vorkommen von Echo-Kristallen.
 - Ein kleiner Vulkan.
+- Ein gigantisches, halb im Boden versunkenes Skelett eines außerirdischen Wesens. Seine Rippen ragen wie gewaltige Torbögen aus der Landschaft; zwischen den Knochen glimmen vereinzelte Echo-Kristalle. Was es war und wie lange es dort liegt, bleibt unerklärt.
+- Ein zerbrochenes Sternentor, dessen gewaltiger Ring schräg aus dem Boden ragt. Zwischen den Bruchstücken flackert gelegentlich für einen Augenblick ein fremder Sternenhimmel auf; danach ist wieder nur die Landschaft dahinter zu sehen.
+- Ein gestrandetes Forschungsschiff, das von einem riesigen Baum durchwachsen ist. Wurzeln haben den Rumpf aufgesprengt, die Krone ragt weit über die Landschaft. Im Inneren blinkt noch eine einzelne Positionsleuchte.
 
 ## Offen
 
