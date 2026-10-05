@@ -17,7 +17,7 @@ test('HQ pilot registers two posed, dusk-controlled lights without new meshes or
   };
   const night=draw(22),half=draw(18.5);
   assert.equal(night.lights.length,2);
-  assert.deepEqual(night.lights.map(l=>l.slice(3)),[[14,0x75dce9,5],[10,0xffb65e,4]]);
+  assert.deepEqual(night.lights.map(l=>l.slice(3)),[[16.8,0x75dce9,4.25],[12,0xffb65e,3.4]]);
   night.lights.forEach((l,i)=>{
     assert.deepEqual(half.lights[i].slice(0,5),l.slice(0,5));
     assert.equal(half.lights[i][5],l[5]/2);

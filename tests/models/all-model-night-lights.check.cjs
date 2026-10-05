@@ -65,6 +65,22 @@ test('every faction building and unit has posed night lights, unchanged geometry
   }
 });
 
+test('noncivilian building lamps spread further with a softer peak, without changing civilian or unit lamps',()=>{
+  const h=modelHarness({heavyModels:true}),noop=()=>{};
+  for(const e of entities(h)){
+    const authored=[];
+    h.EntityModels.find(e).render({entity:e,time:9,nightLight:1,pointLight:(...args)=>authored.push(args),
+      lightPool:noop,part:noop,nightPart:noop,ring:noop,metal:0,dark:0,team:0,accent:0,
+      baseRotation:e.kind==='building'?h.BUILDING_YAW:e.rot,surfaceColor:c=>c});
+    const actual=draw(h,e,22).lights,soften=e.kind==='building'&&!h.BUILDINGS[e.type].civilizationPoints;
+    assert.equal(actual.length,authored.length);
+    actual.forEach((l,i)=>{
+      assert.equal(l[3],authored[i][3]*(soften?1.2:1),`${e.faction}/${e.type}: radius`);
+      assert.equal(l[5],authored[i][5]*(soften?.85:1),`${e.faction}/${e.type}: intensity`);
+    });
+  }
+});
+
 test('local lamps share foundation/chassis frames and flying height; turret lamps follow aim',()=>{
   const h=modelHarness({heavyModels:true}),heightAt=(x,z)=>4+.2*x-.1*z;
   for(const e of entities(h)) {
