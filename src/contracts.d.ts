@@ -490,7 +490,7 @@ interface UnitEntity extends EntityBase {
 interface BuildingEntity extends EntityBase {
   kind: 'building';
   type: BuildingType;
-  /** Cosmetic 45-degree steps (0–7), independent of weapon aim and CPU footprint. */
+  /** Cosmetic offset in eighth-turns (0 <= value < 8), independent of weapon aim and CPU footprint. */
   visualRotation?: number;
   buildRate?: number;
 }

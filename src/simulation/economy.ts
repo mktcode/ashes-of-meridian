@@ -290,7 +290,9 @@
       rotateBuilding(this: MeridianGame, id: number, direction: -1 | 1, team: PlayerTeam = 0): boolean {
         const b = this.managedBuilding(id, team);
         if (!b || (direction !== -1 && direction !== 1)) return false;
-        b.visualRotation = ((b.visualRotation || 0) + direction + 8) % 8;
+        // Keep the stored eighth-turn unit; subdivide it into three 15-degree clicks.
+        const step = Math.round((b.visualRotation || 0) * 3);
+        b.visualRotation = ((step + direction + 24) % 24) / 3;
         return true;
       },
       buildingRepairers(this: MeridianGame, id: number, team: PlayerTeam = 0): UnitEntity[] {

@@ -111,7 +111,7 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     recoveryAttempts: integer, nextRecovery: num, stuck: num, steerSide: oneOf(-1, 1), steerLocked: bool,
     slowed: num, reinforcedUntil: num, returning: bool, lastSource: integer, shieldFlash: num,
     paid: cost, gasId: id, deathAt: num, rally: pos, label: text, buildRate: nonnegative, amount: nonnegative,
-    visualRotation: v => integer(v) && Number(v) < 8
+    visualRotation: v => nonnegative(v) && Number(v) < 8
   })(v) && record(v) && (v.kind !== 'resource' || nonnegative(v.amount)) &&
     (v.visualRotation === undefined || v.kind === 'building');
   const contact: Check = v => record(v) && anyTeam(v.team) &&

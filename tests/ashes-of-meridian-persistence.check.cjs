@@ -148,11 +148,12 @@ test('residential buildings round-trip with unfinished state and paid Echo',()=>
 });
 test('cosmetic building rotation round-trips through save and restore and rejects malformed values',()=>{
   const run=savedBattle(),h=setup(),b=run.battle.state.entities.find(e=>e.type==='fieldlab');
-  b.visualRotation=7;assert.equal(put(h,run),true);
-  const loaded=h.service.loadExpedition();assert.equal(loaded.battle.state.entities.find(e=>e.id===b.id).visualRotation,7);
+  b.visualRotation=1/3;assert.equal(put(h,run),true);
+  const loaded=h.service.loadExpedition();assert.equal(loaded.battle.state.entities.find(e=>e.id===b.id).visualRotation,1/3);
   const {Game}=fixture,restored=new Game(json(defaults));restored.restoreBattle(loaded);
   assert.deepEqual(json(restored.snapshotBattle()),run.battle);
-  for(const invalid of [-1,8,.5,'1',null]){
+  b.visualRotation=7;put(h,run);assert.equal(h.service.loadExpedition().battle.state.entities.find(e=>e.id===b.id).visualRotation,7);
+  for(const invalid of [-1,8,Infinity,'1',null]){
     b.visualRotation=invalid;put(h,run);assert.equal(h.service.loadExpedition(),null);
     assert.ok(h.service.expeditionError);
   }

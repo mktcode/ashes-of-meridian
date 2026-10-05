@@ -36,7 +36,7 @@ test('rotated civilian decks and adaptive feet follow visual terrain support wit
   R.surface=surface;R.quality=0;
   for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower']){
     const e={...entity,type,size:4.2},clearance=JSON.stringify(civilizationClearanceFootprints(e,type,0));
-    for(const visualRotation of [0,1,3,7]){
+    for(const visualRotation of [0,1/3,3,23/3]){
       const rotated=Object.freeze({...e,visualRotation}),pose=surface.buildingPose(rotated,rotated.size);
       assert.equal(pose.height,surface.entityHeight(rotated));
       for(const {polygon,top} of civilizationDeckFootprints(rotated,type,0,visualRotation))for(const p of polygon)

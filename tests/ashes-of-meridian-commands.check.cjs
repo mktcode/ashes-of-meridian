@@ -71,12 +71,17 @@ test('building rotation is immediate, free, bounded and cosmetic for every compl
     g.get(1).type=type;delete g.get(1).visualRotation;
     const before=json(g.s);
     assert.equal(g.submitAction(0,{kind:'rotateBuilding',id:1,direction:-1}),true);
-    assert.equal(g.get(1).visualRotation,7);
-    for(let i=0;i<9;i++)assert.equal(g.submitAction(0,{kind:'rotateBuilding',id:1,direction:1}),true);
+    assert.equal(g.get(1).visualRotation,23/3);
+    for(let i=0;i<25;i++)assert.equal(g.submitAction(0,{kind:'rotateBuilding',id:1,direction:1}),true);
     assert.equal(g.get(1).visualRotation,0);
     const after=json(g.s);delete after.entities[0].visualRotation;
     assert.deepEqual(after,before,'only cosmetic orientation may change');
   }
+  g.get(1).visualRotation=3;
+  assert.equal(g.submitAction(0,{kind:'rotateBuilding',id:1,direction:1}),true);
+  assert.equal(g.get(1).visualRotation,10/3,'existing orientation advances by 15 degrees, not a new unit');
+  assert.equal(g.submitAction(0,{kind:'rotateBuilding',id:1,direction:-1}),true);
+  assert.equal(g.get(1).visualRotation,3);
   assert.equal(g.navDirty,false);assert.deepEqual(events,[]);
   for(const input of [{kind:'rotateBuilding',id:0,direction:1},...[-2,0,2,.5,NaN,Infinity,'1',null,undefined].map(direction=>({kind:'rotateBuilding',id:1,direction}))])
     assert.equal(parseBattleAction(input,10),null);

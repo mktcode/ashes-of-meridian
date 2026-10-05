@@ -2398,7 +2398,7 @@ test('building rotation arrows exist only for completed own buildings and obey a
     h.ui.game.rotateBuilding=vm.runInContext('MeridianGame.prototype.rotateBuilding',h.context);
     h.ui.renderActions();assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateLeft"/);
     assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateRight"/);
-    h.click({action:'rotateLeft'});assert.equal(h.b.visualRotation,7);
+    h.click({action:'rotateLeft'});assert.equal(h.b.visualRotation,23/3);
     h.click({action:'rotateRight'});assert.equal(h.b.visualRotation,0);
     for(const guard of ['paused','modal','mode','intro','ended']){
       h.ui.paused=guard==='paused';h.ui.modalKind=guard==='modal'?'pause':'';
