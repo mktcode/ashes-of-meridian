@@ -23,6 +23,8 @@ interface BuildingDefinitionShape {
   civilizationPoints?: number;
   /** Authored local deck footprints, shared by the CPU support plane and model. */
   civilizationDecks?: readonly { x: number; z: number; w: number; d: number; top?: number }[];
+  civilizationEntry?: { x: number; z: number; length: number };
+  civilizationWings?: readonly { x: number; z: number; w: number; d: number }[];
   cost: number;
   gas: number;
   hp: number;

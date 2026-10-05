@@ -49,7 +49,7 @@ for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
     assert.ok(parts(draw(22,{}, {quality:0})).some((c,i)=>c[11]>parts(draw(12,{}, {quality:0}))[i][11]),
       'performance retains bright sources');
     const heightAt=(x,z)=>4+.24*x-.28*z,
-      surface={heightAt,entityHeight:()=>heightAt(e.x,e.z)},
+      surface={step:1.25,extent:60,heightAt,entityHeight:()=>heightAt(e.x,e.z)},
       pool=pools(draw(22,{}, {surface}))[0];
     assert.ok(pool,'ordinary slope does not hide light');
     const vertices=[];
@@ -58,7 +58,7 @@ for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
     });
     for(let i=0;i<vertices.length;i+=9)
       assert.ok(Math.abs(vertices[i+1]-heightAt(vertices[i],vertices[i+2])-.025)<1e-9,'pool lies above CPU terrain');
-    const cliff={entityHeight:()=>4,heightAt:x=>x>pool[1]+.2?7:4};
+    const cliff={step:1.25,extent:60,entityHeight:()=>4,heightAt:x=>x>pool[1]+.2?7:4};
     assert.equal(pools(draw(22,{}, {surface:cliff})).length,0,'sharp edges still hide the pool');
     const enemy=pools(draw(22,{}, {},{...e,team:1}))[0];
     if(faction===1) assert.equal(enemy[7],0xe98680,'organic pool follows its team-colored source');

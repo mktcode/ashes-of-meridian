@@ -77,6 +77,8 @@ Komponierte Umgebungen besitzen nur eigene Programme/Texturen/Tiefenziele/Fences
 
 High/Balanced teilen Modelle, Schatten/MSAA/Bloom; High ergänzt den ausdrücklich gewünschten Tilt-Shift-Look. Performance reduziert Auflösung und kosmetische Arbeit. HUD bleibt ungefiltert. Die Startatmosphäre wird pro Welt aufgelöst. Im Gefecht wechseln Lichtfarben/-stärke und Dunst kontinuierlich mit dem [simulationszeitgebundenen Tageszyklus](architecture.md#weltrezepte-und-feste-designs). Kühles Nachtfülllicht hält Gelände und Modelle lesbar; gemeinsame Licht-/Schattenrichtung bleibt künstlerisch, nicht astronomisch. RGBA8 ist kein HDR.
 
+Weiche Kontaktschatten sind eine kosmetische Zusatzfläche, nicht die eigentlichen Schlagschatten. Auf lokal ebenem Gelände folgt diese Fläche der CPU-Bodenneigung und liegt knapp oberhalb des Bodens. Bei Krümmung über den Schattenfußabdruck entfällt nur diese Zusatzfläche, damit keine hart abgeschnittenen Dreiecke durch Terrainüberschneidung entstehen. Schattenwerfer und Tiefenschattenpass bleiben unverändert.
+
 ## Kontursilhouetten bei Verdeckung
 
 Nur beobachtete Entitäten und erkundete Ressourcen dürfen hinter opaker **statischer** Geometrie erscheinen. Silhouetten verleihen keine Sicht/Befehlsrechte; Intro, Fog, Ghosts und Vorschauen dürfen nicht optieren. Dynamische Armeen/Gebäude und nicht tiefenschreibende Transparenz sind keine Auslöser.

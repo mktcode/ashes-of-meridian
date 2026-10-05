@@ -107,7 +107,7 @@ test('contact shadows add one effect quad per unit/building on Balanced/High wit
       R.quality=quality;R.calls.length=0;render(R,e,0);
       const contacts=R.calls.filter(c=>c[14]===material);
       assert.equal(contacts.length,1);
-      const c=contacts[0];assert.equal(c[0],'plane');assert.deepEqual(c.slice(1,4),[12,-.02,-23]);
+      const c=contacts[0];assert.equal(c[0],'plane');assert.deepEqual(c.slice(1,4),[12,.025,-23]);
       assert.equal(c[11],0);assert.equal(c[13],'effects');assert.ok(c[12]>0&&c[12]<.4);
       assert.ok(c.slice(1,13).every(Number.isFinite));
       assert.equal(withoutGlow(R.calls.filter(c=>c[14]!==material)),model);
@@ -122,6 +122,23 @@ test('contact shadows add one effect quad per unit/building on Balanced/High wit
   assert.ok(!R.calls.some(c=>c[14]===material));
 });
 
+test('contact shadow quads follow planar slopes above the surface and never slice curved terrain',()=>{
+  const context=loadScripts(['core',...RENDERER_SCRIPTS,'content',...BATTLEFIELD_SCRIPTS,'world','world-view']);
+  const {renderEntity:render,BattlefieldSurface,CONTACT_SHADOW_MATERIAL:material}=vm.runInContext('({renderEntity,BattlefieldSurface,CONTACT_SHADOW_MATERIAL})',context);
+  const R=createRendererStub({record:true});Object.assign(R,{quality:1,cinema:false});
+  const e={id:42,kind:'building',type:'hq',hp:100,team:0,faction:0,size:4,x:12,z:-23,progress:1};
+  R.surface=new BattlefieldSurface(60,2.5,(x,z)=>40+.03*x+.02*z);render(R,e,0);
+  const contacts=R.calls.filter(c=>c[14]===material);assert.equal(contacts.length,1);const c=contacts[0];
+  const cy=Math.cos(c[8]),sy=Math.sin(c[8]),cx=Math.cos(c[9]),sx=Math.sin(c[9]),cz=Math.cos(c[10]),sz=Math.sin(c[10]),
+    xx=cy*cz+sy*sx*sz,xy=cx*sz,xz=-sy*cz+cy*sx*sz,zx=sy*cx,zy=-sx,zz=cy*cx;
+  for(const x of [-c[4]/2,0,c[4]/2])for(const z of [-c[6]/2,0,c[6]/2]){
+    const wx=c[1]+x*xx+z*zx,wy=c[2]+x*xy+z*zy,wz=c[3]+x*xz+z*zz;
+    assert.ok(wy>R.surface.heightAt(wx,wz),'the soft contact layer stays above the ground');
+  }
+  R.surface=new BattlefieldSurface(60,2.5,(x,z)=>40+.02*x*x+.025*z*z);R.calls.length=0;render(R,e,0);
+  assert.equal(R.calls.some(c=>c[14]===material),false,'omit only the invalid cosmetic quad, not the model or real shadow caster');
+  assert.ok(R.calls.some(c=>c[13]==='dynamic'));
+});
 test('faction light animation changes only emissive model strength, not geometry, team colors or previews',()=>{
   const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world-view']);
   vm.runInContext('Math.random=()=>{throw Error("Animation RNG");}',context);

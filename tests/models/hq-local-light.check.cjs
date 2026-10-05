@@ -27,7 +27,7 @@ test('HQ pilot registers two posed, dusk-controlled lights without new meshes or
   for(const entity of [{...e,progress:.4},{...e,hp:0}])assert.equal(draw(22,{},entity).lights.length,0);
   assert.deepEqual(draw(22,{},e,{cinema:true}).lights,night.lights);
   assert.equal(draw(22,{},e,{quality:0}).lights.length,2,'performance retains both lamps');
-  const surface={entityHeight:()=>4,heightAt:()=>4,buildingPose:()=>({height:4,dx:.2,dz:-.1})},
+  const surface={step:1.25,extent:60,entityHeight:()=>4,heightAt:()=>4,buildingPose:()=>({height:4,dx:.2,dz:-.1})},
     frame=vm.runInContext('buildingGroundFrame({dx:.2,dz:-.1},Math.cos(BUILDING_YAW),Math.sin(BUILDING_YAW))',h.context),
     posed=draw(22,{},e,{surface});
   [[0,2.8,3.3],[1.6,4.8,-1.4]].forEach(([x,y,z],i)=>{

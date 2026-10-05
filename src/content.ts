@@ -324,16 +324,20 @@ const BUILDINGS = {
   fieldlab: {
     cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, vision: 0, civilizationPoints: 5,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
+    civilizationEntry: {x:.55,z:2.87,length:1.1},
     desc: 'Civilian field laboratory. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
   },
   researchhub: {
     cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, vision: 0, civilizationPoints: 5,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
+    civilizationEntry: {x:.30,z:3.86,length:.70},
+    civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
     desc: 'Terraced civilian research hub. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
   },
   researchspire: {
     cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, vision: 0, civilizationPoints: 5,
     civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
+    civilizationEntry: {x:.20,z:3.05,length:1.1},
     desc: 'Civilian research tower with three dish antennas. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
@@ -343,6 +347,31 @@ type BuildingDefinition = (typeof BUILDINGS)[BuildingType];
 
 function isCivilizationBuildingType(type: string): boolean {
   return Object.hasOwn(BUILDINGS, type) && !!(BUILDINGS[type as BuildingType] as BuildingDefinitionShape).civilizationPoints;
+}
+function civilizationFootprint(p: Position, team: number, x: number, z: number, w: number, d: number, cut = 0): Position[] {
+  const yaw=BUILDING_YAW+(team===1?Math.PI:0),cs=Math.cos(yaw),sn=Math.sin(yaw),
+    corners=cut ? [[-w/2+cut,-d/2],[w/2-cut,-d/2],[w/2,-d/2+cut],[w/2,d/2-cut],[w/2-cut,d/2],[-w/2+cut,d/2],[-w/2,d/2-cut],[-w/2,-d/2+cut]]
+      : [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]];
+  return corners.map(([dx,dz])=>({x:p.x+(x+dx)*cs+(z+dz)*sn,z:p.z-(x+dx)*sn+(z+dz)*cs}));
+}
+function civilizationDeckFootprints(p: Position, type: BuildingType, team = 0): { polygon: Position[]; top: number }[] {
+  const scale=CIVILIZATION_MODEL_SCALE;
+  return (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!.map(d=>({
+    polygon:civilizationFootprint(p,team,d.x*scale,d.z*scale,(d.w+.76)*scale,(d.d+.76)*scale,.51*scale),top:(d.top||0)*scale}));
+}
+function civilizationClearanceFootprints(p: Position, type: BuildingType, team = 0): Position[][] {
+  const d=BUILDINGS[type] as BuildingDefinitionShape,scale=CIVILIZATION_MODEL_SCALE,entry=d.civilizationEntry!;
+  return [...civilizationDeckFootprints(p,type,team).map(f=>f.polygon),
+    civilizationFootprint(p,team,entry.x*scale,entry.z*scale+entry.length/2,1.05,entry.length+.02),
+    ...(d.civilizationWings||[]).map(w=>civilizationFootprint(p,team,w.x*scale,w.z*scale,w.w*scale,w.d*scale))];
+}
+function civilizationFootprintsOverlap(a: readonly Position[], b: readonly Position[], gap = .25): boolean {
+  for(const polygon of [a,b])for(let i=0;i<polygon.length;i++){
+    const p=polygon[i],q=polygon[(i+1)%polygon.length],length=Math.hypot(q.x-p.x,q.z-p.z),nx=(q.z-p.z)/length,nz=(p.x-q.x)/length,
+      pa=a.map(v=>v.x*nx+v.z*nz),pb=b.map(v=>v.x*nx+v.z*nz);
+    if(Math.max(...pa)+gap<=Math.min(...pb)||Math.max(...pb)+gap<=Math.min(...pa))return false;
+  }
+  return true;
 }
 function civilizationScoreForBuildings(entities: readonly Entity[], team: PlayerTeam): number {
   return entities.reduce((score, e) => score + (e.kind === 'building' && e.team === team && e.hp > 0 && e.progress >= 1

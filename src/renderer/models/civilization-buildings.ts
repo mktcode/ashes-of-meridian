@@ -10,10 +10,10 @@
   const variants: Variant[] = ['fieldlab','researchhub','researchspire'];
   const feet = (x:number,z:number,w:number,d:number,top=0):Foot[] =>
     [-w/2+.2,w/2-.2].flatMap(dx=>[-d/2+.15,0,d/2-.15].map(dz=>({x:x+dx,z:z+dz,top})));
-  const profiles: Record<Variant, {feet: Foot[]; entry: [number,number]}> = {
-    fieldlab:{feet:[...feet(0,0,4.4,3.3),...feet(.55,2.17,3.2,.95)],entry:[.55,2.87]},
-    researchhub:{feet:[...feet(-.8,-1.1,4.65,2.6,1.45),...feet(.75,1.7,5.3,2.55),...feet(.30,3.46,3.3,.60)],entry:[.30,3.86]},
-    researchspire:{feet:[...feet(0,-.40,4.7,3.95),...feet(.2,2.25,4.2,1.3)],entry:[.20,3.05]}
+  const profiles: Record<Variant, {feet: Foot[]}> = {
+    fieldlab:{feet:[...feet(0,0,4.4,3.3),...feet(.55,2.17,3.2,.95)]},
+    researchhub:{feet:[...feet(-.8,-1.1,4.65,2.6,1.45),...feet(.75,1.7,5.3,2.55),...feet(.30,3.46,3.3,.60)]},
+    researchspire:{feet:[...feet(0,-.40,4.7,3.95),...feet(.2,2.25,4.2,1.3)]}
   };
   function assembly(type: Variant): Record<Material, number[]> {
     const meshes: Record<Material, number[]> = {steel:[],edge:[],dark:[],orange:[],cyan:[],glass:[],window:[]};
@@ -187,8 +187,8 @@
         p('box',x,top-.06,z,.38,.17,.38,surfaceColor(colors.orange),0,0,0,0,undefined,MAT.METAL);
       }
       // Compact stairs span to the sampled terrain without flattening the hillside.
-      const [entryX,entryZ]=profiles[type].entry,x=entryX*scale,start=entryZ*scale,
-        count=6,length=type==='researchhub'?.70:1.1,
+      const entry=(BUILDINGS[type] as BuildingDefinitionShape).civilizationEntry!,x=entry.x*scale,start=entry.z*scale,
+        count=6,length=entry.length,
         end=groundHeight?.(x,start+length) ?? -.7,top=.35*scale,rise=(top-end)/count;
       for(let i=0;i<count;i++){
         const z=start+(i+.5)*length/count,y=top-(i+.5)*rise;

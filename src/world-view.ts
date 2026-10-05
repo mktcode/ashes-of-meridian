@@ -57,7 +57,7 @@ class PlacementGuideSampler {
     if (Math.abs(pos.x) >= world.extent - 4 || Math.abs(pos.z) >= world.extent - 4 ||
         !world.sight[this.team].visible[world.idx(pos.x, pos.z)]) return 0;
     // Test the original sample before vent snapping, just like the visibility guard.
-    if (this.buckets.get(this.key(pos))?.some(e => this.unseen.has(e) && buildingBlockerReason(pos, r, e))) return 0;
+    if (this.buckets.get(this.key(pos))?.some(e => this.unseen.has(e) && buildingBlockerReason(pos, r, e, this.type, this.team))) return 0;
     if (!this.ready) return -1;
     const gas = this.type === 'refinery' ? nearestRefineryVent(pos, this.vents) : null;
     if (this.type === 'refinery' && !gas) return -1;
@@ -72,7 +72,7 @@ class PlacementGuideSampler {
     }
     if (!terrain || !world.sight[this.team].explored[world.idx(p.x, p.z)] ||
         this.game.s!.supplyCaches.some(cache => !cache.collected && distance(p, cache) < r + 3) ||
-        this.buckets.get(this.key(p))?.some(e => e !== gas && buildingBlockerReason(p, r, e)) ||
+        this.buckets.get(this.key(p))?.some(e => e !== gas && buildingBlockerReason(p, r, e, this.type, this.team)) ||
         (gas && this.occupiedVents.has(gas.id))) return -1;
     return 1;
   }
@@ -494,6 +494,25 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
     }
 
     // Cosmetic building yaw only; placement, collision radii and save data stay unchanged.
+    // Flat contact quads must never slice through the CPU surface. Follow planar
+    // slopes; omit this cosmetic soft layer on curved terrain, keeping real shadows.
+    function contactShadowPose(surface: BattlefieldSurface | null | undefined, e: Position, width: number, depth: number, yaw: number) {
+      if (!surface) return {height:.025,pitch:0,roll:0};
+      const step=surface.step,center=surface.heightAt(e.x,e.z),
+        dx=(surface.heightAt(e.x+step,e.z)-surface.heightAt(e.x-step,e.z))/(2*step),
+        dz=(surface.heightAt(e.x,e.z+step)-surface.heightAt(e.x,e.z-step))/(2*step),cs=Math.cos(yaw),sn=Math.sin(yaw),
+        halfX=(Math.abs(cs)*width+Math.abs(sn)*depth)/2,halfZ=(Math.abs(sn)*width+Math.abs(cs)*depth)/2;
+      let low=0,high=0;
+      const first=(v:number)=>Math.floor((v+surface.extent)/step)*step-surface.extent,
+        last=(v:number)=>Math.ceil((v+surface.extent)/step)*step-surface.extent;
+      for(let z=first(e.z-halfZ);z<=last(e.z+halfZ);z+=step)for(let x=first(e.x-halfX);x<=last(e.x+halfX);x+=step){
+        const residual=surface.heightAt(x,z)-center-dx*(x-e.x)-dz*(z-e.z);
+        low=Math.min(low,residual);high=Math.max(high,residual);
+        if(high-low>.06)return null;
+      }
+      const pitch=-Math.atan(dx*sn+dz*cs),roll=Math.atan((dx*cs-dz*sn)*Math.cos(pitch));
+      return {height:center+high+.025,pitch,roll};
+    }
     function renderEntity(R: MeridianRenderer, e: RenderEntity, time: number, options: RenderEntityOptions = {}) {
       if (e.hp <= 0) return;
       const f = FACTIONS[e.faction || FACTION_ID.FIRST],
@@ -697,9 +716,10 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       // Two triangles per visible entity, batched with effects; never a shadow caster.
       // Exclude menus, placement previews and Performance. No RNG, textures or model changes.
       if (R.quality > 0 && !R.cinema && !ghost && !options.tint && alpha === 1 && layer === 'dynamic') {
-        const width = (e.size || 1) * (e.kind === 'building' ? 3.2 : 3.6);
-        R.add('plane', e.x, (R.surface?.heightAt(e.x,e.z) ?? 0) - .02, e.z, width, 1, width * (e.kind === 'building' ? 1 : .8),
-          0xffffff, rot, 0, 0, 0, e.kind === 'building' ? .32 : isFlyingUnitType(e.type) ? .12 : .26,
+        const width = (e.size || 1) * (e.kind === 'building' ? 3.2 : 3.6),depth=width*(e.kind === 'building' ? 1 : .8),
+          contact=contactShadowPose(R.surface,e,width,depth,rot);
+        if(contact)R.add('plane', e.x, contact.height, e.z, width, 1, depth,
+          0xffffff, rot, contact.pitch, contact.roll, 0, e.kind === 'building' ? .32 : isFlyingUnitType(e.type) ? .12 : .26,
           'effects', CONTACT_SHADOW_MATERIAL);
       }
       if (e.kind === 'building') {

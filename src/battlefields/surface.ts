@@ -192,15 +192,8 @@ class BattlefieldSurface {
     return {height,dx:gx,dz:gz,fill:height-low};
   }
   private civilizationHeight(p: Position & { type?: string; team?: number }): number {
-    const decks = (BUILDINGS[p.type as BuildingType] as BuildingDefinitionShape).civilizationDecks!,
-      scale = CIVILIZATION_MODEL_SCALE, yaw = BUILDING_YAW + (p.team === 1 ? Math.PI : 0),
-      cs = Math.cos(yaw), sn = Math.sin(yaw);
     let height = -Infinity;
-    for (const deck of decks) {
-      const w=(deck.w+.76)/2,d=(deck.d+.76)/2,cut=.51,top=(deck.top || 0)*scale,
-        polygon=[[-w+cut,-d],[w-cut,-d],[w,-d+cut],[w,d-cut],[w-cut,d],[-w+cut,d],[-w,d-cut],[-w,-d+cut]]
-          .map(([x,z])=>({x:p.x+scale*((deck.x+x)*cs+(deck.z+z)*sn),
-            z:p.z+scale*(-(deck.x+x)*sn+(deck.z+z)*cs)}));
+    for (const {polygon,top} of civilizationDeckFootprints(p,p.type as BuildingType,p.team)) {
       const sample = (x:number,z:number) => {height=Math.max(height,this.heightAt(x,z)-top);};
       // A linear terrain triangle reaches its maximum at an interior grid vertex
       // or where a deck edge crosses a triangle edge. No unrelated uphill margin.

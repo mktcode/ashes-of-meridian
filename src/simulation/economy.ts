@@ -35,12 +35,16 @@
       }
       return !!world.staticGrid[world.idx(p.x, p.z)];
     }
-    function buildingBlockerReason(p: Position, r: number, e: Entity): string {
+    function buildingBlockerReason(p: Position, r: number, e: Entity, type?: BuildingType, team: PlayerTeam = 0): string {
       if (e.hp <= 0) return '';
       if (e.kind === 'unit') {
         const clearance = r + e.size * UNIT_BODY_SCALE + 1;
         return distance(p, e) < clearance || (e.exit && distance(p, e.exit) < clearance)
           ? 'Leave room around units and production exits.' : '';
+      }
+      if (type && isCivilizationBuildingType(type) && e.kind === 'building' && e.team === team && isCivilizationBuildingType(e.type)) {
+        const a=civilizationClearanceFootprints(p,type,team),b=civilizationClearanceFootprints(e,e.type,e.team);
+        return a.some(pa=>b.some(pb=>civilizationFootprintsOverlap(pa,pb))) ? 'Leave room between civilian decks, stairs and walkways.' : '';
       }
       return distance(p, e) < r + e.size + 0.8 ? 'Leave room around structures and resources.' : '';
     }
@@ -206,7 +210,7 @@
           return 'Recover nearby supply caches before building here.';
         for (let e of this.s!.entities) {
           if (e === gas) continue;
-          const reason = buildingBlockerReason(p, r, e);
+          const reason = buildingBlockerReason(p, r, e, type, team);
           if (reason) return reason;
         }
         if (gas && this.alive(e => e.type === 'refinery' && e.gasId === gas.id).length)

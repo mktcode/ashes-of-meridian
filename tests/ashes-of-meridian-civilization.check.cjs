@@ -40,7 +40,7 @@ test('civilian placement accepts uneven slopes and cliff cells but protects obst
   assert.equal(game.account(0).alloy,0);assert.equal(game.account(0).gas,gas-BUILDINGS[type].gas);
   assert.equal(game.s.entities[0].order.id,b.id);assert.equal(game.s.entities[0].order.type,'build');
   assert.deepEqual(Array.from(world.surface.heights),before);
-  game.s.entities[0].order={type:'idle'};assert.match(game.canBuild(type,p),/room around/);
+  game.s.entities[0].order={type:'idle'};assert.match(game.canBuild(type,p),/room (around|between)/);
   game.cancelConstruction(b.id);assert.equal(game.account(0).gas,gas-BUILDINGS[type].gas*.25);
  }
  const {game,world}=fixture();world.path=()=>({status:'unreachable',points:[]});const gas=game.account(0).gas;
@@ -53,6 +53,26 @@ test('civilian placement accepts uneven slopes and cliff cells but protects obst
  world.staticGrid.fill(0);world.surface.cliffs[world.idx(0,0)]=1;world.staticGrid.set(world.surface.cliffs);
  assert.equal(game.canBuild('fieldlab',{x:0,z:0}),'');
  assert.ok(game.canBuild('fieldlab',{x:79,z:0}));
+});
+test('civilian complexes use close nonoverlapping deck outlines while reserving stairs, walkways and military clearance',()=>{
+ const yaw=vm.runInContext('BUILDING_YAW',context),cs=Math.cos(yaw),sn=Math.sin(yaw),at=(x,z=0)=>({x:x*cs+z*sn,z:-x*sn+z*cs});
+ for(const first of types)for(const next of types){
+  const {game}=fixture(0,()=>40);game.spawnBuilding(first,0,0,0,0);
+  const old=BUILDINGS[first].size+BUILDINGS[next].size+.8;
+  let close;
+  for(let x=4;x<old;x+=.25)if(!game.canBuild(next,at(x))){close=at(x);break;}
+  assert.ok(close,`${first}/${next} can form a tighter complex`);
+  const sampler=new PlacementGuideSampler(game,next,0);sampler.refresh();assert.equal(sampler.sample(close),1);
+  assert.ok(game.canBuild(next,at(1)),'models cannot intersect');
+  assert.match(game.canBuild('depot',at(4.5)),/room around/,'military spacing is unchanged');
+ }
+ const {game}=fixture(0,()=>40);game.spawnBuilding('fieldlab',0,0,0,0);
+ assert.match(game.canBuild('fieldlab',at(0,4.8)),/stairs/,'entry stairs are not just the main deck');
+ const hub=fixture(0,()=>40).game;hub.spawnBuilding('researchhub',0,0,0,0);
+ assert.match(hub.canBuild('fieldlab',at(5.75)),/walkways/,'the elevated side walkway keeps its footprint');
+ const actual=fixture(0,()=>40);delete actual.world.path;actual.game.spawnBuilding('fieldlab',0,0,0,0);
+ actual.world.rebuild(actual.game.s.entities);
+ assert.equal(actual.game.build('fieldlab',at(4.9)),true,'a real worker route still permits the compact complex');
 });
 test('civilian cliff foundations are actually reachable and buildable from a safe service point without opening cliff paths for units',()=>{
  const {game,world}=fixture(0,(x,z)=>x>0?45:40);delete world.path;world.rebuild(game.s.entities);

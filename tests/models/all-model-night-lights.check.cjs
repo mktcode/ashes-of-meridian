@@ -68,7 +68,7 @@ test('every faction building and unit has posed night lights, unchanged geometry
 test('local lamps share foundation/chassis frames and flying height; turret lamps follow aim',()=>{
   const h=modelHarness({heavyModels:true}),heightAt=(x,z)=>4+.2*x-.1*z;
   for(const e of entities(h)) {
-    const ground=heightAt(e.x,e.z),surface={heightAt,entityHeight:()=>ground,
+    const ground=heightAt(e.x,e.z),surface={step:1.25,extent:60,heightAt,entityHeight:()=>ground,
       buildingPose:()=>({height:ground,dx:.2,dz:-.1})},flat=draw(h,e,22),posed=draw(h,e,22,{}, {surface});
     const rot=e.kind==='building'?h.BUILDING_YAW:e.rot,cs=Math.cos(rot),sn=Math.sin(rot),
       frame=vm.runInContext(e.kind==='building'

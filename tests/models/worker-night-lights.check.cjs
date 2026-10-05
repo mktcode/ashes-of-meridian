@@ -32,7 +32,7 @@ test('worker lamps follow world dusk/dawn, pose and preview boundaries without R
   }
   assert.ok(lenses(draw(22,{},0)).every(c=>c[11]===2.4),'performance keeps lamps');
   assert.equal(draw(22,{},0).some(c=>c[14]===poolMaterial),false);
-  const surface={entityHeight:()=>4,heightAt:(x)=>x>13.8?6:4};
+  const surface={step:1.25,extent:60,entityHeight:()=>4,heightAt:(x)=>x>13.8?6:4};
   assert.equal(draw(22,{},1,surface).some(c=>c[14]===poolMaterial),false,'no pool bridging an uneven edge');
   const clock=vm.runInContext(`(() => {
     const r=Object.create(MeridianRenderer.prototype);
@@ -54,7 +54,7 @@ test('worker light pool follows uphill, downhill and cross-slope terrain at any 
       const heightAt=(x,z)=>8+dx*x+dz*z,
         e={id:17,kind:'unit',type:'worker',faction:0,team:0,hp:100,size:1,x:12,z:-7,rot},
         r=createRendererStub({record:true});
-      Object.assign(r,{battlefieldHour:22,quality:1,surface:{heightAt,entityHeight:()=>heightAt(e.x,e.z)}});
+      Object.assign(r,{battlefieldHour:22,quality:1,surface:{step:1.25,extent:60,heightAt,entityHeight:()=>heightAt(e.x,e.z)}});
       h.renderEntity(r,Object.freeze(e),9);
       const pool=r.calls.find(c=>c[14]===material);
       assert.ok(pool,`pool stays visible on slope ${dx}/${dz}, heading ${rot}`);
