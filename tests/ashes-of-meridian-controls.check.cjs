@@ -277,7 +277,7 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {}, settings: { quality: 2 } },
+    { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, lastCivilizationScore: 0, tutorialComplete: false, upgrades: {}, settings: { quality: 2 } },
     { expeditionError: null, saveProfile() {}, saveProgress() { return true; },
       loadStageHistory(e) { if (!e) return []; return [...(e.worlds || []).map(w=>({stage:w.stage,map:w.map,seed:w.seed})),
         {stage:e.depth+1,map:e.encounter.map,seed:e.encounter.seed}]; } });
@@ -374,11 +374,13 @@ test('expedition loadout selection keeps four unique ordered slots and locks an 
 
 test('new expedition modules remain editable with an existing checkpoint without changing the saved run', () => {
   const h = setup(), ui = h.ui;
-  const expedition = Object.freeze({ version: 7, battle: null, faction: 0, depth: 2,
+  // Controller metadata is mutable; editing must still leave this existing recipe untouched.
+  const expedition = { version: 7, battle: null, faction: 0, depth: 2, civilizationScore: 0, unlockedStage: 3,
     abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']),
     benefits: Object.freeze({}), enemyBenefits: Object.freeze([Object.freeze({})]),
     offers: Object.freeze([]),
-    encounter: Object.freeze({ mission: 'hq-elimination', enemies: Object.freeze([2]), map: 'desert', seed: 1409 }) });
+    encounter: Object.freeze({ mission: 'hq-elimination', enemies: Object.freeze([2]), map: 'desert', seed: 1409 }) };
+  const before = JSON.stringify(expedition);
   ui.expedition = expedition;
   ui.persistence.saveProgress = () => { throw Error('Loadout editing must not save or discard a run'); };
   ui.uiAction('battle');
@@ -386,12 +388,12 @@ test('new expedition modules remain editable with an existing checkpoint without
   assert.deepEqual(Array.from(ui.battleAbilities), ['repair', 'scan', 'drop']);
   ui.selectBattleAbility('disruption');
   assert.deepEqual(Array.from(ui.battleAbilities), ['repair', 'scan', 'drop', 'disruption']);
-  assert.strictEqual(ui.expedition, expedition);
+  assert.strictEqual(ui.expedition, expedition);assert.equal(JSON.stringify(expedition),before);
   ui.game.start = options => h.calls.push(['start', options]);
   ui.continueExpedition();
   const options = h.calls.at(-1)[1];
   assert.deepEqual(Array.from(options.abilities), ['orbital', 'repair', 'scan', 'drop']);
-  assert.equal(options.seed, 1409);
+  assert.equal(options.seed, 1409);assert.equal(JSON.stringify(expedition),before);
 });
 
 test('module selection updates existing controls without replacing the screen or losing focus and scroll', () => {
@@ -1374,6 +1376,21 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
 });
 
+test('HUD refresh displays live civilization score while construction, loss and pause change the current world',()=>{
+  const h=setup(),ui=h.ui,g=ui.game;
+  ui.view='game';ui.updateHUD=h.UI.prototype.updateHUD;ui.renderActions=()=>{};ui.updateQueues=()=>{};
+  Object.assign(g,{supply:()=>0,cap:()=>24,snapshotSafe:true});Object.assign(g.s,{depth:0,map:'desert',seed:1409});
+  ui.expedition={version:7,depth:0,unlockedStage:1,civilizationScore:0,battle:null,worlds:[],encounter:{map:'desert',seed:1409}};
+  const own={kind:'building',type:'fieldlab',team:0,hp:500,progress:.9};g.s.entities=[own,{...own,team:1,progress:1}];
+  ui.tick(.26);assert.equal(ui.expedition.civilizationScore,0);
+  own.progress=1;ui.tick(.26);
+  assert.equal(ui.expedition.civilizationScore,5);assert.match(h.document.getElementById('civilizationCount').textContent,/5/);
+  assert.equal(h.document.getElementById('battleStage').textContent,'STAGE 1');
+  own.hp=0;ui.paused=true;ui.tick(.26);
+  assert.equal(ui.expedition.civilizationScore,0);assert.match(h.document.getElementById('civilizationCount').textContent,/0/);
+  assert.equal(ui.expedition.unlockedStage,1,'score cannot grant another map without military victory');
+});
+
 test('speed changes are transient, pause-guarded and preserve commands and RNG', () => {
   const h = setup(), g = h.ui.game;
   Object.assign(g.s.parties[0].account, { alloy: 100, gas: 0, energy: 100, abilities: {} });
@@ -1682,6 +1699,8 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   h.ui.game.s.result = { win: true };
   h.ui.expedition = { version: 7, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 0, benefits: {}, enemyBenefits: [{}],
     encounter: { mission: 'hq-elimination', enemies: [1], map: 'desert', seed: 1409 }, offers: [] };
+  // This fixture can enter Stage 2; military victory without score has a separate world-flow test.
+  h.ui.game.s.entities = Array.from({length:10},(_,i)=>({id:i+1,kind:'building',type:'fieldlab',team:0,hp:500,progress:1}));
   const previousMap = h.ui.expedition.encounter.map;
   h.ui.event('result', { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
   assert.equal(h.ui.expedition.depth, 1); assert.equal(saved.length, 1);

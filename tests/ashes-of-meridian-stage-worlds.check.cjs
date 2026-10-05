@@ -39,7 +39,7 @@ function victoryFixture() {
   const h=harness(),{game,ui}=h;
   const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],benefits:{supplyCrate:1},enemyBenefits:[{}],
     encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[2]}};
-  ui.expedition={...copy(recipe),version:7,battle:null,offers:[],civilizationScore:0};
+  ui.expedition={...copy(recipe),version:7,battle:null,offers:[],civilizationScore:0,unlockedStage:1};
   game.start({...recipe,...recipe.encounter});
   const worker=game.alive(e=>e.team===0&&e.type==='worker')[0];
   game.spawnBuilding('hq',worker.x,worker.z,0,0,{progress:1});
@@ -148,6 +148,8 @@ test('selected old world resumes building and production, saves separately and n
 
 test('an actual saved current battle survives a visit and restores independently afterwards',async()=>{
   const h=restoredMenu(),ui=h.ui;
+  // This isolates current-save restoration; the score unlock flow is covered below.
+  ui.expedition.unlockedStage=2;
   ui.chooseBenefit(ui.expedition.offers[0]);await Promise.resolve();
   assert.equal(ui.activeWorldStage,null);assert.equal(ui.view,'game');
   h.game.s.time=21;h.game.s.cam.x+=3;ui.saveBattle();
@@ -159,6 +161,49 @@ test('an actual saved current battle survives a visit and restores independently
   ui.showHome();await ui.browseStage(1);ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,null);assert.equal(ui.paused,true);
   assert.deepEqual(copy(h.game.snapshotBattle()),current);
+});
+
+test('military victory can leave the next stage locked; old-world building unlocks it live without score spending or repeated rewards',async()=>{
+  const h=restoredMenu(),{ui,game}=h,profile=copy(h.profile),encounter=copy(ui.expedition.encounter);
+  assert.equal(ui.expedition.depth,1);assert.equal(ui.expedition.civilizationScore,0);
+  assert.equal(ui.expedition.unlockedStage,1);
+  const button=h.document.getElementById('menu').querySelector('[data-ui="enterSelectedStage"]');
+  assert.equal(button.disabled,true);
+  ui.chooseBenefit(ui.expedition.offers[0]);await Promise.resolve();
+  assert.equal(ui.expedition.offers.length,0);assert.equal(game.s,null,'benefit confirmation cannot bypass the score gate');
+  await ui.startExpeditionBattle();assert.equal(game.s,null);assert.equal(ui.modalKind,'civilizationGate');
+  ui.uiAction('developWorld');await Promise.resolve();
+  assert.equal(ui.activeWorldStage,1);assert.equal(ui.paused,true);
+  for(let i=0;i<9;i++)game.spawnBuilding('fieldlab',-20+i*4,0,0,0,{progress:1});
+  const unfinished=game.spawnBuilding('fieldlab',20,0,0,0,{progress:.9});
+  assert.equal(ui.refreshCivilizationScore(),45);assert.equal(ui.expedition.unlockedStage,1);
+  unfinished.progress=1;
+  assert.equal(ui.refreshCivilizationScore(),50);assert.equal(ui.expedition.unlockedStage,2);
+  assert.equal(ui.expedition.worlds[0].battle.state.entities.filter(e=>e.type==='fieldlab').length,0,'score uses live buildings, not the last autosave');
+  assert.equal(h.profile.aether,profile.aether);assert.equal(h.profile.expeditionDepth,profile.expeditionDepth);
+  assert.deepEqual(copy(ui.expedition.encounter),encounter);
+  assert.equal(ui.expedition.battle,null,'old-world development cannot replace the future current battle');
+  ui.showHome();
+  const saved=h.persistence.loadExpedition();assert.equal(saved.civilizationScore,50);assert.equal(saved.unlockedStage,2);
+  const reload=harness(new Map(h.data));assert.equal(reload.ui.expedition.civilizationScore,50);assert.equal(reload.ui.expedition.unlockedStage,2);
+  await ui.browseStage(1);ui.enterSelectedStage();await Promise.resolve();
+  assert.equal(ui.activeWorldStage,null);assert.equal(game.s.depth,1);
+  assert.equal(ui.refreshCivilizationScore(),50,'score is not spent when entering the next stage');
+  const worker=game.alive(e=>e.team===0&&e.type==='worker')[0];game.spawnBuilding('hq',worker.x,worker.z,0,0,{progress:1});
+  for(const e of game.alive(e=>e.team===1)){e.hp=0;e.deathAt=game.s.time;}
+  game.resultClock=.2;game.step(.05);
+  assert.equal(ui.expedition.depth,2);assert.equal(ui.expedition.worlds.length,2);
+  assert.equal(ui.expedition.civilizationScore,50,'the next map needs no local civil buildings and its victory adds no score payout');
+  assert.equal(ui.expedition.unlockedStage,2,'stage 3 now needs 250 points');
+  assert.equal(h.persistence.loadExpedition().civilizationScore,50);
+});
+
+test('reload derives score from world buildings rather than a forged or stale cached total',()=>{
+  const f=victoryFixture(),record=JSON.parse(f.record);
+  record.expedition.civilizationScore=999999;record.lastCivilizationScore=999999;
+  const h=harness(new Map([[PROFILE,JSON.stringify(record)]]));
+  assert.equal(h.ui.expedition.civilizationScore,0);assert.equal(h.profile.lastCivilizationScore,0);
+  assert.equal(h.ui.expedition.unlockedStage,1,'a cached total cannot unlock a stage');
 });
 
 test('preview preparation disables entry and stale completions cannot switch the selected target',async()=>{
@@ -191,7 +236,7 @@ test('a corrupt archived snapshot is isolated, retained across writes and explic
 
 test('world encoding failure keeps raw damaged records and updated usable worlds in volatile memory',()=>{
   const f=victoryFixture(),record=JSON.parse(f.record),second=copy(f.world);
-  record.expedition.depth=2;
+  record.expedition.depth=2;record.expedition.unlockedStage=2;
   second.stage=2;second.recipe.depth=1;second.battle.state.depth=1;
   record.expedition.worlds[0].battle.data=['x','\u0000'];record.expedition.worlds.push(second);
   const original=copy(record.expedition.worlds[0]),h=harness(new Map([[PROFILE,JSON.stringify(record)]]));

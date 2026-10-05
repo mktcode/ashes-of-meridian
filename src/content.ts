@@ -334,39 +334,39 @@ const BUILDINGS = {
     cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
-    desc: 'Civilian field laboratory. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
+    desc: 'Civilian field laboratory. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
   },
   researchhub: {
     cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 5,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Terraced civilian research hub. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
+    desc: 'Terraced civilian research hub. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
   },
   researchspire: {
     cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 5,
     civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:3.05,length:1.1},
-    desc: 'Civilian research tower with three dish antennas. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
+    desc: 'Civilian research tower with three dish antennas. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
   },
   embercottage: {
     cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
-    desc: 'Civilian hillside cottage with warm-white windows. Costs only Echo; each completed, surviving structure adds 5 Civilization Score at battle end. No production or bonuses.'
+    desc: 'Civilian hillside cottage with warm-white windows. Costs only Echo; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
   },
   terracecommons: {
     cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 5,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.1},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Terraced civilian residences with warm-white windows and planted balconies. Costs only Echo; each completed, surviving structure adds 5 Civilization Score at battle end. No production or bonuses.'
+    desc: 'Terraced civilian residences with warm-white windows and planted balconies. Costs only Echo; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
   },
   hearthtower: {
     cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 5,
     civilizationDecks: [{x:0,z:-.40,w:4.25,d:3.6},{x:.2,z:2.10,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:2.9,length:1.1},
-    desc: 'Civilian residential tower with warm-white windows and an exposed service spine. Costs only Echo; each completed, surviving structure adds 5 Civilization Score at battle end. No production or bonuses.'
+    desc: 'Civilian residential tower with warm-white windows and an exposed service spine. Costs only Echo; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
 
@@ -404,6 +404,38 @@ function civilizationFootprintsOverlap(a: readonly Position[], b: readonly Posit
 function civilizationScoreForBuildings(entities: readonly Entity[], team: PlayerTeam): number {
   return entities.reduce((score, e) => score + (e.kind === 'building' && e.team === team && e.hp > 0 && e.progress >= 1
     ? (BUILDINGS[e.type] as BuildingDefinitionShape).civilizationPoints || 0 : 0), 0);
+}
+
+// Cleared snapshots are immutable value copies; only the active world is counted live.
+const civilizationSnapshotScores = new WeakMap<ExpeditionBattleSave, number>();
+function expeditionCivilizationScore(expedition: MeridianExpedition, live: RunState | null = null, activeStage: number | null = null): number {
+  const snapshotScore = (save: ExpeditionBattleSave | null | undefined) => {
+    if (!save) return 0;
+    let score = civilizationSnapshotScores.get(save);
+    if (score === undefined) {
+      score = civilizationScoreForBuildings(save.state.entities, 0);
+      civilizationSnapshotScores.set(save, score);
+    }
+    return score;
+  };
+  const recipe = activeStage === null ? expedition : expedition.worlds?.find(w => w.stage === activeStage)?.recipe;
+  const active = live && recipe && live.rules.kind === 'single-player' && !!live.rules.completed === (activeStage !== null) &&
+    live.depth === recipe.depth && live.map === recipe.encounter.map && live.seed === recipe.encounter.seed ? live : null;
+  let score = activeStage === null && active ? civilizationScoreForBuildings(active.entities, 0) : snapshotScore(expedition.battle);
+  for (const world of expedition.worlds || []) {
+    if (world.error || !world.recipe || !world.battle) continue;
+    score += activeStage === world.stage && active ? civilizationScoreForBuildings(active.entities, 0) : snapshotScore(world.battle);
+  }
+  return Math.min(Number.MAX_SAFE_INTEGER, score);
+}
+function civilizationScoreRequirement(stage: number): number {
+  if (stage <= 1) return 0;
+  const required = 50 * 5 ** (stage - 2);
+  // Never round/clamp an oversized requirement into an attainable unlock.
+  return Number.isSafeInteger(required) ? required : Infinity;
+}
+function expeditionStageUnlocked(expedition: MeridianExpedition): boolean {
+  return (expedition.unlockedStage ?? expedition.depth + 1) >= expedition.depth + 1;
 }
 
 const ABILITIES = {

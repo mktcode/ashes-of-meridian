@@ -77,7 +77,7 @@ function runningSave() {
 let fixture;
 const savedBattle = () => json((fixture ??= runningSave()).run);
 
-test('civilization scores round-trip independently per expedition and reject damaged totals', () => {
+test('cached civilization scores round-trip independently per expedition and reject damaged totals', () => {
   const h=setup(),run={...json(expedition),civilizationScore:35},profile={...defaults,lastCivilizationScore:20};
   put(h,run,profile);
   assert.equal(setup(h.data).service.loadExpedition().civilizationScore,35);
@@ -88,6 +88,22 @@ test('civilization scores round-trip independently per expedition and reject dam
     put(h,{...run,civilizationScore:invalid},profile);const reload=setup(h.data);
     assert.equal(reload.service.loadExpedition(),null);assert.ok(reload.service.expeditionError);
   }
+});
+
+test('stage unlocks round-trip independently of score and reject malformed or locked running saves',()=>{
+  for(const unlockedStage of [8,9]){
+    const h=setup();put(h,{...json(expedition),unlockedStage});
+    assert.equal(setup(h.data).service.loadExpedition().unlockedStage,unlockedStage);
+  }
+  for(const unlockedStage of [0,7,10,8.5,'9',null,Number.MAX_SAFE_INTEGER]){
+    const h=setup();put(h,{...json(expedition),unlockedStage});
+    const loaded=setup(h.data);assert.equal(loaded.service.loadExpedition(),null);assert.ok(loaded.service.expeditionError);
+  }
+  const run=savedBattle();run.depth=1;run.battle.state.depth=1;
+  const h=setup();put(h,{...run,unlockedStage:2});
+  assert.equal(setup(h.data).service.loadExpedition().unlockedStage,2,'a running unlocked stage survives a lower score');
+  put(h,{...run,unlockedStage:1});const loaded=setup(h.data);
+  assert.equal(loaded.service.loadExpedition(),null);assert.ok(loaded.service.expeditionError);
 });
 
 test('profile and expedition commit together; settings writes preserve the battle and clearing preserves rewards', () => {

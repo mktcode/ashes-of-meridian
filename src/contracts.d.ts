@@ -267,6 +267,8 @@ interface MeridianExpedition extends ExpeditionBattleRecipe {
   version: 7;
   battle: ExpeditionBattleSave | null;
   civilizationScore: number;
+  /** Highest accessible stage; military clearance and score are independent. */
+  unlockedStage?: number;
   offers: string[];
   worlds?: ExpeditionWorld[];
 }

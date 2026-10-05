@@ -289,9 +289,15 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
           (benefits[key].max !== undefined && (normalized.benefits[key] || 0) >= benefits[key].max!)))
         throw Error('Invalid benefit offers');
       normalized.offers = [...p.offers];
+      if (p.unlockedStage !== undefined) {
+        if (!Number.isSafeInteger(p.unlockedStage) || p.unlockedStage < Math.max(1, normalized.depth) ||
+            p.unlockedStage > normalized.depth + 1) throw Error('Invalid stage unlock');
+        normalized.unlockedStage = p.unlockedStage;
+      }
       if (!Object.hasOwn(p, 'battle')) throw Error('Missing battle save');
       if (p.battle !== null) {
-        if (normalized.offers.length || !validExpeditionBattle(p.battle, normalized, deps)) throw Error('Invalid battle save');
+        if (normalized.offers.length || (normalized.unlockedStage ?? normalized.depth + 1) < normalized.depth + 1 ||
+            !validExpeditionBattle(p.battle, normalized, deps)) throw Error('Invalid battle save');
         normalized.battle = p.battle;
       }
       if (p.worlds !== undefined) {

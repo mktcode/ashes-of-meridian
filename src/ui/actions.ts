@@ -354,7 +354,16 @@
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
         speedButton.textContent = speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
-        $('battleLabel').textContent = `STAGE ${s.depth + 1}`;
+        $('battleStage').textContent = `STAGE ${s.depth + 1}`;
+        const civilization = $('civilizationCount');
+        civilization.classList.toggle('hidden', !this.expedition);
+        if (this.expedition) {
+          this.refreshCivilizationScore();
+          const score = this.expedition.civilizationScore;
+          civilization.textContent = `CIV ${score.toLocaleString('en-US', { notation: 'compact', maximumSignificantDigits: 2, useGrouping: false })}`;
+          civilization.title = `Civilization Score: ${score.toLocaleString('en-US')}. ${expeditionProgressText(this.expedition)}`;
+          civilization.setAttribute('aria-label', civilization.title);
+        }
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },

@@ -802,6 +802,7 @@ function appClock(diagnostic = false) {
     Battlefield: class { renderProfile = {}; },
     savedBattleMenuScene: vm.runInContext('savedBattleMenuScene', loadScripts(['world-view'])),
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
+    expeditionStageUnlocked: vm.runInContext('expeditionStageUnlocked', loadScripts(['content'])),
     createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}), drawEffectRing() {},
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
     MeridianRenderer: class {
@@ -911,9 +912,10 @@ test('result UI advances transient clocks without updating the hidden HUD or min
     tick=vm.runInContext('uiPresentationMethods.tick',context),calls=[];
   const ui={view:'game',game:{s:{result:{win:false}}},pings:[{life:.1}],hudClock:0,
     notifyStorageFailure(){calls.push('storage');},advanceTutorialArrival(){},advanceBattleIntro(){},
+    armRectangleSelection(){},updateTutorialSpeedHint(){},refreshCivilizationScore(){calls.push('score');},
     updateQueues(){calls.push('queues');},updateHUD(){calls.push('hud');},drawMinimap(){calls.push('minimap');}};
   tick.call(ui,.3);assert.deepEqual(calls,['storage']);assert.equal(ui.pings.length,0);
-  ui.game.s.result=null;tick.call(ui,.3);assert.deepEqual(calls,['storage','storage','queues','hud','minimap']);
+  ui.game.s.result=null;tick.call(ui,.3);assert.deepEqual(calls,['storage','storage','queues','score','hud','minimap']);
 });
 
 test('app enables celestial backdrops only on home, never in combat or codex',()=>{
@@ -1191,6 +1193,18 @@ test('render phase tolerates timestamp jitter at 60 Hz and discards slots after 
   a.frame(20001);
   assert.equal(a.draws.length, before + 1, 'no immediate replay of missed slots');
   assert.deepEqual(a.errors, []);
+});
+
+test('app current-stage launch checks the score unlock again after asynchronous texture preparation',async()=>{
+  const a=appClock();a.ui.view='home';a.ui.expedition={depth:1,unlockedStage:1,battle:null};
+  let starts=0;a.game.start=()=>starts++;
+  assert.equal(await a.ui.onLaunchBattle({map:'desert'},a.ui.expedition),false);assert.equal(starts,0);
+  a.ui.expedition.unlockedStage=2;
+  assert.equal(await a.ui.onLaunchBattle({map:'desert'},a.ui.expedition),true);assert.equal(starts,1);
+  let ready;a.renderer.prepareBattlefieldTextures=()=>new Promise(done=>{ready=done;});
+  const pending=a.ui.onLaunchBattle({map:'desert'},a.ui.expedition);
+  a.ui.expedition.unlockedStage=1;ready(true);
+  assert.equal(await pending,false);assert.equal(starts,1);
 });
 
 test('frame cap leaves local speed, pause and menu simulation ownership unchanged', () => {

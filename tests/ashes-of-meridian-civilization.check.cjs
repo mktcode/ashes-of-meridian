@@ -4,8 +4,8 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS}=require('./helpers/game-scripts.cjs');
 const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,'ui-core','ui-templates','ui-actions','world-view']);
-const {MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,renderHomeScreen}=vm.runInContext(
- '({MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,renderHomeScreen})',context);
+const {MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen}=vm.runInContext(
+ '({MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen})',context);
 const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
 function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
  const game=Object.create(MeridianGame.prototype),world=Object.create(Battlefield.prototype),extent=80,n=64;
@@ -134,23 +134,76 @@ test('score counts completed surviving own buildings only and defeat withdrawal 
  assert.equal(civilizationScoreForBuildings(game.s.entities,0),25);
  game.checkHQElimination();assert.equal(game.s.result.win,false);assert.equal(game.s.result.civilizationScore,25);assert.equal(a.hp,0);
 });
-test('result credit is added once per battle, persisted with the expedition and retained on defeat; home shows current or last run',()=>{
- const {game}=fixture();const writes=[];
- // This isolates UI accounting; the real victory-tick archive is covered in stage-worlds.
+const civil = (type='fieldlab',extra={}) => ({kind:'building',type,team:0,hp:500,progress:1,...extra});
+const scoreSave = entities => ({version:1,state:{entities},tutorial:null});
+const scoreRecipe = depth => ({depth,encounter:{map:'desert',seed:1409}});
+
+test('live score replaces exactly one snapshot, sums every world and ignores incomplete, lost and foreign buildings',()=>{
+ const first={stage:1,recipe:scoreRecipe(0),battle:scoreSave([civil(),civil('embercottage')])},
+  second={stage:2,recipe:scoreRecipe(1),battle:scoreSave([civil(),civil(),civil()])},
+  damaged={stage:3,error:'damaged',recipe:scoreRecipe(2),battle:scoreSave([civil()])};
+ const expedition={...scoreRecipe(3),worlds:[first,second,damaged],battle:scoreSave([civil()])};
+ const before=JSON.stringify(expedition),live={...scoreRecipe(0).encounter,depth:0,rules:{kind:'single-player',completed:true},
+  entities:[civil('hearthtower'),civil('researchspire',{progress:.9}),civil('researchhub',{hp:0}),civil('embercottage',{team:1})]};
+ assert.equal(expeditionCivilizationScore(expedition),30);
+ assert.equal(expeditionCivilizationScore(expedition,live,1),25,'visited world replaces its saved score, not the current battle');
+ live.entities.push(civil());assert.equal(expeditionCivilizationScore(expedition,live,1),30);
+ live.entities[0].hp=0;assert.equal(expeditionCivilizationScore(expedition,live,1),25);
+ live.rules.completed=undefined;live.depth=3;live.entities=[];
+ assert.equal(expeditionCivilizationScore(expedition,live),25,'current losses replace its older autosave');
+ assert.equal(JSON.stringify(expedition),before,'calculation does not mutate any archived world');
+});
+
+test('score gates use 50 times five, require military clearance and never revoke an unlocked stage',()=>{
+ assert.deepEqual([1,2,3,4,5,6].map(civilizationScoreRequirement),[0,50,250,1250,6250,31250]);
+ assert.ok(Number.isSafeInteger(civilizationScoreRequirement(22)));
+ assert.equal(civilizationScoreRequirement(23),Infinity,'overflow cannot grant a cheaper unlock');
+ assert.equal(civilizationScoreRequirement(999999),Infinity);
+ const world={stage:1,recipe:scoreRecipe(0),battle:scoreSave(Array.from({length:50},()=>civil()))},ui=Object.create(MeridianUI.prototype);
+ Object.assign(ui,{view:'home',activeWorldStage:null,game:{s:null,snapshotSafe:true},profile:{},
+  expedition:{...scoreRecipe(1),unlockedStage:1,civilizationScore:9999,battle:null,worlds:[world]}});
+ assert.equal(ui.refreshCivilizationScore(),250);assert.equal(ui.expedition.unlockedStage,2);
+ assert.equal(expeditionStageUnlocked(ui.expedition),true,'surplus score does not require buildings on the next map');
+ ui.expedition.depth=2;assert.equal(expeditionStageUnlocked(ui.expedition),false,'score alone cannot skip a military stage');
+ ui.refreshCivilizationScore();assert.equal(ui.expedition.unlockedStage,3);
+ ui.view='game';ui.activeWorldStage=1;ui.game.s={map:'desert',seed:1409,depth:0,rules:{kind:'single-player',completed:true},entities:[]};
+ assert.equal(ui.refreshCivilizationScore(),0);assert.equal(ui.expedition.unlockedStage,3);
+ ui.expedition.depth=3;ui.refreshCivilizationScore();assert.equal(expeditionStageUnlocked(ui.expedition),false);
+});
+
+test('a partial or still-stepping tick cannot contribute score or unlock a stage',()=>{
+ const ui=Object.create(MeridianUI.prototype),world={stage:1,recipe:scoreRecipe(0),battle:scoreSave([])};
+ Object.assign(ui,{view:'game',activeWorldStage:1,profile:{},
+  expedition:{...scoreRecipe(1),civilizationScore:0,unlockedStage:1,battle:null,worlds:[world]},
+  game:{snapshotSafe:false,stepping:false,s:{map:'desert',seed:1409,depth:0,rules:{kind:'single-player',completed:true},
+    entities:Array.from({length:10},()=>civil())}}});
+ assert.equal(ui.refreshCivilizationScore(),0);assert.equal(ui.expedition.unlockedStage,1);
+ ui.game.snapshotSafe=true;ui.game.stepping=true;
+ assert.equal(ui.refreshCivilizationScore(),0);assert.equal(ui.expedition.unlockedStage,1);
+ ui.game.stepping=false;assert.equal(ui.refreshCivilizationScore(),50);assert.equal(ui.expedition.unlockedStage,2);
+});
+
+test('military results save current world totals once instead of awarding score, and last-run display survives defeat',()=>{
+ const {game}=fixture(),writes=[];
+ game.snapshotSafe=true;Object.assign(game.s,{depth:0,map:'desert',seed:1409});
+ for(let i=0;i<3;i++)game.spawnBuilding('fieldlab',i*10,0,0,0);
  game.snapshotBattle=archive=>{assert.equal(archive,true);return {version:1,tutorial:null,
   state:JSON.parse(JSON.stringify({...game.s,result:null,rules:{kind:'single-player',completed:true}}))};};
  const ui=Object.create(MeridianUI.prototype);
- Object.assign(ui,{game,activeWorldStage:null,profile:{aether:0,expeditionDepth:0,lastCivilizationScore:0},
-  expedition:{faction:0,abilities:['drop'],depth:0,civilizationScore:10,encounter:{map:'desert',seed:1409},benefits:{},enemyBenefits:[{}]},
+ Object.assign(ui,{view:'game',game,activeWorldStage:null,profile:{aether:0,expeditionDepth:0,lastCivilizationScore:0},
+  expedition:{...scoreRecipe(0),faction:0,abilities:['drop'],battle:null,civilizationScore:9999,unlockedStage:1,benefits:{},enemyBenefits:[{}]},
   audio:{setMode(){},sound(){}},persistence:{saveProgress(profile,expedition){writes.push(JSON.parse(JSON.stringify({profile,expedition})));}},
-  unlockedFactionForDepth:()=>0,rememberStage(){},createEncounter:()=>({map:'desert',enemies:[1]}),createBenefitOffers:()=>[],notifyStorageFailure(){},showResult(){}});
+  unlockedFactionForDepth:()=>0,rememberStage(){},createEncounter:()=>({map:'desert',seed:1410,enemies:[1]}),createBenefitOffers:()=>[],notifyStorageFailure(){},showResult(){}});
  game.s.stats.structuresDestroyed=0;
- const win={win:true,civilizationScore:15};ui.event('result',win);ui.event('result',win);
- assert.equal(ui.expedition.civilizationScore,25);assert.equal(ui.profile.lastCivilizationScore,25);assert.equal(writes.length,1);
- assert.match(renderHomeScreen(ui.expedition),/25<\/strong>/);
- ui.resultAetherRecovered=undefined;ui.event('result',{win:false,civilizationScore:5});ui.event('result',{win:false,civilizationScore:5});
- assert.equal(ui.expedition,null);assert.equal(ui.profile.lastCivilizationScore,30);assert.equal(writes.length,2);
- assert.equal(writes[1].expedition,null);assert.equal(writes[1].profile.lastCivilizationScore,30);
- assert.match(renderHomeScreen(null,false,'',30),/30<\/strong>/);
- assert.match(renderHomeScreen({depth:0,civilizationScore:0},false,'',30),/0<\/strong>/);
+ const win={win:true,civilizationScore:999};ui.event('result',win);ui.event('result',win);
+ assert.equal(ui.expedition.civilizationScore,15);assert.equal(ui.profile.lastCivilizationScore,15);assert.equal(writes.length,1);
+ assert.equal(ui.expedition.unlockedStage,1);assert.match(renderHomeScreen(ui.expedition),/15<\/strong>/);
+ ui.expedition.unlockedStage=2;game.s.depth=1;game.s.seed=1410;game.s.entities=[civil()];
+ assert.equal(ui.refreshCivilizationScore(),20);
+ game.s.entities[0].hp=0;ui.resultAetherRecovered=undefined;
+ ui.event('result',{win:false,civilizationScore:999});ui.event('result',{win:false,civilizationScore:999});
+ assert.equal(ui.expedition,null);assert.equal(ui.profile.lastCivilizationScore,15);assert.equal(writes.length,2);
+ assert.equal(writes[1].expedition,null);assert.equal(writes[1].profile.lastCivilizationScore,15);
+ assert.match(renderHomeScreen(null,false,'',15),/15<\/strong>/);
+ assert.match(renderHomeScreen({depth:0,civilizationScore:0},false,'',15),/0<\/strong>/);
 });

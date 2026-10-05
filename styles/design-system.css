@@ -339,6 +339,7 @@
 }
 #hud .resource .ui-icon { width: 24px; height: 28px }
 #hud .resource small { color: #aacddd }
+#hud #civilizationCount { display: block; color: var(--ui-gold); font: inherit; line-height: 1.5; letter-spacing: 0 }
 #hud #pauseBtn { --ui-cut: 5px; display: grid; place-items: center; padding: 0 }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
 #hud :is(#cameraTools, #commandTools, #abilityBar, .root-grid) { gap: 4px; background: transparent }

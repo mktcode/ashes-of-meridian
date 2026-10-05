@@ -190,6 +190,7 @@
           catch (e) { if (id === worldRequest) textureFailure(e); return false; }
           if (id !== worldRequest || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' : expedition !== ui.expedition)) return false;
           if (!ready) { textureFailure(Error('Required battlefield textures are unavailable')); return false; }
+          if (!world && ui.expedition && !expeditionStageUnlocked(ui.expedition)) return false;
           try {
             if (expedition.battle) game.restoreBattle(expedition, !!world);
             else game.start(options);
@@ -567,7 +568,7 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 7, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, civilizationScore: 0,
+          ui.expedition = { version: 7, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, civilizationScore: 0, unlockedStage: 1,
             benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
             encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,

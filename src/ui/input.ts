@@ -249,6 +249,7 @@
             const world = this.expedition.worlds?.find(w => w.stage === stage);
             if (!world?.error) break;
             this.expedition.worlds = this.expedition.worlds!.filter(w => w !== world);
+            this.refreshCivilizationScore();
             this.persistence.saveProgress(this.profile, this.expedition);
             this.notifyStorageFailure();
             this.showHome();
@@ -256,6 +257,9 @@
           }
           case 'continueExpedition':
             this.continueExpedition();
+            break;
+          case 'developWorld':
+            this.continueBuilding();
             break;
           case 'confirmBenefit':
             if (this.resultBenefit) this.chooseBenefit(this.resultBenefit);
@@ -270,6 +274,7 @@
           case 'confirmAbandon':
             if (this.view !== 'game' || !this.paused || !this.expedition || this.activeWorldStage !== null || this.modalKind !== 'abandonExpedition') break;
             this.modalKind = '';
+            this.refreshCivilizationScore();
             this.expedition = null;
             this.persistence.saveProgress(this.profile, null);
             this.notifyStorageFailure();

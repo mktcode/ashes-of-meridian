@@ -98,7 +98,6 @@
       resultAetherRecovered?: number;
       resultAetherEvacuated?: number;
       resultAetherStructures?: number;
-      resultCivilizationEarned?: number;
       resultCivilizationTotal?: number;
       resultBenefit?: string;
       onViewportChange?: () => void;
@@ -151,6 +150,7 @@
         this.battleIntro = null;
         this.battleTutorial = null;
         this.bind();
+        this.refreshCivilizationScore();
         this.notifyStorageFailure();
       }
       codexModelRotation(dt: number) {
@@ -169,6 +169,17 @@
       persist() {
         this.persistence.saveProfile(this.profile);
         this.notifyStorageFailure();
+      }
+      refreshCivilizationScore() {
+        const expedition = this.expedition;
+        if (!expedition) return 0;
+        expedition.unlockedStage ??= expedition.depth + 1;
+        expedition.civilizationScore = expeditionCivilizationScore(expedition,
+          this.view === 'game' && !this.game.stepping && this.game.snapshotSafe ? this.game.s : null, this.activeWorldStage);
+        if (expedition.civilizationScore >= civilizationScoreRequirement(expedition.depth + 1))
+          expedition.unlockedStage = expedition.depth + 1;
+        this.profile.lastCivilizationScore = expedition.civilizationScore;
+        return expedition.civilizationScore;
       }
       saveBattle() {
         const s = this.game.s, expedition = this.expedition,
@@ -190,6 +201,7 @@
           }
           if (world) world.battle = battle;
           else expedition.battle = battle;
+          this.refreshCivilizationScore();
           const saved = this.persistence.saveProgress(this.profile, expedition);
           this.lastBattleSaveAt = performance.now();
           this.battleSaveBytes = this.persistence.saveBytes;
@@ -264,7 +276,6 @@
           this.resultAetherRecovered = undefined;
           this.resultAetherEvacuated = undefined;
           this.resultAetherStructures = undefined;
-          this.resultCivilizationEarned = undefined;
           this.resultCivilizationTotal = undefined;
           this.resultBenefit = undefined;
           this.paused = !!data.restored;
@@ -309,6 +320,7 @@
             }
           }
           this.audio.setMode?.(this.paused || this.battleIntro ? 'silent' : 'battle');
+          this.refreshCivilizationScore();
           this.updateHUD();
           this.clearMode();
           // Start is outside a tick, so the initial CPU/UI snapshot precedes free play.
@@ -341,6 +353,7 @@
           const firstResult = this.resultAetherRecovered === undefined;
           this.factionJustUnlocked = null;
           if (firstResult) {
+            this.refreshCivilizationScore();
             let victoryWorld: ExpeditionWorld | undefined;
             if (data.win && this.expedition) {
               const recipe: ExpeditionBattleRecipe = JSON.parse(JSON.stringify({
@@ -360,13 +373,6 @@
             if (this.resultAetherRecovered) {
               this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
             }
-            this.resultCivilizationEarned = this.expedition ? data.civilizationScore || 0 : 0;
-            if (this.expedition) {
-              this.expedition.civilizationScore = Math.min(Number.MAX_SAFE_INTEGER,
-                (this.expedition.civilizationScore || 0) + this.resultCivilizationEarned);
-              this.profile.lastCivilizationScore = this.expedition.civilizationScore;
-            }
-            this.resultCivilizationTotal = this.expedition?.civilizationScore || 0;
             if (data.win && this.expedition) {
               const previousUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
               this.expedition.worlds ??= [];
@@ -382,9 +388,9 @@
                 this.expedition.encounter, this.expedition.depth);
               this.expedition.offers = this.createBenefitOffers(this.expedition);
               this.expedition.battle = null;
-            } else if (!data.win) {
-              this.expedition = null;
             }
+            this.resultCivilizationTotal = this.refreshCivilizationScore();
+            if (!data.win) this.expedition = null;
             // One localStorage write owns both payout and retirement of the old battle.
             this.persistence.saveProgress(this.profile, this.expedition);
             this.notifyStorageFailure();
