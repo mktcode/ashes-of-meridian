@@ -9,6 +9,7 @@
         preview: RenderEntity[] = [],
         previewCenter: Position = { x: 0, z: 0 },
         previewTime = 0,
+        previewSavedBattle = false,
         retainedResult: { state: RunState; world: Battlefield | null; key: string } | null = null;
       const canvas = $('world'),
         overlay = $('overlay');
@@ -103,6 +104,7 @@
           preview = scene.entities;
           previewCenter = scene.center;
           previewTime = scene.time;
+          previewSavedBattle = !!ui.expedition?.battle && ui.expedition.encounter.map === map && ui.expedition.encounter.seed === seed;
         }
         function loadingBattlefield(text: string) {
           const loader = $('loading');
@@ -500,9 +502,10 @@
             }
             diagnostics?.recorder.phase('glSubmission');
             // Simulation time freezes with pause/result and scales with game speed.
-            // Menu/archive previews always retain the seed's starting atmosphere.
-            R.setBattlefieldTime(ui.view === 'game' && game.s ? game.s.time : 0);
-            const menuWorld = ui.view === 'home' ? worldView.world : null;
+            // Saved home scenes freeze their battle's atmosphere; archives start at time zero.
+            R.setBattlefieldTime(ui.view === 'game' && game.s ? game.s.time : ui.view === 'home' ? previewTime : 0);
+            // Saved battles use the battlefield sky, not the seed-only celestial backdrop.
+            const menuWorld = ui.view === 'home' && !previewSavedBattle ? worldView.world : null;
             R.setMenuSky(menuWorld?.terrainSeed ?? null, menuWorld?.definition.render.groundTexture ?? '');
             R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
               ui.view === 'codex' ? () => thumbnails.update($('menu')) :

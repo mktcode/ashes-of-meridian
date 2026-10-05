@@ -798,6 +798,9 @@ function appClock(diagnostic = false) {
     console: { error: e => errors.push(e), warn() {} },
     META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
     PLACEMENT_GUIDE_MATERIAL: -9,
+    battlefieldId: map => map,
+    Battlefield: class { renderProfile = {}; },
+    savedBattleMenuScene: vm.runInContext('savedBattleMenuScene', loadScripts(['world-view'])),
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
     createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}), drawEffectRing() {},
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
@@ -807,6 +810,7 @@ function appClock(diagnostic = false) {
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1; canRetainScene = true;
       frameReady() { return true; } releaseEnvironment() {} releaseMenuSky() {} releaseGeometry() {}
+      async prepareBattlefieldTextures() { return true; }
       setBattlefieldTime(time) { this.battlefieldTime=time; }
       setMenuSky(seed,family) { this.menuSky={seed,family}; }
       resize() {} camera() {} project() { return {x:400,y:300}; } begin() { renderWork.begin++; }
@@ -920,6 +924,25 @@ test('app enables celestial backdrops only on home, never in combat or codex',()
   a.ui.view='codex';a.frame(40);assert.equal(a.renderer.menuSky.seed,null);
   a.ui.view='game';a.frame(60);assert.equal(a.renderer.menuSky.seed,null);
   assert.equal(a.renderer.battlefieldTime,a.game.s.time);
+  assert.deepEqual(a.errors,[]);
+});
+
+test('home atmosphere uses frozen saved battle time and resets for archives or abandoned saves', async () => {
+  const a=appClock();
+  a.game.s=null;a.ui.view='home';
+  a.ui.expedition={encounter:{map:'desert',seed:123},battle:{state:{time:347,entities:[],cam:{x:0,z:0}}}};
+  assert.equal(await a.ui.onPreview('desert',123),true);
+  a.frame(0);assert.equal(a.renderer.battlefieldTime,347);
+  assert.equal(a.renderer.menuSky.seed,null,'saved scene uses the time-aware battlefield sky');
+  a.frame(1000);assert.equal(a.renderer.battlefieldTime,347,'menu does not advance the day');
+  assert.equal(await a.ui.onPreview('desert',122),true);
+  a.frame(1020);assert.equal(a.renderer.battlefieldTime,0,'archive uses seed starting time');
+  assert.equal(a.renderer.menuSky.seed,7,'archive retains celestial backdrop');
+  await a.ui.onPreview('desert',123);
+  a.frame(1040);assert.equal(a.renderer.battlefieldTime,347,'return to checkpoint restores its time');
+  a.ui.expedition=null;
+  await a.ui.onPreview('desert',123);
+  a.frame(1060);assert.equal(a.renderer.battlefieldTime,0,'abandoned save leaves no old time');
   assert.deepEqual(a.errors,[]);
 });
 
