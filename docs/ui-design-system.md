@@ -17,6 +17,13 @@ Karte; diese Baufortschrittsanzeige ersetzt keine militärische Zugangsvorausset
 Erreichte Schwellen wechseln zum nächsten höheren Ziel. Bereits freigeschaltete
 Stages werden auch bei Scoreverlust nicht erneut als Ziele angezeigt; ohne laufende
 Expedition bleibt nur die letzte Bestandssumme sichtbar.
+Im HUD bleibt unter dem kompakten Score eine dünne Fortschrittslinie innerhalb
+des bestehenden Stage-Felds. Ihr Ziel ist die tatsächlich nächste Expeditionsstage,
+nicht das nächste vorgebaute Score-Ziel des Startbildschirms. Ein goldenes ✓ ersetzt
+bei ausreichendem Score das CIV-Präfix; erst nach militärischer Freigabe zeigt ein
+cyanfarbener → den möglichen Wechsel über das Hauptmenü. Diese Bereitschaft bleibt
+auch nach Scoreverlust erhalten. Details stehen im Tooltip/zugänglichen Label;
+keine zusätzliche Zeile, blinkende Meldung oder automatische Weiterreise.
 
 Tokens und Selektoren bleiben auf `#menu`, `#modal`, `#result`, `#loading`, `#hud`
 und `#toast` begrenzt. Keine Theme-Tokens auf `:root`, keine globalen Buttonregeln.

@@ -359,9 +359,18 @@
         civilization.classList.toggle('hidden', !this.expedition);
         if (this.expedition) {
           this.refreshCivilizationScore();
-          const score = this.expedition.civilizationScore;
-          civilization.textContent = `CIV ${score.toLocaleString('en-US', { notation: 'compact', maximumSignificantDigits: 2, useGrouping: false })}`;
-          civilization.title = `Civilization Score: ${score.toLocaleString('en-US')}. ${expeditionProgressText(this.expedition)}`;
+          const expedition = this.expedition, score = expedition.civilizationScore,
+            runningBattle = !!expedition.battle || (this.activeWorldStage === null && s.rules.kind === 'single-player' && !s.rules.completed && !s.result),
+            stage = expedition.depth + (runningBattle ? 2 : 1), required = civilizationScoreRequirement(stage),
+            scoreReady = score >= required, stageReady = !runningBattle && expeditionStageUnlocked(expedition),
+            progress = stageReady ? 1 : Number.isFinite(required) ? Math.min(1, score / required) : 0;
+          civilization.textContent = `${stageReady ? '→' : scoreReady ? '✓' : 'CIV'} ${score.toLocaleString('en-US', { notation: 'compact', maximumSignificantDigits: 2, useGrouping: false })}`;
+          civilization.classList.toggle('stage-ready', stageReady);
+          civilization.style.setProperty('--civilization-progress', `${progress * 100}%`);
+          civilization.title = `Civilization Score: ${score.toLocaleString('en-US')}. ` + (stageReady
+            ? `Stage ${stage} unlocked. Return to the expedition via the main menu.`
+            : `${Number.isFinite(required) ? `Stage ${stage}: ${required.toLocaleString('en-US')} points required.` : 'Next score requirement exceeds supported range.'} ${scoreReady ? 'Score ready; military victory still required.' : 'Build in any world to increase your score.'}`);
+          civilization.setAttribute('role', 'img');
           civilization.setAttribute('aria-label', civilization.title);
         }
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
