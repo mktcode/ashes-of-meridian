@@ -6,7 +6,7 @@ const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS}=require('./helpers/ga
 const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,'ui-core','ui-templates','ui-actions','world-view']);
 const {MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,renderHomeScreen}=vm.runInContext(
  '({MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,renderHomeScreen})',context);
-const types=['fieldlab','researchhub','researchspire'];
+const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
 function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
  const game=Object.create(MeridianGame.prototype),world=Object.create(Battlefield.prototype),extent=80,n=64;
  Object.assign(world,{extent,cellSize:2.5,gridSize:n,viewTeam:0,pathVersion:0,surface:new BattlefieldSurface(extent,2.5,height),
@@ -21,10 +21,10 @@ function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
     {id:1,faction:1,account:{alloy:0,gas:0},meta:{},benefits:{},loadout:[],deploymentPending:false}]}});
  return {game,world};
 }
-test('three civilian structures are the last build choices, cheap Echo-only, identical across factions and nonproductive',()=>{
- assert.deepEqual(Object.keys(BUILDINGS).slice(-3),types);
+test('six civilian structures are the last build choices, cheap Echo-only, identical across factions and nonproductive',()=>{
+ assert.deepEqual(Object.keys(BUILDINGS).slice(-6),types);
  types.forEach((type,i)=>{
-  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,[5,10,15][i]);assert.equal(d.civilizationPoints,5);
+  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,[5,10,15][i%3]);assert.equal(d.civilizationPoints,5);
   assert.equal(d.vision,0);assert.equal(d.damage,undefined);assert.equal(d.cap,undefined);assert.equal(d.requires,undefined);
   assert.ok(FACTIONS.every(f=>f.buildings[type]===FACTIONS[0].buildings[type]));
  });
@@ -113,8 +113,11 @@ test('score counts completed surviving own buildings only and defeat withdrawal 
  const {game}=fixture();const a=game.spawnBuilding('fieldlab',0,0,0,0);
  game.spawnBuilding('researchhub',10,0,0,0);game.spawnBuilding('researchspire',20,0,0,0,{progress:.8});
  game.spawnBuilding('fieldlab',30,0,1,1);game.spawnBuilding('researchhub',40,0,0,0,{hp:0});
- assert.equal(civilizationScoreForBuildings(game.s.entities,0),10);
- game.checkHQElimination();assert.equal(game.s.result.win,false);assert.equal(game.s.result.civilizationScore,10);assert.equal(a.hp,0);
+ for(const type of types.slice(3))game.spawnBuilding(type,0,20,0,0);
+ game.spawnBuilding('embercottage',0,30,0,0,{progress:.8});game.spawnBuilding('terracecommons',10,30,0,0,{hp:0});
+ game.spawnBuilding('hearthtower',20,30,1,1);
+ assert.equal(civilizationScoreForBuildings(game.s.entities,0),25);
+ game.checkHQElimination();assert.equal(game.s.result.win,false);assert.equal(game.s.result.civilizationScore,25);assert.equal(a.hp,0);
 });
 test('result credit is added once per battle, persisted with the expedition and retained on defeat; home shows current or last run',()=>{
  const {game}=fixture();const writes=[];

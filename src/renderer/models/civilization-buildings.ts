@@ -1,22 +1,18 @@
-/* Shared civilian research architecture. Static hulls are built once; only the
+/* Shared civilian research and residential architecture. Static hulls are built once; only the
    separate stilt lengths/entry stairs sample the CPU surface at render time. */
 'use strict';
 (() => {
-  type Material = 'steel' | 'edge' | 'dark' | 'orange' | 'cyan' | 'glass' | 'window';
-  type Variant = 'fieldlab' | 'researchhub' | 'researchspire';
+  type Material = 'steel' | 'edge' | 'dark' | 'orange' | 'cyan' | 'glass' | 'window' | 'warm' | 'dim' | 'soil' | 'leaf';
+  type Variant = 'fieldlab' | 'researchhub' | 'researchspire' | 'embercottage' | 'terracecommons' | 'hearthtower';
   type Foot = { x: number; z: number; top: number };
   const colors: Record<Material, number> = {steel:0x68797d,edge:0xabb4b2,dark:0x23333e,
-    orange:0xb46a31,cyan:0x3fdcea,glass:0x235b68,window:0x55ccdf};
-  const variants: Variant[] = ['fieldlab','researchhub','researchspire'];
+    orange:0xb46a31,cyan:0x3fdcea,glass:0x235b68,window:0x55ccdf,
+    warm:0xff6613,dim:0x7a3513,soil:0x384438,leaf:0x385938};
+  const variants: Variant[] = ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
   const feet = (x:number,z:number,w:number,d:number,top=0):Foot[] =>
     [-w/2+.2,w/2-.2].flatMap(dx=>[-d/2+.15,0,d/2-.15].map(dz=>({x:x+dx,z:z+dz,top})));
-  const profiles: Record<Variant, {feet: Foot[]}> = {
-    fieldlab:{feet:[...feet(0,0,4.4,3.3),...feet(.55,2.17,3.2,.95)]},
-    researchhub:{feet:[...feet(-.8,-1.1,4.65,2.6,1.45),...feet(.75,1.7,5.3,2.55),...feet(.30,3.46,3.3,.60)]},
-    researchspire:{feet:[...feet(0,-.40,4.7,3.95),...feet(.2,2.25,4.2,1.3)]}
-  };
   function assembly(type: Variant): Record<Material, number[]> {
-    const meshes: Record<Material, number[]> = {steel:[],edge:[],dark:[],orange:[],cyan:[],glass:[],window:[]};
+    const meshes: Record<Material, number[]> = {steel:[],edge:[],dark:[],orange:[],cyan:[],glass:[],window:[],warm:[],dim:[],soil:[],leaf:[]};
     const tri = (a:number[],b:number[],c:number[],m:Material) => geom.tri(meshes[m],a,b,c,[1,1,1]);
     const quad = (a:number[],b:number[],c:number[],d:number[],m:Material) => {tri(a,b,c,m);tri(a,c,d,m);};
     const box = (x:number,y:number,z:number,w:number,h:number,d:number,m:Material='steel') => {
@@ -128,6 +124,33 @@
       for(const a of [0,Math.PI*2/3,Math.PI*4/3])beam(point(r*.85,a),focus,.035,'dark');
       box(focus[0],focus[1],focus[2],.13,.13,.13,'cyan');
     };
+    const residential = (x:number,y:number,z:number,w:number,d:number,floors=1) => {
+      const H=floors*1.55;
+      box(x,y+H/2,z,w,H,d);box(x,y+.16,z,w+.15,.20,d+.14,'dark');
+      for(let f=0;f<floors;f++){
+        const Y=y+f*1.55;box(x,Y+1.46,z,w+.17,.15,d+.18,'dark');
+        for(let j=0;j<Math.floor(w/1.02);j++){
+          const X=x+(j-(Math.floor(w/1.02)-1)/2)*1.02,Z=z+d/2+.017;
+          box(X,Y+.80,Z,.80,.88,.13,'dark');box(X,Y+.80,Z+.073,.62,.70,.027,(j+f)%5!==2?'warm':'dim');
+          box(X,Y+.80,Z+.096,.035,.70,.032,'dark');box(X,Y+.405,Z+.11,.85,.08,.21,'edge');
+        }
+        for(let j=0;j<Math.floor(d/1.03);j++){
+          const X=x+w/2+.02,Z=z+(j-(Math.floor(d/1.03)-1)/2)*1.03;
+          box(X,Y+.80,Z,.13,.88,.80,'dark');box(X+.074,Y+.80,Z,.027,.70,.62,(j+f)%4!==1?'warm':'dim');
+          box(X+.095,Y+.80,Z,.028,.70,.035,'dark');box(X+.1,Y+.405,Z,.20,.08,.85,'edge');
+        }
+      }
+      for(const dx of [-w/2+.1,w/2-.1]){
+        box(x+dx,y+H/2,z+d/2+.085,.14,H,.15,'edge');
+        for(let k=0;k<floors;k++)box(x+dx,y+k*1.55+.3,z+d/2+.18,.16,.26,.045,'orange');
+      }
+      box(x,y+H+.06,z,w+.28,.20,d+.28,'edge');box(x,y+H+.18,z,w-.22,.08,d-.22,'dark');
+      return y+H+.22;
+    };
+    const planter = (x:number,y:number,z:number,w:number) => {
+      box(x,y+.18,z,w,.36,.55,'orange');box(x,y+.37,z,w-.13,.025,.42,'soil');
+      for(let i=0;i<4;i++)box(x-w*.33+i*w*.22,y+.49,z,.20,.24,.27,'leaf');
+    };
     for(const d of (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!)deck(d.x,d.z,d.w,d.d,d.top);
     if(type==='fieldlab'){
       const roof=module(0,.35,0,4.4,3.3);
@@ -148,7 +171,7 @@
       for(let i=0;i<8;i++){const rise=(top-end)/8;box(3.7,top-(i+.5)*rise,-.1+i*.27,.88,rise,.28,'edge');}
       beam([4.14,top+.6,-.1],[4.14,end+.6,1.9],.055);
       entry(.3,.35,3.01);sign(-.77,.99,3.12);
-    }else{
+    }else if(type==='researchspire'){
       const podium=module(0,.35,-.4,4.7,3.95,2),roof=module(.12,podium-.10,-.58,3.72,3.30,4);
       box(-2.13,4.88,-1.0,.70,9.40,2.50,'dark');for(const x of [-2.29,-1.97])box(x,4.90,.32,.07,9.12,.07,'cyan');
       for(let f=0;f<6;f++){
@@ -161,22 +184,52 @@
       equipment(1.20,podium+.03,.72);grille(-1.15,.71,1.63,.61);grille(1.35,.71,1.63,.48);
       entry(.2,.35,1.63);railing(.2,.35,2.28,4.2,1.26,1.5);sign(-.77,1,1.75);
     }
+    if(type==='embercottage'){
+      const roof=residential(0,.35,0,4.4,3.3);
+      box(-1.8,1.34,-.9,.52,1.8,1.5,'dark');box(-1.8,roof+.15,-.9,.65,.16,1.62,'edge');
+      equipment(.45,roof+.03,-.55);cylinder(-1.1,roof+.42,-.7,.36,.70);cylinder(-1.1,roof+.81,-.7,.4,.12,'dark');
+      for(const dx of [-1.75,1.75])box(dx,roof+.005,.25,.07,.03,2.45,'orange');
+      entry(.55,.35,1.72);railing(.55,.35,2.2,3.2,.9,1.3);planter(-1.05,.35,2.14,.65);
+    }else if(type==='terracecommons'){
+      const back=1.1,roof=residential(-.8,back+.35,-1.1,4.65,2.6,2),terrace=residential(.75,.35,1.7,5.3,2.55);
+      railing(.75,terrace+.04,1.73,5.45,2.65);planter(-1.38,terrace+.03,2.4,1.25);planter(2.55,terrace+.03,2.4,1.1);
+      box(.7,terrace+.18,1.52,1.5,.22,.72,'edge');box(.7,terrace+.34,1.52,1.25,.12,.64,'dark');
+      equipment(-1.6,roof+.04,-1.1);cylinder(.3,roof+.5,-1.55,.48,.8,'steel');cylinder(.3,roof+.96,-1.55,.51,.13,'dark');
+      for(const x of [-2.45,1.1])box(x,roof+.02,-1.05,.075,.035,2.2,'orange');
+      const top=back+1.90,end=terrace+.04;box(2.61,top-.08,-.25,2.7,.16,.86,'edge');
+      for(let i=0;i<8;i++){const rise=(top-end)/8;box(3.7,top-(i+.5)*rise,-.1+i*.27,.88,rise,.28,'edge');}
+      beam([4.14,top+.6,-.1],[4.14,end+.6,1.9],.055);entry(.3,.35,3.01);box(-2.94,back+1.74,-1.1,.16,2.8,1.6,'orange');
+    }else if(type==='hearthtower'){
+      const roof=residential(0,.35,-.4,4.25,3.6,6);
+      box(-2.12,4.69,-.83,.82,8.8,2.7,'dark');box(-2.46,4.69,.10,.13,8.8,.25,'orange');
+      for(let f=0;f<6;f++){const y=.54+f*1.55;box(-2.5,y,-.83,.08,.14,2.65,'edge');box(0,y,1.54,4.5,.16,.35,'dark');}
+      for(const dx of [-1.65,1.65]){
+        box(dx,4.91,1.52,.17,9.32,.18,'edge');for(let f=0;f<6;f++)box(dx,.77+f*1.55,1.63,.18,.24,.06,'orange');
+      }
+      box(-.63,roof+.46,-.6,2.1,.86,2,'steel');box(-.63,roof+.92,-.6,2.26,.15,2.16,'edge');
+      equipment(1.15,roof+.04,-.7);cylinder(-.62,roof+1.25,-.65,.5,.54,'dark');cylinder(-.62,roof+1.53,-.65,.57,.08,'edge');
+      beam([-1.35,roof+.92,-1.2],[-1.35,roof+2.12,-1.2],.055);box(-1.35,roof+2.14,-1.2,.10,.10,.10,'warm');
+      for(const x of [-1.84,1.84])box(x,roof+.025,-.4,.07,.035,3,'orange');
+      entry(.2,.35,1.47);railing(.2,.35,2.13,4.2,1.26,1.5);planter(-1.32,.35,2.04,.8);
+    }
     return meshes;
   }
   for(const type of variants){
-    let geometry: Record<Material,number[]> | undefined;
+    let geometry: Record<Material,number[]> | undefined,supports: Foot[] | undefined;
     const meshes: Record<string,()=>number[]> = {};
-    const materials: Material[] = ['steel','edge','dark','cyan','window',...(type==='researchspire'?[]:['glass' as const])];
+    const housing=type==='embercottage'||type==='terracecommons'||type==='hearthtower',
+      materials: Material[] = housing ? ['steel','edge','dark','orange','cyan','warm','dim','soil','leaf']
+        : ['steel','edge','dark','cyan','window',...(type==='researchspire'?[]:['glass' as const])];
     for(const material of materials)
       meshes[`civil${type[0].toUpperCase()+type.slice(1)}${material[0].toUpperCase()+material.slice(1)}`] = () => (geometry ??= assembly(type))[material];
     const render = ({part:p,nightPart,groundHeight,surfaceColor,pointLight}:EntityModelContext) => {
       const scale=CIVILIZATION_MODEL_SCALE,name=`civil${type[0].toUpperCase()+type.slice(1)}`;
       for(const material of materials){
-        const glow=material==='cyan'?1.1:material==='window'?.65:0;
+        const glow=material==='cyan'?1.1:material==='window'?.65:material==='warm'?1:material==='dim'?.28:0;
         (glow?nightPart:p)(name+material[0].toUpperCase()+material.slice(1),0,0,0,scale,scale,scale,
           surfaceColor(colors[material]),0,0,0,glow,undefined,MAT.METAL);
       }
-      for(const foot of profiles[type].feet){
+      for(const foot of (supports ??= (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!.flatMap(d=>feet(d.x,d.z,d.w,d.d,d.top)))){
         const x=foot.x*scale,z=foot.z*scale,top=foot.top*scale,
           ground=groundHeight?.(x,z) ?? -.7,base=ground,height=Math.max(.03,top-base),
           dx=groundHeight ? (groundHeight(x+.275,z)-groundHeight(x-.275,z))/.55 : 0,
@@ -194,7 +247,8 @@
         const z=start+(i+.5)*length/count,y=top-(i+.5)*rise;
         p('box',x,y,z,1.05,Math.max(.025,Math.abs(rise)),length/count+.015,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
       }
-      pointLight(0,1.1,2.6,8,0x55d9e9,2.5);
+      pointLight(0,1.1,2.6,8,housing?0xff882b:0x55d9e9,2.5);
+      if(type==='hearthtower')pointLight(-.6,8.6,-.7,9,0xff882b,2.5);
       if(type==='researchspire')pointLight(-.5,10.6,-.7,9,0x55d9e9,2.5);
     };
     for(const faction of [0,1,2])registerEntityModel({id:`faction-${faction}/building/${type}`,meshes:faction===0?meshes:{},render});

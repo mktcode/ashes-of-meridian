@@ -53,8 +53,8 @@ function runningSave() {
     assert.equal(cache.collected, true); assert.equal(game.account(team)[kind], before + cache.amount);
   }
   run.civilizationScore = 15;
-  for (const [i,type] of ['fieldlab','researchhub','researchspire'].entries())
-    game.spawnBuilding(type,worker.x+12+i*10,worker.z+20,0,0,{progress:i===2?.4:1,paid:{cost:0,gas:catalogs.buildings[type].gas}});
+  for (const [i,type] of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'].entries())
+    game.spawnBuilding(type,worker.x+12+(i%3)*10,worker.z+20+Math.floor(i/3)*12,0,0,{progress:i%3===2?.4:1,paid:{cost:0,gas:catalogs.buildings[type].gas}});
   const building = game.spawnBuilding('barracks', worker.x + 10, worker.z, 0, 0, { progress: .4 });
   building.hp /= 2; building.queue = [{ type: 'rifle', progress: .3, time: 10, cost: 50, gas: 0 }];
   worker.order = { type: 'build', id: building.id, x: building.x, z: building.z };
@@ -122,6 +122,14 @@ test('running snapshot restores exact CPU state, RNG, fog and consumed cargo wit
   game.snapshotSafe = false; assert.throws(() => game.snapshotBattle(), /completed/); game.snapshotSafe = true;
 });
 
+test('residential buildings round-trip with unfinished state and paid Echo',()=>{
+  const run=savedBattle(),h=setup();assert.equal(put(h,run),true);
+  const restored=setup(h.data).service.loadExpedition();
+  for(const type of ['embercottage','terracecommons','hearthtower']){
+    const before=run.battle.state.entities.find(e=>e.type===type),after=restored.battle.state.entities.find(e=>e.type===type);
+    assert.ok(before);assert.deepEqual(json(after),before);assert.equal(after.paid.cost,0);assert.equal(after.paid.gas,catalogs.buildings[type].gas);
+  }
+});
 test('civilian service areas preserve their center-connection exception in saves and reject invalid flags', () => {
   const run=savedBattle(),worker=run.battle.state.entities.find(e=>e.type==='worker'&&e.team===0),
     building=run.battle.state.entities.find(e=>e.type==='researchspire');

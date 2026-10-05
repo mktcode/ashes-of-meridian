@@ -29,7 +29,7 @@ test('every faction building and unit has posed night lights, unchanged geometry
     assert.ok(id,`${e.faction}/${e.kind}/${e.type} has a model`);
     const day=draw(h,e,12),night=draw(h,e,22);
     assert.deepEqual(day.calls,h.draw(e),'day pose remains the standard model presentation');
-    assert.equal(night.lights.length,id==='faction-0/building/hq'||e.type==='researchspire'?2:1,`${id}: bounded model emitters`);
+    assert.equal(night.lights.length,id==='faction-0/building/hq'||e.type==='researchspire'||e.type==='hearthtower'?2:1,`${id}: bounded model emitters`);
     assert.equal(night.calls.length,day.calls.length,`${id}: no extra geometry in performance mode`);
     let emissive=0;
     night.calls.forEach((c,i)=>{

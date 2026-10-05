@@ -3,10 +3,10 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const {modelHarness,assertMesh}=require('../helpers/model-contract.cjs');
 const {createRendererStub}=require('../helpers/renderer-stub.cjs');
-const types=['fieldlab','researchhub','researchspire'];
-test('shared chamfered research meshes are cached, finite, nondegenerate and have three distinct sizes',()=>{
+const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
+test('shared research and warm residential meshes are cached, finite and nondegenerate',()=>{
  const h=modelHarness(),meshes={};h.EntityModels.upload({meshes:{},geometry(name,data){if(name.startsWith('civil'))meshes[name]=data;}});
- assert.equal(Object.keys(meshes).length,17);
+ assert.equal(Object.keys(meshes).length,44);
  for(const [name,mesh]of Object.entries(meshes)){
   assertMesh(()=>mesh,{minTriangles:1,maxTriangles:8000,min:[-3.6,-.05,-3],max:[4.2,14,4.2]});
   assert.ok(mesh.length/27<8000,name);
@@ -20,6 +20,16 @@ test('shared chamfered research meshes are cached, finite, nondegenerate and hav
   for(const options of [{ghost:true},{tint:0x89eac5,alpha:.3,layer:'effects'}]){
    const calls=h.draw(e,options);assert.ok(calls.every(c=>c[7]===(options.ghost?0x68717d:options.tint)));
   }
+ }
+});
+test('residential window meshes and posed lights are warm orange, isolated from cyan laboratory glazing',()=>{
+ const h=modelHarness();
+ for(const type of types){
+  const R=createRendererStub({record:true}),lights=[];Object.assign(R,{quality:1,battlefieldHour:22,addPointLight:(...args)=>lights.push(args)});
+  h.renderEntity(R,{id:1,kind:'building',type,team:0,faction:0,x:0,z:0,hp:500,size:h.BUILDINGS[type].size,progress:1},0);
+  const housing=types.indexOf(type)>=3,windows=R.calls.filter(c=>c[0].endsWith(housing?'Warm':'Window'));
+  assert.equal(windows.length,1);assert.equal(windows[0][7],housing?0xff6613:0x55ccdf);assert.ok(windows[0][11]>0);
+  assert.equal(lights[0][4],housing?0xff882b:0x55d9e9);
  }
 });
 test('civilian decks use minimal height directly under their authored footprints, not nearby uphill peaks',()=>{
