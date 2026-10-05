@@ -381,6 +381,7 @@ test('command hull is faction-specific and retains construction, team yaw, tint 
   assert.equal(hull(render(entity, { ghost: true }))[7], 0x68717d);
   const enemy = render({ ...entity, team: 1 });
   assert.equal(hull(enemy)[8], BUILDING_YAW + Math.PI);
+  assert.equal(hull(render({...entity,visualRotation:3}))[8],BUILDING_YAW+3*Math.PI/4,'cosmetic hull rotation is independent of aim');
   assert.equal(enemy[1][7], 0xe98680, 'foundation retains hostile team color');
   for (const faction of [1, 2]) assert.equal(hull(render({ ...entity, faction })), undefined);
   for (const type of Object.keys(BUILDINGS).filter(type => type !== 'hq'))
@@ -515,8 +516,9 @@ test('faction 0 turret detail keeps its fixed base and independently aimed head 
   assert.equal(calls.filter(c => c[0] === 'turretHead').length, 1);
   assert.ok(calls.length <= 10); assert.deepEqual(calls, render(entity, {}, 19));
   for (const team of [0,1]) for (const rot of [0,.7,Math.PI,-2]) for (const progress of [0,.4,1]) {
-    const next = render({ ...entity, team, rot, progress }), scale = Math.max(.15,progress);
-    assert.equal(base(next)[8], BUILDING_YAW+team*Math.PI);
+    const visualRotation=progress===1?3:0,
+      next = render({ ...entity, team, rot, progress, visualRotation }), scale = Math.max(.15,progress);
+    assert.equal(base(next)[8], BUILDING_YAW+team*Math.PI+visualRotation*Math.PI/4);
     assert.ok(Math.abs(head(next)[8]-rot) < 1e-9, 'aim is not added to building yaw');
     for (const c of [base(next),head(next)]) {
       assert.deepEqual(c.slice(1,7), [entity.x,0,entity.z,1,scale,1]);

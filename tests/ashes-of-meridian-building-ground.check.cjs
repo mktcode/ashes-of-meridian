@@ -30,6 +30,25 @@ test('building support balances a bounded lean with minimum fill, including off-
   }
 });
 
+test('rotated civilian decks and adaptive feet follow visual terrain support without changing CPU clearance',()=>{
+  const {civilizationClearanceFootprints,civilizationDeckFootprints}=vm.runInContext('({civilizationClearanceFootprints,civilizationDeckFootprints})',context);
+  const surface=new BattlefieldSurface(40,2.5,(x,z)=>20+.4*x+.15*z),before=Array.from(surface.heights),R=createRendererStub({record:true});
+  R.surface=surface;R.quality=0;
+  for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower']){
+    const e={...entity,type,size:4.2},clearance=JSON.stringify(civilizationClearanceFootprints(e,type,0));
+    for(const visualRotation of [0,1,3,7]){
+      const rotated=Object.freeze({...e,visualRotation}),pose=surface.buildingPose(rotated,rotated.size);
+      assert.equal(pose.height,surface.entityHeight(rotated));
+      for(const {polygon,top} of civilizationDeckFootprints(rotated,type,0,visualRotation))for(const p of polygon)
+        assert.ok(pose.height+top>=surface.heightAt(p.x,p.z),'rotated decks do not sink into the slope');
+      assert.equal(JSON.stringify(civilizationClearanceFootprints(rotated,type,0)),clearance,'CPU clearance remains fixed');
+      R.calls.length=0;renderEntity(R,rotated,0);
+      assert.ok(R.calls.length);assert.ok(R.calls.every(c=>c.slice(1,13).every(Number.isFinite)));
+    }
+  }
+  assert.deepEqual(Array.from(surface.heights),before);
+});
+
 test('visual grading uses the terrain material/weights and blends into the original grid without walls',()=>{
   const world=worldFor(.10),before=Array.from(world.surface.heights),patch=buildingGroundGeometry(world,entity),step=world.surface.step,pose=world.surface.buildingPose(entity,entity.size);
   assert.equal(patch.material,MAT.LANDSCAPE);assert.ok(patch.geometry.length>0);

@@ -332,6 +332,7 @@
       max-height: min(340px, calc(100dvh - var(--topbar-height) - 90px))
     }
     #actionPanel .action-grid:not(.root-grid) { grid-template-columns: 1fr }
+    #actionPanel .building-rotation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px }
     #hud button { touch-action: manipulation }
 
     .minimap-panel {

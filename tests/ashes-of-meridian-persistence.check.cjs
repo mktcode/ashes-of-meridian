@@ -146,6 +146,20 @@ test('residential buildings round-trip with unfinished state and paid Echo',()=>
     assert.ok(before);assert.deepEqual(json(after),before);assert.equal(after.paid.cost,0);assert.equal(after.paid.gas,catalogs.buildings[type].gas);
   }
 });
+test('cosmetic building rotation round-trips through save and restore and rejects malformed values',()=>{
+  const run=savedBattle(),h=setup(),b=run.battle.state.entities.find(e=>e.type==='fieldlab');
+  b.visualRotation=7;assert.equal(put(h,run),true);
+  const loaded=h.service.loadExpedition();assert.equal(loaded.battle.state.entities.find(e=>e.id===b.id).visualRotation,7);
+  const {Game}=fixture,restored=new Game(json(defaults));restored.restoreBattle(loaded);
+  assert.deepEqual(json(restored.snapshotBattle()),run.battle);
+  for(const invalid of [-1,8,.5,'1',null]){
+    b.visualRotation=invalid;put(h,run);assert.equal(h.service.loadExpedition(),null);
+    assert.ok(h.service.expeditionError);
+  }
+  delete b.visualRotation;const worker=run.battle.state.entities.find(e=>e.type==='worker');worker.visualRotation=1;
+  put(h,run);assert.equal(h.service.loadExpedition(),null,'unit aim cannot carry a building-only cosmetic field');
+});
+
 test('civilian service areas preserve their center-connection exception in saves and reject invalid flags', () => {
   const run=savedBattle(),worker=run.battle.state.entities.find(e=>e.type==='worker'&&e.team===0),
     building=run.battle.state.entities.find(e=>e.type==='researchspire');

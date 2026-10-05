@@ -287,6 +287,12 @@
         return this.s && !this.s!.result && !this.s.stopped && b?.kind === 'building' && b.team === team &&
           b.progress >= 1 ? b : null;
       },
+      rotateBuilding(this: MeridianGame, id: number, direction: -1 | 1, team: PlayerTeam = 0): boolean {
+        const b = this.managedBuilding(id, team);
+        if (!b || (direction !== -1 && direction !== 1)) return false;
+        b.visualRotation = ((b.visualRotation || 0) + direction + 8) % 8;
+        return true;
+      },
       buildingRepairers(this: MeridianGame, id: number, team: PlayerTeam = 0): UnitEntity[] {
         return this.alive(e => e.team === team && e.kind === 'unit' && e.type === 'worker' &&
           e.order.type === 'repair' && e.order.id === id) as UnitEntity[];

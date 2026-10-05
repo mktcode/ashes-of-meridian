@@ -318,6 +318,7 @@ function setup() {
         case 'cancelQueue': return this.cancelQueue(action.id, action.index);
         case 'toggleRepair': return this.toggleBuildingRepair(action.id);
         case 'sell': return this.sellBuilding(action.id);
+        case 'rotateBuilding':
         case 'rally': return vm.runInContext('MeridianGame.prototype.executeAction', context).call(this, team, action);
         default: assert.fail(`Unexpected UI action: ${action.kind}`);
       }
@@ -2389,6 +2390,33 @@ test('queue tap cancels one waiting order before active work; pause and scroll c
   h.click({queueType:'rifle'}); assert.deepEqual(h.calls.at(-1), ['cancel',1,0]);
   h.ui.paused = true; h.click({queueType:'rifle'}); assert.equal(h.calls.length, 2);
   h.ui.domPressed = true; h.document.handlers.pointercancel(); assert.equal(h.ui.domPressed, false);
+});
+
+test('building rotation arrows exist only for completed own buildings and obey action guards', () => {
+  for(const type of ['barracks','fieldlab','hearthtower']){
+    const h=buildingPanel();h.UI.prototype.bind.call(h.ui);h.b.type=type;
+    h.ui.game.rotateBuilding=vm.runInContext('MeridianGame.prototype.rotateBuilding',h.context);
+    h.ui.renderActions();assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateLeft"/);
+    assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateRight"/);
+    h.click({action:'rotateLeft'});assert.equal(h.b.visualRotation,7);
+    h.click({action:'rotateRight'});assert.equal(h.b.visualRotation,0);
+    for(const guard of ['paused','modal','mode','intro','ended']){
+      h.ui.paused=guard==='paused';h.ui.modalKind=guard==='modal'?'pause':'';
+      h.ui.mode=guard==='mode'?{kind:'rally'}:null;h.ui.battleIntro=guard==='intro'?{}:null;
+      h.ui.game.s.result=guard==='ended'?{win:true}:null;
+      h.click({action:'rotateRight'});assert.equal(h.b.visualRotation,0,guard);
+    }
+  }
+  for(const invalid of ['unfinished','foreign','dead','unit','none']){
+    const h=buildingPanel();h.UI.prototype.bind.call(h.ui);h.ui.game.rotateBuilding=()=>assert.fail('Invalid rotation submitted');
+    if(invalid==='unfinished')h.b.progress=.4;
+    if(invalid==='foreign')h.b.team=1;
+    if(invalid==='dead')h.b.hp=0;
+    if(invalid==='unit')h.b.kind='unit';
+    if(invalid==='none')h.ui.selected=[];
+    h.ui.renderActions();assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="rotate(Left|Right)"/);
+    h.click({action:'rotateRight'});
+  }
 });
 
 test('building buttons dispatch repair; sale pauses, cancels safely, confirms the captured ID and rejects stale repeats', () => {

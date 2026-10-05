@@ -175,6 +175,10 @@
           case 'rally':
             if ((this.selectedBuilding()?.progress || 0) >= 1) this.setMode(kind);
             break;
+          case 'rotateLeft':
+          case 'rotateRight':
+            if ((this.selectedBuilding()?.progress || 0) >= 1) this.buildingAction(kind, this.selected[0]);
+            break;
           case 'repair':
           case 'sell':
             if (this.selectedBuilding()) this.buildingAction(kind, this.selected[0]);
@@ -231,6 +235,7 @@
           if (ready) {
             html += this.actionButton('sell', 'Sell', 'cancel', { disabled: !!sellReason });
             html += this.actionButton('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
+            html += `<div class="building-rotation">${this.actionButton('rotateLeft', 'Rotate left', 'rotateLeft')}${this.actionButton('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
             if (!isCivilizationBuildingType(b!.type)) html += this.actionButton('rally', 'Rally point', 'rally');
           } else html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
@@ -255,7 +260,10 @@
       },
       buildingAction(this: MeridianUI, action: string, id: number) {
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s!.result) return;
-        if (action === 'repair') {
+        if (action === 'rotateLeft' || action === 'rotateRight') {
+          this.submitAction({ kind: 'rotateBuilding', id, direction: action === 'rotateLeft' ? -1 : 1 });
+          this.updateHUD();
+        } else if (action === 'repair') {
           this.submitAction({ kind: 'toggleRepair', id });
           this.updateHUD();
         } else if (action === 'sell') {
@@ -414,6 +422,7 @@
           if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||
             (!this.game.buildingRepairers(this.selected[0], this.localTeam).length && !!this.game.canRepairBuilding(this.selected[0], this.localTeam));
           if (k === 'sell') disabled = !!this.mode || !!this.game.canSellBuilding(this.selected[0], this.localTeam);
+          if (k === 'rotateLeft' || k === 'rotateRight') disabled = !!this.mode || !this.game.managedBuilding(this.selected[0], this.localTeam);
           disabled ||= this.controlsLocked || !!s.result;
           b.disabled = disabled;
           b.classList.toggle('disabled', disabled);

@@ -110,8 +110,10 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     pathArea: shape({ x: num, z: num, radius: nonnegative }, { terrainConnection: oneOf(false) }), pathStatus, pathResolvedGoal: pos,
     recoveryAttempts: integer, nextRecovery: num, stuck: num, steerSide: oneOf(-1, 1), steerLocked: bool,
     slowed: num, reinforcedUntil: num, returning: bool, lastSource: integer, shieldFlash: num,
-    paid: cost, gasId: id, deathAt: num, rally: pos, label: text, buildRate: nonnegative, amount: nonnegative
-  })(v) && record(v) && (v.kind !== 'resource' || nonnegative(v.amount));
+    paid: cost, gasId: id, deathAt: num, rally: pos, label: text, buildRate: nonnegative, amount: nonnegative,
+    visualRotation: v => integer(v) && Number(v) < 8
+  })(v) && record(v) && (v.kind !== 'resource' || nonnegative(v.amount)) &&
+    (v.visualRotation === undefined || v.kind === 'building');
   const contact: Check = v => record(v) && anyTeam(v.team) &&
     (v.kind === 'unit' ? key(units)(v.type) : v.kind === 'building' ? key(buildings)(v.type) :
       v.kind === 'resource' && oneOf('crystal', 'gas')(v.type)) && shape({

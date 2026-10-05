@@ -25,6 +25,9 @@ function parseBattleAction(value: unknown, maxIds: number): BattleAction | null 
     case 'cancelQueue':
       return id(value.id) && typeof value.index === 'number' && Number.isSafeInteger(value.index) && value.index >= 0
         ? { kind: 'cancelQueue', id: value.id, index: value.index } : null;
+    case 'rotateBuilding':
+      return id(value.id) && (value.direction === -1 || value.direction === 1)
+        ? { kind: 'rotateBuilding', id: value.id, direction: value.direction } : null;
     case 'cancelConstruction': case 'toggleRepair': case 'sell':
       return id(value.id) ? { kind: value.kind, id: value.id } : null;
     case 'order': {
@@ -131,6 +134,7 @@ const commandMethods = {
       case 'ability': return this.ability(action.ability, action.position, team);
       case 'sell': return this.sellBuilding(action.id, team);
       case 'toggleRepair': return this.toggleBuildingRepair(action.id, team);
+      case 'rotateBuilding': return this.rotateBuilding(action.id, action.direction, team);
       case 'cancelConstruction': {
         const b = this.get(action.id);
         if (!b || b.team !== team || b.kind !== 'building' || b.progress >= 1) return false;

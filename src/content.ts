@@ -379,16 +379,19 @@ function isCivilizationBuildingType(type: string): boolean {
 function civilizationBuildingAvailable(type: BuildingType, unlockedStage: number | null | undefined): boolean {
   return unlockedStage == null || unlockedStage >= ((BUILDINGS[type] as BuildingDefinitionShape).civilizationUnlockStage || 0);
 }
-function civilizationFootprint(p: Position, team: number, x: number, z: number, w: number, d: number, cut = 0): Position[] {
-  const yaw=BUILDING_YAW+(team===1?Math.PI:0),cs=Math.cos(yaw),sn=Math.sin(yaw),
+function buildingVisualYaw(e: { team?: number; visualRotation?: number }): number {
+  return BUILDING_YAW + (e.team === 1 ? Math.PI : 0) + (e.visualRotation || 0) * Math.PI / 4;
+}
+function civilizationFootprint(p: Position, team: number, x: number, z: number, w: number, d: number, cut = 0, visualRotation = 0): Position[] {
+  const yaw=buildingVisualYaw({team,visualRotation}),cs=Math.cos(yaw),sn=Math.sin(yaw),
     corners=cut ? [[-w/2+cut,-d/2],[w/2-cut,-d/2],[w/2,-d/2+cut],[w/2,d/2-cut],[w/2-cut,d/2],[-w/2+cut,d/2],[-w/2,d/2-cut],[-w/2,-d/2+cut]]
       : [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]];
   return corners.map(([dx,dz])=>({x:p.x+(x+dx)*cs+(z+dz)*sn,z:p.z-(x+dx)*sn+(z+dz)*cs}));
 }
-function civilizationDeckFootprints(p: Position, type: BuildingType, team = 0): { polygon: Position[]; top: number }[] {
+function civilizationDeckFootprints(p: Position, type: BuildingType, team = 0, visualRotation = 0): { polygon: Position[]; top: number }[] {
   const scale=CIVILIZATION_MODEL_SCALE;
   return (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!.map(d=>({
-    polygon:civilizationFootprint(p,team,d.x*scale,d.z*scale,(d.w+.76)*scale,(d.d+.76)*scale,.51*scale),top:(d.top||0)*scale}));
+    polygon:civilizationFootprint(p,team,d.x*scale,d.z*scale,(d.w+.76)*scale,(d.d+.76)*scale,.51*scale,visualRotation),top:(d.top||0)*scale}));
 }
 function civilizationClearanceFootprints(p: Position, type: BuildingType, team = 0): Position[][] {
   const d=BUILDINGS[type] as BuildingDefinitionShape,scale=CIVILIZATION_MODEL_SCALE,entry=d.civilizationEntry!;
@@ -770,6 +773,8 @@ const ICON_PATHS = {
   crystal: 'M12 2l7 5 3 9-10 6-10-6 3-9zM12 2l-3 13 3 7 3-7zM2 16l7-1m6 0 7 1',
   cancel: 'M5 5l14 14M19 5L5 19',
   repair: 'M14 4l-4 4 2 4 4 2 4-4c2 5-3 9-7 7l-7 6-4-4 7-6C7 8 10 3 14 4z',
+  rotateLeft: 'M8 3L4 7l4 4M4 7h9a7 7 0 1 1-7 7',
+  rotateRight: 'M16 3l4 4-4 4M20 7h-9a7 7 0 1 0 7 7',
   drop: 'M4 10a8 8 0 0 1 16 0H4M4 10l6 8m10-8-6 8M8 18h8v4H8z',
   disruption: 'M3 12h4l2-6 4 12 2-6h6M4 5l2 2m12-2-2 2M4 19l2-2m12 2-2-2',
   surge: 'M4 13h5l2-9 3 16 2-7h4M3 7h4m10 10h4',

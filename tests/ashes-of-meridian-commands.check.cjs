@@ -63,6 +63,28 @@ test('action parser copies known data and rejects malformed values before dispat
   ]) assert.equal(parseBattleAction(input, 2), null, JSON.stringify(input));
 });
 
+test('building rotation is immediate, free, bounded and cosmetic for every completed own building', () => {
+  const {g,events}=fixture(),types=vm.runInContext('Object.keys(BUILDINGS)',context);
+  g.s.rules={kind:'single-player'};g.navDirty=false;g.random=()=>{throw Error('Rotation consumed RNG');};
+  g.get(1).rot=.7;
+  for(const type of types){
+    g.get(1).type=type;delete g.get(1).visualRotation;
+    const before=json(g.s);
+    assert.equal(g.submitAction(0,{kind:'rotateBuilding',id:1,direction:-1}),true);
+    assert.equal(g.get(1).visualRotation,7);
+    for(let i=0;i<9;i++)assert.equal(g.submitAction(0,{kind:'rotateBuilding',id:1,direction:1}),true);
+    assert.equal(g.get(1).visualRotation,0);
+    const after=json(g.s);delete after.entities[0].visualRotation;
+    assert.deepEqual(after,before,'only cosmetic orientation may change');
+  }
+  assert.equal(g.navDirty,false);assert.deepEqual(events,[]);
+  for(const input of [{kind:'rotateBuilding',id:0,direction:1},...[-2,0,2,.5,NaN,Infinity,'1',null,undefined].map(direction=>({kind:'rotateBuilding',id:1,direction}))])
+    assert.equal(parseBattleAction(input,10),null);
+  for(const id of [2,5,99])assert.equal(g.executeAction(0,{kind:'rotateBuilding',id,direction:1}),false);
+  const b=g.get(1);b.progress=.99;assert.equal(g.executeAction(0,{kind:'rotateBuilding',id:1,direction:1}),false);
+  b.progress=1;b.hp=0;assert.equal(g.executeAction(0,{kind:'rotateBuilding',id:1,direction:1}),false);
+});
+
 test('inactive/missing actors and out-of-bounds actions leave state and events untouched', () => {
   const { g, events } = fixture(), action = { kind: 'train', unit: 'worker' };
   const before = json(g.s);

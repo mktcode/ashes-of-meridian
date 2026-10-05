@@ -515,7 +515,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       }
     }
 
-    // Cosmetic building yaw only; placement, collision radii and save data stay unchanged.
+    // Cosmetic building yaw only; placement and collision radii stay unchanged.
     // Flat contact quads must never slice through the CPU surface. Follow planar
     // slopes; omit this cosmetic soft layer on curved terrain, keeping real shadows.
     function contactShadowPose(surface: BattlefieldSurface | null | undefined, e: Position, width: number, depth: number, yaw: number) {
@@ -544,7 +544,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       let metal: number = f.metal,
         dark: number = f.dark;
       // Building orientation belongs to the world, not the observing party.
-      const rot = e.kind === 'building' ? (e.team === 1 ? Math.PI : 0) + BUILDING_YAW : e.rot || 0,
+      const rot = e.kind === 'building' ? buildingVisualYaw(e) : e.rot || 0,
         cs = Math.cos(rot),
         sn = Math.sin(rot);
       const ground = R.surface?.entityHeight(e) ??

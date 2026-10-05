@@ -408,6 +408,7 @@ type BattleAction =
   | { kind: 'build'; building: BuildingType; position: Position; selected: number[] }
   | { kind: 'ability'; ability: AbilityType; position: Position }
   | { kind: 'cancelQueue'; id: number; index: number }
+  | { kind: 'rotateBuilding'; id: number; direction: -1 | 1 }
   | { kind: 'cancelConstruction' | 'toggleRepair' | 'sell'; id: number };
 
 interface ActionTicket { tick: number; sequence: number; }
@@ -426,6 +427,7 @@ interface CommandQueue {
 
 type EffectPose = Pick<EntityBase, 'x' | 'z' | 'kind' | 'type' | 'team' | 'faction' | 'rot' | 'size'> & {
   exit?: Pick<ExitPath, 'x' | 'z' | 'length'>;
+  visualRotation?: number;
 };
 
 interface EntityBase extends Position {
@@ -488,6 +490,8 @@ interface UnitEntity extends EntityBase {
 interface BuildingEntity extends EntityBase {
   kind: 'building';
   type: BuildingType;
+  /** Cosmetic 45-degree steps (0–7), independent of weapon aim and CPU footprint. */
+  visualRotation?: number;
   buildRate?: number;
 }
 

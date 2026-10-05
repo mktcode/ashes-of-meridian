@@ -103,7 +103,7 @@ class BattlefieldSurface {
     }
     return Number.isFinite(best) ? {x:a[0]+dx*best,z:a[2]+dz*best} : null;
   }
-  entityHeight(e: Position & { type: string; team?: number; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'> }): number {
+  entityHeight(e: Position & { type: string; team?: number; visualRotation?: number; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'> }): number {
     const floor = this.heightAt(e.x,e.z), index = e.type === 'air' ? 0 : e.type === 'destroyer' ? 1 : -1;
     if (index < 0) return e.kind === 'building' && e.size !== undefined ? this.buildingPose(e, e.size).height : floor;
     const profile = this.flights[index], cruise = this.sampleHeight(profile.cruise, e.x, e.z),
@@ -170,7 +170,7 @@ class BattlefieldSurface {
   }
   // A restrained lean reduces downhill fill without changing buildability or the playable surface.
   // Choose the lowest supporting plane for that lean; never sink a model into the uphill ground.
-  buildingPose(p: Position & { type?: string; team?: number }, radius: number): { height: number; dx: number; dz: number; fill: number } {
+  buildingPose(p: Position & { type?: string; team?: number; visualRotation?: number }, radius: number): { height: number; dx: number; dz: number; fill: number } {
     if (p.type !== undefined && isCivilizationBuildingType(p.type))
       return {height:this.civilizationHeight(p),dx:0,dz:0,fill:0};
     const r = Math.max(this.step, radius),
@@ -191,9 +191,10 @@ class BattlefieldSurface {
     }
     return {height,dx:gx,dz:gz,fill:height-low};
   }
-  private civilizationHeight(p: Position & { type?: string; team?: number }): number {
+  private civilizationHeight(p: Position & { type?: string; team?: number; visualRotation?: number }): number {
     let height = -Infinity;
-    for (const {polygon,top} of civilizationDeckFootprints(p,p.type as BuildingType,p.team)) {
+    // Cosmetic support follows the model; placement/clearance calls retain their fixed CPU yaw.
+    for (const {polygon,top} of civilizationDeckFootprints(p,p.type as BuildingType,p.team,p.visualRotation)) {
       const sample = (x:number,z:number) => {height=Math.max(height,this.heightAt(x,z)-top);};
       // A linear terrain triangle reaches its maximum at an interior grid vertex
       // or where a deck edge crosses a triangle edge. No unrelated uphill margin.
