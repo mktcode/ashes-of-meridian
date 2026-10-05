@@ -1,7 +1,9 @@
 /* Shared Stage-4 Forum. Static approved hull; terrain-adaptive feet and three stair approaches. */
 'use strict';
 (() => {
-  const colors={steel:0x2e333b,wall:0x3b4047,edge:0x666b6e,light:0x828278,dark:0x0e1116,roof:0x13141a,gold:0x6e4d26,glass:0x092426,warm:0xffc975,dim:0x423b2e,cyan:0x30c9b0,jade:0x176b59,leaf:0x1a4030,soil:0x0e130d};
+  // Match the established civilian metal, warm residential glazing and cyan accents.
+  const colors={steel:0x68797d,wall:0x68797d,edge:0xabb4b2,light:0xabb4b2,dark:0x23333e,roof:0x23333e,
+    gold:0xb46a31,glass:0x235b68,warm:0xffdab0,dim:0x806e58,cyan:0x3fdcea,jade:0x235b68,leaf:0x385938,soil:0x384438};
   type Material=keyof typeof colors;
   const materials=Object.keys(colors) as Material[];
   function assembly():Record<Material,number[]> {
@@ -22,10 +24,33 @@
     function hvac(x:number,y:number,z:number,w:number=1.3){oct(x,y+.2,z,w,.4,.9,.10,'steel');box(x,y+.45,z,w+.10,.12,1,'edge');for(let i=0;i<7;i++)box(x-w*.4+i*w*.8/6,y+.52,z,.05,.035,.78,'dark');}
     function tank(x:number,y:number,z:number,r:number=.55){oct(x,y+.12,z,r*2.8,.24,r*2.8,.15,'dark');cylinder(x,y+.5,z,r,.74,'steel');cylinder(x,y+.91,z,r*1.08,.12,'dark');}
     function lamp(x:number,y:number,z:number){oct(x,y+.12,z,.42,.24,.42,.08,'steel');box(x,y+.45,z,.16,.46,.16,'dark');box(x,y+.68,z,.22,.15,.22,'warm');box(x,y+.80,z,.30,.09,.30,'gold');}
-    function windows(x:number,y:number,z:number,w:number,d:number,floors:number,spacing:number=1.65){for(let f=0;f<floors;f++){const Y=y+f*spacing;oct(x,Y+.13,z,w+.09,.20,d+.09,.42,'dark');for(const s of [-1,1]){
-      const n=Math.max(1,Math.floor((w-.9)/.9));for(let j=0;j<n;j++){const X=x+(j-(n-1)/2)*.9;box(X,Y+.88,z+s*(d/2+.028),.72,.95,.11,'dark');box(X,Y+.88,z+s*(d/2+.094),.51,.76,.035,(j+f)%9===2?'dim':'warm');box(X,Y+.47,z+s*(d/2+.13),.78,.075,.14,'edge');}
-      const side=Math.max(1,Math.floor((d-.9)/.9));for(let j=0;j<side;j++){const Z=z+(j-(side-1)/2)*.9;box(x+s*(w/2+.028),Y+.88,Z,.11,.95,.72,'dark');box(x+s*(w/2+.094),Y+.88,Z,.035,.76,.51,(j+f)%8===3?'dim':'warm');}
-      }oct(x,Y+spacing-.05,z,w+.19,.12,d+.19,.47,'edge');}}
+    function windows(x:number,y:number,z:number,w:number,d:number,floors:number,spacing:number=1.65){
+      // The Forum's authored units are larger; panes and rhythm retain residential world dimensions.
+      const pitch=1.02/FORUM_MODEL_SCALE,paneW=.62/FORUM_MODEL_SCALE,paneH=.70/FORUM_MODEL_SCALE,
+        frameW=.80/FORUM_MODEL_SCALE,frameH=.88/FORUM_MODEL_SCALE,mullion=.035/FORUM_MODEL_SCALE;
+      for(let f=0;f<floors;f++){
+        const Y=y+f*spacing;oct(x,Y+.13,z,w+.09,.20,d+.09,.42,'dark');
+        for(const s of [-1,1]){
+          const n=Math.max(1,Math.floor((w-.9)/pitch));
+          for(let j=0;j<n;j++){
+            const X=x+(j-(n-1)/2)*pitch,Z=z+s*(d/2+.094);
+            box(X,Y+.90,z+s*(d/2+.028),frameW,frameH,.11,'dark');
+            box(X,Y+.90,Z,paneW,paneH,.035,(j+f)%5===2?'dim':'warm');
+            box(X,Y+.90,Z+s*.025,mullion,paneH,.032,'dark');
+            box(X,Y+.275,z+s*(d/2+.13),.85/FORUM_MODEL_SCALE,.075,.14,'edge');
+          }
+          const side=Math.max(1,Math.floor((d-.9)/pitch));
+          for(let j=0;j<side;j++){
+            const Z=z+(j-(side-1)/2)*pitch,X=x+s*(w/2+.094);
+            box(x+s*(w/2+.028),Y+.90,Z,.11,frameH,frameW,'dark');
+            box(X,Y+.90,Z,.035,paneH,paneW,(j+f)%4===1?'dim':'warm');
+            box(X+s*.025,Y+.90,Z,.032,paneH,mullion,'dark');
+            box(x+s*(w/2+.13),Y+.275,Z,.14,.075,.85/FORUM_MODEL_SCALE,'edge');
+          }
+        }
+        oct(x,Y+spacing-.05,z,w+.19,.12,d+.19,.47,'edge');
+      }
+    }
     function pilasters(x:number,y:number,z:number,w:number,d:number,h:number){for(const s of [-1,1]){
       for(const X of [x-w/2+.24,x+w/2-.24]){box(X,y+h/2,z+s*(d/2-.05),.38,h,.30,'steel');box(X,y+h/2,z+s*(d/2+.115),.095,h-.22,.06,'gold');}
       for(const Z of [z-d/2+.24,z+d/2-.24])box(x+s*(w/2-.04),y+h/2,Z,.3,h,.38,'steel');
@@ -47,10 +72,16 @@
     for(const y of [15,20.5,26]){const p=[[0,y+1.4,.36],[-.53,y,.36],[0,y-1.4,.36],[.53,y,.36]];quad(p[0],p[1],p[2],p[3],'jade');beam(p[0],p[2],.045,'cyan');}
     // Rear and side tower walls have narrower occupied windows and service recesses.
     for(const s of [-1,1]){
-      for(let f=0;f<12;f++){const Y=6.5+f*1.8;for(const z of [-5.55,-3.65,-1.75]){box(s*4.47,Y,z,.10,.9,.80,'dark');box(s*4.53,Y,z,.04,.68,.57,(f+Math.round(z))%5===0?'dim':'warm');}}
+      for(let f=0;f<12;f++){const Y=6.5+f*1.8;for(const z of [-5.55,-3.65,-1.75]){
+        box(s*4.47,Y,z,.10,1.45,1.30,'dark');box(s*4.53,Y,z,.04,1.16,1.03,(f+Math.round(z))%5===0?'dim':'warm');
+        box(s*4.56,Y,z,.03,1.16,.058,'dark');
+      }}
       box(s*3.55,18.5,-7.43,.65,24,.28,'steel');box(s*3.55,18.5,-7.60,.13,23.8,.075,'gold');
     }
-    for(let f=0;f<12;f++)for(const x of [-2.4,-.8,.8,2.4]){box(x,7.0+f*1.8,-7.37,.9,1,.10,'dark');box(x,7.0+f*1.8,-7.44,.6,.75,.035,'warm');}
+    for(let f=0;f<12;f++)for(const x of [-2.4,-.8,.8,2.4]){
+      box(x,7.0+f*1.8,-7.37,1.30,1.45,.10,'dark');box(x,7.0+f*1.8,-7.44,1.03,1.16,.035,'warm');
+      box(x,7.0+f*1.8,-7.47,.058,1.16,.032,'dark');
+    }
     roof(0,30.05,tz,tw,td);
     // Three prominent warm-windowed penthouse floors crown the central mass, as in the image.
     oct(0,32.77,tz,8.25,5.0,6.8,.5,'steel');windows(0,30.3,tz,8.25,6.8,3);pilasters(0,30.3,tz,8.25,6.8,4.95);roof(0,35.39,tz,8.25,6.8);
@@ -82,7 +113,10 @@
       for(const dx of [-1.05,1.05]){box(x+dx,4.2+H/2,fy+.16,.24,H+.15,.23,'light');box(x+dx*.79,4.2+H/2,fy+.28,.05,H-.25,.04,'gold');}
       box(x,4.2+H/2,fy+.22,.19,H-.8,.04,'cyan');
       // Slender service strips break up large walls without turning the volume into separate towers.
-      for(let f=0;f<Math.floor((top-7)/1.9);f++)for(const Z of [z-2.5,z,z+2.5]){box(x+s*(T.w/2+.06),5.2+f*1.9,Z,.1,.80,.65,'dark');box(x+s*(T.w/2+.12),5.2+f*1.9,Z,.03,.57,.43,'warm');}
+      for(let f=0;f<Math.floor((top-7)/1.9);f++)for(const Z of [z-2.5,z,z+2.5]){
+        box(x+s*(T.w/2+.06),5.2+f*1.9,Z,.1,1.45,1.30,'dark');box(x+s*(T.w/2+.12),5.2+f*1.9,Z,.03,1.16,1.03,'warm');
+        box(x+s*(T.w/2+.15),5.2+f*1.9,Z,.03,1.16,.058,'dark');
+      }
       // Occupied roof terraces: stepped planted strips and exposed maintenance details.
       planter(x,top+.40,z+T.d/2-.60,T.w-1.35);planter(x+s*(T.w/2-.48),top+.40,z-.8,.58,2.0);
       rail([x-T.w/2-.15,z+T.d/2+.14],[x+T.w/2+.15,z+T.d/2+.14],top+.42);
@@ -133,7 +167,7 @@
   const render=({part:p,nightPart,groundHeight,surfaceColor,pointLight}:EntityModelContext)=>{
     const scale=CIVILIZATION_MODEL_SCALE,authoredScale=FORUM_MODEL_SCALE*scale;
     for(const m of materials){
-      const glow=m==='cyan'?.85:m==='warm'?.65:0;
+      const glow=m==='cyan'?1.1:m==='warm'?1:m==='dim'?.28:0;
       (glow?nightPart:p)(name(m),0,0,0,scale,scale,scale,surfaceColor(colors[m]),0,0,0,glow,undefined,MAT.METAL);
     }
     // Hull meshes never change with terrain, faction, construction or preview pose.

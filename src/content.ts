@@ -382,7 +382,7 @@ const BUILDINGS = {
     civilizationSideEntries: [-1,1].map(s=>({x:s*10*FORUM_MODEL_SCALE,z:9.7*FORUM_MODEL_SCALE,
       top:(1.88-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,width:3.25*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,
       length:3.24*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE})),
-    desc: 'Monumental civilian forum with terraced wings, warm windows, jade-lit entrances and a rooftop spacecraft landing pad. Available from Stage 4. Costs only Echo; each completed, surviving forum contributes 30 Civilization Score. No production; the landing pad is decorative.'
+    desc: 'Monumental civilian forum with terraced wings, warm windows, cyan-lit entrances and a rooftop spacecraft landing pad. Available from Stage 4. Costs only Echo; each completed, surviving forum contributes 30 Civilization Score. No production; the landing pad is decorative.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
 

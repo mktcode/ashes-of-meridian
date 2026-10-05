@@ -17,6 +17,16 @@ test('Forum caches one shared, finite hull with terraced wings and an unobstruct
  assert.ok(triangles<40000,'bounded static geometry budget');
  h.EntityModels.upload({meshes:{},geometry(name,data){if(name.startsWith('meridianForum'))assert.strictEqual(data,meshes[name],'hull factories reuse their cached arrays');}});
  const {FORUM_MODEL_SCALE:scale,FORUM_DECK_BASE:base}=vm.runInContext('({FORUM_MODEL_SCALE,FORUM_DECK_BASE})',h.context),roof=(35.9-base)*scale;
+ const warm=meshes.meridianForumWarm,front=(-3.65+6.8/2+.094+.035/2)*scale;
+ let panes=0;
+ for(let i=0;i<warm.length;i+=27){
+  const points=[0,9,18].map(k=>warm.slice(i+k,i+k+3));
+  if(warm[i+5]>.99&&points.every(p=>Math.abs(p[2]-front)<1e-9&&p[1]>(30.3-base)*scale)){
+   const span=k=>Math.max(...points.map(p=>p[k]))-Math.min(...points.map(p=>p[k]));
+   assert.ok(Math.abs(span(0)-.62)<1e-9&&Math.abs(span(1)-.70)<1e-9,'occupied panes retain the residential window proportions and scale');panes++;
+  }
+ }
+ assert.ok(panes>0,'penthouse has larger residential-style panes');
  for(const material of ['Light','Gold','Cyan'])assert.ok(meshes['meridianForum'+material].some((v,i)=>i%9===1&&v>roof),'landing marks and edge beacons are on the highest roof');
  for(const mesh of Object.values(meshes))for(let i=0;i<mesh.length;i+=9){
   if(Math.abs(mesh[i])<1.4*scale&&Math.abs(mesh[i+2]+3.65*scale)<1.4*scale)
@@ -53,11 +63,18 @@ test('Forum terrain support and three wide stairs are level, adaptive, ghost-ide
  assert.deepEqual(Array.from(surface.heights),before);
 });
 
-test('Forum has distinct warm occupied floors and cyan entry/landing emitters using the existing night-light path',()=>{
+test('Forum matches the civilian metal/window palette and night accents while retaining warm floors and cyan landing emitters',()=>{
  const h=modelHarness(),R=createRendererStub({record:true}),lights=[];
  Object.assign(R,{quality:1,battlefieldHour:22,addPointLight:(...args)=>lights.push(args)});
  h.renderEntity(R,entity(h),0);
  const warm=R.calls.find(c=>c[0]==='meridianForumWarm'),cyan=R.calls.find(c=>c[0]==='meridianForumCyan');
+ const home=h.draw({...entity(h),type:'hearthtower',size:h.BUILDINGS.hearthtower.size}),lab=h.draw({...entity(h),type:'fieldlab',size:h.BUILDINGS.fieldlab.size}),forum=h.draw(entity(h));
+ for(const [m,reference] of [['Steel','Steel'],['Wall','Steel'],['Edge','Edge'],['Light','Edge'],['Dark','Dark'],['Roof','Dark'],['Gold','Orange'],['Warm','Warm'],['Dim','Dim'],['Leaf','Leaf'],['Soil','Soil']])
+  assert.equal(forum.find(c=>c[0]==='meridianForum'+m)[7],home.find(c=>c[0]==='civilHearthtower'+reference)[7],'shared civilian palette: '+m);
+ assert.equal(cyan[7],lab.find(c=>c[0]==='civilFieldlabCyan')[7]);
+ const nightHome=createRendererStub({record:true});Object.assign(nightHome,{quality:1,battlefieldHour:22});
+ h.renderEntity(nightHome,{...entity(h),type:'hearthtower',size:h.BUILDINGS.hearthtower.size},0);
+ assert.equal(warm[11],nightHome.calls.find(c=>c[0]==='civilHearthtowerWarm')[11],'same residential window emission');
  assert.ok(warm[11]>0&&cyan[11]>0);assert.notEqual(warm[7],cyan[7]);
  assert.equal(lights.length,3);assert.equal(lights[0][4],cyan[7]);assert.equal(lights[1][4],warm[7]);assert.equal(lights[2][4],cyan[7]);
  assert.ok(lights[2][1]>lights[1][1],'highest cyan lamp serves the roof pad');
