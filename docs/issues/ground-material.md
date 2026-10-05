@@ -1,0 +1,8 @@
+# Bodenmaterial: nasse Lichtakzente
+
+Darstellungsgrenzen und Qualitätsstufen: [Rendering](../rendering.md#lichtanimation-und-kampfakzente). Keine allgemeine Neugestaltung von Beleuchtung, Bloom, Modellen oder Terrainverteilung.
+
+- [ ] Nasse Böden bei normalem Gefechtszoom in High/Balanced menschlich abnehmen: farbige Glanzspuren statt flächiger Aufhellung, keine auffälligen Texturkacheln oder flimmernden Glanzpunkte bei Kamerabewegung. Regnerische Myzel-/Graswelten, Wege und signierte nasse Ufer sowie trockene/Fels-/Schneeflächen als Gegenproben. Schein ist schattenlos wie das vorhandene lokale Licht; Lichtdurchtritt bleibt dessen bekannte Grenze.
+- [ ] Kostenneutralität auf Intel UHD 620 und Mobilgeräten prüfen, insbesondere dichte beleuchtete Basen/Armeen. Gleiche Szene, Kamera, Auflösung und Tageszeit, wechselnde A/B-Reihenfolge; [Diagnose](../testing.md#lokale-performancediagnose). Ein kurzer Chromium/ANGLE-OpenGL-Vergleich auf RTX 3090 mit eingefrorener flacher Myzel-Nachtfixture, sechs Gebäuden/neun Lampen und 1100×700 bestätigte wirksamen Nassglanz, unveränderte Draw-Anzahl und keine GL-Fehler. Trocken-/Performance-Gegenproben unterschieden sich nur in zwei Pixeln um 1/255, erkundete unsichtbare Fläche und Lampen-aus waren identisch. Vier GPU-Szenenzeitabschnitte mit je 36 Proben drifteten stark (Median rund 1,05–2,62 ms); kein belastbarer Kostenneutralitäts- oder Zielgeräte-FPS-Nachweis.
+
+Prüfgrenze: Der bestehende Rendererfall `diagnostic hooks bracket real render passes` erwartet zwei Vollbilddreiecke, zählt aber eines. Mit ursprünglichem Szenenshader gleicher Fehler; für diesen Bodenauftrag unverändert gelassen. Keine KI-/Simulationstests ausgeführt.
