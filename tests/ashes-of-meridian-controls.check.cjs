@@ -147,6 +147,29 @@ test('screen templates render frozen data without DOM access, randomness or prof
   assert.equal(JSON.stringify({profile, expedition}), before);
 });
 
+test('home civilization progress follows the next unmet score threshold without changing military unlocks', () => {
+  const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
+  const render = vm.runInContext('renderHomeCivilizationScore', context);
+  vm.runInContext('Math.random = () => { throw Error("Progress consumed RNG"); };', context);
+  for (const [score, stage, target] of [[0,2,50],[49,2,50],[50,3,250],[250,4,1250],[6250,6,31250]]) {
+    const expedition = Object.freeze({depth:0, unlockedStage:1, civilizationScore:score});
+    const before = JSON.stringify(expedition), html = render(expedition,999);
+    assert.match(html, new RegExp(`aria-label="Civilization Score toward Stage ${stage}"`));
+    assert.match(html, new RegExp(`aria-valuemax="${target}"`));
+    assert.match(html, new RegExp(`aria-valuenow="${score}"`));
+    const width = Number(html.match(/style="width:([\d.]+)%"/)[1]);
+    assert.equal(width,score / target * 100);assert.ok(width >= 0 && width < 100);
+    assert.equal(JSON.stringify(expedition),before);
+    assert.equal(render({...expedition,depth:stage-2,unlockedStage:stage-1},999),html,'already covered score targets are skipped even when military progress lags behind');
+  }
+  const last = render(null,250);
+  assert.doesNotMatch(last,/role="progressbar"/);assert.match(last,/250<\/strong>/);
+  const afterLoss = render({depth:2,unlockedStage:3,civilizationScore:100},0);
+  assert.match(afterLoss,/aria-valuemax="1250"/,'score loss does not target an already unlocked stage again');
+  const capped = render({depth:0,unlockedStage:1,civilizationScore:Number.MAX_SAFE_INTEGER},0);
+  assert.doesNotMatch(capped,/role="progressbar"|width:NaN|width:Infinity/);
+});
+
 test('opponent briefing maps active slots to their faction and benefit data', () => {
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
   const { renderExpeditionOpponents: renderOpponents, FACTIONS, expeditionBenefit } =

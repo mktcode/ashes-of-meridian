@@ -11,6 +11,12 @@ nachgebaut. Die übrige Bildschirmgeometrie und Modellvorschau bleiben in
 `screens.css`, `codex.css` bzw. `hud.css`.
 Run-Briefing, Loadout, Gegner und Vorteile stehen im Sternchen-Modal, nicht zwischen
 den Startaktionen. Die Checkpoint-/Landschaftsvorschau bleibt auf dem Startbildschirm.
+Die dortige Civilization-Anzeige zeigt Bestand/Ziel und einen Fortschrittsbalken
+zur nächsten noch nicht erreichten Score-Schwelle, unabhängig von ausgewählter
+Karte; diese Baufortschrittsanzeige ersetzt keine militärische Zugangsvoraussetzung.
+Erreichte Schwellen wechseln zum nächsten höheren Ziel. Bereits freigeschaltete
+Stages werden auch bei Scoreverlust nicht erneut als Ziele angezeigt; ohne laufende
+Expedition bleibt nur die letzte Bestandssumme sichtbar.
 
 Tokens und Selektoren bleiben auf `#menu`, `#modal`, `#result`, `#loading`, `#hud`
 und `#toast` begrenzt. Keine Theme-Tokens auf `:root`, keine globalen Buttonregeln.

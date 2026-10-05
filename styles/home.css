@@ -63,15 +63,20 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
 }
 #menu .home-screen .civilization-score {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
   margin: 0 0 14px;
   color: #a1cbd0;
   font-size: 12px;
   letter-spacing: 1px;
 }
-#menu .home-screen .civilization-score strong { color: #7bdfeb; font-size: 18px }
-#menu .home-screen .civilization-score small { grid-column: 1 / -1; font-size: 9px; color: #91a5ae }
+#menu .home-screen .civilization-score > span { align-self: center; overflow-wrap: anywhere }
+#menu .home-screen .civilization-amount { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 6px }
+#menu .home-screen .civilization-score strong { color: var(--ui-gold); font-size: clamp(14px, 4vw, 18px); font-weight: 400 }
+#menu .home-screen .civilization-amount > span { color: #91a5ae; font-size: 12px }
+#menu .home-screen .civilization-progress { grid-column: 1 / -1; height: 6px; overflow: hidden; background: #03111ccc; border: 1px solid var(--ui-line) }
+#menu .home-screen .civilization-progress > i { display: block; height: 100%; background: var(--ui-gold) }
+#menu .home-screen .civilization-score small { grid-column: 1 / -1; font-size: 9px; color: #91a5ae; line-height: 1.5 }
 #menu .home-screen .menu-brand {
   display: flex;
   flex-direction: column;
