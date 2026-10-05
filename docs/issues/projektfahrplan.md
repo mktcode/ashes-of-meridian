@@ -30,6 +30,7 @@ Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische 
 
 | Issue | Fokus und Abhängigkeit |
 | --- | --- |
+| [Stage-Wiederbesuche/Weiterbau](stage-wiederbesuche.md) | Nutzerbestätigtes Ziel, Umsetzung noch offen: gespeicherte alte Welt als Menüszene und **Enter world**, ohne Rücksetzen oder erneute Vergütung. Zuerst autoritativen Archiv-/Speichervertrag und sichere Ergebnis-Tickgrenze klären; keine runübergreifende Sammlung. |
 | [Vollständige Runs/Geräte](playtest-validation.md) | Einstieg ohne Upgrades, FFA-Übergänge, Commands, Sieg/Niederlage und Reload zusammenhängend spielen. Zentrale menschliche Abnahme, nicht jede Fachliste als eigene Vollrunde wiederholen. |
 | [Schwierigkeit/Progression](expeditions-schwierigkeit-und-upgrades.md) | HQ-Abschluss, passive Truppenansammlung und tiefe Ressourcenstapel nach den bestehenden KI-/Ökonomieänderungen bewerten. Erst Befunde, dann Balancing; neue Vorteilsideen separat. |
 | [Mehrparteien-Simulation](mehrparteien-simulation.md) | Technische FFA-/Wirtschafts-/Angriffsnachweise gezielt nach Fixturepflege und ausdrücklicher Prüffreigabe. Alte Seed-/Pattbefunde sind keine Abnahme aktueller Weltrezepte. |

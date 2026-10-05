@@ -4,7 +4,7 @@
 
 Das manuelle Feedback zur Implementierung ist positiv. Gezielte Persistenz-/UI-Regressionen sichern Snapshot-Restore mit einem begrenzten Fortsetzungstick, RNG/Sicht/Navigation, laufende Aufträge und Fähigkeiten, Spieler-/Gegner-Kistenverbrauch, ursprüngliche Gefechtsupgrades, Autosave/`pagehide`, pausiertes Continue, Neustartsperre, Vorteilsbestätigung, einmalige Auszahlung und Speicherfehler ab. Keine breite Suite, KI-/Simulationslangläufe oder Browserautomatisierung als Abnahmenachweis.
 
-Maßgeblicher Vertrag: [Speichern und Lebenszyklus](../gameplay.md#speichern-und-lebenszyklus), technische Grenzen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen). Alte reine Startcheckpoints werden nicht übernommen, permanente Profilwerte bleiben erhalten. Keine Migrationen, historischen Gefechtsstände, Replay, Multiplayer-Persistenz oder Offline-Fortschritt.
+Maßgeblicher Vertrag: [Speichern und Lebenszyklus](../gameplay.md#speichern-und-lebenszyklus), technische Grenzen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen). Alte reine Startcheckpoints werden nicht übernommen, permanente Profilwerte bleiben erhalten. Diese Abnahme umfasst keine Migrationen, historischen Gefechtsstände, Replay, Multiplayer-Persistenz oder Offline-Fortschritt. Die separat geplante Erweiterung für [Stage-Wiederbesuche und Weiterbau](stage-wiederbesuche.md) verändert künftig Archiv-, Ergebnis- und Speichergrenzen; deren neue Nachweise gehören in das verlinkte Fachissue, nicht zum bisherigen Abnahmenachweis.
 
 ## Offene menschliche Grenzen
 
