@@ -54,6 +54,8 @@
       stageHistory: ExpeditionStagePreview[] = [];
       stagePreviewIndex = 0;
       stagePreviewBusy = false;
+      activeWorldStage: number | null = null;
+      launchingWorld: ExpeditionWorld | null = null;
       view: 'home' | 'battle' | 'transition' | 'game' | 'codex' | 'codexModel' | 'story';
       codexFaction: FactionId;
       codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType } | null;
@@ -100,8 +102,8 @@
       resultCivilizationTotal?: number;
       resultBenefit?: string;
       onViewportChange?: () => void;
-      onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean) => Promise<boolean>;
-      onLaunchBattle?: (options: BattleOptions, expedition: MeridianExpedition) => Promise<void>;
+      onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean, battle?: ExpeditionBattleSave | null) => Promise<boolean>;
+      onLaunchBattle?: (options: BattleOptions, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, world?: ExpeditionWorld) => Promise<boolean>;
       domPressed?: boolean;
       touchGesture?: boolean;
       pinchDist?: number;
@@ -169,9 +171,13 @@
         this.notifyStorageFailure();
       }
       saveBattle() {
-        const s = this.game.s, expedition = this.expedition;
-        if (this.battleSaveError || this.view !== 'game' || !s || s.result || !expedition || s.rules.kind !== 'single-player' ||
-          s.map !== expedition.encounter.map || s.seed !== expedition.encounter.seed || s.depth !== expedition.depth) return true;
+        const s = this.game.s, expedition = this.expedition,
+          world = expedition?.worlds?.find(w => w.stage === this.activeWorldStage), recipe = world?.recipe ?? expedition;
+        if (this.battleSaveError || this.view !== 'game' || !s || s.result || !expedition || !recipe || s.rules.kind !== 'single-player') return true;
+        if (this.activeWorldStage !== null && (!world || world.error)) return false;
+        if (s.map !== recipe.encounter.map || s.seed !== recipe.encounter.seed || s.depth !== recipe.depth)
+          return !world;
+        if (!!s.rules.completed !== !!world) return false;
         if (this.game.stepping || !this.game.snapshotSafe) return false;
         const started = performance.now();
         this.lastBattleSaveAt = started;
@@ -182,7 +188,8 @@
             const cameraHome = tutorial.arrivalCamera?.home ?? this.battleIntro?.home;
             if (cameraHome) battle.tutorial.cameraHome = { ...cameraHome };
           }
-          expedition.battle = battle;
+          if (world) world.battle = battle;
+          else expedition.battle = battle;
           const saved = this.persistence.saveProgress(this.profile, expedition);
           this.lastBattleSaveAt = performance.now();
           this.battleSaveBytes = this.persistence.saveBytes;
@@ -250,6 +257,7 @@
       }
       event(...[type, data]: GameEvent) {
         if (type === 'start') {
+          this.activeWorldStage = this.launchingWorld?.stage ?? null;
           this.view = 'game';
           this.audio.resetBattleMusic?.();
           this.factionJustUnlocked = null;
@@ -283,7 +291,7 @@
           this.battleTutorial = null;
           this.battleIntro = null;
           if (data.restored) {
-            const tutorial = this.expedition?.battle?.tutorial;
+            const tutorial = this.launchingWorld ? null : this.expedition?.battle?.tutorial;
             if (tutorial) {
               this.battleTutorial = { step: tutorial.step, achieved: new Set(tutorial.achieved),
                 workersTrained: tutorial.workersTrained, elapsed: 0 };
@@ -326,12 +334,22 @@
                   : FACTIONS[this.game.s!.parties[this.localTeam].faction].color
             });
         } else if (type === 'result') {
+          if (this.activeWorldStage !== null || (this.game.s?.rules.kind === 'single-player' && this.game.s.rules.completed)) return;
           this.audio.stopVoice?.();
           this.battleIntro = null;
           this.battleTutorial = null;
           const firstResult = this.resultAetherRecovered === undefined;
           this.factionJustUnlocked = null;
           if (firstResult) {
+            let victoryWorld: ExpeditionWorld | undefined;
+            if (data.win && this.expedition) {
+              const recipe: ExpeditionBattleRecipe = JSON.parse(JSON.stringify({
+                faction: this.expedition.faction, abilities: this.expedition.abilities, depth: this.expedition.depth,
+                benefits: this.expedition.benefits, enemyBenefits: this.expedition.enemyBenefits, encounter: this.expedition.encounter
+              }));
+              victoryWorld = { stage: recipe.depth + 1, map: recipe.encounter.map, seed: recipe.encounter.seed,
+                recipe, battle: this.game.snapshotBattle(true) };
+            }
             let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.parties[0].meta?.aetherEvacuation || 0))),
               limit = AETHER_EVACUATION_CAPS[level],
               evacuated = Math.min(limit, Math.max(0, Math.floor(this.game.s?.parties[0].account.gas || 0))),
@@ -351,7 +369,8 @@
             this.resultCivilizationTotal = this.expedition?.civilizationScore || 0;
             if (data.win && this.expedition) {
               const previousUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
-              this.rememberStage();
+              this.expedition.worlds ??= [];
+              this.expedition.worlds.push(victoryWorld!);
               this.expedition.depth++;
               if (this.expedition.depth > this.profile.expeditionDepth) {
                 this.profile.expeditionDepth = this.expedition.depth;

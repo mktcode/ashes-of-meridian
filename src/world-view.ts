@@ -78,11 +78,13 @@ class PlacementGuideSampler {
   }
 }
 
-// Read-only menu snapshot; archives never borrow an army from another landscape.
-function savedBattleMenuScene(expedition: MeridianExpedition | null, map: BattlefieldId, seed: number):
+// Read-only menu snapshot; the explicit source disambiguates stages sharing a map/seed.
+function savedBattleMenuScene(expedition: MeridianExpedition | null, map: BattlefieldId, seed: number,
+    battle?: ExpeditionBattleSave | null):
     { entities: RenderEntity[]; center: Position; time: number } {
-  const state = expedition?.encounter.map === map && expedition.encounter.seed === seed
-    ? expedition.battle?.state : null;
+  const source = battle === undefined ? expedition?.encounter.map === map && expedition.encounter.seed === seed
+    ? expedition.battle : null : battle;
+  const state = source?.state.map === map && source.state.seed === seed ? source.state : null;
   const entities: RenderEntity[] = state ? state.entities.filter(e => e.hp > 0).map(e => ({ ...e })) : [];
   const buildings = entities.filter(e => e.kind === 'building');
   // Count neighbours in a camera-sized area; stable entity order breaks ties.

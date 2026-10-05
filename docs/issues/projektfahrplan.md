@@ -17,7 +17,7 @@ Die Tabelle ordnet Arbeitsfelder, nicht die Reihenfolge jedes Einzelschritts. Ge
 | Issue | Status, Wirkung und nächster Schritt |
 | --- | --- |
 | [Mobile Performance/Stabilität](mobile-performance.md) | Laptop-Verbesserung bestätigt; mobile Freezes/Context-loss nicht geklärt. Zuerst Buildzuordnung und konkreten Gerätebefund sichern, dann Abbruch-/Befehls-/Armeelast getrennt eingrenzen. Kein weiterer pauschaler Grafikabbau. |
-| [Spielstand](expeditions-spielstand.md) | Implementierung und manuelles Feedback positiv; Hintergrund/Prozessende, Grafikverlust und verständliche Speicherfehler offen. Wegen möglichem Fortschrittsverlust zusammen mit Mobilstabilität abnehmen, nicht Storage neu entwerfen. |
+| [Spielstand/Weltbesuche](expeditions-spielstand.md) | Gefechtsrestore manuell positiv; frühere Welten samt Weiterbau und komprimiertem Archiv integriert, menschliche Abnahme offen. Hintergrund/Prozessende, Grafikverlust, getrennte Save-Ziele, verständliche Speicherfehler und Archivkosten zusammen mit Mobilstabilität abnehmen. |
 | [Worker/Bauwegfindung](worker-bauwegfindung/issue.md) | Bekannte Fehlerklasse korrigiert, Originalstillstände nicht exakt reproduziert. Erreichbarer Bau, wiederholte Lieferungen und nachvollziehbarer Blockiert-/Ausgangsstatus vor weiterem Navigationsumbau. |
 | [Prozedurale Gefechtsstarts](procedural-battlefields.md) | HQ-Bauflächen und KI-Ausweichen verbessert; tatsächlicher bezahlter HQ-Abschluss, knappe Wirtschaftsflächen und Startfairness offen. Ein unspielbarer Start wiegt schwerer als neue Karten-/Modellinhalte. |
 | [Texturladefehler](texture-loading.md) | Im aktuellen Code belegter Fehlerpfad: fehlgeschlagene Pflichttexturen können als erfolgreich vorbereitet gelten. Kleine begrenzte Korrektur mit Fehler-/Parallelrequest-Regressionsfällen; keine angenommene Ursache der mobilen Abbrüche. |
@@ -30,7 +30,6 @@ Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische 
 
 | Issue | Fokus und Abhängigkeit |
 | --- | --- |
-| [Stage-Wiederbesuche/Weiterbau](stage-wiederbesuche.md) | Nutzerbestätigtes Ziel, Umsetzung noch offen: gespeicherte alte Welt als Menüszene und **Enter world**, ohne Rücksetzen oder erneute Vergütung. Zuerst autoritativen Archiv-/Speichervertrag und sichere Ergebnis-Tickgrenze klären; keine runübergreifende Sammlung. |
 | [Vollständige Runs/Geräte](playtest-validation.md) | Einstieg ohne Upgrades, FFA-Übergänge, Commands, Sieg/Niederlage und Reload zusammenhängend spielen. Zentrale menschliche Abnahme, nicht jede Fachliste als eigene Vollrunde wiederholen. |
 | [Schwierigkeit/Progression](expeditions-schwierigkeit-und-upgrades.md) | HQ-Abschluss, passive Truppenansammlung und tiefe Ressourcenstapel nach den bestehenden KI-/Ökonomieänderungen bewerten. Erst Befunde, dann Balancing; neue Vorteilsideen separat. |
 | [Mehrparteien-Simulation](mehrparteien-simulation.md) | Technische FFA-/Wirtschafts-/Angriffsnachweise gezielt nach Fixturepflege und ausdrücklicher Prüffreigabe. Alte Seed-/Pattbefunde sind keine Abnahme aktueller Weltrezepte. |

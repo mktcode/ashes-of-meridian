@@ -2,7 +2,7 @@
     'use strict';
     const runtimeMethods = {
       step(this: MeridianGame, dt: number) {
-        if (this.stepping) return;
+        if (this.stepping || this.dispatchingResult) return;
         this.stepping = true;
         this.snapshotSafe = false;
         try {
@@ -10,6 +10,15 @@
           this.snapshotSafe = true;
         } finally {
           this.stepping = false;
+          if (!this.snapshotSafe) this.pendingResult = null;
+        }
+        const pending = this.pendingResult;
+        this.pendingResult = null;
+        if (pending && pending.state === this.s) {
+          // Snapshot-safe boundary, but still reject recursive ticks from subscribers.
+          this.dispatchingResult = true;
+          try { this.emit('result', pending.result); }
+          finally { this.dispatchingResult = false; }
         }
       },
       stepTick(this: MeridianGame, dt: number) {
@@ -204,7 +213,7 @@
       },
       checkBattleResult(this: MeridianGame) {
         const s = this.s!;
-        if (s.result || s.rules.kind === 'scenario') return;
+        if (s.result || s.rules.kind === 'scenario' || s.rules.completed) return;
         return this.checkHQElimination();
       },
       checkHQElimination(this: MeridianGame) {
@@ -381,7 +390,7 @@
         return true;
       },
       finish(this: MeridianGame, win: boolean, text: string, civilizationScore = civilizationScoreForBuildings(this.s!.entities, 0)) {
-        if (this.s!.result || this.s!.rules.kind === 'scenario') return;
+        if (this.s!.result || this.s!.rules.kind === 'scenario' || this.s!.rules.completed) return;
         let s = this.s!,
           h = this.alive(e => e.team === 0 && e.type === 'hq') as BuildingEntity[],
           integrity = h.length ? Math.max(...h.map(e => e.hp / e.maxHp)) : 0;
@@ -398,7 +407,8 @@
           ),
           integrity
         };
-        this.emit('result', s.result);
+        if (this.stepping) this.pendingResult = { state: s, result: s.result };
+        else this.emit('result', s.result);
       },
     };
     type RuntimeMethods = typeof runtimeMethods;

@@ -19,10 +19,57 @@ function unpackBattleGrid(text: string, length: number): Uint8Array {
   return grid;
 }
 
+// Synchronous, bounded LZW for immutable world snapshots. Codes use JSON-safe
+// UTF-16 characters (no controls, quotes or surrogates); reset bounds the dictionary.
+function packWorldText(text: string): [string, string] {
+  if (text.length > 32 * 1024 * 1024) throw Error('World text exceeds size limit');
+  const alphabet = [...new Set(text.split(''))].join(''), limit = 52000;
+  if (!alphabet.length || alphabet.length >= limit) throw Error('Invalid world text alphabet');
+  let dictionary = new Map<string, number>(), next = 0;
+  const reset = () => { dictionary = new Map(); next = 0; for (let i = 0; i < alphabet.length; i++) dictionary.set(alphabet[i], next++); };
+  reset();
+  const codes: string[] = [];
+  let word = '';
+  // Encode UTF-16 cells, including lone surrogates, rather than codepoints.
+  for (let i = 0; i < text.length; i++) {
+    const cell = text[i], combined = word + cell;
+    if (dictionary.has(combined)) { word = combined; continue; }
+    codes.push(String.fromCharCode(dictionary.get(word)! + 256));
+    if (next < limit) dictionary.set(combined, next++);
+    else { codes.push(String.fromCharCode(limit + 256)); reset(); }
+    word = cell;
+  }
+  if (word) codes.push(String.fromCharCode(dictionary.get(word)! + 256));
+  return [alphabet, codes.join('')];
+}
+function unpackWorldText(value: unknown): string {
+  if (!Array.isArray(value) || value.length !== 2 || value.some(v => typeof v !== 'string'))
+    throw Error('Invalid packed world');
+  const [alphabet, codes] = value as [string, string], limit = 52000, maxLength = 32 * 1024 * 1024;
+  if (!alphabet.length || alphabet.length >= limit || new Set(alphabet.split('')).size !== alphabet.length || !codes.length)
+    throw Error('Invalid packed world alphabet');
+  let dictionary: string[] = [], previous = '', length = 0;
+  const output: string[] = [];
+  const reset = () => { dictionary = alphabet.split(''); previous = ''; };
+  reset();
+  for (let i = 0; i < codes.length; i++) {
+    const code = codes.charCodeAt(i) - 256;
+    if (code === limit) { reset(); continue; }
+    const word = dictionary[code] ?? (code === dictionary.length && previous ? previous + previous[0] : null);
+    if (!word || code < 0 || code >= limit || (!previous && code >= alphabet.length)) throw Error('Invalid packed world code');
+    length += word.length;
+    if (length > maxLength) throw Error('Packed world exceeds size limit');
+    output.push(word);
+    if (previous && dictionary.length < limit) dictionary.push(previous + word[0]);
+    previous = word;
+  }
+  return output.join('');
+}
+
 // A saved simulation is rejected as a whole, never repaired into a fresh battle.
 // Rules/content arrive from the app; this layer knows neither Game nor UI objects.
-function validExpeditionBattle(value: unknown, expedition: MeridianExpedition,
-  { abilities, units, buildings, upgrades, benefits }: PersistenceDependencies): value is ExpeditionBattleSave {
+function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecipe,
+  { abilities, units, buildings, upgrades, benefits }: PersistenceDependencies, completed = false): value is ExpeditionBattleSave {
   type Check = (v: unknown) => boolean;
   const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
   const num: Check = v => typeof v === 'number' && Number.isFinite(v);
@@ -91,7 +138,7 @@ function validExpeditionBattle(value: unknown, expedition: MeridianExpedition,
   }, { fieldWorkshopUsed: bool, deploymentPending: bool, eliminated: bool });
   const state = shape({
     depth: integer, seed: id, map: oneOf(expedition.encounter.map), time: nonnegative, parties: list(party, 4),
-    rules: shape({ kind: oneOf('single-player'), mission: shape({ id: oneOf(expedition.encounter.mission) }) }),
+    rules: shape({ kind: oneOf('single-player'), mission: shape({ id: oneOf(expedition.encounter.mission) }) }, { completed: oneOf(true) }),
     stopped: oneOf(false), nextId: id, entities: list(entity),
     supplyCaches: list(shape({ x: num, z: num, resource: oneOf('alloy', 'gas'), tier: oneOf(1, 2, 3), amount: nonnegative, collected: bool }), 1000),
     scans: list(shape({ x: num, z: num, r: nonnegative, until: num }, { team })),
@@ -115,7 +162,9 @@ function validExpeditionBattle(value: unknown, expedition: MeridianExpedition,
     tutorial: v => v === null || shape({ step: tutorialStep, achieved: list(tutorialStep, 7), workersTrained: integer }, { cameraHome: pos })(v)
   })(value)) return false;
   const b = value as ExpeditionBattleSave, s = b.state, count = expedition.encounter.enemies.length + 1;
-  if (s.depth !== expedition.depth || s.seed !== expedition.encounter.seed || s.parties.length !== count || b.sight.length !== count ||
+  if (s.rules.kind !== 'single-player' || !!s.rules.completed !== completed ||
+    (completed && (s.parties[0].eliminated || s.parties.slice(1).some(p => !p.eliminated))) ||
+    s.depth !== expedition.depth || s.seed !== expedition.encounter.seed || s.parties.length !== count || b.sight.length !== count ||
     s.parties.some((p, i) => p.id !== i || p.faction !== (i ? expedition.encounter.enemies[i - 1] : expedition.faction) ||
       p.controller.kind !== (i ? 'ai' : 'human') || Object.keys(abilities).some(k => !Object.hasOwn(p.account.abilities, k))) ||
     JSON.stringify(s.parties[0].loadout) !== JSON.stringify(expedition.abilities) ||
@@ -139,6 +188,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
   const PROFILE_KEY = 'meridian.profile.v1', STAGE_HISTORY_KEY = 'meridian.stage-history.v1';
   const memoryStore: Record<string, string | null> = {};
   let savedExpedition: unknown = null, expeditionError: string | null = null, saveBytes = 0;
+  const packedWorlds = new WeakMap<ExpeditionBattleSave, unknown>(), damagedWorlds = new Map<number, unknown>();
   const Store = {
     available: true,
     get(k: string) {
@@ -193,21 +243,14 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     }
     return d;
   }
-  function loadExpedition(): MeridianExpedition | null {
-    expeditionError = null;
-    try {
-      const profileRecord = JSON.parse(Store.get(PROFILE_KEY) || 'null'), p = profileRecord?.expedition;
-      savedExpedition = p ?? null;
-      if (p == null) return null;
-      if (profileRecord.version !== 1) throw Error('Incompatible profile save');
-      if (p.version !== 7 || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
+  function readRecipe(p: any): ExpeditionBattleRecipe {
+      if (!p || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
         !p.encounter || !Object.hasOwn(battlefields, p.encounter.map) ||
         typeof p.encounter.mission !== 'string' || !Object.hasOwn(missions, p.encounter.mission) ||
         !missions[p.encounter.mission].maps.includes(p.encounter.map) ||
         !['resource-start', 'exploration'].includes(p.encounter.deployment) || !Array.isArray(p.abilities) ||
         p.abilities.length !== 4 || new Set(p.abilities).size !== 4 ||
         p.abilities.some((key: unknown) => typeof key !== 'string' || !Object.hasOwn(abilities, key)) ||
-        (p.civilizationScore !== undefined && (!Number.isSafeInteger(p.civilizationScore) || p.civilizationScore < 0)) ||
         !Number.isInteger(p.depth) || p.depth < 0 || p.depth > 999999 ||
         !Number.isInteger(p.encounter.seed) || p.encounter.seed < 1 || p.encounter.seed > 99999999)
         throw Error('Incompatible expedition recipe');
@@ -223,11 +266,24 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
             Number(v) < 0 || Number(v) > (benefits[key].max ?? 999999))) throw Error('Invalid expedition benefits');
         return { ...input } as Record<string, number>;
       };
-      const normalized: MeridianExpedition = {
-        version: 7, faction: p.faction, abilities: [...p.abilities], depth: p.depth, civilizationScore: p.civilizationScore ?? 0,
+      return {
+        faction: p.faction, abilities: [...p.abilities], depth: p.depth,
         benefits: copyBenefits(p.benefits), enemyBenefits: p.enemyBenefits.map(copyBenefits),
-        encounter: { ...p.encounter, enemies: [...p.encounter.enemies] }, offers: [], battle: null
+        encounter: { ...p.encounter, enemies: [...p.encounter.enemies] }
       };
+  }
+  function loadExpedition(): MeridianExpedition | null {
+    expeditionError = null;
+    damagedWorlds.clear();
+    try {
+      const profileRecord = JSON.parse(Store.get(PROFILE_KEY) || 'null'), p = profileRecord?.expedition;
+      savedExpedition = p ?? null;
+      if (p == null) return null;
+      if (profileRecord.version !== 1 || p.version !== 7 ||
+          (p.civilizationScore !== undefined && (!Number.isSafeInteger(p.civilizationScore) || p.civilizationScore < 0)))
+        throw Error('Incompatible expedition save');
+      const normalized: MeridianExpedition = { ...readRecipe(p), version: 7, civilizationScore: p.civilizationScore ?? 0,
+        offers: [], battle: null };
       if (!Array.isArray(p.offers) || p.offers.length > 3 || new Set(p.offers).size !== p.offers.length ||
         p.offers.some((key: unknown) => typeof key !== 'string' || !Object.hasOwn(benefits, key) ||
           (benefits[key].max !== undefined && (normalized.benefits[key] || 0) >= benefits[key].max!)))
@@ -237,6 +293,30 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
       if (p.battle !== null) {
         if (normalized.offers.length || !validExpeditionBattle(p.battle, normalized, deps)) throw Error('Invalid battle save');
         normalized.battle = p.battle;
+      }
+      if (p.worlds !== undefined) {
+        if (!Array.isArray(p.worlds) || p.worlds.length > normalized.depth) throw Error('Invalid world archive');
+        const stages = new Set<number>();
+        normalized.worlds = p.worlds.map((w: any): ExpeditionWorld => {
+          if (!w || !Number.isInteger(w.stage) || w.stage < 1 || w.stage > normalized.depth || stages.has(w.stage) ||
+              !Object.hasOwn(battlefields, w.map) || !Number.isInteger(w.seed) || w.seed < 1 || w.seed > 99999999)
+            throw Error('Invalid archived world identity');
+          stages.add(w.stage);
+          try {
+            const recipe = readRecipe(w.recipe), battle = w.battle?.encoding === 'lzw-v1'
+              ? JSON.parse(unpackWorldText(w.battle.data)) : w.battle;
+            if (recipe.depth + 1 !== w.stage || recipe.encounter.map !== w.map || recipe.encounter.seed !== w.seed ||
+                !validExpeditionBattle(battle, recipe, deps, true) || battle.tutorial !== null)
+              throw Error('Invalid completed world snapshot');
+            packedWorlds.set(battle, w.battle);
+            return { stage: w.stage, map: w.map, seed: w.seed, recipe, battle };
+          } catch (e) {
+            warn('Archived world could not be restored:', e);
+            damagedWorlds.set(w.stage, w);
+            return { stage: w.stage, map: w.map, seed: w.seed, recipe: null, battle: null,
+              error: 'This world save is damaged or incompatible. It cannot be entered or restarted.' };
+          }
+        });
       }
       return normalized;
     } catch (e) {
@@ -256,9 +336,33 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     catch (e) { Store.available = false; warn('Save could not be serialized:', e); return false; }
   }
   function saveProgress(profile: MeridianProfile, expedition: MeridianExpedition | null) {
-    savedExpedition = expedition;
     expeditionError = null;
-    const saved = write(profile, expedition);
+    if (!expedition?.worlds) damagedWorlds.clear();
+    try {
+      savedExpedition = expedition ? { ...expedition, ...(expedition.worlds ? { worlds: expedition.worlds.map(w => {
+        if (w.error) {
+          const original = damagedWorlds.get(w.stage);
+          if (!original) throw Error('Missing damaged world record');
+          return original;
+        }
+        if (!w.battle || !w.recipe) throw Error('Missing archived world snapshot');
+        let packed = packedWorlds.get(w.battle);
+        if (!packed) {
+          const text = JSON.stringify(w.battle), data = packWorldText(text);
+          packed = { encoding: 'lzw-v1', data };
+          if (JSON.stringify(packed).length >= text.length) packed = w.battle;
+          packedWorlds.set(w.battle, packed);
+        }
+        return { stage: w.stage, map: w.map, seed: w.seed, recipe: w.recipe, battle: packed };
+      }) } : {}) } : null;
+    } catch (e) {
+      Store.available = false;
+      warn('World archive could not be serialized:', e);
+      // Retain usable in-tab progress even if serialization itself fails.
+      savedExpedition = expedition ? { ...expedition, worlds: expedition.worlds?.map(w =>
+        w.error ? damagedWorlds.get(w.stage) ?? w : w) } : null;
+    }
+    const saved = write(profile, savedExpedition);
     if (!expedition) Store.remove(STAGE_HISTORY_KEY);
     return saved;
   }
@@ -273,6 +377,9 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     loadStageHistory(expedition) {
       if (!expedition) return [];
       const current = { stage: expedition.depth + 1, map: expedition.encounter.map, seed: expedition.encounter.seed };
+      // New authoritative archives need no second storage record or contiguous history.
+      if (expedition.worlds) return [...expedition.worlds.map(w => ({ stage: w.stage, map: w.map, seed: w.seed })), current]
+        .sort((a, b) => a.stage - b.stage);
       try {
         const record = JSON.parse(Store.get(STAGE_HISTORY_KEY) || 'null'), stages = record?.stages;
         // The archive is cosmetic; losing it cannot invalidate the authoritative save.

@@ -89,7 +89,7 @@
         const previewSnapshot = $('previewTransition'), snapshotContext = previewSnapshot.getContext('2d');
         let previewChange: {
           id: number; map: BattlefieldId; seed: number; phase: 'capture' | 'loading' | 'ready' | 'blend';
-          world?: Battlefield; animation?: Animation; resolve: (ready: boolean) => void;
+          world?: Battlefield; battle?: ExpeditionBattleSave | null; animation?: Animation; resolve: (ready: boolean) => void;
         } | null = null;
         function finishPreviewChange(ready: boolean) {
           const change = previewChange;
@@ -99,12 +99,14 @@
           change?.animation?.cancel();
           change?.resolve(ready);
         }
-        function previewEntities(map: BattlefieldId, seed: number) {
-          const scene = savedBattleMenuScene(ui.expedition, map, seed);
+        function previewEntities(map: BattlefieldId, seed: number, battle?: ExpeditionBattleSave | null) {
+          const scene = savedBattleMenuScene(ui.expedition, map, seed, battle);
           preview = scene.entities;
           previewCenter = scene.center;
           previewTime = scene.time;
-          previewSavedBattle = !!ui.expedition?.battle && ui.expedition.encounter.map === map && ui.expedition.encounter.seed === seed;
+          const source = battle === undefined ? ui.expedition?.encounter.map === map && ui.expedition.encounter.seed === seed
+            ? ui.expedition.battle : null : battle;
+          previewSavedBattle = !!source && source.state.map === map && source.state.seed === seed;
         }
         function loadingBattlefield(text: string) {
           const loader = $('loading');
@@ -118,14 +120,14 @@
           loader.classList.remove('hidden');
         }
         let initialHomeReveal = true;
-        ui.onPreview = async (map, seed = 40517, smooth = false) => {
+        ui.onPreview = async (map, seed = 40517, smooth = false, battle) => {
           finishPreviewChange(false);
           const id = ++worldRequest, mapId = battlefieldId(map);
           if (smooth && ui.view === 'home' && snapshotContext) {
             // Capture inside the render callback: WebGL's default buffer is not
             // preserved between frames. No preserveDrawingBuffer or readback loop.
             return new Promise<boolean>(resolve => {
-              previewChange = { id, map: mapId, seed, phase: 'capture', resolve };
+              previewChange = { id, map: mapId, seed, battle, phase: 'capture', resolve };
             });
           }
           try {
@@ -133,7 +135,7 @@
             if (!ready || id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') return false;
             worldView.sync(world, false);
             R.fogOn = false;
-            previewEntities(mapId, seed);
+            previewEntities(mapId, seed, battle);
             $('loading').classList.add('hidden');
             if (initialHomeReveal && ui.view === 'home') {
               initialHomeReveal = false;
@@ -179,18 +181,19 @@
             }).catch(() => {}); // Superseding previews cancel only their own animation.
           }
         }
-        ui.onLaunchBattle = async (options, expedition) => {
+        ui.onLaunchBattle = async (options, expedition, world) => {
           finishPreviewChange(false);
           const id = ++worldRequest, mapId = battlefieldId(options.map), profile = BATTLEFIELDS[mapId].render;
           if (!R.hasBattlefieldTextures(profile)) loadingBattlefield('Preparing operation');
           let ready: boolean;
           try { ready = await R.prepareBattlefieldTextures(profile); }
-          catch (e) { if (id === worldRequest) textureFailure(e); return; }
-          if (id !== worldRequest || expedition !== ui.expedition) return;
-          if (!ready) { textureFailure(Error('Required battlefield textures are unavailable')); return; }
+          catch (e) { if (id === worldRequest) textureFailure(e); return false; }
+          if (id !== worldRequest || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' : expedition !== ui.expedition)) return false;
+          if (!ready) { textureFailure(Error('Required battlefield textures are unavailable')); return false; }
           try {
-            if (expedition.battle) game.restoreBattle(expedition);
+            if (expedition.battle) game.restoreBattle(expedition, !!world);
             else game.start(options);
+            return true;
           } finally { $('loading').classList.add('hidden'); }
         };
         const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R, () => ({
@@ -457,7 +460,7 @@
             if (previewChange?.phase === 'ready') {
               worldView.sync(previewChange.world!, false);
               R.fogOn = false;
-              previewEntities(previewChange.map, previewChange.seed);
+              previewEntities(previewChange.map, previewChange.seed, previewChange.battle);
               previewChange.world = undefined;
               previewChange.phase = 'blend';
             }
@@ -502,7 +505,7 @@
             }
             diagnostics?.recorder.phase('glSubmission');
             // Simulation time freezes with pause/result and scales with game speed.
-            // Saved home scenes freeze their battle's atmosphere; archives start at time zero.
+            // All saved home worlds freeze their atmosphere; landscapes without saves start at zero.
             R.setBattlefieldTime(ui.view === 'game' && game.s ? game.s.time : ui.view === 'home' ? previewTime : 0);
             // Saved battles use the battlefield sky, not the seed-only celestial backdrop.
             const menuWorld = ui.view === 'home' && !previewSavedBattle ? worldView.world : null;
@@ -564,7 +567,7 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 7, battle: null, faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, civilizationScore: 0,
+          ui.expedition = { version: 7, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, civilizationScore: 0,
             benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
             encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,

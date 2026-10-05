@@ -5,7 +5,7 @@ const { join } = require('node:path');
 const groups = Object.freeze({
   logic: ['core', 'harness', 'test-selection', 'abilities', 'parties', 'ffa',
     'ai-planning', 'commands', 'command-queue', 'navigation', 'effect-rng', 'perspective',
-    'persistence', 'civilization', 'simulation-validation'],
+    'persistence', 'stage-worlds', 'civilization', 'simulation-validation'],
   terrain: ['terrain', 'elevation', 'building-ground', 'westmark', 'crystals', 'world-designs',
     'ecology', 'world-variations', 'environment', 'supply-caches'],
   presentation: ['presentation', 'diagnostics', 'controls', 'codex', 'ui-assets', 'renderer', 'materials', 'model-thumbnails', 'menu-sky', 'menu-scene', 'placement-guide', 'landscape-boundary'],

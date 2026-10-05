@@ -136,9 +136,12 @@ test('score counts completed surviving own buildings only and defeat withdrawal 
 });
 test('result credit is added once per battle, persisted with the expedition and retained on defeat; home shows current or last run',()=>{
  const {game}=fixture();const writes=[];
+ // This isolates UI accounting; the real victory-tick archive is covered in stage-worlds.
+ game.snapshotBattle=archive=>{assert.equal(archive,true);return {version:1,tutorial:null,
+  state:JSON.parse(JSON.stringify({...game.s,result:null,rules:{kind:'single-player',completed:true}}))};};
  const ui=Object.create(MeridianUI.prototype);
- Object.assign(ui,{game,profile:{aether:0,expeditionDepth:0,lastCivilizationScore:0},
-  expedition:{depth:0,civilizationScore:10,encounter:{map:'desert'},benefits:{},enemyBenefits:[{}]},
+ Object.assign(ui,{game,activeWorldStage:null,profile:{aether:0,expeditionDepth:0,lastCivilizationScore:0},
+  expedition:{faction:0,abilities:['drop'],depth:0,civilizationScore:10,encounter:{map:'desert',seed:1409},benefits:{},enemyBenefits:[{}]},
   audio:{setMode(){},sound(){}},persistence:{saveProgress(profile,expedition){writes.push(JSON.parse(JSON.stringify({profile,expedition})));}},
   unlockedFactionForDepth:()=>0,rememberStage(){},createEncounter:()=>({map:'desert',enemies:[1]}),createBenefitOffers:()=>[],notifyStorageFailure(){},showResult(){}});
  game.s.stats.structuresDestroyed=0;

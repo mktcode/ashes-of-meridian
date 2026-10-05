@@ -25,6 +25,6 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 
 - [ ] Mehrere Siege/Vorteilswahlen, Upgrades, Niederlage/Abbruch und Fraktionsfreischaltungen. Auszahlung nicht durch erneuten Ergebnisaufruf vervielfachen.
 - [ ] Profil/Expedition unter `file://` und Webhosting sowie Pause/Audio/Rückkehr menschlich abnehmen; Snapshot-Restore, Run-Ende und Speicherfehler nach [Spielstandsabnahme](expeditions-spielstand.md).
-- [ ] Landschaftsarchiv: Pfeile/Labels, weiche Wechsel bei teuren Karten, Reduced motion und Reload; betrachtete Stage niemals mit Continue-Checkpoint verwechseln.
+- [ ] Stage-Auswahl: gespeicherte Bebauung/Tageszeit, Pfeile/Labels, weiche Wechsel bei teuren Karten, Reduced motion und Reload. **Continue expedition** lädt die aktuelle Stage, **Enter world** die ausgewählte abgeschlossene Welt; während des Wechsels kein Eintritt. Weiterbau und getrennte Spielstände mit der [Spielstandsabnahme](expeditions-spielstand.md) zusammen prüfen; reine ältere Landschaftsvorschauen bleiben nicht betretbar.
 
 Karten-/Darstellung zentral unter [Landschaften](project-tomorrow.md), Worker-Gegenverkehr unter [Navigation](worker-bauwegfindung/issue.md), Wärme/Stabilität unter [Performance](mobile-performance.md). Keine automatische Test-/Balancingfreigabe aus dieser Liste.

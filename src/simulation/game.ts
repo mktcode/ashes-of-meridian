@@ -75,6 +75,8 @@
       // Game-owned, not queue-owned: a restart inside a callback cannot bypass it.
       stepping = false;
       snapshotSafe = true;
+      pendingResult: { state: RunState; result: BattleResult } | null = null;
+      dispatchingResult = false;
 
       get localTeam(): PlayerTeam { return this.world?.viewTeam ?? 0; }
 
@@ -119,25 +121,32 @@
         this.effects.reset();
         return true;
       },
-      snapshotBattle(this: MeridianGame): ExpeditionBattleSave {
-        if (this.stepping || !this.snapshotSafe || !this.s || !this.world || this.s.rules.kind !== 'single-player' || this.s.result || this.s.stopped)
+      snapshotBattle(this: MeridianGame, archiveVictory = false): ExpeditionBattleSave {
+        if (this.stepping || !this.snapshotSafe || !this.s || !this.world || this.s.rules.kind !== 'single-player' ||
+            (archiveVictory ? !this.s.result?.win : !!this.s.result) || this.s.stopped)
           throw Error('Only a completed, running expedition tick can be saved');
+        const state = JSON.parse(JSON.stringify(this.s)) as RunState;
+        if (archiveVictory && state.rules.kind === 'single-player') {
+          state.result = null;
+          state.rules.completed = true;
+        }
+        const ids = new Set(state.entities.map(e => e.id));
         return {
-          version: 1, state: JSON.parse(JSON.stringify(this.s)) as RunState,
+          version: 1, state,
           randomState: this.random.state, fogClock: this.fogClock, resultClock: this.resultClock,
           navDirty: this.navDirty, pathVersion: this.world.pathVersion, gridSize: this.world.gridSize,
           blocked: packBattleGrid(this.world.blocked),
           sight: this.world.sight.map(v => ({ visible: packBattleGrid(v.visible), explored: packBattleGrid(v.explored) })),
-          spatial: [...this.spatial].map(([key, entities]) => [key, entities.map(e => e.id)]), tutorial: null
+          spatial: [...this.spatial].map(([key, entities]) => [key, entities.filter(e => !archiveVictory || ids.has(e.id)).map(e => e.id)]), tutorial: null
         };
       },
-      restoreBattle(this: MeridianGame, expedition: MeridianExpedition) {
+      restoreBattle(this: MeridianGame, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, completed = false) {
         const save = expedition.battle;
         if (this.stepping || !save || !validExpeditionBattle(save, expedition, {
           abilities: ABILITIES, units: UNITS, buildings: BUILDINGS, upgrades: PERMANENT_UPGRADES,
           benefits: EXPEDITION_BENEFITS, battlefields: BATTLEFIELDS, missions: MISSIONS,
           enemyCount: expeditionEnemyCount, clamp, getStorage: () => { throw Error('No storage in simulation'); }, warn: () => {}
-        })) throw Error('Invalid expedition battle snapshot');
+        }, completed)) throw Error('Invalid expedition battle snapshot');
         // Reconstruct in isolation. Failed validation/world generation cannot replace a live game.
         const state = JSON.parse(JSON.stringify(save.state)) as RunState,
           world = new Battlefield(state.seed, state.map, state.parties.length);
@@ -153,6 +162,7 @@
           world.fogPixels[i] = world.visible[i] ? 255 : world.explored[i] ? 80 : 0;
         world.fogVersion++;
         const ids = new Map(state.entities.map(e => [e.id, e]));
+        this.pendingResult = null;
         this.s = state; this.world = world; this.ids = ids;
         this.spatial = new Map(save.spatial.map(([key, members]) => [key, members.map(id => ids.get(id)!)]));
         this.random = seeded(save.randomState);
@@ -183,6 +193,7 @@
         return this.startBattle(opts, parties, rules, aiTeams);
       },
       startBattle(this: MeridianGame, opts: BattleOptions & { startSeed?: number }, parties: PartyState[], rules: BattleRules, aiTeams: PlayerTeam[]) {
+        this.pendingResult = null;
         this.snapshotSafe = false;
         const map = battlefieldId(opts.map),
           seed = opts.seed || Math.floor(Math.random() * 1e8);

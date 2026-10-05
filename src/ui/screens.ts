@@ -7,7 +7,9 @@
           this.openModal('saveUnavailable', `<div class="eyebrow">SAVE UNAVAILABLE</div><h1>Progress is only in this tab.</h1><p>The current battle has not been saved to this browser. You can continue in this tab, but closing or reloading may restore older progress.</p><div class="launch-row"><button class="primary" data-ui="backPause">KEEP PLAYING</button><button class="secondary" data-ui="leaveUnsaved">MAIN MENU ANYWAY</button></div>`);
           return;
         }
+        const returningStage = this.activeWorldStage;
         this.game.s = null;
+        this.activeWorldStage = null;
         this.battleIntro = null;
         this.battleTutorial = null;
         this.view = 'home';
@@ -26,13 +28,17 @@
         $('radio').classList.add('hidden');
         $('menu').classList.remove('hidden');
         this.R.fogOn = false;
-        if (this.onPreview) this.onPreview(this.expedition?.encounter.map || 'desert', this.expedition?.encounter.seed);
         this.rememberStage();
-        this.stagePreviewIndex = Math.max(0, this.stageHistory.length - 1);
+        const returningIndex = this.stageHistory.findIndex(s => s.stage === returningStage);
+        this.stagePreviewIndex = returningIndex >= 0 ? returningIndex : Math.max(0, this.stageHistory.length - 1);
         this.stagePreviewBusy = false;
         $('menu').innerHTML =
           renderHomeScreen(this.expedition, this.stageHistory.length > 1,
             this.expedition ? BATTLEFIELDS[this.expedition.encounter.map].name : '', this.profile.lastCivilizationScore);
+        const entry = this.stageHistory[this.stagePreviewIndex];
+        if (this.onPreview) this.onPreview(entry?.map || this.expedition?.encounter.map || 'desert',
+          entry?.seed ?? this.expedition?.encounter.seed, false, this.stageBattle(entry?.stage));
+        this.updateStagePreview();
         if (this.battleSaveError) this.showBattleSaveError();
       },
       showBattleSaveError(this: MeridianUI) {
@@ -42,6 +48,10 @@
       },
       rememberStage(this: MeridianUI) {
         if (!this.expedition) { this.stageHistory = []; return; }
+        if (this.expedition.worlds) {
+          this.stageHistory = this.persistence.loadStageHistory(this.expedition);
+          return;
+        }
         const current = { stage: this.expedition.depth + 1, map: this.expedition.encounter.map, seed: this.expedition.encounter.seed },
           last = this.stageHistory[this.stageHistory.length - 1];
         if (last?.stage === current.stage && last.map === current.map && last.seed === current.seed) return;
@@ -49,8 +59,24 @@
         this.stageHistory.push(current);
         this.persistence.saveStageHistory?.(this.stageHistory);
       },
+      stageBattle(this: MeridianUI, stage?: number): ExpeditionBattleSave | null {
+        if (stage === undefined || stage === (this.expedition?.depth ?? -1) + 1) return this.expedition?.battle ?? null;
+        return this.expedition?.worlds?.find(w => w.stage === stage)?.battle ?? null;
+      },
+      enterSelectedStage(this: MeridianUI) {
+        if (this.view !== 'home' || this.modalKind || this.stagePreviewBusy || this.launchingBattle) return;
+        const entry = this.stageHistory[this.stagePreviewIndex];
+        if (!entry || entry.stage === (this.expedition?.depth ?? -1) + 1) return this.continueExpedition();
+        const world = this.expedition?.worlds?.find(w => w.stage === entry.stage);
+        if (!world) { this.toast('Only the landscape was saved for this stage. This world cannot be entered.'); return; }
+        if (world.error || !world.battle || !world.recipe) {
+          this.openModal('worldSaveError', `<div class="eyebrow">WORLD SAVE UNAVAILABLE</div><h1>Cannot enter this world.</h1><p>${esc(world.error)}</p><p>Your current expedition is kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">KEEP SAVE</button><button class="primary" data-ui="discardWorldSave" data-stage="${world.stage}">DISCARD WORLD</button></div>`);
+          return;
+        }
+        void this.startExpeditionBattle(world);
+      },
       async browseStage(this: MeridianUI, direction: -1 | 1) {
-        if (this.view !== 'home' || this.modalKind || !this.expedition || this.stagePreviewBusy) return;
+        if (this.view !== 'home' || this.modalKind || !this.expedition || this.stagePreviewBusy || this.launchingBattle) return;
         const index = this.stagePreviewIndex + direction, entry = this.stageHistory[index];
         if (!entry || !this.onPreview) return;
         const panel = $('menu').querySelector<HTMLElement>('.expedition-stage');
@@ -58,7 +84,7 @@
         this.stagePreviewBusy = true;
         this.updateStagePreview();
         try {
-          const ready = await this.onPreview(entry.map, entry.seed, true);
+          const ready = await this.onPreview(entry.map, entry.seed, true, this.stageBattle(entry.stage));
           if (!ready || this.view !== 'home' || $('menu').querySelector('.expedition-stage') !== panel) return;
           this.stagePreviewIndex = index;
           this.updateStagePreview();
@@ -83,10 +109,17 @@
         panel.querySelector('.stage-label')!.textContent = archived ? 'STAGE ARCHIVE' : 'CHECKPOINT';
         panel.querySelector('.stage-crystal strong')!.textContent = String(entry.stage);
         panel.querySelector('.stage-map')!.textContent = BATTLEFIELDS[entry.map].name;
-        panel.querySelector('.stage-status')!.textContent = this.stagePreviewBusy ? 'PREPARING LANDSCAPE…' :
-          archived ? `CLEARED · CONTINUE AT ${this.expedition.depth + 1}` : 'CURRENT · LANDSCAPE PREVIEW';
-        panel.querySelector<HTMLButtonElement>('[data-ui="previousStage"]')!.disabled = this.stagePreviewBusy || this.stagePreviewIndex === 0;
-        panel.querySelector<HTMLButtonElement>('[data-ui="nextStage"]')!.disabled = this.stagePreviewBusy || this.stagePreviewIndex === this.stageHistory.length - 1;
+        const world = this.expedition.worlds?.find(w => w.stage === entry.stage);
+        panel.querySelector('.stage-status')!.textContent = this.stagePreviewBusy ? 'PREPARING WORLD…' :
+          archived ? world?.error ? 'WORLD SAVE UNAVAILABLE' : world ? 'CLEARED · WORLD SAVED' : 'LANDSCAPE ONLY · NO WORLD SAVE' : 'CURRENT CHECKPOINT';
+        const button = $('menu').querySelector<HTMLButtonElement>('[data-ui="enterSelectedStage"]');
+        if (button) {
+          button.innerHTML = `${archived ? 'Enter world' : 'Continue expedition'} <span aria-hidden="true">→</span>`;
+          button.title = archived ? `Enter stage ${entry.stage}` : `Continue at stage ${entry.stage}`;
+          button.disabled = this.stagePreviewBusy || this.launchingBattle || (archived && !world);
+        }
+        panel.querySelector<HTMLButtonElement>('[data-ui="previousStage"]')!.disabled = this.stagePreviewBusy || this.launchingBattle || this.stagePreviewIndex === 0;
+        panel.querySelector<HTMLButtonElement>('[data-ui="nextStage"]')!.disabled = this.stagePreviewBusy || this.launchingBattle || this.stagePreviewIndex === this.stageHistory.length - 1;
       },
       showCodex(this: MeridianUI) {
         if (this.view === 'codexModel') this.onPreview?.();
@@ -200,32 +233,38 @@
           this.toast('Select four command modules.'); return;
         }
         this.battleFaction = faction;
-        this.expedition = { version: 7, battle: null, faction, abilities: [...this.battleAbilities], depth: 0, civilizationScore: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
+        this.expedition = { version: 7, battle: null, worlds: [], faction, abilities: [...this.battleAbilities], depth: 0, civilizationScore: 0, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
         this.persistence.saveProgress(this.profile, this.expedition);
         this.notifyStorageFailure();
         this.stageHistory = [];
         this.rememberStage();
         this.startExpeditionBattle();
       },
-      async startExpeditionBattle(this: MeridianUI) {
-        if (!this.expedition || this.launchingBattle || this.expedition.offers.length) return;
+      async startExpeditionBattle(this: MeridianUI, world?: ExpeditionWorld) {
+        if (!this.expedition || this.launchingBattle || (!world && this.expedition.offers.length)) return;
+        if (world && (!this.expedition.worlds?.includes(world) || world.error || !world.recipe || !world.battle)) return;
         if (this.battleSaveError) return this.showBattleSaveError();
         if (this.view === 'game' && this.game.s && !this.game.s.result) return this.showPause();
-        const expedition = this.expedition;
+        const expedition = world ? { ...world.recipe!, battle: world.battle } : this.expedition;
         this.launchingBattle = true;
+        this.launchingWorld = world ?? null;
+        this.updateStagePreview();
         this.audio.unlock();
-        const options: BattleOptions = { faction: this.expedition.faction, ...this.expedition.encounter,
-          abilities: this.expedition.abilities, benefits: this.expedition.benefits,
-          enemyBenefits: this.expedition.enemyBenefits, depth: this.expedition.depth };
+        const options: BattleOptions = { faction: expedition.faction, ...expedition.encounter,
+          abilities: expedition.abilities, benefits: expedition.benefits,
+          enemyBenefits: expedition.enemyBenefits, depth: expedition.depth };
         try {
-          if (this.onLaunchBattle) await this.onLaunchBattle(options, expedition);
-          else if (expedition.battle) this.game.restoreBattle(expedition);
+          if (this.onLaunchBattle) await this.onLaunchBattle(options, expedition, world);
+          else if (expedition.battle) this.game.restoreBattle(expedition, !!world);
           else this.game.start(options);
         } catch (e) {
           console.error('Expedition launch failed:', e);
-          this.battleSaveError = e instanceof Error ? e.message : String(e);
-          this.showBattleSaveError();
-        } finally { this.launchingBattle = false; }
+          if (world) this.openModal('worldLoadError', `<div class="eyebrow">WORLD LOAD FAILED</div><h1>Cannot enter this world.</h1><p>${esc(e instanceof Error ? e.message : String(e))}</p><button class="secondary" data-ui="closeModal">RETURN</button>`);
+          else {
+            this.battleSaveError = e instanceof Error ? e.message : String(e);
+            this.showBattleSaveError();
+          }
+        } finally { this.launchingBattle = false; this.launchingWorld = null; this.updateStagePreview(); }
       },
       continueExpedition(this: MeridianUI) {
         if (this.battleSaveError) return this.showBattleSaveError();
@@ -295,7 +334,7 @@
         this.saveBattle();
         this.openModal(
           'pause',
-          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">MAIN MENU</button><button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button></div><p class="ui-note">This battle is autosaved and Continue expedition restores it paused. A hard interruption may return to the last successful autosave. Abandoning ends the expedition.</p>`
+          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">MAIN MENU</button>${this.activeWorldStage === null ? '<button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button>' : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition restores it paused. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This cleared world is autosaved separately from your current battle. Further building grants no expedition rewards or score.`} A hard interruption may return to the last successful autosave.</p>`
         );
       },
       resume(this: MeridianUI) {

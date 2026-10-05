@@ -240,6 +240,20 @@
           case 'nextStage':
             void this.browseStage(1);
             break;
+          case 'enterSelectedStage':
+            this.enterSelectedStage();
+            break;
+          case 'discardWorldSave': {
+            if (this.view !== 'home' || this.modalKind !== 'worldSaveError' || !this.expedition) break;
+            const stage = this.stageHistory[this.stagePreviewIndex]?.stage;
+            const world = this.expedition.worlds?.find(w => w.stage === stage);
+            if (!world?.error) break;
+            this.expedition.worlds = this.expedition.worlds!.filter(w => w !== world);
+            this.persistence.saveProgress(this.profile, this.expedition);
+            this.notifyStorageFailure();
+            this.showHome();
+            break;
+          }
           case 'continueExpedition':
             this.continueExpedition();
             break;
@@ -250,11 +264,11 @@
             this.showExpeditionBenefits();
             break;
           case 'abandon':
-            if (this.view !== 'game' || !this.paused || !this.expedition || this.modalKind !== 'pause') break;
-            this.openModal('abandonExpedition', `<div class="eyebrow">END EXPEDITION</div><h1>Abandon this expedition?</h1><p>This ends the entire expedition and discards its saved battle, depth and expedition benefits. Your permanent fleet upgrades and reserve are kept. This cannot be undone.</p><div class="btnstack"><button class="primary" data-ui="closeModal">KEEP PLAYING</button><button class="secondary" data-ui="confirmAbandon">ABANDON EXPEDITION</button></div>`);
+            if (this.view !== 'game' || !this.paused || !this.expedition || this.activeWorldStage !== null || this.modalKind !== 'pause') break;
+            this.openModal('abandonExpedition', `<div class="eyebrow">END EXPEDITION</div><h1>Abandon this expedition?</h1><p>This ends the entire expedition and discards its saved battle, all saved worlds, depth and expedition benefits. Your permanent fleet upgrades and reserve are kept. This cannot be undone.</p><div class="btnstack"><button class="primary" data-ui="closeModal">KEEP PLAYING</button><button class="secondary" data-ui="confirmAbandon">ABANDON EXPEDITION</button></div>`);
             break;
           case 'confirmAbandon':
-            if (this.view !== 'game' || !this.paused || !this.expedition || this.modalKind !== 'abandonExpedition') break;
+            if (this.view !== 'game' || !this.paused || !this.expedition || this.activeWorldStage !== null || this.modalKind !== 'abandonExpedition') break;
             this.modalKind = '';
             this.expedition = null;
             this.persistence.saveProgress(this.profile, null);

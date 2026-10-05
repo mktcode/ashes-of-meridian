@@ -24,7 +24,7 @@ test('stage browsing is bounded and purely visual; continue always launches the 
   vm.runInContext('Math.random = () => { throw Error("Browsing consumed RNG"); };', h.context);
   await ui.browseStage(1); assert.equal(previews.length, 0);
   await ui.browseStage(-1); await ui.browseStage(-1); await ui.browseStage(-1);
-  assert.deepEqual(previews, [['alien-planet', 22, true], ['mothership', 11, true]]);
+  assert.deepEqual(previews, [['alien-planet', 22, true, null], ['mothership', 11, true, null]]);
   assert.equal(ui.stagePreviewIndex, 0);
   assert.equal(JSON.stringify({ expedition: ui.expedition, profile: ui.profile, history: ui.stageHistory }), before);
   assert.equal(saved.length, 1);
@@ -236,6 +236,11 @@ function setup() {
     s: { rules: { kind: 'single-player', mission: { id: 'hq-elimination' } },
       cam: { x: 0, z: 0, zoom: 50 }, time: 0, speed: 1, entities: [],
       parties: [{id:0,faction:0,loadout:['orbital','repair','scan','drop'],meta:{},benefits:{},controller:{kind:'human'},account:{alloy:0,gas:0,energy:100,abilities:{}}}] },
+    snapshotBattle(archiveVictory = false) {
+      const state = JSON.parse(JSON.stringify(this.s));
+      if (archiveVictory) { state.result = null; state.rules.completed = true; }
+      return {version:1,state,tutorial:null};
+    },
     effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
@@ -273,7 +278,9 @@ function setup() {
     project: (x, y, z) => ({ x, y: z })
   },
     { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, tutorialComplete: false, upgrades: {}, settings: { quality: 2 } },
-    { expeditionError: null, saveProfile() {}, saveProgress() { return true; } });
+    { expeditionError: null, saveProfile() {}, saveProgress() { return true; },
+      loadStageHistory(e) { if (!e) return []; return [...(e.worlds || []).map(w=>({stage:w.stage,map:w.map,seed:w.seed})),
+        {stage:e.depth+1,map:e.encounter.map,seed:e.encounter.seed}]; } });
   ui.view = 'game'; ui.paused = false;
   const world = document.getElementById('world'), minimap = document.getElementById('minimap');
   const pointer = (type, x, y, options = {}) => {
@@ -1824,7 +1831,7 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
     encounter: { mission: 'hq-elimination', enemies: [1, 2, 0], map: 'desert', seed: 1409 }, offers: [] };
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.showResult = () => {};
-  let saves = 0; h.ui.persistence.saveProfile = () => { saves++; };
+  let saves = 0; h.ui.persistence.saveProgress = () => { saves++; return true; };
   h.ui.event('result', { win: true });
   assert.equal(h.ui.profile.expeditionDepth, 10); assert.equal(h.ui.factionJustUnlocked, 1); assert.equal(saves, 1);
   h.ui.resultAetherRecovered = undefined; h.ui.expedition.depth = 24; h.ui.profile.expeditionDepth = 24;

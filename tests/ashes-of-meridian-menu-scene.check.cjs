@@ -5,7 +5,7 @@ const {loadScripts} = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['world-view']);
 const scene = vm.runInContext('savedBattleMenuScene', context);
 const building = (id,x,z,hp=100) => ({id,kind:'building',type:'hq',x,z,hp});
-const expedition = entities => ({encounter:{map:'desert',seed:123},battle:{state:{entities,time:47,cam:{x:9,z:12}}}});
+const expedition = entities => ({encounter:{map:'desert',seed:123},battle:{state:{map:'desert',seed:123,entities,time:47,cam:{x:9,z:12}}}});
 const plain = value => JSON.parse(JSON.stringify(value));
 
 test('menu uses the saved army and centers the densest living building group without mutating it', () => {
@@ -19,12 +19,23 @@ test('menu uses the saved army and centers the densest living building group wit
   assert.equal(JSON.stringify(save),before,'render copies must not move saved aircraft');
 });
 
-test('missing, abandoned, transition and archived battles show no synthetic army', () => {
+test('missing, abandoned, transition and landscape-only archives show no synthetic army', () => {
   for (const save of [null,{encounter:{map:'desert',seed:123},battle:null}])
     assert.deepEqual(plain(scene(save,'desert',123)),{entities:[],center:{x:0,z:0},time:0});
   const save = expedition([building(1,40,70)]);
   assert.equal(scene(save,'desert',124).entities.length,0);
   assert.equal(scene(save,'westmark',123).entities.length,0);
+});
+
+test('explicit historical snapshots disambiguate identical map and seed without borrowing current armies', () => {
+  const current = expedition([building(1,40,70)]), historical = expedition([building(2,-40,-70)]).battle;
+  historical.state.time = 91;
+  const before = JSON.stringify({current,historical});
+  assert.deepEqual(plain(scene(current,'desert',123,historical).center),{x:-40,z:-70});
+  assert.equal(scene(current,'desert',123,historical).time,91);
+  assert.equal(scene(current,'desert',123,null).entities.length,0);
+  assert.equal(scene(current,'westmark',123,historical).entities.length,0);
+  assert.equal(JSON.stringify({current,historical}),before);
 });
 
 test('a saved battle without buildings uses its saved camera; density ties are stable', () => {

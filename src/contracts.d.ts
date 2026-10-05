@@ -238,24 +238,37 @@ interface ExpeditionEncounter {
   seed: number;
 }
 
-// Visual landscape archive, not a battle snapshot or a selectable checkpoint.
+// Stage navigation metadata; landscape-only entries may lack an enterable world.
 interface ExpeditionStagePreview {
   stage: number;
   map: BattlefieldId;
   seed: number;
 }
 
-interface MeridianExpedition {
-  version: 7;
-  battle: ExpeditionBattleSave | null;
+interface ExpeditionBattleRecipe {
   faction: FactionId;
   abilities: AbilityType[];
   depth: number;
-  civilizationScore: number;
   benefits: Record<string, number>;
   enemyBenefits: Record<string, number>[];
   encounter: ExpeditionEncounter;
+}
+
+interface ExpeditionWorld {
+  stage: number;
+  map: BattlefieldId;
+  seed: number;
+  recipe: ExpeditionBattleRecipe | null;
+  battle: ExpeditionBattleSave | null;
+  error?: string;
+}
+
+interface MeridianExpedition extends ExpeditionBattleRecipe {
+  version: 7;
+  battle: ExpeditionBattleSave | null;
+  civilizationScore: number;
   offers: string[];
+  worlds?: ExpeditionWorld[];
 }
 
 // One save format owns the recipe, CPU state and tutorial progress. No live objects.
@@ -516,7 +529,7 @@ interface ScenarioOptions {
   hostilities: boolean[][];
   duration: number;
 }
-type BattleRules = { kind: 'single-player'; mission: MissionState } |
+type BattleRules = { kind: 'single-player'; mission: MissionState; completed?: true } |
   { kind: 'scenario'; hostilities: boolean[][]; duration: number };
 
 interface RunStats {

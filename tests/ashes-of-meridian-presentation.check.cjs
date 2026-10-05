@@ -784,9 +784,9 @@ function appClock(diagnostic = false) {
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
   const $ = id => {
     if (!elements.has(id)) elements.set(id, {
-      handlers: {}, classList: { add() {}, remove() {} },
+      handlers: {}, style: {}, classList: { add() {}, remove() {} },
       addEventListener(name, fn) { this.handlers[name] = fn; },
-      getContext: () => ({ setTransform() {} })
+      getContext: () => ({ setTransform() {}, drawImage() {} })
     });
     return elements.get(id);
   };
@@ -794,9 +794,9 @@ function appClock(diagnostic = false) {
     $, window, document, navigator: { userAgent: 'clock-test' }, URLSearchParams,
     location: { search: diagnostic ? '?diagnostics=1' : '' }, devicePixelRatio: 1,
     performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
-    addEventListener() {}, ResizeObserver: class { observe() {} },
+    addEventListener() {}, ResizeObserver: class { observe() {} }, matchMedia:()=>({matches:true}),
     console: { error: e => errors.push(e), warn() {} },
-    META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
+    META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {desert:{render:{}}}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
     PLACEMENT_GUIDE_MATERIAL: -9,
     battlefieldId: map => map,
     Battlefield: class { renderProfile = {}; },
@@ -810,6 +810,7 @@ function appClock(diagnostic = false) {
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1; canRetainScene = true;
       frameReady() { return true; } releaseEnvironment() {} releaseMenuSky() {} releaseGeometry() {}
+      hasBattlefieldTextures() { return true; }
       async prepareBattlefieldTextures() { return true; }
       setBattlefieldTime(time) { this.battlefieldTime=time; }
       setMenuSky(seed,family) { this.menuSky={seed,family}; }
@@ -927,10 +928,10 @@ test('app enables celestial backdrops only on home, never in combat or codex',()
   assert.deepEqual(a.errors,[]);
 });
 
-test('home atmosphere uses frozen saved battle time and resets for archives or abandoned saves', async () => {
+test('home atmosphere freezes current and historical worlds but resets for landscape-only or abandoned saves', async () => {
   const a=appClock();
   a.game.s=null;a.ui.view='home';
-  a.ui.expedition={encounter:{map:'desert',seed:123},battle:{state:{time:347,entities:[],cam:{x:0,z:0}}}};
+  a.ui.expedition={encounter:{map:'desert',seed:123},battle:{state:{map:'desert',seed:123,time:347,entities:[],cam:{x:0,z:0}}}};
   assert.equal(await a.ui.onPreview('desert',123),true);
   a.frame(0);assert.equal(a.renderer.battlefieldTime,347);
   assert.equal(a.renderer.menuSky.seed,null,'saved scene uses the time-aware battlefield sky');
@@ -940,9 +941,41 @@ test('home atmosphere uses frozen saved battle time and resets for archives or a
   assert.equal(a.renderer.menuSky.seed,7,'archive retains celestial backdrop');
   await a.ui.onPreview('desert',123);
   a.frame(1040);assert.equal(a.renderer.battlefieldTime,347,'return to checkpoint restores its time');
+  const historical={state:{map:'desert',seed:123,time:912,entities:[{id:99,kind:'building',type:'hq',hp:10,x:4,z:6}],cam:{x:0,z:0}}};
+  await a.ui.onPreview('desert',123,false,historical);
+  a.frame(1060);assert.equal(a.renderer.battlefieldTime,912);
+  assert.equal(a.renderer.menuSky.seed,null,'historical world also uses the battlefield sky');
+  assert.equal(a.entitiesDrawn.at(-1).entity.id,99,'explicit snapshot wins even with identical map/seed');
   a.ui.expedition=null;
   await a.ui.onPreview('desert',123);
-  a.frame(1060);assert.equal(a.renderer.battlefieldTime,0,'abandoned save leaves no old time');
+  a.frame(1080);assert.equal(a.renderer.battlefieldTime,0,'abandoned save leaves no old time');
+  assert.deepEqual(a.errors,[]);
+});
+
+test('smooth app preview carries its snapshot through loading and ignores superseded requests',async()=>{
+  const a=appClock();a.game.s=null;a.ui.view='home';
+  const battle=time=>({state:{map:'desert',seed:123,time,entities:[],cam:{x:0,z:0}}});
+  a.ui.expedition={encounter:{map:'desert',seed:123},battle:battle(10)};
+  await a.ui.onPreview('desert',123,false,a.ui.expedition.battle);a.frame(0);
+  const historical=battle(900),pending=a.ui.onPreview('desert',123,true,historical);
+  a.frame(20);await new Promise(setImmediate);a.frame(40);
+  assert.equal(await pending,true);assert.equal(a.renderer.battlefieldTime,900);
+  const stale=a.ui.onPreview('desert',123,true,battle(800));a.frame(60);
+  await a.ui.onPreview('desert',123,false,battle(700));await new Promise(setImmediate);a.frame(80);
+  assert.equal(await stale,false);assert.equal(a.renderer.battlefieldTime,700);
+  assert.deepEqual(a.errors,[]);
+});
+
+test('app world launch validates archive identity and does not load after leaving home',async()=>{
+  const a=appClock(),world={stage:1,recipe:{},battle:{state:{}}},calls=[];
+  a.ui.view='home';a.ui.expedition={worlds:[world]};
+  a.game.restoreBattle=(target,completed)=>calls.push({target,completed});
+  const target={battle:world.battle};
+  assert.equal(await a.ui.onLaunchBattle({map:'desert'},target,world),true);
+  assert.deepEqual(calls,[{target,completed:true}]);
+  let resolve;a.renderer.prepareBattlefieldTextures=()=>new Promise(done=>{resolve=done;});
+  const pending=a.ui.onLaunchBattle({map:'desert'},target,world);
+  a.ui.view='codex';resolve(true);assert.equal(await pending,false);assert.equal(calls.length,1);
   assert.deepEqual(a.errors,[]);
 });
 
