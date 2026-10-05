@@ -25,7 +25,7 @@ test('six civilian structures are the last build choices, cheap Echo-only, ident
  assert.deepEqual(Object.keys(BUILDINGS).slice(-6),types);
  types.forEach((type,i)=>{
   const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,[5,10,15][i%3]);assert.equal(d.civilizationPoints,5);
-  assert.equal(d.vision,0);assert.equal(d.damage,undefined);assert.equal(d.cap,undefined);assert.equal(d.requires,undefined);
+  assert.equal(d.vision,BUILDINGS.depot.vision);assert.equal(d.damage,undefined);assert.equal(d.cap,undefined);assert.equal(d.requires,undefined);
   assert.ok(FACTIONS.every(f=>f.buildings[type]===FACTIONS[0].buildings[type]));
  });
 });
@@ -36,7 +36,7 @@ test('civilian placement accepts uneven slopes and cliff cells but protects obst
   assert.match(game.canBuild('depot',p),/stable ground/);assert.equal(game.canBuild(type,p),'');
   const sampler=new PlacementGuideSampler(game,type,0);sampler.refresh();assert.equal(sampler.sample(p),1);
   const blocked=world.blocked;assert.equal(game.build(type,p),true);assert.strictEqual(world.blocked,blocked);
-  const b=game.s.entities.at(-1);assert.equal(b.type,type);assert.equal(b.vision,0);assert.equal(b.progress,.06);
+  const b=game.s.entities.at(-1);assert.equal(b.type,type);assert.equal(b.vision,21);assert.equal(b.progress,.06);
   assert.equal(game.account(0).alloy,0);assert.equal(game.account(0).gas,gas-BUILDINGS[type].gas);
   assert.equal(game.s.entities[0].order.id,b.id);assert.equal(game.s.entities[0].order.type,'build');
   assert.deepEqual(Array.from(world.surface.heights),before);
@@ -102,12 +102,27 @@ test('ordinary worker construction completes Echo-only civilian foundations and 
   assert.equal(game.s.stats.built,1);assert.equal(civilizationScoreForBuildings(game.s.entities,0),5);
  }
 });
-test('civilian structures provide no vision or supply and are not reinforcement anchors',()=>{
- const {game,world}=fixture(0,()=>0);game.s.entities=[];
- const b=game.spawnBuilding('fieldlab',0,0,0,0);world.reveal(game.s.entities);
- assert.equal(b.vision,0);assert.ok(world.visible.every(v=>v===0));assert.equal(game.cap(),0);
- game.s.parties[0].account.energy=100;game.s.parties[0].account.abilities={drop:0};
- assert.equal(game.ability('drop',{x:0,z:0}),false);
+test('civilian structures grant normal building vision, respecting terrain tiers, ownership and destruction',()=>{
+ for(const type of types)for(const team of [0,1])for(const progress of [.06,1]){
+  const {game,world}=fixture(0,x=>x>10?10:0);
+  world.surface=new BattlefieldSurface(80,2.5,x=>x>10?10:0,h=>h>=5?1:0);
+  const normal=game.spawnBuilding('depot',0,0,team,0,{progress});world.reveal([normal]);
+  const expected=world.sight.map(s=>Array.from(s.visible)),b=game.spawnBuilding(type,0,0,team,0,{progress});
+  assert.equal(b.vision,normal.vision);world.reveal([b]);
+  assert.deepEqual(world.sight.map(s=>Array.from(s.visible)),expected);
+  assert.equal(world.sight[team].visible[world.idx(0,0)],255);
+  assert.equal(world.sight[1-team].visible[world.idx(0,0)],0);
+  assert.equal(world.sight[team].visible[world.idx(15,0)],0,'decorative roofs do not grant elevated sight');
+  b.vision=0;world.reveal([b]);assert.deepEqual(world.sight.map(s=>Array.from(s.visible)),expected,'normal fallback also covers stored zero vision');
+  b.hp=0;world.reveal([b]);assert.ok(world.sight.every(s=>s.visible.every(v=>v===0)));
+ }
+});
+test('civilian structures still provide no supply and are not reinforcement anchors',()=>{
+ for(const type of types){
+  const {game}=fixture(0,()=>0);game.s.entities=[];game.spawnBuilding(type,0,0,0,0);assert.equal(game.cap(),0);
+  game.s.parties[0].account.energy=100;game.s.parties[0].account.abilities={drop:0};
+  assert.equal(game.ability('drop',{x:0,z:0}),false);
+ }
 });
 test('score counts completed surviving own buildings only and defeat withdrawal preserves their tally',()=>{
  const {game}=fixture();const a=game.spawnBuilding('fieldlab',0,0,0,0);
