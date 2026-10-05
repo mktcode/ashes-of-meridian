@@ -7,6 +7,8 @@
         audio: MeridianAudio,
         overlayContext: CanvasRenderingContext2D,
         preview: RenderEntity[] = [],
+        previewCenter: Position = { x: 0, z: 0 },
+        previewTime = 0,
         retainedResult: { state: RunState; world: Battlefield | null; key: string } | null = null;
       const canvas = $('world'),
         overlay = $('overlay');
@@ -96,38 +98,11 @@
           change?.animation?.cancel();
           change?.resolve(ready);
         }
-        function previewEntities() {
-          preview = [];
-          let id = 0;
-          function e<K extends EntityKind>(kind: K, type: EntityTypeForKind<K>, x: number, z: number, faction: FactionId = FACTION_ID.FIRST, team: TeamId = 0) {
-            let d: { hp?: number; size?: number } = kind === 'building' ? BUILDINGS[type as BuildingType] : UNITS[type as UnitType] || {};
-            if (kind === 'building' && worldView.world) {
-              const p = cinematicBuildingPosition(worldView.world, {x,z}, d.size || 1, preview);
-              if (!p) return;
-              x = p.x; z = p.z;
-            }
-            preview.push({
-              id: ++id, kind, type, x, z, faction, team,
-              hp: d.hp || 100, maxHp: d.hp || 100, size: d.size || 1,
-              rot: kind === 'building' ? 0 : -0.45, walk: 0, progress: 1, carry: 0, amount: 2200,
-              shield: 0, maxShield: 0, kills: 0, order: { type: 'idle' }
-            });
-          }
-          e('building', 'hq', 7, 1);
-          e('building', 'factory', -4, 12);
-          e('building', 'barracks', 21, 10);
-          e('building', 'depot', 29, 1);
-          e('building', 'turret', 20, -6);
-          e('building', 'turret', 30, -10);
-          e('unit', 'hero', 14, 21);
-          e('unit', 'tank', 8, 23);
-          e('unit', 'tank', -1, 26);
-          e('unit', 'artillery', -13, 15);
-          e('unit', 'air', 30, 6);
-          for (let i = 0; i < 9; i++) e('unit', 'rifle', 15 + (i % 3) * 1.8, 16 + Math.floor(i / 3) * 2);
-          for (let i = 0; i < 7; i++) e('resource', 'crystal', -19 + Math.sin(i * 2) * 4, 25 + Math.cos(i * 2) * 4);
-          e('building', 'hq', -30, -48, FACTION_ID.THIRD, 1);
-          e('building', 'turret', -20, -39, FACTION_ID.THIRD, 1);
+        function previewEntities(map: BattlefieldId, seed: number) {
+          const scene = savedBattleMenuScene(ui.expedition, map, seed);
+          preview = scene.entities;
+          previewCenter = scene.center;
+          previewTime = scene.time;
         }
         function loadingBattlefield(text: string) {
           const loader = $('loading');
@@ -156,7 +131,7 @@
             if (!ready || id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') return false;
             worldView.sync(world, false);
             R.fogOn = false;
-            previewEntities();
+            previewEntities(mapId, seed);
             $('loading').classList.add('hidden');
             if (initialHomeReveal && ui.view === 'home') {
               initialHomeReveal = false;
@@ -480,7 +455,7 @@
             if (previewChange?.phase === 'ready') {
               worldView.sync(previewChange.world!, false);
               R.fogOn = false;
-              previewEntities();
+              previewEntities(previewChange.map, previewChange.seed);
               previewChange.world = undefined;
               previewChange.phase = 'blend';
             }
@@ -516,12 +491,11 @@
             } else {
               clearPlacementGuide();
               R.fogOn = false;
-              R.camera(0, 0, 65, true, time);
+              R.camera(previewCenter.x, previewCenter.z, 65, true, time);
               worldView.retainBuildingGround(preview);
               for (let e of preview) {
-                if (e.type === 'air') e.z = 6 + Math.sin(time * 0.3) * 5;
                 worldView.drawBuildingGround(e);
-                renderEntity(R, e, time);
+                renderEntity(R, e, previewTime);
               }
             }
             diagnostics?.recorder.phase('glSubmission');

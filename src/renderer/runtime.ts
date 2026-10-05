@@ -1050,15 +1050,16 @@
         let a = this.viewport.width / this.viewport.height;
         // Preserve the existing pixels-per-world-unit zoom while clipping HUD space.
         let viewHeight = zoom * this.viewport.height / innerHeight;
-        const datum = cinema ? this.surface?.heightAt(0, -4) ?? 0 : 0;
-        let target = cinema ? [0, datum + 7, -4] : [x, 0, z];
+        const datum = cinema ? this.surface?.heightAt(x, z) ?? 0 : 0;
+        let target = cinema ? [x, datum + 7, z] : [x, 0, z];
         // Orthographic zoom controls framing, not physical proximity to the ground.
         // Retreat along the same viewing axis: raised terrain and its decorations
         // stay ahead of the near plane without moving the pivot or changing picking.
         const ceiling = this.surface?.maxHeight ?? 0,
           distance = zoom + (ceiling > 0 ? (ceiling + 32) / 1.1 : 0);
         this.eye = cinema
-          ? [62 + Math.sin(t * CINEMA_ORBIT_SPEED) * 8, 24, 78 + Math.cos(t * CINEMA_ORBIT_SPEED) * 5]
+          ? [x + Math.sin(t * CINEMA_ORBIT_SPEED + .67) * 100, 24,
+              z + Math.cos(t * CINEMA_ORBIT_SPEED + .67) * 100]
           : [x + Math.sin(yaw) * distance * 0.82, distance * 1.1, z + Math.cos(yaw) * distance * 0.82];
         // The menu orbit must stay above the seeded surface, not the old zero-height map.
         if (cinema) this.eye[1] += Math.max(datum, this.surface?.heightAt(this.eye[0], this.eye[2]) ?? 0);

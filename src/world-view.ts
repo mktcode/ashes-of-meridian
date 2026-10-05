@@ -78,6 +78,26 @@ class PlacementGuideSampler {
   }
 }
 
+// Read-only menu snapshot; archives never borrow an army from another landscape.
+function savedBattleMenuScene(expedition: MeridianExpedition | null, map: BattlefieldId, seed: number):
+    { entities: RenderEntity[]; center: Position; time: number } {
+  const state = expedition?.encounter.map === map && expedition.encounter.seed === seed
+    ? expedition.battle?.state : null;
+  const entities: RenderEntity[] = state ? state.entities.filter(e => e.hp > 0).map(e => ({ ...e })) : [];
+  const buildings = entities.filter(e => e.kind === 'building');
+  // Count neighbours in a camera-sized area; stable entity order breaks ties.
+  let cluster: RenderEntity[] = [];
+  for (const anchor of buildings) {
+    const neighbours = buildings.filter(e => Math.hypot(e.x - anchor.x, e.z - anchor.z) <= 30);
+    if (neighbours.length > cluster.length) cluster = neighbours;
+  }
+  const center = cluster.length ? {
+    x: cluster.reduce((sum, e) => sum + e.x, 0) / cluster.length,
+    z: cluster.reduce((sum, e) => sum + e.z, 0) / cluster.length
+  } : state ? { x: state.cam.x, z: state.cam.z } : { x: 0, z: 0 };
+  return { entities, center, time: state?.time ?? 0 };
+}
+
 // Cinematic buildings obey the same ground restrictions as player foundations.
 // Search only nearby; omitting a prop is preferable to a tower on an unsuitable hillside.
 function cinematicBuildingPosition(world: Battlefield, preferred: Position, size: number,

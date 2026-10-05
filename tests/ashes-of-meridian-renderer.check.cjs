@@ -696,13 +696,16 @@ test('placement guide fades in half-spacing lines between gameplay zoom endpoint
   r.camera(0,0,27.2,true);assert.equal(r.placementGridDetail,0,'menu cameras do not enable finer lines');
 });
 
-test('menu camera keeps its gentle orbit at the increased rate', () => {
+test('menu camera circles the supplied scene center at a fixed radius', () => {
   const h = setup(), speed = vm.runInContext('CINEMA_ORBIT_SPEED', h.context);
-  assert.equal(speed, .04);
   h.r.resize();
-  h.r.camera(0, 0, 65, true, Math.PI / (2 * speed));
-  assert.ok(Math.abs(h.r.eye[0] - 70) < 1e-9);
-  assert.ok(Math.abs(h.r.eye[2] - 78) < 1e-9);
+  const x = 45, z = -60;
+  h.r.camera(x, z, 65, true, 0);
+  const first = Array.from(h.r.eye);
+  h.r.camera(x, z, 65, true, Math.PI / speed);
+  assert.ok(Math.abs(Math.hypot(h.r.eye[0] - x, h.r.eye[2] - z) - 100) < 1e-9);
+  assert.ok(Math.abs(first[0] + h.r.eye[0] - 2*x) < 1e-9);
+  assert.ok(Math.abs(first[2] + h.r.eye[2] - 2*z) < 1e-9);
 });
 
 test('menu camera follows raised terrain at its target and stays above hills throughout its orbit', () => {
@@ -710,10 +713,10 @@ test('menu camera follows raised terrain at its target and stays above hills thr
   for(const sample of [()=>36,(x,z)=>Math.hypot(x,z)>70?65:12]) {
     r.surface={heightAt:sample};
     for(const t of [0,25,50,75,100,125,150]) {
-      r.camera(0,0,65,true,t);
+      r.camera(31,-42,65,true,t);
       assert.ok(r.eye[1]>=sample(r.eye[0],r.eye[2])+24,'never orbit under the terrain');
-      assert.ok(r.eye[1]>=sample(0,-4)+24,'retain height above the preview target');
-      const p=r.project(0,sample(0,-4)+7,-4);
+      assert.ok(r.eye[1]>=sample(31,-42)+24,'retain height above the preview target');
+      const p=r.project(31,sample(31,-42)+7,-42);
       assert.ok(Math.abs(p.x-(r.viewport.left+r.viewport.width/2))<1e-3);
       assert.ok(Math.abs(p.y-(r.viewport.top+r.viewport.height/2))<1e-3);
       assert.ok(Array.from(r.lightVP).every(Number.isFinite));
