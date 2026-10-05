@@ -312,7 +312,8 @@
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
-          worldView.sync(world, true, s);
+          const fogOn = !(world.fogCleared && world.viewTeam === 0);
+          worldView.sync(world, fogOn, s);
           worldView.retainBuildingGround(s.entities);
           // Revalidate restored cameras and resized viewports, including while paused.
           if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')
@@ -320,7 +321,7 @@
           R.camera(s.cam.x, s.cam.z, s.cam.zoom, false, 0, s.cam.yaw);
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
-          R.fogOn = !ui.battleIntro;
+          R.fogOn = fogOn && !ui.battleIntro;
           const selectedIds = ui.selectionIds();
           for (const cache of s.supplyCaches)
             if (!cache.collected && world.explored[world.idx(cache.x, cache.z)]) renderSupplyCache(R, world, cache);

@@ -163,6 +163,7 @@
         for (let i = 0; i < world.fogPixels.length; i++)
           world.fogPixels[i] = world.visible[i] ? 255 : world.explored[i] ? 80 : 0;
         world.fogVersion++;
+        if (state.rules.kind === 'single-player' && (state.rules.completed || state.result?.win)) world.clearFog();
         const ids = new Map(state.entities.map(e => [e.id, e]));
         this.pendingResult = null;
         this.s = state; this.world = world; this.ids = ids;

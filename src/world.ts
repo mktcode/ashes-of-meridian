@@ -93,6 +93,7 @@
       readonly gridSize: number;
       declare fogVersion: number;
       viewTeam: PlayerTeam = 0;
+      fogCleared = false;
       declare seed: number;
       readonly terrainSeed: number;
       readonly renderProfile: BattlefieldRenderProfile;
@@ -391,6 +392,13 @@
           this.fogVersion++;
         }
       }
+      clearFog() {
+        this.fogCleared = true;
+        this.sight[0].visible.fill(1);
+        this.sight[0].explored.fill(1);
+        if (this.viewTeam === 0) this.fogPixels.fill(255);
+        this.fogVersion++;
+      }
       reveal(entities: Entity[], scans: Scan[] = []) {
         for (const view of this.sight) view.visible.fill(0);
         for (let e of entities)
@@ -402,6 +410,7 @@
           }
         // Reconnaissance scans and aircraft observe independently of the ground tier.
         for (let s of scans) this.markVisible(this.sight[s.team ?? 0].visible, s.x, s.z, s.r || 31, Infinity);
+        if (this.fogCleared) this.sight[0].visible.fill(1);
         for (const view of this.sight)
           for (let i = 0; i < view.visible.length; i++) if (view.visible[i]) view.explored[i] = 1;
         for (let i = 0; i < this.visible.length; i++) {

@@ -407,6 +407,7 @@
           ),
           integrity
         };
+        if (win) this.world!.clearFog();
         if (this.stepping) this.pendingResult = { state: s, result: s.result };
         else this.emit('result', s.result);
       },

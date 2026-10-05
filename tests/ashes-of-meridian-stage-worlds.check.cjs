@@ -61,6 +61,10 @@ function victoryFixture() {
   }ui.event(...event);};
   game.step(.05);
   assert.equal(emitted,true);assert.equal(game.s.result.win,true);
+  assert.equal(game.world.fogCleared,true);
+  assert.ok(game.world.visible.every(v=>v===1));
+  assert.ok(game.world.explored.every(v=>v===1));
+  assert.ok(game.world.fogPixels.every(v=>v===255));
   assert.equal(ui.expedition.depth,1);assert.equal(ui.expedition.worlds.length,1);
   assert.deepEqual(h.writes.slice(beforeWrites),[PROFILE],'archive, payout and transition share one commit');
   const world=ui.expedition.worlds[0];
@@ -101,10 +105,34 @@ test('a real completed tick archives its final world atomically and freezes only
   assert.equal(fixture.world.battle.state.time,12.05);
 });
 
+test('completed worlds restore fully visible and stay clear through observation updates; new battles and defeats retain fog',()=>{
+  const fixture=victoryFixture(),h=harness(),{game}=h,world=copy(fixture.world);
+  // The completed phase, not cached sight, owns the rule even while paused.
+  const pack=vm.runInContext('packBattleGrid',h.context);
+  const blank=pack(new Uint8Array(world.battle.gridSize**2));
+  world.battle.sight[0]={visible:blank,explored:blank};
+  game.restoreBattle({...world.recipe,battle:world.battle},true);
+  assert.equal(game.world.fogCleared,true);
+  assert.ok(game.world.visible.every(v=>v===1));
+  assert.ok(game.world.explored.every(v=>v===1));
+  assert.ok(game.world.fogPixels.every(v=>v===255));
+  game.step(.4);
+  game.world.reveal(game.s.entities,game.s.scans);
+  assert.ok(game.world.visible.every(v=>v===1));
+  assert.ok(game.world.fogPixels.every(v=>v===255));
+  game.start({...world.recipe,...world.recipe.encounter});
+  assert.equal(game.world.fogCleared,false);
+  assert.ok(game.world.visible.some(v=>v===0));
+  game.finish(false,'Defeat');
+  assert.equal(game.world.fogCleared,false);
+  assert.ok(game.world.fogPixels.some(v=>v!==255));
+});
+
 test('failure after result detection cannot archive or pay out a partial tick',()=>{
   const h=harness(),game=h.game,before=copy(h.profile);let events=0;
   game.s={rules:{kind:'single-player',mission:{id:'hq-elimination'}},entities:[],stats:{kills:0,damage:0,lost:0},time:12};
   game.emit=()=>events++;
+  game.world={clearFog(){}};
   game.stepTick=function(){this.finish(true,'Victory',0);throw Error('late tick failure');};
   assert.throws(()=>game.step(.05),/late tick/);
   assert.equal(events,0);assert.equal(game.pendingResult,null);assert.equal(game.snapshotSafe,false);
