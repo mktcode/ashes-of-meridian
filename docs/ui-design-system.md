@@ -29,7 +29,7 @@ cyanfarbener → den möglichen Wechsel über das Hauptmenü. Diese Bereitschaft
 auch nach Scoreverlust erhalten. Details stehen im Tooltip/zugänglichen Label;
 keine zusätzliche Zeile, blinkende Meldung oder automatische Weiterreise.
 
-Das aktuelle Tutorialziel bleibt als passives Panel oben rechts unter der Statuszeile sichtbar, unabhängig vom geöffneten Aktionsreiter. Alle Tutorialphasen haben ein Ziel; Supply-Ziele zeigen zusätzlich die aktuelle Belegung/Kapazität. Hinweise gehören nicht in den schmalen Bau-/Rekrutierungs-Scrollbereich. Warnungen folgen unterhalb des Zielpanels statt es zu überdecken; die Anzeige fängt keine Welt-/Kameraeingaben ab. Zahlenänderungen aktualisieren nur den Zieltext, nicht das Aktionsmarkup.
+Das aktuelle Tutorialziel bleibt als passives Panel oben links unter der Statuszeile sichtbar, unabhängig vom geöffneten Aktionsreiter. Alle Tutorialphasen haben ein Ziel; Supply-Ziele zeigen zusätzlich die aktuelle Belegung/Kapazität. Hinweise gehören nicht in den schmalen Bau-/Rekrutierungs-Scrollbereich. Warnungen bleiben rechts und weichen bei Platzmangel unter das Zielpanel aus; die Anzeige fängt keine Welt-/Kameraeingaben ab. Zahlenänderungen aktualisieren nur den Zieltext, nicht das Aktionsmarkup.
 
 Tokens und Selektoren bleiben auf `#menu`, `#modal`, `#result`, `#loading`, `#hud`
 und `#toast` begrenzt. Keine Theme-Tokens auf `:root`, keine globalen Buttonregeln.

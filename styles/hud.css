@@ -106,11 +106,13 @@
 
     #battleNotices {
       position: absolute;
+      left: 24px;
       right: 24px;
       top: 90px;
-      max-width: calc(100% - 48px);
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
       gap: 8px
     }
 
@@ -125,6 +127,8 @@
 
     #alerts {
       min-width: 0;
+      max-width: 100%;
+      margin-left: auto;
       text-align: right;
       font: 11px var(--mono)
     }
