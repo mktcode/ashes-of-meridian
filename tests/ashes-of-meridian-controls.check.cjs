@@ -1431,11 +1431,11 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
 });
 
 test('build menu hides unavailable civilian tiers and refreshes when expedition permissions change',()=>{
-  const h=setup(),ui=h.ui,g=ui.game,tiers=[['fieldlab','embercottage'],['researchhub','terracecommons'],['researchspire','hearthtower']];
+  const h=setup(),ui=h.ui,g=ui.game,tiers=[['fieldlab','embercottage'],['researchhub','terracecommons'],['researchspire','hearthtower'],['meridianforum']];
   ui.tab='build';
   for(const faction of [0,1,2]){
     g.s.parties[0].faction=faction;
-    for(const stage of [1,2,3]){
+    for(const stage of [1,2,3,4]){
       g.civilizationStage=stage;ui.renderActionMarkup();
       const html=h.document.getElementById('actions').innerHTML;
       tiers.forEach((types,i)=>types.forEach(type=>{

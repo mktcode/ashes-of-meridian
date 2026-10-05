@@ -146,6 +146,15 @@ test('residential buildings round-trip with unfinished state and paid Echo',()=>
     assert.ok(before);assert.deepEqual(json(after),before);assert.equal(after.paid.cost,0);assert.equal(after.paid.gas,catalogs.buildings[type].gas);
   }
 });
+test('Forum construction round-trips as a known seventh civilian type with paid Echo and no new save format',()=>{
+  const run=savedBattle(),h=setup(),forum=run.battle.state.entities.find(e=>e.type==='fieldlab'),d=catalogs.buildings.meridianforum;
+  Object.assign(forum,{type:'meridianforum',size:d.size,hp:d.hp*.4,maxHp:d.hp,progress:.4,paid:{cost:0,gas:d.gas}});
+  assert.equal(put(h,run),true);
+  const loaded=setup(h.data).service.loadExpedition();assert.ok(loaded);
+  assert.deepEqual(json(loaded.battle.state.entities.find(e=>e.id===forum.id)),forum);
+  const restored=new fixture.Game(json(defaults));restored.restoreBattle(loaded);
+  assert.deepEqual(json(restored.snapshotBattle()),run.battle);
+});
 test('cosmetic building rotation round-trips through save and restore and rejects malformed values',()=>{
   const run=savedBattle(),h=setup(),b=run.battle.state.entities.find(e=>e.type==='fieldlab');
   b.visualRotation=1/3;assert.equal(put(h,run),true);

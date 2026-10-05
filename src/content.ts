@@ -35,6 +35,7 @@ const FACTIONS = [
       factory: 'War foundry',
       hangar: 'Flight deck',
       turret: 'Sentinel turret',
+      meridianforum: 'Meridian Forum',
       fieldlab: 'Field laboratory',
       researchhub: 'Research hub',
       researchspire: 'Research spire',
@@ -74,6 +75,7 @@ const FACTIONS = [
       factory: 'Root hollow',
       hangar: 'Chrysalis',
       turret: 'Thorn spire',
+      meridianforum: 'Meridian Forum',
       fieldlab: 'Field laboratory',
       researchhub: 'Research hub',
       researchspire: 'Research spire',
@@ -112,6 +114,7 @@ const FACTIONS = [
       factory: 'Tomb forge',
       hangar: 'Sky sepulcher',
       turret: 'Mourning obelisk',
+      meridianforum: 'Meridian Forum',
       fieldlab: 'Field laboratory',
       researchhub: 'Research hub',
       researchspire: 'Research spire',
@@ -265,6 +268,9 @@ function flightLaunchRemaining(e: Position & { exit?: Pick<ExitPath, 'x' | 'z' |
 
 const BUILDING_YAW = Math.PI / 15;
 const CIVILIZATION_MODEL_SCALE = .85;
+// Authored Forum units are larger than the other civilian meshes; retain its proportions.
+const FORUM_MODEL_SCALE = .6;
+const FORUM_DECK_BASE = 1.3;
 const BUILDINGS = {
   hq: {
     cost: 400,
@@ -367,6 +373,16 @@ const BUILDINGS = {
     civilizationDecks: [{x:0,z:-.40,w:4.25,d:3.6},{x:.2,z:2.10,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:2.9,length:1.1},
     desc: 'Civilian residential tower with warm-white windows and an exposed service spine. Costs only Echo; each completed, surviving structure contributes 15 Civilization Score to unlock later expedition stages. No production.'
+  },
+  meridianforum: {
+    cost: 0, gas: 25, hp: 950, size: 10.4, time: 20, civilizationPoints: 30, civilizationUnlockStage: 4,
+    civilizationDecks: [{x:0,z:0,w:29.12*FORUM_MODEL_SCALE-.76,d:20.12*FORUM_MODEL_SCALE-.76,cut:.65*FORUM_MODEL_SCALE}],
+    civilizationEntry: {x:0,z:9.6*FORUM_MODEL_SCALE,top:(2.1-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,
+      width:8.2*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,length:3.6*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE},
+    civilizationSideEntries: [-1,1].map(s=>({x:s*10*FORUM_MODEL_SCALE,z:9.7*FORUM_MODEL_SCALE,
+      top:(1.88-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,width:3.25*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,
+      length:3.24*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE})),
+    desc: 'Monumental civilian forum with terraced wings, warm windows, jade-lit entrances and a rooftop spacecraft landing pad. Available from Stage 4. Costs only Echo; each completed, surviving forum contributes 30 Civilization Score. No production; the landing pad is decorative.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
 
@@ -391,12 +407,17 @@ function civilizationFootprint(p: Position, team: number, x: number, z: number, 
 function civilizationDeckFootprints(p: Position, type: BuildingType, team = 0, visualRotation = 0): { polygon: Position[]; top: number }[] {
   const scale=CIVILIZATION_MODEL_SCALE;
   return (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!.map(d=>({
-    polygon:civilizationFootprint(p,team,d.x*scale,d.z*scale,(d.w+.76)*scale,(d.d+.76)*scale,.51*scale,visualRotation),top:(d.top||0)*scale}));
+    polygon:civilizationFootprint(p,team,d.x*scale,d.z*scale,(d.w+.76)*scale,(d.d+.76)*scale,(d.cut??.51)*scale,visualRotation),top:(d.top||0)*scale}));
+}
+function civilizationBuildingEntries(type: BuildingType): readonly CivilizationEntry[] {
+  const d=BUILDINGS[type] as BuildingDefinitionShape;
+  return [d.civilizationEntry!,...(d.civilizationSideEntries||[])];
 }
 function civilizationClearanceFootprints(p: Position, type: BuildingType, team = 0): Position[][] {
-  const d=BUILDINGS[type] as BuildingDefinitionShape,scale=CIVILIZATION_MODEL_SCALE,entry=d.civilizationEntry!;
+  const d=BUILDINGS[type] as BuildingDefinitionShape,scale=CIVILIZATION_MODEL_SCALE;
   return [...civilizationDeckFootprints(p,type,team).map(f=>f.polygon),
-    civilizationFootprint(p,team,entry.x*scale,entry.z*scale+entry.length/2,1.05,entry.length+.02),
+    ...civilizationBuildingEntries(type).map(entry=>civilizationFootprint(p,team,entry.x*scale,
+      entry.z*scale+entry.length/2,entry.width??1.05,entry.length+.02)),
     ...(d.civilizationWings||[]).map(w=>civilizationFootprint(p,team,w.x*scale,w.z*scale,w.w*scale,w.d*scale))];
 }
 function civilizationFootprintsOverlap(a: readonly Position[], b: readonly Position[], gap = .25): boolean {

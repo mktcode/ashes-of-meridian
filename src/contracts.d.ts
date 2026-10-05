@@ -19,12 +19,22 @@ interface UnitDefinitionShape {
   flying?: boolean;
 }
 
+interface CivilizationEntry {
+  /** X/Z and top are model-local; width and length are world-space stair dimensions. */
+  x: number;
+  z: number;
+  length: number;
+  width?: number;
+  top?: number;
+}
+
 interface BuildingDefinitionShape {
   civilizationPoints?: number;
   civilizationUnlockStage?: number;
   /** Authored local deck footprints, shared by the CPU support plane and model. */
-  civilizationDecks?: readonly { x: number; z: number; w: number; d: number; top?: number }[];
-  civilizationEntry?: { x: number; z: number; length: number };
+  civilizationDecks?: readonly { x: number; z: number; w: number; d: number; top?: number; cut?: number }[];
+  civilizationEntry?: CivilizationEntry;
+  civilizationSideEntries?: readonly CivilizationEntry[];
   civilizationWings?: readonly { x: number; z: number; w: number; d: number }[];
   cost: number;
   gas: number;

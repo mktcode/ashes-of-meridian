@@ -79,6 +79,7 @@ Ziel sind gleichmäßigere Renderintervalle bei 60 FPS (16,7 ms Budget), kleiner
 
 ## Ergänzende Geräteabnahme
 
+- Große Bestände des [Meridian Forums](modelle.md) bei normalem Gefechtszoom und im Schattenpass abnehmen. Seine detailreiche gecachte Hülle erhöht die Meshresidenz bereits beim Rendererstart und die eingereichte Geometrie je sichtbarem Gebäude; keine Zielgeräte-/Thermikzusage aus kurzen CPU- oder Software-WebGL-Prüfungen ableiten.
 - Rasterentlastung mit gleichem Spielstand abnehmen: geschlossenes Menü, geöffnetes Menü ohne Bauauswahl und aktives Bauplatzraster unterscheiden. Verzögertes Erscheinen, Kamerafahrt und verbleibende Erst-Meshspitze prüfen.
 - Handy-Reproduktion mit Gerät/Browser/Build, Karte/Seed, Qualität, Tempo, Dauer, Kartenwechsel und Akku/Ladezustand sichern. Freeze, Context-loss und Reloadfehler unterscheiden. Tatsächliche Meshresidenz, Renderziel-/Resize-Spitzen und Materialbytes prüfen; Diagnosebytes sind Schätzungen, keine Treibermessung.
 - Qualitätsvergleich nur zur Eingrenzung eines bestätigten GPU-Problems: gleicher kurzer Abschnitt, vergleichbarer thermischer Start, bei Überhitzungswarnung abbrechen. High erhöht das Pixelbudget gegenüber Balanced; weder Draw Calls noch kurze GL-Einreichung schließen einen GPU-Engpass aus. [Diagnosebedienung](../testing.md#lokale-performancediagnose).

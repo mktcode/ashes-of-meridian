@@ -7,6 +7,7 @@ const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...SI
 const {MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen}=vm.runInContext(
  '({MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen})',context);
 const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
+const allTypes=[...types,'meridianforum'];
 function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
  const game=Object.create(MeridianGame.prototype),world=Object.create(Battlefield.prototype),extent=80,n=64;
  Object.assign(world,{extent,cellSize:2.5,gridSize:n,viewTeam:0,pathVersion:0,surface:new BattlefieldSurface(extent,2.5,height),
@@ -21,11 +22,11 @@ function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
     {id:1,faction:1,account:{alloy:0,gas:0},meta:{},benefits:{},loadout:[],deploymentPending:false}]}});
  return {game,world};
 }
-test('six civilian structures are the last build choices, cheap Echo-only, identical across factions and nonproductive',()=>{
- assert.deepEqual(Object.keys(BUILDINGS).slice(-6),types);
- types.forEach((type,i)=>{
-  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,[5,10,15][i%3]);assert.equal(d.civilizationPoints,[5,10,15][i%3]);
-  assert.equal(d.civilizationUnlockStage,i%3+1);
+test('seven civilian structures are the last build choices, Echo-only, identical across factions and nonproductive',()=>{
+ assert.deepEqual(Object.keys(BUILDINGS).slice(-7),allTypes);
+ allTypes.forEach((type,i)=>{
+  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,i===6?25:[5,10,15][i%3]);assert.equal(d.civilizationPoints,i===6?30:[5,10,15][i%3]);
+  assert.equal(d.civilizationUnlockStage,i===6?4:i%3+1);
   assert.equal(d.vision,BUILDINGS.depot.vision);assert.equal(d.damage,undefined);assert.equal(d.cap,undefined);assert.equal(d.requires,undefined);
   assert.ok(FACTIONS.every(f=>f.buildings[type]===FACTIONS[0].buildings[type]));
  });
@@ -46,11 +47,17 @@ test('civilian stage permissions block direct construction before payment and wo
  for(const type of ['researchspire','hearthtower'])assert.match(game.canBuild(type,null),/Stage 3/);
  game.civilizationStage=3;
  for(const type of types)assert.equal(game.canBuild(type,null),'','old-world depth does not reset expedition permissions');
+ const echo=game.account(0).gas;
+ assert.match(game.canBuild('meridianforum',null),/Stage 4/);
+ assert.equal(game.submitAction(0,{kind:'build',building:'meridianforum',position:{x:0,z:0},selected:[]}),false);
+ assert.equal(game.account(0).gas,echo);assert.equal(game.s.entities.length,1);
+ game.civilizationStage=4;
+ for(const type of allTypes)assert.equal(game.canBuild(type,null),'','Stage 4 adds just the shared forum');
  game.civilizationStage=null;
- for(const type of types)assert.equal(game.canBuild(type,null),'','isolated non-expedition worlds have no campaign gate');
+ for(const type of allTypes)assert.equal(game.canBuild(type,null),'','isolated non-expedition worlds have no campaign gate');
 });
 test('civilian placement accepts uneven slopes and cliff cells but protects obstacles, occupancy, exploration and worker access/payment',()=>{
- for(const faction of [0,1,2])for(const type of types){
+ for(const faction of [0,1,2])for(const type of allTypes){
   const {game,world}=fixture(faction),p={x:0,z:0},before=Array.from(world.surface.heights),gas=game.account(0).gas;
   assert.equal(world.surface.foundation(p,BUILDINGS[type].size),false);
   assert.match(game.canBuild('depot',p),/stable ground/);assert.equal(game.canBuild(type,p),'');
@@ -94,6 +101,20 @@ test('civilian complexes use close nonoverlapping deck outlines while reserving 
  actual.world.rebuild(actual.game.s.entities);
  assert.equal(actual.game.build('fieldlab',at(4.9)),true,'a real worker route still permits the compact complex');
 });
+test('Forum clearance reserves the full platform and all three wider stair approaches',()=>{
+ const {civilizationDeckFootprints,civilizationClearanceFootprints,civilizationFootprintsOverlap,BUILDING_YAW}=vm.runInContext('({civilizationDeckFootprints,civilizationClearanceFootprints,civilizationFootprintsOverlap,BUILDING_YAW})',context),
+  cs=Math.cos(BUILDING_YAW),sn=Math.sin(BUILDING_YAW),at=(x,z)=>({x:x*cs+z*sn,z:-x*sn+z*cs}),p={x:0,z:0},
+  deck=civilizationDeckFootprints(p,'meridianforum',0),clearance=civilizationClearanceFootprints(p,'meridianforum',0);
+ assert.equal(clearance.length,4,'one connected deck and three entries');
+ const {game}=fixture(0,()=>40);game.spawnBuilding('meridianforum',0,0,0,0);
+ for(const x of [-5.1,0,5.1]){
+  const next=at(x,8),small=civilizationClearanceFootprints(next,'fieldlab',0);
+  assert.ok(deck.every(d=>small.every(s=>!civilizationFootprintsOverlap(d.polygon,s))),'candidate clears the platform');
+  assert.ok(clearance.some(c=>small.some(s=>civilizationFootprintsOverlap(c,s))),'but overlaps a stair approach');
+  assert.match(game.canBuild('fieldlab',next),/stairs/);
+ }
+ assert.ok(game.canBuild('fieldlab',at(0,0)),'the large hull cannot intersect another civic building');
+});
 test('civilian cliff foundations are actually reachable and buildable from a safe service point without opening cliff paths for units',()=>{
  const {game,world}=fixture(0,(x,z)=>x>0?45:40);delete world.path;world.rebuild(game.s.entities);
  const p={x:1,z:0},worker=game.s.entities[0],radius=BUILDINGS.fieldlab.size+2.9;
@@ -111,8 +132,24 @@ test('civilian cliff foundations are actually reachable and buildable from a saf
  game.worker(worker,BUILDINGS.fieldlab.time);assert.equal(b.progress,1);assert.equal(worker.order.type,'idle');
  assert.equal(world.surface.fits(p.x,p.z),false,'construction does not alter unit passability');
 });
+test('large Forum construction reaches a real cliff-side service point without making the cliff walkable',()=>{
+ const {game,world}=fixture(0,(x,z)=>x>0?45:40);delete world.path;world.rebuild(game.s.entities);
+ game.civilizationStage=4;
+ const p={x:1,z:0},worker=game.s.entities[0],radius=BUILDINGS.meridianforum.size+2.9;
+ assert.equal(world.surface.fits(p.x,p.z),false);
+ assert.equal(game.canBuild('meridianforum',p),'');assert.equal(game.build('meridianforum',p),true);
+ const b=game.s.entities.at(-1);world.rebuild(game.s.entities);
+ const area={...p,radius,terrainConnection:false},body=worker.size*vm.runInContext('UNIT_BODY_SCALE',context),
+  path=world.path(worker.x,worker.z,p.x,p.z,false,area,body);
+ assert.equal(path.status,'complete');assert.equal(world.surface.fits(path.goal.x,path.goal.z,body),true);
+ assert.equal(world.blockedAt(path.goal.x,path.goal.z),false);
+ Object.assign(worker,path.goal,{rot:0});game.effects={construction(){}};game.s.stats.built=0;
+ game.worker(worker,BUILDINGS.meridianforum.time);
+ assert.equal(b.progress,1);assert.equal(worker.order.type,'idle');assert.equal(civilizationScoreForBuildings(game.s.entities,0),30);
+ assert.equal(game.account(0).gas,75);assert.equal(world.surface.fits(p.x,p.z),false);
+});
 test('ordinary worker construction completes Echo-only civilian foundations and then releases the worker',()=>{
- for(const type of types){
+ for(const type of allTypes){
   const {game}=fixture();game.effects={construction(){}};game.s.stats.built=0;
   assert.equal(game.build(type,{x:0,z:0}),true);const b=game.s.entities.at(-1),worker=game.s.entities[0];
   Object.assign(worker,{x:b.size+2.5,z:0,rot:0});const echo=game.account(0).gas;
@@ -123,7 +160,7 @@ test('ordinary worker construction completes Echo-only civilian foundations and 
  }
 });
 test('civilian structures grant normal building vision, respecting terrain tiers, ownership and destruction',()=>{
- for(const type of types)for(const team of [0,1])for(const progress of [.06,1]){
+ for(const type of allTypes)for(const team of [0,1])for(const progress of [.06,1]){
   const {game,world}=fixture(0,x=>x>10?10:0);
   world.surface=new BattlefieldSurface(80,2.5,x=>x>10?10:0,h=>h>=5?1:0);
   const normal=game.spawnBuilding('depot',0,0,team,0,{progress});world.reveal([normal]);
@@ -138,7 +175,7 @@ test('civilian structures grant normal building vision, respecting terrain tiers
  }
 });
 test('civilian structures still provide no supply and are not reinforcement anchors',()=>{
- for(const type of types){
+ for(const type of allTypes){
   const {game}=fixture(0,()=>0);game.s.entities=[];game.spawnBuilding(type,0,0,0,0);assert.equal(game.cap(),0);
   game.s.parties[0].account.energy=100;game.s.parties[0].account.abilities={drop:0};
   assert.equal(game.ability('drop',{x:0,z:0}),false);

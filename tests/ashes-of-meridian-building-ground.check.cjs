@@ -34,7 +34,7 @@ test('rotated civilian decks and adaptive feet follow visual terrain support wit
   const {civilizationClearanceFootprints,civilizationDeckFootprints}=vm.runInContext('({civilizationClearanceFootprints,civilizationDeckFootprints})',context);
   const surface=new BattlefieldSurface(40,2.5,(x,z)=>20+.4*x+.15*z),before=Array.from(surface.heights),R=createRendererStub({record:true});
   R.surface=surface;R.quality=0;
-  for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower']){
+  for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower','meridianforum']){
     const e={...entity,type,size:4.2},clearance=JSON.stringify(civilizationClearanceFootprints(e,type,0));
     for(const visualRotation of [0,1/3,3,23/3]){
       const rotated=Object.freeze({...e,visualRotation}),pose=surface.buildingPose(rotated,rotated.size);
