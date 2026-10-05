@@ -25,9 +25,29 @@ test('six civilian structures are the last build choices, cheap Echo-only, ident
  assert.deepEqual(Object.keys(BUILDINGS).slice(-6),types);
  types.forEach((type,i)=>{
   const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,[5,10,15][i%3]);assert.equal(d.civilizationPoints,5);
+  assert.equal(d.civilizationUnlockStage,i%3+1);
   assert.equal(d.vision,BUILDINGS.depot.vision);assert.equal(d.damage,undefined);assert.equal(d.cap,undefined);assert.equal(d.requires,undefined);
   assert.ok(FACTIONS.every(f=>f.buildings[type]===FACTIONS[0].buildings[type]));
  });
+});
+test('civilian stage permissions block direct construction before payment and work across old worlds',()=>{
+ const {game}=fixture();game.civilizationStage=1;
+ for(const [i,type] of types.entries()){
+  const allowed=i%3===0,gas=game.account(0).gas;
+  if(allowed) assert.equal(game.canBuild(type,null),'');
+  else {
+   assert.match(game.canBuild(type,null),/Unlock Stage/);
+   assert.equal(game.submitAction(0,{kind:'build',building:type,position:{x:0,z:0},selected:[]}),false);
+   assert.equal(game.account(0).gas,gas);assert.equal(game.s.entities.length,1);
+  }
+ }
+ game.civilizationStage=2;game.s.rules.completed=true;game.s.depth=0;
+ for(const type of ['researchhub','terracecommons'])assert.equal(game.canBuild(type,null),'');
+ for(const type of ['researchspire','hearthtower'])assert.match(game.canBuild(type,null),/Stage 3/);
+ game.civilizationStage=3;
+ for(const type of types)assert.equal(game.canBuild(type,null),'','old-world depth does not reset expedition permissions');
+ game.civilizationStage=null;
+ for(const type of types)assert.equal(game.canBuild(type,null),'','isolated non-expedition worlds have no campaign gate');
 });
 test('civilian placement accepts uneven slopes and cliff cells but protects obstacles, occupancy, exploration and worker access/payment',()=>{
  for(const faction of [0,1,2])for(const type of types){
@@ -154,10 +174,10 @@ test('live score replaces exactly one snapshot, sums every world and ignores inc
  assert.equal(JSON.stringify(expedition),before,'calculation does not mutate any archived world');
 });
 
-test('score gates use 50 times five, require military clearance and never revoke an unlocked stage',()=>{
- assert.deepEqual([1,2,3,4,5,6].map(civilizationScoreRequirement),[0,50,250,1250,6250,31250]);
- assert.ok(Number.isSafeInteger(civilizationScoreRequirement(22)));
- assert.equal(civilizationScoreRequirement(23),Infinity,'overflow cannot grant a cheaper unlock');
+test('score gates use 25 times three, require military clearance and never revoke an unlocked stage',()=>{
+ assert.deepEqual([1,2,3,4,5,6].map(civilizationScoreRequirement),[0,25,75,225,675,2025]);
+ assert.ok(Number.isSafeInteger(civilizationScoreRequirement(32)));
+ assert.equal(civilizationScoreRequirement(33),Infinity,'overflow cannot grant a cheaper unlock');
  assert.equal(civilizationScoreRequirement(999999),Infinity);
  const world={stage:1,recipe:scoreRecipe(0),battle:scoreSave(Array.from({length:50},()=>civil()))},ui=Object.create(MeridianUI.prototype);
  Object.assign(ui,{view:'home',activeWorldStage:null,game:{s:null,snapshotSafe:true},profile:{},

@@ -191,6 +191,8 @@
         let s = this.s!,
           d: BuildingDefinitionShape = BUILDINGS[type];
         if (!d) return 'Unknown structure.';
+        if (s.rules.kind === 'single-player' && team === 0 && !civilizationBuildingAvailable(type, this.civilizationStage))
+          return `Unlock Stage ${d.civilizationUnlockStage} to build this structure.`;
         if (d.requires && !this.has(d.requires as BuildingType, team))
           return `Requires ${buildingName(d.requires, this.factionFor(team))}.`;
         if (!this.alive(e => e.team === team && e.type === 'worker').length)

@@ -331,39 +331,39 @@ const BUILDINGS = {
     desc: 'Automated ground and air defense. Protects workers and choke points, but can be outranged by artillery.'
   },
   fieldlab: {
-    cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5,
+    cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5, civilizationUnlockStage: 1,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
     desc: 'Civilian field laboratory. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
   },
   researchhub: {
-    cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 5,
+    cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 5, civilizationUnlockStage: 2,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
     desc: 'Terraced civilian research hub. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
   },
   researchspire: {
-    cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 5,
+    cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 5, civilizationUnlockStage: 3,
     civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:3.05,length:1.1},
     desc: 'Civilian research tower with three dish antennas. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
   },
   embercottage: {
-    cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5,
+    cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5, civilizationUnlockStage: 1,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
     desc: 'Civilian hillside cottage with warm-white windows. Costs only Echo; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
   },
   terracecommons: {
-    cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 5,
+    cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 5, civilizationUnlockStage: 2,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.1},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
     desc: 'Terraced civilian residences with warm-white windows and planted balconies. Costs only Echo; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
   },
   hearthtower: {
-    cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 5,
+    cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 5, civilizationUnlockStage: 3,
     civilizationDecks: [{x:0,z:-.40,w:4.25,d:3.6},{x:.2,z:2.10,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:2.9,length:1.1},
     desc: 'Civilian residential tower with warm-white windows and an exposed service spine. Costs only Echo; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
@@ -375,6 +375,9 @@ type BuildingDefinition = (typeof BUILDINGS)[BuildingType];
 
 function isCivilizationBuildingType(type: string): boolean {
   return Object.hasOwn(BUILDINGS, type) && !!(BUILDINGS[type as BuildingType] as BuildingDefinitionShape).civilizationPoints;
+}
+function civilizationBuildingAvailable(type: BuildingType, unlockedStage: number | null | undefined): boolean {
+  return unlockedStage == null || unlockedStage >= ((BUILDINGS[type] as BuildingDefinitionShape).civilizationUnlockStage || 0);
 }
 function civilizationFootprint(p: Position, team: number, x: number, z: number, w: number, d: number, cut = 0): Position[] {
   const yaw=BUILDING_YAW+(team===1?Math.PI:0),cs=Math.cos(yaw),sn=Math.sin(yaw),
@@ -430,7 +433,7 @@ function expeditionCivilizationScore(expedition: MeridianExpedition, live: RunSt
 }
 function civilizationScoreRequirement(stage: number): number {
   if (stage <= 1) return 0;
-  const required = 50 * 5 ** (stage - 2);
+  const required = 25 * 3 ** (stage - 2);
   // Never round/clamp an oversized requirement into an attainable unlock.
   return Number.isSafeInteger(required) ? required : Infinity;
 }

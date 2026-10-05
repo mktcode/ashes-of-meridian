@@ -172,12 +172,13 @@
       }
       refreshCivilizationScore() {
         const expedition = this.expedition;
-        if (!expedition) return 0;
+        if (!expedition) { this.game.civilizationStage = null; return 0; }
         expedition.unlockedStage ??= expedition.depth + 1;
         expedition.civilizationScore = expeditionCivilizationScore(expedition,
           this.view === 'game' && !this.game.stepping && this.game.snapshotSafe ? this.game.s : null, this.activeWorldStage);
         if (expedition.civilizationScore >= civilizationScoreRequirement(expedition.depth + 1))
           expedition.unlockedStage = expedition.depth + 1;
+        this.game.civilizationStage = expedition.unlockedStage;
         this.profile.lastCivilizationScore = expedition.civilizationScore;
         return expedition.civilizationScore;
       }

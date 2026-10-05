@@ -59,6 +59,8 @@
     }
     class MeridianGame {
       profile: MeridianProfile;
+      // Derived expedition permission, not part of a world's original recipe/snapshot.
+      civilizationStage: number | null = null;
       emit: GameEventSink;
       s: RunState | null;
       world: Battlefield | null;

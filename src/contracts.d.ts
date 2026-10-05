@@ -21,6 +21,7 @@ interface UnitDefinitionShape {
 
 interface BuildingDefinitionShape {
   civilizationPoints?: number;
+  civilizationUnlockStage?: number;
   /** Authored local deck footprints, shared by the CPU support plane and model. */
   civilizationDecks?: readonly { x: number; z: number; w: number; d: number; top?: number }[];
   civilizationEntry?: { x: number; z: number; length: number };

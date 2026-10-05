@@ -174,28 +174,31 @@ test('military victory can leave the next stage locked; old-world building unloc
   await ui.startExpeditionBattle();assert.equal(game.s,null);assert.equal(ui.modalKind,'civilizationGate');
   ui.uiAction('developWorld');await Promise.resolve();
   assert.equal(ui.activeWorldStage,1);assert.equal(ui.paused,true);
-  for(let i=0;i<9;i++)game.spawnBuilding('fieldlab',-20+i*4,0,0,0,{progress:1});
+  for(let i=0;i<4;i++)game.spawnBuilding('fieldlab',-20+i*4,0,0,0,{progress:1});
   const unfinished=game.spawnBuilding('fieldlab',20,0,0,0,{progress:.9});
-  assert.equal(ui.refreshCivilizationScore(),45);assert.equal(ui.expedition.unlockedStage,1);
+  assert.equal(ui.refreshCivilizationScore(),20);assert.equal(ui.expedition.unlockedStage,1);
+  assert.equal(game.civilizationStage,1);
   unfinished.progress=1;
-  assert.equal(ui.refreshCivilizationScore(),50);assert.equal(ui.expedition.unlockedStage,2);
+  assert.equal(ui.refreshCivilizationScore(),25);assert.equal(ui.expedition.unlockedStage,2);
+  assert.equal(game.civilizationStage,2,'building permissions follow the expedition, not the visited stage');
   assert.equal(ui.expedition.worlds[0].battle.state.entities.filter(e=>e.type==='fieldlab').length,0,'score uses live buildings, not the last autosave');
   assert.equal(h.profile.aether,profile.aether);assert.equal(h.profile.expeditionDepth,profile.expeditionDepth);
   assert.deepEqual(copy(ui.expedition.encounter),encounter);
   assert.equal(ui.expedition.battle,null,'old-world development cannot replace the future current battle');
   ui.showHome();
-  const saved=h.persistence.loadExpedition();assert.equal(saved.civilizationScore,50);assert.equal(saved.unlockedStage,2);
-  const reload=harness(new Map(h.data));assert.equal(reload.ui.expedition.civilizationScore,50);assert.equal(reload.ui.expedition.unlockedStage,2);
+  const saved=h.persistence.loadExpedition();assert.equal(saved.civilizationScore,25);assert.equal(saved.unlockedStage,2);
+  const reload=harness(new Map(h.data));assert.equal(reload.ui.expedition.civilizationScore,25);assert.equal(reload.ui.expedition.unlockedStage,2);
+  assert.equal(reload.game.civilizationStage,2,'reload derives building permissions from saved expedition progress');
   await ui.browseStage(1);ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,null);assert.equal(game.s.depth,1);
-  assert.equal(ui.refreshCivilizationScore(),50,'score is not spent when entering the next stage');
+  assert.equal(ui.refreshCivilizationScore(),25,'score is not spent when entering the next stage');
   const worker=game.alive(e=>e.team===0&&e.type==='worker')[0];game.spawnBuilding('hq',worker.x,worker.z,0,0,{progress:1});
   for(const e of game.alive(e=>e.team===1)){e.hp=0;e.deathAt=game.s.time;}
   game.resultClock=.2;game.step(.05);
   assert.equal(ui.expedition.depth,2);assert.equal(ui.expedition.worlds.length,2);
-  assert.equal(ui.expedition.civilizationScore,50,'the next map needs no local civil buildings and its victory adds no score payout');
-  assert.equal(ui.expedition.unlockedStage,2,'stage 3 now needs 250 points');
-  assert.equal(h.persistence.loadExpedition().civilizationScore,50);
+  assert.equal(ui.expedition.civilizationScore,25,'the next map needs no local civil buildings and its victory adds no score payout');
+  assert.equal(ui.expedition.unlockedStage,2,'stage 3 now needs 75 points');
+  assert.equal(h.persistence.loadExpedition().civilizationScore,25);
 });
 
 test('reload derives score from world buildings rather than a forged or stale cached total',()=>{

@@ -151,7 +151,7 @@ test('home civilization progress follows the next unmet score threshold without 
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
   const render = vm.runInContext('renderHomeCivilizationScore', context);
   vm.runInContext('Math.random = () => { throw Error("Progress consumed RNG"); };', context);
-  for (const [score, stage, target] of [[0,2,50],[49,2,50],[50,3,250],[250,4,1250],[6250,6,31250]]) {
+  for (const [score, stage, target] of [[0,2,25],[24,2,25],[25,3,75],[75,4,225],[675,6,2025]]) {
     const expedition = Object.freeze({depth:0, unlockedStage:1, civilizationScore:score});
     const before = JSON.stringify(expedition), html = render(expedition,999);
     assert.match(html, new RegExp(`aria-label="Civilization Score toward Stage ${stage}"`));
@@ -165,7 +165,7 @@ test('home civilization progress follows the next unmet score threshold without 
   const last = render(null,250);
   assert.doesNotMatch(last,/role="progressbar"/);assert.match(last,/250<\/strong>/);
   const afterLoss = render({depth:2,unlockedStage:3,civilizationScore:100},0);
-  assert.match(afterLoss,/aria-valuemax="1250"/,'score loss does not target an already unlocked stage again');
+  assert.match(afterLoss,/aria-valuemax="225"/,'score loss does not target an already unlocked stage again');
   const capped = render({depth:0,unlockedStage:1,civilizationScore:Number.MAX_SAFE_INTEGER},0);
   assert.doesNotMatch(capped,/role="progressbar"|width:NaN|width:Infinity/);
 });
@@ -1399,6 +1399,23 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
 });
 
+test('build menu hides unavailable civilian tiers and refreshes when expedition permissions change',()=>{
+  const h=setup(),ui=h.ui,g=ui.game,tiers=[['fieldlab','embercottage'],['researchhub','terracecommons'],['researchspire','hearthtower']];
+  ui.tab='build';
+  for(const faction of [0,1,2]){
+    g.s.parties[0].faction=faction;
+    for(const stage of [1,2,3]){
+      g.civilizationStage=stage;ui.renderActionMarkup();
+      const html=h.document.getElementById('actions').innerHTML;
+      tiers.forEach((types,i)=>types.forEach(type=>{
+        const pattern=new RegExp(`data-action="build:${type}"`);
+        if(i<stage)assert.match(html,pattern);else assert.doesNotMatch(html,pattern);
+      }));
+      for(const type of ['hq','barracks','factory','hangar','depot','refinery','turret'])assert.match(html,new RegExp(`data-action="build:${type}"`));
+    }
+  }
+});
+
 test('HUD refresh displays live civilization score while construction, loss and pause change the current world',()=>{
   const h=setup(),ui=h.ui,g=ui.game;
   ui.view='game';ui.updateHUD=h.UI.prototype.updateHUD;ui.renderActions=()=>{};ui.updateQueues=()=>{};
@@ -1408,7 +1425,7 @@ test('HUD refresh displays live civilization score while construction, loss and 
   ui.tick(.26);assert.equal(ui.expedition.civilizationScore,0);
   own.progress=1;ui.tick(.26);
   assert.equal(ui.expedition.civilizationScore,5);assert.match(h.document.getElementById('civilizationCount').textContent,/5/);
-  assert.equal(h.document.getElementById('civilizationCount').style.getPropertyValue('--civilization-progress'),'10%');
+  assert.equal(h.document.getElementById('civilizationCount').style.getPropertyValue('--civilization-progress'),'20%');
   assert.equal(h.document.getElementById('battleStage').textContent,'STAGE 1');
   own.hp=0;ui.paused=true;ui.tick(.26);
   assert.equal(ui.expedition.civilizationScore,0);assert.match(h.document.getElementById('civilizationCount').textContent,/0/);
@@ -1432,13 +1449,13 @@ test('compact HUD distinguishes score readiness from actual next-stage access du
   g.s.entities[0].hp=0;ui.updateHUD();assert.match(count.textContent,/^→ /);
   assert.equal(count.style.getPropertyValue('--civilization-progress'),'100%','permanent access survives score loss');
   g.s.entities[0].hp=500;ui.expedition.battle={state:{entities:[]}};
-  ui.updateHUD();assert.match(count.textContent,/^CIV /);assert.match(count.title,/Stage 3: 250/);
-  assert.equal(count.style.getPropertyValue('--civilization-progress'),'20%');assert.equal(count.classList.contains('stage-ready'),false);
+  ui.updateHUD();assert.match(count.textContent,/^CIV /);assert.match(count.title,/Stage 3: 75/);
+  assert.equal(count.style.getPropertyValue('--civilization-progress'),`${50/75*100}%`);assert.equal(count.classList.contains('stage-ready'),false);
   g.s.entities.push(...Array.from({length:40},()=>({...g.s.entities[0]})));
-  ui.updateHUD();assert.match(count.textContent,/^✓ /);assert.match(count.title,/Stage 3: 250/);
+  ui.updateHUD();assert.match(count.textContent,/^✓ /);assert.match(count.title,/Stage 3: 75/);
   assert.equal(count.style.getPropertyValue('--civilization-progress'),'100%','score banking must not hide readiness by advancing the HUD target');
   assert.equal(ui.expedition.unlockedStage,2,'the paused current battle still needs military victory');
-  ui.expedition.depth=22;ui.expedition.unlockedStage=22;ui.expedition.battle=null;
+  ui.expedition.depth=32;ui.expedition.unlockedStage=32;ui.expedition.battle=null;
   ui.updateHUD();assert.equal(count.style.getPropertyValue('--civilization-progress'),'0%');assert.match(count.title,/exceeds supported range/);
   ui.expedition=null;ui.updateHUD();assert.equal(count.classList.contains('hidden'),true);
 });

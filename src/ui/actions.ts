@@ -214,7 +214,7 @@
           noFreeWorker = this.tab === 'build' && !this.game.availableWorkers(this.localTeam).length,
           sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, s.parties[this.localTeam].loadout.join(','),
             this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
-            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, this.tutorialAction()].join(':');
+            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, this.tutorialAction(), this.game.civilizationStage].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
         $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => {
@@ -234,7 +234,7 @@
             if (!isCivilizationBuildingType(b!.type)) html += this.actionButton('rally', 'Rally point', 'rally');
           } else html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
-          for (let k of contentKeys(BUILDINGS))
+          for (let k of contentKeys(BUILDINGS).filter(k => s.rules.kind !== 'single-player' || this.localTeam !== 0 || civilizationBuildingAvailable(k, this.game.civilizationStage)))
             html += this.actionButton('build:' + k, buildingName(k, f), k, {
               cost: this.game.cost(k, 'building', this.localTeam)
             });
