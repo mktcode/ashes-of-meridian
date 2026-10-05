@@ -22,14 +22,18 @@ test('shared research and warm residential meshes are cached, finite and nondege
   }
  }
 });
-test('residential window meshes and posed lights are warm orange, isolated from cyan laboratory glazing',()=>{
+test('residential window meshes and posed lights are warm cream, isolated from cyan laboratory glazing',()=>{
  const h=modelHarness();
  for(const type of types){
   const R=createRendererStub({record:true}),lights=[];Object.assign(R,{quality:1,battlefieldHour:22,addPointLight:(...args)=>lights.push(args)});
   h.renderEntity(R,{id:1,kind:'building',type,team:0,faction:0,x:0,z:0,hp:500,size:h.BUILDINGS[type].size,progress:1},0);
   const housing=types.indexOf(type)>=3,windows=R.calls.filter(c=>c[0].endsWith(housing?'Warm':'Window'));
-  assert.equal(windows.length,1);assert.equal(windows[0][7],housing?0xff6613:0x55ccdf);assert.ok(windows[0][11]>0);
-  assert.equal(lights[0][4],housing?0xff882b:0x55d9e9);
+  assert.equal(windows.length,1);assert.equal(windows[0][7],housing?0xffdab0:0x55ccdf);assert.ok(windows[0][11]>0);
+  assert.equal(lights[0][4],housing?0xffdab0:0x55d9e9);
+  if(housing){
+   assert.ok(lights.every(l=>l[4]===0xffdab0),'all residential emitters use the window warmth, including the tower crown');
+   const dim=R.calls.find(c=>c[0].endsWith('Dim'));assert.equal(dim[7],0x806e58,'dimmer rooms retain the same natural warm hue');
+  }
  }
 });
 test('civilian decks use minimal height directly under their authored footprints, not nearby uphill peaks',()=>{

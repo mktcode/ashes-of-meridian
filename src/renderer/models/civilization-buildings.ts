@@ -7,7 +7,7 @@
   type Foot = { x: number; z: number; top: number };
   const colors: Record<Material, number> = {steel:0x68797d,edge:0xabb4b2,dark:0x23333e,
     orange:0xb46a31,cyan:0x3fdcea,glass:0x235b68,window:0x55ccdf,
-    warm:0xff6613,dim:0x7a3513,soil:0x384438,leaf:0x385938};
+    warm:0xffdab0,dim:0x806e58,soil:0x384438,leaf:0x385938};
   const variants: Variant[] = ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
   const feet = (x:number,z:number,w:number,d:number,top=0):Foot[] =>
     [-w/2+.2,w/2-.2].flatMap(dx=>[-d/2+.15,0,d/2-.15].map(dz=>({x:x+dx,z:z+dz,top})));
@@ -247,8 +247,8 @@
         const z=start+(i+.5)*length/count,y=top-(i+.5)*rise;
         p('box',x,y,z,1.05,Math.max(.025,Math.abs(rise)),length/count+.015,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
       }
-      pointLight(0,1.1,2.6,8,housing?0xff882b:0x55d9e9,2.5);
-      if(type==='hearthtower')pointLight(-.6,8.6,-.7,9,0xff882b,2.5);
+      pointLight(0,1.1,2.6,8,housing?colors.warm:0x55d9e9,2.5);
+      if(type==='hearthtower')pointLight(-.6,8.6,-.7,9,colors.warm,2.5);
       if(type==='researchspire')pointLight(-.5,10.6,-.7,9,0x55d9e9,2.5);
     };
     for(const faction of [0,1,2])registerEntityModel({id:`faction-${faction}/building/${type}`,meshes:faction===0?meshes:{},render});
