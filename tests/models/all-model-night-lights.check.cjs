@@ -76,7 +76,7 @@ test('noncivilian building lamps spread further with a softer peak, without chan
     assert.equal(actual.length,authored.length);
     actual.forEach((l,i)=>{
       assert.equal(l[3],authored[i][3]*(soften?1.2:1),`${e.faction}/${e.type}: radius`);
-      assert.equal(l[5],authored[i][5]*(soften?.85:1),`${e.faction}/${e.type}: intensity`);
+      assert.equal(l[5],authored[i][5]*(soften?.8:1),`${e.faction}/${e.type}: intensity`);
     });
   }
 });

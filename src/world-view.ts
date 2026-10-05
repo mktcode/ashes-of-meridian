@@ -625,7 +625,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           py = frame ? y+frame[1]*lx+frame[4]*ly+frame[7]*lz : y+ly,
           pz = frame ? e.z+frame[2]*lx+frame[5]*ly+frame[8]*lz : e.z-lx*sn+lz*cs;
         const soften = e.kind === 'building' && !isCivilizationBuildingType(e.type);
-        R.addPointLight?.(px,py,pz,radius*(soften?1.2:1),color,intensity*nightLight*(soften?.85:1));
+        R.addPointLight?.(px,py,pz,radius*(soften?1.2:1),color,intensity*nightLight*(soften?.8:1));
       };
       if (e.kind === 'resource') {
         if (e.type === 'crystal') {
