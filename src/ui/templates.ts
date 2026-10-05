@@ -41,17 +41,34 @@ function expeditionProgressText(expedition: MeridianExpedition): string {
   return `STAGE ${stage} · ${requirement} · ${unlocked ? 'MILITARY VICTORY ALSO REQUIRED' : 'BUILD IN ANY CLEARED WORLD'}`;
 }
 
+function renderCivilizationScore(score: number, stage: number | null, note: string, ready = false): string {
+  const required = stage === null ? Infinity : civilizationScoreRequirement(stage), hasTarget = Number.isFinite(required),
+    value = score.toLocaleString('en-US'), target = required.toLocaleString('en-US'),
+    progress = ready || required === 0 ? 1 : hasTarget ? Math.min(1, score / required) : 0;
+  return `<section class="civilization-score${ready ? ' stage-ready' : ''}" aria-label="Civilization Score">
+    <span>CIVILIZATION SCORE</span><div class="civilization-amount"><strong>${value}</strong>${hasTarget ? `<span>/ ${target}</span>` : ''}</div>
+    ${hasTarget ? `<div class="civilization-progress" role="progressbar" aria-label="Civilization Score toward Stage ${stage}" aria-valuemin="0" aria-valuemax="${required}" aria-valuenow="${ready ? required : Math.min(score, required)}" aria-valuetext="${ready ? `Stage ${stage} unlocked; ${value} current points` : `${value} of ${target} points`}"><i aria-hidden="true" style="width:${progress * 100}%"></i></div>` : ''}
+    <small>${esc(note)}</small>
+  </section>`;
+}
+
+function renderVictoryCivilizationScore(expedition: MeridianExpedition): string {
+  const score = expedition.civilizationScore || 0, stage = expedition.depth + 1,
+    required = civilizationScoreRequirement(stage), ready = expeditionStageUnlocked(expedition),
+    note = ready ? `✓ STAGE ${stage} UNLOCKED · SCORE IS NOT SPENT` : Number.isFinite(required)
+      ? `STAGE ${stage} · ${Math.max(0, required - score).toLocaleString('en-US')} MORE · BUILD IN ANY CLEARED WORLD`
+      : 'NEXT TARGET EXCEEDS SUPPORTED SCORE RANGE';
+  return renderCivilizationScore(score, stage, note, ready);
+}
+
 function renderHomeCivilizationScore(expedition: MeridianExpedition | null, lastScore: number): string {
-  const score = expedition ? expedition.civilizationScore || 0 : lastScore, value = score.toLocaleString('en-US');
+  const score = expedition ? expedition.civilizationScore || 0 : lastScore;
   let stage = expedition ? Math.max(2, (expedition.unlockedStage ?? expedition.depth + 1) + 1) : 2,
     required = expedition ? civilizationScoreRequirement(stage) : Infinity;
   while (score >= required && Number.isFinite(required)) required = civilizationScoreRequirement(++stage);
-  const hasTarget = !!expedition && Number.isFinite(required), target = required.toLocaleString('en-US');
-  return `<section class="civilization-score" aria-label="Civilization Score">
-    <span>CIVILIZATION SCORE</span><div class="civilization-amount"><strong>${value}</strong>${hasTarget ? `<span>/ ${target}</span>` : ''}</div>
-    ${hasTarget ? `<div class="civilization-progress" role="progressbar" aria-label="Civilization Score toward Stage ${stage}" aria-valuemin="0" aria-valuemax="${required}" aria-valuenow="${score}" aria-valuetext="${value} of ${target} points"><i aria-hidden="true" style="width:${score / required * 100}%"></i></div>` : ''}
-    <small>${!expedition ? 'LAST EXPEDITION' : hasTarget ? `TARGET · STAGE ${stage} · ${(required - score).toLocaleString('en-US')} MORE` : 'NEXT TARGET EXCEEDS SUPPORTED SCORE RANGE'}</small>
-  </section>`;
+  const note = !expedition ? 'LAST EXPEDITION' : Number.isFinite(required)
+    ? `TARGET · STAGE ${stage} · ${(required - score).toLocaleString('en-US')} MORE` : 'NEXT TARGET EXCEEDS SUPPORTED SCORE RANGE';
+  return renderCivilizationScore(score, expedition ? stage : null, note);
 }
 
 function renderHomeScreen(expedition: MeridianExpedition | null, hasPreviousStage = false, stageMapName = '', lastCivilizationScore = 0) {

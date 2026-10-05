@@ -170,6 +170,36 @@ test('home civilization progress follows the next unmet score threshold without 
   assert.doesNotMatch(capped,/role="progressbar"|width:NaN|width:Infinity/);
 });
 
+test('victory progress stays on the next encounter, caps surplus and keeps permanent access visible without mutations',()=>{
+  const context=loadScripts(['core','content','ui-core','ui-templates']),render=vm.runInContext('renderVictoryCivilizationScore',context);
+  vm.runInContext('Math.random = () => { throw Error("Progress consumed RNG"); };',context);
+  for(const [score,unlocked,width,now] of [[10,1,40,10],[50,2,100,25],[0,2,100,25]]){
+    const expedition=Object.freeze({depth:1,civilizationScore:score,unlockedStage:unlocked}),before=JSON.stringify(expedition),html=render(expedition);
+    assert.match(html,/aria-label="Civilization Score toward Stage 2"/);
+    assert.match(html,/aria-valuemax="25"/);assert.match(html,new RegExp(`aria-valuenow="${now}"`));
+    assert.match(html,new RegExp(`width:${width}%`));assert.equal(html.includes('stage-ready'),unlocked===2);
+    assert.equal(JSON.stringify(expedition),before);
+  }
+  assert.doesNotMatch(render({depth:32,unlockedStage:32,civilizationScore:0}),/role="progressbar"|width:NaN|width:Infinity/);
+});
+
+test('victory screen integrates score progress without changing next-stage entry permissions',()=>{
+  const h=setup(),ui=h.ui;
+  ui.factionJustUnlocked=null;
+  ui.expedition={depth:1,unlockedStage:1,civilizationScore:10,offers:[],enemyBenefits:[],
+    encounter:{map:'desert',seed:1409,mission:'hq-elimination',enemies:[]}};
+  const before=JSON.stringify(ui.expedition);
+  ui.showResult({win:true});let html=h.document.getElementById('result').innerHTML;
+  assert.match(html,/role="progressbar"/);assert.match(html,/width:40%/);
+  assert.match(html,/data-ui="continueExpedition" disabled/);
+  assert.equal(JSON.stringify(ui.expedition),before);
+  ui.expedition.unlockedStage=2;ui.expedition.civilizationScore=50;
+  ui.showResult({win:true});html=h.document.getElementById('result').innerHTML;
+  assert.match(html,/width:100%/);assert.doesNotMatch(html,/data-ui="continueExpedition" disabled/);
+  ui.expedition=null;ui.showResult({win:false,text:'Defeat'});
+  assert.doesNotMatch(h.document.getElementById('result').innerHTML,/role="progressbar"/);
+});
+
 test('opponent briefing maps active slots to their faction and benefit data', () => {
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
   const { renderExpeditionOpponents: renderOpponents, FACTIONS, expeditionBenefit } =

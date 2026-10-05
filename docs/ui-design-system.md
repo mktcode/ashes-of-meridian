@@ -17,6 +17,10 @@ Karte; diese Baufortschrittsanzeige ersetzt keine militärische Zugangsvorausset
 Erreichte Schwellen wechseln zum nächsten höheren Ziel. Bereits freigeschaltete
 Stages werden auch bei Scoreverlust nicht erneut als Ziele angezeigt; ohne laufende
 Expedition bleibt nur die letzte Bestandssumme sichtbar.
+Der Victory Screen verwendet dieselbe Fortschrittskomponente, hält das Ziel aber
+bei der unmittelbar nächsten Expeditionsstage: fehlende Punkte oder eine volle
+Leiste mit Freischaltmarkierung, auch bei Vorbauen oder späterem Scoreverlust.
+So stimmt die Anzeige mit der anschließenden Encounter-Karte überein.
 Im HUD bleibt unter dem kompakten Score eine dünne Fortschrittslinie innerhalb
 des bestehenden Stage-Felds. Ihr Ziel ist die tatsächlich nächste Expeditionsstage,
 nicht das nächste vorgebaute Score-Ziel des Startbildschirms. Ein goldenes ✓ ersetzt
