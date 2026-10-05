@@ -1,5 +1,6 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
+    interface UIActionButtonOptions { badge?: string | number; disabled?: boolean; cost?: Cost }
     const cameraMapBounds = new WeakMap<Battlefield, { yaw: number; extent: number; surface: BattlefieldSurface | null; low: number; high: number }>();
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
@@ -189,8 +190,8 @@
             break;
         }
       },
-      actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: {badge?: string | number; disabled?: boolean; cost?: Cost} = {}) {
-        const active = this.isModeAction(key), tutorialFocus = this.tutorialAction() === key,
+      actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: UIActionButtonOptions = {}, tutorialAction: string | null = this.tutorialAction()) {
+        const active = this.isModeAction(key), tutorialFocus = tutorialAction === key,
           renderedLabel = active ? 'Cancel' : label;
         const faction = this.game.s?.parties[this.localTeam].faction;
         const badge = active ? '' : opts.badge || '', [kind,type] = key.split(':');
@@ -202,15 +203,22 @@
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost || !opts.cost.gas ? opts.cost.cost + '◆' : ''}${opts.cost.gas ? (opts.cost.cost ? ' ' : '') + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
-        this.renderActionMarkup();
+        this.renderActionMarkup(supply, capacity);
         // Never expose newly created buttons in their default enabled state until the next HUD tick.
         this.updateActionStates(supply, capacity);
       },
-      renderActionMarkup(this: MeridianUI) {
+      renderActionMarkup(this: MeridianUI, supply?: number, capacity?: number) {
         let s = this.game.s;
         if (!s) return;
         let b = this.selectedBuilding();
         if (this.tab === 'building' && !b) this.tab = 'root';
+        if (this.battleTutorial?.step === 'trainRifle' || this.battleTutorial?.step === 'buildDepot') {
+          supply ??= this.game.supply(this.localTeam);
+          capacity ??= this.game.cap(this.localTeam);
+        }
+        const tutorialHint = this.tutorialSupplyHint(supply, capacity), tutorialAction = this.tutorialAction(supply, capacity);
+        const button = (key: string, label: string, ic: string, opts: UIActionButtonOptions = {}) =>
+          this.actionButton(key, label, ic, opts, tutorialAction);
         let ready = !!b && b.progress >= 1,
           repairing = ready && this.game.buildingRepairers(b!.id, this.localTeam).length > 0,
           repairReason = ready && !repairing ? this.game.canRepairBuilding(b!.id, this.localTeam) : '',
@@ -218,41 +226,42 @@
           noFreeWorker = this.tab === 'build' && !this.game.availableWorkers(this.localTeam).length,
           sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, s.parties[this.localTeam].loadout.join(','),
             this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
-            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, this.tutorialAction(), this.game.civilizationStage].join(':');
+            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, tutorialAction, tutorialHint, this.game.civilizationStage].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
         $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => {
           const ability = ABILITIES[key];
-          return this.actionButton('ability:' + key, ability.name, ability.icon);
+          return button('ability:' + key, ability.name, ability.icon);
         }).join('');
         let html = '', f = s.parties[this.localTeam].faction;
         if (this.tab === 'root') {
           for (let [tab, label, ic] of [
             ['build', 'Buildings', 'hq'], ['infantry', 'Infantry', 'rifle'],
             ['vehicles', 'Vehicles', 'tank'], ['aircraft', 'Aircraft', 'air']
-          ]) html += this.actionButton('tab:' + tab, label, ic);
+          ]) html += button('tab:' + tab, label, ic);
         } else if (this.tab === 'building') {
           if (ready) {
-            html += this.actionButton('sell', 'Sell', 'cancel', { disabled: !!sellReason });
-            html += this.actionButton('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
-            html += `<div class="building-rotation">${this.actionButton('rotateLeft', 'Rotate left', 'rotateLeft')}${this.actionButton('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
-            if (!isCivilizationBuildingType(b!.type)) html += this.actionButton('rally', 'Rally point', 'rally');
-          } else html += this.actionButton('cancelBuild', 'Cancel build', 'cancel');
+            html += button('sell', 'Sell', 'cancel', { disabled: !!sellReason });
+            html += button('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
+            html += `<div class="building-rotation">${button('rotateLeft', 'Rotate left', 'rotateLeft')}${button('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
+            if (!isCivilizationBuildingType(b!.type)) html += button('rally', 'Rally point', 'rally');
+          } else html += button('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
           for (let k of contentKeys(BUILDINGS).filter(k => s.rules.kind !== 'single-player' || this.localTeam !== 0 || civilizationBuildingAvailable(k, this.game.civilizationStage)))
-            html += this.actionButton('build:' + k, buildingName(k, f), k, {
+            html += button('build:' + k, buildingName(k, f), k, {
               cost: this.game.cost(k, 'building', this.localTeam)
             });
         } else {
           let types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
           for (let k of types[this.tab] || [])
-            html += this.actionButton('train:' + k, unitName(k, f), k, {
+            html += button('train:' + k, unitName(k, f), k, {
               cost: this.game.cost(k, 'unit', this.localTeam)
             });
         }
-        const tutorialBack = this.tutorialAction() === 'tab:root';
+        const tutorialBack = tutorialAction === 'tab:root';
         $('actions').innerHTML = (this.tab === 'root' ? '' :
           `<button class="menu-back${tutorialBack ? ' tutorial-focus' : ''}" data-action="tab:root">${uiIcon('back')}Back</button>`) +
+          (tutorialHint ? `<p class="building-status" role="status">${esc(tutorialHint)}</p>` : '') +
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?
@@ -355,6 +364,7 @@
         $('alloyCount').textContent = Math.floor(account.alloy).toLocaleString();
         $('gasCount').textContent = Math.floor(account.gas).toLocaleString();
         const supply = this.game.supply(this.localTeam), capacity = this.game.cap(this.localTeam);
+        this.reconcileBattleTutorial(supply, capacity);
         $('supplyCount').textContent = supply + '/' + capacity;
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
         $('energyCount').textContent = String(Math.floor(account.energy));

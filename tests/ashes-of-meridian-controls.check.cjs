@@ -298,6 +298,8 @@ function setup() {
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
     workerTask: vm.runInContext('MeridianGame.prototype.workerTask', context),
+    cap: vm.runInContext('MeridianGame.prototype.cap', context),
+    supply: vm.runInContext('MeridianGame.prototype.supply', context),
     availableWorkers: () => [{}],
     get(id) { return this.s.entities.find(e => e.id === id && e.hp !== 0); },
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
@@ -752,8 +754,9 @@ test('home camera compensates HQ or worker height along the current yaw and reta
   assert.deepEqual(h.calls,[]);
 });
 
-test('first-stage tutorial highlights two workers, refinery, barracks and rifle in sequence and persists completion', () => {
-  const h = setup(), actions = h.document.getElementById('actions'), saved = [];
+test('first-stage tutorial highlights workers, economy, infantry to the supply limit and a completed depot', () => {
+  const h = setup(), actions = h.document.getElementById('actions'), saved = [], spoken = [];
+  h.ui.radioLine = id => spoken.push(id);
   h.ui.setTab = h.UI.prototype.setTab;
   h.ui.alert = () => {};
   h.ui.persistence.saveProfile = profile => { saved.push(JSON.parse(JSON.stringify(profile))); return true; };
@@ -809,12 +812,99 @@ test('first-stage tutorial highlights two workers, refinery, barracks and rifle 
   h.ui.setTab('infantry');
   assert.equal(focused('train:rifle'), true);
 
-  h.ui.event('trained', { type: 'rifle' });
+  const barracks = { id: 12, team: 0, kind: 'building', type: 'barracks', hp: 100, progress: 1, queue: [] };
+  h.ui.game.s.entities.push(barracks, ...Array.from({ length: 3 }, (_, i) =>
+    ({ id: 20 + i, team: 0, kind: 'unit', type: 'worker', hp: 100 })));
+  const recruit = () => {
+    h.ui.game.s.entities.push({ id: h.ui.game.s.entities.length + 100, team: 0, kind: 'unit', type: 'rifle', hp: 100 });
+    h.ui.event('trained', { type: 'rifle' });
+  };
+  recruit();
+  assert.equal(h.ui.battleTutorial.step, 'trainRifle', 'one squad no longer finishes the tutorial');
+  assert.equal(focused('train:rifle'), true);
+  assert.equal(h.ui.profile.tutorialComplete, false);
+  barracks.queue.push({ type: 'rifle' });
+  h.ui.renderActions();
+  assert.equal(focused('train:rifle'), true, 'a queued squad does not hide further recruitment while supply remains');
+  barracks.queue = [];
+  for (let i = 0; i < 8; i++) recruit();
+  assert.equal(h.ui.battleTutorial.step, 'trainRifle');
+  barracks.queue.push({ type: 'rifle' });
+  h.UI.prototype.updateHUD.call(h.ui);
+  assert.equal(h.ui.game.supply(), 23);
+  assert.equal(h.ui.battleTutorial.step, 'buildDepot', 'reserved supply counts and one odd slot cannot fit a squad');
+  assert.equal(spoken.filter(id => id === 'tutorial.supply').length, 1);
+  assert.equal(spoken.filter(id => id === 'tutorial.logistics').length, 1);
+  assert.equal(h.ui.profile.tutorialComplete, false);
+  assert.equal(focused('tab:build'), true);
+  h.ui.setTab('build');
+  assert.equal(focused('build:depot'), true);
+  const depot = { id: 13, team: 0, kind: 'building', type: 'depot', hp: 100, progress: .2, queue: [] };
+  h.ui.game.s.entities.push(depot);
+  h.ui.renderActions();
+  assert.equal(focused('build:depot'), false, 'wait for the depot foundation to finish');
+  assert.equal(h.ui.game.cap(), 24);
+  assert.equal(saved.length, 0);
+  h.ui.game.s.entities = h.ui.game.s.entities.filter(e => e !== depot);
+  h.ui.renderActions();
+  assert.equal(focused('build:depot'), true, 'cancelling the foundation restores the depot prompt');
+  depot.progress = 1;
+  h.ui.game.s.entities.push(depot);
+  h.ui.event('complete', { type: 'depot', x: 1, z: 2 });
+  assert.equal(h.ui.game.cap(), 40);
   assert.equal(h.ui.battleTutorial, null);
   assert.equal(h.ui.profile.tutorialComplete, true);
   assert.equal(saved.length, 1);
   assert.equal(saved[0].tutorialComplete, true);
   assert.equal(actions.innerHTML.includes('tutorial-focus'), false);
+});
+
+test('supply tutorial waits for multiple completed squads and responds to cancelled reservations', () => {
+  const h = setup(), ui = h.ui, g = ui.game;
+  ui.setTab = h.UI.prototype.setTab;
+  ui.tab = 'infantry';
+  ui.battleTutorial = { step: 'trainRifle', achieved: new Set(['trainRifle']), workersTrained: 2, elapsed: 0 };
+  const producer = (id, type, count) => ({ id, team: 0, kind: 'building', type, hp: 100, progress: 1,
+    queue: Array.from({ length: count }, () => ({ type: 'rifle' })) });
+  const a = producer(1, 'barracks', 5), b = producer(2, 'barracks', 4);
+  g.s.entities = [producer(3, 'hq', 0), a, b,
+    ...Array.from({ length: 3 }, (_, i) => ({ id: 4 + i, team: 0, kind: 'unit', type: 'worker', hp: 100 })),
+    { id: 7, team: 0, kind: 'unit', type: 'rifle', hp: 100 }];
+  assert.equal(g.supply(), 23);
+  ui.reconcileBattleTutorial();
+  assert.equal(ui.battleTutorial.step, 'trainRifle', 'full orders alone are not multiple completed squads');
+  assert.equal(ui.tutorialAction(), null);
+  b.queue.pop();
+  ui.reconcileBattleTutorial();
+  assert.equal(g.supply(), 21);
+  assert.equal(ui.tutorialAction(), 'train:rifle', 'cancelling reserved supply restores recruitment guidance');
+  b.queue.push({ type: 'rifle' });
+  ui.reconcileBattleTutorial();
+  assert.equal(ui.tutorialAction(), null);
+  a.queue.shift();
+  g.s.entities.push({ id: 8, team: 0, kind: 'unit', type: 'rifle', hp: 100 });
+  ui.advanceBattleTutorial('trained', 'rifle');
+  assert.equal(g.supply(), 23);
+  assert.equal(ui.battleTutorial.step, 'buildDepot');
+  assert.equal(ui.profile.tutorialComplete, false);
+});
+
+test('supply tutorial derives its limit from current capacity, including odd slots and fleet upgrades', () => {
+  for (const [workers, rifles, rank, step] of [[2, 10, 0, 'trainRifle'], [3, 9, 0, 'trainRifle'],
+    [3, 10, 0, 'buildDepot'], [2, 12, 2, 'trainRifle'], [2, 13, 2, 'buildDepot']]) {
+    const h = setup(), ui = h.ui, g = ui.game;
+    g.s.parties[0].meta.logisticsFrame = rank;
+    g.s.entities = [{ id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] },
+      ...Array.from({ length: workers + rifles }, (_, i) =>
+        ({ id: i + 2, team: 0, kind: 'unit', type: i < workers ? 'worker' : 'rifle', hp: 100 }))];
+    ui.battleTutorial = { step: 'trainRifle', achieved: new Set(['trainRifle']), workersTrained: 2, elapsed: 0 };
+    vm.runInContext('Math.random=()=>{throw Error("Tutorial RNG");};', h.context);
+    const before = JSON.stringify(g.s);
+    assert.ok(g.supply() <= g.cap(), 'fixture stays within its real supply capacity');
+    ui.reconcileBattleTutorial();
+    assert.equal(ui.battleTutorial.step, step);
+    assert.equal(JSON.stringify(g.s), before, 'guidance does not alter balances, units, supply or queues');
+  }
 });
 
 test('tutorial remembers valid goals completed out of order instead of demanding duplicates', () => {
@@ -826,6 +916,11 @@ test('tutorial remembers valid goals completed out of order instead of demanding
   assert.equal(h.ui.beginBattleTutorial(), true);
   h.ui.advanceBattleTutorial('complete', 'hq');
   h.ui.advanceBattleTutorial('complete', 'barracks');
+  h.ui.advanceBattleTutorial('complete', 'depot');
+  h.ui.game.s.entities = [{ id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] },
+    { id: 2, team: 0, kind: 'building', type: 'depot', hp: 100, progress: 1, queue: [] },
+    ...Array.from({ length: 21 }, (_, i) =>
+      ({ id: i + 3, team: 0, kind: 'unit', type: i < 2 ? 'worker' : 'rifle', hp: 100 }))];
   h.ui.advanceBattleTutorial('trained', 'rifle');
   h.ui.advanceBattleTutorial('complete', 'refinery');
   assert.equal(h.ui.battleTutorial.step, 'trainWorker');
@@ -1759,6 +1854,30 @@ test('battle autosave, pagehide and main menu preserve tutorial goals and restor
   ui.resume(); assert.equal(ui.paused, false);
 });
 
+test('supply tutorial recruitment and depot goals restore paused without losing progress', () => {
+  for (const step of ['trainRifle', 'buildDepot']) {
+    const h = savedUIBattle(), ui = h.ui, g = ui.game;
+    g.s.entities = [{ id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] },
+      { id: 2, team: 0, kind: 'building', type: 'barracks', hp: 100, progress: 1, queue: [{ type: 'rifle' }] },
+      ...Array.from({ length: 5 }, (_, i) =>
+        ({ id: i + 3, team: 0, kind: 'unit', type: i < 3 ? 'worker' : 'rifle', hp: 100 }))];
+    const goals = ['buildHQ', 'trainWorker', 'buildRefinery', 'buildBarracks', 'trainRifle'];
+    ui.battleTutorial = { step, achieved: new Set(goals), workersTrained: 2, elapsed: 0 };
+    const state = JSON.stringify(g.s);
+    ui.showHome();
+    ui.continueExpedition();
+    assert.equal(ui.paused, true);
+    assert.equal(ui.battleTutorial.step, step);
+    assert.equal(ui.battleTutorial.workersTrained, 2);
+    assert.deepEqual([...ui.battleTutorial.achieved], goals);
+    assert.equal(ui.profile.tutorialComplete, false);
+    assert.equal(JSON.stringify(g.s), state);
+    ui.reconcileBattleTutorial();
+    assert.equal(ui.battleTutorial.step, step);
+    assert.equal(ui.tutorialAction(), step === 'trainRifle' ? 'tab:infantry' : 'tab:build');
+  }
+});
+
 test('failed battle save warns before leaving and keeps a usable volatile snapshot in this tab', () => {
   const h = savedUIBattle(), ui = h.ui, state = ui.game.s;
   ui.persistence.available = false; ui.persistence.saveProgress = () => false;
@@ -2550,12 +2669,15 @@ test('HUD reads supply and capacity once per update and gates recruitment at cap
     [22, 24, [false, false]], [23, 24, [false, true]],
     [24, 24, [true, true]], [24, 40, [false, false]]
   ]) {
-    let supplyReads = 0, capacityReads = 0;
-    g.supply = () => { supplyReads++; return supply; };
-    g.cap = () => { capacityReads++; return capacity; };
-    h.UI.prototype.updateHUD.call(h.ui);
-    assert.deepEqual(buttons.map(button => button.disabled), blocked);
-    assert.deepEqual([supplyReads, capacityReads], [1, 1]);
+    for (const step of [null, 'trainRifle', 'buildDepot']) {
+      h.ui.battleTutorial = step ? { step, achieved: new Set(), workersTrained: 2, elapsed: 0 } : null;
+      let supplyReads = 0, capacityReads = 0;
+      g.supply = () => { supplyReads++; return supply; };
+      g.cap = () => { capacityReads++; return capacity; };
+      h.UI.prototype.updateHUD.call(h.ui);
+      assert.deepEqual(buttons.map(button => button.disabled), blocked);
+      assert.deepEqual([supplyReads, capacityReads], [1, 1]);
+    }
   }
 });
 

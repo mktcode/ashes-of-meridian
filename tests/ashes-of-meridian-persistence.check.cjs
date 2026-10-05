@@ -138,6 +138,28 @@ test('running snapshot restores exact CPU state, RNG, fog and consumed cargo wit
   game.snapshotSafe = false; assert.throws(() => game.snapshotBattle(), /completed/); game.snapshotSafe = true;
 });
 
+test('supply tutorial goals round-trip in running saves and reject unknown goals', () => {
+  for (const step of ['trainRifle', 'buildDepot']) {
+    const run = savedBattle(), h = setup();
+    run.battle.tutorial = { step, achieved: ['buildHQ', 'trainWorker', 'buildRefinery', 'buildBarracks', 'trainRifle'], workersTrained: 2 };
+    assert.equal(put(h, run), true);
+    assert.deepEqual(json(setup(h.data).service.loadExpedition().battle.tutorial), run.battle.tutorial);
+  }
+  const run = savedBattle(), h = setup();
+  run.battle.tutorial = { step: 'trainWorker', achieved: ['buildHQ', 'buildDepot'], workersTrained: 1 };
+  assert.equal(put(h, run), true, 'a depot completed ahead of its prompt remains remembered');
+  assert.deepEqual(json(setup(h.data).service.loadExpedition().battle.tutorial), run.battle.tutorial);
+  for (const corrupt of [{ ...run.battle.tutorial, step: 'unknown' },
+    { ...run.battle.tutorial, achieved: ['unknown'] }]) {
+    run.battle.tutorial = corrupt;
+    const damaged = setup();
+    put(damaged, run);
+    const loaded = setup(damaged.data).service;
+    assert.equal(loaded.loadExpedition(), null);
+    assert.ok(loaded.expeditionError);
+  }
+});
+
 test('residential buildings round-trip with unfinished state and paid Echo',()=>{
   const run=savedBattle(),h=setup();assert.equal(put(h,run),true);
   const restored=setup(h.data).service.loadExpedition();

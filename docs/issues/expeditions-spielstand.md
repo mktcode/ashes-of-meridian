@@ -8,7 +8,7 @@ Maßgeblicher Vertrag: [Speichern und Lebenszyklus](../gameplay.md#speichern-und
 
 ## Offene menschliche Grenzen
 
-- [ ] Tutorial während Ankunft, Aufklärungsflug und Wirtschaftszielen unterbrechen: Kamerafahrten werden übersprungen, Ziele erhalten und die Kamera bleibt bedienbar. Die technische Restore-Regression ersetzt keine Abnahme der tatsächlichen Kamerafahrten.
+- [ ] Tutorial während Ankunft, Aufklärungsflug, Wirtschaftszielen sowie Infanterie-/Supply-Limit und Depotbau unterbrechen: Kamerafahrten werden übersprungen, Ziele erhalten und die Kamera bleibt bedienbar. Die technische Restore-Regression ersetzt keine Abnahme der tatsächlichen Kamerafahrten.
 - [ ] Unter `file://` und Webhosting sowie mobil Hintergrund, Prozessende und bestmöglich Grafikverlust abnehmen. Nach hartem Abbruch ist Rücksprung zum letzten erfolgreichen Autosave zulässig; keine Verlustfreiheit beim Schließen zugesagt.
 - [ ] Sichtbarkeit und Verständlichkeit der Speicher-Ausfallmeldung, des Einstellungsstatus, der Warnung vor Menüwechsel und des expliziten Verwerfens beschädigter Saves menschlich abnehmen. Automatisierung sichert Zustandsverträge, nicht vollständige Dialog-/Geräteabläufe.
 - [ ] Alte und aktuelle Stage abwechselnd betreten, bauen/produzieren, pausieren und reloaden: Hintergrund/Button-Ziel, ursprüngliche Vorteile, unverändertes aktuelles Gefecht, offene Vorteilswahl, live abgeleiteten Score und gespeicherte Stage-Freischaltung ohne erneute Reserveauszahlung menschlich abnehmen. Neue Gebäudepunkte dürfen das aktuelle Gefecht nicht ersetzen oder vorzeitig eine militärisch unerreichte Stage öffnen; Freischaltung nach Scoreverlust/Reload erhalten. Archivende bei Niederlage/Abbruch/neuem Run und einzeln beschädigte Welt verständlich anzeigen/verwerfen.

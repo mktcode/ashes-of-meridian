@@ -1,7 +1,7 @@
 /* First-battle HUD tutorial. Loaded after ui/core.js. */
 'use strict';
 
-type BattleTutorialStep = 'arrival' | 'buildHQ' | 'recon' | 'trainWorker' | 'buildRefinery' | 'buildBarracks' | 'trainRifle';
+type BattleTutorialStep = 'arrival' | 'buildHQ' | 'recon' | 'trainWorker' | 'buildRefinery' | 'buildBarracks' | 'trainRifle' | 'buildDepot';
 interface BattleTutorialState {
   step: BattleTutorialStep;
   achieved: Set<BattleTutorialStep>;
@@ -18,7 +18,8 @@ const BATTLE_TUTORIAL_TARGETS: Record<BattleTutorialStep, { tab: UITab; action: 
   trainWorker: { tab: 'infantry', action: 'train:worker' },
   buildRefinery: { tab: 'build', action: 'build:refinery' },
   buildBarracks: { tab: 'build', action: 'build:barracks' },
-  trainRifle: { tab: 'infantry', action: 'train:rifle' }
+  trainRifle: { tab: 'infantry', action: 'train:rifle' },
+  buildDepot: { tab: 'build', action: 'build:depot' }
 };
 
 const uiTutorialMethods = {
@@ -75,7 +76,7 @@ const uiTutorialMethods = {
     if (visible) $('speedBtn').setAttribute('aria-describedby', 'speedHint');
     else $('speedBtn').removeAttribute('aria-describedby');
   },
-  tutorialAction(this: MeridianUI): string | null {
+  tutorialAction(this: MeridianUI, supply?: number, capacity?: number): string | null {
     if (!this.battleTutorial || this.battleTutorial.step === 'arrival' || this.battleTutorial.step === 'recon') return null;
     const step = this.battleTutorial.step, target = BATTLE_TUTORIAL_TARGETS[step],
       queuedWorkers = step === 'trainWorker' ? this.game.alive(e => e.team === this.localTeam && e.kind === 'building')
@@ -83,13 +84,25 @@ const uiTutorialMethods = {
       pending = step === 'trainWorker'
         ? this.battleTutorial.workersTrained + queuedWorkers >= 2
         : step === 'trainRifle'
-          ? this.game.alive(e => e.team === this.localTeam && e.kind === 'building' &&
-            e.queue?.some(q => q.type === 'rifle')).length > 0
+          ? (supply ?? this.game.supply(this.localTeam)) + UNITS.rifle.supply > (capacity ?? this.game.cap(this.localTeam))
           : this.game.alive(e => e.team === this.localTeam && e.kind === 'building' &&
-            e.type === (step === 'buildHQ' ? 'hq' : step === 'buildRefinery' ? 'refinery' : 'barracks') && e.progress < 1).length > 0;
+            e.type === target.action.slice('build:'.length) && e.progress < 1).length > 0;
     if (pending) return null;
     if (this.tab === target.tab) return target.action;
     return this.tab === 'root' ? `tab:${target.tab}` : 'tab:root';
+  },
+  tutorialSupplyHint(this: MeridianUI, supply?: number, capacity?: number): string {
+    const step = this.battleTutorial?.step;
+    if (step !== 'trainRifle' && step !== 'buildDepot') return '';
+    supply ??= this.game.supply(this.localTeam);
+    capacity ??= this.game.cap(this.localTeam);
+    const faction = this.game.s!.parties[this.localTeam].faction;
+    if (step === 'buildDepot')
+      return `Supply ${supply}/${capacity}. Complete a ${buildingName('depot', faction)} for +${BUILDINGS.depot.cap} capacity.`;
+    const goal = supply + UNITS.rifle.supply > capacity
+      ? 'No further squad fits. Wait for queued infantry to finish.'
+      : `Recruit ${unitName('rifle', faction)} squads until no more fit.`;
+    return `Supply ${supply}/${capacity}. ${goal} Each squad uses ${UNITS.rifle.supply}; queued recruits count.`;
   },
   finishTutorialRecon(this: MeridianUI) {
     this.setBattleTutorialStep('trainWorker', 'root');
@@ -100,6 +113,8 @@ const uiTutorialMethods = {
   setBattleTutorialStep(this: MeridianUI, step: BattleTutorialStep, tab: UITab) {
     if (!this.battleTutorial) return;
     this.battleTutorial.step = step;
+    if (step === 'trainRifle') this.radioLine('tutorial.supply');
+    else if (step === 'buildDepot' && !this.battleTutorial.achieved.has('buildDepot')) this.radioLine('tutorial.logistics');
     this.actionSignature = '';
     if (this.tab !== tab) this.setTab(tab);
     else this.renderActions();
@@ -111,13 +126,14 @@ const uiTutorialMethods = {
     const achieved = event === 'complete' && type === 'hq' ? 'buildHQ' : event === 'trained' && type === 'worker' && tutorial.workersTrained >= 2 ? 'trainWorker'
       : event === 'complete' && type === 'refinery' ? 'buildRefinery'
         : event === 'complete' && type === 'barracks' ? 'buildBarracks'
-          : event === 'trained' && type === 'rifle' ? 'trainRifle' : null;
-    if (!achieved) {
-      this.actionSignature = '';
-      this.renderActions();
-      return;
-    }
-    tutorial.achieved.add(achieved);
+          : event === 'trained' && type === 'rifle' ? 'trainRifle'
+            : event === 'complete' && type === 'depot' ? 'buildDepot' : null;
+    if (achieved) tutorial.achieved.add(achieved);
+    this.reconcileBattleTutorial();
+    this.actionSignature = '';
+    this.renderActions();
+  },
+  reconcileBattleTutorial(this: MeridianUI, supply?: number, capacity?: number) {
     while (this.battleTutorial?.achieved.has(this.battleTutorial.step)) {
       switch (this.battleTutorial.step) {
         case 'buildHQ':
@@ -128,6 +144,14 @@ const uiTutorialMethods = {
         case 'buildRefinery': this.setBattleTutorialStep('buildBarracks', 'build'); break;
         case 'buildBarracks': this.setBattleTutorialStep('trainRifle', 'root'); break;
         case 'trainRifle':
+          // Orders reserve supply immediately. An odd free slot need not fit another squad.
+          supply ??= this.game.supply(this.localTeam);
+          capacity ??= this.game.cap(this.localTeam);
+          if (capacity <= 0 || supply + UNITS.rifle.supply <= capacity ||
+            this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type === 'rifle').length < 2) return;
+          this.setBattleTutorialStep('buildDepot', 'root');
+          break;
+        case 'buildDepot':
           this.battleTutorial = null;
           this.profile.tutorialComplete = true;
           this.persist();

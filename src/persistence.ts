@@ -154,14 +154,14 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     triggers: dictionary(v => num(v) || bool(v)), cam: shape({ x: num, z: num, zoom: nonnegative, yaw: num }),
     result: oneOf(null), speed: oneOf(1, 2, 3)
   });
-  const tutorialStep = oneOf('arrival', 'buildHQ', 'recon', 'trainWorker', 'buildRefinery', 'buildBarracks', 'trainRifle');
+  const tutorialStep = oneOf('arrival', 'buildHQ', 'recon', 'trainWorker', 'buildRefinery', 'buildBarracks', 'trainRifle', 'buildDepot');
   if (!shape({
     version: oneOf(1), state, randomState: v => Number.isInteger(v) && Number(v) >= -2147483648 && Number(v) <= 2147483647,
     fogClock: nonnegative, resultClock: nonnegative, navDirty: bool, pathVersion: integer,
     gridSize: v => integer(v) && Number(v) >= 3 && Number(v) <= 2048,
     blocked: text, sight: list(shape({ visible: text, explored: text }), 4),
     spatial: list(v => Array.isArray(v) && v.length === 2 && typeof v[0] === 'string' && /^-?\d+,-?\d+$/.test(v[0]) && list(id)(v[1])),
-    tutorial: v => v === null || shape({ step: tutorialStep, achieved: list(tutorialStep, 7), workersTrained: integer }, { cameraHome: pos })(v)
+    tutorial: v => v === null || shape({ step: tutorialStep, achieved: list(tutorialStep, 8), workersTrained: integer }, { cameraHome: pos })(v)
   })(value)) return false;
   const b = value as ExpeditionBattleSave, s = b.state, count = expedition.encounter.enemies.length + 1;
   if (s.rules.kind !== 'single-player' || !!s.rules.completed !== completed ||

@@ -20,6 +20,14 @@ const VOICE_LINES = {
     speaker: 'Expedition command',
     text: 'First, recruit two more Prospectors from Infantry. Then build a refinery beside an Echo vent and prepare our fighting force.'
   },
+  'tutorial.supply': {
+    speaker: 'Expedition command',
+    text: 'Every unit uses supply, and queued recruits reserve it immediately. Build up your infantry until no more squads fit within your supply capacity.'
+  },
+  'tutorial.logistics': {
+    speaker: 'Expedition command',
+    text: 'We have reached our infantry supply limit. Build a Logistics depot to increase army capacity. Its additional supply becomes available only when construction is complete.'
+  },
   'worker.selected.1': { speaker: 'Worker', text: 'Yes?', audio: './audio/voices/worker-selected-1.mp3' },
   'worker.selected.2': { speaker: 'Worker', text: "What's my mission?", audio: './audio/voices/worker-selected-2.mp3' },
   'worker.selected.3': { speaker: 'Worker', text: 'Just following orders.', audio: './audio/voices/worker-selected-3.mp3' },
