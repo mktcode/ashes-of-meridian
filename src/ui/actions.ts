@@ -203,6 +203,11 @@
         return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost || !opts.cost.gas ? opts.cost.cost + '◆' : ''}${opts.cost.gas ? (opts.cost.cost ? ' ' : '') + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
+        if (this.battleTutorial?.step === 'trainRifle' || this.battleTutorial?.step === 'buildDepot') {
+          supply ??= this.game.supply(this.localTeam);
+          capacity ??= this.game.cap(this.localTeam);
+        }
+        this.updateTutorialGoal(supply, capacity);
         this.renderActionMarkup(supply, capacity);
         // Never expose newly created buttons in their default enabled state until the next HUD tick.
         this.updateActionStates(supply, capacity);
@@ -212,11 +217,7 @@
         if (!s) return;
         let b = this.selectedBuilding();
         if (this.tab === 'building' && !b) this.tab = 'root';
-        if (this.battleTutorial?.step === 'trainRifle' || this.battleTutorial?.step === 'buildDepot') {
-          supply ??= this.game.supply(this.localTeam);
-          capacity ??= this.game.cap(this.localTeam);
-        }
-        const tutorialHint = this.tutorialSupplyHint(supply, capacity), tutorialAction = this.tutorialAction(supply, capacity);
+        const tutorialAction = this.tutorialAction(supply, capacity);
         const button = (key: string, label: string, ic: string, opts: UIActionButtonOptions = {}) =>
           this.actionButton(key, label, ic, opts, tutorialAction);
         let ready = !!b && b.progress >= 1,
@@ -226,7 +227,7 @@
           noFreeWorker = this.tab === 'build' && !this.game.availableWorkers(this.localTeam).length,
           sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, s.parties[this.localTeam].loadout.join(','),
             this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
-            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, tutorialAction, tutorialHint, this.game.civilizationStage].join(':');
+            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, tutorialAction, this.game.civilizationStage].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
         $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => {
@@ -261,7 +262,6 @@
         const tutorialBack = tutorialAction === 'tab:root';
         $('actions').innerHTML = (this.tab === 'root' ? '' :
           `<button class="menu-back${tutorialBack ? ' tutorial-focus' : ''}" data-action="tab:root">${uiIcon('back')}Back</button>`) +
-          (tutorialHint ? `<p class="building-status" role="status">${esc(tutorialHint)}</p>` : '') +
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?

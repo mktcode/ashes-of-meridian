@@ -50,7 +50,13 @@
       <div class="clock"><strong id="gameTime">00:00</strong><button id="speedBtn" aria-label="Simulation speed: 1×. Tap to change.">1×</button><div id="speedHint" class="glass hidden" role="tooltip">Construction takes a moment. You can increase the game speed here.</div></div><button
         id="pauseBtn" class="square" aria-label="Pause"><img class="ui-icon" src="./assets/ui/pause.webp" alt="" aria-hidden="true"></button>
     </header>
-    <div id="alerts"></div>
+    <div id="battleNotices">
+      <section id="tutorialGoal" class="hidden" role="status" aria-labelledby="tutorialGoalLabel">
+        <div id="tutorialGoalLabel" class="eyebrow">TUTORIAL OBJECTIVE</div>
+        <p id="tutorialGoalText"></p>
+      </section>
+      <div id="alerts"></div>
+    </div>
     <div id="radio" class="glass hidden">
       <div class="radio-avatar">EC<span></span></div>
       <div>

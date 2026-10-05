@@ -57,7 +57,7 @@
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next),
 #modal .modal-frame,
 #hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action),
-#hud #radio {
+#hud :is(#radio, #tutorialGoal) {
   isolation: isolate;
   position: relative;
   border: 0;
@@ -74,7 +74,7 @@
 #modal .modal-frame::before, #modal .modal-frame::after,
 #hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::before,
 #hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::after,
-#hud #radio::before, #hud #radio::after {
+#hud :is(#radio, #tutorialGoal)::before, #hud :is(#radio, #tutorialGoal)::after {
   content: '';
   display: block;
   position: absolute;
@@ -95,7 +95,7 @@
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
 #modal .modal-frame::after,
 #hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::after,
-#hud #radio::after { inset: var(--ui-inset); background: var(--ui-fill) }
+#hud :is(#radio, #tutorialGoal)::after { inset: var(--ui-inset); background: var(--ui-fill) }
 :is(#menu, #modal, #result) :is(.primary, .secondary) {
   --ui-edge: #4ec1dea6;
   --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8);
@@ -390,6 +390,9 @@
 #hud .queue-item { border-color: #53bcda; background: #092737; border-radius: 0 }
 /* Queue ::after is reserved for its conic progress overlay. */
 #hud #radio { position: absolute; z-index: 4; --ui-edge: #43c3de; --ui-fill: linear-gradient(145deg, #072334f0, #021421f5); padding-right: 48px }
+#hud #tutorialGoal { --ui-edge: var(--ui-gold); --ui-fill: linear-gradient(145deg, #072334f0, #021421f5) }
+#hud #tutorialGoalLabel { color: var(--ui-gold); font-size: 10px; letter-spacing: 1px }
+#hud #tutorialGoalText { color: var(--ui-ink); font-size: 12px; line-height: 1.5 }
 #hud #radioName { font-family: Aldrich, sans-serif; color: #b4ebff; letter-spacing: 1.5px; font-size: 10px }
 #hud #radioText { color: #c3e4f1 }
 #hud #radioClose { width: 44px; height: 44px; padding: 13px }

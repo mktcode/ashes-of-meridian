@@ -856,7 +856,37 @@ test('first-stage tutorial highlights workers, economy, infantry to the supply l
   assert.equal(h.ui.profile.tutorialComplete, true);
   assert.equal(saved.length, 1);
   assert.equal(saved[0].tutorialComplete, true);
+  assert.equal(h.document.getElementById('tutorialGoal').classList.contains('hidden'), true);
   assert.equal(actions.innerHTML.includes('tutorial-focus'), false);
+});
+
+test('tutorial objective stays separate from action markup, covers every step and hides outside the tutorial', () => {
+  const h = setup(), ui = h.ui, panel = h.document.getElementById('tutorialGoal'),
+    text = h.document.getElementById('tutorialGoalText'), actions = h.document.getElementById('actions');
+  ui.game.s.entities = [{ id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] }];
+  for (const step of ['arrival', 'buildHQ', 'recon', 'trainWorker', 'buildRefinery', 'buildBarracks', 'trainRifle', 'buildDepot']) {
+    ui.battleTutorial = { step, achieved: new Set(), workersTrained: 1, elapsed: 0 };
+    ui.renderActions(6, 24);
+    assert.equal(panel.classList.contains('hidden'), false);
+    assert.ok(text.textContent.length > 0, `objective for ${step}`);
+    assert.equal(actions.innerHTML.includes(text.textContent), false, 'objectives never consume action-panel space');
+  }
+  ui.battleTutorial.step = 'trainRifle';
+  ui.renderActions(6, 24);
+  let markup = actions.innerHTML, writes = 0;
+  Object.defineProperty(actions, 'innerHTML', { get: () => markup, set(value) { markup = value; writes++; } });
+  const previousGoal = text.textContent;
+  ui.renderActions(8, 24);
+  assert.notEqual(text.textContent, previousGoal, 'live supply updates the objective');
+  assert.equal(writes, 0, 'a changed supply count does not rebuild or scroll the action buttons');
+  for (const state of ['menu', 'result', 'complete']) {
+    ui.view = state === 'menu' ? 'home' : 'game';
+    ui.game.s.result = state === 'result' ? { win: true } : null;
+    if (state === 'complete') ui.battleTutorial = null;
+    ui.updateTutorialGoal();
+    assert.equal(panel.classList.contains('hidden'), true);
+    assert.equal(text.textContent, '');
+  }
 });
 
 test('supply tutorial waits for multiple completed squads and responds to cancelled reservations', () => {

@@ -91,18 +91,33 @@ const uiTutorialMethods = {
     if (this.tab === target.tab) return target.action;
     return this.tab === 'root' ? `tab:${target.tab}` : 'tab:root';
   },
-  tutorialSupplyHint(this: MeridianUI, supply?: number, capacity?: number): string {
-    const step = this.battleTutorial?.step;
-    if (step !== 'trainRifle' && step !== 'buildDepot') return '';
+  tutorialGoalText(this: MeridianUI, supply?: number, capacity?: number): string {
+    const tutorial = this.battleTutorial;
+    if (!tutorial || !this.game.s) return '';
+    const { step } = tutorial, faction = this.game.s.parties[this.localTeam].faction;
+    switch (step) {
+      case 'arrival': return 'Establish a landing zone.';
+      case 'buildHQ': return `Build a ${buildingName('hq', faction)} to establish your base.`;
+      case 'recon': return 'Survey the enemy outpost and return to your base.';
+      case 'trainWorker': return `Recruit two more ${unitName('worker', faction)} workers (${tutorial.workersTrained}/2 trained).`;
+      case 'buildRefinery': return `Build a ${buildingName('refinery', faction)} beside an Echo vent.`;
+      case 'buildBarracks': return `Build a ${buildingName('barracks', faction)} to recruit infantry.`;
+    }
     supply ??= this.game.supply(this.localTeam);
     capacity ??= this.game.cap(this.localTeam);
-    const faction = this.game.s!.parties[this.localTeam].faction;
     if (step === 'buildDepot')
       return `Supply ${supply}/${capacity}. Complete a ${buildingName('depot', faction)} for +${BUILDINGS.depot.cap} capacity.`;
     const goal = supply + UNITS.rifle.supply > capacity
       ? 'No further squad fits. Wait for queued infantry to finish.'
       : `Recruit ${unitName('rifle', faction)} squads until no more fit.`;
     return `Supply ${supply}/${capacity}. ${goal} Each squad uses ${UNITS.rifle.supply}; queued recruits count.`;
+  },
+  updateTutorialGoal(this: MeridianUI, supply?: number, capacity?: number) {
+    const visible = this.view === 'game' && !!this.game.s && !this.game.s.result && !!this.battleTutorial,
+      panel = $('tutorialGoal'), text = $('tutorialGoalText');
+    panel.classList.toggle('hidden', !visible);
+    const goal = visible ? this.tutorialGoalText(supply, capacity) : '';
+    if (text.textContent !== goal) text.textContent = goal;
   },
   finishTutorialRecon(this: MeridianUI) {
     this.setBattleTutorialStep('trainWorker', 'root');
