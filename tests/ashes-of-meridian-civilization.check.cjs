@@ -24,7 +24,7 @@ function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
 test('six civilian structures are the last build choices, cheap Echo-only, identical across factions and nonproductive',()=>{
  assert.deepEqual(Object.keys(BUILDINGS).slice(-6),types);
  types.forEach((type,i)=>{
-  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,[5,10,15][i%3]);assert.equal(d.civilizationPoints,5);
+  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,[5,10,15][i%3]);assert.equal(d.civilizationPoints,[5,10,15][i%3]);
   assert.equal(d.civilizationUnlockStage,i%3+1);
   assert.equal(d.vision,BUILDINGS.depot.vision);assert.equal(d.damage,undefined);assert.equal(d.cap,undefined);assert.equal(d.requires,undefined);
   assert.ok(FACTIONS.every(f=>f.buildings[type]===FACTIONS[0].buildings[type]));
@@ -119,7 +119,7 @@ test('ordinary worker construction completes Echo-only civilian foundations and 
   game.worker(worker,BUILDINGS[type].time);
   assert.equal(b.progress,1);assert.equal(b.hp,b.maxHp);assert.equal(worker.order.type,'idle');
   assert.equal(game.account(0).gas,echo);assert.equal(game.account(0).alloy,0);
-  assert.equal(game.s.stats.built,1);assert.equal(civilizationScoreForBuildings(game.s.entities,0),5);
+  assert.equal(game.s.stats.built,1);assert.equal(civilizationScoreForBuildings(game.s.entities,0),BUILDINGS[type].civilizationPoints);
  }
 });
 test('civilian structures grant normal building vision, respecting terrain tiers, ownership and destruction',()=>{
@@ -151,8 +151,8 @@ test('score counts completed surviving own buildings only and defeat withdrawal 
  for(const type of types.slice(3))game.spawnBuilding(type,0,20,0,0);
  game.spawnBuilding('embercottage',0,30,0,0,{progress:.8});game.spawnBuilding('terracecommons',10,30,0,0,{hp:0});
  game.spawnBuilding('hearthtower',20,30,1,1);
- assert.equal(civilizationScoreForBuildings(game.s.entities,0),25);
- game.checkHQElimination();assert.equal(game.s.result.win,false);assert.equal(game.s.result.civilizationScore,25);assert.equal(a.hp,0);
+ assert.equal(civilizationScoreForBuildings(game.s.entities,0),45);
+ game.checkHQElimination();assert.equal(game.s.result.win,false);assert.equal(game.s.result.civilizationScore,45);assert.equal(a.hp,0);
 });
 const civil = (type='fieldlab',extra={}) => ({kind:'building',type,team:0,hp:500,progress:1,...extra});
 const scoreSave = entities => ({version:1,state:{entities},tutorial:null});
@@ -160,17 +160,17 @@ const scoreRecipe = depth => ({depth,encounter:{map:'desert',seed:1409}});
 
 test('live score replaces exactly one snapshot, sums every world and ignores incomplete, lost and foreign buildings',()=>{
  const first={stage:1,recipe:scoreRecipe(0),battle:scoreSave([civil(),civil('embercottage')])},
-  second={stage:2,recipe:scoreRecipe(1),battle:scoreSave([civil(),civil(),civil()])},
+  second={stage:2,recipe:scoreRecipe(1),battle:scoreSave([civil(),civil('researchhub'),civil('researchspire')])},
   damaged={stage:3,error:'damaged',recipe:scoreRecipe(2),battle:scoreSave([civil()])};
  const expedition={...scoreRecipe(3),worlds:[first,second,damaged],battle:scoreSave([civil()])};
  const before=JSON.stringify(expedition),live={...scoreRecipe(0).encounter,depth:0,rules:{kind:'single-player',completed:true},
   entities:[civil('hearthtower'),civil('researchspire',{progress:.9}),civil('researchhub',{hp:0}),civil('embercottage',{team:1})]};
- assert.equal(expeditionCivilizationScore(expedition),30);
- assert.equal(expeditionCivilizationScore(expedition,live,1),25,'visited world replaces its saved score, not the current battle');
- live.entities.push(civil());assert.equal(expeditionCivilizationScore(expedition,live,1),30);
- live.entities[0].hp=0;assert.equal(expeditionCivilizationScore(expedition,live,1),25);
+ assert.equal(expeditionCivilizationScore(expedition),45);
+ assert.equal(expeditionCivilizationScore(expedition,live,1),50,'visited world replaces its saved score, not the current battle');
+ live.entities.push(civil());assert.equal(expeditionCivilizationScore(expedition,live,1),55);
+ live.entities[0].hp=0;assert.equal(expeditionCivilizationScore(expedition,live,1),40);
  live.rules.completed=undefined;live.depth=3;live.entities=[];
- assert.equal(expeditionCivilizationScore(expedition,live),25,'current losses replace its older autosave');
+ assert.equal(expeditionCivilizationScore(expedition,live),40,'current losses replace its older autosave');
  assert.equal(JSON.stringify(expedition),before,'calculation does not mutate any archived world');
 });
 
