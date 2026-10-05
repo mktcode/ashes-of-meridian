@@ -9,6 +9,8 @@ I'm a developer with over 20 years of experience, but I don't write code anymore
 https://mktcode.itch.io/ashes-of-meridian
 https://github.com/mktcode/ashes-of-meridian
 
-It's 100% AI slop: the name, the story, the code. Performance is shitty, and it uses JavaScript/Canvas because that's what ChatGPT first spit out. I'm well aware of the criticism these games get, and I'm not claiming mine is any different.
+It's 100% AI slop: the name, the story, the code. There has been absolutely no manual work involved so far. Performance is shitty, and it uses JavaScript/Canvas because that's what ChatGPT first spit out. I'm well aware of the criticism these games get, and I'm not claiming mine is any different. I'm using pi (pi.dev) and my ChatGPT Plus subscription, occasionally drawing on my experience as a software developer for technical decisions. Optimizing performance or migrating to a proper game engine should be fun, I hope.
 
-But I enjoy prompting it into existence. I just can't tell whether anyone besides me would actually enjoy playing it.
+I could see myself taking it more seriously if I got some honest feedback. Is this just average AI slop? Worse? Better? Would you play a game like this on your phone?
+
+If this post is just as annoying as the other AI slop posts, feel free to delete it.
