@@ -122,6 +122,18 @@ test('running snapshot restores exact CPU state, RNG, fog and consumed cargo wit
   game.snapshotSafe = false; assert.throws(() => game.snapshotBattle(), /completed/); game.snapshotSafe = true;
 });
 
+test('civilian service areas preserve their center-connection exception in saves and reject invalid flags', () => {
+  const run=savedBattle(),worker=run.battle.state.entities.find(e=>e.type==='worker'&&e.team===0),
+    building=run.battle.state.entities.find(e=>e.type==='researchspire');
+  worker.order={type:'build',id:building.id,x:building.x,z:building.z};
+  worker.pathArea={x:building.x,z:building.z,radius:catalogs.buildings.researchspire.size+2.9,terrainConnection:false};
+  const h=setup();put(h,run);
+  assert.deepEqual(json(h.service.loadExpedition().battle.state.entities.find(e=>e.id===worker.id).pathArea),json(worker.pathArea));
+  for(const invalid of [true,'false',null]){
+    worker.pathArea.terrainConnection=invalid;put(h,run);
+    assert.equal(h.service.loadExpedition(),null);assert.ok(h.service.expeditionError);
+  }
+});
 test('damaged snapshots and mismatched recipes are blocked, never downgraded to a fresh battle', () => {
   const original = savedBattle();
   for (const change of [

@@ -21,6 +21,8 @@ interface UnitDefinitionShape {
 
 interface BuildingDefinitionShape {
   civilizationPoints?: number;
+  /** Authored local deck footprints, shared by the CPU support plane and model. */
+  civilizationDecks?: readonly { x: number; z: number; w: number; d: number; top?: number }[];
   cost: number;
   gas: number;
   hp: number;
@@ -345,6 +347,8 @@ interface Position {
 
 interface NavigationArea extends Position {
   radius: number;
+  /** Stilt buildings need a reachable service point, not a walkable line to their center. */
+  terrainConnection?: false;
 }
 
 interface NavigationPath {

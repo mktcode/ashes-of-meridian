@@ -60,7 +60,7 @@ function validExpeditionBattle(value: unknown, expedition: MeridianExpedition,
   }, {
     target: v => v === null || id(v), exit: shape({ x: num, z: num, building: id, length: nonnegative }),
     yieldTo: pos, yieldUntil: num, pathGoal: pos, pathVersion: integer,
-    pathArea: shape({ x: num, z: num, radius: nonnegative }), pathStatus, pathResolvedGoal: pos,
+    pathArea: shape({ x: num, z: num, radius: nonnegative }, { terrainConnection: oneOf(false) }), pathStatus, pathResolvedGoal: pos,
     recoveryAttempts: integer, nextRecovery: num, stuck: num, steerSide: oneOf(-1, 1), steerLocked: bool,
     slowed: num, reinforcedUntil: num, returning: bool, lastSource: integer, shieldFlash: num,
     paid: cost, gasId: id, deathAt: num, rally: pos, label: text, buildRate: nonnegative, amount: nonnegative

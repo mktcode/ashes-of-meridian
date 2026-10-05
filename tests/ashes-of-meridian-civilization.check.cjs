@@ -29,7 +29,7 @@ test('three civilian structures are the last build choices, cheap Echo-only, ide
   assert.ok(FACTIONS.every(f=>f.buildings[type]===FACTIONS[0].buildings[type]));
  });
 });
-test('civilian placement accepts strong uneven slopes but protects cliffs, occupancy, exploration and worker access/payment',()=>{
+test('civilian placement accepts uneven slopes and cliff cells but protects obstacles, occupancy, exploration and worker access/payment',()=>{
  for(const faction of [0,1,2])for(const type of types){
   const {game,world}=fixture(faction),p={x:0,z:0},before=Array.from(world.surface.heights),gas=game.account(0).gas;
   assert.equal(world.surface.foundation(p,BUILDINGS[type].size),false);
@@ -50,14 +50,32 @@ test('civilian placement accepts strong uneven slopes but protects cliffs, occup
  world.staticGrid.fill(0);world.staticGrid[world.idx(0,-2.5)]=1;
  assert.match(game.canBuild('researchhub',{x:0,z:0}),/obstructs/,'interior obstacles cannot hide between perimeter samples');
  const sampler=new PlacementGuideSampler(game,'researchhub',0);sampler.refresh();assert.equal(sampler.sample({x:0,z:0}),-1);
- world.staticGrid.fill(0);world.surface.cliffs[world.idx(0,0)]=1;assert.match(game.canBuild('fieldlab',{x:0,z:0}),/accessible/);
+ world.staticGrid.fill(0);world.surface.cliffs[world.idx(0,0)]=1;world.staticGrid.set(world.surface.cliffs);
+ assert.equal(game.canBuild('fieldlab',{x:0,z:0}),'');
  assert.ok(game.canBuild('fieldlab',{x:79,z:0}));
+});
+test('civilian cliff foundations are actually reachable and buildable from a safe service point without opening cliff paths for units',()=>{
+ const {game,world}=fixture(0,(x,z)=>x>0?45:40);delete world.path;world.rebuild(game.s.entities);
+ const p={x:1,z:0},worker=game.s.entities[0],radius=BUILDINGS.fieldlab.size+2.9;
+ assert.equal(world.surface.fits(p.x,p.z),false);assert.equal(world.terrainFree(worker,p),false);
+ assert.match(game.canBuild('depot',p),/stable ground/);assert.equal(game.canBuild('fieldlab',p),'');
+ const sampler=new PlacementGuideSampler(game,'fieldlab',0);sampler.refresh();assert.equal(sampler.sample(p),1);
+ assert.equal(game.build('fieldlab',p),true);const b=game.s.entities.at(-1);world.rebuild(game.s.entities);
+ const area={...p,radius,terrainConnection:false},body=worker.size*vm.runInContext('UNIT_BODY_SCALE',context),
+  path=world.path(worker.x,worker.z,p.x,p.z,false,area,body);
+ assert.equal(path.status,'complete');assert.equal(world.surface.fits(path.goal.x,path.goal.z,body),true);
+ assert.equal(world.blockedAt(path.goal.x,path.goal.z),false);assert.equal(world.terrainFree(path.goal,p),false);
+ assert.notEqual(world.path(worker.x,worker.z,p.x,p.z,false,{...p,radius},body).status,'complete');
+ Object.assign(worker,path.goal,{rot:0});game.effects={construction(){}};game.s.stats.built=0;
+ assert.equal(game.move(worker,b,0,radius+.1,false,area),true,'movement stops at the reachable work area');
+ game.worker(worker,BUILDINGS.fieldlab.time);assert.equal(b.progress,1);assert.equal(worker.order.type,'idle');
+ assert.equal(world.surface.fits(p.x,p.z),false,'construction does not alter unit passability');
 });
 test('ordinary worker construction completes Echo-only civilian foundations and then releases the worker',()=>{
  for(const type of types){
   const {game}=fixture();game.effects={construction(){}};game.s.stats.built=0;
   assert.equal(game.build(type,{x:0,z:0}),true);const b=game.s.entities.at(-1),worker=game.s.entities[0];
-  Object.assign(worker,{x:b.size+1,z:0,rot:0});const echo=game.account(0).gas;
+  Object.assign(worker,{x:b.size+2.5,z:0,rot:0});const echo=game.account(0).gas;
   game.worker(worker,BUILDINGS[type].time);
   assert.equal(b.progress,1);assert.equal(b.hp,b.maxHp);assert.equal(worker.order.type,'idle');
   assert.equal(game.account(0).gas,echo);assert.equal(game.account(0).alloy,0);

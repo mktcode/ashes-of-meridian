@@ -5,7 +5,6 @@
   type Material = 'steel' | 'edge' | 'dark' | 'orange' | 'cyan' | 'glass' | 'window';
   type Variant = 'fieldlab' | 'researchhub' | 'researchspire';
   type Foot = { x: number; z: number; top: number };
-  const scale = .85;
   const colors: Record<Material, number> = {steel:0x68797d,edge:0xabb4b2,dark:0x23333e,
     orange:0xb46a31,cyan:0x3fdcea,glass:0x235b68,window:0x55ccdf};
   const variants: Variant[] = ['fieldlab','researchhub','researchspire'];
@@ -129,15 +128,15 @@
       for(const a of [0,Math.PI*2/3,Math.PI*4/3])beam(point(r*.85,a),focus,.035,'dark');
       box(focus[0],focus[1],focus[2],.13,.13,.13,'cyan');
     };
+    for(const d of (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!)deck(d.x,d.z,d.w,d.d,d.top);
     if(type==='fieldlab'){
-      deck(0,0,4.4,3.3);const roof=module(0,.35,0,4.4,3.3);
+      const roof=module(0,.35,0,4.4,3.3);
       band(0,1.76,0,4.4,3.3);skylight(.45,roof,.2,2.15,1.5);dish(-1.3,roof+.04,-.70,.78);
       box(2.28,.78,-.30,.65,.88,1.95,'dark');for(let i=-2;i<=2;i++)box(2.62,.74+i*.13,-.30,.035,.055,1.60,'edge');
       equipment(.6,roof,-1.1);grille(-1.02,.69,1.71,.55);
-      deck(.55,2.17,3.2,.95);entry(.55,.35,1.72);railing(.55,.35,2.2,3.2,.9,1.3);sign(-.56,1.02,1.84);
+      entry(.55,.35,1.72);railing(.55,.35,2.2,3.2,.9,1.3);sign(-.56,1.02,1.84);
     }else if(type==='researchhub'){
-      const back=1.45;deck(-.8,-1.1,4.65,2.6,back);const roof=module(-.8,back+.35,-1.1,4.65,2.6,2);
-      deck(.75,1.7,5.3,2.55);const terrace=module(.75,.35,1.7,5.3,2.55);
+      const back=1.45,roof=module(-.8,back+.35,-1.1,4.65,2.6,2),terrace=module(.75,.35,1.7,5.3,2.55);
       band(-.8,back+3.31,-1.1,4.65,2.6);band(.75,1.76,1.7,5.3,2.55);railing(.75,terrace+.04,1.73,5.45,2.65);
       for(const x of [-1.1,0,1.1]){
         box(x,terrace+.16,1.55,.76,.24,.72,'dark');cylinder(x,terrace+.65,1.55,.24,.78,'glass');
@@ -148,9 +147,9 @@
       const top=back+1.90,end=terrace+.04;box(2.61,top-.08,-.25,2.7,.16,.86,'edge');
       for(let i=0;i<8;i++){const rise=(top-end)/8;box(3.7,top-(i+.5)*rise,-.1+i*.27,.88,rise,.28,'edge');}
       beam([4.14,top+.6,-.1],[4.14,end+.6,1.9],.055);
-      deck(.30,3.46,3.3,.60);entry(.3,.35,3.01);sign(-.77,.99,3.12);
+      entry(.3,.35,3.01);sign(-.77,.99,3.12);
     }else{
-      deck(0,-.40,4.7,3.95);const podium=module(0,.35,-.4,4.7,3.95,2),roof=module(.12,podium-.10,-.58,3.72,3.30,4);
+      const podium=module(0,.35,-.4,4.7,3.95,2),roof=module(.12,podium-.10,-.58,3.72,3.30,4);
       box(-2.13,4.88,-1.0,.70,9.40,2.50,'dark');for(const x of [-2.29,-1.97])box(x,4.90,.32,.07,9.12,.07,'cyan');
       for(let f=0;f<6;f++){
         const Y=.79+f*1.55;box(-2.50,Y,-1,.065,.17,2.48,'edge');
@@ -160,7 +159,7 @@
       oct(-.58,roof+.72,-1.15,1.65,1,1.5,.35);band(-.58,roof+1.12,-1.15,1.65,1.5);
       dish(-.58,roof+1.23,-1.15,1.84);dish(1.32,roof+.26,.67,.94);dish(-1.16,roof+.26,1.01,.49);
       equipment(1.20,podium+.03,.72);grille(-1.15,.71,1.63,.61);grille(1.35,.71,1.63,.48);
-      deck(.2,2.25,4.2,1.3);entry(.2,.35,1.63);railing(.2,.35,2.28,4.2,1.26,1.5);sign(-.77,1,1.75);
+      entry(.2,.35,1.63);railing(.2,.35,2.28,4.2,1.26,1.5);sign(-.77,1,1.75);
     }
     return meshes;
   }
@@ -171,7 +170,7 @@
     for(const material of materials)
       meshes[`civil${type[0].toUpperCase()+type.slice(1)}${material[0].toUpperCase()+material.slice(1)}`] = () => (geometry ??= assembly(type))[material];
     const render = ({part:p,nightPart,groundHeight,surfaceColor,pointLight}:EntityModelContext) => {
-      const name=`civil${type[0].toUpperCase()+type.slice(1)}`;
+      const scale=CIVILIZATION_MODEL_SCALE,name=`civil${type[0].toUpperCase()+type.slice(1)}`;
       for(const material of materials){
         const glow=material==='cyan'?1.1:material==='window'?.65:0;
         (glow?nightPart:p)(name+material[0].toUpperCase()+material.slice(1),0,0,0,scale,scale,scale,
@@ -179,8 +178,11 @@
       }
       for(const foot of profiles[type].feet){
         const x=foot.x*scale,z=foot.z*scale,top=foot.top*scale,
-          ground=groundHeight?.(x,z) ?? -.7,base=Math.min(ground,top-.18),height=top-base;
-        p('box',x,base+.04,z,.55,.15,.55,surfaceColor(0x69706a),0,0,0,0,undefined,MAT.METAL);
+          ground=groundHeight?.(x,z) ?? -.7,base=ground,height=Math.max(.03,top-base),
+          dx=groundHeight ? (groundHeight(x+.275,z)-groundHeight(x-.275,z))/.55 : 0,
+          dz=groundHeight ? (groundHeight(x,z+.275)-groundHeight(x,z-.275))/.55 : 0,
+          pitch=-Math.atan(dz),roll=Math.atan(dx*Math.cos(pitch));
+        p('box',x,base+.04,z,.55,.15,.55,surfaceColor(0x69706a),0,pitch,roll,0,undefined,MAT.METAL);
         p('box',x,base+height/2,z,.23,height,.25,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
         p('box',x,top-.06,z,.38,.17,.38,surfaceColor(colors.orange),0,0,0,0,undefined,MAT.METAL);
       }
@@ -190,7 +192,7 @@
         end=groundHeight?.(x,start+length) ?? -.7,top=.35*scale,rise=(top-end)/count;
       for(let i=0;i<count;i++){
         const z=start+(i+.5)*length/count,y=top-(i+.5)*rise;
-        p('box',x,y,z,1.05,Math.max(.025,rise),length/count+.015,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
+        p('box',x,y,z,1.05,Math.max(.025,Math.abs(rise)),length/count+.015,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
       }
       pointLight(0,1.1,2.6,8,0x55d9e9,2.5);
       if(type==='researchspire')pointLight(-.5,10.6,-.7,9,0x55d9e9,2.5);

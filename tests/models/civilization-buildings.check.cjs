@@ -22,6 +22,23 @@ test('shared chamfered research meshes are cached, finite, nondegenerate and hav
   }
  }
 });
+test('civilian decks use minimal height directly under their authored footprints, not nearby uphill peaks',()=>{
+ const h=modelHarness(),{BattlefieldSurface,CIVILIZATION_MODEL_SCALE,BUILDING_YAW}=vm.runInContext('({BattlefieldSurface,CIVILIZATION_MODEL_SCALE,BUILDING_YAW})',h.context);
+ for(const type of types)for(const team of [0,1]){
+  const flat=new BattlefieldSurface(60,2.5,()=>40),e={x:0,z:0,type,team},pose=flat.buildingPose(e,h.BUILDINGS[type].size);
+  assert.ok(Math.abs(pose.height-40.1)<1e-9,'flat ground needs only a short footing');
+  const surface=new BattlefieldSurface(60,2.5,(x,z)=>40+.8*x+.25*z),d=h.BUILDINGS[type],cs=Math.cos(BUILDING_YAW+(team===1?Math.PI:0)),sn=Math.sin(BUILDING_YAW+(team===1?Math.PI:0));
+  let needed=-Infinity;
+  for(const deck of d.civilizationDecks){
+   const w=(deck.w+.76)/2,depth=(deck.d+.76)/2,cut=.51;
+   for(const [x,z]of[[-w+cut,-depth],[w-cut,-depth],[w,-depth+cut],[w,depth-cut],[w-cut,depth],[-w+cut,depth],[-w,depth-cut],[-w,-depth+cut]])
+    needed=Math.max(needed,surface.heightAt(CIVILIZATION_MODEL_SCALE*((deck.x+x)*cs+(deck.z+z)*sn),CIVILIZATION_MODEL_SCALE*(-(deck.x+x)*sn+(deck.z+z)*cs))-(deck.top||0)*CIVILIZATION_MODEL_SCALE);
+  }
+  assert.ok(Math.abs(surface.buildingPose(e,d.size).height-needed-.1)<1e-5,'deck clears the actual slope without extra rectangular margins');
+ }
+ const peak=new BattlefieldSurface(60,2.5,(x,z)=>40+9*Math.exp(-((x-4)**2+(z-4)**2)/.1));
+ assert.ok(peak.buildingPose({x:0,z:0,type:'fieldlab'},h.BUILDINGS.fieldlab.size).height<40.12,'a peak outside the hull cannot hoist the building');
+});
 test('level civilian decks, posed lights and each footing track the original hillside without grading, mutation or frame geometry',()=>{
  const h=modelHarness(),{BattlefieldSurface,buildingGroundGeometry}=vm.runInContext('({BattlefieldSurface,buildingGroundGeometry})',h.context);
  const surface=new BattlefieldSurface(60,2.5,(x,z)=>40+.35*x+.12*z),before=Array.from(surface.heights);
@@ -33,9 +50,17 @@ test('level civilian decks, posed lights and each footing track the original hil
   assert.equal(buildingGroundGeometry({surface},e).geometry.length,0);
   const draw=options=>{const R=createRendererStub({record:true});Object.assign(R,{surface,quality:0,battlefieldHour:22});h.renderEntity(R,Object.freeze(e),9,options);return R.calls;};
   const solid=draw({}),ghost=draw({ghost:true});assert.equal(solid.length,ghost.length);
-  solid.forEach((c,i)=>{assert.equal(c[9],0);assert.equal(c[10],0);assert.deepEqual(c.slice(1,7),ghost[i].slice(1,7));});
+  solid.forEach((c,i)=>{
+   if(!(c[0]==='box'&&c[4]===.55&&c[6]===.55)){assert.equal(c[9],0);assert.equal(c[10],0);}
+   assert.deepEqual(c.slice(1,7),ghost[i].slice(1,7));assert.deepEqual(c.slice(8,11),ghost[i].slice(8,11));
+  });
   const feet=solid.filter(c=>c[0]==='box'&&c[4]===.55&&c[6]===.55);assert.ok(feet.length>=12);
-  for(const c of feet)assert.ok(Math.abs(c[2]-.04-surface.heightAt(c[1],c[3]))<1e-9,'foot lies on actual terrain');
+  for(const c of feet){
+   assert.ok(Math.abs(c[2]-.04-surface.heightAt(c[1],c[3]))<1e-9,'foot lies on actual terrain');
+   const cy=Math.cos(c[8]),sy=Math.sin(c[8]),cx=Math.cos(c[9]),sx=Math.sin(c[9]),cz=Math.cos(c[10]),sz=Math.sin(c[10]),
+    nx=-cy*sz+sy*sx*cz,ny=cx*cz,nz=sy*sz+cy*sx*cz;
+   assert.ok(Math.abs(nx/ny+.35)<1e-5&&Math.abs(nz/ny+.12)<1e-5,'foot pad follows the local terrain normal');
+  }
   const legs=solid.filter(c=>c[0]==='box'&&c[4]===.23);assert.equal(legs.length,feet.length);assert.ok(Math.max(...legs.map(c=>c[5]))-Math.min(...legs.map(c=>c[5]))>.5);
  }
  assert.deepEqual(Array.from(surface.heights),before);

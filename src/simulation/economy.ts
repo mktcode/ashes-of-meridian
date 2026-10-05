@@ -5,10 +5,10 @@
     function buildingFoundationReason(world: Battlefield, type: BuildingType, p: Position, team: PlayerTeam): string {
       const r = BUILDINGS[type].size;
       if (world.surface) {
-        if (isCivilizationBuildingType(type)) {
-          // Stilts absorb uneven terrain; impassable cliffs and the map edge stay protected.
-          if (!world.surface.fits(p.x, p.z, r + .35)) return 'Leave clear, accessible terrain around the structure.';
-        } else if (!world.surface.foundation(p, r)) return 'Build on stable ground or a gentle slope, away from cliffs.';
+        // Civilian stilts may bridge terrain that is too steep for units. Workers
+        // still need a genuinely reachable service point outside the footprint.
+        if (!isCivilizationBuildingType(type) && !world.surface.foundation(p, r))
+          return 'Build on stable ground or a gentle slope, away from cliffs.';
         const yaw = BUILDING_YAW + (team === 1 ? Math.PI : 0);
         for (const unit of Object.values(UNITS) as UnitDefinitionShape[]) {
           if (unit.from !== type || unit.flying) continue;
@@ -20,12 +20,13 @@
       const limit = world.extent - 1 - r;
       return Math.abs(p.x) > limit || Math.abs(p.z) > limit ? 'Too close to the battlefield boundary.' : '';
     }
-    function buildingTerrainObstructed(world: Battlefield, p: Position, r: number, fullFootprint = false): boolean {
-      if (fullFootprint) {
+    function buildingTerrainObstructed(world: Battlefield, p: Position, r: number, civilian = false): boolean {
+      if (civilian) {
+        // Steepness cells may lie under stilts; independent obstacles still block.
         const first = world.idx(p.x-r,p.z-r), last = world.idx(p.x+r,p.z+r);
         for (let z=Math.floor(first/world.gridSize);z<=Math.floor(last/world.gridSize);z++)
           for (let x=first%world.gridSize;x<=last%world.gridSize;x++)
-            if (world.staticGrid[z*world.gridSize+x]) return true;
+            if (world.staticGrid[z*world.gridSize+x] && !world.surface?.cliffs[z*world.gridSize+x]) return true;
         return false;
       }
       for (let i = 0; i < 12; i++) {
@@ -235,7 +236,8 @@
           // planned foundation already blocking its footprint.
           world.blocked = blocked.slice();
           world.mark(world.blocked, p.x, p.z, BUILDINGS[type].size + 0.35);
-          const area = { x: p.x, z: p.z, radius: BUILDINGS[type].size + 2.9 };
+          const area: NavigationArea = { x: p.x, z: p.z, radius: BUILDINGS[type].size + 2.9 };
+          if (isCivilizationBuildingType(type)) area.terrainConnection = false;
           w = workers.find(worker => world.path(worker.x, worker.z, p.x, p.z, false,
             area, worker.size * UNIT_BODY_SCALE).status === 'complete');
         } finally {
@@ -394,8 +396,13 @@
             return true;
           }
           let need = b.size + 3.0;
-          if (distance(e, b) > need || !this.world!.terrainFree(e, b)) {
-            this.move(e, b, dt, need, false, { x: b.x, z: b.z, radius: need - 0.1 });
+          const civil = isCivilizationBuildingType(b.type), world = this.world!,
+            accessible = civil ? !world.blockedAt(e.x,e.z) && (world.surface?.fits(e.x,e.z,e.size*UNIT_BODY_SCALE) ?? true)
+              : world.terrainFree(e,b);
+          if (distance(e, b) > need || !accessible) {
+            const area: NavigationArea = { x: b.x, z: b.z, radius: need - 0.1 };
+            if (civil) area.terrainConnection = false;
+            this.move(e, b, dt, need, false, area);
             return true;
           }
           e.rot = angleLerp(e.rot, Math.atan2(b.x - e.x, b.z - e.z), dt * 5);

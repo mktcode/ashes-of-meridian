@@ -103,7 +103,7 @@ class BattlefieldSurface {
     }
     return Number.isFinite(best) ? {x:a[0]+dx*best,z:a[2]+dz*best} : null;
   }
-  entityHeight(e: Position & { type: string; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'> }): number {
+  entityHeight(e: Position & { type: string; team?: number; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'> }): number {
     const floor = this.heightAt(e.x,e.z), index = e.type === 'air' ? 0 : e.type === 'destroyer' ? 1 : -1;
     if (index < 0) return e.kind === 'building' && e.size !== undefined ? this.buildingPose(e, e.size).height : floor;
     const profile = this.flights[index], cruise = this.sampleHeight(profile.cruise, e.x, e.z),
@@ -170,12 +170,13 @@ class BattlefieldSurface {
   }
   // A restrained lean reduces downhill fill without changing buildability or the playable surface.
   // Choose the lowest supporting plane for that lean; never sink a model into the uphill ground.
-  buildingPose(p: Position & { type?: string }, radius: number): { height: number; dx: number; dz: number; fill: number } {
-    const civil = p.type !== undefined && isCivilizationBuildingType(p.type);
+  buildingPose(p: Position & { type?: string; team?: number }, radius: number): { height: number; dx: number; dz: number; fill: number } {
+    if (p.type !== undefined && isCivilizationBuildingType(p.type))
+      return {height:this.civilizationHeight(p),dx:0,dz:0,fill:0};
     const r = Math.max(this.step, radius),
       dx = (this.heightAt(p.x+r,p.z)-this.heightAt(p.x-r,p.z))/(2*r),
       dz = (this.heightAt(p.x,p.z+r)-this.heightAt(p.x,p.z-r))/(2*r),
-      limit = Math.max(1,Math.hypot(dx,dz)/.045), gx = civil ? 0 : dx/limit, gz = civil ? 0 : dz/limit,
+      limit = Math.max(1,Math.hypot(dx,dz)/.045), gx = dx/limit, gz = dz/limit,
       margin = radius * 1.08;
     let height = this.heightAt(p.x,p.z), low = height;
     // Include footprint edges and all interior terrain vertices, but no unrelated margin heights.
@@ -188,8 +189,42 @@ class BattlefieldSurface {
       const residual = this.heightAt(x,z)-gx*(x-p.x)-gz*(z-p.z);
       height = Math.max(height,residual); low = Math.min(low,residual);
     }
-    // Level civilian decks use model-owned terrain-sampled legs, not terrain grading.
-    return {height:height+(civil ? .7 : 0),dx:gx,dz:gz,fill:civil ? 0 : height-low};
+    return {height,dx:gx,dz:gz,fill:height-low};
+  }
+  private civilizationHeight(p: Position & { type?: string; team?: number }): number {
+    const decks = (BUILDINGS[p.type as BuildingType] as BuildingDefinitionShape).civilizationDecks!,
+      scale = CIVILIZATION_MODEL_SCALE, yaw = BUILDING_YAW + (p.team === 1 ? Math.PI : 0),
+      cs = Math.cos(yaw), sn = Math.sin(yaw);
+    let height = -Infinity;
+    for (const deck of decks) {
+      const w=(deck.w+.76)/2,d=(deck.d+.76)/2,cut=.51,top=(deck.top || 0)*scale,
+        polygon=[[-w+cut,-d],[w-cut,-d],[w,-d+cut],[w,d-cut],[w-cut,d],[-w+cut,d],[-w,d-cut],[-w,-d+cut]]
+          .map(([x,z])=>({x:p.x+scale*((deck.x+x)*cs+(deck.z+z)*sn),
+            z:p.z+scale*(-(deck.x+x)*sn+(deck.z+z)*cs)}));
+      const sample = (x:number,z:number) => {height=Math.max(height,this.heightAt(x,z)-top);};
+      // A linear terrain triangle reaches its maximum at an interior grid vertex
+      // or where a deck edge crosses a triangle edge. No unrelated uphill margin.
+      const first=(v:number)=>Math.ceil((v+this.extent)/this.step),
+        last=(v:number)=>Math.floor((v+this.extent)/this.step),
+        left=first(Math.min(...polygon.map(q=>q.x))),right=last(Math.max(...polygon.map(q=>q.x))),
+        near=first(Math.min(...polygon.map(q=>q.z))),far=last(Math.max(...polygon.map(q=>q.z)));
+      for(let iz=near;iz<=far;iz++)for(let ix=left;ix<=right;ix++){
+        const x=ix*this.step-this.extent,z=iz*this.step-this.extent;
+        if(polygon.every((a,i)=>{const b=polygon[(i+1)%8];return (b.x-a.x)*(z-a.z)-(b.z-a.z)*(x-a.x)>=-1e-8;}))sample(x,z);
+      }
+      for(let i=0;i<8;i++){
+        const a=polygon[i],b=polygon[(i+1)%8];sample(a.x,a.z);
+        // Terrain has x/z grid edges and the diagonal x-z=k*step.
+        for(const [start,end,offset] of [[a.x,b.x,this.extent],[a.z,b.z,this.extent],[a.x-a.z,b.x-b.z,0]]){
+          if(Math.abs(end-start)<1e-9)continue;
+          for(let k=Math.ceil((Math.min(start,end)+offset)/this.step);k<=Math.floor((Math.max(start,end)+offset)/this.step);k++){
+            const t=(k*this.step-offset-start)/(end-start);
+            sample(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t);
+          }
+        }
+      }
+    }
+    return height+.10;
   }
   foundationBounds(p: Position, radius: number): { min: number; max: number } {
     const margin = radius + 1, first = (v: number) => Math.floor((v - margin + this.extent) / this.step) * this.step - this.extent,

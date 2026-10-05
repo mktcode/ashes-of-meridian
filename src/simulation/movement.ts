@@ -161,7 +161,9 @@
         if (e.yieldTo) { this.moveYield(e, dt); return false; }
         if (((area && distance(e, area) <= area.radius) || distance(e, p) < stop || (settleBesideOccupiedGoal && !e.exit && ['move', 'attackMove'].includes(e.order.type) &&
           distance(e, p) < stop + e.size * UNIT_BODY_SCALE * 2 && !this.unitFits(e, p.x, p.z))) &&
-          ((UNITS[e.type] as UnitDefinitionShape).flying || this.world!.terrainFree(e, area || p))) {
+          ((UNITS[e.type] as UnitDefinitionShape).flying || (area?.terrainConnection === false
+            ? !this.world!.blockedAt(e.x,e.z) && (this.world!.surface?.fits(e.x,e.z,e.size*UNIT_BODY_SCALE) ?? true)
+            : this.world!.terrainFree(e, area || p)))) {
           // Stop beside an occupied destination instead of trying to stand at its center.
           e.path = [];
           e.pi = 0;
@@ -172,7 +174,7 @@
         }
         const changedGoal = (e.pathGoal && distance(e.pathGoal, p) > 3) ||
           !!e.pathArea !== !!area || (area && e.pathArea &&
-            (distance(area, e.pathArea) > 3 || area.radius !== e.pathArea.radius));
+            (distance(area, e.pathArea) > 3 || area.radius !== e.pathArea.radius || area.terrainConnection !== e.pathArea.terrainConnection));
         // A changed work phase or building layout must not follow a stale route
         // during the ordinary retry cooldown.
         if (changedGoal || e.pathVersion !== this.world!.pathVersion) e.nextPath = 0;

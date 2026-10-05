@@ -273,7 +273,8 @@
         // nearest cell on the far side of a building. Keep a valid preferred service
         // point for unobstructed traffic; otherwise search the whole area once.
         const surfaceFree = (a: Position, b: Position, r = 0) => ignoreSurface || this.terrainFree(a,b,r);
-        const inArea = (p: Position) => !area || (distance(p, area) <= area.radius && surfaceFree(p, area));
+        const inArea = (p: Position) => !area || (distance(p, area) <= area.radius &&
+          (area.terrainConnection === false || surfaceFree(p, area)));
         const fits = (i: number) => ignoreSurface || !this.surface || this.surface.fits(this.point(i).x, this.point(i).z, radius);
         if (area && inArea(start) && !this.blockedAt(x, z) && (ignoreSurface || !this.surface || this.surface.fits(x,z,radius))) return complete(start);
         if (inArea(target) && !this.blockedAt(target.x, target.z) && this.lineFree(start, target, radius, ignoreSurface)) return complete(target);

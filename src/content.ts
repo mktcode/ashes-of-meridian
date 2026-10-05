@@ -255,6 +255,7 @@ function flightLaunchRemaining(e: Position & { exit?: Pick<ExitPath, 'x' | 'z' |
 }
 
 const BUILDING_YAW = Math.PI / 15;
+const CIVILIZATION_MODEL_SCALE = .85;
 const BUILDINGS = {
   hq: {
     cost: 400,
@@ -322,14 +323,17 @@ const BUILDINGS = {
   },
   fieldlab: {
     cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, vision: 0, civilizationPoints: 5,
+    civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     desc: 'Civilian field laboratory. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
   },
   researchhub: {
     cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, vision: 0, civilizationPoints: 5,
+    civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     desc: 'Terraced civilian research hub. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
   },
   researchspire: {
     cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, vision: 0, civilizationPoints: 5,
+    civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
     desc: 'Civilian research tower with three dish antennas. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure adds 5 Civilization Score at battle end; no production or bonuses.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
