@@ -70,7 +70,8 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.28)'));
   assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.012)'));
   assert.ok(FRAG.includes('world/u_groundTile+u_surfaceOffset'), 'physical tile size is independent of bake resolution');
-  assert.ok(FRAG.includes('vec3 t=groundBase(v_pos.xz);base=t;'), 'ground uses the procedural recipe');
+  assert.ok(FRAG.includes('vec4 ground=groundSample(v_pos.xz);'), 'ground uses the opaque RGBA recipe');
+  assert.ok(FRAG.includes('vec3 t=ground.rgb;base=t;'), 'height alpha never becomes surface transparency');
   assert.ok(FRAG.includes('base=t;vec4 rocks=groundDecor'), 'decals overlay the surface recipe');
   assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
   for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex'])
@@ -78,7 +79,7 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('groundDecor(u_rockClustersTex,v_pos.xz,false)'));
   assert.ok(FRAG.includes('groundDecor(u_desertShrubsTex,v_pos.xz,true)'));
   assert.ok(FRAG.includes('normalize(u_eye-v_pos)'));
-  assert.ok(FRAG.includes('texture(u_fog,(v_pos.xz+u_extent)/(u_extent*2.))'));
+  assert.ok(FRAG.includes('float field=sceneryFog(v_pos.xz);'), 'surface fog uses the independently sized scenery mask');
 });
 test('ground decoration samples individual irregular atlas crops with stable world-cell variation', () => {
   const context = loadScripts(RENDERER_SCRIPTS);
@@ -1037,7 +1038,34 @@ test('resize and quality switches release old attachments and rebuild matching d
 test('local diffuse lighting respects current fog visibility and has a no-light fast path',()=>{
   const context=loadScripts(RENDERER_SCRIPTS),shader=vm.runInContext('FRAG',context);
   assert.ok(shader.includes('if(u_pointLightCount==0)return vec3(0.);'));
-  assert.ok(shader.includes('if(u_fogOn>.5)result*=smoothstep(.75,1.,sceneryFog(position.xz));'));
+  assert.ok(shader.includes('float visible=smoothstep(.75,1.,sceneryFog(position.xz));'));
+  assert.ok(shader.includes('result*=visible;specular*=visible;'), 'diffuse and wet glints never reveal unseen ground');
+});
+
+test('wet ground shares albedo height reads and adds a bounded lobe only to eligible receivers',()=>{
+  const context=loadScripts(RENDERER_SCRIPTS),{FRAG:shader,MAT}=vm.runInContext('({FRAG,MAT})',context);
+  const terrain=shader.slice(shader.indexOf(`if(v_mat==${MAT.LANDSCAPE}.){`),shader.indexOf(`}else if(v_mat==${MAT.LEAF}.){`));
+  assert.equal((terrain.match(/texture\(u_groundTex,/g)||[]).length,2,'both terrain colour samples also supply height');
+  assert.equal((terrain.match(/texture\(u_earthTex,v_pos.xz\*\.15\)/g)||[]).length,1,'soil RGBA is fetched once');
+  assert.ok(terrain.includes('stoneSample=triSurface(u_rockTex,v_pos,n,u_rockScale)'));
+  assert.ok(terrain.includes('grassSample.a*u_surfaceRelief.x'));
+  assert.ok(terrain.includes('stoneSample.a*u_surfaceRelief.y'));
+  assert.ok(terrain.includes('earthSample.a*u_landscapeRelief.x'));
+  assert.ok(terrain.includes('float(u_ecology.x>.5&&u_ecology.y==2.)'),'rain is the weather opt-in');
+  assert.ok(terrain.includes('clamp(-v_detail.z,0.,1.)'),'authored wet banks also opt in');
+  assert.ok(terrain.includes('(1.-stoneWeight)*(1.-clamp(v_detail.z,0.,1.))'),'rock and snow suppress gloss');
+  const relief=shader.slice(shader.indexOf('if(u_reliefOn>.5&&'),shader.indexOf('// Local-normal variation'));
+  assert.ok(relief.includes(`if(v_mat==${MAT.LANDSCAPE}.)h=groundHeight;`));
+  assert.ok(relief.includes(`else if(v_mat==${MAT.GROUND}.||(v_mat==${MAT.AUTO}.&&v_pos.y<.22&&n.y>.66))h=groundHeight;`));
+  assert.ok(shader.includes('float groundHeight=0.,groundGloss=0.;'),'models default to no added local gloss');
+  assert.ok(shader.includes('float(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96)*smoothstep(.55,.85,v_n.y)'));
+  const local=shader.slice(shader.indexOf('vec3 localLighting'),shader.indexOf('float shadow()'));
+  assert.ok(local.indexOf('specular=vec3(0.);')<local.indexOf('if(u_pointLightCount==0)'));
+  assert.ok(local.includes('if(groundGloss>0.&&diffuse>0.)'));
+  assert.ok(local.includes('h*=h;h*=h;h*=h;h*=h;'));
+  assert.equal((local.match(/lightTexel\(index/g)||[]).length,2,'same two light reads, no second lamp loop');
+  assert.doesNotMatch(local,/\bpow\(/,'fixed broad lobe avoids variable exponent work per lamp');
+  assert.ok(shader.includes('lit+=(base*localDiffuse+groundSpecular)'), 'glints take lamp colour rather than dark albedo');
 });
 
 test('spatial light grid retains all lamps in battle, performance and cinema without extra passes',()=>{
