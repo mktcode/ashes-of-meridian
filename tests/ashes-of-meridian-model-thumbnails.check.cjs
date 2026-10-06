@@ -133,6 +133,35 @@ test('model tile scheduling renders cold misses once and reuses cached snapshots
   assert.equal(pose(),snapshot,'recreated snapshots use the same fixed model pose and time');
 });
 
+test('wide HUD previews preserve vertical resolution, aspect and bounded capture sizes', () => {
+  const {thumbs,tile,rect,r}=setup();r.canvas.width=3840;r.canvas.height=2160;
+  const hud=(width,height)=>{const canvas=tile(0,'building','hq',{...rect,width,height});
+    canvas.classList={contains:name=>name==='action-model'};return canvas;};
+  const desktop=hud(480,48);assert.equal(thumbs.draw(desktop),'rendered');
+  assert.deepEqual([desktop.width,desktop.height],[960,96]);
+  const ultraWide=hud(960,48);assert.equal(thumbs.draw(ultraWide),'rendered');
+  assert.deepEqual([ultraWide.width,ultraWide.height],[1024,51]);
+  const mobile=hud(48,48);assert.equal(thumbs.draw(mobile),'rendered');
+  assert.deepEqual([mobile.width,mobile.height],[96,96]);
+  r.canvas.width=200;r.canvas.height=600;
+  const constrained=hud(480,48);assert.equal(thumbs.draw(constrained),'rendered');
+  assert.deepEqual([constrained.width,constrained.height],[200,20]);
+});
+
+test('HUD portrait zoom changes framing and cache identity without changing Codex defaults', () => {
+  const {thumbs,tile}=setup(),canvas=tile(0,'building','hq');
+  assert.equal(thumbs.draw(canvas),'rendered');const fit=Array.from(thumbs.preview.vp);
+  canvas.dataset.modelZoom='1.35';assert.equal(thumbs.draw(canvas),'rendered');
+  const cropped=Array.from(thumbs.preview.vp);
+  for(const k of [0,1,4,5,8,9]) assert.ok(Math.abs(cropped[k]-fit[k]*1.35)<1e-5);
+  assert.equal(thumbs.draw(canvas),'unchanged');
+  const reopened=tile(0,'building','hq');reopened.dataset.modelZoom='1.35';
+  assert.equal(thumbs.draw(reopened),'cached');
+  delete canvas.dataset.modelZoom;assert.equal(thumbs.draw(canvas),'cached');
+  assert.equal(thumbs.cache.size,2);
+  canvas.dataset.modelZoom='NaN';assert.equal(thumbs.draw(canvas),'unchanged');
+});
+
 test('snapshot storage stays bounded across resized menus and releases evicted canvases', () => {
   const {thumbs,tile,rect,images} = setup();
   for(let width=10;width<112;width++) {

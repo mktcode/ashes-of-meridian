@@ -201,9 +201,9 @@
       actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: UIActionButtonOptions = {}, tutorialAction: string | null = this.tutorialAction()) {
         const active = this.isModeAction(key), [kind, type] = key.split(':'), faction = this.game.s?.parties[this.localTeam].faction;
         const preview = faction !== undefined && kind === 'build' && hasContentKey(BUILDINGS, type)
-          ? renderModelThumbnail(faction, 'building', type, 'action-model')
+          ? renderModelThumbnail(faction, 'building', type, 'action-model', 1.35)
           : faction !== undefined && (kind === 'train' || kind === 'favorite') && hasContentKey(UNITS, type)
-            ? renderModelThumbnail(faction, 'unit', type, 'action-model') : '';
+            ? renderModelThumbnail(faction, 'unit', type, 'action-model', 1.35) : '';
         const cost = opts.cost, costLabel = cost ? ` · ${cost.cost} Cinder${cost.gas ? ' · ' + cost.gas + ' Echo' : ''}` : '';
         const supplyLabel = (kind === 'train' || kind === 'favorite') && hasContentKey(UNITS, type) ? ` · Supply ${UNITS[type].supply}` : '';
         const name = active ? `${label} · Cancel targeting` : label + costLabel + supplyLabel;
@@ -276,7 +276,7 @@
         const summary = `<span class="summary-title">${esc(name)}</span><span class="selection-health ${enemy ? 'enemy' : 'own'}" style="--health:${clamp(hp / max, 0, 1) * 100}%"${e.kind !== 'resource' ? ` role="meter" aria-label="Hull ${hp} of ${max}${maxShield ? '; Shields ' + shield + ' of ' + Math.ceil(maxShield) : ''}" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${hp}"` : ''}><span>${value}</span>${maxShield ? `<i class="shield-meter" style="width:${clamp(shield / maxShield, 0, 1) * 100}%" aria-hidden="true"></i>` : ''}</span>`;
         const producer = b && contentKeys(UNITS).some(type => UNITS[type].from === b.type), count = producer ? Math.min(5, b.queue.length) : 0;
         const dots = producer ? `<span class="selection-queue" role="img" aria-label="${count} of 5 orders in ${esc(name)} #${b.id}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < count ? 'occupied' : ''}" aria-hidden="true"></i>`).join('')}</span>` : '';
-        const avatar = e.kind === 'resource' ? uiIcon(e.type === 'gas' ? 'aether' : 'crystal') : renderModelThumbnail(e.faction, e.kind, e.type, 'selection-model');
+        const avatar = e.kind === 'resource' ? uiIcon(e.type === 'gas' ? 'aether' : 'crystal') : renderModelThumbnail(e.faction, e.kind, e.type, 'selection-model', 1.35);
         const tutorialAction = this.tutorialAction(supply, capacity);
         const button = (key: string, label: string, ic: string) => this.actionButton(key, label, ic, {}, tutorialAction);
         let actions = '';

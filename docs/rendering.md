@@ -56,7 +56,7 @@ Alle Einheiten- und Gebäudemodelle haben TypeScript als maßgebliche Quelle; ke
 
 ## Modellkacheln
 
-Kleine Kacheln sind zwischengespeicherte Standbilder; nur die Codex-Detailansicht bleibt live. Sie leihen den vorhandenen WebGL-Kontext und Modellmeshes, ohne zweite Welt/GPU-Geometrie. Der begrenzte flüchtige Cache berücksichtigt Modell, Qualität, Pixelgröße und Materialbereitschaft.
+Kleine Kacheln sind zwischengespeicherte Standbilder; nur die Codex-Detailansicht bleibt live. Sie leihen den vorhandenen WebGL-Kontext und Modellmeshes, ohne zweite Welt/GPU-Geometrie. Der begrenzte flüchtige Cache berücksichtigt Modell, Qualität, Pixelgröße, Ausschnittzoom und Materialbereitschaft. HUD-Porträts sind näher gerahmt und dürfen das Modell beschneiden; Codex-Kacheln zeigen weiterhin die vollständige Geometrie. Breite HUD-Kacheln verwenden ein größeres Aufnahmebudget, damit ihre vertikale Auflösung nicht durch die Kachelbreite einbricht; Seitenverhältnis und maximal zweifache Pixeldichte bleiben erhalten.
 
 Cache-Misses erzeugen höchstens ein sichtbares Modell je Renderframe und kopieren synchron aus dem Hauptcanvas; danach überschreibt die Szene das Scratch-Rechteck. **Nur innerhalb des Rendercallbacks aufnehmen.** Unterstütztes 2× MSAA wird separat aufgelöst; kein direkter MSAA-Blit in einen möglicherweise anders formatierten Hauptcanvas. Der Subpixel-Fallback braucht zwei Kopien derselben eingefrorenen Pose, keine Animation. Fehlgeschlagene Allokation nicht jeden Frame wiederholen.
 

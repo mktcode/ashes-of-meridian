@@ -2717,12 +2717,14 @@ test('building and unit actions request the current model of the active faction'
     const html = h.UI.prototype.actionButton.call(h.ui, 'build:hq', 'HQ', 'hq');
     assert.ok(html.includes(`data-model-faction="${faction}" data-model-kind="building" data-model-type="hq"`));
     assert.match(html, /class="action-model"/);
+    assert.match(html, /data-model-zoom="1.35"/);
   }
   for (const faction of [0, 1, 2]) {
     h.ui.game.s.parties[0].faction = faction;
     const html = h.UI.prototype.actionButton.call(h.ui, 'train:worker', 'Worker', 'worker');
     assert.ok(html.includes(`data-model-faction="${faction}" data-model-kind="unit" data-model-type="worker"`));
     assert.match(html, /class="action-model"/);
+    assert.match(html, /data-model-zoom="1.35"/);
   }
 });
 

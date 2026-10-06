@@ -47,10 +47,16 @@ class MeridianModelThumbnails {
     const rect = tile.getBoundingClientRect(), aspect = rect.width/rect.height;
     if (!Number.isFinite(aspect) || aspect <= 0) return false;
     const r = this.renderer, p = this.preview, g = r.gl;
-    const scale = Math.min(256/Math.max(rect.width,rect.height),devicePixelRatio || 1,2);
-    const width = Math.max(1,Math.min(r.canvas.width,256,Math.round(rect.width*scale))),
-      height = Math.max(1,Math.min(r.canvas.height,256,Math.round(rect.height*scale)));
-    const key = [faction,kind,type,r.quality,width,height,
+    // Wide HUD tiles must retain enough vertical pixels, not squeeze the whole
+    // strip into a 256px capture. Codex tiles keep their existing capture budget.
+    const pixelLimit = tile.classList?.contains('action-model') ? 1024 : 256;
+    const scale = Math.min(pixelLimit/Math.max(rect.width,rect.height),devicePixelRatio || 1,2,
+      r.canvas.width/rect.width,r.canvas.height/rect.height);
+    const width = Math.max(1,Math.min(r.canvas.width,pixelLimit,Math.round(rect.width*scale))),
+      height = Math.max(1,Math.min(r.canvas.height,pixelLimit,Math.round(rect.height*scale)));
+    const requestedZoom = Number(tile.dataset.modelZoom ?? 1);
+    const zoom = Number.isFinite(requestedZoom) ? clamp(requestedZoom,1,2) : 1;
+    const key = [faction,kind,type,r.quality,width,height,zoom,
       r.textureResources?.metal?.resident ?? false,r.textureResources?.bio?.resident ?? false].join(':');
     if (this.applied.get(tile) === key && tile.width === width && tile.height === height) return 'unchanged';
     const context = tile.getContext('2d');
@@ -96,7 +102,7 @@ class MeridianModelThumbnails {
       }
     }
     view[12] -= (min[0]+max[0])/2; view[13] -= (min[1]+max[1])/2;
-    const halfHeight = Math.max(.5,(max[0]-min[0])/2/(width/height),(max[1]-min[1])/2)*1.03;
+    const halfHeight = Math.max(.5,(max[0]-min[0])/2/(width/height),(max[1]-min[1])/2)*1.03/zoom;
     p.vp = M4.mul(M4.ortho(-halfHeight*width/height,halfHeight*width/height,-halfHeight,halfHeight,.1,radius*12+10),view);
     p.drawCalls = 0;
     // Cold misses use native 2x MSAA or average two quarter-pixel jittered
