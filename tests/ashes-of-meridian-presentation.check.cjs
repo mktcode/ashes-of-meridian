@@ -1005,15 +1005,47 @@ test('battle entrance covers the switch and reveals only after a submitted battl
   assert.equal(hud.classList.contains('battle-entrance-pending'), true);
   a.frame(0);
   assert.equal(a.draws.length, 1);
+  assert.equal(hud.classList.contains('battle-entrance-pending'), true, 'starting pose survives the first submitted frame');
+  a.frame(20);
   assert.equal(hud.classList.contains('battle-entrance-pending'), false);
   assert.equal(hud.classList.contains('battle-entrance'), true);
   assert.equal(cover.classList.contains('battle-reveal'), true, 'map cover moves behind the arriving HUD');
   const reveal = cover.animations[1];
-  assert.equal(reveal.options.duration, 1200);
+  assert.equal(reveal.options.duration, 1800);
+  const top = a.$('topbar').animations[0], bottom = a.$('commandDeck').animations[0];
+  assert.equal(top.options.duration, 3200);
+  assert.equal(bottom.options.duration, 3200);
+  assert.equal(top.keyframes[0].transform, 'translateY(-110%)');
+  assert.equal(bottom.keyframes[0].transform, 'translateY(110%)');
   reveal.finish(); await new Promise(setImmediate);
   assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(hud.classList.contains('battle-entrance'), true, 'map fade completion must not end HUD motion');
+  assert.equal(top.cancelled, false); assert.equal(bottom.cancelled, false);
+  top.finish(); await new Promise(setImmediate);
+  assert.equal(bottom.cancelled, false, 'each HUD completes independently');
+  bottom.finish(); await new Promise(setImmediate);
   assert.equal(hud.classList.contains('battle-entrance'), false);
   assert.equal(cover.classList.contains('battle-reveal'), false);
+  assert.deepEqual(a.errors, []);
+});
+
+test('battle entrance cancels on exit and replays with fresh HUD animations', async () => {
+  const a = appClock(false, false), hud = a.$('hud'), cover = a.$('battleTransition');
+  cover.classList.remove('hidden'); hud.classList.add('battle-entrance-pending');
+  a.frame(0); a.frame(20);
+  const oldTop = a.$('topbar').animations[0], oldBottom = a.$('commandDeck').animations[0];
+  a.ui.view = 'home'; a.frame(40); await new Promise(setImmediate);
+  assert.equal(oldTop.cancelled, true); assert.equal(oldBottom.cancelled, true);
+  a.ui.view = 'game';
+  a.game.s = { ...a.game.s };
+  cover.classList.remove('hidden'); hud.classList.add('battle-entrance-pending');
+  a.frame(60);
+  assert.equal(a.$('topbar').animations.length, 1, 'repeated start also holds its first frame');
+  a.frame(80);
+  assert.equal(a.$('topbar').animations.length, 2);
+  assert.equal(a.$('commandDeck').animations.length, 2);
+  assert.equal(a.$('topbar').animations[1].cancelled, false);
+  assert.equal(hud.classList.contains('battle-entrance'), true);
   assert.deepEqual(a.errors, []);
 });
 

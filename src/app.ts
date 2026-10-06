@@ -183,24 +183,45 @@
         }
         const battleTransition = $('battleTransition');
         let battleTransitionAnimation: Animation | null = null;
+        let battleHUDAnimations: Animation[] = [];
+        let battleEntranceFrame: RunState | null = null;
         function clearBattleTransition() {
           battleTransitionAnimation?.cancel();
           battleTransitionAnimation = null;
+          battleHUDAnimations.forEach(animation => animation.cancel());
+          battleHUDAnimations = [];
+          battleEntranceFrame = null;
           battleTransition.classList.add('hidden');
           battleTransition.classList.remove('battle-reveal');
           $('hud').classList.remove('battle-entrance-pending', 'battle-entrance');
         }
         function revealBattlefield() {
           if (!$('hud').classList.contains('battle-entrance-pending')) return;
+          if (matchMedia('(prefers-reduced-motion: reduce)').matches) { clearBattleTransition(); return; }
+          // Keep the hidden starting pose through a submitted frame. In particular,
+          // cold scene setup must not consume the HUD's visible animation time.
+          if (battleEntranceFrame !== game.s) { battleEntranceFrame = game.s; return; }
           battleTransitionAnimation?.cancel();
           battleTransition.classList.add('battle-reveal');
+          // Explicit animation instances restart even if DOM/style updates coalesce.
+          // Slow, non-front-loaded motion makes the entrance easy to inspect.
+          const hudAnimations = [
+            $('topbar').animate([{ opacity: 0, transform: 'translateY(-110%)' }, { opacity: 1, transform: 'translateY(0)' }],
+              { duration: 3200, delay: 150, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' }),
+            $('commandDeck').animate([{ opacity: 0, transform: 'translateY(110%)' }, { opacity: 1, transform: 'translateY(0)' }],
+              { duration: 3200, delay: 300, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' })
+          ];
+          battleHUDAnimations = hudAnimations;
           $('hud').classList.replace('battle-entrance-pending', 'battle-entrance');
-          if (matchMedia('(prefers-reduced-motion: reduce)').matches) { clearBattleTransition(); return; }
           const animation = battleTransition.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 1200, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+            { duration: 1800, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
           battleTransitionAnimation = animation;
           void animation.finished.then(() => {
-            if (battleTransitionAnimation === animation) clearBattleTransition();
+            if (battleTransitionAnimation === animation) battleTransition.classList.add('hidden');
+          }).catch(() => {});
+          // Finishing the map fade must not cancel a still-moving HUD.
+          void Promise.all([animation, ...hudAnimations].map(item => item.finished)).then(() => {
+            if (battleHUDAnimations === hudAnimations) clearBattleTransition();
           }).catch(() => {});
         }
         ui.onLaunchBattle = async (options, expedition, world) => {
