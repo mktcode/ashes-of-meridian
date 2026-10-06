@@ -328,6 +328,9 @@
           for (let e of s.entities) {
             if (e.hp <= 0) continue;
             if (!game.observed(e) && !ui.introObserves(e)) continue;
+            // The radius can still cross the viewport when the Forum itself is offscreen.
+            if (e.kind === 'building' && e.type === 'meridianforum' && selectedIds.has(e.id))
+              ring(e.x, e.z, FORUM_SETTLEMENT.radius, e.team !== -1 && e.team !== game.localTeam ? 0xf2a490 : 0x94e4d1, 0.45, 0.12);
             let p = R.project(e.x, world.surface?.entityHeight(e) ?? 0, e.z);
             const v = R.viewport;
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))

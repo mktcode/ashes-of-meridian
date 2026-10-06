@@ -778,9 +778,9 @@ test('effect culling preserves visible output and does not redistribute the acce
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
 function appClock(diagnostic = false) {
   let now = 0;
-  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [];
+  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [], rings = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
-  const elements = new Map(), window = {}, queryRequests = [], buildings = {};
+  const elements = new Map(), window = {}, queryRequests = [], buildings = {}, forumSettings = {radius:73};
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
   const $ = id => {
     if (!elements.has(id)) elements.set(id, {
@@ -803,7 +803,8 @@ function appClock(diagnostic = false) {
     savedBattleMenuScene: vm.runInContext('savedBattleMenuScene', loadScripts(['world-view'])),
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
     expeditionStageUnlocked: vm.runInContext('expeditionStageUnlocked', loadScripts(['content'])),
-    createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}), drawEffectRing() {},
+    createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}),
+    FORUM_SETTLEMENT: forumSettings, drawEffectRing(_renderer,...args) { rings.push(args); },
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
     MeridianRenderer: class {
       viewport = { width: 800, height: 600, left: 0, top: 0 };
@@ -863,7 +864,7 @@ function appClock(diagnostic = false) {
   } });
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
-  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, $,
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, rings, forumSettings, $,
     get performance() { return window.Meridian.performance; },
     setBuilding(name,value) { buildings[name]=value; },
     frame(t) {
@@ -873,6 +874,26 @@ function appClock(diagnostic = false) {
     }
   };
 }
+
+test('selected Forums show their configured settlement radius, including offscreen centers, without state or RNG changes',()=>{
+ const h=appClock(),forum=Object.freeze({id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:12,z:8,progress:.5});
+ h.ui.paused=true;h.game.localTeam=0;h.game.s.entities=[forum];h.setBuilding('meridianforum',{});
+ h.game.observed=()=>true;h.ui.introObserves=()=>false;h.game.random=()=>assert.fail('Radius display must not consume battle RNG');
+ let selected=true;h.ui.selectionIds=()=>new Set(selected?[forum.id]:[]);
+ const before=JSON.stringify(h.game.s),radiusRings=()=>h.rings.filter(r=>r[2]===h.forumSettings.radius);
+ h.frame(0);assert.equal(radiusRings().length,1);assert.deepEqual(radiusRings()[0].slice(0,3),[forum.x,forum.z,h.forumSettings.radius]);
+ assert.equal(JSON.stringify(h.game.s),before);assert.equal(h.steps.length,0);
+ h.rings.length=0;h.renderer.project=()=>({x:-1000,y:300});h.frame(20);
+ assert.equal(radiusRings().length,1,'entity-center culling cannot hide a potentially visible radius');
+ h.rings.length=0;h.renderer.project=()=>({x:400,y:300});selected=false;h.ui.hover=forum.id;h.frame(40);
+ assert.equal(radiusRings().length,0,'hover alone does not show the settlement radius');
+ h.rings.length=0;h.ui.hover=null;h.frame(60);assert.equal(h.rings.length,0);
+ selected=true;h.game.s.entities=[{...forum,hp:0}];h.frame(80);assert.equal(radiusRings().length,0);
+ h.game.s.entities=[forum];h.game.observed=()=>false;h.frame(100);assert.equal(radiusRings().length,0);
+ h.game.observed=()=>true;h.setBuilding('fieldlab',{});h.game.s.entities=[{...forum,type:'fieldlab'}];h.frame(120);
+ assert.equal(radiusRings().length,0,'other civilian buildings have no settlement radius');
+ assert.deepEqual(h.errors,[]);
+});
 
 test('app revalidates restored and resized cameras while paused but leaves cinematic travel alone',()=>{
   const h=appClock(),cam=h.game.s.cam;let calls=0;
