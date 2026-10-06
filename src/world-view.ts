@@ -3,12 +3,13 @@
 
 // View-only parcel fill: clip native terrain triangles, never bridge terrain facets
 // or approximate street holes with interpolated colors. No placement/RNG queries.
+// The visible plaza matches the small selection ring; the CPU navigation reserve stays larger.
 function buildForumParcelGeometry(world: Battlefield, forum: BuildingEntity): Float32Array {
   const surface = world.surface!, radius = FORUM_SETTLEMENT.radius, data: number[] = [],
     circle = Array.from({length:128}, (_,i) => {
       const angle = i*Math.PI*2/128;
       return {x:forum.x+Math.cos(angle)*radius,z:forum.z+Math.sin(angle)*radius};
-    }), streets = forumCorridors(forum).map(polygon => ({polygon,
+    }), streets = forumCorridors(forum,forum.size+.5).map(polygon => ({polygon,
       minX:Math.min(...polygon.map(p=>p.x)),maxX:Math.max(...polygon.map(p=>p.x)),
       minZ:Math.min(...polygon.map(p=>p.z)),maxZ:Math.max(...polygon.map(p=>p.z))}));
   const clip = (polygon: Position[], a: Position, b: Position, inside: boolean): Position[] => {

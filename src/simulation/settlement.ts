@@ -7,7 +7,7 @@ const SETTLEMENT_TYPES: readonly (readonly BuildingType[])[] = [
 function forumBuildingTarget(forum: BuildingEntity): number {
   return Math.floor(clamp(forum.cinderStock || 0, 0, FORUM_SETTLEMENT.capacity) / FORUM_SETTLEMENT.capacity * FORUM_SETTLEMENT.buildings);
 }
-function forumCorridors(forum: BuildingEntity): Position[][] {
+function forumCorridors(forum: BuildingEntity, plazaRadius = forum.size + 2.5 + FORUM_SETTLEMENT.corridorWidth / 2): Position[][] {
   const yaw = buildingVisualYaw(forum), cs = Math.cos(yaw), sn = Math.sin(yaw),
     radius = FORUM_SETTLEMENT.radius, half = FORUM_SETTLEMENT.corridorWidth / 2, reach = radius + 6;
   // Three parallel streets and one cross-axis cut the circle into eight parcels.
@@ -16,12 +16,11 @@ function forumCorridors(forum: BuildingEntity): Position[][] {
     return [[x-half,-length],[x+half,-length],[x+half,length],[x-half,length]];
   });
   streets.push([[-reach,-half],[reach,-half],[reach,half],[-reach,half]]);
-  // A round plaza connects all four street arms around the Forum blocker and
-  // protects all three delivery entries. The same convex contour drives placement and display.
-  const plaza = forum.size + 2.5 + half;
+  // The default round plaza protects delivery entries and connects the street arms.
+  // Presentation may use a tighter contour without reducing this navigation reserve.
   streets.push(Array.from({length:64}, (_,i) => {
     const angle = i*Math.PI*2/64;
-    return [Math.cos(angle)*plaza,Math.sin(angle)*plaza];
+    return [Math.cos(angle)*plazaRadius,Math.sin(angle)*plazaRadius];
   }));
   return streets.map(polygon => polygon.map(([x,z]) =>
     ({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs})));
