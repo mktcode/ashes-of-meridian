@@ -156,6 +156,20 @@ test('building apron edges are asymmetric, deterministic and leave the core cove
   assert.equal(JSON.stringify(building),before);
 });
 
+test('nearby building fringes merge more strongly than either individual apron',()=>{
+  const field=new WorkerRoadField(20),a=new BuildingRoadField(field),b=new BuildingRoadField(field),merged=new BuildingRoadField(field),
+    first={id:7,kind:'building',type:'depot',hp:100,x:-.5,z:.5,size:2.3,team:0},
+    second={...first,id:8,x:8.5};
+  a.update([first]);b.update([second]);merged.update([first,second]);
+  let blended=0;
+  for(let i=0;i<field.pixels.length;i++){
+    assert.ok(merged.pixels[i]>=Math.max(a.pixels[i],b.pixels[i]));
+    if(a.pixels[i]>0&&a.pixels[i]<255&&b.pixels[i]>0&&b.pixels[i]<255&&merged.pixels[i]>Math.max(a.pixels[i],b.pixels[i]))blended++;
+  }
+  assert.ok(blended>0,'overlapping edges fill in rather than keeping the weaker seam');
+  assert.equal(merged.pixels[20*field.size+24],255,'gap between these nearby pads is filled');
+});
+
 test('used HQ approaches join the apron without changing entities or worker rules',()=>{
   const view=new BattlefieldView({workerRoads(){}});
   view.world={extent:20,terrainFree:()=>true};

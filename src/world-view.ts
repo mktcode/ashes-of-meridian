@@ -313,6 +313,7 @@ class SceneryFogField {
 }
 
 // Transient, RNG-neutral wear from observed movement, never navigation or save data.
+const WORKER_ROAD_RADIUS = 2.2;
 class WorkerRoadField {
   readonly size: number;
   readonly cell: number;
@@ -340,7 +341,7 @@ class WorkerRoadField {
       if (!p || dt <= 0 || dt > 1) continue; // No replay after view/background gaps.
       const distance = Math.hypot(w.x - p.x, w.z - p.z);
       if (distance < .02 || distance > Math.min(16, dt * 12 + 2)) continue;
-      const steps = Math.ceil(distance / .5), radius = 1.65;
+      const steps = Math.ceil(distance / .5), radius = WORKER_ROAD_RADIUS;
       for (let s = 0; s < steps; s++) {
         const t = (s + .5) / steps, x = p.x + (w.x - p.x) * t, z = p.z + (w.z - p.z) * t;
         for (let row = Math.max(0, Math.floor((z - radius + this.extent) / this.cell));
@@ -364,7 +365,7 @@ class WorkerRoadField {
     return changed;
   }
   private connect(from: Position, to: Position) {
-    const { extent, cell, size, wear } = this, radius = 1.65,
+    const { extent, cell, size, wear } = this, radius = WORKER_ROAD_RADIUS,
       dx = to.x-from.x, dz = to.z-from.z, length2 = dx*dx+dz*dz;
     if (length2 < .01) return;
     const col = Math.max(0,Math.min(size-1,Math.floor((from.x+extent)/cell))),
@@ -397,7 +398,7 @@ class BuildingRoadField {
     this.key = key; this.pixels.fill(0);
     const { extent, cell, size } = this.field;
     for (const e of buildings) {
-      const inner = e.size * 1.08 + .55, fringe = 1.05, bulge = 1.25,
+      const inner = e.size * 1.08 + 1.1, fringe = 1.45, bulge = 1.6,
         bound = (inner + bulge + fringe) * Math.SQRT2,
         yaw = buildingVisualYaw(e), cs = Math.cos(yaw), sn = Math.sin(yaw),
         phase = surfaceHash(Math.round(e.x*16),Math.round(e.z*16),e.id^0x6170726e)*Math.PI*2;
@@ -413,7 +414,8 @@ class BuildingRoadField {
             edge = bulge*(.5+.28*Math.sin(angle*3+phase)+.15*Math.sin(angle*5-phase*1.7)+.07*Math.cos(angle*7+phase*.6)),
             radius = Math.pow(x**4+z**4,1/4), t = Math.max(0,Math.min(1,(radius-inner-edge)/fringe)),
             pixel = Math.round((1-t*t*(3-2*t))*255), i = row*size+col;
-          this.pixels[i] = Math.max(this.pixels[i],pixel);
+          // Soft union lets overlapping fringes form continuous ground, not a valley.
+          this.pixels[i] = Math.round(255-(255-this.pixels[i])*(255-pixel)/255);
         }
     }
     return true;
@@ -456,7 +458,7 @@ class BattlefieldView {
     const pixels = this.roadPixels ??= new Uint8Array(field.pixels.length);
     let changed = false;
     for (let i = 0; i < pixels.length; i++) {
-      const pixel = Math.max(field.pixels[i],buildings.pixels[i]);
+      const pixel = Math.round(255-(255-field.pixels[i])*(255-buildings.pixels[i])/255);
       if (pixels[i] !== pixel) { pixels[i] = pixel; changed = true; }
     }
     if (changed) this.R.workerRoads(pixels, field.size);
