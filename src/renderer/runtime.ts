@@ -640,10 +640,18 @@
         for (const name of this.textureNames(profile)) if (!this.textureResources[name].resident) return false;
         return true;
       }
-      async prepareBattlefieldTextures(profile: BattlefieldRenderProfile) {
+      async prepareBattlefieldTextures(profile: BattlefieldRenderProfile,
+        progress?: (completed: number, total: number) => Promise<void>) {
         const generation = ++this.textureGeneration, required = this.textureNames(profile);
         this.desiredTextures = required;
-        await Promise.all(Array.from(required, name => this.loadResidentTexture(name)));
+        if (progress) {
+          let completed = 0;
+          for (const name of required) {
+            if (generation !== this.textureGeneration) return false;
+            await this.loadResidentTexture(name);
+            await progress(++completed, required.size);
+          }
+        } else await Promise.all(Array.from(required, name => this.loadResidentTexture(name)));
         if (generation !== this.textureGeneration) return false;
         for (const name of Object.keys(this.textureResources) as ResidentTextureName[])
           if (!required.has(name) && this.textureResources[name].resident) this.releaseResidentTexture(name);

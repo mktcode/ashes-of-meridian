@@ -253,6 +253,34 @@ test('battlefield texture residency retains shared materials and releases map-on
   assert.deepEqual(names.filter(name => renderer.textureResources[name].resident).sort(), ['bio', 'metal']);
 });
 
+test('texture preparation reports completed materials and waits for progress paints, including supersession', async () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
+  const loads = [], reports = [];
+  const renderer = Object.assign(Object.create(Renderer.prototype), {
+    textureResources: {}, textureGeneration: 0,
+    loadResidentTexture: async name => { loads.push(name); return true; }
+  });
+  const profile = { groundTexture: 'ground' };
+  let painted;
+  const pending = renderer.prepareBattlefieldTextures(profile, (done, total) => {
+    reports.push([done, total]);
+    return new Promise(resolve => { painted = resolve; });
+  });
+  await new Promise(setImmediate);
+  assert.deepEqual(loads, ['metal']);
+  assert.deepEqual(reports, [[1, 3]]);
+  painted(); await new Promise(setImmediate);
+  assert.deepEqual(loads, ['metal', 'bio']);
+  assert.deepEqual(reports, [[1, 3], [2, 3]]);
+  renderer.textureGeneration++;
+  painted();
+  assert.equal(await pending, false);
+  assert.deepEqual(loads, ['metal', 'bio'], 'superseded preparation cannot bake the next material');
+  reports.length = 0;
+  assert.equal(await renderer.prepareBattlefieldTextures(profile, async (done, total) => { reports.push([done, total]); }), true);
+  assert.deepEqual(reports, [[1, 3], [2, 3], [3, 3]]);
+});
+
 test('large static geometry and placements are chunked and conservatively culled', () => {
   const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context), draws = [];
   const gl = new Proxy({

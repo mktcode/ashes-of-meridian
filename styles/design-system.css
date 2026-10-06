@@ -320,6 +320,17 @@
 #loading { background: radial-gradient(ellipse at 50% 40%, #123b50, #040e19 65%) }
 #loading .crest .ui-icon { width: 60px; height: 60px }
 #loading h2 { font-family: Aldrich, sans-serif; color: var(--ui-ink); letter-spacing: 1px }
+#loading progress {
+  appearance: none;
+  width: min(320px, 75vw);
+  height: 8px;
+  border: 1px solid var(--ui-line);
+  background: #03111c;
+  color: var(--ui-accent);
+}
+#loading progress::-webkit-progress-bar { background: #03111c }
+#loading progress::-webkit-progress-value { background: var(--ui-accent) }
+#loading progress::-moz-progress-bar { background: var(--ui-accent) }
 
 /* HUD theme; geometry is owned by hud.css. */
 #hud #commandDeck button:focus-visible { outline-offset: -2px } /* Dense scroll rails keep the ring inside the control. */

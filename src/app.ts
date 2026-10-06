@@ -1,6 +1,21 @@
     /* Application lifecycle, fixed-step clock, visual effects, and cinematic frontier. */
     'use strict';
-    (() => {
+    (async () => {
+      // Two frame boundaries let the HTML cover paint before synchronous GPU/CPU work.
+      const loadingPaint = () => new Promise<void>(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      function loadingProgress(value: number, text: string) {
+        const progress = $('loadingProgress') as HTMLProgressElement;
+        progress.value = value;
+        $('loadingStatus').textContent = text;
+      }
+      let loadingPaints = 0;
+      async function loadingStep(value: number, text: string) {
+        loadingProgress(value, text);
+        loadingPaints++;
+        try { await loadingPaint(); }
+        finally { loadingPaints--; }
+      }
       let R: MeridianRenderer,
         game: MeridianGame,
         ui: MeridianUI,
@@ -14,6 +29,7 @@
       const canvas = $('world'),
         overlay = $('overlay');
       try {
+        await loadingStep(0, 'Preparing graphics');
         const params = new URLSearchParams(location.search);
         const experiment = params.get('experiment'),
           mapExperiment: BattlefieldId | null = experiment === 'height' ? 'mothership' :
@@ -37,6 +53,7 @@
         const profile = persistence.loadProfile();
         if (profile.settings.showFps) $('fpsReadout').classList.remove('hidden');
         R = new MeridianRenderer(canvas);
+        await loadingStep(20, 'Graphics ready');
         const thumbnails = new MeridianModelThumbnails(R);
         addEventListener('pagehide',event=>{
           if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releasePointLights(); R.releaseWorkerRoads(); R.releaseEnvironment(); }
@@ -110,7 +127,7 @@
         }
         function loadingBattlefield(text: string) {
           const loader = $('loading');
-          loader.innerHTML = `<div class="crest">◈</div><div class="eyebrow">MERIDIAN EXPEDITIONARY COMMAND</div><h2>${text}<span class="dots">...</span></h2><p>Preparing the frontier</p>`;
+          loader.innerHTML = `<div class="crest">◈</div><div class="eyebrow">MERIDIAN EXPEDITIONARY COMMAND</div><h2>${text}<span class="dots">...</span></h2><progress id="loadingProgress" max="100" value="0" aria-label="Loading progress"></progress><p id="loadingStatus" role="status">Preparing the frontier</p>`;
           loader.classList.remove('hidden');
         }
         function textureFailure(error: unknown) {
@@ -131,11 +148,22 @@
             });
           }
           try {
-            const world = new Battlefield(seed, mapId), ready = await R.prepareBattlefieldTextures(world.renderProfile);
-            if (!ready || id !== worldRequest || ui.view === 'game' || ui.view === 'codexModel') return false;
+            await loadingStep(25, 'Generating landscape');
+            if (id !== worldRequest || failed) return false;
+            const world = new Battlefield(seed, mapId);
+            await loadingStep(45, 'Preparing materials');
+            if (id !== worldRequest || failed) return false;
+            const ready = await R.prepareBattlefieldTextures(world.renderProfile, async (done, total) => {
+              if (id === worldRequest) await loadingStep(45 + 25 * done / total, 'Preparing materials');
+            });
+            if (!ready || id !== worldRequest || failed || ui.view === 'game' || ui.view === 'codexModel') return false;
+            await loadingStep(75, 'Building scenery');
+            if (id !== worldRequest || failed) return false;
             worldView.sync(world, false);
             R.fogOn = false;
             previewEntities(mapId, seed, battle);
+            await loadingStep(100, 'Frontier ready');
+            if (id !== worldRequest || failed || ui.view !== 'home') return false;
             $('loading').classList.add('hidden');
             if (initialHomeReveal && ui.view === 'home') {
               initialHomeReveal = false;
@@ -295,7 +323,7 @@
         ui.onLaunchBattle = async (options, expedition, world) => {
           finishPreviewChange(false);
           const id = ++worldRequest, mapId = battlefieldId(options.map), profile = BATTLEFIELDS[mapId].render;
-          if (!R.hasBattlefieldTextures(profile)) loadingBattlefield('Preparing operation');
+          loadingBattlefield('Preparing operation');
           let ready: boolean;
           try {
             clearBattleTransition();
@@ -306,20 +334,33 @@
               battleTransitionAnimation = animation;
               await animation.finished;
             }
-            ready = await R.prepareBattlefieldTextures(profile);
+            await loadingStep(10, 'Preparing materials');
+            ready = id === worldRequest && !failed && await R.prepareBattlefieldTextures(profile, async (done, total) => {
+              if (id === worldRequest) await loadingStep(10 + 40 * done / total, 'Preparing materials');
+            });
           }
           catch (e) { clearBattleTransition(); if (id === worldRequest) textureFailure(e); return false; }
-          if (id !== worldRequest || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' : expedition !== ui.expedition)) { clearBattleTransition(); return false; }
+          if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' : expedition !== ui.expedition)) {
+            clearBattleTransition();
+            if (id === worldRequest && !failed) $('loading').classList.add('hidden');
+            return false;
+          }
           if (!ready) { clearBattleTransition(); textureFailure(Error('Required battlefield textures are unavailable')); return false; }
-          if (!world && ui.expedition && !expeditionStageUnlocked(ui.expedition)) { clearBattleTransition(); return false; }
+          if (!world && ui.expedition && !expeditionStageUnlocked(ui.expedition)) {
+            clearBattleTransition(); $('loading').classList.add('hidden'); return false;
+          }
           try {
+            await loadingStep(60, expedition.battle ? 'Restoring battlefield' : 'Generating battlefield');
+            if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' :
+              expedition !== ui.expedition || !expeditionStageUnlocked(ui.expedition!))) { clearBattleTransition(); return false; }
             if (expedition.battle) game.restoreBattle(expedition, !!world);
             else game.start(options);
-            return true;
+            await loadingStep(100, 'Operation ready');
+            return id === worldRequest && !failed;
           } catch (error) {
             clearBattleTransition();
             throw error;
-          } finally { $('loading').classList.add('hidden'); }
+          } finally { if (id === worldRequest && !failed) $('loading').classList.add('hidden'); }
         };
         const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R, () => ({
           view: ui.view, paused: ui.paused,
@@ -603,7 +644,8 @@
             // Keep simulation and UI clocks on every rAF.
             // Retain the render phase on e.g. 90/144 Hz displays instead of
             // resetting to now + interval, which would systematically undershoot.
-            if (now + RENDER_TOLERANCE_MS < nextRender || !R.frameReady()) {
+            // The opaque loading cover needs a DOM paint, not a hidden 3D frame.
+            if (loadingPaints > 0 || now + RENDER_TOLERANCE_MS < nextRender || !R.frameReady()) {
               diagnostics?.finishFrame(false);
               requestAnimationFrame(draw);
               return;

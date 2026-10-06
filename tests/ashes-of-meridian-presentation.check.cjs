@@ -816,9 +816,9 @@ test('Forum parcel fills follow native terrain facets and cut the circle, all st
 });
 
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
-function appClock(diagnostic = false, reducedMotion = true) {
+async function appClock(diagnostic = false, reducedMotion = true) {
   let now = 0;
-  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [], rings = [], parcelBuilds = [];
+  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [], rings = [], parcelBuilds = [], paints = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
   const elements = new Map(), window = {}, queryRequests = [], buildings = {}, forumSettings = {radius:73};
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
@@ -849,7 +849,13 @@ function appClock(diagnostic = false, reducedMotion = true) {
   loadScripts(['core', ...DIAGNOSTIC_SCRIPTS, 'app'], { globals: {
     $, window, document, navigator: { userAgent: 'clock-test' }, URLSearchParams,
     location: { search: diagnostic ? '?diagnostics=1' : '' }, devicePixelRatio: 1,
-    performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
+    performance: { now: () => now }, requestAnimationFrame: fn => {
+      if (fn.name === 'draw') pending.push(fn);
+      else queueMicrotask(() => {
+        paints.push({value: $('loadingProgress').value, status: $('loadingStatus').textContent});
+        fn(now);
+      }); // Paint boundaries advance independently of the draw clock.
+    },
     addEventListener() {}, ResizeObserver: class { observe() {} }, matchMedia:()=>({matches:reducedMotion}),
     getComputedStyle: element => ({ opacity: element.style.opacity ?? '1', transform: element.style.transform ?? 'none' }),
     console: { error: e => errors.push(e), warn() {} },
@@ -869,6 +875,7 @@ function appClock(diagnostic = false, reducedMotion = true) {
     FORUM_SETTLEMENT: forumSettings, drawEffectRing(_renderer,...args) { rings.push(args); },
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
     MeridianRenderer: class {
+      constructor() { this.startupPaints = paints.length; }
       viewport = { width: 800, height: 600, left: 0, top: 0 };
       gl = { getExtension(name) { queryRequests.push(name); return null; } };
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
@@ -902,7 +909,7 @@ function appClock(diagnostic = false, reducedMotion = true) {
     MeridianModelThumbnails: class { update() {} dispose() {} },
     BattlefieldView: class {
       world={terrainSeed:7,definition:{render:{groundTexture:'ground'}}};
-      sync() {} retainBuildingGround() {} drawBuildingGround() {}
+      sync() {} retainBuildingGround() {} drawBuildingGround() {} updateWorkerRoads() {} clearWorkerRoads() {}
     },
     MeridianAudio: class { update() {} },
     MeridianGame: class {
@@ -925,9 +932,10 @@ function appClock(diagnostic = false, reducedMotion = true) {
       weatherClocks.push({now,state:s.time,effects:time,weather:weatherTime});
     }
   } });
+  for (let i = 0; i < 100 && !window.Meridian && !errors.length; i++) await Promise.resolve();
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
-  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, rings, parcelBuilds, forumSettings, $,
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, rings, parcelBuilds, forumSettings, paints, $,
     get performance() { return window.Meridian.performance; },
     setBuilding(name,value) { buildings[name]=value; },
     frame(t) {
@@ -938,8 +946,35 @@ function appClock(diagnostic = false, reducedMotion = true) {
   };
 }
 
-test('selected Forum parcel overlays are translucent, cached while paused, update on rotation/world changes and release on deselection or menus',()=>{
- const h=appClock(),uploads=[],marks=[],releases=[],forum={id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:12,z:8,progress:.5};
+test('app paints its initial loading cover before constructing the renderer', async () => {
+  const a = await appClock();
+  assert.equal(a.renderer.startupPaints, 2);
+  assert.deepEqual(a.paints.slice(0, 2), [
+    {value: 0, status: 'Preparing graphics'}, {value: 0, status: 'Preparing graphics'}
+  ]);
+  assert.equal(a.paints.at(-1).value, 20);
+});
+
+test('app launch paints staged progress even with resident materials and completes after battlefield creation', async () => {
+  const a = await appClock();
+  a.ui.view = 'home'; a.ui.expedition = { depth: 0, battle: null };
+  let created = false;
+  a.game.start = () => {
+    assert.equal(a.$('loading').classList.contains('hidden'), false);
+    assert.equal(a.paints.at(-1).value, 60);
+    created = true;
+  };
+  const launch = a.ui.onLaunchBattle({map: 'desert'}, a.ui.expedition);
+  a.frame(20);
+  assert.equal(a.draws.length, 0, 'progress paints do not render the covered 3D scene');
+  assert.equal(await launch, true);
+  assert.equal(created, true);
+  assert.equal(a.paints.at(-1).value, 100);
+  assert.equal(a.$('loading').classList.contains('hidden'), true);
+});
+
+test('selected Forum parcel overlays are translucent, cached while paused, update on rotation/world changes and release on deselection or menus',async()=>{
+ const h=await appClock(),uploads=[],marks=[],releases=[],forum={id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:12,z:8,progress:.5};
  h.ui.paused=true;h.game.localTeam=0;h.game.s.entities=[forum];h.setBuilding('meridianforum',{});
  h.game.world={surface:{entityHeight:()=>0}};h.game.observed=()=>true;h.ui.introObserves=()=>false;
  h.game.random=()=>assert.fail('Parcel overlay cannot draw battle RNG');let selected=true;
@@ -963,8 +998,8 @@ test('selected Forum parcel overlays are translucent, cached while paused, updat
  assert.equal(h.steps.length,0);assert.deepEqual(h.errors,[]);
 });
 
-test('Forum parcel overlays drop stale GPU geometry when a changed world has no paintable area',()=>{
- const h=appClock(),uploads=[],releases=[],marks=[],forum={id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:0,z:0};
+test('Forum parcel overlays drop stale GPU geometry when a changed world has no paintable area',async()=>{
+ const h=await appClock(),uploads=[],releases=[],marks=[],forum={id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:0,z:0};
  h.ui.paused=true;h.game.s.entities=[forum];h.setBuilding('meridianforum',{});h.game.localTeam=0;
  h.game.world={surface:{entityHeight:()=>0}};h.game.observed=()=>true;h.ui.selectionIds=()=>new Set([1]);
  h.renderer.streamGeometry=name=>uploads.push(name);h.renderer.releaseGeometry=name=>releases.push(name);h.renderer.add=(...args)=>marks.push(args);
@@ -974,8 +1009,8 @@ test('Forum parcel overlays drop stale GPU geometry when a changed world has no 
  assert.equal(h.parcelBuilds.length,2,'empty areas are cached without uploading empty meshes');assert.deepEqual(h.errors,[]);
 });
 
-test('selected Forums show their configured settlement radius, including offscreen centers, without state or RNG changes',()=>{
- const h=appClock(),forum=Object.freeze({id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:12,z:8,progress:.5});
+test('selected Forums show their configured settlement radius, including offscreen centers, without state or RNG changes',async()=>{
+ const h=await appClock(),forum=Object.freeze({id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:12,z:8,progress:.5});
  h.ui.paused=true;h.game.localTeam=0;h.game.s.entities=[forum];h.setBuilding('meridianforum',{});
  h.game.observed=()=>true;h.ui.introObserves=()=>false;h.game.random=()=>assert.fail('Radius display must not consume battle RNG');
  let selected=true;h.ui.selectionIds=()=>new Set(selected?[forum.id]:[]);
@@ -994,8 +1029,8 @@ test('selected Forums show their configured settlement radius, including offscre
  assert.deepEqual(h.errors,[]);
 });
 
-test('app revalidates restored and resized cameras while paused but leaves cinematic travel alone',()=>{
-  const h=appClock(),cam=h.game.s.cam;let calls=0;
+test('app revalidates restored and resized cameras while paused but leaves cinematic travel alone',async()=>{
+  const h=await appClock(),cam=h.game.s.cam;let calls=0;
   h.ui.paused=true;cam.x=1000;
   h.ui.cameraClamp=p=>{calls++;return {x:Math.min(5,p.x),z:p.z};};
   h.frame(0);assert.equal(cam.x,5);assert.ok(calls>0);
@@ -1006,8 +1041,8 @@ test('app revalidates restored and resized cameras while paused but leaves cinem
   assert.deepEqual(h.errors,[]);assert.deepEqual(h.steps,[]);
 });
 
-test('result background retains scene construction but invalidates camera, resize, quality and view changes',()=>{
-  const a=appClock();a.game.s.result={win:true};a.ui.paused=true;a.ui.modalKind='result';
+test('result background retains scene construction but invalidates camera, resize, quality and view changes',async()=>{
+  const a=await appClock();a.game.s.result={win:true};a.ui.paused=true;a.ui.modalKind='result';
   a.frame(20);a.frame(40);
   assert.deepEqual(a.draws.map(d=>d.retainScene),[false,true]);
   assert.deepEqual(a.renderWork,{begin:1,battlefield:1,overlay:1});
@@ -1038,8 +1073,8 @@ test('result UI advances transient clocks without updating the hidden HUD or min
   ui.game.s.result=null;tick.call(ui,.3);assert.deepEqual(calls,['storage','storage','queues','score','hud','minimap']);
 });
 
-test('app enables celestial backdrops only on home, never in combat or codex',()=>{
-  const a=appClock();
+test('app enables celestial backdrops only on home, never in combat or codex',async()=>{
+  const a=await appClock();
   a.frame(0);assert.equal(a.renderer.menuSky.seed,null);
   a.ui.view='home';a.frame(20);
   assert.deepEqual(a.renderer.menuSky,{seed:7,family:'ground'});
@@ -1051,7 +1086,7 @@ test('app enables celestial backdrops only on home, never in combat or codex',()
 });
 
 test('home atmosphere freezes current and historical worlds but resets for landscape-only or abandoned saves', async () => {
-  const a=appClock();
+  const a=await appClock();
   a.game.s=null;a.ui.view='home';
   a.ui.expedition={encounter:{map:'desert',seed:123},battle:{state:{map:'desert',seed:123,time:347,entities:[],cam:{x:0,z:0}}}};
   assert.equal(await a.ui.onPreview('desert',123),true);
@@ -1075,7 +1110,7 @@ test('home atmosphere freezes current and historical worlds but resets for lands
 });
 
 test('smooth app preview carries its snapshot through loading and ignores superseded requests',async()=>{
-  const a=appClock();a.game.s=null;a.ui.view='home';
+  const a=await appClock();a.game.s=null;a.ui.view='home';
   const battle=time=>({state:{map:'desert',seed:123,time,entities:[],cam:{x:0,z:0}}});
   a.ui.expedition={encounter:{map:'desert',seed:123},battle:battle(10)};
   await a.ui.onPreview('desert',123,false,a.ui.expedition.battle);a.frame(0);
@@ -1089,7 +1124,7 @@ test('smooth app preview carries its snapshot through loading and ignores supers
 });
 
 test('battle entrance covers the switch and reveals only after a submitted battlefield frame', async () => {
-  const a = appClock(false, false), cover = a.$('battleTransition'), hud = a.$('hud');
+  const a = await appClock(false, false), cover = a.$('battleTransition'), hud = a.$('hud');
   a.ui.view = 'home';
   a.ui.launchingBattle = true;
   a.ui.expedition = { worlds: [] };
@@ -1134,7 +1169,7 @@ test('battle entrance covers the switch and reveals only after a submitted battl
 });
 
 test('battle entrance cancels on exit and replays with fresh HUD animations', async () => {
-  const a = appClock(false, false), hud = a.$('hud'), cover = a.$('battleTransition');
+  const a = await appClock(false, false), hud = a.$('hud'), cover = a.$('battleTransition');
   cover.classList.remove('hidden'); hud.classList.add('battle-entrance-pending');
   a.frame(0); a.frame(20);
   const oldTop = a.$('topbar').animations[0], oldBottom = a.$('commandDeck').animations[0];
@@ -1154,7 +1189,7 @@ test('battle entrance cancels on exit and replays with fresh HUD animations', as
 });
 
 test('battle entrance skips motion and cleans up failed starts', async () => {
-  const a = appClock(), hud = a.$('hud'), cover = a.$('battleTransition');
+  const a = await appClock(), hud = a.$('hud'), cover = a.$('battleTransition');
   cover.classList.remove('hidden'); hud.classList.add('battle-entrance-pending');
   a.frame(0);
   assert.equal(cover.classList.contains('hidden'), true);
@@ -1169,7 +1204,7 @@ test('battle entrance skips motion and cleans up failed starts', async () => {
 });
 
 test('battle exit waits for both sliding HUDs, destination preparation and its submitted frame', async () => {
-  const a = appClock(false, false), cover = a.$('battleTransition'), hud = a.$('hud');
+  const a = await appClock(false, false), cover = a.$('battleTransition'), hud = a.$('hud');
   cover.classList.add('hidden');
   let switched = 0, ready;
   a.ui.onLeaveBattle(() => {
@@ -1200,7 +1235,7 @@ test('battle exit waits for both sliding HUDs, destination preparation and its s
 });
 
 test('battle exit skips reduced motion and reveals the main menu only after rendering', async () => {
-  const a = appClock(), cover = a.$('battleTransition');
+  const a = await appClock(), cover = a.$('battleTransition');
   let switched = 0;
   a.ui.onLeaveBattle(() => { switched++; a.ui.view = 'home'; a.game.s = null; a.$('hud').classList.add('hidden'); });
   await new Promise(setImmediate);
@@ -1214,7 +1249,7 @@ test('battle exit skips reduced motion and reveals the main menu only after rend
 });
 
 test('battle exit preserves the current entrance pose and context loss cancels stale screen changes', async () => {
-  const a = appClock(false, false), top = a.$('topbar'), cover = a.$('battleTransition');
+  const a = await appClock(false, false), top = a.$('topbar'), cover = a.$('battleTransition');
   top.style.opacity = '.6'; top.style.transform = 'matrix(1, 0, 0, 1, 0, -12)';
   cover.classList.add('hidden'); a.$('hud').classList.add('battle-entrance-pending');
   let switched = 0;
@@ -1231,7 +1266,7 @@ test('battle exit preserves the current entrance pose and context loss cancels s
 });
 
 test('battle exit destination preparation failure releases the cover and input lock', async () => {
-  const a = appClock(), cover = a.$('battleTransition');
+  const a = await appClock(), cover = a.$('battleTransition');
   a.ui.onLeaveBattle(() => Promise.reject(Error('destination unavailable')));
   await new Promise(setImmediate);
   assert.equal(cover.classList.contains('hidden'), true);
@@ -1241,7 +1276,7 @@ test('battle exit destination preparation failure releases the cover and input l
 });
 
 test('app world launch validates archive identity and does not load after leaving home',async()=>{
-  const a=appClock(),world={stage:1,recipe:{},battle:{state:{}}},calls=[];
+  const a=await appClock(),world={stage:1,recipe:{},battle:{state:{}}},calls=[];
   a.ui.view='home';a.ui.expedition={worlds:[world]};
   a.game.restoreBattle=(target,completed)=>calls.push({target,completed});
   const target={battle:world.battle};
@@ -1249,12 +1284,13 @@ test('app world launch validates archive identity and does not load after leavin
   assert.deepEqual(calls,[{target,completed:true}]);
   let resolve;a.renderer.prepareBattlefieldTextures=()=>new Promise(done=>{resolve=done;});
   const pending=a.ui.onLaunchBattle({map:'desert'},target,world);
+  await new Promise(setImmediate);
   a.ui.view='codex';resolve(true);assert.equal(await pending,false);assert.equal(calls.length,1);
   assert.deepEqual(a.errors,[]);
 });
 
-test('real app build preview validates and draws the same screen target used by placement', () => {
-  const a=appClock(), target={x:20,z:30}, checks=[];
+test('real app build preview validates and draws the same screen target used by placement', async () => {
+  const a=await appClock(), target={x:20,z:30}, checks=[];
   a.ui.mode={kind:'build',arg:'refinery'};a.ui.pointer={inside:true,x:440,y:350};
   a.ui.targetPosition=(x,y)=>{assert.deepEqual([x,y],[440,350]);return {...target};};
   a.game.world.extent=90;a.game.s.parties=[{faction:0}];
@@ -1271,8 +1307,8 @@ test('real app build preview validates and draws the same screen target used by 
   assert.deepEqual(a.errors,[]);
 });
 
-test('placement guide makes one fine, continuous terrain mesh from bounded visible build samples', () => {
-  const a=appClock(), marks=[], samples=[], uploads=[], releases=[];
+test('placement guide makes one fine, continuous terrain mesh from bounded visible build samples', async () => {
+  const a=await appClock(), marks=[], samples=[], uploads=[], releases=[];
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.ui.paused=true;
   a.setBuilding('depot',{size:2});a.game.localTeam=0;
   a.renderer.ground=(x,y,terrain)=>{assert.equal(terrain,false);return {x:(x-400)/20,z:(y-300)/20};};
@@ -1309,8 +1345,8 @@ test('placement guide makes one fine, continuous terrain mesh from bounded visib
   assert.deepEqual(a.errors,[]);
 });
 
-test('placement guide covers wide viewports and raised ground, updating on rotation and resize', () => {
-  const a=appClock(), uploads=[], marks=[];
+test('placement guide covers wide viewports and raised ground, updating on rotation and resize', async () => {
+  const a=await appClock(), uploads=[], marks=[];
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};
   a.setBuilding('depot',{size:2});a.game.localTeam=0;
   a.game.world={extent:135,fogVersion:0,surface:{maxHeight:60,heightAt:()=>60},
@@ -1342,8 +1378,8 @@ test('placement guide covers wide viewports and raised ground, updating on rotat
   assert.deepEqual(a.errors,[]);
 });
 
-test('placement guide reuses terrain sampler on camera changes, but not across build contexts',()=>{
-  const a=appClock();
+test('placement guide reuses terrain sampler on camera changes, but not across build contexts',async()=>{
+  const a=await appClock();
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.game.localTeam=0;
   a.setBuilding('depot',{size:2});a.setBuilding('hq',{size:4});
   a.game.world={extent:50,fogVersion:0,surface:{maxHeight:0,heightAt:()=>0},
@@ -1371,8 +1407,8 @@ test('placement guide reuses terrain sampler on camera changes, but not across b
   assert.deepEqual(a.errors,[]);
 });
 
-test('placement guide batches cold terrain across frames before uploading and hides stale fields',()=>{
-  const a=appClock(),uploads=[],marks=[];
+test('placement guide batches cold terrain across frames before uploading and hides stale fields',async()=>{
+  const a=await appClock(),uploads=[],marks=[];
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.game.localTeam=0;a.game.guidePendingFrames=2;
   a.setBuilding('depot',{size:2});
   a.game.world={extent:50,fogVersion:0,surface:{maxHeight:0,heightAt:()=>3},sight:[{visible:new Uint8Array([1])}],idx:()=>0};
@@ -1388,8 +1424,8 @@ test('placement guide batches cold terrain across frames before uploading and hi
   a.ui.mode=null;a.frame(120);assert.deepEqual(a.errors,[]);
 });
 
-test('real app loop gates occlusion by party observation and excludes intro-only contacts', () => {
-  const a = appClock(); a.ui.paused = true; a.game.localTeam = 2;
+test('real app loop gates occlusion by party observation and excludes intro-only contacts', async () => {
+  const a = await appClock(); a.ui.paused = true; a.game.localTeam = 2;
   a.game.s.entities = [
     {id:1,kind:'unit',type:'rifle',team:2,hp:100},
     {id:2,kind:'building',type:'hq',team:1,hp:100},
@@ -1412,8 +1448,8 @@ test('real app loop gates occlusion by party observation and excludes intro-only
 });
 
 for (const hz of [30, 59.94, 60, 90, 120, 144]) {
-  test(`app renders at most 60 FPS without slowing its clocks at ${hz} Hz`, () => {
-    const a = appClock(), count = Math.floor(hz * 10);
+  test(`app renders at most 60 FPS without slowing its clocks at ${hz} Hz`, async () => {
+    const a = await appClock(), count = Math.floor(hz * 10);
     for (let i = 1; i <= count; i++) a.frame(i * 1000 / hz);
     const seconds = count / hz;
     assert.ok(Math.abs(a.draws.length - Math.min(60, hz) * seconds) <= 1);
@@ -1431,8 +1467,8 @@ for (const hz of [30, 59.94, 60, 90, 120, 144]) {
   });
 }
 
-test('opt-in diagnostics preserves real app cadence and stops with exportable history on graphics loss', () => {
-  const plain = appClock(), measured = appClock(true);
+test('opt-in diagnostics preserves real app cadence and stops with exportable history on graphics loss', async () => {
+  const plain = await appClock(), measured = await appClock(true);
   for (let i = 1; i <= 120; i++) { plain.frame(i * 1000 / 120); measured.frame(i * 1000 / 120); }
   assert.equal(plain.diagnostics, undefined); assert.deepEqual(plain.queryRequests, []);
   assert.deepEqual(measured.steps, plain.steps);
@@ -1448,14 +1484,14 @@ test('opt-in diagnostics preserves real app cadence and stops with exportable hi
   assert.equal(measured.diagnostics.report().recording.stopped, 'context-lost');
   assert.equal(measured.diagnostics.report().recording.frames.length, 120);
   assert.equal(measured.renderer.diagnostics, undefined);
-  const failed = appClock(true); failed.frame(20);
+  const failed = await appClock(true); failed.frame(20);
   failed.renderer.render = () => { throw Error('synthetic error'); }; failed.frame(40);
   assert.equal(failed.diagnostics.report().recording.stopped, 'render-error');
   assert.equal(failed.diagnostics.report().recording.frames.length, 1);
 });
 
-test('render phase tolerates timestamp jitter at 60 Hz and discards slots after a long gap', () => {
-  const a = appClock();
+test('render phase tolerates timestamp jitter at 60 Hz and discards slots after a long gap', async () => {
+  const a = await appClock();
   for (let i = 1; i <= 600; i++) a.frame(i * 1000 / 60 + (i % 2 ? -.06 : .06));
   assert.equal(a.draws.length, 600, 'small jitter must not turn 60 Hz into 30 FPS');
   const before = a.draws.length, steps = a.steps.length;
@@ -1468,20 +1504,21 @@ test('render phase tolerates timestamp jitter at 60 Hz and discards slots after 
 });
 
 test('app current-stage launch checks the score unlock again after asynchronous texture preparation',async()=>{
-  const a=appClock();a.ui.view='home';a.ui.expedition={depth:1,unlockedStage:1,battle:null};
+  const a=await appClock();a.ui.view='home';a.ui.expedition={depth:1,unlockedStage:1,battle:null};
   let starts=0;a.game.start=()=>starts++;
   assert.equal(await a.ui.onLaunchBattle({map:'desert'},a.ui.expedition),false);assert.equal(starts,0);
   a.ui.expedition.unlockedStage=2;
   assert.equal(await a.ui.onLaunchBattle({map:'desert'},a.ui.expedition),true);assert.equal(starts,1);
   let ready;a.renderer.prepareBattlefieldTextures=()=>new Promise(done=>{ready=done;});
   const pending=a.ui.onLaunchBattle({map:'desert'},a.ui.expedition);
+  await new Promise(setImmediate);
   a.ui.expedition.unlockedStage=1;ready(true);
   assert.equal(await pending,false);assert.equal(starts,1);
 });
 
-test('frame cap leaves local speed, pause and menu simulation ownership unchanged', () => {
+test('frame cap leaves local speed, pause and menu simulation ownership unchanged', async () => {
   for (const mode of ['normal', 'double', 'triple', 'paused', 'menu']) {
-    const a = appClock();
+    const a = await appClock();
     const multiplier = mode === 'triple' ? 3 : mode === 'double' ? 2 : 1;
     a.game.s.speed = multiplier;
     if (mode === 'paused') a.ui.paused = true;
@@ -1496,8 +1533,8 @@ test('frame cap leaves local speed, pause and menu simulation ownership unchange
   }
 });
 
-test('precipitation interpolates only its view clock, freezes on pause and resets per battle', () => {
-  const a=appClock();
+test('precipitation interpolates only its view clock, freezes on pause and resets per battle', async () => {
+  const a=await appClock();
   for(let i=1;i<=120;i++)a.frame(i*1000/120);
   assert.ok(new Set(a.weatherClocks.map(c=>c.weather)).size>50);
   for(const c of a.weatherClocks) {
@@ -1519,9 +1556,9 @@ test('precipitation interpolates only its view clock, freezes on pause and reset
   assert.deepEqual(a.errors,[]);
 });
 
-test('graphics loss and render errors stop scheduling even with the frame cap', () => {
+test('graphics loss and render errors stop scheduling even with the frame cap', async () => {
   for (const contextLoss of [true, false]) {
-    const a = appClock();
+    const a = await appClock();
     a.frame(1000 / 120);
     if (contextLoss) a.$('world').handlers.webglcontextlost({ preventDefault() {} });
     else a.renderer.render = () => { throw Error('test render failure'); };
