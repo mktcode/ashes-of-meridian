@@ -136,6 +136,8 @@ test('model tile scheduling renders cold misses once and reuses cached snapshots
 test('HUD thumbnail scope includes the selection portrait above the command deck', () => {
   const app=require('node:fs').readFileSync(require('node:path').join(__dirname,'../src/app.ts'),'utf8');
   assert.match(app,/\(\) => thumbnails\.update\(\$\('hud'\)\)/);
+  assert.match(app,/ui\.view === 'game' && !\$\('hud'\)\.classList\.contains\('hidden'\) \? \(\) => thumbnails\.update\(\$\('hud'\)\)/,
+    'visible HUD snapshots must still render behind pause/settings modals');
   const {thumbs,tile,calls}=setup();
   const avatar=tile(0,'building','hq',{left:0,top:460,right:32,bottom:492,width:32,height:32});
   const action=tile(0,'unit','worker',{left:160,top:500,right:320,bottom:548,width:160,height:48});
