@@ -1,6 +1,7 @@
 # Grafik und Assets
 
 Darstellungs- und Pflegeverträge; Formen, Budgets, Shaderwerte und CSS-Maße stehen im Code.
+Die gestalterische Richtung beschreibt die [Grafik-Leitlinie](graphics-guideline.md).
 
 ## Texturen
 
