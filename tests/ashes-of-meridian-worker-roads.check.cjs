@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const {loadScripts,RENDERER_SCRIPTS} = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core','content',...RENDERER_SCRIPTS,'world-view']);
-const {WorkerRoadField,BattlefieldView,MeridianRenderer} = vm.runInContext('({WorkerRoadField,BattlefieldView,MeridianRenderer})',context);
+const {WorkerRoadField,BuildingRoadField,BattlefieldView,MeridianRenderer} = vm.runInContext('({WorkerRoadField,BuildingRoadField,BattlefieldView,MeridianRenderer})',context);
 const worker = x => ({id:1,x,z:0});
 function passage(field,start) {
   for(let i=0;i<=40;i++) field.update(start+i*.25,[worker(i%2 ? 0 : 1)]);
@@ -137,6 +137,23 @@ test('building paths extend beyond the footprint, stay cached during pause and r
   assert.equal(uploads[1].data[Math.floor(20)*size+Math.floor(20)],0,'old footprint is removed');
   view.updateWorkerRoads(60,[{...building,hp:0}],()=>true);
   assert.ok(uploads.at(-1).data.every(p=>p===0),'destroyed buildings release their apron');
+});
+
+test('building apron edges are asymmetric, deterministic and leave the core covered',()=>{
+  const field=new WorkerRoadField(20),a=new BuildingRoadField(field),b=new BuildingRoadField(field),
+    building={id:7,kind:'building',type:'hq',hp:100,x:.5,z:.5,size:4.4,team:0},before=JSON.stringify(building);
+  assert.equal(a.update([building]),true);
+  assert.equal(a.update([building]),false,'shape stays cached across frames');
+  b.update([building]);
+  assert.deepEqual(Array.from(a.pixels),Array.from(b.pixels),'same footprint recreates the same contour');
+  const at=(x,z)=>a.pixels[(20+z)*field.size+20+x];
+  for(const [x,z] of [[0,0],[4,0],[-4,0],[0,4],[0,-4]])assert.equal(at(x,z),255);
+  let asymmetric=0;
+  for(let z=-9;z<=9;z++)for(let x=-9;x<=9;x++)if(at(x,z)!==at(-x,-z))asymmetric++;
+  assert.ok(asymmetric>8,'outer contour must not be a symmetric rounded rectangle');
+  b.update([{...building,id:8}]);
+  assert.notDeepEqual(Array.from(a.pixels),Array.from(b.pixels),'buildings do not share one stamped shape');
+  assert.equal(JSON.stringify(building),before);
 });
 
 test('removing a building apron preserves independent worker wear',()=>{

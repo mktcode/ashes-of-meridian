@@ -363,7 +363,7 @@ class WorkerRoadField {
 }
 
 // Persistent while an observed building exists, separate from transient worker wear.
-// Rounded footprints only shade the existing terrain; no grading, geometry or RNG.
+// Irregular footprints only shade the existing terrain; no grading, geometry or RNG.
 class BuildingRoadField {
   readonly pixels: Uint8Array<ArrayBuffer>;
   private key = '';
@@ -376,15 +376,21 @@ class BuildingRoadField {
     this.key = key; this.pixels.fill(0);
     const { extent, cell, size } = this.field;
     for (const e of buildings) {
-      const inner = e.size * 1.08 + .55, outer = inner + 1.05, bound = outer * Math.SQRT2,
-        yaw = buildingVisualYaw(e), cs = Math.cos(yaw), sn = Math.sin(yaw);
+      const inner = e.size * 1.08 + .55, fringe = 1.05, bulge = 1.25,
+        bound = (inner + bulge + fringe) * Math.SQRT2,
+        yaw = buildingVisualYaw(e), cs = Math.cos(yaw), sn = Math.sin(yaw),
+        phase = surfaceHash(Math.round(e.x*16),Math.round(e.z*16),e.id^0x6170726e)*Math.PI*2;
       for (let row = Math.max(0, Math.floor((e.z-bound+extent)/cell));
         row <= Math.min(size-1, Math.floor((e.z+bound+extent)/cell)); row++)
         for (let col = Math.max(0, Math.floor((e.x-bound+extent)/cell));
           col <= Math.min(size-1, Math.floor((e.x+bound+extent)/cell)); col++) {
           const dx = (col+.5)*cell-extent-e.x, dz = (row+.5)*cell-extent-e.z,
             x = dx*cs-dz*sn, z = dx*sn+dz*cs,
-            radius = Math.pow(x**8+z**8,1/8), t = Math.max(0,Math.min(1,(radius-inner)/(outer-inner))),
+            angle = Math.atan2(z,x),
+            // Round off the rectangular template, then vary only its outer apron.
+            // Fixed angular lobes are stable across frames/restores, never a RNG draw.
+            edge = bulge*(.5+.28*Math.sin(angle*3+phase)+.15*Math.sin(angle*5-phase*1.7)+.07*Math.cos(angle*7+phase*.6)),
+            radius = Math.pow(x**4+z**4,1/4), t = Math.max(0,Math.min(1,(radius-inner-edge)/fringe)),
             pixel = Math.round((1-t*t*(3-2*t))*255), i = row*size+col;
           this.pixels[i] = Math.max(this.pixels[i],pixel);
         }
