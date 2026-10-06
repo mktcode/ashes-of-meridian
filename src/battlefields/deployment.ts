@@ -2,9 +2,11 @@
 'use strict';
 type DeploymentMode = 'resource-start' | 'exploration';
 function battlefieldGasPosition(site: Position): Position { return { x: site.x + 7, z: site.z + 7 }; }
-function battlefieldCrystalPosition(site: Position, index: number, deposit: number): Position {
-  const a = deposit * Math.PI * 2 / 5 + index * .8;
-  return { x: site.x + Math.sin(a) * 3.9, z: site.z + Math.cos(a) * 3 };
+function battlefieldCrystalPosition(site: Position, _index: number, deposit: number): Position {
+  // Open toward positive Z to preserve the refinery space at (+7, +7).
+  // The wider radius keeps adjacent cluster bodies and worker passages separate.
+  const a = Math.PI / 2 + deposit * Math.PI / 4;
+  return { x: site.x + Math.sin(a) * 5.5, z: site.z + Math.cos(a) * 5.5 };
 }
 function battlefieldEconomyDistance(world: Battlefield, p: Position): number {
   return Math.min(...world.layout.resourceSites.flatMap((site, i) => [battlefieldGasPosition(site),

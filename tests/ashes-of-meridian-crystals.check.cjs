@@ -97,7 +97,7 @@ function separated(game) {
   }
 }
 
-test('all maps and factions retain distinct accessible crystals in five-slot ellipses', () => {
+test('all maps and factions retain five accessible crystals on an open half-circle with worker clearance', () => {
   for (const [i, map] of Object.keys(BATTLEFIELDS).entries()) {
     const faction = i % 3, game = fresh();
     game.start({ seed: 12345 + i * 31, faction, enemies: [(i + 1) % 3], map });
@@ -106,9 +106,15 @@ test('all maps and factions retain distinct accessible crystals in five-slot ell
     assert.equal(game.s.entities.filter(e => e.type === 'gas').length, count);
     for (let i = 0; i < count; i++) {
       const group = nodes.slice(i * 5, i * 5 + 5);
-      const cx = group.reduce((sum, e) => sum + e.x, 0) / 5, cz = group.reduce((sum, e) => sum + e.z, 0) / 5;
-      for (const e of group) {
-        assert.ok(Math.abs(((e.x-cx)/3.9)**2 + ((e.z-cz)/3)**2 - 1) < 1e-12);
+      const site = game.world.layout.resourceSites[i], angle = Math.PI / 2;
+      for (const [j, e] of group.entries()) {
+        const dx = e.x - site.x, dz = e.z - site.z;
+        assert.ok(Math.abs(Math.hypot(dx, dz) - 5.5) < 1e-12);
+        assert.ok(Math.abs(dx - Math.sin(angle + j * Math.PI / 4) * 5.5) < 1e-12);
+        assert.ok(Math.abs(dz - Math.cos(angle + j * Math.PI / 4) * 5.5) < 1e-12);
+        assert.ok(dx * Math.cos(angle) - dz * Math.sin(angle) >= -1e-12, 'open half-circle');
+        if (j) assert.ok(Math.hypot(e.x - group[j-1].x, e.z - group[j-1].z) >= e.size + group[j-1].size + 1.5,
+          'adjacent clusters leave a worker passage');
         assert.equal(game.world.blockedAt(e.x, e.z), false, `battle ${map}/${faction}, crystal ${e.id}`);
         for (const b of game.s.entities.filter(b => b.kind === 'building' && b.hp > 0))
           assert.ok(Math.hypot(e.x-b.x, e.z-b.z) >= e.size + b.size, `crystal ${e.id} intersects ${b.type} in battle ${map}/${faction}`);
