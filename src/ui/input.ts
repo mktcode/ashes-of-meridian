@@ -9,6 +9,7 @@
         document.addEventListener('pointerup', () => (this.domPressed = false));
         document.addEventListener('pointercancel', () => (this.domPressed = false));
         document.addEventListener('click', e => {
+          if (this.leavingBattle) return;
           let b = (e.target as Element | null)?.closest('button');
           if (!b || b.disabled) return;
           if (b.dataset.ui) {
@@ -210,6 +211,7 @@
         map.addEventListener('pointercancel', () => (miniDrag = false));
       },
       uiAction(this: MeridianUI, action: string) {
+        if (this.leavingBattle) return;
         this.audio.sound('select');
         switch (action) {
           case 'home':

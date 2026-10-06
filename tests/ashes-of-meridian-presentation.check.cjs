@@ -811,6 +811,7 @@ function appClock(diagnostic = false, reducedMotion = true) {
     location: { search: diagnostic ? '?diagnostics=1' : '' }, devicePixelRatio: 1,
     performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
     addEventListener() {}, ResizeObserver: class { observe() {} }, matchMedia:()=>({matches:reducedMotion}),
+    getComputedStyle: element => ({ opacity: element.style.opacity ?? '1', transform: element.style.transform ?? 'none' }),
     console: { error: e => errors.push(e), warn() {} },
     META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {desert:{render:{}}}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
     PLACEMENT_GUIDE_MATERIAL: -9,
@@ -865,7 +866,7 @@ function appClock(diagnostic = false, reducedMotion = true) {
     },
     MeridianUI: class {
       view = 'game'; paused = false; pointer = {}; pings = [];
-      showHome() {} saveBattle() {} autosaveBattle() {} drawMinimap() {} drawOverlay() { renderWork.overlay++; }
+      showHome() {} saveBattle() {} autosaveBattle() {} drawMinimap() {} clearMode() {} drawOverlay() { renderWork.overlay++; }
       selectionIds() { return new Set(); }
       cameraClamp = p => ({x:p.x,z:p.z});
       clampCameraPoint(p) { return this.cameraClamp(p); }
@@ -1062,6 +1063,78 @@ test('battle entrance skips motion and cleans up failed starts', async () => {
   assert.equal(cover.classList.contains('hidden'), true);
   assert.equal(hud.classList.contains('battle-entrance-pending'), false);
   assert.deepEqual(a.errors, []);
+});
+
+test('battle exit waits for both sliding HUDs, destination preparation and its submitted frame', async () => {
+  const a = appClock(false, false), cover = a.$('battleTransition'), hud = a.$('hud');
+  cover.classList.add('hidden');
+  let switched = 0, ready;
+  a.ui.onLeaveBattle(() => {
+    switched++; a.ui.view = 'home'; a.game.s = null; hud.classList.add('hidden');
+    return new Promise(resolve => { ready = resolve; });
+  });
+  assert.equal(a.ui.leavingBattle, true); assert.equal(a.ui.paused, true);
+  assert.equal(cover.classList.contains('battle-reveal'), true, 'outgoing HUD stays above the map blackout');
+  const top = a.$('topbar').animations[0], bottom = a.$('commandDeck').animations[0], blackout = cover.animations[0];
+  assert.equal(top.keyframes[1].transform, 'translateY(-110%)');
+  assert.equal(bottom.keyframes[1].transform, 'translateY(110%)');
+  blackout.finish(); top.finish(); await new Promise(setImmediate);
+  assert.equal(switched, 0, 'blackout cannot cut off the slower HUD');
+  bottom.finish(); await new Promise(setImmediate);
+  assert.equal(switched, 1);
+  assert.equal(cover.classList.contains('battle-reveal'), false, 'full cover conceals destination DOM and viewport changes');
+  a.frame(0);
+  assert.equal(cover.animations.length, 1, 'do not reveal an unprepared destination');
+  ready(true); await new Promise(setImmediate);
+  assert.equal(cover.animations.length, 1, 'texture preparation alone is not a submitted frame');
+  a.frame(20);
+  assert.equal(cover.animations.length, 2);
+  cover.animations[1].finish(); await new Promise(setImmediate);
+  assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(hud.classList.contains('battle-exit'), false);
+  assert.equal(a.ui.leavingBattle, false);
+  assert.deepEqual(a.errors, []);
+});
+
+test('battle exit skips reduced motion and reveals the result only after rendering', async () => {
+  const a = appClock(), cover = a.$('battleTransition');
+  let switched = 0;
+  a.ui.onLeaveBattle(() => { switched++; a.game.s.result = { win: false }; a.$('hud').classList.add('hidden'); });
+  await new Promise(setImmediate);
+  assert.equal(switched, 1); assert.equal(cover.animations.length, 0);
+  assert.equal(cover.classList.contains('hidden'), false);
+  assert.equal(a.ui.leavingBattle, true);
+  a.frame(0);
+  assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(a.ui.leavingBattle, false);
+  assert.deepEqual(a.errors, []);
+});
+
+test('battle exit preserves the current entrance pose and context loss cancels stale screen changes', async () => {
+  const a = appClock(false, false), top = a.$('topbar'), cover = a.$('battleTransition');
+  top.style.opacity = '.6'; top.style.transform = 'matrix(1, 0, 0, 1, 0, -12)';
+  cover.classList.add('hidden'); a.$('hud').classList.add('battle-entrance-pending');
+  let switched = 0;
+  a.ui.onLeaveBattle(() => { switched++; });
+  assert.equal(top.animations[0].keyframes[0].opacity, '.6');
+  assert.equal(top.animations[0].keyframes[0].transform, top.style.transform);
+  a.$('world').handlers.webglcontextlost({ preventDefault() {} });
+  await new Promise(setImmediate);
+  assert.equal(switched, 0);
+  assert.equal(top.animations[0].cancelled, true);
+  assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(a.ui.leavingBattle, false);
+  assert.deepEqual(a.errors, []);
+});
+
+test('battle exit destination preparation failure releases the cover and input lock', async () => {
+  const a = appClock(), cover = a.$('battleTransition');
+  a.ui.onLeaveBattle(() => Promise.reject(Error('destination unavailable')));
+  await new Promise(setImmediate);
+  assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(a.ui.leavingBattle, false);
+  assert.equal(a.$('loading').classList.contains('hidden'), false);
+  assert.deepEqual(a.errors.map(error => error.message), ['destination unavailable']);
 });
 
 test('app world launch validates archive identity and does not load after leaving home',async()=>{

@@ -1,14 +1,25 @@
     /* MeridianUI menus, dialogs and permanent profile screens. Loaded after ui/core.js. */
     'use strict';
     const uiScreenMethods = {
+      transitionBattleExit(this: MeridianUI, complete: () => void | Promise<boolean>) {
+        if (this.leavingBattle) return true;
+        if (this.view !== 'game' || $('hud').classList.contains('hidden') || !this.onLeaveBattle) return false;
+        this.onLeaveBattle(complete);
+        return true;
+      },
       showHome(this: MeridianUI, leaveUnsaved = false, preferredStage?: number) {
+        if (this.leavingBattle) return;
         if (!this.saveBattle() && !leaveUnsaved) {
           this.paused = true;
           this.openModal('saveUnavailable', `<div class="eyebrow">SAVE UNAVAILABLE</div><h1>Progress is only in this tab.</h1><p>The current battle has not been saved to this browser. You can continue in this tab, but closing or reloading may restore older progress.</p><div class="launch-row"><button class="primary" data-ui="backPause">KEEP PLAYING</button><button class="secondary" data-ui="leaveUnsaved">MAIN MENU ANYWAY</button></div>`);
           return;
         }
-        this.refreshCivilizationScore();
         const returningStage = preferredStage ?? this.activeWorldStage;
+        if (this.transitionBattleExit(() => this.finishHome(returningStage))) return;
+        void this.finishHome(returningStage);
+      },
+      finishHome(this: MeridianUI, returningStage: number | null) {
+        this.refreshCivilizationScore();
         this.game.s = null;
         this.activeWorldStage = null;
         this.battleIntro = null;
@@ -37,10 +48,11 @@
           renderHomeScreen(this.expedition, this.stageHistory.length > 1,
             this.expedition ? BATTLEFIELDS[this.expedition.encounter.map].name : '', this.profile.lastCivilizationScore);
         const entry = this.stageHistory[this.stagePreviewIndex];
-        if (this.onPreview) this.onPreview(entry?.map || this.expedition?.encounter.map || 'desert',
+        const preview = this.onPreview?.(entry?.map || this.expedition?.encounter.map || 'desert',
           entry?.seed ?? this.expedition?.encounter.seed, false, this.stageBattle(entry?.stage));
         this.updateStagePreview();
         if (this.battleSaveError) this.showBattleSaveError();
+        return preview;
       },
       showBattleSaveError(this: MeridianUI) {
         this.paused = true;
@@ -245,7 +257,7 @@
         this.startExpeditionBattle();
       },
       async startExpeditionBattle(this: MeridianUI, world?: ExpeditionWorld) {
-        if (!this.expedition || this.launchingBattle || (!world && this.expedition.offers.length)) return;
+        if (!this.expedition || this.launchingBattle || this.leavingBattle || (!world && this.expedition.offers.length)) return;
         if (world && (!this.expedition.worlds?.includes(world) || world.error || !world.recipe || !world.battle)) return;
         if (this.battleSaveError) return this.showBattleSaveError();
         this.refreshCivilizationScore();
@@ -333,6 +345,7 @@
         }
       },
       pause(this: MeridianUI) {
+        if (this.leavingBattle) return;
         if ( this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = true;
         this.audio.setMode?.('silent');
@@ -351,6 +364,7 @@
         );
       },
       resume(this: MeridianUI) {
+        if (this.leavingBattle) return;
         if (this.battleSaveError) return this.showBattleSaveError();
         if ( this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = false;
@@ -404,6 +418,10 @@
         this.showArmory();
       },
       showResult(this: MeridianUI, result: BattleResult) {
+        if (this.transitionBattleExit(() => this.renderResult(result))) return;
+        this.renderResult(result);
+      },
+      renderResult(this: MeridianUI, result: BattleResult) {
         this.paused = true;
         this.clearMode();
         this.modalKind = 'result';

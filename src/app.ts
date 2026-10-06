@@ -185,7 +185,10 @@
         let battleTransitionAnimation: Animation | null = null;
         let battleHUDAnimations: Animation[] = [];
         let battleEntranceFrame: RunState | null = null;
+        let battleExit: { phase: 'out' | 'loading' | 'ready' | 'reveal'; complete: () => void | Promise<boolean> } | null = null;
         function clearBattleTransition() {
+          battleExit = null;
+          ui.leavingBattle = false;
           battleTransitionAnimation?.cancel();
           battleTransitionAnimation = null;
           battleHUDAnimations.forEach(animation => animation.cancel());
@@ -193,7 +196,7 @@
           battleEntranceFrame = null;
           battleTransition.classList.add('hidden');
           battleTransition.classList.remove('battle-reveal');
-          $('hud').classList.remove('battle-entrance-pending', 'battle-entrance');
+          $('hud').classList.remove('battle-entrance-pending', 'battle-entrance', 'battle-exit');
         }
         function revealBattlefield() {
           if (!$('hud').classList.contains('battle-entrance-pending')) return;
@@ -222,6 +225,70 @@
           // Finishing the map fade must not cancel a still-moving HUD.
           void Promise.all([animation, ...hudAnimations].map(item => item.finished)).then(() => {
             if (battleHUDAnimations === hudAnimations) clearBattleTransition();
+          }).catch(() => {});
+        }
+        function showBattleDestination(exit: NonNullable<typeof battleExit>) {
+          if (battleExit !== exit) return;
+          exit.phase = 'loading';
+          // Change viewport, screen and world only once every outgoing element is
+          // gone. Keep an opaque cover until the destination actually renders.
+          battleTransition.classList.remove('battle-reveal');
+          void Promise.resolve().then<void | boolean>(() => battleExit === exit ? exit.complete() : undefined).then(ready => {
+            if (battleExit !== exit) return;
+            if (ready === false) {
+              clearBattleTransition();
+              textureFailure(Error('Required menu textures are unavailable'));
+            } else exit.phase = 'ready';
+          }).catch(error => {
+            if (battleExit !== exit) return;
+            clearBattleTransition();
+            textureFailure(error);
+          });
+        }
+        ui.onLeaveBattle = complete => {
+          // Capture partially entered HUDs before cancelling their old animations:
+          // leaving during an entrance must not snap them to their final position.
+          const poses = ['topbar', 'commandDeck'].map(id => {
+            const style = getComputedStyle($(id));
+            return { opacity: style.opacity, transform: style.transform };
+          });
+          const coverOpacity = battleTransition.classList.contains('hidden') ? '0' : getComputedStyle(battleTransition).opacity;
+          clearBattleTransition();
+          ui.leavingBattle = true;
+          ui.paused = true;
+          ui.clearMode();
+          ui.drag = null;
+          audio.setMode?.('silent');
+          $('modal').classList.add('hidden');
+          $('radio').classList.add('hidden');
+          battleTransition.classList.remove('hidden');
+          const exit: NonNullable<typeof battleExit> = { phase: 'out', complete };
+          battleExit = exit;
+          if (matchMedia('(prefers-reduced-motion: reduce)').matches) { showBattleDestination(exit); return; }
+          // The map blacks out below the HUD so its reverse slide stays visible.
+          battleTransition.classList.add('battle-reveal');
+          $('hud').classList.add('battle-exit');
+          battleHUDAnimations = ['topbar', 'commandDeck'].map((id, index) => $(id).animate([
+            poses[index], { opacity: 0, transform: `translateY(${index ? '' : '-'}110%)` }
+          ], { duration: 1000, delay: index * 80, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' }));
+          const animation = battleTransition.animate([{ opacity: coverOpacity }, { opacity: 1 }],
+            { duration: 900, delay: 180, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' });
+          battleTransitionAnimation = animation;
+          void Promise.all([animation, ...battleHUDAnimations].map(item => item.finished)).then(() => {
+            showBattleDestination(exit);
+          }).catch(() => {});
+        };
+        function revealBattleDestination() {
+          const exit = battleExit;
+          if (!exit || exit.phase !== 'ready') return;
+          exit.phase = 'reveal';
+          if (matchMedia('(prefers-reduced-motion: reduce)').matches) { clearBattleTransition(); return; }
+          battleTransitionAnimation?.cancel();
+          const animation = battleTransition.animate([{ opacity: 1 }, { opacity: 0 }],
+            { duration: 900, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+          battleTransitionAnimation = animation;
+          void animation.finished.then(() => {
+            if (battleExit === exit) clearBattleTransition();
           }).catch(() => {});
         }
         ui.onLaunchBattle = async (options, expedition, world) => {
@@ -574,7 +641,8 @@
             retainedResult = resultKey === null ? null : { state: game.s!, world: game.world, key: resultKey };
             advancePreviewChange();
             // Never fade away the cover before the resized battlefield has rendered.
-            if (ui.view === 'game') revealBattlefield();
+            if (battleExit) revealBattleDestination();
+            else if (ui.view === 'game') revealBattlefield();
             else if (!ui.launchingBattle) clearBattleTransition();
             diagnostics?.recorder.phase('overlay');
             if (!retainResultScene) ui.drawOverlay(overlayContext);

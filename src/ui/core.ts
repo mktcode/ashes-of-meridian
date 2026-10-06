@@ -66,7 +66,7 @@
       codexTouches = new Map<number, {x: number; y: number}>();
       codexPinchDist?: number;
       paused: boolean;
-      get controlsLocked(): boolean { return this.paused || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }
+      get controlsLocked(): boolean { return this.paused || this.leavingBattle || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }
       modalKind: string;
       sellBuildingId: number | null;
       selected: number[];
@@ -86,6 +86,7 @@
       storageWarningShown = false;
       battleSaveError: string | null = null;
       launchingBattle = false;
+      leavingBattle = false;
       lastBattleSaveAt = 0;
       battleSaveBytes = 0;
       battleSaveMilliseconds = 0;
@@ -104,6 +105,7 @@
       onViewportChange?: () => void;
       onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean, battle?: ExpeditionBattleSave | null) => Promise<boolean>;
       onLaunchBattle?: (options: BattleOptions, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, world?: ExpeditionWorld) => Promise<boolean>;
+      onLeaveBattle?: (complete: () => void | Promise<boolean>) => void;
       domPressed?: boolean;
       touchGesture?: boolean;
       pinchDist?: number;

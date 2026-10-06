@@ -1844,6 +1844,76 @@ function savedUIBattle() {
   return { ...h, saves };
 }
 
+test('battle exit defers the main menu after saving and blocks repeated navigation', async () => {
+  const h = savedUIBattle(), ui = h.ui, run = ui.game.s;
+  h.UI.prototype.bind.call(ui);
+  const faction = ui.battleFaction;
+  let finish, requests = 0;
+  ui.onLeaveBattle = complete => { requests++; finish = complete; ui.leavingBattle = true; ui.paused = true; };
+  ui.showHome();
+  assert.equal(h.saves.length, 1, 'save before any visual delay');
+  assert.strictEqual(ui.game.s, run); assert.equal(ui.view, 'game');
+  assert.equal(ui.controlsLocked, true);
+  ui.uiAction('home'); ui.uiAction('resume'); ui.resume(); ui.showHome();
+  h.click({ faction: '0' });
+  assert.equal(ui.battleFaction, faction, 'delegated controls behind the cover are also blocked');
+  assert.equal(requests, 1); assert.equal(ui.paused, true);
+  assert.equal(h.saves.length, 1);
+  await finish();
+  assert.equal(ui.view, 'home'); assert.equal(ui.game.s, null);
+  assert.equal(h.saves.length, 1, 'completing presentation does not save again');
+});
+
+test('battle exit still warns before animation when saving fails', () => {
+  const h = savedUIBattle(), ui = h.ui;
+  let requested = 0;
+  ui.persistence.saveProgress = () => false;
+  ui.onLeaveBattle = () => { requested++; };
+  ui.showHome();
+  assert.equal(requested, 0); assert.equal(ui.modalKind, 'saveUnavailable');
+  ui.uiAction('leaveUnsaved');
+  assert.equal(requested, 1, 'explicitly leaving without storage may animate');
+});
+
+test('battle exit starts only after confirmed abandonment and never restores the discarded expedition', async () => {
+  const h = savedUIBattle(), ui = h.ui, run = ui.game.s;
+  let finish, requests = 0;
+  ui.onLeaveBattle = complete => { requests++; finish = complete; ui.leavingBattle = true; };
+  ui.pause(); ui.uiAction('abandon');
+  assert.equal(requests, 0, 'opening confirmation is not an exit');
+  ui.uiAction('closeModal'); assert.equal(requests, 0);
+  ui.uiAction('abandon'); ui.uiAction('confirmAbandon');
+  assert.equal(requests, 1); assert.equal(ui.expedition, null);
+  assert.strictEqual(ui.game.s, run, 'scene stays available while sliding out');
+  assert.equal(h.saves.filter(save => save.expedition === null).length, 1);
+  ui.uiAction('confirmAbandon'); assert.equal(requests, 1);
+  await finish();
+  assert.equal(ui.view, 'home'); assert.equal(ui.game.s, null);
+  assert.equal(h.saves.filter(save => save.expedition === null).length, 1);
+});
+
+test('battle exit defers victory and defeat screens without delaying or duplicating result persistence', () => {
+  for (const win of [true, false]) {
+    const h = savedUIBattle(), ui = h.ui;
+    const result = { win, text: 'HQ destroyed', time: 42, integrity: .5, score: 1 };
+    ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 }; ui.game.s.result = result;
+    h.document.getElementById('result').classList.add('hidden');
+    let finish, requests = 0;
+    ui.onLeaveBattle = complete => { requests++; finish = complete; ui.leavingBattle = true; ui.paused = true; };
+    ui.event('result', result);
+    assert.equal(h.saves.length, 1); assert.equal(requests, 1);
+    assert.equal(h.document.getElementById('result').classList.contains('hidden'), true);
+    ui.event('result', result);
+    assert.equal(h.saves.length, 1); assert.equal(requests, 1);
+    finish();
+    assert.equal(ui.modalKind, 'result');
+    assert.equal(h.document.getElementById('hud').classList.contains('hidden'), true);
+    assert.equal(h.document.getElementById('result').classList.contains('hidden'), false);
+    assert.equal(h.saves.length, 1);
+    assert.equal(win ? ui.expedition.depth : ui.expedition, win ? 1 : null);
+  }
+});
+
 test('pause abandonment requires confirmation; cancel preserves the expedition and stale confirmations do nothing', () => {
   const h = savedUIBattle(), ui = h.ui;
   h.UI.prototype.bind.call(ui);
