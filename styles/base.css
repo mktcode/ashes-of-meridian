@@ -121,11 +121,6 @@
       overflow: hidden
     }
 
-    #worldViewport.in-battle {
-      top: var(--hud-top);
-      bottom: var(--hud-height)
-    }
-
     canvas#world,
     canvas#overlay {
       position: absolute;

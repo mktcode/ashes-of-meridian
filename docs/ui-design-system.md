@@ -34,7 +34,7 @@ Das aktuelle Tutorialziel bleibt als passives Panel oben links unter der Statusz
 Tokens und Selektoren bleiben auf `#menu`, `#modal`, `#result`, `#loading`, `#hud`
 und `#toast` begrenzt. Keine Theme-Tokens auf `:root`, keine globalen Buttonregeln.
 Funk und Warnungen gehören zum HUD; Diagnoseanzeigen und Welt bleiben außerhalb.
-Die Theme-Schicht bleibt kosmetisch. Layout und Bedienregeln des [kompakten HUDs](gameplay.md#kompaktes-hud) gehören in HUD-Styles und Controller; echte Minimap, Modellkacheln, Queue-IDs und Simulationszustände bleiben maßgeblich. Die Weltgrenzen werden aus der aktuellen HUD-Geometrie gemessen. Keine vereinfachte Demo-Konsole oder statische Weltgrafik einsetzen.
+Die Theme-Schicht bleibt kosmetisch. Layout und Bedienregeln des [kompakten HUDs](gameplay.md#kompaktes-hud) gehören in HUD-Styles und Controller; echte Minimap, Modellkacheln, Queue-IDs und Simulationszustände bleiben maßgeblich. Das Spielfeld bleibt fullscreen hinter dem HUD; HUD-Auswahl, Kataloge und Leistenanimationen ändern weder Rendergröße noch Projektion. Nur Queue-/Funk-/Meldungsabstände folgen der untransformierten HUD-Layoutgeometrie. Keine vereinfachte Demo-Konsole oder statische Weltgrafik einsetzen.
 
 Visuelle Vorlage ist das externe Paket
 `/home/mkt/Downloads/Ashes-of-Meridian-Assets/Ashes-of-Meridian-Demo.html`.

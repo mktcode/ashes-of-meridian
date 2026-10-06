@@ -2671,14 +2671,32 @@ test('recruitment delegates producer choice to the simulation, independent of se
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
-test('hidden HUD measurement preserves geometry until the HUD is visible', () => {
+test('HUD layout uses unanimated offsets only for overlay placement, never world bounds', () => {
   const h=setup(), hud=h.document.getElementById('hud');
   const style=h.document.getElementById('layout-vars').style;h.document.documentElement={style};
-  style.setProperty('--hud-top','48px');
+  const deck=h.document.getElementById('commandDeck'),panel=h.document.getElementById('actionPanel'),status=h.document.getElementById('selectionStatus');
+  deck.offsetTop=656;panel.offsetTop=0;status.offsetTop=-44;
+  for(const el of [deck,panel,status,h.document.getElementById('topbar')])
+    el.getBoundingClientRect=()=>{throw Error('Animated geometry must not affect HUD layout');};
+  style.setProperty('--hud-top','48px');style.setProperty('--hud-height','144px');
   hud.classList.add('hidden');h.ui.updateHUDLayout();
+  assert.equal(style.getPropertyValue('--hud-height'),'144px');
+  hud.classList.remove('hidden');status.classList.add('hidden');h.ui.updateHUDLayout();
+  assert.equal(style.getPropertyValue('--queue-floor'),'152px');
+  status.classList.remove('hidden');h.ui.updateHUDLayout();
+  assert.equal(style.getPropertyValue('--queue-floor'),'196px');
+  status.classList.add('hidden');panel.offsetTop=-136;h.ui.updateHUDLayout();
+  assert.equal(style.getPropertyValue('--hud-height'),'280px');
   assert.equal(style.getPropertyValue('--hud-top'),'48px');
-  hud.classList.remove('hidden');h.ui.updateHUDLayout();
-  assert.equal(style.getPropertyValue('--hud-top'),'55px');
+});
+
+test('captured world releases over the HUD cannot issue orders, select or place targets', () => {
+  for(const mode of [null,{kind:'ability',arg:'scan'},{kind:'build',arg:'depot'}]) {
+    const h=setup();h.UI.prototype.bind.call(h.ui);h.ui.selected=[7];h.ui.mode=mode;
+    h.document.elementFromPoint=()=>({closest:selector=>selector==='#hud'?{}:null});
+    h.pointer('pointerdown',200,200);h.pointer('pointerup',200,200);
+    assert.deepEqual(h.calls,[]);assert.deepEqual(h.ui.selected,[7]);assert.equal(h.ui.mode,mode);
+  }
 });
 
 test('catalog and unit details back controls use the left-arrow asset, not the fallback star', () => {

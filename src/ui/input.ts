@@ -495,6 +495,8 @@
         let d = this.drag;
         this.drag = null;
         if (!d || !this.R.containsPoint(e.clientX, e.clientY)) return;
+        // Pointer capture can deliver releases over the fullscreen HUD to the world canvas.
+        if (document.elementFromPoint?.(e.clientX, e.clientY)?.closest('#hud')) return;
         if (d.selecting && (d.type === 'touch' || d.moved ||
             Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6)) {
           d.x = e.clientX; d.y = e.clientY;

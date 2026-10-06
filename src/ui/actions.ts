@@ -294,13 +294,14 @@
       updateHUDLayout(this: MeridianUI) {
         // Hidden HUDs have zero geometry; do not overwrite the visible layout defaults.
         if ($('hud').classList.contains('hidden')) return;
-        const deck = $('commandDeck').getBoundingClientRect(), panel = $('actionPanel').getBoundingClientRect(), status = $('selectionStatus');
-        const top = Math.min(deck.top, panel.top, status.classList.contains('hidden') ? deck.top : status.getBoundingClientRect().top);
+        // Only queue/radio/toast placement depends on HUD layout. The world stays fullscreen.
+        // Layout offsets exclude entrance/exit transforms, unlike getBoundingClientRect().
+        const deck = $('commandDeck'), panel = $('actionPanel'), status = $('selectionStatus');
+        const top = deck.offsetTop + Math.min(0, panel.offsetTop, status.classList.contains('hidden') ? 0 : status.offsetTop);
         if (!Number.isFinite(top) || typeof innerHeight !== 'number') return;
         const height = Math.max(0, innerHeight - top), style = document.documentElement?.style;
         style?.setProperty('--hud-height', height + 'px');
         style?.setProperty('--queue-floor', height + 8 + 'px');
-        style?.setProperty('--hud-top', $('topbar').getBoundingClientRect().bottom + 'px');
       },
       buildingAction(this: MeridianUI, action: string, id: number) {
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s!.result) return;
