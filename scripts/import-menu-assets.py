@@ -22,7 +22,7 @@ selected = {
     "logo-emblem": "emblem", "logo-ashes": "logo-ashes",
     "logo-of": "logo-of", "logo-meridian": "logo-meridian",
     "checkpoint": "checkpoint", "score": "expedition",
-    "manual": "manual", "settings": "settings",
+    "settings": "settings",
     "aether-hero": "echo-reward", "aether": "echo", "alloy": "cinder",
     "supply": "supply", "energy": "energy", "shield": "shield", "skull": "skull",
     "scan": "scan", "repair": "repair", "strike": "orbital", "reinforce": "drop",
