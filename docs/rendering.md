@@ -2,11 +2,11 @@
 
 Darstellungs- und Pflegeverträge; Formen, Budgets, Shaderwerte und CSS-Maße stehen im Code.
 
-## Texturen und Portraits
+## Texturen
 
 Rasterquellen ausschließlich WebP, Qualität 80; benötigten Alphakanal erhalten. Nach Texturänderungen `npm run embed:textures`, nach GLB-Änderungen `npm run embed:models`, danach Build. Generierte Einbettungen niemals direkt bearbeiten. Eingebettete Data-URLs erhalten `file://`; CSS-Vorschaubilder bleiben zusätzliche lokale Laufzeitassets.
 
-Alte Portrait-/Albedoquellen nicht wegen fehlender aktueller WebGL-Nutzung löschen. Neue Bildassets brauchen einen konkreten Bedarf; Codex-/Aktionskacheln verwenden Modelle. Assetnamen folgen [technischen IDs](architecture.md#technische-ids-und-anzeigenamen).
+Neue Bildassets brauchen einen konkreten Bedarf; Codex-/Aktionskacheln verwenden Modelle. Assetnamen folgen [technischen IDs](architecture.md#technische-ids-und-anzeigenamen).
 
 ## UI-Branding
 

@@ -60,7 +60,6 @@ const paths = [
   ...(await filesBelow('dist', path => path.endsWith('.js'))),
   ...runtimeAudio,
   'assets/fonts/aldrich/OFL.txt',
-  ...(await filesBelow('assets/portraits', path => path.endsWith('.webp'))),
   ...(await filesBelow('assets/ui', path => path.endsWith('.webp'))).filter(path => !cssAssets.includes(path)),
   ...cssAssets
 ].sort();

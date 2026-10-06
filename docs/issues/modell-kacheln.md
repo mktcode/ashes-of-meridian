@@ -6,4 +6,4 @@ Nutzer meldete beim Öffnen von Codex/Baumenü Einbruch von 60 auf 30 FPS oder w
 - [ ] Modellgröße/-ausschnitt, Teamfarben, Kontrast/Kanten, Namen/Kosten und deaktivierte Aktionen in Codex/HUD.
 - [ ] Scrollen/Tippen auf Smartphone unter Last, nicht nur arrangiertes Standbild.
 
-Korrektur zu kleiner Gebäudemodelle ist integriert, menschliche Wiederabnahme offen. Portraitquellen bleiben erhalten.
+Korrektur zu kleiner Gebäudemodelle ist integriert, menschliche Wiederabnahme offen.
