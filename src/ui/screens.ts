@@ -3,7 +3,7 @@
     const uiScreenMethods = {
       transitionBattleExit(this: MeridianUI, complete: () => void | Promise<boolean>) {
         if (this.leavingBattle) return true;
-        if (this.view !== 'game' || $('hud').classList.contains('hidden') || !this.onLeaveBattle) return false;
+        if (this.view !== 'game' || !this.onLeaveBattle) return false;
         this.onLeaveBattle(complete);
         return true;
       },
@@ -89,11 +89,13 @@
         void this.startExpeditionBattle(world);
       },
       continueBuilding(this: MeridianUI) {
-        if (!this.expedition || this.launchingBattle) return;
+        if (!this.expedition || this.launchingBattle || this.leavingBattle) return;
         const world = this.expedition.worlds?.filter(w => !w.error && w.recipe && w.battle)
           .sort((a, b) => b.stage - a.stage)[0];
         if (!world) { this.toast('No playable cleared world remains. Start a new expedition to continue.'); return; }
-        this.showHome(false, world.stage);
+        // Re-entering a cleared world is not a departure to the main menu.
+        if (this.view === 'game' && this.game.s?.result) void this.finishHome(world.stage);
+        else this.showHome(false, world.stage);
         this.enterSelectedStage();
       },
       showCivilizationGate(this: MeridianUI) {
@@ -418,10 +420,7 @@
         this.showArmory();
       },
       showResult(this: MeridianUI, result: BattleResult) {
-        if (this.transitionBattleExit(() => this.renderResult(result))) return;
-        this.renderResult(result);
-      },
-      renderResult(this: MeridianUI, result: BattleResult) {
+        if (this.leavingBattle) return;
         this.paused = true;
         this.clearMode();
         this.modalKind = 'result';

@@ -265,8 +265,9 @@
           const exit: NonNullable<typeof battleExit> = { phase: 'out', complete };
           battleExit = exit;
           if (matchMedia('(prefers-reduced-motion: reduce)').matches) { showBattleDestination(exit); return; }
-          // The map blacks out below the HUD so its reverse slide stays visible.
-          battleTransition.classList.add('battle-reveal');
+          // Keep a visible HUD above the map blackout. From a result screen,
+          // cover the whole screen instead: there is no remaining HUD to slide.
+          if (!$('hud').classList.contains('hidden')) battleTransition.classList.add('battle-reveal');
           $('hud').classList.add('battle-exit');
           battleHUDAnimations = ['topbar', 'commandDeck'].map((id, index) => $(id).animate([
             poses[index], { opacity: 0, transform: `translateY(${index ? '' : '-'}110%)` }

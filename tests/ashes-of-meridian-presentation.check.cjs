@@ -1096,10 +1096,10 @@ test('battle exit waits for both sliding HUDs, destination preparation and its s
   assert.deepEqual(a.errors, []);
 });
 
-test('battle exit skips reduced motion and reveals the result only after rendering', async () => {
+test('battle exit skips reduced motion and reveals the main menu only after rendering', async () => {
   const a = appClock(), cover = a.$('battleTransition');
   let switched = 0;
-  a.ui.onLeaveBattle(() => { switched++; a.game.s.result = { win: false }; a.$('hud').classList.add('hidden'); });
+  a.ui.onLeaveBattle(() => { switched++; a.ui.view = 'home'; a.game.s = null; a.$('hud').classList.add('hidden'); });
   await new Promise(setImmediate);
   assert.equal(switched, 1); assert.equal(cover.animations.length, 0);
   assert.equal(cover.classList.contains('hidden'), false);

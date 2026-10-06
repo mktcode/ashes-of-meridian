@@ -1892,7 +1892,7 @@ test('battle exit starts only after confirmed abandonment and never restores the
   assert.equal(h.saves.filter(save => save.expedition === null).length, 1);
 });
 
-test('battle exit defers victory and defeat screens without delaying or duplicating result persistence', () => {
+test('battle exit is not used for victory or defeat, only for their subsequent return to the main menu', () => {
   for (const win of [true, false]) {
     const h = savedUIBattle(), ui = h.ui;
     const result = { win, text: 'HQ destroyed', time: 42, integrity: .5, score: 1 };
@@ -1901,17 +1901,34 @@ test('battle exit defers victory and defeat screens without delaying or duplicat
     let finish, requests = 0;
     ui.onLeaveBattle = complete => { requests++; finish = complete; ui.leavingBattle = true; ui.paused = true; };
     ui.event('result', result);
-    assert.equal(h.saves.length, 1); assert.equal(requests, 1);
-    assert.equal(h.document.getElementById('result').classList.contains('hidden'), true);
+    assert.equal(h.saves.length, 1); assert.equal(requests, 0);
     ui.event('result', result);
-    assert.equal(h.saves.length, 1); assert.equal(requests, 1);
-    finish();
+    assert.equal(h.saves.length, 1); assert.equal(requests, 0);
     assert.equal(ui.modalKind, 'result');
     assert.equal(h.document.getElementById('hud').classList.contains('hidden'), true);
     assert.equal(h.document.getElementById('result').classList.contains('hidden'), false);
     assert.equal(h.saves.length, 1);
     assert.equal(win ? ui.expedition.depth : ui.expedition, win ? 1 : null);
+    ui.showHome();
+    assert.equal(requests, 1, 'only returning to the main menu starts the fade');
+    assert.equal(ui.view, 'game');
+    finish();
+    assert.equal(ui.view, 'home');
+    assert.equal(h.saves.length, 1);
   }
+});
+
+test('battle exit is bypassed when continuing to build after victory', () => {
+  const h = savedUIBattle(), ui = h.ui;
+  ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
+  ui.game.s.result = { win: true, text: 'Victory', time: 42, integrity: 1, score: 1 };
+  ui.onLeaveBattle = () => assert.fail('Continue building does not leave for the main menu');
+  ui.event('result', ui.game.s.result);
+  let visited;
+  ui.onLaunchBattle = async (options, recipe, world) => { visited = world; return false; };
+  ui.continueBuilding();
+  assert.strictEqual(visited, ui.expedition.worlds[0]);
+  assert.equal(ui.leavingBattle, false);
 });
 
 test('pause abandonment requires confirmation; cancel preserves the expedition and stale confirmations do nothing', () => {
