@@ -31,6 +31,7 @@ Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische 
 | Issue | Fokus und Abhängigkeit |
 | --- | --- |
 | [Vollständige Runs/Geräte](playtest-validation.md) | Einstieg ohne Upgrades, FFA-Übergänge, Commands, Sieg/Niederlage und Reload zusammenhängend spielen. Zentrale menschliche Abnahme, nicht jede Fachliste als eigene Vollrunde wiederholen. |
+| [Citybuilding/Siedlungsaufbau](citybuilding.md) | Reduzierten Aufbau erst nach militärischem Sieg planen; vorhandenes Meridian Forum als Zentrum nutzen. Zuerst Gründung, minimale Wohn-/Versorgungsregeln und Verhältnis zur Score-Freischaltung klären, keine Implementierungsfreigabe. |
 | [Schwierigkeit/Progression](expeditions-schwierigkeit-und-upgrades.md) | Civilization-Score-Freischaltung samt exponentiellem Bauaufwand, HQ-Abschluss, passive Truppenansammlung und tiefe Ressourcenstapel bewerten. Erst Befunde, dann Balancing; neue Vorteilsideen separat. |
 | [Mehrparteien-Simulation](mehrparteien-simulation.md) | Technische FFA-/Wirtschafts-/Angriffsnachweise gezielt nach Fixturepflege und ausdrücklicher Prüffreigabe. Alte Seed-/Pattbefunde sind keine Abnahme aktueller Weltrezepte. |
 | [Höhen/Spielabnahme](hoehenstufen/README.md) | Sicht von oben/unten, Rampenverkehr, Fundamente, Picking und Walling auf der gemeinsamen CPU-Oberfläche prüfen. Worker-/Startprobleme nur im jeweiligen P1-Issue weiterverfolgen. |
