@@ -492,14 +492,22 @@ interface EntityBase extends Position {
 interface UnitEntity extends EntityBase {
   kind: 'unit';
   type: UnitType;
+  /** Explicit Cinder delivery assignment; absent means normal HQ economy. */
+  deliveryForum?: number;
+  deliveryPoint?: Position;
 }
 
 interface BuildingEntity extends EntityBase {
   kind: 'building';
   type: BuildingType;
-  /** Cosmetic offset in eighth-turns (0 <= value < 8), independent of weapon aim and CPU footprint. */
+  /** Model offset in eighth-turns (0 <= value < 8); forums also rotate reserved delivery corridors. */
   visualRotation?: number;
   buildRate?: number;
+  cinderStock?: number;
+  /** Owning forum ID on automatically grown buildings; survives removal of its owner. */
+  forumId?: number;
+  settlementAt?: number;
+  settlementAttempt?: number;
 }
 
 interface ResourceEntity extends EntityBase {
@@ -514,7 +522,7 @@ type EntityForKind<K extends EntityKind> =
   K extends 'unit' ? UnitEntity : K extends 'building' ? BuildingEntity : ResourceEntity;
 type EntityTypeForKind<K extends EntityKind> =
   K extends 'unit' ? UnitType : K extends 'building' ? BuildingType : ResourceType;
-type SpawnExtra = Partial<Omit<EntityBase, 'id' | 'kind' | 'type' | 'team' | 'faction' | 'x' | 'z'>> & { amount?: number; buildRate?: number };
+type SpawnExtra = Partial<Omit<EntityBase, 'id' | 'kind' | 'type' | 'team' | 'faction' | 'x' | 'z'>> & { amount?: number; buildRate?: number; forumId?: number };
 type UnitBody = Pick<UnitEntity, 'type' | 'size'> & Partial<UnitEntity>;
 type UnitPlacement = UnitBody & Position;
 

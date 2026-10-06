@@ -327,7 +327,7 @@
           path: [],
           pi: 0,
           walk: 0,
-          cd: this.random() * 0.5,
+          cd: kind === 'building' && extra.forumId !== undefined ? 0 : this.random() * 0.5,
           nextThink: 0,
           nextPath: 0,
           lastHit: -100,

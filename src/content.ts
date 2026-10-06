@@ -340,49 +340,49 @@ const BUILDINGS = {
     cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5, civilizationUnlockStage: 1,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
-    desc: 'Civilian field laboratory. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
+    desc: 'Civilian field laboratory. Grows automatically around a Cinder-supplied Meridian Forum and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
   },
   researchhub: {
     cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 10, civilizationUnlockStage: 2,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Terraced civilian research hub. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 10 Civilization Score to unlock later expedition stages; no production.'
+    desc: 'Terraced civilian research hub. Grows automatically around a Cinder-supplied Meridian Forum and adapts to uneven hillsides. Each completed, surviving structure contributes 10 Civilization Score to unlock later expedition stages; no production.'
   },
   researchspire: {
     cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 15, civilizationUnlockStage: 3,
     civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:3.05,length:1.1},
-    desc: 'Civilian research tower with three dish antennas. Costs only Echo and adapts to uneven hillsides. Each completed, surviving structure contributes 15 Civilization Score to unlock later expedition stages; no production.'
+    desc: 'Civilian research tower with three dish antennas. Grows automatically around a Cinder-supplied Meridian Forum and adapts to uneven hillsides. Each completed, surviving structure contributes 15 Civilization Score to unlock later expedition stages; no production.'
   },
   embercottage: {
     cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5, civilizationUnlockStage: 1,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
-    desc: 'Civilian hillside cottage with warm-white windows. Costs only Echo; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
+    desc: 'Civilian hillside cottage with warm-white windows. Grows automatically around a Cinder-supplied Meridian Forum; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
   },
   terracecommons: {
     cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 10, civilizationUnlockStage: 2,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.1},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Terraced civilian residences with warm-white windows and planted balconies. Costs only Echo; each completed, surviving structure contributes 10 Civilization Score to unlock later expedition stages. No production.'
+    desc: 'Terraced civilian residences with warm-white windows and planted balconies. Grows automatically around a Cinder-supplied Meridian Forum; each completed, surviving structure contributes 10 Civilization Score to unlock later expedition stages. No production.'
   },
   hearthtower: {
     cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 15, civilizationUnlockStage: 3,
     civilizationDecks: [{x:0,z:-.40,w:4.25,d:3.6},{x:.2,z:2.10,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:2.9,length:1.1},
-    desc: 'Civilian residential tower with warm-white windows and an exposed service spine. Costs only Echo; each completed, surviving structure contributes 15 Civilization Score to unlock later expedition stages. No production.'
+    desc: 'Civilian residential tower with warm-white windows and an exposed service spine. Grows automatically around a Cinder-supplied Meridian Forum; each completed, surviving structure contributes 15 Civilization Score to unlock later expedition stages. No production.'
   },
   meridianforum: {
-    cost: 0, gas: 25, hp: 950, size: 10.4, time: 20, civilizationPoints: 30, civilizationUnlockStage: 4,
+    cost: 0, gas: 25, hp: 950, size: 10.4, time: 20, civilizationPoints: 0, civilizationUnlockStage: 1,
     civilizationDecks: [{x:0,z:0,w:29.12*FORUM_MODEL_SCALE-.76,d:20.12*FORUM_MODEL_SCALE-.76,cut:.65*FORUM_MODEL_SCALE}],
     civilizationEntry: {x:0,z:9.6*FORUM_MODEL_SCALE,top:(2.1-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,
       width:8.2*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,length:3.6*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE},
     civilizationSideEntries: [-1,1].map(s=>({x:s*10*FORUM_MODEL_SCALE,z:9.7*FORUM_MODEL_SCALE,
       top:(1.88-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,width:3.25*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,
       length:3.24*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE})),
-    desc: 'Monumental civilian forum with terraced wings, warm windows, cyan-lit entrances and a rooftop spacecraft landing pad. Available from Stage 4. Costs only Echo; each completed, surviving forum contributes 30 Civilization Score. No production; the landing pad is decorative.'
+    desc: 'Monumental civilian forum with terraced wings, warm windows, cyan-lit entrances and a rooftop spacecraft landing pad. Build after victory, from Stage 1. Costs only Echo; no Civilization Score of its own. Assign prospectors to deliver Cinder: its permanent 1000-Cinder store supports up to 30 automatic civilian buildings. Three access corridors stay clear; the landing pad is decorative.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
 
@@ -390,10 +390,11 @@ type BuildingType = keyof typeof BUILDINGS;
 type BuildingDefinition = (typeof BUILDINGS)[BuildingType];
 
 function isCivilizationBuildingType(type: string): boolean {
-  return Object.hasOwn(BUILDINGS, type) && !!(BUILDINGS[type as BuildingType] as BuildingDefinitionShape).civilizationPoints;
+  return Object.hasOwn(BUILDINGS, type) && !!(BUILDINGS[type as BuildingType] as BuildingDefinitionShape).civilizationDecks;
 }
 function civilizationBuildingAvailable(type: BuildingType, unlockedStage: number | null | undefined): boolean {
-  return unlockedStage == null || unlockedStage >= ((BUILDINGS[type] as BuildingDefinitionShape).civilizationUnlockStage || 0);
+  return (!isCivilizationBuildingType(type) || type === 'meridianforum') &&
+    (unlockedStage == null || unlockedStage >= ((BUILDINGS[type] as BuildingDefinitionShape).civilizationUnlockStage || 0));
 }
 function buildingVisualYaw(e: { team?: number; visualRotation?: number }): number {
   return BUILDING_YAW + (e.team === 1 ? Math.PI : 0) + (e.visualRotation || 0) * Math.PI / 4;
@@ -413,12 +414,12 @@ function civilizationBuildingEntries(type: BuildingType): readonly CivilizationE
   const d=BUILDINGS[type] as BuildingDefinitionShape;
   return [d.civilizationEntry!,...(d.civilizationSideEntries||[])];
 }
-function civilizationClearanceFootprints(p: Position, type: BuildingType, team = 0): Position[][] {
+function civilizationClearanceFootprints(p: Position, type: BuildingType, team = 0, visualRotation = 0): Position[][] {
   const d=BUILDINGS[type] as BuildingDefinitionShape,scale=CIVILIZATION_MODEL_SCALE;
-  return [...civilizationDeckFootprints(p,type,team).map(f=>f.polygon),
+  return [...civilizationDeckFootprints(p,type,team,visualRotation).map(f=>f.polygon),
     ...civilizationBuildingEntries(type).map(entry=>civilizationFootprint(p,team,entry.x*scale,
-      entry.z*scale+entry.length/2,entry.width??1.05,entry.length+.02)),
-    ...(d.civilizationWings||[]).map(w=>civilizationFootprint(p,team,w.x*scale,w.z*scale,w.w*scale,w.d*scale))];
+      entry.z*scale+entry.length/2,entry.width??1.05,entry.length+.02,0,visualRotation)),
+    ...(d.civilizationWings||[]).map(w=>civilizationFootprint(p,team,w.x*scale,w.z*scale,w.w*scale,w.d*scale,0,visualRotation))];
 }
 function civilizationFootprintsOverlap(a: readonly Position[], b: readonly Position[], gap = .25): boolean {
   for(const polygon of [a,b])for(let i=0;i<polygon.length;i++){

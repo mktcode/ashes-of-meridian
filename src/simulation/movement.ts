@@ -268,6 +268,7 @@
       },
       setOrder(this: MeridianGame, e: Entity, order: UnitOrder) {
         if (e.kind === 'building') return;
+        if (e.kind === 'unit') { delete e.deliveryForum; delete e.deliveryPoint; }
         e.order = { ...order };
         e.target = null;
         e.path = [];
@@ -289,6 +290,18 @@
         const target = 'id' in order ? this.get(order.id) : null,
           task = this.workerTask(target, team);
         if (target && this.enemy({team}, target) && !this.canSee(team, target)) return false;
+        if (order.type === 'smart' && this.canSupplyForum(target,team)) {
+          const workers = mobile.filter(e => e.type === 'worker');
+          if (workers.length) {
+            for (const worker of workers) {
+              this.setOrder(worker,{type:'idle'});
+              worker.deliveryForum = target.id;
+              worker.returning = worker.carry > 0;
+            }
+            if (announce) this.notify(team,'order',{type:'smart',x:target.x,z:target.z,count:workers.length});
+            return true;
+          }
+        }
         if (target && task && (order.type === 'smart' || order.type === task)) {
           const worker = mobile.filter(e => e.type === 'worker' && e.id !== target.id)
             .sort((a, b) => distance(a, target) - distance(b, target) || a.id - b.id)[0];

@@ -63,8 +63,8 @@ test('action parser copies known data and rejects malformed values before dispat
   ]) assert.equal(parseBattleAction(input, 2), null, JSON.stringify(input));
 });
 
-test('building rotation is immediate, free, bounded and cosmetic for every completed own building', () => {
-  const {g,events}=fixture(),types=vm.runInContext('Object.keys(BUILDINGS)',context);
+test('building rotation outside Forums is immediate, free, bounded and cosmetic', () => {
+  const {g,events}=fixture(),types=vm.runInContext('Object.keys(BUILDINGS).filter(type => type !== "meridianforum")',context);
   g.s.rules={kind:'single-player'};g.navDirty=false;g.random=()=>{throw Error('Rotation consumed RNG');};
   g.get(1).rot=.7;
   for(const type of types){

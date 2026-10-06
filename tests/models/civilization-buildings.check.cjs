@@ -22,6 +22,21 @@ test('shared research and warm residential meshes are cached, finite and nondege
   }
  }
 });
+test('all six civilian models use normal progress-scaled construction animation and temporary build markers',()=>{
+ const h=modelHarness();vm.runInContext('Math.random=seeded=()=>{throw Error("Construction view RNG");};',h.context);
+ for(const type of types){
+  const e={id:1,kind:'building',type,team:0,faction:0,x:0,z:0,hp:500,size:h.BUILDINGS[type].size,forumId:7},
+   draw=progress=>{const R=createRendererStub({record:true});h.renderEntity(R,{...e,progress},0);return R.calls;},
+   complete=draw(1),hull=complete.find(c=>c[0].startsWith('civil')&&c[0].endsWith('Steel'));
+  for(const progress of [.2,.6]){
+   const calls=draw(progress),part=calls.find(c=>c[0]===hull[0]);
+   assert.equal(part[5],hull[5]*progress,'height rises continuously with construction progress');
+   assert.equal(part[4],hull[4]);assert.equal(part[6],hull[6]);
+   assert.ok(calls.some(c=>c[0]==='ring'&&c[13]==='effects'),'construction marker remains until completion');
+  }
+  assert.ok(!complete.some(c=>c[0]==='ring'&&c[13]==='effects'));
+ }
+});
 test('residential window meshes and posed lights are warm cream, isolated from cyan laboratory glazing',()=>{
  const h=modelHarness();
  for(const type of types){

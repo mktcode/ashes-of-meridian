@@ -16,48 +16,41 @@ function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
  world.visible=world.sight[0].visible;world.explored=world.sight[0].explored;world.staticGrid.set(world.surface.cliffs);
  world.path=()=>({status:'complete',points:[]});
  Object.assign(game,{world,ids:new Map(),random:()=>.5,notify(){},emit(){},setOrder(w,order){w.order=order;},
-  s:{time:0,nextId:3,rules:{kind:'single-player'},stats:{kills:0,damage:0,lost:0},supplyCaches:[],fields:[],scans:[],recalls:[],entities:[
+  s:{time:0,nextId:3,seed:1409,rules:{kind:'single-player',completed:true},stats:{kills:0,damage:0,lost:0,built:0,gathered:0},supplyCaches:[],fields:[],scans:[],recalls:[],entities:[
    {id:1,team:0,faction,kind:'unit',type:'worker',hp:100,maxHp:100,progress:1,size:.65,x:-20,z:-20,order:{type:'idle'}}],
    parties:[{id:0,faction,account:{alloy:0,gas:100},meta:{},benefits:{},loadout:['drop'],deploymentPending:false},
     {id:1,faction:1,account:{alloy:0,gas:0},meta:{},benefits:{},loadout:[],deploymentPending:false}]}});
  return {game,world};
 }
-test('seven civilian structures are the last build choices, Echo-only, identical across factions and nonproductive',()=>{
+test('seven civilian models retain their content values and faction-independent nonproductive role',()=>{
  assert.deepEqual(Object.keys(BUILDINGS).slice(-7),allTypes);
  allTypes.forEach((type,i)=>{
-  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,i===6?25:[5,10,15][i%3]);assert.equal(d.civilizationPoints,i===6?30:[5,10,15][i%3]);
-  assert.equal(d.civilizationUnlockStage,i===6?4:i%3+1);
+  const d=BUILDINGS[type];assert.equal(d.cost,0);assert.equal(d.gas,i===6?25:[5,10,15][i%3]);assert.equal(d.civilizationPoints,i===6?0:[5,10,15][i%3]);
+  assert.equal(d.civilizationUnlockStage,i===6?1:i%3+1);
   assert.equal(d.vision,BUILDINGS.depot.vision);assert.equal(d.damage,undefined);assert.equal(d.cap,undefined);assert.equal(d.requires,undefined);
   assert.ok(FACTIONS.every(f=>f.buildings[type]===FACTIONS[0].buildings[type]));
  });
 });
-test('civilian stage permissions block direct construction before payment and work across old worlds',()=>{
+test('only the Forum is directly buildable, from Stage 1 but strictly after victory',()=>{
  const {game}=fixture();game.civilizationStage=1;
- for(const [i,type] of types.entries()){
-  const allowed=i%3===0,gas=game.account(0).gas;
-  if(allowed) assert.equal(game.canBuild(type,null),'');
-  else {
-   assert.match(game.canBuild(type,null),/Unlock Stage/);
+ for(const stage of [1,4,null]) {
+  game.civilizationStage=stage;
+  for(const type of types){
+   const gas=game.account(0).gas;
+   assert.match(game.canBuild(type,null),/automatically/);
    assert.equal(game.submitAction(0,{kind:'build',building:type,position:{x:0,z:0},selected:[]}),false);
    assert.equal(game.account(0).gas,gas);assert.equal(game.s.entities.length,1);
   }
  }
- game.civilizationStage=2;game.s.rules.completed=true;game.s.depth=0;
- for(const type of ['researchhub','terracecommons'])assert.equal(game.canBuild(type,null),'');
- for(const type of ['researchspire','hearthtower'])assert.match(game.canBuild(type,null),/Stage 3/);
- game.civilizationStage=3;
- for(const type of types)assert.equal(game.canBuild(type,null),'','old-world depth does not reset expedition permissions');
- const echo=game.account(0).gas;
- assert.match(game.canBuild('meridianforum',null),/Stage 4/);
- assert.equal(game.submitAction(0,{kind:'build',building:'meridianforum',position:{x:0,z:0},selected:[]}),false);
- assert.equal(game.account(0).gas,echo);assert.equal(game.s.entities.length,1);
- game.civilizationStage=4;
- for(const type of allTypes)assert.equal(game.canBuild(type,null),'','Stage 4 adds just the shared forum');
- game.civilizationStage=null;
- for(const type of allTypes)assert.equal(game.canBuild(type,null),'','isolated non-expedition worlds have no campaign gate');
+ game.civilizationStage=1;game.s.rules.completed=false;
+ assert.match(game.canBuild('meridianforum',null),/Win/);
+ assert.equal(game.build('meridianforum',{x:0,z:0}),false);
+ assert.equal(game.account(0).gas,100);
+ game.s.rules.completed=true;assert.equal(game.canBuild('meridianforum',null),'');
+ game.s.rules={kind:'local-pvp'};assert.match(game.canBuild('meridianforum',null),/Win/);
 });
 test('civilian placement accepts uneven slopes and cliff cells but protects obstacles, occupancy, exploration and worker access/payment',()=>{
- for(const faction of [0,1,2])for(const type of allTypes){
+ for(const faction of [0,1,2])for(const type of ['meridianforum']){
   const {game,world}=fixture(faction),p={x:0,z:0},before=Array.from(world.surface.heights),gas=game.account(0).gas;
   assert.equal(world.surface.foundation(p,BUILDINGS[type].size),false);
   assert.match(game.canBuild('depot',p),/stable ground/);assert.equal(game.canBuild(type,p),'');
@@ -71,15 +64,14 @@ test('civilian placement accepts uneven slopes and cliff cells but protects obst
   game.cancelConstruction(b.id);assert.equal(game.account(0).gas,gas-BUILDINGS[type].gas*.25);
  }
  const {game,world}=fixture();world.path=()=>({status:'unreachable',points:[]});const gas=game.account(0).gas;
- assert.equal(game.build('fieldlab',{x:0,z:0}),false);assert.equal(game.account(0).gas,gas);assert.equal(game.s.entities.length,1);
- world.sight[0].explored[world.idx(0,0)]=0;assert.match(game.canBuild('fieldlab',{x:0,z:0}),/Scout/);
- world.sight[0].explored.fill(255);world.staticGrid[world.idx(0,0)]=1;assert.match(game.canBuild('fieldlab',{x:0,z:0}),/obstructs/);
+ assert.equal(game.build('meridianforum',{x:0,z:0}),false);assert.equal(game.account(0).gas,gas);assert.equal(game.s.entities.length,1);
+ world.sight[0].explored[world.idx(0,0)]=0;assert.match(game.settlementPlacementReason('fieldlab',{x:0,z:0},0),/Scout/);
+ world.sight[0].explored.fill(255);world.staticGrid[world.idx(0,0)]=1;assert.match(game.settlementPlacementReason('fieldlab',{x:0,z:0},0),/obstructs/);
  world.staticGrid.fill(0);world.staticGrid[world.idx(0,-2.5)]=1;
- assert.match(game.canBuild('researchhub',{x:0,z:0}),/obstructs/,'interior obstacles cannot hide between perimeter samples');
- const sampler=new PlacementGuideSampler(game,'researchhub',0);sampler.refresh();assert.equal(sampler.sample({x:0,z:0}),-1);
+ assert.match(game.settlementPlacementReason('researchhub',{x:0,z:0},0),/obstructs/,'interior obstacles cannot hide between perimeter samples');
  world.staticGrid.fill(0);world.surface.cliffs[world.idx(0,0)]=1;world.staticGrid.set(world.surface.cliffs);
- assert.equal(game.canBuild('fieldlab',{x:0,z:0}),'');
- assert.ok(game.canBuild('fieldlab',{x:79,z:0}));
+ assert.equal(game.settlementPlacementReason('fieldlab',{x:0,z:0},0),'');
+ assert.ok(game.settlementPlacementReason('fieldlab',{x:79,z:0},0));
 });
 test('civilian complexes use close nonoverlapping deck outlines while reserving stairs, walkways and military clearance',()=>{
  const yaw=vm.runInContext('BUILDING_YAW',context),cs=Math.cos(yaw),sn=Math.sin(yaw),at=(x,z=0)=>({x:x*cs+z*sn,z:-x*sn+z*cs});
@@ -87,19 +79,19 @@ test('civilian complexes use close nonoverlapping deck outlines while reserving 
   const {game}=fixture(0,()=>40);game.spawnBuilding(first,0,0,0,0);
   const old=BUILDINGS[first].size+BUILDINGS[next].size+.8;
   let close;
-  for(let x=4;x<old;x+=.25)if(!game.canBuild(next,at(x))){close=at(x);break;}
+  for(let x=4;x<old;x+=.25)if(!game.settlementPlacementReason(next,at(x),0)){close=at(x);break;}
   assert.ok(close,`${first}/${next} can form a tighter complex`);
-  const sampler=new PlacementGuideSampler(game,next,0);sampler.refresh();assert.equal(sampler.sample(close),1);
-  assert.ok(game.canBuild(next,at(1)),'models cannot intersect');
+  assert.equal(game.settlementPlacementReason(next,close,0),'');
+  assert.ok(game.settlementPlacementReason(next,at(1),0),'models cannot intersect');
   assert.match(game.canBuild('depot',at(4.5)),/room around/,'military spacing is unchanged');
  }
  const {game}=fixture(0,()=>40);game.spawnBuilding('fieldlab',0,0,0,0);
- assert.match(game.canBuild('fieldlab',at(0,4.8)),/stairs/,'entry stairs are not just the main deck');
+ assert.match(game.settlementPlacementReason('fieldlab',at(0,4.8),0),/stairs/,'entry stairs are not just the main deck');
  const hub=fixture(0,()=>40).game;hub.spawnBuilding('researchhub',0,0,0,0);
- assert.match(hub.canBuild('fieldlab',at(5.75)),/walkways/,'the elevated side walkway keeps its footprint');
+ assert.match(hub.settlementPlacementReason('fieldlab',at(5.75),0),/walkways/,'the elevated side walkway keeps its footprint');
  const actual=fixture(0,()=>40);delete actual.world.path;actual.game.spawnBuilding('fieldlab',0,0,0,0);
  actual.world.rebuild(actual.game.s.entities);
- assert.equal(actual.game.build('fieldlab',at(4.9)),true,'a real worker route still permits the compact complex');
+ assert.equal(actual.game.settlementPlacementReason('fieldlab',at(4.9),0),'','automatic compact buildings need no worker route');
 });
 test('Forum clearance reserves the full platform and all three wider stair approaches',()=>{
  const {civilizationDeckFootprints,civilizationClearanceFootprints,civilizationFootprintsOverlap,BUILDING_YAW}=vm.runInContext('({civilizationDeckFootprints,civilizationClearanceFootprints,civilizationFootprintsOverlap,BUILDING_YAW})',context),
@@ -111,17 +103,17 @@ test('Forum clearance reserves the full platform and all three wider stair appro
   const next=at(x,8),small=civilizationClearanceFootprints(next,'fieldlab',0);
   assert.ok(deck.every(d=>small.every(s=>!civilizationFootprintsOverlap(d.polygon,s))),'candidate clears the platform');
   assert.ok(clearance.some(c=>small.some(s=>civilizationFootprintsOverlap(c,s))),'but overlaps a stair approach');
-  assert.match(game.canBuild('fieldlab',next),/stairs/);
+  assert.match(game.settlementPlacementReason('fieldlab',next,0),/stairs/);
  }
- assert.ok(game.canBuild('fieldlab',at(0,0)),'the large hull cannot intersect another civic building');
+ assert.ok(game.settlementPlacementReason('fieldlab',at(0,0),0),'the large hull cannot intersect another civic building');
 });
-test('civilian cliff foundations are actually reachable and buildable from a safe service point without opening cliff paths for units',()=>{
+test('Forum cliff foundations are reachable without opening cliff paths for units',()=>{
  const {game,world}=fixture(0,(x,z)=>x>0?45:40);delete world.path;world.rebuild(game.s.entities);
- const p={x:1,z:0},worker=game.s.entities[0],radius=BUILDINGS.fieldlab.size+2.9;
+ const p={x:1,z:0},worker=game.s.entities[0],radius=BUILDINGS.meridianforum.size+2.9;
  assert.equal(world.surface.fits(p.x,p.z),false);assert.equal(world.terrainFree(worker,p),false);
- assert.match(game.canBuild('depot',p),/stable ground/);assert.equal(game.canBuild('fieldlab',p),'');
- const sampler=new PlacementGuideSampler(game,'fieldlab',0);sampler.refresh();assert.equal(sampler.sample(p),1);
- assert.equal(game.build('fieldlab',p),true);const b=game.s.entities.at(-1);world.rebuild(game.s.entities);
+ assert.match(game.canBuild('depot',p),/stable ground/);assert.equal(game.canBuild('meridianforum',p),'');
+ const sampler=new PlacementGuideSampler(game,'meridianforum',0);sampler.refresh();assert.equal(sampler.sample(p),1);
+ assert.equal(game.build('meridianforum',p),true);const b=game.s.entities.at(-1);world.rebuild(game.s.entities);
  const area={...p,radius,terrainConnection:false},body=worker.size*vm.runInContext('UNIT_BODY_SCALE',context),
   path=world.path(worker.x,worker.z,p.x,p.z,false,area,body);
  assert.equal(path.status,'complete');assert.equal(world.surface.fits(path.goal.x,path.goal.z,body),true);
@@ -129,7 +121,7 @@ test('civilian cliff foundations are actually reachable and buildable from a saf
  assert.notEqual(world.path(worker.x,worker.z,p.x,p.z,false,{...p,radius},body).status,'complete');
  Object.assign(worker,path.goal,{rot:0});game.effects={construction(){}};game.s.stats.built=0;
  assert.equal(game.move(worker,b,0,radius+.1,false,area),true,'movement stops at the reachable work area');
- game.worker(worker,BUILDINGS.fieldlab.time);assert.equal(b.progress,1);assert.equal(worker.order.type,'idle');
+ game.worker(worker,BUILDINGS.meridianforum.time);assert.equal(b.progress,1);assert.equal(worker.order.type,'idle');
  assert.equal(world.surface.fits(p.x,p.z),false,'construction does not alter unit passability');
 });
 test('large Forum construction reaches a real cliff-side service point without making the cliff walkable',()=>{
@@ -145,11 +137,11 @@ test('large Forum construction reaches a real cliff-side service point without m
  assert.equal(world.blockedAt(path.goal.x,path.goal.z),false);
  Object.assign(worker,path.goal,{rot:0});game.effects={construction(){}};game.s.stats.built=0;
  game.worker(worker,BUILDINGS.meridianforum.time);
- assert.equal(b.progress,1);assert.equal(worker.order.type,'idle');assert.equal(civilizationScoreForBuildings(game.s.entities,0),30);
+ assert.equal(b.progress,1);assert.equal(worker.order.type,'idle');assert.equal(civilizationScoreForBuildings(game.s.entities,0),0);
  assert.equal(game.account(0).gas,75);assert.equal(world.surface.fits(p.x,p.z),false);
 });
-test('ordinary worker construction completes Echo-only civilian foundations and then releases the worker',()=>{
- for(const type of allTypes){
+test('ordinary worker construction completes the Echo-only Forum and releases the worker',()=>{
+ for(const type of ['meridianforum']){
   const {game}=fixture();game.effects={construction(){}};game.s.stats.built=0;
   assert.equal(game.build(type,{x:0,z:0}),true);const b=game.s.entities.at(-1),worker=game.s.entities[0];
   Object.assign(worker,{x:b.size+2.5,z:0,rot:0});const echo=game.account(0).gas;
@@ -189,7 +181,139 @@ test('score counts completed surviving own buildings only and defeat withdrawal 
  game.spawnBuilding('embercottage',0,30,0,0,{progress:.8});game.spawnBuilding('terracecommons',10,30,0,0,{hp:0});
  game.spawnBuilding('hearthtower',20,30,1,1);
  assert.equal(civilizationScoreForBuildings(game.s.entities,0),45);
- game.checkHQElimination();assert.equal(game.s.result.win,false);assert.equal(game.s.result.civilizationScore,45);assert.equal(a.hp,0);
+ game.s.rules.completed=false;game.checkHQElimination();assert.equal(game.s.result.win,false);assert.equal(game.s.result.civilizationScore,45);assert.equal(a.hp,0);
+});
+test('supplied Forums grow free mixed settlements on a saved clock, with no combat RNG draws or workers',()=>{
+ const {game,world}=fixture(0,()=>40);game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0),funds={...game.account(0)};
+ game.random=()=>assert.fail('Settlement must not consume battle RNG');
+ forum.cinderStock=1000;game.updateSettlements();assert.equal(game.s.entities.length,1);
+ for(let i=1;i<=70;i++){game.s.time=i*10;game.updateSettlements(10);}
+ const grown=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);
+ assert.equal(grown.length,30);assert.deepEqual(game.account(0),funds);assert.ok(grown.every(b=>b.progress===1&&b.paid.cost===0&&b.paid.gas===0));
+ assert.ok(new Set(grown.map(b=>b.type)).size>=4,'all classes mix rather than unlock by stage');
+ for(const b of grown) {
+  assert.ok(Math.hypot(b.x-forum.x,b.z-forum.z)<=60);
+  assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team),'');
+  assert.equal(game.canSellBuilding(b.id),'Managed by its forum');
+  assert.equal(game.rotateBuilding(b.id,1),false);
+ }
+ assert.equal(game.s.stats.built,30);assert.ok(civilizationScoreForBuildings(grown,0)>0);
+ assert.equal(civilizationScoreForBuildings([forum],0),0);
+ const {settlementBuildingType,forumBuildingTarget}=vm.runInContext('({settlementBuildingType,forumBuildingTarget})',context);
+ assert.equal(forumBuildingTarget({...forum,cinderStock:999}),29);
+ assert.equal(forumBuildingTarget({...forum,cinderStock:500}),15);
+ assert.equal(settlementBuildingType(18,.5,.1),'hearthtower');
+ assert.equal(settlementBuildingType(60,.5,.9),'fieldlab');
+ const blocked=fixture(0,()=>40);blocked.game.s.entities=[];
+ const crowded=blocked.game.spawnBuilding('meridianforum',0,0,0,0);crowded.cinderStock=1000;
+ blocked.world.staticGrid.fill(1);assert.equal(blocked.game.growSettlement(crowded),false);
+ assert.equal(blocked.game.s.entities.length,1,'no space means no forced spawn');
+ game.s.rules.completed=false;forum.cinderStock=500;game.s.time+=100;game.updateSettlements();
+ assert.equal(game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0).length,30);
+});
+test('all six settlement models build themselves over their normal construction time without workers, spending or effect RNG',()=>{
+ for(const type of types){
+  const {game}=fixture(0,()=>40);game.s.entities=[];
+  const forum=game.spawnBuilding('meridianforum',0,0,0,0),
+   b=game.spawnBuilding(type,30,30,0,0,{progress:.06,paid:{cost:0,gas:0},forumId:forum.id});
+  b.hp=b.maxHp*.06;const funds={...game.account(0)},events=[];
+  game.random=()=>assert.fail('Automatic construction must not draw battle RNG');
+  game.effects={construction(){assert.fail('No artificial worker construction beams');}};
+  game.notify=(_team,type,data)=>events.push({type,data});
+  assert.equal(civilizationScoreForBuildings([b],0),0);assert.equal(game.s.stats.built,0);
+  game.updateSettlements();assert.equal(b.progress,.06,'maintenance without elapsed time does not construct');
+  game.updateSettlements(BUILDINGS[type].time/2);assert.equal(b.progress,.56);
+  assert.ok(Math.abs(b.hp-b.maxHp*.56)<1e-9);assert.equal(civilizationScoreForBuildings([b],0),0);
+  assert.equal(game.s.stats.built,0);assert.equal(events.length,0);
+  game.updateSettlements(BUILDINGS[type].time/2);assert.equal(b.progress,1);assert.equal(b.hp,b.maxHp);
+  assert.equal(civilizationScoreForBuildings([b],0),BUILDINGS[type].civilizationPoints);
+  assert.equal(game.s.stats.built,1);assert.equal(events.length,1);assert.equal(events[0].type,'complete');
+  game.updateSettlements(10);assert.equal(game.s.stats.built,1);assert.equal(events.length,1);
+  assert.deepEqual(game.account(0),funds);assert.equal(forum.cinderStock,undefined);
+ }
+});
+test('new automatic foundations reserve their slot, reject worker takeover and cancellation, and stop building when their Forum is lost',()=>{
+ const {game}=fixture(0,()=>40),worker=game.s.entities[0];game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.cinderStock=34;
+ game.random=()=>assert.fail('Automatic foundation must not draw battle RNG');
+ game.updateSettlements();game.s.time=10;game.updateSettlements(10);
+ const b=game.s.entities.at(-1);assert.equal(b.forumId,forum.id);
+ assert.equal(b.progress,.06);assert.equal(b.hp,b.maxHp*.06);assert.equal(game.s.stats.built,0);
+ assert.equal(game.workerTask(b),null);worker.order={type:'build',id:b.id};
+ game.worker(worker,10);assert.equal(worker.order.type,'idle');assert.equal(b.progress,.06);
+ game.cancelConstruction(b.id);assert.ok(b.hp>0);
+ assert.equal(game.submitAction(0,{kind:'cancelConstruction',id:b.id}),false);
+ game.s.time=20;game.updateSettlements(1);assert.equal(game.s.entities.length,2,'a foundation already occupies its stock-supported slot');
+ const progress=b.progress;assert.ok(progress>.06&&progress<1);assert.equal(forum.cinderStock,34);
+ game.s.rules.completed=false;game.updateSettlements(1);assert.equal(b.progress,progress);
+ game.s.rules.completed=true;forum.hp=0;game.updateSettlements(1);assert.equal(b.progress,progress);
+ game.s.time+=10;game.updateSettlements(10);assert.equal(b.hp,0);assert.equal(game.s.stats.built,0);
+});
+test('multiple Forums keep independent stocks, overlapping radii share exclusions, and orphan buildings disappear one at a time',()=>{
+ const {game}=fixture(0,()=>40);game.s.entities=[];
+ const a=game.spawnBuilding('meridianforum',-25,0,0,0),b=game.spawnBuilding('meridianforum',25,0,0,0);
+ a.cinderStock=100;b.cinderStock=0;game.updateSettlements();
+ for(let i=1;i<=12;i++){game.s.time=i*10;game.updateSettlements(10);}
+ const grown=game.s.entities.filter(e=>e.forumId===a.id&&e.hp>0);
+ assert.ok(grown.every(e=>e.progress===1));assert.equal(grown.length,3);assert.ok(game.s.entities.every(e=>e.forumId!==b.id));
+ for(const building of grown)assert.equal(game.forumAccessReason(building,building.size,undefined,building.type,0),'');
+ const score=civilizationScoreForBuildings(game.s.entities,0);
+ assert.equal(game.sellBuilding(a.id),true);assert.equal(civilizationScoreForBuildings(game.s.entities,0),score);
+ game.updateSettlements();game.s.time+=9;game.updateSettlements();assert.ok(grown.every(e=>e.hp>0));
+ game.s.time++;game.updateSettlements();assert.equal(grown.filter(e=>e.hp>0).length,2);
+ game.s.time+=10;game.updateSettlements();assert.equal(grown.filter(e=>e.hp>0).length,1);
+ game.s.time+=10;game.updateSettlements();assert.equal(grown.filter(e=>e.hp>0).length,0);
+ assert.equal(b.cinderStock,0);
+});
+test('Forum loss returns idle leftover cargo to HQ even when all deposits are exhausted',()=>{
+ const {game}=fixture(0,()=>40),worker=game.s.entities[0],
+  forum=game.spawnBuilding('meridianforum',0,0,0,0),hq=game.spawnBuilding('hq',-35,-35,0,0);
+ Object.assign(worker,{carry:5,deliveryForum:forum.id,deliveryPoint:{x:10,z:10}});forum.hp=0;
+ let destination=null;game.workerDropoff=()=>hq;game.move=(_worker,p)=>{destination=p;};
+ assert.equal(game.worker(worker,.1),true);assert.equal(worker.deliveryForum,undefined);
+ assert.equal(worker.deliveryPoint,undefined);assert.equal(worker.returning,true);
+ assert.equal(worker.carry,5);assert.equal(destination,hq);assert.equal(game.account(0).alloy,0);
+});
+test('explicit smart commands assign prospectors, only Forum deliveries spend their cargo, and manual orders unassign them',()=>{
+ const {game}=fixture(0,()=>40);delete game.setOrder;
+ const worker=game.s.entities[0];game.ids.set(worker.id,worker);Object.assign(worker,{carry:18,returning:false,path:[],nextPath:0,rot:0});
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0),hq=game.spawnBuilding('hq',-35,-35,0,0);
+ const node={id:90,kind:'resource',type:'crystal',amount:100,hp:1,team:-1,x:20,z:20,size:1};game.s.entities.push(node);game.ids.set(node.id,node);
+ assert.equal(game.command([worker.id],{type:'smart',id:forum.id,x:0,z:0},0,false),true);
+ assert.equal(worker.deliveryForum,forum.id);assert.equal(worker.returning,true);
+ Object.assign(worker,game.forumServicePoints(forum)[0]);game.worker(worker,.1);
+ assert.equal(forum.cinderStock,18);assert.equal(worker.carry,0);assert.equal(game.account(0).alloy,0);
+ assert.equal(worker.order.id,node.id);assert.equal(worker.deliveryForum,forum.id);
+ Object.assign(worker,{carry:18,returning:true});forum.cinderStock=995;game.worker(worker,.1);
+ assert.equal(forum.cinderStock,1000);assert.equal(worker.carry,13);assert.equal(game.account(0).alloy,0);
+ game.worker(worker,1);assert.equal(worker.carry,13);assert.equal(node.amount,100,'full Forum does not consume more Cinder');
+ Object.assign(worker,{carry:2,returning:false});game.worker(worker,1);
+ assert.equal(worker.carry,2);assert.equal(node.amount,100,'other partially loaded miners also wait when the Forum fills');
+ assert.equal(game.command([worker.id],{type:'mine',id:node.id},0,false),true);assert.equal(worker.deliveryForum,undefined);
+ Object.assign(worker,{x:hq.x+hq.size+2.5,z:hq.z,carry:18,returning:true});game.worker(worker,.1);
+ assert.equal(game.account(0).alloy,18,'unassigned workers retain HQ economy');assert.equal(forum.cinderStock,1000);
+ game.command([worker.id],{type:'smart',id:forum.id},0,false);assert.equal(worker.deliveryForum,forum.id);
+ forum.hp=0;game.worker(worker,.1);assert.equal(worker.deliveryForum,undefined,'lost owner cannot steal cargo');
+});
+test('rotated Forum corridors agree with placement guides and service paths and reject blocking rotation',()=>{
+ const {game,world}=fixture(0,()=>40);game.s.entities=[];delete world.path;
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=2;
+ const worker=game.spawnUnit('worker',-50,-30,0,0);
+ world.rebuild(game.s.entities);
+ const service=game.forumDropoff(worker,forum);assert.ok(service);assert.ok(!world.blockedAt(service.x,service.z));
+ const points=game.forumServicePoints(forum),p={x:points[0].x*2.4,z:points[0].z*2.4};
+ assert.match(game.forumAccessReason(p,BUILDINGS.depot.size),/corridors/);
+ const sampler=new PlacementGuideSampler(game,'depot',0);sampler.refresh();assert.equal(sampler.sample(p),-1);
+ let blocker;
+ for(let angle=0;angle<Math.PI*2;angle+=.05){
+  const pos={x:Math.sin(angle)*40,z:Math.cos(angle)*40};
+  if(game.forumAccessReason(pos,2))continue;
+  blocker=game.spawnBuilding('depot',pos.x,pos.z,0,0);
+  if(game.forumRotationReason(forum,7/3))break;
+  blocker.hp=0;blocker=undefined;
+ }
+ assert.ok(blocker);assert.equal(game.rotateBuilding(forum.id,1),false);assert.equal(forum.visualRotation,2);
 });
 const civil = (type='fieldlab',extra={}) => ({kind:'building',type,team:0,hp:500,progress:1,...extra});
 const scoreSave = entities => ({version:1,state:{entities},tutorial:null});
@@ -241,7 +365,7 @@ test('a partial or still-stepping tick cannot contribute score or unlock a stage
 });
 
 test('military results save current world totals once instead of awarding score, and last-run display survives defeat',()=>{
- const {game}=fixture(),writes=[];
+ const {game}=fixture(),writes=[];game.s.rules.completed=false;
  game.snapshotSafe=true;Object.assign(game.s,{depth:0,map:'desert',seed:1409});
  for(let i=0;i<3;i++)game.spawnBuilding('fieldlab',i*10,0,0,0);
  game.snapshotBattle=archive=>{assert.equal(archive,true);return {version:1,tutorial:null,

@@ -70,7 +70,7 @@ class PlacementGuideSampler {
       terrain = !buildingFoundationReason(world, this.type, p, this.team) && !buildingTerrainObstructed(world, p, r, isCivilizationBuildingType(this.type));
       this.terrain.set(key, terrain);
     }
-    if (!terrain || !world.sight[this.team].explored[world.idx(p.x, p.z)] ||
+    if (!terrain || this.game.forumAccessReason(p,r,undefined,this.type,this.team) || !world.sight[this.team].explored[world.idx(p.x, p.z)] ||
         this.game.s!.supplyCaches.some(cache => !cache.collected && distance(p, cache) < r + 3) ||
         this.buckets.get(this.key(p))?.some(e => e !== gas && buildingBlockerReason(p, r, e, this.type, this.team)) ||
         (gas && this.occupiedVents.has(gas.id))) return -1;

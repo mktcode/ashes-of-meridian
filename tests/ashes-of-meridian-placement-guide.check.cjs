@@ -11,13 +11,13 @@ function fixture(team=0) {
   const game=Object.create(MeridianGame.prototype), n=90, length=n*n;
   const idx=(x,z)=>Math.max(0,Math.min(n-1,Math.floor((z+90)/2)))*n+Math.max(0,Math.min(n-1,Math.floor((x+90)/2)));
   const surface=new BattlefieldSurface(90,2.5,()=>0);
-  const world={extent:90,viewTeam:team,surface,staticGrid:new Uint8Array(length),idx,
+  const world={extent:90,cellSize:2,viewTeam:team,surface,staticGrid:new Uint8Array(length),idx,
     terrainFree:(a,b,r)=>surface.segment(a,b,r),
     sight:Array.from({length:2},()=>({visible:new Uint8Array(length).fill(1),explored:new Uint8Array(length).fill(1)}))};
   world.explored=world.sight[team].explored;
   const unit=(id,x,z,type='rifle',extra={})=>({id,team,kind:'unit',type,hp:100,size:1,x,z,order:{type:'idle'},...extra});
   const building=(id,x,z,type)=>({id,team,kind:'building',type,hp:100,size:BUILDINGS[type].size,x,z,progress:1});
-  game.s={parties:[{faction:0},{faction:0}],supplyCaches:[{x:50,z:50,collected:false}],entities:[
+  game.s={rules:{kind:'single-player'},parties:[{faction:0},{faction:0}],supplyCaches:[{x:50,z:50,collected:false}],entities:[
     building(1,-60,-60,'hq'),building(2,-45,-60,'barracks'),building(3,-30,-60,'factory'),unit(4,-60,-45,'worker'),
     unit(5,10,10),unit(6,40,0,'rifle',{exit:{x:-24,z:2,building:2}}),
     {id:7,team:-1,kind:'resource',type:'gas',hp:100,size:1.5,x:18,z:-10},
@@ -55,6 +55,18 @@ test('batched placement matches live validation across terrain, bodies, exits, v
     assert.equal(JSON.stringify(game.s),before,'sampling does not mutate battle state');
   }
 });
+test('Forum corridors update placement guides with the same live exclusion as direct construction',()=>{
+  const {game,building}=fixture(), forum=building(20,0,0,'meridianforum');
+  game.s.rules={kind:'single-player',completed:true};
+  const corridor=vm.runInContext('forumCorridors({x:0,z:0,visualRotation:0})[0]',context),
+    p={x:(corridor[2].x+corridor[3].x)*.3,z:(corridor[2].z+corridor[3].z)*.3},
+    sampler=new PlacementGuideSampler(game,'depot',0);
+  sampler.refresh();assert.equal(sampler.sample(p),1);
+  game.s.entities.push(forum);sampler.refresh();
+  assert.match(game.canBuild('depot',p),/corridors clear/);assert.equal(sampler.sample(p),-1);
+  forum.hp=0;sampler.refresh();assert.equal(sampler.sample(p),1);
+});
+
 test('terrain is cached but workers, blockers, supply caches and refinery occupancy stay live',()=>{
   const {game,world,unit,building}=fixture();let foundations=0,permissions=0;
   const foundation=world.surface.foundation.bind(world.surface), canBuild=game.canBuild.bind(game);

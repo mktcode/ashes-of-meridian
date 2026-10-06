@@ -294,7 +294,7 @@ function setup() {
       if (archiveVictory) { state.result = null; state.rules.completed = true; }
       return {version:1,state,tutorial:null};
     },
-    effects: { floats: [] }, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
+    effects: { floats: [] }, canSupplyForum: () => false, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
     workerTask: vm.runInContext('MeridianGame.prototype.workerTask', context),
@@ -1555,7 +1555,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
 });
 
-test('build menu hides unavailable civilian tiers and refreshes when expedition permissions change',()=>{
+test('build menu exposes only the Forum among civilian models in every expedition stage',()=>{
   const h=setup(),ui=h.ui,g=ui.game,tiers=[['fieldlab','embercottage'],['researchhub','terracecommons'],['researchspire','hearthtower'],['meridianforum']];
   ui.tab='build';
   for(const faction of [0,1,2]){
@@ -1565,7 +1565,7 @@ test('build menu hides unavailable civilian tiers and refreshes when expedition 
       const html=h.document.getElementById('actions').innerHTML;
       tiers.forEach((types,i)=>types.forEach(type=>{
         const pattern=new RegExp(`data-action="build:${type}"`);
-        if(i<stage)assert.match(html,pattern);else assert.doesNotMatch(html,pattern);
+        if(type==='meridianforum')assert.match(html,pattern);else assert.doesNotMatch(html,pattern);
       }));
       for(const type of ['hq','barracks','factory','hangar','depot','refinery','turret'])assert.match(html,new RegExp(`data-action="build:${type}"`));
     }
@@ -2338,6 +2338,20 @@ test('selected workers turn own foundation/damaged target taps into work orders 
     }
 });
 
+test('selected workers send smart supply orders to healthy completed Forums by touch or mouse',()=>{
+  for(const [pointerType,button] of [['touch',0],['mouse',0],['mouse',2]]) {
+    const h=setup();h.UI.prototype.bind.call(h.ui);
+    const worker={id:7,kind:'unit',type:'worker',team:0,hp:100},
+      forum={id:9,kind:'building',type:'meridianforum',team:0,hp:100,maxHp:100,progress:1,x:10,z:20};
+    h.ui.game.s.rules.completed=true;h.ui.game.s.entities=[worker,forum];h.ui.selected=[7];h.ui.pick=()=>forum;
+    h.ui.game.canSupplyForum=vm.runInContext('MeridianGame.prototype.canSupplyForum',h.context);
+    h.pointer('pointerdown',200,200,{pointerType,button});h.pointer('pointerup',200,200,{pointerType,button});
+    assert.equal(h.calls.length,1);assert.equal(h.calls[0][0],'command');
+    assert.deepEqual(JSON.parse(JSON.stringify(h.calls[0][2])),{type:'smart',id:9,x:10,z:20});
+    assert.deepEqual(h.ui.selected,[7]);
+  }
+});
+
 test('healthy own targets, self taps and selections without workers still select normally', () => {
   for (const mode of ['healthy', 'self', 'no-worker', 'deselected']) {
     const h = setup(); h.UI.prototype.bind.call(h.ui);
@@ -2659,6 +2673,18 @@ test('building rotation arrows exist only for completed own buildings and obey a
     h.ui.renderActions();assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="rotate(Left|Right)"/);
     h.click({action:'rotateRight'});
   }
+});
+
+test('Forum panels refresh with stock and growth while managed buildings hide rotation controls',()=>{
+  const h=buildingPanel();h.b.type='meridianforum';h.b.cinderStock=100;
+  h.ui.renderActions();const before=h.ui.actionSignature;
+  h.b.cinderStock=200;h.ui.renderActions();assert.notEqual(h.ui.actionSignature,before);
+  const stocked=h.ui.actionSignature,child={...h.b,id:8,type:'fieldlab',forumId:7};delete child.cinderStock;
+  h.ui.game.s.entities.push(child);h.ui.renderActions();assert.notEqual(h.ui.actionSignature,stocked);
+  h.ui.selected=[8];h.ui.renderActions();
+  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="rotate(Left|Right)"/);
+  child.progress=.3;h.ui.renderActions();
+  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="cancelBuild"/);
 });
 
 test('building buttons dispatch repair; sale pauses, cancels safely, confirms the captured ID and rejects stale repeats', () => {
