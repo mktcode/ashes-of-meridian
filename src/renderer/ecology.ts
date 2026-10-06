@@ -100,7 +100,14 @@
         });
       for(let i=0;i<8;i++){
         const shade=.62+rand()*.35,c=[shade*.91,shade,shade*.8];
+        const start=out.length;
         geom.tri(out,[x,h,z],points[(i+1)%8],points[i],c);
+        // Rounded canopy lighting on the same opaque triangles/footprint. Use each
+        // clump's centre, not the whole bush; no added vertices or random draws.
+        for(let v=start;v<out.length;v+=9){
+          const n=V.norm([(out[v]-x)/(r*r),(out[v+1]-.1)/(h*h*.45),(out[v+2]-z)/(r*r)]);
+          out[v+3]=n[0];out[v+4]=n[1];out[v+5]=n[2];
+        }
         geom.tri(out,[x,.02,z],points[i],points[(i+1)%8],c);
       }
     }

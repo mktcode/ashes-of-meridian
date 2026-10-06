@@ -112,7 +112,7 @@
         const gl = this.gl = context;
         this.program = this.programOf(VERT, FRAG);
         // Bounded, context-lifetime variants; never compile on material/frame changes.
-        for (const material of [MAT.LANDSCAPE, MAT.LEAF])
+        for (const material of [MAT.LANDSCAPE, MAT.LEAF, MAT.BRUSH])
           this.materialPrograms[material] = this.programOf(VERT, sceneMaterialFragment(material));
         this.depthProg = this.programOf(DEPTHV, DEPTHF);
         this.occlusionProg = this.programOf(OCCLUSIONV, OCCLUSIONF);
@@ -945,7 +945,7 @@
         for (let b of Object.values(map)) {
           if (b.dirty) {
             b.sceneMaterial = b.n ? b.data[21] : undefined;
-            if (b.sceneMaterial !== MAT.LANDSCAPE && b.sceneMaterial !== MAT.LEAF) b.sceneMaterial = undefined;
+            if (b.sceneMaterial !== MAT.LANDSCAPE && b.sceneMaterial !== MAT.LEAF && b.sceneMaterial !== MAT.BRUSH) b.sceneMaterial = undefined;
             if (b.sceneMaterial !== undefined) for (let i = 1; i < b.n; i++) {
               if (b.data[i * 22 + 21] !== b.sceneMaterial) { b.sceneMaterial = undefined; break; }
             }

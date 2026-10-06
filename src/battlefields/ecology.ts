@@ -115,7 +115,7 @@ function decorateEcology(builder:BattlefieldBuilder) {
         hi=Math.max(y,height(x-radius,z),height(x+radius,z),height(x,z-radius),height(x,z+radius));
       if(hi-lo>.4)continue;
       const part=rand()<.55?'Brush':'Tuft';
-      place(part,v,x,lo-.06,z,radius,.34+rand()*.1,habitat>.73?style.bloom:style.leaf,yaw,'LEAF');
+      place(part,v,x,lo-.06,z,radius,.34+rand()*.1,habitat>.73?style.bloom:style.leaf,yaw,part==='Brush'?'BRUSH':'LEAF');
       groundRemember(x,z);tufts++;
     }
   }

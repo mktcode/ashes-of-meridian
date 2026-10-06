@@ -1,7 +1,7 @@
 /* Rule-based surface baking. Pure CPU data, no DOM, GPU or simulation RNG. */
 'use strict';
 
-const MAT = { AUTO: 0, GROUND: 1, METAL: 2, BIO: 3, ROCK: 4, CRYSTAL: 5, MASSIF: 6, ALIEN: 7, LANDSCAPE: 8, WATER: 9, BARK: 10, FOLIAGE: 11, MASONRY: 12, LEAF: 13 };
+const MAT = { AUTO: 0, GROUND: 1, METAL: 2, BIO: 3, ROCK: 4, CRYSTAL: 5, MASSIF: 6, ALIEN: 7, LANDSCAPE: 8, WATER: 9, BARK: 10, FOLIAGE: 11, MASONRY: 12, LEAF: 13, BRUSH: 14 };
 
 type SurfacePattern = 'sediment' | 'strata' | 'plates' | 'cells' | 'grass' | 'granite' | 'soil' | 'bark';
 interface SurfaceRecipe {

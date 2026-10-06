@@ -9,7 +9,7 @@
     const ECOLOGY_WIND = `uniform vec2 u_wind;
 vec4 ecologyPosition(mat4 model,vec3 position,float material){
  vec4 p=model*vec4(position,1.);
- if(material==${MAT.LEAF}.&&u_wind.x>0.){
+ if((material==${MAT.LEAF}.||material==${MAT.BRUSH}.)&&u_wind.x>0.){
   float phase=model[3].x*.13+model[3].z*.17+u_wind.y*1.4;
   float bend=clamp(position.y,0.,1.);
   p.x+=sin(phase+position.y)*u_wind.x*bend;
@@ -321,6 +321,31 @@ if(v_mat==${MAT.LANDSCAPE}.){
   // River-bed sediment is still controlled by the authored signed wetness weights.
   base=mix(habitatColor,base,clamp(-v_detail.z*2.,0.,1.));
  }
+}else if(v_mat==${MAT.BRUSH}.){
+ // Opaque, model-anchored leaves: no alpha overdraw, texture reads or new geometry.
+ // Keep the placement's leaf/bloom palette, including dry and alien vegetation.
+ n=gl_FrontFacing?n:-n;
+ // A continuous oblique projection avoids seams at smoothed triangle edges.
+ vec2 p=v_modelPos.xz+v_modelPos.y*vec2(.45,.65);
+ vec2 grid=p*vec2(11.,8.);
+ grid.x+=mod(floor(grid.y),2.)*.5;
+ vec2 cell=floor(grid),q=fract(grid)-.5;
+ float variation=veilHash(cell),fungal=float(u_ecology.x==4.);
+ q.x+=(variation-.5)*q.y*.8;
+ vec2 shape=q*mix(vec2(2.35,1.25),vec2(1.85),fungal);
+ float dome=max(0.,1.-dot(shape,shape));
+ float leaf=1.-smoothstep(.65,1.,dot(shape,shape));
+ float vein=(1.-smoothstep(.025,.085,abs(q.x)))*leaf*(1.-fungal);
+ float detailOn=1.-smoothstep(.35,1.25,length(fwidth(grid)));
+ float shade=mix(1.,.70+leaf*.40+variation*.12+vein*.08,detailOn);
+ base=v_col.rgb*shade;
+ float foot=1.-smoothstep(.01,.14,v_modelPos.y);
+ base=mix(base,u_biomeSoil*(.55+luma(v_col.rgb)),foot*.28*float(u_ecology.x>.5));
+ if(u_reliefOn>.5)n=reliefNormal(n,(leaf*dome*.016+vein*.003)*detailOn);
+ if(u_ecology.x==3.){
+  float frost=smoothstep(.45,.85,n.y)*(.35+variation*.3);
+  base=mix(base,vec3(.76,.84,.86),frost);
+ }
 }else if(v_mat==${MAT.LEAF}.){
  base=v_col.rgb;n=gl_FrontFacing?n:-n;
 }else if(v_mat==${MAT.MASONRY}.){
@@ -412,7 +437,7 @@ if(u_workerRoadOn>.5){
 }
 // All surface detail remains cosmetic: never displace the CPU-authoritative ground.
 // Performance omits bump mapping; terrain reuses its albedo reads, models sample height here.
-if(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96&&v_mat!=${MAT.FOLIAGE}.&&v_mat!=${MAT.WATER}.&&v_mat!=${MAT.LEAF}.){
+if(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96&&v_mat!=${MAT.FOLIAGE}.&&v_mat!=${MAT.WATER}.&&v_mat!=${MAT.LEAF}.&&v_mat!=${MAT.BRUSH}.){
  float h=0.;
  if(v_mat==${MAT.LANDSCAPE}.)h=groundHeight;
  else if(v_mat==${MAT.MASONRY}.)h=triHeight(u_rockTex,v_pos,n,u_rockScale*2.)*u_surfaceRelief.y;

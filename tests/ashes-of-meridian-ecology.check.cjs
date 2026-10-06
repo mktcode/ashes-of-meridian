@@ -86,6 +86,28 @@ test('habitat models are finite, deterministic, bounded opaque meshes with unit 
   }
 });
 
+test('all brush variants select their dedicated opaque material across the four habitat palettes',()=>{
+  const w=bare(()=>new api.Battlefield(11,'frontier')),base=w.renderProfile,
+    geometry=json(w.renderData.geometries),placements=json(w.renderData.placements),before=topology(w);
+  for(const biome of ['verdant','ochre','rime','mycelium']){
+    w.renderData.geometries=json(geometry);w.renderData.placements=json(placements);
+    const profile=api.battlefieldEcology({...base,wilderness:biome},11);
+    w.renderProfile={...profile,ecology:{...profile.ecology,vegetationDensity:3,flora:undefined}};
+    api.decorateEcology(new api.BattlefieldBuilder(w));
+    const brushes=w.renderData.placements.filter(p=>p.mesh.startsWith('ecologyBrush')),
+      flowers=w.renderData.placements.filter(p=>p.mesh.startsWith('ecologyTuft'));
+    assert.ok(brushes.length>0,biome+' has brush placements');
+    assert.equal(w.renderData.geometries.filter(g=>g.model==='ecologyBrush').length,3,biome+' registers all seeded brush meshes');
+    assert.ok(flowers.length>0);
+    for(const p of brushes){
+      assert.equal(p.material,'BRUSH');assert.equal(p.alpha,1);
+      assert.ok(p.color===profile.ecology.leaf||p.color===profile.ecology.bloom,'keep habitat leaf/bloom colours');
+    }
+    assert.ok(flowers.every(p=>p.material==='LEAF'),'small flowers keep their existing shader');
+    assert.equal(topology(w),before,'material never changes CPU topology');
+  }
+});
+
 test('ecology clusters protect complete blocker envelopes, routes, resources and fixed placement budgets',()=>{
   let landmarks=0;
   for(const seed of [11,1,7,4]){
