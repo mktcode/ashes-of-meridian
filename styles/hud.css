@@ -3,7 +3,7 @@
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 3 }
 #hud button, #hud canvas { pointer-events: auto }
 #hud button { touch-action: manipulation }
-#topbar { position: absolute; inset: 0 0 auto; height: var(--hud-top); padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); display: flex; align-items: center; gap: 6px; pointer-events: auto }
+#topbar { position: absolute; inset: 0 0 auto; height: calc(var(--topbar-height) + env(safe-area-inset-top)); padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); display: flex; align-items: center; gap: 6px; pointer-events: auto }
 #battleLabel { order: 1; flex: 0 0 auto; max-width: 44px; padding-left: 4px; font: 8px/14px var(--mono); color: var(--muted) }
 .resource-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1; min-width: 0; gap: 0 4px }
 .resource { display: flex; align-items: center; min-width: 0; gap: 3px }

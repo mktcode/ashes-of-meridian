@@ -2671,6 +2671,27 @@ test('recruitment delegates producer choice to the simulation, independent of se
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
+test('hidden HUD measurement preserves geometry until the HUD is visible', () => {
+  const h=setup(), hud=h.document.getElementById('hud');
+  const style=h.document.getElementById('layout-vars').style;h.document.documentElement={style};
+  style.setProperty('--hud-top','48px');
+  hud.classList.add('hidden');h.ui.updateHUDLayout();
+  assert.equal(style.getPropertyValue('--hud-top'),'48px');
+  hud.classList.remove('hidden');h.ui.updateHUDLayout();
+  assert.equal(style.getPropertyValue('--hud-top'),'55px');
+});
+
+test('catalog and unit details back controls use the left-arrow asset, not the fallback star', () => {
+  const h=setup();
+  for(const tab of ['build','infantry','vehicles','aircraft','details']) {
+    h.ui.tab=tab;
+    if(tab==='details') {h.ui.selected=[1];h.ui.game.s.entities=[{id:1,kind:'unit',type:'worker',faction:0,hp:100}];}
+    h.ui.renderActions();
+    assert.match(h.document.getElementById('actions').innerHTML,
+      /data-action="tab:root"[^>]*><img class="ui-icon" src="\.\/assets\/ui\/back\.webp"/);
+  }
+});
+
 test('building and unit actions request the current model of the active faction', () => {
   const h = setup();
   for (const faction of [0, 1, 2]) {

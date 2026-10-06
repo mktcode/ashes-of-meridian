@@ -18,7 +18,7 @@
       supplyCrate: 'crate', aetherAllocation: 'echo', pioneerSquad: 'pioneers',
       surveyDrones: 'survey', fieldWorkshop: 'workshop', commandCapacitor: 'energy',
       'echo-reward': 'echo-reward', pause: 'pause', settings: 'settings',
-      back: 'back', close: 'close'
+      'tab:root': 'back', back: 'back', close: 'close'
     });
     function uiIcon(name: string, fallback = name): string {
       return Object.hasOwn(UI_ICON_ASSETS, name)

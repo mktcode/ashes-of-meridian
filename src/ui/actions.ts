@@ -292,6 +292,8 @@
         if (el.innerHTML !== markup) el.innerHTML = markup;
       },
       updateHUDLayout(this: MeridianUI) {
+        // Hidden HUDs have zero geometry; do not overwrite the visible layout defaults.
+        if ($('hud').classList.contains('hidden')) return;
         const deck = $('commandDeck').getBoundingClientRect(), panel = $('actionPanel').getBoundingClientRect(), status = $('selectionStatus');
         const top = Math.min(deck.top, panel.top, status.classList.contains('hidden') ? deck.top : status.getBoundingClientRect().top);
         if (!Number.isFinite(top) || typeof innerHeight !== 'number') return;
