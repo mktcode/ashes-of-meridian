@@ -2591,6 +2591,8 @@ test('Forum panels refresh with stock and growth while managed buildings hide ro
   h.ui.game.s.entities.push(child);h.ui.renderActions();assert.notEqual(h.ui.actionSignature,stocked);
   h.ui.selected=[8];h.ui.renderActions();
   assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="rotate(Left|Right)"/);
+  child.progress=.3;h.ui.renderActions();
+  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="cancelBuild"/);
 });
 
 test('building buttons dispatch repair; sale pauses, cancels safely, confirms the captured ID and rejects stale repeats', () => {

@@ -38,7 +38,7 @@
           this.world!.rebuild(s.entities);
           this.navDirty = false;
         }
-        this.updateSettlements();
+        this.updateSettlements(dt);
         for (const e of s.entities) {
           if (e.hp <= 0 || e.kind !== 'building' || e.progress < 1 || e.team === -1) continue;
           if (e.type === 'hq' && e.faction === FACTION_ID.FIRST)

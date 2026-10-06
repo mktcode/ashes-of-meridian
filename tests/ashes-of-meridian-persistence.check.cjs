@@ -177,20 +177,21 @@ test('Forum construction round-trips as a known seventh civilian type with paid 
   const restored=new fixture.Game(json(defaults));restored.restoreBattle(loaded);
   assert.deepEqual(json(restored.snapshotBattle()),run.battle);
 });
-test('Forum stocks, ownership, growth cursors and prospector assignments round-trip and reject malformed fields',()=>{
+test('Forum stocks, ownership, construction progress, growth cursors and prospector assignments round-trip and reject malformed fields',()=>{
   const run=savedBattle(),h=setup(),entities=run.battle.state.entities,
     forum=entities.find(e=>e.type==='fieldlab'),building=entities.find(e=>e.type==='embercottage'),
     worker=entities.find(e=>e.type==='worker'&&e.team===0),d=catalogs.buildings.meridianforum;
   Object.assign(forum,{type:'meridianforum',size:d.size,hp:d.hp,maxHp:d.hp,progress:1,cinderStock:500,settlementAt:13,settlementAttempt:64,visualRotation:1/3});
-  Object.assign(building,{forumId:forum.id,paid:{cost:0,gas:0}});
+  Object.assign(building,{forumId:forum.id,paid:{cost:0,gas:0},progress:.4,hp:building.maxHp*.4});
   Object.assign(worker,{deliveryForum:forum.id,deliveryPoint:{x:forum.x+12,z:forum.z},order:{type:'idle'}});
   assert.equal(put(h,run),true);const loaded=h.service.loadExpedition();assert.ok(loaded);
   assert.deepEqual(json(loaded.battle),run.battle);
   const before=new fixture.Game(json(defaults)),after=new fixture.Game(json(defaults));
   before.restoreBattle(run);after.restoreBattle(loaded);
   before.s.rules.completed=true;after.s.rules.completed=true;
-  before.s.time=after.s.time=13;before.updateSettlements();after.updateSettlements();
-  assert.deepEqual(json(after.snapshotBattle()),json(before.snapshotBattle()),'saved growth cursor continues deterministically');
+  before.s.time=after.s.time=13;before.updateSettlements(.5);after.updateSettlements(.5);
+  assert.equal(after.get(building.id).progress,.4+.5/catalogs.buildings[building.type].time);
+  assert.deepEqual(json(after.snapshotBattle()),json(before.snapshotBattle()),'saved growth cursor and partial construction continue deterministically');
   for(const [entity,key,value] of [[forum,'cinderStock',1001],[forum,'cinderStock',-1],[forum,'settlementAttempt',1.5],
     [building,'forumId',0],[worker,'deliveryForum','1'],[worker,'deliveryPoint',{x:Infinity,z:0}],
     [worker,'cinderStock',1],[forum,'deliveryForum',worker.id]]) {

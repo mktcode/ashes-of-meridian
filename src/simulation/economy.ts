@@ -174,7 +174,7 @@
       },
       workerTask(this: MeridianGame, target: Entity | null, team: PlayerTeam = 0): 'build' | 'repair' | null {
         if (!this.s || this.s.result || this.s.stopped || !target || target.hp <= 0 || target.team !== team) return null;
-        if (target.kind === 'building' && target.progress < 1) return 'build';
+        if (target.kind === 'building' && target.progress < 1) return target.forumId === undefined ? 'build' : null;
         if ((target.kind === 'building' || target.kind === 'unit') &&
           target.progress >= 1 && target.hp < target.maxHp) return 'repair';
         return null;
@@ -279,7 +279,7 @@
       cancelConstruction(this: MeridianGame, id: number, team: PlayerTeam = 0) {
         if (this.s!.stopped) return;
         let e = this.get(id);
-        if (!e || e.team !== team || e.kind !== 'building' || e.progress >= 1) return;
+        if (!e || e.team !== team || e.kind !== 'building' || e.progress >= 1 || e.forumId !== undefined) return;
         let c = e.paid || this.cost(e.type, 'building', team);
         this.account(team).alloy += c.cost * 0.75;
         this.account(team).gas += c.gas * 0.75;
@@ -414,6 +414,17 @@
         const snapped = this.world!.nearest(p.x,p.z);
         return distance(snapped, n) <= 2.15 ? snapped : p;
       },
+      advanceConstruction(this: MeridianGame, b: BuildingEntity, dt: number): boolean {
+        if (b.hp <= 0 || b.progress >= 1 || dt <= 0) return false;
+        const team = b.team as PlayerTeam, old = b.progress;
+        b.progress = Math.min(1, b.progress + dt * (b.buildRate || 1) / BUILDINGS[b.type].time);
+        b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);
+        if (b.progress < 1) return false;
+        if (b.type === 'hq') this.party(team).deploymentPending = false;
+        if (team === 0) this.s!.stats.built++;
+        this.notify(team, 'complete', { type: b.type, x: b.x, z: b.z });
+        return true;
+      },
       worker(this: MeridianGame, e: UnitEntity, dt: number) {
         const team = e.team as PlayerTeam;
         let o = e.order,
@@ -421,7 +432,8 @@
         if (['move', 'attackMove', 'hold', 'stop', 'attack', 'follow'].includes(o.type)) return false;
         if (o.type === 'build' || o.type === 'repair') {
           let b = this.get(o.id) as BuildingEntity | null;
-          if (!b || b.team !== team || (o.type === 'repair' && b.progress < 1)) {
+          if (!b || b.team !== team || (o.type === 'repair' && b.progress < 1) ||
+            (o.type === 'build' && b.forumId !== undefined)) {
             this.finishOrder(e);
             return true;
           }
@@ -437,16 +449,7 @@
           }
           e.rot = angleLerp(e.rot, Math.atan2(b.x - e.x, b.z - e.z), dt * 5);
           if (b.progress < 1) {
-            let rate = dt * (b.buildRate || 1) / (BUILDINGS[b.type] as BuildingDefinitionShape).time;
-            let old = b.progress;
-            b.progress = Math.min(1, b.progress + rate);
-            b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);
-            if (b.progress >= 1) {
-              if (b.type === 'hq') this.party(team).deploymentPending = false;
-              if (team === 0) s.stats.built++;
-              this.notify(team, 'complete', { type: b.type, x: b.x, z: b.z });
-              this.finishOrder(e);
-            }
+            if (this.advanceConstruction(b, dt)) this.finishOrder(e);
           } else if (b.hp < b.maxHp && this.account(team).alloy > 0.1) {
             const repairFactor = 1 - (this.party(team).meta.repairLogistics || 0) * FLEET_EFFECTS.repairDiscount,
               amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10 / repairFactor);

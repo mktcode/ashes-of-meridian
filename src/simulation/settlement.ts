@@ -101,14 +101,15 @@ const settlementMethods = {
         p = {x:forum.x+Math.sin(angle)*radius,z:forum.z+Math.cos(angle)*radius},
         type = settlementBuildingType(radius,random(),random());
       if (this.settlementPlacementReason(type,p,forum.team as PlayerTeam)) continue;
-      const b = this.spawnBuilding(type,p.x,p.z,forum.team as PlayerTeam,forum.faction,{paid:{cost:0,gas:0},forumId:forum.id});
-      if (forum.team === 0) this.s!.stats.built++;
+      const b = this.spawnBuilding(type,p.x,p.z,forum.team as PlayerTeam,forum.faction,
+        {progress:.06,paid:{cost:0,gas:0},forumId:forum.id});
+      b.hp = b.maxHp * b.progress;
       this.world!.rebuild(this.s!.entities);
       return true;
     }
     return false;
   },
-  updateSettlements(this: MeridianGame) {
+  updateSettlements(this: MeridianGame, dt = 0) {
     const s = this.s!;
     if (s.rules.kind !== 'single-player' || !s.rules.completed) return;
     const groups = new Map<number,BuildingEntity[]>();
@@ -124,7 +125,10 @@ const settlementMethods = {
     }
     for (const [owner,buildings] of groups) {
       const forum = this.get(owner);
-      if (forum?.kind === 'building' && forum.type === 'meridianforum' && forum.team === buildings[0].team) continue;
+      if (forum?.kind === 'building' && forum.type === 'meridianforum' && forum.team === buildings[0].team) {
+        if (forum.progress >= 1) for (const b of buildings) this.advanceConstruction(b,dt);
+        continue;
+      }
       const first = buildings[0];
       if (first.settlementAt === undefined) first.settlementAt = s.time + FORUM_SETTLEMENT.interval;
       if (s.time < first.settlementAt) continue;

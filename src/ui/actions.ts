@@ -248,7 +248,7 @@
             html += button('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
             if (b!.forumId === undefined) html += `<div class="building-rotation">${button('rotateLeft', 'Rotate left', 'rotateLeft')}${button('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
             if (!isCivilizationBuildingType(b!.type)) html += button('rally', 'Rally point', 'rally');
-          } else html += button('cancelBuild', 'Cancel build', 'cancel');
+          } else if (b!.forumId === undefined) html += button('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
           for (let k of contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k, this.game.civilizationStage)))
             html += button('build:' + k, buildingName(k, f), k, {
@@ -267,7 +267,7 @@
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?
-            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}${b!.type === 'meridianforum' && ready ?
+            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : b!.forumId !== undefined ? '<br>Automatic construction' : ''}${b!.type === 'meridianforum' && ready ?
             `<br>Cinder: ${Math.floor(b!.cinderStock || 0)} / ${FORUM_SETTLEMENT.capacity}<br>Buildings: ${this.game.alive(e => e.kind === 'building' && e.forumId === b!.id).length} / ${forumBuildingTarget(b!)} (max ${FORUM_SETTLEMENT.buildings})<br>Send prospectors here to supply this settlement.` : ''}</p>` : '');
       },
       buildingAction(this: MeridianUI, action: string, id: number) {

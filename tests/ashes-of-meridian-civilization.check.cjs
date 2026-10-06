@@ -188,7 +188,7 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
  const forum=game.spawnBuilding('meridianforum',0,0,0,0),funds={...game.account(0)};
  game.random=()=>assert.fail('Settlement must not consume battle RNG');
  forum.cinderStock=1000;game.updateSettlements();assert.equal(game.s.entities.length,1);
- for(let i=1;i<=70;i++){game.s.time=i*10;game.updateSettlements();}
+ for(let i=1;i<=70;i++){game.s.time=i*10;game.updateSettlements(10);}
  const grown=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);
  assert.equal(grown.length,30);assert.deepEqual(game.account(0),funds);assert.ok(grown.every(b=>b.progress===1&&b.paid.cost===0&&b.paid.gas===0));
  assert.ok(new Set(grown.map(b=>b.type)).size>=4,'all classes mix rather than unlock by stage');
@@ -212,13 +212,51 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
  game.s.rules.completed=false;forum.cinderStock=500;game.s.time+=100;game.updateSettlements();
  assert.equal(game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0).length,30);
 });
+test('all six settlement models build themselves over their normal construction time without workers, spending or effect RNG',()=>{
+ for(const type of types){
+  const {game}=fixture(0,()=>40);game.s.entities=[];
+  const forum=game.spawnBuilding('meridianforum',0,0,0,0),
+   b=game.spawnBuilding(type,30,30,0,0,{progress:.06,paid:{cost:0,gas:0},forumId:forum.id});
+  b.hp=b.maxHp*.06;const funds={...game.account(0)},events=[];
+  game.random=()=>assert.fail('Automatic construction must not draw battle RNG');
+  game.effects={construction(){assert.fail('No artificial worker construction beams');}};
+  game.notify=(_team,type,data)=>events.push({type,data});
+  assert.equal(civilizationScoreForBuildings([b],0),0);assert.equal(game.s.stats.built,0);
+  game.updateSettlements();assert.equal(b.progress,.06,'maintenance without elapsed time does not construct');
+  game.updateSettlements(BUILDINGS[type].time/2);assert.equal(b.progress,.56);
+  assert.ok(Math.abs(b.hp-b.maxHp*.56)<1e-9);assert.equal(civilizationScoreForBuildings([b],0),0);
+  assert.equal(game.s.stats.built,0);assert.equal(events.length,0);
+  game.updateSettlements(BUILDINGS[type].time/2);assert.equal(b.progress,1);assert.equal(b.hp,b.maxHp);
+  assert.equal(civilizationScoreForBuildings([b],0),BUILDINGS[type].civilizationPoints);
+  assert.equal(game.s.stats.built,1);assert.equal(events.length,1);assert.equal(events[0].type,'complete');
+  game.updateSettlements(10);assert.equal(game.s.stats.built,1);assert.equal(events.length,1);
+  assert.deepEqual(game.account(0),funds);assert.equal(forum.cinderStock,undefined);
+ }
+});
+test('new automatic foundations reserve their slot, reject worker takeover and cancellation, and stop building when their Forum is lost',()=>{
+ const {game}=fixture(0,()=>40),worker=game.s.entities[0];game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.cinderStock=34;
+ game.random=()=>assert.fail('Automatic foundation must not draw battle RNG');
+ game.updateSettlements();game.s.time=10;game.updateSettlements(10);
+ const b=game.s.entities.at(-1);assert.equal(b.forumId,forum.id);
+ assert.equal(b.progress,.06);assert.equal(b.hp,b.maxHp*.06);assert.equal(game.s.stats.built,0);
+ assert.equal(game.workerTask(b),null);worker.order={type:'build',id:b.id};
+ game.worker(worker,10);assert.equal(worker.order.type,'idle');assert.equal(b.progress,.06);
+ game.cancelConstruction(b.id);assert.ok(b.hp>0);
+ assert.equal(game.submitAction(0,{kind:'cancelConstruction',id:b.id}),false);
+ game.s.time=20;game.updateSettlements(1);assert.equal(game.s.entities.length,2,'a foundation already occupies its stock-supported slot');
+ const progress=b.progress;assert.ok(progress>.06&&progress<1);assert.equal(forum.cinderStock,34);
+ game.s.rules.completed=false;game.updateSettlements(1);assert.equal(b.progress,progress);
+ game.s.rules.completed=true;forum.hp=0;game.updateSettlements(1);assert.equal(b.progress,progress);
+ game.s.time+=10;game.updateSettlements(10);assert.equal(b.hp,0);assert.equal(game.s.stats.built,0);
+});
 test('multiple Forums keep independent stocks, overlapping radii share exclusions, and orphan buildings disappear one at a time',()=>{
  const {game}=fixture(0,()=>40);game.s.entities=[];
  const a=game.spawnBuilding('meridianforum',-25,0,0,0),b=game.spawnBuilding('meridianforum',25,0,0,0);
  a.cinderStock=100;b.cinderStock=0;game.updateSettlements();
- for(let i=1;i<=12;i++){game.s.time=i*10;game.updateSettlements();}
+ for(let i=1;i<=12;i++){game.s.time=i*10;game.updateSettlements(10);}
  const grown=game.s.entities.filter(e=>e.forumId===a.id&&e.hp>0);
- assert.equal(grown.length,3);assert.ok(game.s.entities.every(e=>e.forumId!==b.id));
+ assert.ok(grown.every(e=>e.progress===1));assert.equal(grown.length,3);assert.ok(game.s.entities.every(e=>e.forumId!==b.id));
  for(const building of grown)assert.equal(game.forumAccessReason(building,building.size,undefined,building.type,0),'');
  const score=civilizationScoreForBuildings(game.s.entities,0);
  assert.equal(game.sellBuilding(a.id),true);assert.equal(civilizationScoreForBuildings(game.s.entities,0),score);
