@@ -1,7 +1,7 @@
 ---
 name: aom-doc-auditor
 description: Prüft Dokumentation und offene Issues von Ashes of Meridian gegen Quellen und Tests, ausschließlich lesend.
-model: openai-codex/gpt-6-sol
+model: openai-codex/gpt-6.1-sol
 thinking: medium
 tools: read, grep, find, ls, contact_supervisor
 extensions:
