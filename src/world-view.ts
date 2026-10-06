@@ -313,7 +313,26 @@ class SceneryFogField {
 }
 
 // Transient, RNG-neutral wear from observed movement, never navigation or save data.
-const WORKER_ROAD_RADIUS = 2.2;
+const WORKER_ROAD_RADIUS = 2.2, ROAD_JOIN_CELLS = 2;
+// Grayscale closing: bridge narrow gaps without blurring or widening isolated roads.
+// A square kernel is separable; four bounded passes reuse two view-owned buffers.
+function closeRoadGaps(source: Uint8Array, a: Uint8Array, b: Uint8Array, size: number) {
+  const extrema = (input: Uint8Array, output: Uint8Array, vertical: boolean, maximum: boolean) => {
+    for (let row = 0; row < size; row++) for (let col = 0; col < size; col++) {
+      const i = row*size+col, axis = vertical ? row : col, stride = vertical ? size : 1;
+      const first = axis < ROAD_JOIN_CELLS ? -axis : -ROAD_JOIN_CELLS,
+        last = axis+ROAD_JOIN_CELLS < size ? ROAD_JOIN_CELLS : size-1-axis;
+      let value = maximum ? 0 : 255;
+      for (let offset = first; offset <= last; offset++) {
+        const sample = input[i+offset*stride];
+        if (maximum ? sample > value : sample < value) value = sample;
+      }
+      output[i] = value;
+    }
+  };
+  extrema(source,a,false,true); extrema(a,b,true,true);
+  extrema(b,a,false,false); extrema(a,b,true,false);
+}
 class WorkerRoadField {
   readonly size: number;
   readonly cell: number;
@@ -398,7 +417,7 @@ class BuildingRoadField {
     this.key = key; this.pixels.fill(0);
     const { extent, cell, size } = this.field;
     for (const e of buildings) {
-      const inner = e.size * 1.08 + 1.1, fringe = 1.45, bulge = 1.6,
+      const inner = e.size * 1.08 + .55, fringe = 1.05, bulge = 1.25,
         bound = (inner + bulge + fringe) * Math.SQRT2,
         yaw = buildingVisualYaw(e), cs = Math.cos(yaw), sn = Math.sin(yaw),
         phase = surfaceHash(Math.round(e.x*16),Math.round(e.z*16),e.id^0x6170726e)*Math.PI*2;
@@ -431,9 +450,12 @@ class BattlefieldView {
   private workerRoads: WorkerRoadField | null = null;
   private buildingRoads: BuildingRoadField | null = null;
   private roadPixels: Uint8Array<ArrayBuffer> | null = null;
+  private roadJoinScratch: Uint8Array<ArrayBuffer> | null = null;
+  private joinedRoadPixels: Uint8Array<ArrayBuffer> | null = null;
   clearWorkerRoads() {
     if (!this.workerRoads) return;
     this.workerRoads = null; this.buildingRoads = null; this.roadPixels = null;
+    this.roadJoinScratch = null; this.joinedRoadPixels = null;
     this.R.releaseWorkerRoads();
   }
   updateWorkerRoads(time: number, entities: readonly Entity[], observed: (e: Entity) => boolean) {
@@ -455,10 +477,15 @@ class BattlefieldView {
         return this.world!.terrainFree?.(w,target) === false ? null : target;
       }), buildingsChanged = buildings.update(visibleBuildings);
     if (!wearChanged && !buildingsChanged) return;
-    const pixels = this.roadPixels ??= new Uint8Array(field.pixels.length);
+    const pixels = this.roadPixels ??= new Uint8Array(field.pixels.length),
+      joined = this.joinedRoadPixels ??= new Uint8Array(field.pixels.length);
+    if (wearChanged) {
+      const scratch = this.roadJoinScratch ??= new Uint8Array(field.pixels.length);
+      closeRoadGaps(field.pixels,scratch,joined,field.size);
+    }
     let changed = false;
     for (let i = 0; i < pixels.length; i++) {
-      const pixel = Math.round(255-(255-field.pixels[i])*(255-buildings.pixels[i])/255);
+      const pixel = Math.round(255-(255-joined[i])*(255-buildings.pixels[i])/255);
       if (pixels[i] !== pixel) { pixels[i] = pixel; changed = true; }
     }
     if (changed) this.R.workerRoads(pixels, field.size);

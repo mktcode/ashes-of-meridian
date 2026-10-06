@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const {loadScripts,RENDERER_SCRIPTS} = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core','content',...RENDERER_SCRIPTS,'world-view']);
-const {WorkerRoadField,BuildingRoadField,BattlefieldView,MeridianRenderer} = vm.runInContext('({WorkerRoadField,BuildingRoadField,BattlefieldView,MeridianRenderer})',context);
+const {WorkerRoadField,BuildingRoadField,BattlefieldView,MeridianRenderer,closeRoadGaps} = vm.runInContext('({WorkerRoadField,BuildingRoadField,BattlefieldView,MeridianRenderer,closeRoadGaps})',context);
 const worker = x => ({id:1,x,z:0});
 function passage(field,start) {
   for(let i=0;i<=40;i++) field.update(start+i*.25,[worker(i%2 ? 0 : 1)]);
@@ -159,7 +159,7 @@ test('building apron edges are asymmetric, deterministic and leave the core cove
 test('nearby building fringes merge more strongly than either individual apron',()=>{
   const field=new WorkerRoadField(20),a=new BuildingRoadField(field),b=new BuildingRoadField(field),merged=new BuildingRoadField(field),
     first={id:7,kind:'building',type:'depot',hp:100,x:-.5,z:.5,size:2.3,team:0},
-    second={...first,id:8,x:8.5};
+    second={...first,id:8,x:7.5};
   a.update([first]);b.update([second]);merged.update([first,second]);
   let blended=0;
   for(let i=0;i<field.pixels.length;i++){
@@ -167,7 +167,24 @@ test('nearby building fringes merge more strongly than either individual apron',
     if(a.pixels[i]>0&&a.pixels[i]<255&&b.pixels[i]>0&&b.pixels[i]<255&&merged.pixels[i]>Math.max(a.pixels[i],b.pixels[i]))blended++;
   }
   assert.ok(blended>0,'overlapping edges fill in rather than keeping the weaker seam');
-  assert.equal(merged.pixels[20*field.size+24],255,'gap between these nearby pads is filled');
+});
+
+test('road closing fills narrow gaps at the weaker wear level without widening isolated strips',()=>{
+  const size=19,input=new Uint8Array(size*size),scratch=new Uint8Array(input.length),joined=new Uint8Array(input.length);
+  const strip=(x,value)=>{for(let z=4;z<=14;z++)for(let dx=0;dx<2;dx++)input[z*size+x+dx]=value;};
+  strip(4,220);strip(9,160);
+  const before=Array.from(input);
+  closeRoadGaps(input,scratch,joined,size);
+  for(let x=6;x<=8;x++)assert.equal(joined[9*size+x],160,'three-cell gap inherits weaker road wear');
+  assert.equal(joined[9*size+3],0);assert.equal(joined[9*size+11],0,'outer road edges are not dilated');
+  assert.deepEqual(Array.from(input),before,'raw wear remains authoritative for fading');
+  input.fill(0);strip(4,220);
+  closeRoadGaps(input,scratch,joined,size);
+  assert.deepEqual(Array.from(joined),Array.from(input),'isolated straight road keeps its width');
+  strip(11,160);closeRoadGaps(input,scratch,joined,size);
+  assert.equal(joined[9*size+8],0,'larger gaps remain open');
+  input.fill(0);closeRoadGaps(input,scratch,joined,size);
+  assert.ok(joined.every(p=>p===0),'expired roads leave no synthetic residue');
 });
 
 test('used HQ approaches join the apron without changing entities or worker rules',()=>{
