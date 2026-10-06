@@ -775,12 +775,52 @@ test('effect culling preserves visible output and does not redistribute the acce
   assert.equal(JSON.stringify(h.render()), bounded, 'fully visible draw parameters and order are unchanged');
 });
 
+test('Forum parcel fills follow native terrain facets and cut the circle, all streets and the plaza exactly, without RNG or state changes',()=>{
+ const context=loadScripts(['core','content','battlefield-surface',...SIMULATION_SCRIPTS,'world-view']);
+ const {BattlefieldSurface,buildForumParcelGeometry,forumCorridors,forumCorridorBlocked,buildingVisualYaw,FORUM_SETTLEMENT}=vm.runInContext(
+  '({BattlefieldSurface,buildForumParcelGeometry,forumCorridors,forumCorridorBlocked,buildingVisualYaw,FORUM_SETTLEMENT})',context);
+ vm.runInContext('Math.random = seeded = () => { throw Error("Parcel rendering must not consume RNG"); }',context);
+ const surface=new BattlefieldSurface(80,4,(x,z)=>3+Math.sin(x*.7)*.3+Math.cos(z*.4)*.2),before=surface.heights.slice(),radius=FORUM_SETTLEMENT.radius;
+ const cross=(a,b,p)=>(b.x-a.x)*(p.z-a.z)-(b.z-a.z)*(p.x-a.x);
+ for(const rotation of [0,1/3,2]){
+  const forum=Object.freeze({id:1,x:7,z:-4,size:10.4,team:0,visualRotation:rotation}),saved=JSON.stringify(forum),
+   data=buildForumParcelGeometry({surface},forum),streets=forumCorridors(forum,forum.size+.5),triangles=[];
+  assert.ok(data.length>0);assert.equal(data.length%27,0);
+  for(let i=0;i<data.length;i+=27){
+   const points=[0,9,18].map(o=>({x:data[i+o]+forum.x,y:data[i+o+1],z:data[i+o+2]+forum.z}));triangles.push(points);
+   for(const p of points){assert.ok(Math.hypot(p.x-forum.x,p.z-forum.z)<=radius+1e-4);assert.ok(Math.abs(p.y-surface.heightAt(p.x,p.z)-.065)<1e-5);}
+   const center={x:points.reduce((s,p)=>s+p.x,0)/3,z:points.reduce((s,p)=>s+p.z,0)/3};
+   assert.ok(Math.abs(points.reduce((s,p)=>s+p.y,0)/3-surface.heightAt(center.x,center.z)-.065)<1e-5,'a triangle never bridges a CPU terrain facet');
+   assert.ok(streets.every(poly=>!poly.every((a,j)=>cross(a,poly[(j+1)%poly.length],center)>1e-4)),'no painted triangle lies inside a street or plaza');
+  }
+  const yaw=buildingVisualYaw(forum),cs=Math.cos(yaw),sn=Math.sin(yaw),at=(x,z)=>({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs}),
+   covered=p=>triangles.some(t=>{const d=t.map((a,j)=>cross(a,t[(j+1)%3],p));return d.every(v=>v>=-1e-6)||d.every(v=>v<=1e-6);});
+  for(const x of [-.75,-.25,.25,.75])for(const z of [-.55,.55])assert.equal(covered(at(x*radius,z*radius)),true,'all eight parcels are filled');
+  for(const [x,z] of [[-radius/2,33],[0,40],[radius/2,-33],[45,0],[0,0],[7,7]])assert.equal(covered(at(x,z)),false,'street and plaza interiors remain completely empty');
+  const plaza=forum.size+.5;
+  assert.ok(streets[4].every(p=>Math.abs(Math.hypot(p.x-forum.x,p.z-forum.z)-plaza)<1e-9),'visible plaza matches the small selection ring');
+  assert.equal(covered(at(10,10)),true,'the formerly empty band outside the selection ring is now painted');
+  assert.equal(forumCorridorBlocked(forum,at(10,10),.1),true,'the hidden navigation reserve still protects Worker access');
+  for(let i=0;i<16;i++){
+   const angle=i*Math.PI*2/16;
+   assert.equal(covered(at(Math.cos(angle)*plaza*.95,Math.sin(angle)*plaza*.95)),false,'the round plaza stays empty in every direction');
+  }
+  for(const sx of [-1,1])for(const sz of [-1,1])
+   assert.equal(covered(at(sx*plaza*.85,sz*plaza*.85)),true,'former square corners are painted outside the round plaza');
+  assert.equal(covered(at(radius+1,0)),false);assert.equal(JSON.stringify(forum),saved);
+ }
+ const edge=buildForumParcelGeometry({surface},{id:1,x:78,z:0,size:10.4,team:0});
+ for(let i=0;i<edge.length;i+=9)assert.ok(Math.abs(edge[i]+78)<=surface.extent+1e-4&&Math.abs(edge[i+2])<=surface.extent+1e-4,'no fill outside native map bounds');
+ assert.equal(buildForumParcelGeometry({surface},{id:1,x:0,z:0,size:100,team:0}).length,0,'a fully excluded area produces no geometry');
+ assert.deepEqual(surface.heights,before);
+});
+
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
 function appClock(diagnostic = false, reducedMotion = true) {
   let now = 0;
-  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [];
+  const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [], rings = [], parcelBuilds = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
-  const elements = new Map(), window = {}, queryRequests = [], buildings = {};
+  const elements = new Map(), window = {}, queryRequests = [], buildings = {}, forumSettings = {radius:73};
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
   const $ = id => {
     if (!elements.has(id)) elements.set(id, {
@@ -814,13 +854,19 @@ function appClock(diagnostic = false, reducedMotion = true) {
     getComputedStyle: element => ({ opacity: element.style.opacity ?? '1', transform: element.style.transform ?? 'none' }),
     console: { error: e => errors.push(e), warn() {} },
     META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {desert:{render:{}}}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
-    PLACEMENT_GUIDE_MATERIAL: -9,
+    PLACEMENT_GUIDE_MATERIAL: -9, FORUM_PARCEL_MATERIAL: -10,
+    buildForumParcelGeometry(world,forum) {
+      parcelBuilds.push({world,id:forum.id,rotation:forum.visualRotation||0});
+      if(world.emptyParcels) return new Float32Array();
+      return new Float32Array([0,1,0,0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,1,1,1,0,1,0,1,1,1]);
+    },
     battlefieldId: map => map,
     Battlefield: class { renderProfile = {}; },
     savedBattleMenuScene: vm.runInContext('savedBattleMenuScene', loadScripts(['world-view'])),
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
     expeditionStageUnlocked: vm.runInContext('expeditionStageUnlocked', loadScripts(['content'])),
-    createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}), drawEffectRing() {},
+    createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}),
+    FORUM_SETTLEMENT: forumSettings, drawEffectRing(_renderer,...args) { rings.push(args); },
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
     MeridianRenderer: class {
       viewport = { width: 800, height: 600, left: 0, top: 0 };
@@ -828,6 +874,7 @@ function appClock(diagnostic = false, reducedMotion = true) {
       meshes = {}; static = {}; dynamic = {}; effects = {}; textureResources = {};
       width = 800; height = 600; sceneSamples = 0; bloomTargets = []; bloomWidth = 1; bloomHeight = 1; canRetainScene = true;
       frameReady() { return true; } releaseEnvironment() {} releaseMenuSky() {} releaseGeometry() {}
+      streamGeometry() {} add() {}
       hasBattlefieldTextures() { return true; }
       async prepareBattlefieldTextures() { return true; }
       setBattlefieldTime(time) { this.battlefieldTime=time; }
@@ -880,7 +927,7 @@ function appClock(diagnostic = false, reducedMotion = true) {
   } });
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
-  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, $,
+  return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, rings, parcelBuilds, forumSettings, $,
     get performance() { return window.Meridian.performance; },
     setBuilding(name,value) { buildings[name]=value; },
     frame(t) {
@@ -890,6 +937,62 @@ function appClock(diagnostic = false, reducedMotion = true) {
     }
   };
 }
+
+test('selected Forum parcel overlays are translucent, cached while paused, update on rotation/world changes and release on deselection or menus',()=>{
+ const h=appClock(),uploads=[],marks=[],releases=[],forum={id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:12,z:8,progress:.5};
+ h.ui.paused=true;h.game.localTeam=0;h.game.s.entities=[forum];h.setBuilding('meridianforum',{});
+ h.game.world={surface:{entityHeight:()=>0}};h.game.observed=()=>true;h.ui.introObserves=()=>false;
+ h.game.random=()=>assert.fail('Parcel overlay cannot draw battle RNG');let selected=true;
+ h.ui.selectionIds=()=>new Set(selected?[forum.id]:[]);
+ h.renderer.streamGeometry=(name,data)=>uploads.push({name,data});h.renderer.add=(...args)=>marks.push(args);h.renderer.releaseGeometry=name=>releases.push(name);
+ const before=JSON.stringify(h.game.s);h.frame(0);assert.equal(JSON.stringify(h.game.s),before);
+ assert.equal(uploads.length,1);assert.equal(marks[0][0],'forumParcels:1');assert.equal(marks[0][13],'effects');assert.equal(marks[0][14],-10);
+ assert.ok(marks[0][12]>0&&marks[0][12]<.5,'translucent fill, not an opaque surface');
+ h.frame(20);assert.equal(uploads.length,1,'no per-frame geometry upload');
+ forum.visualRotation=1;h.frame(40);assert.equal(uploads.length,2);assert.equal(h.parcelBuilds.at(-1).rotation,1);
+ forum.cinderStock=1200;h.game.s.cam.x=3;h.renderer.viewport.width=960;h.frame(60);assert.equal(uploads.length,2,'stock, camera and viewport do not change the terrain mesh');
+ h.renderer.project=()=>({x:-2000,y:300});const count=marks.length;h.frame(80);assert.ok(marks.length>count,'offscreen Forum centers cannot cull a visible part of the circle');
+ h.game.world={...h.game.world};h.frame(100);assert.equal(uploads.length,3);
+ h.game.world.surface={entityHeight:()=>0};h.frame(120);assert.equal(uploads.length,4);
+ selected=false;h.ui.hover=forum.id;h.frame(140);assert.deepEqual(releases,['forumParcels:1'],'hover alone retains no fill');
+ selected=true;h.frame(160);assert.equal(uploads.length,5);
+ h.game.observed=()=>false;h.frame(180);assert.equal(releases.length,2,'hidden Forums retain no overlay');
+ h.game.observed=()=>true;forum.hp=0;h.frame(200);assert.equal(uploads.length,5);
+ forum.hp=950;h.frame(220);h.ui.battleIntro={};h.frame(240);assert.equal(releases.length,3,'intros do not show planning overlays');
+ h.ui.battleIntro=null;h.frame(260);h.ui.view='home';h.frame(280);assert.equal(releases.length,4,'menu transition releases view-owned GPU data');
+ assert.equal(h.steps.length,0);assert.deepEqual(h.errors,[]);
+});
+
+test('Forum parcel overlays drop stale GPU geometry when a changed world has no paintable area',()=>{
+ const h=appClock(),uploads=[],releases=[],marks=[],forum={id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:0,z:0};
+ h.ui.paused=true;h.game.s.entities=[forum];h.setBuilding('meridianforum',{});h.game.localTeam=0;
+ h.game.world={surface:{entityHeight:()=>0}};h.game.observed=()=>true;h.ui.selectionIds=()=>new Set([1]);
+ h.renderer.streamGeometry=name=>uploads.push(name);h.renderer.releaseGeometry=name=>releases.push(name);h.renderer.add=(...args)=>marks.push(args);
+ h.frame(0);assert.equal(uploads.length,1);assert.equal(marks.length,1);
+ h.game.world={...h.game.world,emptyParcels:true};h.frame(20);h.frame(40);
+ assert.equal(uploads.length,1);assert.equal(marks.length,1);assert.deepEqual(releases,['forumParcels:1']);
+ assert.equal(h.parcelBuilds.length,2,'empty areas are cached without uploading empty meshes');assert.deepEqual(h.errors,[]);
+});
+
+test('selected Forums show their configured settlement radius, including offscreen centers, without state or RNG changes',()=>{
+ const h=appClock(),forum=Object.freeze({id:1,kind:'building',type:'meridianforum',team:0,hp:950,size:10.4,x:12,z:8,progress:.5});
+ h.ui.paused=true;h.game.localTeam=0;h.game.s.entities=[forum];h.setBuilding('meridianforum',{});
+ h.game.observed=()=>true;h.ui.introObserves=()=>false;h.game.random=()=>assert.fail('Radius display must not consume battle RNG');
+ let selected=true;h.ui.selectionIds=()=>new Set(selected?[forum.id]:[]);
+ const before=JSON.stringify(h.game.s),radiusRings=()=>h.rings.filter(r=>r[2]===h.forumSettings.radius);
+ h.frame(0);assert.equal(radiusRings().length,1);assert.deepEqual(radiusRings()[0].slice(0,3),[forum.x,forum.z,h.forumSettings.radius]);
+ assert.equal(JSON.stringify(h.game.s),before);assert.equal(h.steps.length,0);
+ h.rings.length=0;h.renderer.project=()=>({x:-1000,y:300});h.frame(20);
+ assert.equal(radiusRings().length,1,'entity-center culling cannot hide a potentially visible radius');
+ h.rings.length=0;h.renderer.project=()=>({x:400,y:300});selected=false;h.ui.hover=forum.id;h.frame(40);
+ assert.equal(radiusRings().length,0,'hover alone does not show the settlement radius');
+ h.rings.length=0;h.ui.hover=null;h.frame(60);assert.equal(h.rings.length,0);
+ selected=true;h.game.s.entities=[{...forum,hp:0}];h.frame(80);assert.equal(radiusRings().length,0);
+ h.game.s.entities=[forum];h.game.observed=()=>false;h.frame(100);assert.equal(radiusRings().length,0);
+ h.game.observed=()=>true;h.setBuilding('fieldlab',{});h.game.s.entities=[{...forum,type:'fieldlab'}];h.frame(120);
+ assert.equal(radiusRings().length,0,'other civilian buildings have no settlement radius');
+ assert.deepEqual(h.errors,[]);
+});
 
 test('app revalidates restored and resized cameras while paused but leaves cinematic travel alone',()=>{
   const h=appClock(),cam=h.game.s.cam;let calls=0;

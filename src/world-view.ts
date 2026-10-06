@@ -1,6 +1,74 @@
 /* GPU adapter for CPU-generated world data, plus entity models. */
 'use strict';
 
+// View-only parcel fill: clip native terrain triangles, never bridge terrain facets
+// or approximate street holes with interpolated colors. No placement/RNG queries.
+// The visible plaza matches the small selection ring; the CPU navigation reserve stays larger.
+function buildForumParcelGeometry(world: Battlefield, forum: BuildingEntity): Float32Array {
+  const surface = world.surface!, radius = FORUM_SETTLEMENT.radius, data: number[] = [],
+    circle = Array.from({length:128}, (_,i) => {
+      const angle = i*Math.PI*2/128;
+      return {x:forum.x+Math.cos(angle)*radius,z:forum.z+Math.sin(angle)*radius};
+    }), streets = forumCorridors(forum,forum.size+.5).map(polygon => ({polygon,
+      minX:Math.min(...polygon.map(p=>p.x)),maxX:Math.max(...polygon.map(p=>p.x)),
+      minZ:Math.min(...polygon.map(p=>p.z)),maxZ:Math.max(...polygon.map(p=>p.z))}));
+  const clip = (polygon: Position[], a: Position, b: Position, inside: boolean): Position[] => {
+    const sign = inside ? 1 : -1, distances = polygon.map(p =>
+      sign*((b.x-a.x)*(p.z-a.z)-(b.z-a.z)*(p.x-a.x)));
+    if (distances.every(d=>d>=0)) return polygon;
+    if (distances.every(d=>d<0)) return [];
+    const result: Position[] = [];
+    for (let i=0;i<polygon.length;i++) {
+      const j=(i+polygon.length-1)%polygon.length, p=polygon[j], q=polygon[i], d=distances[j], e=distances[i];
+      if ((d>=0)!==(e>=0)) {
+        const t=d/(d-e); result.push({x:p.x+(q.x-p.x)*t,z:p.z+(q.z-p.z)*t});
+      }
+      if (e>=0) result.push(q);
+    }
+    return result;
+  };
+  const emit = (p: Position) => data.push(p.x-forum.x,surface.heightAt(p.x,p.z)+.065,p.z-forum.z,0,1,0,1,1,1);
+  const triangle = (vertices: Position[]) => {
+    let polygon = vertices;
+    if (!vertices.every(p=>(p.x-forum.x)**2+(p.z-forum.z)**2<=radius*radius))
+      for (let i=0;i<circle.length && polygon.length;i++) polygon=clip(polygon,circle[i],circle[(i+1)%circle.length],true);
+    let pieces = polygon.length>=3 ? [polygon] : [];
+    for (const street of streets) {
+      const next: Position[][] = [];
+      for (const part of pieces) {
+        if (part.every(p=>p.x<street.minX)||part.every(p=>p.x>street.maxX)||
+          part.every(p=>p.z<street.minZ)||part.every(p=>p.z>street.maxZ)) { next.push(part); continue; }
+        // Outside pieces are disjoint; only the still-inside remainder proceeds to the next edge.
+        let remaining = part;
+        for (let i=0;i<street.polygon.length && remaining.length;i++) {
+          const a=street.polygon[i],b=street.polygon[(i+1)%street.polygon.length],outside=clip(remaining,a,b,false);
+          if (outside.length>=3) next.push(outside);
+          remaining=clip(remaining,a,b,true);
+        }
+      }
+      pieces=next;
+    }
+    for (const part of pieces) for (let i=1;i<part.length-1;i++) {
+      const a=part[0],b=part[i],c=part[i+1];
+      if (Math.abs((b.x-a.x)*(c.z-a.z)-(b.z-a.z)*(c.x-a.x))<1e-8) continue;
+      emit(a);emit(b);emit(c);
+    }
+  };
+  const step=surface.step, limit=surface.size-2,
+    firstX=Math.max(0,Math.floor((forum.x-radius+surface.extent)/step)),
+    firstZ=Math.max(0,Math.floor((forum.z-radius+surface.extent)/step)),
+    lastX=Math.min(limit,Math.floor((forum.x+radius+surface.extent)/step)),
+    lastZ=Math.min(limit,Math.floor((forum.z+radius+surface.extent)/step));
+  for (let j=firstZ;j<=lastZ;j++) for (let i=firstX;i<=lastX;i++) {
+    const x=i*step-surface.extent,z=j*step-surface.extent,
+      dx=Math.max(x-forum.x,0,forum.x-x-step),dz=Math.max(z-forum.z,0,forum.z-z-step);
+    if (dx*dx+dz*dz>radius*radius) continue;
+    const a={x,z},b={x:x+step,z},c={x:x+step,z:z+step},d={x,z:z+step};
+    triangle([a,d,c]);triangle([a,c,b]);
+  }
+  return new Float32Array(data);
+}
+
 // A build-context-owned, read-only batch: static terrain survives overlapping viewports.
 // Live blockers are indexed afresh, including production exits and unseen entities.
 class PlacementGuideSampler {

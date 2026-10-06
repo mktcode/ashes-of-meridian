@@ -177,12 +177,13 @@ test('Forum construction round-trips as a known seventh civilian type with paid 
   const restored=new fixture.Game(json(defaults));restored.restoreBattle(loaded);
   assert.deepEqual(json(restored.snapshotBattle()),run.battle);
 });
-test('Forum stocks, ownership, construction progress, growth cursors and prospector assignments round-trip and reject malformed fields',()=>{
+test('Forum stocks, ownership, construction progress, layout deadlines, growth cursors and prospector assignments round-trip and reject malformed fields',()=>{
   const run=savedBattle(),h=setup(),entities=run.battle.state.entities,
     forum=entities.find(e=>e.type==='fieldlab'),building=entities.find(e=>e.type==='embercottage'),
     worker=entities.find(e=>e.type==='worker'&&e.team===0),d=catalogs.buildings.meridianforum;
-  Object.assign(forum,{type:'meridianforum',size:d.size,hp:d.hp,maxHp:d.hp,progress:1,cinderStock:500,settlementAt:13,settlementAttempt:64,visualRotation:1/3});
-  Object.assign(building,{forumId:forum.id,paid:{cost:0,gas:0},progress:.4,hp:building.maxHp*.4});
+  Object.assign(forum,{type:'meridianforum',size:d.size,hp:d.hp,maxHp:d.hp,progress:1,cinderStock:2000,settlementAt:13,settlementAttempt:64,visualRotation:1/3});
+  const yaw=vm.runInContext('buildingVisualYaw',fixture.context)(forum),cs=Math.cos(yaw),sn=Math.sin(yaw);
+  Object.assign(building,{x:forum.x+45*cs+33*sn,z:forum.z-45*sn+33*cs,forumId:forum.id,paid:{cost:0,gas:0},progress:.4,hp:building.maxHp*.4});
   Object.assign(worker,{deliveryForum:forum.id,deliveryPoint:{x:forum.x+12,z:forum.z},order:{type:'idle'}});
   assert.equal(put(h,run),true);const loaded=h.service.loadExpedition();assert.ok(loaded);
   assert.deepEqual(json(loaded.battle),run.battle);
@@ -192,8 +193,20 @@ test('Forum stocks, ownership, construction progress, growth cursors and prospec
   before.s.time=after.s.time=13;before.updateSettlements(.5);after.updateSettlements(.5);
   assert.equal(after.get(building.id).progress,.4+.5/catalogs.buildings[building.type].time);
   assert.deepEqual(json(after.snapshotBattle()),json(before.snapshotBattle()),'saved growth cursor and partial construction continue deterministically');
-  for(const [entity,key,value] of [[forum,'cinderStock',1001],[forum,'cinderStock',-1],[forum,'settlementAttempt',1.5],
-    [building,'forumId',0],[worker,'deliveryForum','1'],[worker,'deliveryPoint',{x:Infinity,z:0}],
+  const pending=json(run),pendingBuilding=pending.battle.state.entities.find(e=>e.id===building.id);
+  Object.assign(pendingBuilding,{x:forum.x+40*sn,z:forum.z+40*cs,settlementAt:23});
+  assert.equal(put(h,pending),true);const pendingLoaded=h.service.loadExpedition();assert.equal(pendingLoaded.battle.state.entities.find(e=>e.id===building.id).settlementAt,23);
+  const resumed=new fixture.Game(json(defaults));resumed.restoreBattle(pendingLoaded);resumed.s.rules.completed=true;
+  resumed.s.time=13;resumed.updateSettlements(1);assert.equal(resumed.get(building.id).progress,.4,'pending relocation stops foundation progress');
+  resumed.s.time=22;resumed.updateSettlements();assert.ok(resumed.get(building.id),'reload retains the saved grace period');
+  resumed.s.time=23;resumed.updateSettlements();assert.equal(resumed.get(building.id),null,'expired saved deadline removes the misplaced building');
+  for(const stock of [1000,1001,1999]) {
+    const supplied=json(run);supplied.battle.state.entities.find(e=>e.id===forum.id).cinderStock=stock;
+    assert.equal(put(h,supplied),true);
+    assert.equal(h.service.loadExpedition().battle.state.entities.find(e=>e.id===forum.id).cinderStock,stock);
+  }
+  for(const [entity,key,value] of [[forum,'cinderStock',2001],[forum,'cinderStock',-1],[forum,'settlementAttempt',1.5],
+    [building,'forumId',0],[building,'settlementAt',-1],[worker,'deliveryForum','1'],[worker,'deliveryPoint',{x:Infinity,z:0}],
     [worker,'cinderStock',1],[forum,'deliveryForum',worker.id]]) {
     const damaged=json(run),target=damaged.battle.state.entities.find(e=>e.id===entity.id);
     target[key]=value;put(h,damaged);assert.equal(h.service.loadExpedition(),null,`${key} is validated`);

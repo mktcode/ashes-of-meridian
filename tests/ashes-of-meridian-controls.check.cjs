@@ -2652,6 +2652,7 @@ test('building rotation arrows exist only for completed own buildings and obey a
   for(const type of ['barracks','fieldlab','hearthtower']){
     const h=buildingPanel();h.UI.prototype.bind.call(h.ui);h.b.type=type;
     h.ui.game.rotateBuilding=vm.runInContext('MeridianGame.prototype.rotateBuilding',h.context);
+    h.ui.game.refreshSettlementLayouts=()=>{};
     h.ui.renderActions();assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateLeft"/);
     assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateRight"/);
     h.click({action:'rotateLeft'});assert.equal(h.b.visualRotation,23/3);
@@ -2675,16 +2676,22 @@ test('building rotation arrows exist only for completed own buildings and obey a
   }
 });
 
-test('Forum panels refresh with stock and growth while managed buildings hide rotation controls',()=>{
+test('Forum panels refresh with stock and growth while managed buildings offer rotation, sale and foundation cancellation',()=>{
   const h=buildingPanel();h.b.type='meridianforum';h.b.cinderStock=100;
   h.ui.renderActions();const before=h.ui.actionSignature;
   h.b.cinderStock=200;h.ui.renderActions();assert.notEqual(h.ui.actionSignature,before);
   const stocked=h.ui.actionSignature,child={...h.b,id:8,type:'fieldlab',forumId:7};delete child.cinderStock;
   h.ui.game.s.entities.push(child);h.ui.renderActions();assert.notEqual(h.ui.actionSignature,stocked);
   h.ui.selected=[8];h.ui.renderActions();
-  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="rotate(Left|Right)"/);
+  assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateLeft"/);
+  assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateRight"/);
+  assert.match(h.document.getElementById('actions').innerHTML,/data-action="sell"/);
   child.progress=.3;h.ui.renderActions();
-  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="cancelBuild"/);
+  assert.match(h.document.getElementById('actions').innerHTML,/data-action="cancelBuild"/);
+  child.progress=1;h.UI.prototype.bind.call(h.ui);h.ui.openModal=h.UI.prototype.openModal;
+  h.ui.game.buildingSaleRefund=()=>({cost:0,gas:0});h.click({action:'sell'});
+  assert.match(h.document.getElementById('modal').innerHTML,/no purchase refund/);
+  assert.match(h.document.getElementById('modal').innerHTML,/grow a replacement/);
 });
 
 test('building buttons dispatch repair; sale pauses, cancels safely, confirms the captured ID and rejects stale repeats', () => {

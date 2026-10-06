@@ -137,7 +137,7 @@ const commandMethods = {
       case 'rotateBuilding': return this.rotateBuilding(action.id, action.direction, team);
       case 'cancelConstruction': {
         const b = this.get(action.id);
-        if (!b || b.team !== team || b.kind !== 'building' || b.progress >= 1 || b.forumId !== undefined) return false;
+        if (!b || b.team !== team || b.kind !== 'building' || b.progress >= 1) return false;
         this.cancelConstruction(b.id, team); return true;
       }
       case 'cancelQueue': {

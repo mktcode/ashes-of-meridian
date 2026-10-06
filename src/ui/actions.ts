@@ -246,9 +246,9 @@
           if (ready) {
             html += button('sell', 'Sell', 'cancel', { disabled: !!sellReason });
             html += button('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
-            if (b!.forumId === undefined) html += `<div class="building-rotation">${button('rotateLeft', 'Rotate left', 'rotateLeft')}${button('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
+            html += `<div class="building-rotation">${button('rotateLeft', 'Rotate left', 'rotateLeft')}${button('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
             if (!isCivilizationBuildingType(b!.type)) html += button('rally', 'Rally point', 'rally');
-          } else if (b!.forumId === undefined) html += button('cancelBuild', 'Cancel build', 'cancel');
+          } else html += button('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
           for (let k of contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k, this.game.civilizationStage)))
             html += button('build:' + k, buildingName(k, f), k, {
@@ -287,7 +287,7 @@
           this.paused = true;
           this.clearMode();
           this.openModal('sell',
-            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. ${b.type === 'meridianforum' ? 'Stored Cinder is lost; its settlement disappears gradually.' : 'The structure is removed immediately; supply capacity may decrease.'}</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
+            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. ${b.type === 'meridianforum' ? 'Stored Cinder is lost; its settlement disappears gradually.' : b.kind === 'building' && b.forumId !== undefined ? 'This free settlement building yields no purchase refund. Its Forum will grow a replacement if space permits.' : 'The structure is removed immediately; supply capacity may decrease.'}</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
         }
       },
       finishBuildingSale(this: MeridianUI, confirm: boolean) {

@@ -505,7 +505,7 @@ interface BuildingEntity extends EntityBase {
   cinderStock?: number;
   /** Owning forum ID on automatically grown buildings; survives removal of its owner. */
   forumId?: number;
-  settlementAt?: number;
+  settlementAt?: number; // Forum growth beat, or a managed building's removal deadline.
   settlementAttempt?: number;
 }
 

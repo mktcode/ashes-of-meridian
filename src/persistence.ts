@@ -113,7 +113,7 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     paid: cost, gasId: id, deathAt: num, rally: pos, label: text, buildRate: nonnegative, amount: nonnegative,
     visualRotation: v => nonnegative(v) && Number(v) < 8,
     deliveryForum: id, deliveryPoint: pos,
-    cinderStock: v => nonnegative(v) && Number(v) <= 1000,
+    cinderStock: v => nonnegative(v) && Number(v) <= 2000,
     forumId: id, settlementAt: nonnegative, settlementAttempt: integer
   })(v) && record(v) && (v.kind !== 'resource' || nonnegative(v.amount)) &&
     (v.visualRotation === undefined || v.kind === 'building') &&
