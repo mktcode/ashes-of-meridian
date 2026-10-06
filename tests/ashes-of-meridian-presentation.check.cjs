@@ -999,6 +999,7 @@ test('battle entrance covers the switch and reveals only after a submitted battl
   assert.equal(started, false);
   assert.equal(cover.classList.contains('hidden'), false);
   assert.equal(cover.animations[0].options.duration, 320);
+  assert.equal(cover.classList.contains('battle-reveal'), false, 'fade to black still covers the menu');
   cover.animations[0].finish();
   assert.equal(await launch, true);
   assert.equal(hud.classList.contains('battle-entrance-pending'), true);
@@ -1006,11 +1007,13 @@ test('battle entrance covers the switch and reveals only after a submitted battl
   assert.equal(a.draws.length, 1);
   assert.equal(hud.classList.contains('battle-entrance-pending'), false);
   assert.equal(hud.classList.contains('battle-entrance'), true);
+  assert.equal(cover.classList.contains('battle-reveal'), true, 'map cover moves behind the arriving HUD');
   const reveal = cover.animations[1];
   assert.equal(reveal.options.duration, 1200);
   reveal.finish(); await new Promise(setImmediate);
   assert.equal(cover.classList.contains('hidden'), true);
   assert.equal(hud.classList.contains('battle-entrance'), false);
+  assert.equal(cover.classList.contains('battle-reveal'), false);
   assert.deepEqual(a.errors, []);
 });
 

@@ -114,6 +114,9 @@
       pointer-events: auto;
     }
 
+    /* Once the map is ready, reveal it behind the independently arriving HUD. */
+    #battleTransition.battle-reveal { z-index: 2 }
+
     #worldViewport {
       position: fixed;
       inset: 0;

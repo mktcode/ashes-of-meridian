@@ -187,11 +187,13 @@
           battleTransitionAnimation?.cancel();
           battleTransitionAnimation = null;
           battleTransition.classList.add('hidden');
+          battleTransition.classList.remove('battle-reveal');
           $('hud').classList.remove('battle-entrance-pending', 'battle-entrance');
         }
         function revealBattlefield() {
           if (!$('hud').classList.contains('battle-entrance-pending')) return;
           battleTransitionAnimation?.cancel();
+          battleTransition.classList.add('battle-reveal');
           $('hud').classList.replace('battle-entrance-pending', 'battle-entrance');
           if (matchMedia('(prefers-reduced-motion: reduce)').matches) { clearBattleTransition(); return; }
           const animation = battleTransition.animate([{ opacity: 1 }, { opacity: 0 }],
