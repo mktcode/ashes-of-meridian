@@ -56,7 +56,6 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next),
 #modal .modal-frame,
-#hud :is(#abilityBar, #pauseBtn),
 #hud :is(#radio, #tutorialGoal) {
   isolation: isolate;
   position: relative;
@@ -72,8 +71,6 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
 #modal .modal-frame::before, #modal .modal-frame::after,
-#hud :is(#abilityBar, #pauseBtn)::before,
-#hud :is(#abilityBar, #pauseBtn)::after,
 #hud :is(#radio, #tutorialGoal)::before, #hud :is(#radio, #tutorialGoal)::after {
   content: '';
   display: block;
@@ -94,7 +91,6 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
 #modal .modal-frame::after,
-#hud :is(#abilityBar, #pauseBtn)::after,
 #hud :is(#radio, #tutorialGoal)::after { inset: var(--ui-inset); background: var(--ui-fill) }
 :is(#menu, #modal, #result) :is(.primary, .secondary) {
   --ui-edge: #4ec1dea6;
@@ -327,52 +323,28 @@
 
 /* HUD theme; geometry is owned by hud.css. */
 #hud #commandDeck button:focus-visible { outline-offset: -2px } /* Dense scroll rails keep the ring inside the control. */
-#hud #topbar {
-  isolation: isolate;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-#hud #topbar::before, #hud #topbar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px),
-    calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px));
-  background: #76d7ed;
-}
-#hud #topbar::after {
-  inset: 0 1px 1px;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px),
-    calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px));
-  background: linear-gradient(180deg, #071b28f5, #081d2cec);
-}
+#hud #topbar { background: #092331; border: 0; border-radius: 0; box-shadow: none }
 #hud .resource .ui-icon { width: 24px; height: 28px }
 #hud .resource small { color: #aacddd }
 #hud #civilizationCount { display: block; position: relative; color: var(--ui-gold); font: inherit; line-height: 1.5; letter-spacing: 0 }
 #hud #civilizationCount::after { content: ''; position: absolute; inset: auto 0 0; height: 2px; background: linear-gradient(90deg, currentColor var(--civilization-progress, 0%), var(--ui-line) 0); opacity: .7; pointer-events: none }
 #hud #civilizationCount.stage-ready { color: var(--ui-accent) }
-#hud #pauseBtn { --ui-cut: 5px; display: grid; place-items: center; padding: 0 }
+#hud #pauseBtn { display: grid; place-items: center; background: #0c2a3c; border: 0; border-radius: 0; box-shadow: none }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
-#hud #pauseBtn { --ui-cut: 5px; --ui-edge: #276c86; --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8) }
-#hud #pauseBtn:hover { --ui-edge: #bafaff; color: #bafaff; background: transparent }
-#hud #abilityBar { --ui-cut: 0px; --ui-edge: #2b849f; background: transparent }
+#hud #pauseBtn:hover { background: #125775; color: #bafaff }
 #hud #abilityBar .action { background: #0c2a3c }
 #hud #abilityBar .action:hover { background: #12577566 }
-#hud #abilityBar .action.active { background: #125775; color: #effaff; box-shadow: inset 0 0 0 1px #83edff }
+#hud #abilityBar .action.active { background: #125775; color: #effaff }
 #hud .action.blocked { color: #89aabe }
 #hud .action small { color: #dbc3ff; font-size: 10px; z-index: 1 }
 #hud .action.blocked small { color: #adb0ce }
 :is(#menu, #modal) .textbtn .ui-icon { width: 19px; height: 19px; margin-right: 7px }
-#hud .model-action { background: #102e3d; box-shadow: inset 0 0 0 1px #376b80 }
+#hud .model-action { background: #102e3d }
 #hud .model-action:hover { background: #16475b }
-#hud .model-action.blocked { background: #101f2b; box-shadow: inset 0 0 0 1px #294656 }
-#hud .model-action.active { background: #125775; box-shadow: inset 0 0 0 1px #83edff }
+#hud .model-action.blocked { background: #101f2b }
+#hud .model-action.active { background: #125775 }
 #hud .minimap-panel { background: transparent }
-#hud #minimap { outline: 1px solid #53bcda; outline-offset: -1px }
-#hud .queue-item { border-color: #53bcda; background: #092737; border-radius: 0 }
+#hud .queue-item { border: 0; background: #092737; border-radius: 0 }
 /* Queue ::after is reserved for its conic progress overlay. */
 #hud #radio { position: absolute; z-index: 4; --ui-edge: #43c3de; --ui-fill: linear-gradient(145deg, #072334f0, #021421f5); padding-right: 48px }
 #hud #tutorialGoal { --ui-edge: var(--ui-gold); --ui-fill: linear-gradient(145deg, #072334f0, #021421f5) }
