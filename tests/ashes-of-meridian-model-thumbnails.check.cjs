@@ -133,6 +133,22 @@ test('model tile scheduling renders cold misses once and reuses cached snapshots
   assert.equal(pose(),snapshot,'recreated snapshots use the same fixed model pose and time');
 });
 
+test('HUD thumbnail scope includes the selection portrait above the command deck', () => {
+  const app=require('node:fs').readFileSync(require('node:path').join(__dirname,'../src/app.ts'),'utf8');
+  assert.match(app,/\(\) => thumbnails\.update\(\$\('hud'\)\)/);
+  const {thumbs,tile,calls}=setup();
+  const avatar=tile(0,'building','hq',{left:0,top:460,right:32,bottom:492,width:32,height:32});
+  const action=tile(0,'unit','worker',{left:160,top:500,right:320,bottom:548,width:160,height:48});
+  const nodes=()=>[avatar,action];
+  thumbs.update({getBoundingClientRect:()=>({left:0,top:500,right:800,bottom:600}),querySelectorAll:nodes});
+  assert.equal(avatar.copies.length,0,'selection portrait lies outside command deck clipping bounds');
+  const hud={getBoundingClientRect:()=>({left:0,top:0,right:800,bottom:600}),querySelectorAll:nodes};
+  thumbs.update(hud);assert.equal(avatar.copies.length,1);
+  assert.deepEqual([avatar.width,avatar.height],[64,64]);
+  const settled=calls.length;thumbs.update(hud);
+  assert.equal(calls.length,settled,'unchanged selection remains cached');
+});
+
 test('wide HUD previews preserve vertical resolution, aspect and bounded capture sizes', () => {
   const {thumbs,tile,rect,r}=setup();r.canvas.width=3840;r.canvas.height=2160;
   const hud=(width,height)=>{const canvas=tile(0,'building','hq',{...rect,width,height});
