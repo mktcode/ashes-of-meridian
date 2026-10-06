@@ -394,6 +394,17 @@ if(u_workerRoadOn>.5){
  vec3 loose=mix(compacted,grit,.22*(1.-snow));
  base=mix(base,loose,shoulder*.32);
  base=mix(base,compacted,road*.94);
+ // Restore the narrow wear contour only beside mature paths, including branches.
+ // Local loose grit (or snow) replaces the old fixed grey asphalt edging.
+ float rim=smoothstep(.27,.33,wear)*(1.-smoothstep(.38,.44,wear))*roadSurface;
+ if(rim>0.){
+  vec2 offset=vec2(1.25/(2.*u_extent),0.);
+  float nearby=max(max(texture(u_workerRoad,roadUV+offset).r,texture(u_workerRoad,roadUV-offset).r),
+    max(texture(u_workerRoad,roadUV+offset.yx).r,texture(u_workerRoad,roadUV-offset.yx).r));
+  rim*=smoothstep(.60,.80,nearby);
+  vec3 edge=mix(mix(compacted,grit,.72),vec3(.78,.85,.88),snow*.9);
+  base=mix(base,edge*(.94+grain*.12),rim*.72);
+ }
  // Packed earth/snow is smoother than the surrounding surface, with small grit.
  float pathHeight=soil.a*.035+fine*.009;
  groundHeight=mix(groundHeight,pathHeight,road);
