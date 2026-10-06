@@ -5,6 +5,15 @@ const { createHash } = require('node:crypto');
 const { modelHarness } = require('../helpers/model-contract.cjs');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('../helpers/game-scripts.cjs');
 
+test('each destroyer model registers independently from its own file', () => {
+  for (const faction of [0,1,2]) {
+    const context = loadScripts(['core', 'renderer-materials', 'renderer-geometry', 'renderer-model-kit',
+      'renderer-heavy-mesh', `model-faction-${faction}-unit-destroyer`]);
+    const model = vm.runInContext(`EntityModels.find({kind:'unit',type:'destroyer',faction:${faction}})`, context);
+    assert.equal(typeof model.render, 'function');
+  }
+});
+
 test('destroyers keep exact mesh data, independent moving parts and uniform preview colors', () => {
   const h = modelHarness({heavyModels:true}), meshes = {};
   vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }', h.context);
