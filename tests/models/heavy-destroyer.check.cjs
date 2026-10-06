@@ -1,7 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { createHash } = require('node:crypto');
 const { modelHarness, assertMesh } = require('../helpers/model-contract.cjs');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('../helpers/game-scripts.cjs');
 
@@ -14,27 +13,17 @@ test('each destroyer model registers independently from its own file', () => {
   }
 });
 
-test('destroyers protect unchanged indexed meshes, independent moving parts and uniform preview colors', () => {
+test('destroyers retain independent moving parts and uniform preview colors', () => {
   const h = modelHarness({heavyModels:true}), meshes = {};
   vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }', h.context);
   // Keep full-precision captures outside the bounded JavaScript test heap.
   h.EntityModels.upload({ meshes, geometry(name, data) { meshes[name] = Float64Array.from(data); } });
-  for (const [faction, count, animated] of [[0,null,4],[1,49848,6],[2,31664,16]]) {
+  // All three reconstructions have geometric contracts below, not regenerated
+  // hashes of the deliberately replaced indexed geometry.
+  for (const [faction, animated] of [[0,4],[1,6],[2,1]]) {
     const prefix = `heavy${faction}`;
-    // Cinder Pact is deliberately reconstructed and has a geometric contract below.
-    // Keep the other two full-precision baselines unchanged, including triangle order.
-    if (faction !== 0) {
-      const meshHashes = Object.keys(meshes).filter(key => key.startsWith(prefix)).sort().map(key =>
-        key + ':' + createHash('sha256').update(Buffer.from(new Float64Array(meshes[key]).buffer)).digest('hex'));
-      const expected = {
-        1: 'cd193f805ffc7520fb58de238e5d0d594f7d9cb7acb9bc456509172fef9bcb40',
-        2: '2c4004e6edf5c38ce7e9b7a3e4977aeee7f129da9d9bbe38c6637cc2e5c2dc60'
-      };
-      assert.equal(createHash('sha256').update(meshHashes.join('\n')).digest('hex'), expected[faction]);
-    }
     const keys = Object.keys(meshes).filter(key => key.startsWith(prefix) && !key.endsWith('Neutral'));
-    assert.equal(keys.length, animated + 1 + (faction === 0 ? 1 : 0));
-    if (count !== null) assert.equal(keys.reduce((sum, key) => sum + meshes[key].length / 27, 0), count);
+    assert.equal(keys.length, animated + 1 + (faction === 1 ? 0 : 1));
     assert.ok(keys.every(key => meshes[key].every(Number.isFinite)));
     for (const key of keys.filter(key => !key.endsWith('Team'))) {
       const normal = meshes[key], preview = meshes[key + 'Neutral'];
@@ -105,6 +94,102 @@ test('Breakwater construction is closed, deterministic, RNG-free and bounded wit
   for(let i=0;i<4;i++) {
     assert.deepEqual(calls[i+2].slice(1,4),pivots[i].map(v=>v*.72));
     assert.equal(calls[i+8][10]-calls[i+2][10],2.5);
+  }
+});
+
+test('Crownwing construction is closed, bounded and deterministic without model RNG', () => {
+  for(const faction of [1]) {
+    const context=loadScripts(['core','renderer-materials','renderer-geometry','renderer-model-kit',
+      'renderer-heavy-mesh',`model-faction-${faction}-unit-destroyer`]);
+    vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }',context);
+    const registry=vm.runInContext('EntityModels',context),meshes={};
+    registry.upload({meshes,geometry(name,data){meshes[name]=Float64Array.from(data);}});
+    for(const [name,data] of Object.entries(meshes).filter(([name])=>!name.endsWith('Neutral'))) {
+      const body=name.endsWith('Body'),index=Number(name.split('Part')[1]),main=[2,5].includes(index);
+      const spec=body ?
+        {minTriangles:15000,maxTriangles:30000,min:[-3.02,-2.66,-5.98],max:[3.02,1.881,6.803]} :
+        {minTriangles:700,maxTriangles:1200,min:main?[-7.16,-.10,-1.65]:[-3.18,-.06,-1.82],
+          max:main?[7.16,.63,2.16]:[3.18,.33,2.20]};
+      const mesh=assertMesh(()=>Array.from(data),spec),edges=new Map(),key=p=>p.map(v=>Math.round(v*1e6)).join(',');
+      for(let i=0;i<mesh.length;i+=27) {
+        const points=[0,9,18].map(j=>key(mesh.slice(i+j,i+j+3)));
+        for(let j=0;j<3;j++) {
+          const a=points[j],b=points[(j+1)%3],edge=a<b?`${a}|${b}`:`${b}|${a}`;
+          edges.set(edge,(edges.get(edge)||0)+(a<b?1:-1));
+        }
+      }
+      assert.ok([...edges.values()].every(balance=>balance===0),`${name}: closed oriented surface`);
+    }
+    const repeated={};registry.upload({meshes:repeated,geometry(name,data){repeated[name]=Float64Array.from(data);}});
+    for(const name of Object.keys(meshes)) assert.deepEqual(meshes[name],repeated[name]);
+    if(faction===1) for(const [left,right] of [[2,5],[3,6],[4,7]]) {
+      const a=meshes[`heavy1Part${left}`],b=meshes[`heavy1Part${right}`];
+      assert.equal(a.length,b.length);
+      for(let i=0;i<a.length;i+=27) for(const [l,r] of [[0,0],[9,18],[18,9]]) {
+        assert.equal(a[i+l],-b[i+r]);assert.equal(a[i+l+1],b[i+r+1]);assert.equal(a[i+l+2],b[i+r+2]);
+      }
+    }
+    vm.runInContext('geom.box = geom.cylinder = geom.tri = () => { throw Error("Frame geometry"); }',context);
+    const model=registry.find({kind:'unit',type:'destroyer',faction});
+    for(const id of [0,7]) for(const time of [0,1,2]) for(const tint of [null,0x99e4c6]) {
+      const calls=[],lights=[];
+      model.render({entity:{id},time,nightPart:(...args)=>calls.push(args),part:(...args)=>calls.push(args),
+        team:0x78ded3,surfaceColor:c=>tint??c,pointLight:(...args)=>lights.push(args)});
+      assert.equal(calls.length,8);
+      assert.deepEqual(lights,[[0,1.9,1.1,10,0x78ded3,3]]);
+      const pivots=[
+        [2,-1.95,.72,-1.18],[3,-1.73,-.08,1.67],[4,-1.68,.30,-3.30],
+        [5,1.95,.72,-1.18],[6,1.73,-.08,1.67],[7,1.68,.30,-3.30]
+      ];
+      for(const [index,x,y,z] of pivots) {
+        const call=calls.find(c=>c[0]===`heavy1Part${index}${tint===null?'':'Neutral'}`),phase=time*1.5+id*.13;
+        assert.ok(call);assert.equal(call[1],x*.72);assert.equal(call[2],y*.72);assert.equal(call[3],z*.72);
+        assert.deepEqual(call.slice(4,7),[.72,.72,.72]);
+        assert.equal(call[7],tint??0xffffff);assert.equal(call[9],0);assert.equal(call[8],0);
+        assert.equal(call[10],Math.sin(phase)*([2,5].includes(index)?.22:.13)*(x<0?-1:1));
+      }
+    }
+  }
+});
+
+test('Catafalque war barque has closed detailed armor, an open crystal furnace and no frame-time construction', () => {
+  const context=loadScripts(['core','renderer-materials','renderer-geometry','renderer-model-kit','model-faction-2-unit-destroyer']);
+  vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }',context);
+  const registry=vm.runInContext('EntityModels',context),meshes={};
+  registry.upload({meshes,geometry(name,data){meshes[name]=Float64Array.from(data);}});
+  for(const name of ['heavy2Body','heavy2Team','heavy2Core']) {
+    const core=name.endsWith('Core'),team=name.endsWith('Team'),mesh=assertMesh(()=>Array.from(meshes[name]),{
+      minTriangles:core?40:team?128:4000,maxTriangles:core?40:team?128:14000,
+      min:core?[-1.03,-1.13,-.77]:[-4.7,-1.40,-6.5],max:core?[1.03,1.13,.77]:[4.7,4.40,7.95]
+    }),edges=new Map(),key=p=>p.map(v=>Math.round(v*1e6)).join(',');
+    for(let i=0;i<mesh.length;i+=27) {
+      const points=[0,9,18].map(j=>key(mesh.slice(i+j,i+j+3)));
+      for(let j=0;j<3;j++) {
+        const a=points[j],b=points[(j+1)%3],edge=a<b?`${a}|${b}`:`${b}|${a}`;
+        edges.set(edge,(edges.get(edge)||0)+(a<b?1:-1));
+      }
+    }
+    assert.ok([...edges.values()].every(v=>v===0),`${name}: closed oriented surface`);
+  }
+  const body=meshes.heavy2Body,points=Array.from({length:body.length/9},(_,i)=>Array.from(body.slice(i*9,i*9+3)));
+  assert.ok(points.some(([x,y,z])=>Math.abs(x)>3.7 && y<0 && z<0), 'suspended propulsion bells');
+  assert.ok(points.some(([x,y,z])=>Math.abs(x)>.6 && z>7.8), 'broad circular siege aperture');
+  assert.ok(points.some(([x,y])=>Math.abs(x)>1.5 && y>4.0), 'high open vaulted spars');
+  assert.ok(points.some(([x,y,z])=>Math.abs(x)>2.2 && y<.6 && z>0), 'layered flank armor and underslung battery');
+  assert.ok(points.some(([x,y,z])=>Math.abs(x)<.2 && y>1.70 && z>3), 'raised focusing spine ahead of the open furnace');
+  const repeated={};registry.upload({meshes:repeated,geometry(name,data){repeated[name]=Float64Array.from(data);}});
+  for(const name of Object.keys(meshes)) assert.deepEqual(meshes[name],repeated[name]);
+  vm.runInContext('geom.box = geom.octa = geom.tri = () => { throw Error("Frame geometry"); }',context);
+  const model=registry.find({kind:'unit',type:'destroyer',faction:2});
+  for(const time of [0,1,2]) for(const tint of [null,0x99e4c6]) {
+    const calls=[],lights=[];
+    model.render({entity:{id:7},time,nightPart:(...a)=>calls.push(a),team:0x78ded3,
+      surfaceColor:c=>tint??c,pointLight:(...a)=>lights.push(a)});
+    assert.equal(calls.length,3);assert.equal(lights.length,3);
+    const core=calls[2];assert.equal(core[0],`heavy2Core${tint===null?'':'Neutral'}`);
+    assert.deepEqual(core.slice(1,7),[0,2.65*.72,-1.5*.72,.72,.72,.72]);
+    assert.equal(core[8],time*.35);assert.equal(core[9],0);assert.equal(core[10],0);
+    assert.ok(core[11]>=.24 && core[11]<=.36);
   }
 });
 

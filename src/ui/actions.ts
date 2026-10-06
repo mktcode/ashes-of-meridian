@@ -310,7 +310,7 @@
         const tutorialAction = this.tutorialAction(supply, capacity);
         const button = (key: string, label: string, ic: string) => this.actionButton(key, label, ic, {}, tutorialAction);
         let actions = '';
-        if (b && b.forumId === undefined) {
+        if (b) {
           if (b.progress >= 1) {
             const repairing = this.game.buildingRepairers(b.id, this.localTeam).length > 0;
             actions = button('sell', 'Sell structure', 'cancel') + button('repair', repairing ? 'Stop repair' : 'Repair structure', 'repair');
@@ -350,7 +350,7 @@
           this.paused = true;
           this.clearMode();
           this.openModal('sell',
-            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. ${b.type === 'meridianforum' ? 'Stored Cinder is lost; its settlement disappears gradually.' : 'The structure is removed immediately; supply capacity may decrease.'}</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
+            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. ${b.type === 'meridianforum' ? 'Stored Cinder is lost; its settlement disappears gradually.' : b.kind === 'building' && b.forumId !== undefined ? 'This free settlement building yields no purchase refund. Its Forum will grow a replacement if space permits.' : 'The structure is removed immediately; supply capacity may decrease.'}</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
         }
       },
       finishBuildingSale(this: MeridianUI, confirm: boolean) {

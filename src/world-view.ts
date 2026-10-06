@@ -1,6 +1,74 @@
 /* GPU adapter for CPU-generated world data, plus entity models. */
 'use strict';
 
+// View-only parcel fill: clip native terrain triangles, never bridge terrain facets
+// or approximate street holes with interpolated colors. No placement/RNG queries.
+// The visible plaza matches the small selection ring; the CPU navigation reserve stays larger.
+function buildForumParcelGeometry(world: Battlefield, forum: BuildingEntity): Float32Array {
+  const surface = world.surface!, radius = FORUM_SETTLEMENT.radius, data: number[] = [],
+    circle = Array.from({length:128}, (_,i) => {
+      const angle = i*Math.PI*2/128;
+      return {x:forum.x+Math.cos(angle)*radius,z:forum.z+Math.sin(angle)*radius};
+    }), streets = forumCorridors(forum,forum.size+.5).map(polygon => ({polygon,
+      minX:Math.min(...polygon.map(p=>p.x)),maxX:Math.max(...polygon.map(p=>p.x)),
+      minZ:Math.min(...polygon.map(p=>p.z)),maxZ:Math.max(...polygon.map(p=>p.z))}));
+  const clip = (polygon: Position[], a: Position, b: Position, inside: boolean): Position[] => {
+    const sign = inside ? 1 : -1, distances = polygon.map(p =>
+      sign*((b.x-a.x)*(p.z-a.z)-(b.z-a.z)*(p.x-a.x)));
+    if (distances.every(d=>d>=0)) return polygon;
+    if (distances.every(d=>d<0)) return [];
+    const result: Position[] = [];
+    for (let i=0;i<polygon.length;i++) {
+      const j=(i+polygon.length-1)%polygon.length, p=polygon[j], q=polygon[i], d=distances[j], e=distances[i];
+      if ((d>=0)!==(e>=0)) {
+        const t=d/(d-e); result.push({x:p.x+(q.x-p.x)*t,z:p.z+(q.z-p.z)*t});
+      }
+      if (e>=0) result.push(q);
+    }
+    return result;
+  };
+  const emit = (p: Position) => data.push(p.x-forum.x,surface.heightAt(p.x,p.z)+.065,p.z-forum.z,0,1,0,1,1,1);
+  const triangle = (vertices: Position[]) => {
+    let polygon = vertices;
+    if (!vertices.every(p=>(p.x-forum.x)**2+(p.z-forum.z)**2<=radius*radius))
+      for (let i=0;i<circle.length && polygon.length;i++) polygon=clip(polygon,circle[i],circle[(i+1)%circle.length],true);
+    let pieces = polygon.length>=3 ? [polygon] : [];
+    for (const street of streets) {
+      const next: Position[][] = [];
+      for (const part of pieces) {
+        if (part.every(p=>p.x<street.minX)||part.every(p=>p.x>street.maxX)||
+          part.every(p=>p.z<street.minZ)||part.every(p=>p.z>street.maxZ)) { next.push(part); continue; }
+        // Outside pieces are disjoint; only the still-inside remainder proceeds to the next edge.
+        let remaining = part;
+        for (let i=0;i<street.polygon.length && remaining.length;i++) {
+          const a=street.polygon[i],b=street.polygon[(i+1)%street.polygon.length],outside=clip(remaining,a,b,false);
+          if (outside.length>=3) next.push(outside);
+          remaining=clip(remaining,a,b,true);
+        }
+      }
+      pieces=next;
+    }
+    for (const part of pieces) for (let i=1;i<part.length-1;i++) {
+      const a=part[0],b=part[i],c=part[i+1];
+      if (Math.abs((b.x-a.x)*(c.z-a.z)-(b.z-a.z)*(c.x-a.x))<1e-8) continue;
+      emit(a);emit(b);emit(c);
+    }
+  };
+  const step=surface.step, limit=surface.size-2,
+    firstX=Math.max(0,Math.floor((forum.x-radius+surface.extent)/step)),
+    firstZ=Math.max(0,Math.floor((forum.z-radius+surface.extent)/step)),
+    lastX=Math.min(limit,Math.floor((forum.x+radius+surface.extent)/step)),
+    lastZ=Math.min(limit,Math.floor((forum.z+radius+surface.extent)/step));
+  for (let j=firstZ;j<=lastZ;j++) for (let i=firstX;i<=lastX;i++) {
+    const x=i*step-surface.extent,z=j*step-surface.extent,
+      dx=Math.max(x-forum.x,0,forum.x-x-step),dz=Math.max(z-forum.z,0,forum.z-z-step);
+    if (dx*dx+dz*dz>radius*radius) continue;
+    const a={x,z},b={x:x+step,z},c={x:x+step,z:z+step},d={x,z:z+step};
+    triangle([a,d,c]);triangle([a,c,b]);
+  }
+  return new Float32Array(data);
+}
+
 // A build-context-owned, read-only batch: static terrain survives overlapping viewports.
 // Live blockers are indexed afresh, including production exits and unseen entities.
 class PlacementGuideSampler {
@@ -244,12 +312,72 @@ class SceneryFogField {
   }
 }
 
+// Transient, RNG-neutral wear from observed movement, never navigation or save data.
+class WorkerRoadField {
+  readonly size: number;
+  readonly cell: number;
+  readonly wear: Float32Array;
+  readonly pixels: Uint8Array<ArrayBuffer>;
+  private previous = new Map<number, Position>();
+  private time: number | null = null;
+  constructor(readonly extent: number) {
+    this.size = Math.min(512, Math.ceil(extent * 2));
+    this.cell = extent * 2 / this.size;
+    this.wear = new Float32Array(this.size * this.size);
+    this.pixels = new Uint8Array(this.wear.length);
+  }
+  update(time: number, workers: readonly { id: number; x: number; z: number }[]): boolean {
+    const dt = this.time === null ? 0 : time - this.time;
+    if (this.time !== null && dt >= 0 && dt < .2) return false;
+    if (dt < 0) { this.wear.fill(0); this.previous.clear(); }
+    this.time = time;
+    for (let i = 0; i < this.wear.length; i++) this.wear[i] = Math.max(0, this.wear[i] - Math.max(0, dt) / 120);
+    const next = new Map<number, Position>();
+    for (const w of workers) {
+      next.set(w.id, { x: w.x, z: w.z });
+      const p = this.previous.get(w.id);
+      if (!p || dt <= 0 || dt > 1) continue; // No replay after view/background gaps.
+      const distance = Math.hypot(w.x - p.x, w.z - p.z);
+      if (distance < .02 || distance > Math.min(16, dt * 12 + 2)) continue;
+      const steps = Math.ceil(distance / .5), radius = 1.65;
+      for (let s = 0; s < steps; s++) {
+        const t = (s + .5) / steps, x = p.x + (w.x - p.x) * t, z = p.z + (w.z - p.z) * t;
+        for (let row = Math.max(0, Math.floor((z - radius + this.extent) / this.cell));
+          row <= Math.min(this.size - 1, Math.floor((z + radius + this.extent) / this.cell)); row++)
+          for (let col = Math.max(0, Math.floor((x - radius + this.extent) / this.cell));
+            col <= Math.min(this.size - 1, Math.floor((x + radius + this.extent) / this.cell)); col++) {
+            const d = Math.hypot((col + .5) * this.cell - this.extent - x, (row + .5) * this.cell - this.extent - z);
+            const weight = Math.max(0, 1 - (d / radius) ** 2), i = row * this.size + col;
+            this.wear[i] = Math.min(1, this.wear[i] + weight * weight * .16 * distance / steps);
+          }
+      }
+    }
+    this.previous = next;
+    let changed = false;
+    for (let i = 0; i < this.wear.length; i++) {
+      const pixel = Math.round(this.wear[i] * 255);
+      if (pixel !== this.pixels[i]) { this.pixels[i] = pixel; changed = true; }
+    }
+    return changed;
+  }
+}
+
 class BattlefieldView {
   R: MeridianRenderer;
   data: WorldRenderData | null;
   world: Battlefield | null;
   fogVersion: number;
   private sceneryFog: SceneryFogField | null = null;
+  private workerRoads: WorkerRoadField | null = null;
+  clearWorkerRoads() {
+    if (!this.workerRoads) return;
+    this.workerRoads = null; this.R.releaseWorkerRoads();
+  }
+  updateWorkerRoads(time: number, entities: readonly Entity[], observed: (e: Entity) => boolean) {
+    const field = this.workerRoads ??= new WorkerRoadField(this.world!.extent);
+    const workers = entities.filter(e => e.kind === 'unit' && e.type === 'worker' && e.hp > 0 && observed(e));
+    if (field.update(time, workers)) this.R.workerRoads(field.pixels, field.size);
+  }
   private sceneryTeam: PlayerTeam | null = null;
   private exteriorExtent = 0;
   private exteriorCeiling = 0;
@@ -265,6 +393,7 @@ class BattlefieldView {
   sync(world: Battlefield, fogOn = true, state?: RunState) {
     const R = this.R, layout = world.renderData,
       { extent: EXTENT, cellSize: CELL, gridSize: GRID } = world;
+    if (!state || this.world !== world || this.sceneryTeam !== world.viewTeam) this.clearWorkerRoads();
     if (this.data !== layout) {
       this.exteriorExtent = 0;
       this.exteriorCeiling = world.surface?.maxHeight ?? 0;

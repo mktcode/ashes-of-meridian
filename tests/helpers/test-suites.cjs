@@ -8,7 +8,7 @@ const groups = Object.freeze({
     'persistence', 'expedition', 'stage-worlds', 'civilization', 'simulation-validation'],
   terrain: ['terrain', 'elevation', 'building-ground', 'westmark', 'crystals', 'world-designs',
     'ecology', 'world-variations', 'environment', 'supply-caches'],
-  presentation: ['presentation', 'diagnostics', 'controls', 'codex', 'ui-assets', 'renderer', 'materials', 'model-thumbnails', 'menu-sky', 'menu-scene', 'placement-guide', 'landscape-boundary'],
+  presentation: ['presentation', 'diagnostics', 'controls', 'codex', 'ui-assets', 'renderer', 'materials', 'model-thumbnails', 'menu-sky', 'menu-scene', 'placement-guide', 'landscape-boundary', 'worker-roads'],
   ai: ['ai'],
   simulation: ['simulation']
 });

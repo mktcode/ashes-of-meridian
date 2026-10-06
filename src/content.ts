@@ -382,7 +382,7 @@ const BUILDINGS = {
     civilizationSideEntries: [-1,1].map(s=>({x:s*10*FORUM_MODEL_SCALE,z:9.7*FORUM_MODEL_SCALE,
       top:(1.88-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,width:3.25*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,
       length:3.24*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE})),
-    desc: 'Monumental civilian forum with terraced wings, warm windows, cyan-lit entrances and a rooftop spacecraft landing pad. Build after victory, from Stage 1. Costs only Echo; no Civilization Score of its own. Assign prospectors to deliver Cinder: its permanent 1000-Cinder store supports up to 30 automatic civilian buildings. Three access corridors stay clear; the landing pad is decorative.'
+    desc: 'Monumental civilian forum with terraced wings, warm windows, cyan-lit entrances and a rooftop spacecraft landing pad. Build after victory, from Stage 1. Costs only Echo; no Civilization Score of its own. Assign prospectors to deliver Cinder: its permanent 2000-Cinder store supports up to 60 automatic civilian buildings. Three parallel streets and a crossing avenue define eight parcels; a clear Forum plaza keeps its entrances reachable. The landing pad is decorative.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
 

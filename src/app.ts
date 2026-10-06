@@ -39,7 +39,7 @@
         R = new MeridianRenderer(canvas);
         const thumbnails = new MeridianModelThumbnails(R);
         addEventListener('pagehide',event=>{
-          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releasePointLights(); R.releaseEnvironment(); }
+          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releasePointLights(); R.releaseWorkerRoads(); R.releaseEnvironment(); }
         });
         R.quality = profile.settings.quality;
         R.resize();
@@ -343,6 +343,28 @@
           fps = 60,
           failed = false;
         const ring = (...args: EffectRingArgs) => drawEffectRing(R, ...args);
+        // Selected Forums own terrain-following masks; only layout changes rebuild them.
+        const forumParcelGuides = new Map<number, {world: Battlefield; surface: BattlefieldSurface; key: string; name: string; uploaded: boolean}>();
+        function retainForumParcelGuides(ids = new Set<number>()) {
+          for (const [id,guide] of forumParcelGuides) if (!ids.has(id)) {
+            if (guide.uploaded) R.releaseGeometry(guide.name);
+            forumParcelGuides.delete(id);
+          }
+        }
+        function drawForumParcels(forum: BuildingEntity, world: Battlefield) {
+          const surface = world.surface;
+          if (!surface) return;
+          const key = `${forum.x}:${forum.z}:${forum.size}:${forum.team}:${forum.visualRotation || 0}`, name = `forumParcels:${forum.id}`;
+          let guide = forumParcelGuides.get(forum.id);
+          if (!guide || guide.world !== world || guide.surface !== surface || guide.key !== key) {
+            const data = buildForumParcelGeometry(world,forum);
+            if (data.length) R.streamGeometry(name,data);
+            else if (guide?.uploaded) R.releaseGeometry(name);
+            guide = {world,surface,key,name,uploaded:!!data.length};
+            forumParcelGuides.set(forum.id,guide);
+          }
+          if (guide.uploaded) R.add(name,forum.x,0,forum.z,1,1,1,0x5ce6ef,0,0,0,0,.20,'effects',FORUM_PARCEL_MATERIAL);
+        }
         // Coarse validation samples become a continuous, terrain-following color field.
         // Its fine mesh and GPU storage are view-owned; neither changes world geometry or RNG.
         const GUIDE_MESH = 'placementGuide', GUIDE_SAMPLE = 3, GUIDE_STEP = 1.5;
@@ -438,6 +460,7 @@
           const s = game.s!, world = game.world!;
           const fogOn = !(world.fogCleared && world.viewTeam === 0);
           worldView.sync(world, fogOn, s);
+          worldView.updateWorkerRoads(s.time, s.entities, e => !ui.battleIntro && game.observed(e));
           worldView.retainBuildingGround(s.entities);
           // Revalidate restored cameras and resized viewports, including while paused.
           if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')
@@ -446,12 +469,20 @@
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
           R.fogOn = fogOn && !ui.battleIntro;
-          const selectedIds = ui.selectionIds();
+          const selectedIds = ui.selectionIds(), parcelIds = new Set<number>();
           for (const cache of s.supplyCaches)
             if (!cache.collected && world.explored[world.idx(cache.x, cache.z)]) renderSupplyCache(R, world, cache);
           for (let e of s.entities) {
             if (e.hp <= 0) continue;
             if (!game.observed(e) && !ui.introObserves(e)) continue;
+            // The radius can still cross the viewport when the Forum itself is offscreen.
+            if (e.kind === 'building' && e.type === 'meridianforum' && selectedIds.has(e.id)) {
+              if (world.surface && !ui.battleIntro) {
+                parcelIds.add(e.id);
+                drawForumParcels(e,world);
+              }
+              ring(e.x, e.z, FORUM_SETTLEMENT.radius, e.team !== -1 && e.team !== game.localTeam ? 0xf2a490 : 0x94e4d1, 0.45, 0.12);
+            }
             let p = R.project(e.x, world.surface?.entityHeight(e) ?? 0, e.z);
             const v = R.viewport;
             if (p && (p.x < v.left - 220 || p.x > v.right + 220 || p.y < v.top - 260 || p.y > v.bottom + 260))
@@ -494,6 +525,7 @@
                 ring(b.x, b.z, b.size + 1, 0xe5ba79, 0.25, 0.11, t * 0.1);
             }
           }
+          retainForumParcelGuides(parcelIds);
           renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t, game.localTeam, weatherTime);
           if (ui.mode?.kind === 'build' && !ui.paused && BUILDINGS[ui.mode.arg])
             drawPlacementGuide(ui.mode.arg, s, world);
@@ -599,6 +631,7 @@
               frameClock = 0;
             }
             diagnostics?.recorder.phase('sceneBuild');
+            if (ui.view !== 'game') worldView.clearWorkerRoads();
             const viewTime = game.s?.time,
               resultKey = ui.view === 'game' && game.s?.result && !ui.battleIntro && !ui.mode && !ui.pings.length
                 ? [viewTime, weatherTime, R.width, R.height, R.quality, game.localTeam,
@@ -613,6 +646,7 @@
             } else if (ui.view === 'game' && game.s) battlefield(viewTime!);
             else if (ui.view === 'codexModel' && ui.codexSelection) {
               clearPlacementGuide();
+              retainForumParcelGuides();
               const {kind,type,faction} = ui.codexSelection;
               const d = kind === 'unit' ? UNITS[type as UnitType] : BUILDINGS[type as BuildingType];
               R.fogOn = false;
@@ -621,6 +655,7 @@
                 rot:ui.codexModelRotation(dt),walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0},time,{localTeam:0});
             } else {
               clearPlacementGuide();
+              retainForumParcelGuides();
               R.fogOn = false;
               R.camera(previewCenter.x, previewCenter.z, 65, true, time);
               worldView.retainBuildingGround(preview);
