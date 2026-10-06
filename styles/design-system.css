@@ -56,7 +56,7 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next),
 #modal .modal-frame,
-#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action),
+#hud :is(#abilityBar, #pauseBtn),
 #hud :is(#radio, #tutorialGoal) {
   isolation: isolate;
   position: relative;
@@ -72,8 +72,8 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
 #modal .modal-frame::before, #modal .modal-frame::after,
-#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::before,
-#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::after,
+#hud :is(#abilityBar, #pauseBtn)::before,
+#hud :is(#abilityBar, #pauseBtn)::after,
 #hud :is(#radio, #tutorialGoal)::before, #hud :is(#radio, #tutorialGoal)::after {
   content: '';
   display: block;
@@ -94,7 +94,7 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
 #modal .modal-frame::after,
-#hud :is(#abilityBar, #commandTools button, #cameraTools button, #pauseBtn, .root-grid .action)::after,
+#hud :is(#abilityBar, #pauseBtn)::after,
 #hud :is(#radio, #tutorialGoal)::after { inset: var(--ui-inset); background: var(--ui-fill) }
 :is(#menu, #modal, #result) :is(.primary, .secondary) {
   --ui-edge: #4ec1dea6;
@@ -325,7 +325,7 @@
 #loading .crest .ui-icon { width: 60px; height: 60px }
 #loading h2 { font-family: Aldrich, sans-serif; color: var(--ui-ink); letter-spacing: 1px }
 
-/* HUD geometry, world viewport, picking, minimap and model thumbnails are unchanged. */
+/* HUD theme; geometry is owned by hud.css. */
 #hud #commandDeck button:focus-visible { outline-offset: -2px } /* Dense scroll rails keep the ring inside the control. */
 #hud #topbar {
   isolation: isolate;
@@ -356,34 +356,19 @@
 #hud #civilizationCount.stage-ready { color: var(--ui-accent) }
 #hud #pauseBtn { --ui-cut: 5px; display: grid; place-items: center; padding: 0 }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
-#hud :is(#cameraTools, #commandTools, #abilityBar, .root-grid) { gap: 4px; background: transparent }
-#hud :is(#commandTools button, #cameraTools button, #pauseBtn, .root-grid .action) { --ui-cut: 5px; --ui-edge: #276c86; --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8) }
-#hud #cameraTools .ui-icon { width: 19px; height: 19px }
-#hud :is(#commandTools button, #cameraTools button, #pauseBtn):hover { --ui-edge: #bafaff; color: #bafaff; background: transparent }
-#hud #commandTools #attackMoveBtn[aria-pressed="true"] { --ui-edge: var(--ui-gold); --ui-fill: #493d2b; color: var(--ui-gold); background: transparent }
-#hud #abilityBar { --ui-cut: 5px; --ui-edge: #2b849f; padding: 4px 2px; gap: 0 }
-#hud #abilityBar .action { background: transparent; padding: 8px 2px 3px }
-#hud #abilityBar .action + .action { border-left: 1px solid #244e60 }
-#hud #abilityBar .action .ui-icon { width: 25px; height: 25px; margin: 0 }
+#hud #pauseBtn { --ui-cut: 5px; --ui-edge: #276c86; --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8) }
+#hud #pauseBtn:hover { --ui-edge: #bafaff; color: #bafaff; background: transparent }
+#hud #abilityBar { --ui-cut: 0px; --ui-edge: #2b849f; background: transparent }
+#hud #abilityBar .action { background: #0c2a3c }
 #hud #abilityBar .action:hover { background: #12577566 }
 #hud #abilityBar .action.active { background: #125775; color: #effaff; box-shadow: inset 0 0 0 1px #83edff }
-#hud .action.disabled .ui-icon { opacity: .42; filter: saturate(.45) }
-#hud .action.disabled { color: #89aabe }
-#hud #abilityBar .action.disabled { background: transparent }
+#hud .action.blocked { color: #89aabe }
 #hud .action small { color: #dbc3ff; font-size: 10px; z-index: 1 }
-#hud .action.disabled small { color: #adb0ce }
-#hud .root-grid .action { font-family: Aldrich, sans-serif; color: #b9d6e8 }
-#hud .root-grid .action .ui-icon { width: 32px; height: 31px; margin: 0 }
-#hud .root-grid .action span { margin-top: 2px }
-#hud .root-grid .action:hover:not(:disabled) { --ui-edge: #83edff; --ui-fill: linear-gradient(160deg, #125775, #073143); background: transparent }
-#hud #actionPanel { background: transparent }
-#hud #actionPanel:has(.menu-back) { background: #041722f5; outline: 1px solid #64dff7 }
-#hud .menu-back { background: #0b3345; color: #bafaff; font-family: Aldrich, sans-serif }
-#hud .menu-back .ui-icon { width: 19px; height: 19px; margin-right: 7px }
+#hud .action.blocked small { color: #adb0ce }
 :is(#menu, #modal) .textbtn .ui-icon { width: 19px; height: 19px; margin-right: 7px }
 #hud .model-action { background: #102e3d; box-shadow: inset 0 0 0 1px #376b80 }
 #hud .model-action:hover { background: #16475b }
-#hud .model-action.disabled { background: #101f2b; box-shadow: inset 0 0 0 1px #294656 }
+#hud .model-action.blocked { background: #101f2b; box-shadow: inset 0 0 0 1px #294656 }
 #hud .model-action.active { background: #125775; box-shadow: inset 0 0 0 1px #83edff }
 #hud .minimap-panel { background: transparent }
 #hud #minimap { outline: 1px solid #53bcda; outline-offset: -1px }
@@ -436,9 +421,7 @@
   #result .benefit-option small { font-size: 12px; margin-top: 5px }
   #result .result-reward { min-height: 108px }
   #result .result-reward-breakdown { font-size: 10px; gap: 4px 12px }
-  #hud #abilityBar .action { padding: 8px 2px 2px }
   #hud #abilityBar .action .ui-icon { width: 22px; height: 22px }
-  #hud #abilityBar .action span { margin-top: 2px }
   #hud .resource .ui-icon { width: 15px; height: 21px }
   #hud .resource:has(#supplyCount) .ui-icon { width: 19px }
   #hud #radioName { font-size: 9px; letter-spacing: 1px }
@@ -450,5 +433,5 @@
     animation: none !important;
     transition: none !important;
   }
-  #hud :is(.action, .menu-back).tutorial-focus { box-shadow: inset 0 0 0 3px #fff0b4, 0 0 10px #f2c45daa }
+  #hud .action.tutorial-focus { box-shadow: inset 0 0 0 3px #fff0b4, 0 0 10px #f2c45daa }
 }

@@ -15,7 +15,7 @@ const BATTLE_TUTORIAL_TARGETS: Record<BattleTutorialStep, { tab: UITab; action: 
   arrival: { tab: 'root', action: '' },
   recon: { tab: 'root', action: '' },
   buildHQ: { tab: 'build', action: 'build:hq' },
-  trainWorker: { tab: 'infantry', action: 'train:worker' },
+  trainWorker: { tab: 'root', action: 'favorite:worker' },
   buildRefinery: { tab: 'build', action: 'build:refinery' },
   buildBarracks: { tab: 'build', action: 'build:barracks' },
   trainRifle: { tab: 'infantry', action: 'train:rifle' },
@@ -99,7 +99,7 @@ const uiTutorialMethods = {
       case 'arrival': return 'Establish a landing zone.';
       case 'buildHQ': return `Build a ${buildingName('hq', faction)} to establish your base.`;
       case 'recon': return 'Survey the enemy outpost and return to your base.';
-      case 'trainWorker': return `Recruit two more ${unitName('worker', faction)} workers (${tutorial.workersTrained}/2 trained).`;
+      case 'trainWorker': return `Recruit two more ${unitName('worker', faction)} workers using quick access (${tutorial.workersTrained}/2 trained).`;
       case 'buildRefinery': return `Build a ${buildingName('refinery', faction)} beside an Echo vent.`;
       case 'buildBarracks': return `Build a ${buildingName('barracks', faction)} to recruit infantry.`;
     }

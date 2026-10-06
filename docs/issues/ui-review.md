@@ -22,17 +22,13 @@ Aktions-/Funk-/Queuezustände. Nicht einfach die globalen Tokens ersetzen.
 
 ## Technische und menschliche Abnahme
 
-Technischer Prüfkontext: `file://`, lokale Motive/Font, Menü-Scrollaktionen und
-unbeschnittene Kontroll-Fokusrahmen bei 375×667, 1280×800 und 844×390. HUD-Diagnose
-mit pausierter Welt und angehaltener WebGL-Bildfolge: vier Slots, Kategorie-/Modellkacheln,
-Cancel-/Cooldown-/TECH-Anzeigen, Queue-Overlay, Funk-Dismiss über aufgeklapptem
-Produktionspanel und Pause-/Restart-Dialog. Keine Shader-/Performanceabnahme.
+Technischer Prüfkontext für das [kompakte HUD](../gameplay.md#kompaktes-hud): `file://` bei 320×568, 375×667 und 844×390; gleiche Minimap-/Kataloghöhe, vier Fähigkeiten, lokale Queue ohne Umleitung bei voller Produktion, fünf Queue-Punkte, X-Abbruch, direktes Tempo und separates Pausemenü ohne JavaScript-Fehler. Gezielte Node-Prüfungen decken Tutorial-Schnellwahl, Aktions-/Queue-Verträge und Forum-Balken aus Live-Zustand ab. Kleine Touch-Ziele der Gebäudeaktionen, lange Status-/Kostenangaben und Forum-Balken bei vielen benachbarten Gebäuden bleiben auf Zielgeräten visuell und per Touch abzunehmen. Keine Shader-/Performanceabnahme.
 Kameradrehung technisch mit `file://`/Software-WebGL geprüft: Mittelmausziehen,
 emulierte Zwei-Finger-Drehung mit Pinch und Picking bei gedrehter Kamera.
 Drehgefühl und kombinierte Gesten auf echten Mobilgeräten bleiben menschlich abzunehmen,
 insbesondere der feste [Geländeanker](../gameplay.md#kamera-und-befehle) auf Höhen/Hängen,
 die Begrenzung am Kartenrand und die Höhenzentrierung beim Stage-Start ohne Tutorial
-sowie beim Basis-Knopf. Gezielte Node-Prüfungen decken Start-/Basis-/Tutorial-Framing
+sowie bei automatisch zentrierten Ansichten. Gezielte Node-Prüfungen decken Start-/Tutorial-Framing
 und Projektion auf erhöhtem Terrain ab, nicht das tatsächliche Kameragefühl.
 Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
 Die Außenkulisse bleibt visuell abzunehmen: breite Sichtfenster, erhöhte Kartenränder

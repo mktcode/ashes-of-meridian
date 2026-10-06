@@ -638,7 +638,7 @@
             R.setMenuSky(menuWorld?.terrainSeed ?? null, menuWorld?.definition.render.groundTexture ?? '');
             R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
               ui.view === 'codex' ? () => thumbnails.update($('menu')) :
-                ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined, retainResultScene);
+                ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('commandDeck')) : undefined, retainResultScene);
             retainedResult = resultKey === null ? null : { state: game.s!, world: game.world, key: resultKey };
             advancePreviewChange();
             // Never fade away the cover before the resized battlefield has rendered.

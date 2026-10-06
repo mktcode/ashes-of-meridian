@@ -59,6 +59,35 @@ test('execution revalidates funds in arrival order; queue acceptance neither res
   assert.deepEqual(Array.from(game.commandQueue.lastResults, r => r.status), ['applied', 'rejected']);
 });
 
+test('local recruitment copies and revalidates its producer without rerouting', () => {
+  const { game } = fixture(); game.account(0).alloy = 10000;
+  const other = {...game.get(1), id:5, queue:[]}; game.s.entities.push(other); game.ids.set(5,other);
+  const input = {kind:'train',unit:'worker',producerId:1};
+  assert.ok(game.queueAction(0,input)); input.producerId=5;
+  game.beginCommandTick(); assert.equal(game.get(1).queue.length,1);assert.equal(other.queue.length,0);
+  for(const blocked of ['full','unfinished','enemy','dead','wrong-type']) {
+    const b=game.ids.get(1); Object.assign(b,{hp:100,team:0,progress:1,type:'hq',queue:[]});
+    if(blocked==='full')b.queue=Array.from({length:5},()=>({type:'worker',time:10,progress:0}));
+    if(blocked==='unfinished')b.progress=.5;
+    if(blocked==='enemy')b.team=1;
+    if(blocked==='dead')b.hp=0;
+    if(blocked==='wrong-type')b.type='barracks';
+    const funds=game.account(0).alloy;
+    assert.ok(game.queueAction(0,{kind:'train',unit:'worker',producerId:1}));game.beginCommandTick();
+    assert.equal(game.commandQueue.lastResults[0].status,'rejected',blocked);
+    assert.equal(other.queue.length,0,blocked); assert.equal(game.account(0).alloy,funds,blocked);
+  }
+  assert.ok(game.queueAction(0,{kind:'train',unit:'worker'}));game.beginCommandTick();
+  assert.equal(other.queue.length,1,'global recruitment still chooses an available producer');
+});
+
+test('local recruitment rejects malformed producer IDs before queue admission', () => {
+  const {game}=fixture();
+  for(const producerId of [0,-1,1.5,'1',null,Number.MAX_SAFE_INTEGER+1])
+    assert.equal(game.queueAction(0,{kind:'train',unit:'worker',producerId}),null);
+  assert.equal(game.commandQueue.pending.length,0);
+});
+
 test('stale ownership and newly hidden targets are rejected at execution', () => {
   const { game } = fixture();
   game.queueAction(0, hold()); game.get(3).team = 1;
@@ -149,7 +178,7 @@ test('unexpected execution errors stop the scenario without retrying partially a
 
 function emptyRuntime() {
   const { game } = fixture();
-  Object.assign(game.s, { entities: [], strikes: [], fields: [], scans: [], recalls: [], triggers: {} });
+  Object.assign(game.s, { entities: [], supplyCaches: [], strikes: [], fields: [], scans: [], recalls: [], triggers: {} });
   game.world.definition = {};
   game.world.reveal = () => {};
   game.rehash = game.resolveRecalls = () => {};

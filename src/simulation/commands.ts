@@ -10,8 +10,9 @@ function parseBattleAction(value: unknown, maxIds: number): BattleAction | null 
   if (!record(value)) return null;
   switch (value.kind) {
     case 'train':
-      return typeof value.unit === 'string' && hasContentKey(UNITS, value.unit)
-        ? { kind: 'train', unit: value.unit } : null;
+      return typeof value.unit === 'string' && hasContentKey(UNITS, value.unit) &&
+        (value.producerId === undefined || id(value.producerId))
+        ? { kind: 'train', unit: value.unit, ...(value.producerId === undefined ? {} : { producerId: value.producerId }) } : null;
     case 'build':
       return typeof value.building === 'string' && hasContentKey(BUILDINGS, value.building) &&
         position(value.position) && ids(value.selected)
@@ -129,7 +130,7 @@ const commandMethods = {
     const inBounds = (p: Position) => Math.abs(p.x) <= this.world!.extent && Math.abs(p.z) <= this.world!.extent;
     if ('position' in action && !inBounds(action.position)) return false;
     switch (action.kind) {
-      case 'train': return this.train(action.unit, team);
+      case 'train': return this.train(action.unit, team, action.producerId);
       case 'build': return this.build(action.building, action.position, action.selected, team);
       case 'ability': return this.ability(action.ability, action.position, team);
       case 'sell': return this.sellBuilding(action.id, team);

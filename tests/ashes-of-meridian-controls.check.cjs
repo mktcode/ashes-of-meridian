@@ -295,6 +295,7 @@ function setup() {
       return {version:1,state,tutorial:null};
     },
     effects: { floats: [] }, canSupplyForum: () => false, canBuild: () => '', cost: () => ({ cost: 0, gas: 0 }),
+    recruitmentReason: () => '', abilityRequirement: () => '', afford: () => true,
     alive(predicate) { return this.s.entities.filter(predicate); },
     availableProducers: vm.runInContext('MeridianGame.prototype.availableProducers', context),
     workerTask: vm.runInContext('MeridianGame.prototype.workerTask', context),
@@ -305,6 +306,9 @@ function setup() {
     managedBuilding(id) { const b = this.get(id); return !this.s.result && b?.kind === 'building' && b.team === 0 && b.hp > 0 && b.progress >= 1 ? b : null; },
     buildingRepairers: () => [], canRepairBuilding: () => '', canSellBuilding: () => '',
     party: vm.runInContext('MeridianGame.prototype.party', context),
+    account: vm.runInContext('MeridianGame.prototype.account', context),
+    has: vm.runInContext('MeridianGame.prototype.has', context),
+    factionFor: vm.runInContext('MeridianGame.prototype.factionFor', context),
     abilityStats: vm.runInContext('MeridianGame.prototype.abilityStats', context),
     command(...args) { calls.push(['command', ...args]); },
     // UI tests mock submission/execution; scheduling and permission checks have separate CPU tests.
@@ -313,7 +317,7 @@ function setup() {
       assert.equal(team, 0, 'single-player UI supplies its actor outside the payload');
       switch (action.kind) {
         case 'order': return this.command(action.ids, action.order);
-        case 'train': return this.train(action.unit);
+        case 'train': return action.producerId === undefined ? this.train(action.unit) : this.train(action.unit, team, action.producerId);
         case 'build': return this.build(action.building, action.position, action.selected);
         case 'ability': return this.ability(action.ability, action.position);
         case 'cancelConstruction': return this.cancelConstruction(action.id);
@@ -560,8 +564,7 @@ test('nonzero perspective selection and picking hide foreign units and select on
   h.UI.prototype.select.call(h.ui, [1, 2, 3, 4]);
   assert.deepEqual(Array.from(h.ui.selected), [3]);
   h.UI.prototype.bind.call(h.ui);
-  h.document.getElementById('combatSelectBtn').onclick();
-  assert.deepEqual(Array.from(h.ui.selected), [3]);
+  assert.equal(h.document.getElementById('combatSelectBtn').onclick, undefined);
   g.s.entities.push({ id: 6, team: 2, kind: 'building', type: 'hq', hp: 100, queue: [{ type: 'worker', time: 10, progress: 0 }] });
   g.s.entities.push({ id: 7, team: 0, kind: 'building', type: 'hq', hp: 100, queue: [{ type: 'rifle', time: 10, progress: 0 }] });
   assert.deepEqual(Object.keys(h.ui.recruitmentGroups()), ['worker']);
@@ -569,13 +572,15 @@ test('nonzero perspective selection and picking hide foreign units and select on
 
 test('each battle start resets the music playlist before playback, but resume does not', () => {
   const h = setup(), calls = [];
+  h.ui.profile.tutorialComplete = true;
   h.ui.audio.resetBattleMusic = () => calls.push('reset');
   h.ui.audio.setMode = mode => calls.push(mode);
-  h.ui.event('start');
+  h.ui.event('start', {});
   assert.deepEqual(calls, ['reset', 'battle']);
   h.ui.pause(); h.ui.resume();
-  assert.deepEqual(calls, ['reset', 'battle', 'silent', 'battle']);
-  h.ui.event('start');
+  assert.ok(calls.includes('silent'));
+  assert.deepEqual(calls.filter(value => value !== 'silent'), ['reset', 'battle', 'battle']);
+  h.ui.event('start', {});
   assert.deepEqual(calls.slice(-2), ['reset', 'battle']);
   assert.equal(calls.filter(value => value === 'reset').length, 2);
 });
@@ -771,25 +776,24 @@ test('first-stage tutorial highlights workers, economy, infantry to the supply l
   h.ui.setTab('build');
   assert.equal(focused('build:hq'), true);
   h.ui.advanceBattleTutorial('complete', 'hq');
-  assert.equal(focused('tab:infantry'), true);
-  h.ui.setTab('infantry');
-  assert.equal(focused('train:worker'), true);
+  assert.equal(focused('favorite:worker'), true);
+  assert.match(vm.runInContext("voiceLine('tutorial.economy').text", h.context), /worker icon in quick access/);
   const producer = { id: 10, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1,
     queue: [{ type: 'worker' }] };
   h.ui.game.s.entities.push(producer);
   h.ui.renderActions();
-  assert.equal(focused('train:worker'), true, 'the prompt remains until the second Prospector is ordered');
+  assert.equal(focused('favorite:worker'), true, 'the prompt remains until the second Prospector is ordered');
   producer.queue.push({ type: 'worker' });
   h.ui.renderActions();
   assert.equal(actions.innerHTML.includes('tutorial-focus'), false, 'two queued Prospectors satisfy the ordering prompt');
   producer.queue.pop();
   h.ui.renderActions();
-  assert.equal(focused('train:worker'), true, 'cancelling the second order restores its prompt');
+  assert.equal(focused('favorite:worker'), true, 'cancelling the second order restores its prompt');
   producer.queue = [];
 
   h.ui.event('trained', { type: 'worker' });
-  assert.equal(h.ui.tab, 'infantry');
-  assert.equal(focused('train:worker'), true, 'the second Prospector is requested after the first finishes');
+  assert.equal(h.ui.tab, 'root');
+  assert.equal(focused('favorite:worker'), true, 'the second Prospector is requested after the first finishes');
   h.ui.event('trained', { type: 'worker' });
   assert.equal(h.ui.tab, 'root');
   assert.equal(focused('tab:build'), true);
@@ -1040,8 +1044,7 @@ test('minimap input, camera limits and world targets use the active map size aft
     assert.deepEqual(h.ui.game.s.cam,{x:limits.x,z:-limits.z,zoom:50});
     h.calls.length=0;
     h.pointer('pointerdown',162,18,{target:h.minimap,button:2});
-    const target=h.calls[0][2];
-    assert.ok(Math.abs(target.x-extent*.8)<1e-8);assert.ok(Math.abs(target.z+extent*.8)<1e-8);
+    assert.deepEqual(h.calls, [], 'minimap input only navigates');
     h.ui.R.ground=()=>({x:999,z:-999});h.calls.length=0;
     h.pointer('pointerdown',200,200,{pointerType:'mouse',button:2});
     h.pointer('pointerup',200,200,{pointerType:'mouse',button:2});
@@ -1173,7 +1176,7 @@ test('touch single/double tap preserves selection and visible same-type filterin
   assert.deepEqual(h.calls, [['select', [1]], ['select', [1, 2]]]);
 });
 
-test('triple touch tap selects only living on-screen own non-workers, including support and air units', () => {
+test('triple touch taps retain same-type selection without expanding to the combat force', () => {
   for (const trigger of ['rifle','worker']) {
     const h = setup(); h.UI.prototype.bind.call(h.ui);
     const unit = { id: 1, team: 0, kind: 'unit', type: trigger, hp: 100, x: 200, z: 200 };
@@ -1188,9 +1191,9 @@ test('triple touch tap selects only living on-screen own non-workers, including 
     const tap = time => { h.setTime(time); h.pointer('pointerdown',200,200); h.pointer('pointerup',200,200); };
     tap(0); assert.deepEqual(h.ui.selected,[1]);
     tap(200); assert.deepEqual(h.ui.selected,trigger === 'worker' ? [1,3] : [1,2]);
-    tap(400); const combat = trigger === 'worker' ? [2,4,5,6,7,8] : [1,2,4,5,6,7,8];
-    assert.deepEqual(h.ui.selected,combat);
-    tap(500); assert.deepEqual(h.ui.selected,combat, 'further rapid taps keep combat selection');
+    const sameType = trigger === 'worker' ? [1,3] : [1,2];
+    tap(400); assert.deepEqual(h.ui.selected,sameType);
+    tap(500); assert.deepEqual(h.ui.selected,sameType);
     assert.ok(h.calls.every(c => c[0] === 'select'), 'no order or camera action');
   }
 });
@@ -1264,11 +1267,9 @@ test('selection feedback uses only living owned units and HUD group selection re
   h.ui.select([4]); assert.deepEqual(requests.pop().types, []);
   assert.deepEqual(sounds, ['select'], 'enemy selection never impersonates an owned unit');
   h.UI.prototype.bind.call(h.ui);
-  for (const button of ['combatSelectBtn', 'visibleCombatSelectBtn']) {
-    requests.length = 0;
-    h.document.getElementById(button).onclick();
-    assert.deepEqual(requests, [{ types: ['rifle', 'tank'], group: true }]);
-  }
+  requests.length = 0;
+  h.ui.select([2, 3], true);
+  assert.deepEqual(requests, [{ types: ['rifle', 'tank'], group: true }]);
 });
 
 test('catalogue dialogue shares subtitle and recording identity, outlives its voice and stops on close', () => {
@@ -1319,8 +1320,13 @@ test('successful targeting clears the mode; failed placement allows retry', () =
     const options = { pointerType: 'mouse', button: rightClick ? 2 : 0,
       target: mini ? h.minimap : h.world };
     h.pointer('pointerdown', 100, 100, options); h.pointer('pointerup', 100, 100, options);
-    assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], rightClick ? 'command' : 'ability');
-    assert.equal(h.ui.mode, null);
+    if (mini) {
+      assert.deepEqual(h.calls, []);
+      assert.equal(h.ui.mode.kind, 'ability', 'minimap navigation does not place or cancel targeting');
+    } else {
+      assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], rightClick ? 'command' : 'ability');
+      assert.equal(h.ui.mode, null);
+    }
   }
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.mode = { kind: 'build', arg: 'depot' }; h.ui.game.build = () => false;
@@ -1646,111 +1652,22 @@ test('speed changes are transient, pause-guarded and preserve commands and RNG',
   g.s = run;
 });
 
-test('attack-move toggle changes future ground orders for touch and mouse, not existing orders', () => {
-  for (const input of ['touch', 'mouse', 'minimap']) {
-    const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-    const button = h.document.getElementById('attackMoveBtn');
-    const pending = { type: 'move', x: 30, z: 40 };
-    h.ui.game.s.entities = [{ id: 7, kind: 'unit', team: 0, hp: 100, order: pending }];
-    const options = input === 'touch' ? {} : {
-      pointerType: 'mouse', button: 2, target: input === 'minimap' ? h.minimap : h.world
-    };
-    for (const active of [false, true, true, false]) {
-      if (h.ui.attackMove !== active) button.onclick();
-      assert.strictEqual(h.ui.game.s.entities[0].order, pending);
-      assert.equal(h.calls.length, 0, 'toggling alone issues no command');
-      h.pointer('pointerdown', 200, 200, options); h.pointer('pointerup', 200, 200, options);
-      assert.equal(h.calls.length, 1);
-      assert.equal(h.calls[0][2].type, active ? 'attackMove' : 'move');
-      assert.equal(h.ui.attackMove, active, 'not a one-shot targeting mode');
-      h.calls.length = 0;
-    }
+test('removed command and camera controls have no handlers; ground orders remain move orders', () => {
+  const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
+  for (const id of ['attackMoveBtn', 'combatSelectBtn', 'visibleCombatSelectBtn'])
+    assert.equal(h.document.getElementById(id).onclick, undefined);
+  assert.equal(h.ui.attackMove, undefined);
+  h.clickCamera('home'); assert.deepEqual(h.calls, []);
+  for (const pointerType of ['mouse', 'touch']) {
+    h.pointer('pointerdown', 200, 200, { pointerType, button: pointerType === 'mouse' ? 2 : 0 });
+    h.pointer('pointerup', 200, 200, { pointerType, button: pointerType === 'mouse' ? 2 : 0 });
+    assert.equal(h.calls.at(-1)[2].type, 'move');
   }
 });
 
-test('visible combat force button selects living own non-workers projected inside the battlefield viewport', () => {
+test('minimap tap/drag navigates to the full map bounds', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 100, x: 100, z: 100 };
-  h.ui.game.s.entities = [unit, { ...unit, id: 2, type: 'medic', x: 200 },
-    { ...unit, id: 3, x: -10 }, { ...unit, id: 4, z: 700 }, { ...unit, id: 5, type: 'worker' },
-    { ...unit, id: 6, team: 1 }, { ...unit, id: 7, kind: 'building' }, { ...unit, id: 8, hp: 0 }];
-  h.ui.game.alive = predicate => h.ui.game.s.entities.filter(e => e.hp > 0 && predicate(e));
-  const grounded = [];
-  h.ui.game.world.surface = { entityHeight: e => { grounded.push(e.id); return 6; } };
-  h.ui.lastClick = { id: 5, count: 2 };
-  h.document.getElementById('visibleCombatSelectBtn').onclick();
-  assert.deepEqual(grounded, [1, 2, 3, 4]);
-  assert.deepEqual(h.ui.selected, [1, 2]);
-  assert.deepEqual(h.calls, [['select', [1, 2]]]);
-  assert.equal(Object.keys(h.ui.lastClick).length, 0);
-  h.ui.paused = true; h.document.getElementById('visibleCombatSelectBtn').onclick();
-  assert.deepEqual(h.calls, [['select', [1, 2]]]);
-});
-
-test('combat force button selects every living own non-worker without changing commands', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  const unit = { id: 1, team: 0, kind: 'unit', type: 'rifle', hp: 100 };
-  h.ui.game.s.entities = [unit, { ...unit, id: 2, type: 'medic' }, { ...unit, id: 3, type: 'hero' },
-    { ...unit, id: 4, type: 'air' }, { ...unit, id: 5, type: 'worker' }, { ...unit, id: 6, team: 1 },
-    { ...unit, id: 7, kind: 'building', type: 'barracks' }, { ...unit, id: 8, hp: 0 }];
-  h.ui.game.alive = predicate => h.ui.game.s.entities.filter(e => e.hp > 0 && predicate(e));
-  h.ui.lastClick = { id: 5, count: 2 };
-  h.document.getElementById('combatSelectBtn').onclick();
-  assert.deepEqual(h.ui.selected, [1, 2, 3, 4]);
-  assert.deepEqual(h.calls, [['select', [1, 2, 3, 4]]]);
-  assert.equal(Object.keys(h.ui.lastClick).length, 0);
-  h.ui.paused = true; h.document.getElementById('combatSelectBtn').onclick();
-  assert.deepEqual(h.calls, [['select', [1, 2, 3, 4]]]);
-});
-
-test('attack-move toggle preserves context orders, selection, and explicit ability targeting', () => {
-  for (const active of [false, true]) {
-    const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-    if (active) h.document.getElementById('attackMoveBtn').onclick();
-    for (const target of [{ id: 8, team: 1 }, { id: 9, team: -1 }]) {
-      h.ui.pick = () => target;
-      h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
-      assert.equal(h.calls[0][2].type, 'smart'); assert.equal(h.calls[0][2].id, target.id);
-      h.calls.length = 0;
-    }
-    h.ui.pick = () => ({ id: 10, team: 0 });
-    h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
-    assert.deepEqual(h.calls, [['select', [10]]]); h.calls.length = 0;
-    h.ui.mode = { kind: 'ability', arg: 'scan' }; h.ui.pick = () => null;
-    h.ui.game.ability = (...args) => { h.calls.push(['ability', ...args]); return true; };
-    h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
-    assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], 'ability');
-    assert.equal(h.ui.mode, null); assert.equal(h.ui.attackMove, active);
-  }
-});
-
-test('attack-move is transient, guarded while paused/ended, and reset on battle start', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  const button = h.document.getElementById('attackMoveBtn');
-  assert.equal(h.ui.attackMove, false);
-  const profile = JSON.stringify(h.ui.profile);
-  button.onclick(); assert.equal(h.ui.attackMove, true);
-  h.ui.clearMode(); assert.equal(h.ui.attackMove, true);
-  h.ui.paused = true; button.onclick(); assert.equal(h.ui.attackMove, true);
-  h.ui.paused = false; h.ui.game.s.result = {}; button.onclick(); assert.equal(h.ui.attackMove, true);
-  h.ui.game.s.result = null; h.ui.view = 'home'; button.onclick(); assert.equal(h.ui.attackMove, true);
-  h.ui.event('start', {});
-  assert.equal(h.ui.attackMove, false);
-  assert.equal(JSON.stringify(h.ui.profile), profile);
-});
-
-test('camera buttons and minimap tap/drag navigate to the full map bounds', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.ui.homeCamera = h.UI.prototype.homeCamera;
-  h.ui.game.s.entities.push({ id: 1, team: 0, type: 'hq', x: 20, z: 30 });
-  h.clickCamera('home');
-  assert.deepEqual(h.ui.game.s.cam, { x: 24, z: 28, zoom: 50 });
-  h.clickCamera('in'); assert.equal(h.ui.game.s.cam.zoom, 42.5);
-  h.clickCamera('out'); assert.equal(h.ui.game.s.cam.zoom, 42.5 * 1.18);
-  for (let i = 0; i < 20; i++) h.clickCamera('in');
-  assert.equal(h.ui.game.s.cam.zoom, 27.2);
-  for (let i = 0; i < 20; i++) h.clickCamera('out');
-  assert.equal(h.ui.game.s.cam.zoom, 115);
+  h.ui.game.s.cam.zoom = 115;
   h.pointer('pointerdown', 100, 110, { target: h.minimap });
   assert.ok(Math.abs(h.ui.game.s.cam.x - Math.min(10,flatCameraLimits(h.ui).x)) < 1e-10);
   assert.ok(Math.abs(h.ui.game.s.cam.z - 20) < 1e-10);
@@ -1764,7 +1681,7 @@ test('camera buttons and minimap tap/drag navigate to the full map bounds', () =
   assert.deepEqual(h.calls, []);
 });
 
-test('minimap uses current offset and dimensions for pressing, dragging and right-click orders', () => {
+test('minimap uses current offset and dimensions for navigation without issuing orders', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.minimap.getBoundingClientRect = () => ({ left: 30, top: 50, width: 360, height: 180 });
   h.pointer('pointerdown', 210, 95, { target: h.minimap });
@@ -1776,7 +1693,7 @@ test('minimap uses current offset and dimensions for pressing, dragging and righ
   h.pointer('pointermove', 40, 70, { target: h.minimap });
   assert.deepEqual(h.ui.game.s.cam, { x: 45, z: 45, zoom: 50 });
   h.pointer('pointerdown', 85, 160, { target: h.minimap, button: 2 });
-  assert.deepEqual(JSON.parse(JSON.stringify(h.calls)), [['command', [], { type: 'move', x: -45, z: -45 }]]);
+  assert.deepEqual(h.calls, []);
 });
 
 test('ability and category actions dispatch only while unpaused', () => {
@@ -1802,7 +1719,7 @@ test('repeating the active targeting action cancels without changing selection o
     if (kind === 'build') h.ui.tab = 'build';
     if (kind === 'rally') {
       h.ui.game.s.entities = [{id:7,team:0,kind:'building',type:'barracks',hp:100,progress:1,queue:[]}];
-      h.ui.tab = 'building';
+      h.ui.tab = 'root';
     }
     const state = JSON.stringify(h.ui.game.s), action = kind === 'rally' ? 'rally' : `${kind}:${arg}`;
     h.ui.setMode(kind, arg);
@@ -2298,7 +2215,7 @@ test('DOM press guard tracks pointer presses on controls', () => {
 
 function buildingPanel() {
   const h = setup(), b = { id: 7, kind: 'building', type: 'barracks', team: 0, faction: 0, hp: 100, maxHp: 200, progress: 1, x: 0, z: 0, queue: [] };
-  h.ui.game.s.entities = [b]; h.ui.selected = [7]; h.ui.tab = 'building';
+  h.ui.game.s.entities = [b]; h.ui.selected = [7]; h.ui.tab = 'root';
   h.ui.setTab = h.UI.prototype.setTab;
   h.ui.perform = h.UI.prototype.perform;
   return { ...h, b };
@@ -2391,7 +2308,7 @@ test('building ground taps/clicks only deselect, including right-click and found
     }
 });
 
-test('building camera gestures and own-target selection do not set rally; minimap right-click deselects', () => {
+test('building camera gestures and minimap navigation preserve selection and do not set rally', () => {
   const h = buildingPanel(); h.UI.prototype.bind.call(h.ui); h.ui.select = h.UI.prototype.select;
   h.pointer('pointerdown',200,200); h.pointer('pointermove',240,230); h.pointer('pointerup',240,230);
   assert.deepEqual(Array.from(h.ui.selected),[7]); assert.equal(h.b.rally,undefined);
@@ -2399,7 +2316,7 @@ test('building camera gestures and own-target selection do not set rally; minima
   assert.deepEqual(Array.from(h.ui.selected),[7]); assert.equal(h.b.rally,undefined);
   h.pointer('pointerdown',100,100,{target:h.minimap,pointerType:'mouse',button:2});
   h.pointer('pointerup',100,100,{target:h.minimap,pointerType:'mouse',button:2});
-  assert.deepEqual(Array.from(h.ui.selected),[]); assert.deepEqual(h.calls,[]);
+  assert.deepEqual(Array.from(h.ui.selected),[7]); assert.deepEqual(h.calls,[]);
   const own = {id:8,kind:'unit',type:'worker',team:0,hp:100}; h.ui.game.s.entities.push(own);
   h.ui.select([7]); h.ui.pick = () => own;
   h.pointer('pointerdown',200,200); h.pointer('pointerup',200,200);
@@ -2415,6 +2332,10 @@ test('only the Rally point button arms placement; a following normal tap deselec
     h.ui.audio.sound=key=>sounds.push(key);
     h.ui.game.random=()=>{throw Error('Rally feedback consumed simulation RNG');};
     h.pointer('pointerdown',100,100,options); h.pointer('pointerup',100,100,options);
+    if (mini) {
+      assert.equal(h.b.rally, undefined); assert.equal(h.ui.mode.kind, 'rally');
+      assert.deepEqual(Array.from(h.ui.selected), [7]); continue;
+    }
     assert.ok(h.b.rally); assert.equal(h.ui.mode,null); assert.deepEqual(Array.from(h.ui.selected),[7]);
     assert.equal(h.ui.pings.length,1);assert.deepEqual(sounds,['order']);
     const ping=h.ui.pings[0];
@@ -2652,8 +2573,8 @@ test('building rotation arrows exist only for completed own buildings and obey a
   for(const type of ['barracks','fieldlab','hearthtower']){
     const h=buildingPanel();h.UI.prototype.bind.call(h.ui);h.b.type=type;
     h.ui.game.rotateBuilding=vm.runInContext('MeridianGame.prototype.rotateBuilding',h.context);
-    h.ui.renderActions();assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateLeft"/);
-    assert.match(h.document.getElementById('actions').innerHTML,/data-action="rotateRight"/);
+    h.ui.renderActions();assert.match(h.document.getElementById('selectionStatus').innerHTML,/data-action="rotateLeft"/);
+    assert.match(h.document.getElementById('selectionStatus').innerHTML,/data-action="rotateRight"/);
     h.click({action:'rotateLeft'});assert.equal(h.b.visualRotation,23/3);
     h.click({action:'rotateRight'});assert.equal(h.b.visualRotation,0);
     for(const guard of ['paused','modal','mode','intro','ended']){
@@ -2670,21 +2591,36 @@ test('building rotation arrows exist only for completed own buildings and obey a
     if(invalid==='dead')h.b.hp=0;
     if(invalid==='unit')h.b.kind='unit';
     if(invalid==='none')h.ui.selected=[];
-    h.ui.renderActions();assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="rotate(Left|Right)"/);
+    h.ui.renderActions();assert.doesNotMatch(h.document.getElementById('selectionStatus').innerHTML,/data-action="rotate(Left|Right)"/);
     h.click({action:'rotateRight'});
   }
 });
 
-test('Forum panels refresh with stock and growth while managed buildings hide rotation controls',()=>{
+test('own Forum world bars remain visible without selection or healthbar settings and update from live state',()=>{
+  const h=buildingPanel(),g=h.ui.game,texts=[],rects=[];
+  Object.assign(h.b,{type:'meridianforum',hp:200,maxHp:200,size:4,x:200,z:200,cinderStock:100});
+  g.s.entities.push({...h.b,id:8,type:'fieldlab',forumId:7});
+  h.ui.selected=[];h.ui.profile.settings.healthbars=false;
+  const ctx=new Proxy({fillText(text){texts.push(text);},fillRect(...args){rects.push(args);}},
+    {get:(target,key)=>target[key] || (()=>{})});
+  const limits=vm.runInContext('FORUM_SETTLEMENT',h.context),before=JSON.stringify(g.s);
+  h.ui.drawOverlay(ctx);
+  assert.ok(texts.includes(`Cinder 100/${limits.capacity}`));assert.ok(texts.includes(`Buildings 1/${limits.buildings}`));
+  assert.ok(rects.some(r=>r[2]===100&&r[3]===7),'HP bar has ownership border');
+  assert.equal(JSON.stringify(g.s),before);
+  h.b.cinderStock=200;g.s.entities.push({...h.b,id:9,type:'fieldlab',forumId:7});texts.length=0;
+  h.ui.drawOverlay(ctx);assert.ok(texts.includes(`Cinder 200/${limits.capacity}`));assert.ok(texts.includes(`Buildings 2/${limits.buildings}`));
+});
+
+test('Forum stock belongs in world bars, not HUD panels; managed children hide building actions',()=>{
   const h=buildingPanel();h.b.type='meridianforum';h.b.cinderStock=100;
   h.ui.renderActions();const before=h.ui.actionSignature;
-  h.b.cinderStock=200;h.ui.renderActions();assert.notEqual(h.ui.actionSignature,before);
-  const stocked=h.ui.actionSignature,child={...h.b,id:8,type:'fieldlab',forumId:7};delete child.cinderStock;
-  h.ui.game.s.entities.push(child);h.ui.renderActions();assert.notEqual(h.ui.actionSignature,stocked);
-  h.ui.selected=[8];h.ui.renderActions();
-  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="rotate(Left|Right)"/);
+  h.b.cinderStock=200;h.ui.renderActions();assert.equal(h.ui.actionSignature,before);
+  const child={...h.b,id:8,type:'fieldlab',forumId:7};delete child.cinderStock;
+  h.ui.game.s.entities.push(child);h.ui.selected=[8];h.ui.renderActions();
+  assert.doesNotMatch(h.document.getElementById('selectionStatus').innerHTML,/data-action="(rotateLeft|rotateRight|sell)"/);
   child.progress=.3;h.ui.renderActions();
-  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/data-action="cancelBuild"/);
+  assert.doesNotMatch(h.document.getElementById('selectionStatus').innerHTML,/data-action="cancelBuild"/);
 });
 
 test('building buttons dispatch repair; sale pauses, cancels safely, confirms the captured ID and rejects stale repeats', () => {
@@ -2705,6 +2641,27 @@ test('building buttons dispatch repair; sale pauses, cancels safely, confirms th
   h.ui.game.canSellBuilding = () => 'Last command center'; h.ui.toast = text => h.calls.push(['toast',text]);
   h.ui.selected = [7]; h.click({ action: 'sell' }); assert.equal(h.ui.paused, false);
   assert.deepEqual(h.calls.at(-1), ['toast','Last command center']);
+});
+
+test('quick recruitment binds compatible selections and never reroutes blocked local orders', () => {
+  const h = buildingPanel(), g = h.ui.game;
+  g.recruitmentReason = vm.runInContext('MeridianGame.prototype.recruitmentReason', h.context);
+  g.cap = () => 100;
+  g.train = (...args) => { h.calls.push(['train', ...args]); return true; };
+  h.ui.perform('favorite:rifle');
+  assert.deepEqual(h.calls, [['train', 'rifle', 0, 7]]);
+  h.calls.length = 0; h.b.queue = Array.from({length:5}, () => ({type:'rifle'}));
+  const other = {...h.b, id:8, queue:[]}; g.s.entities.push(other);
+  const reasons=[]; h.ui.toast = text => reasons.push(text);
+  h.ui.perform('favorite:rifle'); assert.deepEqual(h.calls, []); assert.match(reasons.pop(), /queue is full/);
+  h.b.queue=[]; h.b.progress=.5;
+  h.ui.perform('favorite:rifle'); assert.deepEqual(h.calls, []); assert.match(reasons.pop(), /construction/);
+  h.ui.selected=[8]; other.type='hq';
+  h.ui.perform('favorite:rifle'); assert.deepEqual(h.calls, []); // No completed barracks yet.
+  h.b.progress=1; h.ui.perform('favorite:rifle');
+  assert.deepEqual(h.calls, [['train','rifle']], 'incompatible structure routes globally without confirmation');
+  h.calls.length=0;h.ui.selected=[7];h.ui.perform('train:rifle');
+  assert.deepEqual(h.calls, [['train','rifle']], 'catalog remains global');
 });
 
 test('recruitment delegates producer choice to the simulation, independent of selection', () => {
@@ -2732,6 +2689,8 @@ test('building and unit actions request the current model of the active faction'
 
 test('action availability refreshes synchronously without a HUD tick', () => {
   const h = setup(), g = h.ui.game;
+  g.recruitmentReason = vm.runInContext('MeridianGame.prototype.recruitmentReason', h.context);
+  g.cost = () => ({cost: 10, gas: 0});
   Object.assign(g, { supply: () => 0, cap: () => 24, afford: () => false,
     abilityRequirement: key => key === 'orbital' ? 'TECH' : '' });
   g.s.parties[0].account.energy = 32;
@@ -2761,9 +2720,11 @@ test('action availability refreshes synchronously without a HUD tick', () => {
       const action = button.dataset.action;
       if (action.startsWith('ability:')) {
         const active = h.ui.isModeAction(action);
-        assert.equal(button.disabled, active ? false : action !== 'ability:scan', action);
+        assert.equal(button.disabled, false, 'blocked actions remain tappable');
+        assert.equal(button.classList.contains('blocked'), active ? false : action !== 'ability:scan', action);
       } else if (/^(train|build):/.test(action)) {
-        assert.equal(button.disabled, true, action);
+        assert.equal(button.disabled, false);
+        assert.equal(button.classList.contains('blocked'), true, action);
       }
     }
   };
@@ -2779,12 +2740,13 @@ test('action availability refreshes synchronously without a HUD tick', () => {
   assert.equal(panels[0].buttons, previous, 'unchanged markup is retained');
   assert.equal(panels[0].buttons.find(b => b.dataset.action === 'ability:scan').disabled, false,
     'the selected action remains available to cancel');
-  assert.ok(panels[0].buttons.filter(b => b.dataset.action !== 'ability:scan').every(b => b.disabled),
+  assert.ok(panels[0].buttons.filter(b => b.dataset.action !== 'ability:scan').every(b => b.classList.contains('blocked')),
     'state still refreshes when markup is unchanged');
 });
 
-test('HUD disables full queues, missing producers, queued commander and unavailable building actions', () => {
+test('HUD explains full queues, missing producers, queued commander and unavailable building actions on tap', () => {
   const h = buildingPanel(), g = h.ui.game;
+  g.recruitmentReason = vm.runInContext('MeridianGame.prototype.recruitmentReason', h.context);
   Object.assign(g.s.parties[0].account,{alloy:1000,gas:1000,energy:100,abilities:{}});
   Object.assign(g,{supply:()=>10,cap:()=>50,afford:()=>true});
   const buttons = ['train:rifle','train:hero','train:air','repair','sell'].map(action =>
@@ -2795,18 +2757,19 @@ test('HUD disables full queues, missing producers, queued commander and unavaila
   g.s.entities.push({id:8,team:0,kind:'building',type:'hq',hp:100,progress:1,queue:[{type:'hero',time:40,progress:0}]});
   g.canRepairBuilding = () => 'No workers'; g.canSellBuilding = () => 'Protected';
   h.UI.prototype.updateHUD.call(h.ui);
-  assert.ok(buttons.every(b=>b.disabled));
+  assert.ok(buttons.every(b=>b.classList.contains('blocked') && !b.disabled));
   h.b.queue.pop(); g.buildingRepairers = () => [{}]; g.canSellBuilding = () => '';
   h.UI.prototype.updateHUD.call(h.ui);
-  assert.equal(rifle.disabled,false); assert.equal(repair.disabled,false); assert.equal(sell.disabled,false);
-  assert.equal(hero.disabled,true); assert.equal(air.disabled,true);
+  assert.equal(rifle.classList.contains('blocked'),false); assert.equal(repair.classList.contains('blocked'),false); assert.equal(sell.classList.contains('blocked'),false);
+  assert.equal(hero.classList.contains('blocked'),true); assert.equal(air.classList.contains('blocked'),true);
   h.ui.mode = {kind:'ability',arg:'scan'}; h.UI.prototype.updateHUD.call(h.ui);
-  assert.equal(repair.disabled,true); assert.equal(sell.disabled,true);
+  assert.equal(repair.classList.contains('blocked'),true); assert.equal(sell.classList.contains('blocked'),true);
   h.ui.paused = true; h.UI.prototype.updateHUD.call(h.ui); assert.ok(buttons.every(b=>b.disabled));
 });
 
 test('HUD reads supply and capacity once per update and gates recruitment at capacity', () => {
   const h = buildingPanel(), g = h.ui.game;
+  g.recruitmentReason = vm.runInContext('MeridianGame.prototype.recruitmentReason', h.context);
   Object.assign(g.s.parties[0].account, { alloy: 1000, gas: 1000, energy: 100, abilities: {} });
   Object.assign(g.s, { depth: 4 });
   Object.assign(g, { afford: () => true });
@@ -2824,7 +2787,7 @@ test('HUD reads supply and capacity once per update and gates recruitment at cap
       g.supply = () => { supplyReads++; return supply; };
       g.cap = () => { capacityReads++; return capacity; };
       h.UI.prototype.updateHUD.call(h.ui);
-      assert.deepEqual(buttons.map(button => button.disabled), blocked);
+      assert.deepEqual(buttons.map(button => button.classList.contains('blocked')), blocked);
       assert.deepEqual([supplyReads, capacityReads], [1, 1]);
     }
   }
@@ -2841,18 +2804,19 @@ test('ability availability respects energy, cooldown and technology boundaries',
     for (const available of [energy - 1, energy]) {
       g.s.parties[0].account.energy = available;
       h.UI.prototype.updateHUD.call(h.ui);
-      assert.equal(button.disabled, available < energy);
+      assert.equal(button.disabled, false);
+      assert.equal(button.classList.contains('blocked'), available < energy);
     }
     g.s.parties[0].account.abilities[kind] = 12.2;
     h.UI.prototype.updateHUD.call(h.ui);
-    assert.equal(button.disabled, true);
+    assert.equal(button.classList.contains('blocked'), true);
     g.s.parties[0].account.abilities[kind] = 10;
     h.UI.prototype.updateHUD.call(h.ui);
-    assert.equal(button.disabled, false);
+    assert.equal(button.classList.contains('blocked'), false);
     if(kind==='orbital') {
       g.abilityRequirement=()=>'Requires a completed War foundry.';
       h.UI.prototype.updateHUD.call(h.ui);
-      assert.equal(button.disabled,true);
+      assert.equal(button.classList.contains('blocked'),true);
       g.abilityRequirement=()=>null;
     }
   }

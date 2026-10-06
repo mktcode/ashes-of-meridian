@@ -229,6 +229,9 @@
           }
           ctx.restore();
         }
+        const forumCounts = new Map<number, number>();
+        for (const e of s.entities) if (e.hp > 0 && e.kind === 'building' && e.forumId !== undefined)
+          forumCounts.set(e.forumId, (forumCounts.get(e.forumId) || 0) + 1);
         for (let e of s.entities) {
           if (e.hp <= 0) continue;
           let selected = selectedIds.has(e.id),
@@ -239,7 +242,7 @@
             !selected &&
             !hover &&
             !(this.profile.settings.healthbars && e.kind === 'unit') &&
-            !damaged
+            !(e.type === 'meridianforum' && e.team === this.localTeam) && !damaged
           )
             continue;
           if (e.kind === 'resource' && !selected && !hover) continue;
@@ -251,8 +254,8 @@
                     : 3.0,
             p = this.R.project(e.x, y + (g.world?.surface?.entityHeight(e) ?? 0), e.z);
           if (!p || !this.R.containsPoint(p.x, p.y)) continue;
-          let w = e.kind === 'building' ? 56 : e.type === 'hero' || e.type === 'destroyer' ? 42 : 30;
-          ctx.fillStyle = '#07101deb';
+          let w = e.type === 'meridianforum' && e.team === this.localTeam ? 96 : e.kind === 'building' ? 56 : e.type === 'hero' || e.type === 'destroyer' ? 42 : 30;
+          ctx.fillStyle = e.team !== -1 && e.team !== this.localTeam ? '#ff9693' : '#6beddf';
           ctx.fillRect(p.x - w / 2 - 2, p.y - 2, w + 4, e.maxShield ? 10 : 7);
           ctx.fillStyle = '#344350';
           ctx.fillRect(p.x - w / 2, p.y, w, 3);
@@ -260,11 +263,27 @@
           ctx.fillRect(p.x - w / 2, p.y, w * clamp(e.hp / e.maxHp, 0, 1), 3);
           if (e.maxShield) {
             ctx.fillStyle = '#b5adf0';
-            ctx.fillRect(p.x - w / 2, p.y + 5, w * clamp(e.shield / e.maxShield, 0, 1), 2);
+            ctx.fillRect(p.x - w / 2, p.y + 4, w * clamp(e.shield / e.maxShield, 0, 1), 2);
           }
           if (e.progress < 1 && e.kind === 'building') {
+            ctx.fillStyle = '#344350';
+            ctx.fillRect(p.x - w / 2, p.y + 10, w, 2);
             ctx.fillStyle = '#edc082';
-            ctx.fillRect(p.x - w / 2, p.y + 6, w * e.progress, 2);
+            ctx.fillRect(p.x - w / 2, p.y + 10, w * e.progress, 2);
+          }
+          if (e.type === 'meridianforum' && e.team === this.localTeam && e.kind === 'building' && e.progress >= 1) {
+            const stock = Math.floor(e.cinderStock || 0), count = forumCounts.get(e.id) || 0;
+            for (const [offset, value, max, label, color] of [
+              [9, stock, FORUM_SETTLEMENT.capacity, `Cinder ${stock}/${FORUM_SETTLEMENT.capacity}`, '#6beddf'],
+              [24, count, FORUM_SETTLEMENT.buildings, `Buildings ${count}/${FORUM_SETTLEMENT.buildings}`, '#edb875']
+            ] as const) {
+              ctx.fillStyle = '#07101deb';
+              ctx.fillRect(p.x - w / 2 - 2, p.y + offset, w + 4, 13);
+              ctx.fillStyle = color + '80';
+              ctx.fillRect(p.x - w / 2, p.y + offset + 1, w * clamp(value / max, 0, 1), 11);
+              ctx.fillStyle = '#eef3ed';
+              ctx.fillText(label, p.x, p.y + offset + 10);
+            }
           }
           if (
             hover ||

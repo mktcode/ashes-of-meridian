@@ -26,7 +26,7 @@
         : icon(fallback);
     }
     type UIMode = { kind: 'build'; arg: BuildingType } | { kind: 'ability'; arg: AbilityType } | { kind: 'rally'; arg?: undefined };
-    type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'building';
+    type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'details';
     interface UIPing extends Position { life: number; maxLife: number; color: number; }
     interface UIDrag {
       sx: number; sy: number; x: number; y: number; button: number; type: string; moved: boolean;
@@ -73,7 +73,6 @@
       selectedLookupSource: number[];
       selectedLookup: Set<number>;
       tab: UITab;
-      attackMove: boolean;
       mode: UIMode | null;
       hover: number | null;
       pointer: { x: number; y: number; inside: boolean };
@@ -110,6 +109,7 @@
       touchGesture?: boolean;
       pinchDist?: number;
       touchAngle?: number;
+      hudResizeObserver?: ResizeObserver;
       queueSignature?: string;
       queueInputs?: (number | UnitType)[];
       miniBuffer?: HTMLCanvasElement;
@@ -136,7 +136,6 @@
         this.selectedLookupSource = this.selected;
         this.selectedLookup = new Set();
         this.tab = 'root';
-        this.attackMove = false;
         this.mode = null;
         this.hover = null;
         this.pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
@@ -153,6 +152,10 @@
         this.battleIntro = null;
         this.battleTutorial = null;
         this.bind();
+        if (typeof ResizeObserver !== 'undefined') {
+          this.hudResizeObserver = new ResizeObserver(() => this.updateHUDLayout());
+          for (const id of ['topbar', 'commandDeck', 'selectionStatus']) this.hudResizeObserver.observe($(id));
+        }
         this.refreshCivilizationScore();
         this.notifyStorageFailure();
       }
@@ -296,8 +299,6 @@
           this.radioUntil = 0;
           $('alerts').innerHTML = '';
           this.selected = [];
-          this.attackMove = false;
-          $('attackMoveBtn').setAttribute('aria-pressed', 'false');
           this.mode = null;
           this.tab = 'root';
           this.actionSignature = '';
@@ -389,11 +390,6 @@
           this.audio.sound('pickup');
         } else if (type === 'complete') {
           this.audio.sound('complete');
-          this.alert({
-            text: buildingName(data.type, this.game.s!.parties[this.localTeam].faction) + ' complete.',
-            x: data.x,
-            z: data.z
-          });
           this.advanceBattleTutorial('complete', data.type);
           this.actionSignature = '';
         } else if (type === 'trained') {

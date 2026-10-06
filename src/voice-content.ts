@@ -18,7 +18,7 @@ const VOICE_LINES = {
   },
   'tutorial.economy': {
     speaker: 'Expedition command',
-    text: 'First, recruit two more Prospectors from Infantry. Then build a refinery beside an Echo vent and prepare our fighting force.'
+    text: 'First, recruit two more Prospectors using the worker icon in quick access. Then build a refinery beside an Echo vent and prepare our fighting force.'
   },
   'tutorial.supply': {
     speaker: 'Expedition command',

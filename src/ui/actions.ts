@@ -108,14 +108,14 @@
         const units = this.selected.map(id => this.game.get(id))
           .filter((e): e is UnitEntity => !!e && e.kind === 'unit' && e.team === this.localTeam && e.hp > 0);
         if (!this.audio.selectionVoice?.(units, groupVoice)) this.audio.sound('select');
-        this.setTab(this.selectedBuilding() ? 'building' : 'root');
+        this.setTab('root');
       },
       selectedBuilding(this: MeridianUI) {
         let e = this.selected.length === 1 ? this.game.get(this.selected[0]) : null;
         return e?.team === this.localTeam && e.kind === 'building' && e.hp > 0 ? e : null;
       },
       setTab(this: MeridianUI, tab: string) {
-        if (!['root', 'build', 'infantry', 'vehicles', 'aircraft', 'building'].includes(tab)) return;
+        if (!['root', 'build', 'infantry', 'vehicles', 'aircraft', 'details'].includes(tab)) return;
         this.clearMode();
         this.tab = tab as UITab;
         this.actionSignature = '';
@@ -155,12 +155,15 @@
       perform(this: MeridianUI, action: string) {
         if (!this.game.s || this.controlsLocked || this.game.s!.result) return;
         let [kind, arg] = action.split(':');
+        const reason = this.actionReason(action);
+        if (reason) { this.toast(reason); return; }
         if (kind === 'tab') {
           this.setTab(arg);
           return;
         }
-        if (kind === 'train' && hasContentKey(UNITS, arg)) {
-          this.submitAction({ kind: 'train', unit: arg });
+        if ((kind === 'train' || kind === 'favorite') && hasContentKey(UNITS, arg)) {
+          const producerId = kind === 'favorite' ? this.favoriteProducer(arg) : undefined;
+          this.submitAction({ kind: 'train', unit: arg, ...(producerId === undefined ? {} : { producerId }) });
           this.updateHUD();
           return;
         }
@@ -173,6 +176,7 @@
           return;
         }
         switch (kind) {
+          case 'clearSelection': this.select([]); break;
           case 'rally':
             if ((this.selectedBuilding()?.progress || 0) >= 1) this.setMode(kind);
             break;
@@ -190,17 +194,20 @@
             break;
         }
       },
+      favoriteProducer(this: MeridianUI, type: UnitType) {
+        const b = this.selectedBuilding();
+        return b && b.type === UNITS[type].from ? b.id : undefined;
+      },
       actionButton(this: MeridianUI, key: string, label: string, ic: string, opts: UIActionButtonOptions = {}, tutorialAction: string | null = this.tutorialAction()) {
-        const active = this.isModeAction(key), tutorialFocus = tutorialAction === key,
-          renderedLabel = active ? 'Cancel' : label;
-        const faction = this.game.s?.parties[this.localTeam].faction;
-        const badge = active ? '' : opts.badge || '', [kind,type] = key.split(':');
-        const preview = faction !== undefined && kind === 'build' && hasContentKey(BUILDINGS,type)
-          ? renderModelThumbnail(faction,'building',type,'action-model')
-          : faction !== undefined && kind === 'train' && hasContentKey(UNITS,type)
-            ? renderModelThumbnail(faction,'unit',type,'action-model') : '';
-        const visual = preview ? `${preview}<i class="model-space" aria-hidden="true"></i>` : uiIcon(kind === 'tab' ? key : ic, ic);
-        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${tutorialFocus ? 'tutorial-focus' : ''}" data-action="${key}"${opts.disabled ? ' disabled' : ''}>${visual}<span>${renderedLabel}</span>${opts.cost && !active ? `<span class="cost">${opts.cost.cost || !opts.cost.gas ? opts.cost.cost + '◆' : ''}${opts.cost.gas ? (opts.cost.cost ? ' ' : '') + opts.cost.gas + '⬡' : ''}</span>` : ''}<small data-badge="${key}">${badge}</small></button>`;
+        const active = this.isModeAction(key), [kind, type] = key.split(':'), faction = this.game.s?.parties[this.localTeam].faction;
+        const preview = faction !== undefined && kind === 'build' && hasContentKey(BUILDINGS, type)
+          ? renderModelThumbnail(faction, 'building', type, 'action-model')
+          : faction !== undefined && (kind === 'train' || kind === 'favorite') && hasContentKey(UNITS, type)
+            ? renderModelThumbnail(faction, 'unit', type, 'action-model') : '';
+        const cost = opts.cost, costLabel = cost ? ` · ${cost.cost} Cinder${cost.gas ? ' · ' + cost.gas + ' Echo' : ''}` : '';
+        const supplyLabel = (kind === 'train' || kind === 'favorite') && hasContentKey(UNITS, type) ? ` · Supply ${UNITS[type].supply}` : '';
+        const name = active ? `${label} · Cancel targeting` : label + costLabel + supplyLabel;
+        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'blocked' : ''} ${active ? 'active cancel-target' : ''} ${tutorialAction === key ? 'tutorial-focus' : ''}" data-action="${key}" data-label="${esc(label + costLabel + supplyLabel)}" aria-label="${esc(name)}" title="${esc(name)}"${kind === 'build' || kind === 'ability' || kind === 'rally' ? ` aria-pressed="${active}"` : ''}>${preview || uiIcon(kind === 'tab' ? key : ic, ic)}${cost ? `<span class="cost" aria-hidden="true"><span>${cost.cost} C</span>${cost.gas ? `<span>${cost.gas} E</span>` : ''}</span>` : ''}${kind === 'ability' ? `<small data-badge="${key}" aria-hidden="true">${active ? '' : opts.badge || ''}</small>` : ''}</button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
         if (this.battleTutorial?.step === 'trainRifle' || this.battleTutorial?.step === 'buildDepot') {
@@ -209,66 +216,89 @@
         }
         this.updateTutorialGoal(supply, capacity);
         this.renderActionMarkup(supply, capacity);
-        // Never expose newly created buttons in their default enabled state until the next HUD tick.
+        this.renderSelectionStatus(supply, capacity);
         this.updateActionStates(supply, capacity);
+        this.updateHUDLayout();
       },
       renderActionMarkup(this: MeridianUI, supply?: number, capacity?: number) {
-        let s = this.game.s;
+        const s = this.game.s;
         if (!s) return;
-        let b = this.selectedBuilding();
-        if (this.tab === 'building' && !b) this.tab = 'root';
-        const tutorialAction = this.tutorialAction(supply, capacity);
-        const button = (key: string, label: string, ic: string, opts: UIActionButtonOptions = {}) =>
-          this.actionButton(key, label, ic, opts, tutorialAction);
-        let ready = !!b && b.progress >= 1,
-          repairing = ready && this.game.buildingRepairers(b!.id, this.localTeam).length > 0,
-          repairReason = ready && !repairing ? this.game.canRepairBuilding(b!.id, this.localTeam) : '',
-          sellReason = ready ? this.game.canSellBuilding(b!.id, this.localTeam) : '',
-          noFreeWorker = this.tab === 'build' && !this.game.availableWorkers(this.localTeam).length,
-          sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, s.parties[this.localTeam].loadout.join(','),
-            this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
-            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, tutorialAction, this.game.civilizationStage,
-            s.rules.kind === 'single-player' && s.rules.completed, b?.kind === 'building' ? b.cinderStock : '',
-            b?.type === 'meridianforum' ? this.game.alive(e => e.kind === 'building' && e.forumId === b!.id).length : ''].join(':');
+        if (this.tab === 'details' && (!this.selected.length || this.selected.some(id => this.game.get(id)?.kind !== 'unit'))) this.tab = 'root';
+        if (this.mode?.kind === 'rally' && !this.selectedBuilding()) this.clearMode();
+        const tutorialAction = this.tutorialAction(supply, capacity), f = s.parties[this.localTeam].faction;
+        const button = (key: string, label: string, ic: string, opts: UIActionButtonOptions = {}) => this.actionButton(key, label, ic, opts, tutorialAction);
+        const sig = [this.localTeam, this.tab, f, s.parties[this.localTeam].loadout.join(','), this.selected.join(','),
+          this.mode?.kind, this.mode?.arg, tutorialAction, this.game.civilizationStage].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
-        $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => {
-          const ability = ABILITIES[key];
-          return button('ability:' + key, ability.name, ability.icon);
-        }).join('');
-        let html = '', f = s.parties[this.localTeam].faction;
+        const catalog = this.tab !== 'root' && this.tab !== 'details';
+        $('abilityBar').classList.toggle('hidden', catalog || this.tab === 'details');
+        $('actionPanel').classList.toggle('details-panel', this.tab === 'details');
+        $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => button('ability:' + key, ABILITIES[key].name, ABILITIES[key].icon)).join('');
+        const back = button('tab:root', 'Close menu', 'back');
+        let html = '';
         if (this.tab === 'root') {
-          for (let [tab, label, ic] of [
-            ['build', 'Buildings', 'hq'], ['infantry', 'Infantry', 'rifle'],
-            ['vehicles', 'Vehicles', 'tank'], ['aircraft', 'Aircraft', 'air']
-          ]) html += button('tab:' + tab, label, ic);
-        } else if (this.tab === 'building') {
-          if (ready) {
-            html += button('sell', 'Sell', 'cancel', { disabled: !!sellReason });
-            html += button('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
-            if (b!.forumId === undefined) html += `<div class="building-rotation">${button('rotateLeft', 'Rotate left', 'rotateLeft')}${button('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
-            if (!isCivilizationBuildingType(b!.type)) html += button('rally', 'Rally point', 'rally');
-          } else if (b!.forumId === undefined) html += button('cancelBuild', 'Cancel build', 'cancel');
-        } else if (this.tab === 'build') {
-          for (let k of contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k, this.game.civilizationStage)))
-            html += button('build:' + k, buildingName(k, f), k, {
-              cost: this.game.cost(k, 'building', this.localTeam)
-            });
+          html = `<div class="compact-dock"><div class="favorites" role="group" aria-label="Quick access">${
+            button('favorite:worker', unitName('worker', f), 'worker') + button('favorite:rifle', unitName('rifle', f), 'rifle') +
+            button('build:depot', buildingName('depot', f), 'depot') + button('build:barracks', buildingName('barracks', f), 'barracks')
+          }</div><div class="category-nav" role="group" aria-label="Build and recruit">${[
+            ['build', 'Buildings', 'hq'], ['infantry', 'Infantry', 'rifle'], ['vehicles', 'Vehicles', 'tank'], ['aircraft', 'Aircraft', 'air']
+          ].map(([tab, label, ic]) => button('tab:' + tab, label, ic)).join('')}</div></div>`;
+        } else if (this.tab === 'details') {
+          const list = this.selected.map(id => this.game.get(id)).filter((e): e is UnitEntity => e?.kind === 'unit');
+          const groups = new Map<UnitType, UnitEntity[]>();
+          for (const e of list) groups.set(e.type, [...groups.get(e.type) || [], e]);
+          html = `<div class="details-heading">${back}<span>Unit details</span></div><div class="details-body">${[...groups].map(([type, group]) =>
+            `<section><strong>${esc(unitName(type, group[0].faction))}${group.length > 1 ? ' × ' + group.length : ''}</strong><p>${esc(UNITS[type].desc)}</p><small>Hull ${Math.ceil(group.reduce((n, e) => n + e.hp, 0))} / ${Math.ceil(group.reduce((n, e) => n + e.maxHp, 0))} · Shields ${Math.ceil(group.reduce((n, e) => n + e.shield, 0))} · Supply ${UNITS[type].supply}</small></section>`
+          ).join('')}</div>`;
         } else {
-          let types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['worker', 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
-          for (let k of types[this.tab] || [])
-            html += button('train:' + k, unitName(k, f), k, {
-              cost: this.game.cost(k, 'unit', this.localTeam)
-            });
+          if (this.tab === 'build') {
+            html = contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k, this.game.civilizationStage)).map(k =>
+              button('build:' + k, buildingName(k, f), k, { cost: this.game.cost(k, 'building', this.localTeam) })).join('');
+          } else {
+            const types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
+            html = types[this.tab].map(k => button('train:' + k, unitName(k, f), k, { cost: this.game.cost(k, 'unit', this.localTeam) })).join('');
+          }
+          html = `<div class="catalog-grid" role="group" aria-label="${this.tab === 'build' ? 'Buildings' : this.tab}">${back}${html}</div>`;
         }
-        const tutorialBack = tutorialAction === 'tab:root';
-        $('actions').innerHTML = (this.tab === 'root' ? '' :
-          `<button class="menu-back${tutorialBack ? ' tutorial-focus' : ''}" data-action="tab:root">${uiIcon('back')}Back</button>`) +
-          (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
-          `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
-          (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?
-            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : b!.forumId !== undefined ? '<br>Automatic construction' : ''}${b!.type === 'meridianforum' && ready ?
-            `<br>Cinder: ${Math.floor(b!.cinderStock || 0)} / ${FORUM_SETTLEMENT.capacity}<br>Buildings: ${this.game.alive(e => e.kind === 'building' && e.forumId === b!.id).length} / ${forumBuildingTarget(b!)} (max ${FORUM_SETTLEMENT.buildings})<br>Send prospectors here to supply this settlement.` : ''}</p>` : '');
+        $('actions').innerHTML = html;
+      },
+      renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
+        const list = this.selected.map(id => this.game.get(id)).filter((e): e is Entity => !!e), el = $('selectionStatus');
+        el.classList.toggle('hidden', !list.length || this.tab !== 'root');
+        if (!list.length) { el.innerHTML = ''; return; }
+        const e = list[0], b = this.selectedBuilding(), enemy = list.some(e => e.team !== -1 && e.team !== this.localTeam);
+        const name = list.length > 1 ? `${list.length} units selected` : e.kind === 'unit' ? unitName(e.type, e.faction)
+          : e.kind === 'building' ? buildingName(e.type, e.faction) : e.type === 'gas' ? 'Echo vent' : 'Cinder deposit';
+        const hp = Math.ceil(list.reduce((n, e) => n + e.hp, 0)), max = Math.ceil(list.reduce((n, e) => n + e.maxHp, 0));
+        const shield = Math.ceil(list.reduce((n, e) => n + e.shield, 0)), maxShield = list.reduce((n, e) => n + e.maxShield, 0);
+        const value = e.kind === 'resource' ? `${Math.floor(e.amount).toLocaleString('en-US')} remaining` : `HP ${hp.toLocaleString('en-US')} / ${max.toLocaleString('en-US')}`;
+        const summary = `<span class="summary-title">${esc(name)}</span><span class="selection-health ${enemy ? 'enemy' : 'own'}" style="--health:${clamp(hp / max, 0, 1) * 100}%"${e.kind !== 'resource' ? ` role="meter" aria-label="Hull ${hp} of ${max}${maxShield ? '; Shields ' + shield + ' of ' + Math.ceil(maxShield) : ''}" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${hp}"` : ''}><span>${value}</span>${maxShield ? `<i class="shield-meter" style="width:${clamp(shield / maxShield, 0, 1) * 100}%" aria-hidden="true"></i>` : ''}</span>`;
+        const producer = b && contentKeys(UNITS).some(type => UNITS[type].from === b.type), count = producer ? Math.min(5, b.queue.length) : 0;
+        const dots = producer ? `<span class="selection-queue" role="img" aria-label="${count} of 5 orders in ${esc(name)} #${b.id}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < count ? 'occupied' : ''}" aria-hidden="true"></i>`).join('')}</span>` : '';
+        const avatar = e.kind === 'resource' ? uiIcon(e.type === 'gas' ? 'aether' : 'crystal') : renderModelThumbnail(e.faction, e.kind, e.type, 'selection-model');
+        const tutorialAction = this.tutorialAction(supply, capacity);
+        const button = (key: string, label: string, ic: string) => this.actionButton(key, label, ic, {}, tutorialAction);
+        let actions = '';
+        if (b && b.forumId === undefined) {
+          if (b.progress >= 1) {
+            const repairing = this.game.buildingRepairers(b.id, this.localTeam).length > 0;
+            actions = button('sell', 'Sell structure', 'cancel') + button('repair', repairing ? 'Stop repair' : 'Repair structure', 'repair');
+            if (!isCivilizationBuildingType(b.type)) actions += button('rally', 'Rally point', 'rally');
+            actions += button('rotateLeft', 'Rotate left', 'rotateLeft') + button('rotateRight', 'Rotate right', 'rotateRight');
+          } else actions = button('cancelBuild', 'Cancel construction', 'cancel');
+        }
+        const markup = `<span class="selection-avatar ${producer ? 'has-queue' : ''}">${avatar}${dots}</span>${e.kind === 'unit' && list.every(e => e.kind === 'unit') ? `<button class="selection-summary" data-action="tab:details" aria-label="${esc(name)} · Unit details">${summary}</button>` : `<div class="selection-summary">${summary}</div>`}<div class="building-controls">${actions}${button('clearSelection', 'Clear selection', 'close')}</div>`;
+        if (el.innerHTML !== markup) el.innerHTML = markup;
+      },
+      updateHUDLayout(this: MeridianUI) {
+        const deck = $('commandDeck').getBoundingClientRect(), panel = $('actionPanel').getBoundingClientRect(), status = $('selectionStatus');
+        const top = Math.min(deck.top, panel.top, status.classList.contains('hidden') ? deck.top : status.getBoundingClientRect().top);
+        if (!Number.isFinite(top) || typeof innerHeight !== 'number') return;
+        const height = Math.max(0, innerHeight - top), style = document.documentElement?.style;
+        style?.setProperty('--hud-height', height + 'px');
+        style?.setProperty('--queue-floor', height + 8 + 'px');
+        style?.setProperty('--hud-top', $('topbar').getBoundingClientRect().bottom + 'px');
       },
       buildingAction(this: MeridianUI, action: string, id: number) {
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s!.result) return;
@@ -371,7 +401,6 @@
         $('supplyCount').textContent = supply + '/' + capacity;
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
         $('energyCount').textContent = String(Math.floor(account.energy));
-        $('gameTime').textContent = formatTime(s.time);
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
         speedButton.textContent = speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
@@ -397,48 +426,50 @@
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },
+      actionReason(this: MeridianUI, action: string, supply?: number, capacity?: number) {
+        if (this.isModeAction(action)) return '';
+        const [kind, arg] = action.split(':'), team = this.localTeam, s = this.game.s;
+        if (!s) return '';
+        if ((kind === 'train' || kind === 'favorite') && hasContentKey(UNITS, arg))
+          return this.game.recruitmentReason(arg, team, kind === 'favorite' ? this.favoriteProducer(arg) : undefined, supply, capacity);
+        if (kind === 'build' && hasContentKey(BUILDINGS, arg)) {
+          const cost = this.game.cost(arg, 'building', team), account = s.parties[team].account;
+          return this.game.canBuild(arg, null, team) || (account.alloy < cost.cost ? 'Not enough Cinder.' : '') ||
+            (account.gas < cost.gas ? 'Not enough Echo.' : '');
+        }
+        if (kind === 'ability' && hasContentKey(ABILITIES, arg)) {
+          const account = s.parties[team].account;
+          return this.game.abilityRequirement(arg, team) || (account.abilities[arg] > s.time ? 'Ability is cooling down.' : '') ||
+            (account.energy < this.game.abilityStats(arg, team).energy ? 'Not enough energy.' : '');
+        }
+        const b = this.selectedBuilding();
+        if (['repair', 'sell', 'rotateLeft', 'rotateRight'].includes(kind) && this.mode) return 'Cancel targeting first.';
+        if (kind === 'repair') return !b ? 'Select an own structure.' : this.game.buildingRepairers(b.id, team).length ? '' : this.game.canRepairBuilding(b.id, team);
+        if (kind === 'sell') return this.game.canSellBuilding(this.selected[0], team);
+        if (kind === 'rotateLeft' || kind === 'rotateRight') return this.game.managedBuilding(this.selected[0], team) ? '' : 'This structure cannot be rotated.';
+        return '';
+      },
       updateActionStates(this: MeridianUI, supply?: number, capacity?: number) {
         const s = this.game.s;
         if (!s) return;
-        const buttons = document.querySelectorAll<HTMLButtonElement>('[data-action]');
-        if (!buttons.length) return;
-        supply ??= this.game.supply(this.localTeam);
-        capacity ??= this.game.cap(this.localTeam);
-        for (let b of buttons) {
-          let [k, arg] = b.dataset.action!.split(':');
-          const active = this.isModeAction(b.dataset.action!);
-          let disabled = false;
-          if (active) {
-            const badge = b.querySelector('small');
-            if (badge) badge.textContent = '';
-          } else if (k === 'train' && hasContentKey(UNITS, arg)) {
-            let d = UNITS[arg];
-            disabled =
-              !this.game.afford(this.game.cost(arg, 'unit', this.localTeam), this.localTeam) ||
-              !this.game.availableProducers(d.from, this.localTeam).length ||
-              supply + d.supply > capacity;
-            if (arg === 'hero' && this.game.alive(e => e.team === this.localTeam &&
-              (e.type === 'hero' || e.queue?.some(q => q.type === 'hero'))).length) disabled = true;
-          } else if (k === 'build' && hasContentKey(BUILDINGS, arg))
-            disabled = !!this.game.canBuild(arg, null, this.localTeam) || !this.game.afford(this.game.cost(arg, 'building', this.localTeam), this.localTeam);
-          else if (k === 'ability' && hasContentKey(ABILITIES, arg)) {
-            let energy = this.game.abilityStats(arg, this.localTeam).energy,
-              requirement = this.game.abilityRequirement(arg, this.localTeam), account = s.parties[this.localTeam].account;
-            disabled = !!requirement || account.energy < energy || account.abilities[arg] > s.time;
-            let badge = b.querySelector('small');
-            if (badge)
-              badge.textContent =
-                requirement ? 'TECH' : account.abilities[arg] > s.time
-                  ? Math.ceil(account.abilities[arg] - s.time) + 's'
-                  : energy + 'ϟ';
+        for (const b of document.querySelectorAll<HTMLButtonElement>('[data-action]')) {
+          const key = b.dataset.action!, [kind, arg] = key.split(':'), active = this.isModeAction(key), reason = this.actionReason(key, supply, capacity);
+          // Blocked actions remain tappable to explain the reason. Only lifecycle locks disable input.
+          b.disabled = this.controlsLocked || !!s.result;
+          b.classList.toggle('blocked', !!reason);
+          b.classList.toggle('active', active);
+          b.classList.toggle('cancel-target', active);
+          if (kind === 'build' || kind === 'ability' || kind === 'rally') b.setAttribute('aria-pressed', String(active));
+          const base = b.dataset.label || '', label = active ? `${base.split(' · ')[0]} · Cancel targeting` : base + (reason ? ` · ${reason} · Tap for reason` : '');
+          if (b.dataset.label !== undefined) {
+            b.setAttribute('aria-label', label);
+            b.setAttribute('title', label);
           }
-          if (k === 'repair') disabled = !!this.mode || !this.selectedBuilding() ||
-            (!this.game.buildingRepairers(this.selected[0], this.localTeam).length && !!this.game.canRepairBuilding(this.selected[0], this.localTeam));
-          if (k === 'sell') disabled = !!this.mode || !!this.game.canSellBuilding(this.selected[0], this.localTeam);
-          if (k === 'rotateLeft' || k === 'rotateRight') disabled = !!this.mode || !this.game.managedBuilding(this.selected[0], this.localTeam);
-          disabled ||= this.controlsLocked || !!s.result;
-          b.disabled = disabled;
-          b.classList.toggle('disabled', disabled);
+          if (kind === 'ability' && hasContentKey(ABILITIES, arg)) {
+            const badge = b.querySelector('small'), account = s.parties[this.localTeam].account;
+            if (badge) badge.textContent = active ? '' : this.game.abilityRequirement(arg, this.localTeam) ? 'TECH' :
+              account.abilities[arg] > s.time ? Math.ceil(account.abilities[arg] - s.time) + 's' : this.game.abilityStats(arg, this.localTeam).energy + 'ϟ';
+          }
         }
       }
     };

@@ -123,8 +123,32 @@
         return this.alive(e => e.team === team && e.kind === 'building' &&
           e.type === buildingType && e.progress >= 1 && e.queue.length < 5) as BuildingEntity[];
       },
-      train(this: MeridianGame, type: UnitType, team: PlayerTeam = 0) {
+      recruitmentReason(this: MeridianGame, type: UnitType, team: PlayerTeam = 0, producerId?: number, supply?: number, capacity?: number) {
+        const d = UNITS[type];
+        if (producerId !== undefined) {
+          const b = this.get(producerId);
+          if (!b || b.hp <= 0 || b.team !== team || b.kind !== 'building' || b.type !== d.from)
+            return 'This structure cannot recruit this unit.';
+          if (b.progress < 1) return 'Structure is still under construction.';
+          if (b.queue.length >= 5) return 'This structure’s queue is full.';
+        } else if (!this.availableProducers(d.from, team).length)
+          return this.has(d.from, team) ? 'Production queues are full (five orders per structure).'
+            : `Construct a ${buildingName(d.from, this.factionFor(team))} first.`;
+        if (type === 'hero' && this.alive(e => e.team === team &&
+          (e.type === 'hero' || e.queue?.some(q => q.type === 'hero'))).length) return 'Commander already present.';
+        if ((supply ?? this.supply(team)) + d.supply > (capacity ?? this.cap(team))) return 'Supply limit. Complete another logistics depot.';
+        const c = this.cost(type, 'unit', team), account = this.account(team);
+        if (account.alloy < c.cost) return 'Not enough Cinder.';
+        if (account.gas < c.gas) return 'Not enough Echo.';
+        return '';
+      },
+      train(this: MeridianGame, type: UnitType, team: PlayerTeam = 0, producerId?: number) {
         if (this.s!.stopped) return false;
+        // An explicit producer is authoritative, never silently reroute a blocked local order.
+        if (producerId !== undefined) {
+          const reason = this.recruitmentReason(type, team, producerId);
+          if (reason) { this.notify(team, 'toast', reason); return false; }
+        }
         let s = this.s!,
           d = UNITS[type];
         if (!d) return false;
@@ -136,7 +160,7 @@
           this.notify(team, 'toast', 'Your commander is already deployed or in reconstruction.');
           return false;
         }
-        let producers = this.availableProducers(d.from, team);
+        let producers = this.availableProducers(d.from, team).filter(b => producerId === undefined || b.id === producerId);
         // Global recruitment: assign to the shortest queue, independent of selection.
         producers.sort((a, b) => a.queue.length - b.queue.length || a.id - b.id);
         let b = producers[0];
@@ -166,7 +190,6 @@
         let q = b.queue.splice(index, 1)[0];
         this.account(team).alloy += q.cost;
         this.account(team).gas += q.gas;
-        this.notify(team, 'toast', 'Recruitment canceled. Resources refunded.');
       },
       availableWorkers(this: MeridianGame, team: PlayerTeam = 0): UnitEntity[] {
         return this.alive(e => e.team === team && e.kind === 'unit' && e.type === 'worker' &&
@@ -286,7 +309,6 @@
         e.hp = 0;
         e.deathAt = this.s!.time;
         this.navDirty = true;
-        this.notify(team, 'toast', 'Foundation canceled. 75% of resources recovered.');
       },
       managedBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0): BuildingEntity | null {
         let b = this.get(id);
@@ -327,7 +349,6 @@
         let repairing = this.buildingRepairers(id, team);
         if (repairing.length) {
           for (let w of repairing) this.setOrder(w, { type: 'idle' });
-          this.notify(team, 'toast', 'Building repair stopped.');
           return true;
         }
         let reason = this.canRepairBuilding(id, team);
@@ -337,7 +358,6 @@
         }
         let worker = this.availableWorkers(team).sort((a, c) => distance(a, b) - distance(c, b) || a.id - c.id)[0];
         this.command([worker.id], { type: 'repair', id: b.id, x: b.x, z: b.z }, team);
-        this.notify(team, 'toast', 'Nearest free worker assigned to repair.');
         return true;
       },
       canSellBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0) {
@@ -374,7 +394,6 @@
         for (let w of this.buildingRepairers(id, team)) this.setOrder(w, { type: 'idle' });
         // Selling is not a combat kill: no explosion, kill credit or effect RNG draws.
         this.world!.rebuild(this.s!.entities);
-        this.notify(team, 'toast', 'Structure sold. Recruitment canceled and refunded.');
         return true;
       },
       miningResource(this: MeridianGame, e: UnitEntity): ResourceEntity | null {

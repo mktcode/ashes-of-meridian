@@ -67,12 +67,6 @@
             this.updateHUD();
             return;
           }
-          if (b.dataset.cam) {
-            if (this.controlsLocked) return;
-            if (b.dataset.cam === 'home') this.homeCamera();
-            else if (this.game.s)
-              this.zoomCamera(this.game.s.cam.zoom * (b.dataset.cam === 'in' ? 0.85 : 1.18));
-          }
         });
         document.addEventListener('change', e => {
           const target = e.target as HTMLInputElement | HTMLSelectElement | null;
@@ -90,33 +84,6 @@
           this.game.s!.speed = speeds[(speeds.indexOf(this.game.s!.speed) + 1) % speeds.length];
           this.lastClick = {};
           this.updateHUD();
-        };
-        $('attackMoveBtn').onclick = () => {
-          if (this.controlsLocked) return;
-          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
-          this.attackMove = !this.attackMove;
-          $('attackMoveBtn').setAttribute('aria-pressed', String(this.attackMove));
-          this.lastClick = {};
-          this.toast(this.attackMove
-            ? 'Attack-move: troops engage enemies along the way.'
-            : 'Move: troops prioritize reaching the destination.');
-        };
-        $('visibleCombatSelectBtn').onclick = () => {
-          if (this.controlsLocked) return;
-          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
-          this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker')
-            .filter(e => {
-              const y = (isFlyingUnitType(e.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(e) ?? 0),
-                p = this.R.project(e.x, y, e.z);
-              return p && this.R.containsPoint(p.x, p.y);
-            }).map(e => e.id), true);
-          this.lastClick = {};
-        };
-        $('combatSelectBtn').onclick = () => {
-          if (this.controlsLocked) return;
-          if (this.view !== 'game' || this.paused || !this.game.s || this.game.s!.result) return;
-          this.select(this.game.alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type !== 'worker').map(e => e.id), true);
-          this.lastClick = {};
         };
         $('radioClose').onclick = () => {
           this.audio.stopVoice?.('dialogue');
@@ -183,24 +150,10 @@
           if (this.controlsLocked || this.view !== 'game') return;
           e.preventDefault();
           let p = minimapPosition(e);
-          if (e.button === 2) {
-            if (this.selectedBuilding()) this.select([]);
-            else this.issueOrder(
-              this.selected,
-              { type: this.attackMove ? 'attackMove' : 'move', ...p }
-            );
-            this.clearMode();
-          } else if (this.mode) {
-            if (this.mode.kind === 'build') {
-              this.toast('Place foundations in the main battlefield view.');
-              return;
-            }
-            this.applyTarget(p);
-          } else {
-            this.center(p.x, p.z);
-            miniDrag = true;
-            map.setPointerCapture(e.pointerId);
-          }
+          // The minimap only navigates, including during target selection.
+          this.center(p.x, p.z);
+          miniDrag = true;
+          map.setPointerCapture(e.pointerId);
         });
         map.addEventListener('pointermove', e => {
           if (!miniDrag || this.controlsLocked) return;
@@ -561,7 +514,7 @@
             this.selected,
             target
               ? { type: 'smart', id: target.id, x: target.x, z: target.z }
-              : { type: this.attackMove ? 'attackMove' : 'move', ...p }
+              : { type: 'move', ...p }
           );
           this.clearMode();
           return;
@@ -585,19 +538,17 @@
           this.issueOrder(
             this.selected,
             target ? { type: 'smart', id: target.id, x: target.x, z: target.z }
-              : { type: this.attackMove ? 'attackMove' : 'move', ...p }
+              : { type: 'move', ...p }
           );
           return;
         }
         if (target) {
           let now = performance.now(),
             count = previousClick.id === target.id && previousClick.type === d.type &&
-              now - previousClick.time! < 330 ? Math.min(3, previousClick.count! + 1) : 1;
+              now - previousClick.time! < 330 ? Math.min(2, previousClick.count! + 1) : 1;
           if (count >= 2 && target.team === this.localTeam && target.kind === 'unit') {
-            let combat = d.type === 'touch' && count === 3,
-              units = this.game
-              .alive(e => e.team === this.localTeam && e.kind === 'unit' &&
-                (combat ? e.type !== 'worker' : e.type === target.type))
+            let units = this.game
+              .alive(e => e.team === this.localTeam && e.kind === 'unit' && e.type === target.type)
               .filter(e => {
                 let q = this.R.project(e.x, (isFlyingUnitType(e.type) ? 4.4 : 1) + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
                 return q && this.R.containsPoint(q.x, q.y);

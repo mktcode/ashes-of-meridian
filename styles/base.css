@@ -11,15 +11,13 @@
       --panel-deep: #05131ff5;
       --red: #f17b78;
       --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
-      --topbar-height: 63px;
-      --map-size: clamp(124px, 24vw, 200px);
-      --action-width: clamp(104px, 24vw, 240px);
-      --deck-height: calc(var(--map-size) + var(--tools-height) + var(--hud-gap));
-      --ability-height: 64px;
-      --tools-height: 44px;
-      --hud-gap: 1px;
-      --hud-inset: 0px;
-      --center-height: calc(var(--tools-height) + var(--ability-height) + var(--hud-gap))
+      --topbar-height: 48px;
+      --map-size: 144px;
+      --row-height: calc(var(--map-size) / 3);
+      --deck-height: var(--map-size);
+      --hud-height: calc(var(--map-size) + env(safe-area-inset-bottom));
+      --hud-top: calc(var(--topbar-height) + env(safe-area-inset-top));
+      --queue-floor: calc(var(--hud-height) + 8px)
     }
 
     * {
@@ -124,8 +122,8 @@
     }
 
     #worldViewport.in-battle {
-      top: var(--topbar-height);
-      bottom: calc(var(--center-height) + var(--hud-inset))
+      top: var(--hud-top);
+      bottom: var(--hud-height)
     }
 
     canvas#world,

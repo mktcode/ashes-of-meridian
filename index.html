@@ -33,7 +33,6 @@
   <div id="modal" class="screen hidden"></div>
   <div id="hud" class="hidden">
     <header id="topbar"><div id="battleLabel"><span id="battleStage"></span><small id="civilizationCount"></small></div>
-      <div class="top-spacer"></div>
       <div class="resource-strip" aria-label="Resources">
         <div class="resource"><span class="resicon alloy" aria-hidden="true"><img class="ui-icon" src="./assets/ui/cinder.webp" alt=""></span>
           <div><strong id="alloyCount">0</strong><small>CINDER</small></div>
@@ -48,8 +47,7 @@
           <div><strong id="energyCount">0</strong><small>ENERGY</small></div>
         </div>
       </div>
-      <div class="clock"><strong id="gameTime">00:00</strong><button id="speedBtn" aria-label="Simulation speed: 1×. Tap to change.">1×</button><div id="speedHint" class="glass hidden" role="tooltip">Construction takes a moment. You can increase the game speed here.</div></div><button
-        id="pauseBtn" class="square" aria-label="Pause"><img class="ui-icon" src="./assets/ui/pause.webp" alt="" aria-hidden="true"></button>
+      <div id="gameControls" role="group" aria-label="Game speed and pause"><button id="speedBtn" aria-label="Simulation speed: 1×. Tap to change.">1×</button><button id="pauseBtn" aria-label="Pause"><img class="ui-icon" src="./assets/ui/pause.webp" alt="" aria-hidden="true"></button><div id="speedHint" class="glass hidden" role="tooltip">Construction takes a moment. You can increase the game speed here.</div></div>
     </header>
     <div id="battleNotices">
       <section id="tutorialGoal" class="hidden" role="status" aria-labelledby="tutorialGoalLabel">
@@ -69,16 +67,12 @@
     <footer id="commandDeck">
       <section class="minimap-panel" aria-label="Tactical map">
         <canvas id="minimap" aria-label="Minimap" width="210" height="210"></canvas>
-        <div id="cameraTools" role="group" aria-label="Map navigation"><button data-cam="home" aria-label="Center on command"><img class="ui-icon" src="./assets/ui/home.webp" alt="" aria-hidden="true"></button><button data-cam="in"
-          aria-label="Zoom in"><img class="ui-icon" src="./assets/ui/plus.webp" alt="" aria-hidden="true"></button><button data-cam="out" aria-label="Zoom out"><img class="ui-icon" src="./assets/ui/minus.webp" alt="" aria-hidden="true"></button></div>
       </section>
-      <section id="commandCenter" aria-label="Command abilities">
-    <div id="commandTools"><button id="attackMoveBtn" aria-label="Attack-move" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 3l4 1 12 15-2 2L4 6zM20 3l-4 1L4 19l2 2L20 6zM3 16l5 5M16 21l5-5"/></svg></button><button id="visibleCombatSelectBtn" aria-label="Select combat units in view"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V4h4m10 0h4v4m0 8v4h-4M7 20H3v-4M8 16v-1.5a4 4 0 0 1 8 0V16M12 7a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5"/></svg></button><button id="combatSelectBtn" aria-label="Select all combat units"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4m8 0h4v4m0 8v4h-4M8 20H4v-4M12 6a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm-5 3a2 2 0 1 1 0 4m10-4a2 2 0 1 1 0 4M8 19v-2.5a4 4 0 0 1 8 0V19M3 19v-1.5a3 3 0 0 1 3-3m15 4.5v-1.5a3 3 0 0 0-3-3"/></svg></button></div>
-    <div id="abilityBar" role="group" aria-label="Command abilities"></div>
-      </section>
-      <section id="actionPanel" aria-label="Build, recruit and building actions">
+      <section id="actionPanel" aria-label="Build and recruit">
         <div id="actions"></div>
+        <div id="abilityBar" role="group" aria-label="Command abilities"></div>
       </section>
+      <div id="selectionStatus" class="hidden" role="group" aria-label="Selection status and structure actions"></div>
     </footer>
   </div>
   <div id="toast" role="status"></div>

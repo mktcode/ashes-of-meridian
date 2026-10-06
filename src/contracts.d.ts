@@ -410,7 +410,7 @@ type CommandOrder = UnitOrder | ({ type: 'smart'; id: number } & Position);
 type BattleAction =
   | { kind: 'order'; ids: number[]; order: CommandOrder }
   | { kind: 'rally'; ids: number[]; position: Position }
-  | { kind: 'train'; unit: UnitType }
+  | { kind: 'train'; unit: UnitType; producerId?: number }
   | { kind: 'build'; building: BuildingType; position: Position; selected: number[] }
   | { kind: 'ability'; ability: AbilityType; position: Position }
   | { kind: 'cancelQueue'; id: number; index: number }
