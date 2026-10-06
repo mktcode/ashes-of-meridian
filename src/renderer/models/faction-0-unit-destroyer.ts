@@ -1,3 +1,3 @@
-/* Breakwater: the authored GLB hull and animated turbine rotors. */
+/* Breakwater: the detailed hull and animated turbine rotors. */
 'use strict';
 registerHeavyModel('breakwater', 0);

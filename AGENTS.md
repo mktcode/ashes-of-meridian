@@ -11,7 +11,7 @@
 - Kleinster sinnvoller Umfang. Formatierung, Struktur und Verhalten getrennt halten; kein beiläufiges Balancing, Darstellungs-/Regelkorrekturen oder Abarbeiten des Backlogs. Issues sind keine Implementierungsfreigabe.
 - Hindernisverteilung, Körperradien und RNG-Reihenfolge schützen; kosmetische Effekte nutzen teilweise Simulations-RNG. [Referenzen](docs/reference-tests.md) nicht zum Grünmachen regenerieren.
 - Prototyp: keine Migrationen, Rückwärtskompatibilität oder Legacy-Adapter ohne Auftrag.
-- Quellen statt `dist/` bearbeiten. Generierte Asset-Einbettungen nur über ihre [Generatorskripte](docs/rendering.md#texturen) aktualisieren. Rasterassets ausschließlich WebP/Qualität 80; keine unbeauftragte Löschung/Ersetzung.
+- Quellen statt `dist/` bearbeiten; Modelle gemäß [Pflegevertrag](docs/rendering.md#einzeln-wartbare-modelle). Rasterassets ausschließlich WebP/Qualität 80; keine unbeauftragte Löschung/Ersetzung.
 - Direkte `file://`-Auslieferung ohne erforderlichen Server, CDN, Laufzeit-Imports oder gelockerte Browser-Sicherheit erhalten.
 - Zusammenhängende geprüfte Änderungen eigenständig committen; fremde Änderungen nicht aufnehmen. Kein eigenständiger Push/Deployment.
 

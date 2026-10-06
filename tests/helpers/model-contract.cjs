@@ -5,10 +5,10 @@ const { BATTLEFIELD_SCRIPTS, loadScripts, RENDERER_SCRIPTS } = require('./game-s
 const { createRendererStub } = require('./renderer-stub.cjs');
 
 function modelHarness(options = {}) {
-  // Procedural model contracts do not need the large authored GLBs. Their own model
+  // Other model contracts do not need the large destroyer mesh data. Its own model
   // contract explicitly opts in; keep the 128 MB test worker budget effective.
   const renderer = options.heavyModels ? RENDERER_SCRIPTS : RENDERER_SCRIPTS.filter(name =>
-    name !== 'heavy-assets' && name !== 'renderer-heavy-mesh' && !name.endsWith('-unit-destroyer'));
+    name !== 'renderer-heavy-data' && name !== 'renderer-heavy-mesh' && !name.endsWith('-unit-destroyer'));
   const context = loadScripts(['core', ...renderer, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view'], options);
   const api = vm.runInContext('({ geom, ModelMesh, EntityModels, createEntityModelRegistry, renderEntity, UNITS, BUILDINGS, FACTIONS, BUILDING_YAW, MAT })', context);
   return { context, ...api, draw(entity, options = {}, time = 9) {

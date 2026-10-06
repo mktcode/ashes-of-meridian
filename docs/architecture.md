@@ -4,9 +4,9 @@ Entscheidungen und Änderungsrisiken; Implementierungsdetails stehen in Quellen 
 
 ## Auslieferung
 
-Das Spiel muss nach `npm run build` direkt über `file://` funktionieren. Deshalb klassische, synchron in HTML-Reihenfolge geladene Skripte mit gemeinsamen globalen Bindungen: keine Laufzeit-Imports, CDN-Abhängigkeiten, `async` oder `defer`. TypeScript wird strikt geprüft; generierte Asset-Einbettungen bleiben Ausnahmen. `window.Meridian` bietet gezielte Runtime-Inspektion.
+Das Spiel muss nach `npm run build` direkt über `file://` funktionieren. Deshalb klassische, synchron in HTML-Reihenfolge geladene Skripte mit gemeinsamen globalen Bindungen: keine Laufzeit-Imports, CDN-Abhängigkeiten, `async` oder `defer`. TypeScript wird strikt geprüft. `window.Meridian` bietet gezielte Runtime-Inspektion.
 
-Neue Skripte in `index.html` und den betroffenen Gruppen von `tests/helpers/game-scripts.cjs` eintragen. Prototypfragmente erweitern Klassen über nicht aufzählbare Methoden und Declaration Merging. **Ladereihenfolge ist Vertrag**, ebenso die gesamte CSS-Kaskade. Quellen bearbeiten, nie `dist/` oder generierte Einbettungen von Hand.
+Neue Skripte in `index.html` und den betroffenen Gruppen von `tests/helpers/game-scripts.cjs` eintragen. Prototypfragmente erweitern Klassen über nicht aufzählbare Methoden und Declaration Merging. **Ladereihenfolge ist Vertrag**, ebenso die gesamte CSS-Kaskade. Quellen bearbeiten, nie `dist/` von Hand.
 
 Das [UI-Designsystem](ui-design-system.md) beschreibt die auf UI-Wurzeln begrenzte
 Theme-Schicht einschließlich Gefechts-HUD und Meldungen sowie ihre Pflegegrenzen.

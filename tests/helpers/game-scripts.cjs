@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const projectRoot = join(__dirname, '../..');
 const RENDERER_SCRIPTS = Object.freeze([
   'renderer-materials',
-  'heavy-assets',
+  'renderer-heavy-data',
   'renderer-geometry',
   'renderer-terrain-models',
   'renderer-desert-landscape',

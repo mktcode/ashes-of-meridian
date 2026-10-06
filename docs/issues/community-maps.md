@@ -7,7 +7,7 @@ Eigene Geometrie/Oberflächen/statische Objekte plus Starts/Ressourcen/Sperren m
 ## Vor Umsetzung entscheiden
 
 - [ ] Versioniertes Schema/Beispielpaket: ZIP mit `map.json`, begrenztem `scenery.glb`, WebP-Texturen/Qualität 80 und optionaler Vorschau. Numerische Höhen/Masken, keine verlustbehafteten Bilddaten oder erforderlichen `.bin`-Dateien.
-- [ ] Koordinaten, Raster/Diagonale, Materialien/Transforms, einzelne Ressourcen/Vents versus bestehende Ankergruppen, Parteien/Starts und Fehlerbehandlung spezifizieren. Heutiger Einheiten-GLB-Importer ist kein allgemeiner Kartenloader.
+- [ ] Koordinaten, Raster/Diagonale, Materialien/Transforms, einzelne Ressourcen/Vents versus bestehende Ankergruppen, Parteien/Starts und Fehlerbehandlung spezifizieren. Das Spiel besitzt keinen GLB-Importer; ein Kartenimport braucht einen eigenen begrenzten Datenloader.
 - [ ] Grenzen für entpackte Daten, GPU-Texturen/-Geometrie und Instanzen am Prototyp festlegen; ZIP-Bomben/Pfadtraversal/externe URIs/unbekannte Erweiterungen abweisen.
 - [ ] Validierung von Starts, Bauflächen, Fahrzeugwegen/Ressourcen und CPU-/GPU-Übereinstimmung; Fairness zusätzlich menschlich abnehmen. Keine automatische Aufnahme in Expeditionen.
 - [ ] Späteres Teilen separat: Rechte, Versionierung und Moderation. Etwaige Netzwerkanforderungen erst bei einer gesonderten [Multiplayerfreigabe](multiplayer.md).

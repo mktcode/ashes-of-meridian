@@ -1,18 +1,26 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
+const { createHash } = require('node:crypto');
 const { modelHarness } = require('../helpers/model-contract.cjs');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('../helpers/game-scripts.cjs');
 
-const root = join(__dirname, '../..');
-test('authored destroyers keep GLB triangles, independent moving parts and uniform preview colors', () => {
+test('destroyers keep exact mesh data, independent moving parts and uniform preview colors', () => {
   const h = modelHarness({heavyModels:true}), meshes = {};
   vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }', h.context);
-  h.EntityModels.upload({ meshes, geometry(name, data) { meshes[name] = data; } });
+  // Keep full-precision captures outside the bounded JavaScript test heap.
+  h.EntityModels.upload({ meshes, geometry(name, data) { meshes[name] = Float64Array.from(data); } });
   for (const [faction, count, animated] of [[0,20528,4],[1,49848,6],[2,31664,16]]) {
     const prefix = `heavy${faction}`;
+    // Full-precision baseline protects positions, normals, colors and triangle order, not just counts.
+    const meshHashes = Object.keys(meshes).filter(key => key.startsWith(prefix)).sort().map(key =>
+      key + ':' + createHash('sha256').update(Buffer.from(new Float64Array(meshes[key]).buffer)).digest('hex'));
+    const expected = [
+      'a1a398fdf9a02f31930d65ab2d3b32a50be9903cabb8149ee240c3593c507820',
+      'cd193f805ffc7520fb58de238e5d0d594f7d9cb7acb9bc456509172fef9bcb40',
+      '2c4004e6edf5c38ce7e9b7a3e4977aeee7f129da9d9bbe38c6637cc2e5c2dc60'
+    ];
+    assert.equal(createHash('sha256').update(meshHashes.join('\n')).digest('hex'), expected[faction]);
     const keys = Object.keys(meshes).filter(key => key.startsWith(prefix) && !key.endsWith('Neutral'));
     assert.equal(keys.length, animated + 1 + (faction === 0 ? 1 : 0));
     assert.equal(keys.reduce((sum, key) => sum + meshes[key].length / 27, 0), count);
@@ -51,7 +59,7 @@ test('authored destroyers keep GLB triangles, independent moving parts and unifo
 
 test('local flight envelopes keep the complete animated aircraft and destroyer meshes above mountain triangles', () => {
   const h=modelHarness({heavyModels:true}),meshes={},Surface=vm.runInContext('BattlefieldSurface',h.context);
-  h.EntityModels.upload({meshes,geometry(name,data){meshes[name]=data;}});
+  h.EntityModels.upload({meshes,geometry(name,data){meshes[name]=Float64Array.from(data);}});
   const surface=new Surface(30,2.5,(x,z)=>Math.max(0,40-Math.hypot(x,z)*12)),
     rotate=([x,y,z],ry,rx,rz)=>{
       [x,y]=[x*Math.cos(rz)-y*Math.sin(rz),x*Math.sin(rz)+y*Math.cos(rz)];
@@ -69,15 +77,6 @@ test('local flight envelopes keep the complete animated aircraft and destroyer m
         assert.ok(y>surface.heightAt(x,z)+.5,`${faction}/${type}: actual transformed vertex clears the mountain`);
       }
     }
-  }
-});
-
-test('source GLBs match the supported embedded data layout', () => {
-  const counts = {breakwater:20528,crownwing:49848,catafalque:31664};
-  for (const name of Object.keys(counts)) {
-    const file = readFileSync(join(root,'assets/models',`${name}.glb`));
-    assert.equal(file.toString('ascii',0,4),'glTF');
-    assert.equal(file.readUInt32LE(4),2);
   }
 });
 
