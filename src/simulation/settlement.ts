@@ -1,6 +1,6 @@
 /* Post-victory settlements. No draws from combat/effect RNG; all timers/cursors are saved. */
 'use strict';
-const FORUM_SETTLEMENT = Object.freeze({ capacity: 1000, buildings: 30, radius: 60, interval: 10, corridorWidth: 5 });
+const FORUM_SETTLEMENT = Object.freeze({ capacity: 2000, buildings: 60, radius: 60, interval: 10, corridorWidth: 5 });
 const SETTLEMENT_TYPES: readonly (readonly BuildingType[])[] = [
   ['embercottage', 'fieldlab'], ['terracecommons', 'researchhub'], ['hearthtower', 'researchspire']
 ];

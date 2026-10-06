@@ -187,10 +187,10 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
  const {game,world}=fixture(0,()=>40);game.s.entities=[];
  const forum=game.spawnBuilding('meridianforum',0,0,0,0),funds={...game.account(0)};
  game.random=()=>assert.fail('Settlement must not consume battle RNG');
- forum.cinderStock=1000;game.updateSettlements();assert.equal(game.s.entities.length,1);
- for(let i=1;i<=70;i++){game.s.time=i*10;game.updateSettlements(10);}
+ forum.cinderStock=2000;game.updateSettlements();assert.equal(game.s.entities.length,1);
+ for(let i=1;i<=100;i++){game.s.time=i*10;game.updateSettlements(10);}
  const grown=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);
- assert.equal(grown.length,30);assert.deepEqual(game.account(0),funds);assert.ok(grown.every(b=>b.progress===1&&b.paid.cost===0&&b.paid.gas===0));
+ assert.equal(grown.length,60);assert.deepEqual(game.account(0),funds);assert.ok(grown.every(b=>b.progress===1&&b.paid.cost===0&&b.paid.gas===0));
  assert.ok(new Set(grown.map(b=>b.type)).size>=4,'all classes mix rather than unlock by stage');
  for(const b of grown) {
   assert.ok(Math.hypot(b.x-forum.x,b.z-forum.z)<=60);
@@ -198,11 +198,15 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
   assert.equal(game.canSellBuilding(b.id),'Managed by its forum');
   assert.equal(game.rotateBuilding(b.id,1),false);
  }
- assert.equal(game.s.stats.built,30);assert.ok(civilizationScoreForBuildings(grown,0)>0);
+ assert.equal(game.s.stats.built,60);assert.ok(civilizationScoreForBuildings(grown,0)>0);
  assert.equal(civilizationScoreForBuildings([forum],0),0);
  const {settlementBuildingType,forumBuildingTarget}=vm.runInContext('({settlementBuildingType,forumBuildingTarget})',context);
  assert.equal(forumBuildingTarget({...forum,cinderStock:999}),29);
+ assert.equal(forumBuildingTarget({...forum,cinderStock:1000}),30,'existing stock keeps its previous building target');
  assert.equal(forumBuildingTarget({...forum,cinderStock:500}),15);
+ assert.equal(forumBuildingTarget({...forum,cinderStock:1999}),59);
+ assert.equal(forumBuildingTarget({...forum,cinderStock:2000}),60);
+ assert.equal(forumBuildingTarget({...forum,cinderStock:2001}),60,'target stays capped');
  assert.equal(settlementBuildingType(18,.5,.1),'hearthtower');
  assert.equal(settlementBuildingType(60,.5,.9),'fieldlab');
  const blocked=fixture(0,()=>40);blocked.game.s.entities=[];
@@ -210,7 +214,7 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
  blocked.world.staticGrid.fill(1);assert.equal(blocked.game.growSettlement(crowded),false);
  assert.equal(blocked.game.s.entities.length,1,'no space means no forced spawn');
  game.s.rules.completed=false;forum.cinderStock=500;game.s.time+=100;game.updateSettlements();
- assert.equal(game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0).length,30);
+ assert.equal(game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0).length,60);
 });
 test('settlement candidates vary freely in radius and angle while the saved cursor remains deterministic and bounded',()=>{
  const {game}=fixture(0,()=>40);game.s.entities=[];
@@ -247,10 +251,10 @@ test('irregular mixed settlements keep all three rotated Forum approaches naviga
  let total=0,medium=0;const seen=new Set();
  for(const [seed,rotation] of [[1409,0],[2718,1/3],[8123,2]]){
   const {game,world}=fixture(0,()=>40);game.s.entities=[];game.s.seed=seed;delete world.path;
-  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=rotation;forum.cinderStock=1000;
+  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=rotation;forum.cinderStock=2000;
   game.random=()=>assert.fail('Settlement must not consume battle RNG');game.updateSettlements();
-  for(let i=1;i<=70;i++){game.s.time=i*10;game.updateSettlements(10);}
-  const buildings=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);assert.equal(buildings.length,30);
+  for(let i=1;i<=100;i++){game.s.time=i*10;game.updateSettlements(10);}
+  const buildings=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);assert.equal(buildings.length,60);
   total+=buildings.length;medium+=buildings.filter(e=>BUILDINGS[e.type].civilizationPoints===10).length;
   for(const b of buildings){seen.add(b.type);assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team),'');}
   for(const p of game.forumServicePoints(forum)){
@@ -336,14 +340,16 @@ test('explicit smart commands assign prospectors, only Forum deliveries spend th
  Object.assign(worker,game.forumServicePoints(forum)[0]);game.worker(worker,.1);
  assert.equal(forum.cinderStock,18);assert.equal(worker.carry,0);assert.equal(game.account(0).alloy,0);
  assert.equal(worker.order.id,node.id);assert.equal(worker.deliveryForum,forum.id);
- Object.assign(worker,{carry:18,returning:true});forum.cinderStock=995;game.worker(worker,.1);
- assert.equal(forum.cinderStock,1000);assert.equal(worker.carry,13);assert.equal(game.account(0).alloy,0);
+ Object.assign(worker,{carry:18,returning:true});forum.cinderStock=1000;game.worker(worker,.1);
+ assert.equal(forum.cinderStock,1018,'previously full Forums accept additional deliveries');assert.equal(worker.carry,0);
+ Object.assign(worker,{carry:18,returning:true});forum.cinderStock=1995;game.worker(worker,.1);
+ assert.equal(forum.cinderStock,2000);assert.equal(worker.carry,13);assert.equal(game.account(0).alloy,0);
  game.worker(worker,1);assert.equal(worker.carry,13);assert.equal(node.amount,100,'full Forum does not consume more Cinder');
  Object.assign(worker,{carry:2,returning:false});game.worker(worker,1);
  assert.equal(worker.carry,2);assert.equal(node.amount,100,'other partially loaded miners also wait when the Forum fills');
  assert.equal(game.command([worker.id],{type:'mine',id:node.id},0,false),true);assert.equal(worker.deliveryForum,undefined);
  Object.assign(worker,{x:hq.x+hq.size+2.5,z:hq.z,carry:18,returning:true});game.worker(worker,.1);
- assert.equal(game.account(0).alloy,18,'unassigned workers retain HQ economy');assert.equal(forum.cinderStock,1000);
+ assert.equal(game.account(0).alloy,18,'unassigned workers retain HQ economy');assert.equal(forum.cinderStock,2000);
  game.command([worker.id],{type:'smart',id:forum.id},0,false);assert.equal(worker.deliveryForum,forum.id);
  forum.hp=0;game.worker(worker,.1);assert.equal(worker.deliveryForum,undefined,'lost owner cannot steal cargo');
 });
