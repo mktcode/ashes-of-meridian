@@ -279,14 +279,14 @@
       cancelConstruction(this: MeridianGame, id: number, team: PlayerTeam = 0) {
         if (this.s!.stopped) return;
         let e = this.get(id);
-        if (!e || e.team !== team || e.kind !== 'building' || e.progress >= 1 || e.forumId !== undefined) return;
-        let c = e.paid || this.cost(e.type, 'building', team);
+        if (!e || e.team !== team || e.kind !== 'building' || e.progress >= 1) return;
+        let c = e.forumId !== undefined ? {cost:0,gas:0} : e.paid || this.cost(e.type, 'building', team);
         this.account(team).alloy += c.cost * 0.75;
         this.account(team).gas += c.gas * 0.75;
         e.hp = 0;
         e.deathAt = this.s!.time;
         this.navDirty = true;
-        this.notify(team, 'toast', 'Foundation canceled. 75% of resources recovered.');
+        this.notify(team, 'toast', e.forumId !== undefined ? 'Automatic foundation removed. Its Forum may grow a replacement.' : 'Foundation canceled. 75% of resources recovered.');
       },
       managedBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0): BuildingEntity | null {
         let b = this.get(id);
@@ -298,15 +298,13 @@
         if (!b || (direction !== -1 && direction !== 1)) return false;
         // Keep the stored eighth-turn unit; subdivide it into three 15-degree clicks.
         const step = Math.round((b.visualRotation || 0) * 3), rotation = ((step + direction + 24) % 24) / 3;
-        if (b.forumId !== undefined) return false;
         if (b.type === 'meridianforum') {
-          const reason = this.forumRotationReason(b,rotation);
-          if (reason) { this.notify(team,'toast',reason); return false; }
           for (const e of this.s!.entities) if (e.kind === 'unit' && e.deliveryForum === b.id) {
             delete e.deliveryPoint; e.path = []; e.nextPath = 0;
           }
         }
         b.visualRotation = rotation;
+        if (isCivilizationBuildingType(b.type)) this.refreshSettlementLayouts();
         return true;
       },
       buildingRepairers(this: MeridianGame, id: number, team: PlayerTeam = 0): UnitEntity[] {
@@ -343,7 +341,6 @@
       canSellBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0) {
         let b = this.managedBuilding(id, team);
         if (!b) return 'Select a completed own structure.';
-        if (b.forumId !== undefined) return 'Managed by its forum';
         if (b.type === 'hq' && this.alive(e => e.team === team && e.type === 'hq' && e.progress >= 1).length <= 1)
           return 'Last command center';
         return '';
@@ -351,7 +348,7 @@
       buildingSaleRefund(this: MeridianGame, id: number, team: PlayerTeam = 0): Cost | null {
         let b = this.managedBuilding(id, team);
         if (!b) return null;
-        let paid = b.paid || this.cost(b.type, 'building', team),
+        let paid = b.forumId !== undefined ? {cost:0,gas:0} : b.paid || this.cost(b.type, 'building', team),
           refund = { cost: paid.cost * 0.5, gas: paid.gas * 0.5 };
         for (let q of b.queue) {
           refund.cost += q.cost;

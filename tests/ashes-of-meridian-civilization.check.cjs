@@ -201,8 +201,8 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
  for(const b of grown) {
   assert.ok(Math.hypot(b.x-forum.x,b.z-forum.z)<=60);
   assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team),'');
-  assert.equal(game.canSellBuilding(b.id),'Managed by its forum');
-  assert.equal(game.rotateBuilding(b.id,1),false);
+  assert.equal(game.canSellBuilding(b.id),'');
+  if(b===grown[0]) { assert.equal(game.rotateBuilding(b.id,1),true);assert.equal(game.rotateBuilding(b.id,-1),true); }
  }
  assert.equal(game.s.stats.built,60);assert.ok(civilizationScoreForBuildings(grown,0)>0);
  assert.equal(civilizationScoreForBuildings([forum],0),0);
@@ -318,8 +318,8 @@ test('eight-parcel settlements populate every block and keep rotated street axes
 test('all six settlement models build themselves over their normal construction time without workers, spending or effect RNG',()=>{
  for(const type of types){
   const {game}=fixture(0,()=>40);game.s.entities=[];
-  const forum=game.spawnBuilding('meridianforum',0,0,0,0),
-   b=game.spawnBuilding(type,30,30,0,0,{progress:.06,paid:{cost:0,gas:0},forumId:forum.id});
+  const forum=game.spawnBuilding('meridianforum',0,0,0,0),p=forumFrame(forum).world(45,33),
+   b=game.spawnBuilding(type,p.x,p.z,0,0,{progress:.06,paid:{cost:0,gas:0},forumId:forum.id});
   b.hp=b.maxHp*.06;const funds={...game.account(0)},events=[];
   game.random=()=>assert.fail('Automatic construction must not draw battle RNG');
   game.effects={construction(){assert.fail('No artificial worker construction beams');}};
@@ -336,7 +336,7 @@ test('all six settlement models build themselves over their normal construction 
   assert.deepEqual(game.account(0),funds);assert.equal(forum.cinderStock,undefined);
  }
 });
-test('new automatic foundations reserve their slot, reject worker takeover and cancellation, and stop building when their Forum is lost',()=>{
+test('new automatic foundations reserve their slot, reject worker takeover and stop building when their Forum is lost',()=>{
  const {game}=fixture(0,()=>40),worker=game.s.entities[0];game.s.entities=[];
  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.cinderStock=34;
  game.random=()=>assert.fail('Automatic foundation must not draw battle RNG');
@@ -345,8 +345,6 @@ test('new automatic foundations reserve their slot, reject worker takeover and c
  assert.equal(b.progress,.06);assert.equal(b.hp,b.maxHp*.06);assert.equal(game.s.stats.built,0);
  assert.equal(game.workerTask(b),null);worker.order={type:'build',id:b.id};
  game.worker(worker,10);assert.equal(worker.order.type,'idle');assert.equal(b.progress,.06);
- game.cancelConstruction(b.id);assert.ok(b.hp>0);
- assert.equal(game.submitAction(0,{kind:'cancelConstruction',id:b.id}),false);
  game.s.time=20;game.updateSettlements(1);assert.equal(game.s.entities.length,2,'a foundation already occupies its stock-supported slot');
  const progress=b.progress;assert.ok(progress>.06&&progress<1);assert.equal(forum.cinderStock,34);
  game.s.rules.completed=false;game.updateSettlements(1);assert.equal(b.progress,progress);
@@ -401,7 +399,7 @@ test('explicit smart commands assign prospectors, only Forum deliveries spend th
  game.command([worker.id],{type:'smart',id:forum.id},0,false);assert.equal(worker.deliveryForum,forum.id);
  forum.hp=0;game.worker(worker,.1);assert.equal(worker.deliveryForum,undefined,'lost owner cannot steal cargo');
 });
-test('rotated Forum streets agree with placement guides and service paths and reject blocking rotation',()=>{
+test('rotated Forum streets agree with placement guides and service paths while existing military blockers no longer prevent rotation',()=>{
  const {game,world}=fixture(0,()=>40);game.s.entities=[];delete world.path;
  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=2;
  const worker=game.spawnUnit('worker',-50,-30,0,0);
@@ -410,15 +408,62 @@ test('rotated Forum streets agree with placement guides and service paths and re
  const corridor=forumCorridors(forum)[0],p={x:(corridor[0].x+corridor[2].x)/2,z:(corridor[0].z+corridor[2].z)/2};
  assert.match(game.forumAccessReason(p,BUILDINGS.depot.size),/streets/);
  const sampler=new PlacementGuideSampler(game,'depot',0);sampler.refresh();assert.equal(sampler.sample(p),-1);
- let blocker;
- for(let angle=0;angle<Math.PI*2;angle+=.05){
-  const pos={x:Math.sin(angle)*40,z:Math.cos(angle)*40};
-  if(game.forumAccessReason(pos,2))continue;
-  blocker=game.spawnBuilding('depot',pos.x,pos.z,0,0);
-  if(game.forumRotationReason(forum,7/3))break;
-  blocker.hp=0;blocker=undefined;
- }
- assert.ok(blocker);assert.equal(game.rotateBuilding(forum.id,1),false);assert.equal(forum.visualRotation,2);
+ const pos=forumFrame({...forum,visualRotation:7/3}).world(0,40),blocker=game.spawnBuilding('depot',pos.x,pos.z,0,0);
+ worker.deliveryForum=forum.id;worker.deliveryPoint=service;worker.path=[service];
+ assert.equal(game.rotateBuilding(forum.id,1),true);assert.equal(forum.visualRotation,7/3);
+ assert.equal(blocker.hp,blocker.maxHp);assert.equal(worker.deliveryPoint,undefined);assert.equal(worker.path.length,0);
+});
+test('free Forum rotation schedules only misaligned settlement buildings, cancels on turn-back and regrows after the saved grace period without clearing resources or military structures',()=>{
+ const {game,world}=fixture(0,()=>40);game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.cinderStock=2000;
+ for(let i=0;i<=100;i++){game.s.time=i*10;game.updateSettlements(10);}
+ const grown=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);assert.equal(grown.length,60);
+ const p=forumFrame({...forum,visualRotation:1/3}).world(0,40),military=game.spawnBuilding('depot',p.x,p.z,0,0),
+  resource=game.spawn('resource','crystal',p.x+1,p.z+1,-1,0,{amount:80});
+ world.rebuild(game.s.entities);const funds={...game.account(0)},stats={...game.s.stats},score=civilizationScoreForBuildings(grown,0);
+ game.random=()=>assert.fail('Rearrangement must not consume combat/effect RNG');
+ assert.equal(game.rotateBuilding(forum.id,1),true);
+ let pending=grown.filter(b=>b.settlementAt!==undefined);assert.ok(pending.length>0&&pending.length<60);
+ assert.ok(pending.every(b=>b.settlementAt===1010));assert.equal(civilizationScoreForBuildings(grown,0),score);
+ assert.equal(game.rotateBuilding(forum.id,-1),true);assert.ok(grown.every(b=>b.settlementAt===undefined),'turning back cancels removals');
+ assert.equal(game.rotateBuilding(forum.id,1),true);pending=grown.filter(b=>b.settlementAt!==undefined);
+ const survivors=grown.filter(b=>b.settlementAt===undefined),positions=survivors.map(b=>[b.id,b.x,b.z]);
+ game.s.time=1009;game.updateSettlements(1);assert.ok(grown.every(b=>b.hp>0));
+ game.s.time=1010;game.updateSettlements(1);assert.ok(pending.every(b=>b.hp===0&&b.deathAt===1010));
+ assert.ok(survivors.every(b=>b.hp>0));assert.deepEqual(survivors.map(b=>[b.id,b.x,b.z]),positions);
+ assert.ok(civilizationScoreForBuildings(grown,0)<score);assert.equal(game.s.stats.kills,stats.kills);assert.equal(game.s.stats.lost,stats.lost);
+ const replacement=game.s.entities.find(b=>b.forumId===forum.id&&b.hp>0&&!grown.includes(b));
+ assert.ok(replacement);assert.equal(replacement.progress,.06);assert.equal(replacement.paid.cost,0);assert.equal(replacement.paid.gas,0);
+ for(let i=1;i<=100;i++){game.s.time=1010+i*10;game.updateSettlements(10);}
+ const rebuilt=game.s.entities.filter(b=>b.forumId===forum.id&&b.hp>0);assert.equal(rebuilt.length,60);
+ for(const b of rebuilt)assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team,b.visualRotation||0),'');
+ assert.equal(military.hp,military.maxHp);assert.equal(resource.hp,resource.maxHp);assert.equal(resource.amount,80);
+ assert.equal(forum.cinderStock,2000);assert.deepEqual(game.account(0),funds);
+});
+test('individual settlement buildings rotate, sell without minting refunds and allow free foundation cancellation with normal regrowth',()=>{
+ const {game}=fixture(0,()=>40);game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.cinderStock=34;
+ game.random=()=>assert.fail('Civilian controls must not consume combat/effect RNG');
+ game.updateSettlements();game.s.time=10;game.updateSettlements();const first=game.s.entities.at(-1),funds={...game.account(0)};
+ assert.equal(game.submitAction(0,{kind:'cancelConstruction',id:first.id}),true);assert.equal(first.hp,0);assert.deepEqual(game.account(0),funds);
+ game.s.time=20;game.updateSettlements();const second=game.s.entities.at(-1);assert.notEqual(second.id,first.id);
+ game.s.time=30;game.updateSettlements(100);assert.equal(second.progress,1);
+ assert.equal(game.submitAction(0,{kind:'rotateBuilding',id:second.id,direction:1}),true);assert.equal(second.visualRotation,1/3);
+ delete second.paid;assert.equal(game.buildingSaleRefund(second.id).cost,0);assert.equal(game.buildingSaleRefund(second.id).gas,0);
+ assert.equal(game.submitAction(1,{kind:'sell',id:second.id}),false);
+ assert.equal(game.submitAction(0,{kind:'sell',id:second.id}),true);assert.equal(second.hp,0);assert.deepEqual(game.account(0),funds);
+ game.s.time=40;game.updateSettlements();assert.equal(game.s.entities.filter(b=>b.forumId===forum.id&&b.hp>0).length,1);
+});
+test('expiring layout deadlines recheck removed Forum masks and still retire buildings outside their owning radius',()=>{
+ const {game}=fixture(0,()=>40);game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0),p=forumFrame(forum).world(45,33),
+  b=game.spawnBuilding('fieldlab',p.x,p.z,0,0,{forumId:forum.id}),
+  q=forumFrame(forum).world(65,40),outside=game.spawnBuilding('fieldlab',q.x,q.z,0,0,{forumId:forum.id}),
+  other=game.spawnBuilding('meridianforum',p.x,p.z-40,0,0);
+ forum.settlementAt=other.settlementAt=100;game.refreshSettlementLayouts();
+ assert.equal(b.settlementAt,10);assert.equal(outside.settlementAt,10);
+ other.hp=0;game.s.time=10;game.updateSettlements();
+ assert.ok(b.hp>0);assert.equal(b.settlementAt,undefined,'expired deadlines cannot remove now-valid structures');assert.equal(outside.hp,0);
 });
 const civil = (type='fieldlab',extra={}) => ({kind:'building',type,team:0,hp:500,progress:1,...extra});
 const scoreSave = entities => ({version:1,state:{entities},tutorial:null});

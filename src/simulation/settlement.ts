@@ -82,24 +82,24 @@ const settlementMethods = {
     }
     return this.forumAccessReason(p,r,undefined,type,team);
   },
-  forumAccessReason(this: MeridianGame, p: Position, radius: number, except?: number, type?: BuildingType, team: PlayerTeam = 0): string {
+  forumAccessReason(this: MeridianGame, p: Position, radius: number, except?: number, type?: BuildingType, team: PlayerTeam = 0, rotation = 0): string {
     // Half a cell protects the raster edges too. Overlapping settlements share these exclusions.
     for (const e of this.s!.entities) if (e.hp > 0 && e.kind === 'building' && e.type === 'meridianforum' && e.id !== except &&
       forumCorridorBlocked(e,p,radius+.35+this.world!.cellSize/2,
-        type && isCivilizationBuildingType(type) ? settlementFootprints(p,type,team) : [])) return 'Leave the forum streets and entrance plaza clear.';
+        type && isCivilizationBuildingType(type) ? settlementFootprints(p,type,team,rotation) : [])) return 'Leave the forum streets and entrance plaza clear.';
     return '';
   },
-  forumRotationReason(this: MeridianGame, forum: BuildingEntity, rotation: number): string {
-    const next = {...forum,visualRotation:rotation}, shapes = settlementFootprints(next,next.type,next.team as PlayerTeam,rotation);
-    for (const e of this.s!.entities) if (e.hp > 0 && e.kind !== 'unit' && e.id !== forum.id) {
-      if (e.kind === 'building' && isCivilizationBuildingType(e.type)) {
-        const other = settlementFootprints(e,e.type,e.team as PlayerTeam,e.visualRotation || 0);
-        if (shapes.some(a => other.some(b => civilizationFootprintsOverlap(a,b)))) return 'Leave room for forum stairs.';
-      }
-      if (forumCorridorBlocked(next,e,e.size+.35+this.world!.cellSize/2,
-        e.kind === 'building' && isCivilizationBuildingType(e.type) ? settlementFootprints(e,e.type,e.team as PlayerTeam,e.visualRotation || 0) : [])) return 'Rotation would block a forum street or entrance plaza.';
+  refreshSettlementLayouts(this: MeridianGame) {
+    const s = this.s!;
+    if (s.rules.kind !== 'single-player' || !s.rules.completed) return;
+    for (const b of s.entities) if (b.hp > 0 && b.kind === 'building' && b.forumId !== undefined) {
+      const forum = this.get(b.forumId);
+      if (forum?.kind !== 'building' || forum.type !== 'meridianforum' || forum.team !== b.team || forum.progress < 1) continue;
+      const invalid = distance(b,forum) > FORUM_SETTLEMENT.radius ||
+        !!this.forumAccessReason(b,b.size,undefined,b.type,b.team as PlayerTeam,b.visualRotation || 0);
+      if (invalid) b.settlementAt ??= s.time + FORUM_SETTLEMENT.interval;
+      else delete b.settlementAt;
     }
-    return '';
   },
   growSettlement(this: MeridianGame, forum: BuildingEntity): boolean {
     // Sample the whole area without radial bands or angular slots; retry later if space changes.
@@ -123,21 +123,24 @@ const settlementMethods = {
   updateSettlements(this: MeridianGame, dt = 0) {
     const s = this.s!;
     if (s.rules.kind !== 'single-player' || !s.rules.completed) return;
+    const forums = s.entities.filter((e): e is BuildingEntity => e.hp > 0 && e.kind === 'building' && e.type === 'meridianforum' && e.progress >= 1);
     const groups = new Map<number,BuildingEntity[]>();
     for (const e of s.entities) if (e.hp > 0 && e.kind === 'building' && e.forumId !== undefined) {
       const group = groups.get(e.forumId) || [];
       group.push(e); groups.set(e.forumId,group);
     }
-    for (const e of [...s.entities]) if (e.hp > 0 && e.kind === 'building' && e.type === 'meridianforum' && e.progress >= 1) {
-      if (e.settlementAt === undefined) e.settlementAt = s.time + FORUM_SETTLEMENT.interval;
-      if (s.time < e.settlementAt) continue;
-      e.settlementAt = s.time + FORUM_SETTLEMENT.interval;
-      if ((groups.get(e.id)?.length || 0) < forumBuildingTarget(e)) this.growSettlement(e);
-    }
+    // Check on layout actions, growth beats and expiring deadlines, not every tick.
+    if (forums.some(e => e.settlementAt === undefined || s.time >= e.settlementAt ||
+      groups.get(e.id)?.some(b => b.settlementAt !== undefined && s.time >= b.settlementAt))) this.refreshSettlementLayouts();
+    let removed = false;
     for (const [owner,buildings] of groups) {
       const forum = this.get(owner);
       if (forum?.kind === 'building' && forum.type === 'meridianforum' && forum.team === buildings[0].team) {
-        if (forum.progress >= 1) for (const b of buildings) this.advanceConstruction(b,dt);
+        if (forum.progress >= 1) for (const b of buildings) {
+          if (b.settlementAt !== undefined) {
+            if (s.time >= b.settlementAt) { b.hp = 0; b.deathAt = s.time; removed = true; }
+          } else this.advanceConstruction(b,dt);
+        }
         continue;
       }
       const first = buildings[0];
@@ -145,7 +148,14 @@ const settlementMethods = {
       if (s.time < first.settlementAt) continue;
       first.hp = 0; first.deathAt = s.time;
       if (buildings[1]) buildings[1].settlementAt = s.time + FORUM_SETTLEMENT.interval;
-      this.world!.rebuild(s.entities);
+      removed = true;
+    }
+    if (removed) this.world!.rebuild(s.entities);
+    for (const e of forums) {
+      e.settlementAt ??= s.time + FORUM_SETTLEMENT.interval;
+      if (s.time < e.settlementAt) continue;
+      e.settlementAt = s.time + FORUM_SETTLEMENT.interval;
+      if ((groups.get(e.id)?.filter(b => b.hp > 0).length || 0) < forumBuildingTarget(e)) this.growSettlement(e);
     }
   }
 };
