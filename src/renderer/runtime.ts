@@ -7,8 +7,7 @@
     const CINEMA_ORBIT_SPEED = .04;
     // Standalone model previews also render without a BattlefieldView.
     const DEFAULT_TERRAIN_RENDER_PROFILE: BattlefieldRenderProfile = {
-      groundTexture: 'ground', haze: [0.055, 0.09, 0.13],
-      rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 }
+      groundTexture: 'ground', haze: [0.055, 0.09, 0.13]
     };
     // Factories register at script load; GPU resources are created only for the active scenery.
     const BattlefieldEnvironments: Partial<Record<NonNullable<BattlefieldRenderProfile['scenery']>,
@@ -45,7 +44,6 @@
       detailMeshes = new Set<string>();
       extent: number;
       surface: BattlefieldSurface | null = null;
-      decorSeed: number;
       battlefieldProfile: BattlefieldRenderProfile;
       private dayCycleProfile: BattlefieldRenderProfile | null = null;
       private menuSky: MeridianMenuSky | null = null;
@@ -71,8 +69,6 @@
       fogTex: WebGLTexture | null;
       groundTex: WebGLTexture | null;
       desertRockTex: WebGLTexture | null;
-      rockClustersTex: WebGLTexture | null;
-      desertShrubsTex: WebGLTexture | null;
       metalTex: WebGLTexture | null;
       bioTex: WebGLTexture | null;
       westmarkMeadowTex: WebGLTexture | null;
@@ -129,7 +125,6 @@
         this.colors = new Map();
         this.quality = 2;
         this.extent = 90;
-        this.decorSeed = 0;
         this.battlefieldProfile = DEFAULT_TERRAIN_RENDER_PROFILE;
         this.haze = [0.055, 0.09, 0.13];
         this.eye = [0, 65, 50];
@@ -188,8 +183,6 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         this.groundTex = this.dataTexture([146, 101, 75]);
         this.desertRockTex = this.dataTexture([137, 99, 71]);
-        this.rockClustersTex = this.dataTexture([0, 0, 0, 0]);
-        this.desertShrubsTex = this.dataTexture([0, 0, 0, 0]);
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
         this.westmarkMeadowTex = this.dataTexture([103, 119, 64]);
@@ -197,16 +190,14 @@
         this.westmarkEarthTex = this.dataTexture([135, 112, 77]);
         this.westmarkBarkTex = this.dataTexture([92, 78, 58]);
         this.textureResources = {
-          ground: { texture: this.groundTex, fallback: [146, 101, 75], repeat: true, resident: false },
-          desertRock: { texture: this.desertRockTex, fallback: [137, 99, 71], repeat: true, resident: false },
-          rockClusters: { texture: this.rockClustersTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
-          desertShrubs: { texture: this.desertShrubsTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
-          metal: { texture: this.metalTex, fallback: [128, 130, 136], repeat: true, resident: false },
-          bio: { texture: this.bioTex, fallback: [77, 128, 119], repeat: true, resident: false },
-          westmarkMeadow: { texture: this.westmarkMeadowTex, fallback: [103, 119, 64], repeat: true, resident: false },
-          westmarkGranite: { texture: this.westmarkGraniteTex, fallback: [128, 134, 127], repeat: true, resident: false },
-          westmarkEarth: { texture: this.westmarkEarthTex, fallback: [135, 112, 77], repeat: true, resident: false },
-          westmarkBark: { texture: this.westmarkBarkTex, fallback: [92, 78, 58], repeat: true, resident: false }
+          ground: { texture: this.groundTex, fallback: [146, 101, 75], resident: false },
+          desertRock: { texture: this.desertRockTex, fallback: [137, 99, 71], resident: false },
+          metal: { texture: this.metalTex, fallback: [128, 130, 136], resident: false },
+          bio: { texture: this.bioTex, fallback: [77, 128, 119], resident: false },
+          westmarkMeadow: { texture: this.westmarkMeadowTex, fallback: [103, 119, 64], resident: false },
+          westmarkGranite: { texture: this.westmarkGraniteTex, fallback: [128, 134, 127], resident: false },
+          westmarkEarth: { texture: this.westmarkEarthTex, fallback: [135, 112, 77], resident: false },
+          westmarkBark: { texture: this.westmarkBarkTex, fallback: [92, 78, 58], resident: false }
         };
         this.shadowTex = gl.createTexture();
         this.shadowFbo = gl.createFramebuffer();
@@ -641,8 +632,6 @@
         const names = new Set<ResidentTextureName>(['metal', 'bio', profile.groundTexture]);
         if (profile.rockSurface) names.add(profile.rockSurface.texture);
         if (profile.landscape) for (const name of Object.values(profile.landscape)) if (name) names.add(name);
-        if (profile.rockDecor.density > 0) names.add('rockClusters');
-        if (profile.shrubDecor.density > 0) names.add('desertShrubs');
         return names;
       }
       hasBattlefieldTextures(profile: BattlefieldRenderProfile) {
@@ -664,41 +653,17 @@
         const active = this.textureLoads[name];
         if (active) return active;
         const load = new Promise<boolean>(resolve => {
-          if (isProceduralMaterial(name)) {
-            // Bake only on a residency miss. Retain no CPU pixels or per-seed cache.
-            const image = bakeSurface(name), g = this.gl;
-            g.bindTexture(g.TEXTURE_2D, resource.texture);
-            g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, image.width, image.height, 0, g.RGBA, g.UNSIGNED_BYTE, image.pixels);
-            g.generateMipmap(g.TEXTURE_2D);
-            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
-            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
-            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.REPEAT);
-            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.REPEAT);
-            resource.resident = true;
-            resolve(true);
-            return;
-          }
-          const img = new Image();
-          img.decoding = 'async';
-          img.onload = () => {
-            if (this.desiredTextures.has(name)) {
-              const g = this.gl;
-              g.bindTexture(g.TEXTURE_2D, resource.texture);
-              g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, img);
-              g.generateMipmap(g.TEXTURE_2D);
-              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
-              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
-              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, resource.repeat ? g.REPEAT : g.CLAMP_TO_EDGE);
-              g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, resource.repeat ? g.REPEAT : g.CLAMP_TO_EDGE);
-              resource.resident = true;
-            }
-            resolve(resource.resident);
-          };
-          img.onerror = () => {
-            console.warn('Texture could not be loaded:', 'embedded texture');
-            resolve(false);
-          };
-          img.src = MERIDIAN_TEXTURES[name];
+          // Bake only on a residency miss. Retain no CPU pixels or per-seed cache.
+          const image = bakeSurface(name), g = this.gl;
+          g.bindTexture(g.TEXTURE_2D, resource.texture);
+          g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, image.width, image.height, 0, g.RGBA, g.UNSIGNED_BYTE, image.pixels);
+          g.generateMipmap(g.TEXTURE_2D);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.REPEAT);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.REPEAT);
+          resource.resident = true;
+          resolve(true);
         }).finally(() => delete this.textureLoads[name]);
         this.textureLoads[name] = load;
         return load;
@@ -1182,7 +1147,6 @@
         g.uniform3fv(this.uniform(program, 'u_haze'), this.haze as [number, number, number]);
         g.uniform1f(this.uniform(program, 'u_extent'), this.extent);
         g.uniform1f(this.uniform(program, 'u_fogExtent'), this.fogExtent ?? this.extent);
-        g.uniform1ui(this.uniform(program, 'u_decorSeed'), this.decorSeed);
         g.uniform3fv(this.uniform(program, 'u_sun'), lighting.sun as [number, number, number]);
         g.uniform3fv(this.uniform(program, 'u_skyLight'), lighting.sky as [number, number, number]);
         g.uniform3fv(this.uniform(program, 'u_bounce'), lighting.bounce as [number, number, number]);
@@ -1201,8 +1165,6 @@
         g.uniform1f(this.uniform(program, 'u_upland'), profile.upland ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_reliefOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
-        g.uniform4f(this.uniform(program, 'u_groundDecor'), profile.rockDecor.density,
-          profile.shrubDecor.density, profile.rockDecor.opacity, profile.shrubDecor.opacity);
         g.uniform1f(this.uniform(program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_fogOn'), this.fogOn ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_placementGridDetail'), this.placementGridDetail);
@@ -1211,7 +1173,6 @@
         for (const [uniform, texture, unit] of [
           ['u_shadow', this.shadowTex, 0], ['u_fog', this.fogTex, 1],
           ['u_groundTex', this[`${profile.groundTexture}Tex`], 2],
-          ['u_rockClustersTex', this.rockClustersTex, 3], ['u_desertShrubsTex', this.desertShrubsTex, 4],
           ['u_metalTex', this.metalTex, 5], ['u_bioTex', this.bioTex, 6],
           ['u_rockTex', this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`], 7],
           ['u_earthTex', this[`${profile.landscape?.earth ?? 'ground'}Tex`], 8],

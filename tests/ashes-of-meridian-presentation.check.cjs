@@ -222,7 +222,6 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   renderer.fog = data => { fogs++; fogPixels = Array.from(data); };
   const view = new BattlefieldView(renderer), before = JSON.stringify(world.renderData);
   view.sync(world, false); view.sync(world, false);
-  assert.equal(renderer.decorSeed, 1409);
   assert.equal(meshes, world.renderData.geometries.length); assert.equal(fogs, 0); assert.equal(renderer.fogOn, false);
   world.reveal([], [{ x: 0, z: 0, r: 7 }]); view.sync(world); view.sync(world);
   assert.equal(meshes, world.renderData.geometries.length); assert.equal(fogs, 1); assert.equal(renderer.fogOn, true);
@@ -232,7 +231,6 @@ test('world view uploads only changed layout/fog and does not mutate CPU data', 
   view.sync(next); view.sync(next);
   assert.equal(fogs, 2); assert.equal(renderer.fogOn, true);
   assert.deepEqual(fogPixels, Array.from(next.fogPixels)); assert.ok(fogPixels.every(v => v === 0));
-  assert.equal(renderer.decorSeed, 43015, 'new world updates cosmetic seed without sampling world RNG');
   assert.equal(meshes, world.renderData.geometries.length + next.renderData.geometries.length);
 });
 

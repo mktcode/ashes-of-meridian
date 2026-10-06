@@ -72,15 +72,12 @@ test('local flight envelopes keep the complete animated aircraft and destroyer m
   }
 });
 
-test('source GLBs match the supported embedded data layout and portraits exist', () => {
+test('source GLBs match the supported embedded data layout', () => {
   const counts = {breakwater:20528,crownwing:49848,catafalque:31664};
-  for (const [index,name] of Object.keys(counts).entries()) {
+  for (const name of Object.keys(counts)) {
     const file = readFileSync(join(root,'assets/models',`${name}.glb`));
     assert.equal(file.toString('ascii',0,4),'glTF');
     assert.equal(file.readUInt32LE(4),2);
-    const bytes = readFileSync(join(root,'assets/portraits',`faction-${index}-unit-destroyer.webp`));
-    assert.equal(bytes.toString('ascii',0,4),'RIFF');
-    assert.equal(bytes.toString('ascii',8,12),'WEBP');
   }
 });
 

@@ -24,9 +24,6 @@ try {
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   await page.goto(`file://${root}/index.html`);
   await page.waitForFunction(() => window.Meridian && document.querySelector('#loading').classList.contains('hidden'));
-  await page.evaluate(async () => Promise.all(Object.values(MERIDIAN_TEXTURES).map(async source => {
-    const image = new Image(); image.src = source; await image.decode();
-  })));
   await page.waitForTimeout(250);
   await page.screenshot({ path: resolve(screenshots, '05-expedition-command.jpg'), type: 'jpeg', quality: 92 });
   await page.setViewportSize({ width: 390, height: 844 });

@@ -28,7 +28,7 @@ function setup(msaa={}) {
   const r = Object.assign(Object.create(Renderer.prototype),{
     gl,meshes:{},meshParts:{},colors:new Map(),uniformCache:new Map(),program:{},
     dynamic:{},effects:{},static:{},occlusion:{},surface:{heightAt(){throw Error('Thumbnail sampled world');}},
-    quality:2,cinema:false,fogOn:true,extent:140,decorSeed:17,
+    quality:2,cinema:false,fogOn:true,extent:140,
     eye:[10,20,30],vp:new Float32Array(16),lightVP:new Float32Array(16),
     battlefieldProfile:{scenery:'fixture'},canvas:{width:800,height:600},drawCalls:0,
     geometry(name,data) {

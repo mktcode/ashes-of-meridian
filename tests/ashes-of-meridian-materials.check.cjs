@@ -72,7 +72,7 @@ test('procedural materials upload only on residency misses and rebake identicall
   const r = Object.assign(Object.create(MeridianRenderer.prototype), {
     gl: g, textureLoads: {}, textureGeneration: 0, desiredTextures: new Set(Object.keys(PROCEDURAL_MATERIALS)),
     textureResources: Object.fromEntries(Object.keys(PROCEDURAL_MATERIALS).map(name => [name,
-      { texture: {}, fallback: [128, 128, 128], repeat: true, resident: false }]))
+      { texture: {}, fallback: [128, 128, 128], resident: false }]))
   });
   // No Image constructor in this VM: opaque surfaces must never attempt image decoding.
   for (const name of Object.keys(PROCEDURAL_MATERIALS)) {

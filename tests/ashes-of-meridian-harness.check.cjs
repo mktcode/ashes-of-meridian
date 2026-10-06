@@ -116,7 +116,7 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
   for (const name of ['geom', 'MAT', 'document', 'window', 'FACTIONS'])
     assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
   assert.notStrictEqual(BATTLEFIELDS.desert.createLayout, BATTLEFIELDS.mothership.createLayout);
-  assert.notStrictEqual(BATTLEFIELDS.desert.render.rockDecor, BATTLEFIELDS.mothership.render.rockDecor);
+  assert.notStrictEqual(BATTLEFIELDS.desert.render.landscape, BATTLEFIELDS.mothership.render.landscape);
 });
 
 test('renderer fragments expose the existing bindings and class API in document order', () => {
@@ -129,7 +129,7 @@ test('renderer fragments expose the existing bindings and class API in document 
     scripts.filter(script => RENDERER_SCRIPTS.includes(script.name)).map(script => script.filename),
     expectedFiles
   );
-  assert.equal(vm.runInContext('typeof MAT + ":" + typeof MERIDIAN_TEXTURES + ":" + typeof geom', context), 'object:object:object');
+  assert.equal(vm.runInContext('typeof MAT + ":" + typeof geom', context), 'object:object');
   assert.equal(vm.runInContext('typeof VERT + ":" + typeof FRAG + ":" + typeof MeridianRenderer', context), 'string:string:function');
   for (const method of ['resize', 'render', 'project', 'ground']) {
     assert.equal(vm.runInContext(`typeof MeridianRenderer.prototype.${method}`, context), 'function');

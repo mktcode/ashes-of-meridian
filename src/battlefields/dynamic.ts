@@ -171,7 +171,7 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
       rockSurface: { texture: family === 'desert' ? 'desertRock' : 'westmarkGranite', metersPerTile: 8 },
       variationFamily: family, wilderness: 'seeded', terrainReceiverHeight: 80, daylight: true, upland: !industrial,
       landscape: { earth: 'westmarkEarth', bark: 'westmarkBark' },
-      haze: [0.055, 0.09, 0.13], rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 } },
+      haze: [0.055, 0.09, 0.13] },
     generate(builder) {
       const w = builder.world, plan = dynamicTerrainPlan(w), s = w.surface = new BattlefieldSurface(w.extent, w.cellSize,
         plan.height, h => Math.floor(h / 6));

@@ -21,7 +21,7 @@ class MeridianModelThumbnails {
     p.setBattlefieldTime(0);
     p.haze = [.035,.065,.09];
     p.surfaceStyle = surfaceWorldStyle('ground',0);
-    p.extent = 90; p.decorSeed = 0; p.lightVP = M4.identity();
+    p.extent = 90; p.lightVP = M4.identity();
     p.bucket = (map,key,mesh=key,source=mesh) =>
       MeridianRenderer.prototype.bucket.call(p,map,key,mesh,source,8);
   }

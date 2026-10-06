@@ -5,7 +5,7 @@ Die gestalterische Richtung beschreibt die [Grafik-Leitlinie](graphics-guideline
 
 ## Texturen
 
-Rasterquellen ausschließlich WebP, Qualität 80; benötigten Alphakanal erhalten. Nach Texturänderungen `npm run embed:textures`, nach GLB-Änderungen `npm run embed:models`, danach Build. Generierte Einbettungen niemals direkt bearbeiten. Eingebettete Data-URLs erhalten `file://`. Rastertexturen dienen nur noch dem Boden-Dekor; opake Oberflächen und Himmel sind prozedural.
+Rasterquellen ausschließlich WebP, Qualität 80; benötigten Alphakanal erhalten. Gelände- und Modelloberflächen sowie Himmel sind prozedural; es gibt keine Rastertextur-Einbettung. Nach GLB-Änderungen `npm run embed:models`, danach Build. Generierte Modelleinbettungen niemals direkt bearbeiten; sie erhalten `file://`.
 
 Neue Bildassets brauchen einen konkreten Bedarf; Codex-/Aktionskacheln verwenden Modelle. Assetnamen folgen [technischen IDs](architecture.md#technische-ids-und-anzeigenamen).
 

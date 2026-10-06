@@ -180,8 +180,6 @@ interface BattlefieldRenderProfile {
   /** Opt-in weathered stone, meadow mosaics and deposited trail soil. */
   upland?: boolean;
   daylight?: boolean;
-  rockDecor: { density: number; opacity: number };
-  shrubDecor: { density: number; opacity: number };
   haze: readonly [number, number, number];
   lighting?: BattlefieldLighting;
   /** Highest terrain receiver included in the fitted shadow projection; default 32 m. */

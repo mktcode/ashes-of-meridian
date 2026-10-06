@@ -3,8 +3,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const vm = require('node:vm');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const scripts = readScripts();
 function scope(extra = []) {
@@ -301,15 +299,10 @@ test('maximal deployment bonuses retain every worker and commander in reachable 
   }
 });
 
-test('classic loading and embedded shared WebP assets survive procedural map replacement unchanged', () => {
+test('classic renderer scripts expose the material catalogue', () => {
   for (const { source, filename } of scripts) new vm.Script(source, { filename });
-  const context = loadScripts(['renderer-assets'], { scripts });
-  for (const [key, file] of Object.entries({ rockClusters:'texture-ground-rock-clusters.webp',
-    desertShrubs:'texture-ground-desert-shrubs.webp' })) {
-    const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
-    assert.match(url, /^data:image\/webp;base64,/);
-    assert.deepEqual(Buffer.from(url.split(',')[1], 'base64'), readFileSync(join(__dirname, '..', 'assets/textures', file)));
-  }
+  const context = loadScripts(['renderer-materials'], { scripts });
+  assert.equal(vm.runInContext('typeof MAT', context), 'object');
 });
 
 test('retained rock art stays deterministic, finite, bounded and normalized', () => {

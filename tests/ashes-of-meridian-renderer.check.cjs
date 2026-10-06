@@ -72,42 +72,9 @@ test('metal/bio sampling uses scaled mesh-local positions and normals, not world
   assert.ok(FRAG.includes('world/u_groundTile+u_surfaceOffset'), 'physical tile size is independent of bake resolution');
   assert.ok(FRAG.includes('vec4 ground=groundSample(v_pos.xz);'), 'ground uses the opaque RGBA recipe');
   assert.ok(FRAG.includes('vec3 t=ground.rgb;base=t;'), 'height alpha never becomes surface transparency');
-  assert.ok(FRAG.includes('base=t;vec4 rocks=groundDecor'), 'decals overlay the surface recipe');
   assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
-  for (const texture of ['u_rockClustersTex', 'u_desertShrubsTex'])
-    assert.ok(FRAG.includes(`uniform sampler2D ${texture};`));
-  assert.ok(FRAG.includes('groundDecor(u_rockClustersTex,v_pos.xz,false)'));
-  assert.ok(FRAG.includes('groundDecor(u_desertShrubsTex,v_pos.xz,true)'));
   assert.ok(FRAG.includes('normalize(u_eye-v_pos)'));
   assert.ok(FRAG.includes('float field=sceneryFog(v_pos.xz);'), 'surface fog uses the independently sized scenery mask');
-});
-test('ground decoration samples individual irregular atlas crops with stable world-cell variation', () => {
-  const context = loadScripts(RENDERER_SCRIPTS);
-  const { GROUND_DECOR_ATLAS: atlas, FRAG, MeridianRenderer } = vm.runInContext(
-    '({GROUND_DECOR_ATLAS, FRAG, MeridianRenderer})', context);
-  for (const [key, count] of [['rockClusters', 16], ['desertShrubs', 10]]) {
-    assert.equal(atlas[key].length, count);
-    assert.equal(new Set(atlas[key].map(r => r.join(','))).size, count);
-    for (const [x, y, right, bottom] of atlas[key]) {
-      assert.ok(x >= 0 && y >= 0 && right <= 1254 && bottom <= 1254);
-      assert.ok(right > x && bottom > y);
-    }
-    for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++) {
-      const a = atlas[key][i], b = atlas[key][j];
-      assert.ok(a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1], 'motif crops do not overlap');
-    }
-    assert.ok(FRAG.includes(`const vec4 ${key}Rects[${count}]`));
-    assert.ok(FRAG.includes(`${key}Rects[int(r.z*${count}.)]`), 'all supplied motifs are selectable');
-  }
-  const decor = FRAG.slice(FRAG.indexOf('vec4 decorRandom'), FRAG.indexOf('vec3 detail'));
-  assert.doesNotMatch(decor, /u_time|u_eye/);
-  assert.ok(FRAG.includes('precision highp int;'), '32-bit cell hash also on mobile GPUs');
-  assert.ok(decor.includes('u_decorSeed'));
-  assert.ok(decor.includes('cell=floor(p)'));
-  assert.ok(decor.includes('pixels/max(pixels.x,pixels.y)'), 'preserve crop aspect ratio');
-  assert.ok(decor.includes('textureLod(tex,uv,lod)'));
-  assert.ok(decor.includes('dFdx(p)/span*pixels'), 'LOD excludes atlas/cell discontinuities');
-  assert.ok(decor.includes('return vec4(0.)'), 'outside a crop and unoccupied cells stay transparent');
 });
 test('tilt-shift is High-only with a sharp center, normalized kernel and resolution-relative radius', () => {
   const context = loadScripts(RENDERER_SCRIPTS);
@@ -263,7 +230,7 @@ test('map switches keep only current world meshes plus shared geometry, includin
 
 test('battlefield texture residency retains shared materials and releases map-only assets', async () => {
   const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context), loads = [], releases = [];
-  const names = ['ground', 'desertRock', 'rockClusters', 'desertShrubs', 'metal', 'bio'];
+  const names = ['ground', 'desertRock', 'metal', 'bio'];
   const renderer = Object.assign(Object.create(Renderer.prototype), {
     textureResources: Object.fromEntries(names.map(name => [name, { resident: false }])),
     textureLoads: {}, desiredTextures: new Set(), textureGeneration: 0,
@@ -273,17 +240,15 @@ test('battlefield texture residency retains shared materials and releases map-on
     },
     releaseResidentTexture: name => { releases.push(name); renderer.textureResources[name].resident = false; }
   });
-  const profile = (groundTexture, decor = false, rockSurface) => ({ groundTexture,
-    rockSurface, rockDecor: { density: decor ? .5 : 0, opacity: 1 },
-    shrubDecor: { density: decor ? .1 : 0, opacity: 1 }, haze: [0, 0, 0] });
-  const desert = profile('ground', true, { texture: 'desertRock', metersPerTile: 18 });
+  const profile = (groundTexture, rockSurface) => ({ groundTexture, rockSurface, haze: [0, 0, 0] });
+  const desert = profile('ground', { texture: 'desertRock', metersPerTile: 18 });
   await renderer.prepareBattlefieldTextures(desert);
   assert.deepEqual(new Set(loads), new Set(names));
   assert.equal(renderer.hasBattlefieldTextures(desert), true);
   loads.length = 0;
   await renderer.prepareBattlefieldTextures(profile('bio'));
   assert.deepEqual(loads, [], 'shared bio and metal textures stay resident across maps');
-  assert.deepEqual(new Set(releases), new Set(['ground', 'desertRock', 'rockClusters', 'desertShrubs']));
+  assert.deepEqual(new Set(releases), new Set(['ground', 'desertRock']));
   assert.deepEqual(names.filter(name => renderer.textureResources[name].resident).sort(), ['bio', 'metal']);
 });
 
@@ -535,24 +500,21 @@ test('fog texture reallocates only on grid-size changes, including odd row width
   }
 });
 
-test('map render profiles select cached textures and independent decor uniforms without uploads', () => {
+test('map render profiles select cached textures and surface uniforms without uploads', () => {
   const h = setup(); h.r.resize();
   h.r.groundTex = 'dirt'; h.r.metalTex = 'metal'; h.r.bioTex = 'bio';
   for (const texture of ['ground', 'metal', 'bio']) {
     h.calls.length = 0;
     h.r.setBattlefieldProfile({ groundTexture: texture, groundMetersPerTile: [9, 12],
-      rockDecor: { density: 0, opacity: .3 }, shrubDecor: { density: .6, opacity: 0 }, haze: [0, 0, 0] }, 1409);
+      haze: [0, 0, 0] }, 1409);
     h.r.render(0);
     assert.ok(h.calls.some(c => JSON.stringify(c) === JSON.stringify(['uniform2fv', 'u_groundTile', [9, 12]])));
     const style = vm.runInContext(`surfaceWorldStyle('${texture}', 1409)`, h.context);
     assert.ok(h.calls.some(c => JSON.stringify(c) === JSON.stringify(['uniform3fv', 'u_surfaceTint', style.tint])));
-    assert.ok(h.calls.some(c => JSON.stringify(c) === JSON.stringify(['uniform4f', 'u_groundDecor', 0, .6, .3, 0])));
     const slot = h.calls.findIndex(c => c[0] === 'activeTexture' && c[1] === 'TEXTURE2');
     assert.deepEqual(h.calls[slot + 1], ['bindTexture', 'TEXTURE_2D', h.r[`${texture}Tex`]]);
     assert.ok(!h.calls.some(c => ['texImage2D', 'createTexture'].includes(c[0])));
   }
-  const frag = vm.runInContext('FRAG', h.context);
-  for (const component of ['x','y','z','w']) assert.ok(frag.includes('u_groundDecor.' + component));
 });
 
 test('atmosphere uniforms follow the world on all qualities and reset for previews without resource uploads', () => {
@@ -587,11 +549,11 @@ test('dedicated rock material is opt-in and resets on profile changes without te
   }
   const { FRAG } = vm.runInContext('({FRAG})', h.context);
   assert.ok(FRAG.includes('if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5)))'));
-  const material = FRAG.slice(FRAG.indexOf('vec3 rockSurface'), FRAG.indexOf('const vec4 rockClustersRects'));
+  const material = FRAG.slice(FRAG.indexOf('vec3 rockSurface'), FRAG.indexOf('vec3 detail'));
   assert.ok(material.includes('vec3 p=v_pos*u_rockScale;'));
   for (const projection of ['zy', 'xz', 'xy']) assert.ok(material.includes(`texture(u_rockTex,p.${projection})`));
   assert.ok(material.includes('groundBase(v_pos.xz)'), 'rock foot blends with the local ground');
-  assert.doesNotMatch(material, /mod\(|fract\(|u_time|u_eye|u_decorSeed/, 'no mirrored tiling or moving detail');
+  assert.doesNotMatch(material, /mod\(|fract\(|u_time|u_eye/, 'no mirrored tiling or moving detail');
 });
 
 test('upland weathering is opt-in, resets on map changes and reuses shared materials',()=>{

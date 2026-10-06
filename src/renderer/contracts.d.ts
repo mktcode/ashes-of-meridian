@@ -1,6 +1,6 @@
 /* CPU/GPU boundary contracts; erased by the classic-script build. */
 type RenderLayer = 'static' | 'dynamic' | 'effects';
-type ResidentTextureName = keyof typeof MERIDIAN_TEXTURES | ProceduralMaterialName;
+type ResidentTextureName = ProceduralMaterialName;
 type RenderColor = number | string | readonly number[] | Float32Array;
 type MeshData = number[] | Float32Array;
 interface RenderBucket {
@@ -36,7 +36,6 @@ interface RenderMesh {
 interface ResidentTexture {
   texture: WebGLTexture | null;
   fallback: number[];
-  repeat: boolean;
   resident: boolean;
 }
 interface ModelTransform {

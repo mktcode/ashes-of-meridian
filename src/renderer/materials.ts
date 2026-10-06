@@ -1,6 +1,8 @@
 /* Rule-based surface baking. Pure CPU data, no DOM, GPU or simulation RNG. */
 'use strict';
 
+const MAT = { AUTO: 0, GROUND: 1, METAL: 2, BIO: 3, ROCK: 4, CRYSTAL: 5, MASSIF: 6, ALIEN: 7, LANDSCAPE: 8, WATER: 9, BARK: 10, FOLIAGE: 11, MASONRY: 12, LEAF: 13 };
+
 type SurfacePattern = 'sediment' | 'strata' | 'plates' | 'cells' | 'grass' | 'granite' | 'soil' | 'bark';
 interface SurfaceRecipe {
   readonly pattern: SurfacePattern;
@@ -25,9 +27,6 @@ const PROCEDURAL_MATERIALS = {
 type ProceduralMaterialName = keyof typeof PROCEDURAL_MATERIALS;
 const MATERIAL_BAKE_SIZE = 256;
 
-function isProceduralMaterial(name: string): name is ProceduralMaterialName {
-  return Object.hasOwn(PROCEDURAL_MATERIALS, name);
-}
 // Integer hash, not a stateful stream. Evaluation order and resolution cannot shift a world seed.
 function surfaceHash(x: number, y: number, seed: number) {
   let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ seed;
