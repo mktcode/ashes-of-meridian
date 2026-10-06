@@ -156,6 +156,59 @@ test('building apron edges are asymmetric, deterministic and leave the core cove
   assert.equal(JSON.stringify(building),before);
 });
 
+test('used HQ approaches join the apron without changing entities or worker rules',()=>{
+  const view=new BattlefieldView({workerRoads(){}});
+  view.world={extent:20,terrainFree:()=>true};
+  const hq={id:7,kind:'building',type:'hq',hp:100,progress:1,x:.5,z:.5,size:4.4,team:0},
+    miner=x=>({id:1,kind:'unit',type:'worker',hp:10,x,z:.5,team:0,order:{type:'mine',id:99}});
+  view.updateWorkerRoads(0,[hq,miner(8.5)],()=>true);
+  assert.ok(view.workerRoads.pixels.every(p=>p===0),'standing workers create no connection');
+  for(let i=1;i<=40;i++){
+    const entities=[hq,miner(i%2?9:8.5)],before=JSON.stringify(entities);
+    view.updateWorkerRoads(i*.25,entities,()=>true);
+    assert.equal(JSON.stringify(entities),before);
+  }
+  const field=view.workerRoads,at=x=>20*field.size+Math.floor(x+20);
+  assert.ok(field.wear[at(6.5)]>.72,'wear bridges the gap inside the untravelled final approach');
+  for(let x=.5;x<=8.5;x++)assert.ok(view.roadPixels[at(x)]>=184,'no break between mature road and apron');
+  const before=Array.from(field.pixels);
+  view.updateWorkerRoads(10,[hq,miner(8.5)],()=>true);
+  assert.deepEqual(Array.from(field.pixels),before,'pause cannot strengthen connectors');
+  view.updateWorkerRoads(132,[hq],()=>true);
+  assert.ok(field.pixels.every(p=>p===0),'unused connections fade with worker roads');
+});
+
+test('HQ connectors exclude hidden, hostile, unfinished and inaccessible targets and non-mining workers',()=>{
+  const hq={id:7,kind:'building',type:'hq',hp:100,progress:1,x:.5,z:.5,size:4.4,team:0},
+    base={id:1,kind:'unit',type:'worker',hp:10,z:.5,team:0,order:{type:'mine',id:99}};
+  for(const variant of [
+    {hq:{...hq,team:1}}, {hq:{...hq,progress:.5}}, {hidden:true}, {blocked:true},
+    {worker:{order:{type:'move'}}}, {worker:{deliveryForum:42}}, {offset:8}
+  ]){
+    const view=new BattlefieldView({workerRoads(){}}),expected=new WorkerRoadField(20);
+    view.world={extent:20,terrainFree:()=>!variant.blocked};
+    for(let i=0;i<=8;i++){
+      const w={...base,...variant.worker,x:8.5+(variant.offset||0)+(i%2)*.5};
+      view.updateWorkerRoads(i*.25,[variant.hq||hq,w],e=>!variant.hidden||e.id!==7);
+      expected.update(i*.25,[w]);
+    }
+    assert.deepEqual(Array.from(view.workerRoads.pixels),Array.from(expected.pixels),JSON.stringify(variant));
+  }
+});
+
+test('connection resolver never runs for idle, discontinuous or unobserved movement',()=>{
+  const field=new WorkerRoadField(20);let calls=0;
+  const connect=()=>{calls++;return {x:0,z:0};};
+  field.update(0,[worker(8)],connect);
+  field.update(.25,[worker(8)],connect);
+  field.update(.5,[],connect);
+  field.update(.75,[worker(9)],connect);
+  field.update(1,[worker(-9)],connect);
+  field.update(4,[worker(8)],connect);
+  assert.equal(calls,0);
+  assert.ok(field.pixels.every(p=>p===0));
+});
+
 test('removing a building apron preserves independent worker wear',()=>{
   const uploads=[],view=new BattlefieldView({workerRoads:data=>uploads.push(Array.from(data))});
   view.world={extent:20};

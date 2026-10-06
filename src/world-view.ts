@@ -326,7 +326,8 @@ class WorkerRoadField {
     this.wear = new Float32Array(this.size * this.size);
     this.pixels = new Uint8Array(this.wear.length);
   }
-  update(time: number, workers: readonly { id: number; x: number; z: number }[]): boolean {
+  update<T extends { id: number; x: number; z: number }>(time: number, workers: readonly T[],
+      connection?: (worker: T) => Position | null): boolean {
     const dt = this.time === null ? 0 : time - this.time;
     if (this.time !== null && dt >= 0 && dt < .2) return false;
     if (dt < 0) { this.wear.fill(0); this.previous.clear(); }
@@ -351,6 +352,8 @@ class WorkerRoadField {
             this.wear[i] = Math.min(1, this.wear[i] + weight * weight * .16 * distance / steps);
           }
       }
+      const target = connection?.(w);
+      if (target) this.connect(w,target);
     }
     this.previous = next;
     let changed = false;
@@ -359,6 +362,24 @@ class WorkerRoadField {
       if (pixel !== this.pixels[i]) { this.pixels[i] = pixel; changed = true; }
     }
     return changed;
+  }
+  private connect(from: Position, to: Position) {
+    const { extent, cell, size, wear } = this, radius = 1.65,
+      dx = to.x-from.x, dz = to.z-from.z, length2 = dx*dx+dz*dz;
+    if (length2 < .01) return;
+    const col = Math.max(0,Math.min(size-1,Math.floor((from.x+extent)/cell))),
+      row = Math.max(0,Math.min(size-1,Math.floor((from.z+extent)/cell))), strength = wear[row*size+col];
+    // Extend only the existing endpoint's wear. No instant roads or extra buildup
+    // from idle workers; the same field handles fading, pause and view resets.
+    for (let z = Math.max(0,Math.floor((Math.min(from.z,to.z)-radius+extent)/cell));
+      z <= Math.min(size-1,Math.floor((Math.max(from.z,to.z)+radius+extent)/cell)); z++)
+      for (let x = Math.max(0,Math.floor((Math.min(from.x,to.x)-radius+extent)/cell));
+        x <= Math.min(size-1,Math.floor((Math.max(from.x,to.x)+radius+extent)/cell)); x++) {
+        const px = (x+.5)*cell-extent-from.x, pz = (z+.5)*cell-extent-from.z,
+          t = Math.max(0,Math.min(1,(px*dx+pz*dz)/length2)),
+          d2 = (px-dx*t)**2+(pz-dz*t)**2, weight = Math.max(0,1-d2/(radius*radius)), i = z*size+x;
+        wear[i] = Math.max(wear[i],strength*weight*weight);
+      }
   }
 }
 
@@ -418,7 +439,19 @@ class BattlefieldView {
     const buildings = this.buildingRoads ??= new BuildingRoadField(field);
     const workers = entities.filter(e => e.kind === 'unit' && e.type === 'worker' && e.hp > 0 && observed(e)),
       visibleBuildings = entities.filter(e => e.kind === 'building' && e.hp > 0 && observed(e)),
-      wearChanged = field.update(time, workers), buildingsChanged = buildings.update(visibleBuildings);
+      headquarters = visibleBuildings.filter(e => e.kind === 'building' && e.type === 'hq' && e.progress >= 1),
+      wearChanged = field.update(time, workers, w => {
+        if (w.kind !== 'unit' || w.order?.type !== 'mine' || w.deliveryForum !== undefined) return null;
+        let h: Entity | null = null, nearest = Infinity;
+        for (const candidate of headquarters) {
+          const distance = Math.hypot(w.x-candidate.x,w.z-candidate.z);
+          if (candidate.team === w.team && distance < nearest) { h = candidate; nearest = distance; }
+        }
+        if (!h || nearest > h.size+4.6 || nearest <= h.size*1.08) return null;
+        // End well inside the guaranteed apron core, not at a noisy edge or the HQ centre.
+        const scale = h.size*1.08/nearest, target = {x:h.x+(w.x-h.x)*scale,z:h.z+(w.z-h.z)*scale};
+        return this.world!.terrainFree?.(w,target) === false ? null : target;
+      }), buildingsChanged = buildings.update(visibleBuildings);
     if (!wearChanged && !buildingsChanged) return;
     const pixels = this.roadPixels ??= new Uint8Array(field.pixels.length);
     let changed = false;
