@@ -212,10 +212,20 @@ test('resource regions scatter across seeds and every family has variable dimens
 test('gentle planar slopes support buildings while steep slopes, roughness and map bounds reject them', () => {
   const { BattlefieldSurface } = scope(), p = {x:0,z:0},
     gentle = new BattlefieldSurface(20, 2.5, (x,z) => 20 + x * .08 + z * .04),
+    moderate = new BattlefieldSurface(20, 2.5, (x,z) => 20 + x * .14 + z * .04),
+    undulating = new BattlefieldSurface(20, 2.5, (x,z) => 20 + .003 * (x*x + z*z)),
     steep = new BattlefieldSurface(20, 2.5, x => 20 + x * .2),
     bump = new BattlefieldSurface(20, 2.5, (x,z) => 20 + (x === 3.75 && z === 3.75 ? .4 : 0));
   assert.ok(gentle.foundation(p, 4));
   assert.ok(gentle.fits(0, 0, 4));
+  for (const surface of [moderate, undulating]) {
+    assert.ok(surface.foundation(p, 4), 'moderate grades and small waves remain buildable');
+    const before = Array.from(surface.heights), pose = surface.buildingPose(p, 4);
+    for (let z=-4; z<=4; z+=.5) for (let x=-4; x<=4; x+=.5)
+      assert.ok(pose.height + pose.dx*x + pose.dz*z >= surface.heightAt(x,z) - 1e-6,
+        'supporting plane stays above the terrain across the footprint');
+    assert.deepEqual(Array.from(surface.heights), before, 'placement never flattens the playable terrain');
+  }
   assert.equal(steep.foundation(p, 4), false);
   assert.equal(bump.foundation(p, 4), false, 'conservative vertex coverage catches interior extrema');
   const bounds = gentle.foundationBounds(p, 4);

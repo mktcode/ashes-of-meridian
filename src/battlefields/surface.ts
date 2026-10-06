@@ -162,10 +162,12 @@ class BattlefieldSurface {
       last = (v: number) => Math.ceil((v+margin+this.extent)/this.step)*this.step-this.extent;
     const center = this.heightAt(p.x, p.z), dx = (this.heightAt(p.x + this.step, p.z) - this.heightAt(p.x - this.step, p.z)) / (2 * this.step),
       dz = (this.heightAt(p.x, p.z + this.step) - this.heightAt(p.x, p.z - this.step)) / (2 * this.step);
-    if (Math.hypot(dx, dz) > .12) return false;
+    // Accept moderate grades and small undulations without admitting steep hills.
+    // The supporting building pose still covers the complete unchanged surface.
+    if (Math.hypot(dx, dz) > .16) return false;
     for (let z = first(p.z); z <= last(p.z); z += this.step)
       for (let x = first(p.x); x <= last(p.x); x += this.step)
-        if (Math.abs(this.heightAt(x,z) - (center + dx * (x - p.x) + dz * (z - p.z))) > .18) return false;
+        if (Math.abs(this.heightAt(x,z) - (center + dx * (x - p.x) + dz * (z - p.z))) > .30) return false;
     return true;
   }
   // A restrained lean reduces downhill fill without changing buildability or the playable surface.
