@@ -1320,9 +1320,9 @@ test('successful targeting clears the mode; failed placement allows retry', () =
     const options = { pointerType: 'mouse', button: rightClick ? 2 : 0,
       target: mini ? h.minimap : h.world };
     h.pointer('pointerdown', 100, 100, options); h.pointer('pointerup', 100, 100, options);
-    if (mini) {
+    if (mini && rightClick) {
       assert.deepEqual(h.calls, []);
-      assert.equal(h.ui.mode.kind, 'ability', 'minimap navigation does not place or cancel targeting');
+      assert.equal(h.ui.mode.kind, 'ability', 'right-click minimap navigation preserves targeting');
     } else {
       assert.equal(h.calls.length, 1); assert.equal(h.calls[0][0], rightClick ? 'command' : 'ability');
       assert.equal(h.ui.mode, null);
@@ -1662,6 +1662,40 @@ test('removed command and camera controls have no handlers; ground orders remain
     h.pointer('pointerdown', 200, 200, { pointerType, button: pointerType === 'mouse' ? 2 : 0 });
     h.pointer('pointerup', 200, 200, { pointerType, button: pointerType === 'mouse' ? 2 : 0 });
     assert.equal(h.calls.at(-1)[2].type, 'move');
+  }
+});
+
+test('minimap Scan uses map coordinates without moving the camera, and failed scans allow retry', () => {
+  for(const pointerType of ['mouse','touch']) for(const success of [true,false]) {
+    const h=setup();h.UI.prototype.bind.call(h.ui);h.ui.selected=[7];h.ui.mode={kind:'ability',arg:'scan'};
+    h.minimap.getBoundingClientRect=()=>({left:30,top:50,width:360,height:180});
+    h.ui.game.world.extent=200;const cam={...h.ui.game.s.cam};
+    h.ui.game.ability=(...args)=>{h.calls.push(['ability',...args]);return success;};
+    h.pointer('pointerdown',300,95,{target:h.minimap,pointerType});
+    h.pointer('pointermove',310,100,{target:h.minimap,pointerType});
+    h.pointer('pointerup',310,100,{target:h.minimap,pointerType});
+    assert.equal(h.calls.length,1);assert.equal(h.calls[0][1],'scan');
+    assert.equal(h.calls[0][2].x,100);assert.equal(h.calls[0][2].z,-100);
+    assert.deepEqual(h.ui.game.s.cam,cam);assert.deepEqual(h.ui.selected,[7]);
+    assert.equal(h.ui.mode?.arg,success?undefined:'scan');
+  }
+});
+
+test('minimap navigation preserves non-Scan targeting without issuing orders', () => {
+  for(const mode of [{kind:'ability',arg:'orbital'},{kind:'ability',arg:'repair'},{kind:'build',arg:'depot'},{kind:'rally'}]) {
+    const h=setup();h.UI.prototype.bind.call(h.ui);h.ui.mode=mode;h.ui.selected=[7];
+    h.pointer('pointerdown',100,100,{target:h.minimap});h.pointer('pointerup',100,100,{target:h.minimap});
+    assert.deepEqual(h.calls,[]);assert.strictEqual(h.ui.mode,mode);assert.deepEqual(h.ui.selected,[7]);
+  }
+});
+
+test('minimap Scan respects pause, modal, result and lifecycle locks', () => {
+  for(const state of ['paused','modalKind','result','leavingBattle','battleIntro']) {
+    const h=setup();h.UI.prototype.bind.call(h.ui);h.ui.mode={kind:'ability',arg:'scan'};
+    if(state==='result')h.ui.game.s.result='victory';else h.ui[state]=state==='modalKind'?'pause':true;
+    h.ui.game.ability=(...args)=>{h.calls.push(args);return true;};
+    h.pointer('pointerdown',100,100,{target:h.minimap});h.pointer('pointerup',100,100,{target:h.minimap});
+    assert.deepEqual(h.calls,[]);assert.equal(h.ui.mode.arg,'scan');
   }
 });
 

@@ -150,7 +150,12 @@
           if (this.controlsLocked || this.view !== 'game') return;
           e.preventDefault();
           let p = minimapPosition(e);
-          // The minimap only navigates, including during target selection.
+          // Scan is the sole minimap targeting action; other inputs only navigate.
+          if (e.button === 0 && this.mode?.kind === 'ability' && this.mode.arg === 'scan') {
+            miniDrag = false;
+            if (!this.paused && !this.modalKind && !this.game.s?.result) this.applyTarget(p);
+            return;
+          }
           this.center(p.x, p.z);
           miniDrag = true;
           map.setPointerCapture(e.pointerId);
