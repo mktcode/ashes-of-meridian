@@ -1866,7 +1866,7 @@ test('pause abandonment requires confirmation; cancel preserves the expedition a
   h.click({ ui: 'confirmAbandon' }); assert.equal(cleared(), 1, 'duplicate confirmation is ignored');
 });
 
-test('battle autosave, pagehide and main menu preserve tutorial goals and restore paused without redeployment', () => {
+test('battle autosave, pagehide and main menu preserve tutorial goals and continue directly without redeployment', () => {
   const h = savedUIBattle(), ui = h.ui;
   h.UI.prototype.bind.call(ui);
   ui.battleTutorial = { step: 'trainWorker', achieved: new Set(['buildHQ']), workersTrained: 1, elapsed: 0 };
@@ -1876,15 +1876,18 @@ test('battle autosave, pagehide and main menu preserve tutorial goals and restor
   const state = JSON.stringify(ui.game.s); ui.showHome(); assert.equal(ui.game.s, null);
   ui.profile.upgrades.startingWorkers = 5;
   ui.continueExpedition();
-  assert.equal(ui.view, 'game'); assert.equal(ui.paused, true); assert.equal(JSON.stringify(ui.game.s), state);
+  assert.equal(ui.view, 'game'); assert.equal(ui.paused, false); assert.equal(JSON.stringify(ui.game.s), state);
+  assert.equal(ui.modalKind, '');
+  assert.equal(h.document.getElementById('modal').classList.contains('hidden'), true);
   assert.equal(ui.battleTutorial.step, 'trainWorker'); assert.equal(ui.battleTutorial.workersTrained, 1);
   assert.deepEqual([...ui.battleTutorial.achieved], ['buildHQ']);
   assert.deepEqual(ui.game.s.parties[0].meta, {}, 'new purchases do not change restored startupgrades');
   assert.equal(ui.expedition.battle.tutorial.cameraHome, undefined, 'ordinary tutorial goals do not add a phantom camera target');
+  ui.pause(); assert.equal(ui.paused, true); assert.equal(ui.modalKind, 'pause');
   ui.resume(); assert.equal(ui.paused, false);
 });
 
-test('supply tutorial recruitment and depot goals restore paused without losing progress', () => {
+test('supply tutorial recruitment and depot goals continue directly without losing progress', () => {
   for (const step of ['trainRifle', 'buildDepot']) {
     const h = savedUIBattle(), ui = h.ui, g = ui.game;
     g.s.entities = [{ id: 1, team: 0, kind: 'building', type: 'hq', hp: 100, progress: 1, queue: [] },
@@ -1896,7 +1899,8 @@ test('supply tutorial recruitment and depot goals restore paused without losing 
     const state = JSON.stringify(g.s);
     ui.showHome();
     ui.continueExpedition();
-    assert.equal(ui.paused, true);
+    assert.equal(ui.paused, false);
+    assert.equal(ui.modalKind, '');
     assert.equal(ui.battleTutorial.step, step);
     assert.equal(ui.battleTutorial.workersTrained, 2);
     assert.deepEqual([...ui.battleTutorial.achieved], goals);
@@ -1913,7 +1917,8 @@ test('failed battle save warns before leaving and keeps a usable volatile snapsh
   ui.persistence.available = false; ui.persistence.saveProgress = () => false;
   ui.showHome(); assert.strictEqual(ui.game.s, state); assert.equal(ui.modalKind, 'saveUnavailable');
   ui.uiAction('leaveUnsaved'); assert.equal(ui.view, 'home'); assert.equal(ui.game.s, null);
-  ui.continueExpedition(); assert.equal(ui.game.s.time, 42); assert.equal(ui.paused, true);
+  ui.continueExpedition(); assert.equal(ui.game.s.time, 42); assert.equal(ui.paused, false);
+  assert.equal(ui.modalKind, '');
 });
 
 test('blocked expedition saves require explicit discard and concurrent launch attempts do not redeploy', async () => {

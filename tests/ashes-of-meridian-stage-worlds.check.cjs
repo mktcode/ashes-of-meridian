@@ -187,7 +187,8 @@ test('an actual saved current battle survives a visit and restores independently
   assert.deepEqual(copy(ui.expedition.battle),current);
   assert.deepEqual(copy(h.persistence.loadExpedition().battle),current);
   ui.showHome();await ui.browseStage(1);ui.enterSelectedStage();await Promise.resolve();
-  assert.equal(ui.activeWorldStage,null);assert.equal(ui.paused,true);
+  assert.equal(ui.activeWorldStage,null);assert.equal(ui.paused,false);
+  assert.equal(ui.modalKind,'');
   assert.deepEqual(copy(h.game.snapshotBattle()),current);
 });
 

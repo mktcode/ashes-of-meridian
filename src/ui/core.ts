@@ -276,7 +276,7 @@
           this.resultAetherStructures = undefined;
           this.resultCivilizationTotal = undefined;
           this.resultBenefit = undefined;
-          this.paused = !!data.restored;
+          this.paused = !!data.restored && this.activeWorldStage !== null;
           this.modalKind = '';
           this.sellBuildingId = null;
           this.lastClick = {};
@@ -324,7 +324,7 @@
           this.updateHUD();
           this.clearMode();
           // Start is outside a tick, so the initial CPU/UI snapshot precedes free play.
-          if (data.restored) this.showPause();
+          if (this.paused) this.showPause();
           else this.saveBattle();
         } else if (type === 'toast') this.toast(data);
         else if (type === 'radio') {
