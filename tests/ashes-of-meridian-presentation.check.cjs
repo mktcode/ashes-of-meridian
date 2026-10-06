@@ -1011,10 +1011,10 @@ test('battle entrance covers the switch and reveals only after a submitted battl
   assert.equal(hud.classList.contains('battle-entrance'), true);
   assert.equal(cover.classList.contains('battle-reveal'), true, 'map cover moves behind the arriving HUD');
   const reveal = cover.animations[1];
-  assert.equal(reveal.options.duration, 1800);
+  assert.equal(reveal.options.duration, 900);
   const top = a.$('topbar').animations[0], bottom = a.$('commandDeck').animations[0];
-  assert.equal(top.options.duration, 3200);
-  assert.equal(bottom.options.duration, 3200);
+  assert.equal(top.options.duration, 1100);
+  assert.equal(bottom.options.duration, 1100);
   assert.equal(top.keyframes[0].transform, 'translateY(-110%)');
   assert.equal(bottom.keyframes[0].transform, 'translateY(110%)');
   reveal.finish(); await new Promise(setImmediate);

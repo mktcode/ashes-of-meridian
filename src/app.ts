@@ -204,17 +204,17 @@
           battleTransitionAnimation?.cancel();
           battleTransition.classList.add('battle-reveal');
           // Explicit animation instances restart even if DOM/style updates coalesce.
-          // Slow, non-front-loaded motion makes the entrance easy to inspect.
+          // Gentle acceleration keeps the slide visible instead of front-loading it.
           const hudAnimations = [
             $('topbar').animate([{ opacity: 0, transform: 'translateY(-110%)' }, { opacity: 1, transform: 'translateY(0)' }],
-              { duration: 3200, delay: 150, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' }),
+              { duration: 1100, delay: 80, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' }),
             $('commandDeck').animate([{ opacity: 0, transform: 'translateY(110%)' }, { opacity: 1, transform: 'translateY(0)' }],
-              { duration: 3200, delay: 300, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' })
+              { duration: 1100, delay: 160, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' })
           ];
           battleHUDAnimations = hudAnimations;
           $('hud').classList.replace('battle-entrance-pending', 'battle-entrance');
           const animation = battleTransition.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 1800, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+            { duration: 900, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
           battleTransitionAnimation = animation;
           void animation.finished.then(() => {
             if (battleTransitionAnimation === animation) battleTransition.classList.add('hidden');
