@@ -313,7 +313,7 @@ class SceneryFogField {
 }
 
 // Transient, RNG-neutral wear from observed movement, never navigation or save data.
-const WORKER_ROAD_RADIUS = 2.2, ROAD_JOIN_CELLS = 2;
+const WORKER_ROAD_RADIUS = 2.2, ROAD_JOIN_CELLS = 2, WORKER_ROAD_FADE_SECONDS = 300;
 // Grayscale closing: bridge narrow gaps without blurring or widening isolated roads.
 // A square kernel is separable; four bounded passes reuse two view-owned buffers.
 function closeRoadGaps(source: Uint8Array, a: Uint8Array, b: Uint8Array, size: number) {
@@ -352,7 +352,7 @@ class WorkerRoadField {
     if (this.time !== null && dt >= 0 && dt < .2) return false;
     if (dt < 0) { this.wear.fill(0); this.previous.clear(); }
     this.time = time;
-    for (let i = 0; i < this.wear.length; i++) this.wear[i] = Math.max(0, this.wear[i] - Math.max(0, dt) / 120);
+    for (let i = 0; i < this.wear.length; i++) this.wear[i] = Math.max(0, this.wear[i] - Math.max(0, dt) / WORKER_ROAD_FADE_SECONDS);
     const next = new Map<number, Position>();
     for (const w of workers) {
       next.set(w.id, { x: w.x, z: w.z });

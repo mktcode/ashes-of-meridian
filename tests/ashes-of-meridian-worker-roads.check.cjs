@@ -23,7 +23,11 @@ test('repeated travel builds soft wear, idle/pause do not, disuse removes it',()
   const peak=Math.max(...field.wear);
   field.update(11,[worker(1)]);
   assert.ok(Math.max(...field.wear)<peak,'stationary worker only allows decay');
-  field.update(132,[]);
+  const remaining=Math.max(...field.wear);
+  field.update(131,[]);
+  assert.ok(Math.max(...field.wear)>0,'mature roads outlast two minutes of disuse');
+  assert.ok(Math.abs(Math.max(...field.wear)-Math.max(0,remaining-120/300))<1e-6,'wear fades linearly over five simulation minutes');
+  field.update(312,[]);
   assert.ok(field.pixels.every(p=>p===0));
 });
 
@@ -205,7 +209,9 @@ test('used HQ approaches join the apron without changing entities or worker rule
   const before=Array.from(field.pixels);
   view.updateWorkerRoads(10,[hq,miner(8.5)],()=>true);
   assert.deepEqual(Array.from(field.pixels),before,'pause cannot strengthen connectors');
-  view.updateWorkerRoads(132,[hq],()=>true);
+  view.updateWorkerRoads(130,[hq],()=>true);
+  assert.ok(field.pixels.some(p=>p>0),'HQ connections also persist beyond two minutes');
+  view.updateWorkerRoads(311,[hq],()=>true);
   assert.ok(field.pixels.every(p=>p===0),'unused connections fade with worker roads');
 });
 
