@@ -2,7 +2,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const {loadScripts,RENDERER_SCRIPTS} = require('./helpers/game-scripts.cjs');
-const context = loadScripts([...RENDERER_SCRIPTS,'world-view']);
+const context = loadScripts(['core','content',...RENDERER_SCRIPTS,'world-view']);
 const {WorkerRoadField,BattlefieldView,MeridianRenderer} = vm.runInContext('({WorkerRoadField,BattlefieldView,MeridianRenderer})',context);
 const worker = x => ({id:1,x,z:0});
 function passage(field,start) {
@@ -114,4 +114,41 @@ test('view filters workers before tracking, without mutating entities',()=>{
   const expected=new WorkerRoadField(20);
   expected.update(0,[worker(0)]);expected.update(.25,[worker(1)]);
   assert.deepEqual(uploads[0].data,Array.from(expected.pixels));
+});
+
+test('building paths extend beyond the footprint, stay cached during pause and respect observation',()=>{
+  const uploads=[],view=new BattlefieldView({workerRoads:(data,size)=>uploads.push({data:Array.from(data),size})});
+  view.world={extent:20};
+  const building={id:7,kind:'building',type:'hq',hp:100,x:0,z:0,size:4.4,team:0},
+    hidden={...building,id:8,x:13},entities=[building,hidden],before=JSON.stringify(entities);
+  view.updateWorkerRoads(0,entities,e=>e.id!==8);
+  assert.equal(uploads.length,1,'stationary buildings need no worker travel');
+  const {data,size}=uploads[0],at=(x,z)=>data[Math.floor(z+20)*size+Math.floor(x+20)];
+  assert.equal(at(0,0),255);
+  assert.ok(at(5,0)>0,'small apron peeks out beyond the building');
+  assert.equal(at(9,0),0,'apron remains local');
+  assert.equal(at(13,0),0,'unobserved buildings cannot mark terrain');
+  view.updateWorkerRoads(0,entities,e=>e.id!==8);
+  view.updateWorkerRoads(60,entities,e=>e.id!==8);
+  assert.equal(uploads.length,1,'unchanged building mask neither fades nor uploads again');
+  assert.equal(JSON.stringify(entities),before);
+  view.updateWorkerRoads(60,[{...building,x:-10}],()=>true);
+  assert.equal(uploads.length,2,'relocation is visible even while paused');
+  assert.equal(uploads[1].data[Math.floor(20)*size+Math.floor(20)],0,'old footprint is removed');
+  view.updateWorkerRoads(60,[{...building,hp:0}],()=>true);
+  assert.ok(uploads.at(-1).data.every(p=>p===0),'destroyed buildings release their apron');
+});
+
+test('removing a building apron preserves independent worker wear',()=>{
+  const uploads=[],view=new BattlefieldView({workerRoads:data=>uploads.push(Array.from(data))});
+  view.world={extent:20};
+  const building={id:7,kind:'building',type:'hq',hp:100,x:0,z:0,size:4.4,team:0},
+    unit=x=>({...worker(x),kind:'unit',type:'worker',hp:10}),expected=new WorkerRoadField(20);
+  for(let i=0;i<=8;i++){
+    const w=unit(i%2);
+    view.updateWorkerRoads(i*.25,[building,w],()=>true);
+    expected.update(i*.25,[w]);
+  }
+  view.updateWorkerRoads(2,[unit(0)],()=>true);
+  assert.deepEqual(uploads.at(-1),Array.from(expected.pixels));
 });

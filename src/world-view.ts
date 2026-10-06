@@ -362,6 +362,37 @@ class WorkerRoadField {
   }
 }
 
+// Persistent while an observed building exists, separate from transient worker wear.
+// Rounded footprints only shade the existing terrain; no grading, geometry or RNG.
+class BuildingRoadField {
+  readonly pixels: Uint8Array<ArrayBuffer>;
+  private key = '';
+  constructor(private field: WorkerRoadField) {
+    this.pixels = new Uint8Array(field.pixels.length);
+  }
+  update(buildings: readonly RenderEntity[]): boolean {
+    const key = buildings.map(e => `${e.id}:${e.x}:${e.z}:${e.size}:${buildingVisualYaw(e)}`).join('|');
+    if (key === this.key) return false;
+    this.key = key; this.pixels.fill(0);
+    const { extent, cell, size } = this.field;
+    for (const e of buildings) {
+      const inner = e.size * 1.08 + .55, outer = inner + 1.05, bound = outer * Math.SQRT2,
+        yaw = buildingVisualYaw(e), cs = Math.cos(yaw), sn = Math.sin(yaw);
+      for (let row = Math.max(0, Math.floor((e.z-bound+extent)/cell));
+        row <= Math.min(size-1, Math.floor((e.z+bound+extent)/cell)); row++)
+        for (let col = Math.max(0, Math.floor((e.x-bound+extent)/cell));
+          col <= Math.min(size-1, Math.floor((e.x+bound+extent)/cell)); col++) {
+          const dx = (col+.5)*cell-extent-e.x, dz = (row+.5)*cell-extent-e.z,
+            x = dx*cs-dz*sn, z = dx*sn+dz*cs,
+            radius = Math.pow(x**8+z**8,1/8), t = Math.max(0,Math.min(1,(radius-inner)/(outer-inner))),
+            pixel = Math.round((1-t*t*(3-2*t))*255), i = row*size+col;
+          this.pixels[i] = Math.max(this.pixels[i],pixel);
+        }
+    }
+    return true;
+  }
+}
+
 class BattlefieldView {
   R: MeridianRenderer;
   data: WorldRenderData | null;
@@ -369,14 +400,27 @@ class BattlefieldView {
   fogVersion: number;
   private sceneryFog: SceneryFogField | null = null;
   private workerRoads: WorkerRoadField | null = null;
+  private buildingRoads: BuildingRoadField | null = null;
+  private roadPixels: Uint8Array<ArrayBuffer> | null = null;
   clearWorkerRoads() {
     if (!this.workerRoads) return;
-    this.workerRoads = null; this.R.releaseWorkerRoads();
+    this.workerRoads = null; this.buildingRoads = null; this.roadPixels = null;
+    this.R.releaseWorkerRoads();
   }
   updateWorkerRoads(time: number, entities: readonly Entity[], observed: (e: Entity) => boolean) {
     const field = this.workerRoads ??= new WorkerRoadField(this.world!.extent);
-    const workers = entities.filter(e => e.kind === 'unit' && e.type === 'worker' && e.hp > 0 && observed(e));
-    if (field.update(time, workers)) this.R.workerRoads(field.pixels, field.size);
+    const buildings = this.buildingRoads ??= new BuildingRoadField(field);
+    const workers = entities.filter(e => e.kind === 'unit' && e.type === 'worker' && e.hp > 0 && observed(e)),
+      visibleBuildings = entities.filter(e => e.kind === 'building' && e.hp > 0 && observed(e)),
+      wearChanged = field.update(time, workers), buildingsChanged = buildings.update(visibleBuildings);
+    if (!wearChanged && !buildingsChanged) return;
+    const pixels = this.roadPixels ??= new Uint8Array(field.pixels.length);
+    let changed = false;
+    for (let i = 0; i < pixels.length; i++) {
+      const pixel = Math.max(field.pixels[i],buildings.pixels[i]);
+      if (pixels[i] !== pixel) { pixels[i] = pixel; changed = true; }
+    }
+    if (changed) this.R.workerRoads(pixels, field.size);
   }
   private sceneryTeam: PlayerTeam | null = null;
   private exteriorExtent = 0;
