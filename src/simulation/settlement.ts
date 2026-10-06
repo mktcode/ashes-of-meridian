@@ -8,14 +8,20 @@ function forumBuildingTarget(forum: BuildingEntity): number {
   return Math.floor(clamp(forum.cinderStock || 0, 0, FORUM_SETTLEMENT.capacity) / FORUM_SETTLEMENT.capacity * FORUM_SETTLEMENT.buildings);
 }
 function forumCorridors(forum: BuildingEntity): Position[][] {
-  const yaw = buildingVisualYaw(forum), cs = Math.cos(yaw), sn = Math.sin(yaw);
-  return civilizationBuildingEntries('meridianforum').map(entry => {
-    const angle = Math.atan2(entry.x, entry.z), dx = Math.sin(angle), dz = Math.cos(angle),
-      reach = FORUM_SETTLEMENT.radius + 6, half = FORUM_SETTLEMENT.corridorWidth / 2;
-    return [[-dz*half, dx*half], [dz*half, -dx*half],
-      [dx*reach+dz*half, dz*reach-dx*half], [dx*reach-dz*half, dz*reach+dx*half]]
-      .map(([x,z]) => ({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs}));
+  const yaw = buildingVisualYaw(forum), cs = Math.cos(yaw), sn = Math.sin(yaw),
+    radius = FORUM_SETTLEMENT.radius, half = FORUM_SETTLEMENT.corridorWidth / 2, reach = radius + 6;
+  // Three parallel streets and one cross-axis cut the circle into eight parcels.
+  const streets = [-radius/2,0,radius/2].map(x => {
+    const length = Math.sqrt(radius*radius-x*x) + 6;
+    return [[x-half,-length],[x+half,-length],[x+half,length],[x-half,length]];
   });
+  streets.push([[-reach,-half],[reach,-half],[reach,half],[-reach,half]]);
+  // The Forum occupies the central junction. Keep a plaza around its blocker so
+  // all four street arms connect around it and all three delivery entries stay accessible.
+  const plaza = forum.size + 2.5 + half;
+  streets.push([[-plaza,-plaza],[plaza,-plaza],[plaza,plaza],[-plaza,plaza]]);
+  return streets.map(polygon => polygon.map(([x,z]) =>
+    ({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs})));
 }
 function settlementFootprints(p: Position, type: BuildingType, team: PlayerTeam, rotation = 0): Position[][] {
   return civilizationClearanceFootprints(p, type, team, rotation);
@@ -47,7 +53,9 @@ const settlementMethods = {
     const yaw = buildingVisualYaw(forum), cs = Math.cos(yaw), sn = Math.sin(yaw), radius = forum.size + 2.5;
     return civilizationBuildingEntries('meridianforum').map(entry => {
       const a = Math.atan2(entry.x, entry.z), x = Math.sin(a)*radius, z = Math.cos(a)*radius;
-      return {x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs};
+      const p = {x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs};
+      // A sub-cell service area may contain no A* goal when the route needs a detour.
+      return this.world!.point(this.world!.idx(p.x,p.z));
     });
   },
   forumDropoff(this: MeridianGame, worker: UnitEntity, forum: BuildingEntity): Position | null {
@@ -76,7 +84,7 @@ const settlementMethods = {
     // Half a cell protects the raster edges too. Overlapping settlements share these exclusions.
     for (const e of this.s!.entities) if (e.hp > 0 && e.kind === 'building' && e.type === 'meridianforum' && e.id !== except &&
       forumCorridorBlocked(e,p,radius+.35+this.world!.cellSize/2,
-        type && isCivilizationBuildingType(type) ? settlementFootprints(p,type,team) : [])) return 'Leave the forum delivery corridors clear.';
+        type && isCivilizationBuildingType(type) ? settlementFootprints(p,type,team) : [])) return 'Leave the forum streets and entrance plaza clear.';
     return '';
   },
   forumRotationReason(this: MeridianGame, forum: BuildingEntity, rotation: number): string {
@@ -87,7 +95,7 @@ const settlementMethods = {
         if (shapes.some(a => other.some(b => civilizationFootprintsOverlap(a,b)))) return 'Leave room for forum stairs.';
       }
       if (forumCorridorBlocked(next,e,e.size+.35+this.world!.cellSize/2,
-        e.kind === 'building' && isCivilizationBuildingType(e.type) ? settlementFootprints(e,e.type,e.team as PlayerTeam,e.visualRotation || 0) : [])) return 'Rotation would block a delivery corridor.';
+        e.kind === 'building' && isCivilizationBuildingType(e.type) ? settlementFootprints(e,e.type,e.team as PlayerTeam,e.visualRotation || 0) : [])) return 'Rotation would block a forum street or entrance plaza.';
     }
     return '';
   },

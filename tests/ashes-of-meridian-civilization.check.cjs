@@ -6,6 +6,12 @@ const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS}=require('./helpers/ga
 const context=loadScripts(['core','content','expedition',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,'ui-core','ui-templates','ui-actions','world-view']);
 const {MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen}=vm.runInContext(
  '({MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen})',context);
+const {FORUM_SETTLEMENT,forumCorridors,buildingVisualYaw}=vm.runInContext('({FORUM_SETTLEMENT,forumCorridors,buildingVisualYaw})',context);
+function forumFrame(forum){
+ const yaw=buildingVisualYaw(forum),cs=Math.cos(yaw),sn=Math.sin(yaw);
+ return {world:(x,z)=>({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs}),
+  local:p=>({x:(p.x-forum.x)*cs-(p.z-forum.z)*sn,z:(p.x-forum.x)*sn+(p.z-forum.z)*cs})};
+}
 const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
 const allTypes=[...types,'meridianforum'];
 function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
@@ -216,6 +222,31 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
  game.s.rules.completed=false;forum.cinderStock=500;game.s.time+=100;game.updateSettlements();
  assert.equal(game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0).length,60);
 });
+test('Forum street grids reserve three parallel axes, a cross-axis and a connected entrance plaza while leaving eight buildable parcels',()=>{
+ const radius=FORUM_SETTLEMENT.radius,half=FORUM_SETTLEMENT.corridorWidth/2;
+ for(const team of [0,1])for(const rotation of [0,1/3,2]){
+  const {game}=fixture(0,()=>40);game.s.entities=[];
+  const forum=game.spawnBuilding('meridianforum',7,-4,team,team);forum.visualRotation=rotation;
+  const frame=forumFrame(forum),polygons=forumCorridors(forum).map(p=>p.map(frame.local));
+  assert.equal(polygons.length,5,'four street axes plus the local Forum plaza, not radial spokes');
+  for(const [i,x] of [-radius/2,0,radius/2].entries()){
+   assert.ok(polygons[i].every(p=>Math.abs(Math.abs(p.x-x)-half)<1e-9));
+   assert.ok(polygons[i].some(p=>p.z>Math.sqrt(radius*radius-x*x)));
+   assert.ok(polygons[i].some(p=>p.z<-Math.sqrt(radius*radius-x*x)));
+  }
+  assert.ok(polygons[3].every(p=>Math.abs(Math.abs(p.z)-half)<1e-9));
+  for(const [x,z] of [[-radius/2,33],[0,40],[radius/2,-33],[45,0]])
+   assert.match(game.forumAccessReason(frame.world(x,z),BUILDINGS.depot.size),/streets/);
+  for(const p of game.forumServicePoints(forum)){
+   assert.match(game.forumAccessReason(p,0),/plaza/);
+   assert.deepEqual(p,game.world.point(game.world.idx(p.x,p.z)),'service areas contain an actual navigation-cell goal for detours');
+  }
+  for(const x of [-.75,-.25,.25,.75])for(const z of [-.55,.55]){
+   const p=frame.world(x*radius,z*radius);
+   assert.equal(game.settlementPlacementReason('fieldlab',p,team),'','each of the eight parcels admits a civilian foundation');
+  }
+ }
+});
 test('settlement candidates vary freely in radius and angle while the saved cursor remains deterministic and bounded',()=>{
  const {game}=fixture(0,()=>40);game.s.entities=[];
  const forum=game.spawnBuilding('meridianforum',0,0,0,0),samples=[];
@@ -246,7 +277,7 @@ test('mid-rise settlement variants remain common at every distance while tall an
  assert.ok(counts[1][10]>=counts[1][5]&&counts[1][10]>=counts[1][15]);
  assert.deepEqual([...seen].sort(),[...types].sort());
 });
-test('irregular mixed settlements keep all three rotated Forum approaches navigable for workers',()=>{
+test('eight-parcel settlements populate every block and keep rotated street axes and all Forum entries navigable for workers',()=>{
  const {UNITS,UNIT_BODY_SCALE}=vm.runInContext('({UNITS,UNIT_BODY_SCALE})',context);
  let total=0,medium=0;const seen=new Set();
  for(const [seed,rotation] of [[1409,0],[2718,1/3],[8123,2]]){
@@ -256,11 +287,23 @@ test('irregular mixed settlements keep all three rotated Forum approaches naviga
   for(let i=1;i<=100;i++){game.s.time=i*10;game.updateSettlements(10);}
   const buildings=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);assert.equal(buildings.length,60);
   total+=buildings.length;medium+=buildings.filter(e=>BUILDINGS[e.type].civilizationPoints===10).length;
-  for(const b of buildings){seen.add(b.type);assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team),'');}
-  for(const p of game.forumServicePoints(forum)){
-   const worker={x:p.x*4.5,z:p.z*4.5,size:UNITS.worker.size},body=worker.size*UNIT_BODY_SCALE,
-    path=world.path(worker.x,worker.z,p.x,p.z,false,{...p,radius:1.2,terrainConnection:false},body);
-   assert.equal(path.status,'complete','a worker can reach each entry through its reserved approach');
+  const frame=forumFrame(forum),radius=FORUM_SETTLEMENT.radius,plaza=forum.size+2.5+FORUM_SETTLEMENT.corridorWidth/2,parcels=new Set();
+  for(const b of buildings){
+   seen.add(b.type);assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team),'');
+   const p=frame.local(b),column=p.x<-radius/2?0:p.x<0?1:p.x<radius/2?2:3;
+   parcels.add(column+(p.z<0?0:4));
+  }
+  assert.equal(parcels.size,8,'growth fills all eight parcels without using fixed building slots');
+  const segments=[[[-radius/2,-48],[-radius/2,48]],[[radius/2,-48],[radius/2,48]],
+   [[0,-55],[0,-plaza]],[[0,plaza],[0,55]],[[-55,0],[-plaza,0]],[[plaza,0],[55,0]]];
+  const body=UNITS.worker.size*UNIT_BODY_SCALE;
+  for(const [a,b] of segments)assert.equal(world.lineFree(frame.world(...a),frame.world(...b),body),true,'street centerlines remain clear of rasterized buildings');
+  for(const [x,z] of [[-radius/2,-48],[-radius/2,48],[radius/2,-48],[radius/2,48],[0,-55],[0,55],[-55,0],[55,0]]){
+   const worker={...frame.world(x,z),size:UNITS.worker.size};
+   for(const p of game.forumServicePoints(forum)){
+    const path=world.path(worker.x,worker.z,p.x,p.z,false,{...p,radius:1.2,terrainConnection:false},body);
+    assert.equal(path.status,'complete',`each street arm connects to every entry: seed=${seed}, rotation=${rotation}, start=${x},${z}, entry=${p.x},${p.z}`);
+   }
    assert.ok(game.forumDropoff(worker,forum));
   }
  }
@@ -353,14 +396,14 @@ test('explicit smart commands assign prospectors, only Forum deliveries spend th
  game.command([worker.id],{type:'smart',id:forum.id},0,false);assert.equal(worker.deliveryForum,forum.id);
  forum.hp=0;game.worker(worker,.1);assert.equal(worker.deliveryForum,undefined,'lost owner cannot steal cargo');
 });
-test('rotated Forum corridors agree with placement guides and service paths and reject blocking rotation',()=>{
+test('rotated Forum streets agree with placement guides and service paths and reject blocking rotation',()=>{
  const {game,world}=fixture(0,()=>40);game.s.entities=[];delete world.path;
  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=2;
  const worker=game.spawnUnit('worker',-50,-30,0,0);
  world.rebuild(game.s.entities);
  const service=game.forumDropoff(worker,forum);assert.ok(service);assert.ok(!world.blockedAt(service.x,service.z));
- const points=game.forumServicePoints(forum),p={x:points[0].x*2.4,z:points[0].z*2.4};
- assert.match(game.forumAccessReason(p,BUILDINGS.depot.size),/corridors/);
+ const corridor=forumCorridors(forum)[0],p={x:(corridor[0].x+corridor[2].x)/2,z:(corridor[0].z+corridor[2].z)/2};
+ assert.match(game.forumAccessReason(p,BUILDINGS.depot.size),/streets/);
  const sampler=new PlacementGuideSampler(game,'depot',0);sampler.refresh();assert.equal(sampler.sample(p),-1);
  let blocker;
  for(let angle=0;angle<Math.PI*2;angle+=.05){

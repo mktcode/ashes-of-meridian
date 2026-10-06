@@ -55,16 +55,20 @@ test('batched placement matches live validation across terrain, bodies, exits, v
     assert.equal(JSON.stringify(game.s),before,'sampling does not mutate battle state');
   }
 });
-test('Forum corridors update placement guides with the same live exclusion as direct construction',()=>{
+test('Forum streets update placement guides with the same live exclusion as direct construction',()=>{
   const {game,building}=fixture(), forum=building(20,0,0,'meridianforum');
   game.s.rules={kind:'single-player',completed:true};
-  const corridor=vm.runInContext('forumCorridors({x:0,z:0,visualRotation:0})[0]',context),
-    p={x:(corridor[2].x+corridor[3].x)*.3,z:(corridor[2].z+corridor[3].z)*.3},
+  const corridor=vm.runInContext('forumCorridors',context)(forum)[0],
+    p={x:(corridor[0].x+corridor[2].x)/2,z:(corridor[0].z+corridor[2].z)/2},
     sampler=new PlacementGuideSampler(game,'depot',0);
   sampler.refresh();assert.equal(sampler.sample(p),1);
   game.s.entities.push(forum);sampler.refresh();
-  assert.match(game.canBuild('depot',p),/corridors clear/);assert.equal(sampler.sample(p),-1);
-  forum.hp=0;sampler.refresh();assert.equal(sampler.sample(p),1);
+  assert.match(game.canBuild('depot',p),/streets/);assert.equal(sampler.sample(p),-1);
+  forum.visualRotation=1;sampler.refresh();assert.equal(sampler.sample(p),1,'the old street no longer excludes placement after rotation');
+  const moved=vm.runInContext('forumCorridors',context)(forum)[0],
+    q={x:(moved[0].x+moved[2].x)/2,z:(moved[0].z+moved[2].z)/2};
+  assert.match(game.canBuild('depot',q),/streets/);assert.equal(sampler.sample(q),-1,'the rotated street is protected immediately');
+  forum.hp=0;sampler.refresh();assert.equal(sampler.sample(p),1);assert.equal(sampler.sample(q),1);
 });
 
 test('terrain is cached but workers, blockers, supply caches and refinery occupancy stay live',()=>{
