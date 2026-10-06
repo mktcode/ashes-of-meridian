@@ -362,27 +362,30 @@ if(u_ecology.x>.5&&u_habitatOn<.5&&v_mat==${MAT.GROUND}.){
  base=mix(base,u_biomeLush,step(.91,wear)*.14);
  if(u_ecology.x==3.)base=mix(base,vec3(.74,.82,.86),smoothstep(.5,.86,wear)*.55);
 }
-// Isotropic asphalt and a soft contour painted only on the terrain skin, without geometry.
+// Compacted local ground: retain terrain hues and feather wear without a separate curb.
 if(u_workerRoadOn>.5){
  vec2 roadUV=(v_pos.xz+u_extent)/(2.*u_extent);
  float inside=float(all(greaterThanEqual(roadUV,vec2(0.)))&&all(lessThanEqual(roadUV,vec2(1.))));
  float wear=texture(u_workerRoad,roadUV).r;
  float roadSurface=inside*smoothstep(.55,.85,n.y);
- float road=smoothstep(.18,.72,wear)*roadSurface*.92;
- float grain=veilNoise(v_pos.xz*19.);
- vec3 asphalt=mix(vec3(.075,.082,.09),vec3(.18,.19,.20),grain);
- base=mix(base,asphalt,road);
- // A narrow wear-value band, not a constant-width curb. Only mature nearby asphalt opts in.
- float rim=smoothstep(.27,.33,wear)*(1.-smoothstep(.38,.44,wear))*roadSurface;
- if(rim>0.){
-  vec2 offset=vec2(1.25/(2.*u_extent),0.);
-  float nearby=max(max(texture(u_workerRoad,roadUV+offset).r,texture(u_workerRoad,roadUV-offset).r),
-    max(texture(u_workerRoad,roadUV+offset.yx).r,texture(u_workerRoad,roadUV-offset.yx).r));
-  rim*=smoothstep(.60,.80,nearby);
-  base=mix(base,vec3(.44,.46,.47)*mix(.92,1.04,grain),rim*.72);
+ float grain=veilNoise(v_pos.xz*.58)*.7+veilNoise(v_pos.xz*3.7)*.3;
+ float road=smoothstep(.18,.78,wear+(grain-.5)*.045)*roadSurface*.86;
+ // Unstyled terrain keeps its own material; natural habitats expose their native soil.
+ vec3 compacted=base*.82;
+ if(u_habitatOn>.5){
+  float frost=0.;
+  if(u_ecology.x==3.)frost=smoothstep(.6,.88,n.y)*smoothstep(.45,.82,habitat(v_pos.xz)+v_pos.y*.012);
+  compacted=mix(compacted,u_biomeSoil*(.86+luma(base)*.3),.52*(1.-frost*.85));
+ }else if(u_upland>.5){
+  vec3 soil=texture(u_earthTex,v_pos.xz*.15).rgb*vec3(1.24,1.15,.91);
+  float snow=clamp(v_detail.z,0.,1.);
+  compacted=mix(compacted,soil,.52*(1.-snow));
  }
- groundHeight=mix(groundHeight,grain*.035,road);
- groundGloss=mix(groundGloss,groundGloss*.55,road);
+ compacted*=.94+grain*.12;
+ base=mix(base,compacted,road);
+ // Traffic softens existing relief rather than laying a new gravel/asphalt skin.
+ groundHeight=mix(groundHeight,groundHeight*.38+grain*.012,road);
+ groundGloss=mix(groundGloss,groundGloss*.72,road);
 }
 // All surface detail remains cosmetic: never displace the CPU-authoritative ground.
 // Performance omits bump mapping; terrain reuses its albedo reads, models sample height here.

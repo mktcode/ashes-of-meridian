@@ -14,9 +14,9 @@ test('repeated travel builds soft wear, idle/pause do not, disuse removes it',()
   field.update(0,[worker(0)]);
   field.update(.25,[worker(1)]);
   const once=Math.max(...field.wear);
-  assert.ok(once>0&&once<.18,'one traversal remains below asphalt threshold');
+  assert.ok(once>0&&once<.18,'one traversal remains below established path threshold');
   passage(field,.5);
-  assert.ok(Math.max(...field.wear)>.72,'repeated use becomes asphalt');
+  assert.ok(Math.max(...field.wear)>.72,'repeated use establishes a path');
   const before=Array.from(field.pixels);
   assert.equal(field.update(10.5,[worker(1)]),false,'same simulation time is frozen');
   assert.deepEqual(Array.from(field.pixels),before);
@@ -68,7 +68,7 @@ test('road texture is reused, released and bound only on terrain scene draws',()
   const bucket=source=>({mesh:'mesh',source,n:1,buffer:{}});
   const batches={ground:bucket('terrain'),unit:bucket('workerHull'),fill:bucket('buildingGround:1')};
   r.drawBatches(batches,undefined,undefined,undefined,0,0);
-  assert.deepEqual(on,[1,0,1],'models must not inherit terrain asphalt');
+  assert.deepEqual(on,[1,0,1],'models must not inherit terrain wear');
   on.length=0;r.drawBatches(batches);
   assert.deepEqual(on,[],'depth and occlusion passes remain unchanged');
   r.releaseWorkerRoads();r.releaseWorkerRoads();
