@@ -568,7 +568,7 @@
           if (!d.moved) this.applyTarget(p);
           return;
         }
-        if (target && this.game.workerTask(target, this.localTeam) && this.selected.some(id => {
+        if (target && (this.game.canSupplyForum(target, this.localTeam) || this.game.workerTask(target, this.localTeam)) && this.selected.some(id => {
           const worker = this.game.get(id);
           return worker?.team === this.localTeam && worker.kind === 'unit' && worker.type === 'worker' && id !== target.id;
         })) {

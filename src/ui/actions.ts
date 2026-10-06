@@ -227,7 +227,9 @@
           noFreeWorker = this.tab === 'build' && !this.game.availableWorkers(this.localTeam).length,
           sig = [this.localTeam, this.tab, s.parties[this.localTeam].faction, s.parties[this.localTeam].loadout.join(','),
             this.selected.join(','), ready, repairing, repairReason, sellReason, noFreeWorker,
-            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, tutorialAction, this.game.civilizationStage].join(':');
+            this.mode?.kind, this.mode?.arg, this.battleTutorial?.step, tutorialAction, this.game.civilizationStage,
+            s.rules.kind === 'single-player' && s.rules.completed, b?.kind === 'building' ? b.cinderStock : '',
+            b?.type === 'meridianforum' ? this.game.alive(e => e.kind === 'building' && e.forumId === b!.id).length : ''].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
         $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => {
@@ -244,11 +246,11 @@
           if (ready) {
             html += button('sell', 'Sell', 'cancel', { disabled: !!sellReason });
             html += button('repair', repairing ? 'Stop repair' : 'Repair', 'repair', { disabled: !!repairReason });
-            html += `<div class="building-rotation">${button('rotateLeft', 'Rotate left', 'rotateLeft')}${button('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
+            if (b!.forumId === undefined) html += `<div class="building-rotation">${button('rotateLeft', 'Rotate left', 'rotateLeft')}${button('rotateRight', 'Rotate right', 'rotateRight')}</div>`;
             if (!isCivilizationBuildingType(b!.type)) html += button('rally', 'Rally point', 'rally');
           } else html += button('cancelBuild', 'Cancel build', 'cancel');
         } else if (this.tab === 'build') {
-          for (let k of contentKeys(BUILDINGS).filter(k => s.rules.kind !== 'single-player' || this.localTeam !== 0 || civilizationBuildingAvailable(k, this.game.civilizationStage)))
+          for (let k of contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k, this.game.civilizationStage)))
             html += button('build:' + k, buildingName(k, f), k, {
               cost: this.game.cost(k, 'building', this.localTeam)
             });
@@ -265,7 +267,8 @@
           (noFreeWorker ? '<p class="building-status" role="status">No free worker. Recruit one or finish a build/repair.</p>' : '') +
           `<div class="action-grid${this.tab === 'root' ? ' root-grid' : ''}">` + html + '</div>' +
           (this.tab === 'building' ? `<p class="building-status">${esc(buildingName(b!.type, f))}${ready ?
-            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}</p>` : '');
+            '<br>' + esc([repairing ? 'Worker assigned' : repairReason, sellReason].filter(Boolean).join(' · ')) : ''}${b!.type === 'meridianforum' && ready ?
+            `<br>Cinder: ${Math.floor(b!.cinderStock || 0)} / ${FORUM_SETTLEMENT.capacity}<br>Buildings: ${this.game.alive(e => e.kind === 'building' && e.forumId === b!.id).length} / ${forumBuildingTarget(b!)} (max ${FORUM_SETTLEMENT.buildings})<br>Send prospectors here to supply this settlement.` : ''}</p>` : '');
       },
       buildingAction(this: MeridianUI, action: string, id: number) {
         if (this.view !== 'game' || this.paused || this.modalKind || this.mode || !this.game.s || this.game.s!.result) return;
@@ -284,7 +287,7 @@
           this.paused = true;
           this.clearMode();
           this.openModal('sell',
-            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. The structure is removed immediately; supply capacity may decrease.</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
+            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. ${b.type === 'meridianforum' ? 'Stored Cinder is lost; its settlement disappears gradually.' : 'The structure is removed immediately; supply capacity may decrease.'}</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
         }
       },
       finishBuildingSale(this: MeridianUI, confirm: boolean) {

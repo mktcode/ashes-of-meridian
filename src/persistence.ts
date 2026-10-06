@@ -111,9 +111,18 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     recoveryAttempts: integer, nextRecovery: num, stuck: num, steerSide: oneOf(-1, 1), steerLocked: bool,
     slowed: num, reinforcedUntil: num, returning: bool, lastSource: integer, shieldFlash: num,
     paid: cost, gasId: id, deathAt: num, rally: pos, label: text, buildRate: nonnegative, amount: nonnegative,
-    visualRotation: v => nonnegative(v) && Number(v) < 8
+    visualRotation: v => nonnegative(v) && Number(v) < 8,
+    deliveryForum: id, deliveryPoint: pos,
+    cinderStock: v => nonnegative(v) && Number(v) <= 1000,
+    forumId: id, settlementAt: nonnegative, settlementAttempt: integer
   })(v) && record(v) && (v.kind !== 'resource' || nonnegative(v.amount)) &&
-    (v.visualRotation === undefined || v.kind === 'building');
+    (v.visualRotation === undefined || v.kind === 'building') &&
+    (v.cinderStock === undefined || (v.kind === 'building' && v.type === 'meridianforum')) &&
+    (v.forumId === undefined || (v.kind === 'building' && ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'].includes(String(v.type)))) &&
+    (v.settlementAt === undefined || (v.kind === 'building' && (v.type === 'meridianforum' || v.forumId !== undefined))) &&
+    (v.settlementAttempt === undefined || (v.kind === 'building' && v.type === 'meridianforum')) &&
+    (v.deliveryForum === undefined || (v.kind === 'unit' && v.type === 'worker')) &&
+    (v.deliveryPoint === undefined || v.deliveryForum !== undefined);
   const contact: Check = v => record(v) && anyTeam(v.team) &&
     (v.kind === 'unit' ? key(units)(v.type) : v.kind === 'building' ? key(buildings)(v.type) :
       v.kind === 'resource' && oneOf('crystal', 'gas')(v.type)) && shape({

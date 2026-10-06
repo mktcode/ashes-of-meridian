@@ -43,7 +43,7 @@
           ? 'Leave room around units and production exits.' : '';
       }
       if (type && isCivilizationBuildingType(type) && e.kind === 'building' && e.team === team && isCivilizationBuildingType(e.type)) {
-        const a=civilizationClearanceFootprints(p,type,team),b=civilizationClearanceFootprints(e,e.type,e.team);
+        const a=civilizationClearanceFootprints(p,type,team),b=civilizationClearanceFootprints(e,e.type,e.team,e.visualRotation || 0);
         return a.some(pa=>b.some(pb=>civilizationFootprintsOverlap(pa,pb))) ? 'Leave room between civilian decks, stairs and walkways.' : '';
       }
       return distance(p, e) < r + e.size + 0.8 ? 'Leave room around structures and resources.' : '';
@@ -191,6 +191,10 @@
         let s = this.s!,
           d: BuildingDefinitionShape = BUILDINGS[type];
         if (!d) return 'Unknown structure.';
+        if (isCivilizationBuildingType(type) && type !== 'meridianforum')
+          return 'Civilian buildings grow automatically around supplied forums.';
+        if (type === 'meridianforum' && (s.rules.kind !== 'single-player' || !s.rules.completed))
+          return 'Win this battle before founding a settlement.';
         if (s.rules.kind === 'single-player' && team === 0 && !civilizationBuildingAvailable(type, this.civilizationStage))
           return `Unlock Stage ${d.civilizationUnlockStage} to build this structure.`;
         if (d.requires && !this.has(d.requires as BuildingType, team))
@@ -215,6 +219,8 @@
           const reason = buildingBlockerReason(p, r, e, type, team);
           if (reason) return reason;
         }
+        const accessReason = this.forumAccessReason(p,r,undefined,type,team);
+        if (accessReason) return accessReason;
         if (gas && this.alive(e => e.type === 'refinery' && e.gasId === gas.id).length)
           return 'This vent already supplies a refinery.';
         return '';
@@ -291,8 +297,16 @@
         const b = this.managedBuilding(id, team);
         if (!b || (direction !== -1 && direction !== 1)) return false;
         // Keep the stored eighth-turn unit; subdivide it into three 15-degree clicks.
-        const step = Math.round((b.visualRotation || 0) * 3);
-        b.visualRotation = ((step + direction + 24) % 24) / 3;
+        const step = Math.round((b.visualRotation || 0) * 3), rotation = ((step + direction + 24) % 24) / 3;
+        if (b.forumId !== undefined) return false;
+        if (b.type === 'meridianforum') {
+          const reason = this.forumRotationReason(b,rotation);
+          if (reason) { this.notify(team,'toast',reason); return false; }
+          for (const e of this.s!.entities) if (e.kind === 'unit' && e.deliveryForum === b.id) {
+            delete e.deliveryPoint; e.path = []; e.nextPath = 0;
+          }
+        }
+        b.visualRotation = rotation;
         return true;
       },
       buildingRepairers(this: MeridianGame, id: number, team: PlayerTeam = 0): UnitEntity[] {
@@ -329,6 +343,7 @@
       canSellBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0) {
         let b = this.managedBuilding(id, team);
         if (!b) return 'Select a completed own structure.';
+        if (b.forumId !== undefined) return 'Managed by its forum';
         if (b.type === 'hq' && this.alive(e => e.team === team && e.type === 'hq' && e.progress >= 1).length <= 1)
           return 'Last command center';
         return '';
@@ -389,7 +404,8 @@
         return distance(snapped, h) <= h.size + 3.1 ? snapped : p;
       },
       workerMiningPoint(this: MeridianGame, e: UnitEntity, n: ResourceEntity): Position {
-        const h = this.closest(n, target => target.team === e.team && target.type === 'hq' && target.progress >= 1),
+        const h = (e.deliveryForum !== undefined ? this.deliveryTarget(e) : null) ||
+          this.closest(n, target => target.team === e.team && target.type === 'hq' && target.progress >= 1),
           toward = h || e,
           base = Math.atan2(toward.x-n.x,toward.z-n.z),
           offset = ((e.id % 3) - 1) * 0.5,
@@ -440,32 +456,44 @@
           this.effects.construction(e, b, dt);
           return true;
         }
+        let forum = this.deliveryTarget(e);
+        if (e.deliveryForum !== undefined && !forum) {
+          delete e.deliveryForum; delete e.deliveryPoint;
+          if (e.carry) e.returning = true;
+        }
+        if (forum && (forum.cinderStock || 0) >= FORUM_SETTLEMENT.capacity) return true;
         if (o.type === 'idle') {
           let target = this.miningResource(e);
           if (target) e.order = { type: 'mine', id: target.id };
+          else if (e.carry) { e.order = {type:'mine',id:forum?.id || e.lastSource || 0}; e.returning = true; }
         }
         if (e.order.type !== 'mine') return false;
         let maxCarry = 18;
         if (e.carry >= maxCarry || e.returning) {
           e.returning = true;
-          let h = this.closest(e, n => n.team === e.team && n.type === 'hq' && n.progress >= 1);
+          let h = forum || this.closest(e, n => n.team === e.team && n.type === 'hq' && n.progress >= 1);
           if (!h) return true;
           const hqRange = h.size + 3.1,
             hqDistance = distance(e,h);
-          const dropoff = this.workerDropoff(e,h);
+          if (forum && !e.deliveryPoint) e.deliveryPoint = this.forumDropoff(e,forum) || undefined;
+          const dropoff = forum ? e.deliveryPoint : this.workerDropoff(e,h);
+          if (!dropoff) return true;
           // One stable goal for the whole return trip: switching back to the HQ
           // centre when a detour leaves the near zone creates an endless loop.
-          if (hqDistance > hqRange + 1.5 || (hqDistance > hqRange &&
+          if (forum ? distance(e,dropoff) > 1.3 || this.world!.blockedAt(e.x,e.z) ||
+            !(this.world!.surface?.fits(e.x,e.z,e.size*UNIT_BODY_SCALE) ?? true) :
+            hqDistance > hqRange + 1.5 || (hqDistance > hqRange &&
             (this.world!.blockedAt(dropoff.x, dropoff.z) || distance(e, dropoff) > e.size * UNIT_BODY_SCALE * 2.5)) || !this.world!.terrainFree(e, h)) {
-            this.move(e, dropoff, dt, 0.45, false, { x: h.x, z: h.z, radius: hqRange - 0.1 });
+            this.move(e, dropoff, dt, 0.45, false, forum ? {...dropoff,radius:1.2,terrainConnection:false}
+              : { x: h.x, z: h.z, radius: hqRange - 0.1 });
             return true;
           }
-          if (e.team === team) {
-            this.account(team).alloy += e.carry;
-            if (team === 0) s.stats.gathered += e.carry;
-          }
-          e.carry = 0;
-          e.returning = false;
+          const delivered = forum ? Math.min(e.carry,FORUM_SETTLEMENT.capacity-(forum.cinderStock || 0)) : e.carry;
+          if (forum) forum.cinderStock = (forum.cinderStock || 0) + delivered;
+          else this.account(team).alloy += delivered;
+          if (team === 0) s.stats.gathered += delivered;
+          e.carry -= delivered;
+          e.returning = e.carry > 0;
           e.recoveryAttempts = 0;
           e.nextRecovery = 0;
           e.stuck = 0;
@@ -474,7 +502,7 @@
           return true;
         }
         let n = this.get(e.order.id) as ResourceEntity | null;
-        if (!n || n.amount <= 0) {
+        if (!n || n.kind !== 'resource' || n.type !== 'crystal' || n.amount <= 0) {
           n = this.miningResource(e);
           if (!n) {
             if (e.carry) e.returning = true;

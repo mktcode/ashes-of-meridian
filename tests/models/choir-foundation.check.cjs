@@ -29,7 +29,7 @@ test('Choir earth mound is low, closed, outward and irregular within the former 
 test('Choir buildings keep soil foundations except the flower-seated queen, including previews', () => {
   const h = modelHarness();
   vm.runInContext('Math.random = seeded = () => { throw Error("Draw RNG"); }; for (const k of Object.keys(geom)) geom[k] = () => { throw Error("Frame geometry"); };', h.context);
-  for (const [type,d] of Object.entries(h.BUILDINGS).filter(([,d])=>!d.civilizationPoints)) for (const team of [0,1]) for (const progress of [0,.4,1]) {
+  for (const [type,d] of Object.entries(h.BUILDINGS).filter(([,d])=>!d.civilizationDecks)) for (const team of [0,1]) for (const progress of [0,.4,1]) {
     const e = { id:17, faction:1, kind:'building', type, team, progress, x:12, z:-7, size:d.size, hp:d.hp },
       build = Math.max(.15,progress), yaw = h.BUILDING_YAW + team*Math.PI;
     for (const options of [{}, {ghost:true}, {ghost:true,tint:0x99e4c6},
