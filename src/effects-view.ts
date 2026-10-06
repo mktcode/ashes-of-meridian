@@ -384,7 +384,7 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
             ring(
               a.x,
               a.z,
-              rad * clamp(wait / (a.type === 'flare' ? 5 : a.warning || 2.2), 0.05, 1),
+              rad * clamp(wait / (a.warning || 2.2), 0.05, 1),
               col,
               0.85,
               0.15

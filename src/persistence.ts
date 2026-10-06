@@ -154,7 +154,7 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     supplyCaches: list(shape({ x: num, z: num, resource: oneOf('alloy', 'gas'), tier: oneOf(1, 2, 3), amount: nonnegative, collected: bool }), 1000),
     scans: list(shape({ x: num, z: num, r: nonnegative, until: num }, { team })),
     strikes: list(shape({ x: num, z: num, at: num, damage: nonnegative, radius: nonnegative,
-      team: anyTeam, type: oneOf('shell', 'orbital', 'flare') }, { source: integer, warning: num, done: bool })),
+      team: anyTeam, type: oneOf('shell', 'orbital') }, { source: integer, warning: num, done: bool })),
     fields: list(shape({ x: num, z: num, r: nonnegative, until: num, team,
       type: oneOf('bloom', 'repair', 'disruption', 'bulwark', 'surge') }, { power: num, reload: num })),
     recalls: list(shape({ x: num, z: num, team, hq: id, at: num, ids: list(id) })),

@@ -19,7 +19,7 @@ function effectViewSample(render) {
   const state = { time: 2, entities: [], parties: [],
     fields: [{ x: 1, z: 3, until: 10, type: 'bloom', r: 7 }, { x: 4, z: 5, until: 10, type: 'repair' }, { until: 1 }],
     scans: [{ x: 3, z: 4, until: 10 }, { until: 1 }],
-    strikes: [{ type: 'shell' }, { x: 5, z: 6, type: 'flare', team: 1, at: 4, radius: 8 },
+    strikes: [{ type: 'shell' }, { x: 5, z: 6, type: 'orbital', team: 1, at: 4, radius: 8, warning: 5 },
       { x: 8, z: 9, type: 'orbital', team: 0, at: 3 }]
   };
   const pings = [{ x: 3, z: 4, life: .5, maxLife: 1 }, { x: 4, z: 5, life: .1, maxLife: 1, color: 0xff00ff }];

@@ -201,7 +201,6 @@ interface BattlefieldDefinition {
   design?: BattlefieldDesign;
   palette: BattlefieldPalette;
   render: BattlefieldRenderProfile;
-  worldEvent: 'solarFlare' | null;
   generate: (builder: BattlefieldBuilder) => void;
 }
 
@@ -569,7 +568,7 @@ interface Strike extends Position {
   damage: number;
   radius: number;
   team: TeamId;
-  type: 'shell' | 'orbital' | 'flare';
+  type: 'shell' | 'orbital';
   source?: number;
   warning?: number;
   done?: boolean;

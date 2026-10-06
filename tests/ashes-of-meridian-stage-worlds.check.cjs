@@ -112,7 +112,7 @@ test('civilian worlds discard pending eliminated-party strikes on archive and re
   game.s.rules.completed=false;
   const hq=game.alive(e=>e.team===0&&e.type==='hq')[0];
   const hostile=['orbital','shell'].map(type=>({type,team:1,x:hq.x,z:hq.z,radius:10,damage:440,at:game.s.time+.05}));
-  const retained=[{...hostile[0],team:0,at:50},{...hostile[0],type:'flare',team:-1,at:50}];
+  const retained=[{...hostile[0],team:0,at:50}];
   game.s.strikes.push(...hostile,...retained);
   game.finish(true,'Victory');
   const archive=game.snapshotBattle(true);
@@ -127,6 +127,27 @@ test('civilian worlds discard pending eliminated-party strikes on archive and re
   game.step(.1);
   assert.equal(restoredHQ.hp,hp);assert.equal(restoredHQ.shield,shield);
   assert.deepEqual(copy(game.s.strikes),retained);
+});
+
+test('mothership stays free of environmental attacks during battle and civilian development',()=>{
+  const {game}=harness(),events=[];
+  game.emit=(type,data)=>events.push({type,data});
+  game.start({seed:1409,map:'mothership'});
+  game.s.parties.forEach(p=>{p.controller={kind:'human'};});
+  const home=game.alive(e=>e.team===0&&e.type==='worker')[0];
+  game.spawn('unit','rifle',home.x+10,home.z,0,0);
+  game.random=()=>assert.fail('peaceful ticks must not draw combat RNG for environmental attacks');
+  events.length=0;
+  for(const completed of [false,true]){
+    game.s.rules.completed=completed;
+    for(const time of [151,201,301]){
+      game.s.time=time;
+      game.step(.05);
+      assert.equal(game.s.strikes.length,0);
+      assert.equal(game.s.result,null);
+    }
+  }
+  assert.equal(events.filter(e=>e.type==='alert').length,0);
 });
 
 test('completed worlds restore fully visible and stay clear through observation updates; new battles and defeats retain fog',()=>{

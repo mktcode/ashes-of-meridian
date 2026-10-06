@@ -142,36 +142,6 @@
         }
         s.fields = s.fields.filter(f => f.until > s.time);
         s.scans = s.scans.filter(a => a.until > s.time);
-        if (
-          this.world!.definition.worldEvent === 'solarFlare' &&
-          s.time > 150 &&
-          Math.floor(s.time / 100) > (s.triggers.solar || 0)
-        ) {
-          s.triggers.solar = Math.floor(s.time / 100);
-          let target = this.alive(e => e.team !== -1 && e.kind === 'unit' && e.type !== 'worker')[
-            Math.floor(
-              this.random() *
-                this.alive(e => e.team !== -1 && e.kind === 'unit' && e.type !== 'worker').length
-            )
-          ];
-          if (target) {
-            s.strikes.push({
-              x: target.x + 5,
-              z: target.z,
-              at: s.time + 5,
-              radius: 8,
-              damage: 120,
-              team: -1,
-              type: 'flare'
-            });
-            this.emit('alert', {
-              text: 'Stellar eruption detected. Leave the marked area.',
-              danger: true,
-              x: target.x + 5,
-              z: target.z
-            });
-          }
-        }
         this.resultClock += dt;
         if (this.resultClock >= 0.2) {
           this.checkBattleResult();

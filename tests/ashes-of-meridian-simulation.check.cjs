@@ -313,21 +313,6 @@ test('battle starts cover every faction and map with valid entities', () => {
   }
 });
 
-test('mothership alone retains its timed eruption after map display names change', () => {
-  const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
-  for (const b of Object.values(maps)) b.name = 'Same revised environment';
-  for (const map of Object.keys(maps)) {
-    game.start({ seed: 1409, map });
-    game.spawnUnit('rifle', -40, 40, 0, 0);
-    game.s.parties.forEach(p => { p.controller = { kind: 'human' }; });
-    game.s.time = 151;
-    advance(game, 1);
-    const flares = game.s.strikes.filter(s => s.type === 'flare');
-    assert.equal(flares.length, map === 'mothership' ? 1 : 0);
-    if (flares.length) assert.deepEqual([flares[0].radius, flares[0].damage, flares[0].team], [8, 120, -1]);
-  }
-});
-
 test('map layouts supply candidate spawns, resources, camera and unexplored AI scan/scout goals', () => {
   const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
   const desertBefore = json(maps.desert.layout), layout = maps.mothership.layout;
@@ -368,17 +353,6 @@ test('map layouts supply candidate spawns, resources, camera and unexplored AI s
     assert.deepEqual(scans.at(-1), ['scan', goal, team]);
   }
   assert.deepEqual(json(maps.desert.layout), desertBefore, 'editing one layout cannot mutate another map');
-});
-
-test('world events follow the map definition, not its ID', () => {
-  const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
-  maps.desert.worldEvent = 'solarFlare'; maps.mothership.worldEvent = null;
-  for (const map of ['desert', 'mothership']) {
-    game.start({ seed: 1409, map }); game.s.parties.forEach(p => { p.controller = { kind: 'human' }; });
-    game.spawnUnit('rifle', -40, 40, 0, 0);
-    game.s.time = 151; advance(game, 1);
-    assert.equal(game.s.strikes.filter(s => s.type === 'flare').length, map === 'desert' ? 1 : 0);
-  }
 });
 
 test('only enemy HQ destruction wins; loss of the last own HQ loses, without stars or rewards', () => {

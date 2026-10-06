@@ -164,7 +164,7 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
   const industrial = family === 'ship', palette: BattlefieldPalette = industrial
     ? { ground: 0x424f5d, rock: 0x7c8e9b, accent: 0xf0b764, flora: 0x79aab5 }
     : { ground: 0x637344, rock: 0x828783, accent: 0xbad49c, flora: 0x355b3a };
-  return { name, size: { extent: 160, cellSize: 2.5 }, palette, worldEvent: industrial ? 'solarFlare' : null,
+  return { name, size: { extent: 160, cellSize: 2.5 }, palette,
     createSize: seed => ({ extent: [140, 160, 180][Math.floor(seeded(seed ^ 0x53495a45)() * 3)], cellSize: 2.5 }),
     createLayout: (seed, size) => dynamicBattlefieldLayout(seed, size.extent),
     render: { groundTexture: industrial ? 'metal' : family === 'desert' ? 'ground' : family === 'alien' ? 'bio' : 'westmarkMeadow',
