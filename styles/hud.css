@@ -1,5 +1,22 @@
 
     /* Tactical interface */
+    /* Hold the HUD until the first battlefield frame is actually submitted. */
+    #hud.battle-entrance-pending :is(#topbar, #commandDeck) { opacity: 0 }
+    #hud.battle-entrance #topbar {
+      animation: battle-top-in 850ms cubic-bezier(.16, 1, .3, 1) 180ms backwards;
+    }
+    #hud.battle-entrance #commandDeck {
+      animation: battle-bottom-in 900ms cubic-bezier(.16, 1, .3, 1) 280ms backwards;
+    }
+    @keyframes battle-top-in {
+      from { opacity: 0; transform: translateY(-110%) }
+      to { opacity: 1; transform: translateY(0) }
+    }
+    @keyframes battle-bottom-in {
+      from { opacity: 0; transform: translateY(110%) }
+      to { opacity: 1; transform: translateY(0) }
+    }
+
     #hud {
       position: fixed;
       inset: 0;

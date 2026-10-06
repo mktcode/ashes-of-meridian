@@ -106,6 +106,14 @@
       color: var(--teal)
     }
 
+    #battleTransition {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: #000;
+      pointer-events: auto;
+    }
+
     #worldViewport {
       position: fixed;
       inset: 0;

@@ -181,20 +181,53 @@
             }).catch(() => {}); // Superseding previews cancel only their own animation.
           }
         }
+        const battleTransition = $('battleTransition');
+        let battleTransitionAnimation: Animation | null = null;
+        function clearBattleTransition() {
+          battleTransitionAnimation?.cancel();
+          battleTransitionAnimation = null;
+          battleTransition.classList.add('hidden');
+          $('hud').classList.remove('battle-entrance-pending', 'battle-entrance');
+        }
+        function revealBattlefield() {
+          if (!$('hud').classList.contains('battle-entrance-pending')) return;
+          battleTransitionAnimation?.cancel();
+          $('hud').classList.replace('battle-entrance-pending', 'battle-entrance');
+          if (matchMedia('(prefers-reduced-motion: reduce)').matches) { clearBattleTransition(); return; }
+          const animation = battleTransition.animate([{ opacity: 1 }, { opacity: 0 }],
+            { duration: 1200, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+          battleTransitionAnimation = animation;
+          void animation.finished.then(() => {
+            if (battleTransitionAnimation === animation) clearBattleTransition();
+          }).catch(() => {});
+        }
         ui.onLaunchBattle = async (options, expedition, world) => {
           finishPreviewChange(false);
           const id = ++worldRequest, mapId = battlefieldId(options.map), profile = BATTLEFIELDS[mapId].render;
           if (!R.hasBattlefieldTextures(profile)) loadingBattlefield('Preparing operation');
           let ready: boolean;
-          try { ready = await R.prepareBattlefieldTextures(profile); }
-          catch (e) { if (id === worldRequest) textureFailure(e); return false; }
-          if (id !== worldRequest || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' : expedition !== ui.expedition)) return false;
-          if (!ready) { textureFailure(Error('Required battlefield textures are unavailable')); return false; }
-          if (!world && ui.expedition && !expeditionStageUnlocked(ui.expedition)) return false;
+          try {
+            clearBattleTransition();
+            battleTransition.classList.remove('hidden');
+            if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              const animation = battleTransition.animate([{ opacity: 0 }, { opacity: 1 }],
+                { duration: 320, easing: 'ease-in-out', fill: 'forwards' });
+              battleTransitionAnimation = animation;
+              await animation.finished;
+            }
+            ready = await R.prepareBattlefieldTextures(profile);
+          }
+          catch (e) { clearBattleTransition(); if (id === worldRequest) textureFailure(e); return false; }
+          if (id !== worldRequest || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' : expedition !== ui.expedition)) { clearBattleTransition(); return false; }
+          if (!ready) { clearBattleTransition(); textureFailure(Error('Required battlefield textures are unavailable')); return false; }
+          if (!world && ui.expedition && !expeditionStageUnlocked(ui.expedition)) { clearBattleTransition(); return false; }
           try {
             if (expedition.battle) game.restoreBattle(expedition, !!world);
             else game.start(options);
             return true;
+          } catch (error) {
+            clearBattleTransition();
+            throw error;
           } finally { $('loading').classList.add('hidden'); }
         };
         const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R, () => ({
@@ -517,11 +550,15 @@
                 ui.view === 'game' && !ui.modalKind ? () => thumbnails.update($('actionPanel')) : undefined, retainResultScene);
             retainedResult = resultKey === null ? null : { state: game.s!, world: game.world, key: resultKey };
             advancePreviewChange();
+            // Never fade away the cover before the resized battlefield has rendered.
+            if (ui.view === 'game') revealBattlefield();
+            else if (!ui.launchingBattle) clearBattleTransition();
             diagnostics?.recorder.phase('overlay');
             if (!retainResultScene) ui.drawOverlay(overlayContext);
             diagnostics?.finishFrame(true);
           } catch (error) {
             finishPreviewChange(false);
+            clearBattleTransition();
             diagnostics?.stop('render-error');
             failed = true;
             console.error(error);
@@ -540,6 +577,7 @@
         canvas.addEventListener('webglcontextlost', e => {
           e.preventDefault();
           finishPreviewChange(false);
+          clearBattleTransition();
           diagnostics?.stop('context-lost');
           ui.paused = true;
           ui.saveBattle();

@@ -283,8 +283,10 @@
           $('menu').classList.add('hidden');
           $('modal').classList.add('hidden');
           $('result').classList.add('hidden');
-          $('hud').classList.remove('hidden');
-          $('worldViewport').classList.remove('result-backdrop');
+          $('hud').classList.remove('hidden', 'battle-entrance');
+          $('hud').classList.add('battle-entrance-pending');
+          $('battleTransition').classList.remove('hidden');
+          $('worldViewport').classList.remove('result-backdrop', 'home-scene-reveal');
           $('worldViewport').classList.add('in-battle');
           if (this.onViewportChange) this.onViewportChange();
           $('radio').classList.add('hidden');

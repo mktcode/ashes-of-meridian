@@ -776,7 +776,7 @@ test('effect culling preserves visible output and does not redistribute the acce
 });
 
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
-function appClock(diagnostic = false) {
+function appClock(diagnostic = false, reducedMotion = true) {
   let now = 0;
   const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
@@ -784,7 +784,23 @@ function appClock(diagnostic = false) {
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
   const $ = id => {
     if (!elements.has(id)) elements.set(id, {
-      handlers: {}, style: {}, classList: { add() {}, remove() {} },
+      handlers: {}, style: {}, classList: {
+        values: new Set(),
+        add(...names) { names.forEach(name => this.values.add(name)); },
+        remove(...names) { names.forEach(name => this.values.delete(name)); },
+        contains(name) { return this.values.has(name); },
+        replace(oldName, newName) { if (this.values.delete(oldName)) this.values.add(newName); }
+      },
+      animations: [],
+      animate(keyframes, options) {
+        let finish, reject;
+        const animation = { keyframes, options, cancelled: false,
+          finished: new Promise((resolve, fail) => { finish = resolve; reject = fail; }),
+          finish: () => finish(), cancel() { this.cancelled = true; reject(Error('cancelled')); }
+        };
+        this.animations.push(animation);
+        return animation;
+      },
       addEventListener(name, fn) { this.handlers[name] = fn; },
       getContext: () => ({ setTransform() {}, drawImage() {} })
     });
@@ -794,7 +810,7 @@ function appClock(diagnostic = false) {
     $, window, document, navigator: { userAgent: 'clock-test' }, URLSearchParams,
     location: { search: diagnostic ? '?diagnostics=1' : '' }, devicePixelRatio: 1,
     performance: { now: () => now }, requestAnimationFrame: fn => pending.push(fn),
-    addEventListener() {}, ResizeObserver: class { observe() {} }, matchMedia:()=>({matches:true}),
+    addEventListener() {}, ResizeObserver: class { observe() {} }, matchMedia:()=>({matches:reducedMotion}),
     console: { error: e => errors.push(e), warn() {} },
     META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {desert:{render:{}}}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
     PLACEMENT_GUIDE_MATERIAL: -9,
@@ -966,6 +982,51 @@ test('smooth app preview carries its snapshot through loading and ignores supers
   await a.ui.onPreview('desert',123,false,battle(700));await new Promise(setImmediate);a.frame(80);
   assert.equal(await stale,false);assert.equal(a.renderer.battlefieldTime,700);
   assert.deepEqual(a.errors,[]);
+});
+
+test('battle entrance covers the switch and reveals only after a submitted battlefield frame', async () => {
+  const a = appClock(false, false), cover = a.$('battleTransition'), hud = a.$('hud');
+  a.ui.view = 'home';
+  a.ui.launchingBattle = true;
+  a.ui.expedition = { worlds: [] };
+  const world = { battle: {} }; a.ui.expedition.worlds.push(world);
+  let started = false;
+  a.game.restoreBattle = () => {
+    started = true; a.ui.view = 'game';
+    hud.classList.add('battle-entrance-pending');
+  };
+  const launch = a.ui.onLaunchBattle({ map: 'desert' }, world, world);
+  assert.equal(started, false);
+  assert.equal(cover.classList.contains('hidden'), false);
+  assert.equal(cover.animations[0].options.duration, 320);
+  cover.animations[0].finish();
+  assert.equal(await launch, true);
+  assert.equal(hud.classList.contains('battle-entrance-pending'), true);
+  a.frame(0);
+  assert.equal(a.draws.length, 1);
+  assert.equal(hud.classList.contains('battle-entrance-pending'), false);
+  assert.equal(hud.classList.contains('battle-entrance'), true);
+  const reveal = cover.animations[1];
+  assert.equal(reveal.options.duration, 1200);
+  reveal.finish(); await new Promise(setImmediate);
+  assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(hud.classList.contains('battle-entrance'), false);
+  assert.deepEqual(a.errors, []);
+});
+
+test('battle entrance skips motion and cleans up failed starts', async () => {
+  const a = appClock(), hud = a.$('hud'), cover = a.$('battleTransition');
+  cover.classList.remove('hidden'); hud.classList.add('battle-entrance-pending');
+  a.frame(0);
+  assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(cover.animations.length, 0);
+  a.ui.view = 'home'; a.ui.expedition = { worlds: [] };
+  const world = { battle: {} }; a.ui.expedition.worlds.push(world);
+  a.game.restoreBattle = () => { throw Error('cannot restore'); };
+  await assert.rejects(a.ui.onLaunchBattle({ map: 'desert' }, world, world), /cannot restore/);
+  assert.equal(cover.classList.contains('hidden'), true);
+  assert.equal(hud.classList.contains('battle-entrance-pending'), false);
+  assert.deepEqual(a.errors, []);
 });
 
 test('app world launch validates archive identity and does not load after leaving home',async()=>{
