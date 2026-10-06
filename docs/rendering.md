@@ -4,7 +4,7 @@ Darstellungs- und Pflegeverträge; Formen, Budgets, Shaderwerte und CSS-Maße st
 
 ## Texturen
 
-Rasterquellen ausschließlich WebP, Qualität 80; benötigten Alphakanal erhalten. Nach Texturänderungen `npm run embed:textures`, nach GLB-Änderungen `npm run embed:models`, danach Build. Generierte Einbettungen niemals direkt bearbeiten. Eingebettete Data-URLs erhalten `file://`; CSS-Vorschaubilder bleiben zusätzliche lokale Laufzeitassets.
+Rasterquellen ausschließlich WebP, Qualität 80; benötigten Alphakanal erhalten. Nach Texturänderungen `npm run embed:textures`, nach GLB-Änderungen `npm run embed:models`, danach Build. Generierte Einbettungen niemals direkt bearbeiten. Eingebettete Data-URLs erhalten `file://`. Rastertexturen dienen nur noch dem Boden-Dekor; opake Oberflächen und Himmel sind prozedural.
 
 Neue Bildassets brauchen einen konkreten Bedarf; Codex-/Aktionskacheln verwenden Modelle. Assetnamen folgen [technischen IDs](architecture.md#technische-ids-und-anzeigenamen).
 

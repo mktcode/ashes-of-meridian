@@ -304,7 +304,7 @@ test('maximal deployment bonuses retain every worker and commander in reachable 
 test('classic loading and embedded shared WebP assets survive procedural map replacement unchanged', () => {
   for (const { source, filename } of scripts) new vm.Script(source, { filename });
   const context = loadScripts(['renderer-assets'], { scripts });
-  for (const [key, file] of Object.entries({ sky:'skybox.webp', rockClusters:'texture-ground-rock-clusters.webp',
+  for (const [key, file] of Object.entries({ rockClusters:'texture-ground-rock-clusters.webp',
     desertShrubs:'texture-ground-desert-shrubs.webp' })) {
     const url = vm.runInContext(`MERIDIAN_TEXTURES.${key}`, context);
     assert.match(url, /^data:image\/webp;base64,/);

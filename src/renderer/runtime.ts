@@ -7,7 +7,7 @@
     const CINEMA_ORBIT_SPEED = .04;
     // Standalone model previews also render without a BattlefieldView.
     const DEFAULT_TERRAIN_RENDER_PROFILE: BattlefieldRenderProfile = {
-      groundTexture: 'ground', skyTexture: 'sky', haze: [0.055, 0.09, 0.13],
+      groundTexture: 'ground', haze: [0.055, 0.09, 0.13],
       rockDecor: { density: .8, opacity: .18 }, shrubDecor: { density: .1, opacity: .28 }
     };
     // Factories register at script load; GPU resources are created only for the active scenery.
@@ -75,12 +75,10 @@
       desertShrubsTex: WebGLTexture | null;
       metalTex: WebGLTexture | null;
       bioTex: WebGLTexture | null;
-      skyTex: WebGLTexture | null;
       westmarkMeadowTex: WebGLTexture | null;
       westmarkGraniteTex: WebGLTexture | null;
       westmarkEarthTex: WebGLTexture | null;
       westmarkBarkTex: WebGLTexture | null;
-      westmarkSpruceTex: WebGLTexture | null;
       textureResources: Record<ResidentTextureName, ResidentTexture>;
       textureLoads: Partial<Record<ResidentTextureName, Promise<boolean>>> = {};
       desiredTextures = new Set<ResidentTextureName>();
@@ -194,12 +192,10 @@
         this.desertShrubsTex = this.dataTexture([0, 0, 0, 0]);
         this.metalTex = this.dataTexture([128, 130, 136]);
         this.bioTex = this.dataTexture([77, 128, 119]);
-        this.skyTex = this.dataTexture([5, 9, 16]);
         this.westmarkMeadowTex = this.dataTexture([103, 119, 64]);
         this.westmarkGraniteTex = this.dataTexture([128, 134, 127]);
         this.westmarkEarthTex = this.dataTexture([135, 112, 77]);
         this.westmarkBarkTex = this.dataTexture([92, 78, 58]);
-        this.westmarkSpruceTex = this.dataTexture([0, 0, 0, 0]);
         this.textureResources = {
           ground: { texture: this.groundTex, fallback: [146, 101, 75], repeat: true, resident: false },
           desertRock: { texture: this.desertRockTex, fallback: [137, 99, 71], repeat: true, resident: false },
@@ -207,12 +203,10 @@
           desertShrubs: { texture: this.desertShrubsTex, fallback: [0, 0, 0, 0], repeat: false, resident: false },
           metal: { texture: this.metalTex, fallback: [128, 130, 136], repeat: true, resident: false },
           bio: { texture: this.bioTex, fallback: [77, 128, 119], repeat: true, resident: false },
-          sky: { texture: this.skyTex, fallback: [5, 9, 16], repeat: false, resident: false },
           westmarkMeadow: { texture: this.westmarkMeadowTex, fallback: [103, 119, 64], repeat: true, resident: false },
           westmarkGranite: { texture: this.westmarkGraniteTex, fallback: [128, 134, 127], repeat: true, resident: false },
           westmarkEarth: { texture: this.westmarkEarthTex, fallback: [135, 112, 77], repeat: true, resident: false },
-          westmarkBark: { texture: this.westmarkBarkTex, fallback: [92, 78, 58], repeat: true, resident: false },
-          westmarkSpruce: { texture: this.westmarkSpruceTex, fallback: [0, 0, 0, 0], repeat: false, resident: false }
+          westmarkBark: { texture: this.westmarkBarkTex, fallback: [92, 78, 58], repeat: true, resident: false }
         };
         this.shadowTex = gl.createTexture();
         this.shadowFbo = gl.createFramebuffer();
@@ -644,7 +638,7 @@
         return t;
       }
       textureNames(profile: BattlefieldRenderProfile) {
-        const names = new Set<ResidentTextureName>(['sky', 'metal', 'bio', profile.groundTexture]);
+        const names = new Set<ResidentTextureName>(['metal', 'bio', profile.groundTexture]);
         if (profile.rockSurface) names.add(profile.rockSurface.texture);
         if (profile.landscape) for (const name of Object.values(profile.landscape)) if (name) names.add(name);
         if (profile.rockDecor.density > 0) names.add('rockClusters');
@@ -1222,7 +1216,7 @@
           ['u_rockTex', this[`${profile.rockSurface?.texture ?? profile.groundTexture}Tex`], 7],
           ['u_earthTex', this[`${profile.landscape?.earth ?? 'ground'}Tex`], 8],
           ['u_barkTex', this[`${profile.landscape?.bark ?? 'metal'}Tex`], 9],
-          ['u_foliageTex', this[`${profile.landscape?.foliage ?? 'bio'}Tex`], 10]
+          ['u_foliageTex', this.bioTex, 10]
         ] as const) {
           g.activeTexture([g.TEXTURE0,g.TEXTURE1,g.TEXTURE2,g.TEXTURE3,g.TEXTURE4,g.TEXTURE5,
             g.TEXTURE6,g.TEXTURE7,g.TEXTURE8,g.TEXTURE9,g.TEXTURE10][unit]);
@@ -1270,7 +1264,7 @@
           this.bindEcology(this.depthProg, modelTime);
           g.uniformMatrix4fv(this.uniform(this.depthProg, 'u_vp'), false, this.lightVP);
           g.activeTexture(g.TEXTURE10);
-          g.bindTexture(g.TEXTURE_2D, this.westmarkSpruceTex);
+          g.bindTexture(g.TEXTURE_2D, this.bioTex);
           g.uniform1i(this.uniform(this.depthProg, 'u_foliageTex'), 10);
           g.enable(g.POLYGON_OFFSET_FILL);
           g.polygonOffset(1.5, 2);
@@ -1303,9 +1297,6 @@
           this.bindEcology(skyProg, modelTime);
           g.uniform2f(this.uniform(skyProg, 'u_size'), this.width, this.height);
           g.uniform1f(this.uniform(skyProg, 'u_daylight'), this.battlefieldProfile.daylight ? 1 : 0);
-          g.activeTexture(g.TEXTURE0);
-          g.bindTexture(g.TEXTURE_2D, this[`${this.battlefieldProfile.skyTexture}Tex`]);
-          g.uniform1i(this.uniform(skyProg, 'u_skyTex'), 0);
           g.bindVertexArray(this.fullVao);
           g.drawArrays(g.TRIANGLES, 0, 3);
           this.diagnostics?.draw(3);

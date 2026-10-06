@@ -263,7 +263,7 @@ test('map switches keep only current world meshes plus shared geometry, includin
 
 test('battlefield texture residency retains shared materials and releases map-only assets', async () => {
   const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context), loads = [], releases = [];
-  const names = ['ground', 'desertRock', 'rockClusters', 'desertShrubs', 'metal', 'bio', 'sky'];
+  const names = ['ground', 'desertRock', 'rockClusters', 'desertShrubs', 'metal', 'bio'];
   const renderer = Object.assign(Object.create(Renderer.prototype), {
     textureResources: Object.fromEntries(names.map(name => [name, { resident: false }])),
     textureLoads: {}, desiredTextures: new Set(), textureGeneration: 0,
@@ -273,7 +273,7 @@ test('battlefield texture residency retains shared materials and releases map-on
     },
     releaseResidentTexture: name => { releases.push(name); renderer.textureResources[name].resident = false; }
   });
-  const profile = (groundTexture, decor = false, rockSurface) => ({ groundTexture, skyTexture: 'sky',
+  const profile = (groundTexture, decor = false, rockSurface) => ({ groundTexture,
     rockSurface, rockDecor: { density: decor ? .5 : 0, opacity: 1 },
     shrubDecor: { density: decor ? .1 : 0, opacity: 1 }, haze: [0, 0, 0] });
   const desert = profile('ground', true, { texture: 'desertRock', metersPerTile: 18 });
@@ -282,9 +282,9 @@ test('battlefield texture residency retains shared materials and releases map-on
   assert.equal(renderer.hasBattlefieldTextures(desert), true);
   loads.length = 0;
   await renderer.prepareBattlefieldTextures(profile('bio'));
-  assert.deepEqual(loads, [], 'shared bio, metal and sky textures stay resident across maps');
+  assert.deepEqual(loads, [], 'shared bio and metal textures stay resident across maps');
   assert.deepEqual(new Set(releases), new Set(['ground', 'desertRock', 'rockClusters', 'desertShrubs']));
-  assert.deepEqual(names.filter(name => renderer.textureResources[name].resident).sort(), ['bio', 'metal', 'sky']);
+  assert.deepEqual(names.filter(name => renderer.textureResources[name].resident).sort(), ['bio', 'metal']);
 });
 
 test('large static geometry and placements are chunked and conservatively culled', () => {
@@ -537,10 +537,10 @@ test('fog texture reallocates only on grid-size changes, including odd row width
 
 test('map render profiles select cached textures and independent decor uniforms without uploads', () => {
   const h = setup(); h.r.resize();
-  h.r.groundTex = 'dirt'; h.r.metalTex = 'metal'; h.r.bioTex = 'bio'; h.r.skyTex = 'sky';
+  h.r.groundTex = 'dirt'; h.r.metalTex = 'metal'; h.r.bioTex = 'bio';
   for (const texture of ['ground', 'metal', 'bio']) {
     h.calls.length = 0;
-    h.r.setBattlefieldProfile({ groundTexture: texture, skyTexture: 'sky', groundMetersPerTile: [9, 12],
+    h.r.setBattlefieldProfile({ groundTexture: texture, groundMetersPerTile: [9, 12],
       rockDecor: { density: 0, opacity: .3 }, shrubDecor: { density: .6, opacity: 0 }, haze: [0, 0, 0] }, 1409);
     h.r.render(0);
     assert.ok(h.calls.some(c => JSON.stringify(c) === JSON.stringify(['uniform2fv', 'u_groundTile', [9, 12]])));
@@ -594,18 +594,14 @@ test('dedicated rock material is opt-in and resets on profile changes without te
   assert.doesNotMatch(material, /mod\(|fract\(|u_time|u_eye|u_decorSeed/, 'no mirrored tiling or moving detail');
 });
 
-test('upland weathering is opt-in, resets on map changes and needs no foliage image',()=>{
+test('upland weathering is opt-in, resets on map changes and reuses shared materials',()=>{
   const h=setup(),maps=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS]);h.r.resize();
   for(const map of ['frontier','mothership','westmark','desert','haven','frontier']) {
     const profile=vm.runInContext(`BATTLEFIELDS['${map}'].render`,maps);
     h.r.setBattlefieldProfile(profile,1409);h.calls.length=0;h.r.render(0);
     assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_upland'&&c[2]===(profile.upland?1:0)));
     const textures=h.r.textureNames(profile);
-    if(profile.upland) {
-      assert.ok(textures.has('westmarkEarth')&&textures.has('westmarkBark'));
-      assert.ok(!textures.has('westmarkSpruce'),'opaque procedural crowns do not decode branch cards');
-      assert.deepEqual(h.r.textureNames({...profile,landscape:{...profile.landscape,foliage:undefined}}),textures);
-    }
+    if(profile.upland) assert.ok(textures.has('westmarkEarth')&&textures.has('westmarkBark'));
     assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
   }
 });

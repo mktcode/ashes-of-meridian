@@ -167,7 +167,7 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
   return { name, size: { extent: 160, cellSize: 2.5 }, palette, worldEvent: industrial ? 'solarFlare' : null,
     createSize: seed => ({ extent: [140, 160, 180][Math.floor(seeded(seed ^ 0x53495a45)() * 3)], cellSize: 2.5 }),
     createLayout: (seed, size) => dynamicBattlefieldLayout(seed, size.extent),
-    render: { groundTexture: industrial ? 'metal' : family === 'desert' ? 'ground' : family === 'alien' ? 'bio' : 'westmarkMeadow', skyTexture: 'sky',
+    render: { groundTexture: industrial ? 'metal' : family === 'desert' ? 'ground' : family === 'alien' ? 'bio' : 'westmarkMeadow',
       rockSurface: { texture: family === 'desert' ? 'desertRock' : 'westmarkGranite', metersPerTile: 8 },
       variationFamily: family, wilderness: 'seeded', terrainReceiverHeight: 80, daylight: true, upland: !industrial,
       landscape: { earth: 'westmarkEarth', bark: 'westmarkBark' },

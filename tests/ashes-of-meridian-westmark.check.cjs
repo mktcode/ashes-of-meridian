@@ -1,10 +1,9 @@
 // Shared Westmark art survives; the old authored map/bridge navigation recipe does not.
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm');
-const {readFileSync}=require('node:fs'),{join}=require('node:path');
 const {loadScripts,BATTLEFIELD_SCRIPTS,RENDERER_SCRIPTS}=require('./helpers/game-scripts.cjs');
 const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...RENDERER_SCRIPTS]);
-const {Battlefield,BattlefieldBuilder,BattlefieldSurface,BATTLEFIELDS,TerrainModels,MeridianRenderer,MERIDIAN_TEXTURES}=
-  vm.runInContext('({Battlefield,BattlefieldBuilder,BattlefieldSurface,BATTLEFIELDS,TerrainModels,MeridianRenderer,MERIDIAN_TEXTURES})',context);
+const {Battlefield,BattlefieldBuilder,BattlefieldSurface,BATTLEFIELDS,TerrainModels,MeridianRenderer}=
+  vm.runInContext('({Battlefield,BattlefieldBuilder,BattlefieldSurface,BATTLEFIELDS,TerrainModels,MeridianRenderer})',context);
 
 test('foundation margins retain strict map bounds without blocking movement',()=>{
   const s=new BattlefieldSurface(10,2,()=>0);
@@ -77,14 +76,11 @@ test('spruce crowns retain bounded deterministic geometry and full azimuth cover
   }
   assert.notDeepEqual(build(1409),build(7919));
 });
-test('landscape profiles opt into shared materials and the untouched baked spruce asset',()=>{
-  const profile={...BATTLEFIELDS.westmark.render,landscape:{...BATTLEFIELDS.westmark.render.landscape,foliage:'westmarkSpruce'}},
-    names=MeridianRenderer.prototype.textureNames(profile);
-  for(const key of ['westmarkMeadow','westmarkGranite','westmarkEarth','westmarkBark','westmarkSpruce'])assert.ok(names.has(key));
-  assert.deepEqual(Buffer.from(MERIDIAN_TEXTURES.westmarkSpruce.split(',')[1],'base64'),
-    readFileSync(join(__dirname,'../assets/textures/texture-westmark-spruce.webp')));
+test('landscape profiles opt into shared procedural materials',()=>{
+  const names=MeridianRenderer.prototype.textureNames(BATTLEFIELDS.westmark.render);
+  for(const key of ['westmarkMeadow','westmarkGranite','westmarkEarth','westmarkBark'])assert.ok(names.has(key));
   const desert=BATTLEFIELDS.desert.render,desertTextures=MeridianRenderer.prototype.textureNames(desert);
   assert.ok(desertTextures.has('westmarkEarth')&&desertTextures.has('westmarkBark'));
-  assert.ok(!desertTextures.has('westmarkSpruce')&&!desertTextures.has('westmarkMeadow'));
+  assert.ok(!desertTextures.has('westmarkMeadow'));
   assert.ok([...MeridianRenderer.prototype.textureNames({...desert,landscape:undefined})].every(name=>!name.startsWith('westmark')));
 });

@@ -4,10 +4,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const root = new URL('../', import.meta.url);
 const target = new URL('src/renderer/assets.js', root);
 const textures = [
-  ['sky', 'assets/textures/skybox.webp'],
   ['rockClusters', 'assets/textures/texture-ground-rock-clusters.webp'],
-  ['desertShrubs', 'assets/textures/texture-ground-desert-shrubs.webp'],
-  ['westmarkSpruce', 'assets/textures/texture-westmark-spruce.webp']
+  ['desertShrubs', 'assets/textures/texture-ground-desert-shrubs.webp']
 ];
 
 const properties = textures.map(([key, file]) => {

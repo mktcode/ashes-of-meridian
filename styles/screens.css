@@ -1411,7 +1411,7 @@
     .result-next {
       min-height: 210px;
       display: grid;
-      grid-template-columns: 250px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       position: relative;
       isolation: isolate;
       gap: 28px;
@@ -1428,50 +1428,6 @@
       inset: 1px;
       clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
       background: linear-gradient(120deg, #0b2b3cdb, #041420ed)
-    }
-
-    .result-next-preview {
-      min-height: 170px;
-      position: relative;
-      overflow: hidden;
-      border: 1px solid #48cfe952;
-      background-position: center;
-      background-size: cover;
-      box-shadow: inset 0 0 35px #020914
-    }
-
-    .result-next-preview:after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, #06131e22, #020914a6)
-    }
-
-    .result-next-preview span {
-      position: absolute;
-      z-index: 1;
-      left: 13px;
-      bottom: 10px;
-      color: #d5f6fa;
-      font: 9px var(--mono);
-      letter-spacing: 2px;
-      text-transform: uppercase
-    }
-
-    .result-next-preview.map-desert {
-      background-image: url('../assets/textures/texture-ground-dirt-base.webp')
-    }
-
-    .result-next-preview.map-alien-planet {
-      background-image: url('../assets/textures/texture-floor-alien-planet.webp')
-    }
-
-    .result-next-preview.map-mothership {
-      background-image: url('../assets/textures/texture-floor-mothership.webp')
-    }
-
-    .result-next-preview.map-westmark {
-      background-image: url('../assets/textures/texture-westmark-meadow.webp')
     }
 
     .result-next-body {
@@ -1802,12 +1758,6 @@
         min-height: 0;
         display: block;
         padding: 19px
-      }
-
-      .result-next-preview {
-        display: block;
-        min-height: 140px;
-        margin-bottom: 16px
       }
 
       .result-next-heading {

@@ -507,7 +507,7 @@ void main(){if(v_mat==${MAT.WATER}.)discard;if(v_mat==${MAT.FOLIAGE}.&&texture(u
     const FULLV = `#version 300 es
 out vec2 uv;void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);uv=p;gl_Position=vec4(p*2.-1.,0.,1.);}`;
     const SKYF = `#version 300 es
-precision highp float;in vec2 uv;out vec4 frag;uniform vec2 u_size;uniform sampler2D u_skyTex;uniform float u_daylight;
+precision highp float;in vec2 uv;out vec4 frag;uniform vec2 u_size;uniform float u_daylight;
 uniform float u_atmosphereOn;uniform vec3 u_atmosphereHorizon;uniform vec3 u_atmosphereZenith;
 uniform vec4 u_ecology;uniform float u_weatherTime;uniform vec3 u_haze;
 float skyHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -525,12 +525,7 @@ void main(){
  }
  if(u_atmosphereOn>.5){frag=vec4(mix(u_atmosphereHorizon,u_atmosphereZenith,smoothstep(0.,1.,uv.y)),1.);return;}
  if(u_daylight>.5){frag=vec4(mix(vec3(.60,.69,.71),vec3(.22,.42,.58),smoothstep(0.,1.,uv.y)),1.);return;}
- // Cover the viewport without stretching; image uploads have their origin at the top.
- vec2 imageSize=vec2(textureSize(u_skyTex,0));
- float imageAspect=imageSize.x/imageSize.y,screenAspect=u_size.x/u_size.y;
- vec2 scale=vec2(min(1.,screenAspect/imageAspect),min(1.,imageAspect/screenAspect));
- vec2 skyUV=(vec2(uv.x,1.-uv.y)-.5)*scale+.5;
- frag=vec4(texture(u_skyTex,skyUV).rgb,1.);
+ frag=vec4(u_haze,1.);
 }`;
     const BLOOMF = `#version 300 es
 precision highp float;in vec2 uv;out vec4 frag;uniform sampler2D u_tex;uniform vec2 u_step;uniform bool u_extract;uniform float u_lampPrefilter;
