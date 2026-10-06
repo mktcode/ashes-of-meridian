@@ -95,6 +95,7 @@
       touchPoints: Map<number, {x: number; y: number}>;
       battleFaction?: FactionId;
       battleAbilities: AbilityType[];
+      private processExpeditionResult?: ReturnType<typeof createExpeditionResultProcessor>;
       resultAetherRecovered?: number;
       resultAetherEvacuated?: number;
       resultAetherStructures?: number;
@@ -173,14 +174,10 @@
       refreshCivilizationScore() {
         const expedition = this.expedition;
         if (!expedition) { this.game.civilizationStage = null; return 0; }
-        expedition.unlockedStage ??= expedition.depth + 1;
-        expedition.civilizationScore = expeditionCivilizationScore(expedition,
+        const score = refreshExpeditionCivilization(this.profile, expedition,
           this.view === 'game' && !this.game.stepping && this.game.snapshotSafe ? this.game.s : null, this.activeWorldStage);
-        if (expedition.civilizationScore >= civilizationScoreRequirement(expedition.depth + 1))
-          expedition.unlockedStage = expedition.depth + 1;
-        this.game.civilizationStage = expedition.unlockedStage;
-        this.profile.lastCivilizationScore = expedition.civilizationScore;
-        return expedition.civilizationScore;
+        this.game.civilizationStage = expedition.unlockedStage!;
+        return score;
       }
       saveBattle() {
         const s = this.game.s, expedition = this.expedition,
@@ -351,47 +348,22 @@
           this.audio.stopVoice?.();
           this.battleIntro = null;
           this.battleTutorial = null;
-          const firstResult = this.resultAetherRecovered === undefined;
+          if (!this.game.s) return;
           this.factionJustUnlocked = null;
-          if (firstResult) {
-            this.refreshCivilizationScore();
-            let victoryWorld: ExpeditionWorld | undefined;
-            if (data.win && this.expedition) {
-              const recipe: ExpeditionBattleRecipe = JSON.parse(JSON.stringify({
-                faction: this.expedition.faction, abilities: this.expedition.abilities, depth: this.expedition.depth,
-                benefits: this.expedition.benefits, enemyBenefits: this.expedition.enemyBenefits, encounter: this.expedition.encounter
-              }));
-              victoryWorld = { stage: recipe.depth + 1, map: recipe.encounter.map, seed: recipe.encounter.seed,
-                recipe, battle: this.game.snapshotBattle(true) };
-            }
-            let level = Math.min(AETHER_EVACUATION_CAPS.length - 1, Math.max(0, Math.floor(this.game.s?.parties[0].meta?.aetherEvacuation || 0))),
-              limit = AETHER_EVACUATION_CAPS[level],
-              evacuated = Math.min(limit, Math.max(0, Math.floor(this.game.s?.parties[0].account.gas || 0))),
-              structures = Math.max(0, Math.floor(this.game.s?.stats.structuresDestroyed || 0));
-            this.resultAetherEvacuated = evacuated;
-            this.resultAetherStructures = structures * AETHER_STRUCTURE_RECOVERY[level];
-            this.resultAetherRecovered = this.resultAetherEvacuated + this.resultAetherStructures;
-            if (this.resultAetherRecovered) {
-              this.profile.aether = Math.min(999999, this.profile.aether + this.resultAetherRecovered);
-            }
-            if (data.win && this.expedition) {
-              const previousUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
-              this.expedition.worlds ??= [];
-              this.expedition.worlds.push(victoryWorld!);
-              this.expedition.depth++;
-              if (this.expedition.depth > this.profile.expeditionDepth) {
-                this.profile.expeditionDepth = this.expedition.depth;
-              }
-              const currentUnlock = this.unlockedFactionForDepth(this.profile.expeditionDepth);
-              if (currentUnlock > previousUnlock) this.factionJustUnlocked = currentUnlock;
-              this.expedition.encounter = this.createEncounter(this.expedition.depth, this.expedition.encounter.map);
-              this.expedition.enemyBenefits = advanceEnemyBenefits(this.expedition.enemyBenefits,
-                this.expedition.encounter, this.expedition.depth);
-              this.expedition.offers = this.createBenefitOffers(this.expedition);
-              this.expedition.battle = null;
-            }
-            this.resultCivilizationTotal = this.refreshCivilizationScore();
-            if (!data.win) this.expedition = null;
+          const completion = (this.processExpeditionResult ??= createExpeditionResultProcessor())(
+            this.profile, this.expedition, this.game.s, data.win, {
+              snapshotVictory: () => this.game.snapshotBattle(true),
+              createEncounter: (depth, previousMap) => this.createEncounter(depth, previousMap),
+              createBenefitOffers: expedition => this.createBenefitOffers(expedition)
+            });
+          if (completion) {
+            this.expedition = completion.expedition;
+            this.game.civilizationStage = completion.civilizationStage;
+            this.factionJustUnlocked = completion.factionUnlocked;
+            this.resultAetherEvacuated = completion.evacuated;
+            this.resultAetherStructures = completion.structures;
+            this.resultAetherRecovered = completion.recovered;
+            this.resultCivilizationTotal = completion.civilizationTotal;
             // One localStorage write owns both payout and retirement of the old battle.
             this.persistence.saveProgress(this.profile, this.expedition);
             this.notifyStorageFailure();

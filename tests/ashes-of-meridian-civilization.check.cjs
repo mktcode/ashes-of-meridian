@@ -3,7 +3,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS}=require('./helpers/game-scripts.cjs');
-const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,'ui-core','ui-templates','ui-actions','world-view']);
+const context=loadScripts(['core','content','expedition',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,'ui-core','ui-templates','ui-actions','world-view']);
 const {MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen}=vm.runInContext(
  '({MeridianGame,MeridianUI,Battlefield,BattlefieldSurface,BUILDINGS,FACTIONS,PlacementGuideSampler,civilizationScoreForBuildings,expeditionCivilizationScore,civilizationScoreRequirement,expeditionStageUnlocked,renderHomeScreen})',context);
 const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
@@ -255,9 +255,9 @@ test('military results save current world totals once instead of awarding score,
  const win={win:true,civilizationScore:999};ui.event('result',win);ui.event('result',win);
  assert.equal(ui.expedition.civilizationScore,15);assert.equal(ui.profile.lastCivilizationScore,15);assert.equal(writes.length,1);
  assert.equal(ui.expedition.unlockedStage,1);assert.match(renderHomeScreen(ui.expedition),/15<\/strong>/);
- ui.expedition.unlockedStage=2;game.s.depth=1;game.s.seed=1410;game.s.entities=[civil()];
+ ui.expedition.unlockedStage=2;game.s={...game.s,depth:1,seed:1410,entities:[civil()]};
  assert.equal(ui.refreshCivilizationScore(),20);
- game.s.entities[0].hp=0;ui.resultAetherRecovered=undefined;
+ game.s.entities[0].hp=0;
  ui.event('result',{win:false,civilizationScore:999});ui.event('result',{win:false,civilizationScore:999});
  assert.equal(ui.expedition,null);assert.equal(ui.profile.lastCivilizationScore,15);assert.equal(writes.length,2);
  assert.equal(writes[1].expedition,null);assert.equal(writes[1].profile.lastCivilizationScore,15);

@@ -12,7 +12,7 @@ function harness(data = new Map()) {
     get innerHTML(){return this.html || '';},set innerHTML(v){this.html=v;this.parts={};}});
   const elements = new Map(), document = {getElementById(id){if(!elements.has(id))elements.set(id,node());return elements.get(id);}};
   let now=0;
-  const context = loadScripts(['core','content','voice-content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,
+  const context = loadScripts(['core','content','expedition','voice-content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,
     'effects','persistence',...UI_SCRIPTS], {globals:{document,innerWidth:1280,innerHeight:720,performance:{now:()=>now},matchMedia:()=>({matches:true})}});
   const deps = vm.runInContext('({clamp,upgrades:PERMANENT_UPGRADES,benefits:EXPEDITION_BENEFITS,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:BATTLEFIELDS,missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
   const writes=[],fail={set:false};

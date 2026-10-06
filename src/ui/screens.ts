@@ -195,28 +195,17 @@
           this.unlockedFactionForDepth(this.profile.expeditionDepth), startingAlloy, this.battleAbilities);
       },
       unlockedFactionForDepth(this: MeridianUI, depth: number): FactionId {
-        let unlocked: FactionId = FACTION_ID.FIRST;
-        for (let i = 1; i < FACTION_DEPTH_REQUIREMENTS.length; i++)
-          if (depth >= FACTION_DEPTH_REQUIREMENTS[i]) unlocked = i as FactionId;
-        return unlocked;
+        return unlockedExpeditionFaction(depth);
       },
       factionUnlocked(this: MeridianUI, faction: number | undefined): faction is FactionId {
         return faction !== undefined && Number.isInteger(faction) && faction >= 0 && faction < FACTIONS.length &&
           faction <= this.unlockedFactionForDepth(this.profile.expeditionDepth);
       },
       createEncounter(this: MeridianUI, depth = 0, previousMap?: BattlefieldId): ExpeditionEncounter {
-        const maps = availableBattlefields(), choices = contentKeys(MISSIONS)
-          .filter(id => depth + 1 >= MISSIONS[id].firstStage)
-          .flatMap(mission => MISSIONS[mission].maps.filter(map => maps.includes(map)).map(map => ({ mission, map }))),
-          alternatives = choices.filter(choice => choice.map !== previousMap),
-          pool = alternatives.length ? alternatives : choices;
-        // Preserve the faction → map → seed draw order, with no extra mission draw.
-        const enemies = expeditionEnemyFactions(depth, Math.random), choice = pool[Math.floor(Math.random() * pool.length)];
-        return { ...choice, deployment: depth === 0 && this.profile.expeditionDepth === 0 && !this.profile.tutorialComplete ? 'resource-start' : 'exploration',
-          enemies, seed: 1 + Math.floor(Math.random() * 99999999) };
+        return createExpeditionEncounter(this.profile, depth, previousMap);
       },
       createBenefitOffers(this: MeridianUI, expedition: MeridianExpedition) {
-        return expeditionBenefitOffers(expedition.benefits, seeded(expedition.encounter.seed + expedition.depth * 7919));
+        return createExpeditionBenefitOffers(expedition);
       },
       selectBattleAbility(this: MeridianUI, ability: AbilityType) {
         if (this.view !== 'battle') return;

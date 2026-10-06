@@ -264,7 +264,7 @@ function setup() {
   };
   const window = target();
   let now = 0;
-  const context = loadScripts(['core', 'content', 'voice-content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
+  const context = loadScripts(['core', 'content', 'expedition', 'voice-content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, ...UI_SCRIPTS], { globals: {
     document, window, innerWidth: 1280, innerHeight: 800, performance: { now: () => now },
     formatTime: () => '00:00', matchMedia: () => ({ matches: true })
   } });
@@ -1976,15 +1976,15 @@ test('victory checkpoints offers and chosen benefits; defeat clears the expediti
   assert.equal(JSON.stringify(h.calls[0][1].enemyBenefits),enemyBefore);
   assert.equal(JSON.stringify(saved[1].enemyBenefits),enemyBefore);
   const previous=JSON.parse(enemyBefore);
-  h.ui.resultAetherRecovered=undefined;
+  h.ui.game.s = { ...h.ui.game.s }; // A new battle, not a reset of its result display.
   h.ui.createEncounter=depth=>({mission: 'hq-elimination', enemies: Array.from({length: Math.min(3, depth + 1)}, () => 2),map:'mothership',seed:222});
   h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
   assert.deepEqual(totals(), [2, 0, 0]);
   for(const [key,count] of Object.entries(previous[0]))assert.ok(h.ui.expedition.enemyBenefits[0][key]>=count);
-  h.ui.resultAetherRecovered=undefined;
+  h.ui.game.s = { ...h.ui.game.s };
   h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
   assert.deepEqual(totals(), [3, 1, 1]);
-  h.ui.resultAetherRecovered = undefined;
+  h.ui.game.s = { ...h.ui.game.s };
   h.ui.event('result', { win: false, text: 'Defeat', time: 1, integrity: 0, score: 0 });
   assert.equal(h.ui.expedition, null); assert.equal(cleared.length, 1);
 });
@@ -2050,6 +2050,7 @@ test('each result transfers capped unused aether plus structure recovery once at
     assert.equal(h.ui.profile.aether, recovered);
     assert.equal(saves.length, 1, 'even a zero payout retires the battle atomically');
     assert.equal(saves[0].profile.aether, recovered);
+    h.ui.resultAetherRecovered = undefined; // Presentation state must not reopen the payout.
     h.ui.event('result', { win: true });
     assert.equal(h.ui.profile.aether, recovered, 'same result cannot pay twice');
     assert.equal(saves.length, 1);
@@ -2102,7 +2103,7 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   let saves = 0; h.ui.persistence.saveProgress = () => { saves++; return true; };
   h.ui.event('result', { win: true });
   assert.equal(h.ui.profile.expeditionDepth, 10); assert.equal(h.ui.factionJustUnlocked, 1); assert.equal(saves, 1);
-  h.ui.resultAetherRecovered = undefined; h.ui.expedition.depth = 24; h.ui.profile.expeditionDepth = 24;
+  h.ui.game.s = { ...h.ui.game.s }; h.ui.expedition.depth = 24; h.ui.profile.expeditionDepth = 24;
   h.ui.event('result', { win: true });
   assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
 });
