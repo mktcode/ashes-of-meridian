@@ -2,6 +2,14 @@
 
 Der erste kleine Mechanikkern verwendet das Meridian Forum als automatisch wachsendes Siedlungszentrum. Maßgeblicher Vertrag: [Wirtschaft, Bau und Produktion](../gameplay.md#wirtschaft-bau-und-produktion). Weitere Regeln oder breite Tests sind durch dieses Issue nicht freigegeben.
 
+## Technischer Blocker: Forum-Lieferung kann die Simulation blockieren
+
+- [ ] Fehlgeschlagene Ablieferpunkt-Suche begrenzen und Wiederholungen drosseln, ohne unerreichbare Zugänge als erfolgreiche Lieferung zu behandeln. `worker()` ruft bei fehlendem `deliveryPoint` unmittelbar `forumDropoff()` auf; dessen bis zu drei synchronen `world.path()`-Suchen umgehen den Retry-/Recovery-Cooldown aus `move()`/`pathTo()`. Bei ausbleibendem vollständigem Weg bleibt der Punkt leer und die gesamte Suche wiederholt sich jeden Simulationsschritt, je betroffenem Worker. Auch Layoutänderungen und Save/Restore berücksichtigen.
+
+Nutzerbericht: abgeschlossene Frontier-Welt, Seed `13644411`, Forum und zugewiesene Worker, etwa Spielzeit 22:53; ungefähr 1 FPS auch nach Reload/Resume, in Pause wieder 60 FPS. Umleitung der Worker weg vom Forum stellt 59–60 FPS wieder her. Der übermittelte komprimierte Spielstand ist abgeschnitten; Forum-/Workerpositionen und konkrete Hindernisse fehlen. Keine nachgewiesene Speicherbeschädigung.
+
+Begrenzte CPU-Diagnose: derselbe Terrain-Seed, synthetisches Forum bei `(0,0)` mit drei künstlich blockierten Servicebereichen, zwei direkte `worker()`-Aufrufe ohne Partie-/Simulationssuite. Jeder Aufruf startete drei Wegsuchen mit `budget-exhausted`, insgesamt etwa 1,04 bzw. 1,09 Sekunden; kein `deliveryPoint` und kein gesetzter `nextPath`-Cooldown. Belegt die ungebremste Fehlerklasse, nicht die genaue Zugangssituation des Nutzerstands. Vollständigen Stand für die konkrete Reproduktion sichern; Speicherformat `lzw-v1` unverändert erhalten. Allgemeine [Worker-Navigation](worker-bauwegfindung/issue.md) und [CPU-Wegsuche](mobile-performance.md) sind benachbarte, nicht hier pauschal freigegebene Arbeiten.
+
 ## Offene menschliche Abnahme
 
 - [ ] **Einstieg:** Nach dem Sieg die abgeschlossene Welt wieder betreten, ein Forum gründen und Prospectors gezielt zuweisen. Menü-Sperre, Lieferung und Ausbauziel müssen ohne Erklärung außerhalb des Spiels verständlich sein.
