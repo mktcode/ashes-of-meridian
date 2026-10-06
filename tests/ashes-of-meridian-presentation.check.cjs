@@ -797,6 +797,13 @@ test('Forum parcel fills follow native terrain facets and cut the circle, all st
    covered=p=>triangles.some(t=>{const d=t.map((a,j)=>cross(a,t[(j+1)%3],p));return d.every(v=>v>=-1e-6)||d.every(v=>v<=1e-6);});
   for(const x of [-.75,-.25,.25,.75])for(const z of [-.55,.55])assert.equal(covered(at(x*radius,z*radius)),true,'all eight parcels are filled');
   for(const [x,z] of [[-radius/2,33],[0,40],[radius/2,-33],[45,0],[0,0],[10,10]])assert.equal(covered(at(x,z)),false,'street and plaza interiors remain completely empty');
+  const plaza=forum.size+2.5+FORUM_SETTLEMENT.corridorWidth/2;
+  for(let i=0;i<16;i++){
+   const angle=i*Math.PI*2/16;
+   assert.equal(covered(at(Math.cos(angle)*plaza*.95,Math.sin(angle)*plaza*.95)),false,'the round plaza stays empty in every direction');
+  }
+  for(const sx of [-1,1])for(const sz of [-1,1])
+   assert.equal(covered(at(sx*plaza*.85,sz*plaza*.85)),true,'former square corners are painted outside the round plaza');
   assert.equal(covered(at(radius+1,0)),false);assert.equal(JSON.stringify(forum),saved);
  }
  const edge=buildForumParcelGeometry({surface},{id:1,x:78,z:0,size:10.4,team:0});

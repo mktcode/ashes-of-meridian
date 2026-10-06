@@ -235,6 +235,11 @@ test('Forum street grids reserve three parallel axes, a cross-axis and a connect
    assert.ok(polygons[i].some(p=>p.z<-Math.sqrt(radius*radius-x*x)));
   }
   assert.ok(polygons[3].every(p=>Math.abs(Math.abs(p.z)-half)<1e-9));
+  const plaza=forum.size+2.5+half;
+  assert.equal(polygons[4].length,64,'a smooth convex round plaza replaces the square');
+  assert.ok(polygons[4].every(p=>Math.abs(Math.hypot(p.x,p.z)-plaza)<1e-9));
+  for(const sx of [-1,1])for(const sz of [-1,1])
+   assert.equal(game.forumAccessReason(frame.world(sx*plaza*.85,sz*plaza*.85),0),'','former square corners outside the round plaza are no longer reserved');
   for(const [x,z] of [[-radius/2,33],[0,40],[radius/2,-33],[45,0]])
    assert.match(game.forumAccessReason(frame.world(x,z),BUILDINGS.depot.size),/streets/);
   for(const p of game.forumServicePoints(forum)){

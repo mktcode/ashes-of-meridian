@@ -16,10 +16,13 @@ function forumCorridors(forum: BuildingEntity): Position[][] {
     return [[x-half,-length],[x+half,-length],[x+half,length],[x-half,length]];
   });
   streets.push([[-reach,-half],[reach,-half],[reach,half],[-reach,half]]);
-  // The Forum occupies the central junction. Keep a plaza around its blocker so
-  // all four street arms connect around it and all three delivery entries stay accessible.
+  // A round plaza connects all four street arms around the Forum blocker and
+  // protects all three delivery entries. The same convex contour drives placement and display.
   const plaza = forum.size + 2.5 + half;
-  streets.push([[-plaza,-plaza],[plaza,-plaza],[plaza,plaza],[-plaza,plaza]]);
+  streets.push(Array.from({length:64}, (_,i) => {
+    const angle = i*Math.PI*2/64;
+    return [Math.cos(angle)*plaza,Math.sin(angle)*plaza];
+  }));
   return streets.map(polygon => polygon.map(([x,z]) =>
     ({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs})));
 }
