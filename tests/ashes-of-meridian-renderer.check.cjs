@@ -64,6 +64,8 @@ test('brush surface stays opaque, model-anchored and shares wind with its shadow
   const surface=FRAG.split(`}else if(v_mat==${MAT.BRUSH}.){`)[1].split(`}else if(v_mat==${MAT.LEAF}.){`)[0];
   assert.ok(surface.includes('v_modelPos.xz+v_modelPos.y*vec2(.45,.65)'));
   assert.ok(surface.includes('fwidth(grid)'), 'subpixel leaf detail fades instead of shimmering');
+  assert.ok(surface.indexOf('fwidth(grid)')<surface.indexOf('grid.x+=mod'),
+    'pixel footprint is measured before discontinuous row staggering');
   assert.ok(surface.includes('if(u_reliefOn>.5)n=reliefNormal'));
   assert.ok(surface.includes('u_ecology.x==3.')&&surface.includes('u_ecology.x==4.'),'frost and fungal habitat variants');
   assert.ok(!surface.includes('texture(')&&!surface.includes('discard'),'no extra texture reads or alpha-cutout overdraw');

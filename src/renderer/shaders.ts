@@ -327,23 +327,26 @@ if(v_mat==${MAT.LANDSCAPE}.){
  n=gl_FrontFacing?n:-n;
  // A continuous oblique projection avoids seams at smoothed triangle edges.
  vec2 p=v_modelPos.xz+v_modelPos.y*vec2(.45,.65);
- vec2 grid=p*vec2(11.,8.);
+ vec2 grid=p*vec2(4.5,3.2);
+ // Measure the continuous projection before staggering/fract introduces jumps.
+ float pixelSpan=length(fwidth(grid));
  grid.x+=mod(floor(grid.y),2.)*.5;
  vec2 cell=floor(grid),q=fract(grid)-.5;
  float variation=veilHash(cell),fungal=float(u_ecology.x==4.);
- q.x+=(variation-.5)*q.y*.8;
+ q-=vec2(variation-.5,fract(variation*7.13)-.5)*.16;
+ q.x+=(variation-.5)*q.y*.6;
  vec2 shape=q*mix(vec2(2.35,1.25),vec2(1.85),fungal);
  float dome=max(0.,1.-dot(shape,shape));
- float leaf=1.-smoothstep(.65,1.,dot(shape,shape));
- float vein=(1.-smoothstep(.025,.085,abs(q.x)))*leaf*(1.-fungal);
- float detailOn=1.-smoothstep(.35,1.25,length(fwidth(grid)));
- float shade=mix(1.,.70+leaf*.40+variation*.12+vein*.08,detailOn);
+ float edgeWidth=max(.18,pixelSpan*1.4);
+ float leaf=1.-smoothstep(.7-edgeWidth,1.+edgeWidth,dot(shape,shape));
+ float detailOn=1.-smoothstep(.18,.75,pixelSpan);
+ float shade=mix(1.,.82+leaf*.22+variation*.08,detailOn);
  base=v_col.rgb*shade;
  float foot=1.-smoothstep(.01,.14,v_modelPos.y);
  base=mix(base,u_biomeSoil*(.55+luma(v_col.rgb)),foot*.28*float(u_ecology.x>.5));
- if(u_reliefOn>.5)n=reliefNormal(n,(leaf*dome*.016+vein*.003)*detailOn);
+ if(u_reliefOn>.5)n=reliefNormal(n,leaf*dome*.008*detailOn);
  if(u_ecology.x==3.){
-  float frost=smoothstep(.45,.85,n.y)*(.35+variation*.3);
+  float frost=smoothstep(.45,.85,n.y)*(.35+mix(.5,variation,detailOn)*.3);
   base=mix(base,vec3(.76,.84,.86),frost);
  }
 }else if(v_mat==${MAT.LEAF}.){
