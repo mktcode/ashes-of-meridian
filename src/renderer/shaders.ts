@@ -358,15 +358,25 @@ if(u_ecology.x>.5&&u_habitatOn<.5&&v_mat==${MAT.GROUND}.){
  base=mix(base,u_biomeLush,step(.91,wear)*.14);
  if(u_ecology.x==3.)base=mix(base,vec3(.74,.82,.86),smoothstep(.5,.86,wear)*.55);
 }
-// Isotropic asphalt painted only on the terrain skin; no marks, geometry or displacement.
+// Isotropic asphalt and a soft contour painted only on the terrain skin, without geometry.
 if(u_workerRoadOn>.5){
  vec2 roadUV=(v_pos.xz+u_extent)/(2.*u_extent);
  float inside=float(all(greaterThanEqual(roadUV,vec2(0.)))&&all(lessThanEqual(roadUV,vec2(1.))));
  float wear=texture(u_workerRoad,roadUV).r;
- float road=smoothstep(.18,.72,wear)*inside*smoothstep(.55,.85,n.y)*.92;
+ float roadSurface=inside*smoothstep(.55,.85,n.y);
+ float road=smoothstep(.18,.72,wear)*roadSurface*.92;
  float grain=veilNoise(v_pos.xz*19.);
  vec3 asphalt=mix(vec3(.075,.082,.09),vec3(.18,.19,.20),grain);
  base=mix(base,asphalt,road);
+ // A narrow wear-value band, not a constant-width curb. Only mature nearby asphalt opts in.
+ float rim=smoothstep(.27,.33,wear)*(1.-smoothstep(.38,.44,wear))*roadSurface;
+ if(rim>0.){
+  vec2 offset=vec2(1.25/(2.*u_extent),0.);
+  float nearby=max(max(texture(u_workerRoad,roadUV+offset).r,texture(u_workerRoad,roadUV-offset).r),
+    max(texture(u_workerRoad,roadUV+offset.yx).r,texture(u_workerRoad,roadUV-offset.yx).r));
+  rim*=smoothstep(.60,.80,nearby);
+  base=mix(base,vec3(.44,.46,.47)*mix(.92,1.04,grain),rim*.72);
+ }
  groundHeight=mix(groundHeight,grain*.035,road);
  groundGloss=mix(groundGloss,groundGloss*.55,road);
 }
