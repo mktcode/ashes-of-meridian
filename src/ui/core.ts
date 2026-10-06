@@ -74,6 +74,7 @@
       selectedLookup: Set<number>;
       tab: UITab;
       mode: UIMode | null;
+      editFavoriteSlot: number | null = null;
       hover: number | null;
       pointer: { x: number; y: number; inside: boolean };
       drag: UIDrag | null;

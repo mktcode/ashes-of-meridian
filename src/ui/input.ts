@@ -2,16 +2,61 @@
     'use strict';
     const uiInputMethods = {
       bind(this: MeridianUI) {
+        let favoriteHold: { slot: number; startedAt: number; pointerId: number; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null = null;
+        let suppressFavoriteClick: number | null = null;
+        const cancelFavoriteHold = () => {
+          if (favoriteHold) clearTimeout(favoriteHold.timer);
+          favoriteHold = null;
+        };
         document.addEventListener('pointerdown', e => {
           this.audio.unlock();
           this.domPressed = !!(e.target as Element | null)?.closest('button,select,input');
+          cancelFavoriteHold();
+          suppressFavoriteClick = null;
+          const b = (e.target as Element | null)?.closest<HTMLButtonElement>('button[data-favorite-slot]');
+          if (!b || b.disabled || e.button !== 0 || e.isPrimary === false || this.view !== 'game' || this.controlsLocked || this.game.s?.result) return;
+          const slot = Number(b.dataset.favoriteSlot);
+          if (!Number.isInteger(slot) || slot < 0 || slot > 3) return;
+          const startedAt = e.timeStamp ?? performance.now();
+          favoriteHold = { slot, startedAt, pointerId: e.pointerId, x: e.clientX, y: e.clientY, timer: setTimeout(() => {
+            favoriteHold = null;
+            suppressFavoriteClick = slot;
+            this.beginFavoriteEdit(slot);
+          }, Math.max(0, 550 - Math.max(0, performance.now() - startedAt))) };
         });
-        document.addEventListener('pointerup', () => (this.domPressed = false));
-        document.addEventListener('pointercancel', () => (this.domPressed = false));
+        document.addEventListener('pointermove', e => {
+          if (favoriteHold && e.pointerId === favoriteHold.pointerId && Math.hypot(e.clientX - favoriteHold.x, e.clientY - favoriteHold.y) > 10) cancelFavoriteHold();
+        });
+        document.addEventListener('pointerup', e => {
+          this.domPressed = false;
+          // A busy render frame may delay the timer until after release.
+          if (favoriteHold && e.pointerId === favoriteHold.pointerId && (e.timeStamp ?? performance.now()) - favoriteHold.startedAt >= 550) {
+            const slot = favoriteHold.slot;
+            cancelFavoriteHold();
+            suppressFavoriteClick = slot;
+            this.beginFavoriteEdit(slot);
+          }
+          cancelFavoriteHold();
+          if (suppressFavoriteClick !== null) setTimeout(() => { suppressFavoriteClick = null; }, 0);
+        });
+        document.addEventListener('pointercancel', () => { this.domPressed = false; cancelFavoriteHold(); suppressFavoriteClick = null; });
+        document.addEventListener('contextmenu', e => {
+          if ((e.target as Element | null)?.closest('button[data-favorite-slot]')) e.preventDefault();
+        });
         document.addEventListener('click', e => {
           if (this.leavingBattle) return;
           let b = (e.target as Element | null)?.closest('button');
           if (!b || b.disabled) return;
+          if (suppressFavoriteClick !== null && b.dataset.favoriteSlot === String(suppressFavoriteClick)) {
+            suppressFavoriteClick = null;
+            e.preventDefault();
+            return;
+          }
+          if (b.dataset.favoriteSlot !== undefined && this.editFavoriteSlot !== null) {
+            this.clearMode();
+            this.renderActions();
+            return;
+          }
           if (b.dataset.ui) {
             this.uiAction(b.dataset.ui);
             return;
@@ -92,6 +137,8 @@
           this.radioUntil = 0;
         };
         window.addEventListener('blur', () => {
+          cancelFavoriteHold();
+          suppressFavoriteClick = null;
           this.resetCodexGesture();
           this.domPressed = false;
           this.drag = null;

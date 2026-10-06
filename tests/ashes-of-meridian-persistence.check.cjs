@@ -355,6 +355,23 @@ test('invalid JSON reports a blocked save and later settings writes cannot resur
   const cleared = setup(h.data); assert.equal(cleared.service.loadExpedition(), null); assert.equal(cleared.service.expeditionError, null);
 });
 
+test('quick-access preferences round-trip with the profile without replacing the expedition', () => {
+  const h=setup(),quickAccess=['build:hq','favorite:worker','favorite:hero','build:barracks'];
+  put(h,expedition,{...defaults,quickAccess});
+  const loaded=setup(h.data),profile=loaded.service.loadProfile();
+  assert.deepEqual(json(profile.quickAccess),quickAccess);
+  loaded.service.saveProfile(profile);
+  assert.deepEqual(json(setup(h.data).service.loadExpedition()),expedition);
+});
+
+test('invalid quick-access arrays are ignored without damaging other profile data', () => {
+  for(const quickAccess of [null,{},[],['favorite:worker'],['favorite:worker','favorite:rifle','build:depot','build:bogus'],
+    ['favorite:worker','favorite:rifle','build:depot','build:depot:extra'],[null,'favorite:rifle','build:depot','build:barracks']]) {
+    const h=setup();h.data.set(PROFILE,JSON.stringify({...defaults,aether:123,quickAccess}));
+    const loaded=h.service.loadProfile();assert.equal(loaded.quickAccess,undefined);assert.equal(loaded.aether,123);
+  }
+});
+
 test('profile defaults, upgrade normalization and explicit tutorial completion remain independent of expedition schema', () => {
   const h = setup(); assert.deepEqual(json(h.service.loadProfile()), defaults);
   h.data.set(PROFILE, JSON.stringify({ version: 1, expeditionDepth: '25.9', aether: '120.9',

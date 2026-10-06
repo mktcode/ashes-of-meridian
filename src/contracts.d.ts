@@ -213,12 +213,14 @@ type MeridianSettings = Record<string, number | boolean> & {
   showFps: boolean;
 };
 
+type QuickAccessAction = `build:${BuildingType}` | `favorite:${UnitType}`;
 interface MeridianProfile {
   version: 1;
   expeditionDepth: number;
   lastCivilizationScore: number;
   aether: number;
   tutorialComplete: boolean;
+  quickAccess?: QuickAccessAction[];
   upgrades: Record<string, number>;
   settings: MeridianSettings;
 }

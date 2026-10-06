@@ -1745,6 +1745,75 @@ test('ability and category actions dispatch only while unpaused', () => {
   assert.deepEqual(h.calls, []);
 });
 
+function favoriteHarness() {
+  const h=setup();
+  for(const method of ['perform','setTab'])h.ui[method]=h.UI.prototype[method];
+  h.UI.prototype.bind.call(h.ui);
+  return h;
+}
+
+test('favorite replacement changes only its slot, persists preferences and never executes the picked action', () => {
+  for(const action of ['train:hero','build:barracks']) {
+    const h=favoriteHarness();let saved=0;h.ui.persistence.saveProfile=()=>{saved++;return true;};
+    h.ui.game.recruitmentReason=()=> 'No producer';h.ui.game.cost=()=>({cost:9999,gas:0});
+    h.ui.mode={kind:'ability',arg:'scan'};h.ui.beginFavoriteEdit(2);
+    assert.equal(h.ui.mode,null);assert.equal(h.ui.editFavoriteSlot,2);
+    assert.match(h.document.getElementById('actions').innerHTML,/favorite-edit/);
+    h.ui.perform(action.startsWith('build')?'tab:build':'tab:infantry');
+    assert.equal(h.ui.editFavoriteSlot,2);assert.equal(h.ui.actionReason(action),'');
+    h.ui.perform(action);
+    assert.deepEqual(Array.from(h.ui.quickAccess()),['favorite:worker','favorite:rifle',action.replace('train:','favorite:'),'build:barracks']);
+    assert.equal(saved,1);assert.equal(h.ui.tab,'root');assert.equal(h.ui.editFavoriteSlot,null);
+    assert.equal(h.ui.mode,null);assert.deepEqual(h.calls,[]);
+  }
+});
+
+test('favorite editing survives catalog back navigation and cancels on slot tap, pause or lifecycle lock', () => {
+  const h=favoriteHarness();h.ui.beginFavoriteEdit(1);h.ui.perform('tab:vehicles');h.ui.perform('tab:root');
+  assert.equal(h.ui.editFavoriteSlot,1);
+  h.click({favoriteSlot:'1',action:'favorite:rifle'});
+  assert.equal(h.ui.editFavoriteSlot,null);assert.deepEqual(h.calls,[]);
+  h.ui.beginFavoriteEdit(2);h.ui.pause();assert.equal(h.ui.editFavoriteSlot,null);
+  h.ui.beginFavoriteEdit(0);assert.equal(h.ui.editFavoriteSlot,null);
+});
+
+test('favorite hold enters editing after 550ms, suppresses its click and cancels on movement or pointercancel', () => {
+  for(const end of ['hold','move','cancel','tap']) {
+    const h=favoriteHarness(),timers=new Map();let id=0;
+    h.context.setTimeout=(fn,ms)=>{timers.set(++id,{fn,ms});return id;};h.context.clearTimeout=id=>timers.delete(id);
+    h.ui.game.train=(...args)=>h.calls.push(['train',...args]);
+    const b={dataset:{favoriteSlot:'1',action:'favorite:rifle'}},event={target:{closest:()=>b},button:0,pointerId:1,clientX:20,clientY:20,preventDefault(){}};
+    h.document.handlers.pointerdown(event);assert.equal([...timers.values()][0].ms,550);
+    if(end==='move')h.document.handlers.pointermove({...event,clientX:40});
+    if(end==='cancel')h.document.handlers.pointercancel(event);
+    if(end==='hold'){[...timers.values()][0].fn();assert.equal(h.ui.editFavoriteSlot,1);}
+    else assert.equal(h.ui.editFavoriteSlot,null);
+    h.document.handlers.pointerup(event);
+    if(end==='hold'||end==='tap')h.document.handlers.click(event);
+    assert.equal(h.calls.length,end==='tap'?1:0);
+    assert.equal(h.ui.editFavoriteSlot,end==='hold'?1:null);
+    if(end!=='hold')assert.equal(timers.size,0);
+  }
+});
+
+test('favorite long press still enters editing if a busy frame delays the hold timer until release', () => {
+  const h=favoriteHarness(),timers=new Map();let id=0;h.setTime(1000);
+  h.context.setTimeout=(fn,ms)=>{timers.set(++id,{fn,ms});return id;};h.context.clearTimeout=id=>timers.delete(id);
+  const b={dataset:{favoriteSlot:'2',action:'build:depot'}},event={target:{closest:()=>b},button:0,pointerId:1,clientX:20,clientY:20,timeStamp:1000,preventDefault(){}};
+  h.document.handlers.pointerdown(event);h.document.handlers.pointerup({...event,timeStamp:1700});
+  h.document.handlers.click(event);
+  assert.equal(h.ui.editFavoriteSlot,2);assert.deepEqual(h.calls,[]);
+});
+
+test('worker remains reachable and tutorial-guided when its favorite was replaced', () => {
+  const h=favoriteHarness();h.ui.profile.quickAccess=['favorite:rifle','favorite:medic','build:depot','build:barracks'];
+  h.ui.battleTutorial={step:'trainWorker',workersTrained:0};h.ui.tab='root';
+  assert.equal(h.ui.tutorialAction(),'tab:infantry');
+  h.ui.setTab('infantry');assert.match(h.document.getElementById('actions').innerHTML,/data-action="train:worker"/);
+  assert.equal(h.ui.tutorialAction(),'train:worker');
+  assert.match(h.ui.tutorialGoalText(),/Infantry menu/);
+});
+
 test('repeating the active targeting action cancels without changing selection or game state', () => {
   for (const [kind, arg] of [['build','depot'], ['rally'],
     ...['orbital','repair','scan','drop'].map(a => ['ability',a])]) {

@@ -44,6 +44,13 @@
 .action.blocked :is(.ui-icon, .action-model, svg) { opacity: .45 }
 .action:disabled { opacity: .5 }
 .action.active { background: #236476 }
+#hud .favorites .action { touch-action: none; -webkit-touch-callout: none; user-select: none }
+#hud .favorites .favorite-edit,
+#hud.favorites-editing .category-nav .action,
+#hud.favorites-editing .catalog-grid .model-action { box-shadow: inset 0 0 0 2px #ffd94a, 0 0 8px #ffd94a66 }
+#hud .favorites .favorite-edit { z-index: 1 }
+#hud .favorite-edit .action-model { opacity: .25 }
+#hud .favorite-edit::after { content: '?'; position: absolute; inset: 2px; display: grid; place-items: center; color: #ffd94a; font: 28px/1 system-ui, sans-serif; pointer-events: none }
 #hud .action.cancel-target::after { content: '×'; position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; background: #092331aa; color: #fff; font: 32px/1 system-ui, sans-serif; text-shadow: 0 1px 3px #000; pointer-events: none; clip-path: none }
 #hud .catalog-grid .action.cancel-target::after { bottom: 22px; font-size: 22px }
 #hud .action.cancel-target small { z-index: 3 }

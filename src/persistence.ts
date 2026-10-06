@@ -238,6 +238,12 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
         if (Number.isSafeInteger(p.lastCivilizationScore) && p.lastCivilizationScore >= 0)
           d.lastCivilizationScore = p.lastCivilizationScore;
         d.tutorialComplete = p.tutorialComplete === true;
+        if (Array.isArray(p.quickAccess) && p.quickAccess.length === 4 && p.quickAccess.every((action: unknown) => {
+          if (typeof action !== 'string') return false;
+          const [kind, type, extra] = action.split(':');
+          return extra === undefined && (kind === 'build' ? Object.hasOwn(deps.buildings, type) :
+            kind === 'favorite' && Object.hasOwn(deps.units, type));
+        })) d.quickAccess = [...p.quickAccess];
         for (const k in upgrades) d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
         for (const key of Object.keys(d.settings)) {
           const value = p.settings?.[key];

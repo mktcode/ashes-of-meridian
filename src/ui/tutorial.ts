@@ -78,7 +78,8 @@ const uiTutorialMethods = {
   },
   tutorialAction(this: MeridianUI, supply?: number, capacity?: number): string | null {
     if (!this.battleTutorial || this.battleTutorial.step === 'arrival' || this.battleTutorial.step === 'recon') return null;
-    const step = this.battleTutorial.step, target = BATTLE_TUTORIAL_TARGETS[step],
+    const step = this.battleTutorial.step, target = step === 'trainWorker' && !this.quickAccess().includes('favorite:worker')
+      ? { tab: 'infantry' as UITab, action: 'train:worker' } : BATTLE_TUTORIAL_TARGETS[step],
       queuedWorkers = step === 'trainWorker' ? this.game.alive(e => e.team === this.localTeam && e.kind === 'building')
         .reduce((count, e) => count + (e.queue?.filter(q => q.type === 'worker').length || 0), 0) : 0,
       pending = step === 'trainWorker'
@@ -99,7 +100,7 @@ const uiTutorialMethods = {
       case 'arrival': return 'Establish a landing zone.';
       case 'buildHQ': return `Build a ${buildingName('hq', faction)} to establish your base.`;
       case 'recon': return 'Survey the enemy outpost and return to your base.';
-      case 'trainWorker': return `Recruit two more ${unitName('worker', faction)} workers using quick access (${tutorial.workersTrained}/2 trained).`;
+      case 'trainWorker': return `Recruit two more ${unitName('worker', faction)} workers using ${this.quickAccess().includes('favorite:worker') ? 'quick access' : 'the Infantry menu'} (${tutorial.workersTrained}/2 trained).`;
       case 'buildRefinery': return `Build a ${buildingName('refinery', faction)} beside an Echo vent.`;
       case 'buildBarracks': return `Build a ${buildingName('barracks', faction)} to recruit infantry.`;
     }

@@ -1,6 +1,6 @@
     /* MeridianUI selection, action panel, queues and HUD. Loaded after ui/core.js. */
     'use strict';
-    interface UIActionButtonOptions { badge?: string | number; disabled?: boolean; cost?: Cost }
+    interface UIActionButtonOptions { badge?: string | number; disabled?: boolean; cost?: Cost; favoriteSlot?: number }
     const cameraMapBounds = new WeakMap<Battlefield, { yaw: number; extent: number; surface: BattlefieldSurface | null; low: number; high: number }>();
     const uiActionMethods = {
       submitAction(this: MeridianUI, action: BattleAction) {
@@ -116,7 +116,7 @@
       },
       setTab(this: MeridianUI, tab: string) {
         if (!['root', 'build', 'infantry', 'vehicles', 'aircraft', 'details'].includes(tab)) return;
-        this.clearMode();
+        this.clearMode(tab !== 'details');
         this.tab = tab as UITab;
         this.actionSignature = '';
         $('actionPanel').scrollTop = 0;
@@ -147,7 +147,17 @@
         this.actionSignature = '';
         this.renderActions();
       },
-      clearMode(this: MeridianUI) {
+      quickAccess(this: MeridianUI): QuickAccessAction[] {
+        return this.profile.quickAccess ?? ['favorite:worker', 'favorite:rifle', 'build:depot', 'build:barracks'];
+      },
+      beginFavoriteEdit(this: MeridianUI, slot: number) {
+        if (this.view !== 'game' || this.controlsLocked || this.game.s?.result || !Number.isInteger(slot) || slot < 0 || slot > 3) return;
+        this.clearMode();
+        this.editFavoriteSlot = slot;
+        this.setTab('root');
+      },
+      clearMode(this: MeridianUI, preserveFavoriteEdit = false) {
+        if (!preserveFavoriteEdit) this.editFavoriteSlot = null;
         this.mode = null;
         $('world').style.cursor = 'default';
         this.actionSignature = '';
@@ -155,6 +165,19 @@
       perform(this: MeridianUI, action: string) {
         if (!this.game.s || this.controlsLocked || this.game.s!.result) return;
         let [kind, arg] = action.split(':');
+        if (this.editFavoriteSlot !== null && kind !== 'tab') {
+          if ((kind === 'build' && hasContentKey(BUILDINGS, arg)) || (kind === 'train' && hasContentKey(UNITS, arg))) {
+            const favorites = [...this.quickAccess()];
+            favorites[this.editFavoriteSlot] = `${kind === 'train' ? 'favorite' : 'build'}:${arg}` as QuickAccessAction;
+            this.profile.quickAccess = favorites;
+            this.persistence.saveProfile(this.profile);
+            this.notifyStorageFailure();
+            this.clearMode();
+            this.setTab('root');
+            return;
+          }
+          this.clearMode();
+        }
         const reason = this.actionReason(action);
         if (reason) { this.toast(reason); return; }
         if (kind === 'tab') {
@@ -206,8 +229,12 @@
             ? renderModelThumbnail(faction, 'unit', type, 'action-model', 1.35) : '';
         const cost = opts.cost, costLabel = cost ? ` · ${cost.cost} Cinder${cost.gas ? ' · ' + cost.gas + ' Echo' : ''}` : '';
         const supplyLabel = (kind === 'train' || kind === 'favorite') && hasContentKey(UNITS, type) ? ` · Supply ${UNITS[type].supply}` : '';
-        const name = active ? `${label} · Cancel targeting` : label + costLabel + supplyLabel;
-        return `<button class="action ${preview ? 'model-action' : ''} ${opts.disabled ? 'blocked' : ''} ${active ? 'active cancel-target' : ''} ${tutorialAction === key ? 'tutorial-focus' : ''}" data-action="${key}" data-label="${esc(label + costLabel + supplyLabel)}" aria-label="${esc(name)}" title="${esc(name)}"${kind === 'build' || kind === 'ability' || kind === 'rally' ? ` aria-pressed="${active}"` : ''}>${preview || uiIcon(kind === 'tab' ? key : ic, ic)}${cost ? `<span class="cost" aria-hidden="true"><span>${cost.cost} C</span>${cost.gas ? `<span>${cost.gas} E</span>` : ''}</span>` : ''}${kind === 'ability' ? `<small data-badge="${key}" aria-hidden="true">${active ? '' : opts.badge || ''}</small>` : ''}</button>`;
+        const editing = opts.favoriteSlot !== undefined && opts.favoriteSlot === this.editFavoriteSlot;
+        const baseLabel = editing ? `Quick access slot ${opts.favoriteSlot! + 1} · Choose replacement from a category · Tap to cancel editing` :
+          label + costLabel + supplyLabel + (opts.favoriteSlot !== undefined ? ' · Hold to replace favorite' :
+            this.editFavoriteSlot !== null && (kind === 'build' || kind === 'train') ? ` · Assign to quick access slot ${this.editFavoriteSlot + 1}` : '');
+        const name = active ? `${label} · Cancel targeting` : baseLabel;
+        return `<button ${opts.favoriteSlot !== undefined ? `data-favorite-slot="${opts.favoriteSlot}" ` : ''}class="action ${editing ? 'favorite-edit' : ''} ${preview ? 'model-action' : ''} ${opts.disabled ? 'blocked' : ''} ${active ? 'active cancel-target' : ''} ${tutorialAction === key ? 'tutorial-focus' : ''}" data-action="${key}" data-label="${esc(baseLabel)}" aria-label="${esc(name)}" title="${esc(name)}"${kind === 'build' || kind === 'ability' || kind === 'rally' ? ` aria-pressed="${active}"` : ''}>${preview || uiIcon(kind === 'tab' ? key : ic, ic)}${cost ? `<span class="cost" aria-hidden="true"><span>${cost.cost} C</span>${cost.gas ? `<span>${cost.gas} E</span>` : ''}</span>` : ''}${kind === 'ability' ? `<small data-badge="${key}" aria-hidden="true">${active ? '' : opts.badge || ''}</small>` : ''}</button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
         if (this.battleTutorial?.step === 'trainRifle' || this.battleTutorial?.step === 'buildDepot') {
@@ -228,19 +255,22 @@
         const tutorialAction = this.tutorialAction(supply, capacity), f = s.parties[this.localTeam].faction;
         const button = (key: string, label: string, ic: string, opts: UIActionButtonOptions = {}) => this.actionButton(key, label, ic, opts, tutorialAction);
         const sig = [this.localTeam, this.tab, f, s.parties[this.localTeam].loadout.join(','), this.selected.join(','),
-          this.mode?.kind, this.mode?.arg, tutorialAction, this.game.civilizationStage].join(':');
+          this.mode?.kind, this.mode?.arg, tutorialAction, this.game.civilizationStage, this.editFavoriteSlot, this.quickAccess().join(',')].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
+        $('hud').classList.toggle('favorites-editing', this.editFavoriteSlot !== null);
         const catalog = this.tab !== 'root' && this.tab !== 'details';
         $('abilityBar').classList.toggle('hidden', catalog || this.tab === 'details');
         $('actionPanel').classList.toggle('details-panel', this.tab === 'details');
         $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => button('ability:' + key, ABILITIES[key].name, ABILITIES[key].icon)).join('');
-        const back = button('tab:root', 'Close menu', 'back');
+        const back = button('tab:root', this.editFavoriteSlot === null ? 'Close menu' : `Back · Replacing quick access slot ${this.editFavoriteSlot + 1}`, 'back');
         let html = '';
         if (this.tab === 'root') {
           html = `<div class="compact-dock"><div class="favorites" role="group" aria-label="Quick access">${
-            button('favorite:worker', unitName('worker', f), 'worker') + button('favorite:rifle', unitName('rifle', f), 'rifle') +
-            button('build:depot', buildingName('depot', f), 'depot') + button('build:barracks', buildingName('barracks', f), 'barracks')
+            this.quickAccess().map((action, favoriteSlot) => {
+              const [kind, type] = action.split(':');
+              return button(action, kind === 'build' ? buildingName(type as BuildingType, f) : unitName(type as UnitType, f), type, { favoriteSlot });
+            }).join('')
           }</div><div class="category-nav" role="group" aria-label="Build and recruit">${[
             ['build', 'Buildings', 'hq'], ['infantry', 'Infantry', 'rifle'], ['vehicles', 'Vehicles', 'tank'], ['aircraft', 'Aircraft', 'air']
           ].map(([tab, label, ic]) => button('tab:' + tab, label, ic)).join('')}</div></div>`;
@@ -256,7 +286,7 @@
             html = contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k, this.game.civilizationStage)).map(k =>
               button('build:' + k, buildingName(k, f), k, { cost: this.game.cost(k, 'building', this.localTeam) })).join('');
           } else {
-            const types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: ['rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
+            const types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: [...(this.editFavoriteSlot !== null || !this.quickAccess().includes('favorite:worker') ? ['worker' as UnitType] : []), 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
             html = types[this.tab].map(k => button('train:' + k, unitName(k, f), k, { cost: this.game.cost(k, 'unit', this.localTeam) })).join('');
           }
           html = `<div class="catalog-grid" role="group" aria-label="${this.tab === 'build' ? 'Buildings' : this.tab}">${back}${html}</div>`;
@@ -430,6 +460,7 @@
         this.renderActions(supply, capacity);
       },
       actionReason(this: MeridianUI, action: string, supply?: number, capacity?: number) {
+        if (this.editFavoriteSlot !== null && /^(build|train|favorite):/.test(action)) return '';
         if (this.isModeAction(action)) return '';
         const [kind, arg] = action.split(':'), team = this.localTeam, s = this.game.s;
         if (!s) return '';
