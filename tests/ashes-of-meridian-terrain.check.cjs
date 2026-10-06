@@ -9,7 +9,7 @@ const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = re
 const scripts = readScripts();
 function scope(extra = []) {
   const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...extra], { scripts });
-  return vm.runInContext('({Battlefield, BattlefieldSurface, BATTLEFIELDS, BUILDINGS, allocateBattlefieldStarts, battlefieldGasPosition, battlefieldEconomyDistance, battlefieldDeploymentSpace, dynamicBattlefieldLayout, Game:typeof MeridianGame === "undefined" ? null : MeridianGame})', context);
+  return vm.runInContext('({Battlefield, BattlefieldSurface, BATTLEFIELDS, BUILDINGS, allocateBattlefieldStarts, battlefieldSitePosition, battlefieldCrystalPosition, battlefieldGasPosition, battlefieldEconomyDistance, battlefieldDeploymentSpace, dynamicBattlefieldLayout, Game:typeof MeridianGame === "undefined" ? null : MeridianGame})', context);
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const json = value => JSON.parse(JSON.stringify(value));
@@ -60,6 +60,29 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
   });
 }
 
+test('resource geometry varies orientation and vent spacing without consuming shared randomness', () => {
+  const api = scope(), sites = api.dynamicBattlefieldLayout(1409, 140).resourceSites,
+    orientations = new Set(), ventAngles = new Set(), ventRadii = new Set();
+  for (const [i, site] of sites.entries()) {
+    const first = api.battlefieldCrystalPosition(site, i, 0), gas = api.battlefieldGasPosition(site),
+      dx = first.x-site.x, dz = first.z-site.z, gx = gas.x-site.x, gz = gas.z-site.z,
+      radius = Math.hypot(gx,gz);
+    orientations.add(Math.atan2(dx,dz).toFixed(3));
+    ventAngles.add(((gx*dx+gz*dz)/(radius*5.5)).toFixed(3));
+    ventRadii.add(radius.toFixed(3));
+    assert.ok(radius >= 12 && radius < 14, 'vent is farther from the cluster center');
+    assert.ok(gx*dz-gz*dx < 0, 'vent stays on the open side');
+    for (let j=0;j<5;j++)
+      assert.ok(distance(gas,api.battlefieldCrystalPosition(site,i,j)) > 7.8,
+        'vent leaves space for refinery construction beside the clusters');
+    assert.deepEqual(json(api.battlefieldGasPosition({...site})),json(gas), 'geometry is reproducible by coordinates');
+    const hq = api.battlefieldSitePosition(site,-13,-6);
+    assert.ok(distance(gas,hq)>20, 'vent and HQ support areas remain separate');
+  }
+  assert.ok(orientations.size > 4, 'half-circles do not all face the same way');
+  assert.ok(ventAngles.size > 4 && ventRadii.size > 4, 'vent placement also varies relative to the half-circle');
+});
+
 test('desert economy retains nearby legal HQ footprints and snapped refinery foundations', () => {
   const api = scope(['effects', ...SIMULATION_SCRIPTS]);
   // Seed 3 had several HQ footprints rejected by the old curved resource grade.
@@ -71,8 +94,8 @@ test('desert economy retains nearby legal HQ footprints and snapped refinery fou
     for (const e of g.s.entities) if (e.kind === 'unit' && e !== worker) e.hp = 0;
     g.world.sight[0].explored.fill(255);
     for (const site of g.world.layout.resourceSites) {
-      const hq = {x:site.x - 11, z:site.z - 4}, vent = api.battlefieldGasPosition(site);
-      worker.x = site.x - 22; worker.z = site.z - 4;
+      const hq = api.battlefieldSitePosition(site, -13, -6), vent = api.battlefieldGasPosition(site);
+      Object.assign(worker, api.battlefieldSitePosition(site, -24, -6));
       assert.equal(g.canBuild('hq', hq), '', `seed ${seed}: nearby HQ at ${hq.x},${hq.z}`);
       assert.equal(g.canBuild('refinery', {x:vent.x + 2, z:vent.z}), '', `seed ${seed}: snapped vent`);
       assert.ok(g.world.deploymentReachable[g.world.idx(hq.x, hq.z)]);

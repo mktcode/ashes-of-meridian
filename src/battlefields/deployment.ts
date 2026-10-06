@@ -1,12 +1,23 @@
 /* Public, terrain-derived worker candidates. Assignment uses a separate private RNG. */
 'use strict';
 type DeploymentMode = 'resource-start' | 'exploration';
-function battlefieldGasPosition(site: Position): Position { return { x: site.x + 7, z: site.z + 7 }; }
+function battlefieldSiteSeed(site: Position): number {
+  // Coordinate-owned geometry never consumes terrain, deployment or simulation RNG.
+  return Math.imul(Math.round(site.x * 1000), 73856093) ^ Math.imul(Math.round(site.z * 1000), 19349663) ^ 0x45434f4e;
+}
+function battlefieldSitePosition(site: Position, x: number, z: number): Position {
+  const angle = seeded(battlefieldSiteSeed(site))() * Math.PI * 2, cs = Math.cos(angle), sn = Math.sin(angle);
+  return { x: site.x + x * cs + z * sn, z: site.z + z * cs - x * sn };
+}
+function battlefieldGasPosition(site: Position): Position {
+  const random = seeded(battlefieldSiteSeed(site) ^ 0x56454e54), angle = .35 + random() * .65, radius = 12 + random() * 2;
+  // Vary the vent within the open side, away from clusters and the nearby HQ.
+  return battlefieldSitePosition(site, Math.sin(angle) * radius, Math.cos(angle) * radius);
+}
 function battlefieldCrystalPosition(site: Position, _index: number, deposit: number): Position {
-  // Open toward positive Z to preserve the refinery space at (+7, +7).
-  // The wider radius keeps adjacent cluster bodies and worker passages separate.
+  // The wider open half-circle preserves worker passages in every orientation.
   const a = Math.PI / 2 + deposit * Math.PI / 4;
-  return { x: site.x + Math.sin(a) * 5.5, z: site.z + Math.cos(a) * 5.5 };
+  return battlefieldSitePosition(site, Math.sin(a) * 5.5, Math.cos(a) * 5.5);
 }
 function battlefieldEconomyDistance(world: Battlefield, p: Position): number {
   return Math.min(...world.layout.resourceSites.flatMap((site, i) => [battlefieldGasPosition(site),
@@ -40,15 +51,17 @@ function battlefieldDeploymentCandidates(world: Battlefield): Position[] {
   if (!component) throw Error('No connected deployment terrain');
   const reachable = world.deploymentReachable = new Uint8Array(n * n);
   for (const i of component) reachable[i] = 1;
-  for (const site of world.layout.resourceSites)
-    if (!reachable[world.idx(site.x, site.z)] || !reachable[world.idx(site.x + 7, site.z + 7)])
+  for (const site of world.layout.resourceSites) {
+    const gas = battlefieldGasPosition(site);
+    if (!reachable[world.idx(site.x, site.z)] || !reachable[world.idx(gas.x, gas.z)])
       throw Error('Resource region is disconnected from deployment terrain');
+  }
   const candidates: Position[] = [], add = (p: Position, pool = candidates) => {
     if (Math.max(Math.abs(p.x), Math.abs(p.z)) > world.extent - 17 || !reachable[world.idx(p.x, p.z)] ||
       !battlefieldDeploymentSpace(world, p) || pool.some(q => distance(p, q) < 5)) return;
     pool.push({ ...p });
   };
-  for (const site of world.layout.resourceSites) add({ x: site.x - 6, z: site.z + 6 });
+  for (const site of world.layout.resourceSites) add(battlefieldSitePosition(site, -6, 6));
   for (let z = 4; z < n - 4; z += 4) for (let x = 4; x < n - 4; x += 4) add(world.point(z * n + x));
   const sufficient = () => {
     const exploration = candidates.filter(p => battlefieldEconomyDistance(world, p) > 24), minimum = Math.min(65, world.extent * .55);
@@ -111,7 +124,7 @@ function allocateBattlefieldStarts(world: Battlefield, seed: number, count: numb
     for (let i = result.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [result[i], result[j]] = [result[j], result[i]]; }
     return result;
   }, exploration = shuffle(world.startSites.filter(p => battlefieldEconomyDistance(world, p) > 24)),
-    first = mode === 'resource-start' ? shuffle(world.layout.resourceSites.map(site => ({ x: site.x - 6, z: site.z + 6 }))
+    first = mode === 'resource-start' ? shuffle(world.layout.resourceSites.map(site => battlefieldSitePosition(site, -6, 6))
       .filter(p => world.deploymentReachable[world.idx(p.x, p.z)] && battlefieldDeploymentSpace(world, p))) : exploration,
     minimum = Math.min(65, world.extent * .55);
   const search = (chosen: Position[]): Position[] | null => {

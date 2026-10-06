@@ -85,7 +85,7 @@ test('preview layer and opacity are respected; absent amounts have a finite full
 
 const simContext = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness"); }', simContext);
-const { MeridianGame, BATTLEFIELDS } = vm.runInContext('({MeridianGame, BATTLEFIELDS})', simContext);
+const { MeridianGame, BATTLEFIELDS, battlefieldSitePosition } = vm.runInContext('({MeridianGame, BATTLEFIELDS, battlefieldSitePosition})', simContext);
 const json = value => JSON.parse(JSON.stringify(value));
 const crystals = game => game.s.entities.filter(e => e.kind === 'resource' && e.type === 'crystal' && e.hp > 0);
 const fresh = () => new MeridianGame({ upgrades: {} });
@@ -106,13 +106,13 @@ test('all maps and factions retain five accessible crystals on an open half-circ
     assert.equal(game.s.entities.filter(e => e.type === 'gas').length, count);
     for (let i = 0; i < count; i++) {
       const group = nodes.slice(i * 5, i * 5 + 5);
-      const site = game.world.layout.resourceSites[i], angle = Math.PI / 2;
+      const site = game.world.layout.resourceSites[i];
       for (const [j, e] of group.entries()) {
-        const dx = e.x - site.x, dz = e.z - site.z;
+        const dx = e.x - site.x, dz = e.z - site.z, angle = Math.PI / 2 + j * Math.PI / 4,
+          expected = battlefieldSitePosition(site, Math.sin(angle) * 5.5, Math.cos(angle) * 5.5);
         assert.ok(Math.abs(Math.hypot(dx, dz) - 5.5) < 1e-12);
-        assert.ok(Math.abs(dx - Math.sin(angle + j * Math.PI / 4) * 5.5) < 1e-12);
-        assert.ok(Math.abs(dz - Math.cos(angle + j * Math.PI / 4) * 5.5) < 1e-12);
-        assert.ok(dx * Math.cos(angle) - dz * Math.sin(angle) >= -1e-12, 'open half-circle');
+        assert.ok(Math.hypot(e.x - expected.x, e.z - expected.z) < 1e-12);
+        assert.ok(dx * (group[0].z - site.z) - dz * (group[0].x - site.x) >= -1e-12, 'open half-circle');
         if (j) assert.ok(Math.hypot(e.x - group[j-1].x, e.z - group[j-1].z) >= e.size + group[j-1].size + 1.5,
           'adjacent clusters leave a worker passage');
         assert.equal(game.world.blockedAt(e.x, e.z), false, `battle ${map}/${faction}, crystal ${e.id}`);

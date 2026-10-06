@@ -133,7 +133,7 @@ function dynamicTerrainPlan(world: Battlefield) {
   // Guarantee one nearby HQ footprint without widening all economy regions. Probe
   // the real triangulated grid; stable sites keep their original heights exactly.
   const repairs = world.layout.resourceSites.flatMap(site => {
-    const p = { x: site.x - 11, z: site.z - 4 },
+    const p = battlefieldSitePosition(site, -13, -6),
       ox = Math.round(p.x / world.cellSize) * world.cellSize,
       oz = Math.round(p.z / world.cellSize) * world.cellSize,
       probe = new BattlefieldSurface(12.5, world.cellSize, (x, z) => height(x + ox, z + oz)),
@@ -148,7 +148,8 @@ function dynamicTerrainPlan(world: Battlefield) {
   return { height: (x: number, z: number) => {
     let h = height(x, z);
     for (const p of repairs) {
-      const dx = x - p.x, dz = z - p.z, d = Math.max(Math.abs(dx), Math.abs(dz));
+      const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz);
+      // A round shoulder stays local when the HQ offset rotates around the site.
       // 8m covers HQ margins, grid vertices and worker exits; the smooth 5m
       // shoulder ends before any refinery footprint. No step or raised platform.
       if (d < 13) {
