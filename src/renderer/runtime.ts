@@ -67,6 +67,8 @@
       fogSize: number;
       fogExtent: number;
       fogTex: WebGLTexture | null;
+      private workerRoadTex: WebGLTexture | null = null;
+      private workerRoadSize = 0;
       groundTex: WebGLTexture | null;
       desertRockTex: WebGLTexture | null;
       metalTex: WebGLTexture | null;
@@ -979,6 +981,8 @@
           if (sceneTime !== undefined) {
             const program = (b.sceneMaterial === undefined ? undefined : this.materialPrograms[b.sceneMaterial]) ?? this.program;
             if (program !== this.activeSceneProgram) this.bindSceneProgram(sceneTime, modelTime ?? sceneTime, program);
+            g.uniform1f(this.uniform(program, 'u_workerRoadOn'), this.workerRoadTex &&
+              (b.source === 'terrain' || b.source.startsWith('buildingGround')) ? 1 : 0);
           }
           g.bindVertexArray(m.vao);
           g.bindBuffer(g.ARRAY_BUFFER, b.buffer);
@@ -1103,6 +1107,27 @@
           g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, size, size, g.RED, g.UNSIGNED_BYTE, data);
         }
       }
+      releaseWorkerRoads() {
+        if (this.workerRoadTex) this.gl.deleteTexture(this.workerRoadTex);
+        this.workerRoadTex = null; this.workerRoadSize = 0;
+      }
+      workerRoads(data: Uint8Array<ArrayBuffer>, size: number) {
+        const g = this.gl;
+        if (!this.workerRoadTex) {
+          this.workerRoadTex = g.createTexture();
+          if (!this.workerRoadTex) return;
+          g.bindTexture(g.TEXTURE_2D, this.workerRoadTex);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
+          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
+        } else g.bindTexture(g.TEXTURE_2D, this.workerRoadTex);
+        g.pixelStorei(g.UNPACK_ALIGNMENT, 1);
+        if (this.workerRoadSize !== size) {
+          g.texImage2D(g.TEXTURE_2D, 0, g.R8, size, size, 0, g.RED, g.UNSIGNED_BYTE, data);
+          this.workerRoadSize = size;
+        } else g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, size, size, g.RED, g.UNSIGNED_BYTE, data);
+      }
       bindAtmosphere(program: WebGLProgram) {
         const atmosphere = (this.dayCycleProfile ?? this.battlefieldProfile).atmosphere, g = this.gl;
         g.uniform1f(this.uniform(program, 'u_atmosphereOn'), atmosphere ? 1 : 0);
@@ -1168,6 +1193,10 @@
         g.uniform1f(this.uniform(program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_fogOn'), this.fogOn ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_placementGridDetail'), this.placementGridDetail);
+        g.uniform1f(this.uniform(program, 'u_workerRoadOn'), 0);
+        g.activeTexture(g.TEXTURE0 + 13);
+        g.bindTexture(g.TEXTURE_2D, this.workerRoadTex ?? this.fogTex);
+        g.uniform1i(this.uniform(program, 'u_workerRoad'), 13);
         g.uniform1f(this.uniform(program, 'u_time'), time);
         g.uniform1f(this.uniform(program, 'u_portalTime'), this.quality > 0 && !this.cinema ? modelTime : 0);
         for (const [uniform, texture, unit] of [

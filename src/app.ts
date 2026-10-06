@@ -39,7 +39,7 @@
         R = new MeridianRenderer(canvas);
         const thumbnails = new MeridianModelThumbnails(R);
         addEventListener('pagehide',event=>{
-          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releasePointLights(); R.releaseEnvironment(); }
+          if (!event.persisted) { thumbnails.dispose(); R.releaseMenuSky(); R.releaseMenuShadows(); R.releasePointLights(); R.releaseWorkerRoads(); R.releaseEnvironment(); }
         });
         R.quality = profile.settings.quality;
         R.resize();
@@ -438,6 +438,7 @@
           const s = game.s!, world = game.world!;
           const fogOn = !(world.fogCleared && world.viewTeam === 0);
           worldView.sync(world, fogOn, s);
+          worldView.updateWorkerRoads(s.time, s.entities, e => !ui.battleIntro && game.observed(e));
           worldView.retainBuildingGround(s.entities);
           // Revalidate restored cameras and resized viewports, including while paused.
           if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')
@@ -599,6 +600,7 @@
               frameClock = 0;
             }
             diagnostics?.recorder.phase('sceneBuild');
+            if (ui.view !== 'game') worldView.clearWorkerRoads();
             const viewTime = game.s?.time,
               resultKey = ui.view === 'game' && game.s?.result && !ui.battleIntro && !ui.mode && !ui.pings.length
                 ? [viewTime, weatherTime, R.width, R.height, R.quality, game.localTeam,

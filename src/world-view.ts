@@ -244,12 +244,72 @@ class SceneryFogField {
   }
 }
 
+// Transient, RNG-neutral wear from observed movement, never navigation or save data.
+class WorkerRoadField {
+  readonly size: number;
+  readonly cell: number;
+  readonly wear: Float32Array;
+  readonly pixels: Uint8Array<ArrayBuffer>;
+  private previous = new Map<number, Position>();
+  private time: number | null = null;
+  constructor(readonly extent: number) {
+    this.size = Math.min(512, Math.ceil(extent * 2));
+    this.cell = extent * 2 / this.size;
+    this.wear = new Float32Array(this.size * this.size);
+    this.pixels = new Uint8Array(this.wear.length);
+  }
+  update(time: number, workers: readonly { id: number; x: number; z: number }[]): boolean {
+    const dt = this.time === null ? 0 : time - this.time;
+    if (this.time !== null && dt >= 0 && dt < .2) return false;
+    if (dt < 0) { this.wear.fill(0); this.previous.clear(); }
+    this.time = time;
+    for (let i = 0; i < this.wear.length; i++) this.wear[i] = Math.max(0, this.wear[i] - Math.max(0, dt) / 120);
+    const next = new Map<number, Position>();
+    for (const w of workers) {
+      next.set(w.id, { x: w.x, z: w.z });
+      const p = this.previous.get(w.id);
+      if (!p || dt <= 0 || dt > 1) continue; // No replay after view/background gaps.
+      const distance = Math.hypot(w.x - p.x, w.z - p.z);
+      if (distance < .02 || distance > Math.min(16, dt * 12 + 2)) continue;
+      const steps = Math.ceil(distance / .5), radius = 1.65;
+      for (let s = 0; s < steps; s++) {
+        const t = (s + .5) / steps, x = p.x + (w.x - p.x) * t, z = p.z + (w.z - p.z) * t;
+        for (let row = Math.max(0, Math.floor((z - radius + this.extent) / this.cell));
+          row <= Math.min(this.size - 1, Math.floor((z + radius + this.extent) / this.cell)); row++)
+          for (let col = Math.max(0, Math.floor((x - radius + this.extent) / this.cell));
+            col <= Math.min(this.size - 1, Math.floor((x + radius + this.extent) / this.cell)); col++) {
+            const d = Math.hypot((col + .5) * this.cell - this.extent - x, (row + .5) * this.cell - this.extent - z);
+            const weight = Math.max(0, 1 - (d / radius) ** 2), i = row * this.size + col;
+            this.wear[i] = Math.min(1, this.wear[i] + weight * weight * .16 * distance / steps);
+          }
+      }
+    }
+    this.previous = next;
+    let changed = false;
+    for (let i = 0; i < this.wear.length; i++) {
+      const pixel = Math.round(this.wear[i] * 255);
+      if (pixel !== this.pixels[i]) { this.pixels[i] = pixel; changed = true; }
+    }
+    return changed;
+  }
+}
+
 class BattlefieldView {
   R: MeridianRenderer;
   data: WorldRenderData | null;
   world: Battlefield | null;
   fogVersion: number;
   private sceneryFog: SceneryFogField | null = null;
+  private workerRoads: WorkerRoadField | null = null;
+  clearWorkerRoads() {
+    if (!this.workerRoads) return;
+    this.workerRoads = null; this.R.releaseWorkerRoads();
+  }
+  updateWorkerRoads(time: number, entities: readonly Entity[], observed: (e: Entity) => boolean) {
+    const field = this.workerRoads ??= new WorkerRoadField(this.world!.extent);
+    const workers = entities.filter(e => e.kind === 'unit' && e.type === 'worker' && e.hp > 0 && observed(e));
+    if (field.update(time, workers)) this.R.workerRoads(field.pixels, field.size);
+  }
   private sceneryTeam: PlayerTeam | null = null;
   private exteriorExtent = 0;
   private exteriorCeiling = 0;
@@ -265,6 +325,7 @@ class BattlefieldView {
   sync(world: Battlefield, fogOn = true, state?: RunState) {
     const R = this.R, layout = world.renderData,
       { extent: EXTENT, cellSize: CELL, gridSize: GRID } = world;
+    if (!state || this.world !== world || this.sceneryTeam !== world.viewTeam) this.clearWorkerRoads();
     if (this.data !== layout) {
       this.exteriorExtent = 0;
       this.exteriorCeiling = world.surface?.maxHeight ?? 0;
