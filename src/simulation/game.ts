@@ -131,6 +131,8 @@
         if (archiveVictory && state.rules.kind === 'single-player') {
           state.result = null;
           state.rules.completed = true;
+          // Withdrawal leaves launched projectiles in combat, not in a civilian world.
+          state.strikes = state.strikes.filter(strike => strike.team === -1 || !state.parties[strike.team].eliminated);
         }
         const ids = new Set(state.entities.map(e => e.id));
         return {
@@ -152,6 +154,8 @@
         // Reconstruct in isolation. Failed validation/world generation cannot replace a live game.
         const state = JSON.parse(JSON.stringify(save.state)) as RunState,
           world = new Battlefield(state.seed, state.map, state.parties.length);
+        if (state.rules.kind === 'single-player' && state.rules.completed)
+          state.strikes = state.strikes.filter(strike => strike.team === -1 || !state.parties[strike.team].eliminated);
         if (world.gridSize !== save.gridSize) throw Error('Saved battlefield dimensions are incompatible');
         world.blocked.set(unpackBattleGrid(save.blocked, world.blocked.length));
         world.pathVersion = save.pathVersion;

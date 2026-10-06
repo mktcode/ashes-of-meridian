@@ -105,6 +105,30 @@ test('a real completed tick archives its final world atomically and freezes only
   assert.equal(fixture.world.battle.state.time,12.05);
 });
 
+test('civilian worlds discard pending eliminated-party strikes on archive and restore without changing the battle',()=>{
+  const fixture=victoryFixture(),h=harness(),{game}=h,world=copy(fixture.world);
+  game.emit=()=>{};
+  game.restoreBattle({...world.recipe,battle:world.battle},true);
+  game.s.rules.completed=false;
+  const hq=game.alive(e=>e.team===0&&e.type==='hq')[0];
+  const hostile=['orbital','shell'].map(type=>({type,team:1,x:hq.x,z:hq.z,radius:10,damage:440,at:game.s.time+.05}));
+  const retained=[{...hostile[0],team:0,at:50},{...hostile[0],type:'flare',team:-1,at:50}];
+  game.s.strikes.push(...hostile,...retained);
+  game.finish(true,'Victory');
+  const archive=game.snapshotBattle(true);
+  assert.deepEqual(copy(archive.state.strikes),retained);
+  assert.deepEqual(copy(game.s.strikes),[...hostile,...retained],'archiving does not mutate the frozen battle');
+  // A saved cleared world can still contain impacts queued before its victory.
+  archive.state.strikes.push(...copy(hostile));
+  game.restoreBattle({...world.recipe,battle:archive},true);
+  assert.deepEqual(copy(game.s.strikes),retained,'hostile warnings are gone even before resuming');
+  assert.equal(game.ability('scan',hq,1),false,'eliminated opponents cannot issue new abilities');
+  const restoredHQ=game.get(hq.id),hp=restoredHQ.hp,shield=restoredHQ.shield;
+  game.step(.1);
+  assert.equal(restoredHQ.hp,hp);assert.equal(restoredHQ.shield,shield);
+  assert.deepEqual(copy(game.s.strikes),retained);
+});
+
 test('completed worlds restore fully visible and stay clear through observation updates; new battles and defeats retain fog',()=>{
   const fixture=victoryFixture(),h=harness(),{game}=h,world=copy(fixture.world);
   // The completed phase, not cached sight, owns the rule even while paused.
