@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
-const { modelHarness } = require('../helpers/model-contract.cjs');
+const { modelHarness, assertMesh } = require('../helpers/model-contract.cjs');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('../helpers/game-scripts.cjs');
 
 test('each destroyer model registers independently from its own file', () => {
@@ -14,25 +14,27 @@ test('each destroyer model registers independently from its own file', () => {
   }
 });
 
-test('destroyers keep exact mesh data, independent moving parts and uniform preview colors', () => {
+test('destroyers protect unchanged indexed meshes, independent moving parts and uniform preview colors', () => {
   const h = modelHarness({heavyModels:true}), meshes = {};
   vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }', h.context);
   // Keep full-precision captures outside the bounded JavaScript test heap.
   h.EntityModels.upload({ meshes, geometry(name, data) { meshes[name] = Float64Array.from(data); } });
-  for (const [faction, count, animated] of [[0,20528,4],[1,49848,6],[2,31664,16]]) {
+  for (const [faction, count, animated] of [[0,null,4],[1,49848,6],[2,31664,16]]) {
     const prefix = `heavy${faction}`;
-    // Full-precision baseline protects positions, normals, colors and triangle order, not just counts.
-    const meshHashes = Object.keys(meshes).filter(key => key.startsWith(prefix)).sort().map(key =>
-      key + ':' + createHash('sha256').update(Buffer.from(new Float64Array(meshes[key]).buffer)).digest('hex'));
-    const expected = [
-      'a1a398fdf9a02f31930d65ab2d3b32a50be9903cabb8149ee240c3593c507820',
-      'cd193f805ffc7520fb58de238e5d0d594f7d9cb7acb9bc456509172fef9bcb40',
-      '2c4004e6edf5c38ce7e9b7a3e4977aeee7f129da9d9bbe38c6637cc2e5c2dc60'
-    ];
-    assert.equal(createHash('sha256').update(meshHashes.join('\n')).digest('hex'), expected[faction]);
+    // Cinder Pact is deliberately reconstructed and has a geometric contract below.
+    // Keep the other two full-precision baselines unchanged, including triangle order.
+    if (faction !== 0) {
+      const meshHashes = Object.keys(meshes).filter(key => key.startsWith(prefix)).sort().map(key =>
+        key + ':' + createHash('sha256').update(Buffer.from(new Float64Array(meshes[key]).buffer)).digest('hex'));
+      const expected = {
+        1: 'cd193f805ffc7520fb58de238e5d0d594f7d9cb7acb9bc456509172fef9bcb40',
+        2: '2c4004e6edf5c38ce7e9b7a3e4977aeee7f129da9d9bbe38c6637cc2e5c2dc60'
+      };
+      assert.equal(createHash('sha256').update(meshHashes.join('\n')).digest('hex'), expected[faction]);
+    }
     const keys = Object.keys(meshes).filter(key => key.startsWith(prefix) && !key.endsWith('Neutral'));
     assert.equal(keys.length, animated + 1 + (faction === 0 ? 1 : 0));
-    assert.equal(keys.reduce((sum, key) => sum + meshes[key].length / 27, 0), count);
+    if (count !== null) assert.equal(keys.reduce((sum, key) => sum + meshes[key].length / 27, 0), count);
     assert.ok(keys.every(key => meshes[key].every(Number.isFinite)));
     for (const key of keys.filter(key => !key.endsWith('Team'))) {
       const normal = meshes[key], preview = meshes[key + 'Neutral'];
@@ -63,6 +65,46 @@ test('destroyers keep exact mesh data, independent moving parts and uniform prev
       }
     }
     assert.equal(h.draw({...entity,hp:0}).length,0);
+  }
+});
+
+test('Breakwater construction is closed, deterministic, RNG-free and bounded with outward flat normals', () => {
+  const context=loadScripts(['core','renderer-materials','renderer-geometry','renderer-model-kit',
+    'renderer-heavy-mesh','model-faction-0-unit-destroyer']);
+  vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }',context);
+  const registry=vm.runInContext('EntityModels',context),meshes={};
+  registry.upload({meshes,geometry(name,data){meshes[name]=Float64Array.from(data);}});
+  for(const [name,data] of Object.entries(meshes).filter(([name])=>!name.endsWith('Neutral'))) {
+    const rotor=name.includes('Part'),team=name.endsWith('Team');
+    const mesh=assertMesh(()=>Array.from(data),{
+      minTriangles:rotor?150:team?100:9000,maxTriangles:rotor?220:team?180:15000,
+      min:rotor?[-.77,-.77,-.023]:[-8.45,-1.78,-6.75],
+      max:rotor?[.77,.77,.023]:[8.45,4.15,9.183]
+    });
+    // Each directed edge must be paired by an oppositely wound edge, even for
+    // touching independent components. Quantization only welds roundoff at seams.
+    const edges=new Map(),key=p=>p.map(v=>Math.round(v*1e6)).join(',');
+    for(let i=0;i<mesh.length;i+=27) {
+      const points=[0,9,18].map(j=>key(mesh.slice(i+j,i+j+3)));
+      for(let j=0;j<3;j++) {
+        const a=points[j],b=points[(j+1)%3],edge=a<b?`${a}|${b}`:`${b}|${a}`;
+        edges.set(edge,(edges.get(edge)||0)+(a<b?1:-1));
+      }
+    }
+    assert.ok([...edges.values()].every(balance=>balance===0),`${name}: closed oriented surface`);
+  }
+  const repeated={};registry.upload({meshes:repeated,geometry(name,data){repeated[name]=Float64Array.from(data);}});
+  for(const name of Object.keys(meshes)) assert.deepEqual(meshes[name],repeated[name]);
+  // Rendering may reuse the baked meshes but must not reconstruct any of them.
+  vm.runInContext('geom.box = geom.cylinder = geom.tri = () => { throw Error("Frame geometry"); }',context);
+  const model=registry.find({kind:'unit',type:'destroyer',faction:0}),calls=[];
+  for(const time of [0,1]) model.render({time,nightPart:(...args)=>calls.push(args),part:(...args)=>calls.push(args),
+    nightLight:0,team:0x78ded3,surfaceColor:c=>c,pointLight(){}});
+  assert.equal(calls.length,12);
+  const pivots=[[-7.15,.32,1.99],[7.15,.32,1.99],[-4.6,.55,-3.71],[4.6,.55,-3.71]];
+  for(let i=0;i<4;i++) {
+    assert.deepEqual(calls[i+2].slice(1,4),pivots[i].map(v=>v*.72));
+    assert.equal(calls[i+8][10]-calls[i+2][10],2.5);
   }
 });
 

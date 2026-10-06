@@ -4,7 +4,7 @@ Breakwater, Crownwing und Catafalque sind als gemeinsamer `destroyer`-Typ mit fr
 
 - [ ] Menschliche Balance: ein Exemplar stark/schützenswert, zwei Machtspitze, drei weiterhin konterbar, fünf außergewöhnlich teuer? Flugabwehr, Flächenschaden, Heilung/Schilde und Commands gemeinsam bewerten.
 - [ ] KI spart sinnvoll, blockiert normale Produktion nicht dauerhaft und verschenkt/hortet Zerstörer nicht.
-- [ ] Farben, Silhouette, Gewicht und zeitbasierte Animation im normalen Zoom/in Gruppen auf Zielgeräten abnehmen. Kein ungeprüfter Austausch oder Reduktion der detaillierten Meshdaten.
+- [ ] Farben, Silhouette, Gewicht und zeitbasierte Animation im normalen Zoom/in Gruppen auf Zielgeräten abnehmen; die parametrisierte Breakwater gesondert auf Wiedererkennbarkeit und Detailverlust beurteilen.
 - [ ] [Flugfreiraum](project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau), Hangarausfahrt und langsame Anreise über allen Geländeformen beurteilen.
 - [ ] Lade-/Parsekosten der umfangreichen TypeScript-Meshdaten und GPU-Kosten mehrerer sichtbarer Exemplare auf Zielgeräten messen; Original- und neutrale Vorschau-Meshes erhöhen Geometrieresidenz.
 
