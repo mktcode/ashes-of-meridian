@@ -28,7 +28,8 @@ function forumCorridorBlocked(forum: BuildingEntity, p: Position, radius: number
 }
 function settlementBuildingType(radius: number, roll: number, variant: number): BuildingType {
   const outer = clamp((radius - 18) / (FORUM_SETTLEMENT.radius - 18), 0, 1),
-    small = .1 + .65 * outer, large = .75 * (1 - outer),
+    // Mid-rise keeps a substantial share throughout; towers give way to cottages outward.
+    small = .1 + .5 * outer, large = .5 * (1 - outer),
     tier = roll < small ? 0 : roll < small + large ? 2 : 1;
   return SETTLEMENT_TYPES[tier][variant < .5 ? 0 : 1];
 }
@@ -91,13 +92,13 @@ const settlementMethods = {
     return '';
   },
   growSettlement(this: MeridianGame, forum: BuildingEntity): boolean {
-    // Search a bounded number of inner-to-outer sites per interval, retrying later if space changes.
+    // Sample the whole area without radial bands or angular slots; retry later if space changes.
     const random = seeded(this.s!.seed ^ Math.imul(forum.id,0x45d9f3b) ^ Math.imul(forum.settlementAttempt || 0,0x27d4eb2d));
     for (let i=0;i<32;i++) {
       const attempt = forum.settlementAttempt || 0;
       forum.settlementAttempt = (attempt + 1) % 1000000;
-      const ring = Math.floor((attempt % 192) / 32), radius = 18 + ring*7 + random()*2,
-        angle = (attempt % 32) / 32 * Math.PI*2 + (random()-.5)*.12 + buildingVisualYaw(forum),
+      const radius = 18 + (FORUM_SETTLEMENT.radius - 18) * random(),
+        angle = random() * Math.PI*2 + buildingVisualYaw(forum),
         p = {x:forum.x+Math.sin(angle)*radius,z:forum.z+Math.cos(angle)*radius},
         type = settlementBuildingType(radius,random(),random());
       if (this.settlementPlacementReason(type,p,forum.team as PlayerTeam)) continue;

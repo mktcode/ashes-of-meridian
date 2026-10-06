@@ -212,6 +212,57 @@ test('supplied Forums grow free mixed settlements on a saved clock, with no comb
  game.s.rules.completed=false;forum.cinderStock=500;game.s.time+=100;game.updateSettlements();
  assert.equal(game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0).length,30);
 });
+test('settlement candidates vary freely in radius and angle while the saved cursor remains deterministic and bounded',()=>{
+ const {game}=fixture(0,()=>40);game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0),samples=[];
+ forum.settlementAttempt=64;game.random=()=>assert.fail('Placement must not consume battle RNG');
+ game.settlementPlacementReason=(type,p)=>{samples.push({type,x:p.x,z:p.z});return 'occupied';};
+ assert.equal(game.growSettlement(forum),false);assert.equal(samples.length,32);assert.equal(forum.settlementAttempt,96);
+ const radii=samples.map(p=>Math.hypot(p.x,p.z)),yaw=vm.runInContext('buildingVisualYaw',context)(forum);
+ assert.ok(radii.every(r=>r>=18&&r<=60));
+ assert.ok(Math.max(...radii)-Math.min(...radii)>25,'one search spans the area rather than a thin ring');
+ const offSlots=samples.filter((p,i)=>{
+  const delta=Math.atan2(p.x,p.z)-yaw-i*Math.PI/16;
+  return Math.abs(Math.atan2(Math.sin(delta),Math.cos(delta)))>.12;
+ });
+ assert.ok(offSlots.length>16,'angles are not tied to successive evenly spaced slots');
+ const first=samples.slice();forum.settlementAttempt=64;
+ assert.equal(game.growSettlement(forum),false);assert.deepEqual(samples.slice(32),first);
+});
+test('mid-rise settlement variants remain common at every distance while tall and small preferences change outward',()=>{
+ const {settlementBuildingType}=vm.runInContext('({settlementBuildingType})',context),counts=[],seen=new Set();
+ for(const radius of [18,39,60]){
+  const count={5:0,10:0,15:0};
+  for(let i=0;i<100;i++)for(const variant of [.25,.75]){
+   const type=settlementBuildingType(radius,(i+.5)/100,variant);seen.add(type);count[BUILDINGS[type].civilizationPoints]++;
+  }
+  assert.ok(count[10]>=60,'at least a substantial minority of both medium variants throughout the radius');counts.push(count);
+ }
+ assert.ok(counts[0][15]>counts[0][5]);assert.ok(counts[2][5]>counts[2][15]);
+ assert.ok(counts[1][10]>=counts[1][5]&&counts[1][10]>=counts[1][15]);
+ assert.deepEqual([...seen].sort(),[...types].sort());
+});
+test('irregular mixed settlements keep all three rotated Forum approaches navigable for workers',()=>{
+ const {UNITS,UNIT_BODY_SCALE}=vm.runInContext('({UNITS,UNIT_BODY_SCALE})',context);
+ let total=0,medium=0;const seen=new Set();
+ for(const [seed,rotation] of [[1409,0],[2718,1/3],[8123,2]]){
+  const {game,world}=fixture(0,()=>40);game.s.entities=[];game.s.seed=seed;delete world.path;
+  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=rotation;forum.cinderStock=1000;
+  game.random=()=>assert.fail('Settlement must not consume battle RNG');game.updateSettlements();
+  for(let i=1;i<=70;i++){game.s.time=i*10;game.updateSettlements(10);}
+  const buildings=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);assert.equal(buildings.length,30);
+  total+=buildings.length;medium+=buildings.filter(e=>BUILDINGS[e.type].civilizationPoints===10).length;
+  for(const b of buildings){seen.add(b.type);assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team),'');}
+  for(const p of game.forumServicePoints(forum)){
+   const worker={x:p.x*4.5,z:p.z*4.5,size:UNITS.worker.size},body=worker.size*UNIT_BODY_SCALE,
+    path=world.path(worker.x,worker.z,p.x,p.z,false,{...p,radius:1.2,terrainConnection:false},body);
+   assert.equal(path.status,'complete','a worker can reach each entry through its reserved approach');
+   assert.ok(game.forumDropoff(worker,forum));
+  }
+ }
+ assert.ok(medium>=total/4,'medium buildings also remain common after real placement exclusions');
+ assert.deepEqual([...seen].sort(),[...types].sort());
+});
 test('all six settlement models build themselves over their normal construction time without workers, spending or effect RNG',()=>{
  for(const type of types){
   const {game}=fixture(0,()=>40);game.s.entities=[];
