@@ -52,6 +52,7 @@ const float v_mat=SCENE_MATERIAL;
 #endif
 in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
+uniform sampler2D u_workerRoad;uniform float u_workerRoadOn;
 uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;uniform float u_fogExtent;
 uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
@@ -360,6 +361,28 @@ if(u_ecology.x>.5&&u_habitatOn<.5&&v_mat==${MAT.GROUND}.){
  base=mix(base,u_biomeDry*(.65+luma(base)),.6)*(1.-seam*.2);
  base=mix(base,u_biomeLush,step(.91,wear)*.14);
  if(u_ecology.x==3.)base=mix(base,vec3(.74,.82,.86),smoothstep(.5,.86,wear)*.55);
+}
+// Isotropic asphalt and a soft contour painted only on the terrain skin, without geometry.
+if(u_workerRoadOn>.5){
+ vec2 roadUV=(v_pos.xz+u_extent)/(2.*u_extent);
+ float inside=float(all(greaterThanEqual(roadUV,vec2(0.)))&&all(lessThanEqual(roadUV,vec2(1.))));
+ float wear=texture(u_workerRoad,roadUV).r;
+ float roadSurface=inside*smoothstep(.55,.85,n.y);
+ float road=smoothstep(.18,.72,wear)*roadSurface*.92;
+ float grain=veilNoise(v_pos.xz*19.);
+ vec3 asphalt=mix(vec3(.075,.082,.09),vec3(.18,.19,.20),grain);
+ base=mix(base,asphalt,road);
+ // A narrow wear-value band, not a constant-width curb. Only mature nearby asphalt opts in.
+ float rim=smoothstep(.27,.33,wear)*(1.-smoothstep(.38,.44,wear))*roadSurface;
+ if(rim>0.){
+  vec2 offset=vec2(1.25/(2.*u_extent),0.);
+  float nearby=max(max(texture(u_workerRoad,roadUV+offset).r,texture(u_workerRoad,roadUV-offset).r),
+    max(texture(u_workerRoad,roadUV+offset.yx).r,texture(u_workerRoad,roadUV-offset.yx).r));
+  rim*=smoothstep(.60,.80,nearby);
+  base=mix(base,vec3(.44,.46,.47)*mix(.92,1.04,grain),rim*.72);
+ }
+ groundHeight=mix(groundHeight,grain*.035,road);
+ groundGloss=mix(groundGloss,groundGloss*.55,road);
 }
 // All surface detail remains cosmetic: never displace the CPU-authoritative ground.
 // Performance omits bump mapping; terrain reuses its albedo reads, models sample height here.

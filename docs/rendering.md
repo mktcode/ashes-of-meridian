@@ -80,6 +80,12 @@ High/Balanced teilen Modelle, Schatten/MSAA/Bloom; High ergänzt den ausdrückli
 
 Weiche Kontaktschatten sind eine kosmetische Zusatzfläche, nicht die eigentlichen Schlagschatten. Auf lokal ebenem Gelände folgt diese Fläche der CPU-Bodenneigung und liegt knapp oberhalb des Bodens. Bei Krümmung über den Schattenfußabdruck entfällt nur diese Zusatzfläche, damit keine hart abgeschnittenen Dreiecke durch Terrainüberschneidung entstehen. Schattenwerfer und Tiefenschattenpass bleiben unverändert.
 
+## Dekorative Worker-Straßen
+
+Häufige beobachtete Worker-Bewegung verstärkt ein begrenztes, flüchtiges Nutzungsraster im `BattlefieldView`. Stehende Worker tragen nichts bei; ungenutzte Spuren verblassen in Simulationszeit, Pause friert sie ein. Sichtlücken, große Zeitsprünge und Teleports verbinden keine alten Positionen. Welt-/Perspektivwechsel und Menüausstieg verwerfen Raster und GPU-Textur; Straßen sind nicht Teil des Spielstands.
+
+Der normale Szenenpass mischt richtungslose, prozedural gekörnte Asphaltfarbe ausschließlich in die Terrainhaut und deren Gebäudeauffüllung. Eine linear gefilterte R8-Maske wird nur bei geändertem Inhalt hochgeladen; keine Straßenmeshes, Rasterassets oder zusätzlichen Renderpässe. Geländeform, Modelle, Navigation, Tempo, Sicht und RNG bleiben unverändert. Auch Performance zeigt die Farbe, ohne zusätzliches Relief. Ein dezenter hellgrauer Saum folgt einem schmalen Nutzungswerteband; vier benachbarte Maskenproben blenden ihn nur neben kräftig ausgebildetem Asphalt ein. Der Saum verblasst mit der Nutzung und folgt auch Verzweigungen; seine Breite und Geschlossenheit sind wegen der einfachen Raster-/Schwellwertnäherung nicht garantiert. Keine Fahrbahn-/Mittellinien, Fahrtrichtung, Bordsteingeometrie oder automatische Straßenplanung. Die Spur ist eine rendererbasierte Näherung beobachteter Bewegung, keine vollständige Fahrthistorie.
+
 ## Kontursilhouetten bei Verdeckung
 
 Nur beobachtete Entitäten und erkundete Ressourcen dürfen hinter opaker **statischer** Geometrie erscheinen. Silhouetten verleihen keine Sicht/Befehlsrechte; Intro, Fog, Ghosts und Vorschauen dürfen nicht optieren. Dynamische Armeen/Gebäude und nicht tiefenschreibende Transparenz sind keine Auslöser.

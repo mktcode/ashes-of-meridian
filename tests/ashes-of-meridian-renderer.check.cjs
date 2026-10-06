@@ -40,6 +40,7 @@ test('specialized scene draws preserve order, filter before binding and leave ot
   });
   const r = Object.assign(Object.create(Renderer.prototype), { gl, quality: 2, meshes: { mesh: { vao: {}, count: 3 } },
     materialPrograms: { 8: 'landscape', 13: 'leaf' }, program: 'general', drawCalls: 0,
+    uniform(program, name) { return name; },
     bindSceneProgram(time, modelTime, program) {
       bindings.push([time, modelTime, program]); active = this.activeSceneProgram = program;
     }
