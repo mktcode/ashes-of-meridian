@@ -399,6 +399,150 @@ test('explicit smart commands assign prospectors, only Forum deliveries spend th
  game.command([worker.id],{type:'smart',id:forum.id},0,false);assert.equal(worker.deliveryForum,forum.id);
  forum.hp=0;game.worker(worker,.1);assert.equal(worker.deliveryForum,undefined,'lost owner cannot steal cargo');
 });
+function deliveryFixture(){
+ const {game,world}=fixture(0,()=>40);delete game.setOrder;
+ const worker=game.s.entities[0],forum=game.spawnBuilding('meridianforum',0,0,0,0),warnings=[];
+ game.ids.set(worker.id,worker);world.rebuild(game.s.entities);
+ Object.assign(worker,{carry:18,returning:true,deliveryForum:forum.id,order:{type:'mine',id:forum.id},path:[],nextPath:0,pi:0});
+ game.notify=(_team,type,message)=>{if(type==='toast')warnings.push(message);};
+ return {game,world,worker,forum,warnings};
+}
+const serviceRoute=(_x,_z,_tx,_tz,_air,area)=>({status:'complete',points:[{x:area.x,z:area.z}],goal:{x:area.x,z:area.z}});
+test('Forum delivery skips blocked service areas without A* or cargo loss, and warns only once',()=>{
+ const {game,world,worker,forum,warnings}=deliveryFixture();
+ for(const p of game.forumServicePoints(forum))world.staticGrid[world.idx(p.x,p.z)]=1;
+ world.rebuild(game.s.entities);world.path=()=>assert.fail('No goal exists: do not run A*');
+ game.random=()=>assert.fail('Delivery must not draw RNG');
+ for(let i=0;i<100;i++){game.s.time=i*.05;game.worker(worker,.05);}
+ assert.equal(worker.carry,18);assert.equal(worker.deliveryPoint,undefined);
+ assert.equal(forum.cinderStock,undefined);assert.equal(game.account(0).alloy,0);assert.equal(warnings.length,1);
+});
+test('Forum delivery tries one entrance per cooldown and rejects partial and budget-exhausted paths',()=>{
+ const {game,world,worker,forum,warnings}=deliveryFixture(),goals=[];
+ world.path=(_x,_z,tx,tz)=>{goals.push([tx,tz]);return {status:['partial','budget-exhausted','unreachable'][goals.length-1],points:[{x:tx,z:tz}]};};
+ game.worker(worker,.05);for(let i=1;i<60;i++){game.s.time=i*.05;game.worker(worker,.05);}
+ assert.equal(goals.length,1);
+ game.s.time=3.2;game.worker(worker,.05);game.s.time=6.4;game.worker(worker,.05);
+ assert.equal(goals.length,3);assert.equal(new Set(goals.map(JSON.stringify)).size,3);
+ assert.equal(worker.deliveryPoint,undefined);assert.equal(worker.carry,18);assert.equal(forum.cinderStock,undefined);assert.equal(warnings.length,1);
+});
+test('Forum delivery staggers searches across workers rather than multiplying failures in one tick',()=>{
+ const {game,world,worker}=deliveryFixture(),second={...worker,id:101,x:-25,path:[],order:{...worker.order}};game.s.entities.push(second);
+ let calls=0;world.path=()=>{calls++;return {status:'unreachable',points:[]};};
+ game.worker(worker,.05);game.worker(second,.05);assert.equal(calls,1);
+ game.s.time=.24;game.worker(second,.05);assert.equal(calls,1);
+ game.s.time=.25;game.worker(second,.05);assert.equal(calls,2);
+ game.s.time=3.2;game.worker(worker,.05);assert.equal(calls,3);
+ game.s.time=3.5;game.worker(second,.05);assert.equal(calls,4);assert.equal(worker.carry,18);assert.equal(second.carry,18);
+});
+test('Forum delivery reacts to navigation changes and reuses a successful path instead of searching twice',()=>{
+ const {game,world,worker}=deliveryFixture();let calls=0,route;
+ world.path=()=>{calls++;return {status:'unreachable',points:[]};};game.worker(worker,.05);assert.equal(calls,1);
+ world.path=(...args)=>{calls++;return route=serviceRoute(...args);};world.rebuild(game.s.entities);game.s.time=.3;worker.recoveryAttempts=3;
+ delete game.move;game.worker(worker,0);
+ assert.equal(calls,2);assert.equal(worker.pathStatus,'complete');assert.strictEqual(worker.path,route.points);
+ assert.deepEqual(worker.deliveryPoint,route.goal);assert.equal(worker.pathVersion,world.pathVersion);
+ assert.equal(worker.nextPath,game.s.time+3.2,'Keep the movement recovery retry contract');
+ game.worker(worker,0);assert.equal(calls,2,'Stable return trip keeps its route');
+});
+test('Forum delivery uses a real complete route once and unloads only on reaching its service area',()=>{
+ const {game,world,worker,forum}=deliveryFixture();delete world.path;
+ Object.assign(worker,{walk:0,rot:0});let calls=0;const path=world.path.bind(world);
+ world.path=(...args)=>{calls++;return path(...args);};
+ game.worker(worker,.05);assert.equal(calls,1);assert.equal(worker.pathStatus,'complete');
+ assert.ok(worker.deliveryPoint);assert.equal(worker.carry,18);assert.equal(forum.cinderStock,undefined);
+ assert.equal(world.surface.fits(worker.deliveryPoint.x,worker.deliveryPoint.z,worker.size*1.4),true);
+ Object.assign(worker,worker.deliveryPoint);game.worker(worker,.05);
+ assert.equal(calls,1);assert.equal(worker.carry,0);assert.equal(forum.cinderStock,18);
+});
+test('Forum delivery accepts a valid current position in the service area even when its center cannot fit',()=>{
+ const {game,world,worker,forum}=deliveryFixture(),center=game.forumServicePoints(forum)[0];
+ Object.assign(worker,{x:center.x+.5,z:center.z});world.surface.fits=(x,z)=>x===worker.x&&z===worker.z;
+ world.path=()=>assert.fail('Already at a valid service position');game.worker(worker,.05);
+ assert.equal(worker.carry,0);assert.equal(forum.cinderStock,18);
+});
+test('Forum delivery keeps the service area fixed rather than expanding it around an offset saved goal',()=>{
+ const {game,world,worker,forum}=deliveryFixture(),center=game.forumServicePoints(forum)[0];
+ Object.assign(worker,{x:center.x+2,z:center.z,deliveryPoint:{x:center.x+1,z:center.z},pathStatus:'complete',pathVersion:world.pathVersion});
+ let area,stop;game.move=(_e,_p,_dt,s,_settle,a)=>{area=a;stop=s;return false;};
+ world.path=()=>assert.fail('The saved route remains usable');game.worker(worker,.05);
+ assert.equal(worker.carry,18);assert.equal(forum.cinderStock,undefined);
+ assert.equal(area.x,center.x);assert.equal(area.z,center.z);assert.equal(area.radius,1.2);assert.equal(stop,0);
+});
+test('Forum delivery moves into the fixed area instead of stopping short of an offset return goal',()=>{
+ const {game,world,worker,forum}=deliveryFixture(),center=game.forumServicePoints(forum)[0],r=Math.hypot(center.x,center.z),
+  dx=center.x/r,dz=center.z/r,goal={x:center.x+dx,z:center.z+dz};
+ Object.assign(worker,{x:center.x+dx*1.4,z:center.z+dz*1.4,rot:0,walk:0,deliveryPoint:goal,path:[goal],
+  pathStatus:'complete',pathVersion:world.pathVersion,pathGoal:goal,pathArea:{...center,radius:1.2,terrainConnection:false}});
+ world.path=()=>assert.fail('Reuse the existing complete return path');
+ for(let i=0;i<10 && worker.carry;i++){game.worker(worker,.05);game.s.time+=.05;}
+ assert.equal(worker.carry,0);assert.equal(forum.cinderStock,18);
+});
+test('Forum delivery never unloads at a newly blocked goal and resumes when the layout becomes usable',()=>{
+ const {game,world,worker,forum}=deliveryFixture();world.path=serviceRoute;game.move=()=>false;
+ game.worker(worker,.05);const old=worker.deliveryPoint;
+ world.staticGrid[world.idx(old.x,old.z)]=1;world.rebuild(game.s.entities);game.s.time=.3;game.worker(worker,.05);
+ assert.notDeepEqual(worker.deliveryPoint,old);assert.equal(worker.carry,18);
+ Object.assign(worker,worker.deliveryPoint);
+ for(const p of game.forumServicePoints(forum))world.staticGrid[world.idx(p.x,p.z)]=1;
+ world.rebuild(game.s.entities);game.s.time=.6;game.worker(worker,.05);
+ assert.equal(worker.deliveryPoint,undefined);assert.equal(worker.carry,18);assert.equal(forum.cinderStock,undefined);
+ world.staticGrid.fill(0);world.rebuild(game.s.entities);game.s.time=.9;game.worker(worker,.05);
+ assert.equal(worker.carry,0);assert.equal(forum.cinderStock,18);
+});
+test('Forum delivery forgets retries on manual reassignment and on replacement of the owning world',()=>{
+ const {game,world,worker,forum}=deliveryFixture();world.path=()=>({status:'unreachable',points:[]});game.worker(worker,.05);
+ world.path=serviceRoute;game.s.time=.3;assert.equal(game.command([worker.id],{type:'smart',id:forum.id},0,false),true);
+ game.move=()=>false;game.worker(worker,.05);assert.ok(worker.deliveryPoint);
+ game.setOrder(worker,{type:'idle'});worker.deliveryForum=forum.id;worker.returning=true;
+ world.path=()=>({status:'unreachable',points:[]});game.s.time=.6;game.worker(worker,.05);assert.equal(worker.deliveryPoint,undefined);
+ game.world=Object.assign(Object.create(Battlefield.prototype),world,{path:serviceRoute});
+ game.worker(worker,.05);assert.ok(worker.deliveryPoint,'A restored/new world cannot inherit the old negative cache');
+});
+test('Forum delivery preserves a restored valid complete route but discards blocked saved goals',()=>{
+ const {game,world,worker,forum}=deliveryFixture(),point=game.forumServicePoints(forum)[0],path=[point];
+ Object.assign(worker,{deliveryPoint:point,path,pathStatus:'complete',pathVersion:world.pathVersion,
+  pathGoal:point,pathArea:{...point,radius:1.2,terrainConnection:false},nextPath:3});
+ world.path=()=>assert.fail('Keep the valid saved route');delete game.move;game.worker(worker,0);
+ assert.strictEqual(worker.path,path);assert.strictEqual(worker.deliveryPoint,point);
+ for(const p of game.forumServicePoints(forum))world.staticGrid[world.idx(p.x,p.z)]=1;
+ world.rebuild(game.s.entities);game.worker(worker,.05);assert.equal(worker.deliveryPoint,undefined);assert.equal(worker.carry,18);
+});
+test('Forum construction requires delivery access as well as a generic work area, before payment or spawning',()=>{
+ const {game,world}=fixture(0,()=>40),site={x:0,z:0,size:BUILDINGS.meridianforum.size,team:0};
+ const blocked=world.blocked,gas=game.account(0).gas;
+ world.path=(_x,_z,_tx,_tz,_air,area)=>({status:area.radius>2?'complete':'partial',points:[]});
+ assert.equal(game.canBuild('meridianforum',site),'');assert.equal(game.build('meridianforum',site),false);
+ assert.strictEqual(world.blocked,blocked);assert.equal(game.account(0).gas,gas);assert.equal(game.s.entities.length,1);
+ for(const p of game.forumServicePoints(site)){const id=world.idx(p.x,p.z);world.staticGrid[id]=world.surface.cliffs[id]=1;}
+ world.rebuild(game.s.entities);world.path=()=>assert.fail('Blocked delivery access must reject before A*');
+ assert.equal(game.canBuild('meridianforum',site),'','Grid preview stays a cheap approximation');
+ assert.equal(game.build('meridianforum',site),false);assert.equal(game.account(0).gas,gas);
+});
+test('Forum construction can use another reachable worker when the selected worker cannot reach any entrance',()=>{
+ const {game,world}=fixture(0,()=>40),selected=game.s.entities[0],other=game.spawnUnit('worker',-35,-20,0,0);
+ world.path=(...args)=>args[0]===selected.x?{status:'unreachable',points:[]}:serviceRoute(...args);
+ assert.equal(game.build('meridianforum',{x:0,z:0},[selected.id]),true);
+ assert.equal(selected.order.type,'idle');assert.equal(other.order.type,'build');assert.equal(game.account(0).gas,75);
+});
+test('Forum rotation requires a worker to prove access, without changing the existing layout',()=>{
+ const {game,world,forum}=deliveryFixture();game.s.entities=game.s.entities.filter(e=>e.kind!=='unit');
+ world.path=()=>assert.fail('No worker can prove access');assert.equal(game.rotateBuilding(forum.id,1),false);
+ assert.equal(forum.visualRotation,undefined);
+});
+test('Forum rotation rejects blocked or unreachable delivery access atomically, while reachable rotations remain allowed',()=>{
+ const {game,world,worker,forum}=deliveryFixture(),point=game.forumServicePoints(forum)[0];worker.deliveryPoint=point;worker.path=[point];
+ const path=worker.path,proposed={...forum,visualRotation:1/3};
+ for(const p of game.forumServicePoints(proposed))world.staticGrid[world.idx(p.x,p.z)]=1;
+ world.rebuild(game.s.entities);world.path=()=>assert.fail('All proposed service areas are blocked');
+ assert.equal(game.rotateBuilding(forum.id,1),false);assert.equal(forum.visualRotation,undefined);
+ assert.strictEqual(worker.deliveryPoint,point);assert.strictEqual(worker.path,path);
+ world.staticGrid.fill(0);world.rebuild(game.s.entities);world.path=()=>({status:'partial',points:[]});
+ assert.equal(game.rotateBuilding(forum.id,1),false);assert.strictEqual(worker.path,path);
+ world.path=serviceRoute;assert.equal(game.rotateBuilding(forum.id,1),true);
+ assert.equal(forum.visualRotation,1/3);assert.equal(worker.deliveryPoint,undefined);assert.equal(worker.path.length,0);
+});
+
 test('rotated Forum streets agree with placement guides and service paths while existing military blockers no longer prevent rotation',()=>{
  const {game,world}=fixture(0,()=>40);game.s.entities=[];delete world.path;
  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=2;
@@ -416,6 +560,7 @@ test('rotated Forum streets agree with placement guides and service paths while 
 test('free Forum rotation schedules only misaligned settlement buildings, cancels on turn-back and regrows after the saved grace period without clearing resources or military structures',()=>{
  const {game,world}=fixture(0,()=>40);game.s.entities=[];
  const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.cinderStock=2000;
+ game.spawnUnit('worker',-60,-60,0,0); // Forum rotation now needs a real reachable worker entrance.
  for(let i=0;i<=100;i++){game.s.time=i*10;game.updateSettlements(10);}
  const grown=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);assert.equal(grown.length,60);
  const p=forumFrame({...forum,visualRotation:1/3}).world(0,40),military=game.spawnBuilding('depot',p.x,p.z,0,0),

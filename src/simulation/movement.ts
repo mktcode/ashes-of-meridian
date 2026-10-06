@@ -268,7 +268,7 @@
       },
       setOrder(this: MeridianGame, e: Entity, order: UnitOrder) {
         if (e.kind === 'building') return;
-        if (e.kind === 'unit') { delete e.deliveryForum; delete e.deliveryPoint; }
+        if (e.kind === 'unit') { this.forgetForumDelivery(e); delete e.deliveryForum; delete e.deliveryPoint; }
         e.order = { ...order };
         e.target = null;
         e.path = [];

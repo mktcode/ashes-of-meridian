@@ -1,6 +1,29 @@
-/* Post-victory settlements. No draws from combat/effect RNG; all timers/cursors are saved. */
+/* Post-victory settlements. No combat/effect RNG; settlement timers/cursors are saved, delivery retries derived. */
 'use strict';
 const FORUM_SETTLEMENT = Object.freeze({ capacity: 2000, buildings: 60, radius: 60, interval: 10, corridorWidth: 5 });
+type ForumServiceSite = Pick<BuildingEntity,'x'|'z'|'size'|'team'|'visualRotation'>;
+interface ForumDeliveryAttempt {
+  forum: BuildingEntity; version: number; rotation: number; nextTry: number; cursor: number; warned: boolean;
+}
+// Derived navigation scheduling, not entity/snapshot data. A restored/new world gets a fresh cache.
+const forumDeliveries = new WeakMap<Battlefield,{
+  workers: WeakMap<UnitEntity,ForumDeliveryAttempt>; searchAfter: number;
+}>();
+function forumServiceFree(world: Battlefield, p: Position, body: number): boolean {
+  return !world.blockedAt(p.x,p.z) && (world.surface?.fits(p.x,p.z,body) ?? true);
+}
+function forumServiceHasGoal(world: Battlefield, p: Position, body: number): boolean {
+  if (forumServiceFree(world,p,body)) return true;
+  // Usually the 1.2-m area contains just its snapped center; retain correctness
+  // for smaller navigation cells, without substituting a nearest point outside it.
+  const cell=world.idx(p.x,p.z),column=cell%world.gridSize,row=Math.floor(cell/world.gridSize),r=Math.ceil(1.2/world.cellSize);
+  for(let z=Math.max(1,row-r);z<=Math.min(world.gridSize-2,row+r);z++)
+    for(let x=Math.max(1,column-r);x<=Math.min(world.gridSize-2,column+r);x++) {
+      const q=world.point(z*world.gridSize+x);
+      if(distance(q,p)<=1.2 && forumServiceFree(world,q,body)) return true;
+    }
+  return false;
+}
 const SETTLEMENT_TYPES: readonly (readonly BuildingType[])[] = [
   ['embercottage', 'fieldlab'], ['terracecommons', 'researchhub'], ['hearthtower', 'researchspire']
 ];
@@ -51,7 +74,7 @@ const settlementMethods = {
       !!this.s.rules.completed && target?.kind === 'building' && target.type === 'meridianforum' &&
       target.hp > 0 && target.team === team && target.progress >= 1;
   },
-  forumServicePoints(this: MeridianGame, forum: BuildingEntity): Position[] {
+  forumServicePoints(this: MeridianGame, forum: ForumServiceSite): Position[] {
     const yaw = buildingVisualYaw(forum), cs = Math.cos(yaw), sn = Math.sin(yaw), radius = forum.size + 2.5;
     return civilizationBuildingEntries('meridianforum').map(entry => {
       const a = Math.atan2(entry.x, entry.z), x = Math.sin(a)*radius, z = Math.cos(a)*radius;
@@ -60,12 +83,72 @@ const settlementMethods = {
       return this.world!.point(this.world!.idx(p.x,p.z));
     });
   },
-  forumDropoff(this: MeridianGame, worker: UnitEntity, forum: BuildingEntity): Position | null {
-    const world = this.world!, body = worker.size * UNIT_BODY_SCALE;
-    for (const p of this.forumServicePoints(forum).sort((a,b) => distance(worker,a)-distance(worker,b))) {
-      const area: NavigationArea = {...p,radius:1.2,terrainConnection:false};
-      const path = world.path(worker.x,worker.z,p.x,p.z,false,area,body);
-      if (path.status === 'complete') return path.goal || p;
+  forumRoute(this: MeridianGame, worker: UnitEntity, forum: ForumServiceSite,
+    points: Position[] = this.forumServicePoints(forum)): NavigationPath | null {
+    const world=this.world!,body=worker.size*UNIT_BODY_SCALE;
+    for(const p of [...points].sort((a,b)=>distance(worker,a)-distance(worker,b))) {
+      if(distance(worker,p)<=1.2 && forumServiceFree(world,worker,body))
+        return {status:'complete',points:[],goal:{x:worker.x,z:worker.z}};
+      if(!forumServiceHasGoal(world,p,body)) continue;
+      const path=world.path(worker.x,worker.z,p.x,p.z,false,{...p,radius:1.2,terrainConnection:false},body);
+      if(path.status==='complete') return {...path,goal:path.goal || p};
+    }
+    return null;
+  },
+  forumDropoff(this: MeridianGame, worker: UnitEntity, forum: ForumServiceSite): Position | null {
+    return this.forumRoute(worker,forum)?.goal || null;
+  },
+  forgetForumDelivery(this: MeridianGame, worker: UnitEntity) {
+    if(this.world) forumDeliveries.get(this.world)?.workers.delete(worker);
+  },
+  forumDeliveryPoint(this: MeridianGame, worker: UnitEntity, forum: BuildingEntity): Position | null {
+    const world=this.world!,now=this.s!.time,body=worker.size*UNIT_BODY_SCALE,rotation=forum.visualRotation || 0;
+    let cache=forumDeliveries.get(world);
+    if(!cache) {
+      cache={workers:new WeakMap(),searchAfter:0};forumDeliveries.set(world,cache);
+    }
+    let attempt=cache.workers.get(worker);
+    const fresh=!attempt,changed=attempt && (attempt.forum!==forum || attempt.version!==world.pathVersion || attempt.rotation!==rotation);
+    if(!attempt || changed) {
+      attempt={forum,version:world.pathVersion,rotation,nextTry:0,cursor:0,warned:attempt?.warned || false};
+      cache.workers.set(worker,attempt);
+    }
+    const services=this.forumServicePoints(forum),point=worker.deliveryPoint,
+      valid=point && services.some(p=>distance(p,point)<=1.2) && forumServiceFree(world,point,body),
+      failedRoute=worker.pathStatus!==undefined && worker.pathStatus!=='complete' && now>=worker.nextPath;
+    // Preserve a restored complete route, but never trust a stale/blocked saved goal.
+    if(valid && !changed && !failedRoute && (!fresh ||
+      (worker.pathStatus==='complete' && worker.pathVersion===world.pathVersion))) return point;
+    if(point) {
+      delete worker.deliveryPoint;worker.path=[];worker.nextPath=0;
+      attempt.nextTry=0;
+    }
+    if(now<attempt.nextTry) return null;
+    const here=services.find(p=>distance(worker,p)<=1.2 && forumServiceFree(world,worker,body)),
+      candidates=services.filter(p=>forumServiceHasGoal(world,p,body)).sort((a,b)=>distance(worker,a)-distance(worker,b));
+    let route: NavigationPath | null=null;
+    if(here) route=this.forumRoute(worker,forum,[here]);
+    else if(candidates.length) {
+      if(now<cache.searchAfter) return null;
+      // At most one entrance search per attempt; stagger expensive searches across workers.
+      cache.searchAfter=now+.25;
+      route=this.forumRoute(worker,forum,[candidates[attempt.cursor%candidates.length]]);
+      attempt.cursor++;
+    }
+    if(route?.goal) {
+      const goal=route.goal,service=services.find(p=>distance(goal,p)<=1.2)!;
+      worker.deliveryPoint=goal;
+      worker.path=route.points;worker.pi=0;worker.pathStatus=route.status;worker.pathResolvedGoal=route.goal;
+      worker.pathGoal={...goal};worker.pathArea={...service,radius:1.2,terrainConnection:false};
+      worker.pathVersion=world.pathVersion;worker.nextPath=now+Math.min(3.2,.8*(1+(worker.recoveryAttempts || 0)));
+      delete worker.steerLocked;
+      attempt.warned=false;
+      return route.goal;
+    }
+    attempt.nextTry=now+3.2;
+    if(!attempt.warned) {
+      this.notify(worker.team as PlayerTeam,'toast','No complete Forum delivery route found yet. Cargo stays with the Worker; clear an approach, rotate or relocate the Forum.');
+      attempt.warned=true;
     }
     return null;
   },
