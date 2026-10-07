@@ -273,13 +273,16 @@
           world.mark(world.blocked, p.x, p.z, BUILDINGS[type].size + 0.35);
           const area: NavigationArea = { x: p.x, z: p.z, radius: BUILDINGS[type].size + 2.9 };
           if (isCivilizationBuildingType(type)) area.terrainConnection = false;
-          w = workers.find(worker => world.path(worker.x, worker.z, p.x, p.z, false,
-            area, worker.size * UNIT_BODY_SCALE).status === 'complete');
+          w = workers.find(worker => type === 'meridianforum'
+            ? !!this.forumDropoff(worker,{...p,size:BUILDINGS[type].size})
+            : world.path(worker.x, worker.z, p.x, p.z, false,area, worker.size * UNIT_BODY_SCALE).status === 'complete');
         } finally {
           world.blocked = blocked;
         }
         if (!w) {
-          this.notify(team, 'toast', 'A worker cannot reach this location.');
+          this.notify(team, 'toast', type === 'meridianforum'
+            ? 'A worker must be able to reach the Forum construction and delivery area.'
+            : 'A worker cannot reach this location.');
           return false;
         }
         let c = this.cost(type, 'building', team);
@@ -321,9 +324,12 @@
         // Keep the stored eighth-turn unit; subdivide it into three 15-degree clicks.
         const step = Math.round((b.visualRotation || 0) * 3), rotation = ((step + direction + 24) % 24) / 3;
         if (b.type === 'meridianforum') {
-          for (const e of this.s!.entities) if (e.kind === 'unit' && e.deliveryForum === b.id) {
-            delete e.deliveryPoint; e.path = []; e.nextPath = 0;
+          const workers=this.alive(e=>e.kind==='unit' && e.type==='worker' && e.team===team) as UnitEntity[];
+          if(!workers.some(worker=>!!this.forumDropoff(worker,b))) {
+            this.notify(team,'toast','A worker must be able to reach the Forum delivery area.');
+            return false;
           }
+          // The circular delivery area is unchanged: keep existing return routes.
         }
         b.visualRotation = rotation;
         if (isCivilizationBuildingType(b.type)) this.refreshSettlementLayouts();
@@ -405,7 +411,7 @@
         }
         return best;
       },
-      workerDropoff(this: MeridianGame, e: UnitEntity, h: Entity): Position {
+      workerDropoff(this: MeridianGame, e: UnitEntity, h: Position & {size:number}): Position {
         const source = e.order.type === 'mine' ? this.get(e.order.id) : null,
           toward = source || e,
           base = Math.atan2(toward.x-h.x,toward.z-h.z),
@@ -477,6 +483,7 @@
         }
         let forum = this.deliveryTarget(e);
         if (e.deliveryForum !== undefined && !forum) {
+          this.forgetForumDelivery(e);
           delete e.deliveryForum; delete e.deliveryPoint;
           if (e.carry) e.returning = true;
         }
@@ -494,16 +501,18 @@
           if (!h) return true;
           const hqRange = h.size + 3.1,
             hqDistance = distance(e,h);
-          if (forum && !e.deliveryPoint) e.deliveryPoint = this.forumDropoff(e,forum) || undefined;
-          const dropoff = forum ? e.deliveryPoint : this.workerDropoff(e,h);
+          const dropoff = forum ? this.forumDeliveryPoint(e,forum) : this.workerDropoff(e,h);
           if (!dropoff) return true;
+          // A saved/offset goal must not shift the circular ground work area.
+          const service=forum ? this.forumServiceArea(forum) : null;
           // One stable goal for the whole return trip: switching back to the HQ
           // centre when a detour leaves the near zone creates an endless loop.
-          if (forum ? distance(e,dropoff) > 1.3 || this.world!.blockedAt(e.x,e.z) ||
+          if (forum ? distance(e,service!) > service!.radius + .1 || this.world!.blockedAt(e.x,e.z) ||
             !(this.world!.surface?.fits(e.x,e.z,e.size*UNIT_BODY_SCALE) ?? true) :
             hqDistance > hqRange + 1.5 || (hqDistance > hqRange &&
             (this.world!.blockedAt(dropoff.x, dropoff.z) || distance(e, dropoff) > e.size * UNIT_BODY_SCALE * 2.5)) || !this.world!.terrainFree(e, h)) {
-            this.move(e, dropoff, dt, 0.45, false, forum ? {...dropoff,radius:1.2,terrainConnection:false}
+            // Stop inside the fixed service area, never short of an offset goal outside it.
+            this.move(e, dropoff, dt, forum ? 0 : 0.45, false, forum ? service!
               : { x: h.x, z: h.z, radius: hqRange - 0.1 });
             return true;
           }
