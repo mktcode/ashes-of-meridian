@@ -517,6 +517,13 @@ interface BuildingEntity extends EntityBase {
   upgradeLevel?: number;
 }
 
+interface MeridianGame {
+  settlementUpgradeReason(id: number, upgrade: CivilizationUpgradeType | null, team?: PlayerTeam): string;
+  configureSettlementUpgrade(id: number, upgrade: CivilizationUpgradeType | null, team?: PlayerTeam): boolean;
+  settlementExpansionReason(id: number, team?: PlayerTeam): string;
+  expandSettlementBuilding(id: number, team?: PlayerTeam): boolean;
+}
+
 interface ResourceEntity extends EntityBase {
   kind: 'resource';
   type: ResourceType;
