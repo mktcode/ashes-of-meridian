@@ -3,31 +3,20 @@
 ## Geltungsbereich und Pflege
 
 `styles/design-system.css` ist die maßgebliche gemeinsame Gestaltung für Menüs,
-Expeditionsvorbereitung/-übergang, Codex, Dialoge, Flottenupgrades, Ergebnisse,
+Expeditionsvorbereitung/-übergang, Codex, Dialoge, Zivilisationsupgrades, Ergebnisse,
 Ladebildschirm, Gefechts-HUD und Meldungen. Es folgt auf die Basis-/Layoutstyles;
 `styles/home.css` ergänzt danach nur Startbildschirm-Geometrie und Branding.
 Aldrich, Panel-/Buttonform und Glow werden gemeinsam gepflegt, nicht pro Ansicht
 nachgebaut. Die übrige Bildschirmgeometrie und Modellvorschau bleiben in
 `screens.css`, `codex.css` bzw. `hud.css`.
-Run-Briefing, Loadout, Gegner und Vorteile stehen im Sternchen-Modal, nicht zwischen
-den Startaktionen. Die Checkpoint-/Landschaftsvorschau bleibt auf dem Startbildschirm.
-Die dortige Civilization-Anzeige zeigt Bestand/Ziel und einen Fortschrittsbalken
-zur nächsten noch nicht erreichten Score-Schwelle, unabhängig von ausgewählter
-Karte; diese Baufortschrittsanzeige ersetzt keine militärische Zugangsvoraussetzung.
-Erreichte Schwellen wechseln zum nächsten höheren Ziel. Bereits freigeschaltete
-Stages werden auch bei Scoreverlust nicht erneut als Ziele angezeigt; ohne laufende
-Expedition bleibt nur die letzte Bestandssumme sichtbar.
-Der Victory Screen verwendet dieselbe Fortschrittskomponente, hält das Ziel aber
-bei der unmittelbar nächsten Expeditionsstage: fehlende Punkte oder eine volle
-Leiste mit Freischaltmarkierung, auch bei Vorbauen oder späterem Scoreverlust.
-So stimmt die Anzeige mit der anschließenden Encounter-Karte überein.
-Im HUD bleibt unter dem kompakten Score eine dünne Fortschrittslinie innerhalb
-des bestehenden Stage-Felds. Ihr Ziel ist die tatsächlich nächste Expeditionsstage,
-nicht das nächste vorgebaute Score-Ziel des Startbildschirms. Ein goldenes ✓ ersetzt
-bei ausreichendem Score das CIV-Präfix; erst nach militärischer Freigabe zeigt ein
-cyanfarbener → den möglichen Wechsel über das Hauptmenü. Diese Bereitschaft bleibt
-auch nach Scoreverlust erhalten. Details stehen im Tooltip/zugänglichen Label;
-keine zusätzliche Zeile, blinkende Meldung oder automatische Weiterreise.
+Run-Briefing, Loadout, Gegner und Gebäudeboni stehen im Sternchen-Modal, nicht zwischen
+den Startaktionen. Es unterscheidet Boni für neu gestartete Gefechte von den eingefrorenen
+Boni eines gespeicherten Gefechts. Die Checkpoint-/Landschaftsvorschau bleibt auf dem
+Startbildschirm. Civilization-Score-Anzeigen und Zugangsbalken entfallen.
+Bei Auswahl eines gewachsenen Zivilgebäudes ersetzt eine scrollbar lesbare Textliste
+den unteren Aktionsblock. Jede Zeile zeigt Effektbeschreibung, Stapelgrenze und
+Auswahl-/Kostenstatus; Ausbau und Leeren stehen darüber. Minimap und Auswahlzeile
+bleiben erreichbar. Die Liste verändert weder Rendergröße noch Weltprojektion.
 
 Das aktuelle Tutorialziel bleibt als passives Panel oben links unter der Statuszeile sichtbar, unabhängig vom geöffneten Aktionsreiter. Alle Tutorialphasen haben ein Ziel; Supply-Ziele zeigen zusätzlich die aktuelle Belegung/Kapazität. Hinweise gehören nicht in den schmalen Bau-/Rekrutierungs-Scrollbereich. Warnungen bleiben rechts und weichen bei Platzmangel unter das Zielpanel aus; die Anzeige fängt keine Welt-/Kameraeingaben ab. Zahlenänderungen aktualisieren nur den Zieltext, nicht das Aktionsmarkup.
 
@@ -56,7 +45,7 @@ auf die vorhandenen Inhalte erweitert. [Assetpflege](rendering.md#ui-branding).
 - `.primary` bezeichnet die wichtigste Aktion, `.secondary` reguläre Aktionen,
   `.textbtn` Navigation. Auswahl verwendet `.active` und, wo vorhanden, `aria-pressed`.
   Deaktivierte Aktionen behalten lesbare Texte statt pauschaler Transparenz.
-- Flottensysteme erscheinen auf breiten Displays als Zeilen, Command-Module als Karten.
+- Gebäude-Upgrades erscheinen als beschriftete Zeilen, nicht als unbeschriftete Icon-Kacheln.
   Auf schmalen Displays bleiben Informationen einspaltig und Inhalte scrollbar.
 - Einblendungen sind kurz und einmalig; keine dauernden Glanzläufe oder animierten
   Filter. Bestehende Tutorial-Zielmarkierungen bleiben erhalten; bei reduced motion

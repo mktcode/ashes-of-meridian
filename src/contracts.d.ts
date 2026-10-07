@@ -29,8 +29,7 @@ interface CivilizationEntry {
 }
 
 interface BuildingDefinitionShape {
-  civilizationPoints?: number;
-  civilizationUnlockStage?: number;
+
   /** Authored local deck footprints, shared by the CPU support plane and model. */
   civilizationDecks?: readonly { x: number; z: number; w: number; d: number; top?: number; cut?: number }[];
   civilizationEntry?: CivilizationEntry;
@@ -215,13 +214,10 @@ type MeridianSettings = Record<string, number | boolean> & {
 
 type QuickAccessAction = `build:${BuildingType}` | `favorite:${UnitType}`;
 interface MeridianProfile {
-  version: 1;
+  version: 2;
   expeditionDepth: number;
-  lastCivilizationScore: number;
-  aether: number;
   tutorialComplete: boolean;
   quickAccess?: QuickAccessAction[];
-  upgrades: Record<string, number>;
   settings: MeridianSettings;
 }
 
@@ -258,6 +254,8 @@ interface ExpeditionBattleRecipe {
   faction: FactionId;
   abilities: AbilityType[];
   depth: number;
+  /** Frozen player upgrades for this battle, never a live reference to the archive. */
+  upgrades: Record<string, number>;
   benefits: Record<string, number>;
   enemyBenefits: Record<string, number>[];
   encounter: ExpeditionEncounter;
@@ -273,12 +271,8 @@ interface ExpeditionWorld {
 }
 
 interface MeridianExpedition extends ExpeditionBattleRecipe {
-  version: 7;
+  version: 8;
   battle: ExpeditionBattleSave | null;
-  civilizationScore: number;
-  /** Highest accessible stage; military clearance and score are independent. */
-  unlockedStage?: number;
-  offers: string[];
   worlds?: ExpeditionWorld[];
 }
 
@@ -548,6 +542,7 @@ interface BattleOptions {
   enemies?: FactionId[];
   map?: string;
   seed?: number;
+  upgrades?: Record<string, number>;
   benefits?: Record<string, number>;
   enemyBenefits?: Record<string, number>[];
   abilities?: AbilityType[];
@@ -611,7 +606,6 @@ interface PendingRecall extends Position {
 interface Scan extends TimedArea { team?: PlayerTeam; }
 
 interface BattleResult {
-  civilizationScore: number;
   win: boolean;
   text: string;
   time: number;

@@ -11,8 +11,8 @@ function flatCameraLimits(ui) {
 
 test('stage browsing is bounded and purely visual; continue always launches the real checkpoint', async () => {
   const h = setup(), ui = h.ui, saved = [], previews = [];
-  ui.expedition = { version: 7, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2,
-    benefits: { supplyCrate: 1 }, enemyBenefits: [{}], offers: [],
+  ui.expedition = { version: 8, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2,
+    upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
   ui.stageHistory = [{ stage: 1, map: 'mothership', seed: 11 }, { stage: 2, map: 'alien-planet', seed: 22 }];
   ui.persistence.saveStageHistory = stages => saved.push(JSON.stringify(stages));
@@ -39,7 +39,7 @@ test('stage browsing is bounded and purely visual; continue always launches the 
 
 test('stage previews ignore overlapping input, failures, dialogs and stale screen completions', async () => {
   const h = setup(), ui = h.ui;
-  ui.expedition = { depth: 1, encounter: { mission: 'hq-elimination', enemies: [], map: 'desert', seed: 1409 }, abilities: [], enemyBenefits: [], offers: [] };
+  ui.expedition = { depth: 1, encounter: { mission: 'hq-elimination', enemies: [], map: 'desert', seed: 1409 }, upgrades: {}, benefits: {}, abilities: [], enemyBenefits: [] };
   ui.stageHistory = [{ stage: 1, map: 'mothership', seed: 11 }, { stage: 2, map: 'desert', seed: 1409 }];
   ui.showHome();
   let resolve, calls = 0;
@@ -119,13 +119,12 @@ test('ordinary landscape encounters are checkpointed and continued without exper
 test('screen templates render frozen data without DOM access, randomness or profile mutation', () => {
   const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
   vm.runInContext('Math.random = seeded = () => { throw Error("Template RNG"); };', context);
-  const render = vm.runInContext('({renderHomeScreen, renderMissionBriefing, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderArmoryScreen, renderBenefitOptions})', context);
-  const profile = Object.freeze({version: 1, expeditionDepth: 10, aether: 250,
-    upgrades: Object.freeze({startingAlloy: 0, constructionProtocols: 1}),
+  const render = vm.runInContext('({renderHomeScreen, renderMissionBriefing, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderExpeditionUpgradeList})', context);
+  const profile = Object.freeze({version: 2, expeditionDepth: 10,
     settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false, showFps: true})});
-  const expedition = Object.freeze({version: 7, battle: null, faction: 1, abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
+  const expedition = Object.freeze({version: 8, battle: null, faction: 1, upgrades: Object.freeze({orbital:2}), abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
     enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({supplyCrate: 2}), Object.freeze({})]),
-    benefits: Object.freeze({surveyDrones: 1}), offers: Object.freeze(['fieldWorkshop', 'commandCapacitor']),
+    benefits: Object.freeze({surveyDrones: 1}),
     encounter: Object.freeze({mission: 'hq-elimination', enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
   render.renderMissionBriefing(expedition.encounter.mission);
@@ -140,64 +139,18 @@ test('screen templates render frozen data without DOM access, randomness or prof
     /data-ui="startBattle" disabled/);
   const settings = render.renderSettingsScreen(profile.settings);
   assert.match(settings, /data-setting="showFps" checked/);
-  const armory = render.renderArmoryScreen(profile), upgrades = vm.runInContext('META', context);
-  for (const key of Object.keys(upgrades)) assert.ok(armory.includes(`data-upgrade="${key}"`));
-  const offers = render.renderBenefitOptions(expedition.offers);
-  assert.equal(offers, render.renderBenefitOptions(expedition.offers));
+  const totals=Object.freeze({upgrades:Object.freeze({orbital:2}),benefits:expedition.benefits});
+  assert.equal(render.renderExpeditionUpgradeList(totals),render.renderExpeditionUpgradeList(totals));
   assert.equal(JSON.stringify({profile, expedition}), before);
 });
 
-test('home civilization progress follows the next unmet score threshold without changing military unlocks', () => {
-  const context = loadScripts(['core', 'content', 'ui-core', 'ui-templates']);
-  const render = vm.runInContext('renderHomeCivilizationScore', context);
-  vm.runInContext('Math.random = () => { throw Error("Progress consumed RNG"); };', context);
-  for (const [score, stage, target] of [[0,2,25],[24,2,25],[25,3,75],[75,4,225],[675,6,2025]]) {
-    const expedition = Object.freeze({depth:0, unlockedStage:1, civilizationScore:score});
-    const before = JSON.stringify(expedition), html = render(expedition,999);
-    assert.match(html, new RegExp(`aria-label="Civilization Score toward Stage ${stage}"`));
-    assert.match(html, new RegExp(`aria-valuemax="${target}"`));
-    assert.match(html, new RegExp(`aria-valuenow="${score}"`));
-    const width = Number(html.match(/style="width:([\d.]+)%"/)[1]);
-    assert.equal(width,score / target * 100);assert.ok(width >= 0 && width < 100);
-    assert.equal(JSON.stringify(expedition),before);
-    assert.equal(render({...expedition,depth:stage-2,unlockedStage:stage-1},999),html,'already covered score targets are skipped even when military progress lags behind');
-  }
-  const last = render(null,250);
-  assert.doesNotMatch(last,/role="progressbar"/);assert.match(last,/250<\/strong>/);
-  const afterLoss = render({depth:2,unlockedStage:3,civilizationScore:100},0);
-  assert.match(afterLoss,/aria-valuemax="225"/,'score loss does not target an already unlocked stage again');
-  const capped = render({depth:0,unlockedStage:1,civilizationScore:Number.MAX_SAFE_INTEGER},0);
-  assert.doesNotMatch(capped,/role="progressbar"|width:NaN|width:Infinity/);
-});
-
-test('victory progress stays on the next encounter, caps surplus and keeps permanent access visible without mutations',()=>{
-  const context=loadScripts(['core','content','ui-core','ui-templates']),render=vm.runInContext('renderVictoryCivilizationScore',context);
-  vm.runInContext('Math.random = () => { throw Error("Progress consumed RNG"); };',context);
-  for(const [score,unlocked,width,now] of [[10,1,40,10],[50,2,100,25],[0,2,100,25]]){
-    const expedition=Object.freeze({depth:1,civilizationScore:score,unlockedStage:unlocked}),before=JSON.stringify(expedition),html=render(expedition);
-    assert.match(html,/aria-label="Civilization Score toward Stage 2"/);
-    assert.match(html,/aria-valuemax="25"/);assert.match(html,new RegExp(`aria-valuenow="${now}"`));
-    assert.match(html,new RegExp(`width:${width}%`));assert.equal(html.includes('stage-ready'),unlocked===2);
-    assert.equal(JSON.stringify(expedition),before);
-  }
-  assert.doesNotMatch(render({depth:32,unlockedStage:32,civilizationScore:0}),/role="progressbar"|width:NaN|width:Infinity/);
-});
-
-test('victory screen integrates score progress without changing next-stage entry permissions',()=>{
-  const h=setup(),ui=h.ui;
-  ui.factionJustUnlocked=null;
-  ui.expedition={depth:1,unlockedStage:1,civilizationScore:10,offers:[],enemyBenefits:[],
+test('victory offers direct travel without mutating the next encounter',()=>{
+  const h=setup(),ui=h.ui;ui.factionJustUnlocked=null;
+  ui.expedition={depth:1,upgrades:{},benefits:{},enemyBenefits:[],
     encounter:{map:'desert',seed:1409,mission:'hq-elimination',enemies:[]}};
-  const before=JSON.stringify(ui.expedition);
-  ui.showResult({win:true});let html=h.document.getElementById('result').innerHTML;
-  assert.match(html,/role="progressbar"/);assert.match(html,/width:40%/);
-  assert.match(html,/data-ui="continueExpedition" disabled/);
+  const before=JSON.stringify(ui.expedition);ui.showResult({win:true});
+  assert.doesNotMatch(h.document.getElementById('result').innerHTML,/data-ui="continueExpedition" disabled/);
   assert.equal(JSON.stringify(ui.expedition),before);
-  ui.expedition.unlockedStage=2;ui.expedition.civilizationScore=50;
-  ui.showResult({win:true});html=h.document.getElementById('result').innerHTML;
-  assert.match(html,/width:100%/);assert.doesNotMatch(html,/data-ui="continueExpedition" disabled/);
-  ui.expedition=null;ui.showResult({win:false,text:'Defeat'});
-  assert.doesNotMatch(h.document.getElementById('result').innerHTML,/role="progressbar"/);
 });
 
 test('opponent briefing maps active slots to their faction and benefit data', () => {
@@ -324,6 +277,8 @@ function setup() {
         case 'cancelQueue': return this.cancelQueue(action.id, action.index);
         case 'toggleRepair': return this.toggleBuildingRepair(action.id);
         case 'sell': return this.sellBuilding(action.id);
+        case 'configureSettlementUpgrade':
+        case 'expandSettlementBuilding': calls.push(['action',team,JSON.parse(JSON.stringify(action))]);return true;
         case 'rotateBuilding':
         case 'rally': return vm.runInContext('MeridianGame.prototype.executeAction', context).call(this, team, action);
         default: assert.fail(`Unexpected UI action: ${action.kind}`);
@@ -337,7 +292,7 @@ function setup() {
     ground: (x, y) => ({ x: x / 10, z: y / 10 }),
     project: (x, y, z) => ({ x, y: z })
   },
-    { unlock() {}, sound() {} }, { expeditionDepth: 0, aether: 0, lastCivilizationScore: 0, tutorialComplete: false, upgrades: {}, settings: { quality: 2 } },
+    { unlock() {}, sound() {} }, { expeditionDepth: 0, tutorialComplete: false, settings: { quality: 2 } },
     { expeditionError: null, saveProfile() {}, saveProgress() { return true; },
       loadStageHistory(e) { if (!e) return []; return [...(e.worlds || []).map(w=>({stage:w.stage,map:w.map,seed:w.seed})),
         {stage:e.depth+1,map:e.encounter.map,seed:e.encounter.seed}]; } });
@@ -435,10 +390,9 @@ test('expedition loadout selection keeps four unique ordered slots and locks an 
 test('new expedition modules remain editable with an existing checkpoint without changing the saved run', () => {
   const h = setup(), ui = h.ui;
   // Controller metadata is mutable; editing must still leave this existing recipe untouched.
-  const expedition = { version: 7, battle: null, faction: 0, depth: 2, civilizationScore: 0, unlockedStage: 3,
+  const expedition = { version: 8, battle: null, faction: 0, depth: 2, upgrades: {},
     abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']),
     benefits: Object.freeze({}), enemyBenefits: Object.freeze([Object.freeze({})]),
-    offers: Object.freeze([]),
     encounter: Object.freeze({ mission: 'hq-elimination', enemies: Object.freeze([2]), map: 'desert', seed: 1409 }) };
   const before = JSON.stringify(expedition);
   ui.expedition = expedition;
@@ -1578,48 +1532,13 @@ test('build menu exposes only the Forum among civilian models in every expeditio
   }
 });
 
-test('HUD refresh displays live civilization score while construction, loss and pause change the current world',()=>{
-  const h=setup(),ui=h.ui,g=ui.game;
-  ui.view='game';ui.updateHUD=h.UI.prototype.updateHUD;ui.renderActions=()=>{};ui.updateQueues=()=>{};
-  Object.assign(g,{supply:()=>0,cap:()=>24,snapshotSafe:true});Object.assign(g.s,{depth:0,map:'desert',seed:1409});
-  ui.expedition={version:7,depth:0,unlockedStage:1,civilizationScore:0,battle:null,worlds:[],encounter:{map:'desert',seed:1409}};
-  const own={kind:'building',type:'fieldlab',team:0,hp:500,progress:.9};g.s.entities=[own,{...own,team:1,progress:1}];
-  ui.tick(.26);assert.equal(ui.expedition.civilizationScore,0);
-  own.progress=1;ui.tick(.26);
-  assert.equal(ui.expedition.civilizationScore,5);assert.match(h.document.getElementById('civilizationCount').textContent,/5/);
-  assert.equal(h.document.getElementById('civilizationCount').style.getPropertyValue('--civilization-progress'),'20%');
-  assert.equal(h.document.getElementById('battleStage').textContent,'STAGE 1');
-  own.hp=0;ui.paused=true;ui.tick(.26);
-  assert.equal(ui.expedition.civilizationScore,0);assert.match(h.document.getElementById('civilizationCount').textContent,/0/);
-  assert.equal(ui.expedition.unlockedStage,1,'score cannot grant another map without military victory');
-});
-
-test('compact HUD distinguishes score readiness from actual next-stage access during visits and preserves its target',()=>{
-  const h=setup(),ui=h.ui,g=ui.game,count=h.document.getElementById('civilizationCount');
-  ui.view='game';ui.updateHUD=h.UI.prototype.updateHUD;ui.renderActions=()=>{};
-  Object.assign(g,{supply:()=>0,cap:()=>24,snapshotSafe:true});Object.assign(g.s,{depth:0,map:'desert',seed:1409});
-  g.s.entities=Array.from({length:10},()=>({kind:'building',type:'fieldlab',team:0,hp:500,progress:1}));
-  ui.expedition={version:7,depth:0,unlockedStage:1,civilizationScore:0,battle:null,worlds:[],encounter:{map:'desert',seed:1409}};
-  g.start=()=>{throw Error('Readiness must not launch or replace a battle');};
-  ui.updateHUD();assert.match(count.textContent,/^✓ /);assert.match(count.title,/military victory still required/);
-  assert.equal(count.classList.contains('stage-ready'),false);
-  assert.equal(count.style.getPropertyValue('--civilization-progress'),'100%');assert.equal(ui.expedition.unlockedStage,1);
-  ui.activeWorldStage=1;g.s.rules.completed=true;ui.expedition.depth=1;
-  ui.expedition.worlds=[{stage:1,recipe:{depth:0,encounter:ui.expedition.encounter},battle:{state:{entities:[]}}}];
-  ui.updateHUD();assert.match(count.textContent,/^→ /);assert.match(count.title,/Stage 2 unlocked/);
-  assert.equal(count.classList.contains('stage-ready'),true);assert.equal(ui.expedition.unlockedStage,2);
-  g.s.entities[0].hp=0;ui.updateHUD();assert.match(count.textContent,/^→ /);
-  assert.equal(count.style.getPropertyValue('--civilization-progress'),'100%','permanent access survives score loss');
-  g.s.entities[0].hp=500;ui.expedition.battle={state:{entities:[]}};
-  ui.updateHUD();assert.match(count.textContent,/^CIV /);assert.match(count.title,/Stage 3: 75/);
-  assert.equal(count.style.getPropertyValue('--civilization-progress'),`${50/75*100}%`);assert.equal(count.classList.contains('stage-ready'),false);
-  g.s.entities.push(...Array.from({length:40},()=>({...g.s.entities[0]})));
-  ui.updateHUD();assert.match(count.textContent,/^✓ /);assert.match(count.title,/Stage 3: 75/);
-  assert.equal(count.style.getPropertyValue('--civilization-progress'),'100%','score banking must not hide readiness by advancing the HUD target');
-  assert.equal(ui.expedition.unlockedStage,2,'the paused current battle still needs military victory');
-  ui.expedition.depth=32;ui.expedition.unlockedStage=32;ui.expedition.battle=null;
-  ui.updateHUD();assert.equal(count.style.getPropertyValue('--civilization-progress'),'0%');assert.match(count.title,/exceeds supported range/);
-  ui.expedition=null;ui.updateHUD();assert.equal(count.classList.contains('hidden'),true);
+test('civilian HUD choices carry the selected building ID and obey pause guards',()=>{
+  const h=setup(),ui=h.ui,g=ui.game,b={id:7,kind:'building',type:'fieldlab',team:0,hp:500,progress:1,forumId:1,queue:[]};
+  g.s.entities=[b];ui.selected=[7];ui.perform=h.UI.prototype.perform;g.settlementUpgradeReason=()=>'';g.settlementExpansionReason=()=>'';
+  ui.perform('settlementUpgrade:orbital');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:'orbital'}]);
+  ui.perform('settlementExpand');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'expandSettlementBuilding',id:7}]);
+  ui.perform('settlementClear');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:null}]);
+  const count=h.calls.length;ui.paused=true;ui.perform('settlementUpgrade:scan');assert.equal(h.calls.length,count);
 });
 
 test('speed changes are transient, pause-guarded and preserve commands and RNG', () => {
@@ -1850,8 +1769,8 @@ test('pause and visibility changes preserve battle state and require explicit re
 function savedUIBattle() {
   const h = setup(), game = h.ui.game, copy = value => JSON.parse(JSON.stringify(value));
   Object.assign(game.s, { map: 'desert', seed: 1409, depth: 0, result: null, time: 42, speed: 2 });
-  h.ui.expedition = { version: 7, battle: null, faction: 0, abilities: ['orbital', 'repair', 'scan', 'drop'],
-    depth: 0, benefits: {}, enemyBenefits: [{}], offers: [],
+  h.ui.expedition = { version: 8, battle: null, faction: 0, abilities: ['orbital', 'repair', 'scan', 'drop'],
+    depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
   game.snapshotSafe = true; game.snapshotBattle = () => ({ version: 1, state: copy(game.s), tutorial: null });
   game.start = () => assert.fail('A saved battle must use restore, not fresh deployment');
@@ -1981,14 +1900,14 @@ test('battle autosave, pagehide and main menu preserve tutorial goals and contin
   h.setTime(5000); ui.autosaveBattle(); assert.equal(h.saves.length, 1);
   h.window.handlers.pagehide(); assert.equal(h.saves.length, 2);
   const state = JSON.stringify(ui.game.s); ui.showHome(); assert.equal(ui.game.s, null);
-  ui.profile.upgrades.startingWorkers = 5;
+  ui.profile.expeditionDepth = 25;
   ui.continueExpedition();
   assert.equal(ui.view, 'game'); assert.equal(ui.paused, false); assert.equal(JSON.stringify(ui.game.s), state);
   assert.equal(ui.modalKind, '');
   assert.equal(h.document.getElementById('modal').classList.contains('hidden'), true);
   assert.equal(ui.battleTutorial.step, 'trainWorker'); assert.equal(ui.battleTutorial.workersTrained, 1);
   assert.deepEqual([...ui.battleTutorial.achieved], ['buildHQ']);
-  assert.deepEqual(ui.game.s.parties[0].meta, {}, 'new purchases do not change restored startupgrades');
+  assert.deepEqual(ui.game.s.parties[0].meta, {}, 'profile progress does not change restored battle upgrades');
   assert.equal(ui.expedition.battle.tutorial.cameraHome, undefined, 'ordinary tutorial goals do not add a phantom camera target');
   ui.pause(); assert.equal(ui.paused, true); assert.equal(ui.modalKind, 'pause');
   ui.resume(); assert.equal(ui.paused, false);
@@ -2042,162 +1961,40 @@ test('blocked expedition saves require explicit discard and concurrent launch at
 
 test('pause restart actions cannot redeploy a running expedition', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.ui.expedition = { version: 7, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [2, 0], map: 'desert', seed: 1409 },
-    benefits: { supplyCrate: 2 }, enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }], offers: [], depth: 3 };
+  h.ui.expedition = { version: 8, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [2, 0], map: 'desert', seed: 1409 },
+    upgrades: {}, benefits: {}, enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }], depth: 3 };
   const state = h.ui.game.s; let starts = 0;
   h.ui.game.start = () => { starts++; };
   h.ui.pause(); h.click({ ui: 'restartConfirm' }); h.click({ ui: 'restart' }); h.ui.continueExpedition();
   assert.equal(starts, 0); assert.strictEqual(h.ui.game.s, state); assert.equal(h.ui.paused, true);
 });
 
-test('victory checkpoints offers and chosen benefits; defeat clears the expedition', () => {
-  const h = setup(); h.UI.prototype.bind.call(h.ui);
-  const saved = [], cleared = [];
-  h.ui.persistence.saveProgress = (profile, value) => value === null ? cleared.push(true) : saved.push(JSON.parse(JSON.stringify(value)));
-  h.ui.persistence.saveProfile = () => {};
-  h.ui.game.start = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
-  h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
-  h.ui.game.s.result = { win: true };
-  h.ui.expedition = { version: 7, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 0, benefits: {}, enemyBenefits: [{}],
-    encounter: { mission: 'hq-elimination', enemies: [1], map: 'desert', seed: 1409 }, offers: [] };
-  // This fixture can enter Stage 2; military victory without score has a separate world-flow test.
-  h.ui.game.s.entities = Array.from({length:10},(_,i)=>({id:i+1,kind:'building',type:'fieldlab',team:0,hp:500,progress:1}));
-  const previousMap = h.ui.expedition.encounter.map;
-  h.ui.event('result', { win: true, text: 'Victory', time: 1, integrity: 1, score: 1 });
-  assert.equal(h.ui.expedition.depth, 1); assert.equal(saved.length, 1);
-  assert.deepEqual(JSON.parse(JSON.stringify(h.ui.stageHistory)), [
-    { stage: 1, map: previousMap, seed: 1409 },
-    { stage: 2, map: h.ui.expedition.encounter.map, seed: h.ui.expedition.encounter.seed }
-  ]);
-  assert.equal(saved[0].battle, null, 'victory retires the ended snapshot in the same write');
-  assert.equal(saved[0].encounter.mission, 'hq-elimination');
-  assert.notEqual(h.ui.expedition.encounter.map, previousMap);
-  assert.equal(h.ui.expedition.offers.length, 3);
-  const enemyBefore=JSON.stringify(h.ui.expedition.enemyBenefits);
-  const totals = () => Array.from(h.ui.expedition.enemyBenefits, perks => Object.values(perks).reduce((a,b)=>a+b,0));
-  assert.deepEqual(totals(), [1]);
-  assert.deepEqual(Array.from(h.ui.expedition.encounter.enemies), [1]);
-  h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
-  assert.equal(saved.length,1);assert.equal(JSON.stringify(h.ui.expedition.enemyBenefits),enemyBefore);
-  assert.equal(h.ui.stageHistory.length, 2, 'repeated results do not append visual history');
-  const choice = h.ui.expedition.offers[0]; h.click({ benefit: choice });
-  assert.equal(saved.length, 1, 'selecting a result benefit does not commit before confirmation');
-  h.click({ ui: 'confirmBenefit' });
-  assert.equal(h.ui.expedition.benefits[choice], 1); assert.equal(h.ui.expedition.offers.length, 0);
-  assert.equal(saved.length, 2); assert.equal(h.calls.length, 1);
-  assert.equal(JSON.stringify(h.calls[0][1].enemyBenefits),enemyBefore);
-  assert.equal(JSON.stringify(saved[1].enemyBenefits),enemyBefore);
-  const previous=JSON.parse(enemyBefore);
-  h.ui.game.s = { ...h.ui.game.s }; // A new battle, not a reset of its result display.
-  h.ui.createEncounter=depth=>({mission: 'hq-elimination', enemies: Array.from({length: Math.min(3, depth + 1)}, () => 2),map:'mothership',seed:222});
-  h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
-  assert.deepEqual(totals(), [2, 0, 0]);
-  for(const [key,count] of Object.entries(previous[0]))assert.ok(h.ui.expedition.enemyBenefits[0][key]>=count);
-  h.ui.game.s = { ...h.ui.game.s };
-  h.ui.event('result',{win:true,text:'Victory',time:1,integrity:1,score:1});
-  assert.deepEqual(totals(), [3, 1, 1]);
-  h.ui.game.s = { ...h.ui.game.s };
-  h.ui.event('result', { win: false, text: 'Defeat', time: 1, integrity: 0, score: 0 });
-  assert.equal(h.ui.expedition, null); assert.equal(cleared.length, 1);
+test('victory checkpoints the completed world once; defeat clears the expedition', () => {
+  const h=setup(),saved=[],cleared=[];
+  h.ui.persistence.saveProgress=(_profile,value)=>value===null?cleared.push(true):saved.push(JSON.parse(JSON.stringify(value)));
+  h.ui.expedition={version:8,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{orbital:2},benefits:{supplyCrate:1},enemyBenefits:[{}],
+    encounter:{mission:'hq-elimination',enemies:[1],map:'desert',seed:1409}};
+  const previousMap=h.ui.expedition.encounter.map;h.ui.game.s.result={win:true};
+  h.ui.event('result',{win:true,text:'Victory'});
+  assert.equal(h.ui.expedition.depth,1);assert.equal(saved.length,1);
+  assert.equal(saved[0].battle,null);assert.equal(saved[0].worlds[0].recipe.upgrades.orbital,2);
+  assert.notEqual(saved[0].encounter.map,previousMap);
+  assert.deepEqual(JSON.parse(JSON.stringify(saved[0].upgrades)),{});
+  assert.deepEqual(JSON.parse(JSON.stringify(saved[0].enemyBenefits)),[{}]);
+  h.ui.event('result',{win:true});assert.equal(saved.length,1);
+  h.ui.game.s={...h.ui.game.s};h.ui.event('result',{win:false,text:'Defeat'});
+  assert.equal(h.ui.expedition,null);assert.equal(cleared.length,1);
 });
 
-test('upgrades after a result preserve the ended battle and do not replay its sound', () => {
-  for (const win of [false, true]) {
-    const h = setup(), sounds = []; h.UI.prototype.bind.call(h.ui);
-    h.ui.openModal = h.UI.prototype.openModal;
-    h.ui.audio.sound = name => sounds.push(name);
-    Object.assign(h.ui.game.s, { seed: 1409, map: 'desert', enemy: 2,
-      stats: { kills: 3, lost: 1, gathered: 42 },
-      result: { win, text: 'HQ destroyed', time: 20, integrity: .5, score: 12 } });
-    const state = h.ui.game.s, before = JSON.stringify(state);
-    h.ui.event('result', state.result);
-    assert.deepEqual(sounds, [win ? 'victory' : 'defeat']);
-    h.click({ ui: 'armory' }); assert.equal(h.ui.modalKind, 'armory');
-    let saved = 0; h.ui.persistence.saveProfile = () => { saved++; return true; };
-    h.ui.profile.aether = 300; h.ui.buyUpgrade('startingWorkers');
-    assert.equal(saved, 1); assert.equal(h.ui.profile.upgrades.startingWorkers, 1); assert.equal(h.ui.profile.aether, 0);
-    assert.equal(h.ui.modalKind, 'armory');
-    h.click({ ui: 'closeModal' });
-    assert.equal(h.ui.modalKind, 'result');
-    assert.equal(h.ui.paused, true); assert.strictEqual(h.ui.game.s, state);
-    assert.equal(JSON.stringify(state), before);
-    assert.deepEqual(sounds.filter(name => name === 'victory' || name === 'defeat'), [win ? 'victory' : 'defeat']);
-    assert.equal(sounds.filter(name => name === 'research').length, 1);
-    h.click({ ui: 'home' }); assert.equal(h.ui.game.s, null);
-    assert.equal(h.ui.view, 'home'); assert.equal(h.ui.profile.upgrades.startingWorkers, 1);
+test('settings after a result preserve the ended battle and do not replay its sound', () => {
+  for(const win of [false,true]){
+    const h=setup(),sounds=[];h.UI.prototype.bind.call(h.ui);h.ui.openModal=h.UI.prototype.openModal;
+    h.ui.audio.sound=name=>sounds.push(name);h.ui.game.s.result={win,text:'HQ destroyed'};
+    const state=h.ui.game.s,before=JSON.stringify(state);h.ui.event('result',state.result);
+    h.click({ui:'settings'});assert.equal(h.ui.modalKind,'settings');h.click({ui:'closeModal'});
+    assert.equal(h.ui.modalKind,'');assert.equal(h.document.getElementById('result').classList.contains('hidden'),false);assert.strictEqual(h.ui.game.s,state);assert.equal(JSON.stringify(state),before);
+    assert.deepEqual(sounds.filter(name=>name==='victory'||name==='defeat'),[win?'victory':'defeat']);
   }
-});
-
-test('permanent upgrades spend recovered aether, remain bounded and do not alter the active battle', () => {
-  const h = setup(), keys = ['startingAlloy', 'startingWorkers'];
-  h.ui.game.s.parties[0].meta = {}; h.ui.game.s.parties[0].account.alloy = 123; h.ui.game.s.parties[0].account.gas = 45;
-  h.ui.persistence.saveProfile = p => h.calls.push(['profile', JSON.parse(JSON.stringify(p))]);
-  h.ui.profile.aether = 99;
-  h.ui.buyUpgrade('startingAlloy'); assert.deepEqual(h.ui.profile.upgrades, {});
-  h.ui.profile.aether = 100; h.ui.buyUpgrade('startingAlloy');
-  assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1 }); assert.equal(h.ui.profile.aether, 0);
-  h.ui.profile.aether = 500; h.ui.buyUpgrade('aetherEvacuation');
-  assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 1, aetherEvacuation: 1 }); assert.equal(h.ui.profile.aether, 0);
-  h.ui.profile.aether = 5100;
-  for (const key of keys) for (let i=0;i<7;i++) h.ui.buyUpgrade(key);
-  h.ui.buyUpgrade('not-an-upgrade');
-  assert.deepEqual(h.ui.profile.upgrades, { startingAlloy: 5, aetherEvacuation: 1, startingWorkers: 5 });
-  assert.equal(h.ui.profile.aether, 0); assert.equal(h.calls.length, 11);
-  assert.deepEqual([h.ui.game.s.parties[0].account.alloy,h.ui.game.s.parties[0].account.gas,h.ui.game.s.parties[0].meta], [123,45,{}]);
-});
-
-test('each result transfers capped unused aether plus structure recovery once at the run-start upgrade level', () => {
-  for (const [level, gas, structures, recovered] of [[0, 0, 0, 0], [0, 42.9, 2, 52], [0, 1000, 2, 110],
-    [1, 1000, 2, 220], [2, 1000, 2, 380], [3, 1000, 2, 540], [4, 1000, 2, 800], [5, 2000, 2, 1060]]) {
-    const h = setup(), saves = [];
-    h.ui.persistence.saveProgress = (profile, expedition) => saves.push(JSON.parse(JSON.stringify({ profile, expedition })));
-    h.ui.showResult = () => {};
-    h.ui.game.s.parties[0].faction = 2; h.ui.game.s.parties[0].account.gas = gas;
-    h.ui.game.s.parties[0].meta = { aetherEvacuation: level };
-    h.ui.game.s.stats = { structuresDestroyed: structures };
-    h.ui.event('result', { win: true });
-    assert.equal(h.ui.resultAetherEvacuated, Math.min([100, 200, 350, 500, 750, 1000][level], Math.floor(gas)));
-    assert.equal(h.ui.resultAetherStructures, structures * (5 + level * 5));
-    assert.equal(h.ui.resultAetherRecovered, recovered);
-    assert.equal(h.ui.profile.aether, recovered);
-    assert.equal(saves.length, 1, 'even a zero payout retires the battle atomically');
-    assert.equal(saves[0].profile.aether, recovered);
-    h.ui.resultAetherRecovered = undefined; // Presentation state must not reopen the payout.
-    h.ui.event('result', { win: true });
-    assert.equal(h.ui.profile.aether, recovered, 'same result cannot pay twice');
-    assert.equal(saves.length, 1);
-  }
-});
-
-test('fleet upgrades charge their prices, respect caps and never mutate an active battle',()=>{
-  const h=setup(),rules=vm.runInContext('META',h.context),snapshot=JSON.stringify(h.ui.game.s);
-  let saves=0;h.ui.persistence.saveProfile=()=>saves++;
-  for(const key of ['constructionProtocols','logisticsFrame','repairLogistics']) {
-    const rule=rules[key];
-    for(let level=0;level<rule.max;level++) {
-      h.ui.profile.aether=rule.costs[level]-1;h.ui.buyUpgrade(key);
-      assert.equal(h.ui.profile.upgrades[key]||0,level);
-      h.ui.profile.aether++;h.ui.buyUpgrade(key);
-      assert.equal(h.ui.profile.upgrades[key],level+1);assert.equal(h.ui.profile.aether,0);
-    }
-    h.ui.profile.aether=10000;h.ui.buyUpgrade(key);
-    assert.equal(h.ui.profile.upgrades[key],5);assert.equal(h.ui.profile.aether,10000);
-  }
-  assert.equal(saves,15);assert.equal(JSON.stringify(h.ui.game.s),snapshot);
-});
-
-test('command module purchases use rank prices without changing the active battle snapshot', () => {
-  const h = setup(), snapshot = JSON.stringify(h.ui.game.s), rules = vm.runInContext('COMMAND_MODULES', h.context);
-  let saves = 0; h.ui.persistence.saveProfile = () => saves++;
-  for (let rank = 0; rank < 3; rank++) {
-    h.ui.profile.aether = rules.disruption.costs[rank] - 1; h.ui.buyUpgrade('disruption');
-    assert.equal(h.ui.profile.upgrades.disruption || 0, rank);
-    h.ui.profile.aether++; h.ui.buyUpgrade('disruption');
-    assert.equal(h.ui.profile.upgrades.disruption, rank + 1); assert.equal(h.ui.profile.aether, 0);
-  }
-  h.ui.profile.aether = 5000; h.ui.buyUpgrade('disruption');
-  assert.equal(h.ui.profile.upgrades.disruption, 3); assert.equal(h.ui.profile.aether, 5000);
-  assert.equal(saves, 3); assert.equal(JSON.stringify(h.ui.game.s), snapshot);
 });
 
 test('best expedition depth unlocks factions at 10 and 25', () => {
@@ -2208,8 +2005,8 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
       [true, unlocked >= 1, unlocked >= 2]);
   }
   h.ui.profile.expeditionDepth = 9;
-  h.ui.expedition = { version: 7, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 9, benefits: {}, enemyBenefits: [{}, {}, {}],
-    encounter: { mission: 'hq-elimination', enemies: [1, 2, 0], map: 'desert', seed: 1409 }, offers: [] };
+  h.ui.expedition = { version: 8, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 9, upgrades: {}, benefits: {}, enemyBenefits: [{}, {}, {}],
+    encounter: { mission: 'hq-elimination', enemies: [1, 2, 0], map: 'desert', seed: 1409 } };
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.showResult = () => {};
   let saves = 0; h.ui.persistence.saveProgress = () => { saves++; return true; };
@@ -2220,58 +2017,18 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
 });
 
-test('enemy choices use the shared three-offer pool and caps with deterministic faction preferences',()=>{
-  const h=setup(),{chooseEnemyBenefit:choose,expeditionBenefitOffers:offers,EXPEDITION_BENEFITS:rules}=
-    vm.runInContext('({chooseEnemyBenefit,expeditionBenefitOffers,EXPEDITION_BENEFITS})',h.context);
-  vm.runInContext("Math.random=()=>{throw Error('Unseeded choice');}",h.context);
-  const counts=[{}, {}, {}],empty=Object.freeze({});
-  for(let seed=1;seed<=1000;seed++)for(const faction of [0,1,2]) {
-    const key=choose(faction,empty,seed,21);
-    assert.ok(Object.hasOwn(rules,key));assert.equal(choose(faction,empty,seed,21),key);
-    counts[faction][key]=(counts[faction][key]||0)+1;
-  }
-  for(const c of counts)assert.equal(Object.keys(c).length,Object.keys(rules).length,'no faction-exclusive benefits');
-  assert.ok(counts[0].fieldWorkshop>counts[2].fieldWorkshop);
-  assert.ok(counts[1].pioneerSquad>counts[0].pioneerSquad);
-  assert.ok(counts[2].commandCapacitor>counts[1].commandCapacitor);
-  const perks={};
-  for(let depth=1;depth<=100;depth++) {
-    const key=choose(depth%3,Object.freeze({...perks}),depth*7919,depth);
-    perks[key]=(perks[key]||0)+1;
-    assert.ok(perks[key]<=(rules[key].max??Infinity));
-  }
-  assert.equal(Object.values(perks).reduce((a,b)=>a+b,0),100);
-  const capped=Object.fromEntries(Object.entries(rules).filter(([,rule])=>rule.max).map(([key,rule])=>[key,rule.max]));
-  assert.deepEqual(Array.from(offers(capped,()=>.5)).sort(),['aetherAllocation','commandDrill','supplyCrate']);
-  for(const faction of [0,1,2])assert.ok(['aetherAllocation','commandDrill','supplyCrate'].includes(choose(faction,capped,1409,21)));
-});
-
-test('expedition benefits are offered deterministically and bounded on selection',()=>{
-  const h=setup(),rules=vm.runInContext('EXPEDITION_BENEFITS',h.context),seen=new Set();
-  h.ui.expedition={faction:0,depth:8,benefits:{},enemyBenefits:[{},{},{}],offers:[],encounter:{mission:'hq-elimination',enemies:[1,0,2],map:'desert',seed:1409}};
-  const run=h.ui.expedition;
-  for(let seed=1;seed<=30;seed++) {
-    run.encounter.seed=seed;
-    const offers=Array.from(h.ui.createBenefitOffers(run));
-    assert.equal(new Set(offers).size,3);assert.deepEqual(Array.from(h.ui.createBenefitOffers(run)),offers);
-    offers.forEach(k=>seen.add(k));
-  }
-  for(const key of ['surveyDrones','fieldWorkshop','commandCapacitor']) {
-    assert.ok(seen.has(key));run.offers=[key];
-    h.ui.game.start=()=>{};h.ui.chooseBenefit(key);assert.equal(run.benefits[key],1);
-    run.benefits[key]=rules[key].max;run.offers=[key];h.ui.chooseBenefit(key);
-    assert.equal(run.benefits[key],rules[key].max);
-    assert.ok(!h.ui.createBenefitOffers(run).includes(key));
-  }
-  assert.ok(seen.has('commandDrill'));assert.equal(rules.commandDrill.max,undefined);
-  run.offers=['commandDrill'];h.ui.chooseBenefit('commandDrill');
-  run.offers=['commandDrill'];h.ui.chooseBenefit('commandDrill');
-  assert.equal(run.benefits.commandDrill,2);
+test('civilian effect list exposes every catalog choice and marks the selected effect without RNG',()=>{
+  const h=setup(),rules=vm.runInContext('CIVILIZATION_UPGRADES',h.context);
+  vm.runInContext("Math.random=()=>{throw Error('UI consumed RNG');}",h.context);
+  const b={type:'fieldlab',upgrade:'orbital',upgradeLevel:2},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
+  for(const key of Object.keys(rules))assert.ok(html.includes(`data-action="settlementUpgrade:${key}"`));
+  assert.match(html,/data-action="settlementUpgrade:orbital"[^>]*aria-pressed="true"/);
+  assert.equal(JSON.stringify(b),before);
 });
 
 test('home and transition previews use the actual next landscape and atmosphere seed', () => {
   const h = setup(), maps = [];
-  h.ui.expedition = { faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2, benefits: {}, enemyBenefits: [{}], offers: [],
+  h.ui.expedition = { faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2, upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { mission: 'hq-elimination', enemies: [2], map: 'frontier', seed: 1409 } };
   h.ui.onPreview = (map, seed) => maps.push([map, seed]);
   h.ui.showHome();
@@ -2304,7 +2061,7 @@ test('expedition setup creates and saves the fixed Free Marches opening encounte
   assert.ok(openingMaps.includes(saved[0].encounter.map));
   assert.ok(saved[0].encounter.seed > 0);
   assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter,
-    abilities: ['orbital', 'repair', 'scan', 'drop'], benefits: {}, enemyBenefits: [{}], depth: 0 });
+    abilities: ['orbital', 'repair', 'scan', 'drop'], upgrades: {}, benefits: {}, enemyBenefits: [{}], depth: 0 });
 });
 
 test('DOM press guard tracks pointer presses on controls', () => {

@@ -291,18 +291,6 @@
 #menu .codex-section-title { color: var(--ui-gold); letter-spacing: 1px }
 #menu :is(.codex-nav button, .codex-chapters a) { padding: 12px; font: 400 12px/1.4 Aldrich, sans-serif }
 #menu :is(.codex-nav button, .codex-chapters a, .codex-card):hover { --ui-edge: #bafaff }
-:is(#menu, #result) .civilization-score { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; color: #a1cbd0; font-size: 12px; letter-spacing: 1px }
-:is(#menu, #result) .civilization-score > span { align-self: center; overflow-wrap: anywhere }
-:is(#menu, #result) .civilization-amount { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 6px; overflow-wrap: anywhere }
-:is(#menu, #result) .civilization-score strong { color: var(--civilization-color, var(--ui-gold)); font-size: clamp(14px, 4vw, 18px); font-weight: 400 }
-:is(#menu, #result) .civilization-amount > span { color: #91a5ae; font-size: 12px }
-:is(#menu, #result) .civilization-progress { grid-column: 1 / -1; height: 6px; overflow: hidden; background: #03111ccc; border: 1px solid var(--ui-line) }
-:is(#menu, #result) .civilization-progress > i { display: block; height: 100%; background: var(--civilization-color, var(--ui-gold)) }
-:is(#menu, #result) .civilization-score small { grid-column: 1 / -1; font-size: 9px; color: #91a5ae; line-height: 1.5 }
-#result .civilization-score { margin: 0; padding: 16px; border: 1px solid var(--civilization-color, var(--ui-gold)); background: #041b28cc }
-#result .civilization-score strong { font-size: clamp(18px, 3vw, 24px) }
-#result .civilization-score small { font-size: 11px }
-#result .civilization-score.stage-ready { --civilization-color: var(--ui-accent) }
 #result .result-screen { backdrop-filter: none; background: linear-gradient(0deg, #03131ce6, #03131c66) }
 #result .result-hero h1 { font: 400 clamp(35px, 5vw, 60px)/1.2 Aldrich, sans-serif; letter-spacing: 7px }
 #result .result-symbol .ui-icon { width: 35px; height: 38px }
@@ -337,9 +325,6 @@
 #hud #topbar { background: #092331; border: 0; border-radius: 0; box-shadow: none }
 #hud .resource .ui-icon { width: 24px; height: 28px }
 #hud .resource small { color: #aacddd }
-#hud #civilizationCount { display: block; position: relative; color: var(--ui-gold); font: inherit; line-height: 1.5; letter-spacing: 0 }
-#hud #civilizationCount::after { content: ''; position: absolute; inset: auto 0 0; height: 2px; background: linear-gradient(90deg, currentColor var(--civilization-progress, 0%), var(--ui-line) 0); opacity: .7; pointer-events: none }
-#hud #civilizationCount.stage-ready { color: var(--ui-accent) }
 #hud #pauseBtn { display: grid; place-items: center; background: #0c2a3c; border: 0; border-radius: 0; box-shadow: none }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
 #hud #pauseBtn:hover { background: #125775; color: #bafaff }

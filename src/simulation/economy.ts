@@ -44,7 +44,9 @@
           ? 'Leave room around units and production exits.' : '';
       }
       if (type && isCivilizationBuildingType(type) && e.kind === 'building' && e.team === team && isCivilizationBuildingType(e.type)) {
-        const a=civilizationClearanceFootprints(p,type,team),b=civilizationClearanceFootprints(e,e.type,e.team,e.visualRotation || 0);
+        const a=type === 'meridianforum' ? civilizationClearanceFootprints(p,type,team) : settlementReservedFootprints(p,type,team),
+          b=e.forumId === undefined ? civilizationClearanceFootprints(e,e.type,e.team,e.visualRotation || 0) :
+            settlementReservedFootprints(e,e.type,e.team,e.visualRotation || 0);
         return a.some(pa=>b.some(pb=>civilizationFootprintsOverlap(pa,pb))) ? 'Leave room between civilian decks, stairs and walkways.' : '';
       }
       return distance(p, e) < r + e.size + 0.8 ? 'Leave room around structures and resources.' : '';
@@ -219,8 +221,6 @@
           return 'Civilian buildings grow automatically around supplied forums.';
         if (type === 'meridianforum' && (s.rules.kind !== 'single-player' || !s.rules.completed))
           return 'Win this battle before founding a settlement.';
-        if (s.rules.kind === 'single-player' && team === 0 && !civilizationBuildingAvailable(type, this.civilizationStage))
-          return `Unlock Stage ${d.civilizationUnlockStage} to build this structure.`;
         if (d.requires && !this.has(d.requires as BuildingType, team))
           return `Requires ${buildingName(d.requires, this.factionFor(team))}.`;
         if (!this.alive(e => e.team === team && e.type === 'worker').length)
@@ -474,7 +474,7 @@
           if (b.progress < 1) {
             if (this.advanceConstruction(b, dt)) this.finishOrder(e);
           } else if (b.hp < b.maxHp && this.account(team).alloy > 0.1) {
-            const repairFactor = 1 - (this.party(team).meta.repairLogistics || 0) * FLEET_EFFECTS.repairDiscount,
+            const repairFactor = 1 - Math.min(.75, (this.party(team).meta.repairLogistics || 0) * FLEET_EFFECTS.repairDiscount),
               amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10 / repairFactor);
             b.hp += amount;
             this.account(team).alloy -= amount * .1 * repairFactor;

@@ -16,7 +16,7 @@ function entity(id, team, type, x, z, kind = 'unit') {
 
 function fixture(upgrades = {}, abilities = ['disruption', 'bulwark', 'surge', 'recall']) {
   const game = Object.create(MeridianGame.prototype), events = [], drops = [];
-  const parties = singlePlayerParties({ upgrades }, { faction: 0, enemies: [0], abilities });
+  const parties = singlePlayerParties({}, { upgrades, faction: 0, enemies: [0], abilities });
   const ownHq = entity(1, 0, 'hq', 0, 0, 'building'), own = entity(2, 0, 'rifle', 5, 0),
     worker = entity(3, 0, 'worker', 4, 0), enemy = entity(4, 1, 'rifle', 6, 0),
     turret = entity(5, 1, 'turret', 6, 1, 'building');

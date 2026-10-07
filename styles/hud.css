@@ -72,6 +72,21 @@
 .building-controls .action { width: 32px; height: 44px }
 .building-controls .action svg, .building-controls .action .ui-icon { width: 20px; height: 20px }
 #actionPanel.details-panel { height: min(280px, 45svh); background: #092331 }
+#hud #actionPanel.settlement-panel { position: absolute; bottom: 0; left: var(--map-size); right: 0; height: min(360px, 48svh); background: #092331 }
+#hud #commandDeck:has(.settlement-panel) #selectionStatus { bottom: min(360px, 48svh) }
+#hud .settlement-upgrades { padding: 8px; font-size: 12px; line-height: 1.45 }
+#hud .settlement-upgrades header { display: grid; gap: 4px; margin-bottom: 8px }
+#hud .settlement-upgrades small { display: block; font-size: 11px; color: var(--muted) }
+#hud .settlement-controls { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px }
+#hud .settlement-upgrades button { min-height: 44px; border: 0; padding: 8px; color: var(--ink); background: #142d3b; text-align: left; font: inherit }
+#hud .settlement-effect-list { display: grid; gap: 2px }
+#hud .settlement-effect { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; align-items: center; width: 100% }
+#hud .settlement-effect .sigil { width: 28px; height: 28px }
+#hud .settlement-effect .sigil :is(svg, .ui-icon) { width: 24px; height: 24px }
+#hud .settlement-effect em { grid-column: 2; font: 10px var(--mono); color: var(--gold) }
+#hud .settlement-effect.active { background: #236476; box-shadow: inset 3px 0 var(--cyan) }
+#hud .settlement-upgrades .blocked { color: var(--muted) }
+#hud .settlement-upgrades button:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px }
 .details-heading { display: flex; align-items: center; gap: 8px; height: 44px; font: 12px var(--mono) }
 .details-heading button { width: 44px; height: 44px; flex-shrink: 0 }
 .details-body { padding: 8px; font-size: 11px }

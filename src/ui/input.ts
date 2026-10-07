@@ -88,21 +88,6 @@
             this.selectBattleAbility(b.dataset.loadoutAbility);
             return;
           }
-          if (b.dataset.upgrade) {
-            this.buyUpgrade(b.dataset.upgrade);
-            return;
-          }
-          if (b.dataset.benefit) {
-            if (this.game.s?.result && !$('result').classList.contains('hidden')) {
-              this.resultBenefit = b.dataset.benefit;
-              document.querySelectorAll<HTMLElement>('#result [data-benefit]').forEach(option => {
-                const active = option.dataset.benefit === this.resultBenefit;
-                option.classList.toggle('active', active);
-                option.setAttribute('aria-pressed', String(active));
-              });
-            } else this.chooseBenefit(b.dataset.benefit);
-            return;
-          }
           if (b.dataset.action) {
             if (!this.controlsLocked) this.perform(b.dataset.action);
             return;
@@ -256,7 +241,6 @@
             const world = this.expedition.worlds?.find(w => w.stage === stage);
             if (!world?.error) break;
             this.expedition.worlds = this.expedition.worlds!.filter(w => w !== world);
-            this.refreshCivilizationScore();
             this.persistence.saveProgress(this.profile, this.expedition);
             this.notifyStorageFailure();
             this.showHome();
@@ -268,27 +252,20 @@
           case 'developWorld':
             this.continueBuilding();
             break;
-          case 'confirmBenefit':
-            if (this.resultBenefit) this.chooseBenefit(this.resultBenefit);
-            break;
           case 'expeditionBenefits':
             this.showExpeditionBenefits();
             break;
           case 'abandon':
             if (this.view !== 'game' || !this.paused || !this.expedition || this.activeWorldStage !== null || this.modalKind !== 'pause') break;
-            this.openModal('abandonExpedition', `<div class="eyebrow">END EXPEDITION</div><h1>Abandon this expedition?</h1><p>This ends the entire expedition and discards its saved battle, all saved worlds, depth and expedition benefits. Your permanent fleet upgrades and reserve are kept. This cannot be undone.</p><div class="btnstack"><button class="primary" data-ui="closeModal">KEEP PLAYING</button><button class="secondary" data-ui="confirmAbandon">ABANDON EXPEDITION</button></div>`);
+            this.openModal('abandonExpedition', `<div class="eyebrow">END EXPEDITION</div><h1>Abandon this expedition?</h1><p>This ends the entire expedition and discards its saved battle, all saved worlds and their building upgrades. Your settings and faction unlocks are kept. This cannot be undone.</p><div class="btnstack"><button class="primary" data-ui="closeModal">KEEP PLAYING</button><button class="secondary" data-ui="confirmAbandon">ABANDON EXPEDITION</button></div>`);
             break;
           case 'confirmAbandon':
             if (this.view !== 'game' || !this.paused || !this.expedition || this.activeWorldStage !== null || this.modalKind !== 'abandonExpedition') break;
             this.modalKind = '';
-            this.refreshCivilizationScore();
             this.expedition = null;
             this.persistence.saveProgress(this.profile, null);
             this.notifyStorageFailure();
             this.showHome();
-            break;
-          case 'armory':
-            this.showArmory();
             break;
           case 'codex':
             this.showCodex();

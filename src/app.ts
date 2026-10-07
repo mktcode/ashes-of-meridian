@@ -40,7 +40,7 @@
             // The explicitly launched spectator run must not read or mutate the normal profile.
             getStorage: () => visibleSimulation || mapExperiment ? volatileStorage : localStorage,
             clamp,
-            upgrades: PERMANENT_UPGRADES,
+            upgrades: BATTLE_UPGRADES,
             benefits: EXPEDITION_BENEFITS,
             abilities: ABILITIES,
             units: UNITS,
@@ -346,13 +346,10 @@
             return false;
           }
           if (!ready) { clearBattleTransition(); textureFailure(Error('Required battlefield textures are unavailable')); return false; }
-          if (!world && ui.expedition && !expeditionStageUnlocked(ui.expedition)) {
-            clearBattleTransition(); $('loading').classList.add('hidden'); return false;
-          }
           try {
             await loadingStep(60, expedition.battle ? 'Restoring battlefield' : 'Generating battlefield');
             if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' :
-              expedition !== ui.expedition || !expeditionStageUnlocked(ui.expedition!))) { clearBattleTransition(); return false; }
+              expedition !== ui.expedition)) { clearBattleTransition(); return false; }
             if (expedition.battle) game.restoreBattle(expedition, !!world);
             else game.start(options);
             await loadingStep(100, 'Operation ready');
@@ -753,11 +750,11 @@
         // Manual spectator command only; normal launches still stop at the home screen.
         if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 7, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, civilizationScore: 0, unlockedStage: 1,
+          ui.expedition = { version: 8, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, upgrades: {},
             benefits: {pioneerSquad: 2}, enemyBenefits: [{}],
             encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,
-              enemies: [2]}, offers: [] };
+              enemies: [2]} };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {
           ui.showBattle();

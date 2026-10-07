@@ -1,4 +1,4 @@
-    /* MeridianUI menus, dialogs and permanent profile screens. Loaded after ui/core.js. */
+    /* MeridianUI menus, dialogs and expedition screens. Loaded after ui/core.js. */
     'use strict';
     const uiScreenMethods = {
       transitionBattleExit(this: MeridianUI, complete: () => void | Promise<boolean>) {
@@ -19,7 +19,6 @@
         void this.finishHome(returningStage);
       },
       finishHome(this: MeridianUI, returningStage: number | null) {
-        this.refreshCivilizationScore();
         this.game.s = null;
         this.activeWorldStage = null;
         this.battleIntro = null;
@@ -46,7 +45,7 @@
         this.stagePreviewBusy = false;
         $('menu').innerHTML =
           renderHomeScreen(this.expedition, this.stageHistory.length > 1,
-            this.expedition ? BATTLEFIELDS[this.expedition.encounter.map].name : '', this.profile.lastCivilizationScore);
+            this.expedition ? BATTLEFIELDS[this.expedition.encounter.map].name : '');
         const entry = this.stageHistory[this.stagePreviewIndex];
         const preview = this.onPreview?.(entry?.map || this.expedition?.encounter.map || 'desert',
           entry?.seed ?? this.expedition?.encounter.seed, false, this.stageBattle(entry?.stage));
@@ -57,7 +56,7 @@
       showBattleSaveError(this: MeridianUI) {
         this.paused = true;
         this.audio.setMode?.('silent');
-        this.openModal('battleSaveError', `<div class="eyebrow">EXPEDITION SAVE UNAVAILABLE</div><h1>Cannot restore this expedition.</h1><p>${esc(this.battleSaveError)}</p><p>The battle will not restart from its beginning. Your fleet upgrades and reserve are kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">KEEP SAVE</button><button class="primary" data-ui="discardExpeditionSave">ABANDON EXPEDITION</button></div>`);
+        this.openModal('battleSaveError', `<div class="eyebrow">EXPEDITION SAVE UNAVAILABLE</div><h1>Cannot restore this expedition.</h1><p>${esc(this.battleSaveError)}</p><p>The battle will not restart from its beginning. Your settings and faction unlocks are kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">KEEP SAVE</button><button class="primary" data-ui="discardExpeditionSave">ABANDON EXPEDITION</button></div>`);
       },
       rememberStage(this: MeridianUI) {
         if (!this.expedition) { this.stageHistory = []; return; }
@@ -98,10 +97,6 @@
         else this.showHome(false, world.stage);
         this.enterSelectedStage();
       },
-      showCivilizationGate(this: MeridianUI) {
-        if (!this.expedition) return;
-        this.openModal('civilizationGate', `<div class="eyebrow">STAGE LOCKED</div><h1>Develop your civilization.</h1><p>${esc(expeditionProgressText(this.expedition))}</p><p>Civilization Score is the current total across all your worlds. It is not spent. Build in any cleared world, then return here.</p><div class="launch-row"><button class="primary" data-ui="developWorld">CONTINUE BUILDING</button><button class="secondary" data-ui="closeModal">RETURN</button></div>`);
-      },
       async browseStage(this: MeridianUI, direction: -1 | 1) {
         if (this.view !== 'home' || this.modalKind || !this.expedition || this.stagePreviewBusy || this.launchingBattle) return;
         const index = this.stagePreviewIndex + direction, entry = this.stageHistory[index];
@@ -130,8 +125,7 @@
       updateStagePreview(this: MeridianUI) {
         const panel = $('menu').querySelector<HTMLElement>('.expedition-stage'), entry = this.stageHistory[this.stagePreviewIndex];
         if (!panel || !entry || !this.expedition) return;
-        const archived = entry.stage !== this.expedition.depth + 1,
-          locked = !expeditionStageUnlocked(this.expedition);
+        const archived = entry.stage !== this.expedition.depth + 1;
         panel.classList.toggle('archived', archived);
         panel.setAttribute('aria-busy', String(this.stagePreviewBusy));
         panel.querySelector('.stage-label')!.textContent = archived ? 'STAGE ARCHIVE' : 'CHECKPOINT';
@@ -139,12 +133,12 @@
         panel.querySelector('.stage-map')!.textContent = BATTLEFIELDS[entry.map].name;
         const world = this.expedition.worlds?.find(w => w.stage === entry.stage);
         panel.querySelector('.stage-status')!.textContent = this.stagePreviewBusy ? 'PREPARING WORLD…' :
-          archived ? world?.error ? 'WORLD SAVE UNAVAILABLE' : world ? 'CLEARED · WORLD SAVED' : 'LANDSCAPE ONLY · NO WORLD SAVE' : locked ? `STAGE LOCKED · ${expeditionProgressText(this.expedition)}` : 'CURRENT CHECKPOINT';
+          archived ? world?.error ? 'WORLD SAVE UNAVAILABLE' : world ? 'CLEARED · WORLD SAVED' : 'LANDSCAPE ONLY · NO WORLD SAVE' : 'CURRENT CHECKPOINT';
         const button = $('menu').querySelector<HTMLButtonElement>('[data-ui="enterSelectedStage"]');
         if (button) {
           button.innerHTML = `${archived ? 'Enter world' : 'Continue expedition'} <span aria-hidden="true">→</span>`;
           button.title = archived ? `Enter stage ${entry.stage}` : `Continue at stage ${entry.stage}`;
-          button.disabled = this.stagePreviewBusy || this.launchingBattle || (archived ? !world : locked);
+          button.disabled = this.stagePreviewBusy || this.launchingBattle || (archived && !world);
         }
         panel.querySelector<HTMLButtonElement>('[data-ui="previousStage"]')!.disabled = this.stagePreviewBusy || this.launchingBattle || this.stagePreviewIndex === 0;
         panel.querySelector<HTMLButtonElement>('[data-ui="nextStage"]')!.disabled = this.stagePreviewBusy || this.launchingBattle || this.stagePreviewIndex === this.stageHistory.length - 1;
@@ -175,16 +169,13 @@
       },
       encounterBriefing(this: MeridianUI) {
         if (!this.expedition?.encounter) return '';
-        return `<div class="battle-note">${renderMissionBriefing(this.expedition.encounter.mission)}${renderAbilityLoadout(this.expedition.abilities, this.profile)}${renderExpeditionOpponents(this.expedition)}</div>`;
+        return `<div class="battle-note">${renderMissionBriefing(this.expedition.encounter.mission)}${renderAbilityLoadout(this.expedition.abilities, this.expedition.upgrades)}${renderExpeditionOpponents(this.expedition)}</div>`;
       },
       showExpeditionBenefits(this: MeridianUI) {
         if (!this.expedition) return;
-        const active = Object.entries(this.expedition.benefits || {}).filter(([key, count]) =>
-          count > 0 && Object.hasOwn(EXPEDITION_BENEFITS, key));
-        this.openModal(
-          'expeditionBenefits',
-          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Current expedition.</h1><p class="muted">${esc(FACTIONS[this.expedition.faction].name)} · ${this.expedition.depth} sectors cleared<br>Next destination · ${esc(BATTLEFIELDS[this.expedition.encounter.map].name)}</p>${this.encounterBriefing()}<h2>Expedition benefits</h2><div class="expedition-benefit-list">${active.length ? active.map(([key, count]) => { const benefit = expeditionBenefit(key)!; return `<div class="expedition-benefit-row"><span class="sigil">${uiIcon(key, benefit.icon)}</span><div><strong>${esc(benefit.name)}</strong><small>${esc(benefit.desc)}</small></div><b>×${count}</b></div>`; }).join('') : '<p class="empty-benefits">No benefits collected yet. Win this battle to choose your first.</p>'}</div><div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`
-        );
+        const totals = this.expeditionUpgrades();
+        this.openModal('expeditionBenefits',
+          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Civilization upgrades.</h1><p class="muted">${esc(FACTIONS[this.expedition.faction].name)} · ${this.expedition.depth} worlds cleared</p>${this.encounterBriefing()}<h2>For newly started battles</h2>${renderExpeditionUpgradeList(totals)}<p>Configure civilian buildings in cleared worlds. Changes never affect a battle that has already started.</p>${this.expedition.battle ? `<h2>Current battle · frozen upgrades</h2>${renderExpeditionUpgradeList({upgrades:this.expedition.upgrades, benefits:this.expedition.benefits})}` : ''}<div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`);
       },
       showBattle(this: MeridianUI) {
         if (this.battleSaveError) return this.showBattleSaveError();
@@ -200,8 +191,7 @@
         $('modal').classList.add('hidden');
         $('result').classList.add('hidden');
         if (!this.factionUnlocked(this.battleFaction)) this.battleFaction = FACTION_ID.FIRST;
-        let startingAlloyLevel = clamp(Math.floor(Number(this.profile.upgrades.startingAlloy) || 0), 0, STARTING_ALLOY.length - 1),
-          startingAlloy = STARTING_ALLOY[startingAlloyLevel];
+        const startingAlloy = STARTING_CINDER;
         if (this.battleAbilities.length > 4 || new Set(this.battleAbilities).size !== this.battleAbilities.length ||
             this.battleAbilities.some(key => !Object.hasOwn(ABILITIES, key)))
           this.battleAbilities = [...DEFAULT_ABILITY_LOADOUT];
@@ -217,9 +207,6 @@
       },
       createEncounter(this: MeridianUI, depth = 0, previousMap?: BattlefieldId): ExpeditionEncounter {
         return createExpeditionEncounter(this.profile, depth, previousMap);
-      },
-      createBenefitOffers(this: MeridianUI, expedition: MeridianExpedition) {
-        return createExpeditionBenefitOffers(expedition);
       },
       selectBattleAbility(this: MeridianUI, ability: AbilityType) {
         if (this.view !== 'battle') return;
@@ -250,8 +237,7 @@
           this.toast('Select four command modules.'); return;
         }
         this.battleFaction = faction;
-        this.expedition = { version: 7, battle: null, worlds: [], faction, abilities: [...this.battleAbilities], depth: 0, civilizationScore: 0, unlockedStage: 1, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter(), offers: [] };
-        this.refreshCivilizationScore();
+        this.expedition = { version: 8, battle: null, worlds: [], faction, abilities: [...this.battleAbilities], depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter() };
         this.persistence.saveProgress(this.profile, this.expedition);
         this.notifyStorageFailure();
         this.stageHistory = [];
@@ -259,19 +245,22 @@
         this.startExpeditionBattle();
       },
       async startExpeditionBattle(this: MeridianUI, world?: ExpeditionWorld) {
-        if (!this.expedition || this.launchingBattle || this.leavingBattle || (!world && this.expedition.offers.length)) return;
+        if (!this.expedition || this.launchingBattle || this.leavingBattle) return;
         if (world && (!this.expedition.worlds?.includes(world) || world.error || !world.recipe || !world.battle)) return;
         if (this.battleSaveError) return this.showBattleSaveError();
-        this.refreshCivilizationScore();
-        if (!world && !expeditionStageUnlocked(this.expedition)) return this.showCivilizationGate();
         if (this.view === 'game' && this.game.s && !this.game.s.result) return this.showPause();
+        if (!world && !this.expedition.battle) {
+          const totals = this.expeditionUpgrades();
+          this.expedition.upgrades = {...totals.upgrades};
+          this.expedition.benefits = {...totals.benefits};
+        }
         const expedition = world ? { ...world.recipe!, battle: world.battle } : this.expedition;
         this.launchingBattle = true;
         this.launchingWorld = world ?? null;
         this.updateStagePreview();
         this.audio.unlock();
         const options: BattleOptions = { faction: expedition.faction, ...expedition.encounter,
-          abilities: expedition.abilities, benefits: expedition.benefits,
+          abilities: expedition.abilities, upgrades: expedition.upgrades, benefits: expedition.benefits,
           enemyBenefits: expedition.enemyBenefits, depth: expedition.depth };
         try {
           if (this.onLaunchBattle) await this.onLaunchBattle(options, expedition, world);
@@ -289,39 +278,6 @@
       continueExpedition(this: MeridianUI) {
         if (this.battleSaveError) return this.showBattleSaveError();
         if (!this.expedition) return this.showBattle();
-        this.refreshCivilizationScore();
-        if (this.expedition.offers.length) this.showExpeditionTransition();
-        else this.startExpeditionBattle();
-      },
-      showExpeditionTransition(this: MeridianUI) {
-        if (!this.expedition) return this.showHome();
-        this.view = 'transition';
-        this.paused = true;
-        this.audio.setMode?.('menu');
-        $('hud').classList.add('hidden');
-        $('worldViewport').classList.remove('in-battle', 'result-backdrop');
-        $('modal').classList.add('hidden');
-        $('result').classList.add('hidden');
-        $('menu').classList.remove('hidden');
-        if (this.onPreview) this.onPreview(this.expedition.encounter.map, this.expedition.encounter.seed);
-        const benefits = Object.entries(this.expedition.benefits).filter(([, count]) => count)
-          .map(([key, count]) => `${esc(expeditionBenefit(key)!.name)}${count > 1 ? ` ×${count}` : ''}`).join(' · ');
-        $('menu').innerHTML = `<div class="subscreen expedition-transition"><header class="sub-header"><div><div class="eyebrow">MILITARY VICTORY / STAGE ${this.expedition.depth}</div><h1>Choose an expedition benefit.</h1></div><button class="textbtn" data-ui="home">${uiIcon('back')}MAIN MENU</button></header>${this.encounterBriefing()}<p class="muted">${esc(expeditionProgressText(this.expedition))}</p><p class="muted">The benefit remains active until this expedition ends.</p><div class="benefit-options">${renderBenefitOptions(this.expedition.offers)}</div><p class="battle-note">ACTIVE · ${benefits || 'NO BENEFITS YET'}</p><div class="launch-row"><button class="secondary" data-ui="developWorld">CONTINUE BUILDING</button><button class="secondary" data-ui="armory">FLEET UPGRADES</button></div></div>`;
-      },
-      chooseBenefit(this: MeridianUI, key: string) {
-        if (!this.expedition || !this.expedition.offers.includes(key) || !expeditionBenefit(key)) return;
-        const benefit = expeditionBenefit(key)!, count = this.expedition.benefits[key] || 0;
-        if (benefit.max !== undefined && count >= benefit.max) return;
-        this.expedition.benefits[key] = count + 1;
-        this.expedition.offers = [];
-        this.refreshCivilizationScore();
-        this.persistence.saveProgress(this.profile, this.expedition);
-        this.notifyStorageFailure();
-        if (!expeditionStageUnlocked(this.expedition)) {
-          if (this.view === 'game' && this.game.s?.result) this.showResult(this.game.s.result);
-          else this.showHome();
-          return;
-        }
         void this.startExpeditionBattle();
       },
       openModal(this: MeridianUI, kind: string, html: string, wide = false) {
@@ -340,10 +296,6 @@
           if (kind === 'battleSaveError') return this.showHome();
           if (kind === 'pause') this.resume();
           else this.showPause();
-        } else if (kind === 'armory') {
-          if (this.view === 'game' && this.game.s?.result) this.showResult(this.game.s!.result);
-          else if (this.view === 'transition') this.showExpeditionTransition();
-          else this.showHome();
         }
       },
       pause(this: MeridianUI) {
@@ -362,7 +314,7 @@
         this.saveBattle();
         this.openModal(
           'pause',
-          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${this.expedition ? `<p class="muted">Civilization Score · ${(this.expedition.civilizationScore || 0).toLocaleString('en-US')}<br>${esc(expeditionProgressText(this.expedition))}</p>` : ''}${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">MAIN MENU</button>${this.activeWorldStage === null ? '<button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button>' : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This cleared world is autosaved separately from your current battle. Civilian buildings contribute to the expedition's live Civilization Score; visits grant no additional payouts.`} A hard interruption may return to the last successful autosave.</p>`
+          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">MAIN MENU</button>${this.activeWorldStage === null ? '<button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button>' : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This cleared world is autosaved separately from your current battle. Configure civilian building upgrades for newly started battles. The current battle keeps its original upgrades.`} A hard interruption may return to the last successful autosave.</p>`
         );
       },
       resume(this: MeridianUI) {
@@ -399,26 +351,6 @@
         }
         this.persist();
       },
-      showArmory(this: MeridianUI) {
-        let previous = this.view;
-        if (previous === 'game') this.paused = true;
-        this.openModal(
-          'armory',
-          renderArmoryScreen(this.profile),
-          true
-        );
-      },
-      buyUpgrade(this: MeridianUI, key: string) {
-        if (!hasContentKey(PERMANENT_UPGRADES, key)) return;
-        let m = PERMANENT_UPGRADES[key];
-        let n = this.profile.upgrades[key] || 0, cost = m.costs[n];
-        if (n >= m.max || !Number.isFinite(cost) || this.profile.aether < cost) return;
-        this.profile.aether -= cost;
-        this.profile.upgrades[key] = n + 1;
-        this.persist();
-        this.audio.sound('research');
-        this.showArmory();
-      },
       showResult(this: MeridianUI, result: BattleResult) {
         if (this.leavingBattle) return;
         this.paused = true;
@@ -430,14 +362,10 @@
         $('worldViewport').classList.remove('in-battle');
         $('worldViewport').classList.add('result-backdrop');
         if (this.onViewportChange) this.onViewportChange();
-        const locked = !!this.expedition && !expeditionStageUnlocked(this.expedition),
-          offers = result.win && this.expedition ? this.expedition.offers : [];
-        if (!offers.includes(this.resultBenefit || '')) this.resultBenefit = offers[0];
         const next = result.win && this.expedition ? this.expedition.encounter : null,
-          nextPanel = next ? `<section class="result-next"><div class="result-next-body"><div class="result-next-heading"><div><div class="eyebrow">NEXT / STAGE ${this.expedition!.depth + 1}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2></div></div>${renderMissionBriefing(next.mission)}${renderExpeditionOpponents(this.expedition!)}</div></section>` : '',
-          benefitPanel = offers.length ? `<section class="result-benefits"><h3><span></span>CHOOSE AN EXPEDITION BENEFIT<span></span></h3><div class="benefit-options compact">${renderBenefitOptions(offers, this.resultBenefit)}</div><button class="primary result-confirm-benefit" data-ui="confirmBenefit">${locked ? 'CONFIRM BENEFIT' : 'CONTINUE EXPEDITION'} <span>→</span></button></section>` : '';
+          nextPanel = next ? `<section class="result-next"><div class="result-next-body"><div class="eyebrow">NEXT / STAGE ${this.expedition!.depth + 1}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2>${renderMissionBriefing(next.mission)}${renderExpeditionOpponents(this.expedition!)}</div></section>` : '';
         $('modal').classList.add('hidden');
-        $('result').innerHTML = `<main class="result-screen ${result.win ? 'victory' : 'defeat'}"><div class="result-shell"><header class="result-hero"><div class="result-symbol">${uiIcon(result.win ? 'shield' : 'skull')}</div><h1>${result.win ? 'MILITARY VICTORY' : 'DEFEAT'}</h1><p>${result.win ? `STAGE ${this.expedition?.depth || 0} CLEARED` : esc(result.text)}</p></header><section class="result-reward"><span class="result-reward-sigil">${uiIcon('echo-reward')}</span><div><span>ECHO RECOVERED</span><strong>${(this.resultAetherRecovered || 0).toLocaleString()}</strong><small class="result-reward-breakdown"><span>EVACUATED ${(this.resultAetherEvacuated || 0).toLocaleString()}</span><span>BUILDINGS DESTROYED ${(this.resultAetherStructures || 0).toLocaleString()}</span></small></div></section>${result.win && this.expedition ? renderVictoryCivilizationScore(this.expedition) : `<p class="muted">Civilization Score · ${(this.resultCivilizationTotal || 0).toLocaleString('en-US')} across this expedition's worlds</p>${this.expedition ? `<p class="muted">${esc(expeditionProgressText(this.expedition))}</p>` : ''}`}${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}${benefitPanel}${nextPanel}<nav class="result-actions">${result.win ? '<button class="secondary" data-ui="developWorld">CONTINUE BUILDING <span>→</span></button>' : ''}${result.win && !offers.length ? `<button class="primary" data-ui="continueExpedition"${locked ? ' disabled' : ''}>CONTINUE EXPEDITION <span>→</span></button>` : !result.win ? '<button class="primary" data-ui="battle">NEW EXPEDITION <span>→</span></button>' : ''}<button class="secondary" data-ui="armory">FLEET UPGRADES <span>→</span></button><button class="secondary" data-ui="home">MAIN MENU <span>→</span></button></nav></div></main>`;
+        $('result').innerHTML = `<main class="result-screen ${result.win ? 'victory' : 'defeat'}"><div class="result-shell"><header class="result-hero"><div class="result-symbol">${uiIcon(result.win ? 'shield' : 'skull')}</div><h1>${result.win ? 'MILITARY VICTORY' : 'DEFEAT'}</h1><p>${result.win ? `STAGE ${this.expedition?.depth || 0} CLEARED` : esc(result.text)}</p></header>${result.win ? '<p class="muted">The next stage is ready. You can first develop this world and configure civilian upgrades with local Echo.</p>' : ''}${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}${nextPanel}<nav class="result-actions">${result.win ? '<button class="secondary" data-ui="developWorld">CONTINUE BUILDING <span>→</span></button><button class="primary" data-ui="continueExpedition">CONTINUE EXPEDITION <span>→</span></button>' : '<button class="primary" data-ui="battle">NEW EXPEDITION <span>→</span></button>'}<button class="secondary" data-ui="home">MAIN MENU <span>→</span></button></nav></div></main>`;
         $('result').classList.remove('hidden');
       }
     };

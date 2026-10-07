@@ -77,7 +77,6 @@
         this.hudClock += dt;
         if (this.hudClock > 0.25) {
           this.hudClock = 0;
-          this.refreshCivilizationScore();
           if (!this.domPressed) this.updateHUD();
           this.drawMinimap();
         }

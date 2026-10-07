@@ -29,6 +29,11 @@ function parseBattleAction(value: unknown, maxIds: number): BattleAction | null 
     case 'rotateBuilding':
       return id(value.id) && (value.direction === -1 || value.direction === 1)
         ? { kind: 'rotateBuilding', id: value.id, direction: value.direction } : null;
+    case 'configureSettlementUpgrade':
+      return id(value.id) && (value.upgrade === null || (typeof value.upgrade === 'string' && hasContentKey(CIVILIZATION_UPGRADES, value.upgrade)))
+        ? {kind:'configureSettlementUpgrade', id:value.id, upgrade:value.upgrade} : null;
+    case 'expandSettlementBuilding':
+      return id(value.id) ? {kind:'expandSettlementBuilding', id:value.id} : null;
     case 'cancelConstruction': case 'toggleRepair': case 'sell':
       return id(value.id) ? { kind: value.kind, id: value.id } : null;
     case 'order': {
@@ -134,6 +139,8 @@ const commandMethods = {
       case 'build': return this.build(action.building, action.position, action.selected, team);
       case 'ability': return this.ability(action.ability, action.position, team);
       case 'sell': return this.sellBuilding(action.id, team);
+      case 'configureSettlementUpgrade': return this.configureSettlementUpgrade(action.id, action.upgrade, team);
+      case 'expandSettlementBuilding': return this.expandSettlementBuilding(action.id, team);
       case 'toggleRepair': return this.toggleBuildingRepair(action.id, team);
       case 'rotateBuilding': return this.rotateBuilding(action.id, action.direction, team);
       case 'cancelConstruction': {

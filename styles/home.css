@@ -61,7 +61,6 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
   align-self: center;
   gap: clamp(24px, 4vh, 40px);
 }
-#menu .home-screen .civilization-score { margin: 0 0 14px }
 #menu .home-screen .menu-brand {
   display: flex;
   flex-direction: column;

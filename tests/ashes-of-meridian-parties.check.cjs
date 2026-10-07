@@ -26,20 +26,20 @@ test('party snapshots retain single-player defaults and isolate normalized benef
   assert.deepEqual(json(defaults[0].account), json(defaults[1].account));
   assert.notStrictEqual(defaults[0].account.abilities, defaults[1].account.abilities);
   const perks = { supplyCrate: 2, commandCapacitor: 99, fieldWorkshop: 1, unknown: 8 },
-    profile = { upgrades: { startingAlloy: 99, logisticsFrame: 2.9, repairLogistics: -1, disruption: 2.9, unknown: 5 } },
-    options = { faction: 1, enemies: [1], abilities: ['disruption', 'bulwark', 'surge', 'recall'],
+    upgrades = { startingAlloy: 99, logisticsFrame: 2.9, repairLogistics: -1, disruption: 2.9, unknown: 5 }, profile = {},
+    options = { upgrades, faction: 1, enemies: [1], abilities: ['disruption', 'bulwark', 'surge', 'recall'],
       benefits: perks, enemyBenefits: [perks] },
     parties = singlePlayerParties(profile, options);
-  assert.deepEqual(json(parties[0].meta), { startingAlloy: 5, logisticsFrame: 2, repairLogistics: 0, disruption: 2 });
+  assert.deepEqual(json(parties[0].meta), { startingAlloy: 99, logisticsFrame: 2, repairLogistics: 0, disruption: 2 });
   assert.deepEqual(json(parties[0].loadout), options.abilities);
   assert.deepEqual(json(parties[1].loadout), ['repair', 'drop', 'disruption', 'surge']);
   assert.deepEqual(json(parties[1].meta), {});
   assert.deepEqual(json(parties[0].benefits), { supplyCrate: 2, commandCapacitor: 2, fieldWorkshop: 1 });
   assert.deepEqual(json(parties[0].benefits), json(parties[1].benefits));
   assert.notStrictEqual(parties[0].benefits, parties[1].benefits);
-  assert.equal(parties[0].account.alloy - parties[1].account.alloy, 250);
-  profile.upgrades.startingAlloy = 0; perks.supplyCrate = 0; options.faction = 2;
-  assert.equal(parties[0].meta.startingAlloy, 5);
+  assert.equal(parties[0].account.alloy - parties[1].account.alloy, 4950);
+  upgrades.startingAlloy = 0; perks.supplyCrate = 0; options.faction = 2;
+  assert.equal(parties[0].meta.startingAlloy, 99);
   assert.equal(parties[0].benefits.supplyCrate, 2);
   assert.equal(parties[0].faction, 1);
   parties[0].fieldWorkshopUsed = true;
@@ -48,7 +48,7 @@ test('party snapshots retain single-player defaults and isolate normalized benef
 });
 
 test('party accessors share one state, while accounts and upgrade effects remain separate', () => {
-  const game = state({ upgrades: { logisticsFrame: 2 } }, { faction: 1, enemies: [2] });
+  const game = state({}, { upgrades: { logisticsFrame: 2 }, faction: 1, enemies: [2] });
   assert.strictEqual(game.account(0), game.party(0).account);
   assert.strictEqual(game.benefitsFor(1), game.party(1).benefits);
   assert.deepEqual([game.factionFor(0), game.factionFor(1)], [1, 2]);

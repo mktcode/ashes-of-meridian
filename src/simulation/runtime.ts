@@ -45,7 +45,14 @@
             for (const n of this.near(e.x, e.z, 11,
               n => n.team === e.team && s.time - n.lastHit > 4 && n.hp < n.maxHp))
               n.hp = Math.min(n.maxHp, n.hp + dt * 3);
-          if (e.type === 'refinery') this.account(e.team).gas += dt * 1.7;
+          if (e.type === 'refinery') {
+            const vent = e.gasId === undefined ? null : this.get(e.gasId);
+            if (vent?.kind === 'resource' && vent.type === 'gas' && vent.amount > 0) {
+              const extracted = Math.min(vent.amount, dt * 1.7);
+              vent.amount -= extracted;
+              this.account(e.team).gas += extracted;
+            }
+          }
         }
         for (let e of s.entities) {
           if (e.hp <= 0 || e.kind === 'resource') continue;
@@ -195,8 +202,6 @@
         // Resolve all losses together; simultaneous player elimination is always a loss.
         const eliminated = s.parties.filter(p => !p.eliminated &&
           !this.alive(e => e.team === p.id && (p.deploymentPending ? e.type === 'worker' : e.type === 'hq')).length);
-        // Tally before defeated parties withdraw; withdrawal is not building destruction.
-        const civilization = eliminated.length ? civilizationScoreForBuildings(s.entities, 0) : 0;
         for (const party of eliminated) {
           party.eliminated = true;
           // Withdrawal, not combat kills: no score, promotions, explosions or RNG draws.
@@ -214,9 +219,9 @@
         }
         if (eliminated.length) this.world!.reveal(s.entities, s.scans);
         if (this.party(0).eliminated)
-          this.finish(false, mission.defeat, civilization);
+          this.finish(false, mission.defeat);
         else if (s.parties.every(p => p.id === 0 || p.eliminated))
-          this.finish(true, mission.victory, civilization);
+          this.finish(true, mission.victory);
       },
       abilityStats(this: MeridianGame, kind: AbilityType, team: PlayerTeam = 0): AbilityStats {
         return abilityStats(kind, this.party(team).meta[kind] || 0);
@@ -360,13 +365,12 @@
         }
         return true;
       },
-      finish(this: MeridianGame, win: boolean, text: string, civilizationScore = civilizationScoreForBuildings(this.s!.entities, 0)) {
+      finish(this: MeridianGame, win: boolean, text: string) {
         if (this.s!.result || this.s!.rules.kind === 'scenario' || this.s!.rules.completed) return;
         let s = this.s!,
           h = this.alive(e => e.team === 0 && e.type === 'hq') as BuildingEntity[],
           integrity = h.length ? Math.max(...h.map(e => e.hp / e.maxHp)) : 0;
         s.result = {
-          civilizationScore,
           win,
           text,
           time: s.time,

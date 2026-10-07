@@ -114,7 +114,8 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     visualRotation: v => nonnegative(v) && Number(v) < 8,
     deliveryForum: id, deliveryPoint: pos,
     cinderStock: v => nonnegative(v) && Number(v) <= 2000,
-    forumId: id, settlementAt: nonnegative, settlementAttempt: integer
+    forumId: id, settlementAt: nonnegative, settlementAttempt: integer,
+    upgrade: key({...upgrades, ...benefits}), upgradeLevel: oneOf(1, 2, 3)
   })(v) && record(v) && (v.kind !== 'resource' || nonnegative(v.amount)) &&
     (v.visualRotation === undefined || v.kind === 'building') &&
     (v.cinderStock === undefined || (v.kind === 'building' && v.type === 'meridianforum')) &&
@@ -122,7 +123,12 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     (v.settlementAt === undefined || (v.kind === 'building' && (v.type === 'meridianforum' || v.forumId !== undefined))) &&
     (v.settlementAttempt === undefined || (v.kind === 'building' && v.type === 'meridianforum')) &&
     (v.deliveryForum === undefined || (v.kind === 'unit' && v.type === 'worker')) &&
-    (v.deliveryPoint === undefined || v.deliveryForum !== undefined);
+    (v.deliveryPoint === undefined || v.deliveryForum !== undefined) &&
+    (v.upgrade === undefined || (v.kind === 'building' && v.forumId !== undefined && v.upgradeLevel !== undefined)) &&
+    (v.upgradeLevel === undefined || (v.kind === 'building' && v.forumId !== undefined &&
+      (['embercottage','fieldlab'].includes(String(v.type)) ? v.upgradeLevel === 1 :
+        ['terracecommons','researchhub'].includes(String(v.type)) ? v.upgradeLevel === 2 :
+          ['hearthtower','researchspire'].includes(String(v.type)) && v.upgradeLevel === 3)));
   const contact: Check = v => record(v) && anyTeam(v.team) &&
     (v.kind === 'unit' ? key(units)(v.type) : v.kind === 'building' ? key(buildings)(v.type) :
       v.kind === 'resource' && oneOf('crystal', 'gas')(v.type)) && shape({
@@ -181,7 +187,8 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     JSON.stringify(s.parties[0].loadout) !== JSON.stringify(expedition.abilities) ||
     s.parties.some((p, i) => Object.keys(benefits).some(k => (p.benefits[k] || 0) !==
       ((i ? expedition.enemyBenefits[i - 1] : expedition.benefits)[k] || 0)) ||
-      Object.entries(p.meta).some(([k, level]) => level > upgrades[k].max))) return false;
+      Object.entries(p.meta).some(([k, level]) => level > upgrades[k].max)) ||
+    Object.keys(upgrades).some(k => (s.parties[0].meta[k] || 0) !== (expedition.upgrades[k] || 0))) return false;
   const ids = new Set(s.entities.map(e => e.id));
   if (ids.size !== s.entities.length || s.entities.some(e => e.id >= s.nextId || e.team >= count) ||
     s.scans.some(e => (e.team ?? 0) >= count) || s.strikes.some(e => e.team >= count) ||
@@ -194,9 +201,8 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
 // Cache successful reads too. After any Storage failure, never revive old records.
 function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersistence {
   const { getStorage, clamp, upgrades, benefits, abilities, battlefields, missions, enemyCount, warn } = deps;
-  // The unchanged profile format now also owns an optional expedition. Old separate
-  // recipe records are not read or migrated. Profile purchases/settings remain intact.
-  const PROFILE_KEY = 'meridian.profile.v1', STAGE_HISTORY_KEY = 'meridian.stage-history.v1';
+  // A new prototype format intentionally does not migrate former profile purchases or runs.
+  const PROFILE_KEY = 'meridian.profile.v2', STAGE_HISTORY_KEY = 'meridian.stage-history.v2';
   const memoryStore: Record<string, string | null> = {};
   let savedExpedition: unknown = null, expeditionError: string | null = null, saveBytes = 0;
   const packedWorlds = new WeakMap<ExpeditionBattleSave, unknown>(), damagedWorlds = new Map<number, unknown>();
@@ -224,7 +230,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     }
   };
   function defaultProfile(): MeridianProfile {
-    return { version: 1, expeditionDepth: 0, lastCivilizationScore: 0, aether: 0, tutorialComplete: false, upgrades: {},
+    return { version: 2, expeditionDepth: 0, tutorialComplete: false,
       settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false } };
   }
   function loadProfile() {
@@ -232,11 +238,8 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     try {
       const p = JSON.parse(Store.get(PROFILE_KEY) || 'null');
       savedExpedition = p?.expedition ?? null;
-      if (p && p.version === 1) {
+      if (p && p.version === 2) {
         d.expeditionDepth = clamp(Math.floor(Number(p.expeditionDepth) || 0), 0, 999999);
-        d.aether = clamp(Math.floor(Number(p.aether) || 0), 0, 999999);
-        if (Number.isSafeInteger(p.lastCivilizationScore) && p.lastCivilizationScore >= 0)
-          d.lastCivilizationScore = p.lastCivilizationScore;
         d.tutorialComplete = p.tutorialComplete === true;
         if (Array.isArray(p.quickAccess) && p.quickAccess.length === 4 && p.quickAccess.every((action: unknown) => {
           if (typeof action !== 'string') return false;
@@ -244,7 +247,6 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
           return extra === undefined && (kind === 'build' ? Object.hasOwn(deps.buildings, type) :
             kind === 'favorite' && Object.hasOwn(deps.units, type));
         })) d.quickAccess = [...p.quickAccess];
-        for (const k in upgrades) d.upgrades[k] = clamp(Math.floor(Number(p.upgrades?.[k]) || 0), 0, upgrades[k].max);
         for (const key of Object.keys(d.settings)) {
           const value = p.settings?.[key];
           if (Object.hasOwn(p.settings || {}, key) && typeof value === typeof d.settings[key] &&
@@ -285,6 +287,13 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
       };
       return {
         faction: p.faction, abilities: [...p.abilities], depth: p.depth,
+        upgrades: (() => {
+          if (!p.upgrades || typeof p.upgrades !== 'object' || Array.isArray(p.upgrades) ||
+              Object.entries(p.upgrades).some(([key, v]) => !Object.hasOwn(upgrades, key) ||
+                !Number.isSafeInteger(v) || Number(v) < 0 || Number(v) > upgrades[key].max))
+            throw Error('Invalid battle upgrades');
+          return {...p.upgrades};
+        })(),
         benefits: copyBenefits(p.benefits), enemyBenefits: p.enemyBenefits.map(copyBenefits),
         encounter: { ...p.encounter, enemies: [...p.encounter.enemies] }
       };
@@ -296,25 +305,11 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
       const profileRecord = JSON.parse(Store.get(PROFILE_KEY) || 'null'), p = profileRecord?.expedition;
       savedExpedition = p ?? null;
       if (p == null) return null;
-      if (profileRecord.version !== 1 || p.version !== 7 ||
-          (p.civilizationScore !== undefined && (!Number.isSafeInteger(p.civilizationScore) || p.civilizationScore < 0)))
-        throw Error('Incompatible expedition save');
-      const normalized: MeridianExpedition = { ...readRecipe(p), version: 7, civilizationScore: p.civilizationScore ?? 0,
-        offers: [], battle: null };
-      if (!Array.isArray(p.offers) || p.offers.length > 3 || new Set(p.offers).size !== p.offers.length ||
-        p.offers.some((key: unknown) => typeof key !== 'string' || !Object.hasOwn(benefits, key) ||
-          (benefits[key].max !== undefined && (normalized.benefits[key] || 0) >= benefits[key].max!)))
-        throw Error('Invalid benefit offers');
-      normalized.offers = [...p.offers];
-      if (p.unlockedStage !== undefined) {
-        if (!Number.isSafeInteger(p.unlockedStage) || p.unlockedStage < Math.max(1, normalized.depth) ||
-            p.unlockedStage > normalized.depth + 1) throw Error('Invalid stage unlock');
-        normalized.unlockedStage = p.unlockedStage;
-      }
+      if (profileRecord.version !== 2 || p.version !== 8) throw Error('Incompatible expedition save');
+      const normalized: MeridianExpedition = { ...readRecipe(p), version: 8, battle: null };
       if (!Object.hasOwn(p, 'battle')) throw Error('Missing battle save');
       if (p.battle !== null) {
-        if (normalized.offers.length || (normalized.unlockedStage ?? normalized.depth + 1) < normalized.depth + 1 ||
-            !validExpeditionBattle(p.battle, normalized, deps)) throw Error('Invalid battle save');
+        if (!validExpeditionBattle(p.battle, normalized, deps)) throw Error('Invalid battle save');
         normalized.battle = p.battle;
       }
       if (p.worlds !== undefined) {

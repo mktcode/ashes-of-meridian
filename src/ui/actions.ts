@@ -180,6 +180,16 @@
         }
         const reason = this.actionReason(action);
         if (reason) { this.toast(reason); return; }
+        if (kind === 'settlementUpgrade' || kind === 'settlementClear' || kind === 'settlementExpand') {
+          const b = this.selectedBuilding();
+          if (!b) return;
+          const applied = kind === 'settlementExpand' ? this.submitAction({kind:'expandSettlementBuilding', id:b.id}) :
+            this.submitAction({kind:'configureSettlementUpgrade', id:b.id,
+              upgrade:kind === 'settlementClear' ? null : arg as CivilizationUpgradeType});
+          if (applied) { this.audio.sound('research'); this.actionSignature = ''; this.saveBattle(); }
+          this.updateHUD();
+          return;
+        }
         if (kind === 'tab') {
           this.setTab(arg);
           return;
@@ -252,20 +262,24 @@
         if (!s) return;
         if (this.tab === 'details' && (!this.selected.length || this.selected.some(id => this.game.get(id)?.kind !== 'unit'))) this.tab = 'root';
         if (this.mode?.kind === 'rally' && !this.selectedBuilding()) this.clearMode();
-        const tutorialAction = this.tutorialAction(supply, capacity), f = s.parties[this.localTeam].faction;
+        const tutorialAction = this.tutorialAction(supply, capacity), f = s.parties[this.localTeam].faction,
+          b = this.selectedBuilding(), civilian = this.tab === 'root' && b?.forumId !== undefined && b.progress >= 1;
         const button = (key: string, label: string, ic: string, opts: UIActionButtonOptions = {}) => this.actionButton(key, label, ic, opts, tutorialAction);
         const sig = [this.localTeam, this.tab, f, s.parties[this.localTeam].loadout.join(','), this.selected.join(','),
-          this.mode?.kind, this.mode?.arg, tutorialAction, this.game.civilizationStage, this.editFavoriteSlot, this.quickAccess().join(',')].join(':');
+          this.mode?.kind, this.mode?.arg, tutorialAction, civilian, b?.upgrade, b?.upgradeLevel, this.editFavoriteSlot, this.quickAccess().join(',')].join(':');
         if (sig === this.actionSignature) return;
         this.actionSignature = sig;
         $('hud').classList.toggle('favorites-editing', this.editFavoriteSlot !== null);
         const catalog = this.tab !== 'root' && this.tab !== 'details';
-        $('abilityBar').classList.toggle('hidden', catalog || this.tab === 'details');
+        $('abilityBar').classList.toggle('hidden', catalog || this.tab === 'details' || civilian);
         $('actionPanel').classList.toggle('details-panel', this.tab === 'details');
+        $('actionPanel').classList.toggle('settlement-panel', civilian);
         $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => button('ability:' + key, ABILITIES[key].name, ABILITIES[key].icon)).join('');
         const back = button('tab:root', this.editFavoriteSlot === null ? 'Close menu' : `Back · Replacing quick access slot ${this.editFavoriteSlot + 1}`, 'back');
         let html = '';
-        if (this.tab === 'root') {
+        if (civilian && b) {
+          html = this.renderSettlementUpgrades(b);
+        } else if (this.tab === 'root') {
           html = `<div class="compact-dock"><div class="favorites" role="group" aria-label="Quick access">${
             this.quickAccess().map((action, favoriteSlot) => {
               const [kind, type] = action.split(':');
@@ -283,7 +297,7 @@
           ).join('')}</div>`;
         } else {
           if (this.tab === 'build') {
-            html = contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k, this.game.civilizationStage)).map(k =>
+            html = contentKeys(BUILDINGS).filter(k => civilizationBuildingAvailable(k)).map(k =>
               button('build:' + k, buildingName(k, f), k, { cost: this.game.cost(k, 'building', this.localTeam) })).join('');
           } else {
             const types: Record<'infantry' | 'vehicles' | 'aircraft', UnitType[]> = { infantry: [...(this.editFavoriteSlot !== null || !this.quickAccess().includes('favorite:worker') ? ['worker' as UnitType] : []), 'rifle', 'medic', 'hero'], vehicles: ['tank', 'artillery'], aircraft: ['air', 'destroyer'] };
@@ -292,6 +306,18 @@
           html = `<div class="catalog-grid" role="group" aria-label="${this.tab === 'build' ? 'Buildings' : this.tab}">${back}${html}</div>`;
         }
         $('actions').innerHTML = html;
+      },
+      renderSettlementUpgrades(this: MeridianUI, b: BuildingEntity): string {
+        const level = b.upgradeLevel || 0, nextCost = CIVILIZATION_UPGRADE_COSTS[level],
+          label = level >= 3 ? 'Fully expanded · Rank 3' : `Expand to rank ${level + 1} · ${nextCost} Echo`;
+        return `<div class="settlement-upgrades"><header><strong>Civilization upgrade · Rank ${level || '—'}</strong><small>Local Echo pays for ranks. Switching effects is free and keeps the rank. Changes apply only to newly started battles.</small></header><div class="settlement-controls"><button data-action="settlementExpand" data-label="${esc(label)}">${esc(label)}</button><button data-action="settlementClear" data-label="Clear effect · Keep purchased rank">Clear effect</button></div><div class="settlement-effect-list" role="group" aria-label="Choose building upgrade">${contentKeys(CIVILIZATION_UPGRADES).map(key => {
+          const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key,
+            rule = civilizationUpgradeUnique(key) ? 'Once per expedition; extra buildings or ranks do not strengthen this effect.' :
+              effect.max !== undefined && effect.max < 999999 ? `Stacks across worlds, up to ${effect.max} ranks.` : 'Stacks across all cleared worlds.',
+            cost = level ? selected ? 'Selected' : 'Free switch' : `${CIVILIZATION_UPGRADE_COSTS[0]} Echo`,
+            text = `${effect.name} · ${cost}`;
+          return `<button class="settlement-effect${selected ? ' active' : ''}" data-action="settlementUpgrade:${key}" data-label="${esc(text)}" aria-pressed="${selected}"><span class="sigil">${uiIcon(key, effect.icon)}</span><span><strong>${esc(effect.name)}</strong><small>${esc(effect.desc)} ${esc(rule)}</small></span><em>${cost}</em></button>`;
+        }).join('')}</div></div>`;
       },
       renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
         const list = this.selected.map(id => this.game.get(id)).filter((e): e is Entity => !!e), el = $('selectionStatus');
@@ -438,24 +464,6 @@
         speedButton.textContent = speedLabel;
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
         $('battleStage').textContent = `STAGE ${s.depth + 1}`;
-        const civilization = $('civilizationCount');
-        civilization.classList.toggle('hidden', !this.expedition);
-        if (this.expedition) {
-          this.refreshCivilizationScore();
-          const expedition = this.expedition, score = expedition.civilizationScore,
-            runningBattle = !!expedition.battle || (this.activeWorldStage === null && s.rules.kind === 'single-player' && !s.rules.completed && !s.result),
-            stage = expedition.depth + (runningBattle ? 2 : 1), required = civilizationScoreRequirement(stage),
-            scoreReady = score >= required, stageReady = !runningBattle && expeditionStageUnlocked(expedition),
-            progress = stageReady ? 1 : Number.isFinite(required) ? Math.min(1, score / required) : 0;
-          civilization.textContent = `${stageReady ? '→' : scoreReady ? '✓' : 'CIV'} ${score.toLocaleString('en-US', { notation: 'compact', maximumSignificantDigits: 2, useGrouping: false })}`;
-          civilization.classList.toggle('stage-ready', stageReady);
-          civilization.style.setProperty('--civilization-progress', `${progress * 100}%`);
-          civilization.title = `Civilization Score: ${score.toLocaleString('en-US')}. ` + (stageReady
-            ? `Stage ${stage} unlocked. Return to the expedition via the main menu.`
-            : `${Number.isFinite(required) ? `Stage ${stage}: ${required.toLocaleString('en-US')} points required.` : 'Next score requirement exceeds supported range.'} ${scoreReady ? 'Score ready; military victory still required.' : 'Build in any world to increase your score.'}`);
-          civilization.setAttribute('role', 'img');
-          civilization.setAttribute('aria-label', civilization.title);
-        }
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },
@@ -477,6 +485,10 @@
             (account.energy < this.game.abilityStats(arg, team).energy ? 'Not enough energy.' : '');
         }
         const b = this.selectedBuilding();
+        if (kind === 'settlementExpand') return this.game.settlementExpansionReason(b?.id || 0, team);
+        if (kind === 'settlementClear') return this.game.settlementUpgradeReason(b?.id || 0, null, team);
+        if (kind === 'settlementUpgrade') return hasContentKey(CIVILIZATION_UPGRADES, arg)
+          ? this.game.settlementUpgradeReason(b?.id || 0, arg, team) : 'Unknown upgrade effect.';
         if (['repair', 'sell', 'rotateLeft', 'rotateRight'].includes(kind) && this.mode) return 'Cancel targeting first.';
         if (kind === 'repair') return !b ? 'Select an own structure.' : this.game.buildingRepairers(b.id, team).length ? '' : this.game.canRepairBuilding(b.id, team);
         if (kind === 'sell') return this.game.canSellBuilding(this.selected[0], team);
@@ -487,14 +499,16 @@
         const s = this.game.s;
         if (!s) return;
         for (const b of document.querySelectorAll<HTMLButtonElement>('[data-action]')) {
-          const key = b.dataset.action!, [kind, arg] = key.split(':'), active = this.isModeAction(key), reason = this.actionReason(key, supply, capacity);
+          const key = b.dataset.action!, [kind, arg] = key.split(':'),
+            active = kind === 'settlementUpgrade' ? this.selectedBuilding()?.upgrade === arg : this.isModeAction(key),
+            reason = this.actionReason(key, supply, capacity);
           // Blocked actions remain tappable to explain the reason. Only lifecycle locks disable input.
           b.disabled = this.controlsLocked || !!s.result;
           b.classList.toggle('blocked', !!reason);
           b.classList.toggle('active', active);
-          b.classList.toggle('cancel-target', active);
-          if (kind === 'build' || kind === 'ability' || kind === 'rally') b.setAttribute('aria-pressed', String(active));
-          const base = b.dataset.label || '', label = active ? `${base.split(' · ')[0]} · Cancel targeting` : base + (reason ? ` · ${reason} · Tap for reason` : '');
+          b.classList.toggle('cancel-target', active && kind !== 'settlementUpgrade');
+          if (kind === 'build' || kind === 'ability' || kind === 'rally' || kind === 'settlementUpgrade') b.setAttribute('aria-pressed', String(active));
+          const base = b.dataset.label || '', label = active && kind !== 'settlementUpgrade' ? `${base.split(' · ')[0]} · Cancel targeting` : base + (reason ? ` · ${reason} · Tap for reason` : '');
           if (b.dataset.label !== undefined) {
             b.setAttribute('aria-label', label);
             b.setAttribute('title', label);

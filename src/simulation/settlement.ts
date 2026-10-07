@@ -47,7 +47,8 @@ function forumCorridors(forum: BuildingEntity, plazaRadius = forum.size + 2.5 + 
     ({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs})));
 }
 function settlementFootprints(p: Position, type: BuildingType, team: PlayerTeam, rotation = 0): Position[][] {
-  return civilizationClearanceFootprints(p, type, team, rotation);
+  return type === 'meridianforum' ? civilizationClearanceFootprints(p, type, team, rotation) :
+    settlementReservedFootprints(p, type, team, rotation);
 }
 // The actual navigation blocker is a rasterized circle, not only the authored decks.
 function forumCorridorBlocked(forum: BuildingEntity, p: Position, radius: number, shapes: Position[][] = []): boolean {
@@ -55,14 +56,62 @@ function forumCorridorBlocked(forum: BuildingEntity, p: Position, radius: number
     {x:p.x+radius,z:p.z+radius},{x:p.x-radius,z:p.z+radius}];
   return forumCorridors(forum).some(c => civilizationFootprintsOverlap(c, square) || shapes.some(s => civilizationFootprintsOverlap(c,s)));
 }
-function settlementBuildingType(radius: number, roll: number, variant: number): BuildingType {
-  const outer = clamp((radius - 18) / (FORUM_SETTLEMENT.radius - 18), 0, 1),
-    // Mid-rise keeps a substantial share throughout; towers give way to cottages outward.
-    small = .1 + .5 * outer, large = .5 * (1 - outer),
-    tier = roll < small ? 0 : roll < small + large ? 2 : 1;
-  return SETTLEMENT_TYPES[tier][variant < .5 ? 0 : 1];
+function settlementBuildingType(_radius: number, _roll: number, variant: number): BuildingType {
+  return SETTLEMENT_TYPES[0][variant < .5 ? 0 : 1];
 }
 const settlementMethods = {
+  settlementUpgradeBuilding(this: MeridianGame, id: number, team: PlayerTeam): BuildingEntity | null {
+    const s = this.s, b = this.get(id);
+    if (!s || s.result || s.stopped || s.rules.kind !== 'single-player' || !s.rules.completed ||
+      b?.kind !== 'building' || !isCivilizationBuildingType(b.type) || b.type === 'meridianforum' ||
+      b.team !== team || b.hp <= 0 || b.progress < 1 ||
+      b.forumId === undefined || b.settlementAt !== undefined) return null;
+    const forum = this.get(b.forumId);
+    return forum?.kind === 'building' && forum.type === 'meridianforum' && forum.team === team &&
+      forum.hp > 0 && forum.progress >= 1 ? b : null;
+  },
+  settlementUpgradeReason(this: MeridianGame, id: number, upgrade: CivilizationUpgradeType | null, team: PlayerTeam = 0): string {
+    const b = this.settlementUpgradeBuilding(id, team);
+    if (!b) return 'Select a completed civilian building in a supplied, cleared world.';
+    if (upgrade !== null && !hasContentKey(CIVILIZATION_UPGRADES, upgrade)) return 'Unknown upgrade effect.';
+    if (upgrade !== null && !b.upgradeLevel && this.account(team).gas < CIVILIZATION_UPGRADE_COSTS[0]) return 'Not enough Echo.';
+    return '';
+  },
+  configureSettlementUpgrade(this: MeridianGame, id: number, upgrade: CivilizationUpgradeType | null, team: PlayerTeam = 0): boolean {
+    const reason = this.settlementUpgradeReason(id, upgrade, team);
+    if (reason) { this.notify(team, 'toast', reason); return false; }
+    const b = this.settlementUpgradeBuilding(id, team)!;
+    if (upgrade === null) delete b.upgrade;
+    else {
+      if (!b.upgradeLevel) {
+        if (!this.spend({cost:0, gas:CIVILIZATION_UPGRADE_COSTS[0]}, team)) return false;
+        b.upgradeLevel = 1;
+      }
+      b.upgrade = upgrade;
+    }
+    return true;
+  },
+  settlementExpansionReason(this: MeridianGame, id: number, team: PlayerTeam = 0): string {
+    const b = this.settlementUpgradeBuilding(id, team);
+    if (!b) return 'Select a completed civilian building in a supplied, cleared world.';
+    if (!b.upgrade || !b.upgradeLevel) return 'Choose an upgrade effect first.';
+    if (b.upgradeLevel >= 3) return 'This building is fully expanded.';
+    if (this.account(team).gas < CIVILIZATION_UPGRADE_COSTS[b.upgradeLevel]) return 'Not enough Echo.';
+    return '';
+  },
+  expandSettlementBuilding(this: MeridianGame, id: number, team: PlayerTeam = 0): boolean {
+    const reason = this.settlementExpansionReason(id, team);
+    if (reason) { this.notify(team, 'toast', reason); return false; }
+    const b = this.settlementUpgradeBuilding(id, team)!, level = b.upgradeLevel!;
+    if (!this.spend({cost:0, gas:CIVILIZATION_UPGRADE_COSTS[level]}, team)) return false;
+    const health = clamp(b.hp / b.maxHp, 0, 1);
+    b.upgradeLevel = level + 1;
+    b.type = civilizationBuildingAtTier(b.type, b.upgradeLevel);
+    b.maxHp = BUILDINGS[b.type].hp;
+    b.hp = b.maxHp * health;
+    // The maximal footprint was already reserved; expansion changes no navigation or RNG.
+    return true;
+  },
   deliveryTarget(this: MeridianGame, e: UnitEntity): BuildingEntity | null {
     const b = e.deliveryForum === undefined ? null : this.get(e.deliveryForum);
     return b?.kind === 'building' && b.type === 'meridianforum' && b.team === e.team && b.progress >= 1 ? b : null;
@@ -139,8 +188,9 @@ const settlementMethods = {
     return null;
   },
   settlementPlacementReason(this: MeridianGame, type: BuildingType, p: Position, team: PlayerTeam): string {
-    const world = this.world!, r = BUILDINGS[type].size,
-      reason = buildingFoundationReason(world,type,p,team);
+    const world = this.world!, r = settlementReservedRadius(type),
+      reason = Math.abs(p.x) > world.extent - 1 - r || Math.abs(p.z) > world.extent - 1 - r
+        ? 'Too close to the battlefield boundary.' : buildingFoundationReason(world,type,p,team);
     if (reason) return reason;
     if (!world.sight[team].explored[world.idx(p.x,p.z)]) return 'Scout this location before building.';
     if (buildingTerrainObstructed(world,p,r,true)) return 'Terrain obstructs the foundation.';
@@ -182,7 +232,7 @@ const settlementMethods = {
         type = settlementBuildingType(radius,random(),random());
       if (this.settlementPlacementReason(type,p,forum.team as PlayerTeam)) continue;
       const b = this.spawnBuilding(type,p.x,p.z,forum.team as PlayerTeam,forum.faction,
-        {progress:.06,paid:{cost:0,gas:0},forumId:forum.id});
+        {progress:.06,paid:{cost:0,gas:0},forumId:forum.id,size:settlementReservedRadius(type)});
       b.hp = b.maxHp * b.progress;
       this.world!.rebuild(this.s!.entities);
       return true;

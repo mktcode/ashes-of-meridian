@@ -304,7 +304,7 @@ const BUILDINGS = {
     hp: 850,
     size: 2.3,
     time: 20,
-    desc: 'Place within 6 meters of an explored Echo vent; the foundation snaps to its center. Generates 1.7 Echo per second; no worker is needed after construction.'
+    desc: 'Place within 6 meters of an explored Echo vent; the foundation snaps to its center. Extracts 1.7 Echo per second from the finite vent stock; no worker is needed after construction.'
   },
   factory: {
     cost: 225,
@@ -337,52 +337,52 @@ const BUILDINGS = {
     desc: 'Automated ground and air defense. Protects workers and choke points, but can be outranged by artillery.'
   },
   fieldlab: {
-    cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5, civilizationUnlockStage: 1,
+    cost: 0, gas: 0, hp: 500, size: 3.6, time: 8,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
-    desc: 'Civilian field laboratory. Grows automatically around a Cinder-supplied Meridian Forum and adapts to uneven hillsides. Each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages; no production.'
+    desc: 'Civilian field laboratory. Grows around a Cinder-supplied Forum. Select an expedition upgrade and invest local Echo to expand it into a research tower.'
   },
   researchhub: {
-    cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 10, civilizationUnlockStage: 2,
+    cost: 0, gas: 0, hp: 650, size: 4.2, time: 12,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Terraced civilian research hub. Grows automatically around a Cinder-supplied Meridian Forum and adapts to uneven hillsides. Each completed, surviving structure contributes 10 Civilization Score to unlock later expedition stages; no production.'
+    desc: 'Expanded civilian laboratory. Its chosen expedition effect contributes two ranks to newly started battles.'
   },
   researchspire: {
-    cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 15, civilizationUnlockStage: 3,
+    cost: 0, gas: 0, hp: 800, size: 3.9, time: 16,
     civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:3.05,length:1.1},
-    desc: 'Civilian research tower with three dish antennas. Grows automatically around a Cinder-supplied Meridian Forum and adapts to uneven hillsides. Each completed, surviving structure contributes 15 Civilization Score to unlock later expedition stages; no production.'
+    desc: 'Fully expanded civilian research tower. Its chosen expedition effect contributes three ranks to newly started battles.'
   },
   embercottage: {
-    cost: 0, gas: 5, hp: 500, size: 3.6, time: 8, civilizationPoints: 5, civilizationUnlockStage: 1,
+    cost: 0, gas: 0, hp: 500, size: 3.6, time: 8,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1},
-    desc: 'Civilian hillside cottage with warm-white windows. Grows automatically around a Cinder-supplied Meridian Forum; each completed, surviving structure contributes 5 Civilization Score to unlock later expedition stages. No production.'
+    desc: 'Civilian hillside cottage. Grows around a Cinder-supplied Forum. Select an expedition upgrade and invest local Echo to expand it into a residential tower.'
   },
   terracecommons: {
-    cost: 0, gas: 10, hp: 650, size: 4.2, time: 12, civilizationPoints: 10, civilizationUnlockStage: 2,
+    cost: 0, gas: 0, hp: 650, size: 4.2, time: 12,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.1},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Terraced civilian residences with warm-white windows and planted balconies. Grows automatically around a Cinder-supplied Meridian Forum; each completed, surviving structure contributes 10 Civilization Score to unlock later expedition stages. No production.'
+    desc: 'Expanded civilian residences. Their chosen expedition effect contributes two ranks to newly started battles.'
   },
   hearthtower: {
-    cost: 0, gas: 15, hp: 800, size: 3.9, time: 16, civilizationPoints: 15, civilizationUnlockStage: 3,
+    cost: 0, gas: 0, hp: 800, size: 3.9, time: 16,
     civilizationDecks: [{x:0,z:-.40,w:4.25,d:3.6},{x:.2,z:2.10,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:2.9,length:1.1},
-    desc: 'Civilian residential tower with warm-white windows and an exposed service spine. Grows automatically around a Cinder-supplied Meridian Forum; each completed, surviving structure contributes 15 Civilization Score to unlock later expedition stages. No production.'
+    desc: 'Fully expanded civilian residential tower. Its chosen expedition effect contributes three ranks to newly started battles.'
   },
   meridianforum: {
-    cost: 0, gas: 25, hp: 950, size: 10.4, time: 20, civilizationPoints: 0, civilizationUnlockStage: 1,
+    cost: 0, gas: 25, hp: 950, size: 10.4, time: 20,
     civilizationDecks: [{x:0,z:0,w:29.12*FORUM_MODEL_SCALE-.76,d:20.12*FORUM_MODEL_SCALE-.76,cut:.65*FORUM_MODEL_SCALE}],
     civilizationEntry: {x:0,z:9.6*FORUM_MODEL_SCALE,top:(2.1-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,
       width:8.2*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,length:3.6*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE},
     civilizationSideEntries: [-1,1].map(s=>({x:s*10*FORUM_MODEL_SCALE,z:9.7*FORUM_MODEL_SCALE,
       top:(1.88-FORUM_DECK_BASE)*FORUM_MODEL_SCALE,width:3.25*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE,
       length:3.24*FORUM_MODEL_SCALE*CIVILIZATION_MODEL_SCALE})),
-    desc: 'Monumental civilian forum with terraced wings, warm windows, cyan-lit entrances and a rooftop spacecraft landing pad. Build after victory, from Stage 1. Costs only Echo; no Civilization Score of its own. Assign prospectors to deliver Cinder: its permanent 2000-Cinder store supports up to 60 automatic civilian buildings. Three parallel streets and a crossing avenue define eight parcels; a clear Forum plaza keeps its entrances reachable. The landing pad is decorative.'
+    desc: 'Monumental civilian forum with terraced wings, warm windows, cyan-lit entrances and a rooftop spacecraft landing pad. Build after victory, from Stage 1. Costs only Echo; supplies civilian upgrade buildings. Assign prospectors to deliver Cinder: its permanent 2000-Cinder store supports up to 60 automatic civilian buildings. Three parallel streets and a crossing avenue define eight parcels; a clear Forum plaza keeps its entrances reachable. The landing pad is decorative.'
   }
 } as const satisfies Record<string, BuildingDefinitionShape>;
 
@@ -392,9 +392,8 @@ type BuildingDefinition = (typeof BUILDINGS)[BuildingType];
 function isCivilizationBuildingType(type: string): boolean {
   return Object.hasOwn(BUILDINGS, type) && !!(BUILDINGS[type as BuildingType] as BuildingDefinitionShape).civilizationDecks;
 }
-function civilizationBuildingAvailable(type: BuildingType, unlockedStage: number | null | undefined): boolean {
-  return (!isCivilizationBuildingType(type) || type === 'meridianforum') &&
-    (unlockedStage == null || unlockedStage >= ((BUILDINGS[type] as BuildingDefinitionShape).civilizationUnlockStage || 0));
+function civilizationBuildingAvailable(type: BuildingType): boolean {
+  return !isCivilizationBuildingType(type) || type === 'meridianforum';
 }
 function buildingVisualYaw(e: { team?: number; visualRotation?: number }): number {
   return BUILDING_YAW + (e.team === 1 ? Math.PI : 0) + (e.visualRotation || 0) * Math.PI / 4;
@@ -429,43 +428,6 @@ function civilizationFootprintsOverlap(a: readonly Position[], b: readonly Posit
   }
   return true;
 }
-function civilizationScoreForBuildings(entities: readonly Entity[], team: PlayerTeam): number {
-  return entities.reduce((score, e) => score + (e.kind === 'building' && e.team === team && e.hp > 0 && e.progress >= 1
-    ? (BUILDINGS[e.type] as BuildingDefinitionShape).civilizationPoints || 0 : 0), 0);
-}
-
-// Cleared snapshots are immutable value copies; only the active world is counted live.
-const civilizationSnapshotScores = new WeakMap<ExpeditionBattleSave, number>();
-function expeditionCivilizationScore(expedition: MeridianExpedition, live: RunState | null = null, activeStage: number | null = null): number {
-  const snapshotScore = (save: ExpeditionBattleSave | null | undefined) => {
-    if (!save) return 0;
-    let score = civilizationSnapshotScores.get(save);
-    if (score === undefined) {
-      score = civilizationScoreForBuildings(save.state.entities, 0);
-      civilizationSnapshotScores.set(save, score);
-    }
-    return score;
-  };
-  const recipe = activeStage === null ? expedition : expedition.worlds?.find(w => w.stage === activeStage)?.recipe;
-  const active = live && recipe && live.rules.kind === 'single-player' && !!live.rules.completed === (activeStage !== null) &&
-    live.depth === recipe.depth && live.map === recipe.encounter.map && live.seed === recipe.encounter.seed ? live : null;
-  let score = activeStage === null && active ? civilizationScoreForBuildings(active.entities, 0) : snapshotScore(expedition.battle);
-  for (const world of expedition.worlds || []) {
-    if (world.error || !world.recipe || !world.battle) continue;
-    score += activeStage === world.stage && active ? civilizationScoreForBuildings(active.entities, 0) : snapshotScore(world.battle);
-  }
-  return Math.min(Number.MAX_SAFE_INTEGER, score);
-}
-function civilizationScoreRequirement(stage: number): number {
-  if (stage <= 1) return 0;
-  const required = 25 * 3 ** (stage - 2);
-  // Never round/clamp an oversized requirement into an attainable unlock.
-  return Number.isSafeInteger(required) ? required : Infinity;
-}
-function expeditionStageUnlocked(expedition: MeridianExpedition): boolean {
-  return (expedition.unlockedStage ?? expedition.depth + 1) >= expedition.depth + 1;
-}
-
 const ABILITIES = {
   orbital: { name: 'Orbital strike', icon: 'orbital', energy: 85, cd: 48,
     desc: 'Calls down a faction-specific orbital strike. Requires a completed vehicle factory and current vision.' },
@@ -545,9 +507,8 @@ function abilityStats(kind: AbilityType, rank = 0): AbilityStats {
   return stats;
 }
 
-const STARTING_ALLOY = [250, 300, 350, 400, 450, 500] as const;
-const AETHER_EVACUATION_CAPS = [100, 200, 350, 500, 750, 1000] as const;
-const AETHER_STRUCTURE_RECOVERY = [5, 10, 15, 20, 25, 30] as const;
+const STARTING_CINDER = 250;
+const ECHO_VENT_CAPACITY = 900;
 const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
 
 const COMMAND_ENERGY = Object.freeze({ start: 25, max: 200, regeneration: .8 });
@@ -555,7 +516,6 @@ const ABILITY_RULES = Object.freeze({ orbitalBuilding: 'factory' as const, reinf
 const EXPEDITION_EFFECTS = Object.freeze({ alloy: 50, aether: 50, surveyRadius: 22, workshopSpeed: .5, energy: 15 });
 const COMMAND_DRILL = Object.freeze({ radius: 11, damagePerStack: .05 });
 const FLEET_EFFECTS = Object.freeze({ constructionSpeed: .05, supply: 2, repairDiscount: .05 });
-const fleetLevels = (step: number) => Array.from({ length: 6 }, (_, level) => level * step);
 
 const EXPEDITION_BENEFITS = {
   supplyCrate: {
@@ -626,100 +586,14 @@ function normalizedBenefits(input: Record<string, number> = {}): Record<string, 
     .filter(([, value]) => Number(value) > 0));
 }
 
-function expeditionBenefitOffers(benefits: Record<string, number>, random: () => number): ExpeditionBenefit[] {
-  const available = contentKeys(EXPEDITION_BENEFITS).filter(key =>
-    (benefits[key] || 0) < (expeditionBenefit(key)!.max ?? Infinity));
-  for (let i = available.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [available[i], available[j]] = [available[j], available[i]];
-  }
-  return available.slice(0, 3);
-}
-
-// Shared pool and stack limits, not faction-exclusive or stronger enemy benefits.
-const ENEMY_BENEFIT_PREFERENCES: Record<FactionId, Partial<Record<ExpeditionBenefit, number>>> = {
-  0: { fieldWorkshop: 4, supplyCrate: 3, commanderMandate: 2 },
-  1: { pioneerSquad: 4, supplyCrate: 3, fieldWorkshop: 2 },
-  2: { commandCapacitor: 4, aetherAllocation: 3, commanderMandate: 2 }
-};
-function chooseEnemyBenefit(faction: FactionId, benefits: Record<string, number>, seed: number, depth: number, slot = 0): ExpeditionBenefit | undefined {
-  // Independent slot streams; slot zero retains its original draw. Never simulation RNG.
-  const random = seeded(seed ^ 0x454e454d ^ depth ^ Math.imul(slot, 0x9e3779b9)), offers = expeditionBenefitOffers(benefits, random),
-    weights = offers.map(key => ENEMY_BENEFIT_PREFERENCES[faction][key] ?? 1);
-  let draw = random() * weights.reduce((sum, weight) => sum + weight, 0);
-  return offers.find((_, i) => (draw -= weights[i]) < 0);
-}
-
-function advanceEnemyBenefits(previous: Record<string, number>[], encounter: ExpeditionEncounter, depth: number): Record<string, number>[] {
-  return encounter.enemies.map((faction, slot) => {
-    // New entrants have no catch-up bonus and earn their first benefit after this battle.
-    if (!previous[slot]) return {};
-    const benefits = normalizedBenefits(previous[slot]),
-      key = chooseEnemyBenefit(faction, benefits, encounter.seed, depth, slot);
-    if (key) benefits[key] = (benefits[key] || 0) + 1;
-    return benefits;
-  });
-}
-
-const META = {
-  startingAlloy: {
-    name: 'Starting Cinder',
-    icon: 'crystal',
-    desc: 'Adds 50 starting Cinder per level.',
-    display: { label: 'STARTING RESERVES', values: STARTING_ALLOY, unit: 'CINDER',
-      gains: ['+50 CINDER', '+50 CINDER', '+50 CINDER', '+50 CINDER', '+50 CINDER'] },
-    max: 5,
-    costs: [100, 200, 300, 450, 650]
-  },
-  startingWorkers: {
-    name: 'Starting workers',
-    icon: 'worker',
-    desc: 'Start each new battle with one additional worker per level, up to five.',
-    display: { label: 'STARTING WORKERS', values: [0, 1, 2, 3, 4, 5], unit: 'WORKERS',
-      gains: ['+1 WORKER', '+1 WORKER', '+1 WORKER', '+1 WORKER', '+1 WORKER'] },
-    max: 5,
-    costs: [300, 450, 650, 900, 1200]
-  },
-  aetherEvacuation: {
-    name: 'Echo recovery',
-    icon: 'save',
-    desc: 'Raises the evacuation limit and permanent Echo recovered per destroyed enemy building.',
-    display: { label: 'EVACUATION LIMIT', values: AETHER_EVACUATION_CAPS, unit: 'ECHO / BATTLE',
-      gains: ['+100 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING', '+150 LIMIT · +5 / BUILDING',
-        '+250 LIMIT · +5 / BUILDING', '+250 LIMIT · +5 / BUILDING'] },
-    max: 5,
-    costs: [500, 800, 1200, 1800, 2600]
-  },
-  constructionProtocols: {
-    name: 'Construction protocols',
-    icon: 'factory',
-    desc: `Adds ${FLEET_EFFECTS.constructionSpeed * 100}% of base construction speed per level. Adds to Field workshop, without faster repairs.`,
-    display: { label: 'CONSTRUCTION BONUS', values: fleetLevels(FLEET_EFFECTS.constructionSpeed * 100), unit: '% FASTER',
-      gains: ['+5% BUILD SPEED', '+5% BUILD SPEED', '+5% BUILD SPEED', '+5% BUILD SPEED', '+5% BUILD SPEED'] },
-    max: 5,
-    costs: [200, 350, 550, 800, 1100]
-  },
-  logisticsFrame: {
-    name: 'Logistics frame',
-    icon: 'depot',
-    desc: `Adds ${FLEET_EFFECTS.supply} supply capacity per level from battle start. The total limit remains 180.`,
-    display: { label: 'EXTRA CAPACITY', values: fleetLevels(FLEET_EFFECTS.supply), unit: 'SUPPLY',
-      gains: ['+2 SUPPLY', '+2 SUPPLY', '+2 SUPPLY', '+2 SUPPLY', '+2 SUPPLY'] },
-    max: 5,
-    costs: [150, 250, 400, 600, 850]
-  },
-  repairLogistics: {
-    name: 'Repair logistics',
-    icon: 'repair',
-    desc: `Reduces worker repair Cinder costs by ${FLEET_EFFECTS.repairDiscount * 100}% per level, without changing repair speed.`,
-    display: { label: 'REPAIR DISCOUNT', values: fleetLevels(FLEET_EFFECTS.repairDiscount * 100), unit: '% LESS CINDER',
-      gains: ['+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT', '+5% DISCOUNT'] },
-    max: 5,
-    costs: [150, 250, 400, 600, 850]
-  }
-} as const satisfies Record<string, UpgradeDefinition>;
-
-type FleetUpgradeType = keyof typeof META;
+const CIVILIZATION_FLEET_EFFECTS = {
+  startingAlloy: { name: 'Starting Cinder', icon: 'crystal', desc: 'Adds 50 starting Cinder per rank.', max: 999999 },
+  startingWorkers: { name: 'Starting workers', icon: 'worker', desc: 'Adds one starting worker per rank, up to five across the expedition.', max: 5 },
+  constructionProtocols: { name: 'Construction protocols', icon: 'factory', desc: 'Adds 5% construction speed per rank. Does not speed up repairs.', max: 999999 },
+  logisticsFrame: { name: 'Logistics frame', icon: 'depot', desc: 'Adds two supply capacity per rank. The total supply limit remains 180.', max: 999999 },
+  repairLogistics: { name: 'Repair logistics', icon: 'repair', desc: 'Reduces worker repair Cinder costs by 5% per rank, up to 75%.', max: 15 }
+} as const;
+type FleetUpgradeType = keyof typeof CIVILIZATION_FLEET_EFFECTS;
 const COMMAND_MODULES = {
   orbital: {
     name: 'Orbital strike', icon: 'orbital', desc: 'Improves orbital payload, targeting time and recharge.',
@@ -762,16 +636,15 @@ const COMMAND_MODULES = {
       gains: ['16 SUPPLY', '2s EXTRACTION', '48s COOLDOWN'] }, max: 3, costs: [250, 600, 1200]
   }
 } as const satisfies Record<AbilityType, UpgradeDefinition>;
-const PERMANENT_UPGRADES = Object.freeze({ ...META, ...COMMAND_MODULES });
-type UpgradeType = keyof typeof PERMANENT_UPGRADES;
+const BATTLE_UPGRADES = Object.freeze({ ...CIVILIZATION_FLEET_EFFECTS, ...COMMAND_MODULES });
+type UpgradeType = keyof typeof BATTLE_UPGRADES;
 
 // Civilian buildings own a selected effect and a purchased rank; no profile purchases.
 const CIVILIZATION_UPGRADE_COSTS = [40, 80, 140] as const;
-const { aetherEvacuation: civilizationRecoveryExcluded, ...CIVILIZATION_FLEET_EFFECTS } = META;
 const CIVILIZATION_UPGRADES = Object.freeze({
   ...CIVILIZATION_FLEET_EFFECTS,
   ...COMMAND_MODULES, ...EXPEDITION_BENEFITS
-}) as Readonly<Record<Exclude<FleetUpgradeType, 'aetherEvacuation'> | AbilityType | ExpeditionBenefit,
+}) as Readonly<Record<FleetUpgradeType | AbilityType | ExpeditionBenefit,
   { name: string; icon: string; desc: string; max?: number }>>;
 type CivilizationUpgradeType = keyof typeof CIVILIZATION_UPGRADES;
 function civilizationUpgradeUnique(key: CivilizationUpgradeType): boolean {
@@ -786,12 +659,22 @@ function civilizationBuildingAtTier(type: BuildingType, tier: number): BuildingT
   return (research ? ['fieldlab', 'researchhub', 'researchspire'] :
     ['embercottage', 'terracecommons', 'hearthtower'])[tier - 1] as BuildingType;
 }
+// Reserve every expansion envelope, including the wider mid-rise wings, from first growth.
+function settlementReservedFootprints(p: Position, type: BuildingType, team: PlayerTeam, rotation = 0): Position[][] {
+  return [1, 2, 3].flatMap(tier => civilizationClearanceFootprints(p, civilizationBuildingAtTier(type, tier), team, rotation));
+}
+function settlementReservedRadius(type: BuildingType): number {
+  return Math.max(...[1, 2, 3].map(tier => BUILDINGS[civilizationBuildingAtTier(type, tier)].size),
+    ...settlementReservedFootprints({x:0,z:0}, type, 0).flat().map(p => Math.hypot(p.x, p.z)));
+}
 interface CivilizationUpgradeTotals { upgrades: Record<string, number>; benefits: Record<string, number> }
 function civilizationUpgradesForBuildings(entities: readonly Entity[], team: PlayerTeam = 0): CivilizationUpgradeTotals {
-  const totals: CivilizationUpgradeTotals = { upgrades: {}, benefits: {} };
+  const totals: CivilizationUpgradeTotals = { upgrades: {}, benefits: {} },
+    forums = new Set(entities.filter(e => e.kind === 'building' && e.type === 'meridianforum' &&
+      e.team === team && e.hp > 0 && e.progress >= 1).map(e => e.id));
   for (const b of entities) {
     if (b.kind !== 'building' || b.team !== team || b.hp <= 0 || b.progress < 1 ||
-      b.forumId === undefined || !b.upgrade || !hasContentKey(CIVILIZATION_UPGRADES, b.upgrade)) continue;
+      b.forumId === undefined || !forums.has(b.forumId) || b.settlementAt !== undefined || !b.upgrade || !hasContentKey(CIVILIZATION_UPGRADES, b.upgrade)) continue;
     const target = hasContentKey(EXPEDITION_BENEFITS, b.upgrade) ? totals.benefits : totals.upgrades,
       rank = civilizationUpgradeUnique(b.upgrade) ? 1 : b.upgradeLevel || 1;
     target[b.upgrade] = (target[b.upgrade] || 0) + rank;
@@ -802,13 +685,15 @@ function expeditionCivilizationUpgrades(expedition: MeridianExpedition, live: Ru
   activeStage: number | null = null): CivilizationUpgradeTotals {
   const totals: CivilizationUpgradeTotals = { upgrades: {}, benefits: {} };
   for (const world of expedition.worlds || []) {
-    if (world.error || !world.battle) continue;
-    const contribution = civilizationUpgradesForBuildings(activeStage === world.stage && live ? live.entities : world.battle.state.entities);
+    if (world.error || !world.recipe || !world.battle) continue;
+    const recipe = world.recipe, active = activeStage === world.stage && live?.rules.kind === 'single-player' && live.rules.completed &&
+      live.depth === recipe.depth && live.map === recipe.encounter.map && live.seed === recipe.encounter.seed ? live : null;
+    const contribution = civilizationUpgradesForBuildings(active ? active.entities : world.battle.state.entities);
     for (const group of ['upgrades', 'benefits'] as const)
       for (const [key, value] of Object.entries(contribution[group])) totals[group][key] = (totals[group][key] || 0) + value;
   }
   for (const [key, count] of Object.entries(totals.upgrades))
-    if (hasContentKey(PERMANENT_UPGRADES, key)) totals.upgrades[key] = Math.min(count, PERMANENT_UPGRADES[key].max);
+    if (hasContentKey(BATTLE_UPGRADES, key)) totals.upgrades[key] = Math.min(count, BATTLE_UPGRADES[key].max);
   totals.benefits = normalizedBenefits(totals.benefits);
   return totals;
 }

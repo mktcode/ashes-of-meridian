@@ -1,4 +1,4 @@
-    /* Front end, permanent upgrades, HUD, controls. */
+    /* Front end, expedition lifecycle, HUD, controls. */
     'use strict';
     function $(id: 'world' | 'overlay' | 'minimap' | 'previewTransition'): HTMLCanvasElement;
     function $(id: string): HTMLElement;
@@ -13,7 +13,7 @@
       aether: 'echo', crystal: 'cinder', energy: 'energy', shield: 'shield', skull: 'skull',
       scan: 'scan', heal: 'repair', orbital: 'orbital', drop: 'drop', repair: 'repair', bulwark: 'shield',
       'tab:build': 'buildings', 'tab:infantry': 'infantry', 'tab:vehicles': 'vehicles', 'tab:aircraft': 'aircraft',
-      startingAlloy: 'starting-cinder', startingWorkers: 'workers', aetherEvacuation: 'evacuation',
+      startingAlloy: 'starting-cinder', startingWorkers: 'workers',
       constructionProtocols: 'construction', logisticsFrame: 'logistics', repairLogistics: 'repair-logistics',
       supplyCrate: 'crate', aetherAllocation: 'echo', pioneerSquad: 'pioneers',
       surveyDrones: 'survey', fieldWorkshop: 'workshop', commandCapacitor: 'energy',
@@ -56,7 +56,7 @@
       stagePreviewBusy = false;
       activeWorldStage: number | null = null;
       launchingWorld: ExpeditionWorld | null = null;
-      view: 'home' | 'battle' | 'transition' | 'game' | 'codex' | 'codexModel' | 'story';
+      view: 'home' | 'battle' | 'game' | 'codex' | 'codexModel' | 'story';
       codexFaction: FactionId;
       codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType } | null;
       codexZoom = 1;
@@ -97,11 +97,6 @@
       battleFaction?: FactionId;
       battleAbilities: AbilityType[];
       private processExpeditionResult?: ReturnType<typeof createExpeditionResultProcessor>;
-      resultAetherRecovered?: number;
-      resultAetherEvacuated?: number;
-      resultAetherStructures?: number;
-      resultCivilizationTotal?: number;
-      resultBenefit?: string;
       onViewportChange?: () => void;
       onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean, battle?: ExpeditionBattleSave | null) => Promise<boolean>;
       onLaunchBattle?: (options: BattleOptions, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, world?: ExpeditionWorld) => Promise<boolean>;
@@ -157,7 +152,6 @@
           this.hudResizeObserver = new ResizeObserver(() => this.updateHUDLayout());
           for (const id of ['topbar', 'commandDeck', 'selectionStatus']) this.hudResizeObserver.observe($(id));
         }
-        this.refreshCivilizationScore();
         this.notifyStorageFailure();
       }
       codexModelRotation(dt: number) {
@@ -177,13 +171,10 @@
         this.persistence.saveProfile(this.profile);
         this.notifyStorageFailure();
       }
-      refreshCivilizationScore() {
-        const expedition = this.expedition;
-        if (!expedition) { this.game.civilizationStage = null; return 0; }
-        const score = refreshExpeditionCivilization(this.profile, expedition,
-          this.view === 'game' && !this.game.stepping && this.game.snapshotSafe ? this.game.s : null, this.activeWorldStage);
-        this.game.civilizationStage = expedition.unlockedStage!;
-        return score;
+      expeditionUpgrades(): CivilizationUpgradeTotals {
+        return this.expedition ? expeditionCivilizationUpgrades(this.expedition,
+          this.view === 'game' && !this.game.stepping && this.game.snapshotSafe ? this.game.s : null, this.activeWorldStage)
+          : {upgrades:{}, benefits:{}};
       }
       saveBattle() {
         const s = this.game.s, expedition = this.expedition,
@@ -205,7 +196,6 @@
           }
           if (world) world.battle = battle;
           else expedition.battle = battle;
-          this.refreshCivilizationScore();
           const saved = this.persistence.saveProgress(this.profile, expedition);
           this.lastBattleSaveAt = performance.now();
           this.battleSaveBytes = this.persistence.saveBytes;
@@ -277,11 +267,6 @@
           this.view = 'game';
           this.audio.resetBattleMusic?.();
           this.factionJustUnlocked = null;
-          this.resultAetherRecovered = undefined;
-          this.resultAetherEvacuated = undefined;
-          this.resultAetherStructures = undefined;
-          this.resultCivilizationTotal = undefined;
-          this.resultBenefit = undefined;
           this.paused = !!data.restored && this.activeWorldStage !== null;
           this.modalKind = '';
           this.sellBuildingId = null;
@@ -324,7 +309,6 @@
             }
           }
           this.audio.setMode?.(this.paused || this.battleIntro ? 'silent' : 'battle');
-          this.refreshCivilizationScore();
           this.updateHUD();
           this.clearMode();
           // Start is outside a tick, so the initial CPU/UI snapshot precedes free play.
@@ -359,18 +343,12 @@
           const completion = (this.processExpeditionResult ??= createExpeditionResultProcessor())(
             this.profile, this.expedition, this.game.s, data.win, {
               snapshotVictory: () => this.game.snapshotBattle(true),
-              createEncounter: (depth, previousMap) => this.createEncounter(depth, previousMap),
-              createBenefitOffers: expedition => this.createBenefitOffers(expedition)
+              createEncounter: (depth, previousMap) => this.createEncounter(depth, previousMap)
             });
           if (completion) {
             this.expedition = completion.expedition;
-            this.game.civilizationStage = completion.civilizationStage;
             this.factionJustUnlocked = completion.factionUnlocked;
-            this.resultAetherEvacuated = completion.evacuated;
-            this.resultAetherStructures = completion.structures;
-            this.resultAetherRecovered = completion.recovered;
-            this.resultCivilizationTotal = completion.civilizationTotal;
-            // One localStorage write owns both payout and retirement of the old battle.
+            // One localStorage write owns archive creation and retirement of the old battle.
             this.persistence.saveProgress(this.profile, this.expedition);
             this.notifyStorageFailure();
             if (data.win) this.rememberStage();

@@ -6,9 +6,9 @@
       return {
         id, faction, meta, benefits, loadout: normalizedAbilityLoadout(loadout), controller: { kind: 'human' },
         account: {
-          alloy: STARTING_ALLOY[meta.startingAlloy || 0] + (benefits.supplyCrate || 0) * EXPEDITION_EFFECTS.alloy,
+          alloy: STARTING_CINDER + ((meta.startingAlloy || 0) + (benefits.supplyCrate || 0)) * EXPEDITION_EFFECTS.alloy,
           gas: (benefits.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
-          energy: COMMAND_ENERGY.start + (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy,
+          energy: Math.min(COMMAND_ENERGY.max, COMMAND_ENERGY.start + (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy),
           abilities: Object.fromEntries(contentKeys(ABILITIES).map(key => [key, 0])) as Record<AbilityType, number>
         }
       };
@@ -42,10 +42,10 @@
       if (!Array.isArray(enemies) || enemies.length < 1 || enemies.length > 3 ||
           Array.from(enemies).some(faction => !Number.isInteger(faction) || !FACTIONS[faction]))
         throw Error('Expedition battle requires 1–3 enemy factions');
-      const savedMeta = profile.upgrades || {},
+      const savedMeta = opts.upgrades || {},
         meta = Object.fromEntries(
-          (Object.keys(PERMANENT_UPGRADES) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
-            [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, PERMANENT_UPGRADES[key].max)])
+          (Object.keys(BATTLE_UPGRADES) as UpgradeType[]).filter(key => Object.hasOwn(savedMeta, key)).map(key =>
+            [key, clamp(Math.floor(Number(savedMeta[key]) || 0), 0, BATTLE_UPGRADES[key].max)])
         );
       return [
         createParty(0, FACTIONS[opts.faction as FactionId] ? opts.faction as FactionId : FACTION_ID.FIRST,
@@ -59,8 +59,6 @@
     }
     class MeridianGame {
       profile: MeridianProfile;
-      // Derived expedition permission, not part of a world's original recipe/snapshot.
-      civilizationStage: number | null = null;
       emit: GameEventSink;
       s: RunState | null;
       world: Battlefield | null;
@@ -147,7 +145,7 @@
       restoreBattle(this: MeridianGame, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, completed = false) {
         const save = expedition.battle;
         if (this.stepping || !save || !validExpeditionBattle(save, expedition, {
-          abilities: ABILITIES, units: UNITS, buildings: BUILDINGS, upgrades: PERMANENT_UPGRADES,
+          abilities: ABILITIES, units: UNITS, buildings: BUILDINGS, upgrades: BATTLE_UPGRADES,
           benefits: EXPEDITION_BENEFITS, battlefields: BATTLEFIELDS, missions: MISSIONS,
           enemyCount: expeditionEnemyCount, clamp, getStorage: () => { throw Error('No storage in simulation'); }, warn: () => {}
         }, completed)) throw Error('Invalid expedition battle snapshot');
@@ -242,7 +240,7 @@
             this.spawnResource('crystal', p.x, p.z, 1800 + Math.floor(this.random() * 900));
           }
           const gas = battlefieldGasPosition(site);
-          this.spawnResource('gas', gas.x, gas.z, 999999);
+          this.spawnResource('gas', gas.x, gas.z, ECHO_VENT_CAPACITY);
         }
         this.random(); s.nextId++;
         // Preserve the established resource/bonus-worker RNG entry points, not the old loadout.
