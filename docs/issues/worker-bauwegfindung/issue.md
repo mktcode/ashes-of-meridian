@@ -10,6 +10,7 @@ Isolierte HQ-/Depot-Prüfung belegte eine passende Fehlerklasse: wechselndes HQ-
 
 ## Noch offen
 
+- [ ] Lokalen HQ-Fall `service tolerance does not extend the existing outer HQ delivery range` prüfen: Die erwartete Ablieferung im zweiten Worker-Aufruf bleibt aus (Ladung 18 statt 0), auch im isoliert gebauten unveränderten Stand `1e1d24a` vor der umlaufenden Forum-Regel. Ursache beziehungsweise Tickannahme offen; kein Nachweis einer durch das Forum eingeführten HQ-Regression und kein allgemeiner Langlaufbefund.
 - [ ] Originalfälle bei erneutem Stillstand sichern: Karte/Seed, Workerposition/-auftrag/-fracht, Exit/Yield, kompletter Pfad samt Ziel/Status/Version, Stuck-/Recoverywerte und Nachbargeometrie. Vor Reload sichern; kein laufendes Restore.
 - [ ] Sichtbarer Blockiert-/Ausgangswarten-Status oder abschließende Fehlerreaktion. Temporäre Belegung nicht als dauerhaft unerreichbar behandeln; keine heimlichen Erstattungen/Teleports.
 - [ ] Auftragsweite Liveness statt nur Wegpunktfortschritt, Yield-/Umwegzyklen und Servicepunkt-Fairness/Gegenverkehr beurteilen.
