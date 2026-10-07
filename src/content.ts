@@ -767,8 +767,9 @@ type UpgradeType = keyof typeof PERMANENT_UPGRADES;
 
 // Civilian buildings own a selected effect and a purchased rank; no profile purchases.
 const CIVILIZATION_UPGRADE_COSTS = [40, 80, 140] as const;
+const { aetherEvacuation: civilizationRecoveryExcluded, ...CIVILIZATION_FLEET_EFFECTS } = META;
 const CIVILIZATION_UPGRADES = Object.freeze({
-  ...Object.fromEntries(contentKeys(META).filter(key => key !== 'aetherEvacuation').map(key => [key, META[key]])),
+  ...CIVILIZATION_FLEET_EFFECTS,
   ...COMMAND_MODULES, ...EXPEDITION_BENEFITS
 }) as Readonly<Record<Exclude<FleetUpgradeType, 'aetherEvacuation'> | AbilityType | ExpeditionBenefit,
   { name: string; icon: string; desc: string; max?: number }>>;
