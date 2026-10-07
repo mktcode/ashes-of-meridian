@@ -204,7 +204,7 @@ test('shared fine-grid heights are evaluated once, not per triangle or ring revi
   h.world.surface.heightAt=()=>{calls++;return 3;};
   for(let frame=0;frame<30;frame++)h.field.draw('a',frame*20,true);
   assert.equal(calls,25*25,'one CPU height per shared fine vertex');
-  h.field.sampler.sample=()=>-1;h.field.draw('b',600,true);
+  h.field.sampler.sample=()=>-1;h.field.sampler.revision++;h.field.draw('b',600,true);
   assert.equal(calls,25*25,'new colors keep the original terrain mesh positions');
 });
 
@@ -231,6 +231,111 @@ test('ring revisions hide deferred live colors while retaining completed geometr
   const marks=h.marks.length;
   h.field.sampler.refresh=()=>{h.field.sampler.pending=true;};
   h.field.draw('e',660,true);assert.equal(h.marks.length,marks,'no stale ring is drawn when revalidation is deferred');
+});
+
+test('deferred cold revalidation keeps progressing without another clock or fog revision',()=>{
+  const h=ringFixture();cpuNow=0;h.world.sight[0].visible.fill(0);
+  for(let i=0;i<20;i++)h.field.draw('hidden',i*20,true);
+  assert.equal(h.field.pending,false);assert.equal(h.uploads.length,0);
+  const foundation=h.world.surface.foundation.bind(h.world.surface);
+  h.world.surface.foundation=(...args)=>{cpuNow++;return foundation(...args);};
+  h.world.sight[0].visible.fill(1);h.field.draw('visible',500,true);
+  assert.equal(h.field.pending,true,'unfinished proof remains pending even though every ring was previously prepared');
+  for(let i=1;i<=100&&h.field.pending;i++)h.field.draw('visible',500+i*20,true);
+  assert.equal(h.field.pending,false);assert.ok(h.uploads.length>0);
+});
+
+test('unchanged clock revisions and positive HP changes do not resample completed fields',()=>{
+  const h=ringFixture();cpuNow=0;
+  for(let i=0;i<30;i++)h.field.draw(`clock:${i}`,i*20,true);
+  assert.equal(h.field.pending,false);
+  let reads=0;const sample=h.field.sampler.sample.bind(h.field.sampler);
+  h.field.sampler.sample=p=>{reads++;return sample(p);};
+  const revision=h.field.sampler.revision,uploads=h.uploads.length;
+  h.game.s.entities[0].hp--;
+  for(let i=0;i<10;i++)h.field.draw(`fog-clock:${i}`,600+i*20,true);
+  assert.equal(reads,0);assert.equal(h.field.sampler.revision,revision);assert.equal(h.uploads.length,uploads);
+  h.world.sight[0].visible[ h.world.idx(0,0) ]=0;
+  h.field.draw('changed-sight',900,true);assert.ok(reads>0,'actual fog changes invalidate immediately');
+});
+
+test('local blocker updates retain static buckets and cached distant colors',()=>{
+  const {game,world,unit,building}=fixture(),sampler=new PlacementGuideSampler(game,'depot',0);
+  game.s.entities.push(building(20,0,0,'meridianforum'));sampler.refresh(Infinity);
+  const p={x:72,z:72};assert.equal(sampler.sample(p),originalSample(game,'depot',p));
+  const entry=sampler.colors.get('72:72'),forums=sampler.forums[0].polygons,
+    staticBucket=sampler.buckets.get(sampler.key(game.s.entities[0]));
+  sampler.refresh(Infinity);assert.strictEqual(sampler.forums[0].polygons,forums);
+  assert.strictEqual(sampler.buckets.get(sampler.key(game.s.entities[0])),staticBucket);
+  const moving=unit(21,-12,72);game.s.entities.push(moving);sampler.refresh(Infinity);
+  assert.equal(sampler.sample(p),originalSample(game,'depot',p));assert.strictEqual(sampler.colors.get('72:72'),entry);
+  moving.x=72;sampler.refresh(Infinity);assert.equal(sampler.sample(p),-1);
+  moving.exit={x:-12,z:72};sampler.refresh(Infinity);assert.equal(sampler.sample({x:-12,z:72}),-1);
+  moving.hp=0;sampler.refresh(Infinity);assert.equal(sampler.sample(p),originalSample(game,'depot',p));
+  game.s.entities[0].visualRotation=1;sampler.refresh(Infinity);
+  assert.strictEqual(sampler.forums[0].polygons,forums,'unrelated building rotation does not rebuild forum streets');
+});
+
+test('cached Forum polygons preserve placement classification across teams, overlaps and rotations without path searches',()=>{
+  for(const team of [0,1]) {
+    const {game,world,building}=fixture(team),a=building(20,-24,-6,'meridianforum'),b=building(21,42,30,'meridianforum');
+    game.s.rules={kind:'single-player',completed:true};game.s.entities.push(a,b);
+    world.path=()=>{throw Error('placement grids must not search paths');};
+    for(const type of ['depot','barracks','meridianforum']) {
+      const sampler=new PlacementGuideSampler(game,type,team);
+      for(const rotation of [0,2,5]) {
+        a.visualRotation=rotation;b.visualRotation=rotation+.5;sampler.refresh(Infinity);
+        for(let z=-60;z<=60;z+=12)for(let x=-60;x<=60;x+=12) {
+          const p={x,z};assert.equal(sampler.sample(p),originalSample(game,type,p),`${type}, team ${team}, rotation ${rotation}, ${x},${z}`);
+        }
+      }
+    }
+  }
+});
+
+test('cold work uses the time budget rather than the old 32-tile throughput cap',()=>{
+  const h=ringFixture({startX:-60,startZ:-60,endX:60,endZ:60});cpuNow=0;
+  for(let i=0;i<20&&h.field.pending;i++)h.field.draw('a',i*20,true);
+  assert.equal(h.field.pending,false,'1600 tiles need not consume at least 50 frames');
+  assert.ok(h.uploads.length<=12);
+});
+
+test('idle preparation advances CPU/GPU readiness without scene draws or gameplay mutation',()=>{
+  const h=ringFixture(),before=JSON.stringify(h.game.s);cpuNow=0;
+  h.field.prepareIdle('a',0,8);
+  assert.ok(h.uploads.length>0);assert.equal(h.marks.length,0);
+  h.field.draw('a',20,true);assert.ok(h.marks.length>0);
+  assert.equal(JSON.stringify(h.game.s),before);
+});
+
+test('overlapping camera footprints reuse exact terrain positions and defer GPU release until disposal',()=>{
+  const h=ringFixture();cpuNow=0;let heights=0;
+  h.field.sampler.refresh=()=>{h.field.sampler.pending=false;};h.field.sampler.sample=()=>1;
+  h.world.surface.heightAt=()=>{heights++;return 3;};
+  for(let i=0;i<20;i++)h.field.draw('a',i*20,true);
+  assert.equal(heights,625);
+  h.field.retarget({startX:-12,startZ:-18,endX:24,endZ:18},{x:6,z:0});
+  assert.equal(h.releases.length,0);
+  for(let i=0;i<20;i++)h.field.draw('b',500+i*20,true);
+  assert.equal(heights,725,'only the newly exposed four fine-grid columns need heights');
+  for(const ring of h.field.rings)for(let i=0;i<ring.data.length;i+=9) {
+    assert.ok(Math.abs(ring.data[i+1]-3.065)<1e-5);
+    assert.ok(ring.data[i]+h.field.origin.x>=-12 && ring.data[i]+h.field.origin.x<=24);
+  }
+  h.field.dispose();assert.deepEqual(new Set(h.releases),new Set(h.uploads.map(u=>u.name)));
+});
+
+test('view-cached foundation heights match uncached rules on slopes, waves and cliff edges',()=>{
+  for(const height of [(x,z)=>x*.1+Math.sin(z/7)*.2,(x,z)=>Math.sin(x/5)*.8+Math.cos(z/6)*.6,(x,z)=>x<0?0:Math.min(8,x*.8)]) {
+    const {game,world}=fixture();world.surface=new BattlefieldSurface(90,2.5,height);
+    world.terrainFree=(a,b,r)=>world.surface.segment(a,b,r);
+    for(const type of ['depot','barracks','hq']) {
+      const sampler=new PlacementGuideSampler(game,type,0);sampler.refresh(Infinity);
+      for(let z=-42;z<=42;z+=6)for(let x=-42;x<=42;x+=6) {
+        const p={x,z};assert.equal(sampler.sample(p),originalSample(game,type,p),`${type} at ${x},${z}`);
+      }
+    }
+  }
 });
 
 test('unseen blockers and exits remain transparent, before refinery snapping too',()=>{

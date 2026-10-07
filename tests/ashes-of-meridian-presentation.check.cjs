@@ -816,11 +816,16 @@ test('Forum parcel fills follow native terrain facets and cut the circle, all st
 });
 
 // Execute the real app loop with synthetic rAF timestamps, without WebGL or a browser.
-async function appClock(diagnostic = false, reducedMotion = true) {
+async function appClock(diagnostic = false, reducedMotion = true, idle = false) {
   let now = 0;
   const pending = [], draws = [], ticks = [], steps = [], effectTicks = [], errors = [], weatherClocks = [], entitiesDrawn = [], rings = [], parcelBuilds = [], paints = [];
   const renderWork = { begin: 0, battlefield: 0, overlay: 0 };
   const elements = new Map(), window = {}, queryRequests = [], buildings = {}, forumSettings = {radius:73};
+  const idleJobs = new Map();let idleId=0;
+  if(idle) {
+    window.requestIdleCallback=fn=>{const id=++idleId;idleJobs.set(id,fn);return id;};
+    window.cancelIdleCallback=id=>idleJobs.delete(id);
+  }
   const document = { hidden: false, body: { appendChild() {} }, createElement: () => ({ append() {} }) };
   const $ = id => {
     if (!elements.has(id)) elements.set(id, {
@@ -891,6 +896,7 @@ async function appClock(diagnostic = false, reducedMotion = true) {
     },
     // This fixture tests app mesh/lifecycle behavior; shared placement rules have their own tests.
     PlacementGuideSampler: class {
+      revision=0;fogVersion=-1;
       constructor(game,type,team) {
         Object.assign(this,{game,type,team});
         (game.guideSamplers ??= []).push(this);
@@ -899,6 +905,7 @@ async function appClock(diagnostic = false, reducedMotion = true) {
       refresh() {
         this.pending=!!this.game.guidePendingFrames;
         if(this.pending) this.game.guidePendingFrames--;
+        else if(this.fogVersion!==this.game.world.fogVersion) { this.fogVersion=this.game.world.fogVersion;this.revision++; }
       }
       sample(p) {
         const {game,type,team}=this, world=game.world;
@@ -936,6 +943,11 @@ async function appClock(diagnostic = false, reducedMotion = true) {
   assert.ok(window.Meridian, 'app initializes');
   assert.deepEqual(errors, []);
   return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, rings, parcelBuilds, forumSettings, paints, $,
+    idleJobs,
+    idle(remaining=12) {
+      const [id,fn]=idleJobs.entries().next().value;idleJobs.delete(id);
+      fn({timeRemaining:()=>remaining});
+    },
     get performance() { return window.Meridian.performance; },
     setBuilding(name,value) { buildings[name]=value; },
     frame(t) {
@@ -1412,6 +1424,42 @@ test('placement guide reuses terrain sampler on camera changes, but not across b
   a.ui.mode={kind:'build',arg:'hq'};a.frame(160);
   assert.equal(a.game.guideSamplers.length,5,'ending build mode releases the cache');
   assert.deepEqual(a.errors,[]);
+});
+
+async function idleBuildClock() {
+  const a=await appClock(false,true,true);
+  a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.ui.paused=false;a.game.s.result={win:true};a.game.localTeam=0;
+  a.setBuilding('depot',{size:2});a.game.canBuild=()=>'';
+  a.game.world={extent:180,fogVersion:0,surface:{maxHeight:0,heightAt:()=>0},sight:[{visible:new Uint8Array([1])}],idx:()=>0};
+  a.renderer.ground=(x,y)=>({x:(x-400)/3,z:(y-300)/3});
+  return a;
+}
+test('placement guide idle work never draws a scene or advances gameplay and is cancelled on exit or graphics loss',async()=>{
+  const a=await idleBuildClock(),marks=[],uploads=[];
+  a.renderer.add=(...args)=>marks.push(args);a.renderer.streamGeometry=(name,data)=>uploads.push({name,data});
+  a.frame(20);assert.equal(a.idleJobs.size,1);
+  const before=JSON.stringify(a.game.s),draws=a.draws.length,ticks=a.ticks.length,steps=a.steps.length,count=marks.length;
+  a.idle();assert.ok(uploads.length>0);assert.equal(marks.length,count);
+  assert.equal(a.draws.length,draws);assert.equal(a.ticks.length,ticks);assert.equal(a.steps.length,steps);
+  assert.equal(JSON.stringify(a.game.s),before);
+  a.frame(40);assert.ok(marks.length>count);
+  a.ui.mode=null;a.frame(60);assert.equal(a.idleJobs.size,0);assert.deepEqual(a.errors,[]);
+  const b=await idleBuildClock();b.frame(20);assert.equal(b.idleJobs.size,1);
+  b.$('world').handlers.webglcontextlost({preventDefault(){}});assert.equal(b.idleJobs.size,0);
+});
+test('placement guide idle work respects missing idle time and obsolete world or build context',async()=>{
+  const a=await idleBuildClock();let uploads=0;a.renderer.streamGeometry=()=>uploads++;
+  a.frame(20);const count=uploads;a.idle(.5);assert.equal(uploads,count);
+  a.frame(40);const beforeObsolete=uploads;a.game.world={...a.game.world};a.idle();assert.equal(uploads,beforeObsolete);
+  a.frame(60);const next=uploads;a.ui.mode=null;a.idle();assert.equal(uploads,next);
+  assert.deepEqual(a.errors,[]);
+});
+test('idle preparation errors use the normal renderer failure path before another gameplay step',async()=>{
+  const a=await idleBuildClock();a.frame(20);
+  a.renderer.streamGeometry=()=>{throw Error('idle upload failed');};
+  a.idle();assert.equal(a.errors.length,0);
+  a.frame(40);assert.equal(a.errors.length,1);assert.match(a.errors[0].message,/idle upload failed/);
+  assert.equal(a.pending.length,0);assert.equal(a.idleJobs.size,0);assert.equal(a.steps.length,0);
 });
 
 test('placement guide never displays deferred or stale rings and initializes deferred terrain positions',async()=>{

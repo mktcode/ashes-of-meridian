@@ -153,21 +153,21 @@ class BattlefieldSurface {
     }
     return true;
   }
-  foundation(p: Position, radius: number): boolean {
+  foundation(p: Position, radius: number, heightAt = (x: number,z: number) => this.heightAt(x,z)): boolean {
     const margin = radius + 1;
     if (!this.fits(p.x,p.z,margin)) return false;
     // Cover all vertices of every touched triangle (conservative square footprint).
     // Off-grid sample rings can miss a height extremum inside a large foundation.
     const first = (v: number) => Math.floor((v-margin+this.extent)/this.step)*this.step-this.extent,
       last = (v: number) => Math.ceil((v+margin+this.extent)/this.step)*this.step-this.extent;
-    const center = this.heightAt(p.x, p.z), dx = (this.heightAt(p.x + this.step, p.z) - this.heightAt(p.x - this.step, p.z)) / (2 * this.step),
-      dz = (this.heightAt(p.x, p.z + this.step) - this.heightAt(p.x, p.z - this.step)) / (2 * this.step);
+    const center = heightAt(p.x, p.z), dx = (heightAt(p.x + this.step, p.z) - heightAt(p.x - this.step, p.z)) / (2 * this.step),
+      dz = (heightAt(p.x, p.z + this.step) - heightAt(p.x, p.z - this.step)) / (2 * this.step);
     // Accept moderate grades and small undulations without admitting steep hills.
     // The supporting building pose still covers the complete unchanged surface.
     if (Math.hypot(dx, dz) > .16) return false;
     for (let z = first(p.z); z <= last(p.z); z += this.step)
       for (let x = first(p.x); x <= last(p.x); x += this.step)
-        if (Math.abs(this.heightAt(x,z) - (center + dx * (x - p.x) + dz * (z - p.z))) > .30) return false;
+        if (Math.abs(heightAt(x,z) - (center + dx * (x - p.x) + dz * (z - p.z))) > .30) return false;
     return true;
   }
   // A restrained lean reduces downhill fill without changing buildability or the playable surface.

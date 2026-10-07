@@ -70,10 +70,27 @@ function buildForumParcelGeometry(world: Battlefield, forum: BuildingEntity): Fl
 }
 
 // A build-context-owned, read-only batch: static terrain survives overlapping viewports.
-// Live blockers are indexed afresh, including production exits and unseen entities.
+// Live input snapshots update only affected buckets, including exits and unseen entities.
 class PlacementGuideSampler {
   private terrain = new Map<string, boolean>();
-  private buckets = new Map<string, Entity[]>();
+  private foundationHeights = new Map<string, number>();
+  private readonly heightAt = (x: number,z: number) => {
+    const key = `${x}:${z}`;
+    let value = this.foundationHeights.get(key);
+    if (value === undefined) { value = this.world.surface!.heightAt(x,z); this.foundationHeights.set(key,value); }
+    return value;
+  };
+  private buckets = new Map<string, Set<Entity>>();
+  private bucketVersions = new Map<string, number>();
+  private indexed = new Map<Entity, { state: unknown[]; keys: string[] }>();
+  private colors = new Map<string, { epoch: number; bucket: number; target: string; targetBucket: number; explored: number; value: number }>();
+  private forums: { polygons: Position[][]; bounds: number[] }[] = [];
+  private supplyState: unknown[] = [];
+  private visible?: Uint8Array;
+  private explored?: Uint8Array;
+  private epoch = 0;
+  // Actual input changes, not the periodically incremented world fog clock.
+  revision = 0;
   private unseen = new Set<Entity>();
   private vents: ResourceEntity[] = [];
   private occupiedVents = new Set<number>();
@@ -90,46 +107,126 @@ class PlacementGuideSampler {
   // Bound the cache to the requested footprint, retaining overlap on camera changes.
   // Refinery samples may resolve to a vent just outside the sampled rectangle.
   retainTerrainFootprint(startX: number, startZ: number, endX: number, endZ: number) {
-    const margin = this.type === 'refinery' ? REFINERY_PLACEMENT_RANGE : 0;
-    for (const key of this.terrain.keys()) {
+    const margin = this.type === 'refinery' ? REFINERY_PLACEMENT_RANGE : 0,
+      heightMargin = margin+this.size+1+2*(this.world.surface?.step || 0);
+    for (const key of this.foundationHeights.keys()) {
+      const [x,z] = key.split(':').map(Number);
+      if (x<startX-heightMargin || x>endX+heightMargin || z<startZ-heightMargin || z>endZ+heightMargin)
+        this.foundationHeights.delete(key);
+    }
+    for (const cache of [this.terrain, this.colors]) for (const key of cache.keys()) {
       const separator = key.indexOf(':'), x = Number(key.slice(0, separator)), z = Number(key.slice(separator + 1));
       if (x < startX - margin || x > endX + margin || z < startZ - margin || z > endZ + margin)
-        this.terrain.delete(key);
+        cache.delete(key);
     }
   }
   private key(p: Position) { return `${Math.floor(p.x / 10)},${Math.floor(p.z / 10)}`; }
   refresh(terrainBudget = 64, terrainDeadline = Infinity) {
     this.terrainBudget = terrainBudget; this.terrainDeadline = terrainDeadline; this.pending = false;
-    this.ready = !this.game.canBuild(this.type, null, this.team);
-    this.buckets.clear(); this.unseen.clear(); this.vents = []; this.occupiedVents.clear();
-    const add = (e: Entity, p: Position, radius: number) => {
-      for (let z = Math.floor((p.z - radius) / 10); z <= Math.floor((p.z + radius) / 10); z++)
-        for (let x = Math.floor((p.x - radius) / 10); x <= Math.floor((p.x + radius) / 10); x++) {
-          const key = `${x},${z}`, bucket = this.buckets.get(key);
-          if (!bucket) this.buckets.set(key, [e]);
-          else if (bucket[bucket.length - 1] !== e) bucket.push(e);
-        }
+    let changed = false, global = false, forumsChanged = false, ventsChanged = false;
+    const same = (a: unknown[], b: unknown[]) => a.length === b.length && a.every((v,i) => v === b[i]);
+    const ready = !this.game.canBuild(this.type, null, this.team);
+    if (ready !== this.ready) { this.ready = ready; global = true; }
+    const touch = (key: string) => {
+      this.bucketVersions.set(key,(this.bucketVersions.get(key) || 0)+1); changed = true;
     };
+    const remove = (e: Entity, keys: string[]) => {
+      for (const key of keys) {
+        const bucket = this.buckets.get(key)!; bucket.delete(e);
+        if (!bucket.size) this.buckets.delete(key);
+        touch(key);
+      }
+      this.unseen.delete(e);
+    };
+    const alive = new Set<Entity>(), vents: ResourceEntity[] = [], occupied = new Set<number>();
     for (const e of this.game.s!.entities) {
       if (e.hp <= 0) continue;
-      if (!this.game.observed(e)) this.unseen.add(e);
-      const radius = this.size + (e.kind === 'unit' ? e.size * UNIT_BODY_SCALE + 1 : e.size + .8);
-      add(e, e, radius);
-      if (e.kind === 'unit' && e.exit) add(e, e.exit, radius);
-      if (e.kind === 'resource' && e.type === 'gas' && this.world.sight[this.team].explored[this.world.idx(e.x, e.z)])
-        this.vents.push(e);
-      if (e.type === 'refinery' && e.gasId !== undefined) this.occupiedVents.add(e.gasId);
+      alive.add(e);
+      const observed = this.game.observed(e), exit = e.kind === 'unit' ? e.exit : undefined,
+        state = [e.x,e.z,e.size,e.kind,e.type,e.team,e.kind === 'building' ? e.visualRotation : undefined,e.gasId,observed,exit?.x,exit?.z], old = this.indexed.get(e);
+      if (!old || !same(old.state,state)) {
+        if (old) remove(e,old.keys);
+        const keys = new Set<string>(), radius = this.size + (e.kind === 'unit' ? e.size * UNIT_BODY_SCALE + 1 : e.size + .8),
+          add = (p: Position) => {
+            for (let z=Math.floor((p.z-radius)/10);z<=Math.floor((p.z+radius)/10);z++)
+              for (let x=Math.floor((p.x-radius)/10);x<=Math.floor((p.x+radius)/10);x++) keys.add(`${x},${z}`);
+          };
+        add(e); if (exit) add(exit);
+        for (const key of keys) {
+          let bucket = this.buckets.get(key);
+          if (!bucket) { bucket = new Set(); this.buckets.set(key,bucket); }
+          bucket.add(e); touch(key);
+        }
+        if (!observed) this.unseen.add(e);
+        this.indexed.set(e,{state,keys:[...keys]});
+        forumsChanged ||= e.type === 'meridianforum' || old?.state[4] === 'meridianforum';
+        ventsChanged ||= e.type === 'gas' || old?.state[4] === 'gas';
+      }
+      if (this.type === 'refinery') {
+        if (e.kind === 'resource' && e.type === 'gas' && this.world.sight[this.team].explored[this.world.idx(e.x,e.z)]) vents.push(e);
+        if (e.type === 'refinery' && e.gasId !== undefined) occupied.add(e.gasId);
+      }
     }
+    for (const [e,old] of this.indexed) if (!alive.has(e)) {
+      remove(e,old.keys); this.indexed.delete(e);
+      forumsChanged ||= old.state[4] === 'meridianforum'; ventsChanged ||= old.state[4] === 'gas';
+    }
+    if (forumsChanged) {
+      this.forums = this.game.s!.entities.filter(e => e.hp > 0 && e.kind === 'building' && e.type === 'meridianforum').map(entity => {
+        const polygons = forumCorridors(entity as BuildingEntity), points = polygons.flat();
+        return {polygons,bounds:[Math.min(...points.map(p=>p.x)),Math.min(...points.map(p=>p.z)),
+          Math.max(...points.map(p=>p.x)),Math.max(...points.map(p=>p.z))]};
+      });
+      global = true;
+    }
+    if (this.type === 'refinery' && (ventsChanged || vents.length !== this.vents.length || vents.some((e,i)=>e!==this.vents[i]) ||
+      occupied.size !== this.occupiedVents.size || [...occupied].some(id=>!this.occupiedVents.has(id)))) global = true;
+    this.vents = vents; this.occupiedVents = occupied;
+    const supplyState = this.game.s!.supplyCaches.flatMap(c=>[c,c.x,c.z,c.collected]);
+    if (!same(supplyState,this.supplyState)) { this.supplyState = supplyState; global = true; }
+    const sight = this.world.sight[this.team], differs = (a: Uint8Array | undefined,b: Uint8Array) => {
+      if (!a || a.length !== b.length) return true;
+      for (let i=0;i<b.length;i++) if (b[i] !== a[i]) return true;
+      return false;
+    };
+    if (differs(this.visible,sight.visible) || differs(this.explored,sight.explored)) {
+      this.visible = sight.visible.slice(); this.explored = sight.explored.slice(); changed = true;
+    }
+    if (global) { this.epoch++; changed = true; }
+    if (changed) this.revision++;
+  }
+  private forumBlocked(p: Position): boolean {
+    const radius = this.size+.35+this.world.cellSize/2,
+      square = [{x:p.x-radius,z:p.z-radius},{x:p.x+radius,z:p.z-radius},
+        {x:p.x+radius,z:p.z+radius},{x:p.x-radius,z:p.z+radius}],
+      shapes = isCivilizationBuildingType(this.type) ? settlementFootprints(p,this.type,this.team) : [],
+      points = [...square,...shapes.flat()], minX = Math.min(...points.map(q=>q.x)), maxX = Math.max(...points.map(q=>q.x)),
+      minZ = Math.min(...points.map(q=>q.z)), maxZ = Math.max(...points.map(q=>q.z));
+    return this.forums.some(f => {
+      // The square supplies world-axis SAT planes. Rotated civilian polygons
+      // use exact SAT directly, without assuming a world-axis gap bound.
+      const [x,z,endX,endZ] = f.bounds;
+      if (!shapes.length && (maxX+.25<=x || endX+.25<=minX || maxZ+.25<=z || endZ+.25<=minZ)) return false;
+      return f.polygons.some(c => civilizationFootprintsOverlap(c,square) || shapes.some(s=>civilizationFootprintsOverlap(c,s)));
+    });
   }
   sample(pos: Position): number {
     const world = this.world, r = this.size;
     if (Math.abs(pos.x) >= world.extent - 4 || Math.abs(pos.z) >= world.extent - 4 ||
         !world.sight[this.team].visible[world.idx(pos.x, pos.z)]) return 0;
+    const original = this.key(pos), colorKey = `${pos.x}:${pos.z}`, bucket = this.bucketVersions.get(original) || 0,
+      explored = world.sight[this.team].explored[world.idx(pos.x,pos.z)], cached = this.colors.get(colorKey);
+    if (cached && cached.epoch === this.epoch && cached.bucket === bucket && cached.explored === explored &&
+      cached.targetBucket === (this.bucketVersions.get(cached.target) || 0)) return cached.value;
+    const store = (value: number,target = original) => {
+      this.colors.set(colorKey,{epoch:this.epoch,bucket,target,targetBucket:this.bucketVersions.get(target) || 0,explored,value});
+      return value;
+    };
     // Test the original sample before vent snapping, just like the visibility guard.
-    if (this.buckets.get(this.key(pos))?.some(e => this.unseen.has(e) && buildingBlockerReason(pos, r, e, this.type, this.team))) return 0;
-    if (!this.ready) return -1;
+    if ([...(this.buckets.get(original) || [])].some(e => this.unseen.has(e) && buildingBlockerReason(pos, r, e, this.type, this.team))) return store(0);
+    if (!this.ready) return store(-1);
     const gas = this.type === 'refinery' ? nearestRefineryVent(pos, this.vents) : null;
-    if (this.type === 'refinery' && !gas) return -1;
+    if (this.type === 'refinery' && !gas) return store(-1);
     const p = gas || pos, key = `${p.x}:${p.z}`;
     let terrain = this.terrain.get(key);
     if (terrain === undefined) {
@@ -138,14 +235,15 @@ class PlacementGuideSampler {
         this.pending = true; return 0;
       }
       this.terrainBudget--;
-      terrain = !buildingFoundationReason(world, this.type, p, this.team) && !buildingTerrainObstructed(world, p, r, isCivilizationBuildingType(this.type));
+      terrain = !buildingFoundationReason(world, this.type, p, this.team,this.heightAt) && !buildingTerrainObstructed(world, p, r, isCivilizationBuildingType(this.type));
       this.terrain.set(key, terrain);
     }
-    if (!terrain || this.game.forumAccessReason(p,r,undefined,this.type,this.team) || !world.sight[this.team].explored[world.idx(p.x, p.z)] ||
+    const target = this.key(p);
+    if (!terrain || !world.sight[this.team].explored[world.idx(p.x, p.z)] ||
         this.game.s!.supplyCaches.some(cache => !cache.collected && distance(p, cache) < r + 3) ||
-        this.buckets.get(this.key(p))?.some(e => e !== gas && buildingBlockerReason(p, r, e, this.type, this.team)) ||
-        (gas && this.occupiedVents.has(gas.id))) return -1;
-    return 1;
+        [...(this.buckets.get(target) || [])].some(e => e !== gas && buildingBlockerReason(p, r, e, this.type, this.team)) ||
+        (gas && this.occupiedVents.has(gas.id)) || (this.forums.length && this.forumBlocked(p))) return store(-1,target);
+    return store(1,target);
   }
 }
 

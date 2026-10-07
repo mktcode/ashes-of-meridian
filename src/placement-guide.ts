@@ -12,19 +12,45 @@ interface PlacementGuideRing {
   uploaded: boolean;
   revision: string;
   appearedAt: number;
+  initialized: Uint8Array;
+  tileValues: Float32Array;
 }
 class PlacementGuideRings {
-  private readonly columns: number;
-  private readonly samples: Float32Array;
-  private readonly sampledAt: Uint32Array;
-  private readonly heights: Float32Array;
-  private readonly fineColumns: number;
-  private readonly rings: PlacementGuideRing[];
-  private readonly origin: Position;
+  private columns!: number;
+  private samples!: Float32Array;
+  private sampledAt!: Uint32Array;
+  private heights!: Float32Array;
+  private fineColumns!: number;
+  private rings!: PlacementGuideRing[];
+  private origin!: Position;
+  private sourceRevision: string | null = null;
+  private allocated = new Set<number>();
+  private retained = new Map<string, {data: Float32Array; offset: number; origin: Position}>();
   private frame = 0;
   private nextRing = 0;
   constructor(private renderer: MeridianRenderer, private world: Battlefield,
     readonly sampler: PlacementGuideSampler, private bounds: PlacementGuideBounds, center: Position) {
+    this.prepare(bounds,center);
+  }
+  retarget(bounds: PlacementGuideBounds, center: Position) {
+    const oldBounds = this.bounds, oldColumns = this.fineColumns, oldHeights = this.heights;
+    this.retained.clear();
+    for (const ring of this.rings) for (let tile=0;tile<ring.tiles.length;tile++) if (ring.initialized[tile]) {
+      const index=ring.tiles[tile],x=oldBounds.startX+(index%this.columns)*PLACEMENT_GUIDE_SAMPLE,
+        z=oldBounds.startZ+Math.floor(index/this.columns)*PLACEMENT_GUIDE_SAMPLE;
+      if (x>=bounds.startX && x<bounds.endX && z>=bounds.startZ && z<bounds.endZ)
+        this.retained.set(`${x}:${z}`,{data:ring.data,offset:tile*216,origin:this.origin});
+    }
+    this.bounds = bounds; this.nextRing = 0; this.sourceRevision = null;
+    this.prepare(bounds,center);
+    const step=PLACEMENT_GUIDE_SAMPLE/2, oldRows=oldHeights.length/oldColumns;
+    for (let j=0;j<this.heights.length/this.fineColumns;j++) for (let i=0;i<this.fineColumns;i++) {
+      const x=(bounds.startX+i*step-oldBounds.startX)/step,z=(bounds.startZ+j*step-oldBounds.startZ)/step;
+      if (Number.isInteger(x) && Number.isInteger(z) && x>=0 && x<oldColumns && z>=0 && z<oldRows)
+        this.heights[j*this.fineColumns+i]=oldHeights[z*oldColumns+x];
+    }
+  }
+  private prepare(bounds: PlacementGuideBounds, center: Position) {
     const {startX,startZ,endX,endZ} = bounds, step = PLACEMENT_GUIDE_SAMPLE;
     this.columns = Math.round((endX-startX)/step)+1;
     const rows = Math.round((endZ-startZ)/step)+1;
@@ -47,7 +73,8 @@ class PlacementGuideRings {
     this.rings = groups.map(tiles => {
       const indices = [...new Set(tiles.flatMap(i => [i,i+1,i+this.columns,i+this.columns+1]))];
       return {tiles,indices,values:new Float32Array(indices.length).fill(NaN),
-        data:new Float32Array(tiles.length*216),cursor:0,dirty:true,uploaded:false,revision:'',appearedAt:0};
+        data:new Float32Array(tiles.length*216),cursor:0,dirty:true,uploaded:false,revision:'',appearedAt:0,
+        initialized:new Uint8Array(tiles.length),tileValues:new Float32Array(tiles.length*4).fill(NaN)};
     });
   }
   private read(index: number): boolean {
@@ -66,6 +93,8 @@ class PlacementGuideRings {
       x=this.bounds.startX+column*step,z=this.bounds.startZ+row*step,
       a=this.samples[index],b=this.samples[index+1],c=this.samples[index+this.columns],d=this.samples[index+this.columns+1];
     let offset=tile*216;
+    ring.initialized[tile]=1;
+    ring.tileValues.set([a,b,c,d],tile*4);
     const vertex=(i:number,j:number) => {
       const u=i/2,v=j/2,px=x+u*step,pz=z+v*step,
         visibility=(1-u)*(1-v)*Math.abs(a)+u*(1-v)*Math.abs(b)+(1-u)*v*Math.abs(c)+u*v*Math.abs(d),
@@ -104,21 +133,40 @@ class PlacementGuideRings {
         ring.dirty=false;ring.revision=revision;
         return; // An entirely unseen ring needs no GPU allocation or draw.
       }
-      for(let tile=0;tile<ring.tiles.length;tile++) this.tile(ring,tile,false);
+      for(let tile=0;tile<ring.tiles.length;tile++) {
+        const p=ring.tiles[tile],values=[p,p+1,p+this.columns,p+this.columns+1].map(i=>this.samples[i]);
+        if (values.some((v,i)=>v!==ring.tileValues[tile*4+i])) {
+          if (ring.initialized[tile] || values.some(v=>v!==0)) this.tile(ring,tile,!ring.initialized[tile]);
+          else ring.tileValues.set(values,tile*4);
+        }
+      }
       this.renderer.streamGeometry(`placementGuide:${index}`,ring.data);
       if (!ring.uploaded) ring.appearedAt=now;
-      ring.uploaded=true;ring.dirty=false;
+      this.allocated.add(index); ring.uploaded=true;ring.dirty=false;
     }
     ring.revision=revision;
   }
+  get pending() {
+    const revision=String(this.sampler.revision);
+    return this.nextRing<this.rings.length || this.rings.some(r=>r.tiles.length && r.revision!==revision);
+  }
+  prepareIdle(revision: string, now: number, budget: number) {
+    this.advance(revision,now,true,budget,false);
+  }
   draw(revision: string, now: number, reducedMotion: boolean) {
+    this.advance(revision,now,reducedMotion,3,true);
+  }
+  private advance(revision: string, now: number, reducedMotion: boolean, budget: number, present: boolean) {
     this.frame++;
-    const needsWork=this.nextRing<this.rings.length || this.rings.some(r => r.tiles.length && r.revision!==revision);
+    const needsWork=this.pending || this.sourceRevision!==revision;
     if (needsWork) {
       // The deadline limits new terrain queries and mesh construction, not the
       // authoritative build action. Live checks on already visible rings remain fresh.
-      const deadline=performance.now()+3;
-      this.sampler.refresh(64,deadline);
+      const deadline=performance.now()+budget;
+      this.sampler.refresh(Infinity,deadline);
+      if (this.sampler.pending) { this.sourceRevision=null; return; }
+      this.sourceRevision=revision;
+      revision=String(this.sampler.revision);
       for(let i=0;i<this.nextRing;i++) {
         const ring=this.rings[i];
         if (ring.tiles.length && ring.revision!==revision) this.validate(ring,revision,now,i);
@@ -126,13 +174,25 @@ class PlacementGuideRings {
       while(this.nextRing<this.rings.length && !this.rings[this.nextRing].tiles.length) this.nextRing++;
       if(this.nextRing<this.rings.length) {
         const ring=this.rings[this.nextRing];let built=0;
-        // One completed annulus per renderframe also gives warm-cache reveals
+        // One completed annulus per slice also gives warm-cache reveals
         // a center-out sequence. Larger annuli can take several bounded slices.
-        while(ring.cursor<ring.tiles.length && built<32) {
+        while(ring.cursor<ring.tiles.length && built<512) {
           if(built && performance.now()>=deadline) break;
           const index=ring.tiles[ring.cursor];
           if (![index,index+1,index+this.columns,index+this.columns+1].every(i=>this.read(i))) break;
-          this.tile(ring,ring.cursor++,true);built++;
+          const tile=ring.cursor++,x=this.bounds.startX+(index%this.columns)*PLACEMENT_GUIDE_SAMPLE,
+            z=this.bounds.startZ+Math.floor(index/this.columns)*PLACEMENT_GUIDE_SAMPLE,key=`${x}:${z}`,cached=this.retained.get(key);
+          if (cached) {
+            ring.data.set(cached.data.subarray(cached.offset,cached.offset+216),tile*216);
+            for(let p=tile*216;p<(tile+1)*216;p+=9) {
+              ring.data[p]+=cached.origin.x-this.origin.x;ring.data[p+2]+=cached.origin.z-this.origin.z;
+            }
+            ring.initialized[tile]=1;this.retained.delete(key);
+          }
+          // Fully unseen tiles need no height queries until first shown.
+          if ([index,index+1,index+this.columns,index+this.columns+1].some(i=>this.samples[i]!==0))
+            this.tile(ring,tile,!ring.initialized[tile]);
+          built++;
         }
         if(ring.cursor===ring.tiles.length) {
           this.validate(ring,revision,now,this.nextRing);
@@ -140,6 +200,8 @@ class PlacementGuideRings {
         }
       }
     }
+    if (!present) return;
+    revision=String(this.sampler.revision);
     for(let i=0;i<this.nextRing;i++) {
       const ring=this.rings[i];
       if(!ring.uploaded || ring.revision!==revision) continue;
@@ -149,6 +211,7 @@ class PlacementGuideRings {
     }
   }
   dispose() {
-    for(let i=0;i<this.rings.length;i++) if(this.rings[i].uploaded) this.renderer.releaseGeometry(`placementGuide:${i}`);
+    for(const i of this.allocated) this.renderer.releaseGeometry(`placementGuide:${i}`);
+    this.allocated.clear();this.retained.clear();
   }
 }

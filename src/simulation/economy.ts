@@ -2,12 +2,13 @@
     'use strict';
     const REFINERY_PLACEMENT_RANGE = 6;
     // Shared read-only placement rules. The view may cache terrain, never live build permission.
-    function buildingFoundationReason(world: Battlefield, type: BuildingType, p: Position, team: PlayerTeam): string {
+    function buildingFoundationReason(world: Battlefield, type: BuildingType, p: Position, team: PlayerTeam,
+      heightAt?: (x: number,z: number) => number): string {
       const r = BUILDINGS[type].size;
       if (world.surface) {
         // Civilian stilts may bridge terrain that is too steep for units. Workers
         // still need a genuinely reachable service point outside the footprint.
-        if (!isCivilizationBuildingType(type) && !world.surface.foundation(p, r))
+        if (!isCivilizationBuildingType(type) && !world.surface.foundation(p, r,heightAt))
           return 'Build on stable ground or a gentle slope, away from cliffs.';
         const yaw = BUILDING_YAW + (team === 1 ? Math.PI : 0);
         for (const unit of Object.values(UNITS) as UnitDefinitionShape[]) {

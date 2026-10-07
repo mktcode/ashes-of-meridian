@@ -410,9 +410,31 @@
         // Its fine mesh and GPU storage are view-owned; neither changes world geometry or RNG.
         const GUIDE_SAMPLE = PLACEMENT_GUIDE_SAMPLE, guideMotion = matchMedia('(prefers-reduced-motion: reduce)');
         let placementGuide: { world: Battlefield; context: string; key: string; field: PlacementGuideRings } | null = null;
+        let guideIdle: number | null = null;
+        let guideFailure: {error: unknown} | null = null;
         function clearPlacementGuide() {
+          if (guideIdle !== null) window.cancelIdleCallback(guideIdle);
+          guideIdle = null;
           placementGuide?.field.dispose();
           placementGuide = null;
+        }
+        function scheduleGuideIdle() {
+          if (guideIdle !== null || !placementGuide?.field.pending || !window.requestIdleCallback || guideFailure) return;
+          guideIdle = window.requestIdleCallback(deadline => {
+            guideIdle = null;
+            const guide = placementGuide, s = game.s;
+            if (!guide || !s || game.world !== guide.world || ui.view !== 'game' || ui.mode?.kind !== 'build' ||
+                `${ui.mode.arg}:${game.localTeam}` !== guide.context || ui.paused || ui.battleIntro || document.hidden ||
+                loadingPaints>0 || !R.frameReady()) return;
+            // Use only genuine idle time, reserve headroom, and never enqueue scene draws here.
+            const budget = Math.min(8,deadline.timeRemaining()-1);
+            if (budget<1) return;
+            try {
+              guide.field.prepareIdle(`${guide.world.pathVersion}:${guide.world.fogVersion}:${Math.floor(s.time*3)}`,
+                performance.now(),budget);
+              scheduleGuideIdle();
+            } catch (error) { guideFailure = {error}; }
+          });
         }
         function drawPlacementGuide(type: BuildingType, s: RunState, world: Battlefield) {
           if (!world.surface || !world.sight[game.localTeam] || ui.battleIntro) { clearPlacementGuide(); return; }
@@ -438,11 +460,16 @@
               ? placementGuide.field.sampler : new PlacementGuideSampler(game, type, game.localTeam);
             sampler.retainTerrainFootprint(startX, startZ, endX, endZ);
             const center = R.ground(viewport.left+viewport.width/2,viewport.top+viewport.height/2,true);
-            clearPlacementGuide();
-            placementGuide = {world,context,key,field:new PlacementGuideRings(R,world,sampler,
-              {startX,startZ,endX,endZ},center)};
+            const bounds = {startX,startZ,endX,endZ};
+            if (placementGuide?.world === world && placementGuide.context === context) {
+              placementGuide.field.retarget(bounds,center); placementGuide.key = key;
+            } else {
+              clearPlacementGuide();
+              placementGuide = {world,context,key,field:new PlacementGuideRings(R,world,sampler,bounds,center)};
+            }
           }
           placementGuide!.field.draw(revision,performance.now(),guideMotion.matches);
+          scheduleGuideIdle();
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
@@ -558,6 +585,7 @@
           time += dt;
           frameClock += elapsed;
           try {
+            if (guideFailure) throw guideFailure.error;
             if (game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
               accumulator += dt * GAME_SPEED.base * game.s.speed;
               let steps = 0;
@@ -673,6 +701,7 @@
             if (!retainResultScene) ui.drawOverlay(overlayContext);
             diagnostics?.finishFrame(true);
           } catch (error) {
+            clearPlacementGuide();
             finishPreviewChange(false);
             clearBattleTransition();
             diagnostics?.stop('render-error');
@@ -692,6 +721,7 @@
         }
         canvas.addEventListener('webglcontextlost', e => {
           e.preventDefault();
+          clearPlacementGuide();
           finishPreviewChange(false);
           clearBattleTransition();
           diagnostics?.stop('context-lost');
