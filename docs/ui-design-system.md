@@ -18,8 +18,9 @@ den unteren Aktionsblock. Wohn- und cyanfarbene Forschungsgebäude haben disjunk
 Effektlisten; die Überschrift nennt die Familie, auch nach dem Ausbau. Eine gespeicherte,
 nicht mehr passende Auswahl erhält einen Hinweis statt einer auswählbaren Zeile.
 Jede Zeile zeigt Effektbeschreibung, Stapelgrenze und
-Auswahl-/Kostenstatus; Ausbau und Leeren stehen darüber. Minimap und Auswahlzeile
-bleiben erreichbar. Die Liste verändert weder Rendergröße noch Weltprojektion.
+Auswahl-/Kostenstatus; Ausbau und Leeren stehen darüber. Ein allgemeiner Erklärungstext
+entfällt. Das scrollbare Upgrade-Panel ist genauso hoch wie die Minimap; die Auswahlzeile
+sitzt unmittelbar über beiden, ohne freien Bereich über der Karte. Die Liste verändert weder Rendergröße noch Weltprojektion.
 
 Das aktuelle Tutorialziel bleibt als passives Panel oben links unter der Statuszeile sichtbar, unabhängig vom geöffneten Aktionsreiter. Alle Tutorialphasen haben ein Ziel; Supply-Ziele zeigen zusätzlich die aktuelle Belegung/Kapazität. Hinweise gehören nicht in den schmalen Bau-/Rekrutierungs-Scrollbereich. Warnungen bleiben rechts und weichen bei Platzmangel unter das Zielpanel aus; die Anzeige fängt keine Welt-/Kameraeingaben ab. Zahlenänderungen aktualisieren nur den Zieltext, nicht das Aktionsmarkup.
 

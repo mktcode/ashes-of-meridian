@@ -72,8 +72,7 @@
 .building-controls .action { width: 32px; height: 44px }
 .building-controls .action svg, .building-controls .action .ui-icon { width: 20px; height: 20px }
 #actionPanel.details-panel { height: min(280px, 45svh); background: #092331 }
-#hud #actionPanel.settlement-panel { position: absolute; bottom: 0; left: var(--map-size); right: 0; height: min(360px, 48svh); background: #092331 }
-#hud #commandDeck:has(.settlement-panel) #selectionStatus { bottom: min(360px, 48svh) }
+#hud #actionPanel.settlement-panel { position: absolute; bottom: 0; left: var(--map-size); right: 0; height: var(--map-size); background: #092331 }
 #hud .settlement-upgrades { padding: 8px; font-size: 12px; line-height: 1.45 }
 #hud .settlement-upgrades header { display: grid; gap: 4px; margin-bottom: 8px }
 #hud .settlement-upgrades small { display: block; font-size: 11px; color: var(--muted) }

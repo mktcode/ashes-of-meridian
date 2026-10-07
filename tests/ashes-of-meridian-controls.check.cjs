@@ -2024,6 +2024,7 @@ test('civilian effect lists expose only their family and mark selections without
     const research=type.startsWith('research')||type==='fieldlab',key=research?'orbital':'startingAlloy',
       b={type,upgrade:key,upgradeLevel:2},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
     assert.match(html,new RegExp(`${research?'Research':'Residential'} upgrade`));
+    assert.doesNotMatch(html,/Local Echo pays for ranks|Switching effects within this building family|Changes apply only to newly started battles/);
     for(const effect of Object.keys(rules.CIVILIZATION_UPGRADES))
       assert.equal(html.includes(`data-action="settlementUpgrade:${effect}"`),rules.civilizationUpgradeAllowed(type,effect));
     assert.match(html,new RegExp(`data-action="settlementUpgrade:${key}"[^>]*aria-pressed="true"`));
