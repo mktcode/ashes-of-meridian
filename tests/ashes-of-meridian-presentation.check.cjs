@@ -846,7 +846,7 @@ async function appClock(diagnostic = false, reducedMotion = true) {
     });
     return elements.get(id);
   };
-  loadScripts(['core', ...DIAGNOSTIC_SCRIPTS, 'app'], { globals: {
+  loadScripts(['core', 'placement-guide', ...DIAGNOSTIC_SCRIPTS, 'app'], { globals: {
     $, window, document, navigator: { userAgent: 'clock-test' }, URLSearchParams,
     location: { search: diagnostic ? '?diagnostics=1' : '' }, devicePixelRatio: 1,
     performance: { now: () => now }, requestAnimationFrame: fn => {
@@ -1307,11 +1307,11 @@ test('real app build preview validates and draws the same screen target used by 
   assert.deepEqual(a.errors,[]);
 });
 
-test('placement guide makes one fine, continuous terrain mesh from bounded visible build samples', async () => {
+test('placement guide reveals fine terrain rings before the entire field is ready and reuses unchanged buffers', async () => {
   const a=await appClock(), marks=[], samples=[], uploads=[], releases=[];
-  a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.ui.paused=true;
+  a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.ui.paused=false;a.game.s.result={win:true};
   a.setBuilding('depot',{size:2});a.game.localTeam=0;
-  a.renderer.ground=(x,y,terrain)=>{assert.equal(terrain,false);return {x:(x-400)/20,z:(y-300)/20};};
+  a.renderer.ground=(x,y)=>({x:(x-400)/20,z:(y-300)/20});
   a.game.world={extent:50, fogVersion:0, surface:{maxHeight:4,heightAt:(x,z)=>3+x*.01},
     sight:[{visible:new Uint8Array([1])}], idx:()=>0};
   a.game.s.cam.zoom=40;
@@ -1319,61 +1319,68 @@ test('placement guide makes one fine, continuous terrain mesh from bounded visib
   a.renderer.add=(...args)=>marks.push(args);
   a.renderer.streamGeometry=(name,data)=>uploads.push({name,data});
   a.renderer.releaseGeometry=name=>releases.push(name);
-  a.ui.paused=false;a.frame(20);
-  assert.ok(samples.length>0 && samples.length<500);
+  a.frame(20);
+  assert.ok(samples.length>0 && samples.length<64,'the center is checked before the rest of the viewport');
   assert.equal(uploads.length,1);
-  assert.equal(uploads[0].name,'placementGuide');
+  assert.equal(uploads[0].name,'placementGuide:0');
   assert.ok(uploads[0].data.length>samples.length*54,'finer triangles than validation samples');
   const colors=[];
   for(let i=0;i<uploads[0].data.length;i+=9) colors.push(uploads[0].data.slice(i+6,i+9));
   assert.ok(colors.some(c=>c[0]>c[1]),'red where blocked');
   assert.ok(colors.some(c=>c[1]>c[0]),'turquoise where buildable');
   assert.ok(colors.some(c=>c[0]>.42&&c[0]<.94),'smooth transition between samples');
-  assert.ok(marks.every(m=>m[0]==='placementGuide'&&m[13]==='effects'));
+  assert.ok(marks.every(m=>m[0].startsWith('placementGuide:')&&m[13]==='effects'));
   assert.deepEqual(a.errors,[]);
-  const count=samples.length;a.frame(40);assert.equal(samples.length,count,'reuse mesh between revisions');
-  a.game.world.fogVersion++;a.frame(60);
-  assert.equal(uploads.length,1,'unchanged sampled colors do not upload on fog revisions');
-  assert.equal(samples.length,count*2);
-  a.game.canBuild=()=>'';a.game.world.fogVersion++;a.frame(80);
-  assert.equal(uploads.length,2);
-  assert.strictEqual(uploads[0].data,uploads[1].data,'reuse CPU mesh storage for changed colors');
+  for(let now=40;now<=600;now+=20)a.frame(now);
+  assert.ok(uploads.length>1 && uploads.length<=12,'bounded GPU rings, not one mesh per tile');
+  const count=samples.length,completed=uploads.length,storage=new Map(uploads.map(u=>[u.name,u.data]));
+  a.frame(620);assert.equal(samples.length,count,'reuse meshes between revisions');
+  a.game.world.fogVersion++;a.frame(640);
+  assert.equal(uploads.length,completed,'unchanged sampled colors do not upload on fog revisions');
+  assert.ok(samples.length>count);
+  a.game.canBuild=()=>'';a.game.world.fogVersion++;a.frame(660);
+  assert.ok(uploads.length>completed);
+  assert.ok(uploads.slice(completed).every(u=>storage.get(u.name)===u.data),'reuse CPU ring storage for changed colors');
   const afterChange=samples.length;
-  a.game.world.sight[0].visible[0]=0;a.game.world.fogVersion++;a.frame(100);
+  a.game.world.sight[0].visible[0]=0;a.game.world.fogVersion++;a.frame(680);
   assert.equal(samples.length,afterChange,'do not probe unseen terrain');
-  a.ui.mode=null;a.frame(120);assert.deepEqual(releases,['placementGuide']);
+  a.ui.mode=null;a.frame(700);assert.deepEqual(new Set(releases),new Set(storage.keys()));
   assert.deepEqual(a.errors,[]);
 });
 
 test('placement guide covers wide viewports and raised ground, updating on rotation and resize', async () => {
-  const a=await appClock(), uploads=[], marks=[];
+  const a=await appClock(), uploads=new Map(), marks=new Map();let now=0;
+  const settle=()=>{for(let i=0;i<100;i++){now+=20;a.frame(now);}};
+  a.game.s.result={win:true};
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};
   a.setBuilding('depot',{size:2});a.game.localTeam=0;
   a.game.world={extent:135,fogVersion:0,surface:{maxHeight:60,heightAt:()=>60},
     sight:[{visible:new Uint8Array([1])}],idx:()=>0};
   a.game.canBuild=()=>'';
-  a.renderer.streamGeometry=(name,data)=>uploads.push(data);
-  a.renderer.add=(...args)=>marks.push(args);
-  a.renderer.ground=(x,y,terrain)=>{
-    assert.equal(terrain,false);
+  a.renderer.streamGeometry=(name,data)=>uploads.set(name,data);
+  a.renderer.releaseGeometry=name=>{uploads.delete(name);marks.delete(name);};
+  a.renderer.add=(...args)=>marks.set(args[0],args);
+  a.renderer.ground=(x,y)=>{
     return {x:(x-400)/8,z:(y-300)/15};
   };
   const colorAt=(x,z)=>{
-    const data=uploads.at(-1), mark=marks.at(-1);
-    for(let i=0;i<data.length;i+=9)
-      if(Math.abs(data[i]+mark[1]-x)<.01 && Math.abs(data[i+2]+mark[3]-z)<.01)
-        return data[i+7];
+    for(const [name,data] of uploads) {
+      const mark=marks.get(name);if(!mark)continue;
+      for(let i=0;i<data.length;i+=9)
+        if(Math.abs(data[i]+mark[1]-x)<.01 && Math.abs(data[i+2]+mark[3]-z)<.01)
+          return data[i+7];
+    }
     return 0;
   };
-  a.frame(20);
+  settle();
   assert.deepEqual(a.errors,[]);
   assert.ok(colorAt(48,63)>.8,'wide edge of elevated visible ground is not capped at 36');
-  const count=uploads.length;a.frame(40);assert.equal(uploads.length,count);
-  a.game.s.cam.yaw=Math.PI/2;a.frame(60);
-  assert.equal(uploads.length,count+1,'rotation changes the elevated ground footprint');
+  const first=uploads.get('placementGuide:0');now+=20;a.frame(now);assert.strictEqual(uploads.get('placementGuide:0'),first);
+  a.game.s.cam.yaw=Math.PI/2;settle();
+  assert.notStrictEqual(uploads.get('placementGuide:0'),first,'rotation changes the elevated ground footprint');
   assert.ok(colorAt(93,0)>.8,'raised terrain shifts along the rotated camera axis');
-  a.renderer.viewport.width=960;a.frame(80);
-  assert.equal(uploads.length,count+2,'viewport resizing invalidates the mesh');
+  const rotated=uploads.get('placementGuide:0');a.renderer.viewport.width=960;settle();
+  assert.notStrictEqual(uploads.get('placementGuide:0'),rotated,'viewport resizing invalidates the meshes');
   assert.ok(colorAt(111,0)>.8,'newly exposed right edge is covered');
   assert.deepEqual(a.errors,[]);
 });
@@ -1407,20 +1414,21 @@ test('placement guide reuses terrain sampler on camera changes, but not across b
   assert.deepEqual(a.errors,[]);
 });
 
-test('placement guide batches cold terrain across frames before uploading and hides stale fields',async()=>{
+test('placement guide never displays deferred or stale rings and initializes deferred terrain positions',async()=>{
   const a=await appClock(),uploads=[],marks=[];
   a.ui.mode={kind:'build',arg:'depot'};a.ui.pointer={inside:false};a.game.localTeam=0;a.game.guidePendingFrames=2;
   a.setBuilding('depot',{size:2});
   a.game.world={extent:50,fogVersion:0,surface:{maxHeight:0,heightAt:()=>3},sight:[{visible:new Uint8Array([1])}],idx:()=>0};
   a.game.canBuild=()=>'';
   a.renderer.ground=(x,y)=>({x:(x-400)/20,z:(y-300)/20});
-  a.renderer.streamGeometry=(name,data)=>uploads.push(data);a.renderer.add=(...args)=>marks.push(args);
+  a.renderer.streamGeometry=(name,data)=>uploads.push({name,data});a.renderer.add=(...args)=>marks.push(args);
   a.frame(20);a.frame(40);assert.equal(uploads.length,0);assert.equal(marks.length,0);
   a.frame(60);assert.equal(uploads.length,1);assert.equal(marks.length,1);
-  assert.ok(Math.abs(uploads[0][1]-3.065)<1e-5,'positions initialize when a deferred mesh is first uploaded');
+  assert.ok(Math.abs(uploads[0].data[1]-3.065)<1e-5,'positions initialize when a deferred mesh is first uploaded');
   a.game.guidePendingFrames=1;a.game.world.fogVersion++;a.frame(80);
   assert.equal(marks.length,1,'do not draw stale colors while new samples are pending');
-  a.frame(100);assert.equal(marks.length,2);assert.equal(uploads.length,1,'reuse unchanged completed field');
+  a.frame(100);assert.ok(marks.length>1);
+  assert.equal(uploads.filter(u=>u.name==='placementGuide:0').length,1,'reuse the unchanged completed center ring');
   a.ui.mode=null;a.frame(120);assert.deepEqual(a.errors,[]);
 });
 

@@ -102,6 +102,15 @@ test('fragment groups completely mirror their index directories in document orde
   }
 });
 
+test('placement guide loads after its sampler and before app without startup side effects', () => {
+  const scripts=readScripts(), names=scripts.map(script=>script.name);
+  assert.ok(names.indexOf('world-view')<names.indexOf('placement-guide'));
+  assert.ok(names.indexOf('placement-guide')<names.indexOf('app'));
+  const context=loadScripts(['placement-guide'],{scripts});
+  assert.equal(vm.runInContext('typeof PlacementGuideRings',context),'function');
+  assert.equal(vm.runInContext('PLACEMENT_GUIDE_SAMPLE',context),3);
+});
+
 test('CPU map recipes load without content, renderer or browser, with explicit names and IDs', () => {
   const scripts = readScripts(), context = loadScripts(BATTLEFIELD_SCRIPTS, { scripts });
   assert.deepEqual(scripts.filter(s => BATTLEFIELD_SCRIPTS.includes(s.name)).map(s => s.filename),

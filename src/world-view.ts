@@ -79,6 +79,7 @@ class PlacementGuideSampler {
   private occupiedVents = new Set<number>();
   private ready = false;
   private terrainBudget = 0;
+  private terrainDeadline = Infinity;
   pending = false;
   private readonly world: Battlefield;
   private readonly size: number;
@@ -97,8 +98,8 @@ class PlacementGuideSampler {
     }
   }
   private key(p: Position) { return `${Math.floor(p.x / 10)},${Math.floor(p.z / 10)}`; }
-  refresh(terrainBudget = 64) {
-    this.terrainBudget = terrainBudget; this.pending = false;
+  refresh(terrainBudget = 64, terrainDeadline = Infinity) {
+    this.terrainBudget = terrainBudget; this.terrainDeadline = terrainDeadline; this.pending = false;
     this.ready = !this.game.canBuild(this.type, null, this.team);
     this.buckets.clear(); this.unseen.clear(); this.vents = []; this.occupiedVents.clear();
     const add = (e: Entity, p: Position, radius: number) => {
@@ -133,7 +134,9 @@ class PlacementGuideSampler {
     let terrain = this.terrain.get(key);
     if (terrain === undefined) {
       // Keep menu opening/camera movement responsive. Unknown samples are never shown as buildable.
-      if (this.terrainBudget <= 0) { this.pending = true; return 0; }
+      if (this.terrainBudget <= 0 || (this.terrainDeadline !== Infinity && performance.now() >= this.terrainDeadline)) {
+        this.pending = true; return 0;
+      }
       this.terrainBudget--;
       terrain = !buildingFoundationReason(world, this.type, p, this.team) && !buildingTerrainObstructed(world, p, r, isCivilizationBuildingType(this.type));
       this.terrain.set(key, terrain);
