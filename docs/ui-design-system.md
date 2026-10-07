@@ -14,7 +14,10 @@ den Startaktionen. Es unterscheidet Boni für neu gestartete Gefechte von den ei
 Boni eines gespeicherten Gefechts. Die Checkpoint-/Landschaftsvorschau bleibt auf dem
 Startbildschirm. Civilization-Score-Anzeigen und Zugangsbalken entfallen.
 Bei Auswahl eines gewachsenen Zivilgebäudes ersetzt eine scrollbar lesbare Textliste
-den unteren Aktionsblock. Jede Zeile zeigt Effektbeschreibung, Stapelgrenze und
+den unteren Aktionsblock. Wohn- und cyanfarbene Forschungsgebäude haben disjunkte
+Effektlisten; die Überschrift nennt die Familie, auch nach dem Ausbau. Eine gespeicherte,
+nicht mehr passende Auswahl erhält einen Hinweis statt einer auswählbaren Zeile.
+Jede Zeile zeigt Effektbeschreibung, Stapelgrenze und
 Auswahl-/Kostenstatus; Ausbau und Leeren stehen darüber. Minimap und Auswahlzeile
 bleiben erreichbar. Die Liste verändert weder Rendergröße noch Weltprojektion.
 

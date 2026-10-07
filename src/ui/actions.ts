@@ -309,8 +309,10 @@
       },
       renderSettlementUpgrades(this: MeridianUI, b: BuildingEntity): string {
         const level = b.upgradeLevel || 0, nextCost = CIVILIZATION_UPGRADE_COSTS[level],
+          family = civilizationBuildingFamily(b.type) === 'research' ? 'Research' : 'Residential',
+          unavailable = b.upgrade && !civilizationUpgradeAllowed(b.type, b.upgrade),
           label = level >= 3 ? 'Fully expanded · Rank 3' : `Expand to rank ${level + 1} · ${nextCost} Echo`;
-        return `<div class="settlement-upgrades"><header><strong>Civilization upgrade · Rank ${level || '—'}</strong><small>Local Echo pays for ranks. Switching effects is free and keeps the rank. Changes apply only to newly started battles.</small></header><div class="settlement-controls"><button data-action="settlementExpand" data-label="${esc(label)}">${esc(label)}</button><button data-action="settlementClear" data-label="Clear effect · Keep purchased rank">Clear effect</button></div><div class="settlement-effect-list" role="group" aria-label="Choose building upgrade">${contentKeys(CIVILIZATION_UPGRADES).map(key => {
+        return `<div class="settlement-upgrades"><header><strong>${family} upgrade · Rank ${level || '—'}</strong><small>Local Echo pays for ranks. Switching effects within this building family is free and keeps the rank. Changes apply only to newly started battles.${unavailable ? ' The stored effect is unavailable for this family; choose a listed effect or clear it. Purchased ranks are kept.' : ''}</small></header><div class="settlement-controls"><button data-action="settlementExpand" data-label="${esc(label)}">${esc(label)}</button><button data-action="settlementClear" data-label="Clear effect · Keep purchased rank">Clear effect</button></div><div class="settlement-effect-list" role="group" aria-label="Choose building upgrade">${contentKeys(CIVILIZATION_UPGRADES).filter(key => civilizationUpgradeAllowed(b.type, key)).map(key => {
           const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key,
             rule = civilizationUpgradeUnique(key) ? 'Once per expedition; extra buildings or ranks do not strengthen this effect.' :
               effect.max !== undefined && effect.max < 999999 ? `Stacks across worlds, up to ${effect.max} ranks.` : 'Stacks across all cleared worlds.',

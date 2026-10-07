@@ -2017,13 +2017,21 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
 });
 
-test('civilian effect list exposes every catalog choice and marks the selected effect without RNG',()=>{
-  const h=setup(),rules=vm.runInContext('CIVILIZATION_UPGRADES',h.context);
+test('civilian effect lists expose only their family and mark selections without RNG at every tier',()=>{
+  const h=setup(),rules=vm.runInContext('({CIVILIZATION_UPGRADES,civilizationUpgradeAllowed})',h.context);
   vm.runInContext("Math.random=()=>{throw Error('UI consumed RNG');}",h.context);
-  const b={type:'fieldlab',upgrade:'orbital',upgradeLevel:2},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
-  for(const key of Object.keys(rules))assert.ok(html.includes(`data-action="settlementUpgrade:${key}"`));
-  assert.match(html,/data-action="settlementUpgrade:orbital"[^>]*aria-pressed="true"/);
-  assert.equal(JSON.stringify(b),before);
+  for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower']){
+    const research=type.startsWith('research')||type==='fieldlab',key=research?'orbital':'startingAlloy',
+      b={type,upgrade:key,upgradeLevel:2},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
+    assert.match(html,new RegExp(`${research?'Research':'Residential'} upgrade`));
+    for(const effect of Object.keys(rules.CIVILIZATION_UPGRADES))
+      assert.equal(html.includes(`data-action="settlementUpgrade:${effect}"`),rules.civilizationUpgradeAllowed(type,effect));
+    assert.match(html,new RegExp(`data-action="settlementUpgrade:${key}"[^>]*aria-pressed="true"`));
+    assert.equal(JSON.stringify(b),before);
+  }
+  const unavailable=h.ui.renderSettlementUpgrades({type:'embercottage',upgrade:'orbital',upgradeLevel:2});
+  assert.match(unavailable,/stored effect is unavailable/);assert.doesNotMatch(unavailable,/aria-pressed="true"/);
+  assert.match(unavailable,/data-action="settlementClear"/);
 });
 
 test('home and transition previews use the actual next landscape and atmosphere seed', () => {

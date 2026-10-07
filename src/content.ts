@@ -647,6 +647,22 @@ const CIVILIZATION_UPGRADES = Object.freeze({
 }) as Readonly<Record<FleetUpgradeType | AbilityType | ExpeditionBenefit,
   { name: string; icon: string; desc: string; max?: number }>>;
 type CivilizationUpgradeType = keyof typeof CIVILIZATION_UPGRADES;
+type CivilizationBuildingFamily = 'residential' | 'research';
+const CIVILIZATION_UPGRADE_FAMILIES = Object.freeze({
+  startingAlloy: 'residential', startingWorkers: 'residential',
+  constructionProtocols: 'residential', logisticsFrame: 'residential', repairLogistics: 'residential',
+  supplyCrate: 'residential', pioneerSquad: 'residential', commanderMandate: 'residential', commandDrill: 'residential',
+  orbital: 'research', repair: 'research', scan: 'research', drop: 'research',
+  disruption: 'research', bulwark: 'research', surge: 'research', recall: 'research',
+  aetherAllocation: 'research', surveyDrones: 'research', fieldWorkshop: 'research', commandCapacitor: 'research'
+} as const satisfies Record<CivilizationUpgradeType, CivilizationBuildingFamily>);
+function civilizationBuildingFamily(type: BuildingType): CivilizationBuildingFamily | null {
+  return type === 'fieldlab' || type === 'researchhub' || type === 'researchspire' ? 'research' :
+    type === 'embercottage' || type === 'terracecommons' || type === 'hearthtower' ? 'residential' : null;
+}
+function civilizationUpgradeAllowed(type: BuildingType, upgrade: CivilizationUpgradeType): boolean {
+  return civilizationBuildingFamily(type) === CIVILIZATION_UPGRADE_FAMILIES[upgrade];
+}
 function civilizationUpgradeUnique(key: CivilizationUpgradeType): boolean {
   return key === 'commanderMandate' || key === 'surveyDrones' || key === 'fieldWorkshop';
 }
@@ -674,7 +690,8 @@ function civilizationUpgradesForBuildings(entities: readonly Entity[], team: Pla
       e.team === team && e.hp > 0 && e.progress >= 1).map(e => e.id));
   for (const b of entities) {
     if (b.kind !== 'building' || b.team !== team || b.hp <= 0 || b.progress < 1 ||
-      b.forumId === undefined || !forums.has(b.forumId) || b.settlementAt !== undefined || !b.upgrade || !hasContentKey(CIVILIZATION_UPGRADES, b.upgrade)) continue;
+      b.forumId === undefined || !forums.has(b.forumId) || b.settlementAt !== undefined || !b.upgrade || !hasContentKey(CIVILIZATION_UPGRADES, b.upgrade) ||
+      !civilizationUpgradeAllowed(b.type, b.upgrade)) continue;
     const target = hasContentKey(EXPEDITION_BENEFITS, b.upgrade) ? totals.benefits : totals.upgrades,
       rank = civilizationUpgradeUnique(b.upgrade) ? 1 : b.upgradeLevel || 1;
     target[b.upgrade] = (target[b.upgrade] || 0) + rank;

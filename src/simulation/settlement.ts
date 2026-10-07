@@ -74,6 +74,7 @@ const settlementMethods = {
     const b = this.settlementUpgradeBuilding(id, team);
     if (!b) return 'Select a completed civilian building in a supplied, cleared world.';
     if (upgrade !== null && !hasContentKey(CIVILIZATION_UPGRADES, upgrade)) return 'Unknown upgrade effect.';
+    if (upgrade !== null && !civilizationUpgradeAllowed(b.type, upgrade)) return 'This effect belongs to the other civilian building family.';
     if (upgrade !== null && !b.upgradeLevel && this.account(team).gas < CIVILIZATION_UPGRADE_COSTS[0]) return 'Not enough Echo.';
     return '';
   },
@@ -95,6 +96,7 @@ const settlementMethods = {
     const b = this.settlementUpgradeBuilding(id, team);
     if (!b) return 'Select a completed civilian building in a supplied, cleared world.';
     if (!b.upgrade || !b.upgradeLevel) return 'Choose an upgrade effect first.';
+    if (!civilizationUpgradeAllowed(b.type, b.upgrade)) return 'Choose an effect available for this building family first.';
     if (b.upgradeLevel >= 3) return 'This building is fully expanded.';
     if (this.account(team).gas < CIVILIZATION_UPGRADE_COSTS[b.upgradeLevel]) return 'Not enough Echo.';
     return '';
