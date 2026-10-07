@@ -417,7 +417,9 @@ type BattleAction =
   | { kind: 'ability'; ability: AbilityType; position: Position }
   | { kind: 'cancelQueue'; id: number; index: number }
   | { kind: 'rotateBuilding'; id: number; direction: -1 | 1 }
-  | { kind: 'cancelConstruction' | 'toggleRepair' | 'sell'; id: number };
+  | { kind: 'cancelConstruction' | 'toggleRepair' | 'sell'; id: number }
+  | { kind: 'configureSettlementUpgrade'; id: number; upgrade: CivilizationUpgradeType | null }
+  | { kind: 'expandSettlementBuilding'; id: number };
 
 interface ActionTicket { tick: number; sequence: number; }
 interface QueuedAction extends ActionTicket { team: PlayerTeam; action: BattleAction; announce: boolean; }
@@ -509,6 +511,10 @@ interface BuildingEntity extends EntityBase {
   forumId?: number;
   settlementAt?: number; // Forum growth beat, or a managed building's removal deadline.
   settlementAttempt?: number;
+  /** Selected expedition effect; absent means an unconfigured civilian building. */
+  upgrade?: CivilizationUpgradeType;
+  /** Purchased effect/building rank (1–3); effect switching retains this rank. */
+  upgradeLevel?: number;
 }
 
 interface ResourceEntity extends EntityBase {

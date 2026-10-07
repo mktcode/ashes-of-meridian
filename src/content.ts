@@ -765,6 +765,53 @@ const COMMAND_MODULES = {
 const PERMANENT_UPGRADES = Object.freeze({ ...META, ...COMMAND_MODULES });
 type UpgradeType = keyof typeof PERMANENT_UPGRADES;
 
+// Civilian buildings own a selected effect and a purchased rank; no profile purchases.
+const CIVILIZATION_UPGRADE_COSTS = [40, 80, 140] as const;
+const CIVILIZATION_UPGRADES = Object.freeze({
+  ...Object.fromEntries(contentKeys(META).filter(key => key !== 'aetherEvacuation').map(key => [key, META[key]])),
+  ...COMMAND_MODULES, ...EXPEDITION_BENEFITS
+}) as Readonly<Record<Exclude<FleetUpgradeType, 'aetherEvacuation'> | AbilityType | ExpeditionBenefit,
+  { name: string; icon: string; desc: string; max?: number }>>;
+type CivilizationUpgradeType = keyof typeof CIVILIZATION_UPGRADES;
+function civilizationUpgradeUnique(key: CivilizationUpgradeType): boolean {
+  return key === 'commanderMandate' || key === 'surveyDrones' || key === 'fieldWorkshop';
+}
+function civilizationBuildingTier(type: BuildingType): number {
+  return type === 'hearthtower' || type === 'researchspire' ? 3 :
+    type === 'terracecommons' || type === 'researchhub' ? 2 : 1;
+}
+function civilizationBuildingAtTier(type: BuildingType, tier: number): BuildingType {
+  const research = type === 'fieldlab' || type === 'researchhub' || type === 'researchspire';
+  return (research ? ['fieldlab', 'researchhub', 'researchspire'] :
+    ['embercottage', 'terracecommons', 'hearthtower'])[tier - 1] as BuildingType;
+}
+interface CivilizationUpgradeTotals { upgrades: Record<string, number>; benefits: Record<string, number> }
+function civilizationUpgradesForBuildings(entities: readonly Entity[], team: PlayerTeam = 0): CivilizationUpgradeTotals {
+  const totals: CivilizationUpgradeTotals = { upgrades: {}, benefits: {} };
+  for (const b of entities) {
+    if (b.kind !== 'building' || b.team !== team || b.hp <= 0 || b.progress < 1 ||
+      b.forumId === undefined || !b.upgrade || !hasContentKey(CIVILIZATION_UPGRADES, b.upgrade)) continue;
+    const target = hasContentKey(EXPEDITION_BENEFITS, b.upgrade) ? totals.benefits : totals.upgrades,
+      rank = civilizationUpgradeUnique(b.upgrade) ? 1 : b.upgradeLevel || 1;
+    target[b.upgrade] = (target[b.upgrade] || 0) + rank;
+  }
+  return totals;
+}
+function expeditionCivilizationUpgrades(expedition: MeridianExpedition, live: RunState | null = null,
+  activeStage: number | null = null): CivilizationUpgradeTotals {
+  const totals: CivilizationUpgradeTotals = { upgrades: {}, benefits: {} };
+  for (const world of expedition.worlds || []) {
+    if (world.error || !world.battle) continue;
+    const contribution = civilizationUpgradesForBuildings(activeStage === world.stage && live ? live.entities : world.battle.state.entities);
+    for (const group of ['upgrades', 'benefits'] as const)
+      for (const [key, value] of Object.entries(contribution[group])) totals[group][key] = (totals[group][key] || 0) + value;
+  }
+  for (const [key, count] of Object.entries(totals.upgrades))
+    if (hasContentKey(PERMANENT_UPGRADES, key)) totals.upgrades[key] = Math.min(count, PERMANENT_UPGRADES[key].max);
+  totals.benefits = normalizedBenefits(totals.benefits);
+  return totals;
+}
+
 const ICON_PATHS = {
   worker: 'M8 15l-4 5m8-10 8-6 2 2-6 8M5 8l3-3 11 11-3 3z',
   rifle: 'M5 20l3-6 6-1 5-8 2 1-4 10-6 1-3 4M4 9l5-5 5 2-5 5z',
