@@ -1,8 +1,8 @@
 # Zivilisationsupgrades: Integration und Abnahme
 
-Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) beschreiben Gebäudeauswahl, Echo-Ausbau, weltübergreifende Stapel und eingefrorene Gefechtsrezepte. Dieser Feature-Worktree bleibt vorerst getrennt von `main`; keine Migration alter Profil-/Expeditionsstände.
+Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) beschreiben Gebäudeauswahl, Echo-Ausbau, weltübergreifende Stapel und eingefrorene Gefechtsrezepte. Keine Migration alter Profil-/Expeditionsstände.
 
-## Technische Restarbeit vor Integration
+## Technische Restarbeit
 
 - [ ] Langtest-Fixtures in `tests/ashes-of-meridian-simulation.check.cjs` auf Startrezepte statt `profile.upgrades` umstellen; frühere permanente Rang-/Vorteilscaps entsprechen nicht mehr den neuen Gebäude-Stapeln. Die entfernten Regeln nicht durch Kompatibilitätsadapter wieder einführen. Feste RNG-/Terrainreferenzen nicht zum Grünmachen regenerieren. Änderungen und gezielte Ausführung dieses Simulationsblocks separat freigeben.
 - [ ] Präsentationsfixtures und noch nicht ausgeführte Eingabe-/Stage-World-Fälle auf verbliebene alte Annahmen prüfen. Angepasste lokale Verträge sind keine vollständige Integrationsabnahme.
