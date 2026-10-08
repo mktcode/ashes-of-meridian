@@ -88,10 +88,45 @@
         void this.startExpeditionBattle(world);
       },
       continueBuilding(this: MeridianUI) {
+        if (!this.expedition || this.launchingBattle || this.leavingBattle || this.modalKind === 'civilizationIntro') return;
+        if (this.view === 'game' && this.game.s?.result?.win && !this.profile.civilizationIntroComplete) {
+          this.openModal('civilizationIntro', `<div class="eyebrow">CIVILIZATION BUILDING</div><h1>Turn victory into a civilization.</h1><p>This world is now peaceful. Your army, workers and resources stay here, and the next expedition stage is already unlocked.</p><p>Build a <strong>Meridian Forum</strong> from the Build menu. Select a worker, then right-click or tap the finished Forum to assign Cinder deliveries. Stored Cinder lets it automatically grow homes and research buildings around it.</p><p>Select a civilian building to choose its upgrade. Spend this world’s <strong>Echo</strong> to buy stronger ranks and expand the building.</p><p>Upgrades stack across the cleared worlds of this expedition and apply to <strong>newly started battles only</strong>. Battles already started keep their original bonuses.</p><p>You can return through the main menu’s stage archive. When you are ready, use <strong>Continue expedition</strong> in the main menu.</p><div class="launch-row"><button class="primary" data-ui="startCivilizationBuilding">${uiSkin()}START BUILDING</button><button class="secondary" data-ui="closeModal">${uiSkin()}BACK</button></div>`);
+          return;
+        }
+        this.finishContinueBuilding();
+      },
+      startCivilizationBuilding(this: MeridianUI) {
+        if (this.modalKind !== 'civilizationIntro' || this.view !== 'game' || !this.game.s?.result?.win ||
+            !this.expedition || this.launchingBattle || this.leavingBattle) return;
+        this.profile.civilizationIntroComplete = true;
+        this.persist();
+        this.finishContinueBuilding();
+      },
+      finishContinueBuilding(this: MeridianUI) {
         if (!this.expedition || this.launchingBattle || this.leavingBattle) return;
         const world = this.expedition.worlds?.filter(w => !w.error && w.recipe && w.battle)
           .sort((a, b) => b.stage - a.stage)[0];
         if (!world) { this.toast('No playable cleared world remains. Start a new expedition to continue.'); return; }
+        const state = this.game.s;
+        if (this.view === 'game' && state?.result?.win && world.stage === state.depth + 1 &&
+            world.map === state.map && world.seed === state.seed && this.game.continueClearedWorld()) {
+          this.activeWorldStage = world.stage;
+          this.battleIntro = null;
+          this.battleTutorial = null;
+          this.selected = [];
+          this.tab = 'root';
+          this.actionSignature = '';
+          this.clearMode();
+          $('result').classList.add('hidden');
+          $('hud').classList.remove('hidden', 'battle-entrance-pending', 'battle-entrance');
+          $('worldViewport').classList.remove('result-backdrop');
+          $('worldViewport').classList.add('in-battle');
+          if (this.onViewportChange) this.onViewportChange();
+          this.resume();
+          this.updateHUD();
+          this.saveBattle();
+          return;
+        }
         // Re-entering a cleared world is not a departure to the main menu.
         if (this.view === 'game' && this.game.s?.result) void this.finishHome(world.stage);
         else this.showHome(false, world.stage);
@@ -293,6 +328,7 @@
         let kind = this.modalKind;
         this.modalKind = '';
         $('modal').classList.add('hidden');
+        if (kind === 'civilizationIntro' && this.game.s?.result) this.modalKind = 'result';
         if (this.view === 'game' && !this.game.s?.result) {
           if (kind === 'battleSaveError') return this.showHome();
           if (kind === 'pause') this.resume();

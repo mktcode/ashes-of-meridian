@@ -217,6 +217,7 @@ interface MeridianProfile {
   version: 2;
   expeditionDepth: number;
   tutorialComplete: boolean;
+  civilizationIntroComplete: boolean;
   quickAccess?: QuickAccessAction[];
   settings: MeridianSettings;
 }

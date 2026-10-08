@@ -130,6 +130,39 @@ test('civilian worlds discard pending eliminated-party strikes on archive and re
   assert.deepEqual(copy(game.s.strikes),retained);
 });
 
+test('Continue building converts the live victory without loading and saves only its archived world',()=>{
+  const fixture=victoryFixture(),h=harness(new Map([[PROFILE,fixture.record]])),{game,ui}=h;
+  game.emit=()=>{};
+  game.restoreBattle({...fixture.world.recipe,battle:fixture.world.battle},true);
+  game.s.rules.completed=false;
+  game.s.result={win:true,text:'Victory',time:game.s.time,integrity:1,score:1};
+  ui.view='game';ui.paused=true;ui.modalKind='result';
+  const state=game.s,world=game.world,random=game.random.state;
+  const hq=game.alive(e=>e.team===0&&e.type==='hq')[0];
+  state.strikes.push({type:'orbital',team:1,x:hq.x,z:hq.z,radius:10,damage:440,at:state.time+.05});
+  ui.onLaunchBattle=()=>assert.fail('no launch or loading screen');
+  ui.onPreview=()=>assert.fail('no menu preview');
+  ui.onLeaveBattle=()=>assert.fail('no exit transition');
+  ui.continueBuilding();
+  assert.equal(ui.modalKind,'civilizationIntro');
+  assert.ok(state.result);
+  ui.startCivilizationBuilding();
+  assert.strictEqual(game.s,state);assert.strictEqual(game.world,world);
+  assert.equal(game.random.state,random);assert.equal(state.result,null);
+  assert.equal(state.rules.completed,true);assert.equal(state.strikes.length,0);
+  assert.equal(ui.activeWorldStage,1);assert.equal(ui.paused,false);assert.equal(ui.modalKind,'');
+  assert.deepEqual(copy(ui.expedition.worlds[0].battle),copy(game.snapshotBattle()));
+  const saved=h.persistence.loadExpedition();
+  assert.equal(saved.depth,1);assert.equal(saved.battle,null);assert.equal(saved.worlds.length,1);
+  assert.equal(h.persistence.loadProfile().civilizationIntroComplete,true);
+  const hp=hq.hp;game.step(.1);assert.equal(hq.hp,hp);assert.equal(state.result,null);
+  ui.event('result',{win:true,text:'duplicate',time:state.time,integrity:1,score:1});
+  assert.equal(ui.expedition.depth,1);assert.equal(ui.expedition.worlds.length,1);
+  ui.saveBattle();
+  assert.equal(h.persistence.loadExpedition().worlds[0].battle.state.time,state.time);
+  assert.equal(game.continueClearedWorld(),false,'conversion is one-shot');
+});
+
 test('mothership stays free of environmental attacks during battle and civilian development',()=>{
   const {game}=harness(),events=[];
   game.emit=(type,data)=>events.push({type,data});

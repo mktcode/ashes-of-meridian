@@ -5,7 +5,7 @@ const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./help
 const PROFILE = 'meridian.profile.v2', HISTORY = 'meridian.stage-history.v2';
 const json = value => JSON.parse(JSON.stringify(value));
 const defaults = {
-  version: 2, expeditionDepth: 0, tutorialComplete: false,
+  version: 2, expeditionDepth: 0, tutorialComplete: false, civilizationIntroComplete: false,
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false }
 };
 const content = loadScripts(['content']);
@@ -370,8 +370,12 @@ test('profile defaults, preferences and explicit tutorial completion remain inde
   assert.deepEqual(json(h.service.loadProfile()), { ...defaults, expeditionDepth: 25,
     settings: { ...defaults.settings, volume: 1, quality: 0 } });
   for (const value of [true, false, 1, 'true', {}, null]) {
-    h.data.set(PROFILE, JSON.stringify({ ...defaults, tutorialComplete: value }));
+    h.data.set(PROFILE, JSON.stringify({ ...defaults, tutorialComplete: value, civilizationIntroComplete: value }));
     assert.equal(h.service.loadProfile().tutorialComplete, value === true);
+    assert.equal(h.service.loadProfile().civilizationIntroComplete, value === true);
+    const profile = h.service.loadProfile();
+    h.service.saveProfile(profile);
+    assert.equal(h.service.loadProfile().civilizationIntroComplete, value === true);
   }
 });
 

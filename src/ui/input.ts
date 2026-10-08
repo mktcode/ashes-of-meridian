@@ -252,6 +252,9 @@
           case 'developWorld':
             this.continueBuilding();
             break;
+          case 'startCivilizationBuilding':
+            this.startCivilizationBuilding();
+            break;
           case 'expeditionBenefits':
             this.showExpeditionBenefits();
             break;

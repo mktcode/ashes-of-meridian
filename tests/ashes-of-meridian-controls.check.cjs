@@ -1889,16 +1889,32 @@ test('battle exit is not used for victory or defeat, only for their subsequent r
   }
 });
 
-test('battle exit is bypassed when continuing to build after victory', () => {
+test('civilization introduction waits for confirmation and can return to victory without leaving', () => {
   const h = savedUIBattle(), ui = h.ui;
+  h.UI.prototype.bind.call(ui);
   ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   ui.game.s.result = { win: true, text: 'Victory', time: 42, integrity: 1, score: 1 };
   ui.onLeaveBattle = () => assert.fail('Continue building does not leave for the main menu');
   ui.event('result', ui.game.s.result);
-  let visited;
-  ui.onLaunchBattle = async (options, recipe, world) => { visited = world; return false; };
+  ui.onLaunchBattle = () => assert.fail('the introduction must not reload the world');
+  let entered = 0;
+  ui.finishContinueBuilding = () => { entered++; };
+  ui.startCivilizationBuilding();
+  assert.equal(entered, 0, 'stale confirmations are ignored');
   ui.continueBuilding();
-  assert.strictEqual(visited, ui.expedition.worlds[0]);
+  assert.equal(ui.modalKind, 'civilizationIntro');
+  assert.equal(entered, 0);
+  assert.ok(!ui.profile.civilizationIntroComplete);
+  ui.closeModal();
+  assert.equal(ui.modalKind, 'result');
+  assert.ok(!ui.profile.civilizationIntroComplete);
+  ui.continueBuilding();
+  h.click({ ui: 'startCivilizationBuilding' });
+  assert.equal(entered, 1);
+  assert.equal(ui.profile.civilizationIntroComplete, true);
+  ui.modalKind = 'result';
+  ui.continueBuilding();
+  assert.equal(entered, 2, 'later clicks bypass the introduction');
   assert.equal(ui.leavingBattle, false);
 });
 

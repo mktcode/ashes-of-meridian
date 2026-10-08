@@ -121,6 +121,18 @@
         this.effects.reset();
         return true;
       },
+      continueClearedWorld(this: MeridianGame): boolean {
+        const state = this.s;
+        if (this.stepping || !this.snapshotSafe || !state || !this.world || state.stopped ||
+            state.rules.kind !== 'single-player' || state.rules.completed || !state.result?.win) return false;
+        state.result = null;
+        state.rules.completed = true;
+        state.strikes = state.strikes.filter(strike => strike.team === -1 || !state.parties[strike.team].eliminated);
+        this.pendingResult = null;
+        this.effects.reset();
+        this.world.clearFog();
+        return true;
+      },
       snapshotBattle(this: MeridianGame, archiveVictory = false): ExpeditionBattleSave {
         if (this.stepping || !this.snapshotSafe || !this.s || !this.world || this.s.rules.kind !== 'single-player' ||
             (archiveVictory ? !this.s.result?.win : !!this.s.result) || this.s.stopped)

@@ -12,6 +12,8 @@ Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) be
 
 ## Menschliche Abnahme und Balance
 
+- [ ] Einmaligen Hinweis beim ersten **Continue building** auf schmalen/niedrigen Geräten abnehmen: Forum-Lieferung, Echo-Upgrades und nur neue Gefechte verständlich; **Back** ohne Bestätigung und **Start building** ohne Ladebildschirm/Pausemenü. Gezielte CPU-/UI-Verträge prüfen Profilbestätigung, erhaltene Live-Welt/RNG, entferntes feindliches Restfeuer, getrenntes Welt-Speicherziel und Schutz vor erneuter Siegwertung; visuelle/akustische Abnahme bleibt offen.
+
 - [ ] Textliste auf schmalen und niedrigen Echtgeräten abnehmen: Beschreibungen, ausgewählter Effekt, Scrollen, Auswahlzeile/Minimap und Rückkehr zu normalen Aktionen. Technische Chromium-`file://`-Prüfung bei 900×650 bestätigt Scrollbarkeit, erreichbaren unteren Panelrand, angezeigten Auswahlstatus und Echo-Ausbau ohne JavaScriptfehler; das ist keine Ergonomie- oder Geräteabnahme.
 - [ ] Upgrade-Kosten und endlichen Vent-Vorrat abstimmen. Erste Parameter sind 40/80/140 Echo und 900 Echo je Vent; Effektstärken bleiben zunächst an den bisherigen Boni orientiert, nicht anhand vollständiger Runs neu ausbalanciert.
 - [ ] Grenzen für Stapel, Zusatzworker, Command-Ränge und Reparaturrabatt prüfen. Einige Effekte behalten technische Obergrenzen; freie Effektwechsel und das Behalten gekaufter Ränge beim Leeren sind vorläufige Bedienentscheidungen.

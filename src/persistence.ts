@@ -230,7 +230,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     }
   };
   function defaultProfile(): MeridianProfile {
-    return { version: 2, expeditionDepth: 0, tutorialComplete: false,
+    return { version: 2, expeditionDepth: 0, tutorialComplete: false, civilizationIntroComplete: false,
       settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false } };
   }
   function loadProfile() {
@@ -241,6 +241,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
       if (p && p.version === 2) {
         d.expeditionDepth = clamp(Math.floor(Number(p.expeditionDepth) || 0), 0, 999999);
         d.tutorialComplete = p.tutorialComplete === true;
+        d.civilizationIntroComplete = p.civilizationIntroComplete === true;
         if (Array.isArray(p.quickAccess) && p.quickAccess.length === 4 && p.quickAccess.every((action: unknown) => {
           if (typeof action !== 'string') return false;
           const [kind, type, extra] = action.split(':');
