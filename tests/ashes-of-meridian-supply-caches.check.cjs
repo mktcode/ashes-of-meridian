@@ -127,6 +127,87 @@ test('cargo shell bevels form finite non-degenerate outward-facing triangles', (
   }
 });
 
+function cargoRenderHarness() {
+  const ctx = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
+  const render = vm.runInContext('renderSupplyCache', ctx), build = vm.runInContext('buildSupplyCacheRenderParts', ctx);
+  let builds = 0;
+  ctx.buildSupplyCacheRenderParts = (...args) => { builds++; return build(...args); };
+  return {
+    get builds() { return builds; },
+    freshParts(world, cache) { return json(build(world, cache)); },
+    draw(world, cache, quality = 1) {
+      const renderer = createRendererStub({ record: true });
+      renderer.quality = quality;
+      renderer.geometry = () => { throw Error('Cargo recipes must not allocate geometry'); };
+      render(renderer, world, cache);
+      return renderer.calls;
+    }
+  };
+}
+
+test('cargo render recipes reuse terrain samples and exact ordered parts across renderers and qualities', () => {
+  const harness = cargoRenderHarness();
+  let samples = 0;
+  const height = (x, z) => 2 + x * .13 - z * .07 + Math.sin(x + z) * .2;
+  const world = Object.freeze({ surface: Object.freeze({ heightAt(x, z) { samples++; return height(x, z); } }) });
+  for (const resource of ['alloy', 'gas']) for (const tier of [1, 2, 3]) {
+    const cache = Object.freeze({ x: 5.25, z: -7.5, resource, tier, amount: 100, collected: false });
+    const before = json(cache), builds = harness.builds, previousSamples = samples;
+    const first = harness.draw(world, cache);
+    assert.equal(harness.builds, builds + 1);
+    assert.ok(samples > previousSamples);
+    const coldSamples = samples;
+    for (const quality of [0, 1, 2]) {
+      assert.deepEqual(harness.draw(world, cache, quality), first);
+      assert.equal(samples, coldSamples, 'warm frames never resample immutable terrain');
+      assert.equal(harness.builds, builds + 1, 'warm frames never rebuild fixed part parameters');
+    }
+    assert.deepEqual(json(cache), before, 'rendering adds no fields or changes to the save object');
+    const shells = first.filter(call => call[0] === 'supplyCrateHull' && call[4] === 1.5 && call[5] === 1.12);
+    assert.equal(shells.length, [1, 3, 7][tier - 1]);
+    const upperIndices = tier === 1 ? [] : tier === 2 ? [2] : [4, 5];
+    const lower = shells.filter((_, index) => !upperIndices.includes(index));
+    for (const call of lower) assert.equal(call[2], height(call[1], call[3]) + .71);
+    if (tier > 1) {
+      const support = lower.filter(call => call[3] - cache.z > -1.5);
+      const top = Math.max(...support.map(call => height(call[1], call[3]))) + 1.42 + .71;
+      assert.ok(upperIndices.every(index => shells[index][2] === top),
+        'upper containers still rest on the highest supporting lid');
+    }
+  }
+});
+
+test('cargo render recipes invalidate on visual inputs, surface, world and restored object identity only', () => {
+  const harness = cargoRenderHarness();
+  const surface = { heightAt: (x, z) => 1 + x * .08 + z * .12 }, world = { surface };
+  const cache = { x: 4, z: -3, resource: 'alloy', tier: 1, amount: 60, collected: false };
+  const checkRebuild = (world, cache) => {
+    const builds = harness.builds, before = json(cache), calls = harness.draw(world, cache);
+    assert.equal(harness.builds, builds + 1);
+    assert.deepEqual(harness.draw(world, cache), calls);
+    assert.equal(harness.builds, builds + 1, 'only the first changed frame rebuilds');
+    assert.deepEqual(calls, harness.freshParts(world, cache), 'invalidation matches a fresh assembly');
+    assert.deepEqual(json(cache), before);
+    return calls;
+  };
+  const initial = checkRebuild(world, cache);
+  const builds = harness.builds;
+  cache.amount = 0; cache.collected = true;
+  assert.deepEqual(harness.draw(world, cache), initial, 'collection/visibility remains caller-owned');
+  assert.equal(harness.builds, builds, 'non-visual save fields do not invalidate the recipe');
+  for (const [key, value] of [['x', 11], ['z', 8], ['tier', 3], ['resource', 'gas']]) {
+    cache[key] = value;
+    checkRebuild(world, cache);
+  }
+  world.surface = { heightAt: (x, z) => 7 - x * .04 + z * .02 };
+  const current = checkRebuild(world, cache);
+  checkRebuild({ surface: world.surface }, cache);
+  const afterWorldSwitch = harness.builds;
+  assert.deepEqual(harness.draw(world, cache), current);
+  assert.equal(harness.builds, afterWorldSwitch, 'returning to the original world retains its own recipe');
+  checkRebuild(world, Object.freeze({ ...cache }));
+});
+
 test('cargo tiers have distinct single, stacked and piled assemblies within the reserved footprint', () => {
   const ctx = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const render = vm.runInContext('renderSupplyCache', ctx), world = { surface: { heightAt: () => 2 } };

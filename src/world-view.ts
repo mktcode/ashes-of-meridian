@@ -805,7 +805,27 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       3: [[-.82,0,.66,0],[.82,0,.66,0],[-.82,0,-.66,0],[.82,0,-.66,0],
         [-.82,1.42,0,0],[.82,1.42,0,0],[.1,0,-1.95,-.28]]
     };
+    type SupplyCacheRenderPart = Readonly<Parameters<MeridianRenderer['add']>>;
+    const supplyCacheRenderRecipes = new WeakMap<Battlefield, WeakMap<SupplyCache, {
+      surface: BattlefieldSurface | null; x: number; z: number; tier: SupplyCache['tier'];
+      resource: SupplyCache['resource']; parts: readonly SupplyCacheRenderPart[];
+    }>>();
     function renderSupplyCache(R: MeridianRenderer, world: Battlefield, cache: SupplyCache) {
+      // View-only recipes retain no renderer/GPU state and never mutate saved caches.
+      let recipes = supplyCacheRenderRecipes.get(world);
+      if (!recipes) { recipes = new WeakMap(); supplyCacheRenderRecipes.set(world,recipes); }
+      let recipe = recipes.get(cache);
+      if (!recipe || recipe.surface !== world.surface || recipe.x !== cache.x || recipe.z !== cache.z ||
+          recipe.tier !== cache.tier || recipe.resource !== cache.resource) {
+        recipe = {surface:world.surface,x:cache.x,z:cache.z,tier:cache.tier,resource:cache.resource,
+          parts:buildSupplyCacheRenderParts(world,cache)};
+        recipes.set(cache,recipe);
+      }
+      // Keep the original dynamic batches, order, materials and per-frame shading.
+      for (const part of recipe.parts) R.add(...part);
+    }
+    function buildSupplyCacheRenderParts(world: Battlefield, cache: SupplyCache): readonly SupplyCacheRenderPart[] {
+      const parts: SupplyCacheRenderPart[] = [];
       const echo = cache.resource === 'gas', accent = echo ? 0x65e5e9 : 0xf1ae45,
         shell = echo ? 0x385568 : 0x6b6153, dark = 0x222d38, edge = 0x89969e,
         assembly = SUPPLY_CACHE_ASSEMBLIES[cache.tier];
@@ -817,8 +837,8 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           y = (ly ? stackGround : world.surface!.heightAt(x,z)) + ly,
           cs = Math.cos(yaw), sn = Math.sin(yaw);
         const part = (shape: string, dx: number, dy: number, dz: number, sx: number, sy: number, sz: number,
-          color: number, glow = 0, rz = 0, rx = 0) => R.add(shape,
-            x+dx*cs+dz*sn,y+dy,z-dx*sn+dz*cs,sx,sy,sz,color,yaw,rx,rz,glow,1,'dynamic',MAT.METAL);
+          color: number, glow = 0, rz = 0, rx = 0) => parts.push([shape,
+            x+dx*cs+dz*sn,y+dy,z-dx*sn+dz*cs,sx,sy,sz,color,yaw,rx,rz,glow,1,'dynamic',MAT.METAL]);
         // Chamfered pressure shell, dark gasket, two inset lid panels and stacking feet.
         part('supplyCrateHull',0,.71,0,1.5,1.12,1.16,shell);
         part('supplyCrateHull',0,.17,0,1.62,.24,1.28,dark);
@@ -854,6 +874,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           }
         }
       }
+      return parts;
     }
 
     // Cosmetic building yaw only; placement and collision radii stay unchanged.
