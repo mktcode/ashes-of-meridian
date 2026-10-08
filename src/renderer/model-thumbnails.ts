@@ -216,7 +216,7 @@ class MeridianModelThumbnails {
     for (const image of this.cache.values()) image.width = image.height = 0;
     this.cache.clear();
     for (const batches of [this.preview.dynamic,this.preview.effects]) {
-      for (const bucket of Object.values(batches)) this.renderer.gl.deleteBuffer(bucket.buffer);
+      for (const bucket of Object.values(batches)) this.preview.releaseBucket(bucket);
       for (const key of Object.keys(batches)) delete batches[key];
     }
   }

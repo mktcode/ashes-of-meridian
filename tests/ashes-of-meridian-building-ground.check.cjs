@@ -72,6 +72,7 @@ test('visual grading uses the terrain material/weights and blends into the origi
 test('graded terrain is cached and released when the building is removed or relocated',()=>{
   const world=worldFor(.10),uploads=[],releases=[],calls=[],buffers=[],R={dynamic:{},gl:{deleteBuffer:b=>buffers.push(b)},
     geometry:(...a)=>uploads.push(a),releaseGeometry:n=>releases.push(n),add:(...a)=>calls.push(a),
+    releaseBucket(bucket){this.gl.deleteBuffer(bucket.buffer);},
     bucket:(map,key,mesh,source,capacity)=>{assert.equal(capacity,1);return map[key]={mesh,source,buffer:key};}},view=new BattlefieldView(R);
   view.world=world;view.drawBuildingGround(entity);view.drawBuildingGround(entity);
   assert.equal(uploads.length,1);assert.equal(calls.length,2);assert.equal(calls[0].at(-1),MAT.LANDSCAPE);

@@ -8,7 +8,7 @@ function setup(msaa={}) {
   Object.assign(h.context,{innerWidth:800,innerHeight:600,devicePixelRatio:2});
   const {Renderer,Thumbnails} = vm.runInContext('({Renderer:MeridianRenderer,Thumbnails:MeridianModelThumbnails})',h.context);
   let framebuffers=0,statusChecks=0;
-  const calls = [], deleted = [], gl = new Proxy({
+  const vaos=new Set(),calls = [], deleted = [], gl = new Proxy({
     COLOR_BUFFER_BIT:1,DEPTH_BUFFER_BIT:2,
     getInternalformatParameter(target,format,samples) {
       calls.push(['getInternalformatParameter',target,format,samples]);
@@ -19,7 +19,9 @@ function setup(msaa={}) {
     createFramebuffer() {const fbo={};calls.push(['createFramebuffer',fbo]);framebuffers++;return msaa.failAllocation==='framebuffer'||(msaa.failAllocation==='resolve'&&framebuffers%2===0)?null:fbo;},
     createRenderbuffer() {const buffer={};calls.push(['createRenderbuffer',buffer]);return msaa.failAllocation==='renderbuffer'?null:buffer;},
     createBuffer() { const buffer={}; calls.push(['createBuffer',buffer]); return buffer; },
-    deleteBuffer(buffer) { deleted.push(buffer); }
+    deleteBuffer(buffer) { deleted.push(buffer); },
+    createVertexArray() {const vao={};vaos.add(vao);calls.push(['createVertexArray',vao]);return vao;},
+    deleteVertexArray(vao) {assert.ok(vaos.delete(vao),'release a live preview VAO exactly once');calls.push(['deleteVertexArray',vao]);}
   },{get(target,key) {
     if(key in target) return target[key];
     if(String(key).toUpperCase()===key) return key;
@@ -52,11 +54,11 @@ function setup(msaa={}) {
   }
   const images=[];
   h.context.document={createElement(tag){assert.equal(tag,'canvas');const image=tile();images.push(image);return image;}};
-  return {h,r,tile,thumbs:new Thumbnails(r),calls,deleted,rect,images};
+  return {h,r,tile,thumbs:new Thumbnails(r),calls,deleted,rect,images,vaos};
 }
 
 test('model tiles borrow meshes, fit complete geometry and isolate world/profile/instance state', () => {
-  const {h,r,tile,thumbs,calls,deleted,images} = setup();
+  const {h,r,tile,thumbs,calls,deleted,images,vaos} = setup();
   const state=[r.surface,r.battlefieldProfile,r.eye,r.vp,r.lightVP,r.dynamic,r.effects,r.static,r.occlusion];
   vm.runInContext('Math.random = seeded = () => { throw Error("Tile RNG"); };',h.context);
   const meshes=r.meshes;
@@ -94,7 +96,10 @@ test('model tiles borrow meshes, fit complete geometry and isolate world/profile
   const before=calls.length;
   assert.equal(thumbs.draw(tile()),'cached');
   assert.equal(calls.length,before,'cache hits do not touch WebGL');
+  assert.ok(vaos.size>0);const allocated=vaos.size;
   thumbs.dispose();assert.equal(deleted.length,count);assert.equal(new Set(deleted).size,count);
+  assert.equal(vaos.size,0);assert.equal(calls.filter(c=>c[0]==='deleteVertexArray').length,allocated);
+  assert.ok(Object.values(meshes).every(m=>!m.instanceBuckets?.size),'shared meshes retain no disposed preview batches');
   assert.ok(images.every(image=>image.width===0&&image.height===0),'cached pixel storage is released');
   thumbs.dispose();assert.equal(deleted.length,count,'disposal is idempotent and leaves shared meshes alone');
 });

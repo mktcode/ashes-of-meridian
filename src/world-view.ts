@@ -723,7 +723,7 @@ class BattlefieldView {
   private releaseBuildingGround(mesh: string) {
     this.R.releaseGeometry(mesh);
     for (const [key,bucket] of Object.entries(this.R.dynamic)) if (bucket.source === mesh) {
-      this.R.gl.deleteBuffer(bucket.buffer); delete this.R.dynamic[key];
+      this.R.releaseBucket(bucket); delete this.R.dynamic[key];
     }
   }
   retainBuildingGround(entities: readonly RenderEntity[]) {

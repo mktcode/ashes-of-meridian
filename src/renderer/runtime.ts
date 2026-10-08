@@ -305,6 +305,7 @@
         for (const part of parts) {
           const mesh = this.meshes[part];
           if (!mesh) continue;
+          for (const bucket of mesh.instanceBuckets ?? []) this.releaseBucketVertexArray(bucket);
           this.gl.deleteBuffer(mesh.vbo);
           this.gl.deleteVertexArray(mesh.vao);
           delete this.meshes[part];
@@ -937,8 +938,50 @@
         Object.assign(state,{size,gridData,lampData,width,height});
         this.lightGridDirty=false;
       }
+      private releaseBucketVertexArray(b: RenderBucket) {
+        const binding = b.vertexArray;
+        if (!binding) return;
+        this.gl.deleteVertexArray(binding.vao);
+        binding.mesh.instanceBuckets!.delete(b);
+        delete b.vertexArray;
+      }
+      releaseBucket(b: RenderBucket) {
+        this.releaseBucketVertexArray(b);
+        if (b.buffer) this.gl.deleteBuffer(b.buffer);
+        b.buffer = null;
+      }
+      // One VAO per mesh/batch buffer, shared across programs and passes, never between borrowers.
+      private bindBucketVertexArray(b: RenderBucket, mesh: RenderMesh) {
+        const g = this.gl, old = b.vertexArray;
+        if (old && old.mesh === mesh && old.buffer === b.buffer) {
+          g.bindVertexArray(old.vao);
+          return;
+        }
+        this.releaseBucketVertexArray(b);
+        const vao = g.createVertexArray();
+        if (!vao) throw Error('Render batch vertex array allocation failed');
+        g.bindVertexArray(vao);
+        g.bindBuffer(g.ARRAY_BUFFER, mesh.vbo);
+        for (const [i, offset] of [[0, 0], [1, 12], [8, 24]]) {
+          g.enableVertexAttribArray(i);
+          g.vertexAttribPointer(i, 3, g.FLOAT, false, 36, offset);
+        }
+        g.bindBuffer(g.ARRAY_BUFFER, b.buffer);
+        for (let i = 0; i < 4; i++) {
+          g.enableVertexAttribArray(2 + i);
+          g.vertexAttribPointer(2 + i, 4, g.FLOAT, false, 88, i * 16);
+          g.vertexAttribDivisor(2 + i, 1);
+        }
+        for (const [i, size, offset] of [[6, 4, 64], [7, 1, 80], [9, 1, 84]]) {
+          g.enableVertexAttribArray(i);
+          g.vertexAttribPointer(i, size, g.FLOAT, false, 88, offset);
+          g.vertexAttribDivisor(i, 1);
+        }
+        b.vertexArray = { vao, mesh, buffer: b.buffer };
+        (mesh.instanceBuckets ??= new Set()).add(b);
+      }
       clearStatic() {
-        for (let b of Object.values(this.static)) this.gl.deleteBuffer(b.buffer);
+        for (const b of Object.values(this.static)) this.releaseBucket(b);
         this.static = {};
       }
       upload(map: RenderBatches) {
@@ -993,22 +1036,7 @@
             g.uniform1f(this.uniform(program, 'u_workerRoadOn'), this.workerRoadTex &&
               (b.source === 'terrain' || b.source.startsWith('buildingGround')) ? 1 : 0);
           }
-          g.bindVertexArray(m.vao);
-          g.bindBuffer(g.ARRAY_BUFFER, b.buffer);
-          for (let i = 0; i < 4; i++) {
-            g.enableVertexAttribArray(2 + i);
-            g.vertexAttribPointer(2 + i, 4, g.FLOAT, false, 88, i * 16);
-            g.vertexAttribDivisor(2 + i, 1);
-          }
-          g.enableVertexAttribArray(6);
-          g.vertexAttribPointer(6, 4, g.FLOAT, false, 88, 64);
-          g.vertexAttribDivisor(6, 1);
-          g.enableVertexAttribArray(7);
-          g.vertexAttribPointer(7, 1, g.FLOAT, false, 88, 80);
-          g.vertexAttribDivisor(7, 1);
-          g.enableVertexAttribArray(9);
-          g.vertexAttribPointer(9, 1, g.FLOAT, false, 88, 84);
-          g.vertexAttribDivisor(9, 1);
+          this.bindBucketVertexArray(b, m);
           g.drawArraysInstanced(g.TRIANGLES, 0, m.count, b.n);
           this.diagnostics?.draw(m.count, b.n);
           this.drawCalls++;

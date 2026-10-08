@@ -37,7 +37,7 @@ test('upload tracks eligible homogeneous materials and clears stale specializati
 test('specialized scene draws preserve order, filter before binding and leave other passes alone', () => {
   const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
   const bindings = [], draws = []; let active = 'depth';
-  const gl = new Proxy({ drawArraysInstanced() { draws.push(active); } }, {
+  const gl = new Proxy({ createVertexArray() { return {}; }, drawArraysInstanced() { draws.push(active); } }, {
     get: (o, key) => key in o ? o[key] : () => {}
   });
   const r = Object.assign(Object.create(Renderer.prototype), { gl, quality: 2, meshes: { mesh: { vao: {}, count: 3 } },
@@ -56,6 +56,117 @@ test('specialized scene draws preserve order, filter before binding and leave ot
   r.drawBatches(map, undefined, 'skip');
   assert.deepEqual(bindings, [], 'depth/occlusion/custom passes do not opt into material binding');
   assert.deepEqual(draws, ['depth', 'depth', 'depth', 'depth', 'depth']);
+});
+
+// Model VAO-local pointer/divisor state, not just a list of called GL functions.
+function batchVertexArrays() {
+  const context=loadScripts(RENDERER_SCRIPTS),Renderer=vm.runInContext('MeridianRenderer',context);
+  const buffers=new Map(),vaos=new Map(),draws=[],calls=[];
+  let buffer=null,vao=null,failNext=false;
+  const g={ARRAY_BUFFER:1,FLOAT:2,TRIANGLES:3,STATIC_DRAW:4,DYNAMIC_DRAW:5,
+    createBuffer(){const b={};buffers.set(b,null);return b;},
+    deleteBuffer(b){assert.ok(buffers.delete(b),'release live buffer exactly once');},
+    bindBuffer(target,b){assert.ok(buffers.has(b));buffer=b;calls.push('bindBuffer');},
+    bufferData(target,data){buffers.set(buffer,Float32Array.from(data));},
+    bufferSubData(target,offset,data){buffers.get(buffer).set(data,offset/4);},
+    createVertexArray(){if(failNext){failNext=false;return null;}const v={};vaos.set(v,new Map());calls.push('createVertexArray');return v;},
+    deleteVertexArray(v){assert.ok(vaos.delete(v),'release live VAO exactly once');if(vao===v)vao=null;},
+    bindVertexArray(v){assert.ok(v===null||vaos.has(v));vao=v;},
+    enableVertexAttribArray(i){const a=vaos.get(vao);a.set(i,{...a.get(i),enabled:true});calls.push('enable');},
+    vertexAttribPointer(i,size,type,normalized,stride,offset){
+      const a=vaos.get(vao);a.set(i,{...a.get(i),buffer,size,type,normalized,stride,offset});calls.push('pointer');
+    },
+    vertexAttribDivisor(i,divisor){const a=vaos.get(vao);a.set(i,{...a.get(i),divisor});calls.push('divisor');},
+    drawArraysInstanced(mode,first,count,n){
+      const attributes=[...vaos.get(vao)].sort(([a],[b])=>a-b).map(([i,a])=>[i,{...a,divisor:a.divisor??0}]);
+      for(const [,a]of attributes){assert.equal(a.enabled,true);assert.ok(buffers.has(a.buffer));}
+      draws.push({vao,mode,first,count,n,attributes});
+    }
+  };
+  const r=Object.assign(Object.create(Renderer.prototype),{gl:g,quality:2,meshes:{},meshParts:{},
+    static:{},dynamic:{},effects:{},occlusion:{},colors:new Map(),drawCalls:0});
+  r.geometry('piece',new Float32Array(27));
+  // Use a tiny batch reserve to also exercise growth without replacing its GL buffer.
+  r.bucket(r.dynamic,'piece','piece','piece',2);
+  const add=(layer='dynamic',x=0)=>r.add('piece',x,0,0,1,1,1,0xffffff,0,0,0,0,1,layer);
+  return {r,g,buffers,vaos,draws,calls,add,fail(){failNext=true;}};
+}
+function assertBatchAttributes(draw,mesh,bucket) {
+  const attribute=(buffer,size,stride,offset,divisor)=>({buffer,size,type:2,normalized:false,stride,offset,divisor,enabled:true});
+  const expected=new Map([[0,attribute(mesh.vbo,3,36,0,0)],[1,attribute(mesh.vbo,3,36,12,0)],
+    [8,attribute(mesh.vbo,3,36,24,0)]]);
+  for(let i=0;i<4;i++)expected.set(2+i,attribute(bucket.buffer,4,88,i*16,1));
+  for(const [i,size,offset]of [[6,4,64],[7,1,80],[9,1,84]])expected.set(i,attribute(bucket.buffer,size,88,offset,1));
+  assert.deepEqual(draw.attributes,[...expected].sort(([a],[b])=>a-b));
+  assert.equal(draw.count,mesh.count);assert.equal(draw.n,bucket.n);assert.equal(draw.first,0);assert.equal(draw.mode,3);
+}
+
+test('cached batch VAOs preserve every attribute and isolate static, dynamic, effects and contours across passes',()=>{
+  const h=batchVertexArrays(),r=h.r;
+  h.add('static');h.add('static',64);h.add();h.add('dynamic',2);h.add('effects');r.recordOcclusion('piece',0x65e5e9);
+  const maps=[r.static,r.dynamic,r.effects,r.occlusion],buckets=maps.flatMap(map=>Object.values(map));
+  for(const map of maps){r.upload(map);r.drawBatches(map);}
+  for(let i=0;i<buckets.length;i++)assertBatchAttributes(h.draws[i],r.meshes.piece,buckets[i]);
+  assert.equal(new Set(h.draws.map(d=>d.vao)).size,buckets.length,'a shared mesh never shares another batch instance buffer');
+  assert.ok(h.draws.every(d=>d.vao!==r.meshes.piece.vao),'geometry-only VAO is not mutated');
+  const first=h.draws.slice();h.calls.length=0;h.draws.length=0;
+  // The same batches serve depth, scene, effect and occlusion programs without reconfiguration.
+  for(let pass=0;pass<3;pass++)for(const map of maps)r.drawBatches(map);
+  assert.deepEqual(h.calls,[],'warm draws make no pointer, enable, divisor, buffer bind or VAO allocation calls');
+  for(let i=0;i<h.draws.length;i++)assert.deepEqual(h.draws[i],first[i%buckets.length]);
+  const dynamic=r.dynamic.piece,vao=dynamic.vertexArray.vao,buffer=dynamic.buffer;
+  r.begin();r.upload(r.dynamic);r.drawBatches(r.dynamic);assert.equal(h.calls.includes('pointer'),false);
+  for(let i=0;i<5;i++)h.add('dynamic',i);
+  r.upload(r.dynamic);h.calls.length=0;r.drawBatches(r.dynamic);
+  assert.strictEqual(dynamic.buffer,buffer);assert.strictEqual(dynamic.vertexArray.vao,vao);
+  assert.ok(dynamic.data.length>=5*22);assertBatchAttributes(h.draws.at(-1),r.meshes.piece,dynamic);
+  assert.deepEqual(h.calls,[],'CPU reserve growth and bufferData orphaning retain the GL buffer binding');
+});
+
+test('cached batch VAOs invalidate mesh borrowers including preview facades and release independently',()=>{
+  const h=batchVertexArrays(),r=h.r,p=Object.create(r);p.dynamic={};
+  h.add('static');h.add();p.add('piece',0,0,0,1,1,1,0xffffff);
+  const batches=[Object.values(r.static)[0],r.dynamic.piece,p.dynamic.piece],mesh=r.meshes.piece;
+  for(const [owner,map]of [[r,r.static],[r,r.dynamic],[p,p.dynamic]]){owner.upload(map);owner.drawBatches(map);}
+  assert.equal(mesh.instanceBuckets.size,3);assert.equal(h.vaos.size,4);
+  r.geometry('piece',new Float32Array(54));
+  assert.equal(h.vaos.size,1,'old geometry and every borrower VAO are released immediately');
+  assert.equal(mesh.instanceBuckets.size,0);assert.ok(batches.every(b=>!b.vertexArray));
+  for(const [owner,map]of [[r,r.static],[r,r.dynamic],[p,p.dynamic]])owner.drawBatches(map);
+  assert.equal(h.vaos.size,4);assert.equal(r.meshes.piece.instanceBuckets.size,3);
+  assertBatchAttributes(h.draws.at(-1),r.meshes.piece,p.dynamic.piece);
+  const main=r.dynamic.piece.vertexArray.vao;
+  p.releaseBucket(p.dynamic.piece);p.releaseBucket(p.dynamic.piece);
+  assert.equal(h.vaos.size,3);assert.ok(h.vaos.has(main),'preview disposal cannot release a world VAO');
+  assert.equal(r.meshes.piece.instanceBuckets.size,2);
+  r.clearStatic();r.clearStatic();assert.equal(h.vaos.size,2);
+  r.releaseGeometry('piece');r.releaseGeometry('piece');assert.equal(h.vaos.size,0);
+  r.releaseBucket(r.dynamic.piece);assert.equal(h.buffers.size,0,'no mesh or batch buffer survives final disposal');
+});
+
+test('cached batch VAOs track instance buffer replacement and preserve streamed mesh bindings',()=>{
+  const h=batchVertexArrays(),r=h.r;h.add();r.upload(r.dynamic);r.drawBatches(r.dynamic);
+  const b=r.dynamic.piece,old=b.vertexArray.vao,oldBuffer=b.buffer,mesh=r.meshes.piece;
+  b.buffer=h.g.createBuffer();b.dirty=true;r.upload(r.dynamic);h.g.deleteBuffer(oldBuffer);
+  r.drawBatches(r.dynamic);assert.ok(!h.vaos.has(old));assert.notStrictEqual(b.vertexArray.vao,old);
+  assertBatchAttributes(h.draws.at(-1),mesh,b);assert.equal(mesh.instanceBuckets.size,1);
+  const current=b.vertexArray.vao;h.calls.length=0;
+  r.streamGeometry('piece',new Float32Array(27));h.calls.length=0;r.drawBatches(r.dynamic);
+  assert.strictEqual(b.vertexArray.vao,current);assert.deepEqual(h.calls,[],'same VBO with new contents keeps its binding');
+  r.streamGeometry('piece',new Float32Array(54));assert.equal(b.vertexArray,undefined);
+  r.drawBatches(r.dynamic);assertBatchAttributes(h.draws.at(-1),r.meshes.piece,b);
+  r.releaseBucket(b);r.releaseGeometry('piece');assert.equal(h.vaos.size,0);assert.equal(h.buffers.size,0);
+});
+
+test('cached batch VAOs allocate only drawable batches and fail explicitly without retaining a partial binding',()=>{
+  const h=batchVertexArrays(),r=h.r;h.add();r.upload(r.dynamic);const b=r.dynamic.piece;
+  h.calls.length=0;r.drawBatches(r.dynamic,undefined,'piece');assert.deepEqual(h.calls,[]);
+  b.n=0;r.drawBatches(r.dynamic);assert.deepEqual(h.calls,[]);
+  b.n=1;r.detailMeshes=new Set(['piece']);r.quality=0;r.drawBatches(r.dynamic);assert.deepEqual(h.calls,[]);
+  r.quality=2;h.fail();assert.throws(()=>r.drawBatches(r.dynamic),/vertex array allocation failed/);
+  assert.equal(b.vertexArray,undefined);assert.equal(r.meshes.piece.instanceBuckets,undefined);assert.equal(h.vaos.size,1);
+  r.drawBatches(r.dynamic);assertBatchAttributes(h.draws.at(-1),r.meshes.piece,b);
+  r.releaseBucket(b);r.releaseGeometry('piece');assert.equal(h.vaos.size,0);assert.equal(h.buffers.size,0);
 });
 
 test('brush surface stays opaque, model-anchored and shares wind with its shadow pass', () => {

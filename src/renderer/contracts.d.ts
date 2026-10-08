@@ -10,6 +10,8 @@ interface RenderBucket {
   dirty: boolean;
   mesh: string;
   source: string;
+  // This batch owns the VAO; its mesh tracks borrowers for replacement/release.
+  vertexArray?: { vao: WebGLVertexArrayObject; mesh: RenderMesh; buffer: WebGLBuffer | null };
   // Eligible homogeneous material, derived from the instance data on upload.
   sceneMaterial?: number;
   bounds?: [number, number, number, number, number, number];
@@ -32,6 +34,7 @@ interface RenderMesh {
   vbo: WebGLBuffer | null;
   count: number;
   bounds: [number, number, number, number, number, number];
+  instanceBuckets?: Set<RenderBucket>;
 }
 interface ResidentTexture {
   texture: WebGLTexture | null;
