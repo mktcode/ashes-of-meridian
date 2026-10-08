@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { DIAGNOSTIC_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 
 function classes(globals = {}) {
-  return vm.runInContext('({Recorder: MeridianDiagnosticRecorder, Probe: MeridianRenderProbe, create: createMeridianDiagnostics, resources: diagnosticResources})',
+  return vm.runInContext('({Recorder: MeridianDiagnosticRecorder, Probe: MeridianRenderProbe, create: createMeridianDiagnostics, resources: diagnosticResources, instrument: instrumentDiagnosticMethod})',
     loadScripts(DIAGNOSTIC_SCRIPTS, { globals }));
 }
 function gpuGL({ supported = true } = {}) {
@@ -72,6 +72,71 @@ test('diagnostic recorder separates callback/render cadence and CPU phases in a 
   assert.equal(r.report().stopped, 'context-lost');
 });
 
+test('CPU details exclude nested and recursive work, retain parent attribution and summarize real zero calls', () => {
+  const { Recorder } = classes(); let now = 0;
+  const r = new Recorder(() => now, 2);
+  assert.equal(r.beginDetail('movement'), undefined, 'outside rAF no detail clock/state is recorded');
+  r.beginFrame(100);
+  now = 1; const movement = r.beginDetail('movement');
+  now = 3; const collision = r.beginDetail('collision');
+  now = 4; const recursive = r.beginDetail('collision');
+  now = 6; r.endDetail(recursive);
+  now = 7; r.endDetail(collision);
+  now = 8; const path = r.beginDetail('pathfinding');
+  now = 11; r.endDetail(path);
+  now = 13; r.endDetail(movement);
+  now = 14; r.phase('ui');
+  now = 15; const uiPath = r.beginDetail('pathfinding');
+  now = 18; r.endDetail(uiPath);
+  now = 20; r.finishFrame(false);
+  const frame = r.report().frames[0];
+  assert.equal(frame.cpuMs.simulation, 14);
+  assert.equal(frame.cpuDetails.simulation.movement.ms, 5);
+  assert.equal(frame.cpuDetails.simulation.collision.ms, 4);
+  assert.equal(frame.cpuDetails.simulation.collision.calls, 2);
+  assert.equal(frame.cpuDetails.simulation.pathfinding.ms, 3);
+  assert.equal(frame.cpuDetails.ui.pathfinding.ms, 3, 'navigation called by UI is not simulation time');
+  r.beginFrame(120); now = 21; r.finishFrame(false);
+  const summary = r.report().summary.cpuDetails;
+  assert.equal(summary.simulation.pathfinding.ms.samples, 2);
+  assert.equal(summary.simulation.pathfinding.ms.p50, 0);
+  assert.equal(summary.simulation.pathfinding.calls.p95, 1);
+  assert.equal(summary.ui.pathfinding.ms.samples, 1, 'an unmeasured parent is not a zero sample');
+  assert.equal(summary.sceneBuild, undefined);
+  r.beginFrame(140); now = 22; r.finishFrame(false);
+  assert.equal(r.report().frames.length, 2);
+  assert.equal(r.report().summary.cpuDetails.simulation, undefined, 'overwritten ring details are not retained');
+  r.beginFrame(160); const abandoned = r.beginDetail('movement');
+  r.stop('render-error'); now = 30; r.endDetail(abandoned);
+  assert.equal(r.report().frames.length, 2, 'aborted details cannot update a retained callback');
+});
+
+test('opt-in method instrumentation preserves receiver, arguments, identity, errors and property ownership', () => {
+  const { Recorder, instrument } = classes(); let now = 0;
+  const r = new Recorder(() => now), result = {}, argument = {}, failure = Error('unchanged error');
+  const prototype = { move(a) { assert.equal(this, target); assert.equal(a, argument); now += 2; return result; } };
+  const target = Object.create(prototype), original = target.move;
+  const release = instrument(r, target, 'move', 'movement');
+  assert.equal(Object.keys(target).length, 0, 'instrumentation is not enumerable/snapshot data');
+  assert.equal(target.move(argument), result);
+  assert.equal(r.report().frames.length, 0, 'input/loading work outside rAF is not attributed');
+  r.beginFrame(0);
+  assert.equal(target.move(argument), result); r.finishFrame(false);
+  assert.equal(r.report().frames[0].cpuDetails.simulation.movement.ms, 2);
+  release(); assert.equal(target.move, original); assert.equal(Object.hasOwn(target, 'move'), false);
+  Object.defineProperty(target, 'move', { value() { now++; throw failure; }, configurable: true, enumerable: true });
+  const before = Object.getOwnPropertyDescriptor(target, 'move'), undo = instrument(r, target, 'move', 'movement');
+  r.beginFrame(20);
+  assert.throws(() => target.move(), e => e === failure);
+  const next = r.beginDetail('pathfinding'); now++; r.endDetail(next); r.finishFrame(false);
+  assert.equal(r.report().frames[1].cpuDetails.simulation.movement.ms, 1, 'finally unwinds a failed call');
+  assert.equal(r.report().frames[1].cpuDetails.simulation.pathfinding.ms, 1);
+  undo(); assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'move'), before);
+  const preserve = instrument(r, target, 'move', 'movement'), replacement = () => result;
+  Object.defineProperty(target, 'move', { value: replacement });
+  preserve(); assert.equal(target.move, replacement, 'cleanup does not overwrite a subsequent replacement');
+});
+
 test('GPU probe is sparse, asynchronous and counts submitted work independently of timer support', () => {
   const { Recorder, Probe } = classes(), r = new Recorder(() => 0), gl = gpuGL(), p = new Probe(gl, r);
   for (let i = 0; i <= 15; i++) {
@@ -136,6 +201,48 @@ test('GPU loss and failed queries cannot read invalid results or propagate into 
   assert.equal(r.report().frames.at(-1).render.passes.scene.drawCalls, 1, 'timer failure does not disable counters');
 });
 
+test('adapter follows replaced worlds, aggregates method calls per tick and removes hooks on manual stop', () => {
+  let now = 0;
+  const document = { body: { appendChild() {} }, createElement: () => ({ append() {} }) };
+  const { create } = classes({ document, navigator: { userAgent: 'test' }, devicePixelRatio: 1,
+    performance: { now: () => now }, addEventListener() {}, window: {} });
+  const worldPrototype = { path() { now += 3; return 'path'; }, rebuild() { now++; }, reveal() { now++; } };
+  const first = Object.create(worldPrototype), second = Object.create(worldPrototype);
+  const game = { world: first, step() { this.move(); this.world.reveal(); },
+    move() { now++; this.unitFits(); this.pathTo(); }, unitFits() { now += 2; }, pathTo() { this.world.path(); } };
+  const view = { sync() { now++; }, updateWorkerRoads() { now += 2; } };
+  const ui = { tick() { this.saveBattle(); }, saveBattle() { now += 4; } };
+  const R = fakeRenderer(gpuGL({supported:false}));
+  R.upload = function() { now++; }; R.drawBatches = function() { now += 2; };
+  const originalStep = game.step, originalSync = view.sync, originalSave = ui.saveBattle, originalUpload = R.upload;
+  const d = create(R, () => ({}), { game, worldView: view, ui });
+  d.beginFrame(0); game.step(); game.step(); d.recorder.phase('ui'); ui.tick();
+  d.recorder.phase('sceneBuild'); view.sync(); view.updateWorkerRoads();
+  d.recorder.phase('glSubmission'); R.upload(); R.drawBatches(); d.finishFrame(true);
+  const details = d.report().recording.frames[0].cpuDetails;
+  assert.equal(d.report().schema, 2);
+  assert.equal(details.simulation.tick.calls, 2, 'fixed steps per callback are counted');
+  assert.equal(details.simulation.pathfinding.calls, 2);
+  assert.equal(details.simulation.pathfinding.ms, 6);
+  assert.equal(details.simulation.movement.ms, 2);
+  assert.equal(details.simulation.collision.ms, 4);
+  assert.equal(details.simulation.visibility.ms, 2);
+  assert.equal(details.ui.saveBattle.ms, 4); assert.equal(details.ui.hud.ms, 0);
+  assert.equal(details.sceneBuild.workerRoads.ms, 2);
+  assert.equal(details.glSubmission.instanceUploads.ms, 1); assert.equal(details.glSubmission.drawSubmission.ms, 2);
+  game.world = second;
+  d.beginFrame(20);
+  assert.equal(first.path, worldPrototype.path); assert.equal(Object.hasOwn(first, 'path'), false);
+  game.step(); d.finishFrame(false);
+  assert.equal(d.report().recording.frames[1].cpuDetails.simulation.pathfinding.calls, 1);
+  d.stop();
+  assert.equal(second.path, worldPrototype.path); assert.equal(Object.hasOwn(second, 'path'), false);
+  assert.equal(game.step, originalStep); assert.equal(view.sync, originalSync);
+  assert.equal(ui.saveBattle, originalSave); assert.equal(R.upload, originalUpload);
+  d.beginFrame(40); game.step(); d.finishFrame(false);
+  assert.equal(d.report().recording.frames.length, 2, 'stop does not reinstall or resume CPU hooks');
+});
+
 test('local adapter exports only allowlisted metadata and keeps export usable after graphics loss', () => {
   const elements = [], timers = [], events = {}, urls = [], downloads = [];
   const document = { hidden: false, body: { appendChild(e) { elements.push(e); } },
@@ -154,6 +261,7 @@ test('local adapter exports only allowlisted metadata and keeps export usable af
     now = i * 1000; d.recorder.beginFrame(now); R.diagnostics.beginFrame(); d.finishFrame(true);
   }
   const report = d.report();
+  assert.equal(report.schema, 2);
   assert.equal(report.samples.length, 120); assert.equal(report.samples[0].atMs, 10000);
   assert.equal(resources(R).geometryBytesEstimate, 36 * 36);
   assert.equal(resources(R).instanceCapacityBytes, 22 * 8 * 4);

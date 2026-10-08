@@ -864,7 +864,7 @@ async function appClock(diagnostic = false, reducedMotion = true, idle = false) 
     addEventListener() {}, ResizeObserver: class { observe() {} }, matchMedia:()=>({matches:reducedMotion}),
     getComputedStyle: element => ({ opacity: element.style.opacity ?? '1', transform: element.style.transform ?? 'none' }),
     console: { error: e => errors.push(e), warn() {} },
-    META: {}, PERMANENT_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {desert:{render:{}}}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
+    META: {}, BATTLE_UPGRADES: {}, ABILITIES: {}, EXPEDITION_BENEFITS: {}, BATTLEFIELDS: {desert:{render:{}}}, MISSIONS: {}, UNITS: {}, BUILDINGS: buildings, FACTIONS: {},
     PLACEMENT_GUIDE_MATERIAL: -9, FORUM_PARCEL_MATERIAL: -10,
     buildForumParcelGeometry(world,forum) {
       parcelBuilds.push({world,id:forum.id,rotation:forum.visualRotation||0});
@@ -875,7 +875,6 @@ async function appClock(diagnostic = false, reducedMotion = true, idle = false) 
     Battlefield: class { renderProfile = {}; },
     savedBattleMenuScene: vm.runInContext('savedBattleMenuScene', loadScripts(['world-view'])),
     clamp: (v, a, b) => Math.max(a, Math.min(b, v)), expeditionEnemyCount() {}, esc: String,
-    expeditionStageUnlocked: vm.runInContext('expeditionStageUnlocked', loadScripts(['content'])),
     createBuildingPreview: (type,p,faction,team) => ({type,...p,faction,team}),
     FORUM_SETTLEMENT: forumSettings, drawEffectRing(_renderer,...args) { rings.push(args); },
     createMeridianPersistence: () => ({ loadProfile: () => ({ settings: { quality: 2 } }) }),
@@ -940,7 +939,7 @@ async function appClock(diagnostic = false, reducedMotion = true, idle = false) 
     }
   } });
   for (let i = 0; i < 100 && !window.Meridian && !errors.length; i++) await Promise.resolve();
-  assert.ok(window.Meridian, 'app initializes');
+  assert.ok(window.Meridian, `app initializes: ${errors.map(e => e.stack || e).join('\n')}`);
   assert.deepEqual(errors, []);
   return { ...window.Meridian, draws, renderWork, ticks, steps, effectTicks, errors, pending, queryRequests, weatherClocks, entitiesDrawn, rings, parcelBuilds, forumSettings, paints, $,
     idleJobs,
@@ -1527,6 +1526,8 @@ test('opt-in diagnostics preserves real app cadence and stops with exportable hi
   const plain = await appClock(), measured = await appClock(true);
   for (let i = 1; i <= 120; i++) { plain.frame(i * 1000 / 120); measured.frame(i * 1000 / 120); }
   assert.equal(plain.diagnostics, undefined); assert.deepEqual(plain.queryRequests, []);
+  assert.equal(Object.hasOwn(plain.game, 'step'), false, 'normal play has no CPU wrapper');
+  assert.equal(Object.hasOwn(measured.game, 'step'), true, 'diagnostics wraps only its live game instance');
   assert.deepEqual(measured.steps, plain.steps);
   assert.deepEqual(measured.effectTicks, plain.effectTicks);
   assert.deepEqual(measured.draws, plain.draws);
@@ -1535,11 +1536,14 @@ test('opt-in diagnostics preserves real app cadence and stops with exportable hi
   assert.equal(report.recording.summary.callbacks, 120);
   assert.equal(report.recording.summary.rendered, measured.draws.length);
   assert.equal(report.gpu.status, 'unavailable');
-  assert.ok(report.recording.frames.some(f => !f.rendered && f.cpuMs.sceneBuild === undefined));
+  assert.ok(report.recording.frames.some(f => !f.rendered && f.cpuMs.sceneBuild === undefined && f.cpuDetails.sceneBuild === undefined));
+  assert.equal(report.recording.frames.reduce((n, f) => n + (f.cpuDetails.simulation?.tick?.calls ?? 0), 0), measured.steps.length);
+  assert.ok(report.recording.frames.some(f => f.rendered && f.cpuDetails.sceneBuild.entities.calls === 1));
   measured.$('world').handlers.webglcontextlost({ preventDefault() {} });
   assert.equal(measured.diagnostics.report().recording.stopped, 'context-lost');
   assert.equal(measured.diagnostics.report().recording.frames.length, 120);
   assert.equal(measured.renderer.diagnostics, undefined);
+  assert.equal(Object.hasOwn(measured.game, 'step'), false, 'context loss releases CPU hooks as well as GPU queries');
   const failed = await appClock(true); failed.frame(20);
   failed.renderer.render = () => { throw Error('synthetic error'); }; failed.frame(40);
   assert.equal(failed.diagnostics.report().recording.stopped, 'render-error');

@@ -366,7 +366,7 @@
           speed: ui.view === 'game' ? game.s?.speed ?? null : null,
           entities: ui.view === 'game' ? game.s?.entities.length ?? 0 : preview.length,
           effects: ui.view === 'game' ? game.effects.fx.length : 0
-        })) : undefined;
+        }), { game, worldView, ui, thumbnails }) : undefined;
         ui.showHome();
         const SIMULATION_STEP_SECONDS = 0.05,
           RENDER_INTERVAL_MS = 1000 / 60,
@@ -392,6 +392,7 @@
         function drawForumParcels(forum: BuildingEntity, world: Battlefield) {
           const surface = world.surface;
           if (!surface) return;
+          const scope = diagnostics?.recorder.beginDetail('guides');
           const key = `${forum.x}:${forum.z}:${forum.size}:${forum.team}:${forum.visualRotation || 0}`, name = `forumParcels:${forum.id}`;
           let guide = forumParcelGuides.get(forum.id);
           if (!guide || guide.world !== world || guide.surface !== surface || guide.key !== key) {
@@ -402,6 +403,7 @@
             forumParcelGuides.set(forum.id,guide);
           }
           if (guide.uploaded) R.add(name,forum.x,0,forum.z,1,1,1,0x5ce6ef,0,0,0,0,.20,'effects',FORUM_PARCEL_MATERIAL);
+          diagnostics?.recorder.endDetail(scope);
         }
         // Coarse validation samples become a continuous, terrain-following color field.
         // Its fine mesh and GPU storage are view-owned; neither changes world geometry or RNG.
@@ -481,7 +483,8 @@
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
           R.fogOn = fogOn && !ui.battleIntro;
-          const selectedIds = ui.selectionIds(), parcelIds = new Set<number>();
+          const selectedIds = ui.selectionIds(), parcelIds = new Set<number>(),
+            entityScope = diagnostics?.recorder.beginDetail('entities');
           for (const cache of s.supplyCaches)
             if (!cache.collected && world.explored[world.idx(cache.x, cache.z)]) renderSupplyCache(R, world, cache);
           for (let e of s.entities) {
@@ -537,8 +540,12 @@
                 ring(b.x, b.z, b.size + 1, 0xe5ba79, 0.25, 0.11, t * 0.1);
             }
           }
-          retainForumParcelGuides(parcelIds);
+          diagnostics?.recorder.endDetail(entityScope);
+          const effectScope = diagnostics?.recorder.beginDetail('effects');
           renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t, game.localTeam, weatherTime);
+          diagnostics?.recorder.endDetail(effectScope);
+          const guideScope = diagnostics?.recorder.beginDetail('guides');
+          retainForumParcelGuides(parcelIds);
           if (ui.mode?.kind === 'build' && !ui.paused && BUILDINGS[ui.mode.arg])
             drawPlacementGuide(ui.mode.arg, s, world);
           else clearPlacementGuide();
@@ -572,10 +579,11 @@
               ring(p.x, p.z, 0.6, 0xf1deae, 0.8, 0.14);
             } else ring(p.x, p.z, 1.3, 0xa2ddd5, 0.9, 0.12);
           }
+          diagnostics?.recorder.endDetail(guideScope);
         }
         function draw(now: number) {
           if (failed) return;
-          diagnostics?.recorder.beginFrame(now);
+          diagnostics?.beginFrame(now);
           const elapsed = Math.max(0, (now - last) / 1000);
           let dt = Math.min(0.1, elapsed);
           last = now;
