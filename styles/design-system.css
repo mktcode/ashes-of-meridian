@@ -397,8 +397,11 @@
 
 /* Archive, result and loading surfaces retain actual game content/models. */
 #menu .codex-card .codex-thumbnail {
+  /* Opaque model canvases must sit inside both decorative contours. */
+  width: calc(100% - 12px);
+  margin: 6px 6px 0;
   background: radial-gradient(ellipse at 50% 79%, #298cb21a, transparent 69%);
-  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%, 0 12px);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
 }
 #menu .codex-card strong { text-transform: uppercase; letter-spacing: .04em; font-weight: 600 }
 #menu .codex-card span:not(.ui-skin, .ui-rim, .ui-fill, .ui-inner, .ui-corners) { color: var(--ui-muted); font-size: 11px }
