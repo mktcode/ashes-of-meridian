@@ -80,6 +80,7 @@
           if (ui) ui.event(...event);
         });
         ui = new MeridianUI(game, R, audio, profile, persistence);
+        ui.onCachedModelThumbnails = root => thumbnails.update(root,false);
         const context = overlay.getContext('2d');
         if (!context) throw Error('Canvas 2D is unavailable');
         overlayContext = context;

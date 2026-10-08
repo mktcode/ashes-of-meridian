@@ -25,6 +25,10 @@
         ? `<img class="ui-icon" src="./assets/ui/${UI_ICON_ASSETS[name]}.webp" alt="" aria-hidden="true" draggable="false">`
         : icon(fallback);
     }
+    // Decorative material layers only; never participate in layout, focus or input.
+    function uiSkin(): string {
+      return '<span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span>';
+    }
     type UIMode = { kind: 'build'; arg: BuildingType } | { kind: 'ability'; arg: AbilityType } | { kind: 'rally'; arg?: undefined };
     type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'details';
     interface UIPing extends Position { life: number; maxLife: number; color: number; }
@@ -98,6 +102,7 @@
       battleAbilities: AbilityType[];
       private processExpeditionResult?: ReturnType<typeof createExpeditionResultProcessor>;
       onViewportChange?: () => void;
+      onCachedModelThumbnails?: (root: HTMLElement) => void;
       onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean, battle?: ExpeditionBattleSave | null) => Promise<boolean>;
       onLaunchBattle?: (options: BattleOptions, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, world?: ExpeditionWorld) => Promise<boolean>;
       onLeaveBattle?: (complete: () => void | Promise<boolean>) => void;

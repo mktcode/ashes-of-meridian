@@ -1,37 +1,44 @@
-/* Demo visual language adapted to the real UI. Geometry stays in screens/codex/hud.css.
-   Scope excludes world canvases and diagnostics; no :root tokens or global button rules. */
-@font-face {
-  font-family: Aldrich;
-  src: url('../assets/fonts/aldrich/Aldrich-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* OUTPOST / 02 material language from aom-moodboard/moodboard.html.
+   UI-only skin: layout, world canvases, diagnostics and game state are not themed. */
 :is(#menu, #modal, #result, #loading, #hud, #toast) {
-  --ui-ink: #e4f6ff;
-  --ui-muted: #a1bfd1;
-  --ui-accent: #69e7ff;
-  --ui-line: #397d94;
-  --ui-gold: #f2c17d;
-  --ui-danger: #ff9693;
-  --ui-cut: 8px;
-  --ui-shape: polygon(var(--ui-cut) 0, calc(100% - var(--ui-cut)) 0,
-    100% var(--ui-cut), 100% calc(100% - var(--ui-cut)),
-    calc(100% - var(--ui-cut)) 100%, var(--ui-cut) 100%,
-    0 calc(100% - var(--ui-cut)), 0 var(--ui-cut));
-  --ui-inset: 1px;
-  --ui-edge: var(--ui-line);
-  --ui-fill: linear-gradient(145deg, #072334f0, #021421f5);
-  --ui-fast: 160ms;
+  color-scheme: dark;
+  --ui-bg: #050c12;
+  --ui-surface: #0c1b26;
+  --ui-ink: #e2f1f5;
+  --ui-muted: #99b0bd;
+  --ui-accent: #63deff;
+  --ui-line: #294652;
+  --ui-line-soft: #1c323e;
+  --ui-gold: #ffc277;
+  --ui-success: #79e2b6;
+  --ui-danger: #ff9797;
+  --ui-energy: #c8a4ff;
+  --ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --ui-data: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --ui-cut-control: 7.8px;
+  --ui-cut-card: 12px;
+  --ui-cut-panel: 19px;
+  --ui-fast: 180ms;
   --ui-enter: 220ms;
-  --ui-ease: ease-out;
+  --ui-ease: cubic-bezier(.2, .8, .2, 1);
+  --ui-material-panel: radial-gradient(ellipse at 0% 0%, #24628035, transparent 60%),
+    linear-gradient(155deg, #102331 0%, #091622 54%, #0c202c 100%);
+  --ui-material-idle: linear-gradient(115deg, #7dc5ec16, transparent 35% 70%, #0e071918),
+    linear-gradient(180deg, #1a374b 0%, #0c2232 22%, #071522 62%, #133044 100%);
+  --ui-material-active: radial-gradient(ellipse at 48% 0%, #26d7ff32, transparent 58%),
+    linear-gradient(100deg, #5ceaff24, transparent 28% 70%, #46d6ff16),
+    linear-gradient(180deg, #17475f 0%, #09283a 43%, #061827 62%, #174b60 100%);
   --ink: var(--ui-ink);
   --muted: var(--ui-muted);
   --gold: var(--ui-gold);
   --teal: var(--ui-accent);
+  --cyan: var(--ui-accent);
+  --red: var(--ui-danger);
+  --mono: var(--ui-data);
   color: var(--ui-ink);
+  font-family: var(--ui-font);
   font-variant-numeric: tabular-nums;
-  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
 }
 :is(#menu, #modal, #result, #loading, #hud) .ui-icon {
   display: inline-block;
@@ -44,134 +51,219 @@
 }
 :is(#menu, #modal, #result, #loading, #hud) :is(button, a, input, select) {
   touch-action: manipulation;
-  transition: filter var(--ui-fast), color var(--ui-fast),
-    background var(--ui-fast), border-color var(--ui-fast), transform var(--ui-fast);
+  transition: color var(--ui-fast), background var(--ui-fast),
+    border-color var(--ui-fast), transform var(--ui-fast);
 }
 :is(#menu, #modal, #result, #loading, #hud) :is(button, a, input, select):focus-visible {
-  outline: 2px solid var(--ui-ink);
+  outline: 2px solid #edffff;
   outline-offset: 3px;
 }
-/* Only decorative layers are chamfered: never clip controls, focus rings or text. */
-:is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
-  .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
-  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next),
-#modal .modal-frame,
-#hud :is(#radio, #tutorialGoal) {
+
+/* The skin wrapper is not clipped: bloom escapes the true 45-degree contours.
+   Only its decorative layers are clipped. Controls and focus rings stay intact. */
+:is(#menu, #modal, #result, #hud) :has(> .ui-skin) {
+  --ui-cut: var(--ui-cut-control);
+  --ui-rim: 1px;
+  --ui-color: var(--ui-accent);
+  --ui-fill: var(--ui-material-idle);
+  --ui-edge: linear-gradient(135deg, #7badc3 0%, #385b76 18%, #1e445c 48%, #477e9c 75%, #294d67 100%);
+  --ui-inner: .48;
+  --ui-corners: 0;
+  --ui-light: none;
+  --ui-glow: drop-shadow(0 0 1.5px color-mix(in srgb, var(--ui-color) 76%, transparent))
+    drop-shadow(0 0 7px color-mix(in srgb, var(--ui-color) 46.4%, transparent))
+    drop-shadow(0 0 20px color-mix(in srgb, var(--ui-color) 21.6%, transparent));
   isolation: isolate;
-  position: relative;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  clip-path: none;
 }
 :is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
-  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::before,
-:is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
-  .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
-  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
-#modal .modal-frame::before, #modal .modal-frame::after,
-#hud :is(#radio, #tutorialGoal)::before, #hud :is(#radio, #tutorialGoal)::after {
-  content: '';
-  display: block;
+  .codex-card, .codex-model-caption, .opponent-card, .expedition-benefit-row, .result-reward, .result-next),
+#modal .ui-select,
+#hud :is(.action, .queue-item, .minimap-panel, .settlement-upgrades button, #pauseBtn) {
+  position: relative;
+  overflow: visible;
+}
+:is(#menu, #modal, #result, #hud) :has(> .ui-skin)::before,
+:is(#menu, #modal, #result) :has(> .ui-skin)::after { content: none }
+/* Queue progress and targeting/favorite marks keep their own functional ::after. */
+:is(#menu, #modal, #result, #hud) .ui-skin {
   position: absolute;
   inset: 0;
+  display: block;
   width: auto;
   height: auto;
-  border: 0;
-  border-radius: 0;
-  transform: none;
-  clip-path: var(--ui-shape);
-  pointer-events: none;
   z-index: -1;
-  opacity: 1;
-  background: var(--ui-edge);
+  pointer-events: none;
+  filter: var(--ui-light);
+  transition: filter var(--ui-fast) var(--ui-ease);
+  font-size: 0;
+  line-height: 0;
+  padding: 0;
+  margin: 0;
 }
-:is(#menu, #modal, #result) :is(.primary, .secondary, .faction-option, .loadout-option,
-  .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
-  .codex-card, .codex-model-caption, .opponent-card, .result-reward, .result-next)::after,
-#modal .modal-frame::after,
-#hud :is(#radio, #tutorialGoal)::after { inset: var(--ui-inset); background: var(--ui-fill) }
+:is(#menu, #modal, #result, #hud) .ui-skin :is(.ui-rim, .ui-fill, .ui-inner, .ui-corners) {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  padding: 0;
+  margin: 0;
+}
+:is(#menu, #modal, #result, #hud) .ui-skin :is(.ui-rim, .ui-fill) {
+  --c: var(--ui-cut);
+  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c),
+    100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%,
+    0 calc(100% - var(--c)), 0 var(--c));
+}
+:is(#menu, #modal, #result, #hud) .ui-skin .ui-rim { inset: 0; background: var(--ui-edge) }
+:is(#menu, #modal, #result, #hud) .ui-skin .ui-fill {
+  inset: var(--ui-rim);
+  /* Uniform offset of the diagonal bevel, not a second identical polygon. */
+  --c: max(1px, calc(var(--ui-cut) - var(--ui-rim) * .585786));
+  background: var(--ui-fill);
+}
+:is(#menu, #modal, #result, #hud) .ui-skin .ui-inner {
+  --c: max(2px, calc(var(--ui-cut) - 2.4px));
+  inset: 4px;
+  background: linear-gradient(135deg, #b8edff 0%, #5aa2c2 15%, #173e59 42%, #77b9d0 80%, #274e69 100%);
+  opacity: var(--ui-inner);
+  clip-path: polygon(evenodd,
+    var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+    calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c), var(--c) 0,
+    calc(var(--c) + .4px) 1px, calc(100% - var(--c) - .4px) 1px,
+    calc(100% - 1px) calc(var(--c) + .4px), calc(100% - 1px) calc(100% - var(--c) - .4px),
+    calc(100% - var(--c) - .4px) calc(100% - 1px), calc(var(--c) + .4px) calc(100% - 1px),
+    1px calc(100% - var(--c) - .4px), 1px calc(var(--c) + .4px), calc(var(--c) + .4px) 1px, var(--c) 0);
+  transition: opacity var(--ui-fast) var(--ui-ease);
+}
+:is(#menu, #modal, #result, #hud) .ui-skin .ui-corners { inset: 7px; opacity: var(--ui-corners); transition: opacity var(--ui-fast) }
+:is(#menu, #modal, #result, #hud) .ui-corners i {
+  --rail-cut: max(3px, calc(var(--ui-cut) - 5px));
+  position: absolute;
+  width: max(20px, calc(var(--rail-cut) + 10px));
+  height: max(20px, calc(var(--rail-cut) + 10px));
+  background: linear-gradient(135deg, #efffff, var(--ui-color) 65%, #eaffff);
+  clip-path: polygon(0 var(--rail-cut), var(--rail-cut) 0, 100% 0, 100% 2px,
+    calc(var(--rail-cut) + .8px) 2px, 2px calc(var(--rail-cut) + .8px), 2px 100%, 0 100%);
+}
+:is(#menu, #modal, #result, #hud) .ui-corners i:nth-child(1) { left: 0; top: 0 }
+:is(#menu, #modal, #result, #hud) .ui-corners i:nth-child(2) { right: 0; top: 0; transform: rotate(90deg) }
+:is(#menu, #modal, #result, #hud) .ui-corners i:nth-child(3) { right: 0; bottom: 0; transform: rotate(180deg) }
+:is(#menu, #modal, #result, #hud) .ui-corners i:nth-child(4) { left: 0; bottom: 0; transform: rotate(270deg) }
+
+/* Rest / hover / selected / pressed match the moodboard's material states. */
+:is(#menu, #modal, #result, #hud) :is(button, a):has(> .ui-skin):hover:not(:disabled, .blocked) {
+  --ui-edge: linear-gradient(130deg, #ebffff, var(--ui-color) 23%, #2b9ec4 58%, #c9fcff 81%, var(--ui-color));
+  --ui-fill: var(--ui-material-active);
+  --ui-inner: .82;
+  --ui-light: var(--ui-glow);
+  color: #ecfbff;
+}
+:is(#menu, #modal, #result, #hud) :is(.active, [aria-pressed='true']):has(> .ui-skin) {
+  --ui-rim: 2px;
+  --ui-edge: linear-gradient(140deg, #f0ffff 0%, #64f0ff 17%, #11c2ff 38%, #c9ffff 68%, #4ceaff 100%);
+  --ui-fill: var(--ui-material-active);
+  --ui-inner: .88;
+  --ui-corners: 1;
+  --ui-light: var(--ui-glow);
+  color: #c7f7ff;
+}
+:is(#menu, #modal, #result) :is(button, a):has(> .ui-skin):hover:not(:disabled) { transform: translateY(-2px) }
+:is(#menu, #modal, #result, #hud) :is(button, a):has(> .ui-skin):active:not(:disabled, .blocked) {
+  --ui-fill: linear-gradient(180deg, #020912 0%, #071b2a 42%, #16435a 100%);
+  --ui-edge: linear-gradient(160deg, #214c64, #5acee8 76%, #cffcff);
+  --ui-inner: .4;
+  --ui-corners: .35;
+  --ui-light: drop-shadow(0 0 3px color-mix(in srgb, var(--ui-color) 36%, transparent));
+  color: #a6d9e5;
+}
+:is(#menu, #modal, #result) button:has(> .ui-skin):active:not(:disabled) { transform: translateY(2px) }
+:is(#menu, #modal, #result) button:disabled,
+#hud .blocked:has(> .ui-skin) {
+  --ui-edge: linear-gradient(140deg, #3b4e5b, #22333f);
+  --ui-fill: linear-gradient(#172530, #0a1620);
+  --ui-inner: .1;
+  --ui-light: none;
+  --ui-corners: 0;
+  opacity: 1;
+  color: #8ba1af;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: none;
+  transform: none;
+}
+:is(#menu, #modal, #result) button:disabled .ui-icon { opacity: .42 }
+
+/* Controls and readable, non-display typography. Branding assets stay unchanged. */
 :is(#menu, #modal, #result) :is(.primary, .secondary) {
-  --ui-edge: #4ec1dea6;
-  --ui-fill: linear-gradient(125deg, #0c2a3cf0, #021422e8);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   min-height: 48px;
-  padding: 12px 17px;
-  font: 400 13px/1.3 Aldrich, sans-serif;
-  letter-spacing: 2px;
+  padding: 12px 18px;
+  font: 600 11px/1.4 var(--ui-font);
+  letter-spacing: .025em;
   text-transform: uppercase;
-  color: #c0dcea;
 }
-:is(#menu, #modal, #result) :is(.primary, .secondary):hover {
-  --ui-edge: #bafaff;
-  color: white;
-  filter: drop-shadow(0 0 6px #52d4f933);
-}
-:is(#menu, #modal, #result) .primary {
-  --ui-edge: #a6f3ff;
-  --ui-inset: 1.5px;
-  --ui-fill: linear-gradient(140deg, #116180, #063449 43%, #073348 71%, #12506a);
-  color: #f3fdff;
+:is(#menu, #modal, #result) .primary:not(:disabled) {
+  --ui-rim: 1px;
+  --ui-edge: linear-gradient(140deg, #f0ffff 0%, #55edff 23%, #2788b4 63%, #bdffff);
+  --ui-fill: linear-gradient(112deg, #befcff36, transparent 29% 72%, #ffffff16),
+    linear-gradient(180deg, #99efff 0%, #53cde9 10%, #1d8dbb 53%, #329fc3 62%, #74e4f5 100%);
+  --ui-inner: .85;
+  --ui-light: var(--ui-glow);
+  color: #03131e;
+  text-shadow: 0 1px #b3f4ff65;
   font-weight: 650;
-  box-shadow: 0 0 21px #17c9ee30;
-  filter: drop-shadow(0 0 4px #50d8ff50);
 }
-:is(#menu, #modal, #result) .primary::after { box-shadow: inset 0 0 12px #5ee8ff38 }
-:is(#menu, #modal, #result) .primary:hover { filter: drop-shadow(0 0 7px #65e8ff8a) }
-:is(#menu, #modal, #result) button:disabled {
-  --ui-edge: #315b6b;
-  --ui-fill: linear-gradient(120deg, #0a2230cc, #071b28d9);
-  opacity: 1;
-  color: #8ba8b7;
-  background: transparent;
-  box-shadow: none;
-  filter: none;
-  transform: none;
+:is(#menu, #modal, #result) .primary:has(> .ui-skin):hover:not(:disabled) {
+  --ui-fill: linear-gradient(180deg, #c9ffff, #71ddf4 22%, #42afd1 60%, #97f4ff);
+  color: #02151f;
+  text-shadow: none;
 }
-:is(#menu, #modal, #result) button:disabled::after { box-shadow: none }
-:is(#menu, #modal, #result) button:disabled .ui-icon { opacity: .42 }
-:is(#menu, #modal, #result) button:not(:disabled):active { transform: translateY(1px) }
+:is(#menu, #modal, #result) .primary:has(> .ui-skin):active:not(:disabled) { --ui-fill: linear-gradient(#126a91, #5bd2eb); color: #02151f }
 :is(#menu, #modal, #result) .eyebrow {
   color: var(--ui-accent);
-  font: 400 11px/1.5 Aldrich, sans-serif;
-  letter-spacing: 1.8px;
+  font: 10px/1.5 var(--ui-data);
+  letter-spacing: .14em;
 }
 :is(#menu, #modal, #result) .textbtn {
   min-height: 44px;
   color: var(--ui-muted);
-  font: 400 11px/1.4 Aldrich, sans-serif;
-  letter-spacing: 1.2px;
+  font: 11px/1.4 var(--ui-data);
+  letter-spacing: .05em;
 }
 :is(#menu, #modal, #result) .textbtn:hover { color: #bafaff }
-:is(#menu, #modal, #result) :is(h1, h2, h3) { font-family: Aldrich, sans-serif; font-weight: 400 }
-:is(#menu, #modal, #result) :is(.sub-header, .armory-heading) {
-  border-bottom: 1px solid var(--ui-line);
-  padding-bottom: 16px;
-}
+:is(#menu, #modal) .textbtn .ui-icon { width: 19px; height: 19px; margin-right: 7px }
+:is(#menu, #modal, #result) :is(h1, h2, h3) { font-family: var(--ui-font); font-weight: 500 }
+:is(#menu, #modal, #result) :is(.sub-header, .armory-heading) { border-bottom: 1px solid var(--ui-line); padding-bottom: 16px }
 :is(#menu, #modal, #result) :is(.sub-header h1, .modal-card h1) {
-  font: 400 clamp(24px, 3vw, 32px)/1.25 Aldrich, sans-serif;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  font: 400 clamp(24px, 3vw, 32px)/1.2 var(--ui-font);
+  letter-spacing: -.04em;
   color: var(--ui-ink);
 }
-#menu .subscreen { background: linear-gradient(110deg, #03111cf2, #081d2ee3 70%, #061725b3) }
+#menu .subscreen {
+  background: radial-gradient(ellipse at 76% 6%, #103c4e25, transparent 42%), #050c12f2;
+}
 #menu .subscreen > div { border: 0; background: transparent; box-shadow: none }
 #modal .modal-shade {
-  background: #010c16a8;
+  background: #020912b8;
   backdrop-filter: none;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
-/* The stationary frame owns the decoration, the inner card scrolls independently. */
-#modal .modal-frame {
-  --ui-cut: 10px;
-  --ui-edge: #98ecfb;
-  --ui-fill: linear-gradient(150deg, #062639f7, #011320fa 65%);
-  filter: drop-shadow(0 0 8px #34c5ef33);
+/* Stationary panel skin surrounds the independently scrolling dialog content. */
+#modal .modal-frame,
+:is(#menu, #modal, #result) :is(.result-next, .codex-model-caption) {
+  --ui-cut: var(--ui-cut-panel);
+  --ui-fill: var(--ui-material-panel);
+  --ui-inner: .32;
+  --ui-edge: linear-gradient(135deg, #6193a9 0%, #294a65 15%, #1b354e 47%, #4a7d94 79%, #234158 100%);
 }
 #modal .modal-card {
   max-height: calc(100dvh - 48px);
@@ -183,186 +275,252 @@
 }
 #modal .modal-card::before { display: none }
 #modal .modal-card h1 { text-align: center; margin-bottom: 22px }
-#modal .modal-card h2 { font-size: 20px; letter-spacing: 1px }
-#modal .modal-card h3 { font-size: 14px; letter-spacing: 1px }
-#modal .modal-card p { color: #bad1df }
+#modal .modal-card h2 { font-size: 23px; letter-spacing: -.03em }
+#modal .modal-card h3 { font: 11px var(--ui-data); letter-spacing: .08em }
+#modal .modal-card p { color: var(--ui-muted) }
 #modal .modal-symbol { text-align: center; margin-bottom: 8px }
 #modal .modal-symbol .ui-icon { width: 38px; height: 44px }
 #modal .btnstack { gap: 8px }
-#modal [data-ui="abandon"], #modal [data-ui="restartConfirm"] { --ui-edge: #83675b; color: #e5ad92 }
-#modal :is([data-ui="restart"], [data-ui="confirmSale"]) {
-  --ui-edge: #ff9b81;
-  --ui-fill: linear-gradient(135deg, #573133, #221e2b);
-  color: #ffe0d1;
+#modal :is([data-ui='abandon'], [data-ui='restartConfirm']) {
+  --ui-color: var(--ui-gold);
+  --ui-edge: linear-gradient(140deg, #eccda0, #8b5d27 30%, #462e1d 60%, #b28543);
+  --ui-fill: linear-gradient(120deg, #ffc27712, transparent), linear-gradient(#302a24, #151921 60%, #343027);
+  color: var(--ui-gold);
 }
-#modal .ui-note { margin: 20px 0 0; padding-top: 14px; border-top: 1px solid #497183; font-size: 12px }
+#modal :is([data-ui='abandon'], [data-ui='restartConfirm']):has(> .ui-skin):hover:not(:disabled) {
+  --ui-edge: linear-gradient(135deg, #fff3d9, #ffce82 23%, #b88235 65%, #ffe4b6);
+  --ui-fill: linear-gradient(#604329, #291f1a 63%, #694628);
+  color: #ffdfb0;
+}
+#modal :is([data-ui='confirmSale'], [data-ui='confirmAbandon'], [data-ui='replaceExpedition'], [data-ui='discardExpeditionSave'], [data-ui='discardWorldSave']):has(> .ui-skin):not(:disabled) {
+  --ui-color: var(--ui-danger);
+  --ui-edge: linear-gradient(130deg, #af6065, #402730 48%, #855363);
+  --ui-fill: linear-gradient(#322632, #1b1824 65%, #382432);
+  --ui-light: none;
+  color: var(--ui-danger);
+  text-shadow: none;
+}
+#modal :is([data-ui='confirmSale'], [data-ui='confirmAbandon'], [data-ui='replaceExpedition'], [data-ui='discardExpeditionSave'], [data-ui='discardWorldSave']):has(> .ui-skin):hover:not(:disabled) {
+  --ui-edge: linear-gradient(120deg, #fff0f0, var(--ui-danger), #954961);
+  --ui-fill: linear-gradient(#562c3b, #251826 65%, #482432);
+  --ui-light: var(--ui-glow);
+  color: #ffd8d8;
+}
+#modal .ui-note { margin: 20px 0 0; padding-top: 14px; border-top: 1px solid var(--ui-line); font-size: 12px }
 #modal .battle-note { padding: 12px; border-left: 2px solid var(--ui-line); background: #041420e6; line-height: 1.6 }
 #modal .battle-note > p { margin-top: 0 }
-:is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option, .codex-nav button).active {
-  --ui-edge: #9bf3ff;
-  --ui-fill: linear-gradient(140deg, #0c516fdd, #062d42f0);
-  filter: drop-shadow(0 0 4px #46d5f64d);
-}
-#menu .faction-option.active { --ui-edge: var(--ui-gold); --ui-fill: linear-gradient(90deg, #20323c, #0b2334 85%); filter: drop-shadow(0 0 4px #ffc46d54) }
-#menu .faction-option.locked { --ui-edge: #486374; filter: none }
-#menu .faction-option strong { font: 400 15px/1.4 Aldrich, sans-serif }
+:is(#menu, #modal, #result) :is(.faction-option, .loadout-option, .benefit-option, .upgrade-card, .codex-card) { --ui-cut: var(--ui-cut-card) }
+:is(#menu, #modal, #result) :is(.codex-nav button, .codex-chapters a).active { --ui-corners: 0 }
+#menu .faction-option.locked { --ui-light: none; filter: none }
+#menu .faction-option strong { font: 600 14px/1.4 var(--ui-font); letter-spacing: .04em }
 :is(#menu, #modal, #result) :is(.faction-option small, .loadout-option small,
-  .benefit-option small, .expedition-benefit-row small, .upgrade-card p) {
-  color: var(--ui-muted);
-  font-size: 12px;
-  line-height: 1.55;
-}
-:is(#menu, #modal, #result) :is(.loadout-option strong, .benefit-option strong, .upgrade-card h3) {
-  font: 400 13px/1.4 Aldrich, sans-serif;
-  letter-spacing: .6px;
-}
-#menu .loadout-option:hover, :is(#menu, #result) .benefit-option:hover { --ui-edge: #bafaff }
+  .benefit-option small, .expedition-benefit-row small, .upgrade-card p) { color: var(--ui-muted); font-size: 12px; line-height: 1.55 }
+:is(#menu, #modal, #result) :is(.loadout-option strong, .benefit-option strong, .upgrade-card h3) { font: 600 13px/1.4 var(--ui-font); letter-spacing: .04em }
 #menu :is(.loadout-option em, .loadout-summary > span, .loadout-summary b) { font-size: 10px }
 :is(#menu, #modal, #result) .loadout-summary .ui-icon { width: 18px; height: 18px }
+:is(#menu, #modal, #result) .loadout-summary b { border-color: var(--ui-line); border-radius: 0; background: linear-gradient(#e2fcff12, #00000010) }
 #menu .loadout-option .ui-icon { width: 30px; height: 30px }
 :is(#menu, #modal, #result) .benefit-option .ui-icon { width: 34px; height: 34px }
+:is(#menu, #modal, #result) .expedition-benefit-row { --ui-cut: 8px; --ui-inner: .22; --ui-fill: var(--ui-material-panel) }
 :is(#menu, #modal, #result) .expedition-benefit-row .ui-icon { width: 25px; height: 25px }
-:is(#menu, #modal, #result) .opponent-card { --ui-cut: 6px; --ui-edge: var(--opponent-color); --ui-fill: #071c29f2; backdrop-filter: none }
+:is(#menu, #modal, #result) .opponent-card {
+  --ui-cut: 8px;
+  --ui-inner: .22;
+  --ui-edge: linear-gradient(135deg, var(--opponent-color), #294a65 40%, #4a7d94);
+  --ui-fill: var(--ui-material-panel);
+  backdrop-filter: none;
+}
+:is(#menu, #modal, #result) .opponent-sigil { border-radius: 0; border-color: color-mix(in srgb, var(--opponent-color) 45%, transparent); box-shadow: none; text-shadow: none }
 :is(#menu, #modal, #result) .opponent-label { color: var(--ui-muted); font-size: 10px }
 :is(#menu, #modal, #result) .opponent-copy strong { font-size: 12px }
-:is(#menu, #modal, #result) .opponent-copy small { overflow: visible; white-space: normal; overflow-wrap: anywhere; font-size: 11px; line-height: 1.5 }
-#modal .modal-card:has(> .armory-screen) {
-  height: calc(100dvh - 48px);
-  display: flex;
-  overflow: hidden;
-}
-#modal .armory-screen {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-height: 0;
-}
-#modal .armory-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  flex-shrink: 0;
-  gap: 12px;
-}
-#modal .armory-heading h1 { text-transform: uppercase; margin: 0; text-align: left }
-#modal .armory-content {
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: #4edcf080 #06131e;
-  padding: 8px;
-}
-#modal .armory-balance { --ui-cut: 6px; --ui-edge: #75cadd }
-#modal .armory-balance strong { font: 400 25px Aldrich, sans-serif }
-#modal .upgrade-card { --ui-cut: 7px; --ui-edge: #4797ac }
-#modal .upgrade-card:has(button:not(:disabled)) { --ui-edge: #79e4f7 }
+:is(#menu, #modal, #result) .opponent-copy small { overflow: visible; white-space: normal; overflow-wrap: anywhere; font-size: 11px; line-height: 1.5; color: var(--ui-muted) }
+#modal .modal-card:has(> .armory-screen) { height: calc(100dvh - 48px); display: flex; overflow: hidden }
+#modal .armory-screen { display: flex; flex-direction: column; width: 100%; min-height: 0 }
+#modal .armory-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; flex-shrink: 0; gap: 12px }
+#modal .armory-heading h1 { margin: 0; text-align: left }
+#modal .armory-content { min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 8px }
+#modal .armory-balance { --ui-cut: 8px }
+#modal .armory-balance strong { font: 25px var(--ui-data) }
 #modal .upgrade-card .sigil .ui-icon { width: 36px; height: 39px }
-#modal .upgrade-rank { font-size: 11px; letter-spacing: 1.1px }
-#modal .upgrade-effect { background: #092333; border: 1px solid #305768; border-radius: 0 }
+#modal .upgrade-rank { font-size: 11px; letter-spacing: .08em }
+#modal .upgrade-effect { background: #020b12; border: 1px solid var(--ui-line); border-radius: 0 }
 #modal .upgrade-effect :is(span, small) { font-size: 10px }
-#modal .upgrade-effect strong { font: 400 20px Aldrich, sans-serif; color: var(--ui-gold) }
+#modal .upgrade-effect strong { font: 20px var(--ui-data); color: var(--ui-gold) }
 #modal .upgrade-levels { gap: 4px }
-#modal .upgrade-levels i { height: 5px; border: 1px solid #405f6e; background: #304b58 }
-#modal .upgrade-levels i.on { background: #72edff; border-color: #abf7ff; box-shadow: 0 0 7px #4ad5f899 }
-#modal .upgrade-card .secondary { --ui-cut: 5px; font-size: 11px; min-height: 48px; letter-spacing: .4px }
+#modal .upgrade-levels i { height: 5px; border: 1px solid #3c5d70; background: #020b12 }
+#modal .upgrade-levels i.on { background: linear-gradient(#deffff, #45d5f9 35%, #2280a0); border-color: #abf7ff; box-shadow: 0 0 7px #4ad5f870 }
+#modal .upgrade-card .secondary { --ui-cut: 5px; font-size: 11px; min-height: 48px; letter-spacing: .025em }
 #modal .upgrade-card .secondary:disabled small { color: inherit }
-#modal .settings-row { gap: 16px; padding-block: 15px; border-color: #2d546666 }
+
+/* Native input semantics with the moodboard's square switches and lit slider. */
+#modal .settings-row { gap: 16px; padding-block: 15px; border-color: var(--ui-line-soft) }
 #modal .settings-row label { font-size: 14px }
-#modal .settings-row label small { font-size: 12px; color: #89aabe }
+#modal .settings-row label small { font-size: 12px; color: var(--ui-muted) }
 :is(#menu, #modal) :is(input, select) { accent-color: var(--ui-accent); max-width: 100% }
-#modal .settings-row input[type=checkbox] {
+:is(#menu, #modal) select {
+  background: linear-gradient(#030a12, #071722 75%, #0c2431) !important;
+  border: 1px solid #38607a !important;
+  border-radius: 0;
+  color: var(--ui-ink) !important;
+  box-shadow: inset 0 1px #e0ffff12;
+}
+:is(#menu, #modal) select:focus { border-color: var(--ui-accent) !important; box-shadow: 0 0 12px #18caff38 }
+#modal .ui-select { display: inline-flex; max-width: 100%; --ui-cut: 8px; --ui-inner: .22; --ui-fill: linear-gradient(#030a12, #071722 75%, #0c2431) }
+#modal .ui-select:focus-within { --ui-edge: var(--ui-accent); --ui-light: var(--ui-glow) }
+#modal .ui-select select { min-height: 44px; width: 100%; max-width: none; border: 0 !important; background: transparent !important; box-shadow: none }
+#modal .ui-select select:focus { box-shadow: none }
+:is(#menu, #modal) select option { color: var(--ui-ink); background: var(--ui-surface) }
+#modal .settings-row input[type='checkbox'] {
   appearance: none;
-  width: 43px;
+  width: 46px;
   height: 25px;
   flex-shrink: 0;
-  border: 1px solid #4a6c7f;
-  border-radius: 15px;
-  background: radial-gradient(circle at 11.5px 50%, #6d8da0 8px, transparent 8.5px), #163345;
+  border: 1px solid #38607a;
+  border-radius: 0;
+  background: linear-gradient(#cee7ef, #567d92) 3px 50% / 17px 17px no-repeat,
+    linear-gradient(#03101a, #102a3a);
+  box-shadow: inset 0 2px 4px #0009;
   cursor: pointer;
 }
-#modal .settings-row input[type=checkbox]:checked {
-  border-color: #7bd7e9;
-  background: radial-gradient(circle at 29.5px 50%, #c6faff 8px, transparent 8.5px), #106780;
+#modal .settings-row input[type='checkbox']:checked {
+  border-color: #7de9ff;
+  background: linear-gradient(#e3ffff, #3acdf0 55%, #9af2ff) calc(100% - 3px) 50% / 17px 17px no-repeat,
+    linear-gradient(#071f2c, #15495c);
+  box-shadow: 0 0 10px #28c8ff35, inset 0 1px 4px #0008;
 }
-#modal .settings-row input[type=range] { min-height: 32px }
-#menu .codex-card { overflow: visible; --ui-cut: 6px }
-#menu .codex-card span { color: var(--ui-muted); font-size: 11px }
-#menu .codex-section-title { color: var(--ui-gold); letter-spacing: 1px }
-#menu :is(.codex-nav button, .codex-chapters a) { padding: 12px; font: 400 12px/1.4 Aldrich, sans-serif }
-#menu :is(.codex-nav button, .codex-chapters a, .codex-card):hover { --ui-edge: #bafaff }
-#result .result-screen { backdrop-filter: none; background: linear-gradient(0deg, #03131ce6, #03131c66) }
-#result .result-hero h1 { font: 400 clamp(35px, 5vw, 60px)/1.2 Aldrich, sans-serif; letter-spacing: 7px }
+#modal .settings-row input[type='range'] { appearance: none; min-height: 32px; background: transparent; cursor: pointer }
+#modal input[type='range']::-webkit-slider-runnable-track { height: 4px; background: linear-gradient(to right, #b2f9ff 0, #45d5f9 var(--ui-range-progress, 0%), #213c4c var(--ui-range-progress, 0%) 100%); box-shadow: 0 1px #02070c }
+#modal input[type='range']::-moz-range-track { height: 4px; background: #213c4c; box-shadow: 0 1px #02070c }
+#modal input[type='range']::-moz-range-progress { background: linear-gradient(90deg, #b2f9ff, #45d5f9); height: 4px }
+#modal input[type='range']::-webkit-slider-thumb { appearance: none; width: 13px; height: 17px; margin-top: -6.5px; border-radius: 0; background: linear-gradient(#deffff, #4ad3f4 60%, #98f0fc); border: 2px solid #123344; box-shadow: 0 0 0 1px #6adbff, 0 0 9px #44dfff66 }
+#modal input[type='range']::-moz-range-thumb { width: 9px; height: 13px; border-radius: 0; background: linear-gradient(#deffff, #4ad3f4 60%, #98f0fc); border: 2px solid #123344; box-shadow: 0 0 0 1px #6adbff, 0 0 9px #44dfff66 }
+
+/* Archive, result and loading surfaces retain actual game content/models. */
+#menu .codex-card .codex-thumbnail {
+  /* Opaque model canvases must sit inside both decorative contours. */
+  width: calc(100% - 12px);
+  margin: 6px 6px 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 79%, #298cb21a, transparent 69%);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
+}
+#menu .codex-card .codex-thumbnail[data-model-image] { opacity: 1 }
+#menu .codex-card .codex-thumbnail[data-model-image='fresh'] { animation: codex-image-arrive 220ms ease-out }
+@keyframes codex-image-arrive { from { opacity: 0 } to { opacity: 1 } }
+#menu .codex-card strong { text-transform: uppercase; letter-spacing: .04em; font-weight: 600 }
+#menu .codex-card span:not(.ui-skin, .ui-rim, .ui-fill, .ui-inner, .ui-corners) { color: var(--ui-muted); font-size: 11px }
+#menu .codex-section-title { color: var(--ui-accent); letter-spacing: -.03em }
+#menu :is(.codex-nav button, .codex-chapters a) { padding: 12px; font: 600 12px/1.4 var(--ui-font); letter-spacing: .025em }
+#menu :is(.codex-faction, .codex-story, .codex-model-caption) { color: var(--ui-ink) }
+#menu :is(.codex-faction small, .codex-story blockquote) { color: var(--ui-muted) }
+#menu .codex-story h2 { color: var(--ui-accent) }
+#menu .codex-story blockquote { border-color: var(--ui-line); background: var(--ui-surface) }
+#result .result-screen { backdrop-filter: none; background: radial-gradient(ellipse at 50% 0%, #103c4e25, transparent 60%), linear-gradient(#050c1266, #050c12e6) }
+#result .result-hero h1 { font: 400 clamp(35px, 5vw, 60px)/1.2 var(--ui-font); letter-spacing: -.04em; text-indent: 0; text-shadow: 0 0 27px #11c9ff25 }
 #result .result-symbol .ui-icon { width: 35px; height: 38px }
 #result .defeat .result-hero h1 { color: var(--ui-danger); text-shadow: 0 0 24px #ff69692b }
-#result :is(.result-reward, .result-next, .benefit-option) { clip-path: none }
-#result .result-reward { --ui-edge: #92efff; --ui-fill: linear-gradient(130deg, #064665e6, #052436ec 58%, #07344be6); filter: drop-shadow(0 0 6px #37cfea5e) }
-#result .result-reward-sigil .ui-icon { width: 76px; height: 87px }
-#result .result-reward strong { font: 400 54px/1.1 Aldrich, sans-serif; color: #d5fbff; text-shadow: 0 0 20px #11c3fb79 }
-#result .defeat .result-reward { --ui-edge: var(--ui-danger); --ui-fill: linear-gradient(145deg, #072334f0, #021421f5); filter: none }
-#result .result-reward-breakdown { flex-wrap: wrap; letter-spacing: .05em }
-#result .result-hero p { justify-content: center; line-height: 1.6 }
+#result .result-hero p { justify-content: center; line-height: 1.6; letter-spacing: .1em }
 #result .result-next p { color: var(--ui-muted) }
-#result .benefit-option { --ui-cut: 6px; --ui-edge: #3f91ac }
-#result .benefit-option.active { --ui-edge: #9bf3ff }
-#loading { background: radial-gradient(ellipse at 50% 40%, #123b50, #040e19 65%) }
+#loading { background: radial-gradient(ellipse at 50% 40%, #103c4e50, transparent 65%), var(--ui-bg) }
 #loading .crest .ui-icon { width: 60px; height: 60px }
-#loading h2 { font-family: Aldrich, sans-serif; color: var(--ui-ink); letter-spacing: 1px }
-#loading progress {
-  appearance: none;
-  width: min(320px, 75vw);
-  height: 8px;
-  border: 1px solid var(--ui-line);
-  background: #03111c;
-  color: var(--ui-accent);
-}
-#loading progress::-webkit-progress-bar { background: #03111c }
-#loading progress::-webkit-progress-value { background: var(--ui-accent) }
-#loading progress::-moz-progress-bar { background: var(--ui-accent) }
+#loading .eyebrow { color: var(--ui-accent) }
+#loading h2 { font-family: var(--ui-font); color: var(--ui-ink); letter-spacing: -.03em }
+#loading progress { appearance: none; width: min(320px, 75vw); height: 8px; border: 1px solid #3c5d70; padding: 1px; background: #020b12; color: var(--ui-accent) }
+#loading progress::-webkit-progress-bar { background: #020b12 }
+#loading progress::-webkit-progress-value { background: linear-gradient(#deffff, #45d5f9 35%, #2280a0); box-shadow: 0 0 7px #4ad5f870 }
+#loading progress::-moz-progress-bar { background: linear-gradient(#deffff, #45d5f9 35%, #2280a0); box-shadow: 0 0 7px #4ad5f870 }
 
-/* HUD theme; geometry is owned by hud.css. */
-#hud #commandDeck button:focus-visible { outline-offset: -2px } /* Dense scroll rails keep the ring inside the control. */
-#hud #topbar { background: #092331; border: 0; border-radius: 0; box-shadow: none }
-#hud .resource .ui-icon { width: 24px; height: 28px }
-#hud .resource small { color: #aacddd }
-#hud #pauseBtn { display: grid; place-items: center; background: #0c2a3c; border: 0; border-radius: 0; box-shadow: none }
+/* HUD: existing dense hit areas and dimensions, individual inset material skins. */
+#hud #commandDeck button:focus-visible { outline-offset: -2px }
+#hud #topbar {
+  --ui-cut: 0px;
+  --ui-fill: linear-gradient(110deg, #10232bf5, #050c12f5);
+  --ui-edge: #294652;
+  --ui-inner: 0;
+}
+#hud #commandDeck {
+  --ui-cut: 12px;
+  --ui-fill: var(--ui-material-panel);
+  --ui-inner: .32;
+  --ui-edge: linear-gradient(135deg, #6193a9, #294a65 15%, #1b354e 47%, #4a7d94 79%, #234158);
+}
+#hud .resource .ui-icon { width: 24px; height: 28px; filter: drop-shadow(0 0 4px #63deff66) }
+#hud .resource strong { color: var(--ui-ink) }
+#hud .resource.power strong { color: var(--ui-energy) }
+#hud .resource small { color: var(--ui-muted) }
+#hud #pauseBtn { display: grid; place-items: center; --ui-cut: 6px }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
-#hud #pauseBtn:hover { background: #125775; color: #bafaff }
-#hud #abilityBar .action { background: #0c2a3c }
-#hud #abilityBar .action:hover { background: #12577566 }
-#hud #abilityBar .action.active { background: #125775; color: #effaff }
-#hud .action.blocked { color: #89aabe }
-#hud .action small { color: #dbc3ff; font-size: 10px; z-index: 1 }
+#hud .action { --ui-cut: 7px }
+#hud :is(.action, .queue-item, #pauseBtn) > .ui-skin { inset: 2px }
+#hud .action .action-model { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px) }
+#hud .catalog-grid .action-model { height: calc(100% - 16px) }
+#hud .action .cost { left: 4px; right: 4px; bottom: 3px; color: var(--ui-gold); background: linear-gradient(transparent, #071522e8); z-index: 1 }
+#hud .action small { color: var(--ui-energy); font-size: 10px; z-index: 1; top: 4px; right: 6px }
 #hud .action.blocked small { color: #adb0ce }
-:is(#menu, #modal) .textbtn .ui-icon { width: 19px; height: 19px; margin-right: 7px }
-#hud .model-action { background: #102e3d }
-#hud .model-action:hover { background: #16475b }
-#hud .model-action.blocked { background: #101f2b }
-#hud .model-action.active { background: #125775 }
-#hud .minimap-panel { background: transparent }
-#hud .queue-item { border: 0; background: #092737; border-radius: 0 }
-/* Queue ::after is reserved for its conic progress overlay. */
-#hud #radio { position: absolute; z-index: 4; --ui-edge: #43c3de; --ui-fill: linear-gradient(145deg, #072334f0, #021421f5); padding-right: 48px }
-#hud #tutorialGoal { --ui-edge: var(--ui-gold); --ui-fill: linear-gradient(145deg, #072334f0, #021421f5) }
-#hud #tutorialGoalLabel { color: var(--ui-gold); font-size: 10px; letter-spacing: 1px }
+#hud .action.active .ui-icon { filter: drop-shadow(0 0 3px #8af7ffad) drop-shadow(0 0 8px #42cffa85) }
+#hud .minimap-panel > .ui-skin { z-index: 1; --ui-cut: 9px; --ui-inner: .5 }
+#hud .minimap-panel .ui-rim { clip-path: polygon(evenodd, 9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px, 9px 0, 9.8px 2px, calc(100% - 9.8px) 2px, calc(100% - 2px) 9.8px, calc(100% - 2px) calc(100% - 9.8px), calc(100% - 9.8px) calc(100% - 2px), 9.8px calc(100% - 2px), 2px calc(100% - 9.8px), 2px 9.8px, 9.8px 2px, 9px 0) }
+#hud #minimap { background: #041019 }
+#hud #selectionStatus { --ui-cut: 8px; --ui-fill: var(--ui-material-panel); --ui-inner: .22 }
+#hud .selection-queue i { background: #79e2b633 }
+#hud .selection-queue i.occupied { background: var(--ui-success); box-shadow: 0 0 4px #79e2b640 }
+#hud .selection-health { background: linear-gradient(90deg, #79e2b64d var(--health), #020b12 0); box-shadow: inset 0 1px #c6efff14 }
+#hud .selection-health.enemy { background: linear-gradient(90deg, #ff97974d var(--health), #020b12 0) }
+#hud .shield-meter { background: linear-gradient(#e3d6ff, var(--ui-energy)) }
+#hud :is(#actionPanel.details-panel, #actionPanel.settlement-panel) { background: var(--ui-material-panel) }
+#hud .settlement-effect.active { box-shadow: none }
+#hud .settlement-controls button { --ui-cut: 6px }
+#hud .settlement-effect { --ui-cut: 8px }
+#hud .queue-item { --ui-cut: 8px; --ui-inner: .3 }
+#hud .queue-item::after { inset: 3px; clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); background: conic-gradient(transparent var(--progress, 0deg), #e2f1f540 0) }
+#hud :is(#radio, #tutorialGoal) { --ui-cut: 12px; --ui-fill: var(--ui-material-panel); --ui-inner: .32; --ui-edge: linear-gradient(135deg, #6193a9, #294a65 30%, #4a7d94 79%, #234158) }
+#hud #radio { z-index: 4; padding-right: 48px; backdrop-filter: none }
+#hud #tutorialGoal { --ui-color: var(--ui-gold); --ui-edge: linear-gradient(110deg, #f6c47a, #594425 38%, #796342) }
+#hud #tutorialGoalLabel { color: var(--ui-gold); font-size: 10px; letter-spacing: .1em }
 #hud #tutorialGoalText { color: var(--ui-ink); font-size: 12px; line-height: 1.5 }
-#hud #radioName { font-family: Aldrich, sans-serif; color: #b4ebff; letter-spacing: 1.5px; font-size: 10px }
-#hud #radioText { color: #c3e4f1 }
+#hud #radioName { color: #b7d6e2; letter-spacing: .12em; font-size: 10px }
+#hud #radioText { color: var(--ui-ink) }
 #hud #radioClose { width: 44px; height: 44px; padding: 13px }
 #hud #radioClose .ui-icon { width: 17px; height: 17px }
-#hud .alert { background: #092737f2; border-color: var(--ui-gold); color: #d7f3ff }
-#hud .alert.danger { border-color: var(--ui-danger); color: #ffd8b8 }
-#toast { background: #092737f2; border-color: #59bdd59c; border-radius: 5px; color: #d7f3ff; box-shadow: 0 8px 24px #0008; line-height: 1.5 }
+/* Frequently text-replaced signals use two CSS-only layers, never runtime observers. */
+#hud :is(#speedBtn, #speedHint, .alert), #toast {
+  --ui-cut: 6px;
+  --ui-edge: #38607a;
+  --ui-fill: linear-gradient(#102333, #091621);
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#hud :is(#speedBtn, #speedHint, .alert)::before, #toast::before,
+#hud :is(#speedBtn, #speedHint, .alert)::after, #toast::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  --c: var(--ui-cut);
+  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  background: var(--ui-edge);
+}
+#hud :is(#speedBtn, #speedHint, .alert)::after, #toast::after { inset: 1px; --c: calc(var(--ui-cut) - .585786px); background: var(--ui-fill) }
+#hud #speedHint { position: absolute; --ui-cut: 10px; --ui-fill: var(--ui-material-panel); backdrop-filter: none }
+#hud #speedBtn:hover:not(:disabled) { --ui-edge: #63deff; --ui-fill: var(--ui-material-active) }
+#hud #speedBtn:active:not(:disabled) { --ui-fill: linear-gradient(#020912, #16435a) }
+#hud .alert { --ui-cut: 8px; --ui-edge: #b28543; --ui-fill: linear-gradient(#242c2b, #131e27); color: var(--ui-gold) }
+#hud .alert.danger { --ui-edge: #af6065; --ui-fill: linear-gradient(#322632, #1b1824); color: var(--ui-danger) }
+#toast { position: fixed; --ui-cut: 10px; --ui-edge: #84b9ce; --ui-fill: linear-gradient(#193b51, #0c2132); color: var(--ui-ink); filter: drop-shadow(0 0 16px #38caff30); line-height: 1.5 }
 
+:is(#menu, #modal, #result) :is(.home-screen, .subscreen, .modal-card, .armory-content) { scrollbar-color: #38607a #050c12 }
+#hud #actions { scrollbar-color: #38607a #050c12 }
+#menu :is(.subscreen, .codex-model-screen), #modal .modal-frame,
+#result .result-shell { animation: ui-arrive var(--ui-enter) var(--ui-ease) both }
+@keyframes ui-arrive { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: translateY(0) } }
 @media (min-width: 700px) {
   #modal .armory-grid:not(.command-module-grid) { grid-template-columns: 1fr; gap: 12px }
-  #modal .armory-grid:not(.command-module-grid) .upgrade-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 210px;
-    grid-template-areas: 'heading effect' 'description effect' 'levels purchase';
-    gap: 10px 24px;
-    padding: 22px;
-  }
+  #modal .armory-grid:not(.command-module-grid) .upgrade-card { display: grid; grid-template-columns: minmax(0, 1fr) 210px; grid-template-areas: 'heading effect' 'description effect' 'levels purchase'; gap: 10px 24px; padding: 22px }
   #modal .armory-grid:not(.command-module-grid) .upgrade-heading { grid-area: heading; grid-template-columns: 48px minmax(0, 1fr) }
   #modal .armory-grid:not(.command-module-grid) .sigil { width: 42px; height: 42px }
   #modal .armory-grid:not(.command-module-grid) p { grid-area: description; margin: 0 }
@@ -370,36 +528,47 @@
   #modal .armory-grid:not(.command-module-grid) .upgrade-levels { grid-area: levels; align-self: center; margin: 0 }
   #modal .armory-grid:not(.command-module-grid) .secondary { grid-area: purchase }
 }
-#menu :is(.subscreen, .codex-model-screen), #modal .modal-frame,
-#result .result-shell { animation: ui-arrive var(--ui-enter) var(--ui-ease) both }
-@keyframes ui-arrive { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: translateY(0) } }
 @media (max-width: 600px) {
   #menu .subscreen { padding: 20px 16px }
   #menu .sub-header { align-items: flex-start; gap: 12px }
   #menu .sub-header .textbtn { max-width: 110px; flex-shrink: 0 }
   #modal .settings-row { flex-wrap: wrap }
-  #modal .settings-row select { width: 100% }
+  #modal .settings-row :is(select, .ui-select) { width: 100% }
   #modal .armory-heading { grid-template-columns: minmax(0, 1fr) auto }
   #modal .armory-heading h1 { font-size: 24px; grid-column: 1 / -1 }
   #result .result-screen { padding: 24px 16px 32px }
   #result .result-shell { gap: 18px }
-  #result .result-benefits h3 { font-size: 11px; line-height: 1.5; letter-spacing: 1px }
+  #result .result-benefits h3 { font-size: 11px; line-height: 1.5; letter-spacing: .1em }
   #result .benefit-option { padding: 16px }
   #result .benefit-option strong { font-size: 13px }
   #result .benefit-option small { font-size: 12px; margin-top: 5px }
-  #result .result-reward { min-height: 108px }
-  #result .result-reward-breakdown { font-size: 10px; gap: 4px 12px }
   #hud #abilityBar .action .ui-icon { width: 22px; height: 22px }
   #hud .resource .ui-icon { width: 15px; height: 21px }
   #hud .resource:has(#supplyCount) .ui-icon { width: 19px }
-  #hud #radioName { font-size: 9px; letter-spacing: 1px }
+  #hud #radioName { font-size: 9px; letter-spacing: .1em }
 }
 @media (max-width: 360px) { #hud .resource .ui-icon { width: 12px; height: 17px } }
 @media (prefers-reduced-motion: reduce) {
   :is(#menu, #modal, #result, #loading, #hud, #toast),
-  :is(#menu, #modal, #result, #loading, #hud, #toast) * {
+  :is(#menu, #modal, #result, #loading, #hud, #toast) *,
+  :is(#menu, #modal, #result, #loading, #hud, #toast) *::before,
+  :is(#menu, #modal, #result, #loading, #hud, #toast) *::after {
     animation: none !important;
     transition: none !important;
   }
+  :is(#menu, #modal, #result) :is(button, a):has(> .ui-skin):hover { transform: none }
   #hud .action.tutorial-focus { box-shadow: inset 0 0 0 3px #fff0b4, 0 0 10px #f2c45daa }
+}
+@media (forced-colors: active) {
+  :is(#menu, #modal, #result, #hud) .ui-skin { display: none }
+  :is(#menu, #modal, #result, #hud) :has(> .ui-skin),
+  #hud :is(#speedBtn, #speedHint, .alert), #toast {
+    border: 1px solid ButtonText;
+    background: Canvas;
+    color: CanvasText;
+  }
+  :is(#menu, #modal, #result, #hud) :is(.active, [aria-pressed='true']):has(> .ui-skin) { outline: 2px solid Highlight; outline-offset: -2px }
+  #modal .settings-row input[type='checkbox'] { appearance: auto }
+  #hud :is(#speedBtn, #speedHint, .alert)::before, #hud :is(#speedBtn, #speedHint, .alert)::after,
+  #toast::before, #toast::after { display: none }
 }

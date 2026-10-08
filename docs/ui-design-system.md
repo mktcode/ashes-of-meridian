@@ -6,8 +6,9 @@
 Expeditionsvorbereitung/-übergang, Codex, Dialoge, Zivilisationsupgrades, Ergebnisse,
 Ladebildschirm, Gefechts-HUD und Meldungen. Es folgt auf die Basis-/Layoutstyles;
 `styles/home.css` ergänzt danach nur Startbildschirm-Geometrie und Branding.
-Aldrich, Panel-/Buttonform und Glow werden gemeinsam gepflegt, nicht pro Ansicht
-nachgebaut. Die übrige Bildschirmgeometrie und Modellvorschau bleiben in
+Material-Tokens, Panel-/Buttonform und Glow werden gemeinsam gepflegt, nicht pro
+Ansicht nachgebaut. UI-Texte verwenden den System-Sans-Stack der Vorlage, Daten und
+Mikrobeschriftungen Monospace; die vorhandenen Branding-Motive bleiben erhalten. Die übrige Bildschirmgeometrie und Modellvorschau bleiben in
 `screens.css`, `codex.css` bzw. `hud.css`.
 Run-Briefing, Loadout, Gegner und Gebäudeboni stehen im Sternchen-Modal, nicht zwischen
 den Startaktionen. Es unterscheidet Boni für neu gestartete Gefechte von den eingefrorenen
@@ -27,23 +28,38 @@ Das aktuelle Tutorialziel bleibt als passives Panel oben links unter der Statusz
 Tokens und Selektoren bleiben auf `#menu`, `#modal`, `#result`, `#loading`, `#hud`
 und `#toast` begrenzt. Keine Theme-Tokens auf `:root`, keine globalen Buttonregeln.
 Funk und Warnungen gehören zum HUD; Diagnoseanzeigen und Welt bleiben außerhalb.
-Das Aktions-HUD ist flach und rahmenlos, seine Kacheln liegen ohne Zwischenräume aneinander. Ressourcenleiste und Pausebutton sind rechteckig, ohne dekorative Pseudoelemente oder Rahmen und mit minimalem Innenabstand. Pausieren sperrt Eingaben, ändert aber nicht Deckkraft oder Rahmen der Kacheln; die Abdunklung gehört allein zum Modal-Backdrop. Sichtbare Fokus-, Tutorial- und Favoriten-Bearbeitungsmarkierungen sind funktionale Ausnahmen.
+Das Aktions-HUD behält seine dichten, lückenlosen Hit-Flächen. Innerhalb der Kacheln
+sitzen leicht eingerückte Materialrahmen mit Doppelkontur; ausgewählte Aktionen
+besitzen leuchtende Eckschienen. Die Ressourcenleiste bleibt platzsparend und
+rechteckig, Pause und Tempo erhalten die gemeinsame Kontrollgestaltung.
+Pausieren sperrt Eingaben, ändert aber nicht Deckkraft oder Rahmen der Kacheln;
+die Abdunklung gehört allein zum Modal-Backdrop. Fokus-, Tutorial- und
+Favoriten-Bearbeitungsmarkierungen bleiben unabhängig von dekorativen Zuständen.
 Die Theme-Schicht bleibt kosmetisch. Layout und Bedienregeln des [kompakten HUDs](gameplay.md#kompaktes-hud) gehören in HUD-Styles und Controller; echte Minimap, Modellkacheln, Queue-IDs und Simulationszustände bleiben maßgeblich. Das Spielfeld bleibt fullscreen hinter dem HUD; HUD-Auswahl, Kataloge und Leistenanimationen ändern weder Rendergröße noch Projektion. Nur Queue-/Funk-/Meldungsabstände folgen der untransformierten HUD-Layoutgeometrie. Keine vereinfachte Demo-Konsole oder statische Weltgrafik einsetzen.
 
-Visuelle Vorlage ist das externe Paket
-`/home/mkt/Downloads/Ashes-of-Meridian-Assets/Ashes-of-Meridian-Demo.html`.
-Seine dekorativen Regeln werden mit lokalen Selektoren wiederverwendet; Mockup-Logik,
-Speicherung, alte Namen, Audio und Demo-Hintergründe sind keine Spielvorlage.
-Für Codex, zusätzliche Module, mehrere Gegner und Niederlagen wird diese Formsprache
-auf die vorhandenen Inhalte erweitert. [Assetpflege](rendering.md#ui-branding).
+Visuelle Vorlage ist **OUTPOST / 02 — Licht, Kante, Tiefe** aus dem externen Paket
+`/home/mkt/Downloads/aom-moodboard/moodboard.html`. Maßgeblich ist die eingebettete
+Materialschicht dieser HTML-Demo; die separaten `styles.css`/`tokens.css` des Pakets
+enthalten einen abweichenden älteren Stand. Palette, Materialverläufe, abgeschrägte
+Doppelkonturen, Bloom und Zustände werden auf die vorhandenen Spielkomponenten
+übertragen. Mockup-Inhalte, Steuerlogik und Demo-Hintergründe werden nicht übernommen.
+Echte Minimap, Welt, Modelle und Branding-Assets bleiben Spielquellen.
+[Assetpflege](rendering.md#ui-branding).
 
 ## Visuelle Sprache
 
-- Dunkle, ausreichend deckende Navy-Flächen; Cyan markiert Bedienbarkeit und Auswahl.
-  Gold bleibt für Upgrade-Effekte und Fortschritt, Rot für Verlust/destruktive Aktionen.
+- Dunkle, ausreichend deckende Navy-Flächen mit gestuften Materialverläufen;
+  Cyan markiert Bedienbarkeit und Auswahl. Primäraktionen sind helles Cyan mit
+  dunkler Schrift. Bernstein bleibt für Kosten, Warnungen und Fortschritt,
+  Rot für Verlust/destruktive Aktionen, Violett für Energie.
 - Flächen, Konturen, Schatten und Bewegung werden über lokale `--ui-*`-Tokens gepflegt.
-  Abgeschrägte Ecken clippen ausschließlich dekorative Pseudoelemente, nicht Controls
-  oder Text. In dichten HUD-Scrollrails liegt der Fokusrahmen innen. Dialoge haben
+  `uiSkin()` liefert ausschließlich dekoratives, `aria-hidden`-Markup. Die
+  gemeinsame `.ui-skin` enthält äußere Fase, Materialfläche, hohle Innenkontur und
+  Eckschienen. Nur diese Ebenen sind abgeschrägt; die ungeclippte Skin-Hülle trägt
+  Bloom. Controls und Text bleiben ungeclippt, die Skin fängt keine Eingabe ab.
+  Textaktualisierte kleine Meldungen und der Tempobutton nutzen dekorative
+  Pseudoelemente. Queue-Fortschritt, Zielabbruch und Favoritenmarkierungen behalten
+  ihre funktionalen Overlays. In dichten HUD-Scrollrails liegt der Fokusrahmen innen. Dialoge haben
   einen stationären dekorativen Rahmen um den unabhängig scrollenden Inhalt, damit
   das Panel bei langen Manuals/Upgrade-Listen nicht wegscrollt.
 - `.primary` bezeichnet die wichtigste Aktion, `.secondary` reguläre Aktionen,
@@ -54,9 +70,11 @@ auf die vorhandenen Inhalte erweitert. [Assetpflege](rendering.md#ui-branding).
 - Einblendungen sind kurz und einmalig; keine dauernden Glanzläufe oder animierten
   Filter. Bestehende Tutorial-Zielmarkierungen bleiben erhalten; bei reduced motion
   als statischer Rahmen. `prefers-reduced-motion` deaktiviert die CSS-Bewegung einschließlich Ladepunkten.
-  Keine externen Fonts, Laufzeitdienste oder Zufallsziehungen. Motive und Aldrich
-  werden lokal mitgeliefert. Native Einstellungsinputs bleiben erhalten; der
-  Switch-Look der Checkboxen ändert weder Optionen noch Speicher-/Eingabeverträge.
+  Keine externen Fonts, Laufzeitdienste oder Zufallsziehungen. Motive werden lokal
+  mitgeliefert. Native Einstellungsinputs bleiben erhalten; eckige Switches und
+  leuchtende Slider ändern weder Optionen noch Speicher-/Eingabeverträge. Die
+  Sliderfüllung folgt rein visuell dem Eingabewert. `forced-colors` ersetzt die
+  Materialschicht durch Systemfarben und sichtbare Rahmen.
 
 ## Grenzen der Prüfung
 

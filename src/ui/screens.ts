@@ -11,7 +11,7 @@
         if (this.leavingBattle) return;
         if (!this.saveBattle() && !leaveUnsaved) {
           this.paused = true;
-          this.openModal('saveUnavailable', `<div class="eyebrow">SAVE UNAVAILABLE</div><h1>Progress is only in this tab.</h1><p>The current battle has not been saved to this browser. You can continue in this tab, but closing or reloading may restore older progress.</p><div class="launch-row"><button class="primary" data-ui="backPause">KEEP PLAYING</button><button class="secondary" data-ui="leaveUnsaved">MAIN MENU ANYWAY</button></div>`);
+          this.openModal('saveUnavailable', `<div class="eyebrow">SAVE UNAVAILABLE</div><h1>Progress is only in this tab.</h1><p>The current battle has not been saved to this browser. You can continue in this tab, but closing or reloading may restore older progress.</p><div class="launch-row"><button class="primary" data-ui="backPause">${uiSkin()}KEEP PLAYING</button><button class="secondary" data-ui="leaveUnsaved">${uiSkin()}MAIN MENU ANYWAY</button></div>`);
           return;
         }
         const returningStage = preferredStage ?? this.activeWorldStage;
@@ -56,7 +56,7 @@
       showBattleSaveError(this: MeridianUI) {
         this.paused = true;
         this.audio.setMode?.('silent');
-        this.openModal('battleSaveError', `<div class="eyebrow">EXPEDITION SAVE UNAVAILABLE</div><h1>Cannot restore this expedition.</h1><p>${esc(this.battleSaveError)}</p><p>The battle will not restart from its beginning. Your settings and faction unlocks are kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">KEEP SAVE</button><button class="primary" data-ui="discardExpeditionSave">ABANDON EXPEDITION</button></div>`);
+        this.openModal('battleSaveError', `<div class="eyebrow">EXPEDITION SAVE UNAVAILABLE</div><h1>Cannot restore this expedition.</h1><p>${esc(this.battleSaveError)}</p><p>The battle will not restart from its beginning. Your settings and faction unlocks are kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">${uiSkin()}KEEP SAVE</button><button class="primary" data-ui="discardExpeditionSave">${uiSkin()}ABANDON EXPEDITION</button></div>`);
       },
       rememberStage(this: MeridianUI) {
         if (!this.expedition) { this.stageHistory = []; return; }
@@ -82,7 +82,7 @@
         const world = this.expedition?.worlds?.find(w => w.stage === entry.stage);
         if (!world) { this.toast('Only the landscape was saved for this stage. This world cannot be entered.'); return; }
         if (world.error || !world.battle || !world.recipe) {
-          this.openModal('worldSaveError', `<div class="eyebrow">WORLD SAVE UNAVAILABLE</div><h1>Cannot enter this world.</h1><p>${esc(world.error)}</p><p>Your current expedition is kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">KEEP SAVE</button><button class="primary" data-ui="discardWorldSave" data-stage="${world.stage}">DISCARD WORLD</button></div>`);
+          this.openModal('worldSaveError', `<div class="eyebrow">WORLD SAVE UNAVAILABLE</div><h1>Cannot enter this world.</h1><p>${esc(world.error)}</p><p>Your current expedition is kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">${uiSkin()}KEEP SAVE</button><button class="primary" data-ui="discardWorldSave" data-stage="${world.stage}">${uiSkin()}DISCARD WORLD</button></div>`);
           return;
         }
         void this.startExpeditionBattle(world);
@@ -136,7 +136,7 @@
           archived ? world?.error ? 'WORLD SAVE UNAVAILABLE' : world ? 'CLEARED · WORLD SAVED' : 'LANDSCAPE ONLY · NO WORLD SAVE' : 'CURRENT CHECKPOINT';
         const button = $('menu').querySelector<HTMLButtonElement>('[data-ui="enterSelectedStage"]');
         if (button) {
-          button.innerHTML = `${archived ? 'Enter world' : 'Continue expedition'} <span aria-hidden="true">→</span>`;
+          button.innerHTML = `${uiSkin()}${archived ? 'Enter world' : 'Continue expedition'} <span aria-hidden="true">→</span>`;
           button.title = archived ? `Enter stage ${entry.stage}` : `Continue at stage ${entry.stage}`;
           button.disabled = this.stagePreviewBusy || this.launchingBattle || (archived && !world);
         }
@@ -150,6 +150,7 @@
         this.codexSelection = null;
         $('menu').classList.remove('hidden');
         $('menu').innerHTML = renderCodexScreen(this.codexFaction);
+        this.onCachedModelThumbnails?.($('menu'));
       },
       showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType) {
         this.codexSelection = {faction:this.codexFaction,kind,type};
@@ -175,7 +176,7 @@
         if (!this.expedition) return;
         const totals = this.expeditionUpgrades();
         this.openModal('expeditionBenefits',
-          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Civilization upgrades.</h1><p class="muted">${esc(FACTIONS[this.expedition.faction].name)} · ${this.expedition.depth} worlds cleared</p>${this.encounterBriefing()}<h2>For newly started battles</h2>${renderExpeditionUpgradeList(totals)}<p>Configure civilian buildings in cleared worlds. Changes never affect a battle that has already started.</p>${this.expedition.battle ? `<h2>Current battle · frozen upgrades</h2>${renderExpeditionUpgradeList({upgrades:this.expedition.upgrades, benefits:this.expedition.benefits})}` : ''}<div class="launch-row"><button class="primary" data-ui="closeModal">RETURN</button></div>`);
+          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Civilization upgrades.</h1><p class="muted">${esc(FACTIONS[this.expedition.faction].name)} · ${this.expedition.depth} worlds cleared</p>${this.encounterBriefing()}<h2>For newly started battles</h2>${renderExpeditionUpgradeList(totals)}<p>Configure civilian buildings in cleared worlds. Changes never affect a battle that has already started.</p>${this.expedition.battle ? `<h2>Current battle · frozen upgrades</h2>${renderExpeditionUpgradeList({upgrades:this.expedition.upgrades, benefits:this.expedition.benefits})}` : ''}<div class="launch-row"><button class="primary" data-ui="closeModal">${uiSkin()}RETURN</button></div>`);
       },
       showBattle(this: MeridianUI) {
         if (this.battleSaveError) return this.showBattleSaveError();
@@ -229,7 +230,7 @@
         if (this.launchingBattle) return;
         if (this.battleSaveError) return this.showBattleSaveError();
         if (this.expedition && !replaceExpedition) {
-          this.openModal('replaceExpedition', `<div class="eyebrow">NEW EXPEDITION</div><h1>Abandon the current expedition?</h1><p>Starting a new expedition permanently discards your current run and its battle save.</p><div class="launch-row"><button class="primary" data-ui="replaceExpedition">ABANDON AND START NEW</button><button class="secondary" data-ui="closeModal">CANCEL</button></div>`);
+          this.openModal('replaceExpedition', `<div class="eyebrow">NEW EXPEDITION</div><h1>Abandon the current expedition?</h1><p>Starting a new expedition permanently discards your current run and its battle save.</p><div class="launch-row"><button class="primary" data-ui="replaceExpedition">${uiSkin()}ABANDON AND START NEW</button><button class="secondary" data-ui="closeModal">${uiSkin()}CANCEL</button></div>`);
           return;
         }
         const faction = this.factionUnlocked(this.battleFaction) ? this.battleFaction : FACTION_ID.FIRST;
@@ -268,7 +269,7 @@
           else this.game.start(options);
         } catch (e) {
           console.error('Expedition launch failed:', e);
-          if (world) this.openModal('worldLoadError', `<div class="eyebrow">WORLD LOAD FAILED</div><h1>Cannot enter this world.</h1><p>${esc(e instanceof Error ? e.message : String(e))}</p><button class="secondary" data-ui="closeModal">RETURN</button>`);
+          if (world) this.openModal('worldLoadError', `<div class="eyebrow">WORLD LOAD FAILED</div><h1>Cannot enter this world.</h1><p>${esc(e instanceof Error ? e.message : String(e))}</p><button class="secondary" data-ui="closeModal">${uiSkin()}RETURN</button>`);
           else {
             this.battleSaveError = e instanceof Error ? e.message : String(e);
             this.showBattleSaveError();
@@ -285,7 +286,7 @@
         if (kind !== 'sell') this.sellBuildingId = null;
         this.modalKind = kind;
         $('modal').innerHTML =
-          `<div class="modal-shade"><div class="modal-frame ${wide ? 'wide' : ''}"><div class="modal-card">${html}</div></div></div>`;
+          `<div class="modal-shade"><div class="modal-frame ${wide ? 'wide' : ''}">${uiSkin()}<div class="modal-card">${html}</div></div></div>`;
         $('modal').classList.remove('hidden');
       },
       closeModal(this: MeridianUI) {
@@ -314,7 +315,7 @@
         this.saveBattle();
         this.openModal(
           'pause',
-          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">MAIN MENU</button>${this.activeWorldStage === null ? '<button class="secondary" data-ui="abandon">ABANDON EXPEDITION</button>' : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This cleared world is autosaved separately from your current battle. Configure civilian building upgrades for newly started battles. The current battle keeps its original upgrades.`} A hard interruption may return to the last successful autosave.</p>`
+          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">${uiSkin()}RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiSkin()}${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">${uiSkin()}MAIN MENU</button>${this.activeWorldStage === null ? `<button class="secondary" data-ui="abandon">${uiSkin()}ABANDON EXPEDITION</button>` : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This cleared world is autosaved separately from your current battle. Configure civilian building upgrades for newly started battles. The current battle keeps its original upgrades.`} A hard interruption may return to the last successful autosave.</p>`
         );
       },
       resume(this: MeridianUI) {
@@ -340,6 +341,7 @@
         if (!k || !Object.hasOwn(this.profile.settings, k)) return;
         let v = el.type === 'checkbox' ? (el as HTMLInputElement).checked : Number(el.value);
         this.profile.settings[k] = v;
+        if (el.type === 'range') el.style.setProperty('--ui-range-progress', Number(v) * 100 + '%');
         this.audio.updateSettings();
         if (k === 'quality') {
           this.R.quality = Number(v);
@@ -363,9 +365,9 @@
         $('worldViewport').classList.add('result-backdrop');
         if (this.onViewportChange) this.onViewportChange();
         const next = result.win && this.expedition ? this.expedition.encounter : null,
-          nextPanel = next ? `<section class="result-next"><div class="result-next-body"><div class="eyebrow">NEXT / STAGE ${this.expedition!.depth + 1}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2>${renderMissionBriefing(next.mission)}${renderExpeditionOpponents(this.expedition!)}</div></section>` : '';
+          nextPanel = next ? `<section class="result-next">${uiSkin()}<div class="result-next-body"><div class="eyebrow">NEXT / STAGE ${this.expedition!.depth + 1}</div><h2>${esc(BATTLEFIELDS[next.map].name)}</h2>${renderMissionBriefing(next.mission)}${renderExpeditionOpponents(this.expedition!)}</div></section>` : '';
         $('modal').classList.add('hidden');
-        $('result').innerHTML = `<main class="result-screen ${result.win ? 'victory' : 'defeat'}"><div class="result-shell"><header class="result-hero"><div class="result-symbol">${uiIcon(result.win ? 'shield' : 'skull')}</div><h1>${result.win ? 'MILITARY VICTORY' : 'DEFEAT'}</h1><p>${result.win ? `STAGE ${this.expedition?.depth || 0} CLEARED` : esc(result.text)}</p></header>${result.win ? '<p class="muted">The next stage is ready. You can first develop this world and configure civilian upgrades with local Echo.</p>' : ''}${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}${nextPanel}<nav class="result-actions">${result.win ? '<button class="secondary" data-ui="developWorld">CONTINUE BUILDING <span>→</span></button><button class="primary" data-ui="continueExpedition">CONTINUE EXPEDITION <span>→</span></button>' : '<button class="primary" data-ui="battle">NEW EXPEDITION <span>→</span></button>'}<button class="secondary" data-ui="home">MAIN MENU <span>→</span></button></nav></div></main>`;
+        $('result').innerHTML = `<main class="result-screen ${result.win ? 'victory' : 'defeat'}"><div class="result-shell"><header class="result-hero"><div class="result-symbol">${uiIcon(result.win ? 'shield' : 'skull')}</div><h1>${result.win ? 'MILITARY VICTORY' : 'DEFEAT'}</h1><p>${result.win ? `STAGE ${this.expedition?.depth || 0} CLEARED` : esc(result.text)}</p></header>${result.win ? '<p class="muted">The next stage is ready. You can first develop this world and configure civilian upgrades with local Echo.</p>' : ''}${this.factionJustUnlocked === null ? '' : `<p class="unlock-notice">NEW FACTION UNLOCKED · ${esc(FACTIONS[this.factionJustUnlocked].name)} is ready for deployment.</p>`}${nextPanel}<nav class="result-actions">${result.win ? `<button class="secondary" data-ui="developWorld">${uiSkin()}CONTINUE BUILDING <span>→</span></button><button class="primary" data-ui="continueExpedition">${uiSkin()}CONTINUE EXPEDITION <span>→</span></button>` : `<button class="primary" data-ui="battle">${uiSkin()}NEW EXPEDITION <span>→</span></button>`}<button class="secondary" data-ui="home">${uiSkin()}MAIN MENU <span>→</span></button></nav></div></main>`;
         $('result').classList.remove('hidden');
       }
     };

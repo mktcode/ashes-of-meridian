@@ -244,7 +244,7 @@
           label + costLabel + supplyLabel + (opts.favoriteSlot !== undefined ? ' · Hold to replace favorite' :
             this.editFavoriteSlot !== null && (kind === 'build' || kind === 'train') ? ` · Assign to quick access slot ${this.editFavoriteSlot + 1}` : '');
         const name = active ? `${label} · Cancel targeting` : baseLabel;
-        return `<button ${opts.favoriteSlot !== undefined ? `data-favorite-slot="${opts.favoriteSlot}" ` : ''}class="action ${editing ? 'favorite-edit' : ''} ${preview ? 'model-action' : ''} ${opts.disabled ? 'blocked' : ''} ${active ? 'active cancel-target' : ''} ${tutorialAction === key ? 'tutorial-focus' : ''}" data-action="${key}" data-label="${esc(baseLabel)}" aria-label="${esc(name)}" title="${esc(name)}"${kind === 'build' || kind === 'ability' || kind === 'rally' ? ` aria-pressed="${active}"` : ''}>${preview || uiIcon(kind === 'tab' ? key : ic, ic)}${cost ? `<span class="cost" aria-hidden="true"><span>${cost.cost} C</span>${cost.gas ? `<span>${cost.gas} E</span>` : ''}</span>` : ''}${kind === 'ability' ? `<small data-badge="${key}" aria-hidden="true">${active ? '' : opts.badge || ''}</small>` : ''}</button>`;
+        return `<button ${opts.favoriteSlot !== undefined ? `data-favorite-slot="${opts.favoriteSlot}" ` : ''}class="action ${editing ? 'favorite-edit' : ''} ${preview ? 'model-action' : ''} ${opts.disabled ? 'blocked' : ''} ${active ? 'active cancel-target' : ''} ${tutorialAction === key ? 'tutorial-focus' : ''}" data-action="${key}" data-label="${esc(baseLabel)}" aria-label="${esc(name)}" title="${esc(name)}"${kind === 'build' || kind === 'ability' || kind === 'rally' ? ` aria-pressed="${active}"` : ''}>${uiSkin()}${preview || uiIcon(kind === 'tab' ? key : ic, ic)}${cost ? `<span class="cost" aria-hidden="true"><span>${cost.cost} C</span>${cost.gas ? `<span>${cost.gas} E</span>` : ''}</span>` : ''}${kind === 'ability' ? `<small data-badge="${key}" aria-hidden="true">${active ? '' : opts.badge || ''}</small>` : ''}</button>`;
       },
       renderActions(this: MeridianUI, supply?: number, capacity?: number) {
         if (this.battleTutorial?.step === 'trainRifle' || this.battleTutorial?.step === 'buildDepot') {
@@ -312,13 +312,13 @@
           family = civilizationBuildingFamily(b.type) === 'research' ? 'Research' : 'Residential',
           unavailable = b.upgrade && !civilizationUpgradeAllowed(b.type, b.upgrade),
           label = level >= 3 ? 'Fully expanded · Rank 3' : `Expand to rank ${level + 1} · ${nextCost} Echo`;
-        return `<div class="settlement-upgrades"><header><strong>${family} upgrade · Rank ${level || '—'}</strong>${unavailable ? '<small>The stored effect is unavailable for this family; choose a listed effect or clear it. Purchased ranks are kept.</small>' : ''}</header><div class="settlement-controls"><button data-action="settlementExpand" data-label="${esc(label)}">${esc(label)}</button><button data-action="settlementClear" data-label="Clear effect · Keep purchased rank">Clear effect</button></div><div class="settlement-effect-list" role="group" aria-label="Choose building upgrade">${contentKeys(CIVILIZATION_UPGRADES).filter(key => civilizationUpgradeAllowed(b.type, key)).map(key => {
+        return `<div class="settlement-upgrades"><header><strong>${family} upgrade · Rank ${level || '—'}</strong>${unavailable ? '<small>The stored effect is unavailable for this family; choose a listed effect or clear it. Purchased ranks are kept.</small>' : ''}</header><div class="settlement-controls"><button data-action="settlementExpand" data-label="${esc(label)}">${uiSkin()}${esc(label)}</button><button data-action="settlementClear" data-label="Clear effect · Keep purchased rank">${uiSkin()}Clear effect</button></div><div class="settlement-effect-list" role="group" aria-label="Choose building upgrade">${contentKeys(CIVILIZATION_UPGRADES).filter(key => civilizationUpgradeAllowed(b.type, key)).map(key => {
           const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key,
             rule = civilizationUpgradeUnique(key) ? 'Once per expedition; extra buildings or ranks do not strengthen this effect.' :
               effect.max !== undefined && effect.max < 999999 ? `Stacks across worlds, up to ${effect.max} ranks.` : 'Stacks across all cleared worlds.',
             cost = level ? selected ? 'Selected' : 'Free switch' : `${CIVILIZATION_UPGRADE_COSTS[0]} Echo`,
             text = `${effect.name} · ${cost}`;
-          return `<button class="settlement-effect${selected ? ' active' : ''}" data-action="settlementUpgrade:${key}" data-label="${esc(text)}" aria-pressed="${selected}"><span class="sigil">${uiIcon(key, effect.icon)}</span><span><strong>${esc(effect.name)}</strong><small>${esc(effect.desc)} ${esc(rule)}</small></span><em>${cost}</em></button>`;
+          return `<button class="settlement-effect${selected ? ' active' : ''}" data-action="settlementUpgrade:${key}" data-label="${esc(text)}" aria-pressed="${selected}">${uiSkin()}<span class="sigil">${uiIcon(key, effect.icon)}</span><span><strong>${esc(effect.name)}</strong><small>${esc(effect.desc)} ${esc(rule)}</small></span><em>${cost}</em></button>`;
         }).join('')}</div></div>`;
       },
       renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
@@ -346,7 +346,7 @@
             actions += button('rotateLeft', 'Rotate left', 'rotateLeft') + button('rotateRight', 'Rotate right', 'rotateRight');
           } else actions = button('cancelBuild', 'Cancel construction', 'cancel');
         }
-        const markup = `<span class="selection-avatar ${producer ? 'has-queue' : ''}">${avatar}${dots}</span>${e.kind === 'unit' && list.every(e => e.kind === 'unit') ? `<button class="selection-summary" data-action="tab:details" aria-label="${esc(name)} · Unit details">${summary}</button>` : `<div class="selection-summary">${summary}</div>`}<div class="building-controls">${actions}${button('clearSelection', 'Clear selection', 'close')}</div>`;
+        const markup = `${uiSkin()}<span class="selection-avatar ${producer ? 'has-queue' : ''}">${avatar}${dots}</span>${e.kind === 'unit' && list.every(e => e.kind === 'unit') ? `<button class="selection-summary" data-action="tab:details" aria-label="${esc(name)} · Unit details">${summary}</button>` : `<div class="selection-summary">${summary}</div>`}<div class="building-controls">${actions}${button('clearSelection', 'Clear selection', 'close')}</div>`;
         if (el.innerHTML !== markup) el.innerHTML = markup;
       },
       updateHUDLayout(this: MeridianUI) {
@@ -378,7 +378,7 @@
           this.paused = true;
           this.clearMode();
           this.openModal('sell',
-            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. ${b.type === 'meridianforum' ? 'Stored Cinder is lost; its settlement disappears gradually.' : b.kind === 'building' && b.forumId !== undefined ? 'This free settlement building yields no purchase refund. Its Forum will grow a replacement if space permits.' : 'The structure is removed immediately; supply capacity may decrease.'}</p><div class="launch-row"><button class="primary" data-ui="confirmSale">SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">KEEP STRUCTURE</button></div>`);
+            `<div class="eyebrow">SELL STRUCTURE</div><h1>Sell ${esc(buildingName(b.type, b.faction))}?</h1><p>Refund: <b>${refund.cost} Cinder / ${refund.gas} Echo</b>.</p><p>Includes 50% of the building’s purchase value and a full refund for all ${b.queue.length} pending recruitments. ${b.type === 'meridianforum' ? 'Stored Cinder is lost; its settlement disappears gradually.' : b.kind === 'building' && b.forumId !== undefined ? 'This free settlement building yields no purchase refund. Its Forum will grow a replacement if space permits.' : 'The structure is removed immediately; supply capacity may decrease.'}</p><div class="launch-row"><button class="primary" data-ui="confirmSale">${uiSkin()}SELL STRUCTURE</button><button class="secondary" data-ui="cancelSale">${uiSkin()}KEEP STRUCTURE</button></div>`);
         }
       },
       finishBuildingSale(this: MeridianUI, confirm: boolean) {
@@ -430,7 +430,7 @@
         if (signature !== this.queueSignature) {
           this.queueSignature = signature;
           $('productionQueue').innerHTML = types.map(type =>
-            `<button class="queue-item" data-queue-type="${type}">${icon(type)}<span class="queue-count"></span><span class="queue-time"></span></button>`
+            `<button class="queue-item" data-queue-type="${type}">${uiSkin()}${icon(type)}<span class="queue-count"></span><span class="queue-time"></span></button>`
           ).join('');
         }
         // Keep the buttons stable while animating from simulation progress (also correct after pause/load).

@@ -25,9 +25,10 @@ class MeridianModelThumbnails {
     p.bucket = (map,key,mesh=key,source=mesh) =>
       MeridianRenderer.prototype.bucket.call(p,map,key,mesh,source,8);
   }
-  update(root: HTMLElement) {
+  update(root: HTMLElement, allowRender = true) {
     const clip = root.getBoundingClientRect();
-    let canRender = true;
+    // Cache-only hydration is safe during UI construction, outside the render callback.
+    let canRender = allowRender;
     // Cold misses render at most once per frame. Cache hits only copy 2D pixels
     // into new/reconfigured DOM nodes; unchanged tiles do no drawing at all.
     for (const tile of root.querySelectorAll<HTMLCanvasElement>('canvas[data-model-kind]')) {
@@ -59,15 +60,15 @@ class MeridianModelThumbnails {
     const key = [faction,kind,type,r.quality,width,height,zoom,
       r.textureResources?.metal?.resident ?? false,r.textureResources?.bio?.resident ?? false].join(':');
     if (this.applied.get(tile) === key && tile.width === width && tile.height === height) return 'unchanged';
+    const cached = this.cache.get(key);
+    if (!cached && !allowRender) return false;
     const context = tile.getContext('2d');
     if (!context) return false;
-    const cached = this.cache.get(key);
     if (cached) {
       this.cache.delete(key); this.cache.set(key,cached);
       this.apply(tile,context,cached,key);
       return 'cached';
     }
-    if (!allowRender) return false;
     const image = document.createElement('canvas'), imageContext = image.getContext('2d');
     if (!imageContext) return false;
     image.width = width; image.height = height;
@@ -151,7 +152,7 @@ class MeridianModelThumbnails {
       const oldest = this.cache.keys().next().value!, evicted = this.cache.get(oldest)!;
       this.cache.delete(oldest); evicted.width = evicted.height = 0;
     }
-    this.apply(tile,context,image,key);
+    this.apply(tile,context,image,key,true);
     return 'rendered';
   }
   private multisampleTarget(width: number, height: number): WebGLFramebuffer | null {
@@ -203,10 +204,12 @@ class MeridianModelThumbnails {
     g.deleteRenderbuffer(this.msaa.color); g.deleteRenderbuffer(this.msaa.depth); g.deleteRenderbuffer(this.msaa.output);
     this.msaa = null;
   }
-  private apply(tile: HTMLCanvasElement, context: CanvasRenderingContext2D, image: HTMLCanvasElement, key: string) {
+  private apply(tile: HTMLCanvasElement, context: CanvasRenderingContext2D, image: HTMLCanvasElement, key: string, fresh = false) {
     if (tile.width !== image.width) tile.width = image.width;
     if (tile.height !== image.height) tile.height = image.height;
     context.drawImage(image,0,0);
+    // Fade only the first cold image, never cached pixels or in-place refreshes.
+    tile.dataset.modelImage = fresh && !this.applied.has(tile) ? 'fresh' : 'cached';
     this.applied.set(tile,key);
   }
   dispose() {

@@ -12,7 +12,7 @@
 .codex-section-title { max-width: 1200px; margin: 30px auto 14px; color: #e9d3a5; font-size: 19px }
 .codex-screen > .codex-grid { padding: 0; border: 0; background: none; box-shadow: none }
 .codex-grid { max-width: 1200px; margin: auto; display: grid; grid-template-columns: repeat(auto-fill,minmax(155px,1fr)); gap: 12px }
-.codex-card { min-width: 0; padding: 0 0 12px; border: 1px solid #758f985c; background: #0a1b27; color: #e3f1ee; text-align: left; cursor: pointer; }
+.codex-card { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; min-width: 0; padding: 0 0 12px; border: 1px solid #758f985c; background: #0a1b27; color: #e3f1ee; text-align: left; cursor: pointer; }
 .codex-card:hover, .codex-card:focus-visible { border-color: #7ee6ec; background: #163647 }
 .codex-card .codex-thumbnail { width: 100%; height: auto; aspect-ratio: 1; display: block; background: #0b1822; pointer-events: none; }
 .codex-card strong { display: block; padding: 9px 12px 2px; font-size: 13px }
