@@ -216,7 +216,7 @@
   --ui-fill: linear-gradient(112deg, #befcff36, transparent 29% 72%, #ffffff16),
     linear-gradient(180deg, #99efff 0%, #53cde9 10%, #1d8dbb 53%, #329fc3 62%, #74e4f5 100%);
   --ui-inner: .85;
-  --ui-light: drop-shadow(0 0 12px #16c8ff39);
+  --ui-light: var(--ui-glow);
   color: #03131e;
   text-shadow: 0 1px #b3f4ff65;
   font-weight: 650;
