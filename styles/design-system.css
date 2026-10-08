@@ -438,12 +438,6 @@
   --ui-edge: #294652;
   --ui-inner: 0;
 }
-#hud #commandDeck {
-  --ui-cut: 12px;
-  --ui-fill: var(--ui-material-panel);
-  --ui-inner: .32;
-  --ui-edge: linear-gradient(135deg, #6193a9, #294a65 15%, #1b354e 47%, #4a7d94 79%, #234158);
-}
 #hud .resource .ui-icon { width: 24px; height: 28px; filter: drop-shadow(0 0 4px #63deff66) }
 #hud .resource strong { color: var(--ui-ink) }
 #hud .resource.power strong { color: var(--ui-energy) }

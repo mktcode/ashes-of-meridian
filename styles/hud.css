@@ -3,7 +3,7 @@
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 3 }
 #hud button, #hud canvas { pointer-events: auto }
 #hud button { touch-action: manipulation }
-#topbar { position: absolute; inset: 0 0 auto; height: calc(var(--topbar-height) + env(safe-area-inset-top)); padding: calc(env(safe-area-inset-top) + 2px) calc(env(safe-area-inset-right) + 6px) 2px calc(env(safe-area-inset-left) + 6px); display: flex; align-items: center; gap: 6px; pointer-events: auto }
+#topbar { position: absolute; top: calc(env(safe-area-inset-top) + var(--hud-inset)); left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); height: var(--topbar-height); padding: 2px 6px; display: flex; align-items: center; gap: 6px; pointer-events: auto }
 #battleLabel { order: 1; flex: 0 0 auto; max-width: 44px; padding-left: 4px; font: 8px/14px var(--mono); color: var(--muted) }
 .resource-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1; min-width: 0; gap: 0 4px }
 .resource { display: flex; align-items: center; min-width: 0; gap: 3px }
@@ -13,7 +13,7 @@
 #gameControls { order: 2; position: relative; display: flex; gap: 4px; flex: 0 0 auto }
 #gameControls button { width: 44px; height: 44px; padding: 4px; font: 14px var(--mono) }
 #speedHint { position: absolute; top: calc(100% + 8px); right: 0; width: min(260px, 75vw); padding: 12px; font: 12px/1.5 var(--mono); pointer-events: none; z-index: 5 }
-#battleNotices { position: absolute; top: calc(var(--hud-top) + 10px); left: 8px; right: 8px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px }
+#battleNotices { position: absolute; top: calc(var(--hud-top) + 10px); left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px }
 #tutorialGoal { width: 340px; max-width: 100%; padding: 10px 14px; pointer-events: none }
 #tutorialGoalText { margin: 5px 0 0; overflow-wrap: anywhere }
 #alerts { min-width: 0; max-width: 100%; margin-left: auto; text-align: right; font: 11px var(--mono) }
@@ -24,7 +24,7 @@
 #radioName { font: 9px var(--mono) }
 #radioText { font-size: 11px; margin: 5px 0 0; line-height: 1.5 }
 #radioClose { position: absolute; right: 0; top: 0 }
-#commandDeck { position: absolute; left: env(safe-area-inset-left); right: env(safe-area-inset-right); bottom: env(safe-area-inset-bottom); height: var(--map-size); display: grid; grid-template-columns: var(--map-size) minmax(0, 1fr); align-items: end; background: #092331; pointer-events: none }
+#commandDeck { position: absolute; left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); bottom: calc(env(safe-area-inset-bottom) + var(--hud-inset)); height: var(--map-size); display: grid; grid-template-columns: var(--map-size) minmax(0, 1fr); column-gap: var(--hud-gap); align-items: end; background: transparent; pointer-events: none }
 #commandDeck section { min-width: 0; min-height: 0 }
 .minimap-panel { width: var(--map-size); height: var(--map-size) }
 #minimap { display: block; width: 100%; height: 100%; background: #071019; cursor: pointer }
@@ -72,7 +72,7 @@
 .building-controls .action { width: 32px; height: 44px }
 .building-controls .action svg, .building-controls .action .ui-icon { width: 20px; height: 20px }
 #actionPanel.details-panel { height: min(280px, 45svh); background: #092331 }
-#hud #actionPanel.settlement-panel { position: absolute; bottom: 0; left: var(--map-size); right: 0; height: var(--map-size); background: #092331 }
+#hud #actionPanel.settlement-panel { position: absolute; bottom: 0; left: calc(var(--map-size) + var(--hud-gap)); right: 0; height: var(--map-size); background: #092331 }
 #hud .settlement-upgrades { padding: 8px; font-size: 12px; line-height: 1.45 }
 #hud .settlement-upgrades header { display: grid; gap: 4px; margin-bottom: 8px }
 #hud .settlement-upgrades small { display: block; font-size: 11px; color: var(--muted) }
@@ -91,7 +91,7 @@
 .details-body { padding: 8px; font-size: 11px }
 .details-body p { margin: 6px 0 }
 .details-body section { margin-bottom: 10px }
-#productionQueue { position: absolute; left: max(6px, env(safe-area-inset-left)); bottom: var(--queue-floor); max-height: max(54px, calc(100svh - var(--queue-floor) - var(--hud-top) - 8px)); display: flex; flex-direction: column; gap: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; pointer-events: auto }
+#productionQueue { position: absolute; left: calc(env(safe-area-inset-left) + var(--hud-inset)); bottom: var(--queue-floor); max-height: max(54px, calc(100svh - var(--queue-floor) - var(--hud-top) - 8px)); display: flex; flex-direction: column; gap: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; pointer-events: auto }
 .queue-item { width: 54px; height: 54px; flex-shrink: 0; border: 0; position: relative; background: #122737; color: var(--ink); overflow: hidden }
 .queue-item::after { content: ''; position: absolute; inset: 0; background: conic-gradient(transparent var(--progress, 0deg), #eaf8ff66 0); pointer-events: none }
 .queue-item svg { width: 32px; height: 32px }
@@ -105,7 +105,7 @@
 .action.tutorial-focus, #speedBtn.tutorial-focus { z-index: 2; animation: tutorial-focus 1.15s ease-in-out infinite }
 @keyframes tutorial-focus { 0%, 100% { box-shadow: inset 0 0 0 1px #efd28c, 0 0 5px #efd28c88 } 50% { box-shadow: inset 0 0 0 3px #fff0b4, 0 0 18px #f2c45dcc } }
 @media (prefers-reduced-motion: reduce) { .action.tutorial-focus, #speedBtn.tutorial-focus { animation: none; box-shadow: inset 0 0 0 3px #fff0b4 } }
-@media (max-width: 359px) { :root { --map-size: 132px } .resource strong { font-size: 11px } #battleLabel { max-width: 36px; font-size: 7px } }
+@media (max-width: 359px) { :root { --map-size: 132px; --hud-inset: 4px; --hud-gap: 4px } .resource strong { font-size: 11px } #battleLabel { max-width: 36px; font-size: 7px } }
 @media (min-width: 480px) { .building-controls .action { width: 44px } }
 @media (min-width: 700px) { :root { --map-size: 160px } .resource-strip { display: flex; gap: 20px } .resource strong { font-size: 15px } #battleLabel { max-width: 70px; font-size: 10px } }
 @media (max-height: 500px) and (min-width: 601px) { :root { --map-size: 144px } #radio { padding-top: 8px; padding-bottom: 8px } #radioText { line-height: 1.3 } }
