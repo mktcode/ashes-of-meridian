@@ -49,10 +49,13 @@ lebende Einstellungen, erhaltene Skins nach Neurendering sowie konstante Weltma�
 und Minimap-/Kataloghöhe bei 320×568 und 844×390. Das bestätigt keine subjektive
 Stiltreue oder Geräteleistung. Doppelkonturen, Bloom, kleine HUD-Eckschienen und
 Statusfarben benötigen weiterhin menschliche Abnahme, auch bei heller Spielwelt.
-Die freigestellte untere Leiste und eingerückten HUD-Ränder sind technisch bei
+Die freigestellten Leisten und eingerückten HUD-Ränder sind technisch bei
 320×568, 375×667, 844×390 und 1298×900 geprüft, einschließlich Minimap-Spalt,
-Katalog-/Zivilpanel-Ausrichtung und unveränderter Weltgröße. Wirkung und
-Bedienbarkeit der freien Randflächen bleiben in Firefox und auf Touch-Geräten abzunehmen.
+Katalog-/Zivilpanel-Ausrichtung und unveränderter Weltgröße. Separate Ressourcen-/
+Stageflächen, identische Tempo-/Pause-Skins nach Zahlenupdates und ausgeschnittene
+Minimap-Ecken sind unter `file://` in Chromium geprüft. Wirkung und Bedienbarkeit
+der freien Randflächen und kleinen Stageanzeige bleiben in Firefox und auf
+Touch-Geräten abzunehmen.
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und
 Screenreader-Bedienung. Reduzierte Filterkosten sind kein gemessener Performancegewinn;

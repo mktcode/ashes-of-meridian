@@ -84,7 +84,7 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .expedition-benefit-row, .result-reward, .result-next),
 #modal .ui-select,
-#hud :is(.action, .queue-item, .minimap-panel, .settlement-upgrades button, #pauseBtn) {
+#hud :is(.action, .queue-item, .minimap-panel, .settlement-upgrades button, .resource-strip, #battleLabel, #speedBtn, #pauseBtn) {
   position: relative;
   overflow: visible;
 }
@@ -432,29 +432,28 @@
 
 /* HUD: existing dense hit areas and dimensions, individual inset material skins. */
 #hud #commandDeck button:focus-visible { outline-offset: -2px }
-#hud #topbar {
-  --ui-cut: 0px;
-  --ui-fill: linear-gradient(110deg, #10232bf5, #050c12f5);
-  --ui-edge: #294652;
-  --ui-inner: 0;
-}
+#hud .resource-strip { --ui-cut: 8px }
+#hud #battleLabel { --ui-cut: 6px; --ui-fill: var(--ui-material-panel); --ui-inner: .32 }
+#hud #battleLabel small { color: var(--ui-muted); font: 7px/9px var(--mono); letter-spacing: .08em }
+#hud #battleStage { color: var(--ui-accent); font: 600 15px/18px var(--mono) }
 #hud .resource .ui-icon { width: 24px; height: 28px; filter: drop-shadow(0 0 4px #63deff66) }
 #hud .resource strong { color: var(--ui-ink) }
 #hud .resource.power strong { color: var(--ui-energy) }
 #hud .resource small { color: var(--ui-muted) }
-#hud #pauseBtn { display: grid; place-items: center; --ui-cut: 6px }
+#hud :is(#speedBtn, #pauseBtn) { display: grid; place-items: center; --ui-cut: 6px }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
 #hud .action { --ui-cut: 7px }
-#hud :is(.action, .queue-item, #pauseBtn) > .ui-skin { inset: 2px }
+#hud :is(.action, .queue-item, .resource-strip, #battleLabel, #speedBtn, #pauseBtn) > .ui-skin { inset: 2px }
 #hud .action .action-model { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px) }
 #hud .catalog-grid .action-model { height: calc(100% - 16px) }
 #hud .action .cost { left: 4px; right: 4px; bottom: 3px; color: var(--ui-gold); background: linear-gradient(transparent, #071522e8); z-index: 1 }
 #hud .action small { color: var(--ui-energy); font-size: 10px; z-index: 1; top: 4px; right: 6px }
 #hud .action.blocked small { color: #adb0ce }
 #hud .action.active .ui-icon { filter: drop-shadow(0 0 3px #8af7ffad) drop-shadow(0 0 8px #42cffa85) }
-#hud .minimap-panel > .ui-skin { z-index: 1; --ui-cut: 9px; --ui-inner: .5 }
+#hud .minimap-panel { --ui-cut: 9px }
+#hud .minimap-panel > .ui-skin { z-index: 1; --ui-inner: .5 }
 #hud .minimap-panel .ui-rim { clip-path: polygon(evenodd, 9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px, 9px 0, 9.8px 2px, calc(100% - 9.8px) 2px, calc(100% - 2px) 9.8px, calc(100% - 2px) calc(100% - 9.8px), calc(100% - 9.8px) calc(100% - 2px), 9.8px calc(100% - 2px), 2px calc(100% - 9.8px), 2px 9.8px, 9.8px 2px, 9px 0) }
-#hud #minimap { background: #041019 }
+#hud #minimap { background: #041019; clip-path: polygon(var(--ui-cut) 0, calc(100% - var(--ui-cut)) 0, 100% var(--ui-cut), 100% calc(100% - var(--ui-cut)), calc(100% - var(--ui-cut)) 100%, var(--ui-cut) 100%, 0 calc(100% - var(--ui-cut)), 0 var(--ui-cut)) }
 #hud #selectionStatus { --ui-cut: 8px; --ui-fill: var(--ui-material-panel); --ui-inner: .22 }
 #hud .selection-queue i { background: #79e2b633 }
 #hud .selection-queue i.occupied { background: var(--ui-success); box-shadow: 0 0 4px #79e2b640 }
@@ -477,7 +476,7 @@
 #hud #radioClose { width: 44px; height: 44px; padding: 13px }
 #hud #radioClose .ui-icon { width: 17px; height: 17px }
 /* Frequently text-replaced signals use two CSS-only layers, never runtime observers. */
-#hud :is(#speedBtn, #speedHint, .alert), #toast {
+#hud :is(#speedHint, .alert), #toast {
   --ui-cut: 6px;
   --ui-edge: #38607a;
   --ui-fill: linear-gradient(#102333, #091621);
@@ -488,8 +487,8 @@
   background: transparent;
   box-shadow: none;
 }
-#hud :is(#speedBtn, #speedHint, .alert)::before, #toast::before,
-#hud :is(#speedBtn, #speedHint, .alert)::after, #toast::after {
+#hud :is(#speedHint, .alert)::before, #toast::before,
+#hud :is(#speedHint, .alert)::after, #toast::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -499,10 +498,8 @@
   clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
   background: var(--ui-edge);
 }
-#hud :is(#speedBtn, #speedHint, .alert)::after, #toast::after { inset: 1px; --c: calc(var(--ui-cut) - .585786px); background: var(--ui-fill) }
+#hud :is(#speedHint, .alert)::after, #toast::after { inset: 1px; --c: calc(var(--ui-cut) - .585786px); background: var(--ui-fill) }
 #hud #speedHint { position: absolute; --ui-cut: 10px; --ui-fill: var(--ui-material-panel); backdrop-filter: none }
-#hud #speedBtn:hover:not(:disabled) { --ui-edge: #63deff; --ui-fill: var(--ui-material-active) }
-#hud #speedBtn:active:not(:disabled) { --ui-fill: linear-gradient(#020912, #16435a) }
 #hud .alert { --ui-cut: 8px; --ui-edge: #b28543; --ui-fill: linear-gradient(#242c2b, #131e27); color: var(--ui-gold) }
 #hud .alert.danger { --ui-edge: #af6065; --ui-fill: linear-gradient(#322632, #1b1824); color: var(--ui-danger) }
 #toast { position: fixed; --ui-cut: 10px; --ui-edge: #84b9ce; --ui-fill: linear-gradient(#193b51, #0c2132); color: var(--ui-ink); filter: drop-shadow(0 0 16px #38caff30); line-height: 1.5 }
@@ -522,6 +519,10 @@
   #modal .armory-grid:not(.command-module-grid) .upgrade-levels { grid-area: levels; align-self: center; margin: 0 }
   #modal .armory-grid:not(.command-module-grid) .secondary { grid-area: purchase }
 }
+@media (max-width: 699px) {
+  #hud .resource .ui-icon { width: 15px; height: 18px }
+  #hud .resource:has(#supplyCount) .ui-icon { width: 19px }
+}
 @media (max-width: 600px) {
   #menu .subscreen { padding: 20px 16px }
   #menu .sub-header { align-items: flex-start; gap: 12px }
@@ -537,8 +538,6 @@
   #result .benefit-option strong { font-size: 13px }
   #result .benefit-option small { font-size: 12px; margin-top: 5px }
   #hud #abilityBar .action .ui-icon { width: 22px; height: 22px }
-  #hud .resource .ui-icon { width: 15px; height: 21px }
-  #hud .resource:has(#supplyCount) .ui-icon { width: 19px }
   #hud #radioName { font-size: 9px; letter-spacing: .1em }
 }
 @media (max-width: 360px) { #hud .resource .ui-icon { width: 12px; height: 17px } }
@@ -556,13 +555,13 @@
 @media (forced-colors: active) {
   :is(#menu, #modal, #result, #hud) .ui-skin { display: none }
   :is(#menu, #modal, #result, #hud) :has(> .ui-skin),
-  #hud :is(#speedBtn, #speedHint, .alert), #toast {
+  #hud :is(#speedHint, .alert), #toast {
     border: 1px solid ButtonText;
     background: Canvas;
     color: CanvasText;
   }
   :is(#menu, #modal, #result, #hud) :is(.active, [aria-pressed='true']):has(> .ui-skin) { outline: 2px solid Highlight; outline-offset: -2px }
   #modal .settings-row input[type='checkbox'] { appearance: auto }
-  #hud :is(#speedBtn, #speedHint, .alert)::before, #hud :is(#speedBtn, #speedHint, .alert)::after,
+  #hud :is(#speedHint, .alert)::before, #hud :is(#speedHint, .alert)::after,
   #toast::before, #toast::after { display: none }
 }

@@ -1576,6 +1576,7 @@ test('speed changes are transient, pause-guarded and preserve commands and RNG',
   const h = setup(), g = h.ui.game;
   Object.assign(g.s.parties[0].account, { alloy: 100, gas: 0, energy: 100, abilities: {} });
   Object.assign(g, { supply: () => 0, cap: () => 24 });
+  g.s.depth = 6;
   h.ui.updateHUD = h.UI.prototype.updateHUD;
   h.UI.prototype.bind.call(h.ui);
   const button = h.document.getElementById('speedBtn'), profile = JSON.stringify(h.ui.profile);
@@ -1585,10 +1586,12 @@ test('speed changes are transient, pause-guarded and preserve commands and RNG',
   g.s.entities = [{ id: 7, kind: 'unit', team: 0, hp: 100, order }];
   h.ui.selected = [7]; h.ui.mode = mode; h.ui.attackMove = true;
   h.ui.updateHUD();
+  assert.equal(h.document.getElementById('battleStage').textContent, '7');
   for (const speed of [2, 3, 1, 2, 3, 1]) {
     h.ui.lastClick = { id: 7, count: 1 };
     button.onclick();
     assert.equal(g.s.speed, speed);
+    assert.equal(h.document.getElementById('speedValue').textContent, speed + '×');
     assert.deepEqual(h.ui.selected, [7]); assert.strictEqual(h.ui.mode, mode);
     assert.strictEqual(g.s.entities[0].order, order); assert.equal(h.ui.attackMove, true);
     assert.equal(Object.keys(h.ui.lastClick).length, 0);

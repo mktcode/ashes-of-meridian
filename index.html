@@ -33,8 +33,10 @@
   <div id="result" class="screen hidden"></div>
   <div id="modal" class="screen hidden"></div>
   <div id="hud" class="hidden">
-    <header id="topbar"><span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span><div id="battleLabel"><span id="battleStage"></span></div>
-      <div class="resource-strip" aria-label="Resources">
+    <header id="topbar">
+      <div id="battleLabel" role="group" aria-label="Current stage"><span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span><small>STAGE</small><strong id="battleStage">1</strong></div>
+      <div class="resource-strip" role="group" aria-label="Resources">
+        <span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span>
         <div class="resource"><span class="resicon alloy" aria-hidden="true"><img class="ui-icon" src="./assets/ui/cinder.webp" alt=""></span>
           <div><strong id="alloyCount">0</strong><small>CINDER</small></div>
         </div>
@@ -48,7 +50,7 @@
           <div><strong id="energyCount">0</strong><small>ENERGY</small></div>
         </div>
       </div>
-      <div id="gameControls" role="group" aria-label="Game speed and pause"><button id="speedBtn" aria-label="Simulation speed: 1×. Tap to change.">1×</button><button id="pauseBtn" aria-label="Pause"><span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span><img class="ui-icon" src="./assets/ui/pause.webp" alt="" aria-hidden="true"></button><div id="speedHint" class="glass hidden" role="tooltip">Construction takes a moment. You can increase the game speed here.</div></div>
+      <div id="gameControls" role="group" aria-label="Game speed and pause"><button id="speedBtn" aria-label="Simulation speed: 1×. Tap to change."><span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span><span id="speedValue">1×</span></button><button id="pauseBtn" aria-label="Pause"><span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span><img class="ui-icon" src="./assets/ui/pause.webp" alt="" aria-hidden="true"></button><div id="speedHint" class="glass hidden" role="tooltip">Construction takes a moment. You can increase the game speed here.</div></div>
     </header>
     <div id="battleNotices">
       <section id="tutorialGoal" class="hidden" role="status" aria-labelledby="tutorialGoalLabel">

@@ -3,14 +3,14 @@
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 3 }
 #hud button, #hud canvas { pointer-events: auto }
 #hud button { touch-action: manipulation }
-#topbar { position: absolute; top: calc(env(safe-area-inset-top) + var(--hud-inset)); left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); height: var(--topbar-height); padding: 2px 6px; display: flex; align-items: center; gap: 6px; pointer-events: auto }
-#battleLabel { order: 1; flex: 0 0 auto; max-width: 44px; padding-left: 4px; font: 8px/14px var(--mono); color: var(--muted) }
-.resource-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1; min-width: 0; gap: 0 4px }
+#topbar { position: absolute; top: calc(env(safe-area-inset-top) + var(--hud-inset)); left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); height: var(--topbar-height); padding: 0; display: flex; align-items: center; gap: 6px; background: transparent; pointer-events: none }
+#battleLabel { order: 1; flex: 0 0 44px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: auto }
+.resource-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1; min-width: 0; height: 44px; padding: 2px 10px; gap: 0 4px; pointer-events: auto }
 .resource { display: flex; align-items: center; min-width: 0; gap: 3px }
 .resource strong { font: 12px/18px var(--mono); letter-spacing: -.3px; white-space: nowrap }
 .resource small { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0 }
 .resicon { display: flex; flex: 0 0 auto }
-#gameControls { order: 2; position: relative; display: flex; gap: 4px; flex: 0 0 auto }
+#gameControls { order: 2; position: relative; display: flex; gap: 4px; flex: 0 0 auto; pointer-events: auto }
 #gameControls button { width: 44px; height: 44px; padding: 4px; font: 14px var(--mono) }
 #speedHint { position: absolute; top: calc(100% + 8px); right: 0; width: min(260px, 75vw); padding: 12px; font: 12px/1.5 var(--mono); pointer-events: none; z-index: 5 }
 #battleNotices { position: absolute; top: calc(var(--hud-top) + 10px); left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px }
@@ -105,9 +105,9 @@
 .action.tutorial-focus, #speedBtn.tutorial-focus { z-index: 2; animation: tutorial-focus 1.15s ease-in-out infinite }
 @keyframes tutorial-focus { 0%, 100% { box-shadow: inset 0 0 0 1px #efd28c, 0 0 5px #efd28c88 } 50% { box-shadow: inset 0 0 0 3px #fff0b4, 0 0 18px #f2c45dcc } }
 @media (prefers-reduced-motion: reduce) { .action.tutorial-focus, #speedBtn.tutorial-focus { animation: none; box-shadow: inset 0 0 0 3px #fff0b4 } }
-@media (max-width: 359px) { :root { --map-size: 132px; --hud-inset: 4px; --hud-gap: 4px } .resource strong { font-size: 11px } #battleLabel { max-width: 36px; font-size: 7px } }
+@media (max-width: 359px) { :root { --map-size: 132px; --hud-inset: 4px; --hud-gap: 4px } .resource strong { font-size: 11px } }
 @media (min-width: 480px) { .building-controls .action { width: 44px } }
-@media (min-width: 700px) { :root { --map-size: 160px } .resource-strip { display: flex; gap: 20px } .resource strong { font-size: 15px } #battleLabel { max-width: 70px; font-size: 10px } }
+@media (min-width: 700px) { :root { --map-size: 160px } .resource-strip { display: flex; align-items: center; flex: 0 1 auto; margin-right: auto; gap: 20px } .resource strong { font-size: 15px } }
 @media (max-height: 500px) and (min-width: 601px) { :root { --map-size: 144px } #radio { padding-top: 8px; padding-bottom: 8px } #radioText { line-height: 1.3 } }
 
 /* Existing menu/dialog responsiveness is independent of the battle HUD. */
