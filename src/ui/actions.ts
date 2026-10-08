@@ -193,12 +193,12 @@
         }
         const reason = this.actionReason(action);
         if (reason) { this.toast(reason); return; }
-        if (kind === 'settlementUpgrade' || kind === 'settlementClear' || kind === 'settlementExpand') {
+        if (kind === 'settlementUpgrade' || kind === 'settlementExpand') {
           const b = this.selectedBuilding();
           if (!b) return;
           const applied = kind === 'settlementExpand' ? this.submitAction({kind:'expandSettlementBuilding', id:b.id}) :
             this.submitAction({kind:'configureSettlementUpgrade', id:b.id,
-              upgrade:kind === 'settlementClear' ? null : arg as CivilizationUpgradeType});
+              upgrade:arg as CivilizationUpgradeType});
           if (applied) { this.audio.sound('research'); this.actionSignature = ''; this.saveBattle(); }
           this.updateHUD();
           return;
@@ -334,9 +334,10 @@
           unavailable = b.upgrade && !civilizationUpgradeAllowed(b.type, b.upgrade),
           rule = civilizationUpgradeUnique(key) ? 'Once per expedition.' :
             effect.max !== undefined && effect.max < 999999 ? `Up to ${effect.max} ranks.` : '',
+          configurable = !b.upgrade || selected,
           action = selected ? 'settlementExpand' : `settlementUpgrade:${key}`,
-          label = selected ? `Rank ${level + 1} · ${CIVILIZATION_UPGRADE_COSTS[level]} Echo` : `Activate · ${level ? 'Free switch' : CIVILIZATION_UPGRADE_COSTS[0] + ' Echo'}`;
-        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header><span class="settlement-icon" aria-hidden="true">${uiIcon(key, effect.icon)}</span><strong>${esc(effect.name)}</strong>${this.actionButton('settlementBack', 'Close upgrade details', 'close')}</header><p>${esc(effect.desc)}</p>${rule ? `<small>${esc(rule)}</small>` : ''}<div class="settlement-rank">Rank ${level || '—'} · ${selected ? level >= 3 ? 'Fully expanded' : 'Active' : 'Inactive'}</div>${unavailable ? '<small>The stored effect is unavailable for this family. Switching or clearing keeps purchased ranks.</small>' : ''}<div class="settlement-controls">${selected && level >= 3 ? '' : `<button class="action settlement-control" data-action="${action}" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button>`}${b.upgrade ? this.actionButton('settlementClear', 'Clear effect · Keep purchased rank', 'cancel') : ''}</div></section>`;
+          label = selected ? `Rank ${level + 1} · ${CIVILIZATION_UPGRADE_COSTS[level]} Echo` : `Activate · ${level ? 'Free' : CIVILIZATION_UPGRADE_COSTS[0] + ' Echo'}`;
+        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header><span class="settlement-icon" aria-hidden="true">${uiIcon(key, effect.icon)}</span><strong>${esc(effect.name)}</strong>${this.actionButton('settlementBack', 'Close upgrade details', 'close')}</header><p>${esc(effect.desc)}</p>${rule ? `<small>${esc(rule)}</small>` : ''}<div class="settlement-rank">Rank ${level || '—'} · ${selected ? level >= 3 ? 'Fully expanded' : 'Active' : 'Inactive'}</div>${unavailable ? '<small>The stored effect is unavailable for this family and cannot be changed through the HUD.</small>' : !configurable ? '<small>This building already has a permanent upgrade.</small>' : ''}${configurable && !(selected && level >= 3) ? `<div class="settlement-controls"><button class="action settlement-control" data-action="${action}" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button></div>` : ''}</section>`;
       },
       renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
         const list = this.selected.map(id => this.game.get(id)).filter((e): e is Entity => !!e), el = $('selectionStatus');
@@ -504,9 +505,13 @@
         }
         const b = this.selectedBuilding();
         if (kind === 'settlementExpand') return this.game.settlementExpansionReason(b?.id || 0, team);
-        if (kind === 'settlementClear') return this.game.settlementUpgradeReason(b?.id || 0, null, team);
-        if (kind === 'settlementUpgrade') return hasContentKey(CIVILIZATION_UPGRADES, arg)
-          ? this.game.settlementUpgradeReason(b?.id || 0, arg, team) : 'Unknown upgrade effect.';
+        // UI policy only: simulation commands retain switch/clear support.
+        if (kind === 'settlementClear') return 'Activated upgrades cannot be cleared.';
+        if (kind === 'settlementUpgrade') {
+          if (!hasContentKey(CIVILIZATION_UPGRADES, arg)) return 'Unknown upgrade effect.';
+          if (b?.upgrade && b.upgrade !== arg) return 'This building already has a permanent upgrade.';
+          return this.game.settlementUpgradeReason(b?.id || 0, arg, team);
+        }
         if (['repair', 'sell', 'rotateLeft', 'rotateRight'].includes(kind) && this.mode) return 'Cancel targeting first.';
         if (kind === 'repair') return !b ? 'Select an own structure.' : this.game.buildingRepairers(b.id, team).length ? '' : this.game.canRepairBuilding(b.id, team);
         if (kind === 'sell') return this.game.canSellBuilding(this.selected[0], team);

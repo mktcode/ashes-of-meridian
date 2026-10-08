@@ -1579,7 +1579,13 @@ test('civilian HUD choices carry the selected building ID and obey pause guards'
   ui.perform('settlementBack');assert.equal(ui.settlementDetail,null);
   ui.perform('settlementInspect:startingAlloy');assert.equal(ui.settlementDetail,null);
   ui.perform('settlementExpand');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'expandSettlementBuilding',id:7}]);
-  ui.perform('settlementClear');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:null}]);
+  const activated=JSON.stringify(b),commands=h.calls.filter(c=>c[0]==='action').length;
+  assert.match(ui.actionReason('settlementClear'),/cannot be cleared/);
+  assert.match(ui.actionReason('settlementUpgrade:scan'),/permanent upgrade/);
+  ui.perform('settlementClear');ui.perform('settlementUpgrade:scan');
+  assert.equal(h.calls.filter(c=>c[0]==='action').length,commands);assert.equal(JSON.stringify(b),activated);
+  ui.perform('settlementInspect:scan');assert.equal(ui.settlementDetail.upgrade,'scan');
+  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/data-action="settlement(?:Upgrade:|Expand|Clear)/);
   const count=h.calls.length;ui.paused=true;ui.perform('settlementUpgrade:scan');assert.equal(h.calls.length,count);
 });
 
@@ -2095,15 +2101,14 @@ test('civilian effect grids fit twelve slots and separate family icons from deta
     const details=h.ui.renderSettlementUpgrades(b);
     assert.match(details,/data-action="settlementBack"/);
     assert.match(details,/data-action="settlementExpand"/);
-    assert.doesNotMatch(details,/settlementInspect:/);
+    assert.doesNotMatch(details,/settlementInspect:|data-action="settlementClear"/);
     assert.equal(JSON.stringify(b),before);
   }
   h.ui.settlementDetail={buildingId:7,upgrade:'startingAlloy'};
   const unavailable=h.ui.renderSettlementUpgrades({id:7,type:'embercottage',upgrade:'orbital',upgradeLevel:2});
   assert.match(unavailable,/stored effect is unavailable/);
-  assert.match(unavailable,/data-action="settlementClear"/);
-  assert.match(unavailable,/Activate · Free switch/);
-  assert.doesNotMatch(unavailable,/data-action="settlementExpand"/);
+  assert.match(unavailable,/cannot be changed through the HUD/);
+  assert.doesNotMatch(unavailable,/data-action="settlement(?:Upgrade:|Expand|Clear)/);
 });
 
 test('home and transition previews use the actual next landscape and atmosphere seed', () => {

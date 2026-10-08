@@ -14,15 +14,6 @@ Run-Briefing, Loadout, Gegner und Gebäudeboni stehen im Sternchen-Modal, nicht 
 den Startaktionen. Es unterscheidet Boni für neu gestartete Gefechte von den eingefrorenen
 Boni eines gespeicherten Gefechts. Die Checkpoint-/Landschaftsvorschau bleibt auf dem
 Startbildschirm. Civilization-Score-Anzeigen und Zugangsbalken entfallen.
-Bei Auswahl eines gewachsenen Zivilgebäudes ersetzt eine scrollbar lesbare Textliste
-den unteren Aktionsblock. Wohn- und cyanfarbene Forschungsgebäude haben disjunkte
-Effektlisten; die Überschrift nennt die Familie, auch nach dem Ausbau. Eine gespeicherte,
-nicht mehr passende Auswahl erhält einen Hinweis statt einer auswählbaren Zeile.
-Jede Zeile zeigt Effektbeschreibung, Stapelgrenze und
-Auswahl-/Kostenstatus; Ausbau und Leeren stehen darüber. Ein allgemeiner Erklärungstext
-entfällt. Das scrollbare Upgrade-Panel ist genauso hoch wie die Minimap; die Auswahlzeile
-sitzt unmittelbar über beiden, ohne freien Bereich über der Karte. Die Liste verändert weder Rendergröße noch Weltprojektion.
-
 Das aktuelle Tutorialziel bleibt als passives Panel oben links unter der Statuszeile sichtbar, unabhängig vom geöffneten Aktionsreiter. Alle Tutorialphasen haben ein Ziel; Supply-Ziele zeigen zusätzlich die aktuelle Belegung/Kapazität. Hinweise gehören nicht in den schmalen Bau-/Rekrutierungs-Scrollbereich. Warnungen bleiben rechts und weichen bei Platzmangel unter das Zielpanel aus; die Anzeige fängt keine Welt-/Kameraeingaben ab. Zahlenänderungen aktualisieren nur den Zieltext, nicht das Aktionsmarkup.
 
 Tokens und Selektoren bleiben auf `#menu`, `#modal`, `#result`, `#loading`, `#hud`
@@ -44,8 +35,11 @@ links auf einer eigenen Materialfläche ohne Buttonfunktion und bleiben auch auf
 schmalen Displays nebeneinander. Eine Stageanzeige im HUD entfällt.
 Zivilisationsupgrades nutzen dasselbe 4×3-Katalograster, ausschließlich mit Icons.
 Eine separate Detailansicht ersetzt das Raster: freies Upgrade-Icon links,
-X-Button rechts zur Rückkehr, darunter Aktivieren und anschließend Rang-Ausbau. Sie wächst ohne Scrollfläche nach oben; Minimap und
-Auswahlleiste bleiben getrennt und die Welt fullscreen.
+X-Button rechts zur Rückkehr, darunter Aktivieren und anschließend Rang-Ausbau.
+Ein Clear-Button entfällt; Details anderer Effekte bleiben nach Aktivierung lesbar,
+ohne eine neue Aktivierungsaktion anzubieten. Die Detailansicht wächst ohne
+Scrollfläche nach oben; Minimap und Auswahlleiste bleiben getrennt und die Welt fullscreen.
+Die Regeln und die Grenze zur Simulation stehen unter [zivilen Upgrades](gameplay.md#wirtschaft-bau-und-produktion).
 Pause und Tempo nutzen identische Button-Skins und Zustände; ein, zwei oder drei
 Pfeile markieren die Geschwindigkeit, der genaue Faktor bleibt in der zugänglichen
 Beschriftung. Dynamische Werte werden in eigenen Textknoten aktualisiert,
