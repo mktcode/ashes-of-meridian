@@ -41,9 +41,10 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
 }
 #menu .home-screen {
   --home-checkpoint-size: clamp(105px, 17vh, 150px);
-  font-family: Aldrich, 'Segoe UI', sans-serif;
-  background: linear-gradient(90deg, #03111cbb, #03111c33 60%, transparent),
-    linear-gradient(0deg, #03111cdd, transparent 65%);
+  font-family: var(--ui-font);
+  background: radial-gradient(ellipse at 0% 0%, #103c4e25, transparent 42%),
+    linear-gradient(90deg, #050c12dd, #050c1233 60%, transparent),
+    linear-gradient(0deg, #050c12dd, transparent 65%);
 }
 #menu .home-layout {
   display: flex;
@@ -109,7 +110,7 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
 #menu .home-screen .stage-label {
   order: 1;
   margin: 0;
-  font: 11px/1.5 Aldrich, sans-serif;
+  font: 11px/1.5 var(--ui-data);
   color: var(--stage-accent);
   letter-spacing: 2px;
   text-shadow: none;
@@ -123,7 +124,7 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
   background: url('../assets/ui/checkpoint.webp') center / contain no-repeat;
 }
 #menu .home-screen .stage-crystal strong {
-  font: 400 clamp(44px, 7vh, 62px)/1 Aldrich, sans-serif;
+  font: 400 clamp(44px, 7vh, 62px)/1 var(--ui-font);
   letter-spacing: 0;
   transform: translateY(.06em);
   text-shadow: 0 0 14px #92faff88;
@@ -141,7 +142,7 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
   background: transparent;
   border: 0;
   border-radius: 0;
-  color: #69e7ff;
+  color: var(--ui-accent);
   transform: translateY(-50%);
   transition: color .16s, filter .16s;
 }
@@ -178,23 +179,23 @@ body:has(#loading:not(.hidden)) #menu .home-screen * {
 #menu .home-screen .menu-buttons button {
   min-height: 52px;
   padding: 13px 18px;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
-  letter-spacing: 1.5px;
+  letter-spacing: .025em;
   justify-content: space-between;
 }
 #menu .home-screen .continue-row { gap: 10px }
 #menu .home-screen .continue-row .primary { justify-content: center; text-align: center }
-#menu .home-screen .continue-row .primary > span { display: none }
+#menu .home-screen .continue-row .primary > span:not(.ui-skin) { display: none }
 #menu .home-screen .continue-row .expedition-perks-button { flex-basis: 54px; width: 54px; padding: 12px }
 #menu .home-screen .menu-icon { width: 25px; height: 25px }
 #menu .home-screen .menu-buttons .expedition-icon {
   background-image: url('../assets/ui/expedition.webp');
-  filter: sepia(1) saturate(2.5);
+  filter: none;
 }
 @media (max-width: 740px) {
   #menu .home-layout { justify-content: center; padding-inline: max(20px, env(safe-area-inset-left), env(safe-area-inset-right)) }
-  #menu .home-screen { background: linear-gradient(0deg, #03111ce6, #03111c22 70%) }
+  #menu .home-screen { background: linear-gradient(0deg, #050c12e6, #050c1222 70%) }
   #menu .home-screen .menu-main { width: 390px; gap: 24px }
 }
 @media (max-height: 700px) {

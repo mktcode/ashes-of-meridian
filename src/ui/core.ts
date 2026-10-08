@@ -25,6 +25,10 @@
         ? `<img class="ui-icon" src="./assets/ui/${UI_ICON_ASSETS[name]}.webp" alt="" aria-hidden="true" draggable="false">`
         : icon(fallback);
     }
+    // Decorative material layers only; never participate in layout, focus or input.
+    function uiSkin(): string {
+      return '<span class="ui-skin" aria-hidden="true"><span class="ui-rim"></span><span class="ui-fill"></span><span class="ui-inner"></span><span class="ui-corners"><i></i><i></i><i></i><i></i></span></span>';
+    }
     type UIMode = { kind: 'build'; arg: BuildingType } | { kind: 'ability'; arg: AbilityType } | { kind: 'rally'; arg?: undefined };
     type UITab = 'root' | 'build' | 'infantry' | 'vehicles' | 'aircraft' | 'details';
     interface UIPing extends Position { life: number; maxLife: number; color: number; }

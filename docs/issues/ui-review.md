@@ -2,7 +2,7 @@
 
 Geltungsbereich: Menüs, Codex, Dialoge, Flottenupgrades, Ergebnisse und Gefechts-HUD
 im gemeinsamen [Designsystem](../ui-design-system.md). Die folgenden technischen
-Grenzen bestehen unabhängig vom übernommenen Demo-Look.
+Grenzen bestehen unabhängig von der übernommenen Moodboard-Materialgestaltung.
 
 ## Fokus und Dialogsemantik
 
@@ -43,6 +43,12 @@ CPU-Fog-Isolation, Partei-/Sichtstufenfilter und ausbleibende Scan-Korridore sin
 Auch die fest verankerten, kantengeglätteten Baugrid-Linien benötigen visuelle Abnahme
 bei weitem Zoom, niedriger Renderauflösung und Drehung: GPU-Stichproben prüfen die
 Linienfilterung, nicht flimmerfreie Bewegung auf Zielgeräten.
+Die Moodboard-Materialrahmen sind unter `file://` in Chromium/Software-WebGL
+technisch geprüft: dekorative Ebenen ohne Pointer-Eingriff, hohle Diagonalkonturen,
+lebende Einstellungen, erhaltene Skins nach Neurendering sowie konstante Weltmaße
+und Minimap-/Kataloghöhe bei 320×568 und 844×390. Das bestätigt keine subjektive
+Stiltreue oder Geräteleistung. Doppelkonturen, Bloom, kleine HUD-Eckschienen und
+Statusfarben benötigen weiterhin menschliche Abnahme, auch bei heller Spielwelt.
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und
 Screenreader-Bedienung. Reduzierte Filterkosten sind kein gemessener Performancegewinn;
