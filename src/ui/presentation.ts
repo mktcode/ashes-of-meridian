@@ -236,12 +236,13 @@
           let selected = selectedIds.has(e.id),
             hover = this.hover === e.id;
           if (!g.visible(e)) continue;
+          if (e.type === 'meridianforum' && !selected) continue;
           let damaged = e.hp < e.maxHp * 0.97;
           if (
             !selected &&
             !hover &&
             !(this.profile.settings.healthbars && e.kind === 'unit') &&
-            !(e.type === 'meridianforum' && e.team === this.localTeam) && !damaged
+            !damaged
           )
             continue;
           if (e.kind === 'resource' && !selected && !hover) continue;

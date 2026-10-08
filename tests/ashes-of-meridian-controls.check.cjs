@@ -2553,20 +2553,34 @@ test('building rotation arrows exist only for completed own buildings and obey a
   }
 });
 
-test('own Forum world bars remain visible without selection or healthbar settings and update from live state',()=>{
+test('Forum world bars require selection even when hovered or damaged and update from live state',()=>{
   const h=buildingPanel(),g=h.ui.game,texts=[],rects=[];
   Object.assign(h.b,{type:'meridianforum',hp:200,maxHp:200,size:4,x:200,z:200,cinderStock:100});
   g.s.entities.push({...h.b,id:8,type:'fieldlab',forumId:7});
   h.ui.selected=[];h.ui.profile.settings.healthbars=false;
   const ctx=new Proxy({fillText(text){texts.push(text);},fillRect(...args){rects.push(args);}},
     {get:(target,key)=>target[key] || (()=>{})});
-  const limits=vm.runInContext('FORUM_SETTLEMENT',h.context),before=JSON.stringify(g.s);
+  const limits=vm.runInContext('FORUM_SETTLEMENT',h.context);
+  for(const healthbars of [false,true]) for(const hover of [null,h.b.id]) for(const hp of [200,100]) {
+    h.ui.profile.settings.healthbars=healthbars;h.ui.hover=hover;h.b.hp=hp;
+    texts.length=0;rects.length=0;
+    h.ui.drawOverlay(ctx);
+    assert.ok(!texts.some(text=>/^(Cinder|Buildings) /.test(text)),'unselected Forum hides stock and building bars');
+    assert.ok(!rects.some(r=>r[2]===100&&r[3]===7),'unselected Forum hides HP bar');
+  }
+  h.ui.selected=[h.b.id];h.ui.hover=null;h.b.hp=200;h.ui.profile.settings.healthbars=false;
+  texts.length=0;rects.length=0;
+  const before=JSON.stringify(g.s);
   h.ui.drawOverlay(ctx);
   assert.ok(texts.includes(`Cinder 100/${limits.capacity}`));assert.ok(texts.includes(`Buildings 1/${limits.buildings}`));
   assert.ok(rects.some(r=>r[2]===100&&r[3]===7),'HP bar has ownership border');
   assert.equal(JSON.stringify(g.s),before);
   h.b.cinderStock=200;g.s.entities.push({...h.b,id:9,type:'fieldlab',forumId:7});texts.length=0;
   h.ui.drawOverlay(ctx);assert.ok(texts.includes(`Cinder 200/${limits.capacity}`));assert.ok(texts.includes(`Buildings 2/${limits.buildings}`));
+  h.ui.selected=[];texts.length=0;rects.length=0;
+  h.ui.drawOverlay(ctx);
+  assert.ok(!texts.some(text=>/^(Cinder|Buildings) /.test(text)),'deselection hides settlement bars again');
+  assert.ok(!rects.some(r=>r[2]===100&&r[3]===7),'deselection hides HP bar again');
 });
 
 test('Forum stock belongs in world bars; managed children retain rotation, sale and foundation cancellation',()=>{
