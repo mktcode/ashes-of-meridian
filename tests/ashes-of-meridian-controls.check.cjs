@@ -1589,6 +1589,7 @@ test('speed changes are transient, pause-guarded and preserve commands and RNG',
     h.ui.lastClick = { id: 7, count: 1 };
     button.onclick();
     assert.equal(g.s.speed, speed);
+    assert.equal(h.document.getElementById('speedValue').textContent, '▶'.repeat(speed));
     assert.deepEqual(h.ui.selected, [7]); assert.strictEqual(h.ui.mode, mode);
     assert.strictEqual(g.s.entities[0].order, order); assert.equal(h.ui.attackMove, true);
     assert.equal(Object.keys(h.ui.lastClick).length, 0);

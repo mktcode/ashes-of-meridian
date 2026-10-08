@@ -3,17 +3,16 @@
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 3 }
 #hud button, #hud canvas { pointer-events: auto }
 #hud button { touch-action: manipulation }
-#topbar { position: absolute; inset: 0 0 auto; height: calc(var(--topbar-height) + env(safe-area-inset-top)); padding: calc(env(safe-area-inset-top) + 2px) calc(env(safe-area-inset-right) + 6px) 2px calc(env(safe-area-inset-left) + 6px); display: flex; align-items: center; gap: 6px; pointer-events: auto }
-#battleLabel { order: 1; flex: 0 0 auto; max-width: 44px; padding-left: 4px; font: 8px/14px var(--mono); color: var(--muted) }
-.resource-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1; min-width: 0; gap: 0 4px }
+#topbar { position: absolute; top: calc(env(safe-area-inset-top) + var(--hud-inset)); left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); height: var(--topbar-height); padding: 0; display: flex; align-items: center; gap: 6px; background: transparent; pointer-events: none }
+.resource-strip { display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 0; height: 44px; padding: 2px 14px; gap: 4px; pointer-events: auto }
 .resource { display: flex; align-items: center; min-width: 0; gap: 3px }
 .resource strong { font: 12px/18px var(--mono); letter-spacing: -.3px; white-space: nowrap }
 .resource small { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0 }
 .resicon { display: flex; flex: 0 0 auto }
-#gameControls { order: 2; position: relative; display: flex; gap: 4px; flex: 0 0 auto }
+#gameControls { order: 2; position: relative; display: flex; gap: 4px; flex: 0 0 auto; pointer-events: auto }
 #gameControls button { width: 44px; height: 44px; padding: 4px; font: 14px var(--mono) }
 #speedHint { position: absolute; top: calc(100% + 8px); right: 0; width: min(260px, 75vw); padding: 12px; font: 12px/1.5 var(--mono); pointer-events: none; z-index: 5 }
-#battleNotices { position: absolute; top: calc(var(--hud-top) + 10px); left: 8px; right: 8px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px }
+#battleNotices { position: absolute; top: calc(var(--hud-top) + 10px); left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px }
 #tutorialGoal { width: 340px; max-width: 100%; padding: 10px 14px; pointer-events: none }
 #tutorialGoalText { margin: 5px 0 0; overflow-wrap: anywhere }
 #alerts { min-width: 0; max-width: 100%; margin-left: auto; text-align: right; font: 11px var(--mono) }
@@ -24,7 +23,7 @@
 #radioName { font: 9px var(--mono) }
 #radioText { font-size: 11px; margin: 5px 0 0; line-height: 1.5 }
 #radioClose { position: absolute; right: 0; top: 0 }
-#commandDeck { position: absolute; left: env(safe-area-inset-left); right: env(safe-area-inset-right); bottom: env(safe-area-inset-bottom); height: var(--map-size); display: grid; grid-template-columns: var(--map-size) minmax(0, 1fr); align-items: end; background: #092331; pointer-events: none }
+#commandDeck { position: absolute; left: calc(env(safe-area-inset-left) + var(--hud-inset)); right: calc(env(safe-area-inset-right) + var(--hud-inset)); bottom: calc(env(safe-area-inset-bottom) + var(--hud-inset)); height: var(--map-size); display: grid; grid-template-columns: var(--map-size) minmax(0, 1fr); column-gap: var(--hud-gap); align-items: end; background: transparent; pointer-events: none }
 #commandDeck section { min-width: 0; min-height: 0 }
 .minimap-panel { width: var(--map-size); height: var(--map-size) }
 #minimap { display: block; width: 100%; height: 100%; background: #071019; cursor: pointer }
@@ -55,24 +54,23 @@
 #hud .action.cancel-target::after { content: '×'; position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; background: #092331aa; color: #fff; font: 32px/1 system-ui, sans-serif; text-shadow: 0 1px 3px #000; pointer-events: none; clip-path: none }
 #hud .catalog-grid .action.cancel-target::after { bottom: 22px; font-size: 22px }
 #hud .action.cancel-target small { z-index: 3 }
-#selectionStatus { position: absolute; bottom: 100%; left: 0; right: 0; display: flex; flex-wrap: nowrap; gap: 4px; height: 44px; background: #092331; pointer-events: auto }
-.selection-avatar { display: grid; place-items: center; width: 32px; height: 44px; flex: 0 0 32px }
+#selectionStatus { position: absolute; bottom: calc(100% + var(--hud-gap)); left: 0; right: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; min-height: 44px; padding: 4px 10px; background: #092331; pointer-events: auto }
+.selection-avatar { display: grid; place-items: center; width: 32px; height: 44px; flex: 0 0 32px; overflow: hidden }
 .selection-avatar.has-queue { grid-template-rows: 32px 8px; align-content: center }
 .selection-model, .selection-avatar .ui-icon { width: 32px; height: 32px; pointer-events: none }
 .selection-queue { display: flex; align-items: center; justify-content: flex-start; gap: 2px; width: 100%; height: 8px }
 .selection-queue i { width: 4px; height: 4px; border-radius: 50%; background: #6beddf33 }
 .selection-queue i.occupied { background: #6beddf }
-.selection-summary { display: flex; flex-direction: column; justify-content: center; flex: 1 1 0; min-width: 0; padding: 2px 0; overflow: hidden; text-align: left }
+.selection-summary { display: flex; flex-direction: column; justify-content: center; flex: 1 1 100px; min-width: 0; padding: 2px 0; overflow: hidden; text-align: left }
 .summary-title { display: block; max-width: 100%; font: 11px/16px var(--mono); overflow: hidden; white-space: nowrap; text-overflow: ellipsis }
 .selection-health { position: relative; display: block; width: 100%; min-width: 0; background: linear-gradient(90deg, #337b7566 var(--health), #071520 0); border: 0; font: 10px/14px var(--mono) }
 .selection-health.enemy { background: linear-gradient(90deg, #8e4b4266 var(--health), #071520 0) }
 .selection-health > span { display: block; padding: 0 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis }
 .shield-meter { position: absolute; left: 0; bottom: 0; height: 2px; background: #b5adf0 }
-.building-controls { display: flex; flex: 0 0 auto; gap: 1px }
-.building-controls .action { width: 32px; height: 44px }
-.building-controls .action svg, .building-controls .action .ui-icon { width: 20px; height: 20px }
+.building-controls { display: flex; flex-wrap: wrap; flex: 0 1 auto; max-width: 100%; margin-left: auto; justify-content: flex-end; gap: 4px }
+.building-controls .action { width: 44px; height: 44px; flex: 0 0 44px }
 #actionPanel.details-panel { height: min(280px, 45svh); background: #092331 }
-#hud #actionPanel.settlement-panel { position: absolute; bottom: 0; left: var(--map-size); right: 0; height: var(--map-size); background: #092331 }
+#hud #actionPanel.settlement-panel { position: absolute; bottom: 0; left: calc(var(--map-size) + var(--hud-gap)); right: 0; height: var(--map-size); background: #092331 }
 #hud .settlement-upgrades { padding: 8px; font-size: 12px; line-height: 1.45 }
 #hud .settlement-upgrades header { display: grid; gap: 4px; margin-bottom: 8px }
 #hud .settlement-upgrades small { display: block; font-size: 11px; color: var(--muted) }
@@ -91,7 +89,7 @@
 .details-body { padding: 8px; font-size: 11px }
 .details-body p { margin: 6px 0 }
 .details-body section { margin-bottom: 10px }
-#productionQueue { position: absolute; left: max(6px, env(safe-area-inset-left)); bottom: var(--queue-floor); max-height: max(54px, calc(100svh - var(--queue-floor) - var(--hud-top) - 8px)); display: flex; flex-direction: column; gap: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; pointer-events: auto }
+#productionQueue { position: absolute; left: calc(env(safe-area-inset-left) + var(--hud-inset)); bottom: var(--queue-floor); max-height: max(54px, calc(100svh - var(--queue-floor) - var(--hud-top) - 8px)); display: flex; flex-direction: column; gap: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; pointer-events: auto }
 .queue-item { width: 54px; height: 54px; flex-shrink: 0; border: 0; position: relative; background: #122737; color: var(--ink); overflow: hidden }
 .queue-item::after { content: ''; position: absolute; inset: 0; background: conic-gradient(transparent var(--progress, 0deg), #eaf8ff66 0); pointer-events: none }
 .queue-item svg { width: 32px; height: 32px }
@@ -105,9 +103,9 @@
 .action.tutorial-focus, #speedBtn.tutorial-focus { z-index: 2; animation: tutorial-focus 1.15s ease-in-out infinite }
 @keyframes tutorial-focus { 0%, 100% { box-shadow: inset 0 0 0 1px #efd28c, 0 0 5px #efd28c88 } 50% { box-shadow: inset 0 0 0 3px #fff0b4, 0 0 18px #f2c45dcc } }
 @media (prefers-reduced-motion: reduce) { .action.tutorial-focus, #speedBtn.tutorial-focus { animation: none; box-shadow: inset 0 0 0 3px #fff0b4 } }
-@media (max-width: 359px) { :root { --map-size: 132px } .resource strong { font-size: 11px } #battleLabel { max-width: 36px; font-size: 7px } }
+@media (max-width: 359px) { :root { --map-size: 132px; --hud-inset: 4px; --hud-gap: 4px } .resource strong { font-size: 11px } }
 @media (min-width: 480px) { .building-controls .action { width: 44px } }
-@media (min-width: 700px) { :root { --map-size: 160px } .resource-strip { display: flex; gap: 20px } .resource strong { font-size: 15px } #battleLabel { max-width: 70px; font-size: 10px } }
+@media (min-width: 700px) { :root { --map-size: 160px } .resource-strip { flex: 0 1 auto; margin-right: auto; gap: 20px } .resource strong { font-size: 15px } }
 @media (max-height: 500px) and (min-width: 601px) { :root { --map-size: 144px } #radio { padding-top: 8px; padding-bottom: 8px } #radioText { line-height: 1.3 } }
 
 /* Existing menu/dialog responsiveness is independent of the battle HUD. */

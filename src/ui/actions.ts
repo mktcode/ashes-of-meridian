@@ -341,7 +341,7 @@
         if (b) {
           if (b.progress >= 1) {
             const repairing = this.game.buildingRepairers(b.id, this.localTeam).length > 0;
-            actions = button('sell', 'Sell structure', 'cancel') + button('repair', repairing ? 'Stop repair' : 'Repair structure', 'repair');
+            actions = button('sell', 'Sell structure', 'sell') + button('repair', repairing ? 'Stop repair' : 'Repair structure', 'repair');
             if (!isCivilizationBuildingType(b.type)) actions += button('rally', 'Rally point', 'rally');
             actions += button('rotateLeft', 'Rotate left', 'rotateLeft') + button('rotateRight', 'Rotate right', 'rotateRight');
           } else actions = button('cancelBuild', 'Cancel construction', 'cancel');
@@ -463,9 +463,8 @@
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
         $('energyCount').textContent = String(Math.floor(account.energy));
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
-        speedButton.textContent = speedLabel;
+        $('speedValue').textContent = '▶'.repeat(s.speed);
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
-        $('battleStage').textContent = `STAGE ${s.depth + 1}`;
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },

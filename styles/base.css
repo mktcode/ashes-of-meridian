@@ -12,11 +12,13 @@
       --red: #f17b78;
       --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
       --topbar-height: 48px;
+      --hud-inset: 8px;
+      --hud-gap: 8px;
       --map-size: 144px;
       --row-height: calc(var(--map-size) / 3);
       --deck-height: var(--map-size);
-      --hud-height: calc(var(--map-size) + env(safe-area-inset-bottom));
-      --hud-top: calc(var(--topbar-height) + env(safe-area-inset-top));
+      --hud-height: calc(var(--map-size) + var(--hud-inset) + env(safe-area-inset-bottom));
+      --hud-top: calc(var(--topbar-height) + var(--hud-inset) + env(safe-area-inset-top));
       --queue-floor: calc(var(--hud-height) + 8px)
     }
 
@@ -27,7 +29,7 @@
     #fpsReadout {
       position: fixed;
       right: 6px;
-      top: calc(var(--topbar-height) + 6px);
+      top: calc(var(--hud-top) + 6px);
       z-index: 30;
       pointer-events: none;
       padding: 2px 4px;

@@ -30,8 +30,23 @@ und `#toast` begrenzt. Keine Theme-Tokens auf `:root`, keine globalen Buttonrege
 Funk und Warnungen gehören zum HUD; Diagnoseanzeigen und Welt bleiben außerhalb.
 Das Aktions-HUD behält seine dichten, lückenlosen Hit-Flächen. Innerhalb der Kacheln
 sitzen leicht eingerückte Materialrahmen mit Doppelkontur; ausgewählte Aktionen
-besitzen leuchtende Eckschienen. Die Ressourcenleiste bleibt platzsparend und
-rechteckig, Pause und Tempo erhalten die gemeinsame Kontrollgestaltung.
+besitzen leuchtende Eckschienen. Der untere Aktionsblock hat keine gemeinsame
+Hintergrundplatte: Zwischen den abgeschrägten Buttons bleibt die Spielwelt sichtbar.
+Beide Leisten sind mit Safe-Area-Abstand vom Bildschirmrand eingerückt;
+Minimap und Aktionsblock sind zusätzlich durch einen schmalen freien Spalt getrennt.
+Die Auswahlleiste sitzt mit demselben Abstand darüber; Innenabstände halten Avatar
+und kleine Aktionsicons innerhalb des Rahmens. Ihre 44px-Buttons haben eigene
+Zwischenräume und wechseln bei Platzmangel in eine zweite Zeile, statt den
+Auswahltext zu verdrängen. Verkaufen nutzt ein Dollarzeichen, Abbrechen weiterhin ein X.
+Auf sehr schmalen Displays werden diese Abstände für ausreichend große Hit-Flächen reduziert.
+Auch die obere Leiste hat keine gemeinsame Hintergrundplatte. Ressourcen stehen
+links auf einer eigenen Materialfläche ohne Buttonfunktion und bleiben auch auf
+schmalen Displays nebeneinander. Eine Stageanzeige im HUD entfällt.
+Pause und Tempo nutzen identische Button-Skins und Zustände; ein, zwei oder drei
+Pfeile markieren die Geschwindigkeit, der genaue Faktor bleibt in der zugänglichen
+Beschriftung. Dynamische Werte werden in eigenen Textknoten aktualisiert,
+damit die dekorativen Ebenen erhalten bleiben. Die Minimap selbst ist auf die äußere
+Fase ihres Rahmens zugeschnitten; Canvasgröße und Koordinatenabbildung bleiben gleich.
 Pausieren sperrt Eingaben, ändert aber nicht Deckkraft oder Rahmen der Kacheln;
 die Abdunklung gehört allein zum Modal-Backdrop. Fokus-, Tutorial- und
 Favoriten-Bearbeitungsmarkierungen bleiben unabhängig von dekorativen Zuständen.
