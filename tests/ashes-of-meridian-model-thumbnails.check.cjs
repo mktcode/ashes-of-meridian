@@ -133,6 +133,38 @@ test('model tile scheduling renders cold misses once and reuses cached snapshots
   assert.equal(pose(),snapshot,'recreated snapshots use the same fixed model pose and time');
 });
 
+test('cache-only hydration copies all warm tiles without capturing cold models or touching WebGL', () => {
+  const {thumbs,tile,calls,images,rect}=setup();
+  thumbs.draw(tile());thumbs.draw(tile(0,'building','hq'));
+  const first=tile(),second=tile(0,'building','hq'),cold=tile(1),
+    hidden=tile(0,'unit','rifle',{...rect,left:900,right:1060});
+  cold.getContext=()=>{throw Error('Cold hydration allocated a canvas context');};
+  const root={getBoundingClientRect:()=>({left:0,top:0,right:800,bottom:600}),
+    querySelectorAll:()=>[first,cold,second,hidden]};
+  const settled=calls.length;
+  thumbs.update(root,false);
+  assert.equal(first.copies.length,1);assert.equal(second.copies.length,1);
+  assert.equal(cold.copies.length,0);assert.equal(hidden.copies.length,0);
+  assert.equal(first.dataset.modelImage,'cached');assert.equal(second.dataset.modelImage,'cached');
+  assert.equal(cold.dataset.modelImage,undefined);
+  assert.equal(images.length,2);assert.equal(calls.length,settled);
+  thumbs.update(root,false);
+  assert.equal(first.copies.length,1);assert.equal(second.copies.length,1);
+});
+
+test('only the first cold image requests a fade; cached and in-place updates remain immediate', () => {
+  const {thumbs,tile,r}=setup(),first=tile();
+  assert.equal(thumbs.draw(first),'rendered');assert.equal(first.dataset.modelImage,'fresh');
+  assert.equal(thumbs.draw(first),'unchanged');assert.equal(first.dataset.modelImage,'fresh');
+  const reopened=tile();
+  assert.equal(thumbs.draw(reopened),'cached');assert.equal(reopened.dataset.modelImage,'cached');
+  r.quality=0;
+  assert.equal(thumbs.draw(first),'rendered');assert.equal(first.dataset.modelImage,'cached');
+  const cold=tile(1);
+  assert.equal(thumbs.draw(cold,false),false);assert.equal(cold.dataset.modelImage,undefined);
+  assert.equal(thumbs.draw(cold),'rendered');assert.equal(cold.dataset.modelImage,'fresh');
+});
+
 test('HUD thumbnail scope includes the selection portrait above the command deck', () => {
   const app=require('node:fs').readFileSync(require('node:path').join(__dirname,'../src/app.ts'),'utf8');
   assert.match(app,/\(\) => thumbnails\.update\(\$\('hud'\)\)/);

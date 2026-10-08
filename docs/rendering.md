@@ -64,6 +64,8 @@ Kleine Kacheln sind zwischengespeicherte Standbilder; nur die Codex-Detailansich
 
 Cache-Misses erzeugen höchstens ein sichtbares Modell je Renderframe und kopieren synchron aus dem Hauptcanvas; danach überschreibt die Szene das Scratch-Rechteck. **Nur innerhalb des Rendercallbacks aufnehmen.** Unterstütztes 2× MSAA wird separat aufgelöst; kein direkter MSAA-Blit in einen möglicherweise anders formatierten Hauptcanvas. Der Subpixel-Fallback braucht zwei Kopien derselben eingefrorenen Pose, keine Animation. Fehlgeschlagene Allokation nicht jeden Frame wiederholen.
 
+Der Cache bleibt über Codex-/Menüwechsel im selben Tab erhalten, nicht über Reloads. Sichtbare Cache-Hits werden schon beim Aufbau der Codex-Liste ohne WebGL-Arbeit eingesetzt; kalte Aufnahmen bleiben im Rendercallback. Nur erstmalig erzeugte Codex-Bilder blenden leicht ein, Cache-Hits und Aktualisierungen bestehender Bilder nicht. Reduzierte Bewegung überspringt das Einblenden.
+
 Verdrängte Bilder und endgültig verlassene Vorschauen geben eigene Ressourcen frei. Cache-Hits zeichnen/kopieren nicht erneut aus WebGL; Cache-Misses können trotzdem synchronisieren. [Offene Abnahme](issues/modell-kacheln.md).
 
 ## Terrain und Renderpässe

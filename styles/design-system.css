@@ -400,9 +400,13 @@
   /* Opaque model canvases must sit inside both decorative contours. */
   width: calc(100% - 12px);
   margin: 6px 6px 0;
+  opacity: 0;
   background: radial-gradient(ellipse at 50% 79%, #298cb21a, transparent 69%);
   clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
 }
+#menu .codex-card .codex-thumbnail[data-model-image] { opacity: 1 }
+#menu .codex-card .codex-thumbnail[data-model-image='fresh'] { animation: codex-image-arrive 220ms ease-out }
+@keyframes codex-image-arrive { from { opacity: 0 } to { opacity: 1 } }
 #menu .codex-card strong { text-transform: uppercase; letter-spacing: .04em; font-weight: 600 }
 #menu .codex-card span:not(.ui-skin, .ui-rim, .ui-fill, .ui-inner, .ui-corners) { color: var(--ui-muted); font-size: 11px }
 #menu .codex-section-title { color: var(--ui-accent); letter-spacing: -.03em }

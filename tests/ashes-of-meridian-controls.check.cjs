@@ -58,6 +58,22 @@ test('stage previews ignore overlapping input, failures, dialogs and stale scree
   ui.view = 'game'; await ui.browseStage(-1); assert.equal(ui.stagePreviewIndex, 1);
 });
 
+test('Codex hydrates cached model images after attaching its visible replacement DOM', () => {
+  const {ui,document}=setup(),menu=document.getElementById('menu');
+  menu.classList.add('hidden');menu.innerHTML='previous screen';
+  ui.R.clearStatic=()=>{};ui.R.useModelPreview=()=>{};
+  let hydrated=0;
+  ui.onCachedModelThumbnails=root=>{
+    assert.equal(root,menu);assert.equal(ui.view,'codex');
+    assert.equal(menu.classList.contains('hidden'),false);
+    assert.notEqual(menu.innerHTML,'previous screen');
+    hydrated++;
+  };
+  ui.showCodex();assert.equal(hydrated,1);
+  ui.showCodexModel('unit','rifle');assert.equal(hydrated,1,'live detail view does not hydrate tiles');
+  ui.showCodex();assert.equal(hydrated,2,'returning from the live model hydrates the rebuilt list');
+});
+
 test('escaping converts values and protects HTML delimiters independently of screen wording', () => {
   const context = loadScripts(['ui-core']), esc = vm.runInContext('esc', context);
   for (const [input, expected] of [[null, ''], [undefined, ''], [42, '42'],

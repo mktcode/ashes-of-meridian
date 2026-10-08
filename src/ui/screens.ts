@@ -150,6 +150,7 @@
         this.codexSelection = null;
         $('menu').classList.remove('hidden');
         $('menu').innerHTML = renderCodexScreen(this.codexFaction);
+        this.onCachedModelThumbnails?.($('menu'));
       },
       showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType) {
         this.codexSelection = {faction:this.codexFaction,kind,type};

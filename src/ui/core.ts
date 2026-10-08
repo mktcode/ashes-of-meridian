@@ -102,6 +102,7 @@
       battleAbilities: AbilityType[];
       private processExpeditionResult?: ReturnType<typeof createExpeditionResultProcessor>;
       onViewportChange?: () => void;
+      onCachedModelThumbnails?: (root: HTMLElement) => void;
       onPreview?: (map?: BattlefieldId, seed?: number, smooth?: boolean, battle?: ExpeditionBattleSave | null) => Promise<boolean>;
       onLaunchBattle?: (options: BattleOptions, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, world?: ExpeditionWorld) => Promise<boolean>;
       onLeaveBattle?: (complete: () => void | Promise<boolean>) => void;
