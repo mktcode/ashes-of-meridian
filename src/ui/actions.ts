@@ -182,6 +182,13 @@
         if (kind === 'settlementInspect' || kind === 'settlementBack') {
           const b = this.selectedBuilding();
           if (this.tab !== 'root' || !b || b.forumId === undefined || b.progress < 1) return;
+          if (b.upgrade) {
+            if (kind === 'settlementInspect') return;
+            this.settlementDetail = null;
+            this.select([]);
+            this.updateHUD();
+            return;
+          }
           if (kind === 'settlementInspect' && (!hasContentKey(CIVILIZATION_UPGRADES, arg) || !civilizationUpgradeAllowed(b.type, arg))) return;
           const previous = this.settlementDetail?.upgrade;
           this.settlementDetail = kind === 'settlementInspect' ? { buildingId: b.id, upgrade: arg as CivilizationUpgradeType } : null;
@@ -277,7 +284,8 @@
         if (this.mode?.kind === 'rally' && !this.selectedBuilding()) this.clearMode();
         const tutorialAction = this.tutorialAction(supply, capacity), f = s.parties[this.localTeam].faction,
           b = this.selectedBuilding(), civilian = this.tab === 'root' && b?.forumId !== undefined && b.progress >= 1;
-        if (this.settlementDetail && (!civilian || b?.id !== this.settlementDetail.buildingId || !civilizationUpgradeAllowed(b.type, this.settlementDetail.upgrade))) this.settlementDetail = null;
+        if (civilian && b.upgrade) this.settlementDetail = { buildingId: b.id, upgrade: b.upgrade };
+        else if (this.settlementDetail && (!civilian || b?.id !== this.settlementDetail.buildingId || !civilizationUpgradeAllowed(b.type, this.settlementDetail.upgrade))) this.settlementDetail = null;
         const button = (key: string, label: string, ic: string, opts: UIActionButtonOptions = {}) => this.actionButton(key, label, ic, opts, tutorialAction);
         const sig = [this.localTeam, this.tab, f, s.parties[this.localTeam].loadout.join(','), this.selected.join(','),
           this.mode?.kind, this.mode?.arg, tutorialAction, civilian, this.settlementDetail?.upgrade, b?.upgrade, b?.upgradeLevel, this.editFavoriteSlot, this.quickAccess().join(',')].join(':');
@@ -325,19 +333,17 @@
       renderSettlementUpgrades(this: MeridianUI, b: BuildingEntity): string {
         const level = b.upgradeLevel || 0,
           family = civilizationBuildingFamily(b.type) === 'research' ? 'Research' : 'Residential',
-          key = this.settlementDetail?.upgrade;
+          key = b.upgrade || this.settlementDetail?.upgrade;
         if (!key) return `<div class="catalog-grid settlement-grid" role="group" aria-label="${family} upgrades">${contentKeys(CIVILIZATION_UPGRADES).filter(key => civilizationUpgradeAllowed(b.type, key)).map(key => {
           const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key;
           return `<button class="action${selected ? ' active' : ''}" data-action="settlementInspect:${key}" data-label="${esc(effect.name)} · Details" aria-label="${esc(effect.name)} · Details" aria-pressed="${selected}">${uiSkin()}${uiIcon(key, effect.icon)}</button>`;
         }).join('')}</div>`;
         const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key,
           unavailable = b.upgrade && !civilizationUpgradeAllowed(b.type, b.upgrade),
-          rule = civilizationUpgradeUnique(key) ? 'Once per expedition.' :
-            effect.max !== undefined && effect.max < 999999 ? `Up to ${effect.max} ranks.` : '',
-          configurable = !b.upgrade || selected,
+          rule = civilizationUpgradeUnique(key) ? 'Once per expedition.' : '',
           action = selected ? 'settlementExpand' : `settlementUpgrade:${key}`,
           label = selected ? `Rank ${level + 1} · ${CIVILIZATION_UPGRADE_COSTS[level]} Echo` : `Activate · ${level ? 'Free' : CIVILIZATION_UPGRADE_COSTS[0] + ' Echo'}`;
-        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header><span class="settlement-icon" aria-hidden="true">${uiIcon(key, effect.icon)}</span><strong>${esc(effect.name)}</strong>${this.actionButton('settlementBack', 'Close upgrade details', 'close')}</header><p>${esc(effect.desc)}</p>${rule ? `<small>${esc(rule)}</small>` : ''}<div class="settlement-rank">Rank ${level || '—'} · ${selected ? level >= 3 ? 'Fully expanded' : 'Active' : 'Inactive'}</div>${unavailable ? '<small>The stored effect is unavailable for this family and cannot be changed through the HUD.</small>' : !configurable ? '<small>This building already has a permanent upgrade.</small>' : ''}${configurable && !(selected && level >= 3) ? `<div class="settlement-controls"><button class="action settlement-control" data-action="${action}" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button></div>` : ''}</section>`;
+        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header><span class="settlement-icon" aria-hidden="true">${uiIcon(key, effect.icon)}</span><strong>${esc(effect.name)}</strong>${this.actionButton('settlementBack', b.upgrade ? 'Close building details' : 'Back to upgrades', 'close')}</header><p>${esc(effect.desc)}</p>${rule ? `<small>${esc(rule)}</small>` : ''}${unavailable ? '<small>The stored effect is unavailable for this family and cannot be changed through the HUD.</small>' : ''}${!unavailable && !(selected && level >= 3) ? `<div class="settlement-controls"><button class="action settlement-control" data-action="${action}" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button></div>` : ''}</section>`;
       },
       renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
         const list = this.selected.map(id => this.game.get(id)).filter((e): e is Entity => !!e), el = $('selectionStatus');

@@ -33,11 +33,13 @@ Auf sehr schmalen Displays werden diese Abstände für ausreichend große Hit-Fl
 Auch die obere Leiste hat keine gemeinsame Hintergrundplatte. Ressourcen stehen
 links auf einer eigenen Materialfläche ohne Buttonfunktion und bleiben auch auf
 schmalen Displays nebeneinander. Eine Stageanzeige im HUD entfällt.
-Zivilisationsupgrades nutzen dasselbe 4×3-Katalograster, ausschließlich mit Icons.
+Unkonfigurierte Zivilgebäude nutzen dasselbe 4×3-Katalograster, ausschließlich mit Icons.
 Eine separate Detailansicht ersetzt das Raster: freies Upgrade-Icon links,
-X-Button rechts zur Rückkehr, darunter Aktivieren und anschließend Rang-Ausbau.
-Ein Clear-Button entfällt; Details anderer Effekte bleiben nach Aktivierung lesbar,
-ohne eine neue Aktivierungsaktion anzubieten. Die Detailansicht wächst ohne
+X-Button rechts, darunter Aktivieren und anschließend Rang-Ausbau.
+Nach Aktivierung öffnet jede Gebäudeauswahl ausschließlich den festen Effekt;
+X hebt die Gebäudeauswahl auf, statt ein Raster zu öffnen. Nur vor Aktivierung
+führt X zurück zur Übersicht. Clear-Button, Rank-/Active-Zeile und Ranggrenzen-Hinweis
+entfallen; bei einmaligen Effekten bleibt „Once per expedition.“. Die Detailansicht wächst ohne
 Scrollfläche nach oben; Minimap und Auswahlleiste bleiben getrennt und die Welt fullscreen.
 Die Regeln und die Grenze zur Simulation stehen unter [zivilen Upgrades](gameplay.md#wirtschaft-bau-und-produktion).
 Pause und Tempo nutzen identische Button-Skins und Zustände; ein, zwei oder drei

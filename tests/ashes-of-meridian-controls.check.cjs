@@ -1572,20 +1572,26 @@ test('civilian HUD choices carry the selected building ID and obey pause guards'
   assert.equal(JSON.stringify(b),before);assert.equal(h.calls.length,0);
   assert.match(ui.renderSettlementUpgrades(b),/data-action="settlementUpgrade:orbital"/);
   assert.doesNotMatch(ui.renderSettlementUpgrades(b),/data-action="settlementExpand"/);
-  ui.perform('settlementUpgrade:orbital');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:'orbital'}]);
-  b.upgrade='orbital';b.upgradeLevel=1;
-  assert.match(ui.renderSettlementUpgrades(b),/data-action="settlementExpand"/);
-  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/data-action="settlementUpgrade:orbital"/);
   ui.perform('settlementBack');assert.equal(ui.settlementDetail,null);
+  assert.match(ui.renderSettlementUpgrades(b),/catalog-grid/);
   ui.perform('settlementInspect:startingAlloy');assert.equal(ui.settlementDetail,null);
+  ui.perform('settlementInspect:orbital');
+  ui.perform('settlementUpgrade:orbital');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:'orbital'}]);
+  b.upgrade='orbital';b.upgradeLevel=1;ui.settlementDetail=null;
+  ui.renderActionMarkup();assert.equal(ui.settlementDetail.upgrade,'orbital');
+  assert.ok(h.document.getElementById('actionPanel').classList.contains('settlement-detail-panel'));
+  assert.match(ui.renderSettlementUpgrades(b),/data-action="settlementExpand"/);
+  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/catalog-grid|data-action="settlementUpgrade:orbital"/);
   ui.perform('settlementExpand');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'expandSettlementBuilding',id:7}]);
   const activated=JSON.stringify(b),commands=h.calls.filter(c=>c[0]==='action').length;
   assert.match(ui.actionReason('settlementClear'),/cannot be cleared/);
   assert.match(ui.actionReason('settlementUpgrade:scan'),/permanent upgrade/);
   ui.perform('settlementClear');ui.perform('settlementUpgrade:scan');
   assert.equal(h.calls.filter(c=>c[0]==='action').length,commands);assert.equal(JSON.stringify(b),activated);
-  ui.perform('settlementInspect:scan');assert.equal(ui.settlementDetail.upgrade,'scan');
-  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/data-action="settlement(?:Upgrade:|Expand|Clear)/);
+  ui.perform('settlementInspect:scan');assert.equal(ui.settlementDetail.upgrade,'orbital');
+  ui.perform('settlementBack');assert.equal(ui.settlementDetail,null);assert.deepEqual([...ui.selected],[]);
+  ui.selected=[7];ui.renderActionMarkup();assert.equal(ui.settlementDetail.upgrade,'orbital');
+  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/catalog-grid|settlementInspect:/);
   const count=h.calls.length;ui.paused=true;ui.perform('settlementUpgrade:scan');assert.equal(h.calls.length,count);
 });
 
@@ -2088,7 +2094,7 @@ test('civilian effect grids fit twelve slots and separate family icons from deta
   for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower']){
     h.ui.settlementDetail=null;
     const research=type.startsWith('research')||type==='fieldlab',key=research?'orbital':'startingAlloy',
-      b={id:7,type,upgrade:key,upgradeLevel:2},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
+      b={id:7,type,upgradeLevel:0},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
     assert.match(html,/class="catalog-grid settlement-grid"/);
     assert.match(html,new RegExp(`${research?'Research':'Residential'} upgrades`));
     assert.doesNotMatch(html,/<p>|<small>|data-action="settlementUpgrade:/);
@@ -2096,13 +2102,18 @@ test('civilian effect grids fit twelve slots and separate family icons from deta
     assert.equal(slots,research?12:9);assert.ok(slots<=12);
     for(const effect of Object.keys(rules.CIVILIZATION_UPGRADES))
       assert.equal(html.includes(`data-action="settlementInspect:${effect}"`),rules.civilizationUpgradeAllowed(type,effect));
-    assert.match(html,new RegExp(`data-action="settlementInspect:${key}"[^>]*aria-pressed="true"`));
+    assert.match(html,new RegExp(`data-action="settlementInspect:${key}"[^>]*aria-pressed="false"`));
     h.ui.settlementDetail={buildingId:7,upgrade:key};
-    const details=h.ui.renderSettlementUpgrades(b);
+    const preview=h.ui.renderSettlementUpgrades(b);
+    assert.match(preview,new RegExp(`data-action="settlementUpgrade:${key}"`));
+    assert.doesNotMatch(preview,/settlement-rank|Up to \d+ ranks/);
+    assert.equal(JSON.stringify(b),before);
+    b.upgrade=key;b.upgradeLevel=2;h.ui.settlementDetail=null;
+    const activated=JSON.stringify(b),details=h.ui.renderSettlementUpgrades(b);
     assert.match(details,/data-action="settlementBack"/);
     assert.match(details,/data-action="settlementExpand"/);
-    assert.doesNotMatch(details,/settlementInspect:|data-action="settlementClear"/);
-    assert.equal(JSON.stringify(b),before);
+    assert.doesNotMatch(details,/catalog-grid|settlementInspect:|settlement-rank|Up to \d+ ranks|data-action="settlementClear"/);
+    assert.equal(JSON.stringify(b),activated);
   }
   h.ui.settlementDetail={buildingId:7,upgrade:'startingAlloy'};
   const unavailable=h.ui.renderSettlementUpgrades({id:7,type:'embercottage',upgrade:'orbital',upgradeLevel:2});
