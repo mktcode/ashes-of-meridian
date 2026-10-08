@@ -4,12 +4,13 @@ Zentrale Übersicht für Singleplayer-Performance, Speicher-/Thermikdruck und Gr
 
 ## Aktueller Stand und Priorität
 
-- **Desktop, RTX 3090 laut Nutzer:** Nach den jüngsten Änderungen ist der Nutzer vorerst zufrieden. Chromium erscheint im getesteten Spielabschnitt nahezu konstant bei 60 FPS, gelegentlich 59 und selten 58; Firefox erreicht weiterhin nicht konstant 60 FPS. Dies ist aktuelle menschliche Rückmeldung, keine neue kontrollierte Browser-A/B-Aufnahme oder allgemeine Leistungszusage.
+- **Frühere Desktop-Rückmeldung, RTX 3090 laut Nutzer:** In einem früheren Spielabschnitt war der Nutzer zufrieden. Chromium erschien im getesteten Spielabschnitt nahezu konstant bei 60 FPS, gelegentlich 59 und selten 58; Firefox erreichte nicht konstant 60 FPS. Dies war menschliche Rückmeldung, keine kontrollierte Browser-A/B-Aufnahme oder allgemeine Leistungszusage.
 - **Chromium bleibt die Diagnosebasis.** Die verbleibende Firefox-Differenz ist offen, aber kein Anlass für einen vorsorglichen Engine- oder Qualitätsumbau. Ein gleicher Seed allein reicht nicht zum Browservergleich: Spielstand, Kamera, Tageszeit, Auflösung und parallele Tabs beeinflussen die Last.
+- **Dichte Einheiten und Auswahl:** Aktuell meldet der Nutzer spürbare Framedrops bei dicht beieinanderstehenden Einheiten; Verteilen auf der Karte verbessert die Framerate. Auch einzelne Auswahlen können kurze Einbrüche auslösen. Keine aktuelle CPU-/GPU-Zuordnung: Bewegung/Yield/Recovery und räumlich überlappende Licht-/Renderarbeit getrennt prüfen, Auswahl nicht automatisch als Wegsuche interpretieren.
 - **Mobilstabilität bleibt offen:** Pixel 7, Chrome, High: schnelle Erwärmung, gelegentliche Freezes bzw. `webglcontextlost`; nach sofortigem Reload wurde vorübergehend fehlendes WebGL 2 gemeldet. Dauer, Karten-/Buildkontext und konkrete Abbruchdaten fehlen. GPU-Reset, Speicher- oder Thermikdruck sind Hypothesen, kein bewiesener Leak.
 - **Integrierte GPUs und andere Szenen sind nicht allgemein abgenommen.** Positive Desktop-Rückmeldung ersetzt keine Mobil-/Laptop-, dichte-Armee-, Langrun- oder Weltwechselabnahme.
 
-Vorrang bei erneutem Bedarf: mobile Abbrüche und reproduzierbare Einzelhänger zuordnen. Auf dem aktuell zufriedenstellenden Desktopstand besteht kein Auftrag zur weiteren Optimierung. Die folgenden Kandidaten sind Messfragen, keine automatische Implementierungs- oder Lastlauffreigabe.
+Aktuell dichte Armeen und Auswahlhänger getrennt eingrenzen; mobile Abbrüche bleiben ebenfalls offen. Die folgenden Kandidaten sind Messfragen, keine automatische Implementierungs- oder Lastlauffreigabe.
 
 ## Verbleibende CPU-Spitzen
 
@@ -47,6 +48,7 @@ Genaue Klickprüfung und aktuelle Sicht-/Belegung erhalten, keine zusätzliche W
 
 ### Modellkacheln
 
+- [ ] **Einheitenauswahl:** Kalte Portraitaufnahme und Wiederwahl eines bereits aufgenommenen Modells getrennt messen, auch bei pausierter Simulation. Unveränderte Auswahlwerte dürfen befüllte Porträts nicht verdrängen; [DOM-/Cachevertrag](../../rendering.md#modellkacheln). Verbleibende HUD-/Layoutarbeit und der Gelände-Raytest im Eingabehandler sind mögliche Kostenanteile, keine gemessenen Ursachen der Nutzer-Drops; Eingabehandler liegen außerhalb der bisherigen rAF-Zeitzuordnung.
 - [ ] Bei erneutem Einbruch beim Öffnen von Codex/Baumenü erste Aufnahme und Wiederanzeige getrennt messen. Historisch wurden 60 → 30 FPS oder weniger gemeldet, aber ohne Geräte-/Diagnosekontext; kein belegter aktueller Dauerzustand.
 - [ ] CPU-Layout-/Sichtbarkeitsprüfungen von kalter GPU-/Canvas-Kopie trennen. Dirty-/Resize-/Scroll-getriebene Prüfung ist ein Kandidat, falls wiederholte DOM-Rechtecke dominieren. Laufende Weltkulisse separat erfassen; `thumbnails` nicht mit deren Kosten verwechseln.
 

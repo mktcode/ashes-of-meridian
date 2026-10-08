@@ -96,6 +96,7 @@
       battleSaveMilliseconds = 0;
       settlementDetail: { buildingId: number; upgrade: CivilizationUpgradeType } | null = null;
       actionSignature: string;
+      selectionMarkup?: string;
       factionJustUnlocked: FactionId | null;
       hudClock: number;
       touchPoints: Map<number, {x: number; y: number}>;

@@ -2648,6 +2648,74 @@ test('recruitment delegates producer choice to the simulation, independent of se
   assert.deepEqual(h.calls, [['train','rifle']], 'selection is not a preferred producer');
 });
 
+function trackSelectionPanel(h) {
+  const el=h.document.getElementById('selectionStatus');
+  let markup='',reads=0,writes=0,portrait;
+  Object.defineProperty(el,'innerHTML',{
+    get() {reads++;return portrait?.hydrated ? markup.replace('<canvas ','<canvas width="64" height="64" data-model-image="cached" ') : markup;},
+    set(value) {markup=value;writes++;portrait=value.includes('<canvas ') ? {} : undefined;}
+  });
+  return {el,get markup(){return markup;},get reads(){return reads;},get writes(){return writes;},get portrait(){return portrait;}};
+}
+
+test('selection panel retains hydrated portraits and controls across unchanged HUD updates, tabs and clear/reselect',()=>{
+  const h=setup(),panel=trackSelectionPanel(h),e={id:7,kind:'unit',type:'rifle',team:0,faction:0,hp:100,maxHp:100,shield:0,maxShield:0};
+  h.ui.game.s.entities=[e];h.ui.selected=[7];h.ui.renderSelectionStatus();
+  const portrait=panel.portrait;portrait.hydrated=true;
+  for(let i=0;i<3;i++){h.ui.selected=[7];h.ui.game.s.time++;h.ui.renderSelectionStatus();}
+  assert.equal(panel.writes,1,'thumbnail attribute changes never cause a panel replacement');
+  assert.equal(panel.portrait,portrait);
+  h.ui.tab='details';h.ui.renderSelectionStatus();assert.equal(panel.el.classList.contains('hidden'),true);
+  h.ui.tab='root';h.ui.renderSelectionStatus();assert.equal(panel.el.classList.contains('hidden'),false);
+  assert.equal(panel.writes,1,'tab visibility does not discard the portrait');
+  h.ui.selected=[];h.ui.renderSelectionStatus();assert.equal(panel.writes,2);assert.equal(panel.markup,'');
+  h.ui.renderSelectionStatus();assert.equal(panel.writes,2,'an empty selection is cleared only once');
+  h.ui.selected=[7];h.ui.renderSelectionStatus();assert.equal(panel.writes,3);assert.notEqual(panel.portrait,portrait);
+  h.ui.renderSelectionStatus();assert.equal(panel.writes,3);
+  assert.equal(panel.reads,0,'updates never serialize the live selection DOM');
+});
+
+test('selection panel value cache refreshes current health, shields, portrait, ownership, group and restored selections',()=>{
+  const h=setup(),panel=trackSelectionPanel(h),e={id:7,kind:'unit',type:'rifle',team:0,faction:0,hp:100,maxHp:100,shield:0,maxShield:40};
+  h.ui.game.s.entities=[e];h.ui.selected=[7];h.ui.renderSelectionStatus();
+  const change=(values,pattern)=>{
+    const writes=panel.writes;Object.assign(e,values);h.ui.renderSelectionStatus();
+    assert.equal(panel.writes,writes+1);assert.match(panel.markup,pattern);
+    h.ui.renderSelectionStatus();assert.equal(panel.writes,writes+1);
+  };
+  change({hp:75.1},/aria-valuenow="76"/);
+  const writes=panel.writes;e.hp=75.2;h.ui.renderSelectionStatus();assert.equal(panel.writes,writes,'unchanged displayed health stays stable');
+  change({maxHp:150},/aria-valuemax="150"/);
+  change({shield:20},/Shields 20 of 40/);
+  change({maxShield:60},/Shields 20 of 60/);
+  change({type:'medic'},/data-model-type="medic"/);
+  change({faction:1},/data-model-faction="1"/);
+  change({team:1},/selection-health enemy/);
+  const other={...e,id:8,hp:24.8,maxHp:100,shield:10,maxShield:40};
+  h.ui.game.s.entities.push(other);h.ui.selected=[7,8];h.ui.renderSelectionStatus();
+  assert.match(panel.markup,/aria-valuenow="100"/);assert.match(panel.markup,/aria-valuemax="250"/);
+  assert.match(panel.markup,/Shields 30 of 100/);
+  const restored=Object.freeze({...e,type:'worker',hp:20,shield:0});
+  h.ui.game.s.entities=[restored];h.ui.selected=[7];h.ui.renderSelectionStatus();
+  assert.match(panel.markup,/data-model-type="worker"/);assert.match(panel.markup,/aria-valuenow="20"/);
+  assert.equal(panel.reads,0);
+});
+
+test('selection panel value cache keeps construction, producer queue and repair controls current',()=>{
+  const h=buildingPanel(),panel=trackSelectionPanel(h);
+  Object.assign(h.b,{shield:0,maxShield:0,progress:.2});h.ui.renderSelectionStatus();
+  assert.match(panel.markup,/data-action="cancelBuild"/);
+  h.b.progress=1;h.ui.renderSelectionStatus();assert.match(panel.markup,/data-action="sell"/);
+  const writes=panel.writes;h.b.queue.push({type:'rifle'});h.ui.renderSelectionStatus();
+  assert.equal(panel.writes,writes+1);assert.match(panel.markup,/class="occupied"/);
+  const queued=panel.writes;h.b.queue[0].progress=.5;h.ui.renderSelectionStatus();
+  assert.equal(panel.writes,queued,'queue progress belongs to the separate live queue display');
+  h.ui.game.buildingRepairers=()=>[{}];h.ui.renderSelectionStatus();
+  assert.equal(panel.writes,queued+1);assert.match(panel.markup,/data-label="Stop repair"/);
+  h.b.team=1;h.ui.renderSelectionStatus();assert.doesNotMatch(panel.markup,/data-action="sell"/);
+  assert.equal(panel.reads,0);
+});
+
 test('HUD layout uses unanimated offsets only for overlay placement, never world bounds', () => {
   const h=setup(), hud=h.document.getElementById('hud');
   const style=h.document.getElementById('layout-vars').style;h.document.documentElement={style};

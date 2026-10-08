@@ -348,7 +348,10 @@
       renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
         const list = this.selected.map(id => this.game.get(id)).filter((e): e is Entity => !!e), el = $('selectionStatus');
         el.classList.toggle('hidden', !list.length || this.tab !== 'root');
-        if (!list.length) { el.innerHTML = ''; return; }
+        if (!list.length) {
+          if (this.selectionMarkup !== '') { el.innerHTML = ''; this.selectionMarkup = ''; }
+          return;
+        }
         const e = list[0], b = this.selectedBuilding(), enemy = list.some(e => e.team !== -1 && e.team !== this.localTeam);
         const name = list.length > 1 ? `${list.length} units selected` : e.kind === 'unit' ? unitName(e.type, e.faction)
           : e.kind === 'building' ? buildingName(e.type, e.faction) : e.type === 'gas' ? 'Echo vent' : 'Cinder deposit';
@@ -371,7 +374,11 @@
           } else actions = button('cancelBuild', 'Cancel construction', 'cancel');
         }
         const markup = `${uiSkin()}<span class="selection-avatar ${producer ? 'has-queue' : ''}">${avatar}${dots}</span>${e.kind === 'unit' && list.every(e => e.kind === 'unit') ? `<button class="selection-summary" data-action="tab:details" aria-label="${esc(name)} · Unit details">${summary}</button>` : `<div class="selection-summary">${summary}</div>`}<div class="building-controls">${actions}${button('clearSelection', 'Clear selection', 'close')}</div>`;
-        if (el.innerHTML !== markup) el.innerHTML = markup;
+        // Portrait hydration changes canvas attributes. Compare authored markup, not live DOM serialization.
+        if (this.selectionMarkup !== markup) {
+          el.innerHTML = markup;
+          this.selectionMarkup = markup;
+        }
       },
       updateHUDLayout(this: MeridianUI) {
         // Hidden HUDs have zero geometry; do not overwrite the visible layout defaults.
