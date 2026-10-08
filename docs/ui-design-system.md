@@ -34,6 +34,10 @@ besitzen leuchtende Eckschienen. Der untere Aktionsblock hat keine gemeinsame
 Hintergrundplatte: Zwischen den abgeschrägten Buttons bleibt die Spielwelt sichtbar.
 Beide Leisten sind mit Safe-Area-Abstand vom Bildschirmrand eingerückt;
 Minimap und Aktionsblock sind zusätzlich durch einen schmalen freien Spalt getrennt.
+Die Auswahlleiste sitzt mit demselben Abstand darüber; Innenabstände halten Avatar
+und kleine Aktionsicons innerhalb des Rahmens. Ihre 44px-Buttons haben eigene
+Zwischenräume und wechseln bei Platzmangel in eine zweite Zeile, statt den
+Auswahltext zu verdrängen. Verkaufen nutzt ein Dollarzeichen, Abbrechen weiterhin ein X.
 Auf sehr schmalen Displays werden diese Abstände für ausreichend große Hit-Flächen reduziert.
 Auch die obere Leiste hat keine gemeinsame Hintergrundplatte. Ressourcen stehen
 links auf einer eigenen Materialfläche ohne Buttonfunktion und bleiben auch auf

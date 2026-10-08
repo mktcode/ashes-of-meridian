@@ -341,7 +341,7 @@
         if (b) {
           if (b.progress >= 1) {
             const repairing = this.game.buildingRepairers(b.id, this.localTeam).length > 0;
-            actions = button('sell', 'Sell structure', 'cancel') + button('repair', repairing ? 'Stop repair' : 'Repair structure', 'repair');
+            actions = button('sell', 'Sell structure', 'sell') + button('repair', repairing ? 'Stop repair' : 'Repair structure', 'repair');
             if (!isCivilizationBuildingType(b.type)) actions += button('rally', 'Rally point', 'rally');
             actions += button('rotateLeft', 'Rotate left', 'rotateLeft') + button('rotateRight', 'Rotate right', 'rotateRight');
           } else actions = button('cancelBuild', 'Cancel construction', 'cancel');

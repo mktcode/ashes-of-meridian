@@ -796,6 +796,7 @@ const ICON_PATHS = {
   aether: 'M12 2l9 5v10l-9 5-9-5V7z',
   crystal: 'M12 2l7 5 3 9-10 6-10-6 3-9zM12 2l-3 13 3 7 3-7zM2 16l7-1m6 0 7 1',
   cancel: 'M5 5l14 14M19 5L5 19',
+  sell: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
   repair: 'M14 4l-4 4 2 4 4 2 4-4c2 5-3 9-7 7l-7 6-4-4 7-6C7 8 10 3 14 4z',
   rotateLeft: 'M8 3L4 7l4 4M4 7h9a7 7 0 1 1-7 7',
   rotateRight: 'M16 3l4 4-4 4M20 7h-9a7 7 0 1 0 7 7',

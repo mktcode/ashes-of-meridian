@@ -452,6 +452,7 @@
 #hud .minimap-panel .ui-rim { clip-path: polygon(evenodd, 9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px, 9px 0, 9.8px 2px, calc(100% - 9.8px) 2px, calc(100% - 2px) 9.8px, calc(100% - 2px) calc(100% - 9.8px), calc(100% - 9.8px) calc(100% - 2px), 9.8px calc(100% - 2px), 2px calc(100% - 9.8px), 2px 9.8px, 9.8px 2px, 9px 0) }
 #hud #minimap { background: #041019; clip-path: polygon(var(--ui-cut) 0, calc(100% - var(--ui-cut)) 0, 100% var(--ui-cut), 100% calc(100% - var(--ui-cut)), calc(100% - var(--ui-cut)) 100%, var(--ui-cut) 100%, 0 calc(100% - var(--ui-cut)), 0 var(--ui-cut)) }
 #hud #selectionStatus { --ui-cut: 8px; --ui-fill: var(--ui-material-panel); --ui-inner: .22 }
+#hud .building-controls .action :is(svg, .ui-icon) { width: 16px; height: 16px }
 #hud .selection-queue i { background: #79e2b633 }
 #hud .selection-queue i.occupied { background: var(--ui-success); box-shadow: 0 0 4px #79e2b640 }
 #hud .selection-health { background: linear-gradient(90deg, #79e2b64d var(--health), #020b12 0); box-shadow: inset 0 1px #c6efff14 }
