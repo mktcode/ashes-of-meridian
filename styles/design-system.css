@@ -84,7 +84,7 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .expedition-benefit-row, .result-reward, .result-next),
 #modal .ui-select,
-#hud :is(.action, .queue-item, .minimap-panel, .settlement-upgrades button, .resource-strip, #battleLabel, #speedBtn, #pauseBtn) {
+#hud :is(.action, .queue-item, .minimap-panel, .settlement-upgrades button, .resource-strip, #speedBtn, #pauseBtn) {
   position: relative;
   overflow: visible;
 }
@@ -433,9 +433,6 @@
 /* HUD: existing dense hit areas and dimensions, individual inset material skins. */
 #hud #commandDeck button:focus-visible { outline-offset: -2px }
 #hud .resource-strip { --ui-cut: 8px }
-#hud #battleLabel { --ui-cut: 6px; --ui-fill: var(--ui-material-panel); --ui-inner: .32 }
-#hud #battleLabel small { color: var(--ui-muted); font: 7px/9px var(--mono); letter-spacing: .08em }
-#hud #battleStage { color: var(--ui-accent); font: 600 15px/18px var(--mono) }
 #hud .resource .ui-icon { width: 24px; height: 28px; filter: drop-shadow(0 0 4px #63deff66) }
 #hud .resource strong { color: var(--ui-ink) }
 #hud .resource.power strong { color: var(--ui-energy) }
@@ -443,7 +440,7 @@
 #hud :is(#speedBtn, #pauseBtn) { display: grid; place-items: center; --ui-cut: 6px }
 #hud #pauseBtn .ui-icon { width: 14px; height: 17px }
 #hud .action { --ui-cut: 7px }
-#hud :is(.action, .queue-item, .resource-strip, #battleLabel, #speedBtn, #pauseBtn) > .ui-skin { inset: 2px }
+#hud :is(.action, .queue-item, .resource-strip, #speedBtn, #pauseBtn) > .ui-skin { inset: 2px }
 #hud .action .action-model { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px) }
 #hud .catalog-grid .action-model { height: calc(100% - 16px) }
 #hud .action .cost { left: 4px; right: 4px; bottom: 3px; color: var(--ui-gold); background: linear-gradient(transparent, #071522e8); z-index: 1 }

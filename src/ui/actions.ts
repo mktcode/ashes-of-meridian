@@ -463,9 +463,8 @@
         $('supplyCount').style.color = supply >= capacity ? 'var(--red)' : '';
         $('energyCount').textContent = String(Math.floor(account.energy));
         const speedButton = $('speedBtn'), speedLabel = String(s.speed).replace('.', ',') + '×';
-        $('speedValue').textContent = speedLabel;
+        $('speedValue').textContent = '▶'.repeat(s.speed);
         speedButton.setAttribute('aria-label', `Simulation speed: ${speedLabel}. Tap to change.`);
-        $('battleStage').textContent = String(s.depth + 1);
         this.selected = this.selected.filter(id => { const e = this.game.get(id); return e && this.game.observed(e); });
         this.renderActions(supply, capacity);
       },

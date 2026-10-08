@@ -36,9 +36,11 @@ Beide Leisten sind mit Safe-Area-Abstand vom Bildschirmrand eingerückt;
 Minimap und Aktionsblock sind zusätzlich durch einen schmalen freien Spalt getrennt.
 Auf sehr schmalen Displays werden diese Abstände für ausreichend große Hit-Flächen reduziert.
 Auch die obere Leiste hat keine gemeinsame Hintergrundplatte. Ressourcen stehen
-links auf einer eigenen Materialfläche ohne Buttonfunktion; Stage erscheint als
-separate kompakte Anzeige mit hervorgehobener Zahl. Pause und Tempo nutzen identische
-Button-Skins und Zustände. Dynamische Zahlen werden in eigenen Textknoten aktualisiert,
+links auf einer eigenen Materialfläche ohne Buttonfunktion und bleiben auch auf
+schmalen Displays nebeneinander. Eine Stageanzeige im HUD entfällt.
+Pause und Tempo nutzen identische Button-Skins und Zustände; ein, zwei oder drei
+Pfeile markieren die Geschwindigkeit, der genaue Faktor bleibt in der zugänglichen
+Beschriftung. Dynamische Werte werden in eigenen Textknoten aktualisiert,
 damit die dekorativen Ebenen erhalten bleiben. Die Minimap selbst ist auf die äußere
 Fase ihres Rahmens zugeschnitten; Canvasgröße und Koordinatenabbildung bleiben gleich.
 Pausieren sperrt Eingaben, ändert aber nicht Deckkraft oder Rahmen der Kacheln;
