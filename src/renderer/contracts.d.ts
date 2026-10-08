@@ -59,6 +59,10 @@ interface PanelDimensions {
 type ModelPart = (shape: string, x: number, y: number, z: number,
   sx: number, sy: number, sz: number, color: RenderColor,
   ry?: number, rx?: number, rz?: number, glow?: number, alpha?: number, material?: number) => void;
+// Ground recipes retain authored numeric colours; surfaceColor is applied on every replay.
+type ModelGroundPart = (shape: string, x: number, y: number, z: number,
+  sx: number, sy: number, sz: number, color: number,
+  ry?: number, rx?: number, rz?: number, glow?: number, alpha?: number, material?: number) => void;
 type ModelRing = (radius: number, height: number, color?: number, alpha?: number,
   rx?: number, ry?: number, glow?: number) => void;
 // Previews need visual properties, not live simulation paths, cooldowns or orders.
@@ -80,6 +84,10 @@ interface EntityModelContext {
   baseRotation: number;
   /** Terrain height relative to the model datum at a local X/Z point; absent in thumbnails. */
   groundHeight?: (x: number, z: number) => number;
+  /** Adapter-owned immutable pose identity; its terrain/placement inputs invalidate ground recipes. */
+  groundPose?: BuildingSurfacePose;
+  /** Placement previews keep separate recipes, never cached tint, alpha or construction progress. */
+  groundPreview?: boolean;
   surfaceColor: (color: number) => number;
 }
 interface EntityModelDefinition {

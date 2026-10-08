@@ -1,5 +1,5 @@
-/* Shared civilian research and residential architecture. Static hulls are built once; only the
-   separate stilt lengths/entry stairs sample the CPU surface at render time. */
+/* Shared civilian research and residential architecture. Static hulls are built once;
+   separate stilt/entry recipes sample the CPU surface only when the support pose changes. */
 'use strict';
 (() => {
   type Material = 'steel' | 'edge' | 'dark' | 'orange' | 'cyan' | 'glass' | 'window' | 'warm' | 'dim' | 'soil' | 'leaf';
@@ -216,37 +216,41 @@
   }
   for(const type of variants){
     let geometry: Record<Material,number[]> | undefined,supports: Foot[] | undefined;
+    const drawGroundParts = createModelGroundParts();
     const meshes: Record<string,()=>number[]> = {};
     const housing=type==='embercottage'||type==='terracecommons'||type==='hearthtower',
       materials: Material[] = housing ? ['steel','edge','dark','orange','cyan','warm','dim','soil','leaf']
         : ['steel','edge','dark','cyan','window',...(type==='researchspire'?[]:['glass' as const])];
     for(const material of materials)
       meshes[`civil${type[0].toUpperCase()+type.slice(1)}${material[0].toUpperCase()+material.slice(1)}`] = () => (geometry ??= assembly(type))[material];
-    const render = ({part:p,nightPart,groundHeight,surfaceColor,pointLight}:EntityModelContext) => {
+    const render = (context:EntityModelContext) => {
+      const {part:p,nightPart,groundHeight,surfaceColor,pointLight}=context;
       const scale=CIVILIZATION_MODEL_SCALE,name=`civil${type[0].toUpperCase()+type.slice(1)}`;
       for(const material of materials){
         const glow=material==='cyan'?1.1:material==='window'?.65:material==='warm'?1:material==='dim'?.28:0;
         (glow?nightPart:p)(name+material[0].toUpperCase()+material.slice(1),0,0,0,scale,scale,scale,
           surfaceColor(colors[material]),0,0,0,glow,undefined,MAT.METAL);
       }
-      for(const foot of (supports ??= (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!.flatMap(d=>feet(d.x,d.z,d.w,d.d,d.top)))){
-        const x=foot.x*scale,z=foot.z*scale,top=foot.top*scale,
-          ground=groundHeight?.(x,z) ?? -.7,base=ground,height=Math.max(.03,top-base),
-          dx=groundHeight ? (groundHeight(x+.275,z)-groundHeight(x-.275,z))/.55 : 0,
-          dz=groundHeight ? (groundHeight(x,z+.275)-groundHeight(x,z-.275))/.55 : 0,
-          pitch=-Math.atan(dz),roll=Math.atan(dx*Math.cos(pitch));
-        p('box',x,base+.04,z,.55,.15,.55,surfaceColor(0x69706a),0,pitch,roll,0,undefined,MAT.METAL);
-        p('box',x,base+height/2,z,.23,height,.25,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
-        p('box',x,top-.06,z,.38,.17,.38,surfaceColor(colors.orange),0,0,0,0,undefined,MAT.METAL);
-      }
-      // Compact stairs span to the sampled terrain without flattening the hillside.
-      const entry=(BUILDINGS[type] as BuildingDefinitionShape).civilizationEntry!,x=entry.x*scale,start=entry.z*scale,
-        count=6,length=entry.length,
-        end=groundHeight?.(x,start+length) ?? -.7,top=.35*scale,rise=(top-end)/count;
-      for(let i=0;i<count;i++){
-        const z=start+(i+.5)*length/count,y=top-(i+.5)*rise;
-        p('box',x,y,z,1.05,Math.max(.025,Math.abs(rise)),length/count+.015,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
-      }
+      drawGroundParts(context,p=>{
+        for(const foot of (supports ??= (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!.flatMap(d=>feet(d.x,d.z,d.w,d.d,d.top)))){
+          const x=foot.x*scale,z=foot.z*scale,top=foot.top*scale,
+            ground=groundHeight?.(x,z) ?? -.7,base=ground,height=Math.max(.03,top-base),
+            dx=groundHeight ? (groundHeight(x+.275,z)-groundHeight(x-.275,z))/.55 : 0,
+            dz=groundHeight ? (groundHeight(x,z+.275)-groundHeight(x,z-.275))/.55 : 0,
+            pitch=-Math.atan(dz),roll=Math.atan(dx*Math.cos(pitch));
+          p('box',x,base+.04,z,.55,.15,.55,0x69706a,0,pitch,roll,0,undefined,MAT.METAL);
+          p('box',x,base+height/2,z,.23,height,.25,colors.edge,0,0,0,0,undefined,MAT.METAL);
+          p('box',x,top-.06,z,.38,.17,.38,colors.orange,0,0,0,0,undefined,MAT.METAL);
+        }
+        // Compact stairs span to the sampled terrain without flattening the hillside.
+        const entry=(BUILDINGS[type] as BuildingDefinitionShape).civilizationEntry!,x=entry.x*scale,start=entry.z*scale,
+          count=6,length=entry.length,
+          end=groundHeight?.(x,start+length) ?? -.7,top=.35*scale,rise=(top-end)/count;
+        for(let i=0;i<count;i++){
+          const z=start+(i+.5)*length/count,y=top-(i+.5)*rise;
+          p('box',x,y,z,1.05,Math.max(.025,Math.abs(rise)),length/count+.015,colors.edge,0,0,0,0,undefined,MAT.METAL);
+        }
+      });
       pointLight(0,1.1,2.6,8,housing?colors.warm:0x55d9e9,2.5);
       if(type==='hearthtower')pointLight(-.6,8.6,-.7,9,colors.warm,2.5);
       if(type==='researchspire')pointLight(-.5,10.6,-.7,9,0x55d9e9,2.5);

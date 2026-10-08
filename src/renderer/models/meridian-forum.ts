@@ -164,45 +164,49 @@
   const meshes:Record<string,()=>number[]>={};
   const name=(m:Material)=>'meridianForum'+m[0].toUpperCase()+m.slice(1);
   for(const m of materials)meshes[name(m)]=()=>(geometry??=assembly())[m];
-  const render=({part:p,nightPart,groundHeight,surfaceColor,pointLight}:EntityModelContext)=>{
+  const drawGroundParts=createModelGroundParts();
+  const render=(context:EntityModelContext)=>{
+    const {part:p,nightPart,groundHeight,surfaceColor,pointLight}=context;
     const scale=CIVILIZATION_MODEL_SCALE,authoredScale=FORUM_MODEL_SCALE*scale;
     for(const m of materials){
       const glow=m==='cyan'?1.1:m==='warm'?1:m==='dim'?.28:0;
       (glow?nightPart:p)(name(m),0,0,0,scale,scale,scale,surfaceColor(colors[m]),0,0,0,glow,undefined,MAT.METAL);
     }
     // Hull meshes never change with terrain, faction, construction or preview pose.
-    for(const X of [-12,-6,0,6,12])for(const Z of [-7.5,0,7.5]){
-      const x=X*authoredScale,z=Z*authoredScale,base=groundHeight?.(x,z)??-.7,height=Math.max(.03,-base),
-        dx=groundHeight?(groundHeight(x+.275,z)-groundHeight(x-.275,z))/.55:0,
-        dz=groundHeight?(groundHeight(x,z+.275)-groundHeight(x,z-.275))/.55:0,
-        pitch=-Math.atan(dz),roll=Math.atan(dx*Math.cos(pitch));
-      p('box',x,base+.04,z,.55,.15,.55,surfaceColor(colors.edge),0,pitch,roll,0,undefined,MAT.METAL);
-      p('box',x,base+height/2,z,.23,height,.25,surfaceColor(colors.steel),0,0,0,0,undefined,MAT.METAL);
-      p('box',x,-.06,z,.38,.17,.38,surfaceColor(colors.gold),0,0,0,0,undefined,MAT.METAL);
-    }
-    const drawRail=(a:number[],b:number[])=>{
-      const delta=V.sub(b,a),length=Math.hypot(...delta),mid=a.map((v,i)=>(v+b[i])/2),
-        yaw=Math.atan2(delta[0],delta[2]),pitch=-Math.atan2(delta[1],Math.hypot(delta[0],delta[2]));
-      p('box',mid[0],mid[1],mid[2],.055,.055,length,surfaceColor(colors.gold),yaw,pitch,0,0,undefined,MAT.METAL);
-    };
-    for(const [i,entry] of civilizationBuildingEntries('meridianforum').entries()){
-      const x=entry.x*scale,start=entry.z*scale,top=(entry.top??.35)*scale,
-        width=entry.width??1.05,length=entry.length,count=i===0?10:9,
-        end=groundHeight?.(x,start+length)??-.7,rise=(top-end)/count;
-      for(let j=0;j<count;j++){
-        const z=start+(j+.5)*length/count,y=top-(j+.5)*rise;
-        p('box',x,y,z,width,Math.max(.025,Math.abs(rise)),length/count+.015,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
+    drawGroundParts(context,p=>{
+      for(const X of [-12,-6,0,6,12])for(const Z of [-7.5,0,7.5]){
+        const x=X*authoredScale,z=Z*authoredScale,base=groundHeight?.(x,z)??-.7,height=Math.max(.03,-base),
+          dx=groundHeight?(groundHeight(x+.275,z)-groundHeight(x-.275,z))/.55:0,
+          dz=groundHeight?(groundHeight(x,z+.275)-groundHeight(x,z-.275))/.55:0,
+          pitch=-Math.atan(dz),roll=Math.atan(dx*Math.cos(pitch));
+        p('box',x,base+.04,z,.55,.15,.55,colors.edge,0,pitch,roll,0,undefined,MAT.METAL);
+        p('box',x,base+height/2,z,.23,height,.25,colors.steel,0,0,0,0,undefined,MAT.METAL);
+        p('box',x,-.06,z,.38,.17,.38,colors.gold,0,0,0,0,undefined,MAT.METAL);
       }
-      // Low edge rails follow the same terrain-adaptive flight, leaving the pad unobstructed.
-      for(const side of [-1,1]){
-        const X=x+side*(width/2-.035),a=[X,top+.34,start],b=[X,end+.34,start+length];
-        drawRail(a,b);
-        for(const t of [0,.5,1]){
-          const z=start+t*length,y=top+(end-top)*t;
-          p('box',X,y+.17,z,.04,.34,.04,surfaceColor(colors.edge),0,0,0,0,undefined,MAT.METAL);
+      const drawRail=(a:number[],b:number[])=>{
+        const delta=V.sub(b,a),length=Math.hypot(...delta),mid=a.map((v,i)=>(v+b[i])/2),
+          yaw=Math.atan2(delta[0],delta[2]),pitch=-Math.atan2(delta[1],Math.hypot(delta[0],delta[2]));
+        p('box',mid[0],mid[1],mid[2],.055,.055,length,colors.gold,yaw,pitch,0,0,undefined,MAT.METAL);
+      };
+      for(const [i,entry] of civilizationBuildingEntries('meridianforum').entries()){
+        const x=entry.x*scale,start=entry.z*scale,top=(entry.top??.35)*scale,
+          width=entry.width??1.05,length=entry.length,count=i===0?10:9,
+          end=groundHeight?.(x,start+length)??-.7,rise=(top-end)/count;
+        for(let j=0;j<count;j++){
+          const z=start+(j+.5)*length/count,y=top-(j+.5)*rise;
+          p('box',x,y,z,width,Math.max(.025,Math.abs(rise)),length/count+.015,colors.edge,0,0,0,0,undefined,MAT.METAL);
+        }
+        // Low edge rails follow the same terrain-adaptive flight, leaving the pad unobstructed.
+        for(const side of [-1,1]){
+          const X=x+side*(width/2-.035),a=[X,top+.34,start],b=[X,end+.34,start+length];
+          drawRail(a,b);
+          for(const t of [0,.5,1]){
+            const z=start+t*length,y=top+(end-top)*t;
+            p('box',X,y+.17,z,.04,.34,.04,colors.edge,0,0,0,0,undefined,MAT.METAL);
+          }
         }
       }
-    }
+    });
     pointLight(0,(5-FORUM_DECK_BASE)*authoredScale,7.4*authoredScale,5,colors.cyan,2.1);
     pointLight(0,(32.5-FORUM_DECK_BASE)*authoredScale,-3.65*authoredScale,6,colors.warm,1.5);
     pointLight(0,(36.13-FORUM_DECK_BASE)*authoredScale,-3.65*authoredScale,4,colors.cyan,1.1);

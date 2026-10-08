@@ -147,6 +147,100 @@ test('warm building poses preserve every submitted model transform, animation an
   }
 });
 
+function civilianGroundHarness(surface=worldFor(.10).surface) {
+  const R=createRendererStub({record:true}),lamps=[],outlines=[];
+  let samples=0;
+  R.quality=0;
+  R.addPointLight=(...args)=>lamps.push(args);
+  R.recordOcclusion=(...args)=>outlines.push(args);
+  const setSurface=surface=>{
+    if(surface){const heightAt=surface.heightAt.bind(surface);surface.heightAt=(...args)=>{samples++;return heightAt(...args);};}
+    R.surface=surface;
+  };
+  setSurface(surface);
+  return {R,setSurface,get samples(){return samples;},resetSamples(){samples=0;},
+    draw(e,time=0,options={}) {
+      R.calls.length=lamps.length=outlines.length=0;
+      renderEntity(R,e,time,options);
+      return {parts:R.calls.map(c=>[...c]),lamps:lamps.map(c=>[...c]),outlines:outlines.map(c=>[...c])};
+    }};
+}
+
+test('model ground recipes cache only raw parts, separate previews and keep unowned terrain callbacks live',()=>{
+  const create=vm.runInContext('createModelGroundParts',context),drawGround=create(),calls=[];
+  const pose=Object.freeze({height:2,dx:0,dz:0,fill:0});
+  let builds=0,tint;
+  const ctx={groundPose:pose,part:(...args)=>calls.push(args),surfaceColor:color=>tint??color};
+  const build=p=>{builds++;p('box',1,2,3,.55,.15,.55,0x123456,0,.3,0,0,undefined,MAT.METAL);};
+  drawGround(ctx,build);const original=[...calls[0]];assert.equal(builds,1);
+  tint=0x99e4c6;calls.length=0;
+  drawGround(ctx,()=>assert.fail('warm ground recipe was rebuilt'));
+  assert.deepEqual(calls[0],original.map((value,index)=>index===7?tint:value));
+  ctx.groundPreview=true;calls.length=0;drawGround(ctx,build);assert.equal(builds,2);
+  tint=0xf39989;calls.length=0;drawGround(ctx,()=>assert.fail('preview tint invalidated geometry'));
+  assert.deepEqual(calls[0],original.map((value,index)=>index===7?tint:value));
+  ctx.groundPose=Object.freeze({...pose});drawGround(ctx,build);assert.equal(builds,3);
+  delete ctx.groundPose;
+  drawGround(ctx,build);drawGround(ctx,build);assert.equal(builds,5,'callbacks without a pose token are never cached');
+});
+
+test('civilian ground recipes reuse all six buildings and Forum feet, stairs and rails without terrain reads',()=>{
+  const h=civilianGroundHarness(),before=Array.from(h.R.surface.heights);
+  for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower','meridianforum']) {
+    const e=Object.freeze({...entity,type,visualRotation:1/3}),saved=JSON.stringify(e);
+    h.resetSamples();const cold=h.draw(e);assert.ok(h.samples>0);
+    h.resetSamples();assert.deepEqual(h.draw(e),cold);
+    assert.equal(h.samples,0,`${type}: unchanged support never samples terrain`);
+    assert.equal(JSON.stringify(e),saved,'render recipes never add fields to buildings');
+  }
+  assert.deepEqual(Array.from(h.R.surface.heights),before);
+});
+
+test('civilian ground recipes follow placement, model, ownership, surface and restored object changes',()=>{
+  for(const type of ['fieldlab','meridianforum']) {
+    const h=civilianGroundHarness(),e={...entity,type,visualRotation:1/3};
+    const check=()=>{
+      h.resetSamples();const cold=h.draw(e);assert.ok(h.samples>0,'changed inputs rebuild terrain-dependent geometry');
+      h.resetSamples();assert.deepEqual(h.draw(e),cold);assert.equal(h.samples,0);
+      const fresh=Object.freeze({...e});h.resetSamples();assert.deepEqual(h.draw(fresh),cold);
+      assert.ok(h.samples>0,'restored/new object with the same ID gets its own support recipe');
+    };
+    check();
+    for(const change of [{x:3.1},{z:-2.4},{visualRotation:2/3},{team:1},{size:5.7},
+      {type:'researchhub'},{type:'hearthtower'},{type:'meridianforum'}]) {Object.assign(e,change);check();}
+    const other=worldFor(.025).surface;h.setSurface(other);check();
+    const saved=JSON.stringify(e);h.setSurface(null);
+    const flat=h.draw(e);assert.deepEqual(h.draw(e),flat,'terrain-free thumbnails preserve the direct model path');
+    assert.equal(JSON.stringify(e),saved);
+  }
+});
+
+test('civilian ground recipes keep progress, factions, night lamps, tint, alpha, materials and occlusion live',()=>{
+  for(const type of ['fieldlab','hearthtower','meridianforum']) {
+    const h=civilianGroundHarness(),e={...entity,type,visualRotation:1/3};
+    h.R.quality=2;h.R.battlefieldHour=12;
+    const day=h.draw(e,0,{occlusion:true});
+    assert.ok(day.outlines.length);assert.equal(day.lamps.length,0);
+    h.R.battlefieldHour=22;h.resetSamples();const night=h.draw(e,3,{occlusion:true});
+    assert.equal(h.samples,0);assert.ok(night.lamps.length);assert.notDeepEqual(night.parts,day.parts);
+    assert.deepEqual(night,h.draw(Object.freeze({...e}),3,{occlusion:true}));
+    e.progress=.35;e.faction=2;e.hp=55;e.rot=1.4;
+    h.resetSamples();const partial=h.draw(e,5);assert.equal(h.samples,0,'construction and faction do not rebuild terrain parts');
+    assert.equal(partial.lamps.length,0);assert.deepEqual(partial,h.draw(Object.freeze({...e}),5));
+    e.progress=1;
+    h.resetSamples();const ghost=h.draw(e,5,{ghost:true});
+    assert.ok(h.samples>0,'the first preview builds a separate recipe');assert.equal(ghost.lamps.length,0);
+    assert.deepEqual(ghost,h.draw(Object.freeze({...e}),5,{ghost:true}));
+    for(const options of [{tint:0x99e4c6,alpha:.3,layer:'effects'},
+      {tint:0xf39989,alpha:.6,layer:'effects',material:MAT.ROCK},{ghost:true}]) {
+      h.resetSamples();const warm=h.draw(e,7,options);assert.equal(h.samples,0,'preview colour changes never resample terrain');
+      assert.equal(warm.lamps.length,0);assert.deepEqual(warm,h.draw(Object.freeze({...e}),7,options));
+    }
+    h.resetSamples();const solid=h.draw(e,9,{occlusion:true});assert.equal(h.samples,0,'previews leave the solid recipe intact');
+    assert.deepEqual(solid,h.draw(Object.freeze({...e}),9,{occlusion:true}));
+  }
+});
+
 test('buildings lean as rigid models without extra rock bases; placement ghosts share the pose',()=>{
   const world=worldFor(.10),R=createRendererStub({record:true});R.surface=world.surface;R.quality=0;
   const draw=options=>{R.calls.length=0;renderEntity(R,entity,0,options);return R.calls.map(c=>[...c]);};

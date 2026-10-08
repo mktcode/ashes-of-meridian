@@ -1139,6 +1139,8 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         if (model) {
           model.render({ entity: e, time, nightLight, pointLight, lightPool: () => {}, part: p, nightPart, ring, metal, dark, team, accent, baseRotation: rot,
             groundHeight: R.surface ? (lx,lz) => R.surface!.heightAt(e.x+lx*cs+lz*sn,e.z-lx*sn+lz*cs)-ground : undefined,
+            groundPose: pose ?? undefined,
+            groundPreview: !!ghost || options.tint !== undefined || alpha !== 1 || layer !== 'dynamic',
             surfaceColor: color => ghost ? 0x68717d : options.tint || color });
         }
         if (build < 1) {

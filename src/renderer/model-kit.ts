@@ -32,6 +32,28 @@ function createEntityModelRegistry() {
 const EntityModels = createEntityModelRegistry();
 const registerEntityModel = (definition: EntityModelDefinition) => EntityModels.register(definition);
 
+// One cache per model variant; pose identities are surface/object-owned and weakly retained.
+function createModelGroundParts() {
+  type Parts = readonly Readonly<Parameters<ModelGroundPart>>[];
+  const solid = new WeakMap<BuildingSurfacePose, Parts>(), previews = new WeakMap<BuildingSurfacePose, Parts>();
+  return (context: EntityModelContext, build: (part: ModelGroundPart) => void) => {
+    const draw: ModelGroundPart = (shape,x,y,z,sx,sy,sz,color,ry,rx,rz,glow,alpha,material) =>
+      context.part(shape,x,y,z,sx,sy,sz,context.surfaceColor(color),ry,rx,rz,glow,alpha,material);
+    // Without an adapter-owned terrain pose (e.g. thumbnails), keep the direct model path.
+    if (!context.groundPose) { build(draw); return; }
+    const cache = context.groundPreview ? previews : solid;
+    let parts = cache.get(context.groundPose);
+    if (!parts) {
+      const assembled: Parameters<ModelGroundPart>[] = [];
+      build((...args) => { assembled.push(args); });
+      parts = assembled;
+      cache.set(context.groundPose,parts);
+    }
+    // Only local geometry is reused. The adapter still applies live build, tint, alpha and pose.
+    for (const part of parts) draw(...part);
+  };
+}
+
 const ModelMesh = Object.freeze({
   // Positive scales only. Rotation order matches MeridianRenderer.add: Y * X * Z.
   bake(out: number[], mesh: MeshData, { x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1,
