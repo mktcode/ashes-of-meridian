@@ -14,6 +14,59 @@ function forumFrame(forum){
 }
 const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
 const allTypes=[...types,'meridianforum'];
+// Frozen pre-optimization rules from d9ade31; do not replace with calls to the new caches/SAT.
+const placementGeometry=vm.runInContext(`({civilizationFootprintsOverlap,civilizationPlacementFootprints,
+ civilizationClearanceFootprints,settlementReservedFootprints,forumCollisionCorridors,buildingBlockerReason,freezeCivilizationFootprints})`,context);
+const legacyPlacement=vm.runInContext(`(()=>{
+ function overlap(a,b,gap=.25){
+  for(const polygon of [a,b])for(let i=0;i<polygon.length;i++){
+   const p=polygon[i],q=polygon[(i+1)%polygon.length],length=Math.hypot(q.x-p.x,q.z-p.z),nx=(q.z-p.z)/length,nz=(p.x-q.x)/length,
+    pa=a.map(v=>v.x*nx+v.z*nz),pb=b.map(v=>v.x*nx+v.z*nz);
+   if(Math.max(...pa)+gap<=Math.min(...pb)||Math.max(...pb)+gap<=Math.min(...pa))return false;
+  }
+  return true;
+ }
+ function footprints(p,type,team,rotation=0){
+  return type==='meridianforum'?civilizationClearanceFootprints(p,type,team,rotation):settlementReservedFootprints(p,type,team,rotation);
+ }
+ function corridorBlocked(forum,p,radius,shapes=[]){
+  const square=[{x:p.x-radius,z:p.z-radius},{x:p.x+radius,z:p.z-radius},
+   {x:p.x+radius,z:p.z+radius},{x:p.x-radius,z:p.z+radius}];
+  return forumCorridors(forum).some(c=>overlap(c,square)||shapes.some(s=>overlap(c,s)));
+ }
+ function blocker(p,r,e,type,team=0){
+  if(e.hp<=0)return '';
+  if(e.kind==='unit'){
+   const clearance=r+e.size*UNIT_BODY_SCALE+1;
+   return distance(p,e)<clearance||(e.exit&&distance(p,e.exit)<clearance)?'Leave room around units and production exits.':'';
+  }
+  if(type&&isCivilizationBuildingType(type)&&e.kind==='building'&&e.team===team&&isCivilizationBuildingType(e.type)){
+   const a=type==='meridianforum'?civilizationClearanceFootprints(p,type,team):settlementReservedFootprints(p,type,team),
+    b=e.forumId===undefined?civilizationClearanceFootprints(e,e.type,e.team,e.visualRotation||0):
+     settlementReservedFootprints(e,e.type,e.team,e.visualRotation||0);
+   return a.some(pa=>b.some(pb=>overlap(pa,pb)))?'Leave room between civilian decks, stairs and walkways.':'';
+  }
+  return distance(p,e)<r+e.size+.8?'Leave room around structures and resources.':'';
+ }
+ function access(p,radius,except,type,team=0,rotation=0){
+  for(const e of this.s.entities)if(e.hp>0&&e.kind==='building'&&e.type==='meridianforum'&&e.id!==except&&
+   corridorBlocked(e,p,radius+.35+this.world.cellSize/2,type&&isCivilizationBuildingType(type)?footprints(p,type,team,rotation):[]))
+   return 'Leave the forum streets and entrance plaza clear.';
+  return '';
+ }
+ function placement(type,p,team){
+  const world=this.world,r=settlementReservedRadius(type),reason=Math.abs(p.x)>world.extent-1-r||Math.abs(p.z)>world.extent-1-r?
+   'Too close to the battlefield boundary.':buildingFoundationReason(world,type,p,team);
+  if(reason)return reason;
+  if(!world.sight[team].explored[world.idx(p.x,p.z)])return 'Scout this location before building.';
+  if(buildingTerrainObstructed(world,p,r,true))return 'Terrain obstructs the foundation.';
+  if(this.s.supplyCaches.some(c=>!c.collected&&distance(c,p)<r+3))return 'Recover nearby supply caches before building here.';
+  for(const e of this.s.entities){const reason=blocker(p,r,e,type,team);if(reason)return reason;}
+  return access.call(this,p,r,undefined,type,team);
+ }
+ return {overlap,blocker,access,placement};
+})()`,context);
+const plainFootprints=polygons=>Array.from(polygons,poly=>Array.from(poly,p=>({x:p.x,z:p.z})));
 function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
  const game=Object.create(MeridianGame.prototype),world=Object.create(Battlefield.prototype),extent=80,n=64;
  Object.assign(world,{extent,cellSize:2.5,gridSize:n,viewTeam:0,pathVersion:0,surface:new BattlefieldSurface(extent,2.5,height),
@@ -28,6 +81,98 @@ function fixture(faction=0,height=(x,z)=>40+.35*x+.12*z+.06*Math.sin(x)){
     {id:1,faction:1,account:{alloy:0,gas:0},meta:{},benefits:{},loadout:[],deploymentPending:false}]}});
  return {game,world};
 }
+test('placement SAT exactly matches legacy projections at contacts, rotations and degenerate axes',()=>{
+ const rect=(x,z,w=2,d=2)=>[{x:x-w/2,z:z-d/2},{x:x+w/2,z:z-d/2},{x:x+w/2,z:z+d/2},{x:x-w/2,z:z+d/2}],
+  cases=[[],rect(0,0),rect(2.25,0),rect(2.25-Number.EPSILON*4,0),rect(2.25+Number.EPSILON*4,0),
+   rect(-0,-0),[{x:0,z:0}],rect(1e12,1e12),[{x:NaN,z:0},{x:0,z:0},{x:1,z:1}],
+   [{x:Infinity,z:0},{x:0,z:0},{x:1,z:1}]];
+ const prepared=cases.map(a=>placementGeometry.freezeCivilizationFootprints([a.map(p=>({...p}))])[0]);
+ for(const [i,a] of cases.entries())for(const [j,b] of cases.entries())for(const gap of [0,.25,-.25,NaN]){
+  const expected=legacyPlacement.overlap(a,b,gap);
+  for(const pa of [a,prepared[i]])for(const pb of [b,prepared[j]])
+   assert.equal(placementGeometry.civilizationFootprintsOverlap(pa,pb,gap),expected);
+ }
+ const mutable=rect(0,0),other=rect(0,0);assert.equal(placementGeometry.civilizationFootprintsOverlap(mutable,other),true);
+ for(const p of mutable)p.x+=10;assert.equal(placementGeometry.civilizationFootprintsOverlap(mutable,other),false);
+ for(const type of allTypes)for(const team of [0,1])for(const rotation of [0,1/3,2,7/3]){
+  const polygons=placementGeometry.freezeCivilizationFootprints(placementGeometry.settlementReservedFootprints({x:7,z:-4},type,team,rotation)),
+   streets=placementGeometry.freezeCivilizationFootprints(forumCorridors({x:0,z:0,team,size:BUILDINGS.meridianforum.size,visualRotation:rotation}));
+  for(const a of polygons)for(const b of streets){
+   assert.equal(placementGeometry.civilizationFootprintsOverlap(a,b),legacyPlacement.overlap(a,b));
+   assert.equal(placementGeometry.civilizationFootprintsOverlap(b,a),legacyPlacement.overlap(b,a));
+  }
+ }
+});
+test('placement geometry caches are immutable, pose-aware and isolated from entity and snapshot data',()=>{
+ const {game}=fixture(),e=game.spawnBuilding('fieldlab',7,-4,0,0),before=JSON.stringify(e);
+ const get=(reserved=false)=>placementGeometry.civilizationPlacementFootprints(e,e.type,e.team,e.visualRotation||0,reserved);
+ let previous=get();assert.strictEqual(get(),previous);assert.equal(JSON.stringify(e),before);
+ assert.deepEqual(plainFootprints(previous),plainFootprints(placementGeometry.civilizationClearanceFootprints(e,e.type,e.team)));
+ assert.ok(Object.isFrozen(previous)&&previous.every(p=>Object.isFrozen(p)&&p.every(Object.isFrozen)));
+ assert.equal(Reflect.set(previous[0][0],'x',1000),false);
+ e.hp--;e.progress=.5;e.upgrade='orbital';e.upgradeLevel=2;assert.strictEqual(get(),previous,'non-geometric changes reuse geometry');
+ for(const change of [()=>e.x++,()=>e.z--,()=>e.team=1,()=>e.visualRotation=1/3,()=>e.type='researchhub']){
+  change();const next=get();assert.notStrictEqual(next,previous);previous=next;
+  assert.deepEqual(plainFootprints(next),plainFootprints(placementGeometry.civilizationClearanceFootprints(e,e.type,e.team,e.visualRotation||0)));
+ }
+ const reserved=get(true);assert.notStrictEqual(reserved,previous);assert.strictEqual(get(true),reserved);
+ assert.deepEqual(plainFootprints(reserved),plainFootprints(placementGeometry.settlementReservedFootprints(e,e.type,e.team,e.visualRotation||0)));
+ const restored=JSON.parse(JSON.stringify(e));assert.notStrictEqual(placementGeometry.civilizationPlacementFootprints(restored,e.type,e.team,e.visualRotation,true),reserved);
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0),corridors=placementGeometry.forumCollisionCorridors;
+ previous=corridors(forum);assert.strictEqual(corridors(forum),previous);forum.hp--;forum.progress=.5;assert.strictEqual(corridors(forum),previous);
+ for(const change of [()=>forum.x=-0,()=>forum.z=2,()=>forum.size++,()=>forum.team=1,()=>forum.visualRotation=1/3]){
+  change();const next=corridors(forum);assert.notStrictEqual(next,previous);previous=next;
+  assert.deepEqual(plainFootprints(next),plainFootprints(forumCorridors(forum)));
+ }
+ assert.ok(Object.isFrozen(previous)&&previous.every(p=>Object.isFrozen(p)&&p.every(Object.isFrozen)));
+ const raw=forumCorridors(forum);raw[0][0].x++;assert.deepEqual(plainFootprints(previous),plainFootprints(forumCorridors(forum)),'raw public geometry stays fresh and independent');
+});
+test('cached placement preserves legacy reasons while bodies, ownership, terrain and Forum masks change live',()=>{
+ const {game,world}=fixture(0,()=>40);game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0),other=game.spawnBuilding('meridianforum',30,10,1,1),
+  b=game.spawnBuilding('fieldlab',20,30,0,0,{forumId:forum.id}),worker=game.spawn('unit','worker',40,40,0,0),
+  resource=game.spawn('resource','crystal',-40,-30,-1,0,{amount:80}),p={x:0,z:0};
+ const verify=()=>{
+  for(const [x,z] of [[0,0],[20,30],[40,40],[-40,-30],[45,33],[-15,-40],[76,0]]){
+   Object.assign(p,{x,z});
+   for(const type of ['fieldlab','embercottage','meridianforum'])for(const team of [0,1]){
+    assert.equal(game.settlementPlacementReason(type,p,team),legacyPlacement.placement.call(game,type,p,team));
+    assert.equal(game.forumAccessReason(p,4,undefined,type,team),legacyPlacement.access.call(game,p,4,undefined,type,team));
+    for(const e of game.s.entities)assert.equal(placementGeometry.buildingBlockerReason(p,4,e,type,team),legacyPlacement.blocker(p,4,e,type,team));
+   }
+  }
+ };
+ verify();b.visualRotation=1/3;forum.visualRotation=2/3;other.size++;worker.exit={x:45,z:33};verify();
+ b.x=45;b.z=33;b.type='researchspire';b.team=1;delete b.forumId;resource.hp=0;forum.hp=0;verify();
+ b.hp=0;other.hp=0;worker.x=45;worker.z=33;worker.exit=undefined;world.staticGrid[world.idx(45,33)]=1;
+ world.sight[1].explored[world.idx(20,30)]=0;game.s.supplyCaches.push({x:-40,z:-30,collected:false});verify();
+ world.staticGrid.fill(0);world.sight[1].explored.fill(255);game.s.supplyCaches[0].collected=true;worker.hp=0;verify();
+});
+test('bounded settlement growth and layout retain legacy candidates, cursors, RNG and full saved state',()=>{
+ for(const [seed,rotation,blocked] of [[1409,0,false],[8123,1/3,false],[2718,2/3,true]]){
+  const current=fixture(0,()=>40),old=fixture(0,()=>40),games=[current.game,old.game],forums=[];
+  old.game.settlementPlacementReason=legacyPlacement.placement;old.game.forumAccessReason=legacyPlacement.access;
+  const traces=[[],[]];
+  for(const [i,game] of games.entries()){
+   game.s.entities=[];game.s.seed=seed;
+   const forum=game.spawnBuilding('meridianforum',0,0,0,0);forum.visualRotation=rotation;forum.cinderStock=2000;forums.push(forum);
+   game.spawnBuilding('meridianforum',40,-10,1,1);game.spawnBuilding('depot',-30,35,0,0);
+   game.random=()=>assert.fail('Placement must not consume combat/effect RNG');
+   const placement=game.settlementPlacementReason;
+   game.settlementPlacementReason=function(type,p,team){const reason=placement.call(this,type,p,team);traces[i].push([type,p.x,p.z,team,reason]);return reason;};
+   if(blocked)game.world.staticGrid.fill(1);
+  }
+  for(let attempt=0;attempt<8;attempt++){
+   for(const game of games)game.s.time=attempt*10;
+   assert.equal(current.game.growSettlement(forums[0]),old.game.growSettlement(forums[1]));
+   assert.deepEqual(traces[0],traces[1]);assert.equal(JSON.stringify(current.game.s),JSON.stringify(old.game.s));
+   assert.deepEqual(current.world.blocked,old.world.blocked);
+  }
+  for(const forum of forums)forum.visualRotation+=1/3;
+  for(const game of games)game.refreshSettlementLayouts();
+  assert.equal(JSON.stringify(current.game.s),JSON.stringify(old.game.s));
+ }
+});
 test('seven civilian models retain their content values and faction-independent nonproductive role',()=>{
  assert.deepEqual(Object.keys(BUILDINGS).slice(-7),allTypes);
  allTypes.forEach((type,i)=>{

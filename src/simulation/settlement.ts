@@ -46,15 +46,24 @@ function forumCorridors(forum: BuildingEntity, plazaRadius = forum.size + 2.5 + 
   return streets.map(polygon => polygon.map(([x,z]) =>
     ({x:forum.x+x*cs+z*sn,z:forum.z-x*sn+z*cs})));
 }
-function settlementFootprints(p: Position, type: BuildingType, team: PlayerTeam, rotation = 0): Position[][] {
-  return type === 'meridianforum' ? civilizationClearanceFootprints(p, type, team, rotation) :
-    settlementReservedFootprints(p, type, team, rotation);
+const forumCollisionCorridorCache = new WeakMap<BuildingEntity, {
+  x: number; z: number; size: number; yaw: number; polygons: CivilizationFootprints;
+}>();
+function forumCollisionCorridors(forum: BuildingEntity): CivilizationFootprints {
+  const yaw=buildingVisualYaw(forum),old=forumCollisionCorridorCache.get(forum);
+  if(old && Object.is(old.x,forum.x) && Object.is(old.z,forum.z) && old.size===forum.size && old.yaw===yaw)return old.polygons;
+  const polygons=freezeCivilizationFootprints(forumCorridors(forum));
+  forumCollisionCorridorCache.set(forum,{x:forum.x,z:forum.z,size:forum.size,yaw,polygons});
+  return polygons;
+}
+function settlementFootprints(p: Position, type: BuildingType, team: PlayerTeam, rotation = 0): CivilizationFootprints {
+  return civilizationPlacementFootprints(p,type,team,rotation,type !== 'meridianforum');
 }
 // The actual navigation blocker is a rasterized circle, not only the authored decks.
-function forumCorridorBlocked(forum: BuildingEntity, p: Position, radius: number, shapes: Position[][] = []): boolean {
+function forumCorridorBlocked(forum: BuildingEntity, p: Position, radius: number, shapes: CivilizationFootprints = []): boolean {
   const square = [{x:p.x-radius,z:p.z-radius},{x:p.x+radius,z:p.z-radius},
     {x:p.x+radius,z:p.z+radius},{x:p.x-radius,z:p.z+radius}];
-  return forumCorridors(forum).some(c => civilizationFootprintsOverlap(c, square) || shapes.some(s => civilizationFootprintsOverlap(c,s)));
+  return forumCollisionCorridors(forum).some(c => civilizationFootprintsOverlap(c, square) || shapes.some(s => civilizationFootprintsOverlap(c,s)));
 }
 function settlementBuildingType(_radius: number, _roll: number, variant: number): BuildingType {
   return SETTLEMENT_TYPES[0][variant < .5 ? 0 : 1];

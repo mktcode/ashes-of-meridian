@@ -44,9 +44,8 @@
           ? 'Leave room around units and production exits.' : '';
       }
       if (type && isCivilizationBuildingType(type) && e.kind === 'building' && e.team === team && isCivilizationBuildingType(e.type)) {
-        const a=type === 'meridianforum' ? civilizationClearanceFootprints(p,type,team) : settlementReservedFootprints(p,type,team),
-          b=e.forumId === undefined ? civilizationClearanceFootprints(e,e.type,e.team,e.visualRotation || 0) :
-            settlementReservedFootprints(e,e.type,e.team,e.visualRotation || 0);
+        const a=civilizationPlacementFootprints(p,type,team,0,type !== 'meridianforum'),
+          b=civilizationPlacementFootprints(e,e.type,e.team,e.visualRotation || 0,e.forumId !== undefined);
         return a.some(pa=>b.some(pb=>civilizationFootprintsOverlap(pa,pb))) ? 'Leave room between civilian decks, stairs and walkways.' : '';
       }
       return distance(p, e) < r + e.size + 0.8 ? 'Leave room around structures and resources.' : '';

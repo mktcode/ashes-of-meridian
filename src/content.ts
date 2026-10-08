@@ -420,11 +420,41 @@ function civilizationClearanceFootprints(p: Position, type: BuildingType, team =
       entry.z*scale+entry.length/2,entry.width??1.05,entry.length+.02,0,visualRotation)),
     ...(d.civilizationWings||[]).map(w=>civilizationFootprint(p,team,w.x*scale,w.z*scale,w.w*scale,w.d*scale,0,visualRotation))];
 }
+interface CivilizationProjectionAxis { readonly nx: number; readonly nz: number; readonly min: number; readonly max: number; }
+// Only polygons privately generated and deeply frozen below have reusable projections.
+const civilizationImmutableAxes = new WeakMap<readonly Position[], CivilizationProjectionAxis[]>();
 function civilizationFootprintsOverlap(a: readonly Position[], b: readonly Position[], gap = .25): boolean {
-  for(const polygon of [a,b])for(let i=0;i<polygon.length;i++){
-    const p=polygon[i],q=polygon[(i+1)%polygon.length],length=Math.hypot(q.x-p.x,q.z-p.z),nx=(q.z-p.z)/length,nz=(p.x-q.x)/length,
-      pa=a.map(v=>v.x*nx+v.z*nz),pb=b.map(v=>v.x*nx+v.z*nz);
-    if(Math.max(...pa)+gap<=Math.min(...pb)||Math.max(...pb)+gap<=Math.min(...pa))return false;
+  const axesA=civilizationImmutableAxes.get(a),axesB=civilizationImmutableAxes.get(b);
+  if(!axesA && !axesB){
+    // Mutable/public geometry keeps the original path, with no stale projection cache.
+    for(const polygon of [a,b])for(let i=0;i<polygon.length;i++){
+      const p=polygon[i],q=polygon[(i+1)%polygon.length],length=Math.hypot(q.x-p.x,q.z-p.z),nx=(q.z-p.z)/length,nz=(p.x-q.x)/length,
+        pa=a.map(v=>v.x*nx+v.z*nz),pb=b.map(v=>v.x*nx+v.z*nz);
+      if(Math.max(...pa)+gap<=Math.min(...pb)||Math.max(...pb)+gap<=Math.min(...pa))return false;
+    }
+    return true;
+  }
+  const min=Math.min,max=Math.max;
+  for(let side=0;side<2;side++){
+    const polygon=side===0?a:b,axes=side===0?axesA:axesB;
+    for(let i=0;i<polygon.length;i++){
+      const axis=axes?.[i];
+      let nx: number,nz: number;
+      if(axis){nx=axis.nx;nz=axis.nz;}
+      else {
+        const p=polygon[i],q=polygon[(i+1)%polygon.length],length=Math.hypot(q.x-p.x,q.z-p.z);
+        nx=(q.z-p.z)/length;nz=(p.x-q.x)/length;
+      }
+      let minA=Infinity,maxA=-Infinity,minB=Infinity,maxB=-Infinity;
+      // Same projections/extrema, including NaN and signed zero; no per-axis arrays.
+      if(side===0 && axis){minA=axis.min;maxA=axis.max;}
+      else for(let j=0;j<a.length;j++){const v=a[j],projection=v.x*nx+v.z*nz;minA=min(minA,projection);maxA=max(maxA,projection);}
+      if(side===1 && axis){minB=axis.min;maxB=axis.max;}
+      else for(let j=0;j<b.length;j++){const v=b[j],projection=v.x*nx+v.z*nz;minB=min(minB,projection);maxB=max(maxB,projection);}
+      // Most rejected pairs only visit one axis. Prepare lazily, without reordering checks.
+      if(axes && !axis)axes[i]=Object.freeze({nx,nz,min:side===0?minA:minB,max:side===0?maxA:maxB});
+      if(maxA+gap<=minB||maxB+gap<=minA)return false;
+    }
   }
   return true;
 }
@@ -678,6 +708,28 @@ function civilizationBuildingAtTier(type: BuildingType, tier: number): BuildingT
 // Reserve every expansion envelope, including the wider mid-rise wings, from first growth.
 function settlementReservedFootprints(p: Position, type: BuildingType, team: PlayerTeam, rotation = 0): Position[][] {
   return [1, 2, 3].flatMap(tier => civilizationClearanceFootprints(p, civilizationBuildingAtTier(type, tier), team, rotation));
+}
+type CivilizationFootprints = readonly (readonly Readonly<Position>[])[];
+function freezeCivilizationFootprints(polygons: Position[][]): CivilizationFootprints {
+  for(const polygon of polygons){
+    for(const p of polygon)Object.freeze(p);
+    Object.freeze(polygon);
+    civilizationImmutableAxes.set(polygon,[]);
+  }
+  return Object.freeze(polygons);
+}
+const civilizationPlacementFootprintCache = new WeakMap<Position, {
+  x: number; z: number; type: BuildingType; team: PlayerTeam; rotation: number; reserved: boolean; polygons: CivilizationFootprints;
+}>();
+// Geometry only, never build permission. Content envelopes are immutable; bodies/terrain remain live.
+function civilizationPlacementFootprints(p: Position, type: BuildingType, team: PlayerTeam, rotation = 0, reserved = false): CivilizationFootprints {
+  const old=civilizationPlacementFootprintCache.get(p);
+  if(old && Object.is(old.x,p.x) && Object.is(old.z,p.z) && old.type===type && old.team===team &&
+    Object.is(old.rotation,rotation) && old.reserved===reserved)return old.polygons;
+  const polygons=freezeCivilizationFootprints(reserved ? settlementReservedFootprints(p,type,team,rotation) :
+    civilizationClearanceFootprints(p,type,team,rotation));
+  civilizationPlacementFootprintCache.set(p,{x:p.x,z:p.z,type,team,rotation,reserved,polygons});
+  return polygons;
 }
 function settlementReservedRadius(type: BuildingType): number {
   return Math.max(...[1, 2, 3].map(tier => BUILDINGS[civilizationBuildingAtTier(type, tier)].size),
