@@ -94,6 +94,7 @@
       lastBattleSaveAt = 0;
       battleSaveBytes = 0;
       battleSaveMilliseconds = 0;
+      settlementDetail: { buildingId: number; upgrade: CivilizationUpgradeType } | null = null;
       actionSignature: string;
       factionJustUnlocked: FactionId | null;
       hudClock: number;

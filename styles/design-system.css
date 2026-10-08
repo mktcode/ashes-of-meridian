@@ -84,7 +84,7 @@
   .benefit-option, .upgrade-card, .armory-balance, .codex-nav button, .codex-chapters a,
   .codex-card, .codex-model-caption, .opponent-card, .expedition-benefit-row, .result-reward, .result-next),
 #modal .ui-select,
-#hud :is(.action, .queue-item, .minimap-panel, .settlement-upgrades button, .resource-strip, #speedBtn, #pauseBtn) {
+#hud :is(.action, .queue-item, .minimap-panel, .settlement-details, .resource-strip, #speedBtn, #pauseBtn) {
   position: relative;
   overflow: visible;
 }
@@ -458,10 +458,9 @@
 #hud .selection-health { background: linear-gradient(90deg, #79e2b64d var(--health), #020b12 0); box-shadow: inset 0 1px #c6efff14 }
 #hud .selection-health.enemy { background: linear-gradient(90deg, #ff97974d var(--health), #020b12 0) }
 #hud .shield-meter { background: linear-gradient(#e3d6ff, var(--ui-energy)) }
-#hud :is(#actionPanel.details-panel, #actionPanel.settlement-panel) { background: var(--ui-material-panel) }
-#hud .settlement-effect.active { box-shadow: none }
+#hud #actionPanel.details-panel { background: var(--ui-material-panel) }
+#hud .settlement-details { --ui-cut: 8px; --ui-fill: var(--ui-material-panel) }
 #hud .settlement-controls button { --ui-cut: 6px }
-#hud .settlement-effect { --ui-cut: 8px }
 #hud .queue-item { --ui-cut: 8px; --ui-inner: .3 }
 #hud .queue-item::after { inset: 3px; clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); background: conic-gradient(transparent var(--progress, 0deg), #e2f1f540 0) }
 #hud :is(#radio, #tutorialGoal) { --ui-cut: 12px; --ui-fill: var(--ui-material-panel); --ui-inner: .32; --ui-edge: linear-gradient(135deg, #6193a9, #294a65 30%, #4a7d94 79%, #234158) }

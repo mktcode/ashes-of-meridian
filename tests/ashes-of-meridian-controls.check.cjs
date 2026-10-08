@@ -205,6 +205,7 @@ function setup() {
     },
     addEventListener(type, handler) { this.handlers[type] = handler; },
     setPointerCapture() {},
+    focus() {},
     setAttribute(key, value) { this[key] = value; },
     removeAttribute(key) { delete this[key]; },
     getAttribute(key) { return this[key] ?? null; },
@@ -1566,7 +1567,17 @@ test('build menu exposes only the Forum among civilian models in every expeditio
 test('civilian HUD choices carry the selected building ID and obey pause guards',()=>{
   const h=setup(),ui=h.ui,g=ui.game,b={id:7,kind:'building',type:'fieldlab',team:0,hp:500,progress:1,forumId:1,queue:[]};
   g.s.entities=[b];ui.selected=[7];ui.perform=h.UI.prototype.perform;g.settlementUpgradeReason=()=>'';g.settlementExpansionReason=()=>'';
+  const before=JSON.stringify(b);
+  ui.perform('settlementInspect:orbital');assert.equal(ui.settlementDetail.upgrade,'orbital');
+  assert.equal(JSON.stringify(b),before);assert.equal(h.calls.length,0);
+  assert.match(ui.renderSettlementUpgrades(b),/data-action="settlementUpgrade:orbital"/);
+  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/data-action="settlementExpand"/);
   ui.perform('settlementUpgrade:orbital');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:'orbital'}]);
+  b.upgrade='orbital';b.upgradeLevel=1;
+  assert.match(ui.renderSettlementUpgrades(b),/data-action="settlementExpand"/);
+  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/data-action="settlementUpgrade:orbital"/);
+  ui.perform('settlementBack');assert.equal(ui.settlementDetail,null);
+  ui.perform('settlementInspect:startingAlloy');assert.equal(ui.settlementDetail,null);
   ui.perform('settlementExpand');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'expandSettlementBuilding',id:7}]);
   ui.perform('settlementClear');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:null}]);
   const count=h.calls.length;ui.paused=true;ui.perform('settlementUpgrade:scan');assert.equal(h.calls.length,count);
@@ -2065,22 +2076,34 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
 });
 
-test('civilian effect lists expose only their family and mark selections without RNG at every tier',()=>{
+test('civilian effect grids fit twelve slots and separate family icons from details without RNG',()=>{
   const h=setup(),rules=vm.runInContext('({CIVILIZATION_UPGRADES,civilizationUpgradeAllowed})',h.context);
   vm.runInContext("Math.random=()=>{throw Error('UI consumed RNG');}",h.context);
   for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower']){
+    h.ui.settlementDetail=null;
     const research=type.startsWith('research')||type==='fieldlab',key=research?'orbital':'startingAlloy',
-      b={type,upgrade:key,upgradeLevel:2},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
-    assert.match(html,new RegExp(`${research?'Research':'Residential'} upgrade`));
-    assert.doesNotMatch(html,/Local Echo pays for ranks|Switching effects within this building family|Changes apply only to newly started battles/);
+      b={id:7,type,upgrade:key,upgradeLevel:2},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
+    assert.match(html,/class="catalog-grid settlement-grid"/);
+    assert.match(html,new RegExp(`${research?'Research':'Residential'} upgrades`));
+    assert.doesNotMatch(html,/<p>|<small>|data-action="settlementUpgrade:/);
+    const slots=[...html.matchAll(/data-action="settlementInspect:/g)].length;
+    assert.equal(slots,research?12:9);assert.ok(slots<=12);
     for(const effect of Object.keys(rules.CIVILIZATION_UPGRADES))
-      assert.equal(html.includes(`data-action="settlementUpgrade:${effect}"`),rules.civilizationUpgradeAllowed(type,effect));
-    assert.match(html,new RegExp(`data-action="settlementUpgrade:${key}"[^>]*aria-pressed="true"`));
+      assert.equal(html.includes(`data-action="settlementInspect:${effect}"`),rules.civilizationUpgradeAllowed(type,effect));
+    assert.match(html,new RegExp(`data-action="settlementInspect:${key}"[^>]*aria-pressed="true"`));
+    h.ui.settlementDetail={buildingId:7,upgrade:key};
+    const details=h.ui.renderSettlementUpgrades(b);
+    assert.match(details,/data-action="settlementBack"/);
+    assert.match(details,/data-action="settlementExpand"/);
+    assert.doesNotMatch(details,/settlementInspect:/);
     assert.equal(JSON.stringify(b),before);
   }
-  const unavailable=h.ui.renderSettlementUpgrades({type:'embercottage',upgrade:'orbital',upgradeLevel:2});
-  assert.match(unavailable,/stored effect is unavailable/);assert.doesNotMatch(unavailable,/aria-pressed="true"/);
+  h.ui.settlementDetail={buildingId:7,upgrade:'startingAlloy'};
+  const unavailable=h.ui.renderSettlementUpgrades({id:7,type:'embercottage',upgrade:'orbital',upgradeLevel:2});
+  assert.match(unavailable,/stored effect is unavailable/);
   assert.match(unavailable,/data-action="settlementClear"/);
+  assert.match(unavailable,/Activate · Free switch/);
+  assert.doesNotMatch(unavailable,/data-action="settlementExpand"/);
 });
 
 test('home and transition previews use the actual next landscape and atmosphere seed', () => {
