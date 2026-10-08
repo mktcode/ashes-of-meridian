@@ -17,4 +17,4 @@ Frühere menschliche Mobilfunkproben brachen mehrfach ab; Ursache blieb ohne gee
 
 - [ ] Einen gegebenenfalls noch betriebenen separaten Multiplayerdienst und seinen öffentlichen Endpunkt außerhalb dieses Repositories abschalten. Keine automatische Deployment-/Infrastrukturänderung durch den Quellcodeumbau.
 
-Singleplayer-Performance bleibt separat unter [Mobile Performance](mobile-performance.md); autonome Mehrparteien-KI-Prüfung unter [Simulation](mehrparteien-simulation.md). Neue umfangreiche Messungen nur nach [Freigabe](../testing.md).
+Singleplayer-Performance bleibt zentral unter [Performance](performance/README.md); autonome Mehrparteien-KI-Prüfung unter [Simulation](mehrparteien-simulation.md). Neue umfangreiche Messungen nur nach [Freigabe](../testing.md).

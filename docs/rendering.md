@@ -2,6 +2,7 @@
 
 Darstellungs- und Pflegeverträge; Formen, Budgets, Shaderwerte und CSS-Maße stehen im Code.
 Die gestalterische Richtung beschreibt die [Grafik-Leitlinie](graphics-guideline.md).
+Offene Gerätekosten, Engpässe und Messfragen stehen zentral unter [Performance](issues/performance/README.md); technische Wiederverwendung ist keine allgemeine FPS- oder Mobilstabilitätszusage.
 
 ## Texturen
 
@@ -66,7 +67,7 @@ Cache-Misses erzeugen höchstens ein sichtbares Modell je Renderframe und kopier
 
 Der Cache bleibt über Codex-/Menüwechsel im selben Tab erhalten, nicht über Reloads. Sichtbare Cache-Hits werden schon beim Aufbau der Codex-Liste ohne WebGL-Arbeit eingesetzt; kalte Aufnahmen bleiben im Rendercallback. Nur erstmalig erzeugte Codex-Bilder blenden leicht ein, Cache-Hits und Aktualisierungen bestehender Bilder nicht. Reduzierte Bewegung überspringt das Einblenden.
 
-Verdrängte Bilder und endgültig verlassene Vorschauen geben eigene Ressourcen frei. Cache-Hits zeichnen/kopieren nicht erneut aus WebGL; Cache-Misses können trotzdem synchronisieren. [Offene Abnahme](issues/modell-kacheln.md).
+Verdrängte Bilder und endgültig verlassene Vorschauen geben eigene Ressourcen frei. Cache-Hits zeichnen/kopieren nicht erneut aus WebGL; Cache-Misses können trotzdem synchronisieren. [Bild-/Bedienungsabnahme](issues/modell-kacheln.md), [verbleibende Kosten](issues/performance/README.md#modellkacheln).
 
 ## Terrain und Renderpässe
 

@@ -17,6 +17,7 @@ Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) be
 - [ ] Grenzen für Stapel, Zusatzworker, Command-Ränge und Reparaturrabatt prüfen. Einige Effekte behalten technische Obergrenzen; freie Effektwechsel und das Behalten gekaufter Ränge beim Leeren sind vorläufige Bedienentscheidungen.
 - [ ] Einmalige Effekte auf ausgebauten Gebäuden verständlich behandeln: zusätzliche Ränge verstärken sie nicht. Ob hierfür Ausbau gesperrt, eine Warnung ergänzt oder eine andere Rangwirkung gewünscht ist, entscheiden.
 - [ ] Ausreichende Siedlungsfläche trotz vollständiger Erstbau-Reservierung, erreichbare Forum-Lieferungen sowie Cinder-/Echo-Reste nach knappen Siegen mit echten Runs prüfen. Keine automatische Ressourcenrettung oder garantierte maximale Gebäudezahl.
-- [ ] Umfangreiche Archive und häufige Upgrade-Änderungen am Zielgerät prüfen: Aggregation, Speicherung und Wiederbesuche; bestehende [Archivkosten](expeditions-spielstand.md) gelten weiterhin.
+
+Kosten umfangreicher Archive, wiederholter Upgrade-Aggregation und Speicherung stehen zentral unter [Performance](performance/README.md#verbleibende-cpu-spitzen); korrekte Wiederbesuche und getrennte Save-Ziele unter [Spielstandsabnahme](expeditions-spielstand.md).
 
 KI-Partien, umfassende Simulationen und vollständige menschliche Runs sind noch nicht abgenommen. Diese Liste ist keine Freigabe für autonome Langtests oder neue Balancekorrekturen.

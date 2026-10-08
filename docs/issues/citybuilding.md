@@ -12,15 +12,13 @@ Referenz für die Abnahme: abgeschlossene Frontier-Welt, Seed `13644411`, gemeld
 - [ ] **Zugangs- und Bedienungsabnahme:** Erreichbare Gegenstelle auf ebenem Gelände und am Hang von vorne, hinten und seitlich beliefern, insbesondere bei gesperrten Fronttreppen. Bau/Drehung ohne erreichbaren umlaufenden Lieferbereich muss ohne Zahlung/Layoutmutation scheitern. Fremde/militärische Hindernisse bleiben erhalten. Ein vollständig unzugängliches Bestandsforum benötigt eine freigeräumte Zufahrt oder Verkauf/Neubau; Vorratsverlust und erhaltene Worker-Ladung müssen verständlich sein. Ohne eigenen Worker ist kein neuer Drehungs-Wegnachweis möglich.
 - [ ] **Weiterer Prüfrahmen:** Umfangreiche KI-/Simulationsabnahme ist nicht erfolgt. Die bestehende Persistenz-Fixture-Auswahl mit Seed `1409` liefert innerhalb eines 45-s-Zeitbudgets keinen Fallabschluss; für deren Prüfung eigenes Zeitbudget vereinbaren. Die begrenzte direkte Snapshot-/Restore-Probe am Export ist kein Ersatz für die gesamte Persistenzabnahme.
 
-## Baugrid: nachgelagerte Performance-Abnahme
+## Baugrid: Darstellung und Bedienung
 
-Der [zentral beginnende Ringeffekt](../rendering.md#viewport-und-hud) ist im Firefox menschlich positiv bewertet. Offen bleibt die Echtgeräte-Abnahme der cache- und leerlaufgestützten Vorbereitung bei weitem Zoom und dicht bebautem Bestand. Rasterauflösung, Ringoptik und genaue Klickprüfung bleiben unverändert.
+Der [zentral beginnende Ringeffekt](../rendering.md#viewport-und-hud) ist im Firefox menschlich positiv bewertet. Rasterauflösung, Ringoptik und genaue Klickprüfung bleiben unverändert.
 
-Die begrenzte CPU-Probe verwendet flaches, vollständig sichtbares Terrain, feststehende Entitäten, einen Renderer-Stub und künstlich bereitgestellte Leerlaufzeit. Sie isoliert Arbeitsmenge und Fortschritt, ist aber kein Firefox-/GPU- oder Echtgerätebenchmark. Leerlaufzeit ist keine zugesicherte Kapazität: Unter hoher CPU-/Renderlast kann sie ausbleiben; dann bleibt der normale, portionierte Renderpfad zuständig. Der technische Software-WebGL-Nachweis für Idle-Uploads verwendet eine angehaltene Menü-Renderloop, nicht einen Performancevergleich im laufenden Spiel.
-- [ ] **Weiten Zoom profilieren und optimieren:** Erstaufbau und Kamerawechsel auf dem Nutzergerät messen; neue Terrainprüfungen, Planung/Meshaufbau, Live-Validierung und GPU-Uploads getrennt betrachten. Eine größere sichtbare Fläche erhöht bei unveränderter Abtastdichte die Arbeit trotz begrenzter Ringzahl. Ziel ist ein früher sichtbarer Anfang und weniger Aufbauverzögerung; Ringoptik und genaue Klickprüfung erhalten, keine zusätzliche Wegsuche pro Rasterprobe.
-- [ ] **Weitere menschliche Abnahme:** Pan/Zoom/Drehung/Resize und reduzierte Bewegung prüfen. Bereits sichtbare, zwischengespeicherte Flächen benötigen weiterhin aktuelle Belegungs-/Sichtprüfungen. Die Forum-Liefer-/Reload-Abnahme bleibt separat (siehe oben); bei niedriger Bildrate wird auch der portionsweise Grid-Aufbau langsam.
+- [ ] Pan/Zoom/Drehung/Resize und reduzierte Bewegung auf Zielgeräten prüfen. Bereits sichtbare, zwischengespeicherte Flächen benötigen weiterhin aktuelle Belegungs-/Sichtprüfungen; Farbe zwischen Validatorproben bleibt Orientierung.
 
-Allgemeine [Worker-Navigation](worker-bauwegfindung/issue.md) und [CPU-Wegsuche](mobile-performance.md) sind benachbarte, nicht hier pauschal freigegebene Arbeiten.
+Kosten bei weitem Zoom, kalter Aufbau und Vorbereitung unter Last werden zentral unter [Performance/Bauplatzraster](performance/README.md#bauplatzraster) geführt. Die Forum-Liefer-/Reload-Abnahme bleibt hier; allgemeine [Navigation](worker-bauwegfindung/issue.md) bleibt separat. Kein Optimierungsauftrag aus der visuellen Abnahme.
 
 ## Offene menschliche Abnahme
 
@@ -31,6 +29,6 @@ Allgemeine [Worker-Navigation](worker-bauwegfindung/issue.md) und [CPU-Wegsuche]
 
 ## Prüfgrenzen und Zuständigkeiten
 
-Kleine CPU-Verträge prüfen Vorratsbuchung, begrenztes Wachstum, Korridor-Ausschlüsse, Rückbau sowie gespeicherte Zuweisungen und Wachstumscursor. Visuelle Wirkung, Echtgeräteperformance, echte Pendelstrecken auf den verschiedenen Landschaften und vollständige Runs bleiben offen; keine breite KI-/Simulationsabnahme daraus ableiten.
+Kleine CPU-Verträge prüfen Vorratsbuchung, begrenztes Wachstum, Korridor-Ausschlüsse, Rückbau sowie gespeicherte Zuweisungen und Wachstumscursor. Visuelle Wirkung, [Echtgeräteperformance](performance/README.md), echte Pendelstrecken auf den verschiedenen Landschaften und vollständige Runs bleiben offen; keine breite KI-/Simulationsabnahme daraus ableiten.
 
 [Progressionsbalance](expeditions-schwierigkeit-und-upgrades.md), [Weltbesuche/Spielstand](expeditions-spielstand.md), [Modellabnahme](modelle.md) und [menschliche Run-Abnahme](playtest-validation.md) bleiben in ihren Fachissues. Bevölkerung, Steuern, Verkehr, Produktionsketten oder Viertelspezialisierung gehören nicht zum aktuellen Kern.

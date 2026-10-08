@@ -52,4 +52,4 @@ Statusfarben benötigen weiterhin menschliche Abnahme, auch bei heller Spielwelt
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und
 Screenreader-Bedienung. Reduzierte Filterkosten sind kein gemessener Performancegewinn;
-GPU-/Gerätemessungen erst mit konkretem Vergleichsziel.
+GPU-/Gerätemessungen erst mit konkretem Vergleichsziel; offene UI-Kosten zentral unter [Performance](performance/README.md#ui-und-erstaufbau).

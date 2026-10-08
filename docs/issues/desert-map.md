@@ -5,6 +5,7 @@ Warme trockene Canyonlandschaft erhalten, keine dunkle Basaltästhetik. Grundges
 - [ ] Wände/Rinnen, Schutthänge und gruppiertes Geröll bei Übersicht, normalem Zoom und Wandfuß beurteilen; kein gezackter Bodenanschluss. Rand-/Außenkulisse auch im weiten Eckblick.
 - [ ] Dünen-/Mesa-/Oasen-/Salzfamilien, Materialmaßstab/-wiederholung, Nebel/Asche und Einheitenkontrast.
 - [ ] Gegenverkehr, Expansionsbau, Startchancen und lesbare Kämpfe hinter Wänden in vollständigen Partien.
-- [ ] Aktuelle Lade-/Geometrie-/GPU-Kosten auf Zielgerät messen; alte Galeriegrößen sind kein heutiger Flaschenhalsnachweis.
 
-Seedbasierte Wirtschaftsflächen/Zugänge und [RNG-/CPU-Oberfläche](../architecture.md#welt-darstellung-und-zufall) erhalten; alte feste Felsvorschläge und Eckbasen sind keine Layoutvorgaben. Kein nebenher geänderter Bloom/Tilt-Shift oder Eingriff in andere Karten. [Performance](mobile-performance.md).
+Lade-/Geometrie-/GPU-Kosten zentral unter [Performance](performance/README.md#renderer-und-gpu); alte Galeriegrößen sind kein heutiger Flaschenhalsnachweis.
+
+Seedbasierte Wirtschaftsflächen/Zugänge und [RNG-/CPU-Oberfläche](../architecture.md#welt-darstellung-und-zufall) erhalten; alte feste Felsvorschläge und Eckbasen sind keine Layoutvorgaben. Kein nebenher geänderter Bloom/Tilt-Shift oder Eingriff in andere Karten.

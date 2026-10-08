@@ -2,7 +2,7 @@
 
 Planung, keine Implementierungs- oder Testfreigabe. Maßgebliche Übersicht für alle offenen Issues; Details und Befunde bleiben im jeweiligen Fachissue. Priorität folgt Ausfall-/Fortschrittsrisiko, Kernspielbarkeit, Nutzerwirkung und Abhängigkeiten. Ein kleiner belegter Fehler ist eher umsetzbar als eine große, noch unbestätigte Optimierung.
 
-Reviewgrundlage: alle Issue-Texte, Abgleich betroffener Quellen/Tests auf `937914e` und vorhandene Nutzer-/Prüfbefunde. Keine neuen Spiel-, Browser-, KI- oder Simulationsläufe. „Implementiert, Abnahme offen“ ist weder ein neuer Implementierungsauftrag noch eine vollständige Freigabe.
+Reviewgrundlage: alle Issue-Texte, Abgleich betroffener Quellen/Tests auf `937914e` und vorhandene Nutzer-/Prüfbefunde; Performance-Einordnung um die aktuelle Desktop-Rückmeldung nach `9ca3e1d` ergänzt. Keine neuen Spiel-, Browser-, KI- oder Simulationsläufe. „Implementiert, Abnahme offen“ ist weder ein neuer Implementierungsauftrag noch eine vollständige Freigabe.
 
 ## P0 – vor weiterer Veröffentlichung klären
 
@@ -16,7 +16,7 @@ Die Tabelle ordnet Arbeitsfelder, nicht die Reihenfolge jedes Einzelschritts. Ge
 
 | Issue | Status, Wirkung und nächster Schritt |
 | --- | --- |
-| [Mobile Performance/Stabilität](mobile-performance.md) | Laptop-Verbesserung bestätigt; mobile Freezes/Context-loss nicht geklärt. Zuerst Buildzuordnung und konkreten Gerätebefund sichern, dann Abbruch-/Befehls-/Armeelast getrennt eingrenzen. Kein weiterer pauschaler Grafikabbau. |
+| [Performance/Stabilität](performance/README.md) | Desktop aktuell zufriedenstellend: Chromium laut Nutzer nahezu 60 FPS, Firefox noch nicht konstant. Mobile Freezes/Context-loss bleiben offen; bei erneutem Bedarf Abbruch und Einzelspitzen mit Buildkontext eingrenzen. Keine vorsorgliche weitere Optimierung oder Qualitätsreduktion. |
 | [Spielstand/Weltbesuche](expeditions-spielstand.md) | Gefechtsrestore manuell positiv; frühere Welten samt Weiterbau und komprimiertem Archiv integriert, menschliche Abnahme offen. Hintergrund/Prozessende, Grafikverlust, getrennte Save-Ziele, verständliche Speicherfehler und Archivkosten zusammen mit Mobilstabilität abnehmen. |
 | [Worker/Bauwegfindung](worker-bauwegfindung/issue.md) | Bekannte Fehlerklasse korrigiert, Originalstillstände nicht exakt reproduziert. Erreichbarer Bau, wiederholte Lieferungen und nachvollziehbarer Blockiert-/Ausgangsstatus vor weiterem Navigationsumbau. |
 | [Prozedurale Gefechtsstarts](procedural-battlefields.md) | HQ-Bauflächen und KI-Ausweichen verbessert; tatsächlicher bezahlter HQ-Abschluss, knappe Wirtschaftsflächen und Startfairness offen. Ein unspielbarer Start wiegt schwerer als neue Karten-/Modellinhalte. |
@@ -37,7 +37,7 @@ Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische 
 | [Höhen/Spielabnahme](hoehenstufen/README.md) | Sicht von oben/unten, Rampenverkehr, Fundamente, Picking und Walling auf der gemeinsamen CPU-Oberfläche prüfen. Worker-/Startprobleme nur im jeweiligen P1-Issue weiterverfolgen. |
 | [Landschaften/taktische Darstellung](project-tomorrow.md) | Verdeckung, Bauflächen, Flugfreiraum, Kontrast/Nacht und alle sechs Familien einschließlich Mothership. Spielrelevante Lesbarkeit vor Wetter-/Materialfeinschliff. |
 | [Modelle](modelle.md) | Rollen-/Teamlesbarkeit und Nachtlichtauswahl in dichten Gruppen; positive Rückmeldung zur Nachtatmosphäre erhalten. Kein allgemeiner Modellneubau. |
-| [Modellkacheln](modell-kacheln.md) | Cache und Größenkorrektur sind integriert. Erst-/Wiederöffnen, mobile Bedienung und Ausschnitte abnehmen; verbleibende Kosten getrennt von der laufenden 3D-Kulisse messen. |
+| [Modellkacheln](modell-kacheln.md) | Ausschnitte, Einblenden und mobile Bedienung abnehmen; verbleibende Öffnungs-/Layoutkosten zentral unter [Performance](performance/README.md#modellkacheln). |
 | [Schwere Luftzerstörer](schwerer-luftzerstoerer.md) | Bereits integriert. Endgame-Konterbarkeit, KI-Ausgaben, Flugfreiraum und Gerätekosten in passenden Run-Situationen prüfen, keine neue Einheit planen. |
 | [Desert](desert-map.md) | Erodierte Formen/Bodenanschlüsse, warmer Charakter, Kontrast und faire Wege der aktuellen prozeduralen Fassung; kein Rückbau zum festen Layout. |
 
@@ -58,7 +58,7 @@ CSS-Entkopplung aus dem UI-Issue und nicht blockierende Testbereinigung bei fach
 
 1. Quellenfreigabe und alten Dienststatus organisatorisch klären. Parallel bietet der belegte **Texturladefehler** den kleinsten klar abgegrenzten Codeauftrag; **Dialog/Fokus** ist der nächste bereichsübergreifende Bedienungsauftrag.
 2. **Start-/Worker-Zuverlässigkeit:** relevante HQ-Fixtures berichtigen und gezielt Bauabschluss/Lieferzyklen prüfen. Autonome KI-Läufe nur separat freigegeben; fehlende Originalstände bei erneutem Auftreten zuerst sichern.
-3. **Mobilstabilität und Fortsetzen:** eindeutige Diagnose-Buildkennung, konkrete Abbruchaufnahme und Spielstands-/Lebenszyklusabnahme zusammenführen. Weitere Performancearbeit nach dem verbliebenen Engpass, nicht nach der alten Menü-Himmel-Hypothese.
+3. **Mobilstabilität und Fortsetzen:** eindeutige Diagnose-Buildkennung, konkrete Abbruchaufnahme und Spielstands-/Lebenszyklusabnahme zusammenführen. Die [Performanceübersicht](performance/README.md) führt verbleibendes Potenzial; weitere Desktoparbeit erst bei konkretem Bedarf und gemessenem Engpass.
 4. **Ein zusammenhängender Run-Abnahmeblock** mit FFA/Progression und taktischer Darstellung. Daraus konkrete Bugs/Balanceentscheidungen ableiten; erst danach einen neuen Modus oder Plattformausbau wählen.
 
 Aufwand: Texturfehler/Buildkennung voraussichtlich klein, Dialogverwaltung/Fixturepflege mittel; Ursachenklärung bei Stillständen und Geräteabbrüchen offen. Das sind Umfangseinschätzungen, keine Zeit- oder Erfolgszusagen. Kriterien und Freigaben: [Prüfwahl](../testing.md).

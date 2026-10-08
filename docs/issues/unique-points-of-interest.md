@@ -14,6 +14,6 @@ Erste unverbindliche Motivideen, noch keine festgelegte Auswahl:
 
 - [ ] Motivauswahl und gestalterischen Charakter weiter definieren; weitere Ideen sammeln und passende Modelle ausarbeiten.
 - [ ] Zufällige Auswahl und Platzierung pro Karte konkretisieren, einschließlich Eignung für unterschiedliche Landschaften und Platzbedarf.
-- [ ] Atmosphärische Wirkung bei normalem Gefechtszoom sowie technische Kosten auf Zielgeräten abnehmen.
+- [ ] Atmosphärische Wirkung bei normalem Gefechtszoom abnehmen; technische Kosten neuer Geometrie bei späterer Freigabe gemäß der zentralen [Performanceübersicht](performance/README.md#renderer-und-gpu) beurteilen.
 
 Kein zusätzlicher Ressourcen-, Missions- oder Belohnungsmechanismus vorgesehen; das Echo-Kristall-Beispiel ist zunächst ein atmosphärisches Motiv. Bei späterer Umsetzung bestehende Startflächen, Zugänge, Hindernisverteilung und RNG-Verträge schützen ([Architektur](../architecture.md)); Modellpflege gemäß [Rendering](../rendering.md#einzeln-wartbare-modelle). Umsetzung und endgültige Motivauswahl sind noch nicht freigegeben.

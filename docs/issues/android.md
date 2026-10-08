@@ -1,6 +1,6 @@
 # Android/Google Play/Werbung: zurückgestellte Option
 
-Kein Android-Projekt oder SDK, kein Implementierungsauftrag. Erst [Zielgeräte/volle Runs](playtest-validation.md) validieren. Werbefreier Capacitor-Prototyp ist Kandidat, keine Werkzeugentscheidung; bestehende `file://`-Browserauslieferung erhalten.
+Kein Android-Projekt oder SDK, kein Implementierungsauftrag. Erst [Browser-Mobilstabilität](performance/README.md#mobilstabilität-und-speicher) und [Zielgeräte/volle Runs](playtest-validation.md) validieren. Werbefreier Capacitor-Prototyp ist Kandidat, keine Werkzeugentscheidung; bestehende `file://`-Browserauslieferung erhalten.
 
 - [ ] WebView: WebGL/Stabilität, Touch/Safe Areas, Zurück/Ausrichtung, Hintergrund/Audio, Speicher/Wärme/Akku und [gespeichertes Gefecht](expeditions-spielstand.md) nach Prozessende/Update prüfen. Kein Profiltransfer zugesagt.
 - [ ] Paketumfang, Berechtigungen, Asset-/Audio-Lizenzen und aktuelle Store-/Target-API-/Signierungs-/Testanforderungen klären.

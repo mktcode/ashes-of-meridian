@@ -52,7 +52,9 @@ CPU-Unterphasen messen nur synchrone Arbeit innerhalb aufgezeichneter rAF-Phasen
 
 Fehlende/disjoint GPU-Werte sind keine Nullkosten. CPU-Zeiten sind keine Auslastungsprozente, geschätzte Bytes kein Treiberspeicher. Keine Tokens oder vollständigen Spielzustände; Browserkennung und Karte/Seed sind enthalten.
 
-Für Vergleiche denselben Abschnitt/Einstellungen verwenden und getrennt exportieren. Pause, Qualitätswechsel und Hintergrundlücken abgrenzen; Diagnose verursacht selbst Aufwand. Messbedarf und Befunde: [Mobile Performance](issues/mobile-performance.md#messplan-und-abnahme).
+Chromium bleibt vorerst die Basis für CPU-/GPU-Vergleiche. Die Diagnose verwendet `EXT_disjoint_timer_query_webgl2`; fehlende Unterstützung, insbesondere im bisherigen Firefox-Pfad, liefert keine GPU-Zeiten. Browser-/Treiberverfügbarkeit im Bericht prüfen, nicht aus der Browserwahl allein ableiten. Keine gelockerten Browsersicherheitsregeln oder privilegierten Firefox-Erweiterungen für reguläre Messungen voraussetzen.
+
+Vergleichskontext, Erfolgskriterien und offene Messfragen stehen zentral unter [Performance](issues/performance/README.md#messplan-und-erfolgskriterien).
 
 ## Manuelle Probeläufe
 

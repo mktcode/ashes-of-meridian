@@ -4,7 +4,7 @@
 
 Statische Codeprüfung auf Stand `937914e` bestätigt den weiterhin offenen Fehler: In [der Texturvorbereitung](../../src/renderer/runtime.ts) liefert `loadResidentTexture()` bei `Image.onerror` den Wert `false`. `prepareBattlefieldTextures()` wartet auf `Promise.all`, wertet dessen Ergebnisse aber nicht aus und meldet bei aktueller Request-Generation trotzdem Erfolg.
 
-Damit können Menü-/Archivvorschau und Gefechtsstart mit nicht residenten Pflichttexturen fortfahren. Der [Anwendungsfehlerpfad](../../src/app.ts) für fehlgeschlagene Texturvorbereitung wird durch diese aufgelösten Ladefehler nicht erreicht. Kein im Browser reproduzierter Ausfall; kein Nachweis für einen Zusammenhang mit den [mobilen Grafikabbrüchen](mobile-performance.md).
+Damit können Menü-/Archivvorschau und Gefechtsstart mit nicht residenten Pflichttexturen fortfahren. Der [Anwendungsfehlerpfad](../../src/app.ts) für fehlgeschlagene Texturvorbereitung wird durch diese aufgelösten Ladefehler nicht erreicht. Kein im Browser reproduzierter Ausfall; kein Nachweis für einen Zusammenhang mit den [mobilen Grafikabbrüchen](performance/README.md#mobilstabilität-und-speicher).
 
 ## Offene Korrektur und Abnahme
 

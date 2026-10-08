@@ -6,6 +6,7 @@ Breakwater, Crownwing und Catafalque sind als gemeinsamer `destroyer`-Typ mit fr
 - [ ] KI spart sinnvoll, blockiert normale Produktion nicht dauerhaft und verschenkt/hortet Zerstörer nicht.
 - [ ] Farben, Silhouette, Gewicht und zeitbasierte Animation im normalen Zoom/in Gruppen auf Zielgeräten abnehmen; die parametrisierten Modelle gesondert beurteilen, insbesondere die Catafalque-Kriegsbarke auf eigenständige Zerstörersilhouette, Gewicht, Detail-Lesbarkeit und passende Court-Panzer-/Kristallsprache.
 - [ ] [Flugfreiraum](project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau), Hangarausfahrt und langsame Anreise über allen Geländeformen beurteilen.
-- [ ] Lade-/Parsekosten, einmalige Geometrieerzeugung und GPU-Kosten mehrerer sichtbarer Exemplare auf Zielgeräten messen; Original- und neutrale Vorschau-Meshes erhöhen Geometrieresidenz.
+
+Lade-/Parsekosten, Geometrieresidenz und GPU-Kosten großer Bestände werden zentral unter [Performance](performance/README.md#renderer-und-gpu) geführt; Balance und Bildwirkung bleiben hier.
 
 Technische Modell-/Regelprüfungen ersetzen weder Balance noch Mobilabnahme. Zusätzliche autonome Läufe nur nach [Freigabe](../testing.md).

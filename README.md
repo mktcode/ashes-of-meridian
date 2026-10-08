@@ -29,7 +29,7 @@ Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine sp�
 - [Audio und Sprachinhalte](docs/audio.md): Aufnahmen, Texte und Wiedergabeverträge.
 - [Prüfungen](docs/testing.md): kurze gezielte Rückkopplung, Freigaben und Diagnose.
 - [Subagents](docs/subagents.md): isolierte parallele Arbeit.
-- [Projektprioritäten](docs/issues/projektfahrplan.md) und [offene Issues](docs/issues/).
+- [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance/README.md) und [offene Issues](docs/issues/).
 - [Geschichte](docs/story.md): deutsche interne Fassung; englische Spielfassung im Codex.
 
 Isolierte Kartenstarts und Diagnose: [Prüfwerkzeuge](docs/testing.md#manuelle-probeläufe). `npm run simulate:visible` öffnet eine persönliche KI-Zuschauerpartie; **kein Testbefehl, nie automatisch durch Agenten starten**.
