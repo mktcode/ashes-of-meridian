@@ -332,11 +332,11 @@
         }).join('')}</div>`;
         const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key,
           unavailable = b.upgrade && !civilizationUpgradeAllowed(b.type, b.upgrade),
-          rule = civilizationUpgradeUnique(key) ? 'Once per expedition; extra buildings or ranks do not strengthen this effect.' :
-            effect.max !== undefined && effect.max < 999999 ? `Stacks across worlds, up to ${effect.max} ranks.` : 'Stacks across all cleared worlds.',
+          rule = civilizationUpgradeUnique(key) ? 'Once per expedition.' :
+            effect.max !== undefined && effect.max < 999999 ? `Up to ${effect.max} ranks.` : '',
           action = selected ? 'settlementExpand' : `settlementUpgrade:${key}`,
           label = selected ? `Rank ${level + 1} · ${CIVILIZATION_UPGRADE_COSTS[level]} Echo` : `Activate · ${level ? 'Free switch' : CIVILIZATION_UPGRADE_COSTS[0] + ' Echo'}`;
-        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header>${this.actionButton('settlementBack', 'Back to upgrades', 'back')}<strong>${esc(effect.name)}</strong></header><p>${esc(effect.desc)}</p><small>${esc(rule)}</small><div class="settlement-rank">Rank ${level || '—'} · ${selected ? level >= 3 ? 'Fully expanded' : 'Active' : 'Inactive'}</div>${unavailable ? '<small>The stored effect is unavailable for this family. Switching or clearing keeps purchased ranks.</small>' : ''}<div class="settlement-controls">${selected && level >= 3 ? '' : `<button class="action settlement-control" data-action="${action}" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button>`}${b.upgrade ? this.actionButton('settlementClear', 'Clear effect · Keep purchased rank', 'cancel') : ''}</div></section>`;
+        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header><span class="settlement-icon" aria-hidden="true">${uiIcon(key, effect.icon)}</span><strong>${esc(effect.name)}</strong>${this.actionButton('settlementBack', 'Close upgrade details', 'close')}</header><p>${esc(effect.desc)}</p>${rule ? `<small>${esc(rule)}</small>` : ''}<div class="settlement-rank">Rank ${level || '—'} · ${selected ? level >= 3 ? 'Fully expanded' : 'Active' : 'Inactive'}</div>${unavailable ? '<small>The stored effect is unavailable for this family. Switching or clearing keeps purchased ranks.</small>' : ''}<div class="settlement-controls">${selected && level >= 3 ? '' : `<button class="action settlement-control" data-action="${action}" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button>`}${b.upgrade ? this.actionButton('settlementClear', 'Clear effect · Keep purchased rank', 'cancel') : ''}</div></section>`;
       },
       renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
         const list = this.selected.map(id => this.game.get(id)).filter((e): e is Entity => !!e), el = $('selectionStatus');

@@ -75,8 +75,11 @@
 #commandDeck:has(.settlement-detail-panel) { height: auto; min-height: var(--map-size) }
 #hud #actionPanel.settlement-detail-panel { height: auto }
 #hud .settlement-details { display: grid; gap: 6px; padding: 8px; font: 11px/1.35 var(--mono); overflow-wrap: anywhere }
-#hud .settlement-details header { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 6px }
+#hud .settlement-details header { display: grid; grid-template-columns: 32px minmax(0, 1fr) 44px; align-items: center; gap: 6px }
+#hud .settlement-details .settlement-icon { display: grid; place-items: center }
+#hud .settlement-details .settlement-icon :is(svg, .ui-icon) { width: 28px; height: 28px }
 #hud .settlement-details header .action { width: 44px; height: 44px }
+#hud .settlement-details header .action .ui-icon { width: 16px; height: 16px }
 #hud .settlement-details p { margin: 0 }
 #hud .settlement-details small { font: inherit; color: var(--muted) }
 #hud .settlement-controls { display: flex; gap: 4px }

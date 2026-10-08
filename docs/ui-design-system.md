@@ -43,8 +43,8 @@ Auch die obere Leiste hat keine gemeinsame Hintergrundplatte. Ressourcen stehen
 links auf einer eigenen Materialfläche ohne Buttonfunktion und bleiben auch auf
 schmalen Displays nebeneinander. Eine Stageanzeige im HUD entfällt.
 Zivilisationsupgrades nutzen dasselbe 4×3-Katalograster, ausschließlich mit Icons.
-Eine separate Detailansicht ersetzt das Raster und bietet Zurück, Aktivieren und
-anschließend Rang-Ausbau. Sie wächst ohne Scrollfläche nach oben; Minimap und
+Eine separate Detailansicht ersetzt das Raster: freies Upgrade-Icon links,
+X-Button rechts zur Rückkehr, darunter Aktivieren und anschließend Rang-Ausbau. Sie wächst ohne Scrollfläche nach oben; Minimap und
 Auswahlleiste bleiben getrennt und die Welt fullscreen.
 Pause und Tempo nutzen identische Button-Skins und Zustände; ein, zwei oder drei
 Pfeile markieren die Geschwindigkeit, der genaue Faktor bleibt in der zugänglichen
