@@ -1112,6 +1112,17 @@ test('spatial light grid retains all lamps in battle, performance and cinema wit
   r.releasePointLights();assert.equal(h.textures.size,textures-2,'release is idempotent');
 });
 
+test('local light rebuilds query the context texture-size limit only once',()=>{
+  const h=setup(),r=h.r,queries=[],getParameter=h.g.getParameter.bind(h.g);
+  h.g.getParameter=name=>{queries.push(name);return getParameter(name);};
+  Object.assign(r,{dynamic:{},effects:{},occlusion:{},colors:new Map(),extent:64});
+  for(let i=0;i<3;i++) {
+    r.begin();r.addPointLight(i,2,0,8,0xffffff,3);r.preparePointLights();
+    r.releasePointLights();
+  }
+  assert.deepEqual(queries,['MAX_TEXTURE_SIZE'],'releasing world light textures does not discard a context constant');
+});
+
 test('light grid allocation failures are explicit and release partial resources',()=>{
   for(const failure of [{failTexture:true},{failTextureAt:2}]) {
     const h=setup(failure),r=h.r;

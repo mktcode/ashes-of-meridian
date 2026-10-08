@@ -39,6 +39,7 @@
       private lightGrid: { grid: WebGLTexture; lamps: WebGLTexture; size: number;
         gridData: Float32Array; lampData: Float32Array; width: number; height: number } | null = null;
       private lightGridDirty = true;
+      private maxTextureSize?: number;
       colors: Map<number | string, readonly number[] | Float32Array>;
       quality: number;
       detailMeshes = new Set<string>();
@@ -895,7 +896,7 @@
             for (let cx=cell(x-r);cx<=cell(x+r);cx++) cells[cz*size+cx].push(i);
         }
         let state=this.lightGrid;
-        const maxSize=g.getParameter(g.MAX_TEXTURE_SIZE) as number,
+        const maxSize=this.maxTextureSize ??= g.getParameter(g.MAX_TEXTURE_SIZE) as number,
           width=Math.min(256,maxSize), texels=cells.reduce((sum,c)=>sum+c.length*2,0),
           requiredHeight=Math.max(1,Math.ceil(texels/width));
         if (requiredHeight>maxSize || size>maxSize) throw new Error('Local light grid exceeds GPU texture capacity');

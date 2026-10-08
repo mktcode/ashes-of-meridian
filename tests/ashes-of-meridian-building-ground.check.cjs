@@ -81,6 +81,71 @@ test('graded terrain is cached and released when the building is removed or relo
   view.drawBuildingGround(entity);assert.equal(uploads.length,3);
 });
 
+test('building support cache reuses exact terrain results and invalidates every pose input',()=>{
+  const surface=worldFor(.10).surface,e={...entity},before=JSON.stringify(e),heightAt=surface.heightAt.bind(surface);
+  let samples=0;surface.heightAt=(...args)=>{samples++;return heightAt(...args);};
+  const initial=surface.buildingPose(e,e.size);
+  assert.ok(samples>0);assert.ok(Object.isFrozen(initial));
+  samples=0;
+  assert.strictEqual(surface.buildingPose(e,e.size),initial);
+  assert.equal(surface.entityHeight(e),initial.height);assert.equal(samples,0,'warm height lookup does not sample terrain');
+  assert.equal(JSON.stringify(e),before,'cache never adds state to an entity');
+  e.hp=55;e.progress=.5;e.rot=1.4;e.faction=2;
+  assert.strictEqual(surface.buildingPose(e,e.size),initial,'damage, progress, faction and weapon angle do not alter support');
+  for(const change of [{x:3.1},{z:-2.4},{size:5.7},{type:'fieldlab'},{team:1},{visualRotation:1/3},
+    {type:'researchspire',size:4.2},{type:'meridianforum'},{type:'hq'}]) {
+    const old=surface.buildingPose(e,e.size);Object.assign(e,change);samples=0;
+    const pose=surface.buildingPose(e,e.size);
+    assert.ok(samples>0);assert.notStrictEqual(pose,old);
+    assert.deepEqual(pose,surface.computeBuildingPose(e,e.size),'cache miss retains the original formula');
+    samples=0;assert.strictEqual(surface.buildingPose(e,e.size),pose);assert.equal(samples,0);
+  }
+  const old=surface.buildingPose(e,e.size),other=worldFor(.025).surface;
+  assert.notStrictEqual(other.buildingPose(e,e.size),old,'same object cannot carry a pose into another world');
+  assert.deepEqual(other.buildingPose(e,e.size),other.computeBuildingPose(e,e.size));
+  const copy=Object.freeze({...e});
+  assert.notStrictEqual(surface.buildingPose(copy,copy.size),old,'restore/new object with the same ID gets its own entry');
+  assert.deepEqual(surface.buildingPose(copy,copy.size),old);
+});
+
+test('building contact shadows cache accepted and rejected footprints, never moving units',()=>{
+  const {contactShadowPose,computeContactShadowPose}=vm.runInContext('({contactShadowPose,computeContactShadowPose})',context);
+  for(const curved of [false,true]) {
+    const surface=new BattlefieldSurface(40,2.5,(x,z)=>20+.025*x+(curved?.03*z*z:0)),e={...entity},heightAt=surface.heightAt.bind(surface);
+    let samples=0;surface.heightAt=(...args)=>{samples++;return heightAt(...args);};
+    const pose=contactShadowPose(surface,e,12,10,.3);
+    assert.ok(samples>0);if(curved)assert.equal(pose,null);else assert.ok(Object.isFrozen(pose));
+    samples=0;assert.strictEqual(contactShadowPose(surface,e,12,10,.3),pose);assert.equal(samples,0);
+    for(const [change,width,depth,yaw] of [[{x:2},12,10,.3],[{z:3},12,10,.3],[{},14,10,.3],[{},14,8,.3],[{},14,8,.9]]) {
+      Object.assign(e,change);samples=0;
+      const result=contactShadowPose(surface,e,width,depth,yaw);assert.ok(samples>0);
+      assert.deepEqual(result,computeContactShadowPose(surface,e,width,depth,yaw));
+      samples=0;assert.strictEqual(contactShadowPose(surface,e,width,depth,yaw),result);assert.equal(samples,0);
+    }
+    const other=worldFor(.10).surface;
+    assert.deepEqual(contactShadowPose(other,e,14,8,.9),computeContactShadowPose(other,e,14,8,.9));
+    e.kind='unit';samples=0;contactShadowPose(surface,e,14,8,.9);assert.ok(samples>0);
+    samples=0;contactShadowPose(surface,e,14,8,.9);assert.ok(samples>0,'units still sample on every draw');
+  }
+});
+
+test('warm building poses preserve every submitted model transform, animation and preview',()=>{
+  for(const type of ['hq','turret','fieldlab','hearthtower','meridianforum']) {
+    const world=worldFor(.10),e=Object.freeze({...entity,type,visualRotation:1/3}),R=createRendererStub({record:true});
+    R.surface=world.surface;R.quality=2;
+    const original=world.surface.buildingPose.bind(world.surface);let poses=0,heightLookups=0;
+    world.surface.buildingPose=(...args)=>{poses++;return original(...args);};
+    world.surface.entityHeight=()=>{heightLookups++;throw Error('model resampled its shared datum');};
+    const draw=(object,time,options)=>{R.calls.length=0;renderEntity(R,object,time,options);return R.calls.map(c=>[...c]);};
+    for(const time of [0,3])for(const options of [{},{ghost:true},{tint:0x99e4c6,alpha:.3,layer:'effects'}]) {
+      const cold=draw(Object.freeze({...e}),time,options);poses=0;
+      assert.deepEqual(draw(e,time,options),cold);assert.equal(poses,1,'height and frame share one pose lookup');
+      assert.deepEqual(draw(e,time,options),cold,'warm rendering matches a fresh uncached object');
+    }
+    assert.equal(heightLookups,0);
+  }
+});
+
 test('buildings lean as rigid models without extra rock bases; placement ghosts share the pose',()=>{
   const world=worldFor(.10),R=createRendererStub({record:true});R.surface=world.surface;R.quality=0;
   const draw=options=>{R.calls.length=0;renderEntity(R,entity,0,options);return R.calls.map(c=>[...c]);};

@@ -859,7 +859,22 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
     // Cosmetic building yaw only; placement and collision radii stay unchanged.
     // Flat contact quads must never slice through the CPU surface. Follow planar
     // slopes; omit this cosmetic soft layer on curved terrain, keeping real shadows.
-    function contactShadowPose(surface: BattlefieldSurface | null | undefined, e: Position, width: number, depth: number, yaw: number) {
+    type ContactShadowPose = Readonly<{height: number; pitch: number; roll: number}>;
+    const buildingContactShadows = new WeakMap<BattlefieldSurface, WeakMap<Position, {
+      x: number; z: number; width: number; depth: number; yaw: number; pose: ContactShadowPose | null;
+    }>>();
+    function contactShadowPose(surface: BattlefieldSurface | null | undefined, e: Position & {kind?: EntityKind}, width: number, depth: number, yaw: number): ContactShadowPose | null {
+      // Units keep live terrain sampling. Buildings retain only their latest footprint, including rejection.
+      if (!surface || e.kind !== 'building') return computeContactShadowPose(surface,e,width,depth,yaw);
+      let cache = buildingContactShadows.get(surface);
+      if (!cache) { cache = new WeakMap(); buildingContactShadows.set(surface,cache); }
+      const old = cache.get(e);
+      if (old && old.x === e.x && old.z === e.z && old.width === width && old.depth === depth && old.yaw === yaw) return old.pose;
+      const result = computeContactShadowPose(surface,e,width,depth,yaw), pose = result && Object.freeze(result);
+      cache.set(e,{x:e.x,z:e.z,width,depth,yaw,pose});
+      return pose;
+    }
+    function computeContactShadowPose(surface: BattlefieldSurface | null | undefined, e: Position, width: number, depth: number, yaw: number): ContactShadowPose | null {
       if (!surface) return {height:.025,pitch:0,roll:0};
       const step=surface.step,center=surface.heightAt(e.x,e.z),
         dx=(surface.heightAt(e.x+step,e.z)-surface.heightAt(e.x-step,e.z))/(2*step),
@@ -888,11 +903,10 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       const rot = e.kind === 'building' ? buildingVisualYaw(e) : e.rot || 0,
         cs = Math.cos(rot),
         sn = Math.sin(rot);
-      const ground = R.surface?.entityHeight(e) ??
+      const pose = e.kind === 'building' && R.surface ? R.surface.buildingPose(e,e.size) : null,
+        ground = pose?.height ?? R.surface?.entityHeight(e) ??
           (isFlyingUnitType(e.type) ? -3 * flightLaunchRemaining(e) : 0),
-        frame = e.kind === 'building' && R.surface
-          ? buildingGroundFrame(R.surface.buildingPose(e,e.size),cs,sn)
-          : vehicleGroundFrame(R.surface, e, cs, sn);
+        frame = pose ? buildingGroundFrame(pose,cs,sn) : vehicleGroundFrame(R.surface, e, cs, sn);
       let y = ground + (
         isFlyingUnitType(e.type)
           ? 3.8 + Math.sin(time * 2 + e.id) * 0.22

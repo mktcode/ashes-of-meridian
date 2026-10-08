@@ -505,6 +505,21 @@ test('scenario UI perspective resets local interaction, follows actor accounts a
   h.ui.modalKind = 'sell'; assert.equal(h.ui.setPerspective(3), false); assert.equal(g.localTeam, 2);
 });
 
+test('picking samples each observed entity height once and shares it with all radius projections', () => {
+  const h=setup(),g=h.ui.game,samples=[],projections=[];
+  g.s.entities=[
+    {id:1,kind:'building',type:'hq',team:0,hp:100,x:200,z:200,size:4},
+    {id:2,kind:'unit',type:'rifle',team:0,hp:100,x:200,z:200,size:1},
+    {id:3,kind:'unit',type:'rifle',team:1,hp:100,x:200,z:200,size:1}
+  ];
+  g.observed=e=>e.team===0;
+  g.world.surface={entityHeight(e){samples.push(e.id);return e.id*3;}};
+  h.ui.R.project=(x,y,z)=>{projections.push([x,y,z]);return {x,y:z};};
+  assert.equal(h.UI.prototype.pick.call(h.ui,200,200).id,2,'unit still wins the overlapping selection');
+  assert.deepEqual(samples,[1,2],'unobserved entities remain unsampled');
+  assert.deepEqual(projections.map(p=>p[1]),[5,5,5,7,7,7]);
+});
+
 test('nonzero perspective selection and picking hide foreign units and select only its own combat force', () => {
   const h = setup(), g = h.ui.game;
   g.localTeam = 2;

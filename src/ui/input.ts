@@ -311,11 +311,10 @@
           if (e.hp <= 0) continue;
           if (!this.game.observed(e)) continue;
           if (filter && !filter(e)) continue;
-          let y =
-              isFlyingUnitType(e.type) ? 4.4 : e.kind === 'building' ? 2.0 : 1,
-            p = this.R.project(e.x, y + (this.game.world?.surface?.entityHeight(e) ?? 0), e.z);
+          const y = isFlyingUnitType(e.type) ? 4.4 : e.kind === 'building' ? 2.0 : 1,
+            height = y + (this.game.world?.surface?.entityHeight(e) ?? 0),
+            p = this.R.project(e.x, height, e.z);
           if (!p) continue;
-          const height = y + (this.game.world?.surface?.entityHeight(e) ?? 0);
           let edge = this.R.project(e.x + e.size, height, e.z),
             edgeZ = this.R.project(e.x, height, e.z + e.size),
             r = Math.max(e.kind === 'unit' ? 12 : 16,

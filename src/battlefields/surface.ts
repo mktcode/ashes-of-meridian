@@ -1,5 +1,6 @@
 /* One CPU-owned playable surface. Props and roofs are not additional walkable layers. */
 'use strict';
+type BuildingSurfacePose = Readonly<{ height: number; dx: number; dz: number; fill: number }>;
 class BattlefieldSurface {
   readonly step: number;
   readonly size: number;
@@ -8,6 +9,11 @@ class BattlefieldSurface {
   readonly maxHeight: number;
   // Immutable flight envelopes, baked with the terrain, never searched per unit/frame.
   private readonly flights: readonly { floor: Float32Array; cruise: Float32Array }[];
+  // One last pose per object on this immutable surface; no entity mutations or ID retention.
+  private readonly buildingPoses = new WeakMap<Position, {
+    x: number; z: number; radius: number; type?: string; team?: number; visualRotation?: number;
+    pose: BuildingSurfacePose;
+  }>();
   constructor(readonly extent: number, readonly cellSize: number, height: (x: number, z: number) => number,
       readonly visibilityLevel: (height: number, x: number, z: number) => number = () => 0) {
     this.step = cellSize / 2;
@@ -104,8 +110,9 @@ class BattlefieldSurface {
     return Number.isFinite(best) ? {x:a[0]+dx*best,z:a[2]+dz*best} : null;
   }
   entityHeight(e: Position & { type: string; team?: number; visualRotation?: number; kind?: EntityKind; size?: number; exit?: Pick<ExitPath, 'x' | 'z' | 'length'> }): number {
+    if (e.kind === 'building' && e.size !== undefined) return this.buildingPose(e, e.size).height;
     const floor = this.heightAt(e.x,e.z), index = e.type === 'air' ? 0 : e.type === 'destroyer' ? 1 : -1;
-    if (index < 0) return e.kind === 'building' && e.size !== undefined ? this.buildingPose(e, e.size).height : floor;
+    if (index < 0) return floor;
     const profile = this.flights[index], cruise = this.sampleHeight(profile.cruise, e.x, e.z),
       hullFloor = this.sampleHeight(profile.floor, e.x, e.z),
       remaining = flightLaunchRemaining(e);
@@ -172,7 +179,15 @@ class BattlefieldSurface {
   }
   // A restrained lean reduces downhill fill without changing buildability or the playable surface.
   // Choose the lowest supporting plane for that lean; never sink a model into the uphill ground.
-  buildingPose(p: Position & { type?: string; team?: number; visualRotation?: number }, radius: number): { height: number; dx: number; dz: number; fill: number } {
+  buildingPose(p: Position & { type?: string; team?: number; visualRotation?: number }, radius: number): BuildingSurfacePose {
+    const old = this.buildingPoses.get(p);
+    if (old && old.x === p.x && old.z === p.z && old.radius === radius && old.type === p.type &&
+        old.team === p.team && old.visualRotation === p.visualRotation) return old.pose;
+    const pose = Object.freeze(this.computeBuildingPose(p, radius));
+    this.buildingPoses.set(p, {x:p.x,z:p.z,radius,type:p.type,team:p.team,visualRotation:p.visualRotation,pose});
+    return pose;
+  }
+  private computeBuildingPose(p: Position & { type?: string; team?: number; visualRotation?: number }, radius: number): BuildingSurfacePose {
     if (p.type !== undefined && isCivilizationBuildingType(p.type))
       return {height:this.civilizationHeight(p),dx:0,dz:0,fill:0};
     const r = Math.max(this.step, radius),
