@@ -37,7 +37,8 @@
       private pointLightPositions = new Float32Array(8 * 4);
       private pointLightColors = new Float32Array(8 * 4);
       private lightGrid: { grid: WebGLTexture; lamps: WebGLTexture; size: number;
-        gridData: Float32Array; lampData: Float32Array; width: number; height: number } | null = null;
+        gridData: Float32Array; lampData: Float32Array; cellOffsets: Uint32Array;
+        width: number; height: number } | null = null;
       private lightGridDirty = true;
       private maxTextureSize?: number;
       colors: Map<number | string, readonly number[] | Float32Array>;
@@ -886,34 +887,58 @@
       }
       private preparePointLights() {
         if (!this.lightGridDirty || !this.pointLightCount) return;
-        const g=this.gl, extent=this.extent, size=Math.max(1,Math.ceil(extent*2/16)),
-          cellWidth=extent*2/size, cells: number[][]=Array.from({length:size*size},()=>[]),
-          cell=(v: number)=>Math.max(0,Math.min(size-1,Math.floor((v+extent)/cellWidth)));
-        // Conservative X/Z overlap: every influencing lamp reaches every receiver cell.
-        // No global or per-cell selection budget; the shader rejects the exact 3D radius.
-        for (let i=0;i<this.pointLightCount;i++) {
-          const o=i*4, x=this.pointLightPositions[o], z=this.pointLightPositions[o+2], r=this.pointLightPositions[o+3];
-          for (let cz=cell(z-r);cz<=cell(z+r);cz++)
-            for (let cx=cell(x-r);cx<=cell(x+r);cx++) cells[cz*size+cx].push(i);
-        }
+        const g=this.gl, extent=this.extent, positions=this.pointLightPositions, colors=this.pointLightColors,
+          maxSize=this.maxTextureSize ??= g.getParameter(g.MAX_TEXTURE_SIZE) as number,
+          width=Math.min(256,maxSize), coarseSize=Math.max(1,Math.ceil(extent*2/16));
+        if (coarseSize>maxSize) throw new Error('Local light grid exceeds GPU texture capacity');
         let state=this.lightGrid;
-        const maxSize=this.maxTextureSize ??= g.getParameter(g.MAX_TEXTURE_SIZE) as number,
-          width=Math.min(256,maxSize), texels=cells.reduce((sum,c)=>sum+c.length*2,0),
+        // Smaller cells reduce false sphere tests in crowded scenes, not the lamps' influence.
+        // If their duplicated records exceed GPU capacity, retain the supported coarse grid.
+        let size=Math.min(maxSize,Math.max(1,Math.ceil(extent*2/4))), cellWidth=extent*2/size,
+          requiredHeight=1;
+        const cell=(v: number)=>Math.max(0,Math.min(size-1,Math.floor((v+extent)/cellWidth))),
+          cellOffsets=state && state.cellOffsets.length>=size*size ? state.cellOffsets : new Uint32Array(size*size);
+        while (true) {
+          cellOffsets.fill(0,0,size*size);
+          let texels=0;
+          // Count conservative X/Z overlap; the shader still rejects the exact 3D radius.
+          for (let i=0;i<this.pointLightCount;i++) {
+            const o=i*4, x=positions[o], z=positions[o+2], r=positions[o+3],
+              x0=cell(x-r), x1=cell(x+r), z0=cell(z-r), z1=cell(z+r);
+            for (let cz=z0;cz<=z1;cz++) for (let cx=x0;cx<=x1;cx++) {
+              cellOffsets[cz*size+cx]++;
+              texels+=2;
+            }
+          }
           requiredHeight=Math.max(1,Math.ceil(texels/width));
-        if (requiredHeight>maxSize || size>maxSize) throw new Error('Local light grid exceeds GPU texture capacity');
-        // Retain capacity as the orbit/sight changes; do not reallocate GPU storage per lamp count.
+          if (requiredHeight<=maxSize) break;
+          if (size===coarseSize) throw new Error('Local light grid exceeds GPU texture capacity');
+          size=Math.max(coarseSize,Math.ceil(size/2));
+          cellWidth=extent*2/size;
+        }
+        // Retain CPU/GPU capacity; avoid per-cell arrays and per-record subarray views.
         const height=Math.min(maxSize,Math.max(state?.height ?? 1,2**Math.ceil(Math.log2(requiredHeight)))),
           gridData=state?.size===size ? state.gridData : new Float32Array(size*size*4),
           lampData=state?.width===width && state.height===height ? state.lampData : new Float32Array(width*height*4);
         let cursor=0;
-        cells.forEach((lights,index)=> {
-          gridData[index*4]=cursor; gridData[index*4+1]=lights.length;
-          for (const i of lights) {
-            lampData.set(this.pointLightPositions.subarray(i*4,i*4+4),cursor*4);
-            lampData.set(this.pointLightColors.subarray(i*4,i*4+4),(cursor+1)*4);
-            cursor+=2;
+        for (let index=0;index<size*size;index++) {
+          const count=cellOffsets[index];
+          gridData[index*4]=cursor; gridData[index*4+1]=count;
+          cellOffsets[index]=cursor;
+          cursor+=count*2;
+        }
+        // Scatter in submission order: every cell keeps the original floating-point sum order.
+        for (let i=0;i<this.pointLightCount;i++) {
+          const o=i*4, x=positions[o], y=positions[o+1], z=positions[o+2], r=positions[o+3],
+            red=colors[o], green=colors[o+1], blue=colors[o+2], intensity=colors[o+3],
+            x0=cell(x-r), x1=cell(x+r), z0=cell(z-r), z1=cell(z+r);
+          for (let cz=z0;cz<=z1;cz++) for (let cx=x0;cx<=x1;cx++) {
+            const index=cz*size+cx, offset=cellOffsets[index]*4;
+            cellOffsets[index]+=2;
+            lampData[offset]=x; lampData[offset+1]=y; lampData[offset+2]=z; lampData[offset+3]=r;
+            lampData[offset+4]=red; lampData[offset+5]=green; lampData[offset+6]=blue; lampData[offset+7]=intensity;
           }
-        });
+        }
         if (!state) {
           const grid=g.createTexture(), lamps=g.createTexture();
           if (!grid || !lamps) {
@@ -921,7 +946,7 @@
             if (lamps) g.deleteTexture(lamps);
             throw new Error('Could not allocate local light textures');
           }
-          state=this.lightGrid={grid,lamps,size:0,gridData,lampData,width:0,height:0};
+          state=this.lightGrid={grid,lamps,size:0,gridData,lampData,cellOffsets,width:0,height:0};
         }
         const upload=(texture: WebGLTexture, unit: number, w: number,h: number,data: Float32Array,resize: boolean)=> {
           g.activeTexture(g.TEXTURE0+unit); g.bindTexture(g.TEXTURE_2D,texture);
@@ -935,7 +960,7 @@
         };
         upload(state.grid,11,size,size,gridData,state.size!==size);
         upload(state.lamps,12,width,height,lampData,state.width!==width || state.height!==height);
-        Object.assign(state,{size,gridData,lampData,width,height});
+        Object.assign(state,{size,gridData,lampData,cellOffsets,width,height});
         this.lightGridDirty=false;
       }
       private releaseBucketVertexArray(b: RenderBucket) {

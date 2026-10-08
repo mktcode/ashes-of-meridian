@@ -1223,6 +1223,101 @@ test('spatial light grid retains all lamps in battle, performance and cinema wit
   r.releasePointLights();assert.equal(h.textures.size,textures-2,'release is idempotent');
 });
 
+// Independent, allocating reference for the packed count/prefix/scatter layout.
+function assertPackedLightGrid(r) {
+  const state=r.lightGrid,size=state.size,width=r.extent*2/size,
+    cells=Array.from({length:size*size},()=>[]),
+    cell=v=>Math.max(0,Math.min(size-1,Math.floor((v+r.extent)/width)));
+  for(let i=0;i<r.pointLightCount;i++) {
+    const o=i*4,p=r.pointLightPositions,x=p[o],z=p[o+2],radius=p[o+3];
+    for(let cz=cell(z-radius);cz<=cell(z+radius);cz++)
+      for(let cx=cell(x-radius);cx<=cell(x+radius);cx++) cells[cz*size+cx].push(i);
+  }
+  const records=[];let cursor=0;
+  cells.forEach((lamps,index)=>{
+    assert.equal(state.gridData[index*4],cursor);
+    assert.equal(state.gridData[index*4+1],lamps.length);
+    for(const i of lamps) records.push(...r.pointLightPositions.slice(i*4,i*4+4),...r.pointLightColors.slice(i*4,i*4+4));
+    cursor+=lamps.length*2;
+    assert.equal(state.cellOffsets[index],cursor,'scatter cursor finishes at the end of its cell');
+  });
+  assert.deepEqual(Array.from(state.lampData.slice(0,cursor*4)),records,'every record and submission order match');
+}
+
+test('refined light grid packs edges, large radii and reordered warm frames without stale records',()=>{
+  for(const extent of [32,90,151]) {
+    const h=setup(),r=h.r;
+    Object.assign(r,{dynamic:{},effects:{},occlusion:{},colors:new Map(),extent});
+    const lamps=[[extent-.25,2,-extent,4],[-extent-.25,0,extent+.25,8],
+      [.125,3.5,-.125,.25],[0,2,0,extent*2.1],[-4.00001,1,3.99999,4],[4,2,-4,2]];
+    let previous;
+    for(const frame of [lamps,[...lamps].reverse(),lamps.slice(0,2)]) {
+      r.begin();frame.forEach(([x,y,z,radius],i)=>r.addPointLight(x,y,z,radius,0x75dce9,i+.5));
+      r.preparePointLights();
+      assert.equal(r.lightGrid.size,Math.ceil(extent*2/4),'fine broadphase, unchanged physical radii');
+      assertPackedLightGrid(r);
+      if(previous) for(const key of ['cellOffsets','gridData','lampData','grid','lamps'])
+        assert.equal(r.lightGrid[key],previous[key],`${key} capacity is reused across warm/reduced frames`);
+      previous={...r.lightGrid};
+    }
+  }
+});
+
+test('refined light cells preserve all exact sphere contributions at boundaries and outside the world',()=>{
+  const h=setup(),r=h.r;
+  Object.assign(r,{dynamic:{},effects:{},colors:new Map(),extent:32});r.begin();
+  for(const [i,x,z,radius] of [[0,-32,0,8],[1,32,32,4],[2,4.00001,-4,4],[3,-4,.00001,2],[4,0,0,80]])
+    r.addPointLight(x,2,z,radius,0xffffff,i+1);
+  r.preparePointLights();const state=r.lightGrid,width=r.extent*2/state.size;
+  for(const x of [-33,-32,-4.00001,-4,-3.99999,0,3.99999,4,4.00001,32,33])
+    for(const z of [-33,-32,-4.00001,-4,0,4,32,33]) for(const y of [0,2,9]) {
+      const cell=v=>Math.max(0,Math.min(state.size-1,Math.floor((v+r.extent)/width))),
+        index=(cell(z)*state.size+cell(x))*4,offset=state.gridData[index],count=state.gridData[index+1],
+        reaches=(p,o)=>(p[o]-x)**2+(p[o+1]-y)**2+(p[o+2]-z)**2<p[o+3]**2,
+        actual=[],expected=[];
+      for(let i=0;i<count;i++) {const o=(offset+i*2)*4;if(reaches(state.lampData,o))actual.push(state.lampData[o+7]);}
+      for(let i=0;i<r.pointLightCount;i++)if(reaches(r.pointLightPositions,i*4))expected.push(r.pointLightColors[i*4+3]);
+      assert.deepEqual(actual,expected,'same influencing lamps in the same sum order');
+    }
+});
+
+test('refined light grid coarsens at GPU capacity without dropping lamps or changing sum order',()=>{
+  const h=setup(),r=h.r;h.g.getParameter=()=>16;
+  Object.assign(r,{dynamic:{},effects:{},colors:new Map(),extent:32});
+  for(let frame=0;frame<2;frame++) {
+    r.begin();for(let i=0;i<4;i++)r.addPointLight(i,2,i,100,0xffffff,i+1);
+    r.preparePointLights();assert.equal(r.lightGrid.size,4);
+    assert.equal(r.pointLightCount,4);assert.equal(r.lightGrid.height,8);
+    assertPackedLightGrid(r);
+  }
+  r.begin();r.addPointLight(0,2,0,1,0xffffff,1);r.preparePointLights();
+  assert.equal(r.lightGrid.size,16,'fine cells return when their records fit');assertPackedLightGrid(r);
+});
+
+test('refined cells reduce dense infantry lamp candidates without a light budget',()=>{
+  const h=setup(),r=h.r,receivers=[];
+  Object.assign(r,{dynamic:{},effects:{},colors:new Map(),extent:90});r.begin();
+  for(let i=0;i<300;i++) {
+    const x=(i%20-9.5)*1.9,z=(Math.floor(i/20)-7)*1.9;receivers.push({x,z});
+    r.addPointLight(x,1.65,z+.32,4,0x8ce1e2,1.5);
+  }
+  r.preparePointLights();assert.equal(r.pointLightCount,300);
+  const coarseSize=Math.ceil(r.extent*2/16),coarseWidth=r.extent*2/coarseSize,
+    coarse=new Uint32Array(coarseSize*coarseSize),cell=v=>Math.floor((v+r.extent)/coarseWidth);
+  for(let i=0;i<300;i++) {
+    const o=i*4,p=r.pointLightPositions,x=p[o],z=p[o+2],radius=p[o+3];
+    for(let cz=cell(z-radius);cz<=cell(z+radius);cz++)
+      for(let cx=cell(x-radius);cx<=cell(x+radius);cx++)coarse[cz*coarseSize+cx]++;
+  }
+  const state=r.lightGrid,width=r.extent*2/state.size;let before=0,after=0;
+  for(const {x,z} of receivers) {
+    before+=coarse[cell(z)*coarseSize+cell(x)];
+    const cx=Math.floor((x+r.extent)/width),cz=Math.floor((z+r.extent)/width);
+    after+=state.gridData[(cz*state.size+cx)*4+1];
+  }
+  assert.ok(after<before*.5,'fewer shader candidates, not fewer authored lamps');
+});
+
 test('local light rebuilds query the context texture-size limit only once',()=>{
   const h=setup(),r=h.r,queries=[],getParameter=h.g.getParameter.bind(h.g);
   h.g.getParameter=name=>{queries.push(name);return getParameter(name);};
