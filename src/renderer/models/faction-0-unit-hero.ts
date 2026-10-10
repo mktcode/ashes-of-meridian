@@ -221,9 +221,11 @@
       const cy=Math.cos(upperRx),sy=Math.sin(upperRx),cz=Math.cos(upperRz),sz=Math.sin(upperRz),
         beaconY=2.42-.85,bx=-.275*cz-beaconY*sz,by=-.275*sz+beaconY*cz,
         ly=upperTarget[1]+by*cy+.37*sy,lz=upperTarget[2]+by*sy-.37*cy;
-      // Broad nocturnal beacon illuminates real nearby surfaces, even in Performance.
-      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,10,0x38d9e8,3.6);
-      if(nightLight>0)lightPool(bx*SCALE,lz*SCALE,7,7,0x38d9e8,.5*nightLight);
+      // Keep the visibly lit ground beyond attack range, not just the lamp's cutoff.
+      // The larger envelope compensates for distance, grazing normals and edge falloff.
+      const beaconReach=UNITS.hero.range*3;
+      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,42);
+      if(nightLight>0)lightPool(bx*SCALE,lz*SCALE,beaconReach,beaconReach,0x38d9e8,.65*nightLight);
     }
   });
 })();
