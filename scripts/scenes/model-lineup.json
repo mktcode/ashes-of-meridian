@@ -1,0 +1,13 @@
+{
+  "map": "desert",
+  "seed": 1409,
+  "faction": 0,
+  "enemy": 1,
+  "hour": 10,
+  "camera": { "anchor": "player", "x": 0, "z": 0, "zoom": 25, "yaw": 0 },
+  "entities": [
+    { "kind": "unit", "type": "rifle", "team": 0, "anchor": "player", "x": -5, "z": 0 },
+    { "kind": "unit", "type": "hero", "team": 0, "anchor": "player", "x": 0, "z": 0 },
+    { "kind": "unit", "type": "tank", "team": 0, "anchor": "player", "x": 6, "z": 0 }
+  ]
+}
