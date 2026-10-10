@@ -13,6 +13,10 @@ Lokale Laufzeitaufnahmen liegen unter `audio/`; Entwürfe bleiben außerhalb die
 
 Die ZIP-Auslieferung liest Aufnahmewege aus dem gebauten Katalog und bricht bei fehlenden Dateien ab. Docker führt das gesamte freigegebene `audio/voices/`-Verzeichnis mit. Dateien dort nicht ohne Katalogeintrag sammeln. [Auslieferung](deployment.md).
 
+## Auslieferung prüfen
+
+Musik-/SFX-Dateipfade in `src/audio.ts` und Aufnahmen im Sprachkatalog sind maßgeblich; die expliziten Paketlisten müssen dazu passen. Nach Änderungen bauen und gezielt `node --test tests/ashes-of-meridian-audio-delivery.check.cjs` ausführen. Die Prüfung vergleicht Docker-COPYs und die aktuelle `.dockerignore`-Allowlist, schützt den Sprachordner vor Dateien ohne Katalogeintrag und erzeugt ein ZIP unter worktree-lokalem `.tmp/`. Das ZIP muss genau die Runtime-Aufnahmen mit unveränderten Bytes enthalten. Das ist ein statischer Docker-Deklarationsnachweis, kein Container-/Browserlauf oder akustischer Abnahmenachweis.
+
 ## Wiedergabevertrag
 
 - Ein wiederverwendeter Sprachkanal, keine Warteschlange: aktuelle Auswahlmeldung ersetzt eine ältere; Tutorialdialoge haben Vorrang und dürfen nicht von Auswahlmeldungen abgeschnitten werden.

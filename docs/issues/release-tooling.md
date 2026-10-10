@@ -10,7 +10,6 @@ Befunde aus dem Hygieneaudit auf `8a69e7f`; statischer Abgleich, keine Capture-/
 
 ## Laufzeitassets und Produktionswerkzeuge
 
-- [ ] Mehrfach gepflegte Musiklisten in [Audio](../../src/audio.ts), [ZIP](../../scripts/build-zip.mjs), [Dockerfile](../../Dockerfile) und [Dockerfreigaben](../../.dockerignore) gegen Auslieferungsdrift absichern. Gemeinsame maßgebliche Liste oder gezielte Konsistenzprüfung wählen; ZIP und Hosting müssen dieselben freigegebenen Aufnahmen liefern. Sprachkatalogvertrag erhalten.
 - [ ] [Den alten Battlefield-Musikgenerator](../../scripts/generate-battle-music.py) fachlich einordnen: Er bezeichnet `audio/music-battlefield.ogg` als gepflegtes Source-Asset, obwohl diese Datei fehlt und nicht zur Laufzeitplaylist gehört. Bewusst erhaltenes Produktionswerkzeug dokumentieren oder überholten Weg nach Freigabe entfernen; keine unbeauftragte Neugenerierung von Audio.
 - [ ] Falls die itch-Seitenbeschreibung dauerhaft im Repository gepflegt werden soll, einen maßgeblichen Text samt manuellem Veröffentlichungsweg festlegen. Die früher dokumentierte `release/itch-description.md` existiert nicht; keinen vermeintlich aktuellen Veröffentlichungstext erfinden.
 
