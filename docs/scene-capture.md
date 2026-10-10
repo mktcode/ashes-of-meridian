@@ -29,7 +29,7 @@ Pro Aufruf genau eine WebP-Aufnahme, Qualität 80, und `<bild>.webp.json` mit ef
 
 Die Szene bleibt bei Simulationszeit 0 pausiert; es gibt weder Echtzeit-Wartekämpfe noch automatische KI-Partien. Der Browser erhält lediglich ein begrenztes Renderfenster, anschließend wird seine Uhr eingefroren. Seiten-/Konsolen-/WebGL-Fehler oder unerwarteter Simulationsfortschritt brechen die Aufnahme ab.
 
-Die normale seedbasierte Welt mit Ressourcen und Landungsworkern bleibt bestehen. Zusätzliche Objekte werden **arrangiert**, ohne Baukosten, Bauzeit, Platzierungs-/Kollisionsregeln oder automatisches Ausweichen; Überlappungen und ungeeignete Fundamente liegen in der Verantwortung des Rezeptautors. Das erlaubt auch isolierte Gebäude-/Hangvergleiche, ist aber kein Nachweis legaler Spielsituationen oder Balance.
+Die normale seedbasierte Welt mit Ressourcen und Landungsworkern bleibt bestehen. Zusätzliche Gebäude werden **arrangiert**, ohne Baukosten, Bauzeit oder Bauplatzprüfung; Überlappungen und ungeeignete Fundamente liegen in der Verantwortung des Rezeptautors. Einheiten nutzen die normale lokale Spawn-Platzsuche, können leicht versetzt werden oder auf unzugänglichem Terrain ausdrücklich scheitern; der Bericht enthält ihre tatsächlichen Positionen. Das erlaubt auch isolierte Gebäude-/Hangvergleiche, ist aber kein Nachweis legaler Spielsituationen oder Balance.
 
 Gezielter CPU-Test des Rezeptvertrags und serialisierten Callbacks: `node --test tests/scene-capture.check.cjs` (kein Browserlauf).
 

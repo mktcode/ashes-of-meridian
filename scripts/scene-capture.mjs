@@ -50,8 +50,10 @@ if (values.help) {
     // Pause the browser clock after preparation; advance a bounded render window only.
     const clockTime = Date.now();
     await page.clock.install({ time: clockTime });
-    await page.clock.pauseAt(clockTime + 1000);
-    await page.clock.runFor(1000);
+    // pauseAt fast-forwards (does not replay every frame). Leave enough
+    // headroom for slow/software-GPU setup before this command reaches the page.
+    await page.clock.pauseAt(clockTime + 60000);
+    await page.clock.runFor(100);
     await page.waitForFunction(() => document.querySelector('#battleTransition').classList.contains('hidden') && Meridian.renderer.frameReady());
     const state = await page.evaluate(() => ({ glError: Meridian.renderer.gl.getError(), time: Meridian.game.s.time,
       paused: Meridian.ui.paused, hour: Meridian.renderer.battlefieldHour, camera: { ...Meridian.game.s.cam } }));

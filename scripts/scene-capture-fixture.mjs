@@ -51,7 +51,7 @@ export function prepareScene(scene) {
     const spawn = entry.kind === 'unit' ? game.spawnUnit : game.spawnBuilding;
     const entity = spawn.call(game, entry.type, p.x, p.z, entry.team, game.factionFor(entry.team), { rot: entry.rot ?? 0 });
     if (!entity) throw Error(`Could not place ${entry.type}`);
-    placed.push({ id: entity.id, type: entity.type, ...p });
+    placed.push({ id: entity.id, type: entity.type, x: entity.x, z: entity.z });
   }
   game.rehash(); game.world.rebuild(game.s.entities);
   if (scene.reveal !== false) game.world.reveal(game.s.entities, [{ team: 0, x: 0, z: 0, r: game.world.extent * 3 }]);
