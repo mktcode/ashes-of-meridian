@@ -1,6 +1,6 @@
 # Audio und Sprachinhalte
 
-Lokale Laufzeitaufnahmen liegen unter `audio/`; Entwürfe bleiben außerhalb dieses Verzeichnisses. MP3s unverändert übernehmen, nicht bei jedem Build erneut encodieren. Audio wird über lokale HTML-Medienelemente geladen, ohne `fetch`, Server oder gelockerte `file://`-Sicherheit. Die prozeduralen Effekte und Menümusik bleiben Web Audio. Werkzeuge zur Musikherstellung liegen unter `scripts/`, etwa [der Entwurfsgenerator](../scripts/generate-music-drafts.py); sie gehören weder zum Build noch zur Browserlaufzeit.
+Lokale Laufzeitaufnahmen liegen unter `audio/`; Entwürfe bleiben außerhalb dieses Verzeichnisses. MP3s unverändert übernehmen, nicht bei jedem Build erneut encodieren. Audio wird über lokale HTML-Medienelemente geladen, ohne `fetch`, Server oder gelockerte `file://`-Sicherheit. Die prozeduralen Effekte und Menümusik bleiben Web Audio. Werkzeuge zur Musikherstellung liegen unter `scripts/`, etwa [der Entwurfsgenerator](../scripts/generate-music-drafts.py); sie gehören weder zum Build noch zur Browserlaufzeit. Ihr `music-drafts/`-Ausgabeverzeichnis ist temporär und von Git ausgeschlossen; Tests verwenden ausschließlich die freigegebenen Laufzeitaufnahmen unter `audio/`.
 
 ## Sprachzeilen pflegen
 

@@ -2,3 +2,4 @@ dist/
 /release/ashes-of-meridian-prototype.zip
 node_modules/
 .tmp/
+/music-drafts/

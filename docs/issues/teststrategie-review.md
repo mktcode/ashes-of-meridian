@@ -8,11 +8,6 @@
 - [ ] Etablierte Basen in Fachtests ausdrücklich aufbauen; echte Deploymentprüfungen müssen den bezahlten Worker→HQ-Ablauf beobachten. Tutorial- und gezielte FFA-Verträge decken Teile des Starts bereits ab. Die alten KI-/Simulationsblöcke sind kein aktueller Abschlussnachweis. Referenzen nicht allein zum Grünmachen regenerieren; Ausführung und Referenzpflege separat freigeben lassen. Abhängige [FFA-Prüfungen](mehrparteien-simulation.md) und [Startabnahme](procedural-battlefields.md) erst auf passenden Fixtures bewerten.
 - [ ] Historische Effektfixtures in `presentation-v1.json` von der entfernten unkomponierten Desert-Geografie entkoppeln; aktuelle Helper laden das prozedurale Rezept. RNG-Referenzen bleiben unverändert. Diese Fälle wurden für den Terrainumbau nicht als Abschlussnachweis ausgeführt.
 
-## Vorrang: reproduzierbare Standardtests
-
-- [ ] Den Playlist-Fall in [den Harness-Prüfungen](../../tests/ashes-of-meridian-harness.check.cjs) von nicht versionierten Musikentwürfen entkoppeln. Auf `8a69e7f` scheitert der gezielte Fall `battle playlist starts after ten seconds…` nach erfolgreichem Build mit `ENOENT` für `music-drafts/06-sporewake.mp3`; auch `07-rootmind.mp3` wird gelesen. Der Harness gehört zur Standardauswahl. Ein frischer Checkout muss ohne lokale Produktionsentwürfe prüfbar sein; keine Ersatzaufnahme erzeugen oder den Wiedergabetest überspringen.
-- [ ] Laufzeitverträge (Playlist, Startverzögerung, Pausen und lokale Aufnahmen) von Import-/Freigabenachweisen trennen. Falls unveränderte Aufnahmen dauerhaft zu schützen sind, versionierte Prüfsummen statt zusätzlicher lokaler Kopien erwägen. Keine Neucodierung oder Änderung der Musik durch die Testpflege.
-
 ## Prüfkosten und Abdeckung bei fachlicher Pflege
 
 - [ ] Laufzeiten nach Build/Datei/Szenario erst aus vorhandenen Ergebnissen erfassen; neue breite Messung freigeben lassen. Konkreter Auswahlhinweis aus der Shaderprüfung auf `937914e`: `map switches keep only current world meshes…` in der Rendererdatei brauchte lokal rund 45 s, die meisten dortigen Shader-/Orchestrierungsfälle nur Millisekunden. Für solche Kleinständerungen Namensfilter statt ungeprüft die ganze Datei wählen. Terrain-/Residenzabdeckung nicht allein wegen Dauer löschen oder Concurrency/Heap blind ändern.

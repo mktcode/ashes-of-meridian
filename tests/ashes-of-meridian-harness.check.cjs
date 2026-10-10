@@ -213,12 +213,12 @@ test('supply pickup plays a short ascending procedural cue and respects the SFX 
 test('battle playlist starts after ten seconds and plays the approved recordings with ten-second gaps', async () => {
   const h = setupAudio(), { audio, plays } = h, track = h.tracks[0];
   const recordings = [
-    ['ratchet-theory'],
-    ['last-light-relay'],
-    ['breach-protocol'],
-    ['black-channel'],
-    ['sporewake', '06-sporewake.mp3'],
-    ['rootmind', '07-rootmind.mp3']
+    'ratchet-theory',
+    'last-light-relay',
+    'breach-protocol',
+    'black-channel',
+    'sporewake',
+    'rootmind'
   ];
   assert.equal(h.tracks.length, 7, 'music, five overlapping shots and one shared speech channel are prepared');
   assert.equal(track.loop, false);
@@ -234,13 +234,10 @@ test('battle playlist starts after ten seconds and plays the approved recordings
   assert.equal(plays.length, 1);
   assert.ok(Math.abs(track.volume - .028) < 1e-12, 'battle music plays at ten percent of the master volume');
   for (let i = 0; i < recordings.length; i++) {
-    const [name, draft] = recordings[i];
-    const file = `music-${name}.mp3`;
+    const file = `music-${recordings[i]}.mp3`;
     assert.equal(track.src, `./audio/${file}`);
     const asset = readFileSync(join(__dirname, '..', 'audio', file));
     assert.ok(asset.length > 1000, 'approved recording is present');
-    if (draft) assert.deepEqual(asset, readFileSync(join(__dirname, '..', 'music-drafts',
-      draft)), 'approved draft is copied without re-encoding');
     track.paused = true; track.ended = true;
     audio.update();
     assert.equal(plays.length, i + 1, 'a frame before the ended event must not restart the old file');

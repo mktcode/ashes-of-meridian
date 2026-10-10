@@ -9,8 +9,6 @@ Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) be
 - [ ] Verwaiste Fleet-/Benefit-Styles im gemeinsamen Designsystem gezielt bereinigen; keine gleichzeitig veränderte Gestaltung anderer Ansichten.
 - [ ] Breite Integrationsprüfung erst nach gesonderter Freigabe. Gezielte CPU-Fälle schützen Upgrade-Kosten, Ausbau/KP, Stapel/Einmaligkeit, Vent-Erschöpfung, Formatvalidierung und Gefechts-Snapshots. Der echte UI-Lebenszyklusfall prüft insbesondere den Besuch einer alten Welt mit Upgrade-Änderung, während ein anderes Gefecht gespeichert ist.
 
-Der unabhängige Harness-Musiktest ist durch fehlende lokale Entwurfsdateien blockiert; die checkoutunabhängige Korrektur wird zentral unter [Testpflege](teststrategie-review.md#vorrang-reproduzierbare-standardtests) geführt, nicht durch Bereitstellen zusätzlicher Feature-Worktree-Assets.
-
 ## Menschliche Abnahme und Balance
 
 - [ ] Einmaligen Hinweis beim ersten **Continue building** auf schmalen/niedrigen Geräten abnehmen: Forum-Lieferung, Echo-Upgrades und nur neue Gefechte verständlich; **Back** ohne Bestätigung und **Start building** ohne Ladebildschirm/Pausemenü. Gezielte CPU-/UI-Verträge prüfen Profilbestätigung, erhaltene Live-Welt/RNG, entferntes feindliches Restfeuer, getrenntes Welt-Speicherziel und Schutz vor erneuter Siegwertung; visuelle/akustische Abnahme bleibt offen.
