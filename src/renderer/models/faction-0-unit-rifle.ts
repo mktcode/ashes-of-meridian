@@ -172,7 +172,7 @@ function createOathguard(): Record<string, number[]> {
     id:'faction-0/unit/rifle', meshes,
     render({entity:e,time,part:p,team,surfaceColor,nightLight,lightPool,pointLight}) {
       const neutral=surfaceColor(0xffffff)!==0xffffff, white=surfaceColor(0xffffff),cyan=surfaceColor(0x38d9e8);
-      const weight=walking(e,time),phase=(e.walk||0)*5.6;
+      const weight=walking(e,time),phase=(e.walk||0)*4.5;
       const breath=Math.sin(time*2.2)*(.008-weight*.004);
       const hipY=.85+weight*(-.03+Math.cos(phase*2)*.009);
       // Cooldown is reset only by real shots; initial random cooldown is below this window.
