@@ -58,6 +58,26 @@ test('world style is seed-isolated, reproducible and bounded without a growing v
   }
 });
 
+test('failed material uploads share their pending rejection and can be retried', async () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
+  vm.runInContext('bakeSurface = () => ({ width: 1, height: 1, pixels: new Uint8Array(4) })', context);
+  const error = Error('upload failed');
+  let fail = true, uploads = 0;
+  const r = Object.assign(Object.create(Renderer.prototype), {
+    textureLoads: {}, textureResources: { metal: { texture: {}, resident: false } },
+    gl: { bindTexture() {}, texImage2D() { uploads++; if (fail) throw error; }, generateMipmap() {}, texParameteri() {} }
+  });
+  const first = r.loadResidentTexture('metal');
+  assert.strictEqual(r.loadResidentTexture('metal'), first);
+  await assert.rejects(first, error);
+  assert.equal(r.textureResources.metal.resident, false);
+  assert.equal(Object.keys(r.textureLoads).length, 0);
+  fail = false;
+  assert.equal(await r.loadResidentTexture('metal'), true);
+  assert.equal(r.textureResources.metal.resident, true);
+  assert.equal(uploads, 2);
+});
+
 test('procedural materials upload only on residency misses and rebake identically after release', async () => {
   const context = loadScripts(RENDERER_SCRIPTS), { MeridianRenderer, PROCEDURAL_MATERIALS } = vm.runInContext(
     '({MeridianRenderer, PROCEDURAL_MATERIALS})', context);

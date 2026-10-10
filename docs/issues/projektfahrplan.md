@@ -14,7 +14,7 @@ Die Tabelle ordnet Arbeitsfelder, nicht die Reihenfolge jedes Einzelschritts. Ge
 | [Spielstand/Weltbesuche](expeditions-spielstand.md) | Gefechtsrestore manuell positiv; frühere Welten samt Weiterbau und komprimiertem Archiv integriert, menschliche Abnahme offen. Hintergrund/Prozessende, Grafikverlust, getrennte Save-Ziele, verständliche Speicherfehler und Archivkosten zusammen mit Mobilstabilität abnehmen. |
 | [Worker/Bauwegfindung](worker-bauwegfindung/issue.md) | Bekannte Fehlerklasse korrigiert, Originalstillstände nicht exakt reproduziert. Erreichbarer Bau, wiederholte Lieferungen und nachvollziehbarer Blockiert-/Ausgangsstatus vor weiterem Navigationsumbau. |
 | [Prozedurale Gefechtsstarts](procedural-battlefields.md) | HQ-Bauflächen und KI-Ausweichen verbessert; tatsächlicher bezahlter HQ-Abschluss, knappe Wirtschaftsflächen und Startfairness offen. Ein unspielbarer Start wiegt schwerer als neue Karten-/Modellinhalte. |
-| [Texturladefehler](texture-loading.md) | Im aktuellen Code belegter Fehlerpfad: fehlgeschlagene Pflichttexturen können als erfolgreich vorbereitet gelten. Kleine begrenzte Korrektur mit Fehler-/Parallelrequest-Regressionsfällen; keine angenommene Ursache der mobilen Abbrüche. |
+| [Texturvorbereitung](texture-loading.md) | Pflichtmaterial-Erfolg und Residency abgesichert; gezielte Fehler-/Parallelrequest- und App-Regressionen bestanden. Einzelne `file://`-Browserabnahme offen, Chromium-Start durch Socket-Pfadlänge blockiert. Keine angenommene Ursache der mobilen Abbrüche. |
 | [UI/Fokus/Dialoge](ui-review.md) | Dialogrolle, Fokusbindung/-rückgabe fehlen weiterhin. Tastatur-/Screenreaderbedienung und sichere Bestätigungen betreffen den ganzen Spielablauf. Gemeinsame Dialogverwaltung gezielt korrigieren; CSS-Entkopplung bleibt P3. |
 | [Teststrategie/alte Fixtures](teststrategie-review.md) | HQ-Sofortstart-Annahmen widersprechen dem Worker-Start; Fixtures vor neuen KI-/Balanceaussagen fachlich berichtigen, Referenzen nicht blind ersetzen. Reine Testorganisation bleibt nachrangig. |
 
@@ -53,9 +53,9 @@ CSS-Entkopplung aus dem UI-Issue und nicht blockierende Testbereinigung bei fach
 
 ## Empfohlene nächste Arbeitspakete
 
-1. Der belegte **Texturladefehler** bietet den kleinsten klar abgegrenzten Codeauftrag; **Dialog/Fokus** ist der nächste bereichsübergreifende Bedienungsauftrag. Den alten Dienststatus separat organisatorisch klären.
+1. **Dialog/Fokus** ist der nächste bereichsübergreifende Bedienungsauftrag; bei der korrigierten **Texturvorbereitung** bleibt nur die gezielte Browserabnahme offen. Den alten Dienststatus separat organisatorisch klären.
 2. **Start-/Worker-Zuverlässigkeit:** relevante HQ-Fixtures berichtigen und gezielt Bauabschluss/Lieferzyklen prüfen. Autonome KI-Läufe nur separat freigegeben; fehlende Originalstände bei erneutem Auftreten zuerst sichern.
 3. **Mobilstabilität und Fortsetzen:** eindeutige Diagnose-Buildkennung, konkrete Abbruchaufnahme und Spielstands-/Lebenszyklusabnahme zusammenführen. Die [Performanceübersicht](performance/README.md) führt verbleibendes Potenzial; weitere Desktoparbeit erst bei konkretem Bedarf und gemessenem Engpass.
 4. **Ein zusammenhängender Run-Abnahmeblock** mit FFA/Progression und taktischer Darstellung. Daraus konkrete Bugs/Balanceentscheidungen ableiten; erst danach einen neuen Modus oder Plattformausbau wählen.
 
-Aufwand: Texturfehler/Buildkennung voraussichtlich klein, Dialogverwaltung/Fixturepflege mittel; Ursachenklärung bei Stillständen und Geräteabbrüchen offen. Das sind Umfangseinschätzungen, keine Zeit- oder Erfolgszusagen. Kriterien und Freigaben: [Prüfwahl](../testing.md).
+Aufwand: Buildkennung voraussichtlich klein, Dialogverwaltung/Fixturepflege mittel; Ursachenklärung bei Stillständen und Geräteabbrüchen offen. Das sind Umfangseinschätzungen, keine Zeit- oder Erfolgszusagen. Kriterien und Freigaben: [Prüfwahl](../testing.md).

@@ -1,16 +1,13 @@
-# Texturvorbereitung: Ladefehler nicht als Erfolg behandeln
+# Texturvorbereitung: Browserabnahme offen
 
-## Befund
+Die Vorbereitung prüft jetzt erfolgreiche Materialrückgaben und die tatsächliche Residency aller Pflichtmaterialien, bevor sie Erfolg meldet oder alte Materialien freigibt. Aktuelle Fehler erreichen den vorhandenen App-Fehlerpfad; überholte Anfragen liefern auch bei fehlgeschlagenen gemeinsam genutzten Loads nur `false` und melden keinen Fehler über eine neuere Szene.
 
-Statische Codeprüfung auf Stand `937914e` bestätigt den weiterhin offenen Fehler: In [der Texturvorbereitung](../../src/renderer/runtime.ts) liefert `loadResidentTexture()` bei `Image.onerror` den Wert `false`. `prepareBattlefieldTextures()` wartet auf `Promise.all`, wertet dessen Ergebnisse aber nicht aus und meldet bei aktueller Request-Generation trotzdem Erfolg.
+Der historische `Image.onerror`-Befund gilt nicht mehr: Materialien werden inzwischen prozedural erzeugt und hochgeladen. Keine Assetersetzung oder allgemeine Rendererbereinigung; kein belegter Zusammenhang mit [mobilen Grafikabbrüchen](performance/README.md#mobilstabilität-und-speicher).
 
-Damit können Menü-/Archivvorschau und Gefechtsstart mit nicht residenten Pflichttexturen fortfahren. Der [Anwendungsfehlerpfad](../../src/app.ts) für fehlgeschlagene Texturvorbereitung wird durch diese aufgelösten Ladefehler nicht erreicht. Kein im Browser reproduzierter Ausfall; kein Nachweis für einen Zusammenhang mit den [mobilen Grafikabbrüchen](performance/README.md#mobilstabilität-und-speicher).
+Build und gezielte Node-Regressionen für Erfolg, fehlgeschlagene Rückgaben/Uploads, fehlende Residency, Fortschritt, konkurrierende Anfragen, geteilte Loads samt Retry sowie App-Start-/Vorschaufehler bestanden. Keine KI-/Simulations- oder Vollsuiten ausgeführt.
 
-## Offene Korrektur und Abnahme
+## Verbleibende Abnahme
 
-- [ ] Erfolg nur melden, wenn alle für das aktuelle Profil erforderlichen Texturen resident sind. Tatsächlichen Ladefehler von einer überholten Anfrage unterscheiden; überholte Anfragen dürfen keinen Fehlerdialog über eine neuere Vorschau oder ein Gefecht legen.
-- [ ] Aktuellen Ladefehler sichtbar melden, ohne Gefecht oder Vorschau als erfolgreich vorbereitet zu übernehmen; keine stillschweigende Freigabe der Ersatztexturen.
-- [ ] Gezielte Regression: eine Pflichttextur scheitert, alle laden erfolgreich, konkurrierende Profilwechsel sowie gemeinsam genutzte laufende Loads. Request-/Residency-Verträge und Freigabe alter Texturen erhalten.
-- [ ] Nach Korrektur einen gezielten `file://`-Browsercheck mit absichtlich fehlgeschlagener Textur durchführen: kein Gefechtsstart, nachvollziehbarer Fehlerzustand; keine Screenshotserie oder Performanceabnahme.
+- [ ] Ein gezielter Chromium-Check über `file://`: absichtlich fehlgeschlagenes Pflichtmaterial muss Gefechtsstart und Vorschau blockieren und den Fehler sichtbar melden. Da keine Bilder mehr geladen werden, Materialerzeugung/-upload beziehungsweise dessen Rückgabe gezielt scheitern lassen; kein fehlendes Rasterasset simulieren. Keine Screenshotserie oder Performanceabnahme.
 
-Keine Assetersetzung, RNG-/Weltänderung oder allgemeine Rendererbereinigung. [Prüfwahl](../testing.md).
+Der Browserversuch im isolierten Worktree scheiterte bereits beim Chromium-Start: `Socket path too long` für den Singleton-Socket unter dem vorgeschriebenen worktree-lokalen temporären Verzeichnis. Kein Browsernachweis; Isolation und Browsersicherheit wurden nicht gelockert. [Prüfwahl](../testing.md).
