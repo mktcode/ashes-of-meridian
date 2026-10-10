@@ -17,6 +17,7 @@
 - [ ] Shader-Stringtests auf relevante Verdrahtung statt Formelschreibweise begrenzen; keine behauptete GLSL-Kompilierung. Konkrete Beispiele in [den Renderer-Prüfungen](../../tests/ashes-of-meridian-renderer.check.cjs): exakte Triplanar-/Tilt-Shift-Ausdrücke und lokale Licht-/Reliefformeln binden gleichwertige Implementierungen unnötig an Schreibweise und Konstanten.
 - [ ] Historische Entfernungsprüfungen gegen aktuelle Fachverträge abgleichen: etwa explizites `aurelion`-Verbot in Controls oder alte Deck-/Ramp-Modellnamen in Terrain. Aktuellen Kartenkatalog und spielbare Geometrie prüfen, nicht jede frühere Entfernung konservieren. Sicherheitsrelevante Negativfälle gegen doppelte Auszahlung, fremde Kontrolle, Sichtlecks oder ungültige Saves erhalten.
 - [ ] Modell-/Präsentationsüberschneidungen nach Vertragsvergleich reduzieren; Bounds/Winding/Varianten/RNG können unabhängig schützen.
+- [ ] Lampenbudget-Annahme in `tests/models/all-model-night-lights.check.cjs` fachlich abgleichen: Der Fall `every faction building and unit has posed night lights…` erwartet für `faction-2/unit/destroyer` eine Lampe, das unveränderte Modell meldet jedoch einen Reaktorkern und zwei Antriebslampen. Die isolierte Gegenprobe mit der zum Ausgangscommit identischen Modelldatei bestätigt drei Emitter; kein Oathguard-Regressionsfehler. Den Modellvertrag prüfen statt Beleuchtung zum Grünmachen zu reduzieren.
 
 ## Wiederverwendbare Browser- und Diagnosewerkzeuge
 

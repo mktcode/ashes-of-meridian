@@ -109,7 +109,7 @@ function renderEcologyWeather(R:MeridianRenderer,world:Battlefield,s:RunState,ti
     }
   }
 }
-function renderWeaponSignature(R:MeridianRenderer,f:Extract<BattlefieldEffect,{type:'beam'}>,faction:FactionId) {
+function renderWeaponSignature(R:MeridianRenderer,f:Extract<BattlefieldEffect,{type:'beam'}>,faction:FactionId,pactColor=0xffedb8) {
   const life=clamp(f.life/(faction===FACTION_ID.THIRD?.19:.1),0,1),age=1-life,dx=f.tx-f.x,dz=f.tz-f.z,len=Math.hypot(dx,dz)||1,
     sx=-dz/len,sz=dx/len;
   if(faction===FACTION_ID.SECOND) {
@@ -127,7 +127,7 @@ function renderWeaponSignature(R:MeridianRenderer,f:Extract<BattlefieldEffect,{t
   }else{
     const start=clamp(age*1.5,0,1),end=clamp(start+.18,0,1);
     drawVisibleEffectBeam(R,[f.x+dx*start,f.y+(f.ty-f.y)*start,f.z+dz*start],
-      [f.x+dx*end,f.y+(f.ty-f.y)*end,f.z+dz*end],f.width*.65,0xffedb8,2.1,life);
+      [f.x+dx*end,f.y+(f.ty-f.y)*end,f.z+dz*end],f.width*.65,pactColor,2.1,life);
   }
 }
 interface MotionDustTrack {
@@ -255,12 +255,12 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
               drawVisibleEffectBeam(R, [f.x, f.y, f.z], [f.tx, f.ty, f.tz], f.width, f.color, 1.6, Math.min(1, life * 3));
               const faction=effects.weaponFactions?.get(f);
               if(signatures>0&&faction!==undefined&&world.visible[world.idx(f.tx,f.tz)]){
-                signatures--;renderWeaponSignature(R,f,faction);
+                signatures--;renderWeaponSignature(R,f,faction,effects.oathguardBeams?.has(f)?f.color:undefined);
               }
               if (accents > 0 && effects.combatBeams.has(f)) {
                 accents--;
                 const flash = clamp(f.life / .1, 0, 1), radius = .14 + f.width * 2;
-                if (effectBoundsVisible(R, f.x, f.y, f.z, radius, radius * .7, radius))
+                if (!effects.oathguardBeams?.has(f) && effectBoundsVisible(R, f.x, f.y, f.z, radius, radius * .7, radius))
                   R.add('sphere', f.x, f.y, f.z, radius, radius * .7, radius, f.color, 0, 0, 0, 2, flash * .8, 'effects');
                 // Place the accent at the approximate hull, not inside the target mesh.
                 const dx = f.x - f.tx, dz = f.z - f.tz, distance = Math.max(.001, Math.hypot(dx,dz));
