@@ -32,4 +32,6 @@ Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine sp�
 - [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance/README.md) und [offene Issues](docs/issues/).
 - [Geschichte](docs/story.md): deutsche interne Fassung; englische Spielfassung im Codex.
 
+Einzelne arrangierte Grafik-/Modellszenen aufnehmen: [Szenen-Capture](docs/scene-capture.md) (`npm run capture:scene -- --scene scripts/scenes/model-lineup.json`).
+
 Isolierte Kartenstarts und Diagnose: [Prüfwerkzeuge](docs/testing.md#manuelle-probeläufe). `npm run simulate:visible` öffnet eine persönliche KI-Zuschauerpartie; **kein Testbefehl, nie automatisch durch Agenten starten**.

@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json",
     "build:zip": "npm run build && node scripts/build-zip.mjs",
+    "capture:scene": "npm run build && node scripts/scene-capture.mjs",
     "capture:itch": "npm run build && node scripts/capture-itch-media.mjs",
     "simulate:visible": "npm run build && node scripts/open-visible-simulation.mjs",
     "test": "npm run build && node scripts/run-tests.mjs standard",
