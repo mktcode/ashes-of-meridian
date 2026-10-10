@@ -1286,6 +1286,38 @@ test('battle exit destination preparation failure releases the cover and input l
   assert.deepEqual(a.errors.map(error => error.message), ['destination unavailable']);
 });
 
+test('app texture failure blocks launch and preview and exposes the loading error', async () => {
+  for (const preview of [false, true]) {
+    const a = await appClock(), error = Error('Required battlefield textures are unavailable');
+    a.ui.view = 'home';
+    a.renderer.prepareBattlefieldTextures = async () => { throw error; };
+    a.game.start = () => assert.fail('failed textures must not start a battle');
+    a.ui.expedition = {};
+    const result = preview ? await a.ui.onPreview('desert')
+      : await a.ui.onLaunchBattle({ map: 'desert' }, a.ui.expedition);
+    assert.equal(result, false);
+    assert.deepEqual(a.errors, [error]);
+    assert.equal(a.$('loading').classList.contains('hidden'), false);
+    assert.match(a.$('loading').innerHTML, /Texture preparation failed/);
+    if (!preview) assert.equal(a.$('battleTransition').classList.contains('hidden'), true);
+  }
+});
+
+test('app obsolete preview failure does not report over a newer preview', async () => {
+  const a = await appClock();
+  a.ui.view = 'home';
+  let rejectOld;
+  a.renderer.prepareBattlefieldTextures = () => new Promise((resolve, reject) => { rejectOld = reject; });
+  const previous = a.ui.onPreview('desert');
+  await new Promise(setImmediate);
+  a.renderer.prepareBattlefieldTextures = async () => true;
+  assert.equal(await a.ui.onPreview('desert'), true);
+  rejectOld(Error('obsolete material failed'));
+  assert.equal(await previous, false);
+  assert.deepEqual(a.errors, []);
+  assert.equal(a.$('loading').classList.contains('hidden'), true);
+});
+
 test('app world launch validates archive identity and does not load after leaving home',async()=>{
   const a=await appClock(),world={stage:1,recipe:{},battle:{state:{}}},calls=[];
   a.ui.view='home';a.ui.expedition={worlds:[world]};

@@ -647,15 +647,28 @@
         progress?: (completed: number, total: number) => Promise<void>) {
         const generation = ++this.textureGeneration, required = this.textureNames(profile);
         this.desiredTextures = required;
-        if (progress) {
-          let completed = 0;
-          for (const name of required) {
+        try {
+          if (progress) {
+            let completed = 0;
+            for (const name of required) {
+              if (generation !== this.textureGeneration) return false;
+              const loaded = await this.loadResidentTexture(name);
+              if (generation !== this.textureGeneration) return false;
+              if (!loaded) throw Error('Required battlefield textures are unavailable');
+              await progress(++completed, required.size);
+            }
+          } else {
+            const loaded = await Promise.all(Array.from(required, name => this.loadResidentTexture(name)));
             if (generation !== this.textureGeneration) return false;
-            await this.loadResidentTexture(name);
-            await progress(++completed, required.size);
+            if (!loaded.every(Boolean)) throw Error('Required battlefield textures are unavailable');
           }
-        } else await Promise.all(Array.from(required, name => this.loadResidentTexture(name)));
-        if (generation !== this.textureGeneration) return false;
+          if (generation !== this.textureGeneration) return false;
+          if (!this.hasBattlefieldTextures(profile)) throw Error('Required battlefield textures are unavailable');
+        } catch (error) {
+          // Shared loads may fail after a newer scene has taken ownership.
+          if (generation !== this.textureGeneration) return false;
+          throw error;
+        }
         for (const name of Object.keys(this.textureResources) as ResidentTextureName[])
           if (!required.has(name) && this.textureResources[name].resident) this.releaseResidentTexture(name);
         return true;

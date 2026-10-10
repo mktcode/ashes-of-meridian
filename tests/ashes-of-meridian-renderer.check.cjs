@@ -384,8 +384,8 @@ test('texture preparation reports completed materials and waits for progress pai
   const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
   const loads = [], reports = [];
   const renderer = Object.assign(Object.create(Renderer.prototype), {
-    textureResources: {}, textureGeneration: 0,
-    loadResidentTexture: async name => { loads.push(name); return true; }
+    textureResources: Object.fromEntries(['metal', 'bio', 'ground'].map(name => [name, { resident: false }])), textureGeneration: 0,
+    loadResidentTexture: async name => { loads.push(name); renderer.textureResources[name].resident = true; return true; }
   });
   const profile = { groundTexture: 'ground' };
   let painted;
@@ -406,6 +406,56 @@ test('texture preparation reports completed materials and waits for progress pai
   reports.length = 0;
   assert.equal(await renderer.prepareBattlefieldTextures(profile, async (done, total) => { reports.push([done, total]); }), true);
   assert.deepEqual(reports, [[1, 3], [2, 3], [3, 3]]);
+});
+
+test('texture preparation rejects unavailable materials without releasing the previous scene', async () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
+  for (const sequential of [false, true]) for (const failure of ['false', 'reject', 'not-resident']) {
+    const reports = [], releases = [], error = Error('material upload failed');
+    const renderer = Object.assign(Object.create(Renderer.prototype), {
+      textureGeneration: 0,
+      textureResources: Object.fromEntries(['metal', 'bio', 'ground', 'desertRock'].map(name => [name, { resident: name === 'desertRock' }])),
+      loadResidentTexture: async name => {
+        if (name === 'ground') {
+          if (failure === 'reject') throw error;
+          return failure !== 'false';
+        }
+        renderer.textureResources[name].resident = true;
+        return true;
+      },
+      releaseResidentTexture: name => releases.push(name)
+    });
+    await assert.rejects(renderer.prepareBattlefieldTextures({ groundTexture: 'ground' }, sequential
+      ? async done => { reports.push(done); } : undefined), failure === 'reject' ? error : /Required battlefield textures/);
+    assert.deepEqual(releases, []);
+    if (sequential && failure !== 'not-resident') assert.deepEqual(reports, [1, 2], 'failed material is not reported as completed');
+  }
+});
+
+test('texture preparation shares pending loads and suppresses superseded failures', async () => {
+  const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
+  for (const sequential of [false, true]) for (const rejects of [false, true]) {
+    let failOld, finishShared;
+    const shared = new Promise(resolve => { finishShared = resolve; });
+    const old = new Promise((resolve, reject) => { failOld = () => rejects ? reject(Error('old material failed')) : resolve(false); });
+    const renderer = Object.assign(Object.create(Renderer.prototype), {
+      textureGeneration: 0,
+      textureResources: Object.fromEntries(['metal', 'bio', 'ground'].map(name => [name, { resident: false }])),
+      loadResidentTexture: name => name === 'ground' ? old : shared.then(() => {
+        renderer.textureResources[name].resident = true;
+        return true;
+      }),
+      releaseResidentTexture: () => assert.fail('no old material became resident')
+    });
+    const reports = [], progress = sequential ? async done => { reports.push(done); } : undefined;
+    const previous = renderer.prepareBattlefieldTextures({ groundTexture: 'ground' }, progress);
+    finishShared();
+    await new Promise(setImmediate);
+    const current = renderer.prepareBattlefieldTextures({ groundTexture: 'bio' }, progress);
+    assert.equal(await current, true, 'new request can complete with shared loads');
+    failOld();
+    assert.equal(await previous, false, 'obsolete failure never reaches the app error path');
+  }
 });
 
 test('large static geometry and placements are chunked and conservatively culled', () => {
