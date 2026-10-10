@@ -11,6 +11,8 @@ class MeridianEffects {
       private pooled = new WeakSet<BattlefieldEffect>();
       // View-only combat marker/hull radius: keep serialized effects and RNG samples unchanged.
       readonly combatBeams = new WeakMap<BattlefieldEffect, number>();
+      // Rifle bolt trails are view-only; CPU lifetime/damage/RNG stay unchanged.
+      readonly infantryBeams = new WeakSet<BattlefieldEffect>();
       readonly weaponFactions = new WeakMap<BattlefieldEffect, FactionId>();
       // Detailed Pact infantry own their animated muzzle flash; keep common impacts.
       readonly modelMuzzleBeams = new WeakSet<BattlefieldEffect>();
@@ -146,6 +148,7 @@ class MeridianEffects {
               width: e.type === 'tank' || e.type === 'destroyer' ? 0.075 : 0.035
             });
         if (pactInfantry) this.modelMuzzleBeams.add(this.fx[this.fx.length - 1]);
+        if (e.kind === 'unit' && e.type === 'rifle') this.infantryBeams.add(this.fx[this.fx.length - 1]);
         this.combatBeams.set(this.fx[this.fx.length - 1], target.size);
         this.weaponFactions.set(this.fx[this.fx.length - 1], e.faction);
       }

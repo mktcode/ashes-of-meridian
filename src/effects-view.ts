@@ -130,6 +130,90 @@ function renderWeaponSignature(R:MeridianRenderer,f:Extract<BattlefieldEffect,{t
       [f.x+dx*end,f.y+(f.ty-f.y)*end,f.z+dz*end],f.width*.65,pactColor,2.1,life);
   }
 }
+interface InfantryShotView {
+  f: Extract<BattlefieldEffect,{type:'beam'}>;
+  faction: FactionId;
+  at: number;
+  radius: number;
+}
+const infantryShotViews = new WeakMap<MeridianRenderer, {
+  world: Battlefield; state: RunState; team: PlayerTeam; fx: BattlefieldEffect[];
+  seen: WeakSet<BattlefieldEffect>; shots: InfantryShotView[]; time: number;
+}>();
+function renderInfantryShots(R: MeridianRenderer, effects: MeridianEffects, world: Battlefield, s: RunState, team: PlayerTeam) {
+  if (R.cinema) { infantryShotViews.delete(R); return; }
+  let view = infantryShotViews.get(R);
+  if (!view || view.world !== world || view.state !== s || view.team !== team || view.fx !== effects.fx || s.time < view.time) {
+    view = {world, state:s, team, fx:effects.fx, seen:new WeakSet(), shots:[], time:s.time};
+    infantryShotViews.set(R, view);
+  }
+  view.time = s.time;
+  const cap = R.quality > 1 ? 32 : R.quality > 0 ? 12 : 8;
+  for (const f of effects.fx) {
+    if (f.type !== 'beam' || !effects.infantryBeams?.has(f) || view.seen.has(f)) continue;
+    view.seen.add(f);
+    // Never defer hidden or over-budget fire for replay after visibility changes.
+    if (!world.visible[world.idx(f.x,f.z)] || !world.visible[world.idx(f.tx,f.tz)]) continue;
+    const faction = effects.weaponFactions.get(f) ?? FACTION_ID.FIRST,
+      lifetime = faction === FACTION_ID.THIRD ? .19 : .1;
+    view.shots.push({f, faction, at:s.time - Math.max(0,lifetime-f.life), radius:effects.combatBeams.get(f) ?? .65});
+    if (view.shots.length > cap) view.shots.shift();
+  }
+  if (view.shots.length > cap) view.shots.splice(0,view.shots.length-cap);
+  let live = 0;
+  for (const shot of view.shots) {
+    const {f,faction,at} = shot, age = s.time-at;
+    if (age < 0 || age >= .48 || !world.visible[world.idx(f.x,f.z)] || !world.visible[world.idx(f.tx,f.tz)]) continue;
+    view.shots[live++] = shot;
+    const dx = f.tx-f.x, dz = f.tz-f.z, len = Math.max(.001,Math.hypot(dx,dz)),
+      hull = Math.min(shot.radius,len*.5), tx = f.tx-dx/len*hull, tz = f.tz-dz/len*hull;
+    if (!world.visible[world.idx(tx,tz)]) continue;
+    const c = faction === FACTION_ID.FIRST ? 0x38d9e8 : faction === FACTION_ID.SECOND ? 0xb9ed86 : 0xc6a5ff,
+      travel = .13, t = Math.min(age/travel,1),
+      point = (u:number) => [f.x+(tx-f.x)*u,f.y+(f.ty-f.y)*u,f.z+(tz-f.z)*u],
+      beam = (a:number[],b:number[],w:number,color:number,g:number,alpha:number) => drawVisibleEffectBeam(R,a,b,w,color,g,alpha),
+      add = (mesh:string,p:number[],x:number,y:number,z:number,color:number,yaw:number,glow:number,alpha:number) => {
+        if (effectBoundsVisible(R,p[0],p[1],p[2],Math.max(x,z),y,Math.max(x,z)))
+          R.add(mesh,p[0],p[1],p[2],x,y,z,color,yaw,0,0,glow,alpha,'effects');
+      };
+    if (age < travel) {
+      const p = point(t);
+      if (R.quality > 0) beam(point(Math.max(0,t-.26)),p,.105,c,1.1,.16);
+      beam(point(Math.max(0,t-.13)),p,.044,c,2.4,.85);
+      beam(point(Math.max(0,t-.07)),p,.019,0xf3ffff,3,1);
+      add('octa',p,.085,.085,.16,c,Math.atan2(tx-f.x,tz-f.z),2,.85);
+      if (faction === FACTION_ID.SECOND && R.quality > 0) for (let j=0;j<3;j++) {
+        const q=point(Math.max(0,t-j*.055)),a=t*17+j*2.4;
+        q[1]+=Math.sin(a)*.11; q[2]+=Math.cos(a)*.11;
+        add('octa',q,.045,.075,.045,0xe2ffc1,a,1.5,.6);
+      }
+    }
+    if (age < .065) {
+      const fade=1-age/.065,r=.10+fade*.18;
+      // Pact rifles also have a model-local flash; retain the approved short halo.
+      add('sphere',[f.x,f.y,f.z],r,r*.7,r,c,0,2.8,fade*.6);
+      beam(point(-.015),point(.045),.055,0xeeffff,3,fade);
+      if (R.quality > 0) for (let j=0;j<3;j++)
+        beam([f.x,f.y,f.z],[f.x+.10,f.y+Math.sin(j*2.1)*r,f.z+Math.cos(j*2.1)*r],.023,c,2,fade*.8);
+    }
+    if (R.quality > 0) {
+      const smoke=age/.48;
+      add('sphere',[f.x,f.y+smoke*.45,f.z],.10+smoke*.22,.09+smoke*.18,.10+smoke*.22,0x83969c,0,0,(1-smoke)*.085);
+    }
+    if (age >= travel) {
+      const hitAge=(age-travel)/.35,fade=1-hitAge,hit=point(.95);
+      if (hitAge < .2) add('sphere',hit,.16,.16,.16,0xeeffff,0,2.5,fade*.65);
+      for (let j=0;j<(R.quality>1?5:R.quality>0?3:1);j++) {
+        const a=j*2.399+f.z*.4,length=.08+hitAge*.8,
+          back=length*(.3+.15*j),side=Math.cos(a)*length,
+          end=[hit[0]-dx/len*back-dz/len*side,hit[1]+Math.sin(a)*length+.2*hitAge,hit[2]-dz/len*back+dx/len*side],
+          tail=end.map((v,k)=>v+(hit[k]-v)*.20);
+        beam(tail,end,.018,j%2?c:0xf4efcf,1.8,fade*.75);
+      }
+    }
+  }
+  view.shots.length = live;
+}
 interface MotionDustTrack {
   walk: number;
   emitted: number;
@@ -237,6 +321,7 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
           renderMotionDust(R, world, s, localTeam);
           renderEcologyWeather(R, world, s, weatherTime);
           renderBattleScars(R, effects, world, s.time, localTeam);
+          renderInfantryShots(R, effects, world, s, localTeam);
           for (const e of s.entities) {
             if (e.kind !== 'unit' || e.type !== 'hero' || e.hp <= 0 || e.team === -1 ||
               !(s.parties[e.team]?.benefits.commandDrill > 0) || !world.visible[world.idx(e.x,e.z)]) continue;
@@ -252,6 +337,7 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
             let life = clamp(f.life / f.maxLife, 0, 1),
               age = 1 - life;
             if (f.type === 'beam') {
+              if (effects.infantryBeams?.has(f) && !R.cinema) continue;
               drawVisibleEffectBeam(R, [f.x, f.y, f.z], [f.tx, f.ty, f.tz], f.width, f.color, 1.6, Math.min(1, life * 3));
               const faction=effects.weaponFactions?.get(f);
               if(signatures>0&&faction!==undefined&&world.visible[world.idx(f.tx,f.tz)]){

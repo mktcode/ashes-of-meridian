@@ -29,12 +29,14 @@ test('Oathguard shots: one cyan beam from the shoulder rifle, same RNG/count and
   assert.equal(effects.fx[0].x,e.x+Math.sin(e.rot)*.7);
  }
 });
-test('Oathguard effects: no duplicate muzzle sphere; cyan tracer and existing impact, normal visibility gate',()=>{
+test('Oathguard effects: bounded cyan impulse with pale core and brief muzzle halo, normal visibility gate',()=>{
  const {effects,render,source,target}=setup();effects.shot(source,target);
  const r=createRendererStub({record:true});r.quality=1;r.beam=(...args)=>r.calls.push(['beam',...args]);
  const s={time:0,entities:[],scans:[],fields:[],strikes:[],cam:{x:0,z:0}},world={visible:[255],idx:()=>0,renderProfile:{ecology:{dry:[.4,.4,.4],weather:'clear'}}};
  render(r,effects,world,s,[],0);assert(r.calls.length>0);
- assert(!r.calls.some(c=>c[0]==='sphere'),'local model supplies muzzle flash');
- assert(r.calls.filter(c=>c[0]==='beam').every(c=>c[4]===0x38d9e8),'beam, tracer and impact all cyan');
+ assert(r.calls.some(c=>c[0]==='sphere'),'approved impulse supplies brief halo and vapour');
+ assert(r.calls.some(c=>c[0]==='beam'&&c[4]===0x38d9e8),'cyan impulse');
+ assert(r.calls.some(c=>c[0]==='beam'&&c[4]===0xf3ffff),'pale hot core');
+ assert(!r.calls.some(c=>c[0]==='beam'&&Math.hypot(c[2][0]-c[1][0],c[2][2]-c[1][2])>3),'no continuous full-range laser');
  r.calls.length=0;world.visible[0]=0;render(r,effects,world,s,[],0);assert.deepEqual(r.calls,[]);
 });
