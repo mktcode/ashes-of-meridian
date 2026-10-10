@@ -221,8 +221,11 @@
       const cy=Math.cos(upperRx),sy=Math.sin(upperRx),cz=Math.cos(upperRz),sz=Math.sin(upperRz),
         beaconY=2.42-.85,bx=-.275*cz-beaconY*sz,by=-.275*sz+beaconY*cz,
         ly=upperTarget[1]+by*cy+.37*sy,lz=upperTarget[2]+by*sy-.37*cy;
-      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,4.5,0x38d9e8,1.8);
-      if(nightLight>0)lightPool(0,1.3,1.8,2.3,0x38d9e8,.65*nightLight);
+      // Keep the visibly lit ground beyond attack range, not just the lamp's cutoff.
+      // The larger envelope compensates for distance, grazing normals and edge falloff.
+      const beaconReach=UNITS.hero.range*3;
+      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,24);
+      if(nightLight>0)lightPool(bx*SCALE,lz*SCALE,beaconReach,beaconReach,0x38d9e8,.4*nightLight);
     }
   });
 })();
