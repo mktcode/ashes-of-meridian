@@ -23,7 +23,6 @@ Die Tabelle ordnet Arbeitsfelder, nicht die Reihenfolge jedes Einzelschritts. Ge
 | [Texturladefehler](texture-loading.md) | Im aktuellen Code belegter Fehlerpfad: fehlgeschlagene Pflichttexturen können als erfolgreich vorbereitet gelten. Kleine begrenzte Korrektur mit Fehler-/Parallelrequest-Regressionsfällen; keine angenommene Ursache der mobilen Abbrüche. |
 | [UI/Fokus/Dialoge](ui-review.md) | Dialogrolle, Fokusbindung/-rückgabe fehlen weiterhin. Tastatur-/Screenreaderbedienung und sichere Bestätigungen betreffen den ganzen Spielablauf. Gemeinsame Dialogverwaltung gezielt korrigieren; CSS-Entkopplung bleibt P3. |
 | [Teststrategie/alte Fixtures](teststrategie-review.md) | HQ-Sofortstart-Annahmen widersprechen dem Worker-Start; Fixtures vor neuen KI-/Balanceaussagen fachlich berichtigen, Referenzen nicht blind ersetzen. Reine Testorganisation bleibt nachrangig. |
-| [Release-Werkzeuge/Assets](release-tooling.md) | `capture:itch` setzt nicht mehr vorhandene Start-HQs voraus; explizite Capture-Fixture statt Änderung des Spielstarts. Assetlisten und Ausgabewege anschließend gezielt absichern. Kein ausgeführter Browsernachweis. |
 
 ## P2 – vollständiges Spiel und Darstellung gezielt abnehmen
 
@@ -51,6 +50,7 @@ Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische 
 | [Weitere Vorteile](upgrade-ideas.md) | Ideenpool, keine beschlossene Erweiterung. Bestehende Progression zuerst abnehmen; neue Stapel-/Aura-/Auszahlungsregeln einzeln entscheiden. |
 | [Android/Store/Werbung](android.md) | Browser-Mobilstabilität und Lebenszyklus zuerst. WebView-/Storeentscheidung separat, Werbung noch später. |
 | [Repository-Hygiene/Werkzeuge](repository-hygiene.md) | Node-Version, kurze CI/Linkprüfung, Formatkonventionen und Weiterverwendungsrechte klären. Keine vorsorgliche Vollsuite, Massenformatierung oder neue Architektur. |
+| [Release-Werkzeuge/Assets](release-tooling.md) | Explizite Capture-Basen technisch geprüft; einzelne Browserabnahme, Assetlisten und Ausgabeformat/-besitz bleiben offen. Keine Screenshotserie auf Vorrat. |
 | [Communitykarten](community-maps.md) | Skirmish-Regeln → begrenztes Datenschema/Beispielkarte → lokaler Import. Plattform/Sharing erst danach; kein vorhandener Kartenloader. |
 | [Multiplayer](multiplayer.md) | Produkt weiterhin Singleplayer-only. **Ausnahme zur Zurückstellung:** zeitnah außerhalb des Repositories klären, ob ein alter Dienst/Endpunkt noch läuft, und gegebenenfalls durch den Betreiber abschalten lassen. Kein automatischer Infrastrukturzugriff. |
 

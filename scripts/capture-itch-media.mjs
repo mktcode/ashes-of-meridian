@@ -2,6 +2,7 @@ import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright-core';
+import { prepareCaptureBattle } from './capture-battle-fixture.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'release/itch-media');
@@ -42,9 +43,9 @@ try {
     { file: '04-mothership-assault.jpg', map: 'mothership', seed: 43015, faction: 2, enemy: 0, view: 'front' }
   ];
   for (const scene of scenes) {
-    const result = await page.evaluate(({ map, seed, faction, enemy, view }) => {
+    await page.evaluate(prepareCaptureBattle, { options: scene });
+    const result = await page.evaluate(({ map, view }) => {
       const { game, ui, renderer } = Meridian;
-      game.start({ map, seed, faction, enemies: [enemy], benefits: {}, enemyBenefits: [{}], depth: 6 });
       ui.paused = true;
       renderer.quality = 2;
       renderer.resize();

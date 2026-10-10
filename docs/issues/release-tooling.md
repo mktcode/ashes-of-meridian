@@ -2,9 +2,9 @@
 
 Befunde aus dem Hygieneaudit auf `8a69e7f`; statischer Abgleich, keine Capture-/Docker-/Browserausführung. Keine automatische Implementierungs-, Aufnahme- oder Assetänderungsfreigabe. [Auslieferungsvertrag](../deployment.md) und `file://` erhalten.
 
-## Capture an den Worker-Start anpassen
+## Capture-Ausgabe und Abnahme
 
-- [ ] [Das itch-Capture-Skript](../../scripts/capture-itch-media.mjs) baut arrangierte Szenen unmittelbar nach `game.start()` anhand vorhandener HQs auf. Der aktuelle Start liefert Landungsworker, keine HQs; `homes[team]` ist damit nicht vorhanden und die anschließende Koordinatenverwendung kann nicht funktionieren. Explizite Capture-Fixtures für entwickelte Basen verwenden, ohne den produktiven Start oder Regeln zu ändern.
+- [ ] Den [Capture-Pfad](../../scripts/capture-itch-media.mjs) nach ausdrücklicher Freigabe mit einer einzelnen Szene im Browser abnehmen. Der gezielte Node-Test prüft die serialisierte [Capture-Fixture](../../scripts/capture-battle-fixture.mjs) auf den drei verwendeten Kartenrezepten: Worker-Start bleibt unverändert, beide HQs entstehen auf zulässigen Standorten, Belegung/Indizierung und expliziter Abbruch ohne Standort sind abgesichert. Renderer, UI-Lebenszyklus und tatsächliche Medienausgabe sind damit nicht geprüft.
 - [ ] Ausgabeformat und Besitz klären: `capture:itch` schreibt JPEGs unter `release/itch-media/`, während die Arbeitsregeln WebP/Qualität 80 und laufbezogene temporäre Ablage vorsehen. Gewollte Releaseartefakte von Scratch trennen; generierte Ausgaben gezielt ignorieren oder bewusst versionieren. Keine pauschale Löschung vorhandener Medien.
 - [ ] Wiederverwendbare Szenen-/Capture-Bausteine aus `.tmp/devlog-2026-10-08/capture.mjs` prüfen, nicht datierte Motive und Texte als neues Standardwerkzeug übernehmen. Scratch-Skripte sind lokale Hinweise, keine dauerhaften Abhängigkeiten. Gemeinsamer Browserrahmen unter [Testpflege](teststrategie-review.md#wiederverwendbare-browser--und-diagnosewerkzeuge).
 

@@ -24,6 +24,6 @@ Die englische Seitenbeschreibung wird manuell auf itch.io gepflegt; eine version
 
 `npm run build:zip` erzeugt `release/ashes-of-meridian-prototype.zip` mit `index.html` an der Wurzel. Als HTML-Build hochladen, „This file will be played in the browser“ aktivieren und Vollbild/responsiven Viewport ermöglichen. Neue lokale Assets in ZIP- und Docker-Paketweg gemeinsam berücksichtigen; für Sprache gilt der [Katalog-/Paketvertrag](audio.md). `node scripts/build-zip.mjs <ziel.zip>` erlaubt nach dem Build einen abweichenden Ausgabeweg, etwa für isolierte Paketprüfungen.
 
-`npm run capture:itch` erzeugt Präsentationsmedien unter `release/itch-media/`; benötigt Chromium (`CHROMIUM_PATH` für abweichenden Pfad). Arrangierte Motive sind kein Spiel-/Balancingnachweis; nicht routinemäßig als Prüfung starten.
+`npm run capture:itch` erzeugt Präsentationsmedien unter `release/itch-media/`; benötigt Chromium (`CHROMIUM_PATH` für abweichenden Pfad). Das Werkzeug baut entwickelte Basen als explizite Capture-Fixture auf zulässigen HQ-Standorten auf; der produktive Worker-Start bleibt unverändert. Arrangierte Motive sind kein Spiel-/Balancingnachweis; nicht routinemäßig als Prüfung starten.
 
 Nach tatsächlichem Paket-/Hostingwechsel gezielt Assets/404/MIME, Start und Audiofreigabe prüfen. [Prüfwahl](testing.md). Android bleibt eine [zurückgestellte Option](issues/android.md).
