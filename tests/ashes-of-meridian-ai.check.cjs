@@ -401,7 +401,9 @@ for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real econo
   }
   assert.ok(counts.produced>=10&&counts.built>=6);assert.ok(attacks>0);
   assert.ok(g.s.result,`no result at ${g.s.time}`);
-  assert.equal(g.world.extent,135);
+  const size=g.world.definition.createSize(g.world.terrainSeed);
+  assert.deepEqual([g.world.extent,g.world.cellSize,g.world.gridSize],
+    [size.extent,size.cellSize,size.extent*2/size.cellSize]);
 });
 
 for(const enemy of [0,1,2]) test(`depth 16 doctrine ${enemy}: paid autonomous battle finishes`,()=>{

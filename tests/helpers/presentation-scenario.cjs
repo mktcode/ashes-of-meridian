@@ -2,7 +2,7 @@ const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
-const { populateBase } = require('./populated-battle.cjs');
+const { populateBase } = require('./presentation-base.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view', 'effects', ...SIMULATION_SCRIPTS], { globals: { structuredClone } });
 vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);

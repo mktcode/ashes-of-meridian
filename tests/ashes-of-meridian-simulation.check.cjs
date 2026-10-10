@@ -1,11 +1,11 @@
-// CPU tests with fixed start expectations and uninterrupted run scenarios.
+// CPU rule tests with explicit developed fixtures and uninterrupted run scenarios.
 // Scope: docs/reference-tests.md.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
-const { populateBase } = require('./helpers/populated-battle.cjs');
+const { populateBase, populateOpponent } = require('./helpers/populated-battle.cjs');
 const { establishHeadquarters } = require('./helpers/developed-bases.cjs');
 
 const scripts = readScripts();
@@ -20,7 +20,7 @@ const terrainFingerprint = world => createHash('sha256')
   .update(JSON.stringify(world.renderData.placements))
   .digest('hex');
 
-function createGame(fixedStarts = false) {
+function createGame() {
   const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], {
     scripts, globals: { structuredClone },
   });
@@ -32,43 +32,56 @@ function createGame(fixedStarts = false) {
   });
   // Unit-rule scenarios isolate the controller; autonomous play lives in the AI suite.
   game.aiTick = () => {};
-  // Fixed-location economy/crowd arenas are not tests of the randomized start controller.
-  if (fixedStarts) game.startingPositions = () => [game.world.layout.playerStart, game.world.layout.enemySites[0]];
   return { game, events, context };
 }
 
+// Explicit flat rule arena, not a claim about any catalog map's terrain or dimensions.
+function flatArena(extent) {
+  const runtime=createGame(), {game,context}=runtime;
+  vm.runInContext(`const originalArenaRecipe=BATTLEFIELDS['alien-planet'];
+    BATTLEFIELDS['alien-planet']={...originalArenaRecipe,
+      createSize:()=>({extent:${extent},cellSize:2.5}),
+      createLayout:()=>({startSites:[],resourceSites:[{x:-80,z:-80},{x:80,z:80}],corridors:[]}),
+      generate(builder) {
+        const w=builder.world;
+        w.surface=new BattlefieldSurface(w.extent,w.cellSize,()=>0);
+        w.staticGrid.set(w.surface.cliffs); w.terrainFeatureGrid.set(w.surface.cliffs);
+        builder.ground();
+      }};`,context);
+  try { game.start({seed:43015,map:'alien-planet',deployment:'resource-start'}); }
+  finally { vm.runInContext("BATTLEFIELDS['alien-planet']=originalArenaRecipe",context); }
+  game.s.supplyCaches=[]; // Boundary/production rules, not exploration rewards.
+  return runtime;
+}
+
 // Fresh deployment always uses the production start allocation, never fixed HQ coordinates.
-function freshBattle(faction = 0, seed = 1409, deployment) {
+function freshBattle(faction = 0, seed = 1409, deployment, map = 'desert') {
   const runtime = createGame();
-  runtime.game.start({ seed, map: 'desert', faction, deployment });
+  runtime.game.start({ seed, map, faction, deployment });
   return runtime;
 }
 
 // Bare, workerless HQs for economy rules; not the populated combat/production arena.
-function headquartersBattle(faction = 0, seed = 1409, deployment) {
-  const runtime = freshBattle(faction, seed, deployment);
+function headquartersBattle(faction = 0, seed = 1409, deployment, map = 'desert') {
+  const runtime = freshBattle(faction, seed, deployment, map);
   establishHeadquarters(runtime.game);
   return runtime;
 }
 
 // Production, repair and crowd tests explicitly need a developed base, not a fresh start.
-function battle(faction = 0, seed = 1409) {
-  const runtime = headquartersBattle(faction, seed);
+function battle(faction = 0, seed = 1409, map = 'desert') {
+  const runtime = headquartersBattle(faction, seed, 'resource-start', map);
   populateBase(runtime.game);
-  // Explicit developed opponent fixture, not a privileged live starting loadout.
-  const g=runtime.game, h=g.alive(e=>e.team===1&&e.type==='hq')[0];
-  for (const [type,x,z] of [['turret',-6,7],['turret',7,4],['barracks',-10,-1],['factory',7,-8]])
-    g.spawnBuilding(type,h.x+x,h.z+z,1,h.faction);
-  for(let i=0;i<7;i++) g.spawnUnit(i===6?'tank':i===5?'artillery':'rifle',h.x-8+(i%4)*3,h.z+12+Math.floor(i/4)*2,1,h.faction);
-  g.world.rebuild(g.s.entities);g.rehash();
+  populateOpponent(runtime.game);
   return runtime;
 }
 
 function spacingArena() {
-  const { game } = battle();
+  const { game } = flatArena(135);
+  establishHeadquarters(game); populateBase(game); populateOpponent(game);
   game.s.entities = game.s.entities.filter(e => e.kind === 'building');
   game.ids = new Map(game.s.entities.map(e => [e.id, e]));
-  game.world.staticGrid.fill(0); game.world.rebuild(game.s.entities); game.rehash();
+  game.world.rebuild(game.s.entities); game.rehash();
   return game;
 }
 
@@ -178,16 +191,11 @@ test('scenario command tick precedes production and cancels callback input at th
   assert.equal(game.commandQueue.pending.length, 0); assert.equal(game.commandQueue.lastResults.length, 0);
 });
 
-test('larger map supports outer-area spawns, paid construction, production, commands and restart', () => {
-  const {game,context}=createGame(true);
-  vm.runInContext(`BATTLEFIELDS['alien-planet'].size={extent:135,cellSize:2.5};
-    BATTLEFIELDS['alien-planet'].layout.playerStart={x:-111,z:109};
-    BATTLEFIELDS['alien-planet'].layout.startSites[0]={x:-111,z:109};
-    BATTLEFIELDS['alien-planet'].layout.resourceSites[0]={x:-118,z:88};`,context);
-  game.start({seed:43015,map:'alien-planet'});
-  assert.deepEqual([player(game,'hq').x,player(game,'hq').z],[-111,109]);
-  assert.equal(game.s.cam.x,-106);assert.equal(game.world.gridSize,108);
-  game.world.staticGrid.fill(0);game.world.rebuild(game.s.entities);
+test('flat large arena supports outer-area construction, production and commands; restart resolves current map dimensions', () => {
+  const {game}=flatArena(135);
+  establishHeadquarters(game);
+  assert.equal(game.world.gridSize,108);
+  game.world.rebuild(game.s.entities);
   game.world.reveal(game.s.entities,[{x:110,z:105,r:31}]);
   game.account(0).alloy=1000;
   const worker=game.spawnUnit('worker',110,110,0,0);assert.ok(worker);
@@ -207,17 +215,19 @@ test('larger map supports outer-area spawns, paid construction, production, comm
   assert.equal(game.unitFits(rifle,131,115),false);
   const air=game.spawnUnit('air',120,-120,0,0);assert.ok(air);
   game.pathTo(air,{x:999,z:-999});assert.deepEqual(json(air.path),[{x:130,z:-130}]);
-  for(const [map, gridSize] of [['desert',72],['alien-planet',108],['mothership',96]]) {
-    game.start({seed:43015,map});assert.equal(game.world.gridSize,gridSize);
+  for(const map of ['desert','alien-planet','mothership']) {
+    game.start({seed:43015,map});
+    const size=game.world.definition.createSize(game.world.terrainSeed);
+    assert.deepEqual([game.world.extent,game.world.cellSize,game.world.gridSize],
+      [size.extent,size.cellSize,size.extent*2/size.cellSize]);
     assert.ok(game.world.visible.includes(255));
   }
 });
 
-test('spatial queries retain stable order without row aliases on large maps or wide scans', () => {
-  const {game,context}=createGame();
-  vm.runInContext("BATTLEFIELDS['alien-planet'].size={extent:180,cellSize:2.5}",context);
-  game.start({seed:43015,map:'alien-planet'});
-  game.s.entities=[];game.ids.clear();game.world.staticGrid.fill(0);game.world.rebuild([]);
+test('spatial queries retain stable order without row aliases in a flat wide arena or wide scans', () => {
+  const {game}=flatArena(180);
+  assert.equal(game.world.gridSize,144);
+  game.s.entities=[];game.ids.clear();game.world.rebuild([]);
   const units=[[-170,-160],[150,-170],[120,110],[-100,100]].map(([x,z])=>game.spawnUnit('rifle',x,z,0,0));
   game.rehash();
   for(const u of units) assert.deepEqual(Array.from(game.near(u.x,u.z,5),e=>e.id),[u.id]);
@@ -470,9 +480,34 @@ test('ground attack-move preserves mixed formations and worker movement without 
   assert.equal(rifle.order.type,'attack'); assert.equal(rifle.order.id,enemy.id);
 });
 
+for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'mothership']])
+test(`developed bases use legal sites, fitted armies and unchanged RNG: ${map}/${seed}/${faction}`, () => {
+  const {game}=headquartersBattle(faction,seed,'resource-start',map), terrain=terrainFingerprint(game.world),
+    resources=json(game.alive(e=>e.kind==='resource')), random=game.random, state=random.state,
+    enemyAccount=json(game.account(1));
+  const own=populateBase(game), opponent=populateOpponent(game);
+  assert.equal(game.random,random); assert.equal(random.state,state);
+  assert.equal(terrainFingerprint(game.world),terrain);
+  assert.deepEqual(json(game.alive(e=>e.kind==='resource')),resources);
+  assert.deepEqual(json(game.account(1)),enemyAccount);
+  assert.deepEqual([game.account(0).alloy,game.account(0).gas],[1100,400]);
+  assert.equal(game.alive(e=>e.team===0&&e.type==='worker').length,5);
+  assert.equal(game.alive(e=>e.team===1&&e.type==='worker').length,0,'temporary fixture builder removed');
+  assert.deepEqual(own.buildings.map(b=>b.type),['refinery','barracks','depot','factory','depot']);
+  assert.deepEqual(opponent.buildings.map(b=>b.type),['turret','turret','barracks','factory']);
+  const refinery=own.buildings.find(b=>b.type==='refinery'), vent=game.get(refinery.gasId);
+  assert.ok(vent&&vent.type==='gas'); assert.deepEqual([refinery.x,refinery.z],[vent.x,vent.z]);
+  for(const b of [...own.buildings,...opponent.buildings]) {
+    assert.equal(b.progress,1); assert.equal(b.hp,b.maxHp); assert.ok(b.paid,'passed through real paid construction');
+    assert.strictEqual(game.ids.get(b.id),b);
+  }
+  for(const unit of game.alive(e=>e.kind==='unit')) assert.ok(game.unitFits(unit,unit.x,unit.z));
+  assertUnitSpacing(game); assert.equal(game.s.result,null);
+});
+
 test('populated army fixtures and two minutes of mining and combat keep unit spacing', () => {
   for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'mothership']]) {
-    const { game } = createGame(true); game.start({faction,seed,map}); populateBase(game); assertUnitSpacing(game);
+    const { game } = battle(faction,seed,map); assertUnitSpacing(game);
     if (seed !== 1409) continue;
     for (let i=0;i<2400;i++) {
       game.step(.05); game.effects.tick(.05);
@@ -563,7 +598,7 @@ test('local steering tries the open side when a unit and terrain seal its prefer
 });
 
 test('a ground formation clears a mothership service-plant corner without losing its orders', () => {
-  const { game } = createGame(true);
+  const { game } = createGame();
   game.start({seed:1409,map:'mothership',faction:0});
   game.s.entities=[]; game.ids.clear();
   game.spawnBuilding('hq',0,-75,0,0); game.spawnBuilding('hq',0,75,1,1);
@@ -676,8 +711,8 @@ test('workers use distributed near-side mining and HQ service points without que
 for (const [seed,map,faction,count,forced] of [
   [1409,'desert',0,8,false], [7012,'desert',1,12,false], [9017,'alien-planet',2,12,false], [1409,'desert',0,8,true]
 ]) test(`worker traffic stays productive for six minutes: ${seed}/${faction}/${count}, forced node ${forced}`, () => {
-  const {game}=createGame(true);
-  game.start({seed,map,faction}); populateBase(game,count); game.s.parties.forEach(p => { p.controller = { kind: 'human' }; });
+  const {game}=headquartersBattle(faction,seed,'resource-start',map);
+  populateBase(game,count); game.s.parties.forEach(p => { p.controller = { kind: 'human' }; });
   for(const e of game.s.entities) if(e.kind==='unit'&&e.team===1)e.hp=0;
   let workers=game.alive(e=>e.team===0&&e.type==='worker');
   if(forced) for(const w of workers) w.order={type:'mine',id:game.closest(w,n=>n.type==='crystal').id};
