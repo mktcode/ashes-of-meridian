@@ -45,13 +45,21 @@ const aiMethods = {
     return ((d.damage || 0) / (d.reload || 1) +
       (e.kind === 'unit' ? (e.type === 'medic' ? 8 : d.hp / 80) : 0)) * e.hp/e.maxHp;
   },
-  aiOrder(this: MeridianGame, team: PlayerTeam, units: UnitEntity[], p: Position, attack = true) {
-    // Do not erase path progress every strategic tick. The command API handles formation/ownership.
-    const changed = units.filter(e => !e.exit &&
-      (e.order.type !== (attack ? 'attackMove' : 'move') || distance(e.order as Position,p) > 8 ||
-        (e.pathStatus==='unreachable' && distance(e.order as Position,p)>.1)));
-    if (changed.length) this.executeAction(team, {kind:'order',ids:changed.map(e=>e.id),
-      order:{type:attack?'attackMove':'move',x:p.x,z:p.z}},false);
+  aiOrder(this: MeridianGame, team: PlayerTeam, units: UnitEntity[], p: Position, attack = true, tolerance = 8) {
+    // Compare with the command API's formation slots, not its center: wide formations
+    // otherwise reset their outer units every strategic tick. Keep slots on partial updates.
+    const mobile=units.filter(e=>!e.exit), cols=Math.max(1,Math.ceil(Math.sqrt(mobile.length))),
+      spacing=Math.max(0,...mobile.map(e=>e.size))*UNIT_BODY_SCALE*2+.1,
+      goals=mobile.map((e,i)=>({e,p:{x:p.x+(i%cols-(cols-1)/2)*spacing,
+        z:p.z+(Math.floor(i/cols)-(Math.ceil(mobile.length/cols)-1)/2)*spacing}})),
+      changed=goals.filter(({e,p:goal})=>e.order.type!==(attack?'attackMove':'move') ||
+        distance(e.order as Position,goal)>tolerance ||
+        (e.pathStatus==='unreachable' && distance(e.order as Position,goal)>.1));
+    if (changed.length===mobile.length && changed.length)
+      this.executeAction(team,{kind:'order',ids:mobile.map(e=>e.id),
+        order:{type:attack?'attackMove':'move',x:p.x,z:p.z}},false);
+    else for (const {e,p:goal} of changed)
+      this.executeAction(team,{kind:'order',ids:[e.id],order:{type:attack?'attackMove':'move',...goal}},false);
   },
   aiBuild(this: MeridianGame, team: PlayerTeam, type: BuildingType, home: Position) {
     const s=this.s!, ai=this.aiFor(team)!;

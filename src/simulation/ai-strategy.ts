@@ -54,13 +54,80 @@ const aiStrategyMethods = {
     return sites.length ? sites[(ai?.scoutSite || 0)%sites.length] :
       world.startSites[(ai?.scoutSite || 0)%world.startSites.length] || home;
   },
-  aiRetreat(this: MeridianGame, team: PlayerTeam, squad: UnitEntity[], home: BuildingEntity) {
+  aiHold(this: MeridianGame, team: PlayerTeam, units: UnitEntity[], own: Entity[], home: BuildingEntity, attack = true) {
+    const world=this.world!, known=[...own,...Object.values(this.aiFor(team)!.contacts)],
+      buildings=known.filter(e=>e.kind==='building'),
+      producers=buildings.filter(b=>(Object.values(UNITS) as UnitDefinitionShape[]).some(d=>d.from===b.type)),
+      resources=known.filter(e=>e.kind==='resource' && distance(e,home)<45),
+      reserved: {p:Position,r:number}[]=[];
+    let navigation:Uint8Array | undefined, searches=0;
+    const reachable=(unit:UnitEntity,p:Position)=>{
+      if ((UNITS[unit.type] as UnitDefinitionShape).flying) return true;
+      if (searches>=12) return false;
+      searches++;
+      // The live blocked grid can contain hidden foundations. Build a planning view
+      // from public terrain and delayed knowledge only; actions still use live navigation.
+      if (!navigation) {
+        navigation=world.staticGrid.slice();
+        for (const b of buildings) world.mark(navigation,b.x,b.z,b.size+.35);
+      }
+      const blocked=world.blocked;
+      try {
+        world.blocked=navigation;
+        return world.path(unit.x,unit.z,p.x,p.z,false,undefined,unit.size*UNIT_BODY_SCALE,false,1024).status==='complete';
+      } finally { world.blocked=blocked; }
+    };
+    const laneDistance=(p:Position,a:Position,b:Position)=>{
+      const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz || 1),0,1);
+      return distance(p,{x:a.x+t*dx,z:a.z+t*dz});
+    };
+    for (const unit of units) {
+      const r=unit.size*UNIT_BODY_SCALE, flying=!!(UNITS[unit.type] as UnitDefinitionShape).flying,
+        valid=(p:Position)=>distance(p,home)>=20 && distance(p,home)<=44 &&
+          Math.abs(p.x)<world.extent-5-r && Math.abs(p.z)<world.extent-5-r &&
+          (flying || (!!world.deploymentReachable[world.idx(p.x,p.z)] &&
+            !world.staticGrid[world.idx(p.x,p.z)] && !!world.surface?.fits(p.x,p.z,r) && world.terrainFree(home,p,r))) &&
+          buildings.every(b=>distance(p,b)>b.size+r+3) &&
+          producers.every(b=>laneDistance(p,b,{x:b.x+Math.sin(BUILDING_YAW+(b.team===1?Math.PI:0))*(b.size+12),
+            z:b.z+Math.cos(BUILDING_YAW+(b.team===1?Math.PI:0))*(b.size+12)})>=r+3) &&
+          resources.every(c=>distance(p,c)>c.size+r+3 && laneDistance(p,home,c)>r+4) &&
+          own.every(e=>e.type!=='worker' || distance(p,e)>r+e.size*UNIT_BODY_SCALE+2) &&
+          reserved.every(slot=>distance(p,slot.p)>r+slot.r+3);
+      const moving=unit.order.type==='move' || unit.order.type==='attackMove',
+        old=moving?unit.order as Position:unit,
+        stalled=unit.pathStatus==='unreachable' || (unit.recoveryAttempts || 0)>=4;
+      let goal:Position | undefined;
+      // Preserve safe holding positions and paths. Re-plan only proven stalls or a changed layout.
+      if (!stalled && valid(old)) goal={x:old.x,z:old.z};
+      let attempts=0;
+      if (!goal) for (let i=0;i<96;i++) {
+        if (!flying && (attempts>=3 || searches>=12)) break;
+        const index=(i+unit.id*7)%96, angle=(index%32)*Math.PI/16,
+          radius=24+Math.floor(index/32)*8,
+          p={x:home.x+Math.sin(angle)*radius,z:home.z+Math.cos(angle)*radius};
+        if ((stalled && distance(p,old)<8) || !valid(p)) continue;
+        attempts++;
+        if (!reachable(unit,p)) continue;
+        goal=p;break;
+      }
+      if (!goal) {
+        // Retreat must cancel an assault even when local planning runs out of budget.
+        // Ordinary waiting troops keep their order instead of piling onto the HQ.
+        if (!attack) this.aiOrder(team,[unit],home,false);
+        continue;
+      }
+      reserved.push({p:goal,r});
+      if (!moving && distance(unit,goal)<2) continue;
+      this.aiOrder(team,[unit],goal,attack,.1);
+    }
+  },
+  aiRetreat(this: MeridianGame, team: PlayerTeam, squad: UnitEntity[], home: BuildingEntity, own: Entity[]) {
     const ai=this.aiFor(team)!;
     if (ai.goal) ai.failedGoal={...ai.goal,until:this.s!.time+AI_TUNING.failedGoalSeconds};
     this.aiSetMode(team,'recover');
     ai.recoverUntil=this.s!.time+aiRulesFor(this.factionFor(team),this.s!.depth).recoveryTime;
     ai.attackProgress=undefined;
-    this.aiOrder(team,squad,home,false);
+    this.aiHold(team,squad,own,home,false);
   },
   aiAttackGoal(this: MeridianGame, team: PlayerTeam, squad: UnitEntity[], target: AITarget) {
     const ai=this.aiFor(team)!, e=target.contact, now=this.s!.time;
@@ -89,7 +156,7 @@ const aiStrategyMethods = {
       danger=foes.filter(e=>e.kind==='unit'&&distance(e,home)<30),
       power=(units: (Entity | AIContact)[])=>units.reduce((n,e)=>n+this.aiPower(e),0);
     let squad=army.filter(e=>ai.squad.includes(e.id));
-    const guards=army.filter(e=>!ai.squad.includes(e.id) && distance(e,home)<35),
+    const guards=army.filter(e=>!ai.squad.includes(e.id) && distance(e,home)<45),
       baseDefense=own.filter(e=>e.kind==='building' && distance(e,home)<30);
     // A small raid should not recall the entire army when local reserves can handle it.
     const localDefense=[...guards,...baseDefense],
@@ -103,10 +170,10 @@ const aiStrategyMethods = {
       }
     }
     if (ai.mode==='recover') {
-      const restored=squad.every(e=>distance(e,home)<22 &&
+      const restored=squad.every(e=>distance(e,home)<44 &&
         (this.factionFor(team)===FACTION_ID.THIRD ? e.shield>=e.maxShield*.75 : e.hp>=e.maxHp*.85));
       if (squad.length && s.time<(ai.recoverUntil || 0) && (!restored || s.time-ai.restStartedAt<6)) {
-        this.aiOrder(team,squad,home,false);return;
+        this.aiHold(team,army,own,home,false);return;
       }
       this.aiSetMode(team,'assemble');ai.squad=[];squad=[];
     }
@@ -120,13 +187,20 @@ const aiStrategyMethods = {
             this.factionFor(team)===FACTION_ID.THIRD && shields<.2),
         threatened=opposition>0 && (exhausted || squad.length<ai.launched*AI_TUNING.retreatLossRatio ||
           power(squad)<opposition*AI_TUNING.retreatPowerRatio);
-      if (threatened) { this.aiRetreat(team,squad,home);return; }
+      if (threatened) { this.aiRetreat(team,squad,home,own);return; }
+      const reinforcements=army.filter(e=>!ai.squad.includes(e.id) && !(danger.length && holding && guards.includes(e))).slice(rules.reserve)
+        .filter(e=>e.hp>=e.maxHp*.6);
+      if (reinforcements.length) {
+        squad=[...squad,...reinforcements];
+        ai.launched+=reinforcements.length;ai.squad=squad.map(e=>e.id);
+      }
+      if (!danger.length) this.aiHold(team,army.filter(e=>!ai.squad.includes(e.id)),own,home);
       const current=targets.find(t=>t.contact.id===ai.attackProgress?.targetId);
       if (current && squad.some(u=>this.aiCanDamage(u,current.contact))) {
         // Update progress before testing patience; the total sortie age never forces retreat.
         this.aiAttackGoal(team,squad,current);
         if (s.time-ai.attackProgress!.at>=AI_TUNING.stalledSeconds) {
-          this.aiRetreat(team,squad,home);return;
+          this.aiRetreat(team,squad,home,own);return;
         }
         const alternative=targets.find(t=>t.score>current.score+AI_TUNING.targetSwitchMargin &&
           power(squad)>Math.max(42,t.defense*rules.forceRatio) && squad.some(u=>this.aiCanDamage(u,t.contact)));
@@ -149,9 +223,13 @@ const aiStrategyMethods = {
         localContinuation=ai.mode==='attack' && target.defense===0 &&
           visible.some(e=>e.id===target.contact.id) && squad.some(u=>distance(u,target.contact)<AI_TUNING.targetRadius);
       if (!attackers.some(u=>this.aiCanDamage(u,target.contact))) continue;
-      const ready=target.finish ? elapsed>=AI_TUNING.finishWaitSeconds :
-        attackers.length>=rules.attackers && power(attackers)>Math.max(42,target.defense*(elapsed>180?.8:rules.forceRatio)) &&
-        elapsed>=rules.attackWait;
+      const raid=['worker','refinery','barracks','factory','hangar'].includes(target.contact.type) &&
+        visible.some(e=>e.id===target.contact.id) &&
+        attackers.filter(e=>this.aiCanDamage(e,target.contact)).length>=2 &&
+        power(attackers)>Math.max(18,target.defense*rules.forceRatio) && elapsed>=AI_TUNING.finishWaitSeconds,
+        ready=target.finish ? elapsed>=AI_TUNING.finishWaitSeconds : raid ||
+          attackers.length>=rules.attackers && power(attackers)>Math.max(42,target.defense*(elapsed>180?.8:rules.forceRatio)) &&
+          elapsed>=rules.attackWait;
       if (ai.mode==='attack' ? (target.finish || localContinuation || power(attackers)>Math.max(42,target.defense*rules.forceRatio)) : ready) {
         this.aiAttackGoal(team,attackers,target);return;
       }
@@ -172,8 +250,7 @@ const aiStrategyMethods = {
     if (scout && !danger.length && ai.scoutGoal)
       this.aiOrder(team,searchParty.length?searchParty:[scout],searchParty.length?ai.scoutGoal:home,!!searchParty.length);
     this.aiSetMode(team,army.length?'assemble':'bootstrap');ai.squad=[];ai.attackProgress=undefined;
-    const rally={x:home.x-Math.sign(home.x)*13,z:home.z-Math.sign(home.z)*13};
-    this.aiOrder(team,pool.filter(e=>!searchParty.includes(e)),rally);
+    this.aiHold(team,pool.filter(e=>!searchParty.includes(e)),own,home);
   }
 };
 type AIStrategyMethods = typeof aiStrategyMethods;

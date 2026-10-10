@@ -11,7 +11,9 @@ function fixture(faction = 0, depth = 0) {
   const g = Object.create(MeridianGame.prototype), orders = [];
   g.s = { time: 100, depth, rules: { kind: 'single-player', mission: {id:'hq-elimination'} }, entities: [], parties:
     Array.from({ length: 4 }, (_, id) => ({ id, faction, controller: { kind: 'human' } })) };
-  g.world = { cellSize: 2, idx: () => 0, startSites: [{x:60,z:0},{x:0,z:60}],
+  g.world = { cellSize: 2, extent:160, idx: () => 0, startSites: [{x:60,z:0},{x:0,z:60}],
+    staticGrid:new Uint8Array(1), blocked:new Uint8Array(1), deploymentReachable:new Uint8Array(1).fill(1),
+    surface:{fits:()=>true}, terrainFree:()=>true, mark:()=>{}, path:()=>({status:'complete'}),
     layout: {resourceSites:[]}, sight: Array.from({length:4}, () => ({visible:[0],explored:[1]})) };
   g.canSee = () => true;
   g.random = () => { throw Error('Planning must not consume RNG'); };
@@ -125,10 +127,10 @@ test('armed search parties leave reserves at home and keep a distant goal betwee
   assert.equal(searches,1);
   let search = orders.find(o=>o.x===first.x && o.z===first.z);
   assert.equal(search.ids.length,3); assert.equal(search.attack,true);
-  const rally = orders.find(o=>o.x!==first.x);
-  assert.equal(rally.ids.length,7);
-  assert.ok(rally.ids.every(id=>!search.ids.includes(id)),'rally must not cancel reconnaissance');
-  assert.ok(troops.slice(1,4).every(u=>rally.ids.includes(u.id)),'doctrine reserves remain home');
+  const holding = orders.filter(o=>o.x!==first.x).flatMap(o=>o.ids);
+  assert.equal(holding.length,7);
+  assert.ok(holding.every(id=>!search.ids.includes(id)),'holding must not cancel reconnaissance');
+  assert.ok(troops.slice(1,4).every(u=>holding.includes(u.id)),'doctrine reserves remain home');
   orders.length = 0; g.s.time += 20;
   g.aiStrategy(1,own(),[],home);
   assert.equal(searches,1,'a timer alone cannot redirect the search party');
@@ -185,6 +187,97 @@ test('nearby replacement goals renew unreachable orders without resetting an ong
   assert.equal(actions.length,0,'do not retry the same blocked goal every tick');
   MeridianGame.prototype.aiOrder.call(g,1,[troop],{x:60,z:8});
   assert.equal(actions.length,1); assert.equal(actions[0].order.z,8);
+});
+
+test('wide formations retain their paths and partial updates keep the original formation slots', () => {
+  const {g,entity} = fixture(), troops=Array.from({length:36},()=>entity('tank')), actions=[], goal={x:60,z:0};
+  g.executeAction=(team,action)=>{
+    actions.push(json(action));
+    const units=action.ids.map(id=>troops.find(e=>e.id===id)), cols=Math.ceil(Math.sqrt(units.length)), spacing=units[0].size*1.4*2+.1;
+    units.forEach((e,i)=>{e.order={...action.order,
+      x:action.order.x+(i%cols-(cols-1)/2)*spacing,
+      z:action.order.z+(Math.floor(i/cols)-(Math.ceil(units.length/cols)-1)/2)*spacing};});
+  };
+  const order=()=>MeridianGame.prototype.aiOrder.call(g,1,troops,goal);
+  order(); assert.equal(actions.length,1);
+  troops.forEach(e=>{e.path=[{x:12,z:1}];e.recoveryAttempts=2;});
+  order(); assert.equal(actions.length,1,'outer formation offsets are not goal changes');
+  assert.ok(troops.every(e=>e.path.length===1 && e.recoveryAttempts===2));
+  const old=json(troops[0].order);troops[0].order={type:'idle'};
+  order(); assert.equal(actions.length,2);
+  assert.deepEqual(actions[1].ids,[troops[0].id]); assert.deepEqual(actions[1].order,old);
+});
+
+test('holding distributes units away from buildings, exits and mining lanes and preserves settled positions', () => {
+  const {g,entity,home,own,orders}=fixture(), troops=Array.from({length:10},()=>entity('tank',1,home.x,home.z));
+  const barracks=entity('barracks',1,home.x+20,home.z), worker=entity('worker',1,home.x,home.z+10);
+  g.aiFor(1).contacts[900]={id:900,kind:'resource',type:'crystal',team:-1,x:home.x,z:home.z+35,size:2};
+  g.aiOrder=(team,units,p,attack)=>{orders.push({ids:units.map(e=>e.id),...p});units.forEach(e=>{e.order={type:attack?'attackMove':'move',...p};});};
+  g.aiHold(1,troops,own(),home);
+  assert.equal(orders.length,10);
+  for (const o of orders) {
+    assert.ok(Math.hypot(o.x-home.x,o.z-home.z)>=20);
+    assert.ok(Math.hypot(o.x-barracks.x,o.z-barracks.z)>barracks.size+1.3*1.4+3);
+    assert.ok(Math.hypot(o.x-worker.x,o.z-worker.z)>5);
+    assert.ok(o.z<home.z || Math.abs(o.x-home.x)>5.8,'keep mining lane clear');
+  }
+  for (let i=0;i<orders.length;i++)for(let j=0;j<i;j++)assert.ok(Math.hypot(orders[i].x-orders[j].x,orders[i].z-orders[j].z)>6.6);
+  const goals=json(troops.map(e=>e.order));
+  troops.forEach(e=>{e.x=e.order.x;e.z=e.order.z;e.order={type:'idle'};});orders.length=0;
+  g.aiHold(1,troops,own(),home); assert.equal(orders.length,0,'arrived guards do not restart movement every decision');
+  troops.forEach((e,i)=>{e.order=goals[i];e.path=[{x:1,z:1}];});
+  g.aiHold(1,troops,own(),home);assert.deepEqual(json(troops.map(e=>e.order)),goals);
+  troops[0].pathStatus='unreachable';orders.length=0;
+  g.aiHold(1,troops,own(),home);
+  assert.ok(Math.hypot(troops[0].order.x-goals[0].x,troops[0].order.z-goals[0].z)>=8,'failed slot gets a different route');
+});
+
+test('holding route checks use delayed blockers, reject incomplete routes and have a bounded search budget', () => {
+  const {g,entity,home,own,orders}=fixture(), troops=Array.from({length:4},()=>entity('tank',1,home.x,home.z)), marks=[], live=g.world.blocked;
+  const observed=entity('barracks',1,home.x+10,home.z);entity('factory',0,home.x-30,home.z);
+  let searches=0;
+  g.world.mark=(grid,x,z)=>marks.push({x,z});
+  g.world.path=(...args)=>{searches++;assert.equal(args[8],1024);assert.notStrictEqual(g.world.blocked,live);return {status:'partial'};};
+  g.aiHold(1,troops,own(),home);
+  assert.equal(orders.length,0);assert.equal(searches,12);assert.strictEqual(g.world.blocked,live);
+  assert.deepEqual(marks,[{x:home.x,z:home.z},{x:observed.x,z:observed.z}],'hidden foundations cannot affect planning');
+  g.world.path=()=>{throw Error('route failure');};
+  assert.throws(()=>g.aiHold(1,troops,own(),home),/route failure/);assert.strictEqual(g.world.blocked,live);
+});
+
+test('a retreat cancels assault orders even when no safe holding route fits the planning budget', () => {
+  const {g,ai,entity,home,own,contact,launch,orders}=fixture();
+  const troops=Array.from({length:8},()=>entity('rifle',1,8,0)), hq=contact(entity('hq',0));launch(troops,hq);
+  g.world.path=()=>({status:'budget-exhausted'});orders.length=0;
+  g.aiRetreat(1,troops,home,own());
+  assert.equal(ai.mode,'recover');
+  assert.ok(troops.every(e=>orders.some(o=>o.ids.includes(e.id) && o.attack===false)), 'no unit retains the assault just because staging is unavailable');
+});
+
+test('small early raids require visible economy, damaging troops and favorable local power', () => {
+  for (const variant of ['worker','refinery','turret','hq','memory','defended','medic']) {
+    const {g,ai,entity,home,own,contact}=fixture();g.s.time=20;
+    Array.from({length:6},()=>entity(variant==='medic'?'medic':'rifle',1,home.x,home.z));
+    const target=contact(entity(['memory','defended','medic'].includes(variant)?'worker':variant,0,60,0));
+    const visible=variant==='memory'?[]:[target];
+    if(variant==='defended')visible.push(contact(entity('tank',0,60,5)));
+    g.aiScoutGoal=()=>({x:0,z:60});
+    g.aiStrategy(1,own(),visible,home);
+    assert.equal(ai.mode==='attack',['worker','refinery'].includes(variant),variant);
+    if(ai.mode==='attack')assert.equal(ai.squad.length,2);
+  }
+});
+
+test('active assaults receive healthy reinforcements while reserves get holding orders', () => {
+  const {g,ai,entity,home,own,contact,launch,orders}=fixture();
+  const squad=Array.from({length:6},()=>entity('rifle',1,8,0)), hq=contact(entity('hq',0));launch(squad,hq);
+  const fresh=Array.from({length:6},()=>entity('tank',1,home.x+5,home.z));
+  orders.length=0;g.s.time=110;g.aiStrategy(1,own(),[hq],home);
+  assert.equal(ai.mode,'attack');assert.equal(ai.squad.length,9);assert.equal(ai.launched,9);assert.equal(ai.attackStartedAt,100);
+  assert.ok(fresh.slice(3).every(e=>ai.squad.includes(e.id)));
+  assert.ok(fresh.slice(0,3).every(e=>orders.some(o=>o.ids.includes(e.id) && Math.hypot(o.x-home.x,o.z-home.z)>=20)));
+  assert.ok(orders.some(o=>o.ids.length===9 && o.x===hq.x));
+  const last=ai.launched;g.s.time=112;g.aiStrategy(1,own(),[hq],home);assert.equal(ai.launched,last,'do not count the same reinforcements twice');
 });
 
 test('a viable observed target launches the main wave rather than reserving all search escorts', () => {
@@ -291,7 +384,7 @@ test('small score changes cannot flip an active target; a much better objective 
 test('reserves handle a small base raid while a major threat recalls the army', () => {
   const {g,ai,entity,contact,own,home,launch,orders} = fixture();
   const troops = Array.from({length:6},()=>entity('rifle',1,8,0)), hq = contact(entity('hq',0));
-  const guards = Array.from({length:4},()=>entity('rifle',1,home.x+8,home.z)); launch(troops,hq);
+  const guards = Array.from({length:4},()=>entity('rifle',1,home.x+40,home.z)); launch(troops,hq);
   const raid = contact(entity('rifle',2,home.x+15,home.z));
   g.s.time = 110; g.aiStrategy(1,own(),[hq,raid],home);
   assert.equal(ai.mode,'attack');
