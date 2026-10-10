@@ -264,6 +264,15 @@ test('path workspace is isolated during nested searches and cleared after terrai
   assert.deepEqual(pathValue(world.path(-20, 0, 20, 0)), forward);
 });
 
+test('cosmetic callers can bound path work without changing the default route or poisoning later searches', () => {
+  const { world } = pathArena();
+  const expected = pathValue(world.path(-20, 0, 20, 0));
+  assert.equal(world.path(-20, 0, 20, 0, false, undefined, 0, false, 1).status, 'budget-exhausted');
+  assertWorkspaceReset(world.pathWorkspace);
+  assert.deepEqual(pathValue(world.path(-20, 0, 20, 0)), expected);
+  assert.deepEqual(pathValue(world.path(-20, 0, 20, 0, false, undefined, 0, false, Infinity)), expected);
+});
+
 test('path workspace discards pending heap entries on search budget exhaustion', () => {
   const { world, Heap } = pathArena(), pop = Heap.prototype.pop;
   let pops = 0;
