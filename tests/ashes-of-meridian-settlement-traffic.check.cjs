@@ -119,5 +119,8 @@ test('models use only six pedestrian or four drone shared primitive parts, witho
  for(const [name,count] of [['civilian',6],['drone',4]]) {
   const parts=[];models[name]({part:(...args)=>parts.push(args),walk:3,color:0xaaaaaa});
   assert.equal(parts.length,count);assert.ok(parts.every(p=>p[0]==='box'));
+  const emissive=parts.filter(p=>(p[11]||0)>0);
+  assert.equal(emissive.length,name==='drone'?1:0,'only the existing drone indicator emits light');
+  if(name==='drone')assert.equal(emissive[0][7],0x69cbd8);
  }
 });

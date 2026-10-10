@@ -1,4 +1,4 @@
-/* Tiny view-only models. Shared primitives, no meshes, lights or GPU allocation per actor. */
+/* Tiny view-only models. Shared primitives, no meshes, point lights or GPU allocation per actor. */
 'use strict';
 interface SettlementTrafficModelContext { part: ModelPart; walk: number; color: number }
 const SettlementTrafficModels = Object.freeze({
@@ -13,7 +13,7 @@ const SettlementTrafficModels = Object.freeze({
   },
   drone({part:p,color}: SettlementTrafficModelContext) {
     p('box',0,.43,0,.32,.15,.45,color);
-    p('box',0,.48,.13,.21,.07,.14,0x69cbd8);
+    p('box',0,.48,.13,.21,.07,.14,0x69cbd8,0,0,0,1.2);
     for(const side of [-1,1]) p('box',side*.23,.41,-.05,.12,.09,.25,0x424d58);
   }
 });
