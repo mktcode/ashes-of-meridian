@@ -30,16 +30,22 @@ function createGame(fixedStarts = false) {
 }
 
 // Fresh deployment always uses the production start allocation, never fixed HQ coordinates.
-function freshBattle(faction = 0, seed = 1409) {
+function freshBattle(faction = 0, seed = 1409, deployment) {
   const runtime = createGame();
-  runtime.game.start({ seed, map: 'desert', faction });
+  runtime.game.start({ seed, map: 'desert', faction, deployment });
+  return runtime;
+}
+
+// Bare, workerless HQs for economy rules; not the populated combat/production arena.
+function headquartersBattle(faction = 0, seed = 1409, deployment) {
+  const runtime = freshBattle(faction, seed, deployment);
+  establishHeadquarters(runtime.game);
   return runtime;
 }
 
 // Production, repair and crowd tests explicitly need a developed base, not a fresh start.
 function battle(faction = 0, seed = 1409) {
-  const runtime = freshBattle(faction, seed);
-  establishHeadquarters(runtime.game);
+  const runtime = headquartersBattle(faction, seed);
   populateBase(runtime.game);
   // Explicit developed opponent fixture, not a privileged live starting loadout.
   const g=runtime.game, h=g.alive(e=>e.team===1&&e.type==='hq')[0];
@@ -77,6 +83,20 @@ function advance(game, steps) {
 
 const player = (game, type) => game.alive(e => e.team === 0 && e.type === type)[0];
 const rifleCount = game => game.alive(e => e.team === 0 && e.type === 'rifle').length;
+
+// Find a nearby site through the actual paid construction path, including reachability.
+function buildNearWorker(game, type, worker) {
+  for (let radius = 8; radius <= 40; radius += 2) {
+    for (let step = 0; step < 48; step++) {
+      const angle = step * Math.PI * 2 / 48;
+      const position = { x: worker.x + Math.cos(angle) * radius, z: worker.z + Math.sin(angle) * radius };
+      if (game.canBuild(type, position, worker.team)) continue;
+      if (game.build(type, position, [worker.id], worker.team))
+        return game.alive(e => e.team === worker.team && e.type === type && e.progress < 1)[0];
+    }
+  }
+  assert.fail(`No reachable ${type} construction site near worker ${worker.id}.`);
+}
 
 for (const map of ['mothership', 'desert', 'alien-planet']) for (const count of [3, 4])
 test(`internal ${count}-party scenario on ${map}: FFA starts, resource access and explicit stop without expedition result`, () => {
@@ -270,9 +290,10 @@ test('single battle starts with landing workers, paid HQ reserves and an indepen
   assert.notStrictEqual(game.s.rules.mission, mission, 'restart owns a new mission state');
 });
 
-test('no workers means no alloy or aether income, and 250 alloy buys exactly five workers for every faction', () => {
+test('established HQs without workers have no resource income, and 250 Cinder buys exactly five workers for every faction', () => {
   for(const faction of [0,1,2]) {
-    const {game}=freshBattle(faction);
+    const {game}=headquartersBattle(faction);
+    assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
     assert.deepEqual(json(game.cost('worker')),{cost:50,gas:0});
     advance(game,1200);
     assert.deepEqual([game.s.parties[0].account.alloy,game.s.parties[0].account.gas,game.s.stats.gathered],[250,0,0]);
@@ -282,9 +303,9 @@ test('no workers means no alloy or aether income, and 250 alloy buys exactly fiv
   }
 });
 
-test('the first worker must be paid for and recruited, then enables mining and the first new building', () => {
+test('an established workerless HQ pays for its first recruit, which enables mining and new construction', () => {
   for (const faction of [0,1,2]) {
-    const {game}=freshBattle(faction);
+    const {game}=headquartersBattle(faction,1409,'resource-start');
     advance(game,40);
     assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
     assert.match(game.canBuild('barracks'),/Recruit a worker/);
@@ -296,9 +317,41 @@ test('the first worker must be paid for and recruited, then enables mining and t
     const worker=player(game,'worker'); assert.ok(worker); assert.equal(worker.exit,undefined);
     assert.equal(game.alive(e=>e.team===0&&e.kind==='unit').length,1);
     assert.ok(game.s.stats.gathered>0); assert.equal(game.canBuild('barracks'), '');
-    const p={x:-39,z:53}; assert.equal(game.canBuild('barracks',p),'');
-    assert.equal(game.build('barracks',p,[worker.id]),true);
-    advance(game,900); assert.equal(player(game,'barracks').progress,1);
+    const beforeBuild=game.account(0).alloy, buildingCost=game.cost('barracks','building');
+    const barracks=buildNearWorker(game,'barracks',worker);
+    assert.equal(game.account(0).alloy,beforeBuild-buildingCost.cost);
+    assert.equal(worker.order.id,barracks.id);
+    for(let i=0;i<1800&&barracks.progress<1;i++) advance(game,1);
+    assert.equal(barracks.progress,1);
+    assert.equal(game.s.result,null);
+  }
+});
+
+test('landing worker pays for an HQ, completes deployment and only then enables paid recruitment', () => {
+  for (const faction of [0,1,2]) {
+    const {game,events}=freshBattle(faction,1409,'resource-start'), worker=player(game,'worker');
+    assert.ok(worker); assert.equal(player(game,'hq'),undefined);
+    assert.equal(game.party(0).deploymentPending,true);
+    const before=game.account(0).alloy, hqCost=game.cost('hq','building');
+    assert.equal(game.train('worker'),false,'no producer before HQ placement');
+    assert.equal(game.account(0).alloy,before);
+    const hq=buildNearWorker(game,'hq',worker);
+    assert.ok(hq.progress>0&&hq.progress<1,'paid foundation, not a precompleted fixture');
+    assert.equal(game.account(0).alloy,before-hqCost.cost);
+    assert.equal(worker.order.type,'build'); assert.equal(worker.order.id,hq.id);
+    assert.equal(game.party(0).deploymentPending,true,'foundation does not end grace');
+    assert.equal(game.cap(),0);
+    assert.equal(game.train('worker'),false,'unfinished HQ is not a producer');
+    assert.equal(game.account(0).alloy,before-hqCost.cost);
+    for(let i=0;i<1800&&hq.progress<1;i++) advance(game,1);
+    assert.equal(hq.progress,1); assert.equal(game.party(0).deploymentPending,false);
+    assert.equal(game.cap(),24); assert.equal(player(game,'worker'),worker,'landing worker survives construction');
+    assert.equal(events.filter(e=>e.type==='complete'&&e.data.type==='hq').length,1);
+    const beforeRecruit=game.account(0).alloy, workerCost=game.cost('worker');
+    assert.equal(game.train('worker'),true);
+    assert.equal(game.account(0).alloy,beforeRecruit-workerCost.cost);
+    assert.equal(game.supply(),2,'landing worker plus reserved recruit');
+    assert.equal(hq.queue.length,1); assert.equal(hq.queue[0].type,'worker');
     assert.equal(game.s.result,null);
   }
 });
