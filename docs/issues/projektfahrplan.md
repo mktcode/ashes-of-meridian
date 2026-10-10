@@ -4,12 +4,6 @@ Planung, keine Implementierungs- oder Testfreigabe. Maßgebliche Übersicht für
 
 Reviewgrundlage: alle Issue-Texte, Abgleich betroffener Quellen/Tests auf `937914e` und vorhandene Nutzer-/Prüfbefunde; Performance-Einordnung um die aktuelle Desktop-Rückmeldung nach `9ca3e1d` ergänzt. Keine neuen Spiel-, Browser-, KI- oder Simulationsläufe. „Implementiert, Abnahme offen“ ist weder ein neuer Implementierungsauftrag noch eine vollständige Freigabe.
 
-## P0 – vor weiterer Veröffentlichung klären
-
-| Issue | Einordnung und nächster Schritt |
-| --- | --- |
-| [Westmark: Quellen und Kartenabnahme](westmark-map.md) | Herkunft/Nutzungsfreigabe der weiterhin eingebetteten Bildquelle dokumentieren. Offene Rechteklärung, kein festgestellter Rechtsverstoß. Die künstlerische Kartenabnahme ist dagegen P2; keine ungefragte Assetlöschung. |
-
 ## P1 – Verlässlichkeit und Kernspielbarkeit zuerst
 
 Die Tabelle ordnet Arbeitsfelder, nicht die Reihenfolge jedes Einzelschritts. Geräteabhängige Reproduktion und kleine belegte Korrekturen können unabhängig voneinander vorankommen.
@@ -40,6 +34,7 @@ Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische 
 | [Modellkacheln](modell-kacheln.md) | Ausschnitte, Einblenden und mobile Bedienung abnehmen; verbleibende Öffnungs-/Layoutkosten zentral unter [Performance](performance/README.md#modellkacheln). |
 | [Schwere Luftzerstörer](schwerer-luftzerstoerer.md) | Bereits integriert. Endgame-Konterbarkeit, KI-Ausgaben, Flugfreiraum und Gerätekosten in passenden Run-Situationen prüfen, keine neue Einheit planen. |
 | [Desert](desert-map.md) | Erodierte Formen/Bodenanschlüsse, warmer Charakter, Kontrast und faire Wege der aktuellen prozeduralen Fassung; kein Rückbau zum festen Layout. |
+| [Westmark](westmark-map.md) | Jahreszeiten, Vegetation, Kontrast sowie Bau-/Fahrwege und faire Startflächen der prozeduralen Fassung abnehmen. |
 
 ## P3 – Optionen und Pflege, nicht vorsorglich umsetzen
 
@@ -49,7 +44,7 @@ Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische 
 | [Holdout](expeditions-missionsziele-und-holdout.md) | Eigenständiger Missionspilot erst bei begründetem Bedarf nach Run-Abnahme; Wellenökonomie, Belohnung und laufenden Spielstand festlegen. Nicht parallel mehrere neue Modi anfangen. |
 | [Weitere Vorteile](upgrade-ideas.md) | Ideenpool, keine beschlossene Erweiterung. Bestehende Progression zuerst abnehmen; neue Stapel-/Aura-/Auszahlungsregeln einzeln entscheiden. |
 | [Android/Store/Werbung](android.md) | Browser-Mobilstabilität und Lebenszyklus zuerst. WebView-/Storeentscheidung separat, Werbung noch später. |
-| [Repository-Hygiene/Werkzeuge](repository-hygiene.md) | Node-Version, kurze CI/Linkprüfung, Formatkonventionen und Weiterverwendungsrechte klären. Keine vorsorgliche Vollsuite, Massenformatierung oder neue Architektur. |
+| [Repository-Hygiene/Werkzeuge](repository-hygiene.md) | Node-Version, kurze CI/Linkprüfung und Formatkonventionen klären. Keine vorsorgliche Vollsuite, Massenformatierung oder neue Architektur. |
 | [Release-Werkzeuge/Assets](release-tooling.md) | Explizite Capture-Basen technisch geprüft; einzelne Browserabnahme, Assetlisten und Ausgabeformat/-besitz bleiben offen. Keine Screenshotserie auf Vorrat. |
 | [Communitykarten](community-maps.md) | Skirmish-Regeln → begrenztes Datenschema/Beispielkarte → lokaler Import. Plattform/Sharing erst danach; kein vorhandener Kartenloader. |
 | [Multiplayer](multiplayer.md) | Produkt weiterhin Singleplayer-only. **Ausnahme zur Zurückstellung:** zeitnah außerhalb des Repositories klären, ob ein alter Dienst/Endpunkt noch läuft, und gegebenenfalls durch den Betreiber abschalten lassen. Kein automatischer Infrastrukturzugriff. |
@@ -58,7 +53,7 @@ CSS-Entkopplung aus dem UI-Issue und nicht blockierende Testbereinigung bei fach
 
 ## Empfohlene nächste Arbeitspakete
 
-1. Quellenfreigabe und alten Dienststatus organisatorisch klären. Parallel bietet der belegte **Texturladefehler** den kleinsten klar abgegrenzten Codeauftrag; **Dialog/Fokus** ist der nächste bereichsübergreifende Bedienungsauftrag.
+1. Der belegte **Texturladefehler** bietet den kleinsten klar abgegrenzten Codeauftrag; **Dialog/Fokus** ist der nächste bereichsübergreifende Bedienungsauftrag. Den alten Dienststatus separat organisatorisch klären.
 2. **Start-/Worker-Zuverlässigkeit:** relevante HQ-Fixtures berichtigen und gezielt Bauabschluss/Lieferzyklen prüfen. Autonome KI-Läufe nur separat freigegeben; fehlende Originalstände bei erneutem Auftreten zuerst sichern.
 3. **Mobilstabilität und Fortsetzen:** eindeutige Diagnose-Buildkennung, konkrete Abbruchaufnahme und Spielstands-/Lebenszyklusabnahme zusammenführen. Die [Performanceübersicht](performance/README.md) führt verbleibendes Potenzial; weitere Desktoparbeit erst bei konkretem Bedarf und gemessenem Engpass.
 4. **Ein zusammenhängender Run-Abnahmeblock** mit FFA/Progression und taktischer Darstellung. Daraus konkrete Bugs/Balanceentscheidungen ableiten; erst danach einen neuen Modus oder Plattformausbau wählen.

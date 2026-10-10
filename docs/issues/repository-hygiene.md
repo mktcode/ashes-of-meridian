@@ -13,7 +13,6 @@ Fachliche Testaltlasten und wiederverwendbare `.tmp/`-Prüfroutinen stehen unter
 ## Lesbarkeit und Besitz
 
 - [ ] Verbindliche, schlanke Format-/Lintkonventionen abwägen. Es gibt keine konfigurierte Format-/Lintprüfung; stellenweise komprimierter Code und große gemischte Testdateien erschweren Reviews. Einführung und mechanische Formatierung getrennt von Verhaltensänderungen halten; Dateilänge allein rechtfertigt keinen Architekturumbau.
-- [ ] Rechtslage für öffentliche Weiterverwendung ausdrücklich klären: keine projektweite Lizenzdatei im Checkout gefunden. Das ist für ein privates Projekt kein festgestellter Defekt; vorhandene Asset-/Schriftlizenzen und offene [Westmark-Quellenfreigabe](westmark-map.md) bleiben eigenständig. Keine Lizenz ohne Entscheidung des Rechteinhabers ergänzen.
 - [ ] Generierte Ausgaben und Scratch-Besitz konsistent regeln. `.tmp/`, `dist/` und `node_modules/` sind bereits ignoriert; konkrete Capture-Ausgabe unter [Releasepflege](release-tooling.md). Browserprofile, Logs, persönliche Saves und Integrations-Backups nicht übernehmen. Sicherungspatches nicht pauschal löschen; sie können fremde Änderungen sichern.
 
 Die klassischen globalen Skripte, feste Ladereihenfolge und Prototyp-Erweiterungen sind bewusst dokumentierte [Architekturverträge](../architecture.md#auslieferung), keine allein durch Abweichung vom Modulstandard belegten Fehler. Strikte Typprüfung, isolierte Testkontexte und geschützte RNG-Einstiege erhalten.

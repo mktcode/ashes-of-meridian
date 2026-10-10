@@ -12,9 +12,9 @@ Neue Bildassets brauchen einen konkreten Bedarf; Codex-/Aktionskacheln verwenden
 
 ## UI-Branding
 
-UI-Motive liegen als WebP mit Alpha unter `assets/ui/`; Aldrich samt SIL-OFL-Lizenz
+UI-Motive liegen als WebP mit Alpha unter `assets/ui/`; Aldrich liegt
 unter `assets/fonts/aldrich/`. Die UI referenziert sie lokal per CSS oder dekorativem
-Bild. Das ZIP übernimmt das UI-Assetverzeichnis, CSS-Assets und die Fontlizenz;
+Bild. Das ZIP übernimmt das UI-Assetverzeichnis, CSS-Assets und die Fonts;
 keine Renderer-Einbettung nötig. Der Präsentationshelfer `uiIcon()` ordnet Motive nach
 Bedeutung zu, bei Vorteilen und Upgrades auch nach Kontext. Fehlende Entsprechungen
 bleiben SVG; die gemeinsame Contentfunktion `icon()` und Modellkacheln bleiben
@@ -23,7 +23,7 @@ unverändert. Keine Kategorieicons als Ersatz für Einheiten-/Gebäudemodelle.
 Gezielter Neuimport aus dem externen UI-Paket (Python mit Pillow):
 `python3 scripts/import-menu-assets.py <pfad>/Ashes-of-Meridian-Demo.html`.
 Der Importer liest nur explizit ausgewählte Einzelmotive aus `window.AOM_ASSETS`
-und kopiert den benachbarten Font samt Lizenz. Demo-Hintergründe, alte Fraktions-Crops,
+und kopiert den benachbarten Font. Demo-Hintergründe, alte Fraktions-Crops,
 Audio und Mockup-Logik werden nicht importiert. Originalquellen bleiben unberührt; weitere Motive brauchen
 eine explizite semantische Zuordnung statt eines vollständigen Atlasimports.
 
