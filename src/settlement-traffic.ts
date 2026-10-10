@@ -67,8 +67,8 @@ class SettlementTraffic {
       const groundLimit=quality===0?12:24,airLimit=quality===0?3:6;
       for(const air of [false,true]) {
         let count=0;
-        for(let slot=0;slot<(air?2:8);slot++) for(const [forumId,group] of eligible) {
-          if(count>=(air?airLimit:groundLimit)||slot>=(air?Math.min(2,Math.ceil(group.length/12)):Math.min(8,group.length))) continue;
+        for(let slot=0;slot<(air?3:8);slot++) for(const [forumId,group] of eligible) {
+          if(count>=(air?airLimit:groundLimit)||slot>=(air?Math.min(3,group.length):Math.min(8,group.length))) continue;
           const id=-(forumId*32+slot+(air?16:0)+1),random=seeded(state.seed^Math.imul(forumId,0x45d9f3b)^Math.imul(-id,0x119de1f3)),
             old=previous.get(id);
           if(old&&dt>=0&&dt<=1) {

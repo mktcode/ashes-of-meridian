@@ -25,6 +25,8 @@ function fixture(forums=1,perForum=4) {
  return {traffic,state,world,calls,update};
 }
 test('decorative population is bounded globally and per Forum, fairly allocated, with lower Performance budgets',()=>{
+ const small=fixture();small.update(0);
+ assert.equal(small.traffic.actors.filter(a=>a.air).length,3,'a small settlement supports several drones');
  const h=fixture(20,14);h.update(0);
  const actors=h.traffic.actors;
  assert.equal(actors.filter(a=>!a.air).length,24);assert.equal(actors.filter(a=>a.air).length,6);
