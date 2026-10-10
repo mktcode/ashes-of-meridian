@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { populateBase } = require('./helpers/populated-battle.cjs');
+const { establishHeadquarters } = require('./helpers/developed-bases.cjs');
 
 const scripts = readScripts();
 // Normalize VM prototypes when comparing state in tests; no runtime save API.
@@ -38,6 +39,7 @@ function freshBattle(faction = 0, seed = 1409) {
 // Production, repair and crowd tests explicitly need a developed base, not a fresh start.
 function battle(faction = 0, seed = 1409) {
   const runtime = freshBattle(faction, seed);
+  establishHeadquarters(runtime.game);
   populateBase(runtime.game);
   // Explicit developed opponent fixture, not a privileged live starting loadout.
   const g=runtime.game, h=g.alive(e=>e.team===1&&e.type==='hq')[0];

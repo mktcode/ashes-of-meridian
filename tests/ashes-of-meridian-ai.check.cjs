@@ -3,13 +3,20 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const { BATTLEFIELD_SCRIPTS, loadScripts,SIMULATION_SCRIPTS }=require('./helpers/game-scripts.cjs');
+const { establishHeadquarters }=require('./helpers/developed-bases.cjs');
 const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS, 'world','effects','effects-view',...SIMULATION_SCRIPTS]);
 const {MeridianGame,UNITS,BUILDINGS,ABILITIES,renderBattlefieldEffects}=vm.runInContext('({MeridianGame,UNITS,BUILDINGS,ABILITIES,renderBattlefieldEffects})',context);
 vm.runInContext('Math.random=()=>{throw Error("Unseeded simulation RNG")}',context);
 const json=x=>JSON.parse(JSON.stringify(x));
-function battle(faction=0,enemy=2,seed=1409,map='desert') {
+function freshBattle(faction=0,enemy=2,seed=1409,map='desert') {
   const events=[],g=new MeridianGame({upgrades:{}},(type,data)=>events.push({type,data}));
   g.start({faction,enemies:[enemy],seed,map});return {g,events};
+}
+// Local controller/economy rules need completed HQs, not a privileged runtime start.
+function battle(...args) {
+  const runtime=freshBattle(...args);
+  establishHeadquarters(runtime.g);
+  return runtime;
 }
 function advance(g,seconds) {for(let i=0;i<seconds*20&&!g.s.result;i++){g.step(.05);g.effects.tick(.05);}}
 function own(g,team,type){return Array.from(g.alive(e=>e.team===team&&(!type||e.type===type)));}
@@ -32,7 +39,7 @@ test('scouting and scans visit unexplored candidate corners without reading the 
 });
 
 test('depth is bounded and snapshots the battle without changing seeded setup or RNG',()=>{
-  const {g}=battle(), original=json(g.s.entities), terrain=Array.from(g.world.staticGrid), next=g.random();
+  const {g}=freshBattle(), original=json(g.s.entities), terrain=Array.from(g.world.staticGrid), next=g.random();
   assert.equal(g.s.depth,0);
   for(const [depth,expected] of [[-2,0],[3.9,3],[4,4],[16,16],[1000000,999999],[NaN,0]]) {
     const options={seed:1409,depth};g.start(options);options.depth=100;
@@ -63,7 +70,7 @@ test('doctrine resolution has bounded monotonic execution stages without random 
 
 test('baseline deployment starts are symmetric for all faction pairings, with separate accounts and one worker',()=>{
   for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++){
-    const {g}=battle(faction,enemy);
+    const {g}=freshBattle(faction,enemy);
     assert.deepEqual(own(g,0).map(e=>e.type),['worker']);assert.deepEqual(own(g,1).map(e=>e.type),['worker']);
     assert.deepEqual(json(g.account(0)),json(g.account(1)));assert.notStrictEqual(g.account(0),g.account(1));
     assert.deepEqual([g.cap(0),g.cap(1),g.supply(0),g.supply(1)],[0,0,1,1]);
@@ -355,7 +362,7 @@ function audit(g) {
 for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++) {
   const boundedStalemate=faction===2&&enemy===0;
   test(`autonomous ${faction} vs ${enemy}: paid economy, production, strategic pressure and ${boundedStalemate?'bounded active stalemate':'completed battle'}`,()=>{
-    const {g}=battle(faction,enemy,1409+faction*31+enemy*11,faction===2?'mothership':'desert');
+    const {g}=freshBattle(faction,enemy,1409+faction*31+enemy*11,faction===2?'mothership':'desert');
     g.enableAI(0);const counts=audit(g);let attacks=0;
     for(let i=0;i<24000&&!g.s.result;i++) {
       g.step(.05);g.effects.tick(.05);
@@ -381,7 +388,7 @@ for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++) {
 }
 
 for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real economies cross the larger living map and finish a battle`,()=>{
-  const {g}=battle(faction,(faction+1)%3,43015+faction*97,'alien-planet');
+  const {g}=freshBattle(faction,(faction+1)%3,43015+faction*97,'alien-planet');
   g.enableAI(0);const counts=audit(g);let attacks=0;
   // Porous woodland changes encounter timing; Choir/Court seed 43112 ends normally at ~24:31.
   // Keep the result requirement and original seeds, with a 30-minute bound for Alien only.
@@ -398,7 +405,7 @@ for(let faction=0;faction<3;faction++) test(`Alien Planet ${faction}: real econo
 });
 
 for(const enemy of [0,1,2]) test(`depth 16 doctrine ${enemy}: paid autonomous battle finishes`,()=>{
-  const {g}=battle((enemy+1)%3,enemy,7109+enemy*31);
+  const {g}=freshBattle((enemy+1)%3,enemy,7109+enemy*31);
   g.s.depth=16;g.enableAI(0);const counts=audit(g);let attacks=0;
   for(let i=0;i<24000&&!g.s.result;i++) {
     g.step(.05);g.effects.tick(.05);
@@ -412,7 +419,7 @@ for(const enemy of [0,1,2]) test(`depth 16 doctrine ${enemy}: paid autonomous ba
 });
 
 for(const enemy of [0,1,2]) test(`stage 21 benefits vs doctrine ${enemy}: declared starts and paid autonomous play finish`,()=>{
-  const {g}=battle((enemy+1)%3,enemy,1409),choose=vm.runInContext('chooseEnemyBenefit',context),enemyBenefits={};
+  const {g}=freshBattle((enemy+1)%3,enemy,1409),choose=vm.runInContext('chooseEnemyBenefit',context),enemyBenefits={};
   for(let depth=1;depth<=20;depth++) {
     const key=choose(depth===20?enemy:depth%3,enemyBenefits,1409+depth*7919,depth);
     enemyBenefits[key]=(enemyBenefits[key]||0)+1;
@@ -435,6 +442,6 @@ test('seed 444213: the real opponent destroys an undefended HQ instead of stoppi
 });
 
 test('same seed and inputs reproduce an uninterrupted AI economy and the simulation RNG',()=>{
-  const a=battle().g,b=battle().g;advance(a,120);advance(b,120);
+  const a=freshBattle().g,b=freshBattle().g;advance(a,120);advance(b,120);
   assert.deepEqual(json(a.s),json(b.s));assert.equal(a.random(),b.random());
 });
