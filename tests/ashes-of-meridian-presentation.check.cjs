@@ -917,6 +917,8 @@ async function appClock(diagnostic = false, reducedMotion = true, idle = false) 
       world={terrainSeed:7,definition:{render:{groundTexture:'ground'}}};
       sync() {} retainBuildingGround() {} drawBuildingGround() {} updateWorkerRoads() {} clearWorkerRoads() {}
     },
+    // Decorative traffic has separate coverage; this fixture isolates app lifecycle behavior.
+    SettlementTraffic: class { update() {} walkers() { return []; } draw() {} reset() {} },
     MeridianAudio: class { update() {} },
     MeridianGame: class {
       world = {};
