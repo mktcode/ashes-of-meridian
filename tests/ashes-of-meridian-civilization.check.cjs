@@ -395,7 +395,7 @@ test('settlement candidates vary freely in radius and angle while the saved curs
  const {game}=fixture(0,()=>40);game.s.entities=[];
  const forum=game.spawnBuilding('meridianforum',0,0,0,0),samples=[];
  forum.settlementAttempt=64;game.random=()=>assert.fail('Placement must not consume battle RNG');
- game.settlementPlacementReason=(type,p)=>{samples.push({type,x:p.x,z:p.z});return 'occupied';};
+ game.settlementPlacementReason=(type,p,team,rotation)=>{samples.push({type,x:p.x,z:p.z,rotation});return 'occupied';};
  assert.equal(game.growSettlement(forum),false);assert.equal(samples.length,32);assert.equal(forum.settlementAttempt,96);
  const radii=samples.map(p=>Math.hypot(p.x,p.z)),yaw=vm.runInContext('buildingVisualYaw',context)(forum);
  assert.ok(radii.every(r=>r>=18&&r<=60));
@@ -405,8 +405,24 @@ test('settlement candidates vary freely in radius and angle while the saved curs
   return Math.abs(Math.atan2(Math.sin(delta),Math.cos(delta)))>.12;
  });
  assert.ok(offSlots.length>16,'angles are not tied to successive evenly spaced slots');
+ assert.ok(samples.every(p=>p.rotation>=0&&p.rotation<8&&Number.isInteger(p.rotation*3)));
+ assert.ok(new Set(samples.map(p=>p.rotation)).size>12,'candidates have varied orientations');
  const first=samples.slice();forum.settlementAttempt=64;
  assert.equal(game.growSettlement(forum),false);assert.deepEqual(samples.slice(32),first);
+});
+test('settlement spawns retain the orientation validated before placement without drawing battle RNG',()=>{
+ const {game}=fixture(0,()=>40);game.s.entities=[];
+ const forum=game.spawnBuilding('meridianforum',0,0,0,0),samples=[];
+ game.random=()=>assert.fail('Rotation must not consume battle RNG');
+ game.settlementPlacementReason=(type,p,team,rotation)=>{
+  samples.push({type,x:p.x,z:p.z,rotation});return samples.length===1?'occupied':'';
+ };
+ assert.equal(game.growSettlement(forum),true);
+ const b=game.s.entities.find(e=>e.forumId===forum.id),accepted=samples[1];
+ assert.equal(b.visualRotation,accepted.rotation);
+ assert.equal(b.x,accepted.x);assert.equal(b.z,accepted.z);assert.equal(b.type,accepted.type);
+ const rotation=b.visualRotation;game.updateSettlements(10);
+ assert.equal(b.visualRotation,rotation,'construction retains the spawn orientation');
 });
 test('new settlements start small in both model families at every distance',()=>{
  const {settlementBuildingType}=vm.runInContext('({settlementBuildingType})',context),seen=new Set();
@@ -424,9 +440,13 @@ test('eight-parcel settlements populate every block and keep rotated street axes
   for(let i=1;i<=100;i++){game.s.time=i*10;game.updateSettlements(10);}
   const buildings=game.s.entities.filter(e=>e.forumId===forum.id&&e.hp>0);
   assert.ok(buildings.length>0&&buildings.length<=FORUM_SETTLEMENT.buildings,'growth respects available expansion space and the population cap');
+  const footprints=buildings.map(b=>placementGeometry.settlementReservedFootprints(b,b.type,b.team,b.visualRotation));
+  for(let i=0;i<footprints.length;i++)for(let j=0;j<i;j++)
+   assert.equal(footprints[i].some(a=>footprints[j].some(b=>placementGeometry.civilizationFootprintsOverlap(a,b))),false,
+    'randomly rotated buildings reserve non-overlapping footprints for every expansion stage');
   const frame=forumFrame(forum),radius=FORUM_SETTLEMENT.radius,plaza=forum.size+2.5+FORUM_SETTLEMENT.corridorWidth/2,parcels=new Set();
   for(const b of buildings){
-   seen.add(b.type);assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team),'');
+   seen.add(b.type);assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team,b.visualRotation),'');
    const p=frame.local(b),column=p.x<-radius/2?0:p.x<0?1:p.x<radius/2?2:3;
    parcels.add(column+(p.z<0?0:4));
   }
@@ -772,7 +792,8 @@ test('free Forum rotation schedules only misaligned settlement buildings, cancel
  const replacement=game.s.entities.find(b=>b.forumId===forum.id&&b.hp>0&&!grown.includes(b));
  assert.ok(replacement);assert.equal(replacement.progress,.06);assert.equal(replacement.paid.cost,0);assert.equal(replacement.paid.gas,0);
  for(let i=1;i<=100;i++){game.s.time=1010+i*10;game.updateSettlements(10);}
- const rebuilt=game.s.entities.filter(b=>b.forumId===forum.id&&b.hp>0);assert.equal(rebuilt.length,60);
+ const rebuilt=game.s.entities.filter(b=>b.forumId===forum.id&&b.hp>0);
+ assert.ok(rebuilt.length>survivors.length&&rebuilt.length<=60,'regrowth uses available space without exceeding the target');
  for(const b of rebuilt)assert.equal(game.forumAccessReason(b,b.size,undefined,b.type,b.team,b.visualRotation||0),'');
  assert.equal(military.hp,military.maxHp);assert.equal(resource.hp,resource.maxHp);assert.equal(resource.amount,80);
  assert.equal(forum.cinderStock,2000);assert.deepEqual(game.account(0),funds);
@@ -785,7 +806,9 @@ test('individual settlement buildings rotate, sell without minting refunds and a
  assert.equal(game.submitAction(0,{kind:'cancelConstruction',id:first.id}),true);assert.equal(first.hp,0);assert.deepEqual(game.account(0),funds);
  game.s.time=20;game.updateSettlements();const second=game.s.entities.at(-1);assert.notEqual(second.id,first.id);
  game.s.time=30;game.updateSettlements(100);assert.equal(second.progress,1);
- assert.equal(game.submitAction(0,{kind:'rotateBuilding',id:second.id,direction:1}),true);assert.equal(second.visualRotation,1/3);
+ const rotation=second.visualRotation;
+ assert.equal(game.submitAction(0,{kind:'rotateBuilding',id:second.id,direction:1}),true);
+ assert.equal(second.visualRotation,((Math.round(rotation*3)+1)%24)/3);
  delete second.paid;assert.equal(game.buildingSaleRefund(second.id).cost,0);assert.equal(game.buildingSaleRefund(second.id).gas,0);
  assert.equal(game.submitAction(1,{kind:'sell',id:second.id}),false);
  assert.equal(game.submitAction(0,{kind:'sell',id:second.id}),true);assert.equal(second.hp,0);assert.deepEqual(game.account(0),funds);

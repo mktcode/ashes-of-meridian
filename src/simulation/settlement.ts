@@ -198,7 +198,7 @@ const settlementMethods = {
     }
     return null;
   },
-  settlementPlacementReason(this: MeridianGame, type: BuildingType, p: Position, team: PlayerTeam): string {
+  settlementPlacementReason(this: MeridianGame, type: BuildingType, p: Position, team: PlayerTeam, rotation = 0): string {
     const world = this.world!, r = settlementReservedRadius(type),
       reason = Math.abs(p.x) > world.extent - 1 - r || Math.abs(p.z) > world.extent - 1 - r
         ? 'Too close to the battlefield boundary.' : buildingFoundationReason(world,type,p,team);
@@ -207,10 +207,10 @@ const settlementMethods = {
     if (buildingTerrainObstructed(world,p,r,true)) return 'Terrain obstructs the foundation.';
     if (this.s!.supplyCaches.some(c => !c.collected && distance(c,p)<r+3)) return 'Recover nearby supply caches before building here.';
     for (const e of this.s!.entities) {
-      const reason = buildingBlockerReason(p,r,e,type,team);
+      const reason = buildingBlockerReason(p,r,e,type,team,rotation);
       if (reason) return reason;
     }
-    return this.forumAccessReason(p,r,undefined,type,team);
+    return this.forumAccessReason(p,r,undefined,type,team,rotation);
   },
   forumAccessReason(this: MeridianGame, p: Position, radius: number, except?: number, type?: BuildingType, team: PlayerTeam = 0, rotation = 0): string {
     // Half a cell protects the raster edges too. Overlapping settlements share these exclusions.
@@ -240,10 +240,13 @@ const settlementMethods = {
       const radius = 18 + (FORUM_SETTLEMENT.radius - 18) * random(),
         angle = random() * Math.PI*2 + buildingVisualYaw(forum),
         p = {x:forum.x+Math.sin(angle)*radius,z:forum.z+Math.cos(angle)*radius},
-        type = settlementBuildingType(radius,random(),random());
-      if (this.settlementPlacementReason(type,p,forum.team as PlayerTeam)) continue;
+        type = settlementBuildingType(radius,random(),random()),
+        // Separate stream keeps candidate positions/types and battle RNG unchanged.
+        rotation = Math.floor(seeded(this.s!.seed ^ Math.imul(forum.id,0x119de1f3) ^ Math.imul(attempt,0x3449f5))() * 24) / 3;
+      if (this.settlementPlacementReason(type,p,forum.team as PlayerTeam,rotation)) continue;
       const b = this.spawnBuilding(type,p.x,p.z,forum.team as PlayerTeam,forum.faction,
         {progress:.06,paid:{cost:0,gas:0},forumId:forum.id,size:settlementReservedRadius(type)});
+      b.visualRotation = rotation;
       b.hp = b.maxHp * b.progress;
       this.world!.rebuild(this.s!.entities);
       return true;

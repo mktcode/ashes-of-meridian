@@ -36,7 +36,7 @@
       }
       return !!world.staticGrid[world.idx(p.x, p.z)];
     }
-    function buildingBlockerReason(p: Position, r: number, e: Entity, type?: BuildingType, team: PlayerTeam = 0): string {
+    function buildingBlockerReason(p: Position, r: number, e: Entity, type?: BuildingType, team: PlayerTeam = 0, rotation = 0): string {
       if (e.hp <= 0) return '';
       if (e.kind === 'unit') {
         const clearance = r + e.size * UNIT_BODY_SCALE + 1;
@@ -44,7 +44,7 @@
           ? 'Leave room around units and production exits.' : '';
       }
       if (type && isCivilizationBuildingType(type) && e.kind === 'building' && e.team === team && isCivilizationBuildingType(e.type)) {
-        const a=civilizationPlacementFootprints(p,type,team,0,type !== 'meridianforum'),
+        const a=civilizationPlacementFootprints(p,type,team,rotation,type !== 'meridianforum'),
           b=civilizationPlacementFootprints(e,e.type,e.team,e.visualRotation || 0,e.forumId !== undefined);
         return a.some(pa=>b.some(pb=>civilizationFootprintsOverlap(pa,pb))) ? 'Leave room between civilian decks, stairs and walkways.' : '';
       }
