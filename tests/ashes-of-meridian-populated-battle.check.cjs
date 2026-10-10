@@ -1,7 +1,7 @@
 // Synthetic fixture contracts only: no terrain generation, simulation ticks or autonomous AI.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { populateBase, populateOpponent } = require('./helpers/populated-battle.cjs');
+const { populateBase, populateProductionBase, populateOpponent } = require('./helpers/populated-battle.cjs');
 
 function fixture() {
   const parties = [0,1].map(id => ({id,faction:2-id,deploymentPending:false,
@@ -88,6 +88,18 @@ test('populated bases use validated paid buildings and fitting units without shi
   assert.deepEqual(f.rebuilds.at(-1),game.s.entities);
   assert.deepEqual(game.world.revealed,game.s.entities);
   assert.throws(()=>populateBase(game),/otherwise empty HQ/);
+});
+
+test('production-only fixture has no refinery, standing army or leftover temporary builder', () => {
+  const {game,random,vent}=fixture(), before={...vent};
+  const base=populateProductionBase(game);
+  assert.deepEqual(base.buildings.map(b=>b.type),['barracks','depot','factory','depot']);
+  assert.deepEqual(base.units,[]);
+  assert.equal(game.alive(e=>e.team===0&&e.kind==='unit').length,0);
+  assert.equal(game.alive(e=>e.type==='refinery').length,0);
+  assert.equal(game.random,random); assert.equal(random.state,77);
+  assert.deepEqual(vent,before);
+  assert.deepEqual([game.party(0).account.alloy,game.party(0).account.gas],[1100,400]);
 });
 
 test('populated fixture rejects unsuitable sites without unblocking terrain or using unchecked coordinates', () => {

@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
-const { populateBase, populateOpponent } = require('./helpers/populated-battle.cjs');
+const { populateBase, populateProductionBase, populateOpponent } = require('./helpers/populated-battle.cjs');
 const { establishHeadquarters } = require('./helpers/developed-bases.cjs');
 
 const scripts = readScripts();
@@ -78,7 +78,7 @@ function battle(faction = 0, seed = 1409, map = 'desert') {
 
 function spacingArena() {
   const { game } = flatArena(135);
-  establishHeadquarters(game); populateBase(game); populateOpponent(game);
+  establishHeadquarters(game); populateProductionBase(game); populateOpponent(game);
   game.s.entities = game.s.entities.filter(e => e.kind === 'building');
   game.ids = new Map(game.s.entities.map(e => [e.id, e]));
   game.world.rebuild(game.s.entities); game.rehash();
@@ -200,7 +200,11 @@ test('flat large arena supports outer-area construction, production and commands
   game.account(0).alloy=1000;
   const worker=game.spawnUnit('worker',110,110,0,0);assert.ok(worker);
   assert.deepEqual([worker.x,worker.z],[110,110]);
-  assert.match(game.canBuild('barracks',{x:134,z:105}),/boundary/);
+  const boundarySite={x:134,z:105}, beforeBoundary=game.account(0).alloy;
+  assert.ok(game.canBuild('barracks',boundarySite),'foundation crossing the map boundary is rejected');
+  assert.equal(game.build('barracks',boundarySite,[worker.id]),false);
+  assert.equal(game.account(0).alloy,beforeBoundary,'rejected foundation costs nothing');
+  assert.equal(player(game,'barracks'),undefined);
   assert.equal(game.canBuild('barracks',{x:110,z:95}),'');
   const before=game.account(0).alloy, cost=game.cost('barracks','building').cost;
   assert.equal(game.build('barracks',{x:110,z:95},[worker.id]),true);
@@ -210,8 +214,11 @@ test('flat large arena supports outer-area construction, production and commands
   assert.equal(game.train('rifle'),true);advance(game,600);
   const rifle=player(game,'rifle');assert.ok(rifle);assert.ok(rifle.x>90 && rifle.z>85);
   assert.equal(rifle.exit,undefined);
-  game.command([rifle.id],{type:'move',x:120,z:115});advance(game,200);
-  assert.ok(Math.hypot(rifle.x-120,rifle.z-115)<2);
+  const goal=[{x:120,z:115},{x:120,z:85}].find(p=>game.unitFits(rifle,p.x,p.z));
+  assert.ok(goal,'outer-area command needs a free destination, not the opponent HQ footprint');
+  assert.equal(game.command([rifle.id],{type:'move',...goal}),true);advance(game,200);
+  assert.ok(Math.hypot(rifle.x-goal.x,rifle.z-goal.z)<2,
+    JSON.stringify({position:{x:rifle.x,z:rifle.z},goal,order:rifle.order,pathStatus:rifle.pathStatus}));
   assert.equal(game.unitFits(rifle,131,115),false);
   const air=game.spawnUnit('air',120,-120,0,0);assert.ok(air);
   game.pathTo(air,{x:999,z:-999});assert.deepEqual(json(air.path),[{x:130,z:-130}]);

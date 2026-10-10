@@ -76,9 +76,14 @@ function populateBase(game, workers = 5) {
     ['hero', ...Array(7).fill('rifle'), 'medic', 'tank', 'tank', 'medic'],
     { alloy: 1100, gas: 400 });
 }
+// Empty production/spacing rule arena: no refinery, economy loop or pre-spawned army.
+function populateProductionBase(game) {
+  return populateDevelopedParty(game, 0, 0,
+    ['barracks', 'depot', 'factory', 'depot'], [], { alloy: 1100, gas: 400 });
+}
 function populateOpponent(game) {
   return populateDevelopedParty(game, 1, 0,
     ['turret', 'turret', 'barracks', 'factory'],
     [...Array(5).fill('rifle'), 'artillery', 'tank']);
 }
-module.exports = { populateBase, populateOpponent };
+module.exports = { populateBase, populateProductionBase, populateOpponent };
