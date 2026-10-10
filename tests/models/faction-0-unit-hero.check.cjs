@@ -75,6 +75,19 @@ test('Breach Marshal: removed rear mantle and large emissive crystal on the exte
   for(let k=0;k<3;k++)assert(Math.abs(lights[0][k]-center[k])<1e-9,'beacon lamp follows crystal through walking, recoil and heading');
  }
 });
+test('Breach Marshal: broad real night beacon, smooth dusk, preview isolation and Performance lighting',()=>{
+ const {e,draw}=setup();
+ for(const quality of [0,1])for(const [hour,intensity]of [[12,0],[18.5,1.8],[22,3.6],[5.5,1.8]]){
+  const lights=[];
+  draw(e,0,{}, {battlefieldHour:hour,quality,addPointLight:(...args)=>lights.push(args)});
+  assert.equal(lights.length,intensity?1:0);
+  if(intensity){assert.equal(lights[0][3],10,'large real surface-light radius');assert.equal(lights[0][4],0x38d9e8);assert.equal(lights[0][5],intensity);}
+ }
+ for(const options of [{ghost:true},{tint:0x99e4c6},{alpha:.3},{layer:'effects'}]){
+  const lights=[];draw(e,0,options,{battlefieldHour:22,addPointLight:(...args)=>lights.push(args)});
+  assert.deepEqual(lights,[],'no beacon lighting in placement/tile overrides');
+ }
+});
 test('Breach Marshal: team, neutral ghost/tint, alpha, layer and material overrides',()=>{
  const {h,e,draw}=setup();
  for(const rot of [-2.1,0,.7])for(const team of [0,1]){
