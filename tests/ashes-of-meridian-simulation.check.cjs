@@ -3,6 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
+const { createHash } = require('node:crypto');
 const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
 const { populateBase } = require('./helpers/populated-battle.cjs');
 const { establishHeadquarters } = require('./helpers/developed-bases.cjs');
@@ -11,6 +12,13 @@ const scripts = readScripts();
 // Normalize VM prototypes when comparing state in tests; no runtime save API.
 const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
+const terrainFingerprint = world => createHash('sha256')
+  .update(world.staticGrid)
+  .update(Buffer.from(world.surface.heights.buffer, world.surface.heights.byteOffset, world.surface.heights.byteLength))
+  .update(world.terrainColors)
+  .update(JSON.stringify(world.layout))
+  .update(JSON.stringify(world.renderData.placements))
+  .digest('hex');
 
 function createGame(fixedStarts = false) {
   const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], {
@@ -236,36 +244,38 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
   assert.equal(game.s.map, 'desert', 'default map keeps the first catalog entry');
 });
 
-test('seeded starts use distinct corners, keep replay/RNG contracts and allow every ordered corner pair', () => {
-  const {game}=createGame(), pairs=new Set();
-  for (const map of ['desert','alien-planet','mothership']) {
-    for (const seed of [1,2,3,4,5,6,7,8,9,10,1409,2219,24080]) {
-      game.profile.upgrades={startingWorkers:5};
-      const options={seed,map,benefits:{pioneerSquad:5,commanderMandate:1}};
-      game.start(options);
-      const sites=game.world.startSites, bases=[player(game,'hq'),game.alive(e=>e.team===1&&e.type==='hq')[0]];
-      const indices=bases.map(b=>sites.findIndex(p=>p.x===b.x&&p.z===b.z));
-      assert.ok(indices.every(i=>i>=0));assert.notEqual(indices[0],indices[1]);
-      assert.deepEqual(json(game.s.cam),{x:bases[0].x+5,z:bases[0].z-2,zoom:57});
-      assert.equal(game.canSee(0,bases[1]),false);assert.equal(game.canSee(1,bases[0]),false);
-      for(const team of [0,1]) assert.ok(game.alive(e=>e.type==='crystal').some(e=>game.canSee(team,e)), 'starting minerals visible');
-      assertUnitSpacing(game);
-      for(const u of game.alive(e=>e.kind==='unit')) assert.ok(game.unitFits(u,u.x,u.z));
-      const before=json(game.s), terrain=Array.from(game.world.staticGrid), next=game.random();
-      game.start(options);assert.deepEqual(json(game.s),before);assert.equal(game.random(),next);
-      const choose=game.startingPositions;
-      game.startingPositions=()=>game.world.startSites.slice(0,2);
-      game.start(options);game.startingPositions=choose;
-      assert.equal(game.random(),next,'corner choice must not advance simulation RNG');
-      assert.deepEqual(Array.from(game.world.staticGrid),terrain);
-      assert.deepEqual(json(game.s.entities.filter(e=>e.kind==='resource')),before.entities.filter(e=>e.kind==='resource'));
-    }
+// Retain the existing map/seed samples, but expose each case for bounded selection.
+for (const map of ['desert','alien-planet','mothership'])
+for (const seed of [1,2,3,4,5,6,7,8,9,10,1409,2219,24080])
+test(`seeded exploration deployment on ${map}, seed ${seed}: separated candidates, replay and independent RNG`, () => {
+  const {game}=createGame(), options={seed,map,deployment:'exploration',benefits:{pioneerSquad:5,commanderMandate:1}};
+  game.start(options);
+  const starts=game.startingPositions(seed), minimum=Math.min(65,game.world.extent*.55);
+  assert.equal(starts.length,2);
+  for (const start of starts)
+    assert.ok(game.world.startSites.some(p=>p.x===start.x&&p.z===start.z),'allocated origin is a public candidate');
+  assert.ok(Math.hypot(starts[0].x-starts[1].x,starts[0].z-starts[1].z)>=minimum);
+  assert.deepEqual(json(game.s.cam),{x:starts[0].x+5,z:starts[0].z-2,zoom:57,yaw:0});
+  const workers=[0,1].map(team=>game.alive(e=>e.team===team&&e.type==='worker').at(-1));
+  assert.equal(game.alive(e=>e.team===0&&e.type==='worker').length,6,'landing worker plus five declared bonus workers');
+  for (const [team,worker] of workers.entries()) {
+    assert.ok(worker);
+    assert.ok(Math.hypot(worker.x-starts[team].x,worker.z-starts[team].z)<=20,'landing worker fits near its allocated origin');
+    assert.equal(game.party(team).deploymentPending,true);
+    assert.equal(game.canSee(team,workers[1-team]),false);
   }
-  for(let seed=1;seed<=200;seed++) {
-    const sites=game.startingPositions(seed);
-    pairs.add(sites.map(p=>game.world.startSites.indexOf(p)).join('/'));
-  }
-  assert.equal(pairs.size,12,'all four player corners and all three remaining enemy corners');
+  assert.equal(game.alive(e=>e.type==='hq').length,0);
+  assertUnitSpacing(game);
+  for(const u of game.alive(e=>e.kind==='unit')) assert.ok(game.unitFits(u,u.x,u.z));
+  const before=json(game.s), terrain=terrainFingerprint(game.world), next=game.random();
+  game.start(options);assert.deepEqual(json(game.s),before);assert.equal(game.random(),next);
+  // Unlike overriding startingPositions(), startSeed is consumed by the actual allocation path.
+  game.startScenario({seed,map,startSeed:seed+7919,duration:1,
+    parties:[{faction:0,controller:'human',benefits:options.benefits},{faction:2,controller:'human'}],
+    hostilities:[[false,true],[true,false]]});
+  assert.equal(game.random(),next,'private allocation must not advance simulation RNG');
+  assert.equal(terrainFingerprint(game.world),terrain,'private allocation cannot reshape public terrain or decor');
+  assert.deepEqual(json(game.s.entities.filter(e=>e.kind==='resource')),before.entities.filter(e=>e.kind==='resource'));
 });
 
 test('single battle starts with landing workers, paid HQ reserves and an independent elimination mission', () => {
@@ -381,22 +391,28 @@ test('battle starts cover every faction and map with valid entities', () => {
   }
 });
 
-test('map layouts supply candidate spawns, resources, camera and unexplored AI scan/scout goals', () => {
-  const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
-  const desertBefore = json(maps.desert.layout), layout = maps.mothership.layout;
-  layout.playerStart = { x: -45, z: 45 };
-  layout.enemySites[0] = { x: 45, z: -45 };
-  game.start({ seed: 1409, map: 'mothership' });
-  assert.strictEqual(game.world.layout, layout);
-  assert.deepEqual(json(game.s.cam), { x: -67, z: -80, zoom: 57 });
-  for (const [team, site] of [[0, layout.startSites[2]], [1, game.world.startSites[0]]]) {
-    const hq = game.alive(e => e.team === team && e.type === 'hq')[0];
-    assert.deepEqual({ x: hq.x, z: hq.z }, json(site));
+test('resolved procedural layout supplies dimensions, resources, camera and unexplored AI scan/scout goals', () => {
+  const { game, context } = createGame();
+  const { BATTLEFIELDS:maps, battlefieldCrystalPosition, battlefieldGasPosition } =
+    vm.runInContext('({BATTLEFIELDS,battlefieldCrystalPosition,battlefieldGasPosition})',context);
+  const catalogueBefore=JSON.stringify(maps);
+  game.start({ seed: 1409, map: 'mothership', deployment:'exploration' });
+  const world=game.world, layout=world.layout, starts=game.startingPositions(game.s.seed),
+    size=maps.mothership.createSize(world.terrainSeed);
+  assert.strictEqual(world.definition,maps.mothership);
+  assert.deepEqual([world.extent,world.cellSize,world.gridSize],[size.extent,size.cellSize,size.extent*2/size.cellSize]);
+  assert.deepEqual(json(game.s.cam), { x: starts[0].x+5, z: starts[0].z-2, zoom: 57, yaw:0 });
+  const crystals=game.alive(e=>e.kind==='resource'&&e.type==='crystal'), vents=game.alive(e=>e.kind==='resource'&&e.type==='gas');
+  assert.equal(crystals.length,layout.resourceSites.length*5); assert.equal(vents.length,layout.resourceSites.length);
+  for (const [i,site] of layout.resourceSites.entries()) {
+    for(let j=0;j<5;j++) {
+      const crystal=crystals[i*5+j];
+      assert.deepEqual({x:crystal.x,z:crystal.z},json(battlefieldCrystalPosition(site,i,j)));
+    }
+    assert.deepEqual({x:vents[i].x,z:vents[i].z},json(battlefieldGasPosition(site)));
   }
-  const crystal = game.alive(e => e.type === 'crystal')[0];
-  assert.deepEqual({ x: crystal.x, z: crystal.z }, { x: -91.5, z: 76.5 });
-  const vent = game.alive(e => e.type === 'gas')[0];
-  assert.deepEqual({ x: vent.x, z: vent.z }, { x: -86.5, z: 91.5 });
+  // The following controller decision contract needs an explicitly established base.
+  establishHeadquarters(game);
   const scans = [], orders = [];
   game.executeAction = (team, action) => {
     if (action.kind === 'ability' && action.ability === 'scan')
@@ -420,7 +436,7 @@ test('map layouts supply candidate spawns, resources, camera and unexplored AI s
     game.aiAbilities(team, own, [], home);
     assert.deepEqual(scans.at(-1), ['scan', goal, team]);
   }
-  assert.deepEqual(json(maps.desert.layout), desertBefore, 'editing one layout cannot mutate another map');
+  assert.equal(JSON.stringify(maps),catalogueBefore,'generation and controller decisions do not mutate catalogue recipes');
 });
 
 test('only enemy HQ destruction wins; loss of the last own HQ loses, without stars or rewards', () => {
