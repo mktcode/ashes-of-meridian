@@ -224,8 +224,8 @@
       // Keep the visibly lit ground beyond attack range, not just the lamp's cutoff.
       // The larger envelope compensates for distance, grazing normals and edge falloff.
       const beaconReach=UNITS.hero.range*3;
-      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,42);
-      if(nightLight>0)lightPool(bx*SCALE,lz*SCALE,beaconReach,beaconReach,0x38d9e8,.65*nightLight);
+      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,24);
+      if(nightLight>0)lightPool(bx*SCALE,lz*SCALE,beaconReach,beaconReach,0x38d9e8,.4*nightLight);
     }
   });
 })();

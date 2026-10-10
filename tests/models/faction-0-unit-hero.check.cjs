@@ -77,7 +77,7 @@ test('Breach Marshal: removed rear mantle and large emissive crystal on the exte
 });
 test('Breach Marshal: broad real night beacon, smooth dusk, preview isolation and Performance lighting',()=>{
  const {h,e,draw}=setup();
- for(const quality of [0,1])for(const [hour,intensity]of [[12,0],[18.5,21],[22,42],[5.5,21]]){
+ for(const quality of [0,1])for(const [hour,intensity]of [[12,0],[18.5,12],[22,24],[5.5,12]]){
   const lights=[];
   draw(e,0,{}, {battlefieldHour:hour,quality,addPointLight:(...args)=>lights.push(args)});
   assert.equal(lights.length,intensity?1:0);
