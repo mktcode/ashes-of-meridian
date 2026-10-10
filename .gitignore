@@ -1,5 +1,6 @@
 dist/
 /release/ashes-of-meridian-prototype.zip
+/release/itch-media/
 node_modules/
 .tmp/
 /music-drafts/

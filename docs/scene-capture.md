@@ -31,6 +31,6 @@ Die Szene bleibt bei Simulationszeit 0 pausiert; es gibt weder Echtzeit-Wartekä
 
 Die normale seedbasierte Welt mit Ressourcen und Landungsworkern bleibt bestehen. Zusätzliche Gebäude werden **arrangiert**, ohne Baukosten, Bauzeit oder Bauplatzprüfung; Überlappungen und ungeeignete Fundamente liegen in der Verantwortung des Rezeptautors. Einheiten nutzen die normale lokale Spawn-Platzsuche, können leicht versetzt werden oder auf unzugänglichem Terrain ausdrücklich scheitern; der Bericht enthält ihre tatsächlichen Positionen. Das erlaubt auch isolierte Gebäude-/Hangvergleiche, ist aber kein Nachweis legaler Spielsituationen oder Balance.
 
-Gezielter CPU-Test des Rezeptvertrags und serialisierten Callbacks: `node --test tests/scene-capture.check.cjs` (kein Browserlauf).
+Gezielter CPU-Test des Rezeptvertrags und serialisierten Callbacks: `node --test tests/ashes-of-meridian-scene-capture.check.cjs` (kein Browserlauf).
 
-Rezept und Seed sind innerhalb desselben Builds wiederverwendbar, keine pixelgenaue Garantie über Browser, GPU, Spielversionen oder animierte Posteffekte hinweg. Die Aufnahme wird mit höchster Renderqualität erzeugt. Visuelle und echte Mobilgeräteabnahme bleibt menschlich. Das spezielle `capture:itch` bleibt ein separates, unverändertes Marketingwerkzeug.
+Rezept und Seed sind innerhalb desselben Builds wiederverwendbar, keine pixelgenaue Garantie über Browser, GPU, Spielversionen oder animierte Posteffekte hinweg. Die Aufnahme wird mit höchster Renderqualität erzeugt. Visuelle und echte Mobilgeräteabnahme bleibt menschlich. Das spezielle `capture:itch` bleibt ein separates Marketingwerkzeug; beide verwenden denselben WebP-Encoder. Ausgabe und gezielte Einzelaufnahme stehen unter [Auslieferung](deployment.md#itchio).

@@ -4,6 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { prepareScene, validateScene } from './scene-capture-fixture.mjs';
+import { webpScreenshot } from './capture-output.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const { values } = parseArgs({ options: {
@@ -59,18 +60,9 @@ if (values.help) {
       paused: Meridian.ui.paused, hour: Meridian.renderer.battlefieldHour, camera: { ...Meridian.game.s.cam } }));
     if (state.glError || errors.length || !state.paused || state.time !== result.time)
       throw Error(`Capture failed: ${JSON.stringify(state)}; ${errors.join('\n')}`);
-    const png = await page.screenshot({ type: 'png', animations: 'disabled' });
-    // Playwright has no WebP screenshot encoder; use Chromium's built-in canvas encoder.
-    const encoded = await page.evaluate(async base64 => {
-      const image = new Image(); image.src = `data:image/png;base64,${base64}`; await image.decode();
-      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
-      canvas.getContext('2d').drawImage(image, 0, 0);
-      const data = canvas.toDataURL('image/webp', .8);
-      if (!data.startsWith('data:image/webp;')) throw Error('WebP encoder unavailable');
-      return data.split(',')[1];
-    }, png.toString('base64'));
+    const image = await webpScreenshot(page);
     await mkdir(dirname(output), { recursive: true });
-    await writeFile(output, Buffer.from(encoded, 'base64'));
+    await writeFile(output, image);
     await writeFile(`${output}.json`, JSON.stringify({ scene, result, state, browser: browser.version(), output, format: 'webp', quality: 80 }, null, 2) + '\n');
     console.log(output);
   } finally { await browser.close(); }

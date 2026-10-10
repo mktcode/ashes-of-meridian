@@ -4,8 +4,6 @@ Befunde aus dem Hygieneaudit auf `8a69e7f`; statischer Abgleich, keine Capture-/
 
 ## Capture-Ausgabe und Abnahme
 
-- [ ] Den [Capture-Pfad](../../scripts/capture-itch-media.mjs) nach ausdrücklicher Freigabe mit einer einzelnen Szene im Browser abnehmen. Der gezielte Node-Test prüft die serialisierte [Capture-Fixture](../../scripts/capture-battle-fixture.mjs) auf den drei verwendeten Kartenrezepten: Worker-Start bleibt unverändert, beide HQs entstehen auf zulässigen Standorten, Belegung/Indizierung und expliziter Abbruch ohne Standort sind abgesichert. Renderer, UI-Lebenszyklus und tatsächliche Medienausgabe sind damit nicht geprüft.
-- [ ] Ausgabeformat und Besitz klären: `capture:itch` schreibt JPEGs unter `release/itch-media/`, während die Arbeitsregeln WebP/Qualität 80 und laufbezogene temporäre Ablage vorsehen. Gewollte Releaseartefakte von Scratch trennen; generierte Ausgaben gezielt ignorieren oder bewusst versionieren. Keine pauschale Löschung vorhandener Medien.
 - [ ] Wiederverwendbare Szenen-/Capture-Bausteine aus `.tmp/devlog-2026-10-08/capture.mjs` prüfen, nicht datierte Motive und Texte als neues Standardwerkzeug übernehmen. Scratch-Skripte sind lokale Hinweise, keine dauerhaften Abhängigkeiten. Gemeinsamer Browserrahmen unter [Testpflege](teststrategie-review.md#wiederverwendbare-browser--und-diagnosewerkzeuge).
 
 ## Laufzeitassets und Produktionswerkzeuge
