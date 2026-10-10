@@ -35,7 +35,7 @@ test('Breach Marshal: independent detailed command armor, closed meshes, breach 
  for(const type of ['rifle','medic'])assert.notEqual(h.EntityModels.find({...e,type}).id,descriptor.id);
  for(const faction of [1,2])assert.notEqual(h.EntityModels.find({...e,faction}).id,descriptor.id);
  for(const [name,factory]of Object.entries(descriptor.meshes)){
-  assertMesh(factory,{minTriangles:8,maxTriangles:4000,min:[-.8,0,-.65],max:[.8,2.08,1.52]});
+  assertMesh(factory,{minTriangles:8,maxTriangles:4000,min:[-.8,0,-.65],max:[.8,2.66,1.52]});
   if(name.endsWith('Neutral'))for(let i=6;i<meshes[name].length;i+=9)assert.deepEqual(Array.from(meshes[name].slice(i,i+3)),[1,1,1]);
  }
  const normal=draw();assert.equal(normal.length,13);
@@ -52,9 +52,28 @@ test('Breach Marshal: modest visible enlargement over the old Marshal, without g
   assert.deepEqual(c.slice(4,7),[1.18,1.18,1.18]);
   for(let i=0;i<meshes[c[0]].length;i+=9){const y=transform(c,meshes[c[0]].slice(i,i+3))[1];top=Math.max(top,y);bottom=Math.min(bottom,y);}
  }
- assert(top>2.35&&top<2.5,'old Marshal was about 2.19; new silhouette is roughly 11% taller');
+ const helmet=normal.find(c=>c[0]==='breachMarshalHelmet'),data=meshes.breachMarshalHelmet;
+ let headTop=0;for(let i=0;i<data.length;i+=9)headTop=Math.max(headTop,transform(helmet,data.slice(i,i+3))[1]);
+ assert(headTop>2.35&&headTop<2.5,'armor remains roughly 11% taller than the old Marshal');
+ assert(top>3.1&&top<3.2,'raised crystal beacon extends above the armor');
  assert(bottom>=0&&bottom<.01,'scale is about the floor, not the body center');
  assert.equal(e.size,h.UNITS.hero.size);assert.equal(e.hp,h.UNITS.hero.hp);
+});
+test('Breach Marshal: removed rear mantle and large emissive crystal on the extended beacon',()=>{
+ const {h,e,meshes,draw}=setup(),torso=meshes.breachMarshalTorso,optics=meshes.breachMarshalOptics;
+ for(let i=0;i<torso.length;i+=9)assert(!(torso[i+1]<1&&torso[i+2]<-.45),'no hanging rear plates');
+ const crystal=[];for(let i=0;i<optics.length;i+=9)if(optics[i+1]>2.15)crystal.push(optics.slice(i,i+3));
+ assert.equal(crystal.length,24,'closed eight-facet crystal');
+ assert(Math.max(...crystal.map(p=>p[1]))>=2.65-1e-9);
+ assert(Math.max(...crystal.map(p=>p[0]))-Math.min(...crystal.map(p=>p[0]))>=.28-1e-9);
+ assert(draw().find(c=>c[0]==='breachMarshalOptics')[11]>.9,'visible daylight emission');
+ for(const rot of [0,.7,-2.1]){
+  const lights=[],calls=draw({...e,rot,order:undefined,walk:.8,cd:h.UNITS.hero.reload-.02},.5,{},
+   {battlefieldHour:22,quality:0,addPointLight:(...args)=>lights.push(args)});
+  assert.equal(lights.length,1,'reuse the model lamp, no added light budget');
+  const center=transform(calls.find(c=>c[0]==='breachMarshalOptics'),[-.275,2.42,-.37]);
+  for(let k=0;k<3;k++)assert(Math.abs(lights[0][k]-center[k])<1e-9,'beacon lamp follows crystal through walking, recoil and heading');
+ }
 });
 test('Breach Marshal: team, neutral ghost/tint, alpha, layer and material overrides',()=>{
  const {h,e,draw}=setup();

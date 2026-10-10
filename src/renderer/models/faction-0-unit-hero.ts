@@ -58,16 +58,11 @@
         plate(s*.20,1.25,-.49,.09,.38,.07,'steel');
         for(let j=0;j<5;j++)plate(s*.20,1.11+j*.065,-.535,.075,.024,.022,'rubber');
       }
-      // Comms module and protected short antenna, not a tall fantasy crest.
+      // Raised command beacon: reinforced mast and a bronze crystal socket.
       plate(-.275,1.60,-.36,.13,.19,.16,'bronze');
-      ModelMesh.bake(out,geom.cylinder(10),{x:-.275,y:1.845,z:-.37,sx:.027,sy:.30,sz:.027,tint:C.steel});
-      plate(-.275,2.003,-.37,.055,.03,.055,'rubber');
-      // A short split command mantle, rigid segmented armor rather than simulated cloth.
-      for(const s of [-1,1]) {
-        plate(s*.155,1.005,-.51,.29,.61,.055,'orange',-.08,0,s*.045);
-        plate(s*.155,.718,-.535,.285,.04,.065,'bronze');
-        plate(s*.155,1.17,-.555,.17,.028,.02,'ivory');
-      }
+      ModelMesh.bake(out,geom.cylinder(10),{x:-.275,y:1.95,z:-.37,sx:.038,sy:.56,sz:.038,tint:C.steel});
+      plate(-.275,1.77,-.37,.075,.07,.075,'rubber');
+      plate(-.275,2.20,-.37,.19,.07,.19,'bronze');
       joint(0,1.57,0,.145);
     });
     group('helmet',()=>{
@@ -146,7 +141,8 @@
     group('optics',()=>{
       plate(0,1.873,.265,.33,.053,.027,[1,1,1]);
       plate(.24,1.61,.493,.065,.048,.015,[1,1,1]);
-      plate(-.275,2.022,-.37,.027,.013,.027,[1,1,1]);
+      // Large faceted cyan crystal; shares the visor's emission and preview override.
+      ModelMesh.bake(out,geom.octa(),{x:-.275,y:2.42,z:-.37,sx:.14,sy:.23,sz:.14});
     });
     group('team',()=>{
       for(const s of [-1,1])plate(s*.527,1.624,.09,.20,.027,.25,[1,1,1]);
@@ -223,9 +219,9 @@
         draw(side+'Boot',ankle,blend(ankle,a),swing?-.18*Math.sin(Math.PI*u)*weight:0);
       }
       const cy=Math.cos(upperRx),sy=Math.sin(upperRx),cz=Math.cos(upperRz),sz=Math.sin(upperRz),
-        visorY=1.873-.85,vx=-visorY*sz,vy=visorY*cz,
-        ly=upperTarget[1]+vy*cy-.28*sy,lz=upperTarget[2]+vy*sy+.28*cy;
-      pointLight(vx*SCALE,ly*SCALE,lz*SCALE,4.5,0x38d9e8,1.8);
+        beaconY=2.42-.85,bx=-.275*cz-beaconY*sz,by=-.275*sz+beaconY*cz,
+        ly=upperTarget[1]+by*cy+.37*sy,lz=upperTarget[2]+by*sy-.37*cy;
+      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,4.5,0x38d9e8,1.8);
       if(nightLight>0)lightPool(0,1.3,1.8,2.3,0x38d9e8,.65*nightLight);
     }
   });
