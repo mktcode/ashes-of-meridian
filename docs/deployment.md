@@ -20,7 +20,7 @@ Das Singleplayer-Spiel benötigt keinen separaten Spielserver. Eine gegebenenfal
 
 ## itch.io
 
-Die englische Seitenbeschreibung wird in [`release/itch-description.md`](../release/itch-description.md) gepflegt und manuell auf itch.io übernommen.
+Die englische Seitenbeschreibung wird manuell auf itch.io gepflegt; eine versionierte Beschreibung liegt derzeit nicht im Repository.
 
 `npm run build:zip` erzeugt `release/ashes-of-meridian-prototype.zip` mit `index.html` an der Wurzel. Als HTML-Build hochladen, „This file will be played in the browser“ aktivieren und Vollbild/responsiven Viewport ermöglichen. Neue lokale Assets in ZIP- und Docker-Paketweg gemeinsam berücksichtigen; für Sprache gilt der [Katalog-/Paketvertrag](audio.md). `node scripts/build-zip.mjs <ziel.zip>` erlaubt nach dem Build einen abweichenden Ausgabeweg, etwa für isolierte Paketprüfungen.
 

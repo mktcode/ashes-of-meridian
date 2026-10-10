@@ -6,9 +6,10 @@ Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) be
 
 - [ ] Langtest-Fixtures in `tests/ashes-of-meridian-simulation.check.cjs` auf Startrezepte statt `profile.upgrades` umstellen; frühere permanente Rang-/Vorteilscaps entsprechen nicht mehr den neuen Gebäude-Stapeln. Die entfernten Regeln nicht durch Kompatibilitätsadapter wieder einführen. Feste RNG-/Terrainreferenzen nicht zum Grünmachen regenerieren. Änderungen und gezielte Ausführung dieses Simulationsblocks separat freigeben.
 - [ ] Präsentationsfixtures und noch nicht ausgeführte Eingabe-/Stage-World-Fälle auf verbliebene alte Annahmen prüfen. Angepasste lokale Verträge sind keine vollständige Integrationsabnahme.
-- [ ] Lokales Asset für den unabhängigen Harness-Musiktest bereitstellen: `music-drafts/06-sporewake.mp3` fehlt im Feature-Worktree (`ENOENT` bei `battle playlist starts after ten seconds…`). Test nicht überspringen und keine Ersatzaufnahme erfinden.
 - [ ] Verwaiste Fleet-/Benefit-Styles im gemeinsamen Designsystem gezielt bereinigen; keine gleichzeitig veränderte Gestaltung anderer Ansichten.
 - [ ] Breite Integrationsprüfung erst nach gesonderter Freigabe. Gezielte CPU-Fälle schützen Upgrade-Kosten, Ausbau/KP, Stapel/Einmaligkeit, Vent-Erschöpfung, Formatvalidierung und Gefechts-Snapshots. Der echte UI-Lebenszyklusfall prüft insbesondere den Besuch einer alten Welt mit Upgrade-Änderung, während ein anderes Gefecht gespeichert ist.
+
+Der unabhängige Harness-Musiktest ist durch fehlende lokale Entwurfsdateien blockiert; die checkoutunabhängige Korrektur wird zentral unter [Testpflege](teststrategie-review.md#vorrang-reproduzierbare-standardtests) geführt, nicht durch Bereitstellen zusätzlicher Feature-Worktree-Assets.
 
 ## Menschliche Abnahme und Balance
 
