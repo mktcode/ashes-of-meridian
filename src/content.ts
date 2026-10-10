@@ -339,39 +339,39 @@ const BUILDINGS = {
   fieldlab: {
     cost: 0, gas: 0, hp: 500, size: 3.6, time: 8,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
-    civilizationEntry: {x:.55,z:2.87,length:1.1},
+    civilizationEntry: {x:.55,z:2.87,length:1.1,doorZ:1.72},
     desc: 'Civilian field laboratory. Grows around a Cinder-supplied Forum. Select an expedition upgrade and invest local Echo to expand it into a research tower.'
   },
   researchhub: {
     cost: 0, gas: 0, hp: 650, size: 4.2, time: 12,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
-    civilizationEntry: {x:.30,z:3.86,length:.70},
+    civilizationEntry: {x:.30,z:3.86,length:.70,doorZ:3.01},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
     desc: 'Expanded civilian laboratory. Its chosen expedition effect contributes two ranks to newly started battles.'
   },
   researchspire: {
     cost: 0, gas: 0, hp: 800, size: 3.9, time: 16,
     civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
-    civilizationEntry: {x:.20,z:3.05,length:1.1},
+    civilizationEntry: {x:.20,z:3.05,length:1.1,doorZ:1.63},
     desc: 'Fully expanded civilian research tower. Its chosen expedition effect contributes three ranks to newly started battles.'
   },
   embercottage: {
     cost: 0, gas: 0, hp: 500, size: 3.6, time: 8,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
-    civilizationEntry: {x:.55,z:2.87,length:1.1},
+    civilizationEntry: {x:.55,z:2.87,length:1.1,doorZ:1.72},
     desc: 'Civilian hillside cottage. Grows around a Cinder-supplied Forum. Select an expedition upgrade and invest local Echo to expand it into a residential tower.'
   },
   terracecommons: {
     cost: 0, gas: 0, hp: 650, size: 4.2, time: 12,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.1},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
-    civilizationEntry: {x:.30,z:3.86,length:.70},
+    civilizationEntry: {x:.30,z:3.86,length:.70,doorZ:3.01},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
     desc: 'Expanded civilian residences. Their chosen expedition effect contributes two ranks to newly started battles.'
   },
   hearthtower: {
     cost: 0, gas: 0, hp: 800, size: 3.9, time: 16,
     civilizationDecks: [{x:0,z:-.40,w:4.25,d:3.6},{x:.2,z:2.10,w:4.2,d:1.3}],
-    civilizationEntry: {x:.20,z:2.9,length:1.1},
+    civilizationEntry: {x:.20,z:2.9,length:1.1,doorZ:1.47},
     desc: 'Fully expanded civilian residential tower. Its chosen expedition effect contributes three ranks to newly started battles.'
   },
   meridianforum: {

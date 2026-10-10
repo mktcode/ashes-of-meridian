@@ -61,7 +61,7 @@
         R.quality = profile.settings.quality;
         R.resize();
         audio = new MeridianAudio(profile.settings);
-        const worldView = new BattlefieldView(R);
+        const worldView = new BattlefieldView(R), settlementTraffic = new SettlementTraffic();
         game = new MeridianGame(profile, (...event: GameEvent) => {
           const [type] = event;
           if (type === 'start') {
@@ -475,7 +475,8 @@
           const s = game.s!, world = game.world!;
           const fogOn = !(world.fogCleared && world.viewTeam === 0);
           worldView.sync(world, fogOn, s);
-          worldView.updateWorkerRoads(s.time, s.entities, e => !ui.battleIntro && game.observed(e));
+          settlementTraffic.update(world, s, R.quality, e => !ui.battleIntro && game.observed(e));
+          worldView.updateWorkerRoads(s.time, s.entities, e => !ui.battleIntro && game.observed(e), settlementTraffic.walkers());
           worldView.retainBuildingGround(s.entities);
           // Revalidate restored cameras and resized viewports, including while paused.
           if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')
@@ -484,6 +485,7 @@
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
           R.fogOn = fogOn && !ui.battleIntro;
+          settlementTraffic.draw(R);
           const selectedIds = ui.selectionIds(), parcelIds = new Set<number>(),
             entityScope = diagnostics?.recorder.beginDetail('entities');
           for (const cache of s.supplyCaches)
@@ -654,7 +656,7 @@
               frameClock = 0;
             }
             diagnostics?.recorder.phase('sceneBuild');
-            if (ui.view !== 'game') worldView.clearWorkerRoads();
+            if (ui.view !== 'game') { worldView.clearWorkerRoads(); settlementTraffic.reset(); }
             const viewTime = game.s?.time,
               resultKey = ui.view === 'game' && game.s?.result && !ui.battleIntro && !ui.mode && !ui.pings.length
                 ? [viewTime, weatherTime, R.width, R.height, R.quality, game.localTeam,

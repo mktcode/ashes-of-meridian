@@ -24,6 +24,8 @@ interface CivilizationEntry {
   x: number;
   z: number;
   length: number;
+  /** Model-local door plane, behind the stairs; decorative traffic only. */
+  doorZ?: number;
   width?: number;
   top?: number;
 }

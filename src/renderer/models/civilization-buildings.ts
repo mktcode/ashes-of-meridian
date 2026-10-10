@@ -84,7 +84,9 @@
         beam([x+a,y,z+d/2],[x+a,y+.78,z+d/2],.05);beam([x+b,y,z+d/2],[x+b,y+.78,z+d/2],.05);
       }
     };
-    const entry = (x:number,y:number,z:number) => {
+    const entry = (y:number) => {
+      const {x,doorZ:z}=(BUILDINGS[type] as BuildingDefinitionShape).civilizationEntry!;
+      if(z===undefined) throw Error(`Missing civilian door plane: ${type}`);
       box(x,y+.59,z,1,1.18,.14,'dark');box(x,y+.58,z+.08,.74,1.08,.04);
       box(x,y+.58,z+.12,.025,1.05,.022,'dark');box(x+.43,y+.60,z+.12,.055,.85,.035,'cyan');
       box(x,y+1.3,z+.28,1.35,.10,.70,'edge');box(x,y+1.26,z+.64,.75,.035,.035,'cyan');
@@ -157,7 +159,7 @@
       band(0,1.76,0,4.4,3.3);skylight(.45,roof,.2,2.15,1.5);dish(-1.3,roof+.04,-.70,.78);
       box(2.28,.78,-.30,.65,.88,1.95,'dark');for(let i=-2;i<=2;i++)box(2.62,.74+i*.13,-.30,.035,.055,1.60,'edge');
       equipment(.6,roof,-1.1);grille(-1.02,.69,1.71,.55);
-      entry(.55,.35,1.72);railing(.55,.35,2.2,3.2,.9,1.3);sign(-.56,1.02,1.84);
+      entry(.35);railing(.55,.35,2.2,3.2,.9,1.3);sign(-.56,1.02,1.84);
     }else if(type==='researchhub'){
       const back=1.45,roof=module(-.8,back+.35,-1.1,4.65,2.6,2),terrace=module(.75,.35,1.7,5.3,2.55);
       band(-.8,back+3.31,-1.1,4.65,2.6);band(.75,1.76,1.7,5.3,2.55);railing(.75,terrace+.04,1.73,5.45,2.65);
@@ -170,7 +172,7 @@
       const top=back+1.90,end=terrace+.04;box(2.61,top-.08,-.25,2.7,.16,.86,'edge');
       for(let i=0;i<8;i++){const rise=(top-end)/8;box(3.7,top-(i+.5)*rise,-.1+i*.27,.88,rise,.28,'edge');}
       beam([4.14,top+.6,-.1],[4.14,end+.6,1.9],.055);
-      entry(.3,.35,3.01);sign(-.77,.99,3.12);
+      entry(.35);sign(-.77,.99,3.12);
     }else if(type==='researchspire'){
       const podium=module(0,.35,-.4,4.7,3.95,2),roof=module(.12,podium-.10,-.58,3.72,3.30,4);
       box(-2.13,4.88,-1.0,.70,9.40,2.50,'dark');for(const x of [-2.29,-1.97])box(x,4.90,.32,.07,9.12,.07,'cyan');
@@ -182,14 +184,14 @@
       oct(-.58,roof+.72,-1.15,1.65,1,1.5,.35);band(-.58,roof+1.12,-1.15,1.65,1.5);
       dish(-.58,roof+1.23,-1.15,1.84);dish(1.32,roof+.26,.67,.94);dish(-1.16,roof+.26,1.01,.49);
       equipment(1.20,podium+.03,.72);grille(-1.15,.71,1.63,.61);grille(1.35,.71,1.63,.48);
-      entry(.2,.35,1.63);railing(.2,.35,2.28,4.2,1.26,1.5);sign(-.77,1,1.75);
+      entry(.35);railing(.2,.35,2.28,4.2,1.26,1.5);sign(-.77,1,1.75);
     }
     if(type==='embercottage'){
       const roof=residential(0,.35,0,4.4,3.3);
       box(-1.8,1.34,-.9,.52,1.8,1.5,'dark');box(-1.8,roof+.15,-.9,.65,.16,1.62,'edge');
       equipment(.45,roof+.03,-.55);cylinder(-1.1,roof+.42,-.7,.36,.70);cylinder(-1.1,roof+.81,-.7,.4,.12,'dark');
       for(const dx of [-1.75,1.75])box(dx,roof+.005,.25,.07,.03,2.45,'orange');
-      entry(.55,.35,1.72);railing(.55,.35,2.2,3.2,.9,1.3);planter(-1.05,.35,2.14,.65);
+      entry(.35);railing(.55,.35,2.2,3.2,.9,1.3);planter(-1.05,.35,2.14,.65);
     }else if(type==='terracecommons'){
       const back=1.1,roof=residential(-.8,back+.35,-1.1,4.65,2.6,2),terrace=residential(.75,.35,1.7,5.3,2.55);
       railing(.75,terrace+.04,1.73,5.45,2.65);planter(-1.38,terrace+.03,2.4,1.25);planter(2.55,terrace+.03,2.4,1.1);
@@ -198,7 +200,7 @@
       for(const x of [-2.45,1.1])box(x,roof+.02,-1.05,.075,.035,2.2,'orange');
       const top=back+1.90,end=terrace+.04;box(2.61,top-.08,-.25,2.7,.16,.86,'edge');
       for(let i=0;i<8;i++){const rise=(top-end)/8;box(3.7,top-(i+.5)*rise,-.1+i*.27,.88,rise,.28,'edge');}
-      beam([4.14,top+.6,-.1],[4.14,end+.6,1.9],.055);entry(.3,.35,3.01);box(-2.94,back+1.74,-1.1,.16,2.8,1.6,'orange');
+      beam([4.14,top+.6,-.1],[4.14,end+.6,1.9],.055);entry(.35);box(-2.94,back+1.74,-1.1,.16,2.8,1.6,'orange');
     }else if(type==='hearthtower'){
       const roof=residential(0,.35,-.4,4.25,3.6,6);
       box(-2.12,4.69,-.83,.82,8.8,2.7,'dark');box(-2.46,4.69,.10,.13,8.8,.25,'orange');
@@ -210,7 +212,7 @@
       equipment(1.15,roof+.04,-.7);cylinder(-.62,roof+1.25,-.65,.5,.54,'dark');cylinder(-.62,roof+1.53,-.65,.57,.08,'edge');
       beam([-1.35,roof+.92,-1.2],[-1.35,roof+2.12,-1.2],.055);box(-1.35,roof+2.14,-1.2,.10,.10,.10,'warm');
       for(const x of [-1.84,1.84])box(x,roof+.025,-.4,.07,.035,3,'orange');
-      entry(.2,.35,1.47);railing(.2,.35,2.13,4.2,1.26,1.5);planter(-1.32,.35,2.04,.8);
+      entry(.35);railing(.2,.35,2.13,4.2,1.26,1.5);planter(-1.32,.35,2.04,.8);
     }
     return meshes;
   }

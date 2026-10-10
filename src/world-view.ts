@@ -559,14 +559,15 @@ class BattlefieldView {
     this.roadJoinScratch = null; this.joinedRoadPixels = null;
     this.R.releaseWorkerRoads();
   }
-  updateWorkerRoads(time: number, entities: readonly Entity[], observed: (e: Entity) => boolean) {
+  updateWorkerRoads(time: number, entities: readonly Entity[], observed: (e: Entity) => boolean,
+      pedestrians: readonly (Position & { id: number })[] = []) {
     const field = this.workerRoads ??= new WorkerRoadField(this.world!.extent);
     const buildings = this.buildingRoads ??= new BuildingRoadField(field);
     const workers = entities.filter(e => e.kind === 'unit' && e.type === 'worker' && e.hp > 0 && observed(e)),
       visibleBuildings = entities.filter(e => e.kind === 'building' && e.hp > 0 && observed(e)),
       headquarters = visibleBuildings.filter(e => e.kind === 'building' && e.type === 'hq' && e.progress >= 1),
-      wearChanged = field.update(time, workers, w => {
-        if (w.kind !== 'unit' || w.order?.type !== 'mine' || w.deliveryForum !== undefined) return null;
+      wearChanged = field.update<Entity | (Position & { id: number })>(time, [...workers,...pedestrians], w => {
+        if (!('kind' in w) || w.kind !== 'unit' || w.order?.type !== 'mine' || w.deliveryForum !== undefined) return null;
         let h: Entity | null = null, nearest = Infinity;
         for (const candidate of headquarters) {
           const distance = Math.hypot(w.x-candidate.x,w.z-candidate.z);

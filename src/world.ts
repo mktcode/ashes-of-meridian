@@ -262,7 +262,7 @@
         }
         return true;
       }
-      path(x: number, z: number, tx: number, tz: number, air = false, area?: NavigationArea, radius = 0, ignoreSurface = false): NavigationPath {
+      path(x: number, z: number, tx: number, tz: number, air = false, area?: NavigationArea, radius = 0, ignoreSurface = false, budget?: number): NavigationPath {
         const GRID = this.gridSize, limit = this.extent - 5;
         tx = clamp(tx, -limit, limit);
         tz = clamp(tz, -limit, limit);
@@ -319,7 +319,7 @@
             return Math.max(ax, az) + 0.414 * Math.min(ax, az);
           };
           // Preserve the 72×72 search budget; larger grids need proportionally more heap pops.
-          const searchLimit = Math.ceil(5600 * (GRID / 72) ** 2);
+          const searchLimit = Math.min(Math.ceil(5600 * (GRID / 72) ** 2), budget ?? Infinity);
           while (heap.length && tries++ < searchLimit) {
             let i = heap.pop();
             if (closed[i]) continue;
