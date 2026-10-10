@@ -28,8 +28,9 @@ function createGame(fixedStarts = false) {
   return { game, events, context };
 }
 
+// Fresh deployment always uses the production start allocation, never fixed HQ coordinates.
 function freshBattle(faction = 0, seed = 1409) {
-  const runtime = createGame(true);
+  const runtime = createGame();
   runtime.game.start({ seed, map: 'desert', faction });
   return runtime;
 }
@@ -245,16 +246,26 @@ test('seeded starts use distinct corners, keep replay/RNG contracts and allow ev
   assert.equal(pairs.size,12,'all four player corners and all three remaining enemy corners');
 });
 
-test('single battle starts with only the own HQ, one hostile base and no mission state', () => {
-  const { game, events } = freshBattle(), s = game.s;
+test('single battle starts with landing workers, paid HQ reserves and an independent elimination mission', () => {
+  const { game, events, context } = freshBattle(), s = game.s;
+  const { STARTING_CINDER, BUILDINGS } = vm.runInContext('({ STARTING_CINDER, BUILDINGS })', context);
   assert.deepEqual([s.seed,s.map,s.parties[0].faction,s.parties[1].faction,s.time], [1409,'desert',0,2,0]);
-  assert.equal('version' in s, false); assert.equal(game.snapshot, undefined); assert.equal(game.restore, undefined);
-  assert.deepEqual([s.parties[0].account.alloy,s.parties[0].account.gas,s.parties[0].account.energy,s.entities.length,s.nextId,game.supply(),game.cap()], [250,0,25,50,51,0,24]);
-  assert.equal(game.alive(e => e.team === 1 && e.type === 'hq').length, 1);
-  assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
-  assert.ok(s.entities.every(e => ['unit','building','resource'].includes(e.kind)));
-  for (const key of ['m','index','practice','upgrades','research','difficulty']) assert.equal(key in s, false);
+  assert.equal(s.rules.kind, 'single-player'); assert.equal(s.rules.mission.id, 'hq-elimination');
+  assert.equal(s.result, null);
+  assert.equal(game.alive(e => e.type === 'hq').length, 0);
+  assert.notStrictEqual(game.account(0), game.account(1));
+  for (const team of [0,1]) {
+    const own = game.alive(e => e.team === team), worker = own[0];
+    assert.deepEqual(Array.from(own, e => e.type), ['worker']);
+    assert.equal(game.party(team).deploymentPending, true);
+    assert.deepEqual([game.account(team).alloy,game.account(team).gas,game.account(team).energy,game.supply(team),game.cap(team)],
+      [STARTING_CINDER+BUILDINGS.hq.cost,0,25,1,0]);
+    assert.ok(game.unitFits(worker,worker.x,worker.z));
+  }
   assert.deepEqual(events.map(e => e.type), ['start','radio']);
+  const mission = s.rules.mission;
+  game.start({seed:s.seed,map:s.map});
+  assert.notStrictEqual(game.s.rules.mission, mission, 'restart owns a new mission state');
 });
 
 test('no workers means no alloy or aether income, and 250 alloy buys exactly five workers for every faction', () => {
@@ -302,9 +313,11 @@ test('battle starts cover every faction and map with valid entities', () => {
   // Maps change presentation, not faction rules: no redundant faction/map cross-product.
   for (const [faction, map] of [[0,'desert'],[1,'alien-planet'],[2,'mothership']]) {
     game.start({ seed: 1409, faction, enemies: [faction], map });
-    assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
+    assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['worker']);
+    assert.equal(game.alive(e => e.type === 'hq').length, 0);
     advance(game, 2);
-    assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['hq']);
+    assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['worker']);
+    assert.equal(game.party(0).deploymentPending, true);
     assert.equal(game.s.map, map); assert.equal(game.s.parties[1].faction, faction);
     assert.strictEqual(game.world.definition, maps[map], 'resolve each ID rather than silently falling back');
     assert.ok(game.alive(e => e.team === 1).every(e => e.faction === faction));

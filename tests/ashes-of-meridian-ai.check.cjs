@@ -61,12 +61,18 @@ test('doctrine resolution has bounded monotonic execution stages without random 
   }
 });
 
-test('baseline starts are symmetric for all faction pairings, with separate accounts and no army',()=>{
+test('baseline deployment starts are symmetric for all faction pairings, with separate accounts and one worker',()=>{
   for(let faction=0;faction<3;faction++)for(let enemy=0;enemy<3;enemy++){
     const {g}=battle(faction,enemy);
-    assert.deepEqual(own(g,0).map(e=>e.type),['hq']);assert.deepEqual(own(g,1).map(e=>e.type),['hq']);
+    assert.deepEqual(own(g,0).map(e=>e.type),['worker']);assert.deepEqual(own(g,1).map(e=>e.type),['worker']);
     assert.deepEqual(json(g.account(0)),json(g.account(1)));assert.notStrictEqual(g.account(0),g.account(1));
-    assert.deepEqual([g.cap(0),g.cap(1),g.supply(0),g.supply(1)],[24,24,0,0]);
+    assert.deepEqual([g.cap(0),g.cap(1),g.supply(0),g.supply(1)],[0,0,1,1]);
+    for(const team of [0,1]) {
+      assert.equal(g.party(team).deploymentPending,true);
+      assert.equal(g.account(team).alloy,250+BUILDINGS.hq.cost,'normal starting funds plus paid HQ reserves');
+      const worker=own(g,team,'worker')[0];
+      assert.ok(g.unitFits(worker,worker.x,worker.z),'landing worker occupies valid free terrain');
+    }
   }
 });
 
