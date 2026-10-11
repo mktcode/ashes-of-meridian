@@ -1,13 +1,16 @@
 /* Civilian specializations. Reuse shared decks, entries, windows and terrain supports. */
 'use strict';
+type CivilianStyleMaterial = 'steel'|'edge'|'dark'|'orange'|'cyan'|'glass'|'window'|'warm'|'dim'|'soil'|'leaf'|'garden'|'light';
 type CivilianStyleParts = {
-  box(x:number,y:number,z:number,w:number,h:number,d:number,m?:'steel'|'edge'|'dark'|'orange'|'cyan'):void;
+  box(x:number,y:number,z:number,w:number,h:number,d:number,m?:CivilianStyleMaterial,yaw?:number,flat?:boolean):void;
+  oct(x:number,y:number,z:number,w:number,h:number,d:number,cut:number,m?:CivilianStyleMaterial):void;
+  beam(a:number[],b:number[],w:number,m?:CivilianStyleMaterial):void;
   residential(x:number,y:number,z:number,w:number,d:number,floors?:number):number;
   module(x:number,y:number,z:number,w:number,d:number,floors?:number):number;
   entry(y:number):void;
-  cap(x:number,y:number,z:number,w:number,h:number,d:number):void;
+  cap(x:number,y:number,z:number,w:number,h:number,d:number,m?:CivilianStyleMaterial):void;
   crate(x:number,y:number,z:number,scale:number,yaw:number,echo?:boolean):void;
-  cylinder(x:number,y:number,z:number,r:number,h:number,m?:'steel'|'edge'|'dark'|'cyan'):void;
+  cylinder(x:number,y:number,z:number,r:number,h:number,m?:CivilianStyleMaterial,top?:number,n?:number):void;
 };
 function civilianCargo(p:CivilianStyleParts,rank:number,echo=false){
   // Authored local positions, not entity-ID/terrain-dependent decoration. Entrances stay clear.

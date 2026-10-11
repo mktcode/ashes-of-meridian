@@ -3,12 +3,13 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const {modelHarness}=require('../helpers/model-contract.cjs');
 
-test('nine specialized civic hulls select saved upgrades, share factions and retain neutral fallbacks',()=>{
+test('all 36 specialized civic hulls select saved upgrades, share factions and retain neutral fallbacks',()=>{
   const h=modelHarness();
   vm.runInContext('Math.random=seeded=()=>{throw Error("Model RNG");};',h.context);
-  for(const [upgrade,types] of [['startingAlloy',['embercottage','terracecommons','hearthtower']],
-    ['aetherAllocation',['embercottage','terracecommons','hearthtower']],
-    ['weaponTechnology',['fieldlab','researchhub','researchspire']]])for(const [index,type] of types.entries()){
+  const families=vm.runInContext('CIVILIZATION_UPGRADE_FAMILIES',h.context);
+  assert.equal(Object.keys(families).length,12);
+  for(const [upgrade,family]of Object.entries(families))for(const [index,type]of
+    (family==='residential'?['embercottage','terracecommons','hearthtower']:['fieldlab','researchhub','researchspire']).entries()){
     const entity={id:1,kind:'building',type,team:0,faction:0,x:0,z:0,hp:500,size:h.BUILDINGS[type].size,progress:1};
     const neutral=h.draw(entity),selected={...entity,upgrade,upgradeLevel:index+1},special=h.draw(selected);
     assert.ok(special.some(c=>c[0].includes(upgrade)));assert.notDeepEqual(special,neutral);
@@ -22,8 +23,9 @@ test('nine specialized civic hulls select saved upgrades, share factions and ret
     assert.ok(!special.some(c=>c[0]==='supplyCrateHull'),'cargo is baked into model meshes, not assembled per frame');
     assert.deepEqual(h.draw({...selected,id:90210},{},123),special,'cargo arrangement is independent of entity ID and time');
     assert.deepEqual(h.draw(JSON.parse(JSON.stringify(selected))),special,'save/load restores the same appearance');
-    assert.deepEqual(h.draw({...entity,upgrade:upgrade==='weaponTechnology'?'startingAlloy':'weaponTechnology'}),neutral);
-    assert.deepEqual(h.draw({...entity,upgrade:'fieldMedicine'}),neutral,'unimplemented styles remain neutral');
+    assert.deepEqual(h.draw({...entity,upgrade:family==='research'?'startingAlloy':'weaponTechnology'}),neutral);
+    assert.deepEqual(h.draw({...entity,upgrade:'unknown-style'}),neutral,'unknown styles remain neutral');
+    assert.deepEqual(h.draw({...entity,upgradeOffers:[upgrade]}),neutral,'offers without confirmed activation stay neutral');
     for(const faction of [1,2])assert.deepEqual(h.draw({...selected,faction}),special);
     const support=c=>c[0]==='box'&&(c[4]===.55||c[4]===.23);
     assert.deepEqual(special.filter(support),neutral.filter(support),'unchanged feet and terrain supports');

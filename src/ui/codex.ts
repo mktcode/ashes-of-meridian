@@ -66,7 +66,16 @@ function renderCivilianModelGallery(): string {
   const families: {name:string;purpose:string;upgrade:CivilizationUpgradeType;types:BuildingType[]}[]=[
     {name:'Cinder-Kontor',purpose:'Ressourcenbonus: Cinder · feste Cinder-Vorratskisten',upgrade:'startingAlloy',types:['embercottage','terracecommons','hearthtower']},
     {name:'Echo-Depot',purpose:'Ressourcenbonus: Echo · feste Echo-Vorratskisten',upgrade:'aetherAllocation',types:['embercottage','terracecommons','hearthtower']},
-    {name:'Waffentechnikinstitut',purpose:'Militärforschung: Waffentechnik · Panzer-Demonstrator, kein Ressourcenlager',upgrade:'weaponTechnology',types:['fieldlab','researchhub','researchspire']}
+    {name:'Worker-Quartier',purpose:'Arbeitskräfte · Loggien, Laubengänge und Dachgärten',upgrade:'startingWorkers',types:['embercottage','terracecommons','hearthtower']},
+    {name:'Bauplanungswerk',purpose:'Bauorganisation · Tragwerk und feste Montagebrücke',upgrade:'constructionProtocols',types:['embercottage','terracecommons','hearthtower']},
+    {name:'Logistikhaus',purpose:'Versorgungslogistik · neutrale Kassetten und Regalrahmen, kein Ressourcenlager',upgrade:'logisticsFrame',types:['embercottage','terracecommons','hearthtower']},
+    {name:'Reparaturhaus',purpose:'Wartung · Servicebuchten und offene C-Klammer',upgrade:'repairLogistics',types:['embercottage','terracecommons','hearthtower']},
+    {name:'Waffentechnikinstitut',purpose:'Militärforschung: Waffentechnik · Panzer-Demonstrator, kein Ressourcenlager',upgrade:'weaponTechnology',types:['fieldlab','researchhub','researchspire']},
+    {name:'Schutztechnikzentrum',purpose:'Schutztechnik · segmentierte Panzerhüllen',upgrade:'protectionSystems',types:['fieldlab','researchhub','researchspire']},
+    {name:'Feldmedizinzentrum',purpose:'Feldmedizin · helle Stationsflügel und Diagnosekappen',upgrade:'fieldMedicine',types:['fieldlab','researchhub','researchspire']},
+    {name:'Command-Akademie',purpose:'Command-Ausbildung · vier gleichwertige Kontrollsektoren',upgrade:'commandTraining',types:['fieldlab','researchhub','researchspire']},
+    {name:'Energieversorgungsinstitut',purpose:'Command-Energie · Kondensatoren und Kühlflossen, keine Echo-Lagertanks',upgrade:'commandCapacitor',types:['fieldlab','researchhub','researchspire']},
+    {name:'Kommandantenkolleg',purpose:'Kommandanten-Ausbildung · zentraler Führungsbeacon zwischen zwei Schulterpylonen',upgrade:'commanderMandate',types:['fieldlab','researchhub','researchspire']}
   ];
   return `<div class="subscreen codex-screen civilian-model-gallery"><header class="sub-header"><div><div class="eyebrow">MODELL-VORSCHAU · OHNE SPIELSTAND</div><h1>Zivilisationsgebäude</h1><p>Modell anklicken für die große drehbare Ansicht. Ziehen zum Drehen, Mausrad zum Zoomen. Zurück über CODEX.</p></div></header>${families.map(f=>{
     const cards=[{type:f.types[0],upgrade:undefined,label:'Neutral · vor Aktivierung'},...f.types.map((type,i)=>({type,upgrade:f.upgrade,label:`Rang ${i+1} · ${['klein','mittel','Hochhaus'][i]}`}))];

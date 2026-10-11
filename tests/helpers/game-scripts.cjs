@@ -21,6 +21,8 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-settlement-traffic',
   'model-supply-crate',
   'model-civilization-upgrade-styles',
+  'model-civilization-upgrade-architecture',
+  'model-civilization-upgrade-designs',
   'model-civilization-buildings',
   'model-meridian-forum',
   'model-faction-0-building-barracks',
