@@ -34,11 +34,12 @@
         const experiment = params.get('experiment'),
           mapExperiment: BattlefieldId | null = experiment === 'height' ? 'mothership' :
             experiment && Object.prototype.hasOwnProperty.call(BATTLEFIELDS, experiment) ? experiment as BattlefieldId : null,
+          civilianModelGallery = params.get('models') === 'civilian-upgrades',
           visibleSimulation = !mapExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
             // The explicitly launched spectator run must not read or mutate the normal profile.
-            getStorage: () => visibleSimulation || mapExperiment ? volatileStorage : localStorage,
+            getStorage: () => visibleSimulation || mapExperiment || civilianModelGallery ? volatileStorage : localStorage,
             clamp,
             upgrades: BATTLE_UPGRADES,
             upgradeFamilies: CIVILIZATION_UPGRADE_FAMILIES,
@@ -673,7 +674,7 @@
               R.fogOn = false;
               R.camera(0,0,(kind === 'building' ? Math.max(21,d.size*4) : type === 'destroyer' ? 30 : 13) * ui.codexZoom);
               renderEntity(R, {id:7,kind,type,x:0,z:0,faction,team:0,hp:d.hp,maxHp:d.hp,size:d.size,
-                rot:ui.codexModelRotation(dt),walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0},time,{localTeam:0});
+                rot:ui.codexModelRotation(dt),walk:time,progress:1,carry:0,amount:2200,shield:0,maxShield:0,kills:0,upgrade:ui.codexSelection.upgrade},time,{localTeam:0});
             } else {
               clearPlacementGuide();
               retainForumParcelGuides();
@@ -756,7 +757,10 @@
           version: '1.0.0'
         };
         // Manual spectator command only; normal launches still stop at the home screen.
-        if (mapExperiment) {
+        if (civilianModelGallery) {
+          ui.civilianModelGallery=true;
+          ui.showCodex();
+        } else if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
           ui.expedition = { version: 10, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, upgrades: {},
             benefits: {startingWorkers: 2}, enemyBenefits: [{}],

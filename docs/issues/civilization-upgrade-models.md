@@ -132,6 +132,10 @@ Maßgeblich bleiben [Grafik-Leitlinie](../graphics-guideline.md) und [Modellpfle
 - **Identität in allen Qualitätsstufen:** Große Baukörper, Dachmotive und Geschossstaffelung bleiben erhalten. Performance darf optionale Kleindetails auslassen, aber nicht alle Varianten wieder auf ein generisches Haus zurücksetzen. Lampen gezielt statt jede Kühlrippe zu beleuchten; zusätzliche Mesh-/Instanz-/Lichtkosten bleiben abzunehmen.
 - **Keine Simulationseffekte:** Rendering verändert keine Entitäten, IDs, Konten, Lieferregister oder RNG. Speichern/Laden stellt die gewählte Optik aus dem vorhandenen Zustand wieder her. Modale Vorschau oder Modellkachel löst weder Aktivierung noch Lieferung aus.
 
+## Direkte Vorschau des ersten Modellsatzes
+
+Nach dem Build `index.html?models=civilian-upgrades` in Firefox öffnen. Die Galerie zeigt pro Stil das neutrale kleine Haus sowie Rang 1, 2 und 3. Ein Klick öffnet die große drehbare Codex-Ansicht der gewählten Variante; Ziehen dreht, das Mausrad zoomt, **CODEX** führt zurück zur Galerie. Dieser explizite Vorschauaufruf verwendet flüchtigen Speicher statt des normalen Profils: keine Partie nötig, keine Spielstandsänderungen. Die Galerie ist eine Designansicht, keine technische Performance- oder vollständige Gelände-/Nachtabnahme.
+
 ## Umsetzung in überprüfbaren Etappen
 
 - [ ] **Entwurfsabnahme:** Die zwölf Silhouetten und ihre Rangentwicklung gemeinsam abnehmen. Besonders Cinder/Logistik, Echo/Energie, Bau/Reparatur und Command/Kommandant gegeneinander prüfen. Überarbeitungen zuerst hier festhalten, nicht erst nach Erstellung aller Modelle.

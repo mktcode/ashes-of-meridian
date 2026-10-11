@@ -184,11 +184,11 @@
         this.resetCodexGesture();
         this.codexSelection = null;
         $('menu').classList.remove('hidden');
-        $('menu').innerHTML = renderCodexScreen(this.codexFaction);
+        $('menu').innerHTML = this.civilianModelGallery ? renderCivilianModelGallery() : renderCodexScreen(this.codexFaction);
         this.onCachedModelThumbnails?.($('menu'));
       },
-      showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType) {
-        this.codexSelection = {faction:this.codexFaction,kind,type};
+      showCodexModel(this: MeridianUI, kind: 'unit' | 'building', type: UnitType | BuildingType, upgrade?: CivilizationUpgradeType) {
+        this.codexSelection = {faction:this.codexFaction,kind,type,...(upgrade?{upgrade}:{})};
         this.codexZoom = 1;
         this.codexRotation = 0;
         this.codexManualRotation = false;
@@ -196,7 +196,7 @@
         this.R.clearStatic();
         this.R.useModelPreview();
         this.view = 'codexModel';
-        $('menu').innerHTML = renderCodexModelScreen(this.codexFaction,kind,type);
+        $('menu').innerHTML = renderCodexModelScreen(this.codexFaction,kind,type,upgrade);
       },
       showCodexStory(this: MeridianUI) {
         this.view = 'story';

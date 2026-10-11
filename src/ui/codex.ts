@@ -62,9 +62,21 @@ function renderCodexScreen(faction: FactionId): string {
     <h2 class="codex-section-title">Buildings</h2><div class="codex-grid">${cards('building',contentKeys(BUILDINGS))}</div></div>`;
 }
 
-function renderCodexModelScreen(faction: FactionId, kind: 'unit' | 'building', type: UnitType | BuildingType): string {
-  const name = kind === 'unit' ? unitName(type,faction) : buildingName(type,faction);
-  const desc = kind === 'unit' ? UNITS[type as UnitType].desc : BUILDINGS[type as BuildingType].desc;
+function renderCivilianModelGallery(): string {
+  const families: {name:string;upgrade:CivilizationUpgradeType;types:BuildingType[]}[]=[
+    {name:'Cinder-Kontor',upgrade:'startingAlloy',types:['embercottage','terracecommons','hearthtower']},
+    {name:'Waffentechnikinstitut',upgrade:'weaponTechnology',types:['fieldlab','researchhub','researchspire']}
+  ];
+  return `<div class="subscreen codex-screen civilian-model-gallery"><header class="sub-header"><div><div class="eyebrow">MODELL-VORSCHAU · OHNE SPIELSTAND</div><h1>Zivilisationsgebäude</h1><p>Modell anklicken für die große drehbare Ansicht. Ziehen zum Drehen, Mausrad zum Zoomen. Zurück über CODEX.</p></div></header>${families.map(f=>{
+    const cards=[{type:f.types[0],upgrade:undefined,label:'Neutral · vor Aktivierung'},...f.types.map((type,i)=>({type,upgrade:f.upgrade,label:`Rang ${i+1} · ${['klein','mittel','Hochhaus'][i]}`}))];
+    return `<h2 class="codex-section-title">${f.name}</h2><div class="codex-grid">${cards.map(c=>`<button class="codex-card" data-codex-kind="building" data-codex-type="${c.type}"${c.upgrade?` data-codex-upgrade="${c.upgrade}"`:''}>${uiSkin()}${renderModelThumbnail(0,'building',c.type,'codex-thumbnail',1,c.upgrade)}<strong>${c.label}</strong><span>3D-ANSICHT ÖFFNEN ↗</span></button>`).join('')}</div>`;
+  }).join('')}</div>`;
+}
+
+function renderCodexModelScreen(faction: FactionId, kind: 'unit' | 'building', type: UnitType | BuildingType, upgrade?: CivilizationUpgradeType): string {
+  const baseName = kind === 'unit' ? unitName(type,faction) : buildingName(type,faction);
+  const name=upgrade ? `${CIVILIZATION_UPGRADES[upgrade].name} · ${baseName}` : baseName;
+  const desc = upgrade ? CIVILIZATION_UPGRADES[upgrade].desc : kind === 'unit' ? UNITS[type as UnitType].desc : BUILDINGS[type as BuildingType].desc;
   return `<div class="codex-model-screen"><header class="sub-header"><div><div class="eyebrow">${esc(FACTIONS[faction].name)} / ${kind.toUpperCase()}</div><h1>${esc(name)}</h1></div><button class="textbtn" data-ui="codex">${uiIcon('back')}CODEX</button></header><div class="codex-model-caption">${uiSkin()}<p>${esc(desc)}</p></div></div>`;
 }
 
