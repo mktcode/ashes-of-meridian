@@ -747,7 +747,9 @@ function civilizationUpgradesForBuildings(entities: readonly Entity[], team: Pla
 }
 function expeditionCivilizationUpgrades(expedition: MeridianExpedition, live: RunState | null = null,
   activeStage: number | null = null): CivilizationUpgradeTotals {
-  const totals: CivilizationUpgradeTotals = { upgrades: {}, benefits: {} };
+  const totals: CivilizationUpgradeTotals = {
+    upgrades: {...expedition.rescuedUpgrades?.upgrades}, benefits: {...expedition.rescuedUpgrades?.benefits}
+  };
   for (const world of expedition.worlds || []) {
     if (world.error || !world.recipe || !world.battle) continue;
     const recipe = world.recipe, active = activeStage === world.stage && live?.rules.kind === 'single-player' && live.rules.completed &&
@@ -763,6 +765,7 @@ function expeditionCivilizationUpgrades(expedition: MeridianExpedition, live: Ru
 }
 
 const ICON_PATHS = {
+  evacuate: 'M3 4h8v16H3zM8 12h13M16 7l5 5-5 5',
   worker: 'M8 15l-4 5m8-10 8-6 2 2-6 8M5 8l3-3 11 11-3 3z',
   rifle: 'M5 20l3-6 6-1 5-8 2 1-4 10-6 1-3 4M4 9l5-5 5 2-5 5z',
   medic: 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z',

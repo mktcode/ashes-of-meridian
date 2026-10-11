@@ -66,6 +66,13 @@ function unpackWorldText(value: unknown): string {
   return output.join('');
 }
 
+function validEvacuatedArmy(value: unknown, units: Record<string, unknown>): value is EvacuatedUnit[] {
+  return Array.isArray(value) && value.length<=100000 && value.every(u=>u && typeof u==='object' &&
+    Object.keys(u).length===4 && typeof u.type==='string' && Object.hasOwn(units,u.type) &&
+    typeof u.hp==='number' && Number.isFinite(u.hp) && u.hp>0 && u.hp<=1 &&
+    typeof u.shield==='number' && Number.isFinite(u.shield) && u.shield>=0 && u.shield<=1 &&
+    Number.isSafeInteger(u.kills) && u.kills>=0);
+}
 // A saved simulation is rejected as a whole, never repaired into a fresh battle.
 // Rules/content arrive from the app; this layer knows neither Game nor UI objects.
 function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecipe,
@@ -112,7 +119,7 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     slowed: num, reinforcedUntil: num, returning: bool, lastSource: integer, shieldFlash: num,
     paid: cost, gasId: id, deathAt: num, rally: pos, label: text, amount: nonnegative,
     visualRotation: v => nonnegative(v) && Number(v) < 8,
-    deliveryForum: id, deliveryPoint: pos,
+    deliveryForum: id, deliveryPoint: pos, evacuationHQ:id, wavePower:v=>num(v)&&Number(v)>=1&&Number(v)<=1e8,
     cinderStock: v => nonnegative(v) && Number(v) <= 2000,
     forumId: id, settlementAt: nonnegative, settlementAttempt: integer,
     upgrade: key({...upgrades, ...benefits}), upgradeLevel: oneOf(1, 2, 3),
@@ -125,6 +132,8 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     (v.settlementAttempt === undefined || (v.kind === 'building' && v.type === 'meridianforum')) &&
     (v.deliveryForum === undefined || (v.kind === 'unit' && v.type === 'worker')) &&
     (v.deliveryPoint === undefined || v.deliveryForum !== undefined) &&
+    (v.evacuationHQ===undefined || (v.kind==='unit' && v.team===0 && completed)) &&
+    (v.wavePower===undefined || (v.kind==='unit' && v.team!==0 && completed)) &&
     (v.upgradeOffers === undefined || (v.kind==='building' && v.forumId!==undefined)) &&
     (v.forumId === undefined || (Array.isArray(v.upgradeOffers) && v.upgradeOffers.every(k =>
       upgradeFamilies[String(k)] === (['fieldlab','researchhub','researchspire'].includes(String(v.type))?'research':'residential')))) &&
@@ -175,6 +184,13 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
       gathered: nonnegative, built: integer, damage: nonnegative }),
     triggers: dictionary(v => num(v) || bool(v)), cam: shape({ x: num, z: num, zoom: nonnegative, yaw: num }),
     result: oneOf(null), speed: oneOf(1, 2, 3)
+  }, {
+    outpost: shape({wave:integer,nextWave:nonnegative,warned:bool,entrance:v=>v===null || pos(v),
+      remaining:v=>integer(v)&&Number(v)<=80,spawned:integer,nextSpawn:nonnegative,finished:bool,
+      evacuation:v=>v===null || shape({hq:id,until:nonnegative,units:v=>validEvacuatedArmy(v,units),
+        upgrades:v=>list(shape({id,upgrade:key(upgradeFamilies),level:oneOf(1,2,3)}),3)(v) &&
+          Array.isArray(v) && new Set(v.map(u=>u.id)).size===v.length})(v)}),
+    reinforcements:shape({units:v=>validEvacuatedArmy(v,units),nextAttempt:nonnegative})
   });
   const tutorialStep = oneOf('arrival', 'buildHQ', 'recon', 'trainWorker', 'buildRefinery', 'buildBarracks', 'trainRifle', 'buildDepot');
   if (!shape({
@@ -187,6 +203,8 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
   })(value)) return false;
   const b = value as ExpeditionBattleSave, s = b.state, count = expedition.encounter.enemies.length + 1;
   if (s.rules.kind !== 'single-player' || !!s.rules.completed !== completed ||
+    !!s.outpost!==completed || (completed && s.reinforcements!==undefined) ||
+    s.entities.some(e=>e.kind==='unit' && e.evacuationHQ!==undefined && e.evacuationHQ!==s.outpost?.evacuation?.hq) ||
     (completed && (s.parties[0].eliminated || s.parties.slice(1).some(p => !p.eliminated))) ||
     s.depth !== expedition.depth || s.seed !== expedition.encounter.seed || s.parties.length !== count || b.sight.length !== count ||
     s.parties.some((p, i) => p.id !== i || p.faction !== (i ? expedition.encounter.enemies[i - 1] : expedition.faction) ||
@@ -318,8 +336,21 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
       const profileRecord = JSON.parse(Store.get(PROFILE_KEY) || 'null'), p = profileRecord?.expedition;
       savedExpedition = p ?? null;
       if (p == null) return null;
-      if (profileRecord.version !== 2 || p.version !== 10) throw Error('Incompatible expedition save');
-      const normalized: MeridianExpedition = { ...readRecipe(p), version: 10, battle: null };
+      if (profileRecord.version !== 2 || p.version !== 11) throw Error('Incompatible expedition save');
+      const normalized: MeridianExpedition = { ...readRecipe(p), version: 11, battle: null };
+      if(p.rescuedArmy!==undefined) {
+        if(!validEvacuatedArmy(p.rescuedArmy,deps.units))throw Error('Invalid evacuated army');
+        normalized.rescuedArmy=p.rescuedArmy.map((u:EvacuatedUnit)=>({...u}));
+      }
+      if(p.rescuedUpgrades!==undefined) {
+        const totals=p.rescuedUpgrades;
+        if(!totals || typeof totals!=='object' || Array.isArray(totals) || Object.keys(totals).length!==2 ||
+          ['upgrades','benefits'].some(group=>!totals[group] || typeof totals[group]!=='object' || Array.isArray(totals[group]) ||
+            Object.entries(totals[group]).some(([k,v])=>!Object.hasOwn(group==='upgrades'?upgrades:benefits,k) ||
+              !Number.isSafeInteger(v) || Number(v)<0 || Number(v)>(group==='upgrades'?upgrades[k].max:benefits[k].max ?? 999999))))
+          throw Error('Invalid rescued upgrades');
+        normalized.rescuedUpgrades={upgrades:{...totals.upgrades},benefits:{...totals.benefits}};
+      }
       if (!Object.hasOwn(p, 'battle')) throw Error('Missing battle save');
       if (p.battle !== null) {
         if (!validExpeditionBattle(p.battle, normalized, deps)) throw Error('Invalid battle save');

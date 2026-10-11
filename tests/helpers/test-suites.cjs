@@ -5,7 +5,7 @@ const { join } = require('node:path');
 const groups = Object.freeze({
   logic: ['core', 'harness', 'build-info', 'repository-hygiene', 'browser-harness', 'audio-delivery', 'doc-links', 'test-selection', 'developed-bases', 'populated-battle', 'abilities', 'parties', 'ffa',
     'ai-planning', 'commands', 'command-queue', 'navigation', 'unit-collision', 'effects', 'effect-rng', 'perspective',
-    'persistence', 'expedition', 'stage-worlds', 'civilization', 'civilization-upgrades', 'simulation-validation'],
+    'persistence', 'expedition', 'outpost', 'stage-worlds', 'civilization', 'civilization-upgrades', 'simulation-validation'],
   terrain: ['terrain', 'terrain-connectivity', 'surface-ray', 'elevation', 'building-ground', 'westmark', 'crystals', 'world-designs',
     'ecology', 'world-variations', 'environment', 'supply-caches'],
   presentation: ['presentation', 'diagnostics', 'diagnostic-capture', 'capture-fixture', 'capture-output', 'scene-capture', 'controls', 'codex', 'ui-assets', 'renderer', 'shader-contracts', 'materials', 'model-thumbnails', 'menu-sky', 'menu-scene', 'placement-guide', 'landscape-boundary', 'worker-roads', 'settlement-traffic'],

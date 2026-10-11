@@ -289,6 +289,9 @@
           case 'closeModal':
             this.closeModal();
             break;
+          case 'confirmEvacuation':
+            this.confirmEvacuation();
+            break;
           case 'activateSettlementUpgrade':
             this.activateSettlementUpgrade();
             break;
