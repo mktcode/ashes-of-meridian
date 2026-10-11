@@ -2,6 +2,8 @@
 
 Verbindliche Regeln für feste Dreierangebote, permanentes Aktivieren im Modal, HUD-Ränge und Hilfe im laufenden Gefecht stehen in [Gameplay](../gameplay.md#wirtschaft-bau-und-produktion). Keine Migration alter Upgrade-Saves.
 
+Die geplanten eigenen Gebäudestile für alle zwölf Upgrades mit jeweils drei Ausbaustufen stehen im separaten [Modell-Issue](civilization-upgrade-models.md).
+
 ## Technische Restarbeit
 
 - [ ] Optionale Langtest-Fixtures in `tests/ashes-of-meridian-simulation.check.cjs` auf verbliebene Annahmen etablierter Basen, frühere Startversorgung und automatisch minende Worker prüfen. Feste RNG-/Terrainreferenzen nicht zum Grünmachen regenerieren. Ausführung dieser Simulationsblöcke separat freigeben.
