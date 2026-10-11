@@ -54,7 +54,7 @@ export function prepareScene(scene) {
     placed.push({ id: entity.id, type: entity.type, x: entity.x, z: entity.z });
   }
   game.rehash(); game.world.rebuild(game.s.entities);
-  if (scene.reveal !== false) game.world.reveal(game.s.entities, [{ team: 0, x: 0, z: 0, r: game.world.extent * 3 }]);
+  game.world.reveal(game.s.entities, scene.reveal !== false ? [{ team: 0, x: 0, z: 0, r: game.world.extent * 3 }] : []);
   if (scene.camera) {
     const focus = location(scene.camera);
     Object.assign(game.s.cam, { zoom: scene.camera.zoom, yaw: scene.camera.yaw ?? 0 });

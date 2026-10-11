@@ -22,6 +22,10 @@ interface DiagnosticCpuScope {
   measurement: DiagnosticFrame | DiagnosticInteraction; phase: DiagnosticDetailPhase; name: DiagnosticCpuDetail;
   started: number; childMs: number; parent?: DiagnosticCpuScope;
 }
+interface DiagnosticRecordingRange {
+  afterFrameId: number; throughFrameId: number;
+  afterInteractionId: number; throughInteractionId: number;
+}
 interface DiagnosticFrame {
   id: number;
   atMs: number;
@@ -136,9 +140,20 @@ class MeridianDiagnosticRecorder {
     this.activePhase = undefined;
     this.detail = undefined;
   }
-  report() {
-    const frames = this.frames.length < this.capacity ? this.frames.slice() :
+  report(range?: DiagnosticRecordingRange) {
+    if (range && (![range.afterFrameId, range.throughFrameId, range.afterInteractionId, range.throughInteractionId]
+      .every(v => Number.isSafeInteger(v) && v >= 0) ||
+      range.throughFrameId < range.afterFrameId || range.throughInteractionId < range.afterInteractionId))
+      throw Error('Invalid diagnostic recording range');
+    const retained = this.frames.length < this.capacity ? this.frames.slice() :
       this.frames.slice(this.cursor).concat(this.frames.slice(0, this.cursor));
+    let firstRender = true;
+    const frames = range ? retained.filter(f => f.id > range.afterFrameId && f.id <= range.throughFrameId).map((f, i) => {
+      const first = f.rendered && firstRender;
+      if (f.rendered) firstRender = false;
+      // Boundary intervals include work before this window, so exclude them without altering the session.
+      return { ...f, rafIntervalMs: i === 0 ? null : f.rafIntervalMs, renderIntervalMs: first ? null : f.renderIntervalMs };
+    }) : retained;
     const distribution = (values: number[]) => {
       if (!values.length) return null;
       values.sort((a, b) => a - b);
@@ -165,8 +180,9 @@ class MeridianDiagnosticRecorder {
     }
     for (const pass of ['thumbnails', 'shadow', 'scene', 'bloom', 'post'] as const)
       gpu[pass] = distribution(frames.flatMap(f => f.gpuMs[pass] === undefined ? [] : [f.gpuMs[pass]!]));
-    const events = this.interactions.length < this.interactionCapacity ? this.interactions.slice() :
+    const retainedEvents = this.interactions.length < this.interactionCapacity ? this.interactions.slice() :
       this.interactions.slice(this.interactionCursor).concat(this.interactions.slice(0, this.interactionCursor));
+    const events = range ? retainedEvents.filter(e => e.id > range.afterInteractionId && e.id <= range.throughInteractionId) : retainedEvents;
     const interactionSummary: Partial<Record<DiagnosticInteractionKind, {
       durationMs: ReturnType<typeof distribution>; failed: number;
       cpuDetails: Partial<Record<DiagnosticCpuDetail, { ms: ReturnType<typeof distribution>; calls: ReturnType<typeof distribution> }>>;

@@ -50,6 +50,28 @@ test('browser harness owns isolated scratch and restores the caller after succes
   });
 });
 
+test('browser harness supports explicit display/native-GL selection without relaxing security and rejects unknown options', async () => {
+  const { withBrowser } = await import('../scripts/browser/harness.mjs');
+  await fixture(async (directory) => {
+    await withBrowser(directory, async () => {}, {
+      executablePath: '/fixture/chromium',
+      headless: false,
+      angle: 'gl',
+      launch: async (options) => {
+        assert.equal(options.headless, false);
+        assert.equal(options.chromiumSandbox, true);
+        assert.deepEqual(options.args, ['--use-gl=angle', '--use-angle=gl']);
+        return { close: async () => {} };
+      },
+    });
+    for (const options of [{ angle: 'unsupported' }, { headless: 'false' }])
+      await assert.rejects(
+        withBrowser(directory, async () => {}, options),
+        /Invalid browser/,
+      );
+  });
+});
+
 for (const mode of ['failure', 'timeout', 'launch'])
   test(`browser harness releases its scratch after ${mode}`, async () => {
     const { withBrowser } = await import('../scripts/browser/harness.mjs');

@@ -78,6 +78,8 @@ Fehlende/disjoint GPU-Werte sind keine Nullkosten. CPU-Zeiten sind keine Auslast
 
 Chromium bleibt vorerst die Basis für CPU-/GPU-Vergleiche. Die Diagnose verwendet `EXT_disjoint_timer_query_webgl2`; fehlende Unterstützung, insbesondere im bisherigen Firefox-Pfad, liefert keine GPU-Zeiten. Browser-/Treiberverfügbarkeit im Bericht prüfen, nicht aus der Browserwahl allein ableiten. Keine gelockerten Browsersicherheitsregeln oder privilegierten Firefox-Erweiterungen für reguläre Messungen voraussetzen.
 
+Für reproduzierbare arrangierte Szenen übernimmt der [Chromium-Diagnose-Runner](diagnostic-capture.md) begrenzte Echtzeitfenster und JSON-Ausgabe auf Basis der Capture-Rezepte. Er trennt Laden/Warmup/Nachlauf von Messframes und berechnet die bestehenden Recorder-Summaries für explizite Frame-/Interaktions-ID-Grenzen neu, ohne Sitzungsdaten zu verändern. Kein Browserclock-Mocking oder automatischer CI-/Langlauf; Software-/unbekannte Grafikbackends werden gekennzeichnet und können als Voraussetzung abgewiesen werden.
+
 Vergleichskontext, Erfolgskriterien und offene Messfragen stehen zentral unter [Performance](issues/performance/README.md#messplan-und-erfolgskriterien).
 
 ## Manuelle Probeläufe

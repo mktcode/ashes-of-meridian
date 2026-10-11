@@ -1,0 +1,34 @@
+{
+  "scene": {
+    "map": "desert",
+    "seed": 1409,
+    "faction": 0,
+    "enemy": 1,
+    "width": 960,
+    "height": 720,
+    "reveal": false,
+    "camera": { "anchor": "player", "x": 0, "z": 8, "zoom": 36, "yaw": 0 }
+  },
+  "army": {
+    "type": "rifle",
+    "count": 144,
+    "columns": 12,
+    "spacing": 1.45,
+    "anchor": "player",
+    "x": 0,
+    "z": 8
+  },
+  "warmupMs": 1000,
+  "durationMs": 5000,
+  "cases": [
+    { "name": "day-paused", "hour": 10, "paused": true },
+    { "name": "day-running", "hour": 10, "paused": false },
+    { "name": "night-paused", "hour": 22, "paused": true },
+    { "name": "night-running", "hour": 22, "paused": false }
+  ],
+  "interactions": [
+    { "at": 0.1, "kind": "selectArmy" },
+    { "at": 0.3, "kind": "moveArmy", "target": { "anchor": "player", "x": 4, "z": 8 } },
+    { "at": 0.6, "kind": "selectArmy" }
+  ]
+}
