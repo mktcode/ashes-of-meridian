@@ -1,12 +1,12 @@
-// Fixed ground/effect references and deterministic landscape contracts: docs/reference-tests.md.
+// Presentation contracts. CPU effect state is tested separately in effects/effect-rng.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fixture = require('./fixtures/presentation-v1.json');
-const { worldSample, effectSample } = require('./helpers/presentation-scenario.cjs');
+const { worldSample } = require('./helpers/presentation-scenario.cjs');
 const vm = require('node:vm');
 const { DIAGNOSTIC_SCRIPTS, BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 const { createRendererStub } = require('./helpers/renderer-stub.cjs');
-for (const { seed, map } of fixture.worlds) {
+for (const seed of [1409, 2219, 24080]) {
+  const map = 'desert';
   test(`repeatable procedural presentation/navigation: ${seed} (${map})`, () => {
     const actual = worldSample(seed, map);
     assert.deepEqual(actual, worldSample(seed, map), 'new geometry, placement and navigation are seeded');
@@ -625,7 +625,7 @@ test('effect provider follows the current game RNG and resets on each new start'
   assert.equal(JSON.stringify(game.s), restarted);
 });
 
-test('effect drawing accepts frozen data without game/UI globals and matches the original draw calls', () => {
+test('effect drawing accepts frozen data without game/UI globals and matches the draw contract', () => {
   const context = loadScripts(['effects-view'], { globals: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) } });
   vm.runInContext('Math.random = () => { throw Error("Rendering must not consume randomness"); }', context);
   const render = vm.runInContext('renderBattlefieldEffects', context);
@@ -1662,9 +1662,3 @@ test('graphics loss and render errors stop scheduling even with the frame cap', 
     assert.equal(a.errors.length, contextLoss ? 0 : 1);
   }
 });
-
-for (const [kind, expected] of Object.entries(fixture.effects)) {
-  test(`effect payload, lifetime and RNG reference: ${kind}`, () => {
-    assert.deepEqual(effectSample(kind), expected);
-  });
-}

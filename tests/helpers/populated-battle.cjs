@@ -1,5 +1,5 @@
 // Explicit developed simulation bases, never a runtime starting loadout.
-// Requires established, otherwise empty HQs. Historical effects use presentation-base.cjs.
+// Requires established, otherwise empty HQs; not a deployment fixture.
 function populateDevelopedParty(game, team, workers, buildingTypes, unitTypes, economy) {
   const party = game.party(team), homes = game.alive(e => e.team === team && e.kind === 'building' && e.type === 'hq' && e.progress >= 1);
   if (party.deploymentPending || homes.length !== 1 || game.alive(e => e.team === team && e.type !== 'hq').length)
