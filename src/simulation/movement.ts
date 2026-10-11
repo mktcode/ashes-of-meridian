@@ -134,15 +134,19 @@
           (!(UNITS[e.type] as UnitDefinitionShape).flying && this.world!.blockedAt(x, z))) return;
         for (const other of this.s!.entities) {
           if (other === e || other.hp <= 0 || other.kind !== 'unit' || other.team !== e.team || other.exit ||
-            other.yieldTo || other.yieldUntil! > this.s!.time || !['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
+            other.yieldTo || other.yieldUntil! > this.s!.time) continue;
+          const dx = other.x - x, dz = other.z - z, min = (e.size + other.size) * UNIT_BODY_SCALE;
+          // Cheap conservative rejection before order/priority work. Retain the live,
+          // ordered scan and the exact hypot predicate, including tangencies below.
+          if (Math.abs(dx) > min + 1e-9 || Math.abs(dz) > min + 1e-9) continue;
+          if (!['idle', 'mine', 'move', 'attackMove', 'follow'].includes(other.order.type) ||
             !!(UNITS[other.type] as UnitDefinitionShape).flying !== !!(UNITS[e.type] as UnitDefinitionShape).flying) continue;
           // Loaded workers get out first. Otherwise a stable ID priority prevents mutual pushing.
           const loaded = priority.type === 'worker' && (priority.returning || priority.carry >= 18),
             otherLoaded = other.type === 'worker' && (other.returning || other.carry >= 18);
           if (nextChain.includes(other.id) ||
             (other.order.type !== 'idle' && (loaded !== otherLoaded ? !loaded : priority.id > other.id))) continue;
-          const dx = other.x - x, dz = other.z - z, d = Math.hypot(dx, dz),
-            min = (e.size + other.size) * UNIT_BODY_SCALE;
+          const d = Math.hypot(dx, dz);
           if (d >= min || d < 1e-9) continue;
           // Clear the whole lane in one lateral manoeuvre, not a series of tiny pushes.
           const lateral = dx * side!.x + dz * side!.z, forward = dx * side!.z - dz * side!.x;
