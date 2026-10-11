@@ -196,7 +196,7 @@
         const s = this.game.s, expedition = this.expedition,
           world = expedition?.worlds?.find(w => w.stage === this.activeWorldStage), recipe = world?.recipe ?? expedition;
         if (this.battleSaveError || this.view !== 'game' || !s || s.result || !expedition || !recipe || s.rules.kind !== 'single-player') return true;
-        if (this.activeWorldStage !== null && (!world || world.error)) return false;
+        if (this.activeWorldStage !== null && (!world || world.retired || world.error)) return false;
         if (s.map !== recipe.encounter.map || s.seed !== recipe.encounter.seed || s.depth !== recipe.depth)
           return !world;
         if (!!s.rules.completed !== !!world) return false;
@@ -232,7 +232,12 @@
       finishOutpost(): boolean {
         const state=this.game.s,expedition=this.expedition,stage=this.activeWorldStage;
         if(this.launchingBattle || this.leavingBattle || this.view!=='game' || stage===null || !state?.outpost?.finished || !expedition || this.game.stepping || !this.game.snapshotSafe)return false;
+        const world=expedition.worlds?.find(w=>w.stage===stage);
+        if(!world || world.retired)return false;
+        // Preserve the final, safe-tick scene, including units removed by boarding.
+        const battle=this.game.snapshotBattle();
         if(!retireExpeditionOutpost(expedition,stage,state))return false;
+        world.battle=battle;
         this.persistence.saveProgress(this.profile,expedition);
         this.notifyStorageFailure();
         this.rememberStage();

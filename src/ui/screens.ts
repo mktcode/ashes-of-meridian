@@ -82,6 +82,7 @@
         if (!entry || entry.stage === (this.expedition?.depth ?? -1) + 1) return this.continueExpedition();
         const world = this.expedition?.worlds?.find(w => w.stage === entry.stage);
         if (!world) { this.toast('Only the landscape was saved for this stage. This world cannot be entered.'); return; }
+        if (world.retired) { this.toast('This outpost is permanently closed. Its archived scene can still be viewed.'); return; }
         if (world.error || !world.battle || !world.recipe) {
           this.openModal('worldSaveError', `<div class="eyebrow">WORLD SAVE UNAVAILABLE</div><h1>Cannot enter this world.</h1><p>${esc(world.error)}</p><p>Your current expedition is kept.</p><div class="launch-row"><button class="secondary" data-ui="closeModal">${uiSkin()}KEEP SAVE</button><button class="primary" data-ui="discardWorldSave" data-stage="${world.stage}">${uiSkin()}DISCARD WORLD</button></div>`);
           return;
@@ -105,7 +106,7 @@
       },
       finishContinueBuilding(this: MeridianUI) {
         if (!this.expedition || this.launchingBattle || this.leavingBattle) return;
-        const world = this.expedition.worlds?.filter(w => !w.error && w.recipe && w.battle)
+        const world = this.expedition.worlds?.filter(w => !w.retired && !w.error && w.recipe && w.battle)
           .sort((a, b) => b.stage - a.stage)[0];
         if (!world) { this.toast('No playable cleared world remains. Start a new expedition to continue.'); return; }
         const state = this.game.s;
@@ -169,12 +170,12 @@
         panel.querySelector('.stage-map')!.textContent = BATTLEFIELDS[entry.map].name;
         const world = this.expedition.worlds?.find(w => w.stage === entry.stage);
         panel.querySelector('.stage-status')!.textContent = this.stagePreviewBusy ? 'PREPARING WORLD…' :
-          archived ? world?.error ? 'WORLD SAVE UNAVAILABLE' : world ? 'CLEARED · WORLD SAVED' : 'LANDSCAPE ONLY · NO WORLD SAVE' : 'CURRENT CHECKPOINT';
+          archived ? world?.retired ? `${world.retired === 'evacuated' ? 'EVACUATED' : 'OUTPOST LOST'} · VIEW ONLY` : world?.error ? 'WORLD SAVE UNAVAILABLE' : world ? 'CLEARED · WORLD SAVED' : 'LANDSCAPE ONLY · NO WORLD SAVE' : 'CURRENT CHECKPOINT';
         const button = $('menu').querySelector<HTMLButtonElement>('[data-ui="enterSelectedStage"]');
         if (button) {
-          button.innerHTML = `${uiSkin()}${archived ? 'Enter world' : 'Continue expedition'} <span aria-hidden="true">→</span>`;
-          button.title = archived ? `Enter stage ${entry.stage}` : `Continue at stage ${entry.stage}`;
-          button.disabled = this.stagePreviewBusy || this.launchingBattle || (archived && !world);
+          button.innerHTML = `${uiSkin()}${world?.retired ? 'World closed' : archived ? 'Enter world' : 'Continue expedition'} <span aria-hidden="true">→</span>`;
+          button.title = world?.retired ? 'Archived scene only; this outpost cannot be entered' : archived ? `Enter stage ${entry.stage}` : `Continue at stage ${entry.stage}`;
+          button.disabled = this.stagePreviewBusy || this.launchingBattle || (archived && (!world || !!world.retired));
         }
         panel.querySelector<HTMLButtonElement>('[data-ui="previousStage"]')!.disabled = this.stagePreviewBusy || this.launchingBattle || this.stagePreviewIndex === 0;
         panel.querySelector<HTMLButtonElement>('[data-ui="nextStage"]')!.disabled = this.stagePreviewBusy || this.launchingBattle || this.stagePreviewIndex === this.stageHistory.length - 1;
@@ -284,7 +285,7 @@
       },
       async startExpeditionBattle(this: MeridianUI, world?: ExpeditionWorld) {
         if (!this.expedition || this.launchingBattle || this.leavingBattle) return;
-        if (world && (!this.expedition.worlds?.includes(world) || world.error || !world.recipe || !world.battle)) return;
+        if (world && (!this.expedition.worlds?.includes(world) || world.retired || world.error || !world.recipe || !world.battle)) return;
         if (this.battleSaveError) return this.showBattleSaveError();
         if (this.view === 'game' && this.game.s && !this.game.s.result) return this.showPause();
         if (!world && !this.expedition.battle) {
@@ -363,7 +364,7 @@
         this.saveBattle();
         this.openModal(
           'pause',
-          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">${uiSkin()}RESUME OPERATION <span>↗</span></button>${this.activeWorldStage !== null && s.outpost && !s.outpost.finished ? `<button class="secondary" data-ui="outpostGuide">${uiSkin()}OUTPOST GUIDE</button>` : ''}<button class="secondary" data-ui="settings">${uiSkin()}${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">${uiSkin()}MAIN MENU</button>${this.activeWorldStage === null ? `<button class="secondary" data-ui="abandon">${uiSkin()}ABANDON EXPEDITION</button>` : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This outpost is saved separately. Waves and evacuation advance only while it is active and unpaused. Main menu leaves it intact; evacuation permanently removes it. Secure units and up to three building upgrades before leaving for good.`} A hard interruption may return to the last successful autosave.</p>`
+          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">${uiSkin()}RESUME OPERATION <span>↗</span></button>${this.activeWorldStage !== null && s.outpost && !s.outpost.finished ? `<button class="secondary" data-ui="outpostGuide">${uiSkin()}OUTPOST GUIDE</button>` : ''}<button class="secondary" data-ui="settings">${uiSkin()}${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">${uiSkin()}MAIN MENU</button>${this.activeWorldStage === null ? `<button class="secondary" data-ui="abandon">${uiSkin()}ABANDON EXPEDITION</button>` : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This outpost is saved separately. Waves and evacuation advance only while it is active and unpaused. Main menu leaves it intact; evacuation permanently closes it, preserving its scene in the archive. Secure units and up to three building upgrades before leaving for good.`} A hard interruption may return to the last successful autosave.</p>`
         );
       },
       resume(this: MeridianUI) {

@@ -6,7 +6,7 @@ const {loadScripts,SIMULATION_SCRIPTS,UI_SCRIPTS}=require('./helpers/game-script
 const copy=v=>JSON.parse(JSON.stringify(v));
 function fixture(completed=true) {
   const nodes=new Map(),document={getElementById(id){if(!nodes.has(id)){const classes=new Set();nodes.set(id,{innerHTML:'',textContent:'',style:{},classList:{add(...v){v.forEach(x=>classes.add(x));},remove(...v){v.forEach(x=>classes.delete(x));},contains:v=>classes.has(v),toggle(v,on){on?classes.add(v):classes.delete(v);}},setAttribute(){},querySelectorAll(){return [];}});}return nodes.get(id);}};
-  const context=loadScripts(['core','content','world','expedition','effects','persistence',...SIMULATION_SCRIPTS,...UI_SCRIPTS],{globals:{document,innerWidth:400,innerHeight:800,performance:{now:()=>0}}});
+  const context=loadScripts(['core','content','world','expedition','effects','persistence',...SIMULATION_SCRIPTS,...UI_SCRIPTS],{globals:{document,innerWidth:400,innerHeight:800,performance:{now:()=>0},matchMedia:()=>({matches:true}),BATTLEFIELDS:{desert:{name:'Desert'}}}});
   const rules=vm.runInContext('({MeridianGame,MeridianUI,createParty,createOutpostState,retireExpeditionOutpost,expeditionCivilizationUpgrades,validExpeditionBattle,createMeridianPersistence,clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:{desert:{}},missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
   const g=new rules.MeridianGame({version:2,expeditionDepth:1}),events=[];g.emit=(...event)=>events.push(event);
   g.s={depth:0,seed:1409,map:'desert',time:0,parties:[rules.createParty(0,0,{},{}),rules.createParty(1,2,{},{})],
@@ -25,7 +25,7 @@ function fixture(completed=true) {
     if(!b.upgradeOffers.includes(key))b.upgradeOffers=[key,...b.upgradeOffers.filter(x=>x!==key).slice(0,2)];
     b.upgrade=key;b.upgradeLevel=rank;return b;
   }
-  return {g,hq,rules,run,recipe,save,building,events,nodes,service,data};
+  return {g,hq,rules,run,recipe,save,building,events,nodes,service,data,document};
 }
 
 test('cleared outposts warn, vary entrances and grow successive waves without reviving eliminated AI',()=>{
@@ -62,18 +62,21 @@ test('three building ranks can be secured, replaced and survive destruction; ret
   for(const e of [a,b,c])assert.equal(g.evacuateUpgrade(e.id),true);
   assert.equal(g.evacuateUpgrade(d.id),false);assert.equal(g.evacuateUpgrade(b.id),true);assert.equal(g.evacuateUpgrade(d.id),true);
   a.hp=0;hq.hp=0;g.updateOutpost();assert.equal(g.s.outpost.finished,true);
-  assert.equal(rules.retireExpeditionOutpost(run,1,g.s),true);assert.equal(run.worlds.length,0);
+  run.worlds[0].battle=h.save();
+  assert.equal(rules.retireExpeditionOutpost(run,1,g.s),true);assert.equal(run.worlds.length,1);
+  assert.equal(run.worlds[0].retired,'evacuated');
   assert.equal(rules.retireExpeditionOutpost(run,1,g.s),false);
   assert.deepEqual(copy(run.rescuedUpgrades),{upgrades:{repairLogistics:1},benefits:{startingAlloy:3,aetherAllocation:1}});
   assert.deepEqual(copy(rules.expeditionCivilizationUpgrades(run)),copy(run.rescuedUpgrades));
   assert.equal(h.service.saveProgress({version:2},run),true);assert.deepEqual(copy(h.service.loadExpedition()),copy(run));
-  assert.deepEqual(copy(h.service.loadStageHistory(run)).map(e=>e.stage),[2]);
+  assert.deepEqual(copy(h.service.loadStageHistory(run)).map(e=>e.stage),[1,2]);
 });
 
-test('loss without evacuation removes only the outpost, not the expedition or another world',()=>{
+test('loss without evacuation closes only the outpost, preserving its scene and another world',()=>{
   const {g,hq,rules,run}=fixture();run.worlds.push({...copy(run.worlds[0]),stage:2});
   hq.hp=0;g.updateOutpost();assert.equal(g.s.outpost.finished,true);
-  assert.equal(rules.retireExpeditionOutpost(run,1,g.s),true);assert.deepEqual(run.worlds.map(w=>w.stage),[2]);
+  assert.equal(rules.retireExpeditionOutpost(run,1,g.s),true);assert.deepEqual(run.worlds.map(w=>w.stage),[1,2]);
+  assert.equal(run.worlds[0].retired,'lost');assert.equal(run.worlds[1].retired,undefined);
   assert.deepEqual(copy(run.rescuedArmy),[]);assert.equal(run.depth,1);
 });
 
@@ -104,11 +107,20 @@ test('saved reinforcements retry bounded placement, retain hull and experience a
 });
 
 test('finished outposts save their rescue before launching the highest battle and wait for in-flight transitions',()=>{
-  const {g,hq,rules,run,service,nodes}=fixture();g.startEvacuation(hq.id);g.s.time=60;g.updateOutpost();
+  const {g,hq,rules,run,service,nodes}=fixture();g.startEvacuation(hq.id);
+  const boarded=g.spawnUnit('rifle',hq.size+3,0,0,0),remaining=g.spawnUnit('worker',-hq.size-3,0,0,0);
+  g.orderEvacuation([boarded],hq,0);g.updateOutpost();g.s.time=60;g.updateOutpost();
   const calls=[],ui=Object.assign(Object.create(rules.MeridianUI.prototype),{game:g,view:'game',activeWorldStage:1,expedition:run,
     profile:{version:2},persistence:service,selected:[],launchingBattle:true,leavingBattle:false,
     notifyStorageFailure(){},rememberStage(){},toast(){},startExpeditionBattle(){
-      calls.push('launch');assert.equal(service.loadExpedition().worlds.length,0,'retirement is durable before launch');
+      calls.push('launch');
+      const world=service.loadExpedition().worlds[0];
+      assert.equal(world.retired,'evacuated','retirement is durable before launch');
+      assert.equal(world.battle.state.time,60,'final scene is preserved, not the older autosave');
+      assert.equal(world.battle.state.outpost.finished,true);
+      assert.equal(world.battle.state.entities.some(e=>e.id===boarded.id),false,'boarded units leave the scene');
+      assert.equal(world.battle.state.entities.some(e=>e.id===remaining.id),true,'unrescued units remain scenery');
+      assert.equal(service.loadExpedition().rescuedArmy.length,1);
     }});
   assert.equal(ui.finishOutpost(),false);assert.equal(run.worlds.length,1);
   ui.launchingBattle=false;assert.equal(ui.finishOutpost(),true);assert.equal(ui.activeWorldStage,null);assert.equal(g.s,null);
@@ -135,6 +147,47 @@ test('the start event consumes queued rescue once, persists blocked arrivals and
   ui.event('start',{});assert.equal(g.s.reinforcements.units.length,1,'no duplicate on start retry');
   run.rescuedArmy=[saved];ui.launchingWorld={stage:1};ui.showPause=()=>{};ui.event('start',{restored:true});
   assert.equal(run.rescuedArmy.length,1,'a world visit is not the destination');
+});
+
+test('retired scenes remain previewable but cannot be entered or contribute live or saved bonuses',async()=>{
+  const {g,hq,rules,run,building,save,service,document}=fixture();
+  building('startingAlloy',3);hq.hp=0;g.updateOutpost();run.worlds[0].battle=save();
+  const scene=run.worlds[0].battle;
+  assert.equal(rules.retireExpeditionOutpost(run,1,g.s),true);
+  assert.equal(run.worlds[0].battle,scene);
+  assert.deepEqual(copy(rules.expeditionCivilizationUpgrades(run,g.s,1)),{upgrades:{},benefits:{}});
+  service.saveProgress({version:2},run);
+  const loaded=service.loadExpedition();assert.equal(loaded.worlds[0].retired,'lost');
+  assert.deepEqual(copy(loaded.worlds[0].battle),copy(scene));
+  const ui=Object.assign(Object.create(rules.MeridianUI.prototype),{expedition:loaded,view:'home',modalKind:'',
+    stageHistory:service.loadStageHistory(loaded),stagePreviewIndex:0,stagePreviewBusy:false,launchingBattle:false,
+    toast(){},onLaunchBattle(){throw Error('retired world must not launch');}});
+  assert.deepEqual(copy(ui.stageBattle(1)),copy(scene));
+  ui.enterSelectedStage();await ui.startExpeditionBattle(loaded.worlds[0]);
+  const parts=new Map(),panel={classList:{toggle(){}},setAttribute(){},querySelector(s){if(!parts.has(s))parts.set(s,{});return parts.get(s);}},button={};
+  document.getElementById('menu').querySelector=s=>s==='.expedition-stage'?panel:button;
+  ui.updateStagePreview();
+  assert.equal(button.disabled,true);
+  assert.equal(parts.get('.stage-status').textContent,'OUTPOST LOST · VIEW ONLY');
+  assert.equal(parts.get('[data-ui="nextStage"]').disabled,false,'archive browsing stays available');
+  loaded.worlds[0].retired='evacuated';ui.updateStagePreview();
+  assert.equal(parts.get('.stage-status').textContent,'EVACUATED · VIEW ONLY');
+  const previews=[];ui.onPreview=async(map,seed,smooth,battle)=>{previews.push({map,seed,battle});return true;};
+  await ui.browseStage(1);assert.equal(ui.stagePreviewIndex,1);
+  await ui.browseStage(-1);assert.equal(ui.stagePreviewIndex,0);
+  assert.deepEqual(copy(previews[1]),{map:'desert',seed:1409,battle:copy(scene)});
+  ui.finishContinueBuilding();assert.equal(ui.activeWorldStage,undefined,'continue building excludes retired scenes');
+});
+
+test('retirement survives reload without duplicate rescue and rejects unknown archive markers',()=>{
+  const {g,hq,rules,run,save,service,data}=fixture();g.startEvacuation(hq.id);
+  g.s.outpost.evacuation.units.push({type:'rifle',hp:1,shield:0,kills:2});
+  g.s.time=60;g.updateOutpost();run.worlds[0].battle=save();
+  assert.equal(rules.retireExpeditionOutpost(run,1,g.s),true);service.saveProgress({version:2},run);
+  const loaded=service.loadExpedition();
+  assert.equal(rules.retireExpeditionOutpost(loaded,1,g.s),false);assert.equal(loaded.rescuedArmy.length,1);
+  const record=JSON.parse(data.get('meridian.profile.v2'));record.expedition.worlds[0].retired='invalid';
+  data.set('meridian.profile.v2',JSON.stringify(record));assert.equal(service.loadExpedition(),null);
 });
 
 test('HUD highlights evacuation, reports rescued ranks and clears the effect outside the outpost',()=>{

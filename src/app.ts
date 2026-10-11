@@ -350,7 +350,7 @@
             });
           }
           catch (e) { clearBattleTransition(); if (id === worldRequest) textureFailure(e); return false; }
-          if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' : expedition !== ui.expedition)) {
+          if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || !!world.retired || ui.view !== 'home' : expedition !== ui.expedition)) {
             clearBattleTransition();
             if (id === worldRequest && !failed) $('loading').classList.add('hidden');
             return false;
@@ -358,7 +358,7 @@
           if (!ready) { clearBattleTransition(); textureFailure(Error('Required battlefield textures are unavailable')); return false; }
           try {
             await loadingStep(60, expedition.battle ? 'Restoring battlefield' : 'Generating battlefield');
-            if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' :
+            if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || !!world.retired || ui.view !== 'home' :
               expedition !== ui.expedition)) { clearBattleTransition(); return false; }
             if (expedition.battle) game.restoreBattle(expedition, !!world, world ? undefined : ui.expeditionUpgrades());
             else game.start(options);

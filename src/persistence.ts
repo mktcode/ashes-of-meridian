@@ -363,19 +363,23 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
           if (!w || !Number.isInteger(w.stage) || w.stage < 1 || w.stage > normalized.depth || stages.has(w.stage) ||
               !Object.hasOwn(battlefields, w.map) || !Number.isInteger(w.seed) || w.seed < 1 || w.seed > 99999999)
             throw Error('Invalid archived world identity');
+          if (w.retired !== undefined && !['evacuated', 'lost'].includes(w.retired))
+            throw Error('Invalid archived world retirement');
           stages.add(w.stage);
           try {
             const recipe = readRecipe(w.recipe), battle = w.battle?.encoding === 'lzw-v1'
               ? JSON.parse(unpackWorldText(w.battle.data)) : w.battle;
             if (recipe.depth + 1 !== w.stage || recipe.encounter.map !== w.map || recipe.encounter.seed !== w.seed ||
-                !validExpeditionBattle(battle, recipe, deps, true) || battle.tutorial !== null)
+                !validExpeditionBattle(battle, recipe, deps, true) || battle.tutorial !== null ||
+                (w.retired !== undefined && (!battle.state.outpost?.finished ||
+                  (w.retired === 'evacuated') !== !!battle.state.outpost.evacuation)))
               throw Error('Invalid completed world snapshot');
             packedWorlds.set(battle, w.battle);
-            return { stage: w.stage, map: w.map, seed: w.seed, recipe, battle };
+            return { stage: w.stage, map: w.map, seed: w.seed, recipe, battle, ...(w.retired ? { retired: w.retired } : {}) };
           } catch (e) {
             warn('Archived world could not be restored:', e);
             damagedWorlds.set(w.stage, w);
-            return { stage: w.stage, map: w.map, seed: w.seed, recipe: null, battle: null,
+            return { stage: w.stage, map: w.map, seed: w.seed, recipe: null, battle: null, ...(w.retired ? { retired: w.retired } : {}),
               error: 'This world save is damaged or incompatible. It cannot be entered or restarted.' };
           }
         });
@@ -415,7 +419,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
           if (JSON.stringify(packed).length >= text.length) packed = w.battle;
           packedWorlds.set(w.battle, packed);
         }
-        return { stage: w.stage, map: w.map, seed: w.seed, recipe: w.recipe, battle: packed };
+        return { stage: w.stage, map: w.map, seed: w.seed, recipe: w.recipe, battle: packed, ...(w.retired ? { retired: w.retired } : {}) };
       }) } : {}) } : null;
     } catch (e) {
       Store.available = false;

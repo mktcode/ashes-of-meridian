@@ -273,6 +273,8 @@ interface ExpeditionWorld {
   recipe: ExpeditionBattleRecipe | null;
   battle: ExpeditionBattleSave | null;
   error?: string;
+  /** Frozen scene only; cannot be entered or contribute civilian bonuses. */
+  retired?: 'evacuated' | 'lost';
 }
 
 interface MeridianExpedition extends ExpeditionBattleRecipe {

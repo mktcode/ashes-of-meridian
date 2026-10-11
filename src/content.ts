@@ -279,7 +279,7 @@ const BUILDINGS = {
     size: 4.4,
     time: 45,
     cap: 24,
-    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver Cinder here; it provides no passive resources. In a cleared outpost, select it to start irreversible evacuation: rescue units and up to three civilian building upgrades before the stage is permanently abandoned.'
+    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver Cinder here; it provides no passive resources. In a cleared outpost, select it to start irreversible evacuation: rescue units and up to three civilian building upgrades before the stage becomes a permanently inaccessible archive scene.'
   },
   barracks: {
     cost: 145,
@@ -751,7 +751,7 @@ function expeditionCivilizationUpgrades(expedition: MeridianExpedition, live: Ru
     upgrades: {...expedition.rescuedUpgrades?.upgrades}, benefits: {...expedition.rescuedUpgrades?.benefits}
   };
   for (const world of expedition.worlds || []) {
-    if (world.error || !world.recipe || !world.battle) continue;
+    if (world.retired || world.error || !world.recipe || !world.battle) continue;
     const recipe = world.recipe, active = activeStage === world.stage && live?.rules.kind === 'single-player' && live.rules.completed &&
       live.depth === recipe.depth && live.map === recipe.encounter.map && live.seed === recipe.encounter.seed ? live : null;
     const contribution = civilizationUpgradesForBuildings(active ? active.entities : world.battle.state.entities);

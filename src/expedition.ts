@@ -62,10 +62,10 @@ function createExpeditionResultProcessor() {
     return { expedition: win ? expedition : null, factionUnlocked };
   };
 }
-// One-way archive retirement. Presence of the stage makes this idempotent across UI retries.
+// One-way archive retirement. The marker prevents repeated rescue across UI retries.
 function retireExpeditionOutpost(expedition: MeridianExpedition, stage: number, state: RunState): boolean {
   const world=expedition.worlds?.find(w=>w.stage===stage),out=state.outpost;
-  if(!world?.recipe || !out?.finished || state.rules.kind!=='single-player' || !state.rules.completed ||
+  if(!world?.recipe || world.retired || !out?.finished || state.rules.kind!=='single-player' || !state.rules.completed ||
     state.depth+1!==stage || world.map!==state.map || world.seed!==state.seed)return false;
   const rescued=expedition.rescuedUpgrades ??= {upgrades:{},benefits:{}};
   for(const saved of out.evacuation?.upgrades || []) {
@@ -75,6 +75,6 @@ function retireExpeditionOutpost(expedition: MeridianExpedition, stage: number, 
     group[saved.upgrade]=Math.min(max,(group[saved.upgrade] || 0)+saved.level);
   }
   (expedition.rescuedArmy ??= []).push(...out.evacuation?.units || []);
-  expedition.worlds=expedition.worlds!.filter(w=>w!==world);
+  world.retired=out.evacuation?'evacuated':'lost';
   return true;
 }
