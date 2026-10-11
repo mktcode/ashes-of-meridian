@@ -55,7 +55,7 @@ function dynamicTerrainPlan(world: Battlefield) {
       width: 12 + morphology() * 12, depth: 12 + morphology() * 12, phase: morphology() * Math.PI * 2 },
     ridge = { offset: (morphology() - .5) * extent, width: 28 + morphology() * 20, height: 12 + morphology() * 12 },
     macroRandom = seeded(world.terrainSeed ^ 0x504c4154),
-    massifs = Array.from({ length: form === 'massifs' ? 3 : 4 }, () => ({
+    plateaus = Array.from({ length: 4 }, () => ({
       x: (macroRandom() - .5) * extent * 1.45, z: (macroRandom() - .5) * extent * 1.45,
       rx: 34 + macroRandom() * 25, rz: 30 + macroRandom() * 24,
       height: 22 + macroRandom() * 12, phase: macroRandom() * Math.PI * 2
@@ -80,14 +80,13 @@ function dynamicTerrainPlan(world: Battlefield) {
         const d = (v - ridge.offset - 12 * Math.sin(u / 85 + phase)) / ridge.width;
         h += ridge.height * Math.exp(-d * d);
       }
-      if (!industrial && (form === 'terraces' || form === 'massifs')) {
-        // Broad quiet shelves versus isolated rock masses on a quiet plain.
-        // Elliptical, warped outlines avoid both circular mesas and grid terraces.
+      if (!industrial && form === 'terraces') {
+        // Native terrace recipes retain broad quiet shelves with warped outlines.
         let macro = 0;
-        for (const m of massifs) {
+        for (const m of plateaus) {
           const dx = (x - m.x) / m.rx, dz = (z - m.z) / m.rz,
             theta = Math.atan2(dz, dx), d = Math.hypot(dx, dz) + .08 * Math.sin(theta * 3 + m.phase),
-            relief = form === 'terraces' ? 1 - smooth((d - .72) / .38) : Math.exp(-Math.pow(d, 4) * 2);
+            relief = 1 - smooth((d - .72) / .38);
           macro = Math.max(macro, m.height * relief);
         }
         return grade + macro;

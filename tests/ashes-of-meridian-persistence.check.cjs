@@ -13,7 +13,7 @@ const catalogs = vm.runInContext('({units:UNITS,buildings:BUILDINGS,abilities:AB
 const upgrades = vm.runInContext('BATTLE_UPGRADES', content);
 const benefits = vm.runInContext('EXPEDITION_BENEFITS', content);
 const expedition = {
-  version: 11, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
+  version: 12, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
   benefits: { startingAlloy: 2, commanderMandate: 1 },
   enemyBenefits: [{ startingWorkers: 2, commandCapacitor: 1 }, { startingAlloy: 3 }, { aetherAllocation: 2 }],
   encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 }
@@ -76,7 +76,7 @@ let fixture;
 const savedBattle = () => json((fixture ??= runningSave()).run);
 
 test('terrain recipe changes block previous expedition versions without silently regenerating them', () => {
-  for (const version of [8,9,10]) {
+  for (const version of [8,9,10,11]) {
     const h = setup(), run = { ...json(expedition), version };
     put(h, run);
     const loaded = setup(h.data);

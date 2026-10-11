@@ -23,6 +23,7 @@ test('six catalog families resolve repeatable morphology, ecology and atmosphere
     assert.deepEqual(json(a),json(b));assert.equal(a.variation.id,id);assert.ok(a.atmosphere&&a.ecology);
     assert.equal(a.ecology.natural,family!=='ship');
     if(family==='alien')alien.add(a.variation.flora);
+    else assert.equal(a.variation.relief,api.worldVariationRecipe(family,seed).relief,'native recipe owns the relief');
     for(const color of [a.ecology.dry,a.ecology.lush,...Object.values(a.lighting)])assert.ok(color.every(Number.isFinite));
   }
   assert.equal(alien.size,8);assert.equal(JSON.stringify(api.BATTLEFIELDS),before);
@@ -54,9 +55,9 @@ test('Alien relief and habitat axes stay independent and shared landmark meshes 
     const v=api.battlefieldVariation(api.BATTLEFIELDS['alien-planet'].render,seed).variation;
     if(!combinations.has(v.id))combinations.set(v.id,new Set());combinations.get(v.id).add(v.relief);
   }
-  assert.ok([...combinations.values()].every(forms=>forms.size>=3), 'habitats are not locked to one landform');
+  assert.ok([...combinations.values()].every(forms=>forms.size===2), 'each habitat supports both native Alien landforms');
   const forms=new Set([...combinations.values()].flatMap(forms=>[...forms]));
-  assert.deepEqual([...forms].sort(),['broken-crater','massifs','ridges','terraces']);
+  assert.deepEqual([...forms].sort(),['broken-crater','ridges']);
   for(const model of ['variationAlienCoral','variationAlienFan','variationAlienSpire','variationAlienPod',
     'variationAlienArch','variationAlienReed','variationAlienShelf','variationAlienCactus','variationAlienPalm',
     'variationRadar','variationPylon','variationWreck','shipHangar','shipPlant']) {

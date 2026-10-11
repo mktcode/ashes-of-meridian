@@ -276,7 +276,7 @@
           this.toast('Select four command modules.'); return;
         }
         this.battleFaction = faction;
-        this.expedition = { version: 11, battle: null, worlds: [], faction, abilities: [...this.battleAbilities], depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter() };
+        this.expedition = { version: 12, battle: null, worlds: [], faction, abilities: [...this.battleAbilities], depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter() };
         this.persistence.saveProgress(this.profile, this.expedition);
         this.notifyStorageFailure();
         this.stageHistory = [];

@@ -44,10 +44,10 @@ test('a single-file notch does not count as a broad pass and is replaced by a us
   assert.ok(result.after[0] / result.after.reduce((a,b) => a+b,0) >= .94);
 });
 
-test('plateaus and open massifs have distinct morphology while rolling hills remain available', () => {
+test('native terrace recipes retain quiet high ground distinct from rolling hills', () => {
   const result = vm.runInContext(`(()=>{
     const world={extent:180,cellSize:2.5,terrainSeed:3,layout:{resourceSites:[],corridors:[]},renderProfile:{}},
-      forms=['rolling','terraces','massifs'];
+      forms=['rolling','terraces'];
     return forms.map(relief=>{
       world.renderProfile={variation:{family:'alpine',relief,heightScale:1}};
       const h=dynamicTerrainPlan(world).height;let quietHigh=0,sum=0;
@@ -59,10 +59,9 @@ test('plateaus and open massifs have distinct morphology while rolling hills rem
     });
   })()`, scope());
   assert.ok(result[1].quietHigh > 50, 'plateaus have substantial quiet high ground');
-  assert.ok(result[1].quietHigh > result[2].quietHigh, 'isolated masses do not reproduce the same wide shelves');
-  assert.equal(new Set(result.map(p => p.sum)).size, 3);
+  assert.equal(new Set(result.map(p => p.sum)).size, 2);
   const available = vm.runInContext(`Array.from({length:12},(_,i)=>battlefieldVariation(BATTLEFIELDS.westmark.render,i+1).variation.relief)`, scope());
-  for (const form of ['rolling','terraces','massifs']) assert.ok(available.includes(form));
+  for (const form of ['rolling','folds','basin','terraces']) assert.ok(available.includes(form));
 });
 
 for (const map of ['desert','alien-planet','mothership','westmark','frontier','haven']) {
