@@ -324,7 +324,7 @@ function drawVisibleEffectBeam(R: MeridianRenderer, a: number[], b: number[], wi
           renderInfantryShots(R, effects, world, s, localTeam);
           for (const e of s.entities) {
             if (e.kind !== 'unit' || e.type !== 'hero' || e.hp <= 0 || e.team === -1 ||
-              !(s.parties[e.team]?.benefits.commandDrill > 0) || !world.visible[world.idx(e.x,e.z)]) continue;
+              !(s.parties[e.team]?.benefits.commanderMandate > 1) || !world.visible[world.idx(e.x,e.z)]) continue;
             const color = e.team === localTeam ? 0x94e4d1 : 0xf2a490,
               alpha = .16 + (.5 + .5 * Math.sin(t * 1.7 + e.id)) * .05;
             ring(e.x, e.z, COMMAND_DRILL.radius, color, alpha, .11);

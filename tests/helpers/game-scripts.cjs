@@ -83,6 +83,7 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
 ]);
 const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-game',
+  'simulation-upgrades',
   'simulation-movement',
   'simulation-economy',
   'simulation-settlement',

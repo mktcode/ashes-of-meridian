@@ -138,9 +138,9 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const render = vm.runInContext('({renderHomeScreen, renderMissionBriefing, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderExpeditionUpgradeList})', context);
   const profile = Object.freeze({version: 2, expeditionDepth: 10,
     settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false, showFps: true})});
-  const expedition = Object.freeze({version: 8, battle: null, faction: 1, upgrades: Object.freeze({orbital:2}), abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
+  const expedition = Object.freeze({version: 8, battle: null, faction: 1, upgrades: Object.freeze({commandTraining:2}), abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
     enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({startingAlloy: 2}), Object.freeze({})]),
-    benefits: Object.freeze({surveyDrones: 1}),
+    benefits: Object.freeze({commandCapacitor: 1}),
     encounter: Object.freeze({mission: 'hq-elimination', enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
   render.renderMissionBriefing(expedition.encounter.mission);
@@ -155,7 +155,7 @@ test('screen templates render frozen data without DOM access, randomness or prof
     /data-ui="startBattle" disabled/);
   const settings = render.renderSettingsScreen(profile.settings);
   assert.match(settings, /data-setting="showFps" checked/);
-  const totals=Object.freeze({upgrades:Object.freeze({orbital:2}),benefits:expedition.benefits});
+  const totals=Object.freeze({upgrades:Object.freeze({commandTraining:2}),benefits:expedition.benefits});
   assert.equal(render.renderExpeditionUpgradeList(totals),render.renderExpeditionUpgradeList(totals));
   assert.equal(JSON.stringify({profile, expedition}), before);
 });
@@ -174,7 +174,7 @@ test('opponent briefing maps active slots to their faction and benefit data', ()
   const { renderExpeditionOpponents: renderOpponents, FACTIONS, expeditionBenefit } =
     vm.runInContext('({ renderExpeditionOpponents, FACTIONS, expeditionBenefit })', context);
   const expedition = {
-    enemyBenefits: [{}, { startingAlloy: 2 }, { surveyDrones: 1 }],
+    enemyBenefits: [{}, { startingAlloy: 2 }, { commandCapacitor: 1 }],
     encounter: { enemies: [2, 1, 0] }
   };
   for (let count = 1; count <= 3; count++) {
@@ -188,7 +188,7 @@ test('opponent briefing maps active slots to their faction and benefit data', ()
     for (const faction of expedition.encounter.enemies.slice(count))
       assert.ok(!html.includes(FACTIONS[faction].short));
     assert.equal(html.includes(expeditionBenefit('startingAlloy').name), count >= 2);
-    assert.equal(html.includes(expeditionBenefit('surveyDrones').name), count >= 3);
+    assert.equal(html.includes(expeditionBenefit('commandCapacitor').name), count >= 3);
   }
 });
 
@@ -1561,35 +1561,38 @@ test('build menu exposes only the Forum among civilian models in every expeditio
   }
 });
 
-test('civilian HUD choices carry the selected building ID and obey pause guards',()=>{
-  const h=setup(),ui=h.ui,g=ui.game,b={id:7,kind:'building',type:'fieldlab',team:0,hp:500,progress:1,forumId:1,queue:[]};
-  g.s.entities=[b];ui.selected=[7];ui.perform=h.UI.prototype.perform;g.settlementUpgradeReason=()=>'';g.settlementExpansionReason=()=>'';
+test('civilian offers open a paused modal, activate the captured building and reopen information without buying',()=>{
+  const h=setup(),ui=h.ui,g=ui.game,b={id:7,kind:'building',type:'fieldlab',team:0,hp:500,progress:1,forumId:1,queue:[],
+    upgradeOffers:['weaponTechnology','protectionSystems','fieldMedicine']};
+  g.s.entities=[b];ui.selected=[7];ui.perform=h.UI.prototype.perform;ui.openModal=h.UI.prototype.openModal;
+  ui.saveBattle=()=>true;g.settlementUpgradeBuilding=()=>b;g.settlementUpgradeReason=()=>'';g.settlementExpansionReason=()=>'';
+  const submit=g.submitAction;g.submitAction=(team,action)=>{const ok=submit.call(g,team,action);
+    if(action.kind==='configureSettlementUpgrade'){b.upgrade=action.upgrade;b.upgradeLevel=1;}return ok;};
   const before=JSON.stringify(b);
-  ui.perform('settlementInspect:orbital');assert.equal(ui.settlementDetail.upgrade,'orbital');
-  assert.equal(JSON.stringify(b),before);assert.equal(h.calls.length,0);
-  assert.match(ui.renderSettlementUpgrades(b),/data-action="settlementUpgrade:orbital"/);
-  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/data-action="settlementExpand"/);
-  ui.perform('settlementBack');assert.equal(ui.settlementDetail,null);
+  ui.perform('settlementInspect:weaponTechnology');
+  assert.equal(ui.modalKind,'settlementUpgradeInfo');assert.equal(ui.paused,true);assert.equal(JSON.stringify(b),before);
+  assert.match(h.document.getElementById('modal').innerHTML,/data-ui="activateSettlementUpgrade"/);
+  assert.match(h.document.getElementById('modal').innerHTML,/Combat units deal/);
   assert.match(ui.renderSettlementUpgrades(b),/catalog-grid/);
-  ui.perform('settlementInspect:startingAlloy');assert.equal(ui.settlementDetail,null);
-  ui.perform('settlementInspect:orbital');
-  ui.perform('settlementUpgrade:orbital');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:'orbital'}]);
-  b.upgrade='orbital';b.upgradeLevel=1;ui.settlementDetail=null;
-  ui.renderActionMarkup();assert.equal(ui.settlementDetail.upgrade,'orbital');
-  assert.ok(h.document.getElementById('actionPanel').classList.contains('settlement-detail-panel'));
-  assert.match(ui.renderSettlementUpgrades(b),/data-action="settlementExpand"/);
-  assert.doesNotMatch(ui.renderSettlementUpgrades(b),/catalog-grid|data-action="settlementUpgrade:orbital"/);
-  ui.perform('settlementExpand');assert.deepEqual(h.calls.at(-1),['action',0,{kind:'expandSettlementBuilding',id:7}]);
-  const activated=JSON.stringify(b),commands=h.calls.filter(c=>c[0]==='action').length;
-  assert.match(ui.actionReason('settlementClear'),/cannot be cleared/);
-  assert.match(ui.actionReason('settlementUpgrade:scan'),/permanent upgrade/);
-  ui.perform('settlementClear');ui.perform('settlementUpgrade:scan');
-  assert.equal(h.calls.filter(c=>c[0]==='action').length,commands);assert.equal(JSON.stringify(b),activated);
-  ui.perform('settlementInspect:scan');assert.equal(ui.settlementDetail.upgrade,'orbital');
-  ui.perform('settlementBack');assert.equal(ui.settlementDetail,null);assert.deepEqual([...ui.selected],[]);
-  ui.selected=[7];ui.renderActionMarkup();assert.equal(ui.settlementDetail.upgrade,'orbital');
-  assert.doesNotMatch(h.document.getElementById('actions').innerHTML,/catalog-grid|settlementInspect:/);
-  const count=h.calls.length;ui.paused=true;ui.perform('settlementUpgrade:scan');assert.equal(h.calls.length,count);
+  assert.equal(h.calls.filter(c=>c[0]==='action').length,0);
+  ui.uiAction('closeModal');assert.equal(ui.paused,false);assert.equal(ui.modalKind,'');
+  ui.perform('settlementInspect:commandTraining');assert.equal(ui.modalKind,'','unoffered effects cannot open');
+  ui.perform('settlementInspect:weaponTechnology');ui.selected=[];ui.uiAction('activateSettlementUpgrade');
+  assert.equal(b.upgrade,undefined,'a stale confirmation cannot affect a different selection');
+  ui.selected=[7];ui.uiAction('activateSettlementUpgrade');
+  assert.equal(b.upgrade,'weaponTechnology');assert.equal(ui.paused,false);
+  assert.deepEqual(h.calls.find(c=>c[0]==='action'),['action',0,{kind:'configureSettlementUpgrade',id:7,upgrade:'weaponTechnology'}]);
+  const hud=ui.renderSettlementUpgrades(b);
+  assert.match(hud,/data-action="settlementExpand"/);assert.match(hud,/data-action="settlementInspect:weaponTechnology"/);
+  assert.doesNotMatch(hud,/catalog-grid|Combat units deal/);
+  ui.perform('settlementInspect:weaponTechnology');
+  assert.match(h.document.getElementById('modal').innerHTML,/Combat units deal/);
+  assert.doesNotMatch(h.document.getElementById('modal').innerHTML,/activateSettlementUpgrade/);
+  const count=h.calls.filter(c=>c[0]==='action').length;
+  ui.uiAction('activateSettlementUpgrade');ui.perform('settlementExpand');assert.equal(h.calls.filter(c=>c[0]==='action').length,count);
+  ui.uiAction('closeModal');ui.perform('settlementExpand');
+  assert.deepEqual(h.calls.at(-1),['action',0,{kind:'expandSettlementBuilding',id:7}]);
+  ui.uiAction('activateSettlementUpgrade');assert.equal(h.calls.filter(c=>c[0]==='action').length,count+1);
 });
 
 test('speed changes are transient, pause-guarded and preserve commands and RNG', () => {
@@ -2026,7 +2029,7 @@ test('blocked expedition saves require explicit discard and concurrent launch at
 test('pause restart actions cannot redeploy a running expedition', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.expedition = { version: 8, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [2, 0], map: 'desert', seed: 1409 },
-    upgrades: {}, benefits: {}, enemyBenefits: [{ fieldWorkshop: 1 }, { startingAlloy: 1 }], depth: 3 };
+    upgrades: {}, benefits: {}, enemyBenefits: [{ commandCapacitor: 1 }, { startingAlloy: 1 }], depth: 3 };
   const state = h.ui.game.s; let starts = 0;
   h.ui.game.start = () => { starts++; };
   h.ui.pause(); h.click({ ui: 'restartConfirm' }); h.click({ ui: 'restart' }); h.ui.continueExpedition();
@@ -2036,12 +2039,12 @@ test('pause restart actions cannot redeploy a running expedition', () => {
 test('victory checkpoints the completed world once; defeat clears the expedition', () => {
   const h=setup(),saved=[],cleared=[];
   h.ui.persistence.saveProgress=(_profile,value)=>value===null?cleared.push(true):saved.push(JSON.parse(JSON.stringify(value)));
-  h.ui.expedition={version:8,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{orbital:2},benefits:{startingAlloy:1},enemyBenefits:[{}],
+  h.ui.expedition={version:8,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{commandTraining:2},benefits:{startingAlloy:1},enemyBenefits:[{}],
     encounter:{mission:'hq-elimination',enemies:[1],map:'desert',seed:1409}};
   const previousMap=h.ui.expedition.encounter.map;h.ui.game.s.result={win:true};
   h.ui.event('result',{win:true,text:'Victory'});
   assert.equal(h.ui.expedition.depth,1);assert.equal(saved.length,1);
-  assert.equal(saved[0].battle,null);assert.equal(saved[0].worlds[0].recipe.upgrades.orbital,2);
+  assert.equal(saved[0].battle,null);assert.equal(saved[0].worlds[0].recipe.upgrades.commandTraining,2);
   assert.notEqual(saved[0].encounter.map,previousMap);
   assert.deepEqual(JSON.parse(JSON.stringify(saved[0].upgrades)),{});
   assert.deepEqual(JSON.parse(JSON.stringify(saved[0].enemyBenefits)),[{}]);
@@ -2081,38 +2084,23 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
 });
 
-test('civilian effect grids fit twelve slots and separate family icons from details without RNG',()=>{
-  const h=setup(),rules=vm.runInContext('({CIVILIZATION_UPGRADES,civilizationUpgradeAllowed})',h.context);
+test('civilian HUD renders exactly three saved offers and compact purchased details without RNG',()=>{
+  const h=setup(),rules=vm.runInContext('({CIVILIZATION_UPGRADES,civilizationUpgradeOffers})',h.context);
   vm.runInContext("Math.random=()=>{throw Error('UI consumed RNG');}",h.context);
   for(const type of ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower']){
-    h.ui.settlementDetail=null;
-    const research=type.startsWith('research')||type==='fieldlab',key=research?'orbital':'startingAlloy',
-      b={id:7,type,upgradeLevel:0},before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
-    assert.match(html,/class="catalog-grid settlement-grid"/);
-    assert.match(html,new RegExp(`${research?'Research':'Residential'} upgrades`));
-    assert.doesNotMatch(html,/<p>|<small>|data-action="settlementUpgrade:/);
-    const slots=[...html.matchAll(/data-action="settlementInspect:/g)].length;
-    assert.equal(slots,research?12:7);assert.ok(slots<=12);
-    for(const effect of Object.keys(rules.CIVILIZATION_UPGRADES))
-      assert.equal(html.includes(`data-action="settlementInspect:${effect}"`),rules.civilizationUpgradeAllowed(type,effect));
-    assert.match(html,new RegExp(`data-action="settlementInspect:${key}"[^>]*aria-pressed="false"`));
-    h.ui.settlementDetail={buildingId:7,upgrade:key};
-    const preview=h.ui.renderSettlementUpgrades(b);
-    assert.match(preview,new RegExp(`data-action="settlementUpgrade:${key}"`));
-    assert.doesNotMatch(preview,/settlement-rank|Up to \d+ ranks/);
-    assert.equal(JSON.stringify(b),before);
-    b.upgrade=key;b.upgradeLevel=2;h.ui.settlementDetail=null;
-    const activated=JSON.stringify(b),details=h.ui.renderSettlementUpgrades(b);
-    assert.match(details,/data-action="settlementBack"/);
+    const offers=Array.from(rules.civilizationUpgradeOffers(type,1409,7)),b={id:7,type,upgradeOffers:offers},
+      before=JSON.stringify(b),html=h.ui.renderSettlementUpgrades(b);
+    assert.equal([...html.matchAll(/data-action="settlementInspect:/g)].length,3);
+    for(const key of Object.keys(rules.CIVILIZATION_UPGRADES))
+      assert.equal(html.includes(`data-action="settlementInspect:${key}"`),offers.includes(key));
+    assert.doesNotMatch(html,/<p>|data-action="settlementUpgrade:/);assert.equal(JSON.stringify(b),before);
+    b.upgrade=offers[0];b.upgradeLevel=2;
+    const details=h.ui.renderSettlementUpgrades(b);
     assert.match(details,/data-action="settlementExpand"/);
-    assert.doesNotMatch(details,/catalog-grid|settlementInspect:|settlement-rank|Up to \d+ ranks|data-action="settlementClear"/);
-    assert.equal(JSON.stringify(b),activated);
+    assert.equal([...details.matchAll(/data-action="settlementInspect:/g)].length,1);
+    assert.match(details,/aria-label="Information about/);assert.doesNotMatch(details,/catalog-grid|<p>/);
+    b.upgradeLevel=3;assert.doesNotMatch(h.ui.renderSettlementUpgrades(b),/settlementExpand/);
   }
-  h.ui.settlementDetail={buildingId:7,upgrade:'startingAlloy'};
-  const unavailable=h.ui.renderSettlementUpgrades({id:7,type:'embercottage',upgrade:'orbital',upgradeLevel:2});
-  assert.match(unavailable,/stored effect is unavailable/);
-  assert.match(unavailable,/cannot be changed through the HUD/);
-  assert.doesNotMatch(unavailable,/data-action="settlement(?:Upgrade:|Expand|Clear)/);
 });
 
 test('home preview follows the current encounter landscape and seed', () => {

@@ -69,7 +69,7 @@ function unpackWorldText(value: unknown): string {
 // A saved simulation is rejected as a whole, never repaired into a fresh battle.
 // Rules/content arrive from the app; this layer knows neither Game nor UI objects.
 function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecipe,
-  { abilities, units, buildings, upgrades, benefits }: PersistenceDependencies, completed = false): value is ExpeditionBattleSave {
+  { abilities, units, buildings, upgrades, benefits, upgradeFamilies }: PersistenceDependencies, completed = false): value is ExpeditionBattleSave {
   type Check = (v: unknown) => boolean;
   const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
   const num: Check = v => typeof v === 'number' && Number.isFinite(v);
@@ -110,12 +110,13 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     pathArea: shape({ x: num, z: num, radius: nonnegative }, { terrainConnection: oneOf(false) }), pathStatus, pathResolvedGoal: pos,
     recoveryAttempts: integer, nextRecovery: num, stuck: num, steerSide: oneOf(-1, 1), steerLocked: bool,
     slowed: num, reinforcedUntil: num, returning: bool, lastSource: integer, shieldFlash: num,
-    paid: cost, gasId: id, deathAt: num, rally: pos, label: text, buildRate: nonnegative, amount: nonnegative,
+    paid: cost, gasId: id, deathAt: num, rally: pos, label: text, amount: nonnegative,
     visualRotation: v => nonnegative(v) && Number(v) < 8,
     deliveryForum: id, deliveryPoint: pos,
     cinderStock: v => nonnegative(v) && Number(v) <= 2000,
     forumId: id, settlementAt: nonnegative, settlementAttempt: integer,
-    upgrade: key({...upgrades, ...benefits}), upgradeLevel: oneOf(1, 2, 3)
+    upgrade: key({...upgrades, ...benefits}), upgradeLevel: oneOf(1, 2, 3),
+    upgradeOffers: v => list(key(upgradeFamilies),3)(v) && Array.isArray(v) && v.length===3 && new Set(v).size===3
   })(v) && record(v) && (v.kind !== 'resource' || nonnegative(v.amount)) &&
     (v.visualRotation === undefined || v.kind === 'building') &&
     (v.cinderStock === undefined || (v.kind === 'building' && v.type === 'meridianforum')) &&
@@ -124,7 +125,11 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     (v.settlementAttempt === undefined || (v.kind === 'building' && v.type === 'meridianforum')) &&
     (v.deliveryForum === undefined || (v.kind === 'unit' && v.type === 'worker')) &&
     (v.deliveryPoint === undefined || v.deliveryForum !== undefined) &&
-    (v.upgrade === undefined || (v.kind === 'building' && v.forumId !== undefined && v.upgradeLevel !== undefined)) &&
+    (v.upgradeOffers === undefined || (v.kind==='building' && v.forumId!==undefined)) &&
+    (v.forumId === undefined || (Array.isArray(v.upgradeOffers) && v.upgradeOffers.every(k =>
+      upgradeFamilies[String(k)] === (['fieldlab','researchhub','researchspire'].includes(String(v.type))?'research':'residential')))) &&
+    (v.upgrade === undefined || (v.kind === 'building' && v.forumId !== undefined && v.upgradeLevel !== undefined &&
+      Array.isArray(v.upgradeOffers) && v.upgradeOffers.includes(v.upgrade))) &&
     (v.upgradeLevel === undefined || (v.kind === 'building' && v.forumId !== undefined &&
       (['embercottage','fieldlab'].includes(String(v.type)) ? v.upgradeLevel === 1 :
         ['terracecommons','researchhub'].includes(String(v.type)) ? v.upgradeLevel === 2 :
@@ -151,8 +156,10 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     id: team, faction, loadout,
     account: shape({ alloy: nonnegative, gas: nonnegative, energy: nonnegative, abilities: dictionary(nonnegative, abilities) }),
     meta: dictionary(integer, upgrades), benefits: dictionary(integer, benefits),
+    upgradeDelivery: shape({credited:dictionary(integer,benefits),workers:v=>integer(v)&&Number(v)<=5,
+      commander:bool,nextAttempt:nonnegative}),
     controller: v => shape({ kind: oneOf('human') })(v) || shape({ kind: oneOf('ai'), state: ai })(v)
-  }, { fieldWorkshopUsed: bool, deploymentPending: bool, eliminated: bool });
+  }, { deploymentPending: bool, eliminated: bool });
   const state = shape({
     depth: integer, seed: id, map: oneOf(expedition.encounter.map), time: nonnegative, parties: list(party, 4),
     rules: shape({ kind: oneOf('single-player'), mission: shape({ id: oneOf(expedition.encounter.mission) }) }, { completed: oneOf(true) }),
@@ -187,7 +194,12 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     JSON.stringify(s.parties[0].loadout) !== JSON.stringify(expedition.abilities) ||
     s.parties.some((p, i) => Object.keys(benefits).some(k => (p.benefits[k] || 0) !==
       ((i ? expedition.enemyBenefits[i - 1] : expedition.benefits)[k] || 0)) ||
-      Object.entries(p.meta).some(([k, level]) => level > upgrades[k].max)) ||
+      Object.entries(p.meta).some(([k, level]) => level > upgrades[k].max) ||
+      Object.entries(p.benefits).some(([k,level]) => level > (benefits[k].max ?? 999999)) ||
+      Object.entries(p.upgradeDelivery.credited).some(([k,level]) => level > (k==='commanderMandate'?1:benefits[k].max ?? 999999)) ||
+      Object.keys(benefits).some(k => (p.upgradeDelivery.credited[k] || 0) < Math.min(p.benefits[k] || 0,k==='commanderMandate'?1:999999)) ||
+      p.upgradeDelivery.workers > (p.upgradeDelivery.credited.startingWorkers || 0) ||
+      (p.upgradeDelivery.commander && p.upgradeDelivery.credited.commanderMandate!==1)) ||
     Object.keys(upgrades).some(k => (s.parties[0].meta[k] || 0) !== (expedition.upgrades[k] || 0))) return false;
   const ids = new Set(s.entities.map(e => e.id));
   if (ids.size !== s.entities.length || s.entities.some(e => e.id >= s.nextId || e.team >= count) ||

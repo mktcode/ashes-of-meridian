@@ -90,7 +90,7 @@
       continueBuilding(this: MeridianUI) {
         if (!this.expedition || this.launchingBattle || this.leavingBattle || this.modalKind === 'civilizationIntro') return;
         if (this.view === 'game' && this.game.s?.result?.win && !this.profile.civilizationIntroComplete) {
-          this.openModal('civilizationIntro', `<div class="eyebrow">CIVILIZATION BUILDING</div><h1>Turn victory into a civilization.</h1><p>This world is now peaceful. Your army, workers and resources stay here, and the next expedition stage is already unlocked.</p><p>Build a <strong>Meridian Forum</strong> from the Build menu. Select a worker, then right-click or tap the finished Forum to assign Cinder deliveries. Stored Cinder lets it automatically grow homes and research buildings around it.</p><p>Select a civilian building to choose its upgrade. Spend this world’s <strong>Echo</strong> to buy stronger ranks and expand the building.</p><p>Upgrades stack across the cleared worlds of this expedition and apply to <strong>newly started battles only</strong>. Battles already started keep their original bonuses.</p><p>You can return through the main menu’s stage archive. When you are ready, use <strong>Continue expedition</strong> in the main menu.</p><div class="launch-row"><button class="primary" data-ui="startCivilizationBuilding">${uiSkin()}START BUILDING</button><button class="secondary" data-ui="closeModal">${uiSkin()}BACK</button></div>`);
+          this.openModal('civilizationIntro', `<div class="eyebrow">CIVILIZATION BUILDING</div><h1>Turn victory into a civilization.</h1><p>This world is now peaceful. Your army, workers and resources stay here, and the next expedition stage is already unlocked.</p><p>Build a <strong>Meridian Forum</strong> from the Build menu. Select a worker, then right-click or tap the finished Forum to assign Cinder deliveries. Stored Cinder lets it automatically grow homes and research buildings around it.</p><p>Select a civilian building to choose its upgrade. Spend this world’s <strong>Echo</strong> to buy stronger ranks and expand the building.</p><p>Each civilian building offers three upgrades. Choose one in its info dialog, then buy further ranks in the HUD. Upgrades stack across cleared worlds and also strengthen your <strong>running battle when you return</strong>. New resource and unit deliveries are granted only once.</p><p>You can return through the main menu’s stage archive. When you are ready, use <strong>Continue expedition</strong> in the main menu.</p><div class="launch-row"><button class="primary" data-ui="startCivilizationBuilding">${uiSkin()}START BUILDING</button><button class="secondary" data-ui="closeModal">${uiSkin()}BACK</button></div>`);
           return;
         }
         this.finishContinueBuilding();
@@ -211,7 +211,7 @@
         if (!this.expedition) return;
         const totals = this.expeditionUpgrades();
         this.openModal('expeditionBenefits',
-          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Civilization upgrades.</h1><p class="muted">${esc(FACTIONS[this.expedition.faction].name)} · ${this.expedition.depth} worlds cleared</p>${this.encounterBriefing()}<h2>For newly started battles</h2>${renderExpeditionUpgradeList(totals)}<p>Configure civilian buildings in cleared worlds. Changes never affect a battle that has already started.</p>${this.expedition.battle ? `<h2>Current battle · frozen upgrades</h2>${renderExpeditionUpgradeList({upgrades:this.expedition.upgrades, benefits:this.expedition.benefits})}` : ''}<div class="launch-row"><button class="primary" data-ui="closeModal">${uiSkin()}RETURN</button></div>`);
+          `<div class="eyebrow">CURRENT EXPEDITION / CHECKPOINT ${this.expedition.depth + 1}</div><h1>Civilization upgrades.</h1><p class="muted">${esc(FACTIONS[this.expedition.faction].name)} · ${this.expedition.depth} worlds cleared</p>${this.encounterBriefing()}<h2>Available on battle return</h2>${renderExpeditionUpgradeList(totals)}<p>Develop cleared worlds to strengthen the current battle on return. New deliveries are granted once; passive effects update existing units.</p>${this.expedition.battle ? `<h2>Current battle · last applied upgrades</h2>${renderExpeditionUpgradeList({upgrades:this.expedition.upgrades, benefits:this.expedition.benefits})}` : ''}<div class="launch-row"><button class="primary" data-ui="closeModal">${uiSkin()}RETURN</button></div>`);
       },
       showBattle(this: MeridianUI) {
         if (this.battleSaveError) return this.showBattleSaveError();
@@ -300,7 +300,7 @@
           enemyBenefits: expedition.enemyBenefits, depth: expedition.depth };
         try {
           if (this.onLaunchBattle) await this.onLaunchBattle(options, expedition, world);
-          else if (expedition.battle) this.game.restoreBattle(expedition, !!world);
+          else if (expedition.battle) this.game.restoreBattle(expedition, !!world, world ? undefined : this.expeditionUpgrades());
           else this.game.start(options);
         } catch (e) {
           console.error('Expedition launch failed:', e);
@@ -330,6 +330,9 @@
         $('modal').classList.add('hidden');
         if (kind === 'civilizationIntro' && this.game.s?.result) this.modalKind = 'result';
         if (this.view === 'game' && !this.game.s?.result) {
+          if (kind === 'settlementUpgradeInfo') {
+            this.settlementDetail=null;this.resume();this.updateHUD();return;
+          }
           if (kind === 'battleSaveError') return this.showHome();
           if (kind === 'pause') this.resume();
           else this.showPause();
@@ -351,7 +354,7 @@
         this.saveBattle();
         this.openModal(
           'pause',
-          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">${uiSkin()}RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiSkin()}${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">${uiSkin()}MAIN MENU</button>${this.activeWorldStage === null ? `<button class="secondary" data-ui="abandon">${uiSkin()}ABANDON EXPEDITION</button>` : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This cleared world is autosaved separately from your current battle. Configure civilian building upgrades for newly started battles. The current battle keeps its original upgrades.`} A hard interruption may return to the last successful autosave.</p>`
+          `<div class="modal-symbol">${uiIcon('pause')}</div><div class="eyebrow">OPERATION PAUSED / ${formatTime(s.time)}</div><h1>Operation paused.</h1>${renderWorldDesign(this.game.world)}<div class="btnstack"><button class="primary" data-ui="resume">${uiSkin()}RESUME OPERATION <span>↗</span></button><button class="secondary" data-ui="settings">${uiSkin()}${uiIcon('settings')}SETTINGS</button><button class="secondary" data-ui="home">${uiSkin()}MAIN MENU</button>${this.activeWorldStage === null ? `<button class="secondary" data-ui="abandon">${uiSkin()}ABANDON EXPEDITION</button>` : ''}</div><p class="ui-note">${this.activeWorldStage === null ? 'This battle is autosaved and Continue expedition resumes it directly. Abandoning ends the expedition and removes its saved worlds.' : `STAGE ${this.activeWorldStage} · This cleared world is autosaved separately from your current battle. Buy civilian upgrades here to strengthen your current expedition battle when you return.`} A hard interruption may return to the last successful autosave.</p>`
         );
       },
       resume(this: MeridianUI) {

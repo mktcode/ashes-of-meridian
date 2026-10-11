@@ -257,7 +257,7 @@ interface ExpeditionBattleRecipe {
   faction: FactionId;
   abilities: AbilityType[];
   depth: number;
-  /** Frozen player upgrades for this battle, never a live reference to the archive. */
+  /** Applied player upgrades; synchronized with the archive on battle return. */
   upgrades: Record<string, number>;
   benefits: Record<string, number>;
   enemyBenefits: Record<string, number>[];
@@ -317,6 +317,7 @@ interface PersistenceDependencies {
   clamp(value: number, min: number, max: number): number;
   upgrades: Record<string, { max: number }>;
   benefits: Record<string, { max?: number; name?: string }>;
+  upgradeFamilies: Record<string, CivilizationBuildingFamily>;
   abilities: Record<string, unknown>;
   units: Record<string, unknown>;
   buildings: Record<string, unknown>;
@@ -502,7 +503,6 @@ interface BuildingEntity extends EntityBase {
   type: BuildingType;
   /** Model offset in eighth-turns (0 <= value < 8); forums also rotate reserved delivery corridors. */
   visualRotation?: number;
-  buildRate?: number;
   cinderStock?: number;
   /** Owning forum ID on automatically grown buildings; survives removal of its owner. */
   forumId?: number;
@@ -510,8 +510,10 @@ interface BuildingEntity extends EntityBase {
   settlementAttempt?: number;
   /** Selected expedition effect; absent means an unconfigured civilian building. */
   upgrade?: CivilizationUpgradeType;
-  /** Purchased effect/building rank (1–3); effect switching retains this rank. */
+  /** Purchased effect/building rank (1–3); the chosen effect is permanent. */
   upgradeLevel?: number;
+  /** Three permanent offers, drawn once on civilian growth with a separate RNG. */
+  upgradeOffers?: CivilizationUpgradeType[];
 }
 
 interface MeridianGame {
@@ -533,7 +535,7 @@ type EntityForKind<K extends EntityKind> =
   K extends 'unit' ? UnitEntity : K extends 'building' ? BuildingEntity : ResourceEntity;
 type EntityTypeForKind<K extends EntityKind> =
   K extends 'unit' ? UnitType : K extends 'building' ? BuildingType : ResourceType;
-type SpawnExtra = Partial<Omit<EntityBase, 'id' | 'kind' | 'type' | 'team' | 'faction' | 'x' | 'z'>> & { amount?: number; buildRate?: number; forumId?: number };
+type SpawnExtra = Partial<Omit<EntityBase, 'id' | 'kind' | 'type' | 'team' | 'faction' | 'x' | 'z'>> & { amount?: number; forumId?: number };
 type UnitBody = Pick<UnitEntity, 'type' | 'size'> & Partial<UnitEntity>;
 type UnitPlacement = UnitBody & Position;
 
@@ -668,7 +670,12 @@ interface PartyState {
   meta: Record<string, number>;
   benefits: Record<string, number>;
   controller: PartyController;
-  fieldWorkshopUsed?: boolean;
+  upgradeDelivery: {
+    credited: Record<string, number>;
+    workers: number;
+    commander: boolean;
+    nextAttempt: number;
+  };
   /** Before the first completed HQ, survival depends on a deployment worker. */
   deploymentPending?: boolean;
   eliminated?: boolean;

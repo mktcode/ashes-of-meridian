@@ -1,29 +1,21 @@
-# Zivilisationsupgrades: Integration und Abnahme
+# Zivilisationsupgrades: Abnahme und Balance
 
-Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) beschreiben Gebäudeauswahl, Echo-Ausbau, weltübergreifende Stapel und eingefrorene Gefechtsrezepte. Keine Migration alter Profil-/Expeditionsstände.
-
-## Zieländerung: Hilfe im laufenden Gefecht
-
-- [ ] In einer bereits abgeschlossenen Welt gekaufte Upgrades sollen auch ein laufendes, beim Weltbesuch gespeichertes Expeditionsgefecht sofort verstärken. Der bisherige Vertrag eingefrorener Gefechtsboni muss dafür gezielt ersetzt werden; Rückkehr, Speichern/Laden und wiederholte Weltbesuche dürfen keine Boni mehrfach auszahlen.
-- [ ] Den reduzierten Upgrade-Pool an dieser Rettungsfunktion ausrichten und die angebotene Auswahl randomisieren. Insbesondere reine Startboni benötigen eine Entscheidung über ihre Wirkung bei einem bereits gestarteten Gefecht. Umfang und Regeln vor Implementierung besprechen.
+Verbindliche Regeln für feste Dreierangebote, permanentes Aktivieren im Modal, HUD-Ränge und Hilfe im laufenden Gefecht stehen in [Gameplay](../gameplay.md#wirtschaft-bau-und-produktion). Keine Migration alter Upgrade-Saves.
 
 ## Technische Restarbeit
 
-- [ ] Langtest-Fixtures in `tests/ashes-of-meridian-simulation.check.cjs` auf verbliebene Annahmen etablierter Basen und früherer Rang-/Vorteilscaps prüfen. Startrezepte verwenden die gemeinsamen Startboni; ältere Erwartungen zu Anfangsversorgung, Workerzahl und Mining entsprechen teilweise nicht mehr dem Landing-Deployment und den Gebäude-Stapeln. Die entfernten Regeln nicht durch Kompatibilitätsadapter wieder einführen. Feste RNG-/Terrainreferenzen nicht zum Grünmachen regenerieren. Änderungen und gezielte Ausführung dieses Simulationsblocks separat freigeben.
-- [ ] Präsentationsfixtures und noch nicht ausgeführte Eingabe-/Stage-World-Fälle auf verbliebene alte Annahmen prüfen. Angepasste lokale Verträge sind keine vollständige Integrationsabnahme.
-- [ ] Verwaiste Fleet-/Benefit-Styles im gemeinsamen Designsystem gezielt bereinigen; keine gleichzeitig veränderte Gestaltung anderer Ansichten.
-- [ ] Breite Integrationsprüfung erst nach gesonderter Freigabe. Gezielte CPU-Fälle schützen Upgrade-Kosten, Ausbau/KP, Stapel/Einmaligkeit, Vent-Erschöpfung, Formatvalidierung und Gefechts-Snapshots. Der echte UI-Lebenszyklusfall prüft insbesondere den Besuch einer alten Welt mit Upgrade-Änderung, während ein anderes Gefecht gespeichert ist.
+- [ ] Optionale Langtest-Fixtures in `tests/ashes-of-meridian-simulation.check.cjs` auf verbliebene Annahmen etablierter Basen, frühere Startversorgung und automatisch minende Worker prüfen. Feste RNG-/Terrainreferenzen nicht zum Grünmachen regenerieren. Ausführung dieser Simulationsblöcke separat freigeben.
+- [ ] Breite Integrationsprüfung nach gesonderter Freigabe: bisher nur begrenzte Upgrade-, Persistenz-, HUD- und Weltbesuchsverträge. Das ist keine vollständige Spielabnahme.
+- [ ] Langfristige Kosten großer Weltarchive, wiederholter Aggregation und Speicherung gemäß [Performance](performance/README.md#verbleibende-cpu-spitzen) messen. Welt-Save-Ziele gemäß [Spielstandsabnahme](expeditions-spielstand.md) abnehmen.
 
 ## Menschliche Abnahme und Balance
 
-- [ ] Einmaligen Hinweis beim ersten **Continue building** auf schmalen/niedrigen Geräten abnehmen: Forum-Lieferung, Echo-Upgrades und nur neue Gefechte verständlich; **Back** ohne Bestätigung und **Start building** ohne Ladebildschirm/Pausemenü. Gezielte CPU-/UI-Verträge prüfen Profilbestätigung, erhaltene Live-Welt/RNG, entferntes feindliches Restfeuer, getrenntes Welt-Speicherziel und Schutz vor erneuter Siegwertung; visuelle/akustische Abnahme bleibt offen.
+- [ ] Drei Angebote nebeneinander auf schmalen/niedrigen Echtgeräten abnehmen: lesbare Namen, Touch-Ziele, keine Überlagerung von Minimap oder Auswahlzeile. Kompakte aktivierte HUD-Ansicht mit Ausbau und i-Button prüfen; Beschreibung und Aktivierung bleiben im pausierten Modal. Kein Screenshotvergleich ersetzt die Abnahme.
+- [ ] Modal-Lesbarkeit, Abbrechen ohne Kauf, Aktivieren mit lokalem Echo, Rückkehr zur Auswahl und erneutes Öffnen über i abnehmen. Command-Ausbau beschreibt die individuellen Ränge der vier ausgerüsteten Fähigkeiten.
+- [ ] Rettungsfunktion mit echten Runs testen: laufendes Gefecht verlassen, Bauwelt entwickeln, zurückkehren. Sofortige Dauerboni und einmalige Ressourcen-/Workerlieferungen sollen helfen, aber nicht jeden verlorenen Kampf garantieren. Ohne Ankunftsort wartet die Lieferung; Niederlage wird nicht rückgängig gemacht.
+- [ ] Stärken der neuen Waffentechnik, Schutzsysteme und Feldmedizin sowie des gemeinsamen Command-Ausbaus abstimmen. Die ersten Werte sind Prototypparameter, keine vollständige Run-Balance.
+- [ ] Echo-Kosten, endliche Vents, Rangcaps und feste zufällige Angebote abstimmen. Gebäudeverkauf kann neue Angebote ermöglichen, kostet aber Ausbau und Fläche; keine zusätzliche Reroll-Währung oder Anti-Reroll-Regel ohne Auftrag.
+- [ ] Höchststand der bereits gewährten Lieferungen verständlich machen: Verlust und Wiederaufbau von Beitragsgebäuden zahlen dieselben Ränge nicht erneut aus. Gefallene Bonusworker und Commander werden nicht durch einen Weltbesuch ersetzt.
+- [ ] Forum-Lieferungen, ausreichend Siedlungsfläche und Wirtschaft nach knappen Siegen mit echten Runs prüfen. Keine automatische Ressourcenrettung, garantierte maximale Gebäudezahl oder Offline-Fortschritt.
 
-- [ ] Iconraster und scrollfreie Detailansicht auf schmalen und niedrigen Echtgeräten abnehmen: sieben Wohn-/zwölf Forschungsicons, freies Detail-Icon und X zur Rückkehr, bewusste Aktivierung vor Rang-Ausbau, vollständige Beschreibungen, Auswahlzeile/Minimap und Rückkehr zu normalen Aktionen. Zwei gezielte UI-Fälle prüfen Slotgrenze/Familien, getrennte Vorschau und Kauf, UI-Sperre für Effektwechsel/Leeren, direkte feste Details nach Aktivierung/Wiederwahl, X-Abwahl statt Übersicht, Rank-Aktion nach Aktivierung und Pause-Sperre; visuelle Abnahme und Grenzen der nach oben wachsenden Details bleiben offen.
-- [ ] Upgrade-Kosten und endlichen Vent-Vorrat abstimmen. Erste Parameter sind 40/80/140 Echo und 900 Echo je Vent; Effektstärken bleiben zunächst an den bisherigen Boni orientiert, nicht anhand vollständiger Runs neu ausbalanciert.
-- [ ] Grenzen für Stapel, Zusatzworker, Command-Ränge und Reparaturrabatt prüfen. Einige Effekte behalten technische Obergrenzen; die UI-Sperre gegen Effektwechsel/Leeren ist von den weiterhin vorhandenen Simulationsmöglichkeiten zu unterscheiden.
-- [ ] Einmalige Effekte auf ausgebauten Gebäuden verständlich behandeln: zusätzliche Ränge verstärken sie nicht. Ob hierfür Ausbau gesperrt, eine Warnung ergänzt oder eine andere Rangwirkung gewünscht ist, entscheiden.
-- [ ] Ausreichende Siedlungsfläche trotz vollständiger Erstbau-Reservierung, erreichbare Forum-Lieferungen sowie Cinder-/Echo-Reste nach knappen Siegen mit echten Runs prüfen. Keine automatische Ressourcenrettung oder garantierte maximale Gebäudezahl.
-
-Kosten umfangreicher Archive, wiederholter Upgrade-Aggregation und Speicherung stehen zentral unter [Performance](performance/README.md#verbleibende-cpu-spitzen); korrekte Wiederbesuche und getrennte Save-Ziele unter [Spielstandsabnahme](expeditions-spielstand.md).
-
-KI-Partien, umfassende Simulationen und vollständige menschliche Runs sind noch nicht abgenommen. Diese Liste ist keine Freigabe für autonome Langtests oder neue Balancekorrekturen.
+KI-Partien, visuelle/akustische und vollständige Echtgeräteabnahme bleiben offen. Diese Liste ist keine Freigabe für autonome Langtests oder weitere Balancekorrekturen.

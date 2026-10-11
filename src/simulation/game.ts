@@ -3,15 +3,16 @@
     const UNIT_BODY_SCALE = 1.4;
     function createParty(id: PlayerTeam, faction: FactionId, meta: Record<string, number>, benefits: Record<string, number>,
       loadout: readonly AbilityType[] = DEFAULT_ABILITY_LOADOUT): PartyState {
-      return {
+      const party: PartyState = {
         id, faction, meta, benefits, loadout: normalizedAbilityLoadout(loadout), controller: { kind: 'human' },
+        upgradeDelivery: {credited:{},workers:0,commander:false,nextAttempt:0},
         account: {
-          alloy: STARTING_CINDER + (benefits.startingAlloy || 0) * EXPEDITION_EFFECTS.alloy,
-          gas: (benefits.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
-          energy: Math.min(COMMAND_ENERGY.max, COMMAND_ENERGY.start + (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy),
+          alloy: STARTING_CINDER, gas: 0, energy: COMMAND_ENERGY.start,
           abilities: Object.fromEntries(contentKeys(ABILITIES).map(key => [key, 0])) as Record<AbilityType, number>
         }
       };
+      creditUpgradeDeliveries(party);
+      return party;
     }
     // Validate before touching a running game, terrain or RNG. No implicit FFA/alliances.
     function scenarioSetup(opts: ScenarioOptions) {
@@ -155,11 +156,12 @@
           spatial: [...this.spatial].map(([key, entities]) => [key, entities.filter(e => !archiveVictory || ids.has(e.id)).map(e => e.id)]), tutorial: null
         };
       },
-      restoreBattle(this: MeridianGame, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, completed = false) {
+      restoreBattle(this: MeridianGame, expedition: ExpeditionBattleRecipe & { battle: ExpeditionBattleSave | null }, completed = false,
+        upgrades?: CivilizationUpgradeTotals) {
         const save = expedition.battle;
         if (this.stepping || !save || !validExpeditionBattle(save, expedition, {
           abilities: ABILITIES, units: UNITS, buildings: BUILDINGS, upgrades: BATTLE_UPGRADES,
-          benefits: EXPEDITION_BENEFITS, battlefields: BATTLEFIELDS, missions: MISSIONS,
+          benefits: EXPEDITION_BENEFITS, upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES, battlefields: BATTLEFIELDS, missions: MISSIONS,
           enemyCount: expeditionEnemyCount, clamp, getStorage: () => { throw Error('No storage in simulation'); }, warn: () => {}
         }, completed)) throw Error('Invalid expedition battle snapshot');
         // Reconstruct in isolation. Failed validation/world generation cannot replace a live game.
@@ -191,6 +193,13 @@
         this.commandQueue = createCommandQueue();
         this.snapshotSafe = true;
         this.effects.reset();
+        if(upgrades && !completed){
+          this.synchronizeCivilizationUpgrades(upgrades);
+          expedition.upgrades={...this.party(0).meta};
+          expedition.benefits={...this.party(0).benefits};
+          const tutorial=save.tutorial;
+          expedition.battle=this.snapshotBattle();expedition.battle.tutorial=tutorial;
+        }
         this.emit('start', { restored: true });
         return state;
       },
@@ -273,16 +282,7 @@
             Object.assign(e, p);
           }
         // Add bonus units only after the original layout and enemy RNG draws.
-        for (const party of parties) {
-          const team = party.id, perks = party.benefits, home = starts[team],
-            workers = perks.startingWorkers || 0;
-          for (let i = 0; i < workers; i++)
-            if (!this.spawnDeploymentUnit('worker', { x: home.x - 7, z: home.z - 4 + i * 2 }, home, team, this.factionFor(team)))
-              throw new Error('No free space for starting workers.');
-          if (perks.commanderMandate &&
-            !this.spawnDeploymentUnit('hero', { x: home.x - 9, z: home.z + 7 }, home, team, this.factionFor(team)))
-            throw new Error('No free space for starting commander.');
-        }
+        for (const party of parties)this.deliverUpgradeUnits(party.id,starts[party.id]);
         for (const party of parties) {
           const home = starts[party.id];
           party.deploymentPending = true;
@@ -292,12 +292,6 @@
         }
         this.rehash();
         this.world.reveal(s.entities);
-        for (const party of parties) if (party.benefits.surveyDrones) {
-          const team = party.id, home = starts[team],
-            site = layout.resourceSites.filter(p => !this.world!.sight[team].explored[this.world!.idx(p.x, p.z)])
-              .sort((a, b) => distance(a, home) - distance(b, home))[0];
-          if (site) this.world.explore(team, site, EXPEDITION_EFFECTS.surveyRadius);
-        }
         for (const team of aiTeams) this.enableAI(team);
         this.snapshotSafe = true;
         // CPU scenarios must never enter the expedition UI or pay out profile rewards.
@@ -361,7 +355,10 @@
         return e;
       },
       spawnBuilding(this: MeridianGame, type: BuildingType, x: number, z: number, team: TeamId, faction: FactionId, extra: SpawnExtra = {}) {
-        return this.spawn('building', type, x, z, team, faction, extra);
+        const b=this.spawn('building', type, x, z, team, faction, extra);
+        if(b.forumId!==undefined && civilizationBuildingFamily(type))
+          b.upgradeOffers=civilizationUpgradeOffers(type,this.s!.seed,b.id);
+        return b;
       },
       spawnUnit(this: MeridianGame, type: UnitType, x: number, z: number, team: TeamId, faction: FactionId, extra: SpawnExtra = {}) {
         const p = this.unitPosition({ type, size: UNITS[type].size, x, z, ...extra });

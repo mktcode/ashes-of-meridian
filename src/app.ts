@@ -41,6 +41,7 @@
             getStorage: () => visibleSimulation || mapExperiment ? volatileStorage : localStorage,
             clamp,
             upgrades: BATTLE_UPGRADES,
+            upgradeFamilies: CIVILIZATION_UPGRADE_FAMILIES,
             benefits: EXPEDITION_BENEFITS,
             abilities: ABILITIES,
             units: UNITS,
@@ -351,7 +352,7 @@
             await loadingStep(60, expedition.battle ? 'Restoring battlefield' : 'Generating battlefield');
             if (id !== worldRequest || failed || (world ? !ui.expedition?.worlds?.includes(world) || ui.view !== 'home' :
               expedition !== ui.expedition)) { clearBattleTransition(); return false; }
-            if (expedition.battle) game.restoreBattle(expedition, !!world);
+            if (expedition.battle) game.restoreBattle(expedition, !!world, world ? undefined : ui.expeditionUpgrades());
             else game.start(options);
             await loadingStep(100, 'Operation ready');
             return id === worldRequest && !failed;

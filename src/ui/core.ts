@@ -16,7 +16,7 @@
       startingAlloy: 'starting-cinder', startingWorkers: 'workers',
       constructionProtocols: 'construction', logisticsFrame: 'logistics', repairLogistics: 'repair-logistics',
       aetherAllocation: 'echo',
-      surveyDrones: 'survey', fieldWorkshop: 'workshop', commandCapacitor: 'energy',
+      commandCapacitor: 'energy',
       'echo-reward': 'echo-reward', pause: 'pause', settings: 'settings',
       'tab:root': 'back', back: 'back', close: 'close'
     });

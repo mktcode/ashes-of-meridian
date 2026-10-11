@@ -268,7 +268,7 @@ test('destroyer is a costly flying hangar unit; its area hit accepts air and app
   for(const faction of [0,1,2]) {
     assert.ok(FACTIONS[faction].units.destroyer);
     const g=Object.create(MeridianGame.prototype), hits=[];
-    g.s={fields:[],parties:[{benefits:{commandDrill:0}}],time:0};
+    g.s={fields:[],parties:[{benefits:{commanderMandate:0},meta:{}}],time:0};
     g.factionFor=()=>faction;g.account=()=>({alloy:1000,gas:600});
     const price=g.cost('destroyer','unit',0);
     assert.deepEqual({...price},{cost:[850,723,953][faction],gas:500});

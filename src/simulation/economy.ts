@@ -288,12 +288,6 @@
         let c = this.cost(type, 'building', team);
         if (!this.spend(c, team)) return false;
         let b = this.spawnBuilding(type, p.x, p.z, team, this.factionFor(team), { progress: 0.06, paid: c });
-        const party = this.party(team),
-          workshop = party.benefits.fieldWorkshop && !party.fieldWorkshopUsed,
-          buildRate = 1 + (party.meta.constructionProtocols || 0) * FLEET_EFFECTS.constructionSpeed + (workshop ? EXPEDITION_EFFECTS.workshopSpeed : 0);
-        // Add both bonuses to base speed once; changing builders never changes the foundation.
-        if (buildRate !== 1) b.buildRate = buildRate;
-        if (workshop) party.fieldWorkshopUsed = true;
         b.hp = b.maxHp * 0.06;
         if (type === 'refinery')
           b.gasId = this.closest(p, e => e.type === 'gas' && e.kind === 'resource')?.id;
@@ -439,7 +433,7 @@
       advanceConstruction(this: MeridianGame, b: BuildingEntity, dt: number): boolean {
         if (b.hp <= 0 || b.progress >= 1 || dt <= 0) return false;
         const team = b.team as PlayerTeam, old = b.progress;
-        b.progress = Math.min(1, b.progress + dt * (b.buildRate || 1) / BUILDINGS[b.type].time);
+        b.progress = Math.min(1, b.progress + dt * (1 + (b.team===-1 ? 0 : this.party(b.team).meta.constructionProtocols || 0) * FLEET_EFFECTS.constructionSpeed) / BUILDINGS[b.type].time);
         b.hp = Math.min(b.maxHp, b.hp + (b.progress - old) * b.maxHp);
         if (b.progress < 1) return false;
         if (b.type === 'hq') this.party(team).deploymentPending = false;
@@ -474,7 +468,7 @@
             if (this.advanceConstruction(b, dt)) this.finishOrder(e);
           } else if (b.hp < b.maxHp && this.account(team).alloy > 0.1) {
             const repairFactor = 1 - Math.min(.75, (this.party(team).meta.repairLogistics || 0) * FLEET_EFFECTS.repairDiscount),
-              amount = Math.min(dt * 38, b.maxHp - b.hp, this.account(team).alloy * 10 / repairFactor);
+              amount = Math.min(dt * 38 * (1+(this.party(team).meta.repairLogistics || 0)*CIVILIZATION_EFFECTS.repairSpeed), b.maxHp - b.hp, this.account(team).alloy * 10 / repairFactor);
             b.hp += amount;
             this.account(team).alloy -= amount * .1 * repairFactor;
           } else this.finishOrder(e);

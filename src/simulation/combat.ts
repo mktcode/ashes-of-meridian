@@ -18,7 +18,8 @@
           .filter(field => field.type === 'bulwark' && field.team === e.team && field.until > this.s!.time && distance(field, e) <= field.r)
           .reduce((reduction, field) => Math.max(reduction, field.power || 0), 0),
           reinforcement = e.reinforcedUntil! > this.s!.time ? .2 : 0;
-        amount = Math.max(0.05, amount * (1 - bulwark) * (1 - reinforcement));
+        const protection=e.kind==='unit' && e.team!==-1 ? (this.party(e.team).meta.protectionSystems || 0)*CIVILIZATION_EFFECTS.protection : 0;
+        amount = Math.max(0.05, amount * (1 - bulwark) * (1 - reinforcement) * (1-protection));
         e.lastHit = this.s!.time;
         e.lastSource = source?.id;
         if (e.shield > 0) {
@@ -90,7 +91,7 @@
           s = this.s!;
         let range = d.range || 0,
           drillStacks = e.kind === 'unit' && e.type === 'rifle' && e.team !== -1
-            ? s.parties[e.team]?.benefits.commandDrill || 0
+            ? Math.max(0,(s.parties[e.team]?.benefits.commanderMandate || 0)-1)
             : 0,
           inCommand = drillStacks > 0 && s.entities.some(n =>
             n.hp > 0 && n.team === e.team && n.kind === 'unit' && n.type === 'hero' &&
@@ -99,7 +100,8 @@
             (d.damage || 0) *
             (e.faction === FACTION_ID.THIRD ? 1.12 : 1) *
             (e.kills >= 5 ? 1.12 : 1) *
-            (inCommand ? 1 + drillStacks * COMMAND_DRILL.damagePerStack : 1);
+            (inCommand ? 1 + drillStacks * COMMAND_DRILL.damagePerStack : 1) *
+            (e.kind==='unit' && e.type!=='worker' ? 1+(s.parties[e.team]?.meta.weaponTechnology || 0)*CIVILIZATION_EFFECTS.damage : 1);
         return { ...d, range, damage };
       },
       fire(this: MeridianGame, e: UnitEntity | BuildingEntity, target: Entity) {
@@ -213,7 +215,7 @@
         allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
         let t = allies[0];
         if (t) {
-          t.hp = Math.min(t.maxHp, t.hp + UNITS.medic.heal * dt);
+          t.hp = Math.min(t.maxHp, t.hp + UNITS.medic.heal * this.healingFactor(e.team) * dt);
           if (e.cd <= 0) {
             const visible = this.visible(e);
             // Scenario state must not depend on the observing client's sight.

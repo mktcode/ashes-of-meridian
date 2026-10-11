@@ -786,13 +786,13 @@ test('expiring layout deadlines recheck removed Forum masks and still retire bui
 });
 test('partial or still-stepping ticks cannot change the preview of new battle upgrades',()=>{
  const ui=Object.create(MeridianUI.prototype),forum={id:1,kind:'building',type:'meridianforum',team:0,hp:950,progress:1},
-  b={id:2,kind:'building',type:'fieldlab',team:0,hp:500,progress:1,forumId:1,upgrade:'orbital',upgradeLevel:1},
+  b={id:2,kind:'building',type:'fieldlab',team:0,hp:500,progress:1,forumId:1,upgrade:'commandTraining',upgradeLevel:1,upgradeOffers:['commandTraining','weaponTechnology','fieldMedicine']},
   recipe={depth:0,encounter:{map:'desert',seed:1409}},world={stage:1,recipe,battle:{state:{entities:[forum,b]}}};
  Object.assign(ui,{view:'game',activeWorldStage:1,
   expedition:{worlds:[world]},game:{snapshotSafe:false,stepping:false,
    s:{depth:0,map:'desert',seed:1409,rules:{kind:'single-player',completed:true},entities:[forum,{...b,upgradeLevel:2}]}}});
- assert.equal(ui.expeditionUpgrades().upgrades.orbital,1);
- ui.game.snapshotSafe=true;ui.game.stepping=true;assert.equal(ui.expeditionUpgrades().upgrades.orbital,1);
- ui.game.stepping=false;assert.equal(ui.expeditionUpgrades().upgrades.orbital,2);
+ assert.equal(ui.expeditionUpgrades().upgrades.commandTraining,1);
+ ui.game.snapshotSafe=true;ui.game.stepping=true;assert.equal(ui.expeditionUpgrades().upgrades.commandTraining,1);
+ ui.game.stepping=false;assert.equal(ui.expeditionUpgrades().upgrades.commandTraining,2);
  assert.equal(b.upgradeLevel,1,'preview aggregation does not mutate archived buildings');
 });
