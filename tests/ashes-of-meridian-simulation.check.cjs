@@ -20,10 +20,10 @@ const terrainFingerprint = world => createHash('sha256')
   .digest('hex');
 
 // Explicit flat rule arena, not a claim about any catalog map's terrain or dimensions.
-function flatArena(extent, faction = 0) {
+function flatArena(extent, faction = 0, options = {}) {
   const runtime=createGame(), {game,context}=runtime;
   vm.runInContext(`const originalArenaRecipe=BATTLEFIELDS['alien-planet'];
-    BATTLEFIELDS['alien-planet']={...originalArenaRecipe,
+    const flatArenaRecipe={...originalArenaRecipe,
       createSize:()=>({extent:${extent},cellSize:2.5}),
       createLayout:()=>({startSites:[],resourceSites:[{x:-80,z:-80},{x:80,z:80}],corridors:[]}),
       generate(builder) {
@@ -32,9 +32,14 @@ function flatArena(extent, faction = 0) {
         w.staticGrid.set(w.surface.cliffs); w.terrainFeatureGrid.set(w.surface.cliffs);
         builder.ground();
       }};`,context);
-  try { game.start({seed:43015,map:'alien-planet',faction,deployment:'resource-start'}); }
-  finally { vm.runInContext("BATTLEFIELDS['alien-planet']=originalArenaRecipe",context); }
-  game.s.supplyCaches=[]; // Boundary/production rules, not exploration rewards.
+  // Restarts retain the explicit local recipe, never a procedural catalog map.
+  runtime.restartArena = (options = {}) => {
+    vm.runInContext("BATTLEFIELDS['alien-planet']=flatArenaRecipe",context);
+    try { game.start({...options,seed:43015,map:'alien-planet',faction,deployment:'resource-start'}); }
+    finally { vm.runInContext("BATTLEFIELDS['alien-planet']=originalArenaRecipe",context); }
+    game.s.supplyCaches=[]; // Local rules, not exploration rewards.
+  };
+  runtime.restartArena(options);
   return runtime;
 }
 
@@ -1015,8 +1020,8 @@ test('enemy benefits use the same effects, remain separate from fleet upgrades a
 });
 
 test('each team consumes its own paid first-foundation workshop; only the player gets fleet construction speed',()=>{
-  const {game}=createGame(),options={seed:1409,benefits:{pioneerSquad:1,fieldWorkshop:1},enemyBenefits:[{pioneerSquad:1,fieldWorkshop:1}]};
-  game.profile.upgrades={constructionProtocols:5};game.start(options);game.world.staticGrid.fill(0);
+  const options={upgrades:{constructionProtocols:5},benefits:{pioneerSquad:1,fieldWorkshop:1},enemyBenefits:[{pioneerSquad:1,fieldWorkshop:1}]};
+  const {game,restartArena}=flatArena(135,0,options);
   for(const team of [0,1]) {
     const p={x:team?12:-12,z:0},w=game.alive(e=>e.team===team&&e.type==='worker')[0];
     Object.assign(w,{x:p.x,z:-6});game.world.sight[team].explored.fill(255);game.world.rebuild(game.s.entities);
@@ -1028,14 +1033,15 @@ test('each team consumes its own paid first-foundation workshop; only the player
     assert.equal(game.build('depot',p,[],team),true);
     assert.equal(game.get(w.order.id).buildRate,team?undefined:1.25);
   }
-  game.start(options);assert.equal(game.s.parties[0].fieldWorkshopUsed,undefined);assert.equal(game.s.parties[1].fieldWorkshopUsed,undefined);
+  restartArena(options);assert.equal(game.s.parties[0].fieldWorkshopUsed,undefined);assert.equal(game.s.parties[1].fieldWorkshopUsed,undefined);
 });
 
 test('field workshop is paid, consumed only by successful placement and stays with one foundation',()=>{
-  const {game}=createGame(),options={seed:1409,benefits:{fieldWorkshop:99}};
-  game.profile.upgrades={startingWorkers:1};game.start(options);
+  const options={upgrades:{startingWorkers:1},benefits:{fieldWorkshop:99}};
+  const {game,restartArena}=flatArena(135,0,options);
+  assert.equal(game.alive(e=>e.team===0&&e.type==='worker').length,2,'bonus worker plus landing worker');
   const worker=player(game,'worker');worker.x=0;worker.z=-5;
-  game.world.staticGrid.fill(0);game.world.explored.fill(255);game.world.rebuild(game.s.entities);
+  game.world.explored.fill(255);game.world.rebuild(game.s.entities);
   game.account(0).alloy=0;assert.equal(game.build('depot',{x:0,z:0}),false);
   assert.equal(game.s.parties[0].fieldWorkshopUsed,undefined);
   game.account(0).alloy=1000;assert.equal(game.build('depot',{x:0,z:0}),true);
@@ -1053,33 +1059,40 @@ test('field workshop is paid, consumed only by successful placement and stays wi
   const enemy=game.spawnUnit('worker',20,-6,1,2);game.world.sight[1].explored.fill(255);
   game.account(1).alloy=1000;assert.equal(game.build('depot',{x:20,z:0},[],1),true);
   assert.equal(game.get(enemy.order.id).buildRate,undefined);
-  game.start(options);assert.equal(game.s.parties[0].fieldWorkshopUsed,undefined);
+  restartArena(options);assert.equal(game.s.parties[0].fieldWorkshopUsed,undefined);
   assert.equal(game.s.parties[0].benefits.fieldWorkshop,1);
 });
 
 test('fleet logistics and construction levels are bounded snapshots with unchanged setup and RNG',()=>{
-  const {game}=createGame(),options={seed:1409};game.start(options);
-  const entities=json(game.s.entities),terrain=Array.from(game.world.staticGrid),rng=game.random();
-  for(const [value,level] of [[-1,0],[1,1],[2.9,2],[3,3],[4,4],[99,5],[NaN,0]]) {
-    game.profile.upgrades={constructionProtocols:value,logisticsFrame:value,repairLogistics:value};
-    game.start(options);
-    assert.deepEqual(json(game.s.parties[0].meta),{constructionProtocols:level,logisticsFrame:level,repairLogistics:level});
-    assert.deepEqual(json(game.s.entities),entities);assert.deepEqual(Array.from(game.world.staticGrid),terrain);
-    assert.equal(game.random(),rng);assert.deepEqual([game.cap(0),game.cap(1)],[24+level*2,24]);
-    const snapshot=json(game.s);game.profile.upgrades.logisticsFrame=5;
-    assert.deepEqual(json(game.s),snapshot);assert.equal(game.cap(0),24+level*2);
+  const {game,context,restartArena}=flatArena(135), limits=vm.runInContext('BATTLE_UPGRADES',context);
+  const entities=json(game.s.entities),terrain=terrainFingerprint(game.world),rng=game.random();
+  const maximum=[limits.constructionProtocols.max,limits.logisticsFrame.max,limits.repairLogistics.max];
+  for(const [value,ranks] of [[-1,[0,0,0]],[1,[1,1,1]],[2.9,[2,2,2]],['3.9',[3,3,3]],
+    [4,[4,4,4]],[99,[99,99,15]],[Number.MAX_SAFE_INTEGER,maximum],[NaN,[0,0,0]]]) {
+    const upgrades={constructionProtocols:value,logisticsFrame:value,repairLogistics:value};
+    restartArena({upgrades});
+    assert.deepEqual(json(game.s.parties[0].meta),{constructionProtocols:ranks[0],logisticsFrame:ranks[1],repairLogistics:ranks[2]});
+    assert.deepEqual(json(game.s.entities),entities);assert.equal(terrainFingerprint(game.world),terrain);
+    assert.equal(game.random(),rng);
+    const capacity=Math.min(180,ranks[1]*2);
+    assert.deepEqual([game.cap(0),game.cap(1)],[capacity,0],'no HQ capacity before construction');
+    const snapshot=json(game.s);upgrades.logisticsFrame=5;
+    assert.deepEqual(json(game.s),snapshot);assert.equal(game.cap(0),capacity);
+    assert.notStrictEqual(game.party(0).meta,upgrades);
   }
-  game.profile.upgrades={logisticsFrame:5};game.start(options);
-  for(let i=0;i<12;i++)game.spawnBuilding('depot',0,0,0,0);
+  restartArena({upgrades:{logisticsFrame:5}});
+  establishHeadquarters(game);
+  assert.deepEqual([game.cap(0),game.cap(1)],[34,24],'established HQs add their normal capacity');
+  // Capacity-only structures have separate footprints, not twelve overlapping depots.
+  for(let i=0;i<12;i++)game.spawnBuilding('depot',-30+(i%4)*15,-30+Math.floor(i/4)*15,0,0);
   assert.equal(game.cap(),180);
 });
 
 test('construction adds workshop once; repair discounts change cost, never speed or enemy rules',()=>{
-  const {game}=createGame();
-  for(let level=0;level<=5;level++) {
-    game.profile.upgrades={constructionProtocols:level,repairLogistics:level};
-    game.start({seed:1409,benefits:{fieldWorkshop:1}});
-    game.world.staticGrid.fill(0);for(const view of game.world.sight)view.explored.fill(255);
+  const {game,restartArena}=flatArena(135);
+  for(const level of [0,1,2,3,4,5,14,15,16]) {
+    restartArena({upgrades:{constructionProtocols:level,repairLogistics:level},benefits:{fieldWorkshop:1}});
+    for(const view of game.world.sight)view.explored.fill(255);
     game.world.rebuild(game.s.entities);
     for(const team of [0,1]) {
       const x=team*20,w=game.spawnUnit('worker',x,-5,team,game.factionFor(team));
@@ -1090,10 +1103,11 @@ test('construction adds workshop once; repair discounts change cost, never speed
       b.progress=1;b.hp=b.maxHp-100;
       game.setOrder(w,{type:'repair',id:b.id,x:b.x,z:b.z});
       const alloy=game.account(team).alloy;game.worker(w,1);
-      close(b.hp,b.maxHp-62);close(game.account(team).alloy,alloy-3.8*(team===0?1-level*.05:1));
+      const repairFactor=team===0?1-Math.min(level,15)*.05:1;
+      close(b.hp,b.maxHp-62);close(game.account(team).alloy,alloy-3.8*repairFactor);
       // Also bound the actual hull repaired by the discounted remaining budget.
       game.account(team).alloy=1;const hp=b.hp;game.worker(w,1);
-      close(b.hp-hp,10/(team===0?1-level*.05:1));close(game.account(team).alloy,0);
+      close(b.hp-hp,10/repairFactor);close(game.account(team).alloy,0);
       b.hp=b.maxHp;game.worker(w,0);
       game.account(team).alloy=1000;
       assert.equal(game.build('depot',{x,z:12},[],team),true);
@@ -1102,25 +1116,48 @@ test('construction adds workshop once; repair discounts change cost, never speed
   }
 });
 
-test('base energy, hull, production and construction rates match the current rules', () => {
-  const { game } = createGame();
-  game.start({ seed: 1409 });
-  assert.deepEqual(json(game.s.parties[0].meta), {});
-  game.s.parties[0].account.energy = 0;
-  assert.equal(game.train('worker'), true);
-  const own = player(game, 'hq'), enemy = game.alive(e => e.team === 1 && e.type === 'hq')[0];
-  enemy.queue.push({ type: 'worker', progress: 0, time: 9, cost: 50, gas: 0 });
+test('local base energy regenerates at the declared rate and respects the cap', () => {
+  const { game, context } = flatArena(135);
+  establishHeadquarters(game);
+  assert.deepEqual(json(game.party(0).meta), {});
+  const maximum = vm.runInContext('COMMAND_ENERGY.max', context);
+  game.account(0).energy = 0; game.account(1).energy = maximum - .2;
   game.step(.5);
-  close(game.s.parties[0].account.energy, .5 * .8);
-  for (const b of [own, enemy]) close(b.queue[0].progress, .5 / 9);
-  assert.equal(game.spawnUnit('hero', -35, 45, 0, 0).maxHp, 850);
-  const foundation = game.spawnBuilding('depot', -35, 40, 0, 0, { progress: .1 }),
-    worker = game.spawnUnit('worker', -35, 40, 0, 0);
-  foundation.hp = foundation.maxHp * .1;
-  worker.x = foundation.x; worker.z = foundation.z;
-  game.setOrder(worker, { type: 'build', id: foundation.id });
+  close(game.account(0).energy, .5 * .8);
+  close(game.account(1).energy, maximum);
+});
+
+test('local established HQs progress paid worker orders at the base production rate', () => {
+  const { game } = flatArena(135);
+  const homes = establishHeadquarters(game);
+  for (const home of homes) {
+    const before = game.account(home.team).alloy;
+    assert.equal(game.train('worker', home.team, home.id), true);
+    close(game.account(home.team).alloy, before - 50);
+    assert.deepEqual(json(home.queue), [{ type: 'worker', progress: 0, time: 9, cost: 50, gas: 0 }]);
+  }
+  game.step(.5);
+  for (const home of homes) close(home.queue[0].progress, .5 / 9);
+});
+
+test('local unmodified commander spawn retains its base hull', () => {
+  const { game } = flatArena(135);
+  const hero = game.spawnUnit('hero', 0, 0, 0, 0);
+  assert.ok(hero); assert.ok(game.unitFits(hero, hero.x, hero.z));
+  assert.equal(hero.maxHp, 850); assert.equal(hero.hp, 850);
+});
+
+test('local paid foundation advances at the base construction rate from a fitting worker position', () => {
+  const { game } = flatArena(135), worker = player(game,'worker');
+  Object.assign(worker, { x: 0, z: -5 });
+  game.world.sight[0].explored.fill(255);
+  game.world.rebuild(game.s.entities); game.rehash();
+  assert.ok(game.unitFits(worker, worker.x, worker.z));
+  assert.equal(game.build('depot', { x: 0, z: 0 }, [worker.id]), true);
+  const foundation = game.get(worker.order.id);
+  assert.ok(game.unitFits(worker, worker.x, worker.z));
   game.worker(worker, .5);
-  close(foundation.progress, .1 + .5 / 16);
+  close(foundation.progress, .06 + .5 / 16);
   close(foundation.hp, foundation.maxHp * foundation.progress);
 });
 
