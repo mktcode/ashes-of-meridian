@@ -52,6 +52,7 @@ export function resolveShots(scene) {
         effects: true,
         caches: content !== 'landscape',
         guides: false,
+        mapBoundary: false,
         distanceMist: content !== 'landscape',
         horizonMist: content !== 'landscape',
         hud: false,

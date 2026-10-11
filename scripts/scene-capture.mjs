@@ -50,6 +50,7 @@ const { values } = parseArgs({
     reveal: { type: 'boolean' },
     'distance-mist': { type: 'boolean' },
     'horizon-mist': { type: 'boolean' },
+    'map-boundary': { type: 'boolean' },
     'reuse-build': { type: 'boolean' },
     angle: { type: 'string' },
     headed: { type: 'boolean' },
@@ -125,6 +126,7 @@ WebP quality 80 + per-image reports/index. Angles in radians. --scene also accep
     if (values[key] !== undefined) renderOverrides[key] = values[key];
   if (values['distance-mist'] !== undefined) renderOverrides.distanceMist = values['distance-mist'];
   if (values['horizon-mist'] !== undefined) renderOverrides.horizonMist = values['horizon-mist'];
+  if (values['map-boundary'] !== undefined) renderOverrides.mapBoundary = values['map-boundary'];
   const override = (shot) => {
     const result = { ...shot, render: { ...shot.render, ...renderOverrides } };
     for (const key of ['width', 'height', 'hour', 'dpr', 'quality'])

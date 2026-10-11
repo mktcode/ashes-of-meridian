@@ -39,6 +39,7 @@ test('capture recipes share the runtime validator and reject contradictory camer
   assert.equal(shots[1].render.caches, false);
   assert.equal(shots[1].render.distanceMist, false);
   assert.equal(shots[1].render.horizonMist, false);
+  assert.equal(shots[1].render.mapBoundary, false);
   assert.equal(
     resolveShots({ ...base, hud: false, shots: [{ render: { hud: true } }] })[0].render.hud,
     true,
@@ -254,6 +255,60 @@ test('landscape setup keeps resources and anchors, resets scene options and perm
   assert.equal(c.report().units, 1, 'render filter does not remove simulation entities');
   assert.equal(c.visible({ kind: 'unit' }), false);
   assert.equal(game.s.time, 0);
+});
+
+test('map boundary uses terrain at the logical extent, caches world geometry and respects visibility', () => {
+  const { controller: c, r, game } = fixture(),
+    projected = [],
+    widths = [];
+  let samples = 0,
+    dash;
+  game.world.surface.heightAt = () => {
+    samples++;
+    return 4;
+  };
+  r.project = (...p) => {
+    projected.push(p);
+    return { x: p[0], y: p[2] };
+  };
+  const ctx = {
+    save() {},
+    restore() {},
+    beginPath() {},
+    moveTo() {},
+    lineTo() {},
+    setLineDash(v) {
+      dash = Array.from(v);
+    },
+    stroke() {
+      widths.push(this.lineWidth);
+    },
+  };
+  c.render.mapBoundary = true;
+  c.drawMapBoundary(ctx);
+  assert.equal(projected.length, 0, 'normal gameplay has no capture frame');
+  c.active = true;
+  c.render.mapBoundary = false;
+  c.drawMapBoundary(ctx);
+  assert.equal(projected.length, 0);
+  c.render.mapBoundary = true;
+  c.drawMapBoundary(ctx);
+  assert.deepEqual(dash, [8, 6]);
+  assert.deepEqual(widths, [4, 2]);
+  assert.ok(projected.length > 4);
+  for (const [x, y, z] of projected) {
+    assert.ok(Math.abs(x) <= 100 + 1e-8 && Math.abs(z) <= 100 + 1e-8);
+    assert.ok(Math.abs(Math.abs(x) - 100) < 1e-8 || Math.abs(Math.abs(z) - 100) < 1e-8);
+    assert.ok(Math.abs(y - 4.12) < 1e-8);
+  }
+  const previous = samples;
+  c.drawMapBoundary(ctx);
+  assert.equal(samples, previous, 'pan/rotate only reprojects cached terrain points');
+  game.world = { ...game.world, extent: 200 };
+  projected.length = 0;
+  c.drawMapBoundary(ctx);
+  assert.ok(samples > previous);
+  assert.ok(projected.some((p) => p[0] === 200));
 });
 
 test('prepared GL errors abort instead of being consumed by a second report', async () => {

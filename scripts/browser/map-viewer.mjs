@@ -49,6 +49,23 @@ await withBrowser(
     assert.equal(before.state.units, 0);
     assert.equal(before.state.buildings, 0);
     assert.equal(before.state.render.horizonMist, false);
+    assert.equal(before.state.render.mapBoundary, true);
+    const boundary = page.locator('#mapViewer input[name="boundary"]');
+    const overlayHasPixels = () =>
+      page.evaluate(() => {
+        const canvas = document.querySelector('#overlay'),
+          data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+        for (let i = 3; i < data.length; i += 4) if (data[i]) return true;
+        return false;
+      });
+    assert.equal(await boundary.isChecked(), true);
+    assert.equal(await overlayHasPixels(), true);
+    await boundary.uncheck();
+    await ready();
+    assert.equal(await overlayHasPixels(), false);
+    await boundary.check();
+    await ready();
+    assert.equal(await overlayHasPixels(), true);
     assert.equal(await page.evaluate(() => window.Meridian.renderer.fogOn), false);
     assert.equal(await page.evaluate(() => window.Meridian.renderer.horizonMist), false);
     const clock = page.locator('#mapViewerTime');
@@ -115,6 +132,7 @@ await withBrowser(
       matrix = await page.evaluate(() => Array.from(window.Meridian.renderer.vp));
     await page.evaluate((camera) => window.Meridian.capture.apply({ camera }), recipe.camera);
     assert.ok(Math.abs(recipe.hour - 12) < 1e-6);
+    assert.equal(recipe.render.mapBoundary, true);
     const restored = await page.evaluate(() => Array.from(window.Meridian.renderer.vp));
     matrix.forEach((n, i) => assert.ok(Math.abs(n - restored[i]) < 1e-4));
     await page.setViewportSize({ width: 640, height: 720 });
@@ -150,6 +168,8 @@ await withBrowser(
       Math.abs((await page.evaluate(() => window.Meridian.renderer.battlefieldHour)) - 12) < 1e-6,
     );
     assert.equal(await page.locator('#mapViewer output').textContent(), '12:00');
+    assert.equal(await boundary.isChecked(), true);
+    assert.equal(await overlayHasPixels(), true);
     assert.equal(await page.evaluate(() => window.Meridian.renderer.fogOn), false);
     assert.equal(await page.evaluate(() => window.Meridian.renderer.horizonMist), false);
     assert.deepEqual(await page.evaluate(() => window.viewerStorageCalls), []);
@@ -165,7 +185,7 @@ await withBrowser(
     assert.equal(await page.evaluate(() => window.Meridian.game.s.time), 0);
     assert.deepEqual(await page.evaluate(() => window.viewerStorageCalls), []);
     console.log(
-      'Map viewer file://, profile isolation, paused mouse/touch navigation, zoom, unmasked landscape borders, day-time slider/export/reload, idle rendering, export, resize/fit, seed reload and visible context-loss handling passed.',
+      'Map viewer file://, profile isolation, paused mouse/touch navigation, zoom, terrain-following dashed map-boundary toggle/export, unmasked landscape borders, day-time slider/export/reload, idle rendering, export, resize/fit, seed reload and visible context-loss handling passed.',
     );
   },
   { timeoutMs: 60000 },

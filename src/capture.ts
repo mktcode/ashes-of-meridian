@@ -9,7 +9,7 @@ type CaptureCamera = {
   fit?: 'map' | 'entities'; padding?: number;
 };
 type CaptureRender = { units?: boolean; buildings?: boolean; effects?: boolean; caches?: boolean;
-  guides?: boolean; distanceMist?: boolean; horizonMist?: boolean; hud?: boolean };
+  guides?: boolean; mapBoundary?: boolean; distanceMist?: boolean; horizonMist?: boolean; hud?: boolean };
 type CaptureEntity = { kind: 'unit' | 'building'; type: string; team: PlayerTeam;
   x: number; z: number; rot?: number; anchor?: 'world' | 'player' | 'enemy' };
 type CaptureShot = { name?: string; camera?: CaptureCamera; render?: CaptureRender; hour?: number;
@@ -63,7 +63,7 @@ function validateCaptureScene(scene: CaptureScene, shotOnly = false): CaptureSce
   if (scene.hour !== undefined) num(scene.hour, 'hour', 0, 23.999999);
   for (const key of ['reveal','hud'] as const) if (scene[key] !== undefined && typeof scene[key] !== 'boolean') throw Error(`Invalid ${key}`);
   if (scene.render !== undefined) {
-    object(scene.render, ['units','buildings','effects','caches','guides','distanceMist','horizonMist','hud'], 'render');
+    object(scene.render, ['units','buildings','effects','caches','guides','mapBoundary','distanceMist','horizonMist','hud'], 'render');
     for (const [key,v] of Object.entries(scene.render)) if (typeof v !== 'boolean') throw Error(`Invalid render.${key}`);
   }
   if (scene.camera !== undefined) {
@@ -152,7 +152,7 @@ class MeridianCapture {
   scene?: CaptureScene;
   camera?: CaptureCamera;
   resolved?: ResolvedCaptureCamera;
-  render: Required<CaptureRender> = { units:true,buildings:true,effects:true,caches:true,guides:false,distanceMist:true,horizonMist:true,hud:false };
+  render: Required<CaptureRender> = { units:true,buildings:true,effects:true,caches:true,guides:false,mapBoundary:false,distanceMist:true,horizonMist:true,hud:false };
   anchors: Record<string, Position> = {};
   placed: {id:number;type:string;x:number;z:number}[] = [];
   hour?: number;
@@ -184,6 +184,34 @@ class MeridianCapture {
     }
     return points;
   }
+  private boundaryPaths = new WeakMap<Battlefield,CaptureVector[]>();
+  drawMapBoundary(ctx: CanvasRenderingContext2D) {
+    const world=this.game.world;
+    if (!this.active || !this.render.mapBoundary || !world) return;
+    let points=this.boundaryPaths.get(world);
+    if (!points) {
+      const e=world.extent, corners=[[-e,-e],[e,-e],[e,e],[-e,e],[-e,-e]],
+        steps=Math.min(256,Math.ceil(2*e/Math.max(1,world.cellSize ?? 2)));
+      points=[];
+      for (let side=0;side<4;side++) for (let i=0;i<steps;i++) {
+        const t=i/steps,x=corners[side][0]*(1-t)+corners[side+1][0]*t,
+          z=corners[side][1]*(1-t)+corners[side+1][1]*t;
+        points.push([x,world.surface!.heightAt(x,z)+.12,z]);
+      }
+      points.push(points[0]); this.boundaryPaths.set(world,points);
+    }
+    // Screen-space annotation follows terrain and camera, not the decorative apron.
+    ctx.save(); ctx.globalAlpha=1; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.setLineDash([8,6]); ctx.beginPath();
+    let connected=false;
+    for (const point of points) {
+      const p=this.renderer.project(...point);
+      if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) {connected=false;continue;}
+      if (connected) ctx.lineTo(p.x,p.y); else ctx.moveTo(p.x,p.y);
+      connected=true;
+    }
+    ctx.strokeStyle='#06101ee6'; ctx.lineWidth=4; ctx.stroke();
+    ctx.strokeStyle='#c9fff3'; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
+  }
   visible(e: {kind:string}) { return e.kind === 'unit' ? this.render.units : e.kind === 'building' ? this.render.buildings : true; }
   async adopt(shot: CaptureShot = {}) {
     validateCaptureScene(shot as CaptureScene,true);
@@ -191,7 +219,7 @@ class MeridianCapture {
     this.active = this.readyToDraw = true; this.ui.viewing = true; this.ui.paused = true;
     this.scene = {map:this.game.s.map,seed:this.game.s.seed,content:'landing'};
     this.camera = {mode:'game'}; this.fitActive = false; this.fitKey = ''; this.hour = undefined;
-    this.render = {units:true,buildings:true,effects:true,caches:true,guides:false,distanceMist:true,horizonMist:true,hud:false};
+    this.render = {units:true,buildings:true,effects:true,caches:true,guides:false,mapBoundary:false,distanceMist:true,horizonMist:true,hud:false};
     this.anchors = {world:{x:0,z:0}}; this.placed = [];
     for (const [name,team] of [['player',0],['enemy',1]] as const) {
       const home=this.game.alive(e=>e.team===team && e.kind==='unit' && e.type==='worker')[0];
@@ -208,7 +236,7 @@ class MeridianCapture {
     if (this.busy) throw Error('Scene preparation already in progress');
     this.busy = true; this.readyToDraw = false; this.active = true; this.ui.viewing = true; this.ui.viewingCameraLocked = true;
     this.ui.expedition = null; this.ui.paused = true;
-    this.render = {units:true,buildings:true,effects:true,caches:scene.content!=='landscape',guides:false,distanceMist:scene.content!=='landscape',horizonMist:scene.content!=='landscape',hud:false};
+    this.render = {units:true,buildings:true,effects:true,caches:scene.content!=='landscape',guides:false,mapBoundary:false,distanceMist:scene.content!=='landscape',horizonMist:scene.content!=='landscape',hud:false};
     this.reveal = scene.reveal !== false;
     this.ui.view = 'game'; this.renderer.captureCamera = undefined;
     this.scene = JSON.parse(JSON.stringify(scene));
@@ -348,6 +376,7 @@ class MeridianCapture {
       <label>Seed <input name="seed" type="number" min="1" max="99999999" required></label><button>Load</button>
       <button type="button" data-viewer="random">Random seed</button><button type="button" data-viewer="fit">Whole map</button>
       <button type="button" data-viewer="reset">Reset camera</button><label><input name="mist" type="checkbox"> Distance mist</label>
+      <label><input name="boundary" type="checkbox" checked> Map boundary</label>
       <label>Time of day <input id="mapViewerTime" name="hour" type="range" min="0" max="1439" step="1" value="0" aria-label="Time of day"><output for="mapViewerTime">00:00</output></label>
       <button type="button" data-viewer="export">Export recipe</button><button type="button" data-viewer="hide">Hide tools</button></form>
       <p role="status">Drag to pan · middle-drag to rotate · wheel/pinch to zoom</p>`;
@@ -355,6 +384,7 @@ class MeridianCapture {
     const form=panel.querySelector('form')!, map=form.elements.namedItem('map') as HTMLSelectElement,
       seed=form.elements.namedItem('seed') as HTMLInputElement, mist=form.elements.namedItem('mist') as HTMLInputElement,
       clock=form.elements.namedItem('hour') as HTMLInputElement, clockLabel=panel.querySelector('output')!,
+      boundary=form.elements.namedItem('boundary') as HTMLInputElement,
       status=panel.querySelector('p')!;
     let selectedHour: number | undefined;
     const showTime=()=>{
@@ -369,7 +399,7 @@ class MeridianCapture {
       status.textContent='Preparing landscape…';
       try {
         await this.prepare({map:mapId,seed:value,content:'landscape',hour:selectedHour,dpr:Math.min(devicePixelRatio||1,1.6),
-          camera:{mode:'game',fit:'map'},render:{distanceMist:mist.checked,caches:false}});
+          camera:{mode:'game',fit:'map'},render:{distanceMist:mist.checked,mapBoundary:boundary.checked,caches:false}});
         clock.value=String(Math.round((this.renderer.battlefieldHour ?? 0)*60)%1440); showTime();
         const url=new URL(location.href); url.searchParams.set('map',mapId);url.searchParams.set('seed',String(value));
         try { history.replaceState(null,'',url); } catch { /* file:// history is browser dependent */ }
@@ -386,6 +416,7 @@ class MeridianCapture {
     panel.querySelector<HTMLButtonElement>('[data-viewer="fit"]')!.onclick=()=>action(()=>this.apply({camera:{mode:'game',fit:'map',yaw:this.game.s?.cam.yaw ?? 0}}));
     panel.querySelector<HTMLButtonElement>('[data-viewer="reset"]')!.onclick=()=>action(()=>this.apply({camera:{mode:'game',fit:'map',yaw:0}}));
     mist.onchange=()=>action(()=>this.apply({render:{distanceMist:mist.checked}}));
+    boundary.onchange=()=>action(()=>this.apply({render:{mapBoundary:boundary.checked}}));
     clock.oninput=()=>{
       if (this.busy || !this.readyToDraw) return;
       showTime(); selectedHour=Number(clock.value)/60;

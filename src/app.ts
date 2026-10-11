@@ -729,6 +729,7 @@
             if (!retainResultScene) {
               if (!capture?.active || capture.render.guides) ui.drawOverlay(overlayContext);
               else overlayContext.clearRect(0,0,innerWidth,innerHeight);
+              capture?.drawMapBoundary(overlayContext);
             }
             if (capture?.active) {
               capture.renderedRequest = capture.request;
