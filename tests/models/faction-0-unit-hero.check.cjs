@@ -76,7 +76,7 @@ test('Breach Marshal: closed emissive beacon crystal and pose-aligned lamp',()=>
 });
 test('Breach Marshal: broad real night beacon, smooth dusk, preview isolation and Performance lighting',()=>{
  const {h,e,draw}=setup();
- for(const quality of [0,1])for(const [hour,intensity]of [[12,0],[18.5,12],[22,24],[5.5,12]]){
+ for(const quality of [0,1])for(const [hour,intensity]of [[12,0],[18.5,7],[22,14],[5.5,7]]){
   const lights=[];
   draw(e,0,{}, {battlefieldHour:hour,quality,addPointLight:(...args)=>lights.push(args)});
   assert.equal(lights.length,intensity?1:0);
@@ -101,8 +101,8 @@ test('Breach Marshal: crystal and real lamp breathe together, pause freezes them
   const beacon=calls.find(c=>c[0]==='breachMarshalBeacon'),visor=calls.find(c=>c[0]==='breachMarshalOptics');
   assert(beacon[11]>visor[11],'source is brighter than secondary optics');
   const pulse=1+.08*Math.sin(time*2.1);
-  assert(Math.abs(beacon[11]-4.2*pulse)<1e-9);
-  assert(Math.abs(lights[0][5]-24*pulse)<1e-9);
+  assert(Math.abs(beacon[11]-3*pulse)<1e-9);
+  assert(Math.abs(lights[0][5]-14*pulse)<1e-9);
   return [beacon[11],lights[0][5]];
  }
  assert.notDeepEqual(sample(0),sample(.7));

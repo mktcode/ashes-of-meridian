@@ -216,8 +216,8 @@ function createOathguard(): Record<string, number[]> {
       const cy=Math.cos(upperRx),sy=Math.sin(upperRx),cz=Math.cos(upperRz),sz=Math.sin(upperRz),
         visorY=1.873-.85, vx=-visorY*sz,vy=visorY*cz,
         ly=upperTarget[1]+vy*cy-.27*sy,lz=upperTarget[2]+vy*sy+.27*cy;
-      pointLight(vx,ly,lz,4,0x38d9e8,1.5);
-      if(nightLight>0)lightPool(0,1.3,1.8,2.3,0x38d9e8,.65*nightLight);
+      pointLight(vx,ly,lz,4,0x38d9e8,1);
+      if(nightLight>0)lightPool(0,1.3,1.8,2.3,0x38d9e8,.4*nightLight);
     }
   });
 

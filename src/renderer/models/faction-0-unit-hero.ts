@@ -206,7 +206,7 @@
       for(const name of ['torso','helmet','rightArm','leftArm','carbine'])draw(name,[0,.85,0],upperTarget,upperRx,upperRz);
       draw('team',[0,.85,0],upperTarget,upperRx,upperRz,surfaceColor(team),.2);
       draw('optics',[0,.85,0],upperTarget,upperRx,upperRz,cyan,.95+1.55*nightLight);
-      draw('beacon',[0,.85,0],upperTarget,upperRx,upperRz,cyan,(1.2+3*nightLight)*beaconPulse);
+      draw('beacon',[0,.85,0],upperTarget,upperRx,upperRz,cyan,(1.2+1.8*nightLight)*beaconPulse);
       if(firing&&shotAge<.04)draw('flash',[0,.85,0],upperTarget,upperRx,upperRz,cyan,2.2);
       for(const s of [-1,1]) {
         const side=s<0?'left':'right',hip: Point=[s*.205,.85,0],knee: Point=[s*.255,.46,s<0?.12:-.075],ankle: Point=[s*.275,.15,s<0?.16:-.075];
@@ -229,7 +229,7 @@
       // Keep the visibly lit ground beyond attack range, not just the lamp's cutoff.
       // The larger envelope compensates for distance, grazing normals and edge falloff.
       const beaconReach=UNITS.hero.range*3;
-      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,24*beaconPulse);
+      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,14*beaconPulse);
       // No projected ground pool: terrain and nearby models receive the same 3D lamp.
     }
   });

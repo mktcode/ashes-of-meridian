@@ -4,6 +4,23 @@ const vm = require('node:vm');
 const {modelHarness} = require('../helpers/model-contract.cjs');
 const {createRendererStub} = require('../helpers/renderer-stub.cjs');
 
+test('regular infantry: restrained real light and ground pool across factions',()=>{
+ const h=modelHarness(),material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context);
+ for(const faction of [0,1,2])for(const type of ['rifle','medic']){
+  const e={id:17,kind:'unit',type,faction,team:0,hp:h.UNITS[type].hp,size:h.UNITS[type].size,x:0,z:0,rot:0};
+  for(const [hour,blend]of [[18.5,.5],[22,1]]){
+   const lights=[],r=createRendererStub({record:true});
+   Object.assign(r,{battlefieldHour:hour,quality:1,addPointLight:(...args)=>lights.push(args)});
+   h.renderEntity(r,e,0,{});
+   assert.equal(lights.length,1);
+   assert.equal(lights[0][3],4,'retain the existing influence radius');
+   assert.equal(lights[0][5],blend,'reduced point-light strength follows dusk');
+   const pool=r.calls.find(c=>c[14]===material);
+   assert.equal(pool[12],.4*blend,'reduced ground overlay follows dusk');
+  }
+ }
+});
+
 for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
   test(`faction-${faction} ${type}: night accent, terrain pool and preview isolation`, () => {
     const h=modelHarness(), material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context),
