@@ -6,7 +6,22 @@ type CivilianStyleParts = {
   module(x:number,y:number,z:number,w:number,d:number,floors?:number):number;
   entry(y:number):void;
   cap(x:number,y:number,z:number,w:number,h:number,d:number):void;
+  crate(x:number,y:number,z:number,scale:number,yaw:number,echo?:boolean):void;
 };
+function civilianCargo(p:CivilianStyleParts,rank:number,mixed=false){
+  // Authored local positions, not entity-ID/terrain-dependent decoration. Entrances stay clear.
+  const groups: readonly (readonly [number,number,number,number,number])[][]=[
+    [[-1.06,.3,2.19,.30,-.08],[-.46,.3,2.26,.30,.12],[-1.03,.726,2.21,.30,-.08]],
+    [[-1.15,.3,3.38,.30,-.10],[-.55,.3,3.45,.30,.12],[-1.12,.726,3.40,.30,-.10],[-.58,.726,3.46,.30,.12]],
+    [[-1.60,.3,2.05,.32,-.10],[-.95,.3,2.12,.32,.13],[-1.57,.7544,2.08,.32,-.10],[-.97,.7544,2.14,.32,.13],[-1.48,.3,2.66,.27,.28]]
+  ];
+  for(const [x,y,z,s,yaw] of groups[rank-1])p.crate(x,y,z,s,yaw);
+  if(mixed){
+    const z=rank===2?3.45:2.30;
+    p.crate(1.70,.3,z,.30,-.18,true);
+    p.crate(1.73,.726,z+.02,.30,-.18,true);
+  }
+}
 const CivilianUpgradeStyles: Record<string,(type:BuildingType,p:CivilianStyleParts)=>void> = {
   startingAlloy(type,p){
     const rank=type==='embercottage'?1:type==='terracecommons'?2:3;
@@ -32,6 +47,7 @@ const CivilianUpgradeStyles: Record<string,(type:BuildingType,p:CivilianStylePar
       vault(-.95,roof,-.65,1.45,2.5);vault(.95,roof+.18,-.35,1.45,2.5);
       for(let floor=0;floor<6;floor++)p.box(0,.6+floor*1.55,1.38,3.6,.18,.16,'orange');
     }
+    civilianCargo(p,rank);
     p.entry(.35);
   },
   weaponTechnology(type,p){
@@ -63,6 +79,7 @@ const CivilianUpgradeStyles: Record<string,(type:BuildingType,p:CivilianStylePar
       }
       rails(.12,roof,-.58,3.55,2.4);
     }
+    civilianCargo(p,rank,true);
     p.entry(.35);
   }
 };

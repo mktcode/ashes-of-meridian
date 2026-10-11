@@ -2,17 +2,19 @@
    separate stilt/entry recipes sample the CPU surface only when the support pose changes. */
 'use strict';
 (() => {
-  type Material = 'steel' | 'edge' | 'dark' | 'orange' | 'cyan' | 'glass' | 'window' | 'warm' | 'dim' | 'soil' | 'leaf';
+  type Material = 'steel' | 'edge' | 'dark' | 'orange' | 'cyan' | 'glass' | 'window' | 'warm' | 'dim' | 'soil' | 'leaf' | keyof typeof SUPPLY_CRATE_COLORS;
   type Variant = 'fieldlab' | 'researchhub' | 'researchspire' | 'embercottage' | 'terracecommons' | 'hearthtower';
   type Foot = { x: number; z: number; top: number };
   const colors: Record<Material, number> = {steel:0x68797d,edge:0xabb4b2,dark:0x23333e,
     orange:0xb46a31,cyan:0x3fdcea,glass:0x235b68,window:0x55ccdf,
-    warm:0xffdab0,dim:0x806e58,soil:0x384438,leaf:0x385938};
+    warm:0xffdab0,dim:0x806e58,soil:0x384438,leaf:0x385938,...SUPPLY_CRATE_COLORS};
+  let cargoPrimitives: Record<string,MeshData> | undefined;
   const variants: Variant[] = ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
   const feet = (x:number,z:number,w:number,d:number,top=0):Foot[] =>
     [-w/2+.2,w/2-.2].flatMap(dx=>[-d/2+.15,0,d/2-.15].map(dz=>({x:x+dx,z:z+dz,top})));
   function assembly(type: Variant, style = ''): Record<Material, number[]> {
-    const meshes: Record<Material, number[]> = {steel:[],edge:[],dark:[],orange:[],cyan:[],glass:[],window:[],warm:[],dim:[],soil:[],leaf:[]};
+    const meshes:Record<Material,number[]>={steel:[],edge:[],dark:[],orange:[],cyan:[],glass:[],window:[],warm:[],dim:[],soil:[],leaf:[],
+      crateCinder:[],crateEcho:[],crateDark:[],crateEdge:[],crateCinderMark:[],crateEchoMark:[]};
     const tri = (a:number[],b:number[],c:number[],m:Material) => geom.tri(meshes[m],a,b,c,[1,1,1]);
     const quad = (a:number[],b:number[],c:number[],d:number[],m:Material) => {tri(a,b,c,m);tri(a,c,d,m);};
     const box = (x:number,y:number,z:number,w:number,h:number,d:number,m:Material='steel') => {
@@ -161,7 +163,19 @@
         tri(b,a,back,'edge');tri(f,c,front,'edge');quad(a,b,c,f,'edge');
         quad(a,f,front,back,'edge');quad(c,b,back,front,'edge');
       };
-      CivilianUpgradeStyles[style](type,{box,residential,module,entry,cap});
+      const crate=(x:number,y:number,z:number,scale:number,yaw:number,echo=false)=>{
+        cargoPrimitives ??= {supplyCrateHull:geom.supplyCrateHull(),box:geom.box(),hex:geom.cylinder(6)};
+        const cs=Math.cos(yaw),sn=Math.sin(yaw);
+        supplyCrateParts(echo,(shape,dx,dy,dz,sx,sy,sz,color,_glow,rz=0,rx=0)=>{
+          const material=(Object.keys(SUPPLY_CRATE_COLORS) as (keyof typeof SUPPLY_CRATE_COLORS)[])
+            .find(key=>SUPPLY_CRATE_COLORS[key]===color)!;
+          ModelMesh.bake(meshes[material],cargoPrimitives![shape],{
+            x:x+scale*(dx*cs+dz*sn),y:y+dy*scale,z:z+scale*(-dx*sn+dz*cs),
+            sx:sx*scale,sy:sy*scale,sz:sz*scale,ry:yaw,rx,rz
+          });
+        });
+      };
+      CivilianUpgradeStyles[style](type,{box,residential,module,entry,cap,crate});
       return meshes;
     }
     if(type==='fieldlab'){
@@ -234,7 +248,10 @@
     const housing=type==='embercottage'||type==='terracecommons'||type==='hearthtower',
       materials: Material[] = housing ? ['steel','edge','dark','orange','cyan','warm','dim','soil','leaf']
         : ['steel','edge','dark','cyan','window',...(type==='researchspire'?[]:['glass' as const])];
-    const materialSet=(style:string):Material[]=>style ? (housing ? ['steel','edge','dark','orange','cyan','warm','dim'] : ['steel','edge','dark','cyan','window']) : materials;
+    const specializedMaterials:Material[]=housing
+      ? ['steel','edge','dark','orange','cyan','warm','dim','crateCinder','crateCinderMark','crateDark','crateEdge']
+      : ['steel','edge','dark','cyan','window',...Object.keys(SUPPLY_CRATE_COLORS) as (keyof typeof SUPPLY_CRATE_COLORS)[]];
+    const materialSet=(style:string):Material[]=>style ? specializedMaterials : materials;
     const styles=['',housing?'startingAlloy':'weaponTechnology'];
     for(const style of styles)for(const material of materialSet(style))
       meshes[`civil${type[0].toUpperCase()+type.slice(1)}${style}${material[0].toUpperCase()+material.slice(1)}`] = () => {
@@ -246,7 +263,7 @@
       const style=styles.includes(context.entity.upgrade || '') ? context.entity.upgrade || '' : '',
         scale=CIVILIZATION_MODEL_SCALE,name=`civil${type[0].toUpperCase()+type.slice(1)}${style}`;
       for(const material of materialSet(style)){
-        const glow=material==='cyan'?1.1:material==='window'?.65:material==='warm'?1:material==='dim'?.28:0;
+        const glow=material==='cyan'?1.1:material==='window'?.65:material==='warm'?1:material==='dim'?.28:material==='crateCinderMark'||material==='crateEchoMark'?.45:0;
         (glow?nightPart:p)(name+material[0].toUpperCase()+material.slice(1),0,0,0,scale,scale,scale,
           surfaceColor(colors[material]),0,0,0,glow,undefined,MAT.METAL);
       }
