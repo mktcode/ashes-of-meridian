@@ -10,7 +10,7 @@ function upload(h) {
   h.EntityModels.upload(r); return r.meshes;
 }
 // These organic meshes deliberately use smooth, crease-aware normals, not the flat
-// normals required by assertMesh for the older models. Validate the actual normals.
+// normals required by assertMesh. Validate the actual normals.
 function checkSoftMesh(mesh, {min,max,budget}) {
   assert.equal(mesh.length%27,0); assert.ok(mesh.length/27<=budget);
   const edges = new Map(); let rounded = 0;
@@ -36,7 +36,7 @@ function checkSoftMesh(mesh, {min,max,budget}) {
     }
   }
   assert.ok([...edges.values()].every(([count,winding]) => count===2 && winding===0),'closed consistently wound components');
-  assert.ok(rounded>mesh.length/9*.30,'rounded surfaces, not the old faceted mantis');
+  assert.ok(rounded>mesh.length/9*.30,'smooth normals on rounded surfaces');
 }
 function surfaceAt(mesh,x,z) {
   let height = -Infinity;
@@ -86,7 +86,7 @@ test('Bloom queen: five separate petal lobes and a rounded, compact bumblebee si
     'seven cached mesh batches, two antenna instances; at most 22000 triangles including shadows');
 });
 
-test('Bloom queen: flower replaces ONLY the HQ mound, while building role and all preview contracts survive', () => {
+test('Bloom queen: isolated HQ assembly, building role and preview contracts', () => {
   const h = modelHarness();
   assert.equal(h.FACTIONS[1].buildings.hq,'Bloom Queen');
   assert.equal(h.BUILDINGS.hq.size,4.4); assert.equal(h.BUILDINGS.hq.hp,2600); assert.equal(h.BUILDINGS.hq.cap,24);
@@ -97,7 +97,7 @@ test('Bloom queen: flower replaces ONLY the HQ mound, while building role and al
     if (faction!==1 || type!=='hq') assert.notEqual(h.EntityModels.find({...entity,faction,type}).id,model.id);
   vm.runInContext('Math.random = seeded = () => { throw Error("Queen RNG"); }; for (const k of Object.keys(geom)) geom[k] = () => { throw Error("Frame geometry"); };',h.context);
   const normal = h.draw(entity);
-  assert.deepEqual(normal.map(c => c[0]),[...names,names[6]],'no mound, platform, long limbs or old crown');
+  assert.deepEqual(normal.map(c => c[0]),[...names,names[6]],'seven queen batches and two antenna instances');
   assert.deepEqual(h.draw({...entity,progress:undefined,rot:-2.1}),normal,'still an immobile HQ');
   assert.deepEqual(h.draw({...entity,hp:0}),[]);
   for (const team of [0,1]) for (const progress of [0,.4,1]) {
@@ -137,7 +137,7 @@ test('Bloom queen: slow belly breathing and tiny antenna motion never move the f
       const mesh = [];
       h.ModelMesh.bake(mesh,meshes[c[0]],{x:c[1],y:c[2],z:c[3],sx:c[4],sy:c[5],sz:c[6],ry:c[8],rx:c[9],rz:c[10]});
       for (let i = 0; i < mesh.length; i += 9) {
-        assert.ok(mesh[i+1]>=0 && mesh[i+1]<=3.65,'low rounded creature, not the old tall mantis');
+        assert.ok(mesh[i+1]>=0 && mesh[i+1]<=3.65,'animated queen remains within its vertical bounds');
         assert.ok(Math.hypot(mesh[i],mesh[i+2])<4.4,'flower and animation stay inside HQ radius');
       }
     }

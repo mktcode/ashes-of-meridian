@@ -289,7 +289,7 @@ test('a viable observed target launches the main wave rather than reserving all 
   assert.equal(orders.length,1); assert.equal(orders[0].x,worker.x);
 });
 
-test('productive attacks survive the old 150 second limit without resetting sortie age', () => {
+test('continued damage keeps an attack active without resetting sortie age', () => {
   const {g,ai,entity,contact,own,home,launch} = fixture();
   const troop = entity('rifle',1,8,0), hq = contact(entity('hq',0));
   launch([troop],hq); ai.launched = 10;

@@ -8,7 +8,7 @@ test('Thorn spire: rooted cannon cradle and complete aimed weapon preserve build
   checkBuilding({
     faction:1,type:'turret',mesh:'faction1TurretHull',height:3.7,
     min:[-1.43,-.09,-1.49],max:[1.55,3.11,1.49],minTriangles:1000,maxTriangles:1000,
-    maxInstances:5,totalTriangles:2400,legacyChoirEffects:false,
+    maxInstances:5,totalTriangles:2400,choirCrystal:false,
     features:[{name:'four-leaf cannon cradle',min:[-.95,2.65,-.8],max:[.95,3.11,.25],vertices:16}],
     extraMeshes:[
       {mesh:'faction1TurretWeapon',min:[-.87,-.67,-1.44],max:[.87,.67,2.68],minTriangles:600,maxTriangles:600},

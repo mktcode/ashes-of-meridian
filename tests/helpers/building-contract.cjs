@@ -4,7 +4,7 @@ const { modelHarness, assertMesh } = require('./model-contract.cjs');
 
 // Every remaining building owns a small declarative test specification, not a runtime model DSL.
 function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangles,
-  maxInstances = 36, totalTriangles = 3000, features = [], height, extraMeshes = [], legacyChoirEffects = true }) {
+  maxInstances = 36, totalTriangles = 3000, features = [], height, extraMeshes = [], choirCrystal = true }) {
   const h = modelHarness(), id = `faction-${faction}/building/${type}`, d = h.BUILDINGS[type];
   vm.runInContext('Math.random = seeded = () => { throw Error("Building mesh/draw RNG"); };', h.context);
   const upload = () => {
@@ -38,7 +38,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
   for (const f of [0, 1, 2]) for (const t of Object.keys(h.BUILDINGS)) if (f !== faction || t !== type)
     assert.notEqual(h.EntityModels.find({ ...e, faction: f, type: t }).id, id);
   assert.equal(normal.filter(c => c[0] === mesh).length, 1);
-  assert.ok(normal.length <= maxInstances, 'finished instance budget including legacy orbital effects');
+  assert.ok(normal.length <= maxInstances, 'finished instance budget including orbital effects');
   assert.ok(normal.reduce((sum, c) => sum + counts[c[0]], 0) <= totalTriangles, 'complete model triangle budget');
   assert.deepEqual(normal, h.draw({ ...e, progress: undefined }));
   assert.deepEqual(h.draw({ ...e, hp: 0 }), []);
@@ -61,7 +61,7 @@ function checkBuilding({ faction, type, mesh, min, max, minTriangles, maxTriangl
     }
     for (const time of [0,9,20]) {
       const timed = h.draw(state, {}, time), accent = team ? 0xffaf87 : f.accent;
-      if (faction === 1 && legacyChoirEffects) {
+      if (faction === 1 && choirCrystal) {
         assert.deepEqual(timed.find(c => c[0]==='octa' && c[11]===.85),
           ['octa',12,(height+Math.sin(time+e.id)*.14)*build,-7,d.size*.3,1.3*build,d.size*.3,accent,yaw+time*.22,0,0,.85,1,'dynamic',h.MAT.BIO]);
         if (type === 'hangar') assert.deepEqual(timed.find(c => c[0]==='ring' && c[13]==='effects' && c[2]===height*.9),

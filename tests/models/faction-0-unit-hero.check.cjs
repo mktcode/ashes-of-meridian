@@ -46,7 +46,7 @@ test('Breach Marshal: independent detailed command armor, closed meshes, breach 
  assert.equal(normal.find(c=>c[0]==='breachMarshalOptics')[7],0x38d9e8);
  assert.deepEqual(draw({...e,hp:0}),[]);
 });
-test('Breach Marshal: modest visible enlargement over the old Marshal, without gameplay scaling',()=>{
+test('Breach Marshal: bounded armor and raised beacon without gameplay scaling',()=>{
  const {h,e,meshes,draw}=setup(),normal=draw();let top=0,bottom=Infinity;
  for(const c of normal){
   assert.deepEqual(c.slice(4,7),[1.18,1.18,1.18]);
@@ -54,14 +54,13 @@ test('Breach Marshal: modest visible enlargement over the old Marshal, without g
  }
  const helmet=normal.find(c=>c[0]==='breachMarshalHelmet'),data=meshes.breachMarshalHelmet;
  let headTop=0;for(let i=0;i<data.length;i+=9)headTop=Math.max(headTop,transform(helmet,data.slice(i,i+3))[1]);
- assert(headTop>2.35&&headTop<2.5,'armor remains roughly 11% taller than the old Marshal');
+ assert(headTop>2.35&&headTop<2.5,'helmet stays within its authored height bounds');
  assert(top>3.1&&top<3.2,'raised crystal beacon extends above the armor');
  assert(bottom>=0&&bottom<.01,'scale is about the floor, not the body center');
  assert.equal(e.size,h.UNITS.hero.size);assert.equal(e.hp,h.UNITS.hero.hp);
 });
-test('Breach Marshal: removed rear mantle and large emissive crystal on the extended beacon',()=>{
- const {h,e,meshes,draw}=setup(),torso=meshes.breachMarshalTorso,optics=meshes.breachMarshalOptics;
- for(let i=0;i<torso.length;i+=9)assert(!(torso[i+1]<1&&torso[i+2]<-.45),'no hanging rear plates');
+test('Breach Marshal: closed emissive beacon crystal and pose-aligned lamp',()=>{
+ const {h,e,meshes,draw}=setup(),optics=meshes.breachMarshalOptics;
  const crystal=[];for(let i=0;i<optics.length;i+=9)if(optics[i+1]>2.15)crystal.push(optics.slice(i,i+3));
  assert.equal(crystal.length,24,'closed eight-facet crystal');
  assert(Math.max(...crystal.map(p=>p[1]))>=2.65-1e-9);
@@ -121,7 +120,7 @@ test('Breach Marshal: measured walking cadence, articulated legs, idle breathing
  for(let i=1;i<=8;i++)draw(e,4.6+i*.05);
  for(const c of draw(e,5).filter(c=>/Thigh|Shin|Boot/.test(c[0])))assert.deepEqual(c.slice(8,11),[0,0,0]);
  const demo={...e,order:undefined,walk:.4},loop=draw({...demo,walk:.4+Math.PI/2},0),initial=draw(demo,0);
- for(let i=0;i<loop.length;i++)for(const k of [1,2,3,8,9,10])assert(Math.abs(loop[i][k]-initial[i][k])<1e-10,'one cycle per pi/2 travelled, not the old tippy phase');
+ for(let i=0;i<loop.length;i++)for(const k of [1,2,3,8,9,10])assert(Math.abs(loop[i][k]-initial[i][k])<1e-10,'one walking cycle per pi/2 travelled');
 });
 test('Breach Marshal: real-shot recoil and cyan flash preserve both hand and stock contacts',()=>{
  const {h,e,draw}=setup();

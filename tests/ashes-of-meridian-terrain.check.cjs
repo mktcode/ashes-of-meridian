@@ -52,7 +52,6 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
     }
     if (map === 'mothership') {
       assert.ok(w.renderData.geometries.some(d => d.model === 'shipHangar'));
-      assert.ok(!w.renderData.geometries.some(d => /Deck|Ramp/.test(d.model)), 'no old authored deck/ramp skin');
       assert.ok(skin.colors.some(v => v > .5), 'metal geometry carries actual albedo tint, not landscape weights');
     }
   });

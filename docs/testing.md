@@ -38,7 +38,7 @@ Dateien/Namen mit `rg 'test\(' tests` suchen; übersprungene Tests sind keine be
 
 ## Testpflege und Aussagegrenzen
 
-Automatisierung schützt Logik, Zustands-/Ressourcen-/Ladeverträge und RNG, nicht UI-Wortlaut, vollständiges Markup oder historische Entfernungen. Negative Tests brauchen aktuellen Fachgrund, etwa keine doppelte Auszahlung oder verborgenen Feinddaten. Abdeckung klein und unabhängig halten; [feste Referenzen](reference-tests.md) sind keine GPU-Pixelbilder.
+Automatisierung schützt aktuelle Logik, Zustands-/Ressourcen-/Ladeverträge und RNG, nicht UI-Wortlaut, vollständiges Markup oder historische Entfernungen. Keine Tests gegen archivierte Implementierungskopien oder auf die Abwesenheit früherer Karten, Modelle und Bedienelemente. Erwartungen aus dem aktuellen Fachvertrag ableiten; ungültige Eingaben mit neutralen Testwerten statt früheren Inhaltsnamen prüfen. Negative Tests brauchen aktuellen Fachgrund, etwa keine doppelte Auszahlung oder verborgenen Feinddaten. Abdeckung klein und unabhängig halten; [feste Referenzen](reference-tests.md) schützen aktuelle Verträge und sind keine GPU-Pixelbilder.
 
 Node führt kein GLSL aus. Browserchecks nutzen aktuellen Build, isoliertes Profil und `file://` ohne Sicherheitslockerungen. Nur fragliche Lade-/Shader-/Picking-/Lebenszykluspfade prüfen. Software-WebGL und emuliertes Touch bestätigen keine Echtgeräteperformance; KI-Partien kein menschliches Balancing.
 

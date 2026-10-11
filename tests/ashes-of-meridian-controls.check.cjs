@@ -93,7 +93,6 @@ test('opening HQ encounters keep faction → map → seed draw order with the la
     const encounter = h.ui.createEncounter(depth, 'desert');
     assert.deepEqual(JSON.parse(JSON.stringify({...encounter, next: vm.runInContext('Math.random()', h.context)})),
       JSON.parse(JSON.stringify(expected)));
-    assert.notEqual(encounter.map, 'aurelion');
   }
 });
 
@@ -111,7 +110,8 @@ test('six expedition landscapes retain equal map weight, normal party counts and
       assert.equal(draws,(depth<3?0:e.enemies.length)+2,'no extra mission draw');
       assert.notEqual(h.ui.createEncounter(depth,e.map).map,e.map);
     }
-    assert.equal(found.has('aurelion'),false); assert.equal(found.size,count);
+    const maps=vm.runInContext('MISSIONS[DEFAULT_MISSION].maps',h.context);
+    assert.deepEqual([...found].sort(),Array.from(maps).sort(),'every current expedition landscape is selectable');
   }
 });
 
@@ -321,8 +321,7 @@ function setup() {
     (event.target.handlers[type])(event);
   };
   const click = dataset => document.handlers.click({ target: { closest: () => ({ dataset }) } });
-  const clickCamera = cam => click({ cam });
-  return { context, ui, calls, document, window, world, minimap, pointer, click, clickCamera, UI, setTime(value) { now = value; } };
+  return { context, ui, calls, document, window, world, minimap, pointer, click, UI, setTime(value) { now = value; } };
 }
 
 test('storage failures notify once on writes or later ticks and remain visible in settings', () => {
@@ -550,7 +549,6 @@ test('nonzero perspective selection and picking hide foreign units and select on
   h.UI.prototype.select.call(h.ui, [1, 2, 3, 4]);
   assert.deepEqual(Array.from(h.ui.selected), [3]);
   h.UI.prototype.bind.call(h.ui);
-  assert.equal(h.document.getElementById('combatSelectBtn').onclick, undefined);
   g.s.entities.push({ id: 6, team: 2, kind: 'building', type: 'hq', hp: 100, queue: [{ type: 'worker', time: 10, progress: 0 }] });
   g.s.entities.push({ id: 7, team: 0, kind: 'building', type: 'hq', hp: 100, queue: [{ type: 'rifle', time: 10, progress: 0 }] });
   assert.deepEqual(Object.keys(h.ui.recruitmentGroups()), ['worker']);
@@ -602,7 +600,6 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   assert.equal(h.ui.controlsLocked, true);
   assert.equal(h.ui.introObserves(h.ui.game.s.entities[1]), true);
   const camera = { ...h.ui.game.s.cam };
-  h.clickCamera('home'); h.clickCamera('in');
   h.pointer('pointerdown', 200, 200); h.pointer('pointerup', 200, 200);
   h.ui.perform('train:worker');
   assert.deepEqual(h.ui.game.s.cam, camera);
@@ -1626,12 +1623,8 @@ test('speed changes are transient, pause-guarded and preserve commands and RNG',
   g.s = run;
 });
 
-test('removed command and camera controls have no handlers; ground orders remain move orders', () => {
+test('mouse and touch ground commands issue move orders for the selected units', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui); h.ui.selected = [7];
-  for (const id of ['attackMoveBtn', 'combatSelectBtn', 'visibleCombatSelectBtn'])
-    assert.equal(h.document.getElementById(id).onclick, undefined);
-  assert.equal(h.ui.attackMove, undefined);
-  h.clickCamera('home'); assert.deepEqual(h.calls, []);
   for (const pointerType of ['mouse', 'touch']) {
     h.pointer('pointerdown', 200, 200, { pointerType, button: pointerType === 'mouse' ? 2 : 0 });
     h.pointer('pointerup', 200, 200, { pointerType, button: pointerType === 'mouse' ? 2 : 0 });
