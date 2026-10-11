@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { DIAGNOSTIC_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 
 function classes(globals = {}) {
-  return vm.runInContext('({Recorder: MeridianDiagnosticRecorder, Probe: MeridianRenderProbe, create: createMeridianDiagnostics, resources: diagnosticResources, instrument: instrumentDiagnosticMethod})',
+  return vm.runInContext('({Recorder: MeridianDiagnosticRecorder, Probe: MeridianRenderProbe, create: createMeridianDiagnostics, resources: diagnosticResources, sceneContext: diagnosticContext, build: MERIDIAN_BUILD_INFO, instrument: instrumentDiagnosticMethod})',
     loadScripts(DIAGNOSTIC_SCRIPTS, { globals }));
 }
 function gpuGL({ supported = true } = {}) {
@@ -220,7 +220,7 @@ test('adapter follows replaced worlds, aggregates method calls per tick and remo
   d.recorder.phase('sceneBuild'); view.sync(); view.updateWorkerRoads();
   d.recorder.phase('glSubmission'); R.upload(); R.drawBatches(); d.finishFrame(true);
   const details = d.report().recording.frames[0].cpuDetails;
-  assert.equal(d.report().schema, 2);
+  assert.equal(d.report().schema, 3);
   assert.equal(details.simulation.tick.calls, 2, 'fixed steps per callback are counted');
   assert.equal(details.simulation.pathfinding.calls, 2);
   assert.equal(details.simulation.pathfinding.ms, 6);
@@ -261,7 +261,10 @@ test('local adapter exports only allowlisted metadata and keeps export usable af
     now = i * 1000; d.recorder.beginFrame(now); R.diagnostics.beginFrame(); d.finishFrame(true);
   }
   const report = d.report();
-  assert.equal(report.schema, 2);
+  assert.equal(report.schema, 3);
+  assert.match(report.build.id, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(report.gpu.status, 'unavailable');
+  assert.equal(report.recording.summary.gpuMs.scene, null, 'no timing is not a zero-cost GPU sample');
   assert.equal(report.samples.length, 120); assert.equal(report.samples[0].atMs, 10000);
   assert.equal(resources(R).geometryBytesEstimate, 36 * 36);
   assert.equal(resources(R).instanceCapacityBytes, 22 * 8 * 4);
@@ -276,4 +279,124 @@ test('local adapter exports only allowlisted metadata and keeps export usable af
   assert.equal(urls[0].type, 'application/json');
   timers[0](); assert.equal(urls[1], 'blob:local');
   assert.equal(elements[0].children[1].disabled, true);
+});
+
+test('interactions use a separate bounded ring, exclusive nested details and a shared monotonic origin', () => {
+  const { Recorder } = classes(); let now = 100;
+  const r = new Recorder(() => now, 2, 2);
+  const event = r.beginInteraction('selection'), selection = r.beginDetail('selection');
+  assert.equal(r.beginInteraction('command'), undefined, 'nested method is not a second root event');
+  now = 102; const path = r.beginDetail('pathfinding');
+  now = 104; r.endDetail(path); now = 106; r.endDetail(selection); r.finishInteraction(event);
+  assert.equal(r.report().frames.length, 0);
+  assert.equal(r.report().summary.cpuMs.ui, null, 'input is never a synthetic rAF sample');
+  assert.equal(event.atMs, 0); assert.equal(event.durationMs, 6);
+  assert.equal(event.cpuDetails.input.selection.ms, 4);
+  assert.equal(event.cpuDetails.input.pathfinding.ms, 2);
+  now = 110; const empty = r.beginInteraction('selection'); now = 112; r.finishInteraction(empty);
+  assert.equal(r.report().interactions.summary.selection.cpuDetails.pathfinding.ms.p50, 0);
+  now = 120; const failed = r.beginInteraction('command'); now = 121; r.finishInteraction(failed, true);
+  const report = r.report();
+  assert.deepEqual(Array.from(report.interactions.events, e => e.id), [2,3]);
+  assert.equal(report.interactions.eventsSeen, 3);
+  assert.equal(Object.keys(report.interactions.summary.selection.cpuDetails).length, 0, 'evicted details are not retained');
+  assert.equal(report.interactions.summary.command.failed, 1);
+  r.beginFrame(130); assert.equal(r.current.atMs, 30);
+  assert.equal(r.beginInteraction('selection'), undefined, 'rAF calls stay in the frame');
+  r.finishFrame(false);
+  now = 140; const abandoned = r.beginInteraction('action'), detail = r.beginDetail('hud');
+  r.stop('context-lost'); now = 150; r.endDetail(detail); r.finishInteraction(abandoned);
+  assert.equal(r.report().interactions.events.length, 2, 'stopped/incomplete input is discarded');
+  assert.equal(r.beginInteraction('command'), undefined);
+  assert.throws(() => new Recorder(() => 0, 1, 513), /interaction capacity/);
+});
+
+test('input hooks capture picking roots, selection/HUD/command details and input navigation before the first rAF', () => {
+  let now = 0;
+  const document = { hidden:false, body:{appendChild(){}}, createElement:()=>({append(){}}) };
+  const { create } = classes({document, navigator:{userAgent:'test'}, devicePixelRatio:2,
+    performance:{now:()=>now}, addEventListener(){}, window:{}});
+  const result = {}, token = {secret:'NEVER-EXPORT-ARGUMENT'}, failure = Error('NEVER-EXPORT-ERROR');
+  const worldPrototype = {path(){now+=3;}};
+  const first = Object.create(worldPrototype), second = Object.create(worldPrototype);
+  const game = {world:first, unitFits(){now+=5;}};
+  const ui = {
+    pointerUp(arg){assert.equal(this,ui);assert.equal(arg,token);now++;this.targetPosition();this.pick();this.select(arg);this.submitAction(arg);return result;},
+    targetPosition(){now+=2;}, pick(){now+=3;},
+    select(arg){assert.equal(arg,token);now+=2;this.renderActions();},
+    renderActions(){now+=4;game.world.path();},
+    submitAction(arg){assert.equal(arg,token);game.unitFits();now+=2;return false;}
+  };
+  const original = {...ui}, R = fakeRenderer(gpuGL({supported:false}));
+  let captures = 0;
+  const d = create(R,()=>{captures++;return {view:'game',paused:false,simulationTime:0};},{game,ui,worldView:{}});
+  assert.equal(ui.pointerUp(token),result);
+  let report = d.report(), event = report.recording.interactions.events[0];
+  assert.equal(captures,1,'context captured once per root, not each nested call');
+  assert.equal(report.recording.frames.length,0);
+  assert.equal(event.kind,'pointerRelease');assert.equal(event.durationMs,22);
+  assert.equal(event.cpuDetails.input.targetPicking.ms,2);assert.equal(event.cpuDetails.input.entityPicking.ms,3);
+  assert.equal(event.cpuDetails.input.pointerRelease.ms,1);
+  assert.equal(event.cpuDetails.input.selection.ms,2);assert.equal(event.cpuDetails.input.hud.ms,4);
+  assert.equal(event.cpuDetails.input.pathfinding.ms,3);assert.equal(event.cpuDetails.input.collision.ms,5);
+  assert.equal(event.cpuDetails.input.command.ms,2);
+  assert.equal(event.renderSettings.devicePixelRatio,2);assert.equal(event.renderSettings.width,800);
+  assert.equal(event.hidden,false);assert.equal(event.context.paused,false);
+  assert.ok(!JSON.stringify(report).includes('NEVER-EXPORT'));
+  game.world = second;
+  assert.equal(ui.submitAction(token),false,'rejected action result remains untouched');
+  assert.equal(first.path,worldPrototype.path,'input also follows world replacement');
+  d.beginFrame(20);d.recorder.phase('ui');ui.select(token);d.finishFrame(false);
+  report = d.report();
+  assert.equal(report.recording.interactions.events.length,2,'rAF selection is not counted twice');
+  assert.equal(report.recording.frames[0].cpuDetails.ui.selection.ms,2);
+  assert.equal(report.recording.frames[0].cpuDetails.ui.pathfinding.ms,3);
+  ui.select = ()=>{throw failure;}; // A later owner must survive cleanup.
+  assert.throws(()=>ui.pointerUp(token),e=>e===failure);
+  event = d.report().recording.interactions.events.at(-1);
+  assert.equal(event.failed,true);assert.equal(event.kind,'pointerRelease');
+  assert.ok(!JSON.stringify(d.report()).includes('NEVER-EXPORT'));
+  const replacement = ui.select;
+  d.stop();assert.equal(ui.select,replacement);
+  assert.equal(ui.pointerUp,original.pointerUp);assert.equal(ui.submitAction,original.submitAction);
+  assert.equal(ui.renderActions,original.renderActions);assert.equal(second.path,worldPrototype.path);
+  assert.equal(ui.pick,original.pick);assert.equal(ui.targetPosition,original.targetPosition);
+});
+
+test('scene context contains live army counts, camera and actual renderer hour without snapshots or stale menu armies', () => {
+  const { sceneContext, resources } = classes({devicePixelRatio:1.5});
+  const R = fakeRenderer(gpuGL({supported:false}));R.battlefieldHour=22.25;R.viewport={width:900,height:700};
+  const s = {map:'desert',time:12,speed:2,cam:{x:4,z:8,zoom:60,yaw:.5,secret:'PRIVATE'},
+    entities:[{kind:'unit',type:'worker',hp:1,team:0},{kind:'unit',type:'rifle',hp:2,team:0},
+      {kind:'unit',type:'rifle',hp:1,team:1},{kind:'unit',type:'rifle',hp:0,team:0},{kind:'building',hp:1,team:0}],secret:'PRIVATE'};
+  const game = {s,localTeam:0,effects:{fx:[{}]}}, ui = {view:'game',paused:true,selected:[1,2]},
+    world = {definition:{name:'DESERT'},seed:40517};
+  const before = JSON.stringify({s,ui});
+  const context = sceneContext(R,game,ui,world,99);
+  assert.equal(context.units,3);assert.equal(context.localUnits,2);assert.equal(context.localMilitaryUnits,1);
+  assert.equal(context.selectedEntities,2);assert.equal(context.entities,5);assert.equal(context.effects,1);
+  assert.equal(context.timeOfDayHours,22.25);assert.equal(context.paused,true);assert.equal(context.speed,2);
+  assert.equal(context.camera.yaw,.5);assert.equal(context.map,'desert');assert.equal(context.seed,40517);
+  assert.ok(!JSON.stringify(context).includes('PRIVATE'));
+  assert.equal(JSON.stringify({s,ui}),before,'sampling is read-only');
+  assert.equal(resources(R).viewportWidth,900);assert.equal(resources(R).devicePixelRatio,1.5);
+  R.width=1200;R.quality=0;assert.equal(resources(R).width,1200);assert.equal(resources(R).quality,0);
+  ui.view='home';const menu=sceneContext(R,game,ui,world,99);
+  assert.equal(menu.units,null);assert.equal(menu.localMilitaryUnits,null);assert.equal(menu.camera,null);
+  assert.equal(menu.entities,99);assert.equal(menu.speed,null);
+});
+
+test('missing input metadata cannot block a command and context loss during it removes hooks without a partial event', () => {
+  const document={hidden:false,body:{appendChild(){}},createElement:()=>({append(){}})};
+  const {create}=classes({document,navigator:{userAgent:'test'},devicePixelRatio:1,
+    performance:{now:()=>0},addEventListener(){},window:{}});
+  let d, calls=0;const marker={};
+  const ui={submitAction(){calls++;d.stop('context-lost');return marker;}}, original=ui.submitAction;
+  d=create(fakeRenderer(gpuGL({supported:false})),()=>{throw Error('metadata unavailable');},
+    {game:{world:null},ui,worldView:{}});
+  assert.equal(ui.submitAction(),marker);assert.equal(calls,1);assert.equal(ui.submitAction,original);
+  const report=d.report();assert.equal(report.gpu.status,'context-lost');
+  assert.equal(report.recording.interactions.eventsSeen,1);
+  assert.equal(report.recording.interactions.events.length,0);
+  assert.equal(report.recording.frames.length,0);
 });
