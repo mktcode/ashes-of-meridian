@@ -19,6 +19,7 @@ function runtime() {
 
 test('common renderer lazily owns map presentation, keeps shadow passes, and restores normal/model previews',()=>{
   const {r,calls,factories,profile}=runtime();let created=0,disposed=0,resized=0,pending=true;
+  r.cinema=true; // Environment skies are a menu-preview pass, not an in-battle pass.
   factories.fixture=renderer=>{
     assert.equal(renderer,r);created++;
     return {skyProg:'citySky',postProg:'cityPost',

@@ -10,7 +10,7 @@ Isolierte HQ-/Depot-Prüfung belegte eine passende Fehlerklasse: wechselndes HQ-
 
 ## Noch offen
 
-- [ ] Lokalen HQ-Fall `service tolerance does not extend the existing outer HQ delivery range` prüfen: Die erwartete Ablieferung im zweiten Worker-Aufruf bleibt aus (Ladung 18 statt 0), auch im isoliert gebauten unveränderten Stand `1e1d24a` vor der umlaufenden Forum-Regel. Ursache beziehungsweise Tickannahme offen; kein Nachweis einer durch das Forum eingeführten HQ-Regression und kein allgemeiner Langlaufbefund.
+- [ ] Die vier `worker traffic stays productive for six minutes`-Fälle mit den entwickelten Basen klären: Seeds/Faktionen 1409/0 (acht Worker, freie und erzwungene Knotenzuweisung), 7012/1 und 9017/2 (je zwölf Worker) scheitern bereits an fehlendem Abbaufortschritt einzelner Worker in der ersten Minute. Gezielte Gegenprobe für 1409/0 mit erzwungenem Knoten: Worker 63 bei (90.035, 112.291), Minenauftrag auf Ressource 24, Fracht 0, leerer Pfad, Stuck 3.05. Fixturebelegung und tatsächliche Navigation getrennt untersuchen; weder Anlaufgrenze noch Lieferpflicht abschwächen.
 - [ ] Originalfälle bei erneutem Stillstand sichern: Karte/Seed, Workerposition/-auftrag/-fracht, Exit/Yield, kompletter Pfad samt Ziel/Status/Version, Stuck-/Recoverywerte und Nachbargeometrie. Vor Reload sichern; kein laufendes Restore.
 - [ ] Sichtbarer Blockiert-/Ausgangswarten-Status oder abschließende Fehlerreaktion. Temporäre Belegung nicht als dauerhaft unerreichbar behandeln; keine heimlichen Erstattungen/Teleports.
 - [ ] Auftragsweite Liveness statt nur Wegpunktfortschritt, Yield-/Umwegzyklen und Servicepunkt-Fairness/Gegenverkehr beurteilen.

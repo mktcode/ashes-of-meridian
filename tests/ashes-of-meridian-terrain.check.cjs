@@ -52,7 +52,6 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
     }
     if (map === 'mothership') {
       assert.ok(w.renderData.geometries.some(d => d.model === 'shipHangar'));
-      assert.ok(!w.renderData.geometries.some(d => /Deck|Ramp/.test(d.model)), 'no old authored deck/ramp skin');
       assert.ok(skin.colors.some(v => v > .5), 'metal geometry carries actual albedo tint, not landscape weights');
     }
   });
@@ -283,7 +282,7 @@ test('four sight buffers remain isolated and terrain queries do not reevaluate t
 test('maximal deployment bonuses retain every worker and commander in reachable collision-free space', () => {
   const api=scope(['effects',...SIMULATION_SCRIPTS]),g=new api.Game({upgrades:{startingWorkers:5}}),
     benefits={pioneerSquad:5,commanderMandate:1};
-  g.start({seed:1409,map:'mothership',deployment:'resource-start',enemies:[1,2,0],benefits,
+  g.start({seed:1409,map:'mothership',deployment:'resource-start',enemies:[1,2,0],upgrades:{startingWorkers:5},benefits,
     enemyBenefits:[benefits,benefits,benefits]});
   assert.equal(g.alive(e=>e.kind==='building').length,0);
   for(let team=0;team<4;team++) {

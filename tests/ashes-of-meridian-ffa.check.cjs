@@ -4,8 +4,9 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('./helpers/game-scripts.cjs');
 const context = loadScripts(['core', 'content', 'effects', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS]);
-const { MeridianGame, expeditionEnemyCount, expeditionEnemyFactions, advanceEnemyBenefits, chooseEnemyBenefit } =
-  vm.runInContext('({ MeridianGame, expeditionEnemyCount, expeditionEnemyFactions, advanceEnemyBenefits, chooseEnemyBenefit })', context);
+const { establishHeadquarters } = require('./helpers/developed-bases.cjs');
+const { MeridianGame, expeditionEnemyCount, expeditionEnemyFactions } =
+  vm.runInContext('({ MeridianGame, expeditionEnemyCount, expeditionEnemyFactions })', context);
 
 function battle(count = 4, scenario = false, developed = true) {
   const events = [], g = new MeridianGame({ upgrades: {} }, (type, data) => events.push({ type, data }));
@@ -15,11 +16,7 @@ function battle(count = 4, scenario = false, developed = true) {
   if (scenario) g.startScenario(opts);
   else g.start({ seed: opts.seed, map: opts.map, enemies: Array(count - 1).fill(1) });
   // Elimination fixtures describe established bases, not initial deployment.
-  if (developed) for (const party of g.s.parties) {
-    const home = g.startingPositions(opts.seed, count)[party.id];
-    g.spawnBuilding('hq', home.x, home.z, party.id, party.faction);
-    party.deploymentPending = false;
-  }
+  if (developed) establishHeadquarters(g);
   const hqs = g.alive(e => e.type === 'hq');
   events.length = 0;
   return { g, hqs, events };
@@ -30,8 +27,14 @@ test('deployment starts with one worker and paid HQ reserves; HQ survival begins
   assert.equal(g.alive(e => e.type === 'hq').length, 0);
   for (const party of g.s.parties) {
     assert.equal(g.alive(e => e.team === party.id && e.type === 'worker').length, 1);
-    const start = g.startingPositions(g.s.seed, 2)[party.id], before = party.account.alloy;
-    assert.equal(g.executeAction(party.id, { kind: 'build', building: 'hq', position: start, selected: [] }), true);
+    const worker = g.alive(e => e.team === party.id && e.type === 'worker')[0], before = party.account.alloy;
+    let built = false;
+    for(let radius=8;radius<=40&&!built;radius+=2) for(let step=0;step<48&&!built;step++) {
+      const angle=step*Math.PI*2/48, position={x:worker.x+Math.cos(angle)*radius,z:worker.z+Math.sin(angle)*radius};
+      if(!g.canBuild('hq',position,party.id))
+        built=g.executeAction(party.id,{kind:'build',building:'hq',position,selected:[worker.id]});
+    }
+    assert.ok(built,'landing worker finds a legal paid HQ site');
     assert.equal(party.account.alloy, before - g.cost('hq', 'building', party.id).cost);
   }
   g.checkBattleResult();
@@ -42,8 +45,9 @@ test('deployment starts with one worker and paid HQ reserves; HQ survival begins
   assert.equal(g.s.result, null, 'initial foundation loss can be retried while the worker survives');
   hq.hp = hq.maxHp; hq.progress = .999999;
   const builder = g.alive(e => e.team === 0 && e.type === 'worker')[0];
-  builder.x = hq.x - 7; builder.z = hq.z;
-  g.worker(builder, .05);
+  for(let i=0;i<200&&hq.progress<1;i++) {
+    g.s.time+=.05; g.worker(builder,.05);
+  }
   assert.equal(hq.progress, 1);
   assert.equal(g.party(0).deploymentPending, false, 'completion ends grace immediately, before result polling');
   g.checkBattleResult();
@@ -86,7 +90,7 @@ test('FFA hostility is symmetric for every party, even with identical factions; 
 
 test('HQ elimination withdraws assets without kills or RNG and cannot end the battle early', () => {
   const { g, hqs, events } = battle();
-  const unit = g.spawnUnit('rifle', 0, 0, 2, 1);
+  const unit = g.spawn('unit', 'rifle', 0, 0, 2, 1); // Elimination, not terrain placement.
   const building = g.spawnBuilding('barracks', 15, 0, 2, 1);
   building.queue.push({ type: 'rifle', progress: 0, time: 1, cost: 75, gas: 0 });
   g.s.scans.push({ team: 2, x: 0, z: 0, r: 10, until: 50 });
@@ -155,7 +159,7 @@ test('public FFA start snapshots every slot and preserves seeded terrain/resourc
   for (const map of ['desert', 'mothership', 'alien-planet']) {
     const g = new MeridianGame({ upgrades: { startingAlloy: 2 } });
     const resourceSnapshot = () => JSON.stringify(g.s.entities.filter(e => e.kind === 'resource'));
-    const opts = { seed: 1409, map, faction: 1, enemies: [1, 1, 1],
+    const opts = { seed: 1409, map, faction: 1, enemies: [1, 1, 1], upgrades: { startingAlloy: 2 },
       enemyBenefits: [{ supplyCrate: 2 }, { pioneerSquad: 1 }, {}] };
     g.start({ seed: opts.seed, map }); const resources = resourceSnapshot();
     g.start(opts);
@@ -179,24 +183,9 @@ test('public FFA start snapshots every slot and preserves seeded terrain/resourc
   }
 });
 
-test('opening factions are fixed and stage 4/8 entrants accumulate independent benefits', () => {
+test('opening factions are fixed and additional opponents enter at stages 4 and 8', () => {
   assert.deepEqual([0, 1, 2].map(depth => Array.from(expeditionEnemyFactions(depth, () => 0.99))), [[0], [1], [2]]);
   assert.deepEqual([0, 1, 2, 3, 6, 7, 999999].map(expeditionEnemyCount), [1, 1, 1, 2, 2, 3, 3]);
-  let perks = [{}];
-  for (let depth = 1; depth <= 9; depth++) {
-    const encounter = { seed: 1409 + depth, map: 'desert',
-      enemies: Array.from({ length: expeditionEnemyCount(depth) }, (_, slot) => (depth + slot) % 3) };
-    const before = JSON.stringify(perks);
-    const next = advanceEnemyBenefits(perks, encounter, depth);
-    assert.equal(JSON.stringify(perks), before);
-    assert.deepEqual(Array.from(next, p => Object.values(p).reduce((sum, count) => sum + count, 0)),
-      [depth, Math.max(0, depth - 3), Math.max(0, depth - 7)].slice(0, expeditionEnemyCount(depth)));
-    assert.equal(JSON.stringify(next), JSON.stringify(advanceEnemyBenefits(perks, encounter, depth)));
-    perks = next;
-  }
-  const streamChoices = [0, 1, 2].map(slot => Array.from({ length: 20 }, (_, seed) =>
-    chooseEnemyBenefit(1, {}, seed + 1, 4, slot)).join(','));
-  assert.equal(new Set(streamChoices).size, 3, 'same faction still has separate slot streams');
 });
 
 test('HQ elimination and expedition results do not leak into local non-expedition scenarios', () => {

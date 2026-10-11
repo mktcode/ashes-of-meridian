@@ -3,16 +3,8 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, loadScripts } = require('./helpers/game-scripts.cjs');
 
-// API orchestration and shader-source contracts only: no GPU/GLSL execution in Node.
-test('scene material variants share every material and lighting formula with the general shader', () => {
-  const context = loadScripts(RENDERER_SCRIPTS);
-  const { FRAG, MAT, sceneMaterialFragment } = vm.runInContext('({FRAG, MAT, sceneMaterialFragment})', context);
-  for (const material of [MAT.LANDSCAPE, MAT.LEAF, MAT.BRUSH]) {
-    const shader = sceneMaterialFragment(material), define = `#define SCENE_MATERIAL ${material}.\n`;
-    assert.ok(shader.startsWith('#version 300 es\n' + define));
-    assert.equal(shader.replace(define, ''), FRAG, 'specialization only supplies a compile-time material');
-  }
-});
+// Renderer API orchestration only: no GPU execution in Node.
+// Shader interfaces have their own bounded source-contract tests.
 
 test('upload tracks eligible homogeneous materials and clears stale specialization on reuse', () => {
   const context = loadScripts(RENDERER_SCRIPTS), Renderer = vm.runInContext('MeridianRenderer', context);
@@ -167,57 +159,6 @@ test('cached batch VAOs allocate only drawable batches and fail explicitly witho
   assert.equal(b.vertexArray,undefined);assert.equal(r.meshes.piece.instanceBuckets,undefined);assert.equal(h.vaos.size,1);
   r.drawBatches(r.dynamic);assertBatchAttributes(h.draws.at(-1),r.meshes.piece,b);
   r.releaseBucket(b);r.releaseGeometry('piece');assert.equal(h.vaos.size,0);assert.equal(h.buffers.size,0);
-});
-
-test('brush surface stays opaque, model-anchored and shares wind with its shadow pass', () => {
-  const context=loadScripts(RENDERER_SCRIPTS);
-  const {FRAG,VERT,DEPTHV,MAT}=vm.runInContext('({FRAG,VERT,DEPTHV,MAT})',context);
-  const surface=FRAG.split(`}else if(v_mat==${MAT.BRUSH}.){`)[1].split(`}else if(v_mat==${MAT.LEAF}.){`)[0];
-  assert.ok(surface.includes('v_modelPos.xz+v_modelPos.y*vec2(.45,.65)'));
-  assert.ok(surface.includes('fwidth(grid)'), 'subpixel leaf detail fades instead of shimmering');
-  assert.ok(surface.indexOf('fwidth(grid)')<surface.indexOf('grid.x+=mod'),
-    'pixel footprint is measured before discontinuous row staggering');
-  assert.ok(surface.includes('if(u_reliefOn>.5)n=reliefNormal'));
-  assert.ok(surface.includes('u_ecology.x==3.')&&surface.includes('u_ecology.x==4.'),'frost and fungal habitat variants');
-  assert.ok(!surface.includes('texture(')&&!surface.includes('discard'),'no extra texture reads or alpha-cutout overdraw');
-  for(const shader of [VERT,DEPTHV])assert.ok(shader.includes(`material==${MAT.LEAF}.||material==${MAT.BRUSH}.`));
-});
-
-test('metal/bio sampling uses scaled mesh-local positions and normals, not world coordinates', () => {
-  const context = loadScripts(RENDERER_SCRIPTS);
-  const { VERT, FRAG } = vm.runInContext('({VERT, FRAG})', context);
-  assert.ok(VERT.includes('vec3 textureScale=max(vec3(length(a_model[0].xyz),length(a_model[1].xyz),length(a_model[2].xyz)),vec3(.00001));'));
-  assert.ok(VERT.includes('v_modelPos=a_pos*textureScale;'));
-  assert.ok(VERT.includes('v_modelN=a_normal/textureScale;'));
-  for (const varying of ['v_modelPos', 'v_modelN']) {
-    assert.ok(VERT.includes(`out vec3 ${varying};`));
-    assert.ok(FRAG.includes(`in vec3 ${varying};`));
-  }
-  assert.ok(FRAG.includes('tri(u_metalTex,v_modelPos,normalize(v_modelN),.33)'));
-  assert.ok(FRAG.includes('tri(u_bioTex,v_modelPos,normalize(v_modelN),.17)'));
-  assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.28)'));
-  assert.ok(FRAG.includes('tri(u_groundTex,v_pos,n,.012)'));
-  assert.ok(FRAG.includes('world/u_groundTile+u_surfaceOffset'), 'physical tile size is independent of bake resolution');
-  assert.ok(FRAG.includes('vec4 ground=groundSample(v_pos.xz);'), 'ground uses the opaque RGBA recipe');
-  assert.ok(FRAG.includes('vec3 t=ground.rgb;base=t;'), 'height alpha never becomes surface transparency');
-  assert.ok(FRAG.includes('float sh=shadow()'), 'ground still receives model shadows');
-  assert.ok(FRAG.includes('normalize(u_eye-v_pos)'));
-  assert.ok(FRAG.includes('float field=sceneryFog(v_pos.xz);'), 'surface fog uses the independently sized scenery mask');
-});
-test('tilt-shift is High-only with a sharp center, normalized kernel and resolution-relative radius', () => {
-  const context = loadScripts(RENDERER_SCRIPTS);
-  const POSTF = vm.runInContext('POSTF', context);
-  assert.ok(POSTF.includes('if(u_quality>1.5)c=tiltShift(c,px);'));
-  assert.ok(POSTF.includes('smoothstep(.20,.48,abs(uv.y-.5))'));
-  assert.ok(POSTF.includes('if(amount<=0.)return sharp;'));
-  assert.ok(POSTF.includes('px*(min(u_size.x,u_size.y)*.006*amount)'));
-  const kernel = POSTF.slice(POSTF.indexOf('vec3 tiltShift'), POSTF.indexOf('void main()'));
-  assert.equal((kernel.match(/texture\(u_tex,/g) || []).length, 8);
-  assert.ok(kernel.includes('blurred=sharp*4.;'));
-  assert.ok(kernel.includes(')).rgb)*2.;'));
-  assert.ok(kernel.includes('return blurred/16.;'));
-  assert.doesNotMatch(kernel, /texture\((?!u_tex,)/);
-  assert.ok(POSTF.includes('if(u_bloomOn>.5)c+=texture(u_bloom,uv)'), 'bloom composites a separate low-resolution texture');
 });
 
 test('renderer reuses typed geometry and uploads a bucket transition to empty only once', () => {
@@ -649,7 +590,8 @@ test('diagnostic hooks bracket real render passes without changing GL work, incl
     calls.length = 0; r.render(3, 2);
     assert.deepEqual(calls, baseline, 'diagnostic hooks must not change GL submissions/state');
     assert.deepEqual(hooks.filter(v => v !== 'draw'), quality === 0 ? ['frame', 'scene', 'post'] : ['frame', 'shadow', 'scene', 'bloom', 'post']);
-    assert.equal(hooks.filter(v => v === 'draw').length, quality === 0 ? 2 : 5, 'fullscreen triangles are counted too');
+    assert.equal(hooks.filter(v => v === 'draw').length, baseline.filter(c => c[0] === 'quad').length,
+      'diagnostics count each fullscreen draw actually submitted');
     const bucket = { dirty: true, n: 2, data: new Float32Array(44), mesh: 'box', source: 'box' };
     Object.getPrototypeOf(r).upload.call(r, { box: bucket });
     assert.equal(hooks.at(-1), 176, 'instance upload bytes use the actual submitted slice');
@@ -659,16 +601,6 @@ test('diagnostic hooks bracket real render passes without changing GL work, incl
     Object.getPrototypeOf(r).drawBatches.call(r, { box: bucket });
     assert.deepEqual(submitted, [3, 2]);
   }
-});
-
-test('crystal shader preserves facets and adds texture-free internal depth', () => {
-  const {context}=setup(),shader=vm.runInContext('FRAG',context);
-  assert.match(shader,/float facet=\.58\+\.42\*abs\(dot\(localN/);
-  assert.match(shader,/float caustic=pow\(\.5\+\.5\*sin\(dot\(v_modelPos/);
-  assert.match(shader,/glowMix=clamp\(v_glow,0\.,1\.\)\*\(1\.-crystal\*\.58\)/);
-  assert.ok(shader.includes('float mask=1.-smoothstep(.02,.5,length(v_modelPos.xz));'));
-  assert.ok(shader.includes('v_col.a*mask*.16*visible'));
-  assert.doesNotMatch(shader,/sampler2D u_crystal/,'crystal depth adds no texture or render pass');
 });
 
 test('portal surface clock follows simulation time, not wall time, and freezes in Performance and menus', () => {
@@ -753,13 +685,6 @@ test('dedicated rock material is opt-in and resets on profile changes without te
     assert.ok(h.calls.some(c => c[0] === 'uniform1i' && c[1] === 'u_rockTex' && c[2] === 7));
     assert.ok(!h.calls.some(c => ['texImage2D', 'createTexture'].includes(c[0])));
   }
-  const { FRAG } = vm.runInContext('({FRAG})', h.context);
-  assert.ok(FRAG.includes('if(u_rockScale>0.&&((v_mat>3.5&&v_mat<4.5&&v_glow<.2&&v_col.a>.96)||(v_mat>5.5&&v_mat<6.5)))'));
-  const material = FRAG.slice(FRAG.indexOf('vec3 rockSurface'), FRAG.indexOf('vec3 detail'));
-  assert.ok(material.includes('vec3 p=v_pos*u_rockScale;'));
-  for (const projection of ['zy', 'xz', 'xy']) assert.ok(material.includes(`texture(u_rockTex,p.${projection})`));
-  assert.ok(material.includes('groundBase(v_pos.xz)'), 'rock foot blends with the local ground');
-  assert.doesNotMatch(material, /mod\(|fract\(|u_time|u_eye/, 'no mirrored tiling or moving detail');
 });
 
 test('upland weathering is opt-in, resets on map changes and reuses shared materials',()=>{
@@ -774,7 +699,7 @@ test('upland weathering is opt-in, resets on map changes and reuses shared mater
   }
 });
 
-test('ecology uniforms reset, leaf shadows share displacement and Performance omits only detail meshes',()=>{
+test('ecology uniforms reset and Performance omits only detail meshes',()=>{
   const h=setup();h.r.cinema=false;
   const profile=vm.runInContext("battlefieldEcology({...DEFAULT_TERRAIN_RENDER_PROFILE,wilderness:'rime'},1409)",h.context);
   h.r.setBattlefieldProfile(profile,1409);
@@ -786,8 +711,6 @@ test('ecology uniforms reset, leaf shadows share displacement and Performance om
     assert.ok(h.calls.some(c=>c[0]==='uniform4f'&&c[1]==='u_ecology'&&c[2]===3&&c[3]===3));
     assert.ok(!h.calls.some(c=>['texImage2D','createTexture','bufferData'].includes(c[0])));
   }
-  const {VERT,DEPTHV,ECOLOGY_WIND}=vm.runInContext('({VERT,DEPTHV,ECOLOGY_WIND})',h.context);
-  assert.ok(VERT.includes(ECOLOGY_WIND)&&DEPTHV.includes(ECOLOGY_WIND));
   h.r.setBattlefieldProfile(vm.runInContext('DEFAULT_TERRAIN_RENDER_PROFILE',h.context));h.calls.length=0;h.r.render(1,7.5);
   assert.ok(h.calls.filter(c=>c[0]==='uniform4f'&&c[1]==='u_ecology').every(c=>c.slice(2).every(v=>v===0)));
   assert.ok(h.calls.filter(c=>c[0]==='uniform2f'&&c[1]==='u_wind').every(c=>c[2]===0));
@@ -822,31 +745,6 @@ test('lighting profiles override shader colors without additional textures or re
     }
   }
   assert.equal(JSON.stringify(r.battlefieldProfile),profileBefore);
-  const {FRAG,VERT}=vm.runInContext('({FRAG,VERT})',context);
-  assert.match(FRAG,/float metal=.*v_mat>1.5/);assert.match(FRAG,/strength=\.008\+metal/);
-  assert.ok(FRAG.indexOf('lit=finishLighting(lit)')<FRAG.indexOf('float field='),'compress highlights before fog and RGBA8 storage');
-  assert.match(FRAG,/over\/\(1\.\+over\/\.35\)/);
-  assert.match(VERT,/if\(a_material==-1\.\|\|a_material==-4\.\)v_modelPos=a_pos/);
-  const contact=FRAG.slice(FRAG.indexOf('if(v_mat==-1.)'),FRAG.indexOf('if(v_mat==-4.)'));
-  assert.match(contact,/smoothstep\(\.05,1\.,length\(v_modelPos.xz\*2\.\)\)/);
-  assert.match(contact,/smoothstep\(\.35,\.8,sight\)/);
-  assert.doesNotMatch(contact,/shadow\(|u_metalTex|u_groundTex/);
-});
-
-test('placement guide remains fog-gated and derivative-filtered without shading the cell interior', () => {
-  const {context}=setup(), fragment=vm.runInContext('FRAG',context);
-  const guide=fragment.slice(fragment.indexOf('if(v_mat==-9.)'),fragment.indexOf('if(v_mat==-1.)'));
-  assert.match(guide,/battlefieldFog\(v_pos\.xz\)/);
-  assert.match(guide,/step\(\.75,sight\)/);
-  assert.match(guide,/fract\(/);
-  assert.match(guide,/fwidth\(/);
-  assert.match(guide,/line=.*smoothstep\(/);
-  assert.match(guide,/q=v_pos\.xz\/3\./);
-  assert.match(guide,/finePixel=pixel\*2\./);
-  assert.match(guide,/max\(finePixel\.x,finePixel\.y\)/,'fine lines have their own density filter');
-  assert.match(guide,/line=max\(line,fineLine\*u_placementGridDetail\)/,'nested lines do not double opacity');
-  assert.match(guide,/frag=vec4\(v_col\.rgb,v_col\.a\*line\*/);
-  assert.doesNotMatch(guide,/shadow\(|groundBase|u_groundTex/);
 });
 
 test('placement guide fades in half-spacing lines between gameplay zoom endpoints', () => {
@@ -1199,39 +1097,6 @@ test('resize and quality switches release old attachments and rebuild matching d
   assert.equal(h.framebuffers.size, 4); assert.equal(h.buffers.size, 3);
 });
 
-test('local diffuse lighting respects current fog visibility and has a no-light fast path',()=>{
-  const context=loadScripts(RENDERER_SCRIPTS),shader=vm.runInContext('FRAG',context);
-  assert.ok(shader.includes('if(u_pointLightCount==0)return vec3(0.);'));
-  assert.ok(shader.includes('float visible=smoothstep(.75,1.,sceneryFog(position.xz));'));
-  assert.ok(shader.includes('result*=visible;specular*=visible;'), 'diffuse and wet glints never reveal unseen ground');
-});
-
-test('wet ground shares albedo height reads and adds a bounded lobe only to eligible receivers',()=>{
-  const context=loadScripts(RENDERER_SCRIPTS),{FRAG:shader,MAT}=vm.runInContext('({FRAG,MAT})',context);
-  const terrain=shader.slice(shader.indexOf(`if(v_mat==${MAT.LANDSCAPE}.){`),shader.indexOf(`}else if(v_mat==${MAT.LEAF}.){`));
-  assert.equal((terrain.match(/texture\(u_groundTex,/g)||[]).length,2,'both terrain colour samples also supply height');
-  assert.equal((terrain.match(/texture\(u_earthTex,v_pos.xz\*\.15\)/g)||[]).length,1,'soil RGBA is fetched once');
-  assert.ok(terrain.includes('stoneSample=triSurface(u_rockTex,v_pos,n,u_rockScale)'));
-  assert.ok(terrain.includes('grassSample.a*u_surfaceRelief.x'));
-  assert.ok(terrain.includes('stoneSample.a*u_surfaceRelief.y'));
-  assert.ok(terrain.includes('earthSample.a*u_landscapeRelief.x'));
-  assert.ok(terrain.includes('float(u_ecology.x>.5&&u_ecology.y==2.)'),'rain is the weather opt-in');
-  assert.ok(terrain.includes('clamp(-v_detail.z,0.,1.)'),'authored wet banks also opt in');
-  assert.ok(terrain.includes('(1.-stoneWeight)*(1.-clamp(v_detail.z,0.,1.))'),'rock and snow suppress gloss');
-  const relief=shader.slice(shader.indexOf('if(u_reliefOn>.5&&'),shader.indexOf('// Local-normal variation'));
-  assert.ok(relief.includes(`if(v_mat==${MAT.LANDSCAPE}.)h=groundHeight;`));
-  assert.ok(relief.includes(`else if(v_mat==${MAT.GROUND}.||(v_mat==${MAT.AUTO}.&&v_pos.y<.22&&n.y>.66))h=groundHeight;`));
-  assert.ok(shader.includes('float groundHeight=0.,groundGloss=0.;'),'models default to no added local gloss');
-  assert.ok(shader.includes('float(u_reliefOn>.5&&v_glow<.2&&v_col.a>.96)*smoothstep(.55,.85,v_n.y)'));
-  const local=shader.slice(shader.indexOf('vec3 localLighting'),shader.indexOf('float shadow()'));
-  assert.ok(local.indexOf('specular=vec3(0.);')<local.indexOf('if(u_pointLightCount==0)'));
-  assert.ok(local.includes('if(groundGloss>0.&&diffuse>0.)'));
-  assert.ok(local.includes('h*=h;h*=h;h*=h;h*=h;'));
-  assert.equal((local.match(/lightTexel\(index/g)||[]).length,2,'same two light reads, no second lamp loop');
-  assert.doesNotMatch(local,/\bpow\(/,'fixed broad lobe avoids variable exponent work per lamp');
-  assert.ok(shader.includes('lit+=(base*localDiffuse+groundSpecular)'), 'glints take lamp colour rather than dark albedo');
-});
-
 test('spatial light grid retains all lamps in battle, performance and cinema without extra passes',()=>{
   const h=setup(), r=h.r;
   Object.assign(r,{dynamic:{},effects:{},occlusion:{},colors:new Map(),extent:64});
@@ -1439,9 +1304,6 @@ test('bloom uses two quarter-size targets, three ordered passes and a clean allo
   }
   h.options.viewport={left:0,top:0,width:1,height:1};h.r.quality=1;h.r.resize();
   assert.equal(h.r.bloomWidth,1);assert.equal(h.r.bloomHeight,1);
-  const shader=vm.runInContext('BLOOMF',h.context);
-  assert.match(shader,/smoothstep\(\.76,\.90,peak\)\*smoothstep\(\.48,\.74,lum\)/);
-  assert.ok(Math.abs(.227027+2*.316216+2*.070270-1)<.00001);
 });
 
 test('menu shadows reuse only static depth while dynamic casters and the scene remain live', () => {

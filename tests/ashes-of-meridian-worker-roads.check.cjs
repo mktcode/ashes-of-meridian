@@ -58,6 +58,8 @@ test('road texture is reused, released and bound only on terrain scene draws',()
   const calls=[],on=[];
   const gl=new Proxy({
     createTexture(){calls.push('create');return {};},
+    createVertexArray(){return {};},
+    createBuffer(){return {};},
     texImage2D(){calls.push('allocate');},texSubImage2D(){calls.push('upload');},
     deleteTexture(){calls.push('delete');},uniform1f(name,value){if(name==='u_workerRoadOn')on.push(value);}
   },{get:(o,k)=>k in o?o[k]:()=>{}});

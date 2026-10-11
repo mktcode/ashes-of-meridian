@@ -18,7 +18,7 @@ Breite Abschlussprüfung ist keine Pflicht bei jedem Commit oder jeder Integrati
 
 ## Befehle und Auswahl
 
-`npm run check:quality` ist das bewusst kurze Qualitätsnetz: lokale Dokumentationslinks, strikter Build sowie die explizit ausgewählten Linkchecker-, Testauswahl- und Core-Verträge (klassische Bindungen, RNG und Mathematik). Es ist keine Spielabnahme und ersetzt keine betroffenen Fachtests. Die GitHub-CI führt denselben Befehl unter der Node-Version aus `.nvmrc` nach `npm ci` aus; keine KI-/Simulations- oder Vollsuite.
+`npm run check:quality` ist das bewusst kurze Qualitätsnetz: begrenztes Linting/Formatprüfung, Repository-Besitz, lokale Dokumentationslinks, strikter Build sowie explizit ausgewählte Linkchecker-, Testauswahl-, Core- und Werkzeugverträge. Die Browser-Harness-Unitfälle verwenden einen Fake, keinen Browser. Es ist keine Spielabnahme und ersetzt keine betroffenen Fachtests. Die GitHub-CI führt denselben Befehl unter der Node-Version aus `.nvmrc` nach `npm ci` aus; keine KI-/Simulations-, echten Browser- oder Vollsuiten.
 
 `npm run check:docs` prüft ohne Build oder Netzwerk die lokalen Datei-/Verzeichnisziele von Inline-Links, Bildern und Referenzdefinitionen in `README.md`, `AGENTS.md` und allen Markdown-Dateien unter `docs/`. Code und Kommentare bleiben außen vor; URL-Fragmente und Queryteile werden abgetrennt, Anker nicht validiert. Unterstützt werden einfache Markdown-Ziele oder `<Ziele mit Leerzeichen>`, kein vollständiger Markdown-/HTML-Parser. Bei neuen komplexen Linkformen zuerst den Checker gezielt erweitern.
 
@@ -34,13 +34,25 @@ Dateien/Namen mit `rg 'test\(' tests` suchen; übersprungene Tests sind keine be
 
 `node scripts/run-tests.mjs <bereich> --list` zeigt Auswahl ohne Build/Lauf. Bereiche: `logic`, `terrain`, `presentation`, `models`, `standard`. `npm run test:logic`, `test:terrain`, `test:presentation` und `test:models` bauen jeweils neu; Gruppen sind keine Zeitgarantie. `npm test` baut und führt die Standardauswahl ohne die beiden optionalen Langblöcke aus, kann dennoch mehrere Minuten dauern. `npm test -- …` ersetzt keinen gezielten Dateilauf.
 
-`npm run test:ai` und `npm run test:simulation` nur im ausdrücklich freigegebenen Umfang. Eine Freigabe für einen Fall erlaubt weder ganze Datei noch anderen Block.
+`npm run test:ai` und `npm run test:simulation` nur im ausdrücklich freigegebenen Umfang. Eine Freigabe für einen Fall erlaubt weder ganze Datei noch anderen Block. Die [Start-Upgrade-Verträge](../tests/ashes-of-meridian-start-upgrades.check.cjs) liegen getrennt von etablierten Basen und Worker-Langläufen, bleiben aber Teil der optionalen Simulationauswahl: viele echte Kartenstarts kosten lokal etwa fünf Minuten. Sie prüfen `BattleOptions.upgrades`, Snapshot-Isolation, Reserven für das bezahlte HQ, Bonus-/Landeworker, Abstände und RNG; nicht HQ-Bauabschluss oder Worker-Liveness.
+
+## Schlanke Werkzeugkonventionen
+
+`.editorconfig` gibt UTF-8, LF und grundlegende Einrückung vor. `npm run lint`, `npm run check:format` und das ausdrücklich schreibende `npm run format` bearbeiten ausschließlich die Liste in [tooling-files.json](../scripts/tooling-files.json): neue Hygiene-/Browserwerkzeuge und zugehörige Fixtures sowie Dokumentationschecker/Test-Runner. ESLint prüft empfohlene Fehlerregeln mit Node-/gezielten Browserglobals; Prettier vereinheitlicht diesen kleinen Bereich. Keine globale Neuformatierung, keine Modulmigration der klassischen Spielskripte. Neue Dateien gezielt aufnehmen; mechanische Pflege bestehender Dateien von Vertragsänderungen getrennt committen. Für Spielquellen bleibt der strikte TypeScript-Build maßgeblich.
+
+`npm run check:repository` erkennt eingecheckte `.tmp/`, `dist/` und `node_modules/`, prüft deren Ignore-Regeln und lehnt Symlinks an diesen schreibenden Worktree-Wurzeln ab. Es löscht nichts und ordnet keine fremden Backups ihrem Besitzer zu. Eigene Scratch-Verzeichnisse nur eindeutig zugeordnet bereinigen; vorhandene Patches, Saves und Capture-Belege erhalten. Absichtlich ausgelieferte Assets unter `release/` sind kein generierter Scratch.
+
+## Technischer Browser-Smokecheck
+
+`npm run check:browser` baut und öffnet `index.html` direkt über `file://` in einem frischen headless Chromium-Profil. Ein installiertes Chromium ist nötig, optional über `CHROMIUM_PATH` (ein gesetzter ungültiger Pfad wird nicht still ersetzt). Kein Download, Server oder gelockerter Sandbox-/Dateizugriff. Start und Prüfteil haben jeweils 30 Sekunden Budget; Profile/Scratch liegen nur in einem eigenen temporären Worktree-Verzeichnis und werden auch bei Fehlern freigegeben.
+
+Der Check wartet auf eine gerenderte Startansicht, lehnt JavaScript-/Konsolenfehler ab, prüft die tatsächlich angelegten Shaderprogramme auf erfolgreiches Linking und den GL-Fehlerzustand. Er erzwingt Kontextverlust und verlangt gestopptes Rendering sowie sichtbare Recovery-UI. Das ist ein echter GLSL-/`file://`-/Lebenszyklusnachweis, aber kein Pixelbildvergleich, Leckfreiheitsbeweis, Gefechts-/Pickingtest oder Zielgeräteperformancebeleg. Capture-/Diagnosewerkzeuge sind noch nicht alle auf den neuen Harness umgestellt.
 
 ## Testpflege und Aussagegrenzen
 
-Automatisierung schützt Logik, Zustands-/Ressourcen-/Ladeverträge und RNG, nicht UI-Wortlaut, vollständiges Markup oder historische Entfernungen. Negative Tests brauchen aktuellen Fachgrund, etwa keine doppelte Auszahlung oder verborgenen Feinddaten. Abdeckung klein und unabhängig halten; [feste Referenzen](reference-tests.md) sind keine GPU-Pixelbilder.
+Automatisierung schützt aktuelle Logik, Zustands-/Ressourcen-/Ladeverträge und RNG, nicht UI-Wortlaut, vollständiges Markup oder historische Entfernungen. Keine Tests gegen archivierte Implementierungskopien oder auf die Abwesenheit früherer Karten, Modelle und Bedienelemente. Erwartungen aus dem aktuellen Fachvertrag ableiten; ungültige Eingaben mit neutralen Testwerten statt früheren Inhaltsnamen prüfen. Negative Tests brauchen aktuellen Fachgrund, etwa keine doppelte Auszahlung oder verborgenen Feinddaten. Abdeckung klein und unabhängig halten; [feste Referenzen](reference-tests.md) schützen aktuelle Verträge und sind keine GPU-Pixelbilder.
 
-Node führt kein GLSL aus. Browserchecks nutzen aktuellen Build, isoliertes Profil und `file://` ohne Sicherheitslockerungen. Nur fragliche Lade-/Shader-/Picking-/Lebenszykluspfade prüfen. Software-WebGL und emuliertes Touch bestätigen keine Echtgeräteperformance; KI-Partien kein menschliches Balancing.
+Node führt kein GLSL aus. [Shader-Verträge](../tests/ashes-of-meridian-shader-contracts.check.cjs) prüfen Schnittstellen und ausgewählte Verdrahtung, nicht exakte Farb-/Glanzformeln oder Bildqualität. Browserchecks nutzen aktuellen Build, isoliertes Profil und `file://` ohne Sicherheitslockerungen. Nur fragliche Lade-/Shader-/Picking-/Lebenszykluspfade prüfen. Software-WebGL und emuliertes Touch bestätigen keine Echtgeräteperformance; KI-Partien kein menschliches Balancing.
 
 **Visuelle, akustische und vollständige Spielabnahme bleibt menschlich.** Abschluss nennt tatsächliche Prüfungen und relevante offene Grenzen, keine behauptete Vollabnahme. Dauerhafte offene Befunde ins passende Issue, keine Testzählhistorie oder zusätzliches Worklog.
 

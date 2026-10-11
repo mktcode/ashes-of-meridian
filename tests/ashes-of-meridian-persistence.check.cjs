@@ -235,23 +235,16 @@ test('damaged snapshots and mismatched recipes are blocked, never downgraded to 
   }
 });
 
-test('old separate recipes are ignored while current profile preferences survive', () => {
-  const h = setup(new Map([[PROFILE, JSON.stringify({ ...defaults, expeditionDepth: 25 })],
-    ['meridian.expedition.v6', JSON.stringify({ ...expedition, version: 6 })]]));
-  assert.equal(h.service.loadProfile().expeditionDepth, 25); assert.equal(h.service.loadExpedition(), null);
-  assert.equal(h.service.expeditionError, null);
-});
-
 test('invalid recipes, benefits and upgrades are rejected instead of silently repaired', () => {
   for (const invalid of [
-    { ...expedition, version: 6 }, { ...expedition, faction: 3 }, { ...expedition, depth: '8' },
+    { ...expedition, version: expedition.version + 1 }, { ...expedition, faction: 3 }, { ...expedition, depth: '8' },
     { ...expedition, abilities: ['orbital', 'repair', 'scan', 'scan'] },
     { ...expedition, benefits: { pioneerSquad: 99 } }, { ...expedition, upgrades: { orbital: 4 } },
     { ...expedition, upgrades: { missing: 1 } }, { ...expedition, enemyBenefits: [{}] },
     { ...expedition, encounter: { ...expedition.encounter, seed: -1 } },
     { ...expedition, encounter: { ...expedition.encounter, deployment: 'unknown' } },
-    { ...expedition, encounter: { ...expedition.encounter, mission: 'echo-salvage' } },
-    { ...expedition, encounter: { ...expedition.encounter, map: 'aurelion' } }
+    { ...expedition, encounter: { ...expedition.encounter, mission: 'unknown-mission' } },
+    { ...expedition, encounter: { ...expedition.encounter, map: 'unknown-map' } }
   ]) {
     const h = setup(); put(h, invalid, { ...defaults, expeditionDepth: 40 });
     assert.equal(h.service.loadExpedition(), null); assert.ok(h.service.expeditionError);
@@ -263,11 +256,11 @@ test('invalid recipes, benefits and upgrades are rejected instead of silently re
   assert.equal(restricted.service.loadExpedition().encounter.map, 'mothership');
 });
 
-test('removed map recipes and snapshots stay blocked while permanent profile data survives', () => {
+test('unknown map recipes and snapshots are rejected without losing permanent profile data', () => {
   const profile = { ...defaults, expeditionDepth: 25, tutorialComplete: true,
     settings: { ...defaults.settings, music: false } };
   const running = savedBattle();
-  running.encounter.map = running.battle.state.map = 'platform-deck';
+  running.encounter.map = running.battle.state.map = 'unknown-map';
   for (const run of [{ ...running, battle: null }, running]) {
     const h = setup(); put(h, run, profile);
     const before = h.data.get(PROFILE), permanent = json(h.service.loadProfile());
@@ -278,7 +271,7 @@ test('removed map recipes and snapshots stay blocked while permanent profile dat
     const reloaded = setup(h.data);
     assert.deepEqual(json(reloaded.service.loadProfile()), permanent);
     assert.equal(reloaded.service.loadExpedition(), null);
-    assert.ok(reloaded.service.expeditionError, 'settings writes do not resurrect the removed map');
+    assert.ok(reloaded.service.expeditionError, 'settings writes preserve rejection of an invalid map');
     reloaded.service.saveProgress(permanent, null);
     assert.equal(reloaded.service.loadExpedition(), null);
     assert.equal(reloaded.service.expeditionError, null, 'explicit discard clears the blocked run');
@@ -303,7 +296,7 @@ test('landscape archive remains independent, discards foreign history and clears
   h.service.saveStageHistory([previous, current]);
   assert.deepEqual(json(setup(h.data).service.loadStageHistory(expedition)), [previous, current]);
   for (const stages of [[], [previous], [{ ...previous, stage: 7 }, current], [previous, { ...current, seed: 1410 }],
-    [{ ...previous, map: 'aurelion' }, current], [{ ...previous, map: 'platform-deck' }, current], [null, current]]) {
+    [{ ...previous, map: 'unknown-map' }, current], [null, current]]) {
     h.service.saveStageHistory(stages); assert.deepEqual(json(h.service.loadStageHistory(expedition)), [current]);
     assert.equal(h.data.get(PROFILE), before);
   }

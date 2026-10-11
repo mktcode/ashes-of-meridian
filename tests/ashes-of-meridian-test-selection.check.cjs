@@ -10,9 +10,10 @@ test('standard selection includes technical groups and excludes both opt-in endu
   assert.equal(new Set(standard).size, standard.length);
   assert.ok(standard.includes('tests/ashes-of-meridian-model-thumbnails.check.cjs'));
   for (const suite of ['ai', 'simulation']) {
-    assert.equal(selectTests(suite).length, 1);
+    assert.ok(selectTests(suite).length > 0);
     assert.ok(selectTests(suite).every(file => !standard.includes(file)));
   }
+  assert.ok(selectTests('simulation').includes('tests/ashes-of-meridian-start-upgrades.check.cjs'));
   assert.throws(() => selectTests('all'), /Unknown test suite/);
 });
 

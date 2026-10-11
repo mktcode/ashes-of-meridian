@@ -12,7 +12,7 @@ export function localTargets(markdown) {
   const destination = '(?:<([^>\\n]+)>|([^\\s)]+))';
   for (const pattern of [
     new RegExp('!?\\[[^\\]\\n]*\\]\\(\\s*' + destination, 'g'),
-    new RegExp('^ {0,3}\\[[^\\]\\n]+\\]:\\s*' + destination, 'gm')
+    new RegExp('^ {0,3}\\[[^\\]\\n]+\\]:\\s*' + destination, 'gm'),
   ]) {
     for (const match of text.matchAll(pattern)) {
       const target = match[1] ?? match[2];
@@ -44,7 +44,9 @@ export function checkDocLinks(root) {
       continue;
     }
     for (const target of targets) {
-      const resolved = target.startsWith('/') ? resolve(root, `.${target}`) : resolve(root, dirname(file), target);
+      const resolved = target.startsWith('/')
+        ? resolve(root, `.${target}`)
+        : resolve(root, dirname(file), target);
       const path = relative(root, resolved);
       if (path === '..' || path.startsWith('../')) {
         errors.push(`${file}: target outside repository: ${target}`);
@@ -66,6 +68,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.error(result.errors.join('\n'));
     process.exitCode = 1;
   } else {
-    console.log(`Local file targets checked in ${result.files} Markdown files (fragments not checked).`);
+    console.log(
+      `Local file targets checked in ${result.files} Markdown files (fragments not checked).`,
+    );
   }
 }

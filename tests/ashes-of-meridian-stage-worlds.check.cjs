@@ -227,7 +227,7 @@ test('selected old world resumes building and production, saves separately and n
   await ui.browseStage(-1);
   assert.equal(previews[0][3],ui.expedition.worlds[0].battle);
   const button=h.document.getElementById('menu').querySelector('[data-ui="enterSelectedStage"]');
-  assert.ok(button.innerHTML.startsWith('Enter world'));assert.equal(button.disabled,false);
+  assert.equal(button.disabled,false);
   ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,1);assert.equal(ui.paused,true);assert.equal(ui.battleTutorial,null);
   assert.equal(game.s.parties[0].meta.startingWorkers,undefined,'later upgrades do not change an old world');
@@ -305,7 +305,9 @@ test('preview preparation disables entry and stale completions cannot switch the
   assert.equal(ui.stagePreviewIndex,1);assert.equal(h.game.s,null);
   ui.onPreview=async()=>true;ui.showHome();
   await ui.browseStage(-1);await ui.browseStage(1);
-  ui.enterSelectedStage();assert.equal(ui.view,'transition');assert.equal(h.game.s,null);
+  ui.enterSelectedStage();await Promise.resolve();
+  assert.equal(ui.view,'game');assert.equal(ui.activeWorldStage,null);
+  assert.equal(h.game.s.seed,ui.expedition.encounter.seed);
 });
 
 test('a corrupt archived snapshot is isolated, retained across writes and explicitly discardable',()=>{

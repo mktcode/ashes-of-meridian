@@ -76,7 +76,7 @@ test('Living canopy: static organic assembly preserves supply, construction, tea
     if (faction !== 1 || type !== 'depot') assert.notEqual(h.EntityModels.find({...entity,faction,type}).id,model.id);
   vm.runInContext('Math.random = seeded = () => { throw Error("Canopy RNG"); }; for (const k of Object.keys(geom)) geom[k] = () => { throw Error("Frame geometry"); };',h.context);
   const normal = h.draw(entity);
-  assert.deepEqual(normal.map(c => c[0]),['choirMound',...names],'no old tower, orbiting crystal or ring');
+  assert.deepEqual(normal.map(c => c[0]),['choirMound',...names],'mound and three canopy batches');
   for (const time of [0,20]) assert.deepEqual(h.draw(entity,{},time),normal,'no geometric animation');
   assert.deepEqual(h.draw({...entity,progress:undefined,rot:-2.1}),normal);
   assert.deepEqual(h.draw({...entity,hp:0}),[]);

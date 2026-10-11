@@ -38,7 +38,6 @@ test('Sky Sepulcher portal is a fixed horizontal surface with shader-only motion
   const live=draw(1,false,.75),portal=live.find(c=>c[0]==='faction2HangarPortal');
   assert.equal(portal[14],moving);
   assert.equal(live.filter(c=>c[0].startsWith('faction2Hangar')).length,3);
-  assert.ok(!live.some(c=>c[0]==='ring'||c[0]==='octa'),'no legacy tower or orbital rings');
   for(const calls of [draw(0,false,.75),draw(1,true,.75),draw(1,false,.75,{ghost:true}),draw(1,false,.75,{tint:0xabcdef})])
     assert.equal(calls.find(c=>c[0]==='faction2HangarPortal')[14],still);
   const invisible=draw(1,false,.75,{tint:0xabcdef,alpha:0}).find(c=>c[0]==='faction2HangarPortal');

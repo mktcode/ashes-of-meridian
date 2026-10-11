@@ -293,10 +293,10 @@ test('cached Forum polygons preserve placement classification across teams, over
   }
 });
 
-test('cold work uses the time budget rather than the old 32-tile throughput cap',()=>{
+test('wide cold grids finish within a bounded frame and upload budget',()=>{
   const h=ringFixture({startX:-60,startZ:-60,endX:60,endZ:60});cpuNow=0;
   for(let i=0;i<20&&h.field.pending;i++)h.field.draw('a',i*20,true);
-  assert.equal(h.field.pending,false,'1600 tiles need not consume at least 50 frames');
+  assert.equal(h.field.pending,false,'wide grid completes within twenty frames');
   assert.ok(h.uploads.length<=12);
 });
 
