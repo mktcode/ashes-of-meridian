@@ -1105,8 +1105,9 @@ test('construction adds workshop once; repair discounts change cost, never speed
       const alloy=game.account(team).alloy;game.worker(w,1);
       const repairFactor=team===0?1-Math.min(level,15)*.05:1;
       close(b.hp,b.maxHp-62);close(game.account(team).alloy,alloy-3.8*repairFactor);
-      // Also bound the actual hull repaired by the discounted remaining budget.
-      game.account(team).alloy=1;const hp=b.hp;game.worker(w,1);
+      // Two seconds make this budget-limited even at the 75% discount cap
+      // (40 HP per Cinder); the one-second speed limit is checked above.
+      game.account(team).alloy=1;const hp=b.hp;game.worker(w,2);
       close(b.hp-hp,10/repairFactor);close(game.account(team).alloy,0);
       b.hp=b.maxHp;game.worker(w,0);
       game.account(team).alloy=1000;
