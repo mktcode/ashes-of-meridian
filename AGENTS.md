@@ -1,5 +1,14 @@
 # Arbeitsregeln für KI-Agenten
 
+## Worktree-Pflicht – auch für den Hauptagenten
+
+- **Ohne ausdrückliche abweichende Nutzeranweisung für den aktuellen Auftrag findet sämtliche Arbeit in einem eigenen Aufgaben-Worktree auf einem eigenen Branch statt, niemals im `main`-Worktree oder auf Branch `main`.** Das umfasst auch Dokumentation, Arbeitsregeln, Diagnosen, Kleinständerungen und Folgeaufträge nach einer Integration.
+- Fehlt ein geeigneter eigener Aufgaben-Worktree, vor Beginn selbst einen separaten Worktree mit eigenem Branch vom aktuellen lokalen `main` anlegen. Dafür ist keine zusätzliche Nutzerfreigabe nötig. Fremde oder noch anderweitig verwendete Worktrees nicht übernehmen.
+- Vor Arbeit absoluten Worktree-Pfad, Branch und `git status --short` prüfen. Ein aktueller Arbeitsordner in `main`, ein ausgecheckter Branch `main`, eine frühere Integration oder ein allgemeiner Arbeitsauftrag sind **keine** Ausnahme von dieser Pflicht.
+- `main` ist ausschließlich Ziel ausdrücklich beauftragter Integrationen samt Abschlussprüfungen. Direkte Quellen-/Dokumentationsbearbeitung dort nur auf ausdrückliche Nutzeranweisung für den aktuellen Auftrag.
+- Geprüfte eigene Änderungen im Aufgaben-Worktree committen; **nicht automatisch nach `main` integrieren**. „Implementieren“, „kümmere dich darum“ oder „abschließen“ ist keine Integrationsfreigabe.
+- Bei ausdrücklichem Integrationsauftrag zuerst im Aufgaben-Worktree auf dessen Aufgabenbranch den aktuellen lokalen `main` mit `git merge main` integrieren, Konflikte dort lösen und gezielt prüfen. Danach im bestehenden `main`-Worktree auf Branch `main` integrieren und relevante Abschlussprüfungen ausführen. Ändert sich `main` inzwischen, Vorbereitung wiederholen. Vor dem Zielmerge Pfad, Branch und Status erneut prüfen; bei blockierenden fremden Änderungen stoppen und rückfragen, nichts überschreiben oder eigenmächtig stashen. Den Aufgaben-Worktree nicht auf `main` umschalten. Kein automatischer Push und keine automatische Branch-/Worktree-Löschung.
+
 ## Einstieg
 
 1. [README](README.md) lesen, `git status --short` prüfen.
