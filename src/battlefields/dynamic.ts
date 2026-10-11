@@ -29,10 +29,16 @@ function dynamicBattlefieldLayout(seed: number, extent: number): BattlefieldLayo
     const to = remaining.splice(index, 1)[0];
     corridors.push([[from.x, from.z], [to.x, to.z]]); connected.push(to);
   }
-  // Extra routes offer alternatives to the spanning tree, not four base approaches.
-  for (let i = 0; i < sites.length; i++) {
-    const a = sites[i], b = sites[(i + 2) % sites.length];
+  // A few short loops offer alternatives without shaving almost every landform
+  // down to the economy datum with long, crossing diagonals.
+  const pairs = sites.flatMap((a, i) => sites.slice(i + 1).map(b => ({ a, b, length: distance(a, b) })))
+    .sort((a, b) => a.length - b.length);
+  let loops = 0;
+  for (const { a, b } of pairs) {
+    if (corridors.some(([p, q]) => (p[0] === a.x && p[1] === a.z && q[0] === b.x && q[1] === b.z) ||
+        (q[0] === a.x && q[1] === a.z && p[0] === b.x && p[1] === b.z))) continue;
     corridors.push([[a.x, a.z], [b.x, b.z]]);
+    if (++loops === 3) break;
   }
   return { startSites: [], resourceSites: sites, corridors };
 }
@@ -48,6 +54,12 @@ function dynamicTerrainPlan(world: Battlefield) {
     valley = { offset: (morphology() - .5) * extent * .7, bend: 14 + morphology() * 22,
       width: 12 + morphology() * 12, depth: 12 + morphology() * 12, phase: morphology() * Math.PI * 2 },
     ridge = { offset: (morphology() - .5) * extent, width: 28 + morphology() * 20, height: 12 + morphology() * 12 },
+    macroRandom = seeded(world.terrainSeed ^ 0x504c4154),
+    massifs = Array.from({ length: form === 'massifs' ? 3 : 4 }, () => ({
+      x: (macroRandom() - .5) * extent * 1.45, z: (macroRandom() - .5) * extent * 1.45,
+      rx: 34 + macroRandom() * 25, rz: 30 + macroRandom() * 24,
+      height: 22 + macroRandom() * 12, phase: macroRandom() * Math.PI * 2
+    })),
     canyon = !industrial && (form === 'basin' || form === 'broken-crater' || morphology() < .5),
     smooth = (t: number) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); },
     datum = (x: number, z: number) => {
@@ -67,6 +79,18 @@ function dynamicTerrainPlan(world: Battlefield) {
       if (form === 'ridges' || form === 'folds') {
         const d = (v - ridge.offset - 12 * Math.sin(u / 85 + phase)) / ridge.width;
         h += ridge.height * Math.exp(-d * d);
+      }
+      if (!industrial && (form === 'terraces' || form === 'massifs')) {
+        // Broad quiet shelves versus isolated rock masses on a quiet plain.
+        // Elliptical, warped outlines avoid both circular mesas and grid terraces.
+        let macro = 0;
+        for (const m of massifs) {
+          const dx = (x - m.x) / m.rx, dz = (z - m.z) / m.rz,
+            theta = Math.atan2(dz, dx), d = Math.hypot(dx, dz) + .08 * Math.sin(theta * 3 + m.phase),
+            relief = form === 'terraces' ? 1 - smooth((d - .72) / .38) : Math.exp(-Math.pow(d, 4) * 2);
+          macro = Math.max(macro, m.height * relief);
+        }
+        return grade + macro;
       }
       let hillRelief = 0;
       for (const hill of hills) {
@@ -142,19 +166,23 @@ function dynamicTerrainPlan(world: Battlefield) {
     if (probe.foundation(q, BUILDINGS.hq.size) && probe.fits(q.x, q.z, 9)) return [];
     const dx = (height(p.x + 1, p.z) - height(p.x - 1, p.z)) / 2,
       dz = (height(p.x, p.z + 1) - height(p.x, p.z - 1)) / 2,
-      scale = Math.max(1, Math.hypot(dx, dz) / .06);
+      scale = Math.max(1, Math.hypot(dx, dz) / .14);
     return [{ ...p, height: height(p.x, p.z), dx: dx / scale, dz: dz / scale }];
   });
   return { height: (x: number, z: number) => {
     let h = height(x, z);
     for (const p of repairs) {
-      const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz);
-      // A round shoulder stays local when the HQ offset rotates around the site.
-      // 8m covers HQ margins, grid vertices and worker exits; the smooth 5m
-      // shoulder ends before any refinery footprint. No step or raised platform.
-      if (d < 13) {
+      const dx = x - p.x, dz = z - p.z, d = Math.pow(dx ** 4 + dz ** 4, .25);
+      // Retain a buildable grade close to the original slope. A steep, short
+      // shoulder around an over-flattened HQ can cut through the resource hub.
+      if (d < 18) {
         const plane = p.height + p.dx * dx + p.dz * dz;
-        h = plane + (h - plane) * smooth((d - 8) / 5);
+        let influence = 1 - smooth((d - 10) / 8);
+        // The wider shoulder must not alter any refinery foundation, including
+        // conservative raster vertices. The HQ's own foundation stays outside it.
+        for (const vent of vents)
+          influence *= smooth((Math.hypot(x - vent.x, z - vent.z) - 7.5) / 7);
+        h += (plane - h) * influence;
       }
     }
     return h;
@@ -164,8 +192,8 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
   const industrial = family === 'ship', palette: BattlefieldPalette = industrial
     ? { ground: 0x424f5d, rock: 0x7c8e9b, accent: 0xf0b764, flora: 0x79aab5 }
     : { ground: 0x637344, rock: 0x828783, accent: 0xbad49c, flora: 0x355b3a };
-  return { name, size: { extent: 160, cellSize: 2.5 }, palette,
-    createSize: seed => ({ extent: [140, 160, 180][Math.floor(seeded(seed ^ 0x53495a45)() * 3)], cellSize: 2.5 }),
+  return { name, size: { extent: 180, cellSize: 2.5 }, palette,
+    createSize: seed => ({ extent: [160, 180, 200][Math.floor(seeded(seed ^ 0x53495a45)() * 3)], cellSize: 2.5 }),
     createLayout: (seed, size) => dynamicBattlefieldLayout(seed, size.extent),
     render: { groundTexture: industrial ? 'metal' : family === 'desert' ? 'ground' : family === 'alien' ? 'bio' : 'westmarkMeadow',
       rockSurface: { texture: family === 'desert' ? 'desertRock' : 'westmarkGranite', metersPerTile: 8 },
@@ -173,8 +201,7 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
       landscape: { earth: 'westmarkEarth', bark: 'westmarkBark' },
       haze: [0.055, 0.09, 0.13] },
     generate(builder) {
-      const w = builder.world, plan = dynamicTerrainPlan(w), s = w.surface = new BattlefieldSurface(w.extent, w.cellSize,
-        plan.height, h => Math.floor(h / 6));
+      const w = builder.world, plan = dynamicTerrainPlan(w), s = w.surface = connectBattlefieldTerrain(w, plan.height);
       w.staticGrid.set(s.cliffs); w.terrainFeatureGrid.set(s.cliffs);
       builder.ground();
       w.renderData.placements.find(p => p.mesh === 'terrain')!.material = plan.industrial ? 'METAL' : 'LANDSCAPE';
@@ -183,7 +210,14 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
         for (let z = 0; z < size; z++) for (let x = 0; x < size; x++) {
           const px = (x - 1) * step - extent, pz = (z - 1) * step - extent, i = z * size + x,
             inside = Math.max(Math.abs(px), Math.abs(pz)) <= w.extent;
-          heights[i] = (inside ? s.heightAt(px, pz) : plan.height(px, pz)) - .13;
+          const edge = Math.max(Math.abs(px), Math.abs(pz)),
+            ex = clamp(px, -w.extent, w.extent), ez = clamp(pz, -w.extent, w.extent),
+            fade = clamp(1 - (edge - w.extent) / 32, 0, 1),
+            // A repaired edge continues into the backdrop, then returns smoothly
+            // to the original exterior. Never leave a seam at a border ramp.
+            exterior = inside ? 0 : plan.height(px, pz) +
+              (s.heightAt(ex, ez) - plan.height(ex, ez)) * fade * fade * (3 - 2 * fade);
+          heights[i] = (inside ? s.heightAt(px, pz) : exterior) - .13;
           if (plan.industrial) colors.set([.65, .75, .85], i * 3);
           else colors[i * 3 + 1] = clamp((heights[i] - 25) / 22, 0, 1);
         }

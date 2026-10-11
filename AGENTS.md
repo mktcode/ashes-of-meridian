@@ -41,6 +41,7 @@ Performance-Analyse und -Optimierung ist ein kreativer Prozess, der über einfac
 - Minimierung von Arbeit, deren Ergebnis sich seit dem letzten Frame kaum verändert hat
 - Optimierung von Geländeabfragen, Kollisionsprüfungen und wiederholtem Aufbau von Modelldaten
 - Nutzung von Profiling-Tools und Performance-Messungen, um Engpässe zu identifizieren
+- Für gezielte reproduzierbare Szenenmessungen den [Chromium-Diagnose-Runner](docs/diagnostic-capture.md) nutzen; Zeitbudget-/Freigaberegeln gelten weiterhin, Software-WebGL ist kein Geräteperformancebeleg.
 - Kreative Ansätze zur Verbesserung der Framerate und Reduzierung von Latenz, z.B. durch Caching, Level-of-Detail-Techniken oder asynchrone Verarbeitung
 
 ## Delegation

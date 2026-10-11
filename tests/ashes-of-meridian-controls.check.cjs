@@ -11,7 +11,7 @@ function flatCameraLimits(ui) {
 
 test('stage browsing is bounded and purely visual; continue always launches the real checkpoint', async () => {
   const h = setup(), ui = h.ui, saved = [], previews = [];
-  ui.expedition = { version: 8, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2,
+  ui.expedition = { version: 10, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2,
     upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
   ui.stageHistory = [{ stage: 1, map: 'mothership', seed: 11 }, { stage: 2, map: 'alien-planet', seed: 22 }];
@@ -138,7 +138,7 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const render = vm.runInContext('({renderHomeScreen, renderMissionBriefing, renderExpeditionOpponents, renderBattleScreen, renderSettingsScreen, renderExpeditionUpgradeList})', context);
   const profile = Object.freeze({version: 2, expeditionDepth: 10,
     settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false, showFps: true})});
-  const expedition = Object.freeze({version: 8, battle: null, faction: 1, upgrades: Object.freeze({commandTraining:2}), abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
+  const expedition = Object.freeze({version: 10, battle: null, faction: 1, upgrades: Object.freeze({commandTraining:2}), abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
     enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({startingAlloy: 2}), Object.freeze({})]),
     benefits: Object.freeze({commandCapacitor: 1}),
     encounter: Object.freeze({mission: 'hq-elimination', enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
@@ -406,7 +406,7 @@ test('expedition loadout selection keeps four unique ordered slots and locks an 
 test('new expedition modules remain editable with an existing checkpoint without changing the saved run', () => {
   const h = setup(), ui = h.ui;
   // Controller metadata is mutable; editing must still leave this existing recipe untouched.
-  const expedition = { version: 8, battle: null, faction: 0, depth: 2, upgrades: {},
+  const expedition = { version: 10, battle: null, faction: 0, depth: 2, upgrades: {},
     abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']),
     benefits: Object.freeze({}), enemyBenefits: Object.freeze([Object.freeze({})]),
     encounter: Object.freeze({ mission: 'hq-elimination', enemies: Object.freeze([2]), map: 'desert', seed: 1409 }) };
@@ -1820,7 +1820,7 @@ test('pause and visibility changes preserve battle state and require explicit re
 function savedUIBattle() {
   const h = setup(), game = h.ui.game, copy = value => JSON.parse(JSON.stringify(value));
   Object.assign(game.s, { map: 'desert', seed: 1409, depth: 0, result: null, time: 42, speed: 2 });
-  h.ui.expedition = { version: 8, battle: null, faction: 0, abilities: ['orbital', 'repair', 'scan', 'drop'],
+  h.ui.expedition = { version: 10, battle: null, faction: 0, abilities: ['orbital', 'repair', 'scan', 'drop'],
     depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
   game.snapshotSafe = true; game.snapshotBattle = () => ({ version: 1, state: copy(game.s), tutorial: null });
@@ -2028,7 +2028,7 @@ test('blocked expedition saves require explicit discard and concurrent launch at
 
 test('pause restart actions cannot redeploy a running expedition', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.ui.expedition = { version: 8, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [2, 0], map: 'desert', seed: 1409 },
+  h.ui.expedition = { version: 10, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [2, 0], map: 'desert', seed: 1409 },
     upgrades: {}, benefits: {}, enemyBenefits: [{ commandCapacitor: 1 }, { startingAlloy: 1 }], depth: 3 };
   const state = h.ui.game.s; let starts = 0;
   h.ui.game.start = () => { starts++; };
@@ -2039,7 +2039,7 @@ test('pause restart actions cannot redeploy a running expedition', () => {
 test('victory checkpoints the completed world once; defeat clears the expedition', () => {
   const h=setup(),saved=[],cleared=[];
   h.ui.persistence.saveProgress=(_profile,value)=>value===null?cleared.push(true):saved.push(JSON.parse(JSON.stringify(value)));
-  h.ui.expedition={version:8,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{commandTraining:2},benefits:{startingAlloy:1},enemyBenefits:[{}],
+  h.ui.expedition={version:10,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{commandTraining:2},benefits:{startingAlloy:1},enemyBenefits:[{}],
     encounter:{mission:'hq-elimination',enemies:[1],map:'desert',seed:1409}};
   const previousMap=h.ui.expedition.encounter.map;h.ui.game.s.result={win:true};
   h.ui.event('result',{win:true,text:'Victory'});
@@ -2072,7 +2072,7 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
       [true, unlocked >= 1, unlocked >= 2]);
   }
   h.ui.profile.expeditionDepth = 9;
-  h.ui.expedition = { version: 8, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 9, upgrades: {}, benefits: {}, enemyBenefits: [{}, {}, {}],
+  h.ui.expedition = { version: 10, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 9, upgrades: {}, benefits: {}, enemyBenefits: [{}, {}, {}],
     encounter: { mission: 'hq-elimination', enemies: [1, 2, 0], map: 'desert', seed: 1409 } };
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.showResult = () => {};

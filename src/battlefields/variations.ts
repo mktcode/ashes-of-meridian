@@ -61,9 +61,15 @@ function battlefieldVariation(profile:BattlefieldRenderProfile,seed:number):Batt
   const family=profile.variationFamily;if(!family)return profile;
   const recipe=worldVariationRecipe(family,seed),natural=family!=='ship',
     geology=seeded(seed^0x4d414352),
-    landform:WorldReliefForm=family==='alien'?(geology()<.5?'ridges':'broken-crater'):recipe.relief,
+    // Resolve the native axis even when overridden: preserve its reserved draw
+    // before the family's amplitude sample.
+    nativeForm:WorldReliefForm=family==='alien'?(geology()<.5?'ridges':'broken-crater'):recipe.relief,
+    shape=seeded(seed^0x53484150)(),
+    landform:WorldReliefForm=!natural?'deck':shape<.35?'terraces':shape<.6?'massifs':nativeForm,
     base=battlefieldEcology({...profile,wilderness:recipe.biome},seed),ecology=base.ecology!,
-    variation:WorldVariation={id:recipe.id,name:recipe.name+(family==='alien'?(landform==='ridges'?' · RIDGE COUNTRY':' · BROKEN CRATER'):''),
+    variation:WorldVariation={id:recipe.id,name:recipe.name+
+      (landform==='terraces'?' · PLATEAU COUNTRY':landform==='massifs'?' · OPEN MASSIFS':
+        family==='alien'?(landform==='ridges'?' · RIDGE COUNTRY':' · BROKEN CRATER'):''),
       family,relief:landform,amplitude:family==='alien'?36+geology()*10:recipe.amplitude,
       heightScale:recipe.heightScale??1,flora:recipe.flora,landmark:recipe.landmark??(recipe.biome==='mycelium'?'Spire':'Relic')};
   return battlefieldAtmosphere({...base,variation,ecology:{...ecology,natural,flora:recipe.flora,

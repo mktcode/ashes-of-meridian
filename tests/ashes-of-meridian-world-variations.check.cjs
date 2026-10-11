@@ -54,7 +54,9 @@ test('Alien relief and habitat axes stay independent and shared landmark meshes 
     const v=api.battlefieldVariation(api.BATTLEFIELDS['alien-planet'].render,seed).variation;
     if(!combinations.has(v.id))combinations.set(v.id,new Set());combinations.get(v.id).add(v.relief);
   }
-  assert.ok([...combinations.values()].every(forms=>forms.size===2));
+  assert.ok([...combinations.values()].every(forms=>forms.size>=3), 'habitats are not locked to one landform');
+  const forms=new Set([...combinations.values()].flatMap(forms=>[...forms]));
+  assert.deepEqual([...forms].sort(),['broken-crater','massifs','ridges','terraces']);
   for(const model of ['variationAlienCoral','variationAlienFan','variationAlienSpire','variationAlienPod',
     'variationAlienArch','variationAlienReed','variationAlienShelf','variationAlienCactus','variationAlienPalm',
     'variationRadar','variationPylon','variationWreck','shipHangar','shipPlant']) {

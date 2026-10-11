@@ -72,6 +72,34 @@ test('diagnostic recorder separates callback/render cadence and CPU phases in a 
   assert.equal(r.report().stopped, 'context-lost');
 });
 
+test('recording ranges exclude warmup/drain, recompute summaries and drop boundary intervals without changing session data', () => {
+  const { Recorder } = classes(); let now = 0;
+  const recorder = new Recorder(() => now, 4, 4);
+  for (let i = 0; i < 4; i++) {
+    recorder.beginFrame(now); now += i === 0 ? 100 : i;
+    recorder.finishFrame(i !== 1);
+    const event = recorder.beginInteraction('selection'); now++;
+    recorder.finishInteraction(event);
+  }
+  const full = recorder.report(), range = { afterFrameId: 1, throughFrameId: 3, afterInteractionId: 1, throughInteractionId: 3 };
+  const report = recorder.report(range);
+  assert.deepEqual(Array.from(report.frames, f => f.id), [2,3]);
+  assert.deepEqual(Array.from(report.interactions.events, e => e.id), [2,3]);
+  assert.equal(report.summary.cpuMs.simulation.max, 2);
+  assert.equal(report.summary.rendered, 1);
+  assert.equal(report.frames[0].rafIntervalMs, null);
+  assert.equal(report.frames[1].renderIntervalMs, null);
+  assert.equal(report.summary.rafIntervalMs.samples, 1);
+  assert.equal(report.summary.renderIntervalMs, null);
+  assert.equal(report.interactions.summary.selection.durationMs.samples, 2);
+  assert.equal(report.callbacksSeen, 4, 'seen counters remain session totals');
+  assert.equal(recorder.report().summary.cpuMs.simulation.max, 100);
+  assert.equal(recorder.report().frames[2].renderIntervalMs, full.frames[2].renderIntervalMs);
+  for (const invalid of [{}, { ...range, afterFrameId: -1 }, { ...range, throughFrameId: 0 },
+    { ...range, afterInteractionId: NaN }, { ...range, throughInteractionId: 0 }])
+    assert.throws(() => recorder.report(invalid), /Invalid diagnostic recording range/);
+});
+
 test('CPU details exclude nested and recursive work, retain parent attribution and summarize real zero calls', () => {
   const { Recorder } = classes(); let now = 0;
   const r = new Recorder(() => now, 2);

@@ -216,7 +216,7 @@ test('resource regions scatter across seeds and every family has variable dimens
     json(api.dynamicBattlefieldLayout(9017, 120).resourceSites));
   for (const definition of Object.values(api.BATTLEFIELDS)) {
     const sizes = new Set(Array.from({ length: 40 }, (_, seed) => definition.createSize(seed + 1).extent));
-    assert.deepEqual([...sizes].sort((a, b) => a - b), [140, 160, 180]);
+    assert.deepEqual([...sizes].sort((a, b) => a - b), [160, 180, 200]);
   }
   const original = api.BATTLEFIELDS.frontier.createSize;
   try {
