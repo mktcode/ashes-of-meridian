@@ -12,6 +12,8 @@ Die geplanten eigenen Gebäudestile für alle zwölf Upgrades mit jeweils drei A
 
 ## Menschliche Abnahme und Balance
 
+- [ ] [Außenposten-Wellen und Evakuierung](../gameplay.md#außenposten-verteidigung-und-evakuierung) mit echten Runs abstimmen: Vorwarnzeit, Druckanstieg, endliche Vorräte und Rettungsfenster. Command-Center-Button, Dreierauswahl, Countdown und subtilen gelben Puls auf schmalen/niedrigen Echtgeräten sowie bei reduzierter Bewegung abnehmen. Armeewege zum HQ, HQ-Verlust während Rettung, blockierte Ankunft und Rückkehr ins laufende höchste Gefecht prüfen; technische lokale Verträge sind keine Run-/Balanceabnahme.
+
 - [ ] Drei Angebote nebeneinander auf schmalen/niedrigen Echtgeräten abnehmen: lesbare Namen, Touch-Ziele, keine Überlagerung von Minimap oder Auswahlzeile. Kompakte aktivierte HUD-Ansicht mit Ausbau und i-Button prüfen; Beschreibung und Aktivierung bleiben im pausierten Modal. Kein Screenshotvergleich ersetzt die Abnahme.
 - [ ] Modal-Lesbarkeit, Abbrechen ohne Kauf, Aktivieren mit lokalem Echo, Rückkehr zur Auswahl und erneutes Öffnen über i abnehmen. Command-Ausbau beschreibt die individuellen Ränge der vier ausgerüsteten Fähigkeiten.
 - [ ] Rettungsfunktion mit echten Runs testen: laufendes Gefecht verlassen, Bauwelt entwickeln, zurückkehren. Sofortige Dauerboni und einmalige Ressourcen-/Workerlieferungen sollen helfen, aber nicht jeden verlorenen Kampf garantieren. Ohne Ankunftsort wartet die Lieferung; Niederlage wird nicht rückgängig gemacht.

@@ -23,7 +23,7 @@
         }
       },
       stepTick(this: MeridianGame, dt: number) {
-        if (!this.s || this.s.result || this.s.stopped) return;
+        if (!this.s || this.s.result || this.s.stopped || this.s.outpost?.finished) return;
         let s = this.s!;
         if (s.rules.kind === 'scenario') {
           if (!Number.isFinite(dt) || dt <= 0) return;
@@ -43,6 +43,9 @@
           this.world!.rebuild(s.entities);
           this.navDirty = false;
         }
+        this.updateOutpost();
+        if(s.outpost?.finished)return;
+        this.deliverEvacuatedArmy();
         this.updateSettlements(dt);
         for (const e of s.entities) {
           if (e.hp <= 0 || e.kind !== 'building' || e.progress < 1 || e.team === -1) continue;
@@ -96,6 +99,7 @@
             continue;
           }
           if (e.yieldTo) { this.moveYield(e, dt); continue; }
+          if (e.evacuationHQ && this.moveToEvacuation(e,dt)) continue;
           if (e.type === 'worker' && this.worker(e, dt)) continue;
           if (e.type === 'medic' && this.medic(e, dt)) continue;
           let fighting = UNITS[e.type].damage > 0 ? this.combat(e, dt) : false;

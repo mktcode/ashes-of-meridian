@@ -32,7 +32,8 @@
         this.selected = [];
         this.clearMode();
         $('hud').classList.add('hidden');
-        $('worldViewport').classList.remove('in-battle', 'result-backdrop');
+        $('worldViewport').classList.remove('in-battle', 'result-backdrop', 'evacuating');
+        $('outpostStatus').classList.add('hidden');
         if (this.onViewportChange) this.onViewportChange();
         $('modal').classList.add('hidden');
         $('result').classList.add('hidden');
@@ -90,7 +91,7 @@
       continueBuilding(this: MeridianUI) {
         if (!this.expedition || this.launchingBattle || this.leavingBattle || this.modalKind === 'civilizationIntro') return;
         if (this.view === 'game' && this.game.s?.result?.win && !this.profile.civilizationIntroComplete) {
-          this.openModal('civilizationIntro', `<div class="eyebrow">CIVILIZATION BUILDING</div><h1>Turn victory into a civilization.</h1><p>This world is now peaceful. Your army, workers and resources stay here, and the next expedition stage is already unlocked.</p><p>Build a <strong>Meridian Forum</strong> from the Build menu. Select a worker, then right-click or tap the finished Forum to assign Cinder deliveries. Stored Cinder lets it automatically grow homes and research buildings around it.</p><p>Select a civilian building to choose its upgrade. Spend this world’s <strong>Echo</strong> to buy stronger ranks and expand the building.</p><p>Each civilian building offers three upgrades. Choose one in its info dialog, then buy further ranks in the HUD. Upgrades stack across cleared worlds and also strengthen your <strong>running battle when you return</strong>. New resource and unit deliveries are granted only once.</p><p>You can return through the main menu’s stage archive. When you are ready, use <strong>Continue expedition</strong> in the main menu.</p><div class="launch-row"><button class="primary" data-ui="startCivilizationBuilding">${uiSkin()}START BUILDING</button><button class="secondary" data-ui="closeModal">${uiSkin()}BACK</button></div>`);
+          this.openModal('civilizationIntro', `<div class="eyebrow">CIVILIZATION BUILDING</div><h1>Turn victory into a civilization.</h1><p>Your army, workers and resources stay here, and the next expedition stage is already unlocked. This outpost faces endless, increasingly powerful attack waves. Resources are finite: defend your settlement, then evacuate before it falls.</p><p>Build a <strong>Meridian Forum</strong> from the Build menu. Select a worker, then right-click or tap the finished Forum to assign Cinder deliveries. Stored Cinder lets it automatically grow homes and research buildings around it.</p><p>Select a civilian building to choose its upgrade. Spend this world’s <strong>Echo</strong> to buy stronger ranks and expand the building.</p><p>Each civilian building offers three upgrades. Choose one in its info dialog, then buy further ranks in the HUD. Upgrades stack across cleared worlds and also strengthen your <strong>running battle when you return</strong>. New resource and unit deliveries are granted only once.</p><p>Select your <strong>Command Center</strong> to start irreversible evacuation. You have <strong>60 seconds of simulation time</strong>: send units to that HQ and use civilian buildings’ evacuation buttons to secure <strong>three upgrades</strong>. The outpost is permanently removed; your rescue joins the highest battle stage. If the evacuation HQ falls, only what is already secured survives. Unvisited worlds do not advance.</p><p>You can return through the main menu’s stage archive. When you are ready, use <strong>Continue expedition</strong> in the main menu.</p><div class="launch-row"><button class="primary" data-ui="startCivilizationBuilding">${uiSkin()}START BUILDING</button><button class="secondary" data-ui="closeModal">${uiSkin()}BACK</button></div>`);
           return;
         }
         this.finishContinueBuilding();
@@ -222,7 +223,8 @@
         this.audio.setMode?.('menu');
         $('menu').classList.remove('hidden');
         $('hud').classList.add('hidden');
-        $('worldViewport').classList.remove('in-battle', 'result-backdrop');
+        $('worldViewport').classList.remove('in-battle', 'result-backdrop', 'evacuating');
+        $('outpostStatus').classList.add('hidden');
         if (this.onViewportChange) this.onViewportChange();
         $('modal').classList.add('hidden');
         $('result').classList.add('hidden');
@@ -273,7 +275,7 @@
           this.toast('Select four command modules.'); return;
         }
         this.battleFaction = faction;
-        this.expedition = { version: 10, battle: null, worlds: [], faction, abilities: [...this.battleAbilities], depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter() };
+        this.expedition = { version: 11, battle: null, worlds: [], faction, abilities: [...this.battleAbilities], depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}], encounter: this.createEncounter() };
         this.persistence.saveProgress(this.profile, this.expedition);
         this.notifyStorageFailure();
         this.stageHistory = [];
@@ -330,6 +332,7 @@
         $('modal').classList.add('hidden');
         if (kind === 'civilizationIntro' && this.game.s?.result) this.modalKind = 'result';
         if (this.view === 'game' && !this.game.s?.result) {
+          if(kind==='evacuationConfirm'){this.evacuationConfirmId=null;this.resume();return;}
           if (kind === 'settlementUpgradeInfo') {
             this.settlementDetail=null;this.resume();this.updateHUD();return;
           }

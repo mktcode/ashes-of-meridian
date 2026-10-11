@@ -359,6 +359,7 @@
         return false;
       },
       setOrder(this: MeridianGame, e: Entity, order: UnitOrder) {
+        if(e.kind==='unit')delete e.evacuationHQ;
         if (e.kind === 'building') return;
         if (e.kind === 'unit') { this.forgetForumDelivery(e); delete e.deliveryForum; delete e.deliveryPoint; }
         e.order = { ...order };
@@ -382,6 +383,10 @@
         const target = 'id' in order ? this.get(order.id) : null,
           task = this.workerTask(target, team);
         if (target && this.enemy({team}, target) && !this.canSee(team, target)) return false;
+        if(order.type==='smart' && this.orderEvacuation(mobile,target,team)) {
+          if(announce)this.notify(team,'order',{type:'move',x:target!.x,z:target!.z,count:mobile.length});
+          return true;
+        }
         if (order.type === 'smart' && this.canSupplyForum(target,team)) {
           const workers = mobile.filter(e => e.type === 'worker');
           if (workers.length) {
