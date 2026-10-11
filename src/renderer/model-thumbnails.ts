@@ -57,7 +57,10 @@ class MeridianModelThumbnails {
       height = Math.max(1,Math.min(r.canvas.height,pixelLimit,Math.round(rect.height*scale)));
     const requestedZoom = Number(tile.dataset.modelZoom ?? 1);
     const zoom = Number.isFinite(requestedZoom) ? clamp(requestedZoom,1,2) : 1;
-    const key = [faction,kind,type,r.quality,width,height,zoom,
+    const requestedUpgrade=tile.dataset.modelUpgrade,
+      upgrade=kind==='building' && requestedUpgrade && hasContentKey(CIVILIZATION_UPGRADES,requestedUpgrade) &&
+        civilizationUpgradeAllowed(type as BuildingType,requestedUpgrade) ? requestedUpgrade : undefined;
+    const key = [faction,kind,type,upgrade || '',r.quality,width,height,zoom,
       r.textureResources?.metal?.resident ?? false,r.textureResources?.bio?.resident ?? false].join(':');
     if (this.applied.get(tile) === key && tile.width === width && tile.height === height) return 'unchanged';
     const cached = this.cache.get(key);
@@ -75,7 +78,7 @@ class MeridianModelThumbnails {
     p.begin();
     const definition = kind === 'unit' ? UNITS[type as UnitType] : BUILDINGS[type as BuildingType];
     renderEntity(p,{id:7,kind,type:type as UnitType | BuildingType,faction:faction as FactionId,
-      team:0,x:0,z:0,hp:definition.hp,size:definition.size,progress:1,carry:0,walk:0,rot:-.45},0,{localTeam:0});
+      team:0,x:0,z:0,hp:definition.hp,size:definition.size,progress:1,carry:0,walk:0,rot:-.45,upgrade},0,{localTeam:0});
     const low = [Infinity,Infinity,Infinity], high = [-Infinity,-Infinity,-Infinity];
     for (const batches of [p.dynamic,p.effects]) for (const bucket of Object.values(batches)) {
       bucket.bounds = undefined;

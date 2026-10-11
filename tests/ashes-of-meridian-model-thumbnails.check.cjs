@@ -138,6 +138,18 @@ test('model tile scheduling renders cold misses once and reuses cached snapshots
   assert.equal(pose(),snapshot,'recreated snapshots use the same fixed model pose and time');
 });
 
+test('civilian activation invalidates the portrait without a type change and retains both cached variants',()=>{
+  const {tile,thumbs}=setup(),canvas=tile(0,'building','embercottage');
+  assert.equal(thumbs.draw(canvas),'rendered');
+  canvas.dataset.modelUpgrade='startingAlloy';assert.equal(thumbs.draw(canvas),'rendered');
+  assert.equal(thumbs.draw(canvas),'unchanged');
+  delete canvas.dataset.modelUpgrade;assert.equal(thumbs.draw(canvas),'cached');
+  canvas.dataset.modelUpgrade='startingAlloy';assert.equal(thumbs.draw(canvas),'cached');
+  canvas.dataset.modelType='terracecommons';assert.equal(thumbs.draw(canvas),'rendered');
+  canvas.dataset.modelType='hearthtower';assert.equal(thumbs.draw(canvas),'rendered');
+  thumbs.dispose();
+});
+
 test('cache-only hydration copies all warm tiles without capturing cold models or touching WebGL', () => {
   const {thumbs,tile,calls,images,rect}=setup();
   thumbs.draw(tile());thumbs.draw(tile(0,'building','hq'));

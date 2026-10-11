@@ -6,7 +6,7 @@ Jedes der zwölf Zivilisationsupgrades erhält eine eigene architektonische Iden
 
 Geplant sind **36 spezialisierte Varianten**: sechs Wohn- und sechs Forschungsstile mit je drei Rängen. Die sechs bestehenden generischen Familien-/Größenmodelle bleiben als neutrale Darstellung erhalten. Im regulären Spiel ist vor der Aktivierung nur die kleine Stufe erreichbar; neutrale Mittel-/Hochhausmodelle bleiben für generische Vorschauen und vorhandene Darstellungsfälle verfügbar. Es gibt keinen zusätzlichen spielbaren „Rang 0“ und keine drei neuen fraktionsspezifischen Sätze: Alle Fraktionen teilen die zivile Metallarchitektur.
 
-Dieser Auftrag plant die Modelle, implementiert sie aber noch nicht. Die folgenden Baunamen sind interne Entwurfsnamen, keine beauftragte Umbenennung der englischen Upgrade-Anzeigen.
+Die folgenden Baunamen sind interne Entwurfsnamen, keine beauftragte Umbenennung der englischen Upgrade-Anzeigen. Die Umsetzung folgt den untenstehenden Etappen; die übrigen Stile behalten ihre neutrale Darstellung, bis ihr eigener Modellsatz vorhanden ist.
 
 ## Gemeinsame Gestaltung
 
@@ -135,7 +135,8 @@ Maßgeblich bleiben [Grafik-Leitlinie](../graphics-guideline.md) und [Modellpfle
 ## Umsetzung in überprüfbaren Etappen
 
 - [ ] **Entwurfsabnahme:** Die zwölf Silhouetten und ihre Rangentwicklung gemeinsam abnehmen. Besonders Cinder/Logistik, Echo/Energie, Bau/Reparatur und Command/Kommandant gegeneinander prüfen. Überarbeitungen zuerst hier festhalten, nicht erst nach Erstellung aller Modelle.
-- [ ] **Technischer vertikaler Schnitt:** Variantenableitung, Registrierung, gemeinsame zivile Bauteile, Cache-Schlüssel und passende Bounds einführen. Als erste Modelle Cinder-Kontor und Waffentechnikinstitut mit allen drei Rängen umsetzen; neutrale Ausgangsmodelle und Kauf-/Ausbauwechsel durchgängig zeigen.
+- [x] **Erster Modellschnitt:** Cinder-Kontor und Waffentechnikinstitut in drei Rängen, neutrale Ausgangsmodelle, gespeicherte Upgrade-Zuordnung und gemeinsames fraktionsunabhängiges Meshangebot. Vorhandene Decks, Zugänge und Unterkonstruktion bleiben gemeinsam; Auswahlporträts unterscheiden Varianten auch ohne Typwechsel.
+- [ ] **Ersten Schnitt visuell abnehmen:** Die sechs neuen Modelle neben ihren neutralen Gegenstücken präsentieren. Keilhauben, Tresorgewicht, Prüfschienen und Rangstaffelung gegen die Entwürfe prüfen; Körper, Picking, Schatten und Kachelrahmung bei Kameradrehung und an Hängen abnehmen. Technische Bounds- und Geometriechecks ersetzen diese Beurteilung nicht.
 - [ ] **Wohnsatz vervollständigen:** Echo-Depot, Worker-Quartier, Bauplanungswerk, Logistikhaus und Reparaturhaus jeweils in drei Rängen erstellen. Pro Familie zunächst Klein-/Mittel-/Hochhaus gemeinsam prüfen, bevor die nächste Familie folgt.
 - [ ] **Forschungssatz vervollständigen:** Schutztechnikzentrum, Feldmedizinzentrum, Command-Akademie, Energieversorgungsinstitut und Kommandantenkolleg jeweils in drei Rängen erstellen.
 - [ ] **Darstellungsverträge prüfen:** Alle zwölf Upgrade-Zuordnungen und drei Stufen abdecken; unkonfiguriert neutral, Angebot öffnen/abbrechen neutral, bestätigen spezialisiert, Rangkauf richtige Größe, Save/Load unverändert. Familie und Rang dürfen nicht zu falschen oder verschwundenen Meshes führen.
@@ -147,4 +148,4 @@ Maßgeblich bleiben [Grafik-Leitlinie](../graphics-guideline.md) und [Modellpfle
 
 Keine Änderungen an Bonusstärken, Echo-Kosten, Wachstum, Ausbaugeometrie, Kampfeffekten, Lieferungen oder Save-Version. Kein neues Rerollen, keine Fraktionsskins, neuen Gebäudeanimationen oder zusätzlichen Ressourcenproduktion. Bestehende [Upgrade-Balance und Spielabnahme](civilization-upgrades.md) bleiben ein eigener Auftrag. Automatische Modellchecks ersetzen keine menschliche Designabnahme.
 
-**Nächster Schritt nach dieser Planung:** Entwürfe bestätigen oder korrigieren, dann mit dem technischen Schnitt und den ersten zwei dreistufigen Modellfamilien beginnen. Nicht ungeprüft alle 36 Varianten in einem Schritt bauen.
+**Nächster Schritt:** Den ersten sechsteiligen Modellschnitt visuell abnehmen und gegebenenfalls anpassen, danach die übrigen Wohnstile erstellen. Nicht ungeprüft alle verbleibenden Varianten in einem Schritt bauen.
