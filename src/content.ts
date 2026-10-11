@@ -548,20 +548,21 @@ const COMMAND_DRILL = Object.freeze({ radius: 11, damagePerStack: .05 });
 const FLEET_EFFECTS = Object.freeze({ constructionSpeed: .05, supply: 2, repairDiscount: .05 });
 
 const EXPEDITION_BENEFITS = {
-  supplyCrate: {
-    name: 'Supply crate',
+  startingAlloy: {
+    name: 'Starting Cinder',
     icon: 'crystal',
-    desc: `Adds ${EXPEDITION_EFFECTS.alloy} Cinder to your reserves at the start of every remaining battle.`
+    desc: `Adds ${EXPEDITION_EFFECTS.alloy} starting Cinder per rank.`,
+    max: 999999
   },
   aetherAllocation: {
     name: 'Echo allocation',
     icon: 'save',
     desc: `Adds ${EXPEDITION_EFFECTS.aether} Echo at the start of every remaining battle.`
   },
-  pioneerSquad: {
-    name: 'Pioneer squad',
+  startingWorkers: {
+    name: 'Starting workers',
     icon: 'worker',
-    desc: 'Deploys one additional worker at the start of every remaining battle.',
+    desc: 'Adds one starting worker per rank, up to five across the expedition.',
     max: 5
   },
   commanderMandate: {
@@ -617,8 +618,6 @@ function normalizedBenefits(input: Record<string, number> = {}): Record<string, 
 }
 
 const CIVILIZATION_FLEET_EFFECTS = {
-  startingAlloy: { name: 'Starting Cinder', icon: 'crystal', desc: 'Adds 50 starting Cinder per rank.', max: 999999 },
-  startingWorkers: { name: 'Starting workers', icon: 'worker', desc: 'Adds one starting worker per rank, up to five across the expedition.', max: 5 },
   constructionProtocols: { name: 'Construction protocols', icon: 'factory', desc: 'Adds 5% construction speed per rank. Does not speed up repairs.', max: 999999 },
   logisticsFrame: { name: 'Logistics frame', icon: 'depot', desc: 'Adds two supply capacity per rank. The total supply limit remains 180.', max: 999999 },
   repairLogistics: { name: 'Repair logistics', icon: 'repair', desc: 'Reduces worker repair Cinder costs by 5% per rank, up to 75%.', max: 15 }
@@ -673,14 +672,8 @@ type UpgradeType = keyof typeof BATTLE_UPGRADES;
 const CIVILIZATION_UPGRADE_COSTS = [40, 80, 140] as const;
 const CIVILIZATION_UPGRADES = Object.freeze({
   ...CIVILIZATION_FLEET_EFFECTS,
-  ...COMMAND_MODULES,
-  aetherAllocation: EXPEDITION_BENEFITS.aetherAllocation,
-  commanderMandate: EXPEDITION_BENEFITS.commanderMandate,
-  commandDrill: EXPEDITION_BENEFITS.commandDrill,
-  surveyDrones: EXPEDITION_BENEFITS.surveyDrones,
-  fieldWorkshop: EXPEDITION_BENEFITS.fieldWorkshop,
-  commandCapacitor: EXPEDITION_BENEFITS.commandCapacitor
-}) as Readonly<Record<FleetUpgradeType | AbilityType | Exclude<ExpeditionBenefit, 'supplyCrate' | 'pioneerSquad'>,
+  ...COMMAND_MODULES, ...EXPEDITION_BENEFITS
+}) as Readonly<Record<FleetUpgradeType | AbilityType | ExpeditionBenefit,
   { name: string; icon: string; desc: string; max?: number }>>;
 type CivilizationUpgradeType = keyof typeof CIVILIZATION_UPGRADES;
 type CivilizationBuildingFamily = 'residential' | 'research';

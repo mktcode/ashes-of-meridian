@@ -11,11 +11,11 @@ const defaults = {
 const content = loadScripts(['content']);
 const catalogs = vm.runInContext('({units:UNITS,buildings:BUILDINGS,abilities:ABILITIES,battlefields:Object.fromEntries(MISSIONS["hq-elimination"].maps.map(id=>[id,{}])),missions:MISSIONS,enemyCount:expeditionEnemyCount})', content);
 const upgrades = vm.runInContext('BATTLE_UPGRADES', content);
-const benefits = { supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }, fieldWorkshop: { max: 1 } };
+const benefits = vm.runInContext('EXPEDITION_BENEFITS', content);
 const expedition = {
   version: 8, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
-  benefits: { supplyCrate: 2, commanderMandate: 1 },
-  enemyBenefits: [{ pioneerSquad: 2, fieldWorkshop: 1 }, { supplyCrate: 3 }, { aetherAllocation: 2 }],
+  benefits: { startingAlloy: 2, commanderMandate: 1 },
+  enemyBenefits: [{ startingWorkers: 2, fieldWorkshop: 1 }, { startingAlloy: 3 }, { aetherAllocation: 2 }],
   encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 }
 };
 function setup(data = new Map(), rules = {}) {
@@ -76,7 +76,7 @@ let fixture;
 const savedBattle = () => json((fixture ??= runningSave()).run);
 
 test('battle upgrades round-trip as recipe values and reject unknown, fractional and over-cap ranks', () => {
-  const h=setup(),run={...json(expedition),upgrades:{orbital:2,startingWorkers:3}};
+  const h=setup(),run={...json(expedition),upgrades:{orbital:2},benefits:{startingWorkers:3,startingAlloy:2}};
   put(h,run);assert.deepEqual(json(setup(h.data).service.loadExpedition()),run);
   for(const invalid of [null,[],{missing:1},{orbital:4},{orbital:1.2},{orbital:-1}]){
     put(h,{...run,upgrades:invalid});const loaded=setup(h.data);
@@ -239,7 +239,7 @@ test('invalid recipes, benefits and upgrades are rejected instead of silently re
   for (const invalid of [
     { ...expedition, version: expedition.version + 1 }, { ...expedition, faction: 3 }, { ...expedition, depth: '8' },
     { ...expedition, abilities: ['orbital', 'repair', 'scan', 'scan'] },
-    { ...expedition, benefits: { pioneerSquad: 99 } }, { ...expedition, upgrades: { orbital: 4 } },
+    { ...expedition, benefits: { startingWorkers: 99 } }, { ...expedition, upgrades: { orbital: 4 } },
     { ...expedition, upgrades: { missing: 1 } }, { ...expedition, enemyBenefits: [{}] },
     { ...expedition, encounter: { ...expedition.encounter, seed: -1 } },
     { ...expedition, encounter: { ...expedition.encounter, deployment: 'unknown' } },
@@ -282,11 +282,11 @@ test('unknown map recipes and snapshots are rejected without losing permanent pr
 test('deployment and opponent slots round-trip across stage boundaries without shared benefits', () => {
   for (const depth of [0, 1, 2, 3, 7, 20]) {
     const count = catalogs.enemyCount(depth), run = { ...json(expedition), depth,
-      enemyBenefits: Array.from({ length: count }, (_, slot) => ({ supplyCrate: slot + 1 })),
+      enemyBenefits: Array.from({ length: count }, (_, slot) => ({ startingAlloy: slot + 1 })),
       encounter: { ...expedition.encounter, deployment: 'resource-start', enemies: Array.from({ length: count }, (_, slot) => slot % 3) } };
     const h = setup(); put(h, run, { ...defaults, tutorialComplete: true });
     const restored = setup(h.data).service.loadExpedition(); assert.deepEqual(json(restored), run);
-    restored.enemyBenefits[0].supplyCrate = 999; assert.deepEqual(json(h.service.loadExpedition()), run);
+    restored.enemyBenefits[0].startingAlloy = 999; assert.deepEqual(json(h.service.loadExpedition()), run);
   }
 });
 

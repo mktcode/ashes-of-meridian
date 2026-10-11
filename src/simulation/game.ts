@@ -6,7 +6,7 @@
       return {
         id, faction, meta, benefits, loadout: normalizedAbilityLoadout(loadout), controller: { kind: 'human' },
         account: {
-          alloy: STARTING_CINDER + ((meta.startingAlloy || 0) + (benefits.supplyCrate || 0)) * EXPEDITION_EFFECTS.alloy,
+          alloy: STARTING_CINDER + (benefits.startingAlloy || 0) * EXPEDITION_EFFECTS.alloy,
           gas: (benefits.aetherAllocation || 0) * EXPEDITION_EFFECTS.aether,
           energy: Math.min(COMMAND_ENERGY.max, COMMAND_ENERGY.start + (benefits.commandCapacitor || 0) * EXPEDITION_EFFECTS.energy),
           abilities: Object.fromEntries(contentKeys(ABILITIES).map(key => [key, 0])) as Record<AbilityType, number>
@@ -275,7 +275,7 @@
         // Add bonus units only after the original layout and enemy RNG draws.
         for (const party of parties) {
           const team = party.id, perks = party.benefits, home = starts[team],
-            workers = (party.meta.startingWorkers || 0) + (perks.pioneerSquad || 0);
+            workers = perks.startingWorkers || 0;
           for (let i = 0; i < workers; i++)
             if (!this.spawnDeploymentUnit('worker', { x: home.x - 7, z: home.z - 4 + i * 2 }, home, team, this.factionFor(team)))
               throw new Error('No free space for starting workers.');

@@ -37,7 +37,7 @@ let input;
 function victoryFixture() {
   if(input)return copy(input);
   const h=harness(),{game,ui}=h;
-  const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{supplyCrate:1},enemyBenefits:[{}],
+  const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{startingAlloy:1},enemyBenefits:[{}],
     encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[2]}};
   ui.expedition={...copy(recipe),version:8,battle:null,worlds:[]};
   game.start({...recipe,...recipe.encounter});
@@ -70,7 +70,7 @@ function victoryFixture() {
   assert.deepEqual(h.writes.slice(beforeWrites),[PROFILE],'archive and transition share one commit');
   const world=ui.expedition.worlds[0];
   assert.equal(world.battle.state.result,null);assert.equal(world.battle.state.rules.completed,true);
-  assert.equal(world.recipe.depth,0);assert.equal(world.recipe.benefits.supplyCrate,1);
+  assert.equal(world.recipe.depth,0);assert.equal(world.recipe.benefits.startingAlloy,1);
   assert.ok(world.battle.state.parties[1].eliminated);
   assert.equal(game.s.rules.completed,undefined,'visible result was not converted into a live world');
   const loaded=h.persistence.loadExpedition();assert.deepEqual(copy(loaded),copy(ui.expedition));
@@ -221,7 +221,7 @@ test('failure after result detection cannot archive or pay out a partial tick',(
 
 test('selected old world resumes building and production, saves separately and never grants progression',async()=>{
   const h=restoredMenu(),{ui,game,persistence}=h;
-  ui.expedition.upgrades.startingWorkers=5;ui.expedition.benefits.aetherAllocation=2;
+  ui.expedition.benefits.startingWorkers=5;ui.expedition.benefits.aetherAllocation=2;
   const current=copy({...ui.expedition,worlds:undefined}),profile=copy(h.profile),previews=[];
   ui.onPreview=async(...args)=>{previews.push(args);return true;};
   await ui.browseStage(-1);
@@ -230,7 +230,7 @@ test('selected old world resumes building and production, saves separately and n
   assert.equal(button.disabled,false);
   ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,1);assert.equal(ui.paused,true);assert.equal(ui.battleTutorial,null);
-  assert.equal(game.s.parties[0].meta.startingWorkers,undefined,'later upgrades do not change an old world');
+  assert.equal(game.s.parties[0].benefits.startingWorkers,undefined,'later upgrades do not change an old world');
   assert.equal(game.s.parties[0].benefits.aetherAllocation,undefined,'later expedition benefits do not leak backwards');
   const queueBefore=game.get(h.fixture.barracks).queue[0].progress,
     foundationBefore=game.get(h.fixture.foundation).progress,gasBefore=game.account(0).gas;

@@ -139,7 +139,7 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const profile = Object.freeze({version: 2, expeditionDepth: 10,
     settings: Object.freeze({quality: 2, volume: .28, music: true, sfx: true, healthbars: false, showFps: true})});
   const expedition = Object.freeze({version: 8, battle: null, faction: 1, upgrades: Object.freeze({orbital:2}), abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
-    enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({supplyCrate: 2}), Object.freeze({})]),
+    enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({startingAlloy: 2}), Object.freeze({})]),
     benefits: Object.freeze({surveyDrones: 1}),
     encounter: Object.freeze({mission: 'hq-elimination', enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
@@ -174,7 +174,7 @@ test('opponent briefing maps active slots to their faction and benefit data', ()
   const { renderExpeditionOpponents: renderOpponents, FACTIONS, expeditionBenefit } =
     vm.runInContext('({ renderExpeditionOpponents, FACTIONS, expeditionBenefit })', context);
   const expedition = {
-    enemyBenefits: [{}, { supplyCrate: 2 }, { surveyDrones: 1 }],
+    enemyBenefits: [{}, { startingAlloy: 2 }, { surveyDrones: 1 }],
     encounter: { enemies: [2, 1, 0] }
   };
   for (let count = 1; count <= 3; count++) {
@@ -187,7 +187,7 @@ test('opponent briefing maps active slots to their faction and benefit data', ()
       assert.ok(html.includes(FACTIONS[faction].short));
     for (const faction of expedition.encounter.enemies.slice(count))
       assert.ok(!html.includes(FACTIONS[faction].short));
-    assert.equal(html.includes(expeditionBenefit('supplyCrate').name), count >= 2);
+    assert.equal(html.includes(expeditionBenefit('startingAlloy').name), count >= 2);
     assert.equal(html.includes(expeditionBenefit('surveyDrones').name), count >= 3);
   }
 });
@@ -2026,7 +2026,7 @@ test('blocked expedition saves require explicit discard and concurrent launch at
 test('pause restart actions cannot redeploy a running expedition', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
   h.ui.expedition = { version: 8, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [2, 0], map: 'desert', seed: 1409 },
-    upgrades: {}, benefits: {}, enemyBenefits: [{ fieldWorkshop: 1 }, { supplyCrate: 1 }], depth: 3 };
+    upgrades: {}, benefits: {}, enemyBenefits: [{ fieldWorkshop: 1 }, { startingAlloy: 1 }], depth: 3 };
   const state = h.ui.game.s; let starts = 0;
   h.ui.game.start = () => { starts++; };
   h.ui.pause(); h.click({ ui: 'restartConfirm' }); h.click({ ui: 'restart' }); h.ui.continueExpedition();
@@ -2036,7 +2036,7 @@ test('pause restart actions cannot redeploy a running expedition', () => {
 test('victory checkpoints the completed world once; defeat clears the expedition', () => {
   const h=setup(),saved=[],cleared=[];
   h.ui.persistence.saveProgress=(_profile,value)=>value===null?cleared.push(true):saved.push(JSON.parse(JSON.stringify(value)));
-  h.ui.expedition={version:8,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{orbital:2},benefits:{supplyCrate:1},enemyBenefits:[{}],
+  h.ui.expedition={version:8,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{orbital:2},benefits:{startingAlloy:1},enemyBenefits:[{}],
     encounter:{mission:'hq-elimination',enemies:[1],map:'desert',seed:1409}};
   const previousMap=h.ui.expedition.encounter.map;h.ui.game.s.result={win:true};
   h.ui.event('result',{win:true,text:'Victory'});

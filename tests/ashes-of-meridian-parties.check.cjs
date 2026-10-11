@@ -25,26 +25,45 @@ test('party snapshots retain single-player defaults and isolate normalized benef
   assert.deepEqual(json(defaults[1].loadout), ['orbital', 'scan', 'disruption', 'recall']);
   assert.deepEqual(json(defaults[0].account), json(defaults[1].account));
   assert.notStrictEqual(defaults[0].account.abilities, defaults[1].account.abilities);
-  const perks = { supplyCrate: 2, commandCapacitor: 99, fieldWorkshop: 1, unknown: 8 },
-    upgrades = { startingAlloy: 99, logisticsFrame: 2.9, repairLogistics: -1, disruption: 2.9, unknown: 5 }, profile = {},
+  const perks = { startingAlloy: 2, startingWorkers: 99, commandCapacitor: 99, fieldWorkshop: 1, unknown: 8 },
+    upgrades = { logisticsFrame: 2.9, repairLogistics: -1, disruption: 2.9, unknown: 5 }, profile = {},
     options = { upgrades, faction: 1, enemies: [1], abilities: ['disruption', 'bulwark', 'surge', 'recall'],
       benefits: perks, enemyBenefits: [perks] },
     parties = singlePlayerParties(profile, options);
-  assert.deepEqual(json(parties[0].meta), { startingAlloy: 99, logisticsFrame: 2, repairLogistics: 0, disruption: 2 });
+  assert.deepEqual(json(parties[0].meta), { logisticsFrame: 2, repairLogistics: 0, disruption: 2 });
   assert.deepEqual(json(parties[0].loadout), options.abilities);
   assert.deepEqual(json(parties[1].loadout), ['repair', 'drop', 'disruption', 'surge']);
   assert.deepEqual(json(parties[1].meta), {});
-  assert.deepEqual(json(parties[0].benefits), { supplyCrate: 2, commandCapacitor: 2, fieldWorkshop: 1 });
+  assert.deepEqual(json(parties[0].benefits), { startingAlloy: 2, startingWorkers: 5, commandCapacitor: 2, fieldWorkshop: 1 });
   assert.deepEqual(json(parties[0].benefits), json(parties[1].benefits));
   assert.notStrictEqual(parties[0].benefits, parties[1].benefits);
-  assert.equal(parties[0].account.alloy - parties[1].account.alloy, 4950);
-  upgrades.startingAlloy = 0; perks.supplyCrate = 0; options.faction = 2;
-  assert.equal(parties[0].meta.startingAlloy, 99);
-  assert.equal(parties[0].benefits.supplyCrate, 2);
+  assert.equal(parties[0].account.alloy,350);assert.equal(parties[1].account.alloy,350);
+  upgrades.logisticsFrame = 0; perks.startingAlloy = 0; perks.startingWorkers = 0; options.faction = 2;
+  assert.equal(parties[0].meta.logisticsFrame, 2);
+  assert.equal(parties[0].benefits.startingAlloy, 2);assert.equal(parties[0].benefits.startingWorkers,5);
   assert.equal(parties[0].faction, 1);
   parties[0].fieldWorkshopUsed = true;
   assert.equal(parties[1].fieldWorkshopUsed, undefined);
   assert.equal(singlePlayerParties(profile, options)[0].fieldWorkshopUsed, undefined);
+});
+
+test('starting benefits normalize once for player, enemy and scenario parties', () => {
+  for(const [value,cinder,workers] of [[-2,0,0],['3.9',3,3],[99,99,5],['bad',0,0]]){
+    const benefits={startingAlloy:value,startingWorkers:value},
+      parties=singlePlayerParties({}, {benefits,enemyBenefits:[benefits]}),
+      options=scenario(3);
+    for(const p of options.parties)p.benefits=benefits;
+    const scenarioParties=scenarioSetup(options).parties;
+    for(const p of [...parties,...scenarioParties]){
+      assert.equal(p.account.alloy,250+cinder*50);
+      assert.equal(p.benefits.startingAlloy||0,cinder);
+      assert.equal(p.benefits.startingWorkers||0,workers);
+      assert.deepEqual(json(p.meta),{});
+    }
+    benefits.startingAlloy=0;benefits.startingWorkers=0;
+    assert.equal(parties[0].benefits.startingAlloy||0,cinder);
+    assert.equal(scenarioParties[0].benefits.startingWorkers||0,workers);
+  }
 });
 
 test('party accessors share one state, while accounts and upgrade effects remain separate', () => {

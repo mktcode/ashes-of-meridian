@@ -157,10 +157,10 @@ test('only completed hostile structures destroyed by the player earn structure r
 
 test('public FFA start snapshots every slot and preserves seeded terrain/resources on all maps', () => {
   for (const map of ['desert', 'mothership', 'alien-planet']) {
-    const g = new MeridianGame({ upgrades: { startingAlloy: 2 } });
+    const g = new MeridianGame({});
     const resourceSnapshot = () => JSON.stringify(g.s.entities.filter(e => e.kind === 'resource'));
-    const opts = { seed: 1409, map, faction: 1, enemies: [1, 1, 1], upgrades: { startingAlloy: 2 },
-      enemyBenefits: [{ supplyCrate: 2 }, { pioneerSquad: 1 }, {}] };
+    const opts = { seed: 1409, map, faction: 1, enemies: [1, 1, 1], benefits: { startingAlloy: 2 },
+      enemyBenefits: [{ startingAlloy: 2 }, { startingWorkers: 1 }, {}] };
     g.start({ seed: opts.seed, map }); const resources = resourceSnapshot();
     g.start(opts);
     assert.equal(resourceSnapshot(), resources);
@@ -174,8 +174,8 @@ test('public FFA start snapshots every slot and preserves seeded terrain/resourc
     assert.ok(g.s.parties.slice(1).every(p => Object.keys(p.meta).length === 0));
     const snapshot = JSON.stringify(g.s), nextRandom = g.random();
     g.start(opts); assert.equal(JSON.stringify(g.s), snapshot); assert.equal(g.random(), nextRandom);
-    opts.enemyBenefits[0].supplyCrate = 0; opts.enemies[0] = 0;
-    assert.equal(g.party(1).benefits.supplyCrate, 2); assert.equal(g.party(1).faction, 1);
+    opts.enemyBenefits[0].startingAlloy = 0; opts.enemies[0] = 0;
+    assert.equal(g.party(1).benefits.startingAlloy, 2); assert.equal(g.party(1).faction, 1);
     const state = g.s;
     for (const enemies of [[], [0, 1, 2, 0], [0, 3], [0, undefined]]) {
       assert.throws(() => g.start({ enemies })); assert.strictEqual(g.s, state);

@@ -8,7 +8,7 @@ const workers = (game, team = 0) => game.alive((e) => e.team === team && e.type 
 
 function rules(context) {
   return vm.runInContext(
-    '({BATTLE_UPGRADES, STARTING_CINDER, BUILDINGS, UNITS, EXPEDITION_EFFECTS, UNIT_BODY_SCALE})',
+    '({EXPEDITION_BENEFITS, STARTING_CINDER, BUILDINGS, UNITS, EXPEDITION_EFFECTS, UNIT_BODY_SCALE})',
     context,
   );
 }
@@ -29,13 +29,13 @@ test('declared starting alloy ranks change only the account, not world generatio
     entities = copy(game.s.entities),
     next = game.random();
   for (let rank = 0; rank <= 5; rank++) {
-    game.start({ ...options, upgrades: { startingAlloy: rank } });
+    game.start({ ...options, benefits: { startingAlloy: rank } });
     assert.equal(
       game.account(0).alloy,
       api.STARTING_CINDER + api.BUILDINGS.hq.cost + rank * api.EXPEDITION_EFFECTS.alloy,
     );
     assert.equal(game.account(0).gas, 0);
-    assert.equal(game.party(0).meta.startingAlloy, rank);
+    assert.equal(game.party(0).benefits.startingAlloy || 0, rank);
     assert.deepEqual(publicWorld(game), world);
     assert.deepEqual(copy(game.s.entities), entities);
     assert.equal(game.random(), next);
@@ -45,27 +45,27 @@ test('declared starting alloy ranks change only the account, not world generatio
 test('alloy upgrades are copied, normalized to current content bounds and reproduced on restart', () => {
   const { game, context } = createGame(),
     api = rules(context),
-    upgrades = { startingAlloy: 2 },
-    options = { seed: 9897, faction: 1, upgrades };
+    benefits = { startingAlloy: 2 },
+    options = { seed: 9897, faction: 1, benefits };
   game.start(options);
   const before = copy(game.s);
-  upgrades.startingAlloy = 5;
+  benefits.startingAlloy = 5;
   assert.deepEqual(copy(game.s), before);
-  assert.notStrictEqual(game.party(0).meta, upgrades);
+  assert.notStrictEqual(game.party(0).benefits, benefits);
   game.start(options);
-  assert.equal(game.party(0).meta.startingAlloy, 5);
+  assert.equal(game.party(0).benefits.startingAlloy, 5);
   const restarted = copy(game.s);
   game.start(options);
   assert.deepEqual(copy(game.s), restarted);
-  const maximum = api.BATTLE_UPGRADES.startingAlloy.max;
+  const maximum = api.EXPEDITION_BENEFITS.startingAlloy.max;
   for (const [value, rank] of [
     [-2, 0],
     ['3.9', 3],
     [maximum + 1, maximum],
     ['bad', 0],
   ]) {
-    game.start({ ...options, upgrades: { startingAlloy: value } });
-    assert.equal(game.party(0).meta.startingAlloy, rank);
+    game.start({ ...options, benefits: { startingAlloy: value } });
+    assert.equal(game.party(0).benefits.startingAlloy || 0, rank);
     assert.equal(
       game.account(0).alloy,
       api.STARTING_CINDER + api.BUILDINGS.hq.cost + rank * api.EXPEDITION_EFFECTS.alloy,
@@ -86,7 +86,7 @@ for (const faction of [0, 1, 2])
     const nextSamples = Array.from({ length: 7 }, () => game.random());
     cooldownSamples.push(...nextSamples.map((value) => value * 0.5));
     for (let rank = 0; rank <= 5; rank++) {
-      game.start({ ...options, upgrades: { startingWorkers: rank } });
+      game.start({ ...options, benefits: { startingWorkers: rank } });
       const own = workers(game);
       assert.equal(own.length, rank + 1, 'bonus workers plus one landing worker');
       assert.equal(workers(game, 1).length, 1, 'no player upgrades for the enemy');
@@ -124,13 +124,13 @@ for (const faction of [0, 1, 2])
 
 test('worker upgrade input is bounded, copied and applied only to the next deployment', () => {
   const { game } = createGame(),
-    upgrades = { startingWorkers: 2 },
-    options = { seed: 9897, faction: 1, upgrades };
+    benefits = { startingWorkers: 2 },
+    options = { seed: 9897, faction: 1, benefits };
   game.start(options);
   const before = copy(game.s);
-  upgrades.startingWorkers = 5;
+  benefits.startingWorkers = 5;
   assert.deepEqual(copy(game.s), before);
-  assert.notStrictEqual(game.party(0).meta, upgrades);
+  assert.notStrictEqual(game.party(0).benefits, benefits);
   game.start(options);
   assert.equal(workers(game).length, 6);
   const restarted = copy(game.s);
@@ -142,8 +142,8 @@ test('worker upgrade input is bounded, copied and applied only to the next deplo
     [99, 5],
     ['bad', 0],
   ]) {
-    game.start({ ...options, upgrades: { startingWorkers: value } });
-    assert.equal(game.party(0).meta.startingWorkers, rank);
+    game.start({ ...options, benefits: { startingWorkers: value } });
+    assert.equal(game.party(0).benefits.startingWorkers || 0, rank);
     assert.equal(workers(game).length, rank + 1);
   }
 });
@@ -154,19 +154,19 @@ test('declared benefits and upgrades combine without granting the enemy player b
   game.start({
     seed: 1409,
     faction: 1,
-    upgrades: { startingAlloy: 1, startingWorkers: 2 },
+    upgrades: { logisticsFrame: 2 },
     benefits: {
-      supplyCrate: 2,
+      startingAlloy: 3,
       aetherAllocation: 2,
-      pioneerSquad: 3,
+      startingWorkers: 5,
       commanderMandate: 1,
       unknown: 99,
     },
   });
   assert.deepEqual(copy(game.party(0).benefits), {
-    supplyCrate: 2,
+    startingAlloy: 3,
     aetherAllocation: 2,
-    pioneerSquad: 3,
+    startingWorkers: 5,
     commanderMandate: 1,
   });
   const base = api.STARTING_CINDER + api.BUILDINGS.hq.cost;

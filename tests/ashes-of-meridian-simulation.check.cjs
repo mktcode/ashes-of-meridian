@@ -122,7 +122,7 @@ for (const map of ['mothership', 'desert', 'alien-planet']) for (const count of 
 test(`internal ${count}-party scenario on ${map}: FFA starts, resource access and explicit stop without expedition result`, () => {
   const { game, events } = createGame(), options = {
     seed: 1409, map, duration: .1,
-    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human', benefits: { pioneerSquad: 1 } })),
+    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human', benefits: { startingWorkers: 1 } })),
     hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b))
   };
   const profile = json(game.profile), dispatched = [];
@@ -264,7 +264,7 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
 for (const map of ['desert','alien-planet','mothership'])
 for (const seed of [1,2,3,4,5,6,7,8,9,10,1409,2219,24080])
 test(`seeded exploration deployment on ${map}, seed ${seed}: separated candidates, replay and independent RNG`, () => {
-  const {game}=createGame(), options={seed,map,deployment:'exploration',benefits:{pioneerSquad:5,commanderMandate:1}};
+  const {game}=createGame(), options={seed,map,deployment:'exploration',benefits:{startingWorkers:5,commanderMandate:1}};
   game.start(options);
   const starts=game.startingPositions(seed), minimum=Math.min(65,game.world.extent*.55);
   assert.equal(starts.length,2);
@@ -955,8 +955,8 @@ test('base mining, refinery income, medic healing and faction regeneration work 
 
 test('five starting workers begin mining and deliver alloy without recruitment for every faction', () => {
   for (const faction of [0, 1, 2]) {
-    const { game } = createGame(); game.profile.upgrades = { startingWorkers: 5 };
-    game.start({ seed: 1409, faction, map: 'desert' });
+    const { game } = createGame();
+    game.start({ seed: 1409, faction, map: 'desert', benefits: { startingWorkers: 5 } });
     advance(game, 1200);
     assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
     assert.ok(game.s.parties[0].account.alloy > 250); assert.ok(game.s.stats.gathered > 0);
@@ -989,12 +989,12 @@ test('survey drones and capacitor preserve seeded setup, enemy sight and RNG acr
 });
 
 test('enemy benefits use the same effects, remain separate from fleet upgrades and snapshot without shifting resource RNG',()=>{
-  const {game}=createGame(), perks={supplyCrate:8,aetherAllocation:4,surveyDrones:1,fieldWorkshop:1,commandCapacitor:2};
-  game.profile.upgrades={startingAlloy:5,startingWorkers:2,logisticsFrame:5,constructionProtocols:5};
-  game.start({seed:1409});
+  const {game}=createGame(), perks={startingAlloy:8,aetherAllocation:4,surveyDrones:1,fieldWorkshop:1,commandCapacitor:2};
+  const playerOptions={seed:1409,upgrades:{logisticsFrame:5,constructionProtocols:5},benefits:{startingAlloy:5,startingWorkers:2}};
+  game.start(playerOptions);
   const entities=json(game.s.entities),next=game.random(),playerSight=json(game.world.sight[0]),
     enemyVisible=Array.from(game.world.sight[1].visible),enemyExplored=Array.from(game.world.sight[1].explored);
-  game.start({seed:1409,enemyBenefits:[perks]});
+  game.start({...playerOptions,enemyBenefits:[perks]});
   assert.deepEqual(json(game.s.entities),entities);assert.equal(game.random(),next);
   assert.deepEqual(json(game.world.sight[0]),playerSight);
   assert.deepEqual(Array.from(game.world.sight[1].visible),enemyVisible);
@@ -1002,12 +1002,12 @@ test('enemy benefits use the same effects, remain separate from fleet upgrades a
   assert.deepEqual([game.account(1).alloy,game.account(1).gas,game.account(1).energy],[650,200,55]);
   assert.deepEqual([game.account(0).alloy,game.account(0).gas,game.account(0).energy],[500,0,25]);
   assert.equal(game.cap(0),34);assert.equal(game.cap(1),24);
-  const snapshot=json(game.s.parties[1].benefits);perks.supplyCrate=0;
+  const snapshot=json(game.s.parties[1].benefits);perks.startingAlloy=0;
   assert.deepEqual(json(game.s.parties[1].benefits),snapshot);
-  const options={seed:1409,faction:0,enemies:[0],benefits:{pioneerSquad:3,commanderMandate:1},
-    enemyBenefits:[{pioneerSquad:99,commanderMandate:99,unknown:8}]};
+  const options={seed:1409,faction:0,enemies:[0],benefits:{startingWorkers:3,commanderMandate:1},
+    enemyBenefits:[{startingWorkers:99,commanderMandate:99,unknown:8}]};
   game.start(options);
-  assert.deepEqual(json(game.s.parties[1].benefits),{pioneerSquad:5,commanderMandate:1});
+  assert.deepEqual(json(game.s.parties[1].benefits),{startingWorkers:5,commanderMandate:1});
   for(const team of [0,1]) {
     assert.equal(game.alive(e=>e.team===team&&e.type==='worker').length,5);
     assert.equal(game.alive(e=>e.team===team&&e.type==='hero').length,1);
@@ -1020,7 +1020,7 @@ test('enemy benefits use the same effects, remain separate from fleet upgrades a
 });
 
 test('each team consumes its own paid first-foundation workshop; only the player gets fleet construction speed',()=>{
-  const options={upgrades:{constructionProtocols:5},benefits:{pioneerSquad:1,fieldWorkshop:1},enemyBenefits:[{pioneerSquad:1,fieldWorkshop:1}]};
+  const options={upgrades:{constructionProtocols:5},benefits:{startingWorkers:1,fieldWorkshop:1},enemyBenefits:[{startingWorkers:1,fieldWorkshop:1}]};
   const {game,restartArena}=flatArena(135,0,options);
   for(const team of [0,1]) {
     const p={x:team?12:-12,z:0},w=game.alive(e=>e.team===team&&e.type==='worker')[0];
@@ -1037,7 +1037,7 @@ test('each team consumes its own paid first-foundation workshop; only the player
 });
 
 test('field workshop is paid, consumed only by successful placement and stays with one foundation',()=>{
-  const options={upgrades:{startingWorkers:1},benefits:{fieldWorkshop:99}};
+  const options={benefits:{startingWorkers:1,fieldWorkshop:99}};
   const {game,restartArena}=flatArena(135,0,options);
   assert.equal(game.alive(e=>e.team===0&&e.type==='worker').length,2,'bonus worker plus landing worker');
   const worker=player(game,'worker');worker.x=0;worker.z=-5;
