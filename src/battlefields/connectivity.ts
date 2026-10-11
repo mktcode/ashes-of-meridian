@@ -24,6 +24,22 @@ function battlefieldTerrainRegions(surface: BattlefieldSurface, radius = TERRAIN
   groups.sort((a, b) => b.length - a.length);
   return { groups, free, point };
 }
+// Small resource footprints must not disappear from an area-based audit. Use
+// vehicle clearance for every deposit, including the actual off-grid positions.
+function battlefieldTerrainEconomyAccess(surface: BattlefieldSurface, sites: readonly Position[]): boolean[] {
+  if (!sites.length) return [];
+  const regions = battlefieldTerrainRegions(surface, 2.6), main = new Uint8Array(regions.free.length),
+    n = surface.extent * 2 / surface.cellSize,
+    index = (p: Position) => Math.floor((p.z + surface.extent) / surface.cellSize) * n +
+      Math.floor((p.x + surface.extent) / surface.cellSize);
+  for (const i of regions.groups[0] ?? []) main[i] = 1;
+  return sites.flatMap((site, i) => [site, battlefieldGasPosition(site),
+    ...Array.from({ length: 5 }, (_, j) => battlefieldCrystalPosition(site, i, j))]).map(p =>
+      !!main[index(p)] && surface.segment(p, regions.point(index(p)), 2.6));
+}
+function battlefieldTerrainEconomyConnected(surface: BattlefieldSurface, sites: readonly Position[]) {
+  return battlefieldTerrainEconomyAccess(surface, sites).every(Boolean);
+}
 function battlefieldTerrainCoverage(surface: BattlefieldSurface, regions = battlefieldTerrainRegions(surface)) {
   const n = surface.extent * 2 / surface.cellSize, main = new Uint8Array(n * n),
     sectors = Array.from({ length: 9 }, () => ({ area: 0, reachable: 0 }));
@@ -102,18 +118,31 @@ function connectBattlefieldTerrain(world: Pick<Battlefield, 'extent' | 'cellSize
       { ...battlefieldSitePosition(site, -13, -6), radius: 13 }
     ]),
     smooth = (t: number) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
-  let surface = bake(height), routeGrid: Uint8Array | undefined;
+  const n = world.extent * 2 / world.cellSize,
+    economyHubs = new Set(world.layout.resourceSites.map(p =>
+      Math.floor((p.z + world.extent) / world.cellSize) * n + Math.floor((p.x + world.extent) / world.cellSize)));
+  let surface = bake(height), routeGrid: Uint8Array | undefined,
+    economyAccess = battlefieldTerrainEconomyAccess(surface, world.layout.resourceSites);
   // Radius-six connectivity distinguishes a usable army route from an accidental
   // single-file connection. Significant shelves must join this wider network.
   for (let repair = 0; repair <= 8; repair++) {
     const regions = battlefieldTerrainRegions(surface), main = regions.groups[0];
     if (!main) throw Error('No broad connected terrain');
     const total = regions.groups.reduce((sum, g) => sum + g.length, 0),
-      islands = regions.groups.slice(1).filter(g => g.length >= 64);
+      islands = regions.groups.slice(1).filter(g => g.length >= 64 || g.some(i => economyHubs.has(i)));
     if (!islands.length && main.length >= total * .94) {
       const coverage = battlefieldTerrainCoverage(surface, regions);
       if (coverage.fraction < .55 || coverage.sectors.some(p => p < .25))
         throw Error('Insufficient spatial terrain coverage');
+      const reachable = new Set(main);
+      if (!economyAccess.every(Boolean) || [...economyHubs].some(i => !reachable.has(i)))
+        throw Error('Economic terrain access is disconnected');
+      for (const site of world.layout.resourceSites) {
+        const i = Math.floor((site.z + world.extent) / world.cellSize) * n +
+          Math.floor((site.x + world.extent) / world.cellSize);
+        if (!surface.segment(site, regions.point(i), TERRAIN_ROUTE_RADIUS))
+          throw Error('Economic terrain hub lacks broad access');
+      }
       return surface;
     }
     if (repair === 8) break;
@@ -211,7 +240,11 @@ function connectBattlefieldTerrain(world: Pick<Battlefield, 'extent' | 'cellSize
         if (!clear) break;
       }
       if (!clear) continue;
-      surface = proposed; connected = true; break;
+      const proposedEconomy = battlefieldTerrainEconomyAccess(proposed, world.layout.resourceSites);
+      // An otherwise valid new ramp must never cut an existing economic access,
+      // even while other isolated resource regions still need their own repair.
+      if (economyAccess.some((accessible, i) => accessible && !proposedEconomy[i])) continue;
+      surface = proposed; economyAccess = proposedEconomy; connected = true; break;
     }
     if (!connected) throw Error('Cannot connect broad terrain shelf with a safe ramp');
   }

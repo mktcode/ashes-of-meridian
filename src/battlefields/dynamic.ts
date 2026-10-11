@@ -166,18 +166,23 @@ function dynamicTerrainPlan(world: Battlefield) {
     if (probe.foundation(q, BUILDINGS.hq.size) && probe.fits(q.x, q.z, 9)) return [];
     const dx = (height(p.x + 1, p.z) - height(p.x - 1, p.z)) / 2,
       dz = (height(p.x, p.z + 1) - height(p.x, p.z - 1)) / 2,
-      scale = Math.max(1, Math.hypot(dx, dz) / .06);
+      scale = Math.max(1, Math.hypot(dx, dz) / .14);
     return [{ ...p, height: height(p.x, p.z), dx: dx / scale, dz: dz / scale }];
   });
   return { height: (x: number, z: number) => {
     let h = height(x, z);
     for (const p of repairs) {
       const dx = x - p.x, dz = z - p.z, d = Math.pow(dx ** 4 + dz ** 4, .25);
-      // A rounded-square core also protects the conservative cliff cells outside
-      // diagonal foundation vertices. Its short smooth shoulder remains local.
-      if (d < 14) {
+      // Retain a buildable grade close to the original slope. A steep, short
+      // shoulder around an over-flattened HQ can cut through the resource hub.
+      if (d < 18) {
         const plane = p.height + p.dx * dx + p.dz * dz;
-        h = plane + (h - plane) * smooth((d - 10) / 4);
+        let influence = 1 - smooth((d - 10) / 8);
+        // The wider shoulder must not alter any refinery foundation, including
+        // conservative raster vertices. The HQ's own foundation stays outside it.
+        for (const vent of vents)
+          influence *= smooth((Math.hypot(x - vent.x, z - vent.z) - 7.5) / 7);
+        h += (plane - h) * influence;
       }
     }
     return h;

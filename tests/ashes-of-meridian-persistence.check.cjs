@@ -13,7 +13,7 @@ const catalogs = vm.runInContext('({units:UNITS,buildings:BUILDINGS,abilities:AB
 const upgrades = vm.runInContext('BATTLE_UPGRADES', content);
 const benefits = { supplyCrate: {}, aetherAllocation: {}, pioneerSquad: { max: 5 }, commanderMandate: { max: 1 }, fieldWorkshop: { max: 1 } };
 const expedition = {
-  version: 9, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
+  version: 10, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
   benefits: { supplyCrate: 2, commanderMandate: 1 },
   enemyBenefits: [{ pioneerSquad: 2, fieldWorkshop: 1 }, { supplyCrate: 3 }, { aetherAllocation: 2 }],
   encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 }
@@ -76,13 +76,15 @@ let fixture;
 const savedBattle = () => json((fixture ??= runningSave()).run);
 
 test('terrain recipe changes block previous expedition versions without silently regenerating them', () => {
-  const h = setup(), run = { ...json(expedition), version: 8 };
-  put(h, run);
-  const loaded = setup(h.data);
-  assert.equal(loaded.service.loadExpedition(), null);
-  assert.ok(loaded.service.expeditionError);
-  loaded.service.saveProfile(defaults);
-  assert.deepEqual(JSON.parse(h.data.get(PROFILE)).expedition, run, 'settings preserve the incompatible record for explicit disposal');
+  for (const version of [8,9]) {
+    const h = setup(), run = { ...json(expedition), version };
+    put(h, run);
+    const loaded = setup(h.data);
+    assert.equal(loaded.service.loadExpedition(), null);
+    assert.ok(loaded.service.expeditionError);
+    loaded.service.saveProfile(defaults);
+    assert.deepEqual(JSON.parse(h.data.get(PROFILE)).expedition, run, 'settings preserve the incompatible record for explicit disposal');
+  }
 });
 
 test('battle upgrades round-trip as recipe values and reject unknown, fractional and over-cap ranks', () => {

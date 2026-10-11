@@ -8,7 +8,7 @@ function fixture(depth = 0) {
   const rules = vm.runInContext('({process:createExpeditionResultProcessor(), encounter:createExpeditionEncounter, seeded, enemy:expeditionEnemyFactions, maps:availableBattlefields})', context);
   const profile = { version: 2, expeditionDepth: depth, tutorialComplete: true };
   const encounter = { map: 'desert', seed: 1409, mission: 'hq-elimination', deployment: 'exploration', enemies: [1] };
-  const expedition = { version: 9, depth, faction: 0, abilities: ['orbital','repair','scan','drop'], upgrades: {orbital:2}, benefits: {supplyCrate:1},
+  const expedition = { version: 10, depth, faction: 0, abilities: ['orbital','repair','scan','drop'], upgrades: {orbital:2}, benefits: {supplyCrate:1},
     enemyBenefits: [{}], encounter, worlds: [], battle: null };
   const state = { depth, map: 'desert', seed: 1409, rules: {kind:'single-player'}, entities: [] };
   const random = rules.seeded(1409), calls = [];

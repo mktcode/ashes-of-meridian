@@ -274,7 +274,7 @@ interface ExpeditionWorld {
 }
 
 interface MeridianExpedition extends ExpeditionBattleRecipe {
-  version: 9;
+  version: 10;
   battle: ExpeditionBattleSave | null;
   worlds?: ExpeditionWorld[];
 }
