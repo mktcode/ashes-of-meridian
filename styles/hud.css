@@ -112,6 +112,20 @@
 @media (min-width: 700px) { :root { --map-size: 160px } .resource-strip { flex: 0 1 auto; margin-right: auto; gap: 20px } .resource strong { font-size: 15px } }
 @media (max-height: 500px) and (min-width: 601px) { :root { --map-size: 144px } #radio { padding-top: 8px; padding-bottom: 8px } #radioText { line-height: 1.3 } }
 
+/* A composited, input-transparent warning; reduced motion keeps the amber tint. */
+#evacuationGlow { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, #f8d43b08 25%, #ffc12f38 100%); box-shadow: inset 0 0 70px #ffd24c38; z-index: 3 }
+#worldViewport.evacuating #evacuationGlow { opacity: 1; animation: evacuation-pulse 2.4s ease-in-out infinite }
+@keyframes evacuation-pulse { 0%, 100% { opacity: .38 } 50% { opacity: 1 } }
+#outpostStatus { max-width: 480px; padding: 8px 10px; border: 1px solid #8db9c266; background: #092331ed; color: #d6e6e8; font: 11px var(--mono); pointer-events: auto }
+#outpostStatus strong, #outpostStatus small { display: block }
+#outpostStatus small { margin-top: 4px; line-height: 1.5 }
+#outpostStatus.evacuation-status { border-color: #edc64d; color: #ffe595; background: #342d12ed }
+.evacuation-upgrades { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px }
+.evacuation-upgrades:empty { display: none }
+.evacuation-upgrades button { min-height: 44px; padding: 4px 8px; border: 1px solid #dfb94388; color: #ffe595; background: #342d12; font: 10px var(--mono) }
+.building-controls [data-action^="startEvacuation"], .building-controls [data-action^="evacuateUpgrade"] { color: #ffe17b }
+@media (prefers-reduced-motion: reduce) { #worldViewport.evacuating #evacuationGlow { animation: none; opacity: .6 } }
+
 /* Existing menu/dialog responsiveness is independent of the battle HUD. */
 @media (max-width: 1150px) { .armory-grid { grid-template-columns: repeat(2, 1fr) } }
 @media (max-width: 850px) {

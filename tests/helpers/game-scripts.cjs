@@ -97,6 +97,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-ai-rules',
   'simulation-ai-strategy',
   'simulation-ai',
+  'simulation-outpost',
   'simulation-runtime'
 ]);
 const DIAGNOSTIC_SCRIPTS = Object.freeze(['diagnostics-build-info', 'diagnostics-recorder', 'diagnostics-gpu', 'diagnostics-browser']);

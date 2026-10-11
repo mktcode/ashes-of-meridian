@@ -47,6 +47,8 @@ function createExpeditionResultProcessor() {
       const previousUnlock = unlockedExpeditionFaction(profile.expeditionDepth);
       expedition.worlds ??= [];
       expedition.worlds.push(victoryWorld!);
+      if(state.reinforcements?.units.length)
+        (expedition.rescuedArmy ??= []).push(...state.reinforcements.units);
       expedition.depth++;
       if (expedition.depth > profile.expeditionDepth) profile.expeditionDepth = expedition.depth;
       const currentUnlock = unlockedExpeditionFaction(profile.expeditionDepth);
@@ -59,4 +61,20 @@ function createExpeditionResultProcessor() {
     }
     return { expedition: win ? expedition : null, factionUnlocked };
   };
+}
+// One-way archive retirement. Presence of the stage makes this idempotent across UI retries.
+function retireExpeditionOutpost(expedition: MeridianExpedition, stage: number, state: RunState): boolean {
+  const world=expedition.worlds?.find(w=>w.stage===stage),out=state.outpost;
+  if(!world?.recipe || !out?.finished || state.rules.kind!=='single-player' || !state.rules.completed ||
+    state.depth+1!==stage || world.map!==state.map || world.seed!==state.seed)return false;
+  const rescued=expedition.rescuedUpgrades ??= {upgrades:{},benefits:{}};
+  for(const saved of out.evacuation?.upgrades || []) {
+    const group=hasContentKey(BATTLE_UPGRADES,saved.upgrade)?rescued.upgrades:rescued.benefits;
+    const max=hasContentKey(BATTLE_UPGRADES,saved.upgrade)?BATTLE_UPGRADES[saved.upgrade].max:
+      expeditionBenefit(saved.upgrade)?.max ?? 999999;
+    group[saved.upgrade]=Math.min(max,(group[saved.upgrade] || 0)+saved.level);
+  }
+  (expedition.rescuedArmy ??= []).push(...out.evacuation?.units || []);
+  expedition.worlds=expedition.worlds!.filter(w=>w!==world);
+  return true;
 }

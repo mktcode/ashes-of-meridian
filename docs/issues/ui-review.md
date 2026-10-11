@@ -1,6 +1,6 @@
 # UI: offene technische Grenzen
 
-Geltungsbereich: Menüs, Codex, Dialoge, Flottenupgrades, Ergebnisse und Gefechts-HUD
+Geltungsbereich: Menüs, Codex, Dialoge, Zivilisationsupgrades, Außenposten-/Evakuierungshinweise, Ergebnisse und Gefechts-HUD
 im gemeinsamen [Designsystem](../ui-design-system.md). Die folgenden technischen
 Grenzen bestehen unabhängig von der übernommenen Moodboard-Materialgestaltung.
 

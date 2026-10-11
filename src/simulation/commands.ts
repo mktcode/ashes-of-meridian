@@ -34,6 +34,7 @@ function parseBattleAction(value: unknown, maxIds: number): BattleAction | null 
         ? {kind:'configureSettlementUpgrade', id:value.id, upgrade:value.upgrade} : null;
     case 'expandSettlementBuilding':
       return id(value.id) ? {kind:'expandSettlementBuilding', id:value.id} : null;
+    case 'startEvacuation': case 'evacuateUpgrade':
     case 'cancelConstruction': case 'toggleRepair': case 'sell':
       return id(value.id) ? { kind: value.kind, id: value.id } : null;
     case 'order': {
@@ -128,13 +129,15 @@ const commandMethods = {
   },
   executeAction(this: MeridianGame, team: PlayerTeam, input: unknown, announce = true): boolean {
     const s = this.s;
-    if (!s || s.result || s.stopped || !Number.isInteger(team) ||
+    if (!s || s.result || s.stopped || s.outpost?.finished || !Number.isInteger(team) ||
         !s.parties.some(p => p.id === team && !p.eliminated)) return false;
     const action = parseBattleAction(input, s.entities.length);
     if (!action) return false;
     const inBounds = (p: Position) => Math.abs(p.x) <= this.world!.extent && Math.abs(p.z) <= this.world!.extent;
     if ('position' in action && !inBounds(action.position)) return false;
     switch (action.kind) {
+      case 'startEvacuation': return this.startEvacuation(action.id,team);
+      case 'evacuateUpgrade': return this.evacuateUpgrade(action.id,team);
       case 'train': return this.train(action.unit, team, action.producerId);
       case 'build': return this.build(action.building, action.position, action.selected, team);
       case 'ability': return this.ability(action.ability, action.position, team);

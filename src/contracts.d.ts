@@ -276,9 +276,11 @@ interface ExpeditionWorld {
 }
 
 interface MeridianExpedition extends ExpeditionBattleRecipe {
-  version: 10;
+  version: 11;
   battle: ExpeditionBattleSave | null;
   worlds?: ExpeditionWorld[];
+  rescuedUpgrades?: CivilizationUpgradeTotals;
+  rescuedArmy?: EvacuatedUnit[];
 }
 
 // One save format owns the recipe, CPU state and tutorial progress. No live objects.
@@ -419,7 +421,8 @@ type BattleAction =
   | { kind: 'rotateBuilding'; id: number; direction: -1 | 1 }
   | { kind: 'cancelConstruction' | 'toggleRepair' | 'sell'; id: number }
   | { kind: 'configureSettlementUpgrade'; id: number; upgrade: CivilizationUpgradeType | null }
-  | { kind: 'expandSettlementBuilding'; id: number };
+  | { kind: 'expandSettlementBuilding'; id: number }
+  | { kind: 'startEvacuation' | 'evacuateUpgrade'; id: number };
 
 interface ActionTicket { tick: number; sequence: number; }
 interface QueuedAction extends ActionTicket { team: PlayerTeam; action: BattleAction; announce: boolean; }
@@ -498,6 +501,9 @@ interface UnitEntity extends EntityBase {
   /** Explicit Cinder delivery assignment; absent means normal HQ economy. */
   deliveryForum?: number;
   deliveryPoint?: Position;
+  /** Explicit boarding destination; never a mining/repair order. */
+  evacuationHQ?: number;
+  wavePower?: number;
 }
 
 interface BuildingEntity extends EntityBase {
@@ -690,6 +696,33 @@ interface SupplyCache extends Position {
   collected: boolean;
 }
 
+interface EvacuatedUnit {
+  type: UnitType;
+  hp: number; // Remaining hull fraction; destination stats apply on arrival.
+  shield: number;
+  kills: number;
+}
+interface RescuedUpgrade {
+  id: number;
+  upgrade: CivilizationUpgradeType;
+  level: number;
+}
+interface OutpostState {
+  wave: number;
+  nextWave: number;
+  warned: boolean;
+  entrance: Position | null;
+  remaining: number;
+  spawned: number;
+  nextSpawn: number;
+  finished: boolean;
+  evacuation: null | {
+    hq: number;
+    until: number;
+    units: EvacuatedUnit[];
+    upgrades: RescuedUpgrade[];
+  };
+}
 interface RunState {
   depth: number;
   seed: number;
@@ -710,6 +743,8 @@ interface RunState {
   cam: Position & { zoom: number; yaw: number };
   result: BattleResult | null;
   speed: number;
+  outpost?: OutpostState;
+  reinforcements?: { units: EvacuatedUnit[]; nextAttempt: number };
 }
 
 type WorldColor = number | number[];

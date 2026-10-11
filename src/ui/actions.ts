@@ -179,6 +179,19 @@
           }
           this.clearMode();
         }
+        if(kind==='startEvacuation') {
+          const b=this.selectedBuilding(),reason=this.game.evacuationReason(b?.id || 0,this.localTeam);
+          if(reason){this.toast(reason);return;}
+          this.evacuationConfirmId=b!.id;this.paused=true;this.clearMode();
+          this.openModal('evacuationConfirm',`<div class="eyebrow">PERMANENT WITHDRAWAL</div><h1>Evacuate this outpost?</h1><p>This cannot be cancelled. After <strong>60 seconds of simulation time</strong> this stage is permanently removed. Waves continue during evacuation.</p><p>Select units, then right-click or tap <strong>this exact Command Center</strong> to order boarding. Nearby units do not board automatically. Select active civilian upgrade buildings and use <strong>Evacuate upgrade</strong> to secure up to <strong>three buildings at their current ranks</strong>; release selections in the HUD to replace them. Resources and unsecured bonuses are lost. Already secured units and upgrades survive even if this HQ is destroyed.</p><p>Your rescue goes to Stage ${this.expedition ? this.expedition.depth+1 : '?'}, the highest battle stage. Pause stops the timer; game speed accelerates it.</p><div class="btnstack"><button class="primary" data-ui="confirmEvacuation">${uiSkin()}START EVACUATION · 60s</button><button class="secondary" data-ui="closeModal">${uiSkin()}KEEP DEFENDING</button></div>`);
+          return;
+        }
+        if(kind==='evacuateUpgrade') {
+          const id=Number(arg),reason=this.game.evacuationUpgradeReason(id,this.localTeam);
+          if(reason){this.toast(reason);return;}
+          if(this.submitAction({kind:'evacuateUpgrade',id})){this.actionSignature='';this.saveBattle();}
+          this.updateHUD();return;
+        }
         if (kind === 'settlementInspect') {
           const b = this.selectedBuilding();
           if (this.tab !== 'root' || !b || !hasContentKey(CIVILIZATION_UPGRADES,arg) ||
@@ -367,6 +380,10 @@
             actions = button('sell', 'Sell structure', 'sell') + button('repair', repairing ? 'Stop repair' : 'Repair structure', 'repair');
             if (!isCivilizationBuildingType(b.type)) actions += button('rally', 'Rally point', 'rally');
             actions += button('rotateLeft', 'Rotate left', 'rotateLeft') + button('rotateRight', 'Rotate right', 'rotateRight');
+            if(this.activeWorldStage!==null && b.type==='hq')
+              actions += button('startEvacuation','Evacuate outpost · Irreversible 60-second simulation countdown','evacuate');
+            if(this.game.s?.outpost?.evacuation && b.forumId!==undefined)
+              actions += button(`evacuateUpgrade:${b.id}`,this.game.s.outpost.evacuation.upgrades.some(u=>u.id===b.id)?'Release upgrade evacuation selection':'Evacuate upgrade · Keep its current rank','evacuate');
           } else actions = button('cancelBuild', 'Cancel construction', 'cancel');
         }
         const markup = `${uiSkin()}<span class="selection-avatar ${producer ? 'has-queue' : ''}">${avatar}${dots}</span>${e.kind === 'unit' && list.every(e => e.kind === 'unit') ? `<button class="selection-summary" data-action="tab:details" aria-label="${esc(name)} · Unit details">${summary}</button>` : `<div class="selection-summary">${summary}</div>`}<div class="building-controls">${actions}${button('clearSelection', 'Clear selection', 'close')}</div>`;
@@ -481,6 +498,7 @@
       updateHUD(this: MeridianUI) {
         let s = this.game.s;
         if (!s) return;
+        this.updateOutpostHUD();
         const account = s.parties[this.localTeam].account;
         $('alloyCount').textContent = Math.floor(account.alloy).toLocaleString();
         $('gasCount').textContent = Math.floor(account.gas).toLocaleString();
@@ -513,6 +531,8 @@
             (account.energy < this.game.abilityStats(arg, team).energy ? 'Not enough energy.' : '');
         }
         const b = this.selectedBuilding();
+        if(kind==='startEvacuation')return this.game.evacuationReason(b?.id || 0,team);
+        if(kind==='evacuateUpgrade')return this.game.evacuationUpgradeReason(Number(arg),team);
         if (kind === 'settlementExpand') return this.game.settlementExpansionReason(b?.id || 0, team);
         // Permanent choices are enforced by the simulation as well as the HUD.
         if (kind === 'settlementClear') return 'Activated upgrades cannot be cleared.';
@@ -532,8 +552,9 @@
         if (!s) return;
         for (const b of document.querySelectorAll<HTMLButtonElement>('[data-action]')) {
           const key = b.dataset.action!, [kind, arg] = key.split(':'),
-            settlementEffect = kind === 'settlementUpgrade' || kind === 'settlementInspect',
-            active = settlementEffect ? this.selectedBuilding()?.upgrade === arg : this.isModeAction(key),
+            settlementEffect = kind === 'settlementUpgrade' || kind === 'settlementInspect' || kind==='evacuateUpgrade',
+            active = kind==='evacuateUpgrade' ? !!s.outpost?.evacuation?.upgrades.some(u=>u.id===Number(arg)) :
+              settlementEffect ? this.selectedBuilding()?.upgrade === arg : this.isModeAction(key),
             reason = this.actionReason(key, supply, capacity);
           // Blocked actions remain tappable to explain the reason. Only lifecycle locks disable input.
           b.disabled = this.controlsLocked || !!s.result;

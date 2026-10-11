@@ -97,7 +97,7 @@
             n.hp > 0 && n.team === e.team && n.kind === 'unit' && n.type === 'hero' &&
             distance(e, n) <= COMMAND_DRILL.radius),
           damage =
-            (d.damage || 0) *
+            (d.damage || 0) * (e.kind==='unit' ? e.wavePower || 1 : 1) *
             (e.faction === FACTION_ID.THIRD ? 1.12 : 1) *
             (e.kills >= 5 ? 1.12 : 1) *
             (inCommand ? 1 + drillStacks * COMMAND_DRILL.damagePerStack : 1) *
