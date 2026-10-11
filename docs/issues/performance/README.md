@@ -12,6 +12,20 @@ Zentrale Übersicht für Singleplayer-Performance, Speicher-/Thermikdruck und Gr
 
 Aktuell dichte Armeen und Auswahlhänger getrennt eingrenzen; mobile Abbrüche bleiben ebenfalls offen. Die folgenden Kandidaten sind Messfragen, keine automatische Implementierungs- oder Lastlauffreigabe.
 
+## Einordnung der externen Analyse
+
+Die [externe Analyse](externe-analyse.md) beschreibt am Quellstand `d83d79a` reale unnötige Arbeit: rechteckige Terrain-Kandidatensuche, wiederholte Live-Körperscans, globale Weginvalidierung, erneute Modelltransforms/Instanzuploads und volle Lichttextur-Kapazitätsuploads. Der Codeabgleich bestätigt diese Mechanismen, nicht ihren Anteil am Nutzerframe. Kalte Portraitkopien und fehlende MSAA-Invalidierung sind plausible zusätzliche Hebel, keine nachgewiesenen Ursachen der Auswahlhänger bzw. Mobilabbrüche.
+
+Empfohlener Einstieg: zuerst den Live-Kollisionsindex auf `unitFits()` begrenzen und gegen den bisherigen Scan vergleichen; Kandidatenwiederverwendung, Yield und weitere Scans erst getrennt erweitern. Danach Terrain-Kandidatensuche, beginnend mit dem kleinen Ray-Pfad; lange radiusbehaftete Segmente separat prüfen. Unveränderliche Navigationsprüfungen sind ein nachfolgender Cachekandidat. Kleine Lichtupload-/Shaderänderungen bleiben unabhängige A/B-Kandidaten; persistente Instanzhaltung erst bei relevantem gemessenem Modell-/Uploadanteil. Lokale Weginvalidierung, Flowfields, Lichtfelder, Build-Porträts und Worker-Saves sind keine automatisch verhaltens-/darstellungsneutralen Folgeänderungen.
+
+### Grenzen des Ray-Demonstrators
+
+Die beigefügte [Probe](ray-probe.cjs) reproduziert unter Node 24.19.0 die [externen Kandidatenzahlen](ray-probe-results.json): 5.780 Vergleichsfälle ohne Abweichung, diagonal 3.249 statt 279 Zellen. Synthetisches Höhenfeld und nachgebildeter Rechenkern, keine Produktions-/Browser-/FPS-Abnahme. Über alle Vergleichsfälle sinkt die Kandidatenzahl um rund 73 %, die rund 91 % gelten nur für den diagonalen Stressfall.
+
+Ein zusätzlicher isolierter Randfall liefert jedoch **Rechtecktreffer, aber DDA `null`**: Fläche mit `extent=64`, `step=2`, `size=65`, Höhe 2 und einem entfernten Peak auf Höhe 4; Strahl von `[-65.00000005,4,-63.00000005]` nach `[-63.00000005,0,-65.00000005]`. Die bestehenden Dreieckstests akzeptieren `(-64.00000005,-64.00000005)` innerhalb ihrer Toleranz; das exakte X/Z-Clipping des Demonstrators verwirft den Strahl schon vorher. Eine Integration muss diese Toleranz konservativ abdecken, ebenso Rasterkanten/-ecken, parallele/kurze Abfragen, Kartengrenzen und den nächsten Treffer. `segment()` benötigt zusätzlich die unveränderte quadratische Radius-Clearance; Mittellinien-DDA allein genügt nicht. Den Demonstrator nicht unverändert übernehmen.
+
+Auch eine Kreis-/Lichtzellenprüfung braucht konservative Außenränder: Der Shader klemmt Positionen außerhalb der Karte auf Randzellen. Diese repräsentieren nicht nur ein endliches Quadrat innerhalb der Karte; vorhandene Tests schützen ausdrücklich Lichtbeiträge auf Außenkulisse. Teiluploads müssen dagegen nur alle referenzierten Lampenzeilen aktualisieren; ungenutzte Reserve darf erhalten bleiben.
+
 ## Verbleibende CPU-Spitzen
 
 Frühere Chromium-Unterphasenaufnahmen ordnen synchrone Saves, einzelne Wegsuchen und tatsächliche Straßenupdates konkreten Hängern zu. Die damaligen Siedlungsspitzen wurden vor der jüngsten Entlastung gemessen; ihr Restanteil ist nicht neu quantifiziert. Keinen alten Spitzenwert als aktuellen Engpass weiterführen.
