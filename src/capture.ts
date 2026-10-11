@@ -403,7 +403,8 @@ class MeridianCapture {
         clock.value=String(Math.round((this.renderer.battlefieldHour ?? 0)*60)%1440); showTime();
         const url=new URL(location.href); url.searchParams.set('map',mapId);url.searchParams.set('seed',String(value));
         try { history.replaceState(null,'',url); } catch { /* file:// history is browser dependent */ }
-        status.textContent=`${mapId} · seed ${value} · drag/pinch to navigate`;
+        const size=this.game.world!.extent*2;
+        status.textContent=`${mapId} · seed ${value} · map size ${size} × ${size} world units · drag/pinch to navigate`;
       } catch (e) { status.textContent=e instanceof Error ? e.message : String(e); }
       finally {controls.forEach(b=>b.disabled=false);}
     };
