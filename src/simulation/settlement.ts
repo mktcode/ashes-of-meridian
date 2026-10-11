@@ -135,7 +135,7 @@ const settlementMethods = {
   forumServiceArea(this: MeridianGame, forum: ForumServiceSite): NavigationArea {
     // Same ground work area as construction; the foundation still blocks its interior.
     // Model entrances/rotation do not restrict which side may receive a delivery.
-    return {x:forum.x,z:forum.z,radius:forum.size+2.9,terrainConnection:false};
+    return civilizationForumServiceArea(forum);
   },
   forumRoute(this: MeridianGame, worker: UnitEntity, forum: ForumServiceSite): NavigationPath | null {
     const world=this.world!,body=worker.size*UNIT_BODY_SCALE,area=this.forumServiceArea(forum);

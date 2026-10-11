@@ -409,6 +409,9 @@ function civilizationDeckFootprints(p: Position, type: BuildingType, team = 0, v
   return (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!.map(d=>({
     polygon:civilizationFootprint(p,team,d.x*scale,d.z*scale,(d.w+.76)*scale,(d.d+.76)*scale,(d.cut??.51)*scale,visualRotation),top:(d.top||0)*scale}));
 }
+function civilizationForumServiceArea(forum: Position & { size: number }): NavigationArea {
+  return {x:forum.x,z:forum.z,radius:forum.size+2.9,terrainConnection:false};
+}
 function civilizationBuildingEntries(type: BuildingType): readonly CivilizationEntry[] {
   const d=BUILDINGS[type] as BuildingDefinitionShape;
   return [d.civilizationEntry!,...(d.civilizationSideEntries||[])];

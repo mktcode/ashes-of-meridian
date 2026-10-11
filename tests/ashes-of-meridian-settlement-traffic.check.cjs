@@ -3,9 +3,9 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const {loadScripts}=require('./helpers/game-scripts.cjs');
-const context=loadScripts(['core','content','world','model-settlement-traffic','world-view','settlement-traffic']);
-const {SettlementTraffic,BattlefieldView,buildingVisualYaw,CIVILIZATION_MODEL_SCALE}=vm.runInContext(
- '({SettlementTraffic,BattlefieldView,buildingVisualYaw,CIVILIZATION_MODEL_SCALE})',context);
+const context=loadScripts(['core','content','battlefield-surface','world','model-settlement-traffic','world-view','settlement-traffic']);
+const {SettlementTraffic,BattlefieldView,Battlefield,BattlefieldSurface,buildingVisualYaw,CIVILIZATION_MODEL_SCALE}=vm.runInContext(
+ '({SettlementTraffic,BattlefieldView,Battlefield,BattlefieldSurface,buildingVisualYaw,CIVILIZATION_MODEL_SCALE})',context);
 const plain=value=>JSON.parse(JSON.stringify(value));
 function fixture(forums=1,perForum=4) {
  let id=1;
@@ -29,17 +29,17 @@ test('decorative population is bounded globally and per Forum, fairly allocated,
  assert.equal(small.traffic.actors.filter(a=>a.air).length,3,'a small settlement supports several drones');
  const h=fixture(20,14);h.update(0);
  const actors=h.traffic.actors;
- assert.equal(actors.filter(a=>!a.air).length,30);assert.equal(actors.filter(a=>a.air).length,6);
- assert.equal(new Set(actors.map(a=>a.id)).size,36);assert.ok(actors.every(a=>a.id<0));
- for(const forum of new Set(actors.map(a=>a.forumId)))assert.ok(actors.filter(a=>a.forumId===forum&&!a.air).length<=10);
+ assert.equal(actors.filter(a=>!a.air).length,60);assert.equal(actors.filter(a=>a.air).length,6);
+ assert.equal(new Set(actors.map(a=>a.id)).size,66);assert.ok(actors.every(a=>a.id<0));
+ for(const forum of new Set(actors.map(a=>a.forumId)))assert.ok(actors.filter(a=>a.forumId===forum&&!a.air).length<=24);
  assert.ok(new Set(actors.filter(a=>!a.air).map(a=>a.forumId)).size>=12);
- h.update(.25,0);assert.equal(h.traffic.actors.filter(a=>!a.air).length,15);assert.equal(h.traffic.actors.filter(a=>a.air).length,3);
+ h.update(.25,0);assert.equal(h.traffic.actors.filter(a=>!a.air).length,30);assert.equal(h.traffic.actors.filter(a=>a.air).length,3);
  h.state.rules.completed=false;h.update(.5);assert.equal(h.traffic.actors.length,0);
 });
 test('trip searches are globally throttled, cached and use an explicit small A* budget without mutating CPU entities or RNG',()=>{
  const h=fixture(),before=plain(h.state.entities);
  for(let i=0;i<=200;i++)h.update(i*.1);
- assert.ok(h.calls.length>0&&h.calls.length<=40);
+ assert.ok(h.calls.length>0&&h.calls.length<=80);
  assert.ok(h.calls.every(args=>args[8]===600));
  assert.equal(h.state.rng,98765);assert.deepEqual(plain(h.state.entities),before);
  const actors=plain(h.traffic.actors);h.update(20);assert.deepEqual(plain(h.traffic.actors),actors,'pause freezes positions, waits and animation');
@@ -48,7 +48,7 @@ test('failed or partial ground routes never spawn walkers and failed pairs are c
  const h=fixture();h.world.path=(...args)=>{h.calls.push(args);return {status:'budget-exhausted',points:[{x:0,z:0}]};};
  let sawAir=false;
  for(let i=0;i<=400;i++){h.update(i*.1);sawAir ||= h.traffic.actors.some(a=>a.air&&a.route);}
- assert.ok(h.calls.length>0&&h.calls.length<=20,'at most twenty directed pairs including the Forum are searched');
+ assert.ok(h.calls.length>0&&h.calls.length<=40,'failed directed pairs are cached within each refresh interval');
  assert.ok(h.traffic.actors.filter(a=>!a.air).every(a=>!a.route));
  assert.ok(sawAir,'air traffic does not need A*');
 });
@@ -56,7 +56,7 @@ test('both traffic types cross authored rotated door planes, traverse to another
  const h=fixture();h.update(0);
  const ground=h.traffic.actors.find(a=>!a.air),air=h.traffic.actors.find(a=>a.air);
  for(const actor of [ground,air]) {
-  actor.homeId=h.state.entities[0].id;
+  actor.homeId=h.state.entities[0].id;actor.random=()=>.8;
   h.traffic.depart(actor,h.world);assert.ok(actor.route);
   const route=plain(actor.route),first=route[0],last=route.at(-1);
   assert.ok(Math.hypot(first.x-last.x,first.z-last.z)>10);
@@ -115,16 +115,17 @@ test('removed Forums and unfinished, unobserved or scheduled-for-removal buildin
  for(const b of h.state.entities)delete b.settlementAt;
  h.state.time=1;h.traffic.update(h.world,h.state,2,()=>false);assert.equal(h.traffic.actors.length,0);
 });
-test('Forum trips are weighted, return to upgrades, skirt the civic sculpture and work with one upgrade',()=>{
+test('Forum trips are weighted, use the surrounding work area and work with one upgrade',()=>{
  const h=fixture(1,1);h.update(0);
  const actor=h.traffic.actors.find(a=>!a.air),forum=h.state.entities.find(b=>b.type==='meridianforum');
  actor.homeId=h.state.entities[0].id;actor.random=()=>.1;
  h.traffic.depart(actor,h.world);assert.equal(actor.destinationId,forum.id);
- const portal=h.traffic.groups.get(forum.id).find(p=>p.building.id===forum.id);
- assert.equal(portal.deck.length,3,'forecourt waypoints skirt the central sculpture');
- assert.ok(portal.inside.y>0,'Forum uses its raised deck height');
- assert.ok(actor.route.some(p=>p.x===portal.deck[0].x&&p.z===portal.deck[0].z));
- actor.homeId=forum.id;h.traffic.depart(actor,h.world);
+ const area=h.calls.at(-1)[5];assert.equal(area.radius,forum.size+2.9);assert.equal(area.terrainConnection,false);
+ assert.ok(actor.destinationOutside);
+ for(let i=0;i<2000&&!actor.lingerUntil;i++)h.traffic.advance(actor,h.world,.1,i*.1);
+ assert.equal(actor.homeId,forum.id);assert.equal(actor.alpha,1);assert.ok(actor.lingerUntil);
+ const arrived=plain({x:actor.x,y:actor.y,z:actor.z});
+ h.traffic.depart(actor,h.world);assert.deepEqual(plain(actor.route[0]),arrived,'no teleport to the inaccessible front door');
  assert.equal(actor.destinationId,h.state.entities[0].id);
  const large=fixture();large.update(0);const walker=large.traffic.actors.find(a=>!a.air);
  walker.homeId=large.state.entities[0].id;walker.random=()=>.2;large.traffic.depart(walker,large.world);
@@ -146,6 +147,62 @@ test('road usage is sampled only for cosmetic ground searches and cache refresh 
  const before=h.calls.length;h.traffic.depart(actor,h.world);
  assert.equal(h.calls.length,before+1,'expired pairs are searched again');
  assert.equal(h.calls.at(-1)[9](-10,0),1,'future trips see refreshed roads');
+});
+test('a hillside Forum remains visitable when the front stair is inaccessible but its worker area is reachable',()=>{
+ const h=fixture(1,2),forum=h.state.entities.find(b=>b.type==='meridianforum');
+ forum.x=0;forum.z=0;
+ h.state.entities[0].x=-24;h.state.entities[0].z=-6;h.state.entities[0].visualRotation=0;
+ h.state.entities[1].x=-24;h.state.entities[1].z=-18;h.state.entities[1].visualRotation=0;
+ const surface=new BattlefieldSurface(32,1,(x,z)=>x<0?Math.max(0,Math.min(6,(x+20)*.3)):
+  Math.max(0,Math.min(6,(8-z)*1.5)));
+ h.world=Object.assign(Object.create(Battlefield.prototype),{extent:32,cellSize:1,gridSize:64,viewTeam:0,pathVersion:1,
+  surface,staticGrid:new Uint8Array(surface.cliffs),blocked:new Uint8Array(64*64),visible:new Uint8Array(64*64).fill(1)});
+ h.world.rebuild(h.state.entities);
+ const traffic=h.traffic;traffic.update(h.world,h.state,2,()=>true);
+ const portal=traffic.groups.get(forum.id).find(p=>p.building.id===forum.id);
+ assert.equal(portal.groundAccess,false,'the old front-stair requirement rejects this hill');
+ const start=traffic.groups.get(forum.id).find(p=>p.building.id===h.state.entities[0].id).service;
+ const area={x:0,z:0,radius:forum.size+2.9,terrainConnection:false};
+ assert.equal(h.world.path(start.x,start.z,0,0,false,area,.2).status,'complete','worker-style access is reachable');
+ const actor=traffic.actors.find(a=>!a.air);actor.homeId=1;actor.random=()=>.1;traffic.depart(actor,h.world);
+ assert.ok(actor.route);assert.equal(actor.destinationId,forum.id);assert.ok(actor.destinationOutside);
+ const end=actor.route.at(-1);assert.ok(Math.hypot(end.x,end.z)<=area.radius);
+ assert.equal(h.world.blockedAt(end.x,end.z),false);assert.ok(surface.fits(end.x,end.z,.2));
+ for(let i=actor.groundStart;i<actor.groundEnd;i++)assert.ok(h.world.lineFree(actor.route[i],actor.route[i+1],.2),'every outdoor segment is genuinely traversable');
+ for(let i=0;i<1500&&!actor.lingerUntil;i++)traffic.advance(actor,h.world,.1,i*.1);
+ assert.equal(actor.homeId,forum.id);assert.equal(actor.alpha,1);
+ const arrived=plain({x:actor.x,y:actor.y,z:actor.z});traffic.depart(actor,h.world);
+ assert.deepEqual(plain(actor.route[0]),arrived);assert.equal(actor.destinationId,1);
+});
+test('Forum visitors form spaced temporary groups, pause without walking or creating wear, then leave',()=>{
+ const h=fixture();h.update(0);
+ const visitors=h.traffic.actors.filter(a=>!a.air).slice(0,3);
+ for(const actor of visitors){actor.homeId=1;actor.random=()=>.1;h.traffic.depart(actor,h.world);}
+ let now=0;
+ for(let i=1;i<1500;i++) {
+  now=i*.1;h.update(now);
+  if(visitors.every(a=>a.lingerUntil>now))break;
+ }
+ assert.ok(visitors.every(a=>a.lingerUntil>now&&a.alpha===1&&a.walk===0));
+ for(let i=0;i<visitors.length;i++)for(let j=i+1;j<visitors.length;j++)
+  assert.ok(Math.hypot(visitors[i].x-visitors[j].x,visitors[i].z-visitors[j].z)>=.65,'group members do not overlap');
+ const snapshot=plain(visitors);h.update(now);assert.deepEqual(plain(visitors),snapshot,'pause freezes gathering');
+ const uploads=[],view=new BattlefieldView({workerRoads(p){uploads.push(Array.from(p));},releaseWorkerRoads(){}});
+ view.world={extent:100};view.updateWorkerRoads(now,[],()=>true,visitors);
+ view.updateWorkerRoads(now+.5,[],()=>true,visitors);
+ assert.ok(uploads.every(p=>p.every(v=>v===0)),'standing groups do not strengthen paths');
+ const visitor=visitors[0],end=visitor.lingerUntil;
+ h.traffic.advance(visitor,h.world,.1,end+.1);assert.equal(visitor.route,null);assert.ok(visitor.outside);
+ const position=plain({x:visitor.x,y:visitor.y,z:visitor.z});h.traffic.depart(visitor,h.world);
+ assert.deepEqual(plain(visitor.route[0]),position);assert.notEqual(visitor.destinationId,10000);
+ h.state.entities.find(b=>b.id===10000).visualRotation=1;h.update(now+.1);
+ assert.ok(visitors.every(a=>!a.outside&&a.lingerUntil===0),'a changed Forum discards obsolete meeting positions');
+});
+test('unreachable Forum areas never teleport visitors into groups',()=>{
+ const h=fixture();h.world.path=(...args)=>{h.calls.push(args);return {status:'unreachable',points:[]};};h.update(0);
+ const actor=h.traffic.actors.find(a=>!a.air);actor.homeId=1;actor.random=()=>.1;h.traffic.depart(actor,h.world);
+ assert.equal(actor.route,null);assert.equal(actor.outside,false);assert.equal(actor.alpha,0);
+ assert.equal(h.traffic.meetingPoints.size,0);
 });
 test('models use only six pedestrian or four drone shared primitive parts, without lights or mesh allocations',()=>{
  const models=vm.runInContext('SettlementTrafficModels',context);
