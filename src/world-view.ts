@@ -347,7 +347,7 @@ function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
     result: WorldPlacement[] = [], extent = world.extent, style = world.renderProfile?.ecology;
   if (!backdrop || !('relief' in backdrop) || !world.surface || !style || style.natural === false) return result;
   const relief = sceneryRelief(world, backdrop.relief), random = seeded(world.terrainSeed ^ 0x5341554d),
-    depth = Math.min(80, relief.extent - extent - relief.step * 2), reach = extent + depth,
+    depth = relief.extent - extent, reach = relief.extent,
     meshes = new Set(world.renderData.geometries.map(d => d.mesh)),
     limit = Math.min(720, Math.floor(120 * style.vegetationDensity)),
     occupied: { x: number; z: number; r: number }[] = [],
@@ -361,7 +361,7 @@ function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
   for (let attempt = 0; attempt < 5000 && occupied.length < limit; attempt++) {
     const x = (random() * 2 - 1) * reach, z = (random() * 2 - 1) * reach,
       outside = Math.hypot(Math.max(0, Math.abs(x) - extent), Math.max(0, Math.abs(z) - extent));
-    if (outside <= 1 || outside >= depth - 4) continue;
+    if (outside <= 1) continue;
     const zones = ecologyBiotopeAt(style, x, z, height), habitat = zones[0] * .12 + zones[1] + zones[2] * .95,
       family = ecologyFloraAt(style, zones), woody = ecologyWoody(family),
       density = (.18 + .72 * smooth((outside - 1) / 28)) * (.3 + .7 * habitat);
@@ -371,6 +371,7 @@ function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
       variant = attempt % 3, r = part === 'Stone' ? 1.6 + random() * 2.2 : .55 + random() * 1.1;
     if (!meshes.has(`ecology${part}${variant}`) || (woody && part === family && !meshes.has(`ecologyTrunk${variant}`)) ||
         Math.max(Math.abs(x), Math.abs(z)) < extent + r + 1 ||
+        Math.max(Math.abs(x), Math.abs(z)) + r > reach ||
         occupied.some(p => Math.hypot(x - p.x, z - p.z) < r + p.r + .6)) continue;
     const y = height(x, z), lo = Math.min(y, height(x - r, z), height(x + r, z), height(x, z - r), height(x, z + r)),
       hi = Math.max(y, height(x - r, z), height(x + r, z), height(x, z - r), height(x, z + r));
@@ -618,8 +619,6 @@ class BattlefieldView {
     if (changed) this.R.workerRoads(pixels, field.size);
   }
   private sceneryTeam: PlayerTeam | null = null;
-  private exteriorExtent = 0;
-  private exteriorCeiling = 0;
   private exteriorMeshes: WorldGeometry[] = [];
   private worldMeshes = new Set<string>();
   private buildingGround = new Map<number, { key: string; mesh: string; material: number }>();
@@ -634,22 +633,10 @@ class BattlefieldView {
       { extent: EXTENT, cellSize: CELL, gridSize: GRID } = world;
     if (!state || this.world !== world || this.sceneryTeam !== world.viewTeam) this.clearWorkerRoads();
     if (this.data !== layout) {
-      this.exteriorExtent = 0;
-      this.exteriorCeiling = world.surface?.maxHeight ?? 0;
       this.exteriorMeshes = layout.geometries.filter(d => d.model === 'landscapeRelief' && 'relief' in d && d.relief.innerExtent > 0);
-      for (const d of this.exteriorMeshes) if ('relief' in d)
-        for (const h of d.relief.heights) this.exteriorCeiling = Math.max(this.exteriorCeiling, h);
     }
-    // Cover all headings at maximum zoom, including camera and terrain
-    // elevation offsets. Resize the sparse rim, never add terrain/decor cells.
-    const v = R.viewport, windowHeight = typeof innerHeight === 'number' ? innerHeight : v?.height ?? 600,
-      viewRadius = Math.hypot(
-        115 * .5 * (v?.width ?? windowHeight) / windowHeight,
-        115 * .5 * (v?.height ?? windowHeight) / windowHeight * Math.hypot(1.1, .82) / 1.1
-          + this.exteriorCeiling * .82 / 1.1),
-      exteriorExtent = Math.ceil((EXTENT + viewRadius + 8) / 4) * 4,
-      viewDescriptor = (d: WorldGeometry): WorldGeometry => this.exteriorMeshes.includes(d) && 'relief' in d
-        ? { ...d, relief: { ...sceneryRelief(world, d.relief), outerExtent: exteriorExtent } }
+    const viewDescriptor = (d: WorldGeometry): WorldGeometry => this.exteriorMeshes.includes(d) && 'relief' in d
+        ? { ...d, relief: sceneryRelief(world, d.relief) }
         : d.mesh === 'terrain' && d.model === 'landscapeRelief' && 'relief' in d && this.exteriorMeshes.length
           ? { ...d, relief: { ...d.relief, omitSkirt: true } } : d;
     if (this.data !== layout) {
@@ -716,11 +703,6 @@ class BattlefieldView {
         R.add(...args);
       }
       this.data = layout;
-      this.exteriorExtent = exteriorExtent;
-    } else if (exteriorExtent !== this.exteriorExtent) {
-      for (const descriptor of this.exteriorMeshes)
-        R.geometry(descriptor.mesh, TerrainModels.geometry(viewDescriptor(descriptor)));
-      this.exteriorExtent = exteriorExtent;
     }
     if (this.world !== world || this.sceneryTeam !== world.viewTeam) {
       this.sceneryFog = null; this.sceneryTeam = world.viewTeam;

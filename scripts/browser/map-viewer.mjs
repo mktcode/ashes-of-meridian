@@ -91,7 +91,7 @@ await withBrowser(
     assert.equal(await page.evaluate(() => window.Meridian.game.s.time), 0);
     assert.equal(await page.evaluate(() => window.Meridian.ui.paused), true);
     await page.mouse.move(480, 350);
-    await page.mouse.wheel(0, 300);
+    await page.mouse.wheel(0, -300);
     await page.mouse.down({ button: 'right' });
     await page.mouse.move(560, 350, { steps: 4 });
     await page.mouse.up({ button: 'right' });
@@ -100,7 +100,7 @@ await withBrowser(
     await page.mouse.up({ button: 'middle' });
     await ready();
     const after = await page.evaluate(() => window.Meridian.capture.report());
-    assert.ok(after.stateCamera.zoom > before.state.stateCamera.zoom);
+    assert.ok(after.stateCamera.zoom < before.state.stateCamera.zoom);
     assert.notEqual(after.stateCamera.x, before.state.stateCamera.x);
     assert.notEqual(after.stateCamera.yaw, 0);
     const touch = await page.context().newCDPSession(page);
@@ -139,15 +139,33 @@ await withBrowser(
     await ready();
     await page.locator('[data-viewer="reset"]').click();
     await ready();
-    const fits = await page.evaluate(() => {
-      const { capture, renderer: r } = window.Meridian,
-        v = r.viewport;
-      return capture.bounds('map').every((p) => {
-        const q = r.project(...p);
-        return q && q.x >= v.left && q.x <= v.right && q.y >= v.top && q.y <= v.bottom;
-      });
+    const covered = await page.evaluate(() => {
+      const { game, renderer: r } = window.Meridian,
+        v = r.viewport,
+        fields = game.world.renderData.geometries.filter((d) => d.relief).map((d) => d.relief),
+        extent = Math.max(...fields.map((f) => f.extent)),
+        yaw = game.s.cam.yaw;
+      let low = 0,
+        high = game.world.surface.maxHeight;
+      for (const field of fields)
+        for (const h of field.heights) {
+          low = Math.min(low, h);
+          high = Math.max(high, h);
+        }
+      for (const x of [v.left, v.right])
+        for (const y of [v.top, v.bottom]) {
+          const p = r.ground(x, y, false);
+          for (const h of [low, high]) {
+            if (
+              Math.abs(p.x + (Math.sin(yaw) * h * 0.82) / 1.1) > extent - 1 ||
+              Math.abs(p.z + (Math.cos(yaw) * h * 0.82) / 1.1) > extent - 1
+            )
+              return false;
+          }
+        }
+      return true;
     });
-    assert.equal(fits, true);
+    assert.equal(covered, true, 'resized overview keeps every ground ray inside finite scenery');
     assert.equal(await page.evaluate(() => window.Meridian.ui.cameraControlsLocked), false);
     await page.evaluate(() => {
       window.Meridian.ui.resume();

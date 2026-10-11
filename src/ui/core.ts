@@ -73,7 +73,6 @@
       paused: boolean;
       viewing = false;
       viewingCameraLocked = false;
-      viewingZoomMax = 2000;
       viewingEntityVisible?: (entity: Entity) => boolean;
       onCameraChange?: () => void;
       get controlsLocked(): boolean { return this.viewing || this.paused || this.leavingBattle || !!this.game.s?.outpost?.finished || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }

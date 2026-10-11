@@ -199,7 +199,8 @@ function fixture() {
       return e;
     },
   };
-  const ui = { touchPoints: new Map(), pointer: {}, renderActions() {}, updateHUD() {} };
+  const ui = { touchPoints: new Map(), pointer: {}, renderActions() {}, updateHUD() {},
+    clampCameraPoint(point) { this.cameraClamped = true; return {x:point.x,z:point.z}; } };
   let controller;
   const context = vm.createContext({
     BATTLEFIELDS: { desert: {} },
@@ -233,8 +234,8 @@ test('landscape setup keeps resources and anchors, resets scene options and perm
   assert.equal(ui.paused, true);
   assert.equal(ui.viewing, true);
   assert.equal(ui.viewingCameraLocked, false);
+  assert.equal(ui.cameraClamped, true, 'viewer fit passes through finite scenery bounds');
   assert.ok(game.s.cam.zoom > 115);
-  assert.ok(ui.viewingZoomMax > game.s.cam.zoom);
   await c.apply({
     render: { units: false },
     camera: { mode: 'orbit', projection: 'perspective', fit: 'map', pitch: 0 },
