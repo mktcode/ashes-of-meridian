@@ -166,7 +166,9 @@
             R.fogOn = false;
             previewEntities(mapId, seed, battle);
             await loadingStep(100, 'Frontier ready');
-            if (id !== worldRequest || failed || ui.view !== 'home') return false;
+            // The explicitly launched gallery uses the same initial landscape preparation,
+            // but switches to codex before it finishes. Reveal it once preparation is ready.
+            if (id !== worldRequest || failed || (ui.view !== 'home' && !(civilianModelGallery && ui.view === 'codex'))) return false;
             $('loading').classList.add('hidden');
             if (initialHomeReveal && ui.view === 'home') {
               initialHomeReveal = false;
