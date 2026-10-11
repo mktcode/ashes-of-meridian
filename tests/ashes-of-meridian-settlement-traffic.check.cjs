@@ -29,11 +29,11 @@ test('decorative population is bounded globally and per Forum, fairly allocated,
  assert.equal(small.traffic.actors.filter(a=>a.air).length,3,'a small settlement supports several drones');
  const h=fixture(20,14);h.update(0);
  const actors=h.traffic.actors;
- assert.equal(actors.filter(a=>!a.air).length,24);assert.equal(actors.filter(a=>a.air).length,6);
- assert.equal(new Set(actors.map(a=>a.id)).size,30);assert.ok(actors.every(a=>a.id<0));
- for(const forum of new Set(actors.map(a=>a.forumId)))assert.ok(actors.filter(a=>a.forumId===forum&&!a.air).length<=8);
+ assert.equal(actors.filter(a=>!a.air).length,30);assert.equal(actors.filter(a=>a.air).length,6);
+ assert.equal(new Set(actors.map(a=>a.id)).size,36);assert.ok(actors.every(a=>a.id<0));
+ for(const forum of new Set(actors.map(a=>a.forumId)))assert.ok(actors.filter(a=>a.forumId===forum&&!a.air).length<=10);
  assert.ok(new Set(actors.filter(a=>!a.air).map(a=>a.forumId)).size>=12);
- h.update(.25,0);assert.equal(h.traffic.actors.filter(a=>!a.air).length,12);assert.equal(h.traffic.actors.filter(a=>a.air).length,3);
+ h.update(.25,0);assert.equal(h.traffic.actors.filter(a=>!a.air).length,15);assert.equal(h.traffic.actors.filter(a=>a.air).length,3);
  h.state.rules.completed=false;h.update(.5);assert.equal(h.traffic.actors.length,0);
 });
 test('trip searches are globally throttled, cached and use an explicit small A* budget without mutating CPU entities or RNG',()=>{
@@ -48,7 +48,7 @@ test('failed or partial ground routes never spawn walkers and failed pairs are c
  const h=fixture();h.world.path=(...args)=>{h.calls.push(args);return {status:'budget-exhausted',points:[{x:0,z:0}]};};
  let sawAir=false;
  for(let i=0;i<=400;i++){h.update(i*.1);sawAir ||= h.traffic.actors.some(a=>a.air&&a.route);}
- assert.ok(h.calls.length>0&&h.calls.length<=12,'at most the twelve directed pairs of four buildings are searched');
+ assert.ok(h.calls.length>0&&h.calls.length<=20,'at most twenty directed pairs including the Forum are searched');
  assert.ok(h.traffic.actors.filter(a=>!a.air).every(a=>!a.route));
  assert.ok(sawAir,'air traffic does not need A*');
 });
@@ -56,6 +56,7 @@ test('both traffic types cross authored rotated door planes, traverse to another
  const h=fixture();h.update(0);
  const ground=h.traffic.actors.find(a=>!a.air),air=h.traffic.actors.find(a=>a.air);
  for(const actor of [ground,air]) {
+  actor.homeId=h.state.entities[0].id;
   h.traffic.depart(actor,h.world);assert.ok(actor.route);
   const route=plain(actor.route),first=route[0],last=route.at(-1);
   assert.ok(Math.hypot(first.x-last.x,first.z-last.z)>10);
@@ -113,6 +114,38 @@ test('removed Forums and unfinished, unobserved or scheduled-for-removal buildin
  h.update(.75);assert.equal(h.traffic.actors.length,0);
  for(const b of h.state.entities)delete b.settlementAt;
  h.state.time=1;h.traffic.update(h.world,h.state,2,()=>false);assert.equal(h.traffic.actors.length,0);
+});
+test('Forum trips are weighted, return to upgrades, skirt the civic sculpture and work with one upgrade',()=>{
+ const h=fixture(1,1);h.update(0);
+ const actor=h.traffic.actors.find(a=>!a.air),forum=h.state.entities.find(b=>b.type==='meridianforum');
+ actor.homeId=h.state.entities[0].id;actor.random=()=>.1;
+ h.traffic.depart(actor,h.world);assert.equal(actor.destinationId,forum.id);
+ const portal=h.traffic.groups.get(forum.id).find(p=>p.building.id===forum.id);
+ assert.equal(portal.deck.length,3,'forecourt waypoints skirt the central sculpture');
+ assert.ok(portal.inside.y>0,'Forum uses its raised deck height');
+ assert.ok(actor.route.some(p=>p.x===portal.deck[0].x&&p.z===portal.deck[0].z));
+ actor.homeId=forum.id;h.traffic.depart(actor,h.world);
+ assert.equal(actor.destinationId,h.state.entities[0].id);
+ const large=fixture();large.update(0);const walker=large.traffic.actors.find(a=>!a.air);
+ walker.homeId=large.state.entities[0].id;walker.random=()=>.2;large.traffic.depart(walker,large.world);
+ assert.equal(walker.destinationId,10000);
+ walker.random=()=>.8;large.traffic.depart(walker,large.world);assert.notEqual(walker.destinationId,10000);
+ const drone=large.traffic.actors.find(a=>a.air);drone.random=()=>.1;large.traffic.depart(drone,large.world);
+ assert.notEqual(drone.destinationId,10000,'drones retain their existing upgrade-only trips');
+});
+test('road usage is sampled only for cosmetic ground searches and cache refresh preserves active trips',()=>{
+ const h=fixture();h.state.time=0;h.traffic.update(h.world,h.state,2,()=>true,(x)=>x>0?1:0);
+ const actor=h.traffic.actors.find(a=>!a.air);actor.homeId=1;actor.random=()=>.8;
+ h.traffic.depart(actor,h.world);const cost=h.calls.at(-1)[9];
+ assert.equal(cost(10,0),1);assert.equal(cost(-10,0),1.3);
+ const route=actor.route;h.traffic.depart(actor,h.world);assert.equal(h.calls.length,1,'same pair is cached');
+ for(let time=.5;time<=30;time+=.5) {
+  h.state.time=time;h.traffic.advance=()=>{};h.traffic.update(h.world,h.state,2,()=>true,()=>1);
+ }
+ assert.deepEqual(plain(actor.route),plain(route),'refresh does not replace an active journey');
+ const before=h.calls.length;h.traffic.depart(actor,h.world);
+ assert.equal(h.calls.length,before+1,'expired pairs are searched again');
+ assert.equal(h.calls.at(-1)[9](-10,0),1,'future trips see refreshed roads');
 });
 test('models use only six pedestrian or four drone shared primitive parts, without lights or mesh allocations',()=>{
  const models=vm.runInContext('SettlementTrafficModels',context);

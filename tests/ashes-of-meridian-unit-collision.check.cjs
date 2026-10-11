@@ -105,7 +105,8 @@ test('recall updates membership for both successful placement and rolled-back pl
 test('runtime production and exit release agree with live scans throughout the tick',()=>{
   const game=fixture(),hq=game.spawn('building','hq',0,0,0,0);
   Object.assign(game.s,{rules:{kind:'single-player'},strikes:[],scans:[],supplyCaches:[],
-    parties:[{id:0,faction:0,meta:{},controller:{kind:'human'},account:{energy:0}}]});
+    parties:[{id:0,faction:0,meta:{},benefits:{},upgradeDelivery:{workers:0,commander:false},
+      controller:{kind:'human'},account:{energy:0}}]});
   game.world.reveal=()=>{};game.rehash=()=>{};game.updateSettlements=()=>{};
   game.collectSupplyCaches=()=>{};game.checkBattleResult=()=>{};game.weaponRate=()=>1;
   game.combat=()=>false;game.worker=()=>false;game.medic=()=>false;
@@ -129,6 +130,48 @@ test('failed ticks clear the index, and outside-tick mutations or state replacem
     game.s.entities=[];
     assert.equal(game.unitFits(probe,30,0),true,'replaced entity source uses the live scan');
   });
+});
+
+test('Yield axis rejection skips distant order work without changing live array order',()=>{
+  const game=fixture(),e=game.spawn('unit','rifle',0,0,0,0),near=game.spawn('unit','rifle',1,0,0,0),
+    far=game.spawn('unit','rifle',100,100,0,0);
+  let nearReads=0,farReads=0;
+  Object.defineProperty(near,'order',{get(){nearReads++;return {type:'idle'};}});
+  Object.defineProperty(far,'order',{get(){farReads++;return {type:'idle'};}});
+  game.yieldUnitSpace(e,.1,0);
+  assert.ok(nearReads>0);assert.equal(farReads,0);assert.ok(near.yieldTo);
+});
+
+test('Yield retains exact axes, corners, tangencies and mixed body radii',()=>{
+  for(const type of ['worker','rifle','tank','air','destroyer']) for(const axis of ['x','z'])
+    for(const offset of [-1e-9,0,1e-9]){
+      const game=fixture(),e=game.spawn('unit',type,-1,0,0,0),other=game.spawn('unit',type,0,0,0,0),
+        radius=(e.size+other.size)*scale;
+      other[axis]=radius+offset;
+      game.yieldUnitSpace(e,0,0);
+      assert.equal(!!other.yieldTo,offset<0,`${type} ${axis} ${offset}`);
+    }
+  for(const point of [[.8,.8],[0,0]]){
+    const game=fixture(),e=game.spawn('unit','rifle',-1,0,0,0),other=game.spawn('unit','rifle',0,0,0,0),
+      radius=(e.size+other.size)*scale;
+    other.x=point[0]*radius;other.z=point[1]*radius;
+    game.yieldUnitSpace(e,0,0);
+    assert.equal(other.yieldTo,undefined,'square candidate is not necessarily an overlapping body');
+  }
+});
+
+test('Yield retains loaded-worker priority, flight layers and eligibility',()=>{
+  for(const loaded of [false,true]){
+    const game=fixture(),other=game.spawn('unit','rifle',0,0,0,0),e=game.spawn('unit','worker',-1,0,0,0);
+    other.order={type:'move',x:30,z:0};e.carry=loaded?18:0;
+    game.yieldUnitSpace(e,.1,0);
+    assert.equal(!!other.yieldTo,loaded,'loaded worker precedes stable ID priority');
+  }
+  for(const change of [e=>e.team=1,e=>e.hp=0,e=>e.type='air',e=>e.yieldUntil=10,
+    e=>e.exit={x:10,z:0,building:999,length:10},e=>e.order={type:'attack',target:999}]){
+    const game=fixture(),e=game.spawn('unit','rifle',-1,0,0,0),other=game.spawn('unit','rifle',0,0,0,0);
+    change(other);game.yieldUnitSpace(e,.1,0);assert.equal(other.yieldTo,undefined);
+  }
 });
 
 test('indexed dense steering and recursive Yield preserve the scan state and RNG after each directed tick',()=>{

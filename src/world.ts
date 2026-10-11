@@ -262,7 +262,7 @@
         }
         return true;
       }
-      path(x: number, z: number, tx: number, tz: number, air = false, area?: NavigationArea, radius = 0, ignoreSurface = false, budget?: number): NavigationPath {
+      path(x: number, z: number, tx: number, tz: number, air = false, area?: NavigationArea, radius = 0, ignoreSurface = false, budget?: number, groundCost?: (x: number, z: number) => number): NavigationPath {
         const GRID = this.gridSize, limit = this.extent - 5;
         tx = clamp(tx, -limit, limit);
         tz = clamp(tz, -limit, limit);
@@ -278,7 +278,8 @@
           (area.terrainConnection === false || surfaceFree(p, area)));
         const fits = (i: number) => ignoreSurface || !this.surface || this.surface.fits(this.point(i).x, this.point(i).z, radius);
         if (area && inArea(start) && !this.blockedAt(x, z) && (ignoreSurface || !this.surface || this.surface.fits(x,z,radius))) return complete(start);
-        if (inArea(target) && !this.blockedAt(target.x, target.z) && this.lineFree(start, target, radius, ignoreSurface)) return complete(target);
+        const direct = inArea(target) && !this.blockedAt(target.x, target.z) && this.lineFree(start, target, radius, ignoreSurface);
+        if (direct && !groundCost) return complete(target);
         let s = this.idx(x, z),
           end = this.idx(target.x, target.z);
         if (s === end && inArea(target) && !this.blockedAt(target.x, target.z) && surfaceFree(start, target, radius)) return complete(target);
@@ -344,7 +345,8 @@
               if (closed[q] || this.blocked[q] || !fits(q)) continue;
               if (!surfaceFree(i === s ? start : this.point(i), this.point(q), radius)) continue;
               if (dx && dz && (this.blocked[gz * GRID + xx] || this.blocked[zz * GRID + gx])) continue;
-              let nc = cost[i] + w;
+              const p = groundCost ? this.point(q) : null;
+              let nc = cost[i] + w * (p ? Math.max(1, groundCost!(p.x,p.z)) : 1);
               if (nc < cost[q]) {
                 if (cost[q] === Infinity) workspace.touched[workspace.touchedCount++] = q;
                 cost[q] = nc;
@@ -355,6 +357,8 @@
           }
           const exhausted = !found && heap.length > 0;
           if (!found) {
+            // A road preference must not suppress an otherwise reachable direct trip when its budget ends.
+            if (direct) return complete(target);
             if (best === s || bestDistance > 25)
               return { points: [], goal: target, status: exhausted ? 'budget-exhausted' : 'unreachable' };
             end = best;
@@ -371,9 +375,25 @@
           let smooth: Position[] = [],
             anchor = start,
             j = 0;
+          // Cosmetic costs must survive smoothing, otherwise shortcuts erase the road preference.
+          const segmentCost = groundCost ? (a: Position,b: Position) => {
+            const length = distance(a,b), samples = Math.max(1,Math.ceil(length/(this.cellSize*.5)));
+            let sum = 0;
+            for(let n=0;n<samples;n++) {
+              const t=(n+.5)/samples;
+              sum += Math.max(1,groundCost!(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t));
+            }
+            return length*sum/samples;
+          } : null;
           while (j < nodes.length) {
-            let k = j;
-            while (k + 1 < nodes.length && this.lineFree(anchor, nodes[k + 1], radius, ignoreSurface)) k++;
+            let k = j, originalCost = segmentCost ? segmentCost(anchor,nodes[k]) : 0;
+            while (k + 1 < nodes.length && this.lineFree(anchor, nodes[k + 1], radius, ignoreSurface)) {
+              if(segmentCost) {
+                originalCost += segmentCost(nodes[k],nodes[k+1]);
+                if(segmentCost(anchor,nodes[k+1])>originalCost+.001) break;
+              }
+              k++;
+            }
             smooth.push(nodes[k]);
             anchor = nodes[k];
             j = k + 1;

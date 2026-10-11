@@ -500,7 +500,12 @@ vec3 localDiffuse=localLighting(v_pos,n,viewDir,groundGloss,groundSpecular);
 lit+=(base*localDiffuse+groundSpecular)*(1.-clamp(v_glow,0.,1.));
 lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
-float field=sceneryFog(v_pos.xz);float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
+float field=sceneryFog(v_pos.xz);float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);// Cosmetic horizon only: irregular haze hides the far rectangular apron.
+// Sight and local-light visibility still use the unmodified scenery fog above.
+float outside=length(max(abs(v_pos.xz)-vec2(u_extent),vec2(0.)));
+float horizon=outside+8.*sin(v_pos.x*.031)+6.*sin(v_pos.z*.043);
+mist=max(mist,smoothstep(48.,94.,horizon));
+lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
     // Only homogeneous landscape/leaf batches opt in. All lighting and material
     // formulas stay shared; the compiler can eliminate unrelated material paths.
     function sceneMaterialFragment(material: number) {

@@ -213,8 +213,9 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
           const edge = Math.max(Math.abs(px), Math.abs(pz)),
             ex = clamp(px, -w.extent, w.extent), ez = clamp(pz, -w.extent, w.extent),
             fade = clamp(1 - (edge - w.extent) / 32, 0, 1),
-            // A repaired edge continues into the backdrop, then returns smoothly
-            // to the original exterior. Never leave a seam at a border ramp.
+            // One landscape field on both sides of the playable crop, not a
+            // separate perimeter landform. Only carry local CPU edge repairs
+            // smoothly into that same field to keep border ramps seamless.
             exterior = inside ? 0 : plan.height(px, pz) +
               (s.heightAt(ex, ez) - plan.height(ex, ez)) * fade * fade * (3 - 2 * fade);
           heights[i] = (inside ? s.heightAt(px, pz) : exterior) - .13;

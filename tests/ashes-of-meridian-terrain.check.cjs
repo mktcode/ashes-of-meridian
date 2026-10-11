@@ -57,6 +57,33 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
   });
 }
 
+test('playable crop and exterior sample one landscape field, with only local ramp continuation at the seam', () => {
+  const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'],{scripts}),
+    {world,plan}=vm.runInContext('(()=>{const world=new Battlefield(19,"haven",4);return {world,plan:dynamicTerrainPlan(world)};})()',context),
+    field=world.renderData.geometries.find(g=>g.mesh==='dynamicBackdrop').relief,
+    skin=world.renderData.geometries.find(g=>g.mesh==='terrain').relief,extent=world.extent;
+  let inside=0,outside=0,joins=0;
+  for(let row=1;row<field.size-1;row++)for(let col=1;col<field.size-1;col++) {
+    const x=(col-1)*field.step-field.extent,z=(row-1)*field.step-field.extent,
+      edge=Math.max(Math.abs(x),Math.abs(z)),ex=Math.max(-extent,Math.min(extent,x)),ez=Math.max(-extent,Math.min(extent,z));
+    let expected;
+    if(edge<=extent) {expected=world.surface.heightAt(x,z);inside++;}
+    else {
+      const fade=Math.max(0,1-(edge-extent)/32);
+      expected=plan.height(x,z)+(world.surface.heightAt(ex,ez)-plan.height(ex,ez))*fade*fade*(3-2*fade);
+      outside++;if(fade>0)joins++;
+    }
+    assert.ok(Math.abs(field.heights[row*field.size+col]+.13-expected)<1e-5,
+      'no perimeter-specific uplift, depression or alternate landscape field');
+  }
+  assert.ok(inside>0&&outside>0&&joins>0);
+  for(let row=1;row<skin.size-1;row+=13)for(let col=1;col<skin.size-1;col+=13) {
+    const x=(col-1)*skin.step-extent,z=(row-1)*skin.step-extent;
+    assert.ok(Math.abs(skin.heights[row*skin.size+col]+.13-world.surface.heightAt(x,z))<1e-5);
+  }
+  assert.deepEqual(world.staticGrid,world.surface.cliffs);
+});
+
 test('resource geometry varies orientation and vent spacing without consuming shared randomness', () => {
   const api = scope(), sites = api.dynamicBattlefieldLayout(1409, 140).resourceSites,
     orientations = new Set(), ventAngles = new Set(), ventRadii = new Set();
