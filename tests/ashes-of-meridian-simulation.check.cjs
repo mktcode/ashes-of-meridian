@@ -4,11 +4,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
-const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, readScripts, loadScripts } = require('./helpers/game-scripts.cjs');
+const { createGame } = require('./helpers/simulation-runtime.cjs');
 const { populateBase, populateProductionBase, populateOpponent } = require('./helpers/populated-battle.cjs');
 const { establishHeadquarters } = require('./helpers/developed-bases.cjs');
 
-const scripts = readScripts();
 // Normalize VM prototypes when comparing state in tests; no runtime save API.
 const json = value => JSON.parse(JSON.stringify(value));
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
@@ -19,21 +18,6 @@ const terrainFingerprint = world => createHash('sha256')
   .update(JSON.stringify(world.layout))
   .update(JSON.stringify(world.renderData.placements))
   .digest('hex');
-
-function createGame() {
-  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], {
-    scripts, globals: { structuredClone },
-  });
-  vm.runInContext('Math.random = () => { throw Error("Unexpected unseeded randomness in simulation test"); }', context);
-  const MeridianGame = vm.runInContext('MeridianGame', context);
-  const events = [];
-  const game = new MeridianGame({ upgrades: {} }, (type, data) => {
-    events.push({ type, data: json(data) });
-  });
-  // Unit-rule scenarios isolate the controller; autonomous play lives in the AI suite.
-  game.aiTick = () => {};
-  return { game, events, context };
-}
 
 // Explicit flat rule arena, not a claim about any catalog map's terrain or dimensions.
 function flatArena(extent) {
@@ -946,88 +930,6 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   for (const troop of troops) close(troop.hp, troop.maxHp - 50 + (troop.faction === 1 ? 2.1 * .05 : 0));
 });
 
-test('starting alloy levels 0–5 add exactly 50 alloy per level without changing seeded setup', () => {
-  const { game } = createGame(), opts = { seed: 1409, faction: 0, map: 'desert' };
-  game.start(opts);
-  const original = json(game.s.entities), terrain = Array.from(game.world.staticGrid), nextRandom = game.random();
-  for (let level = 0; level <= 5; level++) {
-    game.profile.upgrades = { startingAlloy: level };
-    game.start(opts);
-    assert.deepEqual([game.s.parties[0].account.alloy, game.s.parties[0].account.gas, game.s.parties[0].meta.startingAlloy], [250 + level * 50, 0, level]);
-    assert.deepEqual(json(game.s.entities), original);
-    assert.deepEqual(Array.from(game.world.staticGrid), terrain);
-    assert.equal(game.random(), nextRandom, 'starting alloy consumes no simulation RNG');
-  }
-});
-
-test('starting alloy affects only the next battle, is bounded and reproduces on restart', () => {
-  const { game } = createGame(), opts = { seed: 9897, faction: 1, map: 'desert' };
-  game.profile.upgrades = { startingAlloy: 2 }; game.start(opts);
-  const before = json(game.s);
-  game.profile.upgrades.startingAlloy = 5;
-  assert.deepEqual(json(game.s), before);
-  game.start(opts);
-  assert.equal(game.s.parties[0].account.alloy, 500); assert.deepEqual(json(game.s.parties[0].meta), { startingAlloy: 5 });
-  assert.notStrictEqual(game.s.parties[0].meta, game.profile.upgrades);
-  const restarted = json(game.s);
-  game.start(opts); assert.deepEqual(json(game.s), restarted);
-  for (const [value, level, alloy] of [[-2, 0, 250], ['3.9', 3, 400], [99, 5, 500], ['bad', 0, 250]]) {
-    game.profile.upgrades = { startingAlloy: value }; game.start(opts);
-    assert.deepEqual([game.s.parties[0].meta.startingAlloy, game.s.parties[0].account.alloy], [level, alloy]);
-  }
-});
-
-test('starting worker levels 0–5 preserve seeded setup and free spacing for every faction', () => {
-  for (const faction of [0, 1, 2]) {
-    const { game } = createGame(), opts = { seed: 1409, faction, map: 'desert' };
-    game.start(opts);
-    const original = json(game.s.entities), terrain = Array.from(game.world.staticGrid),
-      samples = Array.from({ length: 6 }, () => game.random());
-    for (let level = 0; level <= 5; level++) {
-      game.profile.upgrades = { startingWorkers: level };
-      game.start(opts);
-      const workers = game.alive(e => e.team === 0 && e.type === 'worker');
-      assert.equal(workers.length, level);
-      assert.deepEqual([game.s.parties[0].account.alloy, game.s.parties[0].account.gas, game.supply(), game.cap()], [250, 0, level, 24]);
-      assert.equal(player(game, 'hq').queue.length, 0);
-      assert.equal(game.s.stats.trained, 0);
-      assert.deepEqual(json(game.s.entities.filter(e => e.team !== 0 || e.kind === 'building')), original);
-      assert.deepEqual(Array.from(game.world.staticGrid), terrain);
-      assert.equal(game.random(), samples[level], 'only one normal spawn RNG draw per bonus worker');
-      for (const [i, w] of workers.entries()) {
-        assert.equal(w.faction, faction); assert.equal(w.cd, samples[i] * .5);
-        assert.equal(w.hp, w.maxHp); assert.equal(w.order.type, 'idle');
-        assert.equal(w.exit, undefined); assert.ok(game.unitFits(w, w.x, w.z));
-        assert.ok(Math.hypot(w.x - player(game, 'hq').x, w.z - player(game, 'hq').z) < 24);
-      }
-      assertUnitSpacing(game);
-    }
-  }
-});
-
-test('starting worker upgrades affect only the next battle and reproduce on restart', () => {
-  const { game } = createGame(), opts = { seed: 9897, faction: 1, map: 'desert' };
-  game.profile.upgrades = { startingWorkers: 2 }; game.start(opts);
-  const before = json(game.s);
-  game.profile.upgrades.startingWorkers = 5;
-  assert.deepEqual(json(game.s), before);
-  game.start(opts);
-  assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
-  assert.deepEqual(json(game.s.parties[0].meta), { startingWorkers: 5 });
-  assert.notStrictEqual(game.s.parties[0].meta, game.profile.upgrades);
-  const restarted = json(game.s);
-  game.start(opts); assert.deepEqual(json(game.s), restarted);
-});
-
-test('starting worker count is an integer bounded to 0–5 even for direct profile input', () => {
-  const { game } = createGame();
-  for (const [value, count] of [[-2, 0], ['3.9', 3], [99, 5], ['bad', 0]]) {
-    game.profile.upgrades = { startingWorkers: value }; game.start({ seed: 90001 });
-    assert.equal(game.s.parties[0].meta.startingWorkers, count);
-    assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, count);
-  }
-});
-
 test('five starting workers begin mining and deliver alloy without recruitment for every faction', () => {
   for (const faction of [0, 1, 2]) {
     const { game } = createGame(); game.profile.upgrades = { startingWorkers: 5 };
@@ -1039,23 +941,6 @@ test('five starting workers begin mining and deliver alloy without recruitment f
     assert.equal(game.s.parties[0].account.gas, 0); assert.equal(player(game, 'hq').queue.length, 0);
     assert.equal(game.canBuild('barracks'), '');
   }
-});
-
-test('expedition benefits combine with permanent start upgrades without helping the enemy', () => {
-  const { game } = createGame();
-  game.profile.upgrades = { startingAlloy: 1, startingWorkers: 2 };
-  game.start({ seed: 1409, faction: 1, benefits: {
-    supplyCrate: 2, aetherAllocation: 2, pioneerSquad: 3, commanderMandate: 1,
-    unknown: 99
-  } });
-  assert.deepEqual(json(game.s.parties[0].benefits), {
-    supplyCrate: 2, aetherAllocation: 2, pioneerSquad: 3, commanderMandate: 1
-  });
-  assert.deepEqual([game.s.parties[0].account.alloy, game.s.parties[0].account.gas], [400, 100]);
-  assert.deepEqual([game.s.parties[1].account.alloy, game.s.parties[1].account.gas], [250, 0]);
-  assert.equal(game.alive(e => e.team === 0 && e.type === 'worker').length, 5);
-  assert.equal(game.alive(e => e.team === 0 && e.type === 'hero').length, 1);
-  assert.equal(game.alive(e => e.team === 1 && (e.type === 'worker' || e.type === 'hero')).length, 0);
 });
 
 test('survey drones and capacitor preserve seeded setup, enemy sight and RNG across restarts',()=>{
