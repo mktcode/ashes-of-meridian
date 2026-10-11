@@ -1,15 +1,25 @@
 /* Optional, bounded measurements. No game state, DOM, storage or network access. */
 'use strict';
+declare const MERIDIAN_BUILD_INFO: Readonly<{ id: string; commit: string | null; dirty: boolean | null }>;
+type DiagnosticInteractionKind = 'pointerRelease' | 'selection' | 'command' | 'action' | 'target';
+type DiagnosticDetailPhase = DiagnosticCpuPhase | 'input';
 type DiagnosticCpuPhase = 'simulation' | 'ui' | 'audio' | 'sceneBuild' | 'glSubmission' | 'overlay';
 type DiagnosticGpuPass = 'thumbnails' | 'shadow' | 'scene' | 'bloom' | 'post';
 type DiagnosticCpuDetail = 'tick' | 'movement' | 'collision' | 'pathPreparation' | 'pathfinding' |
   'settlements' | 'settlementLayout' | 'settlementGrowth' | 'navigationRebuild' | 'visibility' | 'spatialHash' | 'ai' |
   'hud' | 'saveBattle' | 'snapshot' | 'worldSync' | 'workerRoads' | 'buildingGround' | 'entities' | 'effects' | 'guides' |
-  'instanceUploads' | 'drawSubmission' | 'thumbnails';
-type DiagnosticCpuDetails = Partial<Record<DiagnosticCpuPhase,
+  'instanceUploads' | 'drawSubmission' | 'thumbnails' | 'entityPicking' | 'targetPicking' | DiagnosticInteractionKind;
+type DiagnosticCpuDetails = Partial<Record<DiagnosticDetailPhase,
   Partial<Record<DiagnosticCpuDetail, { ms: number; calls: number }>>>>;
+interface DiagnosticInteraction {
+  id: number; kind: DiagnosticInteractionKind; atMs: number; durationMs: number; failed: boolean;
+  cpuDetails: DiagnosticCpuDetails;
+  context?: DiagnosticContext;
+  hidden?: boolean;
+  renderSettings?: { quality: number; width: number; height: number; devicePixelRatio: number };
+}
 interface DiagnosticCpuScope {
-  frame: DiagnosticFrame; phase: DiagnosticCpuPhase; name: DiagnosticCpuDetail;
+  measurement: DiagnosticFrame | DiagnosticInteraction; phase: DiagnosticDetailPhase; name: DiagnosticCpuDetail;
   started: number; childMs: number; parent?: DiagnosticCpuScope;
 }
 interface DiagnosticFrame {
@@ -38,13 +48,39 @@ class MeridianDiagnosticRecorder {
   private phaseStarted = 0;
   private activePhase?: DiagnosticCpuPhase;
   private detail?: DiagnosticCpuScope;
+  private interactions: DiagnosticInteraction[] = [];
+  private interactionCursor = 0;
+  private interactionSequence = 0;
+  private interactionStarted = 0;
+  private interaction?: DiagnosticInteraction;
   current?: DiagnosticFrame;
   stopped: string | null = null;
-  constructor(private readonly clock: () => number, readonly capacity = 6000) {
+  constructor(private readonly clock: () => number, readonly capacity = 6000, readonly interactionCapacity = 512) {
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 6000) throw Error('Invalid diagnostic capacity');
+    if (!Number.isInteger(interactionCapacity) || interactionCapacity < 1 || interactionCapacity > 512)
+      throw Error('Invalid interaction capacity');
+  }
+  beginInteraction(kind: DiagnosticInteractionKind): DiagnosticInteraction | undefined {
+    // Nested UI methods belong to one root call. Calls during rAF stay in their frame phase.
+    if (this.stopped || this.current || this.interaction) return;
+    const now = this.clock();
+    this.origin ??= now;
+    this.interactionStarted = now;
+    this.detail = undefined;
+    return this.interaction = { id: ++this.interactionSequence, kind, atMs: now-this.origin,
+      durationMs: 0, failed: false, cpuDetails: {} };
+  }
+  finishInteraction(event: DiagnosticInteraction | undefined, failed = false) {
+    if (!event || this.interaction !== event) return;
+    event.durationMs = Math.max(0, this.clock()-this.interactionStarted);
+    event.failed = failed;
+    this.interactions[this.interactionCursor] = event;
+    this.interactionCursor = (this.interactionCursor+1) % this.interactionCapacity;
+    this.interaction = undefined;
+    this.detail = undefined;
   }
   beginFrame(timestamp: number) {
-    if (this.stopped) return;
+    if (this.stopped || this.interaction) return;
     this.origin ??= timestamp;
     this.current = { id: ++this.sequence, atMs: timestamp - this.origin,
       rafIntervalMs: this.previousRaf === undefined ? null : timestamp - this.previousRaf,
@@ -63,17 +99,17 @@ class MeridianDiagnosticRecorder {
     this.phaseStarted = now;
   }
   beginDetail(name: DiagnosticCpuDetail): DiagnosticCpuScope | undefined {
-    const frame = this.current, phase = this.activePhase;
-    if (!frame || !phase) return;
-    const details = frame.cpuDetails[phase] ??= {}, value = details[name] ??= { ms: 0, calls: 0 };
+    const measurement = this.current ?? this.interaction, phase = this.current ? this.activePhase : 'input';
+    if (!measurement || !phase) return;
+    const details = measurement.cpuDetails[phase] ??= {}, value = details[name] ??= { ms: 0, calls: 0 };
     value.calls++;
-    return this.detail = { frame, phase, name, started: this.clock(), childMs: 0, parent: this.detail };
+    return this.detail = { measurement, phase, name, started: this.clock(), childMs: 0, parent: this.detail };
   }
   endDetail(scope: DiagnosticCpuScope | undefined) {
-    if (!scope || this.current !== scope.frame || this.detail !== scope) return;
+    if (!scope || (this.current ?? this.interaction) !== scope.measurement || this.detail !== scope) return;
     const elapsed = Math.max(0, this.clock() - scope.started);
     // Exclusive nested times: movement excludes pathfinding/collision, including recursive Yield.
-    scope.frame.cpuDetails[scope.phase]![scope.name]!.ms += Math.max(0, elapsed - scope.childMs);
+    scope.measurement.cpuDetails[scope.phase]![scope.name]!.ms += Math.max(0, elapsed - scope.childMs);
     if (scope.parent) scope.parent.childMs += elapsed;
     this.detail = scope.parent;
   }
@@ -96,6 +132,7 @@ class MeridianDiagnosticRecorder {
     this.stopped ??= reason;
     // A failed/incomplete callback must not masquerade as a completed frame.
     this.current = undefined;
+    this.interaction = undefined;
     this.activePhase = undefined;
     this.detail = undefined;
   }
@@ -128,7 +165,26 @@ class MeridianDiagnosticRecorder {
     }
     for (const pass of ['thumbnails', 'shadow', 'scene', 'bloom', 'post'] as const)
       gpu[pass] = distribution(frames.flatMap(f => f.gpuMs[pass] === undefined ? [] : [f.gpuMs[pass]!]));
+    const events = this.interactions.length < this.interactionCapacity ? this.interactions.slice() :
+      this.interactions.slice(this.interactionCursor).concat(this.interactions.slice(0, this.interactionCursor));
+    const interactionSummary: Partial<Record<DiagnosticInteractionKind, {
+      durationMs: ReturnType<typeof distribution>; failed: number;
+      cpuDetails: Partial<Record<DiagnosticCpuDetail, { ms: ReturnType<typeof distribution>; calls: ReturnType<typeof distribution> }>>;
+    }>> = {};
+    for (const kind of ['pointerRelease', 'selection', 'command', 'action', 'target'] as const) {
+      const measured = events.filter(e => e.kind === kind);
+      if (!measured.length) continue;
+      const names = new Set(measured.flatMap(e => Object.keys(e.cpuDetails.input ?? {})) as DiagnosticCpuDetail[]);
+      const details: NonNullable<(typeof interactionSummary)[DiagnosticInteractionKind]>['cpuDetails'] = {};
+      for (const name of names) details[name] = {
+        ms: distribution(measured.map(e => e.cpuDetails.input?.[name]?.ms ?? 0)),
+        calls: distribution(measured.map(e => e.cpuDetails.input?.[name]?.calls ?? 0))
+      };
+      interactionSummary[kind] = { durationMs: distribution(measured.map(e => e.durationMs)),
+        failed: measured.filter(e => e.failed).length, cpuDetails: details };
+    }
     return { capacity: this.capacity, callbacksSeen: this.sequence, stopped: this.stopped,
+      interactions: { capacity: this.interactionCapacity, eventsSeen: this.interactionSequence, summary: interactionSummary, events },
       summary: { callbacks: frames.length, rendered: frames.filter(f => f.rendered).length,
         callbackWorkMs: distribution(frames.map(f => f.callbackMs)),
         rafIntervalMs: distribution(frames.flatMap(f => f.rafIntervalMs === null ? [] : [f.rafIntervalMs])),

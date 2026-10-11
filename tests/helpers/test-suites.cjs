@@ -3,7 +3,7 @@ const { join } = require('node:path');
 
 // Every root test has one owner; new files must be classified before any suite runs.
 const groups = Object.freeze({
-  logic: ['core', 'harness', 'repository-hygiene', 'browser-harness', 'audio-delivery', 'doc-links', 'test-selection', 'developed-bases', 'populated-battle', 'abilities', 'parties', 'ffa',
+  logic: ['core', 'harness', 'build-info', 'repository-hygiene', 'browser-harness', 'audio-delivery', 'doc-links', 'test-selection', 'developed-bases', 'populated-battle', 'abilities', 'parties', 'ffa',
     'ai-planning', 'commands', 'command-queue', 'navigation', 'unit-collision', 'effects', 'effect-rng', 'perspective',
     'persistence', 'expedition', 'stage-worlds', 'civilization', 'civilization-upgrades', 'simulation-validation'],
   terrain: ['terrain', 'surface-ray', 'elevation', 'building-ground', 'westmark', 'crystals', 'world-designs',
