@@ -14,7 +14,6 @@
 
 - [ ] Laufzeiten nach Build/Datei/Szenario erst aus vorhandenen Ergebnissen erfassen; neue breite Messung freigeben lassen. Konkreter Auswahlhinweis aus der Shaderprüfung auf `937914e`: `map switches keep only current world meshes…` in der Rendererdatei brauchte lokal rund 45 s, die meisten dortigen Shader-/Orchestrierungsfälle nur Millisekunden. Für solche Kleinständerungen Namensfilter statt ungeprüft die ganze Datei wählen. Terrain-/Residenzabdeckung nicht allein wegen Dauer löschen oder Concurrency/Heap blind ändern.
 - [ ] Gemischte Testdateien bei fachlicher Pflege trennen; kurze Validatoren ohne doppelte Abdeckung von autonomen Partien separieren.
-- [ ] Shader-Stringtests auf relevante Verdrahtung statt Formelschreibweise begrenzen; keine behauptete GLSL-Kompilierung. Konkrete Beispiele in [den Renderer-Prüfungen](../../tests/ashes-of-meridian-renderer.check.cjs): exakte Triplanar-/Tilt-Shift-Ausdrücke und lokale Licht-/Reliefformeln binden gleichwertige Implementierungen unnötig an Schreibweise und Konstanten.
 - [ ] Modell-/Präsentationsüberschneidungen nach Vertragsvergleich reduzieren; Bounds/Winding/Varianten/RNG können unabhängig schützen.
 
 ## Wiederverwendbare Browser- und Diagnosewerkzeuge
