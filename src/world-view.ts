@@ -996,7 +996,8 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           ry,
           rx,
           rz,
-          animated && glow >= .3 ? glow * (1 + (e.faction === FACTION_ID.SECOND ? .22 : .12) *
+          // The Marshal beacon already synchronizes emission with its point light.
+          animated && glow >= .3 && shape !== 'breachMarshalBeacon' ? glow * (1 + (e.faction === FACTION_ID.SECOND ? .22 : .12) *
             Math.sin(phase + (e.faction === FACTION_ID.THIRD ? ly * 3 - lz * 2 : lx * .7))) : glow,
           a,
           layer,

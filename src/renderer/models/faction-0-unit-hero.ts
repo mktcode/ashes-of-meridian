@@ -141,7 +141,9 @@
     group('optics',()=>{
       plate(0,1.873,.265,.33,.053,.027,[1,1,1]);
       plate(.24,1.61,.493,.065,.048,.015,[1,1,1]);
-      // Large faceted cyan crystal; shares the visor's emission and preview override.
+    });
+    group('beacon',()=>{
+      // Separate emission makes the source brighter than the visor without a halo mesh.
       ModelMesh.bake(out,geom.octa(),{x:-.275,y:2.42,z:-.37,sx:.14,sy:.23,sz:.14});
     });
     group('team',()=>{
@@ -152,13 +154,13 @@
     return parts;
   }
   const names=['torso','helmet','leftThigh','leftShin','leftBoot','rightThigh','rightShin','rightBoot',
-    'rightArm','leftArm','carbine','optics','team','flash'] as const;
+    'rightArm','leftArm','carbine','optics','beacon','team','flash'] as const;
   let geometry: Record<string,number[]> | undefined;
   const meshes: Record<string,()=>number[]>={};
   for(const name of names) {
     const mesh='breachMarshal'+name[0].toUpperCase()+name.slice(1);
     meshes[mesh]=()=>(geometry??=createMarshal())[name];
-    if(!['optics','team','flash'].includes(name))meshes[mesh+'Neutral']=()=>{
+    if(!['optics','beacon','team','flash'].includes(name))meshes[mesh+'Neutral']=()=>{
       const data=meshes[mesh]().slice();
       for(let i=0;i<data.length;i+=9)data[i+6]=data[i+7]=data[i+8]=1;
       return data;
@@ -181,10 +183,12 @@
     return track.weight;
   }
   registerEntityModel({id:'faction-0/unit/hero',meshes,
-    render({entity:e,time,part:p,team,surfaceColor,nightLight,lightPool,pointLight}) {
+    render({entity:e,time,part:p,team,surfaceColor,nightLight,pointLight}) {
       const neutral=surfaceColor(0xffffff)!==0xffffff,white=surfaceColor(0xffffff),cyan=surfaceColor(0x38d9e8),
         weight=walking(e,time),phase=(e.walk||0)*4,
         breath=Math.sin(time*1.9)*(.007-weight*.004),hipY=.85+weight*(-.03+Math.cos(phase*2)*.008);
+      // Slow, bounded breathing shared by the crystal and its real surface lighting.
+      const beaconPulse=1+.08*Math.sin(time*2.1);
       const shotAge=UNITS.hero.reload-(e.cd??-1),firing=shotAge>=0&&shotAge<.18,
         kick=firing?Math.exp(-shotAge*24)*Math.sin(Math.min(shotAge*85,Math.PI/2)):0,
         upperRx=weight*.04-kick*.045,upperRz=weight*Math.sin(phase)*.013,
@@ -194,7 +198,7 @@
         const cx=Math.cos(rx),sx=Math.sin(rx),cz=Math.cos(rz),sz=Math.sin(rz),
           xx=pivot[0]*cz-pivot[1]*sz,yy=pivot[0]*sz+pivot[1]*cz,
           rotated: Point=[xx,yy*cx-pivot[2]*sx,yy*sx+pivot[2]*cx],
-          suffix=neutral&&!['optics','team','flash'].includes(name)?'Neutral':'',
+          suffix=neutral&&!['optics','beacon','team','flash'].includes(name)?'Neutral':'',
           base='breachMarshal'+name[0].toUpperCase()+name.slice(1);
         p(base+suffix,(target[0]-rotated[0])*SCALE,(target[1]-rotated[1])*SCALE,(target[2]-rotated[2])*SCALE,
           SCALE,SCALE,SCALE,color,0,rx,rz,glow);
@@ -202,6 +206,7 @@
       for(const name of ['torso','helmet','rightArm','leftArm','carbine'])draw(name,[0,.85,0],upperTarget,upperRx,upperRz);
       draw('team',[0,.85,0],upperTarget,upperRx,upperRz,surfaceColor(team),.2);
       draw('optics',[0,.85,0],upperTarget,upperRx,upperRz,cyan,.95+1.55*nightLight);
+      draw('beacon',[0,.85,0],upperTarget,upperRx,upperRz,cyan,(1.2+3*nightLight)*beaconPulse);
       if(firing&&shotAge<.04)draw('flash',[0,.85,0],upperTarget,upperRx,upperRz,cyan,2.2);
       for(const s of [-1,1]) {
         const side=s<0?'left':'right',hip: Point=[s*.205,.85,0],knee: Point=[s*.255,.46,s<0?.12:-.075],ankle: Point=[s*.275,.15,s<0?.16:-.075];
@@ -224,8 +229,8 @@
       // Keep the visibly lit ground beyond attack range, not just the lamp's cutoff.
       // The larger envelope compensates for distance, grazing normals and edge falloff.
       const beaconReach=UNITS.hero.range*3;
-      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,24);
-      if(nightLight>0)lightPool(bx*SCALE,lz*SCALE,beaconReach,beaconReach,0x38d9e8,.4*nightLight);
+      pointLight(bx*SCALE,ly*SCALE,lz*SCALE,beaconReach,0x38d9e8,24*beaconPulse);
+      // No projected ground pool: terrain and nearby models receive the same 3D lamp.
     }
   });
 })();

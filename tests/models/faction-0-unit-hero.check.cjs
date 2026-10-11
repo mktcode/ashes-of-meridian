@@ -38,7 +38,7 @@ test('Breach Marshal: independent detailed command armor, closed meshes, breach 
   assertMesh(factory,{minTriangles:8,maxTriangles:4000,min:[-.8,0,-.65],max:[.8,2.66,1.52]});
   if(name.endsWith('Neutral'))for(let i=6;i<meshes[name].length;i+=9)assert.deepEqual(Array.from(meshes[name].slice(i,i+3)),[1,1,1]);
  }
- const normal=draw();assert.equal(normal.length,13);
+ const normal=draw();assert.equal(normal.length,14);
  assert(normal.reduce((n,c)=>n+meshes[c[0]].length/27,0)<13000);
  assertRecessedMuzzle(meshes.breachMarshalCarbine,{x:.24,y:1.425,z:1.21,front:.09,recess:.08});
  const colors=new Set();for(const data of Object.values(meshes))for(let i=6;i<data.length;i+=9)colors.add(Array.from(data.slice(i,i+3)).join(','));
@@ -60,7 +60,7 @@ test('Breach Marshal: bounded armor and raised beacon without gameplay scaling',
  assert.equal(e.size,h.UNITS.hero.size);assert.equal(e.hp,h.UNITS.hero.hp);
 });
 test('Breach Marshal: closed emissive beacon crystal and pose-aligned lamp',()=>{
- const {h,e,meshes,draw}=setup(),optics=meshes.breachMarshalOptics;
+ const {h,e,meshes,draw}=setup(),optics=meshes.breachMarshalBeacon;
  const crystal=[];for(let i=0;i<optics.length;i+=9)if(optics[i+1]>2.15)crystal.push(optics.slice(i,i+3));
  assert.equal(crystal.length,24,'closed eight-facet crystal');
  assert(Math.max(...crystal.map(p=>p[1]))>=2.65-1e-9);
@@ -70,7 +70,7 @@ test('Breach Marshal: closed emissive beacon crystal and pose-aligned lamp',()=>
   const lights=[],calls=draw({...e,rot,order:undefined,walk:.8,cd:h.UNITS.hero.reload-.02},.5,{},
    {battlefieldHour:22,quality:0,addPointLight:(...args)=>lights.push(args)});
   assert.equal(lights.length,1,'reuse the model lamp, no added light budget');
-  const center=transform(calls.find(c=>c[0]==='breachMarshalOptics'),[-.275,2.42,-.37]);
+  const center=transform(calls.find(c=>c[0]==='breachMarshalBeacon'),[-.275,2.42,-.37]);
   for(let k=0;k<3;k++)assert(Math.abs(lights[0][k]-center[k])<1e-9,'beacon lamp follows crystal through walking, recoil and heading');
  }
 });
@@ -87,6 +87,28 @@ test('Breach Marshal: broad real night beacon, smooth dusk, preview isolation an
   assert.deepEqual(lights,[],'no beacon lighting in placement/tile overrides');
  }
 });
+test('Breach Marshal: crystal and real lamp breathe together, pause freezes them, no ground overlay',()=>{
+ const {h,e,draw}=setup(),material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context);
+ function sample(time){
+  const lights=[],pools=[];
+  const calls=draw(e,time,{}, {battlefieldHour:22,quality:1,addPointLight:(...args)=>lights.push(args)});
+  // Inspect the light material, not the separate contact-shadow plane.
+  const r=createRendererStub({record:true});
+  Object.assign(r,{battlefieldHour:22,quality:1,addPointLight:()=>{}});
+  h.renderEntity(r,e,time,{});
+  pools.push(...r.calls.filter(c=>c[14]===material));
+  assert.deepEqual(pools,[],'only real surface lighting, no projected cyan pool');
+  const beacon=calls.find(c=>c[0]==='breachMarshalBeacon'),visor=calls.find(c=>c[0]==='breachMarshalOptics');
+  assert(beacon[11]>visor[11],'source is brighter than secondary optics');
+  const pulse=1+.08*Math.sin(time*2.1);
+  assert(Math.abs(beacon[11]-4.2*pulse)<1e-9);
+  assert(Math.abs(lights[0][5]-24*pulse)<1e-9);
+  return [beacon[11],lights[0][5]];
+ }
+ assert.notDeepEqual(sample(0),sample(.7));
+ assert.deepEqual(sample(.7),sample(.7),'simulation-time animation is frozen at pause');
+ for(const time of [0,.7,2,4,8])sample(time);
+});
 test('Breach Marshal: team, neutral ghost/tint, alpha, layer and material overrides',()=>{
  const {h,e,draw}=setup();
  for(const rot of [-2.1,0,.7])for(const team of [0,1]){
@@ -95,7 +117,7 @@ test('Breach Marshal: team, neutral ghost/tint, alpha, layer and material overri
   for(const options of [{ghost:true},{tint:0x99e4c6},{ghost:true,tint:0x99e4c6},{tint:0x99e4c6,alpha:.3,layer:'effects',material:h.MAT.AUTO}]){
    const calls=draw(state,0,options),color=options.ghost?0x68717d:options.tint;
    assert(calls.every(c=>c[7]===color));
-   assert(calls.filter(c=>!['breachMarshalOptics','breachMarshalTeam'].includes(c[0])).every(c=>c[0].endsWith('Neutral')));
+   assert(calls.filter(c=>!['breachMarshalOptics','breachMarshalBeacon','breachMarshalTeam'].includes(c[0])).every(c=>c[0].endsWith('Neutral')));
    for(const c of calls)assert.deepEqual(c.slice(12),[options.alpha??1,options.layer||'dynamic',options.material??h.MAT.METAL]);
   }
   assert.equal(draw(state,0,{localTeam:team}).find(c=>c[0]==='breachMarshalTeam')[7],h.FACTIONS[0].color);
