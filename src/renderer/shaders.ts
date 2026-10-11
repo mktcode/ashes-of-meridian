@@ -53,7 +53,7 @@ const float v_mat=SCENE_MATERIAL;
 in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_workerRoad;uniform float u_workerRoadOn;
-uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_distanceMist;uniform float u_time;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;
+uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_distanceMist;uniform float u_horizonMist;uniform float u_time;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;uniform float u_fogExtent;
 uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
 uniform float u_placementGridDetail;
@@ -516,7 +516,7 @@ float field=sceneryFog(v_pos.xz);float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit
 // Sight and local-light visibility still use the unmodified scenery fog above.
 float outside=length(max(abs(v_pos.xz)-vec2(u_extent),vec2(0.)));
 float horizon=outside+8.*sin(v_pos.x*.031)+6.*sin(v_pos.z*.043);
-mist=max(mist,smoothstep(48.,94.,horizon));
+mist=max(mist,smoothstep(48.,94.,horizon)*u_horizonMist);
 lit=mix(lit,u_haze,mist);if(v_pos.y<.0){float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;}frag=vec4(lit,surfaceAlpha);}`;
     // Only homogeneous landscape/leaf batches opt in. All lighting and material
     // formulas stay shared; the compiler can eliminate unrelated material paths.

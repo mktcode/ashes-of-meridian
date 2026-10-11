@@ -5,6 +5,8 @@
 #mapViewer label { display: inline-flex; align-items: center; gap: 4px; }
 #mapViewer input, #mapViewer select, #mapViewer button, #showMapViewer { font: inherit; }
 #mapViewer input[type=number] { width: 110px; }
+#mapViewer input[type=range] { width: 150px; }
+#mapViewer output { min-width: 5ch; font-variant-numeric: tabular-nums; }
 #mapViewer p { margin: 8px 0 0; }
 #showMapViewer { top: 10px; left: 10px; cursor: pointer; }
 #mapViewer[hidden], #showMapViewer[hidden] { display: none; }

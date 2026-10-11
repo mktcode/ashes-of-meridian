@@ -53,6 +53,7 @@ export function resolveShots(scene) {
         caches: content !== 'landscape',
         guides: false,
         distanceMist: content !== 'landscape',
+        horizonMist: content !== 'landscape',
         hud: false,
         ...defaults.render,
         ...(defaultHud === undefined ? {} : { hud: defaultHud }),

@@ -38,6 +38,7 @@ test('capture recipes share the runtime validator and reject contradictory camer
   assert.equal(shots[1].render.units, true, 'shot overrides do not leak');
   assert.equal(shots[1].render.caches, false);
   assert.equal(shots[1].render.distanceMist, false);
+  assert.equal(shots[1].render.horizonMist, false);
   assert.equal(
     resolveShots({ ...base, hud: false, shots: [{ render: { hud: true } }] })[0].render.hud,
     true,
@@ -226,6 +227,8 @@ test('landscape setup keeps resources and anchors, resets scene options and perm
   assert.equal(game.s.entities.length, 1);
   assert.equal(game.s.entities[0].kind, 'resource');
   assert.equal(c.anchors.player.x, 10);
+  assert.equal(c.render.horizonMist, false);
+  assert.equal(c.renderer.horizonMist, false);
   assert.equal(ui.paused, true);
   assert.equal(ui.viewing, true);
   assert.equal(ui.viewingCameraLocked, false);
@@ -245,6 +248,7 @@ test('landscape setup keeps resources and anchors, resets scene options and perm
   });
   assert.equal(c.placed[0].x, 13);
   assert.equal(c.render.units, true);
+  assert.equal(c.renderer.horizonMist, true);
   assert.equal(c.report().units, 1);
   await c.apply({ render: { units: false } });
   assert.equal(c.report().units, 1, 'render filter does not remove simulation entities');

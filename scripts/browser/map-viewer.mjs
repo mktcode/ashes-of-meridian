@@ -48,6 +48,31 @@ await withBrowser(
     assert.equal(before.actionsLocked, true);
     assert.equal(before.state.units, 0);
     assert.equal(before.state.buildings, 0);
+    assert.equal(before.state.render.horizonMist, false);
+    assert.equal(await page.evaluate(() => window.Meridian.renderer.fogOn), false);
+    assert.equal(await page.evaluate(() => window.Meridian.renderer.horizonMist), false);
+    const clock = page.locator('#mapViewerTime');
+    await clock.focus();
+    await page.keyboard.press('Home');
+    await ready();
+    assert.equal(await page.locator('#mapViewer output').textContent(), '00:00');
+    assert.ok(Math.abs(await page.evaluate(() => window.Meridian.renderer.battlefieldHour)) < 1e-6);
+    const nightHaze = await page.evaluate(() => Array.from(window.Meridian.renderer.haze));
+    await clock.evaluate((el) => {
+      el.value = '720';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await ready();
+    assert.equal(await page.locator('#mapViewer output').textContent(), '12:00');
+    assert.ok(
+      Math.abs((await page.evaluate(() => window.Meridian.renderer.battlefieldHour)) - 12) < 1e-6,
+    );
+    assert.notDeepEqual(
+      await page.evaluate(() => Array.from(window.Meridian.renderer.haze)),
+      nightHaze,
+    );
+    assert.equal(await page.evaluate(() => window.Meridian.game.s.time), 0);
+    assert.equal(await page.evaluate(() => window.Meridian.ui.paused), true);
     await page.mouse.move(480, 350);
     await page.mouse.wheel(0, 300);
     await page.mouse.down({ button: 'right' });
@@ -89,6 +114,7 @@ await withBrowser(
     const recipe = await page.evaluate(() => window.Meridian.capture.exportScene()),
       matrix = await page.evaluate(() => Array.from(window.Meridian.renderer.vp));
     await page.evaluate((camera) => window.Meridian.capture.apply({ camera }), recipe.camera);
+    assert.ok(Math.abs(recipe.hour - 12) < 1e-6);
     const restored = await page.evaluate(() => Array.from(window.Meridian.renderer.vp));
     matrix.forEach((n, i) => assert.ok(Math.abs(n - restored[i]) < 1e-4));
     await page.setViewportSize({ width: 640, height: 720 });
@@ -120,6 +146,12 @@ await withBrowser(
     );
     await ready();
     assert.equal(await page.evaluate(() => window.Meridian.game.s.time), 0);
+    assert.ok(
+      Math.abs((await page.evaluate(() => window.Meridian.renderer.battlefieldHour)) - 12) < 1e-6,
+    );
+    assert.equal(await page.locator('#mapViewer output').textContent(), '12:00');
+    assert.equal(await page.evaluate(() => window.Meridian.renderer.fogOn), false);
+    assert.equal(await page.evaluate(() => window.Meridian.renderer.horizonMist), false);
     assert.deepEqual(await page.evaluate(() => window.viewerStorageCalls), []);
     assert.deepEqual(errors, []);
     await page.evaluate(() =>
@@ -133,7 +165,7 @@ await withBrowser(
     assert.equal(await page.evaluate(() => window.Meridian.game.s.time), 0);
     assert.deepEqual(await page.evaluate(() => window.viewerStorageCalls), []);
     console.log(
-      'Map viewer file://, profile isolation, paused mouse/touch navigation, zoom, idle rendering, export, resize/fit, seed reload and visible context-loss handling passed.',
+      'Map viewer file://, profile isolation, paused mouse/touch navigation, zoom, unmasked landscape borders, day-time slider/export/reload, idle rendering, export, resize/fit, seed reload and visible context-loss handling passed.',
     );
   },
   { timeoutMs: 60000 },

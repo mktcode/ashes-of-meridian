@@ -477,7 +477,7 @@
         }
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
-          const fogOn = !(world.fogCleared && world.viewTeam === 0);
+          const fogOn = !(capture?.active && capture.reveal) && !(world.fogCleared && world.viewTeam === 0);
           const displayEntities = capture?.active ? s.entities.filter(e=>capture!.visible(e)) : s.entities;
           const displayState = displayEntities === s.entities ? s : {...s,entities:displayEntities};
           worldView.sync(world, fogOn, displayState);

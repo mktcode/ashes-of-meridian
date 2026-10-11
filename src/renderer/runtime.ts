@@ -1083,6 +1083,7 @@
       captureCamera?: ResolvedCaptureCamera;
       captureDpr?: number;
       distanceMist = true;
+      horizonMist = true;
       camera(x: number, z: number, zoom: number, cinema = false, t = 0, yaw = 0) {
         if (this.captureCamera && !cinema) {
           const c = this.captureCamera, aspect = this.viewport.width / this.viewport.height;
@@ -1296,6 +1297,7 @@
         g.uniform1f(this.uniform(program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_fogOn'), this.fogOn ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_distanceMist'), this.distanceMist !== false ? 1 : 0);
+        g.uniform1f(this.uniform(program, 'u_horizonMist'), this.horizonMist !== false ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_placementGridDetail'), this.placementGridDetail);
         g.uniform1f(this.uniform(program, 'u_workerRoadOn'), 0);
         g.activeTexture(g.TEXTURE0 + 13);
