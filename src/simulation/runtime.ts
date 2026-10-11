@@ -9,6 +9,7 @@
           this.stepTick(dt);
           this.snapshotSafe = true;
         } finally {
+          this.unitCollisionIndex?.clear();
           this.stepping = false;
           if (!this.snapshotSafe) this.pendingResult = null;
         }
@@ -85,6 +86,7 @@
             if (this.move(e, e.exit, dt, 0.05) && this.unitFits(e, e.exit.x, e.exit.z)) {
               e.x = e.exit.x; e.z = e.exit.z;
               delete e.exit;
+              this.updateUnitCollision(e);
               e.path = []; e.nextPath = 0;
             }
             continue;
@@ -238,9 +240,11 @@
                 (UNITS[unit.type] as UnitDefinitionShape).flying) continue;
             const old = { x: unit.x, z: unit.z };
             unit.x = hq.x; unit.z = hq.z;
+            this.updateUnitCollision(unit);
             const position = this.unitPosition(unit, reserved);
-            if (!position) { unit.x = old.x; unit.z = old.z; continue; }
+            if (!position) { unit.x = old.x; unit.z = old.z; this.updateUnitCollision(unit); continue; }
             unit.x = position.x; unit.z = position.z;
+            this.updateUnitCollision(unit);
             this.setOrder(unit, { type: 'idle' });
             reserved.push({ type: unit.type, size: unit.size, ...position });
             this.effects.drop(position, FACTIONS[this.factionFor(recall.team)].color, recall.team);

@@ -64,6 +64,7 @@
       world: Battlefield | null;
       ids: Map<number, Entity>;
       spatial: Map<string, Entity[]>;
+      unitCollisionIndex: LiveUnitCollisionIndex | null = null;
       acc: number;
       fogClock: number;
       resultClock: number;
@@ -180,6 +181,7 @@
         if (state.rules.kind === 'single-player' && (state.rules.completed || state.result?.win)) world.clearFog();
         const ids = new Map(state.entities.map(e => [e.id, e]));
         this.pendingResult = null;
+        this.unitCollisionIndex = null;
         this.s = state; this.world = world; this.ids = ids;
         this.spatial = new Map(save.spatial.map(([key, members]) => [key, members.map(id => ids.get(id)!)]));
         this.random = seeded(save.randomState);
@@ -214,6 +216,7 @@
         this.snapshotSafe = false;
         const map = battlefieldId(opts.map),
           seed = opts.seed || Math.floor(Math.random() * 1e8);
+        this.unitCollisionIndex = null;
         this.world = new Battlefield(seed, map, parties.length);
         const layout = this.world.layout;
         const deployment = rules.kind === 'scenario' ? 'exploration' : opts.deployment ??
@@ -354,6 +357,7 @@
         } as unknown as EntityForKind<K>;
         s.entities.push(e);
         this.ids.set(e.id, e);
+        if (e.kind === 'unit') this.updateUnitCollision(e);
         return e;
       },
       spawnBuilding(this: MeridianGame, type: BuildingType, x: number, z: number, team: TeamId, faction: FactionId, extra: SpawnExtra = {}) {
