@@ -339,30 +339,51 @@ function sceneryRelief(world: Battlefield, relief: WorldRelief): WorldRelief {
   return { ...relief, innerRelief: skin && 'relief' in skin ? skin.relief : undefined };
 }
 
-// Continue a narrow decorative rim with existing clusters, without new RNG draws,
-// assets, blockers or an area-scaled density budget. Keep complete multipart plants.
+// Compose irregular exterior groves from complete existing plant/stone clusters.
+// A private cosmetic stream and fixed budget never touch layout, blockers or RNG.
 function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
   const backdrop = world.renderData.geometries.find(d => d.model === 'landscapeRelief' && 'relief' in d && d.relief.innerExtent),
     result: WorldPlacement[] = [], extent = world.extent;
   if (!backdrop || !('relief' in backdrop) || !world.surface) return result;
   const relief = sceneryRelief(world, backdrop.relief);
+  const random = seeded((world.terrainSeed ?? 0) ^ 0x5341554d),
+    depth = Math.min(80, relief.extent - extent - relief.step * 2);
+  if (depth <= 0 || world.renderProfile?.variation?.family === 'ship') return result;
   for (let side = 0; side < 4; side++) {
     const axis = side % 2 ? 2 : 0, sign = side < 2 ? -1 : 1, groups = new Map<string, WorldPlacement[]>();
     for (const p of world.renderData.placements) {
       if (p.layer !== 'static' || !p.mesh.startsWith('ecology') || /^ecology(Relic|Spire)/.test(p.mesh) ||
           Math.max(Math.abs(p.position[0]), Math.abs(p.position[2])) > extent) continue;
       const distance = extent - sign * p.position[axis];
-      if (distance < 0 || distance > 24) continue;
+      if (distance < 0 || distance > 32) continue;
       const key = `${p.position[0]}:${p.position[2]}`, group = groups.get(key) ?? [];
       group.push(p); groups.set(key, group);
     }
-    const clusters = [...groups.values()].sort((a, b) => a[0].position[axis === 0 ? 2 : 0] - b[0].position[axis === 0 ? 2 : 0]),
-      count = Math.min(6, clusters.length);
-    for (let i = 0; i < count; i++) for (const p of clusters[Math.floor((i + .5) * clusters.length / count)]) {
-      const outside = sign * extent + (sign * extent - p.position[axis]) * .35,
-        x = axis === 0 ? outside : p.position[0], z = axis === 2 ? outside : p.position[2],
-        y = p.position[1] + landscapeReliefHeightAt(relief, x, z) + .13 - world.surface.heightAt(p.position[0], p.position[2]);
-      result.push({ ...p, position: [x, y, z] });
+    const candidates = [...groups.values()], silhouettes = candidates.filter(group =>
+      group.some(p => /^ecology(Trunk|Grove|Conifer|Acacia|Fungus|Stone)/.test(p.mesh))),
+      clusters = (silhouettes.length ? silhouettes : candidates)
+        .sort((a, b) => a[0].position[axis === 0 ? 2 : 0] - b[0].position[axis === 0 ? 2 : 0]);
+    if (!clusters.length) continue;
+    // Six uneven groves per side, four complete plants each. Gaps and varied
+    // depths break the rectangular planting line without area-scaled growth.
+    for (let grove = 0; grove < 6; grove++) {
+      const along = ((grove + .2 + random() * .6) / 6 * 2 - 1) * extent,
+        reach = depth * (.18 + random() * .64),
+        template = clusters.reduce((best, group) => Math.abs(group[0].position[axis === 0 ? 2 : 0] - along) <
+          Math.abs(best[0].position[axis === 0 ? 2 : 0] - along) ? group : best);
+      for (let plant = 0; plant < 4; plant++) {
+        const tangent = clamp(along + (random() - .5) * 24, -extent + 2, extent - 2),
+          outside = sign * (extent + clamp(reach + (random() - .5) * 18, 2, depth)),
+          x = axis === 0 ? outside : tangent, z = axis === 2 ? outside : tangent,
+          scale = .8 + random() * .4, yaw = random() * Math.PI * 2;
+        for (const p of template) {
+          const y = landscapeReliefHeightAt(relief, x, z) + .13 +
+            (p.position[1] - world.surface.heightAt(p.position[0], p.position[2])) * scale;
+          result.push({ ...p, position: [x, y, z],
+            scale: [p.scale[0] * scale, p.scale[1] * scale, p.scale[2] * scale],
+            rotation: [p.rotation[0] + yaw, p.rotation[1], p.rotation[2]] });
+        }
+      }
     }
   }
   return result;
@@ -624,7 +645,9 @@ class BattlefieldView {
           + this.exteriorCeiling * .82 / 1.1),
       exteriorExtent = Math.ceil((EXTENT + viewRadius + 8) / 4) * 4,
       viewDescriptor = (d: WorldGeometry): WorldGeometry => this.exteriorMeshes.includes(d) && 'relief' in d
-        ? { ...d, relief: { ...sceneryRelief(world, d.relief), outerExtent: exteriorExtent } } : d;
+        ? { ...d, relief: { ...sceneryRelief(world, d.relief), outerExtent: exteriorExtent } }
+        : d.mesh === 'terrain' && d.model === 'landscapeRelief' && 'relief' in d && this.exteriorMeshes.length
+          ? { ...d, relief: { ...d.relief, omitSkirt: true } } : d;
     if (this.data !== layout) {
       R.clearStatic();
       for (const patch of this.buildingGround.values()) if (patch.mesh) this.releaseBuildingGround(patch.mesh);

@@ -70,7 +70,7 @@ TerrainModels.landscapeRelief=(relief:WorldRelief)=>{
   }
   const outerExtent=Math.max(extent,relief.outerExtent??extent),edge=size-2,
     joinLength=joins*((innerRelief?step/innerRelief.step:1)-1)*27,
-    rimLength=!innerExtent||outerExtent>extent?4*(size-3)*54:0,
+    rimLength=(!innerExtent&&!relief.omitSkirt)||outerExtent>extent?4*(size-3)*54:0,
     vertices=new Float32Array(size*size*9),out=new Float32Array(cells*54+joinLength+rimLength);
   for(let z=0;z<size;z++)for(let x=0;x<size;x++)
     vertices.set(landscapeReliefVertex(relief,x,z),(z*size+x)*9);
@@ -102,7 +102,7 @@ TerrainModels.landscapeRelief=(relief:WorldRelief)=>{
       geom.tri(rim,pa,qb,qa,color);
     }
   };
-  if(!innerExtent||outerExtent>extent)strip([[1,1],[edge,1],[edge,edge],[1,edge]],edge-1,!!innerExtent);
+  if((!innerExtent&&!relief.omitSkirt)||outerExtent>extent)strip([[1,1],[edge,1],[edge,edge],[1,edge]],edge-1,!!innerExtent);
   out.set(rim,offset);
   return out;
 };

@@ -76,7 +76,7 @@ test('scenery halo uses only the local party sources and resets on perspective c
   assert.ok(world.fogPixels.every(v=>v===0));
 });
 
-test('edge decoration reuses complete existing clusters with a fixed small budget and no CPU mutation', () => {
+test('edge decoration composes complete deterministic groves with a fixed budget and no CPU mutation', () => {
   const {sceneryEdgeDecor}=setup(),placements=[];
   for(let z=-95;z<=95;z+=5)for(const mesh of ['ecologyTrunk0','ecologyGrove0'])
     placements.push({mesh,position:[-95,19.65,z],scale:[1,1,1],color:0xffffff,rotation:[0,0,0],glow:0,alpha:1,layer:'static',material:'LEAF'});
@@ -90,7 +90,10 @@ test('edge decoration reuses complete existing clusters with a fixed small budge
     assert.ok(p.mesh.startsWith('ecology'));
     const key=p.position.join(':');groups.set(key,[...(groups.get(key)||[]),p.mesh]);
   }
-  assert.ok(groups.size>0&&groups.size<=24);
+  assert.ok(groups.size>0&&groups.size<=96);
+  assert.ok(new Set(decor.map(p=>p.position[0])).size>6,'groves have varied depths, not a planting line');
+  assert.deepEqual(JSON.parse(JSON.stringify(sceneryEdgeDecor(world))),JSON.parse(JSON.stringify(decor)));
+  assert.equal(sceneryEdgeDecor({...world,renderProfile:{variation:{family:'ship'}}}).length,0);
   for(const parts of groups.values())assert.deepEqual(parts.sort(),['ecologyGrove0','ecologyTrunk0']);
   assert.equal(JSON.stringify(world),before);
 });
@@ -113,6 +116,9 @@ test('landscape skin retains its top triangles and closes all raised edges to th
     topLength = (field.size - 3) ** 2 * 54;
   for (let i = 1; i < topLength; i += 9) assert.equal(mesh[i], 20);
   assert.equal(mesh.length - topLength, 4 * (field.size - 3) * 54);
+  const stitched=TerrainModels.geometry({mesh:'terrain',model:'landscapeRelief',relief:{...field,omitSkirt:true}});
+  assert.equal(stitched.length,topLength,'stitched skin has no buried wall casting a rectangular seam');
+  assert.deepEqual(stitched,mesh.subarray(0,topLength));
   for (const [axis, value] of [[0,-10],[0,10],[2,-10],[2,10]]) {
     assert.ok(Array.from({ length: (mesh.length - topLength) / 9 }, (_, j) => topLength + j * 9)
       .some(i => mesh[i + axis] === value && Math.abs(mesh[i + 1] + .13) < 1e-6));
@@ -186,6 +192,7 @@ test('world view resizes only the sparse exterior for maximum zoom and releases 
       ], placements: [] } }, before = JSON.stringify(world), view = new BattlefieldView(renderer);
   view.sync(world, false); view.sync(world, false);
   assert.deepEqual(uploads.map(u => u.name), ['terrain', 'backdrop']);
+  assert.equal(uploads[0].mesh.length,(relief(10).size-3)**2*54,'view omits only a stitched skin skirt');
   const narrow = uploads.at(-1);
   renderer.viewport.width = 4000;
   view.sync(world, false); view.sync(world, false);

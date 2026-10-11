@@ -188,6 +188,30 @@ function dynamicTerrainPlan(world: Battlefield) {
     return h;
   }, industrial };
 }
+// Exterior-only macroforms. The quiet first coarse cell preserves the stitched
+// seam; no sample of the CPU surface or any existing random stream is changed.
+function dynamicSceneryHeight(seed: number, family: WorldVariationFamily, extent: number) {
+  const random = seeded(seed ^ 0x45444745), phase = random() * Math.PI * 2,
+    angle = random() * Math.PI, cs = Math.cos(angle), sn = Math.sin(angle),
+    smooth = (t: number) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+  return (x: number, z: number) => {
+    const outside = Math.hypot(Math.max(0, Math.abs(x) - extent), Math.max(0, Math.abs(z) - extent));
+    if (outside <= 5) return 0;
+    const u = x * cs + z * sn, v = z * cs - x * sn,
+      onset = smooth((outside - 5) / 24),
+      bend = 12 * Math.sin(u / 57 + phase) + 9 * Math.sin(v / 83 - phase),
+      ridge = Math.exp(-Math.pow((outside - 46 - bend) / 22, 2)),
+      breaks = .35 + .65 * smooth((Math.sin(u / 69 + phase) + 1) / 2);
+    if (family === 'ship') {
+      // Broken stepped aprons, rather than vegetation on an industrial deck.
+      const terrace = smooth((outside - 16 - bend) / 8) + smooth((outside - 54 + bend) / 8);
+      return -7 * terrace * onset;
+    }
+    if (family === 'desert') return onset * (9 * ridge + 3 * Math.sin(u / 24 + Math.sin(v / 48)));
+    if (family === 'alien') return onset * (25 * ridge * breaks + 5 * Math.sin(v / 31 + phase));
+    return onset * (18 * ridge * breaks + 3 * Math.sin(v / 43 + phase));
+  };
+}
 function createDynamicBattlefield(name: string, family: WorldVariationFamily): BattlefieldDefinition {
   const industrial = family === 'ship', palette: BattlefieldPalette = industrial
     ? { ground: 0x424f5d, rock: 0x7c8e9b, accent: 0xf0b764, flora: 0x79aab5 }
@@ -201,7 +225,8 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
       landscape: { earth: 'westmarkEarth', bark: 'westmarkBark' },
       haze: [0.055, 0.09, 0.13] },
     generate(builder) {
-      const w = builder.world, plan = dynamicTerrainPlan(w), s = w.surface = connectBattlefieldTerrain(w, plan.height);
+      const w = builder.world, plan = dynamicTerrainPlan(w), s = w.surface = connectBattlefieldTerrain(w, plan.height),
+        sceneryHeight = dynamicSceneryHeight(w.terrainSeed, family, w.extent);
       w.staticGrid.set(s.cliffs); w.terrainFeatureGrid.set(s.cliffs);
       builder.ground();
       w.renderData.placements.find(p => p.mesh === 'terrain')!.material = plan.industrial ? 'METAL' : 'LANDSCAPE';
@@ -216,7 +241,7 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
             // A repaired edge continues into the backdrop, then returns smoothly
             // to the original exterior. Never leave a seam at a border ramp.
             exterior = inside ? 0 : plan.height(px, pz) +
-              (s.heightAt(ex, ez) - plan.height(ex, ez)) * fade * fade * (3 - 2 * fade);
+              (s.heightAt(ex, ez) - plan.height(ex, ez)) * fade * fade * (3 - 2 * fade) + sceneryHeight(px, pz);
           heights[i] = (inside ? s.heightAt(px, pz) : exterior) - .13;
           if (plan.industrial) colors.set([.65, .75, .85], i * 3);
           else colors[i * 3 + 1] = clamp((heights[i] - 25) / 22, 0, 1);

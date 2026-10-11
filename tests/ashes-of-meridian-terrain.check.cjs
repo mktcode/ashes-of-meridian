@@ -57,6 +57,40 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
   });
 }
 
+test('exterior macroforms are seed-owned, family-specific and zero throughout the playable seam', () => {
+  const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'],{scripts}),
+    make=vm.runInContext('dynamicSceneryHeight',context),profiles=[];
+  for(const family of ['desert','alien','ship','westmark','frontier','haven']) {
+    const height=make(19,family,160),repeat=make(19,family,160),other=make(31,family,160),values=[];
+    for(let z=-160;z<=160;z+=20)for(let x=-160;x<=160;x+=20)assert.equal(height(x,z),0);
+    for(const sign of [-1,1])for(let along=-160;along<=160;along+=10) {
+      assert.equal(height(sign*165,along),0);assert.equal(height(along,sign*165),0);
+      for(const depth of [10,25,50,80,100]) {
+        const x=sign*(160+depth),value=height(x,along);
+        assert.ok(Number.isFinite(value)&&Math.abs(value)<32);assert.equal(value,repeat(x,along));
+        if(family==='ship')assert.ok(value<=0);
+        values.push(value);
+      }
+    }
+    assert.ok(values.some(v=>Math.abs(v)>3));assert.notEqual(height(210,40),other(210,40));
+    profiles.push(values);
+  }
+  assert.notDeepEqual(profiles[0],profiles[1]);assert.notDeepEqual(profiles[1],profiles[2]);
+});
+
+test('exterior shaping cannot change terrain, economy, deployment or ecology recipes', () => {
+  const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'],{scripts}),
+    normal=vm.runInContext('new Battlefield(19,"haven",4)',context);
+  vm.runInContext('dynamicSceneryHeight=()=>()=>0',context);
+  const quiet=vm.runInContext('new Battlefield(19,"haven",4)',context);
+  assert.equal(topology(normal),topology(quiet));
+  assert.deepEqual(json(normal.startSites),json(quiet.startSites));
+  const skin=w=>w.renderData.geometries.find(g=>g.mesh==='terrain').relief,
+    backdrop=w=>w.renderData.geometries.find(g=>g.mesh==='dynamicBackdrop').relief;
+  assert.deepEqual(json(skin(normal)),json(skin(quiet)));
+  assert.notDeepEqual(Array.from(backdrop(normal).heights),Array.from(backdrop(quiet).heights));
+});
+
 test('resource geometry varies orientation and vent spacing without consuming shared randomness', () => {
   const api = scope(), sites = api.dynamicBattlefieldLayout(1409, 140).resourceSites,
     orientations = new Set(), ventAngles = new Set(), ventRadii = new Set();

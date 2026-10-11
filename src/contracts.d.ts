@@ -742,6 +742,8 @@ interface WorldRelief {
   innerExtent: number;
   /** View-owned exterior continuation; never part of the playable height field. */
   outerExtent?: number;
+  /** A stitched exterior already closes this skin; omit its buried shadow-casting wall. */
+  omitSkirt?: boolean;
   /** View-owned stitch source: exact playable edge vertices, never a CPU terrain change. */
   innerRelief?: WorldRelief;
   /** Model-specific vertex data: natural landscape weights (negative snow = damp sediment),
