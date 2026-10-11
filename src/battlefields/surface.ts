@@ -95,16 +95,37 @@ class BattlefieldSurface {
       top = Math.max(0,col(Math.min(a[2]+dz*near,a[2]+dz*far))),
       bottom = Math.min(this.size-2,col(Math.max(a[2]+dz*near,a[2]+dz*far)));
     let best = Infinity;
-    for (let row = top; row <= bottom; row++) for (let x = left; x <= right; x++) {
-      const i = row*this.size+x, h = this.heights, wx = x*this.step-this.extent, wz = row*this.step-this.extent;
-      for (const [gx,gz,upper] of [[(h[i+this.size+1]-h[i+this.size])/this.step,(h[i+this.size]-h[i])/this.step,1],
-        [(h[i+1]-h[i])/this.step,(h[i+this.size+1]-h[i+1])/this.step,0]]) {
-        const denominator = dy-gx*dx-gz*dz;
-        if (Math.abs(denominator) < 1e-9) continue;
-        const t = (h[i]+gx*(a[0]-wx)+gz*(a[2]-wz)-a[1])/denominator,
-          u = (a[0]+dx*t-wx)/this.step, v = (a[2]+dz*t-wz)/this.step;
-        if (t >= 0 && t <= 1 && t < best && u >= -1e-7 && u <= 1+1e-7 && v >= -1e-7 && v <= 1+1e-7 &&
-          (upper ? v >= u-1e-7 : u >= v-1e-7)) best = t;
+    // Visit only the line's conservative span in each row. Keep row-major order
+    // and the exact triangle tests; no candidate Set, sorting or early hit exit.
+    // Full [0,1] clipping preserves hits within triangle tolerance beyond the
+    // nominal height slab. Never clip strictly to the map before these tests.
+    const narrow = right - left < 2 || bottom - top < 2, guard = this.step * 2e-7;
+    for (let row = top; row <= bottom; row++) {
+      let first = left, last = right;
+      if (!narrow) {
+        const low = row*this.step-this.extent-guard, high = (row+1)*this.step-this.extent+guard;
+        let enter = 0, leave = 1;
+        if (dz === 0) { if (a[2] < low || a[2] > high) continue; }
+        else {
+          const p = (low-a[2])/dz, q = (high-a[2])/dz;
+          enter = Math.max(0,Math.min(p,q)); leave = Math.min(1,Math.max(p,q));
+          if (enter > leave) continue;
+        }
+        const start = a[0]+dx*enter, end = a[0]+dx*leave;
+        first = Math.max(left,Math.ceil((Math.min(start,end)+this.extent-guard)/this.step)-1);
+        last = Math.min(right,col(Math.max(start,end)+guard));
+      }
+      for (let x = first; x <= last; x++) {
+        const i = row*this.size+x, h = this.heights, wx = x*this.step-this.extent, wz = row*this.step-this.extent;
+        for (const [gx,gz,upper] of [[(h[i+this.size+1]-h[i+this.size])/this.step,(h[i+this.size]-h[i])/this.step,1],
+          [(h[i+1]-h[i])/this.step,(h[i+this.size+1]-h[i+1])/this.step,0]]) {
+          const denominator = dy-gx*dx-gz*dz;
+          if (Math.abs(denominator) < 1e-9) continue;
+          const t = (h[i]+gx*(a[0]-wx)+gz*(a[2]-wz)-a[1])/denominator,
+            u = (a[0]+dx*t-wx)/this.step, v = (a[2]+dz*t-wz)/this.step;
+          if (t >= 0 && t <= 1 && t < best && u >= -1e-7 && u <= 1+1e-7 && v >= -1e-7 && v <= 1+1e-7 &&
+            (upper ? v >= u-1e-7 : u >= v-1e-7)) best = t;
+        }
       }
     }
     return Number.isFinite(best) ? {x:a[0]+dx*best,z:a[2]+dz*best} : null;
