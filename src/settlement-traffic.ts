@@ -288,7 +288,7 @@ class SettlementTraffic {
         part:ModelPart=(shape,x,y,z,sx,sy,sz,color,ry=0,rx=0,rz=0,glow=0)=>
           R.add(shape,actor.x+x*cs+z*sn,actor.y+y,actor.z-x*sn+z*cs,sx,sy,sz,color,
             actor.rot+ry,rx,rz,glow,actor.alpha,'dynamic',MAT.METAL);
-      const color=[0x9aafa4,0xb9a58b,0x819bac][-actor.id%3];
+      const color=[0x9aafa4,0xb9a58b,0x819bac,0xd83b35,0xf28c28][-actor.id%5];
       SettlementTrafficModels[actor.air?'drone':'civilian']({part,walk:actor.walk,color});
     }
   }
