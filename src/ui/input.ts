@@ -71,7 +71,11 @@
           if (this.view === 'codex' && b.dataset.codexType !== undefined) {
             const type = b.dataset.codexType;
             if (b.dataset.codexKind === 'unit' && hasContentKey(UNITS,type)) this.showCodexModel('unit',type);
-            else if (b.dataset.codexKind === 'building' && hasContentKey(BUILDINGS,type)) this.showCodexModel('building',type);
+            else if (b.dataset.codexKind === 'building' && hasContentKey(BUILDINGS,type)) {
+              const key=b.dataset.codexUpgrade;
+              const upgrade=this.civilianModelGallery && hasContentKey(CIVILIZATION_UPGRADES,key) && civilizationUpgradeAllowed(type,key) ? key : undefined;
+              this.showCodexModel('building',type,upgrade);
+            }
             return;
           }
           if (b.dataset.faction !== undefined) {

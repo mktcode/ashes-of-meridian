@@ -23,3 +23,21 @@ test('codex exposes current-model tiles for every faction without a profile unlo
   }
   assert.equal(renderStoryScreen(),renderStoryScreen(),'story rendering is deterministic without storage or RNG');
 });
+
+test('civilian gallery exposes eight previews and returns from specialized live models without gameplay',()=>{
+  const menu={innerHTML:'',classList:{remove(){}}},context=loadScripts(['core','content','voice-content',...UI_SCRIPTS],
+    {globals:{document:{getElementById:()=>menu}}});
+  const {renderCivilianModelGallery,MeridianUI}=vm.runInContext('({renderCivilianModelGallery,MeridianUI})',context);
+  vm.runInContext('Math.random=seeded=()=>{throw Error("Gallery RNG");}',context);
+  const html=renderCivilianModelGallery();
+  assert.equal((html.match(/class="codex-card"/g)||[]).length,8);
+  assert.equal((html.match(/data-model-upgrade=/g)||[]).length,6);
+  assert.equal((html.match(/Neutral · vor Aktivierung/g)||[]).length,2);
+  assert.ok(html.includes('data-model-type="hearthtower"'));assert.ok(html.includes('data-model-type="researchspire"'));
+  const ui=Object.assign(Object.create(MeridianUI.prototype),{civilianModelGallery:true,codexFaction:0,
+    resetCodexGesture(){},R:{clearStatic(){},useModelPreview(){}},game:{start(){assert.fail('gallery starts gameplay');}}});
+  ui.showCodexModel('building','hearthtower','startingAlloy');
+  assert.equal(ui.view,'codexModel');assert.equal(ui.codexSelection.upgrade,'startingAlloy');
+  assert.ok(menu.innerHTML.includes('Starting Cinder'));
+  ui.showCodex();assert.equal(ui.view,'codex');assert.equal(menu.innerHTML,html);
+});

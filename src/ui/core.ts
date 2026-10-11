@@ -61,8 +61,9 @@
       activeWorldStage: number | null = null;
       launchingWorld: ExpeditionWorld | null = null;
       view: 'home' | 'battle' | 'game' | 'codex' | 'codexModel' | 'story';
+      civilianModelGallery = false;
       codexFaction: FactionId;
-      codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType } | null;
+      codexSelection: { faction: FactionId; kind: 'unit' | 'building'; type: UnitType | BuildingType; upgrade?: CivilizationUpgradeType } | null;
       codexZoom = 1;
       codexRotation = 0;
       codexManualRotation = false;
