@@ -5,7 +5,7 @@ const { loadScripts } = require('./helpers/game-scripts.cjs');
 
 function setup() {
   const context = loadScripts(['core', 'renderer-materials', 'renderer-geometry',
-    'renderer-terrain-models', 'renderer-landscape', 'content', 'battlefield-shared', 'world', 'world-view'],
+    'renderer-terrain-models', 'renderer-landscape', 'content', 'battlefield-shared', 'battlefield-ecology', 'world', 'world-view'],
     { globals: { innerHeight: 1000 } });
   return vm.runInContext('({TerrainModels, BattlefieldView, SceneryFogField, sceneryEdgeDecor, landscapeReliefHeightAt})', context);
 }
@@ -76,25 +76,35 @@ test('scenery halo uses only the local party sources and resets on perspective c
   assert.ok(world.fogPixels.every(v=>v===0));
 });
 
-test('edge decoration composes complete deterministic groves with a fixed budget and no CPU mutation', () => {
-  const {sceneryEdgeDecor}=setup(),placements=[];
-  for(let z=-95;z<=95;z+=5)for(const mesh of ['ecologyTrunk0','ecologyGrove0'])
-    placements.push({mesh,position:[-95,19.65,z],scale:[1,1,1],color:0xffffff,rotation:[0,0,0],glow:0,alpha:1,layer:'static',material:'LEAF'});
-  placements.push({...placements[0],mesh:'hq'});
-  const field=relief(125,100),world={extent:100,surface:{heightAt:()=>20},
-    renderData:{placements,geometries:[{mesh:'backdrop',model:'landscapeRelief',relief:field}]}},before=JSON.stringify(world),
+test('outer habitat grows denser without border rows, source plants, incomplete trees or CPU mutation', () => {
+  const {sceneryEdgeDecor}=setup(),field=relief(200,100),geometries=[];
+  for(let v=0;v<3;v++)for(const part of ['Trunk','Grove','Stone','Brush'])
+    geometries.push({mesh:`ecology${part}${v}`,model:`ecology${part}`,seed:v,extent:0});
+  const world={extent:100,terrainSeed:19,surface:{heightAt:()=>20},
+    renderProfile:{ecology:{natural:true,flora:'Grove',biome:'verdant',phase:1,vegetationDensity:3,leaf:0x82b864,bloom:0xe0c681}},
+    renderData:{placements:[],geometries:[...geometries,{mesh:'backdrop',model:'landscapeRelief',relief:field}]}},before=JSON.stringify(world),
     decor=sceneryEdgeDecor(world),groups=new Map();
   for(const p of decor) {
-    assert.ok(Math.max(Math.abs(p.position[0]),Math.abs(p.position[2]))>100);
-    assert.ok(Math.max(Math.abs(p.position[0]),Math.abs(p.position[2]))<=124);
-    assert.ok(p.mesh.startsWith('ecology'));
-    const key=p.position.join(':');groups.set(key,[...(groups.get(key)||[]),p.mesh]);
+    const [x,,z]=p.position,reach=Math.max(Math.abs(x),Math.abs(z)),r=p.scale[0];
+    assert.ok(reach>=100+r+1,'whole decorative footprint is outside the playable crop');
+    assert.ok(reach<180);assert.ok(p.mesh.startsWith('ecology'));
+    const key=`${x}:${z}`;groups.set(key,[...(groups.get(key)||[]),p]);
   }
-  assert.ok(groups.size>0&&groups.size<=96);
-  assert.ok(new Set(decor.map(p=>p.position[0])).size>6,'groves have varied depths, not a planting line');
+  assert.ok(groups.size>100&&groups.size<=360,'fixed density-dependent instance cap');
+  let near=0,outer=0;
+  for(const parts of groups.values()) {
+    const [x,,z]=parts[0].position,d=Math.hypot(Math.max(0,Math.abs(x)-100),Math.max(0,Math.abs(z)-100));
+    if(d<=12)near++;if(d>=20&&d<=45)outer++;
+    if(parts.some(p=>p.mesh.startsWith('ecologyGrove'))) {
+      assert.equal(parts.length,2);assert.ok(parts.some(p=>p.mesh.startsWith('ecologyTrunk')));
+      assert.deepEqual(parts[0].position,parts[1].position);assert.deepEqual(parts[0].scale,parts[1].scale);
+      assert.deepEqual(parts[0].rotation,parts[1].rotation);
+    }
+  }
+  const area=d=>800*d+Math.PI*d*d;
+  assert.ok(outer/(area(45)-area(20))>near/area(12),'probability rises softly outward, not at a border line');
   assert.deepEqual(JSON.parse(JSON.stringify(sceneryEdgeDecor(world))),JSON.parse(JSON.stringify(decor)));
-  assert.equal(sceneryEdgeDecor({...world,renderProfile:{variation:{family:'ship'}}}).length,0);
-  for(const parts of groups.values())assert.deepEqual(parts.sort(),['ecologyGrove0','ecologyTrunk0']);
+  assert.equal(sceneryEdgeDecor({...world,renderProfile:{ecology:{...world.renderProfile.ecology,natural:false}}}).length,0);
   assert.equal(JSON.stringify(world),before);
 });
 

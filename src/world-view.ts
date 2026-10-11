@@ -339,52 +339,50 @@ function sceneryRelief(world: Battlefield, relief: WorldRelief): WorldRelief {
   return { ...relief, innerRelief: skin && 'relief' in skin ? skin.relief : undefined };
 }
 
-// Compose irregular exterior groves from complete existing plant/stone clusters.
-// A private cosmetic stream and fixed budget never touch layout, blockers or RNG.
+// The same world-anchored habitat continues outside the playable crop. Only its
+// planting probability changes, softly: no rectangular hedge or copied border
+// row. All instances remain view-owned, with a private stream and fixed budgets.
 function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
   const backdrop = world.renderData.geometries.find(d => d.model === 'landscapeRelief' && 'relief' in d && d.relief.innerExtent),
-    result: WorldPlacement[] = [], extent = world.extent;
-  if (!backdrop || !('relief' in backdrop) || !world.surface) return result;
-  const relief = sceneryRelief(world, backdrop.relief);
-  const random = seeded((world.terrainSeed ?? 0) ^ 0x5341554d),
-    depth = Math.min(80, relief.extent - extent - relief.step * 2);
-  if (depth <= 0 || world.renderProfile?.variation?.family === 'ship') return result;
-  for (let side = 0; side < 4; side++) {
-    const axis = side % 2 ? 2 : 0, sign = side < 2 ? -1 : 1, groups = new Map<string, WorldPlacement[]>();
-    for (const p of world.renderData.placements) {
-      if (p.layer !== 'static' || !p.mesh.startsWith('ecology') || /^ecology(Relic|Spire)/.test(p.mesh) ||
-          Math.max(Math.abs(p.position[0]), Math.abs(p.position[2])) > extent) continue;
-      const distance = extent - sign * p.position[axis];
-      if (distance < 0 || distance > 32) continue;
-      const key = `${p.position[0]}:${p.position[2]}`, group = groups.get(key) ?? [];
-      group.push(p); groups.set(key, group);
-    }
-    const candidates = [...groups.values()], silhouettes = candidates.filter(group =>
-      group.some(p => /^ecology(Trunk|Grove|Conifer|Acacia|Fungus|Stone)/.test(p.mesh))),
-      clusters = (silhouettes.length ? silhouettes : candidates)
-        .sort((a, b) => a[0].position[axis === 0 ? 2 : 0] - b[0].position[axis === 0 ? 2 : 0]);
-    if (!clusters.length) continue;
-    // Six uneven groves per side, four complete plants each. Gaps and varied
-    // depths break the rectangular planting line without area-scaled growth.
-    for (let grove = 0; grove < 6; grove++) {
-      const along = ((grove + .2 + random() * .6) / 6 * 2 - 1) * extent,
-        reach = depth * (.18 + random() * .64),
-        template = clusters.reduce((best, group) => Math.abs(group[0].position[axis === 0 ? 2 : 0] - along) <
-          Math.abs(best[0].position[axis === 0 ? 2 : 0] - along) ? group : best);
-      for (let plant = 0; plant < 4; plant++) {
-        const tangent = clamp(along + (random() - .5) * 24, -extent + 2, extent - 2),
-          outside = sign * (extent + clamp(reach + (random() - .5) * 18, 2, depth)),
-          x = axis === 0 ? outside : tangent, z = axis === 2 ? outside : tangent,
-          scale = .8 + random() * .4, yaw = random() * Math.PI * 2;
-        for (const p of template) {
-          const y = landscapeReliefHeightAt(relief, x, z) + .13 +
-            (p.position[1] - world.surface.heightAt(p.position[0], p.position[2])) * scale;
-          result.push({ ...p, position: [x, y, z],
-            scale: [p.scale[0] * scale, p.scale[1] * scale, p.scale[2] * scale],
-            rotation: [p.rotation[0] + yaw, p.rotation[1], p.rotation[2]] });
-        }
-      }
-    }
+    result: WorldPlacement[] = [], extent = world.extent, style = world.renderProfile?.ecology;
+  if (!backdrop || !('relief' in backdrop) || !world.surface || !style || style.natural === false) return result;
+  const relief = sceneryRelief(world, backdrop.relief), random = seeded(world.terrainSeed ^ 0x5341554d),
+    depth = Math.min(80, relief.extent - extent - relief.step * 2), reach = extent + depth,
+    family = style.flora ?? (style.biome === 'mycelium' ? 'Fungus' : style.biome === 'rime' ? 'Conifer' : style.biome === 'ochre' ? 'Acacia' : 'Grove'),
+    woody = family === 'Grove' || family === 'Acacia' || family === 'Conifer',
+    meshes = new Set(world.renderData.geometries.map(d => d.mesh)),
+    limit = Math.min(720, Math.floor(120 * style.vegetationDensity)),
+    occupied: { x: number; z: number; r: number }[] = [],
+    height = (x: number, z: number) => landscapeReliefHeightAt(relief, x, z) + .13,
+    smooth = (t: number) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); },
+    place = (part: string, variant: number, x: number, y: number, z: number, r: number, h: number,
+        color: number, yaw: number, material: WorldPlacement['material'], glow = 0) =>
+      result.push({ mesh: `ecology${part}${variant}`, position: [x, y, z], scale: [r, h, r],
+        color, rotation: [yaw, 0, 0], glow, alpha: 1, layer: 'static', material });
+  if (depth <= 4 || limit <= 0) return result;
+  for (let attempt = 0; attempt < 5000 && occupied.length < limit; attempt++) {
+    const x = (random() * 2 - 1) * reach, z = (random() * 2 - 1) * reach,
+      outside = Math.hypot(Math.max(0, Math.abs(x) - extent), Math.max(0, Math.abs(z) - extent));
+    if (outside <= 1 || outside >= depth - 4) continue;
+    const habitat = ecologyHabitat(style.phase, x, z),
+      density = (.18 + .72 * smooth((outside - 1) / 28)) * (.3 + .7 * habitat);
+    if (random() > density) continue;
+    const choice = random(), part = choice < .72 ? family : choice < .88 ? 'Stone' : 'Brush',
+      variant = attempt % 3, r = part === 'Stone' ? 1.6 + random() * 2.2 : .55 + random() * 1.1;
+    if (!meshes.has(`ecology${part}${variant}`) || (woody && part === family && !meshes.has(`ecologyTrunk${variant}`)) ||
+        Math.max(Math.abs(x), Math.abs(z)) < extent + r + 1 ||
+        occupied.some(p => Math.hypot(x - p.x, z - p.z) < r + p.r + .6)) continue;
+    const y = height(x, z), lo = Math.min(y, height(x - r, z), height(x + r, z), height(x, z - r), height(x, z + r)),
+      hi = Math.max(y, height(x - r, z), height(x + r, z), height(x, z - r), height(x, z + r));
+    if (hi - lo > (part === 'Stone' ? 2.8 : part === 'Brush' ? .6 : 4.8)) continue;
+    const yaw = random() * Math.PI * 2;
+    if (part === family) {
+      const h = 5 + habitat * 5 + random() * 2;
+      if (woody) place('Trunk', variant, x, y - .35, z, r, h, 0xb0a18c, yaw, 'BARK');
+      place(family, variant, x, y - .35, z, r, h, style.leaf, yaw, 'LEAF', style.biome === 'mycelium' ? .18 : 0);
+    } else if (part === 'Stone') place(part, variant, x, lo - .35, z, r, 1.3 + r * .55 + hi - lo, 0xffffff, yaw, 'ROCK');
+    else place(part, variant, x, lo - .06, z, r, .34 + random() * .1, habitat > .73 ? style.bloom : style.leaf, yaw, 'BRUSH');
+    occupied.push({ x, z, r });
   }
   return result;
 }

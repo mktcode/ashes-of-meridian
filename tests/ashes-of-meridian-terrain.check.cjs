@@ -57,38 +57,31 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
   });
 }
 
-test('exterior macroforms are seed-owned, family-specific and zero throughout the playable seam', () => {
+test('playable crop and exterior sample one landscape field, with only local ramp continuation at the seam', () => {
   const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'],{scripts}),
-    make=vm.runInContext('dynamicSceneryHeight',context),profiles=[];
-  for(const family of ['desert','alien','ship','westmark','frontier','haven']) {
-    const height=make(19,family,160),repeat=make(19,family,160),other=make(31,family,160),values=[];
-    for(let z=-160;z<=160;z+=20)for(let x=-160;x<=160;x+=20)assert.equal(height(x,z),0);
-    for(const sign of [-1,1])for(let along=-160;along<=160;along+=10) {
-      assert.equal(height(sign*165,along),0);assert.equal(height(along,sign*165),0);
-      for(const depth of [10,25,50,80,100]) {
-        const x=sign*(160+depth),value=height(x,along);
-        assert.ok(Number.isFinite(value)&&Math.abs(value)<32);assert.equal(value,repeat(x,along));
-        if(family==='ship')assert.ok(value<=0);
-        values.push(value);
-      }
+    {world,plan}=vm.runInContext('(()=>{const world=new Battlefield(19,"haven",4);return {world,plan:dynamicTerrainPlan(world)};})()',context),
+    field=world.renderData.geometries.find(g=>g.mesh==='dynamicBackdrop').relief,
+    skin=world.renderData.geometries.find(g=>g.mesh==='terrain').relief,extent=world.extent;
+  let inside=0,outside=0,joins=0;
+  for(let row=1;row<field.size-1;row++)for(let col=1;col<field.size-1;col++) {
+    const x=(col-1)*field.step-field.extent,z=(row-1)*field.step-field.extent,
+      edge=Math.max(Math.abs(x),Math.abs(z)),ex=Math.max(-extent,Math.min(extent,x)),ez=Math.max(-extent,Math.min(extent,z));
+    let expected;
+    if(edge<=extent) {expected=world.surface.heightAt(x,z);inside++;}
+    else {
+      const fade=Math.max(0,1-(edge-extent)/32);
+      expected=plan.height(x,z)+(world.surface.heightAt(ex,ez)-plan.height(ex,ez))*fade*fade*(3-2*fade);
+      outside++;if(fade>0)joins++;
     }
-    assert.ok(values.some(v=>Math.abs(v)>3));assert.notEqual(height(210,40),other(210,40));
-    profiles.push(values);
+    assert.ok(Math.abs(field.heights[row*field.size+col]+.13-expected)<1e-5,
+      'no perimeter-specific uplift, depression or alternate landscape field');
   }
-  assert.notDeepEqual(profiles[0],profiles[1]);assert.notDeepEqual(profiles[1],profiles[2]);
-});
-
-test('exterior shaping cannot change terrain, economy, deployment or ecology recipes', () => {
-  const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'],{scripts}),
-    normal=vm.runInContext('new Battlefield(19,"haven",4)',context);
-  vm.runInContext('dynamicSceneryHeight=()=>()=>0',context);
-  const quiet=vm.runInContext('new Battlefield(19,"haven",4)',context);
-  assert.equal(topology(normal),topology(quiet));
-  assert.deepEqual(json(normal.startSites),json(quiet.startSites));
-  const skin=w=>w.renderData.geometries.find(g=>g.mesh==='terrain').relief,
-    backdrop=w=>w.renderData.geometries.find(g=>g.mesh==='dynamicBackdrop').relief;
-  assert.deepEqual(json(skin(normal)),json(skin(quiet)));
-  assert.notDeepEqual(Array.from(backdrop(normal).heights),Array.from(backdrop(quiet).heights));
+  assert.ok(inside>0&&outside>0&&joins>0);
+  for(let row=1;row<skin.size-1;row+=13)for(let col=1;col<skin.size-1;col+=13) {
+    const x=(col-1)*skin.step-extent,z=(row-1)*skin.step-extent;
+    assert.ok(Math.abs(skin.heights[row*skin.size+col]+.13-world.surface.heightAt(x,z))<1e-5);
+  }
+  assert.deepEqual(world.staticGrid,world.surface.cliffs);
 });
 
 test('resource geometry varies orientation and vent spacing without consuming shared randomness', () => {
