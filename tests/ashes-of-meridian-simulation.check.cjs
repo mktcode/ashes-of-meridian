@@ -20,7 +20,7 @@ const terrainFingerprint = world => createHash('sha256')
   .digest('hex');
 
 // Explicit flat rule arena, not a claim about any catalog map's terrain or dimensions.
-function flatArena(extent) {
+function flatArena(extent, faction = 0) {
   const runtime=createGame(), {game,context}=runtime;
   vm.runInContext(`const originalArenaRecipe=BATTLEFIELDS['alien-planet'];
     BATTLEFIELDS['alien-planet']={...originalArenaRecipe,
@@ -32,7 +32,7 @@ function flatArena(extent) {
         w.staticGrid.set(w.surface.cliffs); w.terrainFeatureGrid.set(w.surface.cliffs);
         builder.ground();
       }};`,context);
-  try { game.start({seed:43015,map:'alien-planet',deployment:'resource-start'}); }
+  try { game.start({seed:43015,map:'alien-planet',faction,deployment:'resource-start'}); }
   finally { vm.runInContext("BATTLEFIELDS['alien-planet']=originalArenaRecipe",context); }
   game.s.supplyCaches=[]; // Boundary/production rules, not exploration rewards.
   return runtime;
@@ -57,6 +57,16 @@ function battle(faction = 0, seed = 1409, map = 'desert') {
   const runtime = headquartersBattle(faction, seed, 'resource-start', map);
   populateBase(runtime.game);
   populateOpponent(runtime.game);
+  return runtime;
+}
+
+// Local production rules: paid, legally placed buildings with explicitly skipped
+// construction time and fixture funds; no mining workers or standing armies.
+// Both HQs are established fixtures, not evidence of a live deployment completion.
+function productionBattle(faction = 0) {
+  const runtime = flatArena(135, faction);
+  establishHeadquarters(runtime.game);
+  populateProductionBase(runtime.game);
   return runtime;
 }
 
@@ -521,7 +531,7 @@ test('coincident spawns use deterministic free positions, stay separate at rest 
 });
 
 test('repeated production without rally spawns distinct idle units at the assigned building', () => {
-  const game = spacingArena(), barracks = player(game,'barracks');
+  const { game } = productionBattle(), barracks = player(game,'barracks');
   for (let i=0;i<5;i++) assert.equal(game.train('rifle'),true);
   for (const q of barracks.queue) q.time=.05;
   for (let i=0;i<400;i++) { game.step(.05); assertUnitSpacing(game); }
@@ -669,15 +679,23 @@ test('placement respects terrain, map edges and flight layers; dead units do not
 });
 
 test('blocked production keeps its paid order until space is free', () => {
-  const game = spacingArena(), barracks = player(game,'barracks');
+  const { game } = productionBattle(), barracks = player(game,'barracks'), before = game.account().alloy;
   assert.equal(game.train('rifle'),true); barracks.queue[0].time=.05;
+  const paid = game.account().alloy, order = barracks.queue[0];
+  assert.equal(paid, before - game.cost('rifle').cost);
   const blockedAt = game.world.blockedAt; game.world.blockedAt=()=>true;
   let samples=0; game.random=()=>{samples++;return .5;};
   advance(game,2);
   assert.equal(barracks.queue.length,1); assert.equal(barracks.queue[0].progress,1);
+  assert.strictEqual(barracks.queue[0],order);
+  assert.equal(game.account().alloy,paid); assert.equal(game.supply(),2);
+  assert.equal(game.s.stats.trained,0);
   assert.equal(game.alive(e=>e.kind==='unit').length,0); assert.equal(samples,0);
   game.world.blockedAt=blockedAt; game.step(.05);
   assert.equal(barracks.queue.length,0); assert.equal(game.s.stats.trained,1);
+  assert.equal(game.account().alloy,paid); assert.equal(game.supply(),2);
+  assert.equal(rifleCount(game),1); assert.equal(samples,1);
+  const unit = player(game,'rifle'); assert.ok(game.unitFits(unit,unit.x,unit.z));
   assertUnitSpacing(game);
 });
 
@@ -1403,17 +1421,18 @@ test('workers still repair completed damaged structures and units for the same a
 
 for (const [faction, cost] of [[0, 75], [1, 64], [2, 85]]) {
   test(`faction ${faction}: recruitment spends reference cost, reserves supply and refunds cancellation`, () => {
-    const { game, events } = battle(faction);
+    const { game, events } = productionBattle(faction);
     const barracks = player(game, 'barracks');
+    assert.equal(game.supply(), 0); assert.equal(rifleCount(game), 0);
     assert.equal(game.train('rifle'), true);
     assert.deepEqual(json(barracks.queue), [{ type: 'rifle', progress: 0, time: 11, cost, gas: 0 }]);
-    assert.deepEqual([game.s.parties[0].account.alloy, game.s.parties[0].account.gas, game.supply(), rifleCount(game)], [1100 - cost, 400, 33, 7]);
+    assert.deepEqual([game.s.parties[0].account.alloy, game.s.parties[0].account.gas, game.supply(), rifleCount(game)], [1100 - cost, 400, 2, 0]);
     advance(game, 20);
     assert.ok(barracks.queue[0].progress > 0 && barracks.queue[0].progress < 1);
     const beforeCancel = game.s.parties[0].account.alloy;
     game.cancelQueue(barracks.id, 0);
     close(game.s.parties[0].account.alloy, beforeCancel + cost);
-    assert.equal(game.supply(), 31);
+    assert.equal(game.supply(), 0);
     assert.equal(barracks.queue.length, 0);
     assert.ok(events.some(e => e.type === 'queued' && e.data === 'rifle'));
   });
@@ -1422,10 +1441,14 @@ for (const [faction, cost] of [[0, 75], [1, 64], [2, 85]]) {
 for (const [reason, setup] of [
   ['insufficient alloy', game => { game.s.parties[0].account.alloy = 74; }],
   ['full production queue', game => { for (let i = 0; i < 5; i++) assert.equal(game.train('rifle'), true); }],
-  ['supply limit', game => { for (let i = 0; i < 12; i++) game.spawnUnit('rifle', -45, 35, 0, 0); }],
+  ['supply limit', game => {
+    const count = Math.ceil((game.cap() - game.supply()) / 2);
+    for (let i = 0; i < count; i++) assert.ok(game.spawnUnit('rifle', -45, 35, 0, 0));
+    assert.match(game.recruitmentReason('rifle'), /Supply limit/);
+  }],
 ]) {
   test(`recruitment rejected for ${reason} leaves run state unchanged`, () => {
-    const { game, events } = battle();
+    const { game, events } = productionBattle();
     setup(game);
     const before = json(game.s);
     assert.equal(game.train('rifle'), false);
