@@ -8,6 +8,7 @@ const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effe
   'renderer-geometry','renderer-terrain-models','renderer-upland','renderer-ecology','renderer-world-variation','effects-view','ui-core','ui-templates'],
   {globals:{CONTACT_SHADOW_MATERIAL:-1,SNOWFLAKE_MATERIAL:-6,RAIN_STREAK_MATERIAL:-7,RAIN_SPLASH_MATERIAL:-8}});
 const api=vm.runInContext(`({Battlefield,BATTLEFIELDS,battlefieldEcology,ecologyHabitat,ecologyFootprint,TerrainModels,
+  ecologyBiotope,ecologyBiotopeAt,ecologyBiotopeColor,ecologyFloraAt,ecologyFloraFamilies,
   MeridianEffects,BattlefieldBuilder,decorateEcology,battlefieldGasPosition,renderEcologyWeather,renderBattleScars,battleScarViews,
   renderWeaponSignature,UNIT_BODY_SCALE})`,context);
 const json=v=>JSON.parse(JSON.stringify(v));
@@ -42,6 +43,41 @@ test('ecology resolves four repeatable biomes and weather without mutating profi
     const decorated=new api.Battlefield(seed,map),undecorated=bare(()=>new api.Battlefield(seed,map));
     assert.equal(topology(decorated),topology(undecorated));assert.deepEqual(json(decorated.startSites),json(undecorated.startSites));
     assert.notDeepEqual(Array.from(decorated.terrainColors),Array.from(undecorated.terrainColors));
+  }
+});
+
+test('biotope communities form continuous normalized regions and respond to height and slope',()=>{
+  const style={...api.battlefieldEcology(api.BATTLEFIELDS.haven.render,19).ecology,biotopeElevation:[20,50]},dominant=new Set();
+  for(let x=-200;x<=200;x+=20)for(let z=-200;z<=200;z+=20)for(const height of [20,40,65])for(const slope of [0,.3,1.5]){
+    const weights=api.ecologyBiotope(style,x,z,height,slope),near=api.ecologyBiotope(style,x+.01,z,height,slope);
+    assert.ok(weights.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+    assert.ok(Math.abs(weights.reduce((a,b)=>a+b,0)-1)<1e-12);
+    weights.forEach((v,i)=>assert.ok(Math.abs(v-near[i])<.002,'soft spatial transition'));
+    dominant.add(weights.indexOf(Math.max(...weights)));
+    const low=api.ecologyBiotope(style,x,z,20,0),high=api.ecologyBiotope(style,x,z,65,0),steep=api.ecologyBiotope(style,x,z,20,1.5);
+    assert.ok(low[2]>=high[2],'low gentle ground can retain damp communities');
+    assert.ok(steep[3]>=low[3],'steep ground is more exposed, without changing the slope');
+  }
+  assert.equal(dominant.size,4,'not just a renamed dry/lush blend');
+  const colors=[0,1,2,3].map(i=>api.ecologyBiotopeColor(style,[0,1,2,3].map(j=>i===j?1:0)));
+  assert.equal(new Set(colors.map(c=>JSON.stringify(c))).size,4);
+  assert.notDeepEqual(api.ecologyFloraFamilies(style)[0],api.ecologyFloraFamilies(style)[1]);
+  for(const flora of ['Acacia','Palm','Cactus']){
+    assert.equal(api.ecologyFloraAt({...style,flora},[0,0,1,0]),'Palm','palms prefer damp pockets');
+    assert.notEqual(api.ecologyFloraAt({...style,flora},[1,0,0,0]),'Palm','dry open ground uses drought-tolerant forms');
+  }
+});
+
+test('CPU and GLSL biotope recipes agree numerically for the same terrain inputs',()=>{
+  const source=require('node:fs').readFileSync(require('node:path').join(__dirname,'../dist/src/renderer/shaders.js'),'utf8'),
+    body=source.match(/vec4 biotopeWeights\(vec2 p,float height,float slope\)\{([\s\S]*?)\n\}/)[1]
+      .replace(/float /g,'const ').replace('habitat(p*.65)','habitat({x:p.x*.65,y:p.y*.65})').replace(/return vec4\(([^;]+)\);/,'return [$1];'),
+    shader=new Function('p','height','slope','u_biotopeElevation','u_ecology','habitat','sin','cos','clamp','smoothstep',body),
+    clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t);};
+  for(const phase of [0,1,3,5])for(const x of [-200,-31,0,133,220])for(const z of [-180,17,140])for(const height of [20,40,65])for(const slope of [0,.3,1.5]){
+    const style={phase,biotopeElevation:[20,50]},cpu=api.ecologyBiotope(style,x,z,height,slope),
+      gpu=shader({x,y:z},height,slope,{x:20,y:50},{w:phase},p=>api.ecologyHabitat(phase,p.x,p.y),Math.sin,Math.cos,clamp,smooth);
+    cpu.forEach((v,i)=>assert.ok(Math.abs(v-gpu[i])<1e-12));
   }
 });
 

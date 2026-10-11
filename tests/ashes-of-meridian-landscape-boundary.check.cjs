@@ -78,7 +78,7 @@ test('scenery halo uses only the local party sources and resets on perspective c
 
 test('outer habitat grows denser without border rows, source plants, incomplete trees or CPU mutation', () => {
   const {sceneryEdgeDecor}=setup(),field=relief(200,100),geometries=[];
-  for(let v=0;v<3;v++)for(const part of ['Trunk','Grove','Stone','Brush'])
+  for(let v=0;v<3;v++)for(const part of ['Trunk','Grove','Conifer','Stone','Brush'])
     geometries.push({mesh:`ecology${part}${v}`,model:`ecology${part}`,seed:v,extent:0});
   const world={extent:100,terrainSeed:19,surface:{heightAt:()=>20},
     renderProfile:{ecology:{natural:true,flora:'Grove',biome:'verdant',phase:1,vegetationDensity:3,leaf:0x82b864,bloom:0xe0c681}},
@@ -95,7 +95,7 @@ test('outer habitat grows denser without border rows, source plants, incomplete 
   for(const parts of groups.values()) {
     const [x,,z]=parts[0].position,d=Math.hypot(Math.max(0,Math.abs(x)-100),Math.max(0,Math.abs(z)-100));
     if(d<=12)near++;if(d>=20&&d<=45)outer++;
-    if(parts.some(p=>p.mesh.startsWith('ecologyGrove'))) {
+    if(parts.some(p=>/^ecology(Grove|Conifer)/.test(p.mesh))) {
       assert.equal(parts.length,2);assert.ok(parts.some(p=>p.mesh.startsWith('ecologyTrunk')));
       assert.deepEqual(parts[0].position,parts[1].position);assert.deepEqual(parts[0].scale,parts[1].scale);
       assert.deepEqual(parts[0].rotation,parts[1].rotation);

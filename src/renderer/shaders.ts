@@ -58,7 +58,7 @@ uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u
 uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
 uniform float u_placementGridDetail;
 uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
-uniform float u_habitatOn;uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
+uniform vec2 u_biotopeElevation;uniform float u_habitatOn;uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
 out vec4 frag;
 float sceneryFog(vec2 position){
  vec2 uv=(position+u_fogExtent)/(u_fogExtent*2.);
@@ -164,9 +164,21 @@ float habitat(vec2 p){
  float warp=sin(p.x*.017+p.y*.031+u_ecology.w)*9.;
  return clamp(.5+sin(p.x*.041+warp*.08+u_ecology.w)*.24+cos(p.y*.036-p.x*.015-u_ecology.w)*.23,0.,1.);
 }
+// Mirrors ecologyBiotope(): open, woodland, damp lowland, exposed upland.
+vec4 biotopeWeights(vec2 p,float height,float slope){
+ float elevation=clamp((height-u_biotopeElevation.x)/u_biotopeElevation.y,0.,1.);
+ float moisture=clamp(.5+sin(p.x*.012+sin(p.y*.01)*.8+u_ecology.w*.6)*.28+cos(p.y*.016-u_ecology.w*1.3)*.24,0.,1.);
+ float region=habitat(p*.65);
+ float rock=clamp(smoothstep(.45,1.35,slope)*.55+smoothstep(.65,.98,elevation)*.5,0.,1.);
+ float wet=(1.-rock)*smoothstep(.35,.75,moisture)*(1.-smoothstep(.18,.5,elevation))*(1.-smoothstep(.08,.38,slope))*.9;
+ float forest=(1.-rock-wet)*smoothstep(.2,.7,region)*(.35+.65*smoothstep(.22,.65,moisture))*(1.-.5*smoothstep(.6,.95,elevation))*.95;
+ return vec4(1.-rock-wet-forest,forest,wet,rock);
+}
 vec3 habitatGround(vec3 sampleColor,vec3 normal,float road){
- float zone=habitat(v_pos.xz),grain=veilNoise(v_pos.xz*.64),band=smoothstep(.27,.74,zone+(grain-.5)*.13);
- vec3 color=mix(u_biomeDry,u_biomeLush,band)*( .69+luma(sampleColor)*.95);
+ float slope=length(normal.xz)/max(normal.y,.05);
+ vec4 zones=biotopeWeights(v_pos.xz,v_pos.y+.13,slope);
+ float zone=zones.y+zones.z,grain=veilNoise(v_pos.xz*.64),band=smoothstep(.27,.74,zone+(grain-.5)*.13);
+ vec3 color=(u_biomeDry*zones.x+u_biomeLush*.72*zones.y+(u_biomeLush*.4+u_biomeSoil*.6)*zones.z+u_biomeStone*.9*zones.w)*(.69+luma(sampleColor)*.95);
  // Deposited soil, exposed bedding and cold caps respond to geometry rather than another atlas.
  float exposed=1.-smoothstep(.63,.94,normal.y);
  color=mix(color,u_biomeStone*(.72+grain*.38),exposed*.8);
