@@ -9,6 +9,8 @@
 - Geprüfte eigene Änderungen im Aufgaben-Worktree committen; **nicht automatisch nach `main` integrieren**. „Implementieren“, „kümmere dich darum“ oder „abschließen“ ist keine Integrationsfreigabe.
 - Bei ausdrücklichem Integrationsauftrag zuerst im Aufgaben-Worktree auf dessen Aufgabenbranch den aktuellen lokalen `main` mit `git merge main` integrieren, Konflikte dort lösen und gezielt prüfen. Danach im bestehenden `main`-Worktree auf Branch `main` integrieren und relevante Abschlussprüfungen ausführen. Ändert sich `main` inzwischen, Vorbereitung wiederholen. Vor dem Zielmerge Pfad, Branch und Status erneut prüfen; bei blockierenden fremden Änderungen stoppen und rückfragen, nichts überschreiben oder eigenmächtig stashen. Den Aufgaben-Worktree nicht auf `main` umschalten. Kein automatischer Push und keine automatische Branch-/Worktree-Löschung.
 
+- Nach jeder erfolgreichen Integration eines Aufgaben-/Feature-Branches in den Branch `main` im bestehenden `main`-Worktree enthält die Abschlussantwort immer eine kompakte Zusammenfassung aller relevanten neu integrierten Commit-Messages aus dem Feature-Branch. Den Umfang anhand des `main`-Stands vor der Integration bestimmen; bereits enthaltene Commits und rein technische Merge-Commits ohne eigene inhaltliche Änderung nicht erneut aufführen. Commit-Kurz-IDs und die jeweiligen Änderungen nennen, sodass auf einen Blick erkennbar ist, was jetzt in `main` integriert wurde.
+
 ## Einstieg
 
 1. [README](README.md) lesen, `git status --short` prüfen.
