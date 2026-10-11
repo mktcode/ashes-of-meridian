@@ -18,6 +18,10 @@ Breite Abschlussprüfung ist keine Pflicht bei jedem Commit oder jeder Integrati
 
 ## Befehle und Auswahl
 
+`npm run check:quality` ist das bewusst kurze Qualitätsnetz: lokale Dokumentationslinks, strikter Build sowie die explizit ausgewählten Linkchecker-, Testauswahl- und Core-Verträge (klassische Bindungen, RNG und Mathematik). Es ist keine Spielabnahme und ersetzt keine betroffenen Fachtests. Die GitHub-CI führt denselben Befehl unter der Node-Version aus `.nvmrc` nach `npm ci` aus; keine KI-/Simulations- oder Vollsuite.
+
+`npm run check:docs` prüft ohne Build oder Netzwerk die lokalen Datei-/Verzeichnisziele von Inline-Links, Bildern und Referenzdefinitionen in `README.md`, `AGENTS.md` und allen Markdown-Dateien unter `docs/`. Code und Kommentare bleiben außen vor; URL-Fragmente und Queryteile werden abgetrennt, Anker nicht validiert. Unterstützt werden einfache Markdown-Ziele oder `<Ziele mit Leerzeichen>`, kein vollständiger Markdown-/HTML-Parser. Bei neuen komplexen Linkformen zuerst den Checker gezielt erweitern.
+
 Tests laden gebaute klassische Skripte. Einmal bauen, dann kleinste passende Datei oder Fälle wählen:
 
 ```bash

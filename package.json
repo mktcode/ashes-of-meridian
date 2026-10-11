@@ -2,7 +2,12 @@
   "name": "ashes-of-meridian",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
+    "check:docs": "node scripts/check-doc-links.mjs",
+    "check:quality": "npm run check:docs && npm run build && node --max-old-space-size=128 --test --test-concurrency=1 tests/ashes-of-meridian-doc-links.check.cjs tests/ashes-of-meridian-test-selection.check.cjs tests/ashes-of-meridian-core.check.cjs",
     "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json",
     "build:zip": "npm run build && node scripts/build-zip.mjs",
     "capture:scene": "npm run build && node scripts/scene-capture.mjs",

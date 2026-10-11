@@ -6,8 +6,10 @@ Lokaler, touchorientierter RTS-Roguelite-Prototyp mit drei Fraktionen und WebGL 
 
 ## Starten
 
+Voraussetzung: Node.js 22 (regulär unterstützt, `.nvmrc`; technische Mindestversion 22.0.0).
+
 ```bash
-npm install
+npm ci
 npm run build
 ```
 
@@ -27,7 +29,7 @@ Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine sp�
 - [Architektur](docs/architecture.md): Systemgrenzen, Lade-, Zustands- und RNG-Verträge.
 - [Grafik und Assets](docs/rendering.md): Erweiterung, Besitz und Pflege.
 - [Audio und Sprachinhalte](docs/audio.md): Aufnahmen, Texte und Wiedergabeverträge.
-- [Prüfungen](docs/testing.md): kurze gezielte Rückkopplung, Freigaben und Diagnose.
+- [Prüfungen](docs/testing.md): `npm run check:quality` für das kurze Qualitätsnetz, gezielte Tests, Freigaben und Diagnose.
 - [Subagents](docs/subagents.md): isolierte parallele Arbeit.
 - [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance/README.md) und [offene Issues](docs/issues/).
 - [Geschichte](docs/story.md): deutsche interne Fassung; englische Spielfassung im Codex.
