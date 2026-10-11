@@ -56,6 +56,7 @@ const styleSources = await Promise.all(stylePaths.map(async name => ({
 const cssAssets = [...new Set(styleSources.flatMap(({ name, css }) => localCssTargets(name, css)))];
 const paths = [
   'index.html',
+  'map-viewer.html',
   ...stylePaths,
   ...(await filesBelow('dist', path => path.endsWith('.js'))),
   ...runtimeAudio,

@@ -134,7 +134,7 @@
         });
         window.addEventListener('pagehide', () => { this.saveBattle(); });
         document.addEventListener('visibilitychange', () => {
-          if (document.hidden && this.view === 'game' && !this.game.s?.result) {
+          if (!this.viewing && document.hidden && this.view === 'game' && !this.game.s?.result) {
             this.pause();
           }
         });
@@ -147,7 +147,7 @@
             this.codexZoom = clamp(this.codexZoom * Math.exp(clamp(pixels, -240, 240) * .0015), .3, 2);
             return;
           }
-          if (this.view !== 'game' || this.controlsLocked || !this.game.s ||
+          if (this.view !== 'game' || this.cameraControlsLocked || !this.game.s ||
               !this.R.containsPoint(e.clientX, e.clientY)) return;
           e.preventDefault();
           // WheelEvent delta modes are pixels, lines and pages respectively.
@@ -406,7 +406,7 @@
           if (!this.codexDrag) this.codexManualRotation = false;
           return;
         }
-        if (this.view !== 'game' || this.controlsLocked || !this.R.containsPoint(e.clientX, e.clientY)) return;
+        if (this.view !== 'game' || this.cameraControlsLocked || !this.R.containsPoint(e.clientX, e.clientY)) return;
         e.preventDefault();
         if (e.pointerType === 'mouse' && ![0, 1, 2].includes(e.button)) return;
         this.pointer = { x: e.clientX, y: e.clientY, inside: true };
@@ -430,7 +430,7 @@
           moved: false,
           pointerId: e.pointerId,
           startedAt: performance.now(),
-          selecting: e.pointerType === 'mouse' && e.button === 0 && !this.mode
+          selecting: !this.viewing && e.pointerType === 'mouse' && e.button === 0 && !this.mode
         };
       },
       pointerMove(this: MeridianUI, e: PointerEvent) {
@@ -457,7 +457,7 @@
         }
         this.pointer = { x: e.clientX, y: e.clientY,
           inside: e.target === $('world') && this.R.containsPoint(e.clientX, e.clientY) };
-        if (this.view !== 'game' || this.controlsLocked) return;
+        if (this.view !== 'game' || this.cameraControlsLocked) return;
         if (e.pointerType === 'touch' && this.touchPoints.has(e.pointerId)) {
           this.touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
           if (this.touchPoints.size === 2) {
@@ -493,7 +493,7 @@
           }
           drag.x = e.clientX;
           drag.y = e.clientY;
-        } else {
+        } else if (!this.viewing) {
           this.hover = this.pick(e.clientX, e.clientY)?.id || null;
           if (!this.mode) {
             let t = this.game.get(this.hover);

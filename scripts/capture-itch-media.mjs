@@ -1,14 +1,17 @@
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { prepareCaptureBattle } from './capture-battle-fixture.mjs';
 import { prepareItchCapturePaths, webpScreenshot } from './capture-output.mjs';
+import { withBrowser } from './browser/harness.mjs';
+import { validateCapture } from './capture-recipe.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const { values } = parseArgs({ options: {
-  output: { type: 'string' }, scene: { type: 'string' }, help: { type: 'boolean', short: 'h' }
+const { values } = parseArgs({ allowNegative: true, options: {
+  output: { type: 'string' }, scene: { type: 'string' }, camera: { type: 'string' }, hour: { type: 'string' },
+  units: { type: 'boolean' }, buildings: { type: 'boolean' }, 'distance-mist': { type: 'boolean' },
+  help: { type: 'boolean', short: 'h' }
 } });
 const scenes = [
   { file: '01-desert-firefight.webp', map: 'desert', seed: 1409, faction: 0, enemy: 1, view: 'front' },
@@ -17,29 +20,24 @@ const scenes = [
   { file: '04-mothership-assault.webp', map: 'mothership', seed: 43015, faction: 2, enemy: 0, view: 'front' }
 ];
 if (values.help) {
-  console.log(`Usage: npm run capture:itch -- [--output release/itch-media/<new-run>] [--scene <id>]\nWebP quality 80. Default: new worktree-local .tmp/ directory; existing output directories are refused.\n--scene captures only one desktop image, without mobile images or marketing compositions.\nScenes: ${scenes.map(scene => scene.file.slice(0, -5)).join(', ')}`);
+  console.log(`Usage: npm run capture:itch -- [--output release/itch-media/<new-run>] [--scene <id>]\nWebP quality 80. Default: new worktree-local .tmp/ directory; existing output directories are refused.\n--scene captures only one desktop image, without mobile images or marketing compositions.\nOptional: --camera camera.json --hour 13 --no-units --no-buildings --no-distance-mist\nScenes: ${scenes.map(scene => scene.file.slice(0, -5)).join(', ')}`);
   process.exit(0);
 }
 const selectedScenes = values.scene ? scenes.filter(scene => scene.file === `${values.scene}.webp`) : scenes;
 if (!selectedScenes.length || values.scene === '') throw Error('Unknown --scene; see --help');
-const browserCandidates = [process.env.CHROMIUM_PATH, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome'].filter(Boolean).map(candidate => resolve(candidate));
-let executablePath;
-for (const candidate of browserCandidates) {
-  try { await access(candidate, constants.X_OK); executablePath = candidate; break; } catch {}
-}
-if (!executablePath) throw new Error('Chromium not found. Set CHROMIUM_PATH to a Chromium/Chrome executable.');
+const shotOptions = { render: {} };
+if (values.camera) shotOptions.camera = JSON.parse(await readFile(resolve(values.camera),'utf8'));
+if (values.hour !== undefined) shotOptions.hour = Number(values.hour);
+for (const key of ['units','buildings']) if (values[key] !== undefined) shotOptions.render[key] = values[key];
+if (values['distance-mist'] !== undefined) shotOptions.render.distanceMist = values['distance-mist'];
+validateCapture(shotOptions,true);
 const { output, scratch } = await prepareItchCapturePaths(root, values.output);
 const screenshots = resolve(output, 'screenshots'), mobileScreenshots = resolve(output, 'screenshots-mobile');
 await mkdir(screenshots);
 if (!values.scene) await mkdir(mobileScreenshots);
-process.chdir(scratch);
-// Short Linux alias avoids Chromium's Unix socket path limit while retaining owned scratch.
-const tempPath = process.platform === 'linux' && scratch.length > 55 ? `/proc/${process.pid}/cwd` : scratch;
-process.env.TMPDIR = process.env.TMP = process.env.TEMP = tempPath;
-const { chromium } = await import('playwright-core');
-const browser = await chromium.launch({ executablePath, headless: true, chromiumSandbox: true });
-const errors = [];
 try {
+await withBrowser(root, async browser => {
+  const errors = [];
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
@@ -59,6 +57,7 @@ try {
   let cleanStyle = await page.addStyleTag({ content: '#hud{display:none!important} #worldViewport.in-battle{top:0!important;bottom:0!important}' });
 
   for (const scene of selectedScenes) {
+    await page.evaluate(() => window.Meridian.capture.release());
     await page.evaluate(prepareCaptureBattle, { options: scene });
     const result = await page.evaluate(({ map, view }) => {
       const { game, ui, renderer } = Meridian;
@@ -129,8 +128,7 @@ try {
       return { entities: game.s.entities.length, view };
     }, scene);
     if (scene.view === 'front') await page.waitForTimeout(2200);
-    await page.evaluate(() => { Meridian.ui.paused = true; });
-    await page.waitForTimeout(120);
+    await page.evaluate(shot => window.Meridian.capture.adopt(shot),shotOptions);
     const glError = await page.evaluate(() => Meridian.renderer.gl.getError());
     if (glError) throw new Error(`${scene.file}: WebGL error ${glError}`);
     await writeFile(resolve(screenshots, scene.file), await webpScreenshot(page));
@@ -140,11 +138,10 @@ try {
     }
     await cleanStyle.evaluate(element => element.remove());
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.evaluate(() => { Meridian.renderer.resize(); Meridian.ui.updateHUD(); });
-    await page.waitForTimeout(150);
+    await page.evaluate(shot => window.Meridian.capture.apply({...shot,hud:true}),shotOptions);
     await writeFile(resolve(mobileScreenshots, scene.file), await webpScreenshot(page));
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.evaluate(() => Meridian.renderer.resize());
+    await page.evaluate(shot => window.Meridian.capture.apply({...shot,hud:false}),shotOptions);
     cleanStyle = await page.addStyleTag({ content: '#hud{display:none!important} #worldViewport.in-battle{top:0!important;bottom:0!important}' });
     console.log(`Captured desktop and mobile ${scene.file} (${result.entities} entities)`);
   }
@@ -175,6 +172,7 @@ try {
   }
   if (errors.length) throw new Error(`Browser errors:\n${errors.join('\n')}`);
   console.log(`Created itch.io media in ${output}`);
+}, { timeoutMs: values.scene ? 60000 : 180000 });
 } finally {
-  await browser.close();
+  await rm(scratch, { recursive: true, force: true });
 }

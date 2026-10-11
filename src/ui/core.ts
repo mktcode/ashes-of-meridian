@@ -71,7 +71,13 @@
       codexTouches = new Map<number, {x: number; y: number}>();
       codexPinchDist?: number;
       paused: boolean;
-      get controlsLocked(): boolean { return this.paused || this.leavingBattle || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }
+      viewing = false;
+      viewingCameraLocked = false;
+      viewingZoomMax = 2000;
+      viewingEntityVisible?: (entity: Entity) => boolean;
+      onCameraChange?: () => void;
+      get controlsLocked(): boolean { return this.viewing || this.paused || this.leavingBattle || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }
+      get cameraControlsLocked(): boolean { return this.viewing ? this.viewingCameraLocked : this.controlsLocked; }
       modalKind: string;
       sellBuildingId: number | null;
       selected: number[];
@@ -185,6 +191,7 @@
           : {upgrades:{}, benefits:{}};
       }
       saveBattle() {
+        if (this.viewing) return true;
         const s = this.game.s, expedition = this.expedition,
           world = expedition?.worlds?.find(w => w.stage === this.activeWorldStage), recipe = world?.recipe ?? expedition;
         if (this.battleSaveError || this.view !== 'game' || !s || s.result || !expedition || !recipe || s.rules.kind !== 'single-player') return true;

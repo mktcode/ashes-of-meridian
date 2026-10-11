@@ -35,8 +35,10 @@ export async function prepareItchCapturePaths(root, requested) {
 
 // Playwright cannot encode WebP directly. Keep lossless PNG only in memory,
 // then use Chromium's canvas encoder; never disguise a PNG as a .webp file.
-export async function webpScreenshot(page) {
+export async function webpScreenshot(page, timing = undefined) {
+  const start = performance.now();
   const png = await page.screenshot({ type: 'png', animations: 'disabled' });
+  const encodeStart = performance.now();
   const encoded = await page.evaluate(async base64 => {
     const image = new Image(); image.src = `data:image/png;base64,${base64}`; await image.decode();
     const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
@@ -50,5 +52,6 @@ export async function webpScreenshot(page) {
   const image = Buffer.from(encoded, 'base64');
   if (image.length < 12 || image.toString('ascii', 0, 4) !== 'RIFF' || image.toString('ascii', 8, 12) !== 'WEBP')
     throw Error('Invalid WebP encoder output');
+  if (timing) Object.assign(timing,{screenshotMs:encodeStart-start,encodingMs:performance.now()-encodeStart});
   return image;
 }

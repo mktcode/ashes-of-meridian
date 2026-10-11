@@ -789,6 +789,23 @@ test('menu camera follows raised terrain at its target and stays above hills thr
   assert.deepEqual(Array.from(r.eye),[3,65*1.1,7+65*.82],'gameplay camera is unchanged');
 });
 
+test('capture projections and shadow boxes remain finite from horizontal through top-down views', () => {
+  const {r,context}=setup({scripts:['capture']}); r.resize();
+  for (const projection of ['orthographic','perspective']) for (const pitch of [0,.6,Math.PI/2]) {
+    context.configuration={mode:'orbit',projection,pitch,yaw:.7,fit:'map'};
+    r.captureCamera=vm.runInContext('resolveCaptureCamera(configuration,[[-100,0,-100],[100,40,100]],1.6,40)',context);
+    r.camera(0,0,57);
+    assert.ok([...r.vp,...r.inverseVP,...r.lightVP].every(Number.isFinite));
+    const target=r.captureCamera.target, point=r.project(...target);
+    assert.ok(Math.abs(point.x-(r.viewport.left+r.viewport.width/2))<1e-3);
+    assert.ok(Math.abs(point.y-(r.viewport.top+r.viewport.height/2))<1e-3);
+    const p=r.ground(point.x,point.y,false);
+    assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.z));
+  }
+  r.captureCamera=undefined; r.camera(3,7,65);
+  assert.deepEqual(Array.from(r.eye),[3,65*1.1,7+65*.82]);
+});
+
 test('rotated gameplay camera preserves its pivot and projection/picking roundtrips', () => {
   const {r}=setup(); r.resize();
   for (const yaw of [0, Math.PI / 4, Math.PI / 2, Math.PI, -Math.PI / 2]) {

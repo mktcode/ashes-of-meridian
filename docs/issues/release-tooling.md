@@ -4,8 +4,7 @@ Befunde aus dem Hygieneaudit auf `8a69e7f`; statischer Abgleich, keine Capture-/
 
 ## Capture-Ausgabe und Abnahme
 
-- [ ] [Kartenbetrachter und parametrisierte Capture-Werkzeuge](map-viewer-and-capture.md) gemäß gemeinsamem Szenen-/Kameravertrag planen und in begrenzten Etappen umsetzen; interaktiver HTML-Einstieg, Gesamtansichten, freie Perspektiven und Batchaufnahmen.
-- [ ] Wiederverwendbare Szenen-/Capture-Bausteine aus `.tmp/devlog-2026-10-08/capture.mjs` prüfen, nicht datierte Motive und Texte als neues Standardwerkzeug übernehmen. Scratch-Skripte sind lokale Hinweise, keine dauerhaften Abhängigkeiten. Gemeinsamer Browserrahmen unter [Testpflege](teststrategie-review.md#wiederverwendbare-browser--und-diagnosewerkzeuge).
+Maßgebliche Nutzung und Grenzen: [Kartenbetrachter und Capture](../scene-capture.md). Historische Scratch-Skripte sind keine dauerhaften Werkzeugabhängigkeiten; Marketingmotive bleiben ein eigener Workflow. Gemeinsamer Browserrahmen unter [Testpflege](teststrategie-review.md#wiederverwendbare-browser--und-diagnosewerkzeuge).
 
 ## Laufzeitassets und Produktionswerkzeuge
 

@@ -53,7 +53,7 @@ const float v_mat=SCENE_MATERIAL;
 in vec3 v_modelPos;in vec3 v_modelN;in vec3 v_detail;
 uniform sampler2D u_earthTex;uniform sampler2D u_barkTex;uniform sampler2D u_foliageTex;
 uniform sampler2D u_workerRoad;uniform float u_workerRoadOn;
-uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_time;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;
+uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex;uniform sampler2D u_metalTex;uniform sampler2D u_bioTex;uniform vec3 u_eye;uniform vec3 u_haze;uniform float u_extent;uniform float u_shadowOn;uniform float u_fogOn;uniform float u_distanceMist;uniform float u_time;uniform vec2 u_groundTile;uniform vec3 u_surfaceTint;uniform vec2 u_surfaceOffset;uniform vec4 u_surfaceRelief;uniform float u_reliefOn;
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;uniform float u_fogExtent;
 uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
 uniform float u_placementGridDetail;
@@ -277,7 +277,7 @@ void main(){
   lit=finishLighting(lit);
   float sight=battlefieldFog(v_pos.xz);
   lit*=mix(1.,mix(.16,1.,sight),u_fogOn);
-  float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);
+  float mist=(1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038))*u_distanceMist;
   lit=mix(lit,u_haze,mist);
   float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;
   frag=vec4(lit,v_col.a);return;
@@ -288,7 +288,7 @@ void main(){
   vec3 lit=finishLighting(veilSurface(veilUv,v_mat==${PORTAL_MATERIAL}.?u_portalTime:0.));
   float sight=battlefieldFog(v_pos.xz);
   lit*=mix(1.,mix(.16,1.,sight),u_fogOn);
-  float mist=1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038);
+  float mist=(1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038))*u_distanceMist;
   frag=vec4(mix(lit,u_haze,mist),v_col.a);return;
  }
  vec3 n=normalize(v_n);vec3 base=v_col.rgb;float surfaceAlpha=v_col.a;
@@ -512,7 +512,7 @@ vec3 localDiffuse=localLighting(v_pos,n,viewDir,groundGloss,groundSpecular);
 lit+=(base*localDiffuse+groundSpecular)*(1.-clamp(v_glow,0.,1.));
 lit+=crystal*vec3(.72,.88,1.)*fresnel*fresnel*.16;
 lit=finishLighting(lit);
-float field=sceneryFog(v_pos.xz);float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=1.-exp(-max(dist-75.,0.)*.0038);// Cosmetic horizon only: irregular haze hides the far rectangular apron.
+float field=sceneryFog(v_pos.xz);float fow=mix(1.,mix(.16,1.,field),u_fogOn);lit*=fow;float dist=length(u_eye-v_pos);float mist=(1.-exp(-max(dist-75.,0.)*.0038))*u_distanceMist;// Cosmetic horizon only: irregular haze hides the far rectangular apron.
 // Sight and local-light visibility still use the unmodified scenery fog above.
 float outside=length(max(abs(v_pos.xz)-vec2(u_extent),vec2(0.)));
 float horizon=outside+8.*sin(v_pos.x*.031)+6.*sin(v_pos.z*.043);

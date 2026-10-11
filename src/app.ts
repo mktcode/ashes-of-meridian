@@ -16,6 +16,7 @@
         try { await loadingPaint(); }
         finally { loadingPaints--; }
       }
+      let capture: MeridianCapture | undefined;
       let R: MeridianRenderer,
         game: MeridianGame,
         ui: MeridianUI,
@@ -31,15 +32,16 @@
       try {
         await loadingStep(0, 'Preparing graphics');
         const params = new URLSearchParams(location.search);
-        const experiment = params.get('experiment'),
+        const viewerMode = params.get('viewer') === '1', captureMode = viewerMode || params.get('capture') === '1';
+        const experiment = captureMode ? null : params.get('experiment'),
           mapExperiment: BattlefieldId | null = experiment === 'height' ? 'mothership' :
             experiment && Object.prototype.hasOwnProperty.call(BATTLEFIELDS, experiment) ? experiment as BattlefieldId : null,
-          civilianModelGallery = params.get('models') === 'civilian-upgrades',
-          visibleSimulation = !mapExperiment && params.get('simulation') === 'ai-vs-ai',
+          civilianModelGallery = !captureMode && params.get('models') === 'civilian-upgrades',
+          visibleSimulation = !captureMode && !mapExperiment && params.get('simulation') === 'ai-vs-ai',
           volatileStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} },
           persistence = createMeridianPersistence({
             // The explicitly launched spectator run must not read or mutate the normal profile.
-            getStorage: () => visibleSimulation || mapExperiment || civilianModelGallery ? volatileStorage : localStorage,
+            getStorage: () => captureMode || visibleSimulation || mapExperiment || civilianModelGallery ? volatileStorage : localStorage,
             clamp,
             upgrades: BATTLE_UPGRADES,
             upgradeFamilies: CIVILIZATION_UPGRADE_FAMILIES,
@@ -79,9 +81,11 @@
               }, 10000);
             }
           }
-          if (ui) ui.event(...event);
+          if (ui && !capture?.active) ui.event(...event);
         });
         ui = new MeridianUI(game, R, audio, profile, persistence);
+        capture = new MeridianCapture(game,ui,R,()=>{ settlementTraffic.reset(); worldView.clearWorkerRoads(); worldView.sync(game.world!,false,game.s!); });
+        ui.onCameraChange = () => capture?.active && capture.navigationChanged();
         ui.onCachedModelThumbnails = root => thumbnails.update(root,false);
         const context = overlay.getContext('2d');
         if (!context) throw Error('Canvas 2D is unavailable');
@@ -97,8 +101,9 @@
           overlayContext.setTransform(d, 0, 0, d, -v.left * d, -v.top * d);
           if (ui.view === 'game' && game.s) {
             const cam = game.s.cam;
-            R.camera(cam.x, cam.z, cam.zoom, false, 0, cam.yaw);
-            ui.drawMinimap();
+            if (capture?.active) { capture.request++; capture.drawCamera(); }
+            else R.camera(cam.x, cam.z, cam.zoom, false, 0, cam.yaw);
+            if (!capture?.active) ui.drawMinimap();
           }
         }
         ui.onViewportChange = resize;
@@ -367,7 +372,7 @@
         const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R,
           () => diagnosticContext(R, game, ui, worldView.world, preview.length),
           { game, worldView, ui, thumbnails }) : undefined;
-        ui.showHome();
+        if (!captureMode) ui.showHome();
         const SIMULATION_STEP_SECONDS = 0.05,
           RENDER_INTERVAL_MS = 1000 / 60,
           RENDER_TOLERANCE_MS = 0.1;
@@ -473,24 +478,30 @@
         function battlefield(t: number) {
           const s = game.s!, world = game.world!;
           const fogOn = !(world.fogCleared && world.viewTeam === 0);
-          worldView.sync(world, fogOn, s);
-          settlementTraffic.update(world, s, R.quality, e => !ui.battleIntro && game.observed(e),
+          const displayEntities = capture?.active ? s.entities.filter(e=>capture!.visible(e)) : s.entities;
+          const displayState = displayEntities === s.entities ? s : {...s,entities:displayEntities};
+          worldView.sync(world, fogOn, displayState);
+          if (capture?.active && !capture.render.buildings) settlementTraffic.reset();
+          else settlementTraffic.update(world, displayState, R.quality, e => !ui.battleIntro && game.observed(e),
             (x,z) => worldView.roadUsage(x,z));
-          worldView.updateWorkerRoads(s.time, s.entities, e => !ui.battleIntro && game.observed(e), settlementTraffic.walkers());
-          worldView.retainBuildingGround(s.entities);
+          worldView.updateWorkerRoads(s.time, displayEntities, e => !ui.battleIntro && game.observed(e), settlementTraffic.walkers());
+          worldView.retainBuildingGround(displayEntities);
           // Revalidate restored cameras and resized viewports, including while paused.
-          if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')
-            Object.assign(s.cam, ui.clampCameraPoint(s.cam));
-          R.camera(s.cam.x, s.cam.z, s.cam.zoom, false, 0, s.cam.yaw);
+          if (capture?.active) capture.drawCamera();
+          else {
+            if (!ui.battleIntro && ui.battleTutorial?.step !== 'arrival')
+              Object.assign(s.cam, ui.clampCameraPoint(s.cam));
+            R.camera(s.cam.x, s.cam.z, s.cam.zoom, false, 0, s.cam.yaw);
+          }
           // Intros are presentation-only: show terrain and any featured entity without
           // mutating either party's visibility/exploration buffers.
           R.fogOn = fogOn && !ui.battleIntro;
           settlementTraffic.draw(R);
-          const selectedIds = ui.selectionIds(), parcelIds = new Set<number>(),
+          const selectedIds = capture?.active && !capture.render.guides ? new Set<number>() : ui.selectionIds(), parcelIds = new Set<number>(),
             entityScope = diagnostics?.recorder.beginDetail('entities');
-          for (const cache of s.supplyCaches)
+          for (const cache of capture?.active && !capture.render.caches ? [] : s.supplyCaches)
             if (!cache.collected && world.explored[world.idx(cache.x, cache.z)]) renderSupplyCache(R, world, cache);
-          for (let e of s.entities) {
+          for (let e of displayEntities) {
             if (e.hp <= 0) continue;
             if (!game.observed(e) && !ui.introObserves(e)) continue;
             // The radius can still cross the viewport when the Forum itself is offscreen.
@@ -537,7 +548,7 @@
                 0.18,
                 'effects'
               );
-            if (e.kind === 'unit' && e.type === 'worker' && e.order?.type === 'build') {
+            if ((!capture?.active || capture.render.guides) && e.kind === 'unit' && e.type === 'worker' && e.order?.type === 'build') {
               let b = game.get(e.order.id);
               if (b && b.progress < 1 && distance(e, b) < b.size + 3.5)
                 ring(b.x, b.z, b.size + 1, 0xe5ba79, 0.25, 0.11, t * 0.1);
@@ -545,8 +556,10 @@
           }
           diagnostics?.recorder.endDetail(entityScope);
           const effectScope = diagnostics?.recorder.beginDetail('effects');
-          renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t, game.localTeam, weatherTime);
+          if (!capture?.active || capture.render.effects)
+            renderBattlefieldEffects(R, game.effects, world, s, ui.pings, t, game.localTeam, weatherTime);
           diagnostics?.recorder.endDetail(effectScope);
+          if (capture?.active && !capture.render.guides) { retainForumParcelGuides(); clearPlacementGuide(); return; }
           const guideScope = diagnostics?.recorder.beginDetail('guides');
           retainForumParcelGuides(parcelIds);
           if (ui.mode?.kind === 'build' && !ui.paused && BUILDINGS[ui.mode.arg])
@@ -586,6 +599,9 @@
         }
         function draw(now: number) {
           if (failed) return;
+          if ((captureMode || capture?.active) && (!capture?.readyToDraw || capture.renderedRequest === capture.request)) {
+            requestAnimationFrame(draw); return;
+          }
           diagnostics?.beginFrame(now);
           const elapsed = Math.max(0, (now - last) / 1000);
           let dt = Math.min(0.1, elapsed);
@@ -594,7 +610,7 @@
           frameClock += elapsed;
           try {
             if (guideFailure) throw guideFailure.error;
-            if (game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
+            if (!capture?.active && game.s && ui.view === 'game' && !ui.paused && !game.s.result) {
               accumulator += dt * GAME_SPEED.base * game.s.speed;
               let steps = 0;
               while (accumulator >= SIMULATION_STEP_SECONDS && steps++ < 12) {
@@ -605,8 +621,7 @@
               }
             } else accumulator = 0;
             diagnostics?.recorder.phase('ui');
-            ui.tick(dt);
-            ui.autosaveBattle();
+            if (!capture?.active) { ui.tick(dt); ui.autosaveBattle(); }
             if (weatherState !== game.s) {
               weatherState = game.s;
               weatherTime = game.s?.time ?? 0;
@@ -656,6 +671,11 @@
               frameClock = 0;
             }
             diagnostics?.recorder.phase('sceneBuild');
+            const captureTime = capture?.active && game.s ? capture.hour !== undefined
+              ? ((capture.hour - game.world!.renderProfile.atmosphere!.timeOfDay + 24) % 24) * 25 : game.s.time : null;
+            // Still captures have no second settling frame: night model parts and
+            // point lights must see the requested hour before scene construction.
+            if (captureTime !== null) R.setBattlefieldTime(captureTime);
             if (ui.view !== 'game') { worldView.clearWorkerRoads(); settlementTraffic.reset(); }
             const viewTime = game.s?.time,
               resultKey = ui.view === 'game' && game.s?.result && !ui.battleIntro && !ui.mode && !ui.pings.length
@@ -692,11 +712,11 @@
             diagnostics?.recorder.phase('glSubmission');
             // Simulation time freezes with pause/result and scales with game speed.
             // All saved home worlds freeze their atmosphere; landscapes without saves start at zero.
-            R.setBattlefieldTime(ui.view === 'game' && game.s ? game.s.time : ui.view === 'home' ? previewTime : 0);
+            if (captureTime === null) R.setBattlefieldTime(ui.view === 'game' && game.s ? game.s.time : ui.view === 'home' ? previewTime : 0);
             // Saved battles use the battlefield sky, not the seed-only celestial backdrop.
             const menuWorld = ui.view === 'home' && !previewSavedBattle ? worldView.world : null;
             R.setMenuSky(menuWorld?.terrainSeed ?? null, menuWorld?.definition.render.groundTexture ?? '');
-            R.render(time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
+            R.render(capture?.active ? 0 : time, ui.view === 'game' && game.s ? viewTime! : ui.view === 'codexModel' ? time : 0,
               ui.view === 'codex' ? () => thumbnails.update($('menu')) :
                 ui.view === 'game' && !$('hud').classList.contains('hidden') ? () => thumbnails.update($('hud')) : undefined, retainResultScene);
             retainedResult = resultKey === null ? null : { state: game.s!, world: game.world, key: resultKey };
@@ -706,7 +726,14 @@
             else if (ui.view === 'game') revealBattlefield();
             else if (!ui.launchingBattle) clearBattleTransition();
             diagnostics?.recorder.phase('overlay');
-            if (!retainResultScene) ui.drawOverlay(overlayContext);
+            if (!retainResultScene) {
+              if (!capture?.active || capture.render.guides) ui.drawOverlay(overlayContext);
+              else overlayContext.clearRect(0,0,innerWidth,innerHeight);
+            }
+            if (capture?.active) {
+              capture.renderedRequest = capture.request;
+              if (capture.render.hud) ui.updateHUD();
+            }
             diagnostics?.finishFrame(true);
           } catch (error) {
             clearPlacementGuide();
@@ -722,7 +749,7 @@
             loader.innerHTML =
               '<div class="eyebrow">UPLINK INTERRUPTED</div><h2>The renderer encountered a problem.</h2><p>' +
               esc(error instanceof Error ? error.message : String(error)) +
-              '</p><p>Reload this file to restore the last saved expedition battle or transition.</p>';
+              (captureMode ? '</p><p>Reload this file to prepare the scene again. No game progress was saved.</p>' : '</p><p>Reload this file to restore the last saved expedition battle or transition.</p>');
             return;
           }
           requestAnimationFrame(draw);
@@ -738,8 +765,8 @@
           $('loading').classList.remove('hidden');
           $('loading').innerHTML =
             '<div class="eyebrow">GRAPHICS CONNECTION LOST</div><h2>The graphics connection was lost.</h2><p>' +
-            'Reload this file to restore the last saved expedition battle or transition.' +
-            ' Use Performance quality in Settings for a lighter graphics load.</p>';
+            (captureMode ? 'Reload this file to prepare the scene again. No game progress was saved.</p>' :
+              'Reload this file to restore the last saved expedition battle or transition. Use Performance quality in Settings for a lighter graphics load.</p>');
           failed = true;
         });
         window.Meridian = {
@@ -747,6 +774,7 @@
           ui,
           renderer: R,
           audio,
+          capture,
           diagnostics,
           build: MERIDIAN_BUILD_INFO,
           content: { units: UNITS, buildings: BUILDINGS, factions: FACTIONS },
@@ -760,6 +788,12 @@
           version: '1.0.0'
         };
         // Manual spectator command only; normal launches still stop at the home screen.
+        if (captureMode) {
+          $('loading').classList.add('hidden');
+          requestAnimationFrame(draw);
+          if (viewerMode) await capture.mountViewer(params);
+          return;
+        }
         if (civilianModelGallery) {
           ui.civilianModelGallery=true;
           ui.showCodex();

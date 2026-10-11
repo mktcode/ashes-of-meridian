@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ashes of Meridian — Map Viewer</title>
+</head>
+<body>
+  <p>Opening the map viewer…</p>
+  <script>
+    'use strict';
+    const game = new URL('index.html', location.href);
+    const input = new URLSearchParams(location.search);
+    game.searchParams.set('viewer', '1');
+    for (const key of ['map', 'seed']) if (input.has(key)) game.searchParams.set(key, input.get(key));
+    location.replace(game);
+  </script>
+  <noscript>JavaScript and a WebGL 2 browser are required.</noscript>
+</body>
+</html>

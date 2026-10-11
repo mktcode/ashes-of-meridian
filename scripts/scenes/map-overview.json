@@ -1,0 +1,14 @@
+{
+  "map": "desert",
+  "seed": 1409,
+  "content": "landscape",
+  "width": 1280,
+  "height": 720,
+  "hour": 13,
+  "render": { "distanceMist": false },
+  "shots": [
+    { "name": "overview", "camera": { "mode": "game", "fit": "map" } },
+    { "name": "top", "camera": { "mode": "orbit", "fit": "map", "pitch": 1.5707963267948966 } },
+    { "name": "perspective", "camera": { "mode": "orbit", "projection": "perspective", "fit": "map", "yaw": 1.2, "pitch": 0.45 } }
+  ]
+}

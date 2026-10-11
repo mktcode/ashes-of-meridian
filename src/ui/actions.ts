@@ -37,10 +37,15 @@
         return true;
       },
       center(this: MeridianUI, x: number, z: number) {
-        if (!this.game.s || this.controlsLocked) return;
+        if (!this.game.s || this.cameraControlsLocked) return;
         Object.assign(this.game.s.cam, this.clampCameraPoint({ x, z }));
+        this.onCameraChange?.();
       },
       clampCameraPoint(this: MeridianUI, point: Position): Position {
+        if (this.viewing) {
+          const limit = this.game.world!.extent * 2;
+          return {x:clamp(point.x,-limit,limit),z:clamp(point.z,-limit,limit)};
+        }
         const world = this.game.world!, limit = world.extent, cam = this.game.s!.cam,
           yaw = cam.yaw ?? 0, sn = Math.sin(yaw), cs = Math.cos(yaw), surface = world.surface,
           v = this.R.viewport, windowHeight = typeof innerHeight === 'number' ? innerHeight : v.height,
@@ -82,10 +87,11 @@
         return { x: anchor.x - sn * shift, z: anchor.z - cs * shift };
       },
       zoomCamera(this: MeridianUI, zoom: number) {
-        if (!this.game.s || this.controlsLocked) return;
+        if (!this.game.s || this.cameraControlsLocked) return;
         const cam = this.game.s.cam;
-        cam.zoom = clamp(zoom, 27.2, 115);
+        cam.zoom = clamp(zoom, this.viewing ? 5 : 27.2, this.viewing ? this.viewingZoomMax : 115);
         Object.assign(cam, this.clampCameraPoint(cam));
+        this.onCameraChange?.();
       },
       terrainCameraPoint(this: MeridianUI, point: Position, height: number): Position {
         const yaw = this.game.s!.cam.yaw ?? 0;

@@ -8,9 +8,11 @@ export default [
   {
     files: [
       'scripts/browser/smoke.mjs',
+      'scripts/browser/map-viewer.mjs',
+      'scripts/scene-capture.mjs',
       'scripts/diagnostics/browser.mjs',
       'scripts/diagnostics/capture.mjs',
     ],
-    languageOptions: { globals: globals.browser },
+    languageOptions: { globals: { ...globals.browser, Meridian: 'readonly' } },
   },
 ];

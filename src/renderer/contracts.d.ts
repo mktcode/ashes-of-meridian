@@ -116,6 +116,7 @@ interface Window {
     ui: MeridianUI;
     renderer: MeridianRenderer;
     audio: MeridianAudio;
+    capture: MeridianCapture;
     content: { units: typeof UNITS; buildings: typeof BUILDINGS; factions: typeof FACTIONS };
     readonly performance: { fps: number; drawCalls: number; entities: number };
     readonly build: typeof MERIDIAN_BUILD_INFO;

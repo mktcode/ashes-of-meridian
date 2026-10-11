@@ -339,7 +339,7 @@
         }
       },
       pause(this: MeridianUI) {
-        if (this.leavingBattle) return;
+        if (this.viewing || this.leavingBattle) return;
         if ( this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = true;
         this.audio.setMode?.('silent');
@@ -347,6 +347,7 @@
         this.showPause();
       },
       showPause(this: MeridianUI) {
+        if (this.viewing) return;
         let s = this.game.s;
         if (!s) return;
         this.paused = true;
@@ -358,7 +359,7 @@
         );
       },
       resume(this: MeridianUI) {
-        if (this.leavingBattle) return;
+        if (this.viewing || this.leavingBattle) return;
         if (this.battleSaveError) return this.showBattleSaveError();
         if ( this.view !== 'game' || !this.game.s || this.game.s!.result) return;
         this.paused = false;

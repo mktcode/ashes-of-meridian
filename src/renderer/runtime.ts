@@ -473,7 +473,7 @@
       resize() {
         let g = this.gl,
           scale =
-            this.quality === 0 ? 0.75 : this.quality === 1 ? 1 : Math.min(devicePixelRatio || 1, 1.6);
+            this.quality === 0 ? 0.75 : this.quality === 1 ? 1 : (this.captureDpr ?? Math.min(devicePixelRatio || 1, 1.6));
         // Keep public projection/picking coordinates in CSS client space.
         const rect = this.canvas.getBoundingClientRect();
         this.viewport = { left: rect.left, top: rect.top, width: Math.max(1, rect.width), height: Math.max(1, rect.height),
@@ -1080,7 +1080,19 @@
           this.drawCalls++;
         }
       }
+      captureCamera?: ResolvedCaptureCamera;
+      captureDpr?: number;
+      distanceMist = true;
       camera(x: number, z: number, zoom: number, cinema = false, t = 0, yaw = 0) {
+        if (this.captureCamera && !cinema) {
+          const c = this.captureCamera, aspect = this.viewport.width / this.viewport.height;
+          this.cinema = false; this.placementGridDetail = 0; this.eye = [...c.eye];
+          const projection = c.projection === 'perspective' ? M4.perspective(c.fov, aspect, c.near, c.far)
+            : M4.ortho(-c.height*aspect/2,c.height*aspect/2,-c.height/2,c.height/2,c.near,c.far);
+          this.vp = M4.mul(projection,captureViewMatrix(c)); this.inverseVP = M4.inverse(this.vp);
+          if (this.quality === 0) this.lightVP = M4.identity(); else this.fitShadow();
+          return;
+        }
         this.cinema = cinema;
         // Match the gameplay zoom endpoints; only line visibility changes, never mesh density.
         const gridZoom = Math.max(0, Math.min(1, (115 - zoom) / (115 - 27.2)));
@@ -1115,6 +1127,19 @@
         } else this.fitShadow();
       }
       fitShadow() {
+        if (this.captureCamera) {
+          // A whole-world light box also works for horizontal and vertical views;
+          // no division by the camera rays' vertical component.
+          const extent = (this.extent ?? 90) + 64, ceiling = (this.surface?.maxHeight ?? 0) + 256;
+          const view = M4.look([-64,110,43],[0,0,0]), points: number[][] = [];
+          for (const x of [-extent,extent]) for (const y of [-64,ceiling]) for (const z of [-extent,extent])
+            points.push(M4.point(view,x,y,z));
+          const lo = [0,1,2].map(i=>Math.min(...points.map(p=>p[i]))-16),
+            hi = [0,1,2].map(i=>Math.max(...points.map(p=>p[i]))+16);
+          this.lightVP = M4.mul(M4.ortho(lo[0],hi[0],lo[1],hi[1],-hi[2],-lo[2]),view);
+          this.shadowBias = Math.max(.03,Math.max(hi[0]-lo[0],hi[1]-lo[1])/this.shadowSize*.4)/(hi[2]-lo[2]);
+          return;
+        }
         // Fit the visible ground and elevated receivers in a fixed light-space basis.
         // Taller terrain opts into a higher ceiling without changing other map profiles.
         // Padding keeps off-screen casters near the view edge; no extra shadow pass.
@@ -1167,6 +1192,8 @@
           const hit = this.surface.ray(a, b);
           if (hit) return hit;
         }
+        if (this.captureCamera && Math.abs(b[1]-a[1]) < 1e-8)
+          return {x:this.captureCamera.target[0],z:this.captureCamera.target[2]};
         let t = -a[1] / (b[1] - a[1]);
         return { x: a[0] + (b[0] - a[0]) * t, z: a[2] + (b[2] - a[2]) * t };
       }
@@ -1268,6 +1295,7 @@
         g.uniform1f(this.uniform(program, 'u_rockScale'), profile.rockSurface ? 1 / profile.rockSurface.metersPerTile : 0);
         g.uniform1f(this.uniform(program, 'u_shadowOn'), this.quality > 0 ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_fogOn'), this.fogOn ? 1 : 0);
+        g.uniform1f(this.uniform(program, 'u_distanceMist'), this.distanceMist !== false ? 1 : 0);
         g.uniform1f(this.uniform(program, 'u_placementGridDetail'), this.placementGridDetail);
         g.uniform1f(this.uniform(program, 'u_workerRoadOn'), 0);
         g.activeTexture(g.TEXTURE0 + 13);

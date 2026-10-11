@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,7 +9,9 @@ const outputName = 'dist/src/diagnostics/build-info.js';
 // Fingerprint runtime code and local assets, not maps, scratch or this stamp.
 // No wall clock: identical payloads remain reproducible, including ZIP builds.
 export function buildInfo(root) {
-  const paths = ['index.html'];
+  const paths = readdirSync(root)
+    .filter((name) => name.endsWith('.html'))
+    .sort();
   function visit(directory, javascriptOnly = false) {
     for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
       const name = `${directory}/${entry.name}`;
@@ -47,6 +49,38 @@ export function buildInfo(root) {
   return { id: `sha256:${hash.digest('hex')}`, commit, dirty };
 }
 
+export function sourceFingerprint(root) {
+  if (!existsSync(join(root, 'src')) || !existsSync(join(root, 'tsconfig.json'))) return null;
+  const paths = ['tsconfig.json'];
+  function visit(directory) {
+    for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
+      const name = `${directory}/${entry.name}`;
+      if (entry.isSymbolicLink()) throw Error(`Source fingerprint rejects symlink: ${name}`);
+      if (entry.isDirectory()) visit(name);
+      else if (/\.(?:ts|js)$/.test(name)) paths.push(name);
+    }
+  }
+  visit('src');
+  const hash = createHash('sha256');
+  for (const name of paths.sort()) {
+    const data = readFileSync(join(root, name));
+    hash.update(`${name}\0${data.length}\0`).update(data);
+  }
+  return `sha256:${hash.digest('hex')}`;
+}
+
+export function verifyCaptureBuild(root) {
+  let stamp;
+  try {
+    stamp = JSON.parse(readFileSync(join(root, 'dist/capture-source.json'), 'utf8'));
+  } catch {
+    throw Error('Capture build stamp missing; run npm run build or omit --reuse-build');
+  }
+  if (stamp.sourceId !== sourceFingerprint(root) || stamp.runtimeId !== buildInfo(root).id)
+    throw Error('Build is stale; omit --reuse-build or run npm run build');
+  return stamp;
+}
+
 export function writeBuildInfo(root) {
   const info = buildInfo(root);
   const output = join(root, outputName);
@@ -54,6 +88,10 @@ export function writeBuildInfo(root) {
   writeFileSync(
     output,
     `'use strict';\nconst MERIDIAN_BUILD_INFO = Object.freeze(${JSON.stringify(info)});\n`,
+  );
+  writeFileSync(
+    join(root, 'dist/capture-source.json'),
+    JSON.stringify({ sourceId: sourceFingerprint(root), runtimeId: info.id }) + '\n',
   );
   return info;
 }

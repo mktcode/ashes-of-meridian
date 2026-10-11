@@ -123,7 +123,7 @@
           ctx.stroke();
         }
         for (let e of g.s.entities) {
-          if (e.hp <= 0) continue;
+          if (e.hp <= 0 || (this.viewing && this.viewingEntityVisible?.(e) === false)) continue;
           let explored = g.world.explored[g.world.idx(e.x, e.z)],
             visible = g.visible(e);
           if (e.kind === 'resource') {
@@ -205,7 +205,7 @@
           ctx.lineWidth = 1;
           for (let id of this.selected.slice(0, 12)) {
             let e = g.get(id);
-            if (!e || e.team !== this.localTeam) continue;
+            if (!e || e.team !== this.localTeam || (this.viewing && this.viewingEntityVisible?.(e) === false)) continue;
             let target = e.order?.type === 'attack' ? g.get(e.order.id) : null;
             let goal = e.rally ||
               ((e.order?.type === 'move' || e.order?.type === 'attackMove') ? e.order : target);
@@ -232,7 +232,7 @@
         for (const e of s.entities) if (e.hp > 0 && e.kind === 'building' && e.forumId !== undefined)
           forumCounts.set(e.forumId, (forumCounts.get(e.forumId) || 0) + 1);
         for (let e of s.entities) {
-          if (e.hp <= 0) continue;
+          if (e.hp <= 0 || (this.viewing && this.viewingEntityVisible?.(e) === false)) continue;
           let selected = selectedIds.has(e.id),
             hover = this.hover === e.id;
           if (!g.visible(e)) continue;

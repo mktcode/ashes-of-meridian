@@ -1,0 +1,10 @@
+/* Scoped utility controls: never changes gameplay HUD or canvas geometry. */
+#mapViewer, #showMapViewer { position: fixed; z-index: 100; color: #eef3ed; background: #0b1522ed; border: 1px solid #7796a7; border-radius: 6px; padding: 10px; font: 14px/1.4 sans-serif; }
+#mapViewer { top: 10px; left: 10px; max-width: calc(100vw - 20px); box-sizing: border-box; }
+#mapViewer form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#mapViewer label { display: inline-flex; align-items: center; gap: 4px; }
+#mapViewer input, #mapViewer select, #mapViewer button, #showMapViewer { font: inherit; }
+#mapViewer input[type=number] { width: 110px; }
+#mapViewer p { margin: 8px 0 0; }
+#showMapViewer { top: 10px; left: 10px; cursor: pointer; }
+#mapViewer[hidden], #showMapViewer[hidden] { display: none; }

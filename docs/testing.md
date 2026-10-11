@@ -46,7 +46,9 @@ Dateien/Namen mit `rg 'test\(' tests` suchen; übersprungene Tests sind keine be
 
 `npm run check:browser` baut und öffnet `index.html` direkt über `file://` in einem frischen headless Chromium-Profil. Ein installiertes Chromium ist nötig, optional über `CHROMIUM_PATH` (ein gesetzter ungültiger Pfad wird nicht still ersetzt). Kein Download, Server oder gelockerter Sandbox-/Dateizugriff. Start und Prüfteil haben jeweils 30 Sekunden Budget; Profile/Scratch liegen nur in einem eigenen temporären Worktree-Verzeichnis und werden auch bei Fehlern freigegeben.
 
-Der Check wartet auf eine gerenderte Startansicht, lehnt JavaScript-/Konsolenfehler ab, prüft die tatsächlich angelegten Shaderprogramme auf erfolgreiches Linking und den GL-Fehlerzustand. Er erzwingt Kontextverlust und verlangt gestopptes Rendering sowie sichtbare Recovery-UI. Das ist ein echter GLSL-/`file://`-/Lebenszyklusnachweis, aber kein Pixelbildvergleich, Leckfreiheitsbeweis, Gefechts-/Pickingtest oder Zielgeräteperformancebeleg. Capture-/Diagnosewerkzeuge sind noch nicht alle auf den neuen Harness umgestellt.
+Der Check wartet auf eine gerenderte Startansicht, lehnt JavaScript-/Konsolenfehler ab, prüft die tatsächlich angelegten Shaderprogramme auf erfolgreiches Linking und den GL-Fehlerzustand. Er erzwingt Kontextverlust und verlangt gestopptes Rendering sowie sichtbare Recovery-UI. Das ist ein echter GLSL-/`file://`-/Lebenszyklusnachweis, aber kein Pixelbildvergleich, Leckfreiheitsbeweis, Gefechts-/Pickingtest oder Zielgeräteperformancebeleg. Szenen-/Marketing-Capture und Diagnoserunner verwenden ebenfalls diesen Browser-Harness; Bild-Batches teilen einen Browser, Echtzeit-Diagnosefälle bleiben isoliert.
+
+`npm run check:map-viewer` ist ein separater, ausdrücklich gestarteter technischer Check: `file://`-Launcher, kein Profilzugriff, Kamera trotz stehender Simulation, Maus und emuliertes Pinch/Drehen, erweiterter Zoom, kein Idle-Neuzeichnen, exportierte Projektionsgeometrie, Resize/Gesamtansicht und Seedwechsel. Ein isolierter Browser mit begrenztem Zeitbudget; keine Screenshotserie oder KI-Partie. Die freien Projektionen/Fitmathematik haben zusätzlich kurze CPU-Verträge unter `tests/ashes-of-meridian-capture.check.cjs` und gezielten Rendererfällen. Touchkomfort und Bildqualität bleiben Echtgeräte-/menschliche Abnahme.
 
 ## Testpflege und Aussagegrenzen
 
@@ -86,6 +88,7 @@ Vergleichskontext, Erfolgskriterien und offene Messfragen stehen zentral unter [
 
 Nach Build isoliert ohne normales Profil/Checkpoint:
 
+- `map-viewer.html` für stillstehende Landschaften mit Kameraeingaben, erweitertem Zoom, Gesamtansicht und exportierbarem Capture-Rezept; [Bedienung](scene-capture.md). Keine Zuschauerpartie.
 - `index.html?experiment=<karten-id>&seed=<positiver-seed>` für Katalogkarten; IDs im [Katalog](../src/battlefields/catalog.ts). Seed maximal acht Stellen; alle Katalogkarten erzeugen Terrain aus dem Seed.
 - `index.html?experiment=height`: prozedurale Mothership-Höhen/Sicht mit zwei Workern.
 

@@ -86,3 +86,25 @@ test('build provenance distinguishes clean/dirty Git sources without exporting p
   assert.ok(!JSON.stringify(dirty).includes(root));
   assert.ok(!JSON.stringify(dirty).includes('Fixture'));
 });
+
+test('viewer entry changes runtime identity and source stamps detect stale TypeScript', async (t) => {
+  const { writeBuildInfo, sourceFingerprint, verifyCaptureBuild } =
+    await import('../scripts/build-info.mjs');
+  const root = fixture(t),
+    first = writeBuildInfo(root);
+  writeFileSync(join(root, 'map-viewer.html'), '<!doctype html><title>Viewer</title>');
+  assert.notEqual(writeBuildInfo(root).id, first.id);
+  mkdirSync(join(root, 'src'));
+  writeFileSync(join(root, 'tsconfig.json'), '{}');
+  writeFileSync(join(root, 'src/camera.ts'), 'const camera = 1;');
+  writeBuildInfo(root);
+  const stamp = JSON.parse(readFileSync(join(root, 'dist/capture-source.json'), 'utf8'));
+  assert.equal(stamp.sourceId, sourceFingerprint(root));
+  assert.equal(verifyCaptureBuild(root).runtimeId, stamp.runtimeId);
+  writeFileSync(join(root, 'src/camera.ts'), 'const camera = 2;');
+  assert.notEqual(stamp.sourceId, sourceFingerprint(root));
+  assert.throws(() => verifyCaptureBuild(root), /stale/);
+  writeBuildInfo(root);
+  writeFileSync(join(root, 'map-viewer.html'), '<!doctype html><title>Changed viewer</title>');
+  assert.throws(() => verifyCaptureBuild(root), /stale/);
+});
