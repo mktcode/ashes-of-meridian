@@ -6,8 +6,8 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 
 - [ ] Frischer Run: ein Gegner auf Stage 1–3, zweiter Slot ab 4, dritter ab 8. Bestehende Slots behalten getrennte Vorteile bei Fraktionswechsel, neue starten leer; Briefing/Reload muss dazu passen.
 - [ ] KI-gegen-KI-Druck, Ausscheiden und HQ-Abschluss beobachten. Gegen passiven/verteidigenden Spieler: erfolgreiche Belagerung fortsetzen, sinnvoller Rückzug bei Bedrohung, Reserven gegen Ablenkung, stabile FFA-Ziele.
-- [ ] Militärischen Sieg von Civilization-Score-Freischaltung unterscheiden: live Score, fehlende Punkte, **Continue building**, Vorbauen in älteren Welten und spätere Rückkehr zur Expedition verständlich abnehmen; [Kurve/Bauaufwand](expeditions-schwierigkeit-und-upgrades.md).
-- [ ] Einstieg ohne Flottenupgrades und tiefe Ressourcenstapel balancieren; [Progressionsbefunde](expeditions-schwierigkeit-und-upgrades.md). Faire Wege/Wirtschaft aller Eckstarts prüfen.
+- [ ] Militärischer Sieg schaltet sofort die nächste Stage frei, ohne Score-Gate: **Continue building**, zivile Upgrade-Wahl mit lokalem Echo und spätere Rückkehr zur Expedition verständlich abnehmen; [Kurve/Bauaufwand](expeditions-schwierigkeit-und-upgrades.md).
+- [ ] Einstieg ohne zivile Gebäudeboni und tiefe Ressourcenstapel balancieren; [Progressionsbefunde](expeditions-schwierigkeit-und-upgrades.md). Faire Wege/Wirtschaft aller Eckstarts prüfen.
 
 ## Worker-Start und Tutorial
 
@@ -18,14 +18,18 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 
 ## Commands und Bedienung
 
-- [ ] Viererauswahl/-reihenfolge, Armory-Ränge, feste Slots/Loadouts über Übergänge und Reload verständlich.
+- [ ] Viererauswahl/-reihenfolge, Command-Ausbauränge aus Forschungsgebäuden, feste Slots/Loadouts über Übergänge und Reload verständlich.
 - [ ] Fähigkeiten/Zielbedingungen und dominante Kombinationen im Gefecht; große Gruppen, Recall an belegten HQ-Ausgängen/Höhen und geschützte Reinforcements.
 - [ ] [Rechteckauswahl](../gameplay.md#kamera-und-befehle): Haltezeit, Bereitschaftsring und Fingerverdeckung auf echten Touchgeräten abnehmen; frühes Kameraziehen sicher von Halten-und-Ziehen unterscheidbar? Desktop: Linksziehen zur Auswahl und Rechtsziehen zum Kameraschwenken verständlich?
 - [ ] Touch unter Last: Pan/Pinch, Tapfolgen, Minimap, kleine Aktionen, Scroll/Back/Zielwahl, Ausrichtung und Hintergrundrückkehr. Desktopsteuerung auch im tatsächlich eingebetteten itch.io-Build.
 
+## Außenposten-Einstieg
+
+- [ ] Siegeshinweis, einmalige Bau-Einführung und erneut erreichbaren **Outpost guide** im Pausenmenü ohne externe Erklärung verstehen, auch mit bereits abgeschlossenem Profil-Tutorial. Weiterreisen über das Hauptmenü von endgültiger Evakuierung unterscheiden. Gezielte Wellen-/Rettungs- und Geräteabnahme zentral unter [Zivilisationsupgrades](civilization-upgrades.md), keine zusätzliche Vollrunde.
+
 ## Fortschritt und Lebenszyklus
 
-- [ ] Mehrere Siege/Vorteilswahlen, Upgrades, Niederlage/Abbruch und Fraktionsfreischaltungen. Auszahlung nicht durch erneuten Ergebnisaufruf vervielfachen.
+- [ ] Mehrere Siege, zivile Gebäudewahlen/-ränge, Niederlage/Abbruch und Fraktionsfreischaltungen. Auszahlung nicht durch erneuten Ergebnisaufruf vervielfachen.
 - [ ] Profil/Expedition unter `file://` und Webhosting sowie Pause/Audio/Rückkehr menschlich abnehmen; Snapshot-Restore, Run-Ende und Speicherfehler nach [Spielstandsabnahme](expeditions-spielstand.md).
 - [ ] Stage-Auswahl: gespeicherte Bebauung/Tageszeit, Pfeile/Labels, weiche Wechsel bei teuren Karten, Reduced motion und Reload. **Continue expedition** lädt die aktuelle Stage, **Enter world** die ausgewählte abgeschlossene Welt; während des Wechsels kein Eintritt. Weiterbau und getrennte Spielstände mit der [Spielstandsabnahme](expeditions-spielstand.md) zusammen prüfen; reine ältere Landschaftsvorschauen bleiben nicht betretbar.
 

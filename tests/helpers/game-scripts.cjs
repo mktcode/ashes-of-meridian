@@ -21,6 +21,8 @@ const RENDERER_SCRIPTS = Object.freeze([
   'model-settlement-traffic',
   'model-supply-crate',
   'model-civilization-upgrade-styles',
+  'model-civilization-upgrade-architecture',
+  'model-civilization-upgrade-designs',
   'model-civilization-buildings',
   'model-meridian-forum',
   'model-faction-0-building-barracks',
@@ -95,6 +97,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-ai-rules',
   'simulation-ai-strategy',
   'simulation-ai',
+  'simulation-outpost',
   'simulation-runtime'
 ]);
 const DIAGNOSTIC_SCRIPTS = Object.freeze(['diagnostics-build-info', 'diagnostics-recorder', 'diagnostics-gpu', 'diagnostics-browser']);

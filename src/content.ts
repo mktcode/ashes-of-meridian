@@ -279,7 +279,7 @@ const BUILDINGS = {
     size: 4.4,
     time: 45,
     cap: 24,
-    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver Cinder here; it provides no passive resources.'
+    desc: 'Your command nexus. Trains workers and reconstructs the commander. Workers deliver Cinder here; it provides no passive resources. In a cleared outpost, select it to start irreversible evacuation: rescue units and up to three civilian building upgrades before the stage is permanently abandoned.'
   },
   barracks: {
     cost: 145,
@@ -327,10 +327,10 @@ const BUILDINGS = {
   turret: {
     cost: 115,
     gas: 25,
-    hp: 800,
+    hp: 1600,
     size: 1.7,
     time: 19,
-    damage: 28,
+    damage: 56,
     range: 15,
     reload: 1.05,
     vision: 20,
@@ -340,39 +340,39 @@ const BUILDINGS = {
     cost: 0, gas: 0, hp: 500, size: 3.6, time: 8,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1,doorZ:1.72},
-    desc: 'Civilian field laboratory. Grows around a Cinder-supplied Forum. Select an expedition upgrade and invest local Echo to expand it into a research tower.'
+    desc: 'Civilian field laboratory. Grows around a Cinder-supplied Forum. Choose one of three fixed upgrade offers and invest local Echo to expand it into a research tower. Its effect strengthens new battles and the current battle on return. Secure it during evacuation to keep its current rank after abandoning this outpost.'
   },
   researchhub: {
     cost: 0, gas: 0, hp: 650, size: 4.2, time: 12,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.45},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70,doorZ:3.01},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Expanded civilian laboratory. Its chosen expedition effect contributes two ranks to newly started battles.'
+    desc: 'Expanded civilian laboratory. Its chosen expedition effect contributes two ranks to new battles and the current battle on return. Secure it during evacuation to keep those ranks after abandoning this outpost.'
   },
   researchspire: {
     cost: 0, gas: 0, hp: 800, size: 3.9, time: 16,
     civilizationDecks: [{x:0,z:-.40,w:4.7,d:3.95},{x:.2,z:2.25,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:3.05,length:1.1,doorZ:1.63},
-    desc: 'Fully expanded civilian research tower. Its chosen expedition effect contributes three ranks to newly started battles.'
+    desc: 'Fully expanded civilian research tower, not a defensive turret. Its chosen expedition effect contributes three ranks to new battles and the current battle on return. Securing it during evacuation preserves all three ranks in one building slot.'
   },
   embercottage: {
     cost: 0, gas: 0, hp: 500, size: 3.6, time: 8,
     civilizationDecks: [{x:0,z:0,w:4.4,d:3.3},{x:.55,z:2.17,w:3.2,d:.95}],
     civilizationEntry: {x:.55,z:2.87,length:1.1,doorZ:1.72},
-    desc: 'Civilian hillside cottage. Grows around a Cinder-supplied Forum. Select an expedition upgrade and invest local Echo to expand it into a residential tower.'
+    desc: 'Civilian hillside cottage. Grows around a Cinder-supplied Forum. Choose one of three fixed upgrade offers and invest local Echo to expand it into a residential tower. Its effect strengthens new battles and the current battle on return. Secure it during evacuation to keep its current rank after abandoning this outpost.'
   },
   terracecommons: {
     cost: 0, gas: 0, hp: 650, size: 4.2, time: 12,
     civilizationDecks: [{x:-.8,z:-1.1,w:4.65,d:2.6,top:1.1},{x:.75,z:1.7,w:5.3,d:2.55},{x:.30,z:3.46,w:3.3,d:.60}],
     civilizationEntry: {x:.30,z:3.86,length:.70,doorZ:3.01},
     civilizationWings: [{x:2.72,z:.63,w:2.92,d:2.66}],
-    desc: 'Expanded civilian residences. Their chosen expedition effect contributes two ranks to newly started battles.'
+    desc: 'Expanded civilian residences. Their chosen expedition effect contributes two ranks to new battles and the current battle on return. Secure them during evacuation to keep those ranks after abandoning this outpost.'
   },
   hearthtower: {
     cost: 0, gas: 0, hp: 800, size: 3.9, time: 16,
     civilizationDecks: [{x:0,z:-.40,w:4.25,d:3.6},{x:.2,z:2.10,w:4.2,d:1.3}],
     civilizationEntry: {x:.20,z:2.9,length:1.1,doorZ:1.47},
-    desc: 'Fully expanded civilian residential tower. Its chosen expedition effect contributes three ranks to newly started battles.'
+    desc: 'Fully expanded civilian residential tower, not a defensive turret. Its chosen expedition effect contributes three ranks to new battles and the current battle on return. Securing it during evacuation preserves all three ranks in one building slot.'
   },
   meridianforum: {
     cost: 0, gas: 25, hp: 950, size: 10.4, time: 20,
@@ -747,7 +747,9 @@ function civilizationUpgradesForBuildings(entities: readonly Entity[], team: Pla
 }
 function expeditionCivilizationUpgrades(expedition: MeridianExpedition, live: RunState | null = null,
   activeStage: number | null = null): CivilizationUpgradeTotals {
-  const totals: CivilizationUpgradeTotals = { upgrades: {}, benefits: {} };
+  const totals: CivilizationUpgradeTotals = {
+    upgrades: {...expedition.rescuedUpgrades?.upgrades}, benefits: {...expedition.rescuedUpgrades?.benefits}
+  };
   for (const world of expedition.worlds || []) {
     if (world.error || !world.recipe || !world.battle) continue;
     const recipe = world.recipe, active = activeStage === world.stage && live?.rules.kind === 'single-player' && live.rules.completed &&
@@ -763,6 +765,7 @@ function expeditionCivilizationUpgrades(expedition: MeridianExpedition, live: Ru
 }
 
 const ICON_PATHS = {
+  evacuate: 'M3 4h8v16H3zM8 12h13M16 7l5 5-5 5',
   worker: 'M8 15l-4 5m8-10 8-6 2 2-6 8M5 8l3-3 11 11-3 3z',
   rifle: 'M5 20l3-6 6-1 5-8 2 1-4 10-6 1-3 4M4 9l5-5 5 2-5 5z',
   medic: 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z',

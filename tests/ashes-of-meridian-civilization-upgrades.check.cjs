@@ -27,7 +27,7 @@ function persistence(){
   const data=new Map(),service=rules.createMeridianPersistence({...rules,warn(){},getStorage:()=>({getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)})});
   return {data,service};
 }
-function runFor(g){return {version:10,...copy(recipe),worlds:[],battle:copy(g.snapshotBattle())};}
+function runFor(g){return {version:11,...copy(recipe),worlds:[],battle:copy(g.snapshotBattle())};}
 
 test('six effects per family produce three distinct stable offers without battle RNG',()=>{
   const residential=['startingAlloy','startingWorkers','aetherAllocation','constructionProtocols','logisticsFrame','repairLogistics'],
@@ -167,7 +167,7 @@ test('energy supply increases current regeneration and respects the energy cap',
 });
 
 test('restored battle synchronizes before start subscribers and persists the receipt with the updated recipe',()=>{
-  const run={version:10,...copy(recipe),worlds:[],battle:copy(base)},g=new rules.MeridianGame(copy(profile));
+  const run={version:11,...copy(recipe),worlds:[],battle:copy(base)},g=new rules.MeridianGame(copy(profile));
   let observed=false;g.emit=(type)=>{if(type==='start'){
     observed=true;assert.equal(g.party(0).benefits.startingWorkers,2);
     assert.equal(g.party(0).upgradeDelivery.workers,0);

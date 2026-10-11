@@ -2,6 +2,8 @@
 
 **Produktidee, kein Implementierungsauftrag.** Auf dedizierter Karte Wirtschaft/Basis aufbauen und HQ gegen angekündigte Wellen bis zum Einsatzende halten. Der vorhandene [Missionsvertrag](../architecture.md#einzelspieler-missionen) ist keine Wellenregie; ein bloßer Timer mit Standard-KI wäre nicht derselbe Spielmodus.
 
+Der bereits implementierte [Außenpostenmodus](../gameplay.md#außenposten-verteidigung-und-evakuierung) nach militärischem Sieg hat endlose Wellen und ein selbst gestartetes Evakuierungsende. Er ist nicht dieser zeitlich begrenzte Gefechts-Missionspilot; seine Existenz ist keine Freigabe für einen weiteren Modus oder zusätzliche Türme.
+
 ## Vor Umsetzung entscheiden
 
 - [ ] Schutzobjekt, Dauer/Vorbereitungszeit, Wellentakt/-richtungen/-zusammensetzung und Schlusswelle.

@@ -72,15 +72,15 @@ const upgradeMethods = {
     if(initialHome && (delivery.workers || delivery.commander))throw Error('No free space for upgrade deployment');
     if(!initialHome)this.rehash();
   },
-  spawnUpgradeReinforcement(this: MeridianGame, type:'worker'|'hero', home: Position, team: PlayerTeam) {
+  spawnUpgradeReinforcement(this: MeridianGame, type:UnitType, home: Position, team: PlayerTeam) {
     const world=this.world!,size=UNITS[type].size*UNIT_BODY_SCALE;
     // Bounded local probe, no path search and no random draw until a unit is actually spawned.
     const points: Position[]=[{x:home.x,z:home.z}];
     for(let radius=3;radius<=21;radius+=3)for(let i=0;i<16;i++){
       const angle=i*Math.PI/8;points.push({x:home.x+Math.cos(angle)*radius,z:home.z+Math.sin(angle)*radius});
     }
-    for(const p of points)if(!world.blockedAt(p.x,p.z) && world.surface!.fits(p.x,p.z,size) &&
-      world.surface!.segment(home,p,size) && this.unitFits({type,size:UNITS[type].size,...p},p.x,p.z))
+    for(const p of points)if((isFlyingUnitType(type) || (!world.blockedAt(p.x,p.z) && world.surface!.fits(p.x,p.z,size) &&
+      world.surface!.segment(home,p,size))) && this.unitFits({type,size:UNITS[type].size,...p},p.x,p.z))
       return this.spawnUnit(type,p.x,p.z,team,this.factionFor(team));
     return null;
   },

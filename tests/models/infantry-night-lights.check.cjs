@@ -4,6 +4,23 @@ const vm = require('node:vm');
 const {modelHarness} = require('../helpers/model-contract.cjs');
 const {createRendererStub} = require('../helpers/renderer-stub.cjs');
 
+test('regular infantry: restrained real light and ground pool across factions',()=>{
+ const h=modelHarness(),material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context);
+ for(const faction of [0,1,2])for(const type of ['rifle','medic']){
+  const e={id:17,kind:'unit',type,faction,team:0,hp:h.UNITS[type].hp,size:h.UNITS[type].size,x:0,z:0,rot:0};
+  for(const [hour,blend]of [[18.5,.5],[22,1]]){
+   const lights=[],r=createRendererStub({record:true});
+   Object.assign(r,{battlefieldHour:hour,quality:1,addPointLight:(...args)=>lights.push(args)});
+   h.renderEntity(r,e,0,{});
+   assert.equal(lights.length,1);
+   assert.equal(lights[0][3],4,'retain the existing influence radius');
+   assert.equal(lights[0][5],blend,'reduced point-light strength follows dusk');
+   const pool=r.calls.find(c=>c[14]===material);
+   assert.equal(pool[12],.4*blend,'reduced ground overlay follows dusk');
+  }
+ }
+});
+
 for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
   test(`faction-${faction} ${type}: night accent, terrain pool and preview isolation`, () => {
     const h=modelHarness(), material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context),
@@ -22,8 +39,9 @@ for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
       parts=calls=>calls.filter(c=>c[14]!==material),
       day=draw(12), dusk=draw(18.5), night=draw(22);
     assert.equal(pools(day).length,0);
-    assert.equal(pools(night).length,1,'at most one extra instance, no extra model geometry');
-    assert.equal(pools(dusk)[0][12],pools(night)[0][12]/2,'pool fades with world time');
+    const beaconOnly=faction===0&&type==='hero';
+    assert.equal(pools(night).length,beaconOnly?0:1,'Marshal uses only real surface lighting');
+    if(!beaconOnly)assert.equal(pools(dusk)[0][12],pools(night)[0][12]/2,'pool fades with world time');
     const dayParts=parts(day), duskParts=parts(dusk), nightParts=parts(night);
     assert.equal(nightParts.length,dayParts.length);
     let sources=0;
@@ -36,18 +54,19 @@ for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
         assert.ok(Math.abs(half[11]-(a[11]+b[11])/2)<1e-12,'source fades smoothly too');
       }
     }
-    assert.equal(sources,faction===2&&type==='medic'?2:1);
+    assert.equal(sources,beaconOnly||(faction===2&&type==='medic')?2:1);
     for(const options of [{ghost:true},{tint:0x99e4c6},{alpha:.3},{layer:'effects'}]) {
       assert.deepEqual(draw(22,options),draw(12,options),'preview never acquires night effects');
     }
     assert.ok(parts(draw(22,{}, {cinema:true})).some((c,i)=>c[11]>parts(draw(12,{}, {cinema:true}))[i][11]),
       'cinema retains night emission');
-    assert.equal(pools(draw(22,{}, {cinema:true})).length,1);
+    assert.equal(pools(draw(22,{}, {cinema:true})).length,beaconOnly?0:1);
     assert.deepEqual(draw(undefined),day,'no atmosphere means no additional lighting');
     assert.deepEqual(draw(22,{}, {},{...e,hp:0}),[]);
     assert.equal(pools(draw(22,{}, {quality:0})).length,0,'performance skips pools');
     assert.ok(parts(draw(22,{}, {quality:0})).some((c,i)=>c[11]>parts(draw(12,{}, {quality:0}))[i][11]),
       'performance retains bright sources');
+    if(beaconOnly)return; // Slope/cliff pool fitting belongs only to projected lights.
     const heightAt=(x,z)=>4+.24*x-.28*z,
       surface={step:1.25,extent:60,heightAt,entityHeight:()=>heightAt(e.x,e.z)},
       pool=pools(draw(22,{}, {surface}))[0];

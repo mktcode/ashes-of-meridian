@@ -13,7 +13,7 @@ const catalogs = vm.runInContext('({units:UNITS,buildings:BUILDINGS,abilities:AB
 const upgrades = vm.runInContext('BATTLE_UPGRADES', content);
 const benefits = vm.runInContext('EXPEDITION_BENEFITS', content);
 const expedition = {
-  version: 10, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
+  version: 11, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
   benefits: { startingAlloy: 2, commanderMandate: 1 },
   enemyBenefits: [{ startingWorkers: 2, commandCapacitor: 1 }, { startingAlloy: 3 }, { aetherAllocation: 2 }],
   encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 }
@@ -76,7 +76,7 @@ let fixture;
 const savedBattle = () => json((fixture ??= runningSave()).run);
 
 test('terrain recipe changes block previous expedition versions without silently regenerating them', () => {
-  for (const version of [8,9]) {
+  for (const version of [8,9,10]) {
     const h = setup(), run = { ...json(expedition), version };
     put(h, run);
     const loaded = setup(h.data);
@@ -173,7 +173,8 @@ test('Forum stocks, ownership, construction progress, layout deadlines, growth c
     worker=entities.find(e=>e.type==='worker'&&e.team===0),d=catalogs.buildings.meridianforum;
   Object.assign(forum,{type:'meridianforum',size:d.size,hp:d.hp,maxHp:d.hp,progress:1,cinderStock:2000,settlementAt:13,settlementAttempt:64,visualRotation:1/3});
   const yaw=vm.runInContext('buildingVisualYaw',fixture.context)(forum),cs=Math.cos(yaw),sn=Math.sin(yaw);
-  Object.assign(building,{x:forum.x+45*cs+33*sn,z:forum.z-45*sn+33*cs,forumId:forum.id,paid:{cost:0,gas:0},progress:.4,hp:building.maxHp*.4});
+  Object.assign(building,{x:forum.x+45*cs+33*sn,z:forum.z-45*sn+33*cs,forumId:forum.id,paid:{cost:0,gas:0},progress:.4,hp:building.maxHp*.4,
+    upgradeOffers:json(vm.runInContext('civilizationUpgradeOffers',fixture.context)(building.type,run.battle.state.seed,building.id))});
   Object.assign(worker,{deliveryForum:forum.id,deliveryPoint:{x:forum.x+12,z:forum.z},order:{type:'idle'}});
   assert.equal(put(h,run),true);const loaded=h.service.loadExpedition();assert.ok(loaded);
   assert.deepEqual(json(loaded.battle),run.battle);

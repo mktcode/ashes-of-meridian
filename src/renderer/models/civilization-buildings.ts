@@ -2,26 +2,33 @@
    separate stilt/entry recipes sample the CPU surface only when the support pose changes. */
 'use strict';
 (() => {
-  type Material = 'steel' | 'edge' | 'dark' | 'orange' | 'cyan' | 'glass' | 'window' | 'warm' | 'dim' | 'soil' | 'leaf' | keyof typeof SUPPLY_CRATE_COLORS;
+  type Material = CivilianStyleMaterial | keyof typeof SUPPLY_CRATE_COLORS;
   type Variant = 'fieldlab' | 'researchhub' | 'researchspire' | 'embercottage' | 'terracecommons' | 'hearthtower';
   type Foot = { x: number; z: number; top: number };
   const colors: Record<Material, number> = {steel:0x68797d,edge:0xabb4b2,dark:0x23333e,
     orange:0xb46a31,cyan:0x3fdcea,glass:0x235b68,window:0x55ccdf,
-    warm:0xffdab0,dim:0x806e58,soil:0x384438,leaf:0x385938,...SUPPLY_CRATE_COLORS};
+    warm:0xffdab0,dim:0x806e58,soil:0x384438,leaf:0x385938,garden:0x54785a,light:0xc5cecc,...SUPPLY_CRATE_COLORS};
   let cargoPrimitives: Record<string,MeshData> | undefined;
   const variants: Variant[] = ['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
   const feet = (x:number,z:number,w:number,d:number,top=0):Foot[] =>
     [-w/2+.2,w/2-.2].flatMap(dx=>[-d/2+.15,0,d/2-.15].map(dz=>({x:x+dx,z:z+dz,top})));
   function assembly(type: Variant, style = ''): Record<Material, number[]> {
-    const meshes:Record<Material,number[]>={steel:[],edge:[],dark:[],orange:[],cyan:[],glass:[],window:[],warm:[],dim:[],soil:[],leaf:[],
+    const meshes:Record<Material,number[]>={steel:[],edge:[],dark:[],orange:[],cyan:[],glass:[],window:[],warm:[],dim:[],soil:[],leaf:[],garden:[],light:[],
       crateCinder:[],crateEcho:[],crateDark:[],crateEdge:[],crateCinderMark:[],crateEchoMark:[]};
     const tri = (a:number[],b:number[],c:number[],m:Material) => geom.tri(meshes[m],a,b,c,[1,1,1]);
     const quad = (a:number[],b:number[],c:number[],d:number[],m:Material) => {tri(a,b,c,m);tri(a,c,d,m);};
-    const box = (x:number,y:number,z:number,w:number,h:number,d:number,m:Material='steel') => {
-      ModelMesh.panel(meshes[m],{x,y,z,w,h,d,bevel:Math.min(.04,w*.18,h*.18,d*.18)});
+    let plainBox:number[]|undefined;
+    const box = (x:number,y:number,z:number,w:number,h:number,d:number,m:Material='steel',yaw=0,flat=false) => {
+      if(flat){ModelMesh.bake(meshes[m],plainBox??=geom.box(),{x,y,z,sx:w,sy:h,sz:d,ry:yaw});return;}
+      const bevel=Math.min(.04,w*.18,h*.18,d*.18);
+      if(!yaw)ModelMesh.panel(meshes[m],{x,y,z,w,h,d,bevel});
+      else{
+        const panel:number[]=[];ModelMesh.panel(panel,{x:0,y:0,z:0,w,h,d,bevel});
+        ModelMesh.bake(meshes[m],panel,{x,y,z,ry:yaw});
+      }
     };
-    const cylinder = (x:number,y:number,z:number,r:number,h:number,m:Material='edge') =>
-      ModelMesh.bake(meshes[m],geom.cylinder(12),{x,y,z,sx:r,sy:h,sz:r});
+    const cylinder = (x:number,y:number,z:number,r:number,h:number,m:Material='edge',top=1,n=12) =>
+      ModelMesh.bake(meshes[m],geom.cylinder(n,top),{x,y,z,sx:r,sy:h,sz:r});
     const beam = (a:number[],b:number[],width:number,m:Material='edge') => {
       const dir=V.norm(V.sub(b,a)),u=V.norm(V.cross(dir,Math.abs(dir[1])>.9?[1,0,0]:[0,1,0])),v=V.cross(dir,u);
       const pts=(p:number[])=>[[1,1],[-1,1],[-1,-1],[1,-1]].map(([i,j])=>p.map((n,k)=>n+width/2*(i*u[k]+j*v[k])));
@@ -157,11 +164,11 @@
     };
     for(const d of (BUILDINGS[type] as BuildingDefinitionShape).civilizationDecks!)deck(d.x,d.z,d.w,d.d,d.top);
     if(style){
-      const cap=(x:number,y:number,z:number,w:number,h:number,d:number)=>{
+      const cap=(x:number,y:number,z:number,w:number,h:number,d:number,m:Material='edge')=>{
         const a=[x-w/2,y,z-d/2],b=[x+w/2,y,z-d/2],c=[x+w/2,y,z+d/2],f=[x-w/2,y,z+d/2],
           back=[x,y+h,z-d/2],front=[x,y+h,z+d/2];
-        tri(b,a,back,'edge');tri(f,c,front,'edge');quad(a,b,c,f,'edge');
-        quad(a,f,front,back,'edge');quad(c,b,back,front,'edge');
+        tri(b,a,back,m);tri(f,c,front,m);quad(a,b,c,f,m);
+        quad(a,f,front,back,m);quad(c,b,back,front,m);
       };
       const crate=(x:number,y:number,z:number,scale:number,yaw:number,echo=false)=>{
         cargoPrimitives ??= {supplyCrateHull:geom.supplyCrateHull(),box:geom.box(),hex:geom.cylinder(6)};
@@ -175,7 +182,7 @@
           });
         });
       };
-      CivilianUpgradeStyles[style](type,{box,residential,module,entry,cap,crate,cylinder});
+      CivilianUpgradeStyles[style](type,{box,residential,module,entry,cap,crate,cylinder,oct,beam});
       return meshes;
     }
     if(type==='fieldlab'){
@@ -249,13 +256,26 @@
       materials: Material[] = housing ? ['steel','edge','dark','orange','cyan','warm','dim','soil','leaf']
         : ['steel','edge','dark','cyan','window',...(type==='researchspire'?[]:['glass' as const])];
     const residentialMaterials:Material[]=['steel','edge','dark','orange','cyan','warm','dim'];
+    const small=type==='embercottage'||type==='fieldlab',tall=type==='hearthtower'||type==='researchspire',
+      warmMaterials:Material[]=['steel','edge','dark','cyan','warm','dim'],
+      labMaterials:Material[]=['steel','edge','dark','cyan','window'];
     const styleMaterials:Record<string,Material[]>={
       startingAlloy:[...residentialMaterials,'crateCinder','crateCinderMark','crateDark','crateEdge'],
       aetherAllocation:[...residentialMaterials,'crateEcho','crateEchoMark','crateDark','crateEdge'],
-      weaponTechnology:['steel','edge','dark','cyan','window']
+      startingWorkers:['steel','edge','dark','cyan','warm',...(small?[]:['dim' as const]),'soil','garden'],
+      constructionProtocols:[...warmMaterials,'orange'],
+      logisticsFrame:['steel','edge','dark','cyan','warm',...(small?[]:['dim' as const]),'orange'],
+      repairLogistics:warmMaterials,
+      weaponTechnology:labMaterials,
+      protectionSystems:labMaterials,
+      fieldMedicine:[...labMaterials,'light','glass',...(tall?['soil' as const,'garden' as const]:[])],
+      commandTraining:labMaterials,
+      commandCapacitor:labMaterials,
+      commanderMandate:labMaterials
     };
     const materialSet=(style:string):Material[]=>style ? styleMaterials[style] : materials;
-    const styles=housing?['','startingAlloy','aetherAllocation']:['','weaponTechnology'];
+    const styles=housing?['','startingAlloy','aetherAllocation','startingWorkers','constructionProtocols','logisticsFrame','repairLogistics']
+      :['','weaponTechnology','protectionSystems','fieldMedicine','commandTraining','commandCapacitor','commanderMandate'];
     for(const style of styles)for(const material of materialSet(style))
       meshes[`civil${type[0].toUpperCase()+type.slice(1)}${style}${material[0].toUpperCase()+material.slice(1)}`] = () => {
         if(!geometry.has(style))geometry.set(style,assembly(type,style));

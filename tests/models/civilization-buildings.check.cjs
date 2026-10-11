@@ -6,8 +6,9 @@ const {createRendererStub}=require('../helpers/renderer-stub.cjs');
 const types=['fieldlab','researchhub','researchspire','embercottage','terracecommons','hearthtower'];
 test('shared research and warm residential meshes are cached, finite and nondegenerate',()=>{
  const h=modelHarness(),meshes={};h.EntityModels.upload({meshes:{},geometry(name,data){if(name.startsWith('civil'))meshes[name]=data;}});
- assert.equal(Object.keys(meshes).filter(n=>!n.includes('startingAlloy')&&!n.includes('aetherAllocation')&&!n.includes('weaponTechnology')).length,44);
- assert.equal(Object.keys(meshes).length,125);
+ const styles=vm.runInContext('Object.keys(CivilianUpgradeStyles)',h.context);
+ assert.equal(Object.keys(meshes).filter(n=>!styles.some(s=>n.includes(s))).length,44);
+ assert.equal(Object.keys(meshes).length,290);
  for(const [name,mesh]of Object.entries(meshes)){
   assertMesh(()=>mesh,{minTriangles:1,maxTriangles:8000,min:[-3.6,-.05,-3],max:[4.2,14,4.2]});
   assert.ok(mesh.length/27<8000,name);

@@ -24,15 +24,17 @@ test('codex exposes current-model tiles for every faction without a profile unlo
   assert.equal(renderStoryScreen(),renderStoryScreen(),'story rendering is deterministic without storage or RNG');
 });
 
-test('civilian gallery exposes twelve previews and returns from specialized live models without gameplay',()=>{
+test('civilian gallery exposes all twelve families and 48 previews and returns from specialized live models without gameplay',()=>{
   const menu={innerHTML:'',classList:{remove(){}}},context=loadScripts(['core','content','voice-content',...UI_SCRIPTS],
     {globals:{document:{getElementById:()=>menu}}});
   const {renderCivilianModelGallery,MeridianUI}=vm.runInContext('({renderCivilianModelGallery,MeridianUI})',context);
   vm.runInContext('Math.random=seeded=()=>{throw Error("Gallery RNG");}',context);
   const html=renderCivilianModelGallery();
-  assert.equal((html.match(/class="codex-card"/g)||[]).length,12);
-  assert.equal((html.match(/data-model-upgrade=/g)||[]).length,9);
-  assert.equal((html.match(/Neutral · vor Aktivierung/g)||[]).length,3);
+  assert.equal((html.match(/class="codex-card"/g)||[]).length,48);
+  assert.equal((html.match(/data-model-upgrade=/g)||[]).length,36);
+  assert.equal((html.match(/Neutral · vor Aktivierung/g)||[]).length,12);
+  for(const key of vm.runInContext('Object.keys(CIVILIZATION_UPGRADES)',context))
+    assert.equal((html.match(new RegExp(`data-codex-upgrade="${key}"`,'g'))||[]).length,3,key);
   assert.ok(html.includes('data-model-type="hearthtower"'));assert.ok(html.includes('data-model-type="researchspire"'));
   const ui=Object.assign(Object.create(MeridianUI.prototype),{civilianModelGallery:true,codexFaction:0,
     resetCodexGesture(){},R:{clearStatic(){},useModelPreview(){}},game:{start(){assert.fail('gallery starts gameplay');}}});

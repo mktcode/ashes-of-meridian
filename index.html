@@ -20,6 +20,7 @@
     <canvas id="world" aria-label="Three-dimensional battlefield"></canvas><canvas id="overlay"></canvas>
     <canvas id="previewTransition" class="hidden" aria-hidden="true"></canvas>
     <div id="vignette"></div>
+    <div id="evacuationGlow" aria-hidden="true"></div>
   </div>
   <div id="fpsReadout" class="hidden" aria-hidden="true" title="Rendered frames per second; NET shows received state updates">FPS —</div>
   <div id="battleTransition" class="hidden" aria-hidden="true"></div>
@@ -58,6 +59,7 @@
         <div id="tutorialGoalLabel" class="eyebrow">TUTORIAL OBJECTIVE</div>
         <p id="tutorialGoalText"></p>
       </section>
+      <section id="outpostStatus" class="hidden" aria-label="Outpost defence and evacuation"></section>
       <div id="alerts"></div>
     </div>
     <div id="radio" class="glass hidden">
@@ -100,6 +102,8 @@
   <script data-meridian-script="model-settlement-traffic" src="./dist/src/renderer/models/settlement-traffic.js"></script>
   <script data-meridian-script="model-supply-crate" src="./dist/src/renderer/models/supply-crate.js"></script>
   <script data-meridian-script="model-civilization-upgrade-styles" src="./dist/src/renderer/models/civilization-upgrade-styles.js"></script>
+  <script data-meridian-script="model-civilization-upgrade-architecture" src="./dist/src/renderer/models/civilization-upgrade-architecture.js"></script>
+  <script data-meridian-script="model-civilization-upgrade-designs" src="./dist/src/renderer/models/civilization-upgrade-designs.js"></script>
   <script data-meridian-script="model-civilization-buildings" src="./dist/src/renderer/models/civilization-buildings.js"></script>
   <script data-meridian-script="model-meridian-forum" src="./dist/src/renderer/models/meridian-forum.js"></script>
   <script data-meridian-script="model-faction-0-building-barracks" src="./dist/src/renderer/models/faction-0-building-barracks.js"></script>
@@ -177,6 +181,7 @@
   <script data-meridian-script="simulation-ai-rules" src="./dist/src/simulation/ai-rules.js"></script>
   <script data-meridian-script="simulation-ai-strategy" src="./dist/src/simulation/ai-strategy.js"></script>
   <script data-meridian-script="simulation-ai" src="./dist/src/simulation/ai.js"></script>
+  <script data-meridian-script="simulation-outpost" src="./dist/src/simulation/outpost.js"></script>
   <script data-meridian-script="simulation-runtime" src="./dist/src/simulation/runtime.js"></script>
   <script data-meridian-script="voice-content" src="./dist/src/voice-content.js"></script>
   <script data-meridian-script="audio" src="./dist/src/audio.js"></script>

@@ -76,7 +76,7 @@
       viewingZoomMax = 2000;
       viewingEntityVisible?: (entity: Entity) => boolean;
       onCameraChange?: () => void;
-      get controlsLocked(): boolean { return this.viewing || this.paused || this.leavingBattle || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }
+      get controlsLocked(): boolean { return this.viewing || this.paused || this.leavingBattle || !!this.game.s?.outpost?.finished || !!this.battleIntro || this.battleTutorial?.step === 'arrival'; }
       get cameraControlsLocked(): boolean { return this.viewing ? this.viewingCameraLocked : this.controlsLocked; }
       modalKind: string;
       sellBuildingId: number | null;
@@ -102,6 +102,8 @@
       battleSaveBytes = 0;
       battleSaveMilliseconds = 0;
       settlementDetail: { buildingId: number; upgrade: CivilizationUpgradeType } | null = null;
+      evacuationConfirmId: number | null = null;
+      outpostMarkup = '';
       actionSignature: string;
       selectionMarkup?: string;
       factionJustUnlocked: FactionId | null;
@@ -224,8 +226,44 @@
         }
       }
       autosaveBattle() {
+        if(this.finishOutpost())return;
         if (this.view === 'game' && !this.paused && performance.now() - this.lastBattleSaveAt >= 5000)
           this.saveBattle();
+      }
+      finishOutpost(): boolean {
+        const state=this.game.s,expedition=this.expedition,stage=this.activeWorldStage;
+        if(this.launchingBattle || this.leavingBattle || this.view!=='game' || stage===null || !state?.outpost?.finished || !expedition || this.game.stepping || !this.game.snapshotSafe)return false;
+        if(!retireExpeditionOutpost(expedition,stage,state))return false;
+        this.persistence.saveProgress(this.profile,expedition);
+        this.notifyStorageFailure();
+        this.rememberStage();
+        this.paused=true;this.activeWorldStage=null;this.game.s=null;this.view='home';
+        this.selected=[];this.battleIntro=null;this.battleTutorial=null;
+        $('worldViewport').classList.remove('evacuating');
+        $('outpostStatus').classList.add('hidden');
+        $('hud').classList.add('hidden');$('modal').classList.add('hidden');
+        this.modalKind='';
+        this.toast(state.outpost.evacuation?'Outpost abandoned. Your rescue is deploying to the highest stage.':'Outpost lost. Its civilian upgrades are gone; the expedition continues.');
+        void this.startExpeditionBattle();
+        return true;
+      }
+      confirmEvacuation() {
+        const id=this.evacuationConfirmId;
+        if(this.modalKind!=='evacuationConfirm' || id===null || this.activeWorldStage===null)return;
+        this.evacuationConfirmId=null;
+        const applied=this.submitAction({kind:'startEvacuation',id});
+        this.resume();this.actionSignature='';this.updateHUD();
+        if(applied)this.saveBattle();
+      }
+      updateOutpostHUD() {
+        const s=this.game.s,out=this.activeWorldStage!==null?s?.outpost:undefined,evac=out?.evacuation;
+        $('worldViewport').classList.toggle('evacuating',!!evac && !out?.finished);
+        const el=$('outpostStatus');el.classList.toggle('hidden',!out);
+        if(!out || !s)return;
+        const html=evac?`<strong>EVACUATION · ${Math.max(0,Math.ceil(evac.until-s.time))}s${this.paused?' · PAUSED':''}</strong><small>${evac.units.length} units secured · ${evac.upgrades.length}/3 upgrades · Select units, then tap/right-click the evacuation HQ</small><div class="evacuation-upgrades">${evac.upgrades.map(u=>`<button data-action="evacuateUpgrade:${u.id}" aria-label="Release ${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} evacuation selection">${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} · R${u.level} ×</button>`).join('')}</div>`:
+          `<strong>OUTPOST · WAVE ${out.wave}${out.remaining?' · INCOMING':''}</strong><small>Next wave in ${Math.max(0,Math.ceil(out.nextWave-s.time))}s · Finite resources · Evacuate at your Command Center</small>`;
+        if(this.outpostMarkup!==html){el.innerHTML=html;this.outpostMarkup=html;}
+        el.classList.toggle('evacuation-status',!!evac);
       }
       notifyStorageFailure() {
         if (this.persistence.available !== false || this.storageWarningShown) return;
@@ -283,6 +321,12 @@
           this.audio.resetBattleMusic?.();
           this.factionJustUnlocked = null;
           this.paused = !!data.restored && this.activeWorldStage !== null;
+          if(this.activeWorldStage===null && this.expedition?.rescuedArmy?.length) {
+            const pending=this.game.s!.reinforcements ??= {units:[],nextAttempt:this.game.s!.time};
+            pending.units.push(...this.expedition.rescuedArmy);
+            this.expedition.rescuedArmy=[];
+            this.game.deliverEvacuatedArmy();
+          }
           this.modalKind = '';
           this.sellBuildingId = null;
           this.lastClick = {};

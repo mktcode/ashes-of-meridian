@@ -139,14 +139,22 @@ test('model tile scheduling renders cold misses once and reuses cached snapshots
 });
 
 test('civilian activation invalidates the portrait without a type change and retains both cached variants',()=>{
-  const {tile,thumbs}=setup(),canvas=tile(0,'building','embercottage');
-  assert.equal(thumbs.draw(canvas),'rendered');
-  canvas.dataset.modelUpgrade='startingAlloy';assert.equal(thumbs.draw(canvas),'rendered');
-  assert.equal(thumbs.draw(canvas),'unchanged');
-  delete canvas.dataset.modelUpgrade;assert.equal(thumbs.draw(canvas),'cached');
-  canvas.dataset.modelUpgrade='startingAlloy';assert.equal(thumbs.draw(canvas),'cached');
-  canvas.dataset.modelType='terracecommons';assert.equal(thumbs.draw(canvas),'rendered');
-  canvas.dataset.modelType='hearthtower';assert.equal(thumbs.draw(canvas),'rendered');
+  const {h,tile,thumbs}=setup(),families=vm.runInContext('CIVILIZATION_UPGRADE_FAMILIES',h.context);
+  const pose=()=>Object.entries(thumbs.preview.dynamic).filter(([,b])=>b.n).map(([name])=>name);
+  for(const [upgrade,family]of Object.entries(families)){
+    const types=family==='residential'?['embercottage','terracecommons','hearthtower']:['fieldlab','researchhub','researchspire'],
+      canvas=tile(0,'building',types[0]);
+    assert.ok(['rendered','cached'].includes(thumbs.draw(canvas)));
+    canvas.dataset.modelUpgrade=upgrade;assert.equal(thumbs.draw(canvas),'rendered');
+    assert.ok(pose().some(n=>n.includes(upgrade)),upgrade);
+    assert.equal(thumbs.draw(canvas),'unchanged');
+    delete canvas.dataset.modelUpgrade;assert.equal(thumbs.draw(canvas),'cached');
+    canvas.dataset.modelUpgrade=upgrade;assert.equal(thumbs.draw(canvas),'cached');
+    for(const type of types.slice(1)){
+      canvas.dataset.modelType=type;assert.equal(thumbs.draw(canvas),'rendered');
+      assert.ok(pose().some(n=>n.includes(upgrade)),`${upgrade}/${type}`);
+    }
+  }
   thumbs.dispose();
 });
 
