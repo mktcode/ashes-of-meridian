@@ -6,7 +6,7 @@ Lokaler, touchorientierter RTS-Roguelite-Prototyp mit drei Fraktionen und WebGL 
 
 ## Starten
 
-Voraussetzung: Node.js 22 (regulär unterstützt, `.nvmrc`; technische Mindestversion 22.0.0).
+Voraussetzung: Node.js 24 (regulär unterstützt, `.nvmrc`; Mindestversion 24.0.0). Mit NVM aktiviert `nvm use` die Projektversion; CI und Docker bauen ebenfalls mit Node 24.
 
 ```bash
 npm ci
