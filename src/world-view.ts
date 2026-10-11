@@ -559,6 +559,12 @@ class BattlefieldView {
     this.roadJoinScratch = null; this.joinedRoadPixels = null;
     this.R.releaseWorkerRoads();
   }
+  roadUsage(x: number,z: number): number {
+    const field=this.workerRoads;
+    if(!field) return 0;
+    const col=Math.floor((x+field.extent)/field.cell),row=Math.floor((z+field.extent)/field.cell);
+    return col>=0&&row>=0&&col<field.size&&row<field.size ? field.wear[row*field.size+col] : 0;
+  }
   updateWorkerRoads(time: number, entities: readonly Entity[], observed: (e: Entity) => boolean,
       pedestrians: readonly (Position & { id: number })[] = []) {
     const field = this.workerRoads ??= new WorkerRoadField(this.world!.extent);

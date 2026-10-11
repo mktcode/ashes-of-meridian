@@ -470,7 +470,8 @@
           const s = game.s!, world = game.world!;
           const fogOn = !(world.fogCleared && world.viewTeam === 0);
           worldView.sync(world, fogOn, s);
-          settlementTraffic.update(world, s, R.quality, e => !ui.battleIntro && game.observed(e));
+          settlementTraffic.update(world, s, R.quality, e => !ui.battleIntro && game.observed(e),
+            (x,z) => worldView.roadUsage(x,z));
           worldView.updateWorkerRoads(s.time, s.entities, e => !ui.battleIntro && game.observed(e), settlementTraffic.walkers());
           worldView.retainBuildingGround(s.entities);
           // Revalidate restored cameras and resized viewports, including while paused.

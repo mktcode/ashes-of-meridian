@@ -5,6 +5,7 @@ interface SettlementTrafficPortal {
   building: BuildingEntity;
   inside: SettlementTrafficPoint;
   door: SettlementTrafficPoint;
+  deck: SettlementTrafficPoint[];
   stairs: SettlementTrafficPoint;
   landing: SettlementTrafficPoint;
   service: SettlementTrafficPoint;
@@ -18,6 +19,8 @@ interface SettlementTrafficActor extends SettlementTrafficPoint {
   nextTrip: number;
   route: SettlementTrafficPoint[] | null;
   segment: number;
+  groundStart: number;
+  groundEnd: number;
   rot: number;
   walk: number;
   alpha: number;
@@ -37,21 +40,28 @@ class SettlementTraffic {
   private navigation = -1;
   private nextSearch = 0;
   private cursor = 0;
+  private nextRouteRefresh = 0;
+  private roadUsage: ((x: number,z: number) => number) | undefined;
   reset() {
     this.world=null;this.state=null;this.team=null;this.time=null;this.layout='';
-    this.groups.clear();this.actors=[];this.routes.clear();this.navigation=-1;this.nextSearch=0;this.cursor=0;
+    this.groups.clear();this.actors=[];this.routes.clear();this.navigation=-1;this.nextSearch=0;this.cursor=0;this.nextRouteRefresh=0;this.roadUsage=undefined;
   }
-  update(world: Battlefield, state: RunState, quality: number, observed: (e: Entity) => boolean) {
+  update(world: Battlefield, state: RunState, quality: number, observed: (e: Entity) => boolean,
+      roadUsage?: (x: number,z: number) => number) {
     if(state.rules.kind!=='single-player'||!state.rules.completed||state.result||state.stopped) {this.reset();return;}
     if(this.world!==world||this.state!==state||this.team!==world.viewTeam) {
       this.reset();this.world=world;this.state=state;this.team=world.viewTeam;
     }
+    this.roadUsage=roadUsage;
     const now=state.time,dt=this.time===null?0:now-this.time;
     this.time=now;
     const forums=new Map(state.entities.filter((e):e is BuildingEntity=>e.kind==='building'&&e.type==='meridianforum'&&e.hp>0&&e.progress>=1)
       .map(e=>[e.id,e.team]));
-    const buildings=state.entities.filter((e):e is BuildingEntity=>e.kind==='building'&&e.hp>0&&e.progress>=1&&
+    const upgrades=state.entities.filter((e):e is BuildingEntity=>e.kind==='building'&&e.hp>0&&e.progress>=1&&
       e.forumId!==undefined&&forums.get(e.forumId)===e.team&&e.settlementAt===undefined&&observed(e));
+    const suppliedForums=new Set(upgrades.map(b=>b.forumId));
+    const buildings=[...upgrades,...state.entities.filter((e):e is BuildingEntity=>e.kind==='building'&&
+      forums.has(e.id)&&suppliedForums.has(e.id)&&observed(e))];
     const key=`${quality===0?0:1}|`+buildings.map(b=>`${b.id}:${b.forumId}:${b.type}:${b.x}:${b.z}:${b.size}:${b.team}:${b.visualRotation||0}`).join('|');
     if(key!==this.layout||dt<0||dt>1) {
       const previous=new Map(this.actors.map(a=>[a.id,a]));
@@ -59,16 +69,19 @@ class SettlementTraffic {
       for(const b of buildings) {
         const portal=this.portal(world,b);
         if(!portal) continue;
-        const group=this.groups.get(b.forumId!)||[];group.push(portal);this.groups.set(b.forumId!,group);
+        const forumId=b.type==='meridianforum'?b.id:b.forumId!;
+        const group=this.groups.get(forumId)||[];group.push(portal);this.groups.set(forumId,group);
       }
       // Round-robin allocation prevents the first Forum consuming the entire budget.
       const eligible=[...this.groups].filter(([,g])=>g.length>=2),
         portalKeys=new Set(buildings.map(b=>this.portalKey(b)));
-      const groundLimit=quality===0?12:24,airLimit=quality===0?3:6;
+      const groundLimit=quality===0?15:30,airLimit=quality===0?3:6;
       for(const air of [false,true]) {
         let count=0;
-        for(let slot=0;slot<(air?3:8);slot++) for(const [forumId,group] of eligible) {
-          if(count>=(air?airLimit:groundLimit)||slot>=(air?Math.min(3,group.length):Math.min(8,group.length))) continue;
+        for(let slot=0;slot<(air?3:10);slot++) for(const [forumId,group] of eligible) {
+          const upgradeCount=group.filter(p=>p.building.type!=='meridianforum').length;
+          if((air&&upgradeCount<2)||count>=(air?airLimit:groundLimit)||
+            slot>=(air?Math.min(3,upgradeCount):Math.min(10,Math.ceil(upgradeCount*1.25)))) continue;
           const id=-(forumId*32+slot+(air?16:0)+1),random=seeded(state.seed^Math.imul(forumId,0x45d9f3b)^Math.imul(-id,0x119de1f3)),
             old=previous.get(id);
           if(old&&dt>=0&&dt<=1) {
@@ -76,7 +89,7 @@ class SettlementTraffic {
               old.route=null;old.alpha=0;old.nextTrip=now+1+old.random()*6;
             }
             this.actors.push(old);
-          } else this.actors.push({id,forumId,air,random,nextTrip:now+.5+random()*6,route:null,segment:0,
+          } else this.actors.push({id,forumId,air,random,nextTrip:now+.5+random()*6,route:null,segment:0,groundStart:0,groundEnd:0,
             x:0,y:0,z:0,rot:0,walk:0,alpha:0,tripKey:'',destinationId:0});count++;
         }
       }
@@ -87,11 +100,13 @@ class SettlementTraffic {
       // Preserve unaffected trips during normal settlement growth. Recheck only on navigation changes.
       for(const actor of this.actors) if(actor.route&&!actor.air) {
         let valid=true;
-        for(let i=4;i<actor.route.length-5;i++)
+        for(let i=actor.groundStart;i<actor.groundEnd;i++)
           if(!world.lineFree(actor.route[i],actor.route[i+1],.2)) {valid=false;break;}
         if(!valid) {actor.route=null;actor.alpha=0;actor.nextTrip=now+1+actor.random()*6;}
       }
     }
+    // Refresh only future trips occasionally, so evolving/fading roads can influence routes.
+    if(now>=this.nextRouteRefresh) {this.routes.clear();this.nextRouteRefresh=now+30;}
     if(dt<=0||dt>1) return;
     for(const actor of this.actors) if(actor.route) this.advance(actor,world,dt,now);
     // At most one trip preparation per half-second, globally; only ground trips can run A*.
@@ -112,7 +127,7 @@ class SettlementTraffic {
     const yaw=buildingVisualYaw(b),cs=Math.cos(yaw),sn=Math.sin(yaw),scale=CIVILIZATION_MODEL_SCALE,
       base=world.surface.buildingPose(b,b.size).height,
       point=(z:number,y:number):SettlementTrafficPoint=>({x:b.x+entry.x*scale*cs+z*sn,z:b.z-entry.x*scale*sn+z*cs,y}),
-      inside=point(entry.doorZ*scale-.28,base+.35*scale),
+      inside=point(entry.doorZ*scale-.28,base+(entry.top??.35)*scale),
       door=point(entry.doorZ*scale+.26,inside.y),
       stairs=point(entry.z*scale,inside.y),
       landing=point(entry.z*scale+entry.length,0),
@@ -120,7 +135,11 @@ class SettlementTraffic {
     landing.y=world.surface.heightAt(landing.x,landing.z);service.y=world.surface.heightAt(service.x,service.z);
     const groundAccess=!world.blockedAt(service.x,service.z)&&world.surface.fits(service.x,service.z,.2)&&
       world.terrainFree(landing,service,.2)&&this.approachFree(world,b,landing,service);
-    return {building:b,inside,door,stairs,landing,service,groundAccess};
+    const deck:SettlementTrafficPoint[]=b.type==='meridianforum' ? [[4,6.4],[4,9],[0,9]].map(([x,z])=>{
+      const s=FORUM_MODEL_SCALE*scale;
+      return {x:b.x+x*s*cs+z*s*sn,z:b.z-x*s*sn+z*s*cs,y:inside.y};
+    }) : [];
+    return {building:b,inside,door,deck,stairs,landing,service,groundAccess};
   }
   private approachFree(world: Battlefield,owner: BuildingEntity,a: Position,b: Position): boolean {
     // The owning structure intentionally contains the doorway/stairs. No other obstacle is exempt.
@@ -134,11 +153,15 @@ class SettlementTraffic {
   }
   private depart(actor: SettlementTrafficActor,world: Battlefield) {
     const group=this.groups.get(actor.forumId)!;
-    const candidates=actor.air?group:group.filter(p=>p.groundAccess);
+    const candidates=group.filter(p=>(!actor.air||p.building.type!=='meridianforum')&&(actor.air||p.groundAccess));
     if(candidates.length<2) return;
     const home=candidates.findIndex(p=>p.building.id===actor.homeId),
       index=home<0?Math.floor(actor.random()*candidates.length):home,from=candidates[index],
-      to=candidates[(index+1+Math.floor(actor.random()*(candidates.length-1)))%candidates.length];
+      forum=candidates.find(p=>p.building.type==='meridianforum'),
+      others=candidates.filter(p=>p!==from&&p!==forum),
+      to=forum&&from!==forum&&(!others.length||actor.random()<1/3)?forum:
+        others[Math.floor(actor.random()*others.length)];
+    if(!to) return;
     let middle:SettlementTrafficPoint[];
     if(actor.air) {
       // Only nearby buildings affect this flight: a distant hilltop Forum must not raise all traffic.
@@ -161,7 +184,8 @@ class SettlementTraffic {
       const key=`${from.building.id}:${to.building.id}`;
       let route=this.routes.get(key);
       if(route===undefined) {
-        const result=world.path(from.service.x,from.service.z,to.service.x,to.service.z,false,undefined,.2,false,600);
+        const result=world.path(from.service.x,from.service.z,to.service.x,to.service.z,false,undefined,.2,false,600,
+          this.roadUsage ? (x,z)=>1+.3*(1-clamp(this.roadUsage!(x,z),0,1)) : undefined);
         route=result.status==='complete'?result.points.map(p=>({...p})):null;
         if(this.routes.size>=64) this.routes.delete(this.routes.keys().next().value!);
         this.routes.set(key,route);
@@ -169,9 +193,11 @@ class SettlementTraffic {
       if(!route) return;
       middle=route.map(p=>({...p,y:world.surface?.heightAt(p.x,p.z)||0}));
     }
-    actor.route=[from.inside,from.door,from.stairs,from.landing,from.service,...middle,to.service,to.landing,to.stairs,to.door,to.inside]
-      .filter((p,i,all)=>!i||Math.hypot(p.x-all[i-1].x,p.y-all[i-1].y,p.z-all[i-1].z)>.01)
-      .map(p=>({...p}));
+    const trip=[from.inside,from.door,...from.deck,from.stairs,from.landing,from.service,...middle,to.service,to.landing,to.stairs,...[...to.deck].reverse(),to.door,to.inside]
+      .filter((p,i,all)=>!i||Math.hypot(p.x-all[i-1].x,p.y-all[i-1].y,p.z-all[i-1].z)>.01);
+    actor.groundStart=trip.indexOf(from.service);
+    actor.groundEnd=trip.length-5-to.deck.length;
+    actor.route=trip.map(p=>({...p}));
     actor.destinationId=to.building.id;
     actor.tripKey=`${this.portalKey(from.building)}|${this.portalKey(to.building)}`;
     Object.assign(actor,actor.route[0]);actor.segment=0;actor.alpha=0;actor.walk=0;
@@ -192,7 +218,7 @@ class SettlementTraffic {
       actor.segment===route.length-2?distance(actor,route[route.length-1])/.3:1;
     actor.alpha=Math.min(1,edge);
     // The navigation path sits on the real triangles; staircase/deck links retain their authored heights.
-    if(!actor.air&&actor.segment>=4&&actor.segment<route.length-5)
+    if(!actor.air&&actor.segment>=actor.groundStart&&actor.segment<actor.groundEnd)
       actor.y=world.surface?.heightAt(actor.x,actor.z)||0;
   }
   walkers(): readonly SettlementTrafficActor[] {
