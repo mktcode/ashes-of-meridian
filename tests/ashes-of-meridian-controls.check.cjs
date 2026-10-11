@@ -2115,7 +2115,7 @@ test('civilian effect grids fit twelve slots and separate family icons from deta
   assert.doesNotMatch(unavailable,/data-action="settlement(?:Upgrade:|Expand|Clear)/);
 });
 
-test('home and transition previews use the actual next landscape and atmosphere seed', () => {
+test('home preview follows the current encounter landscape and seed', () => {
   const h = setup(), maps = [];
   h.ui.expedition = { faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2, upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { mission: 'hq-elimination', enemies: [2], map: 'frontier', seed: 1409 } };
@@ -2123,7 +2123,7 @@ test('home and transition previews use the actual next landscape and atmosphere 
   h.ui.showHome();
   assert.deepEqual(maps, [['frontier',1409]]);
   h.ui.expedition.encounter.seed=7919;
-  h.ui.showExpeditionTransition();
+  h.ui.showHome();
   assert.deepEqual(maps, [['frontier',1409],['frontier',7919]]);
 });
 
@@ -2737,14 +2737,17 @@ test('captured world releases over the HUD cannot issue orders, select or place 
   }
 });
 
-test('catalog and unit details back controls use the left-arrow asset, not the fallback star', () => {
+test('catalog and unit details expose an action that returns to the root panel', () => {
   const h=setup();
+  h.ui.setTab=h.UI.prototype.setTab;
   for(const tab of ['build','infantry','vehicles','aircraft','details']) {
     h.ui.tab=tab;
     if(tab==='details') {h.ui.selected=[1];h.ui.game.s.entities=[{id:1,kind:'unit',type:'worker',faction:0,hp:100}];}
     h.ui.renderActions();
-    assert.match(h.document.getElementById('actions').innerHTML,
-      /data-action="tab:root"[^>]*><img class="ui-icon" src="\.\/assets\/ui\/back\.webp"/);
+    const back=h.document.getElementById('actions').innerHTML.match(/<button\b[^>]*\bdata-action="(tab:root)"/);
+    assert.ok(back, `${tab}: return action exists`);
+    h.UI.prototype.perform.call(h.ui,back[1]);
+    assert.equal(h.ui.tab,'root');
   }
 });
 

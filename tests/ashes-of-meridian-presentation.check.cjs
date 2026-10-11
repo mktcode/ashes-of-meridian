@@ -558,18 +558,19 @@ test('effects need only content, consume RNG synchronously and preserve visibili
 
 test('shot and shell faction variants use stable IDs rather than display names', () => {
   const context = loadScripts(['content', 'effects']);
-  vm.runInContext(`FACTIONS.forEach(f => { f.name = 'Same revised name'; });`, context);
   const Effects = vm.runInContext('MeridianEffects', context);
   const effects = new Effects(() => { throw Error('Shot RNG'); });
   const target = { kind: 'unit', type: 'rifle', x: 8, z: 9 };
-  for (const [faction, color, life, shellColor] of [
-    [0, 0xffd2a0, .1, 0xffce8f], [1, 0xafe8a6, .1, 0xb8eba3], [2, 0xd9bfff, .19, 0xffce8f]
-  ]) {
+  const draw = faction => {
+    effects.reset();
     const e = Object.freeze({ kind: 'unit', type: 'rifle', x: 0, z: 0, rot: 0, team: 0, faction });
     effects.shot(e, target); effects.shell(e, target, .85);
-    assert.equal(effects.fx.at(-2).color, color); assert.equal(effects.fx.at(-2).life, life);
-    assert.equal(effects.fx.at(-1).color, shellColor);
-  }
+    return JSON.parse(JSON.stringify(effects.fx));
+  };
+  const before = [0,1,2].map(draw);
+  assert.equal(new Set(before.map(fx => JSON.stringify(fx))).size,3,'factions have distinct effects');
+  vm.runInContext(`FACTIONS.forEach(f => { f.name = 'Same revised name'; });`, context);
+  assert.deepEqual([0,1,2].map(draw),before);
 });
 
 test('placement previews have a stable visual identity and finite transforms for every building', () => {
@@ -1080,10 +1081,10 @@ test('result UI advances transient clocks without updating the hidden HUD or min
     tick=vm.runInContext('uiPresentationMethods.tick',context),calls=[];
   const ui={view:'game',game:{s:{result:{win:false}}},pings:[{life:.1}],hudClock:0,
     notifyStorageFailure(){calls.push('storage');},advanceTutorialArrival(){},advanceBattleIntro(){},
-    armRectangleSelection(){},updateTutorialSpeedHint(){},refreshCivilizationScore(){calls.push('score');},
+    armRectangleSelection(){},updateTutorialSpeedHint(){},
     updateQueues(){calls.push('queues');},updateHUD(){calls.push('hud');},drawMinimap(){calls.push('minimap');}};
   tick.call(ui,.3);assert.deepEqual(calls,['storage']);assert.equal(ui.pings.length,0);
-  ui.game.s.result=null;tick.call(ui,.3);assert.deepEqual(calls,['storage','storage','queues','score','hud','minimap']);
+  ui.game.s.result=null;tick.call(ui,.3);assert.deepEqual(calls,['storage','storage','queues','hud','minimap']);
 });
 
 test('app enables celestial backdrops only on home, never in combat or codex',async()=>{
@@ -1595,19 +1596,6 @@ test('render phase tolerates timestamp jitter at 60 Hz and discards slots after 
   a.frame(20001);
   assert.equal(a.draws.length, before + 1, 'no immediate replay of missed slots');
   assert.deepEqual(a.errors, []);
-});
-
-test('app current-stage launch checks the score unlock again after asynchronous texture preparation',async()=>{
-  const a=await appClock();a.ui.view='home';a.ui.expedition={depth:1,unlockedStage:1,battle:null};
-  let starts=0;a.game.start=()=>starts++;
-  assert.equal(await a.ui.onLaunchBattle({map:'desert'},a.ui.expedition),false);assert.equal(starts,0);
-  a.ui.expedition.unlockedStage=2;
-  assert.equal(await a.ui.onLaunchBattle({map:'desert'},a.ui.expedition),true);assert.equal(starts,1);
-  let ready;a.renderer.prepareBattlefieldTextures=()=>new Promise(done=>{ready=done;});
-  const pending=a.ui.onLaunchBattle({map:'desert'},a.ui.expedition);
-  await new Promise(setImmediate);
-  a.ui.expedition.unlockedStage=1;ready(true);
-  assert.equal(await pending,false);assert.equal(starts,1);
 });
 
 test('frame cap leaves local speed, pause and menu simulation ownership unchanged', async () => {

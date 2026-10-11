@@ -3,13 +3,16 @@ const { createHash } = require('node:crypto');
 const { BATTLEFIELD_SCRIPTS, RENDERER_SCRIPTS, loadScripts } = require('./game-scripts.cjs');
 const { createRendererStub } = require('./renderer-stub.cjs');
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+// Hash typed geometry directly; JSON would expand millions of numeric keys on the JS heap.
+const digestBytes = value => createHash('sha256')
+  .update(Buffer.from(value.buffer, value.byteOffset, value.byteLength)).digest('hex');
 function worldSample(seed, map) {
   const context = loadScripts(['core', ...RENDERER_SCRIPTS, 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   vm.runInContext('Math.random = () => { throw Error("Unseeded presentation randomness"); }', context);
   const { Battlefield, BattlefieldView } = vm.runInContext('({Battlefield, BattlefieldView})', context);
   const renderer = createRendererStub({ record: true });
   let terrain;
-  renderer.geometry = (name, data) => { if (name === 'terrain') terrain = digest(data); };
+  renderer.geometry = (name, data) => { if (name === 'terrain') terrain = digestBytes(data); };
   const world = new Battlefield(seed, map);
   new BattlefieldView(renderer).sync(world);
   const entities = [
@@ -23,7 +26,7 @@ function worldSample(seed, map) {
   world.reveal(entities, [{ x: -20, z: -10, r: 7 }]);
   world.reveal([]);
   return { terrain, placements: digest({ calls: renderer.calls, features: world.renderData.features,
-    reliefs: world.renderData.geometries.filter(d => d.relief).map(d => ({ mesh: d.mesh, relief: digest(Array.from(d.relief.heights)) })) }), navigation: digest({ paths,
+    reliefs: world.renderData.geometries.filter(d => d.relief).map(d => ({ mesh: d.mesh, relief: digestBytes(d.relief.heights) })) }), navigation: digest({ paths,
     nearest: world.nearest(-51, 49), blocked: Array.from(world.blocked),
     visible: Array.from(world.visible), explored: Array.from(world.explored), fog: Array.from(world.fogPixels) }) };
 }

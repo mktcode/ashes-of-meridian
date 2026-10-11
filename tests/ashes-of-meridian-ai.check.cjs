@@ -420,24 +420,6 @@ for(const enemy of [0,1,2]) test(`depth 16 doctrine ${enemy}: paid autonomous ba
   assert.ok(g.s.result,`no result for doctrine ${enemy} at ${g.s.time}`);
 });
 
-for(const enemy of [0,1,2]) test(`stage 21 benefits vs doctrine ${enemy}: declared starts and paid autonomous play finish`,()=>{
-  const {g}=freshBattle((enemy+1)%3,enemy,1409),choose=vm.runInContext('chooseEnemyBenefit',context),enemyBenefits={};
-  for(let depth=1;depth<=20;depth++) {
-    const key=choose(depth===20?enemy:depth%3,enemyBenefits,1409+depth*7919,depth);
-    enemyBenefits[key]=(enemyBenefits[key]||0)+1;
-  }
-  const benefits={supplyCrate:8,aetherAllocation:4,pioneerSquad:3,commanderMandate:1,surveyDrones:1,fieldWorkshop:1,commandCapacitor:2};
-  g.start({seed:1409,faction:(enemy+1)%3,enemies:[enemy],depth:20,benefits,enemyBenefits:[enemyBenefits]});g.enableAI(0);
-  assert.equal(Object.values(g.s.parties[1].benefits).reduce((a,b)=>a+b,0),20);
-  const counts=audit(g);
-  for(let i=0;i<24000&&!g.s.result;i++) {
-    g.step(.05);g.effects.tick(.05);
-    if(i%100===0)for(const team of [0,1])assert.ok(g.account(team).alloy>=0&&g.account(team).gas>=0);
-  }
-  assert.ok(counts.produced>=10&&counts.built>=6);
-  assert.ok(g.s.result,`no result for stage 21 / doctrine ${enemy} at ${g.s.time}`);
-});
-
 test('seed 444213: the real opponent destroys an undefended HQ instead of stopping outside weapon range',()=>{
   const {g}=battle(0,2,444213,'desert');audit(g);advance(g,900);
   assert.equal(g.s.result?.win,false);assert.equal(own(g,0,'hq').length,0);

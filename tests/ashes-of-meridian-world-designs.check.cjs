@@ -87,8 +87,11 @@ test('generated geometry uses CPU samples and matching triangle interpolation wi
   const api = scope(['renderer-geometry','renderer-terrain-models','renderer-landscape']),
     w = new api.Battlefield(1409, 'frontier'), descriptor = w.renderData.geometries.find(g => g.mesh === 'terrain'),
     mesh = api.TerrainModels.geometry(descriptor), s = w.surface;
-  assert.equal(mesh.length, (s.size - 1) ** 2 * 54);
-  for (let i = 0; i < mesh.length; i += 9 * 73) {
+  const topLength = (s.size - 1) ** 2 * 54;
+  assert.ok(mesh.length >= topLength, 'all playable height-field triangles are present');
+  assert.equal(mesh.length % 27, 0); assert.ok(mesh.every(Number.isFinite));
+  // Exterior skirts have their own closure tests; they are not playable CPU surface samples.
+  for (let i = 0; i < topLength; i += 9 * 73) {
     assert.ok(Math.abs(mesh[i+1] - (s.heightAt(mesh[i],mesh[i+2]) - .13)) < 1e-5);
     assert.ok(mesh[i+4] > 0);
     assert.ok(Math.abs(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5]) - 1) < 1e-5);

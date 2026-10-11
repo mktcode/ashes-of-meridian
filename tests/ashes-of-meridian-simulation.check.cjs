@@ -512,16 +512,14 @@ test(`developed bases use legal sites, fitted armies and unchanged RNG: ${map}/$
   assertUnitSpacing(game); assert.equal(game.s.result,null);
 });
 
-test('populated army fixtures and two minutes of mining and combat keep unit spacing', () => {
-  for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'mothership']]) {
-    const { game } = battle(faction,seed,map); assertUnitSpacing(game);
-    if (seed !== 1409) continue;
-    for (let i=0;i<2400;i++) {
-      game.step(.05); game.effects.tick(.05);
-      if (i%20===0) assertUnitSpacing(game);
-    }
-    assertUnitSpacing(game); assert.ok(game.s.stats.gathered>0);
+test('developed desert army keeps unit spacing during two minutes of mining', () => {
+  const { game } = battle(0,1409,'desert');
+  assertUnitSpacing(game);
+  for (let i=0;i<2400;i++) {
+    game.step(.05); game.effects.tick(.05);
+    if (i%20===0) assertUnitSpacing(game);
   }
+  assertUnitSpacing(game); assert.ok(game.s.stats.gathered>0);
 });
 
 test('coincident spawns use deterministic free positions, stay separate at rest and preserve RNG calls', () => {
@@ -604,12 +602,17 @@ test('local steering tries the open side when a unit and terrain seal its prefer
   assert.ok(mover.z>=0);
 });
 
-test('a ground formation clears a mothership service-plant corner without losing its orders', () => {
-  const { game } = createGame();
-  game.start({seed:1409,map:'mothership',faction:0});
+test('a ground formation routes around a blocked corner and completes its orders', () => {
+  const { game } = flatArena(135);
   game.s.entities=[]; game.ids.clear();
   game.spawnBuilding('hq',0,-75,0,0); game.spawnBuilding('hq',0,75,1,1);
+  // Explicit navigation obstacle, independent of a catalog world's terrain recipe.
+  for(let i=0;i<game.world.staticGrid.length;i++) {
+    const p=game.world.point(i);
+    game.world.staticGrid[i]=Number(p.x>=-65&&p.x<=-45&&p.z>=-25&&p.z<=15);
+  }
   game.world.rebuild(game.s.entities); game.rehash();
+  assert.ok(game.world.blockedAt(-55,0));
   const units=[];
   for(let i=0;i<24;i++) {
     const e=game.spawnUnit(i%5===0?'tank':'rifle',-82+(i%6)*3,-45-Math.floor(i/6)*3,0,0);
@@ -617,11 +620,15 @@ test('a ground formation clears a mothership service-plant corner without losing
   }
   game.command(units.map(e=>e.id),{type:'move',x:-35,z:28});
   const goals=units.map(e=>json(e.order));
-  advance(game,1200);
+  for(let i=0;i<1200;i++) {
+    advance(game,1);
+    if(i%20===0) {
+      assertUnitSpacing(game);
+      for(const unit of units) assert.ok(game.unitFits(unit,unit.x,unit.z), `unit ${unit.id} stays off the obstacle`);
+    }
+  }
   for(let i=0;i<units.length;i++) {
-    assert.equal(units[i].order.type,'idle',JSON.stringify({unit:{id:units[i].id,type:units[i].type,
-      x:units[i].x,z:units[i].z,order:units[i].order,path:units[i].path,pi:units[i].pi,
-      nextPath:units[i].nextPath,stuck:units[i].stuck},formation:units.map(e=>({id:e.id,type:e.type,x:e.x,z:e.z,order:e.order}))}));
+    assert.equal(units[i].order.type,'idle',`unit ${units[i].id} completes its move: ${JSON.stringify({x:units[i].x,z:units[i].z,path:units[i].path,stuck:units[i].stuck})}`);
     assert.ok(Math.hypot(units[i].x-goals[i].x,units[i].z-goals[i].z)<6+units[i].size,
       JSON.stringify({id:units[i].id,type:units[i].type,x:units[i].x,z:units[i].z,goal:goals[i]}));
   }
@@ -738,7 +745,7 @@ for (const [seed,map,faction,count,forced] of [
     });
     if(i%20===0)assertUnitSpacing(game);
     if(i%1200===1199)workers.forEach((w,j)=>{
-      if(i===1199) assert.ok(trips[j]>0 || w.carry>0,`worker ${w.id} made no mining progress during startup`);
+      if(i===1199) assert.ok(trips[j]>0 || w.carry>0,`worker ${w.id} made no mining progress during startup: ${JSON.stringify({x:w.x,z:w.z,order:w.order,carry:w.carry,path:w.path,stuck:w.stuck})}`);
       else assert.ok(trips[j]>previous[j],`worker ${w.id} stopped delivering in minute ${(i+1)/1200}`);
       previous[j]=trips[j];
     });

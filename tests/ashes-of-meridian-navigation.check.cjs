@@ -56,14 +56,19 @@ for (const [angle, dz] of [[0, -2], [.4, 2]]) {
 }
 
 test('service tolerance does not extend the existing outer HQ delivery range', () => {
-  const game = arena(); game.spawnBuilding('hq', 0, 0, 0, 0);
-  const w = game.spawnUnit('worker', 9.05, 0, 0, 0), node = game.spawnResource('crystal', 20, 0, 1000);
+  const game = arena(), hq = game.spawnBuilding('hq', 0, 0, 0, 0), outerRange = hq.size + 3.1 + 1.5;
+  const w = game.spawnUnit('worker', outerRange + .5, 0, 0, 0), node = game.spawnResource('crystal', 20, 0, 1000);
   game.world.rebuild(game.s.entities);
   w.order = { type: 'mine', id: node.id }; w.carry = 18; w.returning = true;
   const alloy = game.account(0).alloy;
-  tickWorkers(game, [w]);
-  assert.equal(w.carry, 18); assert.equal(game.account(0).alloy, alloy);
-  tickWorkers(game, [w]);
+  assert.ok(Math.hypot(w.x-hq.x,w.z-hq.z)>outerRange);
+  for(let i=0;i<200&&w.carry;i++) {
+    const outside=Math.hypot(w.x-hq.x,w.z-hq.z)>outerRange;
+    tickWorkers(game, [w]);
+    if(outside) {
+      assert.equal(w.carry,18); assert.equal(game.account(0).alloy,alloy);
+    }
+  }
   assert.equal(w.carry, 0); assert.equal(game.account(0).alloy, alloy + 18);
 });
 
