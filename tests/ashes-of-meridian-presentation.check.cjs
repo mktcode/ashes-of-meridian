@@ -258,7 +258,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
   const landscape=TerrainModels.landscapeRelief;
   TerrainModels.landscapeRelief=relief=>{
     if(!relief.innerExtent)return landscape(relief);
-    boundaries.push([relief.outerExtent??relief.extent,relief.innerExtent]);return new Float32Array();
+    boundaries.push([relief.extent,relief.innerExtent]);return new Float32Array();
   };
   renderer.geometry=(mesh,data)=>{
     if (mesh!=='terrain') return;

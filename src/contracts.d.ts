@@ -777,8 +777,6 @@ interface WorldRelief {
   size: number; // Includes one vertex of halo on every side, for seamless edge normals.
   heights: Float32Array;
   innerExtent: number;
-  /** View-owned exterior continuation; never part of the playable height field. */
-  outerExtent?: number;
   /** A stitched exterior already closes this skin; omit its buried shadow-casting wall. */
   omitSkirt?: boolean;
   /** View-owned stitch source: exact playable edge vertices, never a CPU terrain change. */

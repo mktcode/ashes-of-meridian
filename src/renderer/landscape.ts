@@ -68,9 +68,9 @@ TerrainModels.landscapeRelief=(relief:WorldRelief)=>{
   for(let z=1;z<size-2;z++)for(let x=1;x<size-2;x++)if(visible(x,z)) {
     cells++;if(landscapeJoinEdge(relief,x,z))joins++;
   }
-  const outerExtent=Math.max(extent,relief.outerExtent??extent),edge=size-2,
+  const edge=size-2,
     joinLength=joins*((innerRelief?step/innerRelief.step:1)-1)*27,
-    rimLength=(!innerExtent&&!relief.omitSkirt)||outerExtent>extent?4*(size-3)*54:0,
+    rimLength=!innerExtent&&!relief.omitSkirt?4*(size-3)*54:0,
     vertices=new Float32Array(size*size*9),out=new Float32Array(cells*54+joinLength+rimLength);
   for(let z=0;z<size;z++)for(let x=0;x<size;x++)
     vertices.set(landscapeReliefVertex(relief,x,z),(z*size+x)*9);
@@ -87,22 +87,20 @@ TerrainModels.landscapeRelief=(relief:WorldRelief)=>{
   const rim:number[]=[];
   // The fine skin's downward skirt remains a concealed underside closure;
   // joined exteriors have a continuous apron, not a visible vertical hole wall.
-  // Exterior meshes additionally continue their boundary beyond the largest view.
-  const strip=(corners:number[][],segments:number,extend:boolean)=>{
+  const strip=(corners:number[][],segments:number)=>{
     for(let side=0;side<4;side++)for(let j=0;j<segments;j++) {
       const from=corners[side],to=corners[(side+1)%4],
         at=(t:number)=>{const x=Math.round(from[0]+(to[0]-from[0])*t),z=Math.round(from[1]+(to[1]-from[1])*t);
           return vertices.subarray((z*size+x)*9,(z*size+x)*9+9);},
         a=at(j/segments),b=at((j+1)/segments),
-        lower=(v:Float32Array)=>extend
-          ? [v[0]*outerExtent/extent,v[1],v[2]*outerExtent/extent] : [v[0],-.13,v[2]],
+        lower=(v:Float32Array)=>[v[0],-.13,v[2]],
         pa=[a[0],a[1],a[2]],pb=[b[0],b[1],b[2]],qa=lower(a),qb=lower(b),
         color=[a[6],a[7],a[8]];
       geom.tri(rim,pa,pb,qb,color);
       geom.tri(rim,pa,qb,qa,color);
     }
   };
-  if((!innerExtent&&!relief.omitSkirt)||outerExtent>extent)strip([[1,1],[edge,1],[edge,edge],[1,edge]],edge-1,!!innerExtent);
+  if(!innerExtent&&!relief.omitSkirt)strip([[1,1],[edge,1],[edge,edge],[1,edge]],edge-1);
   out.set(rim,offset);
   return out;
 };

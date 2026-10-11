@@ -267,7 +267,6 @@ class MeridianCapture {
         this.placed.push({id:entity.id,type:entity.type,x:entity.x,z:entity.z});
       }
       this.game.rehash(); this.game.world!.rebuild(this.game.s!.entities);
-      this.ui.viewingZoomMax = (this.game.world!.extent*4+this.game.world!.surface!.maxHeight*2+128)*3;
       this.ui.selected = []; this.ui.hover = null; this.ui.mode = null; this.ui.pointer.inside = false;
       this.ui.drag = null; this.ui.touchPoints.clear(); this.ui.touchGesture = false;
       for (const id of ['menu','modal','result','radio','toast','alerts','battleTransition']) $(id).classList.add('hidden');
@@ -340,6 +339,7 @@ class MeridianCapture {
           z:fit.target[2]-Math.cos(cam.yaw)*fit.target[1]*.82/1.1,zoom:fit.height});
         this.fitKey = key;
       }
+      Object.assign(cam, this.ui.clampCameraPoint(cam));
       this.resolved = resolveCaptureCamera({mode:'game',x:cam.x,z:cam.z,zoom:cam.zoom,yaw:cam.yaw},[],r.viewport.width/r.viewport.height,this.game.world!.surface!.maxHeight);
     } else this.resolved = resolveCaptureCamera(c,c.fit ? this.bounds(c.fit) : [],r.viewport.width/r.viewport.height,this.game.world!.surface!.maxHeight);
     r.captureCamera = this.resolved;

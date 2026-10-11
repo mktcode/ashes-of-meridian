@@ -5,8 +5,8 @@ const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, UI_SCRIPTS, loadScripts } = req
 // Logic behind UI actions; copy, layout and full navigation flows are checked manually.
 function flatCameraLimits(ui) {
   const v=ui.R.viewport,cam=ui.game.s.cam,e=ui.game.world.extent,
-    x=cam.zoom*v.width/800/2,z=cam.zoom*v.height/800/2*Math.hypot(1.1,.82)/1.1;
-  return {x:Math.max(0,e-x+Math.min(8,x*.15)),z:Math.max(0,e-z+Math.min(8,z*.15))};
+    x=cam.zoom*(v.width/800/2),z=cam.zoom*(v.height/800*Math.hypot(1.1,.82)/1.1/2);
+  return {x:Math.max(0,e-2-x),z:Math.max(0,e-2-z)};
 }
 
 test('stage browsing is bounded and purely visual; continue always launches the real checkpoint', async () => {
@@ -605,14 +605,14 @@ test('tutorial begins with worker arrival and HQ placement, then locks only cont
   assert.deepEqual(h.ui.game.s.cam, camera);
   assert.equal(h.ui.drag, null);
   h.ui.advanceBattleIntro(1.25);
-  assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
+  assert.deepEqual(h.ui.game.s.cam, { x: -flatCameraLimits(h.ui).x, z: 48, zoom: 50 });
   h.ui.advanceBattleIntro(3.75);
   assert.deepEqual(spoken, ['tutorial.settle', 'tutorial.warning']);
-  assert.deepEqual(h.ui.game.s.cam, { x: flatCameraLimits(h.ui).x, z: -72, zoom: 50 });
+  assert.deepEqual(h.ui.game.s.cam, { x: flatCameraLimits(h.ui).x, z: -flatCameraLimits(h.ui).z, zoom: 50 });
   h.ui.advanceBattleIntro(4);
-  assert.deepEqual(h.ui.game.s.cam, { x: flatCameraLimits(h.ui).x, z: -72, zoom: 50 });
+  assert.deepEqual(h.ui.game.s.cam, { x: flatCameraLimits(h.ui).x, z: -flatCameraLimits(h.ui).z, zoom: 50 });
   h.ui.advanceBattleIntro(2.5);
-  assert.deepEqual(h.ui.game.s.cam, { x: -56, z: 48, zoom: 50 });
+  assert.deepEqual(h.ui.game.s.cam, { x: -flatCameraLimits(h.ui).x, z: 48, zoom: 50 });
   assert.equal(h.ui.battleIntro, null);
   assert.equal(h.ui.battleTutorial.step, 'trainWorker');
   assert.equal(h.ui.controlsLocked, false);
@@ -653,6 +653,7 @@ test('tutorial speed hint starts at HQ construction and expires without a click 
 
 test('tutorial camera targets compensate terrain height along the viewing axis', () => {
   const h = setup(), s = h.ui.game.s;
+  h.ui.game.world.extent = 140;
   s.depth = 0;
   s.rules = { kind: 'single-player', mission: { id: 'hq-elimination' } };
   s.cam = { x: -55, z: 48, zoom: 50, yaw: 0 };
@@ -678,8 +679,8 @@ test('tutorial camera targets compensate terrain height along the viewing axis',
   const rotated = h.ui.terrainCameraPoint(home, 11);
   close(rotated.x, home.x - 8.2);
   close(rotated.z, home.z);
-  const edge = h.ui.terrainCameraPoint({ x: -90, z: 0 }, 22);
-  close(edge.x, -flatCameraLimits(h.ui).z - 16.4);
+  const edge = h.ui.terrainCameraPoint({ x: -200, z: 0 }, 22);
+  close(edge.x, -flatCameraLimits(h.ui).z);
   close(edge.z, 0);
 });
 
@@ -736,7 +737,7 @@ test('home camera compensates HQ or worker height along the current yaw and reta
   }
   hq.hp=0;s.cam.yaw=Math.PI/2;h.ui.homeCamera();
   assert.ok(Math.abs(s.cam.x-(-26-10*.82/1.1))<1e-9);assert.equal(s.cam.z,18);
-  worker.x=-200;h.ui.homeCamera();assert.ok(Math.abs(s.cam.x-(-flatCameraLimits(h.ui).z-20*.82/1.1))<1e-9);
+  worker.x=-200;h.ui.homeCamera();assert.ok(Math.abs(s.cam.x+flatCameraLimits(h.ui).z)<1e-9);
   const before={...s.cam};h.ui.paused=true;worker.z=40;h.ui.homeCamera();
   assert.deepEqual(s.cam,before,'pause still guards the home button');
   assert.deepEqual(h.calls,[]);
@@ -1447,7 +1448,7 @@ test('mouse wheel zoom and middle-button rotation respect camera guards without 
   assert.ok(Math.abs(h.ui.game.s.cam.zoom - 50 * Math.exp(.18)) < 1e-10);
   assert.equal(Object.keys(h.ui.lastClick).length, 0); assert.equal(prevented, 1);
   for (let i = 0; i < 20; i++) wheel(1000);
-  assert.equal(h.ui.game.s.cam.zoom, 115);
+  assert.equal(h.ui.game.s.cam.zoom, 110, 'finite fixture bounds further limit the zoom');
   for (let i = 0; i < 20; i++) wheel(-1000);
   assert.equal(h.ui.game.s.cam.zoom, 27.2);
   h.pointer('pointerdown', 200, 200, { pointerType: 'mouse', button: 1 });
@@ -1484,10 +1485,10 @@ test('pinch preserves zoom limits and does not pan or issue commands', () => {
   h.pointer('pointermove', 600, 200, { pointerId: 2 });
   assert.equal(h.ui.game.s.cam.zoom, 27.2);
   h.pointer('pointermove', 210, 200, { pointerId: 2 });
-  assert.equal(h.ui.game.s.cam.zoom, 115);
+  assert.equal(h.ui.game.s.cam.zoom, 110);
   h.pointer('pointerup', 210, 200, { pointerId: 2 });
   h.pointer('pointerup', 200, 200);
-  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 115 });
+  assert.deepEqual(h.ui.game.s.cam, { x: 0, z: 0, zoom: 110 });
   assert.equal(h.ui.touchGesture, false); assert.equal(h.ui.touchPoints.size, 0);
   assert.equal(h.ui.drag, null); assert.deepEqual(h.calls, []);
 });
@@ -1675,13 +1676,13 @@ test('minimap tap/drag navigates to the full map bounds', () => {
   h.pointer('pointerdown', 100, 110, { target: h.minimap });
   assert.ok(Math.abs(h.ui.game.s.cam.x - Math.min(10,flatCameraLimits(h.ui).x)) < 1e-10);
   assert.ok(Math.abs(h.ui.game.s.cam.z - 20) < 1e-10);
-  assert.equal(h.ui.game.s.cam.zoom, 115);
+  assert.equal(h.ui.game.s.cam.zoom, 110);
   h.pointer('pointermove', 180, 0, { target: h.minimap });
   const limits=flatCameraLimits(h.ui);
-  assert.deepEqual(h.ui.game.s.cam, { x: limits.x, z: -limits.z, zoom: 115 });
+  assert.deepEqual(h.ui.game.s.cam, { x: limits.x, z: -limits.z, zoom: 110 });
   h.pointer('pointerup', 180, 0, { target: h.minimap });
   h.pointer('pointermove', 90, 90, { target: h.minimap });
-  assert.deepEqual(h.ui.game.s.cam, { x: limits.x, z: -limits.z, zoom: 115 });
+  assert.deepEqual(h.ui.game.s.cam, { x: limits.x, z: -limits.z, zoom: 110 });
   assert.deepEqual(h.calls, []);
 });
 

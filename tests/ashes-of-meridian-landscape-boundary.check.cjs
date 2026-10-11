@@ -87,10 +87,12 @@ test('outer habitat grows denser without border rows, source plants, incomplete 
   for(const p of decor) {
     const [x,,z]=p.position,reach=Math.max(Math.abs(x),Math.abs(z)),r=p.scale[0];
     assert.ok(reach>=100+r+1,'whole decorative footprint is outside the playable crop');
-    assert.ok(reach<180);assert.ok(p.mesh.startsWith('ecology'));
+    assert.ok(reach+r<=field.extent);assert.ok(p.mesh.startsWith('ecology'));
     const key=`${x}:${z}`;groups.set(key,[...(groups.get(key)||[]),p]);
   }
   assert.ok(groups.size>100&&groups.size<=360,'fixed density-dependent instance cap');
+  assert.ok([...groups.values()].some(parts=>Math.max(Math.abs(parts[0].position[0]),Math.abs(parts[0].position[2]))>190),
+    'habitat reaches the actual scenery edge, including the outer corners');
   let near=0,outer=0;
   for(const parts of groups.values()) {
     const [x,,z]=parts[0].position,d=Math.hypot(Math.max(0,Math.abs(x)-100),Math.max(0,Math.abs(z)-100));
@@ -146,8 +148,7 @@ test('stitched exterior shares every fine edge attribute and its cosmetic ground
     }
     return {extent,step,size,innerExtent,heights,colors};
   },fine=make(10,1.25),coarse=make(20,5,10),before=JSON.stringify([fine,coarse]),
-    build=outerExtent=>TerrainModels.geometry({mesh:'backdrop',model:'landscapeRelief',
-      relief:{...coarse,innerRelief:fine,outerExtent}}),mesh=build(20),wide=build(400),
+    mesh=TerrainModels.geometry({mesh:'backdrop',model:'landscapeRelief',relief:{...coarse,innerRelief:fine}}),
     skin=TerrainModels.geometry({mesh:'terrain',model:'landscapeRelief',relief:fine}),expected=new Map(),seen=new Set();
   for(let i=0;i<(fine.size-3)**2*54;i+=9)if(Math.max(Math.abs(skin[i]),Math.abs(skin[i+2]))===10)
     expected.set(`${skin[i]}:${skin[i+2]}`,Array.from(skin.subarray(i,i+9)));
@@ -174,23 +175,11 @@ test('stitched exterior shares every fine edge attribute and its cosmetic ground
     assert.ok(Math.abs(landscapeReliefHeightAt({...coarse,innerRelief:fine},x,z)-rendered)<1e-6,
       'decoration and exterior sight tiers use the same triangles as the GPU');
   }
-  assert.deepEqual(wide.subarray(0,mesh.length),mesh);
-  assert.equal(wide.length-mesh.length,4*(coarse.size-3)*54,'viewport growth adds only the bounded outer strips');
+  assert.equal(bounds(mesh),coarse.extent,'stitched scenery ends at its generated edge');
   assert.equal(JSON.stringify([fine,coarse]),before);
 });
 
-test('exterior continuation preserves its inner mesh and has constant geometry cost regardless of width', () => {
-  const { TerrainModels } = setup(), field = relief(20, 10), before = JSON.stringify(field),
-    build = outerExtent => TerrainModels.geometry({ mesh: 'backdrop', model: 'landscapeRelief',
-      relief: { ...field, outerExtent } }), base = build(20), small = build(40), wide = build(400);
-  assert.deepEqual(wide.subarray(0, base.length), base);
-  assert.equal(small.length, wide.length);
-  assert.equal(wide.length - base.length, 4 * (field.size - 3) * 54);
-  assert.equal(bounds(small), 40); assert.equal(bounds(wide), 400);
-  assert.equal(JSON.stringify(field), before);
-});
-
-test('world view resizes only the sparse exterior for maximum zoom and releases excess coverage on narrower windows', () => {
+test('world view keeps a finite scenery mesh across viewport changes', () => {
   const { BattlefieldView } = setup(), uploads = [],
     renderer = { viewport: { width: 800, height: 800 }, clearStatic() {}, setBattlefieldProfile() {},
       geometry: (name, mesh) => uploads.push({ name, mesh }), releaseGeometry() {} },
@@ -206,12 +195,8 @@ test('world view resizes only the sparse exterior for maximum zoom and releases 
   const narrow = uploads.at(-1);
   renderer.viewport.width = 4000;
   view.sync(world, false); view.sync(world, false);
-  assert.deepEqual(uploads.map(u => u.name), ['terrain', 'backdrop', 'backdrop']);
-  const wide = uploads.at(-1), radius = Math.hypot(115 * .5 * 4,
-    115 * .5 * .8 * Math.hypot(1.1,.82) / 1.1 + 20 * .82 / 1.1);
-  assert.ok(bounds(wide.mesh) >= world.extent + radius + 8);
-  assert.ok(bounds(wide.mesh) < world.extent + radius + 12, 'only a few meters of padding');
-  assert.equal(wide.mesh.length, narrow.mesh.length, 'wider coverage adds no terrain cells');
+  assert.deepEqual(uploads.map(u => u.name), ['terrain', 'backdrop']);
+  assert.equal(bounds(narrow.mesh),20,'no empty terrain extension');
   renderer.viewport.width = 800;
   view.sync(world, false);
   assert.equal(uploads.at(-1).name, 'backdrop');
