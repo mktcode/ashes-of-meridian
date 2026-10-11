@@ -2,6 +2,11 @@
 
 Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) beschreiben Gebäudeauswahl, Echo-Ausbau, weltübergreifende Stapel und eingefrorene Gefechtsrezepte. Keine Migration alter Profil-/Expeditionsstände.
 
+## Zieländerung: Hilfe im laufenden Gefecht
+
+- [ ] In einer bereits abgeschlossenen Welt gekaufte Upgrades sollen auch ein laufendes, beim Weltbesuch gespeichertes Expeditionsgefecht sofort verstärken. Der bisherige Vertrag eingefrorener Gefechtsboni muss dafür gezielt ersetzt werden; Rückkehr, Speichern/Laden und wiederholte Weltbesuche dürfen keine Boni mehrfach auszahlen.
+- [ ] Den reduzierten Upgrade-Pool an dieser Rettungsfunktion ausrichten und die angebotene Auswahl randomisieren. Insbesondere reine Startboni benötigen eine Entscheidung über ihre Wirkung bei einem bereits gestarteten Gefecht. Umfang und Regeln vor Implementierung besprechen.
+
 ## Technische Restarbeit
 
 - [ ] Langtest-Fixtures in `tests/ashes-of-meridian-simulation.check.cjs` auf Startrezepte statt `profile.upgrades` umstellen; frühere permanente Rang-/Vorteilscaps entsprechen nicht mehr den neuen Gebäude-Stapeln. Die entfernten Regeln nicht durch Kompatibilitätsadapter wieder einführen. Feste RNG-/Terrainreferenzen nicht zum Grünmachen regenerieren. Änderungen und gezielte Ausführung dieses Simulationsblocks separat freigeben.
@@ -13,7 +18,7 @@ Die verbindlichen [Spielregeln](../gameplay.md#wirtschaft-bau-und-produktion) be
 
 - [ ] Einmaligen Hinweis beim ersten **Continue building** auf schmalen/niedrigen Geräten abnehmen: Forum-Lieferung, Echo-Upgrades und nur neue Gefechte verständlich; **Back** ohne Bestätigung und **Start building** ohne Ladebildschirm/Pausemenü. Gezielte CPU-/UI-Verträge prüfen Profilbestätigung, erhaltene Live-Welt/RNG, entferntes feindliches Restfeuer, getrenntes Welt-Speicherziel und Schutz vor erneuter Siegwertung; visuelle/akustische Abnahme bleibt offen.
 
-- [ ] Iconraster und scrollfreie Detailansicht auf schmalen und niedrigen Echtgeräten abnehmen: neun Wohn-/zwölf Forschungsicons, freies Detail-Icon und X zur Rückkehr, bewusste Aktivierung vor Rang-Ausbau, vollständige Beschreibungen, Auswahlzeile/Minimap und Rückkehr zu normalen Aktionen. Zwei gezielte UI-Fälle prüfen Slotgrenze/Familien, getrennte Vorschau und Kauf, UI-Sperre für Effektwechsel/Leeren, direkte feste Details nach Aktivierung/Wiederwahl, X-Abwahl statt Übersicht, Rank-Aktion nach Aktivierung und Pause-Sperre; visuelle Abnahme und Grenzen der nach oben wachsenden Details bleiben offen.
+- [ ] Iconraster und scrollfreie Detailansicht auf schmalen und niedrigen Echtgeräten abnehmen: sieben Wohn-/zwölf Forschungsicons, freies Detail-Icon und X zur Rückkehr, bewusste Aktivierung vor Rang-Ausbau, vollständige Beschreibungen, Auswahlzeile/Minimap und Rückkehr zu normalen Aktionen. Zwei gezielte UI-Fälle prüfen Slotgrenze/Familien, getrennte Vorschau und Kauf, UI-Sperre für Effektwechsel/Leeren, direkte feste Details nach Aktivierung/Wiederwahl, X-Abwahl statt Übersicht, Rank-Aktion nach Aktivierung und Pause-Sperre; visuelle Abnahme und Grenzen der nach oben wachsenden Details bleiben offen.
 - [ ] Upgrade-Kosten und endlichen Vent-Vorrat abstimmen. Erste Parameter sind 40/80/140 Echo und 900 Echo je Vent; Effektstärken bleiben zunächst an den bisherigen Boni orientiert, nicht anhand vollständiger Runs neu ausbalanciert.
 - [ ] Grenzen für Stapel, Zusatzworker, Command-Ränge und Reparaturrabatt prüfen. Einige Effekte behalten technische Obergrenzen; die UI-Sperre gegen Effektwechsel/Leeren ist von den weiterhin vorhandenen Simulationsmöglichkeiten zu unterscheiden.
 - [ ] Einmalige Effekte auf ausgebauten Gebäuden verständlich behandeln: zusätzliche Ränge verstärken sie nicht. Ob hierfür Ausbau gesperrt, eine Warnung ergänzt oder eine andere Rangwirkung gewünscht ist, entscheiden.

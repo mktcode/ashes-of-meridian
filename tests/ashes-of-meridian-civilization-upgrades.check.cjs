@@ -52,7 +52,7 @@ test('ineligible, unfinished, foreign, retiring and unsupplied buildings reject 
 });
 test('every effect belongs to exactly one civilian family across all three model tiers',()=>{
   const residential=['startingAlloy','startingWorkers','constructionProtocols','logisticsFrame','repairLogistics',
-    'supplyCrate','pioneerSquad','commanderMandate','commandDrill'],
+    'commanderMandate','commandDrill'],
     research=['orbital','repair','scan','drop','disruption','bulwark','surge','recall',
       'aetherAllocation','surveyDrones','fieldWorkshop','commandCapacitor'];
   assert.deepEqual(Object.keys(rules.CIVILIZATION_UPGRADES).sort(),[...residential,...research].sort());
@@ -73,6 +73,18 @@ test('every effect belongs to exactly one civilian family across all three model
   }
   for(const type of ['meridianforum','hq'])for(const key of Object.keys(rules.CIVILIZATION_UPGRADES))
     assert.equal(rules.civilizationUpgradeAllowed(type,key),false);
+});
+test('deployment-only benefits cannot be bought or counted as duplicate civilian effects',()=>{
+  const {g,b}=fixture();
+  for(const key of ['supplyCrate','pioneerSquad']){
+    assert.equal(g.submitAction(0,{kind:'configureSettlementUpgrade',id:b.id,upgrade:key}),false);
+    assert.equal(g.configureSettlementUpgrade(b.id,key),false);
+    assert.equal(g.account(0).gas,1000);assert.equal(b.upgradeLevel,undefined);
+    b.upgrade=key;
+    assert.deepEqual(copy(rules.civilizationUpgradesForBuildings(g.s.entities)),{upgrades:{},benefits:{}});
+    delete b.upgrade;
+  }
+  assert.ok(rules.benefits.supplyCrate);assert.equal(rules.benefits.pioneerSquad.max,5);
 });
 test('research expansion retains its exclusive choices and a rejected first choice spends nothing',()=>{
   const {g,b}=fixture('fieldlab');
@@ -106,14 +118,14 @@ test('new growth starts small and reserves all intermediate and tower footprints
   }
 });
 test('cleared-world effects stack across worlds, unique bonuses do not duplicate, and live identity is checked',()=>{
-  const {g,b,forum}=fixture();g.configureSettlementUpgrade(b.id,'supplyCrate');g.expandSettlementBuilding(b.id);
+  const {g,b,forum}=fixture();g.configureSettlementUpgrade(b.id,'startingAlloy');g.expandSettlementBuilding(b.id);
   const world={stage:1,map:'desert',seed:1409,recipe:copy(recipe),battle:copy(g.snapshotBattle())};
   const second=copy(world);second.stage=2;second.recipe.depth=1;second.battle.state.depth=1;
   const run={worlds:[world,second]};
-  assert.equal(rules.expeditionCivilizationUpgrades(run).benefits.supplyCrate,4);
+  assert.equal(rules.expeditionCivilizationUpgrades(run).upgrades.startingAlloy,4);
   b.upgradeLevel=3;
-  assert.equal(rules.expeditionCivilizationUpgrades(run,g.s,1).benefits.supplyCrate,5);
-  g.s.seed++;assert.equal(rules.expeditionCivilizationUpgrades(run,g.s,1).benefits.supplyCrate,4);g.s.seed--;
+  assert.equal(rules.expeditionCivilizationUpgrades(run,g.s,1).upgrades.startingAlloy,5);
+  g.s.seed++;assert.equal(rules.expeditionCivilizationUpgrades(run,g.s,1).upgrades.startingAlloy,4);g.s.seed--;
   b.upgrade='commanderMandate';second.battle.state.entities.find(e=>e.id===b.id).upgrade='commanderMandate';
   assert.equal(rules.expeditionCivilizationUpgrades(run,g.s,1).benefits.commanderMandate,1);
   forum.hp=0;assert.deepEqual(copy(rules.civilizationUpgradesForBuildings(g.s.entities)),{upgrades:{},benefits:{}});

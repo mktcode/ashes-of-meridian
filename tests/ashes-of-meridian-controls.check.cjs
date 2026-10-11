@@ -2092,7 +2092,7 @@ test('civilian effect grids fit twelve slots and separate family icons from deta
     assert.match(html,new RegExp(`${research?'Research':'Residential'} upgrades`));
     assert.doesNotMatch(html,/<p>|<small>|data-action="settlementUpgrade:/);
     const slots=[...html.matchAll(/data-action="settlementInspect:/g)].length;
-    assert.equal(slots,research?12:9);assert.ok(slots<=12);
+    assert.equal(slots,research?12:7);assert.ok(slots<=12);
     for(const effect of Object.keys(rules.CIVILIZATION_UPGRADES))
       assert.equal(html.includes(`data-action="settlementInspect:${effect}"`),rules.civilizationUpgradeAllowed(type,effect));
     assert.match(html,new RegExp(`data-action="settlementInspect:${key}"[^>]*aria-pressed="false"`));

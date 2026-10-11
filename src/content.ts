@@ -673,15 +673,21 @@ type UpgradeType = keyof typeof BATTLE_UPGRADES;
 const CIVILIZATION_UPGRADE_COSTS = [40, 80, 140] as const;
 const CIVILIZATION_UPGRADES = Object.freeze({
   ...CIVILIZATION_FLEET_EFFECTS,
-  ...COMMAND_MODULES, ...EXPEDITION_BENEFITS
-}) as Readonly<Record<FleetUpgradeType | AbilityType | ExpeditionBenefit,
+  ...COMMAND_MODULES,
+  aetherAllocation: EXPEDITION_BENEFITS.aetherAllocation,
+  commanderMandate: EXPEDITION_BENEFITS.commanderMandate,
+  commandDrill: EXPEDITION_BENEFITS.commandDrill,
+  surveyDrones: EXPEDITION_BENEFITS.surveyDrones,
+  fieldWorkshop: EXPEDITION_BENEFITS.fieldWorkshop,
+  commandCapacitor: EXPEDITION_BENEFITS.commandCapacitor
+}) as Readonly<Record<FleetUpgradeType | AbilityType | Exclude<ExpeditionBenefit, 'supplyCrate' | 'pioneerSquad'>,
   { name: string; icon: string; desc: string; max?: number }>>;
 type CivilizationUpgradeType = keyof typeof CIVILIZATION_UPGRADES;
 type CivilizationBuildingFamily = 'residential' | 'research';
 const CIVILIZATION_UPGRADE_FAMILIES = Object.freeze({
   startingAlloy: 'residential', startingWorkers: 'residential',
   constructionProtocols: 'residential', logisticsFrame: 'residential', repairLogistics: 'residential',
-  supplyCrate: 'residential', pioneerSquad: 'residential', commanderMandate: 'residential', commandDrill: 'residential',
+  commanderMandate: 'residential', commandDrill: 'residential',
   orbital: 'research', repair: 'research', scan: 'research', drop: 'research',
   disruption: 'research', bulwark: 'research', surge: 'research', recall: 'research',
   aetherAllocation: 'research', surveyDrones: 'research', fieldWorkshop: 'research', commandCapacitor: 'research'
