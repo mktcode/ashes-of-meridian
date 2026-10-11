@@ -1,6 +1,84 @@
     /* MeridianGame movement methods. Loaded after simulation/game.js. */
     'use strict';
+    // Tick-local broadphase for pure body predicates, not ordered/stateful Yield.
+    // Outside ticks callers retain the live scan; no setters or snapshot fields.
+    class LiveUnitCollisionIndex {
+      readonly width: number;
+      entities: Entity[] | null = null;
+      private heads: Int32Array;
+      // Two nodes per body: live center and optional reserved exit. Each node
+      // holds cell/previous/next; relocation is O(1), no per-cell Sets or arrays.
+      private links = new Int32Array(128 * 6);
+      private units: UnitEntity[] = [];
+      private membership = new Map<UnitEntity, number>();
+      private maxSize = [0, 0];
+      constructor(readonly extent: number) {
+        this.width = Math.ceil(extent * 2 / 8);
+        this.heads = new Int32Array(2 * this.width * this.width); this.heads.fill(-1);
+      }
+      private cell(v: number) { return clamp(Math.floor((v + this.extent) / 8), 0, this.width - 1); }
+      private key(x: number, z: number, flying: number) {
+        return (flying * this.width + this.cell(z)) * this.width + this.cell(x);
+      }
+      private link(node: number, key: number) {
+        const o = node * 3, old = this.links[o];
+        if (old === key) return;
+        if (old >= 0) {
+          const previous = this.links[o + 1], next = this.links[o + 2];
+          if (previous < 0) this.heads[old] = next;
+          else this.links[previous * 3 + 2] = next;
+          if (next >= 0) this.links[next * 3 + 1] = previous;
+        }
+        this.links[o] = key;
+        if (key < 0) return;
+        const head = this.heads[key];
+        this.links[o + 1] = -1; this.links[o + 2] = head;
+        if (head >= 0) this.links[head * 3 + 1] = node;
+        this.heads[key] = node;
+      }
+      begin(entities: Entity[]) {
+        this.clear(); this.entities = entities;
+        for (const e of entities) if (e.kind === 'unit') this.update(e);
+      }
+      clear() {
+        this.heads.fill(-1); this.membership.clear(); this.units.length = 0;
+        this.maxSize.fill(0); this.entities = null;
+      }
+      update(e: UnitEntity) {
+        let index = this.membership.get(e);
+        if (index === undefined) {
+          index = this.units.length; this.units.push(e); this.membership.set(e, index);
+          if ((index + 1) * 6 > this.links.length) {
+            const links = new Int32Array(this.links.length * 2); links.set(this.links); this.links = links;
+          }
+          this.links[index * 6] = this.links[index * 6 + 3] = -1;
+        }
+        const flying = (UNITS[e.type] as UnitDefinitionShape).flying ? 1 : 0,
+          body = this.key(e.x, e.z, flying), exit = e.exit ? this.key(e.exit.x, e.exit.z, flying) : -1;
+        this.maxSize[flying] = Math.max(this.maxSize[flying], e.size);
+        this.link(index * 2, body);
+        this.link(index * 2 + 1, exit === body ? -1 : exit);
+      }
+      some(e: UnitBody, x: number, z: number, predicate: (other: UnitEntity) => boolean): boolean {
+        const flying = (UNITS[e.type] as UnitDefinitionShape).flying ? 1 : 0,
+          radius = (e.size + this.maxSize[flying]) * UNIT_BODY_SCALE,
+          left = this.cell(x - radius), right = this.cell(x + radius),
+          top = this.cell(z - radius), bottom = this.cell(z + radius);
+        for (let row = top; row <= bottom; row++) for (let col = left; col <= right; col++) {
+          let node = this.heads[(flying * this.width + row) * this.width + col];
+          while (node >= 0) {
+            if (predicate(this.units[node >>> 1])) return true;
+            node = this.links[node * 3 + 2];
+          }
+        }
+        return false;
+      }
+    }
     const movementMethods = {
+      updateUnitCollision(this: MeridianGame, e: UnitEntity) {
+        const index = this.unitCollisionIndex;
+        if (index?.entities && index.entities === this.s?.entities) index.update(e);
+      },
       unitFits(this: MeridianGame, e: UnitBody, x: number, z: number) {
         const flying = !!(UNITS[e.type] as UnitDefinitionShape).flying;
         const limit = this.world!.extent - 5;
@@ -13,11 +91,19 @@
             distance(cell, b) < b.size + 0.35 + this.world!.cellSize * 0.4)) return false;
         }
         // Read live positions: the combat hash is only rebuilt once per step.
-        return !this.s!.entities.some(other => other !== e && other.hp > 0 && other.kind === 'unit' &&
+        const blocks = (other: Entity) => other !== e && other.hp > 0 && other.kind === 'unit' &&
           !!(UNITS[other.type] as UnitDefinitionShape).flying === flying &&
-          ((other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9 ||
+          !!((other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9 ||
             (other.exit && (other.exit.x - x) ** 2 + (other.exit.z - z) ** 2 <
-              ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9)));
+              ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9));
+        if (this.stepping) {
+          let index = this.unitCollisionIndex;
+          if (!index || index.extent !== this.world!.extent)
+            index = this.unitCollisionIndex = new LiveUnitCollisionIndex(this.world!.extent);
+          if (!index.entities) index.begin(this.s!.entities);
+          if (index.entities === this.s!.entities) return !index.some(e, x, z, blocks);
+        }
+        return !this.s!.entities.some(blocks);
       },
       unitPosition(this: MeridianGame, e: UnitPlacement, reserved: UnitPlacement[] = []): Position | null {
         const limit = this.world!.extent - 5;
@@ -100,6 +186,7 @@
         const nx = e.x + dx / d * step, nz = e.z + dz / d * step;
         if (step > 0 && this.canStep(e, nx, nz)) {
           e.x = nx; e.z = nz;
+          this.updateUnitCollision(e);
           e.rot = angleLerp(e.rot, Math.atan2(dx, dz), dt * (e.type === 'destroyer' ? 2.5 : 9));
           e.walk += step;
           if (step >= d) delete e.yieldTo;
@@ -153,7 +240,7 @@
         e.nextRecovery = e.nextPath;
         if (!(UNITS[e.type] as UnitDefinitionShape).flying && this.world!.blockedAt(e.x, e.z)) {
           const position = this.unitPosition(e);
-          if (position) Object.assign(e, position);
+          if (position) { Object.assign(e, position); this.updateUnitCollision(e); }
         }
         e.stuck = 0;
       },
@@ -238,6 +325,7 @@
           if (!this.canStep(e, nx, nz)) continue;
           e.x = nx;
           e.z = nz;
+          this.updateUnitCollision(e);
           heading -= angle;
           if (angle && allowAlternate) {
             const chosenSide: 1 | -1 = angle > 0 ? 1 : -1;
@@ -254,7 +342,7 @@
           for (const [nx, nz] of [[e.x + vx * step, e.z], [e.x, e.z + vz * step]]) {
             if ((nx === e.x && nz === e.z) || !this.canStep(e, nx, nz)) continue;
             heading = Math.atan2(nx - e.x, nz - e.z);
-            e.x = nx; e.z = nz; moved = true; break;
+            e.x = nx; e.z = nz; this.updateUnitCollision(e); moved = true; break;
           }
         }
         if (moved && Math.hypot(q.x - e.x, q.z - e.z) < d - step * 0.1) {

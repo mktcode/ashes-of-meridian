@@ -22,6 +22,18 @@
 - `test:ai`/`test:simulation` immer nur durch den Hauptagenten auf ausdrücklichen aktuellen Nutzerauftrag, auch direkte/gefilterte Fälle. Implementierung oder Abschlussprüfung ist keine Freigabe. Bedarf vorschlagen, sonst als nicht ausgeführt nennen.
 - Browserchecks nur für konkrete technische Fragen, keine Screenshotserien auf Vorrat. Visuelle/akustische und Echtgeräteabnahme bleibt menschlich. Prüfungen und relevante offene Grenzen im Abschluss benennen.
 
+## Spiel-Performance
+
+Mentales Modell: *Was würde John Carmack tun?*
+
+Performance-Analyse und -Optimierung ist ein kreativer Prozess, der über einfache Code-Verbesserungen hinausgeht. Fokus auf:
+
+- Reduzierung von Suchräumen und globalen Invalidierungen
+- Minimierung von Arbeit, deren Ergebnis sich seit dem letzten Frame kaum verändert hat
+- Optimierung von Geländeabfragen, Kollisionsprüfungen und wiederholtem Aufbau von Modelldaten
+- Nutzung von Profiling-Tools und Performance-Messungen, um Engpässe zu identifizieren
+- Kreative Ansätze zur Verbesserung der Framerate und Reduzierung von Latenz, z.B. durch Caching, Level-of-Detail-Techniken oder asynchrone Verarbeitung
+
 ## Delegation
 
 - Innerhalb freigegebener Arbeit erlaubt; Hauptagent orchestriert, beantwortet Rückfragen, pflegt Issues und integriert. Höchstens drei Kinder gleichzeitig, keine Weiterdelegation.
