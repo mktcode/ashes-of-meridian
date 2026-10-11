@@ -5,5 +5,12 @@ const files = JSON.parse(readFileSync(new URL('./scripts/tooling-files.json', im
 export default [
   { ignores: ['dist/**', '.tmp/**', 'node_modules/**'] },
   { ...js.configs.recommended, files, languageOptions: { globals: globals.node } },
-  { files: ['scripts/browser/smoke.mjs'], languageOptions: { globals: globals.browser } },
+  {
+    files: [
+      'scripts/browser/smoke.mjs',
+      'scripts/diagnostics/browser.mjs',
+      'scripts/diagnostics/capture.mjs',
+    ],
+    languageOptions: { globals: globals.browser },
+  },
 ];

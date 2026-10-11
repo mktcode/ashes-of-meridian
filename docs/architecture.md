@@ -8,6 +8,8 @@ Das Spiel muss nach `npm run build` direkt über `file://` funktionieren. Deshal
 
 Neue Skripte in `index.html` und den betroffenen Gruppen von `tests/helpers/game-scripts.cjs` eintragen. Prototypfragmente erweitern Klassen über nicht aufzählbare Methoden und Declaration Merging. **Ladereihenfolge ist Vertrag**, ebenso die gesamte CSS-Kaskade. Quellen bearbeiten, nie `dist/` von Hand.
 
+Der Build erzeugt nach TypeScript eine eingefrorene, klassische Buildkennung für Runtime-Inspektion und Diagnoseexport. Ihr reproduzierbarer SHA-256-Fingerabdruck umfasst gebaute JavaScriptdateien, HTML, Styles, Assets und Audio; die Kennungsdatei selbst, Source Maps und Scratch bleiben außen vor. Git-Commit und Dirty-Status sind reine Buildzeit-Provenienz, bei Quellen ohne eigenes Repository ausdrücklich unbekannt. Kein Zeitstempel, Git-Aufruf im Browser oder Serverbedarf. Nach Änderungen an Auslieferungsdateien erneut bauen; die Kennung ist kein Laufzeit-Integritätscheck. [Diagnosevertrag](testing.md#lokale-performancediagnose).
+
 Der initiale HTML-Ladescreen erhält vor der synchronen Renderer-/Weltvorbereitung ausdrücklich Zeichenzeit. Startbildschirm und Gefechtsstarts zeigen einen phasenbasierten Fortschritt mit Zeichenpausen zwischen den Vorbereitungsschritten und einzelnen Materialien; die Balkenwerte sind keine Zeit- oder Downloadprognose. Während dieser Zeichenpausen wird keine verdeckte 3D-Szene gerendert. Bei Gefechtsübergängen bleiben Bereitschaftsprüfung und eingereichter Renderframe Voraussetzung für die Szenenenthüllung.
 
 Das [UI-Designsystem](ui-design-system.md) beschreibt die auf UI-Wurzeln begrenzte

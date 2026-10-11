@@ -20,7 +20,13 @@ export async function findChromium(override = process.env.CHROMIUM_PATH) {
 }
 
 // Serial CLI operation: temporary environment/cwd changes belong to this invocation.
-export async function withBrowser(root, run, { launch, executablePath, timeoutMs = 30000 } = {}) {
+export async function withBrowser(
+  root,
+  run,
+  { launch, executablePath, timeoutMs = 30000, headless = true, angle } = {},
+) {
+  if (typeof headless !== 'boolean' || (angle !== undefined && angle !== 'gl'))
+    throw Error('Invalid browser display/ANGLE option');
   const temporary = resolve(root, '.tmp');
   await mkdir(temporary, { recursive: true });
   if ((await lstat(temporary)).isSymbolicLink())
@@ -43,7 +49,8 @@ export async function withBrowser(root, run, { launch, executablePath, timeoutMs
     }
     browser = await start({
       executablePath: chosen,
-      headless: true,
+      headless,
+      ...(angle === 'gl' ? { args: ['--use-gl=angle', '--use-angle=gl'] } : {}),
       chromiumSandbox: true,
       timeout: timeoutMs,
     });

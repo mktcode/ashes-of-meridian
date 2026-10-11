@@ -94,7 +94,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
   'simulation-ai',
   'simulation-runtime'
 ]);
-const DIAGNOSTIC_SCRIPTS = Object.freeze(['diagnostics-recorder', 'diagnostics-gpu', 'diagnostics-browser']);
+const DIAGNOSTIC_SCRIPTS = Object.freeze(['diagnostics-build-info', 'diagnostics-recorder', 'diagnostics-gpu', 'diagnostics-browser']);
 const AUDIO_SCRIPTS = Object.freeze(['voice-content', 'audio']);
 const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-model-thumbnail', 'ui-codex', 'ui-screens', 'ui-tutorial', 'ui-actions', 'ui-input', 'ui-presentation']);
 

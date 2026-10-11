@@ -18,7 +18,7 @@ test('capture callback serializes, preserves pause and projects the focus onto e
   const units = [{ kind: 'unit', type: 'worker', team: 0, x: 10, z: 20 }, { kind: 'unit', type: 'worker', team: 1, x: -10, z: -20 }];
   const game = { start() { this.s = { map: 'desert', seed: 1409, time: 0, entities: units, cam: {} }; },
     alive: fn => units.filter(fn), spawnUnit(type,x,z) { return { id: 3,type,x,z }; }, factionFor: t => t,
-    rehash() {}, world: { extent: 100, rebuild() {}, reveal() {}, surface: { heightAt: () => 12 }, renderProfile: { atmosphere: { timeOfDay: 10 } } } };
+    rehash() {}, world: { extent: 100, rebuild() {}, reveal(entities, vision) { this.lastEntities = entities; this.lastVision = vision; }, surface: { heightAt: () => 12 }, renderProfile: { atmosphere: { timeOfDay: 10 } } } };
   const ui = { terrainCameraPoint: (p,h) => ({ x: p.x, z: p.z - h }), pointer: {}, renderActions() {}, updateHUD() {} };
   const renderer = { resize() {}, setBattlefieldTime(t) { this.elapsed = t; } };
   const context = vm.createContext({ window: { Meridian: { game, ui, renderer, content: { units: { rifle: { size: 1 } }, buildings: {} } } }, scene: {
@@ -31,4 +31,8 @@ test('capture callback serializes, preserves pause and projects the focus onto e
   renderer.setBattlefieldTime(0); assert.equal(renderer.elapsed, 300);
   context.scene.entities[0].type = 'missing';
   assert.throws(() => vm.runInContext(`(${prepareScene.toString()})(scene)`, context), /Unknown unit/);
+  context.scene.entities[0].type = 'rifle'; context.scene.reveal = false;
+  vm.runInContext(`(${prepareScene.toString()})(scene)`, context);
+  assert.equal(game.world.lastEntities, game.s.entities, 'normal visibility includes all arranged entities');
+  assert.equal(game.world.lastVision.length, 0, 'no forced full-map vision');
 });

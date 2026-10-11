@@ -118,6 +118,7 @@ interface Window {
     audio: MeridianAudio;
     content: { units: typeof UNITS; buildings: typeof BUILDINGS; factions: typeof FACTIONS };
     readonly performance: { fps: number; drawCalls: number; entities: number };
+    readonly build: typeof MERIDIAN_BUILD_INFO;
     diagnostics?: ReturnType<typeof createMeridianDiagnostics>;
     version: string;
   };

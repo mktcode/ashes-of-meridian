@@ -360,14 +360,9 @@
             throw error;
           } finally { if (id === worldRequest && !failed) $('loading').classList.add('hidden'); }
         };
-        const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R, () => ({
-          view: ui.view, paused: ui.paused,
-          map: worldView.world?.definition.name ?? null, seed: worldView.world?.seed ?? null,
-          simulationTime: ui.view === 'game' ? game.s?.time ?? null : null,
-          speed: ui.view === 'game' ? game.s?.speed ?? null : null,
-          entities: ui.view === 'game' ? game.s?.entities.length ?? 0 : preview.length,
-          effects: ui.view === 'game' ? game.effects.fx.length : 0
-        }), { game, worldView, ui, thumbnails }) : undefined;
+        const diagnostics = params.get('diagnostics') === '1' ? createMeridianDiagnostics(R,
+          () => diagnosticContext(R, game, ui, worldView.world, preview.length),
+          { game, worldView, ui, thumbnails }) : undefined;
         ui.showHome();
         const SIMULATION_STEP_SECONDS = 0.05,
           RENDER_INTERVAL_MS = 1000 / 60,
@@ -748,6 +743,7 @@
           renderer: R,
           audio,
           diagnostics,
+          build: MERIDIAN_BUILD_INFO,
           content: { units: UNITS, buildings: BUILDINGS, factions: FACTIONS },
           get performance() {
             return {
