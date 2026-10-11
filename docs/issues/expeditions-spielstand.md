@@ -6,6 +6,12 @@ Das manuelle Feedback zum bisherigen Gefechtsrestore ist positiv. Gezielte Persi
 
 Maßgeblicher Vertrag: [Speichern und Lebenszyklus](../gameplay.md#speichern-und-lebenszyklus), technische Grenzen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen). Alte reine Startcheckpoints werden nicht übernommen, permanente Profilwerte bleiben erhalten. Diese Abnahme umfasst keine Migrationen, Rekonstruktion verlorener historischer Welten, Replay, Multiplayer-Persistenz oder Offline-Fortschritt.
 
+## Evakuierungsübergang: gemeldeter Ladefehler
+
+- [ ] Nach der ersten tatsächlich durchgeführten Evakuierung meldet der automatische Start der höchsten Stage `Cannot connect broad terrain shelf with a safe ramp`. Der Nutzer hat **Keep Save** gewählt. Codeprüfung auf `18715c5`: Die Meldung stammt aus der Terrain-Konnektivitätsreparatur und kann sowohl beim neuen Gefecht als auch beim Rekonstruieren eines Snapshots entstehen; kein Beleg für einen beschädigten Save. Karte/Seed, Save und Kennung des tatsächlich gespielten Builds fehlen noch für eine gezielte Reproduktion. Kein Terrain-, Browser- oder Simulationslauf durchgeführt.
+- [ ] Fehlerpfad des Evakuierungsübergangs muss einen vollständig aufgebauten Startbildschirm hinterlassen: Der aktuelle Ablauf setzt nur `view='home'`, ohne das Menü aufzubauen. Scheitert der anschließende Start, schließt **Keep Save** lediglich das Modal; die bisherige gerenderte Kulisse kann ohne sichtbares Menü zurückbleiben. Rettung wird vor dem Startversuch gespeichert; keinen automatischen Abbruch oder Ersatzseed als Fehlerbehandlung verwenden.
+- [ ] Nutzerwunsch: Evakuierte Stages im Startbildschirm weiter durchschalten und als Hintergrund betrachten, aber nicht mehr betreten oder für Boni berücksichtigen. Der aktuelle Vertrag entfernt den gesamten Archiveintrag, nicht nur den Zugang; **Keep Save** stellt ihn nicht wieder her. Vorschauarchiv und aktive Außenposten fachlich trennen, ohne erneute Rettungsauszahlung. Bereits gelöschte Welten sind im gespeicherten Archiv nicht mehr vorhanden; keine stillschweigende Rekonstruktion/Migration zusagen.
+
 ## Offene menschliche Grenzen
 
 - [ ] Tutorial während Ankunft, Aufklärungsflug, Wirtschaftszielen sowie Infanterie-/Supply-Limit und Depotbau unterbrechen: Kamerafahrten werden übersprungen, Ziele erhalten und die Kamera bleibt bedienbar. Die technische Restore-Regression ersetzt keine Abnahme der tatsächlichen Kamerafahrten.
