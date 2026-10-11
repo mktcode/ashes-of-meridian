@@ -77,6 +77,7 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-shared',
   'battlefield-ecology',
   'battlefield-variations',
+  'battlefield-connectivity',
   'battlefield-dynamic',
   'battlefield-deployment',
   'battlefield-catalog'
