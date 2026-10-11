@@ -278,6 +278,23 @@ test('cosmetic callers can bound path work without changing the default route or
   assert.deepEqual(pathValue(world.path(-20, 0, 20, 0, false, undefined, 0, false, Infinity)), expected);
 });
 
+test('cosmetic road costs prefer modest existing detours without changing ordinary navigation',()=>{
+ const {world}=pathArena();world.blocked.fill(0);
+ const from={x:-21.25,z:1.25},to={x:21.25,z:1.25};
+ const ordinary=pathValue(world.path(from.x,from.z,to.x,to.z));
+ const roadCost=(x,z)=>Math.abs(z-3.75)<1.3?1:1.3;
+ const preferred=world.path(from.x,from.z,to.x,to.z,false,undefined,.2,false,600,roadCost);
+ assert.equal(preferred.status,'complete');
+ assert.ok(preferred.points.some(p=>p.z>2.5),'smoothing retains the nearby road instead of cutting straight across it');
+ assert.deepEqual(pathValue(world.path(from.x,from.z,to.x,to.z)),ordinary);
+ const distant=world.path(from.x,from.z,to.x,to.z,false,undefined,.2,false,600,
+  (x,z)=>z>16?1:1.3);
+ assert.equal(distant.status,'complete');assert.ok(distant.points.every(p=>p.z<16),'not worth a large detour');
+ const fallback=world.path(from.x,from.z,to.x,to.z,false,undefined,.2,false,1,roadCost);
+ assert.equal(fallback.status,'complete');assert.deepEqual(pathValue(fallback),ordinary,'bounded preference falls back to a proven direct route');
+ assertWorkspaceReset(world.pathWorkspace);
+});
+
 test('path workspace discards pending heap entries on search budget exhaustion', () => {
   const { world, Heap } = pathArena(), pop = Heap.prototype.pop;
   let pops = 0;
