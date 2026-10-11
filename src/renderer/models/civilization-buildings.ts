@@ -175,7 +175,7 @@
           });
         });
       };
-      CivilianUpgradeStyles[style](type,{box,residential,module,entry,cap,crate});
+      CivilianUpgradeStyles[style](type,{box,residential,module,entry,cap,crate,cylinder});
       return meshes;
     }
     if(type==='fieldlab'){
@@ -248,11 +248,14 @@
     const housing=type==='embercottage'||type==='terracecommons'||type==='hearthtower',
       materials: Material[] = housing ? ['steel','edge','dark','orange','cyan','warm','dim','soil','leaf']
         : ['steel','edge','dark','cyan','window',...(type==='researchspire'?[]:['glass' as const])];
-    const specializedMaterials:Material[]=housing
-      ? ['steel','edge','dark','orange','cyan','warm','dim','crateCinder','crateCinderMark','crateDark','crateEdge']
-      : ['steel','edge','dark','cyan','window',...Object.keys(SUPPLY_CRATE_COLORS) as (keyof typeof SUPPLY_CRATE_COLORS)[]];
-    const materialSet=(style:string):Material[]=>style ? specializedMaterials : materials;
-    const styles=['',housing?'startingAlloy':'weaponTechnology'];
+    const residentialMaterials:Material[]=['steel','edge','dark','orange','cyan','warm','dim'];
+    const styleMaterials:Record<string,Material[]>={
+      startingAlloy:[...residentialMaterials,'crateCinder','crateCinderMark','crateDark','crateEdge'],
+      aetherAllocation:[...residentialMaterials,'crateEcho','crateEchoMark','crateDark','crateEdge'],
+      weaponTechnology:['steel','edge','dark','cyan','window']
+    };
+    const materialSet=(style:string):Material[]=>style ? styleMaterials[style] : materials;
+    const styles=housing?['','startingAlloy','aetherAllocation']:['','weaponTechnology'];
     for(const style of styles)for(const material of materialSet(style))
       meshes[`civil${type[0].toUpperCase()+type.slice(1)}${style}${material[0].toUpperCase()+material.slice(1)}`] = () => {
         if(!geometry.has(style))geometry.set(style,assembly(type,style));
