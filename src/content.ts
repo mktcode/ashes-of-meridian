@@ -327,10 +327,10 @@ const BUILDINGS = {
   turret: {
     cost: 115,
     gas: 25,
-    hp: 800,
+    hp: 1600,
     size: 1.7,
     time: 19,
-    damage: 28,
+    damage: 56,
     range: 15,
     reload: 1.05,
     vision: 20,
