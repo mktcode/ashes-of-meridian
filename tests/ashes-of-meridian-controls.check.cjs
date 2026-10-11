@@ -1908,6 +1908,50 @@ test('battle exit is not used for victory or defeat, only for their subsequent r
   }
 });
 
+test('outpost guide reopens for completed profiles and returns to pause without changing clocks or rescue', () => {
+  const h = setup(), ui = h.ui;
+  h.UI.prototype.bind.call(ui);
+  ui.openModal = h.UI.prototype.openModal;
+  ui.profile.civilizationIntroComplete = true;
+  ui.activeWorldStage = 1;
+  ui.game.s.outpost = vm.runInContext('createOutpostState(0)', h.context);
+  ui.game.s.outpost.evacuation = { hq: 7, until: 60, units: [{ type: 'worker', hp: 1, shield: 0, kills: 0 }], upgrades: [] };
+  const before = JSON.stringify({ state: ui.game.s, profile: ui.profile });
+  ui.pause();
+  for (const back of ['backPause', 'closeModal']) {
+    h.click({ ui: 'outpostGuide' });
+    assert.equal(ui.modalKind, 'outpostGuide');
+    assert.equal(ui.paused, true);
+    assert.equal(ui.controlsLocked, true);
+    h.click({ ui: back });
+    assert.equal(ui.modalKind, 'pause');
+    assert.equal(ui.paused, true, 'reading and closing never resumes the siege');
+  }
+  assert.equal(JSON.stringify({ state: ui.game.s, profile: ui.profile }), before);
+  assert.deepEqual(h.calls, [], 'help submits no gameplay actions');
+  ui.resume();
+  assert.equal(ui.paused, false);
+  assert.equal(JSON.stringify({ state: ui.game.s, profile: ui.profile }), before);
+});
+
+test('outpost guide ignores stale actions outside the active outpost pause menu', () => {
+  for (const guard of ['battle', 'running', 'dialog', 'finished', 'home']) {
+    const h = setup(), ui = h.ui;
+    ui.openModal = h.UI.prototype.openModal;
+    ui.activeWorldStage = 1;
+    ui.game.s.outpost = vm.runInContext('createOutpostState(0)', h.context);
+    ui.paused = true; ui.modalKind = 'pause';
+    if (guard === 'battle') ui.activeWorldStage = null;
+    if (guard === 'running') ui.paused = false;
+    if (guard === 'dialog') ui.modalKind = 'evacuationConfirm';
+    if (guard === 'finished') ui.game.s.outpost.finished = true;
+    if (guard === 'home') ui.view = 'home';
+    const before = JSON.stringify({ state: ui.game.s, paused: ui.paused, modal: ui.modalKind });
+    ui.uiAction('outpostGuide');
+    assert.equal(JSON.stringify({ state: ui.game.s, paused: ui.paused, modal: ui.modalKind }), before, guard);
+  }
+});
+
 test('civilization introduction waits for confirmation and can return to victory without leaving', () => {
   const h = savedUIBattle(), ui = h.ui;
   h.UI.prototype.bind.call(ui);

@@ -262,6 +262,9 @@
           case 'expeditionBenefits':
             this.showExpeditionBenefits();
             break;
+          case 'outpostGuide':
+            this.showOutpostGuide();
+            break;
           case 'abandon':
             if (this.view !== 'game' || !this.paused || !this.expedition || this.activeWorldStage !== null || this.modalKind !== 'pause') break;
             this.openModal('abandonExpedition', `<div class="eyebrow">END EXPEDITION</div><h1>Abandon this expedition?</h1><p>This ends the entire expedition and discards its saved battle, all saved worlds and their building upgrades. Your settings and faction unlocks are kept. This cannot be undone.</p><div class="btnstack"><button class="primary" data-ui="closeModal">${uiSkin()}KEEP PLAYING</button><button class="secondary" data-ui="confirmAbandon">${uiSkin()}ABANDON EXPEDITION</button></div>`);

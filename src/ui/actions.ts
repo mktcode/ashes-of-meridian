@@ -183,7 +183,7 @@
           const b=this.selectedBuilding(),reason=this.game.evacuationReason(b?.id || 0,this.localTeam);
           if(reason){this.toast(reason);return;}
           this.evacuationConfirmId=b!.id;this.paused=true;this.clearMode();
-          this.openModal('evacuationConfirm',`<div class="eyebrow">PERMANENT WITHDRAWAL</div><h1>Evacuate this outpost?</h1><p>This cannot be cancelled. After <strong>60 seconds of simulation time</strong> this stage is permanently removed. Waves continue during evacuation.</p><p>Send units to this Command Center to board. Select civilian buildings to secure up to <strong>three upgrades at their current ranks</strong>. Everything else is lost. Already secured units and upgrades survive even if this HQ is destroyed.</p><p>Your rescue goes to Stage ${this.expedition ? this.expedition.depth+1 : '?'}, the highest battle stage. Pause stops the timer; game speed accelerates it.</p><div class="btnstack"><button class="primary" data-ui="confirmEvacuation">${uiSkin()}START EVACUATION · 60s</button><button class="secondary" data-ui="closeModal">${uiSkin()}KEEP DEFENDING</button></div>`);
+          this.openModal('evacuationConfirm',`<div class="eyebrow">PERMANENT WITHDRAWAL</div><h1>Evacuate this outpost?</h1><p>This cannot be cancelled. After <strong>60 seconds of simulation time</strong> this stage is permanently removed. Waves continue during evacuation.</p><p>Select units, then right-click or tap <strong>this exact Command Center</strong> to order boarding. Nearby units do not board automatically. Select active civilian upgrade buildings and use <strong>Evacuate upgrade</strong> to secure up to <strong>three buildings at their current ranks</strong>; release selections in the HUD to replace them. Resources and unsecured bonuses are lost. Already secured units and upgrades survive even if this HQ is destroyed.</p><p>Your rescue goes to Stage ${this.expedition ? this.expedition.depth+1 : '?'}, the highest battle stage. Pause stops the timer; game speed accelerates it.</p><div class="btnstack"><button class="primary" data-ui="confirmEvacuation">${uiSkin()}START EVACUATION · 60s</button><button class="secondary" data-ui="closeModal">${uiSkin()}KEEP DEFENDING</button></div>`);
           return;
         }
         if(kind==='evacuateUpgrade') {
@@ -381,7 +381,7 @@
             if (!isCivilizationBuildingType(b.type)) actions += button('rally', 'Rally point', 'rally');
             actions += button('rotateLeft', 'Rotate left', 'rotateLeft') + button('rotateRight', 'Rotate right', 'rotateRight');
             if(this.activeWorldStage!==null && b.type==='hq')
-              actions += button('startEvacuation','Evacuate outpost · Irreversible 60-second countdown','evacuate');
+              actions += button('startEvacuation','Evacuate outpost · Irreversible 60-second simulation countdown','evacuate');
             if(this.game.s?.outpost?.evacuation && b.forumId!==undefined)
               actions += button(`evacuateUpgrade:${b.id}`,this.game.s.outpost.evacuation.upgrades.some(u=>u.id===b.id)?'Release upgrade evacuation selection':'Evacuate upgrade · Keep its current rank','evacuate');
           } else actions = button('cancelBuild', 'Cancel construction', 'cancel');

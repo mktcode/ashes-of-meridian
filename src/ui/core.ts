@@ -253,7 +253,7 @@
         $('worldViewport').classList.toggle('evacuating',!!evac && !out?.finished);
         const el=$('outpostStatus');el.classList.toggle('hidden',!out);
         if(!out || !s)return;
-        const html=evac?`<strong>EVACUATION · ${Math.max(0,Math.ceil(evac.until-s.time))}s${this.paused?' · PAUSED':''}</strong><small>${evac.units.length} units secured · ${evac.upgrades.length}/3 upgrades · Send units to the evacuation HQ</small><div class="evacuation-upgrades">${evac.upgrades.map(u=>`<button data-action="evacuateUpgrade:${u.id}" aria-label="Release ${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} evacuation selection">${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} · R${u.level} ×</button>`).join('')}</div>`:
+        const html=evac?`<strong>EVACUATION · ${Math.max(0,Math.ceil(evac.until-s.time))}s${this.paused?' · PAUSED':''}</strong><small>${evac.units.length} units secured · ${evac.upgrades.length}/3 upgrades · Select units, then tap/right-click the evacuation HQ</small><div class="evacuation-upgrades">${evac.upgrades.map(u=>`<button data-action="evacuateUpgrade:${u.id}" aria-label="Release ${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} evacuation selection">${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} · R${u.level} ×</button>`).join('')}</div>`:
           `<strong>OUTPOST · WAVE ${out.wave}${out.remaining?' · INCOMING':''}</strong><small>Next wave in ${Math.max(0,Math.ceil(out.nextWave-s.time))}s · Finite resources · Evacuate at your Command Center</small>`;
         if(this.outpostMarkup!==html){el.innerHTML=html;this.outpostMarkup=html;}
         el.classList.toggle('evacuation-status',!!evac);
