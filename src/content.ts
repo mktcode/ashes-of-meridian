@@ -543,55 +543,38 @@ const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
 
 const COMMAND_ENERGY = Object.freeze({ start: 25, max: 200, regeneration: .8 });
 const ABILITY_RULES = Object.freeze({ orbitalBuilding: 'factory' as const, reinforcementRange: 20 });
-const EXPEDITION_EFFECTS = Object.freeze({ alloy: 50, aether: 50, surveyRadius: 22, workshopSpeed: .5, energy: 15 });
+const EXPEDITION_EFFECTS = Object.freeze({ alloy: 50, aether: 50, energy: 15 });
+const CIVILIZATION_EFFECTS = Object.freeze({ damage: .02, protection: .02, medicine: .05, energyRegeneration: .1, repairSpeed: .05 });
 const COMMAND_DRILL = Object.freeze({ radius: 11, damagePerStack: .05 });
 const FLEET_EFFECTS = Object.freeze({ constructionSpeed: .05, supply: 2, repairDiscount: .05 });
 
 const EXPEDITION_BENEFITS = {
-  supplyCrate: {
-    name: 'Supply crate',
+  startingAlloy: {
+    name: 'Starting Cinder',
     icon: 'crystal',
-    desc: `Adds ${EXPEDITION_EFFECTS.alloy} Cinder to your reserves at the start of every remaining battle.`
+    desc: `Grants ${EXPEDITION_EFFECTS.alloy} Cinder per rank at battle start or once when a newly purchased rank reaches the running battle.`,
+    max: 999999
   },
   aetherAllocation: {
     name: 'Echo allocation',
     icon: 'save',
-    desc: `Adds ${EXPEDITION_EFFECTS.aether} Echo at the start of every remaining battle.`
+    desc: `Grants ${EXPEDITION_EFFECTS.aether} Echo per rank at battle start or once when a newly purchased rank reaches the running battle.`
   },
-  pioneerSquad: {
-    name: 'Pioneer squad',
+  startingWorkers: {
+    name: 'Starting workers',
     icon: 'worker',
-    desc: 'Deploys one additional worker at the start of every remaining battle.',
+    desc: 'Delivers one additional worker per rank, at battle start or on return to a running battle. Maximum five per battle; fallen workers are not replaced.',
     max: 5
   },
   commanderMandate: {
-    name: 'Commander mandate',
-    icon: 'hero',
-    desc: 'Deploys your faction commander at the start of every remaining battle.',
-    max: 1
-  },
-  commandDrill: {
-    name: 'Command drill',
-    icon: 'rifle',
-    desc: `Basic infantry within ${COMMAND_DRILL.radius} meters of their commander deal ${COMMAND_DRILL.damagePerStack * 100}% more damage per stack.`
-  },
-  surveyDrones: {
-    name: 'Survey drones',
-    icon: 'scan',
-    desc: 'Maps the nearest unexplored resource area at each battle start. Does not reveal enemies.',
-    max: 1
-  },
-  fieldWorkshop: {
-    name: 'Field workshop',
-    icon: 'repair',
-    desc: `Your first placed foundation in each battle builds ${EXPEDITION_EFFECTS.workshopSpeed * 100}% faster. Consumed even if canceled.`,
-    max: 1
+    name: 'Commander programme', icon: 'hero',
+    desc: 'Rank 1 deploys your commander once per battle, including on return to a running battle. Ranks 2 and 3 give nearby basic infantry +5% and +10% damage within 11 meters. Does not replace a fallen commander.',
+    max: 3
   },
   commandCapacitor: {
-    name: 'Command capacitor',
-    icon: 'energy',
-    desc: `Adds ${EXPEDITION_EFFECTS.energy} starting command energy per stack. Base starting energy is ${COMMAND_ENERGY.start}.`,
-    max: 2
+    name: 'Energy supply', icon: 'energy',
+    desc: 'Adds 10% command-energy regeneration and grants 15 energy per rank. New ranks also deliver energy to a running battle; energy remains capped.',
+    max: 6
   }
 } as const;
 
@@ -617,11 +600,9 @@ function normalizedBenefits(input: Record<string, number> = {}): Record<string, 
 }
 
 const CIVILIZATION_FLEET_EFFECTS = {
-  startingAlloy: { name: 'Starting Cinder', icon: 'crystal', desc: 'Adds 50 starting Cinder per rank.', max: 999999 },
-  startingWorkers: { name: 'Starting workers', icon: 'worker', desc: 'Adds one starting worker per rank, up to five across the expedition.', max: 5 },
   constructionProtocols: { name: 'Construction protocols', icon: 'factory', desc: 'Adds 5% construction speed per rank. Does not speed up repairs.', max: 999999 },
   logisticsFrame: { name: 'Logistics frame', icon: 'depot', desc: 'Adds two supply capacity per rank. The total supply limit remains 180.', max: 999999 },
-  repairLogistics: { name: 'Repair logistics', icon: 'repair', desc: 'Reduces worker repair Cinder costs by 5% per rank, up to 75%.', max: 15 }
+  repairLogistics: { name: 'Repair service', icon: 'repair', desc: 'Workers repair 5% faster and spend 5% less Cinder per rank, up to 75% cost reduction.', max: 15 }
 } as const;
 type FleetUpgradeType = keyof typeof CIVILIZATION_FLEET_EFFECTS;
 const COMMAND_MODULES = {
@@ -666,25 +647,30 @@ const COMMAND_MODULES = {
       gains: ['16 SUPPLY', '2s EXTRACTION', '48s COOLDOWN'] }, max: 3, costs: [250, 600, 1200]
   }
 } as const satisfies Record<AbilityType, UpgradeDefinition>;
-const BATTLE_UPGRADES = Object.freeze({ ...CIVILIZATION_FLEET_EFFECTS, ...COMMAND_MODULES });
+const CIVILIZATION_RESEARCH_EFFECTS = {
+  weaponTechnology: { name: 'Weapon technology', icon: 'rifle', desc: 'Combat units deal 2% more weapon damage per rank, including existing units. Maximum 15 ranks.', max: 15 },
+  protectionSystems: { name: 'Protection systems', icon: 'shield', desc: 'Units take 2% less damage per rank, up to 30%. Does not heal or change current health.', max: 15 },
+  fieldMedicine: { name: 'Field medicine', icon: 'heal', desc: 'Medics and repair/healing command fields restore 5% more health per rank, including existing support units. Maximum 10 ranks.', max: 10 },
+  commandTraining: { name: 'Command expansion', icon: 'orbital', desc: 'Improves all four equipped command abilities using their individual rank effects. Maximum three ranks.', max: 3 }
+} as const;
+const BATTLE_UPGRADES = Object.freeze({ ...CIVILIZATION_FLEET_EFFECTS, ...CIVILIZATION_RESEARCH_EFFECTS });
 type UpgradeType = keyof typeof BATTLE_UPGRADES;
 
 // Civilian buildings own a selected effect and a purchased rank; no profile purchases.
 const CIVILIZATION_UPGRADE_COSTS = [40, 80, 140] as const;
 const CIVILIZATION_UPGRADES = Object.freeze({
   ...CIVILIZATION_FLEET_EFFECTS,
-  ...COMMAND_MODULES, ...EXPEDITION_BENEFITS
-}) as Readonly<Record<FleetUpgradeType | AbilityType | ExpeditionBenefit,
+  ...CIVILIZATION_RESEARCH_EFFECTS, ...EXPEDITION_BENEFITS
+}) as Readonly<Record<FleetUpgradeType | keyof typeof CIVILIZATION_RESEARCH_EFFECTS | ExpeditionBenefit,
   { name: string; icon: string; desc: string; max?: number }>>;
 type CivilizationUpgradeType = keyof typeof CIVILIZATION_UPGRADES;
 type CivilizationBuildingFamily = 'residential' | 'research';
 const CIVILIZATION_UPGRADE_FAMILIES = Object.freeze({
   startingAlloy: 'residential', startingWorkers: 'residential',
   constructionProtocols: 'residential', logisticsFrame: 'residential', repairLogistics: 'residential',
-  supplyCrate: 'residential', pioneerSquad: 'residential', commanderMandate: 'residential', commandDrill: 'residential',
-  orbital: 'research', repair: 'research', scan: 'research', drop: 'research',
-  disruption: 'research', bulwark: 'research', surge: 'research', recall: 'research',
-  aetherAllocation: 'research', surveyDrones: 'research', fieldWorkshop: 'research', commandCapacitor: 'research'
+  aetherAllocation: 'residential',
+  weaponTechnology: 'research', protectionSystems: 'research', fieldMedicine: 'research',
+  commandTraining: 'research', commanderMandate: 'research', commandCapacitor: 'research'
 } as const satisfies Record<CivilizationUpgradeType, CivilizationBuildingFamily>);
 function civilizationBuildingFamily(type: BuildingType): CivilizationBuildingFamily | null {
   return type === 'fieldlab' || type === 'researchhub' || type === 'researchspire' ? 'research' :
@@ -693,8 +679,14 @@ function civilizationBuildingFamily(type: BuildingType): CivilizationBuildingFam
 function civilizationUpgradeAllowed(type: BuildingType, upgrade: CivilizationUpgradeType): boolean {
   return civilizationBuildingFamily(type) === CIVILIZATION_UPGRADE_FAMILIES[upgrade];
 }
-function civilizationUpgradeUnique(key: CivilizationUpgradeType): boolean {
-  return key === 'commanderMandate' || key === 'surveyDrones' || key === 'fieldWorkshop';
+function civilizationUpgradeOffers(type: BuildingType, seed: number, id: number): CivilizationUpgradeType[] {
+  const pool = contentKeys(CIVILIZATION_UPGRADES).filter(key => civilizationUpgradeAllowed(type,key)),
+    random = seeded(seed ^ Math.imul(id,0x6d2b79f5));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  return pool.slice(0,3);
+}
+function civilizationUpgradeOffered(b: BuildingEntity, key: CivilizationUpgradeType): boolean {
+  return civilizationUpgradeAllowed(b.type,key) && !!b.upgradeOffers?.includes(key);
 }
 function civilizationBuildingTier(type: BuildingType): number {
   return type === 'hearthtower' || type === 'researchspire' ? 3 :
@@ -743,9 +735,9 @@ function civilizationUpgradesForBuildings(entities: readonly Entity[], team: Pla
   for (const b of entities) {
     if (b.kind !== 'building' || b.team !== team || b.hp <= 0 || b.progress < 1 ||
       b.forumId === undefined || !forums.has(b.forumId) || b.settlementAt !== undefined || !b.upgrade || !hasContentKey(CIVILIZATION_UPGRADES, b.upgrade) ||
-      !civilizationUpgradeAllowed(b.type, b.upgrade)) continue;
+      !civilizationUpgradeOffered(b, b.upgrade)) continue;
     const target = hasContentKey(EXPEDITION_BENEFITS, b.upgrade) ? totals.benefits : totals.upgrades,
-      rank = civilizationUpgradeUnique(b.upgrade) ? 1 : b.upgradeLevel || 1;
+      rank = b.upgradeLevel || 1;
     target[b.upgrade] = (target[b.upgrade] || 0) + rank;
   }
   return totals;

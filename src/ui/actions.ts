@@ -179,33 +179,20 @@
           }
           this.clearMode();
         }
-        if (kind === 'settlementInspect' || kind === 'settlementBack') {
+        if (kind === 'settlementInspect') {
           const b = this.selectedBuilding();
-          if (this.tab !== 'root' || !b || b.forumId === undefined || b.progress < 1) return;
-          if (b.upgrade) {
-            if (kind === 'settlementInspect') return;
-            this.settlementDetail = null;
-            this.select([]);
-            this.updateHUD();
-            return;
-          }
-          if (kind === 'settlementInspect' && (!hasContentKey(CIVILIZATION_UPGRADES, arg) || !civilizationUpgradeAllowed(b.type, arg))) return;
-          const previous = this.settlementDetail?.upgrade;
-          this.settlementDetail = kind === 'settlementInspect' ? { buildingId: b.id, upgrade: arg as CivilizationUpgradeType } : null;
-          this.actionSignature = '';
-          this.updateHUD();
-          const target = kind === 'settlementInspect' ? 'settlementBack' : `settlementInspect:${previous}`;
-          $('actions').querySelector<HTMLButtonElement>(`[data-action="${target}"]`)?.focus({ preventScroll: true });
+          if (this.tab !== 'root' || !b || !hasContentKey(CIVILIZATION_UPGRADES,arg) ||
+            !civilizationUpgradeOffered(b,arg) || (b.upgrade && b.upgrade!==arg)) return;
+          this.showSettlementUpgradeInfo(b,arg);
           return;
         }
         const reason = this.actionReason(action);
         if (reason) { this.toast(reason); return; }
-        if (kind === 'settlementUpgrade' || kind === 'settlementExpand') {
+        if (kind === 'settlementUpgrade') return; // Activation is only confirmed in the captured info modal.
+        if (kind === 'settlementExpand') {
           const b = this.selectedBuilding();
           if (!b) return;
-          const applied = kind === 'settlementExpand' ? this.submitAction({kind:'expandSettlementBuilding', id:b.id}) :
-            this.submitAction({kind:'configureSettlementUpgrade', id:b.id,
-              upgrade:arg as CivilizationUpgradeType});
+          const applied = this.submitAction({kind:'expandSettlementBuilding', id:b.id});
           if (applied) { this.audio.sound('research'); this.actionSignature = ''; this.saveBattle(); }
           this.updateHUD();
           return;
@@ -296,7 +283,7 @@
         $('abilityBar').classList.toggle('hidden', catalog || this.tab === 'details' || civilian);
         $('actionPanel').classList.toggle('details-panel', this.tab === 'details');
         $('actionPanel').classList.toggle('settlement-panel', civilian);
-        $('actionPanel').classList.toggle('settlement-detail-panel', civilian && !!this.settlementDetail);
+        $('actionPanel').classList.toggle('settlement-detail-panel', civilian && !!b?.upgrade);
         $('abilityBar').innerHTML = s.parties[this.localTeam].loadout.map(key => button('ability:' + key, ABILITIES[key].name, ABILITIES[key].icon)).join('');
         const back = button('tab:root', this.editFavoriteSlot === null ? 'Close menu' : `Back · Replacing quick access slot ${this.editFavoriteSlot + 1}`, 'back');
         let html = '';
@@ -331,19 +318,28 @@
         $('actions').innerHTML = html;
       },
       renderSettlementUpgrades(this: MeridianUI, b: BuildingEntity): string {
-        const level = b.upgradeLevel || 0,
-          family = civilizationBuildingFamily(b.type) === 'research' ? 'Research' : 'Residential',
-          key = b.upgrade || this.settlementDetail?.upgrade;
-        if (!key) return `<div class="catalog-grid settlement-grid" role="group" aria-label="${family} upgrades">${contentKeys(CIVILIZATION_UPGRADES).filter(key => civilizationUpgradeAllowed(b.type, key)).map(key => {
-          const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key;
-          return `<button class="action${selected ? ' active' : ''}" data-action="settlementInspect:${key}" data-label="${esc(effect.name)} · Details" aria-label="${esc(effect.name)} · Details" aria-pressed="${selected}">${uiSkin()}${uiIcon(key, effect.icon)}</button>`;
+        const level=b.upgradeLevel || 0,family=civilizationBuildingFamily(b.type)==='research'?'Research':'Residential';
+        if(!b.upgrade)return `<div class="catalog-grid settlement-grid" role="group" aria-label="${family} upgrades">${(b.upgradeOffers || []).filter(key=>civilizationUpgradeOffered(b,key)).map(key=>{
+          const effect=CIVILIZATION_UPGRADES[key];
+          return `<button class="action settlement-offer" data-action="settlementInspect:${key}" aria-label="${esc(effect.name)} · Information">${uiSkin()}${uiIcon(key,effect.icon)}<span>${esc(effect.name)}</span></button>`;
         }).join('')}</div>`;
-        const effect = CIVILIZATION_UPGRADES[key], selected = b.upgrade === key,
-          unavailable = b.upgrade && !civilizationUpgradeAllowed(b.type, b.upgrade),
-          rule = civilizationUpgradeUnique(key) ? 'Once per expedition.' : '',
-          action = selected ? 'settlementExpand' : `settlementUpgrade:${key}`,
-          label = selected ? `Rank ${level + 1} · ${CIVILIZATION_UPGRADE_COSTS[level]} Echo` : `Activate · ${level ? 'Free' : CIVILIZATION_UPGRADE_COSTS[0] + ' Echo'}`;
-        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header><span class="settlement-icon" aria-hidden="true">${uiIcon(key, effect.icon)}</span><strong>${esc(effect.name)}</strong>${this.actionButton('settlementBack', b.upgrade ? 'Close building details' : 'Back to upgrades', 'close')}</header><p>${esc(effect.desc)}</p>${rule ? `<small>${esc(rule)}</small>` : ''}${unavailable ? '<small>The stored effect is unavailable for this family and cannot be changed through the HUD.</small>' : ''}${!unavailable && !(selected && level >= 3) ? `<div class="settlement-controls"><button class="action settlement-control" data-action="${action}" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button></div>` : ''}</section>`;
+        const effect=CIVILIZATION_UPGRADES[b.upgrade],label=`Rank ${level+1} · ${CIVILIZATION_UPGRADE_COSTS[level]} Echo`;
+        return `<section class="settlement-details" aria-label="${esc(effect.name)}">${uiSkin()}<header><span class="settlement-icon" aria-hidden="true">${uiIcon(b.upgrade,effect.icon)}</span><strong>${esc(effect.name)}</strong><button class="action settlement-info" data-action="settlementInspect:${b.upgrade}" aria-label="Information about ${esc(effect.name)}">${uiSkin()}<span aria-hidden="true">i</span></button></header><small>RANK ${level} / 3</small>${level<3?`<div class="settlement-controls"><button class="action settlement-control" data-action="settlementExpand" data-label="${esc(label)}">${uiSkin()}<span>${esc(label)}</span></button></div>`:''}</section>`;
+      },
+      showSettlementUpgradeInfo(this: MeridianUI, b: BuildingEntity, key: CivilizationUpgradeType) {
+        if(!this.game.settlementUpgradeBuilding(b.id,this.localTeam))return;
+        this.settlementDetail={buildingId:b.id,upgrade:key};
+        const effect=CIVILIZATION_UPGRADES[key],reason=b.upgrade?'':this.game.settlementUpgradeReason(b.id,key,this.localTeam),
+          commands=key==='commandTraining' ? `<ul>${this.expedition!.abilities.map(kind=>`<li><b>${esc(COMMAND_MODULES[kind].name)}</b>: ${COMMAND_MODULES[kind].display.gains.map(esc).join(' → ')}</li>`).join('')}</ul>` : '';
+        this.paused=true;this.audio.setMode?.('silent');
+        this.openModal('settlementUpgradeInfo',`<div class="eyebrow">CIVILIAN UPGRADE · ${b.upgrade?'ACTIVE':'CHOOSE ONE OF THREE'}</div><h1>${esc(effect.name)}</h1><p>${esc(effect.desc)}</p>${commands}<p>Ranks cost ${CIVILIZATION_UPGRADE_COSTS.join(' / ')} Echo in this world. Effects stack across cleared worlds and reach your running battle when you return. The choice is permanent.</p>${reason?`<p>${esc(reason)}</p>`:''}<div class="btnstack">${!b.upgrade?`<button class="primary" data-ui="activateSettlementUpgrade"${reason?' disabled':''}>${uiSkin()}ACTIVATE · ${CIVILIZATION_UPGRADE_COSTS[0]} ECHO</button>`:''}<button class="secondary" data-ui="closeModal">${uiSkin()}${b.upgrade?'CLOSE':'BACK'}</button></div>`);
+      },
+      activateSettlementUpgrade(this: MeridianUI) {
+        const detail=this.settlementDetail,b=detail && this.game.get(detail.buildingId);
+        if(this.modalKind!=='settlementUpgradeInfo' || this.view!=='game' || !detail || b?.kind!=='building' ||
+          this.selectedBuilding()?.id!==b.id || b.upgrade || !civilizationUpgradeOffered(b,detail.upgrade))return;
+        if(!this.submitAction({kind:'configureSettlementUpgrade',id:b.id,upgrade:detail.upgrade}))return;
+        this.audio.sound('research');this.actionSignature='';this.saveBattle();this.closeModal();
       },
       renderSelectionStatus(this: MeridianUI, supply?: number, capacity?: number) {
         const list = this.selected.map(id => this.game.get(id)).filter((e): e is Entity => !!e), el = $('selectionStatus');
@@ -518,7 +514,7 @@
         }
         const b = this.selectedBuilding();
         if (kind === 'settlementExpand') return this.game.settlementExpansionReason(b?.id || 0, team);
-        // UI policy only: simulation commands retain switch/clear support.
+        // Permanent choices are enforced by the simulation as well as the HUD.
         if (kind === 'settlementClear') return 'Activated upgrades cannot be cleared.';
         if (kind === 'settlementUpgrade') {
           if (!hasContentKey(CIVILIZATION_UPGRADES, arg)) return 'Unknown upgrade effect.';

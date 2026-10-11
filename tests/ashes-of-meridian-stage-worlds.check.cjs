@@ -14,7 +14,7 @@ function harness(data = new Map()) {
   let now=0;
   const context = loadScripts(['core','content','expedition','voice-content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,
     'effects','persistence',...UI_SCRIPTS], {globals:{document,innerWidth:1280,innerHeight:720,performance:{now:()=>now},matchMedia:()=>({matches:true})}});
-  const deps = vm.runInContext('({clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:BATTLEFIELDS,missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
+  const deps = vm.runInContext('({clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:BATTLEFIELDS,missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
   const writes=[],fail={set:false};
   const persistence=vm.runInContext('createMeridianPersistence',context)({...deps,warn(){},getStorage:()=>({
     getItem:k=>data.get(k)??null,setItem(k,v){if(fail.set)throw Error('quota');data.set(k,v);writes.push(k);},removeItem:k=>data.delete(k)
@@ -37,9 +37,9 @@ let input;
 function victoryFixture() {
   if(input)return copy(input);
   const h=harness(),{game,ui}=h;
-  const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{supplyCrate:1},enemyBenefits:[{}],
+  const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{startingAlloy:1},enemyBenefits:[{}],
     encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[2]}};
-  ui.expedition={...copy(recipe),version:8,battle:null,worlds:[]};
+  ui.expedition={...copy(recipe),version:10,battle:null,worlds:[]};
   game.start({...recipe,...recipe.encounter});
   const worker=game.alive(e=>e.team===0&&e.type==='worker')[0];
   game.spawnBuilding('hq',worker.x,worker.z,0,0,{progress:1});
@@ -53,6 +53,8 @@ function victoryFixture() {
   game.s.parties[0].account.gas=321;
   game.s.time=12;game.s.speed=2;game.resultClock=.2;
   for(const e of game.alive(e=>e.team===1)){e.hp=0;e.deathAt=12;}
+  // These fixtures cover world visits; encounter generation has its own RNG contract tests.
+  ui.createEncounter=()=>({map:'alien-planet',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[1]});
   const beforeWrites=h.writes.length;
   let emitted=false;
   game.emit=(...event)=>{if(event[0]==='result'){
@@ -70,7 +72,7 @@ function victoryFixture() {
   assert.deepEqual(h.writes.slice(beforeWrites),[PROFILE],'archive and transition share one commit');
   const world=ui.expedition.worlds[0];
   assert.equal(world.battle.state.result,null);assert.equal(world.battle.state.rules.completed,true);
-  assert.equal(world.recipe.depth,0);assert.equal(world.recipe.benefits.supplyCrate,1);
+  assert.equal(world.recipe.depth,0);assert.equal(world.recipe.benefits.startingAlloy,1);
   assert.ok(world.battle.state.parties[1].eliminated);
   assert.equal(game.s.rules.completed,undefined,'visible result was not converted into a live world');
   const loaded=h.persistence.loadExpedition();assert.deepEqual(copy(loaded),copy(ui.expedition));
@@ -221,7 +223,7 @@ test('failure after result detection cannot archive or pay out a partial tick',(
 
 test('selected old world resumes building and production, saves separately and never grants progression',async()=>{
   const h=restoredMenu(),{ui,game,persistence}=h;
-  ui.expedition.upgrades.startingWorkers=5;ui.expedition.benefits.aetherAllocation=2;
+  ui.expedition.benefits.startingWorkers=5;ui.expedition.benefits.aetherAllocation=2;
   const current=copy({...ui.expedition,worlds:undefined}),profile=copy(h.profile),previews=[];
   ui.onPreview=async(...args)=>{previews.push(args);return true;};
   await ui.browseStage(-1);
@@ -230,7 +232,7 @@ test('selected old world resumes building and production, saves separately and n
   assert.equal(button.disabled,false);
   ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,1);assert.equal(ui.paused,true);assert.equal(ui.battleTutorial,null);
-  assert.equal(game.s.parties[0].meta.startingWorkers,undefined,'later upgrades do not change an old world');
+  assert.equal(game.s.parties[0].benefits.startingWorkers,undefined,'later upgrades do not change an old world');
   assert.equal(game.s.parties[0].benefits.aetherAllocation,undefined,'later expedition benefits do not leak backwards');
   const queueBefore=game.get(h.fixture.barracks).queue[0].progress,
     foundationBefore=game.get(h.fixture.foundation).progress,gasBefore=game.account(0).gas;
@@ -253,29 +255,43 @@ test('selected old world resumes building and production, saves separately and n
   assert.equal(ui.expedition.battle,null,'visits do not create a future battle');
 });
 
-test('an actual saved current battle survives a visit and restores independently afterwards',async()=>{
+test('a saved current battle receives old-world upgrades exactly once on return',async()=>{
   const h=restoredMenu(),ui=h.ui;
   await ui.startExpeditionBattle();
-  assert.equal(ui.activeWorldStage,null);assert.equal(ui.view,'game');
+  assert.equal(ui.activeWorldStage,null);assert.equal(ui.view,'game',JSON.stringify({error:ui.battleSaveError,expedition:!!ui.expedition,modal:ui.modalKind}));
   h.game.s.time=21;h.game.s.cam.x+=3;ui.saveBattle();
   const current=copy(ui.expedition.battle);
   ui.showHome();await ui.browseStage(-1);ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,1);
   const forum=h.game.spawnBuilding('meridianforum',0,0,0,0,{progress:1,cinderStock:100,settlementAt:999});
   const b=h.game.spawnBuilding('fieldlab',24,24,0,0,{progress:1,forumId:forum.id});
-  assert.equal(h.game.configureSettlementUpgrade(b.id,'orbital'),true);
-  assert.equal(ui.expeditionUpgrades().upgrades.orbital,1);
-  assert.equal(ui.expedition.upgrades.orbital,undefined,'saved battle recipe remains frozen');
+  b.upgradeOffers=['commandTraining','weaponTechnology','fieldMedicine'];
+  assert.equal(h.game.configureSettlementUpgrade(b.id,'commandTraining'),true);
+  const home=h.game.spawnBuilding('embercottage',36,24,0,0,{progress:1,forumId:forum.id});
+  home.upgradeOffers=['startingWorkers','startingAlloy','constructionProtocols'];
+  assert.equal(h.game.configureSettlementUpgrade(home.id,'startingWorkers'),true);
+  assert.equal(h.game.expandSettlementBuilding(home.id),true);
+  assert.equal(ui.expeditionUpgrades().upgrades.commandTraining,1);
+  assert.equal(ui.expedition.upgrades.commandTraining,undefined,'saved battle changes only on return');
   h.game.s.cam.yaw+=.1;ui.saveBattle();
   assert.deepEqual(copy(ui.expedition.battle),current);
   assert.deepEqual(copy(h.persistence.loadExpedition().battle),current);
   ui.showHome();await ui.browseStage(1);ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,null);assert.equal(ui.paused,false);
   assert.equal(ui.modalKind,'');
-  assert.deepEqual(copy(h.game.snapshotBattle()),current);
+  const updated=copy(h.game.snapshotBattle());
+  assert.equal(updated.state.time,current.state.time);assert.deepEqual(updated.state.cam,current.state.cam);
+  assert.deepEqual(updated.state.stats,current.state.stats);assert.deepEqual(updated.state.supplyCaches,current.state.supplyCaches);
+  assert.deepEqual(updated.state.parties[1],current.state.parties[1]);
+  assert.equal(updated.state.parties[0].meta.commandTraining,1);
+  assert.equal(updated.state.entities.filter(e=>e.team===0&&e.type==='worker').length,
+    current.state.entities.filter(e=>e.team===0&&e.type==='worker').length+2);
+  assert.deepEqual(copy(h.persistence.loadExpedition().battle),updated);
+  ui.showHome();await ui.startExpeditionBattle();
+  assert.deepEqual(copy(h.game.snapshotBattle()),updated,'second return does not pay or spawn again');
 });
 
-test('victory permits immediate travel and old-world upgrades apply only to a new battle',async()=>{
+test('victory permits immediate travel and old-world upgrades also apply to a new battle',async()=>{
   const h=restoredMenu(),{ui,game}=h,encounter=copy(ui.expedition.encounter);
   assert.equal(ui.expedition.depth,1);
   const button=h.document.getElementById('menu').querySelector('[data-ui="enterSelectedStage"]');
@@ -284,14 +300,15 @@ test('victory permits immediate travel and old-world upgrades apply only to a ne
   assert.equal(ui.activeWorldStage,1);
   const forum=game.spawnBuilding('meridianforum',0,0,0,0,{progress:1,cinderStock:100,settlementAt:999});
   const b=game.spawnBuilding('fieldlab',24,24,0,0,{progress:1,forumId:forum.id});
-  assert.equal(game.configureSettlementUpgrade(b.id,'orbital'),true);
-  assert.equal(ui.expeditionUpgrades().upgrades.orbital,1);
+  b.upgradeOffers=['commandTraining','weaponTechnology','fieldMedicine'];
+  assert.equal(game.configureSettlementUpgrade(b.id,'commandTraining'),true);
+  assert.equal(ui.expeditionUpgrades().upgrades.commandTraining,1);
   assert.deepEqual(copy(ui.expedition.encounter),encounter);
   assert.equal(ui.expedition.battle,null);
   ui.showHome();await ui.browseStage(1);ui.enterSelectedStage();await Promise.resolve();
   assert.equal(ui.activeWorldStage,null);assert.equal(game.s.depth,1);
-  assert.equal(game.s.parties[0].meta.orbital,1);
-  assert.equal(h.persistence.loadExpedition().upgrades.orbital,1);
+  assert.equal(game.s.parties[0].meta.commandTraining,1);
+  assert.equal(h.persistence.loadExpedition().upgrades.commandTraining,1);
 });
 
 test('preview preparation disables entry and stale completions cannot switch the selected target',async()=>{

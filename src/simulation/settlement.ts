@@ -83,7 +83,9 @@ const settlementMethods = {
     const b = this.settlementUpgradeBuilding(id, team);
     if (!b) return 'Select a completed civilian building in a supplied, cleared world.';
     if (upgrade !== null && !hasContentKey(CIVILIZATION_UPGRADES, upgrade)) return 'Unknown upgrade effect.';
-    if (upgrade !== null && !civilizationUpgradeAllowed(b.type, upgrade)) return 'This effect belongs to the other civilian building family.';
+    if (upgrade === null) return 'Activated upgrades cannot be cleared.';
+    if (b.upgrade && b.upgrade !== upgrade) return 'This building already has a permanent upgrade.';
+    if (!civilizationUpgradeOffered(b, upgrade)) return 'Choose one of this building’s three offers.';
     if (upgrade !== null && !b.upgradeLevel && this.account(team).gas < CIVILIZATION_UPGRADE_COSTS[0]) return 'Not enough Echo.';
     return '';
   },
@@ -91,21 +93,19 @@ const settlementMethods = {
     const reason = this.settlementUpgradeReason(id, upgrade, team);
     if (reason) { this.notify(team, 'toast', reason); return false; }
     const b = this.settlementUpgradeBuilding(id, team)!;
-    if (upgrade === null) delete b.upgrade;
-    else {
-      if (!b.upgradeLevel) {
-        if (!this.spend({cost:0, gas:CIVILIZATION_UPGRADE_COSTS[0]}, team)) return false;
-        b.upgradeLevel = 1;
-      }
-      b.upgrade = upgrade;
+    if (upgrade === null) return false;
+    if (!b.upgradeLevel) {
+      if (!this.spend({cost:0, gas:CIVILIZATION_UPGRADE_COSTS[0]}, team)) return false;
+      b.upgradeLevel = 1;
     }
+    b.upgrade = upgrade;
     return true;
   },
   settlementExpansionReason(this: MeridianGame, id: number, team: PlayerTeam = 0): string {
     const b = this.settlementUpgradeBuilding(id, team);
     if (!b) return 'Select a completed civilian building in a supplied, cleared world.';
     if (!b.upgrade || !b.upgradeLevel) return 'Choose an upgrade effect first.';
-    if (!civilizationUpgradeAllowed(b.type, b.upgrade)) return 'Choose an effect available for this building family first.';
+    if (!civilizationUpgradeOffered(b, b.upgrade)) return 'Choose one of this building’s three offers first.';
     if (b.upgradeLevel >= 3) return 'This building is fully expanded.';
     if (this.account(team).gas < CIVILIZATION_UPGRADE_COSTS[b.upgradeLevel]) return 'Not enough Echo.';
     return '';

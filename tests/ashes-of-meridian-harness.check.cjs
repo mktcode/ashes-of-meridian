@@ -51,7 +51,7 @@ test('content loads alone with reference catalog order, classic bindings and nam
   assert.deepEqual(Object.values(ids), Array.from(FACTIONS.keys()), 'IDs retain catalog/unlock order');
   assert.strictEqual(context.icon, icon);
   assert.equal(FACTIONS.length,3);
-  assert.ok(CIVILIZATION_UPGRADES.startingAlloy);assert.ok(CIVILIZATION_UPGRADES.orbital);assert.ok(CIVILIZATION_UPGRADES.commanderMandate);
+  assert.ok(CIVILIZATION_UPGRADES.startingAlloy);assert.ok(CIVILIZATION_UPGRADES.commandTraining);assert.ok(CIVILIZATION_UPGRADES.commanderMandate);
   for (const upgrade of Object.values(CIVILIZATION_UPGRADES)) {
     assert.ok(upgrade.name && upgrade.desc && upgrade.icon);
     if(upgrade.max!==undefined) assert.ok(Number.isSafeInteger(upgrade.max)&&upgrade.max>0);

@@ -15,8 +15,8 @@
       'tab:build': 'buildings', 'tab:infantry': 'infantry', 'tab:vehicles': 'vehicles', 'tab:aircraft': 'aircraft',
       startingAlloy: 'starting-cinder', startingWorkers: 'workers',
       constructionProtocols: 'construction', logisticsFrame: 'logistics', repairLogistics: 'repair-logistics',
-      supplyCrate: 'crate', aetherAllocation: 'echo', pioneerSquad: 'pioneers',
-      surveyDrones: 'survey', fieldWorkshop: 'workshop', commandCapacitor: 'energy',
+      aetherAllocation: 'echo',
+      commandCapacitor: 'energy',
       'echo-reward': 'echo-reward', pause: 'pause', settings: 'settings',
       'tab:root': 'back', back: 'back', close: 'close'
     });

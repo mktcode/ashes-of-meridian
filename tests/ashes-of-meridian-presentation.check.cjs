@@ -655,13 +655,13 @@ function effectCullingView() {
   } };
 }
 
-test('command drill marks only visible living commanders of parties that own the benefit', () => {
+test('commander support marks only visible living commanders of parties with support ranks', () => {
   const h = effectCullingView();
   h.world.visible = [255, 0];
   h.world.idx = x => x >= 10 ? 1 : 0;
   h.state.parties = [
-    { benefits: { commandDrill: 2 } }, { benefits: { commandDrill: 1 } },
-    { benefits: {} }, { benefits: { commandDrill: 1 } }
+    { benefits: { commanderMandate: 3 } }, { benefits: { commanderMandate: 2 } },
+    { benefits: {} }, { benefits: { commanderMandate: 2 } }
   ];
   h.state.entities = [
     { id: 1, kind: 'unit', type: 'hero', hp: 100, team: 0, x: 0, z: 1 },

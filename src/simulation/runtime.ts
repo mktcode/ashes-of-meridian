@@ -32,7 +32,11 @@
           if (!this.beginCommandTick()) return;
         }
         s.time += dt;
-        for (const { account } of s.parties) account.energy = Math.min(COMMAND_ENERGY.max, account.energy + dt * COMMAND_ENERGY.regeneration);
+        for (const party of s.parties) {
+          party.account.energy = Math.min(COMMAND_ENERGY.max, party.account.energy + dt * COMMAND_ENERGY.regeneration *
+            (1+(party.benefits.commandCapacitor || 0)*CIVILIZATION_EFFECTS.energyRegeneration));
+          if(s.rules.kind!=='single-player' || !s.rules.completed)this.deliverUpgradeUnits(party.id);
+        }
         this.resolveRecalls();
         this.rehash();
         if (this.navDirty) {
@@ -146,7 +150,7 @@
             if (field.type === 'bloom') {
               this.damage(e, dt * 23, { team: field.team }, true);
               e.slowed = s.time + 1;
-            } else if (field.type === 'repair') e.hp = Math.min(e.maxHp, e.hp + dt * (field.power || 10));
+            } else if (field.type === 'repair') e.hp = Math.min(e.maxHp, e.hp + dt * (field.power || 10) * this.healingFactor(field.team));
           }
         }
         s.fields = s.fields.filter(f => f.until > s.time);
@@ -226,7 +230,7 @@
           this.finish(true, mission.victory);
       },
       abilityStats(this: MeridianGame, kind: AbilityType, team: PlayerTeam = 0): AbilityStats {
-        return abilityStats(kind, this.party(team).meta[kind] || 0);
+        return abilityStats(kind, this.party(team).loadout.includes(kind) ? this.party(team).meta.commandTraining || 0 : 0);
       },
       resolveRecalls(this: MeridianGame) {
         const s = this.s!;
@@ -340,8 +344,8 @@
           this.notify(team, 'radio', 'Orbital command|Target solution confirmed. Clear the impact zone.');
         } else if (kind === 'repair') {
           for (const e of this.near(p.x, p.z, d.radius!, a => a.team === team)) {
-            e.hp = Math.min(e.maxHp, e.hp + d.instantHull!);
-            if (e.maxShield) e.shield = Math.min(e.maxShield, e.shield + d.instantShield!);
+            e.hp = Math.min(e.maxHp, e.hp + d.instantHull! * this.healingFactor(team));
+            if (e.maxShield) e.shield = Math.min(e.maxShield, e.shield + d.instantShield! * this.healingFactor(team));
           }
           s.fields.push({ type: 'repair', team, x: p.x, z: p.z, r: d.radius!,
             until: s.time + d.duration!, power: d.healing });

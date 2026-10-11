@@ -8,7 +8,7 @@ function fixture(depth = 0) {
   const rules = vm.runInContext('({process:createExpeditionResultProcessor(), encounter:createExpeditionEncounter, seeded, enemy:expeditionEnemyFactions, maps:availableBattlefields})', context);
   const profile = { version: 2, expeditionDepth: depth, tutorialComplete: true };
   const encounter = { map: 'desert', seed: 1409, mission: 'hq-elimination', deployment: 'exploration', enemies: [1] };
-  const expedition = { version: 10, depth, faction: 0, abilities: ['orbital','repair','scan','drop'], upgrades: {orbital:2}, benefits: {supplyCrate:1},
+  const expedition = { version: 10, depth, faction: 0, abilities: ['orbital','repair','scan','drop'], upgrades: {commandTraining:2}, benefits: {startingAlloy:1},
     enemyBenefits: [{}], encounter, worlds: [], battle: null };
   const state = { depth, map: 'desert', seed: 1409, rules: {kind:'single-player'}, entities: [] };
   const random = rules.seeded(1409), calls = [];
@@ -28,10 +28,10 @@ test('victory archives the frozen recipe and unlocks the next encounter without 
   const world = h.expedition.worlds[0];
   assert.equal(world.stage,10); assert.equal(world.recipe.depth,9);
   assert.deepEqual(copy(world.recipe.encounter),oldRecipe.encounter);
-  assert.deepEqual(copy(world.recipe.upgrades),{orbital:2});
+  assert.deepEqual(copy(world.recipe.upgrades),{commandTraining:2});
   assert.deepEqual(copy(h.expedition.upgrades),{}); assert.deepEqual(copy(h.expedition.benefits),{});
-  h.expedition.benefits.supplyCrate=3; h.expedition.upgrades.orbital=3;
-  assert.equal(world.recipe.benefits.supplyCrate,1); assert.equal(world.recipe.upgrades.orbital,2);
+  h.expedition.benefits.startingAlloy=3; h.expedition.upgrades.commandTraining=3;
+  assert.equal(world.recipe.benefits.startingAlloy,1); assert.equal(world.recipe.upgrades.commandTraining,2);
   assert.equal(world.battle.state.rules.completed,true); assert.equal(h.state.rules.completed,undefined);
   assert.equal('aether' in h.profile,false); assert.equal('offers' in h.expedition,false);
   const before = JSON.stringify({profile:h.profile,expedition:h.expedition,calls:h.calls});

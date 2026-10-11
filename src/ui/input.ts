@@ -285,6 +285,9 @@
           case 'closeModal':
             this.closeModal();
             break;
+          case 'activateSettlementUpgrade':
+            this.activateSettlementUpgrade();
+            break;
           case 'confirmSale':
             this.finishBuildingSale(true);
             break;

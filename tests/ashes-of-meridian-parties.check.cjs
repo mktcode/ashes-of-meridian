@@ -25,26 +25,45 @@ test('party snapshots retain single-player defaults and isolate normalized benef
   assert.deepEqual(json(defaults[1].loadout), ['orbital', 'scan', 'disruption', 'recall']);
   assert.deepEqual(json(defaults[0].account), json(defaults[1].account));
   assert.notStrictEqual(defaults[0].account.abilities, defaults[1].account.abilities);
-  const perks = { supplyCrate: 2, commandCapacitor: 99, fieldWorkshop: 1, unknown: 8 },
-    upgrades = { startingAlloy: 99, logisticsFrame: 2.9, repairLogistics: -1, disruption: 2.9, unknown: 5 }, profile = {},
+  const perks = { startingAlloy: 2, startingWorkers: 99, commandCapacitor: 99, commanderMandate: 2, unknown: 8 },
+    upgrades = { logisticsFrame: 2.9, repairLogistics: -1, commandTraining: 2.9, unknown: 5 }, profile = {},
     options = { upgrades, faction: 1, enemies: [1], abilities: ['disruption', 'bulwark', 'surge', 'recall'],
       benefits: perks, enemyBenefits: [perks] },
     parties = singlePlayerParties(profile, options);
-  assert.deepEqual(json(parties[0].meta), { startingAlloy: 99, logisticsFrame: 2, repairLogistics: 0, disruption: 2 });
+  assert.deepEqual(json(parties[0].meta), { logisticsFrame: 2, repairLogistics: 0, commandTraining: 2 });
   assert.deepEqual(json(parties[0].loadout), options.abilities);
   assert.deepEqual(json(parties[1].loadout), ['repair', 'drop', 'disruption', 'surge']);
   assert.deepEqual(json(parties[1].meta), {});
-  assert.deepEqual(json(parties[0].benefits), { supplyCrate: 2, commandCapacitor: 2, fieldWorkshop: 1 });
+  assert.deepEqual(json(parties[0].benefits), { startingAlloy: 2, startingWorkers: 5, commandCapacitor: 6, commanderMandate: 2 });
   assert.deepEqual(json(parties[0].benefits), json(parties[1].benefits));
   assert.notStrictEqual(parties[0].benefits, parties[1].benefits);
-  assert.equal(parties[0].account.alloy - parties[1].account.alloy, 4950);
-  upgrades.startingAlloy = 0; perks.supplyCrate = 0; options.faction = 2;
-  assert.equal(parties[0].meta.startingAlloy, 99);
-  assert.equal(parties[0].benefits.supplyCrate, 2);
+  assert.equal(parties[0].account.alloy,350);assert.equal(parties[1].account.alloy,350);
+  upgrades.logisticsFrame = 0; perks.startingAlloy = 0; perks.startingWorkers = 0; options.faction = 2;
+  assert.equal(parties[0].meta.logisticsFrame, 2);
+  assert.equal(parties[0].benefits.startingAlloy, 2);assert.equal(parties[0].benefits.startingWorkers,5);
   assert.equal(parties[0].faction, 1);
-  parties[0].fieldWorkshopUsed = true;
-  assert.equal(parties[1].fieldWorkshopUsed, undefined);
-  assert.equal(singlePlayerParties(profile, options)[0].fieldWorkshopUsed, undefined);
+  parties[0].upgradeDelivery.workers--;
+  assert.equal(parties[1].upgradeDelivery.workers,5);
+  assert.equal(singlePlayerParties(profile, options)[0].upgradeDelivery.workers,0);
+});
+
+test('starting benefits normalize once for player, enemy and scenario parties', () => {
+  for(const [value,cinder,workers] of [[-2,0,0],['3.9',3,3],[99,99,5],['bad',0,0]]){
+    const benefits={startingAlloy:value,startingWorkers:value},
+      parties=singlePlayerParties({}, {benefits,enemyBenefits:[benefits]}),
+      options=scenario(3);
+    for(const p of options.parties)p.benefits=benefits;
+    const scenarioParties=scenarioSetup(options).parties;
+    for(const p of [...parties,...scenarioParties]){
+      assert.equal(p.account.alloy,250+cinder*50);
+      assert.equal(p.benefits.startingAlloy||0,cinder);
+      assert.equal(p.benefits.startingWorkers||0,workers);
+      assert.deepEqual(json(p.meta),{});
+    }
+    benefits.startingAlloy=0;benefits.startingWorkers=0;
+    assert.equal(parties[0].benefits.startingAlloy||0,cinder);
+    assert.equal(scenarioParties[0].benefits.startingWorkers||0,workers);
+  }
 });
 
 test('party accessors share one state, while accounts and upgrade effects remain separate', () => {
@@ -62,15 +81,15 @@ test('party accessors share one state, while accounts and upgrade effects remain
   assert.equal(game.account(0).alloy, 240);
 });
 
-test('command drill linearly buffs each faction basic infantry only near its living commander', () => {
-  const game = state({ upgrades: {} }, { benefits: { commandDrill: 2 }, enemyBenefits: [{ commandDrill: 3 }] }),
+test('commander ranks buff basic infantry only near a living commander', () => {
+  const game = state({ upgrades: {} }, { benefits: { commanderMandate: 3 }, enemyBenefits: [{ commanderMandate: 2 }] }),
     unit = (id, type, team, faction, x) => ({ id, type, team, faction, x, z: 0, hp: 100, kind: 'unit', kills: 0 }),
     commander = unit(1, 'hero', 0, 0, 0), rifle = unit(2, 'rifle', 0, 0, 11),
     enemyCommander = unit(3, 'hero', 1, 2, 50), enemyRifle = unit(4, 'rifle', 1, 2, 61),
     tank = unit(5, 'tank', 0, 0, 1);
   game.s.entities = [commander, rifle, enemyCommander, enemyRifle, tank];
   assert.equal(game.rangedStats(rifle).damage, 13 * 1.1);
-  assert.equal(game.rangedStats(enemyRifle).damage, 13 * 1.12 * 1.15);
+  assert.equal(game.rangedStats(enemyRifle).damage, 13 * 1.12 * 1.05);
   assert.equal(game.rangedStats(tank).damage, 58);
   assert.equal(game.rangedStats(commander).damage, 31);
   for (const faction of [0, 1, 2]) {
@@ -84,10 +103,10 @@ test('command drill linearly buffs each faction basic infantry only near its liv
   commander.hp = 100; rifle.kills = 5;
   assert.equal(game.rangedStats(rifle).damage, 13 * 1.12 * 1.12 * 1.1);
 
-  const withoutMandate = state({ upgrades: {} }, { benefits: { commandDrill: 37 } });
+  const withoutMandate = state({ upgrades: {} }, { benefits: { commanderMandate: 1 } });
   withoutMandate.s.entities = [unit(6, 'rifle', 0, 0, 0)];
-  assert.equal(withoutMandate.party(0).benefits.commandDrill, 37);
-  assert.equal(game.party(0).benefits.commanderMandate, undefined);
+  assert.equal(withoutMandate.party(0).benefits.commanderMandate, 1);
+  assert.equal(game.party(0).benefits.commanderMandate, 3);
   assert.equal(withoutMandate.rangedStats(withoutMandate.s.entities[0]).damage, 13);
 });
 
