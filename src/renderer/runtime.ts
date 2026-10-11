@@ -1218,6 +1218,7 @@
         g.uniform2f(this.uniform(program, 'u_wind'), e && this.quality > 0 && !this.cinema ? e.wind : 0, time);
         g.uniform1f(this.uniform(program, 'u_weatherTime'), this.quality > 0 ? time : 0);
         g.uniform1f(this.uniform(program, 'u_habitatOn'), e && e.natural !== false ? 1 : 0);
+        g.uniform2fv(this.uniform(program, 'u_biotopeElevation'), (e?.biotopeElevation ?? [24,32]) as [number,number]);
         g.uniform3fv(this.uniform(program, 'u_haze'), this.haze as [number, number, number]);
         if (e) for (const [uniform, color] of [['u_biomeDry',e.dry],['u_biomeLush',e.lush],
           ['u_biomeSoil',e.soil],['u_biomeStone',e.stone]] as const)

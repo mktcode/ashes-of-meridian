@@ -25,6 +25,39 @@ function ecologyHabitat(phase:number,x:number,z:number):number {
   const warp=Math.sin(x*.017+z*.031+phase)*9;
   return clamp(.5+Math.sin(x*.041+warp*.08+phase)*.24+Math.cos(z*.036-x*.015-phase)*.23,0,1);
 }
+// Four soft communities within the family's palette, not four unrelated climates.
+// Keep this analytic recipe in sync with biotopeWeights() in the scene shader.
+function ecologyBiotope(style:BattlefieldEcology,x:number,z:number,height:number,slope:number):readonly [number,number,number,number] {
+  const smooth=(a:number,b:number,v:number)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t);},
+    [low,range]=style.biotopeElevation??[24,32],elevation=clamp((height-low)/range,0,1),
+    moisture=clamp(.5+Math.sin(x*.012+Math.sin(z*.01)*.8+style.phase*.6)*.28+
+      Math.cos(z*.016-style.phase*1.3)*.24,0,1),
+    patch=ecologyHabitat(style.phase,x*.65,z*.65),
+    rock=clamp(smooth(.45,1.35,slope)*.55+smooth(.65,.98,elevation)*.5,0,1),
+    wet=(1-rock)*smooth(.35,.75,moisture)*(1-smooth(.18,.5,elevation))*(1-smooth(.08,.38,slope))*.9,
+    forest=(1-rock-wet)*smooth(.2,.7,patch)*(.35+.65*smooth(.22,.65,moisture))*(1-.5*smooth(.6,.95,elevation))*.95;
+  return [1-rock-wet-forest,forest,wet,rock];
+}
+function ecologyBiotopeAt(style:BattlefieldEcology,x:number,z:number,height:(x:number,z:number)=>number) {
+  const step=1.25,dx=(height(x+step,z)-height(x-step,z))/(2*step),dz=(height(x,z+step)-height(x,z-step))/(2*step);
+  return ecologyBiotope(style,x,z,height(x,z),Math.hypot(dx,dz));
+}
+function ecologyBiotopeColor(style:BattlefieldEcology,weights:readonly number[]):number[] {
+  return [0,1,2].map(c=>style.dry[c]*weights[0]+style.lush[c]*.72*weights[1]+
+    (style.lush[c]*.4+style.soil[c]*.6)*weights[2]+style.stone[c]*.9*weights[3]);
+}
+function ecologyFloraFamilies(style:BattlefieldEcology):readonly [EcologyFlora,EcologyFlora] {
+  const primary=style.flora??(style.biome==='mycelium'?'Fungus':style.biome==='rime'?'Conifer':style.biome==='ochre'?'Acacia':'Grove'),
+    secondary:EcologyFlora=primary==='Grove'?'Conifer':primary==='Conifer'?'Grove':
+      primary==='Acacia'||primary==='Cactus'?'Palm':primary==='Palm'?'Acacia':primary==='Fungus'?'Coral':'Fungus';
+  return [primary,secondary];
+}
+function ecologyFloraAt(style:BattlefieldEcology,weights:readonly number[]):EcologyFlora {
+  const [primary,secondary]=ecologyFloraFamilies(style);
+  if(primary==='Palm')return weights[2]>.3?primary:secondary;
+  return (primary==='Acacia'||primary==='Cactus'?weights[2]>.3:weights[1]>.35)?secondary:primary;
+}
+function ecologyWoody(family:EcologyFlora):boolean {return family==='Grove'||family==='Acacia'||family==='Conifer';}
 function ecologyFootprint(world:Battlefield,x:number,z:number,r:number):boolean {
   if(Math.max(Math.abs(x),Math.abs(z))+r>=world.extent-1)return false;
   const c=world.cellSize,e=world.extent,n=world.gridSize;
@@ -35,9 +68,11 @@ function ecologyFootprint(world:Battlefield,x:number,z:number,r:number):boolean 
 }
 function decorateEcology(builder:BattlefieldBuilder) {
   const w=builder.world,style=w.renderProfile.ecology;if(!style||style.natural===false)return;
+  let low=Infinity;
+  for(const h of w.surface?.heights??[])low=Math.min(low,h);
+  if(Number.isFinite(low))style.biotopeElevation=[low,Math.max(8,(w.surface?.maxHeight??low)-low)];
   const rand=builder.cosmeticRandom(0x48414249),height=(x:number,z:number)=>w.surface?.heightAt(x,z)??0,
-    family=style.flora??(style.biome==='mycelium'?'Fungus':style.biome==='rime'?'Conifer':style.biome==='ochre'?'Acacia':'Grove'),
-    woody=family==='Grove'||family==='Acacia'||family==='Conifer',
+    families=ecologyFloraFamilies(style),woody=families.some(ecologyWoody),
     occupied:{x:number;z:number;r:number}[]=[],groundSites=new Map<string,Position[]>(),
     blockedSites:Position[]=[],landmarks:Position[]=[];
   for(let i=0;i<w.staticGrid.length;i++)if(w.staticGrid[i])blockedSites.push(w.point(i));
@@ -45,9 +80,9 @@ function decorateEcology(builder:BattlefieldBuilder) {
   w.renderData.placements=w.renderData.placements.filter(p=>!p.mesh.startsWith('upland'));
   w.renderData.geometries=w.renderData.geometries.filter(p=>!p.mesh.startsWith('upland'));
   for(let variant=0;variant<3;variant++) {
-    for(const part of [...(woody?['Trunk']:[]),...new Set([family,'Tuft','Brush','Relic','Spire'])])w.renderData.geometries.push({
+    for(const part of [...(woody?['Trunk']:[]),...new Set([...families,'Tuft','Brush','Relic','Spire'])])w.renderData.geometries.push({
       mesh:`ecology${part}${variant}`,model:`ecology${part}`,seed:193+variant*7919,
-      extent:part==='Trunk'&&family==='Acacia'?1:0,detail:part==='Tuft'||part==='Brush'});
+      extent:part==='Trunk'&&families.includes('Acacia')?1:0,detail:part==='Tuft'||part==='Brush'});
     w.renderData.geometries.push({mesh:`ecologyStone${variant}`,model:'uplandStone',seed:173+variant*7919,extent:0});
   }
   const safe=(x:number,z:number,r:number)=>w.layout.resourceSites.every(p=>Math.hypot(x-p.x,z-p.z)>r+8&&
@@ -86,14 +121,15 @@ function decorateEcology(builder:BattlefieldBuilder) {
     const anchor=i%3===0&&blockedSites.length?blockedSites[Math.floor(rand()*blockedSites.length)]:null,
       x=anchor?anchor.x+(rand()-.5)*1.2:(rand()-.5)*(w.extent*2-8),
       z=anchor?anchor.z+(rand()-.5)*1.2:(rand()-.5)*(w.extent*2-8),v=i%3,
-      habitat=ecologyHabitat(style.phase,x,z),r=.55+rand()*1.1,yaw=rand()*Math.PI*2,y=height(x,z);
+      zones=ecologyBiotopeAt(style,x,z,height),habitat=zones[0]*.12+zones[1]+zones[2]*.95,
+      family=ecologyFloraAt(style,zones),r=.55+rand()*1.1,yaw=rand()*Math.PI*2,y=height(x,z);
     if(!safe(x,z,1))continue;
     if(safe(x,z,r)&&ecologyFootprint(w,x,z,r+.4)&&clear(x,z,r*.4)) {
       const lo=Math.min(y,height(x-r,z),height(x+r,z),height(x,z-r),height(x,z+r)),
         hi=Math.max(y,height(x-r,z),height(x+r,z),height(x,z-r),height(x,z+r));
-      if(trees<treeLimit&&habitat>.36&&hi-lo<4.8) {
+      if(trees<treeLimit&&habitat>.2&&zones[3]<.7&&hi-lo<4.8) {
         const h=5+habitat*5+rand()*2;
-        if(woody)place('Trunk',v,x,y-.35,z,r,h,0xb0a18c,yaw,'BARK');
+        if(ecologyWoody(family))place('Trunk',v,x,y-.35,z,r,h,0xb0a18c,yaw,'BARK');
         place(family,v,x,y-.35,z,r,h,style.leaf,yaw,'LEAF',style.biome==='mycelium'?.18:0);
         occupied.push({x,z,r:r*.4});trees++;
       }else if(stones<84) {
@@ -104,7 +140,7 @@ function decorateEcology(builder:BattlefieldBuilder) {
           occupied.push({x,z,r:sr*.65});stones++;
         }
       }
-    }else if(tufts<tuftLimit&&(habitat>.42||rand()<.12)&&!w.staticGrid[w.idx(x,z)]&&groundClear(x,z)) {
+    }else if(tufts<tuftLimit&&(habitat>.3||rand()<.025)&&!w.staticGrid[w.idx(x,z)]&&groundClear(x,z)) {
       // Avoid route centres and keep every small plant visibly traversable.
       if(w.layout.corridors.some(route=>route.slice(1).some(([bx,bz],j)=>{
         const [ax,az]=route[j];return pointSegment({x,z},{x:ax,z:az},{x:bx,z:bz})<2.5;
@@ -121,9 +157,9 @@ function decorateEcology(builder:BattlefieldBuilder) {
   }
   // Palette information on the minimap, not a second terrain or visibility map.
   for(let i=0;i<w.gridSize*w.gridSize;i++) {
-    const p=w.point(i),h=ecologyHabitat(style.phase,p.x,p.z),light=.83+height(p.x,p.z)*.013;
+    const p=w.point(i),zones=ecologyBiotopeAt(style,p.x,p.z,height),meadowColor=ecologyBiotopeColor(style,zones),light=.83+height(p.x,p.z)*.013;
     for(let c=0;c<3;c++) {
-      const meadow=style.dry[c]*(1-h)+style.lush[c]*h;
+      const meadow=meadowColor[c];
       w.terrainColors[i*4+c]=(w.staticGrid[i]?(meadow*.35+style.stone[c]*.65)*.68:meadow)*180*light;
     }
   }

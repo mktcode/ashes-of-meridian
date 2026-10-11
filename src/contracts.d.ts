@@ -161,6 +161,8 @@ interface BattlefieldEcology {
   /** Artificial decks receive weather/material aging, not meadow habitat shading. */
   natural?: boolean;
   flora?: EcologyFlora;
+  /** Cosmetic height datum and range, derived once from the finished CPU surface. */
+  biotopeElevation?: readonly [number, number];
 }
 
 interface BattlefieldRenderProfile {

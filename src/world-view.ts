@@ -348,8 +348,6 @@ function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
   if (!backdrop || !('relief' in backdrop) || !world.surface || !style || style.natural === false) return result;
   const relief = sceneryRelief(world, backdrop.relief), random = seeded(world.terrainSeed ^ 0x5341554d),
     depth = Math.min(80, relief.extent - extent - relief.step * 2), reach = extent + depth,
-    family = style.flora ?? (style.biome === 'mycelium' ? 'Fungus' : style.biome === 'rime' ? 'Conifer' : style.biome === 'ochre' ? 'Acacia' : 'Grove'),
-    woody = family === 'Grove' || family === 'Acacia' || family === 'Conifer',
     meshes = new Set(world.renderData.geometries.map(d => d.mesh)),
     limit = Math.min(720, Math.floor(120 * style.vegetationDensity)),
     occupied: { x: number; z: number; r: number }[] = [],
@@ -364,10 +362,12 @@ function sceneryEdgeDecor(world: Battlefield): WorldPlacement[] {
     const x = (random() * 2 - 1) * reach, z = (random() * 2 - 1) * reach,
       outside = Math.hypot(Math.max(0, Math.abs(x) - extent), Math.max(0, Math.abs(z) - extent));
     if (outside <= 1 || outside >= depth - 4) continue;
-    const habitat = ecologyHabitat(style.phase, x, z),
+    const zones = ecologyBiotopeAt(style, x, z, height), habitat = zones[0] * .12 + zones[1] + zones[2] * .95,
+      family = ecologyFloraAt(style, zones), woody = ecologyWoody(family),
       density = (.18 + .72 * smooth((outside - 1) / 28)) * (.3 + .7 * habitat);
     if (random() > density) continue;
-    const choice = random(), part = choice < .72 ? family : choice < .88 ? 'Stone' : 'Brush',
+    const choice = random(), canopy = .2 + habitat * .65,
+      part = choice < canopy ? family : choice < canopy + .12 + zones[3] * .45 ? 'Stone' : 'Brush',
       variant = attempt % 3, r = part === 'Stone' ? 1.6 + random() * 2.2 : .55 + random() * 1.1;
     if (!meshes.has(`ecology${part}${variant}`) || (woody && part === family && !meshes.has(`ecologyTrunk${variant}`)) ||
         Math.max(Math.abs(x), Math.abs(z)) < extent + r + 1 ||
