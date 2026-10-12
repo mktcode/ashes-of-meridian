@@ -64,6 +64,7 @@
 <p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
 <p>Die Checkbox „Runde Flüsse“ ersetzt die eckigen Routen durch zusammenhängende Bézier-Kurven, bevor Höhen, Bett und Brücken berechnet werden. Nur Kreuzungen, Verzweigungen und Randanschlüsse bleiben feste Anker; normale duale Knoten dürfen übersprungen werden. Wasser wird als eigenes fein unterteiltes Band dargestellt; das Gelände wird entlang der Ufer lokal verfeinert. Beide Checkboxen vergleichen Varianten mit demselben Seed. Die Vorschau zeigt auch Layouts mit überschrittener Neigungsgrenze, dann ausdrücklich mit einer Warnung.</p>
+<p>Die Spielflächen besitzen weich gerundete, unterschiedlich gestreckte und asymmetrische Konturen statt sechs dominanter Ecken. Dieselben Konturen bestimmen Darstellung, Schutzabstände und Höhenplanung; ein breiter Kern für Weganschlüsse bleibt erhalten.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
 <p><strong>Fiktiver Prototyp:</strong> 45 % maximale Steigung für Landwege und Brückendecks; Wasser außerhalb der Brücken ist gesperrt. Die Prüfung betrachtet Wasser mit Brücken im Begehbarkeitsraster und die Dreiecksneigungen der begehbaren Oberflächen. Keine Wasserphysik, Erosion, Durchflussmengen, Unterführung-Navigation, Körperfreiraum oder RTS-Balance. Ein sich aufteilender Fluss ist hier ein stilisiertes Verteilernetz, kein vollständiges hydrologisches Modell.</p>
 </dialog>
@@ -100,6 +101,30 @@ function polygonPath(ctx, points) {
   ctx.beginPath();
   points.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
   ctx.closePath();
+}
+function shapeRegion(region, random) {
+  const rotation = random() * Math.PI * 2, stretch = 1 + random() * .16,
+    phase2 = random() * Math.PI * 2, phase3 = random() * Math.PI * 2,
+    amplitude2 = .05 + random() * .05, amplitude3 = .015 + random() * .015;
+  // Smooth radial variation instead of six corner anchors. For r(theta),
+  // r >= .87 and r'' <= .67, so r² + 2r'² - r*r'' stays positive.
+  // The subsequent ellipse transform preserves convexity and road access.
+  const local = Array.from({ length: 32 }, (_, i) => {
+    const angle = i * Math.PI * 2 / 32,
+      radius = region.radius * (1 + amplitude2 * Math.cos(2 * angle + phase2) + amplitude3 * Math.cos(3 * angle + phase3));
+    return { x: Math.cos(angle) * radius * stretch, y: Math.sin(angle) * radius / stretch };
+  });
+  // Bound the entire footprint, keeping room for rivers between nodes.
+  const scale = Math.min(1, region.radius * 1.22 / Math.max(...local.map(p => Math.hypot(p.x, p.y))));
+  region.points = local.map(p => ({
+    x: region.x + scale * (Math.cos(rotation) * p.x - Math.sin(rotation) * p.y),
+    y: region.y + scale * (Math.sin(rotation) * p.x + Math.cos(rotation) * p.y) }));
+  region.sides = region.points.map((a, i) => {
+    const b = region.points[(i + 1) % region.points.length], dx = b.x - a.x, dy = b.y - a.y;
+    return { a, dx, dy, length2: dx * dx + dy * dy };
+  });
+  region.bounds = { minX: Math.min(...region.points.map(p => p.x)), maxX: Math.max(...region.points.map(p => p.x)),
+    minY: Math.min(...region.points.map(p => p.y)), maxY: Math.max(...region.points.map(p => p.y)) };
 }
 function polygonDistance(region, x, y) {
   // Exact signed Euclidean distance to the same convex polygon drawn on the map.
@@ -452,19 +477,7 @@ function makePlan(seed, curved = true, rounded = true) {
   }
   // Separate shape RNG: polygon detail does not change the existing terrain/graph draws.
   const shapeRandom = rng(seed ^ 0x504f4c59);
-  for (const region of regions) {
-    const rotation = (shapeRandom() - .5) * .5;
-    // Bounded angular/radial variation keeps the six corners convex and well spaced.
-    region.points = Array.from({ length: 6 }, (_, i) => {
-      const angle = i * Math.PI / 3 + rotation + (shapeRandom() - .5) * .12,
-        radius = region.radius * (.88 + shapeRandom() * .24);
-      return { x: region.x + Math.cos(angle) * radius, y: region.y + Math.sin(angle) * radius };
-    });
-    region.sides = region.points.map((a, i) => {
-      const b = region.points[(i + 1) % region.points.length], dx = b.x - a.x, dy = b.y - a.y;
-      return { a, dx, dy, length2: dx * dx + dy * dy };
-    });
-  }
+  for (const region of regions) shapeRegion(region, shapeRandom);
   // Independent desired heights. Pairwise footprint gaps, not center distances,
   // limit the available rise between the complete polygon interiors.
   const heightRandom = rng(seed ^ 0x48454947), gaps = regions.map(() => []);
@@ -506,6 +519,10 @@ function sampleLand(plan, x, y) {
   // Signed distance to the union of all regions and broad passages.
   let d = Infinity, offset = Infinity;
   for (const r of plan.regions) {
+    // A cheap lower bound skips detailed contours only when neither the
+    // union distance nor the height cone can improve. Queries stay exact.
+    const b = r.bounds, lower = Math.max(0, b.minX - x, x - b.maxX, b.minY - y, y - b.maxY);
+    if (lower > 0 && lower >= d && r.offset + OFFSET_GRADE * lower >= offset) continue;
     const gap = polygonDistance(r, x, y);
     d = Math.min(d, gap);
     // Minimum of .20-Lipschitz distance cones: one globally consistent surface.

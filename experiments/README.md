@@ -4,7 +4,7 @@
 
 ## Bedienung
 
-- **Neues Layout:** sechseckige Karte mit 19 unregelmäßigen polygonalen Regionen, verbindenden Wegen, gerundeten Flüssen und lokalen Brücken.
+- **Neues Layout:** sechseckige Karte mit 19 weich gerundeten, unterschiedlich gestreckten Spielflächen, verbindenden Wegen, gerundeten Flüssen und lokalen Brücken.
 - **Planungskarte:** Regionen, Verbindungen, Regionsnummern und Höhenversätze; „Netze“ zeigt zusätzlich Basis- und duales Netz.
 - **3D-Ansicht:** Ziehen dreht/neigt, Mausrad oder Regler zoomt, Doppelklick setzt die Kamera zurück. „Spielräume“ markiert geschützte Flächen. Das Gelände wird einmal pro Layout zur GPU übertragen; Kamerabewegungen benötigen keine erneute Generierung.
 
@@ -15,6 +15,8 @@ Die 3D-Karte füllt das Browserfenster unter einer schmalen Steuer- und Statusle
 ## Topologie vor Gelände
 
 Zuerst Spielräume, Wege, Flussrouten und Kreuzungen planen, anschließend kompatible Regionshöhen wählen und die Landschaft darum aufbauen. Polygonabstände begrenzen die Höhenversätze; ein gemeinsames distanzbasiertes Höhenfeld gibt auch Wegkreuzungen eine eindeutige Höhe. Noise bleibt außerhalb geschützter Flächen und ihrer Sicherheitszone.
+
+Die Spielflächen verwenden fein unterteilte, seedabhängige Konturen mit weicher Radiusvariation, unterschiedlicher Streckung und Orientierung statt sechs dominanter Ecken. Sie bleiben konvex, besitzen einen breiten Kern für Weganschlüsse und eine begrenzte Ausdehnung für freie Flusskorridore. Dieselben Konturen bestimmen Darstellung, Regionsabstände, Höhenanker und geschützte Flächen; sie sind keine reine Renderverzierung. Ein eigener Form-Zufallsstrom lässt Knotenpositionen und Netzwahl unverändert. Distanzabfragen überspringen entfernte Konturen nur mit konservativen Schranken, ohne ihr Ergebnis zu verändern.
 
 Wege verbinden im Basisnetz ausschließlich benachbarte Regionen. Das duale Netz verbindet die Zentren ihrer Dreiecksflächen über die Mittelpunkte der Nachbarverbindungen und wird bis zum Kartenrand fortgeführt. Ein gerichteter Fluss beginnt am Rand, darf sich höchstens zweimal aufteilen und endet mit jedem Ast wieder am Rand. Jeder Teilabschnitt folgt einer streng fallenden gemeinsamen Wasserhöhe; Abzweigungen haben keine Höhensprünge.
 
@@ -35,5 +37,7 @@ An tatsächlichen Weg-/Flusskreuzungen entstehen separate Brückendecks. Nur Flu
 Die Darstellung ist eine vorläufige Vorschau: Steigungsüberschreitungen werden ausdrücklich angezeigt, verhindern aber nicht die Darstellung. Insbesondere lokale Übergangsdreiecke der verfeinerten Oberfläche können den Grenzwert überschreiten. Die CPU-Prüfung bleibt streng und weist solche Fälle zurück; eine sichtbare Landschaft ist keine Spielbarkeitsfreigabe.
 
 Dies ist ein stilisiertes Verteilernetz, keine Wasserphysik oder Erosionssimulation. Durchflussmengen, Körperfreiraum, Navigation unter Brücken und RTS-Balance werden nicht geprüft. Der Spielgenerator, Spielprofile und reguläre Build bleiben davon unberührt.
+
+Kurze Konturprüfung ohne Mesh-/Rasteraufbau: `node experiments/map-generation/check-regions.mjs`. Sie prüft deterministische Formen, Konvexität, Mindestkern, begrenzte Ausdehnung, gemeinsame Planungsgeometrie und exakte Distanzabfragen; sie ist keine vollständige Gelände- oder Spielbarkeitsprüfung.
 
 Optionale CPU-Prüfung ohne Installation: `node experiments/map-generation/check.mjs` im Repository-Root. Sie erzeugt vollständige Meshes und Raster, ist kein schneller Smoke-Test und sollte für die visuelle Vorschau nicht vorausgesetzt werden. Sie prüft gekrümmte Kanten, gemeinsame Kreuzungsanker, lokale Brücken, Randanschlüsse, inverse Abbildung, fallende Wasserhöhen, Rasterverbindung und tatsächliche Dreiecksneigung an vier festen Seeds. Sie ersetzt weder WebGL-/Bedienungsprüfung noch visuelle Abnahme.
