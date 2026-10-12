@@ -2,7 +2,7 @@
 <html lang="de">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RTS-Layout – verzweigte Flüsse auf dem dualen Netz</title>
+<title>RTS-Layout – geschwungene Wege und Flüsse</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0 auto; padding: 24px; max-width: 1100px; background: #151b23; color: #e2e9ef; font: 16px/1.5 system-ui, sans-serif; }
@@ -22,14 +22,15 @@
 <p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
 <button id="generate">Neues zufälliges Layout</button>
 <label><input id="overlay" type="checkbox" checked> Spielräume im 3D-Modell markieren</label>
-<label><input id="dual" type="checkbox"> Duales Netz anzeigen</label>
+<label><input id="dual" type="checkbox"> Basis- und duales Netz anzeigen</label>
+<label><input id="curves" type="checkbox" checked> Geschwungene Verbindungen</label>
 <p id="status" role="status"></p>
 <div class="views">
   <section><h2>1 · Planungskarte</h2><canvas id="layout" width="480" height="480" aria-label="Regionen und verbindende Wege"></canvas></section>
   <section><h2>2 · Dreidimensionales Höhenmodell</h2><canvas id="height" width="960" height="960" aria-label="Drehbares und zoombares dreidimensionales Höhenmodell"></canvas><small id="renderError" role="status"></small><br><small>Ziehen: drehen und neigen · Mausrad: zoomen · Doppelklick: zurücksetzen.</small><br><label for="zoom" style="margin-left:0">Zoom <input id="zoom" type="range" min="0.5" max="4" step="0.01" value="1"> <output id="zoomValue" for="zoom">100 %</output></label></section>
 </div>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
-<p>Der Fluss verläuft über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
+<p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Geschwungene Verbindungen“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
 <p><strong>Fiktiver Prototyp:</strong> 45 % maximale Steigung für Landwege und Brückendecks; Wasser außerhalb der Brücken ist gesperrt. Die Prüfung betrachtet Wasser mit Brücken im Begehbarkeitsraster und die Dreiecksneigungen der begehbaren Oberflächen. Keine Wasserphysik, Erosion, Durchflussmengen, Unterführung-Navigation, Körperfreiraum oder RTS-Balance. Ein sich aufteilender Fluss ist hier ein stilisiertes Verteilernetz, kein vollständiges hydrologisches Modell.</p>
 <script>
 'use strict';
@@ -41,14 +42,6 @@ const BRIDGE_BUFFER = 1.8, BRIDGE_REACH = RIVER_SUPPORT + BRIDGE_BUFFER;
 function insideMap(x, y) {
   x = Math.abs(x - SIZE / 2); y = Math.abs(y - SIZE / 2);
   return y <= HEX_RADIUS * Math.sqrt(3) / 2 + 1e-8 && Math.sqrt(3) * x + y <= Math.sqrt(3) * HEX_RADIUS + 1e-8;
-}
-function hexPath(ctx, x, y, radius) {
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const angle = i * Math.PI / 3, px = x + radius * Math.cos(angle), py = y + radius * Math.sin(angle);
-    if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
-  }
-  ctx.closePath();
 }
 let current, mesh, gpu;
 let yaw = -.7, tilt = .65, zoom = 1;
@@ -94,6 +87,79 @@ function polygonGap(a, b) {
     if (t >= 0 && t <= 1 && u >= 0 && u <= 1) gap = 0;
   }
   return gap;
+}
+// Geometry is transported from a reference network by one injective map.
+// The displacement Jacobian has norm < .32 everywhere: no folding, and
+// lengths/widths shrink by at most 32%. Heights travel with the same map.
+function makeWarp(seed, enabled) {
+  const random = rng(seed ^ 0x43555256);
+  return { enabled, phases: Array.from({ length: 4 }, () => random() * Math.PI * 2) };
+}
+function warpPoint(plan, p) {
+  if (!plan.warp.enabled) return { x: p.x, y: p.y };
+  const [a, b, c, d] = plan.warp.phases;
+  return { x: p.x + 4 * Math.sin((p.x + .4 * p.y) / 20 + a) + Math.sin((p.y - .3 * p.x) / 47 + b),
+    y: p.y + 4 * Math.sin((p.y - .4 * p.x) / 22 + c) + Math.sin((p.x + .3 * p.y) / 49 + d) };
+}
+function unwarpPoint(plan, p) {
+  let q = { x: p.x, y: p.y };
+  // Fixed-point inversion converges because the displacement is contractive.
+  for (let i = 0; i < 12 && plan.warp.enabled; i++) {
+    const mapped = warpPoint(plan, q);
+    q = { x: p.x - (mapped.x - q.x), y: p.y - (mapped.y - q.y) };
+  }
+  return q;
+}
+function curvePath(plan, points, closed = false) {
+  const curve = [], count = closed ? points.length : points.length - 1;
+  for (let i = 0; i < count; i++) {
+    const a = points[i], b = points[(i + 1) % points.length], steps = Math.ceil(distance(a, b) / 3);
+    for (let j = 0; j < steps; j++) {
+      const p = { x: a.x + (b.x - a.x) * j / steps, y: a.y + (b.y - a.y) * j / steps };
+      curve.push({ ...warpPoint(plan, p), source: p });
+    }
+  }
+  if (!closed) { const p = points[points.length - 1]; curve.push({ ...warpPoint(plan, p), source: p }); }
+  return curve;
+}
+function capsuleOutline(plan, a, b, radius) {
+  const angle = Math.atan2(b.y - a.y, b.x - a.x), points = [];
+  for (const [center, start] of [[b, angle + Math.PI / 2], [a, angle - Math.PI / 2]]) {
+    for (let i = 0; i <= 12; i++) {
+      const t = start - Math.PI * i / 12;
+      points.push({ x: center.x + radius * Math.cos(t), y: center.y + radius * Math.sin(t) });
+    }
+  }
+  return curvePath(plan, points, true);
+}
+function buildCurves(plan) {
+  plan.border = curvePath(plan, Array.from({ length: 6 }, (_, i) => ({
+    x: SIZE / 2 + HEX_RADIUS * Math.cos(i * Math.PI / 3),
+    y: SIZE / 2 + HEX_RADIUS * Math.sin(i * Math.PI / 3) })), true);
+  for (const r of plan.regions) r.outline = curvePath(plan, r.points, true);
+  for (const e of plan.edges) {
+    const a = plan.regions[e.a], b = plan.regions[e.b], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    e.points = curvePath(plan, [a, mid, b]);
+    e.outline = capsuleOutline(plan, a, b, ROAD_RADIUS);
+  }
+  const river = plan.river;
+  for (const e of river.dual.links) e.points = curvePath(plan, [river.dual.nodes[e.a], e.mid, river.dual.nodes[e.b]]);
+  river.curves = river.selected.map(e => curvePath(plan, [river.dual.nodes[e.a], e.mid, river.dual.nodes[e.b]])
+    .map(p => ({ ...p, height: waterHeight(river, p.source.x, p.source.y) })));
+  river.outlines = river.segments.map(e => capsuleOutline(plan, e.a, e.b, RIVER_RADIUS));
+  river.bridgeOutlines = river.segments.map(e => capsuleOutline(plan, e.a, e.b, BRIDGE_REACH));
+  for (const b of river.bridges) {
+    b.outline = curvePath(plan, [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => ({
+      x: b.center.x + u * b.halfLength * b.ux - v * b.halfWidth * b.uy,
+      y: b.center.y + u * b.halfLength * b.uy + v * b.halfWidth * b.ux })), true);
+  }
+}
+function linePath(ctx, points) {
+  ctx.beginPath(); points.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
+}
+function sampleWorld(plan, x, y) {
+  const source = unwarpPoint(plan, { x, y });
+  return sample(plan, source.x, source.y);
 }
 function latticeNeighbor(a, b) {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(a.q + a.r - b.q - b.r)) === 1;
@@ -271,7 +337,7 @@ function fitRiverHeights(plan, gaps) {
     if (!changed) break;
   }
 }
-function makePlan(seed) {
+function makePlan(seed, curved = true) {
   const random = rng(seed), regions = [], edges = [];
   // Axial lattice: center + six inner + twelve outer regions, with bounded jitter.
   // All footprints retain a margin to the convex hex boundary.
@@ -327,9 +393,10 @@ function makePlan(seed) {
   const angle = random() * Math.PI * 2, phase = random() * Math.PI * 2;
   const waves = Array.from({ length: 7 }, () => ({ angle: random() * Math.PI * 2,
     scale: 9 + random() * 24, phase: random() * Math.PI * 2, amplitude: 3 + random() * 6 }));
-  const plan = { seed, regions, edges, angle, phase, waves };
+  const plan = { seed, regions, edges, angle, phase, waves, warp: makeWarp(seed, curved) };
   plan.river = planRiver(plan);
   fitRiverHeights(plan, gaps);
+  buildCurves(plan);
   return plan;
 }
 function sampleLand(plan, x, y) {
@@ -356,7 +423,8 @@ function sample(plan, x, y) {
   const land = sampleLand(plan, x, y), river = plan.river,
     gap = riverDistance(river, x, y), water = waterHeight(river, x, y), bridge = bridgeAt(river, x, y, gap);
   const influence = 1 - smooth((gap - RIVER_RADIUS) / BANK_WIDTH);
-  return { ...land, walkHeight: land.height + (bridge ? .08 : 0), bridge, riverGap: gap, water,
+  return { ...land, walkHeight: land.height + (bridge ? .08 : 0), deckHeight: land.height + .08,
+    bridge, riverGap: gap, water,
     planned: land.planned && (gap > RIVER_RADIUS || bridge),
     height: land.height + (water - BED_DEPTH - land.height) * influence };
 }
@@ -375,79 +443,74 @@ function checkConnected(mask, n) {
 function drawNetwork(ctx, plan, filled) {
   const scale = PIXELS / SIZE;
   ctx.save(); ctx.scale(scale, scale);
-  hexPath(ctx, SIZE / 2, SIZE / 2, HEX_RADIUS);
+  polygonPath(ctx, plan.border);
   ctx.fillStyle = '#303548'; ctx.fill();
   ctx.strokeStyle = '#99afc4'; ctx.lineWidth = 1; ctx.stroke();
   ctx.clip();
-  // Faint hex-lattice neighbors reveal the planning structure behind the graph.
-  ctx.strokeStyle = '#475064'; ctx.lineWidth = .6;
-  for (let i = 0; i < plan.regions.length; i++) for (let j = i + 1; j < plan.regions.length; j++) {
-    const a = plan.regions[i], b = plan.regions[j], dq = a.q - b.q, dr = a.r - b.r;
-    if (Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)) !== 1) continue;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  // Potential connections are diagnostic only, not a permanent grid overlay.
+  if (document.getElementById('dual').checked) {
+    ctx.strokeStyle = '#475064'; ctx.lineWidth = .6;
+    for (let i = 0; i < plan.regions.length; i++) for (let j = i + 1; j < plan.regions.length; j++) {
+      const a = plan.regions[i], b = plan.regions[j];
+      if (!latticeNeighbor(a, b)) continue;
+      linePath(ctx, curvePath(plan, [a, b])); ctx.stroke();
+    }
   }
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (const e of plan.edges) {
-    const a = plan.regions[e.a], b = plan.regions[e.b];
-    ctx.strokeStyle = e.loop ? '#bc99ff' : '#dce7ba';
-    ctx.lineWidth = filled ? ROAD_RADIUS * 2 : 1.5;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.fillStyle = ctx.strokeStyle = e.loop ? '#bc99ff' : '#dce7ba';
+    if (filled) { polygonPath(ctx, e.outline); ctx.fill(); }
+    else { ctx.lineWidth = 1.5; linePath(ctx, e.points); ctx.stroke(); }
   }
   if (document.getElementById('dual').checked) {
     ctx.strokeStyle = '#618299'; ctx.lineWidth = .6; ctx.setLineDash([2, 2]);
     for (const e of plan.river.dual.links) {
-      const a = plan.river.dual.nodes[e.a], b = plan.river.dual.nodes[e.b];
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(e.mid.x, e.mid.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      linePath(ctx, e.points); ctx.stroke();
     }
     ctx.setLineDash([]);
   }
-  ctx.strokeStyle = '#39adf0'; ctx.lineWidth = RIVER_RADIUS * 2;
-  for (const e of plan.river.segments) { ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke(); }
+  ctx.fillStyle = '#39adf0';
+  for (const outline of plan.river.outlines) { polygonPath(ctx, outline); ctx.fill(); }
   ctx.strokeStyle = '#d4f2ff'; ctx.lineWidth = .7;
-  for (const e of plan.river.segments) {
-    const length = Math.sqrt(e.length2), ux = e.dx / length, uy = e.dy / length,
-      x = (e.a.x + e.b.x) / 2, y = (e.a.y + e.b.y) / 2;
-    ctx.beginPath(); ctx.moveTo(x - ux * 3 - uy * 2, y - uy * 3 + ux * 2); ctx.lineTo(x, y);
-    ctx.lineTo(x - ux * 3 + uy * 2, y - uy * 3 - ux * 2); ctx.stroke();
+  for (const points of plan.river.curves) for (let i = 3; i < points.length; i += 6) {
+    const a = points[i - 1], b = points[i], length = distance(a, b), ux = (b.x - a.x) / length, uy = (b.y - a.y) / length;
+    ctx.beginPath(); ctx.moveTo(b.x - ux * 3 - uy * 2, b.y - uy * 3 + ux * 2); ctx.lineTo(b.x, b.y);
+    ctx.lineTo(b.x - ux * 3 + uy * 2, b.y - uy * 3 - ux * 2); ctx.stroke();
   }
   for (const b of plan.river.bridges) {
-    ctx.save(); ctx.translate(b.center.x, b.center.y); ctx.rotate(Math.atan2(b.uy, b.ux));
-    ctx.beginPath(); ctx.rect(-b.halfLength, -b.halfWidth, b.halfLength * 2, b.halfWidth * 2); ctx.clip();
-    ctx.rotate(-Math.atan2(b.uy, b.ux)); ctx.translate(-b.center.x, -b.center.y);
-    for (const [color, width] of [['#624628', BRIDGE_REACH * 2], ['#d99b58', BRIDGE_REACH * 2 - .7]]) {
-      ctx.strokeStyle = color; ctx.lineWidth = width;
-      for (const e of plan.river.segments) {
-        ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
-      }
-    }
+    ctx.save(); polygonPath(ctx, b.outline); ctx.clip(); ctx.fillStyle = '#d99b58';
+    for (const outline of plan.river.bridgeOutlines) { polygonPath(ctx, outline); ctx.fill(); }
     ctx.restore();
   }
   for (const [i, r] of plan.regions.entries()) {
-    polygonPath(ctx, r.points);
+    polygonPath(ctx, r.outline);
     if (filled) { ctx.fillStyle = '#77ddb0'; ctx.fill(); }
     else { ctx.strokeStyle = '#77ddb0'; ctx.lineWidth = 1.5; ctx.stroke(); }
     ctx.fillStyle = filled ? '#13281f' : '#ffffff'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(String(i + 1), r.x, r.y - 4);
+    const center = warpPoint(plan, r);
+    ctx.fillText(String(i + 1), center.x, center.y - 4);
     ctx.font = '7px system-ui';
-    ctx.fillText(`${r.offset >= 0 ? '+' : ''}${r.offset.toFixed(1)}`, r.x, r.y + 6);
+    ctx.fillText(`${r.offset >= 0 ? '+' : ''}${r.offset.toFixed(1)}`, center.x, center.y + 6);
   }
   ctx.fillStyle = '#ffffff'; ctx.font = 'bold 8px system-ui';
-  const source = plan.river.source; ctx.fillText('S', source.x, source.y);
-  for (const exit of plan.river.exits) ctx.fillText('A', exit.x, exit.y);
+  const source = warpPoint(plan, plan.river.source); ctx.fillText('S', source.x, source.y);
+  for (const exit of plan.river.exits) { const p = warpPoint(plan, exit); ctx.fillText('A', p.x, p.y); }
   ctx.restore();
 }
 // Actual 3D vertices sampled from the same field; no new random draws.
 function makeMesh(plan) {
   const n = 64, vertices = [], triangles = [], lookup = new Map();
   let maxPlayableGrade = 0;
-  // Triangular lattice fills the exact hexagon, with no outside vertices or mask.
+  // Reference triangles are transported together with the curved border.
+  // Gradients below use actual warped XY coordinates, not the reference grid.
   for (let r = -n; r <= n; r++) for (let q = -n; q <= n; q++) {
     if (Math.abs(q + r) > n) continue;
     const x = HEX_RADIUS / n * (q + r / 2), y = HEX_RADIUS / n * Math.sqrt(3) / 2 * r,
       s = sample(plan, x + SIZE / 2, y + SIZE / 2);
     lookup.set(`${q},${r}`, vertices.length);
-    vertices.push({ x, y, z: s.height - 40, height: s.height, planned: s.planned,
-      walkZ: s.walkHeight - 40, waterZ: s.water - 40 });
+    const world = warpPoint(plan, { x: x + SIZE / 2, y: y + SIZE / 2 });
+    vertices.push({ x: world.x - SIZE / 2, y: world.y - SIZE / 2, sourceX: x, sourceY: y,
+      z: s.height - 40, height: s.height, planned: s.planned, walkZ: s.deckHeight - 40, waterZ: s.water - 40 });
   }
   for (let r = -n; r < n; r++) for (let q = -n; q < n; q++) {
     const a = lookup.get(`${q},${r}`), b = lookup.get(`${q + 1},${r}`),
@@ -460,7 +523,9 @@ function makeMesh(plan) {
       const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
       const light = .45 + .55 * Math.max(0, (nx * -.4 + ny * -.5 + nz * .768) / Math.hypot(nx, ny, nz));
       // Sample the face center so narrow planned paths remain visible.
-      const center = sample(plan, (p.x + q.x + r.x) / 3 + SIZE / 2, (p.y + q.y + r.y) / 3 + SIZE / 2);
+      if (nz <= 0) throw Error('Verformtes Geländedreieck ist gefaltet.');
+      const center = sample(plan, (p.sourceX + q.sourceX + r.sourceX) / 3 + SIZE / 2,
+        (p.sourceY + q.sourceY + r.sourceY) / 3 + SIZE / 2);
       triangles.push({ indices, light, height: center.height, planned: center.planned, material: 0 });
       if (center.riverGap <= RIVER_RADIUS) triangles.push({ indices, light: 1, height: center.water, planned: false, material: 1 });
       if (center.bridge) triangles.push({ indices, light, height: center.walkHeight, planned: true, material: 2 });
@@ -570,27 +635,29 @@ function drawPlanning() {
 function render() {
   const plan = current; drawPlanning();
   const mask = new Uint8Array(AUDIT_SIZE * AUDIT_SIZE);
-  let area = 0, mapArea = 0, low = Infinity, high = -Infinity;
   for (let y = 0; y < AUDIT_SIZE; y++) for (let x = 0; x < AUDIT_SIZE; x++) {
     const px = (x + .5) * SIZE / AUDIT_SIZE, py = (y + .5) * SIZE / AUDIT_SIZE;
-    if (!insideMap(px, py)) continue;
-    const i = y * AUDIT_SIZE + x, s = sample(plan, px, py);
-    mapArea++; mask[i] = s.planned ? 1 : 0; area += mask[i]; low = Math.min(low, s.height); high = Math.max(high, s.height);
+    const i = y * AUDIT_SIZE + x, s = sampleWorld(plan, px, py);
+    mask[i] = s.planned ? 1 : 0;
   }
   mesh = makeMesh(plan); draw3D();
   const valid = checkConnected(mask, AUDIT_SIZE), river = plan.river;
-  const downhill = river.segments.every(e => waterHeight(river, e.a.x, e.a.y) > waterHeight(river, e.b.x, e.b.y));
+  const downhill = river.curves.every(points => points.every((p, i) => !i || points[i - 1].height > p.height));
   if (!valid || !downhill) throw Error('Fluss-/Begehbarkeitsprüfung fehlgeschlagen.');
   document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length} Brücken · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(mesh.maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %`;
 }
 function generate() {
   const seeds = new Uint32Array(1); crypto.getRandomValues(seeds);
-  try { current = makePlan(seeds[0]); render(); }
+  try { current = makePlan(seeds[0], document.getElementById('curves').checked); render(); }
   catch (error) { document.getElementById('status').textContent = `Seed ${seeds[0]}: ${error.message}`; console.error(error); }
 }
 document.getElementById('generate').addEventListener('click', generate);
 document.getElementById('overlay').addEventListener('change', draw3D);
 document.getElementById('dual').addEventListener('change', drawPlanning);
+document.getElementById('curves').addEventListener('change', event => {
+  try { current = makePlan(current.seed, event.target.checked); render(); }
+  catch (error) { document.getElementById('status').textContent = error.message; console.error(error); }
+});
 const view = document.getElementById('height');
 view.addEventListener('webglcontextlost', event => {
   event.preventDefault();
