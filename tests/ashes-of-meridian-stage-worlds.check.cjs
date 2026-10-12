@@ -22,7 +22,7 @@ function harness(data = new Map()) {
   const profile=persistence.loadProfile();profile.tutorialComplete=true;
   const Game=vm.runInContext('MeridianGame',context),UI=vm.runInContext('MeridianUI',context),game=new Game(profile);
   class TestUI extends UI {
-    bind(){} updateHUD(){} drawMinimap(){} radio(){} alert(){} clearMode(){this.mode=null;}
+    bind(){} updateHUD(){} drawMinimap(){} radio(){} alert(){} toast(){} clearMode(){this.mode=null;}
     beginBattleTutorial(){return false;} terrainCameraPoint(p){return {x:p.x,z:p.z};} center(){}
     openModal(kind,html){this.modalKind=kind;this.modalHTML=html;}
     showResult(result){this.modalKind='result';this.lastResult=result;}
@@ -55,7 +55,11 @@ function victoryFixture() {
   for(const e of game.alive(e=>e.team===1)){e.hp=0;e.deathAt=12;}
   // These fixtures cover world visits; encounter generation has its own RNG contract tests.
   ui.createEncounter=()=>({map:'alien-planet',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[1]});
-  const beforeWrites=h.writes.length;
+  const beforeWrites=h.writes.length, state=game.s, terrain=game.world, voices=[];
+  ui.audio.playVoice=id=>voices.push(id);
+  ui.onLaunchBattle=()=>assert.fail('victory must not reload the world');
+  ui.openModal=()=>assert.fail('victory must not open a modal');
+  ui.showResult=()=>assert.fail('victory must not show a result screen');
   let emitted=false;
   game.emit=(...event)=>{if(event[0]==='result'){
     emitted=true;assert.equal(game.stepping,false);assert.equal(game.snapshotSafe,true);
@@ -63,18 +67,23 @@ function victoryFixture() {
     game.step(.05);game.stepTick=tick;
   }ui.event(...event);};
   game.step(.05);
-  assert.equal(emitted,true);assert.equal(game.s.result.win,true);
+  assert.equal(emitted,true);assert.equal(game.s.result,null);
+  assert.strictEqual(game.s,state);assert.strictEqual(game.world,terrain);
+  assert.equal(ui.paused,false);assert.equal(ui.modalKind,'');assert.equal(ui.activeWorldStage,1);
+  assert.deepEqual(voices,['expedition.areaClear']);
+  assert.ok(game.s.outpost);
   assert.equal(game.world.fogCleared,true);
   assert.ok(game.world.visible.every(v=>v===1));
   assert.ok(game.world.explored.every(v=>v===1));
   assert.ok(game.world.fogPixels.every(v=>v===255));
   assert.equal(ui.expedition.depth,1);assert.equal(ui.expedition.worlds.length,1);
-  assert.deepEqual(h.writes.slice(beforeWrites),[PROFILE],'archive and transition share one commit');
+  assert.deepEqual(h.writes.slice(beforeWrites),[PROFILE,PROFILE],'archive is committed before saving the live outpost');
   const world=ui.expedition.worlds[0];
   assert.equal(world.battle.state.result,null);assert.equal(world.battle.state.rules.completed,true);
   assert.equal(world.recipe.depth,0);assert.equal(world.recipe.benefits.startingAlloy,1);
   assert.ok(world.battle.state.parties[1].eliminated);
-  assert.equal(game.s.rules.completed,undefined,'visible result was not converted into a live world');
+  assert.equal(game.s.rules.completed,true,'victory immediately becomes a live outpost');
+  ui.event('result',{win:true});assert.deepEqual(voices,['expedition.areaClear'],'duplicate events do not replay the announcement');
   const loaded=h.persistence.loadExpedition();assert.deepEqual(copy(loaded),copy(ui.expedition));
   const packed=JSON.parse(h.data.get(PROFILE)).expedition.worlds[0].battle;
   assert.equal(packed.encoding,'lzw-v1');
@@ -102,7 +111,7 @@ test('world codec round-trips Unicode, dictionary resets and rejects malformed c
   assert.throws(()=>unpack([packed[0],String.fromCharCode(51000+256)]),/Invalid/);
 });
 
-test('a real completed tick archives its final world atomically and freezes only the copied result',()=>{
+test('a real completed tick archives victory and immediately runs the same outpost with one announcement',()=>{
   const fixture=victoryFixture();
   assert.equal(fixture.world.battle.tutorial,null);
   assert.equal(fixture.world.battle.state.time,12.05);

@@ -414,9 +414,18 @@
             // One localStorage write owns archive creation and retirement of the old battle.
             this.persistence.saveProgress(this.profile, this.expedition);
             this.notifyStorageFailure();
-            if (data.win) this.rememberStage();
+            if (data.win) {
+              this.rememberStage();
+              // The result arrives after the tick: archive first, then keep this world running.
+              this.finishContinueBuilding();
+              this.radioLine('expedition.areaClear');
+              this.toast('Stage cleared. Build a Meridian Forum and strengthen your defenses.');
+              if (this.factionJustUnlocked !== null)
+                this.toast(`New faction unlocked: ${FACTIONS[this.factionJustUnlocked].name}`);
+              return;
+            }
             this.audio.setMode?.('silent');
-            this.audio.sound(data.win ? 'victory' : 'defeat');
+            this.audio.sound('defeat');
           }
           this.showResult(data);
         } else if (type === 'shot') {

@@ -6,6 +6,11 @@ interface VoiceLineDefinition {
   audio?: `./audio/voices/${string}.mp3`;
 }
 const VOICE_LINES = {
+  'expedition.areaClear': {
+    speaker: 'Expedition command',
+    text: 'Commander! This area is clear. For now at least. They will try to claim it back soon. We need to strengthen our defenses and harvest more resources, while we can. A Meridian Forum should decide about how we move on then.',
+    audio: './audio/voices/commander-this-area-is-clear.mp3'
+  },
   'tutorial.settle': {
     speaker: 'Prospector',
     text: "Commander, I've found something. We should settle here for a while and harvest these resources. Shall I deploy a command outpost here?",
