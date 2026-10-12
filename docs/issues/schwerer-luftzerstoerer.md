@@ -1,10 +1,10 @@
 # Schwerer Luftzerstörer: Balance und Darstellung
 
-Breakwater, Crownwing und Catafalque sind als gemeinsamer `destroyer`-Typ mit fraktionsspezifischen TypeScript-Konstruktionen integriert. Rolle: seltene teure Endgame-Einheit gegen Boden/Luft, langsamer als Strike aircraft; keine Stückobergrenze oder neue Technologiekette. Aktuelle Werte im Content, [Modellpflege](../rendering.md#einzeln-wartbare-modelle).
+Breakwater und Crownwing sind als gemeinsamer `destroyer`-Typ mit fraktionsspezifischen TypeScript-Konstruktionen integriert. Rolle: seltene teure Endgame-Einheit gegen Boden/Luft, langsamer als Strike aircraft; keine Stückobergrenze oder neue Technologiekette. Aktuelle Werte im Content, [Modellpflege](../rendering.md#einzeln-wartbare-modelle).
 
 - [ ] Menschliche Balance: ein Exemplar stark/schützenswert, zwei Machtspitze, drei weiterhin konterbar, fünf außergewöhnlich teuer? Flugabwehr, Flächenschaden, Heilung/Schilde und Commands gemeinsam bewerten.
 - [ ] KI spart sinnvoll, blockiert normale Produktion nicht dauerhaft und verschenkt/hortet Zerstörer nicht.
-- [ ] Farben, Silhouette, Gewicht und zeitbasierte Animation im normalen Zoom/in Gruppen auf Zielgeräten abnehmen; die parametrisierten Modelle gesondert beurteilen, insbesondere die Catafalque-Kriegsbarke auf eigenständige Zerstörersilhouette, Gewicht, Detail-Lesbarkeit und passende Court-Panzer-/Kristallsprache.
+- [ ] Farben, Silhouette, Gewicht und zeitbasierte Animation im normalen Zoom/in Gruppen auf Zielgeräten abnehmen; die parametrisierten Modelle gesondert auf eigenständige Zerstörersilhouette, Gewicht und Detail-Lesbarkeit beurteilen.
 - [ ] [Flugfreiraum](project-tomorrow.md#flugfreiraum-nach-dem-reliefausbau), Hangarausfahrt und langsame Anreise über allen Geländeformen beurteilen.
 
 Lade-/Parsekosten, Geometrieresidenz und GPU-Kosten großer Bestände werden zentral unter [Performance](performance/README.md#renderer-und-gpu) geführt; Balance und Bildwirkung bleiben hier.

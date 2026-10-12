@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { populateBase, populateProductionBase, populateOpponent } = require('./helpers/populated-battle.cjs');
 
 function fixture() {
-  const parties = [0,1].map(id => ({id,faction:2-id,deploymentPending:false,
+  const parties = [0,1].map(id => ({id,faction:1-id,deploymentPending:false,
     account:{alloy:250,gas:0,energy:25,abilities:{scan:0}}}));
   const homes = parties.map(p => ({id:p.id+1,kind:'building',type:'hq',team:p.id,faction:p.faction,
     x:p.id*200,z:0,hp:2600,maxHp:2600,size:4.4,progress:1}));

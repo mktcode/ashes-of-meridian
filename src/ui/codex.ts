@@ -24,29 +24,26 @@ The richest sources often lie beyond safe routes. In the **Dark Fringes**, condi
 
 Researchers followed the new routes first. Then salvage fleets. Today armed expeditions set out with charts that may have been altered by parties unknown.
 
-## 3. Three Claims
+## 3. Two Claims
 
 **The Cinder Pact** arose when supply companies abandoned remote stations. Their inhabitants survived by sharing tools and dismantling equipment that belonged to others. The Pact swore never again to leave an inhabited station behind because saving it cost too much. It seeks Echo sources of its own so no supplier can cut off its people. But a lifeline for the Pact may cost someone else their home.
 
 **The Manyroot** joins rooted organisms, mobile plant beings, and thinking guardians in many independent seed-clans. Their intertwined lives depend on one another and on soil rich in Echo. When a source runs dry, the smallest creatures suffer first; years later, entire groves fail to bloom. The clans search for new soil for their descendants. They know how much life depends on a single source — and sometimes claim it at the expense of others anyway.
 
-**The Mourning Houses** hold the estates of fallen civilizations in trust. Their members protect archives, care for survivors, and honor promises to people who can no longer speak for themselves. Some of their claims reach back centuries. The last archive of a lost city may lie beneath a coveted Echo source; a living settlement may also suffer under the weight of an ancient contract.
-
-None of these powers speaks with a single voice. Pact stations, seed-clans, and individual Houses have obligations of their own. Even allies can become enemies over the same source.
+Neither power speaks with a single voice. Pact stations and seed-clans have obligations of their own. Even allies can become enemies over the same source.
 
 ## 4. The Next Advance
 
 An expedition fleet cannot send unlimited ships through an unstable corridor. Its advance force lands with limited supplies, establishes a base, and secures extraction sites for the journey ahead. What it can recover strengthens the fleet; what it leaves behind may fall to a rival.
 
-The Seventh Survey left traces among all three powers. The Pact holds logs from a transport that turned back, a seed-clan keeps seed capsules of unknown origin, and a Mourning House has sealed away a contradictory reading. No one yet knows what the survey really found — or why not everyone returned.
+The Seventh Survey left traces among both powers. The Pact holds logs from a transport that turned back, while a seed-clan keeps seed capsules of unknown origin. Their records contain contradictory readings. No one yet knows what the survey really found — or why not everyone returned.
 
-For the fleets, the next safe landing comes first. To a station, a shipment of Echo might mean one more winter with air to breathe. To a grove, the same source holds the future of its roots. And to a Mourning House, it may shelter a name that must not be forgotten.
+For the fleets, the next safe landing comes first. To a station, a shipment of Echo might mean one more winter with air to breathe. To a grove, the same source holds the future of its roots.
 `;
 
 const CODEX_FACTION_STORIES = [
   'When supply companies abandoned remote stations, their crews survived by sharing tools and refusing to leave inhabited homes behind. The Pact now builds armored expeditions to secure its own lifelines—but its promises can become claims on somebody else’s world.',
-  'The Manyroot is a community of interdependent lives, not a single mind. Its seed-clans search for new soil and fading Echo sources; their care for one another can still become a threat to those already living there.',
-  'The Mourning Houses are trustees for lost civilizations, guarding archives and promises their original owners can no longer defend. Their precision protects irreplaceable inheritances, though the living may pay the price for old claims.'
+  'The Manyroot is a community of interdependent lives, not a single mind. Its seed-clans search for new soil and fading Echo sources; their care for one another can still become a threat to those already living there.'
 ] as const;
 
 function renderCodexScreen(faction: FactionId): string {

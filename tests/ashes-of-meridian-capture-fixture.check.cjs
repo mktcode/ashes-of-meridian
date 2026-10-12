@@ -5,8 +5,8 @@ const { BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, loadScripts } = require('./help
 
 const scenes = [
   { map: 'desert', seed: 1409, faction: 0, enemy: 1 },
-  { map: 'alien-planet', seed: 24080, faction: 1, enemy: 2 },
-  { map: 'westmark', seed: 43015, faction: 2, enemy: 0 }
+  { map: 'alien-planet', seed: 24080, faction: 1, enemy: 0 },
+  { map: 'westmark', seed: 43015, faction: 0, enemy: 1 }
 ];
 
 function createRuntime() {

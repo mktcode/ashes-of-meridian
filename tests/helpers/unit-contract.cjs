@@ -34,7 +34,7 @@ function checkUnit({ type, meshes: specs, min, max, totalTriangles, maxInstances
   const e = { id:17, faction:0, team:0, kind:'unit', type, hp:d.hp, size:d.size,
     x:12, z:-7, rot:.7, walk:0, carry:0 }, primary = calls => calls.find(c => c[0] === mesh), normal = h.draw(e);
   assert.equal(h.EntityModels.find(e).id, id); assert.ok(Object.isFrozen(h.EntityModels.find(e)));
-  for (const faction of [1,2]) assert.notEqual(h.EntityModels.find({...e, faction})?.id, id);
+  for (const faction of Array.from(h.FACTIONS.keys()).filter(f=>f!==0)) assert.notEqual(h.EntityModels.find({...e, faction})?.id, id);
   // Detailed destroyers have their own opt-in model contract (and a larger test heap footprint).
   for (const other of Object.keys(h.UNITS).filter(t => t !== type && t !== 'destroyer'))
     assert.notEqual(h.EntityModels.find({...e, type:other}).id, id);

@@ -314,6 +314,6 @@
       if(type==='hearthtower')pointLight(-.6,8.6,-.7,9,colors.warm,2.5);
       if(type==='researchspire')pointLight(-.5,10.6,-.7,9,0x55d9e9,2.5);
     };
-    for(const faction of [0,1,2])registerEntityModel({id:`faction-${faction}/building/${type}`,meshes:faction===0?meshes:{},render});
+    for(const faction of [0,1])registerEntityModel({id:`faction-${faction}/building/${type}`,meshes:faction===0?meshes:{},render});
   }
 })();

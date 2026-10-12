@@ -1,7 +1,7 @@
 /* Battle definitions, balancing, iconography and faction nomenclature. */
 'use strict';
 // Stable numeric IDs; display names below are content, never lookup keys.
-const FACTION_ID = Object.freeze({ FIRST: 0, SECOND: 1, THIRD: 2 } as const);
+const FACTION_ID = Object.freeze({ FIRST: 0, SECOND: 1 } as const);
 type FactionId = (typeof FACTION_ID)[keyof typeof FACTION_ID];
 
 const FACTIONS = [
@@ -75,45 +75,6 @@ const FACTIONS = [
       factory: 'Root hollow',
       hangar: 'Chrysalis',
       turret: 'Thorn spire',
-      meridianforum: 'Meridian Forum',
-      fieldlab: 'Field laboratory',
-      researchhub: 'Research hub',
-      researchspire: 'Research spire',
-      embercottage: 'Ember cottage',
-      terracecommons: 'Terrace commons',
-      hearthtower: 'Hearth tower'
-    }
-  },
-  {
-    name: 'The Mourning Houses',
-    short: 'MOURNING HOUSES',
-    sigil: '◇',
-    color: 0xcab7f2,
-    accent: 0x79d9e3,
-    metal: 0xc7c3ba,
-    dark: 0x3c3b50,
-    desc: 'Beautiful. Ancient. Afraid.',
-    doctrine: { name: 'Precision supremacy', desc: 'Early technology, aircraft and high-value targets.' },
-    trait: 'Units have regenerative shields and deal 12% more damage. Cinder costs are 12% higher.',
-    ability: 'Judgment beam',
-    units: {
-      worker: 'Custodian',
-      rifle: 'Pallbearer',
-      medic: 'Absolver',
-      tank: 'Sepulcher',
-      artillery: 'Elegist',
-      air: 'Vigil',
-      destroyer: 'Catafalque',
-      hero: 'The Unveiled'
-    },
-    buildings: {
-      hq: 'Silent Throne',
-      barracks: 'Processional gate',
-      depot: 'Votive pillar',
-      refinery: 'Echo Prism',
-      factory: 'Tomb forge',
-      hangar: 'Sky sepulcher',
-      turret: 'Mourning obelisk',
       meridianforum: 'Meridian Forum',
       fieldlab: 'Field laboratory',
       researchhub: 'Research hub',
@@ -484,8 +445,7 @@ type AbilityType = keyof typeof ABILITIES;
 const DEFAULT_ABILITY_LOADOUT: readonly AbilityType[] = Object.freeze(['orbital', 'repair', 'scan', 'drop']);
 const FACTION_ABILITY_LOADOUTS: Record<FactionId, readonly AbilityType[]> = Object.freeze({
   0: Object.freeze<AbilityType[]>(['orbital', 'repair', 'bulwark', 'drop']),
-  1: Object.freeze<AbilityType[]>(['repair', 'drop', 'disruption', 'surge']),
-  2: Object.freeze<AbilityType[]>(['orbital', 'scan', 'disruption', 'recall'])
+  1: Object.freeze<AbilityType[]>(['repair', 'drop', 'disruption', 'surge'])
 });
 function normalizedAbilityLoadout(input: unknown, fallback: readonly AbilityType[] = DEFAULT_ABILITY_LOADOUT): AbilityType[] {
   if (!Array.isArray(input)) return [...fallback];
@@ -542,7 +502,7 @@ function abilityStats(kind: AbilityType, rank = 0): AbilityStats {
 
 const STARTING_CINDER = 250;
 const ECHO_VENT_CAPACITY = 900;
-const FACTION_DEPTH_REQUIREMENTS = [0, 10, 25] as const;
+const FACTION_DEPTH_REQUIREMENTS = [0, 10] as const;
 
 const COMMAND_ENERGY = Object.freeze({ start: 25, max: 200, regeneration: .8 });
 const ABILITY_RULES = Object.freeze({ orbitalBuilding: 'factory' as const, reinforcementRange: 20 });
@@ -585,7 +545,7 @@ type ExpeditionBenefit = keyof typeof EXPEDITION_BENEFITS;
 
 // Stage = completed depth + 1. The opening visits each faction once before FFA expands.
 const EXPEDITION_ENEMY_ENTRY_STAGES = [1, 4, 8] as const;
-const EXPEDITION_OPENING_ENEMIES = [FACTION_ID.FIRST, FACTION_ID.SECOND, FACTION_ID.THIRD] as const;
+const EXPEDITION_OPENING_ENEMIES = [FACTION_ID.FIRST, FACTION_ID.SECOND] as const;
 function expeditionEnemyCount(depth: number): number {
   return EXPEDITION_ENEMY_ENTRY_STAGES.filter(stage => depth + 1 >= stage).length;
 }

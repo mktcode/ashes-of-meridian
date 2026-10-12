@@ -14,7 +14,7 @@ function draw(h,e,hour,options={},extra={}) {
 }
 
 function entities(h) {
-  return [0,1,2].flatMap(faction=>['building','unit'].flatMap(kind=>
+  return Array.from(h.FACTIONS.keys()).flatMap(faction=>['building','unit'].flatMap(kind=>
     Object.entries(kind==='building'?h.BUILDINGS:h.UNITS).map(([type,d])=>
       ({id:17,kind,type,faction,team:0,hp:d.hp,size:d.size,x:12,z:-7,rot:.7,walk:2,carry:10,progress:1}))));
 }
@@ -23,14 +23,13 @@ test('every faction building and unit has posed night lights, unchanged geometry
   const h=modelHarness({heavyModels:true});
   vm.runInContext('Math.random = seeded = () => { throw Error("View RNG"); };',h.context);
   const es=entities(h);
-  assert.equal(es.length,3*(Object.keys(h.BUILDINGS).length+Object.keys(h.UNITS).length),'all faction models');
+  assert.equal(es.length,h.FACTIONS.length*(Object.keys(h.BUILDINGS).length+Object.keys(h.UNITS).length),'all faction models');
   for(const e of es) {
     const id=h.EntityModels.find(e)?.id;
     assert.ok(id,`${e.faction}/${e.kind}/${e.type} has a model`);
     const day=draw(h,e,12),night=draw(h,e,22);
     assert.deepEqual(day.calls,h.draw(e),'day pose remains the standard model presentation');
-    // Catafalque has one reactor light and two propulsion lights.
-    const threeEmitters=e.type==='meridianforum'||id==='faction-2/unit/destroyer';
+    const threeEmitters=e.type==='meridianforum';
     const twoEmitters=id==='faction-0/building/hq'||e.type==='researchspire'||e.type==='hearthtower';
     assert.equal(night.lights.length,threeEmitters?3:twoEmitters?2:1,`${id}: bounded model emitters`);
     assert.equal(night.calls.length,day.calls.length,`${id}: no extra geometry in performance mode`);
@@ -93,7 +92,7 @@ test('local lamps share foundation/chassis frames and flying height; turret lamp
       frame=vm.runInContext(e.kind==='building'
         ? `buildingGroundFrame({dx:.2,dz:-.1},${cs},${sn})`
         : `vehicleGroundFrame({heightAt:(x,z)=>4+.2*x-.1*z},${JSON.stringify(e)},${cs},${sn})`,h.context);
-    const lift=vm.runInContext(`isFlyingUnitType('${e.type}') ? 3.8+Math.sin(18+17)*.22 : ${e.faction}===2 ? .3+Math.sin(18+17)*.08 : 0`,h.context);
+    const lift=vm.runInContext(`isFlyingUnitType('${e.type}') ? 3.8+Math.sin(18+17)*.22 : 0`,h.context);
     const baseLift=e.kind==='unit'?lift:0;
     flat.lights.forEach((l,i)=>{
       const wx=l[0]-e.x,wz=l[2]-e.z,lx=wx*cs-wz*sn,lz=wx*sn+wz*cs,ly=l[1]-baseLift;
@@ -103,7 +102,7 @@ test('local lamps share foundation/chassis frames and flying height; turret lamp
       expected.forEach((v,k)=>assert.ok(Math.abs(v-posed.lights[i][k])<1e-10,`${e.faction}/${e.type}: shared pose`));
     });
   }
-  for(const faction of [0,1,2]) {
+  for(const faction of h.FACTIONS.keys()) {
     const e=entities(h).find(e=>e.faction===faction&&e.type==='turret'),a=draw(h,e,22),b=draw(h,{...e,rot:e.rot+Math.PI/2},22);
     const [x,,z]=a.lights[0],[u,,v]=b.lights[0];
     assert.ok(Math.abs((u-e.x)-(z-e.z))<1e-10);

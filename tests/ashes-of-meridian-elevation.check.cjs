@@ -275,9 +275,9 @@ function drawPose(e,surface,quality=0) {
 
 test('vehicles follow uphill, downhill and cross slopes as rigid assemblies, preserving heading and hover',()=>{
   const surface=new BattlefieldSurface(10,2.5,(x,z)=>4+x*.25+z*.375), up=normalize([-.25,1,-.375]);
-  for(const faction of [0,1,2]) for(const type of ['worker','tank','artillery']) {
+  for(const faction of [0,1]) for(const type of ['worker','tank','artillery']) {
     const e={id:4,x:0,z:0,rot:0,kind:'unit',type,hp:100,faction,team:0,size:UNITS[type].size,walk:2,carry:10},
-      hover=faction===2?.3+Math.sin(2+e.id)*.08:0, flat=drawPose(e,null);
+      hover=0, flat=drawPose(e,null);
     for(const rot of [0,Math.PI/2,Math.PI,Math.PI*1.5,.7]) {
       const forward=normalize([Math.sin(rot),.25*Math.sin(rot)+.375*Math.cos(rot),Math.cos(rot)]),
         frame=[cross(up,forward),up,forward], calls=drawPose({...e,rot},surface);

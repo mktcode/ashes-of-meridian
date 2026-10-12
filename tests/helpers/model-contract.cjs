@@ -47,7 +47,7 @@ function assertMesh(factory, { minTriangles, maxTriangles, min, max }) {
 function modelDrawDigests(h, ids) {
   const result = {};
   for (const id of ids) {
-    const [, factionId, kind, type] = /^faction-([0-2])\/(unit|building)\/([a-z]+)$/.exec(id) || [];
+    const [, factionId, kind, type] = /^faction-(\d+)\/(unit|building)\/([a-z]+)$/.exec(id) || [];
     const d = (kind === 'unit' ? h.UNITS : h.BUILDINGS)[type];
     assert.ok(d, `known model reference: ${id}`);
     const hash = createHash('sha256');
@@ -68,7 +68,7 @@ function assertBuildingAssembly(h, { type, meshName, frontZ, hp, maxInstances = 
     hull = calls => calls.find(c => c[0] === meshName);
   assert.equal(h.BUILDINGS[type].size, e.size); assert.equal(h.BUILDINGS[type].hp, hp);
   assert.equal(model.id, id); assert.equal(Object.isFrozen(model), true);
-  for (const faction of [1, 2]) assert.notEqual(h.EntityModels.find({ ...e, faction })?.id, id);
+  for (const faction of Array.from(h.FACTIONS.keys()).filter(f=>f!==0)) assert.notEqual(h.EntityModels.find({ ...e, faction })?.id, id);
   for (const other of Object.keys(h.BUILDINGS).filter(t => t !== type))
     assert.notEqual(h.EntityModels.find({ ...e, type: other })?.id, id);
   assert.equal(h.EntityModels.find({ ...e, kind: 'unit' }), undefined);

@@ -7,15 +7,15 @@ const copy=v=>JSON.parse(JSON.stringify(v));
 function fixture(completed=true) {
   const nodes=new Map(),document={getElementById(id){if(!nodes.has(id)){const classes=new Set();nodes.set(id,{innerHTML:'',textContent:'',style:{},classList:{add(...v){v.forEach(x=>classes.add(x));},remove(...v){v.forEach(x=>classes.delete(x));},contains:v=>classes.has(v),toggle(v,on){on?classes.add(v):classes.delete(v);}},setAttribute(){},querySelectorAll(){return [];}});}return nodes.get(id);}};
   const context=loadScripts(['core','content','world','expedition','effects','persistence',...SIMULATION_SCRIPTS,...UI_SCRIPTS],{globals:{document,innerWidth:400,innerHeight:800,performance:{now:()=>0},matchMedia:()=>({matches:true}),BATTLEFIELDS:{desert:{name:'Desert'}}}});
-  const rules=vm.runInContext('({MeridianGame,MeridianUI,createParty,createOutpostState,retireExpeditionOutpost,expeditionCivilizationUpgrades,validExpeditionBattle,createMeridianPersistence,clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:{desert:{}},missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
+  const rules=vm.runInContext('({factions:FACTIONS,MeridianGame,MeridianUI,createParty,createOutpostState,retireExpeditionOutpost,expeditionCivilizationUpgrades,validExpeditionBattle,createMeridianPersistence,clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:{desert:{}},missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
   const g=new rules.MeridianGame({version:2,expeditionDepth:1}),events=[];g.emit=(...event)=>events.push(event);
-  g.s={depth:0,seed:1409,map:'desert',time:0,parties:[rules.createParty(0,0,{},{}),rules.createParty(1,2,{},{})],
+  g.s={depth:0,seed:1409,map:'desert',time:0,parties:[rules.createParty(0,0,{},{}),rules.createParty(1,1,{},{})],
     rules:{kind:'single-player',mission:{id:'hq-elimination'},...(completed?{completed:true}:{})},stopped:false,nextId:1,entities:[],supplyCaches:[],scans:[],strikes:[],fields:[],recalls:[],
     stats:{kills:0,structuresDestroyed:0,lost:0,trained:0,gathered:0,built:0,damage:0},triggers:{},cam:{x:0,z:0,zoom:50,yaw:0},result:null,speed:1};
   g.enableAI(1);if(completed){g.s.parties[1].eliminated=true;g.s.outpost=rules.createOutpostState(0);}
   g.world={clearFog(){},extent:100,gridSize:4,blocked:new Uint8Array(16),pathVersion:0,sight:[0,1].map(()=>({visible:new Uint8Array(16).fill(1),explored:new Uint8Array(16).fill(1)})),
     deploymentReachable:new Uint8Array(16).fill(1),point:i=>({x:(i%4)*40-60,z:Math.floor(i/4)*40-60}),blockedAt:()=>false,terrainFree:()=>true,surface:{fits:()=>true,segment:()=>true}};
-  const hq=g.spawnBuilding('hq',0,0,0,0),recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{},enemyBenefits:[{}],encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[2]}};
+  const hq=g.spawnBuilding('hq',0,0,0,0),recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{},enemyBenefits:[{}],encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[1]}};
   const run={version:13,...copy(recipe),depth:1,battle:null,worlds:[{stage:1,map:'desert',seed:1409,recipe:copy(recipe),battle:g.snapshotBattle()}]};
   const save=()=>{g.rehash();return g.snapshotBattle();};
   const data=new Map(),service=rules.createMeridianPersistence({...rules,getStorage:()=>({getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)}),warn(){}});
@@ -84,7 +84,7 @@ test('evacuation snapshots persist timer, selection, boarded army and hostile sh
   const {g,hq,rules,run,recipe,save,building,service,data}=fixture();
   g.startEvacuation(hq.id);g.evacuateUpgrade(building().id);
   g.s.outpost.evacuation.units.push({type:'tank',hp:.6,shield:0,kills:5});g.s.time=17;
-  const attacker=g.spawnUnit('artillery',60,60,1,2,{wavePower:1.16});
+  const attacker=g.spawnUnit('artillery',60,60,1,1,{wavePower:1.16});
   g.s.strikes.push({x:0,z:0,at:18,damage:100,radius:4,team:1,type:'shell',source:attacker.id});
   run.worlds[0].battle=save();assert.equal(rules.validExpeditionBattle(run.worlds[0].battle,recipe,rules,true),true);
   service.saveProgress({version:2},run);const restored=service.loadExpedition();

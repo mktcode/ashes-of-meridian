@@ -94,7 +94,7 @@ test('deployment can replace unreachable relocation and still prioritizes existi
 });
 
 test('AI stage knobs saturate and enforce reaction/decision floors without random draws', () => {
-  for (const faction of [0,1,2]) {
+  for (const faction of [0,1]) {
     let previous;
     for (const depth of [-10,0,3,4,8,12,16,1000000,Infinity,NaN]) {
       const r = aiRulesFor(faction,depth);
@@ -335,11 +335,10 @@ test('observed damage to nearby defenders counts as progress, but hidden damage 
 });
 
 test('real danger and faction exhaustion still retreat despite damage progress', () => {
-  for (const faction of [0,1,2]) {
+  for (const faction of [0,1]) {
     const {g,ai,entity,contact,own,home,launch} = fixture(faction);
     const troop = entity('rifle',1,8,0), hq = contact(entity('hq',0)); launch([troop],hq);
     if (faction===1) troop.hp *= .5;
-    if (faction===2) troop.shield = 0;
     const threats = Array.from({length:faction===0?2:1},()=>contact(entity(faction===0?'tank':'rifle',2,12,0)));
     g.s.time = 110; hq.hp -= 10; g.aiStrategy(1,own(),[hq,...threats],home);
     assert.equal(ai.mode,'recover');

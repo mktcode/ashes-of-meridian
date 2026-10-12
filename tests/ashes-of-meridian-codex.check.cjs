@@ -8,7 +8,7 @@ test('codex exposes current-model tiles for every faction without a profile unlo
   const {renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS} =
     vm.runInContext('({renderCodexScreen,renderCodexModelScreen,renderStoryScreen,renderHomeScreen,FACTIONS,UNITS,BUILDINGS})',context);
   assert.match(renderHomeScreen(null),/data-ui="codex"/);
-  for(let faction=0;faction<3;faction++) {
+  for(const faction of FACTIONS.keys()) {
     const html=renderCodexScreen(faction);
     assert.match(html,new RegExp(FACTIONS[faction].name));
     assert.match(html,/data-ui="codexStory"/);

@@ -211,6 +211,6 @@
     pointLight(0,(32.5-FORUM_DECK_BASE)*authoredScale,-3.65*authoredScale,6,colors.warm,1.5);
     pointLight(0,(36.13-FORUM_DECK_BASE)*authoredScale,-3.65*authoredScale,4,colors.cyan,1.1);
   };
-  for(const faction of [0,1,2])registerEntityModel({id:`faction-${faction}/building/meridianforum`,meshes:faction===0?meshes:{},render});
+  for(const faction of [0,1])registerEntityModel({id:`faction-${faction}/building/meridianforum`,meshes:faction===0?meshes:{},render});
 
 })();

@@ -8,7 +8,7 @@ export function validateScene(scene) {
   if (typeof scene.map !== 'string' || !scene.map) throw Error('map is required');
   number(scene.seed, 'seed', 1, 99999999);
   if (!Number.isInteger(scene.seed)) throw Error('seed must be an integer');
-  for (const key of ['faction', 'enemy']) if (scene[key] !== undefined) { number(scene[key], key, 0, 2); if (!Number.isInteger(scene[key])) throw Error(`Invalid ${key}`); }
+  for (const key of ['faction', 'enemy']) if (scene[key] !== undefined) { number(scene[key], key, 0, 1); if (!Number.isInteger(scene[key])) throw Error(`Invalid ${key}`); }
   for (const key of ['width', 'height']) if (scene[key] !== undefined) { number(scene[key], key, 64, 4096); if (!Number.isInteger(scene[key])) throw Error(`Invalid ${key}`); }
   if (scene.hour !== undefined) number(scene.hour, 'hour', 0, 23.999999);
   for (const key of ['hud', 'reveal']) if (scene[key] !== undefined && typeof scene[key] !== 'boolean') throw Error(`Invalid ${key}`);

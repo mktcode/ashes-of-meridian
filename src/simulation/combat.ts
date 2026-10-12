@@ -77,7 +77,7 @@
             e.x,
             e.z,
             e.kind === 'building' ? 3.5 : e.type === 'destroyer' ? 3 : 1.2,
-            e.faction === FACTION_ID.SECOND ? 0xaee2ac : e.faction === FACTION_ID.THIRD ? 0xb9a9e8 : 0xf3b17c
+            e.faction === FACTION_ID.SECOND ? 0xaee2ac : 0xf3b17c
           );
           this.emit('explosion', { x: e.x, z: e.z, big: e.kind === 'building' || e.type === 'tank' || e.type === 'destroyer' });
         }
@@ -98,7 +98,6 @@
             distance(e, n) <= COMMAND_DRILL.radius),
           damage =
             (d.damage || 0) * (e.kind==='unit' ? e.wavePower || 1 : 1) *
-            (e.faction === FACTION_ID.THIRD ? 1.12 : 1) *
             (e.kills >= 5 ? 1.12 : 1) *
             (inCommand ? 1 + drillStacks * COMMAND_DRILL.damagePerStack : 1) *
             (e.kind==='unit' && e.type!=='worker' ? 1+(s.parties[e.team]?.meta.weaponTechnology || 0)*CIVILIZATION_EFFECTS.damage : 1);

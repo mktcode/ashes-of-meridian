@@ -906,9 +906,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
       let y = ground + (
         isFlyingUnitType(e.type)
           ? 3.8 + Math.sin(time * 2 + e.id) * 0.22
-          : e.faction === FACTION_ID.THIRD && e.kind === 'unit'
-            ? 0.3 + Math.sin(time * 2 + e.id) * 0.08
-            : 0);
+          : 0);
       let layer = options.layer || 'dynamic',
         alpha = options.alpha === undefined ? 1 : options.alpha;
       let build = e.kind === 'building' ? Math.max(0.15, e.progress === undefined ? 1 : e.progress) : 1;
@@ -953,13 +951,8 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
         a = alpha,
         m = surfaceMat
       ) => {
-        // Glowing Court prisms use the existing crystal shader instead of flat painted metal.
-        // Explicit preview/material overrides retain authority over this model-level default.
         const resolvedMaterial = options.material !== undefined && e.kind === 'building' && isCivilizationBuildingType(e.type)
-          ? options.material : options.material === undefined && m === surfaceMat &&
-          e.faction === FACTION_ID.THIRD && e.kind === 'building' && shape === 'octa' && glow >= .3
-            ? MAT.CRYSTAL
-            : m;
+          ? options.material : m;
         const height = ly * build,
           px = frame ? e.x+frame[0]*lx+frame[3]*height+frame[6]*lz : e.x+lx*cs+lz*sn,
           py = frame ? y+frame[1]*lx+frame[4]*height+frame[7]*lz : y+height,
@@ -980,10 +973,10 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           rz,
           // The Marshal beacon already synchronizes emission with its point light.
           animated && glow >= .3 && shape !== 'breachMarshalBeacon' ? glow * (1 + (e.faction === FACTION_ID.SECOND ? .22 : .12) *
-            Math.sin(phase + (e.faction === FACTION_ID.THIRD ? ly * 3 - lz * 2 : lx * .7))) : glow,
+            Math.sin(phase + lx * .7)) : glow,
           a,
           layer,
-          resolvedMaterial === PORTAL_MATERIAL && !animated ? PORTAL_STILL_MATERIAL : resolvedMaterial
+          resolvedMaterial
         );
         if (occlusion && a === 1) R.recordOcclusion(shape, occlusionColor);
       };
@@ -1106,8 +1099,7 @@ function modelFrameRotation(f: readonly number[], ry: number, rx: number, rz: nu
           // Other Choir buildings retain the shared mound, including in build previews.
           if (e.type !== 'hq') p('choirMound', 0, 0, 0, s, 1, s, ghost ? 0x68717d : options.tint || 0x70523b,
             0, 0, 0, 0, alpha, options.material ?? MAT.ROCK);
-        } else if (!(e.faction === FACTION_ID.THIRD && ['barracks','depot','factory','hangar','hq','turret'].includes(e.type))) {
-          // Court structures with bespoke silhouettes own angular foundations, without a circular dais.
+        } else {
           p('hex', 0, 0.15, 0, s * 1.09, 0.3, s * 1.09, 0x384552, 0.12);
           p('ring', 0, 0.33, 0, s * 1.03, 0.1, s * 1.03, team, 0, 0, 0, 0.4);
         }

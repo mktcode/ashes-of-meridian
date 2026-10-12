@@ -370,6 +370,7 @@ interface ProfileStorage {
 }
 
 interface PersistenceDependencies {
+  factions: readonly unknown[];
   getStorage(): ProfileStorage;
   clamp(value: number, min: number, max: number): number;
   upgrades: Record<string, { max: number }>;

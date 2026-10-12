@@ -34,7 +34,7 @@ test('Forum caches one shared, finite hull with terraced wings and an unobstruct
  }
  const e=entity(h),baseDraw=h.draw(e);
  assert.ok(baseDraw.some(c=>c[0].startsWith('meridianForum')));
- for(const faction of [0,1,2])assert.deepEqual(h.draw({...e,faction}),baseDraw,'no research, residential or faction variant');
+ for(const faction of h.FACTIONS.keys())assert.deepEqual(h.draw({...e,faction}),baseDraw,'no research, residential or faction variant');
  assert.ok(baseDraw.every(c=>!['choirMound','hex','ring'].includes(c[0])));
  for(const options of [{ghost:true},{tint:0x89eac5,alpha:.3,layer:'effects'}])
   assert.ok(h.draw(e,options).every(c=>c[7]===(options.ghost?0x68717d:options.tint)));

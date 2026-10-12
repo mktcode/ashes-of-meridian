@@ -99,8 +99,8 @@ function separated(game) {
 
 test('all maps and factions retain five accessible crystals on an open half-circle with worker clearance', () => {
   for (const [i, map] of Object.keys(BATTLEFIELDS).entries()) {
-    const faction = i % 3, game = fresh();
-    game.start({ seed: 12345 + i * 31, faction, enemies: [(i + 1) % 3], map });
+    const faction = i % 2, game = fresh();
+    game.start({ seed: 12345 + i * 31, faction, enemies: [(i + 1) % 2], map });
     const nodes = crystals(game), count = game.world.layout.resourceSites.length;
     assert.equal(nodes.length, count * 5); separated(game);
     assert.equal(game.s.entities.filter(e => e.type === 'gas').length, count);

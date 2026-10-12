@@ -4,10 +4,10 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const {loadScripts,BATTLEFIELD_SCRIPTS,SIMULATION_SCRIPTS}=require('./helpers/game-scripts.cjs');
 const context=loadScripts(['core','content','expedition',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,'effects','persistence']);
-const rules=vm.runInContext('({MeridianGame,BUILDINGS,CIVILIZATION_UPGRADES,CIVILIZATION_UPGRADE_FAMILIES,civilizationBuildingFamily,civilizationUpgradeOffers,civilizationUpgradeAllowed,civilizationUpgradeOffered,settlementReservedRadius,civilizationUpgradesForBuildings,expeditionCivilizationUpgrades,createMeridianPersistence,validExpeditionBattle,clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:BATTLEFIELDS,missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
+const rules=vm.runInContext('({factions:FACTIONS,MeridianGame,BUILDINGS,CIVILIZATION_UPGRADES,CIVILIZATION_UPGRADE_FAMILIES,civilizationBuildingFamily,civilizationUpgradeOffers,civilizationUpgradeAllowed,civilizationUpgradeOffered,settlementReservedRadius,civilizationUpgradesForBuildings,expeditionCivilizationUpgrades,createMeridianPersistence,validExpeditionBattle,clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:BATTLEFIELDS,missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
 const copy=v=>JSON.parse(JSON.stringify(v));
 const profile={version:2,expeditionDepth:1,tutorialComplete:true,settings:{volume:.28,music:true,sfx:true,quality:2,healthbars:false,showFps:false}};
-const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{commandTraining:1},benefits:{startingAlloy:1},enemyBenefits:[{}],encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[2]}};
+const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{commandTraining:1},benefits:{startingAlloy:1},enemyBenefits:[{}],encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[1]}};
 const game=new rules.MeridianGame(copy(profile));game.start({...recipe,...recipe.encounter});
 const base=copy(game.snapshotBattle());
 function active(){

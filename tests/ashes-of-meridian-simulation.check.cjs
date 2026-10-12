@@ -125,7 +125,7 @@ for (const map of ['westmark', 'desert', 'alien-planet']) for (const count of [3
 test(`internal ${count}-party scenario on ${map}: FFA starts, resource access and explicit stop without expedition result`, () => {
   const { game, events } = createGame(), options = {
     seed: 1409, map, duration: .1,
-    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human', benefits: { startingWorkers: 1 } })),
+    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 2, controller: id === 2 ? 'ai' : 'human', benefits: { startingWorkers: 1 } })),
     hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b))
   };
   const profile = json(game.profile), dispatched = [];
@@ -253,10 +253,10 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
   }`, context);
   for (const expected of [12345678, 87654321]) {
     const previous = game.world;
-    game.start({ faction: 1, enemies: [2], map: 'desert' });
+    game.start({ faction: 1, enemies: [0], map: 'desert' });
     assert.equal(game.s.seed, expected); assert.equal(game.world.seed, expected);
     assert.notStrictEqual(game.world, previous);
-    assert.deepEqual([game.s.parties[0].faction, game.s.parties[1].faction, game.s.map], [1, 2, 'desert']);
+    assert.deepEqual([game.s.parties[0].faction, game.s.parties[1].faction, game.s.map], [1, 0, 'desert']);
   }
   game.start({ seed: 1409 }); // Internal deterministic scenarios still bypass the random draw.
   assert.equal(game.s.seed, 1409);
@@ -290,7 +290,7 @@ test(`seeded exploration deployment on ${map}, seed ${seed}: separated candidate
   game.start(options);assert.deepEqual(json(game.s),before);assert.equal(game.random(),next);
   // Unlike overriding startingPositions(), startSeed is consumed by the actual allocation path.
   game.startScenario({seed,map,startSeed:seed+7919,duration:1,
-    parties:[{faction:0,controller:'human',benefits:options.benefits},{faction:2,controller:'human'}],
+    parties:[{faction:0,controller:'human',benefits:options.benefits},{faction:1,controller:'human'}],
     hostilities:[[false,true],[true,false]]});
   assert.equal(game.random(),next,'private allocation must not advance simulation RNG');
   assert.equal(terrainFingerprint(game.world),terrain,'private allocation cannot reshape public terrain or decor');
@@ -300,7 +300,7 @@ test(`seeded exploration deployment on ${map}, seed ${seed}: separated candidate
 test('single battle starts with landing workers, paid HQ reserves and an independent elimination mission', () => {
   const { game, events, context } = freshBattle(), s = game.s;
   const { STARTING_CINDER, BUILDINGS } = vm.runInContext('({ STARTING_CINDER, BUILDINGS })', context);
-  assert.deepEqual([s.seed,s.map,s.parties[0].faction,s.parties[1].faction,s.time], [1409,'desert',0,2,0]);
+  assert.deepEqual([s.seed,s.map,s.parties[0].faction,s.parties[1].faction,s.time], [1409,'desert',0,1,0]);
   assert.equal(s.rules.kind, 'single-player'); assert.equal(s.rules.mission.id, 'hq-elimination');
   assert.equal(s.result, null);
   assert.equal(game.alive(e => e.type === 'hq').length, 0);
@@ -320,7 +320,7 @@ test('single battle starts with landing workers, paid HQ reserves and an indepen
 });
 
 test('established HQs without workers have no resource income, and 250 Cinder buys exactly five workers for every faction', () => {
-  for(const faction of [0,1,2]) {
+  for(const faction of [0,1]) {
     const {game}=headquartersBattle(faction);
     assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
     assert.deepEqual(json(game.cost('worker')),{cost:50,gas:0});
@@ -333,7 +333,7 @@ test('established HQs without workers have no resource income, and 250 Cinder bu
 });
 
 test('an established workerless HQ pays for its first recruit, which enables mining and new construction', () => {
-  for (const faction of [0,1,2]) {
+  for (const faction of [0,1]) {
     const {game}=headquartersBattle(faction,1409,'resource-start');
     advance(game,40);
     assert.deepEqual(Array.from(game.alive(e=>e.team===0),e=>e.type),['hq']);
@@ -357,7 +357,7 @@ test('an established workerless HQ pays for its first recruit, which enables min
 });
 
 test('landing worker pays for an HQ, completes deployment and only then enables paid recruitment', () => {
-  for (const faction of [0,1,2]) {
+  for (const faction of [0,1]) {
     const {game,events}=freshBattle(faction,1409,'resource-start'), worker=player(game,'worker');
     assert.ok(worker); assert.equal(player(game,'hq'),undefined);
     assert.equal(game.party(0).deploymentPending,true);
@@ -395,7 +395,7 @@ test('fresh starts with the same seed reproduce state; another seed changes reso
 test('battle starts cover every faction and map with valid entities', () => {
   const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
   // Maps change presentation, not faction rules: no redundant faction/map cross-product.
-  for (const [faction, map] of [[0,'desert'],[1,'alien-planet'],[2,'westmark']]) {
+  for (const [faction, map] of [[0,'desert'],[1,'alien-planet'],[0,'westmark']]) {
     game.start({ seed: 1409, faction, enemies: [faction], map });
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['worker']);
     assert.equal(game.alive(e => e.type === 'hq').length, 0);
@@ -489,7 +489,7 @@ test('ground attack-move preserves mixed formations and worker movement without 
   assert.equal(rifle.order.type,'attack'); assert.equal(rifle.order.id,enemy.id);
 });
 
-for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'westmark']])
+for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[1,9017,'alien-planet'],[0,43015,'westmark']])
 test(`developed bases use legal sites, fitted armies and unchanged RNG: ${map}/${seed}/${faction}`, () => {
   const {game}=headquartersBattle(faction,seed,'resource-start',map), terrain=terrainFingerprint(game.world),
     resources=json(game.alive(e=>e.kind==='resource')), random=game.random, state=random.state,
@@ -767,8 +767,8 @@ test('movement speed preserves faction modifiers and strict slow expiry without 
   const { game } = freshBattle();
   game.s.time = 10;
   game.random = () => { throw Error('Speed calculation must not consume RNG'); };
-  for (const [type, speeds] of [['worker', [4.5, 4.95, 4.5]], ['air', [7, 7.7, 7]]]) {
-    for (const faction of [0, 1, 2]) {
+  for (const [type, speeds] of [['worker', [4.5, 4.95]], ['air', [7, 7.7]]]) {
+    for (const faction of [0, 1]) {
       for (const slowed of [undefined, 9, 10, 11]) {
         const entity = Object.freeze({ type, faction, slowed });
         const before = json(game.s);
@@ -832,7 +832,7 @@ test('detour planning restores the navigation grid and never consumes RNG', () =
 
 test('all produced unit types physically leave their building before working or following rally', () => {
   for(const [i,type] of ['worker','rifle','medic','tank','artillery','air','hero'].entries()) {
-    const game=spacingArena(), faction=i%3;
+    const game=spacingArena(), faction=i%2;
     game.s.parties[0].account.alloy=10000; game.s.parties[0].account.gas=10000;
     let b=player(game,['hq','barracks','barracks','factory','factory','hangar','hq'][i]);
     if(!b)b=game.spawnBuilding('hangar',0,10,0,faction);
@@ -869,12 +869,13 @@ test('exit space is reserved and selling the producer does not strand its unit',
   advance(game,240); assert.ok(game.get(unit.id)); assert.equal(unit.exit,undefined); assertUnitSpacing(game);
 });
 
-test('base combat/movement stats retain faction, shields and unit-veterancy modifiers without difficulty scaling', () => {
+test('base combat/movement stats retain faction and unit-veterancy modifiers without difficulty scaling', () => {
   const { game } = battle();
-  for (const team of [0, 1, 2]) for (const faction of [0, 1, 2]) {
+  for (const team of [0, 1, 2]) for (const faction of [0, 1]) {
     const e = game.spawnUnit('rifle', 0, 0, team, faction);
     const stats = game.rangedStats(e);
-    close(stats.damage, 13 * (faction === 2 ? 1.12 : 1));
+    close(stats.damage, 13);
+    assert.equal(e.maxShield, 0);
     assert.equal(stats.range, 9); assert.equal(e.vision, 17);
     close(e.maxHp, game.spawnUnit('rifle', 10, 10, 0, faction).maxHp);
     close(game.spawnBuilding('hq', 20, 20, team, faction).maxHp, 2600);
@@ -929,10 +930,10 @@ test('ordinary move can retreat from an enemy without switching to combat pursui
 test('retained weapons apply direct damage and schedule artillery shells without a boss weapon', () => {
   const { game } = battle(), target = game.alive(e => e.team === 1 && e.type === 'hq')[0];
   const hp = target.hp; game.world.visible.fill(255);
-  for (const [type,faction] of [['rifle',0],['tank',1],['rifle',2],['artillery',0]]) {
+  for (const [type,faction] of [['rifle',0],['tank',1],['rifle',1],['artillery',0]]) {
     const unit = game.spawnUnit(type,target.x-10,target.z,0,faction); game.fire(unit,target);
   }
-  close(target.hp, hp - 13 - 58 - 13*1.12);
+  close(target.hp, hp - 13 - 58 - 13);
   assert.equal(game.s.strikes.length, 1);
   const shell = game.s.strikes[0];
   assert.deepEqual([shell.at,shell.damage,shell.radius,shell.type], [.85,100,4.5,'shell']);
@@ -945,11 +946,11 @@ test('base mining, refinery income, medic healing and faction regeneration work 
   worker.x = node.x; worker.z = node.z; worker.order = { type: 'mine', id: node.id };
   for (let i = 0; i < 3; i++) game.worker(worker, 1.25);
   assert.equal(worker.carry, 18);
-  const medic = game.spawnUnit('medic', 75, 75, 0, 0), patient = game.spawnUnit('rifle', 75, 75, 0, 2);
+  const medic = game.spawnUnit('medic', 75, 75, 0, 0), patient = game.spawnUnit('rifle', 75, 75, 0, 1);
   patient.hp -= 80; game.rehash(); game.medic(medic, 1);
   close(patient.hp, patient.maxHp - 60);
   medic.hp = 0; patient.hp = 0;
-  const troops = [0, 1, 2].map(f => game.spawnUnit('rifle', 75, 75, 0, f));
+  const troops = [0, 1].map(f => game.spawnUnit('rifle', 75, 75, 0, f));
   for (const troop of troops) troop.hp = troop.maxHp - 50;
   const gas = game.s.parties[0].account.gas; advance(game, 1);
   close(game.s.parties[0].account.gas, gas + .05 * 1.7);
@@ -957,7 +958,7 @@ test('base mining, refinery income, medic healing and faction regeneration work 
 });
 
 test('five starting workers begin mining and deliver alloy without recruitment for every faction', () => {
-  for (const faction of [0, 1, 2]) {
+  for (const faction of [0, 1]) {
     const { game } = createGame();
     game.start({ seed: 1409, faction, map: 'desert', benefits: { startingWorkers: 5 } });
     advance(game, 1200);
@@ -1128,7 +1129,7 @@ test('building repair assigns only the nearest living own worker and repairs thr
   const workers = game.alive(e => e.team === 0 && e.type === 'worker');
   const nearest = [...workers].sort((a, c) => Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
   assert.ok(Math.hypot(nearest.x-b.x,nearest.z-b.z)>b.size+4, 'starts outside repair range');
-  game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 1, 2);
+  game.spawnUnit('worker', b.x, b.z, 1, 0); game.spawnUnit('worker', b.x, b.z, 1, 1);
   game.spawnUnit('worker', b.x, b.z, 0, 0).hp = 0;
   const before = new Map(workers.map(w => [w.id, json(w.order)])), alloy = game.s.parties[0].account.alloy, x = nearest.x, z = nearest.z;
   assert.equal(game.toggleBuildingRepair(b.id), true);
@@ -1418,7 +1419,7 @@ test('workers still repair completed damaged structures and units for the same a
   }
 });
 
-for (const [faction, cost] of [[0, 75], [1, 64], [2, 85]]) {
+for (const [faction, cost] of [[0, 75], [1, 64]]) {
   test(`faction ${faction}: recruitment spends reference cost, reserves supply and refunds cancellation`, () => {
     const { game, events } = productionBattle(faction);
     const barracks = player(game, 'barracks');

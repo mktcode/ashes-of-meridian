@@ -62,7 +62,7 @@ test('model tiles borrow meshes, fit complete geometry and isolate world/profile
   const state=[r.surface,r.battlefieldProfile,r.eye,r.vp,r.lightVP,r.dynamic,r.effects,r.static,r.occlusion];
   vm.runInContext('Math.random = seeded = () => { throw Error("Tile RNG"); };',h.context);
   const meshes=r.meshes;
-  for(const faction of [0,1,2]) for(const [kind,types] of [['unit',Object.keys(h.UNITS).filter(t=>t!=='destroyer')],['building',Object.keys(h.BUILDINGS)]]) {
+  for(const faction of h.FACTIONS.keys()) for(const [kind,types] of [['unit',Object.keys(h.UNITS).filter(t=>t!=='destroyer')],['building',Object.keys(h.BUILDINGS)]]) {
     for(const type of types) {
       const canvas=tile(faction,kind,type);
       assert.equal(thumbs.draw(canvas),'rendered',`${faction}/${kind}/${type}`);

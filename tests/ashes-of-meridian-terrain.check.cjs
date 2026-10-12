@@ -308,7 +308,7 @@ test('four sight buffers remain isolated and terrain queries do not reevaluate t
 test('maximal deployment bonuses retain every worker and commander in reachable collision-free space', () => {
   const api=scope(['effects',...SIMULATION_SCRIPTS]),g=new api.Game({}),
     benefits={startingWorkers:5,commanderMandate:1};
-  g.start({seed:1409,map:'westmark',deployment:'resource-start',enemies:[1,2,0],benefits,
+  g.start({seed:1409,map:'westmark',deployment:'resource-start',enemies:[1,1,0],benefits,
     enemyBenefits:[benefits,benefits,benefits]});
   assert.equal(g.alive(e=>e.kind==='building').length,0);
   for(let team=0;team<4;team++) {

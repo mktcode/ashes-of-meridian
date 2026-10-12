@@ -73,7 +73,7 @@ test('alloy upgrades are copied, normalized to current content bounds and reprod
   }
 });
 
-for (const faction of [0, 1, 2])
+for (const faction of [0, 1])
   test(`bonus workers supplement landing deployment with preserved world and RNG ordering: faction ${faction}`, () => {
     const { game, context } = createGame(),
       api = rules(context),

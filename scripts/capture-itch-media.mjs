@@ -16,8 +16,8 @@ const { values } = parseArgs({ allowNegative: true, options: {
 const scenes = [
   { file: '01-desert-firefight.webp', map: 'desert', seed: 1409, faction: 0, enemy: 1, view: 'front' },
   { file: '02-desert-outpost.webp', map: 'desert', seed: 1409, faction: 0, enemy: 1, view: 'base' },
-  { file: '03-alien-frontier.webp', map: 'alien-planet', seed: 24080, faction: 1, enemy: 2, view: 'front' },
-  { file: '04-westmark-assault.webp', map: 'westmark', seed: 43015, faction: 2, enemy: 0, view: 'front' }
+  { file: '03-alien-frontier.webp', map: 'alien-planet', seed: 24080, faction: 1, enemy: 0, view: 'front' },
+  { file: '04-westmark-assault.webp', map: 'westmark', seed: 43015, faction: 0, enemy: 1, view: 'front' }
 ];
 if (values.help) {
   console.log(`Usage: npm run capture:itch -- [--output release/itch-media/<new-run>] [--scene <id>]\nWebP quality 80. Default: new worktree-local .tmp/ directory; existing output directories are refused.\n--scene captures only one desktop image, without mobile images or marketing compositions.\nOptional: --camera camera.json --hour 13 --no-units --no-buildings --no-distance-mist\nScenes: ${scenes.map(scene => scene.file.slice(0, -5)).join(', ')}`);

@@ -38,7 +38,7 @@ function validateCaptureScene(scene: CaptureScene, shotOnly = false): CaptureSce
   if (!shotOnly) {
     if (typeof scene.map !== 'string' || !Object.hasOwn(BATTLEFIELDS,scene.map)) throw Error('Unknown map');
     num(scene.seed, 'seed', 1, 99999999, true);
-    for (const key of ['faction','enemy'] as const) if (scene[key] !== undefined) num(scene[key], key, 0, 2, true);
+    for (const key of ['faction','enemy'] as const) if (scene[key] !== undefined) num(scene[key], key, 0, FACTIONS.length - 1, true);
     if (scene.content !== undefined && !['landscape','landing','arranged'].includes(scene.content)) throw Error('Invalid content');
     if (scene.content === 'landscape' && scene.entities?.length) throw Error('Landscape cannot contain arranged entities');
     if (scene.entities !== undefined) {

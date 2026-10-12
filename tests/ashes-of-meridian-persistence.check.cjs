@@ -9,14 +9,14 @@ const defaults = {
   settings: { volume: 0.28, music: true, sfx: true, quality: 2, healthbars: false, showFps: false }
 };
 const content = loadScripts(['content']);
-const catalogs = vm.runInContext('({units:UNITS,buildings:BUILDINGS,abilities:ABILITIES,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,battlefields:Object.fromEntries(MISSIONS["hq-elimination"].maps.map(id=>[id,{}])),missions:MISSIONS,enemyCount:expeditionEnemyCount})', content);
+const catalogs = vm.runInContext('({factions:FACTIONS,units:UNITS,buildings:BUILDINGS,abilities:ABILITIES,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,battlefields:Object.fromEntries(MISSIONS["hq-elimination"].maps.map(id=>[id,{}])),missions:MISSIONS,enemyCount:expeditionEnemyCount})', content);
 const upgrades = vm.runInContext('BATTLE_UPGRADES', content);
 const benefits = vm.runInContext('EXPEDITION_BENEFITS', content);
 const expedition = {
   version: 13, battle: null, faction: 1, abilities: ['orbital', 'repair', 'scan', 'drop'], depth: 8, upgrades: {},
   benefits: { startingAlloy: 2, commanderMandate: 1 },
   enemyBenefits: [{ startingWorkers: 2, commandCapacitor: 1 }, { startingAlloy: 3 }, { aetherAllocation: 2 }],
-  encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2, 1, 2], map: 'desert', seed: 1409 }
+  encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [0, 1, 0], map: 'desert', seed: 1409 }
 };
 function setup(data = new Map(), rules = {}) {
   const trace = [], fail = {}, warnings = [], context = loadScripts(['persistence']);
@@ -41,7 +41,7 @@ function runningSave() {
   const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', ...SIMULATION_SCRIPTS, 'effects', 'persistence']);
   const Game = vm.runInContext('MeridianGame', context), game = new Game(json(defaults));
   const run = { ...json(expedition), faction: 0, depth: 0, benefits: {}, enemyBenefits: [{}],
-    encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
+    encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [1], map: 'desert', seed: 1409 } };
   game.start({ ...run.encounter, faction: run.faction, abilities: run.abilities, depth: run.depth });
   const worker = game.s.entities.find(e => e.team === 0 && e.type === 'worker');
   for (const [kind, team] of [['alloy', 0], ['gas', 0], ['alloy', 1]]) {
@@ -236,7 +236,9 @@ test('damaged snapshots and mismatched recipes are blocked, never downgraded to 
     r => { delete r.battle; }, r => { r.battle.version++; }, r => { r.battle.state.seed++; },
     r => { r.battle.state.entities[0].type = 'missing'; }, r => { r.battle.state.entities.push(r.battle.state.entities[0]); },
     r => { r.battle.sight[0].visible = 'bad'; }, r => { r.battle.state.supplyCaches[0].collected = 'false'; },
-    r => { r.battle.randomState = null; }, r => { r.battle.state.parties[1].controller.state.observation.readyAt = null; }
+    r => { r.battle.randomState = null; }, r => { r.battle.state.parties[1].controller.state.observation.readyAt = null; },
+    r => { r.battle.state.parties[1].faction = catalogs.factions.length; },
+    r => { r.battle.state.entities[0].faction = catalogs.factions.length; }
   ]) {
     const h = setup(), damaged = json(original); change(damaged); put(h, damaged);
     const before = h.data.get(PROFILE);
@@ -250,7 +252,8 @@ test('damaged snapshots and mismatched recipes are blocked, never downgraded to 
 
 test('invalid recipes, benefits and upgrades are rejected instead of silently repaired', () => {
   for (const invalid of [
-    { ...expedition, version: expedition.version + 1 }, { ...expedition, faction: 3 }, { ...expedition, depth: '8' },
+    { ...expedition, version: expedition.version + 1 }, { ...expedition, faction: catalogs.factions.length }, { ...expedition, depth: '8' },
+    { ...expedition, encounter: { ...expedition.encounter, enemies: [0, catalogs.factions.length, 1] } },
     { ...expedition, abilities: ['orbital', 'repair', 'scan', 'scan'] },
     { ...expedition, benefits: { startingWorkers: 99 } }, { ...expedition, upgrades: { commandTraining: 4 } },
     { ...expedition, upgrades: { missing: 1 } }, { ...expedition, enemyBenefits: [{}] },
@@ -296,7 +299,7 @@ test('deployment and opponent slots round-trip across stage boundaries without s
   for (const depth of [0, 1, 2, 3, 7, 20]) {
     const count = catalogs.enemyCount(depth), run = { ...json(expedition), depth,
       enemyBenefits: Array.from({ length: count }, (_, slot) => ({ startingAlloy: slot + 1 })),
-      encounter: { ...expedition.encounter, deployment: 'resource-start', enemies: Array.from({ length: count }, (_, slot) => slot % 3) } };
+      encounter: { ...expedition.encounter, deployment: 'resource-start', enemies: Array.from({ length: count }, (_, slot) => slot % catalogs.factions.length) } };
     const h = setup(); put(h, run, { ...defaults, tutorialComplete: true });
     const restored = setup(h.data).service.loadExpedition(); assert.deepEqual(json(restored), run);
     restored.enemyBenefits[0].startingAlloy = 999; assert.deepEqual(json(h.service.loadExpedition()), run);

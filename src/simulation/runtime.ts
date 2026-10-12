@@ -341,8 +341,8 @@
         if (kind === 'orbital') {
           s.strikes.push({ x: p.x, z: p.z, at: s.time + d.strikeDelay!,
             ...(d.strikeDelay !== 2.2 ? { warning: d.strikeDelay } : {}),
-            radius: faction === FACTION_ID.THIRD ? 8 : 10,
-            damage: (faction === FACTION_ID.THIRD ? 440 : faction === FACTION_ID.SECOND ? 260 : 355) * d.damageMultiplier!,
+            radius: 10,
+            damage: (faction === FACTION_ID.SECOND ? 260 : 355) * d.damageMultiplier!,
             team, type: 'orbital' });
           s.scans.push({ ...p, team, r: 17, until: s.time + 8 });
           this.notify(team, 'radio', 'Orbital command|Target solution confirmed. Clear the impact zone.');

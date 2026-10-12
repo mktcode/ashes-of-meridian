@@ -44,13 +44,9 @@ test('Choir buildings keep soil foundations except the flower-seated queen, incl
       assert.ok(!calls.some(c => c[0] === 'ring' && c[2] === .33*build), 'no permanent platform rim');
       if (progress < 1) assert.ok(calls.some(c => c[0] === 'ring' && c[13] === 'effects' && c[2] === .13), 'construction marker retained');
     }
-    for (const faction of [0,2]) {
+    for (const faction of [0]) {
       const calls = h.draw({...e,faction});
-      if (faction === 2 && ['barracks','depot','factory','hangar','hq','turret'].includes(type)) {
-        const mesh = type === 'barracks' ? 'faction2BarracksHull' : type === 'depot' ? 'faction2DepotHull' : type === 'factory' ? 'faction2FactoryHull' : type === 'hangar' ? 'faction2HangarHull' : type === 'turret' ? 'faction2TurretHull' : 'faction2HqHull';
-        assert.equal(calls[0][0],mesh,'Court structure owns its angular foundation');
-      }
-      else { assert.equal(calls[0][0],'hex'); assert.equal(calls[1][0],'ring'); }
+      assert.equal(calls[0][0],'hex'); assert.equal(calls[1][0],'ring');
       assert.ok(!calls.some(c => c[0] === 'choirMound'));
     }
   }

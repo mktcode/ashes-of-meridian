@@ -171,7 +171,7 @@ const aiStrategyMethods = {
     }
     if (ai.mode==='recover') {
       const restored=squad.every(e=>distance(e,home)<44 &&
-        (this.factionFor(team)===FACTION_ID.THIRD ? e.shield>=e.maxShield*.75 : e.hp>=e.maxHp*.85));
+        e.hp>=e.maxHp*.85);
       if (squad.length && s.time<(ai.recoverUntil || 0) && (!restored || s.time-ai.restStartedAt<6)) {
         this.aiHold(team,army,own,home,false);return;
       }
@@ -181,10 +181,8 @@ const aiStrategyMethods = {
     if (ai.mode==='attack' && ai.goal && squad.length) {
       const opposition=power(foes.filter(e=>squad.some(u=>distance(u,e)<AI_TUNING.targetRadius))),
         hull=squad.reduce((n,e)=>n+e.hp,0)/squad.reduce((n,e)=>n+e.maxHp,0),
-        shields=squad.reduce((n,e)=>n+e.shield,0)/Math.max(1,squad.reduce((n,e)=>n+e.maxShield,0)),
         exhausted=opposition>0 && s.time-ai.attackStartedAt>6 &&
-          (this.factionFor(team)===FACTION_ID.SECOND ? hull<.6 :
-            this.factionFor(team)===FACTION_ID.THIRD && shields<.2),
+          this.factionFor(team)===FACTION_ID.SECOND && hull<.6,
         threatened=opposition>0 && (exhausted || squad.length<ai.launched*AI_TUNING.retreatLossRatio ||
           power(squad)<opposition*AI_TUNING.retreatPowerRatio);
       if (threatened) { this.aiRetreat(team,squad,home,own);return; }
