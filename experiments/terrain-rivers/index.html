@@ -2,7 +2,7 @@
 <html lang="de">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RTS-Layout – geschwungene Wege und Flüsse</title>
+<title>RTS-Layout – gerundete Flussrouten</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0 auto; padding: 24px; max-width: 1100px; background: #151b23; color: #e2e9ef; font: 16px/1.5 system-ui, sans-serif; }
@@ -24,12 +24,14 @@
 <label><input id="overlay" type="checkbox" checked> Spielräume im 3D-Modell markieren</label>
 <label><input id="dual" type="checkbox"> Basis- und duales Netz anzeigen</label>
 <label><input id="curves" type="checkbox" checked> Geschwungene Verbindungen</label>
+<label><input id="rounded" type="checkbox" checked> Flussrouten abrunden</label>
 <p id="status" role="status"></p>
 <div class="views">
   <section><h2>1 · Planungskarte</h2><canvas id="layout" width="480" height="480" aria-label="Regionen und verbindende Wege"></canvas></section>
-  <section><h2>2 · Dreidimensionales Höhenmodell</h2><canvas id="height" width="960" height="960" aria-label="Drehbares und zoombares dreidimensionales Höhenmodell"></canvas><small id="renderError" role="status"></small><br><small>Ziehen: drehen und neigen · Mausrad: zoomen · Doppelklick: zurücksetzen.</small><br><label for="zoom" style="margin-left:0">Zoom <input id="zoom" type="range" min="0.5" max="4" step="0.01" value="1"> <output id="zoomValue" for="zoom">100 %</output></label></section>
+  <section><h2>2 · Dreidimensionales Höhenmodell</h2><canvas id="height" width="960" height="960" aria-label="Drehbares und zoombares dreidimensionales Höhenmodell"></canvas><small id="renderError" role="status"></small><br><small>Ziehen: drehen und neigen · Mausrad: zoomen · Doppelklick: zurücksetzen.</small><br><label for="zoom" style="margin-left:0">Zoom <input id="zoom" type="range" min="0.5" max="4" step="0.01" value="1.6"> <output id="zoomValue" for="zoom">160 %</output></label></section>
 </div>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
+<p>Die Checkbox „Flussrouten abrunden“ ersetzt die eckigen Routen durch zusammenhängende Bézier-Kurven, bevor Höhen, Bett und Brücken berechnet werden. Nur Kreuzungen, Verzweigungen und Randanschlüsse bleiben feste Anker; normale duale Knoten dürfen übersprungen werden. Wasser wird als eigenes fein unterteiltes Band dargestellt; das Gelände wird entlang der Ufer lokal verfeinert. Beide Checkboxen vergleichen Varianten mit demselben Seed. Die Vorschau zeigt auch Layouts mit überschrittener Neigungsgrenze, dann ausdrücklich mit einer Warnung.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Geschwungene Verbindungen“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
 <p><strong>Fiktiver Prototyp:</strong> 45 % maximale Steigung für Landwege und Brückendecks; Wasser außerhalb der Brücken ist gesperrt. Die Prüfung betrachtet Wasser mit Brücken im Begehbarkeitsraster und die Dreiecksneigungen der begehbaren Oberflächen. Keine Wasserphysik, Erosion, Durchflussmengen, Unterführung-Navigation, Körperfreiraum oder RTS-Balance. Ein sich aufteilender Fluss ist hier ein stilisiertes Verteilernetz, kein vollständiges hydrologisches Modell.</p>
 <script>
@@ -44,7 +46,8 @@ function insideMap(x, y) {
   return y <= HEX_RADIUS * Math.sqrt(3) / 2 + 1e-8 && Math.sqrt(3) * x + y <= Math.sqrt(3) * HEX_RADIUS + 1e-8;
 }
 let current, mesh, gpu;
-let yaw = -.7, tilt = .65, zoom = 1;
+let startupSeed = typeof location === 'undefined' ? null : new URL(location.href).searchParams.get('seed');
+let yaw = -.7, tilt = .65, zoom = 1.6;
 function rng(seed) {
   return () => {
     seed = (seed + 0x6d2b79f5) | 0;
@@ -144,8 +147,8 @@ function buildCurves(plan) {
   }
   const river = plan.river;
   for (const e of river.dual.links) e.points = curvePath(plan, [river.dual.nodes[e.a], e.mid, river.dual.nodes[e.b]]);
-  river.curves = river.selected.map(e => curvePath(plan, [river.dual.nodes[e.a], e.mid, river.dual.nodes[e.b]])
-    .map(p => ({ ...p, height: waterHeight(river, p.source.x, p.source.y) })));
+  river.curves = river.paths.map(points => points.map(source => ({ ...warpPoint(plan, source), source,
+    height: waterHeight(river, source.x, source.y) })));
   river.outlines = river.segments.map(e => capsuleOutline(plan, e.a, e.b, RIVER_RADIUS));
   river.bridgeOutlines = river.segments.map(e => capsuleOutline(plan, e.a, e.b, BRIDGE_REACH));
   for (const b of river.bridges) {
@@ -199,6 +202,46 @@ function dualNetwork(regions) {
     links.push({ a: first, b: second, mid, key });
   }
   return { nodes, links };
+}
+// Route selection supplies topology only. Degree-two dual nodes are NOT curve
+// anchors: spans run directly between road crossings and shared junctions.
+function smoothRiverRoutes(dual, selected, direction, rounded) {
+  const outgoing = dual.nodes.map(() => []), incoming = new Map(), paths = [], cubics = [];
+  for (const e of selected) { outgoing[e.a].push(e); incoming.set(e.b, e); }
+  const tangent = e => {
+    const a = dual.nodes[e.a], b = dual.nodes[e.b], length = distance(a, b);
+    return { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
+  };
+  if (!rounded) return { paths: selected.map(e => [dual.nodes[e.a], e.mid, dual.nodes[e.b]]), cubics };
+  for (let node = 0; node < outgoing.length; node++) {
+    if (incoming.has(node) && outgoing[node].length === 1) continue;
+    for (const first of outgoing[node]) {
+      const chain = [first]; let last = first;
+      while (outgoing[last.b].length === 1) { last = outgoing[last.b][0]; chain.push(last); }
+      const anchors = [{ p: dual.nodes[node], t: tangent(incoming.get(node) || first) },
+        ...chain.map(e => ({ p: e.mid, t: tangent(e) })), { p: dual.nodes[last.b], t: tangent(last) }];
+      const points = [anchors[0].p];
+      for (let i = 1; i < anchors.length; i++) {
+        const start = anchors[i - 1], end = anchors[i], a = start.p, d = end.p,
+          length = distance(a, d), downstream = project(d, direction) - project(a, direction);
+        // Ordered control projections prove strict downstream motion for the
+        // entire cubic, not just its endpoints. Junction tangents are shared.
+        const h1 = Math.min(length * .45, downstream * .4 / project(start.t, direction)),
+          h2 = Math.min(length * .45, downstream * .4 / project(end.t, direction)),
+          b = { x: a.x + start.t.x * h1, y: a.y + start.t.y * h1 },
+          c = { x: d.x - end.t.x * h2, y: d.y - end.t.y * h2 };
+        cubics.push({ a, b, c, d });
+        const steps = Math.ceil(3 * Math.max(distance(a, b), distance(b, c), distance(c, d)) / .7);
+        for (let j = 1; j <= steps; j++) {
+          const t = j / steps, u = 1 - t;
+          points.push(j === steps ? d : { x: u ** 3 * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t ** 3 * d.x,
+            y: u ** 3 * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t ** 3 * d.y });
+        }
+      }
+      paths.push(points);
+    }
+  }
+  return { paths, cubics };
 }
 function planRiver(plan) {
   const random = rng(plan.seed ^ 0x52495652), dual = dualNetwork(plan.regions);
@@ -256,34 +299,61 @@ function planRiver(plan) {
     selected.push(...branch.links); branchNodes.add(branch.node);
     for (const e of branch.links) used.add(e.b);
   }
-  const segments = selected.flatMap(e => {
-    const p = dual.nodes[e.a], q = dual.nodes[e.b];
-    return [{ a: p, b: e.mid }, { a: e.mid, b: q }];
-  }).map(e => ({ ...e, dx: e.b.x - e.a.x, dy: e.b.y - e.a.y, length2: distance(e.a, e.b) ** 2 }));
+  const { paths, cubics } = smoothRiverRoutes(dual, selected, direction, plan.rounded);
+  const segments = paths.flatMap(points => points.slice(1).map((b, i) => ({ a: points[i], b })))
+    .map(e => ({ ...e, dx: e.b.x - e.a.x, dy: e.b.y - e.a.y, length2: distance(e.a, e.b) ** 2 }));
   const selectedByKey = new Map(selected.map(e => [e.key, e]));
   const bridges = plan.edges.filter(e => selectedByKey.has(edgeKey(e.a, e.b))).map(e => {
     const a = plan.regions[e.a], b = plan.regions[e.b], length = distance(a, b), crossing = selectedByKey.get(edgeKey(e.a, e.b));
     const ux = (b.x - a.x) / length, uy = (b.y - a.y) / length, halfWidth = ROAD_RADIUS + .5;
-    let halfLength = 0;
-    // Bound only the local crossing footprint, including its crossing angle.
-    // The actual deck is additionally clipped to the river + bank + buffer.
-    for (const p of [dual.nodes[crossing.a], dual.nodes[crossing.b]]) {
-      const dx = p.x - crossing.mid.x, dy = p.y - crossing.mid.y, legLength = Math.hypot(dx, dy),
-        across = Math.abs(ux * dy - uy * dx) / legLength, along = Math.abs(ux * dx + uy * dy) / legLength;
-      halfLength = Math.max(halfLength, (BRIDGE_REACH + halfWidth * along) / across);
-    }
+    // Recompute from the curve tangent at the retained crossing anchor.
+    const from = dual.nodes[crossing.a], to = dual.nodes[crossing.b], dx = to.x - from.x, dy = to.y - from.y,
+      tangentLength = Math.hypot(dx, dy), across = Math.abs(ux * dy - uy * dx) / tangentLength,
+      along = Math.abs(ux * dx + uy * dy) / tangentLength,
+      halfLength = (BRIDGE_REACH + halfWidth * along) / across + 2;
+    // The rectangle is only a bound; decks are clipped to the rounded corridor.
     return { key: crossing.key, center: crossing.mid, ux, uy, halfLength, halfWidth };
   });
   const exits = [...used].filter(i => dual.nodes[i].boundary && i !== source);
-  return { dual, direction, selected, segments, bridges, source: dual.nodes[source],
-    exits: exits.map(i => dual.nodes[i]), splits: branchNodes.size, phase: plan.phase };
+  return { dual, direction, selected, paths, cubics, segments, bridges, source: dual.nodes[source],
+    exits: exits.map(i => dual.nodes[i]), splits: branchNodes.size, phase: plan.phase,
+    spatial: riverSpatialTree(segments) };
+}
+function riverSpatialTree(segments) {
+  const node = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const e of segments) {
+    node.minX = Math.min(node.minX, e.a.x, e.b.x); node.minY = Math.min(node.minY, e.a.y, e.b.y);
+    node.maxX = Math.max(node.maxX, e.a.x, e.b.x); node.maxY = Math.max(node.maxY, e.a.y, e.b.y);
+  }
+  if (segments.length <= 8) node.segments = segments;
+  else {
+    const axis = node.maxX - node.minX > node.maxY - node.minY ? 'x' : 'y',
+      sorted = [...segments].sort((a, b) => a.a[axis] + a.b[axis] - b.a[axis] - b.b[axis]), mid = sorted.length >> 1;
+    node.left = riverSpatialTree(sorted.slice(0, mid)); node.right = riverSpatialTree(sorted.slice(mid));
+  }
+  return node;
+}
+function riverBoxGap(node, x, y) {
+  const dx = Math.max(node.minX - x, 0, x - node.maxX), dy = Math.max(node.minY - y, 0, y - node.maxY);
+  return dx * dx + dy * dy;
 }
 function riverDistance(river, x, y) {
   let squared = Infinity;
-  for (const e of river.segments) {
-    const dx = x - e.a.x, dy = y - e.a.y,
-      t = Math.max(0, Math.min(1, (dx * e.dx + dy * e.dy) / e.length2));
-    squared = Math.min(squared, (dx - t * e.dx) ** 2 + (dy - t * e.dy) ** 2);
+  const stack = [river.spatial];
+  while (stack.length) {
+    const node = stack.pop();
+    if (riverBoxGap(node, x, y) >= squared) continue;
+    if (!node.segments) {
+      // Visit the nearer child first; bounding boxes prune the distant curves.
+      if (riverBoxGap(node.left, x, y) < riverBoxGap(node.right, x, y)) stack.push(node.right, node.left);
+      else stack.push(node.left, node.right);
+      continue;
+    }
+    for (const e of node.segments) {
+      const dx = x - e.a.x, dy = y - e.a.y,
+        t = Math.max(0, Math.min(1, (dx * e.dx + dy * e.dy) / e.length2));
+      squared = Math.min(squared, (dx - t * e.dx) ** 2 + (dy - t * e.dy) ** 2);
+    }
   }
   return Math.sqrt(squared);
 }
@@ -337,7 +407,7 @@ function fitRiverHeights(plan, gaps) {
     if (!changed) break;
   }
 }
-function makePlan(seed, curved = true) {
+function makePlan(seed, curved = true, rounded = true) {
   const random = rng(seed), regions = [], edges = [];
   // Axial lattice: center + six inner + twelve outer regions, with bounded jitter.
   // All footprints retain a margin to the convex hex boundary.
@@ -393,7 +463,7 @@ function makePlan(seed, curved = true) {
   const angle = random() * Math.PI * 2, phase = random() * Math.PI * 2;
   const waves = Array.from({ length: 7 }, () => ({ angle: random() * Math.PI * 2,
     scale: 9 + random() * 24, phase: random() * Math.PI * 2, amplitude: 3 + random() * 6 }));
-  const plan = { seed, regions, edges, angle, phase, waves, warp: makeWarp(seed, curved) };
+  const plan = { seed, regions, edges, angle, phase, waves, rounded, warp: makeWarp(seed, curved) };
   plan.river = planRiver(plan);
   fitRiverHeights(plan, gaps);
   buildCurves(plan);
@@ -416,13 +486,16 @@ function sampleLand(plan, x, y) {
   const base = riverDatum(plan.river, x, y);
   let noise = 0;
   for (const w of plan.waves) noise += w.amplitude * Math.sin((x * Math.cos(w.angle) + y * Math.sin(w.angle)) / w.scale + w.phase);
-  return { planned: insideMap(x, y) && d <= 0, clearance: d,
+  return { planned: insideMap(x, y) && d <= 0, clearance: d, riverGap,
     height: base + offset + noise * smooth((d - NOISE_MARGIN) / 24) * smooth(anchorGap / 16) };
 }
 function sample(plan, x, y) {
   const land = sampleLand(plan, x, y), river = plan.river,
-    gap = riverDistance(river, x, y), water = waterHeight(river, x, y), bridge = bridgeAt(river, x, y, gap);
-  const influence = 1 - smooth((gap - RIVER_RADIUS) / BANK_WIDTH);
+    gap = land.riverGap, water = waterHeight(river, x, y), bridge = bridgeAt(river, x, y, gap);
+  // The blue band's edge is the actual waterline, not a submerged bank.
+  const totalDepth = WATER_DROP + BED_DEPTH;
+  const influence = gap <= RIVER_RADIUS ? 1 - BED_DEPTH / totalDepth * smooth(gap / RIVER_RADIUS) :
+    WATER_DROP / totalDepth * (1 - smooth((gap - RIVER_RADIUS) / BANK_WIDTH));
   return { ...land, walkHeight: land.height + (bridge ? .08 : 0), deckHeight: land.height + .08,
     bridge, riverGap: gap, water,
     planned: land.planned && (gap > RIVER_RADIUS || bridge),
@@ -472,7 +545,7 @@ function drawNetwork(ctx, plan, filled) {
   ctx.fillStyle = '#39adf0';
   for (const outline of plan.river.outlines) { polygonPath(ctx, outline); ctx.fill(); }
   ctx.strokeStyle = '#d4f2ff'; ctx.lineWidth = .7;
-  for (const points of plan.river.curves) for (let i = 3; i < points.length; i += 6) {
+  for (const points of plan.river.curves) for (let i = 12; i < points.length; i += 26) {
     const a = points[i - 1], b = points[i], length = distance(a, b), ux = (b.x - a.x) / length, uy = (b.y - a.y) / length;
     ctx.beginPath(); ctx.moveTo(b.x - ux * 3 - uy * 2, b.y - uy * 3 + ux * 2); ctx.lineTo(b.x, b.y);
     ctx.lineTo(b.x - ux * 3 + uy * 2, b.y - uy * 3 - ux * 2); ctx.stroke();
@@ -497,26 +570,112 @@ function drawNetwork(ctx, plan, filled) {
   for (const exit of plan.river.exits) { const p = warpPoint(plan, exit); ctx.fillText('A', p.x, p.y); }
   ctx.restore();
 }
+// Conforming local refinement: shared edge midpoints also split neighboring
+// triangles. No hanging vertices/cracks, and no global high-resolution raster.
+function refineRiverTerrain(plan, vertices, faces, addVertex) {
+  for (let level = 0; level < 2; level++) {
+    const marked = new Set(), mids = new Map();
+    for (const face of faces) {
+      const p = face.map(i => vertices[i]), x = p.reduce((s, v) => s + v.sourceX, 0) / 3 + SIZE / 2,
+        y = p.reduce((s, v) => s + v.sourceY, 0) / 3 + SIZE / 2;
+      if (riverDistance(plan.river, x, y) > RIVER_SUPPORT + 3) continue;
+      for (let i = 0; i < 3; i++) marked.add(edgeKey(face[i], face[(i + 1) % 3]));
+    }
+    const midpoint = (a, b) => {
+      const key = edgeKey(a, b);
+      if (!marked.has(key)) return undefined;
+      if (!mids.has(key)) mids.set(key, addVertex((vertices[a].sourceX + vertices[b].sourceX) / 2,
+        (vertices[a].sourceY + vertices[b].sourceY) / 2));
+      return mids.get(key);
+    };
+    const refined = [];
+    for (const face of faces) {
+      let [a, b, c] = face, ab = midpoint(a, b), bc = midpoint(b, c), ca = midpoint(c, a);
+      const count = [ab, bc, ca].filter(i => i !== undefined).length;
+      if (!count) { refined.push(face); continue; }
+      if (count === 3) { refined.push([a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]); continue; }
+      // Rotate to put the single split at AB, or the two splits at AB/BC.
+      while (ab === undefined || (count === 2 && bc === undefined)) {
+        [a, b, c] = [b, c, a]; [ab, bc, ca] = [bc, ca, ab];
+      }
+      if (count === 1) refined.push([a, ab, c], [ab, b, c]);
+      else refined.push([b, bc, ab], [a, ab, c], [ab, bc, c]);
+    }
+    faces = refined;
+  }
+  return faces;
+}
+function clipWaterToMap(points) {
+  // Clip in reference space; the shared warp then attaches water to the border.
+  for (let i = 0; i < 6 && points.length; i++) {
+    const angle = i * Math.PI / 3, next = (i + 1) * Math.PI / 3,
+      a = { x: SIZE / 2 + HEX_RADIUS * Math.cos(angle), y: SIZE / 2 + HEX_RADIUS * Math.sin(angle) },
+      dx = HEX_RADIUS * (Math.cos(next) - Math.cos(angle)), dy = HEX_RADIUS * (Math.sin(next) - Math.sin(angle)),
+      side = p => dx * (p.y - a.y) - dy * (p.x - a.x), clipped = [];
+    for (let j = 0; j < points.length; j++) {
+      const p = points[j], q = points[(j + 1) % points.length], u = side(p), v = side(q);
+      if (u >= 0) clipped.push(p);
+      if ((u >= 0) !== (v >= 0)) {
+        const t = u / (u - v); clipped.push({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t });
+      }
+    }
+    points = clipped;
+  }
+  return points;
+}
+function addWaterBand(plan, vertices, triangles) {
+  // A union of finely sampled segment capsules represents the same distance
+  // corridor used by carving/navigation, independent of terrain face colors.
+  for (const outline of plan.river.outlines) {
+    let points = clipWaterToMap(outline.map(p => p.source));
+    if (points.length < 3) continue;
+    const area = points.reduce((sum, p, i) => {
+      const q = points[(i + 1) % points.length]; return sum + p.x * q.y - p.y * q.x;
+    }, 0);
+    if (area < 0) points = points.reverse();
+    const center = { x: points.reduce((s, p) => s + p.x, 0) / points.length,
+      y: points.reduce((s, p) => s + p.y, 0) / points.length }, start = vertices.length;
+    for (const source of [center, ...points]) {
+      const p = warpPoint(plan, source), height = waterHeight(plan.river, source.x, source.y);
+      vertices.push({ x: p.x - SIZE / 2, y: p.y - SIZE / 2, sourceX: source.x - SIZE / 2,
+        sourceY: source.y - SIZE / 2, z: height - 40, waterZ: height - 40, walkZ: height - 40, height });
+    }
+    for (let i = 0; i < points.length; i++) {
+      const indices = [start, start + i + 1, start + (i + 1) % points.length + 1],
+        [a, b, c] = indices.map(i => vertices[i]), area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      if (Math.abs(area) < 1e-9) continue;
+      if (area < 0) throw Error('Wasserband besitzt ein gefaltetes Dreieck.');
+      triangles.push({ indices, light: 1, height: vertices[start].height, planned: false, material: 1 });
+    }
+  }
+}
 // Actual 3D vertices sampled from the same field; no new random draws.
 function makeMesh(plan) {
-  const n = 64, vertices = [], triangles = [], lookup = new Map();
+  const n = 64, vertices = [], triangles = [], lookup = new Map(), baseFaces = [];
   let maxPlayableGrade = 0;
+  const addVertex = (x, y) => {
+    const s = sample(plan, x + SIZE / 2, y + SIZE / 2), world = warpPoint(plan, { x: x + SIZE / 2, y: y + SIZE / 2 });
+    vertices.push({ x: world.x - SIZE / 2, y: world.y - SIZE / 2, sourceX: x, sourceY: y,
+      z: s.height - 40, height: s.height, planned: s.planned, walkZ: s.deckHeight - 40, waterZ: s.water - 40 });
+    return vertices.length - 1;
+  };
   // Reference triangles are transported together with the curved border.
   // Gradients below use actual warped XY coordinates, not the reference grid.
   for (let r = -n; r <= n; r++) for (let q = -n; q <= n; q++) {
     if (Math.abs(q + r) > n) continue;
-    const x = HEX_RADIUS / n * (q + r / 2), y = HEX_RADIUS / n * Math.sqrt(3) / 2 * r,
-      s = sample(plan, x + SIZE / 2, y + SIZE / 2);
-    lookup.set(`${q},${r}`, vertices.length);
-    const world = warpPoint(plan, { x: x + SIZE / 2, y: y + SIZE / 2 });
-    vertices.push({ x: world.x - SIZE / 2, y: world.y - SIZE / 2, sourceX: x, sourceY: y,
-      z: s.height - 40, height: s.height, planned: s.planned, walkZ: s.deckHeight - 40, waterZ: s.water - 40 });
+    const x = HEX_RADIUS / n * (q + r / 2), y = HEX_RADIUS / n * Math.sqrt(3) / 2 * r;
+    lookup.set(`${q},${r}`, addVertex(x, y));
   }
   for (let r = -n; r < n; r++) for (let q = -n; q < n; q++) {
     const a = lookup.get(`${q},${r}`), b = lookup.get(`${q + 1},${r}`),
       d = lookup.get(`${q},${r + 1}`), c = lookup.get(`${q + 1},${r + 1}`);
     for (const indices of [[a, b, d], [b, c, d]]) {
       if (indices.some(i => i === undefined)) continue;
+      baseFaces.push(indices);
+    }
+  }
+  const faces = refineRiverTerrain(plan, vertices, baseFaces, addVertex);
+  for (const indices of faces) {
       const [p, q, r] = indices.map(i => vertices[i]);
       const ux = q.x - p.x, uy = q.y - p.y, uz = q.z - p.z,
         vx = r.x - p.x, vy = r.y - p.y, vz = r.z - p.z;
@@ -527,7 +686,6 @@ function makeMesh(plan) {
       const center = sample(plan, (p.sourceX + q.sourceX + r.sourceX) / 3 + SIZE / 2,
         (p.sourceY + q.sourceY + r.sourceY) / 3 + SIZE / 2);
       triangles.push({ indices, light, height: center.height, planned: center.planned, material: 0 });
-      if (center.riverGap <= RIVER_RADIUS) triangles.push({ indices, light: 1, height: center.water, planned: false, material: 1 });
       if (center.bridge) triangles.push({ indices, light, height: center.walkHeight, planned: true, material: 2 });
       // Audit the surface actually used for walking, not the bed below a bridge.
       if (center.planned) {
@@ -535,11 +693,12 @@ function makeMesh(plan) {
           walkNX = uy * zv - zu * vy, walkNY = zu * vx - ux * zv;
         maxPlayableGrade = Math.max(maxPlayableGrade, Math.hypot(walkNX, walkNY) / Math.abs(nz));
       }
-    }
   }
+  addWaterBand(plan, vertices, triangles);
   // Test actual land/deck faces; riverbanks outside the route may be steep.
-  if (maxPlayableGrade > MAX_GRADE + 1e-6) throw Error('Spielraum überschreitet die fiktive Neigungsgrenze.');
-  return { vertices, triangles, maxPlayableGrade };
+  // Keep provisional layouts visible; violations are explicitly flagged below.
+  // The standalone CPU check still rejects grades above the limit.
+  return { vertices, triangles, maxPlayableGrade, terrainFaceCount: faces.length, baseFaceCount: baseFaces.length };
 }
 function createGPU() {
   const gl = document.getElementById('height').getContext('webgl', { antialias: true, alpha: false });
@@ -644,18 +803,22 @@ function render() {
   const valid = checkConnected(mask, AUDIT_SIZE), river = plan.river;
   const downhill = river.curves.every(points => points.every((p, i) => !i || points[i - 1].height > p.height));
   if (!valid || !downhill) throw Error('Fluss-/Begehbarkeitsprüfung fehlgeschlagen.');
-  document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length} Brücken · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(mesh.maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %`;
+  document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length} Brücken · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(mesh.maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %${mesh.maxPlayableGrade > MAX_GRADE ? ' · WARNUNG: Neigungsgrenze überschritten – vorläufige Vorschau' : ''}`;
 }
 function generate() {
   const seeds = new Uint32Array(1); crypto.getRandomValues(seeds);
-  try { current = makePlan(seeds[0], document.getElementById('curves').checked); render(); }
+  if (startupSeed !== null && /^\d+$/.test(startupSeed) && Number(startupSeed) <= 0xffffffff) seeds[0] = Number(startupSeed);
+  startupSeed = null;
+  try { current = makePlan(seeds[0], document.getElementById('curves').checked,
+    document.getElementById('rounded').checked); render(); }
   catch (error) { document.getElementById('status').textContent = `Seed ${seeds[0]}: ${error.message}`; console.error(error); }
 }
 document.getElementById('generate').addEventListener('click', generate);
 document.getElementById('overlay').addEventListener('change', draw3D);
 document.getElementById('dual').addEventListener('change', drawPlanning);
-document.getElementById('curves').addEventListener('change', event => {
-  try { current = makePlan(current.seed, event.target.checked); render(); }
+for (const id of ['curves', 'rounded']) document.getElementById(id).addEventListener('change', () => {
+  try { current = makePlan(current.seed, document.getElementById('curves').checked,
+    document.getElementById('rounded').checked); render(); }
   catch (error) { document.getElementById('status').textContent = error.message; console.error(error); }
 });
 const view = document.getElementById('height');
@@ -695,7 +858,7 @@ view.addEventListener('wheel', event => {
   const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? PIXELS : 1);
   setZoom(zoom * Math.exp(-Math.max(-200, Math.min(200, delta)) * .002));
 }, { passive: false });
-view.addEventListener('dblclick', () => { yaw = -.7; tilt = .65; setZoom(1); });
+view.addEventListener('dblclick', () => { yaw = -.7; tilt = .65; setZoom(1.6); });
 generate();
 </script>
 </html>
