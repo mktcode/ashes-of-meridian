@@ -89,13 +89,13 @@ const outpostMethods = {
     }
     if(!out.warned && s.time>=out.nextWave-OUTPOST_RULES.warning) {
       out.entrance=this.outpostEntrance();out.warned=true;
-      this.emit('alert',{text:`Wave ${out.wave+1} approaching in ${OUTPOST_RULES.warning}s.`,danger:true,...(out.entrance || {})});
+      this.emit('alert',{text:`Wave ${out.wave+1} approaching in ${OUTPOST_RULES.warning}s.`,danger:true,outpostWave:true,...(out.entrance || {})});
     }
     if(s.time>=out.nextWave) {
       out.wave++;out.remaining=Math.min(OUTPOST_RULES.maxWaveUnits,4+out.wave*3+s.depth);
       out.spawned=0;out.nextSpawn=s.time;out.entrance ??=this.outpostEntrance();
       out.nextWave=s.time+OUTPOST_RULES.interval;out.warned=false;
-      this.emit('alert',{text:`Wave ${out.wave} — defend the outpost!`,danger:true,...(out.entrance || {})});
+      this.emit('alert',{text:`Wave ${out.wave} — defend the outpost!`,danger:true,outpostWave:true,...(out.entrance || {})});
     }
     if(!out.remaining || !out.entrance || s.time<out.nextSpawn)return;
     out.nextSpawn=s.time+1;

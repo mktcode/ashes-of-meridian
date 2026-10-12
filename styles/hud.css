@@ -116,10 +116,14 @@
 #evacuationGlow { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, #f8d43b08 25%, #ffc12f38 100%); box-shadow: inset 0 0 70px #ffd24c38; z-index: 3 }
 #worldViewport.evacuating #evacuationGlow { opacity: 1; animation: evacuation-pulse 2.4s ease-in-out infinite }
 @keyframes evacuation-pulse { 0%, 100% { opacity: .38 } 50% { opacity: 1 } }
-#outpostStatus { max-width: 480px; padding: 8px 10px; border: 1px solid #8db9c266; background: #092331ed; color: #d6e6e8; font: 11px var(--mono); pointer-events: auto }
-#outpostStatus strong, #outpostStatus small { display: block }
+#outpostStatus { display: flex; align-items: baseline; gap: 16px; max-width: 480px; color: #d6e6e8; font: 12px var(--mono); text-shadow: 0 1px 3px #000; pointer-events: none }
+#outpostStatus .wave-timer { font-variant-numeric: tabular-nums }
+#outpostStatus.wave-incoming:not(.evacuation-status) { color: #ff7777; animation: wave-incoming-glow .8s ease-in-out infinite alternate }
+@keyframes wave-incoming-glow { from { text-shadow: 0 0 3px #ff343488, 0 1px 3px #000 } to { text-shadow: 0 0 10px #ff3434, 0 0 20px #ff343488 } }
+@media (prefers-reduced-motion: reduce) { #outpostStatus.wave-incoming { animation: none; text-shadow: 0 0 8px #ff3434 } }
+#outpostStatus.evacuation-status { display: block; padding: 8px 10px; border: 1px solid #edc64d; color: #ffe595; background: #342d12ed; pointer-events: auto }
+#outpostStatus.evacuation-status strong, #outpostStatus small { display: block }
 #outpostStatus small { margin-top: 4px; line-height: 1.5 }
-#outpostStatus.evacuation-status { border-color: #edc64d; color: #ffe595; background: #342d12ed }
 .evacuation-upgrades { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px }
 .evacuation-upgrades:empty { display: none }
 .evacuation-upgrades button { min-height: 44px; padding: 4px 8px; border: 1px solid #dfb94388; color: #ffe595; background: #342d12; font: 10px var(--mono) }

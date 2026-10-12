@@ -389,7 +389,7 @@ interface GameEventMap {
   start: { restored?: boolean };
   toast: string;
   radio: string;
-  alert: string | ({ text: string; danger?: boolean } & Partial<Position>);
+  alert: string | ({ text: string; danger?: boolean; outpostWave?: boolean } & Partial<Position>);
   order: { type: CommandOrder['type']; count: number } & Partial<Position>;
   result: BattleResult;
   shot: Position & { heavy: boolean };

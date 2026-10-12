@@ -190,6 +190,25 @@ test('retirement survives reload without duplicate rescue and rejects unknown ar
   data.set('meridian.profile.v2',JSON.stringify(record));assert.equal(service.loadExpedition(),null);
 });
 
+test('HUD holds the wave timer at zero during arrivals and suppresses duplicate wave alerts',()=>{
+  const {g,rules,nodes}=fixture();
+  const ui=Object.assign(Object.create(rules.MeridianUI.prototype),{game:g,activeWorldStage:1,outpostMarkup:''});
+  ui.updateOutpostHUD();
+  assert.equal(nodes.get('outpostStatus').classList.contains('wave-incoming'),false);
+  g.s.outpost.wave=1;g.s.outpost.nextWave=360;g.s.time=180;
+  ui.updateOutpostHUD();
+  assert.equal(nodes.get('outpostStatus').classList.contains('wave-incoming'),true);
+  assert.match(nodes.get('outpostStatus').innerHTML,/>0s</);
+  g.s.time=187;g.s.outpost.remaining=2;ui.updateOutpostHUD();
+  assert.equal(nodes.get('outpostStatus').classList.contains('wave-incoming'),true);
+  assert.match(nodes.get('outpostStatus').innerHTML,/>0s</);
+  g.s.outpost.remaining=0;ui.updateOutpostHUD();
+  assert.equal(nodes.get('outpostStatus').classList.contains('wave-incoming'),false);
+  assert.match(nodes.get('outpostStatus').innerHTML,/>173s</);
+  // The DOM stub cannot create alerts: wave events must return before that path.
+  ui.alert({text:'Wave arriving',danger:true,outpostWave:true});
+});
+
 test('HUD highlights evacuation, reports rescued ranks and clears the effect outside the outpost',()=>{
   const {g,hq,rules,nodes,run}=fixture();
   const ui=Object.assign(Object.create(rules.MeridianUI.prototype),{game:g,activeWorldStage:1,outpostMarkup:'',paused:false,expedition:run});

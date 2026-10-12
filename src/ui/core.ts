@@ -264,8 +264,10 @@
         $('worldViewport').classList.toggle('evacuating',!!evac && !out?.finished);
         const el=$('outpostStatus');el.classList.toggle('hidden',!out);
         if(!out || !s)return;
+        const arriving=out.wave>0 && (out.remaining>0 || s.time<out.nextWave-OUTPOST_RULES.interval+6);
+        el.classList.toggle('wave-incoming',arriving);
         const html=evac?`<strong>EVACUATION · ${Math.max(0,Math.ceil(evac.until-s.time))}s${this.paused?' · PAUSED':''}</strong><small>${evac.units.length} units secured · ${evac.upgrades.length}/3 upgrades · Select units, then tap/right-click the evacuation HQ</small><div class="evacuation-upgrades">${evac.upgrades.map(u=>`<button data-action="evacuateUpgrade:${u.id}" aria-label="Release ${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} evacuation selection">${esc(CIVILIZATION_UPGRADES[u.upgrade].name)} · R${u.level} ×</button>`).join('')}</div>`:
-          `<strong>OUTPOST · WAVE ${out.wave}${out.remaining?' · INCOMING':''}</strong><small>Next wave in ${Math.max(0,Math.ceil(out.nextWave-s.time))}s · Finite resources · Evacuate at your Command Center</small>`;
+          `<strong>WAVE ${out.wave}</strong><span class="wave-timer">${arriving?0:Math.max(0,Math.ceil(out.nextWave-s.time))}s</span>`;
         if(this.outpostMarkup!==html){el.innerHTML=html;this.outpostMarkup=html;}
         el.classList.toggle('evacuation-status',!!evac);
       }
@@ -281,6 +283,7 @@
         this.toastUntil = performance.now() + 3500;
       }
       alert(data: GameEventMap['alert']) {
+        if(typeof data!=='string' && data.outpostWave)return;
         let d = typeof data === 'string' ? { text: data } : data,
           el = document.createElement('div');
         el.className = 'alert' + (d.danger ? ' danger' : '');
