@@ -128,6 +128,26 @@ test('running snapshot restores exact CPU state, RNG, fog and consumed cargo', (
   game.snapshotSafe = false; assert.throws(() => game.snapshotBattle(), /completed/); game.snapshotSafe = true;
 });
 
+test('corrected group move intent round-trips and rejects malformed positions', () => {
+  const run = savedBattle(), worker = run.battle.state.entities.find(e => e.kind === 'unit' && e.team === 0);
+  worker.order = { type: 'move', x: worker.x + 3, z: worker.z };
+  worker.formationGoal = { x: worker.x + 2, z: worker.z };
+  const h = setup();
+  assert.equal(put(h, run), true);
+  const loaded = setup(h.data).service.loadExpedition();
+  assert.deepEqual(json(loaded), run);
+  const restored = new fixture.Game(json(defaults));
+  restored.restoreBattle(loaded);
+  assert.deepEqual(json(restored.get(worker.id).formationGoal), worker.formationGoal);
+  assert.deepEqual(json(restored.snapshotBattle()), run.battle);
+  for (const invalid of [{ x: 'invalid', z: 0 }, { x: 0 }, null]) {
+    const damaged = json(run), entity = damaged.battle.state.entities.find(e => e.id === worker.id);
+    entity.formationGoal = invalid;
+    const bad = setup(); put(bad, damaged);
+    assert.equal(setup(bad.data).service.loadExpedition(), null);
+  }
+});
+
 test('supply tutorial goals round-trip in running saves and reject unknown goals', () => {
   for (const step of ['trainRifle', 'buildDepot']) {
     const run = savedBattle(), h = setup();

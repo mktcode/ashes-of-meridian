@@ -188,6 +188,178 @@ test('production exit still ignores only its own building and keeps its reservat
   assert.ok(Math.hypot(w.x - end.x, w.z - end.z) < .001);
 });
 
+// Group destinations use a tiny authored arena, not procedural starts or AI matches.
+function groupArena() {
+  const context = loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world', 'effects', ...SIMULATION_SCRIPTS], { scripts });
+  const { Game, World, Surface, slots, party, scale } = vm.runInContext(
+    '({Game:MeridianGame,World:Battlefield,Surface:BattlefieldSurface,slots:formationSlots,party:createParty,scale:UNIT_BODY_SCALE})', context);
+  const game = new Game({ upgrades: {} }), gridSize = 32, extent = 40, cellSize = 2.5;
+  game.world = Object.assign(Object.create(World.prototype), {
+    gridSize, extent, cellSize, staticGrid: new Uint8Array(gridSize * gridSize),
+    blocked: new Uint8Array(gridSize * gridSize), pathVersion: 0, viewTeam: 0,
+    surface: new Surface(extent, cellSize, () => 0)
+  });
+  game.s = { entities: [], nextId: 1, time: 0, seed: 1409, fields: [], rules: { kind: 'single-player', completed: false },
+    parties: [party(0, 0, {}, {}), party(1, 1, {}, {})] };
+  return { game, slots, scale };
+}
+function groupUnits(game, types = ['rifle', 'rifle', 'rifle', 'rifle']) {
+  return types.map((type, i) => game.spawn('unit', type, -20 + i % 2 * 5, -10 + Math.floor(i / 2) * 5, 0, 0));
+}
+function orderGroup(game, units, p, type = 'move') {
+  assert.equal(game.command(units.map(e => e.id), { type, ...p }, 0, false), true);
+}
+function assertGroupGoalsFit(game, units, scale) {
+  const departing = new Set(units);
+  for (const e of units) {
+    assert.ok(game.unitFits({ type: e.type, size: e.size }, e.order.x, e.order.z, departing), `invalid goal for ${e.id}`);
+    for (const other of units) if (other !== e && !!(['air', 'destroyer'].includes(other.type)) === !!(['air', 'destroyer'].includes(e.type)))
+      assert.ok(Math.hypot(e.order.x-other.order.x, e.order.z-other.order.z) >= (e.size+other.size)*scale-1e-9,
+        `overlapping goals ${e.id}/${other.id}`);
+  }
+}
+
+function finishGroupMoves(game, units) {
+  const targets = units.map(e => ({ x: e.order.x, z: e.order.z })), arrivalLimits = units.map(() => 1);
+  for (let i = 0; i < 600 && units.some(e => e.order.type !== 'idle'); i++) {
+    game.s.time += .05;
+    units.forEach((e, j) => {
+      if (e.order.type !== 'move' || !game.move(e, e.order, .05, 1)) return;
+      // Ordinary moves already allow stopping beside a temporarily occupied goal.
+      // Preserve that contract, but require actual occupancy for the extra tolerance.
+      if (Math.hypot(e.x-targets[j].x, e.z-targets[j].z) >= 1) {
+        assert.equal(game.unitFits(e, targets[j].x, targets[j].z), false);
+        arrivalLimits[j] += e.size * 1.4 * 2;
+      }
+      game.finishOrder(e);
+    });
+    for (const e of units) assert.ok(game.unitFits(e, e.x, e.z), `invalid moving body ${e.id}`);
+  }
+  assert.ok(units.every(e => e.order.type === 'idle'), JSON.stringify(units));
+  units.forEach((e, i) => assert.ok(Math.hypot(e.x-targets[i].x, e.z-targets[i].z) < arrivalLimits[i]));
+  assert.ok(units.every(e => e.formationGoal === undefined));
+}
+
+test('group moves preserve free formation slots, departing bodies and navigation RNG', () => {
+  const { game, slots, scale } = groupArena(), units = groupUnits(game), goal = { x: 12, z: 8 },
+    expected = pathValue(slots(units, goal));
+  // Already standing at the requested formation is not a reason to move its slots.
+  units.forEach((e, i) => Object.assign(e, expected[i]));
+  game.random = () => { throw Error('Goal correction must not consume RNG'); };
+  game.world.path = () => { throw Error('Goal correction must not start A*'); };
+  orderGroup(game, units, goal);
+  assert.deepEqual(units.map(e => ({ x: e.order.x, z: e.order.z })), expected);
+  assert.ok(units.every(e => e.formationGoal === undefined));
+  assertGroupGoalsFit(game, units, scale);
+  game.stepping = true;
+  orderGroup(game, units, goal);
+  assert.deepEqual(units.map(e => ({ x: e.order.x, z: e.order.z })), expected, 'indexed probes also ignore departing centers');
+  game.unitCollisionIndex.clear(); game.stepping = false;
+  finishGroupMoves(game, units);
+});
+
+test('group goal correction reserves later valid slots before replacing an occupied slot', () => {
+  const { game, slots, scale } = groupArena(), units = groupUnits(game), goal = { x: 12, z: 8 },
+    expected = pathValue(slots(units, goal));
+  const blocker = game.spawn('unit', 'rifle', expected[0].x, expected[0].z, 0, 0);
+  game.setOrder(blocker, { type: 'hold' });
+  assert.equal(game.unitFits(units[0], expected[0].x, expected[0].z), false, 'uncorrected slot is occupied');
+  orderGroup(game, units, goal);
+  assert.notDeepEqual({ x: units[0].order.x, z: units[0].order.z }, expected[0]);
+  for (let i = 1; i < units.length; i++) assert.deepEqual({ x: units[i].order.x, z: units[i].order.z }, expected[i]);
+  assert.deepEqual(pathValue(units[0].formationGoal), expected[0]);
+  assertGroupGoalsFit(game, units, scale);
+  finishGroupMoves(game, units);
+  assert.deepEqual([blocker.x, blocker.z, blocker.order.type], [expected[0].x, expected[0].z, 'hold']);
+});
+
+test('group goals beside a building are fitted and complete their ordinary move orders', () => {
+  const { game, scale } = groupArena(), units = groupUnits(game), goal = { x: 10, z: 0 };
+  game.spawnBuilding('depot', 12.5, 0, 0, 0); game.world.rebuild(game.s.entities);
+  orderGroup(game, units, goal);
+  assert.ok(units.some(e => e.formationGoal), 'fixture actually requires a building correction');
+  assertGroupGoalsFit(game, units, scale);
+  finishGroupMoves(game, units);
+});
+
+test('group attack-move fits mixed body radii and flight layers without changing worker orders', () => {
+  const { game, slots, scale } = groupArena(), units = groupUnits(game, ['worker', 'tank', 'rifle', 'air']),
+    goal = { x: 12, z: 8 }, expected = slots(units, goal);
+  const airBlocker = game.spawn('unit', 'air', expected[3].x, expected[3].z, 0, 0);
+  game.setOrder(airBlocker, { type: 'hold' });
+  game.spawnBuilding('depot', expected[1].x, expected[1].z, 0, 0); game.world.rebuild(game.s.entities);
+  orderGroup(game, units, goal, 'attackMove');
+  assert.deepEqual(units.map(e => e.order.type), ['move', 'attackMove', 'attackMove', 'attackMove']);
+  assertGroupGoalsFit(game, units, scale);
+  assert.ok(units[1].formationGoal && units[3].formationGoal);
+  assert.deepEqual(pathValue(units[0].formationGoal), pathValue(expected[0]), 'worker retains its original slot intent');
+});
+
+test('group correction respects selected production exit reservations', () => {
+  const { game, slots, scale } = groupArena(), units = groupUnits(game), goal = { x: 12, z: 8 },
+    expected = slots(units, goal);
+  units[3].exit = { building: 999, ...expected[0], length: 20 };
+  orderGroup(game, units, goal);
+  assert.ok(units[0].formationGoal, 'departure does not remove the exit reservation');
+  assertGroupGoalsFit(game, units, scale);
+});
+
+test('group goal correction respects cliff footprints and map edges', () => {
+  const { game, slots, scale } = groupArena(), units = groupUnits(game, ['tank', 'rifle']),
+    goal = { x: 34.5, z: 8 }, expected = slots(units, goal), world = game.world;
+  world.surface.cliffs[world.idx(expected[0].x, expected[0].z)] = 1;
+  orderGroup(game, units, goal);
+  assert.ok(units.every(e => e.formationGoal), 'one goal is a cliff and the other exceeds the movement boundary');
+  assertGroupGoalsFit(game, units, scale);
+  assert.ok(units.every(e => Math.abs(e.order.x) <= world.extent-5));
+});
+
+test('fully blocked group goals keep their requested slots after a bounded local search', () => {
+  const { game, slots } = groupArena(), units = groupUnits(game), goal = { x: 12, z: 8 },
+    expected = pathValue(slots(units, goal)), grid = game.world.blocked;
+  grid.fill(1);
+  let probes = 0;
+  const fits = game.unitFits;
+  game.unitFits = function (...args) { probes++; return fits.apply(this, args); };
+  orderGroup(game, units, goal);
+  assert.equal(probes, units.length * 136, 'one original slot plus at most 135 nearby candidates per unit');
+  assert.deepEqual(units.map(e => ({ x: e.order.x, z: e.order.z })), expected);
+  assert.ok(units.every(e => !e.formationGoal));
+  assert.strictEqual(game.world.blocked, grid); assert.ok(grid.every(v => v === 1));
+});
+
+test('solo and non-movement commands do not acquire group corrections', () => {
+  const { game } = groupArena(), units = groupUnits(game), goal = { x: 12, z: 8 };
+  game.world.blocked.fill(1);
+  orderGroup(game, [units[0]], goal);
+  assert.deepEqual({ x: units[0].order.x, z: units[0].order.z }, goal);
+  orderGroup(game, units, goal, 'guard');
+  assert.ok(units.every(e => e.order.type === 'guard' && e.order.x === goal.x && e.order.z === goal.z && !e.formationGoal));
+});
+
+for (const attack of [false, true]) test(`AI compares corrected group intent without repeated resets, restored intent and partial renewals: ${attack}`, () => {
+  const { game } = groupArena(), units = groupUnits(game), goal = { x: 10, z: 0 };
+  game.spawnBuilding('depot', 12.5, 0, 0, 0); game.world.rebuild(game.s.entities);
+  game.aiOrder(0, units, goal, attack, .1);
+  assert.ok(units.some(e => e.formationGoal));
+  units.find(e => e.formationGoal).pathStatus = 'unreachable';
+  const orders = units.map(e => pathValue(e.order)), paths = units.map(e => e.path);
+  game.aiOrder(0, units, goal, attack, .1);
+  units.forEach((e, i) => { assert.deepEqual(pathValue(e.order), orders[i]); assert.strictEqual(e.path, paths[i]); });
+  // Snapshots preserve the requested slot along with the corrected order; no transient cache is required.
+  game.s.entities = pathValue(game.s.entities); game.ids = new Map(game.s.entities.map(e => [e.id, e]));
+  const restored = units.map(e => game.get(e.id)), restoredPaths = restored.map(e => e.path);
+  game.unitFits = () => { throw Error('Repeated AI intent comparison must not inspect live blockers'); };
+  game.aiOrder(0, restored, goal, attack, .1);
+  restored.forEach((e, i) => assert.strictEqual(e.path, restoredPaths[i]));
+  game.setOrder(restored[0], { type: 'hold' });
+  game.aiOrder(0, restored, goal, attack, .1);
+  assert.equal(restored[0].order.type, attack ? 'attackMove' : 'move');
+  restored.slice(1).forEach((e, i) => assert.strictEqual(e.path, restoredPaths[i+1]));
+  game.setOrder(restored[1], { type: 'follow', id: restored[0].id });
+  assert.equal(restored[1].formationGoal, undefined, 'replacing an order discards the old intent');
+});
+
 // Pure navigation fixtures: no world generation or simulation tick required.
 function pathArena() {
   const context = loadScripts(['world'], { scripts });
