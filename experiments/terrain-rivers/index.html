@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTS-Layout – verzweigte Flüsse auf dem dualen Netz</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; padding: 24px; max-width: 1100px; background: #151b23; color: #e2e9ef; font: 16px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 25px; margin: 0 0 8px; } p { color: #b4c2cf; }
+  button { background: #77ddb0; color: #13281f; border: 0; border-radius: 6px; padding: 12px 20px; font: inherit; font-weight: 700; cursor: pointer; }
+  label { margin-left: 16px; display: inline-block; } input { accent-color: #77ddb0; }
+  .views { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+  canvas { width: 100%; height: auto; display: block; border: 1px solid #47535f; border-radius: 8px; }
+  #height { touch-action: none; cursor: grab; }
+  #height:active { cursor: grabbing; }
+  h2 { font-size: 18px; } #status { font-family: monospace; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+  .legend span::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 6px; background: var(--color); }
+  @media (max-width: 650px) { .views { grid-template-columns: 1fr; } body { padding: 16px; } }
+</style>
+<h1>Spielraum zuerst, Landschaft danach</h1>
+<p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
+<button id="generate">Neues zufälliges Layout</button>
+<label><input id="overlay" type="checkbox" checked> Spielräume im 3D-Modell markieren</label>
+<label><input id="dual" type="checkbox"> Duales Netz anzeigen</label>
+<p id="status" role="status"></p>
+<div class="views">
+  <section><h2>1 · Planungskarte</h2><canvas id="layout" width="480" height="480" aria-label="Regionen und verbindende Wege"></canvas></section>
+  <section><h2>2 · Dreidimensionales Höhenmodell</h2><canvas id="height" width="960" height="960" aria-label="Drehbares und zoombares dreidimensionales Höhenmodell"></canvas><small id="renderError" role="status"></small><br><small>Ziehen: drehen und neigen · Mausrad: zoomen · Doppelklick: zurücksetzen.</small><br><label for="zoom" style="margin-left:0">Zoom <input id="zoom" type="range" min="0.5" max="4" step="0.01" value="1"> <output id="zoomValue" for="zoom">100 %</output></label></section>
+</div>
+<p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
+<p>Der Fluss verläuft über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
+<p><strong>Fiktiver Prototyp:</strong> 45 % maximale Steigung für Landwege und Brückendecks; Wasser außerhalb der Brücken ist gesperrt. Die Prüfung betrachtet Wasser mit Brücken im Begehbarkeitsraster und die Dreiecksneigungen der begehbaren Oberflächen. Keine Wasserphysik, Erosion, Durchflussmengen, Unterführung-Navigation, Körperfreiraum oder RTS-Balance. Ein sich aufteilender Fluss ist hier ein stilisiertes Verteilernetz, kein vollständiges hydrologisches Modell.</p>
+<script>
+'use strict';
+const SIZE = 300, PIXELS = 480, ROAD_RADIUS = 7, HEX_RADIUS = 145;
+const MAX_GRADE = .45, OFFSET_GRADE = .20, NOISE_MARGIN = 6;
+const RIVER_RADIUS = 2.8, BANK_WIDTH = 3, FLOW_GRADE = .035, AUDIT_SIZE = 192;
+const WATER_DROP = 1.4, BED_DEPTH = 1.1, RIVER_SUPPORT = RIVER_RADIUS + BANK_WIDTH;
+const BRIDGE_BUFFER = 1.8, BRIDGE_REACH = RIVER_SUPPORT + BRIDGE_BUFFER;
+function insideMap(x, y) {
+  x = Math.abs(x - SIZE / 2); y = Math.abs(y - SIZE / 2);
+  return y <= HEX_RADIUS * Math.sqrt(3) / 2 + 1e-8 && Math.sqrt(3) * x + y <= Math.sqrt(3) * HEX_RADIUS + 1e-8;
+}
+function hexPath(ctx, x, y, radius) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = i * Math.PI / 3, px = x + radius * Math.cos(angle), py = y + radius * Math.sin(angle);
+    if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+}
+let current, mesh, gpu;
+let yaw = -.7, tilt = .65, zoom = 1;
+function rng(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t ^= t + Math.imul(t ^ t >>> 7, 61 | t);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function segmentDistance(x, y, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(x - a.x - t * dx, y - a.y - t * dy);
+}
+const smooth = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+function polygonPath(ctx, points) {
+  ctx.beginPath();
+  points.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
+  ctx.closePath();
+}
+function polygonDistance(region, x, y) {
+  // Exact signed Euclidean distance to the same convex polygon drawn on the map.
+  let squared = Infinity, inside = true;
+  for (const e of region.sides) {
+    const dx = x - e.a.x, dy = y - e.a.y;
+    if (e.dx * dy - e.dy * dx < -1e-8) inside = false;
+    const t = Math.max(0, Math.min(1, (dx * e.dx + dy * e.dy) / e.length2));
+    squared = Math.min(squared, (dx - t * e.dx) ** 2 + (dy - t * e.dy) ** 2);
+  }
+  return Math.sqrt(squared) * (inside ? -1 : 1);
+}
+function polygonGap(a, b) {
+  let gap = Math.max(0, Math.min(...a.points.map(p => polygonDistance(b, p.x, p.y)),
+    ...b.points.map(p => polygonDistance(a, p.x, p.y))));
+  for (const e of a.sides) for (const f of b.sides) {
+    const cross = e.dx * f.dy - e.dy * f.dx;
+    if (Math.abs(cross) < 1e-9) continue;
+    const dx = f.a.x - e.a.x, dy = f.a.y - e.a.y,
+      t = (dx * f.dy - dy * f.dx) / cross, u = (dx * e.dy - dy * e.dx) / cross;
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) gap = 0;
+  }
+  return gap;
+}
+function latticeNeighbor(a, b) {
+  return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(a.q + a.r - b.q - b.r)) === 1;
+}
+function edgeKey(a, b) { return a < b ? `${a}:${b}` : `${b}:${a}`; }
+function project(p, direction) { return p.x * direction.x + p.y * direction.y; }
+function dualNetwork(regions) {
+  const nodes = [], links = [], facesByEdge = new Map();
+  for (let a = 0; a < regions.length; a++) for (let b = a + 1; b < regions.length; b++) {
+    if (!latticeNeighbor(regions[a], regions[b])) continue;
+    for (let c = b + 1; c < regions.length; c++) {
+      if (!latticeNeighbor(regions[a], regions[c]) || !latticeNeighbor(regions[b], regions[c])) continue;
+      const index = nodes.length, points = [regions[a], regions[b], regions[c]];
+      nodes.push({ x: points.reduce((s, p) => s + p.x, 0) / 3,
+        y: points.reduce((s, p) => s + p.y, 0) / 3, boundary: false });
+      for (const [i, j] of [[a, b], [b, c], [a, c]]) {
+        const key = edgeKey(i, j);
+        if (!facesByEdge.has(key)) facesByEdge.set(key, { a: i, b: j, faces: [] });
+        facesByEdge.get(key).faces.push(index);
+      }
+    }
+  }
+  for (const [key, edge] of facesByEdge) {
+    const a = regions[edge.a], b = regions[edge.b], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const first = edge.faces[0];
+    let second = edge.faces[1];
+    if (second === undefined) {
+      const from = nodes[first], dx = mid.x - from.x, dy = mid.y - from.y;
+      let lo = 1, hi = 20;
+      for (let step = 0; step < 40; step++) {
+        const t = (lo + hi) / 2;
+        if (insideMap(from.x + dx * t, from.y + dy * t)) lo = t; else hi = t;
+      }
+      second = nodes.length;
+      nodes.push({ x: from.x + dx * lo, y: from.y + dy * lo, boundary: true });
+    }
+    links.push({ a: first, b: second, mid, key });
+  }
+  return { nodes, links };
+}
+function planRiver(plan) {
+  const random = rng(plan.seed ^ 0x52495652), dual = dualNetwork(plan.regions);
+  // Downstream scalar orders EVERY leg, including both halves of a dual edge.
+  const angle = Math.floor(random() * 6) * Math.PI / 3 + .12 + random() * .12,
+    direction = { x: Math.cos(angle), y: Math.sin(angle) }, outgoing = dual.nodes.map(() => []);
+  for (const link of dual.links) {
+    let a = link.a, b = link.b;
+    if (project(dual.nodes[a], direction) > project(dual.nodes[b], direction)) [a, b] = [b, a];
+    const p = project(dual.nodes[a], direction), m = project(link.mid, direction), q = project(dual.nodes[b], direction);
+    if (m <= p + 1e-6 || q <= m + 1e-6) continue;
+    outgoing[a].push({ ...link, a, b, score: distance(dual.nodes[a], link.mid) + distance(link.mid, dual.nodes[b]) + random() * 12 });
+  }
+  function route(start, forbidden) {
+    const memo = new Map();
+    function visit(node) {
+      if (forbidden.has(node)) return null;
+      if (dual.nodes[node].boundary) return { score: 0, links: [] };
+      if (memo.has(node)) return memo.get(node);
+      let best = null;
+      for (const edge of outgoing[node]) {
+        const tail = visit(edge.b);
+        if (tail && (!best || edge.score + tail.score > best.score)) best = { score: edge.score + tail.score, links: [edge, ...tail.links] };
+      }
+      memo.set(node, best); return best;
+    }
+    return visit(start);
+  }
+  let trunk = null, source = null;
+  for (let i = 0; i < dual.nodes.length; i++) {
+    if (!dual.nodes[i].boundary) continue;
+    for (const inlet of outgoing[i]) {
+      const tail = route(inlet.b, new Set([i]));
+      if (tail && (!trunk || inlet.score + tail.score > trunk.score)) {
+        source = i; trunk = { score: inlet.score + tail.score, links: [inlet, ...tail.links] };
+      }
+    }
+  }
+  if (!trunk) throw Error('Das duale Netz besitzt keinen durchgehend abfallenden Flussweg.');
+  const selected = [...trunk.links], used = new Set([source]), branchNodes = new Set();
+  for (const e of selected) used.add(e.b);
+  const wantedSplits = 1 + Math.floor(random() * 2);
+  for (let split = 0; split < wantedSplits; split++) {
+    const alternatives = [];
+    for (const node of used) {
+      if (dual.nodes[node].boundary || branchNodes.has(node)) continue;
+      for (const edge of outgoing[node]) {
+        if (used.has(edge.b)) continue;
+        const tail = route(edge.b, used);
+        if (tail) alternatives.push({ node, links: [edge, ...tail.links] });
+      }
+    }
+    if (!alternatives.length) break;
+    const branch = alternatives[Math.floor(random() * alternatives.length)];
+    selected.push(...branch.links); branchNodes.add(branch.node);
+    for (const e of branch.links) used.add(e.b);
+  }
+  const segments = selected.flatMap(e => {
+    const p = dual.nodes[e.a], q = dual.nodes[e.b];
+    return [{ a: p, b: e.mid }, { a: e.mid, b: q }];
+  }).map(e => ({ ...e, dx: e.b.x - e.a.x, dy: e.b.y - e.a.y, length2: distance(e.a, e.b) ** 2 }));
+  const selectedByKey = new Map(selected.map(e => [e.key, e]));
+  const bridges = plan.edges.filter(e => selectedByKey.has(edgeKey(e.a, e.b))).map(e => {
+    const a = plan.regions[e.a], b = plan.regions[e.b], length = distance(a, b), crossing = selectedByKey.get(edgeKey(e.a, e.b));
+    const ux = (b.x - a.x) / length, uy = (b.y - a.y) / length, halfWidth = ROAD_RADIUS + .5;
+    let halfLength = 0;
+    // Bound only the local crossing footprint, including its crossing angle.
+    // The actual deck is additionally clipped to the river + bank + buffer.
+    for (const p of [dual.nodes[crossing.a], dual.nodes[crossing.b]]) {
+      const dx = p.x - crossing.mid.x, dy = p.y - crossing.mid.y, legLength = Math.hypot(dx, dy),
+        across = Math.abs(ux * dy - uy * dx) / legLength, along = Math.abs(ux * dx + uy * dy) / legLength;
+      halfLength = Math.max(halfLength, (BRIDGE_REACH + halfWidth * along) / across);
+    }
+    return { key: crossing.key, center: crossing.mid, ux, uy, halfLength, halfWidth };
+  });
+  const exits = [...used].filter(i => dual.nodes[i].boundary && i !== source);
+  return { dual, direction, selected, segments, bridges, source: dual.nodes[source],
+    exits: exits.map(i => dual.nodes[i]), splits: branchNodes.size, phase: plan.phase };
+}
+function riverDistance(river, x, y) {
+  let squared = Infinity;
+  for (const e of river.segments) {
+    const dx = x - e.a.x, dy = y - e.a.y,
+      t = Math.max(0, Math.min(1, (dx * e.dx + dy * e.dy) / e.length2));
+    squared = Math.min(squared, (dx - t * e.dx) ** 2 + (dy - t * e.dy) ** 2);
+  }
+  return Math.sqrt(squared);
+}
+function bridgeAt(river, x, y, gap = riverDistance(river, x, y)) {
+  if (gap > BRIDGE_REACH) return false;
+  return river.bridges.some(b => {
+    const dx = x - b.center.x, dy = y - b.center.y;
+    return Math.abs(dx * b.ux + dy * b.uy) <= b.halfLength && Math.abs(-dx * b.uy + dy * b.ux) <= b.halfWidth;
+  });
+}
+function riverDatum(river, x, y) {
+  const downstream = project({ x: x - SIZE / 2, y: y - SIZE / 2 }, river.direction);
+  // Derivative along flow is -.035 +/- .0125: strictly falling, gently curved.
+  return 40 - FLOW_GRADE * downstream + Math.sin(downstream / 80 + river.phase);
+}
+function waterHeight(river, x, y) { return riverDatum(river, x, y) - WATER_DROP; }
+function riverPolygonGap(region, river) {
+  let gap = Infinity;
+  for (const e of river.segments) {
+    gap = Math.min(gap, Math.max(0, polygonDistance(region, e.a.x, e.a.y)),
+      Math.max(0, polygonDistance(region, e.b.x, e.b.y)));
+    for (const p of region.points) gap = Math.min(gap, segmentDistance(p.x, p.y, e.a, e.b));
+    for (const side of region.sides) {
+      const cross = e.dx * side.dy - e.dy * side.dx;
+      if (Math.abs(cross) < 1e-9) continue;
+      const dx = side.a.x - e.a.x, dy = side.a.y - e.a.y,
+        t = (dx * side.dy - dy * side.dx) / cross, u = (dx * e.dy - dy * e.dx) / cross;
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) gap = 0;
+    }
+  }
+  return Math.max(0, gap - RIVER_SUPPORT);
+}
+function fitRiverHeights(plan, gaps) {
+  const regions = plan.regions, reach = regions.map(r => riverPolygonGap(r, plan.river));
+  // The complete river corridor is a fixed zero-offset anchor. Shortest gap
+  // distances include zero-cost polygon interiors, preventing contradictory
+  // river/region heights before any terrain is generated.
+  for (let pass = 0; pass < regions.length - 1; pass++) {
+    for (let i = 0; i < regions.length; i++) for (let j = 0; j < regions.length; j++) {
+      if (i !== j) reach[i] = Math.min(reach[i], reach[j] + gaps[i][j]);
+    }
+  }
+  regions.forEach((r, i) => { r.offset = Math.max(-OFFSET_GRADE * reach[i], Math.min(OFFSET_GRADE * reach[i], r.offset)); });
+  for (let pass = 0; pass < regions.length - 1; pass++) {
+    let changed = false;
+    for (let i = 0; i < regions.length; i++) for (let j = 0; j < regions.length; j++) {
+      if (i === j) continue;
+      const bound = regions[j].offset + OFFSET_GRADE * gaps[i][j];
+      if (regions[i].offset > bound) { regions[i].offset = bound; changed = true; }
+    }
+    if (!changed) break;
+  }
+}
+function makePlan(seed) {
+  const random = rng(seed), regions = [], edges = [];
+  // Axial lattice: center + six inner + twelve outer regions, with bounded jitter.
+  // All footprints retain a margin to the convex hex boundary.
+  for (let r = -2; r <= 2; r++) for (let q = -2; q <= 2; q++) {
+    if (Math.abs(q + r) > 2) continue;
+    // Reserve enough space between the complete polygon footprints for water.
+    regions.push({ q, r, x: SIZE / 2 + 53 * (q + r / 2) + (random() - .5) * 6,
+      y: SIZE / 2 + 53 * Math.sqrt(3) / 2 * r + (random() - .5) * 6, radius: 11 + random() * 4 });
+  }
+  // Separate shape RNG: polygon detail does not change the existing terrain/graph draws.
+  const shapeRandom = rng(seed ^ 0x504f4c59);
+  for (const region of regions) {
+    const rotation = (shapeRandom() - .5) * .5;
+    // Bounded angular/radial variation keeps the six corners convex and well spaced.
+    region.points = Array.from({ length: 6 }, (_, i) => {
+      const angle = i * Math.PI / 3 + rotation + (shapeRandom() - .5) * .12,
+        radius = region.radius * (.88 + shapeRandom() * .24);
+      return { x: region.x + Math.cos(angle) * radius, y: region.y + Math.sin(angle) * radius };
+    });
+    region.sides = region.points.map((a, i) => {
+      const b = region.points[(i + 1) % region.points.length], dx = b.x - a.x, dy = b.y - a.y;
+      return { a, dx, dy, length2: dx * dx + dy * dy };
+    });
+  }
+  // Independent desired heights. Pairwise footprint gaps, not center distances,
+  // limit the available rise between the complete polygon interiors.
+  const heightRandom = rng(seed ^ 0x48454947), gaps = regions.map(() => []);
+  for (const r of regions) r.offset = (heightRandom() * 2 - 1) * 16;
+  for (let i = 0; i < regions.length; i++) for (let j = i + 1; j < regions.length; j++) {
+    const gap = polygonGap(regions[i], regions[j]);
+    gaps[i][j] = gaps[j][i] = gap;
+  }
+  // Prim's minimum spanning tree: connected by construction, with no retries.
+  const connected = new Set([0]);
+  while (connected.size < regions.length) {
+    let best;
+    for (const a of connected) for (let b = 0; b < regions.length; b++) {
+      if (connected.has(b) || !latticeNeighbor(regions[a], regions[b])) continue;
+      const length = distance(regions[a], regions[b]);
+      if (!best || length < best.length) best = { a, b, length, loop: false };
+    }
+    edges.push(best); connected.add(best.b);
+  }
+  const pairs = [];
+  for (let a = 0; a < regions.length; a++) for (let b = a + 1; b < regions.length; b++) {
+    if (!latticeNeighbor(regions[a], regions[b]) || edges.some(e => e.a === a && e.b === b || e.a === b && e.b === a)) continue;
+    pairs.push({ a, b, length: distance(regions[a], regions[b]), loop: true });
+  }
+  // Choose short extra connections, slightly randomized for different cycles.
+  for (const p of pairs) p.score = p.length * (.8 + random() * .4);
+  pairs.sort((a, b) => a.score - b.score);
+  edges.push(...pairs.slice(0, 6));
+  const angle = random() * Math.PI * 2, phase = random() * Math.PI * 2;
+  const waves = Array.from({ length: 7 }, () => ({ angle: random() * Math.PI * 2,
+    scale: 9 + random() * 24, phase: random() * Math.PI * 2, amplitude: 3 + random() * 6 }));
+  const plan = { seed, regions, edges, angle, phase, waves };
+  plan.river = planRiver(plan);
+  fitRiverHeights(plan, gaps);
+  return plan;
+}
+function sampleLand(plan, x, y) {
+  // Signed distance to the union of all regions and broad passages.
+  let d = Infinity, offset = Infinity;
+  for (const r of plan.regions) {
+    const gap = polygonDistance(r, x, y);
+    d = Math.min(d, gap);
+    // Minimum of .20-Lipschitz distance cones: one globally consistent surface.
+    // Compatible anchors keep each polygon's own offset throughout its interior.
+    offset = Math.min(offset, r.offset + OFFSET_GRADE * Math.max(0, gap));
+  }
+  for (const e of plan.edges) d = Math.min(d, segmentDistance(x, y, plan.regions[e.a], plan.regions[e.b]) - ROAD_RADIUS);
+  const riverGap = riverDistance(plan.river, x, y), anchorGap = Math.max(0, riverGap - RIVER_SUPPORT);
+  offset = Math.min(offset, OFFSET_GRADE * anchorGap);
+  // Matching river/land datum avoids carving a low water plane through high land.
+  const base = riverDatum(plan.river, x, y);
+  let noise = 0;
+  for (const w of plan.waves) noise += w.amplitude * Math.sin((x * Math.cos(w.angle) + y * Math.sin(w.angle)) / w.scale + w.phase);
+  return { planned: insideMap(x, y) && d <= 0, clearance: d,
+    height: base + offset + noise * smooth((d - NOISE_MARGIN) / 24) * smooth(anchorGap / 16) };
+}
+function sample(plan, x, y) {
+  const land = sampleLand(plan, x, y), river = plan.river,
+    gap = riverDistance(river, x, y), water = waterHeight(river, x, y), bridge = bridgeAt(river, x, y, gap);
+  const influence = 1 - smooth((gap - RIVER_RADIUS) / BANK_WIDTH);
+  return { ...land, walkHeight: land.height + (bridge ? .08 : 0), bridge, riverGap: gap, water,
+    planned: land.planned && (gap > RIVER_RADIUS || bridge),
+    height: land.height + (water - BED_DEPTH - land.height) * influence };
+}
+function checkConnected(mask, n) {
+  const root = mask.indexOf(1), visited = new Uint8Array(mask.length), queue = [root];
+  if (root < 0) return false;
+  visited[root] = 1;
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head], x = i % n, y = Math.floor(i / n);
+    for (const j of [x > 0 ? i - 1 : -1, x < n - 1 ? i + 1 : -1, y > 0 ? i - n : -1, y < n - 1 ? i + n : -1]) {
+      if (j >= 0 && mask[j] && !visited[j]) { visited[j] = 1; queue.push(j); }
+    }
+  }
+  return mask.every((value, i) => !value || visited[i]);
+}
+function drawNetwork(ctx, plan, filled) {
+  const scale = PIXELS / SIZE;
+  ctx.save(); ctx.scale(scale, scale);
+  hexPath(ctx, SIZE / 2, SIZE / 2, HEX_RADIUS);
+  ctx.fillStyle = '#303548'; ctx.fill();
+  ctx.strokeStyle = '#99afc4'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.clip();
+  // Faint hex-lattice neighbors reveal the planning structure behind the graph.
+  ctx.strokeStyle = '#475064'; ctx.lineWidth = .6;
+  for (let i = 0; i < plan.regions.length; i++) for (let j = i + 1; j < plan.regions.length; j++) {
+    const a = plan.regions[i], b = plan.regions[j], dq = a.q - b.q, dr = a.r - b.r;
+    if (Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)) !== 1) continue;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const e of plan.edges) {
+    const a = plan.regions[e.a], b = plan.regions[e.b];
+    ctx.strokeStyle = e.loop ? '#bc99ff' : '#dce7ba';
+    ctx.lineWidth = filled ? ROAD_RADIUS * 2 : 1.5;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  if (document.getElementById('dual').checked) {
+    ctx.strokeStyle = '#618299'; ctx.lineWidth = .6; ctx.setLineDash([2, 2]);
+    for (const e of plan.river.dual.links) {
+      const a = plan.river.dual.nodes[e.a], b = plan.river.dual.nodes[e.b];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(e.mid.x, e.mid.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  ctx.strokeStyle = '#39adf0'; ctx.lineWidth = RIVER_RADIUS * 2;
+  for (const e of plan.river.segments) { ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke(); }
+  ctx.strokeStyle = '#d4f2ff'; ctx.lineWidth = .7;
+  for (const e of plan.river.segments) {
+    const length = Math.sqrt(e.length2), ux = e.dx / length, uy = e.dy / length,
+      x = (e.a.x + e.b.x) / 2, y = (e.a.y + e.b.y) / 2;
+    ctx.beginPath(); ctx.moveTo(x - ux * 3 - uy * 2, y - uy * 3 + ux * 2); ctx.lineTo(x, y);
+    ctx.lineTo(x - ux * 3 + uy * 2, y - uy * 3 - ux * 2); ctx.stroke();
+  }
+  for (const b of plan.river.bridges) {
+    ctx.save(); ctx.translate(b.center.x, b.center.y); ctx.rotate(Math.atan2(b.uy, b.ux));
+    ctx.beginPath(); ctx.rect(-b.halfLength, -b.halfWidth, b.halfLength * 2, b.halfWidth * 2); ctx.clip();
+    ctx.rotate(-Math.atan2(b.uy, b.ux)); ctx.translate(-b.center.x, -b.center.y);
+    for (const [color, width] of [['#624628', BRIDGE_REACH * 2], ['#d99b58', BRIDGE_REACH * 2 - .7]]) {
+      ctx.strokeStyle = color; ctx.lineWidth = width;
+      for (const e of plan.river.segments) {
+        ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  for (const [i, r] of plan.regions.entries()) {
+    polygonPath(ctx, r.points);
+    if (filled) { ctx.fillStyle = '#77ddb0'; ctx.fill(); }
+    else { ctx.strokeStyle = '#77ddb0'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    ctx.fillStyle = filled ? '#13281f' : '#ffffff'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(i + 1), r.x, r.y - 4);
+    ctx.font = '7px system-ui';
+    ctx.fillText(`${r.offset >= 0 ? '+' : ''}${r.offset.toFixed(1)}`, r.x, r.y + 6);
+  }
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 8px system-ui';
+  const source = plan.river.source; ctx.fillText('S', source.x, source.y);
+  for (const exit of plan.river.exits) ctx.fillText('A', exit.x, exit.y);
+  ctx.restore();
+}
+// Actual 3D vertices sampled from the same field; no new random draws.
+function makeMesh(plan) {
+  const n = 64, vertices = [], triangles = [], lookup = new Map();
+  let maxPlayableGrade = 0;
+  // Triangular lattice fills the exact hexagon, with no outside vertices or mask.
+  for (let r = -n; r <= n; r++) for (let q = -n; q <= n; q++) {
+    if (Math.abs(q + r) > n) continue;
+    const x = HEX_RADIUS / n * (q + r / 2), y = HEX_RADIUS / n * Math.sqrt(3) / 2 * r,
+      s = sample(plan, x + SIZE / 2, y + SIZE / 2);
+    lookup.set(`${q},${r}`, vertices.length);
+    vertices.push({ x, y, z: s.height - 40, height: s.height, planned: s.planned,
+      walkZ: s.walkHeight - 40, waterZ: s.water - 40 });
+  }
+  for (let r = -n; r < n; r++) for (let q = -n; q < n; q++) {
+    const a = lookup.get(`${q},${r}`), b = lookup.get(`${q + 1},${r}`),
+      d = lookup.get(`${q},${r + 1}`), c = lookup.get(`${q + 1},${r + 1}`);
+    for (const indices of [[a, b, d], [b, c, d]]) {
+      if (indices.some(i => i === undefined)) continue;
+      const [p, q, r] = indices.map(i => vertices[i]);
+      const ux = q.x - p.x, uy = q.y - p.y, uz = q.z - p.z,
+        vx = r.x - p.x, vy = r.y - p.y, vz = r.z - p.z;
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const light = .45 + .55 * Math.max(0, (nx * -.4 + ny * -.5 + nz * .768) / Math.hypot(nx, ny, nz));
+      // Sample the face center so narrow planned paths remain visible.
+      const center = sample(plan, (p.x + q.x + r.x) / 3 + SIZE / 2, (p.y + q.y + r.y) / 3 + SIZE / 2);
+      triangles.push({ indices, light, height: center.height, planned: center.planned, material: 0 });
+      if (center.riverGap <= RIVER_RADIUS) triangles.push({ indices, light: 1, height: center.water, planned: false, material: 1 });
+      if (center.bridge) triangles.push({ indices, light, height: center.walkHeight, planned: true, material: 2 });
+      // Audit the surface actually used for walking, not the bed below a bridge.
+      if (center.planned) {
+        const zu = center.bridge ? q.walkZ - p.walkZ : uz, zv = center.bridge ? r.walkZ - p.walkZ : vz,
+          walkNX = uy * zv - zu * vy, walkNY = zu * vx - ux * zv;
+        maxPlayableGrade = Math.max(maxPlayableGrade, Math.hypot(walkNX, walkNY) / Math.abs(nz));
+      }
+    }
+  }
+  // Test actual land/deck faces; riverbanks outside the route may be steep.
+  if (maxPlayableGrade > MAX_GRADE + 1e-6) throw Error('Spielraum überschreitet die fiktive Neigungsgrenze.');
+  return { vertices, triangles, maxPlayableGrade };
+}
+function createGPU() {
+  const gl = document.getElementById('height').getContext('webgl', { antialias: true, alpha: false });
+  if (!gl) throw Error('WebGL ist in diesem Browser nicht verfügbar.');
+  const compile = (type, source) => {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source); gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const error = gl.getShaderInfoLog(shader); gl.deleteShader(shader); throw Error(error);
+    }
+    return shader;
+  };
+  const vertex = compile(gl.VERTEX_SHADER, `
+    attribute vec3 position;
+    attribute vec4 surface;
+    uniform vec4 camera;
+    uniform float scale;
+    varying vec4 face;
+    void main() {
+      float x = position.x * camera.x - position.y * camera.y;
+      float forward = position.x * camera.y + position.y * camera.x;
+      float y = position.z * camera.z - forward * camera.w;
+      float depth = forward * camera.z + position.z * camera.w;
+      gl_Position = vec4(x * scale, y * scale, -depth / 500.0, 1.0);
+      face = surface;
+    }
+  `);
+  const fragment = compile(gl.FRAGMENT_SHADER, `
+    precision mediump float;
+    varying vec4 face;
+    uniform bool overlay;
+    void main() {
+      float h = clamp(face.y / 85.0, 0.0, 1.0);
+      vec3 color = vec3(25.0, 40.0, 55.0) + h * vec3(210.0, 193.0, 150.0);
+      if (overlay && face.z > 0.5) color = vec3(100.0, 205.0, 150.0);
+      if (face.w > 0.5 && face.w < 1.5) color = vec3(38.0, 147.0, 217.0);
+      if (face.w > 1.5) color = vec3(217.0, 155.0, 88.0);
+      gl_FragColor = vec4(color * face.x / 255.0, 1.0);
+    }
+  `);
+  const program = gl.createProgram();
+  gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
+  gl.deleteShader(vertex); gl.deleteShader(fragment);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    const error = gl.getProgramInfoLog(program); gl.deleteProgram(program); throw Error(error);
+  }
+  gl.useProgram(program);
+  const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  for (const [name, offset] of [['position', 0], ['surface', 12]]) {
+    const location = gl.getAttribLocation(program, name);
+    gl.enableVertexAttribArray(location); gl.vertexAttribPointer(location, name === 'position' ? 3 : 4, gl.FLOAT, false, 28, offset);
+  }
+  gl.enable(gl.DEPTH_TEST); gl.clearColor(32 / 255, 43 / 255, 56 / 255, 1);
+  return { gl, buffer, uploaded: null, count: 0,
+    camera: gl.getUniformLocation(program, 'camera'), scale: gl.getUniformLocation(program, 'scale'),
+    overlay: gl.getUniformLocation(program, 'overlay') };
+}
+function draw3D() {
+  try {
+    const canvas = document.getElementById('height');
+    if (gpu && gpu.gl.isContextLost()) return;
+    gpu ??= createGPU();
+    const { gl } = gpu;
+    // Geometry and face attributes are uploaded once per layout, never per frame.
+    if (gpu.uploaded !== mesh) {
+      const data = new Float32Array(mesh.triangles.length * 3 * 7);
+      let offset = 0;
+      for (const t of mesh.triangles) for (const index of t.indices) {
+        const p = mesh.vertices[index];
+        data[offset++] = p.x; data[offset++] = p.y;
+        data[offset++] = t.material === 1 ? p.waterZ : t.material === 2 ? p.walkZ : p.z;
+        data[offset++] = t.material === 2 ? .9 : t.light; data[offset++] = t.height;
+        data[offset++] = t.planned ? 1 : 0; data[offset++] = t.material;
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, gpu.buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      gpu.count = data.length / 7; gpu.uploaded = mesh;
+    }
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.uniform4f(gpu.camera, Math.cos(yaw), Math.sin(yaw), Math.cos(tilt), Math.sin(tilt));
+    gl.uniform1f(gpu.scale, .96 * zoom * 2 / PIXELS);
+    gl.uniform1i(gpu.overlay, document.getElementById('overlay').checked ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLES, 0, gpu.count);
+    document.getElementById('renderError').textContent = '';
+  } catch (error) {
+    document.getElementById('renderError').textContent = `3D-Anzeige: ${error.message}`;
+  }
+}
+function drawPlanning() {
+  const layout = document.getElementById('layout').getContext('2d');
+  layout.fillStyle = '#202b38'; layout.fillRect(0, 0, PIXELS, PIXELS); drawNetwork(layout, current, true);
+}
+function render() {
+  const plan = current; drawPlanning();
+  const mask = new Uint8Array(AUDIT_SIZE * AUDIT_SIZE);
+  let area = 0, mapArea = 0, low = Infinity, high = -Infinity;
+  for (let y = 0; y < AUDIT_SIZE; y++) for (let x = 0; x < AUDIT_SIZE; x++) {
+    const px = (x + .5) * SIZE / AUDIT_SIZE, py = (y + .5) * SIZE / AUDIT_SIZE;
+    if (!insideMap(px, py)) continue;
+    const i = y * AUDIT_SIZE + x, s = sample(plan, px, py);
+    mapArea++; mask[i] = s.planned ? 1 : 0; area += mask[i]; low = Math.min(low, s.height); high = Math.max(high, s.height);
+  }
+  mesh = makeMesh(plan); draw3D();
+  const valid = checkConnected(mask, AUDIT_SIZE), river = plan.river;
+  const downhill = river.segments.every(e => waterHeight(river, e.a.x, e.a.y) > waterHeight(river, e.b.x, e.b.y));
+  if (!valid || !downhill) throw Error('Fluss-/Begehbarkeitsprüfung fehlgeschlagen.');
+  document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length} Brücken · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(mesh.maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %`;
+}
+function generate() {
+  const seeds = new Uint32Array(1); crypto.getRandomValues(seeds);
+  try { current = makePlan(seeds[0]); render(); }
+  catch (error) { document.getElementById('status').textContent = `Seed ${seeds[0]}: ${error.message}`; console.error(error); }
+}
+document.getElementById('generate').addEventListener('click', generate);
+document.getElementById('overlay').addEventListener('change', draw3D);
+document.getElementById('dual').addEventListener('change', drawPlanning);
+const view = document.getElementById('height');
+view.addEventListener('webglcontextlost', event => {
+  event.preventDefault();
+  document.getElementById('renderError').textContent = 'Grafikkontext verloren; warte auf Wiederherstellung.';
+});
+view.addEventListener('webglcontextrestored', () => { gpu = null; requestDraw(); });
+let drag = null, frame = null;
+function requestDraw() {
+  if (frame !== null) return;
+  frame = requestAnimationFrame(() => { frame = null; draw3D(); });
+}
+view.addEventListener('pointerdown', event => {
+  if (drag || event.button !== 0) return;
+  drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  view.setPointerCapture(event.pointerId);
+});
+view.addEventListener('pointermove', event => {
+  if (!drag || event.pointerId !== drag.id) return;
+  yaw += (event.clientX - drag.x) * .008;
+  tilt = Math.max(.25, Math.min(1.35, tilt + (event.clientY - drag.y) * .006));
+  drag.x = event.clientX; drag.y = event.clientY; requestDraw();
+});
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  view.addEventListener(type, event => { if (drag && event.pointerId === drag.id) drag = null; });
+}
+function setZoom(value) {
+  zoom = Math.max(.5, Math.min(4, value));
+  document.getElementById('zoom').value = String(zoom);
+  document.getElementById('zoomValue').textContent = `${Math.round(zoom * 100)} %`;
+  requestDraw();
+}
+document.getElementById('zoom').addEventListener('input', event => setZoom(Number(event.target.value)));
+view.addEventListener('wheel', event => {
+  event.preventDefault();
+  const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? PIXELS : 1);
+  setZoom(zoom * Math.exp(-Math.max(-200, Math.min(200, delta)) * .002));
+}, { passive: false });
+view.addEventListener('dblclick', () => { yaw = -.7; tilt = .65; setZoom(1); });
+generate();
+</script>
+</html>
