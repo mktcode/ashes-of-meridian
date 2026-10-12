@@ -48,16 +48,17 @@ const result = vm.runInContext(`(() => {
     const light = .45 + .55 * Math.max(0, (-.4 * nx - .5 * ny + .768 * nz) / Math.hypot(nx, ny, nz));
     assert.ok(Math.abs(mesh.vertices[target].light - light) < 1e-12);
   }
-  assert.equal(heightBoundary(1), 85 / 3);
-  assert.equal(heightBoundary(2), 170 / 3);
-  for (const [height, expected] of [[-10, 0], [0, 0], [28, 0], [85 / 3, 1], [40, 1], [170 / 3, 2], [85, 2], [100, 2]]) {
+  assert.deepEqual(HEIGHT_BOUNDARIES, [0, 35, 45, 85]);
+  assert.equal(heightBoundary(1), 35);
+  assert.equal(heightBoundary(2), 45);
+  for (const [height, expected] of [[-10, 0], [0, 0], [34.99, 0], [35, 1], [40, 1], [44.99, 1], [45, 2], [85, 2], [100, 2]]) {
     assert.equal(heightBand(height), expected);
   }
   // Entire cards may occupy one zone: do not normalize to their own extrema.
-  for (const [heights, expected] of [[[5, 10, 15], 0], [[35, 40, 45], 1], [[60, 70, 80], 2]]) {
+  for (const [heights, expected] of [[[5, 10, 34], 0], [[35, 40, 44], 1], [[45, 70, 80], 2]]) {
     assert.ok(heights.every(h => heightBand(h) === expected));
   }
-  assert.ok(heightLegendHTML().includes('Mittelland: 28,3–56,7'));
+  assert.ok(heightLegendHTML().includes('Mittelland: 35–45'));
   // Verify that GPU packing uses shared terrain attributes, but keeps water
   // and bridge decks separate. Extra material faces must not affect normals.
   const first = mesh.triangles[0];
@@ -91,7 +92,7 @@ const result = vm.runInContext(`(() => {
   assert.equal(uploads, 1);
   assert.equal(uniforms.heightZones, 1);
   assert.deepEqual(uniforms.heightRange, [0, 85]);
-  assert.deepEqual(uniforms.heightCuts, [85 / 3, 170 / 3]);
+  assert.deepEqual(uniforms.heightCuts, [35, 45]);
   current = plan;
   const originalMesh = mesh, toggle = document.getElementById('heightZones');
   for (const active of [false, true]) {
