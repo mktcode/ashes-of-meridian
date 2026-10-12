@@ -711,7 +711,7 @@ class BattlefieldView {
       if (world.fogVersion > 0 || fogOn) {
         if (state) {
           const team = world.viewTeam, sources = state.entities.filter(e => e.hp > 0 && e.team === team && e.kind !== 'resource')
-            .map(e => ({ x: e.x, z: e.z, r: e.vision || (e.kind === 'building' ? 21 : 17),
+            .map(e => ({ x: e.x, z: e.z, r: e.vision || (e.kind === 'building' ? 25 : 20),
               level: e.kind === 'unit' && (UNITS[e.type] as UnitDefinitionShape | undefined)?.flying ? Infinity : world.surface?.visibilityLevelAt(e.x, e.z) ?? 0 }));
           for (const scan of state.scans) if ((scan.team ?? 0) === team && scan.until > state.time)
             sources.push({ x: scan.x, z: scan.z, r: scan.r || 31, level: Infinity });

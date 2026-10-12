@@ -334,7 +334,7 @@
           hp,
           maxHp: hp,
           size: d.size || 2,
-          vision: d.vision || (kind === 'building' ? 21 : 17),
+          vision: d.vision || (kind === 'building' ? 25 : 20),
           rot: team === 1 ? Math.PI : 0,
           progress: 1,
           queue: [],

@@ -424,7 +424,7 @@
         for (const view of this.sight) view.visible.fill(0);
         for (let e of entities)
           if (e.hp > 0 && e.team !== -1 && e.kind !== 'resource') {
-            const r = e.vision || (e.kind === 'building' ? 21 : 17),
+            const r = e.vision || (e.kind === 'building' ? 25 : 20),
               flying = e.kind === 'unit' && !!(UNITS[e.type] as UnitDefinitionShape | undefined)?.flying,
               level = flying ? Infinity : this.surface?.visibilityLevelAt(e.x, e.z) ?? 0;
             this.markVisible(this.sight[e.team].visible, e.x, e.z, r, level);

@@ -98,7 +98,7 @@ const UNITS = {
     supply: 1,
     time: 9,
     from: 'hq',
-    vision: 15,
+    vision: 18,
     desc: 'Harvests Cinder automatically. Free workers construct newly placed structures without interrupting builders or repairers. Select a worker, then tap an own foundation to resume building, a damaged allied building/unit to repair, or crystals to mine.'
   },
   rifle: {
@@ -113,7 +113,7 @@ const UNITS = {
     supply: 2,
     time: 11,
     from: 'barracks',
-    vision: 17,
+    vision: 20,
     desc: 'Versatile ranged infantry. Attacks ground and air. Excellent in groups; vulnerable to artillery.'
   },
   medic: {
@@ -128,7 +128,7 @@ const UNITS = {
     supply: 2,
     time: 16,
     from: 'barracks',
-    vision: 17,
+    vision: 20,
     heal: 20,
     desc: 'Automatically restores 20 hull per second to nearby allies. Unarmed. Move with your frontline to keep squads alive.'
   },
@@ -144,7 +144,7 @@ const UNITS = {
     supply: 4,
     time: 24,
     from: 'factory',
-    vision: 19,
+    vision: 23,
     splash: 2.6,
     groundOnly: true,
     desc: 'Heavy assault armor. Explosive shells damage clustered ground targets. Cannot attack aircraft; escort with infantry.'
@@ -161,7 +161,7 @@ const UNITS = {
     supply: 4,
     time: 29,
     from: 'factory',
-    vision: 18,
+    vision: 22,
     splash: 4.5,
     minRange: 5,
     groundOnly: true,
@@ -179,7 +179,7 @@ const UNITS = {
     supply: 3,
     time: 25,
     from: 'hangar',
-    vision: 23,
+    vision: 28,
     flying: true,
     desc: 'Strike aircraft. Crosses terrain and attacks ground or air. Excellent for flanking artillery and striking exposed objectives.'
   },
@@ -195,7 +195,7 @@ const UNITS = {
     supply: 16,
     time: 70,
     from: 'hangar',
-    vision: 29,
+    vision: 35,
     splash: 2.8,
     flying: true,
     desc: 'Rare heavy aerial destroyer. Bombards ground and air with a heavy area-impact battery. Protect it from concentrated anti-air fire.'
@@ -212,7 +212,7 @@ const UNITS = {
     supply: 0,
     time: 40,
     from: 'hq',
-    vision: 22,
+    vision: 26,
     desc: 'Your veteran field commander. A powerful ranged fighter. Reconstruct at command if lost.'
   }
 } as const satisfies Record<string, UnitDefinitionShape>;
@@ -294,7 +294,7 @@ const BUILDINGS = {
     damage: 56,
     range: 15,
     reload: 1.05,
-    vision: 20,
+    vision: 24,
     desc: 'Automated ground and air defense. Protects workers and choke points, but can be outranged by artillery.'
   },
   fieldlab: {
