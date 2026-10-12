@@ -84,12 +84,18 @@
           if (ui && !capture?.active) ui.event(...event);
         });
         ui = new MeridianUI(game, R, audio, profile, persistence);
-        capture = new MeridianCapture(game,ui,R,()=>{ settlementTraffic.reset(); worldView.clearWorkerRoads(); worldView.sync(game.world!,false,game.s!); });
+        capture = new MeridianCapture(game,ui,R,()=>{ settlementTraffic.reset(); worldView.clearWorkerRoads(); worldView.sync(game.world!,false,game.s!); },()=>drawOverlay());
         ui.onCameraChange = () => capture?.active && capture.navigationChanged();
         ui.onCachedModelThumbnails = root => thumbnails.update(root,false);
         const context = overlay.getContext('2d');
         if (!context) throw Error('Canvas 2D is unavailable');
         overlayContext = context;
+        function drawOverlay() {
+          if (!capture?.active || capture.render.guides) ui.drawOverlay(overlayContext);
+          else overlayContext.clearRect(0,0,innerWidth,innerHeight);
+          capture?.drawMapDiagnostics(overlayContext);
+          capture?.drawMapBoundary(overlayContext);
+        }
         function resize() {
           retainedResult = null;
           R.resize();
@@ -726,11 +732,7 @@
             else if (ui.view === 'game') revealBattlefield();
             else if (!ui.launchingBattle) clearBattleTransition();
             diagnostics?.recorder.phase('overlay');
-            if (!retainResultScene) {
-              if (!capture?.active || capture.render.guides) ui.drawOverlay(overlayContext);
-              else overlayContext.clearRect(0,0,innerWidth,innerHeight);
-              capture?.drawMapBoundary(overlayContext);
-            }
+            if (!retainResultScene) drawOverlay();
             if (capture?.active) {
               capture.renderedRequest = capture.request;
               if (capture.render.hud) ui.updateHUD();

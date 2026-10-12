@@ -63,6 +63,65 @@ await withBrowser(
     await boundary.uncheck();
     await ready();
     assert.equal(await overlayHasPixels(), false);
+    await page.locator('#mapDiagnostics summary').click();
+    assert.equal(await page.locator('[data-viewer="report"]').isDisabled(), true);
+    assert.equal(await page.evaluate(() => window.Meridian.capture.mapDiagnostics.data), undefined);
+    await page.evaluate(() => {
+      const { game } = window.Meridian,
+        w = game.world;
+      window.viewerDiagnosticSignature = () =>
+        JSON.stringify({
+          heights: w.surface.heights,
+          cliffs: w.surface.cliffs,
+          static: w.staticGrid,
+          blocked: w.blocked,
+          layout: w.layout,
+          entities: game.s.entities,
+          time: game.s.time,
+        });
+      window.viewerDiagnosticBaseline = window.viewerDiagnosticSignature();
+      window.viewerDiagnosticFrame = window.Meridian.renderer.frame;
+    });
+    await page.locator('[data-viewer="analyze"]').click();
+    await ready();
+    const diagnostic = await page.evaluate(() => window.Meridian.capture.exportMapDiagnostics());
+    assert.equal(diagnostic.map, 'desert');
+    assert.equal(diagnostic.seed, 1409);
+    assert.equal(diagnostic.build.id, await page.evaluate(() => window.Meridian.build.id));
+    assert.equal(diagnostic.economy.accessibleAnchors, diagnostic.economy.anchors);
+    assert.ok(diagnostic.broad.interiorCoverage >= 0.55);
+    assert.equal(await overlayHasPixels(), true);
+    await page.locator('[data-layer="connections"]').uncheck();
+    await ready();
+    assert.equal(await overlayHasPixels(), false);
+    for (const layer of ['cliffs', 'foundations', 'economy', 'starts']) {
+      const control = page.locator(`[data-layer="${layer}"]`);
+      await control.check();
+      await ready();
+      assert.equal(await overlayHasPixels(), true, `${layer} has projected annotations`);
+      await control.uncheck();
+      await ready();
+      assert.equal(await overlayHasPixels(), false);
+    }
+    assert.equal(
+      await page.evaluate(
+        () => window.viewerDiagnosticBaseline === window.viewerDiagnosticSignature(),
+      ),
+      true,
+    );
+    assert.equal(
+      await page.evaluate(() => window.Meridian.renderer.frame),
+      await page.evaluate(() => window.viewerDiagnosticFrame),
+      'diagnostic layer changes redraw annotations without rendering the 3D world',
+    );
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('[data-viewer="report"]').click();
+    const download = await downloadPromise;
+    assert.equal(download.suggestedFilename(), 'desert-1409-diagnostics.json');
+    assert.equal(await download.failure(), null);
+    await page.locator('[data-layer="economy"]').check();
+    await ready();
+    await page.locator('#mapDiagnostics summary').click();
     await boundary.check();
     await ready();
     assert.equal(await overlayHasPixels(), true);
@@ -133,6 +192,11 @@ await withBrowser(
     await page.evaluate((camera) => window.Meridian.capture.apply({ camera }), recipe.camera);
     assert.ok(Math.abs(recipe.hour - 12) < 1e-6);
     assert.equal(recipe.render.mapBoundary, true);
+    assert.equal(
+      Object.hasOwn(recipe, 'diagnostics'),
+      false,
+      'viewer analysis is not a capture-recipe field',
+    );
     const restored = await page.evaluate(() => Array.from(window.Meridian.renderer.vp));
     matrix.forEach((n, i) => assert.ok(Math.abs(n - restored[i]) < 1e-4));
     await page.setViewportSize({ width: 640, height: 720 });
@@ -186,12 +250,40 @@ await withBrowser(
       Math.abs((await page.evaluate(() => window.Meridian.renderer.battlefieldHour)) - 12) < 1e-6,
     );
     assert.equal(await page.locator('#mapViewer output').textContent(), '12:00');
+    const reloadedDiagnostic = await page.evaluate(() =>
+      window.Meridian.capture.exportMapDiagnostics(),
+    );
+    assert.equal(reloadedDiagnostic.seed, 1410);
+    assert.equal(await page.locator('[data-layer="economy"]').isChecked(), true);
+    assert.equal(
+      await page
+        .locator('[data-diagnostic-report]')
+        .textContent()
+        .then((t) => t.includes('seed 1410')),
+      true,
+    );
     assert.equal(await boundary.isChecked(), true);
     assert.equal(await overlayHasPixels(), true);
     assert.equal(await page.evaluate(() => window.Meridian.renderer.fogOn), false);
     assert.equal(await page.evaluate(() => window.Meridian.renderer.horizonMist), false);
     assert.deepEqual(await page.evaluate(() => window.viewerStorageCalls), []);
     assert.deepEqual(errors, []);
+    // Bypass HTML validation to exercise the load-error path without another world build.
+    await page.evaluate(() => {
+      document.querySelector('#mapViewer input[name="seed"]').value = '0';
+      document
+        .querySelector('#mapViewer form')
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await ready();
+    assert.equal(await page.locator('[data-viewer="report"]').isDisabled(), true);
+    assert.equal(await page.locator('[data-layer="economy"]').isDisabled(), true);
+    assert.equal(await page.evaluate(() => window.Meridian.capture.mapDiagnostics.data), undefined);
+    assert.equal(
+      await page.evaluate(() => window.Meridian.game.s.seed),
+      1410,
+      'failed input never replaces the seed',
+    );
     await page.evaluate(() =>
       window.Meridian.renderer.gl.getExtension('WEBGL_lose_context').loseContext(),
     );
@@ -203,7 +295,7 @@ await withBrowser(
     assert.equal(await page.evaluate(() => window.Meridian.game.s.time), 0);
     assert.deepEqual(await page.evaluate(() => window.viewerStorageCalls), []);
     console.log(
-      'Map viewer file://, profile isolation, paused mouse/touch navigation, zoom, terrain-following dashed map-boundary toggle/export, unmasked landscape borders, day-time slider/export/reload, idle rendering, export, resize/fit, seed reload and visible context-loss handling passed.',
+      'Map viewer file://, profile isolation, paused mouse/touch navigation, zoom, terrain-following dashed map-boundary toggle/export, read-only cached map diagnostics, layer toggles/report download/reload/error invalidation, unmasked landscape borders, day-time slider/export/reload, idle rendering, export, resize/fit, seed reload and visible context-loss handling passed.',
     );
   },
   { timeoutMs: 60000 },

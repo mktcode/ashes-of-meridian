@@ -106,7 +106,7 @@ const SIMULATION_SCRIPTS = Object.freeze([
 ]);
 const DIAGNOSTIC_SCRIPTS = Object.freeze(['diagnostics-build-info', 'diagnostics-recorder', 'diagnostics-gpu', 'diagnostics-browser']);
 const AUDIO_SCRIPTS = Object.freeze(['voice-content', 'audio']);
-const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-model-thumbnail', 'ui-codex', 'ui-screens', 'ui-tutorial', 'ui-actions', 'ui-input', 'ui-presentation', 'capture']);
+const UI_SCRIPTS = Object.freeze(['ui-core', 'ui-templates', 'ui-model-thumbnail', 'ui-codex', 'ui-screens', 'ui-tutorial', 'ui-actions', 'ui-input', 'ui-presentation', 'map-diagnostics', 'capture']);
 
 // Deliberately not a general HTML parser. Only the project's named classic
 // scripts with quoted attributes and synchronous document order are supported.

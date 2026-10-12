@@ -18,6 +18,20 @@ Die Landschaft enthält Terrain, Wirtschaftsressourcen und Kulisse, aber keine E
 
 **Export recipe** lädt ein JSON mit der tatsächlich aufgelösten 3D-Kamera herunter, auch wenn der Bildmittelpunkt außerhalb der Karte liegt. Dieses Rezept ist direkt im Capture-Werkzeug verwendbar. Karte und Seed bestimmen gemeinsam die Landschaft im festen Zwei-Parteien-Kontext des Szenenrunners; das ist keine Rekonstruktion beliebiger aktueller Kampagnenwelten. Gleiche Seeds konservieren keine Landschaft über verschiedene Generator-/Buildversionen hinweg.
 
+### Kartendiagnose
+
+**Map diagnostics → Analyze map** untersucht die fertige CPU-Oberfläche rein lesend. Ohne Anforderung entsteht kein zusätzlicher Analyseaufwand. Danach werden Ergebnisse und geländefolgende Annotationen pro Welt wiederverwendet; Kamerabewegung projiziert nur die gespeicherten Punkte. Ein Diagnose-Ebenenwechsel zeichnet ausschließlich die 2D-Annotationen neu, nicht die 3D-Welt. Beim Karten-/Seedwechsel wird eine bereits aktivierte Analyse erneuert, bei fehlgeschlagenem Laden verworfen. Alle Ebenen sind einzeln abschaltbar:
+
+- **Connections:** größtes radius-6-freies Netz grün, andere breite Komponenten orange; schmale, nur für Einzelkörper nutzbare Flächen bleiben ungefärbt.
+- **Cliffs:** permanente Terrain-Klippen rot.
+- **HQ terrain sample:** geeignete/ungeeignete HQ-Mittelpunkte im 10-Einheiten-Raster, mit dem tatsächlichen HQ-Radius und der normalen CPU-Fundamentprüfung. Nur Terrain: Ressourcen, Belegung, Sicht und Kosten werden nicht geprüft; keine Bauzusage.
+- **Economic network and anchors:** geplante Wirtschaftsverbindungen, Kristalle, Echo-Vents und HQ-Anker. Keine nachverfolgten Einheitenwege oder exakten Positionen der Reparaturrampen.
+- **Start candidates:** öffentliche Kandidaten weiß, die beiden ursprünglichen Viewer-Landungen gelb. Keine Vierparteienzuteilung oder Startfairnessbewertung.
+
+Der Bericht nennt Höhenbereich, Klippenanteil, breite/Fahrzeug-Komponenten, verbundene Innenfläche einschließlich neun Sektoren, Wirtschaftsanschlüsse und HQ-Stichproben. Der Anteil des größten Netzes bezieht sich auf die beim jeweiligen Radius freien Zellen, nicht die gesamte Kartenfläche. Landungsabstände zu Ressourcen sind Luftlinien. Warnungen vergleichen statische Merkmale mit den bestehenden Generatorgrenzen; erfüllte Grenzen beweisen weder dynamischen Gruppenverkehr, Walling noch Balance.
+
+**Export report** speichert einen separaten JSON-Bericht mit Karte, Seed, aufgelöstem Rezept, Kennzahlen, Aussagegrenzen und Buildkennung. Diagnoseebenen sind reine, auch über verdeckendem Terrain sichtbare 2D-Annotationen. Sie verändern weder Welt/RNG noch Profil und gehören nicht zum Capture-Rezept; **Export recipe** bleibt ein Landschafts-/Kamerarezept ohne Diagnoseebenen. Bildwirkung und Bedienkomfort auf Zielgeräten benötigen menschliche Abnahme.
+
 ## Automatisierte Aufnahmen
 
 ```bash

@@ -161,8 +161,19 @@ class MeridianCapture {
   fitKey = '';
   timing = {worldMs:0,resourcesMs:0,frameMs:0};
   toolbar?: HTMLElement;
+  mapDiagnostics?: MeridianMapDiagnostics;
+  drawMapDiagnostics(ctx: CanvasRenderingContext2D) {
+    if (this.active && this.readyToDraw && !this.busy) this.mapDiagnostics?.draw(ctx,(x,y,z)=>this.renderer.project(x,y,z));
+  }
+  exportMapDiagnostics() {
+    if (this.busy || !this.readyToDraw || !this.game.s || !this.mapDiagnostics?.data) throw Error('No analyzed map to export');
+    const report=JSON.parse(JSON.stringify(this.mapDiagnostics.data.report)) as ReturnType<typeof analyzeMapDiagnostics>['report'];
+    return {build:MERIDIAN_BUILD_INFO,...report};
+  }
   constructor(readonly game: MeridianGame, readonly ui: MeridianUI, readonly renderer: MeridianRenderer,
-    readonly worldChanged: () => void) { this.ui.viewingEntityVisible=e=>this.visible(e); }
+    readonly worldChanged: () => void, readonly annotationsChanged: () => void = () => {this.request++;}) {
+    this.ui.viewingEntityVisible=e=>this.visible(e);
+  }
   location(p: {x:number;z:number;anchor?:string}): Position {
     const a = this.anchors[p.anchor ?? 'world']; if (!a) throw Error(`Missing anchor: ${p.anchor}`);
     return {x:p.x+a.x,z:p.z+a.z};
@@ -214,6 +225,7 @@ class MeridianCapture {
   }
   visible(e: {kind:string}) { return e.kind === 'unit' ? this.render.units : e.kind === 'building' ? this.render.buildings : true; }
   async adopt(shot: CaptureShot = {}) {
+    this.mapDiagnostics?.invalidate();
     validateCaptureScene(shot as CaptureScene,true);
     if (!this.game.s || this.busy) throw Error('No stable scene to adopt');
     this.active = this.readyToDraw = true; this.ui.viewing = true; this.ui.paused = true;
@@ -228,12 +240,14 @@ class MeridianCapture {
     return this.apply(shot);
   }
   release() {
+    this.mapDiagnostics?.invalidate();
     this.active = this.readyToDraw = false; this.ui.viewing = false; this.ui.viewingCameraLocked = false;
     this.renderer.captureCamera = undefined; this.renderer.captureDpr = undefined; this.renderer.distanceMist = this.renderer.horizonMist = true;
   }
   async prepare(scene: CaptureScene) {
     validateCaptureScene(scene);
     if (this.busy) throw Error('Scene preparation already in progress');
+    this.mapDiagnostics?.invalidate();
     this.busy = true; this.readyToDraw = false; this.active = true; this.ui.viewing = true; this.ui.viewingCameraLocked = true;
     this.ui.expedition = null; this.ui.paused = true;
     this.render = {units:true,buildings:true,effects:true,caches:scene.content!=='landscape',guides:false,mapBoundary:false,distanceMist:scene.content!=='landscape',horizonMist:scene.content!=='landscape',hud:false};
@@ -379,8 +393,46 @@ class MeridianCapture {
       <label><input name="boundary" type="checkbox" checked> Map boundary</label>
       <label>Time of day <input id="mapViewerTime" name="hour" type="range" min="0" max="1439" step="1" value="0" aria-label="Time of day"><output for="mapViewerTime">00:00</output></label>
       <button type="button" data-viewer="export">Export recipe</button><button type="button" data-viewer="hide">Hide tools</button></form>
-      <p role="status">Drag to pan · middle-drag to rotate · wheel/pinch to zoom</p>`;
+      <p role="status">Drag to pan · middle-drag to rotate · wheel/pinch to zoom</p>
+      <details id="mapDiagnostics"><summary>Map diagnostics</summary>
+        <div class="diagnosticActions"><button type="button" data-viewer="analyze">Analyze map</button>
+          <button type="button" data-viewer="report" disabled>Export report</button></div>
+        <div class="diagnosticLayers">
+          <label><input type="checkbox" data-layer="connections" checked disabled> Connections: green main / orange detached (radius 6)</label>
+          <label><input type="checkbox" data-layer="cliffs" disabled> Cliffs: red</label>
+          <label><input type="checkbox" data-layer="foundations" disabled> HQ terrain sample: green suitable / red unsuitable</label>
+          <label><input type="checkbox" data-layer="economy" disabled> Economic network and anchors</label>
+          <label><input type="checkbox" data-layer="starts" disabled> Start candidates: white / two-party landings: yellow</label>
+        </div><pre data-diagnostic-report role="status">Analysis runs only on request, then refreshes on map load.</pre>
+        <p>Annotations show through terrain. HQ samples ignore resources and occupancy; corridors are planned links, not repair ramps.
+          Static access does not prove traffic flow or balance. Diagnostic overlays are not part of the capture recipe.</p>
+      </details>`;
     document.body.append(panel); this.toolbar=panel;
+    const diagnostics=this.mapDiagnostics=new MeridianMapDiagnostics(),
+      diagnosticReport=panel.querySelector<HTMLElement>('[data-diagnostic-report]')!,
+      reportButton=panel.querySelector<HTMLButtonElement>('[data-viewer="report"]')!,
+      layerControls=[...panel.querySelectorAll<HTMLInputElement>('[data-layer]')];
+    const analyze=()=>{
+      if (this.busy || !this.readyToDraw || !this.game.s || !this.game.world) throw Error('No stable map to analyze');
+      const {report:r}=diagnostics.analyze(this.game.world,this.game.s.map,this.anchors), pct=(v:number)=>`${(v*100).toFixed(1)}%`;
+      diagnosticReport.textContent=[`${r.map} · seed ${r.seed} · ${r.recipe} · build ${MERIDIAN_BUILD_INFO.id.slice(-12)}`,
+        `Height: ${r.height.min.toFixed(1)}–${r.height.max.toFixed(1)} · cliff cells: ${pct(r.cliffs.fraction)}`,
+        `Broad network: ${r.broad.components} components · largest ${pct(r.broad.largestShare)} of broad-clear cells`,
+        `Broad interior coverage: ${pct(r.broad.interiorCoverage)} · vehicle components: ${r.vehicle.components}`,
+        `Sector coverage (rows −Z → +Z): ${[0,3,6].map(i=>r.broad.sectorCoverage.slice(i,i+3).map(pct).join(' / ')).join(' | ')}`,
+        `Economy: ${r.economy.accessibleAnchors}/${r.economy.anchors} anchors accessible · ${r.economy.broadHubs}/${r.economy.regions} broad hubs`,
+        `HQ terrain sample (${r.hqSample.spacing}-unit spacing): ${r.hqSample.suitable}/${r.hqSample.tested} suitable points`,
+        `Public start candidates: ${r.deployment.candidates} · landing distances are straight-line, not fairness scores`,
+        ...r.deployment.landings.map(p=>`${p.name}: nearest resource ${p.nearestEconomyDistance.toFixed(1)} units`),
+        ...(r.warnings.length?r.warnings:['Static terrain checks meet the current generator thresholds; gameplay remains untested.'])].join('\n');
+      reportButton.disabled=false;layerControls.forEach(c=>c.disabled=false);this.annotationsChanged();
+    };
+    panel.querySelector<HTMLButtonElement>('[data-viewer="analyze"]')!.onclick=()=>{
+      try {analyze();} catch(e) {diagnosticReport.textContent=String(e);}
+    };
+    for (const input of layerControls) input.onchange=()=>{
+      diagnostics.layers[input.dataset.layer as MapDiagnosticLayer]=input.checked;this.annotationsChanged();
+    };
     const form=panel.querySelector('form')!, map=form.elements.namedItem('map') as HTMLSelectElement,
       seed=form.elements.namedItem('seed') as HTMLInputElement, mist=form.elements.namedItem('mist') as HTMLInputElement,
       clock=form.elements.namedItem('hour') as HTMLInputElement, clockLabel=panel.querySelector('output')!,
@@ -394,19 +446,28 @@ class MeridianCapture {
     const show=document.createElement('button'); show.id='showMapViewer'; show.textContent='Show tools'; show.hidden=true;
     document.body.append(show); show.onclick=()=>{panel.hidden=false;show.hidden=true;};
     const load = async () => {
-      const controls=[...form.querySelectorAll<HTMLButtonElement|HTMLInputElement|HTMLSelectElement>('button,input,select')];
+      const controls=[...panel.querySelectorAll<HTMLButtonElement|HTMLInputElement|HTMLSelectElement>('button,input,select')];
       const mapId=map.value, value=Number(seed.value); controls.forEach(b=>b.disabled=true);
+      diagnostics.invalidate();this.annotationsChanged();
       status.textContent='Preparing landscape…';
+      diagnosticReport.textContent=diagnostics.enabled?'Preparing map analysis…':'Analysis runs only on request, then refreshes on map load.';
       try {
         await this.prepare({map:mapId,seed:value,content:'landscape',hour:selectedHour,dpr:Math.min(devicePixelRatio||1,1.6),
           camera:{mode:'game',fit:'map'},render:{distanceMist:mist.checked,mapBoundary:boundary.checked,caches:false}});
+        if (diagnostics.enabled) analyze();
         clock.value=String(Math.round((this.renderer.battlefieldHour ?? 0)*60)%1440); showTime();
         const url=new URL(location.href); url.searchParams.set('map',mapId);url.searchParams.set('seed',String(value));
         try { history.replaceState(null,'',url); } catch { /* file:// history is browser dependent */ }
         const size=this.game.world!.extent*2;
         status.textContent=`${mapId} · seed ${value} · map size ${size} × ${size} world units · drag/pinch to navigate`;
-      } catch (e) { status.textContent=e instanceof Error ? e.message : String(e); }
-      finally {controls.forEach(b=>b.disabled=false);}
+      } catch (e) {
+        status.textContent=e instanceof Error ? e.message : String(e);
+        diagnosticReport.textContent='No analysis available for this load.';
+      }
+      finally {
+        controls.forEach(b=>b.disabled=false);
+        reportButton.disabled=!diagnostics.data;layerControls.forEach(c=>c.disabled=!diagnostics.data);
+      }
     };
     map.value=params.get('map') ?? 'desert'; seed.value=params.get('seed') ?? '1409';
     form.onsubmit=e=>{e.preventDefault();void load();};
@@ -424,6 +485,13 @@ class MeridianCapture {
       action(()=>this.apply({hour:selectedHour}));
     };
     panel.querySelector<HTMLButtonElement>('[data-viewer="hide"]')!.onclick=()=>{panel.hidden=true;show.hidden=false;};
+    reportButton.onclick=()=>{
+      try {
+        const report=this.exportMapDiagnostics(),blob=new Blob([JSON.stringify(report,null,2)+'\n'],{type:'application/json'}),
+          url=URL.createObjectURL(blob),a=document.createElement('a');
+        a.href=url;a.download=`${report.map}-${report.seed}-diagnostics.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      } catch(e) {diagnosticReport.textContent=String(e);}
+    };
     panel.querySelector<HTMLButtonElement>('[data-viewer="export"]')!.onclick=()=>{
       try {
         const blob=new Blob([JSON.stringify(this.exportScene(),null,2)+'\n'],{type:'application/json'}), url=URL.createObjectURL(blob), a=document.createElement('a');
