@@ -64,7 +64,7 @@ test('native terrace recipes retain quiet high ground distinct from rolling hill
   for (const form of ['rolling','folds','basin','terraces']) assert.ok(available.includes(form));
 });
 
-for (const map of ['desert','alien-planet','mothership','westmark','frontier','haven']) {
+for (const map of ['desert','alien-planet','westmark','frontier','haven']) {
   test(`${map}: enlarged terrain distributes broad reachable ground and protects economic foundations`, () => {
     const result = vm.runInContext(`(()=>{
       const seed=1409,definition=BATTLEFIELDS[${JSON.stringify(map)}],size=definition.createSize(seed),

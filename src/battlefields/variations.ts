@@ -25,15 +25,6 @@ const WORLD_VARIATIONS:Readonly<Record<WorldVariationFamily,readonly WorldVariat
     {id:'oasis-valleys',name:'OASIS VALLEYS',biome:'ochre',flora:'Palm',relief:'basin',amplitude:11,weather:'mist',landmark:'Relic',dry:[.66,.53,.32],lush:[.25,.41,.27],leaf:0x8bb26b},
     {id:'salt-folds',name:'SALT AND GOLD',biome:'ochre',flora:'Spire',relief:'folds',amplitude:12,weather:'clear',landmark:'Spire',dry:[.75,.71,.57],lush:[.50,.43,.30],leaf:0xe1cc98}
   ],
-  ship:[
-    {id:'solar-dock',name:'SOLAR SERVICE DECK',biome:'ochre',flora:'Spire',relief:'deck',amplitude:0,heightScale:1,weather:'clear',landmark:'Radar',dry:[.39,.43,.46],lush:[.65,.48,.24]},
-    {id:'cryo-carrier',name:'CRYO CARRIER',biome:'rime',flora:'Spire',relief:'deck',amplitude:0,heightScale:.9,weather:'snow',landmark:'Pylon',dry:[.39,.51,.59],lush:[.38,.67,.73]},
-    {id:'salvage-fleet',name:'SALVAGE FLEET',biome:'ochre',flora:'Spire',relief:'deck',amplitude:0,heightScale:1.08,weather:'ash',landmark:'Wreck',dry:[.45,.34,.28],lush:[.66,.42,.20]},
-    {id:'azure-crown',name:'AZURE CROWN',biome:'mycelium',flora:'Spire',relief:'deck',amplitude:0,heightScale:1,weather:'mist',landmark:'Pylon',dry:[.33,.47,.57],lush:[.34,.69,.75]},
-    {id:'gilded-crown',name:'GILDED CROWN',biome:'ochre',flora:'Spire',relief:'deck',amplitude:0,heightScale:.9,weather:'clear',landmark:'Relic',dry:[.55,.46,.32],lush:[.76,.57,.29]},
-    {id:'storm-crown',name:'STORM CROWN',biome:'rime',flora:'Spire',relief:'deck',amplitude:0,heightScale:1.06,weather:'rain',landmark:'Spire',dry:[.35,.37,.54],lush:[.57,.48,.70]},
-    {id:'ember-crown',name:'EMBER CROWN',biome:'ochre',flora:'Spire',relief:'deck',amplitude:0,heightScale:.96,weather:'ash',landmark:'Wreck',dry:[.45,.33,.28],lush:[.65,.39,.23]}
-  ],
   alpine:[
     {id:'spring-valley',name:'SPRING VALLEY',biome:'verdant',flora:'Grove',relief:'rolling',amplitude:5,weather:'rain',landmark:'Relic'},
     {id:'amber-valley',name:'AMBER VALLEY',biome:'ochre',flora:'Grove',relief:'folds',amplitude:7,weather:'mist',landmark:'Relic',dry:[.62,.51,.28],lush:[.39,.42,.22],leaf:0xd6ad59},
@@ -59,7 +50,7 @@ function worldVariationRecipe(family:WorldVariationFamily,seed:number):WorldVari
 }
 function battlefieldVariation(profile:BattlefieldRenderProfile,seed:number):BattlefieldRenderProfile {
   const family=profile.variationFamily;if(!family)return profile;
-  const recipe=worldVariationRecipe(family,seed),natural=family!=='ship',
+  const recipe=worldVariationRecipe(family,seed),
     geology=seeded(seed^0x4d414352),
     // Alien's relief axis is independent of its habitat recipe. Keep its draw
     // before the amplitude sample; other families use their recipe's own form.
@@ -70,7 +61,7 @@ function battlefieldVariation(profile:BattlefieldRenderProfile,seed:number):Batt
         family==='alien'?(landform==='ridges'?' · RIDGE COUNTRY':' · BROKEN CRATER'):''),
       family,relief:landform,amplitude:family==='alien'?36+geology()*10:recipe.amplitude,
       heightScale:recipe.heightScale??1,flora:recipe.flora,landmark:recipe.landmark??(recipe.biome==='mycelium'?'Spire':'Relic')};
-  return battlefieldAtmosphere({...base,variation,ecology:{...ecology,natural,flora:recipe.flora,
+  return battlefieldAtmosphere({...base,variation,ecology:{...ecology,natural:true,flora:recipe.flora,
     weather:recipe.weather,cover:recipe.weather==='clear'?.18:recipe.weather==='mist'?.58:.8,
     dry:recipe.dry??ecology.dry,lush:recipe.lush??ecology.lush,leaf:recipe.leaf??ecology.leaf,bloom:recipe.bloom??ecology.bloom}},
     {timeOfDay:'seeded'},seed);
@@ -93,30 +84,5 @@ function decorateWorldVariation(builder:BattlefieldBuilder) {
         p.color=e.leaf;p.material=style.flora==='Spire'?'CRYSTAL':'LEAF';
       }
     }
-  }
-  if(style.family!=='ship')return;
-  const rand=builder.cosmeticRandom(0x41524348),part=style.landmark,
-    model=part==='Relic'||part==='Spire'?`ecology${part}`:`variation${part}`,
-    color=e.dry.map(v=>Math.min(1,v*1.6+.22));
-  for(let i=0;i<3;i++)w.renderData.geometries.push({mesh:`variationLandmark${i}`,model,seed:197+i*7919,extent:0});
-  const place=(i:number,x:number,y:number,z:number,r:number,h:number,yaw:number)=>
-    builder.place(`variationLandmark${i%3}`,x,y,z,r,h,r,color,yaw,0,0,0,1,'static',part==='Spire'?'CRYSTAL':'METAL');
-  for (const [i, model] of ['shipHangar', 'shipPlant'].entries())
-    w.renderData.geometries.push({ mesh: `shipFixture${i}`, model, seed: 197, extent: 0 });
-  // Small machinery fits entirely within existing cliff blockers. A support seats its
-  // rigid base above the sampled slope; it never creates a playable roof or new obstacle.
-  for (let i = 0; i < 100; i++) {
-    const x = (rand() - .5) * w.extent * 1.8, z = (rand() - .5) * w.extent * 1.8, r = .65 + rand() * .25;
-    if (!ecologyFootprint(w, x, z, r * 1.6 + .4)) continue;
-    const bounds = w.surface!.foundationBounds({ x, z }, r * 1.6), h = bounds.max - bounds.min + .05;
-    builder.place('box', x, bounds.min + h / 2, z, r * 2.2, h, r * 2.2, color, 0, 0, 0, 0, 1, 'static', 'METAL');
-    builder.place(`shipFixture${i % 2}`, x, bounds.max, z, r, 2, r, color, rand() * Math.PI * 2, 0, 0, 0, 1, 'static', 'METAL');
-  }
-  const backdrop = w.renderData.geometries.find(d => 'relief' in d && d.relief.innerExtent);
-  // Large grounded silhouettes remain on the non-playable generated exterior.
-  for(let i=0;i<8;i++) {
-    const side=i%2?1:-1,x=side*(w.extent+26),z=(Math.floor(i/2)-1.5)*57,
-      y=backdrop&&'relief' in backdrop?worldReliefHeightAt(backdrop.relief,x,z):0;
-    place(i,x,y,z,5+rand()*2,9+rand()*9,rand()*Math.PI*2);
   }
 }

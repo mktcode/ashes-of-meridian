@@ -3,7 +3,6 @@
 const BATTLEFIELDS = {
   desert: createDynamicBattlefield('DESERT', 'desert'),
   'alien-planet': createDynamicBattlefield('ALIEN PLANET', 'alien'),
-  mothership: createDynamicBattlefield('MOTHERSHIP', 'ship'),
   westmark: createDynamicBattlefield('WESTMARK', 'alpine'),
   frontier: createDynamicBattlefield('FRONTIER', 'frontier'),
   haven: createDynamicBattlefield('HAVEN', 'haven')

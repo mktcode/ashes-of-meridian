@@ -131,7 +131,7 @@ test('controller assignment owns independent AI memory without altering faction,
 });
 
 function scenario(count = 4) {
-  return { seed: 1409, map: 'mothership', duration: 2,
+  return { seed: 1409, map: 'westmark', duration: 2,
     parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human' })),
     hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b && (a + b) % 2 === 1)) };
 }

@@ -132,33 +132,6 @@
     }
     return finish(out);
   };
-  const box=(out:number[],x:number,y:number,z:number,sx:number,sy:number,sz:number,color:number[])=>{
-    const mesh=geom.box();for(let i=0;i<mesh.length;i+=9)out.push(x+mesh[i]*sx,y+mesh[i+1]*sy,z+mesh[i+2]*sz,
-      mesh[i+3],mesh[i+4],mesh[i+5],...color);
-  };
-  TerrainModels.variationRadar=(seed:number)=>{
-    const out:number[]=[];box(out,0,.12,0,.9,.24,.7,[.5,.62,.65]);box(out,0,.55,0,.13,.85,.13,[.74,.77,.76]);
-    for(let i=0;i<16;i++) {
-      const a=i*Math.PI/8,b=(i+1)*Math.PI/8;
-      geom.tri(out,[0,.87,.16],[Math.cos(a)*.61,.91+Math.sin(a)*.29,-.08],[Math.cos(b)*.61,.91+Math.sin(b)*.29,-.08],[.72,.83,.91]);
-    }
-    tube(out,[[0,.86,.16,.025],[0,.91,.51,.012]],[.95,.73,.34],6);return finish(out);
-  };
-  TerrainModels.variationPylon=(seed:number)=>{
-    const out:number[]=[];box(out,0,.07,0,1.05,.14,.82,[.43,.51,.57]);
-    for(const side of [-1,1]) {
-      box(out,side*.32,.49,0,.14,.85,.28,[.67,.74,.80]);
-      box(out,side*.32,.87,0,.25,.12,.4,[.8,.9,.94]);
-      box(out,side*.32,.46,.15,.035,.65,.035,[.43,.88,1]);
-    }
-    box(out,0,.68,0,.56,.12,.21,[.55,.66,.71]);return finish(out);
-  };
-  TerrainModels.variationWreck=(seed:number)=>{
-    const out:number[]=[],r=seeded(seed);
-    for(let i=0;i<9;i++)box(out,(r()-.5)*1.1,.04+r()*.19,(r()-.5)*1.1,.24+r()*.38,.1+r()*.18,.19+r()*.25,[.54,.45,.34]);
-    tube(out,[[-.33,.09,0,.22],[-.26,.42,0,.24],[-.18,.58,0,.14]],[.72,.61,.41],8);
-    box(out,.28,.34,0,.2,.48,.7,[.42,.51,.54]);return finish(out);
-  };
   // Alien replacement meshes retain the original instancing footprint/placement RNG.
   // A family has a complete silhouette; no floating old mushroom gills are retained.
   for(const family of ['Coral','Fan','Spire','Pod','Arch','Reed','Shelf','Cactus','Palm'] as const)

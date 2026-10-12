@@ -263,10 +263,10 @@ test('invalid recipes, benefits and upgrades are rejected instead of silently re
     assert.equal(h.service.loadExpedition(), null); assert.ok(h.service.expeditionError);
     assert.equal(h.service.loadProfile().expeditionDepth, 40);
   }
-  const restricted = setup(new Map(), { missions: { 'hq-elimination': { maps: ['mothership'] } } });
+  const restricted = setup(new Map(), { missions: { 'hq-elimination': { maps: ['westmark'] } } });
   put(restricted); assert.equal(restricted.service.loadExpedition(), null);
-  put(restricted, { ...expedition, encounter: { ...expedition.encounter, map: 'mothership' } });
-  assert.equal(restricted.service.loadExpedition().encounter.map, 'mothership');
+  put(restricted, { ...expedition, encounter: { ...expedition.encounter, map: 'westmark' } });
+  assert.equal(restricted.service.loadExpedition().encounter.map, 'westmark');
 });
 
 test('unknown map recipes and snapshots are rejected without losing permanent profile data', () => {
@@ -304,7 +304,7 @@ test('deployment and opponent slots round-trip across stage boundaries without s
 });
 
 test('landscape archive remains independent, discards foreign history and clears with the run', () => {
-  const h = setup(), current = { stage: 9, map: 'desert', seed: 1409 }, previous = { stage: 8, map: 'mothership', seed: 82 };
+  const h = setup(), current = { stage: 9, map: 'desert', seed: 1409 }, previous = { stage: 8, map: 'westmark', seed: 82 };
   put(h); const before = h.data.get(PROFILE);
   h.service.saveStageHistory([previous, current]);
   assert.deepEqual(json(setup(h.data).service.loadStageHistory(expedition)), [previous, current]);

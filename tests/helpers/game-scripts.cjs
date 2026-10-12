@@ -10,7 +10,6 @@ const RENDERER_SCRIPTS = Object.freeze([
   'renderer-desert-landscape',
   'renderer-desert-terrain',
   'renderer-alien-terrain',
-  'renderer-mothership-terrain',
   'renderer-landscape',
   'renderer-upland',
   'renderer-ecology',

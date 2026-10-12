@@ -268,7 +268,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
   };
   renderer.fog=(data,size)=>{assert.equal(data.length,size*size);fogs.push([size,Array.from(data)]);};
   const view=new BattlefieldView(renderer);
-  for(const [map,extent,grid] of [['desert',90,72],['alien-planet',135,108],['mothership',120,96]]) {
+  for(const [map,extent,grid] of [['desert',90,72],['alien-planet',135,108],['westmark',120,96]]) {
     const w=fixture(map,extent,grid), count=fogs.length;
     view.sync(w,false);view.sync(w,true);view.sync(w,true);
     assert.equal(renderer.extent,extent);
@@ -286,7 +286,7 @@ test('world view switches ground bounds, boundary descriptors and fog sizes betw
 test('world view dispatches declared terrain models and profiles without assuming mountains', () => {
   const context = loadScripts(['core', 'content', ...RENDERER_SCRIPTS, ...BATTLEFIELD_SCRIPTS, 'world', 'world-view']);
   const { Battlefield, BattlefieldView, TerrainModels } = vm.runInContext('({Battlefield, BattlefieldView, TerrainModels})', context);
-  const world = new Battlefield(1409, 'mothership'), renderer = createRendererStub(), uploads = [], inputs = [];
+  const world = new Battlefield(1409, 'westmark'), renderer = createRendererStub(), uploads = [], inputs = [];
   const feature = world.renderData.features[0];
   TerrainModels.testInterior = input => { inputs.push(input); return [1, 2, 3]; };
   world.renderData.geometries = [{ mesh: 'custom', model: 'testInterior', feature }];

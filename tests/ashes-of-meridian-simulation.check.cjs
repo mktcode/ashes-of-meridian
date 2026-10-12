@@ -118,7 +118,7 @@ function buildNearWorker(game, type, worker) {
   assert.fail(`No reachable ${type} construction site near worker ${worker.id}.`);
 }
 
-for (const map of ['mothership', 'desert', 'alien-planet']) for (const count of [3, 4])
+for (const map of ['westmark', 'desert', 'alien-planet']) for (const count of [3, 4])
 test(`internal ${count}-party scenario on ${map}: FFA starts, resource access and explicit stop without expedition result`, () => {
   const { game, events } = createGame(), options = {
     seed: 1409, map, duration: .1,
@@ -169,7 +169,7 @@ test(`internal ${count}-party scenario on ${map}: FFA starts, resource access an
 });
 
 test('scenario command tick precedes production and cancels callback input at the duration limit', () => {
-  const { game } = createGame(), options = { seed: 1409, map: 'mothership', duration: .05,
+  const { game } = createGame(), options = { seed: 1409, map: 'westmark', duration: .05,
     parties: [{ faction: 0, controller: 'human' }, { faction: 1, controller: 'human' }],
     hostilities: [[false, true], [true, false]] };
   game.startScenario(options);
@@ -221,7 +221,7 @@ test('flat large arena supports outer-area construction, production and commands
   assert.equal(game.unitFits(rifle,131,115),false);
   const air=game.spawnUnit('air',120,-120,0,0);assert.ok(air);
   game.pathTo(air,{x:999,z:-999});assert.deepEqual(json(air.path),[{x:130,z:-130}]);
-  for(const map of ['desert','alien-planet','mothership']) {
+  for(const map of ['desert','alien-planet','westmark']) {
     game.start({seed:43015,map});
     const size=game.world.definition.createSize(game.world.terrainSeed);
     assert.deepEqual([game.world.extent,game.world.cellSize,game.world.gridSize],
@@ -261,7 +261,7 @@ test('starts without a supplied seed draw a fresh random battlefield each time',
 });
 
 // Retain the existing map/seed samples, but expose each case for bounded selection.
-for (const map of ['desert','alien-planet','mothership'])
+for (const map of ['desert','alien-planet','westmark'])
 for (const seed of [1,2,3,4,5,6,7,8,9,10,1409,2219,24080])
 test(`seeded exploration deployment on ${map}, seed ${seed}: separated candidates, replay and independent RNG`, () => {
   const {game}=createGame(), options={seed,map,deployment:'exploration',benefits:{startingWorkers:5,commanderMandate:1}};
@@ -392,7 +392,7 @@ test('fresh starts with the same seed reproduce state; another seed changes reso
 test('battle starts cover every faction and map with valid entities', () => {
   const { game, context } = createGame(), maps = vm.runInContext('BATTLEFIELDS', context);
   // Maps change presentation, not faction rules: no redundant faction/map cross-product.
-  for (const [faction, map] of [[0,'desert'],[1,'alien-planet'],[2,'mothership']]) {
+  for (const [faction, map] of [[0,'desert'],[1,'alien-planet'],[2,'westmark']]) {
     game.start({ seed: 1409, faction, enemies: [faction], map });
     assert.deepEqual(Array.from(game.alive(e => e.team === 0), e => e.type), ['worker']);
     assert.equal(game.alive(e => e.type === 'hq').length, 0);
@@ -412,10 +412,10 @@ test('resolved procedural layout supplies dimensions, resources, camera and unex
   const { BATTLEFIELDS:maps, battlefieldCrystalPosition, battlefieldGasPosition } =
     vm.runInContext('({BATTLEFIELDS,battlefieldCrystalPosition,battlefieldGasPosition})',context);
   const catalogueBefore=JSON.stringify(maps);
-  game.start({ seed: 1409, map: 'mothership', deployment:'exploration' });
+  game.start({ seed: 1409, map: 'westmark', deployment:'exploration' });
   const world=game.world, layout=world.layout, starts=game.startingPositions(game.s.seed),
-    size=maps.mothership.createSize(world.terrainSeed);
-  assert.strictEqual(world.definition,maps.mothership);
+    size=maps.westmark.createSize(world.terrainSeed);
+  assert.strictEqual(world.definition,maps.westmark);
   assert.deepEqual([world.extent,world.cellSize,world.gridSize],[size.extent,size.cellSize,size.extent*2/size.cellSize]);
   assert.deepEqual(json(game.s.cam), { x: starts[0].x+5, z: starts[0].z-2, zoom: 57, yaw:0 });
   const crystals=game.alive(e=>e.kind==='resource'&&e.type==='crystal'), vents=game.alive(e=>e.kind==='resource'&&e.type==='gas');
@@ -486,7 +486,7 @@ test('ground attack-move preserves mixed formations and worker movement without 
   assert.equal(rifle.order.type,'attack'); assert.equal(rifle.order.id,enemy.id);
 });
 
-for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'mothership']])
+for (const [faction,seed,map] of [[0,1409,'desert'],[1,7012,'desert'],[2,9017,'alien-planet'],[0,43015,'westmark']])
 test(`developed bases use legal sites, fitted armies and unchanged RNG: ${map}/${seed}/${faction}`, () => {
   const {game}=headquartersBattle(faction,seed,'resource-start',map), terrain=terrainFingerprint(game.world),
     resources=json(game.alive(e=>e.kind==='resource')), random=game.random, state=random.state,
@@ -968,7 +968,7 @@ test('five starting workers begin mining and deliver alloy without recruitment f
 
 test('energy supply preserves seeded setup, sight and RNG across restarts',()=>{
   const {game}=createGame();
-  for(const map of ['desert','alien-planet','mothership']) {
+  for(const map of ['desert','alien-planet','westmark']) {
     const options={seed:1409,map};game.start(options);
     const entities=json(game.s.entities),terrain=Array.from(game.world.staticGrid),rng=game.random(),
       visible=Array.from(game.world.visible),enemyView=json(game.world.sight[1]),

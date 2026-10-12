@@ -45,7 +45,7 @@ function dynamicBattlefieldLayout(seed: number, extent: number): BattlefieldLayo
 function dynamicTerrainPlan(world: Battlefield) {
   const random = seeded(world.terrainSeed ^ 0x54455252), style = world.renderProfile.variation,
     amplitude = (14 + random() * 12) * (style?.heightScale ?? 1), angle = random() * Math.PI, phase = random() * Math.PI * 2,
-    industrial = style?.family === 'ship', form = industrial ? 'terraces' : style?.relief || 'rolling',
+    form = style?.relief || 'rolling',
     cs = Math.cos(angle), sn = Math.sin(angle), extent = world.extent,
     hills = Array.from({ length: 12 }, () => ({ x: (random() - .5) * extent * 1.9,
       z: (random() - .5) * extent * 1.9, radius: 42 + random() * 38, height: 9 + random() * 17 })),
@@ -60,7 +60,7 @@ function dynamicTerrainPlan(world: Battlefield) {
       rx: 34 + macroRandom() * 25, rz: 30 + macroRandom() * 24,
       height: 22 + macroRandom() * 12, phase: macroRandom() * Math.PI * 2
     })),
-    canyon = !industrial && (form === 'basin' || form === 'broken-crater' || morphology() < .5),
+    canyon = form === 'basin' || form === 'broken-crater' || morphology() < .5,
     smooth = (t: number) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); },
     datum = (x: number, z: number) => {
       let h = 18 + amplitude * (.5 + .22 * Math.sin((x * cs + z * sn) / 160 + phase) +
@@ -80,7 +80,7 @@ function dynamicTerrainPlan(world: Battlefield) {
         const d = (v - ridge.offset - 12 * Math.sin(u / 85 + phase)) / ridge.width;
         h += ridge.height * Math.exp(-d * d);
       }
-      if (!industrial && form === 'terraces') {
+      if (form === 'terraces') {
         // Native terrace recipes retain broad quiet shelves with warped outlines.
         let macro = 0;
         for (const m of plateaus) {
@@ -95,7 +95,7 @@ function dynamicTerrainPlan(world: Battlefield) {
       for (const hill of hills) {
         const d = Math.hypot(x - hill.x, z - hill.z) / hill.radius;
         // A smooth maximum joins broad hills without stacking them into one giant mound.
-        const relief = hill.height * (form === 'terraces' ? 1 - smooth((d - .35) / 1.3) : Math.exp(-d * d));
+        const relief = hill.height * Math.exp(-d * d);
         hillRelief += relief ** 6;
       }
       h += Math.pow(hillRelief, 1 / 6);
@@ -185,25 +185,23 @@ function dynamicTerrainPlan(world: Battlefield) {
       }
     }
     return h;
-  }, industrial };
+  } };
 }
 function createDynamicBattlefield(name: string, family: WorldVariationFamily): BattlefieldDefinition {
-  const industrial = family === 'ship', palette: BattlefieldPalette = industrial
-    ? { ground: 0x424f5d, rock: 0x7c8e9b, accent: 0xf0b764, flora: 0x79aab5 }
-    : { ground: 0x637344, rock: 0x828783, accent: 0xbad49c, flora: 0x355b3a };
+  const palette: BattlefieldPalette = { ground: 0x637344, rock: 0x828783, accent: 0xbad49c, flora: 0x355b3a };
   return { name, size: { extent: 180, cellSize: 2.5 }, palette,
     createSize: seed => ({ extent: [160, 180, 200][Math.floor(seeded(seed ^ 0x53495a45)() * 3)], cellSize: 2.5 }),
     createLayout: (seed, size) => dynamicBattlefieldLayout(seed, size.extent),
-    render: { groundTexture: industrial ? 'metal' : family === 'desert' ? 'ground' : family === 'alien' ? 'bio' : 'westmarkMeadow',
+    render: { groundTexture: family === 'desert' ? 'ground' : family === 'alien' ? 'bio' : 'westmarkMeadow',
       rockSurface: { texture: family === 'desert' ? 'desertRock' : 'westmarkGranite', metersPerTile: 8 },
-      variationFamily: family, wilderness: 'seeded', terrainReceiverHeight: 80, daylight: true, upland: !industrial,
+      variationFamily: family, wilderness: 'seeded', terrainReceiverHeight: 80, daylight: true, upland: true,
       landscape: { earth: 'westmarkEarth', bark: 'westmarkBark' },
       haze: [0.055, 0.09, 0.13] },
     generate(builder) {
       const w = builder.world, plan = dynamicTerrainPlan(w), s = w.surface = connectBattlefieldTerrain(w, plan.height);
       w.staticGrid.set(s.cliffs); w.terrainFeatureGrid.set(s.cliffs);
       builder.ground();
-      w.renderData.placements.find(p => p.mesh === 'terrain')!.material = plan.industrial ? 'METAL' : 'LANDSCAPE';
+      w.renderData.placements.find(p => p.mesh === 'terrain')!.material = 'LANDSCAPE';
       const field = (extent: number, step: number, innerExtent = 0): WorldRelief => {
         const size = Math.round(extent * 2 / step) + 3, heights = new Float32Array(size * size), colors = new Float32Array(size * size * 3);
         for (let z = 0; z < size; z++) for (let x = 0; x < size; x++) {
@@ -218,14 +216,13 @@ function createDynamicBattlefield(name: string, family: WorldVariationFamily): B
             exterior = inside ? 0 : plan.height(px, pz) +
               (s.heightAt(ex, ez) - plan.height(ex, ez)) * fade * fade * (3 - 2 * fade);
           heights[i] = (inside ? s.heightAt(px, pz) : exterior) - .13;
-          if (plan.industrial) colors.set([.65, .75, .85], i * 3);
-          else colors[i * 3 + 1] = clamp((heights[i] - 25) / 22, 0, 1);
+          colors[i * 3 + 1] = clamp((heights[i] - 25) / 22, 0, 1);
         }
         return { extent, step, size, heights, colors, innerExtent };
       };
       w.renderData.geometries.push({ mesh: 'terrain', model: 'landscapeRelief', relief: field(w.extent, s.step) },
         { mesh: 'dynamicBackdrop', model: 'landscapeRelief', relief: field(w.extent + 100, 5, w.extent) });
-      builder.place('dynamicBackdrop', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static', plan.industrial ? 'METAL' : 'LANDSCAPE');
+      builder.place('dynamicBackdrop', 0, 0, 0, 1, 1, 1, 0xffffff, 0, 0, 0, 0, 1, 'static', 'LANDSCAPE');
       // Minimap uses the same height field; vegetation may only decorate existing blockers.
       for (let i = 0; i < w.staticGrid.length; i++) {
         const p = w.point(i), shade = .7 + s.heightAt(p.x, p.z) * .012;

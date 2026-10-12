@@ -17,7 +17,7 @@ const scenes = [
   { file: '01-desert-firefight.webp', map: 'desert', seed: 1409, faction: 0, enemy: 1, view: 'front' },
   { file: '02-desert-outpost.webp', map: 'desert', seed: 1409, faction: 0, enemy: 1, view: 'base' },
   { file: '03-alien-frontier.webp', map: 'alien-planet', seed: 24080, faction: 1, enemy: 2, view: 'front' },
-  { file: '04-mothership-assault.webp', map: 'mothership', seed: 43015, faction: 2, enemy: 0, view: 'front' }
+  { file: '04-westmark-assault.webp', map: 'westmark', seed: 43015, faction: 2, enemy: 0, view: 'front' }
 ];
 if (values.help) {
   console.log(`Usage: npm run capture:itch -- [--output release/itch-media/<new-run>] [--scene <id>]\nWebP quality 80. Default: new worktree-local .tmp/ directory; existing output directories are refused.\n--scene captures only one desktop image, without mobile images or marketing compositions.\nOptional: --camera camera.json --hour 13 --no-units --no-buildings --no-distance-mist\nScenes: ${scenes.map(scene => scene.file.slice(0, -5)).join(', ')}`);
@@ -160,7 +160,7 @@ await withBrowser(root, async browser => {
     }
     await compose('background-2560x1440.webp', 2560, 1440, '01-desert-firefight.webp', '<div class="shade"></div>',
       '.shade{position:fixed;inset:0;background:radial-gradient(circle at center,#080e1718 20%,#080e1760 100%),linear-gradient(#04101b22,#04101b66)}');
-    await compose('embed-background-1920x1080.webp', 1920, 1080, '04-mothership-assault.webp',
+    await compose('embed-background-1920x1080.webp', 1920, 1080, '04-westmark-assault.webp',
       '<div class="shade"></div><div class="label">MERIDIAN TACTICAL LINK<br><small>CLICK RUN GAME TO DEPLOY</small></div>',
       '.shade{position:fixed;inset:0;background:radial-gradient(circle at center,#080e1740,#080e1788 100%)}.label{position:fixed;left:55px;bottom:45px;padding-left:18px;border-left:2px solid #74e5d3;color:#eef3ed;font:18px/1.6 monospace;letter-spacing:3px;text-shadow:0 2px 8px #000}.label small{color:#edb875;font-size:12px}');
     await compose('banner-1920x600.webp', 1920, 600, '01-desert-firefight.webp',

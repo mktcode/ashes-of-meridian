@@ -275,7 +275,7 @@ test('map switches keep only current world meshes plus shared geometry, includin
   r.geometry('sharedUnit', new Float32Array(27));
   const shared = r.meshes.sharedUnit;
   let firstDesertBytes;
-  for (const [map,seed=1409] of [['desert'], ['frontier',3], ['frontier'], ['haven'], ['westmark'], ['mothership'], ['alien-planet'], ['desert']]) {
+  for (const [map,seed=1409] of [['desert'], ['frontier',3], ['frontier'], ['haven'], ['westmark'], ['alien-planet'], ['desert']]) {
     const world = new Battlefield(seed, map), before = JSON.stringify(world.renderData);
     const expected = new Set(['sharedUnit', 'terrain', ...world.renderData.geometries.map(d => d.mesh)]);
     view.sync(world, false);
@@ -689,7 +689,7 @@ test('dedicated rock material is opt-in and resets on profile changes without te
 
 test('upland weathering is opt-in, resets on map changes and reuses shared materials',()=>{
   const h=setup(),maps=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS]);h.r.resize();
-  for(const map of ['frontier','mothership','westmark','desert','haven','frontier']) {
+  for(const map of ['frontier','westmark','desert','haven','frontier']) {
     const profile=vm.runInContext(`BATTLEFIELDS['${map}'].render`,maps);
     h.r.setBattlefieldProfile(profile,1409);h.calls.length=0;h.r.render(0);
     assert.ok(h.calls.some(c=>c[0]==='uniform1f'&&c[1]==='u_upland'&&c[2]===(profile.upland?1:0)));

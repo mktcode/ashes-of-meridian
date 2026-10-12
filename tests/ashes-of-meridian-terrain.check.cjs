@@ -15,7 +15,7 @@ function topology(world) {
   return createHash('sha256').update(Buffer.from(world.surface.heights.buffer)).update(world.staticGrid)
     .update(world.terrainColors).update(JSON.stringify(world.layout)).update(JSON.stringify(world.renderData.placements)).digest('hex');
 }
-for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven']) {
+for (const map of ['desert', 'alien-planet', 'westmark', 'frontier', 'haven']) {
   test(`${map}: public terrain provides connected economy, buildable spaces and separated exploration starts`, () => {
     const api = scope(), w = new api.Battlefield(1409, map, 4), minimum = Math.min(65, w.extent * .55);
     assert.ok(w.startSites.length > 4, 'candidate pool is not four authored bases');
@@ -49,10 +49,6 @@ for (const map of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier
     for (let row = 1; row < skin.size - 1; row += 13) for (let col = 1; col < skin.size - 1; col += 13) {
       const x = (col - 1) * skin.step - skin.extent, z = (row - 1) * skin.step - skin.extent;
       assert.ok(Math.abs(skin.heights[row * skin.size + col] + .13 - w.surface.heightAt(x, z)) < 1e-5);
-    }
-    if (map === 'mothership') {
-      assert.ok(w.renderData.geometries.some(d => d.model === 'shipHangar'));
-      assert.ok(skin.colors.some(v => v > .5), 'metal geometry carries actual albedo tint, not landscape weights');
     }
   });
 }
@@ -286,7 +282,7 @@ test('gentle planar slopes support buildings while steep slopes, roughness and m
 });
 
 test('four sight buffers remain isolated and terrain queries do not reevaluate the generation field', () => {
-  const api = scope(), w = new api.Battlefield(1409, 'mothership', 4),
+  const api = scope(), w = new api.Battlefield(1409, 'westmark', 4),
     starts = api.allocateBattlefieldStarts(w, 19, 4, 'exploration');
   assert.strictEqual(w.visible, w.sight[0].visible);
   w.reveal([], starts.map((p, team) => ({...p,team,r:5})));
@@ -309,7 +305,7 @@ test('four sight buffers remain isolated and terrain queries do not reevaluate t
 test('maximal deployment bonuses retain every worker and commander in reachable collision-free space', () => {
   const api=scope(['effects',...SIMULATION_SCRIPTS]),g=new api.Game({}),
     benefits={startingWorkers:5,commanderMandate:1};
-  g.start({seed:1409,map:'mothership',deployment:'resource-start',enemies:[1,2,0],benefits,
+  g.start({seed:1409,map:'westmark',deployment:'resource-start',enemies:[1,2,0],benefits,
     enemyBenefits:[benefits,benefits,benefits]});
   assert.equal(g.alive(e=>e.kind==='building').length,0);
   for(let team=0;team<4;team++) {

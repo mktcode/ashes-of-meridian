@@ -90,6 +90,6 @@ Nach Build isoliert ohne normales Profil/Checkpoint:
 
 - `map-viewer.html` für stillstehende Landschaften mit Kameraeingaben, erweitertem Zoom, Gesamtansicht und exportierbarem Capture-Rezept; [Bedienung](scene-capture.md). Keine Zuschauerpartie.
 - `index.html?experiment=<karten-id>&seed=<positiver-seed>` für Katalogkarten; IDs im [Katalog](../src/battlefields/catalog.ts). Seed maximal acht Stellen; alle Katalogkarten erzeugen Terrain aus dem Seed.
-- `index.html?experiment=height`: prozedurale Mothership-Höhen/Sicht mit zwei Workern.
+- `index.html?experiment=height`: prozedurale Westmark-Höhen/Sicht mit zwei Workern.
 
 Vergleichsseeds nur im betroffenen Issue halten. `npm run simulate:visible` ist eine persönliche Zuschauerpartie, **nie automatisch durch Agenten öffnen**. Allgemeine menschliche Abnahme: [vollständige Runs](issues/playtest-validation.md).

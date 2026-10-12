@@ -12,8 +12,8 @@ const {Battlefield: ProceduralBattlefield, BattlefieldSurface, MeridianGame, Mer
 const deckHeight=w=>Math.fround(6*w.renderProfile.variation.heightScale);
 // A synthetic ramp/cliff fixture isolates surface contracts from procedural catalog geography.
 function withRamp(run) {
-  const original = BATTLEFIELDS.mothership;
-  BATTLEFIELDS.mothership = { ...original, createSize: () => ({ extent: 120, cellSize: 2.5 }),
+  const original = BATTLEFIELDS.westmark;
+  BATTLEFIELDS.westmark = { ...original, createSize: () => ({ extent: 120, cellSize: 2.5 }),
     createLayout: () => ({ startSites: [], resourceSites: [-60,-20,20,60].flatMap(x => [-60,70].map(z => ({x,z}))),
       corridors: [] }),
     generate(builder) {
@@ -28,14 +28,14 @@ function withRamp(run) {
       w.renderData.geometries.push({mesh:'terrain',model:'landscapeRelief',relief:{extent:w.extent,step,size,heights,innerExtent:0}});
     }
   };
-  try { return run(); } finally { BATTLEFIELDS.mothership = original; }
+  try { return run(); } finally { BATTLEFIELDS.westmark = original; }
 }
-function Battlefield(seed, map = 'mothership', count = 2) {
-  return map === 'mothership' ? withRamp(() => new ProceduralBattlefield(seed, map, count)) : new ProceduralBattlefield(seed, map, count);
+function Battlefield(seed, map = 'westmark', count = 2) {
+  return map === 'westmark' ? withRamp(() => new ProceduralBattlefield(seed, map, count)) : new ProceduralBattlefield(seed, map, count);
 }
 function game() {
   const g = new MeridianGame({upgrades:{}});
-  withRamp(() => g.start({seed:1409,map:'mothership',deployment:'exploration'}));
+  withRamp(() => g.start({seed:1409,map:'westmark',deployment:'exploration'}));
   g.s.parties.forEach(p=>p.controller={kind:'human'});
   g.checkBattleResult = () => {}; // Movement/effect unit fixtures do not test victory resolution.
   return g;
@@ -54,7 +54,7 @@ test('surface height and ray use the same diagonal, including non-planar quads',
 });
 
 test('ground sight respects declared tiers while sources combine and air or scans see every tier',()=>{
-  const w=new Battlefield(1409,'mothership'), entity=(id,team,type,x,z)=>({
+  const w=new Battlefield(1409,'westmark'), entity=(id,team,type,x,z)=>({
     id,team,type,x,z,kind:'unit',hp:100,vision:17
   }), low=entity(1,0,'rifle',80,30), high=entity(2,1,'rifle',80,42), highAlly=entity(3,0,'rifle',76,42);
   assert.equal(w.surface.visibilityLevelAt(80,36),0,'lower half of the ramp belongs to the low tier');
@@ -77,7 +77,7 @@ test('ground sight respects declared tiers while sources combine and air or scan
 });
 
 test('surface transition mask survives replacement of dynamic occupancy, and paths cannot smooth across cliffs',()=>{
-  const w = new Battlefield(1409,'mothership'); w.blocked.fill(0);
+  const w = new Battlefield(1409,'westmark'); w.blocked.fill(0);
   const a={x:100,z:30}, b={x:100,z:65};
   assert.equal(w.lineFree(a,b),false);
   const route=w.path(a.x,a.z,b.x,b.z,false,undefined,1);
@@ -124,8 +124,8 @@ test('both flight classes use continuous local envelopes and clear their complet
   assert.equal(s.entityHeight({type:'tank',x:20,z:0}),30,'ground units remain on the terrain');
 });
 
-test('local flight clearance covers the six procedural map surfaces',()=>{
-  for(const [map,seed] of [['alien-planet',9],['desert',1409],['mothership',1409],['westmark',1409],['frontier',3],['haven',1409]]) {
+test('local flight clearance covers the five procedural map surfaces',()=>{
+  for(const [map,seed] of [['alien-planet',9],['desert',1409],['westmark',1409],['frontier',3],['haven',1409]]) {
     const w=new ProceduralBattlefield(seed,map),s=w.surface;
     let peak={x:0,z:0},highest=-Infinity;
     for(let i=0;i<w.staticGrid.length;i++) {
@@ -218,7 +218,7 @@ test('CPU effect origins, targets, shell landing and particle floor include surf
 });
 
 test('terrain picking roundtrips both plateaus and ramp while camera drag keeps its flat plane',()=>{
-  const w=new Battlefield(1409,'mothership'),r=Object.create(MeridianRenderer.prototype);
+  const w=new Battlefield(1409,'westmark'),r=Object.create(MeridianRenderer.prototype);
   Object.assign(r,{viewport:{left:0,top:0,right:1200,bottom:800,width:1200,height:800},quality:0,surface:w.surface});
   r.camera(42,30,85);
   for(const [x,z] of [[72,65],[72,36.5],[0,0],[-72,-65]]) {
@@ -230,7 +230,7 @@ test('terrain picking roundtrips both plateaus and ramp while camera drag keeps 
 });
 
 test('rendered floor samples and models use the CPU surface in battle and menu cinema, and map changes replace it',()=>{
-  const w=new Battlefield(1409,'mothership'),r=createRendererStub({record:true}),meshes=new Map();
+  const w=new Battlefield(1409,'westmark'),r=createRendererStub({record:true}),meshes=new Map();
   r.geometry=(name,data)=>{meshes.set(name,data);};r.quality=0;
   const view=new BattlefieldView(r);view.sync(w);
   const mesh=meshes.get('terrain'),floorVertices=(w.surface.size-1)**2*6;
@@ -347,7 +347,7 @@ test('cinematic foundations relocate off steep terrain, respect blockers and spa
 });
 
 test('GPU instances retain the complete vehicle slope pose without mutating entities',()=>{
-  const w=new Battlefield(1409,'mothership'),
+  const w=new Battlefield(1409,'westmark'),
     e={id:1,x:72,z:34,rot:0,walk:0,kind:'unit',type:'worker',hp:100,faction:0,team:0,size:UNITS.worker.size}, before=JSON.stringify(e),
     calls=drawPose(e,w.surface),hull=calls.find(c=>c[0]==='workerHull');
   assert.ok(hull[9]<0,'front rises along the ramp');

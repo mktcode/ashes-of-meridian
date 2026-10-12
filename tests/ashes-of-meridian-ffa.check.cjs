@@ -156,7 +156,7 @@ test('only completed hostile structures destroyed by the player earn structure r
 });
 
 test('public FFA start snapshots every slot and preserves seeded terrain/resources on all maps', () => {
-  for (const map of ['desert', 'mothership', 'alien-planet']) {
+  for (const map of ['desert', 'westmark', 'alien-planet']) {
     const g = new MeridianGame({});
     const resourceSnapshot = () => JSON.stringify(g.s.entities.filter(e => e.kind === 'resource'));
     const opts = { seed: 1409, map, faction: 1, enemies: [1, 1, 1], benefits: { startingAlloy: 2 },

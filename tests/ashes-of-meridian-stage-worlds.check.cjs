@@ -165,10 +165,10 @@ test('Continue building converts the live victory without loading and saves only
   assert.equal(game.continueClearedWorld(),false,'conversion is one-shot');
 });
 
-test('mothership stays free of environmental attacks during battle and civilian development',()=>{
+test('ordinary landscapes stay free of environmental attacks during battle and civilian development',()=>{
   const {game}=harness(),events=[];
   game.emit=(type,data)=>events.push({type,data});
-  game.start({seed:1409,map:'mothership'});
+  game.start({seed:1409,map:'westmark'});
   game.s.parties.forEach(p=>{p.controller={kind:'human'};});
   const home=game.alive(e=>e.team===0&&e.type==='worker')[0];
   game.spawn('unit','rifle',home.x+10,home.z,0,0);

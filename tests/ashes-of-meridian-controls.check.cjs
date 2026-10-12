@@ -14,7 +14,7 @@ test('stage browsing is bounded and purely visual; continue always launches the 
   ui.expedition = { version: 12, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2,
     upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
-  ui.stageHistory = [{ stage: 1, map: 'mothership', seed: 11 }, { stage: 2, map: 'alien-planet', seed: 22 }];
+  ui.stageHistory = [{ stage: 1, map: 'westmark', seed: 11 }, { stage: 2, map: 'alien-planet', seed: 22 }];
   ui.persistence.saveStageHistory = stages => saved.push(JSON.stringify(stages));
   ui.rememberStage(); ui.rememberStage();
   assert.equal(saved.length, 1, 'revisiting a checkpoint does not duplicate history');
@@ -24,7 +24,7 @@ test('stage browsing is bounded and purely visual; continue always launches the 
   vm.runInContext('Math.random = () => { throw Error("Browsing consumed RNG"); };', h.context);
   await ui.browseStage(1); assert.equal(previews.length, 0);
   await ui.browseStage(-1); await ui.browseStage(-1); await ui.browseStage(-1);
-  assert.deepEqual(previews, [['alien-planet', 22, true, null], ['mothership', 11, true, null]]);
+  assert.deepEqual(previews, [['alien-planet', 22, true, null], ['westmark', 11, true, null]]);
   assert.equal(ui.stagePreviewIndex, 0);
   assert.equal(JSON.stringify({ expedition: ui.expedition, profile: ui.profile, history: ui.stageHistory }), before);
   assert.equal(saved.length, 1);
@@ -40,7 +40,7 @@ test('stage browsing is bounded and purely visual; continue always launches the 
 test('stage previews ignore overlapping input, failures, dialogs and stale screen completions', async () => {
   const h = setup(), ui = h.ui;
   ui.expedition = { depth: 1, encounter: { mission: 'hq-elimination', enemies: [], map: 'desert', seed: 1409 }, upgrades: {}, benefits: {}, abilities: [], enemyBenefits: [] };
-  ui.stageHistory = [{ stage: 1, map: 'mothership', seed: 11 }, { stage: 2, map: 'desert', seed: 1409 }];
+  ui.stageHistory = [{ stage: 1, map: 'westmark', seed: 11 }, { stage: 2, map: 'desert', seed: 1409 }];
   ui.showHome();
   let resolve, calls = 0;
   ui.onPreview = () => { calls++; return new Promise(done => { resolve = done; }); };
@@ -85,7 +85,7 @@ test('opening HQ encounters keep faction → map → seed draw order with the la
   const h = setup();
   for (const depth of [0, 1, 2]) {
     const expected = vm.runInContext(`(() => {
-      const random = seeded(1409), maps = ['alien-planet','mothership','westmark','frontier','haven'];
+      const random = seeded(1409), maps = ['alien-planet','westmark','frontier','haven'];
       return {mission: DEFAULT_MISSION, deployment: ${depth} === 0 ? 'resource-start' : 'exploration', enemies: expeditionEnemyFactions(${depth}, random),
         map: maps[Math.floor(random() * maps.length)], seed: 1 + Math.floor(random() * 99999999), next: random()};
     })()`, h.context);
@@ -96,10 +96,10 @@ test('opening HQ encounters keep faction → map → seed draw order with the la
   }
 });
 
-test('six expedition landscapes retain equal map weight, normal party counts and no immediate repeat', () => {
+test('five expedition landscapes retain equal map weight, normal party counts and no immediate repeat', () => {
   const h = setup();
   for (const depth of [2,3,6,7]) {
-    const found = new Set(), count = 6;
+    const found = new Set(), count = 5;
     for (let index=0;index<count;index++) {
       let draws=0;
       vm.runInContext('Math',h.context).random=()=>{draws++;return (index+.5)/count;};
@@ -2163,7 +2163,7 @@ test('home preview follows the current encounter landscape and seed', () => {
 test('expedition encounter generation excludes the immediately previous map', () => {
   const h = setup();
   vm.runInContext('Math.random = () => 0;', h.context);
-  for (const previousMap of ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven'])
+  for (const previousMap of ['desert', 'alien-planet', 'westmark', 'frontier', 'haven'])
     assert.notEqual(h.ui.createEncounter(3, previousMap).map, previousMap);
 });
 

@@ -34,7 +34,7 @@
         const params = new URLSearchParams(location.search);
         const viewerMode = params.get('viewer') === '1', captureMode = viewerMode || params.get('capture') === '1';
         const experiment = captureMode ? null : params.get('experiment'),
-          mapExperiment: BattlefieldId | null = experiment === 'height' ? 'mothership' :
+          mapExperiment: BattlefieldId | null = experiment === 'height' ? 'westmark' :
             experiment && Object.prototype.hasOwnProperty.call(BATTLEFIELDS, experiment) ? experiment as BattlefieldId : null,
           civilianModelGallery = !captureMode && params.get('models') === 'civilian-upgrades',
           visibleSimulation = !captureMode && !mapExperiment && params.get('simulation') === 'ai-vs-ai',

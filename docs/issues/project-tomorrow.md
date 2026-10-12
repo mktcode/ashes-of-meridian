@@ -8,11 +8,6 @@ Glassteppe wirkte laut Nutzer trotz Pflanzenvariation leer. Seedbasierte Großfo
 
 - [ ] Großformen, rundere Kuppen zwischen Weg-/Bauschultern statt pyramidenartiger Grate, Hangvegetation/-material, Verdeckung, Bauflächen und faire Umwege bei normalem Zoom/Nebel beurteilen. Technische Erdung ist keine künstlerische Abnahme.
 
-## Mothership: prozedurale Industrieflächen
-
-- [ ] Terrassierte Metallflächen als Teil eines großen industriellen Trägers erkennbar statt als beliebige Metallarena? Maschinen-/Hangarsilhouetten, nicht begehbare Außenkulisse, Metallalterung, Schnee/Asche und Einheitenkontrast bei normalem Zoom beurteilen. Der aktuelle gemeinsame Generator und seine Dekoration sind maßgeblich, kein Wiederaufbau des früheren festen Deck-/Brückengrundrisses.
-- [ ] Verdeckung an Aufbauten und Terrassenrändern; Rampen, Wirtschaft und Sicht zentral unter [Höhenabnahme](hoehenstufen/README.md).
-
 ## Flugfreiraum nach dem Reliefausbau
 
 - [ ] Flugzeug-/Zerstörerhöhe, An-/Abstieg über Bergen/Tälern/Decks und Produktionsausfahrt abnehmen. CPU-Hülle schützt nicht automatisch vor hohen Dekorbauten, Baumkronen oder Außenkulisse.
@@ -23,7 +18,7 @@ Glassteppe wirkte laut Nutzer trotz Pflanzenvariation leer. Seedbasierte Großfo
 - [ ] Seedabhängig hohe Vegetationsdichte einschließlich eng gestaffelter Kronen und verstreuter niedriger Büsche bei normalem Zoom/Nebel visuell und auf Zielgeräten abnehmen; insbesondere Verdeckung dichtester Seeds prüfen; Gerätekosten zentral unter [Performance](performance/README.md#renderer-und-gpu); große Pflanzen bleiben auf vorhandenen Sperrflächen, mehr befahrbarer Bodendekor ersetzt keine neuen Waldhindernisse. Frontier-Seed `3` wurde mit erhöhter Dichte über die echte Chromium-Auslieferung ohne GL-/Seitenfehler geöffnet; keine Framerate-/Allseedabnahme.
 - [ ] Bauflächenlinien: Hang-/Blockerübergänge, Sichtgrenzen, Vents und Klickvorschau; Kosten zentral unter [Performance](performance/README.md#bauplatzraster). Farbe zwischen Validatorproben bleibt nur Orientierung.
 - [ ] Kontursilhouetten: normaler Zoom, Parteienfarben, dichte Gruppen und Verdeckung durch statische Berge/Kronen/Stadt. Keine Sichtfreigabe durch Intro/Fog.
-- [ ] Materialmaßstab/-wiederholung, Boden-/Einheiten-/Minimap-Kontrast der sechs prozeduralen Weltfamilien vergleichen; [Desert](desert-map.md), [Westmark](westmark-map.md), [Mothership](#mothership-prozedurale-industrieflächen).
+- [ ] Materialmaßstab/-wiederholung, Boden-/Einheiten-/Minimap-Kontrast der fünf prozeduralen Weltfamilien vergleichen; [Desert](desert-map.md), [Westmark](westmark-map.md).
 - [ ] Begehbare Hänge, Fahrzeug-Hanglage, verteilte Ressourcen/Bauflächen und faire Wege verschiedener Größen; Nachtkontrast/Fernkulisse. Start-/KI-Abnahme zentral unter [prozeduralen Gefechten](procedural-battlefields.md).
 - [ ] [Startbildschirm-Himmel](../rendering.md#menü-landschaftswechsel): fremde Farbpaletten, Sternpunktgrößen, Planeten-/Sonnenwirkung und Menülesbarkeit visuell abnehmen. Gezielter Chromium-Check deckt atmosphärische und Weltraumvariante, Shaderkompilierung, schmales Seitenverhältnis und Ressourcenfreigabe beim Menüausstieg ab; keine Echtgeräte-/Performanceabnahme.
 - [ ] [Tageszyklus](../architecture.md#weltrezepte-und-feste-designs): Morgen-/Abendübergänge und Nachtlesbarkeit aller Familien/Fraktionen auf Zielgeräten abnehmen; die deutlich dunklere Nachtfüllbeleuchtung und stärkere nächtliche Bloom-Einblendung zusammen mit den [Einheiten-/Gebäude-Lichtakzenten](modelle.md) insbesondere auf dunklen Displays prüfen. Gezielter lokaler Chromium-Check mit arrangierter Desert-Basis, Seed `1415`, bestätigte Mittags-/Mitternachts-Uniforms, Pause/Fortsetzung und fehlerfreie WebGL-Ausgabe; kein Nachweis für dunkle Displays oder alle Wetter-/Materialkombinationen.

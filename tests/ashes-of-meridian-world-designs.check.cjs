@@ -24,7 +24,7 @@ test('named seed overrides remain deterministic without pinning any catalog land
   assert.equal(a.renderProfile.atmosphere.timeOfDay, 18.5);
 });
 test('atmosphere remains bounded, deterministic and independent of terrain generation', () => {
-  const api = scope(), profile = api.BATTLEFIELDS.mothership.render, before = JSON.stringify(profile);
+  const api = scope(), profile = api.BATTLEFIELDS.westmark.render, before = JSON.stringify(profile);
   assert.strictEqual(api.battlefieldAtmosphere(profile, undefined, 1), profile);
   const night = api.battlefieldAtmosphere(profile, {timeOfDay:0}, 1),
     day = api.battlefieldAtmosphere(profile, {timeOfDay:12}, 1);

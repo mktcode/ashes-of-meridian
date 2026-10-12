@@ -19,7 +19,7 @@ Danach `index.html` direkt im Browser öffnen (`file://`, kein Server nötig). H
 
 ## Spielen
 
-**New expedition** startet einen Run mit festem Vierer-Command-Loadout. Alle Parteien landen mit Workern und bauen ihr HQ selbst. Beim ersten Tutorial liegen Ressourcen in Sicht, später wird vor der Basiswahl erkundet. Sechs Landschaftsfamilien des gemeinsamen prozeduralen Generators stehen als seedbasierte Expeditionskarten zur Verfügung. Militärische Siege schalten unmittelbar die nächste Stage frei.
+**New expedition** startet einen Run mit festem Vierer-Command-Loadout. Alle Parteien landen mit Workern und bauen ihr HQ selbst. Beim ersten Tutorial liegen Ressourcen in Sicht, später wird vor der Basiswahl erkundet. Fünf Landschaftsfamilien des gemeinsamen prozeduralen Generators stehen als seedbasierte Expeditionskarten zur Verfügung. Militärische Siege schalten unmittelbar die nächste Stage frei.
 
 Automatisch wachsende Zivilisationsgebäude bieten jeweils drei feste Zufallsangebote aus ihrem Wohn-/Forschungspool. Im Info-Modal wird ein Effekt aktiviert; lokales Echo kauft weitere Ränge im HUD und Ausbau bis zum Turm. Boni stapeln sich über die abgeschlossenen Welten des Runs, nicht über neue Expeditionen.
 

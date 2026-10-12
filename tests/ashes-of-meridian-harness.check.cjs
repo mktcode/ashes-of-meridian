@@ -103,16 +103,16 @@ test('CPU map recipes load without content, renderer or browser, with explicit n
   assert.deepEqual(scripts.filter(s => BATTLEFIELD_SCRIPTS.includes(s.name)).map(s => s.filename),
     BATTLEFIELD_SCRIPTS.map(name => `dist/src/battlefields/${name.replace('battlefield-', '')}.js`));
   const { BATTLEFIELDS, battlefieldId } = vm.runInContext('({BATTLEFIELDS, battlefieldId})', context);
-  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'mothership', 'westmark', 'frontier', 'haven']);
-  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'MOTHERSHIP', 'WESTMARK', 'FRONTIER', 'HAVEN']);
+  assert.deepEqual(Object.keys(BATTLEFIELDS), ['desert', 'alien-planet', 'westmark', 'frontier', 'haven']);
+  assert.deepEqual(Object.values(BATTLEFIELDS).map(b => b.name), ['DESERT', 'ALIEN PLANET', 'WESTMARK', 'FRONTIER', 'HAVEN']);
   assert.deepEqual(Array.from(vm.runInContext('availableBattlefields()',context)), Object.keys(BATTLEFIELDS));
   for (const id of Object.keys(BATTLEFIELDS)) assert.equal(battlefieldId(id), id);
   for (const invalid of [undefined, null, 4, '', 'unknown', 'toString', '__proto__'])
     assert.equal(battlefieldId(invalid), 'desert');
   for (const name of ['geom', 'MAT', 'document', 'window', 'FACTIONS'])
     assert.equal(vm.runInContext(`typeof ${name}`, context), 'undefined');
-  assert.notStrictEqual(BATTLEFIELDS.desert.createLayout, BATTLEFIELDS.mothership.createLayout);
-  assert.notStrictEqual(BATTLEFIELDS.desert.render.landscape, BATTLEFIELDS.mothership.render.landscape);
+  assert.notStrictEqual(BATTLEFIELDS.desert.createLayout, BATTLEFIELDS.westmark.createLayout);
+  assert.notStrictEqual(BATTLEFIELDS.desert.render.landscape, BATTLEFIELDS.westmark.render.landscape);
 });
 
 test('renderer fragments expose the existing bindings and class API in document order', () => {
