@@ -16,6 +16,13 @@ Bildwirkung, Materialien, Biotope und Randkulisse zentral unter [Landschaften](p
 - [ ] Lokale Gebäude-Bodenhaut, Hangneigung und Menü-Bauplätze visuell abnehmen: keine Fremdtextur-Platten, glaubwürdiger Bodenanschluss und erhaltene Menükomposition. CPU-/Browserverträge sichern Stützebene, Materialgewichte, Auslauf und Patch-Lebenszyklus, nicht die Gesamtbildwirkung. Rein visuelle Auffüllung verändert keine Spieloberfläche; [Modellvertrag](../rendering.md#einzeln-wartbare-modelle).
 - [ ] Größere Karten auf Erkundungsdauer, Wirtschaftsverteilung und Kamerabedienung beurteilen; feste Rasterauflösung erzeugt mehr Zellen. Startzeit, Speicher und Renderkosten auf Zielgeräten unter [Performance](performance/README.md) prüfen.
 
+## Reproduzierbarer Generierungsabbruch
+
+- [ ] Seed `16053245` für `alien-planet` und `haven`: Der reine CPU-Geländeaufbau auf Stand `8f4580b` scheitert in `connectBattlefieldTerrain` mit `Cannot connect broad terrain shelf with a safe ramp`, vor Dekor, Rendering oder Simulation. Alien wählt `broken-crater`, Haven `basin`; beide verwenden hier dieselbe Höhenform und Morphologie-RNG-Reihenfolge.
+- Die elf Wirtschaftswege, alle Wirtschaftszugänge und HQ-Stützen bestehen ihre anfänglichen Prüfungen. Die breite Hauptkomponente umfasst 10.252 Rasterzellen; eine westliche Hochfläche bei ungefähr `x = -154 … -106`, `z = -4 … 39` bleibt mit 182 Zellen getrennt. Gesamt-/Sektorabdeckung sind ausreichend; die Hochfläche überschreitet aber die Grenze von 64 Zellen für anschlusspflichtige Inseln.
+- Die erste Anschlussrunde findet 8.444 Endpunktpaare und prüft ihre begrenzte Auswahl von 48 Alternativen: 22 scheitern am Rampen-Höhenprofil, 22 an der breiten Rampenpassage, vier zunächst breite Rampen würden vorhandene Wirtschaftswege unpassierbar machen. Es gibt keinen akzeptierten Anschluss; der Generator bricht regelkonform ab. Diese Zählung stammt aus einer separaten transienten Instrumentierung des Haven-Falls, nicht aus einer Seed-/KI-Serie.
+- Korrekturbedarf: Anschlussauswahl und Rampenprofil müssen die bestehenden Wirtschaftswege gemeinsam berücksichtigen. Nicht durch Ersatzseed, Ausschalten der Insel-/Breitenprüfung oder Lockerung der Klippenschwelle kaschieren. Der lokale Fehlernachweis ist keine universelle Seedabnahme.
+
 ## Interessante Vergleichsseeds
 
 Vom Nutzer im Map Viewer auf unterschiedlichen Familien als interessant bewertet:
