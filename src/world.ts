@@ -96,6 +96,7 @@
       fogCleared = false;
       declare seed: number;
       readonly terrainSeed: number;
+      readonly landscape: ResolvedLandscapeRecipe;
       readonly renderProfile: BattlefieldRenderProfile;
       declare definition: BattlefieldDefinition;
       declare layout: BattlefieldLayout;
@@ -137,9 +138,8 @@
         this.seed = seed;
         this.definition = BATTLEFIELDS[battlefieldId(map)];
         this.terrainSeed = this.definition.design?.terrainSeed ?? seed;
-        const profile = battlefieldVariation(this.definition.render, this.terrainSeed);
-        this.renderProfile = battlefieldAtmosphere(profile.ecology ? profile : battlefieldEcology(profile, this.terrainSeed),
-          this.definition.design?.atmosphere, seed);
+        this.landscape = resolveBattlefieldLandscape(this.definition.family, this.definition.render, this.terrainSeed);
+        this.renderProfile = battlefieldAtmosphere(this.landscape.presentation, this.definition.design?.atmosphere, seed);
         const size = this.definition.createSize?.(this.terrainSeed) ?? this.definition.size;
         this.extent = size.extent;
         this.cellSize = size.cellSize;

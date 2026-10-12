@@ -1,27 +1,8 @@
 /* Public, terrain-derived worker candidates. Assignment uses a separate private RNG. */
 'use strict';
 type DeploymentMode = 'resource-start' | 'exploration';
-function battlefieldSiteSeed(site: Position): number {
-  // Coordinate-owned geometry never consumes terrain, deployment or simulation RNG.
-  return Math.imul(Math.round(site.x * 1000), 73856093) ^ Math.imul(Math.round(site.z * 1000), 19349663) ^ 0x45434f4e;
-}
-function battlefieldSitePosition(site: Position, x: number, z: number): Position {
-  const angle = seeded(battlefieldSiteSeed(site))() * Math.PI * 2, cs = Math.cos(angle), sn = Math.sin(angle);
-  return { x: site.x + x * cs + z * sn, z: site.z + z * cs - x * sn };
-}
-function battlefieldGasPosition(site: Position): Position {
-  const random = seeded(battlefieldSiteSeed(site) ^ 0x56454e54), angle = .35 + random() * .65, radius = 12 + random() * 2;
-  // Vary the vent within the open side, away from clusters and the nearby HQ.
-  return battlefieldSitePosition(site, Math.sin(angle) * radius, Math.cos(angle) * radius);
-}
-function battlefieldCrystalPosition(site: Position, _index: number, deposit: number): Position {
-  // The wider open half-circle preserves worker passages in every orientation.
-  const a = Math.PI / 2 + deposit * Math.PI / 4;
-  return battlefieldSitePosition(site, Math.sin(a) * 5.5, Math.cos(a) * 5.5);
-}
 function battlefieldEconomyDistance(world: Battlefield, p: Position): number {
-  return Math.min(...world.layout.resourceSites.flatMap((site, i) => [battlefieldGasPosition(site),
-    ...Array.from({ length: 5 }, (_, j) => battlefieldCrystalPosition(site, i, j))]).map(r => distance(p, r)));
+  return Math.min(...world.layout.economyRegions.flatMap(region => [region.vent, ...region.crystals]).map(r => distance(p, r)));
 }
 function battlefieldDeploymentSpace(world: Battlefield, p: Position): boolean {
   if (!world.surface!.fits(p.x, p.z, 3) || battlefieldEconomyDistance(world, p) < 4) return false;
@@ -51,8 +32,7 @@ function battlefieldDeploymentCandidates(world: Battlefield): Position[] {
   if (!component) throw Error('No connected deployment terrain');
   const reachable = world.deploymentReachable = new Uint8Array(n * n);
   for (const i of component) reachable[i] = 1;
-  for (const site of world.layout.resourceSites) {
-    const gas = battlefieldGasPosition(site);
+  for (const { center: site, vent: gas } of world.layout.economyRegions) {
     if (!reachable[world.idx(site.x, site.z)] || !reachable[world.idx(gas.x, gas.z)])
       throw Error('Resource region is disconnected from deployment terrain');
   }
@@ -61,7 +41,7 @@ function battlefieldDeploymentCandidates(world: Battlefield): Position[] {
       !battlefieldDeploymentSpace(world, p) || pool.some(q => distance(p, q) < 5)) return;
     pool.push({ ...p });
   };
-  for (const site of world.layout.resourceSites) add(battlefieldSitePosition(site, -6, 6));
+  for (const region of world.layout.economyRegions) add(region.deployment);
   for (let z = 4; z < n - 4; z += 4) for (let x = 4; x < n - 4; x += 4) add(world.point(z * n + x));
   const sufficient = () => {
     const exploration = candidates.filter(p => battlefieldEconomyDistance(world, p) > 24), minimum = Math.min(65, world.extent * .55);
@@ -124,7 +104,7 @@ function allocateBattlefieldStarts(world: Battlefield, seed: number, count: numb
     for (let i = result.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [result[i], result[j]] = [result[j], result[i]]; }
     return result;
   }, exploration = shuffle(world.startSites.filter(p => battlefieldEconomyDistance(world, p) > 24)),
-    first = mode === 'resource-start' ? shuffle(world.layout.resourceSites.map(site => battlefieldSitePosition(site, -6, 6))
+    first = mode === 'resource-start' ? shuffle(world.layout.economyRegions.map(region => region.deployment)
       .filter(p => world.deploymentReachable[world.idx(p.x, p.z)] && battlefieldDeploymentSpace(world, p))) : exploration,
     minimum = Math.min(65, world.extent * .55);
   const search = (chosen: Position[]): Position[] | null => {
@@ -143,8 +123,8 @@ function allocateBattlefieldStarts(world: Battlefield, seed: number, count: numb
   const regions = new Map<Position, number>();
   for (const p of [...first, ...exploration]) {
     let nearest = -1, best = Infinity;
-    for (const [i, site] of world.layout.resourceSites.entries()) {
-      const d = distance(p, site);
+    for (const [i, region] of world.layout.economyRegions.entries()) {
+      const d = distance(p, region.center);
       if (d < best) { nearest = i; best = d; }
     }
     regions.set(p, nearest);

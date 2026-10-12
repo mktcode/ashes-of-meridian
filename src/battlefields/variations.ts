@@ -1,70 +1,39 @@
-/* World families compose morphology, habitat and atmosphere. Selection never advances
- * terrain-placement or encounter streams; pinned landscape seeds also pin the family. */
+/* Resolve one landscape before terrain generation. CPU form, habitat and presentation
+ * share a seed but own explicit contracts; presentation never drives CPU morphology. */
 'use strict';
-interface WorldVariationRecipe {
-  id:string; name:string; biome:EcologyBiome; flora:EcologyFlora; relief:WorldReliefForm;
-  amplitude:number; weather:EcologyWeather;
-  heightScale?:number; landmark?:WorldVariation['landmark'];
-  dry?:readonly [number,number,number]; lush?:readonly [number,number,number];
-  leaf?:number; bloom?:number;
+function worldVariationRecipe(family: LandscapeFamilyDefinition, seed: number): LandscapeVariantDefinition {
+  const list = family.recipes, rand = seeded(seed ^ 0x574f524c);
+  if (!list.length) throw Error('Landscape family requires at least one recipe');
+  return list[Math.floor(rand() * list.length)];
 }
-const WORLD_VARIATIONS:Readonly<Record<WorldVariationFamily,readonly WorldVariationRecipe[]>> = {
-  alien:[
-    {id:'lantern-basin',name:'LANTERN BASINS',biome:'mycelium',flora:'Fungus',relief:'basin',amplitude:12,weather:'mist'},
-    {id:'coral-highlands',name:'CORAL HIGHLANDS',biome:'mycelium',flora:'Coral',relief:'craters',amplitude:14,weather:'rain',dry:[.45,.22,.29],lush:[.19,.39,.39],leaf:0xe78196,bloom:0x88d8df},
-    {id:'glass-steppe',name:'GLASS STEPPE',biome:'rime',flora:'Spire',relief:'dunes',amplitude:10,weather:'snow',dry:[.43,.52,.64],lush:[.24,.33,.48],leaf:0xb0dce8},
-    {id:'amber-fans',name:'AMBER FANLANDS',biome:'ochre',flora:'Fan',relief:'terraces',amplitude:13,weather:'ash',leaf:0xe9af65,bloom:0xa5d3bc},
-    {id:'scarlet-pods',name:'SCARLET NURSERIES',biome:'mycelium',flora:'Pod',relief:'folds',amplitude:11,weather:'rain',dry:[.36,.20,.32],lush:[.33,.36,.26],leaf:0xd5749c,bloom:0xf0ba85},
-    {id:'bone-arches',name:'BONE ARCHES',biome:'mycelium',flora:'Arch',relief:'craters',amplitude:15,weather:'mist',dry:[.43,.38,.51],lush:[.22,.32,.41],leaf:0xd8d9c4},
-    {id:'jade-reeds',name:'JADE REED SEA',biome:'verdant',flora:'Reed',relief:'rolling',amplitude:12,weather:'rain',dry:[.37,.46,.32],lush:[.12,.35,.33],leaf:0x8bdbc6},
-    {id:'ivory-shelves',name:'IVORY SHELF GARDENS',biome:'rime',flora:'Shelf',relief:'terraces',amplitude:14,weather:'mist',leaf:0xd6d5ee,bloom:0x8ccec8}
-  ],
-  desert:[
-    {id:'wind-sea',name:'WIND-SCARRED DUNES',biome:'ochre',flora:'Cactus',relief:'dunes',amplitude:9,weather:'clear',landmark:'Relic',dry:[.74,.55,.31],lush:[.46,.43,.26],leaf:0x9eac78},
-    {id:'red-mesas',name:'RED MESA COUNTRY',biome:'ochre',flora:'Acacia',relief:'terraces',amplitude:13,weather:'ash',landmark:'Relic',dry:[.65,.32,.19],lush:[.43,.39,.23]},
-    {id:'oasis-valleys',name:'OASIS VALLEYS',biome:'ochre',flora:'Palm',relief:'basin',amplitude:11,weather:'mist',landmark:'Relic',dry:[.66,.53,.32],lush:[.25,.41,.27],leaf:0x8bb26b},
-    {id:'salt-folds',name:'SALT AND GOLD',biome:'ochre',flora:'Spire',relief:'folds',amplitude:12,weather:'clear',landmark:'Spire',dry:[.75,.71,.57],lush:[.50,.43,.30],leaf:0xe1cc98}
-  ],
-  westmark:[
-    {id:'spring-valley',name:'SPRING VALLEY',biome:'verdant',flora:'Grove',relief:'rolling',amplitude:5,weather:'rain',landmark:'Relic'},
-    {id:'amber-valley',name:'AMBER VALLEY',biome:'ochre',flora:'Grove',relief:'folds',amplitude:7,weather:'mist',landmark:'Relic',dry:[.62,.51,.28],lush:[.39,.42,.22],leaf:0xd6ad59},
-    {id:'winter-valley',name:'WINTER VALLEY',biome:'rime',flora:'Conifer',relief:'basin',amplitude:6,weather:'snow',landmark:'Spire'},
-    {id:'high-meadows',name:'HIGH MEADOWS',biome:'verdant',flora:'Conifer',relief:'terraces',amplitude:8,weather:'clear',landmark:'Relic',dry:[.57,.58,.31],lush:[.27,.42,.28]}
-  ],
-  frontier:[
-    {id:'green-expanse',name:'GREEN EXPANSE',biome:'verdant',flora:'Grove',relief:'rolling',amplitude:0,weather:'mist'},
-    {id:'golden-expanse',name:'GOLDEN EXPANSE',biome:'ochre',flora:'Acacia',relief:'rolling',amplitude:0,weather:'ash'},
-    {id:'frozen-expanse',name:'FROZEN EXPANSE',biome:'rime',flora:'Conifer',relief:'rolling',amplitude:0,weather:'snow'},
-    {id:'spore-expanse',name:'SPORE EXPANSE',biome:'mycelium',flora:'Coral',relief:'rolling',amplitude:0,weather:'rain'}
-  ],
-  haven:[
-    {id:'haven-oasis',name:'HAVEN · GARDEN TERRACES',biome:'ochre',flora:'Palm',relief:'basin',amplitude:8,weather:'mist',landmark:'Relic',dry:[.63,.49,.29],lush:[.26,.42,.28],leaf:0xa9bd72},
-    {id:'haven-orchards',name:'HAVEN · EMERALD ORCHARDS',biome:'verdant',flora:'Grove',relief:'rolling',amplitude:10,weather:'rain',landmark:'Relic'},
-    {id:'haven-frost',name:'HAVEN · FROST GARDENS',biome:'rime',flora:'Conifer',relief:'terraces',amplitude:12,weather:'snow',landmark:'Spire'},
-    {id:'haven-bloom',name:'HAVEN · LUMINOUS GARDENS',biome:'mycelium',flora:'Fan',relief:'folds',amplitude:9,weather:'mist',landmark:'Pylon'}
-  ]
-};
-function worldVariationRecipe(family:WorldVariationFamily,seed:number):WorldVariationRecipe {
-  const list=WORLD_VARIATIONS[family],rand=seeded(seed^0x574f524c);
-  return list[Math.floor(rand()*list.length)];
-}
-function battlefieldVariation(profile:BattlefieldRenderProfile,seed:number):BattlefieldRenderProfile {
-  const family=profile.variationFamily;if(!family)return profile;
-  const recipe=worldVariationRecipe(family,seed),
-    geology=seeded(seed^0x4d414352),
-    // Alien's relief axis is independent of its habitat recipe. Keep its draw
-    // before the amplitude sample; other families use their recipe's own form.
-    landform:WorldReliefForm=family==='alien'?(geology()<.5?'ridges':'broken-crater'):recipe.relief,
-    base=battlefieldEcology({...profile,wilderness:recipe.biome},seed),ecology=base.ecology!,
-    variation:WorldVariation={id:recipe.id,name:recipe.name+
-      (landform==='terraces'?' · PLATEAU COUNTRY':
-        family==='alien'?(landform==='ridges'?' · RIDGE COUNTRY':' · BROKEN CRATER'):''),
-      family,relief:landform,amplitude:family==='alien'?36+geology()*10:recipe.amplitude,
-      heightScale:recipe.heightScale??1,flora:recipe.flora,landmark:recipe.landmark??(recipe.biome==='mycelium'?'Spire':'Relic')};
-  return battlefieldAtmosphere({...base,variation,ecology:{...ecology,natural:true,flora:recipe.flora,
-    weather:recipe.weather,cover:recipe.weather==='clear'?.18:recipe.weather==='mist'?.58:.8,
-    dry:recipe.dry??ecology.dry,lush:recipe.lush??ecology.lush,leaf:recipe.leaf??ecology.leaf,bloom:recipe.bloom??ecology.bloom}},
-    {timeOfDay:'seeded'},seed);
+function resolveBattlefieldLandscape(family: LandscapeFamilyDefinition, profile: BattlefieldRenderProfile,
+    seed: number): ResolvedLandscapeRecipe {
+  const recipe = worldVariationRecipe(family, seed), habitat = recipe.habitat;
+  let terrain: BattlefieldTerrainRecipe, suffix = '', reservedGeology: (() => number) | undefined;
+  if (family.relief.mode === 'axis') {
+    const geology = seeded(seed ^ 0x4d414352), index = geology() < .5 ? 0 : 1;
+    terrain = Object.freeze({ relief: family.relief.forms[index], heightScale: family.relief.heightScale });
+    suffix = family.relief.suffixes[index];
+    reservedGeology = geology;
+  } else {
+    if (!recipe.terrain) throw Error('Recipe-owned relief requires terrain parameters');
+    terrain = Object.freeze({ ...recipe.terrain });
+    if (terrain.relief === 'terraces') suffix = ' · PLATEAU COUNTRY';
+  }
+  const base = battlefieldEcology({ ...profile, wilderness: habitat.biome }, seed), ecology = base.ecology!;
+  // Reserve the former amplitude sample after habitat resolution, in its original
+  // draw order. It was metadata, never a terrain input.
+  reservedGeology?.();
+  const variation: WorldVariation = { id: recipe.id, name: recipe.name + suffix,
+      family: family.id, relief: terrain.relief, heightScale: terrain.heightScale,
+      flora: habitat.flora, landmark: habitat.landmark ?? (habitat.biome === 'mycelium' ? 'Spire' : 'Relic') },
+    resolvedHabitat: BattlefieldEcology = { ...ecology, natural: true, flora: habitat.flora,
+      weather: habitat.weather, cover: habitat.weather === 'clear' ? .18 : habitat.weather === 'mist' ? .58 : .8,
+      dry: habitat.dry ?? ecology.dry, lush: habitat.lush ?? ecology.lush,
+      leaf: habitat.leaf ?? ecology.leaf, bloom: habitat.bloom ?? ecology.bloom },
+    presentation = battlefieldAtmosphere({ ...base, variation, ecology: resolvedHabitat }, { timeOfDay: 'seeded' }, seed);
+  // Habitat's cosmetic elevation range is filled once the authoritative surface exists.
+  return Object.freeze({ terrain, habitat: resolvedHabitat, presentation });
 }
 function decorateWorldVariation(builder:BattlefieldBuilder) {
   const w=builder.world,style=w.renderProfile.variation,e=w.renderProfile.ecology;

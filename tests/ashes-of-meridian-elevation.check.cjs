@@ -7,17 +7,19 @@ const {loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS, RENDERER_SCRIPTS} =
 const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world','effects',...SIMULATION_SCRIPTS,
   ...RENDERER_SCRIPTS,'world-view','effects-view'], {globals:{innerHeight:800}});
 const {Battlefield: ProceduralBattlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity,
-  BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, modelFrameRotation} = vm.runInContext(
-  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, modelFrameRotation})',context);
-const deckHeight=w=>Math.fround(6*w.renderProfile.variation.heightScale);
+  BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, modelFrameRotation, battlefieldEconomyRegions} = vm.runInContext(
+  '({Battlefield, BattlefieldSurface, MeridianGame, MeridianRenderer, MeridianEffects, BattlefieldView, renderEntity, BATTLEFIELDS, UNITS, UNIT_BODY_SCALE, modelFrameRotation, battlefieldEconomyRegions})',context);
+const deckHeight=w=>Math.fround(6*w.landscape.terrain.heightScale);
 // A synthetic ramp/cliff fixture isolates surface contracts from procedural catalog geography.
 function withRamp(run) {
   const original = BATTLEFIELDS.westmark;
   BATTLEFIELDS.westmark = { ...original, createSize: () => ({ extent: 120, cellSize: 2.5 }),
-    createLayout: () => ({ startSites: [], resourceSites: [-60,-20,20,60].flatMap(x => [-60,70].map(z => ({x,z}))),
-      corridors: [] }),
+    createLayout: () => {
+      const resourceSites = [-60,-20,20,60].flatMap(x => [-60,70].map(z => ({x,z})));
+      return { startSites: [], resourceSites, economyRegions: battlefieldEconomyRegions(resourceSites), corridors: [] };
+    },
     generate(builder) {
-      const w = builder.world, h = 6 * w.renderProfile.variation.heightScale;
+      const w = builder.world, h = 6 * w.landscape.terrain.heightScale;
       w.surface = new BattlefieldSurface(w.extent, w.cellSize,
         (x,z) => h * (Math.abs(x) < 90 ? Math.max(0, Math.min(1, (z-31)/11)) : z >= 42 ? 1 : 0),
         height => height >= h / 2 ? 1 : 0);

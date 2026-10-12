@@ -7,7 +7,7 @@ function scope() {
   return loadScripts(['core', 'content', ...BATTLEFIELD_SCRIPTS, 'world']);
 }
 const synthetic = `const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);},
-  world={extent:100,cellSize:2.5,layout:{resourceSites:[],corridors:[]}};`;
+  world={extent:100,cellSize:2.5,layout:{resourceSites:[],economyRegions:[],corridors:[]}};`;
 
 test('a substantial isolated shelf receives a broad graded connection without flattening the map', () => {
   const result = vm.runInContext(`(()=>{${synthetic}
@@ -46,10 +46,10 @@ test('a single-file notch does not count as a broad pass and is replaced by a us
 
 test('native terrace recipes retain quiet high ground distinct from rolling hills', () => {
   const result = vm.runInContext(`(()=>{
-    const world={extent:180,cellSize:2.5,terrainSeed:3,layout:{resourceSites:[],corridors:[]},renderProfile:{}},
+    const world={extent:180,cellSize:2.5,terrainSeed:3,layout:{resourceSites:[],economyRegions:[],corridors:[]},landscape:{}},
       forms=['rolling','terraces'];
     return forms.map(relief=>{
-      world.renderProfile={variation:{family:'westmark',relief,heightScale:1}};
+      world.landscape={terrain:{relief,heightScale:1}};
       const h=dynamicTerrainPlan(world).height;let quietHigh=0,sum=0;
       for(let z=-150;z<=150;z+=5)for(let x=-150;x<=150;x+=5){
         const y=h(x,z),slope=Math.hypot((h(x+1,z)-h(x-1,z))/2,(h(x,z+1)-h(x,z-1))/2);
@@ -60,7 +60,7 @@ test('native terrace recipes retain quiet high ground distinct from rolling hill
   })()`, scope());
   assert.ok(result[1].quietHigh > 50, 'plateaus have substantial quiet high ground');
   assert.equal(new Set(result.map(p => p.sum)).size, 2);
-  const available = vm.runInContext(`Array.from({length:12},(_,i)=>battlefieldVariation(BATTLEFIELDS.westmark.render,i+1).variation.relief)`, scope());
+  const available = vm.runInContext(`Array.from({length:12},(_,i)=>resolveBattlefieldLandscape(BATTLEFIELDS.westmark.family,BATTLEFIELDS.westmark.render,i+1).terrain.relief)`, scope());
   for (const form of ['rolling','folds','basin','terraces']) assert.ok(available.includes(form));
 });
 
@@ -68,7 +68,7 @@ for (const map of ['desert','alien-planet','westmark','frontier','haven']) {
   test(`${map}: enlarged terrain distributes broad reachable ground and protects economic foundations`, () => {
     const result = vm.runInContext(`(()=>{
       const seed=1409,definition=BATTLEFIELDS[${JSON.stringify(map)}],size=definition.createSize(seed),
-        world={...size,terrainSeed:seed,renderProfile:battlefieldVariation(definition.render,seed),layout:definition.createLayout(seed,size)},
+        world={...size,terrainSeed:seed,landscape:resolveBattlefieldLandscape(definition.family,definition.render,seed),layout:definition.createLayout(seed,size)},
         height=dynamicTerrainPlan(world).height,original=new BattlefieldSurface(world.extent,world.cellSize,height),
         surface=connectBattlefieldTerrain(world,height),regions=battlefieldTerrainRegions(surface);
       let protectedDelta=0;
@@ -93,7 +93,7 @@ test('Haven seed 19 keeps every deposit accessible and HQ shoulders preserve ref
   const result = vm.runInContext(`(()=>{
     const w=new Battlefield(19,'haven',4),regions=battlefieldTerrainRegions(w.surface),main=new Set(regions.groups[0]),
       definition=BATTLEFIELDS.haven,size=definition.createSize(19),rawWorld={...size,terrainSeed:19,
-        renderProfile:battlefieldVariation(definition.render,19),layout:definition.createLayout(19,size)},
+        landscape:resolveBattlefieldLandscape(definition.family,definition.render,19),layout:definition.createLayout(19,size)},
       oldFoundation=BattlefieldSurface.prototype.foundation,oldFits=BattlefieldSurface.prototype.fits;
     let unrepaired;
     try{
@@ -117,7 +117,7 @@ test('Haven seed 19 keeps every deposit accessible and HQ shoulders preserve ref
         hq:w.surface.foundation(hq,BUILDINGS.hq.size),refinery:w.surface.foundation(gas,BUILDINGS.refinery.size),
         route:w.path(w.startSites[0].x,w.startSites[0].z,site.x,site.z,false,undefined,2.6).status};
     });
-    return {sites,refineryDelta,economy:battlefieldTerrainEconomyConnected(w.surface,w.layout.resourceSites)};
+    return {sites,refineryDelta,economy:battlefieldTerrainEconomyConnected(w.surface,w.layout.economyRegions)};
   })()`, scope());
   assert.equal(result.economy, true);
   assert.equal(result.refineryDelta, 0, 'HQ correction leaves complete refinery raster footprints unchanged');
@@ -130,11 +130,12 @@ test('Haven seed 19 keeps every deposit accessible and HQ shoulders preserve ref
 test('a small blocked resource footprint cannot hide inside otherwise connected terrain', () => {
   const result = vm.runInContext(`(()=>{${synthetic}
     world.layout.resourceSites=[{x:0,z:0}];
+    world.layout.economyRegions=battlefieldEconomyRegions(world.layout.resourceSites);
     const height=(x,z)=>20+20*Math.exp(-(x*x+z*z)/9),surface=new BattlefieldSurface(100,2.5,height),
       regions=battlefieldTerrainRegions(surface);
     let error='';try{connectBattlefieldTerrain(world,height);}catch(e){error=e.message;}
     return {groups:regions.groups.map(g=>g.length),coverage:battlefieldTerrainCoverage(surface,regions),
-      economy:battlefieldTerrainEconomyConnected(surface,world.layout.resourceSites),error};
+      economy:battlefieldTerrainEconomyConnected(surface,world.layout.economyRegions),error};
   })()`, scope());
   assert.ok(result.groups.slice(1).every(n=>n<64));
   assert.ok(result.coverage.fraction>=.55&&result.coverage.sectors.every(p=>p>=.25));
@@ -146,7 +147,7 @@ test('spatial coverage detects an inaccessible upper map even with a large conne
   const result = vm.runInContext(`(()=>{
     const surface=new BattlefieldSurface(100,2.5,(x,z)=>z<25?20:20+(z-25)*2),regions=battlefieldTerrainRegions(surface);
     let rejected=false;
-    try{connectBattlefieldTerrain({extent:100,cellSize:2.5,layout:{resourceSites:[],corridors:[]}},(x,z)=>z<25?20:20+(z-25)*2);}
+    try{connectBattlefieldTerrain({extent:100,cellSize:2.5,layout:{resourceSites:[],economyRegions:[],corridors:[]}},(x,z)=>z<25?20:20+(z-25)*2);}
     catch(e){rejected=/Insufficient spatial terrain coverage/.test(e.message);}
     return {...battlefieldTerrainCoverage(surface,regions),rejected};
   })()`, scope());

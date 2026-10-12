@@ -25,7 +25,10 @@ function flatArena(extent, faction = 0, options = {}) {
   vm.runInContext(`const originalArenaRecipe=BATTLEFIELDS['alien-planet'];
     const flatArenaRecipe={...originalArenaRecipe,
       createSize:()=>({extent:${extent},cellSize:2.5}),
-      createLayout:()=>({startSites:[],resourceSites:[{x:-80,z:-80},{x:80,z:80}],corridors:[]}),
+      createLayout:()=>{
+        const resourceSites=[{x:-80,z:-80},{x:80,z:80}];
+        return {startSites:[],resourceSites,economyRegions:battlefieldEconomyRegions(resourceSites),corridors:[]};
+      },
       generate(builder) {
         const w=builder.world;
         w.surface=new BattlefieldSurface(w.extent,w.cellSize,()=>0);
