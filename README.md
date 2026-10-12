@@ -39,7 +39,7 @@ Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine sp�
 - [Audio und Sprachinhalte](docs/audio.md): Aufnahmen, Texte und Wiedergabeverträge.
 - [Prüfungen](docs/testing.md): `npm run check:quality` für das kurze Qualitätsnetz, gezielte Tests, Freigaben und Diagnose.
 - [Subagents](docs/subagents.md): isolierte parallele Arbeit.
-- [Eigenständige Experimente](experiments/README.md): vom Spiel getrennte Terrain-Prototypen mit WebGL-Ansicht, darunter topologiegeleitete Regionen und Wege sowie Flüsse auf dem dualen Netz mit lokalen Brücken.
+- [Neue Map-Generierung](experiments/README.md): eigenständiger Prototyp unter `experiments/map-generation/` mit topologiegeleiteten Regionen und Wegen, gerundeten Flüssen, lokalen Brücken und WebGL-Vorschau; noch getrennt vom produktiven Spielgenerator.
 - [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance-und-mobilstabilitaet.md) und [offene Issues](docs/issues/).
 - [Geschichte](docs/story.md): deutsche interne Fassung; englische Spielfassung im Codex.
 
