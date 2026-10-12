@@ -25,8 +25,14 @@ Die Landschaft enthält Terrain, Wirtschaftsressourcen und Kulisse, aber keine E
 - **Connections:** größtes radius-6-freies Netz grün, andere breite Komponenten orange; schmale, nur für Einzelkörper nutzbare Flächen bleiben ungefärbt.
 - **Cliffs:** permanente Terrain-Klippen rot.
 - **HQ terrain sample:** geeignete/ungeeignete HQ-Mittelpunkte im 10-Einheiten-Raster, mit dem tatsächlichen HQ-Radius und der normalen CPU-Fundamentprüfung. Nur Terrain: Ressourcen, Belegung, Sicht und Kosten werden nicht geprüft; keine Bauzusage.
-- **Economic network and anchors:** geplante Wirtschaftsverbindungen, Kristalle, Echo-Vents und HQ-Anker. Keine nachverfolgten Einheitenwege oder exakten Positionen der Reparaturrampen.
+- **Resolved routes and anchors:** geländefolgende Wirtschaftsverbindungen, Kristalle, Echo-Vents und HQ-Anker; ausgewählter Link gelb. Keine nachverfolgten Einheitenwege oder exakten Positionen der Reparaturrampen.
+- **Original straight links:** unveränderte Graph-Kanten gestrichelt weiß, zum Vergleich mit den aufgelösten Trassen. Beide Geometrien werden auf dem aktuellen Terrain gezeichnet, nicht auf zwei verschiedenen Welten.
+- **Terrain changes:** Abtrag orange, Auffüllung violett ab 0,5 Höheneinheiten gegenüber dem wirtschaftlich gestützten Gelände **vor** den Korridoren; einschließlich abschließender Reparaturrampen, nicht gegenüber einer unberührten Naturlandschaft.
 - **Start candidates:** öffentliche Kandidaten weiß, die beiden ursprünglichen Viewer-Landungen gelb. Keine Vierparteienzuteilung oder Startfairnessbewertung.
+
+**Height profile** wählt einen Wirtschaftslink; das Diagramm zeigt entlang seiner aufgelösten Weglänge das vorherige wirtschaftlich gestützte Feld, das geplante Trassenfeld und die endgültige CPU-Höhe. Auswahl und Kamera zeichnen nur gespeicherte Werte neu. Geometrie, Umwegfaktor, befahrbarer radius-6-Kern, geschätzte Längsneigung, Suchdurchläufe und Reparaturzahl stehen auch im JSON. Profilneigungen sind Stichproben, keine maximalen Dreieckssteigungen.
+
+Abtrag/Auffüllung und absolute Geländeänderung sind Raster-Volumenschätzungen an den Weltraster-Mittelpunkten. Der zusätzliche **straight datum reference** wertet den Gerade-/Datum-Wegansatz mit aktuellen Wirtschaftsstützen und denselben bereits gezogenen Natur- und Schulterparametern aus, aber **ohne** Anschlussreparaturen, Startsuche oder Ökologie. Er ist keine nacherzeugte alte Generatorversion und kein Vergleich zweier vollständig geprüfter Welten. Diese lesende Gegenprobe und die Erzeugungsmetadaten sind flüchtig, kein Snapshot-/Navigationszustand. Das aktuelle Terrain und seine Regeln bleiben maßgeblich.
 
 Der Bericht nennt Höhenbereich, Klippenanteil, breite/Fahrzeug-Komponenten, verbundene Innenfläche einschließlich neun Sektoren, Wirtschaftsanschlüsse und HQ-Stichproben. Der Anteil des größten Netzes bezieht sich auf die beim jeweiligen Radius freien Zellen, nicht die gesamte Kartenfläche. Landungsabstände zu Ressourcen sind Luftlinien. Warnungen vergleichen statische Merkmale mit den bestehenden Generatorgrenzen; erfüllte Grenzen beweisen weder dynamischen Gruppenverkehr, Walling noch Balance.
 

@@ -89,6 +89,35 @@ test('cached annotations redraw without height queries and expire with the world
   assert.equal(result.nextHeight, 30);
 });
 
+test('route reports compare resolved geometry, sampled earthworks and cached height profiles without mutation', () => {
+  const result=vm.runInContext(`(()=>{${fixture}
+    world.layout.corridors=[[[-20,-20],[0,20],[20,20]]];
+    world.corridorPlan={links:[[[-20,-20],[20,20]]],corridors:world.layout.corridors,before:()=>24,height:()=>20,
+      straightReference:()=>()=>18,expandedNodes:17,repairs:1};
+    const before=JSON.stringify(world),diagnostics=new MeridianMapDiagnostics();
+    seeded=()=>{throw Error('No analysis RNG');};
+    const data=diagnostics.analyze(world,'frontier',anchors),report=data.report;
+    world.corridorPlan.before=world.corridorPlan.height=world.corridorPlan.straightReference=()=>{throw Error('Drawing cannot refit terrain');};
+    surface.heightAt=()=>{throw Error('Drawing cannot query terrain');};
+    const calls=[],ctx={canvas:{width:480,height:160},clearRect(){},fillRect(){},beginPath(){},moveTo(){},lineTo(){},
+      fillText(){},stroke(){calls.push('stroke');}};
+    diagnostics.drawProfile(ctx);
+    return {report,unchanged:before===JSON.stringify(world),cuts:data.cutPaths.length,fills:data.fillPaths.length,
+      straightPoints:data.originalLinks[0].length,curvedPoints:data.corridors[0].length,drawn:calls.length};
+  })()`,scope());
+  assert.ok(result.unchanged && result.cuts>0);
+  assert.equal(result.fills,0);
+  assert.equal(result.report.schema,2);
+  const r=result.report.corridors,m=r.modification;
+  assert.equal(r.expandedNodes,17);assert.equal(r.repairs,1);assert.ok(r.allCoresClear && r.meanDetour>1);
+  assert.equal(m.sampledCutVolume,25600);assert.equal(m.sampledFillVolume,0);
+  assert.equal(m.sampledAbsoluteVolume,25600);assert.equal(m.changedFraction,1);
+  assert.equal(m.straightDatumReference.sampledAbsoluteVolume,38400);
+  assert.match(m.straightDatumReference.limitation,/before connectivity repairs/);
+  assert.ok(r.routes[0].samples.every(p=>p.before===24&&p.planned===20&&p.final===20));
+  assert.ok(result.curvedPoints>result.straightPoints && result.drawn===4);
+});
+
 test('report export includes build provenance, returns value copies and rejects stale or busy scenes', () => {
   const result = vm.runInContext(`(()=>{${fixture}
     const c=new MeridianCapture({world,s:{map:'frontier',seed:101}},{},{},()=>{});

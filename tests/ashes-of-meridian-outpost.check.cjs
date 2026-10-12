@@ -16,7 +16,7 @@ function fixture(completed=true) {
   g.world={clearFog(){},extent:100,gridSize:4,blocked:new Uint8Array(16),pathVersion:0,sight:[0,1].map(()=>({visible:new Uint8Array(16).fill(1),explored:new Uint8Array(16).fill(1)})),
     deploymentReachable:new Uint8Array(16).fill(1),point:i=>({x:(i%4)*40-60,z:Math.floor(i/4)*40-60}),blockedAt:()=>false,terrainFree:()=>true,surface:{fits:()=>true,segment:()=>true}};
   const hq=g.spawnBuilding('hq',0,0,0,0),recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{},enemyBenefits:[{}],encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[1]}};
-  const run={version:12,...copy(recipe),depth:1,battle:null,worlds:[{stage:1,map:'desert',seed:1409,recipe:copy(recipe),battle:g.snapshotBattle()}]};
+  const run={version:13,...copy(recipe),depth:1,battle:null,worlds:[{stage:1,map:'desert',seed:1409,recipe:copy(recipe),battle:g.snapshotBattle()}]};
   const save=()=>{g.rehash();return g.snapshotBattle();};
   const data=new Map(),service=rules.createMeridianPersistence({...rules,getStorage:()=>({getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)}),warn(){}});
   function building(key='startingAlloy',rank=1) {

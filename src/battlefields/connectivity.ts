@@ -109,7 +109,7 @@ function battlefieldRampRoute(extent: number, a: Position, b: Position,
   return rounded.slice(1).every((p, i) => clear(rounded[i], p, 17)) ? rounded : null;
 }
 function connectBattlefieldTerrain(world: Pick<Battlefield, 'extent' | 'cellSize' | 'layout'>,
-    height: (x: number, z: number) => number): BattlefieldSurface {
+    height: (x: number, z: number) => number, diagnostics?: Pick<BattlefieldCorridorPlan,'repairs'|'corridors'>): BattlefieldSurface {
   const bake = (field: (x: number, z: number) => number) =>
     new BattlefieldSurface(world.extent, world.cellSize, field, h => Math.floor(h / 6)),
     protectedSites = world.layout.economyRegions.flatMap(region => region.rampProtection),
@@ -119,6 +119,10 @@ function connectBattlefieldTerrain(world: Pick<Battlefield, 'extent' | 'cellSize
       Math.floor((p.z + world.extent) / world.cellSize) * n + Math.floor((p.x + world.extent) / world.cellSize)));
   let surface = bake(height), routeGrid: Uint8Array | undefined,
     economyAccess = battlefieldTerrainEconomyAccess(surface, world.layout.economyRegions);
+  if(diagnostics&&!battlefieldCorridorsClear(surface,diagnostics.corridors))
+    throw Error('Economic corridor lacks broad surface clearance');
+  if(diagnostics&&!battlefieldHeadquartersSupported(surface,world.layout.economyRegions))
+    throw Error('Economic HQ support lacks foundation or exit clearance');
   // Radius-six connectivity distinguishes a usable army route from an accidental
   // single-file connection. Significant shelves must join this wider network.
   for (let repair = 0; repair <= 8; repair++) {
@@ -154,7 +158,7 @@ function connectBattlefieldTerrain(world: Pick<Battlefield, 'extent' | 'cellSize
     for (const a of sample(main)) for (const b of sample(island)) {
       const length = distance(a, b), rise = Math.abs(surface.heightAt(a.x, a.z) - surface.heightAt(b.x, b.z));
       // Enough run for a low-gradient, eased ascent and generous end landings.
-      if (length < 40 || rise / (length - 24) > .22) continue;
+      if (length < 40 || rise / (length - 24) > .20) continue;
       if (protectedSites.some(p => Math.min(distance(p, a), distance(p, b)) < p.radius + 18)) continue;
       candidates.push({ a, b, length });
     }
@@ -186,7 +190,9 @@ function connectBattlefieldTerrain(world: Pick<Battlefield, 'extent' | 'cellSize
           if (d < nearest) { nearest = d; along = offset + t * leg.length; projection = q; }
           offset += leg.length;
         }
-        if (nearest >= p.radius + 24 || along < 20 || along > run - 20) continue;
+        // Only constrain the usable ramp core. A shoulder brushing a protected
+        // pad is already masked below; distant pad knots can invent steep steps.
+        if (nearest >= p.radius + 12 || along < 20 || along > run - 20) continue;
         const dx = (source.heightAt(p.x + 1, p.z) - source.heightAt(p.x - 1, p.z)) / 2,
           dz = (source.heightAt(p.x, p.z + 1) - source.heightAt(p.x, p.z - 1)) / 2,
           grade = source.heightAt(p.x, p.z) + dx * (projection.x - p.x) + dz * (projection.z - p.z);
@@ -235,12 +241,15 @@ function connectBattlefieldTerrain(world: Pick<Battlefield, 'extent' | 'cellSize
         }
         if (!clear) break;
       }
-      if (!clear) continue;
+      if (!clear || diagnostics&&(!battlefieldCorridorsClear(proposed,diagnostics.corridors)||
+          !battlefieldHeadquartersSupported(proposed,world.layout.economyRegions))) continue;
       const proposedEconomy = battlefieldTerrainEconomyAccess(proposed, world.layout.economyRegions);
       // An otherwise valid new ramp must never cut an existing economic access,
       // even while other isolated resource regions still need their own repair.
       if (economyAccess.some((accessible, i) => accessible && !proposedEconomy[i])) continue;
-      surface = proposed; economyAccess = proposedEconomy; connected = true; break;
+      surface = proposed; economyAccess = proposedEconomy; connected = true;
+      if(diagnostics)diagnostics.repairs++;
+      break;
     }
     if (!connected) throw Error('Cannot connect broad terrain shelf with a safe ramp');
   }

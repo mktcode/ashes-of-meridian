@@ -100,6 +100,7 @@
       readonly renderProfile: BattlefieldRenderProfile;
       declare definition: BattlefieldDefinition;
       declare layout: BattlefieldLayout;
+      corridorPlan?: BattlefieldCorridorPlan;
       declare staticGrid: Uint8Array;
       declare terrainFeatureGrid: Uint8Array;
       declare blocked: Uint8Array;

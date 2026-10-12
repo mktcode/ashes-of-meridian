@@ -69,6 +69,7 @@ const BATTLEFIELD_SCRIPTS = Object.freeze([
   'battlefield-economy',
   'battlefield-morphology',
   'battlefield-economy-terrain',
+  'battlefield-corridors',
   'battlefield-terrain-view',
   'battlefield-connectivity',
   'battlefield-dynamic',
