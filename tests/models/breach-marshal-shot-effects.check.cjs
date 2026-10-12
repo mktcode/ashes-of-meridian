@@ -22,7 +22,7 @@ test('Breach Marshal shots: cyan scaled carbine muzzle, unchanged RNG, effect co
   assert.equal(f.y,3+1.425*1.18);assert.equal(f.life,.1);assert.equal(f.width,.035);
   assert.equal(effects.combatBeams.get(f),target.size);
  }
- for(const change of [{type:'medic'},{type:'tank'},{kind:'building',type:'turret'},{faction:1},{faction:2}]){
+ for(const change of [{type:'medic'},{type:'tank'},{kind:'building',type:'turret'},{faction:1}]){
   effects.reset();const e={...source,...change};effects.shot(e,target);
   assert(!effects.modelMuzzleBeams.has(effects.fx[0]));assert.notEqual(effects.fx[0].color,0x38d9e8);
   assert.equal(effects.fx[0].x,e.x+Math.sin(e.rot)*.7);

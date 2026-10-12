@@ -184,7 +184,7 @@ test('public FFA start snapshots every slot and preserves seeded terrain/resourc
 });
 
 test('opening factions are fixed and additional opponents enter at stages 4 and 8', () => {
-  assert.deepEqual([0, 1, 2].map(depth => Array.from(expeditionEnemyFactions(depth, () => 0.99))), [[0], [1], [2]]);
+  assert.deepEqual([0, 1, 2].map(depth => Array.from(expeditionEnemyFactions(depth, () => 0.99))), [[0], [1], [1]]);
   assert.deepEqual([0, 1, 2, 3, 6, 7, 999999].map(expeditionEnemyCount), [1, 1, 1, 2, 2, 3, 3]);
 });
 

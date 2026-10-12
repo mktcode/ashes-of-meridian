@@ -76,7 +76,7 @@ function validEvacuatedArmy(value: unknown, units: Record<string, unknown>): val
 // A saved simulation is rejected as a whole, never repaired into a fresh battle.
 // Rules/content arrive from the app; this layer knows neither Game nor UI objects.
 function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecipe,
-  { abilities, units, buildings, upgrades, benefits, upgradeFamilies }: PersistenceDependencies, completed = false): value is ExpeditionBattleSave {
+  { abilities, units, buildings, upgrades, benefits, upgradeFamilies, factions }: PersistenceDependencies, completed = false): value is ExpeditionBattleSave {
   type Check = (v: unknown) => boolean;
   const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
   const num: Check = v => typeof v === 'number' && Number.isFinite(v);
@@ -94,7 +94,8 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
   const dictionary = (check: Check, known?: Record<string, unknown>): Check => v => record(v) &&
     Object.entries(v).every(([k, item]) => (!known || Object.hasOwn(known, k)) && check(item));
   const pos = shape({ x: num, z: num });
-  const faction = oneOf(0, 1, 2), team = oneOf(0, 1, 2, 3), anyTeam = oneOf(-1, 0, 1, 2, 3);
+  const faction: Check = v => integer(v) && Number(v) < factions.length;
+  const team = oneOf(0, 1, 2, 3), anyTeam = oneOf(-1, 0, 1, 2, 3);
   const cost = shape({ cost: nonnegative, gas: nonnegative });
   const pathStatus = oneOf('complete', 'partial', 'unreachable', 'budget-exhausted');
   const order: Check = v => record(v) && shape({ type: oneOf('idle', 'hold', 'stop', 'move', 'attackMove', 'guard',
@@ -294,7 +295,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
     return d;
   }
   function readRecipe(p: any): ExpeditionBattleRecipe {
-      if (!p || !Number.isInteger(p.faction) || p.faction < 0 || p.faction > 2 ||
+      if (!p || !Number.isInteger(p.faction) || p.faction < 0 || p.faction >= deps.factions.length ||
         !p.encounter || !Object.hasOwn(battlefields, p.encounter.map) ||
         typeof p.encounter.mission !== 'string' || !Object.hasOwn(missions, p.encounter.mission) ||
         !missions[p.encounter.mission].maps.includes(p.encounter.map) ||
@@ -306,7 +307,7 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
         throw Error('Incompatible expedition recipe');
       const count = enemyCount(p.depth);
       if (!Array.isArray(p.encounter.enemies) || p.encounter.enemies.length !== count ||
-        p.encounter.enemies.some((f: unknown) => !Number.isInteger(f) || Number(f) < 0 || Number(f) > 2) ||
+        p.encounter.enemies.some((f: unknown) => !Number.isInteger(f) || Number(f) < 0 || Number(f) >= deps.factions.length) ||
         !Array.isArray(p.enemyBenefits) || p.enemyBenefits.length !== count ||
         p.enemyBenefits.some((b: unknown) => !b || typeof b !== 'object' || Array.isArray(b)))
         throw Error('Invalid expedition parties');

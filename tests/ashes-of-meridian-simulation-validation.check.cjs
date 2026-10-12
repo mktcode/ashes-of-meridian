@@ -21,7 +21,7 @@ test('unknown structures cannot be built or spend resources', () => {
 });
 
 test('unknown units cannot be recruited or mutate the battle', () => {
-  for (const faction of [0, 1, 2]) {
+  for (const faction of [0, 1]) {
     const game = battle(faction), before = json(game.s);
     game.random = () => { throw Error('Economic rejection consumed RNG'); };
     assert.equal(game.train('unknown-unit'), false);

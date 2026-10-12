@@ -1,6 +1,6 @@
 # Ashes of Meridian
 
-Lokaler, touchorientierter RTS-Roguelite-Prototyp mit drei Fraktionen und WebGL 2: **Basis bauen → Gefecht gewinnen → Außenposten ausbauen und verteidigen → Einheiten und Upgrades evakuieren → weiterziehen**. Der Core Loop ist implementiert; Bedienbarkeit, Langzeitbalance und Zielgeräteperformance bleiben offen.
+Lokaler, touchorientierter RTS-Roguelite-Prototyp mit zwei Fraktionen — The Cinder Pact und The Manyroot — und WebGL 2: **Basis bauen → Gefecht gewinnen → Außenposten ausbauen und verteidigen → Einheiten und Upgrades evakuieren → weiterziehen**. Der Core Loop ist implementiert; Bedienbarkeit, Langzeitbalance und Zielgeräteperformance bleiben offen.
 
 [Öffentliche Testversion](https://aom.markus-kottlaender.de/) · Profile bleiben lokal im jeweiligen Browser.
 

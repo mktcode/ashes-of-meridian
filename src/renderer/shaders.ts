@@ -3,7 +3,7 @@
     // Effect-only material; no texture or changes to the embedded material catalog.
     const CONTACT_SHADOW_MATERIAL = -1, PLACEMENT_GUIDE_MATERIAL = -9, FORUM_PARCEL_MATERIAL = -10;
     // Dedicated procedural surfaces; the alloy pool makes deposits visibly illuminate the ground.
-    const PORTAL_MATERIAL = -2, PORTAL_STILL_MATERIAL = -3, ALLOY_LIGHT_MATERIAL = -4,
+    const ALLOY_LIGHT_MATERIAL = -4,
       ALIEN_LIGHT_MATERIAL = -5, SNOWFLAKE_MATERIAL = -6, RAIN_STREAK_MATERIAL = -7, RAIN_SPLASH_MATERIAL = -8;
     // Identical displacement in scene and shadow passes; only cosmetic foliage moves.
     const ECOLOGY_WIND = `uniform vec2 u_wind;
@@ -38,7 +38,6 @@ if(a_material==${RAIN_STREAK_MATERIAL}.){
 }
 if(a_material==${CONTACT_SHADOW_MATERIAL}.||a_material==${ALLOY_LIGHT_MATERIAL}.)v_modelPos=a_pos;
 if(a_material==${SNOWFLAKE_MATERIAL}.||a_material==${RAIN_STREAK_MATERIAL}.||a_material==${RAIN_SPLASH_MATERIAL}.)v_modelPos=a_pos;
-if(a_material==${PORTAL_MATERIAL}.||a_material==${PORTAL_STILL_MATERIAL}.)v_modelPos=a_pos;
 v_modelN=a_normal/textureScale;
 vec3 normal=a_normal;if(a_material>3.5)normal/=vec3(dot(a_model[0].xyz,a_model[0].xyz),dot(a_model[1].xyz,a_model[1].xyz),dot(a_model[2].xyz,a_model[2].xyz));v_n=normalize(mat3(a_model)*normal);v_col=vec4(a_color.rgb*a_tint,a_color.a);v_glow=a_glow;v_shadow=u_light*p;v_mat=a_material;gl_Position=u_vp*p;}`;
     const FRAG = `#version 300 es
@@ -57,7 +56,7 @@ uniform sampler2D u_shadow;uniform sampler2D u_fog;uniform sampler2D u_groundTex
 uniform vec3 u_sun;uniform vec3 u_skyLight;uniform vec3 u_bounce;uniform float u_shadowBias;uniform float u_fogExtent;
 uniform int u_pointLightCount;uniform highp sampler2D u_lightGrid;uniform highp sampler2D u_lightData;
 uniform float u_placementGridDetail;
-uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_portalTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
+uniform sampler2D u_rockTex;uniform float u_rockScale;uniform float u_effectTime;uniform vec2 u_landscapeRelief;uniform float u_upland;
 uniform vec2 u_biotopeElevation;uniform float u_habitatOn;uniform vec4 u_ecology;uniform vec3 u_biomeDry;uniform vec3 u_biomeLush;uniform vec3 u_biomeSoil;uniform vec3 u_biomeStone;uniform float u_weatherTime;
 out vec4 frag;
 float sceneryFog(vec2 position){
@@ -152,14 +151,12 @@ vec3 finishLighting(vec3 color){
  color*=(peak-over+over/(1.+over/.35))/max(peak,.0001);
  return mix(color,color*color*(3.-2.*color),.10);
 }
-// Smooth value noise and domain warping, evaluated only on the gate membrane.
-// Fixed octave budget, no texture reads, particles, CPU geometry or simulation RNG.
+// Shared terrain value noise: no texture reads, CPU geometry or simulation RNG.
 float veilHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float veilNoise(vec2 p){
  vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
  return mix(mix(veilHash(i),veilHash(i+vec2(1,0)),f.x),mix(veilHash(i+vec2(0,1)),veilHash(i+vec2(1,1)),f.x),f.y);
 }
-float veilCloud(vec2 p){return veilNoise(p)*.57+veilNoise(p*2.03+7.1)*.29+veilNoise(p*4.07-3.4)*.14;}
 float habitat(vec2 p){
  float warp=sin(p.x*.017+p.y*.031+u_ecology.w)*9.;
  return clamp(.5+sin(p.x*.041+warp*.08+u_ecology.w)*.24+cos(p.y*.036-p.x*.015-u_ecology.w)*.23,0.,1.);
@@ -203,17 +200,6 @@ vec3 uplandStone(vec3 stone,vec3 n){
  float cap=smoothstep(.63,.94,n.y)*smoothstep(.28,.76,weather);
  return mix(stone,stone*vec3(.77,.91,.57),cap*.58);
 }
-vec3 veilSurface(vec2 p,float time){
- vec2 drift=vec2(time*.12,-time*.24);
- vec2 warp=vec2(veilCloud(p*1.35+drift),veilCloud(p*1.35-drift+9.7));
- float cloud=veilCloud(p*2.1+warp*2.8+drift);
- float fold=sin(p.y*6.5+p.x*2.4+warp.x*9.+cloud*7.-time*1.8);
- float threads=pow(.5+.5*fold,12.)*smoothstep(.3,.75,cloud);
- float edge=pow(clamp(abs(p.x)/1.12,0.,1.),5.);
- vec3 hue=v_col.rgb;
- return mix(hue*.16,hue*1.18,smoothstep(.16,.86,cloud))
-       +mix(hue,vec3(.85,.66,1.),.45)*(threads*.95+edge*.22);
-}
 void main(){
  if(v_mat==${SNOWFLAKE_MATERIAL}.||v_mat==${RAIN_STREAK_MATERIAL}.||v_mat==${RAIN_SPLASH_MATERIAL}.){
   vec2 p=v_modelPos.xz*2.;float mask;
@@ -229,7 +215,7 @@ void main(){
    mask=ring*(.45+.55*smoothstep(-.35,.65,sin(p.x*17.+p.y*11.)));
   }else{
    // At game scale snow reads as small irregular tufts, not star-shaped icons.
-   float turn=u_portalTime*.4+v_pos.x*.23+v_pos.z*.19;
+   float turn=u_effectTime*.4+v_pos.x*.23+v_pos.z*.19;
    vec2 q=mat2(cos(turn),-sin(turn),sin(turn),cos(turn))*p;
    float r=length(q*vec2(1.06,.92))+sin(q.x*8.+q.y*5.)*.035;
    mask=(1.-smoothstep(.12,.94,r))*(.78+.22*(1.-smoothstep(0.,.5,r)));
@@ -281,15 +267,6 @@ void main(){
   lit=mix(lit,u_haze,mist);
   float grain=fract(sin(dot(v_pos.xz,vec2(12.9898,78.233)))*43758.54);lit*=.965+grain*.055;
   frag=vec4(lit,v_col.a);return;
- }
- if(v_mat==${PORTAL_MATERIAL}.||v_mat==${PORTAL_STILL_MATERIAL}.){
-  // Vertical gates use XY; horizontal flight wells use XZ without changing gate motion.
-  vec2 veilUv=abs(v_modelN.y)>.7?v_modelPos.xz:v_modelPos.xy;
-  vec3 lit=finishLighting(veilSurface(veilUv,v_mat==${PORTAL_MATERIAL}.?u_portalTime:0.));
-  float sight=battlefieldFog(v_pos.xz);
-  lit*=mix(1.,mix(.16,1.,sight),u_fogOn);
-  float mist=(1.-exp(-max(length(u_eye-v_pos)-75.,0.)*.0038))*u_distanceMist;
-  frag=vec4(mix(lit,u_haze,mist),v_col.a);return;
  }
  vec3 n=normalize(v_n);vec3 base=v_col.rgb;float surfaceAlpha=v_col.a;
 // Share opaque terrain RGBA reads between albedo, relief and wet-ground gloss.

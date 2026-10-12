@@ -15,18 +15,11 @@ const specs = [
   [1,'tank',[-1.65,-.18,-1.75],[1.65,1.95,2.05],6500,11,'choirRootbeastBody'],
   [1,'artillery',[-1.05,0,-1.55],[1.05,2.7,1.65],6500,6,'choirSporecallerBody'],
   [1,'air',[-2.85,-.15,-1.5],[2.85,1.5,1.5],8500,7,'choirMothwingBody'],
-  [1,'hero',[-1.25,-.12,-1.2],[1.25,3.1,1.25],3500,9,'choirFirstVoiceBody'],
-  [2,'worker',[-.95,.25,-.9],[.95,1.03,1.5],1400,7,'courtCustodianBody'],
-  [2,'rifle',[-.65,.2,-.5],[.65,2.05,1.5],2600,5,'courtPallbearerBody'],
-  [2,'medic',[-1,.08,-.5],[1,2.2,.5],1200,8,'courtAbsolverFrame'],
-  [2,'tank',[-1.35,.24,-1.5],[1.35,1.5,1.9],2800,6,'courtSepulcherHull'],
-  [2,'artillery',[-.9,.17,-1.5],[.9,3.23,1.95],2600,8,'courtElegistSled'],
-  [2,'air',[-2.6,.1,-1.95],[2.6,1.3,2.4],1600,6,'courtSeraphHull'],
-  [2,'hero',[-1.2,0,-.55],[1.2,2.85,.7],3400,8,'courtUnmaskedBody']
+  [1,'hero',[-1.25,-.12,-1.2],[1.25,3.1,1.25],3500,9,'choirFirstVoiceBody']
 ];
 
 function altitude(e,time) {
-  return e.type === 'air' ? 3.8+Math.sin(time*2+e.id)*.22 : e.faction===2 ? .3+Math.sin(time*2+e.id)*.08 : 0;
+  return e.type === 'air' ? 3.8+Math.sin(time*2+e.id)*.22 : 0;
 }
 function bounds(calls, meshes, e, time) {
   const low=[Infinity,Infinity,Infinity], high=[-Infinity,-Infinity,-Infinity], yaw=e.rot||0;
@@ -123,14 +116,14 @@ test('Tender walks on alternating tripods with visible foot travel and freezes w
   assert.deepEqual(draw(undefined),start,'missing preview walk defaults to a finite pose');
 });
 
-test('new unit catalog has fourteen distinct assemblies and deliberately different flight animation',()=>{
+test('Manyroot units have seven distinct assemblies and mirrored flight animation',()=>{
   const h=modelHarness(), signatures=new Set();
   for(const [faction,type] of specs) {
     const e={id:37,kind:'unit',type,faction,team:0,hp:100,size:1,x:0,z:0,rot:0};
     const calls=h.draw(e);
     signatures.add(calls.map(c=>c[0]).join('|'));
   }
-  assert.equal(signatures.size,14);
+  assert.equal(signatures.size,specs.length);
   const e={id:37,kind:'unit',type:'air',faction:1,team:0,hp:100,size:1,x:0,z:0,rot:0};
   const a=h.draw(e,{},0),b=h.draw(e,{},.2);
   assert.notEqual(a.find(c=>c[0]==='choirMothwingFore')[10],b.find(c=>c[0]==='choirMothwingFore')[10]);
@@ -143,6 +136,4 @@ test('new unit catalog has fourteen distinct assemblies and deliberately differe
   }
   for(const [name,length] of [['choirThornlingMuzzle',.32],['choirRootbeastHorn',.63],['choirSporecallerTrumpet',1.1]])
     assertRecessedMuzzle(meshes[name],{x:0,y:0,z:0,rx:-Math.PI/2,front:length,recess:.15});
-  const court0=h.draw({...e,faction:2},{},0),court1=h.draw({...e,faction:2},{},.2);
-  assert.deepEqual(court0.map(c=>c.filter((_,i)=>i!==2)),court1.map(c=>c.filter((_,i)=>i!==2)),'Seraph remains rigid; only the existing global flight bob changes');
 });

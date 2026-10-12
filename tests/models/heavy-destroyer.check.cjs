@@ -5,7 +5,7 @@ const { modelHarness, assertMesh } = require('../helpers/model-contract.cjs');
 const { loadScripts, BATTLEFIELD_SCRIPTS, SIMULATION_SCRIPTS } = require('../helpers/game-scripts.cjs');
 
 test('each destroyer model registers independently from its own file', () => {
-  for (const faction of [0,1,2]) {
+  for (const faction of [0,1]) {
     const context = loadScripts(['core', 'renderer-materials', 'renderer-geometry', 'renderer-model-kit',
       'renderer-heavy-mesh', `model-faction-${faction}-unit-destroyer`]);
     const model = vm.runInContext(`EntityModels.find({kind:'unit',type:'destroyer',faction:${faction}})`, context);
@@ -18,9 +18,9 @@ test('destroyers retain independent moving parts and uniform preview colors', ()
   vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }', h.context);
   // Keep full-precision captures outside the bounded JavaScript test heap.
   h.EntityModels.upload({ meshes, geometry(name, data) { meshes[name] = Float64Array.from(data); } });
-  // All three reconstructions have geometric contracts below, not regenerated
+  // Both reconstructions have geometric contracts below, not regenerated
   // hashes of the deliberately replaced indexed geometry.
-  for (const [faction, animated] of [[0,4],[1,6],[2,1]]) {
+  for (const [faction, animated] of [[0,4],[1,6]]) {
     const prefix = `heavy${faction}`;
     const keys = Object.keys(meshes).filter(key => key.startsWith(prefix) && !key.endsWith('Neutral'));
     assert.equal(keys.length, animated + 1 + (faction === 1 ? 0 : 1));
@@ -152,47 +152,6 @@ test('Crownwing construction is closed, bounded and deterministic without model 
   }
 });
 
-test('Catafalque war barque has closed detailed armor, an open crystal furnace and no frame-time construction', () => {
-  const context=loadScripts(['core','renderer-materials','renderer-geometry','renderer-model-kit','model-faction-2-unit-destroyer']);
-  vm.runInContext('Math.random = seeded = () => { throw Error("Model RNG"); }',context);
-  const registry=vm.runInContext('EntityModels',context),meshes={};
-  registry.upload({meshes,geometry(name,data){meshes[name]=Float64Array.from(data);}});
-  for(const name of ['heavy2Body','heavy2Team','heavy2Core']) {
-    const core=name.endsWith('Core'),team=name.endsWith('Team'),mesh=assertMesh(()=>Array.from(meshes[name]),{
-      minTriangles:core?40:team?128:4000,maxTriangles:core?40:team?128:14000,
-      min:core?[-1.03,-1.13,-.77]:[-4.7,-1.40,-6.5],max:core?[1.03,1.13,.77]:[4.7,4.40,7.95]
-    }),edges=new Map(),key=p=>p.map(v=>Math.round(v*1e6)).join(',');
-    for(let i=0;i<mesh.length;i+=27) {
-      const points=[0,9,18].map(j=>key(mesh.slice(i+j,i+j+3)));
-      for(let j=0;j<3;j++) {
-        const a=points[j],b=points[(j+1)%3],edge=a<b?`${a}|${b}`:`${b}|${a}`;
-        edges.set(edge,(edges.get(edge)||0)+(a<b?1:-1));
-      }
-    }
-    assert.ok([...edges.values()].every(v=>v===0),`${name}: closed oriented surface`);
-  }
-  const body=meshes.heavy2Body,points=Array.from({length:body.length/9},(_,i)=>Array.from(body.slice(i*9,i*9+3)));
-  assert.ok(points.some(([x,y,z])=>Math.abs(x)>3.7 && y<0 && z<0), 'suspended propulsion bells');
-  assert.ok(points.some(([x,y,z])=>Math.abs(x)>.6 && z>7.8), 'broad circular siege aperture');
-  assert.ok(points.some(([x,y])=>Math.abs(x)>1.5 && y>4.0), 'high open vaulted spars');
-  assert.ok(points.some(([x,y,z])=>Math.abs(x)>2.2 && y<.6 && z>0), 'layered flank armor and underslung battery');
-  assert.ok(points.some(([x,y,z])=>Math.abs(x)<.2 && y>1.70 && z>3), 'raised focusing spine ahead of the open furnace');
-  const repeated={};registry.upload({meshes:repeated,geometry(name,data){repeated[name]=Float64Array.from(data);}});
-  for(const name of Object.keys(meshes)) assert.deepEqual(meshes[name],repeated[name]);
-  vm.runInContext('geom.box = geom.octa = geom.tri = () => { throw Error("Frame geometry"); }',context);
-  const model=registry.find({kind:'unit',type:'destroyer',faction:2});
-  for(const time of [0,1,2]) for(const tint of [null,0x99e4c6]) {
-    const calls=[],lights=[];
-    model.render({entity:{id:7},time,nightPart:(...a)=>calls.push(a),team:0x78ded3,
-      surfaceColor:c=>tint??c,pointLight:(...a)=>lights.push(a)});
-    assert.equal(calls.length,3);assert.equal(lights.length,3);
-    const core=calls[2];assert.equal(core[0],`heavy2Core${tint===null?'':'Neutral'}`);
-    assert.deepEqual(core.slice(1,7),[0,2.65*.72,-1.5*.72,.72,.72,.72]);
-    assert.equal(core[8],time*.35);assert.equal(core[9],0);assert.equal(core[10],0);
-    assert.ok(core[11]>=.24 && core[11]<=.36);
-  }
-});
-
 test('local flight envelopes keep the complete animated aircraft and destroyer meshes above mountain triangles', () => {
   const h=modelHarness({heavyModels:true}),meshes={},Surface=vm.runInContext('BattlefieldSurface',h.context);
   h.EntityModels.upload({meshes,geometry(name,data){meshes[name]=Float64Array.from(data);}});
@@ -202,7 +161,7 @@ test('local flight envelopes keep the complete animated aircraft and destroyer m
       [y,z]=[y*Math.cos(rx)-z*Math.sin(rx),y*Math.sin(rx)+z*Math.cos(rx)];
       return [x*Math.cos(ry)+z*Math.sin(ry),y,-x*Math.sin(ry)+z*Math.cos(ry)];
     };
-  for(const faction of [0,1,2])for(const type of ['air','destroyer'])for(const time of [0,1]) {
+  for(const faction of [0,1])for(const type of ['air','destroyer'])for(const time of [0,1]) {
     const e={id:7,kind:'unit',type,faction,team:0,hp:1500,size:h.UNITS[type].size,x:-6,z:-6,rot:Math.PI/4},
       calls=h.draw(e,{},time),datum=surface.entityHeight(e);
     for(const call of calls) {
@@ -265,13 +224,13 @@ test('destroyer is a costly flying hangar unit; its area hit accepts air and app
   assert.ok(UNITS.destroyer.speed < UNITS.air.speed / 2);
   assert.equal(UNITS.destroyer.from,'hangar'); assert.equal(isFlyingUnitType('destroyer'),true);
   assert.equal(parseBattleAction({kind:'train',unit:'destroyer'}).unit,'destroyer');
-  for(const faction of [0,1,2]) {
+  for(const faction of FACTIONS.keys()) {
     assert.ok(FACTIONS[faction].units.destroyer);
     const g=Object.create(MeridianGame.prototype), hits=[];
     g.s={fields:[],parties:[{benefits:{commanderMandate:0},meta:{}}],time:0};
     g.factionFor=()=>faction;g.account=()=>({alloy:1000,gas:600});
     const price=g.cost('destroyer','unit',0);
-    assert.deepEqual({...price},{cost:[850,723,953][faction],gas:500});
+    assert.deepEqual({...price},{cost:faction===1?723:850,gas:500});
     const attacker={id:1,kind:'unit',type:'destroyer',team:0,faction,x:0,z:0,kills:0,cd:0,rot:0};
     const target={id:2,kind:'unit',type:'air',team:1,x:5,z:0,size:1};
     const bystander={id:3,kind:'unit',type:'rifle',team:1,x:6,z:0,size:1};
@@ -281,7 +240,7 @@ test('destroyer is a costly flying hangar unit; its area hit accepts air and app
     g.fire(attacker,target);
     assert.equal(hits.length,2);
     assert.equal(hits[0][0],target);assert.equal(hits[1][0],bystander);
-    assert.equal(hits[0][1],145*(faction===2?1.12:1));
+    assert.equal(hits[0][1],145);
     assert.equal(hits[1][1],hits[0][1]*.45);
     assert.equal(attacker.cd,2.6);
   }

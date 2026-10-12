@@ -14,7 +14,7 @@ function harness(data = new Map()) {
   let now=0;
   const context = loadScripts(['core','content','expedition','voice-content',...BATTLEFIELD_SCRIPTS,'world',...SIMULATION_SCRIPTS,
     'effects','persistence',...UI_SCRIPTS], {globals:{document,innerWidth:1280,innerHeight:720,performance:{now:()=>now},matchMedia:()=>({matches:true})}});
-  const deps = vm.runInContext('({clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:BATTLEFIELDS,missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
+  const deps = vm.runInContext('({factions:FACTIONS,clamp,upgrades:BATTLE_UPGRADES,benefits:EXPEDITION_BENEFITS,upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES,abilities:ABILITIES,units:UNITS,buildings:BUILDINGS,battlefields:BATTLEFIELDS,missions:MISSIONS,enemyCount:expeditionEnemyCount})',context);
   const writes=[],fail={set:false};
   const persistence=vm.runInContext('createMeridianPersistence',context)({...deps,warn(){},getStorage:()=>({
     getItem:k=>data.get(k)??null,setItem(k,v){if(fail.set)throw Error('quota');data.set(k,v);writes.push(k);},removeItem:k=>data.delete(k)
@@ -38,7 +38,7 @@ function victoryFixture() {
   if(input)return copy(input);
   const h=harness(),{game,ui}=h;
   const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{startingAlloy:1},enemyBenefits:[{}],
-    encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[2]}};
+    encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[1]}};
   ui.expedition={...copy(recipe),version:12,battle:null,worlds:[]};
   game.start({...recipe,...recipe.encounter});
   const worker=game.alive(e=>e.team===0&&e.type==='worker')[0];
@@ -363,7 +363,9 @@ test('world encoding failure keeps raw damaged records and updated usable worlds
 test('completed-world validation isolates recipe or phase damage and rejects ambiguous archive identities',()=>{
   const f=victoryFixture();
   for(const change of [w=>{delete w.battle.state.rules.completed;},w=>{w.recipe.benefits={};},
-    w=>{w.battle.state.parties[1].eliminated=false;},w=>{w.battle.state.seed++;},w=>{w.battle.tutorial={step:'arrival'};}]){
+    w=>{w.battle.state.parties[1].eliminated=false;},w=>{w.battle.state.seed++;},w=>{w.battle.tutorial={step:'arrival'};},
+    w=>{w.recipe.faction=2;},w=>{w.recipe.encounter.enemies=[2];},
+    w=>{w.battle.state.parties[1].faction=2;},w=>{w.battle.state.entities[0].faction=2;}]){
     const record=JSON.parse(f.record);record.expedition.worlds=[copy(f.world)];change(record.expedition.worlds[0]);
     const h=harness(new Map([[PROFILE,JSON.stringify(record)]]));
     assert.equal(h.ui.battleSaveError,null);assert.ok(h.ui.expedition.worlds[0].error);

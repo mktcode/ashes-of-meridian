@@ -110,7 +110,7 @@ function renderEcologyWeather(R:MeridianRenderer,world:Battlefield,s:RunState,ti
   }
 }
 function renderWeaponSignature(R:MeridianRenderer,f:Extract<BattlefieldEffect,{type:'beam'}>,faction:FactionId,pactColor=0xffedb8) {
-  const life=clamp(f.life/(faction===FACTION_ID.THIRD?.19:.1),0,1),age=1-life,dx=f.tx-f.x,dz=f.tz-f.z,len=Math.hypot(dx,dz)||1,
+  const life=clamp(f.life/.1,0,1),age=1-life,dx=f.tx-f.x,dz=f.tz-f.z,len=Math.hypot(dx,dz)||1,
     sx=-dz/len,sz=dx/len;
   if(faction===FACTION_ID.SECOND) {
     // Helical seed pulses, not the Pact's instantaneous luminous tracer.
@@ -119,11 +119,6 @@ function renderWeaponSignature(R:MeridianRenderer,f:Extract<BattlefieldEffect,{t
       const x=f.x+dx*t+sx*curl,z=f.z+dz*t+sz*curl,y=f.y+(f.ty-f.y)*t;
       if(effectBoundsVisible(R,x,y,z,.15,.15,.15))R.add('octa',x,y,z,.10,.13,.10,0xc5ed97,t*6,0,0,1.2,life*.8,'effects');
     }
-  }else if(faction===FACTION_ID.THIRD) {
-    const width=.10*(1-age);
-    for(const side of [-1,1])drawVisibleEffectBeam(R,[f.x+sx*width*side,f.y,f.z+sz*width*side],
-      [f.tx,f.ty,f.tz],f.width*.30,0x96dfed,1.8,life*.7);
-    drawVisibleEffectBeam(R,[f.tx-sx*.3,f.ty-.3,f.tz-sz*.3],[f.tx+sx*.3,f.ty+.3,f.tz+sz*.3],.035,0xe3cdff,1.8,life*.65);
   }else{
     const start=clamp(age*1.5,0,1),end=clamp(start+.18,0,1);
     drawVisibleEffectBeam(R,[f.x+dx*start,f.y+(f.ty-f.y)*start,f.z+dz*start],
@@ -155,7 +150,7 @@ function renderInfantryShots(R: MeridianRenderer, effects: MeridianEffects, worl
     // Never defer hidden or over-budget fire for replay after visibility changes.
     if (!world.visible[world.idx(f.x,f.z)] || !world.visible[world.idx(f.tx,f.tz)]) continue;
     const faction = effects.weaponFactions.get(f) ?? FACTION_ID.FIRST,
-      lifetime = faction === FACTION_ID.THIRD ? .19 : .1;
+      lifetime = .1;
     view.shots.push({f, faction, at:s.time - Math.max(0,lifetime-f.life), radius:effects.combatBeams.get(f) ?? .65});
     if (view.shots.length > cap) view.shots.shift();
   }
@@ -168,7 +163,7 @@ function renderInfantryShots(R: MeridianRenderer, effects: MeridianEffects, worl
     const dx = f.tx-f.x, dz = f.tz-f.z, len = Math.max(.001,Math.hypot(dx,dz)),
       hull = Math.min(shot.radius,len*.5), tx = f.tx-dx/len*hull, tz = f.tz-dz/len*hull;
     if (!world.visible[world.idx(tx,tz)]) continue;
-    const c = faction === FACTION_ID.FIRST ? 0x38d9e8 : faction === FACTION_ID.SECOND ? 0xb9ed86 : 0xc6a5ff,
+    const c = faction === FACTION_ID.SECOND ? 0xb9ed86 : 0x38d9e8,
       travel = .13, t = Math.min(age/travel,1),
       point = (u:number) => [f.x+(tx-f.x)*u,f.y+(f.ty-f.y)*u,f.z+(tz-f.z)*u],
       beam = (a:number[],b:number[],w:number,color:number,g:number,alpha:number) => drawVisibleEffectBeam(R,a,b,w,color,g,alpha),

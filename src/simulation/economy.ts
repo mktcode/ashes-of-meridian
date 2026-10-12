@@ -94,7 +94,7 @@
           ? BUILDINGS[type as BuildingType]
           : UNITS[type as UnitType],
           mul = kind === 'unit' && type !== 'worker'
-            ? (this.factionFor(team) === FACTION_ID.SECOND ? 0.85 : this.factionFor(team) === FACTION_ID.THIRD ? 1.12 : 1)
+            ? (this.factionFor(team) === FACTION_ID.SECOND ? 0.85 : 1)
             : 1;
         return { cost: Math.ceil(d.cost * mul), gas: d.gas || 0 };
       },

@@ -29,8 +29,8 @@ Assets](rendering.md), die Gestaltung der Bedienoberfläche im
   Gebäude- und Einheitentypen sollen aus dem üblichen Gefechtsabstand unterscheidbar
   bleiben, nicht erst in der Nahansicht.
 - Die industrielle Kolonie lebt von modularen Bauten, Metallflächen und technischen
-  Aufbauten. Diese Sprache ist kein Zwang für alle Fraktionen: biologische und
-  kristalline Formen behalten ihre eigene Identität im gemeinsamen Diorama-Look.
+  Aufbauten. Diese Sprache ist kein Zwang für alle Fraktionen: biologische Formen
+  behalten ihre eigene Identität im gemeinsamen Diorama-Look.
 - Die Gefechtsansicht ist isometrisch anmutend, technisch aber eine drehbare
   orthografische 3D-Perspektive. „Low-Poly“ allein beschreibt den Stil nicht ausreichend:
   Geometrie, Oberflächen, Licht und Atmosphäre wirken zusammen.

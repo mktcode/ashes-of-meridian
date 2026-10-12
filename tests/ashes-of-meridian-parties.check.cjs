@@ -16,13 +16,13 @@ function state(profile = { upgrades: {} }, options = {}) {
 
 test('party snapshots retain single-player defaults and isolate normalized benefits and fleet upgrades', () => {
   const defaults = singlePlayerParties({ upgrades: {} }, {});
-  assert.deepEqual(Array.from(defaults, p => [p.id, p.faction]), [[0, 0], [1, 2]]);
+  assert.deepEqual(Array.from(defaults, p => [p.id, p.faction]), [[0, 0], [1, 1]]);
   assert.deepEqual(json(defaults[0].account), {
     alloy: 250, gas: 0, energy: 25, abilities: { orbital: 0, repair: 0, scan: 0, drop: 0,
       disruption: 0, bulwark: 0, surge: 0, recall: 0 }
   });
   assert.deepEqual(json(defaults[0].loadout), ['orbital', 'repair', 'scan', 'drop']);
-  assert.deepEqual(json(defaults[1].loadout), ['orbital', 'scan', 'disruption', 'recall']);
+  assert.deepEqual(json(defaults[1].loadout), ['repair', 'drop', 'disruption', 'surge']);
   assert.deepEqual(json(defaults[0].account), json(defaults[1].account));
   assert.notStrictEqual(defaults[0].account.abilities, defaults[1].account.abilities);
   const perks = { startingAlloy: 2, startingWorkers: 99, commandCapacitor: 99, commanderMandate: 2, unknown: 8 },
@@ -38,7 +38,7 @@ test('party snapshots retain single-player defaults and isolate normalized benef
   assert.deepEqual(json(parties[0].benefits), json(parties[1].benefits));
   assert.notStrictEqual(parties[0].benefits, parties[1].benefits);
   assert.equal(parties[0].account.alloy,350);assert.equal(parties[1].account.alloy,350);
-  upgrades.logisticsFrame = 0; perks.startingAlloy = 0; perks.startingWorkers = 0; options.faction = 2;
+  upgrades.logisticsFrame = 0; perks.startingAlloy = 0; perks.startingWorkers = 0; options.faction = 0;
   assert.equal(parties[0].meta.logisticsFrame, 2);
   assert.equal(parties[0].benefits.startingAlloy, 2);assert.equal(parties[0].benefits.startingWorkers,5);
   assert.equal(parties[0].faction, 1);
@@ -67,10 +67,10 @@ test('starting benefits normalize once for player, enemy and scenario parties', 
 });
 
 test('party accessors share one state, while accounts and upgrade effects remain separate', () => {
-  const game = state({}, { upgrades: { logisticsFrame: 2 }, faction: 1, enemies: [2] });
+  const game = state({}, { upgrades: { logisticsFrame: 2 }, faction: 1, enemies: [1] });
   assert.strictEqual(game.account(0), game.party(0).account);
   assert.strictEqual(game.benefitsFor(1), game.party(1).benefits);
-  assert.deepEqual([game.factionFor(0), game.factionFor(1)], [1, 2]);
+  assert.deepEqual([game.factionFor(0), game.factionFor(1)], [1, 1]);
   game.party(1).faction = 0;
   assert.equal(game.factionFor(1), 0);
   assert.ok(game.cap(0) > 0);
@@ -85,23 +85,23 @@ test('commander ranks buff basic infantry only near a living commander', () => {
   const game = state({ upgrades: {} }, { benefits: { commanderMandate: 3 }, enemyBenefits: [{ commanderMandate: 2 }] }),
     unit = (id, type, team, faction, x) => ({ id, type, team, faction, x, z: 0, hp: 100, kind: 'unit', kills: 0 }),
     commander = unit(1, 'hero', 0, 0, 0), rifle = unit(2, 'rifle', 0, 0, 11),
-    enemyCommander = unit(3, 'hero', 1, 2, 50), enemyRifle = unit(4, 'rifle', 1, 2, 61),
+    enemyCommander = unit(3, 'hero', 1, 1, 50), enemyRifle = unit(4, 'rifle', 1, 1, 61),
     tank = unit(5, 'tank', 0, 0, 1);
   game.s.entities = [commander, rifle, enemyCommander, enemyRifle, tank];
   assert.equal(game.rangedStats(rifle).damage, 13 * 1.1);
-  assert.equal(game.rangedStats(enemyRifle).damage, 13 * 1.12 * 1.05);
+  assert.equal(game.rangedStats(enemyRifle).damage, 13 * 1.05);
   assert.equal(game.rangedStats(tank).damage, 58);
   assert.equal(game.rangedStats(commander).damage, 31);
-  for (const faction of [0, 1, 2]) {
+  for (const faction of [0, 1]) {
     rifle.faction = faction;
-    assert.equal(game.rangedStats(rifle).damage, 13 * (faction === 2 ? 1.12 : 1) * 1.1);
+    assert.equal(game.rangedStats(rifle).damage, 13 * 1.1);
   }
   commander.x = -0.01;
-  assert.equal(game.rangedStats(rifle).damage, 13 * 1.12);
+  assert.equal(game.rangedStats(rifle).damage, 13);
   commander.x = 0; commander.hp = 0;
-  assert.equal(game.rangedStats(rifle).damage, 13 * 1.12);
+  assert.equal(game.rangedStats(rifle).damage, 13);
   commander.hp = 100; rifle.kills = 5;
-  assert.equal(game.rangedStats(rifle).damage, 13 * 1.12 * 1.12 * 1.1);
+  assert.equal(game.rangedStats(rifle).damage, 13 * 1.12 * 1.1);
 
   const withoutMandate = state({ upgrades: {} }, { benefits: { commanderMandate: 1 } });
   withoutMandate.s.entities = [unit(6, 'rifle', 0, 0, 0)];
@@ -127,12 +127,12 @@ test('controller assignment owns independent AI memory without altering faction,
   assert.equal(game.aiFor(1), undefined);
   assert.strictEqual(game.account(1), account);
   assert.strictEqual(game.benefitsFor(1), benefits);
-  assert.equal(game.factionFor(1), 2);
+  assert.equal(game.factionFor(1), 1);
 });
 
 function scenario(count = 4) {
   return { seed: 1409, map: 'westmark', duration: 2,
-    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 3, controller: id === 2 ? 'ai' : 'human' })),
+    parties: Array.from({ length: count }, (_, id) => ({ faction: id % 2, controller: id === 2 ? 'ai' : 'human' })),
     hostilities: Array.from({ length: count }, (_, a) => Array.from({ length: count }, (_, b) => a !== b && (a + b) % 2 === 1)) };
 }
 

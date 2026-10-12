@@ -91,7 +91,7 @@ test('building support cache reuses exact terrain results and invalidates every 
   assert.strictEqual(surface.buildingPose(e,e.size),initial);
   assert.equal(surface.entityHeight(e),initial.height);assert.equal(samples,0,'warm height lookup does not sample terrain');
   assert.equal(JSON.stringify(e),before,'cache never adds state to an entity');
-  e.hp=55;e.progress=.5;e.rot=1.4;e.faction=2;
+  e.hp=55;e.progress=.5;e.rot=1.4;e.faction=1;
   assert.strictEqual(surface.buildingPose(e,e.size),initial,'damage, progress, faction and weapon angle do not alter support');
   for(const change of [{x:3.1},{z:-2.4},{size:5.7},{type:'fieldlab'},{team:1},{visualRotation:1/3},
     {type:'researchspire',size:4.2},{type:'meridianforum'},{type:'hq'}]) {
@@ -224,7 +224,7 @@ test('civilian ground recipes keep progress, factions, night lamps, tint, alpha,
     h.R.battlefieldHour=22;h.resetSamples();const night=h.draw(e,3,{occlusion:true});
     assert.equal(h.samples,0);assert.ok(night.lamps.length);assert.notDeepEqual(night.parts,day.parts);
     assert.deepEqual(night,h.draw(Object.freeze({...e}),3,{occlusion:true}));
-    e.progress=.35;e.faction=2;e.hp=55;e.rot=1.4;
+    e.progress=.35;e.faction=1;e.hp=55;e.rot=1.4;
     h.resetSamples();const partial=h.draw(e,5);assert.equal(h.samples,0,'construction and faction do not rebuild terrain parts');
     assert.equal(partial.lamps.length,0);assert.deepEqual(partial,h.draw(Object.freeze({...e}),5));
     e.progress=1;

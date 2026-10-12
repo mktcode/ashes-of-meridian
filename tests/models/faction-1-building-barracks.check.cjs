@@ -52,7 +52,7 @@ test('Bloom nursery: static three-part assembly preserves team, build, preview a
   const model = h.EntityModels.find(entity);
   assert.equal(model.id, 'faction-1/building/barracks');
   assert.ok(Object.isFrozen(model));
-  for (const faction of [0,1,2]) for (const type of Object.keys(h.BUILDINGS))
+  for (const faction of h.FACTIONS.keys()) for (const type of Object.keys(h.BUILDINGS))
     if (faction !== 1 || type !== 'barracks') assert.notEqual(h.EntityModels.find({ ...entity, faction, type }).id, model.id);
   assert.equal(h.EntityModels.find({ ...entity, kind:'unit' }), undefined);
   vm.runInContext('for (const key of Object.keys(geom)) geom[key] = () => { throw Error("Per-frame geometry"); }', h.context);

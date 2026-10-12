@@ -72,7 +72,7 @@ test('Living canopy: static organic assembly preserves supply, construction, tea
   const model = h.EntityModels.find(entity);
   assert.equal(model.id,'faction-1/building/depot'); assert.ok(Object.isFrozen(model));
   assert.equal(h.EntityModels.find({...entity,kind:'unit'}),undefined);
-  for (const faction of [0,1,2]) for (const type of Object.keys(h.BUILDINGS))
+  for (const faction of h.FACTIONS.keys()) for (const type of Object.keys(h.BUILDINGS))
     if (faction !== 1 || type !== 'depot') assert.notEqual(h.EntityModels.find({...entity,faction,type}).id,model.id);
   vm.runInContext('Math.random = seeded = () => { throw Error("Canopy RNG"); }; for (const k of Object.keys(geom)) geom[k] = () => { throw Error("Frame geometry"); };',h.context);
   const normal = h.draw(entity);

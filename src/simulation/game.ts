@@ -39,7 +39,7 @@
     }
     // Snapshot the single-player recipe without terrain, entities or random draws.
     function singlePlayerParties(profile: MeridianProfile, opts: BattleOptions): PartyState[] {
-      const enemies = opts.enemies ?? [FACTION_ID.THIRD];
+      const enemies = opts.enemies ?? [FACTION_ID.SECOND];
       if (!Array.isArray(enemies) || enemies.length < 1 || enemies.length > 3 ||
           Array.from(enemies).some(faction => !Number.isInteger(faction) || !FACTIONS[faction]))
         throw Error('Expedition battle requires 1–3 enemy factions');
@@ -166,7 +166,7 @@
         if (this.stepping || !save || !validExpeditionBattle(save, expedition, {
           abilities: ABILITIES, units: UNITS, buildings: BUILDINGS, upgrades: BATTLE_UPGRADES,
           benefits: EXPEDITION_BENEFITS, upgradeFamilies:CIVILIZATION_UPGRADE_FAMILIES, battlefields: BATTLEFIELDS, missions: MISSIONS,
-          enemyCount: expeditionEnemyCount, clamp, getStorage: () => { throw Error('No storage in simulation'); }, warn: () => {}
+          factions: FACTIONS, enemyCount: expeditionEnemyCount, clamp, getStorage: () => { throw Error('No storage in simulation'); }, warn: () => {}
         }, completed)) throw Error('Invalid expedition battle snapshot');
         // Reconstruct in isolation. Failed validation/world generation cannot replace a live game.
         const state = JSON.parse(JSON.stringify(save.state)) as RunState,
@@ -321,7 +321,6 @@
           hp = d.hp || 1000;
         if (kind === 'unit') {
           if (faction === FACTION_ID.SECOND) hp *= 0.9;
-          if (faction === FACTION_ID.THIRD) hp *= 0.85;
           if (faction === FACTION_ID.FIRST && ['tank', 'artillery'].includes(type)) hp *= 1.15;
         }
         let e = {
@@ -350,8 +349,8 @@
           kills: 0,
           carry: 0,
           work: 0,
-          shield: faction === FACTION_ID.THIRD && kind === 'unit' ? hp * 0.32 : 0,
-          maxShield: faction === FACTION_ID.THIRD && kind === 'unit' ? hp * 0.32 : 0,
+          shield: 0,
+          maxShield: 0,
           ...extra
         } as unknown as EntityForKind<K>;
         s.entities.push(e);

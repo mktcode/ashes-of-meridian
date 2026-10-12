@@ -13,7 +13,7 @@ test('stage browsing is bounded and purely visual; continue always launches the 
   const h = setup(), ui = h.ui, saved = [], previews = [];
   ui.expedition = { version: 12, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2,
     upgrades: {}, benefits: {}, enemyBenefits: [{}],
-    encounter: { mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
+    encounter: { mission: 'hq-elimination', enemies: [1], map: 'desert', seed: 1409 } };
   ui.stageHistory = [{ stage: 1, map: 'westmark', seed: 11 }, { stage: 2, map: 'alien-planet', seed: 22 }];
   ui.persistence.saveStageHistory = stages => saved.push(JSON.stringify(stages));
   ui.rememberStage(); ui.rememberStage();
@@ -107,7 +107,7 @@ test('five expedition landscapes retain equal map weight, normal party counts an
       found.add(e.map);
       assert.equal(e.mission,'hq-elimination');
       assert.equal(e.enemies.length,depth<3?1:depth<7?2:3);
-      assert.equal(draws,(depth<3?0:e.enemies.length)+2,'no extra mission draw');
+      assert.equal(draws,(depth<2?0:e.enemies.length)+2,'no extra mission draw');
       assert.notEqual(h.ui.createEncounter(depth,e.map).map,e.map);
     }
     const maps=vm.runInContext('MISSIONS[DEFAULT_MISSION].maps',h.context);
@@ -141,7 +141,7 @@ test('screen templates render frozen data without DOM access, randomness or prof
   const expedition = Object.freeze({version: 12, battle: null, faction: 1, upgrades: Object.freeze({commandTraining:2}), abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']), depth: 10,
     enemyBenefits: Object.freeze([Object.freeze({}), Object.freeze({startingAlloy: 2}), Object.freeze({})]),
     benefits: Object.freeze({commandCapacitor: 1}),
-    encounter: Object.freeze({mission: 'hq-elimination', enemies: Object.freeze([2, 1, 2]), map: 'desert', seed: 1409})});
+    encounter: Object.freeze({mission: 'hq-elimination', enemies: Object.freeze([0, 1, 0]), map: 'desert', seed: 1409})});
   const before = JSON.stringify({profile, expedition});
   render.renderMissionBriefing(expedition.encounter.mission);
   const briefing = render.renderExpeditionOpponents(expedition);
@@ -175,7 +175,7 @@ test('opponent briefing maps active slots to their faction and benefit data', ()
     vm.runInContext('({ renderExpeditionOpponents, FACTIONS, expeditionBenefit })', context);
   const expedition = {
     enemyBenefits: [{}, { startingAlloy: 2 }, { commandCapacitor: 1 }],
-    encounter: { enemies: [2, 1, 0] }
+    encounter: { enemies: [0, 1, 0] }
   };
   for (let count = 1; count <= 3; count++) {
     const html = renderOpponents({
@@ -185,8 +185,10 @@ test('opponent briefing maps active slots to their faction and benefit data', ()
     });
     for (const faction of expedition.encounter.enemies.slice(0, count))
       assert.ok(html.includes(FACTIONS[faction].short));
-    for (const faction of expedition.encounter.enemies.slice(count))
-      assert.ok(!html.includes(FACTIONS[faction].short));
+    assert.equal((html.match(/class="opponent-card"/g) || []).length, count);
+    for (const faction of FACTIONS.keys())
+      if (!expedition.encounter.enemies.slice(0, count).includes(faction))
+        assert.ok(!html.includes(FACTIONS[faction].short));
     assert.equal(html.includes(expeditionBenefit('startingAlloy').name), count >= 2);
     assert.equal(html.includes(expeditionBenefit('commandCapacitor').name), count >= 3);
   }
@@ -409,7 +411,7 @@ test('new expedition modules remain editable with an existing checkpoint without
   const expedition = { version: 12, battle: null, faction: 0, depth: 2, upgrades: {},
     abilities: Object.freeze(['orbital', 'repair', 'scan', 'drop']),
     benefits: Object.freeze({}), enemyBenefits: Object.freeze([Object.freeze({})]),
-    encounter: Object.freeze({ mission: 'hq-elimination', enemies: Object.freeze([2]), map: 'desert', seed: 1409 }) };
+    encounter: Object.freeze({ mission: 'hq-elimination', enemies: Object.freeze([1]), map: 'desert', seed: 1409 }) };
   const before = JSON.stringify(expedition);
   ui.expedition = expedition;
   ui.persistence.saveProgress = () => { throw Error('Loadout editing must not save or discard a run'); };
@@ -491,7 +493,7 @@ test('UI submits actor-bound action data and cannot set rally when execution rej
 
 test('scenario UI perspective resets local interaction, follows actor accounts and routes commands to that actor', () => {
   const h = setup(), g = h.ui.game, queries = [], actions = [];
-  g.s.parties = Array.from({ length: 4 }, (_, id) => ({ id, faction: id % 3,
+  g.s.parties = Array.from({ length: 4 }, (_, id) => ({ id, faction: id % 2,
     loadout: ['orbital', 'repair', 'scan', 'drop'], meta: {}, benefits: {},
     account: { alloy: 100 + id, gas: 200 + id, energy: 20 + id, abilities: {} } }));
   g.s.entities = [{ id: 7, team: 2, type: 'hq', kind: 'building', hp: 100, progress: 1, x: 20, z: 10, queue: [] }];
@@ -517,7 +519,7 @@ test('scenario UI perspective resets local interaction, follows actor accounts a
   assert.deepEqual(queries, [['supply', 2], ['cap', 2]]);
   h.ui.issueOrder([7], { type: 'hold' });
   assert.deepEqual(actions, [[2, { kind: 'order', ids: [7], order: { type: 'hold' } }]]);
-  assert.match(h.ui.actionButton('build:hq', 'HQ', 'hq'), /data-model-faction="2" data-model-kind="building" data-model-type="hq"/);
+  assert.match(h.ui.actionButton('build:hq', 'HQ', 'hq'), /data-model-faction="0" data-model-kind="building" data-model-type="hq"/);
   h.ui.modalKind = 'sell'; assert.equal(h.ui.setPerspective(3), false); assert.equal(g.localTeam, 2);
 });
 
@@ -1548,7 +1550,7 @@ test('touch taps still issue orders; pause, cancel and blur retain gesture guard
 test('build menu exposes only the Forum among civilian models in every expedition stage',()=>{
   const h=setup(),ui=h.ui,g=ui.game,tiers=[['fieldlab','embercottage'],['researchhub','terracecommons'],['researchspire','hearthtower'],['meridianforum']];
   ui.tab='build';
-  for(const faction of [0,1,2]){
+  for(const faction of [0,1]){
     g.s.parties[0].faction=faction;
     for(const stage of [1,2,3,4]){
       g.civilizationStage=stage;ui.renderActionMarkup();
@@ -1823,7 +1825,7 @@ function savedUIBattle() {
   Object.assign(game.s, { map: 'desert', seed: 1409, depth: 0, result: null, time: 42, speed: 2 });
   h.ui.expedition = { version: 12, battle: null, faction: 0, abilities: ['orbital', 'repair', 'scan', 'drop'],
     depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}],
-    encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [2], map: 'desert', seed: 1409 } };
+    encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [1], map: 'desert', seed: 1409 } };
   game.snapshotSafe = true; game.snapshotBattle = () => ({ version: 1, state: copy(game.s), tutorial: null });
   game.start = () => assert.fail('A saved battle must use restore, not fresh deployment');
   game.restoreBattle = expedition => { game.s = copy(expedition.battle.state); h.ui.event('start', { restored: true }); };
@@ -2073,7 +2075,7 @@ test('blocked expedition saves require explicit discard and concurrent launch at
 
 test('pause restart actions cannot redeploy a running expedition', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  h.ui.expedition = { version: 12, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [2, 0], map: 'desert', seed: 1409 },
+  h.ui.expedition = { version: 12, battle: null, faction: 1, abilities: ['orbital','repair','scan','drop'], encounter: { mission: 'hq-elimination', enemies: [1, 0], map: 'desert', seed: 1409 },
     upgrades: {}, benefits: {}, enemyBenefits: [{ commandCapacitor: 1 }, { startingAlloy: 1 }], depth: 3 };
   const state = h.ui.game.s; let starts = 0;
   h.ui.game.start = () => { starts++; };
@@ -2109,16 +2111,16 @@ test('settings after a result preserve the ended battle and do not replay its so
   }
 });
 
-test('best expedition depth unlocks factions at 10 and 25', () => {
+test('best expedition depth unlocks Manyroot at 10 and stays within the catalog', () => {
   const h = setup(); h.UI.prototype.bind.call(h.ui);
-  for (const [depth, unlocked] of [[0, 0], [9, 0], [10, 1], [24, 1], [25, 2]]) {
+  for (const [depth, unlocked] of [[0, 0], [9, 0], [10, 1], [999999, 1]]) {
     h.ui.profile.expeditionDepth = depth;
-    assert.deepEqual([0, 1, 2].map(faction => h.ui.factionUnlocked(faction)),
-      [true, unlocked >= 1, unlocked >= 2]);
+    assert.deepEqual([0, 1].map(faction => h.ui.factionUnlocked(faction)),
+      [true, unlocked >= 1]);
   }
   h.ui.profile.expeditionDepth = 9;
   h.ui.expedition = { version: 12, battle: null, faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 9, upgrades: {}, benefits: {}, enemyBenefits: [{}, {}, {}],
-    encounter: { mission: 'hq-elimination', enemies: [1, 2, 0], map: 'desert', seed: 1409 } };
+    encounter: { mission: 'hq-elimination', enemies: [1, 1, 0], map: 'desert', seed: 1409 } };
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.showResult = () => {};
   let saves = 0; h.ui.persistence.saveProgress = () => { saves++; return true; };
@@ -2126,7 +2128,7 @@ test('best expedition depth unlocks factions at 10 and 25', () => {
   assert.equal(h.ui.profile.expeditionDepth, 10); assert.equal(h.ui.factionJustUnlocked, 1); assert.equal(saves, 1);
   h.ui.game.s = { ...h.ui.game.s }; h.ui.expedition.depth = 24; h.ui.profile.expeditionDepth = 24;
   h.ui.event('result', { win: true });
-  assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, 2); assert.equal(saves, 2);
+  assert.equal(h.ui.profile.expeditionDepth, 25); assert.equal(h.ui.factionJustUnlocked, null); assert.equal(saves, 2);
 });
 
 test('civilian HUD renders exactly three saved offers and compact purchased details without RNG',()=>{
@@ -2151,7 +2153,7 @@ test('civilian HUD renders exactly three saved offers and compact purchased deta
 test('home preview follows the current encounter landscape and seed', () => {
   const h = setup(), maps = [];
   h.ui.expedition = { faction: 0, abilities: ['orbital','repair','scan','drop'], depth: 2, upgrades: {}, benefits: {}, enemyBenefits: [{}],
-    encounter: { mission: 'hq-elimination', enemies: [2], map: 'frontier', seed: 1409 } };
+    encounter: { mission: 'hq-elimination', enemies: [1], map: 'frontier', seed: 1409 } };
   h.ui.onPreview = (map, seed) => maps.push([map, seed]);
   h.ui.showHome();
   assert.deepEqual(maps, [['frontier',1409]]);
@@ -2167,22 +2169,22 @@ test('expedition encounter generation excludes the immediately previous map', ()
     assert.notEqual(h.ui.createEncounter(3, previousMap).map, previousMap);
 });
 
-test('expedition setup creates and saves the fixed Free Marches opening encounter', () => {
-  const h = setup(); h.ui.profile.expeditionDepth = 25; h.ui.battleFaction = 2;
+test('expedition setup saves the selected faction and fixed opening opponent', () => {
+  const h = setup(); h.ui.profile.expeditionDepth = 10; h.ui.battleFaction = 1;
   vm.runInContext('Math.random = () => .999;', h.context);
   h.ui.view = 'battle';
   const saved = []; h.ui.persistence.saveProgress = (profile, value) => saved.push(JSON.parse(JSON.stringify(value)));
   h.ui.game.start = () => { throw Error('Battle started before renderer preparation'); };
   h.ui.onLaunchBattle = opts => h.calls.push(['start', JSON.parse(JSON.stringify(opts))]);
   h.ui.startBattle();
-  assert.equal(saved.length, 1); assert.equal(saved[0].faction, 2); assert.equal(saved[0].depth, 0);
+  assert.equal(saved.length, 1); assert.equal(saved[0].faction, 1); assert.equal(saved[0].depth, 0);
   assert.equal(saved[0].encounter.enemies.length, 1);
   assert.deepEqual(saved[0].encounter.enemies, [0]);
   assert.equal(saved[0].encounter.mission, 'hq-elimination');
   const openingMaps = vm.runInContext("MISSIONS['hq-elimination'].maps", h.context);
   assert.ok(openingMaps.includes(saved[0].encounter.map));
   assert.ok(saved[0].encounter.seed > 0);
-  assert.deepEqual(h.calls[0][1], { faction: 2, ...saved[0].encounter,
+  assert.deepEqual(h.calls[0][1], { faction: 1, ...saved[0].encounter,
     abilities: ['orbital', 'repair', 'scan', 'drop'], upgrades: {}, benefits: {}, enemyBenefits: [{}], depth: 0 });
 });
 
@@ -2501,7 +2503,7 @@ test('queue view compares values instead of entity identities and refreshes acto
   const label = first.getAttribute('aria-label');
   g.s.parties[0].faction = 1; h.ui.updateQueues();
   assert.notEqual(first.getAttribute('aria-label'), label);
-  g.s.parties.push({ id: 1, faction: 2 }); g.localTeam = 1;
+  g.s.parties.push({ id: 1, faction: 1 }); g.localTeam = 1;
   h.ui.updateQueues(); assert.equal(h.buttons().length, 0);
   g.s.entities[0].team = 1; h.ui.updateQueues(); assert.equal(h.buttons().length, 2);
   // Explicit UI invalidation must still rebuild otherwise identical content.
@@ -2786,14 +2788,14 @@ test('catalog and unit details expose an action that returns to the root panel',
 
 test('building and unit actions request the current model of the active faction', () => {
   const h = setup();
-  for (const faction of [0, 1, 2]) {
+  for (const faction of [0, 1]) {
     h.ui.game.s.parties[0].faction = faction;
     const html = h.UI.prototype.actionButton.call(h.ui, 'build:hq', 'HQ', 'hq');
     assert.ok(html.includes(`data-model-faction="${faction}" data-model-kind="building" data-model-type="hq"`));
     assert.match(html, /class="action-model"/);
     assert.match(html, /data-model-zoom="1.35"/);
   }
-  for (const faction of [0, 1, 2]) {
+  for (const faction of [0, 1]) {
     h.ui.game.s.parties[0].faction = faction;
     const html = h.UI.prototype.actionButton.call(h.ui, 'train:worker', 'Worker', 'worker');
     assert.ok(html.includes(`data-model-faction="${faction}" data-model-kind="unit" data-model-type="worker"`));

@@ -17,10 +17,10 @@ function setup(){
 }
 test('rifle impulse preserves CPU effect contract across factions; ordinary weapons remain unmarked',()=>{
  const {effects,source,target,R,s,frame}=setup();
- for(const [faction,color] of [[0,0x38d9e8],[1,0xb9ed86],[2,0xc6a5ff]]){
+ for(const [faction,color] of [[0,0x38d9e8],[1,0xb9ed86]]){
   effects.reset();source.faction=faction;effects.shot(source,target);
   const f=effects.fx[0];assert(effects.infantryBeams.has(f));assert.equal(effects.fx.length,1);
-  assert.equal(f.life,faction===2?.19:.1);assert.equal(f.maxLife,.19);assert.equal(f.width,.035);
+  assert.equal(f.life,.1);assert.equal(f.maxLife,.19);assert.equal(f.width,.035);
   frame();s.time+=.04;effects.tick(.04);frame();
   assert(R.calls.some(c=>c[0]==='beam'&&c[4]===color));
   assert(!R.calls.some(c=>c[0]==='beam'&&Math.hypot(c[2][0]-c[1][0],c[2][2]-c[1][2])>6));

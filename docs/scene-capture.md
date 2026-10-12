@@ -62,7 +62,7 @@ CLI: Karte/Seed, `--content`, `--fit`, `--camera-mode`, `--projection`, `--x/--z
 
 - `map`, `seed`: technische Katalog-ID und ganze Zahl 1–99999999; unbekannte Karten sind Fehler.
 - `content`: `landscape` ohne Start-Einheiten/-Gebäude, `landing` als Standard mit Landungsworkern, `arranged` ohne Start-Einheiten/-Gebäude, aber mit den angegebenen Objekten. Terrain/Ressourcen bleiben unverändert; Landschaft mit zusätzlichen Einheiten/Gebäuden ist widersprüchlich und wird abgewiesen.
-- `faction`, `enemy`: 0–2, Standard 0 gegen 1.
+- `faction`, `enemy`: 0–1, Standard 0 gegen 1.
 - `entities`: höchstens 200 arrangierte Einheiten/Gebäude, jeweils `kind`, technischer `type`, `team` 0/1, `x/z`, optional `rot` und `anchor`. `anchor` ist `world` (Standard), `player` oder `enemy`. Landungsanker werden vor einer Entfernung gesichert. Gebäude werden arrangiert, nicht bezahlt/gebaut; Einheiten nutzen normale lokale Spawn-Platzsuche. Ergebnis enthält tatsächliche Positionen. Kein Balancing-/Bauzulässigkeitsnachweis.
 - `camera`: unten beschriebener Kameravertrag. Ohne Kamera Gesamtansicht im Spielwinkel.
 - `render`: booleans `units`, `buildings`, `effects`, `caches`, `guides`, `mapBoundary`, `distanceMist`, `horizonMist`, `hud`. Renderfilter entfernen keine CPU-Entitäten und verändern keine Belegung/Sicht/RNG. Verborgene Gebäude liefern auch keine Fundamente, Straßen, Siedlungsverkehr oder Schatten. Standardmäßig Einheiten/Gebäude/Effekte sichtbar, Hilfsmasken/Kartenrahmen/HUD aus; Landschaft zusätzlich ohne Kisten, Distanzdunst und kosmetische Randverblendung (`horizonMist`).

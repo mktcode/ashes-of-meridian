@@ -47,6 +47,7 @@
             upgradeFamilies: CIVILIZATION_UPGRADE_FAMILIES,
             benefits: EXPEDITION_BENEFITS,
             abilities: ABILITIES,
+            factions: FACTIONS,
             units: UNITS,
             buildings: BUILDINGS,
             enemyCount: expeditionEnemyCount,
@@ -595,7 +596,7 @@
             } else if (ui.mode.kind === 'ability') {
               let kind = ui.mode.arg, stats = game.abilityStats(kind, game.localTeam),
                 rad = kind === 'scan' ? stats.scanRadius! : kind === 'orbital'
-                  ? s.parties[game.localTeam].faction === FACTION_ID.THIRD ? 8 : 10
+                  ? 10
                   : stats.radius || 4;
               ring(p.x, p.z, rad, kind === 'orbital' ? 0xf4c080 : 0x9bdddd, 0.75, 0.12);
               ring(p.x, p.z, 0.6, 0xf1deae, 0.8, 0.14);
@@ -806,7 +807,7 @@
             benefits: {startingWorkers: 2}, enemyBenefits: [{}],
             encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,
-              enemies: [2]} };
+              enemies: [FACTION_ID.SECOND]} };
           ui.startExpeditionBattle();
         } else if (visibleSimulation) {
           ui.showBattle();

@@ -36,7 +36,7 @@ test('Oathguard: independent painted armor, closed meshes, two-handed rifle and 
   const {h,e,descriptor,meshes,draw}=setup();
   assert.equal(h.EntityModels.find(e).id,descriptor.id);
   assert.notEqual(h.EntityModels.find({...e,type:'medic'}).id,descriptor.id);
-  for(const faction of [1,2])assert.notEqual(h.EntityModels.find({...e,faction}).id,descriptor.id);
+  for(const faction of [1])assert.notEqual(h.EntityModels.find({...e,faction}).id,descriptor.id);
   for(const [name,factory] of Object.entries(descriptor.meshes)) {
     assertMesh(factory,{minTriangles:8,maxTriangles:4000,min:[-.8,0,-.6],max:[.8,2.06,1.36]});
     if(name.endsWith('Neutral'))for(let i=6;i<meshes[name].length;i+=9)assert.deepEqual(Array.from(meshes[name].slice(i,i+3)),[1,1,1]);

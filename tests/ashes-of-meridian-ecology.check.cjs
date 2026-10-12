@@ -305,7 +305,7 @@ test('snowflakes have soft-quad geometry, varied sizes and drifting speeds with 
 test('weapon identities add distinct bounded view signatures without sampling RNG or changing beams',()=>{
   const R=createRendererStub({record:true});R.beam=(...args)=>R.calls.push(['beam',...args]);
   const effects=new api.MeridianEffects(()=>{throw Error('Weapon view consumed RNG');}),shapes=[];
-  for(const faction of [0,1,2]){
+  for(const faction of [0,1]){
     effects.reset();effects.shot({kind:'unit',type:'rifle',team:0,faction,x:0,z:0,size:1,rot:0},{kind:'unit',type:'tank',team:1,faction:0,x:20,z:0,size:1.3,rot:0});
     const f=effects.fx[0],before=JSON.stringify(f);assert.equal(effects.weaponFactions.get(f),faction);
     R.calls.length=0;api.renderWeaponSignature(R,f,faction);assert.ok(R.calls.length>=1&&R.calls.length<=4);

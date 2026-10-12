@@ -159,7 +159,7 @@ test('only the Forum is directly buildable, from Stage 1 but strictly after vict
  game.s.rules={kind:'local-pvp'};assert.match(game.canBuild('meridianforum',null),/Win/);
 });
 test('civilian placement accepts uneven slopes and cliff cells but protects obstacles, occupancy, exploration and worker access/payment',()=>{
- for(const faction of [0,1,2])for(const type of ['meridianforum']){
+ for(const faction of [0,1])for(const type of ['meridianforum']){
   const {game,world}=fixture(faction),p={x:0,z:0},before=Array.from(world.surface.heights),gas=game.account(0).gas;
   assert.equal(world.surface.foundation(p,BUILDINGS[type].size),false);
   assert.match(game.canBuild('depot',p),/stable ground/);assert.equal(game.canBuild(type,p),'');

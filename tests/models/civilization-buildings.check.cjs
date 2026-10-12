@@ -17,7 +17,7 @@ test('shared research and warm residential meshes are cached, finite and nondege
   const e={id:1,kind:'building',type,team:0,faction:0,x:0,z:0,hp:500,size:h.BUILDINGS[type].size,progress:1};
   const base=h.draw(e);
   assert.ok(base.some(c=>c[0].startsWith('civil')));assert.ok(!base.some(c=>['choirMound','hex','ring'].includes(c[0])));
-  for(const faction of [0,1,2])assert.deepEqual(h.draw({...e,faction}),base,'same hulls/colors for all factions');
+  for(const faction of h.FACTIONS.keys())assert.deepEqual(h.draw({...e,faction}),base,'same hulls/colors for all factions');
   assert.ok(h.draw(e,{material:h.MAT.AUTO}).every(c=>c[14]===h.MAT.AUTO),'explicit diagnostic material overrides civic metal');
   for(const options of [{ghost:true},{tint:0x89eac5,alpha:.3,layer:'effects'}]){
    const calls=h.draw(e,options);assert.ok(calls.every(c=>c[7]===(options.ghost?0x68717d:options.tint)));
@@ -75,7 +75,7 @@ test('level civilian decks, posed lights and each footing track the original hil
  const surface=new BattlefieldSurface(60,2.5,(x,z)=>40+.35*x+.12*z),before=Array.from(surface.heights);
  vm.runInContext('Math.random=seeded=()=>{throw Error("View RNG");};for(const k of Object.keys(geom))geom[k]=()=>{throw Error("Frame geometry");};',h.context);
  for(const type of types)for(const team of [0,1]){
-  const e={id:1,kind:'building',type,team,faction:2,x:1.3,z:.7,hp:500,size:h.BUILDINGS[type].size,progress:1};
+  const e={id:1,kind:'building',type,team,faction:1,x:1.3,z:.7,hp:500,size:h.BUILDINGS[type].size,progress:1};
   const pose=surface.buildingPose(e,e.size);assert.equal(pose.dx,0);assert.equal(pose.dz,0);assert.equal(pose.fill,0);
   assert.equal(surface.entityHeight(e),pose.height);
   assert.equal(buildingGroundGeometry({surface},e).geometry.length,0);

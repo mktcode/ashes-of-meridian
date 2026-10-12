@@ -26,7 +26,7 @@ test('all 36 specialized civic hulls select saved upgrades, share factions and r
     assert.deepEqual(h.draw({...entity,upgrade:family==='research'?'startingAlloy':'weaponTechnology'}),neutral);
     assert.deepEqual(h.draw({...entity,upgrade:'unknown-style'}),neutral,'unknown styles remain neutral');
     assert.deepEqual(h.draw({...entity,upgradeOffers:[upgrade]}),neutral,'offers without confirmed activation stay neutral');
-    for(const faction of [1,2])assert.deepEqual(h.draw({...selected,faction}),special);
+    for(const faction of [1])assert.deepEqual(h.draw({...selected,faction}),special);
     const support=c=>c[0]==='box'&&(c[4]===.55||c[4]===.23);
     assert.deepEqual(special.filter(support),neutral.filter(support),'unchanged feet and terrain supports');
     const ghost=h.draw(selected,{ghost:true});assert.equal(ghost.length,special.length);

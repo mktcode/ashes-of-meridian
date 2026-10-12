@@ -135,16 +135,14 @@ class MeridianEffects {
               tx: target.x,
               ty: th,
               tz: target.z,
-              life: e.faction === FACTION_ID.THIRD ? 0.19 : 0.1,
+              life: 0.1,
               maxLife: 0.19,
               color: pactInfantry ? 0x38d9e8 :
                 e.faction === FACTION_ID.SECOND
                   ? 0xafe8a6
-                  : e.faction === FACTION_ID.THIRD
-                    ? 0xd9bfff
-                    : e.team !== localTeam
-                      ? 0xf49685
-                      : 0xffd2a0,
+                  : e.team !== localTeam
+                    ? 0xf49685
+                    : 0xffd2a0,
               width: e.type === 'tank' || e.type === 'destroyer' ? 0.075 : 0.035
             });
         if (pactInfantry) this.modelMuzzleBeams.add(this.fx[this.fx.length - 1]);

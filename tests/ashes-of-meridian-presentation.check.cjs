@@ -143,7 +143,7 @@ test('faction light animation changes only emissive model strength, not geometry
   const context=loadScripts(['core',...RENDERER_SCRIPTS,'content','world-view']);
   vm.runInContext('Math.random=()=>{throw Error("Animation RNG");}',context);
   const render=vm.runInContext('renderEntity',context),R=createRendererStub({record:true});R.cinema=false;
-  for(const faction of [0,1,2]) {
+  for(const faction of [0,1]) {
     const e=Object.freeze({id:42,kind:'building',type:'hq',hp:100,team:0,faction,size:4,x:0,z:0,rot:0,progress:1});
     for(const time of [0,1.5]) {
       const draw=(quality,options={})=>{R.quality=quality;R.calls.length=0;render(R,e,time,options);return R.calls.filter(c=>c[14]!==-1);};
@@ -381,7 +381,7 @@ test('command hull is faction-specific and retains construction, team yaw, tint 
   assert.equal(hull(enemy)[8], BUILDING_YAW + Math.PI);
   assert.equal(hull(render({...entity,visualRotation:1/3}))[8],BUILDING_YAW+Math.PI/12,'cosmetic hull rotation is independent of aim');
   assert.equal(enemy[1][7], 0xe98680, 'foundation retains hostile team color');
-  for (const faction of [1, 2]) assert.equal(hull(render({ ...entity, faction })), undefined);
+  for (const faction of [1]) assert.equal(hull(render({ ...entity, faction })), undefined);
   for (const type of Object.keys(BUILDINGS).filter(type => type !== 'hq'))
     assert.equal(hull(render({ ...entity, type })), undefined);
   assert.deepEqual(render({ ...entity, hp: 0 }), []);
@@ -454,7 +454,7 @@ test('detailed faction 0 workers preserve yaw, cargo indication, team tint and r
   assert.ok(preview.every(c => c[12] === .3 && c[13] === 'effects'));
   assert.equal(render(unit, 0, { ghost: true })[0][7], 0x68717d);
   assert.ok(render({ ...unit, team: 1 }).some(c => c[7] === 0xe98680));
-  for (const faction of [1,2])
+  for (const faction of [1])
     assert.ok(render({ ...unit, faction }).every(c => !['workerHull','workerDrill'].includes(c[0])));
   assert.deepEqual(render({ ...unit, hp: 0 }), []);
 });
@@ -533,7 +533,7 @@ test('faction 0 turret detail keeps its fixed base and independently aimed head 
     assert.equal(c[7], 0x99e4c6); assert.equal(c[12], .3); assert.equal(c[13], 'effects');
   }
   assert.equal(head(render(entity, { ghost: true }))[7], 0x68717d);
-  for (const faction of [1,2]) assert.equal(head(render({ ...entity, faction })), undefined);
+  for (const faction of [1]) assert.equal(head(render({ ...entity, faction })), undefined);
   for (const type of Object.keys(BUILDINGS).filter(type => type !== 'turret'))
     assert.equal(head(render({ ...entity, type })), undefined);
   assert.deepEqual(render({ ...entity, hp: 0 }), []);
@@ -567,10 +567,10 @@ test('shot and shell faction variants use stable IDs rather than display names',
     effects.shot(e, target); effects.shell(e, target, .85);
     return JSON.parse(JSON.stringify(effects.fx));
   };
-  const before = [0,1,2].map(draw);
-  assert.equal(new Set(before.map(fx => JSON.stringify(fx))).size,3,'factions have distinct effects');
+  const before = [0,1].map(draw);
+  assert.equal(new Set(before.map(fx => JSON.stringify(fx))).size,2,'factions have distinct effects');
   vm.runInContext(`FACTIONS.forEach(f => { f.name = 'Same revised name'; });`, context);
-  assert.deepEqual([0,1,2].map(draw),before);
+  assert.deepEqual([0,1].map(draw),before);
 });
 
 test('placement previews have a stable visual identity and finite transforms for every building', () => {
@@ -578,7 +578,7 @@ test('placement previews have a stable visual identity and finite transforms for
   const { createBuildingPreview, renderEntity, BUILDINGS } = vm.runInContext(
     '({createBuildingPreview, renderEntity, BUILDINGS})', context);
   vm.runInContext('Math.random = seeded = () => { throw Error("Preview RNG"); };', context);
-  for (const faction of [0, 1, 2]) for (const type of Object.keys(BUILDINGS)) {
+  for (const faction of [0, 1]) for (const type of Object.keys(BUILDINGS)) {
     const preview = Object.freeze(createBuildingPreview(type, {x: 12, z: -7}, faction));
     assert.equal(preview.id, 0, 'no simulation ID allocation');
     for (const time of [0, 9, 20]) {
@@ -596,7 +596,7 @@ test('entity models stay identical when faction, unit and building display names
   const { renderEntity, UNITS, BUILDINGS } = vm.runInContext('({renderEntity, UNITS, BUILDINGS})', context);
   const draw = () => {
     const renderer = createRendererStub({ record: true });
-    for (const faction of [0, 1, 2]) for (const team of [0, 1])
+    for (const faction of [0, 1]) for (const team of [0, 1])
       for (const [kind, definitions] of [['unit', UNITS], ['building', BUILDINGS]])
         for (const [type, d] of Object.entries(definitions))
           renderEntity(renderer, Object.freeze({ id: 1, kind, type, faction, team,

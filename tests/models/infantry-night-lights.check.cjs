@@ -6,7 +6,7 @@ const {createRendererStub} = require('../helpers/renderer-stub.cjs');
 
 test('regular infantry: restrained real light and ground pool across factions',()=>{
  const h=modelHarness(),material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context);
- for(const faction of [0,1,2])for(const type of ['rifle','medic']){
+ for(const faction of h.FACTIONS.keys())for(const type of ['rifle','medic']){
   const e={id:17,kind:'unit',type,faction,team:0,hp:h.UNITS[type].hp,size:h.UNITS[type].size,x:0,z:0,rot:0};
   for(const [hour,blend]of [[18.5,.5],[22,1]]){
    const lights=[],r=createRendererStub({record:true});
@@ -21,7 +21,7 @@ test('regular infantry: restrained real light and ground pool across factions',(
  }
 });
 
-for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
+for(const faction of [0,1]) for(const type of ['rifle','medic','hero']) {
   test(`faction-${faction} ${type}: night accent, terrain pool and preview isolation`, () => {
     const h=modelHarness(), material=vm.runInContext('ALLOY_LIGHT_MATERIAL',h.context),
       definition=h.UNITS[type],
@@ -54,7 +54,7 @@ for(const faction of [0,1,2]) for(const type of ['rifle','medic','hero']) {
         assert.ok(Math.abs(half[11]-(a[11]+b[11])/2)<1e-12,'source fades smoothly too');
       }
     }
-    assert.equal(sources,beaconOnly||(faction===2&&type==='medic')?2:1);
+    assert.equal(sources,beaconOnly?2:1);
     for(const options of [{ghost:true},{tint:0x99e4c6},{alpha:.3},{layer:'effects'}]) {
       assert.deepEqual(draw(22,options),draw(12,options),'preview never acquires night effects');
     }

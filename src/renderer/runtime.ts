@@ -1304,7 +1304,7 @@
         g.bindTexture(g.TEXTURE_2D, this.workerRoadTex ?? this.fogTex);
         g.uniform1i(this.uniform(program, 'u_workerRoad'), 13);
         g.uniform1f(this.uniform(program, 'u_time'), time);
-        g.uniform1f(this.uniform(program, 'u_portalTime'), this.quality > 0 && !this.cinema ? modelTime : 0);
+        g.uniform1f(this.uniform(program, 'u_effectTime'), this.quality > 0 && !this.cinema ? modelTime : 0);
         for (const [uniform, texture, unit] of [
           ['u_shadow', this.shadowTex, 0], ['u_fog', this.fogTex, 1],
           ['u_groundTex', this[`${profile.groundTexture}Tex`], 2],
