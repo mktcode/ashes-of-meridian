@@ -11,7 +11,7 @@
 - **Grasflächen:** eigenes gelbgrünes Eignungs-Overlay mit Legende. Es ist alternativ zum Baumflächen-Overlay sichtbar, aber Gras und Bäume dürfen dieselben Flächen bewachsen. Das Overlay zeigt Eignung, nicht die aktuelle Grasdichte.
 - **Pflanzflächen:** grobe grüne Eignungsvorschau mit eigener Legende; übriges Gelände wird abgedunkelt. Sie hat Vorrang vor Höhenzonen und Spielraummarkierung. Wasser, Brücken und Bäume behalten ihre Materialien. Die Rastervorschau ist keine Standortgarantie und zeigt nicht die tatsächliche Walddichte; jeder Baumstandort wird zusätzlich einzeln geprüft.
 - **Planungskarte:** Regionen, Verbindungen, Regionsnummern und Höhenversätze; „Netze“ zeigt zusätzlich Basis- und duales Netz.
-- **3D-Ansicht:** Ziehen dreht/neigt, Mausrad oder Regler zoomt, Doppelklick setzt die Kamera zurück. „Spielräume“ markiert geschützte Flächen. Das Gelände wird einmal pro Layout zur GPU übertragen; Kamerabewegungen benötigen keine erneute Generierung.
+- **3D-Ansicht:** Linke Maustaste halten und ziehen verschiebt die Kamera; mittlere Maustaste halten und ziehen dreht/neigt um den aktuellen Kamerazielpunkt. Mausrad oder Regler zoomt bis 3200 %, Doppelklick setzt Position, Blickwinkel und Zoom zurück. „Spielräume“ markiert geschützte Flächen. Das Gelände wird einmal pro Layout zur GPU übertragen; Kamerabewegungen benötigen keine erneute Generierung.
 
 „Verformung“ vergleicht verformte und gerade Kanten mit demselben Seed. „Runde Flüsse“ vergleicht gerundete und eckige Flussrouten unabhängig davon. Ein Startseed lässt sich über die URL angeben, etwa `map-generation/index.html?seed=2`; danach erzeugt der Layout-Button wieder zufällige Seeds. Gleiche Seeds ergeben bei unverändertem Rezept dasselbe Layout; es gibt keine Speicherung.
 

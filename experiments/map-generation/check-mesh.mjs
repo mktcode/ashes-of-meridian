@@ -4,7 +4,8 @@ import { loadLab, VIEW_SCRIPTS } from './test-support.mjs';
 
 // Exercise the full-resolution mesh and upload with a cheap synthetic height
 // field. No production terrain queries, river carving or navigation raster.
-const canvas = { width: 800, height: 600, getBoundingClientRect: () => ({ width: 800, height: 600 }), addEventListener() {} };
+const canvas = { width: 800, height: 600, listeners: new Map(), setPointerCapture() {},
+  getBoundingClientRect: () => ({ width: 800, height: 600 }), addEventListener(type, listener) { this.listeners.set(type, listener); } };
 const elements = new Map([['height', canvas]]);
 const frames = [];
 const context = loadLab({ scripts: VIEW_SCRIPTS, globals: {
@@ -185,6 +186,22 @@ const result = vm.runInContext(`(() => {
   assert.equal(preview.grassInstances.length/7,2);assert.equal(bufferUploads.get(grassBuffer),2);
   assert.equal(bufferUploads.get(terrainBuffer),1);assert.equal(bufferUploads.get(treeBuffer),2);
   assert.equal(bufferUploads.get(grassMaskBuffer),1);assert.equal(preview.mesh,mesh);assert.equal(preview.plan,plan);
+  const view=document.getElementById('height'), emit=(type,button,x,y)=>view.listeners.get(type)({button,pointerId:1,clientX:x,clientY:y,preventDefault(){}});
+  const grassData=preview.grassInstances, uploadCount=bufferUploads.get(grassBuffer), yaw=camera.yaw, tilt=camera.tilt;
+  emit('pointerdown',0,100,100);emit('pointermove',0,150,125);emit('pointerup',0,150,125);flushFrames();
+  assert.equal(camera.yaw,yaw);assert.equal(camera.tilt,tilt);
+  const unit=PIXELS/(.96*camera.zoom*600),right=camera.targetX*Math.cos(yaw)-camera.targetY*Math.sin(yaw),
+    forward=camera.targetX*Math.sin(yaw)+camera.targetY*Math.cos(yaw);
+  assert.ok(Math.abs(right+50*unit)<1e-10);assert.ok(Math.abs(forward*Math.sin(tilt)+25*unit)<1e-10);
+  const target=[camera.targetX,camera.targetY];
+  emit('pointerdown',1,100,100);emit('pointermove',1,150,125);emit('pointercancel',1,150,125);flushFrames();
+  assert.ok(camera.yaw!==yaw && camera.tilt!==tilt);assert.deepEqual([camera.targetX,camera.targetY],target);
+  emit('pointermove',1,200,200);assert.deepEqual([camera.targetX,camera.targetY],target);
+  document.getElementById('zoom').listeners.get('input')({target:{value:'100'}});flushFrames();assert.equal(camera.zoom,32);
+  view.listeners.get('dblclick')();flushFrames();assert.equal(camera.zoom,1.6);assert.equal(camera.targetX,0);assert.equal(camera.targetY,0);
+  assert.equal(camera.yaw,-.7);assert.equal(camera.tilt,.65);
+  assert.equal(preview.grassInstances,grassData);assert.equal(bufferUploads.get(grassBuffer),uploadCount);
+  assert.equal(bufferUploads.get(terrainBuffer),1);assert.equal(preview.mesh,mesh);assert.equal(preview.plan,plan);
   return { vertices: mesh.vertices.length, faces: mesh.terrainFaceCount };
 })()`, context, { timeout: 5000 });
-console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height, fixed zones, trees, instanced grass, independent overlays and cached uploads on toggles/density OK. No generated-map/raster validation.`);
+console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height, fixed zones, trees, instanced grass, independent overlays, left-drag pan/middle-drag orbit, 32x zoom/reset and cached uploads OK. No generated-map/raster validation.`);
