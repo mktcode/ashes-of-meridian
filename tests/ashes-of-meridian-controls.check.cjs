@@ -1827,6 +1827,10 @@ function savedUIBattle() {
     depth: 0, upgrades: {}, benefits: {}, enemyBenefits: [{}],
     encounter: { deployment: 'exploration', mission: 'hq-elimination', enemies: [1], map: 'desert', seed: 1409 } };
   game.snapshotSafe = true; game.snapshotBattle = () => ({ version: 1, state: copy(game.s), tutorial: null });
+  game.continueClearedWorld = () => {
+    game.s.result = null; game.s.rules.completed = true;
+    return true;
+  };
   game.start = () => assert.fail('A saved battle must use restore, not fresh deployment');
   game.restoreBattle = expedition => { game.s = copy(expedition.battle.state); h.ui.event('start', { restored: true }); };
   h.ui.beginBattleTutorial = () => assert.fail('Restore must not restart the tutorial');
@@ -1894,20 +1898,21 @@ test('battle exit is not used for victory or defeat, only for their subsequent r
     let finish, requests = 0;
     ui.onLeaveBattle = complete => { requests++; finish = complete; ui.leavingBattle = true; ui.paused = true; };
     ui.event('result', result);
-    assert.equal(h.saves.length, 1); assert.equal(requests, 0);
+    const resultSaves = win ? 2 : 1;
+    assert.equal(h.saves.length, resultSaves); assert.equal(requests, 0);
     ui.event('result', result);
-    assert.equal(h.saves.length, 1); assert.equal(requests, 0);
-    assert.equal(ui.modalKind, 'result');
-    assert.equal(h.document.getElementById('hud').classList.contains('hidden'), true);
-    assert.equal(h.document.getElementById('result').classList.contains('hidden'), false);
-    assert.equal(h.saves.length, 1);
+    assert.equal(h.saves.length, resultSaves); assert.equal(requests, 0);
+    assert.equal(ui.modalKind, win ? '' : 'result');
+    assert.equal(ui.paused, !win);
+    assert.equal(h.document.getElementById('hud').classList.contains('hidden'), !win);
+    assert.equal(h.document.getElementById('result').classList.contains('hidden'), win);
     assert.equal(win ? ui.expedition.depth : ui.expedition, win ? 1 : null);
     ui.showHome();
     assert.equal(requests, 1, 'only returning to the main menu starts the fade');
     assert.equal(ui.view, 'game');
     finish();
     assert.equal(ui.view, 'home');
-    assert.equal(h.saves.length, 1);
+    assert.equal(h.saves.length, resultSaves + (win ? 1 : 0));
   }
 });
 
@@ -1955,32 +1960,21 @@ test('outpost guide ignores stale actions outside the active outpost pause menu'
   }
 });
 
-test('civilization introduction waits for confirmation and can return to victory without leaving', () => {
+test('victory starts development and speech without confirmation or leaving', () => {
   const h = savedUIBattle(), ui = h.ui;
   h.UI.prototype.bind.call(ui);
   ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   ui.game.s.result = { win: true, text: 'Victory', time: 42, integrity: 1, score: 1 };
   ui.onLeaveBattle = () => assert.fail('Continue building does not leave for the main menu');
+  ui.onLaunchBattle = () => assert.fail('victory must not reload the world');
+  ui.openModal = () => assert.fail('victory must not ask for confirmation');
+  const spoken=[];ui.radioLine=id=>spoken.push(id);
   ui.event('result', ui.game.s.result);
-  ui.onLaunchBattle = () => assert.fail('the introduction must not reload the world');
-  let entered = 0;
-  ui.finishContinueBuilding = () => { entered++; };
+  assert.equal(ui.game.s.result,null);assert.equal(ui.game.s.rules.completed,true);
+  assert.equal(ui.paused,false);assert.equal(ui.modalKind,'');
+  assert.deepEqual(spoken,['expedition.areaClear']);
   ui.startCivilizationBuilding();
-  assert.equal(entered, 0, 'stale confirmations are ignored');
-  ui.continueBuilding();
-  assert.equal(ui.modalKind, 'civilizationIntro');
-  assert.equal(entered, 0);
-  assert.ok(!ui.profile.civilizationIntroComplete);
-  ui.closeModal();
-  assert.equal(ui.modalKind, 'result');
-  assert.ok(!ui.profile.civilizationIntroComplete);
-  ui.continueBuilding();
-  h.click({ ui: 'startCivilizationBuilding' });
-  assert.equal(entered, 1);
-  assert.equal(ui.profile.civilizationIntroComplete, true);
-  ui.modalKind = 'result';
-  ui.continueBuilding();
-  assert.equal(entered, 2, 'later clicks bypass the introduction');
+  assert.deepEqual(spoken,['expedition.areaClear']);
   assert.equal(ui.leavingBattle, false);
 });
 
@@ -2085,6 +2079,7 @@ test('pause restart actions cannot redeploy a running expedition', () => {
 
 test('victory checkpoints the completed world once; defeat clears the expedition', () => {
   const h=setup(),saved=[],cleared=[];
+  h.ui.finishContinueBuilding=()=>{};
   h.ui.persistence.saveProgress=(_profile,value)=>value===null?cleared.push(true):saved.push(JSON.parse(JSON.stringify(value)));
   h.ui.expedition={version:13,battle:null,worlds:[],faction:0,abilities:['orbital','repair','scan','drop'],depth:0,upgrades:{commandTraining:2},benefits:{startingAlloy:1},enemyBenefits:[{}],
     encounter:{mission:'hq-elimination',enemies:[1],map:'desert',seed:1409}};
@@ -2103,11 +2098,13 @@ test('victory checkpoints the completed world once; defeat clears the expedition
 test('settings after a result preserve the ended battle and do not replay its sound', () => {
   for(const win of [false,true]){
     const h=setup(),sounds=[];h.UI.prototype.bind.call(h.ui);h.ui.openModal=h.UI.prototype.openModal;
+    h.ui.finishContinueBuilding=()=>{};
+    h.document.getElementById('result').classList.add('hidden');
     h.ui.audio.sound=name=>sounds.push(name);h.ui.game.s.result={win,text:'HQ destroyed'};
     const state=h.ui.game.s,before=JSON.stringify(state);h.ui.event('result',state.result);
     h.click({ui:'settings'});assert.equal(h.ui.modalKind,'settings');h.click({ui:'closeModal'});
-    assert.equal(h.ui.modalKind,'');assert.equal(h.document.getElementById('result').classList.contains('hidden'),false);assert.strictEqual(h.ui.game.s,state);assert.equal(JSON.stringify(state),before);
-    assert.deepEqual(sounds.filter(name=>name==='victory'||name==='defeat'),[win?'victory':'defeat']);
+    assert.equal(h.ui.modalKind,'');assert.equal(h.document.getElementById('result').classList.contains('hidden'),win);assert.strictEqual(h.ui.game.s,state);assert.equal(JSON.stringify(state),before);
+    assert.deepEqual(sounds.filter(name=>name==='victory'||name==='defeat'),win?[]:['defeat']);
   }
 });
 
@@ -2123,6 +2120,7 @@ test('best expedition depth unlocks Manyroot at 10 and stays within the catalog'
     encounter: { mission: 'hq-elimination', enemies: [1, 1, 0], map: 'desert', seed: 1409 } };
   h.ui.game.s.stats = { kills: 0, lost: 0, gathered: 0 };
   h.ui.showResult = () => {};
+  h.ui.finishContinueBuilding = () => {};
   let saves = 0; h.ui.persistence.saveProgress = () => { saves++; return true; };
   h.ui.event('result', { win: true });
   assert.equal(h.ui.profile.expeditionDepth, 10); assert.equal(h.ui.factionJustUnlocked, 1); assert.equal(saves, 1);
