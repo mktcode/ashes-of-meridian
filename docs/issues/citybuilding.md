@@ -18,7 +18,7 @@ Der [zentral beginnende Ringeffekt](../rendering.md#viewport-und-hud) ist im Fir
 
 - [ ] Pan/Zoom/Drehung/Resize und reduzierte Bewegung auf Zielgeräten prüfen. Bereits sichtbare, zwischengespeicherte Flächen benötigen weiterhin aktuelle Belegungs-/Sichtprüfungen; Farbe zwischen Validatorproben bleibt Orientierung.
 
-Kosten bei weitem Zoom, kalter Aufbau und Vorbereitung unter Last werden zentral unter [Performance/Bauplatzraster](performance/README.md#bauplatzraster) geführt. Die Forum-Liefer-/Reload-Abnahme bleibt hier; allgemeine [Navigation](worker-bauwegfindung/issue.md) bleibt separat. Kein Optimierungsauftrag aus der visuellen Abnahme.
+Kosten bei weitem Zoom, kalter Aufbau und Vorbereitung unter Last werden zentral unter [Performance/Bauplatzraster](performance-und-mobilstabilitaet.md#bauplatzraster) geführt. Die Forum-Liefer-/Reload-Abnahme bleibt hier; allgemeine [Navigation](navigation-worker-und-gruppenankunft.md) bleibt separat. Kein Optimierungsauftrag aus der visuellen Abnahme.
 
 ## Offene menschliche Abnahme
 
@@ -30,6 +30,6 @@ Kosten bei weitem Zoom, kalter Aufbau und Vorbereitung unter Last werden zentral
 
 ## Prüfgrenzen und Zuständigkeiten
 
-Kleine CPU-Verträge prüfen Vorratsbuchung, begrenztes Wachstum, Korridor-Ausschlüsse, Rückbau sowie gespeicherte Zuweisungen und Wachstumscursor. Visuelle Wirkung, [Echtgeräteperformance](performance/README.md), echte Pendelstrecken auf den verschiedenen Landschaften und vollständige Runs bleiben offen; keine breite KI-/Simulationsabnahme daraus ableiten.
+Kleine CPU-Verträge prüfen Vorratsbuchung, begrenztes Wachstum, Korridor-Ausschlüsse, Rückbau sowie gespeicherte Zuweisungen und Wachstumscursor. Visuelle Wirkung, [Echtgeräteperformance](performance-und-mobilstabilitaet.md), echte Pendelstrecken auf den verschiedenen Landschaften und vollständige Runs bleiben offen; keine breite KI-/Simulationsabnahme daraus ableiten.
 
 [Progressionsbalance](expeditions-schwierigkeit-und-upgrades.md), [Weltbesuche/Spielstand](expeditions-spielstand.md), [Modellabnahme](modelle.md) und [menschliche Run-Abnahme](playtest-validation.md) bleiben in ihren Fachissues. Bevölkerung, Steuern, Verkehr, Produktionsketten oder Viertelspezialisierung gehören nicht zum aktuellen Kern.

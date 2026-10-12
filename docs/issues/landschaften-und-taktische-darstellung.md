@@ -1,6 +1,6 @@
 # Landschaften und taktische Darstellung: offene Abnahme
 
-Zentrale menschliche Bildabnahme aller fünf natürlichen Landschaftsfamilien. Welt-/Materialrezepte sind integriert; [Weltgrenzen](../architecture.md#weltrezepte-und-feste-designs) und [Grafikpflege](../rendering.md) bleiben maßgeblich. Geländewege, Höhen-/Sichtregeln und Walling unter [Terrain](terrain-generation.md), Start-/KI-Abnahme unter [prozeduralen Gefechten](procedural-battlefields.md). Kein weiterer Engineumbau aus dieser Liste.
+Zentrale menschliche Bildabnahme aller fünf natürlichen Landschaftsfamilien. Welt-/Materialrezepte sind integriert; [Weltgrenzen](../architecture.md#weltrezepte-und-feste-designs) und [Grafikpflege](../rendering.md) bleiben maßgeblich. Geländewege, Höhen-/Sichtregeln und Walling unter [Terrain](terrain-generation.md), Start-/KI-Abnahme unter [prozeduralen Gefechten](prozedurale-gefechtsstarts.md). Kein weiterer Engineumbau aus dieser Liste.
 
 ## Familiencharakter und Materialien
 
@@ -20,7 +20,7 @@ Zentrale menschliche Bildabnahme aller fünf natürlichen Landschaftsfamilien. W
 ## Taktische Lesbarkeit und Flugfreiraum
 
 - [ ] Gemeldeten verdeckten Echo-Vent mit Raffinerie belegen und Bau abschließen; Originalkarte/Seed fehlen. Silhouetten-Zielklick ist integriert, Originalfall nicht reproduziert.
-- [ ] Bauflächenlinien an Hang-/Blocker-/Sichtgrenzen, Vents und Klickvorschau beurteilen; Farbe zwischen Validatorproben bleibt Orientierung. Kosten unter [Bauplatzraster](performance/README.md#bauplatzraster), Bedienung unter [Citybuilding](citybuilding.md#baugrid-darstellung-und-bedienung).
+- [ ] Bauflächenlinien an Hang-/Blocker-/Sichtgrenzen, Vents und Klickvorschau beurteilen; Farbe zwischen Validatorproben bleibt Orientierung. Kosten unter [Bauplatzraster](performance-und-mobilstabilitaet.md#bauplatzraster), Bedienung unter [Citybuilding](citybuilding.md#baugrid-darstellung-und-bedienung).
 - [ ] Kontursilhouetten bei normalem Zoom, Parteienfarben, dichten Gruppen und Verdeckung durch Berge/Kronen/Stadt prüfen. Keine Sichtfreigabe durch Intro/Fog.
 
 ### Flugfreiraum nach dem Reliefausbau
@@ -35,4 +35,4 @@ Zentrale menschliche Bildabnahme aller fünf natürlichen Landschaftsfamilien. W
 - [ ] Bloom, Lichtanimation, Tracer/Funken/Explosionen/Staub und Brandflecken im Gefecht prüfen, kein flächiges Bodenleuchten. Räumliche Lichtzuordnung in dichten Basen/Armeen und Lichtdurchtritt ohne lokale Schatten bleiben offen.
 - [ ] **Nasse Bodenlichtakzente:** High/Balanced bei normalem Zoom vergleichen: farbige Glanzspuren statt flächiger Aufhellung, keine Texturkacheln oder flimmernden Glanzpunkte in Bewegung. Regnerische Myzel-/Graswelten, Wege und signierte nasse Ufer gegen trockene/Fels-/Schneeflächen prüfen. Schein bleibt schattenlos; Kostenneutralität auf integrierten GPUs/Mobilgeräten ist nicht belegt. [Lichtvertrag](../rendering.md#lichtanimation-und-kampfakzente).
 
-Technische CPU-/GPU-/Browserprüfungen ersetzen keine künstlerische oder Echtgeräteabnahme. Gerätekosten zentral unter [Performance](performance/README.md), vollständige Partien unter [Run-Abnahme](playtest-validation.md), keine zusätzlichen Vollrunden je Familie. Favoriten/Export mit [Skirmish](new-battle-screen.md) entscheiden; weitere Assets, Zivilisationsspuren, [seltene Blickfänge](unique-points-of-interest.md), Topologie und Missionen brauchen eigene Freigabe. Keine automatisch beauftragten Langläufe.
+Technische CPU-/GPU-/Browserprüfungen ersetzen keine künstlerische oder Echtgeräteabnahme. Gerätekosten zentral unter [Performance](performance-und-mobilstabilitaet.md), vollständige Partien unter [Run-Abnahme](playtest-validation.md), keine zusätzlichen Vollrunden je Familie. Favoriten/Export mit [Skirmish](skirmish-gefechtskonfiguration.md) entscheiden; weitere Assets, Zivilisationsspuren, [seltene Blickfänge](unique-points-of-interest.md), Topologie und Missionen brauchen eigene Freigabe. Keine automatisch beauftragten Langläufe.

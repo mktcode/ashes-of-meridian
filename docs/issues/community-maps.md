@@ -1,6 +1,6 @@
 # Eigene 3D-Karten importieren und später teilen
 
-**Produktziel, kein Implementierungsauftrag.** Zuerst lokaler Dateiimport im profilfreien Skirmish/Test, keine Plattform, Uploadfunktion oder Ingame-Editor. [Skirmish-Regeln](new-battle-screen.md) vorher festlegen.
+**Produktziel, kein Implementierungsauftrag.** Zuerst lokaler Dateiimport im profilfreien Skirmish/Test, keine Plattform, Uploadfunktion oder Ingame-Editor. [Skirmish-Regeln](skirmish-gefechtskonfiguration.md) vorher festlegen.
 
 Eigene Geometrie/Oberflächen/statische Objekte plus Starts/Ressourcen/Sperren müssen möglich sein, nicht nur Koordinaten auf bestehendem Terrain. Nur validierte Daten, kein fremder JS-/Shadercode. CPU-Höhe und Kollisions-/Baumasken sind autoritativ; dekoratives GLB definiert keine Spielbarkeit. Genau eine Bodenhöhe je X/Z bleibt die [Systemgrenze](../architecture.md#welt-darstellung-und-zufall).
 

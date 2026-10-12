@@ -6,7 +6,7 @@ Alle zwölf eigenen Gebäudestile mit jeweils drei Ausbaustufen sind integriert;
 
 ## Technische Restarbeit
 
-Verbliebene Langtest-Fixtures zentral unter [Testpflege](teststrategie-review.md#vorrang-fachlich-veraltete-startannahmen), Welt-Save-Ziele unter [Spielstandsabnahme](expeditions-spielstand.md) und Archiv-/Aggregationskosten unter [Performance](performance/README.md#verbleibende-cpu-spitzen). Keine zusätzlichen Prüfrunden aus dieser Liste.
+Verbliebene Langtest-Fixtures zentral unter [Testpflege](test-und-werkzeugpflege.md#vorrang-fachlich-veraltete-startannahmen), Welt-Save-Ziele unter [Spielstandsabnahme](expeditions-spielstand.md) und Archiv-/Aggregationskosten unter [Performance](performance-und-mobilstabilitaet.md#verbleibende-cpu-spitzen). Keine zusätzlichen Prüfrunden aus dieser Liste.
 
 - [ ] Breite Integrationsprüfung nach gesonderter Freigabe: bisher nur begrenzte Upgrade-, Persistenz-, HUD- und Weltbesuchsverträge. Das ist keine vollständige Spielabnahme.
 

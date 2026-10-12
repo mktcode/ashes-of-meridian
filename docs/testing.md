@@ -82,7 +82,7 @@ Chromium bleibt vorerst die Basis für CPU-/GPU-Vergleiche. Die Diagnose verwend
 
 Für reproduzierbare arrangierte Szenen übernimmt der [Chromium-Diagnose-Runner](diagnostic-capture.md) begrenzte Echtzeitfenster und JSON-Ausgabe auf Basis der Capture-Rezepte. Er trennt Laden/Warmup/Nachlauf von Messframes und berechnet die bestehenden Recorder-Summaries für explizite Frame-/Interaktions-ID-Grenzen neu, ohne Sitzungsdaten zu verändern. Kein Browserclock-Mocking oder automatischer CI-/Langlauf; Software-/unbekannte Grafikbackends werden gekennzeichnet und können als Voraussetzung abgewiesen werden.
 
-Vergleichskontext, Erfolgskriterien und offene Messfragen stehen zentral unter [Performance](issues/performance/README.md#messplan-und-erfolgskriterien).
+Vergleichskontext, Erfolgskriterien und offene Messfragen stehen zentral unter [Performance](issues/performance-und-mobilstabilitaet.md#messplan-und-erfolgskriterien).
 
 ## Manuelle Probeläufe
 

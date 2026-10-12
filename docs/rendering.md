@@ -2,7 +2,7 @@
 
 Darstellungs- und Pflegeverträge; Formen, Budgets, Shaderwerte und CSS-Maße stehen im Code.
 Die gestalterische Richtung beschreibt die [Grafik-Leitlinie](graphics-guideline.md).
-Offene Gerätekosten, Engpässe und Messfragen stehen zentral unter [Performance](issues/performance/README.md); technische Wiederverwendung ist keine allgemeine FPS- oder Mobilstabilitätszusage.
+Offene Gerätekosten, Engpässe und Messfragen stehen zentral unter [Performance](issues/performance-und-mobilstabilitaet.md); technische Wiederverwendung ist keine allgemeine FPS- oder Mobilstabilitätszusage.
 
 ## Texturen
 
@@ -79,7 +79,7 @@ Der Cache bleibt über Codex-/Menüwechsel im selben Tab erhalten, nicht über R
 
 Das Auswahlpanel vergleicht seine aktuellen Anzeigewerte als erzeugtes Markup mit der letzten eigenen Ausgabe, nicht mit der nachträglich veränderten DOM-Serialisierung. Befüllte Porträts und Bedienelemente bleiben bei unveränderten Werten erhalten; Lebenspunkte, Schilde, Modell, Besitz, Gruppen, Bauzustand, Queue-Belegung und Reparaturaktionen werden weiter aktuell ausgewertet. Abwahl leert Ausgabe und Vergleichswert; bloßer Tabwechsel ändert nur die Sichtbarkeit.
 
-Verdrängte Bilder und endgültig verlassene Vorschauen geben eigene Ressourcen frei. Cache-Hits zeichnen/kopieren nicht erneut aus WebGL; Cache-Misses können trotzdem synchronisieren. [Bild-/Bedienungsabnahme](issues/ui-review.md#modellkacheln-bild-und-bedienung), [verbleibende Kosten](issues/performance/README.md#modellkacheln).
+Verdrängte Bilder und endgültig verlassene Vorschauen geben eigene Ressourcen frei. Cache-Hits zeichnen/kopieren nicht erneut aus WebGL; Cache-Misses können trotzdem synchronisieren. [Bild-/Bedienungsabnahme](issues/ui-review.md#modellkacheln-bild-und-bedienung), [verbleibende Kosten](issues/performance-und-mobilstabilitaet.md#modellkacheln).
 
 ## Terrain und Renderpässe
 
@@ -135,7 +135,7 @@ Alle Gebäude- und Einheitenmodelle melden zusätzlich lokale, schattenlose Lamp
 
 Feinere Lichtzellen verringern reine Fehlkandidatenprüfungen bei dicht stehenden Einheiten, ohne Einflussradius oder Lichtsumme zu ändern. Zählen, Präfixbereiche und anschließendes Eintragen nutzen wiederverwendete typisierte Puffer statt einzelner Zellarrays und Teilarrayansichten. Jede Zelle behält die Lampen-Anmeldereihenfolge einschließlich der Gleitkomma-Additionsreihenfolge im Shader. Feinere Zuordnung dupliziert mehr Lampendaten; reichen die GPU-Texturmaße dafür nicht, wird bis zum bisherigen groben Raster vergröbert, niemals eine Lampe ausgewählt oder verworfen. Bei unveränderten Rastermaßen/Kapazitäten bleiben CPU-Puffer und GPU-Speicher erhalten; technische Allokationsgrenzen bleiben explizit.
 
-Nasser Landschafts-/Bodenuntergrund erhält in High/Balanced zusätzlich einen begrenzten, lampenfarbigen Glanzanteil im selben Lichtloop. Regen und die signierten nassen Ufergewichte optieren ein; Gras glänzt schwächer, exponierter Fels, Schnee, steile Flächen und emissive/transparente Teile werden ausgeblendet. Modelle und Performance behalten die lokale diffuse Beleuchtung ohne diesen Zusatz. Die vorhandene Mikrohöhe variiert den Glanz und bricht ihn über die Reliefnormale auf; Gelände-Albedo und Relief teilen ihre RGBA-Abfragen statt Farbe und Höhe getrennt zu lesen. Keine neuen Texturen, Lampen, Geometrie oder Renderpässe, keine echten Spiegelbilder. Der Glanz kostet zusätzliche begrenzte Rechenarbeit je berührender Lampe; gemeinsam genutzte Texturabfragen sind keine Garantie für Kostenneutralität auf jedem Treiber. [Offene Landschaftsabnahme](issues/project-tomorrow.md#tageszeit-wetter-und-licht).
+Nasser Landschafts-/Bodenuntergrund erhält in High/Balanced zusätzlich einen begrenzten, lampenfarbigen Glanzanteil im selben Lichtloop. Regen und die signierten nassen Ufergewichte optieren ein; Gras glänzt schwächer, exponierter Fels, Schnee, steile Flächen und emissive/transparente Teile werden ausgeblendet. Modelle und Performance behalten die lokale diffuse Beleuchtung ohne diesen Zusatz. Die vorhandene Mikrohöhe variiert den Glanz und bricht ihn über die Reliefnormale auf; Gelände-Albedo und Relief teilen ihre RGBA-Abfragen statt Farbe und Höhe getrennt zu lesen. Keine neuen Texturen, Lampen, Geometrie oder Renderpässe, keine echten Spiegelbilder. Der Glanz kostet zusätzliche begrenzte Rechenarbeit je berührender Lampe; gemeinsam genutzte Texturabfragen sind keine Garantie für Kostenneutralität auf jedem Treiber. [Offene Landschaftsabnahme](issues/landschaften-und-taktische-darstellung.md#tageszeit-wetter-und-licht).
 
 Lichtlisten werden je Szenenaufbau/Weltwechsel geleert, Modellkacheln besitzen getrennte CPU-Puffer. Nur für die Darstellung sichtbarkeitsgeprüfte Entitäten dürfen Lampen melden; diffuser Lichtbeitrag und Bodenglanz werden zusätzlich an aktuellen Fog-Sichtgrenzen maskiert. Spielsicht, RNG und Simulation bleiben unberührt. Ohne lokale Schatten kann Licht durch Wände oder Geländekanten scheinen; das ist eine bewusste Grenze, keine physikalische Beleuchtung. Dichte Ansammlungen erhöhen die lokale Fragmentarbeit; die räumliche Zuordnung ersetzt keine Zielgeräteabnahme.
 
@@ -179,4 +179,4 @@ CPU-Meshspeicher und GPU-Puffer bleiben je Ring bei gleichem Bildausschnitt erha
 
 Die Forum-Auswahl ergänzt eine transparente Zyanfläche im Siedlungskreis. Ihre Straßenaussparungen kommen direkt aus der CPU-Siedlungsgeometrie. Der sichtbare runde Forumplatz endet am kleinen Auswahlkreis; die größere interne Platzreserve für Worker-Zufahrten bleibt unabhängig davon erhalten. Native Geländedreiecke werden an diesen Konturen und am Kreisrand geschnitten, statt Straßenlöcher aus abgetasteten Farben zu interpolieren oder Gelände über größere Dreiecke zu überbrücken. Ein eigener Effektmaterialzweig zeichnet die Fläche ohne Rasterlinien und mit aktueller Sichtmaske. Das ist ein struktureller Siedlungsplan, kein Bauplatzvalidator und keine Geländeveränderung. Welt-/Oberflächen-, Lage-, Größen- oder Orientierungswechsel erneuern den ausgewählten Mesh; Kamera, Cinder-Vorrat und Zeit benötigen keinen Upload. Abwahl, Sichtverlust, Zerstörung, Intro und Menüwechsel geben die betroffenen View-Meshes frei. Echtgeräteperformance und Farblesbarkeit bleiben menschlich zu prüfen.
 
-[Prüfwahl](testing.md) · [Darstellungsabnahme](issues/project-tomorrow.md) · [Audio und Sprachpflege](audio.md).
+[Prüfwahl](testing.md) · [Darstellungsabnahme](issues/landschaften-und-taktische-darstellung.md) · [Audio und Sprachpflege](audio.md).

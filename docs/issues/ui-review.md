@@ -14,7 +14,7 @@ unterscheiden; Escape darf keine erforderliche Bestätigung überspringen. Keine
 
 ## Modellkacheln: Bild und Bedienung
 
-[Cache-/Rendervertrag](../rendering.md#modellkacheln) erhalten; Öffnungs-, Layout- und Kopierkosten zentral unter [Performance/Modellkacheln](performance/README.md#modellkacheln), kein erneuter Cache-/Modellumbau aus dieser Liste.
+[Cache-/Rendervertrag](../rendering.md#modellkacheln) erhalten; Öffnungs-, Layout- und Kopierkosten zentral unter [Performance/Modellkacheln](performance-und-mobilstabilitaet.md#modellkacheln), kein erneuter Cache-/Modellumbau aus dieser Liste.
 
 - [ ] Modellgröße/-ausschnitt, Teamfarben, Kontrast/Kanten, Namen/Kosten und deaktivierte Aktionen in Codex/HUD abnehmen.
 - [ ] Erstmaliges Einblenden und sofortige Wiederanzeige in Firefox und bei reduzierter Bewegung visuell prüfen.
@@ -40,7 +40,7 @@ sowie bei automatisch zentrierten Ansichten. Gezielte Node-Prüfungen decken Sta
 und Projektion auf erhöhtem Terrain ab, nicht das tatsächliche Kameragefühl.
 Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
 Randkulisse, Kameraabdeckung und Fog-Übergänge zentral unter
-[Landschaften](project-tomorrow.md#randkulisse-und-kamera) abnehmen;
+[Landschaften](landschaften-und-taktische-darstellung.md#randkulisse-und-kamera) abnehmen;
 CPU-Fog-Isolation, Partei-/Sichtstufenfilter und ausbleibende Scan-Korridore sind gezielt geprüft.
 Auch die fest verankerten, kantengeglätteten Baugrid-Linien benötigen visuelle Abnahme
 bei weitem Zoom, niedriger Renderauflösung und Drehung: GPU-Stichproben prüfen die
@@ -61,4 +61,4 @@ bleiben in Firefox und auf Touch-Geräten abzunehmen.
 Noch offen:
 visuelle Abnahme auf Zielgeräten, kleine Querformate, lange Briefings, Fokusführung und
 Screenreader-Bedienung. Reduzierte Filterkosten sind kein gemessener Performancegewinn;
-GPU-/Gerätemessungen erst mit konkretem Vergleichsziel; offene UI-Kosten zentral unter [Performance](performance/README.md#ui-und-erstaufbau).
+GPU-/Gerätemessungen erst mit konkretem Vergleichsziel; offene UI-Kosten zentral unter [Performance](performance-und-mobilstabilitaet.md#ui-und-erstaufbau).

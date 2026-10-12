@@ -39,7 +39,7 @@ Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine sp�
 - [Audio und Sprachinhalte](docs/audio.md): Aufnahmen, Texte und Wiedergabeverträge.
 - [Prüfungen](docs/testing.md): `npm run check:quality` für das kurze Qualitätsnetz, gezielte Tests, Freigaben und Diagnose.
 - [Subagents](docs/subagents.md): isolierte parallele Arbeit.
-- [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance/README.md) und [offene Issues](docs/issues/).
+- [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance-und-mobilstabilitaet.md) und [offene Issues](docs/issues/).
 - [Geschichte](docs/story.md): deutsche interne Fassung; englische Spielfassung im Codex.
 
 Landschaften, arrangierte Modell-/Gefechtsbilder und mehrere Kameraperspektiven aufnehmen: [Szenen-Capture](docs/scene-capture.md) (`npm run capture:scene -- --scene scripts/scenes/map-overview.json`). Begrenzte Echtzeitmessungen mit Szenenrezept und automatischem JSON-Export: [Chromium-Diagnose](docs/diagnostic-capture.md) (`npm run diagnose:scene -- --angle gl --require-hardware`).

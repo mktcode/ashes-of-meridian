@@ -7,12 +7,12 @@ Maßgebliche Übersicht der offenen Arbeit, keine Implementierungs- oder Testfre
 | Issue | Wirkung und nächster Schritt |
 | --- | --- |
 | [Spielstand/Weltbesuche](expeditions-spielstand.md) | Evakuierungs-Startfehler muss einen vollständigen Menüstand hinterlassen; aktueller Fehlerpfad setzt nur die Ansicht um. Historischen Frontier-Seedfehler nach Generatoränderungen neu beurteilen. Save-Version-/Buildfrage, getrennte Speicherziele und Lebenszyklusabnahme bleiben offen. |
-| [Navigation/Liveness](worker-bauwegfindung/issue.md) | Bekannte Bauweg-Fehlerklasse korrigiert, Originalstillstände und Worker-Langlaufbefunde offen. Gruppenankunft/Ausweichwackeln ist unabhängig von verbesserten FPS. Reproduzierbare Zustände vor Reload sichern. |
-| [Prozedurale Gefechtsstarts](procedural-battlefields.md) | Bezahlten KI-HQ-Abschluss, knappe Wirtschaftsflächen, Ressourcenverkehr und Startfairness abnehmen; begrenzte Generatorproben beweisen keine laufende Partie. |
+| [Navigation/Liveness](navigation-worker-und-gruppenankunft.md) | Bekannte Bauweg-Fehlerklasse korrigiert, Originalstillstände und Worker-Langlaufbefunde offen. Gruppenankunft/Ausweichwackeln ist unabhängig von verbesserten FPS. Reproduzierbare Zustände vor Reload sichern. |
+| [Prozedurale Gefechtsstarts](prozedurale-gefechtsstarts.md) | Bezahlten KI-HQ-Abschluss, knappe Wirtschaftsflächen, Ressourcenverkehr und Startfairness abnehmen; begrenzte Generatorproben beweisen keine laufende Partie. |
 | [UI/Fokus/Dialoge](ui-review.md) | Dialogrolle, Fokusbindung/-rückgabe fehlen weiterhin; gemeinsame Verwaltung gezielt korrigieren. CSS-Entkopplung separat nachrangig. |
-| [Performance/Stabilität](performance/README.md) | Dichte-Armee-FPS laut Nutzer verbessert, Auswahlhänger und Mobil-Freezes/Context-loss bleiben offen. Konkreten Nutzerabschnitt mit Build/Gerät eingrenzen; keine vorsorgliche Qualitätsreduktion oder pauschaler Engineumbau. |
-| [Texturvorbereitung](texture-loading.md) | Fehler-/Residencyverträge technisch abgesichert; gezielter `file://`-Fehlerpfadcheck noch offen. Historischer Browserstart an Socket-Pfadlänge gescheitert, keine bewiesene Mobilabbruchursache. |
-| [Testpflege/alte Fixtures](teststrategie-review.md) | Verbliebene HQ-/Mining-/Startannahmen fachlich berichtigen, bevor neue KI-/Balanceaussagen abgeleitet werden. Bereits korrigierte lokale Regelarenen nicht nochmals als unimplementiert führen. |
+| [Performance/Stabilität](performance-und-mobilstabilitaet.md) | Dichte-Armee-FPS laut Nutzer verbessert, Auswahlhänger und Mobil-Freezes/Context-loss bleiben offen. Konkreten Nutzerabschnitt mit Build/Gerät eingrenzen; keine vorsorgliche Qualitätsreduktion oder pauschaler Engineumbau. |
+| [Texturvorbereitung](texturvorbereitung-browserabnahme.md) | Fehler-/Residencyverträge technisch abgesichert; gezielter `file://`-Fehlerpfadcheck noch offen. Historischer Browserstart an Socket-Pfadlänge gescheitert, keine bewiesene Mobilabbruchursache. |
+| [Testpflege/alte Fixtures](test-und-werkzeugpflege.md) | Verbliebene HQ-/Mining-/Startannahmen fachlich berichtigen, bevor neue KI-/Balanceaussagen abgeleitet werden. Bereits korrigierte lokale Regelarenen nicht nochmals als unimplementiert führen. |
 
 ## P2 – zusammenhängende menschliche Abnahme
 
@@ -26,16 +26,16 @@ Nicht jedes offene Kästchen ist ein Bug. Gemeinsame Run-/Geräteblöcke statt s
 | [Zivilisationsupgrades/Außenposten](civilization-upgrades.md) | Feste Angebote, Echo-Ränge, Wellenanstieg, Rettungsfenster, Dreierauswahl und einmalige Lieferungen in echten Runs. |
 | [Mehrparteien-Prüfungen](mehrparteien-simulation.md) | Autonome FFA-/Wirtschafts-/Angriffsfälle erst nach Fixturepflege und eigener Prüffreigabe. |
 | [Terrain/Wege/Höhen](terrain-generation.md) | Rampendurchsatz, Sicht von oben/unten, Fundamente, Picking, faire Wirtschaftswege und Walling; interessante Vergleichsseeds erhalten. |
-| [Landschaften/taktische Darstellung](project-tomorrow.md) | Zentrale Bildabnahme einschließlich Desert/Westmark, Biotopen, Randkulisse, Kontrast/Nacht, Flugfreiraum und nassen Bodenakzenten. |
+| [Landschaften/taktische Darstellung](landschaften-und-taktische-darstellung.md) | Zentrale Bildabnahme einschließlich Desert/Westmark, Biotopen, Randkulisse, Kontrast/Nacht, Flugfreiraum und nassen Bodenakzenten. |
 | [Modelle](modelle.md) | Rollen-/Teamlesbarkeit, Hangauflage und Nachtlichter in dichten Gruppen. Positive Nachtatmosphäre erhalten, kein allgemeiner Neubau. |
 | [Upgrade-Gebäudemodelle](civilization-upgrade-models.md) | 36 Varianten implementiert; Rang-/Stillesbarkeit, Hang-/Nacht-/Siedlungswirkung und Variantenkosten im Spiel abnehmen. |
 | [Schwere Luftzerstörer](schwerer-luftzerstoerer.md) | Integriert; Endgame-Konterbarkeit, KI-Ausgaben, Flugfreiraum und Darstellung prüfen. |
 
-Modellkachel-Bild-/Touchabnahme unter [UI](ui-review.md#modellkacheln-bild-und-bedienung), Kosten ausschließlich unter [Performance](performance/README.md). Technische Prüfungen ersetzen keine visuelle/akustische/Echtgeräteabnahme.
+Modellkachel-Bild-/Touchabnahme unter [UI](ui-review.md#modellkacheln-bild-und-bedienung), Kosten ausschließlich unter [Performance](performance-und-mobilstabilitaet.md). Technische Prüfungen ersetzen keine visuelle/akustische/Echtgeräteabnahme.
 
 ## P3 – Pflege bei Bedarf
 
-[Test- und Werkzeugpflege](teststrategie-review.md) führt verbleibende Dateischnitte, Werkzeugkonventionen, Scratch-Besitz und mögliche Dauerregressionen. Capture-/Ausgabegrenzen sind unter [Scene Capture](../scene-capture.md) und [Deployment](../deployment.md) dokumentiert; kein eigenständiger offener Capture-Umbau belegt. Die Pflege einer itch-Seitenbeschreibung im Repository bleibt eine bedingte Entscheidung.
+[Test- und Werkzeugpflege](test-und-werkzeugpflege.md) führt verbleibende Dateischnitte, Werkzeugkonventionen, Scratch-Besitz und mögliche Dauerregressionen. Capture-/Ausgabegrenzen sind unter [Scene Capture](../scene-capture.md) und [Deployment](../deployment.md) dokumentiert; kein eigenständiger offener Capture-Umbau belegt. Die Pflege einer itch-Seitenbeschreibung im Repository bleibt eine bedingte Entscheidung.
 
 CSS-Entkopplung aus [UI](ui-review.md#css-verantwortung) als getrennten strukturellen Schritt behandeln. ECS, Worker-Threads, IK, weitere Caches oder Pooling brauchen konkrete Befunde; Dateilänge allein ist kein Umbaugrund.
 
@@ -45,9 +45,9 @@ Keine aktiven Fehler oder automatisch beschlossenen Erweiterungen. Vor Umsetzung
 
 | Issue | Voraussetzung / Entscheidung |
 | --- | --- |
-| [Skirmish](new-battle-screen.md) | Parteien, Startbedingungen, Kartenauswahl und Profiltrennung nach stabilem Kernloop festlegen. |
-| [Holdout](expeditions-missionsziele-und-holdout.md) | Begrenzter Missionspilot ist nicht der integrierte endlose Außenpostenmodus; eigenen Bedarf, Wellenetat und Belohnung klären. |
-| [Weitere Vorteile](upgrade-ideas.md) | Ideenpool; bestehende Progression zuerst abnehmen, neue Stapel-/Aura-/Auszahlungsregeln einzeln entscheiden. |
+| [Skirmish](skirmish-gefechtskonfiguration.md) | Parteien, Startbedingungen, Kartenauswahl und Profiltrennung nach stabilem Kernloop festlegen. |
+| [Holdout](holdout-missionspilot.md) | Begrenzter Missionspilot ist nicht der integrierte endlose Außenpostenmodus; eigenen Bedarf, Wellenetat und Belohnung klären. |
+| [Weitere Vorteile](expeditionsvorteile-ideen.md) | Ideenpool; bestehende Progression zuerst abnehmen, neue Stapel-/Aura-/Auszahlungsregeln einzeln entscheiden. |
 | [Einzigartige Blickfänge](unique-points-of-interest.md) | Atmosphärische Motive, Platzierung und Geometriekosten definieren; keine zusätzlichen Ressourcen-/Missionsmechaniken. |
 | [Android/Store/Werbung](android.md) | Browser-Mobilstabilität und Lebenszyklus zuerst, Verpackung/Store separat, Werbung später. |
 | [Communitykarten](community-maps.md) | Skirmish-Regeln → begrenztes Schema/Beispielkarte → lokaler Import, Plattform/Sharing erst danach. |

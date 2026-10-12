@@ -7,8 +7,8 @@
 Start-Upgrade-Verträge sowie lokale Produktions-/Energie-/Bau-/Upgradefälle verwenden bereits explizite Optionen beziehungsweise etablierte flache Regelarenen. Das beweist weder prozeduralen HQ-Abschluss noch Mining-/Liveness-Abnahme.
 
 - [ ] Übrige lokale Terrain-/Start-/Entitätszahlannahmen gegen aktuelle Weltrezepte und [Worker-Start](../gameplay.md#gefecht-und-fortschritt) prüfen. Verbliebene Profil-Upgrades, vorgefertigte HQs oder automatisch minende Worker insbesondere in optionalen Langtest-Fixtures berichtigen; lokale Regelarenen von echten Landschafts-/Startverträgen trennen.
-- [ ] Gemischte Fälle und Abstandregeln gezielt prüfen. Offene Worker-Langläufe unter [Navigation/Liveness](worker-bauwegfindung/issue.md); prozedurale Mining-/Transportabnahme bleibt offen. Ein bestandener lokaler Abbau beweist keine Kampf-/Crowdabnahme.
-- [ ] Etablierte Basen in Fachtests ausdrücklich aufbauen; echte Deploymentprüfungen beobachten bezahlten Worker→HQ-Ablauf. Tutorial-/FFA-Verträge sichern nur Teile des Starts. [FFA](mehrparteien-simulation.md) und [Startabnahme](procedural-battlefields.md) erst mit passenden Fixtures bewerten. Referenzen nicht zum Grünmachen regenerieren; Ausführung und Referenzpflege separat freigeben.
+- [ ] Gemischte Fälle und Abstandregeln gezielt prüfen. Offene Worker-Langläufe unter [Navigation/Liveness](navigation-worker-und-gruppenankunft.md); prozedurale Mining-/Transportabnahme bleibt offen. Ein bestandener lokaler Abbau beweist keine Kampf-/Crowdabnahme.
+- [ ] Etablierte Basen in Fachtests ausdrücklich aufbauen; echte Deploymentprüfungen beobachten bezahlten Worker→HQ-Ablauf. Tutorial-/FFA-Verträge sichern nur Teile des Starts. [FFA](mehrparteien-simulation.md) und [Startabnahme](prozedurale-gefechtsstarts.md) erst mit passenden Fixtures bewerten. Referenzen nicht zum Grünmachen regenerieren; Ausführung und Referenzpflege separat freigeben.
 
 ## Bestehende Kurzprüfungsblocker
 
@@ -27,7 +27,7 @@ Vorhandener [Browser-Smokecheck](../testing.md#technischer-browser-smokecheck) p
 
 - [ ] Ältere Capture-/Diagnosewerkzeuge bei konkretem Bedarf auf gemeinsamen Browser-Harness und expliziten Scratch-Besitz umstellen. Ignorierte Schreibwurzeln und Isolation erhalten; keine pauschale Bereinigung persönlicher Profile/Saves oder Integrations-Backups.
 - [ ] Diagnose-Start/Stopp samt Ressourcenfreigabe und technische VAO-Besitz-/Freigabechecks auf dauerhafte Regressionseignung prüfen. Historische worktree-lokale Scratch-Proben sind keine benötigten Repository-Eingaben; Optimierungsorakel alter Implementierungen nicht ungeprüft übernehmen.
-- [ ] Bei weiterem Baugrid-Messbedarf einen begrenzten parametrisierten Placement-Benchmark mit JSON-Ausgabe erwägen. Build/Umgebung dokumentieren, keine zeitabhängigen Pass-/Fail-Grenzen für Logiktests. Leistungsziele unter [Performance](performance/README.md).
+- [ ] Bei weiterem Baugrid-Messbedarf einen begrenzten parametrisierten Placement-Benchmark mit JSON-Ausgabe erwägen. Build/Umgebung dokumentieren, keine zeitabhängigen Pass-/Fail-Grenzen für Logiktests. Leistungsziele unter [Performance](performance-und-mobilstabilitaet.md).
 - [ ] Nur falls die itch-Seitenbeschreibung künftig im Repository gepflegt werden soll: einen maßgeblichen Text und manuellen Veröffentlichungsweg festlegen. `release/itch-description.md` existiert nicht; keinen aktuellen Veröffentlichungstext erfinden.
 
 Keine Screenshotserie auf Vorrat, keine Asset-/Deploymentänderung aus dieser Pflegeplanung. Arrangierte Medien sind keine Balance- oder vollständige Spielabnahme.

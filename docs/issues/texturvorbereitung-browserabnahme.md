@@ -2,7 +2,7 @@
 
 Die Vorbereitung prüft jetzt erfolgreiche Materialrückgaben und die tatsächliche Residency aller Pflichtmaterialien, bevor sie Erfolg meldet oder alte Materialien freigibt. Aktuelle Fehler erreichen den vorhandenen App-Fehlerpfad; überholte Anfragen liefern auch bei fehlgeschlagenen gemeinsam genutzten Loads nur `false` und melden keinen Fehler über eine neuere Szene.
 
-Der historische `Image.onerror`-Befund gilt nicht mehr: Materialien werden inzwischen prozedural erzeugt und hochgeladen. Keine Assetersetzung oder allgemeine Rendererbereinigung; kein belegter Zusammenhang mit [mobilen Grafikabbrüchen](performance/README.md#mobilstabilität-und-speicher).
+Der historische `Image.onerror`-Befund gilt nicht mehr: Materialien werden inzwischen prozedural erzeugt und hochgeladen. Keine Assetersetzung oder allgemeine Rendererbereinigung; kein belegter Zusammenhang mit [mobilen Grafikabbrüchen](performance-und-mobilstabilitaet.md#mobilstabilität-und-speicher).
 
 Build und gezielte Node-Regressionen für Erfolg, fehlgeschlagene Rückgaben/Uploads, fehlende Residency, Fortschritt, konkurrierende Anfragen, geteilte Loads samt Retry sowie App-Start-/Vorschaufehler bestanden. Keine KI-/Simulations- oder Vollsuiten ausgeführt.
 
