@@ -10,6 +10,7 @@
   button:disabled { opacity: .5; cursor: default; }
   :focus-visible { outline: 2px solid #77ddb0; outline-offset: 3px; }
   input { accent-color: #77ddb0; }
+  select { font: inherit; color: #e2e9ef; background: #202b38; border: 1px solid #596775; border-radius: 5px; padding: 4px; }
   header { flex: none; border-bottom: 1px solid #47535f; background: #151b23; padding: 8px 12px 5px; }
   .toolbar { display: flex; align-items: center; gap: 12px; }
   .brand, #infoOpen { flex: none; }
@@ -43,6 +44,7 @@
     <strong class="brand">Terrain-Labor</strong>
     <div class="controls" tabindex="0" aria-label="Einstellungen, auf schmalen Bildschirmen horizontal scrollbar">
       <button id="generate">Neues Layout</button>
+      <label>Boden <select id="terrainStyle"><option value="westmark">Westmark</option><option value="desert">Desert</option></select></label>
       <label title="Bäume sind rein visuell und blockieren keine Bewegung"><input id="trees" type="checkbox" checked> Bäume</label>
       <label title="Grün: mögliche Pflanzflächen, übriges Gelände dunkel. Grobe Vorschau; jeder Baumstandort wird zusätzlich exakt geprüft"><input id="planting" type="checkbox"> Pflanzflächen</label>
       <label>Walddichte <input id="treeDensity" type="range" min="0" max="100" step="5" value="65"><output id="treeDensityValue" for="treeDensity">65 %</output></label>
@@ -51,8 +53,8 @@
       <label title="Graseignung, unabhängig von Baumflächen und tatsächlicher Dichte"><input id="grassAreas" type="checkbox"> Grasflächen</label>
       <label>Grasdichte <input id="grassDensity" type="range" min="0" max="100" step="5" value="65"><output id="grassDensityValue" for="grassDensity">65 %</output></label>
       <span id="grassCount"></span>
-      <label title="Feste Höhenzonen im globalen Höhenraum anzeigen, unabhängig von Kartenminimum und -maximum"><input id="heightZones" type="checkbox" checked> Höhenzonen</label>
-      <label title="Spielräume im 3D-Modell markieren; bei Höhenzonen oder Pflanzflächen ausgeblendet"><input id="overlay" type="checkbox" checked disabled> Spielräume</label>
+      <label title="Feste Höhenzonen im globalen Höhenraum anzeigen, unabhängig von Kartenminimum und -maximum"><input id="heightZones" type="checkbox"> Höhenzonen</label>
+      <label title="Spielräume im 3D-Modell markieren; bei Höhenzonen oder Pflanzflächen ausgeblendet"><input id="overlay" type="checkbox"> Spielräume</label>
       <label title="Basis- und duales Netz in der Planungskarte anzeigen"><input id="dual" type="checkbox"> Netze</label>
       <label title="Gemeinsame weiche Verformung von Wegen, Flüssen und Kartenrand"><input id="curves" type="checkbox" checked> Verformung</label>
       <label title="Flussrouten vor der Höhen- und Brückenplanung abrunden"><input id="rounded" type="checkbox" checked> Runde Flüsse</label>
@@ -83,6 +85,7 @@
 <p>„Höhenzonen“ zeigt drei feste Höhenbereiche im fiktiven globalen Höhenraum von 0 bis 85: Tiefland bis 35 (grün), Mittelland von 35 bis 45 (ocker), Hochland ab 45 (grau). Das schmale Mittelland lässt beiden äußeren Zonen mehr Raum. Die Schwellen sind für alle Seeds identisch; Kartenminimum und -maximum verändern sie nicht. Eine Karte darf überwiegend in einer Zone liegen. Wasser und Brücken behalten ihre Farben; die Spielraummarkierung ist in diesem Modus ausgeblendet. Dies sind Diagnosefarben, keine Bodenmaterialien. Die Höhen außerhalb des Darstellungsraums erhalten die Farbe der jeweils äußersten Zone, ohne das Gelände zu begrenzen.</p>
 <p>„Bäume“ zeigt rein visuelle Laub- und Nadelbäume in seed-stabilen Gehölzen mit Lichtungen. Höhenzone, tatsächliche lokale Neigung und Abstände zu Wasser, Wegen, Brücken, Zugängen und Kartenrand bestimmen die Standorte. Kronen sind bei den Freihaltezonen für Wege, Brücken und Kartenrand berücksichtigt. Trockene Flussufer sind ausdrücklich bepflanzbar, auch auf steileren Böschungen; dort ist die Pflanzrate erhöht. Stämme bleiben außerhalb des Wassers, Kronen dürfen darüber ragen. Die Bäume sind keine Bewegungshindernisse. „Walddichte“ fügt Bäume hinzu oder entfernt sie, ohne verbleibende Bäume zu verschieben oder Gelände neu zu erzeugen. „Pflanzflächen“ zeigt eine grobe grüne Eignungsvorschau statt der Höhenfarben; jeder tatsächliche Standort wird zusätzlich einzeln geprüft. Eine geeignete Fläche muss nicht bewaldet sein.</p>
 <p>„Gras“ ergänzt kurze statische Büschel auf einer eigenen, seed-stabilen Vegetationsschicht. Grasflächen dürfen sich mit Baumflächen überschneiden und nutzen auch steilere Hänge und schmale Flächen. Wasser, Brücken und Wegkerne bleiben frei; die Dichte läuft zu Wegrändern weich aus. Tiefland erhält dichten Bewuchs, Mittelland weniger, Hochland nur vereinzelte Büschel; Ufer erhalten einen Bonus. „Grasdichte“ filtert feste Standorte, ohne Bäume, Gelände oder Navigation zu verändern. „Grasflächen“ zeigt die Eignung gelbgrün statt der Baumflächen; beide Diagnose-Overlays sind alternativ, die Vegetation selbst darf sich überlagern. Die Darstellung verwendet instanzierte, texturfreie Grashalme (mit einem WebGL-Fallback), ohne Wind, Schatten oder Bewegungshindernisse.</p>
+<p>„Boden“ schaltet zwischen Westmark (Wiese, Granit, Erde) und Desert (Sediment/Sand, geschichteter Fels) um. Die eingebetteten prozeduralen Materialrezepte und die Welt-/Triplanarprojektion stammen aus dem Spiel. Höhen, Hangneigung, eigene großräumige Muster, Wege und Ufer mischen die Oberflächen weich. Höhenübergänge bleiben global bei 35/45, nicht relativ zum Kartenminimum. Feines Mikrorelief verändert nur die Beleuchtung; ohne die WebGL-Derivate-Erweiterung bleibt die Texturfarbe sichtbar. Höhenzonen und Pflanzflächen sind weiterhin Diagnoseansichten. Der Materialwechsel verändert weder Geometrie noch Vegetation, Seed oder Navigation. Spielbeleuchtung, Wetter, Schatten und Postprocessing werden nicht übernommen.</p>
 <p>Das Gelände verwendet ein feineres Grundmesh und zusätzliche Unterteilungen entlang der Flüsse. Gemeinsame, flächengewichtete Vertex-Normalen und interpolierte Höhenfarben reduzieren sichtbare Dreiecksfacetten. Das Höhenfeld und die Steigungsprüfung bleiben davon unabhängig; Wasser und Brückendecks behalten getrennte Oberflächen.</p>
 <p>Die Spielflächen besitzen weich gerundete, unterschiedlich gestreckte und asymmetrische Konturen statt sechs dominanter Ecken. Dieselben Konturen bestimmen Darstellung, Schutzabstände und Höhenplanung; ein breiter Kern für Weganschlüsse bleibt erhalten.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
@@ -1012,6 +1015,179 @@ function grassBladeGeometry() {
   return new Float32Array(data);
 }
 </script>
+<script id="terrain-materials">
+'use strict';
+// Embedded JS port of src/renderer/materials.ts: same recipes/hash/tileable bake.
+// Keep standalone file:// delivery; never load game runtime or external assets.
+const LAB_SURFACES = {
+  ground: {pattern:'sediment',seed:0x73616e64,low:[91,62,47],high:[185,142,94],tile:[14,14],relief:.12,variation:.22},
+  desertRock: {pattern:'strata',seed:0x726f636b,low:[104,77,61],high:[167,129,94],tile:[18,18],relief:.22,variation:.22},
+  westmarkMeadow: {pattern:'grass',seed:0x6d6f7373,low:[44,66,33],high:[136,144,75],tile:[8,8],relief:.07,variation:.15},
+  westmarkGranite: {pattern:'granite',seed:0x6772616e,low:[71,80,83],high:[168,175,165],tile:[12,12],relief:.12,variation:.06},
+  westmarkEarth: {pattern:'soil',seed:0x736f696c,low:[65,49,35],high:[155,125,85],tile:[7,7],relief:.08,variation:.10}
+};
+const LAB_MATERIALS = {westmark:['westmarkMeadow','westmarkGranite','westmarkEarth'],desert:['ground','desertRock','ground']};
+function surfaceHash(x,y,seed) {
+  let h=Math.imul(x,374761393)^Math.imul(y,668265263)^seed;h=Math.imul(h^(h>>>13),1274126177);
+  return ((h^(h>>>16))>>>0)/4294967296;
+}
+function surfaceSmooth(a,b,value) {return smooth((value-a)/(b-a));}
+function surfaceNoise(u,v,periodX,periodY,seed) {
+  const x=u*periodX,y=v*periodY,ix=Math.floor(x),iy=Math.floor(y),wrap=(n,p)=>((n%p)+p)%p,
+    h=(dx,dy)=>surfaceHash(wrap(ix+dx,periodX),wrap(iy+dy,periodY),seed),a=surfaceSmooth(0,1,x-ix),b=surfaceSmooth(0,1,y-iy);
+  return (h(0,0)*(1-a)+h(1,0)*a)*(1-b)+(h(0,1)*(1-a)+h(1,1)*a)*b;
+}
+function sampleSurface(recipe,u,v) {
+  const seed=recipe.seed,noise=(x,y,salt=0)=>surfaceNoise(u,v,x,y,seed^salt),
+    broad=noise(4,4),medium=noise(16,16,1237),fine=noise(64,64,7919);
+  let height=broad*.45+medium*.35+fine*.20,pigment=height;
+  switch(recipe.pattern) {
+    case 'sediment': {
+      const ripple=.5+.5*Math.sin(v*Math.PI*32+broad*5);
+      height=.55*broad+.25*medium+.20*ripple;pigment=.26+height*.54+fine*.20;break;
+    }
+    case 'strata': {
+      const wave=v*12+broad*1.8+medium*.25,band=wave-Math.floor(wave),ledge=surfaceSmooth(.08,.32,band)*(1-surfaceSmooth(.65,.96,band));
+      height=ledge*.20+medium*.52+fine*.28;pigment=.25+height*.50+noise(3,12,83)*.25;break;
+    }
+    case 'grass': {
+      const blades=noise(96,16,353);height=broad*.35+medium*.20+blades*.45;pigment=.12+broad*.45+blades*.30+fine*.13;break;
+    }
+    case 'granite': height=broad*.30+medium*.40+fine*.30;pigment=.15+medium*.48+surfaceSmooth(.3,.72,fine)*.37;break;
+    case 'soil': height=broad*.45+medium*.35+fine*.20;pigment=.12+height*.72+fine*.16;break;
+  }
+  const t=Math.max(0,Math.min(1,pigment));
+  return [...recipe.low.map((c,i)=>c+(recipe.high[i]-c)*t),Math.max(0,Math.min(1,height))*255];
+}
+function bakeSurface(name,size=256) {
+  const pixels=new Uint8Array(size*size*4),recipe=LAB_SURFACES[name];
+  for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
+    const s=sampleSurface(recipe,x/size,y/size),i=(y*size+x)*4;
+    for(let c=0;c<4;c++) pixels[i+c]=Math.round(s[c]);
+  }
+  return {width:size,height:size,pixels};
+}
+function surfaceWorldStyle(name,seed) {
+  const r=LAB_SURFACES[name],salt=seed^r.seed^0x7374796c,warmth=(surfaceHash(0,0,salt)-.5)*r.variation,
+    brightness=1+(surfaceHash(1,0,salt)-.5)*.12;
+  return {tint:[brightness+warmth,brightness,brightness-warmth],offset:[surfaceHash(2,0,salt),surfaceHash(3,0,salt)]};
+}
+function makeMaterialAttributes(mesh,plan) {
+  const normals=new Float64Array(mesh.vertices.length*3),details=new Float32Array(mesh.vertices.length*2);
+  for(const t of mesh.triangles) if(t.material===0) {
+    const [a,b,c]=t.indices.map(i=>mesh.vertices[i]),ux=b.x-a.x,uy=b.y-a.y,uz=b.z-a.z,vx=c.x-a.x,vy=c.y-a.y,vz=c.z-a.z,
+      nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+    for(const i of t.indices) {normals[i*3]+=nx;normals[i*3+1]+=ny;normals[i*3+2]+=nz;}
+  }
+  const edges=(plan?.edges || []).map(e=>[plan.regions[e.a],plan.regions[e.b]]);
+  for(let i=0;i<mesh.vertices.length;i++) {
+    const p=mesh.vertices[i],x=p.sourceX+SIZE/2,y=p.sourceY+SIZE/2;let gap=Infinity;
+    for(const [a,b] of edges) {
+      if(x<Math.min(a.x,b.x)-10 || x>Math.max(a.x,b.x)+10 || y<Math.min(a.y,b.y)-10 || y>Math.max(a.y,b.y)+10) continue;
+      gap=Math.min(gap,segmentDistance(x,y,a,b));
+    }
+    details[i*2]=1-smooth((gap-(ROAD_RADIUS-1))/3);
+    details[i*2+1]=plan?.river ? 1-smooth((riverDistance(plan.river,x,y)-RIVER_RADIUS)/(BANK_WIDTH+2)) : 0;
+  }
+  const data=new Float32Array(mesh.triangles.length*3*5);let offset=0;
+  for(const t of mesh.triangles) for(const i of t.indices) {
+    const nx=normals[i*3],ny=normals[i*3+1],nz=normals[i*3+2],length=Math.hypot(nx,ny,nz)||1;
+    // Shader uses the game's Y-up convention, the lab itself uses Z-up.
+    data.set([nx/length,nz/length,ny/length,details[i*2],details[i*2+1]],offset);offset+=5;
+  }
+  return data;
+}
+function terrainMaterialGLSL(relief) {
+  return `
+    varying vec3 worldPosition; varying vec3 groundNormal; varying vec2 groundInfo;
+    uniform sampler2D groundTex; uniform sampler2D rockTex; uniform sampler2D earthTex;
+    uniform vec2 groundTile; uniform vec2 surfaceOffset; uniform vec3 surfaceTint;
+    uniform vec3 surfaceRelief; uniform bool desert;
+    float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
+    float veilHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+    float veilNoise(vec2 p){
+      vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+      return mix(mix(veilHash(i),veilHash(i+vec2(1,0)),f.x),mix(veilHash(i+vec2(0,1)),veilHash(i+vec2(1,1)),f.x),f.y);
+    }
+    float veilCloud(vec2 p){return veilNoise(p)*.57+veilNoise(p*2.03+7.1)*.29+veilNoise(p*4.07-3.4)*.14;}
+    // Game triplanar sampling: fourth-power normals; strata stay horizontal.
+    vec4 stoneSample(vec3 n){
+      vec3 p=worldPosition*.125,w=pow(abs(n),vec3(4));w/=max(w.x+w.y+w.z,.0001);
+      return texture2D(rockTex,p.zy)*w.x+texture2D(rockTex,p.xz)*w.y+texture2D(rockTex,p.xy)*w.z;
+    }
+    vec4 landscapeSample(vec3 n){
+      vec2 p=worldPosition.xz,uv=p/groundTile+surfaceOffset;
+      vec2 warp=vec2(veilNoise(p*.12),veilNoise(p*.12+19.7))*.38;
+      vec4 grass=mix(texture2D(groundTex,uv+warp),texture2D(groundTex,uv*1.371+3.76+warp),.42);
+      grass.rgb*=surfaceTint*mix(.87,1.08,veilNoise(p*.075));
+      vec4 stone=stoneSample(n),earth=texture2D(earthTex,p*.15);
+      float slope=length(n.xz)/max(n.y,.05),grain=veilNoise(p*.64);
+      // Absolute 35/45 cutoffs, softly crossed over +/- 3 height units.
+      float middle=smoothstep(32.0,38.0,worldPosition.y+(grain-.5)*1.5);
+      float high=smoothstep(42.0,48.0,worldPosition.y+(grain-.5)*1.5);
+      float exposed=1.0-smoothstep(.55,.94,n.y);
+      float rock=clamp(max(exposed*.92,high*.72)+smoothstep(.45,1.35,slope)*.18,0.0,1.0);
+      float patch=veilCloud(p*.042+surfaceOffset);
+      if(!desert) {
+        // Westmark high-meadow warm/cool cloud tint, independent of map extrema.
+        grass.rgb*=mix(vec3(.63,.83,.70),vec3(1.08,.99,.63),smoothstep(.25,.78,patch));
+        grass.rgb=mix(grass.rgb,grass.rgb*vec3(1.10,1.04,.82),middle*.30);
+        float weather=veilNoise(p*.19),seam=sin(worldPosition.y*1.1+weather*7.0+p.x*.06);
+        stone.rgb=mix(stone.rgb*vec3(.92,.99,1.03),vec3(.59,.56,.43),.24);
+        stone.rgb*=mix(.91,1.06,smoothstep(-.75,.35,seam));
+        stone.rgb=mix(stone.rgb,stone.rgb*vec3(.77,.91,.57),smoothstep(.63,.94,n.y)*smoothstep(.28,.76,weather)*.58);
+      } else {
+        grass.rgb*=mix(vec3(.96,.91,.87),vec3(1.09,1.04,.94),patch);
+      }
+      vec3 base=mix(grass.rgb,stone.rgb,rock);
+      float height=mix(grass.a*surfaceRelief.x,stone.a*surfaceRelief.y,rock);
+      // Game compacted soil/loose shoulders, driven by planned roads here.
+      float road=groundInfo.x,edgeNoise=veilNoise(p*.8),trail=smoothstep(.05,.88,road+(edgeNoise-.5)*.26);
+      vec3 soil=earth.rgb*(desert?vec3(.90,.86,.78):vec3(1.24,1.15,.91));
+      base=mix(base,soil,trail*.87);height=mix(height,earth.a*.035+veilNoise(p*5.3)*.009,trail);
+      // Port of the signed-bank sediment blend; lab stores positive wetness.
+      float wet=groundInfo.y,bankNoise=veilNoise(p*.63)+.35*veilNoise(p*2.7);
+      float sediment=smoothstep(.02,.38,wet+(bankNoise-.6)*.38)*smoothstep(0.0,.05,wet);
+      vec3 bankEarth=texture2D(earthTex,p*.23).rgb*vec3(.76,.78,.72);
+      float gravel=smoothstep(.60,.78,veilNoise(p*5.7));
+      base=mix(base,mix(bankEarth,stone.rgb*.82,gravel*.55),sediment*.88);base*=1.0-wet*.23;
+      height=mix(height,earth.a*surfaceRelief.z,sediment);
+      return vec4(base,height);
+    }
+    ${relief ? `vec3 materialReliefNormal(vec3 n,float height){
+      vec3 dx=dFdx(worldPosition),dy=dFdy(worldPosition),r1=cross(dy,n),r2=cross(n,dx);
+      float det=dot(dx,r1);
+      vec3 gradient=sign(det)*(dFdx(height)*r1+dFdy(height)*r2)/max(abs(det),.000001);
+      gradient/=max(1.0,length(gradient)*2.0);return normalize(n-gradient);
+    }` : ''}
+  `;
+}
+function makeMaterialGPU(gl,program) {
+  const uniforms={};
+  for(const name of ['groundTex','rockTex','earthTex','groundTile','surfaceOffset','surfaceTint','surfaceRelief','desert']) uniforms[name]=gl.getUniformLocation(program,name);
+  return {uniforms,textures:new Map()};
+}
+function bindTerrainMaterials(gpu,style,seed) {
+  const gl=gpu.gl,m=gpu.materials,u=m.uniforms,names=LAB_MATERIALS[style] || LAB_MATERIALS.westmark;
+  for(let i=0;i<3;i++) {
+    const name=names[i];gl.activeTexture(gl.TEXTURE0+i);
+    if(!m.textures.has(name)) {
+      const image=bakeSurface(name),texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,image.width,image.height,0,gl.RGBA,gl.UNSIGNED_BYTE,image.pixels);
+      gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+      m.textures.set(name,texture);
+    } else gl.bindTexture(gl.TEXTURE_2D,m.textures.get(name));
+    gl.uniform1i(u[['groundTex','rockTex','earthTex'][i]],i);
+  }
+  if(m.style!==style || m.seed!==seed) {
+    const s=surfaceWorldStyle(names[0],seed);gl.uniform2fv(u.groundTile,LAB_SURFACES[names[0]].tile);
+    gl.uniform2fv(u.surfaceOffset,s.offset);gl.uniform3fv(u.surfaceTint,s.tint);
+    gl.uniform3fv(u.surfaceRelief,names.map(name=>LAB_SURFACES[name].relief));gl.uniform1i(u.desert,style==='desert'?1:0);
+    m.style=style;m.seed=seed;
+  }
+}
+</script>
 <script id="terrain-view">
 'use strict';
 // Browser preview state is separate from all pure generation/audit blocks.
@@ -1029,7 +1205,13 @@ function createGPU() {
     }
     return shader;
   };
+  const relief = !!gl.getExtension('OES_standard_derivatives');
   const vertex = compile(gl.VERTEX_SHADER, `
+    attribute vec3 materialNormal;
+    attribute vec2 materialInfo;
+    varying vec3 worldPosition;
+    varying vec3 groundNormal;
+    varying vec2 groundInfo;
     attribute vec3 position;
     attribute vec4 surface;
     attribute float plantable;
@@ -1046,10 +1228,14 @@ function createGPU() {
       float depth = forward * camera.z + position.z * camera.w;
       gl_Position = vec4(x * scale.x, y * scale.y, -depth / 500.0, 1.0);
       face = surface; plantMask = plantable;
+      worldPosition = vec3(position.x, position.z + 40.0, position.y);
+      groundNormal = materialNormal; groundInfo = materialInfo;
     }
   `);
   const fragment = compile(gl.FRAGMENT_SHADER, `
-    precision mediump float;
+    ${relief ? '#extension GL_OES_standard_derivatives : enable' : ''}
+    precision highp float;
+    ${terrainMaterialGLSL(relief)}
     varying vec4 face;
     uniform bool overlay;
     uniform bool heightZones;
@@ -1066,6 +1252,14 @@ function createGPU() {
         else if (face.y < heightCuts.y) color = vec3(${HEIGHT_BANDS[1].color.map(n => n.toFixed(1)).join(', ')});
         else color = vec3(${HEIGHT_BANDS[2].color.map(n => n.toFixed(1)).join(', ')});
       }
+      float light = face.x;
+      if (!heightZones && face.w < 0.5) {
+        vec3 n = normalize(groundNormal);
+        vec4 sampleColor = landscapeSample(n);
+        ${relief ? 'n = materialReliefNormal(n, sampleColor.a);' : ''}
+        color = sampleColor.rgb * 255.0;
+        light = .45 + .55 * max(0.0, dot(n, normalize(vec3(-.4,.768,-.5))));
+      }
       if (overlay && !heightZones && face.z > 0.5) color = vec3(100.0, 205.0, 150.0);
       if (planting && face.w < 0.5) color = plantMask >= 0.5 ? (grassAreas ? vec3(175.0,210.0,65.0) : vec3(60.0,215.0,135.0)) : color * 0.38;
       if (face.w > 0.5 && face.w < 1.5) color = vec3(38.0, 147.0, 217.0);
@@ -1073,7 +1267,7 @@ function createGPU() {
       if (face.w > 2.5 && face.w < 3.5) color = vec3(112.0, 78.0, 48.0);
       if (face.w > 3.5 && face.w < 4.5) color = vec3(62.0, 137.0, 61.0);
       if (face.w > 4.5) color = vec3(37.0, 100.0, 71.0);
-      gl_FragColor = vec4(color * face.x / 255.0, 1.0);
+      gl_FragColor = vec4(color * light / 255.0, 1.0);
     }
   `);
   const program = gl.createProgram();
@@ -1093,6 +1287,8 @@ function createGPU() {
   }
   gl.enable(gl.DEPTH_TEST); gl.clearColor(32 / 255, 43 / 255, 56 / 255, 1);
   return { gl, program, buffer, attributes, uploaded: null, count: 0,
+    materialDataBuffer: gl.createBuffer(), materials: makeMaterialGPU(gl, program),
+    materialNormal: gl.getAttribLocation(program, 'materialNormal'), materialInfo: gl.getAttribLocation(program, 'materialInfo'),
     grassMaskBuffer: gl.createBuffer(), grassMaskCache: {}, grassAreas: gl.getUniformLocation(program, 'grassAreas'),
     plantBuffer: gl.createBuffer(), treeBuffer: gl.createBuffer(), plantAttribute: gl.getAttribLocation(program, 'plantable'),
     planting: gl.getUniformLocation(program, 'planting'),
@@ -1140,6 +1336,16 @@ function draw3D() {
       gl.bindBuffer(gl.ARRAY_BUFFER, gpu.buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       gpu.count = data.length / 7; gpu.uploaded = mesh;
     }
+    if (gpu.materialDataBuffer) {
+      bindTerrainMaterials(gpu, document.getElementById('terrainStyle').value, preview.plan?.seed || 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gpu.materialDataBuffer);
+      if (gpu.materialMesh !== mesh || gpu.materialPlan !== preview.plan) {
+        gl.bufferData(gl.ARRAY_BUFFER, makeMaterialAttributes(mesh, preview.plan), gl.STATIC_DRAW);
+        gpu.materialMesh = mesh; gpu.materialPlan = preview.plan;
+      }
+      gl.enableVertexAttribArray(gpu.materialNormal); gl.vertexAttribPointer(gpu.materialNormal, 3, gl.FLOAT, false, 20, 0);
+      gl.enableVertexAttribArray(gpu.materialInfo); gl.vertexAttribPointer(gpu.materialInfo, 2, gl.FLOAT, false, 20, 12);
+    }
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniform4f(gpu.camera, Math.cos(camera.yaw), Math.sin(camera.yaw), Math.cos(camera.tilt), Math.sin(camera.tilt));
@@ -1181,6 +1387,10 @@ function draw3D() {
         gpu.uploadedTrees = preview.treeGeometry;
       }
       if (gpu.plantAttribute != null) { gl.disableVertexAttribArray(gpu.plantAttribute); gl.vertexAttrib1f(gpu.plantAttribute, 0); }
+      if (gpu.materialDataBuffer) {
+        gl.disableVertexAttribArray(gpu.materialNormal); gl.vertexAttrib3f(gpu.materialNormal, 0, 1, 0);
+        gl.disableVertexAttribArray(gpu.materialInfo); gl.vertexAttrib2f(gpu.materialInfo, 0, 0);
+      }
       gl.drawArrays(gl.TRIANGLES, 0, preview.treeGeometry.length / 7);
     }
     if (document.getElementById('grass').checked && preview.grassInstances?.length) drawGrass(gpu, preview.grassInstances, canvas);
@@ -1221,6 +1431,7 @@ function drawGrass(gpu,data,canvas) {
   // Disable terrain attributes before switching layouts/programs.
   for(const a of gpu.attributes) gl.disableVertexAttribArray(a.location);
   if(gpu.plantAttribute!=null) gl.disableVertexAttribArray(gpu.plantAttribute);
+  if(gpu.materialDataBuffer) { gl.disableVertexAttribArray(gpu.materialNormal); gl.disableVertexAttribArray(gpu.materialInfo); }
   gl.useProgram(g.program);
   gl.uniform4f(g.camera,Math.cos(camera.yaw),Math.sin(camera.yaw),Math.cos(camera.tilt),Math.sin(camera.tilt));
   gl.uniform2f(g.target,camera.targetX,camera.targetY);
@@ -1321,6 +1532,7 @@ function bindLabControls() {
   document.getElementById('generate').addEventListener('click', generate);
   document.getElementById('heightLegend').innerHTML = heightLegendHTML();
   syncDisplayControls();
+  document.getElementById('terrainStyle').addEventListener('change', () => { requestDraw(); });
   document.getElementById('heightZones').addEventListener('change', () => {
     syncDisplayControls();
     draw3D(); // Uniforms only: preserve the seed, plan, mesh and GPU upload.
