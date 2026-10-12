@@ -85,8 +85,8 @@ function decorateEcology(builder:BattlefieldBuilder) {
       extent:part==='Trunk'&&families.includes('Acacia')?1:0,detail:part==='Tuft'||part==='Brush'});
     w.renderData.geometries.push({mesh:`ecologyStone${variant}`,model:'uplandStone',seed:173+variant*7919,extent:0});
   }
-  const safe=(x:number,z:number,r:number)=>w.layout.resourceSites.every(p=>Math.hypot(x-p.x,z-p.z)>r+8&&
-    distance({x,z},battlefieldGasPosition(p))>r+6),
+  const safe=(x:number,z:number,r:number)=>w.layout.economyRegions.every(({center,vent})=>Math.hypot(x-center.x,z-center.z)>r+8&&
+    distance({x,z},vent)>r+6),
     clear=(x:number,z:number,r:number)=>occupied.every(p=>Math.hypot(x-p.x,z-p.z)>r+p.r),
     place=(part:string,v:number,x:number,y:number,z:number,r:number,h:number,color:number,yaw:number,mat:WorldPlacement['material'],glow=0)=>
       builder.place(`ecology${part}${v}`,x,y,z,r,h,r,color,yaw,0,0,glow,1,'static',mat);

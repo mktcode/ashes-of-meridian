@@ -263,12 +263,12 @@
         this.random(); s.nextId++;
         // Keep the former default loadout's RNG entry point for crystal amounts and enemy spawns.
         for (let i = 0; i < 24; i++) this.random();
-        for (let [i, site] of layout.resourceSites.entries()) {
-          for (let j = 0; j < 5; j++) {
+        for (let [i, region] of layout.economyRegions.entries()) {
+          for (let j = 0; j < region.crystals.length; j++) {
             let p = this.crystalPosition(i, j);
             this.spawnResource('crystal', p.x, p.z, 1800 + Math.floor(this.random() * 900));
           }
-          const gas = battlefieldGasPosition(site);
+          const gas = region.vent;
           this.spawnResource('gas', gas.x, gas.z, ECHO_VENT_CAPACITY);
         }
         this.random(); s.nextId++;
@@ -384,7 +384,7 @@
         return p ? this.spawnUnit(type, p.x, p.z, team, faction) : null;
       },
       crystalPosition(this: MeridianGame, siteIndex: number, depositIndex: number): Position {
-        return battlefieldCrystalPosition(this.world!.layout.resourceSites[siteIndex], siteIndex, depositIndex);
+        return { ...this.world!.layout.economyRegions[siteIndex].crystals[depositIndex] };
       },
       spawnResource(this: MeridianGame, type: ResourceType, x: number, z: number, amount: number) {
         return this.spawn('resource', type, x, z, -1, FACTION_ID.FIRST, { amount, size: type === 'gas' ? 1.5 : 1.3 });

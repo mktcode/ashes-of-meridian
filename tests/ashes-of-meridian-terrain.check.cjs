@@ -127,8 +127,8 @@ test('desert economy retains nearby legal HQ footprints and snapped refinery fou
 test('overlapping road shoulders join without an angular summit and keep their graded cores', () => {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world']);
   const result = vm.runInContext(`(() => {
-    const world={terrainSeed:1409,extent:160,renderProfile:{variation:{family:'westmark',relief:'rolling',heightScale:1}},
-      layout:{resourceSites:[],corridors:[[[-100,-20],[100,-20]],[[-100,20],[100,20]]]}};
+    const world={terrainSeed:1409,extent:160,landscape:{terrain:{relief:'rolling',heightScale:1}},
+      layout:{resourceSites:[],economyRegions:[],corridors:[[[-100,-20],[100,-20]],[[-100,20],[100,20]]]}};
     const joined=dynamicTerrainPlan(world).height, eps=.001,
       left=(joined(0,0)-joined(0,-eps))/eps, right=(joined(0,eps)-joined(0,0))/eps;
     world.layout.corridors=[[[-100,-20],[100,-20]]];
@@ -157,7 +157,7 @@ test('deployment refinement finds off-grid shelves even when a large coarse pool
   for (const clustered of [false,true]) {
     const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world'], { scripts });
     const result = vm.runInContext(`(() => {
-      const world = {extent:100,gridSize:80,layout:{resourceSites:[]},surface:{fits:()=>true},
+      const world = {extent:100,gridSize:80,layout:{resourceSites:[],economyRegions:[]},surface:{fits:()=>true},
         point:Battlefield.prototype.point,idx:Battlefield.prototype.idx,cellSize:2.5};
       battlefieldEconomyDistance = () => 30;
       battlefieldDeploymentSpace = (w,p) => {
@@ -196,6 +196,7 @@ test('deployment improves compact valid starts for two, three and four parties',
       {x:-80,z:-80},{x:80,z:-80},{x:-80,z:80},{x:80,z:80}]},
       startSites:[{x:-35,z:-35},{x:35,z:-35},{x:-35,z:35},{x:35,z:35},
         {x:-80,z:-80},{x:80,z:-80},{x:-80,z:80},{x:80,z:80}]};
+    world.layout.economyRegions=battlefieldEconomyRegions(world.layout.resourceSites);
     return [2,3,4].map(count => allocateBattlefieldStarts(world,19,count,'exploration'));
   })()`, context);
   for (const starts of results) {
@@ -212,9 +213,11 @@ test('deployment prefers separate nearby resource regions but permits shared eco
     battlefieldEconomyDistance = () => 30;
     const world = {extent:140,layout:{resourceSites:[{x:0,z:0},{x:-80,z:100}]},
       startSites:[{x:-80,z:0},{x:80,z:0},{x:-80,z:80}]};
+    world.layout.economyRegions=battlefieldEconomyRegions(world.layout.resourceSites);
     const pair = allocateBattlefieldStarts(world,19,2,'exploration');
     const shared = allocateBattlefieldStarts(world,19,3,'exploration');
     world.layout.resourceSites = [{x:0,z:0}];
+    world.layout.economyRegions=battlefieldEconomyRegions(world.layout.resourceSites);
     const singleRegion = allocateBattlefieldStarts(world,19,3,'exploration');
     return {pair,shared,singleRegion};
   })()`, context);

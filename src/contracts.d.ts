@@ -107,6 +107,8 @@ interface BattlefieldLayout {
   startSites: Position[];
   /** Economy regions are generated before deployment; none identify live parties. */
   resourceSites: Position[];
+  /** Coordinate-owned geometry shared by terrain, resources, decor and deployment. */
+  economyRegions: readonly BattlefieldEconomyRegion[];
   corridors: [number, number][][];
 }
 
@@ -133,13 +135,60 @@ type EcologyBiome = 'verdant' | 'ochre' | 'rime' | 'mycelium';
 type EcologyWeather = 'clear' | 'mist' | 'rain' | 'snow' | 'ash';
 type EcologyFlora = 'Grove' | 'Acacia' | 'Conifer' | 'Fungus' | 'Coral' | 'Fan' | 'Spire' | 'Pod' | 'Arch' | 'Reed' | 'Shelf' | 'Cactus' | 'Palm';
 type WorldVariationFamily = 'alien' | 'desert' | 'westmark' | 'frontier' | 'haven';
-type WorldReliefForm = 'rolling' | 'dunes' | 'basin' | 'folds' | 'craters' | 'terraces' | 'ridges' | 'broken-crater';
+type WorldReliefForm = 'rolling' | 'dunes' | 'basin' | 'folds' | 'terraces' | 'ridges' | 'broken-crater';
+interface BattlefieldTerrainRecipe {
+  readonly relief: WorldReliefForm;
+  readonly heightScale: number;
+}
+interface LandscapeHabitatRecipe {
+  readonly biome: EcologyBiome;
+  readonly flora: EcologyFlora;
+  readonly weather: EcologyWeather;
+  readonly landmark?: WorldVariation['landmark'];
+  readonly dry?: readonly [number, number, number];
+  readonly lush?: readonly [number, number, number];
+  readonly leaf?: number;
+  readonly bloom?: number;
+}
+interface LandscapeVariantDefinition {
+  readonly id: string;
+  readonly name: string;
+  /** Absent when the family owns an independent relief axis. */
+  readonly terrain?: BattlefieldTerrainRecipe;
+  readonly habitat: LandscapeHabitatRecipe;
+}
+interface LandscapeFamilyDefinition {
+  readonly id: WorldVariationFamily;
+  readonly name: string;
+  readonly materials: Pick<BattlefieldRenderProfile, 'groundTexture' | 'rockSurface'>;
+  readonly relief: { readonly mode: 'recipe' } | {
+    readonly mode: 'axis';
+    readonly forms: readonly [WorldReliefForm, WorldReliefForm];
+    readonly suffixes: readonly [string, string];
+    readonly heightScale: number;
+  };
+  readonly recipes: readonly LandscapeVariantDefinition[];
+}
+interface ResolvedLandscapeRecipe {
+  readonly terrain: BattlefieldTerrainRecipe;
+  readonly habitat: BattlefieldEcology;
+  readonly presentation: BattlefieldRenderProfile;
+}
+interface BattlefieldEconomyRegion {
+  readonly center: Readonly<Position>;
+  readonly crystals: readonly Readonly<Position>[];
+  readonly vent: Readonly<Position>;
+  readonly hq: Readonly<Position>;
+  readonly deployment: Readonly<Position>;
+  /** Ramp protection differs intentionally from decor and foundation margins. */
+  readonly rampProtection: readonly (Readonly<Position> & { readonly radius: number })[];
+}
 interface WorldVariation {
   readonly id: string;
   readonly name: string;
   readonly family: WorldVariationFamily;
+  /** Display/shader metadata derived from the resolved CPU recipe, not a terrain input. */
   readonly relief: WorldReliefForm;
-  readonly amplitude: number;
   readonly heightScale: number;
   readonly flora: EcologyFlora;
   readonly landmark: 'Relic' | 'Spire' | 'Radar' | 'Wreck' | 'Pylon';
@@ -166,7 +215,6 @@ interface BattlefieldEcology {
 }
 
 interface BattlefieldRenderProfile {
-  variationFamily?: WorldVariationFamily;
   variation?: WorldVariation;
   /** Opt-in seeded habitat/weather; resolved once into ecology for CPU/view sharing. */
   wilderness?: EcologyBiome | 'seeded';
@@ -196,6 +244,7 @@ interface BattlefieldSize {
 }
 
 interface BattlefieldDefinition {
+  family: LandscapeFamilyDefinition;
   name: string;
   size: BattlefieldSize;
   /** Resolve dimensions before layout and buffer allocation, without encounter RNG. */

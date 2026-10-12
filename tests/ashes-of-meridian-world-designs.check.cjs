@@ -6,7 +6,7 @@ const { loadScripts, BATTLEFIELD_SCRIPTS } = require('./helpers/game-scripts.cjs
 const json = value => JSON.parse(JSON.stringify(value));
 function scope(extra = []) {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...extra]);
-  return vm.runInContext('({Battlefield,BattlefieldSurface,BATTLEFIELDS,MISSIONS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,battlefieldVariation,availableBattlefields,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
+  return vm.runInContext('({Battlefield,BattlefieldSurface,BATTLEFIELDS,MISSIONS,battlefieldDesign,battlefieldAtmosphere,battlefieldDayCycle,resolveBattlefieldLandscape,availableBattlefields,TerrainModels: typeof TerrainModels === "undefined" ? null : TerrainModels})', context);
 }
 function signature(world) {
   return createHash('sha256').update(JSON.stringify(world.layout)).update(world.staticGrid)
@@ -72,7 +72,7 @@ test('all landscape families share a seed-owned starting hour and readable midni
     const expected = api.battlefieldAtmosphere(api.BATTLEFIELDS.desert.render, {timeOfDay:'seeded'}, seed).atmosphere.timeOfDay;
     hours.add(expected);
     for (const recipe of Object.values(api.BATTLEFIELDS)) {
-      const start = api.battlefieldAtmosphere(api.battlefieldVariation(recipe.render, seed), recipe.design?.atmosphere, seed);
+      const start = api.battlefieldAtmosphere(api.resolveBattlefieldLandscape(recipe.family, recipe.render, seed).presentation, recipe.design?.atmosphere, seed);
       assert.equal(start.atmosphere.timeOfDay, expected);
       const night = api.battlefieldDayCycle(start, (24-expected)*25);
       assert.ok(Math.abs(night.atmosphere.timeOfDay) < 1e-10);

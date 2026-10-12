@@ -1,11 +1,11 @@
 /* Expedition map catalog: families of the shared procedural landscape generator. */
 'use strict';
 const BATTLEFIELDS = {
-  desert: createDynamicBattlefield('DESERT', 'desert'),
-  'alien-planet': createDynamicBattlefield('ALIEN PLANET', 'alien'),
-  westmark: createDynamicBattlefield('WESTMARK', 'westmark'),
-  frontier: createDynamicBattlefield('FRONTIER', 'frontier'),
-  haven: createDynamicBattlefield('HAVEN', 'haven')
+  desert: createDynamicBattlefield(LANDSCAPE_FAMILIES.desert),
+  'alien-planet': createDynamicBattlefield(LANDSCAPE_FAMILIES.alien),
+  westmark: createDynamicBattlefield(LANDSCAPE_FAMILIES.westmark),
+  frontier: createDynamicBattlefield(LANDSCAPE_FAMILIES.frontier),
+  haven: createDynamicBattlefield(LANDSCAPE_FAMILIES.haven)
 } as const;
 type BattlefieldId = keyof typeof BATTLEFIELDS;
 const DEFAULT_BATTLEFIELD: BattlefieldId = 'desert';

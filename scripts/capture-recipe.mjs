@@ -11,6 +11,10 @@ export function captureSchema(root = resolve(import.meta.dirname, '..')) {
     const source = stripTypeScriptTypes(readFileSync(resolve(root, 'src/capture.ts'), 'utf8'), {
       mode: 'transform',
     });
+    const families = stripTypeScriptTypes(
+      readFileSync(resolve(root, 'src/battlefields/families.ts'), 'utf8'),
+      { mode: 'strip' },
+    );
     const catalog = stripTypeScriptTypes(
       readFileSync(resolve(root, 'src/battlefields/catalog.ts'), 'utf8'),
       { mode: 'strip' },
@@ -18,7 +22,7 @@ export function captureSchema(root = resolve(import.meta.dirname, '..')) {
     schemas.set(
       root,
       runInNewContext(
-        `${catalog}\n${source}\n({maps:availableBattlefields(), validate:validateCaptureScene, resolve:resolveCaptureCamera, view:captureViewMatrix})`,
+        `${families}\n${catalog}\n${source}\n({maps:availableBattlefields(), validate:validateCaptureScene, resolve:resolveCaptureCamera, view:captureViewMatrix})`,
         { createDynamicBattlefield: () => ({}) },
       ),
     );

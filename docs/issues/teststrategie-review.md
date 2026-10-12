@@ -10,6 +10,11 @@ Start-Upgrade-Verträge sowie lokale Produktions-/Energie-/Bau-/Upgradefälle ve
 - [ ] Gemischte Fälle und Abstandregeln gezielt prüfen. Offene Worker-Langläufe unter [Navigation/Liveness](worker-bauwegfindung/issue.md); prozedurale Mining-/Transportabnahme bleibt offen. Ein bestandener lokaler Abbau beweist keine Kampf-/Crowdabnahme.
 - [ ] Etablierte Basen in Fachtests ausdrücklich aufbauen; echte Deploymentprüfungen beobachten bezahlten Worker→HQ-Ablauf. Tutorial-/FFA-Verträge sichern nur Teile des Starts. [FFA](mehrparteien-simulation.md) und [Startabnahme](procedural-battlefields.md) erst mit passenden Fixtures bewerten. Referenzen nicht zum Grünmachen regenerieren; Ausführung und Referenzpflege separat freigeben.
 
+## Bestehende Kurzprüfungsblocker
+
+- [ ] Formatabweichung in `tests/ashes-of-meridian-capture.check.cjs` gezielt bereinigen: `check:quality` stoppt dort bereits in `check:format`. Die Datei ist gegenüber dem geprüften Ausgangsstand `2038076` unverändert; Lint, Repository-/Dokumentationsprüfung, Build und die übrigen expliziten Qualitätsnetz-Fälle lassen sich unabhängig prüfen.
+- [ ] Den Gruppenvertrag `fragment groups completely mirror their index directories…` in `tests/ashes-of-meridian-harness.check.cjs` mit dem tatsächlichen Capture-Einstieg abgleichen: `UI_SCRIPTS` enthält `capture`, dessen Datei aber unter `dist/src/capture.js` statt `dist/src/ui/` liegt. Der Verzeichnistest meldet deshalb eine fehlende UI-Datei; dieselbe Inkonsistenz besteht im Ausgangsstand `2038076`. Der gezielte Battlefield-Gruppenvertrag bleibt unabhängig prüfbar.
+
 ## Prüfkosten und Abdeckung bei fachlicher Pflege
 
 - [ ] Laufzeiten nach Build/Datei/Szenario zunächst aus vorhandenen Ergebnissen erfassen; breite Neumessung freigeben lassen. Historischer Auswahlhinweis auf `937914e`: Rendererfall `map switches keep only current world meshes…` etwa 45 s, viele Shader-/Orchestrierungsfälle Millisekunden. Namensfilter statt ungeprüft ganzer Datei; Terrain-/Residenzschutz nicht wegen Dauer löschen, Concurrency/Heap nicht blind ändern.
