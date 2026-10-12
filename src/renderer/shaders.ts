@@ -157,6 +157,8 @@ float veilNoise(vec2 p){
  vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
  return mix(mix(veilHash(i),veilHash(i+vec2(1,0)),f.x),mix(veilHash(i+vec2(0,1)),veilHash(i+vec2(1,1)),f.x),f.y);
 }
+// Layered value noise is also used by the meadow surface.
+float veilCloud(vec2 p){return veilNoise(p)*.57+veilNoise(p*2.03+7.1)*.29+veilNoise(p*4.07-3.4)*.14;}
 float habitat(vec2 p){
  float warp=sin(p.x*.017+p.y*.031+u_ecology.w)*9.;
  return clamp(.5+sin(p.x*.041+warp*.08+u_ecology.w)*.24+cos(p.y*.036-p.x*.015-u_ecology.w)*.23,0.,1.);

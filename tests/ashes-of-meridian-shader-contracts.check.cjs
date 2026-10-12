@@ -47,6 +47,13 @@ test('mesh materials use model coordinates and scene/shadow passes share wind di
   for (const shader of [VERT, DEPTHV]) assert.ok(shader.includes(ECOLOGY_WIND));
 });
 
+test('shared terrain noise calls have GLSL helper definitions', () => {
+  const { FRAG } = shaders();
+  const helpers = new Set([...FRAG.matchAll(/\bfloat\s+(veil\w+)\s*\(/g)].map(([, name]) => name));
+  for (const [, name] of FRAG.matchAll(/\b(veil\w+)\s*\(/g))
+    assert.ok(helpers.has(name), `${name}: shared noise helper is defined`);
+});
+
 test('local diffuse and specular lighting use the scenery fog gate', () => {
   const { FRAG } = shaders();
   const local = FRAG.slice(FRAG.indexOf('vec3 localLighting'), FRAG.indexOf('float shadow()'));
