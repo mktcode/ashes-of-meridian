@@ -401,30 +401,43 @@ class MeridianCapture {
           <label><input type="checkbox" data-layer="connections" checked disabled> Connections: green main / orange detached (radius 6)</label>
           <label><input type="checkbox" data-layer="cliffs" disabled> Cliffs: red</label>
           <label><input type="checkbox" data-layer="foundations" disabled> HQ terrain sample: green suitable / red unsuitable</label>
-          <label><input type="checkbox" data-layer="economy" disabled> Economic network and anchors</label>
+          <label><input type="checkbox" data-layer="economy" disabled> Resolved routes and anchors (selected link: yellow)</label>
+          <label><input type="checkbox" data-layer="links" disabled> Original straight links: dashed white</label>
+          <label><input type="checkbox" data-layer="changes" disabled> Terrain changes: orange cut / purple fill</label>
           <label><input type="checkbox" data-layer="starts" disabled> Start candidates: white / two-party landings: yellow</label>
-        </div><pre data-diagnostic-report role="status">Analysis runs only on request, then refreshes on map load.</pre>
-        <p>Annotations show through terrain. HQ samples ignore resources and occupancy; corridors are planned links, not repair ramps.
+        </div><div class="corridorProfile"><label>Height profile <select data-corridor-route disabled></select></label>
+          <canvas data-corridor-profile width="480" height="160" hidden aria-label="Selected corridor height profile"></canvas></div>
+        <pre data-diagnostic-report role="status">Analysis runs only on request, then refreshes on map load.</pre>
+        <p>Annotations show through terrain. HQ samples ignore resources and occupancy; corridors are resolved routes, not repair ramps.
+          Terrain changes include repairs; the straight datum reference does not. Height profiles are sampled.
           Static access does not prove traffic flow or balance. Diagnostic overlays are not part of the capture recipe.</p>
       </details>`;
     document.body.append(panel); this.toolbar=panel;
     const diagnostics=this.mapDiagnostics=new MeridianMapDiagnostics(),
       diagnosticReport=panel.querySelector<HTMLElement>('[data-diagnostic-report]')!,
       reportButton=panel.querySelector<HTMLButtonElement>('[data-viewer="report"]')!,
-      layerControls=[...panel.querySelectorAll<HTMLInputElement>('[data-layer]')];
+      layerControls=[...panel.querySelectorAll<HTMLInputElement>('[data-layer]')],
+      routeControl=panel.querySelector<HTMLSelectElement>('[data-corridor-route]')!,
+      profileCanvas=panel.querySelector<HTMLCanvasElement>('[data-corridor-profile]')!;
     const analyze=()=>{
       if (this.busy || !this.readyToDraw || !this.game.s || !this.game.world) throw Error('No stable map to analyze');
-      const {report:r}=diagnostics.analyze(this.game.world,this.game.s.map,this.anchors), pct=(v:number)=>`${(v*100).toFixed(1)}%`;
+      const data=diagnostics.analyze(this.game.world,this.game.s.map,this.anchors),{report:r}=data,pct=(v:number)=>`${(v*100).toFixed(1)}%`;
       diagnosticReport.textContent=[`${r.map} · seed ${r.seed} · ${r.recipe} · build ${MERIDIAN_BUILD_INFO.id.slice(-12)}`,
         `Height: ${r.height.min.toFixed(1)}–${r.height.max.toFixed(1)} · cliff cells: ${pct(r.cliffs.fraction)}`,
         `Broad network: ${r.broad.components} components · largest ${pct(r.broad.largestShare)} of broad-clear cells`,
         `Broad interior coverage: ${pct(r.broad.interiorCoverage)} · vehicle components: ${r.vehicle.components}`,
         `Sector coverage (rows −Z → +Z): ${[0,3,6].map(i=>r.broad.sectorCoverage.slice(i,i+3).map(pct).join(' / ')).join(' | ')}`,
         `Economy: ${r.economy.accessibleAnchors}/${r.economy.anchors} anchors accessible · ${r.economy.broadHubs}/${r.economy.regions} broad hubs`,
+        `Corridors: ${r.corridors.links} links · ${r.corridors.meanDetour.toFixed(2)}× mean detour · ${r.corridors.repairs??'unknown'} repairs · radius-6 cores ${r.corridors.allCoresClear?'clear':'blocked'}`,
+        ...(r.corridors.modification?[`Terrain changed >0.5 units: ${pct(r.corridors.modification.changedFraction)} · sampled cut/fill ${r.corridors.modification.sampledCutVolume.toFixed(0)}/${r.corridors.modification.sampledFillVolume.toFixed(0)} units³`,
+          `Sampled absolute change: ${r.corridors.modification.sampledAbsoluteVolume.toFixed(0)} units³ · straight datum reference (before repairs): ${r.corridors.modification.straightDatumReference.sampledAbsoluteVolume.toFixed(0)}`]:[]),
         `HQ terrain sample (${r.hqSample.spacing}-unit spacing): ${r.hqSample.suitable}/${r.hqSample.tested} suitable points`,
         `Public start candidates: ${r.deployment.candidates} · landing distances are straight-line, not fairness scores`,
         ...r.deployment.landings.map(p=>`${p.name}: nearest resource ${p.nearestEconomyDistance.toFixed(1)} units`),
         ...(r.warnings.length?r.warnings:['Static terrain checks meet the current generator thresholds; gameplay remains untested.'])].join('\n');
+      routeControl.innerHTML=data.profiles.map(p=>`<option value="${p.index}">Link ${p.index+1} (${p.detourRatio.toFixed(2)}×)</option>`).join('');
+      routeControl.value=String(diagnostics.selectedRoute);routeControl.disabled=!data.profiles.length;
+      profileCanvas.hidden=!data.profiles.length;diagnostics.drawProfile(profileCanvas.getContext('2d')!);
       reportButton.disabled=false;layerControls.forEach(c=>c.disabled=false);this.annotationsChanged();
     };
     panel.querySelector<HTMLButtonElement>('[data-viewer="analyze"]')!.onclick=()=>{
@@ -432,6 +445,10 @@ class MeridianCapture {
     };
     for (const input of layerControls) input.onchange=()=>{
       diagnostics.layers[input.dataset.layer as MapDiagnosticLayer]=input.checked;this.annotationsChanged();
+    };
+    routeControl.onchange=()=>{
+      if(this.busy||!diagnostics.data)return;
+      diagnostics.selectedRoute=Number(routeControl.value);diagnostics.drawProfile(profileCanvas.getContext('2d')!);this.annotationsChanged();
     };
     const form=panel.querySelector('form')!, map=form.elements.namedItem('map') as HTMLSelectElement,
       seed=form.elements.namedItem('seed') as HTMLInputElement, mist=form.elements.namedItem('mist') as HTMLInputElement,
@@ -448,7 +465,7 @@ class MeridianCapture {
     const load = async () => {
       const controls=[...panel.querySelectorAll<HTMLButtonElement|HTMLInputElement|HTMLSelectElement>('button,input,select')];
       const mapId=map.value, value=Number(seed.value); controls.forEach(b=>b.disabled=true);
-      diagnostics.invalidate();this.annotationsChanged();
+      diagnostics.invalidate();routeControl.innerHTML='';profileCanvas.hidden=true;this.annotationsChanged();
       status.textContent='Preparing landscape…';
       diagnosticReport.textContent=diagnostics.enabled?'Preparing map analysis…':'Analysis runs only on request, then refreshes on map load.';
       try {
@@ -467,6 +484,7 @@ class MeridianCapture {
       finally {
         controls.forEach(b=>b.disabled=false);
         reportButton.disabled=!diagnostics.data;layerControls.forEach(c=>c.disabled=!diagnostics.data);
+        routeControl.disabled=!diagnostics.data?.profiles.length;
       }
     };
     map.value=params.get('map') ?? 'desert'; seed.value=params.get('seed') ?? '1409';

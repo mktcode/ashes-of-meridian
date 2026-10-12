@@ -47,9 +47,11 @@ function dynamicTerrainPlan(world: Pick<Battlefield, 'terrainSeed' | 'extent' | 
   const random = seeded(world.terrainSeed ^ 0x4d4f5250),
     morphology = sampleBattlefieldMorphology(world.terrainSeed, world.extent, world.landscape.terrain, random),
     shoulders = sampleBattlefieldEconomyShoulders(world.layout.economyRegions, random),
-    natural = battlefieldNaturalTerrain(morphology),
-    height = fitBattlefieldEconomy(world, world.layout, natural, shoulders, BUILDINGS.hq.size);
-  return { height };
+    natural = battlefieldNaturalTerrain(morphology),size={extent:world.extent,cellSize:world.cellSize},
+    layout={...world.layout,corridors:world.layout.corridorLinks??world.layout.corridors},
+    before=fitBattlefieldEconomy(size,{...layout,corridors:[]},natural,shoulders,BUILDINGS.hq.size),
+    plan=planBattlefieldCorridors(size,layout,before);
+  return {...plan,straightReference:()=>fitBattlefieldEconomy(size,layout,natural,shoulders,BUILDINGS.hq.size)};
 }
 function createDynamicBattlefield(family: LandscapeFamilyDefinition): BattlefieldDefinition {
   const palette: BattlefieldPalette = { ground: 0x637344, rock: 0x828783, accent: 0xbad49c, flora: 0x355b3a };
@@ -59,7 +61,8 @@ function createDynamicBattlefield(family: LandscapeFamilyDefinition): Battlefiel
     render: { ...family.materials, wilderness: 'seeded', terrainReceiverHeight: 80, daylight: true, upland: true,
       landscape: { earth: 'westmarkEarth', bark: 'westmarkBark' }, haze: [0.055, 0.09, 0.13] },
     generate(builder) {
-      const w = builder.world, plan = dynamicTerrainPlan(w), surface = w.surface = connectBattlefieldTerrain(w, plan.height);
+      const w = builder.world, plan = dynamicTerrainPlan(w),surface=w.surface=connectBattlefieldTerrain(w,plan.height,plan);
+      w.layout.corridorLinks=plan.links;w.layout.corridors=plan.corridors;w.corridorPlan=plan;
       w.staticGrid.set(surface.cliffs); w.terrainFeatureGrid.set(surface.cliffs);
       buildBattlefieldTerrainView(builder, surface, plan.height);
     }

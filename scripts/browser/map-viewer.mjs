@@ -90,11 +90,22 @@ await withBrowser(
     assert.equal(diagnostic.build.id, await page.evaluate(() => window.Meridian.build.id));
     assert.equal(diagnostic.economy.accessibleAnchors, diagnostic.economy.anchors);
     assert.ok(diagnostic.broad.interiorCoverage >= 0.55);
+    assert.equal(diagnostic.schema, 2);
+    assert.equal(diagnostic.corridors.allCoresClear, true);
+    assert.ok(diagnostic.corridors.routes.some((r) => r.points.length > 2));
+    assert.ok(diagnostic.corridors.modification.changedFraction > 0);
+    const profile = page.locator('[data-corridor-profile]');
+    assert.equal(await profile.isVisible(), true);
+    await page.locator('[data-corridor-route]').selectOption('1');
+    assert.equal(
+      await page.evaluate(() => window.Meridian.capture.mapDiagnostics.selectedRoute),
+      1,
+    );
     assert.equal(await overlayHasPixels(), true);
     await page.locator('[data-layer="connections"]').uncheck();
     await ready();
     assert.equal(await overlayHasPixels(), false);
-    for (const layer of ['cliffs', 'foundations', 'economy', 'starts']) {
+    for (const layer of ['cliffs', 'foundations', 'economy', 'starts', 'links', 'changes']) {
       const control = page.locator(`[data-layer="${layer}"]`);
       await control.check();
       await ready();
@@ -254,6 +265,8 @@ await withBrowser(
       window.Meridian.capture.exportMapDiagnostics(),
     );
     assert.equal(reloadedDiagnostic.seed, 1410);
+    assert.equal(reloadedDiagnostic.corridors.allCoresClear, true);
+    assert.equal(await page.locator('[data-corridor-route]').inputValue(), '0');
     assert.equal(await page.locator('[data-layer="economy"]').isChecked(), true);
     assert.equal(
       await page
@@ -278,6 +291,8 @@ await withBrowser(
     await ready();
     assert.equal(await page.locator('[data-viewer="report"]').isDisabled(), true);
     assert.equal(await page.locator('[data-layer="economy"]').isDisabled(), true);
+    assert.equal(await page.locator('[data-corridor-route]').isDisabled(), true);
+    assert.equal(await profile.isVisible(), false);
     assert.equal(await page.evaluate(() => window.Meridian.capture.mapDiagnostics.data), undefined);
     assert.equal(
       await page.evaluate(() => window.Meridian.game.s.seed),

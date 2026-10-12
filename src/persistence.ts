@@ -336,8 +336,8 @@ function createMeridianPersistence(deps: PersistenceDependencies): MeridianPersi
       const profileRecord = JSON.parse(Store.get(PROFILE_KEY) || 'null'), p = profileRecord?.expedition;
       savedExpedition = p ?? null;
       if (p == null) return null;
-      if (profileRecord.version !== 2 || p.version !== 12) throw Error('Incompatible expedition save');
-      const normalized: MeridianExpedition = { ...readRecipe(p), version: 12, battle: null };
+      if (profileRecord.version !== 2 || p.version !== 13) throw Error('Incompatible expedition save');
+      const normalized: MeridianExpedition = { ...readRecipe(p), version: 13, battle: null };
       if(p.rescuedArmy!==undefined) {
         if(!validEvacuatedArmy(p.rescuedArmy,deps.units))throw Error('Invalid evacuated army');
         normalized.rescuedArmy=p.rescuedArmy.map((u:EvacuatedUnit)=>({...u}));

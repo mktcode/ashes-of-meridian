@@ -109,6 +109,8 @@ interface BattlefieldLayout {
   resourceSites: Position[];
   /** Coordinate-owned geometry shared by terrain, resources, decor and deployment. */
   economyRegions: readonly BattlefieldEconomyRegion[];
+  /** Unchanged economic graph endpoints, separate from resolved terrain routes. */
+  corridorLinks?: [number, number][][];
   corridors: [number, number][][];
 }
 
@@ -327,7 +329,7 @@ interface ExpeditionWorld {
 }
 
 interface MeridianExpedition extends ExpeditionBattleRecipe {
-  version: 12;
+  version: 13;
   battle: ExpeditionBattleSave | null;
   worlds?: ExpeditionWorld[];
   rescuedUpgrades?: CivilizationUpgradeTotals;

@@ -39,7 +39,7 @@ function victoryFixture() {
   const h=harness(),{game,ui}=h;
   const recipe={faction:0,depth:0,abilities:['orbital','repair','scan','drop'],upgrades:{},benefits:{startingAlloy:1},enemyBenefits:[{}],
     encounter:{map:'desert',seed:1409,mission:'hq-elimination',deployment:'exploration',enemies:[2]}};
-  ui.expedition={...copy(recipe),version:12,battle:null,worlds:[]};
+  ui.expedition={...copy(recipe),version:13,battle:null,worlds:[]};
   game.start({...recipe,...recipe.encounter});
   const worker=game.alive(e=>e.team===0&&e.type==='worker')[0];
   game.spawnBuilding('hq',worker.x,worker.z,0,0,{progress:1});

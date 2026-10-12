@@ -802,7 +802,7 @@
           ui.showCodex();
         } else if (mapExperiment) {
           // Explicit, local manual playtest. No normal profile reads/writes or automatic spectator run.
-          ui.expedition = { version: 12, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, upgrades: {},
+          ui.expedition = { version: 13, battle: null, worlds: [], faction: 0, abilities: [...DEFAULT_ABILITY_LOADOUT], depth: 0, upgrades: {},
             benefits: {startingWorkers: 2}, enemyBenefits: [{}],
             encounter: {mission: DEFAULT_MISSION, deployment: 'resource-start', map: mapExperiment,
               seed: /^[1-9][0-9]{0,7}$/.test(params.get('seed') ?? '') ? Number(params.get('seed')) : 1409,

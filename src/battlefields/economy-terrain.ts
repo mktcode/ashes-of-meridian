@@ -29,10 +29,10 @@ function fitBattlefieldEconomy(size: BattlefieldSize, layout: BattlefieldLayout,
         scale = Math.max(1, Math.hypot(dx, dz) / .06);
       return { ...p, height: datum(p.x, p.z), dx: dx / scale, dz: dz / scale };
     }),
-    routes = layout.corridors.map(route => {
-      const [a, b] = route, dx = b[0] - a[0], dz = b[1] - a[1];
+    routes = layout.corridors.flatMap(route => route.slice(1).map((b,i) => {
+      const a=route[i], dx = b[0] - a[0], dz = b[1] - a[1];
       return { x: a[0], z: a[1], dx, dz, length2: dx * dx + dz * dz };
-    }),
+    })).filter(r=>r.length2>.0001),
     height: BattlefieldHeightField = (x, z) => {
       const grade = datum(x, z);
       let h = raw(x, z, grade), roadRetention = 1;
@@ -66,7 +66,10 @@ function fitBattlefieldEconomy(size: BattlefieldSize, layout: BattlefieldLayout,
 }
 function supportBattlefieldHeadquarters(size: BattlefieldSize, regions: readonly BattlefieldEconomyRegion[],
     vents: readonly BattlefieldVentPlane[], height: BattlefieldHeightField, hqRadius: number): BattlefieldHeightField {
-  const smooth = battlefieldSmooth, repairs = regions.flatMap(({ hq: p }) => {
+  // Include every coarse cliff cell touched by the existing radius-nine exit
+  // check, not just the building center. A radius-ten L4 core misses its corners.
+  const smooth = battlefieldSmooth,core=Math.max(10,(Math.max(9,hqRadius+1)+size.cellSize)*Math.pow(2,.25)),
+    shoulder=12,repairs = regions.flatMap(({ hq: p }) => {
     const ox = Math.round(p.x / size.cellSize) * size.cellSize,
       oz = Math.round(p.z / size.cellSize) * size.cellSize,
       probe = new BattlefieldSurface(12.5, size.cellSize, (x, z) => height(x + ox, z + oz)),
@@ -81,9 +84,9 @@ function supportBattlefieldHeadquarters(size: BattlefieldSize, regions: readonly
     let h = height(x, z);
     for (const p of repairs) {
       const dx = x - p.x, dz = z - p.z, d = Math.pow(dx ** 4 + dz ** 4, .25);
-      if (d < 18) {
+      if (d < core+shoulder) {
         const plane = p.height + p.dx * dx + p.dz * dz;
-        let influence = 1 - smooth((d - 10) / 8);
+        let influence = 1 - smooth((d - core) / shoulder);
         // Wider HQ shoulders must not alter any complete refinery footprint.
         for (const vent of vents)
           influence *= smooth((Math.hypot(x - vent.x, z - vent.z) - 7.5) / 7);
