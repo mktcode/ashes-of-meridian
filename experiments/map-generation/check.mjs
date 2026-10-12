@@ -1,17 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { loadLab } from './test-support.mjs';
 
-// Checks the embedded, standalone program without importing game code or a DOM.
-const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-assert.match(script, /generate\(\);\s*$/);
-const context = vm.createContext({
-  document: { getElementById: () => ({ addEventListener() {} }), addEventListener() {} },
-  window: { addEventListener() {} },
-  ResizeObserver: class { observe() {} },
-});
-vm.runInContext(script.replace(/generate\(\);\s*$/, ''), context);
+// Checks only the pure core, mesh and audits, without game code or DOM stubs.
+const context = loadLab();
 
 for (const seed of [1, 2, 19, 16053245]) {
   const audit = vm.runInContext(`(() => {
@@ -47,7 +39,7 @@ for (const seed of [1, 2, 19, 16053245]) {
     const nodeDegrees = new Map();
     for (const e of river.selected) nodeDegrees.set(e.b, (nodeDegrees.get(e.b) || 0) + 1);
     return {
-      connected: checkConnected(mask, n), maxGrade: terrain.maxPlayableGrade,
+      connected: checkConnected(mask, n), maxGrade: auditSurface(terrain),
       downhill: river.curves.every(points => points.every((p, i) => !i || points[i - 1].height > p.height)),
       splits: river.splits, exits: river.exits.length, noMerges: [...nodeDegrees.values()].every(n => n === 1),
       crossings, localBridges, roundTripError, maxDeviation, maxDepthError,

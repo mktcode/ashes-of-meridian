@@ -13,6 +13,14 @@
 
 Die 3D-Karte füllt das Browserfenster unter einer schmalen Steuer- und Statusleiste. Die einklappbare Planungskarte liegt klein unten links; Erklärungen, Legende und Bedienhinweise stehen im Info-Modal (Schließen per Button, Escape oder Hintergrundklick). Auf schmalen Bildschirmen ist die Steuerleiste horizontal scrollbar. Der Vollbild-Button blendet zusätzlich die Browserleisten aus. Größenänderungen zeichnen nur die vorhandenen GPU-Daten mit korrigiertem Seitenverhältnis neu; sie erzeugen kein neues Gelände. Die Zeichenauflösung ist auf vier Millionen Pixel und höchstens zweifache Pixeldichte begrenzt.
 
+## Aufbau und Erweiterung
+
+Die einzelne HTML-Datei enthält benannte klassische Scriptblöcke für reinen Generierungskern, Mesh-Aufbau, Diagnosen, Planungskarte, WebGL-Ansicht, Controller und Browserstart. Sie teilen gezielt globale Bindungen und werden synchron in HTML-Reihenfolge geladen; das sind Verantwortungsgrenzen, keine ES-Module oder vollständige Namensraum-Isolation. Es gibt weiterhin keine Laufzeit-Imports oder erforderlichen Buildschritte.
+
+Kern, Mesh und Diagnosen benötigen weder DOM noch WebGL. Der Controller führt Aufbau, Prüfung und Darstellung ausdrücklich nacheinander aus; reine Kamera-/Anzeigeaktionen zeichnen nur neu. Steigungen werden am fertigen Mesh geprüft, nicht während dessen Konstruktion. Browserzustand und Kamera sind getrennt von den generierten Plandaten. Darstellungsfunktionen verändern den Plan nicht. Künftige Dekoration soll den fertigen Plan und dessen Höhenabfragen lesen, einen eigenen Zufallsstrom nutzen und weder Gelände noch Begehbarkeit verändern.
+
+Die Node-Prüfungen laden über einen gemeinsamen Testhelfer ausschließlich die benötigten Scriptblöcke. Der Browserstart wird nicht geladen oder aus Quelltext herausgeschnitten; DOM-Stubs sind nur für die Bedienungs-/Upload-Prüfung nötig. Günstige synthetische Höhenabfragen lassen sich gezielt an Mesh-Aufbau und Rasterdiagnose übergeben, ohne globale Kernfunktionen zu ersetzen.
+
 ## Topologie vor Gelände
 
 Zuerst Spielräume, Wege, Flussrouten und Kreuzungen planen, anschließend kompatible Regionshöhen wählen und die Landschaft darum aufbauen. Polygonabstände begrenzen die Höhenversätze; ein gemeinsames distanzbasiertes Höhenfeld gibt auch Wegkreuzungen eine eindeutige Höhe. Noise bleibt außerhalb geschützter Flächen und ihrer Sicherheitszone.
@@ -45,6 +53,6 @@ Dies ist ein stilisiertes Verteilernetz, keine Wasserphysik oder Erosionssimulat
 
 Kurze Konturprüfung ohne Mesh-/Rasteraufbau: `node experiments/map-generation/check-regions.mjs`. Sie prüft deterministische Formen, Konvexität, Mindestkern, begrenzte Ausdehnung, gemeinsame Planungsgeometrie, exakte Distanzabfragen, fallendes Höhendatum und unveränderte flache Betttiefe; sie ist keine vollständige Gelände- oder Spielbarkeitsprüfung.
 
-Kurze Mesh-/Upload-Prüfung: `node experiments/map-generation/check-mesh.mjs`. Sie verwendet ein günstiges synthetisches Höhenfeld für das volle Grundmesh und prüft gemeinsame Beleuchtung, interpolierte Höhen, getrennte Materialien, feste Höhenzonen und einmaligen GPU-Upload auch beim Umschalten der Zonen. Sie erzeugt keine prozedurale Testkarte und ersetzt weder deren Steigungs-/Rasterprüfung noch echte WebGL- oder visuelle Abnahme.
+Kurze Mesh-/Upload-Prüfung: `node experiments/map-generation/check-mesh.mjs`. Sie verwendet ein günstiges synthetisches Höhenfeld für das volle Grundmesh und prüft gemeinsame Beleuchtung, interpolierte Höhen, getrennte Materialien, feste Höhenzonen und einmaligen GPU-Upload auch beim Umschalten der Zonen. Kleine Diagnosefälle unterscheiden Brückendeck und Flussbett und prüfen Rasterverbindungen. Sie erzeugt keine prozedurale Testkarte und ersetzt weder deren Steigungs-/Rasterprüfung noch echte WebGL- oder visuelle Abnahme.
 
 Optionale CPU-Prüfung ohne Installation: `node experiments/map-generation/check.mjs` im Repository-Root. Sie erzeugt vollständige Meshes und Raster, ist kein schneller Smoke-Test und sollte für die visuelle Vorschau nicht vorausgesetzt werden. Sie prüft gekrümmte Kanten, gemeinsame Kreuzungsanker, lokale Brücken, Randanschlüsse, inverse Abbildung, fallende Wasserhöhen, Rasterverbindung und tatsächliche Dreiecksneigung an vier festen Seeds. Sie ersetzt weder WebGL-/Bedienungsprüfung noch visuelle Abnahme.

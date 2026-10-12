@@ -1,15 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { loadLab, VIEW_SCRIPTS } from './test-support.mjs';
 
 // Exercise the full-resolution mesh and upload with a cheap synthetic height
 // field. No production terrain queries, river carving or navigation raster.
-const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-assert.match(script, /generate\(\);\s*$/);
 const canvas = { width: 800, height: 600, getBoundingClientRect: () => ({ width: 800, height: 600 }), addEventListener() {} };
 const elements = new Map([['height', canvas]]);
-const context = vm.createContext({
+const context = loadLab({ scripts: VIEW_SCRIPTS, globals: {
   assert,
   document: { getElementById: id => {
     if (!elements.has(id)) elements.set(id, {
@@ -19,21 +16,35 @@ const context = vm.createContext({
   }, addEventListener() {} },
   window: { addEventListener() {}, devicePixelRatio: 1 },
   ResizeObserver: class { observe() {} },
-});
-vm.runInContext(script.replace(/generate\(\);\s*$/, ''), context, { timeout: 1000 });
+} });
 const result = vm.runInContext(`(() => {
-  sample = (plan, x, y) => {
+  assert.equal(preview.plan, null);
+  assert.equal(preview.mesh, null);
+  assert.equal(document.getElementById('heightZones').listeners.size, 0);
+  bindLabControls();
+  const sampleHeight = (plan, x, y) => {
     const height = 40 + .0005 * ((x - SIZE / 2) ** 2 + (y - SIZE / 2) ** 2);
     return { height, planned: true, bridge: false, deckHeight: height + .08, water: 38.6 };
   };
-  riverDistance = () => Infinity;
-  const plan = { warp: makeWarp(2, true), river: { outlines: [] } };
-  mesh = makeMesh(plan);
+  const plan = { warp: makeWarp(2, true), river: { outlines: [], spatial: riverSpatialTree([]) } };
+  const mesh = preview.mesh = makeMesh(plan, sampleHeight);
   assert.equal(TERRAIN_RESOLUTION, 96);
   assert.equal(mesh.baseFaceCount, 6 * 96 ** 2);
   assert.equal(mesh.terrainFaceCount, mesh.baseFaceCount);
   assert.equal(mesh.vertices.length, 3 * 96 * 97 + 1);
-  assert.ok(mesh.maxPlayableGrade < MAX_GRADE);
+  assert.ok(auditSurface(mesh) < MAX_GRADE);
+  const patch = { vertices: [{ x:0,y:0,z:0,walkZ:0 }, { x:1,y:0,z:10,walkZ:.1 }, { x:0,y:1,z:0,walkZ:0 }],
+    triangles: [{ indices:[0,1,2], material:0, planned:true, bridge:true }] };
+  assert.equal(auditSurface(patch), .1);
+  patch.triangles[0].bridge = false;
+  assert.equal(auditSurface(patch), 10);
+  patch.triangles[0].planned = false;
+  assert.equal(auditSurface(patch), 0);
+  const auditPlan = { river: { curves: [[{ height:2 }, { height:1 }]] } };
+  const beforeAudit = JSON.stringify(patch);
+  assert.ok(auditMap(auditPlan, patch, 3, () => ({ planned:true })).connected);
+  assert.ok(!auditMap(auditPlan, patch, 3, (p,x,y) => ({ planned:(x < 100 && y < 100) || (x > 200 && y > 200) })).connected);
+  assert.equal(JSON.stringify(patch), beforeAudit);
   assert.ok(mesh.vertices.every(p => Number.isFinite(p.light) && p.light >= .45 && p.light <= 1));
   assert.ok(mesh.triangles.some(t => t.indices.some(i => Math.abs(mesh.vertices[i].light - t.light) > 1e-5)));
   for (const target of [0, Math.floor(mesh.vertices.length / 2), mesh.vertices.length - 1]) {
@@ -72,7 +83,7 @@ const result = vm.runInContext(`(() => {
     uniform1i(name, value) { uniforms[name] = value; }, drawArrays() {},
     ARRAY_BUFFER: 1, STATIC_DRAW: 2, TRIANGLES: 4, COLOR_BUFFER_BIT: 8, DEPTH_BUFFER_BIT: 16,
   };
-  gpu = { gl, buffer: {}, uploaded: null, overlay: 'overlay', heightZones: 'heightZones',
+  preview.gpu = { gl, buffer: {}, uploaded: null, overlay: 'overlay', heightZones: 'heightZones',
     heightRange: 'heightRange', heightCuts: 'heightCuts' };
   draw3D();
   assert.equal(uploads, 1);
@@ -93,7 +104,7 @@ const result = vm.runInContext(`(() => {
   assert.equal(uniforms.heightZones, 1);
   assert.deepEqual(uniforms.heightRange, [0, 85]);
   assert.deepEqual(uniforms.heightCuts, [35, 45]);
-  current = plan;
+  preview.plan = plan;
   const originalMesh = mesh, toggle = document.getElementById('heightZones');
   for (const active of [false, true]) {
     toggle.checked = active;
@@ -101,8 +112,8 @@ const result = vm.runInContext(`(() => {
     assert.equal(document.getElementById('heightLegend').hidden, !active);
     assert.equal(document.getElementById('overlay').disabled, active);
     assert.equal(uniforms.heightZones, active ? 1 : 0);
-    assert.equal(mesh, originalMesh);
-    assert.equal(current, plan);
+    assert.equal(preview.mesh, originalMesh);
+    assert.equal(preview.plan, plan);
     assert.equal(uploads, 1);
   }
   return { vertices: mesh.vertices.length, faces: mesh.terrainFaceCount };

@@ -75,8 +75,9 @@
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
 <p><strong>Fiktiver Prototyp:</strong> 45 % maximale Steigung für Landwege und Brückendecks; Wasser außerhalb der Brücken ist gesperrt. Die Prüfung betrachtet Wasser mit Brücken im Begehbarkeitsraster und die Dreiecksneigungen der begehbaren Oberflächen. Keine Wasserphysik, Erosion, Durchflussmengen, Unterführung-Navigation, Körperfreiraum oder RTS-Balance. Ein sich aufteilender Fluss ist hier ein stilisiertes Verteilernetz, kein vollständiges hydrologisches Modell.</p>
 </dialog>
-<script>
+<script id="terrain-core">
 'use strict';
+// Pure recipe, geometry, planning and height queries. No browser initialization.
 const SIZE = 300, PIXELS = 480, ROAD_RADIUS = 7, HEX_RADIUS = 145;
 const MAX_GRADE = .45, OFFSET_GRADE = .20, NOISE_MARGIN = 6;
 const TERRAIN_RESOLUTION = 96;
@@ -90,11 +91,6 @@ const HEIGHT_BANDS = [
 const HEIGHT_BOUNDARIES = [HEIGHT_SPACE.min, 35, 45, HEIGHT_SPACE.max];
 function heightBoundary(index) { return HEIGHT_BOUNDARIES[index]; }
 function heightBand(height) { return height < heightBoundary(1) ? 0 : height < heightBoundary(2) ? 1 : 2; }
-function heightLegendHTML() {
-  const number = value => value.toFixed(1).replace(/\.0$/, '').replace('.', ',');
-  return `<strong>Höhenraum ${number(HEIGHT_SPACE.min)}–${number(HEIGHT_SPACE.max)} · feste Zonen</strong><div class="legend">` +
-    HEIGHT_BANDS.map((band, i) => `<span style="--color:rgb(${band.color.join(',')})">${band.name}: ${number(heightBoundary(i))}–${number(heightBoundary(i + 1))}</span>`).join('') + '</div>';
-}
 const RIVER_RADIUS = 2.8, BANK_WIDTH = 3, FLOW_GRADE = .07, AUDIT_SIZE = 192;
 const WATER_DROP = 1.4, BED_DEPTH = 1.1, RIVER_SUPPORT = RIVER_RADIUS + BANK_WIDTH;
 const BRIDGE_BUFFER = 1.8, BRIDGE_REACH = RIVER_SUPPORT + BRIDGE_BUFFER;
@@ -102,9 +98,6 @@ function insideMap(x, y) {
   x = Math.abs(x - SIZE / 2); y = Math.abs(y - SIZE / 2);
   return y <= HEX_RADIUS * Math.sqrt(3) / 2 + 1e-8 && Math.sqrt(3) * x + y <= Math.sqrt(3) * HEX_RADIUS + 1e-8;
 }
-let current, mesh, gpu;
-let startupSeed = typeof location === 'undefined' ? null : new URL(location.href).searchParams.get('seed');
-let yaw = -.7, tilt = .65, zoom = 1.6;
 function rng(seed) {
   return () => {
     seed = (seed + 0x6d2b79f5) | 0;
@@ -120,11 +113,6 @@ function segmentDistance(x, y, a, b) {
   return Math.hypot(x - a.x - t * dx, y - a.y - t * dy);
 }
 const smooth = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
-function polygonPath(ctx, points) {
-  ctx.beginPath();
-  points.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
-  ctx.closePath();
-}
 function shapeRegion(region, random) {
   const rotation = random() * Math.PI * 2, stretch = 1 + random() * .16,
     phase2 = random() * Math.PI * 2, phase3 = random() * Math.PI * 2,
@@ -237,9 +225,6 @@ function buildCurves(plan) {
       x: b.center.x + u * b.halfLength * b.ux - v * b.halfWidth * b.uy,
       y: b.center.y + u * b.halfLength * b.uy + v * b.halfWidth * b.ux })), true);
   }
-}
-function linePath(ctx, points) {
-  ctx.beginPath(); points.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
 }
 function sampleWorld(plan, x, y) {
   const source = unwarpPoint(plan, { x, y });
@@ -587,7 +572,24 @@ function checkConnected(mask, n) {
   }
   return mask.every((value, i) => !value || visited[i]);
 }
-function drawNetwork(ctx, plan, filled) {
+</script>
+<script id="terrain-planning-view">
+'use strict';
+// Planning-map presentation; core plans are read-only here.
+function heightLegendHTML() {
+  const number = value => value.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  return `<strong>Höhenraum ${number(HEIGHT_SPACE.min)}–${number(HEIGHT_SPACE.max)} · feste Zonen</strong><div class="legend">` +
+    HEIGHT_BANDS.map((band, i) => `<span style="--color:rgb(${band.color.join(',')})">${band.name}: ${number(heightBoundary(i))}–${number(heightBoundary(i + 1))}</span>`).join('') + '</div>';
+}
+function polygonPath(ctx, points) {
+  ctx.beginPath();
+  points.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
+  ctx.closePath();
+}
+function linePath(ctx, points) {
+  ctx.beginPath(); points.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
+}
+function drawNetwork(ctx, plan, filled, showDual) {
   const scale = PIXELS / SIZE;
   ctx.save(); ctx.scale(scale, scale);
   polygonPath(ctx, plan.border);
@@ -595,7 +597,7 @@ function drawNetwork(ctx, plan, filled) {
   ctx.strokeStyle = '#99afc4'; ctx.lineWidth = 1; ctx.stroke();
   ctx.clip();
   // Potential connections are diagnostic only, not a permanent grid overlay.
-  if (document.getElementById('dual').checked) {
+  if (showDual) {
     ctx.strokeStyle = '#475064'; ctx.lineWidth = .6;
     for (let i = 0; i < plan.regions.length; i++) for (let j = i + 1; j < plan.regions.length; j++) {
       const a = plan.regions[i], b = plan.regions[j];
@@ -609,7 +611,7 @@ function drawNetwork(ctx, plan, filled) {
     if (filled) { polygonPath(ctx, e.outline); ctx.fill(); }
     else { ctx.lineWidth = 1.5; linePath(ctx, e.points); ctx.stroke(); }
   }
-  if (document.getElementById('dual').checked) {
+  if (showDual) {
     ctx.strokeStyle = '#618299'; ctx.lineWidth = .6; ctx.setLineDash([2, 2]);
     for (const e of plan.river.dual.links) {
       linePath(ctx, e.points); ctx.stroke();
@@ -644,6 +646,10 @@ function drawNetwork(ctx, plan, filled) {
   for (const exit of plan.river.exits) { const p = warpPoint(plan, exit); ctx.fillText('A', p.x, p.y); }
   ctx.restore();
 }
+</script>
+<script id="terrain-mesh">
+'use strict';
+// CPU mesh construction, independent of the DOM and WebGL.
 // Conforming local refinement: shared edge midpoints also split neighboring
 // triangles. No hanging vertices/cracks, and no global high-resolution raster.
 function refineRiverTerrain(plan, vertices, faces, addVertex) {
@@ -724,12 +730,11 @@ function addWaterBand(plan, vertices, triangles) {
   }
 }
 // Actual 3D vertices sampled from the same field; no new random draws.
-function makeMesh(plan) {
+function makeMesh(plan, sampleHeight = sample) {
   // 50% more subdivisions than the former 64 grid: 2.25x as many base triangles.
   const n = TERRAIN_RESOLUTION, vertices = [], triangles = [], lookup = new Map(), baseFaces = [];
-  let maxPlayableGrade = 0;
   const addVertex = (x, y) => {
-    const s = sample(plan, x + SIZE / 2, y + SIZE / 2), world = warpPoint(plan, { x: x + SIZE / 2, y: y + SIZE / 2 });
+    const s = sampleHeight(plan, x + SIZE / 2, y + SIZE / 2), world = warpPoint(plan, { x: x + SIZE / 2, y: y + SIZE / 2 });
     vertices.push({ x: world.x - SIZE / 2, y: world.y - SIZE / 2, sourceX: x, sourceY: y,
       z: s.height - 40, height: s.height, planned: s.planned, walkZ: s.deckHeight - 40, waterZ: s.water - 40 });
     return vertices.length - 1;
@@ -764,27 +769,50 @@ function makeMesh(plan) {
       for (const i of indices) {
         normals[i * 3] += nx; normals[i * 3 + 1] += ny; normals[i * 3 + 2] += nz;
       }
-      const center = sample(plan, (p.sourceX + q.sourceX + r.sourceX) / 3 + SIZE / 2,
+      const center = sampleHeight(plan, (p.sourceX + q.sourceX + r.sourceX) / 3 + SIZE / 2,
         (p.sourceY + q.sourceY + r.sourceY) / 3 + SIZE / 2);
-      triangles.push({ indices, light, height: center.height, planned: center.planned, material: 0 });
+      triangles.push({ indices, light, height: center.height, planned: center.planned, bridge: center.bridge, material: 0 });
       if (center.bridge) triangles.push({ indices, light, height: center.walkHeight, planned: true, material: 2 });
-      // Audit the surface actually used for walking, not the bed below a bridge.
-      if (center.planned) {
-        const zu = center.bridge ? q.walkZ - p.walkZ : uz, zv = center.bridge ? r.walkZ - p.walkZ : vz,
-          walkNX = uy * zv - zu * vy, walkNY = zu * vx - ux * zv;
-        maxPlayableGrade = Math.max(maxPlayableGrade, Math.hypot(walkNX, walkNY) / Math.abs(nz));
-      }
   }
   for (let i = 0; i < vertices.length; i++) {
     const nx = normals[i * 3], ny = normals[i * 3 + 1], nz = normals[i * 3 + 2];
     vertices[i].light = .45 + .55 * Math.max(0, (nx * -.4 + ny * -.5 + nz * .768) / (Math.hypot(nx, ny, nz) || 1));
   }
   addWaterBand(plan, vertices, triangles);
-  // Test actual land/deck faces; riverbanks outside the route may be steep.
-  // Keep provisional layouts visible; violations are explicitly flagged below.
-  // The standalone CPU check still rejects grades above the limit.
-  return { vertices, triangles, maxPlayableGrade, terrainFaceCount: faces.length, baseFaceCount: baseFaces.length };
+  return { vertices, triangles, terrainFaceCount: faces.length, baseFaceCount: baseFaces.length };
 }
+</script>
+<script id="terrain-audit">
+'use strict';
+// Diagnostics consume completed plans/meshes without changing either.
+function auditSurface(mesh) {
+  let maxPlayableGrade = 0;
+  for (const t of mesh.triangles) {
+    if (t.material !== 0 || !t.planned) continue;
+    const [p, q, r] = t.indices.map(i => mesh.vertices[i]),
+      ux = q.x - p.x, uy = q.y - p.y, vx = r.x - p.x, vy = r.y - p.y,
+      zu = t.bridge ? q.walkZ - p.walkZ : q.z - p.z,
+      zv = t.bridge ? r.walkZ - p.walkZ : r.z - p.z,
+      nz = ux * vy - uy * vx, nx = uy * zv - zu * vy, ny = zu * vx - ux * zv;
+    maxPlayableGrade = Math.max(maxPlayableGrade, Math.hypot(nx, ny) / Math.abs(nz));
+  }
+  return maxPlayableGrade;
+}
+function auditMap(plan, mesh, n = AUDIT_SIZE, sampleAt = sampleWorld) {
+  const mask = new Uint8Array(n * n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    mask[y * n + x] = sampleAt(plan, (x + .5) * SIZE / n, (y + .5) * SIZE / n).planned ? 1 : 0;
+  }
+  return { connected: checkConnected(mask, n),
+    downhill: plan.river.curves.every(points => points.every((p, i) => !i || points[i - 1].height > p.height)),
+    maxPlayableGrade: auditSurface(mesh) };
+}
+</script>
+<script id="terrain-view">
+'use strict';
+// Browser preview state is separate from all pure generation/audit blocks.
+const preview = { plan: null, mesh: null, gpu: null };
+const camera = { yaw: -.7, tilt: .65, zoom: 1.6 };
 function createGPU() {
   const gl = document.getElementById('height').getContext('webgl', { antialias: true, alpha: false });
   if (!gl) throw Error('WebGL ist in diesem Browser nicht verfügbar.');
@@ -851,6 +879,8 @@ function createGPU() {
     heightRange: gl.getUniformLocation(program, 'heightRange'), heightCuts: gl.getUniformLocation(program, 'heightCuts') };
 }
 function draw3D() {
+  const mesh = preview.mesh;
+  if (!mesh) return;
   try {
     const canvas = document.getElementById('height'), bounds = canvas.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
@@ -860,8 +890,8 @@ function draw3D() {
       width = Math.max(1, Math.round(bounds.width * ratio)), height = Math.max(1, Math.round(bounds.height * ratio));
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
-    if (gpu && gpu.gl.isContextLost()) return;
-    gpu ??= createGPU();
+    if (preview.gpu && preview.gpu.gl.isContextLost()) return;
+    const gpu = preview.gpu ??= createGPU();
     const { gl } = gpu;
     // Geometry and face attributes are uploaded once per layout, never per frame.
     if (gpu.uploaded !== mesh) {
@@ -880,8 +910,8 @@ function draw3D() {
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.uniform4f(gpu.camera, Math.cos(yaw), Math.sin(yaw), Math.cos(tilt), Math.sin(tilt));
-    const scale = .96 * zoom * 2 / PIXELS, shortSide = Math.min(canvas.width, canvas.height);
+    gl.uniform4f(gpu.camera, Math.cos(camera.yaw), Math.sin(camera.yaw), Math.cos(camera.tilt), Math.sin(camera.tilt));
+    const scale = .96 * camera.zoom * 2 / PIXELS, shortSide = Math.min(canvas.width, canvas.height);
     gl.uniform2f(gpu.scale, scale * shortSide / canvas.width, scale * shortSide / canvas.height);
     gl.uniform1i(gpu.overlay, document.getElementById('overlay').checked ? 1 : 0);
     gl.uniform1i(gpu.heightZones, document.getElementById('heightZones').checked ? 1 : 0);
@@ -895,105 +925,116 @@ function draw3D() {
 }
 function drawPlanning() {
   const layout = document.getElementById('layout').getContext('2d');
-  layout.fillStyle = '#202b38'; layout.fillRect(0, 0, PIXELS, PIXELS); drawNetwork(layout, current, true);
+  layout.fillStyle = '#202b38'; layout.fillRect(0, 0, PIXELS, PIXELS);
+  drawNetwork(layout, preview.plan, true, document.getElementById('dual').checked);
 }
-function render() {
-  const plan = current; drawPlanning();
-  const mask = new Uint8Array(AUDIT_SIZE * AUDIT_SIZE);
-  for (let y = 0; y < AUDIT_SIZE; y++) for (let x = 0; x < AUDIT_SIZE; x++) {
-    const px = (x + .5) * SIZE / AUDIT_SIZE, py = (y + .5) * SIZE / AUDIT_SIZE;
-    const i = y * AUDIT_SIZE + x, s = sampleWorld(plan, px, py);
-    mask[i] = s.planned ? 1 : 0;
-  }
-  mesh = makeMesh(plan); draw3D();
-  const valid = checkConnected(mask, AUDIT_SIZE), river = plan.river;
-  const downhill = river.curves.every(points => points.every((p, i) => !i || points[i - 1].height > p.height));
-  if (!valid || !downhill) throw Error('Fluss-/Begehbarkeitsprüfung fehlgeschlagen.');
-  document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length} Brücken · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(mesh.maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %${mesh.maxPlayableGrade > MAX_GRADE ? ' · WARNUNG: Neigungsgrenze überschritten – vorläufige Vorschau' : ''}`;
+</script>
+<script id="terrain-app">
+'use strict';
+// Explicit build -> audit -> presentation pipeline. Display-only events skip it.
+let startupSeed = typeof location === 'undefined' ? null : new URL(location.href).searchParams.get('seed');
+function updateStatus(plan, audit) {
+  const river = plan.river, { connected: valid, downhill, maxPlayableGrade } = audit;
+  document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length} Brücken · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %${maxPlayableGrade > MAX_GRADE ? ' · WARNUNG: Neigungsgrenze überschritten – vorläufige Vorschau' : ''}`;
+}
+function rebuildPreview() {
+  const plan = preview.plan;
+  preview.mesh = makeMesh(plan);
+  const audit = auditMap(plan, preview.mesh);
+  drawPlanning(); draw3D();
+  if (!audit.connected || !audit.downhill) throw Error('Fluss-/Begehbarkeitsprüfung fehlgeschlagen.');
+  // Provisional slope violations remain visible, with the same warning.
+  updateStatus(plan, audit);
 }
 function generate() {
   const seeds = new Uint32Array(1); crypto.getRandomValues(seeds);
   if (startupSeed !== null && /^\d+$/.test(startupSeed) && Number(startupSeed) <= 0xffffffff) seeds[0] = Number(startupSeed);
   startupSeed = null;
-  try { current = makePlan(seeds[0], document.getElementById('curves').checked,
-    document.getElementById('rounded').checked); render(); }
+  try { preview.plan = makePlan(seeds[0], document.getElementById('curves').checked,
+    document.getElementById('rounded').checked); rebuildPreview(); }
   catch (error) { document.getElementById('status').textContent = `Seed ${seeds[0]}: ${error.message}`; console.error(error); }
 }
-document.getElementById('generate').addEventListener('click', generate);
-document.getElementById('heightLegend').innerHTML = heightLegendHTML();
-document.getElementById('heightZones').addEventListener('change', () => {
-  const active = document.getElementById('heightZones').checked;
-  document.getElementById('heightLegend').hidden = !active;
-  document.getElementById('overlay').disabled = active;
-  draw3D(); // Uniforms only: preserve the seed, plan, mesh and GPU upload.
-});
-document.getElementById('overlay').addEventListener('change', draw3D);
-document.getElementById('dual').addEventListener('change', drawPlanning);
-for (const id of ['curves', 'rounded']) document.getElementById(id).addEventListener('change', () => {
-  try { current = makePlan(current.seed, document.getElementById('curves').checked,
-    document.getElementById('rounded').checked); render(); }
-  catch (error) { document.getElementById('status').textContent = error.message; console.error(error); }
-});
-const info = document.getElementById('info');
-document.getElementById('infoOpen').addEventListener('click', () => info.showModal());
-info.addEventListener('click', event => {
-  if (event.target !== info) return;
-  const bounds = info.getBoundingClientRect();
-  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) info.close();
-});
-const fullscreen = document.getElementById('fullscreen');
-fullscreen.disabled = !document.fullscreenEnabled;
-fullscreen.addEventListener('click', async () => {
-  try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
-  } catch (error) { document.getElementById('renderError').textContent = `Vollbild: ${error.message}`; }
-});
-document.addEventListener('fullscreenchange', () => {
-  fullscreen.textContent = document.fullscreenElement ? 'Vollbild beenden' : 'Vollbild';
-  fullscreen.setAttribute('aria-pressed', String(!!document.fullscreenElement));
-  requestDraw();
-});
-const view = document.getElementById('height');
-new ResizeObserver(requestDraw).observe(view);
-window.addEventListener('resize', requestDraw);
-view.addEventListener('webglcontextlost', event => {
-  event.preventDefault();
-  document.getElementById('renderError').textContent = 'Grafikkontext verloren; warte auf Wiederherstellung.';
-});
-view.addEventListener('webglcontextrestored', () => { gpu = null; requestDraw(); });
-let drag = null, frame = null;
-function requestDraw() {
-  if (frame !== null) return;
-  frame = requestAnimationFrame(() => { frame = null; draw3D(); });
+function bindLabControls() {
+  document.getElementById('generate').addEventListener('click', generate);
+  document.getElementById('heightLegend').innerHTML = heightLegendHTML();
+  document.getElementById('heightZones').addEventListener('change', () => {
+    const active = document.getElementById('heightZones').checked;
+    document.getElementById('heightLegend').hidden = !active;
+    document.getElementById('overlay').disabled = active;
+    draw3D(); // Uniforms only: preserve the seed, plan, mesh and GPU upload.
+  });
+  document.getElementById('overlay').addEventListener('change', draw3D);
+  document.getElementById('dual').addEventListener('change', drawPlanning);
+  for (const id of ['curves', 'rounded']) document.getElementById(id).addEventListener('change', () => {
+    try { preview.plan = makePlan(preview.plan.seed, document.getElementById('curves').checked,
+      document.getElementById('rounded').checked); rebuildPreview(); }
+    catch (error) { document.getElementById('status').textContent = error.message; console.error(error); }
+  });
+  const info = document.getElementById('info');
+  document.getElementById('infoOpen').addEventListener('click', () => info.showModal());
+  info.addEventListener('click', event => {
+    if (event.target !== info) return;
+    const bounds = info.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) info.close();
+  });
+  const fullscreen = document.getElementById('fullscreen');
+  fullscreen.disabled = !document.fullscreenEnabled;
+  fullscreen.addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch (error) { document.getElementById('renderError').textContent = `Vollbild: ${error.message}`; }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    fullscreen.textContent = document.fullscreenElement ? 'Vollbild beenden' : 'Vollbild';
+    fullscreen.setAttribute('aria-pressed', String(!!document.fullscreenElement));
+    requestDraw();
+  });
+  const view = document.getElementById('height');
+  new ResizeObserver(requestDraw).observe(view);
+  window.addEventListener('resize', requestDraw);
+  view.addEventListener('webglcontextlost', event => {
+    event.preventDefault();
+    document.getElementById('renderError').textContent = 'Grafikkontext verloren; warte auf Wiederherstellung.';
+  });
+  view.addEventListener('webglcontextrestored', () => { preview.gpu = null; requestDraw(); });
+  let drag = null, frame = null;
+  function requestDraw() {
+    if (frame !== null) return;
+    frame = requestAnimationFrame(() => { frame = null; draw3D(); });
+  }
+  view.addEventListener('pointerdown', event => {
+    if (drag || event.button !== 0) return;
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    view.setPointerCapture(event.pointerId);
+  });
+  view.addEventListener('pointermove', event => {
+    if (!drag || event.pointerId !== drag.id) return;
+    camera.yaw += (event.clientX - drag.x) * .008;
+    camera.tilt = Math.max(.25, Math.min(1.35, camera.tilt + (event.clientY - drag.y) * .006));
+    drag.x = event.clientX; drag.y = event.clientY; requestDraw();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    view.addEventListener(type, event => { if (drag && event.pointerId === drag.id) drag = null; });
+  }
+  function setZoom(value) {
+    camera.zoom = Math.max(.5, Math.min(4, value));
+    document.getElementById('zoom').value = String(camera.zoom);
+    document.getElementById('zoomValue').textContent = `${Math.round(camera.zoom * 100)} %`;
+    requestDraw();
+  }
+  document.getElementById('zoom').addEventListener('input', event => setZoom(Number(event.target.value)));
+  view.addEventListener('wheel', event => {
+    event.preventDefault();
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? PIXELS : 1);
+    setZoom(camera.zoom * Math.exp(-Math.max(-200, Math.min(200, delta)) * .002));
+  }, { passive: false });
+  view.addEventListener('dblclick', () => { camera.yaw = -.7; camera.tilt = .65; setZoom(1.6); });
 }
-view.addEventListener('pointerdown', event => {
-  if (drag || event.button !== 0) return;
-  drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
-  view.setPointerCapture(event.pointerId);
-});
-view.addEventListener('pointermove', event => {
-  if (!drag || event.pointerId !== drag.id) return;
-  yaw += (event.clientX - drag.x) * .008;
-  tilt = Math.max(.25, Math.min(1.35, tilt + (event.clientY - drag.y) * .006));
-  drag.x = event.clientX; drag.y = event.clientY; requestDraw();
-});
-for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-  view.addEventListener(type, event => { if (drag && event.pointerId === drag.id) drag = null; });
-}
-function setZoom(value) {
-  zoom = Math.max(.5, Math.min(4, value));
-  document.getElementById('zoom').value = String(zoom);
-  document.getElementById('zoomValue').textContent = `${Math.round(zoom * 100)} %`;
-  requestDraw();
-}
-document.getElementById('zoom').addEventListener('input', event => setZoom(Number(event.target.value)));
-view.addEventListener('wheel', event => {
-  event.preventDefault();
-  const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? PIXELS : 1);
-  setZoom(zoom * Math.exp(-Math.max(-200, Math.min(200, delta)) * .002));
-}, { passive: false });
-view.addEventListener('dblclick', () => { yaw = -.7; tilt = .65; setZoom(1.6); });
+</script>
+<script id="terrain-start">
+'use strict';
+bindLabControls();
 generate();
 </script>
 </html>

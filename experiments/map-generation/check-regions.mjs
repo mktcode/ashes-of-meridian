@@ -1,19 +1,13 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { loadLab } from './test-support.mjs';
 
-// Bounded contour check: no terrain mesh, navigation raster or WebGL startup.
-const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-assert.match(script, /generate\(\);\s*$/);
-const context = vm.createContext({
-  assert,
-  document: { getElementById: () => ({ addEventListener() {} }), addEventListener() {} },
-  window: { addEventListener() {} },
-  ResizeObserver: class { observe() {} },
-});
-vm.runInContext(script.replace(/generate\(\);\s*$/, ''), context, { timeout: 1000 });
+// Bounded contour check: no mesh, navigation raster, DOM or browser startup.
+const context = loadLab({ scripts: ['terrain-core'], globals: { assert } });
 vm.runInContext(`
+  assert.equal(typeof document, 'undefined');
+  assert.equal(typeof window, 'undefined');
+  assert.equal(typeof generate, 'undefined');
   for (const seed of [1, 2, 19, 16053245]) {
     const random = rng(seed ^ 0x504f4c59), repeated = rng(seed ^ 0x504f4c59);
     for (let i = 0; i < 19; i++) {
