@@ -7,7 +7,9 @@ const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 assert.match(script, /generate\(\);\s*$/);
 const context = vm.createContext({
-  document: { getElementById: () => ({ addEventListener() {} }) },
+  document: { getElementById: () => ({ addEventListener() {} }), addEventListener() {} },
+  window: { addEventListener() {} },
+  ResizeObserver: class { observe() {} },
 });
 vm.runInContext(script.replace(/generate\(\);\s*$/, ''), context);
 
