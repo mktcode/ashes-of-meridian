@@ -7,7 +7,7 @@ Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Re
 - [ ] Frischer Run: ein Gegner auf Stage 1–3, zweiter Slot ab 4, dritter ab 8. Bestehende Slots behalten getrennte Vorteile bei Fraktionswechsel, neue starten leer; Briefing/Reload muss dazu passen.
 - [ ] KI-gegen-KI-Druck, Ausscheiden und HQ-Abschluss beobachten. Gegen passiven/verteidigenden Spieler: erfolgreiche Belagerung fortsetzen, sinnvoller Rückzug bei Bedrohung, Reserven gegen Ablenkung, stabile FFA-Ziele.
 - [ ] Militärischer Sieg schaltet sofort die nächste Stage frei, ohne Score-Gate: **Continue building**, zivile Upgrade-Wahl mit lokalem Echo und spätere Rückkehr zur Expedition verständlich abnehmen; [Kurve/Bauaufwand](expeditions-schwierigkeit-und-upgrades.md).
-- [ ] Einstieg ohne zivile Gebäudeboni und tiefe Ressourcenstapel balancieren; [Progressionsbefunde](expeditions-schwierigkeit-und-upgrades.md). Faire Wege/Wirtschaft aller Eckstarts prüfen.
+- [ ] Einstieg ohne zivile Gebäudeboni und tiefe Ressourcenstapel balancieren; [Progressionsbefunde](expeditions-schwierigkeit-und-upgrades.md). Faire Wege/Wirtschaft aller prozedural zugeteilten Parteienstarts gemäß [Terrainabnahme](terrain-generation.md) prüfen.
 
 ## Worker-Start und Tutorial
 

@@ -1,62 +1,63 @@
 # Projektprioritäten
 
-Planung, keine Implementierungs- oder Testfreigabe. Maßgebliche Übersicht für alle offenen Issues; Details und Befunde bleiben im jeweiligen Fachissue. Priorität folgt Ausfall-/Fortschrittsrisiko, Kernspielbarkeit, Nutzerwirkung und Abhängigkeiten. Ein kleiner belegter Fehler ist eher umsetzbar als eine große, noch unbestätigte Optimierung.
+Maßgebliche Übersicht der offenen Arbeit, keine Implementierungs- oder Testfreigabe. Details/Befunde bleiben im jeweiligen Fachissue; erledigte Historie in Git. Statischer Issue-/Quellen-/Testabgleich auf `2038076`, keine neuen Builds, Browser-, KI- oder Simulationsläufe. Implementiert mit offener menschlicher Abnahme ist kein unimplementiertes Feature.
 
-Reviewgrundlage: alle Issue-Texte, Abgleich betroffener Quellen/Tests auf `937914e` und vorhandene Nutzer-/Prüfbefunde; Performance-Einordnung um die aktuelle Desktop-Rückmeldung nach `9ca3e1d` ergänzt. Keine neuen Spiel-, Browser-, KI- oder Simulationsläufe. „Implementiert, Abnahme offen“ ist weder ein neuer Implementierungsauftrag noch eine vollständige Freigabe.
+## P1 – Verlässlichkeit und Kernspielbarkeit
 
-## P1 – Verlässlichkeit und Kernspielbarkeit zuerst
-
-Die Tabelle ordnet Arbeitsfelder, nicht die Reihenfolge jedes Einzelschritts. Geräteabhängige Reproduktion und kleine belegte Korrekturen können unabhängig voneinander vorankommen.
-
-| Issue | Status, Wirkung und nächster Schritt |
+| Issue | Wirkung und nächster Schritt |
 | --- | --- |
-| [Performance/Stabilität](performance/README.md) | Desktop aktuell zufriedenstellend: Chromium laut Nutzer nahezu 60 FPS, Firefox noch nicht konstant. Mobile Freezes/Context-loss bleiben offen; bei erneutem Bedarf Abbruch und Einzelspitzen mit Buildkontext eingrenzen. Keine vorsorgliche weitere Optimierung oder Qualitätsreduktion. |
-| [Spielstand/Weltbesuche](expeditions-spielstand.md) | Gefechtsrestore manuell positiv; frühere Welten samt Weiterbau und komprimiertem Archiv integriert, menschliche Abnahme offen. Hintergrund/Prozessende, Grafikverlust, getrennte Save-Ziele, verständliche Speicherfehler und Archivkosten zusammen mit Mobilstabilität abnehmen. |
-| [Worker/Bauwegfindung](worker-bauwegfindung/issue.md) | Bekannte Fehlerklasse korrigiert, Originalstillstände nicht exakt reproduziert. Erreichbarer Bau, wiederholte Lieferungen und nachvollziehbarer Blockiert-/Ausgangsstatus vor weiterem Navigationsumbau. |
-| [Prozedurale Gefechtsstarts](procedural-battlefields.md) | HQ-Bauflächen und KI-Ausweichen verbessert; tatsächlicher bezahlter HQ-Abschluss, knappe Wirtschaftsflächen und Startfairness offen. Ein unspielbarer Start wiegt schwerer als neue Karten-/Modellinhalte. |
-| [Texturvorbereitung](texture-loading.md) | Pflichtmaterial-Erfolg und Residency abgesichert; gezielte Fehler-/Parallelrequest- und App-Regressionen bestanden. Einzelne `file://`-Browserabnahme offen, Chromium-Start durch Socket-Pfadlänge blockiert. Keine angenommene Ursache der mobilen Abbrüche. |
-| [UI/Fokus/Dialoge](ui-review.md) | Dialogrolle, Fokusbindung/-rückgabe fehlen weiterhin. Tastatur-/Screenreaderbedienung und sichere Bestätigungen betreffen den ganzen Spielablauf. Gemeinsame Dialogverwaltung gezielt korrigieren; CSS-Entkopplung bleibt P3. |
-| [Teststrategie/alte Fixtures](teststrategie-review.md) | HQ-Sofortstart-Annahmen widersprechen dem Worker-Start; Fixtures vor neuen KI-/Balanceaussagen fachlich berichtigen, Referenzen nicht blind ersetzen. Reine Testorganisation bleibt nachrangig. |
+| [Spielstand/Weltbesuche](expeditions-spielstand.md) | Evakuierungs-Startfehler muss einen vollständigen Menüstand hinterlassen; aktueller Fehlerpfad setzt nur die Ansicht um. Historischen Frontier-Seedfehler nach Generatoränderungen neu beurteilen. Save-Version-/Buildfrage, getrennte Speicherziele und Lebenszyklusabnahme bleiben offen. |
+| [Navigation/Liveness](worker-bauwegfindung/issue.md) | Bekannte Bauweg-Fehlerklasse korrigiert, Originalstillstände und Worker-Langlaufbefunde offen. Gruppenankunft/Ausweichwackeln ist unabhängig von verbesserten FPS. Reproduzierbare Zustände vor Reload sichern. |
+| [Prozedurale Gefechtsstarts](procedural-battlefields.md) | Bezahlten KI-HQ-Abschluss, knappe Wirtschaftsflächen, Ressourcenverkehr und Startfairness abnehmen; begrenzte Generatorproben beweisen keine laufende Partie. |
+| [UI/Fokus/Dialoge](ui-review.md) | Dialogrolle, Fokusbindung/-rückgabe fehlen weiterhin; gemeinsame Verwaltung gezielt korrigieren. CSS-Entkopplung separat nachrangig. |
+| [Performance/Stabilität](performance/README.md) | Dichte-Armee-FPS laut Nutzer verbessert, Auswahlhänger und Mobil-Freezes/Context-loss bleiben offen. Konkreten Nutzerabschnitt mit Build/Gerät eingrenzen; keine vorsorgliche Qualitätsreduktion oder pauschaler Engineumbau. |
+| [Texturvorbereitung](texture-loading.md) | Fehler-/Residencyverträge technisch abgesichert; gezielter `file://`-Fehlerpfadcheck noch offen. Historischer Browserstart an Socket-Pfadlänge gescheitert, keine bewiesene Mobilabbruchursache. |
+| [Testpflege/alte Fixtures](teststrategie-review.md) | Verbliebene HQ-/Mining-/Startannahmen fachlich berichtigen, bevor neue KI-/Balanceaussagen abgeleitet werden. Bereits korrigierte lokale Regelarenen nicht nochmals als unimplementiert führen. |
 
-## P2 – vollständiges Spiel und Darstellung gezielt abnehmen
+## P2 – zusammenhängende menschliche Abnahme
 
-Nicht alle offenen Kästchen sind Bugs. Menschliche Abnahme und neue technische Befunde unterscheiden; bei bestätigtem Stillstand, unbedienbarem UI oder falscher Sicht-/Bauentscheidung das konkrete Problem nach P1 ziehen.
+Nicht jedes offene Kästchen ist ein Bug. Gemeinsame Run-/Geräteblöcke statt separater Vollrunde je Fachissue; bestätigte Stillstände, Speicher- oder Bedienfehler nach P1 ziehen.
 
-| Issue | Fokus und Abhängigkeit |
+| Issue | Fokus |
 | --- | --- |
-| [Vollständige Runs/Geräte](playtest-validation.md) | Einstieg ohne Upgrades, FFA-Übergänge, Commands, Sieg/Niederlage und Reload zusammenhängend spielen. Zentrale menschliche Abnahme, nicht jede Fachliste als eigene Vollrunde wiederholen. |
-| [Citybuilding/Siedlungsaufbau](citybuilding.md) | Forum-Aufbau nach militärischem Sieg ist implementiert. Gründung, Cinder-Zuweisung, Lieferzugänge und Wachstum menschlich abnehmen; keine Score-Freischaltung oder weitere Siedlungsregeln ableiten. |
-| [Schwierigkeit/Progression](expeditions-schwierigkeit-und-upgrades.md) | Zivile Gebäudewahl und Echo-Ausbau ohne Score-Gate, HQ-Abschluss, passive Truppenansammlung und tiefe Ressourcenstapel bewerten. Erst Befunde, dann Balancing; neue Vorteilsideen separat. |
-| [Zivilisationsupgrades/Außenposten](civilization-upgrades.md) | Gebäude-Upgrades, endlose Wellen und irreversible Evakuierung sind implementiert. Einstieg, Wellenanstieg, Rettungsfenster, Dreierauswahl und Verlust/Rückkehr in echten Runs abnehmen; keine zusätzlichen Turmtypen beauftragt. |
-| [Mehrparteien-Simulation](mehrparteien-simulation.md) | Technische FFA-/Wirtschafts-/Angriffsnachweise gezielt nach Fixturepflege und ausdrücklicher Prüffreigabe. Alte Seed-/Pattbefunde sind keine Abnahme aktueller Weltrezepte. |
-| [Höhen/Spielabnahme](hoehenstufen/README.md) | Sicht von oben/unten, Rampenverkehr, Fundamente, Picking und Walling auf der gemeinsamen CPU-Oberfläche prüfen. Worker-/Startprobleme nur im jeweiligen P1-Issue weiterverfolgen. |
-| [Landschaften/taktische Darstellung](project-tomorrow.md) | Verdeckung, Bauflächen, Flugfreiraum, Kontrast/Nacht und alle fünf natürlichen Familien. Spielrelevante Lesbarkeit vor Wetter-/Materialfeinschliff. |
-| [Modelle](modelle.md) | Rollen-/Teamlesbarkeit und Nachtlichtauswahl in dichten Gruppen; positive Rückmeldung zur Nachtatmosphäre erhalten. Kein allgemeiner Modellneubau. |
-| [Modellkacheln](modell-kacheln.md) | Ausschnitte, Einblenden und mobile Bedienung abnehmen; verbleibende Öffnungs-/Layoutkosten zentral unter [Performance](performance/README.md#modellkacheln). |
-| [Schwere Luftzerstörer](schwerer-luftzerstoerer.md) | Bereits integriert. Endgame-Konterbarkeit, KI-Ausgaben, Flugfreiraum und Gerätekosten in passenden Run-Situationen prüfen, keine neue Einheit planen. |
-| [Desert](desert-map.md) | Erodierte Formen/Bodenanschlüsse, warmer Charakter, Kontrast und faire Wege der aktuellen prozeduralen Fassung; kein Rückbau zum festen Layout. |
-| [Westmark](westmark-map.md) | Jahreszeiten, Vegetation, Kontrast sowie Bau-/Fahrwege und faire Startflächen der prozeduralen Fassung abnehmen. |
+| [Vollständige Runs/Geräte](playtest-validation.md) | Zentrale Run-Abnahme: Einstieg, Tutorial/Audio, FFA, Commands, Sieg/Niederlage, Reload und Touch. |
+| [Citybuilding](citybuilding.md) | Forum-Lieferbereiche, Reload, Gründung/Wachstum, Drehung/Rückbau und dekorativer Verkehr. Freeze-Korrektur positiv rückgemeldet, Liefer-/Fortsetzungsfluss offen. |
+| [Schwierigkeit/Progression](expeditions-schwierigkeit-und-upgrades.md) | HQ-Abschluss, Druck gegen passive Spieler, Ansammlung/große Armeen, tiefe Ressourcenstapel. Erst aktuelle Befunde, dann Balancing. |
+| [Zivilisationsupgrades/Außenposten](civilization-upgrades.md) | Feste Angebote, Echo-Ränge, Wellenanstieg, Rettungsfenster, Dreierauswahl und einmalige Lieferungen in echten Runs. |
+| [Mehrparteien-Prüfungen](mehrparteien-simulation.md) | Autonome FFA-/Wirtschafts-/Angriffsfälle erst nach Fixturepflege und eigener Prüffreigabe. |
+| [Terrain/Wege/Höhen](terrain-generation.md) | Rampendurchsatz, Sicht von oben/unten, Fundamente, Picking, faire Wirtschaftswege und Walling; interessante Vergleichsseeds erhalten. |
+| [Landschaften/taktische Darstellung](project-tomorrow.md) | Zentrale Bildabnahme einschließlich Desert/Westmark, Biotopen, Randkulisse, Kontrast/Nacht, Flugfreiraum und nassen Bodenakzenten. |
+| [Modelle](modelle.md) | Rollen-/Teamlesbarkeit, Hangauflage und Nachtlichter in dichten Gruppen. Positive Nachtatmosphäre erhalten, kein allgemeiner Neubau. |
+| [Upgrade-Gebäudemodelle](civilization-upgrade-models.md) | 36 Varianten implementiert; Rang-/Stillesbarkeit, Hang-/Nacht-/Siedlungswirkung und Variantenkosten im Spiel abnehmen. |
+| [Schwere Luftzerstörer](schwerer-luftzerstoerer.md) | Integriert; Endgame-Konterbarkeit, KI-Ausgaben, Flugfreiraum und Darstellung prüfen. |
 
-## P3 – Optionen und Pflege, nicht vorsorglich umsetzen
+Modellkachel-Bild-/Touchabnahme unter [UI](ui-review.md#modellkacheln-bild-und-bedienung), Kosten ausschließlich unter [Performance](performance/README.md). Technische Prüfungen ersetzen keine visuelle/akustische/Echtgeräteabnahme.
+
+## P3 – Pflege bei Bedarf
+
+[Test- und Werkzeugpflege](teststrategie-review.md) führt verbleibende Dateischnitte, Werkzeugkonventionen, Scratch-Besitz und mögliche Dauerregressionen. Capture-/Ausgabegrenzen sind unter [Scene Capture](../scene-capture.md) und [Deployment](../deployment.md) dokumentiert; kein eigenständiger offener Capture-Umbau belegt. Die Pflege einer itch-Seitenbeschreibung im Repository bleibt eine bedingte Entscheidung.
+
+CSS-Entkopplung aus [UI](ui-review.md#css-verantwortung) als getrennten strukturellen Schritt behandeln. ECS, Worker-Threads, IK, weitere Caches oder Pooling brauchen konkrete Befunde; Dateilänge allein ist kein Umbaugrund.
+
+## Zurückgestellte Produktideen
+
+Keine aktiven Fehler oder automatisch beschlossenen Erweiterungen. Vor Umsetzung Bedarf, Regeln und Abhängigkeiten einzeln entscheiden.
 
 | Issue | Voraussetzung / Entscheidung |
 | --- | --- |
-| [Skirmish](new-battle-screen.md) | Nach stabilem Kernloop Regeln, Parteien, Startbedingungen und Profiltrennung entscheiden. Kein reiner Dialogbau ohne Spielmodusvertrag. |
-| [Holdout](expeditions-missionsziele-und-holdout.md) | Eigenständiger Missionspilot erst bei begründetem Bedarf nach Run-Abnahme; Wellenökonomie, Belohnung und laufenden Spielstand festlegen. Nicht parallel mehrere neue Modi anfangen. |
-| [Weitere Vorteile](upgrade-ideas.md) | Ideenpool, keine beschlossene Erweiterung. Bestehende Progression zuerst abnehmen; neue Stapel-/Aura-/Auszahlungsregeln einzeln entscheiden. |
-| [Android/Store/Werbung](android.md) | Browser-Mobilstabilität und Lebenszyklus zuerst. WebView-/Storeentscheidung separat, Werbung noch später. |
-| [Repository-Hygiene/Werkzeuge](repository-hygiene.md) | Format-/Lintkonventionen und Ausgabe-/Scratch-Besitz klären; kurzes [Qualitätsnetz](../testing.md#befehle-und-auswahl) erhalten. Keine vorsorgliche Vollsuite, Massenformatierung oder neue Architektur. |
-| [Release-Werkzeuge/Assets](release-tooling.md) | Explizite Capture-Basen technisch geprüft; einzelne Browserabnahme, Assetlisten und Ausgabeformat/-besitz bleiben offen. Keine Screenshotserie auf Vorrat. |
-| [Communitykarten](community-maps.md) | Skirmish-Regeln → begrenztes Datenschema/Beispielkarte → lokaler Import. Plattform/Sharing erst danach; kein vorhandener Kartenloader. |
-| [Multiplayer](multiplayer.md) | Produkt weiterhin Singleplayer-only. **Ausnahme zur Zurückstellung:** zeitnah außerhalb des Repositories klären, ob ein alter Dienst/Endpunkt noch läuft, und gegebenenfalls durch den Betreiber abschalten lassen. Kein automatischer Infrastrukturzugriff. |
+| [Skirmish](new-battle-screen.md) | Parteien, Startbedingungen, Kartenauswahl und Profiltrennung nach stabilem Kernloop festlegen. |
+| [Holdout](expeditions-missionsziele-und-holdout.md) | Begrenzter Missionspilot ist nicht der integrierte endlose Außenpostenmodus; eigenen Bedarf, Wellenetat und Belohnung klären. |
+| [Weitere Vorteile](upgrade-ideas.md) | Ideenpool; bestehende Progression zuerst abnehmen, neue Stapel-/Aura-/Auszahlungsregeln einzeln entscheiden. |
+| [Einzigartige Blickfänge](unique-points-of-interest.md) | Atmosphärische Motive, Platzierung und Geometriekosten definieren; keine zusätzlichen Ressourcen-/Missionsmechaniken. |
+| [Android/Store/Werbung](android.md) | Browser-Mobilstabilität und Lebenszyklus zuerst, Verpackung/Store separat, Werbung später. |
+| [Communitykarten](community-maps.md) | Skirmish-Regeln → begrenztes Schema/Beispielkarte → lokaler Import, Plattform/Sharing erst danach. |
+| [Multiplayer](multiplayer.md) | Singleplayer-only. Ausnahme: Betreiber soll außerhalb des Repositories klären, ob Altdienst/Endpunkt läuft, gegebenenfalls abschalten. Kein automatischer Infrastrukturzugriff. |
 
-CSS-Entkopplung aus dem UI-Issue und nicht blockierende Testbereinigung bei fachlicher Pflege mitnehmen, nicht mit Verhaltensänderungen vermischen. ECS, Worker-Threads, IK, weitere Caches oder Pooling brauchen einen konkreten Befund; Dateilänge ist kein Umbaugrund.
+## Nächste Arbeitspakete
 
-## Empfohlene nächste Arbeitspakete
+1. **Evakuierungs-Fehlerpfad und Dialog/Fokus:** belegte Zustands-/Bedienungsgrenzen gezielt korrigieren; Generierungsfehler mit aktuellem Rezept gesondert beurteilen.
+2. **Start-/Worker-Zuverlässigkeit:** verbleibende Fixtures berichtigen, Bauabschluss/Lieferzyklen prüfen; autonome Läufe nur separat freigegeben.
+3. **Mobilstabilität/Fortsetzen und konkrete Auswahlhänger:** Gerät, Build, Szene und Abbruchzustand sichern, statt aus alten FPS-Werten eine Ursache abzuleiten.
+4. **Ein zusammenhängender Run-/Geräteabnahmeblock:** Progression, Außenposten und taktische Darstellung gemeinsam prüfen; daraus konkrete Bugs/Balanceentscheidungen ableiten, erst danach neue Modi/Plattformen.
 
-1. **Dialog/Fokus** ist der nächste bereichsübergreifende Bedienungsauftrag; bei der korrigierten **Texturvorbereitung** bleibt nur die gezielte Browserabnahme offen. Den alten Dienststatus separat organisatorisch klären.
-2. **Start-/Worker-Zuverlässigkeit:** relevante HQ-Fixtures berichtigen und gezielt Bauabschluss/Lieferzyklen prüfen. Autonome KI-Läufe nur separat freigegeben; fehlende Originalstände bei erneutem Auftreten zuerst sichern.
-3. **Mobilstabilität und Fortsetzen:** eindeutige Diagnose-Buildkennung, konkrete Abbruchaufnahme und Spielstands-/Lebenszyklusabnahme zusammenführen. Die [Performanceübersicht](performance/README.md) führt verbleibendes Potenzial; weitere Desktoparbeit erst bei konkretem Bedarf und gemessenem Engpass.
-4. **Ein zusammenhängender Run-Abnahmeblock** mit FFA/Progression und taktischer Darstellung. Daraus konkrete Bugs/Balanceentscheidungen ableiten; erst danach einen neuen Modus oder Plattformausbau wählen.
-
-Aufwand: Buildkennung voraussichtlich klein, Dialogverwaltung/Fixturepflege mittel; Ursachenklärung bei Stillständen und Geräteabbrüchen offen. Das sind Umfangseinschätzungen, keine Zeit- oder Erfolgszusagen. Kriterien und Freigaben: [Prüfwahl](../testing.md).
+[Prüfwahl und Freigaben](../testing.md) bleiben verbindlich. Diese Priorisierung beauftragt keine Umsetzung und keine Langläufe.

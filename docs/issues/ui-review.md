@@ -6,11 +6,19 @@ Grenzen bestehen unabhängig von der übernommenen Moodboard-Materialgestaltung.
 
 ## Fokus und Dialogsemantik
 
-Statischer Abgleich auf `937914e`: [`openModal`](../../src/ui/screens.ts) ersetzt
+Statischer Abgleich auf `2038076`: [`openModal`](../../src/ui/screens.ts) ersetzt
 Markup weiterhin ohne Dialogrolle, initialen Fokus, Tab-Begrenzung oder Fokusrückgabe. Hintergrundkontrollen bleiben per Tastatur erreichbar. Auch vollständige
 Neurenderings nach Upgrade-Käufen können den Fokus verlieren.
 Eine gemeinsame Fokus-/Dialogverwaltung muss Rückkehr zu Pause, Ergebnis und Hauptmenü
 unterscheiden; Escape darf keine erforderliche Bestätigung überspringen. Keine bloße CSS-Lösung.
+
+## Modellkacheln: Bild und Bedienung
+
+[Cache-/Rendervertrag](../rendering.md#modellkacheln) erhalten; Öffnungs-, Layout- und Kopierkosten zentral unter [Performance/Modellkacheln](performance/README.md#modellkacheln), kein erneuter Cache-/Modellumbau aus dieser Liste.
+
+- [ ] Modellgröße/-ausschnitt, Teamfarben, Kontrast/Kanten, Namen/Kosten und deaktivierte Aktionen in Codex/HUD abnehmen.
+- [ ] Erstmaliges Einblenden und sofortige Wiederanzeige in Firefox und bei reduzierter Bewegung visuell prüfen.
+- [ ] Scrollen/Tippen auf Smartphone unter Last, nicht nur arrangiertes Standbild.
 
 ## CSS-Verantwortung
 
@@ -31,14 +39,8 @@ die Begrenzung am Kartenrand und die Höhenzentrierung beim Stage-Start ohne Tut
 sowie bei automatisch zentrierten Ansichten. Gezielte Node-Prüfungen decken Start-/Tutorial-Framing
 und Projektion auf erhöhtem Terrain ab, nicht das tatsächliche Kameragefühl.
 Statische Zustandsprojektionen schützen keine vollständigen Echtgeräteinteraktionen.
-Die Außenkulisse bleibt visuell abzunehmen: breite Sichtfenster, erhöhte Kartenränder
-und gedrehte Kamera ohne sichtbares Ende, helle Anschlussnaht oder Durchblick unter das Terrain;
-auch der Anteil der Außenkulisse an den Pan-Grenzen und die Erreichbarkeit
-bebaubarer Ränder nach Zoom-/Fenstergrößenwechseln.
-Lebendige Randgestaltung soll aus passender Verteilung vorhandener Dekoration entstehen,
-nicht aus unnötig großer Kulisse oder pauschal erhöhten Instanzbudgets.
-Material-/Bewuchsübergang, stetiger Höhen-/Schattierungsanschluss ohne helle oder dunkle Naht
-und kreisförmiger Sichtsaum am Rand sind menschlich abzunehmen;
+Randkulisse, Kameraabdeckung und Fog-Übergänge zentral unter
+[Landschaften](project-tomorrow.md#randkulisse-und-kamera) abnehmen;
 CPU-Fog-Isolation, Partei-/Sichtstufenfilter und ausbleibende Scan-Korridore sind gezielt geprüft.
 Auch die fest verankerten, kantengeglätteten Baugrid-Linien benötigen visuelle Abnahme
 bei weitem Zoom, niedriger Renderauflösung und Drehung: GPU-Stichproben prüfen die

@@ -2,13 +2,13 @@
 
 Verbindliche Regeln für feste Dreierangebote, permanentes Aktivieren im Modal, HUD-Ränge und Hilfe im laufenden Gefecht stehen in [Gameplay](../gameplay.md#wirtschaft-bau-und-produktion). Keine Migration alter Upgrade-Saves.
 
-Die geplanten eigenen Gebäudestile für alle zwölf Upgrades mit jeweils drei Ausbaustufen stehen im separaten [Modell-Issue](civilization-upgrade-models.md).
+Alle zwölf eigenen Gebäudestile mit jeweils drei Ausbaustufen sind integriert; verbleibende Darstellung-/Kostenabnahme im [Modell-Issue](civilization-upgrade-models.md).
 
 ## Technische Restarbeit
 
-- [ ] Optionale Langtest-Fixtures in `tests/ashes-of-meridian-simulation.check.cjs` auf verbliebene Annahmen etablierter Basen, frühere Startversorgung und automatisch minende Worker prüfen. Feste RNG-/Terrainreferenzen nicht zum Grünmachen regenerieren. Ausführung dieser Simulationsblöcke separat freigeben.
+Verbliebene Langtest-Fixtures zentral unter [Testpflege](teststrategie-review.md#vorrang-fachlich-veraltete-startannahmen), Welt-Save-Ziele unter [Spielstandsabnahme](expeditions-spielstand.md) und Archiv-/Aggregationskosten unter [Performance](performance/README.md#verbleibende-cpu-spitzen). Keine zusätzlichen Prüfrunden aus dieser Liste.
+
 - [ ] Breite Integrationsprüfung nach gesonderter Freigabe: bisher nur begrenzte Upgrade-, Persistenz-, HUD- und Weltbesuchsverträge. Das ist keine vollständige Spielabnahme.
-- [ ] Langfristige Kosten großer Weltarchive, wiederholter Aggregation und Speicherung gemäß [Performance](performance/README.md#verbleibende-cpu-spitzen) messen. Welt-Save-Ziele gemäß [Spielstandsabnahme](expeditions-spielstand.md) abnehmen.
 
 ## Menschliche Abnahme und Balance
 

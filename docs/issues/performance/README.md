@@ -13,19 +13,13 @@ Zentrale Übersicht für Singleplayer-Performance, Speicher-/Thermikdruck und Gr
 
 Aktuell dichte Armeen und Auswahlhänger getrennt eingrenzen; mobile Abbrüche bleiben ebenfalls offen. Die folgenden Kandidaten sind Messfragen, keine automatische Implementierungs- oder Lastlauffreigabe.
 
-## Einordnung der externen Analyse
+## Kandidaten und konservative Grenzen
 
-Die [externe Analyse](externe-analyse.md) beschreibt am Quellstand `d83d79a` reale unnötige Arbeit: rechteckige Terrain-Kandidatensuche, wiederholte Live-Körperscans, globale Weginvalidierung, erneute Modelltransforms/Instanzuploads und volle Lichttextur-Kapazitätsuploads. Der Codeabgleich bestätigt diese Mechanismen, nicht ihren Anteil am Nutzerframe. Kalte Portraitkopien und fehlende MSAA-Invalidierung sind plausible zusätzliche Hebel, keine nachgewiesenen Ursachen der Auswahlhänger bzw. Mobilabbrüche.
+Live-Kollisionsindex für `unitFits()` und zeilenweise Terrain-Ray-Kandidatensuche sind integriert. Yield behält seinen geordneten Live-Scan mit Achsenvorprüfung. Kandidatenwiederverwendung, radiusbehaftete Terrainsegmente und unveränderliche Navigationsprüfungen bleiben begrenzte Folgefragen, zunächst am Nutzerstand messen. Persistente Instanzdaten erst bei dominantem Modell-/Uploadanteil untersuchen. Lokale Weginvalidierung, Flowfields, Lichtfelder, Build-Porträts und Worker-Saves sind keine automatisch verhaltens-/darstellungsneutralen Änderungen.
 
-Die erste Stufe begrenzt den Live-Kollisionsindex auf `unitFits()`; Kandidatenwiederverwendung und weitere Indizes bleiben getrennte Folgeentscheidungen. Yield behält seinen geordneten Live-Scan mit einer konservativen Achsenvorprüfung. Der Terrain-Ray verwendet ebenfalls eine konservative zeilenweise Kandidatensuche; der externe DDA-Demonstrator wurde nicht übernommen. Nächster begrenzter Kandidat sind lange radiusbehaftete Terrainsegmente; zunächst ihre Relevanz für Wegglättung am Nutzerstand prüfen. Unveränderliche Navigationsprüfungen sind ein nachfolgender Cachekandidat. Kleine Lichtupload-/Shaderänderungen bleiben unabhängige A/B-Kandidaten; persistente Instanzhaltung erst bei relevantem gemessenem Modell-/Uploadanteil. Lokale Weginvalidierung, Flowfields, Lichtfelder, Build-Porträts und Worker-Saves sind keine automatisch verhaltens-/darstellungsneutralen Folgeänderungen.
+Die historische externe DDA-Probe war ein nachgebildeter Rechenkern, kein Produktions-/Browser-/FPS-Nachweis, und wurde nicht übernommen. Ihr wichtigster offener Schutzkontext bleibt der toleranznahe Randfall: Fläche `extent=64`, `step=2`, `size=65`, Höhe 2, entfernter Peak auf Höhe 4; Strahl von `[-65.00000005,4,-63.00000005]` nach `[-63.00000005,0,-65.00000005]`. Exakte X/Z-Clippinggrenzen verwerfen hier einen von den Dreieckstoleranzen akzeptierten Treffer bei `(-64.00000005,-64.00000005)`. Jede neue Kandidatensuche muss Toleranz, Rasterkanten/-ecken, parallele/kurze Abfragen, Kartengrenzen und nächsten Treffer konservativ schützen. `segment()` braucht unveränderte quadratische Radius-Clearance, nicht nur Mittellinien-DDA.
 
-### Grenzen des Ray-Demonstrators
-
-Die beigefügte [Probe](ray-probe.cjs) reproduziert unter Node 24.19.0 die [externen Kandidatenzahlen](ray-probe-results.json): 5.780 Vergleichsfälle ohne Abweichung, diagonal 3.249 statt 279 Zellen. Synthetisches Höhenfeld und nachgebildeter Rechenkern, keine Produktions-/Browser-/FPS-Abnahme. Über alle Vergleichsfälle sinkt die Kandidatenzahl um rund 73 %, die rund 91 % gelten nur für den diagonalen Stressfall.
-
-Ein zusätzlicher isolierter Randfall liefert jedoch **Rechtecktreffer, aber DDA `null`**: Fläche mit `extent=64`, `step=2`, `size=65`, Höhe 2 und einem entfernten Peak auf Höhe 4; Strahl von `[-65.00000005,4,-63.00000005]` nach `[-63.00000005,0,-65.00000005]`. Die bestehenden Dreieckstests akzeptieren `(-64.00000005,-64.00000005)` innerhalb ihrer Toleranz; das exakte X/Z-Clipping des Demonstrators verwirft den Strahl schon vorher. Eine Integration muss diese Toleranz konservativ abdecken, ebenso Rasterkanten/-ecken, parallele/kurze Abfragen, Kartengrenzen und den nächsten Treffer. `segment()` benötigt zusätzlich die unveränderte quadratische Radius-Clearance; Mittellinien-DDA allein genügt nicht. Den Demonstrator nicht unverändert übernehmen.
-
-Auch eine Kreis-/Lichtzellenprüfung braucht konservative Außenränder: Der Shader klemmt Positionen außerhalb der Karte auf Randzellen. Diese repräsentieren nicht nur ein endliches Quadrat innerhalb der Karte; vorhandene Tests schützen ausdrücklich Lichtbeiträge auf Außenkulisse. Teiluploads müssen dagegen nur alle referenzierten Lampenzeilen aktualisieren; ungenutzte Reserve darf erhalten bleiben.
+Kreis-/Lichtzellenprüfungen müssen Außenränder konservativ behandeln: Der Shader klemmt Außenpositionen auf Randzellen; vorhandene Tests schützen deren Lichtbeitrag. Teiluploads müssen alle referenzierten Lampenzeilen aktualisieren, nicht ungenutzte Reserve. Frühe Nullbeitragsprüfungen im Lichtshader, kleinere Uploads und MSAA-Invalidierung nach letzter Nutzung bleiben einzelne A/B-Kandidaten, keine belegten Ursachen von Auswahlhängern/Mobilabbrüchen. Fallbacks und weiterverwendete Renderziele erhalten.
 
 ## Verbleibende CPU-Spitzen
 
@@ -52,7 +46,7 @@ Frühere Chromium-Unterphasenaufnahmen ordnen synchrone Saves, einzelne Wegsuche
 - [ ] **Geometrie und Culling:** Detailreiche Foren, Zerstörer, Vegetation und zusätzliche Schatten-/Konturpässe können bei großen Beständen teuer werden. Räumliche Batchunterteilung nur bei bestätigter Geometrielast; mehr Buckets können mehr Draws verursachen. Vollständige Bounds einschließlich Animationen und außerhalb der Kamera liegender Schattenwerfer erhalten.
 - [ ] **Menü und Ergebnis:** Nur bei erneutem konkretem Symptom untersuchen. Bewegte Weltkulisse, eigentliche UI-Öffnung und Renderziel-/Filterkosten trennen; ein Menü ist keine automatisch billige 2D-Szene.
 
-Keine pauschale Reduktion von Auflösung, MSAA, Details, Lichtmenge, Bloom oder gewünschtem Tilt-Shift. GPU-Kosten und Treiber-/Compositoranteile lassen sich weder aus Draw-Zahlen noch aus kurzer GL-Einreichung allein ableiten. [Darstellungsabnahme](../modelle.md), [Landschaften](../project-tomorrow.md), [Bodenmaterial](../ground-material.md).
+Keine pauschale Reduktion von Auflösung, MSAA, Details, Lichtmenge, Bloom oder gewünschtem Tilt-Shift. GPU-Kosten und Treiber-/Compositoranteile lassen sich weder aus Draw-Zahlen noch aus kurzer GL-Einreichung allein ableiten. [Darstellungsabnahme](../modelle.md), [Landschaften](../project-tomorrow.md), [Nasse Bodenlichtakzente](../project-tomorrow.md#tageszeit-wetter-und-licht).
 
 ## UI und Erstaufbau
 
@@ -69,7 +63,7 @@ Genaue Klickprüfung und aktuelle Sicht-/Belegung erhalten, keine zusätzliche W
 - [ ] Bei erneutem Einbruch beim Öffnen von Codex/Baumenü erste Aufnahme und Wiederanzeige getrennt messen. Historisch wurden 60 → 30 FPS oder weniger gemeldet, aber ohne Geräte-/Diagnosekontext; kein belegter aktueller Dauerzustand.
 - [ ] CPU-Layout-/Sichtbarkeitsprüfungen von kalter GPU-/Canvas-Kopie trennen. Dirty-/Resize-/Scroll-getriebene Prüfung ist ein Kandidat, falls wiederholte DOM-Rechtecke dominieren. Laufende Weltkulisse separat erfassen; `thumbnails` nicht mit deren Kosten verwechseln.
 
-Ausschnitt, Teamfarben, Einblenden und Touchbedienung bleiben unter [Modellkacheln](../modell-kacheln.md); [Cache-/Ressourcenvertrag](../../rendering.md#modellkacheln).
+Ausschnitt, Teamfarben, Einblenden und Touchbedienung bleiben unter [UI-Modellkacheln](../ui-review.md#modellkacheln-bild-und-bedienung); [Cache-/Ressourcenvertrag](../../rendering.md#modellkacheln).
 
 ## Initialisierung und Weltwechsel
 

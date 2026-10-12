@@ -30,8 +30,6 @@ Kosten bei weitem Zoom, kalter Aufbau und Vorbereitung unter Last werden zentral
 
 ## Prüfgrenzen und Zuständigkeiten
 
-- [ ] **Bestehende Spuren-Testlücke:** Der isolierte Fall `road texture is reused, released and bound only on terrain scene draws` in `tests/ashes-of-meridian-worker-roads.check.cjs` scheitert auch auf unverändertem `main` (`d5070e2`) mit `Render batch vertex array allocation failed`. Den Renderer-Stub separat auf den aktuellen VAO-Vertrag prüfen; nicht durch Änderungen am Siedlungsverkehr umgehen. Die übrigen Spurenfälle und der begrenzte Chromium-/WebGL-Verkehrsnachweis ersetzen diesen Vertrag nicht.
-
 Kleine CPU-Verträge prüfen Vorratsbuchung, begrenztes Wachstum, Korridor-Ausschlüsse, Rückbau sowie gespeicherte Zuweisungen und Wachstumscursor. Visuelle Wirkung, [Echtgeräteperformance](performance/README.md), echte Pendelstrecken auf den verschiedenen Landschaften und vollständige Runs bleiben offen; keine breite KI-/Simulationsabnahme daraus ableiten.
 
 [Progressionsbalance](expeditions-schwierigkeit-und-upgrades.md), [Weltbesuche/Spielstand](expeditions-spielstand.md), [Modellabnahme](modelle.md) und [menschliche Run-Abnahme](playtest-validation.md) bleiben in ihren Fachissues. Bevölkerung, Steuern, Verkehr, Produktionsketten oder Viertelspezialisierung gehören nicht zum aktuellen Kern.
