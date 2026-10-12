@@ -12,7 +12,9 @@ const elements = new Map([['height', canvas]]);
 const context = vm.createContext({
   assert,
   document: { getElementById: id => {
-    if (!elements.has(id)) elements.set(id, { addEventListener() {}, checked: true });
+    if (!elements.has(id)) elements.set(id, {
+      listeners: new Map(), addEventListener(type, listener) { this.listeners.set(type, listener); }, checked: true,
+    });
     return elements.get(id);
   }, addEventListener() {} },
   window: { addEventListener() {}, devicePixelRatio: 1 },
@@ -46,18 +48,31 @@ const result = vm.runInContext(`(() => {
     const light = .45 + .55 * Math.max(0, (-.4 * nx - .5 * ny + .768 * nz) / Math.hypot(nx, ny, nz));
     assert.ok(Math.abs(mesh.vertices[target].light - light) < 1e-12);
   }
+  assert.equal(heightBoundary(1), 85 / 3);
+  assert.equal(heightBoundary(2), 170 / 3);
+  for (const [height, expected] of [[-10, 0], [0, 0], [28, 0], [85 / 3, 1], [40, 1], [170 / 3, 2], [85, 2], [100, 2]]) {
+    assert.equal(heightBand(height), expected);
+  }
+  // Entire cards may occupy one zone: do not normalize to their own extrema.
+  for (const [heights, expected] of [[[5, 10, 15], 0], [[35, 40, 45], 1], [[60, 70, 80], 2]]) {
+    assert.ok(heights.every(h => heightBand(h) === expected));
+  }
+  assert.ok(heightLegendHTML().includes('Mittelland: 28,3–56,7'));
   // Verify that GPU packing uses shared terrain attributes, but keeps water
   // and bridge decks separate. Extra material faces must not affect normals.
   const first = mesh.triangles[0];
   mesh.triangles.push({ ...first, material: 1, light: 1, height: 38.6, planned: false },
     { ...first, material: 2, light: .6, height: 40, planned: true });
   let uploaded, uploads = 0;
+  const uniforms = {};
   const gl = {
     isContextLost: () => false, bindBuffer() {}, bufferData(target, data) { uploaded = data; uploads++; },
-    viewport() {}, clear() {}, uniform4f() {}, uniform2f() {}, uniform1i() {}, drawArrays() {},
+    viewport() {}, clear() {}, uniform4f() {}, uniform2f(name, x, y) { uniforms[name] = [x, y]; },
+    uniform1i(name, value) { uniforms[name] = value; }, drawArrays() {},
     ARRAY_BUFFER: 1, STATIC_DRAW: 2, TRIANGLES: 4, COLOR_BUFFER_BIT: 8, DEPTH_BUFFER_BIT: 16,
   };
-  gpu = { gl, buffer: {}, uploaded: null };
+  gpu = { gl, buffer: {}, uploaded: null, overlay: 'overlay', heightZones: 'heightZones',
+    heightRange: 'heightRange', heightCuts: 'heightCuts' };
   draw3D();
   assert.equal(uploads, 1);
   assert.equal(uploaded.length, mesh.triangles.length * 21);
@@ -74,6 +89,21 @@ const result = vm.runInContext(`(() => {
   }
   draw3D();
   assert.equal(uploads, 1);
+  assert.equal(uniforms.heightZones, 1);
+  assert.deepEqual(uniforms.heightRange, [0, 85]);
+  assert.deepEqual(uniforms.heightCuts, [85 / 3, 170 / 3]);
+  current = plan;
+  const originalMesh = mesh, toggle = document.getElementById('heightZones');
+  for (const active of [false, true]) {
+    toggle.checked = active;
+    toggle.listeners.get('change')();
+    assert.equal(document.getElementById('heightLegend').hidden, !active);
+    assert.equal(document.getElementById('overlay').disabled, active);
+    assert.equal(uniforms.heightZones, active ? 1 : 0);
+    assert.equal(mesh, originalMesh);
+    assert.equal(current, plan);
+    assert.equal(uploads, 1);
+  }
   return { vertices: mesh.vertices.length, faces: mesh.terrainFaceCount };
 })()`, context, { timeout: 5000 });
-console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height and cached upload OK. No generated-map/raster validation.`);
+console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height, fixed height zones and cached upload on toggles OK. No generated-map/raster validation.`);

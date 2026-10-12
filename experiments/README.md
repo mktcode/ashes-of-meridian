@@ -5,6 +5,7 @@
 ## Bedienung
 
 - **Neues Layout:** sechseckige Karte mit 19 weich gerundeten, unterschiedlich gestreckten Spielflächen, verbindenden Wegen, gerundeten Flüssen und lokalen Brücken.
+- **Höhenzonen:** standardmäßig drei feste Bereiche im fiktiven Höhenraum 0–85: Tiefland (grün), Mittelland (ocker), Hochland (grau). Sichtbare Legende mit Schwellen bei 28⅓ und 56⅔; die gerundeten Zahlen in der Legende dienen nur der Anzeige. Kartenminimum und -maximum verändern die Grenzen nicht, eine Karte darf überwiegend in einer Zone liegen. Der Höhenraum ist ein Darstellungs-/Dekorationsmaßstab, kein zusätzlicher Höhen-Clamp für den Generator. Außerhalb liegende Höhen erhalten die äußerste Zonenfarbe. Wasser und Brückendecks behalten ihre Farben. Im Zonenmodus ist die Spielraummarkierung deaktiviert; beim Ausschalten steht sie wieder zur Verfügung. Umschalten verändert nur Shader-Uniforms, ohne Neugenerierung oder erneuten Mesh-Upload. Noch keine Vegetation, Felsobjekte oder Neigungs-/Feuchtezonen.
 - **Planungskarte:** Regionen, Verbindungen, Regionsnummern und Höhenversätze; „Netze“ zeigt zusätzlich Basis- und duales Netz.
 - **3D-Ansicht:** Ziehen dreht/neigt, Mausrad oder Regler zoomt, Doppelklick setzt die Kamera zurück. „Spielräume“ markiert geschützte Flächen. Das Gelände wird einmal pro Layout zur GPU übertragen; Kamerabewegungen benötigen keine erneute Generierung.
 
@@ -42,6 +43,6 @@ Dies ist ein stilisiertes Verteilernetz, keine Wasserphysik oder Erosionssimulat
 
 Kurze Konturprüfung ohne Mesh-/Rasteraufbau: `node experiments/map-generation/check-regions.mjs`. Sie prüft deterministische Formen, Konvexität, Mindestkern, begrenzte Ausdehnung, gemeinsame Planungsgeometrie und exakte Distanzabfragen; sie ist keine vollständige Gelände- oder Spielbarkeitsprüfung.
 
-Kurze Mesh-/Upload-Prüfung: `node experiments/map-generation/check-mesh.mjs`. Sie verwendet ein günstiges synthetisches Höhenfeld für das volle Grundmesh und prüft gemeinsame Beleuchtung, interpolierte Höhen, getrennte Materialien und einmaligen GPU-Upload. Sie erzeugt keine prozedurale Testkarte und ersetzt weder deren Steigungs-/Rasterprüfung noch echte WebGL- oder visuelle Abnahme.
+Kurze Mesh-/Upload-Prüfung: `node experiments/map-generation/check-mesh.mjs`. Sie verwendet ein günstiges synthetisches Höhenfeld für das volle Grundmesh und prüft gemeinsame Beleuchtung, interpolierte Höhen, getrennte Materialien, feste Höhenzonen und einmaligen GPU-Upload auch beim Umschalten der Zonen. Sie erzeugt keine prozedurale Testkarte und ersetzt weder deren Steigungs-/Rasterprüfung noch echte WebGL- oder visuelle Abnahme.
 
 Optionale CPU-Prüfung ohne Installation: `node experiments/map-generation/check.mjs` im Repository-Root. Sie erzeugt vollständige Meshes und Raster, ist kein schneller Smoke-Test und sollte für die visuelle Vorschau nicht vorausgesetzt werden. Sie prüft gekrümmte Kanten, gemeinsame Kreuzungsanker, lokale Brücken, Randanschlüsse, inverse Abbildung, fallende Wasserhöhen, Rasterverbindung und tatsächliche Dreiecksneigung an vier festen Seeds. Sie ersetzt weder WebGL-/Bedienungsprüfung noch visuelle Abnahme.

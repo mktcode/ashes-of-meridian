@@ -23,6 +23,9 @@
   #height:active { cursor: grabbing; }
   .minimap { position: absolute; left: 14px; bottom: 14px; width: min(320px, 38vw, 38vh); border: 1px solid #596775; border-radius: 8px; overflow: hidden; background: #202b38; box-shadow: 0 4px 24px #0007; }
   .minimap summary { padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  .height-legend { position: absolute; top: 14px; right: 14px; padding: 8px 10px; border: 1px solid #596775; border-radius: 8px; background: #202b38ee; font-size: 12px; pointer-events: none; }
+  .height-legend .legend { display: grid; gap: 4px; margin-top: 4px; }
+  .controls label:has(input:disabled) { opacity: .5; }
   #layout { display: block; width: 100%; height: auto; }
   #renderError { position: absolute; top: 12px; left: 12px; right: 12px; color: #ffbc9c; pointer-events: none; }
   #renderError:not(:empty) { padding: 8px; background: #151b23ee; border-radius: 5px; }
@@ -39,7 +42,8 @@
     <strong class="brand">Terrain-Labor</strong>
     <div class="controls" tabindex="0" aria-label="Einstellungen, auf schmalen Bildschirmen horizontal scrollbar">
       <button id="generate">Neues Layout</button>
-      <label title="Spielräume im 3D-Modell markieren"><input id="overlay" type="checkbox" checked> Spielräume</label>
+      <label title="Feste Höhenzonen im globalen Höhenraum anzeigen, unabhängig von Kartenminimum und -maximum"><input id="heightZones" type="checkbox" checked> Höhenzonen</label>
+      <label title="Spielräume im 3D-Modell markieren; bei aktiven Höhenzonen ausgeblendet"><input id="overlay" type="checkbox" checked disabled> Spielräume</label>
       <label title="Basis- und duales Netz in der Planungskarte anzeigen"><input id="dual" type="checkbox"> Netze</label>
       <label title="Gemeinsame weiche Verformung von Wegen, Flüssen und Kartenrand"><input id="curves" type="checkbox" checked> Verformung</label>
       <label title="Flussrouten vor der Höhen- und Brückenplanung abrunden"><input id="rounded" type="checkbox" checked> Runde Flüsse</label>
@@ -56,6 +60,7 @@
     <summary>Planungskarte</summary>
     <canvas id="layout" width="480" height="480" aria-label="Regionen und verbindende Wege"></canvas>
   </details>
+  <aside id="heightLegend" class="height-legend" aria-label="Legende der festen Höhenzonen"></aside>
   <small id="renderError" role="status"></small>
 </main>
 <dialog id="info" aria-labelledby="infoTitle">
@@ -64,6 +69,7 @@
 <p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
 <p>Die Checkbox „Runde Flüsse“ ersetzt die eckigen Routen durch zusammenhängende Bézier-Kurven, bevor Höhen, Bett und Brücken berechnet werden. Nur Kreuzungen, Verzweigungen und Randanschlüsse bleiben feste Anker; normale duale Knoten dürfen übersprungen werden. Wasser wird als eigenes fein unterteiltes Band dargestellt; das Gelände wird entlang der Ufer lokal verfeinert. Beide Checkboxen vergleichen Varianten mit demselben Seed. Die Vorschau zeigt auch Layouts mit überschrittener Neigungsgrenze, dann ausdrücklich mit einer Warnung.</p>
+<p>„Höhenzonen“ zeigt drei feste Höhenbereiche im fiktiven globalen Höhenraum von 0 bis 85: Tiefland (grün), Mittelland (ocker), Hochland (grau). Die Schwellen sind für alle Seeds identisch; Kartenminimum und -maximum verändern sie nicht. Eine Karte darf überwiegend in einer Zone liegen. Wasser und Brücken behalten ihre Farben; die Spielraummarkierung ist in diesem Modus ausgeblendet. Dies sind Diagnosefarben, noch keine Vegetation oder Felsobjekte. Die Höhen außerhalb des Darstellungsraums erhalten die Farbe der jeweils äußersten Zone, ohne das Gelände zu begrenzen.</p>
 <p>Das Gelände verwendet ein feineres Grundmesh und zusätzliche Unterteilungen entlang der Flüsse. Gemeinsame, flächengewichtete Vertex-Normalen und interpolierte Höhenfarben reduzieren sichtbare Dreiecksfacetten. Das Höhenfeld und die Steigungsprüfung bleiben davon unabhängig; Wasser und Brückendecks behalten getrennte Oberflächen.</p>
 <p>Die Spielflächen besitzen weich gerundete, unterschiedlich gestreckte und asymmetrische Konturen statt sechs dominanter Ecken. Dieselben Konturen bestimmen Darstellung, Schutzabstände und Höhenplanung; ein breiter Kern für Weganschlüsse bleibt erhalten.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
@@ -74,6 +80,20 @@
 const SIZE = 300, PIXELS = 480, ROAD_RADIUS = 7, HEX_RADIUS = 145;
 const MAX_GRADE = .45, OFFSET_GRADE = .20, NOISE_MARGIN = 6;
 const TERRAIN_RESOLUTION = 96;
+// Fixed fictional display/decorating space, not per-map extrema or a terrain clamp.
+const HEIGHT_SPACE = { min: 0, max: 85 };
+const HEIGHT_BANDS = [
+  { name: 'Tiefland', color: [77, 143, 83] },
+  { name: 'Mittelland', color: [177, 157, 107] },
+  { name: 'Hochland', color: [174, 181, 187] },
+];
+function heightBoundary(index) { return HEIGHT_SPACE.min + (HEIGHT_SPACE.max - HEIGHT_SPACE.min) * index / HEIGHT_BANDS.length; }
+function heightBand(height) { return height < heightBoundary(1) ? 0 : height < heightBoundary(2) ? 1 : 2; }
+function heightLegendHTML() {
+  const number = value => value.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  return `<strong>Höhenraum ${number(HEIGHT_SPACE.min)}–${number(HEIGHT_SPACE.max)} · feste Zonen</strong><div class="legend">` +
+    HEIGHT_BANDS.map((band, i) => `<span style="--color:rgb(${band.color.join(',')})">${band.name}: ${number(heightBoundary(i))}–${number(heightBoundary(i + 1))}</span>`).join('') + '</div>';
+}
 const RIVER_RADIUS = 2.8, BANK_WIDTH = 3, FLOW_GRADE = .035, AUDIT_SIZE = 192;
 const WATER_DROP = 1.4, BED_DEPTH = 1.1, RIVER_SUPPORT = RIVER_RADIUS + BANK_WIDTH;
 const BRIDGE_BUFFER = 1.8, BRIDGE_REACH = RIVER_SUPPORT + BRIDGE_BUFFER;
@@ -793,10 +813,18 @@ function createGPU() {
     precision mediump float;
     varying vec4 face;
     uniform bool overlay;
+    uniform bool heightZones;
+    uniform vec2 heightRange;
+    uniform vec2 heightCuts;
     void main() {
-      float h = clamp(face.y / 85.0, 0.0, 1.0);
+      float h = clamp((face.y - heightRange.x) / (heightRange.y - heightRange.x), 0.0, 1.0);
       vec3 color = vec3(25.0, 40.0, 55.0) + h * vec3(210.0, 193.0, 150.0);
-      if (overlay && face.z > 0.5) color = vec3(100.0, 205.0, 150.0);
+      if (heightZones) {
+        if (face.y < heightCuts.x) color = vec3(${HEIGHT_BANDS[0].color.map(n => n.toFixed(1)).join(', ')});
+        else if (face.y < heightCuts.y) color = vec3(${HEIGHT_BANDS[1].color.map(n => n.toFixed(1)).join(', ')});
+        else color = vec3(${HEIGHT_BANDS[2].color.map(n => n.toFixed(1)).join(', ')});
+      }
+      if (overlay && !heightZones && face.z > 0.5) color = vec3(100.0, 205.0, 150.0);
       if (face.w > 0.5 && face.w < 1.5) color = vec3(38.0, 147.0, 217.0);
       if (face.w > 1.5) color = vec3(217.0, 155.0, 88.0);
       gl_FragColor = vec4(color * face.x / 255.0, 1.0);
@@ -817,7 +845,8 @@ function createGPU() {
   gl.enable(gl.DEPTH_TEST); gl.clearColor(32 / 255, 43 / 255, 56 / 255, 1);
   return { gl, buffer, uploaded: null, count: 0,
     camera: gl.getUniformLocation(program, 'camera'), scale: gl.getUniformLocation(program, 'scale'),
-    overlay: gl.getUniformLocation(program, 'overlay') };
+    overlay: gl.getUniformLocation(program, 'overlay'), heightZones: gl.getUniformLocation(program, 'heightZones'),
+    heightRange: gl.getUniformLocation(program, 'heightRange'), heightCuts: gl.getUniformLocation(program, 'heightCuts') };
 }
 function draw3D() {
   try {
@@ -853,6 +882,9 @@ function draw3D() {
     const scale = .96 * zoom * 2 / PIXELS, shortSide = Math.min(canvas.width, canvas.height);
     gl.uniform2f(gpu.scale, scale * shortSide / canvas.width, scale * shortSide / canvas.height);
     gl.uniform1i(gpu.overlay, document.getElementById('overlay').checked ? 1 : 0);
+    gl.uniform1i(gpu.heightZones, document.getElementById('heightZones').checked ? 1 : 0);
+    gl.uniform2f(gpu.heightRange, HEIGHT_SPACE.min, HEIGHT_SPACE.max);
+    gl.uniform2f(gpu.heightCuts, heightBoundary(1), heightBoundary(2));
     gl.drawArrays(gl.TRIANGLES, 0, gpu.count);
     document.getElementById('renderError').textContent = '';
   } catch (error) {
@@ -886,6 +918,13 @@ function generate() {
   catch (error) { document.getElementById('status').textContent = `Seed ${seeds[0]}: ${error.message}`; console.error(error); }
 }
 document.getElementById('generate').addEventListener('click', generate);
+document.getElementById('heightLegend').innerHTML = heightLegendHTML();
+document.getElementById('heightZones').addEventListener('change', () => {
+  const active = document.getElementById('heightZones').checked;
+  document.getElementById('heightLegend').hidden = !active;
+  document.getElementById('overlay').disabled = active;
+  draw3D(); // Uniforms only: preserve the seed, plan, mesh and GPU upload.
+});
 document.getElementById('overlay').addEventListener('change', draw3D);
 document.getElementById('dual').addEventListener('change', drawPlanning);
 for (const id of ['curves', 'rounded']) document.getElementById(id).addEventListener('change', () => {
