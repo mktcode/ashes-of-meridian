@@ -25,9 +25,11 @@ const result = vm.runInContext(`(() => {
     assert.ok(decorationClearance(plan, t.sourceX, t.sourceY));
     assert.equal(decorationSite(plan, t.sourceX, t.sourceY, flat).eligible, true);
     assert.ok(plantingMask(decoration.field, t.sourceX, t.sourceY) >= .5);
-    for (let j = 0; j < i; j++) assert.ok(distance(t, full[j]) >= TREE_RULES.spacing);
+    for (let j = 0; j < i; j++) assert.ok(distance(t, full[j]) >= Math.max(t.spacing, full[j].spacing));
   }
+  assert.ok(TREE_RULES.clearance * (1 - .32) > 1.8 * 1.35, 'Largest crown stays out of protected areas');
   const t = full[0];
+  assert.equal(decorationSite(plan, t.sourceX, t.sourceY, (p,x,y) => ({height:40 + (x-t.x)*.35,water:-100,bridge:false})).eligible, true);
   for (const [height, band] of [[20,0],[40,1],[70,2]]) {
     assert.equal(decorationSite(plan, t.sourceX, t.sourceY, () => ({height,water:0,bridge:false})).band, band);
   }
@@ -67,7 +69,9 @@ const result = vm.runInContext(`(() => {
   const zoneCounts = zones.map(d => selectTrees(d,.65).length);
   assert.ok(zoneCounts[1] < zoneCounts[0] * .75, 'Mittelland must be noticeably sparser');
   assert.ok(zoneCounts[2] < zoneCounts[1] * .5, 'Hochland must be much sparser');
-  assert.ok(zoneCounts[2] < zoneCounts[0] * .3, 'Strong Tiefland/Hochland density contrast');
+  assert.ok(zoneCounts[1] < zoneCounts[0] * .3, 'Lowland should be a dense forest, not scattered trees');
+  assert.ok(zoneCounts[2] < zoneCounts[0] * .06, 'Drastic Tiefland/Hochland density contrast');
+  assert.ok(selectTrees(zones[0],1).length > zoneCounts[0], 'Lowland slider must not saturate at 65%');
   assert.equal(JSON.stringify(plan), before);
   return { full:full.length, medium:medium.length, sparse:sparse.length, zoneCounts };
 })()`, context, { timeout: 5000 });

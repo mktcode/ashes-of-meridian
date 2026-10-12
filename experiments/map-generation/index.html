@@ -818,9 +818,11 @@ function auditMap(plan, mesh, n = AUDIT_SIZE, sampleAt = sampleWorld) {
 <script id="terrain-decoration">
 'use strict';
 // Read-only, visual decoration. No terrain changes or navigation obstacles.
-const TREE_RULES = { step: 6, clearance: 5.5, spacing: 5.4, maxGrade: .28 };
-// Strong vegetation contrast in the fixed global zones; never normalize by map.
-const TREE_ZONE_DENSITY = [1, .45, .12];
+const TREE_RULES = { step: 4, clearance: 4, maxGrade: .40 };
+// Eligibility is zone-independent. Lowland crowns may overlap to form forest;
+// middle/highland remain open. Never normalize these rules by map extrema.
+const TREE_ZONE_DENSITY = [2, .25, .025];
+const TREE_ZONE_SPACING = [2.8, 4.5, 5.4];
 function decorationClearance(plan, x, y) {
   // Margins include the largest crown under the .32 warp derivative bound.
   const dx = Math.abs(x - SIZE / 2), dy = Math.abs(y - SIZE / 2);
@@ -866,7 +868,7 @@ function makeDecoration(plan, sampleAt = sampleWorld) {
     phases = Array.from({ length: 4 }, () => random() * Math.PI * 2), catalog = [], bins = new Map(), candidates = [];
   // Stable random priorities avoid scan-order bias. Density filters the fixed
   // catalog; surviving trees never move when the slider changes.
-  const pitch = 4.5;
+  const pitch = 2.5, binSize = Math.max(...TREE_ZONE_SPACING);
   for (let y = pitch / 2; y < SIZE; y += pitch) for (let x = pitch / 2; x < SIZE; x += pitch) {
     candidates.push({ x: x + (random() - .5) * pitch * .8, y: y + (random() - .5) * pitch * .8,
       priority: random(), chance: random(), type: random(), rotation: random() * Math.PI * 2, size: .85 + random() * .5 });
@@ -876,19 +878,19 @@ function makeDecoration(plan, sampleAt = sampleWorld) {
     if (plantingMask(field, c.x, c.y) < .5) continue;
     const forest = smooth((.5 + .28 * Math.sin(c.x / 29 + phases[0]) * Math.sin(c.y / 36 + phases[1]) +
       .18 * Math.sin(c.x / 17 + c.y / 23 + phases[2]) + .10 * Math.cos(c.y / 11 + phases[3]) - .32) / .45);
-    if (forest <= c.chance) continue;
+    if (forest <= 0) continue;
     const site = decorationSite(plan, c.x, c.y, sampleAt);
     if (!site.eligible) continue;
-    const zoneDensity = TREE_ZONE_DENSITY[site.band];
-    if (c.chance >= forest * zoneDensity) continue;
-    const bx = Math.floor(site.x / TREE_RULES.spacing), by = Math.floor(site.y / TREE_RULES.spacing);
+    const probability = Math.min(1, forest * TREE_ZONE_DENSITY[site.band]), spacing = TREE_ZONE_SPACING[site.band];
+    if (c.chance >= probability) continue;
+    const bx = Math.floor(site.x / binSize), by = Math.floor(site.y / binSize);
     let crowded = false;
     for (let y = by - 1; y <= by + 1; y++) for (let x = bx - 1; x <= bx + 1; x++) {
-      if ((bins.get(`${x}:${y}`) || []).some(t => distance(t, site) < TREE_RULES.spacing)) crowded = true;
+      if ((bins.get(`${x}:${y}`) || []).some(t => distance(t, site) < Math.max(spacing, t.spacing))) crowded = true;
     }
     if (crowded) continue;
     const tree = { ...site, type: c.type < [.82, .5, .18][site.band] ? 'broadleaf' : 'conifer',
-      rotation: c.rotation, size: c.size, threshold: c.chance / (forest * zoneDensity) };
+      rotation: c.rotation, size: c.size, spacing, threshold: c.chance / probability };
     catalog.push(tree);
     const key = `${bx}:${by}`;
     if (!bins.has(key)) bins.set(key, []);
