@@ -95,7 +95,7 @@ function heightLegendHTML() {
   return `<strong>Höhenraum ${number(HEIGHT_SPACE.min)}–${number(HEIGHT_SPACE.max)} · feste Zonen</strong><div class="legend">` +
     HEIGHT_BANDS.map((band, i) => `<span style="--color:rgb(${band.color.join(',')})">${band.name}: ${number(heightBoundary(i))}–${number(heightBoundary(i + 1))}</span>`).join('') + '</div>';
 }
-const RIVER_RADIUS = 2.8, BANK_WIDTH = 3, FLOW_GRADE = .035, AUDIT_SIZE = 192;
+const RIVER_RADIUS = 2.8, BANK_WIDTH = 3, FLOW_GRADE = .07, AUDIT_SIZE = 192;
 const WATER_DROP = 1.4, BED_DEPTH = 1.1, RIVER_SUPPORT = RIVER_RADIUS + BANK_WIDTH;
 const BRIDGE_BUFFER = 1.8, BRIDGE_REACH = RIVER_SUPPORT + BRIDGE_BUFFER;
 function insideMap(x, y) {
@@ -447,7 +447,8 @@ function bridgeAt(river, x, y, gap = riverDistance(river, x, y)) {
 }
 function riverDatum(river, x, y) {
   const downstream = project({ x: x - SIZE / 2, y: y - SIZE / 2 }, river.direction);
-  // Derivative along flow is -.035 +/- .0125: strictly falling, gently curved.
+  // Stronger broad relief, without adding local noise or deepening the bed.
+  // Derivative along flow is -FLOW_GRADE +/- 1/80: strictly falling.
   return 40 - FLOW_GRADE * downstream + Math.sin(downstream / 80 + river.phase);
 }
 function waterHeight(river, x, y) { return riverDatum(river, x, y) - WATER_DROP; }

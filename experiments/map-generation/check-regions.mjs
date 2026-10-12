@@ -34,6 +34,26 @@ vm.runInContext(`
   }
   const plan = makePlan(2);
   assert.equal(plan.regions.length, 19);
+  // Check the shared broad datum, not a mesh/raster playability approval.
+  assert.equal(FLOW_GRADE, .07);
+  assert.ok(FLOW_GRADE > 1 / 80);
+  assert.ok((FLOW_GRADE + 1 / 80 + OFFSET_GRADE) / (1 - .32) < MAX_GRADE);
+  let previous = Infinity, first;
+  for (let i = 0; i <= 32; i++) {
+    const d = -HEX_RADIUS + 2 * HEX_RADIUS * i / 32;
+    const height = riverDatum(plan.river, SIZE / 2 + plan.river.direction.x * d, SIZE / 2 + plan.river.direction.y * d);
+    if (i === 0) first = height;
+    assert.ok(height < previous); previous = height;
+  }
+  assert.ok(first - previous >= 2 * HEX_RADIUS * FLOW_GRADE - 2);
+  assert.ok(plan.river.curves.every(points => points.every((p, i) => !i || points[i - 1].height > p.height)));
+  for (let i = 0; i < 32; i++) {
+    const segment = plan.river.segments[Math.floor(i * plan.river.segments.length / 32)],
+      x = (segment.a.x + segment.b.x) / 2, y = (segment.a.y + segment.b.y) / 2,
+      land = sampleLand(plan, x, y), bed = sample(plan, x, y);
+    assert.ok(Math.abs(land.height - bed.height - WATER_DROP - BED_DEPTH) < 1e-7);
+    assert.ok(Math.abs(bed.deckHeight - land.height - .08) < 1e-7);
+  }
   for (const region of plan.regions) {
     assert.ok(region.points.every(p => insideMap(p.x, p.y)));
     assert.ok(region.outline.every(p => Math.abs(polygonDistance(region, p.source.x, p.source.y)) < 1e-7));
@@ -47,4 +67,4 @@ vm.runInContext(`
   assert.equal(JSON.stringify(pruned), JSON.stringify(probes.map(p => sampleLand(plan, p.x, p.y))));
   plan.regions.forEach((r, i) => { r.bounds = bounds[i]; });
 `, context, { timeout: 5000 });
-console.log('Rounded region contours: deterministic, convex, road-width core, bounded footprint, shared planning geometry and exact distance pruning OK. No mesh/raster generated.');
+console.log('Rounded region contours: deterministic, convex, road-width core, bounded footprint, shared planning geometry exact distance pruning, stronger descending datum and shallow bed OK. No mesh/raster generated.');

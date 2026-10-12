@@ -31,6 +31,8 @@ Das regelmäßige Netz ist nur die topologische Basis. Wege, Flüsse und Randkan
 
 Die Ableitung des Verschiebungsfelds ist global auf weniger als 0,32 begrenzt. Dadurch ist die Abbildung invertierbar, erzeugt keine Faltungen und erhält die Beziehungen des Basisnetzes; Längen und Breiten können sich dabei um bis zu 32 % verändern. Wasserhöhen werden mit den Kurven transportiert, nicht aus der neuen horizontalen Fließrichtung abgeleitet. Begehbarkeitsabfragen verwenden die inverse Abbildung, und die Steigungsprüfung misst die tatsächlich verformten Geländedreiecke. Planung und Höhenfeld bleiben in Referenzkoordinaten konsistent; die Darstellung ist keine unabhängig verzerrte Vorschau.
 
+Die großflächige Grundneigung des gemeinsamen Gelände-/Flussdatums ist stärker ausgeprägt: 7 % in Fließrichtung im unverformten Planungsraum, zuzüglich der bestehenden sanften Höhenwelle. Dadurch wachsen die Höhenunterschiede über die Karte, ohne das kleinteilige Rauschen oder die Flusstiefe zu erhöhen. Die festen Höhenzonengrenzen bleiben unabhängig davon. Die Neigung der tatsächlichen Oberfläche nach Verformung und Ufermodellierung wird weiterhin separat geprüft; die stärkere Grundneigung ist keine Spielbarkeitsfreigabe.
+
 Der Fluss ist ein Höhenanker für die gemeinsame Geländeplanung. Nahe Regionshöhen werden vor dem Geländeaufbau begrenzt; das Bett liegt 2,5 Höheneinheiten unter dem Ufer statt in einer tief eingeschnittenen Schlucht. Noise bleibt außerhalb der geschützten Spielräume und des Flusskorridors.
 
 An tatsächlichen Weg-/Flusskreuzungen entstehen separate Brückendecks. Nur Fluss, Uferbereich und ein kleiner Puffer werden orange markiert; die übrigen Wegabschnitte bleiben normales Gelände. Wasser außerhalb der Decks ist gesperrt. Der Prototyp prüft die Rasterverbindung mit Brücken, die Dreiecksneigung der begehbaren Oberflächen gegen die unabhängige 45-%-Grenze und die fallende Wasserhöhe auf jedem Flussabschnitt.
@@ -41,7 +43,7 @@ Die Darstellung ist eine vorläufige Vorschau: Steigungsüberschreitungen werden
 
 Dies ist ein stilisiertes Verteilernetz, keine Wasserphysik oder Erosionssimulation. Durchflussmengen, Körperfreiraum, Navigation unter Brücken und RTS-Balance werden nicht geprüft. Der Spielgenerator, Spielprofile und reguläre Build bleiben davon unberührt.
 
-Kurze Konturprüfung ohne Mesh-/Rasteraufbau: `node experiments/map-generation/check-regions.mjs`. Sie prüft deterministische Formen, Konvexität, Mindestkern, begrenzte Ausdehnung, gemeinsame Planungsgeometrie und exakte Distanzabfragen; sie ist keine vollständige Gelände- oder Spielbarkeitsprüfung.
+Kurze Konturprüfung ohne Mesh-/Rasteraufbau: `node experiments/map-generation/check-regions.mjs`. Sie prüft deterministische Formen, Konvexität, Mindestkern, begrenzte Ausdehnung, gemeinsame Planungsgeometrie, exakte Distanzabfragen, fallendes Höhendatum und unveränderte flache Betttiefe; sie ist keine vollständige Gelände- oder Spielbarkeitsprüfung.
 
 Kurze Mesh-/Upload-Prüfung: `node experiments/map-generation/check-mesh.mjs`. Sie verwendet ein günstiges synthetisches Höhenfeld für das volle Grundmesh und prüft gemeinsame Beleuchtung, interpolierte Höhen, getrennte Materialien, feste Höhenzonen und einmaligen GPU-Upload auch beim Umschalten der Zonen. Sie erzeugt keine prozedurale Testkarte und ersetzt weder deren Steigungs-/Rasterprüfung noch echte WebGL- oder visuelle Abnahme.
 
