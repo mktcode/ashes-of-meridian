@@ -25,7 +25,7 @@ const WORLD_VARIATIONS:Readonly<Record<WorldVariationFamily,readonly WorldVariat
     {id:'oasis-valleys',name:'OASIS VALLEYS',biome:'ochre',flora:'Palm',relief:'basin',amplitude:11,weather:'mist',landmark:'Relic',dry:[.66,.53,.32],lush:[.25,.41,.27],leaf:0x8bb26b},
     {id:'salt-folds',name:'SALT AND GOLD',biome:'ochre',flora:'Spire',relief:'folds',amplitude:12,weather:'clear',landmark:'Spire',dry:[.75,.71,.57],lush:[.50,.43,.30],leaf:0xe1cc98}
   ],
-  alpine:[
+  westmark:[
     {id:'spring-valley',name:'SPRING VALLEY',biome:'verdant',flora:'Grove',relief:'rolling',amplitude:5,weather:'rain',landmark:'Relic'},
     {id:'amber-valley',name:'AMBER VALLEY',biome:'ochre',flora:'Grove',relief:'folds',amplitude:7,weather:'mist',landmark:'Relic',dry:[.62,.51,.28],lush:[.39,.42,.22],leaf:0xd6ad59},
     {id:'winter-valley',name:'WINTER VALLEY',biome:'rime',flora:'Conifer',relief:'basin',amplitude:6,weather:'snow',landmark:'Spire'},

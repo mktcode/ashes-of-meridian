@@ -5,7 +5,7 @@ function scope() {
   const context=loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world',...RENDERER_SCRIPTS]);
   return vm.runInContext('({Battlefield,BATTLEFIELDS,WORLD_VARIATIONS,worldVariationRecipe,battlefieldVariation,TerrainModels,battlefieldGasPosition,worldReliefHeightAt})',context);
 }
-const families={alien:'alien-planet',desert:'desert',alpine:'westmark',frontier:'frontier',haven:'haven'},
+const families={alien:'alien-planet',desert:'desert',westmark:'westmark',frontier:'frontier',haven:'haven'},
   json=v=>JSON.parse(JSON.stringify(v));
 function representatives(api,family) {
   const seeds=new Map();for(let seed=1;seed<=128;seed++) {

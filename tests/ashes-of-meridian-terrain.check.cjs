@@ -127,7 +127,7 @@ test('desert economy retains nearby legal HQ footprints and snapped refinery fou
 test('overlapping road shoulders join without an angular summit and keep their graded cores', () => {
   const context = loadScripts(['core','content',...BATTLEFIELD_SCRIPTS,'world']);
   const result = vm.runInContext(`(() => {
-    const world={terrainSeed:1409,extent:160,renderProfile:{variation:{family:'alpine',relief:'rolling',heightScale:1}},
+    const world={terrainSeed:1409,extent:160,renderProfile:{variation:{family:'westmark',relief:'rolling',heightScale:1}},
       layout:{resourceSites:[],corridors:[[[-100,-20],[100,-20]],[[-100,20],[100,20]]]}};
     const joined=dynamicTerrainPlan(world).height, eps=.001,
       left=(joined(0,0)-joined(0,-eps))/eps, right=(joined(0,eps)-joined(0,0))/eps;

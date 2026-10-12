@@ -49,7 +49,7 @@ test('native terrace recipes retain quiet high ground distinct from rolling hill
     const world={extent:180,cellSize:2.5,terrainSeed:3,layout:{resourceSites:[],corridors:[]},renderProfile:{}},
       forms=['rolling','terraces'];
     return forms.map(relief=>{
-      world.renderProfile={variation:{family:'alpine',relief,heightScale:1}};
+      world.renderProfile={variation:{family:'westmark',relief,heightScale:1}};
       const h=dynamicTerrainPlan(world).height;let quietHigh=0,sum=0;
       for(let z=-150;z<=150;z+=5)for(let x=-150;x<=150;x+=5){
         const y=h(x,z),slope=Math.hypot((h(x+1,z)-h(x-1,z))/2,(h(x,z+1)-h(x,z-1))/2);
