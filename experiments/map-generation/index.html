@@ -17,7 +17,7 @@
   .controls { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; overflow-x: auto; font-size: 12px; padding: 3px; }
   .controls > * { flex: none; white-space: nowrap; }
   .controls label { display: flex; align-items: center; gap: 4px; }
-  #zoom, #treeDensity, #grassDensity { width: 100px; } #zoomValue, #treeDensityValue { min-width: 40px; }
+  #zoom, #treeDensity, #grassDensity, #timeOfDay { width: 100px; } #zoomValue, #treeDensityValue { min-width: 40px; }
   #plantingLegend, #grassLegend { top: auto; bottom: 14px; }
   #status { margin: 5px 0 0; color: #b4c2cf; font: 11px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
   .scene { flex: 1; min-height: 0; position: relative; }
@@ -45,6 +45,9 @@
     <div class="controls" tabindex="0" aria-label="Einstellungen, auf schmalen Bildschirmen horizontal scrollbar">
       <button id="generate">Neues Layout</button>
       <label>Boden <select id="terrainStyle"><option value="westmark">Westmark</option><option value="desert">Desert</option></select></label>
+      <label>Tageszeit <input id="timeOfDay" type="range" min="0" max="24" step="0.25" value="15"><output id="timeValue" for="timeOfDay">15:00</output></label>
+      <label><input id="shadows" type="checkbox" checked> Schatten</label>
+      <label><input id="relief" type="checkbox" checked> Relief</label>
       <label title="Bäume sind rein visuell und blockieren keine Bewegung"><input id="trees" type="checkbox" checked> Bäume</label>
       <label title="Grün: mögliche Pflanzflächen, übriges Gelände dunkel. Grobe Vorschau; jeder Baumstandort wird zusätzlich exakt geprüft"><input id="planting" type="checkbox"> Pflanzflächen</label>
       <label>Walddichte <input id="treeDensity" type="range" min="0" max="100" step="5" value="65"><output id="treeDensityValue" for="treeDensity">65 %</output></label>
@@ -85,7 +88,8 @@
 <p>„Höhenzonen“ zeigt drei feste Höhenbereiche im fiktiven globalen Höhenraum von 0 bis 85: Tiefland bis 35 (grün), Mittelland von 35 bis 45 (ocker), Hochland ab 45 (grau). Das schmale Mittelland lässt beiden äußeren Zonen mehr Raum. Die Schwellen sind für alle Seeds identisch; Kartenminimum und -maximum verändern sie nicht. Eine Karte darf überwiegend in einer Zone liegen. Wasser und Brücken behalten ihre Farben; die Spielraummarkierung ist in diesem Modus ausgeblendet. Dies sind Diagnosefarben, keine Bodenmaterialien. Die Höhen außerhalb des Darstellungsraums erhalten die Farbe der jeweils äußersten Zone, ohne das Gelände zu begrenzen.</p>
 <p>„Bäume“ zeigt rein visuelle Laub- und Nadelbäume in seed-stabilen Gehölzen mit Lichtungen. Höhenzone, tatsächliche lokale Neigung und Abstände zu Wasser, Wegen, Brücken, Zugängen und Kartenrand bestimmen die Standorte. Kronen sind bei den Freihaltezonen für Wege, Brücken und Kartenrand berücksichtigt. Trockene Flussufer sind ausdrücklich bepflanzbar, auch auf steileren Böschungen; dort ist die Pflanzrate erhöht. Stämme bleiben außerhalb des Wassers, Kronen dürfen darüber ragen. Die Bäume sind keine Bewegungshindernisse. „Walddichte“ fügt Bäume hinzu oder entfernt sie, ohne verbleibende Bäume zu verschieben oder Gelände neu zu erzeugen. „Pflanzflächen“ zeigt eine grobe grüne Eignungsvorschau statt der Höhenfarben; jeder tatsächliche Standort wird zusätzlich einzeln geprüft. Eine geeignete Fläche muss nicht bewaldet sein.</p>
 <p>„Gras“ ergänzt kurze statische Büschel auf einer eigenen, seed-stabilen Vegetationsschicht. Grasflächen dürfen sich mit Baumflächen überschneiden und nutzen auch steilere Hänge und schmale Flächen. Wasser, Brücken und Wegkerne bleiben frei; die Dichte läuft zu Wegrändern weich aus. Tiefland erhält dichten Bewuchs, Mittelland weniger, Hochland nur vereinzelte Büschel; Ufer erhalten einen Bonus. „Grasdichte“ filtert feste Standorte, ohne Bäume, Gelände oder Navigation zu verändern. „Grasflächen“ zeigt die Eignung gelbgrün statt der Baumflächen; beide Diagnose-Overlays sind alternativ, die Vegetation selbst darf sich überlagern. Die Darstellung verwendet instanzierte, texturfreie Grashalme (mit einem WebGL-Fallback), ohne Wind, Schatten oder Bewegungshindernisse.</p>
-<p>„Boden“ schaltet zwischen Westmark (Wiese, Granit, Erde) und Desert (Sediment/Sand, geschichteter Fels) um. Die eingebetteten prozeduralen Materialrezepte und die Welt-/Triplanarprojektion stammen aus dem Spiel. Höhen, Hangneigung, eigene großräumige Muster und Ufer mischen die Oberflächen weich. Die Verbindungswege erhalten keine eigene Bodenfärbung; ihre Geländeform und Vegetations-Freihaltezonen bleiben erhalten. Höhenübergänge bleiben global bei 35/45, nicht relativ zum Kartenminimum. Feines Mikrorelief verändert nur die Beleuchtung; ohne die WebGL-Derivate-Erweiterung bleibt die Texturfarbe sichtbar. Höhenzonen und Pflanzflächen sind weiterhin Diagnoseansichten. Der Materialwechsel verändert weder Geometrie noch Vegetation, Seed oder Navigation. Spielbeleuchtung, Wetter, Schatten und Postprocessing werden nicht übernommen.</p>
+<p>„Boden“ schaltet zwischen Westmark (Wiese, Granit, Erde) und Desert (Sediment/Sand, geschichteter Fels) um. Die eingebetteten prozeduralen Materialrezepte und die Welt-/Triplanarprojektion stammen aus dem Spiel. Höhen, Hangneigung, eigene großräumige Muster und Ufer mischen die Oberflächen weich. Die Verbindungswege erhalten keine eigene Bodenfärbung; ihre Geländeform und Vegetations-Freihaltezonen bleiben erhalten. Höhenübergänge bleiben global bei 35/45, nicht relativ zum Kartenminimum. Feines Mikrorelief verändert nur die Beleuchtung; ohne die WebGL-Derivate-Erweiterung bleibt die Texturfarbe sichtbar. Höhenzonen und Pflanzflächen sind weiterhin Diagnoseansichten. Der Materialwechsel verändert weder Geometrie noch Vegetation, Seed oder Navigation. Die Vorschau verwendet eine eigene Tageszeitbeleuchtung und Schatten; Spielwetter und Postprocessing werden nicht übernommen.</p>
+<p>„Tageszeit“ regelt die Sonne und eine kühle Nachtbeleuchtung, ohne eine Spieluhr laufen zu lassen. Lichtfarbe, Richtung und Schatten verändern sich mit der Uhrzeit. „Schatten“ zeigt echte Gelände-/Baumschatten aus einer gecachten Shadowmap; auch Bäume und Gras empfangen Schatten. Kurze Grasbüschel werfen selbst keine Schatten. „Relief“ schaltet das stärkere rein optische Mikrorelief ein/aus. Materialtexturen werden mit 512 statt 256 Pixeln und – falls unterstützt – anisotroper Filterung dargestellt. Kamera und Materialwechsel verwenden die Shadowmap weiter; nur Gelände, Baumbestand/-sichtbarkeit oder Tageszeit erneuern sie. Diagnoseansichten behalten ihre neutralen Farben.</p>
 <p>Das Gelände verwendet ein feineres Grundmesh und zusätzliche Unterteilungen entlang der Flüsse. Gemeinsame, flächengewichtete Vertex-Normalen und interpolierte Höhenfarben reduzieren sichtbare Dreiecksfacetten. Das Höhenfeld und die Steigungsprüfung bleiben davon unabhängig; Wasser und Brückendecks behalten getrennte Oberflächen.</p>
 <p>Die Spielflächen besitzen weich gerundete, unterschiedlich gestreckte und asymmetrische Konturen statt sechs dominanter Ecken. Dieselben Konturen bestimmen Darstellung, Schutzabstände und Höhenplanung; ein breiter Kern für Weganschlüsse bleibt erhalten.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
@@ -1059,7 +1063,7 @@ function sampleSurface(recipe,u,v) {
   const t=Math.max(0,Math.min(1,pigment));
   return [...recipe.low.map((c,i)=>c+(recipe.high[i]-c)*t),Math.max(0,Math.min(1,height))*255];
 }
-function bakeSurface(name,size=256) {
+function bakeSurface(name,size=512) {
   const pixels=new Uint8Array(size*size*4),recipe=LAB_SURFACES[name];
   for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
     const s=sampleSurface(recipe,x/size,y/size),i=(y*size+x)*4;
@@ -1114,7 +1118,9 @@ function terrainMaterialGLSL(relief) {
       vec2 warp=vec2(veilNoise(p*.12),veilNoise(p*.12+19.7))*.38;
       vec4 grass=mix(texture2D(groundTex,uv+warp),texture2D(groundTex,uv*1.371+3.76+warp),.42);
       grass.rgb*=surfaceTint*mix(.87,1.08,veilNoise(p*.075));
+      grass.rgb*=.84+.32*smoothstep(.22,.78,grass.a);
       vec4 stone=stoneSample(n),earth=texture2D(earthTex,p*.15);
+      stone.rgb*=.90+.20*smoothstep(.25,.75,stone.a);
       float slope=length(n.xz)/max(n.y,.05),grain=veilNoise(p*.64);
       // Absolute 35/45 cutoffs, softly crossed over +/- 3 height units.
       float middle=smoothstep(32.0,38.0,worldPosition.y+(grain-.5)*1.5);
@@ -1155,7 +1161,7 @@ function terrainMaterialGLSL(relief) {
 function makeMaterialGPU(gl,program) {
   const uniforms={};
   for(const name of ['groundTex','rockTex','earthTex','groundTile','surfaceOffset','surfaceTint','surfaceRelief','desert']) uniforms[name]=gl.getUniformLocation(program,name);
-  return {uniforms,textures:new Map()};
+  return {uniforms,textures:new Map(),anisotropy:gl.getExtension('EXT_texture_filter_anisotropic')};
 }
 function bindTerrainMaterials(gpu,style,seed) {
   const gl=gpu.gl,m=gpu.materials,u=m.uniforms,names=LAB_MATERIALS[style] || LAB_MATERIALS.westmark;
@@ -1166,6 +1172,7 @@ function bindTerrainMaterials(gpu,style,seed) {
       gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,image.width,image.height,0,gl.RGBA,gl.UNSIGNED_BYTE,image.pixels);
       gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+      if(m.anisotropy) gl.texParameterf(gl.TEXTURE_2D,m.anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,gl.getParameter(m.anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
       m.textures.set(name,texture);
     } else gl.bindTexture(gl.TEXTURE_2D,m.textures.get(name));
     gl.uniform1i(u[['groundTex','rockTex','earthTex'][i]],i);
@@ -1176,6 +1183,157 @@ function bindTerrainMaterials(gpu,style,seed) {
     gl.uniform3fv(u.surfaceRelief,names.map(name=>LAB_SURFACES[name].relief));gl.uniform1i(u.desert,style==='desert'?1:0);
     m.style=style;m.seed=seed;
   }
+}
+</script>
+<script id="terrain-lighting">
+'use strict';
+// Cosmetic, static time-of-day. Never read/write the game's clock or terrain RNG.
+function labLighting(hour) {
+  hour=((Number.isFinite(hour)?hour:15)%24+24)%24;
+  const angle=(hour-6)*Math.PI/12,z=Math.sin(angle),sign=z>=0?1:-1,
+    physical=[Math.cos(angle)*sign,-.55*sign,Math.max(.15,Math.abs(z))],length=Math.hypot(...physical),
+    direction=physical.map(v=>v/length),day=smooth((z+.10)/.35),warm=1-smooth((z-.05)/.65),
+    mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+  return {hour,direction,gameDirection:[direction[0],direction[2],direction[1]],
+    ambient:mix([.12,.16,.25],[.34,.39,.44],day),
+    sun:mix([.17,.22,.35],mix([.92,.94,.92],[1.12,.62,.32],warm),day).map(v=>v*smooth(Math.abs(z)/.25)),
+    background:mix([.035,.055,.10],[.20,.26,.31],day)};
+}
+function terrainLightingGLSL(derivatives=false) {
+  return `
+    uniform vec3 lightDirection; uniform vec3 sunColor; uniform vec3 ambientColor;
+    uniform mat4 shadowMatrix; uniform sampler2D shadowTex; uniform float shadowTexel; uniform bool shadowOn;
+    float unpackShadow(vec4 d){return dot(d,vec4(1.0,1.0/255.0,1.0/65025.0,1.0/16581375.0));}
+    float shadowTap(vec3 q,vec2 offset,vec2 gradient,float bias){
+      vec2 uv=(floor((q.xy+offset)/shadowTexel)+.5)*shadowTexel;
+      return step(q.z-bias+dot(gradient,uv-q.xy),unpackShadow(texture2D(shadowTex,uv)));
+    }
+    float shadowFor(vec3 point,vec3 normal){
+      if(!shadowOn)return 1.0;
+      vec4 p=shadowMatrix*vec4(point.x,point.z,point.y-40.0,1.0);
+      vec3 q=p.xyz*.5+.5;
+      if(q.x<0.0||q.x>1.0||q.y<0.0||q.y>1.0||q.z<0.0||q.z>1.0)return 1.0;
+      vec2 gradient=vec2(0.0);
+      ${derivatives ? `
+      // Compare at each sampled texel's receiver-plane depth, not at its centre pixel.
+      vec2 dx=dFdx(q.xy),dy=dFdy(q.xy);float dzx=dFdx(q.z),dzy=dFdy(q.z),det=dx.x*dy.y-dx.y*dy.x;
+      if(abs(det)>.0000000001) gradient=clamp(vec2(dy.y*dzx-dx.y*dzy,dx.x*dzy-dy.x*dzx)/det,vec2(-16),vec2(16));` : ''}
+      float bias=shadowTexel*(${derivatives ? '.25+.4' : '1.0+4.0'}*(1.0-max(0.0,dot(normal,lightDirection))));
+      vec2 d=vec2(shadowTexel*.6);float lit=0.0;
+      lit+=shadowTap(q,vec2(-d.x,-d.y),gradient,bias);
+      lit+=shadowTap(q,vec2(d.x,-d.y),gradient,bias);
+      lit+=shadowTap(q,vec2(-d.x,d.y),gradient,bias);
+      lit+=shadowTap(q,vec2(d.x,d.y),gradient,bias);
+      return .25+.75*lit*.25;
+    }
+    vec3 surfaceLighting(vec3 point,vec3 normal,vec3 geometricNormal){
+      float nd=max(0.0,dot(normal,lightDirection));
+      return ambientColor+sunColor*nd*shadowFor(point,geometricNormal);
+    }
+  `;
+}
+function makeLightingUniforms(gl,program) {
+  const uniforms={};
+  for(const name of ['lightDirection','sunColor','ambientColor','shadowMatrix','shadowTex','shadowTexel','shadowOn']) uniforms[name]=gl.getUniformLocation(program,name);
+  return uniforms;
+}
+function bindLighting(gpu,u,day) {
+  const gl=gpu.gl;
+  if(!gpu.shadowFallback) {
+    const texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0+3);gl.bindTexture(gl.TEXTURE_2D,texture);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    gpu.shadowFallback=texture;
+  }
+  gl.activeTexture(gl.TEXTURE0+3);gl.bindTexture(gl.TEXTURE_2D,gpu.shadow?.texture || gpu.shadowFallback);
+  gl.uniform1i(u.shadowTex,3);gl.uniform1i(u.shadowOn,document.getElementById('shadows').checked && gpu.shadow?.valid ? 1:0);
+  gl.uniform1f(u.shadowTexel,1/(gpu.shadow?.size || 1));
+  gl.uniformMatrix4fv(u.shadowMatrix,false,gpu.shadow?.matrix || new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]));
+  gl.uniform3fv(u.lightDirection,day.gameDirection);gl.uniform3fv(u.sunColor,day.sun);gl.uniform3fv(u.ambientColor,day.ambient);
+}
+function treeSurfaceNormals(data) {
+  const normals=new Float32Array(data.length/7*3);
+  for(let i=0;i<data.length;i+=21) {
+    const ux=data[i+7]-data[i],uy=data[i+8]-data[i+1],uz=data[i+9]-data[i+2],
+      vx=data[i+14]-data[i],vy=data[i+15]-data[i+1],vz=data[i+16]-data[i+2],
+      nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,length=Math.hypot(nx,ny,nz)||1;
+    for(let v=0;v<3;v++) normals.set([nx/length,nz/length,ny/length],(i/7+v)*3);
+  }
+  return normals;
+}
+function uploadTreeSurfaces(gpu) {
+  const data=preview.treeGeometry,gl=gpu.gl;
+  if(!data?.length || gpu.uploadedTrees===data)return;
+  gl.bindBuffer(gl.ARRAY_BUFFER,gpu.treeBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gpu.treeNormalBuffer);gl.bufferData(gl.ARRAY_BUFFER,treeSurfaceNormals(data),gl.STATIC_DRAW);
+  gpu.uploadedTrees=data;
+}
+function shadowBounds(mesh,trees) {
+  const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+  const add=(x,y,z)=>{for(const [i,v] of [x,y,z].entries()){min[i]=Math.min(min[i],v);max[i]=Math.max(max[i],v);}};
+  for(const p of mesh.vertices) {
+    add(p.x,p.y,p.z);if(Number.isFinite(p.walkZ))add(p.x,p.y,p.walkZ);if(Number.isFinite(p.waterZ))add(p.x,p.y,p.waterZ);
+  }
+  if(trees)for(let i=0;i<trees.length;i+=7)add(trees[i],trees[i+1],trees[i+2]);
+  return {min,max};
+}
+function shadowProjection(bounds,direction) {
+  const [x,y,z]=direction,rlen=Math.hypot(x,y),right=[-y/rlen,x/rlen,0],
+    up=[-z*right[1],z*right[0],x*right[1]-y*right[0]],axes=[right,up,direction],
+    lows=[Infinity,Infinity,Infinity],highs=[-Infinity,-Infinity,-Infinity];
+  for(let mask=0;mask<8;mask++) {
+    const p=bounds.min.map((v,i)=>mask&(1<<i)?bounds.max[i]:v);
+    for(let i=0;i<3;i++){const d=axes[i].reduce((s,v,k)=>s+v*p[k],0);lows[i]=Math.min(lows[i],d-4);highs[i]=Math.max(highs[i],d+4);}
+  }
+  const m=new Float32Array(16);m[15]=1;
+  for(let i=0;i<3;i++) {
+    const s=(i===2?-2:2)/(highs[i]-lows[i]);
+    for(let k=0;k<3;k++)m[k*4+i]=axes[i][k]*s;
+    m[12+i]=(i===2?1:-1)*(highs[i]+lows[i])/(highs[i]-lows[i]);
+  }
+  return m;
+}
+function makeShadowGPU(gl) {
+  const compile=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
+  const vertex=compile(gl.VERTEX_SHADER,`attribute vec3 position;attribute vec4 surface;uniform mat4 projection;varying float material;
+    void main(){gl_Position=projection*vec4(position,1.0);material=surface.w;}`),
+    fragment=compile(gl.FRAGMENT_SHADER,`precision highp float;varying float material;
+    void main(){if(material>.5&&material<1.5)discard;
+      vec4 encoded=fract(min(gl_FragCoord.z,.999999)*vec4(1.0,255.0,65025.0,16581375.0));
+      encoded-=encoded.yzww*vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);gl_FragColor=encoded;}`),program=gl.createProgram();
+  gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
+  const size=Math.min(2048,gl.getParameter(gl.MAX_TEXTURE_SIZE),gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)),texture=gl.createTexture(),depth=gl.createRenderbuffer(),framebuffer=gl.createFramebuffer();
+  gl.activeTexture(gl.TEXTURE0+3);gl.bindTexture(gl.TEXTURE_2D,texture);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,size,size,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.bindRenderbuffer(gl.RENDERBUFFER,depth);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,size,size);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);
+  const complete=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  if(!complete)throw Error('Schatten-Framebuffer unvollständig.');
+  return {program,size,texture,depth,framebuffer,position:gl.getAttribLocation(program,'position'),surface:gl.getAttribLocation(program,'surface'),projection:gl.getUniformLocation(program,'projection')};
+}
+function renderShadowMap(gpu,day) {
+  const gl=gpu.gl,s=gpu.shadow ??= makeShadowGPU(gl),trees=preview.treeGeometry,showTrees=document.getElementById('trees').checked;
+  if(s.valid && s.mesh===preview.mesh && s.trees===trees && s.showTrees===showTrees && s.hour===day.hour)return;
+  if(s.mesh!==preview.mesh || s.trees!==trees)s.bounds=shadowBounds(preview.mesh,trees);
+  s.matrix=shadowProjection(s.bounds,day.direction);
+  const dither=gl.isEnabled(gl.DITHER);gl.disable(gl.DITHER);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,s.framebuffer);gl.viewport(0,0,s.size,s.size);gl.clearColor(1,1,1,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(s.program);gl.uniformMatrix4fv(s.projection,false,s.matrix);
+  for(let i=0;i<gpu.maxAttributes;i++)gl.disableVertexAttribArray(i);
+  const draw=(buffer,count)=>{
+    gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(s.position);gl.vertexAttribPointer(s.position,3,gl.FLOAT,false,28,0);
+    gl.enableVertexAttribArray(s.surface);gl.vertexAttribPointer(s.surface,4,gl.FLOAT,false,28,12);gl.drawArrays(gl.TRIANGLES,0,count);
+  };
+  draw(gpu.buffer,gpu.count);if(showTrees && trees?.length)draw(gpu.treeBuffer,trees.length/7);
+  gl.disableVertexAttribArray(s.position);gl.disableVertexAttribArray(s.surface);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  if(dither)gl.enable(gl.DITHER);
+  s.mesh=preview.mesh;s.trees=trees;s.showTrees=showTrees;s.hour=day.hour;s.valid=true;
 }
 </script>
 <script id="terrain-view">
@@ -1226,6 +1384,8 @@ function createGPU() {
     ${relief ? '#extension GL_OES_standard_derivatives : enable' : ''}
     precision highp float;
     ${terrainMaterialGLSL(relief)}
+    ${terrainLightingGLSL(relief)}
+    uniform bool reliefOn;
     varying vec4 face;
     uniform bool overlay;
     uniform bool heightZones;
@@ -1243,12 +1403,13 @@ function createGPU() {
         else color = vec3(${HEIGHT_BANDS[2].color.map(n => n.toFixed(1)).join(', ')});
       }
       float light = face.x;
+      vec3 n = length(groundNormal) > .5 ? normalize(groundNormal) : vec3(0,1,0);
+      vec3 geometricNormal = n;
       if (!heightZones && face.w < 0.5) {
-        vec3 n = normalize(groundNormal);
         vec4 sampleColor = landscapeSample(n);
-        ${relief ? 'n = materialReliefNormal(n, sampleColor.a);' : ''}
+        ${relief ? 'if (reliefOn) n = materialReliefNormal(n, sampleColor.a * 2.8);' : ''}
         color = sampleColor.rgb * 255.0;
-        light = .45 + .55 * max(0.0, dot(n, normalize(vec3(-.4,.768,-.5))));
+        light = 1.0;
       }
       if (overlay && !heightZones && face.z > 0.5) color = vec3(100.0, 205.0, 150.0);
       if (planting && face.w < 0.5) color = plantMask >= 0.5 ? (grassAreas ? vec3(175.0,210.0,65.0) : vec3(60.0,215.0,135.0)) : color * 0.38;
@@ -1257,6 +1418,10 @@ function createGPU() {
       if (face.w > 2.5 && face.w < 3.5) color = vec3(112.0, 78.0, 48.0);
       if (face.w > 3.5 && face.w < 4.5) color = vec3(62.0, 137.0, 61.0);
       if (face.w > 4.5) color = vec3(37.0, 100.0, 71.0);
+      if (!heightZones && !planting && !overlay) {
+        color *= surfaceLighting(worldPosition, n, geometricNormal);
+        light = 1.0;
+      }
       gl_FragColor = vec4(color * light / 255.0, 1.0);
     }
   `);
@@ -1277,6 +1442,8 @@ function createGPU() {
   }
   gl.enable(gl.DEPTH_TEST); gl.clearColor(32 / 255, 43 / 255, 56 / 255, 1);
   return { gl, program, buffer, attributes, uploaded: null, count: 0,
+    lighting: makeLightingUniforms(gl, program), maxAttributes: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
+    reliefOn: gl.getUniformLocation(program, 'reliefOn'), treeNormalBuffer: gl.createBuffer(),
     materialDataBuffer: gl.createBuffer(), materials: makeMaterialGPU(gl, program),
     materialNormal: gl.getAttribLocation(program, 'materialNormal'), materialWet: gl.getAttribLocation(program, 'materialWet'),
     grassMaskBuffer: gl.createBuffer(), grassMaskCache: {}, grassAreas: gl.getUniformLocation(program, 'grassAreas'),
@@ -1325,6 +1492,14 @@ function draw3D() {
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, gpu.buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       gpu.count = data.length / 7; gpu.uploaded = mesh;
+    }
+    if (gpu.lighting) {
+      uploadTreeSurfaces(gpu);
+      const hour=Number(document.getElementById('timeOfDay').value), day=labLighting(hour);
+      if(document.getElementById('shadows').checked) renderShadowMap(gpu,day);
+      gl.useProgram(gpu.program); bindLighting(gpu,gpu.lighting,day);
+      gl.uniform1i(gpu.reliefOn,document.getElementById('relief').checked?1:0);
+      gl.clearColor(...day.background,1);
     }
     if (gpu.materialDataBuffer) {
       bindTerrainMaterials(gpu, document.getElementById('terrainStyle').value, preview.plan?.seed || 0);
@@ -1378,7 +1553,8 @@ function draw3D() {
       }
       if (gpu.plantAttribute != null) { gl.disableVertexAttribArray(gpu.plantAttribute); gl.vertexAttrib1f(gpu.plantAttribute, 0); }
       if (gpu.materialDataBuffer) {
-        gl.disableVertexAttribArray(gpu.materialNormal); gl.vertexAttrib3f(gpu.materialNormal, 0, 1, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER,gpu.treeNormalBuffer);
+        gl.enableVertexAttribArray(gpu.materialNormal); gl.vertexAttribPointer(gpu.materialNormal,3,gl.FLOAT,false,12,0);
         gl.disableVertexAttribArray(gpu.materialWet); gl.vertexAttrib1f(gpu.materialWet, 0);
       }
       gl.drawArrays(gl.TRIANGLES, 0, preview.treeGeometry.length / 7);
@@ -1397,7 +1573,7 @@ function createGrassGPU(gl) {
   };
   const vertex=compile(gl.VERTEX_SHADER,`
     attribute vec3 blade; attribute vec3 root; attribute vec4 clump;
-    uniform vec4 camera; uniform vec2 scale; uniform vec2 target; varying vec3 color;
+    uniform vec4 camera; uniform vec2 scale; uniform vec2 target; varying vec3 color; varying vec3 grassWorld;
     void main() {
       float c=cos(clump.y),s=sin(clump.y);
       vec3 p=root+vec3(c*blade.x-s*blade.y,s*blade.x+c*blade.y,blade.z)*clump.x;
@@ -1406,13 +1582,18 @@ function createGrassGPU(gl) {
       gl_Position=vec4(x*scale.x,(p.z*camera.z-forward*camera.w)*scale.y,-(forward*camera.z+p.z*camera.w)/500.0,1.0);
       vec3 base=clump.z<.5?vec3(.28,.48,.14):clump.z<1.5?vec3(.44,.48,.23):vec3(.51,.49,.33);
       color=base*(.78+clump.w*.25+blade.z*.3);
+      grassWorld=vec3(p.x,p.z+40.0,p.y);
     }`);
-  const fragment=compile(gl.FRAGMENT_SHADER,`precision mediump float; varying vec3 color; void main(){gl_FragColor=vec4(color,1.0);}`);
+  const derivatives=!!gl.getExtension('OES_standard_derivatives');
+  const fragment=compile(gl.FRAGMENT_SHADER,`${derivatives?'#extension GL_OES_standard_derivatives : enable':''}
+    precision highp float; varying vec3 color; varying vec3 grassWorld;
+    ${terrainLightingGLSL(derivatives)}
+    void main(){vec3 n=vec3(0,1,0);gl_FragColor=vec4(color*surfaceLighting(grassWorld,n,n),1.0);}`);
   const program=gl.createProgram(); gl.attachShader(program,vertex); gl.attachShader(program,fragment); gl.linkProgram(program);
   gl.deleteShader(vertex);gl.deleteShader(fragment);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
   const model=grassBladeGeometry(),buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,model,gl.STATIC_DRAW);
-  return {program,model,buffer,instances:gl.createBuffer(),ext:gl.getExtension('ANGLE_instanced_arrays'),
+  return {program,model,buffer,lighting:makeLightingUniforms(gl,program),instances:gl.createBuffer(),ext:gl.getExtension('ANGLE_instanced_arrays'),
     blade:gl.getAttribLocation(program,'blade'),root:gl.getAttribLocation(program,'root'),clump:gl.getAttribLocation(program,'clump'),
     camera:gl.getUniformLocation(program,'camera'),scale:gl.getUniformLocation(program,'scale'),target:gl.getUniformLocation(program,'target')};
 }
@@ -1423,6 +1604,7 @@ function drawGrass(gpu,data,canvas) {
   if(gpu.plantAttribute!=null) gl.disableVertexAttribArray(gpu.plantAttribute);
   if(gpu.materialDataBuffer) { gl.disableVertexAttribArray(gpu.materialNormal); gl.disableVertexAttribArray(gpu.materialWet); }
   gl.useProgram(g.program);
+  if(g.lighting) bindLighting(gpu,g.lighting,labLighting(Number(document.getElementById('timeOfDay').value)));
   gl.uniform4f(g.camera,Math.cos(camera.yaw),Math.sin(camera.yaw),Math.cos(camera.tilt),Math.sin(camera.tilt));
   gl.uniform2f(g.target,camera.targetX,camera.targetY);
   const scale=.96*camera.zoom*2/PIXELS,short=Math.min(canvas.width,canvas.height);
@@ -1523,6 +1705,12 @@ function bindLabControls() {
   document.getElementById('heightLegend').innerHTML = heightLegendHTML();
   syncDisplayControls();
   document.getElementById('terrainStyle').addEventListener('change', () => { requestDraw(); });
+  document.getElementById('timeOfDay').addEventListener('input', () => {
+    const minutes=Math.round(Number(document.getElementById('timeOfDay').value)*60);
+    document.getElementById('timeValue').textContent=`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
+    requestDraw();
+  });
+  for(const id of ['shadows','relief']) document.getElementById(id).addEventListener('change',requestDraw);
   document.getElementById('heightZones').addEventListener('change', () => {
     syncDisplayControls();
     draw3D(); // Uniforms only: preserve the seed, plan, mesh and GPU upload.
