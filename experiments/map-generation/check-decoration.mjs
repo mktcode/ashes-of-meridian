@@ -27,8 +27,17 @@ const result = vm.runInContext(`(() => {
     assert.ok(plantingMask(decoration.field, t.sourceX, t.sourceY) >= .5);
     for (let j = 0; j < i; j++) assert.ok(distance(t, full[j]) >= Math.max(t.spacing, full[j].spacing));
   }
-  assert.ok(TREE_RULES.clearance * (1 - .32) > 1.8 * 1.35, 'Largest crown stays out of protected areas');
-  const t = full[0];
+  assert.ok(TREE_RULES.clearance * (1 - .32) > 1.8 * 1.35, 'Largest crown stays out of roads/bridges/map edge');
+  assert.ok(TREE_RULES.waterClearance * (1 - .32) > .22 * 1.35, 'Largest trunk stays out of water');
+  const shore = full.find(t => t.shore);
+  assert.ok(shore, 'Banks must host vegetation');
+  const steep = (p,x,y) => ({height:40 + (x-shore.x)*.7,water:0,bridge:false});
+  assert.equal(decorationSite(plan, shore.sourceX, shore.sourceY, steep).eligible, true);
+  const actualShore = decorationSite(plan, shore.sourceX, shore.sourceY);
+  assert.ok(actualShore.shore && actualShore.eligible);
+  assert.ok(actualShore.height > sampleWorld(plan,shore.x,shore.y).water);
+  const t = full.find(t => !t.shore);
+  assert.ok(t);
   assert.equal(decorationSite(plan, t.sourceX, t.sourceY, (p,x,y) => ({height:40 + (x-t.x)*.35,water:-100,bridge:false})).eligible, true);
   for (const [height, band] of [[20,0],[40,1],[70,2]]) {
     assert.equal(decorationSite(plan, t.sourceX, t.sourceY, () => ({height,water:0,bridge:false})).band, band);
@@ -76,4 +85,4 @@ const result = vm.runInContext(`(() => {
   return { full:full.length, medium:medium.length, sparse:sparse.length, zoneCounts };
 })()`, context, { timeout: 5000 });
 console.log(`Equal eligible areas at 65%: Tiefland/Mittelland/Hochland ${result.zoneCounts.join('/')} trees.`);
-console.log(`Decoration: ${result.full}/${result.medium}/${result.sparse} trees at 100/65/30%; deterministic, read-only, nested densities, clear routes/banks/bridges, physical slopes, spacing and both models OK. Synthetic heights only.`);
+console.log(`Decoration: ${result.full}/${result.medium}/${result.sparse} trees at 100/65/30%; deterministic, read-only, nested densities, clear routes/bridges, vegetated banks with dry trunks, physical slopes, spacing and both models OK. Synthetic heights plus one actual bank-site check; no terrain mesh/raster.`);
