@@ -6,16 +6,19 @@ import { loadLab, VIEW_SCRIPTS } from './test-support.mjs';
 // field. No production terrain queries, river carving or navigation raster.
 const canvas = { width: 800, height: 600, getBoundingClientRect: () => ({ width: 800, height: 600 }), addEventListener() {} };
 const elements = new Map([['height', canvas]]);
+const frames = [];
 const context = loadLab({ scripts: VIEW_SCRIPTS, globals: {
   assert,
   document: { getElementById: id => {
     if (!elements.has(id)) elements.set(id, {
-      listeners: new Map(), addEventListener(type, listener) { this.listeners.set(type, listener); }, checked: true,
+      listeners: new Map(), addEventListener(type, listener) { this.listeners.set(type, listener); }, checked: id !== 'planting',
     });
     return elements.get(id);
   }, addEventListener() {} },
   window: { addEventListener() {}, devicePixelRatio: 1 },
   ResizeObserver: class { observe() {} },
+  requestAnimationFrame(callback) { frames.push(callback); return frames.length; },
+  flushFrames() { while (frames.length) frames.shift()(); },
 } });
 const result = vm.runInContext(`(() => {
   assert.equal(preview.plan, null);
@@ -75,16 +78,24 @@ const result = vm.runInContext(`(() => {
   const first = mesh.triangles[0];
   mesh.triangles.push({ ...first, material: 1, light: 1, height: 38.6, planned: false },
     { ...first, material: 2, light: .6, height: 40, planned: true });
-  let uploaded, uploads = 0;
-  const uniforms = {};
+  let uploaded, uploads = 0, bound;
+  const terrainBuffer = {}, plantBuffer = {}, treeBuffer = {}, bufferUploads = new Map();
+  const uniforms = {}, pointers = new Map(), drawCalls = [];
   const gl = {
-    isContextLost: () => false, bindBuffer() {}, bufferData(target, data) { uploaded = data; uploads++; },
+    isContextLost: () => false, bindBuffer(target, buffer) { bound = buffer; },
+    bufferData(target, data) {
+      bufferUploads.set(bound, (bufferUploads.get(bound) || 0) + 1);
+      if (bound === terrainBuffer) { uploaded = data; uploads++; }
+    },
+    vertexAttribPointer(location) { pointers.set(location, bound); },
+    enableVertexAttribArray() {}, disableVertexAttribArray() {}, vertexAttrib1f() {},
     viewport() {}, clear() {}, uniform4f() {}, uniform2f(name, x, y) { uniforms[name] = [x, y]; },
-    uniform1i(name, value) { uniforms[name] = value; }, drawArrays() {},
+    uniform1i(name, value) { uniforms[name] = value; }, drawArrays() { drawCalls.push(pointers.get(0)); },
     ARRAY_BUFFER: 1, STATIC_DRAW: 2, TRIANGLES: 4, COLOR_BUFFER_BIT: 8, DEPTH_BUFFER_BIT: 16,
   };
-  preview.gpu = { gl, buffer: {}, uploaded: null, overlay: 'overlay', heightZones: 'heightZones',
-    heightRange: 'heightRange', heightCuts: 'heightCuts' };
+  preview.gpu = { gl, buffer: terrainBuffer, plantBuffer, treeBuffer, plantAttribute: 2, planting: 'planting',
+    attributes: [{location:0,size:3,offset:0},{location:1,size:4,offset:12}],
+    uploaded: null, overlay: 'overlay', heightZones: 'heightZones', heightRange: 'heightRange', heightCuts: 'heightCuts' };
   draw3D();
   assert.equal(uploads, 1);
   assert.equal(uploaded.length, mesh.triangles.length * 21);
@@ -116,6 +127,38 @@ const result = vm.runInContext(`(() => {
     assert.equal(preview.plan, plan);
     assert.equal(uploads, 1);
   }
+  const tree = {x:150,y:150,height:40,size:1,rotation:0};
+  preview.decoration = {field:{step:SIZE,n:2,sites:Array.from({length:4},()=>({eligible:true}))},
+    catalog:[{...tree,type:'broadleaf',threshold:.2},{...tree,x:160,type:'conifer',threshold:.8}]};
+  document.getElementById('treeDensity').value = '65';
+  refreshTrees(); draw3D();
+  assert.equal(preview.trees.length, 1);
+  assert.deepEqual(drawCalls.slice(-2), [terrainBuffer, treeBuffer]);
+  for (const active of [false, true]) {
+    const trees = document.getElementById('trees'); trees.checked = active;
+    trees.listeners.get('change')(); flushFrames();
+    assert.equal(drawCalls.at(-1), active ? treeBuffer : terrainBuffer);
+  }
+  for (const active of [true, false]) {
+    const planting = document.getElementById('planting'); planting.checked = active;
+    planting.listeners.get('change')(); flushFrames();
+    assert.equal(uniforms.planting, active ? 1 : 0);
+    assert.equal(document.getElementById('plantingLegend').hidden, !active);
+    assert.equal(document.getElementById('heightLegend').hidden, active);
+  }
+  assert.equal(bufferUploads.get(terrainBuffer), 1);
+  assert.equal(bufferUploads.get(plantBuffer), 1);
+  assert.equal(bufferUploads.get(treeBuffer), 1);
+  const density = document.getElementById('treeDensity'); density.value = '100';
+  density.listeners.get('input')(); flushFrames();
+  assert.equal(preview.trees.length, 2);
+  assert.equal(preview.plan, plan); assert.equal(preview.mesh, mesh);
+  assert.equal(bufferUploads.get(terrainBuffer), 1);
+  assert.equal(bufferUploads.get(plantBuffer), 1);
+  assert.equal(bufferUploads.get(treeBuffer), 2);
+  density.value = '0'; density.listeners.get('input')(); flushFrames();
+  assert.equal(preview.trees.length, 0);
+  assert.equal(drawCalls.at(-1), terrainBuffer);
   return { vertices: mesh.vertices.length, faces: mesh.terrainFaceCount };
 })()`, context, { timeout: 5000 });
-console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height, fixed height zones and cached upload on toggles OK. No generated-map/raster validation.`);
+console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height, fixed zones, trees, planting overlay and independent cached uploads on toggles/density OK. No generated-map/raster validation.`);

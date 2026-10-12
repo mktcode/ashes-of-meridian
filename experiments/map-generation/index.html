@@ -16,7 +16,8 @@
   .controls { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; overflow-x: auto; font-size: 12px; padding: 3px; }
   .controls > * { flex: none; white-space: nowrap; }
   .controls label { display: flex; align-items: center; gap: 4px; }
-  #zoom { width: 100px; } #zoomValue { min-width: 40px; }
+  #zoom, #treeDensity { width: 100px; } #zoomValue, #treeDensityValue { min-width: 40px; }
+  #plantingLegend { top: auto; bottom: 14px; }
   #status { margin: 5px 0 0; color: #b4c2cf; font: 11px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
   .scene { flex: 1; min-height: 0; position: relative; }
   #height { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
@@ -42,8 +43,12 @@
     <strong class="brand">Terrain-Labor</strong>
     <div class="controls" tabindex="0" aria-label="Einstellungen, auf schmalen Bildschirmen horizontal scrollbar">
       <button id="generate">Neues Layout</button>
+      <label title="Bäume sind rein visuell und blockieren keine Bewegung"><input id="trees" type="checkbox" checked> Bäume</label>
+      <label title="Grün: mögliche Pflanzflächen, übriges Gelände dunkel. Grobe Vorschau; jeder Baumstandort wird zusätzlich exakt geprüft"><input id="planting" type="checkbox"> Pflanzflächen</label>
+      <label>Walddichte <input id="treeDensity" type="range" min="0" max="100" step="5" value="65"><output id="treeDensityValue" for="treeDensity">65 %</output></label>
+      <span id="treeCount"></span>
       <label title="Feste Höhenzonen im globalen Höhenraum anzeigen, unabhängig von Kartenminimum und -maximum"><input id="heightZones" type="checkbox" checked> Höhenzonen</label>
-      <label title="Spielräume im 3D-Modell markieren; bei aktiven Höhenzonen ausgeblendet"><input id="overlay" type="checkbox" checked disabled> Spielräume</label>
+      <label title="Spielräume im 3D-Modell markieren; bei Höhenzonen oder Pflanzflächen ausgeblendet"><input id="overlay" type="checkbox" checked disabled> Spielräume</label>
       <label title="Basis- und duales Netz in der Planungskarte anzeigen"><input id="dual" type="checkbox"> Netze</label>
       <label title="Gemeinsame weiche Verformung von Wegen, Flüssen und Kartenrand"><input id="curves" type="checkbox" checked> Verformung</label>
       <label title="Flussrouten vor der Höhen- und Brückenplanung abrunden"><input id="rounded" type="checkbox" checked> Runde Flüsse</label>
@@ -61,6 +66,7 @@
     <canvas id="layout" width="480" height="480" aria-label="Regionen und verbindende Wege"></canvas>
   </details>
   <aside id="heightLegend" class="height-legend" aria-label="Legende der festen Höhenzonen"></aside>
+  <aside id="plantingLegend" class="height-legend" hidden aria-label="Legende der Pflanzflächen"><strong>Pflanzflächen · grobe Vorschau</strong><div class="legend"><span style="--color:rgb(60,215,135)">Grün: mögliche Standorte</span></div><div>Jeder Baumstandort wird einzeln geprüft.</div></aside>
   <small id="renderError" role="status"></small>
 </main>
 <dialog id="info" aria-labelledby="infoTitle">
@@ -69,7 +75,8 @@
 <p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
 <p>Die Checkbox „Runde Flüsse“ ersetzt die eckigen Routen durch zusammenhängende Bézier-Kurven, bevor Höhen, Bett und Brücken berechnet werden. Nur Kreuzungen, Verzweigungen und Randanschlüsse bleiben feste Anker; normale duale Knoten dürfen übersprungen werden. Wasser wird als eigenes fein unterteiltes Band dargestellt; das Gelände wird entlang der Ufer lokal verfeinert. Beide Checkboxen vergleichen Varianten mit demselben Seed. Die Vorschau zeigt auch Layouts mit überschrittener Neigungsgrenze, dann ausdrücklich mit einer Warnung.</p>
-<p>„Höhenzonen“ zeigt drei feste Höhenbereiche im fiktiven globalen Höhenraum von 0 bis 85: Tiefland bis 35 (grün), Mittelland von 35 bis 45 (ocker), Hochland ab 45 (grau). Das schmale Mittelland lässt beiden äußeren Zonen mehr Raum. Die Schwellen sind für alle Seeds identisch; Kartenminimum und -maximum verändern sie nicht. Eine Karte darf überwiegend in einer Zone liegen. Wasser und Brücken behalten ihre Farben; die Spielraummarkierung ist in diesem Modus ausgeblendet. Dies sind Diagnosefarben, noch keine Vegetation oder Felsobjekte. Die Höhen außerhalb des Darstellungsraums erhalten die Farbe der jeweils äußersten Zone, ohne das Gelände zu begrenzen.</p>
+<p>„Höhenzonen“ zeigt drei feste Höhenbereiche im fiktiven globalen Höhenraum von 0 bis 85: Tiefland bis 35 (grün), Mittelland von 35 bis 45 (ocker), Hochland ab 45 (grau). Das schmale Mittelland lässt beiden äußeren Zonen mehr Raum. Die Schwellen sind für alle Seeds identisch; Kartenminimum und -maximum verändern sie nicht. Eine Karte darf überwiegend in einer Zone liegen. Wasser und Brücken behalten ihre Farben; die Spielraummarkierung ist in diesem Modus ausgeblendet. Dies sind Diagnosefarben, keine Bodenmaterialien. Die Höhen außerhalb des Darstellungsraums erhalten die Farbe der jeweils äußersten Zone, ohne das Gelände zu begrenzen.</p>
+<p>„Bäume“ zeigt rein visuelle Laub- und Nadelbäume in seed-stabilen Gehölzen mit Lichtungen. Höhenzone, tatsächliche lokale Neigung und Abstände zu Wasser, Wegen, Brücken, Zugängen und Kartenrand bestimmen die Standorte. Kronen sind bei den Freihaltezonen berücksichtigt. Die Bäume sind keine Bewegungshindernisse. „Walddichte“ fügt Bäume hinzu oder entfernt sie, ohne verbleibende Bäume zu verschieben oder Gelände neu zu erzeugen. „Pflanzflächen“ zeigt eine grobe grüne Eignungsvorschau statt der Höhenfarben; jeder tatsächliche Standort wird zusätzlich einzeln geprüft. Eine geeignete Fläche muss nicht bewaldet sein.</p>
 <p>Das Gelände verwendet ein feineres Grundmesh und zusätzliche Unterteilungen entlang der Flüsse. Gemeinsame, flächengewichtete Vertex-Normalen und interpolierte Höhenfarben reduzieren sichtbare Dreiecksfacetten. Das Höhenfeld und die Steigungsprüfung bleiben davon unabhängig; Wasser und Brückendecks behalten getrennte Oberflächen.</p>
 <p>Die Spielflächen besitzen weich gerundete, unterschiedlich gestreckte und asymmetrische Konturen statt sechs dominanter Ecken. Dieselben Konturen bestimmen Darstellung, Schutzabstände und Höhenplanung; ein breiter Kern für Weganschlüsse bleibt erhalten.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
@@ -808,10 +815,126 @@ function auditMap(plan, mesh, n = AUDIT_SIZE, sampleAt = sampleWorld) {
     maxPlayableGrade: auditSurface(mesh) };
 }
 </script>
+<script id="terrain-decoration">
+'use strict';
+// Read-only, visual decoration. No terrain changes or navigation obstacles.
+const TREE_RULES = { step: 6, clearance: 5.5, spacing: 5.4, maxGrade: .28 };
+function decorationClearance(plan, x, y) {
+  // Margins include the largest crown under the .32 warp derivative bound.
+  const dx = Math.abs(x - SIZE / 2), dy = Math.abs(y - SIZE / 2);
+  if (dy > HEX_RADIUS * Math.sqrt(3) / 2 - TREE_RULES.clearance ||
+    (Math.sqrt(3) * dx + dy) / 2 > Math.sqrt(3) * HEX_RADIUS / 2 - TREE_RULES.clearance) return false;
+  for (const e of plan.edges) {
+    if (segmentDistance(x, y, plan.regions[e.a], plan.regions[e.b]) < ROAD_RADIUS + TREE_RULES.clearance) return false;
+  }
+  if (riverDistance(plan.river, x, y) < RIVER_SUPPORT + TREE_RULES.clearance) return false;
+  for (const b of plan.river.bridges) {
+    const u = (x - b.center.x) * b.ux + (y - b.center.y) * b.uy,
+      v = -(x - b.center.x) * b.uy + (y - b.center.y) * b.ux;
+    if (Math.hypot(Math.max(0, Math.abs(u) - b.halfLength), Math.max(0, Math.abs(v) - b.halfWidth)) < TREE_RULES.clearance) return false;
+  }
+  return true;
+}
+function decorationSite(plan, x, y, sampleAt = sampleWorld) {
+  const world = warpPoint(plan, { x, y });
+  const site = { x: world.x, y: world.y, sourceX: x, sourceY: y, eligible: false };
+  if (!decorationClearance(plan, x, y)) return site;
+  const s = sampleAt(plan, world.x, world.y), delta = 1;
+  if (s.bridge || s.height <= s.water) return site;
+  // Physical slope in world space, including warp and carving.
+  const gx = (sampleAt(plan, world.x + delta, world.y).height - sampleAt(plan, world.x - delta, world.y).height) / (2 * delta),
+    gy = (sampleAt(plan, world.x, world.y + delta).height - sampleAt(plan, world.x, world.y - delta).height) / (2 * delta);
+  site.height = s.height; site.band = heightBand(s.height); site.grade = Math.hypot(gx, gy);
+  site.eligible = Number.isFinite(site.grade) && site.grade <= TREE_RULES.maxGrade;
+  return site;
+}
+function plantingMask(field, x, y) {
+  const ix = Math.floor(x / field.step), iy = Math.floor(y / field.step), n = field.n;
+  if (ix < 0 || iy < 0 || ix >= n - 1 || iy >= n - 1) return 0;
+  // Interpolated suitability estimate, never a substitute for exact placement.
+  const fx = x / field.step - ix, fy = y / field.step - iy,
+    value = i => field.sites[i].eligible ? 1 : 0;
+  return (1 - fy) * ((1 - fx) * value(iy * n + ix) + fx * value(iy * n + ix + 1)) +
+    fy * ((1 - fx) * value((iy + 1) * n + ix) + fx * value((iy + 1) * n + ix + 1));
+}
+function makeDecoration(plan, sampleAt = sampleWorld) {
+  const step = TREE_RULES.step, n = Math.floor(SIZE / step) + 1, sites = [];
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) sites.push(decorationSite(plan, x * step, y * step, sampleAt));
+  const field = { step, n, sites }, random = rng(plan.seed ^ 0x54524545),
+    phases = Array.from({ length: 4 }, () => random() * Math.PI * 2), catalog = [], bins = new Map(), candidates = [];
+  // Stable random priorities avoid scan-order bias. Density filters the fixed
+  // catalog; surviving trees never move when the slider changes.
+  const pitch = 4.5;
+  for (let y = pitch / 2; y < SIZE; y += pitch) for (let x = pitch / 2; x < SIZE; x += pitch) {
+    candidates.push({ x: x + (random() - .5) * pitch * .8, y: y + (random() - .5) * pitch * .8,
+      priority: random(), chance: random(), type: random(), rotation: random() * Math.PI * 2, size: .85 + random() * .5 });
+  }
+  candidates.sort((a, b) => a.priority - b.priority);
+  for (const c of candidates) {
+    if (plantingMask(field, c.x, c.y) < .5) continue;
+    const forest = smooth((.5 + .28 * Math.sin(c.x / 29 + phases[0]) * Math.sin(c.y / 36 + phases[1]) +
+      .18 * Math.sin(c.x / 17 + c.y / 23 + phases[2]) + .10 * Math.cos(c.y / 11 + phases[3]) - .32) / .45);
+    if (forest <= c.chance) continue;
+    const site = decorationSite(plan, c.x, c.y, sampleAt);
+    if (!site.eligible) continue;
+    const zoneDensity = [.9, .75, .6][site.band];
+    if (c.chance >= forest * zoneDensity) continue;
+    const bx = Math.floor(site.x / TREE_RULES.spacing), by = Math.floor(site.y / TREE_RULES.spacing);
+    let crowded = false;
+    for (let y = by - 1; y <= by + 1; y++) for (let x = bx - 1; x <= bx + 1; x++) {
+      if ((bins.get(`${x}:${y}`) || []).some(t => distance(t, site) < TREE_RULES.spacing)) crowded = true;
+    }
+    if (crowded) continue;
+    const tree = { ...site, type: c.type < [.82, .5, .18][site.band] ? 'broadleaf' : 'conifer',
+      rotation: c.rotation, size: c.size, threshold: c.chance / (forest * zoneDensity) };
+    catalog.push(tree);
+    const key = `${bx}:${by}`;
+    if (!bins.has(key)) bins.set(key, []);
+    bins.get(key).push(tree);
+  }
+  return { field, catalog };
+}
+function selectTrees(decoration, density) {
+  return decoration.catalog.filter(t => t.threshold < Math.max(0, Math.min(1, density)));
+}
+function makeTreeGeometry(trees) {
+  const data = [];
+  for (const tree of trees) {
+    const point = (r, z, i) => {
+      const a = tree.rotation + i * Math.PI / 3;
+      return { x: tree.x - SIZE / 2 + Math.cos(a) * r * tree.size,
+        y: tree.y - SIZE / 2 + Math.sin(a) * r * tree.size,
+        z: tree.height - 40 + z * tree.size };
+    };
+    const face = (a, b, c, material) => {
+      const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z,
+        vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z,
+        nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const light = .55 + .45 * Math.max(0, (-.4 * nx - .5 * ny + .768 * nz) / Math.hypot(nx, ny, nz));
+      for (const p of [a, b, c]) data.push(p.x, p.y, p.z, light, tree.height, 0, material);
+    };
+    const rings = (levels, material) => {
+      for (let j = 1; j < levels.length; j++) for (let i = 0; i < 6; i++) {
+        const [r0, z0] = levels[j - 1], [r1, z1] = levels[j],
+          a = point(r0, z0, i), b = point(r0, z0, i + 1), c = point(r1, z1, i + 1), d = point(r1, z1, i);
+        face(a, b, c, material); face(a, c, d, material);
+      }
+      for (const j of [0, levels.length - 1]) for (let i = 0; i < 6; i++) {
+        const [r, z] = levels[j], center = point(0, z, 0), a = point(r, z, i), b = point(r, z, i + 1);
+        if (j === 0) face(center, b, a, material); else face(center, a, b, material);
+      }
+    };
+    rings([[.22, -.15], [.18, 3.2]], 3);
+    if (tree.type === 'broadleaf') rings([[.65, 2.6], [1.8, 4.4], [.15, 6.7]], 4);
+    else { rings([[1.75, 2], [.05, 5.5]], 5); rings([[1.2, 3.8], [.04, 7.4]], 5); }
+  }
+  return new Float32Array(data);
+}
+</script>
 <script id="terrain-view">
 'use strict';
 // Browser preview state is separate from all pure generation/audit blocks.
-const preview = { plan: null, mesh: null, gpu: null };
+const preview = { plan: null, mesh: null, gpu: null, decoration: null, trees: [], treeGeometry: null };
 const camera = { yaw: -.7, tilt: .65, zoom: 1.6 };
 function createGPU() {
   const gl = document.getElementById('height').getContext('webgl', { antialias: true, alpha: false });
@@ -827,6 +950,8 @@ function createGPU() {
   const vertex = compile(gl.VERTEX_SHADER, `
     attribute vec3 position;
     attribute vec4 surface;
+    attribute float plantable;
+    varying float plantMask;
     uniform vec4 camera;
     uniform vec2 scale;
     varying vec4 face;
@@ -836,7 +961,7 @@ function createGPU() {
       float y = position.z * camera.z - forward * camera.w;
       float depth = forward * camera.z + position.z * camera.w;
       gl_Position = vec4(x * scale.x, y * scale.y, -depth / 500.0, 1.0);
-      face = surface;
+      face = surface; plantMask = plantable;
     }
   `);
   const fragment = compile(gl.FRAGMENT_SHADER, `
@@ -844,6 +969,8 @@ function createGPU() {
     varying vec4 face;
     uniform bool overlay;
     uniform bool heightZones;
+    uniform bool planting;
+    varying float plantMask;
     uniform vec2 heightRange;
     uniform vec2 heightCuts;
     void main() {
@@ -855,8 +982,12 @@ function createGPU() {
         else color = vec3(${HEIGHT_BANDS[2].color.map(n => n.toFixed(1)).join(', ')});
       }
       if (overlay && !heightZones && face.z > 0.5) color = vec3(100.0, 205.0, 150.0);
+      if (planting && face.w < 0.5) color = plantMask >= 0.5 ? vec3(60.0, 215.0, 135.0) : color * 0.38;
       if (face.w > 0.5 && face.w < 1.5) color = vec3(38.0, 147.0, 217.0);
-      if (face.w > 1.5) color = vec3(217.0, 155.0, 88.0);
+      if (face.w > 1.5 && face.w < 2.5) color = vec3(217.0, 155.0, 88.0);
+      if (face.w > 2.5 && face.w < 3.5) color = vec3(112.0, 78.0, 48.0);
+      if (face.w > 3.5 && face.w < 4.5) color = vec3(62.0, 137.0, 61.0);
+      if (face.w > 4.5) color = vec3(37.0, 100.0, 71.0);
       gl_FragColor = vec4(color * face.x / 255.0, 1.0);
     }
   `);
@@ -868,15 +999,25 @@ function createGPU() {
   }
   gl.useProgram(program);
   const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  const attributes = [];
   for (const [name, offset] of [['position', 0], ['surface', 12]]) {
     const location = gl.getAttribLocation(program, name);
-    gl.enableVertexAttribArray(location); gl.vertexAttribPointer(location, name === 'position' ? 3 : 4, gl.FLOAT, false, 28, offset);
+    const size = name === 'position' ? 3 : 4;
+    attributes.push({ location, size, offset });
+    gl.enableVertexAttribArray(location); gl.vertexAttribPointer(location, size, gl.FLOAT, false, 28, offset);
   }
   gl.enable(gl.DEPTH_TEST); gl.clearColor(32 / 255, 43 / 255, 56 / 255, 1);
-  return { gl, buffer, uploaded: null, count: 0,
+  return { gl, buffer, attributes, uploaded: null, count: 0,
+    plantBuffer: gl.createBuffer(), treeBuffer: gl.createBuffer(), plantAttribute: gl.getAttribLocation(program, 'plantable'),
+    planting: gl.getUniformLocation(program, 'planting'),
     camera: gl.getUniformLocation(program, 'camera'), scale: gl.getUniformLocation(program, 'scale'),
     overlay: gl.getUniformLocation(program, 'overlay'), heightZones: gl.getUniformLocation(program, 'heightZones'),
     heightRange: gl.getUniformLocation(program, 'heightRange'), heightCuts: gl.getUniformLocation(program, 'heightCuts') };
+}
+function bindSurface(gpu, buffer) {
+  const { gl } = gpu;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  for (const a of gpu.attributes || []) gl.vertexAttribPointer(a.location, a.size, gl.FLOAT, false, 28, a.offset);
 }
 function draw3D() {
   const mesh = preview.mesh;
@@ -917,7 +1058,36 @@ function draw3D() {
     gl.uniform1i(gpu.heightZones, document.getElementById('heightZones').checked ? 1 : 0);
     gl.uniform2f(gpu.heightRange, HEIGHT_SPACE.min, HEIGHT_SPACE.max);
     gl.uniform2f(gpu.heightCuts, heightBoundary(1), heightBoundary(2));
+    gl.uniform1i(gpu.planting, document.getElementById('planting').checked ? 1 : 0);
+    if (gpu.plantAttribute != null) {
+      const field = preview.decoration?.field;
+      if (field) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, gpu.plantBuffer);
+        if (gpu.plantField !== field || gpu.plantMesh !== mesh) {
+          const values = new Float32Array(mesh.vertices.length), data = new Float32Array(mesh.triangles.length * 3);
+          for (let i = 0; i < mesh.vertices.length; i++) {
+            const p = mesh.vertices[i]; values[i] = plantingMask(field, p.sourceX + SIZE / 2, p.sourceY + SIZE / 2);
+          }
+          let offset = 0;
+          for (const t of mesh.triangles) for (const i of t.indices) data[offset++] = t.material === 0 ? values[i] : 0;
+          gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+          gpu.plantField = field; gpu.plantMesh = mesh;
+        }
+        gl.enableVertexAttribArray(gpu.plantAttribute);
+        gl.vertexAttribPointer(gpu.plantAttribute, 1, gl.FLOAT, false, 4, 0);
+      } else { gl.disableVertexAttribArray(gpu.plantAttribute); gl.vertexAttrib1f(gpu.plantAttribute, 0); }
+    }
+    bindSurface(gpu, gpu.buffer);
     gl.drawArrays(gl.TRIANGLES, 0, gpu.count);
+    if (document.getElementById('trees').checked && preview.treeGeometry?.length) {
+      bindSurface(gpu, gpu.treeBuffer);
+      if (gpu.uploadedTrees !== preview.treeGeometry) {
+        gl.bufferData(gl.ARRAY_BUFFER, preview.treeGeometry, gl.STATIC_DRAW);
+        gpu.uploadedTrees = preview.treeGeometry;
+      }
+      if (gpu.plantAttribute != null) { gl.disableVertexAttribArray(gpu.plantAttribute); gl.vertexAttrib1f(gpu.plantAttribute, 0); }
+      gl.drawArrays(gl.TRIANGLES, 0, preview.treeGeometry.length / 7);
+    }
     document.getElementById('renderError').textContent = '';
   } catch (error) {
     document.getElementById('renderError').textContent = `3D-Anzeige: ${error.message}`;
@@ -941,6 +1111,8 @@ function rebuildPreview() {
   const plan = preview.plan;
   preview.mesh = makeMesh(plan);
   const audit = auditMap(plan, preview.mesh);
+  preview.decoration = makeDecoration(plan);
+  refreshTrees();
   drawPlanning(); draw3D();
   if (!audit.connected || !audit.downhill) throw Error('Fluss-/Begehbarkeitsprüfung fehlgeschlagen.');
   // Provisional slope violations remain visible, with the same warning.
@@ -954,15 +1126,35 @@ function generate() {
     document.getElementById('rounded').checked); rebuildPreview(); }
   catch (error) { document.getElementById('status').textContent = `Seed ${seeds[0]}: ${error.message}`; console.error(error); }
 }
+function updateTreeCount() {
+  const enabled = document.getElementById('trees').checked;
+  document.getElementById('treeCount').textContent = `${preview.trees.length} Bäume${enabled ? '' : ' (aus)'}`;
+}
+function refreshTrees() {
+  if (!preview.decoration) return;
+  const density = Number(document.getElementById('treeDensity').value) / 100;
+  preview.trees = selectTrees(preview.decoration, density);
+  preview.treeGeometry = makeTreeGeometry(preview.trees);
+  document.getElementById('treeDensityValue').textContent = `${Math.round(density * 100)} %`;
+  updateTreeCount();
+}
+function syncDisplayControls() {
+  const planting = document.getElementById('planting').checked, zones = document.getElementById('heightZones').checked;
+  document.getElementById('plantingLegend').hidden = !planting;
+  document.getElementById('heightLegend').hidden = planting || !zones;
+  document.getElementById('overlay').disabled = planting || zones;
+}
 function bindLabControls() {
   document.getElementById('generate').addEventListener('click', generate);
   document.getElementById('heightLegend').innerHTML = heightLegendHTML();
+  syncDisplayControls();
   document.getElementById('heightZones').addEventListener('change', () => {
-    const active = document.getElementById('heightZones').checked;
-    document.getElementById('heightLegend').hidden = !active;
-    document.getElementById('overlay').disabled = active;
+    syncDisplayControls();
     draw3D(); // Uniforms only: preserve the seed, plan, mesh and GPU upload.
   });
+  document.getElementById('trees').addEventListener('change', () => { updateTreeCount(); requestDraw(); });
+  document.getElementById('planting').addEventListener('change', () => { syncDisplayControls(); requestDraw(); });
+  document.getElementById('treeDensity').addEventListener('input', () => { refreshTrees(); requestDraw(); });
   document.getElementById('overlay').addEventListener('change', draw3D);
   document.getElementById('dual').addEventListener('change', drawPlanning);
   for (const id of ['curves', 'rounded']) document.getElementById(id).addEventListener('change', () => {

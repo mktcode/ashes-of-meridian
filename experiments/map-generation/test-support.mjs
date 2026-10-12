@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 export const CORE_SCRIPTS = ['terrain-core', 'terrain-mesh', 'terrain-audit'];
-export const VIEW_SCRIPTS = [...CORE_SCRIPTS, 'terrain-planning-view', 'terrain-view', 'terrain-app'];
+export const VIEW_SCRIPTS = [...CORE_SCRIPTS, 'terrain-decoration', 'terrain-planning-view', 'terrain-view', 'terrain-app'];
 
 // Explicit inline blocks are the test boundary. Never run the browser start,
 // remove calls from source text, or require DOM stubs for the generation core.
