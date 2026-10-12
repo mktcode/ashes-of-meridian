@@ -11,7 +11,7 @@ const context = loadLab({ scripts: VIEW_SCRIPTS, globals: {
   assert,
   document: { getElementById: id => {
     if (!elements.has(id)) elements.set(id, {
-      listeners: new Map(), addEventListener(type, listener) { this.listeners.set(type, listener); }, checked: id !== 'planting',
+      listeners: new Map(), addEventListener(type, listener) { this.listeners.set(type, listener); }, checked: !['planting','grassAreas'].includes(id),
     });
     return elements.get(id);
   }, addEventListener() {} },
@@ -89,7 +89,7 @@ const result = vm.runInContext(`(() => {
     },
     vertexAttribPointer(location) { pointers.set(location, bound); },
     enableVertexAttribArray() {}, disableVertexAttribArray() {}, vertexAttrib1f() {},
-    viewport() {}, clear() {}, uniform4f() {}, uniform2f(name, x, y) { uniforms[name] = [x, y]; },
+    useProgram() {}, viewport() {}, clear() {}, uniform4f() {}, uniform2f(name, x, y) { uniforms[name] = [x, y]; },
     uniform1i(name, value) { uniforms[name] = value; }, drawArrays() { drawCalls.push(pointers.get(0)); },
     ARRAY_BUFFER: 1, STATIC_DRAW: 2, TRIANGLES: 4, COLOR_BUFFER_BIT: 8, DEPTH_BUFFER_BIT: 16,
   };
@@ -159,6 +159,32 @@ const result = vm.runInContext(`(() => {
   density.value = '0'; density.listeners.get('input')(); flushFrames();
   assert.equal(preview.trees.length, 0);
   assert.equal(drawCalls.at(-1), terrainBuffer);
+  const grassBuffer = {}, grassMaskBuffer = {}, divisors = new Map();
+  preview.gpu.grassMaskBuffer = grassMaskBuffer; preview.gpu.grassMaskCache = {}; preview.gpu.grassAreas = 'grassAreas';
+  preview.gpu.grass = { program:{}, buffer:{}, instances:grassBuffer, blade:5, root:3, clump:4,
+    ext:{vertexAttribDivisorANGLE(a,n){divisors.set(a,n);},drawArraysInstancedANGLE(){drawCalls.push('grass');}} };
+  preview.grassDecoration = {field:preview.decoration.field,catalog:[
+    {...tree,band:0,tone:.4,threshold:.2},{...tree,x:160,band:2,tone:.8,threshold:.8}]};
+  const grassDensity = document.getElementById('grassDensity'); grassDensity.value = '65';
+  refreshGrass(); draw3D();
+  assert.equal(preview.grassInstances.length / 7,1);
+  assert.equal(drawCalls.at(-1),'grass');
+  assert.ok([...divisors.values()].every(n=>n===0));
+  for(const active of [false,true]) {
+    const grass=document.getElementById('grass');grass.checked=active;grass.listeners.get('change')();flushFrames();
+    assert.equal(drawCalls.at(-1),active?'grass':terrainBuffer);
+  }
+  for(const id of ['grassAreas','planting','grassAreas']) {
+    const e=document.getElementById(id);e.checked=true;e.listeners.get('change')();flushFrames();
+    assert.equal(document.getElementById('grassLegend').hidden,id!=='grassAreas');
+    assert.equal(document.getElementById('plantingLegend').hidden,id!=='planting');
+    assert.equal(uniforms.grassAreas,id==='grassAreas'?1:0);
+  }
+  assert.equal(bufferUploads.get(grassBuffer),1);assert.equal(bufferUploads.get(grassMaskBuffer),1);
+  grassDensity.value='100';grassDensity.listeners.get('input')();flushFrames();
+  assert.equal(preview.grassInstances.length/7,2);assert.equal(bufferUploads.get(grassBuffer),2);
+  assert.equal(bufferUploads.get(terrainBuffer),1);assert.equal(bufferUploads.get(treeBuffer),2);
+  assert.equal(bufferUploads.get(grassMaskBuffer),1);assert.equal(preview.mesh,mesh);assert.equal(preview.plan,plan);
   return { vertices: mesh.vertices.length, faces: mesh.terrainFaceCount };
 })()`, context, { timeout: 5000 });
-console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height, fixed zones, trees, planting overlay and independent cached uploads on toggles/density OK. No generated-map/raster validation.`);
+console.log(`Synthetic mesh: ${result.vertices} vertices, ${result.faces} terrain faces; area-weighted lighting, interpolated height, fixed zones, trees, instanced grass, independent overlays and cached uploads on toggles/density OK. No generated-map/raster validation.`);
