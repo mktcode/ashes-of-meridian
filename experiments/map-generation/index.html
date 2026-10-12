@@ -64,6 +64,7 @@
 <p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
 <p>Die Checkbox „Runde Flüsse“ ersetzt die eckigen Routen durch zusammenhängende Bézier-Kurven, bevor Höhen, Bett und Brücken berechnet werden. Nur Kreuzungen, Verzweigungen und Randanschlüsse bleiben feste Anker; normale duale Knoten dürfen übersprungen werden. Wasser wird als eigenes fein unterteiltes Band dargestellt; das Gelände wird entlang der Ufer lokal verfeinert. Beide Checkboxen vergleichen Varianten mit demselben Seed. Die Vorschau zeigt auch Layouts mit überschrittener Neigungsgrenze, dann ausdrücklich mit einer Warnung.</p>
+<p>Das Gelände verwendet ein feineres Grundmesh und zusätzliche Unterteilungen entlang der Flüsse. Gemeinsame, flächengewichtete Vertex-Normalen und interpolierte Höhenfarben reduzieren sichtbare Dreiecksfacetten. Das Höhenfeld und die Steigungsprüfung bleiben davon unabhängig; Wasser und Brückendecks behalten getrennte Oberflächen.</p>
 <p>Die Spielflächen besitzen weich gerundete, unterschiedlich gestreckte und asymmetrische Konturen statt sechs dominanter Ecken. Dieselben Konturen bestimmen Darstellung, Schutzabstände und Höhenplanung; ein breiter Kern für Weganschlüsse bleibt erhalten.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
 <p><strong>Fiktiver Prototyp:</strong> 45 % maximale Steigung für Landwege und Brückendecks; Wasser außerhalb der Brücken ist gesperrt. Die Prüfung betrachtet Wasser mit Brücken im Begehbarkeitsraster und die Dreiecksneigungen der begehbaren Oberflächen. Keine Wasserphysik, Erosion, Durchflussmengen, Unterführung-Navigation, Körperfreiraum oder RTS-Balance. Ein sich aufteilender Fluss ist hier ein stilisiertes Verteilernetz, kein vollständiges hydrologisches Modell.</p>
@@ -72,6 +73,7 @@
 'use strict';
 const SIZE = 300, PIXELS = 480, ROAD_RADIUS = 7, HEX_RADIUS = 145;
 const MAX_GRADE = .45, OFFSET_GRADE = .20, NOISE_MARGIN = 6;
+const TERRAIN_RESOLUTION = 96;
 const RIVER_RADIUS = 2.8, BANK_WIDTH = 3, FLOW_GRADE = .035, AUDIT_SIZE = 192;
 const WATER_DROP = 1.4, BED_DEPTH = 1.1, RIVER_SUPPORT = RIVER_RADIUS + BANK_WIDTH;
 const BRIDGE_BUFFER = 1.8, BRIDGE_REACH = RIVER_SUPPORT + BRIDGE_BUFFER;
@@ -701,7 +703,8 @@ function addWaterBand(plan, vertices, triangles) {
 }
 // Actual 3D vertices sampled from the same field; no new random draws.
 function makeMesh(plan) {
-  const n = 64, vertices = [], triangles = [], lookup = new Map(), baseFaces = [];
+  // 50% more subdivisions than the former 64 grid: 2.25x as many base triangles.
+  const n = TERRAIN_RESOLUTION, vertices = [], triangles = [], lookup = new Map(), baseFaces = [];
   let maxPlayableGrade = 0;
   const addVertex = (x, y) => {
     const s = sample(plan, x + SIZE / 2, y + SIZE / 2), world = warpPoint(plan, { x: x + SIZE / 2, y: y + SIZE / 2 });
@@ -725,6 +728,7 @@ function makeMesh(plan) {
     }
   }
   const faces = refineRiverTerrain(plan, vertices, baseFaces, addVertex);
+  const normals = new Float64Array(vertices.length * 3);
   for (const indices of faces) {
       const [p, q, r] = indices.map(i => vertices[i]);
       const ux = q.x - p.x, uy = q.y - p.y, uz = q.z - p.z,
@@ -733,6 +737,11 @@ function makeMesh(plan) {
       const light = .45 + .55 * Math.max(0, (nx * -.4 + ny * -.5 + nz * .768) / Math.hypot(nx, ny, nz));
       // Sample the face center so narrow planned paths remain visible.
       if (nz <= 0) throw Error('Verformtes Geländedreieck ist gefaltet.');
+      // Area-weighted shared normals soften lighting, not the actual surface.
+      // Water and decks keep their separate material/lighting boundaries.
+      for (const i of indices) {
+        normals[i * 3] += nx; normals[i * 3 + 1] += ny; normals[i * 3 + 2] += nz;
+      }
       const center = sample(plan, (p.sourceX + q.sourceX + r.sourceX) / 3 + SIZE / 2,
         (p.sourceY + q.sourceY + r.sourceY) / 3 + SIZE / 2);
       triangles.push({ indices, light, height: center.height, planned: center.planned, material: 0 });
@@ -743,6 +752,10 @@ function makeMesh(plan) {
           walkNX = uy * zv - zu * vy, walkNY = zu * vx - ux * zv;
         maxPlayableGrade = Math.max(maxPlayableGrade, Math.hypot(walkNX, walkNY) / Math.abs(nz));
       }
+  }
+  for (let i = 0; i < vertices.length; i++) {
+    const nx = normals[i * 3], ny = normals[i * 3 + 1], nz = normals[i * 3 + 2];
+    vertices[i].light = .45 + .55 * Math.max(0, (nx * -.4 + ny * -.5 + nz * .768) / (Math.hypot(nx, ny, nz) || 1));
   }
   addWaterBand(plan, vertices, triangles);
   // Test actual land/deck faces; riverbanks outside the route may be steep.
@@ -827,7 +840,8 @@ function draw3D() {
         const p = mesh.vertices[index];
         data[offset++] = p.x; data[offset++] = p.y;
         data[offset++] = t.material === 1 ? p.waterZ : t.material === 2 ? p.walkZ : p.z;
-        data[offset++] = t.material === 2 ? .9 : t.light; data[offset++] = t.height;
+        data[offset++] = t.material === 0 ? p.light : t.material === 2 ? .9 : t.light;
+        data[offset++] = t.material === 0 ? p.height : t.height;
         data[offset++] = t.planned ? 1 : 0; data[offset++] = t.material;
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, gpu.buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
