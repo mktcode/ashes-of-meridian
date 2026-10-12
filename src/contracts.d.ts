@@ -552,6 +552,8 @@ interface EntityBase extends Position {
 interface UnitEntity extends EntityBase {
   kind: 'unit';
   type: UnitType;
+  /** Uncorrected slot of the current group move; keeps AI intent stable after correction. */
+  formationGoal?: Position;
   /** Explicit Cinder delivery assignment; absent means normal HQ economy. */
   deliveryForum?: number;
   deliveryPoint?: Position;

@@ -114,7 +114,7 @@ function validExpeditionBattle(value: unknown, expedition: ExpeditionBattleRecip
     kills: integer, carry: nonnegative, work: num, shield: nonnegative, maxShield: nonnegative
   }, {
     target: v => v === null || id(v), exit: shape({ x: num, z: num, building: id, length: nonnegative }),
-    yieldTo: pos, yieldUntil: num, pathGoal: pos, pathVersion: integer,
+    yieldTo: pos, yieldUntil: num, pathGoal: pos, pathVersion: integer, formationGoal: pos,
     pathArea: shape({ x: num, z: num, radius: nonnegative }, { terrainConnection: oneOf(false) }), pathStatus, pathResolvedGoal: pos,
     recoveryAttempts: integer, nextRecovery: num, stuck: num, steerSide: oneOf(-1, 1), steerLocked: bool,
     slowed: num, reinforcedUntil: num, returning: bool, lastSource: integer, shieldFlash: num,

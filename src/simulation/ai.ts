@@ -48,13 +48,13 @@ const aiMethods = {
   aiOrder(this: MeridianGame, team: PlayerTeam, units: UnitEntity[], p: Position, attack = true, tolerance = 8) {
     // Compare with the command API's formation slots, not its center: wide formations
     // otherwise reset their outer units every strategic tick. Keep slots on partial updates.
-    const mobile=units.filter(e=>!e.exit), cols=Math.max(1,Math.ceil(Math.sqrt(mobile.length))),
-      spacing=Math.max(0,...mobile.map(e=>e.size))*UNIT_BODY_SCALE*2+.1,
-      goals=mobile.map((e,i)=>({e,p:{x:p.x+(i%cols-(cols-1)/2)*spacing,
-        z:p.z+(Math.floor(i/cols)-(Math.ceil(mobile.length/cols)-1)/2)*spacing}})),
+    const mobile=units.filter(e=>!e.exit), slots=formationSlots(mobile,p),
+      goals=mobile.map((e,i)=>({e,p:slots[i]})),
+      // Read the issued intent, not live blockers or the corrected coordinates.
+      // Otherwise a nearby correction can restart the same order every AI tick.
       changed=goals.filter(({e,p:goal})=>e.order.type!==(attack?'attackMove':'move') ||
-        distance(e.order as Position,goal)>tolerance ||
-        (e.pathStatus==='unreachable' && distance(e.order as Position,goal)>.1));
+        distance(e.formationGoal || e.order as Position,goal)>tolerance ||
+        (e.pathStatus==='unreachable' && distance(e.formationGoal || e.order as Position,goal)>.1));
     if (changed.length===mobile.length && changed.length)
       this.executeAction(team,{kind:'order',ids:mobile.map(e=>e.id),
         order:{type:attack?'attackMove':'move',x:p.x,z:p.z}},false);

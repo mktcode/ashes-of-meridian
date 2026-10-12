@@ -74,12 +74,23 @@
         return false;
       }
     }
+    // Shared intent geometry: correcting a destination must not change the AI's
+    // comparison with the originally requested formation slot.
+    function formationSlots(units: UnitEntity[], p: Position): Position[] {
+      const cols = Math.max(1, Math.ceil(Math.sqrt(units.length))),
+        rows = Math.ceil(units.length / cols),
+        spacing = Math.max(0, ...units.map(e => e.size)) * UNIT_BODY_SCALE * 2 + 0.1;
+      return units.map((e, i) => ({
+        x: p.x + (i % cols - (cols - 1) / 2) * spacing,
+        z: p.z + (Math.floor(i / cols) - (rows - 1) / 2) * spacing
+      }));
+    }
     const movementMethods = {
       updateUnitCollision(this: MeridianGame, e: UnitEntity) {
         const index = this.unitCollisionIndex;
         if (index?.entities && index.entities === this.s?.entities) index.update(e);
       },
-      unitFits(this: MeridianGame, e: UnitBody, x: number, z: number) {
+      unitFits(this: MeridianGame, e: UnitBody, x: number, z: number, departing?: ReadonlySet<UnitEntity>) {
         const flying = !!(UNITS[e.type] as UnitDefinitionShape).flying;
         const limit = this.world!.extent - 5;
         if (Math.abs(x) > limit || Math.abs(z) > limit) return false;
@@ -93,7 +104,7 @@
         // Read live positions: the combat hash is only rebuilt once per step.
         const blocks = (other: Entity) => other !== e && other.hp > 0 && other.kind === 'unit' &&
           !!(UNITS[other.type] as UnitDefinitionShape).flying === flying &&
-          !!((other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9 ||
+          !!((!departing?.has(other) && (other.x - x) ** 2 + (other.z - z) ** 2 < ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9) ||
             (other.exit && (other.exit.x - x) ** 2 + (other.exit.z - z) ** 2 <
               ((e.size + other.size) * UNIT_BODY_SCALE) ** 2 - 1e-9));
         if (this.stepping) {
@@ -122,6 +133,49 @@
           }
         }
         return null;
+      },
+      groupMoveGoals(this: MeridianGame, units: UnitEntity[], p: Position) {
+        const requested = formationSlots(units, p), goals = requested.map(p => ({ ...p }));
+        // Solo orders retain their existing navigation/arrival semantics.
+        if (units.length < 2) return { requested, goals };
+        const departing = new Set(units), reserved: UnitPlacement[] = [],
+          flying = (e: UnitPlacement) => !!(UNITS[e.type] as UnitDefinitionShape).flying,
+          fits = (e: UnitEntity, p: Position) =>
+            // Probe without an exit exemption: a destination is not a launch path.
+            this.unitFits({ type: e.type, size: e.size }, p.x, p.z, departing) &&
+            reserved.every(other => flying(other) !== flying(e) ||
+              distance(other, p) >= (other.size + e.size) * UNIT_BODY_SCALE),
+          reserve = (e: UnitEntity, p: Position) => reserved.push({ type: e.type, size: e.size, ...p }),
+          valid = units.map((e, i) => {
+            if (!fits(e, requested[i])) return false;
+            reserve(e, requested[i]);
+            return true;
+          });
+        // Reserve all valid original slots first; an earlier correction must not
+        // steal a later unit's unchanged destination. Selected bodies will leave,
+        // but their production exit reservations still block candidate positions.
+        for (let i = 0; i < units.length; i++) {
+          if (valid[i]) continue;
+          const e = units[i], origin = requested[i], body = e.size * UNIT_BODY_SCALE,
+            connectedOrigin = !flying(e) && (this.world!.surface?.fits(origin.x, origin.z, body) ?? true);
+          let replacement: Position | null = null;
+          // At most 135 deterministic candidates within six metres. This is a
+          // local fit correction, not an additional reachability/path search.
+          for (let r = 1; r <= 6 && !replacement; r++) {
+            const count = Math.ceil(2 * Math.PI * r);
+            for (let j = 0; j < count; j++) {
+              const angle = j * 2 * Math.PI / count,
+                candidate = { x: origin.x + Math.cos(angle) * r, z: origin.z + Math.sin(angle) * r };
+              if (!fits(e, candidate) || (connectedOrigin && !this.world!.terrainFree(origin, candidate, body))) continue;
+              replacement = candidate;
+              break;
+            }
+          }
+          // No suitable nearby place: leave recovery and arrival policy unchanged.
+          if (replacement) goals[i] = replacement;
+          reserve(e, goals[i]);
+        }
+        return { requested, goals };
       },
       yieldUnitSpace(this: MeridianGame, e: UnitEntity, x: number, z: number, priority: UnitEntity = e, chain: number[] = [], side: Position | null = null) {
         if (chain.length >= 4 || chain.includes(e.id)) return;
@@ -361,7 +415,10 @@
       setOrder(this: MeridianGame, e: Entity, order: UnitOrder) {
         if(e.kind==='unit')delete e.evacuationHQ;
         if (e.kind === 'building') return;
-        if (e.kind === 'unit') { this.forgetForumDelivery(e); delete e.deliveryForum; delete e.deliveryPoint; }
+        if (e.kind === 'unit') {
+          this.forgetForumDelivery(e); delete e.deliveryForum; delete e.deliveryPoint;
+          delete e.formationGoal;
+        }
         e.order = { ...order };
         e.target = null;
         e.path = [];
@@ -418,16 +475,16 @@
           }
         }
         if (order.type === 'build' || order.type === 'repair') return false;
-        let cols = Math.max(1, Math.ceil(Math.sqrt(mobile.length))),
-          spacing = Math.max(0, ...mobile.map(e => e.size)) * UNIT_BODY_SCALE * 2 + 0.1,
-          i = 0;
+        const formation = order.type === 'move' || order.type === 'attackMove'
+          ? this.groupMoveGoals(mobile, order) : null;
+        let i = 0;
         for (let e of units) {
-          let o: CommandOrder = { ...order };
+          let o: CommandOrder = { ...order }, formationGoal: Position | undefined;
           if (e.kind === 'unit') {
-            if (o.type === 'move' || o.type === 'attackMove') {
-              let j = i++;
-              o.x += ((j % cols) - (cols - 1) / 2) * spacing;
-              o.z += (Math.floor(j / cols) - (Math.ceil(mobile.length / cols) - 1) / 2) * spacing;
+            if (formation && (o.type === 'move' || o.type === 'attackMove')) {
+              const j = i++, goal = formation.goals[j], requested = formation.requested[j];
+              o.x = goal.x; o.z = goal.z;
+              if (goal.x !== requested.x || goal.z !== requested.z) formationGoal = { ...requested };
             }
             // Ground taps attack-move combat units without turning workers into attackers.
             if (e.type === 'worker' && o.type === 'attackMove') o.type = 'move';
@@ -443,6 +500,7 @@
             }
           }
           this.setOrder(e, o as UnitOrder);
+          if (e.kind === 'unit' && formationGoal) e.formationGoal = formationGoal;
         }
         if (announce && mobile.length)
           this.notify(team, 'order', { type: order.type, x: order.x, z: order.z, count: mobile.length });
@@ -450,6 +508,7 @@
       },
       finishOrder(this: MeridianGame, e: UnitEntity) {
         e.order = { type: 'idle' };
+        delete e.formationGoal;
         e.path = [];
         e.pi = 0;
         delete e.recoveryAttempts;
