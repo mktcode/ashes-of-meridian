@@ -819,6 +819,8 @@ function auditMap(plan, mesh, n = AUDIT_SIZE, sampleAt = sampleWorld) {
 'use strict';
 // Read-only, visual decoration. No terrain changes or navigation obstacles.
 const TREE_RULES = { step: 6, clearance: 5.5, spacing: 5.4, maxGrade: .28 };
+// Strong vegetation contrast in the fixed global zones; never normalize by map.
+const TREE_ZONE_DENSITY = [1, .45, .12];
 function decorationClearance(plan, x, y) {
   // Margins include the largest crown under the .32 warp derivative bound.
   const dx = Math.abs(x - SIZE / 2), dy = Math.abs(y - SIZE / 2);
@@ -877,7 +879,7 @@ function makeDecoration(plan, sampleAt = sampleWorld) {
     if (forest <= c.chance) continue;
     const site = decorationSite(plan, c.x, c.y, sampleAt);
     if (!site.eligible) continue;
-    const zoneDensity = [.9, .75, .6][site.band];
+    const zoneDensity = TREE_ZONE_DENSITY[site.band];
     if (c.chance >= forest * zoneDensity) continue;
     const bx = Math.floor(site.x / TREE_RULES.spacing), by = Math.floor(site.y / TREE_RULES.spacing);
     let crowded = false;

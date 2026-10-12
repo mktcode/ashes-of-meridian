@@ -60,6 +60,16 @@ const result = vm.runInContext(`(() => {
     assert.deepEqual([...materials], [3, tree.type === 'broadleaf' ? 4 : 5]);
   }
   assert.equal(makeTreeGeometry([]).length, 0);
-  return { full:full.length, medium:medium.length, sparse:sparse.length };
+  // Equal topology, area, slope and random stream: only global height changes.
+  const zones = [20,40,70].map(height => makeDecoration(plan, () => ({height,water:0,bridge:false})));
+  assert.ok(zones.every(d => JSON.stringify(d.field.sites.map(s => s.eligible)) ===
+    JSON.stringify(zones[0].field.sites.map(s => s.eligible))));
+  const zoneCounts = zones.map(d => selectTrees(d,.65).length);
+  assert.ok(zoneCounts[1] < zoneCounts[0] * .75, 'Mittelland must be noticeably sparser');
+  assert.ok(zoneCounts[2] < zoneCounts[1] * .5, 'Hochland must be much sparser');
+  assert.ok(zoneCounts[2] < zoneCounts[0] * .3, 'Strong Tiefland/Hochland density contrast');
+  assert.equal(JSON.stringify(plan), before);
+  return { full:full.length, medium:medium.length, sparse:sparse.length, zoneCounts };
 })()`, context, { timeout: 5000 });
+console.log(`Equal eligible areas at 65%: Tiefland/Mittelland/Hochland ${result.zoneCounts.join('/')} trees.`);
 console.log(`Decoration: ${result.full}/${result.medium}/${result.sparse} trees at 100/65/30%; deterministic, read-only, nested densities, clear routes/banks/bridges, physical slopes, spacing and both models OK. Synthetic heights only.`);
