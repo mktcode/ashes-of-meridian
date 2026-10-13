@@ -1452,7 +1452,6 @@ function terrainMaterialGLSL(relief) {
         float weather=veilNoise(p*.19),seam=sin(worldPosition.y*1.1+weather*7.0+p.x*.06);
         stone.rgb=mix(stone.rgb*vec3(.92,.99,1.03),vec3(.59,.56,.43),.24);
         stone.rgb*=mix(.91,1.06,smoothstep(-.75,.35,seam));
-        stone.rgb=mix(stone.rgb,stone.rgb*vec3(.77,.91,.57),smoothstep(.63,.94,n.y)*smoothstep(.28,.76,weather)*.58);
       } else {
         grass.rgb*=mix(vec3(.96,.91,.87),vec3(1.09,1.04,.94),patch);
       }
