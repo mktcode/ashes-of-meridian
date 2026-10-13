@@ -39,7 +39,7 @@ Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine sp�
 - [Audio und Sprachinhalte](docs/audio.md): Aufnahmen, Texte und Wiedergabeverträge.
 - [Prüfungen](docs/testing.md): `npm run check:quality` für das kurze Qualitätsnetz, gezielte Tests, Freigaben und Diagnose.
 - [Subagents](docs/subagents.md): isolierte parallele Arbeit.
-- [Neue Map-Generierung](experiments/README.md): eigenständiger Prototyp unter `experiments/map-generation/` mit topologiegeleiteten Regionen und Wegen, gerundeten Flüssen, lokalen Brücken und WebGL-Vorschau; noch getrennt vom produktiven Spielgenerator.
+- **AOM Map Generator:** eigenständiges Terrainlabor im Parallelprojekt `../../aom-map-generator/` mit eigener `README.md`, Git-Historie und direkt nutzbarer `index.html`. Kartenplanung, Landschaftsformen und Materialvorschau sind weiterhin vom produktiven Spielgenerator getrennt.
 - [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance-und-mobilstabilitaet.md) und [offene Issues](docs/issues/).
 - [Geschichte](docs/story.md): deutsche interne Fassung; englische Spielfassung im Codex.
 

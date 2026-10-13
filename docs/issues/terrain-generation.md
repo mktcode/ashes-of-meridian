@@ -16,13 +16,6 @@ Bildwirkung, Materialien, Biotope und Randkulisse zentral unter [Landschaften](l
 - [ ] Lokale Gebäude-Bodenhaut, Hangneigung und Menü-Bauplätze visuell abnehmen: keine Fremdtextur-Platten, glaubwürdiger Bodenanschluss und erhaltene Menükomposition. CPU-/Browserverträge sichern Stützebene, Materialgewichte, Auslauf und Patch-Lebenszyklus, nicht die Gesamtbildwirkung. Rein visuelle Auffüllung verändert keine Spieloberfläche; [Modellvertrag](../rendering.md#einzeln-wartbare-modelle).
 - [ ] Größere Karten auf Erkundungsdauer, Wirtschaftsverteilung und Kamerabedienung beurteilen; feste Rasterauflösung erzeugt mehr Zellen. Startzeit, Speicher und Renderkosten auf Zielgeräten unter [Performance](performance-und-mobilstabilitaet.md) prüfen.
 
-## Terrassenvorschau im Terrainlabor
-
-- [ ] Die [eigenständige Vorschau](../../experiments/map-generation/index.html?seed=2) mit Terrassen visuell abnehmen: unterschiedlich hohe Kronen und Felssimse statt einer einzelnen angehobenen Fläche. Kein produktiver Spielgenerator, keine zusätzlichen begehbaren Hochflächen.
-- [ ] An schmalen, sehr steilen Terrassenwänden zeigen sich bei starkem Zoom teilweise rasterartige Hell-/Dunkelstreifen. Gegenproben für Mesh-Auflösung, Normalen und Selbstschatten unterscheiden, bevor weitere globale Verfeinerung oder Shaderänderungen erfolgen. Reproduzierbar an der freistehenden östlichen Mesa von Seed 2: Desert, 16:30, Schatten an, Mikrorelief/Bäume/Gras aus, etwa 900 % Zoom. Auch mit der zusätzlichen lokalen Unterteilung bleibt das Muster stellenweise sichtbar. Der gezielte Chromium-Check bestätigt zusammenhängendes Mesh ohne offene Innenkanten, gültiges GL und unveränderte geschützte Höhen/Spielraumneigung; er ist kein Bildqualitäts- oder Geräteperformancebeleg.
-
-- [ ] Mit Brückenausdünnung zeigt die Laborvorschau für Seed 2 eine begehbare Maximalneigung von etwa 82,2 % statt der erlaubten 45 %. Rasterverbindung und fallendes Wasser werden dabei als gültig gemeldet. Klassifikation/Übergangsdreiecke an entfallenen Brücken gesondert untersuchen; nicht durch Material- oder Beleuchtungsänderungen kaschieren. Beobachtet beim Ferrum-Shadercheck auf Grundlage von `490c7ca`; Kern, Mesh, Audit, Dekoration und Controller sind gegenüber diesem Basisstand unverändert. Der Materialcheck ist keine Spielbarkeitsfreigabe.
-
 ## Reproduzierbarer Generierungsabbruch
 
 - [ ] Seed `16053245` für `alien-planet` und `haven`: Der reine CPU-Geländeaufbau auf Stand `8f4580b` scheitert in `connectBattlefieldTerrain` mit `Cannot connect broad terrain shelf with a safe ramp`, vor Dekor, Rendering oder Simulation. Alien wählt `broken-crater`, Haven `basin`; beide verwenden hier dieselbe Höhenform und Morphologie-RNG-Reihenfolge.
