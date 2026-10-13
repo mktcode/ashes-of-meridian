@@ -22,12 +22,14 @@ for (const seed of [1, 2, 19, 16053245]) {
       const s = sampleWorld(plan, p.x, p.y), back = unwarpPoint(plan, p);
       maxDepthError = Math.max(maxDepthError, Math.abs(sampleLand(plan, back.x, back.y).height - s.height - 2.5));
     }
+    const keptBridges = new Set(river.bridges.map(b => b.key));
     const crossings = river.selected.every(e => {
       const road = plan.edges.find(road => edgeKey(road.a, road.b) === e.key);
       if (!road) return true;
       const anchor = warpPoint(plan, e.mid), bridge = sampleWorld(plan, anchor.x, anchor.y);
       return road.points.some(p => distance(p, anchor) < 1e-8) &&
-        river.curves.some(points => points.some(p => distance(p, anchor) < 1e-8)) && bridge.bridge;
+        river.curves.some(points => points.some(p => distance(p, anchor) < 1e-8)) &&
+        bridge.bridge === keptBridges.has(e.key) && bridge.planned === keptBridges.has(e.key);
     });
     const localBridges = river.bridges.every(b => {
       const e = plan.edges.find(e => edgeKey(e.a, e.b) === b.key), a = plan.regions[e.a], c = plan.regions[e.b];

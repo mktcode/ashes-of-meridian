@@ -85,6 +85,7 @@
 <div class="info-heading"><h1 id="infoTitle">Spielraum zuerst, Landschaft danach</h1><form method="dialog"><button autofocus>Schließen</button></form></div>
 <p><strong>Bedienung:</strong> Linke Maustaste halten und ziehen: verschieben · Mittlere Maustaste halten und ziehen: drehen und neigen · Mausrad oder Zoomregler: zoomen (bis 3200 %) · Doppelklick: Kamera zurücksetzen. Die Planungskarte lässt sich über ihre Überschrift einklappen. „Vollbild“ blendet die Browserleisten aus; Escape beendet den Vollbildmodus. Auf schmalen Bildschirmen ist die obere Einstellungsleiste horizontal scrollbar.</p>
 <p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
+<p>Der Seed bestimmt eine Brückenausdünnung zwischen 0 und 100 % der gemeinsam entbehrlichen Übergänge. Eng benachbarte Brücken, insbesondere zwischen denselben trockenen Weggebieten, kommen bevorzugt in die Entfernungsauswahl. Nach jeder probeweisen Entfernung wird die Verbindung erneut geprüft: Notwendige Übergänge bleiben erhalten. Die Statusleiste zeigt den Seed-Anteil und die tatsächlich entfernte Anzahl; bei wenigen Kandidaten wird auf ganze Brücken gerundet. Verformung und Flussrundung verändern diese Auswahl nicht.</p>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
 <p>Die Checkbox „Runde Flüsse“ ersetzt die eckigen Routen durch zusammenhängende Bézier-Kurven, bevor Höhen, Bett und Brücken berechnet werden. Nur Kreuzungen, Verzweigungen und Randanschlüsse bleiben feste Anker; normale duale Knoten dürfen übersprungen werden. Wasser wird als eigenes fein unterteiltes Band dargestellt; das Gelände wird entlang der Ufer lokal verfeinert. Beide Checkboxen vergleichen Varianten mit demselben Seed. Die Vorschau zeigt auch Layouts mit überschrittener Neigungsgrenze, dann ausdrücklich mit einer Warnung.</p>
 <p>„Landschaftsformen“ ersetzt das bisherige Wellenrelief durch sanfte Tieflandhügel und Hochland-Tafelberge mit unregelmäßigen Abbruchkanten, Hangrinnen, Gesteinsstufen und Schuttfüßen. Ein eigener Plan nutzt freie Zwischenräume des Hex-Netzes; Spielräume, Wege, Wasser und Brückenzugänge behalten ihre Höhen. Steile Wände werden lokal feiner trianguliert. Felsnadeln und Blöcke sind rein visueller Dekor außerhalb der geschützten Flächen, keine zusätzliche Spielebene. Ausschalten zeigt das bisherige Relief bei identischem Layout/Seed; Gelände und Vegetation werden dabei neu aufgebaut. Für den Formvergleich lassen sich Bäume, Gras und Mikrorelief separat ausschalten. Die Referenzoptik einer Canyonlandschaft ist ein Ziel, keine vollständige Erosionssimulation.</p>
@@ -393,7 +394,7 @@ function planRiver(plan) {
   const segments = paths.flatMap(points => points.slice(1).map((b, i) => ({ a: points[i], b })))
     .map(e => ({ ...e, dx: e.b.x - e.a.x, dy: e.b.y - e.a.y, length2: distance(e.a, e.b) ** 2 }));
   const selectedByKey = new Map(selected.map(e => [e.key, e]));
-  const bridges = plan.edges.filter(e => selectedByKey.has(edgeKey(e.a, e.b))).map(e => {
+  const crossings = plan.edges.filter(e => selectedByKey.has(edgeKey(e.a, e.b))).map(e => {
     const a = plan.regions[e.a], b = plan.regions[e.b], length = distance(a, b), crossing = selectedByKey.get(edgeKey(e.a, e.b));
     const ux = (b.x - a.x) / length, uy = (b.y - a.y) / length, halfWidth = ROAD_RADIUS + .5;
     // Recompute from the curve tangent at the retained crossing anchor.
@@ -404,10 +405,61 @@ function planRiver(plan) {
     // The rectangle is only a bound; decks are clipped to the rounded corridor.
     return { key: crossing.key, center: crossing.mid, ux, uy, halfLength, halfWidth };
   });
+  const { bridges, reduction } = selectBridges(plan, crossings);
   const exits = [...used].filter(i => dual.nodes[i].boundary && i !== source);
-  return { dual, direction, selected, paths, cubics, segments, bridges, source: dual.nodes[source],
+  return { dual, direction, selected, paths, cubics, segments, bridges, reduction, source: dual.nodes[source],
     exits: exits.map(i => dual.nodes[i]), splits: branchNodes.size, phase: plan.phase,
     spatial: riverSpatialTree(segments) };
+}
+// Contract dry ROAD components, not all visually dry terrain: only the planned
+// passages guarantee access. A reverse-delete pass finds a jointly removable
+// pool; individually redundant crossings must never be deleted all at once.
+function selectBridges(plan, crossings, percent) {
+  const random = rng(plan.seed ^ 0x42524447), seededPercent = Math.floor(random() * 101);
+  const removalPercent = percent ?? seededPercent;
+  const parent = plan.regions.map((_, i) => i), crossingKeys = new Set(crossings.map(b => b.key));
+  function root(i) { return parent[i] === i ? i : (parent[i] = root(parent[i])); }
+  for (const e of plan.edges) if (!crossingKeys.has(edgeKey(e.a, e.b))) parent[root(e.a)] = root(e.b);
+  const roads = new Map(plan.edges.map(e => [edgeKey(e.a, e.b), e]));
+  const links = crossings.map(bridge => {
+    const e = roads.get(bridge.key), a = root(e.a), b = root(e.b);
+    return { bridge, a, b, pair: edgeKey(a, b), tie: random() };
+  });
+  const adjacency = plan.regions.map(() => []);
+  for (const link of links) { adjacency[link.a].push(link); adjacency[link.b].push(link); }
+  const excluded = new Set(), candidates = [];
+  function hasBypass(link) {
+    const visited = new Set([link.a]), queue = [link.a];
+    for (let head = 0; head < queue.length; head++) {
+      const node = queue[head];
+      if (node === link.b) return true;
+      for (const e of adjacency[node]) {
+        if (e === link || excluded.has(e.bridge.key)) continue;
+        const next = e.a === node ? e.b : e.a;
+        if (!visited.has(next)) { visited.add(next); queue.push(next); }
+      }
+    }
+    return false;
+  }
+  while (true) {
+    const active = links.filter(e => !excluded.has(e.bridge.key));
+    let best = null;
+    for (const link of active) {
+      if (!hasBypass(link)) continue;
+      // Prefer proximity to another crossing of the same dry component pair.
+      // Otherwise consider nearby crossings along alternative connection cycles.
+      const parallel = active.filter(e => e !== link && e.pair === link.pair),
+        neighbors = parallel.length ? parallel : active.filter(e => e !== link),
+        gap = Math.min(...neighbors.map(e => distance(link.bridge.center, e.bridge.center)));
+      // Reference-space distances keep selection stable under the warp toggle.
+      if (!best || gap < best.gap || gap === best.gap && link.tie < best.link.tie) best = { link, gap };
+    }
+    if (!best) break;
+    candidates.push(best.link.bridge.key); excluded.add(best.link.bridge.key);
+  }
+  const removed = candidates.slice(0, Math.round(candidates.length * removalPercent / 100)), removedKeys = new Set(removed);
+  return { bridges: crossings.filter(b => !removedKeys.has(b.key)),
+    reduction: { percent: removalPercent, total: crossings.length, candidates, removed } };
 }
 function riverSpatialTree(segments) {
   const node = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
@@ -1899,7 +1951,7 @@ function drawPlanning() {
 let startupSeed = typeof location === 'undefined' ? null : new URL(location.href).searchParams.get('seed');
 function updateStatus(plan, audit) {
   const river = plan.river, { connected: valid, downhill, maxPlayableGrade } = audit;
-  document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length} Brücken · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %${maxPlayableGrade > MAX_GRADE ? ' · WARNUNG: Neigungsgrenze überschritten – vorläufige Vorschau' : ''}`;
+  document.getElementById('status').textContent = `Seed ${plan.seed} · ${river.splits} Aufteilungen / ${river.exits.length} Ausflüsse · ${river.bridges.length}/${river.reduction.total} Brücken · Ausdünnung ${river.reduction.percent} % der redundanten (${river.reduction.removed.length}/${river.reduction.candidates.length} entfernt) · Wasser überall abwärts: ${downhill ? 'JA' : 'NEIN'} · Wege mit Brücken verbunden: ${valid ? 'JA' : 'NEIN'} · maximale Wegneigung ${(maxPlayableGrade * 100).toFixed(1)} % / ${MAX_GRADE * 100} %${maxPlayableGrade > MAX_GRADE ? ' · WARNUNG: Neigungsgrenze überschritten – vorläufige Vorschau' : ''}`;
 }
 function rebuildPreview() {
   const plan = preview.plan;
