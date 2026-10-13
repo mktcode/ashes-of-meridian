@@ -19,6 +19,7 @@ vm.runInContext(`
     assert.ok(plan.landforms.rocks.length <= 72);
     assert.equal(old.landforms.mesas.length, 0);
     assert.equal(old.landforms.rocks.length, 0);
+    assert.equal(old.landforms.terraced, false);
     const before = JSON.stringify(plan);
     const protectedProbes = [
       ...plan.regions.flatMap(r => [r, ...r.points.filter((_, i) => i % 8 === 0)]),
@@ -45,12 +46,32 @@ vm.runInContext(`
     }
     for (const mesa of plan.landforms.mesas) {
       assert.ok(mesa.members.length <= 4);
+      const t = mesa.terraces;
+      assert.equal(t.steps.length, 3); assert.ok(t.crowns.length >= 2 && t.crowns.length <= 3);
+      assert.ok(Math.abs(t.steps.reduce((sum, s) => sum + s.drop, 0) - .84) < 1e-12);
+      let previousHeight = Infinity;
+      for (let i = 0; i <= 200; i++) {
+        const h = terraceProfile(t, i * 1.38 / 200);
+        assert.ok(h <= previousHeight + 1e-12 && h >= 0 && h <= 1); previousHeight = h;
+      }
+      for (let i = 0; i < 2; i++) {
+        const a = t.steps[i], b = t.steps[i + 1], left = a.edge + a.width, gap = b.edge - left;
+        assert.ok(gap > .1, 'Broad shelves between short risers');
+        assert.ok(Math.abs(terraceProfile(t, left + gap * .75) - terraceProfile(t, left + gap * .25)) < .02);
+        assert.ok(terraceProfile(t, a.edge) - terraceProfile(t, a.edge + a.width) > a.drop * .9);
+      }
+      for (let dy = -mesa.width; dy <= mesa.width; dy += 3) for (let dx = -mesa.width; dx <= mesa.width; dx += 3) {
+        const p = mesa.segments[0].a, x = p.x + dx, y = p.y + dy, q = mesaCoordinate(mesa, x, y), h = terracedMesaHeight(mesa, x, y, q);
+        assert.ok(h >= 0 && h <= 1, 'Nested crowns share one bounded height budget');
+      }
       // Conservative bounds must cut off only zero-support samples.
       for (let i = 0; i < 16; i++) {
         const y = mesa.bounds.minY + (mesa.bounds.maxY - mesa.bounds.minY) * i / 15;
         const x = mesa.bounds.minX + (mesa.bounds.maxX - mesa.bounds.minX) * i / 15;
         for (const [px, py] of [[mesa.bounds.minX,y],[mesa.bounds.maxX,y],[x,mesa.bounds.minY],[x,mesa.bounds.maxY]]) {
-          assert.equal(mesaProfile(mesaCoordinate(mesa, px, py)), 0);
+          const q = mesaCoordinate(mesa, px, py);
+          assert.equal(mesaProfile(q), 0);
+          assert.equal(terracedMesaHeight(mesa, px, py, q), 0);
         }
       }
     }
@@ -73,6 +94,32 @@ vm.runInContext(`
   // Lowland relief cannot turn into a mountain, even inside a mesa footprint.
   assert.ok(Math.abs(sampleLandforms(p, root.x, root.y, 30, 100, 100)) <= 4.4);
   assert.ok(sampleLandforms(p, root.x, root.y, 50, 100, 100) > 20);
+  const single = makePlan(2, true, true, true, false);
+  assert.equal(JSON.stringify(p.landforms.mesas), JSON.stringify(single.landforms.mesas), 'Terrace RNG does not move/resize parent mesas');
+  assert.equal(JSON.stringify(p.regions), JSON.stringify(single.regions));
+  assert.equal(JSON.stringify(p.river), JSON.stringify(single.river));
+  assert.equal(sampleLand(p, root.x, root.y).referenceHeight, sampleLand(single, root.x, root.y).referenceHeight);
+  assert.ok(p.landforms.mesas.some(m => [0,1,2,3].some(i => {
+    const a = m.segments[0].a, x = a.x + 2 * Math.cos(i * Math.PI / 2), y = a.y + 2 * Math.sin(i * Math.PI / 2);
+    return sampleLand(p, x, y).height !== sampleLand(single, x, y).height;
+  })), 'Terraces change real free-space relief, not protected anchors');
+  const freeMesa = p.landforms.mesas.slice().sort((a,b)=>b.segments[0].a.clearance-a.segments[0].a.clearance)[0], freeRoot = freeMesa.segments[0].a,
+    flat = { ...freeMesa, terraces: { ...freeMesa.terraces, crowns: [{x:freeRoot.x,y:freeRoot.y,radius:5,seed:8,height:.28,edge:.57,width:.2}] } },
+    flatPlan = {...p,landforms:{...p.landforms,mesas:[flat]}};
+  assert.ok(landformDetail(flatPlan, freeRoot.x + 3.3, freeRoot.y, 1), 'Crown cliffs refine even inside the quiet parent top');
+  assert.equal(landformDetail(flatPlan, freeRoot.x, freeRoot.y, 1), false);
+  // A buffer-clipped flank must still have shelves, not slope them by
+  // multiplying all tiers by a smooth clearance mask AFTER shaping them.
+  const shelfPlan = {...p,landforms:{...p.landforms,mesas:[freeMesa]}}, t = freeMesa.terraces,
+    qs = [t.steps[1].edge + t.steps[1].width + .02, t.steps[2].edge - .02], heights = [];
+  for(const q of qs) {
+    let low=NOISE_MARGIN, high=NOISE_MARGIN+4;
+    for(let i=0;i<40;i++) { const d=(low+high)/2; if(landformProtection(d,100)<1-q/1.38)low=d;else high=d; }
+    const d=(low+high)/2, protection=landformProtection(d,100), forms=p.landforms,
+      hills=3.2*landNoise(forms.seed,freeRoot.x/32,freeRoot.y/32)+1.2*landNoise(forms.seed^17,freeRoot.x/15,freeRoot.y/15);
+    heights.push(sampleLandforms(shelfPlan,freeRoot.x,freeRoot.y,50,d,100)-protection*.2*hills);
+  }
+  assert.ok(Math.abs(heights[0]-heights[1])<1e-8, 'Protected-boundary shelves retain a constant mountain contribution');
   // Conforming cliff refinement: every interior split is shared by neighbors.
   const vertices = [{x:0,y:0,sourceX:0,sourceY:0}, {x:2,y:0,sourceX:2,sourceY:0},
     {x:0,y:2,sourceX:0,sourceY:2}, {x:2,y:2,sourceX:2,sourceY:2}];
@@ -102,4 +149,4 @@ vm.runInContext(`
   assert.ok(rockMesh.vertices.every(p=>Number.isFinite(p.z) && Number.isFinite(p.light)));
   assert.equal(auditSurface(rockMesh),0,'Visual rocks must not enter walkable slope audits');
 `, context, { timeout: 25000 });
-console.log('Landforms: deterministic independent planning, exact protected heights/topology/water, lowland/highland profiles, bounded support, shared cliff refinement and non-playable rocks OK.');
+console.log('Landforms: deterministic independent planning, exact protected heights/topology/water, lowland/highland profiles, broad terrace shelves and bounded nested crowns, independent terrace RNG, bounded support, shared cliff refinement and non-playable rocks OK.');

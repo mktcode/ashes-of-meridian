@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { withBrowser } from '../../scripts/browser/harness.mjs';
 
-// One real map, one same-seed comparison. No build, game startup, seed sweep,
-// screenshot batch or pixel assertions. Requires installed playwright-core and
+// One real map, same-seed terrace and landscape comparisons. No build, game
+// startup, seed sweep, screenshot batch or pixel assertions. Requires installed playwright-core and
 // Chromium; the shared harness owns an isolated worktree-local browser profile.
 const root = fileURLToPath(new URL('../../', import.meta.url));
 await withBrowser(root, async browser => {
@@ -34,15 +34,17 @@ await withBrowser(root, async browser => {
     window.landformCheck = {
       plan, mesh,
       heights: plan.regions.map(r => sampleLand(plan, r.x, r.y).height),
-      topology: JSON.stringify([plan.regions, plan.edges, plan.river])
+      topology: JSON.stringify([plan.regions, plan.edges, plan.river]),
+      mesas: JSON.stringify(plan.landforms.mesas),
+      relief: plan.landforms.mesas.flatMap(m => [m.segments[0].a, ...m.terraces.crowns]).map(p => sampleLand(plan, p.x, p.y).height)
     };
-    return { seed: plan.seed, mesas: plan.landforms.mesas.length, rocks: plan.landforms.rocks.length,
+    return { seed: plan.seed, terraced: plan.landforms.terraced, mesas: plan.landforms.mesas.length, rocks: plan.landforms.rocks.length,
       faces: mesh.terrainFaceCount, finite: mesh.vertices.every(p => Number.isFinite(p.z) && Number.isFinite(p.height)),
       rockFaces: mesh.triangles.filter(t => t.rock).length, conforming, audit,
       gl: preview.gpu.gl.getError(), error: document.getElementById('renderError').textContent,
       mainProgram: preview.gpu.gl.getProgramParameter(preview.gpu.program, preview.gpu.gl.LINK_STATUS) };
   });
-  assert.equal(first.seed, 2); assert.ok(first.mesas > 0 && first.rocks > 0 && first.rockFaces > 0);
+  assert.equal(first.seed, 2); assert.equal(first.terraced, true); assert.ok(first.mesas > 0 && first.rocks > 0 && first.rockFaces > 0);
   assert.ok(first.finite && first.conforming && first.mainProgram);
   assert.ok(first.audit.connected && first.audit.downhill && first.audit.maxPlayableGrade <= .45);
   assert.equal(first.gl, 0); assert.equal(first.error, '');
@@ -51,6 +53,19 @@ await withBrowser(root, async browser => {
   await page.uncheck('#relief');
   await page.waitForTimeout(100);
   assert.ok(await page.evaluate(() => landformCheck.mesh === preview.mesh && preview.gpu.uploaded === preview.mesh));
+  await page.uncheck('#terraces');
+  const single = await page.evaluate(() => ({
+    seed: preview.plan.seed, terraced: preview.plan.landforms.terraced,
+    sameMesas: landformCheck.mesas === JSON.stringify(preview.plan.landforms.mesas),
+    sameTopology: landformCheck.topology === JSON.stringify([preview.plan.regions, preview.plan.edges, preview.plan.river]),
+    sameHeights: JSON.stringify(landformCheck.heights) === JSON.stringify(preview.plan.regions.map(r => sampleLand(preview.plan, r.x, r.y).height)),
+    differentRelief: JSON.stringify(landformCheck.relief) !== JSON.stringify(preview.plan.landforms.mesas.flatMap(m => [m.segments[0].a, ...m.terraces.crowns]).map(p => sampleLand(preview.plan, p.x, p.y).height)),
+    rebuilt: landformCheck.mesh !== preview.mesh && preview.gpu.uploaded === preview.mesh,
+    grade: auditSurface(preview.mesh), gl: preview.gpu.gl.getError()
+  }));
+  assert.equal(single.seed, 2); assert.equal(single.terraced, false);
+  assert.ok(single.sameMesas && single.sameTopology && single.sameHeights && single.differentRelief && single.rebuilt);
+  assert.ok(Math.abs(single.grade - first.audit.maxPlayableGrade) < 1e-12); assert.equal(single.gl, 0);
   await page.uncheck('#landforms');
   const comparison = await page.evaluate(() => ({
     seed: preview.plan.seed, enabled: preview.plan.landforms.enabled,
@@ -64,6 +79,6 @@ await withBrowser(root, async browser => {
   assert.ok(comparison.sameTopology && comparison.sameHeights && comparison.rebuilt && comparison.noRocks);
   assert.ok(Math.abs(comparison.grade - first.audit.maxPlayableGrade) < 1e-12);
   assert.equal(comparison.gl, 0); assert.equal(comparison.error, ''); assert.deepEqual(errors, []);
-  console.log('Seed 2: actual warped mesh, conforming cliff/river refinement, 192² connectivity, descending water, unchanged playable grade and protected heights, same-seed toggle, file:// + GLSL/GL OK.', first);
+  console.log('Seed 2: actual warped mesh, conforming cliff/river refinement, 192² connectivity, descending water, unchanged playable grade and protected heights, same-seed terrace/landscape toggles, file:// + GLSL/GL OK.', first);
   await page.close();
 }, { timeoutMs: 60000 });

@@ -49,6 +49,7 @@
       <label><input id="shadows" type="checkbox" checked> Schatten</label>
       <label><input id="relief" type="checkbox" checked> Relief</label>
       <label title="Echte Geländeformen: Tieflandhügel, Hochland-Tafelberge und Felsdekor; Vergleich mit demselben Seed"><input id="landforms" type="checkbox" checked> Landschaftsformen</label>
+      <label title="Unterteilt die Tafelberge in Felssimse und versetzte Hochflächen; wirkt nur mit Landschaftsformen"><input id="terraces" type="checkbox" checked> Terrassen</label>
       <label title="Bäume sind rein visuell und blockieren keine Bewegung"><input id="trees" type="checkbox" checked> Bäume</label>
       <label title="Grün: mögliche Pflanzflächen, übriges Gelände dunkel. Grobe Vorschau; jeder Baumstandort wird zusätzlich exakt geprüft"><input id="planting" type="checkbox"> Pflanzflächen</label>
       <label>Walddichte <input id="treeDensity" type="range" min="0" max="100" step="5" value="65"><output id="treeDensityValue" for="treeDensity">65 %</output></label>
@@ -87,6 +88,7 @@
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
 <p>Die Checkbox „Runde Flüsse“ ersetzt die eckigen Routen durch zusammenhängende Bézier-Kurven, bevor Höhen, Bett und Brücken berechnet werden. Nur Kreuzungen, Verzweigungen und Randanschlüsse bleiben feste Anker; normale duale Knoten dürfen übersprungen werden. Wasser wird als eigenes fein unterteiltes Band dargestellt; das Gelände wird entlang der Ufer lokal verfeinert. Beide Checkboxen vergleichen Varianten mit demselben Seed. Die Vorschau zeigt auch Layouts mit überschrittener Neigungsgrenze, dann ausdrücklich mit einer Warnung.</p>
 <p>„Landschaftsformen“ ersetzt das bisherige Wellenrelief durch sanfte Tieflandhügel und Hochland-Tafelberge mit unregelmäßigen Abbruchkanten, Hangrinnen, Gesteinsstufen und Schuttfüßen. Ein eigener Plan nutzt freie Zwischenräume des Hex-Netzes; Spielräume, Wege, Wasser und Brückenzugänge behalten ihre Höhen. Steile Wände werden lokal feiner trianguliert. Felsnadeln und Blöcke sind rein visueller Dekor außerhalb der geschützten Flächen, keine zusätzliche Spielebene. Ausschalten zeigt das bisherige Relief bei identischem Layout/Seed; Gelände und Vegetation werden dabei neu aufgebaut. Für den Formvergleich lassen sich Bäume, Gras und Mikrorelief separat ausschalten. Die Referenzoptik einer Canyonlandschaft ist ein Ziel, keine vollständige Erosionssimulation.</p>
+<p>„Terrassen“ unterteilt die Bergkörper geometrisch: mehrere breite Felssimse statt einer durchgehenden Wand, dazu kleinere versetzte Hochflächen auf der Krone. Konturen, Breiten und Höhenstufen variieren mit dem Seed. Es wird nicht die gesamte Welt auf feste Höhen gerundet: Tiefland, Spielräume, Wege und Flussanschlüsse behalten ihre bisherigen Höhen. Ausschalten vergleicht die einstufigen Tafelberge bei gleichem Layout; beide Varianten bauen Gelände und Vegetation neu auf. Die zusätzlichen Hochflächen sind weiterhin kein neu begehbarer Spielraum.</p>
 <p>„Höhenzonen“ zeigt drei feste Höhenbereiche im fiktiven globalen Höhenraum von 0 bis 85: Tiefland bis 35 (grün), Mittelland von 35 bis 45 (ocker), Hochland ab 45 (grau). Das schmale Mittelland lässt beiden äußeren Zonen mehr Raum. Die Schwellen sind für alle Seeds identisch; Kartenminimum und -maximum verändern sie nicht. Eine Karte darf überwiegend in einer Zone liegen. Wasser und Brücken behalten ihre Farben; die Spielraummarkierung ist in diesem Modus ausgeblendet. Dies sind Diagnosefarben, keine Bodenmaterialien. Die Höhen außerhalb des Darstellungsraums erhalten die Farbe der jeweils äußersten Zone, ohne das Gelände zu begrenzen.</p>
 <p>„Bäume“ zeigt rein visuelle Laub- und Nadelbäume in seed-stabilen Gehölzen mit Lichtungen. Höhenzone, tatsächliche lokale Neigung und Abstände zu Wasser, Wegen, Brücken, Zugängen und Kartenrand bestimmen die Standorte. Kronen sind bei den Freihaltezonen für Wege, Brücken und Kartenrand berücksichtigt. Trockene Flussufer sind ausdrücklich bepflanzbar, auch auf steileren Böschungen; dort ist die Pflanzrate erhöht. Stämme bleiben außerhalb des Wassers, Kronen dürfen darüber ragen. Die Bäume sind keine Bewegungshindernisse. „Walddichte“ fügt Bäume hinzu oder entfernt sie, ohne verbleibende Bäume zu verschieben oder Gelände neu zu erzeugen. „Pflanzflächen“ zeigt eine grobe grüne Eignungsvorschau statt der Höhenfarben; jeder tatsächliche Standort wird zusätzlich einzeln geprüft. Eine geeignete Fläche muss nicht bewaldet sein.</p>
 <p>„Gras“ ergänzt kurze statische Büschel auf einer eigenen, seed-stabilen Vegetationsschicht. Grasflächen dürfen sich mit Baumflächen überschneiden und nutzen auch steilere Hänge und schmale Flächen. Wasser, Brücken und Wegkerne bleiben frei; die Dichte läuft zu Wegrändern weich aus. Tiefland erhält dichten Bewuchs, Mittelland weniger, Hochland nur vereinzelte Büschel; Ufer erhalten einen Bonus. „Grasdichte“ filtert feste Standorte, ohne Bäume, Gelände oder Navigation zu verändern. „Grasflächen“ zeigt die Eignung gelbgrün statt der Baumflächen; beide Diagnose-Overlays sind alternativ, die Vegetation selbst darf sich überlagern. Die Darstellung verwendet instanzierte, texturfreie Grashalme (mit einem WebGL-Fallback), ohne Wind, Schatten oder Bewegungshindernisse.</p>
@@ -496,7 +498,7 @@ function fitRiverHeights(plan, gaps) {
     if (!changed) break;
   }
 }
-function makePlan(seed, curved = true, rounded = true, landforms = true) {
+function makePlan(seed, curved = true, rounded = true, landforms = true, terraces = true) {
   const random = rng(seed), regions = [], edges = [];
   // Axial lattice: center + six inner + twelve outer regions, with bounded jitter.
   // All footprints retain a margin to the convex hex boundary.
@@ -543,7 +545,7 @@ function makePlan(seed, curved = true, rounded = true, landforms = true) {
   const plan = { seed, regions, edges, angle, phase, waves, rounded, warp: makeWarp(seed, curved) };
   plan.river = planRiver(plan);
   fitRiverHeights(plan, gaps);
-  plan.landforms = planLandforms(plan, landforms);
+  plan.landforms = planLandforms(plan, landforms, terraces);
   planRockOutcrops(plan);
   buildCurves(plan);
   return plan;
@@ -562,9 +564,9 @@ function landNoise(seed, x, y) {
   return (a + (b - a) * fx) * (1 - fy) + (c + (d - c) * fx) * fy;
 }
 function highlandWeight(height) { return smooth((height - heightBoundary(1)) / (heightBoundary(2) - heightBoundary(1))); }
-function planLandforms(plan, enabled) {
+function planLandforms(plan, enabled, terraced = true) {
   const random = rng(plan.seed ^ 0x4d455341), seed = plan.seed ^ 0x48494c4c,
-    result = { enabled, seed, mesas: [], rocks: [] };
+    result = { enabled, terraced: enabled && terraced, seed, mesas: [], rocks: [] };
   if (!enabled) return result;
   const dual = plan.river.dual, roads = new Set(plan.edges.map(e => edgeKey(e.a, e.b))),
     nodes = dual.nodes.map((p, i) => {
@@ -603,6 +605,9 @@ function planLandforms(plan, enabled) {
         members: members.map(p => p.i), segments, bounds: {
           minX: Math.min(...members.map(p => p.x)) - width * 1.8, maxX: Math.max(...members.map(p => p.x)) + width * 1.8,
           minY: Math.min(...members.map(p => p.y)) - width * 1.8, maxY: Math.max(...members.map(p => p.y)) + width * 1.8 } };
+    // Independent per-body stream: adding terraces cannot move the original
+    // mesas, change their amplitude or consume the layout/morphology draws.
+    mesa.terraces = planMesaTerraces(mesa);
     result.mesas.push(mesa);
   }
   return result;
@@ -635,26 +640,88 @@ function mesaProfile(q) {
     wall = .84 * (1 - strata), foot = .16 * (1 - smooth((q - .58) / .8));
   return (wall + foot) * (1 - .035 * smooth(q / .58));
 }
+function planMesaTerraces(mesa) {
+  const random = rng(mesa.seed ^ 0x54455252), upper = .18 + random() * .04, middle = .27 + random() * .05,
+    steps = [{ edge: .49 + random() * .03, width: .085 + random() * .02, drop: upper },
+      { edge: .72 + random() * .03, width: .085 + random() * .02, drop: middle },
+      { edge: .98 + random() * .03, width: .10 + random() * .02, drop: .84 - upper - middle }], crowns = [];
+  for (let i = 0; i < Math.min(3, mesa.members.length + 1); i++) {
+    const e = mesa.segments[Math.min(i, mesa.segments.length - 1)], p = i === 0 ? e.a : e.b,
+      angle = mesa.phase + i * 2.4 + random() * .6, shift = mesa.width * (i === 0 ? .12 : .32),
+      radius = mesa.width * (.32 + random() * .08);
+    crowns.push({ x: p.x + Math.cos(angle) * shift, y: p.y + Math.sin(angle) * shift, radius,
+      height: i === 0 ? .28 : .16 + random() * .09, seed: (random() * 0xffffffff) >>> 0,
+      edge: .55 + random() * .04, width: .18 + random() * .03 });
+  }
+  return { steps, crowns };
+}
+function terraceProfile(terraces, q) {
+  if (q >= 1.38) return 0;
+  // Sum of descending steps, not quantized world height. Gaps between the
+  // short smooth risers leave broad shelves. Start the talus BELOW the last
+  // shelf: adding its slope across every tier would tilt the new ledges.
+  let height = .16 * (1 - smooth((q - 1.10) / .28));
+  for (const s of terraces.steps) height += s.drop * (1 - smooth((q - s.edge) / s.width));
+  return height * (1 - .035 * smooth(q / .58));
+}
+function crownCoordinate(crown, x, y) {
+  const dx = x - crown.x, dy = y - crown.y;
+  if (Math.abs(dx) > crown.radius * 1.12 || Math.abs(dy) > crown.radius * 1.12) return Infinity;
+  return Math.hypot(dx, dy) / (crown.radius * (1 + .12 * landNoise(crown.seed, x / 4, y / 4)));
+}
+function terracedMesaHeight(mesa, x, y, q) {
+  if (q >= 1.38) return 0;
+  let crown = 0;
+  if (q < .58) for (const c of mesa.terraces.crowns) {
+    crown = Math.max(crown, c.height * (1 - smooth((crownCoordinate(c, x, y) - c.edge) / c.width)));
+  }
+  // Lower the old crown to make room, rather than stacking new height onto
+  // it. Crown patches use max-union and fade BEFORE the parent's cliff.
+  return .72 * terraceProfile(mesa.terraces, q) + crown * (1 - smooth((q - .35) / .23));
+}
+function landformProtection(clearance, anchorGap) {
+  return smooth((clearance - NOISE_MARGIN) / 4) * smooth((anchorGap - 4) / 8);
+}
 function sampleLandforms(plan, x, y, referenceHeight, clearance, anchorGap) {
   // Six reference units exceed the largest base-mesh edge. Any face whose
   // center lies in a protected area therefore samples only unchanged anchors.
   if (clearance <= NOISE_MARGIN || anchorGap <= 4) return 0;
   const forms = plan.landforms, high = highlandWeight(referenceHeight),
-    protection = smooth((clearance - NOISE_MARGIN) / 4) * smooth((anchorGap - 4) / 8),
+    protection = landformProtection(clearance, anchorGap),
     hills = 3.2 * landNoise(forms.seed, x / 32, y / 32) + 1.2 * landNoise(forms.seed ^ 17, x / 15, y / 15);
   let mountain = 0;
   for (const mesa of forms.mesas) {
     const q = mesaCoordinate(mesa, x, y);
     // Max-union: overlap never stacks mountain amplitudes into spikes.
-    mountain = Math.max(mountain, mesa.amplitude * mesaProfile(q));
+    // Safety buffers often define the visible cliff more than the contour.
+    // In terrace mode, clip its profile coordinate BEFORE forming the tiers;
+    // multiplying a stepped mountain by a smooth mask would tilt every shelf.
+    const clippedQ = Math.max(q, 1.38 * (1 - protection));
+    mountain = Math.max(mountain, mesa.amplitude * (forms.terraced ? terracedMesaHeight(mesa, x, y, clippedQ) : mesaProfile(q)));
   }
-  return protection * ((1 - high * .8) * hills + high * mountain);
+  if (!forms.terraced) return protection * ((1 - high * .8) * hills + high * mountain);
+  return protection * (1 - high * .8) * hills + high * mountain;
 }
 function landformDetail(plan, x, y, level = 0) {
   if (!plan.landforms?.enabled) return false;
+  let clipQ;
   return plan.landforms.mesas.some(mesa => {
-    const q = mesaCoordinate(mesa, x, y);
-    return level === 0 ? q > .38 && q < 1.4 : q > .48 && q < 1.02;
+    let q = mesaCoordinate(mesa, x, y);
+    if (!plan.landforms.terraced) return level === 0 ? q > .38 && q < 1.4 : q > .48 && q < 1.02;
+    if (q >= 1.38) return false;
+    if (clipQ === undefined) {
+      const s = sampleLand(plan, x, y);
+      clipQ = 1.38 * (1 - landformProtection(s.clearance, Math.max(0, s.riverGap - RIVER_SUPPORT)));
+    }
+    q = Math.max(q, clipQ);
+    if (q >= 1.38) return false;
+    if (level === 0 && q > .37) return true;
+    const pad = level === 2 ? .02 : .04;
+    if (level >= 1 && mesa.terraces.steps.some(s => q > s.edge - pad && q < s.edge + s.width + pad)) return true;
+    return q < .8 && mesa.terraces.crowns.some(c => {
+      const cq = crownCoordinate(c, x, y);
+      return level === 0 ? cq > .30 && cq < 1.1 : cq > .46 && cq < .94;
+    });
   });
 }
 function rockClearance(plan, x, y, margin = 0) {
@@ -814,12 +881,16 @@ function drawNetwork(ctx, plan, filled, showDual) {
 // Conforming local refinement: shared edge midpoints also split neighboring
 // triangles. No hanging vertices/cracks, and no global high-resolution raster.
 function refineTerrain(plan, vertices, faces, addVertex) {
-  for (let level = 0; level < 2; level++) {
+  // Buffer-clipped terrace risers are narrower than the ordinary mesa wall.
+  // One extra local level resolves them without refining all rivers again.
+  const levels = plan.landforms?.terraced ? 3 : 2;
+  for (let level = 0; level < levels; level++) {
     const marked = new Set(), mids = new Map();
     for (const face of faces) {
       const p = face.map(i => vertices[i]), x = p.reduce((s, v) => s + v.sourceX, 0) / 3 + SIZE / 2,
         y = p.reduce((s, v) => s + v.sourceY, 0) / 3 + SIZE / 2;
-      if (riverDistance(plan.river, x, y) > RIVER_SUPPORT + 3 && !landformDetail(plan, x, y, level)) continue;
+      const nearRiver = level < 2 && riverDistance(plan.river, x, y) <= RIVER_SUPPORT + 3;
+      if (!nearRiver && !landformDetail(plan, x, y, level)) continue;
       for (let i = 0; i < 3; i++) marked.add(edgeKey(face[i], face[(i + 1) % 3]));
     }
     const midpoint = (a, b) => {
@@ -1847,7 +1918,8 @@ function generate() {
   if (startupSeed !== null && /^\d+$/.test(startupSeed) && Number(startupSeed) <= 0xffffffff) seeds[0] = Number(startupSeed);
   startupSeed = null;
   try { preview.plan = makePlan(seeds[0], document.getElementById('curves').checked,
-    document.getElementById('rounded').checked, document.getElementById('landforms').checked); rebuildPreview(); }
+    document.getElementById('rounded').checked, document.getElementById('landforms').checked,
+    document.getElementById('terraces').checked); rebuildPreview(); }
   catch (error) { document.getElementById('status').textContent = `Seed ${seeds[0]}: ${error.message}`; console.error(error); }
 }
 function updateTreeCount() {
@@ -1905,9 +1977,10 @@ function bindLabControls() {
   document.getElementById('treeDensity').addEventListener('input', () => { refreshTrees(); requestDraw(); });
   document.getElementById('overlay').addEventListener('change', draw3D);
   document.getElementById('dual').addEventListener('change', drawPlanning);
-  for (const id of ['curves', 'rounded', 'landforms']) document.getElementById(id).addEventListener('change', () => {
+  for (const id of ['curves', 'rounded', 'landforms', 'terraces']) document.getElementById(id).addEventListener('change', () => {
     try { preview.plan = makePlan(preview.plan.seed, document.getElementById('curves').checked,
-      document.getElementById('rounded').checked, document.getElementById('landforms').checked); rebuildPreview(); }
+      document.getElementById('rounded').checked, document.getElementById('landforms').checked,
+      document.getElementById('terraces').checked); rebuildPreview(); }
     catch (error) { document.getElementById('status').textContent = error.message; console.error(error); }
   });
   const info = document.getElementById('info');
