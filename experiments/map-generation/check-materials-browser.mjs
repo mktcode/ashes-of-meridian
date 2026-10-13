@@ -60,8 +60,8 @@ await withBrowser(root, async browser => {
           if(probeMode>0){
             value=landscapeSample(n).rgb;
             if(probeMode==2 || probeMode==5)value=vec3(mineralRoughness,mineralAO,mineralWeight);
-            if(probeMode==3)value=normalize(n-mineralGradient)*.5+.5;
-            if(probeMode==4)value=mineralLighting(normalize(n-mineralGradient),normalize(vec3(.4,.8,-.4)),vec3(.94),vec3(.4),1.0);
+            if(probeMode==3)value=ferrumReliefNormal(n)*.5+.5;
+            if(probeMode==4)value=mineralLighting(ferrumReliefNormal(n),normalize(vec3(.4,.8,-.4)),vec3(.94),vec3(.4),1.0);
           }
           gl_FragColor=vec4(value,1);
         }`);
@@ -81,6 +81,8 @@ await withBrowser(root, async browser => {
         mode = gl.getUniformLocation(program, 'probeMode'), height = gl.getUniformLocation(program, 'patchHeight');
       gl.uniform1i(gl.getUniformLocation(program, 'ferrumDetailTex'), 4);
       gl.uniform3f(gl.getUniformLocation(program, 'mineralView'), .3, .8, .5);
+      const tuning=gl.getUniformLocation(program,'materialTuning'),exposure=gl.getUniformLocation(program,'mineralExposure');
+      gl.uniform4f(tuning,1,1,0,1);gl.uniform1f(exposure,1.25);
       const setDetail = rgba => {
         gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, textures[3]);
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(rgba));
@@ -99,6 +101,21 @@ await withBrowser(root, async browser => {
         metadata: probe(false, 0, 1, 2), normals: probe(false, 0, 1, 3), lit: probe(false, 0, 1, 4) };
       setDetail([220,128,80,100]);
       samples.changedMetadata=probe(false,0,1,2);samples.changedNormals=probe(false,0,1,3);
+      gl.uniform4f(tuning,0,1,0,1);samples.flatNormals=probe(false,0,1,3);
+      gl.uniform4f(tuning,.4,1,0,1);samples.shallowNormals=probe(false,0,1,3);
+      gl.uniform4f(tuning,1,2,0,1);samples.denseNormals=probe(false,0,1,3);
+      gl.uniform4f(tuning,1,1,.15,0);samples.tunedMetadata=probe(false,0,1,2);
+      gl.uniform1f(exposure,.6);samples.dim=probe(false,0,1,4);
+      gl.uniform1f(exposure,2);samples.bright=probe(false,0,1,4);
+      gl.uniform4f(tuning,1,1,0,1);gl.uniform1f(exposure,1.25);
+      // A tiny current checker fixture proves UV frequency, not just normals,
+      // changes with texture density. No reference-image or palette snapshot.
+      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,textures[1]);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,2,2,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([
+        28,28,28,128,240,240,240,128,240,240,240,128,28,28,28,128]));
+      samples.density1=probe(false,0,1,1);
+      gl.uniform4f(tuning,1,2,0,1);samples.density2=probe(false,0,1,1);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([128,128,128,128]));
       results.push({ ...samples, gl: gl.getError() });
       gl.deleteShader(vertex); gl.deleteShader(fragment); gl.deleteProgram(program);
     }
@@ -128,11 +145,67 @@ await withBrowser(root, async browser => {
     assert.ok(p.changedMetadata.every(([rough,ao,weight]) => rough < 100 && ao < 120 && weight === 255), 'Packed roughness/AO reach the actual material, independently of coverage');
     assert.ok(p.normals.every(([,y]) => y > 250) && p.changedNormals.every(([,y]) => y < 235), 'Packed OpenGL normal XY changes the surface normal');
     for (const rgb of [...p.normals,...p.changedNormals]) assert.ok(Math.abs(Math.hypot(...rgb.map(v => v / 255 * 2 - 1)) - 1) < .02, 'Reconstructed normals remain unit length');
+    assert.ok(p.flatNormals.every(([,y])=>y>250) && p.shallowNormals.every(([,y],i)=>y>p.changedNormals[i][1]) &&
+      p.denseNormals.every(([,y],i)=>y<p.changedNormals[i][1]), 'Relief zero flattens normals; depth and density scale their strength');
+    assert.ok(p.tunedMetadata.every(([rough,ao])=>rough>p.changedMetadata[0][0] && ao===255), 'Roughness bias raises roughness and zero AO disables micro-occlusion');
+    assert.ok(p.bright.every((rgb,i)=>rgb.every((v,c)=>v>p.dim[i][c])), 'Exposure changes the actual filmic lighting');
+    assert.ok(p.density1.some((rgb,i)=>rgb[0]!==p.density2[i][0]), 'Texture density changes actual projected UV sampling');
     assert.ok(p.lit.every(rgb => Math.min(...rgb) > 0), 'Ferrum BRDF produces nonblack illumination with valid inputs');
     assert.ok(p.dryMeadow.every(([, ,weight]) => weight === 0), 'Dry lowland has no mineral contribution');
     if(p.explicitGradients)assert.ok(p.dryMeadow.every(([rough,ao]) => rough === 255 && ao === 255), 'Dry pure meadow leaves mineral data untouched, skipping Ferrum lookups');
   }
+  // Actual UI events reach uniforms, without rebaking, recompiling, uploading
+  // geometry or invalidating the shadow pass. Folding only resizes the view.
+  await page.evaluate(()=>{
+    const gl=preview.gpu.gl,counts={image:0,buffer:0,shadow:0,compile:0};
+    materialCheck.counts=counts;materialCheck.originals={};
+    for(const [name,count] of [['texImage2D','image'],['bufferData','buffer'],['shaderSource','compile'],['bindFramebuffer','shadow']]){
+      const original=gl[name];materialCheck.originals[name]=original;
+      gl[name]=function(...args){if(name!=='bindFramebuffer' || args[1]===preview.gpu.shadow.framebuffer)counts[count]++;return original.apply(this,args);};
+    }
+    materialCheck.camera={...camera};materialCheck.hour=document.getElementById('timeOfDay').value;
+    for(const [id,value] of Object.entries({reliefDepth:1.5,textureDensity:1.7,roughnessBias:-.2,aoStrength:.4,materialExposure:1.65})){
+      const e=document.getElementById(id);e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  });
+  await page.waitForFunction(()=>{
+    const gl=preview.gpu.gl,u=preview.gpu.materials.uniforms,v=gl.getUniform(preview.gpu.program,u.materialTuning);
+    return [1.5,1.7,-.2,.4].every((x,i)=>Math.abs(x-v[i])<.0001) && Math.abs(gl.getUniform(preview.gpu.program,u.mineralExposure)-1.65)<.0001;
+  }, null, {timeout:5000});
+  assert.ok(await page.evaluate(()=>Object.entries(materialSettings).every(([id,value])=>Math.abs(parseFloat(document.getElementById(id+'Value').textContent)-value)<.0001)));
+  await page.locator('#reliefDepth').focus();await page.keyboard.press('Home');await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(()=>Math.abs(materialSettings.reliefDepth-.05)<.0001);
+  for(const size of [{width:1000,height:800},{width:375,height:720},{width:667,height:375}]){
+    await page.setViewportSize(size);
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1 &&
+      document.getElementById('settings').scrollWidth<=document.getElementById('settings').clientWidth+1 &&
+      document.getElementById('height').getBoundingClientRect().height>=innerHeight*.3 &&
+      document.querySelector('.minimap').getBoundingClientRect().top>=document.querySelector('.scene').getBoundingClientRect().top), 'Controls fit without horizontal overflow; canvas stays usable and minimap does not cover the header');
+    const openHeight=await page.locator('#height').evaluate(e=>e.getBoundingClientRect().height);
+    await page.locator('#settings > summary').click();
+    assert.ok(await page.evaluate(()=>!document.getElementById('settings').open));
+    assert.ok(await page.locator('#height').evaluate((e,h)=>e.getBoundingClientRect().height>h,openHeight), 'Folding gives space back to the canvas');
+    await page.locator('#settings > summary').focus();await page.keyboard.press('Enter');
+    assert.ok(await page.evaluate(()=>document.getElementById('settings').open));
+  }
+  await page.setViewportSize({width:1000,height:800});
+  await page.uncheck('#relief');
+  assert.ok(await page.locator('#reliefDepth').isDisabled());
+  await page.locator('#materialReset').click();
+  await page.waitForFunction(()=>Object.entries(MATERIAL_CONTROLS).every(([id,c])=>materialSettings[id]===c.value) &&
+    preview.gpu.gl.getUniform(preview.gpu.program,preview.gpu.materials.uniforms.materialTuning)[0]===1);
+  const controlReuse=await page.evaluate(()=>{
+    const gl=preview.gpu.gl,counts=materialCheck.counts;
+    for(const [name,original] of Object.entries(materialCheck.originals))gl[name]=original;
+    return {counts,stable:materialCheck.plan===preview.plan && materialCheck.mesh===preview.mesh &&
+      materialCheck.decoration===preview.decoration && materialCheck.grass===preview.grassDecoration &&
+      materialCheck.materialBuffer===preview.gpu.materialDataBuffer &&
+      Object.keys(camera).every(key=>camera[key]===materialCheck.camera[key]) &&
+      document.getElementById('timeOfDay').value===materialCheck.hour && document.getElementById('relief').checked};
+  });
+  assert.deepEqual(controlReuse.counts,{image:0,buffer:0,shadow:0,compile:0});assert.ok(controlReuse.stable);
   await page.selectOption('#terrainStyle', 'desert');
+  assert.ok(await page.locator('#roughnessBias').isDisabled());
   await page.uncheck('#relief');
   await page.waitForFunction(() => preview.gpu.materials.style === 'desert', null, { timeout: 5000 });
   await page.selectOption('#terrainStyle', 'westmark');
@@ -156,7 +229,12 @@ await withBrowser(root, async browser => {
   });
   assert.equal(reuse.image,0);assert.equal(reuse.buffer,0);assert.equal(reuse.gl,0);
   // Restore first into the non-Ferrum style: its unused detail sampler must not
-  // require an upload. Returning to Ferrum reuses the already decoded images.
+  // require an upload. Returning to Ferrum reuses images and custom settings.
+  await page.evaluate(()=>{
+    for(const [id,value] of Object.entries({textureDensity:1.4,roughnessBias:-.12})){
+      const e=document.getElementById(id);e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  });
   await page.selectOption('#terrainStyle','desert');
   await page.waitForFunction(()=>preview.gpu.materials.style==='desert');
   const lifecycle=await page.evaluate(()=>{
@@ -176,9 +254,13 @@ await withBrowser(root, async browser => {
       materialCheck.images.albedo===FERRUM_IMAGES.albedo && materialCheck.images.detail===FERRUM_IMAGES.detail &&
       preview.gpu.gl.getError()===0 && preview.gpu.gl.getProgramParameter(preview.gpu.program,preview.gpu.gl.LINK_STATUS) &&
       preview.gpu.materials.textures.get('ferrum')!==materialCheck.textures.get('ferrum') && !document.getElementById('renderError').textContent));
+    assert.ok(await page.evaluate(()=>{
+      const v=preview.gpu.gl.getUniform(preview.gpu.program,preview.gpu.materials.uniforms.materialTuning);
+      return Math.abs(v[1]-1.4)<.0001 && Math.abs(v[2]+.12)<.0001 && !document.getElementById('roughnessBias').disabled;
+    }), 'Custom tuning survives style switching and GPU context replacement');
   }
   assert.deepEqual(errors, []);
-  console.log('Material GPU: sharp patchy coverage, packed Ferrum normal/roughness/AO, BRDF and neutral rock fixtures; file:// WebP decoding, shader linking and unchanged plan/mesh/vegetation; zero texture/geometry uploads on camera/relief changes OK.',
+  console.log('Material GPU: sharp patchy coverage, packed Ferrum normal/roughness/AO, BRDF and neutral rock fixtures; file:// WebP decoding, shader linking and unchanged plan/mesh/vegetation; material sliders/keyboard/reset and responsive folding OK; zero texture/geometry uploads, shader recompiles or shadow redraws on tuning/folding; custom settings restored with context OK.',
     { derivatives: result.derivatives, gradients: result.gradients, contextRestored: lifecycle, variants: result.probes.map(p => ({ antialias: p.antialias, explicitGradients: p.explicitGradients, blended: p.ramp.filter(v => v > 0 && v < 255).length })) });
   await page.close();
 }, { timeoutMs: 60000 });

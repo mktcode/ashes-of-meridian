@@ -11,20 +11,32 @@
   :focus-visible { outline: 2px solid #77ddb0; outline-offset: 3px; }
   input { accent-color: #77ddb0; }
   select { font: inherit; color: #e2e9ef; background: #202b38; border: 1px solid #596775; border-radius: 5px; padding: 4px; }
-  header { flex: none; border-bottom: 1px solid #47535f; background: #151b23; padding: 8px 12px 5px; }
-  .toolbar { display: flex; align-items: center; gap: 12px; }
-  .brand, #infoOpen { flex: none; }
-  .controls { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; overflow-x: auto; font-size: 12px; padding: 3px; }
-  .controls > * { flex: none; white-space: nowrap; }
-  .controls label { display: flex; align-items: center; gap: 4px; }
-  #zoom, #treeDensity, #grassDensity, #timeOfDay { width: 100px; } #zoomValue, #treeDensityValue { min-width: 40px; }
+  header { flex: none; display: flex; flex-direction: column; max-height: 65vh; max-height: 65dvh; border-bottom: 1px solid #47535f; background: #151b23; padding: 8px 12px 5px; }
+  .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .brand { margin-right: auto; }
+  .toolbar, #status { flex: none; }
+  #settings { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  #settings > summary { position: sticky; top: 0; z-index: 1; background: #151b23; cursor: pointer; padding: 6px 0; font-weight: 600; }
+  .settings-content { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 8px; padding: 3px 4px 8px; }
+  .controls { min-width: 0; display: flex; flex-wrap: wrap; align-content: start; align-items: center; gap: 8px 14px; border: 1px solid #47535f; border-radius: 6px; margin: 0; padding: 8px; font-size: 12px; }
+  .controls:first-child { grid-column: 1 / -1; }
+  .controls { align-self: start; }
+  .controls legend { padding: 0 5px; font-weight: 600; color: #77ddb0; }
+  .controls label { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .controls input[type=range] { width: 110px; max-width: 100%; }
+  .material-sliders { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,180px),1fr)); gap: 8px 18px; width: 100%; }
+  .material-sliders label { display: grid; grid-template-columns: 1fr auto; }
+  .material-sliders input[type=range] { grid-column: 1 / -1; width: 100%; margin: 0; }
+  .control-note { flex: 1 1 260px; color: #b4c2cf; }
+  output { font-variant-numeric: tabular-nums; }
+  #zoomValue, #treeDensityValue { min-width: 40px; }
   #plantingLegend, #grassLegend { top: auto; bottom: 14px; }
-  #status { margin: 5px 0 0; color: #b4c2cf; font: 11px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
-  .scene { flex: 1; min-height: 0; position: relative; }
+  #status { margin: 5px 0 0; color: #b4c2cf; font: 11px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; max-height: 3.5em; overflow-y: auto; }
+  .scene { flex: 1; min-height: 0; position: relative; container-type: size; }
   #height { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
   #height:active { cursor: grabbing; }
-  .minimap { position: absolute; left: 14px; bottom: 14px; width: min(320px, 38vw, 38vh); border: 1px solid #596775; border-radius: 8px; overflow: hidden; background: #202b38; box-shadow: 0 4px 24px #0007; }
-  .minimap summary { padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  .minimap { position: absolute; left: 14px; bottom: 14px; width: min(320px, 38vw, max(0px, calc(100cqh - 58px))); border: 1px solid #596775; border-radius: 8px; overflow: hidden; background: #202b38; box-shadow: 0 4px 24px #0007; }
+  .minimap summary { padding: 5px 9px; font-size: 12px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .height-legend { position: absolute; top: 14px; right: 14px; padding: 8px 10px; border: 1px solid #596775; border-radius: 8px; background: #202b38ee; font-size: 12px; pointer-events: none; }
   .height-legend .legend { display: grid; gap: 4px; margin-top: 4px; }
   .controls label:has(input:disabled) { opacity: .5; }
@@ -40,16 +52,37 @@
   @media (max-width: 650px) { .brand { display: none; } header { padding-inline: 8px; } .minimap { left: 8px; bottom: 8px; } dialog { padding: 16px; } }
 </style>
 <header>
-  <div class="toolbar" role="toolbar" aria-label="Terrain-Einstellungen">
+  <div class="toolbar" aria-label="Terrain-Aktionen">
     <strong class="brand">Terrain-Labor</strong>
-    <div class="controls" tabindex="0" aria-label="Einstellungen, auf schmalen Bildschirmen horizontal scrollbar">
-      <button id="generate">Neues Layout</button>
+    <button id="generate">Neues Layout</button>
+    <button id="fullscreen" aria-pressed="false">Vollbild</button>
+    <button id="infoOpen" aria-haspopup="dialog" aria-controls="info">Info</button>
+  </div>
+  <details id="settings" open>
+    <summary>Einstellungen · Material, Landschaft und Vegetation</summary>
+    <div class="settings-content">
+    <fieldset class="controls"><legend>Material &amp; Licht</legend>
       <label>Boden <select id="terrainStyle"><option value="westmark">Westmark</option><option value="desert">Desert</option></select></label>
       <label>Tageszeit <input id="timeOfDay" type="range" min="0" max="24" step="0.25" value="15"><output id="timeValue" for="timeOfDay">15:00</output></label>
       <label><input id="shadows" type="checkbox" checked> Schatten</label>
-      <label><input id="relief" type="checkbox" checked> Relief</label>
+      <label><input id="relief" type="checkbox" checked> Mikrorelief</label>
+      <div class="material-sliders">
+        <label>Relieftiefe <output id="reliefDepthValue" for="reliefDepth"></output><input id="reliefDepth" type="range"></label>
+        <label>Texturdichte <output id="textureDensityValue" for="textureDensity"></output><input id="textureDensity" type="range"></label>
+        <label>Rauheitskorrektur <output id="roughnessBiasValue" for="roughnessBias"></output><input id="roughnessBias" type="range"></label>
+        <label>AO-Stärke <output id="aoStrengthValue" for="aoStrength"></output><input id="aoStrength" type="range"></label>
+        <label>Belichtung <output id="materialExposureValue" for="materialExposure"></output><input id="materialExposure" type="range"></label>
+      </div>
+      <small class="control-note">Relieftiefe und Dichte: Bodenmaterialien. Rauheit, AO und Belichtung: Ferrum (Westmark). Nur optisch, keine Höhenänderung.</small>
+      <button id="materialReset">Material zurücksetzen</button>
+    </fieldset>
+    <fieldset class="controls"><legend>Landschaft</legend>
       <label title="Echte Geländeformen: Tieflandhügel, Hochland-Tafelberge und Felsdekor; Vergleich mit demselben Seed"><input id="landforms" type="checkbox" checked> Landschaftsformen</label>
       <label title="Unterteilt die Tafelberge in Felssimse und versetzte Hochflächen; wirkt nur mit Landschaftsformen"><input id="terraces" type="checkbox" checked> Terrassen</label>
+      <label title="Gemeinsame weiche Verformung von Wegen, Flüssen und Kartenrand"><input id="curves" type="checkbox" checked> Verformung</label>
+      <label title="Flussrouten vor der Höhen- und Brückenplanung abrunden"><input id="rounded" type="checkbox" checked> Runde Flüsse</label>
+    </fieldset>
+    <fieldset class="controls"><legend>Vegetation</legend>
       <label title="Bäume sind rein visuell und blockieren keine Bewegung"><input id="trees" type="checkbox" checked> Bäume</label>
       <label title="Grün: mögliche Pflanzflächen, übriges Gelände dunkel. Grobe Vorschau; jeder Baumstandort wird zusätzlich exakt geprüft"><input id="planting" type="checkbox"> Pflanzflächen</label>
       <label>Walddichte <input id="treeDensity" type="range" min="0" max="100" step="5" value="65"><output id="treeDensityValue" for="treeDensity">65 %</output></label>
@@ -58,16 +91,15 @@
       <label title="Graseignung, unabhängig von Baumflächen und tatsächlicher Dichte"><input id="grassAreas" type="checkbox"> Grasflächen</label>
       <label>Grasdichte <input id="grassDensity" type="range" min="0" max="100" step="5" value="65"><output id="grassDensityValue" for="grassDensity">65 %</output></label>
       <span id="grassCount"></span>
+    </fieldset>
+    <fieldset class="controls"><legend>Diagnose &amp; Kamera</legend>
       <label title="Feste Höhenzonen im globalen Höhenraum anzeigen, unabhängig von Kartenminimum und -maximum"><input id="heightZones" type="checkbox"> Höhenzonen</label>
       <label title="Spielräume im 3D-Modell markieren; bei Höhenzonen oder Pflanzflächen ausgeblendet"><input id="overlay" type="checkbox"> Spielräume</label>
       <label title="Basis- und duales Netz in der Planungskarte anzeigen"><input id="dual" type="checkbox"> Netze</label>
-      <label title="Gemeinsame weiche Verformung von Wegen, Flüssen und Kartenrand"><input id="curves" type="checkbox" checked> Verformung</label>
-      <label title="Flussrouten vor der Höhen- und Brückenplanung abrunden"><input id="rounded" type="checkbox" checked> Runde Flüsse</label>
       <label for="zoom">Zoom <input id="zoom" type="range" min="0.5" max="32" step="0.01" value="1.6"> <output id="zoomValue" for="zoom">160 %</output></label>
-      <button id="fullscreen" aria-pressed="false">Vollbild</button>
+    </fieldset>
     </div>
-    <button id="infoOpen" aria-haspopup="dialog" aria-controls="info">Info</button>
-  </div>
+  </details>
   <p id="status" role="status"></p>
 </header>
 <main class="scene" aria-label="Terrain-Vorschau">
@@ -83,7 +115,7 @@
 </main>
 <dialog id="info" aria-labelledby="infoTitle">
 <div class="info-heading"><h1 id="infoTitle">Spielraum zuerst, Landschaft danach</h1><form method="dialog"><button autofocus>Schließen</button></form></div>
-<p><strong>Bedienung:</strong> Linke Maustaste halten und ziehen: verschieben · Mittlere Maustaste halten und ziehen: drehen und neigen · Mausrad oder Zoomregler: zoomen (bis 3200 %) · Doppelklick: Kamera zurücksetzen. Die Planungskarte lässt sich über ihre Überschrift einklappen. „Vollbild“ blendet die Browserleisten aus; Escape beendet den Vollbildmodus. Auf schmalen Bildschirmen ist die obere Einstellungsleiste horizontal scrollbar.</p>
+<p><strong>Bedienung:</strong> Linke Maustaste halten und ziehen: verschieben · Mittlere Maustaste halten und ziehen: drehen und neigen · Mausrad oder Zoomregler: zoomen (bis 3200 %) · Doppelklick: Kamera zurücksetzen. Die Planungskarte lässt sich über ihre Überschrift einklappen. „Vollbild“ blendet die Browserleisten aus; Escape beendet den Vollbildmodus. „Einstellungen“ klappt die mehrzeilige Leiste auf und zu. Die Gruppen umbrechen auf schmalen Bildschirmen; bei wenig Höhe scrollt nur der Einstellungsbereich. Layout, Vollbild und Info bleiben erreichbar.</p>
 <p>Regionen und Wege auf dem ersten Netz · Fluss auf dem dualen Netz dazwischen · ein Zufluss am Kartenrand, bis zu zwei Aufteilungen · Brücken an tatsächlichen Wegkreuzungen.</p>
 <p>Der Seed bestimmt eine Brückenausdünnung zwischen 0 und 100 % der gemeinsam entbehrlichen Übergänge. Eng benachbarte Brücken, insbesondere zwischen denselben trockenen Weggebieten, kommen bevorzugt in die Entfernungsauswahl. Nach jeder probeweisen Entfernung wird die Verbindung erneut geprüft: Notwendige Übergänge bleiben erhalten. Die Statusleiste zeigt den Seed-Anteil und die tatsächlich entfernte Anzahl; bei wenigen Kandidaten wird auf ganze Brücken gerundet. Verformung und Flussrundung verändern diese Auswahl nicht.</p>
 <p class="legend"><span style="--color:#77ddb0">Regionen</span><span style="--color:#dce7ba">Wege</span><span style="--color:#bc99ff">Zusatzwege</span><span style="--color:#39adf0">Fluss → Fließrichtung</span><span style="--color:#d99b58">Brückendeck</span></p>
@@ -94,7 +126,7 @@
 <p>„Bäume“ zeigt rein visuelle Laub- und Nadelbäume in seed-stabilen Gehölzen mit Lichtungen. Höhenzone, tatsächliche lokale Neigung und Abstände zu Wasser, Wegen, Brücken, Zugängen und Kartenrand bestimmen die Standorte. Kronen sind bei den Freihaltezonen für Wege, Brücken und Kartenrand berücksichtigt. Trockene Flussufer sind ausdrücklich bepflanzbar, auch auf steileren Böschungen; dort ist die Pflanzrate erhöht. Stämme bleiben außerhalb des Wassers, Kronen dürfen darüber ragen. Die Bäume sind keine Bewegungshindernisse. „Walddichte“ fügt Bäume hinzu oder entfernt sie, ohne verbleibende Bäume zu verschieben oder Gelände neu zu erzeugen. „Pflanzflächen“ zeigt eine grobe grüne Eignungsvorschau statt der Höhenfarben; jeder tatsächliche Standort wird zusätzlich einzeln geprüft. Eine geeignete Fläche muss nicht bewaldet sein.</p>
 <p>„Gras“ ergänzt kurze statische Büschel auf einer eigenen, seed-stabilen Vegetationsschicht. Grasflächen dürfen sich mit Baumflächen überschneiden und nutzen auch steilere Hänge und schmale Flächen. Wasser, Brücken und Wegkerne bleiben frei; die Dichte läuft zu Wegrändern weich aus. Tiefland erhält dichten Bewuchs, Mittelland weniger, Hochland nur vereinzelte Büschel; Ufer erhalten einen Bonus. „Grasdichte“ filtert feste Standorte, ohne Bäume, Gelände oder Navigation zu verändern. „Grasflächen“ zeigt die Eignung gelbgrün statt der Baumflächen; beide Diagnose-Overlays sind alternativ, die Vegetation selbst darf sich überlagern. Die Darstellung verwendet instanzierte, texturfreie Grashalme (mit einem WebGL-Fallback), ohne Wind, Schatten oder Bewegungshindernisse.</p>
 <p>„Boden“ schaltet zwischen Westmark (Wiese, Ferrum-Fels, Erde) und Desert (Sediment/Sand, geschichteter Fels) um. Wiese, Erde und Desert stammen aus den prozeduralen Spielrezepten. Westmark-Fels verwendet eingebettete hochauflösende Ferrum-Karten aus der STRATA-Materialgalerie: mineralische Farbe, Normalen, Rauheit und Mikroverschattung. Zwei gepackte WebP-Texturen mit Mipmaps bleiben je Grafikkontext resident; die Galerie-Parallaxschleifen und zusätzliches Geometrie-Displacement werden nicht übernommen. Höhen und Hangneigung bestimmen Gras-/Felsflächen mit schmalen, unregelmäßig gefleckten Materialkanten statt breiter weicher Verläufe. Ufersediment und die Wiesenfarbvariation bleiben weich; die Materialkanten sind unabhängig vom Mikroreliefschalter. Die Verbindungswege erhalten keine eigene Bodenfärbung; ihre Geländeform und Vegetations-Freihaltezonen bleiben erhalten. Höhenübergänge bleiben global bei 35/45, nicht relativ zum Kartenminimum. Feines Mikrorelief verändert nur die Beleuchtung; Ferrums vorberechnete Normalen funktionieren auch ohne WebGL-Derivate, bei Wiese und Erde entfällt dann deren ableitungsbasiertes Relief. Höhenzonen und Pflanzflächen sind weiterhin Diagnoseansichten. Der Materialwechsel verändert weder Geometrie noch Vegetation, Seed oder Navigation. Die Vorschau verwendet eine eigene Tageszeitbeleuchtung und Schatten; Spielwetter und Postprocessing werden nicht übernommen.</p>
-<p>„Tageszeit“ regelt die Sonne und eine kühle Nachtbeleuchtung, ohne eine Spieluhr laufen zu lassen. Lichtfarbe, Richtung und Schatten verändern sich mit der Uhrzeit. „Schatten“ zeigt echte Gelände-/Baumschatten aus einer gecachten Shadowmap; auch Bäume und Gras empfangen Schatten. Kurze Grasbüschel werfen selbst keine Schatten. „Relief“ schaltet das stärkere rein optische Mikrorelief ein/aus. Ferrum verwendet 2048er Farbe und 1024er Normal-/Materialdaten; die übrigen Rezepte werden mit 512 Pixeln gebacken. Mipmaps und – falls unterstützt – anisotrope Filterung erhalten Details in schräger Ansicht. Kamera und Materialwechsel verwenden die Shadowmap weiter; nur Gelände, Baumbestand/-sichtbarkeit oder Tageszeit erneuern sie. Diagnoseansichten behalten ihre neutralen Farben.</p>
+<p>„Tageszeit“ regelt die Sonne und eine kühle Nachtbeleuchtung, ohne eine Spieluhr laufen zu lassen. Lichtfarbe, Richtung und Schatten verändern sich mit der Uhrzeit. „Schatten“ zeigt echte Gelände-/Baumschatten aus einer gecachten Shadowmap; auch Bäume und Gras empfangen Schatten. Kurze Grasbüschel werfen selbst keine Schatten. „Mikrorelief“ schaltet das rein optische Relief ein/aus; „Relieftiefe“ skaliert dessen Stärke, nicht die Geländeformen oder Silhouette. „Texturdichte“ erhöht/verringert die Wiederholung aller Bodenkarten; größere Werte zeigen kleinere, dichter wiederholte Strukturen. „Rauheitskorrektur“, „AO-Stärke“ (Mikroverschattung) und „Belichtung“ beeinflussen Ferrum in Westmark und sind für Desert deaktiviert. „Material zurücksetzen“ stellt nur diese Regler und Mikrorelief zurück, nicht Kamera, Tageszeit, Bodenwahl oder Seed. Kein Neugenerieren, Texturbacken, Shadowmap- oder Mesh-Upload beim Regeln. Ferrum verwendet 2048er Farbe und 1024er Normal-/Materialdaten; die übrigen Rezepte werden mit 512 Pixeln gebacken. Mipmaps und – falls unterstützt – anisotrope Filterung erhalten Details in schräger Ansicht. Kamera und Materialwechsel verwenden die Shadowmap weiter; nur Gelände, Baumbestand/-sichtbarkeit oder Tageszeit erneuern sie. Diagnoseansichten behalten ihre neutralen Farben.</p>
 <p>Das Gelände verwendet ein feineres Grundmesh und zusätzliche Unterteilungen entlang der Flüsse. Gemeinsame, flächengewichtete Vertex-Normalen und interpolierte Höhenfarben reduzieren sichtbare Dreiecksfacetten. Das Höhenfeld und die Steigungsprüfung bleiben davon unabhängig; Wasser und Brückendecks behalten getrennte Oberflächen.</p>
 <p>Die Spielflächen besitzen weich gerundete, unterschiedlich gestreckte und asymmetrische Konturen statt sechs dominanter Ecken. Dieselben Konturen bestimmen Darstellung, Schutzabstände und Höhenplanung; ein breiter Kern für Weganschlüsse bleibt erhalten.</p>
 <p>Das Hex-Netz bestimmt nur die Nachbarschaften. Wege, Flüsse und Kartenrand werden in kurze Teilsegmente unterteilt und mit einem gemeinsamen weichen Feld verformt. Kreuzungen und gemeinsame Knoten bleiben verbunden; Regionen und Ufer folgen derselben Geometrie. Die Checkbox „Verformung“ vergleicht beide Varianten mit demselben Seed. Der Fluss verläuft im Basisnetz über Dreieckszentren und kreuzt Nachbarverbindungen an ihren Mittelpunkten. Seine Wasserhöhe fällt auf jedem Abschnitt strikt ab; Aufteilungen teilen dieselbe Wasserhöhe. Pfeile zeigen die Richtung. S = Zufluss, A = Ausfluss. Die braunen Brücken sind separate, kurze Decks über der Flussquerung: Fluss und Uferbereich plus 1,8 Einheiten Puffer. Die übrige Strecke bleibt ein normaler Weg, keine durchgehende Brücke. Das Ufer folgt dem Wasserprofil: 1,4 Einheiten über dem Wasser, das Bett liegt weitere 1,1 Einheiten darunter. Nahe Regionshöhen berücksichtigen dieses Profil bereits in der Planung; es entstehen keine tief ausgeschnittenen Schluchten.</p>
@@ -1330,6 +1362,15 @@ function grassBladeGeometry() {
 // Embedded JS port of src/renderer/materials.ts: same recipes/hash/tileable bake.
 // Keep standalone file:// delivery; Ferrum uses embedded user-provided WebP maps.
 const FERRUM_IMAGES = {};
+// Single authority for ranges/defaults; UI and uniforms share these values.
+const MATERIAL_CONTROLS = {
+  reliefDepth: {min:0,max:1.8,step:.05,value:1},
+  textureDensity: {min:.5,max:2.5,step:.05,value:1},
+  roughnessBias: {min:-.35,max:.2,step:.01,value:0,ferrumOnly:true},
+  aoStrength: {min:0,max:1.5,step:.05,value:1,ferrumOnly:true},
+  materialExposure: {min:.5,max:2.5,step:.05,value:1.25,ferrumOnly:true}
+};
+const materialSettings=Object.fromEntries(Object.entries(MATERIAL_CONTROLS).map(([id,c])=>[id,c.value]));
 async function loadFerrumMaterial() {
   const assets=JSON.parse(document.getElementById('terrain-ferrum-assets').textContent);
   await Promise.all(Object.entries(assets.maps).map(([name,map])=>new Promise((resolve,reject)=>{
@@ -1419,6 +1460,8 @@ function terrainMaterialGLSL(relief,gradients=false) {
     uniform vec2 groundTile; uniform vec2 surfaceOffset; uniform vec3 surfaceTint;
     uniform vec3 surfaceRelief; uniform bool desert; uniform bool ferrum;
     uniform sampler2D ferrumDetailTex; uniform vec3 mineralView;
+    // Relief multiplier, texture frequency, roughness bias, AO multiplier.
+    uniform vec4 materialTuning; uniform float mineralExposure;
     // Per-fragment outputs, produced once by landscapeSample and reused in lighting.
     vec3 mineralGradient, mineralAlbedo;
     float mineralRoughness, mineralAO, mineralWeight;
@@ -1444,12 +1487,13 @@ function terrainMaterialGLSL(relief,gradients=false) {
       vec3 color=mineralBRDF(albedo,mineralRoughness,n,v,l)*sun*4.4*visibility;
       color+=albedo*sky*mineralAO;
       color+=(.04+.96*pow(1.0-max(dot(n,v),0.0),5.0))*sky*(.12+.22*(1.0-mineralRoughness))*mineralAO;
-      return mineralSRGB(mineralFilmic(color*1.25));
+      return mineralSRGB(mineralFilmic(color*mineralExposure));
     }
     vec2 mineralSlope(vec4 detail){
       vec2 xy=detail.rg*2.0-1.0;
       return -xy/max(sqrt(max(1.0-dot(xy,xy),0.0)),.12);
     }
+    vec3 ferrumReliefNormal(vec3 n){return normalize(n-mineralGradient*materialTuning.x*materialTuning.y);}
     float luma(vec3 c){return dot(c,vec3(.299,.587,.114));}
     float veilHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float veilNoise(vec2 p){
@@ -1474,7 +1518,7 @@ function terrainMaterialGLSL(relief,gradients=false) {
     }
     // Game triplanar sampling: fourth-power normals; strata stay horizontal.
     vec4 stoneSample(vec3 n){
-      vec3 p=worldPosition*.125,w=n*n;w*=w;
+      vec3 p=worldPosition*(.125*materialTuning.y),w=n*n;w*=w;
       if(ferrum)w*=w; // Gallery's sharper eighth-power projection for Ferrum.
       w/=max(w.x+w.y+w.z,.0001);
       vec4 color=rockTap(rockTex,p.zy,mineralDx.zy,mineralDy.zy)*w.x+rockTap(rockTex,p.xz,mineralDx.xz,mineralDy.xz)*w.y+rockTap(rockTex,p.xy,mineralDx.xy,mineralDy.xy)*w.z;
@@ -1484,21 +1528,21 @@ function terrainMaterialGLSL(relief,gradients=false) {
         vec2 gx=mineralSlope(dx),gy=mineralSlope(dy),gz=mineralSlope(dz);
         mineralGradient=w.x*vec3(0,gx.y,gx.x)+w.y*vec3(gy.x,0,gy.y)+w.z*vec3(gz.x,gz.y,0);
         mineralGradient-=n*dot(mineralGradient,n);
-        mineralRoughness=clamp(dot(vec3(dx.b,dy.b,dz.b),w),.20,1.0);
-        mineralAO=dot(vec3(dx.a,dy.a,dz.a),w);
+        mineralRoughness=clamp(dot(vec3(dx.b,dy.b,dz.b),w)+materialTuning.z,.20,1.0);
+        mineralAO=clamp(1.0+(dot(vec3(dx.a,dy.a,dz.a),w)-1.0)*materialTuning.w,0.0,1.0);
       }
       return color;
     }
     vec4 landscapeSample(vec3 n){
       mineralGradient=vec3(0);mineralRoughness=1.0;mineralAO=1.0;mineralWeight=0.0;
-      ${gradients ? 'mineralDx=dFdx(worldPosition*.125);mineralDy=dFdy(worldPosition*.125);' : ''}
+      ${gradients ? 'mineralDx=dFdx(worldPosition*(.125*materialTuning.y));mineralDy=dFdy(worldPosition*(.125*materialTuning.y));' : ''}
       float rock=rockCoverage(n);
-      vec2 p=worldPosition.xz,uv=p/groundTile+surfaceOffset;
+      vec2 p=worldPosition.xz,uv=p*materialTuning.y/groundTile+surfaceOffset;
       vec2 warp=vec2(veilNoise(p*.12),veilNoise(p*.12+19.7))*.38;
       vec4 grass=mix(texture2D(groundTex,uv+warp),texture2D(groundTex,uv*1.371+3.76+warp),.42);
       grass.rgb*=surfaceTint*mix(.87,1.08,veilNoise(p*.075));
       grass.rgb*=.84+.32*smoothstep(.22,.78,grass.a);
-      vec4 stone=vec4(0),earth=texture2D(earthTex,p*.15);
+      vec4 stone=vec4(0),earth=texture2D(earthTex,p*(.15*materialTuning.y));
       // Explicit gradients are computed before this divergent branch. On capable
       // GPUs dry pure meadow skips all six Ferrum lookups without undefined LOD.
       ${gradients ? 'if(!ferrum || rock>0.0 || groundWet>0.0)' : ''}stone=stoneSample(n);
@@ -1520,7 +1564,7 @@ function terrainMaterialGLSL(relief,gradients=false) {
       // Port of the signed-bank sediment blend; lab stores positive wetness.
       float wet=groundWet,bankNoise=veilNoise(p*.63)+.35*veilNoise(p*2.7);
       float sediment=smoothstep(.02,.38,wet+(bankNoise-.6)*.38)*smoothstep(0.0,.05,wet);
-      vec3 bankEarth=texture2D(earthTex,p*.23).rgb*vec3(.76,.78,.72);
+      vec3 bankEarth=texture2D(earthTex,p*(.23*materialTuning.y)).rgb*vec3(.76,.78,.72);
       float gravel=smoothstep(.60,.78,veilNoise(p*5.7));
       base=mix(base,mix(bankEarth,stone.rgb*.82,gravel*.55),sediment*.88);base*=1.0-wet*.23;
       height=mix(height,earth.a*surfaceRelief.z,sediment);
@@ -1538,7 +1582,7 @@ function terrainMaterialGLSL(relief,gradients=false) {
 }
 function makeMaterialGPU(gl,program) {
   const uniforms={};
-  for(const name of ['groundTex','rockTex','earthTex','groundTile','surfaceOffset','surfaceTint','surfaceRelief','desert','ferrum','ferrumDetailTex','mineralView']) uniforms[name]=gl.getUniformLocation(program,name);
+  for(const name of ['groundTex','rockTex','earthTex','groundTile','surfaceOffset','surfaceTint','surfaceRelief','desert','ferrum','ferrumDetailTex','mineralView','materialTuning','mineralExposure']) uniforms[name]=gl.getUniformLocation(program,name);
   return {uniforms,textures:new Map(),sizes:new Map(),anisotropy:gl.getExtension('EXT_texture_filter_anisotropic')};
 }
 function bindMaterialTexture(gpu,name,unit) {
@@ -1574,6 +1618,8 @@ function bindTerrainMaterials(gpu,style,seed) {
   if(names[1]==='ferrum')bindMaterialTexture(gpu,'ferrumDetail',4);
   // Separate from unit 3, which belongs to the cached terrain shadow map.
   gl.uniform1i(u.ferrumDetailTex,4);gl.uniform1i(u.ferrum,names[1]==='ferrum'?1:0);
+  gl.uniform4f(u.materialTuning,materialSettings.reliefDepth,materialSettings.textureDensity,materialSettings.roughnessBias,materialSettings.aoStrength);
+  gl.uniform1f(u.mineralExposure,materialSettings.materialExposure);
   gl.uniform3f(u.mineralView,Math.sin(camera.yaw)*Math.cos(camera.tilt),Math.sin(camera.tilt),Math.cos(camera.yaw)*Math.cos(camera.tilt));
   if(m.style!==style || m.seed!==seed) {
     const s=surfaceWorldStyle(names[0],seed);gl.uniform2fv(u.groundTile,LAB_SURFACES[names[0]].tile);
@@ -1809,8 +1855,8 @@ function createGPU() {
       vec3 geometricNormal = n;
       if (!heightZones && face.w < 0.5) {
         vec4 sampleColor = landscapeSample(n);
-        ${relief ? 'if (reliefOn) n = materialReliefNormal(n, sampleColor.a * 2.8);' : ''}
-        if(reliefOn && ferrum)n=normalize(mix(n,normalize(geometricNormal-mineralGradient),mineralWeight));
+        ${relief ? 'if (reliefOn) n = materialReliefNormal(n, sampleColor.a * 2.8 * materialTuning.x);' : ''}
+        if(reliefOn && ferrum)n=normalize(mix(n,ferrumReliefNormal(geometricNormal),mineralWeight));
         color = sampleColor.rgb * 255.0;
         light = 1.0;
       }
@@ -2112,17 +2158,41 @@ function syncDisplayControls() {
   document.getElementById('heightLegend').hidden = planting || grass || !zones;
   document.getElementById('overlay').disabled = planting || grass || zones;
 }
+function syncMaterialControls() {
+  const ferrum=document.getElementById('terrainStyle').value==='westmark';
+  for(const [id,c] of Object.entries(MATERIAL_CONTROLS)) {
+    const input=document.getElementById(id),value=materialSettings[id];
+    input.value=String(value);
+    input.disabled=!!c.ferrumOnly && !ferrum || id==='reliefDepth' && !document.getElementById('relief').checked;
+    document.getElementById(id+'Value').textContent=(id==='roughnessBias' && value>=0?'+':'')+value.toFixed(2)+(id==='roughnessBias'?'':'×');
+  }
+}
 function bindLabControls() {
+  for(const [id,c] of Object.entries(MATERIAL_CONTROLS)) {
+    const input=document.getElementById(id);
+    input.min=c.min;input.max=c.max;input.step=c.step;input.defaultValue=c.value;
+    input.addEventListener('input',()=>{
+      const value=Number(input.value);
+      if(Number.isFinite(value))materialSettings[id]=Math.max(c.min,Math.min(c.max,value));
+      syncMaterialControls();requestDraw();
+    });
+  }
+  syncMaterialControls();
+  document.getElementById('materialReset').addEventListener('click',()=>{
+    for(const [id,c] of Object.entries(MATERIAL_CONTROLS))materialSettings[id]=c.value;
+    document.getElementById('relief').checked=true;
+    syncMaterialControls();requestDraw();
+  });
   document.getElementById('generate').addEventListener('click', generate);
   document.getElementById('heightLegend').innerHTML = heightLegendHTML();
   syncDisplayControls();
-  document.getElementById('terrainStyle').addEventListener('change', () => { requestDraw(); });
+  document.getElementById('terrainStyle').addEventListener('change', () => { syncMaterialControls();requestDraw(); });
   document.getElementById('timeOfDay').addEventListener('input', () => {
     const minutes=Math.round(Number(document.getElementById('timeOfDay').value)*60);
     document.getElementById('timeValue').textContent=`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
     requestDraw();
   });
-  for(const id of ['shadows','relief']) document.getElementById(id).addEventListener('change',requestDraw);
+  for(const id of ['shadows','relief']) document.getElementById(id).addEventListener('change',()=>{syncMaterialControls();requestDraw();});
   document.getElementById('heightZones').addEventListener('change', () => {
     syncDisplayControls();
     draw3D(); // Uniforms only: preserve the seed, plan, mesh and GPU upload.
