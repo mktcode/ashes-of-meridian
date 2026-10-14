@@ -22,25 +22,36 @@
       uniform vec3 right, up, eye;
       uniform vec2 scale;
       out vec3 surfaceNormal;
+      out vec3 worldPosition;
       void main() {
         vec3 p = (model * vec4(position, 1.0)).xyz;
         gl_Position = vec4(dot(p, right) * scale.x, dot(p, up) * scale.y, -dot(p, eye) / 80.0, 1.0);
         surfaceNormal = transpose(inverse(mat3(model))) * normal;
+        worldPosition = p;
       }`), shader(gl.FRAGMENT_SHADER, `#version 300 es
       precision highp float;
       in vec3 surfaceNormal;
+      in vec3 worldPosition;
       uniform vec3 color;
+      uniform bool terrain;
       out vec4 outputColor;
       void main() {
         vec3 n = normalize(surfaceNormal);
         float light = max(0.0, dot(n, normalize(vec3(-0.5, 0.9, 0.7))));
-        outputColor = vec4(color * (0.42 + light * 0.65), 1.0);
+        vec3 tint = color;
+        if (terrain) {
+          tint = mix(vec3(0.27, 0.36, 0.28), vec3(0.57, 0.58, 0.40), smoothstep(-0.4, 2.1, worldPosition.y));
+          vec2 distanceToGrid = abs(fract(worldPosition.xz + 0.5) - 0.5);
+          vec2 line = 1.0 - smoothstep(vec2(0.012), vec2(0.012) + fwidth(worldPosition.xz), distanceToGrid);
+          tint *= 1.0 - 0.16 * max(line.x, line.y);
+        }
+        outputColor = vec4(tint * (0.42 + light * 0.65), 1.0);
       }`)];
     for (const handle of shaders) gl.attachShader(program, handle);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     for (const handle of shaders) gl.deleteShader(handle);
-    const uniforms = Object.fromEntries(['model', 'right', 'up', 'eye', 'scale', 'color'].map(name => [name, gl.getUniformLocation(program, name)]));
+    const uniforms = Object.fromEntries(['model', 'right', 'up', 'eye', 'scale', 'color', 'terrain'].map(name => [name, gl.getUniformLocation(program, name)]));
 
     // One shared unit cube; joints transform it without rebuilding geometry.
     const vertices = [];
@@ -62,6 +73,14 @@
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    for (let i = 0; i < 2; i++) {
+      gl.enableVertexAttribArray(i);
+      gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 24, i * 12);
+    }
+    const terrainVao = gl.createVertexArray();
+    gl.bindVertexArray(terrainVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, CrowdTerrain.vertices, gl.STATIC_DRAW);
     for (let i = 0; i < 2; i++) {
       gl.enableVertexAttribArray(i);
       gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 24, i * 12);
@@ -167,20 +186,21 @@
       const camera = CrowdSimulation.cameraFrame(yaw, pitch, zoom, w, h);
       for (const name of ['right', 'up', 'eye']) gl.uniform3fv(uniforms[name], camera[name]);
       gl.uniform2fv(uniforms.scale, camera.scale);
-      const half = CrowdSimulation.halfSize, size = half * 2;
-      box(identity(), [0, -0.045, 0], [size, 0.08, size], [0.18, 0.23, 0.26]);
-      for (let i = -half; i <= half; i++) {
-        box(identity(), [i, -0.003, 0], [0.015, 0.004, size], [0.27, 0.33, 0.35]);
-        box(identity(), [0, -0.003, i], [size, 0.004, 0.015], [0.27, 0.33, 0.35]);
-      }
+      gl.bindVertexArray(terrainVao);
+      gl.uniformMatrix4fv(uniforms.model, false, identity());
+      gl.uniform1i(uniforms.terrain, 1);
+      gl.drawArrays(gl.TRIANGLES, 0, CrowdTerrain.vertices.length / 6);
+      gl.bindVertexArray(vao);
+      gl.uniform1i(uniforms.terrain, 0);
       if (world.destination) {
         const { x, z } = world.destination;
         const color = moving ? [0.90, 0.68, 0.28] : [0.45, 0.76, 0.48];
-        box(identity(), [x, 0.015, z], [0.65, 0.02, 0.07], color);
-        box(identity(), [x, 0.015, z], [0.07, 0.02, 0.65], color);
+        const marker = CrowdTerrain.transform(x, z, CrowdTerrain.heightAt(x, z) + 0.035, 0);
+        box(marker, [0, 0, 0], [0.65, 0.02, 0.07], color);
+        box(marker, [0, 0, 0], [0.07, 0.02, 0.65], color);
       }
       for (const marine of world.marines) {
-        const root = multiply(translate([marine.x, 0, marine.z]), rotate([0, marine.yaw, 0]));
+        const root = CrowdTerrain.transform(marine.x, marine.z, marine.y, marine.yaw);
         const pose = MarineModel.samplePose(marine.time, marine.runWeight), joints = {};
         for (const part of MarineModel.parts) {
           const animation = pose[part.name] || {};

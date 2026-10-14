@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const context = vm.createContext({});
-vm.runInContext(readFileSync(new URL('./crowd-core.js', import.meta.url), 'utf8') + '\nthis.core = CrowdSimulation;', context);
+vm.runInContext(readFileSync(new URL('./crowd-terrain.js', import.meta.url), 'utf8'), context);
+vm.runInContext(readFileSync(new URL('./crowd-core.js', import.meta.url), 'utf8') + '\nthis.core = CrowdSimulation; this.terrain = CrowdTerrain;', context);
 const core = context.core;
 const world = core.createWorld();
 const marine = world.marines[0];
@@ -21,6 +22,7 @@ for (let tick = 0; tick < 400; tick++) {
   assert.ok(distance <= previousDistance, 'movement never overshoots');
   assert.ok(Math.abs(4 * marine.x - 3 * marine.z) < 1e-10, 'straight path');
   assert.ok(marine.runWeight >= 0 && marine.runWeight <= 1);
+  assert.equal(marine.y, context.terrain.heightAt(marine.x, marine.z), 'movement follows the triangular terrain');
   assert.ok(Math.abs(marine.yaw - Math.atan2(3, 4)) < 1e-10, 'model faces the destination');
   previousDistance = distance;
 }
@@ -72,12 +74,17 @@ const dot = (a, b) => a.reduce((sum, value, i) => sum + value * b[i], 0);
 for (const [width, height] of [[1200, 600], [400, 700]]) {
   for (const yaw of [-1.3, 0.55, Math.PI / 2]) for (const pitch of [0.35, 0.9, 1.35]) for (const zoom of [0.7, 1, 3]) {
     const camera = core.cameraFrame(yaw, pitch, zoom, width, height);
-    for (const [x, z] of [[0, 0], [5, -8], [-11, 11], [13, 0]]) {
-      const p = [x, 0, z];
+    for (const [x, z] of [[0, 0], [5, -8], [-11, 11], [30, 0]]) {
+      const p = [x, context.terrain.heightAt(x, z), z];
       const point = core.groundPoint(dot(p, camera.right) * camera.scale[0], dot(p, camera.up) * camera.scale[1], camera);
       if (Math.abs(x) > core.halfSize) assert.equal(point, null, 'off-field clicks do not command');
       else {
-        assert.ok(Math.abs(point.x - x) < 1e-10 && Math.abs(point.z - z) < 1e-10, 'ground picking inverts rotated/zoomed camera projection');
+        assert.ok(point, 'visible terrain ray has a hit');
+        const hit = [point.x, point.y, point.z];
+        assert.ok(Math.abs(dot(hit, camera.right) - dot(p, camera.right)) < 1e-8
+          && Math.abs(dot(hit, camera.up) - dot(p, camera.up)) < 1e-8, 'terrain picking inverts rotated/zoomed camera projection');
+        assert.equal(point.y, context.terrain.heightAt(point.x, point.z));
+        assert.ok(dot(hit, camera.eye) >= dot(p, camera.eye) - 1e-8, 'nearest visible slope wins over hidden ground');
       }
     }
     const hidpi = core.cameraFrame(yaw, pitch, zoom, width * 2, height * 2);

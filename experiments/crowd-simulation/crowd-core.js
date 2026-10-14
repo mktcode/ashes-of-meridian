@@ -1,10 +1,10 @@
 'use strict';
 
 const CrowdSimulation = (() => {
-  const halfSize = 12;
+  const halfSize = CrowdTerrain.halfSize;
   const moveSpeed = 2; // Matches the model's support-foot travel at normal cadence.
   function createMarine(x = 0, z = 0) {
-    return { x, z, yaw: 0, moving: false, time: 0, runWeight: 0 };
+    return { x, y: CrowdTerrain.heightAt(x, z), z, yaw: 0, moving: false, time: 0, runWeight: 0 };
   }
   function createWorld() {
     return { marines: [createMarine()], destination: null };
@@ -39,6 +39,7 @@ const CrowdSimulation = (() => {
         marine.x += dx / distance * step;
         marine.z += dz / distance * step;
       }
+      marine.y = CrowdTerrain.heightAt(marine.x, marine.z);
     }
   }
   function cameraFrame(yaw, pitch, zoom, width, height) {
@@ -50,12 +51,7 @@ const CrowdSimulation = (() => {
     };
   }
   function groundPoint(ndcX, ndcY, camera) {
-    if (Math.abs(camera.eye[1]) < 1e-5) return null;
-    const horizontal = ndcX / camera.scale[0], vertical = ndcY / camera.scale[1];
-    const p = camera.right.map((value, i) => value * horizontal + camera.up[i] * vertical);
-    const depth = -p[1] / camera.eye[1];
-    const point = { x: p[0] + depth * camera.eye[0], z: p[2] + depth * camera.eye[2] };
-    return contains(point) ? point : null;
+    return CrowdTerrain.pick(ndcX, ndcY, camera);
   }
   return { halfSize, createMarine, createWorld, moveTo, update, cameraFrame, groundPoint };
 })();
