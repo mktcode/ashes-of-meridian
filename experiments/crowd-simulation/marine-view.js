@@ -23,8 +23,8 @@
       uniform vec2 scale;
       out vec3 surfaceNormal;
       void main() {
-        vec3 p = (model * vec4(position, 1.0)).xyz - vec3(0.0, 0.95, 0.0);
-        gl_Position = vec4(dot(p, right) * scale.x, dot(p, up) * scale.y, -dot(p, eye) / 20.0, 1.0);
+        vec3 p = (model * vec4(position, 1.0)).xyz;
+        gl_Position = vec4(dot(p, right) * scale.x, dot(p, up) * scale.y, -dot(p, eye) / 80.0, 1.0);
         surfaceNormal = transpose(inverse(mat3(model))) * normal;
       }`), shader(gl.FRAGMENT_SHADER, `#version 300 es
       precision highp float;
@@ -93,35 +93,55 @@
       gl.drawArrays(gl.TRIANGLES, 0, 36);
     }
 
-    let yaw = 0.55, pitch = 0.22, zoom = 1;
-    let paused = false, time = 0, runWeight = 0, previous = null;
-    const state = document.getElementById('state');
+    const world = CrowdSimulation.createWorld();
+    let yaw = 0.55, pitch = 0.90, zoom = 1;
+    let paused = false, previous = null;
     const speed = document.getElementById('speed');
     const pause = document.getElementById('pause');
     speed.addEventListener('input', () => { document.getElementById('speed-value').textContent = `${Number(speed.value).toFixed(2)}×`; });
-    state.addEventListener('change', () => { status.textContent = state.selectedOptions[0].textContent; });
     pause.addEventListener('click', () => {
       paused = !paused;
       pause.textContent = paused ? 'Fortsetzen' : 'Pause';
       pause.setAttribute('aria-pressed', String(paused));
     });
-    document.getElementById('reset').addEventListener('click', () => { yaw = 0.55; pitch = 0.22; zoom = 1; });
+    document.getElementById('reset').addEventListener('click', () => { yaw = 0.55; pitch = 0.90; zoom = 1; });
+    function commandAt(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (event.clientX - rect.left - canvas.clientLeft) / canvas.clientWidth * 2 - 1;
+      const y = 1 - (event.clientY - rect.top - canvas.clientTop) / canvas.clientHeight * 2;
+      if (Math.abs(x) > 1 || Math.abs(y) > 1) return;
+      const camera = CrowdSimulation.cameraFrame(yaw, pitch, zoom, canvas.clientWidth, canvas.clientHeight);
+      const point = CrowdSimulation.groundPoint(x, y, camera);
+      if (point) CrowdSimulation.moveTo(world, point);
+    }
     let drag = null;
+    canvas.addEventListener('contextmenu', event => event.preventDefault());
     canvas.addEventListener('pointerdown', event => {
-      if (drag || event.button !== 0) return;
-      drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      if (drag) { drag.cancelled = true; return; }
+      if (event.button !== 0 && event.button !== 2) return;
+      drag = { id: event.pointerId, button: event.button, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, moved: false, cancelled: false };
       canvas.setPointerCapture(event.pointerId);
     });
     canvas.addEventListener('pointermove', event => {
-      if (!drag || drag.id !== event.pointerId) return;
+      if (!drag || drag.id !== event.pointerId || drag.cancelled) return;
+      if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) <= 6) return;
+      drag.moved = true;
       yaw -= (event.clientX - drag.x) * 0.008;
-      pitch = Math.max(-0.15, Math.min(1.25, pitch + (event.clientY - drag.y) * 0.008));
+      pitch = Math.max(0.35, Math.min(1.35, pitch + (event.clientY - drag.y) * 0.008));
       drag.x = event.clientX; drag.y = event.clientY;
     });
+    canvas.addEventListener('pointerup', event => {
+      if (!drag || drag.id !== event.pointerId) return;
+      if (!drag.moved && !drag.cancelled && drag.button === 0
+        && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) <= 6) commandAt(event);
+      drag = null;
+      canvas.releasePointerCapture(event.pointerId);
+    });
+    canvas.addEventListener('pointercancel', () => { drag = null; });
     canvas.addEventListener('lostpointercapture', () => { drag = null; });
     canvas.addEventListener('wheel', event => {
       event.preventDefault();
-      zoom = Math.max(0.6, Math.min(2.2, zoom * Math.exp(-event.deltaY * 0.001)));
+      zoom = Math.max(0.7, Math.min(3, zoom * Math.exp(-event.deltaY * 0.001)));
     }, { passive: false });
     canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault();
@@ -133,35 +153,43 @@
       if (gl.isContextLost()) return;
       const dt = previous === null ? 0 : Math.min((now - previous) / 1000, 0.05);
       previous = now;
-      if (!paused) {
-        time += dt * Number(speed.value);
-        const target = state.value === 'run' ? 1 : 0;
-        runWeight += (target - runWeight) * (1 - Math.exp(-dt * 10));
-      }
+      if (!paused) CrowdSimulation.update(world, dt * Number(speed.value));
+      const moving = world.marines.some(marine => marine.moving);
+      const message = paused ? 'Pausiert' : world.destination
+        ? `${moving ? 'Alle Marines laufen zum Ziel' : 'Alle Marines am Ziel · Idle'} (${world.destination.x.toFixed(1)}, ${world.destination.z.toFixed(1)})`
+        : 'Klick auf das Spielfeld setzt das gemeinsame Ziel.';
+      if (status.textContent !== message) status.textContent = message;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       gl.viewport(0, 0, w, h);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      const c = Math.cos(yaw), s = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-      gl.uniform3fv(uniforms.right, [c, 0, -s]);
-      gl.uniform3fv(uniforms.up, [-s * sp, cp, -c * sp]);
-      gl.uniform3fv(uniforms.eye, [s * cp, sp, c * cp]);
-      const scale = 0.8 * zoom * Math.min(w, h);
-      gl.uniform2f(uniforms.scale, scale / w, scale / h);
-      box(identity(), [0, -0.045, 0], [3.4, 0.08, 3.4], [0.18, 0.23, 0.26]);
-      for (let i = -3; i <= 3; i++) {
-        box(identity(), [i * 0.5, -0.003, 0], [0.008, 0.004, 3.4], [0.27, 0.33, 0.35]);
-        box(identity(), [0, -0.003, i * 0.5], [3.4, 0.004, 0.008], [0.27, 0.33, 0.35]);
+      const camera = CrowdSimulation.cameraFrame(yaw, pitch, zoom, w, h);
+      for (const name of ['right', 'up', 'eye']) gl.uniform3fv(uniforms[name], camera[name]);
+      gl.uniform2fv(uniforms.scale, camera.scale);
+      const half = CrowdSimulation.halfSize, size = half * 2;
+      box(identity(), [0, -0.045, 0], [size, 0.08, size], [0.18, 0.23, 0.26]);
+      for (let i = -half; i <= half; i++) {
+        box(identity(), [i, -0.003, 0], [0.015, 0.004, size], [0.27, 0.33, 0.35]);
+        box(identity(), [0, -0.003, i], [size, 0.004, 0.015], [0.27, 0.33, 0.35]);
       }
-      const pose = MarineModel.samplePose(time, runWeight), joints = {};
-      for (const part of MarineModel.parts) {
-        const animation = pose[part.name] || {};
-        const offset = animation.offset || [0, 0, 0];
-        const local = multiply(translate(part.pivot.map((v, i) => v + offset[i])), rotate(animation.rotation || [0, 0, 0]));
-        const joint = multiply(part.parent ? joints[part.parent] : identity(), local);
-        joints[part.name] = joint;
-        box(joint, part.center, part.size, part.color);
+      if (world.destination) {
+        const { x, z } = world.destination;
+        const color = moving ? [0.90, 0.68, 0.28] : [0.45, 0.76, 0.48];
+        box(identity(), [x, 0.015, z], [0.65, 0.02, 0.07], color);
+        box(identity(), [x, 0.015, z], [0.07, 0.02, 0.65], color);
+      }
+      for (const marine of world.marines) {
+        const root = multiply(translate([marine.x, 0, marine.z]), rotate([0, marine.yaw, 0]));
+        const pose = MarineModel.samplePose(marine.time, marine.runWeight), joints = {};
+        for (const part of MarineModel.parts) {
+          const animation = pose[part.name] || {};
+          const offset = animation.offset || [0, 0, 0];
+          const local = multiply(translate(part.pivot.map((v, i) => v + offset[i])), rotate(animation.rotation || [0, 0, 0]));
+          const joint = multiply(part.parent ? joints[part.parent] : root, local);
+          joints[part.name] = joint;
+          box(joint, part.center, part.size, part.color);
+        }
       }
       requestAnimationFrame(frame);
     }

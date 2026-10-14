@@ -14,23 +14,23 @@
     label { display: inline-flex; align-items: center; gap: 8px; }
     button, select { font: inherit; padding: 8px 12px; color: inherit; background: #21313e; border: 1px solid #425765; border-radius: 5px; }
     button { cursor: pointer; }
-    canvas { display: block; width: 100%; height: 65vh; min-height: 320px; background: #111b24; border: 1px solid #354b5a; border-radius: 8px; touch-action: none; cursor: grab; }
+    canvas { display: block; width: 100%; height: 65vh; min-height: 320px; background: #111b24; border: 1px solid #354b5a; border-radius: 8px; touch-action: none; cursor: crosshair; }
     #status { min-height: 1.6em; }
   </style>
 </head>
 <body>
   <h1>Crowd Simulation · Marine</h1>
-  <p>Erster Modellbaustein: ein einfacher Low-Poly-Marine mit Helm, Visier und Panzerung. Noch keine Crowd, Navigation oder Spiellogik.</p>
+  <p>Ein minimales RTS-Experiment auf einem großen Spielfeld: Ein Klick setzt das gemeinsame Ziel für alle Marines — ohne Auswahl. Aktuell ist ein Marine unterwegs, noch ohne Hindernisse oder Wegfindung.</p>
   <div class="controls">
-    <label>Animation <select id="state"><option value="idle">Idle · Bereitschaft</option><option value="run">Run · Laufen auf der Stelle</option></select></label>
     <label>Tempo <input id="speed" type="range" min="0.25" max="2" step="0.05" value="1"><output id="speed-value">1.00×</output></label>
     <button id="pause" type="button" aria-pressed="false">Pause</button>
     <button id="reset" type="button">Kamera zurücksetzen</button>
   </div>
-  <canvas id="scene" role="img" aria-label="Drehbares 3D-Modell eines animierten Marines"></canvas>
-  <p id="status" role="status">Idle · Bereitschaft</p>
-  <small>Ziehen: Kamera drehen / neigen · Mausrad: zoomen. Auch per Touch drehbar.<br>Idle: Atmung und leichte Kopfbewegung. Run: gegenläufige Arme und Beine mit Kniebeugung. Der Marine bleibt am Ursprung.</small>
+  <canvas id="scene" role="img" aria-label="Interaktives 3D-Spielfeld: Klicken oder Tippen bewegt alle Marines zum Ziel"></canvas>
+  <p id="status" role="status">Klick auf das Spielfeld setzt das gemeinsame Ziel.</p>
+  <small>Klick / Tippen: alle Marines zum Ziel bewegen · Ziehen: Kamera drehen / neigen · Mausrad: zoomen.<br>Das Zielkreuz zeigt den gemeinsamen Treffpunkt. Unterwegs läuft der Marine, am Ziel wechselt er automatisch zu Idle. Ein neuer Klick ersetzt den bisherigen Befehl.</small>
   <script src="marine-model.js"></script>
+  <script src="crowd-core.js"></script>
   <script src="marine-view.js"></script>
 </body>
 </html>
