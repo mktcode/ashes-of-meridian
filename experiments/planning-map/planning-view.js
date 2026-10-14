@@ -75,8 +75,6 @@ function buildRoadRamps(plan) {
     const a = plan.cells[edge.a], b = plan.cells[edge.b];
     if (a.offset === b.offset) continue;
     const high = a.offset > b.offset ? a : b, low = high === a ? b : a;
-    const highRegion = plan.regions[high === a ? edge.a : edge.b];
-    const lowRegion = plan.regions[low === a ? edge.a : edge.b];
     const edgeIndex = high.points.findIndex((p, i) =>
       [p, high.points[(i + 1) % 6]].every((corner) => low.points.some((other) => distance(corner, other) < 1e-6)));
     if (edgeIndex < 0) throw Error('Road ramp requires neighboring cells.');
@@ -84,32 +82,19 @@ function buildRoadRamps(plan) {
     const length = distance(start, end);
     const tangent = { x: (end.x - start.x) / length, y: (end.y - start.y) / length };
     const normal = { x: -tangent.y, y: tangent.x };
-    const roadLength = distance(lowRegion, highRegion);
-    const direction = { x: (highRegion.x - lowRegion.x) / roadLength, y: (highRegion.y - lowRegion.y) / roadLength };
-    const dot = (p) => p.x * normal.x + p.y * normal.y;
-    const gradeAxis = dot(direction);
-    const t = -dot({ x: lowRegion.x - start.x, y: lowRegion.y - start.y }) / gradeAxis;
-    const crossing = { x: lowRegion.x + direction.x * t, y: lowRegion.y + direction.y * t };
-    // First green-footprint intersection along the road: ramp ends halfway there.
-    let greenDistance = Infinity;
-    for (let i = 0; i < highRegion.points.length; i++) {
-      const p = highRegion.points[i], q = highRegion.points[(i + 1) % highRegion.points.length];
-      const sx = q.x - p.x, sy = q.y - p.y;
-      const denominator = direction.x * sy - direction.y * sx;
-      if (Math.abs(denominator) < 1e-8) continue;
-      const px = p.x - crossing.x, py = p.y - crossing.y;
-      const along = (px * sy - py * sx) / denominator;
-      const segment = (px * direction.y - py * direction.x) / denominator;
-      if (along > 0 && segment >= 0 && segment <= 1) greenDistance = Math.min(greenDistance, along);
-    }
-    if (!Number.isFinite(greenDistance)) throw Error('Road misses green footprint.');
-    const run = greenDistance / 2, width = ROAD_RADIUS / gradeAxis;
+    const roadLength = distance(low, high);
+    const direction = { x: (high.x - low.x) / roadLength, y: (high.y - low.y) / roadLength };
+    const gradeAxis = direction.x * normal.x + direction.y * normal.y;
+    const crossing = { x: (low.x + high.x) / 2, y: (low.y + high.y) / 2 };
+    // Halfway from the shared edge to the cell center leaves a connected plateau
+    // and keeps cuts at neighboring edges disjoint.
+    const run = distance(crossing, high) / 2, width = ROAD_RADIUS / gradeAxis;
     const left = { x: crossing.x - tangent.x * width, y: crossing.y - tangent.y * width };
     const right = { x: crossing.x + tangent.x * width, y: crossing.y + tangent.y * width };
     const points = [left, right, { x: right.x + direction.x * run, y: right.y + direction.y * run },
       { x: left.x + direction.x * run, y: left.y + direction.y * run }];
     ramps.push({ highCellId: high.id, lowCellId: low.id, edgeIndex, crossing, direction, normal,
-      run, greenDistance, points, lowHeight: CELL_DATUM + low.offset, highHeight: CELL_DATUM + high.offset });
+      run, points, lowHeight: CELL_DATUM + low.offset, highHeight: CELL_DATUM + high.offset });
   }
   return ramps;
 }
@@ -121,7 +106,7 @@ function rampHeight(ramp, point) {
 function buildPlanningMesh(plan) {
   const triangles = [], lines = [], ramps = buildRoadRamps(plan);
   const vertex = (target, point, height, color) => target.push(point.x, point.y, height, ...color);
-  function surface(points, heightAt, color, lift = 0) {
+  function surface(points, heightAt, color) {
     if (polygonArea(points) < 1e-6) return;
     const center = {
       x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
@@ -130,9 +115,9 @@ function buildPlanningMesh(plan) {
     const outline = curvePath(plan, points, true), warpedCenter = warpPoint(plan, center);
     for (let i = 0; i < outline.length; i++) {
       const a = outline[i], b = outline[(i + 1) % outline.length];
-      vertex(triangles, warpedCenter, heightAt(center) + lift, color);
-      vertex(triangles, a, heightAt(a.source) + lift, color);
-      vertex(triangles, b, heightAt(b.source) + lift, color);
+      vertex(triangles, warpedCenter, heightAt(center), color);
+      vertex(triangles, a, heightAt(a.source), color);
+      vertex(triangles, b, heightAt(b.source), color);
     }
   }
   function wall(a, b, bottomAt, topAt, color, rim = false) {
@@ -171,13 +156,6 @@ function buildPlanningMesh(plan) {
     for (const ramp of cellRamps) for (const i of [1, 3]) {
       wall(ramp.points[i], ramp.points[(i + 1) % 4], (p) => rampHeight(ramp, p), flatHeight, [0.25, 0.285, 0.32]);
     }
-    function overlay(outline, lift, color) {
-      const source = outline.map((p) => p.source || p);
-      const clipped = clipPolygon(source, cell.points);
-      for (const patch of patches) surface(clipPolygon(clipped, patch.points), patch.heightAt, color, lift);
-    }
-    for (const edge of plan.edges) overlay(edge.outline, 0.08, edge.loop ? [0.66, 0.47, 0.9] : [0.8, 0.85, 0.65]);
-    for (const region of plan.regions) overlay(region.outline, 0.2, [0.36, 0.8, 0.57]);
   }
   return { triangles: new Float32Array(triangles), lines: new Float32Array(lines) };
 }
@@ -261,7 +239,7 @@ function createPlanningRenderer(canvas, labels) {
     if (gl.getError() !== gl.NO_ERROR) throw Error('WebGL-Zeichnen fehlgeschlagen.');
     labels.replaceChildren();
     for (const cell of plan.cells) {
-      // Offset labels sit near the cell rim, not on the green footprint.
+      // Keep offset labels near the cell rim, away from the central plateau.
       const anchor = warpPoint(plan, { x: cell.x, y: cell.y - 23 });
       const p = project3D(anchor, CELL_DATUM + cell.offset, yaw);
       const label = document.createElement('span');

@@ -37,6 +37,21 @@ function checkHeights(cells, heightSteps) {
   }
   assert.ok(branching, 'alternative ascending routes exist');
 }
+function checkNetwork(plan) {
+  const ramps = sandbox.buildRoadRamps(plan);
+  const peak = plan.heightSteps.peakCellId;
+  for (const edge of plan.edges) assert.ok(sandbox.latticeNeighbor(plan.cells[edge.a], plan.cells[edge.b]));
+  for (const cell of plan.cells) {
+    let current = cell.id, steps = 0;
+    while (current !== peak) {
+      const ramp = ramps.find((ramp) => ramp.lowCellId === current);
+      assert.ok(ramp, 'actual ramp network has an ascent from every non-peak, including all minima');
+      current = ramp.highCellId;
+      assert.ok(++steps < plan.cells.length, 'no ascent cycle');
+    }
+    assert.equal(steps, cell.distanceToPeak);
+  }
+}
 function checkRamps(plan) {
   const ramps = sandbox.buildRoadRamps(plan);
   const differingRoads = plan.edges.filter((edge) => plan.cells[edge.a].offset !== plan.cells[edge.b].offset);
@@ -44,14 +59,13 @@ function checkRamps(plan) {
   for (const ramp of ramps) {
     const high = plan.cells.find((cell) => cell.id === ramp.highCellId);
     const low = plan.cells.find((cell) => cell.id === ramp.lowCellId);
-    const highRegion = plan.regions[plan.cells.indexOf(high)];
     assert.equal(high.offset - low.offset, 8);
-    assert.equal(ramp.run, ramp.greenDistance / 2, 'ends halfway along the exposed road');
+    assert.equal(ramp.run, Math.hypot(ramp.crossing.x - high.x, ramp.crossing.y - high.y) / 2, 'ends halfway to the cell center');
     assert.ok(ramp.run > 0);
     const area = sandbox.polygonArea(ramp.points);
     assert.ok(Math.abs(sandbox.polygonArea(sandbox.clipPolygon(ramp.points, high.points)) - area) < 1e-6, 'entire ramp inside higher cell');
     assert.ok(sandbox.polygonArea(sandbox.clipPolygon(ramp.points, low.points)) < 1e-6, 'no ramp in lower cell');
-    assert.ok(sandbox.polygonArea(sandbox.clipPolygon(highRegion.points, ramp.points)) < 1e-6, 'green footprint untouched');
+
     for (const p of ramp.points.slice(0, 2)) assert.ok(Math.abs(sandbox.rampHeight(ramp, p) - ramp.lowHeight) < 1e-8, 'continuous lower lip');
     for (const p of ramp.points.slice(2)) assert.ok(Math.abs(sandbox.rampHeight(ramp, p) - ramp.highHeight) < 1e-8, 'continuous upper lip');
     const midpoint = { x: ramp.crossing.x + ramp.direction.x * ramp.run / 2, y: ramp.crossing.y + ramp.direction.y * ramp.run / 2 };
@@ -72,18 +86,12 @@ for (const seed of [0, 2, 42, 4294967295]) {
       const options = { curved };
       const plan = sandbox.makePlan(seed, options);
       assert.equal(JSON.stringify(plan), JSON.stringify(sandbox.makePlan(seed, options)));
-      assert.equal(plan.regions.length, 19);
       assert.equal(plan.cells.length, 19);
       checkHeights(plan.cells, plan.heightSteps);
-      assert.ok(plan.regions.every((region) => !('offset' in region)), 'green footprints own no height offset');
       for (const [index, cell] of plan.cells.entries()) {
         assert.ok(cell.offset >= -16 && cell.offset <= 16);
-        assert.equal(cell.q, plan.regions[index].q);
-        assert.equal(cell.r, plan.regions[index].r);
         assert.equal(cell.points.length, 6);
         for (const point of cell.points) assert.ok(Math.abs(Math.hypot(point.x - cell.x, point.y - cell.y) - 53 / Math.sqrt(3)) < 1e-8);
-        const points = sandbox.clipPolygon(plan.regions[index].points, cell.points);
-        assert.equal(points.length, plan.regions[index].points.length, 'entire green footprint fits its lattice cell');
         const key = `${seed}:${index}`;
         const signature = JSON.stringify({ points: cell.points, offset: cell.offset });
         if (geometry.has(key)) assert.equal(signature, geometry.get(key), 'display options preserve cell heights and lattice');
@@ -91,27 +99,22 @@ for (const seed of [0, 2, 42, 4294967295]) {
       }
       assert.equal(plan.edges.filter((edge) => !edge.loop).length, 18);
       assert.equal(plan.edges.filter((edge) => edge.loop).length, 6);
-      assert.deepEqual(Object.keys(plan).sort(), ['border', 'cells', 'edges', 'heightSteps', 'regions', 'seed', 'warp'], 'plan contains only active planning data');
+      assert.deepEqual(Object.keys(plan).sort(), ['cells', 'edges', 'heightSteps', 'seed', 'warp'], 'no duplicate regions or unused border');
       const reachable = new Set([0]);
-      for (let pass = 0; pass < plan.regions.length; pass++) {
+      for (let pass = 0; pass < plan.cells.length; pass++) {
         for (const edge of plan.edges) {
           if (reachable.has(edge.a)) reachable.add(edge.b);
           if (reachable.has(edge.b)) reachable.add(edge.a);
         }
       }
-      assert.equal(reachable.size, plan.regions.length, 'roads connect all regions');
+      assert.equal(reachable.size, plan.cells.length, 'connections reach all cells');
+      checkNetwork(plan);
       const beforeDrawing = JSON.stringify(plan);
       const rampCount = checkRamps(plan);
       const mesh = sandbox.buildPlanningMesh(plan);
-      if (rampCount) {
-        let slopedRoad = false;
-        for (let i = 0; i < mesh.triangles.length; i += 18) {
-          const color = mesh.triangles[i + 3];
-          if (Math.abs(color - 0.8) < 1e-6 || Math.abs(color - 0.66) < 1e-6) {
-            if (Math.abs(mesh.triangles[i + 2] - mesh.triangles[i + 8]) > 1e-4) slopedRoad = true;
-          }
-        }
-        assert.ok(slopedRoad, 'road mesh follows ramp slope');
+      assert.ok(rampCount > 0);
+      for (let i = 0; i < mesh.triangles.length; i += 6) {
+        assert.ok(![0.36, 0.8, 0.66].some((color) => Math.abs(mesh.triangles[i + 3] - color) < 1e-6), 'no oval or road overlays');
       }
       assert.ok(mesh.triangles.length > 0 && mesh.lines.length > 0);
       assert.equal(mesh.triangles.length % 18, 0);
@@ -131,10 +134,18 @@ for (const seed of [0, 2, 42, 4294967295]) {
 const template = sandbox.makePlan(2, { curved: false });
 for (const peakId of template.cells.filter((cell) => ring(cell) === 2).map((cell) => cell.id)) {
   const cells = JSON.parse(JSON.stringify(template.cells));
-  checkHeights(cells, sandbox.assignSteppedHeights(cells, cells.find((cell) => cell.id === peakId)));
+  const heightSteps = sandbox.assignSteppedHeights(cells, cells.find((cell) => cell.id === peakId));
+  checkHeights(cells, heightSteps);
+  const plan = { ...template, cells, heightSteps, edges: sandbox.buildConnections(cells, peakId) };
+  checkNetwork(plan);
+  checkRamps(plan);
 }
-// More deterministic layouts exercise road jitter and nearby ramp cuts without meshing.
-for (let seed = 3; seed < 35; seed++) checkRamps(sandbox.makePlan(seed));
+// More deterministic layouts exercise connection choices and nearby ramp cuts.
+for (let seed = 3; seed < 35; seed++) {
+  const plan = sandbox.makePlan(seed);
+  checkNetwork(plan);
+  checkRamps(plan);
+}
 const levelPlan = JSON.parse(JSON.stringify(template));
 for (const cell of levelPlan.cells) cell.offset = 0;
 assert.equal(sandbox.buildRoadRamps(levelPlan).length, 0, 'level roads need no ramp');
@@ -142,4 +153,4 @@ const low = sandbox.project3D({ x: 150, y: 150 }, 8);
 const high = sandbox.project3D({ x: 150, y: 150 }, 40);
 assert.ok(high.y < low.y, 'higher offsets project visibly upwards');
 assert.equal(high.x, low.x);
-console.log('Planning map: 8 deterministic plans, all 12 outer peaks, fixed height steps, guaranteed ascents, high-cell-only road ramps, topology and 3D meshes passed.');
+console.log('Planning map: 8 deterministic plans, all 12 outer peaks, ramp-network ascents from every cell, high-cell-only cuts, topology and 3D meshes passed.');

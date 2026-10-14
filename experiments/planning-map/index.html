@@ -33,17 +33,14 @@
     <label><input id="curved" type="checkbox" checked> Gekrümmte Karte</label>
   </div>
   <div class="scene">
-    <canvas id="map" width="900" height="600" role="img" aria-label="Dreidimensionale Grid-Waben mit individuellen Höhenoffsets, Spielflächen und Planungswegen"></canvas>
+    <canvas id="map" width="900" height="600" role="img" aria-label="Dreidimensionale spielbare Grid-Waben mit Höhenoffsets und verbindenden Rampen"></canvas>
     <div id="labels" aria-label="Höhenoffsets der Waben"></div>
   </div>
   <p id="status" role="status"></p>
   <div class="legend">
-    <span style="--color:#99afc4">Waben · W-Nummer / Höhenoffset</span>
-    <span style="--color:#77ddb0">Spielflächen ohne eigenen Offset</span>
-    <span style="--color:#dce7ba">Verbindungsbaum</span>
-    <span style="--color:#bc99ff">Zusatzwege</span>
+    <span style="--color:#99afc4">Spielfläche: ganze Wabe · W-Nummer / Höhenoffset</span>
   </div>
-  <p><small>± Werte relativ zu einer gemeinsamen horizontalen Nullebene. Die Wabenplattformen sind eben und an ihren Grenzen abgestuft. Wege verbinden die Spielflächen; bei Höhenwechseln liegt die Rampe ausschließlich in der höheren Wabe und endet auf halber Wegstrecke zur grünen Spielfläche. WebGL 2 erforderlich; keine 2D-Ersatzansicht.</small></p>
+  <p><small>± Werte relativ zu einer gemeinsamen horizontalen Nullebene. Die Wabenplattformen sind eben und an ihren Grenzen abgestuft. Die ganze Wabe ist Spielfläche. Rampen verbinden die Höhenstufen und garantieren von jeder Wabe einen Aufstieg zum Hochpunkt. Sie liegen ausschließlich in der höheren Wabe und enden auf halber Strecke zur Wabenmitte. WebGL 2 erforderlich; keine 2D-Ersatzansicht.</small></p>
   <script src="planning-core.js"></script>
   <script src="planning-view.js"></script>
   <script src="planning-app.js"></script>

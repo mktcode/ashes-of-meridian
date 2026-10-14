@@ -51,7 +51,7 @@ function generate() {
     if (!renderPlan) return;
     currentPlan = makePlan(seed, { curved: checked('curved') });
     redraw();
-    status.textContent = `Seed ${seed} · ${currentPlan.cells.length} Waben · Höhenstufen ${currentPlan.heightSteps.step} · Hochpunkt W${currentPlan.heightSteps.peakCellId} · ${currentPlan.edges.length} Wege`;
+    status.textContent = `Seed ${seed} · ${currentPlan.cells.length} Waben · Höhenstufen ${currentPlan.heightSteps.step} · Hochpunkt W${currentPlan.heightSteps.peakCellId} · ${currentPlan.edges.length} Verbindungen`;
   } catch (error) {
     status.textContent = `Seed ${seed}: ${error.message}`;
   }
