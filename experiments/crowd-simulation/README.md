@@ -6,8 +6,8 @@ Server oder externe Bibliothek nötig. Eigenständiges Experiment ohne Spielanbi
 Ein prozeduraler Low-Poly-Marine aus starren, hierarchisch verbundenen Teilen:
 Helm, Visier, Brust- und Schulterpanzer, Rucksack und gegliederte Gliedmaßen.
 Auf einem großen, hügeligen Spielfeld setzt Klick / Tippen ein gemeinsames Ziel für alle
-Marines, ohne Auswahl. „Marine spawnen“ fügt jeweils einen weiteren auf einem freien,
-begehbaren Platz hinzu; der Zähler zeigt die Anzahl. Neue Marines übernehmen auch ein
+Marines, ohne Auswahl. „Marine spawnen“ fügt einen weiteren hinzu,
+„10 Marines spawnen“ bis zu zehn auf freien, begehbaren Plätzen; der Zähler zeigt die Anzahl. Neue Marines übernehmen auch ein
 bereits gesetztes Ziel. Spawnen und Befehle sind während der Pause möglich, Bewegung
 beginnt erst beim Fortsetzen. Ein neuer Befehl ersetzt den bisherigen.
 

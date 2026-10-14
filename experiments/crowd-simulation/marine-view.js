@@ -119,10 +119,18 @@
     const speed = document.getElementById('speed');
     const pause = document.getElementById('pause');
     speed.addEventListener('input', () => { document.getElementById('speed-value').textContent = `${Number(speed.value).toFixed(2)}×`; });
-    document.getElementById('spawn').addEventListener('click', () => {
-      world.notice = CrowdSimulation.spawnMarine(world) ? '' : 'Kein freier Spawn- oder Standplatz mehr vorhanden.';
+    function spawnMarines(count) {
+      world.notice = '';
+      for (let i = 0; i < count; i++) {
+        if (!CrowdSimulation.spawnMarine(world)) {
+          world.notice = 'Kein freier Spawn- oder Standplatz mehr vorhanden.';
+          break;
+        }
+      }
       document.getElementById('unit-count').textContent = String(world.marines.length);
-    });
+    }
+    document.getElementById('spawn').addEventListener('click', () => spawnMarines(1));
+    document.getElementById('spawn-ten').addEventListener('click', () => spawnMarines(10));
     pause.addEventListener('click', () => {
       paused = !paused;
       pause.textContent = paused ? 'Fortsetzen' : 'Pause';
