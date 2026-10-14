@@ -1,11 +1,10 @@
 'use strict';
-// Standalone topology, river, bridge and compatible-height planning.
+// Standalone topology, rivers, bridges and per-grid-cell height offsets.
 // Extracted from aom-map-generator 77cf9b9; no terrain generation or browser state.
 const SIZE = 300,
-  PIXELS = 480,
+  PIXELS = 900,
   ROAD_RADIUS = 7,
   HEX_RADIUS = 145;
-const OFFSET_GRADE = 0.2;
 const RIVER_RADIUS = 2.8,
   BANK_WIDTH = 3,
   FLOW_GRADE = 0.07;
@@ -613,37 +612,8 @@ function riverPolygonGap(region, river) {
   }
   return Math.max(0, gap - RIVER_SUPPORT);
 }
-function fitRiverHeights(plan, gaps) {
-  const regions = plan.regions,
-    reach = regions.map((r) => riverPolygonGap(r, plan.river));
-  // The complete river corridor is a fixed zero-offset anchor. Shortest gap
-  // distances include zero-cost polygon interiors, preventing contradictory
-  // river/region heights before any terrain is generated.
-  for (let pass = 0; pass < regions.length - 1; pass++) {
-    for (let i = 0; i < regions.length; i++)
-      for (let j = 0; j < regions.length; j++) {
-        if (i !== j) reach[i] = Math.min(reach[i], reach[j] + gaps[i][j]);
-      }
-  }
-  regions.forEach((r, i) => {
-    r.offset = Math.max(-OFFSET_GRADE * reach[i], Math.min(OFFSET_GRADE * reach[i], r.offset));
-  });
-  for (let pass = 0; pass < regions.length - 1; pass++) {
-    let changed = false;
-    for (let i = 0; i < regions.length; i++)
-      for (let j = 0; j < regions.length; j++) {
-        if (i === j) continue;
-        const bound = regions[j].offset + OFFSET_GRADE * gaps[i][j];
-        if (regions[i].offset > bound) {
-          regions[i].offset = bound;
-          changed = true;
-        }
-      }
-    if (!changed) break;
-  }
-}
 /**
- * Plan topology and compatible heights only; never read UI state.
+ * Plan topology and independent full-cell heights; never read UI state.
  * @param {number} seed Unsigned 32-bit seed.
  * @param {{curved?: boolean, rounded?: boolean}} [options]
  */
@@ -668,16 +638,20 @@ function makePlan(seed, { curved = true, rounded = true } = {}) {
   // Separate shape RNG: polygon detail does not change the existing terrain/graph draws.
   const shapeRandom = rng(seed ^ 0x504f4c59);
   for (const region of regions) shapeRegion(region, shapeRandom);
-  // Independent desired heights. Pairwise footprint gaps, not center distances,
-  // limit the available rise between the complete polygon interiors.
-  const heightRandom = rng(seed ^ 0x48454947),
-    gaps = regions.map(() => []);
-  for (const r of regions) r.offset = (heightRandom() * 2 - 1) * 16;
-  for (let i = 0; i < regions.length; i++)
-    for (let j = i + 1; j < regions.length; j++) {
-      const gap = polygonGap(regions[i], regions[j]);
-      gaps[i][j] = gaps[j][i] = gap;
-    }
+  // Heights belong to full lattice cells, not the jittered green footprints.
+  const heightRandom = rng(seed ^ 0x48454947);
+  const cells = regions.map((region, index) => {
+    const x = SIZE / 2 + 53 * (region.q + region.r / 2);
+    const y = SIZE / 2 + (53 * Math.sqrt(3) / 2) * region.r;
+    return {
+      id: index + 1, q: region.q, r: region.r, x, y,
+      offset: (heightRandom() * 2 - 1) * 16,
+      points: Array.from({ length: 6 }, (_, i) => {
+        const angle = Math.PI / 6 + i * Math.PI / 3;
+        return { x: x + 53 / Math.sqrt(3) * Math.cos(angle), y: y + 53 / Math.sqrt(3) * Math.sin(angle) };
+      }),
+    };
+  });
   // Prim's minimum spanning tree: connected by construction, with no retries.
   const connected = new Set([0]);
   while (connected.size < regions.length) {
@@ -713,9 +687,9 @@ function makePlan(seed, { curved = true, rounded = true } = {}) {
     phase: random() * Math.PI * 2,
     amplitude: 3 + random() * 6,
   }));
-  const plan = { seed, regions, edges, angle, phase, waves, rounded, warp: makeWarp(seed, curved) };
+  const plan = { seed, cells, regions, edges, angle, phase, waves, rounded, warp: makeWarp(seed, curved) };
   plan.river = planRiver(plan);
-  fitRiverHeights(plan, gaps);
+  for (const cell of cells) cell.outline = curvePath(plan, cell.points, true);
   buildCurves(plan);
   return plan;
 }

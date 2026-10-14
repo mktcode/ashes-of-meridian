@@ -1,14 +1,17 @@
 'use strict';
 const canvas = document.getElementById('map');
-const context = canvas.getContext('2d');
+let renderPlan;
+try {
+  renderPlan = createPlanningRenderer(canvas, document.getElementById('labels'));
+} catch (error) {
+  document.getElementById('status').textContent = error.message;
+}
 const seedInput = document.getElementById('seed');
 const status = document.getElementById('status');
 const checked = (id) => document.getElementById(id).checked;
 let currentPlan;
 function redraw() {
-  if (!currentPlan || !context) return;
-  context.clearRect(0, 0, PIXELS, PIXELS);
-  drawNetwork(context, currentPlan, checked('filled'), checked('dual'));
+  if (currentPlan && renderPlan) renderPlan(currentPlan);
 }
 function generate() {
   const seed = Number(seedInput.value);
@@ -17,11 +20,11 @@ function generate() {
     return;
   }
   try {
-    if (!context) throw Error('Canvas 2D ist nicht verfügbar.');
+    if (!renderPlan) return;
     currentPlan = makePlan(seed, { curved: checked('curved'), rounded: checked('rounded') });
     redraw();
     const river = currentPlan.river;
-    status.textContent = `Seed ${seed} · ${currentPlan.regions.length} Regionen · ${currentPlan.edges.length} Wege · ${river.splits} Flussaufteilungen · ${river.exits.length} Ausflüsse · ${river.bridges.length}/${river.reduction.total} Brücken erhalten · ${river.reduction.removed.length} redundante Brücken entfernt (${river.reduction.percent} % Ausdünnung).`;
+    status.textContent = `Seed ${seed} · ${currentPlan.cells.length} Waben mit eigenem Höhenoffset · ${currentPlan.edges.length} Wege · ${river.splits} Flussaufteilungen · ${river.exits.length} Ausflüsse · ${river.bridges.length}/${river.reduction.total} Brücken erhalten · ${river.reduction.removed.length} redundante Brücken entfernt (${river.reduction.percent} % Ausdünnung).`;
   } catch (error) {
     status.textContent = `Seed ${seed}: ${error.message}`;
   }
@@ -37,7 +40,6 @@ document.getElementById('random').addEventListener('click', () => {
   generate();
 });
 for (const id of ['curved', 'rounded']) document.getElementById(id).addEventListener('change', generate);
-for (const id of ['filled', 'dual']) document.getElementById(id).addEventListener('change', redraw);
 const startupSeed = new URL(location.href).searchParams.get('seed');
 if (startupSeed !== null) seedInput.value = startupSeed;
 generate();

@@ -1,124 +1,149 @@
 'use strict';
-// Read-only 2D presentation of the planning recipe.
-function polygonPath(ctx, points) {
-  ctx.beginPath();
-  points.forEach((p, i) => {
-    if (i) ctx.lineTo(p.x, p.y);
-    else ctx.moveTo(p.x, p.y);
-  });
-  ctx.closePath();
+// Fixed orthographic 3D view. All heights use one world-unit scale.
+const CELL_DATUM = 24;
+function project3D(point, height) {
+  const x = point.x - SIZE / 2, y = point.y - SIZE / 2;
+  return {
+    x: (x - y) / Math.sqrt(2),
+    y: (x + y) / Math.sqrt(6) - height * Math.sqrt(2 / 3),
+    depth: (x + y + height) / Math.sqrt(3),
+  };
 }
-function linePath(ctx, points) {
-  ctx.beginPath();
-  points.forEach((p, i) => {
-    if (i) ctx.lineTo(p.x, p.y);
-    else ctx.moveTo(p.x, p.y);
-  });
-}
-function drawNetwork(ctx, plan, filled, showDual) {
-  const scale = PIXELS / SIZE;
-  ctx.save();
-  ctx.scale(scale, scale);
-  polygonPath(ctx, plan.border);
-  ctx.fillStyle = '#303548';
-  ctx.fill();
-  ctx.strokeStyle = '#99afc4';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.clip();
-  // Potential connections are diagnostic only, not a permanent grid overlay.
-  if (showDual) {
-    ctx.strokeStyle = '#475064';
-    ctx.lineWidth = 0.6;
-    for (let i = 0; i < plan.regions.length; i++)
-      for (let j = i + 1; j < plan.regions.length; j++) {
-        const a = plan.regions[i],
-          b = plan.regions[j];
-        if (!latticeNeighbor(a, b)) continue;
-        linePath(ctx, curvePath(plan, [a, b]));
-        ctx.stroke();
+// Clip in the unwarped lattice, so all annotations share the cell boundary.
+function clipPolygon(points, boundary) {
+  let result = points;
+  for (let i = 0; i < boundary.length && result.length; i++) {
+    const a = boundary[i], b = boundary[(i + 1) % boundary.length];
+    const side = (p) => (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+    const input = result;
+    result = [];
+    let previous = input[input.length - 1], previousSide = side(previous);
+    for (const current of input) {
+      const currentSide = side(current);
+      if ((previousSide >= 0) !== (currentSide >= 0)) {
+        const t = previousSide / (previousSide - currentSide);
+        result.push({ x: previous.x + t * (current.x - previous.x), y: previous.y + t * (current.y - previous.y) });
       }
-  }
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  for (const e of plan.edges) {
-    ctx.fillStyle = ctx.strokeStyle = e.loop ? '#bc99ff' : '#dce7ba';
-    if (filled) {
-      polygonPath(ctx, e.outline);
-      ctx.fill();
-    } else {
-      ctx.lineWidth = 1.5;
-      linePath(ctx, e.points);
-      ctx.stroke();
+      if (currentSide >= 0) result.push(current);
+      previous = current;
+      previousSide = currentSide;
     }
   }
-  if (showDual) {
-    ctx.strokeStyle = '#618299';
-    ctx.lineWidth = 0.6;
-    ctx.setLineDash([2, 2]);
-    for (const e of plan.river.dual.links) {
-      linePath(ctx, e.points);
-      ctx.stroke();
+  return result;
+}
+function buildPlanningMesh(plan) {
+  const triangles = [], lines = [];
+  const vertex = (target, point, height, color) => target.push(point.x, point.y, height, ...color);
+  function flat(points, height, color) {
+    if (points.length < 3) return;
+    const center = {
+      x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+      y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+    };
+    for (let i = 0; i < points.length; i++) {
+      vertex(triangles, center, height, color);
+      vertex(triangles, points[i], height, color);
+      vertex(triangles, points[(i + 1) % points.length], height, color);
     }
-    ctx.setLineDash([]);
   }
-  ctx.fillStyle = '#39adf0';
-  for (const outline of plan.river.outlines) {
-    polygonPath(ctx, outline);
-    ctx.fill();
-  }
-  ctx.strokeStyle = '#d4f2ff';
-  ctx.lineWidth = 0.7;
-  for (const points of plan.river.curves)
-    for (let i = 12; i < points.length; i += 26) {
-      const a = points[i - 1],
-        b = points[i],
-        length = distance(a, b),
-        ux = (b.x - a.x) / length,
-        uy = (b.y - a.y) / length;
-      ctx.beginPath();
-      ctx.moveTo(b.x - ux * 3 - uy * 2, b.y - uy * 3 + ux * 2);
-      ctx.lineTo(b.x, b.y);
-      ctx.lineTo(b.x - ux * 3 + uy * 2, b.y - uy * 3 - ux * 2);
-      ctx.stroke();
+  for (const cell of plan.cells) {
+    const height = CELL_DATUM + cell.offset;
+    const topColor = cell.offset >= 0 ? [0.37, 0.44, 0.54] : [0.29, 0.35, 0.44];
+    flat(cell.outline, height, topColor);
+    for (let i = 0; i < cell.outline.length; i++) {
+      const a = cell.outline[i], b = cell.outline[(i + 1) % cell.outline.length];
+      const shade = 0.19 + 0.08 * Math.abs(b.x - a.x) / Math.max(0.001, distance(a, b));
+      const color = [shade, shade + 0.035, shade + 0.07];
+      for (const [point, z] of [[a, 0], [b, 0], [b, height], [a, 0], [b, height], [a, height]]) vertex(triangles, point, z, color);
+      vertex(lines, a, height + 0.25, [0.7, 0.79, 0.9]);
+      vertex(lines, b, height + 0.25, [0.7, 0.79, 0.9]);
     }
-  for (const b of plan.river.bridges) {
-    ctx.save();
-    polygonPath(ctx, b.outline);
-    ctx.clip();
-    ctx.fillStyle = '#d99b58';
-    for (const outline of plan.river.bridgeOutlines) {
-      polygonPath(ctx, outline);
-      ctx.fill();
+    function overlay(outline, lift, color, bounds = cell.points) {
+      const source = outline.map((p) => p.source || p);
+      const clipped = clipPolygon(clipPolygon(source, bounds), cell.points);
+      flat(clipped.map((p) => warpPoint(plan, p)), height + lift, color);
     }
-    ctx.restore();
-  }
-  for (const [i, r] of plan.regions.entries()) {
-    polygonPath(ctx, r.outline);
-    if (filled) {
-      ctx.fillStyle = '#77ddb0';
-      ctx.fill();
-    } else {
-      ctx.strokeStyle = '#77ddb0';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+    for (const edge of plan.edges) overlay(edge.outline, 0.08, edge.loop ? [0.66, 0.47, 0.9] : [0.8, 0.85, 0.65]);
+    for (const outline of plan.river.outlines) overlay(outline, 0.12, [0.16, 0.6, 0.88]);
+    for (const bridge of plan.river.bridges) {
+      const bounds = bridge.outline.map((p) => p.source);
+      for (const outline of plan.river.bridgeOutlines) overlay(outline, 0.16, [0.85, 0.58, 0.3], bounds);
     }
-    ctx.fillStyle = filled ? '#13281f' : '#ffffff';
-    ctx.font = 'bold 10px system-ui';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const center = warpPoint(plan, r);
-    ctx.fillText(String(i + 1), center.x, center.y - 4);
-    ctx.font = '7px system-ui';
-    ctx.fillText(`${r.offset >= 0 ? '+' : ''}${r.offset.toFixed(1)}`, center.x, center.y + 6);
+    for (const region of plan.regions) overlay(region.outline, 0.2, [0.36, 0.8, 0.57]);
   }
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 8px system-ui';
-  const source = warpPoint(plan, plan.river.source);
-  ctx.fillText('S', source.x, source.y);
-  for (const exit of plan.river.exits) {
-    const p = warpPoint(plan, exit);
-    ctx.fillText('A', p.x, p.y);
+  return { triangles: new Float32Array(triangles), lines: new Float32Array(lines) };
+}
+function fixedFrame(plan) {
+  const points = plan.cells.flatMap((cell) => cell.outline.flatMap((p) => [project3D(p, 0), project3D(p, CELL_DATUM + cell.offset)]));
+  const minX = Math.min(...points.map((p) => p.x)), maxX = Math.max(...points.map((p) => p.x));
+  const minY = Math.min(...points.map((p) => p.y)), maxY = Math.max(...points.map((p) => p.y));
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, scale: Math.min((PIXELS - 100) / (maxX - minX), (600 - 100) / (maxY - minY)) };
+}
+function createPlanningRenderer(canvas, labels) {
+  const gl = canvas.getContext('webgl2', { antialias: true });
+  if (!gl) throw Error('Diese 3D-Ansicht benötigt WebGL 2.');
+  function shader(type, source) {
+    const result = gl.createShader(type);
+    gl.shaderSource(result, source);
+    gl.compileShader(result);
+    if (!gl.getShaderParameter(result, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(result));
+    return result;
   }
-  ctx.restore();
+  const program = gl.createProgram();
+  const vertexShader = shader(gl.VERTEX_SHADER, `#version 300 es
+    precision highp float;
+    layout(location=0) in vec3 position;
+    layout(location=1) in vec3 color;
+    uniform vec3 frame;
+    out vec3 tint;
+    void main() {
+      vec2 p = position.xy - vec2(150.0);
+      vec2 projected = vec2((p.x-p.y)/sqrt(2.0), (p.x+p.y)/sqrt(6.0)-position.z*sqrt(2.0/3.0));
+      vec2 screen = (projected-frame.xy)*frame.z;
+      gl_Position = vec4(screen.x/450.0, -screen.y/300.0, -(p.x+p.y+position.z)/600.0, 1.0);
+      tint = color;
+    }`);
+  const fragmentShader = shader(gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
+    in vec3 tint;
+    out vec4 outputColor;
+    void main() { outputColor = vec4(tint, 1.0); }`);
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  gl.deleteShader(vertexShader);
+  gl.deleteShader(fragmentShader);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
+  const buffer = gl.createBuffer();
+  const frameUniform = gl.getUniformLocation(program, 'frame');
+  return (plan) => {
+    const mesh = buildPlanningMesh(plan), frame = fixedFrame(plan);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.08, 0.1, 0.15, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.useProgram(program);
+    gl.uniform3f(frameUniform, frame.x, frame.y, frame.scale);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+    for (const [vertices, mode] of [[mesh.triangles, gl.TRIANGLES], [mesh.lines, gl.LINES]]) {
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+      gl.drawArrays(mode, 0, vertices.length / 6);
+    }
+    if (gl.getError() !== gl.NO_ERROR) throw Error('WebGL-Zeichnen fehlgeschlagen.');
+    labels.replaceChildren();
+    for (const cell of plan.cells) {
+      // Offset labels sit near the cell rim, not on the green footprint.
+      const anchor = warpPoint(plan, { x: cell.x, y: cell.y - 23 });
+      const p = project3D(anchor, CELL_DATUM + cell.offset);
+      const label = document.createElement('span');
+      label.textContent = `W${cell.id} ${cell.offset >= 0 ? '+' : ''}${cell.offset.toFixed(1)}`;
+      label.style.left = `${50 + (p.x - frame.x) * frame.scale / 9}%`;
+      label.style.top = `${50 + (p.y - frame.y) * frame.scale / 6}%`;
+      labels.append(label);
+    }
+  };
 }

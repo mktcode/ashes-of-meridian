@@ -3,23 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AOM · Planungskarte</title>
+  <title>AOM · 3D-Planungskarte</title>
   <style>
     :root { color-scheme: dark; font: 15px system-ui, sans-serif; background: #151a24; color: #e5edf5; }
-    body { margin: 0 auto; max-width: 960px; padding: 16px; }
+    body { margin: 0 auto; max-width: 1100px; padding: 16px; }
     h1 { font-size: 1.3rem; }
     form, .options, .legend { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0; }
     input, button { font: inherit; padding: 6px; }
     input[type=number] { width: 140px; }
-    canvas { display: block; width: min(100%, 720px); height: auto; background: #202636; border-radius: 8px; }
+    .scene { position: relative; width: 100%; aspect-ratio: 3 / 2; }
+    canvas { display: block; width: 100%; height: 100%; border-radius: 8px; }
+    #labels { position: absolute; inset: 0; pointer-events: none; }
+    #labels span { position: absolute; transform: translate(-50%, -50%); font-size: clamp(8px, 1.2vw, 13px); white-space: nowrap; background: #101824dd; padding: 2px 4px; border-radius: 3px; }
     #status { min-height: 3em; line-height: 1.5; }
     .legend span { border-left: 12px solid var(--color); padding-left: 6px; }
     small { color: #aebdce; }
   </style>
 </head>
 <body>
-  <h1>Planungskarte · eigenständiges Experiment</h1>
-  <small>Nur Topologie und Höhenanker, keine Terrain-, Material- oder Spielvorschau.</small>
+  <h1>3D-Planungskarte · Wabenhöhen</h1>
+  <small>Feste schräge 3D-Ansicht ohne Kamera-Controls. Der Höhenoffset gehört jeweils zur ganzen Wabe.</small>
   <form id="generate">
     <label>Seed <input id="seed" type="number" min="0" max="4294967295" step="1" required value="2"></label>
     <button type="submit">Plan erzeugen</button>
@@ -28,19 +31,21 @@
   <div class="options">
     <label><input id="curved" type="checkbox" checked> Gekrümmte Karte</label>
     <label><input id="rounded" type="checkbox" checked> Gerundete Flüsse</label>
-    <label><input id="filled" type="checkbox" checked> Flächen anzeigen</label>
-    <label><input id="dual" type="checkbox"> Planungsnetze anzeigen</label>
   </div>
-  <canvas id="map" width="480" height="480" role="img" aria-label="Planungskarte mit Regionen, Wegen, Flüssen und Brücken"></canvas>
+  <div class="scene">
+    <canvas id="map" width="900" height="600" role="img" aria-label="Dreidimensionale Grid-Waben mit individuellen Höhenoffsets, Spielflächen und Planungswegen"></canvas>
+    <div id="labels" aria-label="Höhenoffsets der Waben"></div>
+  </div>
   <p id="status" role="status"></p>
   <div class="legend">
-    <span style="--color:#77ddb0">Regionen · Nummer / Höhenoffset</span>
+    <span style="--color:#99afc4">Waben · W-Nummer / Höhenoffset</span>
+    <span style="--color:#77ddb0">Spielflächen ohne eigenen Offset</span>
     <span style="--color:#dce7ba">Verbindungsbaum</span>
     <span style="--color:#bc99ff">Zusatzwege</span>
-    <span style="--color:#39adf0">Fluss · S: Quelle / A: Ausfluss</span>
-    <span style="--color:#d99b58">Brücken</span>
+    <span style="--color:#39adf0">Flussplanung</span>
+    <span style="--color:#d99b58">Brückenplanung</span>
   </div>
-  <p><small>Höhenoffsets relativ zum Flussdatum. Entfernte redundante Brücken bleiben bewusst aus: Nicht jede gezeichnete Wegquerung ist begehbar. Keine Freigabe für Gelände-Steigungen oder Spielbarkeit.</small></p>
+  <p><small>± Werte relativ zu einer gemeinsamen horizontalen Nullebene. Ganze Waben sind eben und an ihren Grenzen abgestuft; ihre Seiten zeigen die Höhenunterschiede. Wege, Flüsse und Brücken sind nur Planmarkierungen auf den Waben, noch keine Rampen oder physikalisch abwärts fließenden Wasserflächen. WebGL 2 erforderlich; keine 2D-Ersatzansicht.</small></p>
   <script src="planning-core.js"></script>
   <script src="planning-view.js"></script>
   <script src="planning-app.js"></script>
