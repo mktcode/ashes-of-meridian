@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AOM · Landschaftsgerüst</title>
+  <style>
+    :root { color-scheme: dark; font: 14px system-ui, sans-serif; background: #111b24; color: #dbe5eb; accent-color: #b9cbd1; }
+    * { box-sizing: border-box; }
+    body { margin: 0 auto; max-width: 1520px; padding: 20px; }
+    h1 { font-size: 1.3rem; margin: 0 0 6px; }
+    p { color: #a7b7c3; line-height: 1.5; }
+    .intro { margin: 0 0 18px; max-width: 950px; }
+    form, .options { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 14px 0; }
+    label { display: inline-flex; align-items: center; gap: 7px; }
+    input, button, select { font: inherit; }
+    input[type=number] { width: 120px; }
+    input[type=number], button, select { background: #21313e; border: 1px solid #425765; border-radius: 5px; color: inherit; padding: 7px 10px; }
+    button { cursor: pointer; }
+    button:hover { background: #314755; }
+    .scene { position: relative; overflow: hidden; border: 1px solid #354b5a; border-radius: 8px; background: #111b24; }
+    canvas { display: block; width: 100%; height: min(74vh, 920px); min-height: 400px; cursor: grab; touch-action: none; }
+    canvas.dragging { cursor: grabbing; }
+    #labels { position: absolute; inset: 0; pointer-events: none; }
+    #labels span { position: absolute; transform: translate(-50%, -100%); font-size: 11px; white-space: nowrap; padding: 4px 7px; background: #101b24d9; border: 1px solid #63808a80; border-radius: 4px; }
+    #labels span::after { content: ''; position: absolute; top: 100%; left: 50%; height: 9px; width: 1px; background: #a1b3bc; }
+    .legend { display: flex; flex-wrap: wrap; gap: 18px; padding: 12px 0; font-size: 12px; color: #a7b7c3; }
+    .legend span::before { content: ''; display: inline-block; width: 18px; height: 2px; vertical-align: middle; background: var(--color); margin-right: 7px; }
+    #status { font-size: 12px; min-height: 1.5em; margin: 8px 0; }
+    small { color: #a7b7c3; line-height: 1.6; }
+    @media (max-width: 600px) { body { padding: 10px; } canvas { height: 64vh; } #labels span { font-size: 9px; } }
+  </style>
+</head>
+<body>
+  <h1>Landschaftsgerüst · Tal, Schlucht & Pass</h1>
+  <p class="intro">Ein gewundener Aufstieg führt vom offenen Tal durch mehrere verdeckte Talräume und Pässe zur Hochfläche. Weitere Äste erschließen Seitentäler, Sackgassen und Rundwege. Gebirgsriegel trennen die Räume — kein einzelnes großes Mitteltal und keine Detailgeometrie.</p>
+  <form id="generate">
+    <label>Seed <input id="seed" type="number" min="0" max="4294967295" step="1" value="7" required></label>
+    <button type="submit">Landschaft erzeugen</button>
+    <button id="random" type="button">Anderer Seed</button>
+    <label>Zusätzliche Äste <input id="branches" type="range" min="0" max="12" step="1" value="6"><output id="branches-value" for="branches">6</output></label>
+    <label>Formstufe <select id="stage"><option value="macro">1 · Nur Großformen</option><option value="landscape" selected>2 · Ausläufer & Flanken</option></select></label>
+  </form>
+  <div class="options">
+    <label><input id="structure" type="checkbox"> Landschaftsgerüst</label>
+    <label><input id="routes" type="checkbox" checked> Erkundungsrouten</label>
+    <label><input id="places" type="checkbox" checked> Orte</label>
+    <label><input id="contours" type="checkbox"> Höhenlinien</label>
+    <button id="overview" type="button">Draufsicht</button>
+    <button id="reset" type="button">Kamera zurücksetzen</button>
+  </div>
+  <div class="scene">
+    <canvas id="terrain" role="img" aria-label="Interaktive Landschaftsskizze mit Tal, verzweigter Schlucht, Gebirgskämmen und Pass zur Hochfläche"></canvas>
+    <div id="labels"></div>
+  </div>
+  <div class="legend">
+    <span style="--color:#ebc989">Durchgehender Aufstieg</span>
+    <span style="--color:#b3966e">Seitenäste & Rundwege</span>
+    <span style="--color:#81b9c7">Tal- und Schluchtachsen (Gerüst)</span>
+    <span style="--color:#d78e7b">Gebirgskämme und Ausläufer (Gerüst)</span>
+  </div>
+  <p id="status" role="status"></p>
+  <small>Ziehen: drehen / neigen · Rechtsziehen oder Shift+Ziehen: verschieben · Mausrad: zoomen.<br>Touch: ein Finger dreht, zwei Finger verschieben / drehen / zoomen. Der helle Aufstieg bleibt bei jeder Astanzahl verbunden. Routen formen das Gelände, sind aber keine geprüfte Navigation. Die Formstufen verwenden dasselbe Landschaftsgerüst.</small>
+  <script src="landscape-core.js"></script>
+  <script src="landscape-view.js"></script>
+  <script src="landscape-app.js"></script>
+</body>
+</html>

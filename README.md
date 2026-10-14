@@ -42,6 +42,8 @@ Bei Speicherfehlern bleibt Fortschritt nur im Tab; Reload kann ältere Werte lad
 - [Hosting und itch.io](docs/deployment.md), [Kartenbetrachter, Capture und Diagnose](docs/scene-capture.md).
 - [Offene Arbeit](docs/issues/projektfahrplan.md), [Geschichte](docs/story.md) (deutsche interne Fassung).
 - [3D-Planungskarten-Experiment](experiments/planning-map/README.md): unabhängig vom Spiel.
+- [Natürliches Terrain – Höhenfeld-Skizze](experiments/natural-terrain/README.md): erster Noise-basierter Ansatz.
+- [Landschaftsgerüst – Tal, Schlucht & Pass](experiments/landscape-structure/README.md): neuer Entwurf mit geplanten Großformen, Erkundungsrouten und Kamerasteuerung.
 
 `map-viewer.html` zeigt Landschaften ohne Gefecht oder Profilzugriff.
 Das separate Terrainlabor liegt im Parallelprojekt `../../aom-map-generator/` mit eigener README.

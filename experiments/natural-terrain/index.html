@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AOM · Natürliches Terrain</title>
+  <style>
+    :root { color-scheme: dark; font: 14px system-ui, sans-serif; background: #141c25; color: #dce5eb; }
+    body { max-width: 1400px; margin: auto; padding: 20px; }
+    h1 { font-size: 1.25rem; margin: 0 0 8px; }
+    p { color: #a6b7c4; line-height: 1.5; }
+    form, .options { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 16px 0; }
+    input, button { font: inherit; }
+    button, input[type=number] { padding: 7px 10px; background: #253340; color: inherit; border: 1px solid #465968; border-radius: 5px; }
+    input[type=number] { width: 115px; }
+    label { display: inline-flex; gap: 8px; align-items: center; }
+    canvas { display: block; width: 100%; height: min(72vh, 850px); min-height: 360px; background: #141c25; border: 1px solid #344553; border-radius: 8px; touch-action: none; cursor: grab; }
+    canvas.dragging { cursor: grabbing; }
+    #status { font-size: 12px; min-height: 1.5em; }
+    small { color: #a6b7c4; }
+  </style>
+</head>
+<body>
+  <h1>Natürliches Terrain · Höhenfeld-Skizze</h1>
+  <small>Ein zusammenhängender Anstieg mit tiefer und hoher Ebene, Höhenzügen und Schluchten. Keine Waben, Stempel oder Detailgeometrie.</small>
+  <form id="generate">
+    <label>Seed <input id="seed" type="number" min="0" max="4294967295" step="1" value="12" required></label>
+    <button type="submit">Neu erzeugen</button>
+    <button id="random" type="button">Anderer Seed</button>
+    <button id="reset" type="button">Kamera zurücksetzen</button>
+  </form>
+  <div class="options">
+    <label>Relief <input id="relief" type="range" min="0.3" max="1.8" step="0.05" value="1"></label>
+    <label><input id="roads" type="checkbox" checked> Wege markieren</label>
+    <label><input id="contours" type="checkbox" checked> Höhenlinien</label>
+  </div>
+  <canvas id="terrain" role="img" aria-label="Drehbares natürliches Terrain mit zwei Ebenen und verbindenden Wegen"></canvas>
+  <p id="status" role="status"></p>
+  <p><small>Ziehen: drehen und neigen · Rechtsziehen oder Shift+Ziehen: verschieben · Mausrad: zoomen.<br>Touch: ein Finger dreht, zwei Finger verschieben / drehen / zoomen. Wege sind nur aufliegende Trassenmarkierungen, keine geprüften begehbaren Verbindungen.</small></p>
+  <script src="terrain.js"></script>
+</body>
+</html>
