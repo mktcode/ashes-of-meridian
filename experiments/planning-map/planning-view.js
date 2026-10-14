@@ -1,8 +1,10 @@
 'use strict';
-// Fixed orthographic 3D view. All heights use one world-unit scale.
+// Orthographic 3D view with yaw only; fixed pitch and world-unit scale.
 const CELL_DATUM = 24;
-function project3D(point, height) {
-  const x = point.x - SIZE / 2, y = point.y - SIZE / 2;
+function project3D(point, height, yaw = 0) {
+  const dx = point.x - SIZE / 2, dy = point.y - SIZE / 2;
+  const x = Math.cos(yaw) * dx - Math.sin(yaw) * dy;
+  const y = Math.sin(yaw) * dx + Math.cos(yaw) * dy;
   return {
     x: (x - y) / Math.sqrt(2),
     y: (x + y) / Math.sqrt(6) - height * Math.sqrt(2 / 3),
@@ -74,10 +76,11 @@ function buildPlanningMesh(plan) {
   return { triangles: new Float32Array(triangles), lines: new Float32Array(lines) };
 }
 function fixedFrame(plan) {
-  const points = plan.cells.flatMap((cell) => cell.outline.flatMap((p) => [project3D(p, 0), project3D(p, CELL_DATUM + cell.offset)]));
-  const minX = Math.min(...points.map((p) => p.x)), maxX = Math.max(...points.map((p) => p.x));
-  const minY = Math.min(...points.map((p) => p.y)), maxY = Math.max(...points.map((p) => p.y));
-  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, scale: Math.min((PIXELS - 100) / (maxX - minX), (600 - 100) / (maxY - minY)) };
+  // Rotation-invariant bounds prevent implicit zoom or recentering during drag.
+  const radius = Math.max(...plan.cells.flatMap((cell) => cell.outline.map((p) => Math.hypot(p.x - SIZE / 2, p.y - SIZE / 2))));
+  const height = Math.max(...plan.cells.map((cell) => CELL_DATUM + cell.offset)) + 0.25;
+  return { x: 0, y: -height * Math.sqrt(2 / 3) / 2,
+    scale: Math.min((PIXELS - 100) / (2 * radius), 500 / (2 * radius / Math.sqrt(3) + height * Math.sqrt(2 / 3))) };
 }
 function createPlanningRenderer(canvas, labels) {
   const gl = canvas.getContext('webgl2', { antialias: true });
@@ -95,9 +98,11 @@ function createPlanningRenderer(canvas, labels) {
     layout(location=0) in vec3 position;
     layout(location=1) in vec3 color;
     uniform vec3 frame;
+    uniform vec2 rotation;
     out vec3 tint;
     void main() {
-      vec2 p = position.xy - vec2(150.0);
+      vec2 source = position.xy - vec2(150.0);
+      vec2 p = vec2(rotation.x*source.x-rotation.y*source.y, rotation.y*source.x+rotation.x*source.y);
       vec2 projected = vec2((p.x-p.y)/sqrt(2.0), (p.x+p.y)/sqrt(6.0)-position.z*sqrt(2.0/3.0));
       vec2 screen = (projected-frame.xy)*frame.z;
       gl_Position = vec4(screen.x/450.0, -screen.y/300.0, -(p.x+p.y+position.z)/600.0, 1.0);
@@ -114,31 +119,45 @@ function createPlanningRenderer(canvas, labels) {
   gl.deleteShader(vertexShader);
   gl.deleteShader(fragmentShader);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
-  const buffer = gl.createBuffer();
+  const batches = [
+    { buffer: gl.createBuffer(), mode: gl.TRIANGLES, count: 0 },
+    { buffer: gl.createBuffer(), mode: gl.LINES, count: 0 },
+  ];
   const frameUniform = gl.getUniformLocation(program, 'frame');
-  return (plan) => {
-    const mesh = buildPlanningMesh(plan), frame = fixedFrame(plan);
+  const rotationUniform = gl.getUniformLocation(program, 'rotation');
+  let uploadedPlan, frame;
+  return (plan, yaw = 0) => {
+    if (uploadedPlan !== plan) {
+      const mesh = buildPlanningMesh(plan);
+      frame = fixedFrame(plan);
+      for (const [index, vertices] of [mesh.triangles, mesh.lines].entries()) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, batches[index].buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        batches[index].count = vertices.length / 6;
+      }
+      uploadedPlan = plan;
+    }
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.08, 0.1, 0.15, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
     gl.useProgram(program);
     gl.uniform3f(frameUniform, frame.x, frame.y, frame.scale);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.uniform2f(rotationUniform, Math.cos(yaw), Math.sin(yaw));
     gl.enableVertexAttribArray(0);
     gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
-    for (const [vertices, mode] of [[mesh.triangles, gl.TRIANGLES], [mesh.lines, gl.LINES]]) {
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.drawArrays(mode, 0, vertices.length / 6);
+    for (const batch of batches) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, batch.buffer);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+      gl.drawArrays(batch.mode, 0, batch.count);
     }
     if (gl.getError() !== gl.NO_ERROR) throw Error('WebGL-Zeichnen fehlgeschlagen.');
     labels.replaceChildren();
     for (const cell of plan.cells) {
       // Offset labels sit near the cell rim, not on the green footprint.
       const anchor = warpPoint(plan, { x: cell.x, y: cell.y - 23 });
-      const p = project3D(anchor, CELL_DATUM + cell.offset);
+      const p = project3D(anchor, CELL_DATUM + cell.offset, yaw);
       const label = document.createElement('span');
       label.textContent = `W${cell.id} ${cell.offset >= 0 ? '+' : ''}${cell.offset.toFixed(1)}`;
       label.style.left = `${50 + (p.x - frame.x) * frame.scale / 9}%`;

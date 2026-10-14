@@ -39,7 +39,7 @@ Das Spiel ist **Singleplayer-only** und benötigt keinen Backenddienst. Eine sp�
 - [Audio und Sprachinhalte](docs/audio.md): Aufnahmen, Texte und Wiedergabeverträge.
 - [Prüfungen](docs/testing.md): `npm run check:quality` für das kurze Qualitätsnetz, gezielte Tests, Freigaben und Diagnose.
 - [Subagents](docs/subagents.md): isolierte parallele Arbeit.
-- **[Planungskarten-Experiment](experiments/planning-map/README.md):** feste 3D-Wabenansicht mit Wabenhöhenoffsets, ohne Kamera-Controls, Terrain oder Materialien (WebGL 2); `experiments/planning-map/index.html` direkt öffnen.
+- **[Planungskarten-Experiment](experiments/planning-map/README.md):** drehbare 3D-Wabenansicht mit Wabenhöhenoffsets, festem Zoom und fester Neigung, ohne Terrain oder Materialien (WebGL 2); `experiments/planning-map/index.html` direkt öffnen.
 - **AOM Map Generator:** eigenständiges Terrainlabor im Parallelprojekt `../../aom-map-generator/` mit eigener `README.md`, Git-Historie und direkt nutzbarer `index.html`. Kartenplanung, Landschaftsformen und Materialvorschau sind weiterhin vom produktiven Spielgenerator getrennt.
 - [Projektprioritäten](docs/issues/projektfahrplan.md), [Performance](docs/issues/performance-und-mobilstabilitaet.md) und [offene Issues](docs/issues/).
 - [Geschichte](docs/story.md): deutsche interne Fassung; englische Spielfassung im Codex.

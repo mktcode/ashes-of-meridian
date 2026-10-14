@@ -2,7 +2,7 @@
 
 `index.html` direkt im Browser öffnen, auch per `file://`. Kein Build, Server, Materialasset oder Parallelprojekt erforderlich. WebGL 2 ist nötig; es gibt keine 2D-Ansicht. Reproduzierbarer Einstieg: `index.html?seed=2`.
 
-Die feste orthografische Kamera zeigt 19 zusammenhängende Grid-Waben als dreidimensionale Körper mit sichtbaren Seitenflächen. Kein Drehen, Verschieben oder Zoomen. Seeds und die bisherigen Karten-/Flusskrümmungsoptionen bleiben verfügbar.
+Die orthografische Kamera zeigt 19 zusammenhängende Grid-Waben als dreidimensionale Körper mit sichtbaren Seitenflächen. Horizontal mit linker Maustaste oder einem Finger ziehen dreht die Darstellung um die Hochachse. Kameraneigung, Maßstab und Bildmitte bleiben dabei unverändert. Kein Verschieben oder Zoomen; vertikales Ziehen hat keine Wirkung. Seeds und die bisherigen Karten-/Flusskrümmungsoptionen bleiben verfügbar.
 
 ## Höhen gehören den Waben
 
@@ -17,8 +17,9 @@ Die 19 Waben bilden den Grid-Ausschnitt; außerhalb davon liegende Teile der bis
 ## Quellen und Prüfung
 
 - `planning-core.js`: Planungslogik und Waben mit eigenem Offset.
-- `planning-view.js`: Wabenkörper, geklippte Planmarkierungen, WebGL-Tiefentest und feste 3D-Projektion.
-- `planning-app.js`: Seed und Bedienung; kein Renderloop und keine Kameraeingaben.
-- `check.mjs`: begrenzte Determinismus-, Wabengeometrie-, Offset-, Topologie- und 3D-Meshprüfung; `node experiments/planning-map/check.mjs` vom Repository aus. Die Flussprofilprüfung betrifft nur das ursprüngliche Planungsprofil, nicht die abgestufte Darstellung.
+- `planning-view.js`: Wabenkörper, geklippte Planmarkierungen, WebGL-Tiefentest und 3D-Projektion mit ausschließlich horizontaler Drehung. Drehungen verwenden das bestehende GPU-Mesh, ohne Neuplanung oder erneuten Upload.
+- `planning-app.js`: Seed und Bedienung; nur Drehgesten, keine Zoom-/Neigungseingaben und kein permanenter Renderloop.
+- `check.mjs`: begrenzte Determinismus-, Wabengeometrie-, Offset-, Topologie- und 3D-Meshprüfung einschließlich Bildgrenzen bei Drehung; `node experiments/planning-map/check.mjs` vom Repository aus.
+- `check-rotation.mjs`: Drehgesten und Pointer-Abbruch, mitdrehende Beschriftung sowie unveränderter Plan/GPU-Upload mit simuliertem DOM/WebGL; `node experiments/planning-map/check-rotation.mjs`. Die Flussprofilprüfung betrifft nur das ursprüngliche Planungsprofil, nicht die abgestufte Darstellung.
 
 Ursprünglich extrahiert aus `aom-map-generator`, Commit `77cf9b91fab3e027b88102d5d3ff91708725d7fc`, `src/terrain-core.js` und `src/terrain-planning-view.js`. Bewusst unabhängiges Experiment mit geändertem Höhenmodell, keine Laufzeitabhängigkeit und keine automatische Synchronisierung mit dem Terrainlabor. Keine zusätzliche Lizenz- oder Nutzungsfreigabe behauptet.

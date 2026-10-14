@@ -12,7 +12,8 @@
     input, button { font: inherit; padding: 6px; }
     input[type=number] { width: 140px; }
     .scene { position: relative; width: 100%; aspect-ratio: 3 / 2; }
-    canvas { display: block; width: 100%; height: 100%; border-radius: 8px; }
+    canvas { display: block; width: 100%; height: 100%; border-radius: 8px; cursor: grab; touch-action: none; }
+    canvas.dragging { cursor: grabbing; }
     #labels { position: absolute; inset: 0; pointer-events: none; }
     #labels span { position: absolute; transform: translate(-50%, -50%); font-size: clamp(8px, 1.2vw, 13px); white-space: nowrap; background: #101824dd; padding: 2px 4px; border-radius: 3px; }
     #status { min-height: 3em; line-height: 1.5; }
@@ -22,7 +23,7 @@
 </head>
 <body>
   <h1>3D-Planungskarte · Wabenhöhen</h1>
-  <small>Feste schräge 3D-Ansicht ohne Kamera-Controls. Der Höhenoffset gehört jeweils zur ganzen Wabe.</small>
+  <small>Horizontal mit Maus oder Finger ziehen zum Drehen. Zoom und Neigung bleiben fest. Der Höhenoffset gehört jeweils zur ganzen Wabe.</small>
   <form id="generate">
     <label>Seed <input id="seed" type="number" min="0" max="4294967295" step="1" required value="2"></label>
     <button type="submit">Plan erzeugen</button>

@@ -58,8 +58,8 @@ for (const seed of [0, 2, 42, 4294967295]) {
       assert.equal(JSON.stringify(plan), beforeDrawing, 'meshing is read-only');
       const frame = sandbox.fixedFrame(plan);
       assert.ok(frame.scale > 0);
-      for (const cell of plan.cells) for (const point of cell.outline) for (const z of [0, 24 + cell.offset]) {
-        const p = sandbox.project3D(point, z);
+      for (const cell of plan.cells) for (const point of cell.outline) for (const z of [0, 24 + cell.offset]) for (const yaw of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+        const p = sandbox.project3D(point, z, yaw);
         assert.ok(Math.abs((p.x - frame.x) * frame.scale) <= 450);
         assert.ok(Math.abs((p.y - frame.y) * frame.scale) <= 300);
       }
