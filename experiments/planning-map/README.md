@@ -2,7 +2,11 @@
 
 `index.html` direkt im Browser öffnen, auch per `file://`. Kein Build, Server, Materialasset oder Parallelprojekt erforderlich. WebGL 2 ist nötig; es gibt keine 2D-Ansicht. Reproduzierbarer Einstieg: `index.html?seed=2`.
 
-Die orthografische Kamera zeigt 19 zusammenhängende Waben als dreidimensionale Körper mit sichtbaren Seitenflächen. **Die ganze Wabe ist Spielfläche**, einschließlich ihrer Rampen. Keine zusätzlichen inneren Ovalflächen oder aufgemalten Wegkorridore. Horizontal mit linker Maustaste oder einem Finger ziehen dreht die Darstellung um die Hochachse. Kameraneigung, Maßstab und Bildmitte bleiben unverändert. Seeds und optionale Kartenkrümmung bleiben verfügbar.
+Die orthografische Kamera zeigt 19 zusammenhängende Waben als dreidimensionale Körper mit sichtbaren Seitenflächen. **Die ganze Wabe ist Spielfläche**, einschließlich ihrer Rampen. Keine zusätzlichen inneren Ovalflächen oder aufgemalten Wegkorridore. Horizontal mit linker Maustaste oder einem Finger ziehen dreht die Darstellung um die Hochachse. Kameraneigung und Bildmitte bleiben unverändert. Mausrad oder Zoomregler ändern den Maßstab zwischen 60 und 250 Prozent; „Zoom zurücksetzen“ stellt die Gesamtansicht wieder her. Beim Drehen bleibt der gewählte Zoom erhalten. Starkes Vergrößern schneidet den Kartenrand ab; es gibt kein Verschieben. Seeds und optionale Kartenkrümmung bleiben verfügbar.
+
+## Licht und Schatten
+
+Eine feste gerichtete Lichtquelle im Kartenraum beleuchtet Plattformen, Rampen und Wände. Grundlicht hält auch unbeleuchtete Flächen lesbar. Waben und Rampen werfen echte Schlagschatten aufeinander; die Lichtquelle dreht sich nicht mit der Kamera. Eine Tiefenkarte aus Lichtsicht mit gefilterten Schattenkanten wird nur bei neuer Geometrie erzeugt. Drehung und Zoom verwenden das bestehende Mesh und die gespeicherten Schatten. Kein zusätzlicher Boden und keine bewegliche Lichtsteuerung.
 
 ## Waben und Höhen
 
@@ -25,9 +29,9 @@ Kein Terrainraster, keine Landschaftsformen, Felsen, Vegetation, Materialien ode
 ## Quellen und Prüfung
 
 - `planning-core.js`: Waben, Höhen und aufsteigendes Verbindungsnetz.
-- `planning-view.js`: Wabenkörper und Rampenausschnitte, WebGL-Tiefentest und 3D-Projektion. Drehungen verwenden das bestehende GPU-Mesh, ohne Neuplanung oder erneuten Upload.
-- `planning-app.js`: Seed und Bedienung; nur Drehgesten, keine Zoom-/Neigungseingaben und kein permanenter Renderloop.
+- `planning-view.js`: Wabenkörper und Rampenausschnitte, WebGL-Tiefentest, feste Beleuchtung mit Shadow Map und 3D-Projektion. Kamerabewegungen verwenden das bestehende GPU-Mesh, ohne Neuplanung oder erneuten Upload.
+- `planning-app.js`: Seed und Bedienung; Drehgesten, Mausrad-/Reglerzoom, keine Neigungseingaben und kein permanenter Renderloop.
 - `check.mjs`: begrenzte Determinismus-, Wabengeometrie-, Terrassen-, Rampennetz-, Ausschnitt- und Meshprüfung einschließlich aller zwölf möglichen Außenhochpunkte und Bildgrenzen bei Drehung; `node experiments/planning-map/check.mjs` vom Repository aus.
-- `check-rotation.mjs`: Drehgesten und Pointer-Abbruch, mitdrehende Beschriftung sowie unveränderter Plan/GPU-Upload mit simuliertem DOM/WebGL; `node experiments/planning-map/check-rotation.mjs`.
+- `check-rotation.mjs`: Drehgesten und Pointer-Abbruch, begrenzter Mausrad-/Reglerzoom, mitbewegte Beschriftung sowie unveränderter Plan/GPU-Upload und Schatten-Cache mit simuliertem DOM/WebGL; `node experiments/planning-map/check-rotation.mjs`.
 
 Ursprünglich extrahiert aus `aom-map-generator`, Commit `77cf9b91fab3e027b88102d5d3ff91708725d7fc`, `src/terrain-core.js` und `src/terrain-planning-view.js`. Bewusst unabhängiges Experiment mit geändertem Höhenmodell, keine Laufzeitabhängigkeit und keine automatische Synchronisierung mit dem Terrainlabor. Keine zusätzliche Lizenz- oder Nutzungsfreigabe behauptet.

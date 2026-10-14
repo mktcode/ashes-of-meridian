@@ -11,7 +11,7 @@
     form, .options, .legend { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0; }
     input, button { font: inherit; padding: 6px; }
     input[type=number] { width: 140px; }
-    .scene { position: relative; width: 100%; aspect-ratio: 3 / 2; }
+    .scene { position: relative; width: 100%; aspect-ratio: 3 / 2; overflow: hidden; border-radius: 8px; }
     canvas { display: block; width: 100%; height: 100%; border-radius: 8px; cursor: grab; touch-action: none; }
     canvas.dragging { cursor: grabbing; }
     #labels { position: absolute; inset: 0; pointer-events: none; }
@@ -23,7 +23,7 @@
 </head>
 <body>
   <h1>3D-Planungskarte · Wabenhöhen</h1>
-  <small>Horizontal mit Maus oder Finger ziehen zum Drehen. Zoom und Neigung bleiben fest. Der Höhenoffset gehört jeweils zur ganzen Wabe.</small>
+  <small>Horizontal mit Maus oder Finger ziehen zum Drehen. Zoomen mit Mausrad oder Regler; die Neigung bleibt fest. Der Höhenoffset gehört jeweils zur ganzen Wabe.</small>
   <form id="generate">
     <label>Seed <input id="seed" type="number" min="0" max="4294967295" step="1" required value="2"></label>
     <button type="submit">Plan erzeugen</button>
@@ -31,6 +31,9 @@
   </form>
   <div class="options">
     <label><input id="curved" type="checkbox" checked> Gekrümmte Karte</label>
+    <label>Zoom <input id="zoom" type="range" min="0.6" max="2.5" step="0.01" value="1"></label>
+    <output id="zoom-value" for="zoom">100 %</output>
+    <button id="zoom-reset" type="button">Zoom zurücksetzen</button>
   </div>
   <div class="scene">
     <canvas id="map" width="900" height="600" role="img" aria-label="Dreidimensionale spielbare Grid-Waben mit Höhenoffsets und verbindenden Rampen"></canvas>
@@ -40,7 +43,7 @@
   <div class="legend">
     <span style="--color:#99afc4">Spielfläche: ganze Wabe · W-Nummer / Höhenoffset</span>
   </div>
-  <p><small>± Werte relativ zu einer gemeinsamen horizontalen Nullebene. Die Wabenplattformen sind eben und an ihren Grenzen abgestuft. Die ganze Wabe ist Spielfläche. Rampen verbinden die Höhenstufen und garantieren von jeder Wabe einen Aufstieg zum Hochpunkt. Sie liegen ausschließlich in der höheren Wabe und enden auf halber Strecke zur Wabenmitte. WebGL 2 erforderlich; keine 2D-Ersatzansicht.</small></p>
+  <p><small>± Werte relativ zu einer gemeinsamen horizontalen Nullebene. Die Wabenplattformen sind eben und an ihren Grenzen abgestuft. Die ganze Wabe ist Spielfläche. Rampen verbinden die Höhenstufen und garantieren von jeder Wabe einen Aufstieg zum Hochpunkt. Sie liegen ausschließlich in der höheren Wabe und enden auf halber Strecke zur Wabenmitte. Ein festes gerichtetes Licht erzeugt Schatten auf Waben und Rampen. WebGL 2 erforderlich; keine 2D-Ersatzansicht.</small></p>
   <script src="planning-core.js"></script>
   <script src="planning-view.js"></script>
   <script src="planning-app.js"></script>

@@ -1,5 +1,5 @@
 'use strict';
-// Orthographic 3D view with yaw only; fixed pitch and world-unit scale.
+// Orthographic 3D view with yaw and zoom; fixed pitch and world-space light.
 const CELL_DATUM = 24;
 function project3D(point, height, yaw = 0) {
   const dx = point.x - SIZE / 2, dy = point.y - SIZE / 2;
@@ -176,14 +176,39 @@ function createPlanningRenderer(canvas, labels) {
     if (!gl.getShaderParameter(result, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(result));
     return result;
   }
-  const program = gl.createProgram();
-  const vertexShader = shader(gl.VERTEX_SHADER, `#version 300 es
+  function program(vertexSource, fragmentSource) {
+    const result = gl.createProgram();
+    const shaders = [shader(gl.VERTEX_SHADER, vertexSource), shader(gl.FRAGMENT_SHADER, fragmentSource)];
+    for (const source of shaders) gl.attachShader(result, source);
+    gl.linkProgram(result);
+    for (const source of shaders) gl.deleteShader(source);
+    if (!gl.getProgramParameter(result, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(result));
+    return result;
+  }
+  // Fixed orthographic light volume encloses all seeds, including the warp.
+  const lightProjection = `
+    const vec3 lightDirection = normalize(vec3(-0.6, -0.8, 1.4));
+    vec3 lightSpace(vec3 world) {
+      vec3 p = world - vec3(150.0, 150.0, 0.0);
+      vec3 right = vec3(0.8, -0.6, 0.0);
+      vec3 up = cross(lightDirection, right);
+      return vec3(dot(p, right)/190.0, dot(p, up)/190.0, -dot(p, lightDirection)/240.0);
+    }`;
+  const shadowProgram = program(`#version 300 es
+    precision highp float;
+    layout(location=0) in vec3 position;
+    ${lightProjection}
+    void main() { gl_Position = vec4(lightSpace(position), 1.0); }`, `#version 300 es
+    precision highp float;
+    void main() { }`);
+  const viewProgram = program(`#version 300 es
     precision highp float;
     layout(location=0) in vec3 position;
     layout(location=1) in vec3 color;
     uniform vec3 frame;
     uniform vec2 rotation;
     out vec3 tint;
+    out vec3 world;
     void main() {
       vec2 source = position.xy - vec2(150.0);
       vec2 p = vec2(rotation.x*source.x-rotation.y*source.y, rotation.y*source.x+rotation.x*source.y);
@@ -191,26 +216,67 @@ function createPlanningRenderer(canvas, labels) {
       vec2 screen = (projected-frame.xy)*frame.z;
       gl_Position = vec4(screen.x/450.0, -screen.y/300.0, -(p.x+p.y+position.z)/600.0, 1.0);
       tint = color;
-    }`);
-  const fragmentShader = shader(gl.FRAGMENT_SHADER, `#version 300 es
+      world = position;
+    }`, `#version 300 es
     precision highp float;
+    precision highp sampler2DShadow;
     in vec3 tint;
+    in vec3 world;
+    uniform sampler2DShadow shadowMap;
+    uniform vec3 viewDirection;
+    uniform bool unlit;
     out vec4 outputColor;
-    void main() { outputColor = vec4(tint, 1.0); }`);
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  gl.deleteShader(vertexShader);
-  gl.deleteShader(fragmentShader);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
+    ${lightProjection}
+    void main() {
+      if (unlit) { outputColor = vec4(tint, 1.0); return; }
+      vec3 normal = normalize(cross(dFdx(world), dFdy(world)));
+      if (dot(normal, viewDirection) < 0.0) normal = -normal;
+      float diffuse = max(dot(normal, lightDirection), 0.0);
+      vec3 shadow = lightSpace(world)*0.5+0.5;
+      float bias = 0.0008 + 0.0015*(1.0-diffuse);
+      float visibility = 0.0;
+      vec2 texel = 1.0/vec2(textureSize(shadowMap, 0));
+      for (int x=-1; x<=1; x++) for (int y=-1; y<=1; y++) {
+        visibility += texture(shadowMap, vec3(shadow.xy+vec2(x,y)*texel, shadow.z-bias))/9.0;
+      }
+      outputColor = vec4(tint*(0.48 + 0.7*diffuse*visibility), 1.0);
+    }`);
+  const shadowSize = 2048;
+  const shadowTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, shadowSize, shadowSize, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+  const shadowFramebuffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFramebuffer);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, shadowTexture, 0);
+  gl.drawBuffers([gl.NONE]);
+  gl.readBuffer(gl.NONE);
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw Error('Schattenpuffer konnte nicht erstellt werden.');
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   const batches = [
     { buffer: gl.createBuffer(), mode: gl.TRIANGLES, count: 0 },
     { buffer: gl.createBuffer(), mode: gl.LINES, count: 0 },
   ];
-  const frameUniform = gl.getUniformLocation(program, 'frame');
-  const rotationUniform = gl.getUniformLocation(program, 'rotation');
+  const frameUniform = gl.getUniformLocation(viewProgram, 'frame');
+  const rotationUniform = gl.getUniformLocation(viewProgram, 'rotation');
+  const viewUniform = gl.getUniformLocation(viewProgram, 'viewDirection');
+  const unlitUniform = gl.getUniformLocation(viewProgram, 'unlit');
+  const shadowUniform = gl.getUniformLocation(viewProgram, 'shadowMap');
+  function bindBatch(batch) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, batch.buffer);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+  }
+  gl.enableVertexAttribArray(0);
+  gl.enableVertexAttribArray(1);
+  gl.enable(gl.DEPTH_TEST);
   let uploadedPlan, frame;
-  return (plan, yaw = 0) => {
+  return (plan, yaw = 0, zoom = 1) => {
     if (uploadedPlan !== plan) {
       const mesh = buildPlanningMesh(plan);
       frame = fixedFrame(plan);
@@ -219,21 +285,30 @@ function createPlanningRenderer(canvas, labels) {
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
         batches[index].count = vertices.length / 6;
       }
+      // The light and geometry are stationary: cache shadows across camera changes.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFramebuffer);
+      gl.viewport(0, 0, shadowSize, shadowSize);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(shadowProgram);
+      bindBatch(batches[0]);
+      gl.drawArrays(gl.TRIANGLES, 0, batches[0].count);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       uploadedPlan = plan;
     }
+    const scale = frame.scale * zoom;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.08, 0.1, 0.15, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);
-    gl.useProgram(program);
-    gl.uniform3f(frameUniform, frame.x, frame.y, frame.scale);
+    gl.useProgram(viewProgram);
+    gl.uniform3f(frameUniform, frame.x, frame.y, scale);
     gl.uniform2f(rotationUniform, Math.cos(yaw), Math.sin(yaw));
-    gl.enableVertexAttribArray(0);
-    gl.enableVertexAttribArray(1);
-    for (const batch of batches) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, batch.buffer);
-      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
-      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+    gl.uniform3f(viewUniform, Math.cos(yaw)+Math.sin(yaw), Math.cos(yaw)-Math.sin(yaw), 1);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
+    gl.uniform1i(shadowUniform, 0);
+    for (const [index, batch] of batches.entries()) {
+      bindBatch(batch);
+      gl.uniform1i(unlitUniform, index === 1 ? 1 : 0);
       gl.drawArrays(batch.mode, 0, batch.count);
     }
     if (gl.getError() !== gl.NO_ERROR) throw Error('WebGL-Zeichnen fehlgeschlagen.');
@@ -244,8 +319,8 @@ function createPlanningRenderer(canvas, labels) {
       const p = project3D(anchor, CELL_DATUM + cell.offset, yaw);
       const label = document.createElement('span');
       label.textContent = `W${cell.id} ${cell.offset >= 0 ? '+' : ''}${cell.offset.toFixed(1)}`;
-      label.style.left = `${50 + (p.x - frame.x) * frame.scale / 9}%`;
-      label.style.top = `${50 + (p.y - frame.y) * frame.scale / 6}%`;
+      label.style.left = `${50 + (p.x - frame.x) * scale / 9}%`;
+      label.style.top = `${50 + (p.y - frame.y) * scale / 6}%`;
       labels.append(label);
     }
   };

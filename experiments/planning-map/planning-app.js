@@ -10,10 +10,26 @@ const seedInput = document.getElementById('seed');
 const status = document.getElementById('status');
 const checked = (id) => document.getElementById(id).checked;
 let currentPlan;
-let yaw = 0;
+let yaw = 0, zoom = 1;
+const zoomInput = document.getElementById('zoom');
 function redraw() {
-  if (currentPlan && renderPlan) renderPlan(currentPlan, yaw);
+  if (currentPlan && renderPlan) renderPlan(currentPlan, yaw, zoom);
 }
+function setZoom(value) {
+  if (!Number.isFinite(value)) return;
+  zoom = Math.max(0.6, Math.min(2.5, Math.round(value * 100) / 100));
+  zoomInput.value = String(zoom);
+  document.getElementById('zoom-value').textContent = `${Math.round(zoom * 100)} %`;
+  scheduleDraw();
+}
+zoomInput.addEventListener('input', () => setZoom(Number(zoomInput.value)));
+canvas.addEventListener('wheel', (event) => {
+  event.preventDefault();
+  const units = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? canvas.clientHeight : 1;
+  const delta = Math.max(-300, Math.min(300, event.deltaY * units));
+  setZoom(zoom * Math.exp(-delta * 0.0015));
+}, { passive: false });
+document.getElementById('zoom-reset').addEventListener('click', () => setZoom(1));
 // One active pointer; horizontal motion changes yaw, vertical motion does nothing.
 let drag, drawPending = false;
 canvas.addEventListener('pointerdown', (event) => {
@@ -26,6 +42,9 @@ canvas.addEventListener('pointermove', (event) => {
   if (!drag || event.pointerId !== drag.id) return;
   yaw = (yaw + (event.clientX - drag.x) * Math.PI * 2 / canvas.clientWidth) % (Math.PI * 2);
   drag.x = event.clientX;
+  scheduleDraw();
+});
+function scheduleDraw() {
   if (!drawPending) {
     drawPending = true;
     requestAnimationFrame(() => {
@@ -33,7 +52,7 @@ canvas.addEventListener('pointermove', (event) => {
       redraw();
     });
   }
-});
+}
 function finishDrag(event) {
   if (!drag || event.pointerId !== drag.id) return;
   drag = undefined;
