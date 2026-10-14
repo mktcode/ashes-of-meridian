@@ -41,6 +41,7 @@
         vec3 tint = color;
         if (terrain) {
           tint = mix(vec3(0.27, 0.36, 0.28), vec3(0.57, 0.58, 0.40), smoothstep(-0.4, 2.1, worldPosition.y));
+          tint = mix(tint, vec3(0.38, 0.35, 0.33), 1.0 - smoothstep(0.70, 0.87, n.y));
           vec2 distanceToGrid = abs(fract(worldPosition.xz + 0.5) - 0.5);
           vec2 line = 1.0 - smoothstep(vec2(0.012), vec2(0.012) + fwidth(worldPosition.xz), distanceToGrid);
           tint *= 1.0 - 0.16 * max(line.x, line.y);
@@ -119,7 +120,7 @@
     const pause = document.getElementById('pause');
     speed.addEventListener('input', () => { document.getElementById('speed-value').textContent = `${Number(speed.value).toFixed(2)}×`; });
     document.getElementById('spawn').addEventListener('click', () => {
-      CrowdSimulation.spawnMarine(world);
+      world.notice = CrowdSimulation.spawnMarine(world) ? '' : 'Kein freier Spawn- oder Standplatz mehr vorhanden.';
       document.getElementById('unit-count').textContent = String(world.marines.length);
     });
     pause.addEventListener('click', () => {
@@ -135,7 +136,7 @@
       if (Math.abs(x) > 1 || Math.abs(y) > 1) return;
       const camera = CrowdSimulation.cameraFrame(yaw, pitch, zoom, canvas.clientWidth, canvas.clientHeight);
       const point = CrowdSimulation.groundPoint(x, y, camera);
-      if (point) CrowdSimulation.moveTo(world, point);
+      if (point) world.notice = CrowdSimulation.moveTo(world, point) ? '' : 'Dieses Ziel ist gesperrt, nicht erreichbar oder bietet zu wenig Platz.';
     }
     let drag = null;
     canvas.addEventListener('contextmenu', event => event.preventDefault());
@@ -178,9 +179,9 @@
       previous = now;
       if (!paused) CrowdSimulation.update(world, dt * Number(speed.value));
       const moving = world.marines.some(marine => marine.moving);
-      const message = paused ? 'Pausiert' : world.destination
-        ? `${moving ? 'Alle Marines laufen zum Ziel' : 'Alle Marines am Ziel · Idle'} (${world.destination.x.toFixed(1)}, ${world.destination.z.toFixed(1)})`
-        : 'Klick auf das Spielfeld setzt das gemeinsame Ziel.';
+      const message = world.notice || (paused ? 'Pausiert' : world.destination
+        ? `${moving ? 'Marines folgen dem Flow Field' : 'Alle Marines am Ziel · Idle'} (${world.destination.x.toFixed(1)}, ${world.destination.z.toFixed(1)})`
+        : 'Klick auf das Spielfeld setzt das gemeinsame Ziel.');
       if (status.textContent !== message) status.textContent = message;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
@@ -196,6 +197,10 @@
       gl.drawArrays(gl.TRIANGLES, 0, CrowdTerrain.vertices.length / 6);
       gl.bindVertexArray(vao);
       gl.uniform1i(uniforms.terrain, 0);
+      for (const obstacle of CrowdNavigation.obstacles) {
+        const root = translate([obstacle.x, obstacle.baseY, obstacle.z]);
+        box(root, [0, obstacle.height / 2, 0], [obstacle.width, obstacle.height, obstacle.depth], [0.44, 0.40, 0.34]);
+      }
       if (world.destination) {
         const { x, z } = world.destination;
         const color = moving ? [0.90, 0.68, 0.28] : [0.45, 0.76, 0.48];

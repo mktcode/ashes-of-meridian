@@ -14,7 +14,8 @@ const CrowdTerrain = (() => {
       + 1.7 * Math.exp(-((x - 5) ** 2 / 18 + (z - 4) ** 2 / 24))
       + 1.2 * Math.exp(-((x - 1) ** 2 / 18 + (z + 7) ** 2 / 14))
       - 0.55 * Math.exp(-((x - 4) ** 2 / 14 + (z + 1) ** 2 / 18))
-      + 0.16 * Math.sin(x * 0.5) * Math.cos(z * 0.4);
+      + 0.16 * Math.sin(x * 0.5) * Math.cos(z * 0.4)
+      + 0.85 * Math.max(0, Math.max(Math.abs(x), Math.abs(z)) - 8.5) ** 2;
   }
   for (let iz = 0; iz <= cells; iz++) for (let ix = 0; ix <= cells; ix++) {
     const x = -halfSize + ix * cellSize, z = -halfSize + iz * cellSize;
@@ -51,7 +52,23 @@ const CrowdTerrain = (() => {
     }
     return { y, normal: normalize(normal) };
   }
-  const heightAt = (x, z) => sample(x, z).y;
+  function heightAt(x, z) {
+    const gx = clamp((x + halfSize) / cellSize, 0, cells), gz = clamp((z + halfSize) / cellSize, 0, cells);
+    const ix = Math.min(cells - 1, Math.floor(gx)), iz = Math.min(cells - 1, Math.floor(gz));
+    const u = gx - ix, v = gz - iz, a = iz * stride + ix, b = a + 1, c = a + stride, d = c + 1;
+    return u + v <= 1
+      ? points[a][1] * (1 - u - v) + points[b][1] * u + points[c][1] * v
+      : points[d][1] * (u + v - 1) + points[c][1] * (1 - u) + points[b][1] * (1 - v);
+  }
+  function slopeAt(x, z) {
+    const gx = clamp((x + halfSize) / cellSize, 0, cells), gz = clamp((z + halfSize) / cellSize, 0, cells);
+    const ix = Math.min(cells - 1, Math.floor(gx)), iz = Math.min(cells - 1, Math.floor(gz));
+    const a = iz * stride + ix, b = a + 1, c = a + stride, d = c + 1;
+    // Physical triangle slope, not the smoothed lighting normal.
+    return gx - ix + gz - iz <= 1
+      ? Math.hypot(points[b][1] - points[a][1], points[c][1] - points[a][1]) / cellSize
+      : Math.hypot(points[d][1] - points[c][1], points[d][1] - points[b][1]) / cellSize;
+  }
   function transform(x, z, y, yaw) {
     const up = sample(x, z).normal;
     const horizontal = [Math.sin(yaw), 0, Math.cos(yaw)];
@@ -88,5 +105,5 @@ const CrowdTerrain = (() => {
     const z = clamp(origin[2] + direction[2] * nearest, -halfSize, halfSize);
     return { x, y: heightAt(x, z), z };
   }
-  return { halfSize, vertices: mesh, heightAt, sample, transform, pick };
+  return { halfSize, vertices: mesh, heightAt, slopeAt, sample, transform, pick };
 })();

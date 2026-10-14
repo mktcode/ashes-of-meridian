@@ -18,11 +18,12 @@ for (let i = 0; i < mesh.length; i += 18) {
     max = Math.max(max, mesh[vertex + 1]);
     assert.ok(Math.abs(terrain.heightAt(mesh[vertex], mesh[vertex + 2]) - mesh[vertex + 1]) < 1e-10, 'mesh vertices and CPU height agree');
     assert.ok(Math.abs(Math.hypot(mesh[vertex + 3], mesh[vertex + 4], mesh[vertex + 5]) - 1) < 1e-6);
-    assert.ok(mesh[vertex + 4] > 0.8, 'gentle walkable slopes');
+    if (Math.max(Math.abs(mesh[vertex]), Math.abs(mesh[vertex + 2])) <= 8) assert.ok(mesh[vertex + 4] > 0.8, 'gentle interior slopes');
   }
   assert.ok(Math.abs(terrain.heightAt(x, z) - y) < 1e-10, 'CPU height interpolates the actual rendered triangle, not a separate analytic surface');
 }
-assert.ok(max - min > 2, 'visible hills and depressions');
+assert.ok(max - min > 8, 'visible hills and steep mountain rim');
+for (const [x, z] of [[10, 0], [-10, 0], [0, 10], [0, -10]]) assert.ok(terrain.slopeAt(x, z) > 1, 'all four edges have steep physical triangle slopes');
 const dot = (a, b) => a.reduce((sum, value, i) => sum + value * b[i], 0);
 for (const [x, z] of [[0, 0], [-4, -3], [5, 4], [4, -1], [-12, 12], [12, -12], [1.2, 3.7]]) {
   for (const yaw of [-1.5, 0, 0.6, Math.PI]) {
@@ -32,12 +33,12 @@ for (const [x, z] of [[0, 0], [-4, -3], [5, 4], [4, -1], [-12, 12], [12, -12], [
     assert.equal(frame[13], y);
     assert.equal(frame[14], z);
     for (const vector of [right, up, forward]) assert.ok(Math.abs(Math.hypot(...vector) - 1) < 1e-10);
-    assert.ok(Math.abs(dot(right, up)) + Math.abs(dot(up, forward)) + Math.abs(dot(right, forward)) < 1e-10, 'orthonormal slope-aligned marine/marker frame');
+    assert.ok(Math.abs(dot(right, up)) + Math.abs(dot(up, forward)) + Math.abs(dot(right, forward)) < 1e-10, 'orthonormal slope-aligned marker frame');
     assert.ok(Math.abs(forward[0] * Math.cos(yaw) - forward[2] * Math.sin(yaw)) < 1e-10, 'surface alignment preserves horizontal heading');
     assert.ok(Math.abs(dot(up, terrain.sample(x, z).normal) - 1) < 1e-10);
   }
   for (const [dx, dz] of [[1e-6, 0], [0, 1e-6], [1e-6, -1e-6]]) {
-    assert.ok(Math.abs(terrain.heightAt(x + dx, z + dz) - terrain.heightAt(x - dx, z - dz)) < 1e-5, 'continuous height across vertices and triangle seams');
+    assert.ok(Math.abs(terrain.heightAt(x + dx, z + dz) - terrain.heightAt(x - dx, z - dz)) < 1e-4, 'continuous height across gentle and steep triangle seams');
   }
 }
 const camera = {
