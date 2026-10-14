@@ -2,7 +2,7 @@
 
 // Standalone landscape composition; no gameplay, DOM, or navigation constraints.
 const LandscapeCore = (() => {
-  const WIDTH = 520, LENGTH = 640, NX = 208, NY = 256;
+  const WIDTH = 520, LENGTH = 640, NX = 52, NY = 64;
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const mix = (a, b, t) => a + (b - a) * t;
   const smooth = (a, b, x) => {
