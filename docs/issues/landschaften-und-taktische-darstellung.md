@@ -1,38 +1,56 @@
-# Landschaften und taktische Darstellung: offene Abnahme
+# Menschliche Bildabnahme
 
-Zentrale menschliche Bildabnahme aller fünf natürlichen Landschaftsfamilien. Welt-/Materialrezepte sind integriert; [Weltgrenzen](../architecture.md#weltrezepte-und-feste-designs) und [Grafikpflege](../rendering.md) bleiben maßgeblich. Geländewege, Höhen-/Sichtregeln und Walling unter [Terrain](terrain-generation.md), Start-/KI-Abnahme unter [prozeduralen Gefechten](prozedurale-gefechtsstarts.md). Kein weiterer Engineumbau aus dieser Liste.
+[Gestaltungsziele](../graphics-guideline.md), [Assetpflege](../assets.md).
+Bei normalem Gefechtszoom, Bewegung, Teamfarben, Tag/Nacht und Zielgeräten prüfen;
+technische Standbilder/Tests erledigen diese Liste nicht.
 
-## Familiencharakter und Materialien
+## Landschaften und Kamera
 
-- [ ] **Alien Planet:** Markante Großformen, rundere Kuppen statt pyramidenartiger Grate, Hangvegetation/-material und Verdeckung bei normalem Zoom/Nebel beurteilen. Glassteppe wurde als leer beanstandet; seedbasierte Großformen sind integriert. Vergleich: `experiment=alien-planet&seed=9` (Glassteppe/Bergzüge), Seed `7` (Pilzlandschaft/Kraterrand). Frühere feste Geografie ist keine Vorgabe.
-- [ ] **Desert:** Warmen trockenen Canyoncharakter erhalten, keine dunkle Basaltästhetik. Grundgestaltung war positiv bewertet, Polygonwände/Bodenanschlüsse beanstandet. Erodierte Wände/Rinnen, Schutthänge, gruppiertes Geröll und Wandfuß ohne gezackten Anschluss bei Übersicht/Spielzoom abnehmen; Dünen-/Mesa-/Oasen-/Salzrezepte, Nebel/Asche und weite Eckblicke vergleichen. Kein Rückbau zum festen Layout.
-- [ ] **Westmark:** Jahreszeiten, Pflanzen/Kronen, Schnee, Tal-/Bergkulisse, Hangvegetation und Tageslicht der prozeduralen Fassungen vergleichen. Isolierter Start: `index.html?experiment=westmark`, flüchtiges Profil; das frühere Fluss-/Brückenlayout ist keine Vorgabe.
-- [ ] Materialmaßstab/-wiederholung, Boden-/Einheiten-/Minimap-Kontrast und Nachtlesbarkeit aller Familien vergleichen.
-- [ ] **Biotope:** Offene, gehölzreiche, feuchte und karge Gemeinschaften sowie zweite Pflanzenformen in Übersicht/Spielzoom prüfen. Übergänge sollen große nachvollziehbare Regionen bilden, ohne Wege/Wirtschaft zu verdecken oder Höhen überall gleich einzufärben. Gezielt karge Desert-Hochflächen, Grove/Conifer auf Haven und Reed/Fungus auf Alien vergleichen. Kosmetische Feuchte ist keine Hydrologie; hoher Wald bleibt auf Sperrflächen, offene Flächen bekommen keine neuen Blocker. [Vertrag](../rendering.md#landschaftszonen-und-wetter).
-- [ ] Hohe Vegetationsdichte, gestaffelte Kronen und niedrige Büsche insbesondere in dichtesten Seeds auf Verdeckung prüfen. Frontier `3` wurde mit erhöhter Dichte in Chromium ohne GL-/Seitenfehler geöffnet; keine Allseed-/Geräteabnahme. Mehr Bodendekor rechtfertigt keine zusätzlichen Waldhindernisse.
+- [ ] Alien: markante Großformen, rundere Kuppen, Hangmaterial/Vegetation und Verdeckung.
+  Glassteppe als leer beanstandet; Vergleiche `alien-planet` Seeds `9` und `7`.
+- [ ] Desert: warmen Canyoncharakter erhalten; Wand-/Bodenanschlüsse, Rinnen, Schutt,
+  Geröll sowie Dünen/Mesa/Oase/Salz und weite Eckblicke, keine dunkle Basaltästhetik.
+- [ ] Westmark: Jahreszeiten, Schnee, Pflanzen/Kronen und Tal-/Bergkulisse.
+- [ ] Alle Familien: Materialmaßstab/Wiederholung, Biotopübergänge, Kontrast in Welt/
+  Minimap, hohe Vegetationsdichte und Verdeckung. Karge Desert-Höhen, Grove/Conifer
+  auf Haven und Reed/Fungus auf Alien vergleichen; offene Flächen nicht optisch blockieren.
+- [ ] Endliche Außenkulisse, Anschluss/Fog und Randdekor ohne sichtbares Geländeende,
+  rechteckigen Schattenrand oder unbeabsichtigten Beckenwall. Vergleich Westmark `4`.
+  Schmale/breite Fenster, Drehung/Zoom/Resize und bebaubare Randziele.
+- [ ] Bauflächenlinien auf Hängen, bei weitem Zoom/niedriger Auflösung und Sichtgrenzen;
+  Ringaufbau, Pan/Resize und reduced motion. Zyan-Parzellen/Forumplatz bei Pause/Drehung,
+  Straßenaussparungen und Auswahlradius; Farbe ist kein Bauvalidator.
+- [ ] Verdeckten Echo-Vent per Silhouette mit Raffinerie belegen/fertigbauen;
+  ursprüngliche Karte/Seed fehlen. Kontursilhouetten in dichten Gruppen hinter Berg/Krone/Stadt.
+- [ ] Flugfreiraum, Hangarausfahrt und An-/Abstieg von Flugzeugen/Zerstörern über
+  Bergen/Decks; CPU-Hülle schützt nicht vor beliebig hohem Dekor.
 
-## Randkulisse und Kamera
+## Licht, Wetter und Modelle
 
-- [ ] Feste, bis zum erzeugten Rand dekorierte Außenkulisse und weich erhöhte Vegetations-/Steindichte in Übersicht und bei normalen Randkameras beurteilen. Westmark `4` zeigte zuvor einen harten Dekorabschluss vor leerer Gelände-Verlängerung; diese entfällt. Keine unnötig große Kulisse oder pauschal erhöhten Instanzbudgets.
-- [ ] Breite/schmale Fenster, Drehung, Zoom, Resize und Randziele prüfen: kein sichtbares Geländeende, Durchblick, heller Anschluss oder rechteckiger Schattenrand. Kamera-/Zoomgrenzen berücksichtigen Bildschirmecken und Geländeextrema; Übersichten dürfen zugunsten geschlossener Geländedeckung Teile der spielbaren Fläche abschneiden. Erreichbarkeit bebaubarer Ränder erhalten.
-- [ ] Außenhöhen dürfen keine unbeabsichtigte umlaufende Beckenform erzeugen; echte Becken-/Kraterrezepte bleiben Varianten. Die spielbare Grenze bleibt rechteckig, Kulisse verleiht weder Baufläche noch Spielsicht. Vollaufgedeckte Vergleiche müssen auch die kosmetische Sichtkulisse aufdecken. Lokale Fog-Übergänge einschließlich kreisförmigem Sichtsaum, Material-/Bewuchs-/Schattierungsanschluss und Nachtwirkung menschlich abnehmen. [Darstellungsvertrag](../rendering.md#terrain-und-renderpässe).
+Nachtatmosphäre und Manyroot-Gestaltung wurden positiv bewertet; kein Auftrag zum Abschwächen.
 
-## Taktische Lesbarkeit und Flugfreiraum
+- [ ] Dämmerung/Morgen, Nachtfülllicht/Bloom und alle Fraktionslampen auch in Performance,
+  dichten Gruppen und Kulissen. Fog-Grenzen und schattenlosen Lichtdurchtritt beachten.
+  Bodenschein auf Rampen/Krümmung, kein flächiges Leuchten.
+- [ ] Breach-Marshal-Beacon mindestens über Basis-Angriffsreichweite auf Boden/Nachbarn,
+  mehrere Beacons zusammen; Oathguard/Marshal Haltung, Gehzyklus, Stoppen, Atmung und
+  echte Schüsse. Manyroot-Tender-Dreibeingang nach kaum sichtbarer Bewegung erneut sichten;
+  Medic/Commander und Panzer/Artillerie klar unterscheiden.
+- [ ] Manyroot-Gebäude: Bloom queen/nursery, Living canopy, Erdhügel, Chrysalis-Motte
+  und gerichtete Thorn-spire-Kanone während Bau/Kampf; weitere Entwürfe nur nach eigener Priorität.
+- [ ] Zivile Wohn-/Forschungsmodelle und Forum: Silhouette, warme/cyanfarbene Fenster,
+  Deck-/Stützen-/Treppenauflage am Hang, Ghosts/Picking/Schatten. Baumdurchdringung
+  an überbrückten Klippen besonders beim Spire prüfen, keine CPU-Dekoränderung daraus ableiten.
+- [ ] Alle zwölf zivilen Stilfamilien/Rangfolgen im Spiel: besonders Cinder/Logistik,
+  Echo/Energie, Bau/Reparatur und Command/Kommandant ohne Label/Bloom unterscheiden.
+  Aktivierung/Rangkauf/Load in Welt, Archiv, Porträt und Detailansicht richtig anzeigen;
+  neutrale Vorschau bleibt neutral. Galerie: `index.html?models=civilian-upgrades`.
+- [ ] Zerstörer: eigenständige schwere Silhouette, Farben/Animation und Gruppenwirkung.
+- [ ] Dekorativer Verkehr: gedrehte Türen, Deck/Treppe am Hang, seltene Drohnenreisen,
+  Gruppenhalte und Fußwege; Verkauf/Drehung/Load dürfen keine alten Routen erzeugen.
+- [ ] Menü-Himmel/Planeten, Regen/Schnee zurückhaltend, Tracer/Funken/Explosionen/Staub;
+  nasse Bodenlichtakzente statt flächiger Aufhellung/Texturkacheln/flimmernder Glanzpunkte.
 
-- [ ] Gemeldeten verdeckten Echo-Vent mit Raffinerie belegen und Bau abschließen; Originalkarte/Seed fehlen. Silhouetten-Zielklick ist integriert, Originalfall nicht reproduziert.
-- [ ] Bauflächenlinien an Hang-/Blocker-/Sichtgrenzen, Vents und Klickvorschau beurteilen; Farbe zwischen Validatorproben bleibt Orientierung. Kosten unter [Bauplatzraster](performance-und-mobilstabilitaet.md#bauplatzraster), Bedienung unter [Citybuilding](citybuilding.md#baugrid-darstellung-und-bedienung).
-- [ ] Kontursilhouetten bei normalem Zoom, Parteienfarben, dichten Gruppen und Verdeckung durch Berge/Kronen/Stadt prüfen. Keine Sichtfreigabe durch Intro/Fog.
-
-### Flugfreiraum nach dem Reliefausbau
-
-- [ ] Flugzeug-/Zerstörerhöhe, An-/Abstieg über Bergen/Tälern/Decks und Produktionsausfahrt abnehmen. CPU-Hülle schützt nicht automatisch vor hohen Dekorbauten, Baumkronen oder Außenkulisse.
-
-## Tageszeit, Wetter und Licht
-
-- [ ] [Startbildschirm-Himmel](../rendering.md#menü-landschaftswechsel): fremde Paletten, Sternpunktgrößen, Planeten-/Sonnenwirkung und Menülesbarkeit. Chromium prüft atmosphärische/Weltraumvariante, Shader, schmales Seitenverhältnis und Ressourcenfreigabe, nicht subjektive Wirkung oder Geräteperformance.
-- [ ] [Tageszyklus](../architecture.md#weltrezepte-und-feste-designs): Morgen-/Abendübergänge und Nachtlesbarkeit aller Familien/Fraktionen, besonders auf dunklen Displays. Dunklere Nachtfüllbeleuchtung, stärkerer Bloom und [Modelllichter](modelle.md) gemeinsam prüfen. Technischer Desert-Vergleich `1415` sichert Mittag/Mitternacht und Pause, nicht alle Wetter-/Materialkombinationen.
-- [ ] Regen/Schnee in Bewegung zurückhaltend statt dominant oder einfacher Striche beurteilen; frühere verstärkte Regenfassung wurde beanstandet.
-- [ ] Bloom, Lichtanimation, Tracer/Funken/Explosionen/Staub und Brandflecken im Gefecht prüfen, kein flächiges Bodenleuchten. Räumliche Lichtzuordnung in dichten Basen/Armeen und Lichtdurchtritt ohne lokale Schatten bleiben offen.
-- [ ] **Nasse Bodenlichtakzente:** High/Balanced bei normalem Zoom vergleichen: farbige Glanzspuren statt flächiger Aufhellung, keine Texturkacheln oder flimmernden Glanzpunkte in Bewegung. Regnerische Myzel-/Graswelten, Wege und signierte nasse Ufer gegen trockene/Fels-/Schneeflächen prüfen. Schein bleibt schattenlos; Kostenneutralität auf integrierten GPUs/Mobilgeräten ist nicht belegt. [Lichtvertrag](../rendering.md#lichtanimation-und-kampfakzente).
-
-Technische CPU-/GPU-/Browserprüfungen ersetzen keine künstlerische oder Echtgeräteabnahme. Gerätekosten zentral unter [Performance](performance-und-mobilstabilitaet.md), vollständige Partien unter [Run-Abnahme](playtest-validation.md), keine zusätzlichen Vollrunden je Familie. Favoriten/Export mit [Skirmish](skirmish-gefechtskonfiguration.md) entscheiden; weitere Assets, Zivilisationsspuren, [seltene Blickfänge](unique-points-of-interest.md), Topologie und Missionen brauchen eigene Freigabe. Keine automatisch beauftragten Langläufe.
+[Terrain-/Verkehrsregeln](terrain-generation.md), [UI-Bedienung](ui-review.md),
+[Run-Abnahme](playtest-validation.md), [Gerätekosten](performance-und-mobilstabilitaet.md).
+Keine zusätzliche Vollrunde oder unbeauftragte Modell-/Engineänderung aus dieser Liste.

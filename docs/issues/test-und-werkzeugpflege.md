@@ -1,33 +1,45 @@
-# Test- und Werkzeugpflege: offene Folgearbeit
+# Test- und Werkzeugpflege
 
-[Prüfverfahren/Zeitbudget](../testing.md) und [Werkzeugkonventionen](../testing.md#schlanke-werkzeugkonventionen) sind maßgeblich. Kein automatischer Mess-/Umbauauftrag, keine geteilten mutablen VM-Kontexte als Laufzeitabkürzung. Erledigte Prüfhistorie bleibt in Git, offene fachliche Befunde hier beziehungsweise im zuständigen Issue.
+## Fachlich veraltete Fixtures
 
-## Vorrang: fachlich veraltete Startannahmen
+- [ ] Verbliebene Start-/Terrain-/Entitätszahlannahmen gegen den aktuellen Worker→bezahltes
+  HQ-Ablauf prüfen: Profil-Upgrades, vorgefertigte HQs und automatisch minende Worker
+  insbesondere in Langtests berichtigen. Lokale flache Regelarenen von echten
+  Landschafts-/Deploymentprüfungen trennen. Keine Referenzen zum Grünmachen regenerieren.
+- [ ] Westmark-KI-/Simulationsfixtures und echte FFA-Fälle erst danach gezielt mit eigener
+  Freigabe prüfen. Keine kartenspezifische Patt-Ausnahme; Dispatchtests beweisen keine
+  Erntezyklen, Gaszugänge oder autonomen Partien. [Workerbefunde](navigation-worker-und-gruppenankunft.md).
 
-Start-Upgrade-Verträge sowie lokale Produktions-/Energie-/Bau-/Upgradefälle verwenden bereits explizite Optionen beziehungsweise etablierte flache Regelarenen. Das beweist weder prozeduralen HQ-Abschluss noch Mining-/Liveness-Abnahme.
+## Bekannte Kurzprüfungsblocker
 
-- [ ] Übrige lokale Terrain-/Start-/Entitätszahlannahmen gegen aktuelle Weltrezepte und [Worker-Start](../gameplay.md#gefecht-und-fortschritt) prüfen. Verbliebene Profil-Upgrades, vorgefertigte HQs oder automatisch minende Worker insbesondere in optionalen Langtest-Fixtures berichtigen; lokale Regelarenen von echten Landschafts-/Startverträgen trennen.
-- [ ] Gemischte Fälle und Abstandregeln gezielt prüfen. Offene Worker-Langläufe unter [Navigation/Liveness](navigation-worker-und-gruppenankunft.md); prozedurale Mining-/Transportabnahme bleibt offen. Ein bestandener lokaler Abbau beweist keine Kampf-/Crowdabnahme.
-- [ ] Etablierte Basen in Fachtests ausdrücklich aufbauen; echte Deploymentprüfungen beobachten bezahlten Worker→HQ-Ablauf. Tutorial-/FFA-Verträge sichern nur Teile des Starts. [FFA](mehrparteien-simulation.md) und [Startabnahme](prozedurale-gefechtsstarts.md) erst mit passenden Fixtures bewerten. Referenzen nicht zum Grünmachen regenerieren; Ausführung und Referenzpflege separat freigeben.
+Historisch auf `2038076` festgestellt, nicht durch diese Dokumentationspflege neu ausgeführt:
 
-## Bestehende Kurzprüfungsblocker
+- [ ] `tests/ashes-of-meridian-capture.check.cjs`: Formatabweichung stoppt `check:quality`
+  in `check:format`; übrige kurze Prüfungen lassen sich unabhängig ausführen.
+- [ ] Harnessfall `fragment groups completely mirror their index directories…`:
+  `UI_SCRIPTS` enthält `capture`, Datei liegt aber unter `dist/src/capture.js`, nicht `dist/src/ui/`.
+  Verzeichniserwartung mit tatsächlichem Ladevertrag abgleichen.
 
-- [ ] Formatabweichung in `tests/ashes-of-meridian-capture.check.cjs` gezielt bereinigen: `check:quality` stoppt dort bereits in `check:format`. Die Datei ist gegenüber dem geprüften Ausgangsstand `2038076` unverändert; Lint, Repository-/Dokumentationsprüfung, Build und die übrigen expliziten Qualitätsnetz-Fälle lassen sich unabhängig prüfen.
-- [ ] Den Gruppenvertrag `fragment groups completely mirror their index directories…` in `tests/ashes-of-meridian-harness.check.cjs` mit dem tatsächlichen Capture-Einstieg abgleichen: `UI_SCRIPTS` enthält `capture`, dessen Datei aber unter `dist/src/capture.js` statt `dist/src/ui/` liegt. Der Verzeichnistest meldet deshalb eine fehlende UI-Datei; dieselbe Inkonsistenz besteht im Ausgangsstand `2038076`. Der gezielte Battlefield-Gruppenvertrag bleibt unabhängig prüfbar.
+## Materialfehler im Browser
 
-## Prüfkosten und Abdeckung bei fachlicher Pflege
+- [ ] Ein begrenzter Chromium-Check über `file://`: gezielt fehlgeschlagene Erzeugung/
+  Upload eines Pflichtmaterials muss Gefechtsstart/Vorschau blockieren und Fehler
+  sichtbar melden. Keine fehlende Rasterdatei simulieren; Materialien sind prozedural.
+  Node-Fehler-/Residencyverträge sind geprüft, Browsernachweis offen. Historischer
+  Browserstart scheiterte an `Socket path too long` im lokalen Scratch; Isolation
+  oder Browsersicherheit nicht lockern. Kein belegter Bezug zu mobilen Abbrüchen.
 
-- [ ] Laufzeiten nach Build/Datei/Szenario zunächst aus vorhandenen Ergebnissen erfassen; breite Neumessung freigeben lassen. Historischer Auswahlhinweis auf `937914e`: Rendererfall `map switches keep only current world meshes…` etwa 45 s, viele Shader-/Orchestrierungsfälle Millisekunden. Namensfilter statt ungeprüft ganzer Datei; Terrain-/Residenzschutz nicht wegen Dauer löschen, Concurrency/Heap nicht blind ändern.
-- [ ] Gemischte Testdateien und weitere Quellen bei fachlicher Pflege gezielt in die Werkzeugkonventionen aufnehmen; kurze Validatoren von autonomen Partien trennen. Dateilänge allein ist kein Architekturumbaugrund; keine Massenformatierung.
-- [ ] Modell-/Präsentationsüberschneidungen nach Vertragsvergleich reduzieren; Bounds, Winding, Varianten und RNG können unabhängig schützen.
+## Pflege bei konkretem Bedarf
 
-## Browser, Diagnose und Ausgabebesitz
+- [ ] Gemischte teure/kurze Testdateien und Modell-/Präsentationsüberschneidungen nach
+  Vertragsvergleich aufteilen; Laufzeiten aus bestehenden Ergebnissen berücksichtigen.
+  Keine Testabschwächung, geteilten mutablen VM-Kontexte oder Massenformatierung.
+- [ ] Ältere Werkzeuge auf gemeinsamen Browser-Harness und expliziten Scratch-Besitz prüfen.
+  Persönliche Profile/Saves und Backups nicht bereinigen.
+- [ ] Diagnose-Start/Stopp/Ressourcenfreigabe und VAO-Besitz dauerhaft gezielt absichern;
+  alte Scratch-Orakel nicht ungeprüft als aktuelle Sollregel übernehmen.
+- [ ] Bei Baugrid-Messbedarf begrenzten JSON-Benchmark erwägen, ohne zeitabhängiges
+  Pass/Fail in Logiktests. Nur bei Bedarf einen versionierten itch-Beschreibungstext entscheiden.
 
-Vorhandener [Browser-Smokecheck](../testing.md#technischer-browser-smokecheck) prüft echte `file://`-Startansicht, Shader/GL und Kontextverlust mit Recovery-UI; das ist keine vollständige Ressourcenfreigabe oder Geräteabnahme. [Capture](../scene-capture.md), [Diagnose](../diagnostic-capture.md) und [Auslieferung](../deployment.md) sind die maßgeblichen Bedienungs-/Ausgabeverträge.
-
-- [ ] Ältere Capture-/Diagnosewerkzeuge bei konkretem Bedarf auf gemeinsamen Browser-Harness und expliziten Scratch-Besitz umstellen. Ignorierte Schreibwurzeln und Isolation erhalten; keine pauschale Bereinigung persönlicher Profile/Saves oder Integrations-Backups.
-- [ ] Diagnose-Start/Stopp samt Ressourcenfreigabe und technische VAO-Besitz-/Freigabechecks auf dauerhafte Regressionseignung prüfen. Historische worktree-lokale Scratch-Proben sind keine benötigten Repository-Eingaben; Optimierungsorakel alter Implementierungen nicht ungeprüft übernehmen.
-- [ ] Bei weiterem Baugrid-Messbedarf einen begrenzten parametrisierten Placement-Benchmark mit JSON-Ausgabe erwägen. Build/Umgebung dokumentieren, keine zeitabhängigen Pass-/Fail-Grenzen für Logiktests. Leistungsziele unter [Performance](performance-und-mobilstabilitaet.md).
-- [ ] Nur falls die itch-Seitenbeschreibung künftig im Repository gepflegt werden soll: einen maßgeblichen Text und manuellen Veröffentlichungsweg festlegen. `release/itch-description.md` existiert nicht; keinen aktuellen Veröffentlichungstext erfinden.
-
-Keine Screenshotserie auf Vorrat, keine Asset-/Deploymentänderung aus dieser Pflegeplanung. Arrangierte Medien sind keine Balance- oder vollständige Spielabnahme.
+[Befehle](../testing.md), [Freigaben](../../AGENTS.md#prüfungen),
+[Messfragen](performance-und-mobilstabilitaet.md).

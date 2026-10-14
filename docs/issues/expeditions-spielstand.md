@@ -1,25 +1,40 @@
-# Expedition: verbleibende Spielstandsabnahme
+# Spielstand und Evakuierungsübergang
 
-## Vertrag und Prüfgrenze
+## Offene Fehler
 
-Das manuelle Feedback zum bisherigen Gefechtsrestore ist positiv. Gezielte Persistenz-/UI-Regressionen sichern Snapshot-Restore mit begrenzter Fortsetzung, RNG/Sicht/Navigation, laufende Aufträge und Fähigkeiten, Spieler-/Gegner-Kistenverbrauch, ursprüngliche Gefechtsupgrades, Autosave/`pagehide`, direktes Continue ohne Pausemenü, Neustartsperre, zivile Upgrade-Bestätigung, einmalige Auszahlung und Speicherfehler ab. Die Weltbesuche sind technisch integriert: sichere Sieg-Tickgrenze, verlustfreie Komprimierung, getrennte aktuelle/archivierte Save-Ziele, Weiterbau/Produktion und ursprüngliche Gefechtsboni ohne erneute Auszahlung bereits vergüteter Gebäuderänge. Beschädigte Weltpayloads bleiben isoliert erhalten, Quota-Ausfall lässt gemeinsam neuen In-Memory- und alten dauerhaften Stand bestehen. Keine breite Suite, KI-/Simulationslangläufe oder Browserautomatisierung als Abnahmenachweis; neue Weltbesuche sind noch nicht menschlich abgenommen.
+- [ ] **Menü nach Zielstartfehler:** `src/ui/core.ts` setzt beim Außenpostenabschluss nur
+  `view='home'`, ohne das Menü aufzubauen. Scheitert der Zielstart und wird **Keep Save**
+  gewählt, kann nur die Kulisse ohne sichtbares Menü bleiben. Einen vollständigen
+  Startbildschirm hinterlassen; Rettung ist vor dem Startversuch gespeichert.
+  Kein automatischer Run-Abbruch oder Ersatzseed.
+- [ ] **Historischer Frontier-Abbruch:** Stage 2, Seed `73670270`, zwei Parteien,
+  `battle:null`: `Cannot connect broad terrain shelf with a safe ramp` nach erster
+  Evakuierung. Auf `18715c5` mit `new Battlefield(73670270,'frontier',2)` im nativen
+  Node-Kontext reproduziert, kein Browser-/KI-Lauf. Nach Generatoränderungen nicht
+  erneut geprüft; aktuelle Reproduktion offen. Verwandter [Terrainfall](terrain-generation.md#generierungsabbrüche).
+- [ ] **Ursprüngliche Versionswarnung zuordnen:** Nutzer-Payload Version 11 mit 17
+  geretteten Einheiten, ohne archivierte Welten, wurde damals erfolgreich geladen;
+  `Incompatible expedition save` war damit nicht reproduzierbar. Gespielter Build
+  blieb unbekannt. Aktuell verlangt der Code Version 13; heutige Sperre des alten
+  Saves ist erwartetes Verhalten, kein Beleg seiner ursprünglichen Beschädigung.
 
-Maßgeblicher Vertrag: [Speichern und Lebenszyklus](../gameplay.md#speichern-und-lebenszyklus), technische Grenzen in der [Architektur](../architecture.md#zustands--und-verantwortungsgrenzen). Alte reine Startcheckpoints werden nicht übernommen, permanente Profilwerte bleiben erhalten. Diese Abnahme umfasst keine Migrationen, Rekonstruktion verlorener historischer Welten, Replay, Multiplayer-Persistenz oder Offline-Fortschritt.
+## Menschlich abnehmen
 
-## Evakuierungsübergang: gemeldeter Ladefehler
+- [ ] Tutorial während Ankunft/Kamerafahrt/Wirtschaft/Supply/Depot unterbrechen und
+  fortsetzen: Ziele erhalten, Fahrten übersprungen, Kamera bedienbar.
+- [ ] Aktuelle und alte Stage abwechselnd betreten, bauen, produzieren, pausieren und
+  reloaden: getrennte Speicherziele, richtige Menüszene/Buttonziele, neue Dauerboni
+  bei Rückkehr ins Gefecht ohne doppelte Lieferungen. Archivende und beschädigte
+  einzelne Welt ausdrücklich verständlich verwerfen.
+- [ ] Außenposten-Wellen/Countdown nach Pause, Menü und Reload fortsetzen, endgültig
+  geschlossene Stages nur betrachten; Rettung genau einmal, blockierte Ankunft erhalten.
+  Zusammen mit [Run-Abnahme](playtest-validation.md) prüfen.
+- [ ] `file://`, Hosting und Mobilgerät: Hintergrund/Prozessende/Grafikverlust sowie
+  verständliche Speicherwarnung und Einstellungsstatus. Harter Abbruch darf zum
+  letzten Autosave zurückführen; keine Verlustfreiheit beim Schließen zugesagt.
 
-- [ ] Historischen Generierungsfehler nach den Änderungen an den Familienformen gezielt neu beurteilen; keine aktuelle Reproduktion behaupten. Nach der ersten tatsächlich durchgeführten Evakuierung meldete der automatische Start der höchsten Stage `Cannot connect broad terrain shelf with a safe ramp`. Der Nutzer hat **Keep Save** gewählt. Nutzerstack und Save zeigen einen neuen Gefechtsstart (`battle:null`), Stage 2, Frontier/Seed `73670270`, zwei Parteien. Auf `18715c5` mit frischem Build direkt über `new Battlefield(73670270,'frontier',2)` identisch reproduziert (rund vier Sekunden mit klassischen Skripten im nativen Node-Kontext; erster VM-Versuch nach 60 Sekunden abgebrochen). Kein KI-/Simulations- oder Browserlauf. Die damalige sichere Rampenreparatur lehnte das konkrete Kartenrezept ab. Ob der aktuelle Generator denselben Fehler erzeugt, ist nicht geprüft; kein Ersatzseed oder globales Abflachen als stiller Workaround.
-- [ ] Der übermittelte Save wurde mit Expeditionsversion 11 erfolgreich angenommen und enthält alle 17 geretteten Einheiten, aber keine archivierten Welten mehr. Die damals gemeldete Konsolenwarnung `Incompatible expedition save` war mit diesem Payload unter Version 11 nicht reproduzierbar. Nach der Vereinfachung auf native Familienformen verlangt das Terrainrezept Version 12; der alte Payload ist jetzt erwartungsgemäß gesperrt und darf nicht auf neu erzeugtem Terrain wiederhergestellt werden. Herkunft der ursprünglichen Warnung/gespielte Buildkennung bleibt offen; die neue Versionssperre ist kein Beleg für einen beschädigten Save.
-- [ ] Fehlerpfad des Evakuierungsübergangs muss einen vollständig aufgebauten Startbildschirm hinterlassen: Der aktuelle Ablauf setzt nur `view='home'`, ohne das Menü aufzubauen. Scheitert der anschließende Start, schließt **Keep Save** lediglich das Modal; die bisherige gerenderte Kulisse kann ohne sichtbares Menü zurückbleiben. Rettung wird vor dem Startversuch gespeichert; keinen automatischen Abbruch oder Ersatzseed als Fehlerbehandlung verwenden.
-
-## Offene menschliche Grenzen
-
-- [ ] Tutorial während Ankunft, Aufklärungsflug, Wirtschaftszielen sowie Infanterie-/Supply-Limit und Depotbau unterbrechen: Kamerafahrten werden übersprungen, Ziele erhalten und die Kamera bleibt bedienbar. Die technische Restore-Regression ersetzt keine Abnahme der tatsächlichen Kamerafahrten.
-- [ ] Unter `file://` und Webhosting sowie mobil Hintergrund, Prozessende und bestmöglich Grafikverlust abnehmen. Nach hartem Abbruch ist Rücksprung zum letzten erfolgreichen Autosave zulässig; keine Verlustfreiheit beim Schließen zugesagt.
-- [ ] Sichtbarkeit und Verständlichkeit der Speicher-Ausfallmeldung, des Einstellungsstatus, der Warnung vor Menüwechsel und des expliziten Verwerfens beschädigter Saves menschlich abnehmen. Automatisierung sichert Zustandsverträge, nicht vollständige Dialog-/Geräteabläufe.
-- [ ] Alte und aktuelle Stage abwechselnd betreten, bauen/produzieren, pausieren und reloaden: Hintergrund/Button-Ziel, ursprüngliche Gefechtsboni der Bauwelt, getrennte Speicherziele und neue zivile Boni bei Rückkehr ins laufende Gefecht ohne doppelte Lieferungen menschlich abnehmen. Militärischer Sieg schaltet die nächste Stage unabhängig von zivilem Ausbau oder späterem Gebäudeverlust frei. Archivende bei Niederlage/Abbruch/neuem Run und einzeln beschädigte Welt verständlich anzeigen/verwerfen.
-- [ ] Außenposten-Wellen und gestartete Evakuierung nach Pause, Menübesuch und Reload fortsetzen: kein Offline-Fortschritt, kein Countdown-Neustart und kein erneutes Betreten geschlossener Stages. Evakuierte/verlorene Stages bleiben mit finaler eingefrorener Szene im Menü durchschaltbar; Zugangssperre, Statusanzeige und Kulisse menschlich abnehmen. Gesicherte Ränge/Armee nur einmal an die höchste Gefechts-Stage übertragen, blockierte Ankunft gespeichert erhalten. Ablaufabnahme gemeinsam mit [Wellen und Rettung](civilization-upgrades.md), nicht als zusätzliche Vollrunde.
-
-Save-/Snapshotkosten und Speicherentwicklung einschließlich archivierter Welten werden zentral unter [Performance](performance-und-mobilstabilitaet.md#verbleibende-cpu-spitzen) geführt. Browserquota und vollständige Langruns sind nicht allgemein abgenommen. Mehrere Keys erhöhen die Quote nicht; kein stilles Ausdünnen des Archivs. Speicherformat, konsistente Snapshotgrenze und Lebenszyklusgarantien bleiben im [Architekturvertrag](../architecture.md#zustands--und-verantwortungsgrenzen).
-
-Technischen Browsercheck nur bei einer konkreten verbleibenden Lade-/Lebenszyklusfrage; [Prüfwahl](../testing.md) beachten. Verbundene Abnahme: [vollständige Runs](playtest-validation.md), [prozedurale Karten](prozedurale-gefechtsstarts.md), [Android](android.md), [mobile Grafikabbrüche](performance-und-mobilstabilitaet.md#mobilstabilität-und-speicher). Autosaves beheben nicht die Ursache von Grafikabbrüchen. Lokale Speicherung ist nicht manipulationssicher; gleichzeitiges Spielen desselben Profils in mehreren Tabs ist nicht koordiniert.
+Gefechtsrestore wurde menschlich positiv rückgemeldet; Weltbesuche und vollständige
+Geräte-/Langruns sind nicht allgemein abgenommen. Sichere Tickgrenze, gemeinsamer Write,
+Versionssperren und dauerhaft flüchtiger Storage bleiben [Systemgrenzen](../architecture.md).
+Speicherzeit/-quota zentral unter [Performance](performance-und-mobilstabilitaet.md);
+Autosaves beheben keine Grafikabbrüche.

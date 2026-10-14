@@ -1,67 +1,112 @@
-# Arbeitsregeln für KI-Agenten
+# Arbeitsregeln
 
-## Worktree-Pflicht – auch für den Hauptagenten
+## Worktrees und Integration
 
-- **Ohne ausdrückliche abweichende Nutzeranweisung für den aktuellen Auftrag findet sämtliche Arbeit in einem eigenen Aufgaben-Worktree auf einem eigenen Branch statt, niemals im `main`-Worktree oder auf Branch `main`.** Das umfasst auch Dokumentation, Arbeitsregeln, Diagnosen, Kleinständerungen und Folgeaufträge nach einer Integration.
-- Fehlt ein geeigneter eigener Aufgaben-Worktree, vor Beginn selbst einen separaten Worktree mit eigenem Branch vom aktuellen lokalen `main` anlegen. Dafür ist keine zusätzliche Nutzerfreigabe nötig. Fremde oder noch anderweitig verwendete Worktrees nicht übernehmen.
-- Vor Arbeit absoluten Worktree-Pfad, Branch und `git status --short` prüfen. Ein aktueller Arbeitsordner in `main`, ein ausgecheckter Branch `main`, eine frühere Integration oder ein allgemeiner Arbeitsauftrag sind **keine** Ausnahme von dieser Pflicht.
-- `main` ist ausschließlich Ziel ausdrücklich beauftragter Integrationen samt Abschlussprüfungen. Direkte Quellen-/Dokumentationsbearbeitung dort nur auf ausdrückliche Nutzeranweisung für den aktuellen Auftrag.
-- Geprüfte eigene Änderungen im Aufgaben-Worktree committen; **nicht automatisch nach `main` integrieren**. „Implementieren“, „kümmere dich darum“ oder „abschließen“ ist keine Integrationsfreigabe.
-- Bei ausdrücklichem Integrationsauftrag zuerst im Aufgaben-Worktree auf dessen Aufgabenbranch den aktuellen lokalen `main` mit `git merge main` integrieren, Konflikte dort lösen und gezielt prüfen. Danach im bestehenden `main`-Worktree auf Branch `main` integrieren und relevante Abschlussprüfungen ausführen. Ändert sich `main` inzwischen, Vorbereitung wiederholen. Vor dem Zielmerge Pfad, Branch und Status erneut prüfen; bei blockierenden fremden Änderungen stoppen und rückfragen, nichts überschreiben oder eigenmächtig stashen. Den Aufgaben-Worktree nicht auf `main` umschalten. Kein automatischer Push und keine automatische Branch-/Worktree-Löschung.
+- Standard ist ein eigener Aufgaben-Worktree mit eigenem Branch vom aktuellen lokalen
+  `main`, auch für Analyse, Dokumentation, Kleinständerungen und Folgeaufträge.
+  Fehlt er, selbst anlegen. Fremde/aktive Worktrees nicht übernehmen.
+- Vor Arbeit absoluten Pfad, Branch und `git status --short` prüfen; fremde Änderungen erhalten.
+  Direkt in `main/` nur auf ausdrückliche Nutzeranweisung für den aktuellen Auftrag.
+  Aktueller Ordner, frühere Integration oder „kümmere dich darum“ ist keine Ausnahme.
+- Geprüfte eigene Änderungen committen, nicht automatisch integrieren/pushen/deployen.
+  Ein Implementierungs-/Abschlussauftrag ist keine Integrationsfreigabe.
+- Bei „nach main integrieren“ zuerst im Aufgaben-Worktree `git merge main`, Konflikte dort
+  lösen und gezielt prüfen. Danach im bestehenden Schwester-Worktree `main/` auf Branch
+  `main` den Aufgabenbranch integrieren und relevant prüfen. Ändert sich `main`, Vorbereitung
+  wiederholen. Aufgaben-Worktree bleibt auf seinem Branch, kein Ersatz-Zielworktree.
+- Vor Zielmerge Pfad, Branch und Status erneut prüfen. Bei blockierenden fremden Änderungen
+  oder falschem Zielbranch stoppen/rückfragen; nichts überschreiben, mitcommitten oder stashen.
+  Kein automatischer Push und keine automatische Worktree-/Branchlöschung.
+- Abschluss einer Integration nennt Kurz-IDs und kompakte Änderungen aller neu enthaltenen
+  inhaltlichen Feature-Commits, keine bereits enthaltenen oder rein technischen Merge-Commits.
 
-- Nach jeder erfolgreichen Integration eines Aufgaben-/Feature-Branches in den Branch `main` im bestehenden `main`-Worktree enthält die Abschlussantwort immer eine kompakte Zusammenfassung aller relevanten neu integrierten Commit-Messages aus dem Feature-Branch. Den Umfang anhand des `main`-Stands vor der Integration bestimmen; bereits enthaltene Commits und rein technische Merge-Commits ohne eigene inhaltliche Änderung nicht erneut aufführen. Commit-Kurz-IDs und die jeweiligen Änderungen nennen, sodass auf einen Blick erkennbar ist, was jetzt in `main` integriert wurde.
+## Einstieg und Änderungen
 
-## Einstieg
+[README](README.md) lesen, betroffenes [Issue](docs/issues/) sowie Quellen/Tests erkunden.
+Vor strukturellen Änderungen [Systemgrenzen](docs/architecture.md) lesen.
 
-1. [README](README.md) lesen, `git status --short` prüfen.
-2. Betroffenes [Issue](docs/issues/), Quellen und Tests mit `rg`/`find` erkunden.
-3. Fachreferenzen nur nach Bedarf; vor strukturellen Änderungen [Architektur](docs/architecture.md) lesen.
-
-## Änderungen
-
-- Kleinster sinnvoller Umfang. Formatierung, Struktur und Verhalten getrennt halten; kein beiläufiges Balancing, Darstellungs-/Regelkorrekturen oder Abarbeiten des Backlogs. Issues sind keine Implementierungsfreigabe.
-- Hindernisverteilung, Körperradien und RNG-Reihenfolge schützen; kosmetische Effekte nutzen teilweise Simulations-RNG. [Referenzen](docs/reference-tests.md) nicht zum Grünmachen regenerieren.
+- Kleinster sinnvoller Umfang; Formatierung, Struktur und Verhalten trennen.
+  Kein beiläufiges Balancing, Darstellungs-/Regelkorrekturen oder Backlogabarbeiten.
+  Issues sind keine Implementierungsfreigabe.
+- Hindernisverteilung, Körperradien und RNG-Reihenfolge schützen; auch Kosmetik kann
+  Simulations-RNG ziehen. [Referenzen](docs/reference-tests.md) nicht zum Grünmachen regenerieren.
 - Prototyp: keine Migrationen, Rückwärtskompatibilität oder Legacy-Adapter ohne Auftrag.
-- Quellen statt `dist/` bearbeiten; Modelle gemäß [Pflegevertrag](docs/rendering.md#einzeln-wartbare-modelle). Rasterassets ausschließlich WebP/Qualität 80; keine unbeauftragte Löschung/Ersetzung.
-- Direkte `file://`-Auslieferung ohne erforderlichen Server, CDN, Laufzeit-Imports oder gelockerte Browser-Sicherheit erhalten.
-- Zusammenhängende geprüfte Änderungen eigenständig committen; fremde Änderungen nicht aufnehmen. Kein eigenständiger Push/Deployment.
+- Quellen statt `dist/` bearbeiten. [Asset-/Modellpflege](docs/assets.md) beachten;
+  Rasterassets nur WebP/Qualität 80, keine unbeauftragte Löschung/Ersetzung.
+- Direkte `file://`-Auslieferung ohne Server, CDN, Laufzeit-Imports oder gelockerte Sicherheit erhalten.
 
-## Prüfungen und Zeitbudget
+## Prüfungen
 
-- Kurze gezielte Rückkopplung zuerst: lokale Logik mit Build/betroffenen Fällen, mechanische Kleinständerung mit Build/Diff, Dokumentation nur mit Diff/Links/Angaben. [Auswahl und Befehle](docs/testing.md).
-- Mehrminütige oder zeitlich unbekannte breite Läufe benötigen aktuelle ausdrückliche Freigabe samt konkretem Erkenntnisziel. Gemeinsame Verträge begründen Prüfbedarf, keine automatische Vollsuite. Breite Integrationstests nur einmal am integrierten Stand durch den Hauptagenten; Wiederholung nur bei neuem relevantem Risiko.
-- `test:ai`/`test:simulation` immer nur durch den Hauptagenten auf ausdrücklichen aktuellen Nutzerauftrag, auch direkte/gefilterte Fälle. Implementierung oder Abschlussprüfung ist keine Freigabe. Bedarf vorschlagen, sonst als nicht ausgeführt nennen.
-- Browserchecks nur für konkrete technische Fragen, keine Screenshotserien auf Vorrat. Visuelle/akustische und Echtgeräteabnahme bleibt menschlich. Prüfungen und relevante offene Grenzen im Abschluss benennen.
+- Kurze gezielte Rückkopplung: Dokumentation mit Diff/Links/Angaben, mechanische
+  Quelländerung mit Build/Diff, lokale Logik mit Build/betroffenen Fällen.
+  [Befehle und Aussagegrenzen](docs/testing.md).
+- Mehrminütige oder zeitlich unbekannte breite Läufe nur mit aktueller ausdrücklicher
+  Freigabe und konkretem Erkenntnisziel. Gemeinsame Verträge sind kein Vollsuiteauftrag.
+  Breite Integrationstests nur einmal am integrierten Stand durch den Hauptagenten;
+  Wiederholung braucht neues relevantes Risiko.
+- `test:ai`/`test:simulation` immer nur durch den Hauptagenten auf ausdrücklichen aktuellen
+  Auftrag, auch direkte/gefilterte Fälle. Implementierung/Abschluss ist keine Freigabe.
+  Bedarf vorschlagen, sonst als nicht ausgeführt nennen.
+- Browserchecks nur für konkrete technische Fragen, keine Screenshotserien auf Vorrat.
+  `simulate:visible` nie automatisch starten. Visuelle/akustische und Echtgeräteabnahme
+  bleibt menschlich; tatsächliche Prüfungen und relevante Grenzen im Abschluss nennen.
 
-## Spiel-Performance
+## Performance
 
-Mentales Modell: *Was würde John Carmack tun?*
-
-Performance-Analyse und -Optimierung ist ein kreativer Prozess, der über einfache Code-Verbesserungen hinausgeht. Fokus auf:
-
-- Reduzierung von Suchräumen und globalen Invalidierungen
-- Minimierung von Arbeit, deren Ergebnis sich seit dem letzten Frame kaum verändert hat
-- Optimierung von Geländeabfragen, Kollisionsprüfungen und wiederholtem Aufbau von Modelldaten
-- Nutzung von Profiling-Tools und Performance-Messungen, um Engpässe zu identifizieren
-- Für gezielte reproduzierbare Szenenmessungen den [Chromium-Diagnose-Runner](docs/diagnostic-capture.md) nutzen; Zeitbudget-/Freigaberegeln gelten weiterhin, Software-WebGL ist kein Geräteperformancebeleg.
-- Kreative Ansätze zur Verbesserung der Framerate und Reduzierung von Latenz, z.B. durch Caching, Level-of-Detail-Techniken oder asynchrone Verarbeitung
+*Was würde John Carmack tun?* Suchräume und globale Invalidierung reduzieren,
+unveränderte Arbeit vermeiden, Gelände/Kollision/Modellaufbau anhand konkreter Messungen
+untersuchen. Kreative Caches, LOD, Pooling oder asynchrone Verfahren sind Kandidaten,
+kein vorsorglicher Engineumbau. [Diagnosewerkzeuge](docs/scene-capture.md) und
+[offene Messfragen](docs/issues/performance-und-mobilstabilitaet.md) nutzen;
+Software-WebGL ist kein Geräteperformancebeleg. Prüfregeln gelten unverändert.
 
 ## Delegation
 
-- Innerhalb freigegebener Arbeit erlaubt; Hauptagent orchestriert, beantwortet Rückfragen, pflegt Issues und integriert. Höchstens drei Kinder gleichzeitig, keine Weiterdelegation.
-- Jedes Kind erhält eigenen vom Hauptagenten angelegten Worktree/Branch, auch bei Analyse. Vor Start absoluten Pfad, Branch, Ausgangscommit und Status prüfen; Abweichung → stoppen/rückfragen. Audit ohne Shell erhält den Git-Nachweis vom Hauptagenten.
-- Lokale AGENTS-Version gilt; Kontextvererbung sicherstellen (`inheritProjectContext: true`). Regeln während einer Welle nicht nebenbei ändern. Luna/low für klare kleine Aufgaben, Sol/medium oder high für Abwägung/Reviews; Ausnahmen begründen und effektive Zuordnung prüfen.
-- Auftrag enthält Ziel/Nicht-Ziele, Schreibgrenzen/Verträge, Abhängigkeiten, Prüfungen und Übergabe. Fachliche Überschneidungen vorab klären; Umfangserweiterung an Hauptagenten melden.
-- Erste Audit-Phase ausschließlich lesend: keine Änderungen/Scratch-Dateien, Befehle, Builds, Tests, Benchmarks oder Browserläufe durch Audit-Kinder. Ausführungsbedarf nur vorschlagen.
-- Kinder committen nur geprüfte eigene Änderungen. Keine fremden Worktrees, Merges/Rebases/Pushes, gemeinsame Git-Konfiguration oder Worktree-/Branch-Löschungen; `docs/issues/` und Arbeitsregeln nur durch Hauptagenten ändern.
-- Fragen/Zwischenmeldungen über nativen Supervisor, Abschluss mit Branch/Commit, Dateien, Prüfungen/Resultat, Risiken/Entscheidungen. Fehlerzustand erhalten, nicht still den Ausführungsmodus wechseln. Integration und Bereinigung ausschließlich durch Hauptagenten nach gesicherter Übergabe/beendeten Prozessen. [Verfahren](docs/subagents.md).
+- Innerhalb freigegebener Arbeit erlaubt; Hauptagent orchestriert, beantwortet Rückfragen,
+  pflegt Issues und integriert. Maximal drei Kinder gleichzeitig, keine Weiterdelegation.
+- Jedes Kind erhält eigenen vom Hauptagenten angelegten Worktree/Branch, auch bei Analyse.
+  Vor Start Pfad, Branch, Ausgangscommit und Status prüfen; Abweichung → stoppen/rückfragen.
+  Audit ohne Shell erhält diesen Git-Nachweis vom Hauptagenten.
+- Lokale AGENTS-Version und `inheritProjectContext: true` sicherstellen; Regeln während
+  einer Welle nicht nebenbei ändern. Effektive Rollen/Profile/Overrides vor Start prüfen.
+  Projektprofile und Defaults stehen in `.pi/agents/` und `.pi/settings.json`;
+  Luna/low für kleine klare Aufgaben, Sol/medium oder high für Abwägung/Reviews.
+  Ausnahmen begründen; bei Modell-/Providerfehlern kein Ersatz-CLI oder Scope-Ausweichen.
+- Auftrag nennt Ziel/Nicht-Ziele, Pfad/Branch/Commit, Schreibgrenzen, Verträge, Abhängigkeiten,
+  Prüfung und Übergabe. Überschneidungen vorher klären, Erweiterungen an Hauptagenten melden.
+- Erste Auditphase nur lesend: keine Änderungen/Scratch-Dateien, Befehle, Installationen,
+  Builds, Tests, Benchmarks oder Browserläufe durch Audit-Kinder. Ausführungsbedarf vorschlagen.
+  Auditprofile bleiben lesend; Umsetzung braucht neuen freigegebenen Schreibauftrag.
+- Kind mit eigenem `cwd` und `worktree: false` starten; ein Fork ersetzt keine Isolation.
+  Abhängige Pakete erst nach vereinbartem Vertrag/Ergebnis; aktive Kinder-Worktrees nicht bearbeiten.
+- Rückfragen über nativen Supervisor, mit konkreter `replyTo`-ID beantworten. Asynchrone
+  koordinierte Wellen mit WorkflowScript, unabhängige Runs über `runs.all`; Syntax vorher
+  gegen installierte Hilfe prüfen. Keine Polling-/Sleep-Schleifen oder paralleles Intercom/Worklog.
+- Kinder committen nur geprüfte eigene Änderungen; keine fremden Worktrees, Merges/Rebases,
+  Pushes, gemeinsame Git-Konfiguration oder Löschungen. Issues und Arbeitsregeln nur Hauptagent.
+  Übergabe: Branch/Commit, Dateien, Prüfungen/Resultat, Risiken/Entscheidungen.
+- Fehlerzustand/Run-ID erhalten, nicht still Ausführungsmodus wechseln. Hauptagent prüft Diff
+  seit Ausgangscommit und Status, integriert/prüft nach Risiko, nicht automatisch per Vollsuite.
+  Bereinigung erst nach gesicherter Übergabe/Integration oder Verwerfung und beendeten Prozessen:
+  ignorierte Belege prüfen/sichern, reguläres `git worktree remove` und bei nachgewiesenem Merge
+  `git branch -d`. Kein Force/Clean oder Löschen fremder Arbeit; bei Unklarheit erhalten.
 
-## Temporäre Arbeit
+## Temporäre Isolation
 
-Selbst angelegte Skripte, Downloads, Profile, Bilder und Logs nur unter `<eigener-Worktree>/.tmp/<lauf>/`; nie gemeinsam benannte `/tmp/`-Pfade. Bei Hilfsprogrammen `TMPDIR`, `TMP`, `TEMP` und Ausgabewege explizit dorthin setzen, in jedem Toolaufruf erneut. Keine schreibend geteilten `.tmp/`, `dist/`, `node_modules/` oder Symlinks zwischen Worktrees. Nur eigene Dateien nach Prozessende bereinigen; [Runtime-Grenzen](docs/subagents.md#temporäre-isolation).
+Eigene Skripte, Downloads, Profile, Bilder und Logs nur unter `<worktree>/.tmp/<lauf>/`.
+Keine gemeinsam benannten `/tmp/`-Pfade oder schreibend geteilten `node_modules/`, `dist/`, `.tmp/`
+und keine Symlinks zwischen Worktrees. `TMPDIR`, `TMP`, `TEMP`, steuerbare Runtime-Ausgabewege
+und Profile in jedem Toolaufruf explizit worktree-lokal setzen; Shell-Exports gelten nicht dauerhaft.
+Nur eigene Dateien nach Prozessende bereinigen, persönliche Saves/Backups erhalten.
+Pi-eigene Sessions/IPC/Toolausgaben nicht global umbiegen/löschen; `.tmp/` ist keine Sandbox.
+Fest kodierte externe Toolpfade vor Parallelbetrieb klären; dauerhafte Befunde vor Bereinigung sichern.
 
-## Dokumentation und Issues
+## Dokumentation
 
-Dauerhafte Entscheidungen, Grenzen und Pflegeverfahren dokumentieren, keine Codekarte, Wertetabellen oder Test-/Änderungshistorie. Ein maßgeblicher Ort je Information; andere Stellen verlinken. README ist Einstieg, AGENTS Regelwerk, offene Arbeit ausschließlich in `docs/issues/`, abgeschlossene Historie in Git; kein zusätzliches Worklog.
-
-Nur betroffene Dokumentation pflegen; bei Wartungsaufträgen Redundanzen/Altlasten entfernen. Befunde knapp mit relevantem Prüfkontext ins Issue, Auswirkungen auf andere Issues dort ergänzen. Erledigte Issue-Dateien löschen.
+Code erklärt das Was, knappe Kommentare nur nötiges Warum. Markdown nur für Einstieg,
+übergreifende Entscheidungen, externe Verfahren, Gestaltungsziele und offene Arbeit.
+Keine Codekarten, Wertetabellen, parallelen Sollregeln oder Test-/Änderungschroniken.
+Ein maßgeblicher Ort je Information: README Einstieg, AGENTS Regeln, `docs/issues/` offene
+Befunde mit relevantem Prüfkontext, Git abgeschlossene Historie. Kein zusätzliches Worklog.
+Redundanzen/Altlasten bei Pflege entfernen, erledigte Issues löschen; offene menschliche
+Abnahme nicht aufgrund technischer Tests schließen.

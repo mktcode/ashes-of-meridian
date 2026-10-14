@@ -1,86 +1,42 @@
-# Grafik-Leitlinie
-
-## Leitbild
+# Gestaltungsziele
 
 **Stilisiertes 3D-Sci-Fi mit atmosphärischem Miniatur-Diorama-Look.**
+Modellhafte Gebäude und Einheiten, charaktervolle fremde Landschaften und gezielte
+Lichtakzente: weder Fotorealismus noch Comic oder grobe Platzhalter.
+Keine Freigabe für einen Grafikumbau; [Assetpflege](assets.md).
 
-Ashes of Meridian zeigt eine fremdartige, lebendige Welt aus der Perspektive eines
-Strategiebretts: modellhafte Gebäude und Einheiten, charaktervolle Landschaften und
-gezielt gesetzte Lichtakzente. Die Gestaltung ist nicht fotorealistisch, aber auch
-nicht comichaft. Sie verbindet die Übersicht eines Strategiespiels mit der Stimmung
-einer kleinen, räumlich glaubwürdigen Welt.
+## Welt
 
-Kurzbeschreibung für die Außendarstellung:
+- Große klare Silhouetten vermitteln Rolle und Fraktion im normalen Gefechtszoom;
+  Detail unterstützt sie, nicht maximale realistische Abnutzung.
+- Technische Kolonien verbinden modularen Metallbau mit cyanfarbenen und warmweißen
+  Lichtdetails. Biologische Fraktionen behalten eigene Formen und Materialidentität.
+- Gedämpfte Landschaften tragen technische/organische Akzente. Gemeinsame Stimmung
+  verlangt keine uniforme Palette über alle Familien.
+- Dunst, Licht und Schatten sind künstlerisch komponiert. Nacht darf ruhig, fremd und
+  leicht melancholisch wirken; Gelände und relevante Objekte bleiben lesbar.
+- Bloom und Tilt-Shift unterstützen die Miniaturwirkung, dürfen Formen nicht verwischen.
+  Auch reduzierte Qualität muss dieselbe gestalterische Identität behalten.
+- Atmosphäre, Vegetation und Effekte dürfen Ressourcen, Auswahl und Kampf nicht verdecken.
 
-> Eine atmosphärische Sci-Fi-Miniaturwelt mit stilisierten 3D-Modellen, industriellen
-> Kolonien und leuchtenden Akzenten in fremdartigen Landschaften.
+## UI
 
-Diese Leitlinie beschreibt die gestalterische Richtung, keine Freigabe für einen
-Grafikumbau. Technische Verträge und Assetpflege stehen in [Grafik und
-Assets](rendering.md), die Gestaltung der Bedienoberfläche im
-[UI-Designsystem](ui-design-system.md).
+Vorlage: **OUTPOST / 02 — Licht, Kante, Tiefe**, eingebettete Materialschicht der
+externen HTML-Demo `/home/mkt/Downloads/aom-moodboard/moodboard.html`, nicht deren ältere
+separate CSS-/Tokenfassung. Keine Mockup-Inhalte, Steuerlogik oder Demo-Hintergründe übernehmen.
 
-## Formen und Maßstab
+Dunkle Navy-Flächen, abgeschrägte Doppelkonturen und dezenter Glow. Cyan für Bedienbarkeit/
+Auswahl, Bernstein für Kosten/Warnungen/Fortschritt, Rot für Verlust, Violett für Energie.
+Keine dauernden Glanzläufe; reduced motion und forced colors bleiben bedienbar.
 
-- Klare Silhouetten und geometrisch reduzierte, bewusst gestaltete Formen tragen
-  den Look. Modelle wirken wie sorgfältig gebaute Miniaturen, nicht wie grobe
-  Platzhalter.
-- Große Formen vermitteln Funktion und Identität; kleine Details ergänzen sie.
-  Gebäude- und Einheitentypen sollen aus dem üblichen Gefechtsabstand unterscheidbar
-  bleiben, nicht erst in der Nahansicht.
-- Die industrielle Kolonie lebt von modularen Bauten, Metallflächen und technischen
-  Aufbauten. Diese Sprache ist kein Zwang für alle Fraktionen: biologische Formen
-  behalten ihre eigene Identität im gemeinsamen Diorama-Look.
-- Die Gefechtsansicht ist isometrisch anmutend, technisch aber eine drehbare
-  orthografische 3D-Perspektive. „Low-Poly“ allein beschreibt den Stil nicht ausreichend:
-  Geometrie, Oberflächen, Licht und Atmosphäre wirken zusammen.
+`styles/design-system.css` pflegt die gemeinsame Materialschicht nur auf UI-Wurzeln,
+keine Theme-Tokens auf `:root` oder globalen Buttonregeln. Weltcanvas, Picking und
+Diagnoseanzeigen gehören nicht dazu. Dekoration fängt keine Eingaben ab; Controls und
+Text bleiben ungeclippt. Das HUD liegt über der fullscreen Welt, nicht in einem
+verkleinerten Viewport. Layout, Zustände und Abmessungen sind ausschließlich im Code maßgeblich.
 
-## Oberflächen und Farbe
+## Abnahme
 
-- Oberflächen vermitteln Materialcharakter, ohne die großen Formen durch kleinteilige
-  Muster zu überdecken. Detail dient der räumlichen Wirkung, nicht maximaler
-  realistischer Abnutzung.
-- Gedämpfte Landschaftsfarben bilden die Bühne für technische und organische
-  Akzente. Erdige, violette und blaugraue Töne sind charakteristische Beispiele,
-  keine verbindliche Palette für jede Landschaft.
-- Cyanfarbene und warmweiße Lichtdetails prägen die technische Kolonie. Andere
-  Fraktions- und Landschaftsfarben bleiben möglich; gemeinsame Stimmung bedeutet
-  nicht gleiche Farbgebung.
-- Leuchtflächen sind gezielte Blickpunkte. Nicht jede Kante oder Struktur soll
-  leuchten; dunklere Flächen geben den Akzenten Gewicht.
-
-## Licht und Atmosphäre
-
-- Dunst, weiche Lichtübergänge und Schatten geben den einfachen Formen Tiefe.
-  Die Beleuchtung ist künstlerisch komponiert, nicht auf physikalischen Realismus
-  verpflichtet.
-- Tag und Nacht dürfen die Stimmung deutlich verändern. Nachts entsteht durch
-  kühles Umgebungslicht und lokale Lichtinseln eine ruhige, geheimnisvolle, leicht
-  melancholische Atmosphäre; Gelände und Spielobjekte müssen dennoch lesbar bleiben.
-- Bloom unterstützt helle Akzente, soll aber Formen und Farbunterschiede nicht
-  zu einem gleichförmigen Leuchten verschmelzen lassen.
-- Der Tilt-Shift-Look verstärkt in der hohen Qualitätsstufe den Miniatureindruck.
-  Er ist eine ergänzende Präsentationsebene, nicht die Voraussetzung für den Stil:
-  auch ohne Unschärfe muss die Szene als zusammenhängende Modellwelt wirken.
-
-## Lesbarkeit vor Inszenierung
-
-- Atmosphäre unterstützt das Spiel, statt relevante Einheiten, Ressourcen,
-  Auswahlzustände oder Kampfaktionen zu verdecken.
-- Detail, Vegetation und Effekte sollen die Welt beleben, ohne die wichtigen
-  Silhouetten und Bewegungen im Gefechtsbild zu überlagern.
-- Die Bedienoberfläche bleibt klar und ungefiltert. Ihre semantischen Farben und
-  Formen folgen dem UI-Designsystem, nicht frei der jeweiligen Landschaftsstimmung.
-- Reduzierte Qualitätsstufen sollen dieselbe gestalterische Identität bewahren,
-  auch wenn kosmetische Details und Nachbearbeitung entfallen.
-
-## Gestalterische Abnahme
-
-Neue Modelle, Materialien und Effekte werden im Zusammenhang mit der Welt beurteilt:
-Passen Silhouette und Material zum Diorama-Look? Bleibt das Objekt im üblichen
-Gefechtszoom erkennbar? Funktionieren Farbe und Licht am Tag wie bei Nacht? Unterstützt
-es die Identität seiner Fraktion, ohne die gemeinsame Bildsprache zu verlassen?
-
-Die Antworten erfordern menschliche visuelle Abnahme. Ein technisch erfolgreicher
-Build bestätigt weder Stimmung noch Lesbarkeit; Prüfverfahren und technische Grenzen
-stehen in [Testing](testing.md) und [Grafik und Assets](rendering.md).
+Modelle/Materialien im Zusammenhang mit Welt, Fraktion und normalem Gefechtszoom
+beurteilen, tags/nachts und auf Zielgeräten. Build oder Standbild bestätigt weder
+Stimmung noch Touch-Ergonomie. [Offene Bildabnahme](issues/landschaften-und-taktische-darstellung.md).

@@ -1,37 +1,35 @@
-# Auslieferung
+# Veröffentlichung
 
-Derselbe statische Browserstand funktioniert über `file://`, Webhosting und itch.io. Kein Backend/Volume für Offline-Spiel; Profile bleiben im Storage des jeweiligen Origins, ohne Synchronisierung. Domain-/Protokollwechsel erzeugt einen anderen Speicherraum.
+Statischer Singleplayer-Stand, kein Backend oder Volume. Profile gehören zum jeweiligen
+Browser-Origin; Domain-/Protokollwechsel bedeutet einen anderen Speicherraum, keine Synchronisierung.
 
 ## Docker und Dokploy
-
-[Dockerfile](../Dockerfile) ist die maßgebliche Web-Laufzeitliste. Quellen, Tests und Source Maps bleiben draußen; lokale UI-Grafiken, Schriftdateien, CSS- und Audioassets zusätzlich zu eingebetteten WebGL-Assets mitführen. Bei neuen Laufzeitassets auch die Freigaben in [`.dockerignore`](../.dockerignore) ergänzen. [Nginx](../nginx.conf) liefert fehlende Dateien bewusst als 404, ohne SPA-Fallback; Revalidierung verhindert gemischte Versionen bei unhashed Dateinamen.
 
 ```bash
 docker build -t ashes-of-meridian .
 docker run --rm -p 8080:8080 ashes-of-meridian
 ```
 
-Dokploy: Dockerfile-Build, Repository-Root als Kontext, kein Build-Target. HTTPS/TLS endet am Proxy; interne Appports nicht öffentlich öffnen.
+[Dockerfile](../Dockerfile) und [`.dockerignore`](../.dockerignore) bestimmen Laufzeitdateien.
+Neue Assets auch im ZIP berücksichtigen. [Nginx](../nginx.conf) liefert fehlende Dateien als
+404 ohne SPA-Fallback; Revalidierung schützt unhashed Dateinamen vor gemischten Ständen.
 
-| Dienst | Dockerfile | interner Port | Healthcheck | öffentlicher Endpunkt |
-| --- | --- | --- | --- | --- |
-| Spiel | `Dockerfile` | 8080 | `GET /` | `https://aom.markus-kottlaender.de` |
-Das Singleplayer-Spiel benötigt keinen separaten Spielserver. Eine gegebenenfalls noch aktive frühere Multiplayerinstallation muss außerhalb des Quellcodeumbaus abgeschaltet werden; [offene Betriebsbereinigung](issues/multiplayer.md#betrieb-bereinigen).
+Dokploy: Repository-Root als Kontext, Dockerfile ohne Build-Target, interner Port 8080,
+Healthcheck `GET /`. TLS endet am Proxy; interne Ports nicht öffentlich öffnen.
+Öffentlicher Endpunkt: `https://aom.markus-kottlaender.de/`.
+Ein möglicherweise noch laufender alter Multiplayerdienst ist [offene Betriebsarbeit](issues/ideen.md#multiplayer).
 
 ## itch.io
 
-Die englische Seitenbeschreibung wird manuell auf itch.io gepflegt; eine versionierte Beschreibung liegt derzeit nicht im Repository.
+`npm run build:zip` erzeugt `release/ashes-of-meridian-prototype.zip` mit `index.html`
+an der Wurzel. Als HTML-Build hochladen, „This file will be played in the browser“
+aktivieren und Vollbild/responsiven Viewport ermöglichen. Seitenbeschreibung manuell
+auf itch.io pflegen; keine zweite Sollfassung im Repository.
 
-`npm run build:zip` erzeugt `release/ashes-of-meridian-prototype.zip` mit `index.html` an der Wurzel. Als HTML-Build hochladen, „This file will be played in the browser“ aktivieren und Vollbild/responsiven Viewport ermöglichen. Neue lokale Assets in ZIP- und Docker-Paketweg gemeinsam berücksichtigen; für Sprache gilt der [Katalog-/Paketvertrag](audio.md). `node scripts/build-zip.mjs <ziel.zip>` erlaubt nach dem Build einen abweichenden Ausgabeweg, etwa für isolierte Paketprüfungen.
+`npm run capture:itch -- --help` zeigt Szenen/Optionen; `--scene <id>` begrenzt die Aufnahme.
+Ausgaben sind neue eigene `.tmp/`-Ordner oder bewusst `release/itch-media/<neuer-lauf>`.
+Medien manuell auswählen und veröffentlichen. Arrangierte Feuergefechte sind kein Balancenachweis.
+[Browser-/Ausgabegrenzen](scene-capture.md).
 
-`npm run capture:itch` benötigt Chromium (`CHROMIUM_PATH` für abweichenden Pfad) und erzeugt WebP-Präsentationsmedien mit Qualität 80. Ohne Ausgabeangabe entsteht ein neuer laufbezogener Ordner unter dem eigenen `.tmp/`; Browserprofile und Scratch bleiben ebenfalls dort. Bewusste Releaseausgaben unter `release/itch-media/` sind generierte, ignorierte Artefakte für manuelle Auswahl/Veröffentlichung, keine versionierten Quellen. Bestehende Ausgabeordner werden abgelehnt, alte Medien weder überschrieben noch gelöscht. Andere Ausgabeziele außerhalb `.tmp/` und `release/itch-media/` des Worktrees sind nicht erlaubt.
-
-```bash
-npm run capture:itch -- --help
-npm run capture:itch -- --output release/itch-media/mein-neuer-lauf
-npm run capture:itch -- --scene 02-desert-outpost
-```
-
-Ohne Szenenfilter entstehen die Desktop-/Mobilgalerie und Marketing-Kompositionen samt Vorschau. `--scene` erzeugt ausschließlich eine Desktopaufnahme der benannten Szene; IDs stehen in `--help`. Der Filter dient einer gezielten Abnahme, nicht einer automatischen Screenshotserie. Das Werkzeug baut entwickelte Basen als explizite Capture-Fixture auf zulässigen HQ-Standorten auf; der produktive Worker-Start bleibt unverändert. Arrangierte Motive sind kein Spiel-/Balancingnachweis; nicht routinemäßig als Prüfung starten.
-
-Nach tatsächlichem Paket-/Hostingwechsel gezielt Assets/404/MIME, Start und Audiofreigabe prüfen. [Prüfwahl](testing.md). Android bleibt eine [zurückgestellte Option](issues/android.md).
+Nach tatsächlichem Paket-/Hostingwechsel gezielt Assets, 404/MIME, Start und Audiofreigabe
+prüfen; kein automatischer Push/Deployment. [Assetpflege](assets.md).

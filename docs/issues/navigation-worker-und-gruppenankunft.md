@@ -1,32 +1,41 @@
-# Navigation: Worker, Gruppenankunft und Liveness
+# Navigation und Liveness
 
-## Nutzerberichte
+## Workerstillstände
 
-Beim nacheinander gesetzten rechten/linken Logistics depot blieb der zweite Worker stehen; Karte/Seed/Position fehlen. Zweiter Bericht: zwei stehende Prospector zwischen HQ/Gebäude nahe Mineralfeld, ohne Zustandsabzug.
+Berichte: zweiter Worker beim nacheinander gesetzten rechten/linken Depot; zwei
+stehende Prospectors zwischen HQ/Gebäude am Mineralfeld. Karte/Seed/Zustandsabzug fehlen.
 
-![Zweiter Worker unter unfertigem linkem Depot](worker-bauwegfindung/benachbarte-logistikdepots.webp)
+![Worker unter unfertigem linkem Depot](worker-bauwegfindung/benachbarte-logistikdepots.webp)
 
-Isolierte HQ-/Depot-Prüfung belegte eine passende Fehlerklasse: wechselndes HQ-/Servicepunktziel und vorzeitig übersprungener Arbeitswegpunkt. Korrektur integriert, Originalscreenshots nicht exakt reproduziert. [Navigationsregressionen](../../tests/ashes-of-meridian-navigation.check.cjs), [dauerhafter Vertrag](../architecture.md#welt-darstellung-und-zufall).
+Wechselndes HQ-/Servicepunktziel und übersprungener Arbeitswegpunkt sind korrigiert;
+Originalfälle nicht exakt reproduziert.
 
-## Noch offen
+- [ ] Vier historische `worker traffic stays productive for six minutes`-Fälle klären:
+  1409/0 mit acht Workern (frei/erzwungene Knotenzuweisung), 7012/1 und 9017/2 mit zwölf.
+  Einzelne Worker ohne Abbaufortschritt in der ersten Minute. Gegenprobe 1409/0,
+  erzwungener Knoten: Worker 63 bei `(90.035,112.291)`, Ressource 24, Fracht 0,
+  leerer Pfad, Stuck 3.05. Fixturebelegung und Navigation getrennt untersuchen.
+- [ ] Originalstillstand vor Reload sichern: Karte/Seed, ID, Position, Auftrag/Fracht,
+  kompletter Pfad/Ziel/Status/Version, Exit, Stuck/Recovery/Yield und Nachbarn.
+- [ ] Auftragsweite Liveness, Umweg-/Yieldzyklen und Servicepunkt-Fairness im Gegenverkehr.
+  Blockiert-/Ausgangswarten nachvollziehbar anzeigen; temporäre Belegung nicht als
+  endgültig unerreichbar behandeln, keine Teleports/heimlichen Erstattungen.
 
-- [ ] Die vier `worker traffic stays productive for six minutes`-Fälle mit den entwickelten Basen klären: Seeds/Faktionen 1409/0 (acht Worker, freie und erzwungene Knotenzuweisung), 7012/1 und 9017/2 (je zwölf Worker) scheitern bereits an fehlendem Abbaufortschritt einzelner Worker in der ersten Minute. Gezielte Gegenprobe für 1409/0 mit erzwungenem Knoten: Worker 63 bei (90.035, 112.291), Minenauftrag auf Ressource 24, Fracht 0, leerer Pfad, Stuck 3.05. Fixturebelegung und tatsächliche Navigation getrennt untersuchen; weder Anlaufgrenze noch Lieferpflicht abschwächen.
-- [ ] Originalfälle bei erneutem Stillstand sichern: Karte/Seed, Workerposition/-auftrag/-fracht, Exit/Yield, kompletter Pfad samt Ziel/Status/Version, Stuck-/Recoverywerte und Nachbargeometrie. Vor Reload sichern; kein laufendes Restore.
-- [ ] Sichtbarer Blockiert-/Ausgangswarten-Status oder abschließende Fehlerreaktion. Temporäre Belegung nicht als dauerhaft unerreichbar behandeln; keine heimlichen Erstattungen/Teleports.
-- [ ] Auftragsweite Liveness statt nur Wegpunktfortschritt, Yield-/Umwegzyklen und Servicepunkt-Fairness/Gegenverkehr beurteilen.
-- [ ] Größenabhängige Clearance, allgemeine Segmentkollision und globales Suchbudget nur als separate Erweiterung. Bestehende Radien/RNG schützen. Kosten von Wegsuche und Live-Körperprüfungen stehen zentral unter [Performance](performance-und-mobilstabilitaet.md#bewegte-armeen-und-navigation); reine Beschleunigung ersetzt keine Liveness-Abnahme.
-
-Akzeptanz: erreichbarer Bau wird ohne Neuauftrag abgeschlossen, jeder erreichbare Minenworker liefert wiederholt; unerreichbare Ziele sind nachvollziehbar ohne Suchstürme. Höhenzugang darf Arbeit durch Klippen nicht erlauben.
-
-Bestehende Langlauf-Ausnahme für künstlich gebündelte Startworker: erste Anlaufminute nur mit Abbaufortschritt, danach weiterhin Lieferung je Worker/Minute. Keine allgemeine Stillstandstoleranz. Crowd-/Originalfallabnahme bleibt offen; [Prüffreigaben](../testing.md).
+Akzeptanz: erreichbarer Bau endet ohne Neuauftrag, jeder erreichbare Minenworker liefert
+wiederholt; unerreichbare Ziele warten verständlich ohne Suchstürme, keine Arbeit durch Klippen.
+Bestehende Langlauf-Ausnahme bei künstlich gebündelten Startworkern: erste Minute
+Abbaufortschritt, danach Lieferung je Worker/Minute; keine allgemeine Stillstandstoleranz.
 
 ## Gruppenankunft und Ausweichwackeln
 
-Der Nutzer meldete sehr lange Gruppenankunft, fortgesetztes Hin-und-her-Bewegen vieler Einheiten und eine bis zum Aufnahmeende bewegte Einheit. Annähernd 60 FPS in derselben Chromium-Aufnahme belegen keine korrekte Zielankunft. Die aggregierte Performanceaufnahme enthält keine Einzelpositionen, Befehls-/Zielmarker oder Recoveryzustände; konkrete Ursache und betroffene Einheit bleiben offen. Die jüngste positive FPS-Rückmeldung ist keine bestätigte Behebung dieses Verhaltens.
+Lange Ankunft, dauerhaftes Hin-und-her vieler Einheiten und eine bis Aufnahmeende bewegte
+Einheit trotz annähernd 60 FPS gemeldet. Aufnahme enthält keine individuellen Ziel-/
+Recoveryzustände; Ursache offen. Lokale Gruppenzielkorrektur und bessere FPS belegen keine Behebung.
 
-- [ ] Bei erneutem Auftreten Spielstand/Karte/Seed, Einheiten-IDs, ursprünglichen Gruppenbefehl und Formationsziele sichern. Je betroffener Einheit Position, Auftrag, Pfad/Ziel/Status/Version, Wegpunkt, Stuck-/Recovery-/Yieldzustand und nahe Körper/Ausgänge vor Reload erfassen.
-- [ ] Einzel- gegen Gruppenankunft, freies gegen belegtes Ziel sowie tatsächlich blockierte Engstelle unterscheiden; Ankunftstoleranz, Formationsplatz und wiederholtes Ausweichen/Neuplanen getrennt beurteilen.
+- [ ] Spielstand, ursprünglichen Gruppenbefehl und Formationsziele sowie obige Einzelzustände sichern.
+- [ ] Einzel/Gruppe, freies/belegtes Ziel und Engstelle getrennt beurteilen; Ankunftstoleranz,
+  Formationsplatz, wiederholtes Ausweichen und Neuplanen unterscheiden.
 
-Die beauftragte lokale Korrektur ungültiger Gruppenzielplätze prüft freie Originalplätze, Belegung, gemischte Körpergrößen, Klippen/Rand, Ausgangsreservierungen und begrenzten Fallback; eine kleine synthetische Testarena prüft außerdem die Ankunft neben einem Gebäude und an teilweise belegten Zielen gemäß der bestehenden Ankunftstoleranz. Das belegt weder den Original-Wackelfall noch Engstellen-/Gegenverkehrs- oder Worker-Liveness-Abnahme. Radien, Formationsabstände, Yield und Recovery bleiben unverändert; vollständige Erreichbarkeit korrigierter Plätze bleibt Aufgabe der bisherigen Navigation.
-
-Weitere Änderungen an Radien, Zielabständen, Formation, Yield-Prioritäten oder Recovery benötigen einen eigenen Auftrag samt Reproduktion und begrenzter Verhaltensregression; schnelleres Rendering oder ein Körperindex ist kein Nachweis einer Behebung.
+Radien, Formation, Prioritäten oder Recovery erst mit eigenem Auftrag/Reproduktion ändern.
+Such-/Kollisionskosten unter [Performance](performance-und-mobilstabilitaet.md),
+Langläufe nur mit [Freigabe](../../AGENTS.md#prüfungen).

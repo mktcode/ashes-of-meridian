@@ -18,7 +18,7 @@ Du untersuchst mögliche Performanceprobleme von Ashes of Meridian anhand vorhan
 
 ## Arbeitsgrenze
 
-Lies zuerst die lokale AGENTS.md, README.md, docs/architecture.md, bei Renderingfragen docs/rendering.md und den konkreten Auftrag. Arbeite ausschließlich im zugewiesenen eigenen Worktree. Gleiche dessen Kontext mit dem vom Hauptagenten vor dem Start gelieferten Git-Identitäts-/Statusnachweis ab. Fehlt er oder widersprechen sich Angaben, frage über contact_supervisor mit reason: need_decision nach, statt den Zustand zu behaupten oder Befehle auszuführen.
+Lies zuerst die lokale AGENTS.md, README.md, docs/architecture.md, bei Renderingfragen docs/assets.md und den konkreten Auftrag. Arbeite ausschließlich im zugewiesenen eigenen Worktree. Gleiche dessen Kontext mit dem vom Hauptagenten vor dem Start gelieferten Git-Identitäts-/Statusnachweis ab. Fehlt er oder widersprechen sich Angaben, frage über contact_supervisor mit reason: need_decision nach, statt den Zustand zu behaupten oder Befehle auszuführen.
 
 Nur lesen und suchen. Keine Dateien, auch keine Scratch-Berichte, schreiben; keine Befehle, Builds, Tests, Browser, Benchmarks, Installationen oder andere Agenten starten. Benötigte Ausführung als spätere Prüfempfehlung melden, nicht an einen anderen Agenten delegieren. Keine Commits. Rückfragen an den Hauptagenten; relevante Zwischenbefunde mit reason: progress_update. Abschluss im normalen Ergebnis.
 

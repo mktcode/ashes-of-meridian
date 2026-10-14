@@ -1,36 +1,58 @@
-# Vollständige Runs und Geräteabnahme
+# Zusammenhängende Run- und Geräteabnahme
 
-Menschliche Abnahme bleibt offen; technische Regressionen ersetzen sie nicht. Relevante neue Befunde knapp mit Gerät/Browser, Build, Karte/Seed, Stage, Ausstattung und Ergebnis sichern.
+Menschlich offen, keine automatische Test-/Balancefreigabe. Neue Befunde mit
+Gerät/Browser, Build, Karte/Seed, Stage, Ausstattung und Ergebnis sichern.
+Keine zusätzliche Vollrunde je Feature.
 
-## FFA-Expeditionen: gezielte Abnahme
+## Einstieg und Bedienung
 
-- [ ] Frischer Run: ein Gegner auf Stage 1–3, zweiter Slot ab 4, dritter ab 8. Bestehende Slots behalten getrennte Vorteile bei Fraktionswechsel, neue starten leer; Briefing/Reload muss dazu passen.
-- [ ] KI-gegen-KI-Druck, Ausscheiden und HQ-Abschluss beobachten. Gegen passiven/verteidigenden Spieler: erfolgreiche Belagerung fortsetzen, sinnvoller Rückzug bei Bedrohung, Reserven gegen Ablenkung, stabile FFA-Ziele.
-- [ ] Militärischer Sieg schaltet sofort die nächste Stage frei, ohne Score-Gate: **Continue building**, zivile Upgrade-Wahl mit lokalem Echo und spätere Rückkehr zur Expedition verständlich abnehmen; [Kurve/Bauaufwand](expeditions-schwierigkeit-und-upgrades.md).
-- [ ] Einstieg ohne zivile Gebäudeboni und tiefe Ressourcenstapel balancieren; [Progressionsbefunde](expeditions-schwierigkeit-und-upgrades.md). Faire Wege/Wirtschaft aller prozedural zugeteilten Parteienstarts gemäß [Terrainabnahme](terrain-generation.md) prüfen.
+- [ ] Frischer Run: Worker-Ankunft, HQ-Bau, Text-/Kamerafahrt und Supply-/Depot-Tutorial
+  ohne Vorwissen verständlich. Zielpanel auch bei Warnungen/Funk sichtbar;
+  Rekrutierung/Depot abbrechen, Tutorial unterbrechen/fortsetzen.
+- [ ] Tutorial-/Auswahlstimmen gegenüber Musik/Kampf, Pause/Fortsetzen, SFX-Stummschaltung
+  und verspätete mobile Autoplay-Freigabe. Aufnahme `infantry-selected-3.mp3`
+  („Pew pew pew yourself!“) gegen automatische Katalogtranskription bestätigen.
+- [ ] Vierer-Loadout/-reihenfolge und Command-Ränge über Reload; Fähigkeiten, große
+  Gruppen, Recall an belegten HQ-Ausgängen/Höhen und Reinforcements.
+- [ ] Touch unter Last: Pan/Pinch/Drehen, Tapfolgen, Rechteckauswahl samt Haltering,
+  Minimap, Favoriten, Scroll/Back/Zielwahl, Ausrichtung/Hintergrundrückkehr.
+  Desktopsteuerung auch im eingebetteten itch-Build. [UI-Sonderfälle](ui-review.md).
+- [ ] FFA: Gegner-Slots ab Stages 4/8, getrennte Konten und Briefing/Reload; HQ-Abschluss,
+  Ausscheiden, Angriff/Rückzug und Druck gegen passive Spieler beobachten.
 
-## Worker-Start und Tutorial
+## Citybuilding und Upgrades
 
-- [ ] Worker-Ankunft, Lesedauer der Textdialoge und Fahrt eigenes HQ → Gegner → eigenes HQ menschlich abnehmen, insbesondere im Hochformat. Platzieren des ersten HQ ohne Vorwissen verständlich?
-- [ ] [Supply-Tutorial](../gameplay.md#kamera-und-befehle) im frischen Profil menschlich abnehmen: mehrere Infanterietrupps bis keine weitere Einheit passt, reserviertes Supply in der Warteschlange, Depot platzieren/fertigstellen und verständlicher Abschluss. Lesbarkeit der Text-Funkmeldungen und des bleibenden [Zielpanels oben links](../ui-design-system.md) in Hoch-/Querformat abnehmen, einschließlich aller Tutorialphasen und gleichzeitiger Warnungen/Funkmeldungen sowie des Tempohinweises beim HQ-Bau. Kein zusätzlicher Scrollbedarf im Baumenü durch Tutorialtext. Wartezeit/Ressourcen für die größere erste Armee sowie Gegnerdruck währenddessen beurteilen; kein Balancing geändert. Abbrechen von Rekrutierung/Depot mitprüfen; Fortsetzen gemäß [Spielstandsabnahme](expeditions-spielstand.md).
-- [ ] Tutorial-/Auswahlstimmen, Verständlichkeit gegenüber Musik/Kampf, Pause/Fortsetzen, SFX-Stummschaltung und verspätete mobile Autoplay-Freigabe akustisch prüfen. Wortlaut von `infantry-selected-3.mp3` („Pew pew pew yourself!“) gegen die automatische Katalogtranskription bestätigen. [Pflegevertrag](../audio.md).
-- [ ] Bezahlten KI-HQ-Aufbau aus Worker-Sicht auf den spielbaren Karten gezielt prüfen; KI-/Simulationsläufe brauchen separate Freigabe. Danach Wirtschaft und frühe Angriffe unter dem längeren Aufbau vergleichen, kein automatisches Balancing.
+- [ ] Nach Sieg Gründung/Prospector-Zuweisung, Menü-Sperre und Outpost guide verstehen.
+  Gründung mit knappen Restvorräten, voller Speicher/Restladung, Umzuweisung und Forumverlust.
+- [ ] Umlaufende Forum-Lieferung vorne/hinten/seitlich am Hang und nach Reload.
+  Referenz: Frontier `13644411`, Forum `211` bei `(131.2526,52.2235)`, Rotation
+  `5.666666666666667`. Gemeldeter Einbruch auf etwa 1 FPS bei 22:53 nach Zuweisung;
+  Export enthält nur früheren Stand um 20:53. Freeze-Korrektur im Firefox positiv
+  rückgemeldet; Lieferung/Fortsetzung offen. Blockierter Bereich muss ohne Suchsturm
+  warten, Ladung behalten und verständlichen Hinweis zeigen; Vorrat nicht künstlich auffüllen.
+- [ ] Forum-Drehung mit bebauter Siedlung: ungültige Gebäude verzögert zurückbauen,
+  rechtzeitiges Zurückdrehen hebt Frist auf; Ressourcen/Militär bleiben stehen.
+  Ohne erreichbaren Lieferbereich keine Zahlung/Layoutmutation. Individuelle Drehung,
+  Verkauf/Fundamentabbruch und gespeicherte Fristen prüfen.
+- [ ] Drei feste Angebote: Namen/Touch-Ziele, pausiertes Info-Modal, Abbruch ohne Kauf,
+  Aktivierung mit lokalem Echo, permanenter Effekt, Rangkauf und i-Button.
+  Laufendes Gefecht verlassen, Bauwelt entwickeln, zurückkehren: aktuelle Dauerboni,
+  nur neue Lieferungen, blockierte Ankunft erhalten. Wiederaufbau ersetzt keine gefallenen Bonusworker/Commander.
+- [ ] Wachstum/Weiterbau nach Save, mehrere Foren und fehlender Bauplatz;
+  kein Offline-Wachstum oder garantierter Maximalausbau.
 
-## Commands und Bedienung
+## Außenposten, Evakuierung und Lebenszyklus
 
-- [ ] Viererauswahl/-reihenfolge, Command-Ausbauränge aus Forschungsgebäuden, feste Slots/Loadouts über Übergänge und Reload verständlich.
-- [ ] Fähigkeiten/Zielbedingungen und dominante Kombinationen im Gefecht; große Gruppen, Recall an belegten HQ-Ausgängen/Höhen und geschützte Reinforcements.
-- [ ] [Rechteckauswahl](../gameplay.md#kamera-und-befehle): Haltezeit, Bereitschaftsring und Fingerverdeckung auf echten Touchgeräten abnehmen; frühes Kameraziehen sicher von Halten-und-Ziehen unterscheidbar? Desktop: Linksziehen zur Auswahl und Rechtsziehen zum Kameraschwenken verständlich?
-- [ ] Touch unter Last: Pan/Pinch, Tapfolgen, Minimap, kleine Aktionen, Scroll/Back/Zielwahl, Ausrichtung und Hintergrundrückkehr. Desktopsteuerung auch im tatsächlich eingebetteten itch.io-Build.
+- [ ] Sieg → Außenposten und erneut erreichbarer Guide verständlich; Menüwechsel von
+  endgültiger Evakuierung unterscheiden. Wellenanstieg, Vorwarnung und endliche Vorräte.
+- [ ] HQ-Button, irreversibler Countdown, Armeeweg zum richtigen HQ, Dreierauswahl
+  der Gebäuderänge und Austausch bis Abschluss. HQ-Verlust während Rettung,
+  blockierte Zielankunft, Rettung genau einmal; Status/Puls auch schmal und reduced motion.
+- [ ] Siege, Niederlage/Abbruch, Freischaltungen; Stage-Auswahl mit Szene/Tageszeit,
+  teuren Wechseln und Reload. Continue/Enter world korrekt unterscheiden.
+- [ ] Hintergrund/Prozessende, Grafikverlust, Quota/Speicherwarnung, beschädigte einzelne
+  Welt und Run-Ende unter `file://`, Hosting und Mobilgerät: [Spielstand](expeditions-spielstand.md).
 
-## Außenposten-Einstieg
-
-- [ ] Siegeshinweis, einmalige Bau-Einführung und erneut erreichbaren **Outpost guide** im Pausenmenü ohne externe Erklärung verstehen, auch mit bereits abgeschlossenem Profil-Tutorial. Weiterreisen über das Hauptmenü von endgültiger Evakuierung unterscheiden. Gezielte Wellen-/Rettungs- und Geräteabnahme zentral unter [Zivilisationsupgrades](civilization-upgrades.md), keine zusätzliche Vollrunde.
-
-## Fortschritt und Lebenszyklus
-
-- [ ] Mehrere Siege, zivile Gebäudewahlen/-ränge, Niederlage/Abbruch und Fraktionsfreischaltungen. Auszahlung nicht durch erneuten Ergebnisaufruf vervielfachen.
-- [ ] Profil/Expedition unter `file://` und Webhosting sowie Pause/Audio/Rückkehr menschlich abnehmen; Snapshot-Restore, Run-Ende und Speicherfehler nach [Spielstandsabnahme](expeditions-spielstand.md).
-- [ ] Stage-Auswahl: gespeicherte Bebauung/Tageszeit, Pfeile/Labels, weiche Wechsel bei teuren Karten, Reduced motion und Reload. **Continue expedition** lädt die aktuelle Stage, **Enter world** die ausgewählte abgeschlossene Welt; während des Wechsels kein Eintritt. Weiterbau und getrennte Spielstände mit der [Spielstandsabnahme](expeditions-spielstand.md) zusammen prüfen; reine ältere Landschaftsvorschauen bleiben nicht betretbar.
-
-Karten-/Darstellung zentral unter [Landschaften](landschaften-und-taktische-darstellung.md), Worker-Gegenverkehr unter [Navigation](navigation-worker-und-gruppenankunft.md), Wärme/Stabilität unter [Performance](performance-und-mobilstabilitaet.md). Keine automatische Test-/Balancingfreigabe aus dieser Liste.
+Balance unter [Progression](expeditions-schwierigkeit-und-upgrades.md),
+Bildwirkung unter [Darstellung](landschaften-und-taktische-darstellung.md),
+Kosten/Stabilität unter [Performance](performance-und-mobilstabilitaet.md).

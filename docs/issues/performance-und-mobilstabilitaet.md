@@ -1,92 +1,83 @@
-# Performance: verbleibendes Potenzial und Geräteabnahme
+# Performance und Mobilstabilität
 
-Zentrale Übersicht für Singleplayer-Performance, Speicher-/Thermikdruck und Grafikabbrüche. Fachissues behalten Spielregeln, Bedienung und visuelle Abnahme; Performancebefunde und nächste Messfragen werden hier gepflegt. Technische Verträge stehen in [Architektur](../architecture.md) und [Rendering](../rendering.md), Diagnosebedienung und Prüfgrenzen unter [Prüfungen](../testing.md#lokale-performancediagnose). Optimierungshistorie bleibt in Git.
+Zentrale offene Messfragen, keine Optimierungsfreigabe. [Werkzeuge](../scene-capture.md),
+[Messgrenzen](../testing.md), [Freigaben](../../AGENTS.md#prüfungen).
+Abgeschlossene Optimierungen und A/B-Zahlen stehen in Git, nicht als aktuelle FPS-Zusage hier.
 
-## Aktueller Stand und Priorität
+## Nutzerbefunde
 
-- **Frühere Desktop-Rückmeldung, RTX 3090 laut Nutzer:** In einem früheren Spielabschnitt war der Nutzer zufrieden. Chromium erschien im getesteten Spielabschnitt nahezu konstant bei 60 FPS, gelegentlich 59 und selten 58; Firefox erreichte nicht konstant 60 FPS. Dies war menschliche Rückmeldung, keine kontrollierte Browser-A/B-Aufnahme oder allgemeine Leistungszusage.
-- **Chromium bleibt die Diagnosebasis.** Die verbleibende Firefox-Differenz ist offen, aber kein Anlass für einen vorsorglichen Engine- oder Qualitätsumbau. Ein gleicher Seed allein reicht nicht zum Browservergleich: Spielstand, Kamera, Tageszeit, Auflösung und parallele Tabs beeinflussen die Last.
-- **Dichte Einheiten und Auswahl:** Nach Live-Kollisionsindex und Terrain-Ray-Optimierung meldet der Nutzer beim Spielen in Firefox mit maximal großer Armee meistens über 55 FPS und eine deutliche Verbesserung. Menschliche Rückmeldung zum getesteten Stand, keine kontrollierte A/B-Aufnahme oder allgemeine Leistungszusage; Kamera, Tageszeit und Auflösung sind nicht dokumentiert. Zuvor wurden spürbare Framedrops bei dicht beieinanderstehenden Einheiten gemeldet; Verteilen verbesserte die Framerate. Einzelne Auswahlen konnten ebenfalls kurze Einbrüche auslösen und sind nicht gesondert abgenommen. Die konkrete Gefechtsszene ist noch nicht CPU-/GPU-seitig zugeordnet. Kurze isolierte Gegenproben bestätigen sowohl zusätzliche Bewegungs-/Kollisionsarbeit als auch dichteabhängige Nachtlichtkosten; beides am Spielstand getrennt prüfen, Auswahl nicht automatisch als Wegsuche interpretieren.
-- **Aktuelle synthetische Eingrenzung:** Die 144-Schützen-Vorlage auf dem Terrainstand `f7491a8`, High, DPR 1, Chromium/ANGLE OpenGL mit gemeldeter RTX 3090 und fünf Sekunden Echtzeit je Tag/Nacht-/Pause/Laufend-Fall erreicht überwiegend 60-Hz-Renderintervalle, aber CPU-Callbackspitzen über 20 ms. Laufend ist Kollisions-/Yield-Arbeit relevant; ein separates CPU-Sampling bestätigt den geordneten Yield-Scan. Ein konservativer Achsenfilter vor dessen Order-/Prioritätsarbeit erhält Live-Reihenfolge und exakten Abstandstest. In einem wiederholten A/B-Paar sinkt Kollisions-p95 tagsüber von 6,6 auf 4,8 ms, nachts von 7,8 auf 4,9 ms. Ein früher Vergleichslauf zeigt dagegen gleichzeitig starke CPU-Verlangsamung auch im Szenenaufbau; die kurzen Proben streuen und belegen keinen stabilen FPS-/Renderintervallgewinn. Wiederholte HUD-/Layoutarbeit, Szenenaufbau und einzelne kalte Portraitspitzen bleiben eigene Messfragen. Die Nacht-Szene kostet im GPU-Timer meist etwa 5 ms; kein Beleg für denselben Engpass im Nutzergefecht, Firefox oder auf Mobilgeräten.
-- **Mobilstabilität bleibt offen:** Pixel 7, Chrome, High: schnelle Erwärmung, gelegentliche Freezes bzw. `webglcontextlost`; nach sofortigem Reload wurde vorübergehend fehlendes WebGL 2 gemeldet. Dauer, Karten-/Buildkontext und konkrete Abbruchdaten fehlen. GPU-Reset, Speicher- oder Thermikdruck sind Hypothesen, kein bewiesener Leak.
-- **Integrierte GPUs und andere Szenen sind nicht allgemein abgenommen.** Positive Desktop-Rückmeldung ersetzt keine Mobil-/Laptop-, dichte-Armee-, Langrun- oder Weltwechselabnahme.
+- **Dichte Armeen/Auswahl:** Firefox mit maximaler Armee nach Korrekturen laut Nutzer
+  meistens über 55 FPS, deutlich verbessert. Einzelne Auswahlhänger nicht gesondert
+  abgenommen; Spielstand/Kamera/Tageszeit/Auflösung fehlen. Kurze synthetische Proben
+  zeigen sowohl Bewegung/Kollision als auch dichteabhängige Nachtlichtkosten,
+  keine bewiesene Ursache des Nutzerfalls. Jüngste 144-Schützen-Probe auf `f7491a8`,
+  High/DPR 1, Chromium/ANGLE OpenGL, RTX 3090: überwiegend 60-Hz-Intervalle, aber
+  CPU-Spitzen über 20 ms; Nacht-GPU meist etwa 5 ms. Nur fünf Sekunden je Fall,
+  streuende Ergebnisse, kein Firefox-/Mobil-/Langrunbeleg.
+- **Unerreichbare Gruppenziele, Firefox:** wiederkehrende Hänger nach Gruppenbefehl
+  gemeldet; Screenshot, aber kein Save/Build/Seed/Gruppengröße/Intervall gesichert.
+  Wiederholte Wegsuche/Recovery nur Hypothese. Lokale Gruppenzielkorrektur garantiert
+  keine vollständige Erreichbarkeit. Nicht mit [Generierungsabbruch](terrain-generation.md#generierungsabbrüche) verwechseln.
+- **Pixel 7, Chrome, High:** schnelle Erwärmung, Freezes/`webglcontextlost`, unmittelbar
+  nach Reload vorübergehend kein WebGL 2. Dauer/Build/Szene fehlen; GPU-Reset,
+  Speicher-/Thermikdruck sind Hypothesen, kein bewiesener Leak.
+- Frühere RTX-3090-Rückmeldung: Chromium nahezu 60 FPS, Firefox weniger konstant.
+  Keine kontrollierte Browser-A/B-Probe. Integrierte GPUs/andere Szenen nicht allgemein abgenommen.
 
-Aktuell dichte Armeen und Auswahlhänger getrennt eingrenzen; mobile Abbrüche bleiben ebenfalls offen. Die folgenden Kandidaten sind Messfragen, keine automatische Implementierungs- oder Lastlauffreigabe.
+## Nächste Eingrenzung
 
-## Kandidaten und konservative Grenzen
+- [ ] Dichte Armee laufend/pausiert und Tag/Nacht getrennt am Nutzer-Spielstand;
+  Kollisions-/Yieldarbeit, Szenenaufbau, HUD/Layout und kalte Porträts unterscheiden.
+  [Ankunftswackeln](navigation-worker-und-gruppenankunft.md#gruppenankunft-und-ausweichwackeln)
+  ist unabhängig von FPS.
+- [ ] Auswahl kalt versus wiederverwendetes Modell, auch pausiert. Picking, HUD/Layout,
+  GPU-/Canvas-Kopie und folgende Ticks separat erfassen, Auswahl nicht pauschal als Wegsuche behandeln.
+- [ ] Unerreichbares Ziel: kurzen auffälligen Abschnitt samt Such-/Recoveryaufrufen,
+  Pause-Gegenprobe und Autosavezeitpunkten sichern, bevor Budgets/Recovery geändert werden.
+- [ ] Mobilabbruch mit Gerät/OS/Browser, Build, Karte/Seed, Save, Qualität/Tempo,
+  Dauer, Akku/Ladezustand und Temperaturkontext erfassen. Freeze, Context-loss und
+  Reloadfehler trennen; bei Überhitzungswarnung abbrechen.
 
-Live-Kollisionsindex für `unitFits()` und zeilenweise Terrain-Ray-Kandidatensuche sind integriert. Yield behält seinen geordneten Live-Scan mit Achsenvorprüfung. Kandidatenwiederverwendung, radiusbehaftete Terrainsegmente und unveränderliche Navigationsprüfungen bleiben begrenzte Folgefragen, zunächst am Nutzerstand messen. Persistente Instanzdaten erst bei dominantem Modell-/Uploadanteil untersuchen. Lokale Weginvalidierung, Flowfields, Lichtfelder, Build-Porträts und Worker-Saves sind keine automatisch verhaltens-/darstellungsneutralen Änderungen.
+## Weitere Kandidaten nur bei gemessenem Anteil
 
-Die historische externe DDA-Probe war ein nachgebildeter Rechenkern, kein Produktions-/Browser-/FPS-Nachweis, und wurde nicht übernommen. Ihr wichtigster offener Schutzkontext bleibt der toleranznahe Randfall: Fläche `extent=64`, `step=2`, `size=65`, Höhe 2, entfernter Peak auf Höhe 4; Strahl von `[-65.00000005,4,-63.00000005]` nach `[-63.00000005,0,-65.00000005]`. Exakte X/Z-Clippinggrenzen verwerfen hier einen von den Dreieckstoleranzen akzeptierten Treffer bei `(-64.00000005,-64.00000005)`. Jede neue Kandidatensuche muss Toleranz, Rasterkanten/-ecken, parallele/kurze Abfragen, Kartengrenzen und nächsten Treffer konservativ schützen. `segment()` braucht unveränderte quadratische Radius-Clearance, nicht nur Mittellinien-DDA.
+- [ ] Snapshot/Autosave: Kopien, Upgrade-Aggregation, Gesamtserialisierung und synchrone
+  Storagewrites am realen Archiv messen. `window.Meridian.ui.battleSaveMilliseconds`
+  und `battleSaveBytes` sind Dauer/UTF-16-Schätzung, keine Quota/Residenz.
+  `setTimeout` beseitigt keine Hauptthreadblockade; Speichergrenzen nicht ändern.
+- [ ] Wegsuche/Live-Körper: Suchstarts, Terrain-/Kanten-Clearance und verbleibende
+  geordnete Scans. Nur identische unveränderliche Prüfungen wiederverwenden.
+  Flowfields, globales Budget oder Verteilung über Ticks ändern Verhalten und brauchen Entscheidung.
+- [ ] Straßen/Siedlung: tatsächliche Raster-/Maskenupdates und restliche Geometrie getrennt;
+  Wachstumstakt, Kandidatenreihenfolge und Platzierungsentscheidungen erhalten.
+- [ ] Baugrid: Erstaufbau/Kamerawechsel bei weitem Zoom/dichtem Bestand, Terrainproben,
+  Meshaufbau, Belegungsvalidierung und Uploads unterscheiden. Keine geänderte Rasterdichte/
+  Ringoptik; Leerlaufzeit ist nicht garantiert, normale Vorbereitung muss weiterlaufen.
+- [ ] GPU: Material/Relief, lokale Nachtlampen, nasse Böden, Detailgeometrie und zusätzliche
+  Schatten-/Konturpässe auf Zielhardware. Persistente Instanzen/Teiluploads/Culling nur
+  bei dominantem Anteil; mehr Buckets/`bufferSubData` sind nicht automatisch billiger.
+- [ ] Start/Weltwechsel: CPU-Generation, Modelle, Shader/Materialbereitschaft, Restore,
+  erster Draw getrennt; teilweise außerhalb rAF. Kein Preload aller Welten.
+- [ ] Residenz bei Welt-/Qualitäts-/Größen-/Vorschauwechseln: kurze Spitzen gegen dauerhaftes
+  Wachstum unterscheiden. Caches begrenzt/schwach, Ressourcenfreigabe gezielt prüfen.
 
-Kreis-/Lichtzellenprüfungen müssen Außenränder konservativ behandeln: Der Shader klemmt Außenpositionen auf Randzellen; vorhandene Tests schützen deren Lichtbeitrag. Teiluploads müssen alle referenzierten Lampenzeilen aktualisieren, nicht ungenutzte Reserve. Frühe Nullbeitragsprüfungen im Lichtshader, kleinere Uploads und MSAA-Invalidierung nach letzter Nutzung bleiben einzelne A/B-Kandidaten, keine belegten Ursachen von Auswahlhängern/Mobilabbrüchen. Fallbacks und weiterverwendete Renderziele erhalten.
+Keine pauschale Reduktion von Qualität, Auflösung, Details, Lampen, Bloom oder gewünschtem
+Tilt-Shift. Sicht-/KI-/Wirtschaftsvollscans allein beweisen keinen Engpass.
 
-## Verbleibende CPU-Spitzen
+## Konservativer Randfall
 
-- [ ] **Terrain-Picking: Geräteabnahme.** Die zeilenweise Ray-Kandidatensuche behält exakte Dreieckstests, Randtoleranz und Trefferreihenfolge bei. Eine synthetische diagonale Node-24-Gegenprobe mit dem Produktionspfad und dem alten Kernel im selben Kontext benötigt 169 statt 3.249 Zellen; sieben wechselnde warme Proben zeigten rund 0,019 statt 0,36 ms je Abfrage. Achsenparallele/vertikale Abfragen behalten ihre 57 bzw. eine Kandidatenzelle; ihr Zeitunterschied lag in der kurzen Probe im Mikrosekundenbereich. Begrenzte Vergleichsfixtures schützen unterschiedliche Höhen, beide Strahlrichtungen, Raster-/Kartengrenzen und den oben beschriebenen DDA-Randfall. Kein Browser-/FPS-Nachweis. Auswahl, Kameradrehung und die vier Minimap-Rays getrennt am Nutzerstand beurteilen; `segment()` und Navigation bleiben unverändert.
+Bei weiterer Terrain-Ray-Kandidatensuche Toleranzen erhalten: `extent=64`, `step=2`,
+`size=65`, Höhe 2 mit entferntem Peak 4; Strahl von `[-65.00000005,4,-63.00000005]`
+nach `[-63.00000005,0,-65.00000005]`. Exaktes X/Z-Clipping verliert den von der
+Dreieckstoleranz erlaubten Treffer `(-64.00000005,-64.00000005)`.
+Radiusbehaftete Segmente brauchen quadratische Clearance, nicht bloße Mittellinien-DDA.
+Lichtshader klemmt Außenpositionen auf Randzellen; konservative Lichtbeiträge und
+Fallbacks erhalten, bei Teiluploads alle referenzierten Zeilen aktualisieren.
 
-Frühere Chromium-Unterphasenaufnahmen ordnen synchrone Saves, einzelne Wegsuchen und tatsächliche Straßenupdates konkreten Hängern zu. Die damaligen Siedlungsspitzen wurden vor der jüngsten Entlastung gemessen; ihr Restanteil ist nicht neu quantifiziert. Keinen alten Spitzenwert als aktuellen Engpass weiterführen.
+## Vergleichsvertrag
 
-- [ ] **Snapshot und Autosave:** Kopien, Gesamtserialisierung und synchrones `localStorage` können das Bildbudget überschreiten; Archivwachstum und wiederholte Upgrade-Aggregation getrennt betrachten; laufende Gefechtsrezepte und getrennte Save-Ziele bleiben unverändert. Erst am realen Spielstand Zeit und Payload messen, dann identische Arbeit reduzieren. `window.Meridian.ui.battleSaveMilliseconds` zeigt die letzte Snapshot-/Speicherdauer, `battleSaveBytes` die geschätzte UTF-16-Payloadgröße, nicht Browserquota oder Residenz. Ein `setTimeout` beseitigt keine Hauptthreadblockade. Speicherintervall, sichere Snapshotgrenze und Lebenszyklussicherungen nicht still ändern. [Spielstandsvertrag und Abnahme](expeditions-spielstand.md).
-- [ ] **Wegsuche:** Gruppenbewegung kann synchrone Suchstarts bündeln; wiederholte Terrain-/Kanten-Clearance ist ein möglicher Kostenanteil. Nur unveränderliche Prüfungen für tatsächlich verwendete Körperradien begrenzt wiederverwenden; dynamische Belegung, exakte Start-/Zielsegmente, Arbeitsbereiche und Recovery bleiben aktuell. Identische Wege, Gleichstände, Reihenfolge und RNG nachweisen. Verteilen über Ticks, Flowfields oder ein globales Suchbudget ändern Reaktionsverhalten und brauchen eine eigene Entscheidung.
-- [ ] **Regelmäßige Ruckler bei unerreichbaren Gruppenzielen (Firefox):** Der Nutzer meldet wiederkehrende Hänger, nachdem Einheiten an eine unerreichbare Stelle geschickt werden; ein Screenshot liegt der Meldung zugrunde. Noch keine technische Reproduktion oder CPU-/GPU-Aufnahme; genaue Laufzeit-Buildkennung, Karte/Seed, Spielstand, Gruppengröße und Hängerintervall sind nicht gesichert. Wiederholte Wegsuche/Recovery ist eine Hypothese, keine belegte Ursache. Die lokale Gruppenzielkorrektur garantiert keine vollständige Erreichbarkeit und ist kein Nachweis einer Behebung. Zuerst den kurzen auffälligen Abschnitt samt Such-/Recovery-Aufrufen, Pause-Gegenprobe und Autosave-Zeitpunkten zuordnen; keine vorsorgliche Änderung der Suchbudgets oder Recoveryregeln. Dieser Laufzeitbefund ist vom separat reproduzierten [Generierungsabbruch bei Seed `16053245`](terrain-generation.md#reproduzierbarer-generierungsabbruch) zu unterscheiden.
-- [ ] **Straßen und Siedlungslayout:** Tatsächliche Raster-/Maskenupdates und restliche Geometrieprüfungen separat messen, nicht ihre Durchschnittskosten zum dauerhaften Hauptengpass erklären. Nur identische Berechnungen günstiger ausführen; Wachstumsintervall, Kandidatenzahl/-reihenfolge, Platzierungsentscheidungen und RNG erhalten.
-- [ ] **Sicht, KI, Wirtschaft und HUD:** Vollscans allein belegen keinen Engpass. Nur eine gemessen dominante Unterphase weiter aufteilen; Frequenzen, KI-Reaktion und Spielregeln nicht vorsorglich reduzieren.
-
-## Bewegte Armeen und Navigation
-
-- [ ] **Live-Körperprüfungen: Geräteabnahme und Restkosten.** Ein ticklokaler Broadphase-Index entlastet jetzt die reine `unitFits`-Körperprüfung; Yield bleibt ein geordneter Live-Scan mit konservativer Achsenvorprüfung, andere geordnete Scans bleiben unverändert. [Lebenszyklusvertrag](../architecture.md#welt-darstellung-und-zufall). Eine kurze ebene Node-24-Gegenprobe mit 300 Infanteristen und identischem gerichtetem Bewegungspass reduzierte im dichten Fall die geprüften Entitäten von 330.910 auf 35.284 bei weiterhin 1.934 Körperprüfungen; bei verteilter Aufstellung von 90.000 auf 580 bei 300 Prüfungen. Gleichheit von Zuständen/RNG und Live-Updates ist in begrenzten Fixtures geprüft. Sieben wechselnde warme A/B-Proben mit den Produktionsskripten im selben Node-Kontext zeigten im dichten Fall rund 4,7 statt 1,5 ms je Pass einschließlich Indexaufbau/-freigabe. Dieselbe per `file://` geladene CPU-Probe in Headless Chromium 154 bestätigte die Richtung mit rund 4,2 statt 1,5 ms. Ein getrennter VM-Harness zeigte dagegen trotz weniger Kandidaten keinen Zeitgewinn; Zeitvergleiche nicht über Ausführungskontexte vermischen. Keine Grafik oder autonome Partie in diesen Proben, kein Gefechts-/FPS-Nachweis. Am Nutzerstand CPU-Anteil, Restscans und dichte Nachtbeleuchtung getrennt abnehmen. Außerhalb von Ticks bleiben direkte Live-Scans bewusst erhalten.
-- [ ] **Befehlslatenz:** Einzel-/Gruppenbefehl, freies Ziel und Engstelle unterscheiden. Die [Diagnose](../testing.md#lokale-performancediagnose) trennt jetzt ausgewählte synchrone UI-Wurzelaufrufe außerhalb rAF von Frame-Arbeit und erfasst deren Picking-/Auswahl-, HUD-, Kollisions- und Wegsuchdetails. Diese begrenzten Ereignisse am auffälligen Abschnitt auswerten; Eingabewartezeit vor Handlerbeginn und erstes sichtbar präsentiertes Bild bleiben ungemessen. Unmittelbar folgende Ticks separat betrachten.
-
-**Ankunftswackeln separat behandeln.** Der Nutzer meldete anhaltendes Ausweichen trotz annähernd 60 FPS. Aggregierte Kollisions-/Yield-Aufrufe identifizieren weder eine Einheit noch ihren Ziel-/Recoveryzustand. Die offene Reproduktion gehört zur [Navigation](navigation-worker-und-gruppenankunft.md#gruppenankunft-und-ausweichwackeln); ein schnellerer Index behebt nicht automatisch den Verhaltensfehler.
-
-## Renderer und GPU
-
-- [ ] **Modellaufbau und Instanzdaten:** Bei dominanter Szenenaufbau-/Uploadzeit unveränderte Gebäudeteile bzw. fertige Transforms wiederverwenden. Baufortschritt, Waffenbewegung, Schaden, Teamfarbe, Nachtakzente, Lampen und Konturen müssen aktuell bleiben. Pufferkapazität/Teiluploads gegen bisherigen Uploadpfad messen; `bufferSubData` ist wegen möglicher Treiberstalls nicht pauschal schneller.
-- [ ] **Szenenshader:** Material-/Relief-, Schatten- und lokale Lichtarbeit können auf integrierten GPUs teuer sein. Eine isolierte Chromium/ANGLE-OpenGL-Probe auf RTX 3090 mit 300 dicht stehenden, gleich ausgerichteten Cinder-Pact-Schützen, ebenem Boden, Nachtlampen, High und 900×600 Pixeln zeigte beim feineren Lichtgitter rund 3,6 statt 6,1 ms im GPU-Timer über den Renderdurchlauf. Drei kurze A/B-Wechsel mit je sechs warmen Proben pro Stand bestätigten die Richtung; CPU-Modellaufbau und Pixelreadback lagen außerhalb des Timers. Separate Pixelvergleiche waren in 16 Renderzuständen identisch. Das belegt den Hebel in dieser Testszene, keine Gefechts-FPS oder Mobilabnahme. Restkosten des tatsächlichen Szenenpasses auf Zielhardware eingrenzen; dichte beleuchtete Basen und nasse Materialien bleiben relevante Fälle. Bloom/Post waren in vorhandenen Chromium-Aufnahmen klein und sind ohne neuen Befund keine ersten Kandidaten.
-- [ ] **Geometrie und Culling:** Detailreiche Foren, Zerstörer, Vegetation und zusätzliche Schatten-/Konturpässe können bei großen Beständen teuer werden. Räumliche Batchunterteilung nur bei bestätigter Geometrielast; mehr Buckets können mehr Draws verursachen. Vollständige Bounds einschließlich Animationen und außerhalb der Kamera liegender Schattenwerfer erhalten.
-- [ ] **Menü und Ergebnis:** Nur bei erneutem konkretem Symptom untersuchen. Bewegte Weltkulisse, eigentliche UI-Öffnung und Renderziel-/Filterkosten trennen; ein Menü ist keine automatisch billige 2D-Szene.
-
-Keine pauschale Reduktion von Auflösung, MSAA, Details, Lichtmenge, Bloom oder gewünschtem Tilt-Shift. GPU-Kosten und Treiber-/Compositoranteile lassen sich weder aus Draw-Zahlen noch aus kurzer GL-Einreichung allein ableiten. [Darstellungsabnahme](modelle.md), [Landschaften](landschaften-und-taktische-darstellung.md), [Nasse Bodenlichtakzente](landschaften-und-taktische-darstellung.md#tageszeit-wetter-und-licht).
-
-## UI und Erstaufbau
-
-### Bauplatzraster
-
-- [ ] Bei weitem Zoom/dichtem Bestand Erstaufbau und Kamerawechsel auf dem Nutzergerät messen: neue Terrainproben, Planung/Meshaufbau, aktuelle Belegungsvalidierung und Uploads unterscheiden. Ein früher sichtbarer Anfang und kleinere Einzelspitzen sind das Ziel, nicht eine veränderte Abtastdichte oder Ringoptik.
-- [ ] Leerlaufzeit ist unter hoher Last nicht garantiert; Vorbereitung muss auch über den normalen portionierten Renderpfad fortschreiten. Geschlossenes Menü, geöffnetes Menü ohne Bauauswahl und aktives Raster als getrennte Fälle betrachten.
-
-Genaue Klickprüfung und aktuelle Sicht-/Belegung erhalten, keine zusätzliche Wegsuche je Rasterprobe. Die bisherige Darstellung wurde im Firefox positiv bewertet; dies ersetzt keine Kostenmessung bei weitem Zoom. [Visuelle/Bauabnahme](citybuilding.md#baugrid-darstellung-und-bedienung).
-
-### Modellkacheln
-
-- [ ] **Einheitenauswahl:** Kalte Portraitaufnahme und Wiederwahl eines bereits aufgenommenen Modells getrennt messen, auch bei pausierter Simulation. Unveränderte Auswahlwerte dürfen befüllte Porträts nicht verdrängen; [DOM-/Cachevertrag](../rendering.md#modellkacheln). Verbleibende HUD-/Layoutarbeit und der Gelände-Raytest im Eingabehandler sind mögliche Kostenanteile, keine gemessenen Ursachen der Nutzer-Drops; die getrennten Diagnose-Interaktionen erlauben nun die Zuordnung ausgewählter synchroner Auswahl-/Pointerrelease-Aufrufe außerhalb rAF.
-- [ ] Bei erneutem Einbruch beim Öffnen von Codex/Baumenü erste Aufnahme und Wiederanzeige getrennt messen. Historisch wurden 60 → 30 FPS oder weniger gemeldet, aber ohne Geräte-/Diagnosekontext; kein belegter aktueller Dauerzustand.
-- [ ] CPU-Layout-/Sichtbarkeitsprüfungen von kalter GPU-/Canvas-Kopie trennen. Dirty-/Resize-/Scroll-getriebene Prüfung ist ein Kandidat, falls wiederholte DOM-Rechtecke dominieren. Laufende Weltkulisse separat erfassen; `thumbnails` nicht mit deren Kosten verwechseln.
-
-Ausschnitt, Teamfarben, Einblenden und Touchbedienung bleiben unter [UI-Modellkacheln](ui-review.md#modellkacheln-bild-und-bedienung); [Cache-/Ressourcenvertrag](../rendering.md#modellkacheln).
-
-## Initialisierung und Weltwechsel
-
-- [ ] Bei konkret störender Start-/Wechselzeit CPU-Welterzeugung, Modellgeometrie, Textur-/Shaderbereitschaft, Restore und ersten Draw getrennt erfassen. Diese Arbeit liegt teilweise außerhalb rAF und wird von der laufenden Framediagnose nicht vollständig erfasst. Kalter Start, wiederholter Weltbesuch und Freigabe des vorigen Bestands sind unterschiedliche Fälle.
-
-Identische abgeleitete Daten sind ein Wiederverwendungskandidat; Weltrezepte, Hindernisverteilung, öffentliche Terrain-/private Startquellen und RNG-Reihenfolge bleiben erhalten. Keine zweite Terrainimplementierung oder vorsorglicher Preload aller Welten. [Startabnahme](prozedurale-gefechtsstarts.md), [Weltbesuche](expeditions-spielstand.md).
-
-## Mobilstabilität und Speicher
-
-- [ ] Abbruch mit Gerät, Betriebssystem, Browser, Build/Commit, Karte/Seed, Spielstand, Qualität, Tempo, Dauer, Akku-/Ladezustand und Temperaturkontext sichern. Freeze, Context-loss und Reloadfehler unterscheiden; bei Überhitzungswarnung abbrechen.
-- [ ] Speicherentwicklung bei Kartenwechsel, Resize, dichter Bebauung und geöffneten Vorschauen prüfen: residente Modell-/Vorschau-Meshes, Materialtexturen, Instanzpuffer, lokale Lichtdaten, MSAA-/Schatten-/Postziele und Caches berücksichtigen. Kurzzeitige Allokationsspitzen von dauerhaft wachsender Residenz unterscheiden; Diagnosebytes sind Schätzungen, keine Treibermessung.
-- [ ] Wärme, Akku, Renderintervalle und Fortsetzen nach Hintergrund/Reload auf dem betroffenen Handy beurteilen. Desktop- oder Software-WebGL-Checks ersetzen dies nicht. Qualitätsgegenproben nur zur Eingrenzung mit vergleichbarem thermischem Start, keine neue automatische Qualitätsreduktion.
-
-Autosaves beheben nicht die Ursache von Grafikabbrüchen. Der gesonderte [Texturladefehler](texturvorbereitung-browserabnahme.md) ist keine bewiesene Abbruchursache. Browserstabilität zuerst, eine [Android/WebView-Verpackung](android.md) separat bewerten. Ein 30-FPS-Modus oder geändertes Pauseverhalten ist nicht beschlossen.
-
-## Messplan und Erfolgskriterien
-
-- [ ] Nur den auffälligen kurzen Abschnitt reproduzieren: gleicher Spielstand, Kamera/Zoom, Tageszeit, interne Auflösung/DPR, Qualität und Tempo; andere Spiel-Tabs schließen. Laden/Warmup, Pause, Save und Hintergrundlücken separat kennzeichnen. Firefox und Chromium verwenden getrennte Browserprofile/Spielstände.
-- [ ] CPU-Haupt-/Unterphasen, Renderintervalle/p95/p99/Maximalspitzen, Eingabelatenz und verfügbare GPU-Passzeiten unterscheiden. Unterphasen sind exklusive Anteile der Hauptphase, Aufrufe keine Einheitenzahlen. CPU und GPU überlappen; Zeiten nicht einfach addieren. Fehlende GPU-Timer sind keine Nullkosten.
-- [ ] Für eine reproduzierbare arrangierte Gegenprobe den [Chromium-Diagnose-Runner](../diagnostic-capture.md) mit begrenztem Echtzeitfenster und überprüftem Grafikbackend verwenden. Die Tag/Nacht- und Pause/Laufend-Vorlage ersetzt nicht den auffälligen Nutzer-Spielstand; API-Auswahl und Gruppenbefehl sind keine Pointer-/Eingabe-bis-Bild-Messung. Keine Software-WebGL-Werte als Geräte-FPS weiterführen.
-- [ ] Kalte und warme Fälle sowie Allokations-/Speicherwirkung getrennt vergleichen; wechselnde A/B-Reihenfolge und mehrere kurze Proben statt unkontrollierter Vorher-/Nachheraufnahmen. Zuerst eine dichte Szene laufend/pausiert und bei Tag/Nacht getrennt betrachten, anhand aufgezeichneter Kamera, Armeegröße, Tagesstunde und Renderauflösung zuordnen. Globale Summaries mit gemischten Menüs/Pausen/Qualitäten sind kein sauberer Fallvergleich. Diagnose hat selbst Aufwand; synthetische CPU- oder Software-WebGL-Proben belegen keine Nutzer-FPS.
-
-Ziel: gleichmäßigere Renderintervalle im 60-FPS-/16,7-ms-Budget, kleinere Einzelhänger und kürzere Befehlslatenz bei gleicher Szene, Bildwirkung und Spielgeschwindigkeit. Keine FPS-Zusage für alle Geräte. Caches bleiben begrenzt oder schwach referenziert; Welt-/Objektwechsel, Resize, Nacht, Fog, Schattenränder und Freigabe gezielt prüfen. Gameplay, Hindernisverteilung, Körperradien und RNG schützen; Referenzen nicht zum Grünmachen ersetzen.
-
-[Prüf- und Freigaberegeln](../testing.md) gelten weiterhin: kein automatischer Volllauf oder Gerätekreuzprodukt; `test:ai`/`test:simulation` auch gefiltert nur mit aktuellem ausdrücklichem Auftrag. Vollständiges Spielen bleibt unter [Run-Abnahme](playtest-validation.md), zukünftige Netzwerkleistung unter [Multiplayer](multiplayer.md).
+Gleicher Save, Kamera/Zoom, Tageszeit, Auflösung/DPR, Qualität/Tempo; andere Tabs schließen.
+Buildkennung sichern, kalte/warme Fälle, Laden/Save/Hintergrund und thermischen Start trennen.
+Mehrere kurze wechselnde A/B-Proben; CPU, Renderintervalle/p95/p99, Eingabearbeit und GPU
+nicht addieren oder verwechseln. Software-/synthetische Szenen sind kein Geräte-FPS-Nachweis.
+Ziel: gleichmäßigere 60-FPS-/16,7-ms-Intervalle und weniger Hänger bei gleicher Bildwirkung,
+Spielzeit und Regeln. Keine allgemeine FPS-/Speicherzusage; [Run-Abnahme](playtest-validation.md).

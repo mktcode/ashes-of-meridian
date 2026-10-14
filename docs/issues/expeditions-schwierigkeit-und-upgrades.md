@@ -1,14 +1,33 @@
-# Progression: offene Balanceentscheidungen
+# Progression und Balance
 
-Aktuelle [Regeln](../gameplay.md), menschliche [Run-Abnahme](playtest-validation.md). Gebäude-Upgrades ersetzen Flottenkäufe, Vorteilswahl und Score-Gates; deren Integration und Balance stehen im [Upgrade-Issue](civilization-upgrades.md). Forum-Aufbau und Lieferzugänge bleiben im [Citybuilding-Issue](citybuilding.md). Die folgenden älteren Run-Befunde müssen unter den neuen Regeln erneut beurteilt werden.
+Ältere Rückmeldungen unter den heutigen Gebäude-Upgrades erneut beurteilen;
+keine automatischen Zahlenänderungen. [Zusammenhängende Run-Abnahme](playtest-validation.md).
 
-- [ ] **Zivilisationsfortschritt:** Die frühere Score-Kurve entfällt. Aufwand nach militärischem Sieg, Vorbauen auf alten Karten, reservierte Ausbauflächen und endliche Echo-Wirtschaft anhand der [Gebäude-Upgrades](civilization-upgrades.md) neu abnehmen; keine zusätzliche Zugangsschwelle ableiten.
-- [ ] **FFA-HQ-Abschluss:** Angreifer zogen beim absichtlich passiven Spieler vom letzten HQ ab; später beendete die letzte KI. Karte/Seed/strategischer Zustand fehlen. Fortschritts-/Zielbindung ist überarbeitet, Originalursache unbewiesen; erneut spielen.
-- [ ] **Rush-/Startökonomie:** vor Anpassung Stage 21 leicht erreicht mit Supply crate×8, Echo allocation×4, Pioneer squad×3, Commander mandate×1, Survey drones×1, Field workshop×1, Command capacitor×2; Fraktion/Flottenränge fehlen. Rückmeldung nach Anpassung „schon viel viel besser“, aber ohne neue Stage/Ausstattung. Einstieg und tiefe Runs neu bewerten, keine weiteren Zahlenänderungen ohne Rückmeldung.
-- [ ] **Passive Truppenansammlung:** Erneutes Playtest-Feedback bestätigt den Pulk, teilweise blockierte Einheiten und wenig Druck vor Armee plus Orbital strike; Originalkarte/Seed/Tiefe und Spielstand fehlen. Nachschub blieb während aktiver Angriffe ungeführt; große Formationsabstände konnten zudem laufende Wege wiederholt zurücksetzen. Verteilte Sammelpositionen mit begrenzter beobachtungsbasierter Wegprüfung, Nachschubanschluss, stabile Formationsaufträge und frühere Überfälle auf sichtbare schwache Wirtschaftsziele sind umgesetzt. Ressourcenboni und Orbital strike unverändert.
-  - Begrenzter Vorher/Nachher-Lauf: Desert `1409`, Tiefe 0, Fraktionen 0/2, beide reguläre KI-Controller ab Worker-Start, 600 Simulationssekunden als Obergrenze; Basisvergleich `91f8d58`. Bei Stichproben alle fünf Sekunden sank das Maximum untätiger Truppen direkt an Produktionsausgängen je Partei von sechs auf eine. Gegnerangriff ab etwa 240 statt 275 Sekunden; beide Varianten endeten regulär. Kein Nachweis für den fehlenden Originalstand, andere Seeds oder menschliches Balancing. Große Kampfgruppen und einzelne Bewegungsstaus bestehen weiterhin.
-  - Synthetische Verträge sichern Sammelabstände, Verkehrsfreiraum, Planungsbudgets/Sichtgrenzen, Formationsstabilität, Nachschub und Rückzug; gezielte reale Formations-/Erholungsfälle bestanden. Der zusätzliche autonome Fall `0 vs 2` (Desert `1431`) endete nicht innerhalb seines 90-Sekunden-Wandzeitbudgets; kein Prüfergebnis und kein bestätigtes Simulationspatt. Ursache separat eingrenzen, keine Referenzen oder Fallanforderungen abschwächen.
-  - Menschlich prüfen: freie Ausgänge und Workerwege, Druck gegen einen passiven/verteidigenden Spieler, Orbital-Anfälligkeit und späte große Armeen auf weiteren Landschaften. Zuverlässigkeit bei bekannter starker Verteidigung bleibt offen.
-- [ ] **Tiefe Ressourcenstapel:** Verhaltensdruck ist begrenzt, Vorteile wachsen weiter. Nutzt KI zusätzliche Mittel ausreichend? Weitere Produktionskapazität/Vorteilsgrenzen erst nach menschlichen Runs entscheiden.
+- [ ] Aufbauaufwand nach Sieg, Vorbauen alter Welten, endliches Echo, feste Angebote,
+  Rangkosten/-caps und Lieferhöchststände. Kein Score-Gate oder permanente Flottenkäufe.
+  Verkauf/Reroll kostet Ausbau/Fläche; keine neue Anti-Reroll-Währung beschlossen.
+- [ ] Waffen-/Schutz-/Feldmedizin-/Command-Boni und Rettung bei Rückkehr in verlorengehende
+  Gefechte: hilfreich, aber keine garantierte Rettung. Knappheit nach ressourcenintensiven Siegen.
+- [ ] Außenposten-Wellendruck, Warnzeit, endliche Vorräte und Rettungsfenster in echten Runs.
+- [ ] **FFA-HQ-Abschluss:** Angreifer zogen beim passiven Spieler vom letzten HQ ab;
+  später beendete die letzte KI. Karte/Seed/Zustand fehlen, ursprüngliche Ursache unbewiesen.
+- [ ] **Rush/Startökonomie:** früher Stage 21 leicht erreicht mit Supply crate×8,
+  Echo allocation×4, Pioneer squad×3, Commander mandate×1, Survey drones×1,
+  Field workshop×1, Command capacitor×2; Fraktion/Flottenränge unbekannt.
+  Nach Anpassung „schon viel viel besser“, ohne aktuellen Run-Kontext. Alte Ausstattung
+  ist ein historischer Befund, keine heutige Sollregel; Einstieg/tiefe Runs neu beurteilen.
+- [ ] **Passive Ansammlung:** Pulk/blockierte Einheiten und wenig Druck bis Armee plus
+  Orbital strike gemeldet, ohne Originalsave/Seed/Tiefe. Sammel-/Nachschub-/Formationsteuerung
+  überarbeitet, Originalfall offen. Freie Ausgänge, Workerwege, Druck gegen starke Verteidigung,
+  Orbital-Anfälligkeit und große Armeen prüfen. Ressourcenboni/Orbital unverändert.
+  Historischer autonomer Desert-Fall `1431`, `0 vs 2`, endete nicht im 90-s-Wandzeitbudget;
+  kein bestätigtes Patt, nicht durch Referenz-/Fallabschwächung lösen.
+- [ ] Tiefe Ressourcenstapel: nutzt KI zusätzliche Mittel? Produktionskapazität oder
+  Vorteilsgrenzen erst anhand aktueller menschlicher Befunde ändern.
+- [ ] **Luftzerstörer:** ein Exemplar stark/schützenswert, zwei Machtspitze, drei konterbar,
+  fünf außergewöhnlich teuer? Flugabwehr, Flächenschaden, Heilung/Schilde und Commands
+  gemeinsam beurteilen; KI darf normale Produktion nicht durch Sparen/Horten blockieren.
 
-Weitere Effekte stehen ausschließlich im [Ideenpool](expeditionsvorteile-ideen.md); permanente Käufe oder Start-Nachhall sind damit nicht beschlossen. Mehrere unabhängig koordinierte KI-Angriffsgruppen bleiben unkonkretisiert; erst den Erfolg der bestehenden Such-/Angriffssteuerung beurteilen, keine zusätzliche KI-Architektur aus dieser Abnahmeliste ableiten.
+[Bewegungsfehler](navigation-worker-und-gruppenankunft.md) und
+[Performance](performance-und-mobilstabilitaet.md) getrennt von Balance behandeln.
+Weitere Effekte/Angriffsgruppen nur nach eigener Entscheidung; [Ideenpool](ideen.md).
