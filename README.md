@@ -41,6 +41,7 @@ Bei Speicherfehlern bleibt Fortschritt nur im Tab; Reload kann ältere Werte lad
 - [Assets und Modelle](docs/assets.md), [Gestaltungsziele](docs/graphics-guideline.md).
 - [Hosting und itch.io](docs/deployment.md), [Kartenbetrachter, Capture und Diagnose](docs/scene-capture.md).
 - [Offene Arbeit](docs/issues/projektfahrplan.md), [Geschichte](docs/story.md) (deutsche interne Fassung).
+- [Crowd-Simulation – Marine](experiments/crowd-simulation/README.md): einfacher 3D-Modellbaustein mit Idle- und Laufanimation.
 - [3D-Planungskarten-Experiment](experiments/planning-map/README.md): unabhängig vom Spiel.
 - [Natürliches Terrain – Höhenfeld-Skizze](experiments/natural-terrain/README.md): erster Noise-basierter Ansatz.
 - [Landschaftsgerüst – Tal, Schlucht & Pass](experiments/landscape-structure/README.md): neuer Entwurf mit geplanten Großformen, Erkundungsrouten und Kamerasteuerung.
