@@ -33,37 +33,148 @@ function clipPolygon(points, boundary) {
   }
   return result;
 }
+function polygonArea(points) {
+  return Math.abs(points.reduce((sum, a, i) => {
+    const b = points[(i + 1) % points.length];
+    return sum + a.x * b.y - a.y * b.x;
+  }, 0)) / 2;
+}
+function clipHalfPlane(points, a, b, inside) {
+  const sign = inside ? 1 : -1;
+  const side = (p) => sign * ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x));
+  const result = [];
+  if (!points.length) return result;
+  let previous = points[points.length - 1], previousSide = side(previous);
+  for (const current of points) {
+    const currentSide = side(current);
+    if ((previousSide >= 0) !== (currentSide >= 0)) {
+      const t = previousSide / (previousSide - currentSide);
+      result.push({ x: previous.x + t * (current.x - previous.x), y: previous.y + t * (current.y - previous.y) });
+    }
+    if (currentSide >= 0) result.push(current);
+    previous = current;
+    previousSide = currentSide;
+  }
+  return result;
+}
+// Convex subtraction partitions the plateau without leaving a top face over a ramp.
+function subtractPolygon(points, cut) {
+  const outside = [];
+  let remainder = points;
+  for (let i = 0; i < cut.length && remainder.length; i++) {
+    const a = cut[i], b = cut[(i + 1) % cut.length];
+    const part = clipHalfPlane(remainder, a, b, false);
+    if (polygonArea(part) > 1e-6) outside.push(part);
+    remainder = clipHalfPlane(remainder, a, b, true);
+  }
+  return outside;
+}
+function buildRoadRamps(plan) {
+  const ramps = [];
+  for (const edge of plan.edges) {
+    const a = plan.cells[edge.a], b = plan.cells[edge.b];
+    if (a.offset === b.offset) continue;
+    const high = a.offset > b.offset ? a : b, low = high === a ? b : a;
+    const highRegion = plan.regions[high === a ? edge.a : edge.b];
+    const lowRegion = plan.regions[low === a ? edge.a : edge.b];
+    const edgeIndex = high.points.findIndex((p, i) =>
+      [p, high.points[(i + 1) % 6]].every((corner) => low.points.some((other) => distance(corner, other) < 1e-6)));
+    if (edgeIndex < 0) throw Error('Road ramp requires neighboring cells.');
+    const start = high.points[edgeIndex], end = high.points[(edgeIndex + 1) % 6];
+    const length = distance(start, end);
+    const tangent = { x: (end.x - start.x) / length, y: (end.y - start.y) / length };
+    const normal = { x: -tangent.y, y: tangent.x };
+    const roadLength = distance(lowRegion, highRegion);
+    const direction = { x: (highRegion.x - lowRegion.x) / roadLength, y: (highRegion.y - lowRegion.y) / roadLength };
+    const dot = (p) => p.x * normal.x + p.y * normal.y;
+    const gradeAxis = dot(direction);
+    const t = -dot({ x: lowRegion.x - start.x, y: lowRegion.y - start.y }) / gradeAxis;
+    const crossing = { x: lowRegion.x + direction.x * t, y: lowRegion.y + direction.y * t };
+    // First green-footprint intersection along the road: ramp ends halfway there.
+    let greenDistance = Infinity;
+    for (let i = 0; i < highRegion.points.length; i++) {
+      const p = highRegion.points[i], q = highRegion.points[(i + 1) % highRegion.points.length];
+      const sx = q.x - p.x, sy = q.y - p.y;
+      const denominator = direction.x * sy - direction.y * sx;
+      if (Math.abs(denominator) < 1e-8) continue;
+      const px = p.x - crossing.x, py = p.y - crossing.y;
+      const along = (px * sy - py * sx) / denominator;
+      const segment = (px * direction.y - py * direction.x) / denominator;
+      if (along > 0 && segment >= 0 && segment <= 1) greenDistance = Math.min(greenDistance, along);
+    }
+    if (!Number.isFinite(greenDistance)) throw Error('Road misses green footprint.');
+    const run = greenDistance / 2, width = ROAD_RADIUS / gradeAxis;
+    const left = { x: crossing.x - tangent.x * width, y: crossing.y - tangent.y * width };
+    const right = { x: crossing.x + tangent.x * width, y: crossing.y + tangent.y * width };
+    const points = [left, right, { x: right.x + direction.x * run, y: right.y + direction.y * run },
+      { x: left.x + direction.x * run, y: left.y + direction.y * run }];
+    ramps.push({ highCellId: high.id, lowCellId: low.id, edgeIndex, crossing, direction, normal,
+      run, greenDistance, points, lowHeight: CELL_DATUM + low.offset, highHeight: CELL_DATUM + high.offset });
+  }
+  return ramps;
+}
+function rampHeight(ramp, point) {
+  const span = ramp.run * (ramp.direction.x * ramp.normal.x + ramp.direction.y * ramp.normal.y);
+  const t = ((point.x - ramp.crossing.x) * ramp.normal.x + (point.y - ramp.crossing.y) * ramp.normal.y) / span;
+  return ramp.lowHeight + Math.max(0, Math.min(1, t)) * (ramp.highHeight - ramp.lowHeight);
+}
 function buildPlanningMesh(plan) {
-  const triangles = [], lines = [];
+  const triangles = [], lines = [], ramps = buildRoadRamps(plan);
   const vertex = (target, point, height, color) => target.push(point.x, point.y, height, ...color);
-  function flat(points, height, color) {
-    if (points.length < 3) return;
+  function surface(points, heightAt, color, lift = 0) {
+    if (polygonArea(points) < 1e-6) return;
     const center = {
       x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
       y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
     };
-    for (let i = 0; i < points.length; i++) {
-      vertex(triangles, center, height, color);
-      vertex(triangles, points[i], height, color);
-      vertex(triangles, points[(i + 1) % points.length], height, color);
+    const outline = curvePath(plan, points, true), warpedCenter = warpPoint(plan, center);
+    for (let i = 0; i < outline.length; i++) {
+      const a = outline[i], b = outline[(i + 1) % outline.length];
+      vertex(triangles, warpedCenter, heightAt(center) + lift, color);
+      vertex(triangles, a, heightAt(a.source) + lift, color);
+      vertex(triangles, b, heightAt(b.source) + lift, color);
+    }
+  }
+  function wall(a, b, bottomAt, topAt, color, rim = false) {
+    const points = curvePath(plan, [a, b]);
+    for (let i = 1; i < points.length; i++) {
+      const p = points[i - 1], q = points[i];
+      const loP = bottomAt(p.source), loQ = bottomAt(q.source), hiP = topAt(p.source), hiQ = topAt(q.source);
+      for (const [point, z] of [[p, loP], [q, loQ], [q, hiQ], [p, loP], [q, hiQ], [p, hiP]]) vertex(triangles, point, z, color);
+      if (rim) {
+        vertex(lines, p, hiP + 0.25, [0.7, 0.79, 0.9]);
+        vertex(lines, q, hiQ + 0.25, [0.7, 0.79, 0.9]);
+      }
     }
   }
   for (const cell of plan.cells) {
-    const height = CELL_DATUM + cell.offset;
+    const height = CELL_DATUM + cell.offset, flatHeight = () => height;
+    const cellRamps = ramps.filter((ramp) => ramp.highCellId === cell.id);
+    let plateaus = [cell.points];
+    for (const ramp of cellRamps) plateaus = plateaus.flatMap((polygon) => subtractPolygon(polygon, ramp.points));
+    const patches = [...plateaus.map((points) => ({ points, heightAt: flatHeight })),
+      ...cellRamps.map((ramp) => ({ points: ramp.points, heightAt: (p) => rampHeight(ramp, p) }))];
     const topColor = cell.offset >= 0 ? [0.37, 0.44, 0.54] : [0.29, 0.35, 0.44];
-    flat(cell.outline, height, topColor);
-    for (let i = 0; i < cell.outline.length; i++) {
-      const a = cell.outline[i], b = cell.outline[(i + 1) % cell.outline.length];
-      const shade = 0.19 + 0.08 * Math.abs(b.x - a.x) / Math.max(0.001, distance(a, b));
+    for (const patch of patches) surface(patch.points, patch.heightAt, topColor);
+    for (let i = 0; i < cell.points.length; i++) {
+      const a = cell.points[i], b = cell.points[(i + 1) % cell.points.length];
+      const edgeRamp = cellRamps.find((ramp) => ramp.edgeIndex === i);
+      const stops = edgeRamp ? [a, edgeRamp.points[0], edgeRamp.points[1], b] : [a, b];
+      const shade = 0.19 + 0.08 * Math.abs(b.x - a.x) / distance(a, b);
       const color = [shade, shade + 0.035, shade + 0.07];
-      for (const [point, z] of [[a, 0], [b, 0], [b, height], [a, 0], [b, height], [a, height]]) vertex(triangles, point, z, color);
-      vertex(lines, a, height + 0.25, [0.7, 0.79, 0.9]);
-      vertex(lines, b, height + 0.25, [0.7, 0.79, 0.9]);
+      for (let j = 1; j < stops.length; j++) {
+        const topAt = edgeRamp && j === 2 ? () => edgeRamp.lowHeight : flatHeight;
+        wall(stops[j - 1], stops[j], () => 0, topAt, color, true);
+      }
+    }
+    // Vertical cheeks close the cut into the higher plateau; no hidden wall across the road.
+    for (const ramp of cellRamps) for (const i of [1, 3]) {
+      wall(ramp.points[i], ramp.points[(i + 1) % 4], (p) => rampHeight(ramp, p), flatHeight, [0.25, 0.285, 0.32]);
     }
     function overlay(outline, lift, color, bounds = cell.points) {
       const source = outline.map((p) => p.source || p);
       const clipped = clipPolygon(clipPolygon(source, bounds), cell.points);
-      flat(clipped.map((p) => warpPoint(plan, p)), height + lift, color);
+      for (const patch of patches) surface(clipPolygon(clipped, patch.points), patch.heightAt, color, lift);
     }
     for (const edge of plan.edges) overlay(edge.outline, 0.08, edge.loop ? [0.66, 0.47, 0.9] : [0.8, 0.85, 0.65]);
     for (const outline of plan.river.outlines) overlay(outline, 0.12, [0.16, 0.6, 0.88]);
