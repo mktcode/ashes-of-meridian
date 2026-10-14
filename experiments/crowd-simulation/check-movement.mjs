@@ -45,7 +45,7 @@ assert.ok(core.moveTo(world, { x: 6, z: 0 }));
 assert.equal(world.stats.fieldBuilds, 1, 'identical command does not rebuild the field');
 const frozen = JSON.stringify(world);
 for (const dt of [0, -1, NaN, Infinity]) core.update(world, dt);
-for (const point of [null, { x: NaN, z: 0 }, { x: 0, z: Infinity }, { x: 30, z: 0 }, { x: 2.5, z: 0 }, { x: 11, z: 0 }]) {
+for (const point of [null, { x: NaN, z: 0 }, { x: 0, z: Infinity }, { x: nav.halfSize + 1, z: 0 }, { x: 2.5, z: 0 }, { x: nav.halfSize - 1, z: 0 }]) {
   assert.equal(core.moveTo(world, point), false);
 }
 assert.equal(JSON.stringify(world), frozen, 'pause/invalid commands preserve movement, field and destination');
@@ -93,6 +93,10 @@ overlap.marines.push(core.createMarine());
 advance(overlap, 0.25);
 assert.ok(Math.hypot(overlap.marines[0].x - overlap.marines[1].x, overlap.marines[0].z - overlap.marines[1].z) >= nav.radius * 2 - 1e-4, 'coincident bodies have a deterministic escape direction');
 valid(overlap);
+const distant = core.createWorld();
+assert.ok(core.moveTo(distant, { x: 24, z: -23 }), 'new map area is reachable');
+arrive(distant, 60);
+assert.equal(distant.marines[0].x, 24); assert.equal(distant.marines[0].z, -23);
 const slow = core.createWorld(), fast = core.createWorld();
 core.moveTo(slow, { x: -6, z: 0 }); core.moveTo(fast, { x: -6, z: 0 });
 for (let i = 0; i < 30; i++) { core.update(slow, 1 / 60); core.update(fast, 2 / 60); }
@@ -123,9 +127,15 @@ for (const [width, height] of [[1200, 600], [400, 700]]) {
     assert.equal(hidpi.scale[0], camera.scale[0]); assert.equal(hidpi.scale[1], camera.scale[1]);
   }
 }
-const camera = core.cameraFrame(0.55, 0.9, 1, 1000, 700), box = nav.obstacles[0];
-const top = [box.x, box.baseY + box.height, box.z];
-const blocked = core.groundPoint(dot(top, camera.right) * camera.scale[0], dot(top, camera.up) * camera.scale[1], camera);
-assert.equal(blocked.x, box.x); assert.equal(blocked.z, box.z);
-assert.equal(core.moveTo(world, blocked), false, 'clicking the rendered box does not issue a command behind it');
+const camera = core.cameraFrame(0.55, 0.9, 1, 1000, 700);
+for (const x of [-terrain.halfSize, terrain.halfSize]) for (const z of [-terrain.halfSize, terrain.halfSize]) {
+  const corner = [x, terrain.heightAt(x, z), z];
+  assert.ok(Math.abs(dot(corner, camera.right) * camera.scale[0]) < 0.95 && Math.abs(dot(corner, camera.up) * camera.scale[1]) < 0.95, 'default camera frames the enlarged map including the mountain rim');
+}
+for (const box of nav.obstacles) {
+  const top = [box.x, box.baseY + box.height, box.z];
+  const blocked = core.groundPoint(dot(top, camera.right) * camera.scale[0], dot(top, camera.up) * camera.scale[1], camera);
+  assert.equal(blocked.x, box.x); assert.equal(blocked.z, box.z);
+  assert.equal(core.moveTo(world, blocked), false, 'clicking any rendered box does not issue a command behind it');
+}
 console.log('Movement: shared flow detour, safe spawn/slots, separation, stable arrival, redirect, pause/tempo, field reuse, bounded ticks and obstacle picking checked.');

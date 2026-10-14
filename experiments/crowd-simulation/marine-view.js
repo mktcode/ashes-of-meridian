@@ -165,7 +165,7 @@
     canvas.addEventListener('lostpointercapture', () => { drag = null; });
     canvas.addEventListener('wheel', event => {
       event.preventDefault();
-      zoom = Math.max(0.7, Math.min(3, zoom * Math.exp(-event.deltaY * 0.001)));
+      zoom = Math.max(0.7, Math.min(10, zoom * Math.exp(-event.deltaY * 0.001)));
     }, { passive: false });
     canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault();

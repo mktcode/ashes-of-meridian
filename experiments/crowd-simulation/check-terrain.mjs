@@ -18,14 +18,15 @@ for (let i = 0; i < mesh.length; i += 18) {
     max = Math.max(max, mesh[vertex + 1]);
     assert.ok(Math.abs(terrain.heightAt(mesh[vertex], mesh[vertex + 2]) - mesh[vertex + 1]) < 1e-10, 'mesh vertices and CPU height agree');
     assert.ok(Math.abs(Math.hypot(mesh[vertex + 3], mesh[vertex + 4], mesh[vertex + 5]) - 1) < 1e-6);
-    if (Math.max(Math.abs(mesh[vertex]), Math.abs(mesh[vertex + 2])) <= 8) assert.ok(mesh[vertex + 4] > 0.8, 'gentle interior slopes');
+    if (Math.max(Math.abs(mesh[vertex]), Math.abs(mesh[vertex + 2])) <= terrain.halfSize - 4) assert.ok(mesh[vertex + 4] > 0.8, 'gentle interior slopes');
   }
   assert.ok(Math.abs(terrain.heightAt(x, z) - y) < 1e-10, 'CPU height interpolates the actual rendered triangle, not a separate analytic surface');
 }
 assert.ok(max - min > 8, 'visible hills and steep mountain rim');
-for (const [x, z] of [[10, 0], [-10, 0], [0, 10], [0, -10]]) assert.ok(terrain.slopeAt(x, z) > 1, 'all four edges have steep physical triangle slopes');
+const rim = terrain.halfSize - 2;
+for (const [x, z] of [[rim, 0], [-rim, 0], [0, rim], [0, -rim]]) assert.ok(terrain.slopeAt(x, z) > 1, 'all four edges have steep physical triangle slopes');
 const dot = (a, b) => a.reduce((sum, value, i) => sum + value * b[i], 0);
-for (const [x, z] of [[0, 0], [-4, -3], [5, 4], [4, -1], [-12, 12], [12, -12], [1.2, 3.7]]) {
+for (const [x, z] of [[0, 0], [-4, -3], [5, 4], [4, -1], [-terrain.halfSize, terrain.halfSize], [terrain.halfSize, -terrain.halfSize], [1.2, 3.7]]) {
   for (const yaw of [-1.5, 0, 0.6, Math.PI]) {
     const y = terrain.heightAt(x, z), frame = terrain.transform(x, z, y, yaw);
     const right = frame.slice(0, 3), up = frame.slice(4, 7), forward = frame.slice(8, 11);

@@ -5,21 +5,25 @@ import vm from 'node:vm';
 const context = vm.createContext({});
 for (const file of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(file, import.meta.url), 'utf8'), context);
 const { nav, terrain, core } = vm.runInContext('({ nav: CrowdNavigation, terrain: CrowdTerrain, core: CrowdSimulation })', context);
-assert.equal(nav.cells, 48);
+assert.equal(nav.halfSize, 32);
+assert.equal(nav.cells, 128);
+assert.equal(nav.obstacles.length, 9);
 assert.ok(nav.canStand(0, 0));
-for (const [x, z] of [[11, 0], [-11, 0], [0, 11], [0, -11], [11, 11], [2.5, 0]]) {
+const rim = nav.halfSize - 1;
+for (const [x, z] of [[rim, 0], [-rim, 0], [0, rim], [0, -rim], [rim, rim], ...nav.obstacles.map(b => [b.x, b.z])]) {
   assert.equal(nav.canStand(x, z), false, 'rock and steep rim are blocked');
   assert.equal(nav.buildField({ x, z }), null, 'blocked goals do not generate a flow field');
 }
-const obstacle = nav.obstacles[0];
 for (let i = 0; i < nav.walkable.length; i++) {
   const p = nav.pointAt(i);
   if (!nav.walkable[i]) continue;
   for (const dx of [-0.249, 0, 0.249]) for (const dz of [-0.249, 0, 0.249]) {
     assert.ok(terrain.slopeAt(p.x + dx, p.z + dz) <= nav.maxSlope, 'walkable cells cover only physical gentle triangles');
-    const cx = Math.max(obstacle.x - obstacle.width / 2, Math.min(obstacle.x + obstacle.width / 2, p.x + dx));
-    const cz = Math.max(obstacle.z - obstacle.depth / 2, Math.min(obstacle.z + obstacle.depth / 2, p.z + dz));
-    assert.ok(Math.hypot(p.x + dx - cx, p.z + dz - cz) >= nav.radius, 'whole cell has body clearance from the rendered obstacle');
+    for (const obstacle of nav.obstacles) {
+      const cx = Math.max(obstacle.x - obstacle.width / 2, Math.min(obstacle.x + obstacle.width / 2, p.x + dx));
+      const cz = Math.max(obstacle.z - obstacle.depth / 2, Math.min(obstacle.z + obstacle.depth / 2, p.z + dz));
+      assert.ok(Math.hypot(p.x + dx - cx, p.z + dz - cz) >= nav.radius, 'whole cell has body clearance from every rendered obstacle');
+    }
   }
   for (let n = 0; n < 8; n++) {
     const next = nav.neighbours[i * 8 + n];
@@ -29,7 +33,7 @@ for (let i = 0; i < nav.walkable.length; i++) {
   }
 }
 assert.equal(nav.canTravel(0, 0, 6, 0), false, 'direct route is obstructed');
-for (const goal of [{ x: 6, z: 0 }, { x: -6, z: -2 }, { x: 0, z: 7 }]) {
+for (const goal of [{ x: 6, z: 0 }, { x: -6, z: -2 }, { x: 0, z: 7 }, { x: -23, z: 20 }, { x: 24, z: -23 }]) {
   const field = nav.buildField(goal), again = nav.buildField(goal);
   assert.ok(field);
   assert.deepEqual(Array.from(field.cost), Array.from(again.cost), 'deterministic shortest distances');
@@ -54,7 +58,7 @@ for (const goal of [{ x: 6, z: 0 }, { x: -6, z: -2 }, { x: 0, z: 7 }]) {
   }
 }
 const full = core.createWorld();
-for (let i = 0; i <= nav.spawnSites.length; i++) core.spawnMarine(full);
+full.marines = nav.spawnSites.map(p => core.createMarine(p.x, p.z));
 assert.ok(full.marines.length > 30);
 const snapshot = JSON.stringify(full);
 assert.equal(core.spawnMarine(full), null, 'finite map capacity fails gracefully');

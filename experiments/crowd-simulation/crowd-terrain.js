@@ -1,7 +1,7 @@
 'use strict';
 
 const CrowdTerrain = (() => {
-  const halfSize = 12, cellSize = 0.5, cells = halfSize * 2 / cellSize;
+  const halfSize = 32, cellSize = 0.5, cells = halfSize * 2 / cellSize;
   const stride = cells + 1, points = [], normals = [], vertices = [];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const normalize = v => {
@@ -15,7 +15,7 @@ const CrowdTerrain = (() => {
       + 1.2 * Math.exp(-((x - 1) ** 2 / 18 + (z + 7) ** 2 / 14))
       - 0.55 * Math.exp(-((x - 4) ** 2 / 14 + (z + 1) ** 2 / 18))
       + 0.16 * Math.sin(x * 0.5) * Math.cos(z * 0.4)
-      + 0.85 * Math.max(0, Math.max(Math.abs(x), Math.abs(z)) - 8.5) ** 2;
+      + 0.85 * Math.max(0, Math.max(Math.abs(x), Math.abs(z)) - (halfSize - 3.5)) ** 2;
   }
   for (let iz = 0; iz <= cells; iz++) for (let ix = 0; ix <= cells; ix++) {
     const x = -halfSize + ix * cellSize, z = -halfSize + iz * cellSize;

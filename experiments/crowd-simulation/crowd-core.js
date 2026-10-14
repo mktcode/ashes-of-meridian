@@ -212,7 +212,7 @@ const CrowdSimulation = (() => {
   }
   function cameraFrame(yaw, pitch, zoom, width, height) {
     const c = Math.cos(yaw), s = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-    const scale = 2 * zoom / 28 * Math.min(width, height);
+    const scale = 2 * zoom / (halfSize * 2 * Math.SQRT2 + 8) * Math.min(width, height);
     return { right: [c, 0, -s], up: [-s * sp, cp, -c * sp], eye: [s * cp, sp, c * cp], scale: [scale / width, scale / height] };
   }
   function groundPoint(ndcX, ndcY, camera) {

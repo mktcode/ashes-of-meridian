@@ -5,17 +5,17 @@ Server oder externe Bibliothek nötig. Eigenständiges Experiment ohne Spielanbi
 
 Ein prozeduraler Low-Poly-Marine aus starren, hierarchisch verbundenen Teilen:
 Helm, Visier, Brust- und Schulterpanzer, Rucksack und gegliederte Gliedmaßen.
-Auf einem hügeligen Spielfeld setzt Klick / Tippen ein gemeinsames Ziel für alle
+Auf einem großen, hügeligen Spielfeld setzt Klick / Tippen ein gemeinsames Ziel für alle
 Marines, ohne Auswahl. „Marine spawnen“ fügt jeweils einen weiteren auf einem freien,
 begehbaren Platz hinzu; der Zähler zeigt die Anzahl. Neue Marines übernehmen auch ein
 bereits gesetztes Ziel. Spawnen und Befehle sind während der Pause möglich, Bewegung
 beginnt erst beim Fortsetzen. Ein neuer Befehl ersetzt den bisherigen.
 
-Ein gemeinsames Flow Field führt die Crowd um den Felsblock. Die steilen, grau
+Ein gemeinsames Flow Field führt die Crowd um die verteilten Felsblöcke. Die steilen, grau
 gefärbten Berghänge an allen Kartenrändern sind unbegehbar. Navigation verwendet die
 Neigung der tatsächlichen Geländedreiecke und berücksichtigt den Körperradius,
 nicht nur die geglätteten Beleuchtungsnormalen. Klicks auf gesperrte Flächen, den
-sichtbaren Felsblock oder nicht erreichbare Ziele ändern den bestehenden Befehl nicht.
+sichtbare Felsblöcke oder nicht erreichbare Ziele ändern den bestehenden Befehl nicht.
 
 Das statische Navigationsraster entsteht einmal; Dijkstra berechnet das gemeinsame
 Flow Field bei einem neuen Ziel, nicht pro Marine oder Frame. Bewegliche Marines
