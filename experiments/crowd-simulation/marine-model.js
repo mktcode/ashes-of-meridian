@@ -35,6 +35,7 @@ const MarineModel = (() => {
   const shinLength = -rigPart('leftBoot').pivot[1];
   const hipHeight = rigPart('hips').pivot[1] + rigPart('leftThigh').pivot[1];
   const boot = rigPart('leftBoot');
+  const legs = [['left', 1, 0], ['right', -1, 0.5]].map(([side, sign, shift]) => ({ side, sign, shift, x: rigPart(`${side}Thigh`).pivot[0] }));
   const restAnkleHeight = hipHeight - thighLength - shinLength;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const mix = (a, b, weight) => a + (b - a) * weight;
@@ -61,27 +62,74 @@ const MarineModel = (() => {
     return { z, lift, pitch };
   }
 
-  function samplePose(time, runWeight) {
+  function footAxes(pitch, slopeX = 0, slopeZ = 0) {
+    const normalize = v => {
+      const length = Math.hypot(...v);
+      return v.map(value => value / length);
+    };
+    const up = normalize([-slopeX, 1, -slopeZ]);
+    const forward = normalize([0, slopeZ, 1]);
+    const right = normalize([up[1] * forward[2] - up[2] * forward[1], -up[0] * forward[2], up[0] * forward[1]]);
+    const c = Math.cos(pitch), s = Math.sin(pitch);
+    return [right, up.map((v, i) => v * c + forward[i] * s), forward.map((v, i) => v * c - up[i] * s)];
+  }
+
+  function ankleRotation(axes, legAngle) {
+    // Cancel the shin rotation before applying the boot's independent ground frame.
+    const c = Math.cos(legAngle), s = Math.sin(legAngle);
+    const matrix = [];
+    for (const axis of axes) matrix.push(axis[0], c * axis[1] + s * axis[2], -s * axis[1] + c * axis[2], 0);
+    matrix.push(0, 0, 0, 1);
+    return matrix;
+  }
+
+  // Optional sampler returns ground height in the upright, yaw-only model frame.
+  // It owns no terrain or simulation state; a missing sampler retains the flat preview.
+  function samplePose(time, runWeight, groundHeight = null) {
     const run = clamp(runWeight, 0, 1);
     const cycle = ((time / runCycleDuration) % 1 + 1) % 1;
     const phase = cycle * Math.PI * 2;
     const breath = Math.sin(time * Math.PI * 2 * 0.65);
     const idleBob = breath * 0.008;
-    const bob = mix(idleBob, -0.055 + 0.030 * Math.cos(2 * (phase - 0.44 * Math.PI * 2)), run);
-    const pose = {
-      hips: { offset: [0, bob, 0] },
-      chest: { rotation: [run * 0.10, run * Math.sin(phase) * 0.055, (1 - run) * breath * 0.012 + run * Math.sin(phase) * 0.018] },
-      helmet: { rotation: [Math.sin(time * 1.2) * 0.018 * (1 - run) - run * 0.07, 0, 0] },
-    };
-    for (const [side, sign, shift] of [['left', 1, 0], ['right', -1, 0.5]]) {
+    let bob = mix(idleBob, -0.055 + 0.030 * Math.cos(2 * (phase - 0.44 * Math.PI * 2)), run);
+    const targets = [];
+    for (const { side, sign, shift, x } of legs) {
       const foot = footPath((cycle + shift) % 1);
       const pitch = run * foot.pitch;
       // Keep the lowest boot corner above the floor, including heel/toe roll.
       const flatSole = boot.size[1] / 2 - boot.center[1];
       const sole = Math.cos(pitch) * flatSole
         + Math.sin(pitch) * boot.center[2] + Math.abs(Math.sin(pitch)) * boot.size[2] / 2;
-      const ankleY = mix(restAnkleHeight + idleBob, flatSole + 0.005 + foot.lift, run) + sole - flatSole;
-      const y = ankleY - hipHeight - bob, z = run * foot.z;
+      let ankleY = mix(restAnkleHeight + idleBob, flatSole + 0.005 + foot.lift, run) + sole - flatSole;
+      const z = run * foot.z;
+      let axes = null;
+      if (groundHeight) {
+        const centerZ = z + boot.center[2];
+        const slopeX = clamp((groundHeight(x + 0.10, centerZ) - groundHeight(x - 0.10, centerZ)) / 0.20, -0.6, 0.6);
+        const slopeZ = clamp((groundHeight(x, centerZ + 0.10) - groundHeight(x, centerZ - 0.10)) / 0.20, -0.6, 0.6);
+        axes = footAxes(pitch, slopeX, slopeZ);
+        ankleY = -Infinity;
+        // A 3×3 sole footprint covers toe, heel and cross-slope edges on the actual mesh.
+        for (const sx of [-1, 0, 1]) for (const sz of [-1, 0, 1]) {
+          const local = [boot.center[0] + sx * boot.size[0] / 2, boot.center[1] - boot.size[1] / 2, boot.center[2] + sz * boot.size[2] / 2];
+          const point = [0, 0, 0];
+          for (let axis = 0; axis < 3; axis++) for (let i = 0; i < 3; i++) point[i] += axes[axis][i] * local[axis];
+          ankleY = Math.max(ankleY, groundHeight(x + point[0], z + point[2]) - point[1]);
+        }
+        ankleY += 0.005 + run * foot.lift;
+        const reach = thighLength + shinLength - 0.006;
+        const maxHip = ankleY + Math.sqrt(Math.max(0, reach ** 2 - z ** 2));
+        bob = Math.min(bob, maxHip - hipHeight);
+      }
+      targets.push({ side, sign, pitch, z, ankleY, axes });
+    }
+    const pose = {
+      hips: { offset: [0, bob, 0] },
+      chest: { rotation: [run * 0.10, run * Math.sin(phase) * 0.055, (1 - run) * breath * 0.012 + run * Math.sin(phase) * 0.018] },
+      helmet: { rotation: [Math.sin(time * 1.2) * 0.018 * (1 - run) - run * 0.07, 0, 0] },
+    };
+    for (const { side, sign, pitch, z, ankleY, axes } of targets) {
+      const y = ankleY - hipHeight - bob;
       const distance = clamp(Math.hypot(y, z), 0.001, thighLength + shinLength);
       // The positive knee solution bends the heel back, never through the kneecap.
       const knee = Math.PI - Math.acos(clamp((thighLength ** 2 + shinLength ** 2 - distance ** 2) / (2 * thighLength * shinLength), -1, 1));
@@ -89,6 +137,7 @@ const MarineModel = (() => {
       pose[`${side}Thigh`] = { rotation: [thigh, 0, 0] };
       pose[`${side}Shin`] = { rotation: [knee, 0, 0] };
       pose[`${side}Boot`] = { rotation: [pitch - thigh - knee, 0, 0] };
+      if (axes) pose[`${side}Boot`].matrix = ankleRotation(axes, thigh + knee);
       pose[`${side}Arm`] = { rotation: [run * sign * Math.cos(phase) * 0.52, 0, -sign * 0.10] };
       pose[`${side}Forearm`] = { rotation: [-(0.12 + run * (0.85 - sign * Math.cos(phase) * 0.12)), 0, 0] };
     }

@@ -13,9 +13,13 @@ und Animation gemeinsam; Pause hält beides an. Ziehen dreht die Kamera, das Mau
 zoomt. Klicks außerhalb des Spielfelds und Kameraziehen erteilen keinen Laufbefehl.
 
 Hügel und Mulden sind ein festes, prozedurales Dreiecks-Höhenfeld. Darstellung,
-Klickziele und Bodenhöhe verwenden dieselbe Oberfläche. Marines und Zielkreuz
-folgen Höhe und Neigung; bei verdeckten Hängen trifft ein Klick die vordere Fläche.
-Dies ist eine einfache Geländeausrichtung, noch keine individuelle Fußanpassung.
+Klickziele und Bodenhöhe verwenden dieselbe Oberfläche; bei verdeckten Hängen
+trifft ein Klick die vordere Fläche. Das Zielkreuz folgt der Neigung, der Marine
+bleibt aufrecht. Seine Füße werden einzeln auf Höhe und Neigung ihres Untergrunds
+angepasst. Das Becken senkt sich bei Bedarf, Standfüße halten Bodenkontakt und
+Schwungfüße werden angehoben. Die normale Atmung und Laufbewegung bleiben erhalten.
+Die Fußanpassung ist für sanfte Hänge ausgelegt, nicht für Treppen oder Klettern;
+es gibt keine persistente Fußverriegelung bei abrupten Richtungswechseln.
 
 Noch keine Hindernisse, Wegfindung, Formation oder Kollisionssimulation.
 Das Modell ist Quellgeometrie, kein exportiertes GLB und kein skinned Mesh.
@@ -23,5 +27,6 @@ Das Modell ist Quellgeometrie, kein exportiertes GLB und kein skinned Mesh.
 Gezielte Prüfungen aus dem Repository:
 `node experiments/crowd-simulation/check.mjs` (Modell),
 `node experiments/crowd-simulation/check-movement.mjs` (Bewegung und Zielprojektion),
-`node experiments/crowd-simulation/check-terrain.mjs` (Gelände und Bodenausrichtung).
+`node experiments/crowd-simulation/check-terrain.mjs` (Gelände und Bodenausrichtung),
+`node experiments/crowd-simulation/check-feet.mjs` (Fußanpassung und aufrechter Körper).
 Bildwirkung, Animationsqualität und Bedienung bitte im Browser beurteilen.

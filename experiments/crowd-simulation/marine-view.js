@@ -200,12 +200,14 @@
         box(marker, [0, 0, 0], [0.07, 0.02, 0.65], color);
       }
       for (const marine of world.marines) {
-        const root = CrowdTerrain.transform(marine.x, marine.z, marine.y, marine.yaw);
-        const pose = MarineModel.samplePose(marine.time, marine.runWeight), joints = {};
+        const root = multiply(translate([marine.x, marine.y, marine.z]), rotate([0, marine.yaw, 0]));
+        const c = Math.cos(marine.yaw), s = Math.sin(marine.yaw);
+        const groundHeight = (x, z) => CrowdTerrain.heightAt(marine.x + c * x + s * z, marine.z - s * x + c * z) - marine.y;
+        const pose = MarineModel.samplePose(marine.time, marine.runWeight, groundHeight), joints = {};
         for (const part of MarineModel.parts) {
           const animation = pose[part.name] || {};
           const offset = animation.offset || [0, 0, 0];
-          const local = multiply(translate(part.pivot.map((v, i) => v + offset[i])), rotate(animation.rotation || [0, 0, 0]));
+          const local = multiply(translate(part.pivot.map((v, i) => v + offset[i])), animation.matrix || rotate(animation.rotation || [0, 0, 0]));
           const joint = multiply(part.parent ? joints[part.parent] : root, local);
           joints[part.name] = joint;
           box(joint, part.center, part.size, part.color);
