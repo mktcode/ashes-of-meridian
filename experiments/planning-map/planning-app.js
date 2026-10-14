@@ -52,7 +52,7 @@ function generate() {
     currentPlan = makePlan(seed, { curved: checked('curved'), rounded: checked('rounded') });
     redraw();
     const river = currentPlan.river;
-    status.textContent = `Seed ${seed} · ${currentPlan.cells.length} Waben mit eigenem Höhenoffset · ${currentPlan.edges.length} Wege · ${river.splits} Flussaufteilungen · ${river.exits.length} Ausflüsse · ${river.bridges.length}/${river.reduction.total} Brücken erhalten · ${river.reduction.removed.length} redundante Brücken entfernt (${river.reduction.percent} % Ausdünnung).`;
+    status.textContent = `Seed ${seed} · ${currentPlan.cells.length} Waben · Höhenstufen ${currentPlan.heightSteps.step} · Hochpunkt W${currentPlan.heightSteps.peakCellId} · ${currentPlan.edges.length} Wege · ${river.splits} Flussaufteilungen · ${river.exits.length} Ausflüsse · ${river.bridges.length}/${river.reduction.total} Brücken erhalten · ${river.reduction.removed.length} redundante Brücken entfernt (${river.reduction.percent} % Ausdünnung).`;
   } catch (error) {
     status.textContent = `Seed ${seed}: ${error.message}`;
   }

@@ -612,6 +612,25 @@ function riverPolygonGap(region, river) {
   }
   return Math.max(0, gap - RIVER_SUPPORT);
 }
+// BFS layers guarantee a one-step ascent from every cell to the unique peak.
+function assignSteppedHeights(cells, peak) {
+  const step = 8, peakOffset = 16;
+  const distances = new Map([[peak, 0]]), queue = [peak];
+  for (let head = 0; head < queue.length; head++) {
+    const current = queue[head];
+    for (const neighbor of cells) {
+      if (distances.has(neighbor) || !latticeNeighbor(current, neighbor)) continue;
+      distances.set(neighbor, distances.get(current) + 1);
+      queue.push(neighbor);
+    }
+  }
+  if (queue.length !== cells.length) throw Error('Disconnected height lattice.');
+  for (const cell of cells) {
+    cell.distanceToPeak = distances.get(cell);
+    cell.offset = peakOffset - cell.distanceToPeak * step;
+  }
+  return { step, peakCellId: peak.id };
+}
 /**
  * Plan topology and independent full-cell heights; never read UI state.
  * @param {number} seed Unsigned 32-bit seed.
@@ -645,13 +664,15 @@ function makePlan(seed, { curved = true, rounded = true } = {}) {
     const y = SIZE / 2 + (53 * Math.sqrt(3) / 2) * region.r;
     return {
       id: index + 1, q: region.q, r: region.r, x, y,
-      offset: (heightRandom() * 2 - 1) * 16,
       points: Array.from({ length: 6 }, (_, i) => {
         const angle = Math.PI / 6 + i * Math.PI / 3;
         return { x: x + 53 / Math.sqrt(3) * Math.cos(angle), y: y + 53 / Math.sqrt(3) * Math.sin(angle) };
       }),
     };
   });
+  // A separate seed stream selects the outer peak without changing roads/rivers.
+  const outerCells = cells.filter((cell) => Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(cell.q + cell.r)) === 2);
+  const heightSteps = assignSteppedHeights(cells, outerCells[Math.floor(heightRandom() * outerCells.length)]);
   // Prim's minimum spanning tree: connected by construction, with no retries.
   const connected = new Set([0]);
   while (connected.size < regions.length) {
@@ -687,7 +708,7 @@ function makePlan(seed, { curved = true, rounded = true } = {}) {
     phase: random() * Math.PI * 2,
     amplitude: 3 + random() * 6,
   }));
-  const plan = { seed, cells, regions, edges, angle, phase, waves, rounded, warp: makeWarp(seed, curved) };
+  const plan = { seed, cells, heightSteps, regions, edges, angle, phase, waves, rounded, warp: makeWarp(seed, curved) };
   plan.river = planRiver(plan);
   for (const cell of cells) cell.outline = curvePath(plan, cell.points, true);
   buildCurves(plan);
