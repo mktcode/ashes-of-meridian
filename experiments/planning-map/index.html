@@ -31,7 +31,6 @@
   </form>
   <div class="options">
     <label><input id="curved" type="checkbox" checked> Gekrümmte Karte</label>
-    <label><input id="rounded" type="checkbox" checked> Gerundete Flüsse</label>
   </div>
   <div class="scene">
     <canvas id="map" width="900" height="600" role="img" aria-label="Dreidimensionale Grid-Waben mit individuellen Höhenoffsets, Spielflächen und Planungswegen"></canvas>
@@ -43,10 +42,8 @@
     <span style="--color:#77ddb0">Spielflächen ohne eigenen Offset</span>
     <span style="--color:#dce7ba">Verbindungsbaum</span>
     <span style="--color:#bc99ff">Zusatzwege</span>
-    <span style="--color:#39adf0">Flussplanung</span>
-    <span style="--color:#d99b58">Brückenplanung</span>
   </div>
-  <p><small>± Werte relativ zu einer gemeinsamen horizontalen Nullebene. Ganze Waben sind eben und an ihren Grenzen abgestuft; ihre Seiten zeigen die Höhenunterschiede. Wege, Flüsse und Brücken sind nur Planmarkierungen auf den Waben, noch keine Rampen oder physikalisch abwärts fließenden Wasserflächen. WebGL 2 erforderlich; keine 2D-Ersatzansicht.</small></p>
+  <p><small>± Werte relativ zu einer gemeinsamen horizontalen Nullebene. Die Wabenplattformen sind eben und an ihren Grenzen abgestuft. Wege verbinden die Spielflächen; bei Höhenwechseln liegt die Rampe ausschließlich in der höheren Wabe und endet auf halber Wegstrecke zur grünen Spielfläche. WebGL 2 erforderlich; keine 2D-Ersatzansicht.</small></p>
   <script src="planning-core.js"></script>
   <script src="planning-view.js"></script>
   <script src="planning-app.js"></script>

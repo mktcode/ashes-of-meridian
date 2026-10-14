@@ -49,10 +49,9 @@ function generate() {
   }
   try {
     if (!renderPlan) return;
-    currentPlan = makePlan(seed, { curved: checked('curved'), rounded: checked('rounded') });
+    currentPlan = makePlan(seed, { curved: checked('curved') });
     redraw();
-    const river = currentPlan.river;
-    status.textContent = `Seed ${seed} · ${currentPlan.cells.length} Waben · Höhenstufen ${currentPlan.heightSteps.step} · Hochpunkt W${currentPlan.heightSteps.peakCellId} · ${currentPlan.edges.length} Wege · ${river.splits} Flussaufteilungen · ${river.exits.length} Ausflüsse · ${river.bridges.length}/${river.reduction.total} Brücken erhalten · ${river.reduction.removed.length} redundante Brücken entfernt (${river.reduction.percent} % Ausdünnung).`;
+    status.textContent = `Seed ${seed} · ${currentPlan.cells.length} Waben · Höhenstufen ${currentPlan.heightSteps.step} · Hochpunkt W${currentPlan.heightSteps.peakCellId} · ${currentPlan.edges.length} Wege`;
   } catch (error) {
     status.textContent = `Seed ${seed}: ${error.message}`;
   }
@@ -67,7 +66,7 @@ document.getElementById('random').addEventListener('click', () => {
   seedInput.value = String(value[0]);
   generate();
 });
-for (const id of ['curved', 'rounded']) document.getElementById(id).addEventListener('change', generate);
+document.getElementById('curved').addEventListener('change', generate);
 const startupSeed = new URL(location.href).searchParams.get('seed');
 if (startupSeed !== null) seedInput.value = startupSeed;
 generate();

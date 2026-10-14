@@ -4,6 +4,8 @@ import vm from 'node:vm';
 
 let uploads = 0, rotation, captured;
 const frames = [], elements = new Map();
+const html = readFileSync(new URL('index.html', import.meta.url), 'utf8');
+const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
 const gl = new Proxy({
   NO_ERROR: 0,
   getError: () => 0,
@@ -14,6 +16,7 @@ const gl = new Proxy({
   uniform2f: (_, x, y) => { rotation = [x, y]; },
 }, { get: (target, key) => key in target ? target[key] : () => {} });
 function element(id) {
+  assert.ok(htmlIds.has(id), `UI element exists: ${id}`);
   if (!elements.has(id)) elements.set(id, {
     handlers: new Map(), value: '2', checked: true, clientWidth: 900, width: 900, height: 600,
     children: [], style: {}, classList: { add() {}, remove() {} },

@@ -171,17 +171,12 @@ function buildPlanningMesh(plan) {
     for (const ramp of cellRamps) for (const i of [1, 3]) {
       wall(ramp.points[i], ramp.points[(i + 1) % 4], (p) => rampHeight(ramp, p), flatHeight, [0.25, 0.285, 0.32]);
     }
-    function overlay(outline, lift, color, bounds = cell.points) {
+    function overlay(outline, lift, color) {
       const source = outline.map((p) => p.source || p);
-      const clipped = clipPolygon(clipPolygon(source, bounds), cell.points);
+      const clipped = clipPolygon(source, cell.points);
       for (const patch of patches) surface(clipPolygon(clipped, patch.points), patch.heightAt, color, lift);
     }
     for (const edge of plan.edges) overlay(edge.outline, 0.08, edge.loop ? [0.66, 0.47, 0.9] : [0.8, 0.85, 0.65]);
-    for (const outline of plan.river.outlines) overlay(outline, 0.12, [0.16, 0.6, 0.88]);
-    for (const bridge of plan.river.bridges) {
-      const bounds = bridge.outline.map((p) => p.source);
-      for (const outline of plan.river.bridgeOutlines) overlay(outline, 0.16, [0.85, 0.58, 0.3], bounds);
-    }
     for (const region of plan.regions) overlay(region.outline, 0.2, [0.36, 0.8, 0.57]);
   }
   return { triangles: new Float32Array(triangles), lines: new Float32Array(lines) };

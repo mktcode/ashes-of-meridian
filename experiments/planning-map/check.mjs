@@ -69,8 +69,7 @@ function checkRamps(plan) {
 }
 for (const seed of [0, 2, 42, 4294967295]) {
   for (const curved of [false, true]) {
-    for (const rounded of [false, true]) {
-      const options = { curved, rounded };
+      const options = { curved };
       const plan = sandbox.makePlan(seed, options);
       assert.equal(JSON.stringify(plan), JSON.stringify(sandbox.makePlan(seed, options)));
       assert.equal(plan.regions.length, 19);
@@ -87,29 +86,20 @@ for (const seed of [0, 2, 42, 4294967295]) {
         assert.equal(points.length, plan.regions[index].points.length, 'entire green footprint fits its lattice cell');
         const key = `${seed}:${index}`;
         const signature = JSON.stringify({ points: cell.points, offset: cell.offset });
-        if (geometry.has(key)) assert.equal(signature, geometry.get(key), 'display/river options preserve cell heights and lattice');
+        if (geometry.has(key)) assert.equal(signature, geometry.get(key), 'display options preserve cell heights and lattice');
         geometry.set(key, signature);
       }
       assert.equal(plan.edges.filter((edge) => !edge.loop).length, 18);
       assert.equal(plan.edges.filter((edge) => edge.loop).length, 6);
-      assert.equal(plan.landforms, undefined);
-      const retained = new Set(plan.river.bridges.map((bridge) => bridge.key));
+      assert.deepEqual(Object.keys(plan).sort(), ['border', 'cells', 'edges', 'heightSteps', 'regions', 'seed', 'warp'], 'plan contains only active planning data');
       const reachable = new Set([0]);
-      const crossingKeys = new Set(plan.river.selected.map((edge) => edge.key));
       for (let pass = 0; pass < plan.regions.length; pass++) {
         for (const edge of plan.edges) {
-          const key = sandbox.edgeKey(edge.a, edge.b);
-          if (crossingKeys.has(key) && !retained.has(key)) continue;
           if (reachable.has(edge.a)) reachable.add(edge.b);
           if (reachable.has(edge.b)) reachable.add(edge.a);
         }
       }
-      assert.equal(reachable.size, plan.regions.length, 'retained bridges connect all regions');
-      for (const path of plan.river.curves) {
-        for (let i = 1; i < path.length; i++) {
-          assert.ok(path[i].height < path[i - 1].height, 'water flows downhill');
-        }
-      }
+      assert.equal(reachable.size, plan.regions.length, 'roads connect all regions');
       const beforeDrawing = JSON.stringify(plan);
       const rampCount = checkRamps(plan);
       const mesh = sandbox.buildPlanningMesh(plan);
@@ -135,11 +125,10 @@ for (const seed of [0, 2, 42, 4294967295]) {
         assert.ok(Math.abs((p.x - frame.x) * frame.scale) <= 450);
         assert.ok(Math.abs((p.y - frame.y) * frame.scale) <= 300);
       }
-    }
   }
 }
 // Exhaust every possible outer peak, not just those selected by the test seeds.
-const template = sandbox.makePlan(2, { curved: false, rounded: false });
+const template = sandbox.makePlan(2, { curved: false });
 for (const peakId of template.cells.filter((cell) => ring(cell) === 2).map((cell) => cell.id)) {
   const cells = JSON.parse(JSON.stringify(template.cells));
   checkHeights(cells, sandbox.assignSteppedHeights(cells, cells.find((cell) => cell.id === peakId)));
@@ -153,4 +142,4 @@ const low = sandbox.project3D({ x: 150, y: 150 }, 8);
 const high = sandbox.project3D({ x: 150, y: 150 }, 40);
 assert.ok(high.y < low.y, 'higher offsets project visibly upwards');
 assert.equal(high.x, low.x);
-console.log('Planning map: 16 deterministic plans, all 12 outer peaks, fixed height steps, guaranteed ascents, high-cell-only road ramps, topology and 3D meshes passed.');
+console.log('Planning map: 8 deterministic plans, all 12 outer peaks, fixed height steps, guaranteed ascents, high-cell-only road ramps, topology and 3D meshes passed.');
