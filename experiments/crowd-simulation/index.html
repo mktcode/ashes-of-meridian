@@ -20,15 +20,17 @@
 </head>
 <body>
   <h1>Crowd Simulation · Marine</h1>
-  <p>Ein minimales RTS-Experiment auf einem großen, hügeligen Spielfeld: Ein Klick setzt das gemeinsame Ziel für alle Marines — ohne Auswahl. Aktuell ist ein Marine unterwegs, noch ohne Hindernisse oder Wegfindung.</p>
+  <p>Ein minimales RTS-Experiment auf einem großen, hügeligen Spielfeld: Ein Klick setzt das gemeinsame Ziel für alle Marines — ohne Auswahl. Mit „Marine spawnen“ fügst du weitere Einheiten hinzu, die auch ein bereits gesetztes Ziel übernehmen. Noch ohne Hindernisse, Wegfindung oder Kollisionen.</p>
   <div class="controls">
     <label>Tempo <input id="speed" type="range" min="0.25" max="2" step="0.05" value="1"><output id="speed-value">1.00×</output></label>
+    <button id="spawn" type="button">Marine spawnen</button>
+    <span>Marines: <output id="unit-count" aria-label="Anzahl Marines">1</output></span>
     <button id="pause" type="button" aria-pressed="false">Pause</button>
     <button id="reset" type="button">Kamera zurücksetzen</button>
   </div>
   <canvas id="scene" role="img" aria-label="Interaktives 3D-Spielfeld: Klicken oder Tippen bewegt alle Marines zum Ziel"></canvas>
   <p id="status" role="status">Klick auf das Spielfeld setzt das gemeinsame Ziel.</p>
-  <small>Klick / Tippen: alle Marines zum Ziel bewegen · Ziehen: Kamera drehen / neigen · Mausrad: zoomen.<br>Das Zielkreuz zeigt den gemeinsamen Treffpunkt. Unterwegs läuft der Marine, am Ziel wechselt er automatisch zu Idle. Der Körper bleibt aufrecht, die Füße passen sich dem Hang an. Ein neuer Klick ersetzt den bisherigen Befehl.</small>
+  <small>Klick / Tippen: alle Marines zum Ziel bewegen · Ziehen: Kamera drehen / neigen · Mausrad: zoomen.<br>Das Zielkreuz zeigt den gemeinsamen Treffpunkt. Unterwegs laufen die Marines, am Ziel wechseln sie automatisch zu Idle. Die Körper bleiben aufrecht, die Füße passen sich dem Hang an. Ohne Kollisionen können Marines am Ziel überlappen. Ein neuer Klick ersetzt den bisherigen Befehl.</small>
   <script src="marine-model.js"></script>
   <script src="crowd-terrain.js"></script>
   <script src="crowd-core.js"></script>

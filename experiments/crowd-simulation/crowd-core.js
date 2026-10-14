@@ -9,6 +9,16 @@ const CrowdSimulation = (() => {
   function createWorld() {
     return { marines: [createMarine()], destination: null };
   }
+  function spawnMarine(world) {
+    // Spread new arrivals around the center without randomness or extra world state.
+    const index = world.marines.length;
+    const angle = index * Math.PI * (3 - Math.sqrt(5));
+    const radius = Math.min(halfSize - 1, 1.1 * Math.sqrt(index));
+    const marine = createMarine(Math.cos(angle) * radius, Math.sin(angle) * radius);
+    marine.moving = Boolean(world.destination && Math.hypot(world.destination.x - marine.x, world.destination.z - marine.z) > 1e-6);
+    world.marines.push(marine);
+    return marine;
+  }
   function contains(point) {
     return point && Number.isFinite(point.x) && Number.isFinite(point.z)
       && Math.abs(point.x) <= halfSize && Math.abs(point.z) <= halfSize;
@@ -53,5 +63,5 @@ const CrowdSimulation = (() => {
   function groundPoint(ndcX, ndcY, camera) {
     return CrowdTerrain.pick(ndcX, ndcY, camera);
   }
-  return { halfSize, createMarine, createWorld, moveTo, update, cameraFrame, groundPoint };
+  return { halfSize, createMarine, createWorld, spawnMarine, moveTo, update, cameraFrame, groundPoint };
 })();

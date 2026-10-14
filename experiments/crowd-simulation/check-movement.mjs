@@ -46,6 +46,41 @@ for (const point of [null, { x: NaN, z: 0 }, { x: 0, z: Infinity }, { x: core.ha
   assert.equal(JSON.stringify(world), frozen, 'invalid commands preserve the existing destination');
 }
 
+const crowd = core.createWorld();
+for (let i = 1; i <= 120; i++) {
+  const unit = core.spawnMarine(crowd);
+  assert.equal(crowd.marines.length, i + 1, 'each spawn adds exactly one marine');
+  assert.equal(crowd.marines[i], unit);
+  assert.equal(unit.moving, false, 'spawning without a destination starts idle');
+  assert.equal(unit.runWeight, 0);
+  assert.equal(unit.y, context.terrain.heightAt(unit.x, unit.z), 'spawn samples terrain height');
+  assert.ok(Math.abs(unit.x) <= core.halfSize - 1 && Math.abs(unit.z) <= core.halfSize - 1, 'spawn stays inside the field even with many units');
+}
+assert.equal(new Set(crowd.marines.map(unit => `${unit.x},${unit.z}`)).size, crowd.marines.length, 'initial spawn positions are distributed');
+core.moveTo(crowd, { x: 6, z: -5 });
+core.update(crowd, 0.25);
+const existingUnits = JSON.stringify(crowd.marines), destination = crowd.destination;
+const newcomer = core.spawnMarine(crowd);
+assert.equal(newcomer.moving, true, 'newcomer inherits a running command immediately');
+assert.equal(crowd.destination, destination, 'spawning preserves the existing destination');
+assert.equal(JSON.stringify(crowd.marines.slice(0, -1)), existingUnits, 'spawning does not mutate existing units');
+const pausedCrowd = JSON.stringify(crowd);
+core.update(crowd, 0);
+assert.equal(JSON.stringify(crowd), pausedCrowd, 'spawning while paused does not advance any unit');
+core.update(crowd, 100);
+core.update(crowd, 1);
+assert.ok(crowd.marines.every(unit => unit.x === 6 && unit.z === -5 && !unit.moving && unit.runWeight < 0.001), 'all spawned units reach the shared goal and return to idle');
+const latecomer = core.spawnMarine(crowd);
+assert.equal(latecomer.moving, true, 'destination is retained for spawns after arrival');
+core.moveTo(crowd, { x: -4, z: 3 });
+core.update(crowd, 100);
+core.update(crowd, 1);
+assert.ok(crowd.marines.every(unit => unit.x === -4 && unit.z === 3 && !unit.moving), 'redirect includes every spawned unit');
+const atSpawn = core.createWorld();
+const nextSpawn = core.spawnMarine(core.createWorld());
+core.moveTo(atSpawn, nextSpawn);
+assert.equal(core.spawnMarine(atSpawn).moving, false, 'spawn directly at the goal stays idle');
+
 world.marines.push(core.createMarine(-5, 7), core.createMarine(2, -1));
 core.moveTo(world, { x: 1, z: 1 });
 assert.ok(world.marines.every(unit => unit.moving), 'commands apply to every marine, without selection');
@@ -93,4 +128,4 @@ for (const [width, height] of [[1200, 600], [400, 700]]) {
   }
 }
 assert.equal(core.groundPoint(0, 0, core.cameraFrame(0, 0, 1, 800, 600)), null, 'edge-on camera cannot pick the floor');
-console.log('Movement: shared commands, facing, exact arrival/idle, redirect, pause/tempo, bounds and ground picking checked.');
+console.log('Movement: crowd spawning, inherited goals, shared commands, facing, exact arrival/idle, redirect, pause/tempo, bounds and ground picking checked.');

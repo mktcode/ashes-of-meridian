@@ -118,6 +118,10 @@
     const speed = document.getElementById('speed');
     const pause = document.getElementById('pause');
     speed.addEventListener('input', () => { document.getElementById('speed-value').textContent = `${Number(speed.value).toFixed(2)}×`; });
+    document.getElementById('spawn').addEventListener('click', () => {
+      CrowdSimulation.spawnMarine(world);
+      document.getElementById('unit-count').textContent = String(world.marines.length);
+    });
     pause.addEventListener('click', () => {
       paused = !paused;
       pause.textContent = paused ? 'Fortsetzen' : 'Pause';
