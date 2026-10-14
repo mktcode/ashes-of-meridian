@@ -49,12 +49,15 @@ for (const goal of [{ x: 6, z: 0 }, { x: -6, z: -2 }, { x: 0, z: 7 }, { x: -23, 
     assert.ok(Math.abs(Math.hypot(direction.x, direction.z) - 1) < 1e-6);
     assert.ok(nav.canTravel(p.x, p.z, p.x + direction.x * 0.1, p.z + direction.z * 0.1));
   }
-  const slots = nav.places(goal, 20, field);
-  assert.equal(slots.length, 20);
-  for (let i = 0; i < slots.length; i++) {
-    const a = slots[i];
-    assert.ok(nav.canTravel(goal.x, goal.z, a.x, a.z), 'final slots are visible from the shared goal area');
-    for (let j = i + 1; j < slots.length; j++) assert.ok(Math.hypot(a.x - slots[j].x, a.z - slots[j].z) >= 4 * nav.radius, 'parking leaves room to pass');
+  for (const direction of [null, { x: 1, z: 0 }, { x: 0, z: 1 }, { x: 0.6, z: 0.8 }]) {
+    const slots = nav.places(goal, 20, field, true, direction);
+    assert.equal(slots.length, 20);
+    assert.deepEqual(slots, nav.places(goal, 21, field, true, direction).slice(0, 20), 'adding a slot preserves existing rotated reservations');
+    for (let i = 0; i < slots.length; i++) {
+      const a = slots[i];
+      assert.ok(nav.canTravel(goal.x, goal.z, a.x, a.z), 'final slots are visible from the shared goal area');
+      for (let j = i + 1; j < slots.length; j++) assert.ok(Math.hypot(a.x - slots[j].x, a.z - slots[j].z) >= 4 * nav.radius - 1e-10, 'rotated parking leaves room to pass');
+    }
   }
 }
 const full = core.createWorld();

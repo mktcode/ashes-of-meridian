@@ -22,8 +22,11 @@ Flow Field bei einem neuen Ziel, nicht pro Marine oder Frame. Bewegliche Marines
 werden nicht ins Feld geschrieben. Lokale Geschwindigkeitsproben und kurze
 Überlappungskorrekturen behandeln Nachbarn aus einem räumlichen Raster. Am Ziel
 reserviert jeder einen eigenen Standplatz mit freien Durchgängen, auch neben Wänden
-und Hängen. Stockt die Ankunft, können noch laufende Marines ihre Reservierungen
-tauschen; bereits besetzte Standplätze bleiben erhalten. Dies ist einfache lokale
+und Hängen. Die Zielaufstellung folgt der vorherrschenden Ankunftsrichtung: Vordere
+Marines füllen die gegenüberliegende Seite, Nachzügler die Ankunftsseite. Innerhalb
+einer Reihe bleibt die seitliche Reihenfolge möglichst erhalten. Stockt die Ankunft,
+können noch laufende Marines ihre Reservierungen innerhalb derselben Reihe tauschen;
+bereits besetzte Standplätze bleiben erhalten. Dies ist einfache lokale
 Crowd-Steuerung, kein ORCA und keine zugesicherte Lösung beliebiger dichter Staus.
 Die endliche Karte begrenzt Spawn- und Standplätze; bei Platzmangel meldet die UI dies.
 
@@ -44,6 +47,7 @@ Gezielte Prüfungen aus dem Repository:
 `node experiments/crowd-simulation/check.mjs` (Modell),
 `node experiments/crowd-simulation/check-movement.mjs` (Crowd-Bewegung und Bedienverträge),
 `node experiments/crowd-simulation/check-navigation.mjs` (Flow Field und Begehbarkeit),
+`node experiments/crowd-simulation/check-arrival.mjs` (Ankunftsreihen und Standplatztausch),
 `node experiments/crowd-simulation/check-smoothing.mjs` (Ausweichstabilität und Darstellung zwischen Ticks),
 `node experiments/crowd-simulation/check-terrain.mjs` (Dreiecksoberfläche und Picking),
 `node experiments/crowd-simulation/check-feet.mjs` (Fußanpassung und aufrechter Körper).

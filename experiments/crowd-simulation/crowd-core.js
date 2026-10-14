@@ -12,7 +12,7 @@ const CrowdSimulation = (() => {
       previous: { x, z, yaw: 0, time: 0, runWeight: 0 } };
   }
   function createWorld() {
-    return { marines: [createMarine()], destination: null, field: null, slots: [], arrivalRadius: 0, accumulator: 0,
+    return { marines: [createMarine()], destination: null, field: null, slots: [], arrivalRadius: 0, arrivalDirection: null, arrivalFront: 0, accumulator: 0,
       stats: { fieldBuilds: 0, neighbourChecks: 0, steps: 0 }, scratch: null, notice: '' };
   }
   function setTarget(marine, target) {
@@ -24,12 +24,13 @@ const CrowdSimulation = (() => {
   function spawnMarine(world) {
     const point = nav.spawnSites.find(site => world.marines.every(m => Math.hypot(m.x - site.x, m.z - site.z) >= diameter + 0.03));
     if (!point) return null;
-    const slots = world.field ? nav.places(world.destination, world.marines.length + 1, world.field) : [];
+    const slots = world.field ? nav.places(world.destination, world.marines.length + 1, world.field, true, world.arrivalDirection) : [];
     if (world.field && slots.length <= world.marines.length) return null;
     const marine = createMarine(point.x, point.z);
     if (world.field) {
       const target = slots.find(slot => !world.slots.some(old => Math.hypot(old.x - slot.x, old.z - slot.z) < 0.01));
       if (!target) return null;
+      target.row = arrivalRow(target, world.arrivalDirection, world.arrivalFront);
       setTarget(marine, target);
       world.slots.push(target);
       world.arrivalRadius = Math.max(world.arrivalRadius, Math.hypot(target.x - world.destination.x, target.z - world.destination.z) + 1.5);
@@ -37,25 +38,46 @@ const CrowdSimulation = (() => {
     world.marines.push(marine);
     return marine;
   }
+  const depth = (point, direction) => point.x * direction.x + point.z * direction.z;
+  const lateral = (point, direction) => point.z * direction.x - point.x * direction.z;
+  const arrivalRow = (point, direction, front) => Math.floor((front - depth(point, direction)) / (diameter + 0.05) + 1e-8);
+  function arrivalDirection(marines, point) {
+    let x = 0, z = 0;
+    for (const marine of marines) { x += point.x - marine.x; z += point.z - marine.z; }
+    if (Math.hypot(x, z) < nav.cellSize * Math.max(1, marines.length)) {
+      // Symmetric approaches have no dominant direction: use a deterministic nonzero fallback.
+      let farthest = 0;
+      x = 0; z = 1;
+      for (const marine of marines) {
+        const distance = Math.hypot(point.x - marine.x, point.z - marine.z);
+        if (distance > farthest + 1e-8) { farthest = distance; x = point.x - marine.x; z = point.z - marine.z; }
+      }
+    }
+    const length = Math.hypot(x, z) || 1;
+    return { x: x / length, z: z / length };
+  }
   function moveTo(world, point) {
     if (!point || !nav.canStand(point.x, point.z)) return false;
     if (world.destination && point.x === world.destination.x && point.z === world.destination.z) return true;
     const field = nav.buildField(point);
     if (!field || world.marines.some(m => !Number.isFinite(field.cost[nav.indexAt(m.x, m.z)]))) return false;
-    const slots = nav.places(point, world.marines.length, field);
+    const direction = arrivalDirection(world.marines, point);
+    const slots = nav.places(point, world.marines.length, field, true, direction);
     if (slots.length !== world.marines.length) return false;
-    const free = slots.slice();
-    // Only on commands, not per tick. Nearer arrivals claim the inner spaces first.
-    const ordered = world.marines.slice().sort((a, b) => Math.hypot(a.x - point.x, a.z - point.z) - Math.hypot(b.x - point.x, b.z - point.z));
-    for (const marine of ordered) {
-      let nearest = 0, best = Infinity;
-      for (let i = 0; i < free.length; i++) {
-        const distance = (free[i].x - marine.x) ** 2 + (free[i].z - marine.z) ** 2;
-        if (distance < best) { nearest = i; best = distance; }
-      }
-      setTarget(marine, free.splice(nearest, 1)[0]);
+    const front = Math.max(depth(point, direction), ...slots.map(slot => depth(slot, direction)));
+    for (const slot of slots) slot.row = arrivalRow(slot, direction, front);
+    // Fill the far side first; match lateral order within each depth band rather than crossing lanes.
+    const ordered = world.marines.slice().sort((a, b) => depth(b, direction) - depth(a, direction) || lateral(a, direction) - lateral(b, direction));
+    const ranked = slots.slice().sort((a, b) => a.row - b.row || lateral(a, direction) - lateral(b, direction));
+    for (let start = 0; start < ranked.length;) {
+      let end = start + 1;
+      while (end < ranked.length && ranked[end].row === ranked[start].row) end++;
+      const group = ordered.slice(start, end).sort((a, b) => lateral(a, direction) - lateral(b, direction));
+      for (let i = start; i < end; i++) setTarget(group[i - start], ranked[i]);
+      start = end;
     }
     world.destination = { x: point.x, z: point.z }; world.field = field; world.slots = slots;
+    world.arrivalDirection = direction; world.arrivalFront = front;
     world.arrivalRadius = Math.max(...slots.map(slot => Math.hypot(slot.x - point.x, slot.z - point.z))) + 1.5;
     world.stats.fieldBuilds++;
     return true;
@@ -65,6 +87,9 @@ const CrowdSimulation = (() => {
     const pending = world.marines.filter(m => m.moving && m.direct);
     for (let i = 0; i < pending.length; i++) for (let j = i + 1; j < pending.length; j++) {
       const a = pending[i], b = pending[j], at = a.target, bt = b.target;
+      // Recovery may fix crossed lanes, but must never swap front and rear rows.
+      if (at.row !== bt.row || (lateral(a, world.arrivalDirection) - lateral(b, world.arrivalDirection))
+        * (lateral(bt, world.arrivalDirection) - lateral(at, world.arrivalDirection)) < -1e-8) continue;
       const before = Math.hypot(a.x - at.x, a.z - at.z) + Math.hypot(b.x - bt.x, b.z - bt.z);
       const after = Math.hypot(a.x - bt.x, a.z - bt.z) + Math.hypot(b.x - at.x, b.z - at.z);
       if (after + 0.1 < before && nav.canTravel(a.x, a.z, bt.x, bt.z) && nav.canTravel(b.x, b.z, at.x, at.z)) {

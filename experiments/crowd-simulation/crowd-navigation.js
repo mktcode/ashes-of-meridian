@@ -129,18 +129,26 @@ const CrowdNavigation = (() => {
     const distance = Math.hypot(dx, dz);
     return distance > 1e-6 ? { x: dx / distance, z: dz / distance } : { x: 0, z: 0 };
   }
-  function places(point, limit, field = null, visible = true) {
+  function places(point, limit, field = null, visible = true, direction = null) {
     // Leave passing lanes between parked bodies instead of sealing off inner slots.
     const candidates = [], spacing = radius * 4 + 0.15, rings = Math.ceil(halfSize * 4 / spacing);
     for (let q = -rings; q <= rings; q++) for (let r = -rings; r <= rings; r++) {
-      const x = point.x + spacing * (q + r / 2), z = point.z + spacing * Math.sqrt(3) / 2 * r;
+      const dx = spacing * (q + r / 2), dz = spacing * Math.sqrt(3) / 2 * r;
+      const x = point.x + (direction ? direction.x * dx - direction.z * dz : dx);
+      const z = point.z + (direction ? direction.z * dx + direction.x * dz : dz);
       if (!canStand(x, z) || field && !Number.isFinite(field.cost[indexAt(x, z)])) continue;
       // Park away from walls/cliffs so a resting marine cannot seal the last passing lane.
       if (offsets.some(([dx, dz]) => !canStand(x + dx * (radius * 2 + 0.05), z + dz * (radius * 2 + 0.05)))) continue;
       if (visible && !canTravel(point.x, point.z, x, z)) continue;
       candidates.push({ x, z });
     }
-    candidates.sort((a, b) => (a.x - point.x) ** 2 + (a.z - point.z) ** 2 - (b.x - point.x) ** 2 - (b.z - point.z) ** 2 || a.z - b.z || a.x - b.x);
+    candidates.sort((a, b) => {
+      const radial = (a.x - point.x) ** 2 + (a.z - point.z) ** 2 - (b.x - point.x) ** 2 - (b.z - point.z) ** 2;
+      if (!direction || Math.abs(radial) > 1e-8) return radial || a.z - b.z || a.x - b.x;
+      // Equal-radius slots fill the far side first; ignore roundoff from rotating the lattice.
+      const forward = (b.x - a.x) * direction.x + (b.z - a.z) * direction.z;
+      return Math.abs(forward) > 1e-8 ? forward : (a.z - b.z) * direction.x - (a.x - b.x) * direction.z;
+    });
     return candidates.slice(0, limit);
   }
   const spawnSites = places({ x: 0, z: 0 }, count, null, false);
