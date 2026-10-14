@@ -7,7 +7,9 @@ const CrowdSimulation = (() => {
   const turns = [0, ...Array.from({ length: 11 }, (_, i) => [i + 1, -i - 1]).flat(), 12]
     .map(n => [Math.cos(n * Math.PI / 12), Math.sin(n * Math.PI / 12)]);
   function createMarine(x = 0, z = 0) {
-    return { x, y: CrowdTerrain.heightAt(x, z), z, yaw: 0, moving: false, time: 0, runWeight: 0, vx: 0, vz: 0, avoidSide: 1, target: null, directCell: -1, direct: false, bestDistance: Infinity, stalledFor: 0 };
+    return { x, y: CrowdTerrain.heightAt(x, z), z, yaw: 0, moving: false, time: 0, runWeight: 0, vx: 0, vz: 0,
+      avoidSide: 1, avoidCos: 1, avoidSin: 0, clearFor: 0, target: null, directCell: -1, direct: false, bestDistance: Infinity, stalledFor: 0,
+      previous: { x, z, yaw: 0, time: 0, runWeight: 0 } };
   }
   function createWorld() {
     return { marines: [createMarine()], destination: null, field: null, slots: [], arrivalRadius: 0, accumulator: 0,
@@ -16,6 +18,7 @@ const CrowdSimulation = (() => {
   function setTarget(marine, target) {
     marine.target = target; marine.directCell = -1; marine.direct = false;
     marine.bestDistance = Infinity; marine.stalledFor = 0;
+    marine.avoidCos = 1; marine.avoidSin = 0; marine.clearFor = 0;
     marine.moving = Math.hypot(target.x - marine.x, target.z - marine.z) > 0.03;
   }
   function spawnMarine(world) {
@@ -106,12 +109,29 @@ const CrowdSimulation = (() => {
     if (nav.canTravel(marine.x, marine.z, marine.x + dx, marine.z)) marine.x += dx;
     if (nav.canTravel(marine.x, marine.z, marine.x, marine.z + dz)) marine.z += dz;
   }
+  function safeVelocity(units, s, i, nearby, vx, vz, speed, straight) {
+    const horizon = Math.min(0.15, s.remaining[i] / speed);
+    if (!nav.canTravel(units[i].x, units[i].z, units[i].x + vx * horizon, units[i].z + vz * horizon)) return false;
+    for (const j of nearby) {
+      const otherSpeed = Math.hypot(units[j].vx, units[j].vz);
+      const otherHorizon = Math.min(0.15, s.remaining[j] / (otherSpeed || 1));
+      const preview = straight && otherSpeed < 0.05 ? Math.min(0.6, s.remaining[i] / speed) : horizon;
+      const dx = units[i].x - units[j].x, dz = units[i].z - units[j].z;
+      const px = vx * preview - units[j].vx * otherHorizon, pz = vz * preview - units[j].vz * otherHorizon;
+      const t = Math.max(0, Math.min(1, -(dx * px + dz * pz) / (px * px + pz * pz || 1)));
+      if (Math.hypot(dx + px * t, dz + pz * t) < Math.min(diameter + 0.015, Math.hypot(dx, dz)) - 1e-5) return false;
+    }
+    return true;
+  }
   function tick(world) {
     const units = world.marines, s = scratchFor(world), dt = fixedStep;
     s.vx.fill(0); s.vz.fill(0); s.pushX.fill(0); s.pushZ.fill(0); s.remaining.fill(0);
     for (let i = 0; i < units.length; i++) {
       const marine = units[i];
       s.startX[i] = marine.x; s.startZ[i] = marine.z;
+      const previous = marine.previous;
+      previous.x = marine.x; previous.z = marine.z; previous.yaw = marine.yaw;
+      previous.time = marine.time; previous.runWeight = marine.runWeight;
       marine.time += dt;
       if (!marine.target) continue;
       const dx = marine.target.x - marine.x, dz = marine.target.z - marine.z, distance = Math.hypot(dx, dz);
@@ -141,28 +161,24 @@ const CrowdSimulation = (() => {
           }
         }
       }
-      // Bounded velocity probes, right before left. Unlike repulsive forces, these can pass parked bodies beside a wall.
+      const marine = units[i], clear = safeVelocity(units, s, i, nearby, s.vx[i], s.vz[i], speed, true);
+      marine.clearFor = clear ? Math.min(0.18, marine.clearFor + dt) : 0;
+      const heldX = s.vx[i] * marine.avoidCos + s.vz[i] * marine.avoidSin;
+      const heldZ = s.vz[i] * marine.avoidCos - s.vx[i] * marine.avoidSin;
+      // A brief clear gap must not undo a safe passing manoeuvre on the very next tick.
+      if (marine.avoidCos < 0.999 && marine.clearFor < 0.18
+        && safeVelocity(units, s, i, nearby, heldX, heldZ, speed, false)) {
+        s.pushX[i] = heldX; s.pushZ[i] = heldZ;
+        continue;
+      }
       for (const [c, candidateTurn] of turns) {
-        const turn = candidateTurn * units[i].avoidSide;
+        const turn = candidateTurn * marine.avoidSide;
         const vx = s.vx[i] * c + s.vz[i] * turn, vz = s.vz[i] * c - s.vx[i] * turn;
-        const horizon = Math.min(0.15, s.remaining[i] / speed);
-        if (!nav.canTravel(units[i].x, units[i].z, units[i].x + vx * horizon, units[i].z + vz * horizon)) continue;
-        let safe = true;
-        for (const j of nearby) {
-          const otherSpeed = Math.hypot(units[j].vx, units[j].vz);
-          const otherHorizon = Math.min(0.15, s.remaining[j] / (otherSpeed || 1));
-          // Do not turn back toward a parked body as soon as the next tiny step is clear.
-          const preview = Math.abs(turn) < 1e-4 && otherSpeed < 0.05 ? Math.min(0.6, s.remaining[i] / speed) : horizon;
-          const dx = units[i].x - units[j].x, dz = units[i].z - units[j].z;
-          const px = vx * preview - units[j].vx * otherHorizon, pz = vz * preview - units[j].vz * otherHorizon;
-          const t = Math.max(0, Math.min(1, -(dx * px + dz * pz) / (px * px + pz * pz || 1)));
-          if (Math.hypot(dx + px * t, dz + pz * t) < Math.min(diameter + 0.015, Math.hypot(dx, dz)) - 1e-5) { safe = false; break; }
-        }
-        if (safe) {
-          s.pushX[i] = vx; s.pushZ[i] = vz;
-          if (Math.abs(turn) > 1e-4) units[i].avoidSide = Math.sign(turn);
-          break;
-        }
+        if (c === 1 ? !clear : !safeVelocity(units, s, i, nearby, vx, vz, speed, false)) continue;
+        s.pushX[i] = vx; s.pushZ[i] = vz;
+        marine.avoidCos = c; marine.avoidSin = turn;
+        if (Math.abs(turn) > 1e-4) marine.avoidSide = Math.sign(turn);
+        break;
       }
     }
     // All steering reads the old positions/velocities before any marine advances.
@@ -198,7 +214,12 @@ const CrowdSimulation = (() => {
       marine.vx = dx / dt; marine.vz = dz / dt;
       const animation = Math.min(1, travelled / (moveSpeed * dt));
       marine.runWeight += (animation - marine.runWeight) * (1 - Math.exp(-dt * 10));
-      if (travelled > 1e-4) marine.yaw = Math.atan2(dx, dz);
+      // Face meaningful locomotion, not tiny alternating overlap corrections.
+      if (travelled > moveSpeed * dt * 0.08) {
+        const angle = Math.atan2(dx, dz) - marine.yaw;
+        const turn = Math.atan2(Math.sin(angle), Math.cos(angle)) * (1 - Math.exp(-dt * 12));
+        marine.yaw += Math.max(-5 * dt, Math.min(5 * dt, turn));
+      }
       marine.y = CrowdTerrain.heightAt(marine.x, marine.z);
     }
     if (units.some(m => m.moving && m.direct && m.stalledFor > 2)) reassignPending(world);
@@ -209,6 +230,15 @@ const CrowdSimulation = (() => {
     world.stats.neighbourChecks = 0;
     world.accumulator += Math.min(dt, 0.25);
     while (world.accumulator >= fixedStep - 1e-10) { tick(world); world.accumulator -= fixedStep; }
+  }
+  function renderMarine(world, marine) {
+    const alpha = Math.max(0, Math.min(1, world.accumulator / fixedStep)), previous = marine.previous;
+    const blend = key => previous[key] + (marine[key] - previous[key]) * alpha;
+    const x = blend('x'), z = blend('z'), angle = marine.yaw - previous.yaw;
+    // A shared tick fraction keeps neighbouring bodies temporally aligned, without individual position lag.
+    return { x, y: CrowdTerrain.heightAt(x, z), z,
+      yaw: previous.yaw + Math.atan2(Math.sin(angle), Math.cos(angle)) * alpha,
+      time: blend('time'), runWeight: blend('runWeight') };
   }
   function cameraFrame(yaw, pitch, zoom, width, height) {
     const c = Math.cos(yaw), s = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
@@ -238,5 +268,5 @@ const CrowdSimulation = (() => {
     }
     return ground;
   }
-  return { halfSize, createMarine, createWorld, spawnMarine, moveTo, update, cameraFrame, groundPoint };
+  return { halfSize, createMarine, createWorld, spawnMarine, moveTo, update, renderMarine, cameraFrame, groundPoint };
 })();

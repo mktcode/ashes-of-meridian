@@ -27,6 +27,10 @@ tauschen; bereits besetzte Standplätze bleiben erhalten. Dies ist einfache loka
 Crowd-Steuerung, kein ORCA und keine zugesicherte Lösung beliebiger dichter Staus.
 Die endliche Karte begrenzt Spawn- und Standplätze; bei Platzmangel meldet die UI dies.
 
+Kurze freie Lücken beenden ein sicheres Ausweichmanöver nicht sofort wieder.
+Die Blickrichtung dreht gleitend; Position und Animation werden zwischen festen
+Simulationsticks gemeinsam interpoliert, ohne individuellen Nachlauf der Körper.
+
 Tempo skaliert Bewegung und Animation gemeinsam; Pause hält beides an. Ziehen dreht
 die Kamera, das Mausrad zoomt. Kameraziehen und Klicks außerhalb des Geländes erteilen
 keinen Laufbefehl. Darstellung, Geländehöhe und Picking verwenden dieselbe Oberfläche.
@@ -40,6 +44,7 @@ Gezielte Prüfungen aus dem Repository:
 `node experiments/crowd-simulation/check.mjs` (Modell),
 `node experiments/crowd-simulation/check-movement.mjs` (Crowd-Bewegung und Bedienverträge),
 `node experiments/crowd-simulation/check-navigation.mjs` (Flow Field und Begehbarkeit),
+`node experiments/crowd-simulation/check-smoothing.mjs` (Ausweichstabilität und Darstellung zwischen Ticks),
 `node experiments/crowd-simulation/check-terrain.mjs` (Dreiecksoberfläche und Picking),
 `node experiments/crowd-simulation/check-feet.mjs` (Fußanpassung und aufrechter Körper).
 Bildwirkung, Animationsqualität und Bedienung bitte im Browser beurteilen;

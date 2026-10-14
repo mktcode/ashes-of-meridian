@@ -208,7 +208,8 @@
         box(marker, [0, 0, 0], [0.65, 0.02, 0.07], color);
         box(marker, [0, 0, 0], [0.07, 0.02, 0.65], color);
       }
-      for (const marine of world.marines) {
+      for (const unit of world.marines) {
+        const marine = CrowdSimulation.renderMarine(world, unit);
         const root = multiply(translate([marine.x, marine.y, marine.z]), rotate([0, marine.yaw, 0]));
         const c = Math.cos(marine.yaw), s = Math.sin(marine.yaw);
         const groundHeight = (x, z) => CrowdTerrain.heightAt(marine.x + c * x + s * z, marine.z - s * x + c * z) - marine.y;

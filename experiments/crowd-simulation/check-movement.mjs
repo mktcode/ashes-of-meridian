@@ -97,6 +97,11 @@ const distant = core.createWorld();
 assert.ok(core.moveTo(distant, { x: 24, z: -23 }), 'new map area is reachable');
 arrive(distant, 60);
 assert.equal(distant.marines[0].x, 24); assert.equal(distant.marines[0].z, -23);
+const converging = core.createWorld();
+converging.marines = Array.from({ length: 16 }, (_, i) => core.createMarine(10 * Math.cos(i * Math.PI / 8), 10 * Math.sin(i * Math.PI / 8)));
+valid(converging);
+assert.ok(core.moveTo(converging, { x: 0, z: 0 }));
+arrive(converging);
 const slow = core.createWorld(), fast = core.createWorld();
 core.moveTo(slow, { x: -6, z: 0 }); core.moveTo(fast, { x: -6, z: 0 });
 for (let i = 0; i < 30; i++) { core.update(slow, 1 / 60); core.update(fast, 2 / 60); }
