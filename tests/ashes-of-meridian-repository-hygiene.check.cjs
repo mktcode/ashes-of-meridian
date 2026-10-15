@@ -12,11 +12,22 @@ test('artifact classification rejects generated roots but preserves authored ass
       '.tmp/log',
       'node_modules/a',
       'dist',
+      'packages/crowd-simulation/dist/index.js',
+      'packages/crowd-simulation/.tmp/log',
+      'packages/crowd-simulation/node_modules/tool',
       'release/shot.webp',
       'docs/dist.md',
       'src/distinct.ts',
     ]),
-    ['dist/a.js', '.tmp/log', 'node_modules/a', 'dist'],
+    [
+      'dist/a.js',
+      '.tmp/log',
+      'node_modules/a',
+      'dist',
+      'packages/crowd-simulation/dist/index.js',
+      'packages/crowd-simulation/.tmp/log',
+      'packages/crowd-simulation/node_modules/tool',
+    ],
   );
 });
 
@@ -38,6 +49,10 @@ test('repository guard detects tracked outputs and shared writable symlinks with
     git(['rm', '--cached', '-q', 'dist/accident.js']);
     await symlink(join(root, 'dist'), join(root, 'node_modules'), 'dir');
     assert.throws(() => checkRepository(root), /directory is a symlink/);
+    await rm(join(root, 'node_modules'));
+    await mkdir(join(root, 'packages/crowd-simulation'), { recursive: true });
+    await symlink(join(root, 'dist'), join(root, 'packages/crowd-simulation/dist'), 'dir');
+    assert.throws(() => checkRepository(root), /packages\/crowd-simulation\/dist/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

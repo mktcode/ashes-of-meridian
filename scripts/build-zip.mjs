@@ -58,7 +58,7 @@ const paths = [
   'index.html',
   'map-viewer.html',
   ...stylePaths,
-  ...(await filesBelow('dist', path => path.endsWith('.js'))),
+  ...(await filesBelow('dist', path => /\.(?:js|html)$/.test(path))),
   ...runtimeAudio,
   'assets/fonts/aldrich/OFL.txt',
   ...(await filesBelow('assets/ui', path => path.endsWith('.webp'))).filter(path => !cssAssets.includes(path)),
@@ -68,9 +68,12 @@ const paths = [
 if (new Set(paths).size !== paths.length) throw new Error('Duplicate path in itch.io package');
 const entries = await Promise.all(paths.map(async name => ({ name, data: await readFile(resolve(root, name)) })));
 const packaged = new Set(paths);
-const html = entries.find(entry => entry.name === 'index.html').data.toString('utf8');
-for (const [, target] of html.matchAll(/(?:src|href)=["']\.\/([^"']+)["']/g)) {
-  if (!packaged.has(target)) throw new Error(`index.html references an unpackaged file: ${target}`);
+for (const entry of entries.filter(entry => entry.name.endsWith('.html'))) {
+  for (const [, url] of entry.data.toString('utf8').matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
+    if (/^(?:#|data:|https?:)/.test(url)) continue;
+    const target = posix.normalize(posix.join(posix.dirname(entry.name), url.split(/[?#]/, 1)[0]));
+    if (!packaged.has(target)) throw new Error(`${entry.name} references an unpackaged file: ${url}`);
+  }
 }
 for (const { name, css } of styleSources) {
   for (const target of localCssTargets(name, css)) {

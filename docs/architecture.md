@@ -12,8 +12,15 @@ eintragen; Ladereihenfolge und CSS-Kaskade sind Verträge. Klassenfragmente verw
 nicht aufzählbare Prototypmethoden und TypeScript Declaration Merging.
 `map-viewer.html` verwendet dieselbe App, keinen eigenen Renderer oder Scriptkatalog.
 
+Das private Crowd-Workspace ist vom Spiel getrennt. Sein CPU-Kern besitzt Bewegung,
+Navigation und Reservierungen; die Referenzdemo besitzt Modelle, WebGL, Kamera und
+Picking. Interne Module werden beim Build in ein klassisches synchrones Browser-Bundle
+übersetzt; das ändert den `file://`-Vertrag nicht. Node-Verbraucher erhalten einen
+separaten Moduleinstieg. Eine spätere Spielanbindung muss den Besitzer der Körperpositionen
+eindeutig festlegen, nicht zwei Bewegungssimulationen auf denselben Körper anwenden.
+
 Nach Änderungen an Auslieferungsdateien neu bauen: die Buildkennung beschreibt den
-gebauten Payload, prüft aber nicht dessen Integrität zur Laufzeit.
+gebauten Payload einschließlich Crowd-Demo, prüft aber nicht dessen Integrität zur Laufzeit.
 
 ## Zustand und Lebenszyklus
 

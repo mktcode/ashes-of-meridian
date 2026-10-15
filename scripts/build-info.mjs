@@ -12,16 +12,20 @@ export function buildInfo(root) {
   const paths = readdirSync(root)
     .filter((name) => name.endsWith('.html'))
     .sort();
-  function visit(directory, javascriptOnly = false) {
+  function visit(directory, runtimeOnly = false) {
     for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
       const name = `${directory}/${entry.name}`;
       if (entry.isSymbolicLink()) throw Error(`Runtime fingerprint rejects symlink: ${name}`);
-      if (entry.isDirectory()) visit(name, javascriptOnly);
-      else if (entry.isFile() && name !== outputName && (!javascriptOnly || name.endsWith('.js')))
+      if (entry.isDirectory()) visit(name, runtimeOnly);
+      else if (
+        entry.isFile() &&
+        name !== outputName &&
+        (!runtimeOnly || /\.(?:js|html)$/.test(name))
+      )
         paths.push(name);
     }
   }
-  visit('dist/src', true);
+  visit('dist', true);
   for (const directory of ['styles', 'assets', 'audio']) visit(directory);
   const hash = createHash('sha256');
   for (const name of paths.sort()) {
@@ -61,6 +65,19 @@ export function sourceFingerprint(root) {
     }
   }
   visit('src');
+  const crowd = 'packages/crowd-simulation';
+  if (existsSync(join(root, crowd))) {
+    visit(`${crowd}/src`);
+    visit(`${crowd}/demo`);
+    paths.push(
+      `${crowd}/demo/index.html`,
+      `${crowd}/package.json`,
+      `${crowd}/tsconfig.json`,
+      `${crowd}/build.mjs`,
+    );
+    for (const manifest of ['package.json', 'package-lock.json'])
+      if (existsSync(join(root, manifest))) paths.push(manifest);
+  }
   const hash = createHash('sha256');
   for (const name of paths.sort()) {
     const data = readFileSync(join(root, name));

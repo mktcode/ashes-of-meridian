@@ -108,3 +108,34 @@ test('viewer entry changes runtime identity and source stamps detect stale TypeS
   writeFileSync(join(root, 'map-viewer.html'), '<!doctype html><title>Changed viewer</title>');
   assert.throws(() => verifyCaptureBuild(root), /stale/);
 });
+
+test('crowd delivery and package sources participate in runtime/source identities', async (t) => {
+  const { writeBuildInfo, sourceFingerprint, verifyCaptureBuild } =
+    await import('../scripts/build-info.mjs');
+  const root = fixture(t);
+  mkdirSync(join(root, 'src'));
+  writeFileSync(join(root, 'tsconfig.json'), '{}');
+  const packageRoot = join(root, 'packages/crowd-simulation');
+  mkdirSync(join(packageRoot, 'src'), { recursive: true });
+  mkdirSync(join(packageRoot, 'demo'));
+  for (const file of ['package.json', 'tsconfig.json'])
+    writeFileSync(join(packageRoot, file), '{}');
+  writeFileSync(join(packageRoot, 'build.mjs'), '// build');
+  writeFileSync(join(packageRoot, 'src/index.ts'), 'export const value = 1;');
+  writeFileSync(join(packageRoot, 'demo/index.html'), '<!doctype html>');
+  writeFileSync(join(packageRoot, 'demo/view.js'), '// demo');
+  mkdirSync(join(root, 'dist/crowd-simulation'), { recursive: true });
+  writeFileSync(join(root, 'dist/crowd-simulation/index.html'), '<!doctype html>');
+  writeFileSync(join(root, 'dist/crowd-simulation/crowd.js'), 'const crowd = 1;');
+  const first = writeBuildInfo(root),
+    source = sourceFingerprint(root);
+  writeFileSync(join(root, 'dist/crowd-simulation/crowd.js'), 'const crowd = 2;');
+  assert.throws(() => verifyCaptureBuild(root), /stale/);
+  assert.notEqual(writeBuildInfo(root).id, first.id);
+  writeFileSync(join(packageRoot, 'src/index.ts'), 'export const value = 2;');
+  assert.notEqual(sourceFingerprint(root), source);
+  assert.throws(() => verifyCaptureBuild(root), /stale/);
+  writeBuildInfo(root);
+  writeFileSync(join(packageRoot, 'demo/index.html'), '<title>new demo</title>');
+  assert.throws(() => verifyCaptureBuild(root), /stale/);
+});

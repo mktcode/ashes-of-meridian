@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,6 +34,12 @@ export function checkDocLinks(root) {
     }
   }
   collect('docs');
+  if (existsSync(resolve(root, 'packages'))) {
+    for (const entry of readdirSync(resolve(root, 'packages'), { withFileTypes: true })) {
+      const readme = `packages/${entry.name}/README.md`;
+      if (entry.isDirectory() && existsSync(resolve(root, readme))) files.push(readme);
+    }
+  }
   const errors = [];
   for (const file of files) {
     let targets;

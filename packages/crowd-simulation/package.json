@@ -1,0 +1,17 @@
+{
+  "name": "@aom/crowd-simulation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "tsc -p tests/tsconfig.json && node tests/check-api.mjs && node tests/check-lifecycle.mjs && node tests/check-parity.mjs && node tests/check-smoothing.mjs && node tests/check-instances.mjs",
+    "test:browser": "node tests/check-browser.mjs"
+  }
+}

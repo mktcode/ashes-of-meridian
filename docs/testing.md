@@ -25,6 +25,16 @@ Lint/Format erfassen nur [tooling-files.json](../scripts/tooling-files.json), ni
 `npm run format` schreibt. Keine globale Formatierung oder Modulmigration daraus ableiten.
 `check:repository` prüft Ignore-/Besitzregeln, löscht aber nichts.
 
+## Crowd-Package
+
+`npm run test:crowd` baut das unabhängige Package und prüft öffentliche API,
+TypeScript-Verbraucher, Lebenszyklus und vor der Extraktion aufgezeichnetes Verhalten.
+Der kurze Packagecheck läuft auch in `check:quality`. Gezielte physische Regressionen,
+Skalierungsfälle und Messwerkzeuge stehen im [Package-Einstieg](../packages/crowd-simulation/README.md).
+`npm run check:crowd-browser` prüft dessen direkte `file://`-Demo im Chromium;
+`node packages/crowd-simulation/tests/check-browser.mjs --release` verwendet stattdessen
+die mit `npm run build` erzeugte Auslieferung. Kein Test der Spielanbindung.
+
 ## Browser
 
 Installiertes Chromium, optional `CHROMIUM_PATH`; kein Download oder gelockerter Dateizugriff.

@@ -38,3 +38,16 @@ test('link checker resolves from each document and rejects missing or outside ta
   writeFileSync(join(root, 'docs/nested/a.md'), '[bad](bad%ZZ.md)');
   assert.match(checkDocLinks(root).errors[0], /URI malformed/);
 });
+
+test('workspace README links are checked without traversing generated package output', async t => {
+  const { checkDocLinks } = await checker;
+  const scratch = join(__dirname, '../.tmp/doc-links');
+  mkdirSync(scratch, { recursive: true });
+  const root = mkdtempSync(join(scratch, 'workspace-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const directory of ['docs', 'packages/crowd-simulation/dist']) mkdirSync(join(root, directory), { recursive: true });
+  for (const file of ['README.md', 'AGENTS.md']) writeFileSync(join(root, file), '');
+  writeFileSync(join(root, 'packages/crowd-simulation/README.md'), '[missing](missing.ts)');
+  writeFileSync(join(root, 'packages/crowd-simulation/dist/README.md'), '[ignored](missing.js)');
+  assert.deepEqual(checkDocLinks(root), { files: 3, errors: ['packages/crowd-simulation/README.md: missing target: missing.ts'] });
+});
