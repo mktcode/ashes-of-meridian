@@ -12,6 +12,11 @@ Issue; abgeschlossene Änderungen in Git. Menschliche Abnahme ist nicht durch te
 5. [Performance/Mobilstabilität](performance-und-mobilstabilitaet.md): konkrete Auswahlhänger, unerreichbare Gruppenziele und mobile Abbrüche.
 6. [Test-/Werkzeugpflege](test-und-werkzeugpflege.md): veraltete Fixtures, Kurzprüfungsblocker, Materialfehler im Browser.
 
+## Architekturvorhaben
+
+- [Landschaftslabor als Package und Crowd-Anbindung](landschaftslabor-package-und-crowd-integration.md):
+  gemeinsame Oberfläche, Offline-Auslieferung und profilbezogene Weggarantie vor der Spielintegration klären.
+
 ## Danach: zusammenhängende Abnahme
 
 - [Run, Tutorial, Citybuilding, Upgrades und Evakuierung](playtest-validation.md).
